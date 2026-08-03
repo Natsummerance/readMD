@@ -310,6 +310,8 @@ class Handler(BaseHTTPRequestHandler):
             self._api_ai_config()
         elif path == '/api/ai/chat':
             self._api_ai_chat()
+        elif path == '/api/image/save':
+            self._api_image_save()
         elif path == '/api/ai/prompts':
             self._api_ai_prompts()
         elif path == '/api/ai/history':
@@ -412,6 +414,44 @@ class Handler(BaseHTTPRequestHandler):
                 self._sse({'done': True})
             except Exception:
                 pass
+
+    def _api_image_save(self):
+        """保存编辑后的图片到文档目录 images/ 子目录，返回相对路径。"""
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8'))
+        except Exception:
+            self._send_json(400, {'error': '无效请求'})
+            return
+        dir_path = body.get('dir') or ''
+        data_b64 = body.get('data') or ''
+        fmt = (body.get('format') or 'png').lower()
+        name = body.get('name') or ''
+        if not dir_path or not data_b64 or not os.path.isdir(dir_path):
+            self._send_json(400, {'error': '缺少目录或图片数据'})
+            return
+        if fmt not in ('png', 'jpeg', 'jpg', 'webp'):
+            fmt = 'png'
+        try:
+            import base64 as _b64
+            raw = _b64.b64decode(data_b64)
+            if not raw:
+                self._send_json(400, {'error': '图片数据为空'})
+                return
+            img_dir = os.path.join(dir_path, 'images')
+            os.makedirs(img_dir, exist_ok=True)
+            if not name or not re.match(r'^[A-Za-z0-9_\-]+', name):
+                name = 'img_%d_%s' % (int(time.time() * 1000), os.urandom(3).hex())
+            if not name.lower().endswith('.' + fmt):
+                name += '.' + fmt
+            target = os.path.join(img_dir, name)
+            with open(target, 'wb') as f:
+                f.write(raw)
+            rel = os.path.join('images', name).replace('\\', '/')
+            self._send_json(200, {'ok': True, 'path': target, 'rel': rel})
+        except Exception as e:
+            logging.exception('image save failed')
+            self._send_json(500, {'error': '图片保存失败：%s' % e})
 
     def _api_ai_prompts(self):
         """Prompt 模板：GET 列表，POST 保存/覆盖/删除。"""
@@ -997,6 +1037,20 @@ def run_selftest():
         safe_print('prompts/history OK')
     except Exception as e:
         safe_print('prompts/history selftest failed:', e)
+        ok = False
+    try:
+        import tempfile, base64 as _b64
+        with tempfile.TemporaryDirectory() as td:
+            png = _b64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')
+            img_dir = os.path.join(td, 'images')
+            os.makedirs(img_dir, exist_ok=True)
+            target = os.path.join(img_dir, 't.png')
+            with open(target, 'wb') as f:
+                f.write(png)
+            assert os.path.isfile(target)
+        safe_print('image save OK')
+    except Exception as e:
+        safe_print('image save selftest failed:', e)
         ok = False
     safe_print('selftest %s' % ('PASSED' if ok else 'FAILED'))
     return 0 if ok else 1

@@ -158,6 +158,46 @@
 </div>
 
 
+
+<!-- 图片编辑器弹窗 -->
+<div id="img-modal" class="hidden">
+  <div id="img-box">
+    <h3>&#128444; 插入图片（裁剪 / 缩放 / 旋转）</h3>
+    <div class="img-source">
+      <button id="img-file" class="tb-btn accent">&#128194; 选择本地图片…</button>
+      <input id="img-url-input" type="text" placeholder="或粘贴图片 URL 直接插入" autocomplete="off">
+      <button id="img-url-load" class="tb-btn">插入 URL</button>
+    </div>
+    <div class="img-stage" id="img-stage">
+      <canvas id="img-canvas"></canvas>
+      <div id="img-crop" class="img-crop">
+        <div class="crop-handle crop-se"></div>
+      </div>
+      <div id="img-hint" class="img-hint">请先选择本地图片开始编辑（拖拽虚线框裁剪，右下角手柄调整大小）</div>
+    </div>
+    <div class="img-controls">
+      <button id="img-rot-l" class="tb-btn" title="逆时针旋转 90°">&#8634; 左转</button>
+      <button id="img-rot-r" class="tb-btn" title="顺时针旋转 90°">&#8635; 右转</button>
+      <label class="img-ctl">角度 <input id="img-angle" type="range" min="0" max="360" value="0"></label>
+      <label class="img-ctl">缩放 <input id="img-scale" type="range" min="10" max="300" value="100"><span id="img-scale-val">100%</span></label>
+      <select id="img-ratio" title="裁剪比例">
+        <option value="free">自由比例</option>
+        <option value="1:1">1:1 方形</option>
+        <option value="4:3">4:3</option>
+        <option value="16:9">16:9</option>
+        <option value="orig">原图比例</option>
+      </select>
+      <button id="img-reset" class="tb-btn">重置</button>
+    </div>
+    <div class="img-info"><span id="img-info"></span></div>
+    <div class="url-actions">
+      <button id="img-insert" class="tb-btn accent" disabled>&#11015; 插入到文档</button>
+      <button id="img-close" class="tb-btn">关闭</button>
+    </div>
+    <p class="fix-note">图片将保存到文档同目录的 <code>images/</code> 子文件夹，并以相对路径插入 Markdown（仅在编辑本地 .md 时可用）。</p>
+  </div>
+</div>
+
 <!-- Prompt 模板管理弹窗 -->
 <div id="tpl-modal" class="hidden">
   <div id="tpl-box">
@@ -237,6 +277,7 @@
 <div id="busy" class="hidden"><span>处理中…</span></div>
 <button id="top-btn" class="hidden" title="回到顶部">&#8593;</button>
 <input id="file-input" type="file" class="hidden">
+<input id="img-file-input" type="file" accept="image/*" class="hidden">
 
 <footer id="statusbar">
   <span id="status-left"></span>

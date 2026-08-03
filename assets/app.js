@@ -1321,6 +1321,331 @@ function cmInsertSyntax(kind) {
   cmView.dispatch({ changes: { from: sel.from, to: sel.to, insert }, selection: { anchor: cursor } });
   cmView.focus();
 }
+
+/* ---------------- 图片编辑器（插入 / 裁剪 / 缩放 / 旋转） ---------------- */
+
+const imgState = {
+  img: null, rawW: 0, rawH: 0,
+  angle: 0, scale: 100, ratio: 'free',
+  rotW: 0, rotH: 0, fitScale: 1, offX: 0, offY: 0,
+  crop: { x: 0, y: 0, w: 0, h: 0 },
+  drag: null, // { mode:'move'|'resize', sx, sy, cx, cy, cw, ch }
+};
+
+function openImgModal() {
+  if (!state.dir) { showToast('图片编辑仅支持本地 Markdown 文件'); return; }
+  $('img-modal').classList.remove('hidden');
+  resetImg();
+  drawImg();
+  updateImgInfo();
+}
+
+function closeImgModal() {
+  $('img-modal').classList.add('hidden');
+  imgState.img = null;
+  imgState.drag = null;
+}
+
+function loadImgFromFile(file) {
+  if (!file) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try { loadImgSrc(fr.result); } catch (e) { showToast('图片读取失败：' + e.message); }
+  };
+  fr.onerror = () => showToast('图片读取失败');
+  fr.readAsDataURL(file);
+}
+
+function loadImgSrc(src) {
+  const im = new Image();
+  im.onload = () => {
+    imgState.img = im;
+    imgState.rawW = im.naturalWidth || im.width;
+    imgState.rawH = im.naturalHeight || im.height;
+    resetImg();
+    $('img-hint').style.display = 'none';
+    $('img-insert').disabled = false;
+    $('img-crop').classList.add('active');
+    updateImgInfo();
+  };
+  im.onerror = () => showToast('图片加载失败（URL 可能被跨域限制）');
+  im.src = src;
+}
+
+function computeRotated() {
+  const a = ((imgState.angle % 360) + 360) % 360;
+  const rad = a * Math.PI / 180;
+  imgState.rotW = Math.max(1, Math.round(Math.abs(imgState.rawW * Math.cos(rad)) + Math.abs(imgState.rawH * Math.sin(rad))));
+  imgState.rotH = Math.max(1, Math.round(Math.abs(imgState.rawW * Math.sin(rad)) + Math.abs(imgState.rawH * Math.cos(rad))));
+}
+
+function imgRect() {
+  return { x: imgState.offX, y: imgState.offY, w: imgState.rotW * imgState.fitScale, h: imgState.rotH * imgState.fitScale };
+}
+
+function drawImg() {
+  const canvas = $('img-canvas');
+  const stage = $('img-stage');
+  if (!canvas || !imgState.img) return;
+  const cw = stage.clientWidth;
+  const ch = stage.clientHeight;
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = Math.round(cw * dpr);
+  canvas.height = Math.round(ch * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = '#101418';
+  ctx.fillRect(0, 0, cw, ch);
+  computeRotated();
+  imgState.fitScale = Math.min(cw / imgState.rotW, ch / imgState.rotH);
+  imgState.offX = (cw - imgState.rotW * imgState.fitScale) / 2;
+  imgState.offY = (ch - imgState.rotH * imgState.fitScale) / 2;
+  const tmp = document.createElement('canvas');
+  tmp.width = imgState.rotW;
+  tmp.height = imgState.rotH;
+  const tctx = tmp.getContext('2d');
+  tctx.translate(imgState.rotW / 2, imgState.rotH / 2);
+  tctx.rotate(imgState.angle * Math.PI / 180);
+  tctx.drawImage(imgState.img, -imgState.rawW / 2, -imgState.rawH / 2, imgState.rawW, imgState.rawH);
+  ctx.drawImage(tmp, imgState.offX, imgState.offY, imgState.rotW * imgState.fitScale, imgState.rotH * imgState.fitScale);
+  clampCrop();
+  updateCropUI();
+  updateImgInfo();
+}
+
+function ratioValue() {
+  if (imgState.ratio === '1:1') return 1;
+  if (imgState.ratio === '4:3') return 4 / 3;
+  if (imgState.ratio === '16:9') return 16 / 9;
+  if (imgState.ratio === 'orig') {
+    const r = imgState.rotW / imgState.rotH;
+    return isFinite(r) && r > 0 ? r : 1;
+  }
+  return 0;
+}
+
+function clampCrop() {
+  const r = imgRect();
+  const min = 24;
+  let { x, y, w, h } = imgState.crop;
+  if (!imgState.img || !r.w || !r.h) { x = r.x; y = r.y; w = r.w; h = r.h; }
+  w = Math.max(min, Math.min(w, r.w));
+  h = Math.max(min, Math.min(h, r.h));
+  x = Math.max(r.x, Math.min(x, r.x + r.w - w));
+  y = Math.max(r.y, Math.min(y, r.y + r.h - h));
+  imgState.crop = { x, y, w, h };
+  const rv = ratioValue();
+  if (rv > 0) {
+    let nw = w, nh = nw / rv;
+    if (nh > r.h) { nh = r.h; nw = nh * rv; }
+    imgState.crop.w = nw;
+    imgState.crop.h = nh;
+    imgState.crop.x = Math.max(r.x, Math.min(imgState.crop.x, r.x + r.w - nw));
+    imgState.crop.y = Math.max(r.y, Math.min(imgState.crop.y, r.y + r.h - nh));
+  }
+}
+
+function updateCropUI() {
+  const c = $('img-crop');
+  if (!c) return;
+  c.style.left = imgState.crop.x + 'px';
+  c.style.top = imgState.crop.y + 'px';
+  c.style.width = imgState.crop.w + 'px';
+  c.style.height = imgState.crop.h + 'px';
+}
+
+function updateImgInfo() {
+  const el = $('img-info');
+  if (!el) return;
+  const r = imgRect();
+  if (!imgState.img || !r.w) { el.textContent = '尚未加载图片'; return; }
+  const ow = Math.max(1, Math.round(imgState.crop.w / imgState.fitScale * imgState.scale / 100));
+  const oh = Math.max(1, Math.round(imgState.crop.h / imgState.fitScale * imgState.scale / 100));
+  el.textContent = '原图 ' + imgState.rawW + '×' + imgState.rawH + ' · 角度 ' + imgState.angle + '° · 缩放 ' + imgState.scale + '% · 输出 ' + ow + '×' + oh + ' px';
+}
+
+function resetImg() {
+  imgState.angle = 0;
+  imgState.scale = 100;
+  imgState.ratio = 'free';
+  $('img-angle').value = 0;
+  $('img-scale').value = 100;
+  $('img-scale-val').textContent = '100%';
+  $('img-ratio').value = 'free';
+  if (imgState.img) {
+    computeRotated();
+    const stage = $('img-stage');
+    const cw = stage.clientWidth, ch = stage.clientHeight;
+    imgState.fitScale = Math.min(cw / imgState.rotW, ch / imgState.rotH);
+    imgState.offX = (cw - imgState.rotW * imgState.fitScale) / 2;
+    imgState.offY = (ch - imgState.rotH * imgState.fitScale) / 2;
+    const r = imgRect();
+    imgState.crop = { x: r.x, y: r.y, w: r.w, h: r.h };
+    $('img-hint').style.display = 'none';
+    $('img-crop').classList.add('active');
+    $('img-insert').disabled = false;
+  } else {
+    imgState.rotW = 0; imgState.rotH = 0;
+    $('img-hint').style.display = '';
+    $('img-crop').classList.remove('active');
+    $('img-insert').disabled = true;
+  }
+  drawImg();
+}
+
+function rotateImg(delta) {
+  if (!imgState.img) return;
+  imgState.angle = ((imgState.angle + delta) % 360 + 360) % 360;
+  $('img-angle').value = imgState.angle;
+  drawImg();
+}
+
+function applyRatio() {
+  if (!imgState.img) return;
+  clampCrop();
+  updateCropUI();
+  updateImgInfo();
+}
+
+function stagePointer(e) {
+  if (!imgState.img) return;
+  const stage = $('img-stage');
+  const rect = stage.getBoundingClientRect();
+  const px = e.clientX - rect.left;
+  const py = e.clientY - rect.top;
+  const cropEl = $('img-crop');
+  const handle = e.target && e.target.classList && e.target.classList.contains('crop-handle');
+  const inCrop = px >= imgState.crop.x - 4 && px <= imgState.crop.x + imgState.crop.w + 4 &&
+                 py >= imgState.crop.y - 4 && py <= imgState.crop.y + imgState.crop.h + 4;
+  if (handle || (inCrop && !e.shiftKey)) {
+    imgState.drag = handle
+      ? { mode: 'resize', sx: px, sy: py, cx: imgState.crop.x, cy: imgState.crop.y, cw: imgState.crop.w, ch: imgState.crop.h }
+      : { mode: 'move', sx: px, sy: py, cx: imgState.crop.x, cy: imgState.crop.y, cw: imgState.crop.w, ch: imgState.crop.h };
+    stage.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  } else {
+    // 在空白处拖拽 = 从按下点画新裁剪框
+    imgState.drag = { mode: 'draw', sx: px, sy: py, cw: 0, ch: 0 };
+    stage.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  }
+}
+
+function stagePointerMove(e) {
+  if (!imgState.drag || !imgState.img) return;
+  const stage = $('img-stage');
+  const rect = stage.getBoundingClientRect();
+  const px = e.clientX - rect.left;
+  const py = e.clientY - rect.top;
+  const r = imgRect();
+  const d = imgState.drag;
+  const rv = ratioValue();
+  if (d.mode === 'move') {
+    let nx = d.cx + (px - d.sx);
+    let ny = d.cy + (py - d.sy);
+    nx = Math.max(r.x, Math.min(nx, r.x + r.w - d.cw));
+    ny = Math.max(r.y, Math.min(ny, r.y + r.h - d.ch));
+    imgState.crop.x = nx; imgState.crop.y = ny;
+  } else if (d.mode === 'resize') {
+    let nw = Math.max(24, Math.min(px - d.cx, r.w));
+    let nh = Math.max(24, Math.min(py - d.cy, r.h));
+    if (rv > 0) {
+      if (nw / rv > r.h) { nw = r.h * rv; nh = r.h; }
+      else nh = nw / rv;
+    }
+    imgState.crop.w = nw; imgState.crop.h = nh;
+    if (imgState.crop.x + nw > r.x + r.w) imgState.crop.x = r.x + r.w - nw;
+    if (imgState.crop.y + nh > r.y + r.h) imgState.crop.y = r.y + r.h - nh;
+  } else if (d.mode === 'draw') {
+    let x = Math.min(d.sx, px), y = Math.min(d.sy, py);
+    let w = Math.abs(px - d.sx), h = Math.abs(py - d.sy);
+    x = Math.max(r.x, Math.min(x, r.x + r.w));
+    y = Math.max(r.y, Math.min(y, r.y + r.h));
+    w = Math.max(24, Math.min(w, r.x + r.w - x));
+    h = Math.max(24, Math.min(h, r.y + r.h - y));
+    if (rv > 0) {
+      if (w / rv > r.h) { w = r.h * rv; h = r.h; }
+      else h = w / rv;
+      x = Math.max(r.x, Math.min(x, r.x + r.w - w));
+      y = Math.max(r.y, Math.min(y, r.y + r.h - h));
+    }
+    imgState.crop = { x, y, w, h };
+  }
+  updateCropUI();
+  updateImgInfo();
+  e.preventDefault();
+}
+
+function stagePointerUp(e) {
+  imgState.drag = null;
+  try { $('img-stage').releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+}
+
+function insertImgUrl() {
+  const url = $('img-url-input').value.trim();
+  if (!url) { showToast('请输入图片 URL'); return; }
+  if (!cmView) { showToast('请先进入编辑模式'); return; }
+  cmInsertImage(url);
+  closeImgModal();
+  showToast('已插入图片 URL');
+}
+
+function cmInsertImage(rel) {
+  if (!cmView) return;
+  const sel = cmView.state.selection.main;
+  const insert = '![图片](' + rel + ')';
+  cmView.dispatch({ changes: { from: sel.from, to: sel.to, insert }, selection: { anchor: sel.from + insert.length } });
+  cmView.focus();
+}
+
+async function exportAndInsertImg() {
+  if (!imgState.img) return;
+  const r = imgRect();
+  const srcX = (imgState.crop.x - r.x) / imgState.fitScale;
+  const srcY = (imgState.crop.y - r.y) / imgState.fitScale;
+  const srcW = imgState.crop.w / imgState.fitScale;
+  const srcH = imgState.crop.h / imgState.fitScale;
+  const outW = Math.max(1, Math.round(srcW * imgState.scale / 100));
+  const outH = Math.max(1, Math.round(srcH * imgState.scale / 100));
+  const tmp = document.createElement('canvas');
+  tmp.width = imgState.rotW;
+  tmp.height = imgState.rotH;
+  const tctx = tmp.getContext('2d');
+  tctx.translate(imgState.rotW / 2, imgState.rotH / 2);
+  tctx.rotate(imgState.angle * Math.PI / 180);
+  tctx.drawImage(imgState.img, -imgState.rawW / 2, -imgState.rawH / 2, imgState.rawW, imgState.rawH);
+  const out = document.createElement('canvas');
+  out.width = outW;
+  out.height = outH;
+  const octx = out.getContext('2d');
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = 'high';
+  octx.drawImage(tmp, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
+  const blob = await new Promise(res => out.toBlob(res, 'image/png'));
+  if (!blob) { showToast('图片导出失败'); return; 
+  }
+  const b64 = await new Promise(res => {
+    const fr = new FileReader();
+    fr.onload = () => res(String(fr.result).split(',')[1] || '');
+    fr.readAsDataURL(blob);
+  });
+  busy(true);
+  try {
+    const resp = await apiFetch('/api/image/save', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dir: state.dir, data: b64, format: 'png', name: 'img_' + Date.now() }),
+    });
+    const d = await resp.json();
+    if (!resp.ok || !d.ok) throw new Error(d.error || '保存失败');
+    cmInsertImage(d.rel);
+    closeImgModal();
+    showToast('图片已插入（' + d.rel + '）');
+  } catch (e) {
+    showToast('图片保存失败：' + e.message);
+  } finally {
+    busy(false);
+  }
+}
 async function toggleEdit() {
   if (state.editing) { exitEdit(); return; }
   if (state.mode !== 'file' || !state.file) { showToast('仅本地 Markdown 文件可编辑'); return; }
@@ -1774,9 +2099,38 @@ function bindEvents() {
   $('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('url-go').click(); });
 
   $('btn-edit').addEventListener('click', toggleEdit);
-  document.querySelectorAll('#md-tool .md-tool-btn').forEach(b => b.addEventListener('click', () => cmInsertSyntax(b.dataset.md)));
+  document.querySelectorAll('#md-tool .md-tool-btn').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.md === 'image') openImgModal();
+    else cmInsertSyntax(b.dataset.md);
+  }));
   $('edit-save').addEventListener('click', saveEdit);
   $('edit-cancel').addEventListener('click', exitEdit);
+  $('img-file').addEventListener('click', () => $('img-file-input').click());
+  $('img-file-input').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    if (f) loadImgFromFile(f);
+    e.target.value = '';
+  });
+  $('img-url-load').addEventListener('click', insertImgUrl);
+  $('img-url-input').addEventListener('keydown', e => { if (e.key === 'Enter') insertImgUrl(); });
+  $('img-rot-l').addEventListener('click', () => rotateImg(-90));
+  $('img-rot-r').addEventListener('click', () => rotateImg(90));
+  $('img-angle').addEventListener('input', e => { imgState.angle = +e.target.value; drawImg(); });
+  $('img-scale').addEventListener('input', e => {
+    imgState.scale = +e.target.value;
+    $('img-scale-val').textContent = imgState.scale + '%';
+    updateImgInfo();
+  });
+  $('img-ratio').addEventListener('change', e => { imgState.ratio = e.target.value; applyRatio(); });
+  $('img-reset').addEventListener('click', resetImg);
+  $('img-insert').addEventListener('click', exportAndInsertImg);
+  $('img-close').addEventListener('click', closeImgModal);
+  $('img-modal').addEventListener('click', e => { if (e.target === $('img-modal')) closeImgModal(); });
+  const stage = $('img-stage');
+  stage.addEventListener('pointerdown', stagePointer);
+  stage.addEventListener('pointermove', stagePointerMove);
+  stage.addEventListener('pointerup', stagePointerUp);
+  stage.addEventListener('pointercancel', stagePointerUp);
   $('btn-saveas').addEventListener('click', saveAs);
 
   $('btn-recent').addEventListener('click', refreshRecent);
@@ -1875,6 +2229,7 @@ function bindEvents() {
       $('ai-panel').classList.add('hidden');
       $('share-modal').classList.add('hidden');
       $('tpl-modal').classList.add('hidden');
+      $('img-modal').classList.add('hidden');
       if (state.editing) exitEdit();
     }
   });

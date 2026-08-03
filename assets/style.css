@@ -615,6 +615,76 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
 #ai-template, #ai-session { flex: 1.15; }
 #ai-clear-ctx { flex: 0 0 auto; padding: 5px 7px; font-size: 12px; }
 
+
+/* ---------- 图片编辑器 ---------- */
+#img-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 115;
+}
+#img-modal.hidden { display: none; }
+#img-box {
+  background: var(--bg2);
+  color: var(--fg);
+  border-radius: 12px;
+  padding: 16px 20px;
+  width: min(760px, 95vw);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: var(--shadow);
+}
+#img-box h3 { margin: 0; font-size: 15px; }
+.img-source { display: flex; gap: 8px; align-items: center; }
+.img-source input { flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); padding: 6px 8px; font-size: 13px; }
+.img-stage {
+  position: relative;
+  height: 380px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #101418;
+  touch-action: none;
+  user-select: none;
+}
+#img-canvas { display: block; width: 100%; height: 100%; }
+.img-hint { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #9aa4b2; font-size: 13px; padding: 0 20px; text-align: center; pointer-events: none; }
+.img-crop {
+  position: absolute;
+  border: 2px solid #3b6ef5;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.55);
+  cursor: move;
+  display: none;
+  box-sizing: border-box;
+  touch-action: none;
+}
+.img-crop.active { display: block; }
+.crop-handle {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 14px;
+  height: 14px;
+  background: #3b6ef5;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  cursor: nwse-resize;
+}
+.img-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.img-ctl { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg2); }
+.img-ctl input[type=range] { width: 90px; }
+#img-ratio { border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--fg); padding: 5px 6px; font-size: 12px; }
+.img-info { font-size: 12px; color: var(--fg2); min-height: 16px; }
+@media (max-width: 600px) {
+  .img-stage { height: 240px; }
+  .img-source { flex-wrap: wrap; }
+  .img-source input { flex: 1 1 100%; }
+}
 /* ---------- 模板管理弹窗 ---------- */
 #tpl-modal {
   position: fixed;
