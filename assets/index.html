@@ -2,9 +2,11 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#3b6ef5">
 <title>ReadMD</title>
 <link rel="stylesheet" href="/assets/style.css">
+<script>window.LAN_TOKEN=null;</script>
 </head>
 <body>
 <header id="toolbar">
@@ -16,12 +18,14 @@
     <span id="file-title" class="file-title">未打开文件</span>
   </div>
   <div class="tb-group tb-right">
+    <button id="btn-ai" class="tb-btn accent" title="AI 助手：快速阅读 / 修改 / 扩充 / 续写 / 润色 (Ctrl+Shift+A)" disabled>&#129302; AI</button>
     <button id="btn-convert" class="tb-btn" title="万物转 MD：docx/pptx/xlsx/pdf/html... 转为 Markdown" disabled>转换</button>
     <button id="btn-web" class="tb-btn" title="网页转 MD：输入 URL 抓取正文，可批量爬取 (Ctrl+U)" disabled>网页</button>
-    <button id="btn-ocr" class="tb-btn" title="扫描转 MD：图片/扫描件 OCR (Ctrl+O 选择图片)" disabled>OCR</button>
+    <button id="btn-ocr" class="tb-btn" title="扫描转 MD：图片/扫描件 OCR" disabled>OCR</button>
     <button id="btn-edit" class="tb-btn" title="编辑当前 Markdown (Ctrl+E)" disabled>编辑</button>
     <button id="btn-saveas" class="tb-btn" title="把当前内容另存为 .md 文件" disabled>另存</button>
     <button id="btn-assoc" class="tb-btn" title="把 .md 设置为 ReadMD 默认打开方式">设为默认</button>
+    <button id="btn-share" class="tb-btn icon" title="移动端共享：扫码在手机上阅读">&#128241;</button>
     <button id="btn-toc" class="tb-btn" title="目录 (Ctrl+Shift+F)">&#9776; 目录</button>
     <button id="btn-fix" class="tb-btn" title="本次自动修正详情">&#128736; 修复</button>
     <button id="btn-search" class="tb-btn icon" title="搜索 (Ctrl+F)">&#128269;</button>
@@ -64,6 +68,7 @@
         <div class="welcome-btns">
           <button id="w-open" class="big-btn">&#128194; 打开 Markdown</button>
           <button id="w-folder" class="big-btn">&#128193; 打开文件夹</button>
+          <button id="w-ai" class="big-btn" disabled>&#129302; AI 助手</button>
           <button id="w-convert" class="big-btn">&#128736; 万物转 MD</button>
           <button id="w-web" class="big-btn">&#127760; 网页转 MD</button>
           <button id="w-ocr" class="big-btn">&#128424; 扫描转 MD</button>
@@ -73,18 +78,73 @@
           <ul id="recent-list"></ul>
           <button id="recent-clear" class="link-btn">清空记录</button>
         </div>
-        <p class="welcome-hint">快捷键：Ctrl+O 打开 · Ctrl+F 搜索 · Ctrl+U 网页 · Ctrl+E 编辑 · Ctrl+P 打印<br>直接双击 .md 文件秒开阅读；docx / pptx / xlsx / pdf / 图片 / 网页 均可一键转 Markdown</p>
+        <p class="welcome-hint">快捷键：Ctrl+O 打开 · Ctrl+F 搜索 · Ctrl+U 网页 · Ctrl+E 编辑 · Ctrl+Shift+A AI · Ctrl+P 打印<br>直接双击 .md 文件秒开阅读；docx / pptx / xlsx / pdf / 图片 / 网页 均可一键转 Markdown；AI 可快速阅读、修改、扩充、续写、润色</p>
       </div>
     </main>
     <textarea id="edit-area" class="hidden" spellcheck="false"></textarea>
   </div>
 </div>
 
-<footer id="statusbar">
-  <span id="status-left"></span>
-  <span id="status-right"></span>
-  <span id="status-mods"></span>
-</footer>
+<!-- AI 助手面板 -->
+<div id="ai-panel" class="hidden">
+  <div class="ai-head">
+    <span>&#129302; AI 助手</span>
+    <button id="ai-close" class="tb-btn icon" title="关闭">&#10005;</button>
+  </div>
+  <div class="ai-body">
+    <div class="ai-row">
+      <select id="ai-provider" title="提供商"></select>
+      <select id="ai-model" title="模型"></select>
+    </div>
+    <div class="ai-row">
+      <input id="ai-key" type="password" placeholder="API Key（留空则读取环境变量）" autocomplete="off">
+      <button id="ai-save-key" class="tb-btn" title="保存 Key 与当前选择">存</button>
+    </div>
+    <div class="ai-actions">
+      <button class="ai-act" data-act="quick_read" title="快速阅读全文并输出概述与要点">&#128218; 阅读</button>
+      <button class="ai-act" data-act="polish" title="润色文档，保持结构与 Markdown 标记">&#10024; 润色</button>
+      <button class="ai-act" data-act="modify" title="按补充要求修改文档">&#128295; 修改</button>
+      <button class="ai-act" data-act="expand" title="扩充内容，补充细节与示例">&#128218;&#8599; 扩充</button>
+      <button class="ai-act" data-act="continue" title="从文档末尾续写">&#9997;&#65039; 续写</button>
+      <button class="ai-act" data-act="translate" title="翻译（可在下方填写目标语言）">&#128172; 翻译</button>
+      <button class="ai-act" data-act="ask" title="就文档内容提问">&#10067; 提问</button>
+    </div>
+    <div class="ai-row">
+      <input id="ai-prompt" type="text" placeholder="补充要求 / 提问内容 / 翻译目标语言（可选）" autocomplete="off">
+    </div>
+    <div class="ai-row ai-row2">
+      <label class="ai-sel"><input id="ai-selection" type="checkbox"> 仅处理选中文字</label>
+      <span id="ai-usage"></span>
+    </div>
+    <div class="ai-output-wrap">
+      <div id="ai-output"></div>
+    </div>
+    <div class="ai-foot">
+      <button id="ai-run" class="tb-btn accent">&#10148; 发送</button>
+      <button id="ai-stop" class="tb-btn" disabled>&#9632; 停止</button>
+      <button id="ai-apply" class="tb-btn" disabled>应用到文档</button>
+      <button id="ai-copy" class="tb-btn" disabled>复制</button>
+      <button id="ai-saveas" class="tb-btn" disabled>另存为</button>
+      <span id="ai-status"></span>
+    </div>
+  </div>
+</div>
+
+<!-- 移动端共享弹窗 -->
+<div id="share-modal" class="hidden">
+  <div id="share-box">
+    <h3>&#128241; 移动端共享</h3>
+    <p class="fix-note">启动后手机连同一 Wi-Fi，扫描二维码即可在手机浏览器阅读当前文档（也支持转 MD / OCR / 网页 / AI）。局域网访问需携带本次随机令牌，关闭共享即失效。</p>
+    <div id="share-qr"></div>
+    <p id="share-url" class="share-url"></p>
+    <p id="share-token" class="share-token"></p>
+    <div class="url-actions">
+      <button id="share-start" class="tb-btn accent">开启共享</button>
+      <button id="share-stop" class="tb-btn" disabled>关闭共享</button>
+      <button id="share-close" class="tb-btn">关闭</button>
+    </div>
+  </div>
+</div>
 
 <div id="url-modal" class="hidden">
   <div id="url-box">
@@ -117,7 +177,14 @@
 <button id="top-btn" class="hidden" title="回到顶部">&#8593;</button>
 <input id="file-input" type="file" class="hidden">
 
+<footer id="statusbar">
+  <span id="status-left"></span>
+  <span id="status-right"></span>
+  <span id="status-mods"></span>
+</footer>
+
 <script src="/assets/vendor/marked.min.js"></script>
+<script src="/assets/vendor/qrcode.min.js"></script>
 <script src="/assets/app.js"></script>
 </body>
 </html>

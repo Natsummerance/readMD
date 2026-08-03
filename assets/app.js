@@ -4,6 +4,15 @@
 const $ = id => document.getElementById(id);
 const py = (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
 const hasPy = !!py;
+const LAN_TOKEN = window.LAN_TOKEN || null;
+
+function apiFetch(url, opts) {
+  opts = opts || {};
+  if (LAN_TOKEN) {
+    opts.headers = Object.assign({}, opts.headers || {}, { 'X-ReadMD-Token': LAN_TOKEN });
+  }
+  return fetch(url, opts);
+}
 
 const MD_RE = /\.(md|markdown|mdown|mkd|mdx|txt)$/i;
 const IMG_RE = /\.(png|jpe?g|bmp|webp|gif|tiff?)$/i;
@@ -37,6 +46,7 @@ const state = {
   modulesStarted: false,
   editing: false,
   busyCount: 0,
+  ai: { config: null, providers: [], busy: false, aborter: null, raw: '' },
 };
 
 /* ---------------- 设置 ---------------- */
@@ -101,7 +111,7 @@ function startModules() {
 
 async function pollModules() {
   try {
-    const r = await fetch('/api/modules');
+    const r = await apiFetch('/api/modules');
     const d = await r.json();
     state.modules = d.modules || {};
     updateModuleUi();
@@ -118,13 +128,15 @@ function updateModuleUi() {
   $('btn-convert').disabled = !ready('convert');
   $('btn-web').disabled = !ready('web');
   $('btn-ocr').disabled = !ready('ocr');
-  ['w-convert', 'w-web', 'w-ocr'].forEach(id => {
+  $('btn-ai').disabled = !ready('ai');
+  ['w-convert', 'w-web', 'w-ocr', 'w-ai'].forEach(id => {
     const el = $(id);
     if (el) el.disabled = false;
   });
+  if (ready('ai') && !state.ai.config) loadAiConfig();
   const parts = [];
   for (const [k, v] of Object.entries(m)) {
-    const label = { convert: '转换', ocr: 'OCR', web: '网页' }[k] || k;
+    const label = { convert: '转换', ocr: 'OCR', web: '网页', ai: 'AI' }[k] || k;
     if (v === 'ready') parts.push(label + '\u2713');
     else if (v === 'error') parts.push(label + '\u2717');
     else parts.push(label + '\u2026');
@@ -166,7 +178,7 @@ async function loadFile(path) {
   if (!path) return;
   setProgress(8);
   try {
-    const r = await fetch('/api/file?p=' + encodeURIComponent(path));
+    const r = await apiFetch('/api/file?p=' + encodeURIComponent(path));
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
       showToast('无法打开：' + (d.error || r.status));
@@ -191,6 +203,7 @@ async function loadFile(path) {
     saveLastFile(d.path);
     updateStatus();
     exitEdit();
+    clearAiOutput();
     setProgress(100);
     afterRender();
   } catch (e) {
@@ -298,6 +311,7 @@ async function renderVirtual(source, name, dir, content, fixes) {
   state.fixed = content;
   state.original = content;
   setFixes(fixes || [], {});
+  clearAiOutput();
   renderContent(content, name);
   document.title = (name || '转换结果') + ' - ReadMD';
   $('file-title').textContent = (name || '转换结果').slice(0, 80);
@@ -314,7 +328,7 @@ async function ensureModule(name, timeoutMs) {
   const limit = timeoutMs || 60000;
   while (Date.now() - t0 < limit) {
     try {
-      const r = await fetch('/api/modules');
+      const r = await apiFetch('/api/modules');
       const d = await r.json();
       const st = d.modules && d.modules[name];
       if (st === 'ready') return true;
@@ -330,7 +344,7 @@ async function convertFile(path) {
   if (!(await ensureModule('convert'))) return;
   busy(true);
   try {
-    const r = await fetch('/api/convert?p=' + encodeURIComponent(path));
+    const r = await apiFetch('/api/convert?p=' + encodeURIComponent(path));
     const d = await r.json();
     if (r.status === 409) { showToast(d.error || '模块加载中…'); return; }
     if (!r.ok) { showToast(d.error || '转换失败'); return; }
@@ -344,7 +358,7 @@ async function ocrFile(path) {
   if (!(await ensureModule('ocr'))) return;
   busy(true);
   try {
-    const r = await fetch('/api/ocr?p=' + encodeURIComponent(path));
+    const r = await apiFetch('/api/ocr?p=' + encodeURIComponent(path));
     const d = await r.json();
     if (r.status === 409) { showToast(d.error || '模块加载中…'); return; }
     if (!r.ok) { showToast(d.error || 'OCR 失败'); return; }
@@ -359,7 +373,7 @@ async function webToMd(url, crawl) {
   if (!(await ensureModule('web'))) return;
   busy(true);
   try {
-    const r = await fetch('/api/url?u=' + encodeURIComponent(url) + '&crawl=' + (crawl ? '1' : '0'));
+    const r = await apiFetch('/api/url?u=' + encodeURIComponent(url) + '&crawl=' + (crawl ? '1' : '0'));
     const d = await r.json();
     if (r.status === 409) { showToast(d.error || '模块加载中…'); return; }
     if (!r.ok) { showToast(d.error || '抓取失败'); return; }
@@ -390,7 +404,7 @@ function chooseFile(mode) {
 async function uploadFile(file) {
   const ext = '.' + (file.name.split('.').pop() || 'bin');
   try {
-    const r = await fetch('/api/upload?ext=' + encodeURIComponent(ext), { method: 'POST', body: file });
+    const r = await apiFetch('/api/upload?ext=' + encodeURIComponent(ext), { method: 'POST', body: file });
     const d = await r.json();
     return d.path || null;
   } catch (e) { showToast('上传失败'); return null; }
@@ -401,6 +415,372 @@ function convertOrOcr(p, mode) {
   else convertFile(p);
 }
 
+/* ---------------- AI 助手 ---------------- */
+
+const AI_ACTIONS = {
+  quick_read: '快速阅读', polish: '润色', modify: '修改',
+  expand: '扩充', continue: '续写', translate: '翻译', ask: '提问',
+};
+
+const AI_SYSTEM = {
+  quick_read: '你是 ReadMD 的文档阅读助手。对用户给出的 Markdown 文档做快速阅读，输出：1) 一句话概述；2) 核心要点列表；3) 文档结构目录；4) 值得注意的细节或疑问。使用 Markdown 格式。',
+  polish: '你是资深中文编辑。润色用户给出的 Markdown 文档：修正错别字、病句、表达生硬之处，保留原有结构与全部 Markdown 标记，只输出润色后的完整文档，不要加任何解释。',
+  modify: '你是文档修订助手。根据用户要求修改文档，修正明显错误（错别字、标点、Markdown 格式错误）。只输出修改后的完整文档，不要加任何解释。',
+  expand: '你是文档扩充助手。在保持原有结构与语气的前提下，为文档补充细节、示例、解释，使内容更丰富。只输出扩充后的完整文档，不要加任何解释。',
+  continue: '你是文档续写助手。从文档末尾自然延续写作，保持风格一致。只输出续写的新增内容，不要重复原文。',
+  translate: '你是专业翻译。将用户给出的文档翻译成指定语言，保留 Markdown 结构、表格与代码块，只输出译文。',
+  ask: '你是文档问答助手。基于用户给出的文档内容回答问题；文档中没有的内容请明确说明。',
+};
+
+function toggleAiPanel() {
+  const p = $('ai-panel');
+  p.classList.toggle('hidden');
+  if (!p.classList.contains('hidden') && !state.ai.config) loadAiConfig();
+}
+
+function clearAiOutput() {
+  state.ai.raw = '';
+  state.ai.aborter = null;
+  const out = $('ai-output');
+  if (out) out.innerHTML = '';
+  updateAiRawButtons();
+}
+
+async function loadAiConfig() {
+  try {
+    const r = await apiFetch('/api/ai/config');
+    if (!r.ok) return null;
+    state.ai.config = await r.json();
+    const cfg = state.ai.config;
+    state.ai.providers = [...(cfg.custom || []), ...(cfg.presets || [])];
+    fillAiProviders(state.ai.providers, cfg.current || {});
+    return cfg;
+  } catch (e) { /* ignore */ return null; }
+}
+
+function fillAiProviders(merged, current) {
+  const sel = $('ai-provider');
+  const curName = (current && current.provider) || (merged[0] && merged[0].name) || '';
+  sel.innerHTML = '';
+  merged.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.name;
+    o.textContent = p.name + (p.custom ? ' (自定义)' : '');
+    sel.appendChild(o);
+  });
+  if (curName) sel.value = curName;
+  onAiProviderChange();
+  const curModel = (current && current.model) || '';
+  if (curModel && $('ai-model').value !== curModel && [...($('ai-model').options || [])].some(o => o.value === curModel)) {
+    $('ai-model').value = curModel;
+  }
+  syncAiKey();
+}
+
+function currentAiProvider() {
+  const name = $('ai-provider').value;
+  return (state.ai.providers || []).find(p => p.name === name) || null;
+}
+
+function onAiProviderChange() {
+  const p = currentAiProvider();
+  const m = $('ai-model');
+  m.innerHTML = '';
+  if (!p) { syncAiKey(); return; }
+  (p.models || ['']).forEach(md => {
+    const o = document.createElement('option');
+    o.value = md;
+    o.textContent = md;
+    m.appendChild(o);
+  });
+  const curModel = (state.ai.config && state.ai.config.current && state.ai.config.current.model) || '';
+  if (curModel && (p.models || []).includes(curModel)) m.value = curModel;
+  syncAiKey();
+}
+
+function syncAiKey() {
+  const p = currentAiProvider();
+  const inp = $('ai-key');
+  const usage = $('ai-usage');
+  if (!p) { inp.value = ''; inp.placeholder = ''; usage.textContent = ''; return; }
+  inp.value = p.api_key || '';
+  inp.placeholder = (p.key_source && p.key_source.indexOf('env:') === 0)
+    ? '已从环境变量 ' + p.key_source.slice(4) + ' 读取，可覆盖'
+    : 'API Key（留空则读取环境变量）';
+  usage.textContent = p.has_key
+    ? (p.key_source ? 'Key 就绪（' + p.key_source + '）' : 'Key 已配置')
+    : '未配置 Key';
+}
+
+async function saveAiSelection() {
+  const p = currentAiProvider();
+  if (!p || !state.ai.config) return;
+  const custom = (state.ai.config.custom || []).map(c => Object.assign({}, c));
+  const keyVal = $('ai-key').value.trim();
+  if (p.custom) {
+    const t = custom.find(c => c.name === p.name);
+    if (t) { if (keyVal) t.api_key = keyVal; else delete t.api_key; }
+  } else {
+    let over = custom.find(c => c.name === p.name);
+    if (!over) {
+      over = Object.assign({}, p);
+      delete over.has_key; delete over.key_source;
+      over.custom = true; over.api_key = '';
+      custom.push(over);
+    }
+    if (keyVal) over.api_key = keyVal; else delete over.api_key;
+  }
+  const current = { provider: p.name, model: $('ai-model').value };
+  try {
+    await apiFetch('/api/ai/config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ providers: custom, current }),
+    });
+  } catch (e) { /* ignore */ }
+}
+
+function getAiTargetText() {
+  let sel = '';
+  if ($('ai-selection').checked) {
+    sel = ((window.getSelection && window.getSelection()) || {}).toString() || '';
+    if (!sel) showToast('未选中文字，将处理全文');
+  }
+  if (sel) return { text: sel, isSelection: true };
+  const src = state.mode === 'file'
+    ? (state.original || state.fixed || '')
+    : (state.fixed || state.original || '');
+  return { text: src, isSelection: false };
+}
+
+function setAiBusy(b) {
+  state.ai.busy = b;
+  $('ai-run').disabled = b;
+  $('ai-stop').disabled = !b;
+  $('ai-status').textContent = b ? '生成中…' : '';
+}
+
+function updateAiRawButtons() {
+  const has = !!state.ai.raw;
+  $('ai-apply').disabled = !has;
+  $('ai-copy').disabled = !has;
+  $('ai-saveas').disabled = !has;
+}
+
+async function runAi(action) {
+  const p = currentAiProvider();
+  if (!p) { showToast('请先选择 AI 提供商'); return; }
+  const keyVal = $('ai-key').value.trim();
+  if (!p.has_key && !keyVal) { showToast('未配置 API Key（可填写或设置环境变量）'); return; }
+  const { text, isSelection } = getAiTargetText();
+  if (!text || !text.trim()) { showToast('没有可处理的文档内容'); return; }
+  const prompt = $('ai-prompt').value.trim();
+  const model = $('ai-model').value || (p.models || [''])[0] || '';
+  saveAiSelection();
+
+  let sys = AI_SYSTEM[action] || '你是 ReadMD 的文档助手。';
+  if (action === 'translate' && prompt) {
+    sys = '你是专业翻译。将用户给出的文档翻译成「' + prompt + '」，保留 Markdown 结构、表格与代码块，只输出译文。';
+  }
+  const docs = text.length > 120000 ? text.slice(0, 120000) + '\n\n[内容过长已截断，请分段处理]' : text;
+  let userMsg;
+  if (action === 'ask' && prompt) userMsg = '文档如下：\n\n' + docs + '\n\n问题：' + prompt;
+  else if (action === 'modify' && prompt) userMsg = '文档如下：\n\n' + docs + '\n\n修改要求：' + prompt;
+  else if (prompt) userMsg = '文档如下：\n\n' + docs + '\n\n补充要求：' + prompt;
+  else userMsg = '文档如下：\n\n' + docs;
+
+  const out = $('ai-output');
+  out.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'ai-out-head';
+  head.textContent = (AI_ACTIONS[action] || action) + (isSelection ? '（选中文字）' : '（全文）') + ' · ' + p.name + ' · ' + model;
+  out.appendChild(head);
+  const body = document.createElement('div');
+  body.className = 'ai-out-body';
+  out.appendChild(body);
+  state.ai.raw = '';
+  updateAiRawButtons();
+  setAiBusy(true);
+  const ctrl = new AbortController();
+  state.ai.aborter = ctrl;
+  let renderTimer = null;
+  const render = () => {
+    renderTimer = null;
+    const prot = protectMath(state.ai.raw);
+    const html = marked.parse(prot.src, { gfm: true, breaks: false });
+    body.innerHTML = restoreMath(html, prot.saved);
+    body.scrollTop = body.scrollHeight;
+  };
+  try {
+    const r = await apiFetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        provider: p.name, model: model, api_key: keyVal || undefined,
+        messages: [{ role: 'system', content: sys }, { role: 'user', content: userMsg }],
+        stream: true,
+      }),
+      signal: ctrl.signal,
+    });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.error || ('HTTP ' + r.status));
+    }
+    const reader = r.body.getReader();
+    const dec = new TextDecoder('utf-8');
+    let buf = '';
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, idx).trim();
+        buf = buf.slice(idx + 1);
+        if (line.indexOf('data:') !== 0) continue;
+        const data = line.slice(5).trim();
+        if (!data) continue;
+        let obj;
+        try { obj = JSON.parse(data); } catch (e) { continue; }
+        if (obj.error) throw new Error(obj.error);
+        if (obj.d === undefined) continue;
+        state.ai.raw += obj.d;
+        if (!renderTimer) renderTimer = setTimeout(render, 120);
+      }
+    }
+    if (renderTimer) { clearTimeout(renderTimer); renderTimer = null; render(); }
+    renderMath(body);
+    updateAiRawButtons();
+    if (state.ai.raw) showToast('AI 完成');
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      showToast('已停止');
+    } else {
+      showToast('AI 出错：' + e.message);
+      body.innerHTML = '<p class="ai-err">' + String(e.message).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])) + '</p>';
+    }
+  } finally {
+    setAiBusy(false);
+    state.ai.aborter = null;
+  }
+}
+
+async function copyAi() {
+  if (!state.ai.raw) return;
+  try {
+    await navigator.clipboard.writeText(state.ai.raw);
+    showToast('已复制');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = state.ai.raw;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); showToast('已复制'); } catch (e2) { showToast('复制失败'); }
+    ta.remove();
+  }
+}
+
+function applyAi() {
+  if (!state.ai.raw) return;
+  const selOnly = $('ai-selection').checked;
+  if (state.mode === 'file') {
+    let next = state.ai.raw;
+    if (selOnly) {
+      const sel = ((window.getSelection && window.getSelection()) || {}).toString() || '';
+      const cur = state.original || state.fixed || '';
+      const i = sel ? cur.indexOf(sel) : -1;
+      if (i >= 0) next = cur.slice(0, i) + state.ai.raw + cur.slice(i + sel.length);
+      else { showToast('未定位到选中文字，已改为全文应用'); }
+    }
+    state.original = next;
+    state.fixed = next;
+    exitEdit();
+    toggleEdit();
+    showToast('已应用，请检查后 Ctrl+S 保存（首存自动备份）');
+  } else {
+    state.fixed = state.ai.raw;
+    state.original = state.ai.raw;
+    renderContent(state.ai.raw, (state.sourceName || 'AI 结果') + ' · AI');
+    updateStatus();
+    showToast('已应用（虚拟文档），可另存为 .md');
+  }
+}
+
+async function saveAiAs() {
+  if (!state.ai.raw) return;
+  const base = (state.sourceName || state.file || 'document').replace(/[\\/]/g, '_');
+  const suggested = base.replace(/\.[^.]+$/, '') + '.ai.md';
+  if (hasPy) {
+    const out = await py.save_as(state.ai.raw, suggested);
+    if (out) showToast('已保存：' + out);
+  } else {
+    const blob = new Blob([state.ai.raw], { type: 'text/markdown;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = suggested;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  }
+}
+
+/* ---------------- 移动端共享 ---------------- */
+
+async function openShareModal() {
+  $('share-modal').classList.remove('hidden');
+  refreshShareStatus();
+}
+
+async function refreshShareStatus() {
+  try {
+    const r = await apiFetch('/api/share/status');
+    const d = await r.json();
+    if (d.running) {
+      $('share-start').disabled = true;
+      $('share-stop').disabled = false;
+      $('share-url').textContent = '手机浏览器打开：' + d.url;
+      $('share-token').textContent = '访问令牌：' + d.token;
+      renderQr(d.url);
+    } else {
+      $('share-start').disabled = false;
+      $('share-stop').disabled = true;
+      $('share-url').textContent = '';
+      $('share-token').textContent = '';
+      const q = $('share-qr');
+      q.innerHTML = '<p class="fix-note">尚未开启共享</p>';
+    }
+  } catch (e) { /* ignore */ }
+}
+
+function renderQr(text) {
+  const box = $('share-qr');
+  box.innerHTML = '';
+  try {
+    if (typeof qrcode !== 'function') { box.textContent = text; return; }
+    const qr = qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    box.innerHTML = qr.createImgTag(6, 10);
+  } catch (e) {
+    box.textContent = text;
+  }
+}
+
+async function startShare() {
+  try {
+    const r = await apiFetch('/api/share/start', { method: 'POST' });
+    const d = await r.json();
+    if (d.error) { showToast(d.error); return; }
+    showToast('共享已开启');
+  } catch (e) { showToast('开启失败：' + e.message); }
+  refreshShareStatus();
+}
+
+async function stopShare() {
+  try {
+    await apiFetch('/api/share/stop', { method: 'POST' });
+    showToast('共享已关闭');
+  } catch (e) { showToast('关闭失败：' + e.message); }
+  refreshShareStatus();
+}
 /* ---------------- 编辑模式 ---------------- */
 
 function toggleEdit() {
@@ -439,7 +819,7 @@ async function saveEdit() {
     if (hasPy) {
       ok = await py.save_file(state.file, content, state.encoding || 'utf-8');
     } else {
-      const r = await fetch('/api/save', {
+      const r = await apiFetch('/api/save', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: state.file, content, encoding: state.encoding || 'utf-8' }),
       });
@@ -609,7 +989,7 @@ async function openFolder() {
 
 async function listFolder(dir) {
   try {
-    const r = await fetch('/api/list?p=' + encodeURIComponent(dir));
+    const r = await apiFetch('/api/list?p=' + encodeURIComponent(dir));
     const d = await r.json();
     state.folder = d.dir;
     state.folderFiles = d.files || [];
@@ -752,7 +1132,7 @@ function startAutoReload() {
   autoReloadTimer = setInterval(async () => {
     if (!state.file || !state.autoReload || state.mode !== 'file') return;
     try {
-      const r = await fetch('/api/file?p=' + encodeURIComponent(state.file) + '&meta=1');
+      const r = await apiFetch('/api/file?p=' + encodeURIComponent(state.file) + '&meta=1');
       if (!r.ok) return;
       const d = await r.json();
       if (d.mtime !== state.mtime) {
@@ -881,6 +1261,25 @@ function bindEvents() {
     if (e.key === 'Enter') { e.preventDefault(); jumpToMark(e.shiftKey ? -1 : 1); }
   });
 
+  $('btn-ai').addEventListener('click', toggleAiPanel);
+  $('w-ai').addEventListener('click', toggleAiPanel);
+  $('ai-close').addEventListener('click', () => { $('ai-panel').classList.add('hidden'); });
+  $('ai-provider').addEventListener('change', onAiProviderChange);
+  $('ai-save-key').addEventListener('click', saveAiSelection);
+  document.querySelectorAll('.ai-act').forEach(b => b.addEventListener('click', () => runAi(b.dataset.act)));
+  $('ai-run').addEventListener('click', () => runAi('ask'));
+  $('ai-stop').addEventListener('click', () => { if (state.ai.aborter) state.ai.aborter.abort(); });
+  $('ai-apply').addEventListener('click', applyAi);
+  $('ai-copy').addEventListener('click', copyAi);
+  $('ai-saveas').addEventListener('click', saveAiAs);
+  $('ai-prompt').addEventListener('keydown', e => { if (e.key === 'Enter') $('ai-run').click(); });
+
+  $('btn-share').addEventListener('click', openShareModal);
+  $('share-start').addEventListener('click', startShare);
+  $('share-stop').addEventListener('click', stopShare);
+  $('share-close').addEventListener('click', () => { $('share-modal').classList.add('hidden'); });
+  $('share-modal').addEventListener('click', e => { if (e.target === $('share-modal')) $('share-modal').classList.add('hidden'); });
+
   $('tab-toc').addEventListener('click', () => showSide('toc'));
   $('tab-files').addEventListener('click', () => showSide('files'));
 
@@ -901,6 +1300,7 @@ function bindEvents() {
     else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); toggleTheme(); }
     else if (mod && e.key.toLowerCase() === 'r') { e.preventDefault(); if (state.file && state.mode === 'file') loadFile(state.file); }
     else if (mod && e.key.toLowerCase() === 'p') { e.preventDefault(); window.print(); }
+    else if (mod && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); toggleAiPanel(); }
     else if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoom(10); }
     else if (mod && e.key === '-') { e.preventDefault(); zoom(-10); }
     else if (mod && e.key === 'ArrowLeft') { e.preventDefault(); historyBack(); }
@@ -909,6 +1309,8 @@ function bindEvents() {
       closeSearch();
       $('fix-modal').classList.add('hidden');
       closeWebDialog();
+      $('ai-panel').classList.add('hidden');
+      $('share-modal').classList.add('hidden');
       if (state.editing) exitEdit();
     }
   });

@@ -12,6 +12,7 @@ for %%E in (.md .markdown .mdown .mkd) do (
 )
 reg delete "HKCU\Software\Classes\ReadMD.markdown" /f >nul 2>nul
 reg delete "HKCU\Software\Classes\Applications\readmd.py" /f >nul 2>nul
+reg delete "HKCU\Software\Classes\Applications\ReadMD.exe" /f >nul 2>nul
 
 if exist "%APPDATA%\ReadMD\backup\.md.reg.bak" (
     reg import "%APPDATA%\ReadMD\backup\.md.reg.bak" >nul 2>nul

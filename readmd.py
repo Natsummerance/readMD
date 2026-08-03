@@ -20,6 +20,8 @@ import logging
 import mimetypes
 import os
 import re
+import secrets
+import socket
 import subprocess
 import sys
 import threading
@@ -30,12 +32,12 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 import readmd_fix
 import readmd_modules as RM
 
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
+APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'ReadMD')
 SETTINGS_FILE = os.path.join(DATA_DIR, 'settings.json')
 RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
 LOG_FILE = os.path.join(DATA_DIR, 'readmd.log')
-VERSION = '1.0.0'
+VERSION = '1.1.0'
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 
@@ -95,11 +97,15 @@ def read_text(path):
 
 class Handler(BaseHTTPRequestHandler):
     server_version = 'ReadMD/' + VERSION
+    LAN_TOKEN = None
 
     def log_message(self, fmt, *args):
         pass  # 静默访问日志
 
     def do_GET(self):
+        if not self._lan_authorized():
+            self._send(403, 'text/plain; charset=utf-8', b'forbidden')
+            return
         try:
             self._route()
         except Exception as e:
@@ -110,6 +116,9 @@ class Handler(BaseHTTPRequestHandler):
                 pass
 
     def do_POST(self):
+        if not self._lan_authorized():
+            self._send(403, 'text/plain; charset=utf-8', b'forbidden')
+            return
         try:
             self._route()
         except Exception as e:
@@ -119,13 +128,24 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
+    def _lan_authorized(self):
+        """局域网模式下，除页面与静态资源外，所有 API 都要求携带 token。"""
+        if not self.LAN_TOKEN:
+            return True
+        u = urlparse(self.path)
+        if u.path in ('/', '/index.html') or u.path.startswith('/assets/'):
+            return True
+        qs = parse_qs(u.query)
+        if qs.get('t', [''])[0] == self.LAN_TOKEN:
+            return True
+        return self.headers.get('X-ReadMD-Token', '') == self.LAN_TOKEN
+
     def _route(self):
         u = urlparse(self.path)
         path = u.path
         qs = parse_qs(u.query)
         if path in ('/', '/index.html'):
-            self._send_file(os.path.join(APP_DIR, 'assets', 'index.html'),
-                            'text/html; charset=utf-8')
+            self._send_index()
         elif path.startswith('/assets/'):
             rel = path[len('/assets/'):]
             fp = os.path.normpath(os.path.join(APP_DIR, 'assets', rel))
@@ -164,6 +184,16 @@ class Handler(BaseHTTPRequestHandler):
             self._do_save()
         elif path == '/api/upload':
             self._do_upload(qs.get('ext', [''])[0])
+        elif path == '/api/ai/config':
+            self._api_ai_config()
+        elif path == '/api/ai/chat':
+            self._api_ai_chat()
+        elif path == '/api/share/start':
+            self._send_json(200, start_lan_server())
+        elif path == '/api/share/stop':
+            self._send_json(200, stop_lan_server())
+        elif path == '/api/share/status':
+            self._send_json(200, share_status())
         elif path == '/raw':
             p = unquote(qs.get('p', [''])[0])
             self._send_raw(p)
@@ -182,6 +212,80 @@ class Handler(BaseHTTPRequestHandler):
     def _send_json(self, code, obj):
         self._send(code, 'application/json; charset=utf-8',
                    json.dumps(obj, ensure_ascii=False).encode('utf-8'))
+
+    def _send_index(self):
+        """返回首页；局域网模式下注入 token 供前端 fetch 携带。"""
+        fp = os.path.join(APP_DIR, 'assets', 'index.html')
+        if not os.path.isfile(fp):
+            self._send(404, 'text/plain; charset=utf-8', b'not found')
+            return
+        with open(fp, 'rb') as f:
+            data = f.read()
+        if self.LAN_TOKEN:
+            data = data.replace(b'window.LAN_TOKEN=null;',
+                                ('window.LAN_TOKEN="%s";' % self.LAN_TOKEN).encode('utf-8'))
+        self._send(200, 'text/html; charset=utf-8', data)
+
+    def _sse(self, obj):
+        try:
+            self.wfile.write(('data: ' + json.dumps(obj, ensure_ascii=False) + '\n\n').encode('utf-8'))
+            self.wfile.flush()
+        except Exception:
+            pass
+
+    def _api_ai_config(self):
+        if not RM.is_ready('ai'):
+            RM.load_all()
+            self._send_json(409, {'error': 'AI 模块加载中，请稍候再试'})
+            return
+        try:
+            mod = RM.get('ai')
+            if self.command == 'GET':
+                self._send_json(200, mod.get_config())
+            else:
+                n = int(self.headers.get('Content-Length', 0) or 0)
+                body = json.loads(self.rfile.read(n).decode('utf-8'))
+                mod.save_config(body)
+                self._send_json(200, {'ok': True})
+        except Exception as e:
+            logging.exception('ai config failed')
+            self._send_json(500, {'error': 'AI 配置失败：%s' % e})
+
+    def _api_ai_chat(self):
+        """AI 对话：SSE 流式返回，兼容 OpenAI / Anthropic 双协议。"""
+        if not RM.is_ready('ai'):
+            RM.load_all()
+            self._send_json(409, {'error': 'AI 模块加载中，请稍候再试'})
+            return
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            payload = json.loads(self.rfile.read(n).decode('utf-8'))
+        except Exception:
+            self._send_json(400, {'error': '请求格式错误'})
+            return
+        try:
+            mod = RM.get('ai')
+            gen = mod.chat(payload)
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('Connection', 'close')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            if isinstance(gen, str):
+                self._sse({'d': gen})
+                self._sse({'done': True})
+                return
+            for delta in gen:
+                self._sse({'d': delta})
+            self._sse({'done': True})
+        except Exception as e:
+            logging.exception('ai chat failed')
+            try:
+                self._sse({'error': str(e)})
+                self._sse({'done': True})
+            except Exception:
+                pass
 
     def _send_file(self, fp, ctype):
         if not os.path.isfile(fp):
@@ -368,6 +472,95 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
+LAN = {'server': None, 'token': None}
+
+
+def _is_private(ip):
+    parts = ip.split('.')
+    if len(parts) != 4:
+        return False
+    try:
+        a = int(parts[0]); b = int(parts[1])
+    except ValueError:
+        return False
+    return (a == 10) or (a == 172 and 16 <= b <= 31) or (a == 192 and b == 168)
+
+
+def get_lan_ip():
+    """获取本机局域网 IP：优先 RFC1918 私网地址（避免取到 VPN/代理网段）。"""
+    ips = []
+    for target in ('223.5.5.5', '114.114.114.114', '1.1.1.1', '8.8.8.8'):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                sock.connect((target, 80))
+                ip = sock.getsockname()[0]
+                if ip and ip not in ips:
+                    ips.append(ip)
+            finally:
+                sock.close()
+        except Exception:
+            continue
+    for ip in ips:
+        if _is_private(ip):
+            return ip
+    if ips:
+        return ips[0]
+    try:
+        return socket.gethostbyname(socket.gethostname())
+    except Exception:
+        return '127.0.0.1'
+
+
+def share_status():
+    srv = LAN.get('server')
+    if srv is None:
+        return {'running': False}
+    return {'running': True, 'port': srv.server_port, 'token': LAN.get('token'),
+            'url': 'http://%s:%d/' % (get_lan_ip(), srv.server_port)}
+
+
+def start_lan_server():
+    """启动局域网共享服务器（带随机 token 鉴权），供手机等设备访问。"""
+    if LAN['server'] is not None:
+        return share_status()
+    token = secrets.token_urlsafe(12)
+
+    class LanHandler(Handler):
+        LAN_TOKEN = token
+
+    try:
+        srv = ThreadingHTTPServer(('0.0.0.0', 0), LanHandler)
+    except OSError as e:
+        return {'ok': False, 'error': '无法监听局域网：%s' % e}
+    srv.daemon_threads = True
+    threading.Thread(target=srv.serve_forever, daemon=True, name='readmd-lan').start()
+    LAN['server'] = srv
+    LAN['token'] = token
+    d = share_status()
+    d['ok'] = True
+    logging.info('LAN share started: %s', d.get('url'))
+    return d
+
+
+def stop_lan_server():
+    srv = LAN.get('server')
+    if srv is None:
+        return {'ok': True, 'running': False}
+    try:
+        srv.shutdown()
+    except Exception:
+        pass
+    try:
+        srv.server_close()
+    except Exception:
+        pass
+    LAN['server'] = None
+    LAN['token'] = None
+    logging.info('LAN share stopped')
+    return {'ok': True, 'running': False}
+
+
 def start_server(port=0):
     server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
     server.daemon_threads = True
@@ -534,24 +727,33 @@ def _quote(s):
 
 
 def install_association():
-    """把 .md 等扩展名关联到 ReadMD（HKCU，无需管理员权限）。"""
+    """把 .md 等扩展名关联到 ReadMD（HKCU，无需管理员权限）。
+
+    打包版（PyInstaller exe）直接关联 exe；源码版关联 pythonw + readmd.py。
+    """
     try:
         import shutil
-        pyw = None
-        for cand in (os.path.join(APP_DIR, '.venv', 'Scripts', 'pythonw.exe'),):
-            if os.path.isfile(cand):
-                pyw = cand
-        if pyw is None:
-            py = sys.executable
-            base = os.path.basename(py).lower()
-            if base == 'python.exe':
-                cand = os.path.splitext(py)[0] + 'w.exe'
-                pyw = cand if os.path.isfile(cand) else None
+        frozen = getattr(sys, 'frozen', False)
+        if frozen:
+            pyw = sys.executable
+            cmd = '%s "%%1"' % _quote(pyw)
+            icon = '%s,0' % _quote(pyw)  # exe 自带图标
+        else:
+            pyw = None
+            for cand in (os.path.join(APP_DIR, '.venv', 'Scripts', 'pythonw.exe'),):
+                if os.path.isfile(cand):
+                    pyw = cand
             if pyw is None:
-                pyw = py  # 退化为 python（可能闪一个控制台）
-        script = os.path.join(APP_DIR, 'readmd.py')
-        cmd = '%s %s "%%1"' % (_quote(pyw), _quote(script))
-        icon = '%s,0' % _quote(os.path.join(APP_DIR, 'assets', 'readmd.ico'))
+                py = sys.executable
+                base = os.path.basename(py).lower()
+                if base == 'python.exe':
+                    cand = os.path.splitext(py)[0] + 'w.exe'
+                    pyw = cand if os.path.isfile(cand) else None
+                if pyw is None:
+                    pyw = py  # 退化为 python（可能闪一个控制台）
+            script = os.path.join(APP_DIR, 'readmd.py')
+            cmd = '%s %s "%%1"' % (_quote(pyw), _quote(script))
+            icon = '%s,0' % _quote(os.path.join(APP_DIR, 'assets', 'readmd.ico'))
         for ext in ('.md', '.markdown', '.mdown', '.mkd'):
             subprocess.run(['reg', 'add', r'HKCU\Software\Classes\%s' % ext, '/ve',
                             '/d', 'ReadMD.markdown', '/f'],
@@ -591,12 +793,18 @@ def run_selftest():
         with urllib.request.urlopen('http://127.0.0.1:%d/' % port, timeout=5) as r:
             body = r.read().decode('utf-8', 'replace')
             assert r.status == 200 and 'ReadMD' in body
-        self_file = os.path.abspath(__file__)
-        with urllib.request.urlopen(
-                'http://127.0.0.1:%d/api/file?p=%s' % (port, quote(self_file)),
-                timeout=5) as r:
-            d = json.loads(r.read().decode('utf-8'))
-            assert d['name'] == 'readmd.py'
+        if getattr(sys, 'frozen', False):
+            with urllib.request.urlopen(
+                    'http://127.0.0.1:%d/api/modules' % port, timeout=10) as r:
+                d = json.loads(r.read().decode('utf-8'))
+                assert 'modules' in d and 'ai' in d['modules']
+        else:
+            self_file = os.path.abspath(__file__)
+            with urllib.request.urlopen(
+                    'http://127.0.0.1:%d/api/file?p=%s' % (port, quote(self_file)),
+                    timeout=5) as r:
+                d = json.loads(r.read().decode('utf-8'))
+                assert d['name'] == 'readmd.py'
         safe_print('http server OK (port %d)' % port)
     except Exception as e:
         safe_print('http selftest failed:', e)
@@ -614,7 +822,14 @@ def main():
     parser.add_argument('--port', type=int, default=0, help='本地服务端口（默认随机）')
     parser.add_argument('--selftest', action='store_true', help='运行自测')
     parser.add_argument('--mods', action='store_true', help='加载全部扩展模块并报告状态')
+    parser.add_argument('--share', action='store_true', help='启动后自动开启局域网共享（手机扫码访问）')
+    parser.add_argument('--assoc', action='store_true', help='注册 .md 默认打开方式后退出')
     args = parser.parse_args()
+
+    if args.assoc:
+        r = install_association()
+        safe_print('association: %s' % ('OK' if r is True else r))
+        return 0 if r is True else 1
 
     if args.selftest:
         sys.exit(run_selftest())
@@ -630,6 +845,12 @@ def main():
 
     setup_logging()
     server = start_server(args.port)
+    if args.share:
+        d = start_lan_server()
+        if d.get('ok'):
+            safe_print('局域网共享已开启：%s' % d.get('url'))
+        else:
+            safe_print('局域网共享失败：%s' % d.get('error'))
     initial = None
     if args.file:
         p = os.path.abspath(args.file)

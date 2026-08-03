@@ -1,12 +1,13 @@
 @echo off
 rem ============================================================
 rem  ReadMD Installer - setup venv, install deps, register .md
+rem  (if dist\ReadMD.exe exists, it is used instead of pythonw)
 rem ============================================================
 setlocal
 cd /d "%~dp0"
 title ReadMD Installer
 
-echo [1/3] Checking Python ...
+echo [1/4] Checking Python ...
 where python >nul 2>nul
 if errorlevel 1 (
     echo.
@@ -18,7 +19,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [2/3] Creating virtual environment and installing dependencies ...
+echo [2/4] Creating virtual environment and installing dependencies ...
 if not exist ".venv\Scripts\python.exe" (
     python -m venv .venv
     if errorlevel 1 goto :err
@@ -26,10 +27,19 @@ if not exist ".venv\Scripts\python.exe" (
 ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r requirements.txt
 if errorlevel 1 goto :err
 
-echo [3/3] Registering file association (current user, no admin needed) ...
-set "PYW=%~dp0.venv\Scripts\pythonw.exe"
+echo [3/4] Generating icon ...
+".venv\Scripts\python.exe" tools\make_icon.py
+if errorlevel 1 goto :err
+
+echo [4/4] Registering file association (current user, no admin needed) ...
+if exist "%~dp0dist\ReadMD.exe" (
+    set "PYW=%~dp0dist\ReadMD.exe"
+    set "ICON=%~dp0dist\ReadMD.exe"
+) else (
+    set "PYW=%~dp0.venv\Scripts\pythonw.exe"
+    set "ICON=%~dp0assets\readmd.ico"
+)
 set "SCRIPT=%~dp0readmd.py"
-set "ICON=%~dp0assets\readmd.ico"
 
 if not exist "%APPDATA%\ReadMD\backup" mkdir "%APPDATA%\ReadMD\backup"
 reg export "HKCU\Software\Classes\.md" "%APPDATA%\ReadMD\backup\.md.reg.bak" /y >nul 2>nul
@@ -39,9 +49,14 @@ for %%E in (.md .markdown .mdown .mkd) do (
 )
 reg add "HKCU\Software\Classes\ReadMD.markdown" /ve /d "ReadMD Markdown Reader" /f >nul
 reg add "HKCU\Software\Classes\ReadMD.markdown\DefaultIcon" /ve /d "\"%ICON%\",0" /f >nul
-reg add "HKCU\Software\Classes\ReadMD.markdown\shell\open\command" /ve /t REG_EXPAND_SZ /d "\"%PYW%\" \"%SCRIPT%\" \"%%1\"" /f >nul
-reg add "HKCU\Software\Classes\ReadMD.markdown\shell\openwith" /ve /d "" /f >nul
-reg add "HKCU\Software\Classes\Applications\readmd.py\shell\open\command" /ve /t REG_EXPAND_SZ /d "\"%PYW%\" \"%SCRIPT%\" \"%%1\"" /f >nul
+if exist "%~dp0dist\ReadMD.exe" (
+    reg add "HKCU\Software\Classes\ReadMD.markdown\shell\open\command" /ve /t REG_EXPAND_SZ /d "\"%PYW%\" \"%%1\"" /f >nul
+    reg add "HKCU\Software\Classes\Applications\ReadMD.exe\shell\open\command" /ve /t REG_EXPAND_SZ /d "\"%PYW%\" \"%%1\"" /f >nul
+) else (
+    reg add "HKCU\Software\Classes\ReadMD.markdown\shell\open\command" /ve /t REG_EXPAND_SZ /d "\"%PYW%\" \"%SCRIPT%\" \"%%1\"" /f >nul
+    reg add "HKCU\Software\Classes\ReadMD.markdown\shell\openwith" /ve /d "" /f >nul
+    reg add "HKCU\Software\Classes\Applications\readmd.py\shell\open\command" /ve /t REG_EXPAND_SZ /d "\"%PYW%\" \"%SCRIPT%\" \"%%1\"" /f >nul
+)
 
 rem refresh explorer icon cache
 ie4uinit.exe -show >nul 2>nul

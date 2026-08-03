@@ -10,7 +10,7 @@ import importlib
 import logging
 import threading
 
-MODULES = ['convert', 'ocr', 'web']
+MODULES = ['convert', 'ocr', 'web', 'ai']
 
 _status = {m: 'idle' for m in MODULES}
 _error = {}
