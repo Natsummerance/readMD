@@ -100,6 +100,13 @@
       <input id="ai-key" type="password" placeholder="API Key（留空则读取环境变量）" autocomplete="off">
       <button id="ai-save-key" class="tb-btn" title="保存 Key 与当前选择">存</button>
     </div>
+    <div class="ai-row">
+      <select id="ai-template" title="Prompt 模板：选择后应用到本次对话"></select>
+      <button id="ai-tpl-btn" class="tb-btn" title="模板管理（新建 / 编辑 / 删除）">模板</button>
+      <select id="ai-session" title="历史会话：加载 / 切换"></select>
+      <button id="ai-save-session" class="tb-btn" title="保存当前会话">存</button>
+      <button id="ai-del-session" class="tb-btn" title="删除当前会话">删</button>
+    </div>
     <div class="ai-actions">
       <button class="ai-act" data-act="quick_read" title="快速阅读全文并输出概述与要点">&#128218; 阅读</button>
       <button class="ai-act" data-act="polish" title="润色文档，保持结构与 Markdown 标记">&#10024; 润色</button>
@@ -115,6 +122,7 @@
     <div class="ai-row ai-row2">
       <label class="ai-sel"><input id="ai-selection" type="checkbox"> 仅处理选中文字</label>
       <span id="ai-usage"></span>
+      <button id="ai-clear-ctx" class="tb-btn" title="清空对话上下文，开始新一轮对话">清空</button>
     </div>
     <div class="ai-output-wrap">
       <div id="ai-output"></div>
@@ -127,6 +135,40 @@
       <button id="ai-saveas" class="tb-btn" disabled>另存为</button>
       <span id="ai-status"></span>
     </div>
+  </div>
+</div>
+
+
+<!-- Prompt 模板管理弹窗 -->
+<div id="tpl-modal" class="hidden">
+  <div id="tpl-box">
+    <h3>&#128221; Prompt 模板管理</h3>
+    <div class="tpl-layout">
+      <ul id="tpl-list" class="tpl-list"></ul>
+      <div class="tpl-form">
+        <input id="tpl-id" type="hidden">
+        <input id="tpl-name" type="text" placeholder="模板名称（如：总结要点 / 生成周报）">
+        <select id="tpl-action">
+          <option value="quick_read">动作：快速阅读</option>
+          <option value="polish">动作：润色</option>
+          <option value="modify">动作：修改</option>
+          <option value="expand">动作：扩充</option>
+          <option value="continue">动作：续写</option>
+          <option value="translate">动作：翻译</option>
+          <option value="ask">动作：提问</option>
+          <option value="custom">自定义动作</option>
+        </select>
+        <textarea id="tpl-system" rows="4" placeholder="系统提示词：角色设定与任务说明"></textarea>
+        <textarea id="tpl-user" rows="3" placeholder="用户消息模板（可选）：可用 {doc} 代表文档内容、{prompt} 代表补充要求；留空则自动拼接文档"></textarea>
+      </div>
+    </div>
+    <div class="url-actions">
+      <button id="tpl-new" class="tb-btn">新建</button>
+      <button id="tpl-save" class="tb-btn accent">保存</button>
+      <button id="tpl-del" class="tb-btn">删除</button>
+      <button id="tpl-close" class="tb-btn">关闭</button>
+    </div>
+    <p class="fix-note">内置模板可直接编辑并保存（覆盖默认行为）；删除内置模板即恢复默认。{doc} / {prompt} 会在发送时自动替换为文档内容与补充要求。</p>
   </div>
 </div>
 

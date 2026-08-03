@@ -544,6 +544,7 @@ mark.hl.cur { background: var(--hl-cur); }
   cursor: pointer;
 }
 .ai-act:hover { border-color: var(--accent); color: var(--accent); }
+.ai-act.active { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 .ai-output-wrap { flex: 1; min-height: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
 #ai-output { height: 100%; overflow: auto; padding: 10px 12px; }
 .ai-out-head { font-size: 12px; color: var(--fg2); padding-bottom: 6px; border-bottom: 1px dashed var(--border); margin-bottom: 8px; }
@@ -556,6 +557,103 @@ mark.hl.cur { background: var(--hl-cur); }
 .ai-err { color: #d33; font-size: 13px; }
 .ai-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 #ai-status { font-size: 12px; color: var(--accent); flex: 1; }
+/* ---------- Prompt 模板 / 历史会话 ---------- */
+.ai-row .tb-btn { flex: 0 0 auto; padding: 5px 7px; font-size: 12px; }
+#ai-template, #ai-session { flex: 1.15; }
+#ai-clear-ctx { flex: 0 0 auto; padding: 5px 7px; font-size: 12px; }
+
+/* ---------- 模板管理弹窗 ---------- */
+#tpl-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 110;
+}
+#tpl-modal.hidden { display: none; }
+#tpl-box {
+  background: var(--bg2);
+  color: var(--fg);
+  border-radius: 12px;
+  padding: 18px 22px;
+  width: min(760px, 94vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+}
+#tpl-box h3 { margin: 0 0 10px; font-size: 15px; }
+.tpl-layout { display: flex; gap: 14px; flex: 1; min-height: 0; }
+.tpl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 210px;
+  flex: 0 0 210px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.tpl-list li {
+  padding: 7px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  word-break: break-all;
+}
+.tpl-list li:last-child { border-bottom: none; }
+.tpl-list li:hover { background: var(--bg); }
+.tpl-list li.active { background: var(--accent); color: var(--accent-fg); }
+.tpl-list li .tpl-tag { font-size: 11px; opacity: .75; }
+.tpl-form { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.tpl-form input, .tpl-form select, .tpl-form textarea {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  padding: 7px 9px;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.tpl-form textarea { resize: vertical; }
+
+/* ---------- AI 会话气泡 ---------- */
+.ai-msg { margin-bottom: 12px; }
+.ai-msg .ai-msg-tag { font-size: 11px; color: var(--fg2); margin-bottom: 3px; }
+.ai-msg.user .ai-msg-body {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 13px;
+}
+.ai-msg.ai .ai-msg-body { font-size: 13.5px; line-height: 1.65; }
+.ai-msg.ai .ai-msg-body table { border-collapse: collapse; margin: 8px 0; }
+.ai-msg.ai .ai-msg-body th, .ai-msg.ai .ai-msg-body td { border: 1px solid var(--border); padding: 4px 8px; font-size: 12.5px; }
+.ai-msg.ai .ai-msg-body pre { background: var(--code-bg); padding: 8px 10px; border-radius: 6px; overflow: auto; font-size: 12px; }
+.ai-msg.ai .ai-msg-body code { background: var(--code-bg); border-radius: 4px; padding: 1px 4px; font-size: 12px; }
+.ai-msg.ai .ai-msg-body blockquote { border-left: 3px solid var(--accent); margin: 6px 0; padding-left: 10px; color: var(--fg2); }
+.ai-msg.ai .ai-msg-body h1, .ai-msg.ai .ai-msg-body h2, .ai-msg.ai .ai-msg-body h3,
+.ai-msg.ai .ai-msg-body h4 { margin: 10px 0 6px; }
+
+/* ---------- 大文档增量渲染进度 ---------- */
+#render-progress {
+  position: sticky;
+  top: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--accent);
+  background: var(--bg2);
+  border-bottom: 1px dashed var(--border);
+  z-index: 5;
+}
+
 
 /* ---------- 移动端共享 ---------- */
 #share-modal {
@@ -595,6 +693,8 @@ mark.hl.cur { background: var(--hl-cur); }
   #toolbar { flex-wrap: wrap; }
   #side { position: fixed; left: 0; top: 52px; bottom: 28px; width: min(280px, 80vw); z-index: 90; box-shadow: var(--shadow); }
   #ai-panel { width: min(420px, 94vw); }
+  .tpl-layout { flex-direction: column; }
+  .tpl-list { width: 100%; flex: 0 0 auto; max-height: 160px; }
   #content { padding: 12px 14px; }
   .markdown-body { padding: 14px; }
   .welcome-btns { flex-direction: column; align-items: stretch; }
@@ -603,6 +703,7 @@ mark.hl.cur { background: var(--hl-cur); }
 }
 @media (max-width: 600px) {
   body { font-size: 14px; }
+  .ai-row { flex-wrap: wrap; }
   #toolbar { padding: 4px 6px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   #toolbar::-webkit-scrollbar { display: none; }
   .tb-group { flex-shrink: 0; }

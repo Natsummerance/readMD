@@ -46,7 +46,10 @@ const state = {
   modulesStarted: false,
   editing: false,
   busyCount: 0,
-  ai: { config: null, providers: [], busy: false, aborter: null, raw: '' },
+  ai: {
+    config: null, providers: [], busy: false, aborter: null, raw: '',
+    templates: [], templateId: '', messages: [], sessionId: null, sessions: [],
+  },
 };
 
 /* ---------------- 设置 ---------------- */
@@ -221,14 +224,100 @@ function setFixes(fixes, stats) {
     : '\uD83D\uDEE0 修复';
 }
 
+const INCREMENTAL_THRESHOLD = 300 * 1024; // 300KB 以上走增量渲染
+const INCREMENTAL_LINES = 6000;
+
 function renderContent(content, name) {
+  const saved = state.scrollPos[normalizePath(name || state.file || '')] || 0;
+  const big = content.length > INCREMENTAL_THRESHOLD || content.split('\n').length > INCREMENTAL_LINES;
+  if (big) {
+    renderContentIncremental(content, saved);
+    return;
+  }
   const prot = protectMath(content);
   const html = marked.parse(prot.src, { gfm: true, breaks: false });
   const finalHtml = restoreMath(html, prot.saved);
   $('content').innerHTML = '<article class="markdown-body">' + finalHtml + '</article>';
   postProcess();
-  const saved = state.scrollPos[normalizePath(name || state.file || '')];
   if (saved) requestAnimationFrame(() => { $('content').scrollTop = saved; });
+}
+
+/* 大文档分块：优先按围栏代码块 / 空行切块，超长块按行硬切 */
+function splitMdBlocks(md) {
+  const lines = String(md || '').split('\n');
+  const blocks = [];
+  let buf = [];
+  let inFence = false;
+  const flush = () => {
+    if (buf.length) { blocks.push(buf.join('\n')); buf = []; }
+  };
+  for (const line of lines) {
+    const t = line.trim();
+    if (!inFence && /^```/.test(t)) {
+      flush();
+      inFence = true;
+      buf.push(line);
+      continue;
+    }
+    if (inFence) {
+      buf.push(line);
+      if (t.startsWith('```')) { flush(); inFence = false; }
+      continue;
+    }
+    if (t === '') {
+      flush();
+      continue;
+    }
+    buf.push(line);
+  }
+  flush();
+  if (inFence && buf.length) blocks.push(buf.join('\n'));
+  const MAX_BLOCK_LINES = 200;
+  const out = [];
+  for (const b of blocks) {
+    const ls = b.split('\n');
+    if (ls.length <= MAX_BLOCK_LINES) { out.push(b); continue; }
+    for (let i = 0; i < ls.length; i += MAX_BLOCK_LINES) {
+      out.push(ls.slice(i, i + MAX_BLOCK_LINES).join('\n'));
+    }
+  }
+  return out;
+}
+
+async function renderContentIncremental(content, savedTop) {
+  const el = $('content');
+  el.innerHTML = '<article class="markdown-body"></article>';
+  const body = el.querySelector('.markdown-body');
+  const blocks = splitMdBlocks(content);
+  const total = blocks.length;
+  if (total <= 1) {
+    const prot = protectMath(content);
+    body.innerHTML = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
+    postProcess();
+    if (savedTop) el.scrollTop = savedTop;
+    return;
+  }
+  const prog = document.createElement('div');
+  prog.id = 'render-progress';
+  el.appendChild(prog);
+  const CHUNK = 8;
+  for (let i = 0; i < total; i += CHUNK) {
+    const frag = document.createDocumentFragment();
+    const end = Math.min(i + CHUNK, total);
+    for (let k = i; k < end; k++) {
+      const div = document.createElement('div');
+      const prot = protectMath(blocks[k]);
+      div.innerHTML = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
+      frag.appendChild(div);
+    }
+    body.appendChild(frag);
+    const pct = Math.round((end / total) * 100);
+    if (pct >= 100 || pct % 10 < 8) prog.textContent = '渲染中… ' + Math.min(pct, 100) + '%';
+    if (end < total) await new Promise(r => setTimeout(r, 0));
+  }
+  prog.remove();
+  if (savedTop) el.scrollTop = savedTop;
+  postProcess();
 }
 
 function postProcess() {
@@ -436,7 +525,275 @@ function toggleAiPanel() {
   const p = $('ai-panel');
   p.classList.toggle('hidden');
   if (!p.classList.contains('hidden') && !state.ai.config) loadAiConfig();
+  else if (!p.classList.contains('hidden')) { loadAiPrompts(); loadAiSessions(); }
 }
+/* ---------------- Prompt 模板 ---------------- */
+
+async function loadAiPrompts() {
+  try {
+    const r = await apiFetch('/api/ai/prompts');
+    if (!r.ok) return;
+    state.ai.templates = (await r.json()).templates || [];
+    fillAiTemplates();
+  } catch (e) { /* ignore */ }
+}
+
+function fillAiTemplates() {
+  const sel = $('ai-template');
+  if (!sel) return;
+  const cur = state.ai.templateId;
+  sel.innerHTML = '';
+  const none = document.createElement('option');
+  none.value = '';
+  none.textContent = '默认动作（不使用模板）';
+  sel.appendChild(none);
+  (state.ai.templates || []).forEach(t => {
+    const o = document.createElement('option');
+    o.value = t.id;
+    o.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
+    sel.appendChild(o);
+  });
+  if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
+  else state.ai.templateId = '';
+}
+
+function currentAiTemplate() {
+  const id = $('ai-template').value;
+  return (state.ai.templates || []).find(t => t.id === id) || null;
+}
+
+function onAiTemplateChange() {
+  const t = currentAiTemplate();
+  state.ai.templateId = t ? t.id : '';
+  document.querySelectorAll('.ai-act').forEach(b => {
+    b.classList.toggle('active', !!(t && t.action && t.action !== 'custom' && b.dataset.act === t.action));
+  });
+  if (t && t.action === 'translate') $('ai-prompt').placeholder = '翻译：目标语言（如：英语 / 日语）';
+  else $('ai-prompt').placeholder = '补充要求 / 提问内容 / 翻译目标语言（可选）';
+}
+
+function openTplModal() {
+  $('tpl-modal').classList.remove('hidden');
+  if (!state.ai.templates.length) loadAiPrompts();
+  renderTplList();
+  selectTpl(null);
+}
+
+function renderTplList() {
+  const list = $('tpl-list');
+  list.innerHTML = '';
+  (state.ai.templates || []).forEach(t => {
+    const li = document.createElement('li');
+    li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
+    li.dataset.id = t.id;
+    li.title = '动作：' + (t.action || 'custom') + (t.user ? ' · 含用户消息模板' : '');
+    li.addEventListener('click', () => selectTpl(t.id));
+    list.appendChild(li);
+  });
+}
+
+function selectTpl(id) {
+  const t = (state.ai.templates || []).find(x => x.id === id) || null;
+  document.querySelectorAll('#tpl-list li').forEach(li => li.classList.toggle('active', li.dataset.id === id));
+  $('tpl-id').value = t ? t.id : '';
+  $('tpl-name').value = t ? t.name : '';
+  $('tpl-action').value = (t && t.action) || 'custom';
+  $('tpl-system').value = t ? (t.system || '') : '';
+  $('tpl-user').value = t ? (t.user || '') : '';
+  $('tpl-del').disabled = !t;
+}
+
+async function saveTplForm() {
+  const t = {
+    id: $('tpl-id').value || undefined,
+    name: $('tpl-name').value.trim(),
+    action: $('tpl-action').value,
+    system: $('tpl-system').value,
+    user: $('tpl-user').value,
+  };
+  if (!t.name) { showToast('请填写模板名称'); return; }
+  try {
+    const r = await apiFetch('/api/ai/prompts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', template: t }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || '保存失败');
+    await loadAiPrompts();
+    renderTplList();
+    const saved = d.template || {};
+    selectTpl(saved.id);
+    $('ai-template').value = saved.id;
+    onAiTemplateChange();
+    showToast('模板已保存');
+  } catch (e) { showToast('保存失败：' + e.message); }
+}
+
+async function deleteTplForm() {
+  const id = $('tpl-id').value;
+  if (!id) return;
+  const t = (state.ai.templates || []).find(x => x.id === id);
+  const isBuiltin = t && t.builtin;
+  try {
+    const r = await apiFetch('/api/ai/prompts', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', id }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || '删除失败');
+    await loadAiPrompts();
+    renderTplList();
+    selectTpl(null);
+    showToast(isBuiltin ? '已恢复内置模板默认' : '模板已删除');
+  } catch (e) { showToast('删除失败：' + e.message); }
+}
+
+/* ---------------- AI 历史会话 ---------------- */
+
+async function loadAiSessions() {
+  try {
+    const r = await apiFetch('/api/ai/history');
+    if (!r.ok) return;
+    state.ai.sessions = (await r.json()).sessions || [];
+    fillAiSessions();
+  } catch (e) { /* ignore */ }
+}
+
+function fillAiSessions() {
+  const sel = $('ai-session');
+  if (!sel) return;
+  sel.innerHTML = '';
+  const fresh = document.createElement('option');
+  fresh.value = '';
+  fresh.textContent = '＋ 新会话（不加载）';
+  sel.appendChild(fresh);
+  (state.ai.sessions || []).forEach(s => {
+    const o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = (s.title || '未命名会话').slice(0, 22) + ' · ' + fmtTime(s.updated) + ' · ' + (s.msgCount || 0) + ' 条';
+    sel.appendChild(o);
+  });
+  sel.value = state.ai.sessionId || '';
+}
+
+function fmtTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts * 1000);
+  const p = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+async function onAiSessionChange() {
+  const id = $('ai-session').value;
+  if (!id) return;
+  try {
+    const r = await apiFetch('/api/ai/history?id=' + encodeURIComponent(id));
+    if (!r.ok) { showToast('加载会话失败'); return; }
+    const s = (await r.json()).session;
+    if (!s) { showToast('会话不存在'); return; }
+    if (s.provider && [...$('ai-provider').options].some(o => o.value === s.provider)) {
+      $('ai-provider').value = s.provider;
+      onAiProviderChange();
+      if (s.model && [...$('ai-model').options].some(o => o.value === s.model)) $('ai-model').value = s.model;
+      syncAiKey();
+    }
+    state.ai.messages = s.messages || [];
+    state.ai.sessionId = s.id;
+    state.ai.raw = '';
+    renderAiHistory();
+    showToast('已加载会话');
+  } catch (e) { showToast('加载会话失败'); }
+}
+
+function renderAiHistory() {
+  const out = $('ai-output');
+  out.innerHTML = '';
+  const msgs = state.ai.messages || [];
+  let uSeq = 0, aSeq = 0;
+  msgs.forEach((m, i) => {
+    if (m.role === 'user') { uSeq++;
+      const ub = document.createElement('div');
+      ub.className = 'ai-msg user';
+      const tag = document.createElement('div');
+      tag.className = 'ai-msg-tag';
+      tag.textContent = '我 · 提问 ' + uSeq;
+      const body = document.createElement('div');
+      body.className = 'ai-msg-body';
+      body.textContent = m.content.length > 3000 ? m.content.slice(0, 3000) + '\n…（已省略）' : m.content;
+      ub.appendChild(tag); ub.appendChild(body);
+      out.appendChild(ub);
+    } else if (m.role === 'assistant' && m.content) { aSeq++;
+      const ab = document.createElement('div');
+      ab.className = 'ai-msg ai';
+      const tag = document.createElement('div');
+      tag.className = 'ai-msg-tag';
+      tag.textContent = 'AI · 回答 ' + aSeq;
+      const body = document.createElement('div');
+      body.className = 'ai-msg-body';
+      const prot = protectMath(m.content);
+      body.innerHTML = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
+      ab.appendChild(tag); ab.appendChild(body);
+      out.appendChild(ab);
+    }
+  });
+  out.scrollTop = out.scrollHeight;
+  const last = msgs[msgs.length - 1];
+  if (last && last.role === 'assistant') state.ai.raw = last.content || '';
+  updateAiRawButtons();
+}
+
+async function saveCurrentSession() {
+  const msgs = state.ai.messages || [];
+  if (!msgs.length) { showToast('当前没有对话内容'); return; }
+  const title = ($('ai-prompt').value.trim() || msgs[0].content || '未命名会话').slice(0, 40).replace(/\s+/g, ' ');
+  const sess = {
+    id: state.ai.sessionId || undefined,
+    title: title,
+    provider: $('ai-provider').value,
+    model: $('ai-model').value,
+    doc: state.mode === 'file' ? (state.file || '') : (state.sourceName || ''),
+    messages: msgs,
+  };
+  try {
+    const r = await apiFetch('/api/ai/history', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', session: sess }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || '保存失败');
+    state.ai.sessionId = d.session.id;
+    await loadAiSessions();
+    $('ai-session').value = state.ai.sessionId;
+    showToast('会话已保存');
+  } catch (e) { showToast('保存失败：' + e.message); }
+}
+
+async function deleteCurrentSession() {
+  const id = $('ai-session').value;
+  if (!id) return;
+  try {
+    const r = await apiFetch('/api/ai/history', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', id }),
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok) throw new Error(d.error || '删除失败');
+    if (state.ai.sessionId === id) { state.ai.sessionId = null; state.ai.messages = []; clearAiOutput(); }
+    await loadAiSessions();
+    showToast('会话已删除');
+  } catch (e) { showToast('删除失败：' + e.message); }
+}
+
+function clearAiContext() {
+  if (!(state.ai.messages || []).length) { showToast('当前没有上下文'); return; }
+  state.ai.messages = [];
+  state.ai.sessionId = null;
+  state.ai.raw = '';
+  clearAiOutput();
+  $('ai-session').value = '';
+  showToast('已清空上下文，开始新一轮');
+}
+
 
 function clearAiOutput() {
   state.ai.raw = '';
@@ -454,6 +811,8 @@ async function loadAiConfig() {
     const cfg = state.ai.config;
     state.ai.providers = [...(cfg.custom || []), ...(cfg.presets || [])];
     fillAiProviders(state.ai.providers, cfg.current || {});
+    loadAiPrompts();
+    loadAiSessions();
     return cfg;
   } catch (e) { /* ignore */ return null; }
 }
@@ -577,26 +936,48 @@ async function runAi(action) {
   const model = $('ai-model').value || (p.models || [''])[0] || '';
   saveAiSelection();
 
-  let sys = AI_SYSTEM[action] || '你是 ReadMD 的文档助手。';
-  if (action === 'translate' && prompt) {
+  const tpl = currentAiTemplate();
+  let sys = (tpl && tpl.system) || AI_SYSTEM[action] || '你是 ReadMD 的文档助手。';
+  if (action === 'translate' && prompt && !(tpl && tpl.system)) {
     sys = '你是专业翻译。将用户给出的文档翻译成「' + prompt + '」，保留 Markdown 结构、表格与代码块，只输出译文。';
   }
   const docs = text.length > 120000 ? text.slice(0, 120000) + '\n\n[内容过长已截断，请分段处理]' : text;
+  const fill = s => String(s || '').replace(/\{doc\}/g, docs).replace(/\{prompt\}/g, prompt || '');
   let userMsg;
-  if (action === 'ask' && prompt) userMsg = '文档如下：\n\n' + docs + '\n\n问题：' + prompt;
+  if (tpl && tpl.user) {
+    userMsg = fill(tpl.user);
+  } else if (action === 'ask' && prompt) userMsg = '文档如下：\n\n' + docs + '\n\n问题：' + prompt;
   else if (action === 'modify' && prompt) userMsg = '文档如下：\n\n' + docs + '\n\n修改要求：' + prompt;
   else if (prompt) userMsg = '文档如下：\n\n' + docs + '\n\n补充要求：' + prompt;
   else userMsg = '文档如下：\n\n' + docs;
 
+  const msgs = (state.ai.messages || []).slice(-40);
+  msgs.push({ role: 'user', content: userMsg });
+
   const out = $('ai-output');
-  out.innerHTML = '';
-  const head = document.createElement('div');
-  head.className = 'ai-out-head';
-  head.textContent = (AI_ACTIONS[action] || action) + (isSelection ? '（选中文字）' : '（全文）') + ' · ' + p.name + ' · ' + model;
-  out.appendChild(head);
-  const body = document.createElement('div');
-  body.className = 'ai-out-body';
-  out.appendChild(body);
+  const userBubble = document.createElement('div');
+  userBubble.className = 'ai-msg user';
+  const uTag = document.createElement('div');
+  uTag.className = 'ai-msg-tag';
+  const userSeq = (state.ai.messages || []).filter(m => m.role === 'user').length + 1;
+  uTag.textContent = '我 · 提问 ' + userSeq + ' · ' + (AI_ACTIONS[action] || action) + (isSelection ? '（选中文字）' : '（全文）') + ' · ' + p.name + ' · ' + model;
+  const uBody = document.createElement('div');
+  uBody.className = 'ai-msg-body';
+  uBody.textContent = userMsg.length > 2000 ? userMsg.slice(0, 2000) + '\n…（文档内容较长已省略）' : userMsg;
+  userBubble.appendChild(uTag); userBubble.appendChild(uBody);
+  out.appendChild(userBubble);
+
+  const aiBubble = document.createElement('div');
+  aiBubble.className = 'ai-msg ai';
+  const aiTag = document.createElement('div');
+  aiTag.className = 'ai-msg-tag';
+  aiTag.textContent = 'AI 生成中…';
+  const aiBody = document.createElement('div');
+  aiBody.className = 'ai-msg-body';
+  aiBubble.appendChild(aiTag); aiBubble.appendChild(aiBody);
+  out.appendChild(aiBubble);
+  out.scrollTop = out.scrollHeight;
+
   state.ai.raw = '';
   updateAiRawButtons();
   setAiBusy(true);
@@ -605,10 +986,11 @@ async function runAi(action) {
   let renderTimer = null;
   const render = () => {
     renderTimer = null;
+    if (!state.ai.raw) return;
     const prot = protectMath(state.ai.raw);
     const html = marked.parse(prot.src, { gfm: true, breaks: false });
-    body.innerHTML = restoreMath(html, prot.saved);
-    body.scrollTop = body.scrollHeight;
+    aiBody.innerHTML = restoreMath(html, prot.saved);
+    out.scrollTop = out.scrollHeight;
   };
   try {
     const r = await apiFetch('/api/ai/chat', {
@@ -616,7 +998,7 @@ async function runAi(action) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         provider: p.name, model: model, api_key: keyVal || undefined,
-        messages: [{ role: 'system', content: sys }, { role: 'user', content: userMsg }],
+        messages: [{ role: 'system', content: sys }].concat(msgs),
         stream: true,
       }),
       signal: ctrl.signal,
@@ -644,26 +1026,40 @@ async function runAi(action) {
         if (obj.error) throw new Error(obj.error);
         if (obj.d === undefined) continue;
         state.ai.raw += obj.d;
-        if (!renderTimer) renderTimer = setTimeout(render, 120);
+        if (!renderTimer) renderTimer = setTimeout(render, state.ai.raw.length > 150000 ? 500 : 120);
       }
     }
     if (renderTimer) { clearTimeout(renderTimer); renderTimer = null; render(); }
-    renderMath(body);
-    updateAiRawButtons();
-    if (state.ai.raw) showToast('AI 完成');
+    renderMath(aiBody);
+    aiTag.textContent = 'AI · 回答 ' + userSeq;
+    if (state.ai.raw) {
+      msgs.push({ role: 'assistant', content: state.ai.raw });
+      state.ai.messages = msgs;
+      state.ai.sessionId = null;
+      $('ai-session').value = '';
+      updateAiRawButtons();
+      showToast('AI 完成（可点“存”保存会话）');
+    } else {
+      msgs.pop();
+    }
   } catch (e) {
     if (e.name === 'AbortError') {
+      aiTag.textContent = 'AI · 回答 ' + userSeq + '（已停止）';
+      if (state.ai.raw) {
+        msgs.push({ role: 'assistant', content: state.ai.raw });
+        state.ai.messages = msgs;
+      }
       showToast('已停止');
     } else {
+      aiTag.textContent = 'AI · 出错';
       showToast('AI 出错：' + e.message);
-      body.innerHTML = '<p class="ai-err">' + String(e.message).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])) + '</p>';
+      aiBody.innerHTML = '<p class="ai-err">' + String(e.message).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])) + '</p>';
     }
   } finally {
     setAiBusy(false);
     state.ai.aborter = null;
   }
 }
-
 async function copyAi() {
   if (!state.ai.raw) return;
   try {
@@ -1273,6 +1669,17 @@ function bindEvents() {
   $('ai-copy').addEventListener('click', copyAi);
   $('ai-saveas').addEventListener('click', saveAiAs);
   $('ai-prompt').addEventListener('keydown', e => { if (e.key === 'Enter') $('ai-run').click(); });
+  $('ai-template').addEventListener('change', onAiTemplateChange);
+  $('ai-tpl-btn').addEventListener('click', openTplModal);
+  $('tpl-new').addEventListener('click', () => selectTpl(null));
+  $('tpl-save').addEventListener('click', saveTplForm);
+  $('tpl-del').addEventListener('click', deleteTplForm);
+  $('tpl-close').addEventListener('click', () => $('tpl-modal').classList.add('hidden'));
+  $('tpl-modal').addEventListener('click', e => { if (e.target === $('tpl-modal')) $('tpl-modal').classList.add('hidden'); });
+  $('ai-session').addEventListener('change', onAiSessionChange);
+  $('ai-save-session').addEventListener('click', saveCurrentSession);
+  $('ai-del-session').addEventListener('click', deleteCurrentSession);
+  $('ai-clear-ctx').addEventListener('click', clearAiContext);
 
   $('btn-share').addEventListener('click', openShareModal);
   $('share-start').addEventListener('click', startShare);
@@ -1311,6 +1718,7 @@ function bindEvents() {
       closeWebDialog();
       $('ai-panel').classList.add('hidden');
       $('share-modal').classList.add('hidden');
+      $('tpl-modal').classList.add('hidden');
       if (state.editing) exitEdit();
     }
   });

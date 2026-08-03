@@ -24,6 +24,7 @@ import secrets
 import socket
 import subprocess
 import sys
+import time
 import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -36,8 +37,10 @@ APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.
 DATA_DIR = os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'ReadMD')
 SETTINGS_FILE = os.path.join(DATA_DIR, 'settings.json')
 RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
+PROMPTS_FILE = os.path.join(DATA_DIR, 'prompts.json')
+HISTORY_FILE = os.path.join(DATA_DIR, 'chat_history.json')
 LOG_FILE = os.path.join(DATA_DIR, 'readmd.log')
-VERSION = '1.1.0'
+VERSION = '1.2.0'
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 
@@ -77,6 +80,125 @@ def save_json(path, data):
         os.replace(tmp, path)
     except Exception as e:
         logging.exception('save_json failed: %s', path)
+
+
+
+# ---------------------------------------------------------------- AI 模板 / 历史会话
+
+# 内置 Prompt 模板（只读；可覆盖为自定义版本，或另存为自定义模板）
+BUILTIN_PROMPTS = [
+    {"id": "quick_read", "name": "快速阅读", "action": "quick_read",
+     "system": "你是 ReadMD 的文档阅读助手。对用户给出的 Markdown 文档做快速阅读，输出：1) 一句话概述；2) 核心要点列表；3) 文档结构目录；4) 值得注意的细节或疑问。使用 Markdown 格式。",
+     "user": ""},
+    {"id": "polish", "name": "润色", "action": "polish",
+     "system": "你是资深中文编辑。润色用户给出的 Markdown 文档：修正错别字、病句、表达生硬之处，保留原有结构与全部 Markdown 标记，只输出润色后的完整文档，不要加任何解释。",
+     "user": ""},
+    {"id": "modify", "name": "修改", "action": "modify",
+     "system": "你是文档修订助手。根据用户要求修改文档，修正明显错误（错别字、标点、Markdown 格式错误）。只输出修改后的完整文档，不要加任何解释。",
+     "user": ""},
+    {"id": "expand", "name": "扩充", "action": "expand",
+     "system": "你是文档扩充助手。在保持原有结构与语气的前提下，为文档补充细节、示例、解释，使内容更丰富。只输出扩充后的完整文档，不要加任何解释。",
+     "user": ""},
+    {"id": "continue", "name": "续写", "action": "continue",
+     "system": "你是文档续写助手。从文档末尾自然延续写作，保持风格一致。只输出续写的新增内容，不要重复原文。",
+     "user": ""},
+    {"id": "translate", "name": "翻译", "action": "translate",
+     "system": "你是专业翻译。将用户给出的文档翻译成指定语言，保留 Markdown 结构、表格与代码块，只输出译文。",
+     "user": ""},
+    {"id": "ask", "name": "提问", "action": "ask",
+     "system": "你是文档问答助手。基于用户给出的文档内容回答问题；文档中没有的内容请明确说明。",
+     "user": ""},
+    {"id": "summary", "name": "总结要点", "action": "ask",
+     "system": "你是文档总结助手。用 5 条以内要点概括用户文档的核心内容，输出为 Markdown 列表；最后用一句话总结全文。",
+     "user": ""},
+    {"id": "outline", "name": "生成大纲", "action": "ask",
+     "system": "你是文档策划。为用户文档生成层级目录大纲（# / ## / ###），只输出大纲，不要其他内容。",
+     "user": ""},
+    {"id": "weekly", "name": "生成周报", "action": "ask",
+     "system": "你是周报助手。根据用户给出的工作内容，整理成结构化周报：本周完成 / 下周计划 / 风险与求助。只输出周报正文。",
+     "user": ""},
+    {"id": "to_english", "name": "翻译成英文", "action": "translate",
+     "system": "你是专业翻译。将用户给出的文档翻译成英文，保留 Markdown 结构、表格与代码块，只输出译文。",
+     "user": ""},
+    {"id": "code_review", "name": "代码审查", "action": "ask",
+     "system": "你是资深代码审查员。审查用户文档中的代码块：指出 bug、安全隐患、可读性问题，并给出修改建议与示例代码。用 Markdown 输出。",
+     "user": ""},
+    {"id": "action_items", "name": "提取行动项", "action": "ask",
+     "system": "你是任务管理助手。从用户文档中提取可执行行动项，用 Markdown 表格输出：事项 / 负责人 / 截止时间 / 优先级。",
+     "user": ""},
+    {"id": "fix_format", "name": "修正 Markdown 格式", "action": "modify",
+     "system": "你是 Markdown 格式专家。修正文档中的格式问题：表格对齐、加粗符号配对、公式写法、标题层级。只输出修正后的完整文档，不要解释。",
+     "user": ""},
+]
+
+
+def load_prompts():
+    """内置 + 自定义模板合并；自定义可覆盖同名内置。"""
+    d = load_json(PROMPTS_FILE, {})
+    customs = d.get('templates', [])
+    by_id = {t.get('id'): t for t in customs}
+    merged = []
+    seen = set()
+    for b in BUILTIN_PROMPTS:
+        bid = b.get('id')
+        seen.add(bid)
+        merged.append(dict(by_id.get(bid, b), builtin=True))
+    for c in customs:
+        cid = c.get('id')
+        if cid in seen:
+            continue
+        merged.append(dict(c, builtin=False))
+    return {'templates': merged}
+
+
+def save_prompt(template):
+    """新增 / 更新模板。id 为空时自动生成；内置 id 表示覆盖内置模板。"""
+    t = dict(template or {})
+    if not t.get('id'):
+        t['id'] = 't_%d' % int(time.time() * 1000)
+    if not t.get('name'):
+        t['name'] = '未命名模板'
+    t.pop('builtin', None)
+    d = load_json(PROMPTS_FILE, {})
+    customs = [c for c in d.get('templates', []) if c.get('id') != t.get('id')]
+    customs.append(t)
+    save_json(PROMPTS_FILE, {'templates': customs})
+    return t
+
+
+def delete_prompt(prompt_id):
+    d = load_json(PROMPTS_FILE, {})
+    d['templates'] = [t for t in d.get('templates', []) if t.get('id') != prompt_id]
+    save_json(PROMPTS_FILE, d)
+    return True
+
+
+def load_history(limit=50):
+    d = load_json(HISTORY_FILE, {'sessions': []})
+    return d.get('sessions', [])[:limit]
+
+
+def save_session(session):
+    """新增 / 更新会话（按 id upsert），限制会话 50 个、消息 60 条。"""
+    s = dict(session or {})
+    now = time.time()
+    if not s.get('id'):
+        s['id'] = 'h_%d' % int(now * 1000)
+    s['created'] = s.get('created') or now
+    s['updated'] = now
+    msgs = (s.get('messages') or [])[-60:]
+    s['messages'] = msgs
+    s['msgCount'] = len(msgs)
+    sessions = [x for x in load_history(500) if x.get('id') != s['id']]
+    sessions.insert(0, s)
+    save_json(HISTORY_FILE, {'sessions': sessions[:50]})
+    return s
+
+
+def delete_session(session_id):
+    sessions = [x for x in load_history(500) if x.get('id') != session_id]
+    save_json(HISTORY_FILE, {'sessions': sessions})
+    return True
 
 
 def read_text(path):
@@ -188,6 +310,10 @@ class Handler(BaseHTTPRequestHandler):
             self._api_ai_config()
         elif path == '/api/ai/chat':
             self._api_ai_chat()
+        elif path == '/api/ai/prompts':
+            self._api_ai_prompts()
+        elif path == '/api/ai/history':
+            self._api_ai_history()
         elif path == '/api/share/start':
             self._send_json(200, start_lan_server())
         elif path == '/api/share/stop':
@@ -287,6 +413,57 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
+    def _api_ai_prompts(self):
+        """Prompt 模板：GET 列表，POST 保存/覆盖/删除。"""
+        try:
+            if self.command == 'GET':
+                self._send_json(200, load_prompts())
+                return
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8'))
+            action = body.get('action', 'save')
+            if action == 'delete':
+                self._send_json(200, {'ok': delete_prompt(body.get('id') or '')})
+            else:
+                t = save_prompt(body.get('template') or {})
+                self._send_json(200, {'ok': True, 'template': t})
+        except Exception as e:
+            logging.exception('ai prompts failed')
+            self._send_json(500, {'error': '模板操作失败：%s' % e})
+
+    def _api_ai_history(self):
+        """AI 会话：GET 列表/详情，POST 保存/删除/清空。"""
+        try:
+            if self.command == 'GET':
+                u = urlparse(self.path)
+                qs = parse_qs(u.query)
+                sid = qs.get('id', [''])[0]
+                if sid:
+                    for s in load_history(500):
+                        if s.get('id') == sid:
+                            self._send_json(200, {'session': s})
+                            return
+                    self._send_json(404, {'error': '会话不存在'})
+                    return
+                brief = [{k: s.get(k) for k in ('id', 'title', 'created', 'updated',
+                                                'provider', 'model', 'doc', 'msgCount')}
+                         for s in load_history()]
+                self._send_json(200, {'sessions': brief})
+                return
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8'))
+            action = body.get('action', 'save')
+            if action == 'delete':
+                self._send_json(200, {'ok': delete_session(body.get('id') or '')})
+            elif action == 'clear':
+                save_json(HISTORY_FILE, {'sessions': []})
+                self._send_json(200, {'ok': True})
+            else:
+                sess = save_session(body.get('session') or {})
+                self._send_json(200, {'ok': True, 'session': sess})
+        except Exception as e:
+            logging.exception('ai history failed')
+            self._send_json(500, {'error': '会话操作失败：%s' % e})
     def _send_file(self, fp, ctype):
         if not os.path.isfile(fp):
             self._send(404, 'text/plain; charset=utf-8', b'not found')
@@ -808,6 +985,18 @@ def run_selftest():
         safe_print('http server OK (port %d)' % port)
     except Exception as e:
         safe_print('http selftest failed:', e)
+        ok = False
+    try:
+        t = save_prompt({'name': '_selftest', 'system': 'x', 'action': 'ask'})
+        assert load_prompts()['templates']
+        assert delete_prompt(t['id'])
+        s = save_session({'title': '_selftest', 'provider': 'DeepSeek', 'model': 'deepseek-chat',
+                         'doc': 't', 'messages': [{'role': 'user', 'content': 'hi'}]})
+        assert s['id'] and load_history()[0]['id'] == s['id']
+        assert delete_session(s['id'])
+        safe_print('prompts/history OK')
+    except Exception as e:
+        safe_print('prompts/history selftest failed:', e)
         ok = False
     safe_print('selftest %s' % ('PASSED' if ok else 'FAILED'))
     return 0 if ok else 1
