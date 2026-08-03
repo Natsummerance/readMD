@@ -1,0 +1,687 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""ReadMD —— 轻量级本地 Markdown 阅读器。
+
+特性：
+  - 本地 127.0.0.1 HTTP 服务 + pywebview 原生窗口，秒开
+  - 渲染前自动修正常见错误（表格 / 加粗 / 公式 / 标题），只影响显示
+  - 自动刷新、目录、搜索、主题、字号、最近文件、文件夹浏览、打印
+  - 全部资源离线（marked + MathJax 已内置），无需联网
+
+用法：
+  python readmd.py [文件.md]        # 打开文件（或空启动）
+  python readmd.py --browser [文件] # 用默认浏览器打开（无 pywebview 时兜底）
+  python readmd.py --selftest       # 自测（修正器 + 本地服务）
+"""
+
+import argparse
+import json
+import logging
+import mimetypes
+import os
+import re
+import subprocess
+import sys
+import threading
+import webbrowser
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import parse_qs, quote, unquote, urlparse
+
+import readmd_fix
+import readmd_modules as RM
+
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'ReadMD')
+SETTINGS_FILE = os.path.join(DATA_DIR, 'settings.json')
+RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
+LOG_FILE = os.path.join(DATA_DIR, 'readmd.log')
+VERSION = '1.0.0'
+
+MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
+
+
+def safe_print(*args, **kwargs):
+    try:
+        if sys.stdout is not None:
+            print(*args, **kwargs)
+    except Exception:
+        pass
+
+
+def setup_logging():
+    try:
+        os.makedirs(DATA_DIR, exist_ok=True)
+        logging.basicConfig(
+            filename=LOG_FILE, level=logging.INFO, encoding='utf-8',
+            format='%(asctime)s %(levelname)s %(message)s')
+    except Exception:
+        pass
+
+
+def load_json(path, default):
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return default
+
+
+def save_json(path, data):
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = path + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except Exception as e:
+        logging.exception('save_json failed: %s', path)
+
+
+def read_text(path):
+    """按编码优先级读取文本文件（UTF-8 / GB18030 / Big5 / Latin-1）。"""
+    with open(path, 'rb') as f:
+        data = f.read()
+    if data.startswith(b'\xef\xbb\xbf'):
+        return data.decode('utf-8-sig'), 'utf-8-sig'
+    for enc in ('utf-8', 'gb18030', 'big5', 'latin-1'):
+        try:
+            return data.decode(enc), enc
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return data.decode('utf-8', errors='replace'), 'utf-8'
+
+
+# ---------------------------------------------------------------- HTTP 服务
+
+class Handler(BaseHTTPRequestHandler):
+    server_version = 'ReadMD/' + VERSION
+
+    def log_message(self, fmt, *args):
+        pass  # 静默访问日志
+
+    def do_GET(self):
+        try:
+            self._route()
+        except Exception as e:
+            logging.exception('http error: %s', self.path)
+            try:
+                self._send(500, 'text/plain; charset=utf-8', ('error: %s' % e).encode('utf-8'))
+            except Exception:
+                pass
+
+    def do_POST(self):
+        try:
+            self._route()
+        except Exception as e:
+            logging.exception('http post error: %s', self.path)
+            try:
+                self._send(500, 'text/plain; charset=utf-8', ('error: %s' % e).encode('utf-8'))
+            except Exception:
+                pass
+
+    def _route(self):
+        u = urlparse(self.path)
+        path = u.path
+        qs = parse_qs(u.query)
+        if path in ('/', '/index.html'):
+            self._send_file(os.path.join(APP_DIR, 'assets', 'index.html'),
+                            'text/html; charset=utf-8')
+        elif path.startswith('/assets/'):
+            rel = path[len('/assets/'):]
+            fp = os.path.normpath(os.path.join(APP_DIR, 'assets', rel))
+            base = os.path.normpath(os.path.join(APP_DIR, 'assets'))
+            if not fp.startswith(base):
+                self._send(403, 'text/plain; charset=utf-8', b'forbidden')
+                return
+            mime = mimetypes.guess_type(fp)[0] or 'application/octet-stream'
+            if mime.startswith('text/') or mime in ('application/javascript', 'application/json'):
+                mime += '; charset=utf-8'
+            self._send_file(fp, mime)
+        elif path == '/api/file':
+            p = unquote(qs.get('p', [''])[0])
+            if not p:
+                self._send(400, 'text/plain; charset=utf-8', b'missing p')
+                return
+            self._api_file(p, qs.get('meta', ['0'])[0] == '1')
+        elif path == '/api/list':
+            p = unquote(qs.get('p', [''])[0])
+            self._api_list(p)
+        elif path == '/api/modules':
+            RM.load_all()  # 幂等：任意前端轮询即触发后台加载（渲染完成后的首次轮询才会发生）
+            st, err = RM.status()
+            self._send_json(200, {'modules': st, 'errors': err})
+        elif path == '/api/convert':
+            p = unquote(qs.get('p', [''])[0])
+            self._api_convert(p)
+        elif path == '/api/ocr':
+            p = unquote(qs.get('p', [''])[0])
+            self._api_ocr(p)
+        elif path == '/api/url':
+            u = unquote(qs.get('u', [''])[0])
+            crawl = qs.get('crawl', ['0'])[0] == '1'
+            self._api_url(u, crawl)
+        elif path == '/api/save':
+            self._do_save()
+        elif path == '/api/upload':
+            self._do_upload(qs.get('ext', [''])[0])
+        elif path == '/raw':
+            p = unquote(qs.get('p', [''])[0])
+            self._send_raw(p)
+        else:
+            self._send(404, 'text/plain; charset=utf-8', b'not found')
+
+    def _send(self, code, ctype, body):
+        self.send_response(code)
+        self.send_header('Content-Type', ctype)
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', 'no-cache')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _send_json(self, code, obj):
+        self._send(code, 'application/json; charset=utf-8',
+                   json.dumps(obj, ensure_ascii=False).encode('utf-8'))
+
+    def _send_file(self, fp, ctype):
+        if not os.path.isfile(fp):
+            self._send(404, 'text/plain; charset=utf-8', b'not found')
+            return
+        with open(fp, 'rb') as f:
+            self._send(200, ctype, f.read())
+
+    def _api_file(self, p, meta_only):
+        if not os.path.isfile(p):
+            self._send_json(404, {'error': '文件不存在'})
+            return
+        try:
+            st = os.stat(p)
+        except OSError:
+            self._send_json(404, {'error': '无法访问文件'})
+            return
+        name = os.path.basename(p)
+        d = {
+            'path': p, 'name': name, 'dir': os.path.dirname(p),
+            'mtime': st.st_mtime, 'size': st.st_size,
+        }
+        if meta_only:
+            self._send_json(200, d)
+            return
+        text, enc = read_text(p)
+        fr = readmd_fix.fix_markdown(text)
+        d.update({
+            'encoding': enc,
+            'content': fr.text,
+            'original': text,
+            'fixes': fr.fixes,
+            'stats': fr.stats,
+        })
+        self._send_json(200, d)
+
+    def _api_list(self, p):
+        """递归列出目录下的 Markdown 文件（最多 4 层 / 500 个）。"""
+        if not os.path.isdir(p):
+            self._send_json(200, {'dir': p, 'files': []})
+            return
+        files = []
+        for root, dirs, names in os.walk(p):
+            dirs[:] = [x for x in dirs if not x.startswith(('.', '_'))]
+            depth = root[len(p):].count(os.sep)
+            if depth >= 4:
+                dirs[:] = []
+                continue
+            for n in sorted(names):
+                if n.lower().endswith(MD_EXTS):
+                    files.append(os.path.join(root, n))
+            if len(files) >= 500:
+                break
+        self._send_json(200, {'dir': p, 'files': files[:500]})
+
+    def _api_convert(self, p):
+        if not os.path.isfile(p):
+            self._send_json(404, {'error': '文件不存在'})
+            return
+        if not RM.is_ready('convert'):
+            RM.load_all()
+            self._send_json(409, {'error': '转换模块加载中，请稍候再试'})
+            return
+        try:
+            mod = RM.get('convert')
+            text = mod.convert(p) or ''
+            if not text.strip():
+                self._send_json(200, {'content': '', 'name': os.path.basename(p),
+                                      'dir': os.path.dirname(p), 'source': 'convert',
+                                      'note': '未提取到文字，可尝试“扫描转 MD”（OCR）'})
+                return
+            fr = readmd_fix.fix_markdown(text)
+            self._send_json(200, {'content': fr.text, 'fixes': fr.fixes,
+                                  'name': os.path.basename(p),
+                                  'dir': os.path.dirname(p), 'source': 'convert', 'path': p})
+        except Exception as e:
+            logging.exception('convert failed: %s', p)
+            self._send_json(500, {'error': '转换失败：%s' % e})
+
+    def _api_ocr(self, p):
+        if not os.path.isfile(p):
+            self._send_json(404, {'error': '文件不存在'})
+            return
+        if not RM.is_ready('ocr'):
+            RM.load_all()
+            self._send_json(409, {'error': 'OCR 模块加载中，请稍候再试'})
+            return
+        try:
+            mod = RM.get('ocr')
+            text = mod.ocr_any(p)
+            fr = readmd_fix.fix_markdown(text or '')
+            self._send_json(200, {'content': fr.text, 'fixes': fr.fixes,
+                                  'name': os.path.basename(p),
+                                  'dir': os.path.dirname(p), 'source': 'ocr', 'path': p})
+        except Exception as e:
+            logging.exception('ocr failed: %s', p)
+            self._send_json(500, {'error': 'OCR 失败：%s' % e})
+
+    def _api_url(self, u, crawl):
+        if not u:
+            self._send_json(400, {'error': '缺少 URL'})
+            return
+        if not RM.is_ready('web'):
+            RM.load_all()
+            self._send_json(409, {'error': '网页模块加载中，请稍候再试'})
+            return
+        try:
+            mod = RM.get('web')
+            text = mod.crawl(u) if crawl else mod.fetch_url(u)
+            if not text:
+                self._send_json(200, {'content': '', 'name': u, 'dir': '',
+                                      'source': 'url', 'note': '未能从该网页提取到正文'})
+                return
+            fr = readmd_fix.fix_markdown(text)
+            self._send_json(200, {'content': fr.text, 'fixes': fr.fixes,
+                                  'name': u, 'dir': '', 'source': 'url', 'path': u})
+        except Exception as e:
+            logging.exception('url convert failed: %s', u)
+            self._send_json(500, {'error': '抓取失败：%s' % e})
+
+    def _do_upload(self, ext):
+        """浏览器兜底模式：接收文件字节写入临时目录，返回可转换的路径。"""
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            data = self.rfile.read(n)
+            if not data:
+                self._send_json(400, {'error': '空文件'})
+                return
+            upload_dir = os.path.join(DATA_DIR, 'uploads')
+            os.makedirs(upload_dir, exist_ok=True)
+            import uuid
+            name = uuid.uuid4().hex + (ext if ext and ext.startswith('.') else ('.' + ext if ext else '.bin'))
+            target = os.path.join(upload_dir, name)
+            with open(target, 'wb') as f:
+                f.write(data)
+            self._send_json(200, {'path': target})
+        except Exception as e:
+            logging.exception('upload failed')
+            self._send_json(500, {'error': '上传失败：%s' % e})
+
+    def _do_save(self):
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8'))
+        except Exception:
+            self._send_json(400, {'error': '无效请求'})
+            return
+        path = body.get('path') or ''
+        content = body.get('content') or ''
+        enc = body.get('encoding') or 'utf-8'
+        if not path:
+            self._send_json(400, {'error': '缺少文件路径'})
+            return
+        try:
+            import shutil
+            bak = None
+            if os.path.isfile(path) and not os.path.exists(path + '.bak'):
+                shutil.copy2(path, path + '.bak')
+                bak = path + '.bak'
+            with open(path, 'w', encoding=enc, newline='') as f:
+                f.write(content)
+            self._send_json(200, {'ok': True, 'path': path, 'backup': bak})
+        except Exception as e:
+            logging.exception('save failed: %s', path)
+            self._send_json(500, {'error': '保存失败：%s' % e})
+
+    def _send_raw(self, p):
+        if not os.path.isfile(p):
+            self._send(404, 'text/plain; charset=utf-8', b'not found')
+            return
+        mime = mimetypes.guess_type(p)[0] or 'application/octet-stream'
+        try:
+            with open(p, 'rb') as f:
+                body = f.read()
+        except OSError:
+            self._send(500, 'text/plain; charset=utf-8', b'read error')
+            return
+        self.send_response(200)
+        self.send_header('Content-Type', mime)
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', 'no-cache')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(body)
+
+
+def start_server(port=0):
+    server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    server.daemon_threads = True
+    t = threading.Thread(target=server.serve_forever, daemon=True)
+    t.start()
+    return server
+
+
+# ---------------------------------------------------------------- JS 桥接 API
+
+class Api(object):
+    """暴露给前端 window.pywebview.api 的方法（浏览器模式下不可用）。"""
+
+    def __init__(self):
+        self._window = None
+
+    def choose_file(self):
+        import webview
+        if self._window is None:
+            return None
+        try:
+            files = self._window.create_file_dialog(
+                webview.OPEN_DIALOG,
+                file_types=('Markdown 文件 (*.md;*.markdown;*.mdown;*.mkd;*.txt)',))
+            return files[0] if files else None
+        except Exception as e:
+            logging.exception('choose_file failed')
+            return None
+
+    def choose_folder(self):
+        import webview
+        if self._window is None:
+            return None
+        try:
+            dirs = self._window.create_file_dialog(webview.FOLDER_DIALOG)
+            return dirs[0] if dirs else None
+        except Exception:
+            return None
+
+    def choose_any_file(self):
+        """任意格式文件（用于“万物转 MD”）。"""
+        import webview
+        if self._window is None:
+            return None
+        try:
+            files = self._window.create_file_dialog(
+                webview.OPEN_DIALOG,
+                file_types=(
+                    '所有文件 (*.*)',
+                    '文档 (*.md;*.markdown;*.docx;*.doc;*.pptx;*.xlsx;*.pdf;*.html;*.htm;*.txt;*.csv;*.json)',
+                    '图片 (*.png;*.jpg;*.jpeg;*.bmp;*.webp;*.tif;*.tiff)',
+                ))
+            return files[0] if files else None
+        except Exception:
+            return None
+
+    def start_modules(self):
+        """渲染完成后由前端触发：后台加载转换 / OCR / 网页模块。"""
+        RM.load_all()
+        return True
+
+    def get_modules_status(self):
+        st, err = RM.status()
+        return {'modules': st, 'errors': err}
+
+    def save_file(self, path, content, encoding):
+        """编辑保存：写回文件，首次保存自动生成 .bak 备份。"""
+        try:
+            import shutil
+            bak = None
+            if os.path.isfile(path) and not os.path.exists(path + '.bak'):
+                shutil.copy2(path, path + '.bak')
+                bak = path + '.bak'
+            with open(path, 'w', encoding=encoding or 'utf-8', newline='') as f:
+                f.write(content)
+            return {'ok': True, 'backup': bak}
+        except Exception as e:
+            logging.exception('save_file failed')
+            return {'ok': False, 'error': str(e)}
+
+    def save_as(self, content, suggested):
+        """把转换 / 网页 / OCR 结果另存为 .md 文件。"""
+        import webview
+        if self._window is None:
+            return None
+        try:
+            target = self._window.create_file_dialog(
+                webview.SAVE_DIALOG, save_filename=suggested,
+                file_types=('Markdown (*.md)',))
+            if not target:
+                return None
+            with open(target, 'w', encoding='utf-8', newline='') as f:
+                f.write(content)
+            return target
+        except Exception as e:
+            logging.exception('save_as failed')
+            return None
+
+    def open_external(self, url):
+        try:
+            webbrowser.open(url)
+            return True
+        except Exception:
+            return False
+
+    def open_path(self, path):
+        """用系统默认程序打开文件（如图片、PDF 或外部文档）。"""
+        try:
+            os.startfile(path)
+            return True
+        except Exception:
+            return False
+
+    def get_settings(self):
+        return load_json(SETTINGS_FILE, {})
+
+    def save_settings(self, settings):
+        cur = load_json(SETTINGS_FILE, {})
+        cur.update(settings or {})
+        save_json(SETTINGS_FILE, cur)
+        return True
+
+    def get_recent(self):
+        return load_json(RECENT_FILE, [])
+
+    def add_recent(self, path):
+        rec = load_json(RECENT_FILE, [])
+        try:
+            rec = [x for x in rec if os.path.normcase(x) != os.path.normcase(path)]
+        except Exception:
+            rec = [x for x in rec if x != path]
+        rec.insert(0, path)
+        save_json(RECENT_FILE, rec[:20])
+        return True
+
+    def clear_recent(self):
+        save_json(RECENT_FILE, [])
+        return True
+
+    def save_fixed(self, path, content):
+        """把修正后的文本另存为新文件。"""
+        try:
+            base, ext = os.path.splitext(path)
+            out = base + '.readmd' + (ext or '.md')
+            with open(out, 'w', encoding='utf-8', newline='\n') as f:
+                f.write(content)
+            return out
+        except Exception as e:
+            logging.exception('save_fixed failed')
+            return None
+
+    def install_association(self):
+        """注册 .md 文件关联（当前用户，无需管理员）。"""
+        return install_association()
+
+    def get_app_info(self):
+        return {'version': VERSION, 'python': sys.version.split()[0]}
+
+
+# ---------------------------------------------------------------- 文件关联
+
+def _quote(s):
+    return '"%s"' % s
+
+
+def install_association():
+    """把 .md 等扩展名关联到 ReadMD（HKCU，无需管理员权限）。"""
+    try:
+        import shutil
+        pyw = None
+        for cand in (os.path.join(APP_DIR, '.venv', 'Scripts', 'pythonw.exe'),):
+            if os.path.isfile(cand):
+                pyw = cand
+        if pyw is None:
+            py = sys.executable
+            base = os.path.basename(py).lower()
+            if base == 'python.exe':
+                cand = os.path.splitext(py)[0] + 'w.exe'
+                pyw = cand if os.path.isfile(cand) else None
+            if pyw is None:
+                pyw = py  # 退化为 python（可能闪一个控制台）
+        script = os.path.join(APP_DIR, 'readmd.py')
+        cmd = '%s %s "%%1"' % (_quote(pyw), _quote(script))
+        icon = '%s,0' % _quote(os.path.join(APP_DIR, 'assets', 'readmd.ico'))
+        for ext in ('.md', '.markdown', '.mdown', '.mkd'):
+            subprocess.run(['reg', 'add', r'HKCU\Software\Classes\%s' % ext, '/ve',
+                            '/d', 'ReadMD.markdown', '/f'],
+                           capture_output=True)
+        subprocess.run(['reg', 'add', r'HKCU\Software\Classes\ReadMD.markdown', '/ve',
+                        '/d', 'ReadMD Markdown 阅读器', '/f'], capture_output=True)
+        subprocess.run(['reg', 'add', r'HKCU\Software\Classes\ReadMD.markdown\DefaultIcon',
+                        '/ve', '/d', icon, '/f'], capture_output=True)
+        subprocess.run(['reg', 'add', r'HKCU\Software\Classes\ReadMD.markdown\shell\open\command',
+                        '/ve', '/t', 'REG_EXPAND_SZ', '/d', cmd, '/f'], capture_output=True)
+        subprocess.run(['reg', 'add', r'HKCU\Software\Classes\Applications\readmd.py\shell\open\command',
+                        '/ve', '/t', 'REG_EXPAND_SZ', '/d', cmd, '/f'], capture_output=True)
+        try:
+            subprocess.run(['ie4uinit.exe', '-show'], capture_output=True)
+        except Exception:
+            pass
+        return True
+    except Exception as e:
+        logging.exception('install_association failed')
+        return str(e)
+
+
+# ---------------------------------------------------------------- 自测
+
+def run_selftest():
+    ok = True
+    try:
+        import urllib.request
+        import readmd_fix_test
+        readmd_fix_test.run_tests(quiet=True)
+    except Exception as e:
+        safe_print('fixer tests import failed:', e)
+        ok = False
+    try:
+        server = start_server(0)
+        port = server.server_port
+        with urllib.request.urlopen('http://127.0.0.1:%d/' % port, timeout=5) as r:
+            body = r.read().decode('utf-8', 'replace')
+            assert r.status == 200 and 'ReadMD' in body
+        self_file = os.path.abspath(__file__)
+        with urllib.request.urlopen(
+                'http://127.0.0.1:%d/api/file?p=%s' % (port, quote(self_file)),
+                timeout=5) as r:
+            d = json.loads(r.read().decode('utf-8'))
+            assert d['name'] == 'readmd.py'
+        safe_print('http server OK (port %d)' % port)
+    except Exception as e:
+        safe_print('http selftest failed:', e)
+        ok = False
+    safe_print('selftest %s' % ('PASSED' if ok else 'FAILED'))
+    return 0 if ok else 1
+
+
+# ---------------------------------------------------------------- 启动
+
+def main():
+    parser = argparse.ArgumentParser(description='ReadMD - 轻量级 Markdown 阅读器')
+    parser.add_argument('file', nargs='?', help='要打开的 .md 文件')
+    parser.add_argument('--browser', action='store_true', help='用默认浏览器打开（兜底模式）')
+    parser.add_argument('--port', type=int, default=0, help='本地服务端口（默认随机）')
+    parser.add_argument('--selftest', action='store_true', help='运行自测')
+    parser.add_argument('--mods', action='store_true', help='加载全部扩展模块并报告状态')
+    args = parser.parse_args()
+
+    if args.selftest:
+        sys.exit(run_selftest())
+
+    if args.mods:
+        ok = True
+        for m in RM.MODULES:
+            good = RM.load_forced(m)
+            st, err = RM.status()
+            safe_print('%s: %s%s' % (m, st.get(m), (' - ' + err.get(m, '')) if err.get(m) else ''))
+            ok = ok and good
+        return 0 if ok else 1
+
+    setup_logging()
+    server = start_server(args.port)
+    initial = None
+    if args.file:
+        p = os.path.abspath(args.file)
+        if os.path.isfile(p):
+            initial = p
+        else:
+            safe_print('文件不存在: %s' % args.file)
+
+    url = 'http://127.0.0.1:%d/' % server.server_port
+    if initial:
+        url += '?file=' + quote(initial)
+
+    if args.browser:
+        webbrowser.open(url)
+        safe_print('ReadMD 服务运行于 %s（Ctrl+C 退出）' % url)
+        try:
+            while True:
+                threading.Event().wait(3600)
+        except KeyboardInterrupt:
+            pass
+        return 0
+
+    try:
+        import webview
+    except ImportError:
+        safe_print('未安装 pywebview。请先运行 install.bat，或用 --browser 模式。')
+        safe_print('快速兜底：python readmd.py --browser "%s"' % (initial or ''))
+        return 1
+
+    api = Api()
+    try:
+        window = webview.create_window(
+            'ReadMD', url, js_api=api,
+            width=1160, height=820, min_size=(720, 480),
+            text_select=True, zoomable=True, background_color='#f7f7f5')
+    except Exception as e:
+        safe_print('创建窗口失败：%s' % e)
+        return 1
+    api._window = window
+    try:
+        webview.start()
+    except Exception as e:
+        logging.exception('webview start failed')
+        safe_print('启动失败：%s' % e)
+        try:
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, 'ReadMD 启动失败：%s' % e, 'ReadMD', 0x10)
+        except Exception:
+            pass
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

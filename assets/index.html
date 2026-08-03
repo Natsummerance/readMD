@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReadMD</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<header id="toolbar">
+  <div class="tb-group tb-left">
+    <button id="btn-open" class="tb-btn" title="打开 Markdown 文件 (Ctrl+O)">&#128194; 打开</button>
+    <button id="btn-folder" class="tb-btn icon" title="打开文件夹">&#128193;</button>
+    <button id="btn-recent" class="tb-btn icon" title="最近文件">&#128337;</button>
+    <button id="btn-reload" class="tb-btn icon" title="重新加载 (Ctrl+R)">&#8635;</button>
+    <span id="file-title" class="file-title">未打开文件</span>
+  </div>
+  <div class="tb-group tb-right">
+    <button id="btn-convert" class="tb-btn" title="万物转 MD：docx/pptx/xlsx/pdf/html... 转为 Markdown" disabled>转换</button>
+    <button id="btn-web" class="tb-btn" title="网页转 MD：输入 URL 抓取正文，可批量爬取 (Ctrl+U)" disabled>网页</button>
+    <button id="btn-ocr" class="tb-btn" title="扫描转 MD：图片/扫描件 OCR (Ctrl+O 选择图片)" disabled>OCR</button>
+    <button id="btn-edit" class="tb-btn" title="编辑当前 Markdown (Ctrl+E)" disabled>编辑</button>
+    <button id="btn-saveas" class="tb-btn" title="把当前内容另存为 .md 文件" disabled>另存</button>
+    <button id="btn-assoc" class="tb-btn" title="把 .md 设置为 ReadMD 默认打开方式">设为默认</button>
+    <button id="btn-toc" class="tb-btn" title="目录 (Ctrl+Shift+F)">&#9776; 目录</button>
+    <button id="btn-fix" class="tb-btn" title="本次自动修正详情">&#128736; 修复</button>
+    <button id="btn-search" class="tb-btn icon" title="搜索 (Ctrl+F)">&#128269;</button>
+    <button id="btn-theme" class="tb-btn icon" title="切换主题 (Ctrl+D)">&#9789;</button>
+    <button id="btn-a" class="tb-btn" title="减小字号 (Ctrl+-)">A&minus;</button>
+    <button id="btn-A" class="tb-btn" title="增大字号 (Ctrl+=)">A+</button>
+    <button id="btn-print" class="tb-btn icon" title="打印 / 导出 PDF (Ctrl+P)">&#128424;</button>
+  </div>
+</header>
+
+<div id="search-bar" class="hidden">
+  <input id="search-input" type="text" placeholder="在文档中搜索...">
+  <span id="search-count" class="search-count"></span>
+  <button id="search-prev" class="tb-btn" title="上一个 (Shift+Enter)">&#8593;</button>
+  <button id="search-next" class="tb-btn" title="下一个 (Enter)">&#8595;</button>
+  <button id="search-close" class="tb-btn" title="关闭 (Esc)">&#10005;</button>
+</div>
+
+<div id="edit-bar" class="hidden">
+  <span class="edit-tip">编辑模式：修改后 Ctrl+S 保存（首次保存自动备份 .bak），Esc 取消</span>
+  <button id="edit-save" class="tb-btn accent">&#128190; 保存 (Ctrl+S)</button>
+  <button id="edit-cancel" class="tb-btn">取消 (Esc)</button>
+</div>
+
+<div id="layout">
+  <aside id="side" class="hidden">
+    <div id="side-tabs">
+      <button id="tab-toc" class="side-tab active">目录</button>
+      <button id="tab-files" class="side-tab">文件</button>
+    </div>
+    <nav id="toc-list" class="side-body"></nav>
+    <div id="file-list" class="side-body hidden"></div>
+  </aside>
+
+  <div id="main-col">
+    <main id="content">
+      <div id="welcome">
+        <div class="logo">Read<span>MD</span></div>
+        <p class="welcome-sub">轻量级本地 Markdown 阅读器 · 自动修正表格 / 加粗 / 公式 · 万物皆可转 MD</p>
+        <div class="welcome-btns">
+          <button id="w-open" class="big-btn">&#128194; 打开 Markdown</button>
+          <button id="w-folder" class="big-btn">&#128193; 打开文件夹</button>
+          <button id="w-convert" class="big-btn">&#128736; 万物转 MD</button>
+          <button id="w-web" class="big-btn">&#127760; 网页转 MD</button>
+          <button id="w-ocr" class="big-btn">&#128424; 扫描转 MD</button>
+        </div>
+        <div id="recent-box" class="hidden">
+          <h3>最近打开</h3>
+          <ul id="recent-list"></ul>
+          <button id="recent-clear" class="link-btn">清空记录</button>
+        </div>
+        <p class="welcome-hint">快捷键：Ctrl+O 打开 · Ctrl+F 搜索 · Ctrl+U 网页 · Ctrl+E 编辑 · Ctrl+P 打印<br>直接双击 .md 文件秒开阅读；docx / pptx / xlsx / pdf / 图片 / 网页 均可一键转 Markdown</p>
+      </div>
+    </main>
+    <textarea id="edit-area" class="hidden" spellcheck="false"></textarea>
+  </div>
+</div>
+
+<footer id="statusbar">
+  <span id="status-left"></span>
+  <span id="status-right"></span>
+  <span id="status-mods"></span>
+</footer>
+
+<div id="url-modal" class="hidden">
+  <div id="url-box">
+    <h3>&#127760; 网页转 MD</h3>
+    <input id="url-input" type="text" placeholder="https://example.com/article" autocomplete="off">
+    <label class="url-crawl"><input id="url-crawl" type="checkbox"> 批量爬取同站链接（最多 10 个页面，合并为一个文档）</label>
+    <div class="url-actions">
+      <button id="url-go" class="tb-btn accent">抓取</button>
+      <button id="url-close" class="tb-btn">取消</button>
+    </div>
+    <p class="fix-note">使用 trafilatura 提取正文，对文章 / 博客 / 新闻类页面效果最佳。</p>
+  </div>
+</div>
+
+<div id="fix-modal" class="hidden">
+  <div id="fix-box">
+    <h3>本次自动修正详情 <span id="fix-count"></span></h3>
+    <ul id="fix-list"></ul>
+    <div class="fix-actions">
+      <button id="fix-save" class="tb-btn">另存为修正后文件</button>
+      <button id="fix-close" class="tb-btn">关闭</button>
+    </div>
+    <p class="fix-note">修正仅用于本次阅读，不会改写原文件。</p>
+  </div>
+</div>
+
+<div id="toast" class="hidden"></div>
+<div id="progress"></div>
+<div id="busy" class="hidden"><span>处理中…</span></div>
+<button id="top-btn" class="hidden" title="回到顶部">&#8593;</button>
+<input id="file-input" type="file" class="hidden">
+
+<script src="/assets/vendor/marked.min.js"></script>
+<script src="/assets/app.js"></script>
+</body>
+</html>
