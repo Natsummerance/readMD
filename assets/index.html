@@ -45,9 +45,27 @@
 </div>
 
 <div id="edit-bar" class="hidden">
-  <span class="edit-tip">编辑模式：修改后 Ctrl+S 保存（首次保存自动备份 .bak），Esc 取消</span>
-  <button id="edit-save" class="tb-btn accent">&#128190; 保存 (Ctrl+S)</button>
-  <button id="edit-cancel" class="tb-btn">取消 (Esc)</button>
+  <div class="md-tool" id="md-tool">
+    <button class="md-tool-btn" data-md="bold" title="加粗：**文本**">B</button>
+    <button class="md-tool-btn" data-md="italic" title="斜体：*文本*"><i>I</i></button>
+    <button class="md-tool-btn" data-md="strike" title="删除线：~~文本~~">S&#773;</button>
+    <button class="md-tool-btn" data-md="h2" title="标题：## 文本">H</button>
+    <button class="md-tool-btn" data-md="quote" title="引用：> 文本">&#10077;</button>
+    <button class="md-tool-btn" data-md="list" title="无序列表：- 项">&#8226;</button>
+    <button class="md-tool-btn" data-md="task" title="任务列表：- [ ] 项">&#9744;</button>
+    <button class="md-tool-btn" data-md="link" title="链接：[文本](url)">&#128279;</button>
+    <button class="md-tool-btn" data-md="image" title="图片：![描述](url)">&#128444;</button>
+    <button class="md-tool-btn" data-md="code" title="行内代码：`代码`">&lt;/&gt;</button>
+    <button class="md-tool-btn" data-md="codeblock" title="代码块：```代码```">&#9003;</button>
+    <button class="md-tool-btn" data-md="math" title="公式：$x^2$">&#8721;</button>
+    <button class="md-tool-btn" data-md="table" title="表格：| 列1 | 列2 |">&#9700;</button>
+    <button class="md-tool-btn" data-md="hr" title="分隔线：---">&#8213;</button>
+  </div>
+  <div class="edit-actions">
+    <span class="edit-tip">Ctrl+S 保存 · Esc 取消 · 输入 Markdown 时自动补全</span>
+    <button id="edit-save" class="tb-btn accent">&#128190; 保存 (Ctrl+S)</button>
+    <button id="edit-cancel" class="tb-btn">取消 (Esc)</button>
+  </div>
 </div>
 
 <div id="layout">
@@ -82,6 +100,7 @@
       </div>
     </main>
     <textarea id="edit-area" class="hidden" spellcheck="false"></textarea>
+    <div id="edit-wrap" class="hidden"><div id="edit-cm"></div></div>
   </div>
 </div>
 

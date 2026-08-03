@@ -417,17 +417,70 @@ mark.hl.cur { background: var(--hl-cur); }
   color: var(--fg);
 }
 #edit-area.hidden { display: none; }
+#edit-wrap { flex: 1 1 auto; min-height: 0; display: flex; }
+#edit-wrap.hidden { display: none; }
+#edit-cm { flex: 1; min-height: 0; overflow: auto; }
 #edit-bar {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 5px 12px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 10px;
   background: var(--bg2);
   border-bottom: 1px solid var(--border);
   flex: 0 0 auto;
 }
 #edit-bar.hidden { display: none; }
-.edit-tip { color: var(--fg2); font-size: 12px; flex: 1; }
+.md-tool { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.md-tool::-webkit-scrollbar { display: none; }
+.md-tool-btn {
+  flex: 0 0 auto;
+  min-width: 26px;
+  height: 24px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  border-radius: 5px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 7px;
+}
+.md-tool-btn:hover { border-color: var(--accent); color: var(--accent); }
+.md-tool-btn i { font-style: italic; }
+.edit-actions { display: flex; align-items: center; gap: 10px; }
+.edit-tip { color: var(--fg2); font-size: 12px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- CodeMirror 编辑器 ---------- */
+#edit-wrap .cm-editor { height: 100%; font-size: 14px; background: var(--bg2); color: var(--fg); }
+#edit-wrap .cm-scroller {
+  font-family: Consolas, "Cascadia Code", "Microsoft YaHei", monospace;
+  line-height: 1.7;
+  padding: 8px 0;
+}
+#edit-wrap .cm-content { padding: 0 20px 24px; caret-color: var(--accent); }
+#edit-wrap .cm-gutters {
+  background: var(--bg2);
+  color: var(--fg2);
+  border-right: 1px solid var(--border);
+  font-size: 12px;
+}
+#edit-wrap .cm-activeLine, #edit-wrap .cm-activeLineGutter { background: var(--bg); }
+#edit-wrap .cm-selectionBackground { background: rgba(59, 110, 245, .25) !important; }
+#edit-wrap .cm-cursor { border-left-color: var(--accent); }
+#edit-wrap .cm-tooltip {
+  background: var(--bg2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+#edit-wrap .cm-tooltip-autocomplete ul li[aria-selected] { background: var(--accent); color: var(--accent-fg); }
+#edit-wrap .cm-tooltip .cm-completionDetail { color: var(--fg2); font-style: normal; }
+#edit-wrap .cm-foldPlaceholder { background: var(--bg); border-color: var(--border); color: var(--fg2); }
+body[data-theme="light"] #edit-wrap .cm-editor { background: #fff; color: #1f2328; }
+body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
+#edit-wrap .cm-editor.cm-focused { outline: none; }
 .tb-btn.accent { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
 .tb-btn.accent:hover { opacity: .9; }
 .tb-btn:disabled { opacity: .45; cursor: not-allowed; }

@@ -8,3 +8,5 @@ Thumbs.db
 build/
 dist/
 *.spec
+
+tools/cm-bundle/node_modules/

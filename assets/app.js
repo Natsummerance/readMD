@@ -95,6 +95,7 @@ function toggleTheme() {
   state.theme = next;
   applySettings();
   saveSettings();
+  applyCmTheme();
 }
 
 function zoom(delta) {
@@ -1075,7 +1076,7 @@ async function copyAi() {
   }
 }
 
-function applyAi() {
+async function applyAi() {
   if (!state.ai.raw) return;
   const selOnly = $('ai-selection').checked;
   if (state.mode === 'file') {
@@ -1090,7 +1091,7 @@ function applyAi() {
     state.original = next;
     state.fixed = next;
     exitEdit();
-    toggleEdit();
+    await toggleEdit();
     showToast('已应用，请检查后 Ctrl+S 保存（首存自动备份）');
   } else {
     state.fixed = state.ai.raw;
@@ -1177,30 +1178,184 @@ async function stopShare() {
   } catch (e) { showToast('关闭失败：' + e.message); }
   refreshShareStatus();
 }
-/* ---------------- 编辑模式 ---------------- */
+/* ---------------- 编辑模式（CodeMirror 6：自动补全 + 语法引用） ---------------- */
 
-function toggleEdit() {
+let cmView = null;
+let cmReady = false;
+let cmLoading = false;
+let cmThemeCompartment = null;
+
+function loadCodeMirror() {
+  return new Promise((resolve, reject) => {
+    if (window.ReadMDCodeMirror) { cmReady = true; resolve(); return; }
+    if (cmLoading) {
+      const t0 = Date.now();
+      const iv = setInterval(() => {
+        if (window.ReadMDCodeMirror) { clearInterval(iv); cmReady = true; cmLoading = false; resolve(); }
+        else if (Date.now() - t0 > 15000) { clearInterval(iv); cmLoading = false; reject(new Error('编辑器组件加载超时')); }
+      }, 100);
+      return;
+    }
+    cmLoading = true;
+    const s = document.createElement('script');
+    s.src = '/assets/vendor/codemirror.bundle.js';
+    s.onload = () => { cmReady = true; cmLoading = false; resolve(); };
+    s.onerror = () => { cmLoading = false; reject(new Error('编辑器组件加载失败，已退回基础编辑')); };
+    document.head.appendChild(s);
+  });
+}
+
+function createEditor(doc) {
+  destroyEditor();
+  if (!window.ReadMDCodeMirror) return false;
+  const CM = window.ReadMDCodeMirror;
+  const dark = document.body.dataset.theme === 'dark';
+  cmThemeCompartment = new CM.Compartment();
+  const st = CM.EditorState.create({
+    doc: doc,
+    extensions: [
+      CM.lineNumbers(),
+      CM.highlightActiveLineGutter(),
+      CM.highlightActiveLine(),
+      CM.drawSelection(),
+      CM.dropCursor(),
+      CM.bracketMatching(),
+      CM.indentOnInput(),
+      CM.foldGutter(),
+      CM.syntaxHighlighting(CM.defaultHighlightStyle, { fallback: true }),
+      CM.history(),
+      CM.markdown({ base: CM.markdownLanguage, codeLanguages: CM.languages }),
+      CM.autocompletion({ override: [cmMarkdownCompletions()], activateOnTyping: true }),
+      CM.closeBrackets(),
+      CM.keymap.of([CM.indentWithTab, ...CM.closeBracketsKeymap, ...CM.defaultKeymap, ...CM.historyKeymap, ...CM.completionKeymap]),
+      cmThemeCompartment.of(dark ? CM.oneDark : []),
+      CM.EditorView.lineWrapping,
+    ],
+  });
+  cmView = new CM.EditorView({ state: st, parent: $('edit-cm') });
+  cmView.focus();
+  return true;
+}
+
+function destroyEditor() {
+  if (cmView) {
+    try { cmView.destroy(); } catch (e) { /* ignore */ }
+    cmView = null;
+  }
+  const c = $('edit-cm');
+  if (c) c.innerHTML = '';
+  cmThemeCompartment = null;
+}
+
+function applyCmTheme() {
+  if (!cmView || !window.ReadMDCodeMirror || !cmThemeCompartment) return;
+  const CM = window.ReadMDCodeMirror;
+  const dark = document.body.dataset.theme === 'dark';
+  cmView.dispatch({ effects: cmThemeCompartment.reconfigure(dark ? CM.oneDark : []) });
+}
+
+/* Markdown 自动补全（基于 GitHub 开源 @codemirror/autocomplete） */
+function cmMarkdownCompletions() {
+  const CM = window.ReadMDCodeMirror;
+  const item = (label, snippetText, detail, type) => ({
+    label, detail, type, apply: CM.snippet(snippetText),
+  });
+  const ALL = [
+    item("# 标题", "# ${标题}", "一级标题", "markdown"),
+    item("## 标题", "## ${标题}", "二级标题", "markdown"),
+    item("### 标题", "### ${标题}", "三级标题", "markdown"),
+    item("#### 标题", "#### ${标题}", "四级标题", "markdown"),
+    item("**加粗**", "**${文本}**", "加粗", "markdown"),
+    item("*斜体*", "*${文本}*", "斜体", "markdown"),
+    item("~~删除线~~", "~~${文本}~~", "删除线", "markdown"),
+    item("`行内代码`", "`${代码}`", "行内代码", "markdown"),
+    item("```代码块", "```\n${代码}\n```", "代码块", "markdown"),
+    item("[链接文本](url)", "[${文本}](url)", "链接", "markdown"),
+    item("![图片描述](url)", "![${描述}](url)", "图片", "markdown"),
+    item("> 引用", "> ${引用}", "引用块", "markdown"),
+    item("$公式$", "$x^2$", "行内公式", "markdown"),
+    item("$$公式$$", "$$\n${公式}\n$$", "块级公式", "markdown"),
+    item("| 表格 |", "| 列1 | 列2 |\n|---|---|\n| ${值} |  |", "表格", "markdown"),
+    item("- 列表项", "- ${项目}", "无序列表", "markdown"),
+    item("- [ ] 任务", "- [ ] ${任务}", "任务列表", "markdown"),
+    item("--- 分隔线", "---", "分隔线", "markdown"),
+  ];  return context => {
+    const before = context.matchBefore(/[\w#*_`\[!>|\$~:]{0,8}/);
+    if (!before) return null;
+    const w = before.text.toLowerCase();
+    const matched = ALL.filter(c => c.label.toLowerCase().startsWith(w) || c.label.toLowerCase().includes(w));
+    if (!matched.length) return null;
+    return { from: before.from, options: matched.slice(0, 12) };
+  };
+}
+
+/* 语法引用 / 插入工具栏 */
+function cmInsertSyntax(kind) {
+  if (!cmView) return;
+  const sel = cmView.state.selection.main;
+  const selected = cmView.state.sliceDoc(sel.from, sel.to);
+  let insert = null;
+  let cursor = sel.from;
+  const wrap = (b, d, a) => {
+    insert = b + (selected || d) + a;
+    cursor = sel.from + b.length + (selected || d).length;
+  };
+  switch (kind) {
+    case 'bold': wrap('**', '文本', '**'); break;
+    case 'italic': wrap('*', '文本', '*'); break;
+    case 'strike': wrap('~~', '文本', '~~'); break;
+    case 'code': wrap('`', '代码', '`'); break;
+    case 'math': wrap('$', 'x^2', '$'); break;
+    case 'h2': insert = '## ' + (selected || '标题'); cursor = sel.from + insert.length; break;
+    case 'quote': insert = '> ' + (selected || '引用'); cursor = sel.from + insert.length; break;
+    case 'list': insert = '- ' + (selected || '项目'); cursor = sel.from + insert.length; break;
+    case 'task': insert = '- [ ] ' + (selected || '任务'); cursor = sel.from + insert.length; break;
+    case 'link': insert = '[' + (selected || '文本') + '](url)'; cursor = sel.from + 1 + (selected || '文本').length; break;
+    case 'image': insert = '![' + (selected || '描述') + '](url)'; cursor = sel.from + 2 + (selected || '描述').length; break;
+    case 'codeblock': insert = '```\n' + (selected || '代码') + '\n```'; cursor = sel.from + 4 + (selected || '代码').length; break;
+    case 'table': insert = '| 列1 | 列2 |\n|---|---|\n| ' + (selected || '值') + ' |  |'; cursor = sel.from + insert.length; break;
+    case 'hr': insert = '\n---\n'; cursor = sel.from + insert.length; break;
+    default: return;
+  }
+  if (insert === null) return;
+  cmView.dispatch({ changes: { from: sel.from, to: sel.to, insert }, selection: { anchor: cursor } });
+  cmView.focus();
+}
+async function toggleEdit() {
   if (state.editing) { exitEdit(); return; }
   if (state.mode !== 'file' || !state.file) { showToast('仅本地 Markdown 文件可编辑'); return; }
-  $('edit-area').value = state.original || '';
   $('edit-bar').classList.remove('hidden');
-  $('edit-area').classList.remove('hidden');
   $('content').classList.add('hidden');
   state.editing = true;
   $('btn-edit').textContent = '\u270E 编辑中';
-  $('edit-area').focus();
+  try {
+    await loadCodeMirror();
+  } catch (e) { /* 退回 textarea */ }
+  if (window.ReadMDCodeMirror) {
+    $('edit-area').classList.add('hidden');
+    $('edit-wrap').classList.remove('hidden');
+    createEditor(state.original || '');
+  } else {
+    $('edit-wrap').classList.add('hidden');
+    $('edit-area').classList.remove('hidden');
+    $('edit-area').value = state.original || '';
+    $('edit-area').focus();
+  }
 }
 
 function exitEdit() {
   if (!state.editing) {
     $('edit-bar').classList.add('hidden');
     $('edit-area').classList.add('hidden');
+    $('edit-wrap').classList.add('hidden');
     $('content').classList.remove('hidden');
     $('btn-edit').textContent = '编辑';
     return;
   }
+  destroyEditor();
   $('edit-bar').classList.add('hidden');
   $('edit-area').classList.add('hidden');
+  $('edit-wrap').classList.add('hidden');
   $('content').classList.remove('hidden');
   state.editing = false;
   $('btn-edit').textContent = '编辑';
@@ -1208,7 +1363,7 @@ function exitEdit() {
 
 async function saveEdit() {
   if (!state.file || !state.editing) return;
-  const content = $('edit-area').value;
+  const content = cmView ? cmView.state.doc.toString() : $('edit-area').value;
   busy(true);
   try {
     let ok;
@@ -1619,6 +1774,7 @@ function bindEvents() {
   $('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('url-go').click(); });
 
   $('btn-edit').addEventListener('click', toggleEdit);
+  document.querySelectorAll('#md-tool .md-tool-btn').forEach(b => b.addEventListener('click', () => cmInsertSyntax(b.dataset.md)));
   $('edit-save').addEventListener('click', saveEdit);
   $('edit-cancel').addEventListener('click', exitEdit);
   $('btn-saveas').addEventListener('click', saveAs);
