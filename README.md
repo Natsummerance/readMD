@@ -121,7 +121,7 @@ deploy.bat --tag v1.4.0    rem 指定发布标签（默认 v1.4.0）
 2. 运行修正器测试（37 项）+ 主程序自测 + 扩展模块加载测试
 3. 生成图标 → 打包 `ReadMD.exe` → 生成启动画面 → 打包 `ReadMDSetup.exe` / `ReadMDUninstall.exe`
 4. `git push` 推送代码
-5. 用 `release_notes.md` 更新 Release 说明 → 上传缺失的安装包/便携版/图标 → `--verify` 校验线上资产与本地产物 SHA256 完全一致
+5. 用 `release_notes.md` 更新 Release 说明 → 上传缺失的安装包/便携版 → `--verify` 校验线上资产与本地产物 SHA256 完全一致
 
 也可以单独使用 `release.py`：
 
@@ -276,7 +276,7 @@ deploy.bat --tag v1.4.0    rem 指定发布标签（默认 v1.4.0）
 2. 运行修正器测试（37 项）+ 主程序自测 + 扩展模块加载测试
 3. 生成图标 → 打包 `ReadMD.exe` → 生成启动画面 → 打包 `ReadMDSetup.exe` / `ReadMDUninstall.exe`
 4. `git push` 推送代码
-5. 用 `release_notes.md` 更新 Release 说明 → 上传缺失的安装包/便携版/图标 → `--verify` 校验线上资产与本地产物 SHA256 完全一致
+5. 用 `release_notes.md` 更新 Release 说明 → 上传缺失的安装包/便携版 → `--verify` 校验线上资产与本地产物 SHA256 完全一致
 
 也可以单独使用 `release.py`：
 

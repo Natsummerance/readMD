@@ -74,11 +74,11 @@ def sha256(path):
 
 
 def build_assets(base, tag):
+    """发布资产：安装包 + 便携版。图标已在仓库内（assets/icon-256.png），不再作为 Release 资产。"""
     v = tag.lstrip("v")
     return [
         (os.path.join(base, "dist", "ReadMDSetup.exe"), "ReadMDSetup-v%s.exe" % v),
         (os.path.join(base, "dist", "ReadMD.exe"), "ReadMD-portable-v%s.exe" % v),
-        (os.path.join(base, "assets", "icon-256.png"), "readmd-icon-256.png"),
     ]
 
 
