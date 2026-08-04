@@ -1,6 +1,6 @@
 pywebview>=5.1
 
-# 万物转 MD（MarkItDown）
+# Everything-to-MD (MarkItDown)
 markitdown
 pdfminer.six
 python-docx
@@ -12,11 +12,11 @@ lxml
 lxml_html_clean
 mammoth
 
-# 网页转 MD
+# Webpage-to-MD
 trafilatura
 requests
 
-# 扫描转 MD（OCR + PDF 渲染）
+# Scan/OCR-to-MD (WinRT OCR + PDF rendering)
 pymupdf
 winrt-Windows.Media.Ocr
 winrt-Windows.Graphics.Imaging
