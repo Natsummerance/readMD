@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -32,7 +33,8 @@ def token():
     return t
 
 
-def api(method, url, body=None, token_str=None, binary=False, headers=None):
+def api(method, url, body=None, token_str=None, binary=False, headers=None, retries=3):
+    """请求 GitHub API；网络抖动自动重试（指数退避）。"""
     h = {"Accept": "application/vnd.github+json", "User-Agent": "readmd-release"}
     if token_str:
         h["Authorization"] = "Bearer " + token_str
@@ -40,12 +42,20 @@ def api(method, url, body=None, token_str=None, binary=False, headers=None):
         h.update(headers)
     data = body if binary else (json.dumps(body).encode("utf-8") if body is not None else None)
     req = urllib.request.Request(url, data=data, method=method, headers=h)
-    try:
-        with urllib.request.urlopen(req, timeout=900) as r:
-            raw = r.read()
-            return r.status, raw
-    except urllib.error.HTTPError as e:
-        return e.code, e.read()
+    last = None
+    for i in range(retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=900) as r:
+                raw = r.read()
+                return r.status, raw
+        except urllib.error.HTTPError as e:
+            return e.code, e.read()
+        except Exception as e:  # 连接重置/超时等瞬时故障
+            last = e
+            if i < retries:
+                print("  network error (%s), retry %d/%d ..." % (e, i + 1, retries), flush=True)
+                time.sleep(2 * (i + 1))
+    raise last
 
 
 def get_release(tag, tok):
