@@ -83,7 +83,9 @@ readmd/
 ├─ package.bat          # 一键打包单文件 exe（PyInstaller）
 ├─ setup.bat            # 一键：打包 + 安装 + 设为默认 + 启动
 ├─ uninstall.bat        # 移除文件关联（保留备份）
-├─ release.py           # 一键发布 GitHub Release（创建 + 上传安装包/便携版）
+├─ release.py           # 发布 GitHub Release（--verify 校验 / --update 更新 / --force-upload 重传）
+├─ deploy.bat           # ★一键部署：测试 → 打包 → 推送 → 发布 Release（自动校验 SHA256）
+├─ release_notes.md     # Release 发布说明（deploy.bat 自动读取）
 ├─ installer/           # 安装器（苹果风动画 UI）
 │  ├─ setup_app.py      #   安装/卸载/静默模式主程序
 │  ├─ setup.html        #   动画界面（毛玻璃/弹簧动效/极光背景）
@@ -101,6 +103,37 @@ readmd/
 ├─ tools/cm-bundle/    # CodeMirror 6 构建源（npm install + esbuild 重新打包 vendor）
 └─ tools/make_icon.py   # 多尺寸图标生成器（纯标准库）
 ```
+
+## 一键部署（给其他用户下载）
+
+环境要求：已安装 Git，并配置系统环境变量 `GITHUB_TOKEN`（GitHub Personal Access Token，仓库 `Natsummerance/readMD` 需 `repo` 权限）。
+
+```bat
+deploy.bat                 rem 完整流程：测试 → 打包 → 推送 → 发布 Release
+deploy.bat --skip-build    rem 复用已有 dist 产物，只跑测试 + 推送 + 发布（更快）
+deploy.bat --skip-tests    rem 跳过自测
+deploy.bat --tag v1.4.0    rem 指定发布标签（默认 v1.4.0）
+```
+
+脚本会依次执行：
+
+1. 检查 `GITHUB_TOKEN`
+2. 运行修正器测试（37 项）+ 主程序自测 + 扩展模块加载测试
+3. 生成图标 → 打包 `ReadMD.exe` → 生成启动画面 → 打包 `ReadMDSetup.exe` / `ReadMDUninstall.exe`
+4. `git push` 推送代码
+5. 用 `release_notes.md` 更新 Release 说明 → 上传缺失的安装包/便携版/图标 → `--verify` 校验线上资产与本地产物 SHA256 完全一致
+
+也可以单独使用 `release.py`：
+
+```bat
+python release.py --verify             rem 校验线上与本地产物一致性（名称/大小/SHA256）
+python release.py --update             rem 更新已存在 Release 的标题与说明（读 release_notes.md）
+python release.py --force-upload       rem 同名资产先删除再重传
+python release.py                      rem 创建 Release（已存在则跳过）+ 上传缺失资产
+```
+
+> 其他人无需拉取源码：直接到 [GitHub Releases](https://github.com/Natsummerance/readMD/releases)
+> 下载 **ReadMDSetup-v1.4.0.exe**（安装包）或 **ReadMD-portable-v1.4.0.exe**（便携版）即可使用。
 
 ## 自动修正说明
 
@@ -225,6 +258,37 @@ readmd/
 ├─ tools/cm-bundle/    # CodeMirror 6 构建源（npm install + esbuild 重新打包 vendor）
 └─ tools/make_icon.py   # 多尺寸图标生成器（纯标准库）
 ```
+
+## 一键部署（给其他用户下载）
+
+环境要求：已安装 Git，并配置系统环境变量 `GITHUB_TOKEN`（GitHub Personal Access Token，仓库 `Natsummerance/readMD` 需 `repo` 权限）。
+
+```bat
+deploy.bat                 rem 完整流程：测试 → 打包 → 推送 → 发布 Release
+deploy.bat --skip-build    rem 复用已有 dist 产物，只跑测试 + 推送 + 发布（更快）
+deploy.bat --skip-tests    rem 跳过自测
+deploy.bat --tag v1.4.0    rem 指定发布标签（默认 v1.4.0）
+```
+
+脚本会依次执行：
+
+1. 检查 `GITHUB_TOKEN`
+2. 运行修正器测试（37 项）+ 主程序自测 + 扩展模块加载测试
+3. 生成图标 → 打包 `ReadMD.exe` → 生成启动画面 → 打包 `ReadMDSetup.exe` / `ReadMDUninstall.exe`
+4. `git push` 推送代码
+5. 用 `release_notes.md` 更新 Release 说明 → 上传缺失的安装包/便携版/图标 → `--verify` 校验线上资产与本地产物 SHA256 完全一致
+
+也可以单独使用 `release.py`：
+
+```bat
+python release.py --verify             rem 校验线上与本地产物一致性（名称/大小/SHA256）
+python release.py --update             rem 更新已存在 Release 的标题与说明（读 release_notes.md）
+python release.py --force-upload       rem 同名资产先删除再重传
+python release.py                      rem 创建 Release（已存在则跳过）+ 上传缺失资产
+```
+
+> 其他人无需拉取源码：直接到 [GitHub Releases](https://github.com/Natsummerance/readMD/releases)
+> 下载 **ReadMDSetup-v1.4.0.exe**（安装包）或 **ReadMD-portable-v1.4.0.exe**（便携版）即可使用。
 
 ## 自动修正说明
 
