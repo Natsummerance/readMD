@@ -9,6 +9,7 @@
 - 🤖 **AI 助手**：接入外部大模型 API（OpenAI / DeepSeek / Kimi / 智谱 GLM / 通义千问 / 硅基流动 / OpenRouter / Groq / xAI / Ollama / Anthropic 等 15+ 预设，并兼容 cc-switch 里的自定义提供商），支持快速阅读、修改、扩充、续写、润色、翻译、提问；流式输出，结果可一键应用到文档；提供商与 API Key 完全自定义（Key 也可读系统环境变量）；内置 14 个 Prompt 模板（总结要点 / 生成周报 / 大纲 / 代码审查 / 翻译成英文等）且可自定义增删改；多轮对话可保存为历史会话，随时恢复续聊
 - 📱 **移动端共享**：开启局域网共享后，手机扫码即可在同一 Wi-Fi 下阅读 / 转 MD / OCR / AI（随机令牌鉴权，关停即失效）
 - 📦 **一键打包安装**：`run.bat` 运行 · `package.bat` 打包单文件 exe · `setup.bat` 打包 + 安装 + 设为默认 + 启动
+- 🚀 **安装包直装**：GitHub Releases 提供 **ReadMDSetup.exe 安装包**（苹果风动画界面：毛玻璃、弹簧动效、极光背景，一键安装 / 升级 / 卸载）与 **便携版 exe**，下载即用，无需拉取源码
 - 🛠 **自动修正**：表格缺分隔行 / 列数不齐、未闭合的 `**` `__` `*`、未闭合的 `$` `$$` `\(` `\)`、`#标题` 缺空格、BOM、CRLF 等
 - 🔄 **万物转 MD**：docx / pptx / xlsx / pdf / html / csv / json 等一键转为 Markdown（基于 MarkItDown），转换结果自动过修正器
 - 🔍 **扫描转 MD（OCR）**：图片、扫描件 PDF 用 Windows 10/11 内置 OCR（离线、免费、无次数限制，支持中文）；PDF 有文字层直接提取，无文字层逐页渲染 OCR
@@ -82,6 +83,13 @@ readmd/
 ├─ package.bat          # 一键打包单文件 exe（PyInstaller）
 ├─ setup.bat            # 一键：打包 + 安装 + 设为默认 + 启动
 ├─ uninstall.bat        # 移除文件关联（保留备份）
+├─ release.py           # 一键发布 GitHub Release（创建 + 上传安装包/便携版）
+├─ installer/           # 安装器（苹果风动画 UI）
+│  ├─ setup_app.py      #   安装/卸载/静默模式主程序
+│  ├─ setup.html        #   动画界面（毛玻璃/弹簧动效/极光背景）
+│  ├─ build_setup.bat   #   构建 ReadMDSetup.exe + ReadMDUninstall.exe
+│  ├─ make_splash.py    #   生成 PyInstaller 启动画面
+│  └─ splash.png
 ├─ requirements.txt
 ├─ assets/
 │  ├─ index.html        # 界面骨架
@@ -265,6 +273,14 @@ readmd/
 - 每次开启生成随机访问令牌；局域网内的 API 请求（除页面与静态资源外）均需携带令牌，关闭共享即失效
 - 命令行方式：`python readmd.py --share` 启动时即开启共享
 
+## 下载安装包
+
+不用拉取源码也能安装：访问 [GitHub Releases](https://github.com/Natsummerance/readMD/releases) 下载：
+
+- **ReadMDSetup-版本.exe**：安装包，双击进入苹果风动画安装向导 —— 选择目录、开关默认关联与快捷方式，进度动画后一键完成；已安装时运行即升级；「设置 → 应用」中可随时卸载
+- **ReadMD-portable-版本.exe**：便携版，免安装，双击直接运行
+- 安装包自带 ReadMDUninstall.exe 卸载器，卸载时仅移除本安装器创建的关联与文件，不动你的文档与配置
+
 ## 打包 / 一键安装
 
 | 脚本 | 作用 |
@@ -274,6 +290,8 @@ readmd/
 | `package.bat` | 一键打包为单文件 `dist\ReadMD.exe`（PyInstaller，自动安装构建依赖并生成图标） |
 | `setup.bat` | 一键完成：装依赖 → 打包 exe → 注册 .md 默认打开方式 → 启动 |
 | `uninstall.bat` | 移除关联并尝试恢复安装前备份 |
+| `installer\build_setup.bat` | 构建动画安装器 `dist\ReadMDSetup.exe`（内嵌 ReadMD.exe）与 `dist\ReadMDUninstall.exe` |
+| `release.py` | 一键创建 GitHub Release 并上传安装包 / 便携版 / 图标 |
 
 > 打包版与源码版功能完全一致；打包版体积较大（约 100MB，含 OCR 与转换依赖），日常使用推荐源码版（`install.bat` + `run.bat`）。
 > Windows 默认应用受 UserChoice 哈希保护：若注册后系统仍用其他程序打开，右键 .md → 打开方式 → 选择 ReadMD → 始终使用。

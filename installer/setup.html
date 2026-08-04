@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>ReadMD 安装程序</title>
+<style>
+:root{
+  --bg:#0a0e18; --bg2:#0d1220; --text:#f3f6fb; --text2:#9aa5bb; --text3:#67718a;
+  --accent:#3b6ef5; --accent2:#7b3ff2; --ok:#30d158; --warn:#ffb340; --danger:#ff5f57;
+  --card:rgba(255,255,255,.05); --border:rgba(255,255,255,.09); --border2:rgba(255,255,255,.14);
+  --glass:rgba(255,255,255,.06); --spring:cubic-bezier(.34,1.56,.64,1); --ease:cubic-bezier(.22,1,.36,1);
+  --shadow:0 18px 50px rgba(0,0,0,.45);
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#eef1f8; --bg2:#e7ebf5; --text:#10141f; --text2:#5a6478; --text3:#8b93a8;
+    --card:rgba(255,255,255,.66); --border:rgba(20,30,60,.10); --border2:rgba(20,30,60,.18);
+    --glass:rgba(255,255,255,.55); --shadow:0 18px 50px rgba(60,80,160,.18);
+  }
+}
+*{box-sizing:border-box; margin:0; padding:0}
+html,body{height:100%; overflow:hidden}
+body{
+  display:flex; flex-direction:column; height:100%;
+  font-family:-apple-system,"Segoe UI Variable Text","Segoe UI","PingFang SC","Microsoft YaHei UI",sans-serif;
+  background:linear-gradient(180deg,var(--bg) 0%,var(--bg2) 100%);
+  color:var(--text); user-select:none; -webkit-user-select:none;
+}
+::selection{background:rgba(59,110,245,.35)}
+/* ---------- 极光背景 ---------- */
+.aurora{position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0}
+.aurora i{position:absolute; border-radius:50%; filter:blur(90px); opacity:.55; will-change:transform}
+.aurora i:nth-child(1){width:520px;height:520px; left:-160px; top:-180px;
+  background:radial-gradient(circle,#3b6ef5 0%,rgba(59,110,245,0) 70%);
+  animation:drift1 26s ease-in-out infinite alternate}
+.aurora i:nth-child(2){width:460px;height:460px; right:-140px; top:10%;
+  background:radial-gradient(circle,#7b3ff2 0%,rgba(123,63,242,0) 70%);
+  animation:drift2 32s ease-in-out infinite alternate}
+.aurora i:nth-child(3){width:380px;height:380px; left:32%; bottom:-220px;
+  background:radial-gradient(circle,#1aa6ff 0%,rgba(26,166,255,0) 70%);
+  animation:drift3 38s ease-in-out infinite alternate}
+@keyframes drift1{to{transform:translate(90px,70px) scale(1.12)}}
+@keyframes drift2{to{transform:translate(-70px,120px) scale(1.08)}}
+@keyframes drift3{to{transform:translate(60px,-60px) scale(1.15)}}
+/* ---------- 标题栏 ---------- */
+.titlebar{position:relative; z-index:5; height:52px; display:flex; align-items:center;
+  padding:0 16px; -webkit-app-region:drag; background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,0))}
+.traffic{display:flex; gap:8px; align-items:center}
+.traffic i{width:12px;height:12px;border-radius:50%; display:block}
+.traffic i:nth-child(1){background:var(--danger)}
+.traffic i:nth-child(2){background:var(--warn)}
+.traffic i:nth-child(3){background:var(--ok)}
+.titlebar .ttl{flex:1; text-align:center; font-size:12.5px; font-weight:600; letter-spacing:.02em; color:var(--text3)}
+.tb-right{display:flex; gap:8px; -webkit-app-region:no-drag}
+.win-btn{width:34px;height:30px;border-radius:9px; border:1px solid var(--border2);
+  background:var(--glass); color:var(--text2); font-size:13px; line-height:1; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; transition:transform .12s var(--ease), background .2s, color .2s}
+.win-btn:hover{background:rgba(255,255,255,.14); color:var(--text)}
+.win-btn:active{transform:scale(.9)}
+.win-btn.danger:hover{background:var(--danger); border-color:var(--danger); color:#fff}
+/* ---------- 主舞台 ---------- */
+main{position:relative; z-index:2; flex:1; min-height:0; overflow:hidden}
+.page{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:24px 56px 40px; opacity:0; pointer-events:none;
+  transform:translateX(var(--from,46px)) scale(.99); transition:opacity .4s var(--ease), transform .5s var(--ease)}
+.page.active{opacity:1; transform:none; pointer-events:auto}
+.page.back{--from:-46px}
+/* 徽标 */
+.logo{width:92px;height:92px; margin-bottom:22px; filter:drop-shadow(0 14px 34px rgba(59,110,245,.45));
+  animation:pop .75s var(--spring)}
+@keyframes pop{from{transform:scale(.45); opacity:0}}
+h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; animation:rise .6s var(--ease) .05s both}
+.sub{font-size:14px; color:var(--text2); text-align:center; max-width:430px; line-height:1.6;
+  animation:rise .6s var(--ease) .12s both}
+@keyframes rise{from{transform:translateY(14px); opacity:0}}
+.chips{display:flex; gap:8px; margin:22px 0 8px; flex-wrap:wrap; justify-content:center;
+  animation:rise .6s var(--ease) .2s both}
+.chip{font-size:11.5px; padding:5px 12px; border-radius:999px; color:var(--text2);
+  background:var(--glass); border:1px solid var(--border)}
+.ver{font-size:12px; color:var(--text3); margin-top:6px}
+.actions{display:flex; gap:12px; margin-top:30px; align-items:center; animation:rise .6s var(--ease) .28s both}
+.btn{border:0; cursor:pointer; font-family:inherit; border-radius:13px; font-weight:600; font-size:14.5px;
+  padding:0 30px; height:48px; letter-spacing:.01em; transition:transform .12s var(--ease), box-shadow .25s, filter .2s, background .2s;
+  -webkit-app-region:no-drag}
+.btn:active{transform:scale(.965)}
+.btn:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+.btn-primary{color:#fff; background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%);
+  box-shadow:0 10px 28px rgba(59,110,245,.4)}
+.btn-primary:hover{filter:brightness(1.08); box-shadow:0 14px 34px rgba(59,110,245,.5)}
+.btn-ghost{color:var(--text); background:var(--glass); border:1px solid var(--border2)}
+.btn-ghost:hover{background:rgba(255,255,255,.12)}
+.btn-danger{color:#fff; background:linear-gradient(135deg,#ff5f57,#ff3b30); box-shadow:0 10px 28px rgba(255,59,48,.35)}
+.btn-danger:hover{filter:brightness(1.06)}
+.btn[disabled]{opacity:.5; pointer-events:none}
+.btn-sm{height:38px; padding:0 18px; font-size:13px; border-radius:11px}
+.link-btn{background:none; border:0; color:var(--text3); cursor:pointer; font-size:12.5px; text-decoration:underline;
+  text-underline-offset:3px; margin-top:14px; font-family:inherit}
+.link-btn:hover{color:var(--text2)}
+/* ---------- 选项页 ---------- */
+.panel{width:100%; max-width:520px; display:flex; flex-direction:column; gap:14px;
+  animation:rise .6s var(--ease) .08s both}
+.opt-card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px 16px;
+  display:flex; align-items:center; gap:14px; transition:border-color .25s, background .25s}
+.opt-card:hover{border-color:var(--border2)}
+.opt-card .ic{width:38px;height:38px;border-radius:11px; flex:none; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg,rgba(59,110,245,.25),rgba(123,63,242,.25)); font-size:17px}
+.opt-t{flex:1; min-width:0}
+.opt-t b{display:block; font-size:14px; font-weight:600; margin-bottom:2px}
+.opt-t span{font-size:12px; color:var(--text3)}
+.path-row{display:flex; gap:10px; align-items:center}
+.path-row input{flex:1; height:44px; border-radius:12px; border:1px solid var(--border2); background:var(--glass);
+  color:var(--text); font-family:inherit; font-size:12.5px; padding:0 14px; outline:none;
+  transition:border-color .2s, box-shadow .2s; -webkit-app-region:no-drag}
+.path-row input:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(59,110,245,.22)}
+/* 开关 */
+.switch{position:relative; width:46px; height:27px; border-radius:999px; background:rgba(255,255,255,.16);
+  border:1px solid var(--border2); cursor:pointer; transition:background .25s var(--ease), border-color .25s; flex:none}
+.switch i{position:absolute; top:2px; left:2px; width:21px; height:21px; border-radius:50%; background:#fff;
+  box-shadow:0 2px 6px rgba(0,0,0,.35); transition:transform .28s var(--spring)}
+.switch.on{background:linear-gradient(135deg,var(--accent),var(--accent2)); border-color:transparent}
+.switch.on i{transform:translateX(19px)}
+.size-note{font-size:12px; color:var(--text3); text-align:center}
+/* ---------- 安装页 ---------- */
+.inst-wrap{width:100%; max-width:520px; display:flex; flex-direction:column; gap:22px}
+.steps{display:flex; flex-direction:column; gap:10px}
+.step{display:flex; align-items:center; gap:13px; opacity:.42; transform:translateX(-10px);
+  transition:opacity .4s var(--ease), transform .5s var(--ease)}
+.step.on{opacity:1; transform:none}
+.step .dot{width:30px;height:30px;border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center;
+  font-size:13px; border:1.5px solid var(--border2); color:var(--text3); transition:all .35s var(--spring)}
+.step.on .dot{border-color:var(--accent); color:var(--accent); box-shadow:0 0 0 4px rgba(59,110,245,.15)}
+.step.done .dot{border-color:transparent; background:var(--ok); color:#fff; transform:scale(1.08)}
+.step b{font-size:13.5px; font-weight:600}
+.step span{display:block; font-size:11.5px; color:var(--text3)}
+.step.active .dot{animation:pulse 1.4s ease-out infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(59,110,245,.4)}70%{box-shadow:0 0 0 10px rgba(59,110,245,0)}100%{box-shadow:0 0 0 0 rgba(59,110,245,0)}}
+.prog{display:flex; align-items:center; gap:14px}
+.prog .track{flex:1; height:7px; border-radius:999px; background:rgba(255,255,255,.1); overflow:hidden}
+.prog .fill{height:100%; width:0%; border-radius:999px; position:relative;
+  background:linear-gradient(90deg,var(--accent),var(--accent2) 70%,#1aa6ff); transition:width .5s var(--ease)}
+.prog .fill::after{content:""; position:absolute; inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+  transform:translateX(-100%); animation:shine 1.6s ease-in-out infinite}
+@keyframes shine{60%{transform:translateX(100%)}100%{transform:translateX(100%)}}
+.prog .pct{font-variant-numeric:tabular-nums; font-size:13px; color:var(--text2); width:42px; text-align:right}
+.stat{font-size:12.5px; color:var(--text3); text-align:center; min-height:18px}
+/* 错误卡片 */
+.err-card{width:100%; max-width:460px; background:rgba(255,59,48,.1); border:1px solid rgba(255,59,48,.35);
+  border-radius:16px; padding:16px 18px; display:flex; gap:12px; align-items:flex-start;
+  animation:pop .5s var(--spring)}
+.err-card .eic{font-size:20px; line-height:1.2}
+.err-card b{font-size:13.5px; color:var(--danger); display:block; margin-bottom:4px}
+.err-card p{font-size:12px; color:var(--text2); line-height:1.5; word-break:break-all}
+/* ---------- 完成页 ---------- */
+.done-badge{width:104px;height:104px;border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(circle at 32% 28%, rgba(48,209,88,.28), rgba(48,209,88,.06) 70%);
+  margin-bottom:24px; position:relative; animation:pop .7s var(--spring)}
+.done-badge .ring{position:absolute; inset:-6px; border-radius:50%; border:2px solid var(--ok); opacity:.55;
+  animation:ringpulse 2s ease-out infinite}
+@keyframes ringpulse{0%{transform:scale(.9); opacity:.7}100%{transform:scale(1.35); opacity:0}}
+.done-badge .ck{width:74px;height:74px;border-radius:50%; background:linear-gradient(135deg,#30d158,#23c74f);
+  display:flex; align-items:center; justify-content:center; box-shadow:0 14px 36px rgba(48,209,88,.4)}
+.done-badge .ck svg{width:36px;height:36px}
+.done-title{font-size:24px; font-weight:700; letter-spacing:-.01em; margin-bottom:8px; animation:rise .6s var(--ease) .1s both}
+.done-sub{font-size:13.5px; color:var(--text2); text-align:center; line-height:1.7; max-width:400px; animation:rise .6s var(--ease) .18s both}
+/* ---------- 模态 ---------- */
+.modal{position:fixed; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
+  background:rgba(5,8,16,.55); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); opacity:0; pointer-events:none; transition:opacity .3s var(--ease)}
+.modal.show{opacity:1; pointer-events:auto}
+.modal .box{width:400px; background:var(--bg2); border:1px solid var(--border2); border-radius:20px; padding:26px 26px 22px;
+  box-shadow:var(--shadow); transform:scale(.9) translateY(10px); transition:transform .45s var(--spring)}
+.modal.show .box{transform:none}
+.modal h3{font-size:16px; font-weight:700; margin-bottom:10px}
+.modal p{font-size:13px; color:var(--text2); line-height:1.65; margin-bottom:22px}
+.modal .m-actions{display:flex; gap:10px; justify-content:flex-end}
+/* 提示 */
+.toast{position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(80px); z-index:30;
+  background:rgba(16,22,36,.92); border:1px solid var(--border2); color:var(--text); font-size:13px;
+  padding:11px 20px; border-radius:999px; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+  box-shadow:0 12px 34px rgba(0,0,0,.4); transition:transform .45s var(--spring); pointer-events:none; opacity:0}
+.toast.show{transform:translateX(-50%) translateY(0); opacity:1}
+/* 无障碍：减少动态 */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important}
+}
+</style>
+</head>
+<body>
+<div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
+
+<header class="titlebar">
+  <div class="traffic"><i></i><i></i><i></i></div>
+  <div class="ttl" id="win-title">ReadMD 安装程序</div>
+  <div class="tb-right">
+    <button class="win-btn" id="btn-min" title="最小化">&#8211;</button>
+    <button class="win-btn danger" id="btn-close" title="关闭">&#10005;</button>
+  </div>
+</header>
+
+<main id="stage">
+  <!-- 欢迎 -->
+  <section class="page active" id="page-welcome">
+    <svg class="logo" viewBox="0 0 128 128" aria-hidden="true">
+      <defs>
+        <linearGradient id="lg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#3B6EF5"/><stop offset="1" stop-color="#7B3FF2"/>
+        </linearGradient>
+      </defs>
+      <rect x="4" y="4" width="120" height="120" rx="26" fill="url(#lg)"/>
+      <rect x="4" y="4" width="120" height="120" rx="26" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="2"/>
+      <g stroke="#fff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none">
+        <path d="M34 44 V84"/>
+        <path d="M34 44 L64 76 L94 44"/>
+        <path d="M94 44 V70"/>
+      </g>
+      <path d="M78 88 L94 88 L94 104 L101 97 L94 90 L94 88 Z" fill="#fff"/>
+    </svg>
+    <h1 id="welcome-title">欢迎使用 ReadMD</h1>
+    <p class="sub" id="welcome-sub">轻量级 Markdown 阅读器 — 秒开渲染、自动纠错、AI 助手、万物转 MD。<br>安装过程纯本地完成，无需管理员权限。</p>
+    <div class="chips">
+      <span class="chip">&#9889; 秒开</span><span class="chip">&#129302; AI 助手</span>
+      <span class="chip">&#128444; 图片编辑</span><span class="chip">&#128260; 万物转 MD</span>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="btn-install">安装 ReadMD</button>
+      <button class="btn btn-ghost" id="btn-exit">退出</button>
+    </div>
+    <div class="ver" id="welcome-ver"></div>
+    <button class="link-btn" id="btn-uninstall-link" style="display:none">已安装？前往卸载…</button>
+  </section>
+
+  <!-- 选项 -->
+  <section class="page" id="page-options">
+    <h1>安装选项</h1>
+    <p class="sub" style="margin-bottom:26px">选择安装位置与快捷方式</p>
+    <div class="panel">
+      <div class="opt-card">
+        <div class="ic">&#128193;</div>
+        <div class="opt-t">
+          <b>安装位置</b>
+          <span>默认安装到当前用户目录，无需管理员权限</span>
+        </div>
+      </div>
+      <div class="path-row">
+        <input id="opt-dir" spellcheck="false" autocomplete="off">
+        <button class="btn btn-ghost btn-sm" id="btn-browse">更改…</button>
+      </div>
+      <div class="opt-card">
+        <div class="ic">&#128196;</div>
+        <div class="opt-t"><b>设为 .md 默认打开方式</b><span>双击 .md 文件直接使用 ReadMD 打开</span></div>
+        <div class="switch on" id="sw-assoc" data-key="assoc"><i></i></div>
+      </div>
+      <div class="opt-card">
+        <div class="ic">&#128133;</div>
+        <div class="opt-t"><b>创建桌面快捷方式</b><span>在桌面放置 ReadMD 图标</span></div>
+        <div class="switch on" id="sw-desktop" data-key="desktop"><i></i></div>
+      </div>
+      <div class="opt-card">
+        <div class="ic">&#128203;</div>
+        <div class="opt-t"><b>创建开始菜单快捷方式</b><span>可从开始菜单搜索并启动</span></div>
+        <div class="switch on" id="sw-startmenu" data-key="startmenu"><i></i></div>
+      </div>
+      <div class="size-note">安装大小约 110 MB · 随时可在「设置 → 应用」中卸载</div>
+      <div class="actions" style="justify-content:center">
+        <button class="btn btn-ghost" id="btn-opt-back">返回</button>
+        <button class="btn btn-primary" id="btn-start-install">开始安装</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 安装中 -->
+  <section class="page" id="page-installing">
+    <h1 id="inst-title">正在安装…</h1>
+    <div class="inst-wrap" style="margin-top:30px">
+      <div class="steps" id="steps"></div>
+      <div class="prog">
+        <div class="track"><div class="fill" id="prog-fill"></div></div>
+        <div class="pct" id="prog-pct">0%</div>
+      </div>
+      <div class="stat" id="prog-stat"></div>
+    </div>
+    <div class="err-card" id="err-card" style="display:none">
+      <div class="eic">&#9888;</div>
+      <div>
+        <b>操作未完成</b>
+        <p id="err-text"></p>
+        <div class="actions" style="margin-top:14px">
+          <button class="btn btn-ghost btn-sm" id="btn-err-back">返回</button>
+          <button class="btn btn-primary btn-sm" id="btn-err-retry">重试</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 完成 -->
+  <section class="page" id="page-done">
+    <div class="done-badge">
+      <span class="ring"></span>
+      <div class="ck">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M5 12.5 L10 17.5 L19 7" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+    </div>
+    <div class="done-title" id="done-title">安装完成</div>
+    <div class="done-sub" id="done-sub"></div>
+    <div class="actions" id="done-actions"></div>
+  </section>
+</main>
+
+<!-- 确认弹窗 -->
+<div class="modal" id="confirm">
+  <div class="box">
+    <h3 id="confirm-title">提示</h3>
+    <p id="confirm-text"></p>
+    <div class="m-actions">
+      <button class="btn btn-ghost btn-sm" id="confirm-cancel">取消</button>
+      <button class="btn btn-primary btn-sm" id="confirm-ok">继续</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+  var api = window.pywebview ? window.pywebview.api : null;
+  var MOCK = !window.pywebview;
+
+  var STEP_LABELS = {
+    install: [['prepare','准备安装目录'],['copy','复制程序文件'],['assoc','注册文件关联'],['shortcut','创建快捷方式'],['uninst','写入卸载信息']],
+    uninstall:[['stop','关闭运行中的 ReadMD'],['assoc','移除文件关联'],['shortcut','删除快捷方式'],['uninst','移除卸载信息'],['delete','清理安装目录']]
+  };
+  var state = { mode:'install', installed:null, default_dir:'', version:'', running:false };
+  var steps = [];
+  var installing = false;
+  var done = false;
+  var options = { assoc:true, desktop:true, startmenu:true };
+
+  function $(id){ return document.getElementById(id); }
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  function toast(msg){
+    var t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toast._t); toast._t = setTimeout(function(){ t.classList.remove('show'); }, 2600);
+  }
+  function go(id, back){
+    var cur = document.querySelector('.page.active');
+    var next = $(id);
+    if (cur && cur !== next){
+      cur.classList.remove('active');
+      next.classList.toggle('back', !!back);
+    }
+    next.classList.add('active');
+  }
+
+  function renderSteps(){
+    var box = $('steps'); box.innerHTML = '';
+    steps.forEach(function(s, i){
+      var row = document.createElement('div');
+      row.className = 'step'; row.id = 'step-' + i;
+      row.innerHTML = '<div class="dot">&#10003;</div><div><b>' + esc(s[1]) + '</b><span></span></div>';
+      box.appendChild(row);
+    });
+  }
+
+  function setStep(i, status){
+    var row = $('step-' + i); if (!row) return;
+    row.classList.toggle('on', status !== 'idle');
+    row.classList.toggle('active', status === 'active');
+    row.classList.toggle('done', status === 'done');
+  }
+
+  function applyProgress(p){
+    var fill = $('prog-fill'), pct = $('prog-pct'), stat = $('prog-stat');
+    var target = Math.max(0, Math.min(100, p.percent || 0));
+    fill.style.width = target + '%';
+    pct.textContent = Math.round(target) + '%';
+    stat.textContent = p.text || '';
+    var idx = -1;
+    for (var i = 0; i < steps.length; i++){ if (steps[i][0] === p.step){ idx = i; break; } }
+    if (idx >= 0){
+      for (var j = 0; j < steps.length; j++){
+        setStep(j, j < idx ? 'done' : (j === idx ? 'active' : 'idle'));
+      }
+    }
+  }
+
+  var mockTimer = null;
+  function mockRun(){
+    var seq = [['prepare','准备安装目录',14],['copy','复制程序文件',40],['assoc','注册文件关联',62],['shortcut','创建快捷方式',80],['uninst','写入卸载信息',100]];
+    var i = 0;
+    mockTimer = setInterval(function(){
+      if (i >= seq.length){
+        clearInterval(mockTimer);
+        mockProgress = { running:false, percent:100, step:'done', text:'安装完成', done:true, error:'' };
+        return;
+      }
+      mockProgress = { running:true, percent:seq[i][2], step:seq[i][0], text:seq[i][1], done:false, error:'' };
+      i++;
+    }, 650);
+  }
+  var mockProgress = { running:false, percent:0, step:'', text:'', done:false, error:'' };
+
+  function mockApi(name){
+    var m = {
+      get_state: function(){ return Promise.resolve({ mode:'install', installed:null, default_dir:'C:\\Users\\demo\\AppData\\Local\\Programs\\ReadMD', version:'1.4.0', running:false }); },
+      get_progress: function(){ return Promise.resolve(mockProgress); },
+      start_install: function(o){ options = o || options; mockProgress = { running:true, percent:0, step:'prepare', text:'准备安装目录', done:false, error:'' }; mockRun(); return Promise.resolve(true); },
+      start_uninstall: function(){ mockProgress = { running:true, percent:0, step:'stop', text:'关闭运行中的 ReadMD', done:false, error:'' }; mockRun(); return Promise.resolve(true); },
+      choose_dir: function(){ return Promise.resolve(null); },
+      launch: function(){ return Promise.resolve(true); },
+      open_dir: function(){ return Promise.resolve(true); },
+      minimize: function(){ return Promise.resolve(true); },
+      close: function(){ return Promise.resolve(true); }
+    };
+    return m[name] ? m[name]() : Promise.resolve(null);
+  }
+  function call(name){
+    if (MOCK){ return mockApi(name); }
+    if (api && typeof api[name] === 'function'){ return api[name](); }
+    return Promise.resolve(null);
+  }
+  function callArgs(name, arg){
+    if (MOCK){ return mockApi(name); }
+    if (api && typeof api[name] === 'function'){ return api[name](arg); }
+    return Promise.resolve(null);
+  }
+
+  function poll(){
+    var fn = function(){
+      if (!installing) return;
+      var p;
+      if (MOCK){ p = mockProgress; }
+      else if (api && api.get_progress){ p = api.get_progress(); }
+      else return;
+      Promise.resolve(p).then(function(prog){
+        if (!prog) return;
+        applyProgress(prog);
+        if (prog.error && !prog.done){
+          $('err-card').style.display = 'flex';
+          $('err-text').textContent = prog.error;
+          $('inst-title').textContent = '遇到了一点问题';
+          installing = false;
+          return;
+        }
+        if (prog.done && !done){
+          done = true; installing = false;
+          setTimeout(finish, 650);
+        }
+      });
+    };
+    fn();
+    setInterval(fn, 160);
+  }
+
+  function finish(){
+    var un = state.mode === 'uninstall';
+    $('done-title').textContent = un ? '已卸载' : '安装完成';
+    var actions = $('done-actions'); actions.innerHTML = '';
+    var mk = function(text, cls, fn){
+      var b = document.createElement('button');
+      b.className = 'btn ' + cls; b.textContent = text;
+      b.addEventListener('click', fn); actions.appendChild(b);
+    };
+    if (un){
+      $('done-sub').textContent = 'ReadMD 已从这台电脑移除。感谢你的使用！';
+      mk('完成', 'btn-primary', function(){ call('close'); });
+      mk('打开项目主页', 'btn-ghost', function(){ window.open('https://github.com/Natsummerance/readMD'); });
+    } else {
+      var s = '';
+      if (options.assoc) s += '已将 .md 设为默认打开方式。';
+      else s += '未注册文件关联，可在 ReadMD 工具栏「设为默认」。';
+      s += ' 现在可以立即开始阅读。';
+      $('done-sub').textContent = s;
+      mk('立即启动', 'btn-primary', function(){ call('launch'); call('close'); });
+      mk('打开安装目录', 'btn-ghost', function(){ callArgs('open_dir', state.default_dir); });
+      mk('完成', 'btn-ghost', function(){ call('close'); });
+    }
+    go('page-done');
+  }
+
+  function initState(st){
+    state = st || state;
+    var un = state.mode === 'uninstall';
+    steps = un ? STEP_LABELS.uninstall : STEP_LABELS.install;
+    $('welcome-title').textContent = un ? '卸载 ReadMD？' : '欢迎使用 ReadMD';
+    $('welcome-sub').innerHTML = un
+      ? '将移除文件关联、快捷方式与安装目录。你的文档与设置不会受影响。'
+      : '轻量级 Markdown 阅读器 — 秒开渲染、自动纠错、AI 助手、万物转 MD。<br>安装过程纯本地完成，无需管理员权限。';
+    $('welcome-ver').textContent = 'v' + state.version + ' · 由 Natsummerance 发布';
+    if (state.installed){
+      $('btn-uninstall-link').style.display = 'block';
+      $('btn-install').textContent = '升级到 v' + state.version;
+      $('welcome-sub').innerHTML = '检测到已安装版本（' + esc(state.installed.version) + '），点击下方按钮将升级到最新版。<br>你的文档、AI 配置与历史会话都会保留。';
+    }
+    if (un){
+      $('btn-install').textContent = '卸载 ReadMD';
+      $('btn-install').className = 'btn btn-danger';
+    }
+    $('opt-dir').value = state.default_dir || 'C:\\Users\\demo\\AppData\\Local\\Programs\\ReadMD';
+    $('win-title').textContent = un ? 'ReadMD 卸载程序' : 'ReadMD 安装程序';
+  }
+
+  function startInstall(){
+    var dir = $('opt-dir').value.trim();
+    if (!dir){ toast('请先填写安装目录'); return; }
+    var opts = { dir: dir, assoc: options.assoc, desktop: options.desktop, startmenu: options.startmenu };
+    state.default_dir = dir;
+    if (MOCK || !state.running){
+      beginInstall(opts); return;
+    }
+    $('confirm-title').textContent = 'ReadMD 正在运行';
+    $('confirm-text').textContent = '安装前需要关闭正在运行的 ReadMD。未保存的编辑内容可能会丢失，是否继续？';
+    $('confirm-ok').onclick = function(){ hideConfirm(); opts.force = true; beginInstall(opts); };
+    showConfirm();
+  }
+
+  function beginInstall(opts){
+    done = false; installing = true;
+    $('err-card').style.display = 'none';
+    $('inst-title').textContent = '正在安装…';
+    renderSteps(); applyProgress({ percent:0, step:'', text:'准备中…' });
+    go('page-installing');
+    callArgs('start_install', opts);
+  }
+  function startUninstall(){
+    done = false; installing = true;
+    $('err-card').style.display = 'none';
+    $('inst-title').textContent = '正在卸载…';
+    renderSteps(); applyProgress({ percent:0, step:'', text:'准备中…' });
+    go('page-installing');
+    call('start_uninstall');
+  }
+  function showConfirm(){ $('confirm').classList.add('show'); }
+  function hideConfirm(){ $('confirm').classList.remove('show'); }
+
+  // ---- 事件 ----
+  $('btn-install').addEventListener('click', function(){
+    if (state.mode === 'uninstall'){
+      $('confirm-title').textContent = '卸载 ReadMD？';
+      $('confirm-text').textContent = '将移除文件关联、快捷方式与安装目录。文档与设置会保留。确定要卸载吗？';
+      $('confirm-ok').onclick = function(){ hideConfirm(); startUninstall(); };
+      showConfirm();
+    } else {
+      go('page-options');
+    }
+  });
+  $('btn-exit').addEventListener('click', function(){ call('close'); });
+  $('btn-uninstall-link').addEventListener('click', function(){
+    state.mode = 'uninstall';
+    initState(state);
+    go('page-welcome', false);
+  });
+  $('btn-opt-back').addEventListener('click', function(){ go('page-welcome', true); });
+  $('btn-browse').addEventListener('click', function(){
+    var cur = $('opt-dir').value;
+    Promise.resolve(callArgs('choose_dir', cur)).then(function(r){
+      if (r && r[0]){ $('opt-dir').value = r[0]; state.default_dir = r[0]; }
+      else if (MOCK){ toast('（演示模式：目录选择已模拟）'); }
+    });
+  });
+  $('btn-start-install').addEventListener('click', startInstall);
+  $('btn-err-back').addEventListener('click', function(){
+    $('err-card').style.display = 'none';
+    go(state.mode === 'uninstall' ? 'page-welcome' : 'page-options', true);
+  });
+  $('btn-err-retry').addEventListener('click', function(){
+    if (state.mode === 'uninstall') startUninstall(); else beginInstall({
+      dir: $('opt-dir').value.trim(), assoc: options.assoc, desktop: options.desktop, startmenu: options.startmenu, force: true
+    });
+  });
+  document.querySelectorAll('.switch').forEach(function(sw){
+    sw.addEventListener('click', function(){
+      sw.classList.toggle('on');
+      options[sw.dataset.key] = sw.classList.contains('on');
+    });
+  });
+  $('btn-min').addEventListener('click', function(){ call('minimize'); });
+  $('btn-close').addEventListener('click', function(){
+    if (installing){ toast('请等待安装完成'); return; }
+    call('close');
+  });
+  $('confirm-cancel').addEventListener('click', hideConfirm);
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape'){
+      if ($('confirm').classList.contains('show')){ hideConfirm(); }
+      else if (!installing){ call('close'); }
+    }
+  });
+
+  // ---- 启动 ----
+  renderSteps();
+  Promise.resolve(call('get_state')).then(function(st){
+    initState(st || state);
+  });
+  poll();
+})();
+</script>
+</body>
+</html>
