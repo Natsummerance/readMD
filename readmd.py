@@ -40,9 +40,120 @@ RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
 PROMPTS_FILE = os.path.join(DATA_DIR, 'prompts.json')
 HISTORY_FILE = os.path.join(DATA_DIR, 'chat_history.json')
 LOG_FILE = os.path.join(DATA_DIR, 'readmd.log')
-VERSION = '1.2.0'
+VERSION = '2.0.0'
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
+
+CONTROL_PORT = 26891
+INSTANCE_FILE = os.path.join(DATA_DIR, 'instance.json')
+
+_T0 = time.time()
+
+
+def milestone(group, name):
+    """启动里程碑打点：写入 readmd.log，用于验证“秒开”。"""
+    try:
+        logging.info('[%s] %dms %s', group, int((time.time() - _T0) * 1000), name)
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------- 单实例常驻
+# 固定控制端口 + instance.json（端口/随机 token）。新进程先 ping 已有实例，
+# 命中则把要打开的文件 POST 过去后立即退出，实现“双击 .md 秒开”。
+
+_CONTROL = {'queue': [], 'window': None, 'ready': False}
+_control_lock = threading.Lock()
+
+
+def _read_instance():
+    return load_json(INSTANCE_FILE, {})
+
+
+def _write_instance(port, token):
+    save_json(INSTANCE_FILE, {'port': port, 'token': token,
+                              'pid': os.getpid(), 'started': time.time()})
+
+
+def _clear_instance():
+    try:
+        if os.path.isfile(INSTANCE_FILE):
+            os.remove(INSTANCE_FILE)
+    except Exception:
+        pass
+
+
+def _ping_instance(port, token, timeout=0.8):
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            'http://127.0.0.1:%d/api/ping?t=%s' % (port, token))
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return bool(json.loads(r.read().decode('utf-8')).get('ok'))
+    except Exception:
+        return False
+
+
+def instance_alive():
+    """存在可用的常驻实例则返回 (port, token)，否则 None。"""
+    d = _read_instance()
+    port = d.get('port')
+    token = d.get('token')
+    if not port or not token:
+        return None
+    return (port, token) if _ping_instance(port, token) else None
+
+
+def forward_open(port, token, path):
+    """把文件转发给常驻实例并唤起窗口；成功返回 True。"""
+    import urllib.request
+    payload = json.dumps({'token': token, 'file': path or ''}).encode('utf-8')
+    req = urllib.request.Request(
+        'http://127.0.0.1:%d/api/control/open' % port,
+        data=payload, headers={'Content-Type': 'application/json'}, method='POST')
+    try:
+        with urllib.request.urlopen(req, timeout=3) as r:
+            return bool(json.loads(r.read().decode('utf-8')).get('ok'))
+    except Exception:
+        return False
+
+
+def push_control(path):
+    """控制请求入队；窗口就绪时立即推送并显示（秒开路径）。"""
+    with _control_lock:
+        _CONTROL['queue'].append(path or '')
+        win = _CONTROL.get('window')
+        ready = _CONTROL.get('ready')
+    if win is not None and ready:
+        try:
+            win.evaluate_js('window.openExternalFile(%s);' % json.dumps(path or ''))
+        except Exception:
+            pass
+        try:
+            win.show()
+            win.restore()
+        except Exception:
+            pass
+
+
+def pop_control():
+    with _control_lock:
+        if _CONTROL['queue']:
+            return _CONTROL['queue'].pop(0)
+    return None
+
+
+def quit_app():
+    """托盘“退出 ReadMD”：清理单实例文件后结束进程。"""
+    try:
+        _clear_instance()
+    except Exception:
+        pass
+    try:
+        stop_lan_server()
+    except Exception:
+        pass
+    os._exit(0)
 
 
 def safe_print(*args, **kwargs):
@@ -322,6 +433,13 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, stop_lan_server())
         elif path == '/api/share/status':
             self._send_json(200, share_status())
+        elif path == '/api/ping':
+            self._send_json(200, {'ok': self._api_ping(qs)})
+        elif path == '/api/control/open':
+            self._api_control_open()
+        elif path == '/api/control/next':
+            act = pop_control()
+            self._send_json(200, {'pending': act is not None, 'file': act or ''})
         elif path == '/raw':
             p = unquote(qs.get('p', [''])[0])
             self._send_raw(p)
@@ -360,6 +478,27 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.flush()
         except Exception:
             pass
+
+    def _api_ping(self, qs):
+        t = qs.get('t', [''])[0]
+        return bool(t) and t == _read_instance().get('token', '')
+
+    def _api_control_open(self):
+        n = int(self.headers.get('Content-Length', 0) or 0)
+        try:
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+        except Exception:
+            self._send_json(400, {'error': '无效请求'})
+            return
+        if body.get('token') != _read_instance().get('token', ''):
+            self._send_json(403, {'error': 'forbidden'})
+            return
+        path = body.get('file') or ''
+        if path and not os.path.isfile(path):
+            self._send_json(404, {'error': '文件不存在'})
+            return
+        push_control(path)
+        self._send_json(200, {'ok': True})
 
     def _api_ai_config(self):
         if not RM.is_ready('ai'):
@@ -779,7 +918,20 @@ def stop_lan_server():
 
 
 def start_server(port=0):
-    server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    """启动本地 HTTP 服务。
+
+    默认绑定固定控制端口（CONTROL_PORT）以支持单实例常驻；
+    端口被其他程序占用时回退随机端口并禁用单实例。
+    """
+    if not port:
+        port = CONTROL_PORT
+    try:
+        server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+    except OSError:
+        try:
+            server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        except OSError:
+            raise
     server.daemon_threads = True
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
@@ -936,6 +1088,24 @@ class Api(object):
     def get_app_info(self):
         return {'version': VERSION, 'python': sys.version.split()[0]}
 
+    def report_ready(self):
+        """前端页面加载完成（启动里程碑：page_loaded）。"""
+        milestone('boot', 'page_loaded')
+        return True
+
+    def show_window(self):
+        if self._window is not None:
+            try:
+                self._window.show()
+                self._window.restore()
+            except Exception:
+                pass
+        return True
+
+    def request_quit(self):
+        quit_app()
+        return True
+
 
 # ---------------------------------------------------------------- 文件关联
 
@@ -1027,6 +1197,41 @@ def run_selftest():
         safe_print('http selftest failed:', e)
         ok = False
     try:
+        import urllib.request as _urlreq
+        old_inst = _read_instance()
+        srv = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        srv.daemon_threads = True
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        p = srv.server_port
+        tok = 'selftest-%s' % os.urandom(4).hex()
+        _write_instance(p, tok)
+
+        def _ctl(url, data=None):
+            req = _urlreq.Request('http://127.0.0.1:%d%s' % (p, url),
+                                  data=data, method='POST' if data is not None else 'GET',
+                                  headers={'Content-Type': 'application/json'} if data is not None else {})
+            try:
+                with _urlreq.urlopen(req, timeout=5) as r:
+                    return json.loads(r.read().decode('utf-8'))
+            except _urlreq.HTTPError as e:
+                return json.loads(e.read().decode('utf-8'))
+
+        assert _ctl('/api/ping?t=' + tok).get('ok') is True
+        assert _ctl('/api/ping?t=bad').get('ok') is False
+        assert _ctl('/api/control/open', json.dumps({'token': 'bad', 'file': ''}).encode('utf-8')).get('ok') is not True
+        assert _ctl('/api/control/open', json.dumps({'token': tok, 'file': ''}).encode('utf-8')).get('ok') is True
+        d = _ctl('/api/control/next')
+        assert d.get('pending') is True and d.get('file') == ''
+        d = _ctl('/api/control/next')
+        assert d.get('pending') is False
+        srv.shutdown()
+        srv.server_close()
+        save_json(INSTANCE_FILE, old_inst)
+        safe_print('single-instance control OK')
+    except Exception as e:
+        safe_print('single-instance selftest failed:', e)
+        ok = False
+    try:
         t = save_prompt({'name': '_selftest', 'system': 'x', 'action': 'ask'})
         assert load_prompts()['templates']
         assert delete_prompt(t['id'])
@@ -1087,7 +1292,19 @@ def main():
         return 0 if ok else 1
 
     setup_logging()
+    milestone('boot', 'start')
+
+    # 单实例：已有常驻实例 → 转发文件 / 唤起窗口后立即退出（秒开）
+    alive = instance_alive()
+    if alive is not None:
+        port, token = alive
+        if not args.file or forward_open(port, token, os.path.abspath(args.file)):
+            return 0
+
     server = start_server(args.port)
+    if server.server_port == CONTROL_PORT:
+        _write_instance(CONTROL_PORT, secrets.token_urlsafe(16))
+    milestone('boot', 'server_up')
     if args.share:
         d = start_lan_server()
         if d.get('ok'):
@@ -1114,6 +1331,7 @@ def main():
                 threading.Event().wait(3600)
         except KeyboardInterrupt:
             pass
+        _clear_instance()
         return 0
 
     try:
@@ -1124,6 +1342,7 @@ def main():
         return 1
 
     api = Api()
+    milestone('boot', 'webview_imported')
     try:
         window = webview.create_window(
             'ReadMD', url, js_api=api,
@@ -1133,6 +1352,35 @@ def main():
         safe_print('创建窗口失败：%s' % e)
         return 1
     api._window = window
+    with _control_lock:
+        _CONTROL['window'] = window
+        _CONTROL['ready'] = True
+    milestone('boot', 'window_created')
+
+    # 页面加载完成（Python 侧兜底；JS report_ready 为精确 page_loaded 打点）
+    def _on_loaded():
+        milestone('boot', 'window_loaded')
+
+    try:
+        window.events.loaded += _on_loaded
+    except Exception:
+        pass
+
+    # 关闭按钮 → 隐藏到托盘（真正退出走托盘“退出”）
+    def _on_closing():
+        try:
+            window.hide()
+        except Exception:
+            pass
+        return False
+
+    try:
+        window.events.closing += _on_closing
+    except Exception:
+        pass
+
+    _start_tray(window)
+
     try:
         webview.start()
     except Exception as e:
@@ -1144,6 +1392,60 @@ def main():
         except Exception:
             pass
         return 1
+
+    # 窗口真正被销毁时（托盘退出走 os._exit，通常到不了这里）
+    _clear_instance()
+    return 0
+
+
+_tray_icon = {'icon': None}
+
+
+def _start_tray(window):
+    """启动系统托盘图标（pystray run_detached）；失败静默降级。"""
+    try:
+        import pystray
+        from PIL import Image
+    except Exception:
+        return None
+    try:
+        img = Image.open(os.path.join(APP_DIR, 'assets', 'readmd.ico'))
+    except Exception:
+        img = None
+
+    def act_show(icon, item):
+        try:
+            window.show()
+            window.restore()
+        except Exception:
+            pass
+
+    def act_open(icon, item):
+        try:
+            window.show()
+            window.restore()
+            window.evaluate_js('window.__trayOpenFile && window.__trayOpenFile();')
+        except Exception:
+            pass
+
+    def act_quit(icon, item):
+        quit_app()
+
+    try:
+        menu = pystray.Menu(
+            pystray.MenuItem('显示 ReadMD', act_show, default=True),
+            pystray.MenuItem('打开文件…', act_open),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem('退出 ReadMD', act_quit),
+        )
+        icon = pystray.Icon('readmd', img, 'ReadMD', menu=menu)
+        icon.run_detached()
+        _tray_icon['icon'] = icon
+        logging.info('tray started')
+        return icon
+    except Exception as e:
+        logging.exception('tray start failed: %s', e)
+        return None
     return 0
 
 

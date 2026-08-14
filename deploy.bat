@@ -7,7 +7,7 @@ rem  Usage:
 rem    deploy.bat                   full deploy (test + build + push + release)
 rem    deploy.bat --skip-build      reuse existing dist exes (faster)
 rem    deploy.bat --skip-tests      skip the self-test round
-rem    deploy.bat --tag v1.4.0      release tag (default v1.4.0)
+rem    deploy.bat --tag v2.0.0      release tag (default v2.0.0)
 rem
 rem  Requirements: GITHUB_TOKEN in system/user env vars.
 rem ============================================================
@@ -15,7 +15,7 @@ setlocal
 cd /d "%~dp0"
 title ReadMD Deploy
 
-set "TAG=v1.4.0"
+set "TAG=v2.0.0"
 set "SKIP_BUILD=0"
 set "SKIP_TESTS=0"
 
@@ -70,13 +70,23 @@ echo   all tests passed
 
 echo [4/6] Building packages ...
 if "%SKIP_BUILD%"=="1" goto :build_done
-if exist "dist\ReadMDSetup.exe" if exist "dist\ReadMD.exe" (
+if exist "dist\ReadMDSetup.exe" if exist "dist\ReadMD\ReadMD.exe" (
     echo   dist exes already exist. Rebuilding anyway (delete dist to skip).
 )
 ".venv\Scripts\python.exe" tools\make_icon.py
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
+".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onedir --windowed ^
     --name ReadMD --icon "assets\readmd.ico" ^
+    --add-data "assets;assets" ^
+    --add-data "readmd_modules;readmd_modules" ^
+    --add-data "readmd_fix.py;." ^
+    --hidden-import readmd_fix ^
+    --collect-data magika ^
+    --collect-submodules readmd_modules ^
+    readmd.py
+if errorlevel 1 goto :err
+".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
+    --name ReadMD-portable --icon "assets\readmd.ico" ^
     --add-data "assets;assets" ^
     --add-data "readmd_modules;readmd_modules" ^
     --add-data "readmd_fix.py;." ^
@@ -96,7 +106,7 @@ if errorlevel 1 goto :err
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
     --name ReadMDSetup --icon "assets\readmd.ico" ^
     --add-data "installer;installer" ^
-    --add-binary "dist\ReadMD.exe;." ^
+    --add-binary "dist\ReadMD;ReadMD" ^
     --add-binary "dist\ReadMDUninstall.exe;." ^
     --splash "installer\splash.png" ^
     installer\setup_app.py

@@ -28,8 +28,8 @@ echo [3/6] Generating icon ...
 ".venv\Scripts\python.exe" tools\make_icon.py
 if errorlevel 1 goto :err
 
-echo [4/6] Packaging ReadMD.exe ...
-".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
+echo [4/6] Packaging ReadMD (onedir install edition) ...
+".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onedir --windowed ^
     --name ReadMD --icon "assets\readmd.ico" ^
     --add-data "assets;assets" ^
     --add-data "readmd_modules;readmd_modules" ^
@@ -41,7 +41,7 @@ echo [4/6] Packaging ReadMD.exe ...
 if errorlevel 1 goto :err
 
 echo [5/6] Registering as default .md app (current user) ...
-set "EXE=%~dp0dist\ReadMD.exe"
+set "EXE=%~dp0dist\ReadMD\ReadMD.exe"
 if not exist "%APPDATA%\ReadMD\backup" mkdir "%APPDATA%\ReadMD\backup"
 reg export "HKCU\Software\Classes\.md" "%APPDATA%\ReadMD\backup\.md.reg.bak" /y >nul 2>nul
 for %%E in (.md .markdown .mdown .mkd) do (
@@ -55,7 +55,7 @@ reg add "HKCU\Software\Classes\Applications\ReadMD.exe\shell\open\command" /ve /
 ie4uinit.exe -show >nul 2>nul
 
 echo [6/6] Launching ReadMD ...
-start "" "dist\ReadMD.exe"
+start "" "dist\ReadMD\ReadMD.exe"
 
 echo.
 echo Done! ReadMD.exe is packaged and set as the default .md app.

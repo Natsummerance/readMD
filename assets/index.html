@@ -11,28 +11,54 @@
 <body>
 <header id="toolbar">
   <div class="tb-group tb-left">
-    <button id="btn-open" class="tb-btn" title="打开 Markdown 文件 (Ctrl+O)">&#128194; 打开</button>
-    <button id="btn-folder" class="tb-btn icon" title="打开文件夹">&#128193;</button>
-    <button id="btn-recent" class="tb-btn icon" title="最近文件">&#128337;</button>
-    <button id="btn-reload" class="tb-btn icon" title="重新加载 (Ctrl+R)">&#8635;</button>
-    <span id="file-title" class="file-title">未打开文件</span>
+    <button id="btn-open" class="tb-btn" title="打开 Markdown 文件 (Ctrl+O)" aria-label="打开文件">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
+      <span class="tb-label">打开</span>
+    </button>
+    <button id="btn-folder" class="tb-btn icon" title="打开文件夹" aria-label="打开文件夹">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/></svg>
+    </button>
+    <button id="btn-recent" class="tb-btn icon" title="最近文件" aria-label="最近文件">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+    </button>
+    <button id="btn-reload" class="tb-btn icon" title="重新加载 (Ctrl+R)" aria-label="重新加载">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
+    </button>
+    <span id="file-title" class="file-title" title=""></span>
   </div>
   <div class="tb-group tb-right">
-    <button id="btn-ai" class="tb-btn accent" title="AI 助手：快速阅读 / 修改 / 扩充 / 续写 / 润色 (Ctrl+Shift+A)" disabled>&#129302; AI</button>
-    <button id="btn-convert" class="tb-btn" title="万物转 MD：docx/pptx/xlsx/pdf/html... 转为 Markdown" disabled>转换</button>
-    <button id="btn-web" class="tb-btn" title="网页转 MD：输入 URL 抓取正文，可批量爬取 (Ctrl+U)" disabled>网页</button>
-    <button id="btn-ocr" class="tb-btn" title="扫描转 MD：图片/扫描件 OCR" disabled>OCR</button>
-    <button id="btn-edit" class="tb-btn" title="编辑当前 Markdown (Ctrl+E)" disabled>编辑</button>
-    <button id="btn-saveas" class="tb-btn" title="把当前内容另存为 .md 文件" disabled>另存</button>
-    <button id="btn-assoc" class="tb-btn" title="把 .md 设置为 ReadMD 默认打开方式">设为默认</button>
-    <button id="btn-share" class="tb-btn icon" title="移动端共享：扫码在手机上阅读">&#128241;</button>
-    <button id="btn-toc" class="tb-btn" title="目录 (Ctrl+Shift+F)">&#9776; 目录</button>
-    <button id="btn-fix" class="tb-btn" title="本次自动修正详情">&#128736; 修复</button>
-    <button id="btn-search" class="tb-btn icon" title="搜索 (Ctrl+F)">&#128269;</button>
-    <button id="btn-theme" class="tb-btn icon" title="切换主题 (Ctrl+D)">&#9789;</button>
-    <button id="btn-a" class="tb-btn" title="减小字号 (Ctrl+-)">A&minus;</button>
-    <button id="btn-A" class="tb-btn" title="增大字号 (Ctrl+=)">A+</button>
-    <button id="btn-print" class="tb-btn icon" title="打印 / 导出 PDF (Ctrl+P)">&#128424;</button>
+    <button id="btn-search" class="tb-btn icon" title="搜索 (Ctrl+F)" aria-label="搜索">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    </button>
+    <button id="btn-toc" class="tb-btn icon" title="目录 (Ctrl+Shift+F)" aria-label="目录">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+    </button>
+    <button id="btn-theme" class="tb-btn icon" title="切换主题 (Ctrl+D)" aria-label="切换主题">&#9789;</button>
+    <button id="btn-a" class="tb-btn" title="减小字号 (Ctrl+-)" aria-label="减小字号">A&minus;</button>
+    <button id="btn-A" class="tb-btn" title="增大字号 (Ctrl+=)" aria-label="增大字号">A+</button>
+    <button id="btn-print" class="tb-btn icon" title="打印 / 导出 PDF (Ctrl+P)" aria-label="打印">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V4h10v4"/><rect x="4" y="8" width="16" height="8" rx="1"/><path d="M7 16h10v4H7z"/></svg>
+    </button>
+    <button id="btn-edit" class="tb-btn" title="编辑当前 Markdown (Ctrl+E)" aria-label="编辑" disabled>
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>
+      <span class="tb-label">编辑</span>
+    </button>
+    <button id="btn-ai" class="tb-btn accent" title="AI 助手：快速阅读 / 修改 / 扩充 / 续写 / 润色 (Ctrl+Shift+A)" aria-label="AI 助手" disabled>
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
+      <span class="tb-label">AI</span>
+    </button>
+    <button id="btn-more" class="tb-btn icon" title="更多功能" aria-label="更多功能" aria-haspopup="true">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+    </button>
+    <div id="more-menu" class="more-menu">
+      <button id="btn-convert" class="more-item" disabled><span>转换</span><em>万物转 MD</em></button>
+      <button id="btn-web" class="more-item" disabled><span>网页</span><em>网页转 MD</em></button>
+      <button id="btn-ocr" class="more-item" disabled><span>OCR</span><em>扫描转 MD</em></button>
+      <button id="btn-saveas" class="more-item" disabled><span>另存为</span><em>.md 文件</em></button>
+      <button id="btn-assoc" class="more-item"><span>设为默认</span><em>.md 打开方式</em></button>
+      <button id="btn-share" class="more-item"><span>共享</span><em>手机扫码阅读</em></button>
+      <button id="btn-fix" class="more-item"><span>修复详情</span><em>本次自动修正</em></button>
+    </div>
   </div>
 </header>
 
@@ -81,22 +107,44 @@
   <div id="main-col">
     <main id="content">
       <div id="welcome">
-        <div class="logo">Read<span>MD</span></div>
-        <p class="welcome-sub">轻量级本地 Markdown 阅读器 · 自动修正表格 / 加粗 / 公式 · 万物皆可转 MD</p>
-        <div class="welcome-btns">
-          <button id="w-open" class="big-btn">&#128194; 打开 Markdown</button>
-          <button id="w-folder" class="big-btn">&#128193; 打开文件夹</button>
-          <button id="w-ai" class="big-btn" disabled>&#129302; AI 助手</button>
-          <button id="w-convert" class="big-btn">&#128736; 万物转 MD</button>
-          <button id="w-web" class="big-btn">&#127760; 网页转 MD</button>
-          <button id="w-ocr" class="big-btn">&#128424; 扫描转 MD</button>
+        <div class="welcome-inner">
+          <div class="logo">Read<span>MD</span></div>
+          <p class="welcome-sub">轻量本地 Markdown 阅读器 · 自动修正 · 万物转 MD · AI 助手</p>
+          <div class="welcome-btns">
+            <button id="w-open" class="big-btn" title="打开本地 Markdown 文件">
+              <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
+              <span>打开 Markdown</span><em>Ctrl+O</em>
+            </button>
+            <button id="w-folder" class="big-btn" title="打开文件夹，浏览其中所有 Markdown">
+              <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/></svg>
+              <span>打开文件夹</span><em>目录浏览</em>
+            </button>
+            <button id="w-ai" class="big-btn" title="AI 助手：快速阅读 / 润色 / 修改 / 续写" disabled>
+              <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
+              <span>AI 助手</span><em>Ctrl+Shift+A</em>
+            </button>
+            <button id="w-convert" class="big-btn" title="docx / pptx / xlsx / pdf / html 等转为 Markdown">
+              <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
+              <span>万物转 MD</span><em>docx · pdf · xlsx…</em>
+            </button>
+            <button id="w-web" class="big-btn" title="输入网址抓取正文为 Markdown">
+              <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/></svg>
+              <span>网页转 MD</span><em>Ctrl+U</em>
+            </button>
+            <button id="w-ocr" class="big-btn" title="扫描件 / 图片离线 OCR 为 Markdown">
+              <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h3"/><path d="M17 4h3v3"/><path d="M20 17v3h-3"/><path d="M7 20H4v-3"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
+              <span>扫描转 MD</span><em>离线 OCR</em>
+            </button>
+          </div>
+          <div id="recent-box" class="hidden">
+            <div class="recent-head">
+              <h3>最近打开</h3>
+              <button id="recent-clear" class="link-btn">清空记录</button>
+            </div>
+            <ul id="recent-list"></ul>
+          </div>
+          <p class="welcome-hint">直接双击 .md 秒开 · 自动修正常见格式错误（不改原文件）· 快捷键 Ctrl+O 打开 · Ctrl+F 搜索 · Ctrl+E 编辑 · Ctrl+P 打印</p>
         </div>
-        <div id="recent-box" class="hidden">
-          <h3>最近打开</h3>
-          <ul id="recent-list"></ul>
-          <button id="recent-clear" class="link-btn">清空记录</button>
-        </div>
-        <p class="welcome-hint">快捷键：Ctrl+O 打开 · Ctrl+F 搜索 · Ctrl+U 网页 · Ctrl+E 编辑 · Ctrl+Shift+A AI · Ctrl+P 打印<br>直接双击 .md 文件秒开阅读；docx / pptx / xlsx / pdf / 图片 / 网页 均可一键转 Markdown；AI 可快速阅读、修改、扩充、续写、润色</p>
       </div>
     </main>
     <textarea id="edit-area" class="hidden" spellcheck="false"></textarea>

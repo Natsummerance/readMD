@@ -2,10 +2,10 @@
 """发布 ReadMD 到 GitHub Releases（无需 gh CLI，纯标准库）。
 
 用法：
-    python release.py --verify [--tag v1.4.0]        # 校验线上 Release 与本地产物（名称/大小/SHA256）
-    python release.py --update [--tag v1.4.0]        # 更新已存在 Release 的标题与说明
-    python release.py [--tag v1.4.0]                 # 创建 Release（已存在则跳过），上传缺失资产
-    python release.py --force-upload [--tag v1.4.0]  # 强制重传全部资产（覆盖同名）
+    python release.py --verify [--tag v2.0.0]        # 校验线上 Release 与本地产物（名称/大小/SHA256）
+    python release.py --update [--tag v2.0.0]        # 更新已存在 Release 的标题与说明
+    python release.py [--tag v2.0.0]                 # 创建 Release（已存在则跳过），上传缺失资产
+    python release.py --force-upload [--tag v2.0.0]  # 强制重传全部资产（覆盖同名）
 
 通用参数：--name 标题  --body-file 说明文件  --draft  --skip-assets  --asset 指定单个资产名
 需要环境变量 GITHUB_TOKEN（可存系统变量）。
@@ -74,11 +74,11 @@ def sha256(path):
 
 
 def build_assets(base, tag):
-    """发布资产：安装包 + 便携版。图标已在仓库内（assets/icon-256.png），不再作为 Release 资产。"""
+    """发布资产：安装包 + 便携版。安装版为 onedir 目录安装（秒开），便携版为单文件。"""
     v = tag.lstrip("v")
     return [
         (os.path.join(base, "dist", "ReadMDSetup.exe"), "ReadMDSetup-v%s.exe" % v),
-        (os.path.join(base, "dist", "ReadMD.exe"), "ReadMD-portable-v%s.exe" % v),
+        (os.path.join(base, "dist", "ReadMD-portable.exe"), "ReadMD-portable-v%s.exe" % v),
     ]
 
 
@@ -198,13 +198,15 @@ def upload_all(rel, args, tok):
 
 DEFAULT_BODY = """## 下载
 
-> 安装包（推荐）：下载 **ReadMDSetup-v1.4.0.exe**，双击即可安装（内含炫酷动画安装界面，支持设为 .md 默认打开方式，可随时在「设置 → 应用」中卸载）。
-> 便携版：**ReadMD-portable-v1.4.0.exe** 免安装，双击直接运行。
+> 安装包（推荐）：下载 **ReadMDSetup-v2.0.0.exe**，双击即可安装（内含动画安装界面，支持设为 .md 默认打开方式，可随时在「设置 → 应用」中卸载）。
+> 便携版：**ReadMD-portable-v2.0.0.exe** 免安装，双击直接运行。
 
-## 新增
+## 新增（v2.0.0）
 
-- 编辑器插入图片：裁剪 / 缩放 / 旋转（Canvas 所见即所得，保存到文档 `images/` 目录）
-- 全新安装器：苹果风格动画 UI（毛玻璃、弹簧动效、极光背景），一键安装 / 升级 / 卸载
+- 秒开启动：安装版改为目录安装（不再每次解压 96MB 单文件），冷启动窗口可用 ≤1.5s；常驻托盘后双击 .md 再次打开 <0.3s
+- 单实例常驻：关闭窗口进系统托盘，再打开文件瞬时唤起；托盘菜单「显示 / 打开文件 / 退出」
+- 界面全面改版：现代清爽阅读风（44px 工具条 + 内联 SVG 图标、欢迎页最近文件网格、三主题全套设计 token）
+- 阅读体验：标题层级 / 代码块 / 表格 / 引用 / 任务列表精修，目录滚动高亮，大文档骨架屏，动画遵循系统减弱动效设置
 
 ## 完整功能
 
@@ -222,8 +224,8 @@ DEFAULT_BODY = """## 下载
 
 def main():
     ap = argparse.ArgumentParser(description="发布 ReadMD Release（纯标准库，无需 gh CLI）")
-    ap.add_argument("--tag", default="v1.4.0")
-    ap.add_argument("--name", default="ReadMD v1.4.0")
+    ap.add_argument("--tag", default="v2.0.0")
+    ap.add_argument("--name", default="ReadMD v2.0.0")
     ap.add_argument("--body-file")
     ap.add_argument("--draft", action="store_true")
     ap.add_argument("--skip-assets", action="store_true")

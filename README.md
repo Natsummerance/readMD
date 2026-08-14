@@ -1,53 +1,68 @@
-# ReadMD · 轻量级 Markdown 阅读器
+<div align="center">
 
-一个**纯本地、秒开、离线可用**的 Markdown 阅读器。双击 `.md` 文件即可阅读，
-渲染前会自动修正常见 Markdown 错误（表格、加粗、公式、标题），**只影响显示，绝不改写原文件**。
+<img src="assets/icon-256.png" width="96" alt="ReadMD logo">
 
-## 功能
+# 📖 ReadMD · 轻量级 Markdown 阅读器
 
-- ⚡ **快**：打开 .md 秒开——先渲染正文（marked + MathJax 全离线），**渲染完成后再在后台懒加载**转换/OCR/网页模块，不影响阅读速度
-- 🤖 **AI 助手**：接入外部大模型 API（OpenAI / DeepSeek / Kimi / 智谱 GLM / 通义千问 / 硅基流动 / OpenRouter / Groq / xAI / Ollama / Anthropic 等 15+ 预设，并兼容 cc-switch 里的自定义提供商），支持快速阅读、修改、扩充、续写、润色、翻译、提问；流式输出，结果可一键应用到文档；提供商与 API Key 完全自定义（Key 也可读系统环境变量）；内置 14 个 Prompt 模板（总结要点 / 生成周报 / 大纲 / 代码审查 / 翻译成英文等）且可自定义增删改；多轮对话可保存为历史会话，随时恢复续聊
-- 📱 **移动端共享**：开启局域网共享后，手机扫码即可在同一 Wi-Fi 下阅读 / 转 MD / OCR / AI（随机令牌鉴权，关停即失效）
-- 📦 **一键打包安装**：`run.bat` 运行 · `package.bat` 打包单文件 exe · `setup.bat` 打包 + 安装 + 设为默认 + 启动
-- 🚀 **安装包直装**：GitHub Releases 提供 **ReadMDSetup.exe 安装包**（苹果风动画界面：毛玻璃、弹簧动效、极光背景，一键安装 / 升级 / 卸载）与 **便携版 exe**，下载即用，无需拉取源码
-- 🛠 **自动修正**：表格缺分隔行 / 列数不齐、未闭合的 `**` `__` `*`、未闭合的 `$` `$$` `\(` `\)`、`#标题` 缺空格、BOM、CRLF 等
-- 🔄 **万物转 MD**：docx / pptx / xlsx / pdf / html / csv / json 等一键转为 Markdown（基于 MarkItDown），转换结果自动过修正器
-- 🔍 **扫描转 MD（OCR）**：图片、扫描件 PDF 用 Windows 10/11 内置 OCR（离线、免费、无次数限制，支持中文）；PDF 有文字层直接提取，无文字层逐页渲染 OCR
-- 🌐 **网页转 MD**：输入 URL 抓取正文（trafilatura），支持勾选“批量爬取”同站链接最多 10 页合并为一个文档
-- ✏️ **编辑 MD**：Ctrl+E 进入**主动编辑模式**（基于 GitHub 开源 [CodeMirror 6](https://github.com/codemirror/codemirror.next)），Markdown 语法高亮 + **自动补全**（标题 / 加粗 / 斜体 / 引用 / 表格 / 公式 / 代码块等 18 种语法，输入即提示）；工具栏一键插入各种 Markdown 字符与结构（引用块、表格、任务列表、分隔线、链接、图片…）；**插入图片可裁剪 / 缩放 / 旋转**（Canvas 所见即所得，图片保存到文档同目录 `images/` 子文件夹后以相对路径插入）；Ctrl+S 保存（首次保存自动生成 `.bak` 备份），保存后自动重新渲染
-- 📑 阅读体验：目录侧栏、全文搜索（Ctrl+F）、亮/暗/护眼三主题、字号缩放、打印/导出 PDF
-- 📂 文件夹浏览：打开整个文件夹，侧栏列出全部 Markdown 逐个阅读
-- 🚀 **大文档增量渲染**：超过 300KB 或 6000 行的超大文档自动分块增量渲染——先出开头、渲染过程中显示进度，界面始终保持流畅不卡顿
-- 🔄 自动刷新：文件在外部被修改后自动重新加载
-- 🖥 可设为 Windows 默认打开方式（当前用户级，无需管理员）
+**纯本地 · 秒开 · 离线可用** 的 Windows Markdown 阅读器。
 
-## 安装
+双击 `.md` 即读，渲染前自动修正常见 Markdown 错误（表格 / 加粗 / 公式 / 标题），**只影响显示，绝不改写原文件**；集成 AI 助手、万物转 MD、扫描 OCR、网页转 MD、主动编辑与移动端共享。
 
-环境要求：Windows 10/11（自带 WebView2 运行时）、Python 3.9+（已安装并加入 PATH）。
+![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078d6?logo=windows&logoColor=white)
+![version](https://img.shields.io/github/v/release/Natsummerance/readMD?color=3b6ef5)
+![webview2](https://img.shields.io/badge/runtime-WebView2-4fc08d)
+![repo size](https://img.shields.io/github/repo-size/Natsummerance/readMD)
+
+</div>
+
+---
+
+## ✨ 特性
+
+- ⚡ **秒开**：安装版为 onedir 目录安装，冷启动窗口可用 ≤1.5s（低配机 / 机械硬盘 ≤2s）；关闭窗口隐藏到系统托盘常驻，再双击 `.md` 瞬时唤起（<0.3s）
+- 🎨 **界面清爽**：44px 工具条 + 内联 SVG 图标、欢迎页最近文件网格、浅色 / 暗色 / sepia 三主题全套设计 token、大文档骨架屏、动画遵循系统「减弱动态效果」
+- 🤖 **AI 助手**：接入 OpenAI / DeepSeek / Kimi / 智谱 GLM / 通义千问 / 硅基流动 / OpenRouter / Groq / xAI / Ollama / Anthropic 等 15+ 预设；快速阅读、修改、扩充、续写、润色、翻译、提问；流式输出、一键应用到文档；14 个 Prompt 模板 + 历史会话
+- 🔄 **万物转 MD**：docx / pptx / xlsx / pdf / html / csv / json 等一键转为 Markdown（MarkItDown），转换结果自动过修正器
+- 🔍 **扫描转 MD（OCR）**：图片、扫描件 PDF 使用 Windows 10/11 内置 OCR（离线、免费、支持中文）；有文字层的 PDF 直接提取，无文字层逐页渲染识别
+- 🌐 **网页转 MD**：输入 URL 抓取正文（trafilatura），支持批量爬取同站最多 10 页合并为一份文档
+- ✏️ **主动编辑**：基于 [CodeMirror 6](https://github.com/codemirror/codemirror.next) 的 Markdown 语法高亮 + 自动补全（18 种语法），一键插入表格 / 公式 / 任务列表等；**插入图片可裁剪 / 缩放 / 旋转**，保存到文档 `images/` 目录；Ctrl+S 保存（首存自动 `.bak` 备份）
+- 📱 **移动端共享**：开启局域网共享后，手机扫码在同一 Wi-Fi 下阅读 / 转 MD / OCR / AI（随机令牌鉴权）
+- 📑 **阅读体验**：目录侧栏（滚动高亮）、全文搜索、三主题、字号缩放、打印 / 导出 PDF、文件夹浏览、大文档增量渲染（>300KB 或 6000 行分块渲染不卡顿）、文件外部修改自动刷新
+- 🛠 **自动修正**：表格缺分隔行 / 列数不齐、未闭合 `**` `__` `*`、未闭合 `$` `$$`、`#标题` 缺空格、BOM、CRLF 等，逐处列出修改
+- 🖥 **默认打开方式**：可设为 Windows 默认 `.md` 应用（当前用户级，无需管理员）
+
+## 🚀 快速开始
+
+**方式一：直接下载（推荐）**
+
+不用拉取源码：到 [GitHub Releases](https://github.com/Natsummerance/readMD/releases) 下载：
+
+| 文件 | 说明 |
+| --- | --- |
+| **ReadMDSetup-版本.exe** | 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级 |
+| **ReadMD-portable-版本.exe** | 便携版，免安装，双击直接运行 |
+
+> 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
+
+**方式二：源码运行（开发 / 自定义）**
+
+环境要求：Windows 10/11（自带 WebView2 运行时）、Python 3.9+。
 
 ```bat
 双击 install.bat
 ```
 
-脚本会：
-1. 在本目录创建 `.venv` 虚拟环境并安装 `pywebview`
-2. 注册 `.md / .markdown / .mdown / .mkd` 文件关联（HKCU，无需管理员）
-
-安装后直接双击任意 `.md` 文件即可用 ReadMD 打开。
-
-> 若系统仍用其他程序打开（Windows 默认应用设置有优先级），
-> 右键 `.md` → 打开方式 → 选择 ReadMD → 始终使用；或点击阅读器工具栏的「设为默认」。
-> 注意：程序化修改默认应用受 Windows 的 UserChoice 哈希保护，此路径已是最佳实践。
-
-## 使用
+脚本会创建 `.venv`、安装依赖并注册 `.md / .markdown / .mdown / .mkd` 文件关联（HKCU，无需管理员）。之后直接双击任意 `.md` 文件即可用 ReadMD 打开；或：
 
 ```bat
-rem 直接打开文件
-readmd\.venv\Scripts\pythonw.exe readmd\readmd.py "C:\path\to\file.md"
-
-rem 无 pywebview 时用浏览器兜底
-python readmd\readmd.py --browser "C:\path\to\file.md"
+run.bat                              rem 一键运行
+.venv\Scripts\pythonw.exe readmd.py  rem 打开文件 / 空启动
+python readmd.py --browser "文件.md"  rem 无 pywebview 时用浏览器兜底
 ```
+
+> 若 Windows 仍用其他程序打开：右键 `.md` → 打开方式 → 选择 ReadMD → 始终使用；或点击阅读器工具栏「设为默认」。程序化修改默认应用受 Windows UserChoice 哈希保护，此路径已是最佳实践。
+
+## 🖱️ 使用
 
 ### 快捷键
 
@@ -55,8 +70,8 @@ python readmd\readmd.py --browser "C:\path\to\file.md"
 | --- | --- |
 | Ctrl+O | 打开文件 |
 | Ctrl+U | 网页转 MD |
-| Ctrl+E | 编辑当前 MD（CodeMirror 语法高亮 + 自动补全，Ctrl+S 保存） |
-| Ctrl+F | 搜索（Enter 下一个，Shift+Enter 上一个，Esc 关闭） |
+| Ctrl+E | 编辑当前 MD（Ctrl+S 保存） |
+| Ctrl+F | 搜索（Enter 下一个 / Shift+Enter 上一个 / Esc 关闭） |
 | Ctrl+Shift+F | 目录侧栏 |
 | Ctrl+Shift+A | AI 助手面板 |
 | Ctrl+D | 切换主题 |
@@ -65,317 +80,146 @@ python readmd\readmd.py --browser "C:\path\to\file.md"
 | Ctrl+P | 打印 / 导出 PDF |
 | Ctrl+← / Ctrl+→ | 历史后退 / 前进 |
 
-## 目录结构
+### 常用操作
 
-```
-readmd/
-├─ readmd.py            # 主程序（本地服务 + 原生窗口）
-├─ readmd_fix.py        # 自动修正器（纯标准库）
-├─ readmd_fix_test.py   # 修正器测试（python readmd_fix_test.py）
-├─ readmd_modules/      # 懒加载扩展模块
-│  ├─ __init__.py       #   模块注册表 / 后台加载
-│  ├─ convert.py        #   万物转 MD（MarkItDown）
-│  ├─ ocr.py            #   扫描转 MD（WinRT OCR + PyMuPDF）
-│  ├─ web.py            #   网页转 MD（trafilatura + 批量爬取）
-│  └─ ai.py             #   AI 助手（OpenAI / Anthropic 双协议 + 提供商注册表）
-├─ run.bat              # 一键运行（venv pythonw）
-├─ install.bat          # 一键安装 + 注册文件关联
-├─ package.bat          # 一键打包单文件 exe（PyInstaller）
-├─ setup.bat            # 一键：打包 + 安装 + 设为默认 + 启动
-├─ uninstall.bat        # 移除文件关联（保留备份）
-├─ release.py           # 发布 GitHub Release（--verify 校验 / --update 更新 / --force-upload 重传）
-├─ deploy.bat           # ★一键部署：测试 → 打包 → 推送 → 发布 Release（自动校验 SHA256）
-├─ release_notes.md     # Release 发布说明（deploy.bat 自动读取）
-├─ installer/           # 安装器（苹果风动画 UI）
-│  ├─ setup_app.py      #   安装/卸载/静默模式主程序
-│  ├─ setup.html        #   动画界面（毛玻璃/弹簧动效/极光背景）
-│  ├─ build_setup.bat   #   构建 ReadMDSetup.exe + ReadMDUninstall.exe
-│  ├─ make_splash.py    #   生成 PyInstaller 启动画面
-│  └─ splash.png
-├─ requirements.txt
-├─ assets/
-│  ├─ index.html        # 界面骨架
-│  ├─ style.css         # 阅读主题 + 移动端响应式
-│  ├─ app.js            # 渲染 / 目录 / 搜索 / 公式 / AI / 转换 / 编辑
-│  ├─ readmd.ico        # 多尺寸应用图标（16~256）
-│  ├─ icon-256.png      # 256px 图标预览
-│  └─ vendor/           # marked + MathJax + qrcode + codemirror.bundle（全部离线）
-├─ tools/cm-bundle/    # CodeMirror 6 构建源（npm install + esbuild 重新打包 vendor）
-└─ tools/make_icon.py   # 多尺寸图标生成器（纯标准库）
-```
+- **打开**：工具栏「打开」或 Ctrl+O；「文件夹」浏览整个目录逐个阅读
+- **最近文件**：欢迎页最近文件网格，一键回到上次阅读的位置
+- **转换 / OCR / 网页**：可在「更多」菜单中找到；结果为虚拟文档，可「另存」为 `.md`
+- **修复**：渲染时自动修正会在「🛠 修复」面板中列出每一处修改
+- **托盘**：关闭窗口即隐藏到系统托盘（再次打开瞬时）；托盘菜单「显示 / 打开文件 / 退出」
 
-## 一键部署（给其他用户下载）
+## 🧠 核心能力详解
 
-环境要求：已安装 Git，并配置系统环境变量 `GITHUB_TOKEN`（GitHub Personal Access Token，仓库 `Natsummerance/readMD` 需 `repo` 权限）。
+### 自动修正
 
-```bat
-deploy.bat                 rem 完整流程：测试 → 打包 → 推送 → 发布 Release
-deploy.bat --skip-build    rem 复用已有 dist 产物，只跑测试 + 推送 + 发布（更快）
-deploy.bat --skip-tests    rem 跳过自测
-deploy.bat --tag v1.4.0    rem 指定发布标签（默认 v1.4.0）
-```
-
-脚本会依次执行：
-
-1. 检查 `GITHUB_TOKEN`
-2. 运行修正器测试（37 项）+ 主程序自测 + 扩展模块加载测试
-3. 生成图标 → 打包 `ReadMD.exe` → 生成启动画面 → 打包 `ReadMDSetup.exe` / `ReadMDUninstall.exe`
-4. `git push` 推送代码
-5. 用 `release_notes.md` 更新 Release 说明 → 上传缺失的安装包/便携版 → `--verify` 校验线上资产与本地产物 SHA256 完全一致
-
-也可以单独使用 `release.py`：
-
-```bat
-python release.py --verify             rem 校验线上与本地产物一致性（名称/大小/SHA256）
-python release.py --update             rem 更新已存在 Release 的标题与说明（读 release_notes.md）
-python release.py --force-upload       rem 同名资产先删除再重传
-python release.py                      rem 创建 Release（已存在则跳过）+ 上传缺失资产
-```
-
-> 其他人无需拉取源码：直接到 [GitHub Releases](https://github.com/Natsummerance/readMD/releases)
-> 下载 **ReadMDSetup-v1.4.0.exe**（安装包）或 **ReadMD-portable-v1.4.0.exe**（便携版）即可使用。
-
-## 自动修正说明
-
-修正均为**保守启发式**，只发生在内存渲染阶段，并会在「🛠 修复」面板中列出每一处修改：
+修正均为**保守启发式**，只发生在内存渲染阶段，并在「🛠 修复」面板中列出每一处修改：
 
 - **表格**：检测连续的竖线行，缺少 `|---|` 表头分隔行时自动补全；各列不足时补齐空单元格；分隔行不足 3 个连字符时补足
-- **加粗**：`**文字` 补全为 `**文字**`；`文字**` 中游离的结束符转义为字面量；`2 * 3` 这类乘号转义；列表 `* 项` 与分隔线 `***` 不受影响
+- **加粗**：`**文字` 补全为 `**文字**`；游离的结束符转义为字面量；`2 * 3` 这类乘号转义；列表 `* 项` 与分隔线 `***` 不受影响
 - **公式**：`$x^2$ 和 $y` 补全为 `$y$`；`$$` 块级公式未闭合时补 `$$`；`价格 $5` 这类货币不会被误判；代码块与行内代码内的内容一律跳过
 - **标题**：`#标题` → `# 标题`
 
-## 万物转 MD 说明
+### 万物转 MD / 扫描 OCR / 网页转 MD
 
 - **文件转换**：工具栏「转换」选择任意文件（或直接 `python readmd.py 文件.docx`），MarkItDown 转成 Markdown 后自动过修正器并渲染；未提取到文字时提示改用 OCR
-- **扫描 / 图片**：工具栏「OCR」选择图片或 PDF；Windows 内置 OCR 离线识别（需要系统已安装对应语言包，中文一般自带）；扫描版 PDF 会逐页渲染后识别
+- **扫描 / 图片**：工具栏「OCR」选择图片或 PDF；Windows 内置 OCR 离线识别（需系统已安装对应语言包，中文一般自带）；扫描版 PDF 逐页渲染后识别
 - **网页**：工具栏「网页」输入 URL；勾选“批量爬取”会抓取同站最多 10 个链接合并为一份文档
-- **另存**：转换 / 网页 / OCR 结果为虚拟文档，点「另存」保存为 .md 文件
-- 转换 / OCR / 网页模块均为**首次渲染完成后的后台懒加载**，工具栏按钮在模块就绪前保持禁用，不影响 Markdown 阅读的启动速度
+- 转换 / OCR / 网页模块均为**首次渲染完成后的后台懒加载**，不影响 Markdown 阅读的启动速度
 
+### 大文档增量渲染
 
-## 大文档渲染说明
-
-- 超过 **300KB 或 6000 行** 的文档自动进入**增量分块渲染**：正文按围栏代码块 / 空行切成小块，逐帧渲染（每帧 8 块），顶部显示「渲染中… N%」，可边渲染边滚动阅读
+- 超过 **300KB 或 6000 行** 的文档自动进入**增量分块渲染**：正文按围栏代码块 / 空行切成小块逐帧渲染，顶部显示「渲染中… N%」，可边渲染边滚动阅读
 - 代码块与公式跨块保护不拆分，渲染完成后统一生成目录 / 搜索索引 / 公式排版，滚动位置自动恢复
 - 小文档仍为一次性整篇渲染，启动速度不受影响
 
+### 主动编辑（CodeMirror 6）
 
-## 编辑模式说明
+- 行号、括号配对、自动缩进、代码折叠、语法高亮（Markdown + 内嵌代码语言）、亮 / 暗主题跟随
+- 输入 `#` `*` `` ` `` `[` `>` `|` `~` 等触发 18 种 Markdown 语法补全，选中即插入并定位光标
+- 工具栏一键插入：加粗 / 斜体 / 删除线 / 标题 / 引用 / 列表 / 任务 / 链接 / 图片 / 行内代码 / 代码块 / 公式 / 表格 / 分隔线
+- **插入图片**：本地图片可在画布上裁剪（自由 / 1:1 / 4:3 / 16:9）、旋转（90° / 任意角度）、缩放（10%~300%），导出 PNG 保存到文档同目录 `images/` 并以相对路径插入
+- CodeMirror 已离线打包（`assets/vendor/codemirror.bundle.js`），仅首次进入编辑模式时加载，不影响阅读秒开
 
-- **主动编辑**：Ctrl+E 进入编辑，基于 [CodeMirror 6](https://github.com/codemirror)（GitHub 开源，`@codemirror/*` 官方模块 + `@codemirror/autocomplete`）实现：行号、括号配对、自动缩进、代码折叠、语法高亮（Markdown + 内嵌代码语言）、亮/暗主题跟随
-- **自动补全**：输入 `#` `*` `` ` `` `[` `>` `|` `# ReadMD · 轻量级 Markdown 阅读器
+### AI 助手
 
-一个**纯本地、秒开、离线可用**的 Markdown 阅读器。双击 `.md` 文件即可阅读，
-渲染前会自动修正常见 Markdown 错误（表格、加粗、公式、标题），**只影响显示，绝不改写原文件**。
+- **提供商**：OpenAI / DeepSeek / Kimi / 智谱 GLM / 通义千问 / 硅基流动 / OpenRouter / Groq / xAI / Mistral / Gemini / 火山方舟 / 腾讯混元 / Ollama（本地）/ Anthropic 等 15+ 预设，自动导入 cc-switch 中配置过的提供商
+- **API Key**：面板中填写即保存到本机（`%APPDATA%\ReadMD\ai.json`）；留空时自动读取环境变量（如 `DEEPSEEK_API_KEY`），无需重复填写
+- **自定义**：可直接修改任意预设的地址 / 模型 / Key；兼容 OpenAI Chat Completions 与 Anthropic Messages 双协议，绝大多数聚合网关 / NewAPI / One API 可直接使用
+- **动作**：快速阅读、润色、修改、扩充、续写、翻译、提问；默认处理全文，可勾选「仅处理选中文字」
+- **模板**：内置 14 个常用模板（总结要点 / 生成周报 / 生成大纲 / 代码审查 / 修正格式等），支持新建 / 编辑 / 删除与 `{doc}` `{prompt}` 占位符
+- **历史会话**：多轮上下文自动累积，可保存 / 恢复（最多 50 个会话 / 60 条消息）
+- **落地**：流式渲染结果可「应用到文档」（进入编辑审阅后 Ctrl+S 保存）、「复制」或「另存为」
 
-## 功能
+### 移动端共享
 
-- ⚡ **快**：打开 .md 秒开——先渲染正文（marked + MathJax 全离线），**渲染完成后再在后台懒加载**转换/OCR/网页模块，不影响阅读速度
-- 🤖 **AI 助手**：接入外部大模型 API（OpenAI / DeepSeek / Kimi / 智谱 GLM / 通义千问 / 硅基流动 / OpenRouter / Groq / xAI / Ollama / Anthropic 等 15+ 预设，并兼容 cc-switch 里的自定义提供商），支持快速阅读、修改、扩充、续写、润色、翻译、提问；流式输出，结果可一键应用到文档；提供商与 API Key 完全自定义（Key 也可读系统环境变量）；内置 14 个 Prompt 模板（总结要点 / 生成周报 / 大纲 / 代码审查 / 翻译成英文等）且可自定义增删改；多轮对话可保存为历史会话，随时恢复续聊
-- 📱 **移动端共享**：开启局域网共享后，手机扫码即可在同一 Wi-Fi 下阅读 / 转 MD / OCR / AI（随机令牌鉴权，关停即失效）
-- 📦 **一键打包安装**：`run.bat` 运行 · `package.bat` 打包单文件 exe · `setup.bat` 打包 + 安装 + 设为默认 + 启动
-- 🛠 **自动修正**：表格缺分隔行 / 列数不齐、未闭合的 `**` `__` `*`、未闭合的 `$` `$$` `\(` `\)`、`#标题` 缺空格、BOM、CRLF 等
-- 🔄 **万物转 MD**：docx / pptx / xlsx / pdf / html / csv / json 等一键转为 Markdown（基于 MarkItDown），转换结果自动过修正器
-- 🔍 **扫描转 MD（OCR）**：图片、扫描件 PDF 用 Windows 10/11 内置 OCR（离线、免费、无次数限制，支持中文）；PDF 有文字层直接提取，无文字层逐页渲染 OCR
-- 🌐 **网页转 MD**：输入 URL 抓取正文（trafilatura），支持勾选“批量爬取”同站链接最多 10 页合并为一个文档
-- ✏️ **编辑 MD**：Ctrl+E 进入**主动编辑模式**（基于 GitHub 开源 [CodeMirror 6](https://github.com/codemirror/codemirror.next)），Markdown 语法高亮 + **自动补全**（标题 / 加粗 / 斜体 / 引用 / 表格 / 公式 / 代码块等 18 种语法，输入即提示）；工具栏一键插入各种 Markdown 字符与结构（引用块、表格、任务列表、分隔线、链接、图片…）；Ctrl+S 保存（首次保存自动生成 `.bak` 备份），保存后自动重新渲染
-- 📑 阅读体验：目录侧栏、全文搜索（Ctrl+F）、亮/暗/护眼三主题、字号缩放、打印/导出 PDF
-- 📂 文件夹浏览：打开整个文件夹，侧栏列出全部 Markdown 逐个阅读
-- 🚀 **大文档增量渲染**：超过 300KB 或 6000 行的超大文档自动分块增量渲染——先出开头、渲染过程中显示进度，界面始终保持流畅不卡顿
-- 🔄 自动刷新：文件在外部被修改后自动重新加载
-- 🖥 可设为 Windows 默认打开方式（当前用户级，无需管理员）
-
-## 安装
-
-环境要求：Windows 10/11（自带 WebView2 运行时）、Python 3.9+（已安装并加入 PATH）。
-
-```bat
-双击 install.bat
-```
-
-脚本会：
-1. 在本目录创建 `.venv` 虚拟环境并安装 `pywebview`
-2. 注册 `.md / .markdown / .mdown / .mkd` 文件关联（HKCU，无需管理员）
-
-安装后直接双击任意 `.md` 文件即可用 ReadMD 打开。
-
-> 若系统仍用其他程序打开（Windows 默认应用设置有优先级），
-> 右键 `.md` → 打开方式 → 选择 ReadMD → 始终使用；或点击阅读器工具栏的「设为默认」。
-> 注意：程序化修改默认应用受 Windows 的 UserChoice 哈希保护，此路径已是最佳实践。
-
-## 使用
-
-```bat
-rem 直接打开文件
-readmd\.venv\Scripts\pythonw.exe readmd\readmd.py "C:\path\to\file.md"
-
-rem 无 pywebview 时用浏览器兜底
-python readmd\readmd.py --browser "C:\path\to\file.md"
-```
-
-### 快捷键
-
-| 快捷键 | 功能 |
-| --- | --- |
-| Ctrl+O | 打开文件 |
-| Ctrl+U | 网页转 MD |
-| Ctrl+E | 编辑当前 MD（CodeMirror 语法高亮 + 自动补全，Ctrl+S 保存） |
-| Ctrl+F | 搜索（Enter 下一个，Shift+Enter 上一个，Esc 关闭） |
-| Ctrl+Shift+F | 目录侧栏 |
-| Ctrl+Shift+A | AI 助手面板 |
-| Ctrl+D | 切换主题 |
-| Ctrl+= / Ctrl+- | 增大 / 减小字号 |
-| Ctrl+R | 重新加载 |
-| Ctrl+P | 打印 / 导出 PDF |
-| Ctrl+← / Ctrl+→ | 历史后退 / 前进 |
-
-## 目录结构
-
-```
-readmd/
-├─ readmd.py            # 主程序（本地服务 + 原生窗口）
-├─ readmd_fix.py        # 自动修正器（纯标准库）
-├─ readmd_fix_test.py   # 修正器测试（python readmd_fix_test.py）
-├─ readmd_modules/      # 懒加载扩展模块
-│  ├─ __init__.py       #   模块注册表 / 后台加载
-│  ├─ convert.py        #   万物转 MD（MarkItDown）
-│  ├─ ocr.py            #   扫描转 MD（WinRT OCR + PyMuPDF）
-│  ├─ web.py            #   网页转 MD（trafilatura + 批量爬取）
-│  └─ ai.py             #   AI 助手（OpenAI / Anthropic 双协议 + 提供商注册表）
-├─ run.bat              # 一键运行（venv pythonw）
-├─ install.bat          # 一键安装 + 注册文件关联
-├─ package.bat          # 一键打包单文件 exe（PyInstaller）
-├─ setup.bat            # 一键：打包 + 安装 + 设为默认 + 启动
-├─ uninstall.bat        # 移除文件关联（保留备份）
-├─ requirements.txt
-├─ assets/
-│  ├─ index.html        # 界面骨架
-│  ├─ style.css         # 阅读主题 + 移动端响应式
-│  ├─ app.js            # 渲染 / 目录 / 搜索 / 公式 / AI / 转换 / 编辑
-│  ├─ readmd.ico        # 多尺寸应用图标（16~256）
-│  ├─ icon-256.png      # 256px 图标预览
-│  └─ vendor/           # marked + MathJax + qrcode + codemirror.bundle（全部离线）
-├─ tools/cm-bundle/    # CodeMirror 6 构建源（npm install + esbuild 重新打包 vendor）
-└─ tools/make_icon.py   # 多尺寸图标生成器（纯标准库）
-```
-
-## 一键部署（给其他用户下载）
-
-环境要求：已安装 Git，并配置系统环境变量 `GITHUB_TOKEN`（GitHub Personal Access Token，仓库 `Natsummerance/readMD` 需 `repo` 权限）。
-
-```bat
-deploy.bat                 rem 完整流程：测试 → 打包 → 推送 → 发布 Release
-deploy.bat --skip-build    rem 复用已有 dist 产物，只跑测试 + 推送 + 发布（更快）
-deploy.bat --skip-tests    rem 跳过自测
-deploy.bat --tag v1.4.0    rem 指定发布标签（默认 v1.4.0）
-```
-
-脚本会依次执行：
-
-1. 检查 `GITHUB_TOKEN`
-2. 运行修正器测试（37 项）+ 主程序自测 + 扩展模块加载测试
-3. 生成图标 → 打包 `ReadMD.exe` → 生成启动画面 → 打包 `ReadMDSetup.exe` / `ReadMDUninstall.exe`
-4. `git push` 推送代码
-5. 用 `release_notes.md` 更新 Release 说明 → 上传缺失的安装包/便携版 → `--verify` 校验线上资产与本地产物 SHA256 完全一致
-
-也可以单独使用 `release.py`：
-
-```bat
-python release.py --verify             rem 校验线上与本地产物一致性（名称/大小/SHA256）
-python release.py --update             rem 更新已存在 Release 的标题与说明（读 release_notes.md）
-python release.py --force-upload       rem 同名资产先删除再重传
-python release.py                      rem 创建 Release（已存在则跳过）+ 上传缺失资产
-```
-
-> 其他人无需拉取源码：直接到 [GitHub Releases](https://github.com/Natsummerance/readMD/releases)
-> 下载 **ReadMDSetup-v1.4.0.exe**（安装包）或 **ReadMD-portable-v1.4.0.exe**（便携版）即可使用。
-
-## 自动修正说明
-
-修正均为**保守启发式**，只发生在内存渲染阶段，并会在「🛠 修复」面板中列出每一处修改：
-
-- **表格**：检测连续的竖线行，缺少 `|---|` 表头分隔行时自动补全；各列不足时补齐空单元格；分隔行不足 3 个连字符时补足
-- **加粗**：`**文字` 补全为 `**文字**`；`文字**` 中游离的结束符转义为字面量；`2 * 3` 这类乘号转义；列表 `* 项` 与分隔线 `***` 不受影响
-- **公式**：`$x^2$ 和 $y` 补全为 `$y$`；`$$` 块级公式未闭合时补 `$$`；`价格 $5` 这类货币不会被误判；代码块与行内代码内的内容一律跳过
-- **标题**：`#标题` → `# 标题`
-
-## 万物转 MD 说明
-
-- **文件转换**：工具栏「转换」选择任意文件（或直接 `python readmd.py 文件.docx`），MarkItDown 转成 Markdown 后自动过修正器并渲染；未提取到文字时提示改用 OCR
-- **扫描 / 图片**：工具栏「OCR」选择图片或 PDF；Windows 内置 OCR 离线识别（需要系统已安装对应语言包，中文一般自带）；扫描版 PDF 会逐页渲染后识别
-- **网页**：工具栏「网页」输入 URL；勾选“批量爬取”会抓取同站最多 10 个链接合并为一份文档
-- **另存**：转换 / 网页 / OCR 结果为虚拟文档，点「另存」保存为 .md 文件
-- 转换 / OCR / 网页模块均为**首次渲染完成后的后台懒加载**，工具栏按钮在模块就绪前保持禁用，不影响 Markdown 阅读的启动速度
-
-
-## 大文档渲染说明
-
-- 超过 **300KB 或 6000 行** 的文档自动进入**增量分块渲染**：正文按围栏代码块 / 空行切成小块，逐帧渲染（每帧 8 块），顶部显示「渲染中… N%」，可边渲染边滚动阅读
-- 代码块与公式跨块保护不拆分，渲染完成后统一生成目录 / 搜索索引 / 公式排版，滚动位置自动恢复
-- 小文档仍为一次性整篇渲染，启动速度不受影响
-
-
- `~` 等触发 18 种 Markdown 语法补全（标题 / 加粗 / 斜体 / 删除线 / 引用 / 表格 / 公式 / 代码块 / 链接 / 图片 / 列表 / 任务 / 分隔线），选中即插入并定位光标
-- **语法引用工具栏**：编辑栏顶部一排按钮（B 加粗 / I 斜体 / S 删除线 / H 标题 / ❝ 引用 / • 列表 / ☐ 任务 / 🔗 链接 / 🖼 图片 / `</>` 行内代码 / 代码块 / ∑ 公式 / 表格 / — 分隔线），选中文字后点击即包裹，未选中则插入占位文本
-- **插入图片**：编辑栏 🖼 按钮打开图片编辑器——选择本地图片或粘贴图片 URL；本地图片可在画布上拖拽虚线框裁剪（支持自由 / 1:1 / 4:3 / 16:9 / 原图比例）、右下角手柄调整裁剪区、左转/右转 90° 或角度滑杆任意旋转、10%~300% 缩放；点「插入到文档」导出 PNG 保存到文档同目录 `images/` 子文件夹，并以相对路径 `![](images/xxx.png)` 插入（兼容移动端 / 打包版 / 网页预览），Ctrl+S 一并保存
-- **离线与懒加载**：CodeMirror 已打包为 `assets/vendor/codemirror.bundle.js`（约 1.5MB）随项目离线分发，仅在首次进入编辑模式时加载，不影响阅读秒开；构建源在 `tools/cm-bundle/`（`npm install && npx esbuild entry.js --bundle --minify --outfile=../../assets/vendor/codemirror.bundle.js` 可重新打包）
-
-
-## AI 助手说明
-
-- **提供商**：内置 OpenAI / DeepSeek / Kimi / 智谱 GLM / 通义千问 / 硅基流动 / OpenRouter / Groq / xAI / Mistral / Gemini / 火山方舟 / 腾讯混元 / Ollama（本地）/ Anthropic 共 15+ 预设（地址取自 cc-switch 与各官方文档），并自动导入你在 cc-switch 中配置过的提供商（DeepSeek / xem8k5 / hotapi / penguinsaichat 等）
-- **API Key**：面板中填写即保存到本机配置（`%APPDATA%\ReadMD\ai.json`）；留空时自动读取系统环境变量（如 `DEEPSEEK_API_KEY`、`XEM8K5_API_KEY`），无需重复填写
-- **自定义提供商**：选择「自定义」或在面板直接修改任意预设的地址 / 模型 / Key，点「存」保存；兼容 OpenAI Chat Completions 与 Anthropic Messages 两种协议，绝大多数聚合网关 / NewAPI / One API 均可直接使用
-- **动作**：快速阅读（概述+要点+目录）、润色、修改（可填要求）、扩充、续写、翻译（可填目标语言）、提问；默认处理全文，勾选「仅处理选中文字」可只处理页面中选中的片段
-- **Prompt 模板**：AI 面板的「模板」下拉内置 14 个常用模板（总结要点 / 生成周报 / 生成大纲 / 翻译成英文 / 代码审查 / 提取行动项 / 修正 Markdown 格式等）；点「模板」按钮可新建、编辑、删除自定义模板，内置模板也可覆盖；模板支持 `{doc}`（文档内容）与 `{prompt}`（补充要求）占位符
-- **历史会话**：每次对话自动累积上下文（多轮连续提问），点「存」把当前会话保存到本机（`%APPDATA%\ReadMD\chat_history.json`，最多 50 个会话 / 60 条消息）；下拉选择历史会话即可恢复提供商、模型与全部对话，继续续聊；「清空」开始新一轮
-- **流式输出与落地**：结果实时流式渲染（支持表格 / 公式），完成后可「应用到文档」（进入编辑模式审阅后 Ctrl+S 保存，首存自动备份）、「复制」或「另存为」
-
-## 移动端共享说明
-
-- 点工具栏「📱」开启共享，弹出二维码与访问 URL；手机连同一 Wi-Fi 后扫码即可在手机浏览器阅读当前文档，并可使用转 MD / OCR / 网页 / AI 全部功能
-- 每次开启生成随机访问令牌；局域网内的 API 请求（除页面与静态资源外）均需携带令牌，关闭共享即失效
+- 点工具栏「📱」开启共享，弹出二维码；手机连同一 Wi-Fi 扫码即可阅读当前文档，并使用转 MD / OCR / 网页 / AI 全部功能
+- 每次开启生成随机访问令牌；局域网 API 请求（除页面与静态资源外）均需携带令牌，关闭共享即失效
 - 命令行方式：`python readmd.py --share` 启动时即开启共享
 
-## 下载安装包
+## 📦 目录结构
 
-不用拉取源码也能安装：访问 [GitHub Releases](https://github.com/Natsummerance/readMD/releases) 下载：
+```
+readmd/
+├─ readmd.py            # 主程序（本地服务 + 窗口 + 单实例托盘 + 里程碑打点）
+├─ readmd_fix.py        # 自动修正器（纯标准库）
+├─ readmd_fix_test.py   # 修正器测试（37 项，python readmd_fix_test.py）
+├─ readmd_modules/      # 懒加载扩展模块
+│  ├─ convert.py        #   万物转 MD（MarkItDown）
+│  ├─ ocr.py            #   扫描转 MD（WinRT OCR + PyMuPDF）
+│  ├─ web.py            #   网页转 MD（trafilatura + 批量爬取）
+│  └─ ai.py             #   AI 助手（双协议 + 提供商注册表）
+├─ DESIGN.md            # 设计规范（色盘 / 字体 / 间距 / 圆角 token）
+├─ installer/           # 安装器（动画 UI + onedir 目录安装）
+│  ├─ setup_app.py      #   安装 / 卸载 / 静默模式主程序
+│  ├─ setup.html        #   动画界面（毛玻璃 / 弹簧动效 / 极光背景）
+│  └─ build_setup.bat   #   构建 ReadMDSetup.exe + ReadMDUninstall.exe
+├─ assets/
+│  ├─ index.html        # 界面骨架
+│  ├─ style.css         # 阅读主题 + 移动端响应式
+│  ├─ app.js            # 渲染 / 目录 / 搜索 / 公式 / AI / 转换 / 编辑
+│  ├─ readmd.ico        # 多尺寸应用图标（16~256）
+│  └─ vendor/           # marked + MathJax + qrcode + codemirror.bundle（全部离线）
+├─ package.bat          # 一键打包（onedir 安装版 + 便携单文件）
+├─ setup.bat            # 一键：打包 + 注册默认打开 + 启动
+├─ install.bat          # 一键安装依赖 + 注册文件关联
+├─ run.bat              # 一键运行（venv pythonw）
+├─ uninstall.bat        # 移除文件关联（保留备份）
+├─ deploy.bat           # ★一键部署：测试 → 打包 → 推送 → 发布 Release
+├─ release.py           # GitHub Release 工具（--verify / --update / --force-upload）
+└─ release_notes.md     # Release 发布说明（deploy.bat 自动读取）
+```
 
-- **ReadMDSetup-版本.exe**：安装包，双击进入苹果风动画安装向导 —— 选择目录、开关默认关联与快捷方式，进度动画后一键完成；已安装时运行即升级；「设置 → 应用」中可随时卸载
-- **ReadMD-portable-版本.exe**：便携版，免安装，双击直接运行
-- 安装包自带 ReadMDUninstall.exe 卸载器，卸载时仅移除本安装器创建的关联与文件，不动你的文档与配置
-
-## 打包 / 一键安装
+## 🔨 打包 / 一键安装
 
 | 脚本 | 作用 |
 | --- | --- |
 | `run.bat` | 一键运行（venv pythonw，秒开） |
-| `install.bat` | 安装依赖 + 生成图标 + 注册 .md 关联（已存在 `dist\ReadMD.exe` 时优先关联 exe） |
-| `package.bat` | 一键打包为单文件 `dist\ReadMD.exe`（PyInstaller，自动安装构建依赖并生成图标） |
-| `setup.bat` | 一键完成：装依赖 → 打包 exe → 注册 .md 默认打开方式 → 启动 |
+| `install.bat` | 安装依赖 + 生成图标 + 注册 `.md` 关联 |
+| `package.bat` | 一键打包：onedir 安装版 `dist\ReadMD\ReadMD.exe` + 便携单文件 `dist\ReadMD-portable.exe` |
+| `setup.bat` | 一键完成：装依赖 → 打包 onedir exe → 注册默认打开方式 → 启动 |
 | `uninstall.bat` | 移除关联并尝试恢复安装前备份 |
-| `installer\build_setup.bat` | 构建动画安装器 `dist\ReadMDSetup.exe`（内嵌 ReadMD.exe）与 `dist\ReadMDUninstall.exe` |
-| `release.py` | 一键创建 GitHub Release 并上传安装包 / 便携版 / 图标 |
+| `installer\build_setup.bat` | 构建 `dist\ReadMDSetup.exe`（内嵌 onedir 目录）与 `dist\ReadMDUninstall.exe` |
+| `release.py` | 创建 GitHub Release 并上传安装包 / 便携版，校验 SHA256 |
 
-> 打包版与源码版功能完全一致；打包版体积较大（约 100MB，含 OCR 与转换依赖），日常使用推荐源码版（`install.bat` + `run.bat`）。
-> Windows 默认应用受 UserChoice 哈希保护：若注册后系统仍用其他程序打开，右键 .md → 打开方式 → 选择 ReadMD → 始终使用。
+> 安装版为目录安装（约 200MB，含 OCR 与转换依赖，冷启动无需解压、秒开）；便携版为单文件（首次启动需解压、稍慢）。日常开发推荐源码版（`install.bat` + `run.bat`）。
 
-## 卸载
+## 🌍 一键部署与发布
+
+环境要求：已安装 Git，并配置系统环境变量 `GITHUB_TOKEN`（仓库 `Natsummerance/readMD` 需 `repo` 权限）。
 
 ```bat
-双击 uninstall.bat
+deploy.bat                 rem 完整流程：测试 → 打包 → 推送 → 发布 Release
+deploy.bat --skip-build    rem 复用已有 dist 产物，只跑测试 + 推送 + 发布
+deploy.bat --skip-tests    rem 跳过自测
+deploy.bat --tag v2.0.0    rem 指定发布标签（默认 v2.0.0）
 ```
 
-会删除已注册的文件关联（并尝试恢复安装前的 `.md` 关联备份），
-`.venv` 与整个 `readmd` 文件夹保留，可手动删除。
+也可以单独使用 `release.py`：
 
-## 常见问题
+```bat
+python release.py --verify             rem 校验线上与本地产物一致性（名称 / 大小 / SHA256）
+python release.py --update             rem 更新已存在 Release 的标题与说明（读 release_notes.md）
+python release.py --force-upload       rem 同名资产先删除再重传
+python release.py                      rem 创建 Release（已存在则跳过）+ 上传缺失资产
+```
 
-- **提示未安装 pywebview**：运行 `install.bat`，或在 PowerShell 中执行
-  `python -m pip install pywebview`
-- **打开时报 WebView2 相关错误**：系统缺少 Edge WebView2 运行时，
-  下载安装 https://developer.microsoft.com/microsoft-edge/webview2/ 后重试
-- **启动闪一下控制台**：双击 `.md` 走的是 `pythonw.exe`（无控制台）；
-  若你手动用 `python readmd.py` 运行，控制台属正常现象
-- **安全性说明**：Markdown 中的原始 HTML（如 `<script>`）会按原样渲染，
-  与大多数阅读器一致，仅建议打开可信文件
+## 🗑️ 卸载
+
+- **安装版**：「设置 → 应用」中找到 ReadMD 卸载；或运行安装目录中的 `ReadMDUninstall.exe`
+- **源码版**：双击 `uninstall.bat` 移除文件关联（并尝试恢复安装前的 `.md` 关联备份），`.venv` 与 `readmd` 文件夹保留，可手动删除
+
+## ❓ 常见问题
+
+- **提示未安装 pywebview**：运行 `install.bat`，或在 PowerShell 执行 `python -m pip install pywebview`
+- **打开时报 WebView2 相关错误**：系统缺少 Edge WebView2 运行时，下载安装 https://developer.microsoft.com/microsoft-edge/webview2/ 后重试
+- **启动闪一下控制台**：双击 `.md` 走的是 `pythonw.exe`（无控制台）；手动用 `python readmd.py` 运行出现控制台属正常现象
+- **为什么打开这么快**：安装版是 onedir 目录安装，启动无需解压；窗口创建约 0.1s，页面由常驻实例秒级唤起
+- **安全性说明**：Markdown 中的原始 HTML（如 `<script>`）会按原样渲染，与大多数阅读器一致，仅建议打开可信文件
+
+---
+
+<div align="center">
+
+**ReadMD** · 纯本地优先，你的文档不出本机。
+
+</div>

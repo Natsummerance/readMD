@@ -25,7 +25,7 @@ from urllib.parse import urlparse
 APP_NAME = 'ReadMD'
 APP_EXE = 'ReadMD.exe'
 UNINST_EXE = 'ReadMDUninstall.exe'
-APP_VERSION = '1.4.0'
+APP_VERSION = '2.0.0'
 PUBLISHER = 'Natsummerance'
 PROG_ID = 'ReadMD.markdown'
 EXTENSIONS = ['.md', '.markdown', '.mdown', '.mkd']
@@ -83,6 +83,17 @@ def bundled_exe(name):
             return p
     for cand in (resource_path(name), os.path.join(asset_root(), 'dist', name)):
         if os.path.isfile(cand):
+            return cand
+    return None
+
+
+def bundled_app_dir():
+    """onedir 应用目录（ReadMD.exe + _internal）：优先安装器内嵌，回退本地 dist。"""
+    for cand in (
+        os.path.join(sys._MEIPASS, 'ReadMD') if getattr(sys, '_MEIPASS', None) else None,
+        os.path.join(asset_root(), 'dist', 'ReadMD'),
+    ):
+        if cand and os.path.isfile(os.path.join(cand, APP_EXE)):
             return cand
     return None
 
@@ -231,11 +242,12 @@ def create_shortcut(target, lnk_path, icon):
 def write_uninstall_entry(inst_dir):
     exe = os.path.join(inst_dir, UNINST_EXE)
     size = 0
-    for f in os.listdir(inst_dir):
-        try:
-            size += os.path.getsize(os.path.join(inst_dir, f))
-        except OSError:
-            pass
+    for root, _dirs, files in os.walk(inst_dir):
+        for f in files:
+            try:
+                size += os.path.getsize(os.path.join(root, f))
+            except OSError:
+                pass
     reg_set(UNINSTALL_KEY, 'DisplayName', APP_NAME + ' Markdown Reader')
     reg_set(UNINSTALL_KEY, 'DisplayVersion', APP_VERSION)
     reg_set(UNINSTALL_KEY, 'Publisher', PUBLISHER)
@@ -267,6 +279,26 @@ def _copy_file(src, dst, optional=False):
     raise RuntimeError('文件被占用，无法写入：%s' % dst)
 
 
+def _copy_tree(src_dir, dst_dir):
+    """整目录复制（onedir：ReadMD.exe + _internal），带占用重试。"""
+    os.makedirs(dst_dir, exist_ok=True)
+    for root, _dirs, files in os.walk(src_dir):
+        rel = os.path.relpath(root, src_dir)
+        target_root = dst_dir if rel == '.' else os.path.join(dst_dir, rel)
+        os.makedirs(target_root, exist_ok=True)
+        for f in files:
+            src = os.path.join(root, f)
+            dst = os.path.join(target_root, f)
+            for i in range(5):
+                try:
+                    shutil.copy2(src, dst)
+                    break
+                except PermissionError:
+                    time.sleep(0.5)
+            else:
+                raise RuntimeError('文件被占用，无法写入：%s' % dst)
+
+
 def do_install(opts, progress):
     inst_dir = os.path.abspath(opts['dir'])
     if not inst_dir or inst_dir == os.path.dirname(inst_dir):
@@ -278,7 +310,18 @@ def do_install(opts, progress):
     if opts.get('force') and app_running():
         stop_app()
     progress(22, 'copy', '复制程序文件')
-    _copy_file(bundled_exe(APP_EXE), os.path.join(inst_dir, APP_EXE))
+    # 升级兼容：先清掉旧 onedir 的 _internal 残留（避免陈旧 DLL / 资源）
+    old_internal = os.path.join(inst_dir, '_internal')
+    if os.path.isdir(old_internal):
+        try:
+            shutil.rmtree(old_internal)
+        except OSError:
+            pass
+    app_dir = bundled_app_dir()
+    if app_dir is not None:
+        _copy_tree(app_dir, inst_dir)
+    else:
+        _copy_file(bundled_exe(APP_EXE), os.path.join(inst_dir, APP_EXE))
     _copy_file(bundled_exe(UNINST_EXE), os.path.join(inst_dir, UNINST_EXE), optional=True)
     with open(os.path.join(inst_dir, 'install.json'), 'w', encoding='utf-8') as f:
         json.dump({'app': APP_NAME, 'version': APP_VERSION,
@@ -359,6 +402,12 @@ def do_uninstall(progress):
                     pass
     progress(66, 'uninst', '移除卸载信息')
     remove_uninstall_entry()
+    inst_file = os.path.join(app_data_dir(), 'instance.json')
+    if os.path.isfile(inst_file):
+        try:
+            os.remove(inst_file)
+        except OSError:
+            pass
     progress(86, 'delete', '清理安装目录')
     if inst_dir and os.path.isdir(inst_dir):
         _cleanup_dir(inst_dir)

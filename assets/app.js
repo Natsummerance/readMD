@@ -2,8 +2,19 @@
 /* ReadMD 前端逻辑：渲染、目录、搜索、主题、自动刷新、历史、转换 / 网页 / OCR / 编辑 */
 
 const $ = id => document.getElementById(id);
-const py = (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
-const hasPy = !!py;
+let py = (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
+let hasPy = !!py;
+
+/* pywebview 桥接注入可能晚于页面脚本执行（低配机实测晚 ~1s）。
+   启动前短暂等待桥接，确保 report_ready / 托盘打开 / 单实例控制轮询可用。 */
+function bindPy() {
+  if (!hasPy && window.pywebview && window.pywebview.api) {
+    py = window.pywebview.api;
+    hasPy = true;
+  }
+  return hasPy;
+}
+
 const LAN_TOKEN = window.LAN_TOKEN || null;
 
 function apiFetch(url, opts) {
@@ -160,14 +171,25 @@ async function refreshRecent() {
   if (!rec.length) { box.classList.add('hidden'); return; }
   box.classList.remove('hidden');
   list.innerHTML = '';
-  rec.forEach(p => {
+  rec.slice(0, 12).forEach(p => {
     const li = document.createElement('li');
-    const a = document.createElement('a');
-    a.href = '#';
-    a.textContent = p;
-    a.title = p;
-    a.addEventListener('click', e => { e.preventDefault(); loadFile(p); });
-    li.appendChild(a);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'recent-card';
+    const name = String(p).split(/[\\/]/).pop() || p;
+    const dir = String(p).slice(0, String(p).length - name.length).replace(/[\\/]+$/, '') || '';
+    const nm = document.createElement('span');
+    nm.className = 'recent-name';
+    nm.textContent = name;
+    nm.title = p;
+    const dp = document.createElement('span');
+    dp.className = 'recent-dir';
+    dp.textContent = dir;
+    dp.title = p;
+    btn.appendChild(nm);
+    btn.appendChild(dp);
+    btn.addEventListener('click', e => { e.preventDefault(); loadFile(p); });
+    li.appendChild(btn);
     list.appendChild(li);
   });
 }
@@ -217,12 +239,52 @@ async function loadFile(path) {
   }
 }
 
+/* ---------------- 外部唤起（单实例常驻：托盘 / 双击 .md） ---------------- */
+
+async function openExternalFile(path) {
+  if (hasPy && py.show_window) {
+    try { await py.show_window(); } catch (e) { /* ignore */ }
+  }
+  if (path) openInitialFile(path);
+}
+window.openExternalFile = openExternalFile;
+
+let controlPollTimer = null;
+async function pollControl() {
+  try {
+    const r = await apiFetch('/api/control/next');
+    const d = await r.json();
+    if (d && d.pending) openExternalFile(d.file || '');
+  } catch (e) { /* ignore */ }
+}
+function startControlPoll() {
+  stopControlPoll();
+  controlPollTimer = setInterval(pollControl, 2000);
+}
+function stopControlPoll() {
+  if (controlPollTimer) clearInterval(controlPollTimer);
+  controlPollTimer = null;
+}
+
+function setEditBtn(label) {
+  const el = $('btn-edit');
+  if (!el) return;
+  const sp = el.querySelector('span.tb-label');
+  if (sp) sp.textContent = label;
+  else el.textContent = label;
+}
+
 function setFixes(fixes, stats) {
   state.fixes = fixes || [];
   state.stats = stats || {};
-  $('btn-fix').textContent = state.fixes.length
-    ? '\uD83D\uDEE0 修复 ' + state.fixes.length
-    : '\uD83D\uDEE0 修复';
+  const n = state.fixes.length;
+  const el = $('btn-fix');
+  if (!el) return;
+  const sp = el.querySelector('span');
+  const lbl = n ? ('修复详情（' + n + '）') : '修复详情';
+  if (sp) sp.textContent = lbl;
+  else el.textContent = lbl;
+  el.title = n ? ('本次自动修正 ' + n + ' 处') : '本次自动修正详情';
 }
 
 const INCREMENTAL_THRESHOLD = 300 * 1024; // 300KB 以上走增量渲染
@@ -1652,7 +1714,7 @@ async function toggleEdit() {
   $('edit-bar').classList.remove('hidden');
   $('content').classList.add('hidden');
   state.editing = true;
-  $('btn-edit').textContent = '\u270E 编辑中';
+  setEditBtn('编辑中');
   try {
     await loadCodeMirror();
   } catch (e) { /* 退回 textarea */ }
@@ -1674,7 +1736,7 @@ function exitEdit() {
     $('edit-area').classList.add('hidden');
     $('edit-wrap').classList.add('hidden');
     $('content').classList.remove('hidden');
-    $('btn-edit').textContent = '编辑';
+    setEditBtn('编辑');
     return;
   }
   destroyEditor();
@@ -1683,7 +1745,7 @@ function exitEdit() {
   $('edit-wrap').classList.add('hidden');
   $('content').classList.remove('hidden');
   state.editing = false;
-  $('btn-edit').textContent = '编辑';
+  setEditBtn('编辑');
 }
 
 async function saveEdit() {
@@ -2082,6 +2144,20 @@ function bindEvents() {
   $('btn-folder').addEventListener('click', openFolder);
   $('w-folder').addEventListener('click', openFolder);
 
+  const moreBtn = $('btn-more');
+  const moreMenu = $('more-menu');
+  if (moreBtn && moreMenu) {
+    moreBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      moreMenu.classList.toggle('open');
+    });
+    document.addEventListener('click', e => {
+      if (moreMenu.classList.contains('open') && !moreMenu.contains(e.target) && e.target !== moreBtn) {
+        moreMenu.classList.remove('open');
+      }
+    });
+  }
+
   $('btn-convert').addEventListener('click', () => chooseFile('convert'));
   $('w-convert').addEventListener('click', () => chooseFile('convert'));
   $('btn-ocr').addEventListener('click', () => chooseFile('ocr'));
@@ -2223,6 +2299,7 @@ function bindEvents() {
     else if (mod && e.key === 'ArrowLeft') { e.preventDefault(); historyBack(); }
     else if (mod && e.key === 'ArrowRight') { e.preventDefault(); historyForward(); }
     else if (e.key === 'Escape') {
+      if (moreMenu && moreMenu.classList.contains('open')) { moreMenu.classList.remove('open'); }
       closeSearch();
       $('fix-modal').classList.add('hidden');
       closeWebDialog();
@@ -2278,6 +2355,7 @@ async function openInitialFile(path) {
 }
 
 async function init() {
+  bindPy();
   await loadSettings();
   bindEvents();
   refreshRecent();
@@ -2290,6 +2368,15 @@ async function init() {
     restoreLastFile();
   }
   startAutoReload();
+  finishInit();
+}
+
+function finishInit() {
+  if (hasPy) {
+    if (py.report_ready) { try { py.report_ready(); } catch (e) { /* ignore */ } }
+    window.__trayOpenFile = loadFileDialog;
+  }
+  startControlPoll();
 }
 
 async function restoreLastFile() {
@@ -2305,6 +2392,14 @@ async function restoreLastFile() {
   if (last && /\.(md|markdown|mdown|mkd|mdx|txt)$/i.test(last)) loadFile(last);
 }
 
+window.addEventListener('pywebviewready', async () => {
+  const upgraded = !hasPy && bindPy();
+  if (upgraded) {
+    await loadSettings();
+    refreshRecent();
+    finishInit();
+  }
+});
 window.addEventListener('DOMContentLoaded', init);
 window.addEventListener('beforeunload', () => {
   if (state.file && $('content')) {
