@@ -869,3 +869,139 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
   #edit-area { padding: 12px; font-size: 13px; }
   #toast { max-width: 88vw; }
 }
+
+
+/* ---------- 导出面板 ---------- */
+#export-modal {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+#export-modal.hidden { display: none; }
+#export-box {
+  background: var(--bg2);
+  color: var(--fg);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-3);
+  padding: 18px 20px;
+  width: min(900px, 95vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#export-box h3 { margin: 0; font-size: 15px; }
+.export-head { display: flex; align-items: center; justify-content: space-between; }
+.export-body { display: flex; gap: 14px; min-height: 0; flex: 1; }
+.export-side { flex: 0 0 190px; display: flex; flex-direction: column; gap: 10px; }
+.exp-fmts { display: flex; gap: 6px; }
+.exp-fmt {
+  flex: 1;
+  padding: 8px 0;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg2);
+  border-radius: var(--radius-s);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.exp-fmt:hover { border-color: var(--accent); color: var(--fg); }
+.exp-fmt.active { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.exp-print {
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  background: var(--bg);
+  color: var(--fg2);
+  border-radius: var(--radius-s);
+  font-size: 12.5px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.exp-print:hover { color: var(--fg); border-color: var(--accent); }
+.exp-preset-row { display: flex; flex-direction: column; gap: 4px; }
+.exp-preset-row label { font-size: 12px; color: var(--fg3); }
+#exp-preset {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--bg);
+  color: var(--fg);
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.exp-preset-actions { display: flex; gap: 6px; }
+.exp-preset-actions .tb-btn { flex: 1; padding: 6px 4px; font-size: 12px; }
+.exp-save-name { display: flex; flex-direction: column; gap: 6px; }
+.exp-save-name input {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--bg);
+  color: var(--fg);
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+.exp-save-btns { display: flex; gap: 6px; }
+.exp-save-btns .tb-btn { flex: 1; padding: 6px 4px; font-size: 12px; }
+.export-opts { flex: 1; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 10px; }
+.exp-sec { border: 1px solid var(--border); border-radius: var(--radius-s); overflow: hidden; }
+.exp-sec-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: none;
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.exp-sec-head .exp-arrow { transition: transform .15s; font-size: 10px; color: var(--fg3); }
+.exp-sec.open .exp-arrow { transform: rotate(90deg); }
+.exp-sec-body { display: none; padding: 8px 10px 10px; }
+.exp-sec.open .exp-sec-body { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; }
+.exp-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.exp-field.full { grid-column: 1 / -1; }
+.exp-field label { font-size: 12px; color: var(--fg2); }
+.exp-field input[type="text"], .exp-field input[type="number"], .exp-field select {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--bg);
+  color: var(--fg);
+  padding: 5px 8px;
+  font-size: 12.5px;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.exp-field input[type="color"] { width: 100%; height: 28px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--bg); padding: 1px 2px; cursor: pointer; }
+.exp-field input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+.exp-field .exp-check { display: flex; align-items: center; gap: 6px; }
+.exp-field input:focus, .exp-field select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.export-foot { display: flex; align-items: center; gap: 8px; }
+.export-foot .tb-btn { padding: 7px 14px; }
+.export-spacer { flex: 1; }
+.export-result { font-size: 12px; color: var(--fg2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55%; }
+.export-result.ok { color: var(--accent); }
+.export-result.err { color: #d64545; }
+
+@media (max-width: 760px) {
+  .export-body { flex-direction: column; }
+  .export-side { flex: 0 0 auto; flex-direction: row; flex-wrap: wrap; }
+  .exp-fmts { width: 100%; }
+  .exp-preset-row { flex: 1; }
+}
+

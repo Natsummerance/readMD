@@ -27,3 +27,7 @@ winrt-Windows.Foundation.Collections
 winrt-Windows.Globalization
 # System tray (single-instance resident)
 pystray
+
+# Export-to-PDF / formula-to-image (lazy-loaded)
+reportlab
+matplotlib

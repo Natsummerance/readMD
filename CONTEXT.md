@@ -4,7 +4,7 @@
 
 ## 项目一句话
 
-纯本地、秒开、离线可用的 Windows Markdown 阅读器：双击 .md 即读，渲染前自动修正常见 MD 错误（只影响显示不改原文件），并集成 AI 助手 / 万物转 MD / 扫描 OCR / 网页转 MD / 主动编辑 / 移动端共享 / 大文档增量渲染。v2.0 起安装版为 onedir 目录安装（冷启动 ≤1.5s）+ 单实例常驻托盘（再次打开 <0.3s）。
+纯本地、秒开、离线可用的 Windows Markdown 阅读器：双击 .md 即读，渲染前自动修正常见 MD 错误（只影响显示不改原文件），并集成 AI 助手 / 万物转 MD / 扫描 OCR / 网页转 MD / 主动编辑 / 移动端共享 / 大文档增量渲染 / 导出 PDF·DOCX·HTML。v2.0 起安装版为 onedir 目录安装（冷启动 ≤1.5s）+ 单实例常驻托盘（再次打开 <0.3s）。
 
 ## 位置与仓库
 
@@ -26,6 +26,7 @@
 9. 秒开（v2.0）：安装版改 PyInstaller onedir 目录安装，消除单文件 96MB 每次解压的 ~6s；固定控制端口 26891 + instance.json 单实例，新进程 ping 到常驻实例后 POST /api/control/open 秒退
 10. 常驻托盘（v2.0）：pystray run_detached，「显示 / 打开文件 / 退出」；关闭按钮 → 隐藏窗口（记忆位置）；退出时清理 instance.json
 11. UI 全面改版（v2.0）：44px 工具条 + 内联 SVG、「更多」二级菜单、欢迎页最近文件网格、三主题全套设计 token（DESIGN.md）、阅读排版精修、骨架屏、无障碍焦点环/减少动效
+12. 导出 PDF / DOCX / HTML（v2.1.0）：打印按钮升级为导出面板；内置「简约/经典/商务」预设 + 全量可视化定制（页面/封面目录/正文/各级标题/表格/代码/引用/链接/页脚/元数据/数学 DPI/HTML 主题），自定义预设可保存；公式 PDF/DOCX 本地 matplotlib 渲染成图，HTML 内联 marked+MathJax 单文件；图片按文档目录嵌入（缺失跳过提示）
 
 ## 关键文件
 
@@ -34,6 +35,8 @@
 | readmd.py | 主程序（本地服务+窗口），含单实例控制/托盘、启动里程碑打点、run_selftest()、install_association()、Prompt/历史会话 API |
 | readmd_fix.py | 自动修正器（纯标准库），fix_markdown() 返回 text + fixes 列表 |
 | readmd_fix_test.py | 修正器 37 项单元测试，python readmd_fix_test.py |
+| readmd_export_test.py | 导出模块 22 项单元测试（parser/styles/formula/三格式 smoke），python readmd_export_test.py |
+| readmd_modules/mdexport/ | v2.1.0 导出包（惰性加载，不进 MODULES 自动加载）：parser.py / styles.py / formula.py / pdf_render.py / docx_render.py / html_render.py |
 | readmd_modules/__init__.py | 懒加载注册表（convert/ocr/web/ai），load_all() 后台加载 |
 | readmd_modules/convert.py | MarkItDown 转换 |
 | readmd_modules/ocr.py | WinRT OCR + PyMuPDF |
@@ -59,7 +62,7 @@
 
 ## 测试现状（全部通过）
 
-- 修正器单测 37/37；`--selftest`（HTTP 服务 + 单实例 ping/open + prompts 历史 + 图片保存）PASSED；`--mods` 四模块 ready
+- 修正器单测 37/37；导出单测 22/22；`--selftest`（HTTP 服务 + 单实例 ping/open + prompts 历史 + 图片保存 + 导出三格式冒烟）PASSED；`--mods` 四模块 ready
 - dist\ReadMD\ReadMD.exe --selftest 退出码 0（console=False 无输出）；`readmd.log` 启动里程碑：start / server_up / webview_imported / window_created / page_loaded
 - 安装器串行 静默安装→文件就位→静默卸载→目录清除，验证通过（并发下曾出现竞争残留，正常串行无问题）
 
@@ -69,6 +72,7 @@
 - Remove-Item -Recurse 被策略拦截，删目录用 `[System.IO.Directory]::Delete(path, $true)`
 - requirements.txt 必须保持纯 ASCII（中文注释会让 pip 在 GBK 区域设置下解码失败，之前因此修复过一次）
 - v2.0 新增依赖 pystray（托盘）；单实例控制端口 26891 固定，占用时回退随机端口并禁用单实例
+- v2.1 新增依赖 reportlab（PDF）、matplotlib（公式成图），全部惰性导入（mdexport 包不进 MODULES 自动加载）；requirements.txt 保持纯 ASCII
 - 注册表关联 HKCU\Software\Classes\ReadMD.markdown → dist\ReadMD\ReadMD.exe（测试残留的悬空路径已修复）
 
 ## 已知待办 / 隐患
@@ -78,6 +82,13 @@
 - onedir 版 selftest 的 frozen 分支会调 `/api/modules` 触发重量模块加载（原 onefile 已如此），验证时注意区分
 - .spec 文件被 .gitignore 忽略（`*.spec`），本地保留用于重建；新环境可用 .bat 命令行参数打包
 - AI Key 无内置密钥，全部依赖用户配置/环境变量
+
+## 最近一次变更（v2.1.0 导出）
+
+- 新增 readmd_modules/mdexport/ 导出包：parser（块 AST + 行内节点 + 公式提取）、styles（schema + 3 预设 + sanitize）、formula（matplotlib mathtext 渲染公式为透明 PNG，含中文公式；不支持语法回退文本并提示）、pdf_render（reportlab：微软雅黑 TTF + Consolas 等宽注册、样式 token 到 ParagraphStyle/TableStyle、封面/目录/书签/页码/元数据、multiBuild）、docx_render（python-docx：内置 Heading 样式 + eastAsia 字体、表头底纹/斑马纹/双写列宽、代码块底纹、公式 run.add_picture、页脚 PAGE 域）、html_render（单文件内联 marked+MathJax+主题 CSS）
+- readmd.py：Api.export_doc（SAVE_DIALOG → mdexport.export）/ reveal_path / get_export_presets / save_export_presets；selftest 增加导出三格式冒烟；VERSION=2.1.0
+- 前端：btn-print 与 Ctrl+P 打开导出面板（export-modal），schema 驱动 8 组参数渲染，预设/自定义预设/恢复默认，导出后「打开 / 所在文件夹」，exportLast/exportPresets 经 settings.json 持久化
+- 打包注意：package.bat 的 --collect-submodules readmd_modules 已覆盖 mdexport；reportlab/matplotlib 由 PyInstaller hook 收集；构建后用 dist exe 验证 --selftest 的 export OK
 
 ## 最近一次变更（v2.0.1 安装器修复）
 

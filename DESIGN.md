@@ -51,3 +51,28 @@
 
 - 三主题下所有组件均可读（对比度达标），窄窗口（<900px / <600px）不破版。
 - 打印模式仅保留正文（白底黑字）。
+
+
+## 07 导出面板与文档导出（v2.1.0）
+
+### 导出面板（export-modal）
+- 布局：左侧固定 190px（格式 Tab PDF/DOCX/HTML + 「打印当前文档」+ 预设下拉 + 存为预设/恢复默认），右侧滚动参数区（折叠分组：页面设置 / 封面与目录 / 正文排版 / 标题 / 表格 / 代码块 / 引用与链接 / 页脚与元数据 / 数学公式 / HTML 主题），底部「导出」主按钮 + 结果区（打开 / 所在文件夹）
+- 视觉：沿用弹层统一规范（var(--bg2) 底、var(--radius-l) 圆角、var(--shadow-3)）；格式 Tab 选中态用品牌蓝 var(--accent)；参数控件 12–13px、焦点环同全局规范
+- 交互：预设切换即重渲参数；参数改动仅存内存，导出成功写入 settings.json（exportLast）；自定义预设存 exportPresets；Esc / 点击遮罩关闭
+
+### 样式 token -> 导出映射（PDF / DOCX / HTML）
+- 页面：A4/A5/B5/Letter/Legal + 方向 + 四边距 mm；PDF/DOCX 生效
+- 正文：字体（微软雅黑/黑体/宋体/楷体/等线/Arial）、字号 pt、行距、段距、颜色、对齐
+- 标题 H1–H6：字号 / 颜色 / 加粗 / 对齐 / 前后间距；PDF 映射 ParagraphStyle，DOCX 映射内置 Heading 样式（保留导航窗格），HTML 映射 h1–h6 CSS
+- 表格：表头背景与文字色 / 加粗 / 边框色与宽 / 斑马纹与底色 / 单元格字号与内边距 / 对齐 / 宽度%；PDF/DOCX/HTML 三端同 token
+- 代码块：背景 / 文字 / 等宽字体 / 字号 / 边框 / 圆角（仅 HTML 圆角；PDF 用方角边框、DOCX 用底纹）
+- 引用：左边条色 / 背景 / 文字色；链接色；分割线色
+- 封面与目录：PDF/DOCX 支持封面（标题/副标题/日期/对齐）；PDF 支持目录页（reportlab TableOfContents + PDF 书签）与页脚页码/文字；DOCX 页脚页码用 PAGE 域
+- 元数据：title/author/subject 写入 PDF 元数据
+- 数学：PDF/DOCX 用 matplotlib mathtext 渲染透明 PNG（DPI 220，含中文公式切雅黑字体集；不支持语法回退原文）；HTML 保留 MathJax（内联 tex-svg，离线）
+- HTML 主题：htmlTheme 亮/暗/米色决定页面背景与正文色，其余样式 token 直接映射 CSS
+
+### 交付门禁（导出相关）
+- readmd_export_test.py 22/22；selftest 含导出三格式冒烟
+- 导出后 PDF 可用 pymupdf 打开、DOCX 可用 python-docx 打开、HTML 含 DOCTYPE + marked + MathJax
+- 公式含中文不产生缺字告警；缺失图片有 warn 提示且不中断导出

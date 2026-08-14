@@ -36,7 +36,7 @@
     <button id="btn-theme" class="tb-btn icon" title="切换主题 (Ctrl+D)" aria-label="切换主题">&#9789;</button>
     <button id="btn-a" class="tb-btn" title="减小字号 (Ctrl+-)" aria-label="减小字号">A&minus;</button>
     <button id="btn-A" class="tb-btn" title="增大字号 (Ctrl+=)" aria-label="增大字号">A+</button>
-    <button id="btn-print" class="tb-btn icon" title="打印 / 导出 PDF (Ctrl+P)" aria-label="打印">
+    <button id="btn-print" class="tb-btn icon" title="导出 PDF / DOCX / HTML (Ctrl+P)" aria-label="导出">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V4h10v4"/><rect x="4" y="8" width="16" height="8" rx="1"/><path d="M7 16h10v4H7z"/></svg>
     </button>
     <button id="btn-edit" class="tb-btn" title="编辑当前 Markdown (Ctrl+E)" aria-label="编辑" disabled>
@@ -317,6 +317,50 @@
       <button id="fix-close" class="tb-btn">关闭</button>
     </div>
     <p class="fix-note">修正仅用于本次阅读，不会改写原文件。</p>
+  </div>
+</div>
+
+<!-- 导出面板（PDF / DOCX / HTML + 样式定制） -->
+<div id="export-modal" class="hidden" role="dialog" aria-modal="true" aria-label="导出文档">
+  <div id="export-box">
+    <div class="export-head">
+      <h3>导出文档</h3>
+      <button id="export-close" class="tb-btn icon" aria-label="关闭">&#10005;</button>
+    </div>
+    <div class="export-body">
+      <div class="export-side">
+        <div class="exp-fmts" role="tablist" aria-label="导出格式">
+          <button class="exp-fmt active" data-fmt="pdf" role="tab" aria-selected="true">PDF</button>
+          <button class="exp-fmt" data-fmt="docx" role="tab" aria-selected="false">DOCX</button>
+          <button class="exp-fmt" data-fmt="html" role="tab" aria-selected="false">HTML</button>
+        </div>
+        <button id="export-print" class="exp-print" title="使用浏览器打印对话框（可另存为 PDF）">&#128424; 打印当前文档</button>
+        <div class="exp-preset-row">
+          <label for="exp-preset">样式预设</label>
+          <select id="exp-preset"></select>
+        </div>
+        <div class="exp-preset-actions">
+          <button id="exp-save-preset" class="tb-btn">存为预设&#8230;</button>
+          <button id="exp-reset" class="tb-btn">恢复默认</button>
+        </div>
+        <div id="exp-save-name" class="exp-save-name hidden">
+          <input id="exp-save-input" type="text" placeholder="预设名称" maxlength="20" autocomplete="off">
+          <div class="exp-save-btns">
+            <button id="exp-save-ok" class="tb-btn accent">保存</button>
+            <button id="exp-save-cancel" class="tb-btn">取消</button>
+          </div>
+        </div>
+      </div>
+      <div class="export-opts" id="export-opts" role="tabpanel"></div>
+    </div>
+    <div class="export-foot">
+      <span id="export-result" class="export-result"></span>
+      <span class="export-spacer"></span>
+      <button id="export-open" class="tb-btn hidden">打开</button>
+      <button id="export-reveal" class="tb-btn hidden">所在文件夹</button>
+      <button id="export-run" class="tb-btn accent">导出</button>
+    </div>
+    <p class="fix-note">公式在 PDF / DOCX 中渲染为图片（本地离线）；HTML 为单文件（内联 marked + MathJax），图片保持相对路径，请连同原目录一起保存。样式参数会自动记忆。</p>
   </div>
 </div>
 

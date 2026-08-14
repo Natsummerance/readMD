@@ -40,7 +40,7 @@ RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
 PROMPTS_FILE = os.path.join(DATA_DIR, 'prompts.json')
 HISTORY_FILE = os.path.join(DATA_DIR, 'chat_history.json')
 LOG_FILE = os.path.join(DATA_DIR, 'readmd.log')
-VERSION = '2.0.1'
+VERSION = '2.1.0'
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 
@@ -1028,6 +1028,80 @@ class Api(object):
             logging.exception('save_as failed')
             return None
 
+    def export_doc(self, fmt, payload=None):
+        """导出当前文档为 PDF / DOCX / HTML（js_api 入口）。
+
+        payload: {content, baseDir, suggestedName, options}
+        返回 {ok, path, size, warns, error, canceled}。
+        """
+        import webview
+        if self._window is None:
+            return {'ok': False, 'error': '窗口未就绪'}
+        payload = payload or {}
+        fmt = (fmt or '').lower()
+        ext_map = {'pdf': 'PDF 文档 (*.pdf)',
+                   'docx': 'Word 文档 (*.docx)',
+                   'html': 'HTML 网页 (*.html)'}
+        if fmt not in ext_map:
+            return {'ok': False, 'error': '不支持的导出格式'}
+        try:
+            import readmd_modules.mdexport as MDE
+            MDE.load()
+        except Exception as e:
+            logging.exception('mdexport import failed')
+            return {'ok': False, 'error': '导出模块加载失败：%s' % e}
+        suggested = (payload.get('suggestedName') or 'export').strip() or 'export'
+        if not suggested.lower().endswith('.' + fmt):
+            suggested += '.' + fmt
+        try:
+            target = self._window.create_file_dialog(
+                webview.SAVE_DIALOG, save_filename=suggested,
+                file_types=(ext_map[fmt],))
+        except Exception as e:
+            logging.exception('save dialog failed')
+            return {'ok': False, 'error': '保存对话框失败：%s' % e}
+        if not target:
+            return {'ok': False, 'canceled': True}
+        try:
+            return MDE.export(fmt, payload.get('content') or '',
+                              payload.get('baseDir') or '', target,
+                              options=payload.get('options') or {},
+                              source_name=payload.get('suggestedName') or '')
+        except Exception as e:
+            logging.exception('export failed')
+            return {'ok': False, 'error': '导出失败：%s' % e}
+
+    def reveal_path(self, path):
+        """在资源管理器中选中该文件。"""
+        try:
+            subprocess.Popen(['explorer', '/select,', os.path.normpath(path)])
+            return True
+        except Exception:
+            return False
+
+    def get_export_presets(self):
+        """返回导出样式默认值 / 内置预设 / 自定义预设 / 上次参数。"""
+        try:
+            from readmd_modules.mdexport import styles as _st
+        except Exception:
+            return {'error': '导出模块不可用'}
+        cur = load_json(SETTINGS_FILE, {})
+        return {'defaults': _st.DEFAULT_STYLE,
+                'presets': _st.PRESETS,
+                'custom': cur.get('exportPresets', {}),
+                'last': cur.get('exportLast', {})}
+
+    def save_export_presets(self, payload):
+        """保存自定义导出预设与上次参数。"""
+        cur = load_json(SETTINGS_FILE, {})
+        payload = payload or {}
+        if 'custom' in payload:
+            cur['exportPresets'] = payload.get('custom') or {}
+        if 'last' in payload:
+            cur['exportLast'] = payload.get('last') or {}
+        save_json(SETTINGS_FILE, cur)
+        return True
+
     def open_external(self, url):
         try:
             webbrowser.open(url)
@@ -1270,6 +1344,20 @@ def run_selftest():
         safe_print('image save OK')
     except Exception as e:
         safe_print('image save selftest failed:', e)
+        ok = False
+    try:
+        import tempfile as _tf
+        from readmd_modules.mdexport import export as _export
+        demo_md = '# ReadMD 导出自测\n\n正文 **加粗** 与 `代码`，公式 $\\frac{a}{b}$。\n\n| 列A | 列B |\n| --- | --- |\n| 1 | 2 |\n'
+        with _tf.TemporaryDirectory() as td:
+            for _fmt, _ext in (('pdf', '.pdf'), ('docx', '.docx'), ('html', '.html')):
+                out = os.path.join(td, 'smoke' + _ext)
+                r = _export(_fmt, demo_md, td, out,
+                            options={'meta': {'title': 'Selftest'}})
+                assert r.get('ok') is True and os.path.isfile(out) and r.get('size', 0) > 0, r
+        safe_print('export OK')
+    except Exception as e:
+        safe_print('export selftest failed:', e)
         ok = False
     safe_print('selftest %s' % ('PASSED' if ok else 'FAILED'))
     return 0 if ok else 1

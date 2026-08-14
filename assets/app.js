@@ -61,6 +61,9 @@ const state = {
     config: null, providers: [], busy: false, aborter: null, raw: '',
     templates: [], templateId: '', messages: [], sessionId: null, sessions: [],
   },
+  export: {
+    fmt: 'pdf', defaults: null, presets: {}, custom: {}, options: null, last: null, ready: false,
+  },
 };
 
 /* ---------------- 设置 ---------------- */
@@ -2227,7 +2230,351 @@ function bindEvents() {
   $('btn-theme').addEventListener('click', toggleTheme);
   $('btn-a').addEventListener('click', () => zoom(-10));
   $('btn-A').addEventListener('click', () => zoom(10));
-  $('btn-print').addEventListener('click', () => window.print());
+
+/* ---------------- 导出面板（PDF / DOCX / HTML + 样式定制） ---------------- */
+
+const EXPORT_FONTS = ['MicrosoftYaHei', 'SimHei', 'SimSun', 'KaiTi', 'DengXian', 'Arial'];
+const EXPORT_MONO = ['Consolas', 'Courier New', 'SimHei'];
+const EXPORT_ALIGNS = ['left', 'center', 'right', 'justify'];
+const EXPORT_PAGES = ['A4', 'A5', 'B5', 'Letter', 'Legal'];
+const EXPORT_PRESET_NAMES = { minimal: '简约', classic: '经典', business: '商务' };
+
+/* 每个字段: {k: 点路径, label, type, opts, min, max, step, full, fmts} */
+const EXPORT_SECTIONS = [
+  { title: '页面设置', fmts: ['pdf', 'docx'], fields: [
+    { k: 'page.size', label: '纸张', type: 'select', opts: EXPORT_PAGES },
+    { k: 'page.orientation', label: '方向', type: 'select', opts: [['portrait', '纵向'], ['landscape', '横向']] },
+    { k: 'page.marginTop', label: '上边距 mm', type: 'number', min: 0, max: 60 },
+    { k: 'page.marginRight', label: '右边距 mm', type: 'number', min: 0, max: 60 },
+    { k: 'page.marginBottom', label: '下边距 mm', type: 'number', min: 0, max: 60 },
+    { k: 'page.marginLeft', label: '左边距 mm', type: 'number', min: 0, max: 60 },
+  ]},
+  { title: '封面与目录', fmts: ['pdf', 'docx'], fields: [
+    { k: 'cover.enabled', label: '启用封面页', type: 'checkbox' },
+    { k: 'cover.title', label: '封面标题（留空用文件名）', type: 'text', full: true },
+    { k: 'cover.subtitle', label: '封面副标题', type: 'text', full: true },
+    { k: 'cover.date', label: '封面日期', type: 'text' },
+    { k: 'cover.align', label: '封面对齐', type: 'select', opts: [['center', '居中'], ['left', '左对齐'], ['right', '右对齐']] },
+    { k: 'toc.enabled', label: 'PDF 目录页', type: 'checkbox', fmts: ['pdf'] },
+  ]},
+  { title: '正文排版', fmts: ['pdf', 'docx', 'html'], fields: [
+    { k: 'typography.font', label: '正文字体', type: 'select', opts: EXPORT_FONTS.map(f => [f, f]) },
+    { k: 'typography.size', label: '字号 pt', type: 'number', min: 8, max: 20 },
+    { k: 'typography.lineHeight', label: '行距', type: 'number', min: 1, max: 2.5, step: 0.1 },
+    { k: 'typography.spacing', label: '段间距 pt', type: 'number', min: 0, max: 30 },
+    { k: 'typography.color', label: '正文颜色', type: 'color' },
+    { k: 'typography.align', label: '对齐', type: 'select', opts: EXPORT_ALIGNS.map(a => [a, a]) },
+  ]},
+  { title: '标题（各级颜色 / 字号 / 加粗 / 对齐）', fmts: ['pdf', 'docx', 'html'], headingRows: true },
+  { title: '表格', fmts: ['pdf', 'docx', 'html'], fields: [
+    { k: 'table.headerBg', label: '表头背景', type: 'color' },
+    { k: 'table.headerColor', label: '表头文字色', type: 'color' },
+    { k: 'table.headerBold', label: '表头加粗', type: 'checkbox' },
+    { k: 'table.borderColor', label: '边框颜色', type: 'color' },
+    { k: 'table.borderWidth', label: '边框宽度 pt', type: 'number', min: 0, max: 3, step: 0.25 },
+    { k: 'table.banded', label: '斑马纹', type: 'checkbox' },
+    { k: 'table.bandColor', label: '斑马纹颜色', type: 'color' },
+    { k: 'table.cellSize', label: '单元格字号 pt', type: 'number', min: 7, max: 16 },
+    { k: 'table.cellPadding', label: '单元格内边距 pt', type: 'number', min: 0, max: 20 },
+    { k: 'table.align', label: '对齐', type: 'select', opts: EXPORT_ALIGNS.map(a => [a, a]) },
+    { k: 'table.widthPct', label: '表格宽度 %', type: 'number', min: 50, max: 100 },
+  ]},
+  { title: '代码块', fmts: ['pdf', 'docx', 'html'], fields: [
+    { k: 'code.bg', label: '背景色', type: 'color' },
+    { k: 'code.color', label: '文字色', type: 'color' },
+    { k: 'code.font', label: '等宽字体', type: 'select', opts: EXPORT_MONO.map(f => [f, f]) },
+    { k: 'code.size', label: '字号 pt', type: 'number', min: 6, max: 16 },
+    { k: 'code.borderColor', label: '边框颜色', type: 'color' },
+    { k: 'code.borderWidth', label: '边框宽度 pt', type: 'number', min: 0, max: 3, step: 0.25 },
+    { k: 'code.rounded', label: '圆角（HTML）', type: 'checkbox', fmts: ['html'] },
+  ]},
+  { title: '引用与链接', fmts: ['pdf', 'docx', 'html'], fields: [
+    { k: 'quote.barColor', label: '引用左边条色', type: 'color' },
+    { k: 'quote.bg', label: '引用背景', type: 'color' },
+    { k: 'quote.color', label: '引用文字色', type: 'color' },
+    { k: 'link.color', label: '链接颜色', type: 'color' },
+    { k: 'hr.color', label: '分割线颜色', type: 'color' },
+  ]},
+  { title: '页脚与元数据', fmts: ['pdf', 'docx'], fields: [
+    { k: 'footer.pageNumbers', label: '显示页码', type: 'checkbox' },
+    { k: 'footer.text', label: '页脚文字', type: 'text', full: true },
+    { k: 'meta.title', label: '文档标题（PDF 元数据）', type: 'text', full: true },
+    { k: 'meta.author', label: '作者', type: 'text' },
+    { k: 'meta.subject', label: '主题', type: 'text' },
+  ]},
+  { title: '数学公式', fmts: ['pdf', 'docx'], fields: [
+    { k: 'math.dpi', label: '渲染分辨率 DPI', type: 'number', min: 100, max: 500, step: 10 },
+  ]},
+  { title: 'HTML 主题', fmts: ['html'], fields: [
+    { k: 'htmlTheme', label: '页面主题', type: 'select', opts: [['light', '亮色'], ['dark', '暗色'], ['sepia', '米色']] },
+  ]},
+];
+
+function expGet(obj, path) {
+  return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
+}
+function expSet(obj, path, val) {
+  const ks = path.split('.');
+  let o = obj;
+  for (let i = 0; i < ks.length - 1; i++) {
+    if (typeof o[ks[i]] !== 'object' || o[ks[i]] === null) o[ks[i]] = {};
+    o = o[ks[i]];
+  }
+  o[ks[ks.length - 1]] = val;
+}
+function expDeepMerge(base, over) {
+  const out = JSON.parse(JSON.stringify(base || {}));
+  if (!over || typeof over !== 'object') return out;
+  Object.keys(over).forEach(k => {
+    const v = over[k];
+    if (v && typeof v === 'object' && !Array.isArray(v) && out[k] && typeof out[k] === 'object') {
+      out[k] = expDeepMerge(out[k], v);
+    } else if (v !== undefined) out[k] = JSON.parse(JSON.stringify(v));
+  });
+  return out;
+}
+
+async function loadExportPresets() {
+  if (state.export.defaults) return true;
+  if (!bindPy()) return false;
+  try {
+    const d = await py.get_export_presets();
+    if (!d || d.error) throw new Error((d && d.error) || 'no data');
+    state.export.defaults = d.defaults || {};
+    state.export.presets = d.presets || {};
+    state.export.custom = d.custom || {};
+    state.export.last = d.last || null;
+    if (state.export.last && state.export.last.options) {
+      state.export.options = expDeepMerge(state.export.defaults, state.export.last.options);
+    } else {
+      state.export.options = expDeepMerge(state.export.defaults, {});
+    }
+    return true;
+  } catch (e) {
+    console.error(e);
+    return false;
+  }
+}
+
+function openExportModal() {
+  if (!bindPy()) { showToast('浏览器模式请使用桌面版导出'); return; }
+  if (!state.export.ready) {
+    loadExportPresets().then(ok => {
+      if (ok) { state.export.ready = true; renderExportModal(); }
+      else showToast('导出模块加载失败');
+    });
+    return;
+  }
+  renderExportModal();
+}
+
+function closeExportModal() { $('export-modal').classList.add('hidden'); }
+
+function currentExportContent() {
+  if (state.editing) {
+    return (window.cmView && window.cmView.state) ? window.cmView.state.doc.toString()
+      : ($('edit-area') && $('edit-area').value || '');
+  }
+  if (state.mode === 'file') return state.original || state.fixed || '';
+  return state.fixed || '';
+}
+function currentExportName() {
+  let n = '';
+  if (state.mode === 'file' && state.file) n = state.file.split(/[\\/]/).pop();
+  else n = (state.sourceName || '导出').split(/[\\/]/).pop();
+  n = n.replace(/\.[^.]+$/, '');
+  return n || '导出';
+}
+
+function renderExportModal() {
+  $('export-modal').classList.remove('hidden');
+  renderExportSections();
+  renderExportPresetSelect();
+  const r = $('export-result');
+  r.textContent = ''; r.className = 'export-result';
+  $('export-open').classList.add('hidden');
+  $('export-reveal').classList.add('hidden');
+}
+
+function expFieldApplicable(f, fmt) {
+  const own = f.fmts || EXPORT_SECTIONS.reduce((a, s) => a.concat((s.fields || []).map(x => x.k)), []);
+  return (f.fmts || ['pdf', 'docx', 'html']).indexOf(fmt) >= 0;
+}
+
+function renderExportSections() {
+  const fmt = state.export.fmt;
+  const host = $('export-opts');
+  host.textContent = '';
+  EXPORT_SECTIONS.forEach(sec => {
+    const fields = sec.fields || [];
+    const applicable = sec.headingRows ? (sec.fmts.indexOf(fmt) >= 0)
+      : fields.some(f => expFieldApplicable(f, fmt));
+    if (!applicable) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'exp-sec open';
+    const head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'exp-sec-head';
+    head.innerHTML = '<span class="exp-arrow">&#9654;</span>' + sec.title;
+    const body = document.createElement('div');
+    body.className = 'exp-sec-body';
+    if (sec.headingRows) {
+      for (let i = 1; i <= 6; i++) {
+        const row = document.createElement('div');
+        row.className = 'exp-field full exp-h-row';
+        row.innerHTML =
+          '<label>H' + i + '</label>' +
+          '<input type="number" data-k="headings.h' + i + '.size" min="8" max="40" title="字号">' +
+          '<input type="color" data-k="headings.h' + i + '.color" title="颜色">' +
+          '<label class="exp-check">加粗<input type="checkbox" data-k="headings.h' + i + '.bold"></label>' +
+          '<select data-k="headings.h' + i + '.align">' + EXPORT_ALIGNS.map(a => '<option value="' + a + '">' + a + '</option>').join('') + '</select>';
+        body.appendChild(row);
+      }
+    } else {
+      fields.forEach(f => {
+        if (!expFieldApplicable(f, fmt)) return;
+        body.appendChild(expFieldEl(f));
+      });
+    }
+    head.addEventListener('click', () => wrap.classList.toggle('open'));
+    wrap.appendChild(head);
+    wrap.appendChild(body);
+    host.appendChild(wrap);
+  });
+  applyExportOptionsToDom();
+}
+
+function expFieldEl(f) {
+  const box = document.createElement('div');
+  box.className = 'exp-field' + (f.full ? ' full' : '');
+  let inner = '<label>' + f.label + '</label>';
+  if (f.type === 'select') {
+    inner += '<select data-k="' + f.k + '">' + (f.opts || []).map(o =>
+      '<option value="' + (Array.isArray(o) ? o[0] : o) + '">' + (Array.isArray(o) ? o[1] : o) + '</option>'
+    ).join('') + '</select>';
+  } else if (f.type === 'checkbox') {
+    inner = '<label class="exp-check"><input type="checkbox" data-k="' + f.k + '"> ' + f.label + '</label>';
+  } else if (f.type === 'color') {
+    inner += '<input type="color" data-k="' + f.k + '">';
+  } else if (f.type === 'number') {
+    inner += '<input type="number" data-k="' + f.k + '" min="' + (f.min != null ? f.min : '') + '" max="' + (f.max != null ? f.max : '') + '" step="' + (f.step != null ? f.step : '1') + '">';
+  } else {
+    inner += '<input type="text" data-k="' + f.k + '">';
+  }
+  box.innerHTML = inner;
+  return box;
+}
+
+function applyExportOptionsToDom() {
+  const opts = state.export.options || {};
+  document.querySelectorAll('#export-opts [data-k]').forEach(el => {
+    const v = expGet(opts, el.dataset.k);
+    if (v === undefined || v === null) return;
+    if (el.type === 'checkbox') el.checked = !!v;
+    else el.value = v;
+  });
+}
+
+function collectExportOptions() {
+  const opts = expDeepMerge(state.export.defaults, {});
+  document.querySelectorAll('#export-opts [data-k]').forEach(el => {
+    let v;
+    if (el.type === 'checkbox') v = el.checked;
+    else if (el.type === 'number') v = parseFloat(el.value);
+    else v = el.value;
+    expSet(opts, el.dataset.k, v);
+  });
+  return opts;
+}
+
+function renderExportPresetSelect() {
+  const sel = $('exp-preset');
+  sel.textContent = '';
+  const names = Object.keys(state.export.presets || {}).concat(Object.keys(state.export.custom || {}));
+  sel.appendChild(new Option('自定义', '__custom__'));
+  names.forEach(n => {
+    sel.appendChild(new Option(EXPORT_PRESET_NAMES[n] || n, n));
+  });
+  sel.value = '__custom__';
+  sel.onchange = () => {
+    const v = sel.value;
+    if (v === '__custom__') return;
+    const preset = (state.export.presets[v] || state.export.custom[v] || {});
+    state.export.options = expDeepMerge(state.export.defaults, preset);
+    renderExportSections();
+  };
+}
+
+async function runExport() {
+  const fmt = state.export.fmt;
+  const options = collectExportOptions();
+  const payload = {
+    content: currentExportContent(),
+    baseDir: state.dir || '',
+    suggestedName: currentExportName(),
+    options: options,
+  };
+  busy(true);
+  let r = null;
+  try {
+    r = await py.export_doc(fmt, payload);
+  } catch (e) { showToast('导出失败：' + e.message); busy(false); return; }
+  busy(false);
+  if (!r) { showToast('导出失败'); return; }
+  if (r.canceled) return;
+  if (!r.ok) { showToast('导出失败：' + (r.error || '未知错误')); return; }
+  const res = $('export-result');
+  res.textContent = '已导出：' + r.path;
+  res.className = 'export-result ok';
+  $('export-open').classList.remove('hidden');
+  $('export-reveal').classList.remove('hidden');
+  $('export-open').onclick = () => py.open_path(r.path);
+  $('export-reveal').onclick = () => py.reveal_path(r.path);
+  try { py.save_export_presets({ last: { fmt: fmt, options: options } }); } catch (e) { /* ignore */ }
+  if (r.warns && r.warns.length) showToast('导出完成，' + r.warns.length + ' 条提示');
+  else showToast('导出成功');
+}
+
+async function expSavePreset() {
+  const box = $('exp-save-name');
+  box.classList.remove('hidden');
+  const input = $('exp-save-input');
+  input.value = '';
+  input.focus();
+  $('exp-save-ok').onclick = async () => {
+    const name = input.value.trim();
+    if (!name) { showToast('请输入预设名称'); return; }
+    if (EXPORT_PRESET_NAMES[name]) { showToast('名称与内置预设冲突'); return; }
+    state.export.custom[name] = collectExportOptions();
+    try { await py.save_export_presets({ custom: state.export.custom }); } catch (e) { /* ignore */ }
+    renderExportPresetSelect();
+    box.classList.add('hidden');
+    showToast('预设已保存：' + name);
+  };
+  $('exp-save-cancel').onclick = () => box.classList.add('hidden');
+}
+
+  $('btn-print').addEventListener('click', openExportModal);
+
+  // 导出面板事件
+  $('export-close').addEventListener('click', closeExportModal);
+  $('export-modal').addEventListener('click', e => { if (e.target === $('export-modal')) closeExportModal(); });
+  document.querySelectorAll('.exp-fmt').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.exp-fmt').forEach(b => { b.classList.toggle('active', b === btn); b.setAttribute('aria-selected', b === btn ? 'true' : 'false'); });
+    state.export.fmt = btn.dataset.fmt;
+    renderExportSections();
+  }));
+  $('export-print').addEventListener('click', () => window.print());
+  $('export-run').addEventListener('click', runExport);
+  $('exp-save-preset').addEventListener('click', expSavePreset);
+  $('exp-reset').addEventListener('click', () => {
+    state.export.options = expDeepMerge(state.export.defaults, {});
+    renderExportSections();
+    const sel = $('exp-preset'); if (sel) sel.value = '__custom__';
+  });
+  $('export-box').addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !$('export-modal').classList.contains('hidden')) { e.stopPropagation(); closeExportModal(); }
+  });
   $('btn-assoc').addEventListener('click', installAssoc);
   $('top-btn').addEventListener('click', () => { $('content').scrollTo({ top: 0, behavior: 'smooth' }); });
   $('recent-clear').addEventListener('click', async () => {
@@ -2292,7 +2639,7 @@ function bindEvents() {
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleSide('toc'); }
     else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); toggleTheme(); }
     else if (mod && e.key.toLowerCase() === 'r') { e.preventDefault(); if (state.file && state.mode === 'file') loadFile(state.file); }
-    else if (mod && e.key.toLowerCase() === 'p') { e.preventDefault(); window.print(); }
+    else if (mod && e.key.toLowerCase() === 'p') { e.preventDefault(); openExportModal(); }
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); toggleAiPanel(); }
     else if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoom(10); }
     else if (mod && e.key === '-') { e.preventDefault(); zoom(-10); }
