@@ -7,7 +7,7 @@ rem  Usage:
 rem    deploy.bat                   full deploy (test + build + push + release)
 rem    deploy.bat --skip-build      reuse existing dist exes (faster)
 rem    deploy.bat --skip-tests      skip the self-test round
-rem    deploy.bat --tag v2.0.0      release tag (default v2.0.0)
+rem    deploy.bat --tag v2.0.1      release tag (default v2.0.1)
 rem
 rem  Requirements: GITHUB_TOKEN in system/user env vars.
 rem ============================================================
@@ -15,7 +15,7 @@ setlocal
 cd /d "%~dp0"
 title ReadMD Deploy
 
-set "TAG=v2.0.0"
+set "TAG=v2.0.1"
 set "SKIP_BUILD=0"
 set "SKIP_TESTS=0"
 
@@ -95,12 +95,9 @@ if errorlevel 1 goto :err
     --collect-submodules readmd_modules ^
     readmd.py
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" installer\make_splash.py
-if errorlevel 1 goto :err
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
     --name ReadMDUninstall --icon "assets\readmd.ico" ^
     --add-data "installer;installer" ^
-    --splash "installer\splash.png" ^
     installer\setup_app.py
 if errorlevel 1 goto :err
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
@@ -108,7 +105,6 @@ if errorlevel 1 goto :err
     --add-data "installer;installer" ^
     --add-binary "dist\ReadMD;ReadMD" ^
     --add-binary "dist\ReadMDUninstall.exe;." ^
-    --splash "installer\splash.png" ^
     installer\setup_app.py
 if errorlevel 1 goto :err
 echo   build done

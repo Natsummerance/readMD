@@ -1,7 +1,12 @@
 ## 下载
 
-> 安装包（推荐）：下载 **ReadMDSetup-v2.0.0.exe**，双击即可安装（内含动画安装界面，支持设为 .md 默认打开方式，可随时在「设置 → 应用」中卸载）。
-> 便携版：**ReadMD-portable-v2.0.0.exe** 免安装，双击直接运行。
+> 安装包（推荐）：下载 **ReadMDSetup-v2.0.1.exe**，双击即可安装（内含动画安装界面，支持设为 .md 默认打开方式，可随时在「设置 → 应用」中卸载）。
+> 便携版：**ReadMD-portable-v2.0.1.exe** 免安装，双击直接运行。
+
+## 修复（v2.0.1）
+
+- **修复安装器黑屏弹窗**：v2.0.0 安装包 / 卸载器使用 PyInstaller `--splash` 启动画面，但代码未调用 `pyi_splash.close()`，导致黑色启动画面永远置顶、无法关闭，在低配机上会挡住安装界面，表现为「安装完退不掉、软件打不开」。v2.0.1 彻底移除启动画面，并在安装器代码中加入防御性关闭逻辑
+- **版本号统一**：安装器与主程序版本统一为 2.0.1，安装 / 升级后注册表与 `install.json` 均为最新版本，避免版本显示不一致
 
 ## 新增（v2.0.0）
 
@@ -27,5 +32,5 @@
 
 | 文件 | SHA256 |
 | --- | --- |
-| ReadMDSetup-v2.0.0.exe | `398a0695b96fa34693b4947407e5a790dc446fd9d0c4a8a2de0db07ad0cc2a4b` |
-| ReadMD-portable-v2.0.0.exe | `13bad0d1789bddcd74d8be2f10fc2c85e5ad998095599f3ba00c4a5004dd0ab1` |
+| ReadMDSetup-v2.0.1.exe | `B43629341097EB2C69D890E9386FCDE4DAFCEB6969EAB90ED84C35CA120DBD17` |
+| ReadMD-portable-v2.0.1.exe | `128D7AA3BDA65405CD5148E172D333B86876428412B5E376FD05FE6CAC9CDB14` |

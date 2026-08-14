@@ -22,10 +22,23 @@ import winreg
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
+
+# PyInstaller --splash 启动画面不会自动关闭，且无关闭按钮、置顶显示。
+# v2.0.0 曾因未调用 pyi_splash.close() 导致黑屏弹窗卡死安装界面，
+# 这里在 Python 启动后立即关闭，作为防御。仅当 bootloader 注入了
+# _PYI_SPLASH_IPC 环境变量（即构建时启用了 --splash）才导入，
+# 避免在无 splash 的构建里触发 pyi_splash 模块自身的报错。
+try:
+    if os.environ.get('_PYI_SPLASH_IPC'):
+        import pyi_splash  # type: ignore
+        pyi_splash.close()
+except Exception:
+    pass
+
 APP_NAME = 'ReadMD'
 APP_EXE = 'ReadMD.exe'
 UNINST_EXE = 'ReadMDUninstall.exe'
-APP_VERSION = '2.0.0'
+APP_VERSION = '2.0.1'
 PUBLISHER = 'Natsummerance'
 PROG_ID = 'ReadMD.markdown'
 EXTENSIONS = ['.md', '.markdown', '.mdown', '.mkd']
@@ -121,7 +134,12 @@ def is_installed():
         with open(os.path.join(inst, 'install.json'), encoding='utf-8') as f:
             ver = json.load(f).get('version', '?')
     except Exception:
-        pass
+        # 旧版（如 v1.4）可能没有 install.json：回退读注册表 DisplayVersion
+        try:
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, UNINSTALL_KEY) as k:
+                ver, _ = winreg.QueryValueEx(k, 'DisplayVersion')
+        except OSError:
+            pass
     return {'dir': inst, 'version': ver}
 
 

@@ -2,10 +2,10 @@
 """发布 ReadMD 到 GitHub Releases（无需 gh CLI，纯标准库）。
 
 用法：
-    python release.py --verify [--tag v2.0.0]        # 校验线上 Release 与本地产物（名称/大小/SHA256）
-    python release.py --update [--tag v2.0.0]        # 更新已存在 Release 的标题与说明
-    python release.py [--tag v2.0.0]                 # 创建 Release（已存在则跳过），上传缺失资产
-    python release.py --force-upload [--tag v2.0.0]  # 强制重传全部资产（覆盖同名）
+    python release.py --verify [--tag v2.0.1]        # 校验线上 Release 与本地产物（名称/大小/SHA256）
+    python release.py --update [--tag v2.0.1]        # 更新已存在 Release 的标题与说明
+    python release.py [--tag v2.0.1]                 # 创建 Release（已存在则跳过），上传缺失资产
+    python release.py --force-upload [--tag v2.0.1]  # 强制重传全部资产（覆盖同名）
 
 通用参数：--name 标题  --body-file 说明文件  --draft  --skip-assets  --asset 指定单个资产名
 需要环境变量 GITHUB_TOKEN（可存系统变量）。
@@ -198,8 +198,13 @@ def upload_all(rel, args, tok):
 
 DEFAULT_BODY = """## 下载
 
-> 安装包（推荐）：下载 **ReadMDSetup-v2.0.0.exe**，双击即可安装（内含动画安装界面，支持设为 .md 默认打开方式，可随时在「设置 → 应用」中卸载）。
-> 便携版：**ReadMD-portable-v2.0.0.exe** 免安装，双击直接运行。
+> 安装包（推荐）：下载 **ReadMDSetup-v2.0.1.exe**，双击即可安装（内含动画安装界面，支持设为 .md 默认打开方式，可随时在「设置 → 应用」中卸载）。
+> 便携版：**ReadMD-portable-v2.0.1.exe** 免安装，双击直接运行。
+
+## 修复（v2.0.1）
+
+- 修复安装器黑屏弹窗：v2.0.0 安装包使用 PyInstaller 启动画面但未调用 pyi_splash.close()，黑色启动画面永远置顶且无法关闭，低配机安装时会被卡住。v2.0.1 移除启动画面并加入防御性关闭逻辑
+- 安装版本号统一为 2.0.1
 
 ## 新增（v2.0.0）
 
@@ -224,8 +229,8 @@ DEFAULT_BODY = """## 下载
 
 def main():
     ap = argparse.ArgumentParser(description="发布 ReadMD Release（纯标准库，无需 gh CLI）")
-    ap.add_argument("--tag", default="v2.0.0")
-    ap.add_argument("--name", default="ReadMD v2.0.0")
+    ap.add_argument("--tag", default="v2.0.1")
+    ap.add_argument("--name", default="ReadMD v2.0.1")
     ap.add_argument("--body-file")
     ap.add_argument("--draft", action="store_true")
     ap.add_argument("--skip-assets", action="store_true")

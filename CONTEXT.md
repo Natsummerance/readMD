@@ -11,7 +11,7 @@
 - 本地：`T:\Programming\Project\codex\creator\readmd`（Windows，PowerShell，.venv 已建好）
 - GitHub：`https://github.com/Natsummerance/readMD`（public，main 分支）
 - 账号：Natsummerance / 2734763029@qq.com；发布 token 在系统环境变量 `GITHUB_TOKEN`
-- 最新 Release：v2.0.0（ReadMDSetup-v2.0.0.exe 安装包 + ReadMD-portable-v2.0.0.exe 便携版）
+- 最新 Release：v2.0.1（ReadMDSetup-v2.0.1.exe 安装包 + ReadMD-portable-v2.0.1.exe 便携版）
 
 ## 功能清单（按开发顺序）
 
@@ -52,8 +52,8 @@
 ## 打包与发布
 
 - `package.bat`：一次产出两版——onedir 安装版 `dist\ReadMD\ReadMD.exe`（秒开）+ 便携单文件 `dist\ReadMD-portable.exe`（windowed，console=False，图标 readmd.ico）
-- `installer/build_setup.bat`：先 ReadMDUninstall.exe，再 ReadMDSetup.exe（内嵌 onedir 目录 `ReadMD/` + 卸载器 + splash 动画）
-- `deploy.bat [--skip-build] [--skip-tests] [--tag v2.0.0]`：完整一键部署
+- `installer/build_setup.bat`：先 ReadMDUninstall.exe，再 ReadMDSetup.exe（内嵌 onedir 目录 `ReadMD/` + 卸载器；v2.0.1 起不再使用 PyInstaller splash 启动画面，避免黑屏弹窗卡死安装流程）
+- `deploy.bat [--skip-build] [--skip-tests] [--tag v2.0.1]`：完整一键部署
 - `release.py --verify`：线上资产与本地 SHA256 全比对；`--update` 更新说明；`--force-upload` 覆盖重传
 - Release 资产规范：只传 2 个（安装包 + 便携版），图标在仓库内不再上传
 
@@ -79,6 +79,6 @@
 - .spec 文件被 .gitignore 忽略（`*.spec`），本地保留用于重建；新环境可用 .bat 命令行参数打包
 - AI Key 无内置密钥，全部依赖用户配置/环境变量
 
-## 最近一次变更（v2.0.0 实施中）
+## 最近一次变更（v2.0.1 安装器修复）
 
-秒开 + 界面全面升级：安装版改 onedir 目录安装 + 单实例常驻托盘（固定控制端口 26891 + instance.json，关闭=隐藏到托盘）；pystray 托盘；启动里程碑打点 readmd.log；前端全面改版（44px 工具条/SVG 图标/更多二级菜单/欢迎页最近文件网格/三主题 token）；DESIGN.md 设计规范；readmd.py VERSION 同步 2.0.0。
+修复安装器黑屏弹窗：v2.0.0 的 ReadMDSetup/ReadMDUninstall 用 PyInstaller --splash 但从未调用 pyi_splash.close()，启动画面置顶且无关闭按钮，低配机解压慢时更明显，会挡住安装界面（表现为装完退不掉、软件打不开）。v2.0.1 移除 --splash，并在 setup_app.py 加防御性 pyi_splash.close()；安装器/主程序版本号统一 2.0.1；deploy.bat 与 release.py 默认标签同步 v2.0.1。

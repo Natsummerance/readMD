@@ -191,7 +191,7 @@ readmd/
 deploy.bat                 rem 完整流程：测试 → 打包 → 推送 → 发布 Release
 deploy.bat --skip-build    rem 复用已有 dist 产物，只跑测试 + 推送 + 发布
 deploy.bat --skip-tests    rem 跳过自测
-deploy.bat --tag v2.0.0    rem 指定发布标签（默认 v2.0.0）
+deploy.bat --tag v2.0.1    rem 指定发布标签（默认 v2.0.1）
 ```
 
 也可以单独使用 `release.py`：
@@ -202,6 +202,12 @@ python release.py --update             rem 更新已存在 Release 的标题与�
 python release.py --force-upload       rem 同名资产先删除再重传
 python release.py                      rem 创建 Release（已存在则跳过）+ 上传缺失资产
 ```
+
+## 📝 更新日志
+
+- **v2.0.1（安装器修复）**：移除安装包 / 卸载器的 PyInstaller 启动画面，修复低配机黑屏置顶弹窗卡死安装流程的问题；安装版本号统一为 2.0.1
+- **v2.0.0**：秒开（onedir 目录安装 + 单实例托盘常驻）；界面全面改版（44px 工具条 / SVG 图标 / 欢迎页最近文件网格 / 三主题设计 token）；大文档骨架屏与无障碍优化
+- **v1.4.0**：插入图片（裁剪 / 缩放 / 旋转）；苹果风动画安装器
 
 ## 🗑️ 卸载
 

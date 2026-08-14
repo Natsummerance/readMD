@@ -40,7 +40,7 @@ RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
 PROMPTS_FILE = os.path.join(DATA_DIR, 'prompts.json')
 HISTORY_FILE = os.path.join(DATA_DIR, 'chat_history.json')
 LOG_FILE = os.path.join(DATA_DIR, 'readmd.log')
-VERSION = '2.0.0'
+VERSION = '2.0.1'
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 
@@ -1167,6 +1167,20 @@ def install_association():
 
 def run_selftest():
     ok = True
+    try:
+        import re as _re
+        setup_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'installer', 'setup_app.py')
+        if os.path.isfile(setup_py):
+            with open(setup_py, encoding='utf-8') as f:
+                m = _re.search(r"APP_VERSION\s*=\s*'([^']+)'", f.read())
+            inst_ver = m.group(1) if m else None
+            assert inst_ver == VERSION, '安装器版本 %s 与主程序 %s 不一致' % (inst_ver, VERSION)
+            safe_print('version consistency OK (%s)' % VERSION)
+        else:
+            safe_print('installer/setup_app.py not found, skip version check')
+    except Exception as e:
+        safe_print('version consistency failed:', e)
+        ok = False
     try:
         import urllib.request
         import readmd_fix_test

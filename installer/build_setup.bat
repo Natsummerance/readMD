@@ -10,7 +10,7 @@ setlocal
 cd /d "%~dp0.."
 title ReadMD Setup Builder
 
-echo [1/4] Checking venv and dist\ReadMD\ReadMD.exe ...
+echo [1/3] Checking venv and dist\ReadMD\ReadMD.exe ...
 if not exist ".venv\Scripts\python.exe" (
     python -m venv .venv
     ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r requirements.txt pyinstaller
@@ -21,25 +21,19 @@ if not exist "dist\ReadMD\ReadMD.exe" (
     exit /b 1
 )
 
-echo [2/4] Generating splash ...
-".venv\Scripts\python.exe" installer\make_splash.py
-if errorlevel 1 goto :err
-
-echo [3/4] Building ReadMDUninstall.exe ...
+echo [2/3] Building ReadMDUninstall.exe ...
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
     --name ReadMDUninstall --icon "assets\readmd.ico" ^
     --add-data "installer;installer" ^
-    --splash "installer\splash.png" ^
     installer\setup_app.py
 if errorlevel 1 goto :err
 
-echo [4/4] Building ReadMDSetup.exe (embedding onedir app) ...
+echo [3/3] Building ReadMDSetup.exe (embedding onedir app) ...
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
     --name ReadMDSetup --icon "assets\readmd.ico" ^
     --add-data "installer;installer" ^
     --add-binary "dist\ReadMD;ReadMD" ^
     --add-binary "dist\ReadMDUninstall.exe;." ^
-    --splash "installer\splash.png" ^
     installer\setup_app.py
 if errorlevel 1 goto :err
 

@@ -404,8 +404,9 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
   var mockProgress = { running:false, percent:0, step:'', text:'', done:false, error:'' };
 
   function mockApi(name){
+    console.warn('[ReadMD setup] 演示模式：pywebview 桥接不可用，安装/卸载为模拟效果');
     var m = {
-      get_state: function(){ return Promise.resolve({ mode:'install', installed:null, default_dir:'C:\\Users\\demo\\AppData\\Local\\Programs\\ReadMD', version:'1.4.0', running:false }); },
+      get_state: function(){ return Promise.resolve({ mode:'install', installed:null, default_dir:'C:\\Users\\demo\\AppData\\Local\\Programs\\ReadMD', version:'2.0.1', running:false }); },
       get_progress: function(){ return Promise.resolve(mockProgress); },
       start_install: function(o){ options = o || options; mockProgress = { running:true, percent:0, step:'prepare', text:'准备安装目录', done:false, error:'' }; mockRun(); return Promise.resolve(true); },
       start_uninstall: function(){ mockProgress = { running:true, percent:0, step:'stop', text:'关闭运行中的 ReadMD', done:false, error:'' }; mockRun(); return Promise.resolve(true); },
@@ -591,11 +592,44 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
   });
 
   // ---- 启动 ----
-  renderSteps();
-  Promise.resolve(call('get_state')).then(function(st){
-    initState(st || state);
-  });
-  poll();
+  // pywebview 在导航完成（on_navigation_completed）后才注入 window.pywebview，
+  // 页面内联脚本总是先于桥接执行，因此绝不能在此刻用 window.pywebview 判定演示模式。
+  // v2.0.1 修复：真实安装器等待 pywebviewready / 桥接轮询就绪后再用真实 API 启动；
+  // 演示模式（mockApi 假安装预览）仅当 URL 带 ?demo=1 时启用，真实环境绝不假安装。
+  var booted = false;
+  var demoMode = /[?&]demo=1/.test(location.search);
+  function kernelError(){
+    $('welcome-ver').textContent = '';
+    $('welcome-sub').textContent = '未能连接安装程序内核，请关闭后重新打开。';
+    var b = $('btn-install'); if (b){ b.textContent = '内核未连接'; b.disabled = true; }
+  }
+  function boot(){
+    if (booted) return;
+    booted = true;
+    api = window.pywebview ? window.pywebview.api : null;
+    MOCK = demoMode || !window.pywebview;
+    renderSteps();
+    function initFromApi(attempt){
+      Promise.resolve(call('get_state')).then(function(st){
+        if (st && st.version){ initState(st); return; }
+        if ((attempt || 0) < 25){ setTimeout(function(){ initFromApi((attempt || 0) + 1); }, 200); }
+        else { kernelError(); }
+      }).catch(function(){
+        if ((attempt || 0) < 25){ setTimeout(function(){ initFromApi((attempt || 0) + 1); }, 200); }
+        else { kernelError(); }
+      });
+    }
+    initFromApi(0);
+    poll();
+  }
+  if (window.addEventListener){ window.addEventListener('pywebviewready', boot); }
+  // 桥接可能晚到：轮询等待（200ms×40≈8s）；仍无桥接则明确报错并禁用安装，绝不进入演示假安装。
+  (function waitBridge(attempt){
+    if (booted) return;
+    if (window.pywebview){ boot(); return; }
+    if (attempt < 40){ setTimeout(function(){ waitBridge(attempt + 1); }, 200); }
+    else { booted = true; renderSteps(); kernelError(); }
+  })(0);
 })();
 </script>
 </body>
