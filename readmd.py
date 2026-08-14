@@ -40,12 +40,17 @@ RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
 PROMPTS_FILE = os.path.join(DATA_DIR, 'prompts.json')
 HISTORY_FILE = os.path.join(DATA_DIR, 'chat_history.json')
 LOG_FILE = os.path.join(DATA_DIR, 'readmd.log')
-VERSION = '2.1.0'
+VERSION = '2.1.1'
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
+CONVERT_EXTS = ('.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm',
+                '.txt', '.csv', '.json', '.xml', '.zip', '.eml', '.msg', '.rtf', '.odt', '.epub')
 
 CONTROL_PORT = 26891
 INSTANCE_FILE = os.path.join(DATA_DIR, 'instance.json')
+_CONVERT_JOBS = {}
+_CONVERT_JOB_SEQ = [0]
+_CONVERT_LOCK = threading.Lock()
 
 _T0 = time.time()
 
@@ -312,6 +317,76 @@ def delete_session(session_id):
     return True
 
 
+def _md_output_path(src):
+    """转换输出路径：源文件同目录同名 .md。"""
+    d = os.path.dirname(os.path.abspath(src))
+    base = os.path.splitext(os.path.basename(src))[0]
+    return os.path.join(d, base + '.md')
+
+
+def _write_md(path, content):
+    with open(path, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(content)
+    return True
+
+
+def _convert_worker(job):
+    items = job['items']
+    for it in items:
+        if job.get('cancel'):
+            it['status'] = 'canceled'
+            it['done'] = True
+            continue
+        try:
+            mod = RM.get('convert')
+            text, engine, err = mod.convert_verbose(it['src'])
+            if err and not text:
+                it['status'] = 'error'
+                it['error'] = err
+                it['done'] = True
+                continue
+            if not text.strip():
+                it['status'] = 'error'
+                it['error'] = '未提取到文字（可尝试 OCR）'
+                it['done'] = True
+                continue
+            import readmd_modules.mdcheck as MDC
+            fixed, warns = MDC.check(text, os.path.dirname(os.path.abspath(it['src'])))
+            out = _md_output_path(it['src'])
+            it['out'] = out
+            it['engine'] = engine
+            it['warns'] = warns
+            if os.path.exists(out) and not job.get('overwrite'):
+                it['status'] = 'skipped'
+            else:
+                try:
+                    _write_md(out, fixed)
+                    it['status'] = 'ok'
+                except Exception as e:  # noqa: BLE001
+                    it['status'] = 'error'
+                    it['error'] = '写入失败：%s' % e
+        except Exception as e:  # noqa: BLE001
+            logging.exception('batch convert failed: %s', it.get('src'))
+            it['status'] = 'error'
+            it['error'] = str(e)
+        it['done'] = True
+    job['running'] = False
+    job['finished'] = True
+
+
+def _start_convert_job(paths, overwrite):
+    with _CONVERT_LOCK:
+        _CONVERT_JOB_SEQ[0] += 1
+        jid = 'c%d' % _CONVERT_JOB_SEQ[0]
+        job = {'id': jid, 'overwrite': bool(overwrite), 'running': True,
+               'finished': False, 'cancel': False,
+               'items': [{'src': p, 'status': 'queued', 'done': False} for p in paths]}
+        _CONVERT_JOBS[jid] = job
+        threading.Thread(target=_convert_worker, args=(job,), daemon=True,
+                         name='convert-batch-%s' % jid).start()
+        return jid
+
+
 def read_text(path):
     """按编码优先级读取文本文件（UTF-8 / GB18030 / Big5 / Latin-1）。"""
     with open(path, 'rb') as f:
@@ -403,6 +478,12 @@ class Handler(BaseHTTPRequestHandler):
             RM.load_all()  # 幂等：任意前端轮询即触发后台加载（渲染完成后的首次轮询才会发生）
             st, err = RM.status()
             self._send_json(200, {'modules': st, 'errors': err})
+        elif path == '/api/convert/collect':
+            self._api_convert_collect()
+        elif path == '/api/convert/batch':
+            self._api_convert_batch()
+        elif path == '/api/convert/progress':
+            self._api_convert_progress(qs.get('job', [''])[0])
         elif path == '/api/convert':
             p = unquote(qs.get('p', [''])[0])
             self._api_convert(p)
@@ -419,6 +500,8 @@ class Handler(BaseHTTPRequestHandler):
             self._do_upload(qs.get('ext', [''])[0])
         elif path == '/api/ai/config':
             self._api_ai_config()
+        elif path == '/api/ai/models':
+            self._api_ai_models()
         elif path == '/api/ai/chat':
             self._api_ai_chat()
         elif path == '/api/image/save':
@@ -518,6 +601,24 @@ class Handler(BaseHTTPRequestHandler):
             logging.exception('ai config failed')
             self._send_json(500, {'error': 'AI 配置失败：%s' % e})
 
+    def _api_ai_models(self):
+        """通过 API Key 拉取模型列表（GET /api/ai/models?provider&base_url&key&mode）。"""
+        if not RM.is_ready('ai'):
+            RM.load_all()
+            self._send_json(409, {'error': 'AI 模块加载中，请稍候再试'})
+            return
+        try:
+            u = urlparse(self.path)
+            q = parse_qs(u.query)
+            mod = RM.get('ai')
+            ids = mod.list_models(q.get('base_url', [''])[0] or None,
+                                  q.get('key', [''])[0] or '',
+                                  q.get('mode', ['auto'])[0])
+            self._send_json(200, {'models': ids})
+        except Exception as e:
+            logging.exception('ai models failed')
+            self._send_json(500, {'error': str(e)})
+
     def _api_ai_chat(self):
         """AI 对话：SSE 流式返回，兼容 OpenAI / Anthropic 双协议。"""
         if not RM.is_ready('ai'):
@@ -543,8 +644,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._sse({'d': gen})
                 self._sse({'done': True})
                 return
-            for delta in gen:
-                self._sse({'d': delta})
+            for item in gen:
+                if isinstance(item, dict):
+                    self._sse(item)
+                else:
+                    self._sse({'d': item})
             self._sse({'done': True})
         except Exception as e:
             logging.exception('ai chat failed')
@@ -697,6 +801,29 @@ class Handler(BaseHTTPRequestHandler):
                 break
         self._send_json(200, {'dir': p, 'files': files[:500]})
 
+    def _api_convert_collect(self):
+        """收集目录下可转换文件（递归 ≤4 层，≤200 个，不含 .md）。"""
+        u = urlparse(self.path)
+        q = parse_qs(u.query)
+        p = q.get('dir', [''])[0]
+        if not os.path.isdir(p):
+            self._send_json(200, {'dir': p, 'files': []})
+            return
+        files = []
+        for root, dirs, names in os.walk(p):
+            dirs[:] = [x for x in dirs if not x.startswith(('.', '_'))]
+            depth = root[len(p):].count(os.sep)
+            if depth >= 4:
+                dirs[:] = []
+                continue
+            for n in sorted(names):
+                ext = os.path.splitext(n)[1].lower()
+                if ext in CONVERT_EXTS:
+                    files.append(os.path.join(root, n))
+            if len(files) >= 200:
+                break
+        self._send_json(200, {'dir': p, 'files': files[:200]})
+
     def _api_convert(self, p):
         if not os.path.isfile(p):
             self._send_json(404, {'error': '文件不存在'})
@@ -707,19 +834,74 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             mod = RM.get('convert')
-            text = mod.convert(p) or ''
+            text, engine, err = mod.convert_verbose(p)
+            if err and not text:
+                self._send_json(500, {'error': '转换失败：%s' % err})
+                return
             if not text.strip():
                 self._send_json(200, {'content': '', 'name': os.path.basename(p),
                                       'dir': os.path.dirname(p), 'source': 'convert',
+                                      'engine': engine,
                                       'note': '未提取到文字，可尝试“扫描转 MD”（OCR）'})
                 return
-            fr = readmd_fix.fix_markdown(text)
-            self._send_json(200, {'content': fr.text, 'fixes': fr.fixes,
+            import readmd_modules.mdcheck as MDC
+            fixed, warns = MDC.check(text, os.path.dirname(os.path.abspath(p)))
+            fixes = [w['msg'] for w in warns if w.get('level') == 'auto']
+            out = _md_output_path(p)
+            overwrite = parse_qs(urlparse(self.path).query).get('overwrite', ['0'])[0] == '1'
+            saved, skipped = False, False
+            if os.path.exists(out) and not overwrite:
+                skipped = True
+            else:
+                try:
+                    _write_md(out, fixed)
+                    saved = True
+                except Exception as e:  # noqa: BLE001
+                    logging.exception('convert autosave failed')
+            self._send_json(200, {'content': fixed, 'fixes': fixes,
                                   'name': os.path.basename(p),
-                                  'dir': os.path.dirname(p), 'source': 'convert', 'path': p})
+                                  'dir': os.path.dirname(p), 'source': 'convert', 'path': p,
+                                  'engine': engine, 'out': out, 'saved': saved,
+                                  'skipped': skipped, 'warns': warns})
         except Exception as e:
             logging.exception('convert failed: %s', p)
             self._send_json(500, {'error': '转换失败：%s' % e})
+
+    def _api_convert_batch(self):
+        n = int(self.headers.get('Content-Length', 0) or 0)
+        try:
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+        except Exception:
+            self._send_json(400, {'error': '请求格式错误'})
+            return
+        paths = [p for p in (body.get('paths') or [])
+                 if isinstance(p, str) and os.path.isfile(p)]
+        if not paths:
+            self._send_json(400, {'error': '没有可转换的文件'})
+            return
+        if not RM.is_ready('convert'):
+            RM.load_all()
+            self._send_json(409, {'error': '转换模块加载中，请稍候再试'})
+            return
+        try:
+            jid = _start_convert_job(paths, bool(body.get('overwrite')))
+            self._send_json(200, {'job': jid, 'total': len(paths)})
+        except Exception as e:
+            logging.exception('convert batch start failed')
+            self._send_json(500, {'error': '批量转换启动失败：%s' % e})
+
+    def _api_convert_progress(self, jid):
+        job = _CONVERT_JOBS.get(jid or '')
+        if not job:
+            self._send_json(404, {'error': '任务不存在'})
+            return
+        self._send_json(200, {
+            'job': jid, 'running': job.get('running', False),
+            'finished': job.get('finished', False),
+            'done': sum(1 for it in job['items'] if it.get('done')),
+            'total': len(job['items']),
+            'items': job['items'],
+        })
 
     def _api_ocr(self, p):
         if not os.path.isfile(p):
@@ -985,6 +1167,31 @@ class Api(object):
             return files[0] if files else None
         except Exception:
             return None
+
+    def choose_many_files(self):
+        """批量转换：多选任意格式文件。"""
+        import webview
+        if self._window is None:
+            return []
+        try:
+            files = self._window.create_file_dialog(
+                webview.OPEN_DIALOG, allow_multiple=True,
+                file_types=(
+                    '所有文件 (*.*)',
+                    '文档 (*.md;*.markdown;*.docx;*.doc;*.pptx;*.xlsx;*.pdf;*.html;*.htm;*.txt;*.csv;*.json)',
+                    '图片 (*.png;*.jpg;*.jpeg;*.bmp;*.webp;*.tif;*.tiff)',
+                ))
+            return list(files or [])
+        except Exception:
+            return []
+
+    def open_dir(self, path):
+        """在资源管理器中打开目录。"""
+        try:
+            subprocess.Popen(['explorer', os.path.normpath(path)])
+            return True
+        except Exception:
+            return False
 
     def start_modules(self):
         """渲染完成后由前端触发：后台加载转换 / OCR / 网页模块。"""
@@ -1358,6 +1565,47 @@ def run_selftest():
         safe_print('export OK')
     except Exception as e:
         safe_print('export selftest failed:', e)
+        ok = False
+    try:
+        import tempfile as _tf
+        import time as _tm
+        import urllib.request as _uq
+        RM.load_forced('convert')
+        _td = _tf.mkdtemp()
+        from docx import Document as _Doc
+        _dp = os.path.join(_td, 'smoke.docx')
+        _d = _Doc()
+        _d.add_heading('Selftest', level=1)
+        _d.add_paragraph('hello world')
+        _d.save(_dp)
+        from readmd_modules import convert as _CV
+        txt, eng, err = _CV.convert_verbose(_dp)
+        assert eng == 'docx' and err is None and '# Selftest' in txt, (eng, err)
+        srv3 = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        srv3.daemon_threads = True
+        threading.Thread(target=srv3.serve_forever, daemon=True).start()
+        p3 = srv3.server_port
+        req = _uq.Request('http://127.0.0.1:%d/api/convert/batch' % p3,
+                          data=json.dumps({'paths': [_dp], 'overwrite': True}).encode('utf-8'),
+                          method='POST', headers={'Content-Type': 'application/json'})
+        with _uq.urlopen(req, timeout=30) as r:
+            bd = json.loads(r.read().decode('utf-8'))
+        assert bd.get('job'), bd
+        jid = bd['job']
+        pr = {}
+        for _ in range(60):
+            with _uq.urlopen('http://127.0.0.1:%d/api/convert/progress?job=%s' % (p3, jid), timeout=5) as r:
+                pr = json.loads(r.read().decode('utf-8'))
+            if pr.get('finished'):
+                break
+            _tm.sleep(0.25)
+        assert pr.get('finished') and pr['items'][0].get('status') == 'ok', pr
+        assert os.path.isfile(os.path.join(_td, 'smoke.md'))
+        srv3.shutdown()
+        srv3.server_close()
+        safe_print('convert OK')
+    except Exception as e:
+        safe_print('convert selftest failed:', e)
         ok = False
     safe_print('selftest %s' % ('PASSED' if ok else 'FAILED'))
     return 0 if ok else 1

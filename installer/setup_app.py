@@ -38,7 +38,7 @@ except Exception:
 APP_NAME = 'ReadMD'
 APP_EXE = 'ReadMD.exe'
 UNINST_EXE = 'ReadMDUninstall.exe'
-APP_VERSION = '2.1.0'
+APP_VERSION = '2.1.1'
 PUBLISHER = 'Natsummerance'
 PROG_ID = 'ReadMD.markdown'
 EXTENSIONS = ['.md', '.markdown', '.mdown', '.mkd']

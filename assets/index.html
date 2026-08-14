@@ -87,6 +87,14 @@
     <button class="md-tool-btn" data-md="table" title="表格：| 列1 | 列2 |">&#9700;</button>
     <button class="md-tool-btn" data-md="hr" title="分隔线：---">&#8213;</button>
   </div>
+  <div class="pv-ctl" role="group" aria-label="预览布局">
+    <button class="pv-btn active" data-pv="none" title="无预览（直接编辑）" aria-label="无预览">无</button>
+    <button class="pv-btn" data-pv="left" title="左侧实时预览" aria-label="左侧预览">左</button>
+    <button class="pv-btn" data-pv="right" title="右侧实时预览" aria-label="右侧预览">右</button>
+    <button class="pv-btn" data-pv="bottom" title="下方实时预览" aria-label="下方预览">下</button>
+    <button class="pv-btn" data-pv="top" title="上方实时预览" aria-label="上方预览">上</button>
+    <label class="ai-sel pv-sync"><input id="pv-sync" type="checkbox" title="编辑器与预览滚动联动"> 滚动同步</label>
+  </div>
   <div class="edit-actions">
     <span class="edit-tip">Ctrl+S 保存 · Esc 取消 · 输入 Markdown 时自动补全</span>
     <button id="edit-save" class="tb-btn accent">&#128190; 保存 (Ctrl+S)</button>
@@ -149,6 +157,7 @@
     </main>
     <textarea id="edit-area" class="hidden" spellcheck="false"></textarea>
     <div id="edit-wrap" class="hidden"><div id="edit-cm"></div></div>
+    <div id="preview-wrap" class="hidden"><div id="preview-pane" class="markdown-body"></div></div>
   </div>
 </div>
 
@@ -159,14 +168,55 @@
     <button id="ai-close" class="tb-btn icon" title="关闭">&#10005;</button>
   </div>
   <div class="ai-body">
-    <div class="ai-row">
-      <select id="ai-provider" title="提供商"></select>
-      <select id="ai-model" title="模型"></select>
-    </div>
-    <div class="ai-row">
-      <input id="ai-key" type="password" placeholder="API Key（留空则读取环境变量）" autocomplete="off">
-      <button id="ai-save-key" class="tb-btn" title="保存 Key 与当前选择">存</button>
-    </div>
+    <details class="ai-conn" open>
+      <summary class="ai-conn-summary">连接设置<span class="ai-conn-hint">自填 Base URL + API Key，可选预设</span></summary>
+      <div class="conn-grid">
+        <div class="conn-field">
+          <label for="ai-provider">提供商</label>
+          <select id="ai-provider" title="选择提供商（预设或自定义）"></select>
+        </div>
+        <div class="conn-field">
+          <label for="ai-mode">响应方式</label>
+          <select id="ai-mode" title="接口协议 / 端点">
+            <option value="auto">自动（按提供商）</option>
+            <option value="chat">OpenAI chat/completions</option>
+            <option value="completion">OpenAI completions</option>
+            <option value="responses">OpenAI responses</option>
+            <option value="messages">Anthropic messages</option>
+          </select>
+        </div>
+        <div class="conn-field">
+          <label for="ai-base-url">Base URL</label>
+          <div class="conn-inline">
+            <input id="ai-base-url" type="text" placeholder="https://api.example.com/v1" autocomplete="off" spellcheck="false">
+            <button id="ai-url-reset" class="tb-btn icon" title="恢复预设地址" aria-label="恢复预设地址">&#8635;</button>
+          </div>
+        </div>
+        <div class="conn-field">
+          <label for="ai-key">API Key</label>
+          <div class="conn-inline">
+            <input id="ai-key" type="password" placeholder="必填（本地 Ollama 可留空）" autocomplete="off">
+            <button id="ai-key-toggle" class="tb-btn icon" title="显示 / 隐藏" aria-label="显示或隐藏 API Key">&#128065;</button>
+          </div>
+        </div>
+        <div class="conn-field">
+          <label for="ai-model">模型</label>
+          <div class="conn-inline">
+            <input id="ai-model" list="ai-model-list" placeholder="选择或输入模型名" autocomplete="off" spellcheck="false">
+            <datalist id="ai-model-list"></datalist>
+            <button id="ai-models-btn" class="tb-btn" title="通过 API Key 获取可用模型列表">获取模型</button>
+          </div>
+        </div>
+        <div class="conn-field conn-stream">
+          <label class="ai-sel"><input id="ai-stream" type="checkbox" checked> 流式输出</label>
+        </div>
+        <div class="conn-actions">
+          <button id="ai-save-key" class="tb-btn accent">保存设置</button>
+          <span id="ai-conn-status" class="conn-status"></span>
+        </div>
+      </div>
+    </details>
+    <div class="ai-usage-bar">Token 用量：<span id="ai-usage"></span></div>
     <div class="ai-row">
       <select id="ai-template" title="Prompt 模板：选择后应用到本次对话"></select>
       <button id="ai-tpl-btn" class="tb-btn" title="模板管理（新建 / 编辑 / 删除）">模板</button>
@@ -188,7 +238,6 @@
     </div>
     <div class="ai-row ai-row2">
       <label class="ai-sel"><input id="ai-selection" type="checkbox"> 仅处理选中文字</label>
-      <span id="ai-usage"></span>
       <button id="ai-clear-ctx" class="tb-btn" title="清空对话上下文，开始新一轮对话">清空</button>
     </div>
     <div class="ai-output-wrap">
@@ -361,6 +410,30 @@
       <button id="export-run" class="tb-btn accent">导出</button>
     </div>
     <p class="fix-note">公式在 PDF / DOCX 中渲染为图片（本地离线）；HTML 为单文件（内联 marked + MathJax），图片保持相对路径，请连同原目录一起保存。样式参数会自动记忆。</p>
+  </div>
+</div>
+
+<!-- 批量转换弹窗 -->
+<div id="convert-modal" class="hidden">
+  <div id="convert-box">
+    <div class="export-head">
+      <h3>转 Markdown</h3>
+      <button id="convert-close" class="tb-btn icon" aria-label="关闭">&#10005;</button>
+    </div>
+    <div class="convert-body">
+      <div class="convert-actions">
+        <button id="convert-files" class="tb-btn accent">选择文件（可多选）</button>
+        <button id="convert-folder" class="tb-btn">选择文件夹</button>
+        <label class="ai-sel"><input id="convert-overwrite" type="checkbox"> 覆盖已存在的 .md</label>
+      </div>
+      <div id="convert-list" class="convert-list"></div>
+      <div class="convert-foot">
+        <span id="convert-status" class="convert-status"></span>
+        <span class="export-spacer"></span>
+        <button id="convert-open-dir" class="tb-btn hidden">打开结果目录</button>
+      </div>
+    </div>
+    <p class="fix-note">转换结果自动保存为源文件同目录同名 .md（如 report.docx → report.md）。docx 公式、PDF 表格走专用解析，其余格式自动回退通用转换；输出经过严格校验（表格 / 代码围栏 / 公式 / 图片引用）。</p>
   </div>
 </div>
 

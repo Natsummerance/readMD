@@ -155,6 +155,7 @@ def get_config():
         d = dict(p)
         d["has_key"] = bool(resolve_key(d))
         d["key_source"] = key_source(d)
+        d["mode"] = p.get("mode") or ("messages" if p.get("format") == "anthropic" else "auto")
         return d
 
     presets = [annotate(dict(p)) for p in PRESETS]
@@ -270,11 +271,14 @@ def _anthropic_messages(messages):
 
 def chat(payload):
     """调用大模型。payload: {provider?, base_url?, format?, api_key?, model,
-    messages, temperature?, stream?}。stream=True 时返回文本增量生成器。"""
+    messages, temperature?, stream?, mode?}。统一返回生成器：产出 str 增量，
+    末尾可产出 {'usage': {...}} 用量事件。mode: auto|chat|completion|responses|messages。"""
     name = payload.get("provider") or ""
     prov = find_provider(name) if name else {}
-    if not prov:
+    if not prov and name:
         raise ChatError("未知提供商：%s" % name)
+    if not prov:
+        prov = {}
     base_url = (payload.get("base_url") or prov.get("base_url") or "").rstrip("/")
     fmt = payload.get("format") or prov.get("format") or "openai"
     api_key = payload.get("api_key") or resolve_key(prov)
@@ -284,28 +288,58 @@ def chat(payload):
     messages = payload.get("messages") or []
     temperature = payload.get("temperature", 0.4)
     stream = bool(payload.get("stream", True))
+    mode = (payload.get("mode") or prov.get("mode") or "").strip().lower()
+    if not mode:
+        mode = "messages" if fmt == "anthropic" else "auto"
 
-    if fmt == "anthropic":
+    if mode in ("messages", "anthropic"):
         return _chat_anthropic(base_url, api_key, model, messages, temperature, stream)
+    if mode == "completion":
+        return _chat_openai_completion(base_url, api_key, model, messages, temperature, stream)
+    if mode == "responses":
+        return _chat_openai_responses(base_url, api_key, model, messages, temperature, stream)
     return _chat_openai(base_url, api_key, model, messages, temperature, stream)
+def _openai_usage(d):
+    u = d.get("usage") or {}
+    if not u:
+        return None
+    out = {}
+    if u.get("prompt_tokens") is not None:
+        out["prompt_tokens"] = int(u["prompt_tokens"])
+    if u.get("completion_tokens") is not None:
+        out["completion_tokens"] = int(u["completion_tokens"])
+    if u.get("total_tokens") is not None:
+        out["total_tokens"] = int(u["total_tokens"])
+    return out or None
 
 
 def _chat_openai(base_url, api_key, model, messages, temperature, stream):
     url = base_url + "/chat/completions"
     body = {"model": model, "messages": _openai_messages(messages), "stream": stream, "temperature": temperature}
+    if stream:
+        body["stream_options"] = {"include_usage": True}
     headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
 
     if not stream:
         text = _http_json(url, headers, body)
         try:
             d = json.loads(text)
-            return d["choices"][0]["message"]["content"] or ""
+            usage = _openai_usage(d)
+            content = d["choices"][0]["message"]["content"] or ""
+
+            def g():
+                if content:
+                    yield content
+                if usage:
+                    yield {"usage": usage}
+            return g()
         except Exception as e:
             raise ChatError("响应解析失败：%s" % text[:300]) from e
 
     resp = _http_stream(url, headers, body)
 
     def gen():
+        usage = None
         try:
             for raw in resp:
                 if not raw:
@@ -320,6 +354,8 @@ def _chat_openai(base_url, api_key, model, messages, temperature, stream):
                     d = json.loads(data)
                 except Exception:
                     continue
+                if d.get("usage"):
+                    usage = _openai_usage(d)
                 choices = d.get("choices") or []
                 if not choices:
                     continue
@@ -335,7 +371,151 @@ def _chat_openai(base_url, api_key, model, messages, temperature, stream):
                 resp.close()
             except Exception:
                 pass
+        if usage:
+            yield {"usage": usage}
     return gen()
+
+
+def _chat_openai_completion(base_url, api_key, model, messages, temperature, stream):
+    url = base_url + "/completions"
+    msgs = _openai_messages(messages)
+    prompt_text = "\n\n".join(m.get("content", "") for m in msgs if m.get("content"))
+    body = {"model": model, "prompt": prompt_text, "max_tokens": 4096,
+            "temperature": temperature, "stream": stream}
+    headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
+
+    if not stream:
+        text = _http_json(url, headers, body)
+        try:
+            d = json.loads(text)
+            usage = _openai_usage(d)
+            content = d["choices"][0].get("text") or ""
+
+            def g():
+                if content:
+                    yield content
+                if usage:
+                    yield {"usage": usage}
+            return g()
+        except Exception as e:
+            raise ChatError("响应解析失败：%s" % text[:300]) from e
+
+    resp = _http_stream(url, headers, body)
+
+    def gen():
+        usage = None
+        try:
+            for raw in resp:
+                if not raw:
+                    continue
+                line = raw.decode("utf-8", "replace").strip()
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    d = json.loads(data)
+                except Exception:
+                    continue
+                if d.get("usage"):
+                    usage = _openai_usage(d)
+                choices = d.get("choices") or []
+                if not choices:
+                    continue
+                delta = choices[0].get("delta") or {}
+                if delta.get("text"):
+                    yield delta["text"]
+                if choices[0].get("finish_reason"):
+                    break
+        except urllib.error.URLError as e:
+            raise ChatError("连接中断：%s" % e.reason) from e
+        finally:
+            try:
+                resp.close()
+            except Exception:
+                pass
+        if usage:
+            yield {"usage": usage}
+    return gen()
+
+
+def _chat_openai_responses(base_url, api_key, model, messages, temperature, stream):
+    url = base_url + "/responses"
+    msgs = []
+    for m in _openai_messages(messages):
+        if m["role"] == "system":
+            msgs.insert(0, {"role": "system", "content": m["content"]})
+        else:
+            msgs.append(m)
+    body = {"model": model, "input": msgs, "stream": stream, "temperature": temperature}
+    headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
+
+    if not stream:
+        text = _http_json(url, headers, body)
+        try:
+            d = json.loads(text)
+            usage = _openai_usage(d)
+            content = d.get("output_text") or ""
+
+            def g():
+                if content:
+                    yield content
+                if usage:
+                    yield {"usage": usage}
+            return g()
+        except Exception as e:
+            raise ChatError("响应解析失败：%s" % text[:300]) from e
+
+    resp = _http_stream(url, headers, body)
+
+    def gen():
+        usage = None
+        try:
+            for raw in resp:
+                if not raw:
+                    continue
+                line = raw.decode("utf-8", "replace").strip()
+                if not line.startswith("data:"):
+                    continue
+                data = line[5:].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    d = json.loads(data)
+                except Exception:
+                    continue
+                if d.get("type") == "response.output_text.delta":
+                    dt = d.get("delta") or {}
+                    if dt.get("text"):
+                        yield dt["text"]
+                elif d.get("type") == "response.completed":
+                    r2 = d.get("response") or {}
+                    if r2.get("usage"):
+                        usage = _openai_usage(r2)
+                elif d.get("type") == "error":
+                    raise ChatError("提供商错误：%s" % json.dumps(d, ensure_ascii=False)[:300])
+        except urllib.error.URLError as e:
+            raise ChatError("连接中断：%s" % e.reason) from e
+        finally:
+            try:
+                resp.close()
+            except Exception:
+                pass
+        if usage:
+            yield {"usage": usage}
+    return gen()
+def _anthropic_usage(u):
+    out = {}
+    if u.get("input_tokens") is not None:
+        out["prompt_tokens"] = int(u["input_tokens"])
+    if u.get("output_tokens") is not None:
+        out["completion_tokens"] = int(u["output_tokens"])
+    p = out.get("prompt_tokens")
+    c = out.get("completion_tokens")
+    if p is not None and c is not None:
+        out["total_tokens"] = p + c
+    return out or None
 
 
 def _chat_anthropic(base_url, api_key, model, messages, temperature, stream):
@@ -350,13 +530,23 @@ def _chat_anthropic(base_url, api_key, model, messages, temperature, stream):
         text = _http_json(url, headers, body)
         try:
             d = json.loads(text)
-            return "".join(b.get("text", "") for b in d.get("content", []) if b.get("type") == "text")
+            content = "".join(b.get("text", "") for b in d.get("content", []) if b.get("type") == "text")
+            usage = _anthropic_usage(d.get("usage") or {})
+
+            def g():
+                if content:
+                    yield content
+                if usage:
+                    yield {"usage": usage}
+            return g()
         except Exception as e:
             raise ChatError("响应解析失败：%s" % text[:300]) from e
 
     resp = _http_stream(url, headers, body)
 
     def gen():
+        input_tokens = None
+        output_tokens = 0
         try:
             for raw in resp:
                 if not raw:
@@ -369,14 +559,22 @@ def _chat_anthropic(base_url, api_key, model, messages, temperature, stream):
                     d = json.loads(data)
                 except Exception:
                     continue
-                if d.get("type") == "content_block_delta":
+                if d.get("type") == "message_start":
+                    u = (d.get("message") or {}).get("usage") or {}
+                    if u.get("input_tokens") is not None:
+                        input_tokens = int(u["input_tokens"])
+                elif d.get("type") == "content_block_delta":
                     delta = d.get("delta") or {}
                     if delta.get("type") == "text_delta" and delta.get("text"):
                         yield delta["text"]
-                elif d.get("type") in ("message_stop", "error"):
-                    if d.get("type") == "error":
-                        raise ChatError("提供商错误：%s" % json.dumps(d, ensure_ascii=False)[:300])
+                elif d.get("type") == "message_delta":
+                    u = d.get("usage") or {}
+                    if u.get("output_tokens") is not None:
+                        output_tokens = int(u["output_tokens"])
+                elif d.get("type") == "message_stop":
                     break
+                elif d.get("type") == "error":
+                    raise ChatError("提供商错误：%s" % json.dumps(d, ensure_ascii=False)[:300])
         except urllib.error.URLError as e:
             raise ChatError("连接中断：%s" % e.reason) from e
         finally:
@@ -384,4 +582,47 @@ def _chat_anthropic(base_url, api_key, model, messages, temperature, stream):
                 resp.close()
             except Exception:
                 pass
+        usage = _anthropic_usage({"input_tokens": input_tokens, "output_tokens": output_tokens})
+        if usage:
+            yield {"usage": usage}
     return gen()
+
+def _http_get_json(url, headers, timeout=30):
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace")[:500]
+        raise ChatError("HTTP %d：%s" % (e.code, detail)) from e
+    except urllib.error.URLError as e:
+        raise ChatError("网络错误：%s" % e.reason) from e
+
+
+def list_models(base_url, api_key, mode="auto"):
+    """通过 API Key 获取可用模型列表。OpenAI 兼容 GET {base}/models；Anthropic GET {base}/v1/models。"""
+    base_url = (base_url or "").rstrip("/")
+    if not base_url:
+        raise ChatError("请先填写 Base URL")
+    if not api_key:
+        raise ChatError("请先填写 API Key 再获取模型列表")
+    mode = (mode or "").strip().lower()
+    if mode in ("messages", "anthropic"):
+        url = base_url + "/v1/models"
+        headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01"}
+    else:
+        url = base_url + "/models"
+        headers = {"Authorization": "Bearer " + api_key}
+    data = _http_get_json(url, headers)
+    try:
+        d = json.loads(data)
+    except Exception as e:
+        raise ChatError("模型列表解析失败：%s" % data[:300]) from e
+    items = d.get("data") or []
+    ids = []
+    for it in items:
+        if isinstance(it, dict) and it.get("id"):
+            ids.append(str(it["id"]))
+    if not ids:
+        raise ChatError("接口未返回模型列表（data 为空）")
+    return ids

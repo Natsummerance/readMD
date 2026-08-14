@@ -11,7 +11,7 @@
 - 本地：`T:\Programming\Project\codex\creator\readmd`（Windows，PowerShell，.venv 已建好）
 - GitHub：`https://github.com/Natsummerance/readMD`（public，main 分支）
 - 账号：Natsummerance / 2734763029@qq.com；发布 token 在系统环境变量 `GITHUB_TOKEN`
-- 最新 Release：v2.0.1（ReadMDSetup-v2.0.1.exe 安装包 + ReadMD-portable-v2.0.1.exe 便携版）
+- 最新 Release：v2.1.1（ReadMDSetup-v2.1.1.exe 安装包 + ReadMD-portable-v2.1.1.exe 便携版）
 
 ## 功能清单（按开发顺序）
 
@@ -27,6 +27,9 @@
 10. 常驻托盘（v2.0）：pystray run_detached，「显示 / 打开文件 / 退出」；关闭按钮 → 隐藏窗口（记忆位置）；退出时清理 instance.json
 11. UI 全面改版（v2.0）：44px 工具条 + 内联 SVG、「更多」二级菜单、欢迎页最近文件网格、三主题全套设计 token（DESIGN.md）、阅读排版精修、骨架屏、无障碍焦点环/减少动效
 12. 导出 PDF / DOCX / HTML（v2.1.0）：打印按钮升级为导出面板；内置「简约/经典/商务」预设 + 全量可视化定制（页面/封面目录/正文/各级标题/表格/代码/引用/链接/页脚/元数据/数学 DPI/HTML 主题），自定义预设可保存；公式 PDF/DOCX 本地 matplotlib 渲染成图，HTML 内联 marked+MathJax 单文件；图片按文档目录嵌入（缺失跳过提示）
+13. AI 连接自定义（v2.1.1）：AI 面板顶部新增「连接设置」卡片——提供商预设可选但 API Key 必填（本地 Ollama 除外）、Base URL 可编辑（保存为该提供商自定义覆盖，可一键恢复预设）、响应方式四选（auto/chat completions/completions/responses/Anthropic messages）、流式开关；「获取模型」按钮通过 Key 拉取模型列表填入 datalist（失败回退预设并可手输模型名）；对话实时监控 token 用量（本次 + 会话累计，随会话存入 history）
+14. 编辑实时预览（v2.1.1）：编辑工具栏新增「无/左/右/下/上」五档预览布局（默认无，与旧版一致），300ms 防抖实时渲染（复用 marked + MathJax 管线 + 当前主题），可选「滚动同步」按比例双向联动；转换/OCR/网页虚拟文档解锁编辑，无文件保存走另存为并切换为文件模式
+15. 转换保存 / 批量 / 质量（v2.1.1）：单文件与批量转换一律自动保存到源目录同名 .md（同名默认跳过，可勾选覆盖）；「转 Markdown」弹窗支持多选文件 / 整文件夹（递归 ≤200 个）+ 实时进度列表 + 打开结果目录；docx 专用解析（OMML 公式→LaTeX、标题、表格、等宽字体代码块、样式级列表），pdf 专用解析（PyMuPDF find_tables 还原表格 + 公式启发式），其余走 MarkItDown 并逐文件回退；统一 mdcheck 严格校验（围栏闭合/表格/公式定界符/替换符/图片存在性，安全项自动修复）
 
 ## 关键文件
 
@@ -35,13 +38,15 @@
 | readmd.py | 主程序（本地服务+窗口），含单实例控制/托盘、启动里程碑打点、run_selftest()、install_association()、Prompt/历史会话 API |
 | readmd_fix.py | 自动修正器（纯标准库），fix_markdown() 返回 text + fixes 列表 |
 | readmd_fix_test.py | 修正器 37 项单元测试，python readmd_fix_test.py |
+| readmd_convert_test.py | 转换/校验/AI 协议 21 项单元测试，python readmd_convert_test.py |
+| readmd_modules/mdcheck.py | 转换后严格校验（围栏/表格/公式/替换符/图片）+ 安全自动修复 |
 | readmd_export_test.py | 导出模块 22 项单元测试（parser/styles/formula/三格式 smoke），python readmd_export_test.py |
 | readmd_modules/mdexport/ | v2.1.0 导出包（惰性加载，不进 MODULES 自动加载）：parser.py / styles.py / formula.py / pdf_render.py / docx_render.py / html_render.py |
 | readmd_modules/__init__.py | 懒加载注册表（convert/ocr/web/ai），load_all() 后台加载 |
-| readmd_modules/convert.py | MarkItDown 转换 |
+| readmd_modules/convert.py | 转换：docx/pdf 专用解析（OMML→LaTeX、表格、代码块）+ MarkItDown 兜底 |
 | readmd_modules/ocr.py | WinRT OCR + PyMuPDF |
 | readmd_modules/web.py | trafilatura 网页提取 |
-| readmd_modules/ai.py | AI 提供商注册表 + 双协议请求 |
+| readmd_modules/ai.py | AI 提供商注册表 + 四协议请求（chat/completions/completions/responses/messages）+ 模型列表拉取 + 用量解析 |
 | assets/ | 前端（index.html/style.css/app.js + vendor 全离线：marked/MathJax/qrcode/codemirror.bundle） |
 | DESIGN.md | v2.0 设计规范：色盘/字体/间距/圆角/阴影 token，三主题 |
 | installer/setup_app.py | 安装器主程序（含静默模式、onedir 整目录拷贝安装）；setup.html 动画界面；build_setup.bat 打包 |

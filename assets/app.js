@@ -60,7 +60,9 @@ const state = {
   ai: {
     config: null, providers: [], busy: false, aborter: null, raw: '',
     templates: [], templateId: '', messages: [], sessionId: null, sessions: [],
+    usage: null, sessUsage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
   },
+  pvLayout: 'none', pvSync: false,
   export: {
     fmt: 'pdf', defaults: null, presets: {}, custom: {}, options: null, last: null, ready: false,
   },
@@ -84,7 +86,7 @@ async function loadSettings() {
 async function saveSettings() {
   const s = {
     theme: state.theme, fontSize: state.fontSize, lineWidth: state.lineWidth,
-    autoReload: state.autoReload,
+    autoReload: state.autoReload, pvLayout: state.pvLayout, pvSync: state.pvSync,
   };
   try {
     if (hasPy) await py.save_settings(s);
@@ -471,8 +473,6 @@ async function renderVirtual(source, name, dir, content, fixes) {
   document.title = (name || '转换结果') + ' - ReadMD';
   $('file-title').textContent = (name || '转换结果').slice(0, 80);
   $('btn-reload').disabled = true;
-  $('btn-edit').disabled = true;
-  $('btn-saveas').disabled = false;
   updateStatus();
   setProgress(100);
   afterRender();
@@ -504,10 +504,148 @@ async function convertFile(path) {
     if (r.status === 409) { showToast(d.error || '模块加载中…'); return; }
     if (!r.ok) { showToast(d.error || '转换失败'); return; }
     if (!d.content) { showToast(d.note || '未提取到内容'); return; }
-    renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
+    showConvertWarns(d.warns);
+    if (d.saved && d.out) {
+      showToast('已保存：' + d.out);
+      await loadFile(d.out);
+    } else if (d.skipped) {
+      showToast('已存在同名 .md，跳过保存（可在批量转换中勾选“覆盖已存在”）', 3400);
+      renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
+    } else {
+      renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
+    }
   } catch (e) { showToast('转换失败：' + e.message); }
   finally { busy(false); }
 }
+
+function showConvertWarns(warns) {
+  if (!warns || !warns.length) return;
+  const bad = warns.filter(w => w.level === 'warn' || w.level === 'error');
+  if (bad.length) showToast('转换完成，' + bad.length + ' 条质量警告（' + (bad[0].msg || '见校验报告') + '）', 3600);
+}
+
+/* ---------------- 批量转换（转 MD） ---------------- */
+
+let convertJobTimer = null;
+let convertLastDir = null;
+
+async function openConvertModal() {
+  if (!hasPy) { showToast('浏览器模式请使用“打开文件”转换'); return; }
+  $('convert-modal').classList.remove('hidden');
+  $('convert-list').innerHTML = '';
+  $('convert-status').textContent = '';
+  $('convert-open-dir').classList.add('hidden');
+}
+
+function closeConvertModal() {
+  stopConvertPoll();
+  $('convert-modal').classList.add('hidden');
+}
+
+async function pickConvertFiles() {
+  let files = [];
+  try { files = await py.choose_many_files(); } catch (e) { files = []; }
+  if (!files || !files.length) return;
+  await startBatchConvert(files, $('convert-overwrite').checked);
+}
+
+async function pickConvertFolder() {
+  let dir = null;
+  try { dir = await py.choose_folder(); } catch (e) { dir = null; }
+  if (!dir) return;
+  try {
+    const r = await apiFetch('/api/convert/collect?dir=' + encodeURIComponent(dir));
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || '收集失败');
+    const files = d.files || [];
+    if (!files.length) { showToast('该目录下没有可转换的文件'); return; }
+    convertLastDir = dir;
+    await startBatchConvert(files, $('convert-overwrite').checked);
+  } catch (e) { showToast('收集文件失败：' + e.message); }
+}
+
+async function startBatchConvert(files, overwrite) {
+  if (!(await ensureModule('convert'))) return;
+  const list = $('convert-list');
+  list.innerHTML = '';
+  files.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'convert-item queued';
+    const nm = document.createElement('span');
+    nm.className = 'convert-name';
+    nm.textContent = p.split(/[\\/]/).pop();
+    nm.title = p;
+    const st = document.createElement('span');
+    st.className = 'convert-state';
+    st.textContent = '排队中';
+    row.appendChild(nm); row.appendChild(st);
+    list.appendChild(row);
+  });
+  $('convert-status').textContent = '准备中…';
+  try {
+    const r = await apiFetch('/api/convert/batch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths: files, overwrite: !!overwrite }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || '启动失败');
+    if (files.length) {
+      const parts = files[0].split(/[\\/]/);
+      parts.pop();
+      convertLastDir = parts.join('\\');
+    }
+    pollConvertJob(d.job);
+  } catch (e) {
+    $('convert-status').textContent = '启动失败：' + e.message;
+  }
+}
+
+function pollConvertJob(jid) {
+  stopConvertPoll();
+  convertJobTimer = setInterval(async () => {
+    try {
+      const r = await apiFetch('/api/convert/progress?job=' + encodeURIComponent(jid));
+      if (!r.ok) { stopConvertPoll(); return; }
+      const d = await r.json();
+      renderConvertProgress(d);
+      if (d.finished) stopConvertPoll();
+    } catch (e) { stopConvertPoll(); }
+  }, 600);
+}
+
+function stopConvertPoll() {
+  if (convertJobTimer) { clearInterval(convertJobTimer); convertJobTimer = null; }
+}
+
+function renderConvertProgress(d) {
+  const rows = $('convert-list').querySelectorAll('.convert-item');
+  const statusMap = { ok: '\u2713 成功', skipped: '跳过（已存在）', error: '失败', canceled: '已取消', queued: '排队中' };
+  let ok = 0, skipped = 0, err = 0, warnCount = 0;
+  (d.items || []).forEach((it, i) => {
+    const row = rows[i];
+    if (row) {
+      row.className = 'convert-item ' + (it.status || 'queued');
+      const st = row.querySelector('.convert-state');
+      if (st) {
+        st.textContent = statusMap[it.status] || it.status;
+        if (it.status === 'error' && it.error) st.title = it.error;
+      }
+    }
+    if (it.status === 'ok') { ok++; warnCount += (it.warns || []).filter(w => w.level !== 'auto').length; }
+    else if (it.status === 'skipped') skipped++;
+    else if (it.status === 'error') err++;
+  });
+  const status = $('convert-status');
+  if (!status) return;
+  if (d.running) {
+    status.textContent = '转换中 ' + d.done + '/' + d.total + '…';
+  } else {
+    status.textContent = '完成：成功 ' + ok + ' · 跳过 ' + skipped + ' · 失败 ' + err + (warnCount ? ' · 警告 ' + warnCount : '');
+    $('convert-open-dir').classList.remove('hidden');
+  }
+}
+
+
 
 async function ocrFile(path) {
   if (!(await ensureModule('ocr'))) return;
@@ -590,8 +728,11 @@ const AI_SYSTEM = {
 function toggleAiPanel() {
   const p = $('ai-panel');
   p.classList.toggle('hidden');
-  if (!p.classList.contains('hidden') && !state.ai.config) loadAiConfig();
-  else if (!p.classList.contains('hidden')) { loadAiPrompts(); loadAiSessions(); }
+  if (!p.classList.contains('hidden')) {
+    updateAiUsage();
+    if (!state.ai.config) loadAiConfig();
+    else { loadAiPrompts(); loadAiSessions(); }
+  }
 }
 /* ---------------- Prompt 模板 ---------------- */
 
@@ -760,12 +901,15 @@ async function onAiSessionChange() {
     if (s.provider && [...$('ai-provider').options].some(o => o.value === s.provider)) {
       $('ai-provider').value = s.provider;
       onAiProviderChange();
-      if (s.model && [...$('ai-model').options].some(o => o.value === s.model)) $('ai-model').value = s.model;
+      if (s.model) $('ai-model').value = s.model;
       syncAiKey();
     }
     state.ai.messages = s.messages || [];
     state.ai.sessionId = s.id;
     state.ai.raw = '';
+    state.ai.usage = null;
+    state.ai.sessUsage = s.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+    updateAiUsage();
     renderAiHistory();
     showToast('已加载会话');
   } catch (e) { showToast('加载会话失败'); }
@@ -793,7 +937,7 @@ function renderAiHistory() {
       ab.className = 'ai-msg ai';
       const tag = document.createElement('div');
       tag.className = 'ai-msg-tag';
-      tag.textContent = 'AI · 回答 ' + aSeq;
+      tag.textContent = 'AI · 回答 ' + aSeq + (m.model ? ' · ' + m.model : '') + fmtAiUsage(m.usage);
       const body = document.createElement('div');
       body.className = 'ai-msg-body';
       const prot = protectMath(m.content);
@@ -819,6 +963,7 @@ async function saveCurrentSession() {
     model: $('ai-model').value,
     doc: state.mode === 'file' ? (state.file || '') : (state.sourceName || ''),
     messages: msgs,
+    usage: state.ai.sessUsage,
   };
   try {
     const r = await apiFetch('/api/ai/history', {
@@ -855,6 +1000,9 @@ function clearAiContext() {
   state.ai.messages = [];
   state.ai.sessionId = null;
   state.ai.raw = '';
+  state.ai.usage = null;
+  state.ai.sessUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+  updateAiUsage();
   clearAiOutput();
   $('ai-session').value = '';
   showToast('已清空上下文，开始新一轮');
@@ -870,8 +1018,10 @@ function clearAiOutput() {
 }
 
 async function loadAiConfig() {
+  for (let attempt = 0; attempt < 25; attempt++) {
   try {
     const r = await apiFetch('/api/ai/config');
+    if (r.status === 409) { await new Promise(r2 => setTimeout(r2, 800)); continue; }
     if (!r.ok) return null;
     state.ai.config = await r.json();
     const cfg = state.ai.config;
@@ -881,6 +1031,8 @@ async function loadAiConfig() {
     loadAiSessions();
     return cfg;
   } catch (e) { /* ignore */ return null; }
+  }
+  return null;
 }
 
 function fillAiProviders(merged, current) {
@@ -896,10 +1048,7 @@ function fillAiProviders(merged, current) {
   if (curName) sel.value = curName;
   onAiProviderChange();
   const curModel = (current && current.model) || '';
-  if (curModel && $('ai-model').value !== curModel && [...($('ai-model').options || [])].some(o => o.value === curModel)) {
-    $('ai-model').value = curModel;
-  }
-  syncAiKey();
+  if (curModel) $('ai-model').value = curModel;
 }
 
 function currentAiProvider() {
@@ -907,34 +1056,39 @@ function currentAiProvider() {
   return (state.ai.providers || []).find(p => p.name === name) || null;
 }
 
+function aiPresetBase(p) {
+  return (p && p.base_url) || '';
+}
+
 function onAiProviderChange() {
   const p = currentAiProvider();
-  const m = $('ai-model');
-  m.innerHTML = '';
+  const dl = $('ai-model-list');
+  if (dl) dl.innerHTML = '';
+  $('ai-model').value = '';
   if (!p) { syncAiKey(); return; }
-  (p.models || ['']).forEach(md => {
-    const o = document.createElement('option');
-    o.value = md;
-    o.textContent = md;
-    m.appendChild(o);
-  });
+  const base = aiPresetBase(p);
+  $('ai-base-url').value = base;
+  const mode = p.mode || (p.format === 'anthropic' ? 'messages' : 'auto');
+  $('ai-mode').value = (mode === 'anthropic') ? 'messages' : mode;
   const curModel = (state.ai.config && state.ai.config.current && state.ai.config.current.model) || '';
-  if (curModel && (p.models || []).includes(curModel)) m.value = curModel;
+  if (curModel) $('ai-model').value = curModel;
   syncAiKey();
 }
 
 function syncAiKey() {
   const p = currentAiProvider();
   const inp = $('ai-key');
-  const usage = $('ai-usage');
-  if (!p) { inp.value = ''; inp.placeholder = ''; usage.textContent = ''; return; }
+  const status = $('ai-conn-status');
+  if (!p) { inp.value = ''; inp.placeholder = ''; if (status) status.textContent = ''; return; }
   inp.value = p.api_key || '';
   inp.placeholder = (p.key_source && p.key_source.indexOf('env:') === 0)
     ? '已从环境变量 ' + p.key_source.slice(4) + ' 读取，可覆盖'
-    : 'API Key（留空则读取环境变量）';
-  usage.textContent = p.has_key
-    ? (p.key_source ? 'Key 就绪（' + p.key_source + '）' : 'Key 已配置')
-    : '未配置 Key';
+    : (p.name.indexOf('Ollama') >= 0 ? 'API Key（本地 Ollama 可留空）' : 'API Key（必填）');
+  if (status) {
+    status.textContent = p.has_key
+      ? (p.key_source ? 'Key 就绪（' + p.key_source + '）' : 'Key 已配置')
+      : (p.name.indexOf('Ollama') >= 0 ? '本地模型无需 Key' : '未配置 Key');
+  }
 }
 
 async function saveAiSelection() {
@@ -942,26 +1096,40 @@ async function saveAiSelection() {
   if (!p || !state.ai.config) return;
   const custom = (state.ai.config.custom || []).map(c => Object.assign({}, c));
   const keyVal = $('ai-key').value.trim();
-  if (p.custom) {
-    const t = custom.find(c => c.name === p.name);
-    if (t) { if (keyVal) t.api_key = keyVal; else delete t.api_key; }
-  } else {
-    let over = custom.find(c => c.name === p.name);
-    if (!over) {
-      over = Object.assign({}, p);
-      delete over.has_key; delete over.key_source;
-      over.custom = true; over.api_key = '';
-      custom.push(over);
-    }
-    if (keyVal) over.api_key = keyVal; else delete over.api_key;
+  const baseUrl = $('ai-base-url').value.trim();
+  const mode = $('ai-mode').value || 'auto';
+  let over = custom.find(c => c.name === p.name);
+  if (!over) {
+    over = Object.assign({}, p);
+    delete over.has_key; delete over.key_source;
+    over.custom = true;
+    custom.push(over);
   }
-  const current = { provider: p.name, model: $('ai-model').value };
+  if (baseUrl) over.base_url = baseUrl;
+  else delete over.base_url;
+  over.mode = mode;
+  if (mode === 'messages') over.format = 'anthropic';
+  if (keyVal) over.api_key = keyVal; else delete over.api_key;
+  const current = { provider: p.name, model: $('ai-model').value || '' };
   try {
-    await apiFetch('/api/ai/config', {
+    const r = await apiFetch('/api/ai/config', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ providers: custom, current }),
     });
-  } catch (e) { /* ignore */ }
+    if (r.ok) {
+      state.ai.config.custom = custom;
+      state.ai.config.current = current;
+      state.ai.providers = [...custom, ...(state.ai.config.presets || [])];
+      const status = $('ai-conn-status');
+      if (status) status.textContent = '已保存✓';
+      showToast('连接设置已保存');
+    } else {
+      const d = await r.json().catch(() => ({}));
+      throw new Error(d.error || 'HTTP ' + r.status);
+    }
+  } catch (e) {
+    showToast('保存失败：' + e.message);
+  }
 }
 
 function getAiTargetText() {
@@ -991,15 +1159,86 @@ function updateAiRawButtons() {
   $('ai-saveas').disabled = !has;
 }
 
+async function loadAiModels() {
+  const baseUrl = $('ai-base-url').value.trim();
+  const key = $('ai-key').value.trim();
+  const mode = $('ai-mode').value || 'auto';
+  if (!baseUrl) { showToast('请先填写 Base URL'); return; }
+  const p = currentAiProvider();
+  const local = p && p.name.indexOf('Ollama') >= 0;
+  if (!local && !key) { showToast('请先填写 API Key'); return; }
+  const btn = $('ai-models-btn');
+  const old = btn.textContent;
+  btn.disabled = true; btn.textContent = '获取中…';
+  const status = $('ai-conn-status');
+  try {
+    const q = new URLSearchParams({ base_url: baseUrl, key: key, mode: mode });
+    const r = await apiFetch('/api/ai/models?' + q.toString());
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    const ids = d.models || [];
+    const dl = $('ai-model-list');
+    dl.innerHTML = '';
+    ids.forEach(id => {
+      const o = document.createElement('option');
+      o.value = id;
+      dl.appendChild(o);
+    });
+    if (ids.length) {
+      if (ids.indexOf($('ai-model').value) < 0) $('ai-model').value = ids[0];
+      if (status) status.textContent = '获取到 ' + ids.length + ' 个模型✓';
+      showToast('已获取 ' + ids.length + ' 个模型');
+    } else {
+      if (status) status.textContent = '接口未返回模型，可手动输入';
+      showToast('接口未返回模型，可手动输入模型名');
+    }
+  } catch (e) {
+    if (status) status.textContent = '获取失败';
+    showToast('获取模型失败：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+}
+
+function toggleAiKey() {
+  const inp = $('ai-key');
+  inp.type = (inp.type === 'password') ? 'text' : 'password';
+  $('ai-key-toggle').title = inp.type === 'password' ? '显示 / 隐藏' : '隐藏';
+}
+
+function resetAiUrl() {
+  const p = currentAiProvider();
+  if (!p) return;
+  $('ai-base-url').value = p.base_url || '';
+  const mode = p.mode || (p.format === 'anthropic' ? 'messages' : 'auto');
+  $('ai-mode').value = (mode === 'anthropic') ? 'messages' : mode;
+  showToast('已恢复预设地址');
+}
+
+function updateAiUsage() {
+  const el = $('ai-usage');
+  if (!el) return;
+  const u = state.ai.usage;
+  const s = state.ai.sessUsage;
+  const fmt = n => (n == null ? 0 : n);
+  el.textContent = '本次 ' + fmt(u && u.prompt_tokens) + '/' + fmt(u && u.completion_tokens) + '/' + fmt(u && u.total_tokens)
+    + ' · 会话累计 ' + fmt(s.prompt_tokens) + '/' + fmt(s.completion_tokens) + '/' + fmt(s.total_tokens);
+}
+
 async function runAi(action) {
   const p = currentAiProvider();
   if (!p) { showToast('请先选择 AI 提供商'); return; }
   const keyVal = $('ai-key').value.trim();
-  if (!p.has_key && !keyVal) { showToast('未配置 API Key（可填写或设置环境变量）'); return; }
+  const local = p.name.indexOf('Ollama') >= 0;
+  if (!local && !keyVal) { showToast('未配置 API Key（请填写后重试）'); return; }
   const { text, isSelection } = getAiTargetText();
   if (!text || !text.trim()) { showToast('没有可处理的文档内容'); return; }
   const prompt = $('ai-prompt').value.trim();
-  const model = $('ai-model').value || (p.models || [''])[0] || '';
+  const model = $('ai-model').value.trim() || (p.models || [''])[0] || '';
+  const mode = $('ai-mode').value || 'auto';
+  const baseUrl = $('ai-base-url').value.trim();
+  const stream = $('ai-stream').checked;
   saveAiSelection();
 
   const tpl = currentAiTemplate();
@@ -1026,7 +1265,7 @@ async function runAi(action) {
   const uTag = document.createElement('div');
   uTag.className = 'ai-msg-tag';
   const userSeq = (state.ai.messages || []).filter(m => m.role === 'user').length + 1;
-  uTag.textContent = '我 · 提问 ' + userSeq + ' · ' + (AI_ACTIONS[action] || action) + (isSelection ? '（选中文字）' : '（全文）') + ' · ' + p.name + ' · ' + model;
+  uTag.textContent = '我 · 提问 ' + userSeq + ' · ' + (AI_ACTIONS[action] || action) + (isSelection ? '（选中文字）' : '（全文）') + ' · ' + model;
   const uBody = document.createElement('div');
   uBody.className = 'ai-msg-body';
   uBody.textContent = userMsg.length > 2000 ? userMsg.slice(0, 2000) + '\n…（文档内容较长已省略）' : userMsg;
@@ -1064,8 +1303,9 @@ async function runAi(action) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         provider: p.name, model: model, api_key: keyVal || undefined,
+        base_url: baseUrl || undefined, mode: mode, stream: stream,
         messages: [{ role: 'system', content: sys }].concat(msgs),
-        stream: true,
+        temperature: 0.7,
       }),
       signal: ctrl.signal,
     });
@@ -1090,6 +1330,16 @@ async function runAi(action) {
         let obj;
         try { obj = JSON.parse(data); } catch (e) { continue; }
         if (obj.error) throw new Error(obj.error);
+        if (obj.done) break;
+        if (obj.usage) {
+          state.ai.usage = obj.usage;
+          const s = state.ai.sessUsage;
+          s.prompt_tokens += obj.usage.prompt_tokens || 0;
+          s.completion_tokens += obj.usage.completion_tokens || 0;
+          s.total_tokens += obj.usage.total_tokens || 0;
+          updateAiUsage();
+          continue;
+        }
         if (obj.d === undefined) continue;
         state.ai.raw += obj.d;
         if (!renderTimer) renderTimer = setTimeout(render, state.ai.raw.length > 150000 ? 500 : 120);
@@ -1097,9 +1347,11 @@ async function runAi(action) {
     }
     if (renderTimer) { clearTimeout(renderTimer); renderTimer = null; render(); }
     renderMath(aiBody);
-    aiTag.textContent = 'AI · 回答 ' + userSeq;
+    aiTag.textContent = 'AI · 回答 ' + userSeq + ' · ' + model + fmtAiUsage(state.ai.usage);
     if (state.ai.raw) {
-      msgs.push({ role: 'assistant', content: state.ai.raw });
+      const last = { role: 'assistant', content: state.ai.raw };
+      if (state.ai.usage) last.usage = state.ai.usage;
+      msgs.push(last);
       state.ai.messages = msgs;
       state.ai.sessionId = null;
       $('ai-session').value = '';
@@ -1112,7 +1364,9 @@ async function runAi(action) {
     if (e.name === 'AbortError') {
       aiTag.textContent = 'AI · 回答 ' + userSeq + '（已停止）';
       if (state.ai.raw) {
-        msgs.push({ role: 'assistant', content: state.ai.raw });
+        const last = { role: 'assistant', content: state.ai.raw };
+        if (state.ai.usage) last.usage = state.ai.usage;
+        msgs.push(last);
         state.ai.messages = msgs;
       }
       showToast('已停止');
@@ -1126,6 +1380,13 @@ async function runAi(action) {
     state.ai.aborter = null;
   }
 }
+
+function fmtAiUsage(u) {
+  if (!u) return '';
+  const t = u.total_tokens != null ? u.total_tokens : ((u.prompt_tokens || 0) + (u.completion_tokens || 0));
+  return t ? ' · ' + t + ' tokens' : '';
+}
+
 async function copyAi() {
   if (!state.ai.raw) return;
   try {
@@ -1295,6 +1556,7 @@ function createEditor(doc) {
       CM.keymap.of([CM.indentWithTab, ...CM.closeBracketsKeymap, ...CM.defaultKeymap, ...CM.historyKeymap, ...CM.completionKeymap]),
       cmThemeCompartment.of(dark ? CM.oneDark : []),
       CM.EditorView.lineWrapping,
+      CM.EditorView.updateListener.of(u => { if (u.docChanged) schedulePreview(); }),
     ],
   });
   cmView = new CM.EditorView({ state: st, parent: $('edit-cm') });
@@ -1711,13 +1973,96 @@ async function exportAndInsertImg() {
     busy(false);
   }
 }
+/* ---------------- 编辑实时预览（左/右/下/上 + 滚动同步） ---------------- */
+
+let pvTimer = null;
+let pvLast = '';
+let pvEditorEl = null;
+
+function getEditContent() {
+  return cmView ? cmView.state.doc.toString() : ($('edit-area') && $('edit-area').value || '');
+}
+
+function setPvLayout(layout) {
+  if (['none', 'left', 'right', 'bottom', 'top'].indexOf(layout) < 0) layout = 'none';
+  state.pvLayout = layout;
+  document.querySelectorAll('.pv-btn').forEach(b => b.classList.toggle('active', b.dataset.pv === layout));
+  const mc = $('main-col');
+  const pw = $('preview-wrap');
+  if (!mc || !pw) return;
+  mc.classList.remove('pv-left', 'pv-right', 'pv-bottom', 'pv-top');
+  if (state.editing && layout !== 'none') {
+    mc.classList.add('pv-' + layout);
+    pw.classList.remove('hidden');
+    schedulePreview();
+  } else {
+    pw.classList.add('hidden');
+  }
+  saveSettings();
+}
+
+function schedulePreview() {
+  if (pvTimer) clearTimeout(pvTimer);
+  pvTimer = setTimeout(renderPreview, 300);
+}
+
+function renderPreview() {
+  pvTimer = null;
+  const pane = $('preview-pane');
+  if (!pane || state.pvLayout === 'none' || !state.editing) return;
+  const src = getEditContent();
+  if (src === pvLast) return;
+  pvLast = src;
+  let html;
+  try {
+    const prot = protectMath(src);
+    html = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
+  } catch (e) {
+    html = '<p class="ai-err">预览渲染失败</p>';
+  }
+  pane.innerHTML = html;
+  fixLinks(pane);
+  fixImages(pane);
+  renderMath(pane);
+}
+
+function pvSyncFromEditor() {
+  if (!state.pvSync || state.pvLayout === 'none') return;
+  const src = pvEditorEl || $('edit-area');
+  const dst = $('preview-wrap');
+  if (!src || !dst) return;
+  const maxSrc = src.scrollHeight - src.clientHeight;
+  const maxDst = dst.scrollHeight - dst.clientHeight;
+  if (maxSrc <= 0 || maxDst <= 0) return;
+  dst.scrollTop = (src.scrollTop / maxSrc) * maxDst;
+}
+
+function pvSyncFromPreview() {
+  if (!state.pvSync || state.pvLayout === 'none') return;
+  const src = $('preview-wrap');
+  const dst = pvEditorEl || $('edit-area');
+  if (!src || !dst) return;
+  const maxSrc = src.scrollHeight - src.clientHeight;
+  const maxDst = dst.scrollHeight - dst.clientHeight;
+  if (maxSrc <= 0 || maxDst <= 0) return;
+  dst.scrollTop = (src.scrollTop / maxSrc) * maxDst;
+}
+
+function applyPvUi() {
+  document.querySelectorAll('.pv-btn').forEach(b => b.classList.toggle('active', b.dataset.pv === state.pvLayout));
+  const sync = $('pv-sync');
+  if (sync) sync.checked = !!state.pvSync;
+  setPvLayout(state.pvLayout);
+}
+
 async function toggleEdit() {
   if (state.editing) { exitEdit(); return; }
-  if (state.mode !== 'file' || !state.file) { showToast('仅本地 Markdown 文件可编辑'); return; }
+  if (state.original === undefined || state.original === '') { showToast('没有可编辑的内容'); return; }
   $('edit-bar').classList.remove('hidden');
   $('content').classList.add('hidden');
   state.editing = true;
   setEditBtn('编辑中');
+  pvLast = '';
   try {
     await loadCodeMirror();
   } catch (e) { /* 退回 textarea */ }
@@ -1725,15 +2070,30 @@ async function toggleEdit() {
     $('edit-area').classList.add('hidden');
     $('edit-wrap').classList.remove('hidden');
     createEditor(state.original || '');
+    pvEditorEl = cmView ? cmView.scrollDOM : null;
+    if (pvEditorEl) pvEditorEl.addEventListener('scroll', pvSyncFromEditor);
   } else {
     $('edit-wrap').classList.add('hidden');
     $('edit-area').classList.remove('hidden');
     $('edit-area').value = state.original || '';
+    pvEditorEl = $('edit-area');
+    pvEditorEl.addEventListener('scroll', pvSyncFromEditor);
     $('edit-area').focus();
   }
+  applyPvUi();
 }
 
 function exitEdit() {
+  if (pvTimer) { clearTimeout(pvTimer); pvTimer = null; }
+  if (pvEditorEl) {
+    pvEditorEl.removeEventListener('scroll', pvSyncFromEditor);
+    pvEditorEl = null;
+  }
+  const pw = $('preview-wrap');
+  if (pw) pw.classList.add('hidden');
+  const mc = $('main-col');
+  if (mc) mc.classList.remove('pv-left', 'pv-right', 'pv-bottom', 'pv-top');
+  pvLast = '';
   if (!state.editing) {
     $('edit-bar').classList.add('hidden');
     $('edit-area').classList.add('hidden');
@@ -1752,8 +2112,33 @@ function exitEdit() {
 }
 
 async function saveEdit() {
-  if (!state.file || !state.editing) return;
+  if (!state.editing) return;
   const content = cmView ? cmView.state.doc.toString() : $('edit-area').value;
+  if (!state.file) {
+    // 虚拟文档（转换 / OCR / 网页）：另存为 .md 后切换为文件模式
+    const name = (state.sourceName || 'document').replace(/[\\/]/g, '_');
+    const suggested = name.replace(/\.[^.]+$/, '') + '.md';
+    let out = null;
+    if (hasPy) {
+      busy(true);
+      try { out = await py.save_as(content, suggested); }
+      catch (e) { showToast('保存失败：' + e.message); busy(false); return; }
+      busy(false);
+      if (!out) { showToast('已取消保存'); return; }
+      showToast('已保存：' + out);
+      exitEdit();
+      await loadFile(out);
+    } else {
+      const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = suggested;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+      showToast('已下载：' + suggested);
+    }
+    return;
+  }
   busy(true);
   try {
     let ok;
@@ -2057,7 +2442,7 @@ function updateStatus() {
   if (state.size) parts.push((state.size / 1024).toFixed(1) + ' KB');
   if (state.encoding) parts.push(state.encoding);
   $('status-right').textContent = parts.join(' · ');
-  const canEdit = state.mode === 'file' && MD_RE.test(state.file || '') && !state.editing;
+  const canEdit = (state.mode === 'file' || state.mode === 'virtual') && !!state.original && !state.editing;
   const canReload = state.mode === 'file';
   const canSaveas = state.mode === 'virtual' || state.fixed !== '';
   $('btn-edit').disabled = !canEdit && !state.editing;
@@ -2161,8 +2546,15 @@ function bindEvents() {
     });
   }
 
-  $('btn-convert').addEventListener('click', () => chooseFile('convert'));
-  $('w-convert').addEventListener('click', () => chooseFile('convert'));
+  $('btn-convert').addEventListener('click', openConvertModal);
+  $('w-convert').addEventListener('click', openConvertModal);
+  $('convert-files').addEventListener('click', pickConvertFiles);
+  $('convert-folder').addEventListener('click', pickConvertFolder);
+  $('convert-close').addEventListener('click', closeConvertModal);
+  $('convert-open-dir').addEventListener('click', () => {
+    if (convertLastDir && py.open_dir) py.open_dir(convertLastDir);
+  });
+  $('convert-modal').addEventListener('click', e => { if (e.target === $('convert-modal')) closeConvertModal(); });
   $('btn-ocr').addEventListener('click', () => chooseFile('ocr'));
   $('w-ocr').addEventListener('click', () => chooseFile('ocr'));
   $('btn-web').addEventListener('click', openWebDialog);
@@ -2184,6 +2576,11 @@ function bindEvents() {
   }));
   $('edit-save').addEventListener('click', saveEdit);
   $('edit-cancel').addEventListener('click', exitEdit);
+  document.querySelectorAll('.pv-btn').forEach(b => b.addEventListener('click', () => setPvLayout(b.dataset.pv)));
+  const pvSyncEl = $('pv-sync');
+  if (pvSyncEl) pvSyncEl.addEventListener('change', e => { state.pvSync = e.target.checked; saveSettings(); });
+  const pvWrap = $('preview-wrap');
+  if (pvWrap) pvWrap.addEventListener('scroll', pvSyncFromPreview);
   $('img-file').addEventListener('click', () => $('img-file-input').click());
   $('img-file-input').addEventListener('change', e => {
     const f = e.target.files && e.target.files[0];
@@ -2594,6 +2991,10 @@ async function expSavePreset() {
   $('w-ai').addEventListener('click', toggleAiPanel);
   $('ai-close').addEventListener('click', () => { $('ai-panel').classList.add('hidden'); });
   $('ai-provider').addEventListener('change', onAiProviderChange);
+  $('ai-mode').addEventListener('change', () => { /* 协议变更由保存设置时生效 */ });
+  $('ai-url-reset').addEventListener('click', resetAiUrl);
+  $('ai-key-toggle').addEventListener('click', toggleAiKey);
+  $('ai-models-btn').addEventListener('click', loadAiModels);
   $('ai-save-key').addEventListener('click', saveAiSelection);
   document.querySelectorAll('.ai-act').forEach(b => b.addEventListener('click', () => runAi(b.dataset.act)));
   $('ai-run').addEventListener('click', () => runAi('ask'));
@@ -2654,6 +3055,8 @@ async function expSavePreset() {
       $('share-modal').classList.add('hidden');
       $('tpl-modal').classList.add('hidden');
       $('img-modal').classList.add('hidden');
+      $('convert-modal').classList.add('hidden');
+      stopConvertPoll();
       if (state.editing) exitEdit();
     }
   });

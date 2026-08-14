@@ -53,6 +53,25 @@
 - 打印模式仅保留正文（白底黑字）。
 
 
+## 08 连接设置 / 预览布局 / 批量转换（v2.1.1）
+
+### AI 连接设置卡片（ai-conn）
+- 位置：AI 面板顶部可折叠 `<details>`，打开默认展开；总结行「连接设置 + 提示」，展开后 2 列网格（conn-grid）
+- 字段：提供商（下拉，预设 + 自定义）、响应方式（auto/chat/completion/responses/messages）、Base URL（文本框 + 恢复预设按钮）、API Key（密码框 + 显隐切换，必填校验，本地 Ollama 例外）、模型（输入框 + datalist + 「获取模型」按钮）、流式输出开关、保存设置 + 状态文字
+- 视觉：卡片用 var(--bg) 底 + var(--border) 边框 + var(--radius-m)；字段标签 12px var(--fg2)；输入 12.5px、焦点环同全局；44px 触控目标、对比度 ≥4.5:1
+- 状态：Key 就绪 / 未配置 / 获取模型失败等均以内联文字反馈；Token 用量条（ai-usage-bar）固定在对话区上方，展示「本次 prompt/completion/total · 会话累计」
+
+### 编辑实时预览（pv-ctl）
+- 布局控件：编辑工具栏第二行右侧「无 / 左 / 右 / 下 / 上」五档分段按钮 + 「滚动同步」开关；无 = 默认直接编辑（不加载预览资源）
+- 排布：#main-col 切类 pv-left/right（左右分栏 50/50）、pv-bottom/top（上下 46%）；预览面板 #preview-pane 复用 markdown-body 排版，max-width var(--line-width) 居中
+- 渲染：300ms 防抖，protectMath → marked → restoreMath → renderMath；滚动同步按滚动比例双向联动
+- 主题：预览面板与当前三主题同步（var(--bg2)/var(--fg) 等 token）
+
+### 批量转换弹窗（convert-modal）
+- 结构：与 export-modal 同款弹层规范（var(--overlay) 遮罩 + var(--bg2) 底 + var(--radius-l) + var(--shadow-3)），宽 min(560px, 95vw)
+- 操作：选择文件（多选）/ 选择文件夹 / 覆盖已存在复选；下方实时进度列表（文件名 + 状态：排队/成功/跳过/失败，成功绿强调色、失败红、跳过琥珀），底部汇总「完成：成功 n · 跳过 n · 失败 n · 警告 n」+「打开结果目录」
+- 说明行：转换结果自动保存为源目录同名 .md；docx/PDF 专用解析，其余回退通用转换，输出经严格校验
+
 ## 07 导出面板与文档导出（v2.1.0）
 
 ### 导出面板（export-modal）

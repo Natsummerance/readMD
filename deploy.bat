@@ -15,7 +15,7 @@ setlocal
 cd /d "%~dp0"
 title ReadMD Deploy
 
-set "TAG=v2.0.1"
+set "TAG=v2.1.1"
 set "SKIP_BUILD=0"
 set "SKIP_TESTS=0"
 
@@ -23,10 +23,7 @@ set "SKIP_TESTS=0"
 if "%~1"=="" goto :parse_done
 if /i "%~1"=="--skip-build" set "SKIP_BUILD=1"
 if /i "%~1"=="--skip-tests" set "SKIP_TESTS=1"
-if /i "%~1"=="--tag" (
-    shift
-    set "TAG=%~1"
-)
+if /i "%~1"=="--tag" set "TAG=%~2"
 shift
 goto :parse
 :parse_done
