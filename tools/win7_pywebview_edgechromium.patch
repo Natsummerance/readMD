@@ -1,0 +1,68 @@
+# -*- coding: utf-8 -*-
+"""ReadMD Win7 兼容版：给 pywebview 4.4.1 edgechromium 打补丁。
+
+pywebview 4.4.1 的 edgechromium 不支持 BrowserExecutableFolder（无法使用
+固定版 WebView2 运行时），本脚本在安装后的 site-packages 里就地补丁：
+
+  props.UserDataFolder = cache_dir
+      ↓ 追加
+  props.BrowserExecutableFolder = os.environ['READMD_WEBVIEW2_RUNTIME']
+  props.UserDataFolder = os.environ['READMD_WEBVIEW2_USERDATA']
+
+用法（win7 venv 下执行）：
+  python tools\win7_pywebview_edgechromium.patch
+
+幂等：已打补丁时直接退出 0。
+"""
+import io
+import os
+import sys
+import site
+
+
+MARKER = 'ReadMD Win7 兼容版补丁'
+OLD_SNIPPET = '''        props.UserDataFolder = cache_dir
+        props.set_IsInPrivateModeEnabled(_settings['private_mode'])
+        props.AdditionalBrowserArguments = '--disable-features=ElasticOverscroll'
+        self.web_view.CreationProperties = props
+'''
+NEW_SNIPPET = '''        props.UserDataFolder = cache_dir
+        # %(marker)s：固定版 WebView2 109 运行时 + 嵌入式 user-data
+        if os.environ.get('READMD_WEBVIEW2_RUNTIME'):
+            props.BrowserExecutableFolder = os.environ['READMD_WEBVIEW2_RUNTIME']
+        if os.environ.get('READMD_WEBVIEW2_USERDATA'):
+            props.UserDataFolder = os.environ['READMD_WEBVIEW2_USERDATA']
+        props.set_IsInPrivateModeEnabled(_settings['private_mode'])
+        props.AdditionalBrowserArguments = '--disable-features=ElasticOverscroll'
+        self.web_view.CreationProperties = props
+''' % {'marker': MARKER}
+
+
+def find_edgechromium():
+    candidates = []
+    for base in site.getsitepackages():
+        candidates.append(os.path.join(base, 'webview', 'platforms', 'edgechromium.py'))
+    candidates.append(os.path.join(os.path.dirname(sys.executable), 'Lib',
+                                   'site-packages', 'webview', 'platforms', 'edgechromium.py'))
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    raise SystemExit('未找到 pywebview edgechromium.py（候选：%s）' % '; '.join(candidates))
+
+
+def main():
+    path = find_edgechromium()
+    src = io.open(path, encoding='utf-8').read()
+    if MARKER in src:
+        print('already patched:', path)
+        return 0
+    if OLD_SNIPPET not in src:
+        raise SystemExit('pywebview 源码结构不匹配，请确认版本为 4.4.1：%s' % path)
+    src = src.replace(OLD_SNIPPET, NEW_SNIPPET)
+    io.open(path, 'w', encoding='utf-8', newline='\n').write(src)
+    print('patched:', path)
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

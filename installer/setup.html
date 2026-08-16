@@ -262,7 +262,12 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
         <div class="opt-t"><b>创建开始菜单快捷方式</b><span>可从开始菜单搜索并启动</span></div>
         <div class="switch on" id="sw-startmenu" data-key="startmenu"><i></i></div>
       </div>
-      <div class="size-note">安装大小约 110 MB · 随时可在「设置 → 应用」中卸载</div>
+      <div class="opt-card" id="card-webview2" style="display:none">
+        <div class="ic">&#128230;</div>
+        <div class="opt-t"><b>安装 WebView2 运行时</b><span>Win7 必需（内置 109 固定版，约 143 MB）；系统已装 WebView2 时可关闭</span></div>
+        <div class="switch on" id="sw-webview2" data-key="webview2"><i></i></div>
+      </div>
+      <div class="size-note" id="size-note">安装大小约 110 MB · 随时可在「设置 → 应用」中卸载</div>
       <div class="actions" style="justify-content:center">
         <button class="btn btn-ghost" id="btn-opt-back">返回</button>
         <button class="btn btn-primary" id="btn-start-install">开始安装</button>
@@ -329,14 +334,14 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
   var MOCK = !window.pywebview;
 
   var STEP_LABELS = {
-    install: [['prepare','准备安装目录'],['copy','复制程序文件'],['assoc','注册文件关联'],['shortcut','创建快捷方式'],['uninst','写入卸载信息']],
+    install: [['prepare','准备安装目录'],['copy','复制程序文件'],['runtime','安装 WebView2 运行时'],['assoc','注册文件关联'],['shortcut','创建快捷方式'],['uninst','写入卸载信息']],
     uninstall:[['stop','关闭运行中的 ReadMD'],['assoc','移除文件关联'],['shortcut','删除快捷方式'],['uninst','移除卸载信息'],['delete','清理安装目录']]
   };
-  var state = { mode:'install', installed:null, default_dir:'', version:'', running:false };
+  var state = { mode:'install', installed:null, default_dir:'', version:'', running:false, win7:false, webview2Default:false };
   var steps = [];
   var installing = false;
   var done = false;
-  var options = { assoc:true, desktop:true, startmenu:true };
+  var options = { assoc:true, desktop:true, startmenu:true, webview2:false };
 
   function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -389,7 +394,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
 
   var mockTimer = null;
   function mockRun(){
-    var seq = [['prepare','准备安装目录',14],['copy','复制程序文件',40],['assoc','注册文件关联',62],['shortcut','创建快捷方式',80],['uninst','写入卸载信息',100]];
+    var seq = [['prepare','准备安装目录',12],['copy','复制程序文件',32],['runtime','安装 WebView2 运行时',44],['assoc','注册文件关联',62],['shortcut','创建快捷方式',80],['uninst','写入卸载信息',100]];
     var i = 0;
     mockTimer = setInterval(function(){
       if (i >= seq.length){
@@ -502,12 +507,25 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
     }
     $('opt-dir').value = state.default_dir || 'C:\\Users\\demo\\AppData\\Local\\Programs\\ReadMD';
     $('win-title').textContent = un ? 'ReadMD 卸载程序' : 'ReadMD 安装程序';
+    var w2 = $('card-webview2');
+    if (w2){
+      w2.style.display = (state.win7 && !un) ? '' : 'none';
+      if (state.win7 && !un){
+        options.webview2 = !!state.webview2Default;
+        var sw2 = $('sw-webview2');
+        sw2.classList.toggle('on', options.webview2);
+      }
+    }
+    var sizeNote = $('size-note');
+    if (sizeNote) sizeNote.textContent = state.win7 && !un
+      ? '安装大小约 260 MB（含 WebView2 运行时）· 随时可在「设置 → 应用」中卸载'
+      : '安装大小约 110 MB · 随时可在「设置 → 应用」中卸载';
   }
 
   function startInstall(){
     var dir = $('opt-dir').value.trim();
     if (!dir){ toast('请先填写安装目录'); return; }
-    var opts = { dir: dir, assoc: options.assoc, desktop: options.desktop, startmenu: options.startmenu };
+    var opts = { dir: dir, assoc: options.assoc, desktop: options.desktop, startmenu: options.startmenu, webview2: options.webview2 };
     state.default_dir = dir;
     if (MOCK || !state.running){
       beginInstall(opts); return;
@@ -569,7 +587,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
   });
   $('btn-err-retry').addEventListener('click', function(){
     if (state.mode === 'uninstall') startUninstall(); else beginInstall({
-      dir: $('opt-dir').value.trim(), assoc: options.assoc, desktop: options.desktop, startmenu: options.startmenu, force: true
+      dir: $('opt-dir').value.trim(), assoc: options.assoc, desktop: options.desktop, startmenu: options.startmenu, webview2: options.webview2, force: true
     });
   });
   document.querySelectorAll('.switch').forEach(function(sw){

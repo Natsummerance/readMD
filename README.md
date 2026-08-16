@@ -8,7 +8,7 @@
 
 双击 `.md` 即读，渲染前自动修正常见 Markdown 错误（表格 / 加粗 / 公式 / 标题），**只影响显示，绝不改写原文件**；集成 AI 助手、万物转 MD、扫描 OCR、网页转 MD、主动编辑与移动端共享。
 
-![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078d6?logo=windows&logoColor=white)
+![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20%2B%20Win7%20Beta-0078d6?logo=windows&logoColor=white)
 ![version](https://img.shields.io/github/v/release/Natsummerance/readMD?color=3b6ef5)
 ![webview2](https://img.shields.io/badge/runtime-WebView2-4fc08d)
 ![repo size](https://img.shields.io/github/repo-size/Natsummerance/readMD)
@@ -42,6 +42,7 @@
 | --- | --- |
 | **ReadMDSetup-版本.exe** | 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级 |
 | **ReadMD-portable-版本.exe** | 便携版，免安装，双击直接运行 |
+| **ReadMDSetup-2.1.1-Beta-win7-x64.exe** | **Win7 兼容版**（v2.1.1 Beta，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
 
@@ -62,6 +63,18 @@ python readmd.py --browser "文件.md"  rem 无 pywebview 时用浏览器兜底
 ```
 
 > 若 Windows 仍用其他程序打开：右键 `.md` → 打开方式 → 选择 ReadMD → 始终使用；或点击阅读器工具栏「设为默认」。程序化修改默认应用受 Windows UserChoice 哈希保护，此路径已是最佳实践。
+
+## 🪟 Win7 兼容版（v2.1.1 Beta）
+
+> 正式版（v2.1.1）基于 Python 3.10 + pywebview 6.x，**不支持 Windows 7**。为仍在使用 Win7 的机器提供独立的 **v2.1.1 Beta** 兼容版，独立发布（pre-release tag `v2.1.1-beta`），不影响正式版。
+
+**适用环境**：Windows 7 SP1 x64（需 .NET Framework 4.8 与 VC++ 运行库，详见 Release 说明）；安装包内嵌 **固定版 WebView2 109 运行时**（Win7 最后支持线），安装时自动放入安装目录，无需联网安装系统级运行时。
+
+**与正式版一致的能力**：秒开（onedir 目录安装 + 单实例托盘）、浅色 / 暗色 / sepia 三主题阅读、自动修正、目录 / 搜索 / 编辑 / 导出 PDF·DOCX·HTML / 打印、docx / pdf 转 Markdown（含自动保存与严格校验）。
+
+**Win7 版暂不支持**（入口会明确提示）：OCR（依赖 WinRT，仅 Win10+）、AI 助手、网页转 MD、以及 docx / pdf 以外的格式转换。
+
+**构建**：独立 Python 3.9.13 构建链（`.venv-win7` + `win7-reqs.txt` + `build_win7.bat`），不污染正式版发布链。
 
 ## 🖱️ 使用
 

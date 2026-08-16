@@ -1,0 +1,19 @@
+# ReadMD Win7 compatibility build (Python 3.9.13, Win7 SP1 x64 + WebView2 109)
+# Separate from the regular build (Python 3.10+ / pywebview 6.x):
+# pywebview 4.4.1 bundles WebView2 SDK 1.0.1518.46 (= 109 branch, last Win7 line).
+pywebview==4.4.1
+pythonnet==3.0.1
+PyInstaller==6.11.1
+
+# docx / pdf -> MD (dedicated parsers, no markitdown)
+python-docx==1.2.0
+pymupdf==1.24.14
+lxml==5.3.0
+
+# Export PDF / DOCX / HTML (lazy-loaded)
+reportlab==4.2.5
+matplotlib==3.9.4
+
+# Single-instance tray
+pystray==0.19.5
+Pillow==9.5.0

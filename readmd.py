@@ -15,6 +15,7 @@
 """
 
 import argparse
+import io
 import json
 import logging
 import mimetypes
@@ -40,11 +41,29 @@ RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
 PROMPTS_FILE = os.path.join(DATA_DIR, 'prompts.json')
 HISTORY_FILE = os.path.join(DATA_DIR, 'chat_history.json')
 LOG_FILE = os.path.join(DATA_DIR, 'readmd.log')
-VERSION = '2.1.1'
+def _bundle_version():
+    """frozen 构建内嵌 version.txt（Win7 链：2.1.1 Beta）。"""
+    try:
+        if getattr(sys, 'frozen', False):
+            base = getattr(sys, '_MEIPASS', None) or os.path.dirname(os.path.abspath(sys.executable))
+            p = os.path.join(base, 'version.txt')
+            if os.path.isfile(p):
+                v = open(p, encoding='utf-8').read().strip()
+                if v:
+                    return v
+    except Exception:
+        pass
+    return None
+
+
+VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
+           or _bundle_version() or '2.1.1')
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 CONVERT_EXTS = ('.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm',
                 '.txt', '.csv', '.json', '.xml', '.zip', '.eml', '.msg', '.rtf', '.odt', '.epub')
+WIN7_CONVERT_EXTS = ('.docx', '.pdf')
+WIN7_UNAVAILABLE = '该功能在 Win7 版暂不支持（本版本仅保留 docx / pdf 转 MD 与导出功能）'
 
 CONTROL_PORT = 26891
 INSTANCE_FILE = os.path.join(DATA_DIR, 'instance.json')
@@ -53,6 +72,35 @@ _CONVERT_JOB_SEQ = [0]
 _CONVERT_LOCK = threading.Lock()
 
 _T0 = time.time()
+
+
+def is_win7():
+    """Win7 检测：驱动功能裁剪与内置固定版 WebView2 109 运行时。"""
+    if os.environ.get('READMD_FORCE_WIN7') == '1':
+        return True
+    try:
+        import platform
+        return platform.system() == 'Windows' and platform.release() == '7'
+    except Exception:
+        return False
+
+
+def setup_win7_webview2_env():
+    """Win7：把内置固定版 WebView2 109 运行时目录与嵌入式 user-data 目录注入环境变量，
+    win7 构建里打过补丁的 pywebview edgechromium 会读取这两个变量。"""
+    if not is_win7():
+        return
+    try:
+        if getattr(sys, 'frozen', False):
+            base = os.path.dirname(os.path.abspath(sys.executable))
+        else:
+            base = APP_DIR
+        rt = os.path.join(base, 'webview2_runtime')
+        if os.path.isdir(rt):
+            os.environ['READMD_WEBVIEW2_RUNTIME'] = rt
+            os.environ['READMD_WEBVIEW2_USERDATA'] = os.path.join(base, 'webview2_userdata')
+    except Exception:
+        pass
 
 
 def milestone(group, name):
@@ -477,7 +525,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/modules':
             RM.load_all()  # 幂等：任意前端轮询即触发后台加载（渲染完成后的首次轮询才会发生）
             st, err = RM.status()
-            self._send_json(200, {'modules': st, 'errors': err})
+            self._send_json(200, {'modules': st, 'errors': err, 'win7': is_win7()})
         elif path == '/api/convert/collect':
             self._api_convert_collect()
         elif path == '/api/convert/batch':
@@ -818,7 +866,7 @@ class Handler(BaseHTTPRequestHandler):
                 continue
             for n in sorted(names):
                 ext = os.path.splitext(n)[1].lower()
-                if ext in CONVERT_EXTS:
+                if ext in (CONVERT_EXTS if not is_win7() else WIN7_CONVERT_EXTS):
                     files.append(os.path.join(root, n))
             if len(files) >= 200:
                 break
@@ -827,6 +875,9 @@ class Handler(BaseHTTPRequestHandler):
     def _api_convert(self, p):
         if not os.path.isfile(p):
             self._send_json(404, {'error': '文件不存在'})
+            return
+        if is_win7() and os.path.splitext(p)[1].lower() not in WIN7_CONVERT_EXTS:
+            self._send_json(415, {'error': WIN7_UNAVAILABLE})
             return
         if not RM.is_ready('convert'):
             RM.load_all()
@@ -876,6 +927,8 @@ class Handler(BaseHTTPRequestHandler):
             return
         paths = [p for p in (body.get('paths') or [])
                  if isinstance(p, str) and os.path.isfile(p)]
+        if is_win7():
+            paths = [p for p in paths if os.path.splitext(p)[1].lower() in WIN7_CONVERT_EXTS]
         if not paths:
             self._send_json(400, {'error': '没有可转换的文件'})
             return
@@ -1152,7 +1205,7 @@ class Api(object):
             return None
 
     def choose_any_file(self):
-        """任意格式文件（用于“万物转 MD”）。"""
+        """任意格式文件（用于“万物转 MD”）。Win7 版仅开放 docx / pdf。"""
         import webview
         if self._window is None:
             return None
@@ -1160,6 +1213,9 @@ class Api(object):
             files = self._window.create_file_dialog(
                 webview.OPEN_DIALOG,
                 file_types=(
+                    'Word / PDF (*.docx;*.pdf)' if is_win7() else '所有文件 (*.*)',
+                    '文档 (*.docx;*.pdf)' if is_win7() else '文档 (*.md;*.markdown;*.docx;*.doc;*.pptx;*.xlsx;*.pdf;*.html;*.htm;*.txt;*.csv;*.json)',
+                ) if is_win7() else (
                     '所有文件 (*.*)',
                     '文档 (*.md;*.markdown;*.docx;*.doc;*.pptx;*.xlsx;*.pdf;*.html;*.htm;*.txt;*.csv;*.json)',
                     '图片 (*.png;*.jpg;*.jpeg;*.bmp;*.webp;*.tif;*.tiff)',
@@ -1169,7 +1225,7 @@ class Api(object):
             return None
 
     def choose_many_files(self):
-        """批量转换：多选任意格式文件。"""
+        """批量转换：多选任意格式文件。Win7 版仅开放 docx / pdf。"""
         import webview
         if self._window is None:
             return []
@@ -1177,6 +1233,9 @@ class Api(object):
             files = self._window.create_file_dialog(
                 webview.OPEN_DIALOG, allow_multiple=True,
                 file_types=(
+                    'Word / PDF (*.docx;*.pdf)' if is_win7() else '所有文件 (*.*)',
+                    '文档 (*.docx;*.pdf)' if is_win7() else '文档 (*.md;*.markdown;*.docx;*.doc;*.pptx;*.xlsx;*.pdf;*.html;*.htm;*.txt;*.csv;*.json)',
+                ) if is_win7() else (
                     '所有文件 (*.*)',
                     '文档 (*.md;*.markdown;*.docx;*.doc;*.pptx;*.xlsx;*.pdf;*.html;*.htm;*.txt;*.csv;*.json)',
                     '图片 (*.png;*.jpg;*.jpeg;*.bmp;*.webp;*.tif;*.tiff)',
@@ -1453,10 +1512,18 @@ def run_selftest():
         setup_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'installer', 'setup_app.py')
         if os.path.isfile(setup_py):
             with open(setup_py, encoding='utf-8') as f:
-                m = _re.search(r"APP_VERSION\s*=\s*'([^']+)'", f.read())
-            inst_ver = m.group(1) if m else None
-            assert inst_ver == VERSION, '安装器版本 %s 与主程序 %s 不一致' % (inst_ver, VERSION)
-            safe_print('version consistency OK (%s)' % VERSION)
+                _src = f.read()
+            # 常规链：APP_VERSION = '2.1.1'；Win7 链：APP_VERSION = os.environ.get(...) or '2.1.1'
+            m1 = _re.search(r"APP_VERSION\s*=\s*\(?\s*os\.environ\.get\('READMD_VERSION_OVERRIDE'\)[\s\S]*?or\s+'([^']+)'", _src)
+            m2 = _re.search(r"APP_VERSION\s*=\s*'([^']+)'", _src)
+            if os.environ.get('READMD_VERSION_OVERRIDE'):
+                # 版本来自同一环境变量，两侧天然一致；确认 fallback 存在即可
+                assert m1 is not None or m2 is not None, '未找到 APP_VERSION（env override 链）'
+                safe_print('version consistency OK (%s, env override)' % VERSION)
+            else:
+                inst_ver = (m1.group(1) if m1 else (m2.group(1) if m2 else None))
+                assert inst_ver == VERSION, '安装器版本 %s 与主程序 %s 不一致' % (inst_ver, VERSION)
+                safe_print('version consistency OK (%s)' % VERSION)
         else:
             safe_print('installer/setup_app.py not found, skip version check')
     except Exception as e:
@@ -1644,6 +1711,10 @@ def main():
     setup_logging()
     milestone('boot', 'start')
 
+    # Win7 版：OCR / AI / 网页转 MD 依赖 WinRT 或未打包，标记为不可用
+    if is_win7():
+        RM.set_disabled(('ocr', 'web', 'ai'), WIN7_UNAVAILABLE)
+
     # 单实例：已有常驻实例 → 转发文件 / 唤起窗口后立即退出（秒开）
     alive = instance_alive()
     if alive is not None:
@@ -1731,6 +1802,7 @@ def main():
 
     _start_tray(window)
 
+    setup_win7_webview2_env()
     try:
         webview.start()
     except Exception as e:

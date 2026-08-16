@@ -53,7 +53,8 @@ const state = {
   lastQuery: '',
   folder: null,
   folderFiles: [],
-  modules: {},         // convert/ocr/web -> idle|loading|ready|error
+  modules: {},         // convert/ocr/web -> idle|loading|ready|error|disabled
+  win7: false,         // Win7 版：功能裁剪与固定版运行时
   modulesStarted: false,
   editing: false,
   busyCount: 0,
@@ -134,6 +135,7 @@ async function pollModules() {
     const r = await apiFetch('/api/modules');
     const d = await r.json();
     state.modules = d.modules || {};
+    state.win7 = !!d.win7;
     updateModuleUi();
     const pending = Object.values(state.modules).some(v => v === 'loading' || v === 'idle');
     if (pending && state.modulesStarted) setTimeout(pollModules, 900);
@@ -145,10 +147,18 @@ async function pollModules() {
 function updateModuleUi() {
   const m = state.modules;
   const ready = n => m[n] === 'ready';
-  $('btn-convert').disabled = !ready('convert');
-  $('btn-web').disabled = !ready('web');
-  $('btn-ocr').disabled = !ready('ocr');
-  $('btn-ai').disabled = !ready('ai');
+  const disabled = n => m[n] === 'disabled';
+  [['btn-convert', 'convert'], ['btn-web', 'web'], ['btn-ocr', 'ocr'], ['btn-ai', 'ai']].forEach(([id, key]) => {
+    const el = $(id);
+    if (!el) return;
+    if (disabled(key)) {
+      // Win7 版：按钮保持可点击，点击后提示“暂不支持”
+      el.disabled = false;
+      el.title = 'Win7 版暂不支持该功能';
+    } else {
+      el.disabled = !ready(key);
+    }
+  });
   ['w-convert', 'w-web', 'w-ocr', 'w-ai'].forEach(id => {
     const el = $(id);
     if (el) el.disabled = false;
@@ -159,10 +169,19 @@ function updateModuleUi() {
     const label = { convert: '转换', ocr: 'OCR', web: '网页', ai: 'AI' }[k] || k;
     if (v === 'ready') parts.push(label + '\u2713');
     else if (v === 'error') parts.push(label + '\u2717');
+    else if (v === 'disabled') parts.push(label + ' Win7 暂不支持');
     else parts.push(label + '\u2026');
   }
   const el = $('status-mods');
   if (el) el.textContent = parts.length ? '模块 ' + parts.join(' ') : '';
+}
+
+function moduleBlocked(name) {
+  if (state.modules[name] === 'disabled') {
+    showToast('该功能在 Win7 版暂不支持（本版本仅保留 docx / pdf 转 MD 与导出功能）', 3400);
+    return true;
+  }
+  return false;
 }
 
 /* ---------------- 最近文件 ---------------- */
@@ -531,6 +550,8 @@ let convertLastDir = null;
 
 async function openConvertModal() {
   if (!hasPy) { showToast('浏览器模式请使用“打开文件”转换'); return; }
+  const note = $('convert-note');
+  if (note) note.textContent = state.win7 ? 'Win7 版仅支持 docx / pdf 转 Markdown；转换结果自动保存为源文件同目录同名 .md。' : '转换结果自动保存为源文件同目录同名 .md（如 report.docx → report.md）。docx 公式、PDF 表格走专用解析，其余格式自动回退通用转换；输出经过严格校验（表格 / 代码围栏 / 公式 / 图片引用）。';
   $('convert-modal').classList.remove('hidden');
   $('convert-list').innerHTML = '';
   $('convert-status').textContent = '';
@@ -679,6 +700,7 @@ async function webToMd(url, crawl) {
 /* ---------------- 文件选择（含浏览器兜底） ---------------- */
 
 function chooseFile(mode) {
+  if (moduleBlocked(mode)) return;
   if (hasPy) {
     py.choose_any_file().then(p => { if (p) convertOrOcr(p, mode); });
     return;
@@ -726,6 +748,7 @@ const AI_SYSTEM = {
 };
 
 function toggleAiPanel() {
+  if (moduleBlocked('ai')) return;
   const p = $('ai-panel');
   p.classList.toggle('hidden');
   if (!p.classList.contains('hidden')) {
@@ -2516,6 +2539,7 @@ function installAssoc() {
 /* ---------------- 网页对话框 ---------------- */
 
 function openWebDialog() {
+  if (moduleBlocked('web')) return;
   $('url-modal').classList.remove('hidden');
   $('url-input').focus();
 }

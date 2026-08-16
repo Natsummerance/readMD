@@ -28,6 +28,23 @@ def is_ready(name):
         return _status.get(name) == 'ready'
 
 
+def set_disabled(names, reason=''):
+    """把不支持运行的模块标记为 disabled（Win7 版：OCR / AI / 网页）。
+
+    标记后：状态汇报为 'disabled'（前端据此禁用入口并提示），
+    不会进入后台加载；load() 也不受影响。
+    """
+    global MODULES
+    with _lock:
+        MODULES = [m for m in MODULES if m not in names]
+        for m in names:
+            if m not in _status:
+                _status[m] = 'idle'
+            _status[m] = 'disabled'
+            if reason:
+                _error[m] = reason
+
+
 def load_all():
     """后台加载全部模块（幂等，重复调用无副作用）。"""
     global _loader_thread
@@ -35,7 +52,7 @@ def load_all():
         if _loader_thread is not None and _loader_thread.is_alive():
             return
         for m in MODULES:
-            if _status[m] in ('ready', 'error'):
+            if _status[m] in ('ready', 'error', 'disabled'):
                 continue
             _status[m] = 'loading'
         _loader_thread = threading.Thread(target=_run, daemon=True, name='readmd-modules')

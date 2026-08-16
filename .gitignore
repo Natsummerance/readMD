@@ -10,3 +10,6 @@ dist/
 *.spec
 
 tools/cm-bundle/node_modules/
+.venv-win7/
+installer/webview2_runtime/
+release_body_win7_beta.md

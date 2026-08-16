@@ -108,7 +108,7 @@ def ensure_release(args, tok):
             body = f.read()
     st, raw = api("POST", "%s/releases" % API,
                   {"tag_name": args.tag, "name": args.name, "body": body,
-                   "draft": args.draft, "prerelease": False}, token_str=tok)
+                   "draft": args.draft, "prerelease": bool(args.prerelease)}, token_str=tok)
     if st not in (200, 201):
         raise SystemExit("创建 Release 失败 (%s): %s" % (st, raw.decode("utf-8", "replace")))
     rel = json.loads(raw)
@@ -171,7 +171,12 @@ def verify_release(args, tok):
 
 def upload_all(rel, args, tok):
     base = os.path.dirname(os.path.abspath(__file__))
-    assets = build_assets(base, args.tag)
+    if args.asset_file:
+        if len(args.asset_file) != len(args.asset_name or []):
+            raise SystemExit("--asset-file 与 --asset-name 数量必须一致")
+        assets = list(zip(args.asset_file, args.asset_name or []))
+    else:
+        assets = build_assets(base, args.tag)
     for fp, name in assets:
         if not os.path.isfile(fp):
             raise SystemExit("缺少文件: %s（请先打包）" % fp)
@@ -235,7 +240,10 @@ def main():
     ap.add_argument("--draft", action="store_true")
     ap.add_argument("--skip-assets", action="store_true")
     ap.add_argument("--force-upload", action="store_true", help="同名资产先删除再重传")
+    ap.add_argument("--prerelease", action="store_true", help="标记为预发布（Win7 Beta 等）")
     ap.add_argument("--asset", help="只处理指定资产名")
+    ap.add_argument("--asset-file", action="append", help="自定义资产文件路径（可重复）")
+    ap.add_argument("--asset-name", action="append", help="对应资产名称（与 --asset-file 配对）")
     ap.add_argument("--verify", action="store_true", help="校验线上与本地产物一致性后退出")
     ap.add_argument("--update", action="store_true", help="更新已存在 Release 的标题/说明")
     args = ap.parse_args()

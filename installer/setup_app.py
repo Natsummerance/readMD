@@ -38,7 +38,22 @@ except Exception:
 APP_NAME = 'ReadMD'
 APP_EXE = 'ReadMD.exe'
 UNINST_EXE = 'ReadMDUninstall.exe'
-APP_VERSION = '2.1.1'
+def _bundle_version():
+    """frozen 安装器内嵌 version.txt（Win7 链：2.1.1 Beta）。"""
+    try:
+        if getattr(sys, '_MEIPASS', None):
+            p = os.path.join(sys._MEIPASS, 'version.txt')
+            if os.path.isfile(p):
+                v = open(p, encoding='utf-8').read().strip()
+                if v:
+                    return v
+    except Exception:
+        pass
+    return None
+
+
+APP_VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
+               or _bundle_version() or '2.1.1')
 PUBLISHER = 'Natsummerance'
 PROG_ID = 'ReadMD.markdown'
 EXTENSIONS = ['.md', '.markdown', '.mdown', '.mkd']
@@ -47,6 +62,7 @@ RELEASE_URL = 'https://github.com/Natsummerance/readMD/releases'
 INSTALL_STEPS = [
     ('prepare', '准备安装目录'),
     ('copy', '复制程序文件'),
+    ('runtime', '安装 WebView2 运行时'),
     ('assoc', '注册文件关联'),
     ('shortcut', '创建快捷方式'),
     ('uninst', '写入卸载信息'),
@@ -81,6 +97,51 @@ def default_install_dir():
     return os.path.join(base, 'Programs', 'ReadMD')
 
 
+WEBVIEW2_CLIENT_GUID = r'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+
+
+def is_win7():
+    """Win7 检测：决定是否内置 / 默认安装固定版 WebView2 109 运行时。"""
+    if os.environ.get('READMD_FORCE_WIN7') == '1':
+        return True
+    try:
+        import platform
+        return platform.system() == 'Windows' and platform.release() == '7'
+    except Exception:
+        return False
+
+
+def system_webview2_installed():
+    """系统级 Evergreen WebView2 运行时是否已安装（HKCU / HKLM）。"""
+    for root in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+        try:
+            with winreg.OpenKey(root, WEBVIEW2_CLIENT_GUID) as k:
+                v, _ = winreg.QueryValueEx(k, 'pv')
+                if v:
+                    return True
+        except OSError:
+            pass
+    return False
+
+
+def bundled_webview2_runtime_dir():
+    """内置固定版 WebView2 运行时目录（含 msedgewebview2.exe）。
+
+    候选顺序：安装器自身 _MEIPASS 内嵌 → 与可执行文件同目录（卸载器位于
+    安装目录，与 webview2_runtime 平级）→ 源码目录 installer\webview2_runtime。
+    """
+    cands = []
+    if getattr(sys, '_MEIPASS', None):
+        cands.append(os.path.join(sys._MEIPASS, 'webview2_runtime'))
+    if getattr(sys, 'frozen', False):
+        cands.append(os.path.join(os.path.dirname(os.path.abspath(sys.executable)), 'webview2_runtime'))
+    cands.append(os.path.join(asset_root(), 'installer', 'webview2_runtime'))
+    for cand in cands:
+        if cand and os.path.isdir(cand) and os.path.isfile(os.path.join(cand, 'msedgewebview2.exe')):
+            return cand
+    return None
+
+
 def is_uninstaller():
     if getattr(sys, 'frozen', False):
         name = os.path.basename(sys.executable).lower()
@@ -90,13 +151,19 @@ def is_uninstaller():
 
 
 def bundled_exe(name):
+    """内置可执行文件；Win7 构建的卸载器以 -win7 后缀命名，一并兜底。"""
+    names = [name]
+    if name.lower().endswith('.exe'):
+        names.append(name[:-4] + '-win7.exe')
     if getattr(sys, '_MEIPASS', None):
-        p = os.path.join(sys._MEIPASS, name)
-        if os.path.isfile(p):
-            return p
-    for cand in (resource_path(name), os.path.join(asset_root(), 'dist', name)):
-        if os.path.isfile(cand):
-            return cand
+        for n in names:
+            p = os.path.join(sys._MEIPASS, n)
+            if os.path.isfile(p):
+                return p
+    for n in names:
+        for cand in (resource_path(n), os.path.join(asset_root(), 'dist', n)):
+            if os.path.isfile(cand):
+                return cand
     return None
 
 
@@ -344,8 +411,17 @@ def do_install(opts, progress):
     with open(os.path.join(inst_dir, 'install.json'), 'w', encoding='utf-8') as f:
         json.dump({'app': APP_NAME, 'version': APP_VERSION,
                    'installed_at': time.strftime('%Y-%m-%d %H:%M:%S'),
-                   'dir': inst_dir, 'assoc': bool(opts.get('assoc', True))},
+                   'dir': inst_dir, 'assoc': bool(opts.get('assoc', True)),
+                   'webview2': bool(opts.get('webview2', False))},
                   f, ensure_ascii=False, indent=2)
+    # Win7：把内置固定版 WebView2 109 运行时复制到安装目录（约 143MB）
+    progress(34, 'runtime', '安装 WebView2 运行时')
+    if opts.get('webview2', False):
+        rt = bundled_webview2_runtime_dir()
+        if rt is not None:
+            _copy_tree(rt, os.path.join(inst_dir, 'webview2_runtime'))
+        else:
+            progress(34, 'runtime', '未找到内置运行时，跳过')
     progress(46, 'assoc', '注册文件关联')
     if opts.get('assoc', True):
         backup_assoc()
@@ -607,6 +683,8 @@ def run_gui(uninstall_mode):
         'default_dir': default_install_dir(),
         'version': APP_VERSION,
         'running': app_running(),
+        'win7': is_win7(),
+        'webview2Default': is_win7() and not system_webview2_installed(),
         'progress': {'running': False, 'percent': 0, 'step': '', 'text': '', 'done': False, 'error': ''},
     }
     if state['mode'] == 'uninstall' and inst is None:
@@ -625,6 +703,11 @@ def run_gui(uninstall_mode):
             js_api=api, width=980, height=700, min_size=(880, 640),
             text_select=True, background_color='#0a0e18')
     api._window = window
+    # Win7：安装器 UI 同样使用内置固定版运行时（打过补丁的 pywebview）
+    rt = bundled_webview2_runtime_dir()
+    if rt is not None:
+        os.environ['READMD_WEBVIEW2_RUNTIME'] = rt
+        os.environ['READMD_WEBVIEW2_USERDATA'] = os.path.join(app_data_dir(), 'setup_userdata')
     webview.start()
     return 0
 
@@ -644,7 +727,8 @@ def main():
     if args.install_silent is not None:
         d = args.install_silent or default_install_dir()
         return run_install_silent({'dir': d, 'assoc': True, 'desktop': False,
-                                   'startmenu': False, 'force': args.force})
+                                   'startmenu': False, 'force': args.force,
+                                   'webview2': is_win7() and not system_webview2_installed()})
     if args.uninstall_silent:
         return run_uninstall_silent()
     return run_gui(args.uninstall)

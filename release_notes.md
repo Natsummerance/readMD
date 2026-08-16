@@ -2,6 +2,15 @@
 
 > 安装包（推荐）：下载 **ReadMDSetup-v2.1.1.exe**，双击即可安装（内含动画安装界面，支持设为 .md 默认打开方式，可随时在「设置 → 应用」中卸载）。
 > 便携版：**ReadMD-portable-v2.1.1.exe** 免安装，双击直接运行。
+> Win7 用户：下载 **ReadMDSetup-2.1.1-Beta-win7-x64.exe**（v2.1.1 Beta 兼容版，详见下方说明）。
+
+## Win7 兼容版（v2.1.1 Beta）
+
+- **适用**：Windows 7 SP1 x64（正式版 v2.1.1 基于 Python 3.10 + pywebview 6.x，不支持 Win7）。安装包内嵌固定版 **WebView2 109 运行时**（Win7 最后支持线），安装时自动放入安装目录，无需系统级 WebView2；Win7 且系统未装 WebView2 时安装界面默认勾选「安装 WebView2 运行时」
+- **保留**：秒开（onedir 目录安装 + 单实例托盘）、三主题阅读 / 自动修正 / 目录 / 搜索 / 编辑 / 导出 PDF·DOCX·HTML / 打印、docx / pdf 转 Markdown（自动保存 + 批量 + 严格校验）
+- **裁剪**：OCR（WinRT 仅 Win10+）、AI 助手、网页转 MD、docx / pdf 以外的格式转换在 Win7 版入口明确提示「暂不支持」
+- **版本**：仅 Win7 版使用版本串 `2.1.1 Beta`；正式版 / 便携版保持 `2.1.1`；独立 pre-release 发布，不影响正式版
+- **前置条件**：Win7 SP1 x64、.NET Framework 4.8、VC++ 2015-2022 运行库（x64）
 
 ## 新增（v2.1.1）
 

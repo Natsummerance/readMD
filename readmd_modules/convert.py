@@ -32,10 +32,7 @@ _MATH_CHARS = set('+-*/=<>^_~%∑∫√∞≈≠±×÷∂∇∏πθαβγδφψ�
 
 
 def load():
-    global _engine
-    if _engine is None:
-        from markitdown import MarkItDown
-        _engine = MarkItDown()
+    # 惰性加载：docx / pdf 专用解析不依赖 markitdown（Win7 版未安装）
     return _engine
 
 
@@ -80,8 +77,14 @@ def convert_verbose(path):
 
 
 def _markitdown_convert(path):
-    eng = load()
-    result = eng.convert(path)
+    global _engine
+    if _engine is None:
+        try:
+            from markitdown import MarkItDown
+        except Exception as e:  # noqa: BLE001
+            raise ImportError('MarkItDown 未安装（%s），本格式无法转换' % e)
+        _engine = MarkItDown()
+    result = _engine.convert(path)
     return (result.text_content or '').strip()
 
 
