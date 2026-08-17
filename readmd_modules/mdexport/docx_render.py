@@ -10,12 +10,43 @@ from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import nsdecls, qn
+from docx.parts.hdrftr import FooterPart, HeaderPart
 from docx.shared import Mm, Pt, RGBColor
 from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
 from . import parser as _parser
 
 _BASE_FONT = 'Microsoft YaHei'
+
+
+def _default_part_xml(original, tag, style_name):
+    """Load python-docx's template, with a frozen-bundle-safe minimal fallback."""
+    try:
+        return original()
+    except FileNotFoundError:
+        return (
+            "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"
+            '<w:%s %s><w:p><w:pPr><w:pStyle w:val="%s"/>'
+            '</w:pPr></w:p></w:%s>' % (tag, nsdecls('w'), style_name, tag)
+        ).encode('utf-8')
+
+
+_DOCX_DEFAULT_FOOTER = FooterPart._default_footer_xml
+_DOCX_DEFAULT_HEADER = HeaderPart._default_header_xml
+
+
+@classmethod
+def _safe_default_footer_xml(cls):
+    return _default_part_xml(_DOCX_DEFAULT_FOOTER, 'ftr', 'Footer')
+
+
+@classmethod
+def _safe_default_header_xml(cls):
+    return _default_part_xml(_DOCX_DEFAULT_HEADER, 'hdr', 'Header')
+
+
+FooterPart._default_footer_xml = _safe_default_footer_xml
+HeaderPart._default_header_xml = _safe_default_header_xml
 
 
 def _hex_rgb(v, default='262626'):

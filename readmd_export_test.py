@@ -17,6 +17,7 @@ sys.path.insert(0, ROOT)
 from readmd_modules.mdexport import parser as P
 from readmd_modules.mdexport import styles as S
 from readmd_modules.mdexport import formula as F
+from readmd_modules.mdexport import docx_render as DOCX
 from readmd_modules.mdexport import pdf_render as PDF
 import readmd_modules.mdexport as E
 
@@ -195,6 +196,17 @@ class TestPdfFonts(unittest.TestCase):
             self.assertTrue(PDF._font_ready(second))
         finally:
             PDF._registered_font_name = previous
+
+
+class TestDocxTemplates(unittest.TestCase):
+    def test_missing_frozen_template_uses_minimal_part(self):
+        from docx.oxml import parse_xml
+
+        def missing():
+            raise FileNotFoundError('frozen template')
+
+        xml = DOCX._default_part_xml(missing, 'ftr', 'Footer')
+        self.assertTrue(parse_xml(xml).tag.endswith('ftr'))
 
 
 class TestExportSmoke(unittest.TestCase):
