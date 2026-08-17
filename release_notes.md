@@ -4,10 +4,7 @@
 
 - Windows 安装版：`ReadMDSetup-v2.2.0.exe`
 - Windows 便携版：`ReadMD-portable-v2.2.0.exe`
-- Intel Mac：`ReadMD-macos-x64-v2.2.0.zip`
-- Apple Silicon Mac：`ReadMD-macos-arm64-v2.2.0.zip`
-
-macOS 包暂未签名。解压后首次启动请在 Finder 中右键 `ReadMD.app` 并选择“打开”；若系统仍阻止运行，请在“系统设置 → 隐私与安全性”中允许打开。
+v2.2.0 先发布 Windows 版。macOS 将采用独立原生依赖与构建流程，在 v2.2.1 单独发布。
 
 ## 本次更新
 
@@ -17,7 +14,7 @@ macOS 包暂未签名。解压后首次启动请在 Finder 中右键 `ReadMD.app
 - 编辑工具栏收敛为单行，新增分组 Markdown 命令、可搜索命令面板和分类公式选择器。
 - 图片编辑升级为八向裁剪、任意角度、翻转、画布缩放/平移、输出尺寸与撤销重做。
 - 预览方向改为工具栏右侧紧凑停靠组件，支持拖拽调整编辑/预览比例；桌面窄窗口不再把左右预览错误放到下方。
-- 新增 macOS 原生数据目录、Finder 打开/定位、Vision OCR、文档类型声明及 Intel/Apple Silicon 双架构构建。
+- 已完成 macOS 原生数据目录、Finder 打开/定位、Vision OCR 与文档类型声明的基础适配；独立 macOS 构建顺延至 v2.2.1。
 
 ## 隐私说明
 
@@ -25,4 +22,4 @@ v2.2.0 首次启动会清空旧版 AI 自定义连接及当前选择，用户需
 
 ## 校验
 
-Release 由 GitHub Actions 在 Windows、Intel macOS 与 Apple Silicon macOS 全部测试通过后自动生成。工作流会验证文件名、非零大小、应用版本、目标架构与 SHA-256。
+Release 由 GitHub Actions 在 Windows 测试与两个 EXE 自检通过后自动生成。工作流会验证文件名、非零大小、应用版本与 SHA-256。

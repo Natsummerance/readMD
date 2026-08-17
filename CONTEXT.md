@@ -11,7 +11,7 @@
 - 本地：任意工作区目录（不得在仓库记录开发者绝对路径）
 - GitHub：`https://github.com/Natsummerance/readMD`（public，main 分支）
 - 发布凭据仅由 GitHub Actions 管理，不在源码或文档记录个人账号、邮箱或 Token
-- 当前开发版本：v2.2.0；Windows + Intel/Apple Silicon macOS 由 CI 构建
+- 当前发布版本：v2.2.0（Windows）；macOS 独立适配目标为 v2.2.1
 - Win7 兼容版：**v2.1.1 Beta**（pre-release tag `v2.1.1-beta`，资产 `ReadMDSetup-2.1.1-Beta-win7-x64.exe`）——Win7 SP1 x64 + 内嵌固定版 WebView2 109 运行时；独立 Python 3.9.13 构建链（`.venv-win7` / `win7-reqs.txt` / `build_win7.bat` / `ReadMD-win7.spec` / `ReadMDSetup-win7.spec` / `tools\win7_pywebview_edgechromium.patch` / `tools\bundle_runtime.py`）；功能裁剪：仅 docx / pdf 转 MD + 导出（OCR / AI / 网页 / 其他格式在 Win7 下提示不可用）
 
 ## 功能清单（按开发顺序）
@@ -63,7 +63,7 @@
 - `package.bat`：一次产出两版——onedir 安装版 `dist\ReadMD\ReadMD.exe`（秒开）+ 便携单文件 `dist\ReadMD-portable.exe`（windowed，console=False，图标 readmd.ico）
 - `installer/build_setup.bat`：先 ReadMDUninstall.exe，再 ReadMDSetup.exe（内嵌 onedir 目录 `ReadMD/` + 卸载器；v2.0.1 起不再使用 PyInstaller splash 启动画面，避免黑屏弹窗卡死安装流程）
 - `deploy.bat [--skip-tests] [--tag v2.2.0]`：测试并推送 main 与标签
-- GitHub Actions 在 Windows、Intel macOS、Apple Silicon macOS 测试后生成四个 Release 资产
+- GitHub Actions 为 v2.2.0 生成 Windows 安装版与便携版两个 Release 资产；macOS 从 v2.2.1 起使用独立流程
 - Release 由 CI 唯一创建，并在发布前校验架构、版本、大小与 SHA-256
 
 ## 测试现状（全部通过）

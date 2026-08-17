@@ -42,13 +42,11 @@
 | --- | --- |
 | **ReadMDSetup-版本.exe** | 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级 |
 | **ReadMD-portable-版本.exe** | 便携版，免安装，双击直接运行 |
-| **ReadMD-macos-x64-v2.2.0.zip** | Intel Mac 未签名版 |
-| **ReadMD-macos-arm64-v2.2.0.zip** | Apple Silicon Mac 未签名版 |
 | **ReadMDSetup-2.1.1-Beta-win7-x64.exe** | **Win7 兼容版**（v2.1.1 Beta，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
 >
-> macOS 包目前未签名。解压后首次启动请在 Finder 中右键 `ReadMD.app` →“打开”；如仍被拦截，请到“系统设置 → 隐私与安全性”允许打开。
+> v2.2.0 先发布 Windows 版。macOS 将拆分原生依赖和构建流程，在 v2.2.1 单独发布。
 
 **方式二：源码运行（开发 / 自定义）**
 

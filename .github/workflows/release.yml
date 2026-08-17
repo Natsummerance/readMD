@@ -17,12 +17,8 @@ env:
 
 jobs:
   test:
-    name: Test · ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, macos-15-intel, macos-14]
-    runs-on: ${{ matrix.os }}
+    name: Test · Windows
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -83,48 +79,10 @@ jobs:
             dist/ReadMD-portable-v2.2.0.exe
           if-no-files-found: error
 
-  macos-package:
-    name: Package · macOS · ${{ matrix.arch }}
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: test
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-15-intel
-            arch: x64
-            machine: x86_64
-          - os: macos-14
-            arch: arm64
-            machine: arm64
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: pip
-      - run: python -m pip install --disable-pip-version-check -r requirements.txt pyinstaller
-      - name: Build and verify app bundle
-        run: |
-          python -m PyInstaller --noconfirm --clean ReadMD-macOS.spec
-          test "$(uname -m)" = "${{ matrix.machine }}"
-          file dist/ReadMD.app/Contents/MacOS/ReadMD | grep "${{ matrix.machine }}"
-          plutil -lint dist/ReadMD.app/Contents/Info.plist
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' dist/ReadMD.app/Contents/Info.plist)" = "$READMD_VERSION"
-          dist/ReadMD.app/Contents/MacOS/ReadMD --selftest
-          ditto -c -k --sequesterRsrc --keepParent dist/ReadMD.app "ReadMD-macos-${{ matrix.arch }}-v${READMD_VERSION}.zip"
-          unzip -t "ReadMD-macos-${{ matrix.arch }}-v${READMD_VERSION}.zip"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: macos-${{ matrix.arch }}-asset
-          path: ReadMD-macos-${{ matrix.arch }}-v2.2.0.zip
-          if-no-files-found: error
-
   release:
     name: Publish GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [windows-package, macos-package]
+    needs: windows-package
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -132,20 +90,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: '*-asset*'
-          path: release-assets
-          merge-multiple: true
-      - uses: actions/download-artifact@v4
-        with:
           name: windows-assets
           path: release-assets
       - name: Verify assets and checksums
         run: |
-          test "$(find release-assets -maxdepth 1 -type f | wc -l)" -eq 4
+          test "$(find release-assets -maxdepth 1 -type f | wc -l)" -eq 2
           test -s release-assets/ReadMDSetup-v2.2.0.exe
           test -s release-assets/ReadMD-portable-v2.2.0.exe
-          test -s release-assets/ReadMD-macos-x64-v2.2.0.zip
-          test -s release-assets/ReadMD-macos-arm64-v2.2.0.zip
           (cd release-assets && sha256sum * > SHA256SUMS.txt)
           echo '### SHA-256' >> "$GITHUB_STEP_SUMMARY"
           echo '```text' >> "$GITHUB_STEP_SUMMARY"
@@ -158,6 +109,4 @@ jobs:
           files: |
             release-assets/ReadMDSetup-v2.2.0.exe
             release-assets/ReadMD-portable-v2.2.0.exe
-            release-assets/ReadMD-macos-x64-v2.2.0.zip
-            release-assets/ReadMD-macos-arm64-v2.2.0.zip
           fail_on_unmatched_files: true
