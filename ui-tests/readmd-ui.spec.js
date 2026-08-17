@@ -1,4 +1,6 @@
 const { test, expect } = require('@playwright/test');
+const path = require('path');
+const { pathToFileURL } = require('url');
 
 async function enterEdit(page) {
   await page.goto('/');
@@ -9,6 +11,28 @@ async function enterEdit(page) {
   });
   await expect(page.locator('#edit-bar')).toBeVisible();
 }
+
+test('installer keeps location-page actions inside compact viewports', async ({ page }) => {
+  const installerUrl = pathToFileURL(path.resolve(__dirname, '../installer/setup.html')).href + '?demo=1';
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const viewport of [{ width: 880, height: 640 }, { width: 784, height: 560 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto(installerUrl);
+    await page.locator('#btn-install').click();
+    await expect(page.locator('#page-options')).toHaveClass(/active/);
+    await page.locator('#page-options').evaluate(options => {
+      options.getAnimations({ subtree: true }).forEach(animation => animation.finish());
+    });
+    const actions = await page.locator('#page-options .actions').boundingBox();
+    expect(actions).not.toBeNull();
+    expect(actions.y).toBeGreaterThanOrEqual(52);
+    expect(actions.y + actions.height).toBeLessThanOrEqual(viewport.height - 8);
+    await page.locator('#size-note').scrollIntoViewIfNeeded();
+    const actionsAfterScroll = await page.locator('#page-options .actions').boundingBox();
+    expect(actionsAfterScroll.y + actionsAfterScroll.height).toBeLessThanOrEqual(viewport.height - 8);
+    await expect(page.locator('#btn-start-install')).toBeInViewport();
+  }
+});
 
 test('single row commands, formula picker and responsive preview', async ({ page }) => {
   const errors = []; page.on('pageerror', e => errors.push(String(e)));

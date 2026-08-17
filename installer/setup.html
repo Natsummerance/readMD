@@ -101,6 +101,17 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
 /* ---------- 选项页 ---------- */
 .panel{width:100%; max-width:520px; display:flex; flex-direction:column; gap:14px;
   animation:rise .6s var(--ease) .08s both}
+#page-options{justify-content:flex-start; padding-top:20px; padding-bottom:18px}
+#page-options>h1{flex:none; margin-bottom:6px}
+#page-options>.sub{flex:none; margin-bottom:16px !important}
+#page-options>.panel{flex:1; min-height:0; gap:0}
+.option-fields{flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  display:flex; flex-direction:column; gap:14px; padding:2px 6px 12px;
+  scrollbar-width:thin; scrollbar-color:var(--border2) transparent}
+.option-fields::-webkit-scrollbar{width:8px}
+.option-fields::-webkit-scrollbar-thumb{background:var(--border2); border-radius:999px; border:2px solid transparent; background-clip:padding-box}
+.option-actions{flex:none; justify-content:center; width:100%; margin-top:0 !important; padding:14px 6px 2px;
+  border-top:1px solid var(--border); background:linear-gradient(180deg,transparent,var(--bg2) 24%)}
 .opt-card{background:var(--card); border:1px solid var(--border); border-radius:16px; padding:14px 16px;
   display:flex; align-items:center; gap:14px; transition:border-color .25s, background .25s}
 .opt-card:hover{border-color:var(--border2)}
@@ -236,39 +247,41 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
     <h1>安装选项</h1>
     <p class="sub" style="margin-bottom:26px">选择安装位置与快捷方式</p>
     <div class="panel">
-      <div class="opt-card">
-        <div class="ic">&#128193;</div>
-        <div class="opt-t">
-          <b>安装位置</b>
-          <span>默认安装到当前用户目录，无需管理员权限</span>
+      <div class="option-fields" role="group" aria-label="安装位置与快捷方式选项">
+        <div class="opt-card">
+          <div class="ic">&#128193;</div>
+          <div class="opt-t">
+            <b>安装位置</b>
+            <span>默认安装到当前用户目录，无需管理员权限</span>
+          </div>
         </div>
+        <div class="path-row">
+          <input id="opt-dir" spellcheck="false" autocomplete="off">
+          <button class="btn btn-ghost btn-sm" id="btn-browse">更改…</button>
+        </div>
+        <div class="opt-card">
+          <div class="ic">&#128196;</div>
+          <div class="opt-t"><b>设为 .md 默认打开方式</b><span>双击 .md 文件直接使用 ReadMD 打开</span></div>
+          <div class="switch on" id="sw-assoc" data-key="assoc"><i></i></div>
+        </div>
+        <div class="opt-card">
+          <div class="ic">&#128133;</div>
+          <div class="opt-t"><b>创建桌面快捷方式</b><span>在桌面放置 ReadMD 图标</span></div>
+          <div class="switch on" id="sw-desktop" data-key="desktop"><i></i></div>
+        </div>
+        <div class="opt-card">
+          <div class="ic">&#128203;</div>
+          <div class="opt-t"><b>创建开始菜单快捷方式</b><span>可从开始菜单搜索并启动</span></div>
+          <div class="switch on" id="sw-startmenu" data-key="startmenu"><i></i></div>
+        </div>
+        <div class="opt-card" id="card-webview2" style="display:none">
+          <div class="ic">&#128230;</div>
+          <div class="opt-t"><b>安装 WebView2 运行时</b><span>Win7 必需（内置 109 固定版，约 143 MB）；系统已装 WebView2 时可关闭</span></div>
+          <div class="switch on" id="sw-webview2" data-key="webview2"><i></i></div>
+        </div>
+        <div class="size-note" id="size-note">安装大小约 110 MB · 随时可在「设置 → 应用」中卸载</div>
       </div>
-      <div class="path-row">
-        <input id="opt-dir" spellcheck="false" autocomplete="off">
-        <button class="btn btn-ghost btn-sm" id="btn-browse">更改…</button>
-      </div>
-      <div class="opt-card">
-        <div class="ic">&#128196;</div>
-        <div class="opt-t"><b>设为 .md 默认打开方式</b><span>双击 .md 文件直接使用 ReadMD 打开</span></div>
-        <div class="switch on" id="sw-assoc" data-key="assoc"><i></i></div>
-      </div>
-      <div class="opt-card">
-        <div class="ic">&#128133;</div>
-        <div class="opt-t"><b>创建桌面快捷方式</b><span>在桌面放置 ReadMD 图标</span></div>
-        <div class="switch on" id="sw-desktop" data-key="desktop"><i></i></div>
-      </div>
-      <div class="opt-card">
-        <div class="ic">&#128203;</div>
-        <div class="opt-t"><b>创建开始菜单快捷方式</b><span>可从开始菜单搜索并启动</span></div>
-        <div class="switch on" id="sw-startmenu" data-key="startmenu"><i></i></div>
-      </div>
-      <div class="opt-card" id="card-webview2" style="display:none">
-        <div class="ic">&#128230;</div>
-        <div class="opt-t"><b>安装 WebView2 运行时</b><span>Win7 必需（内置 109 固定版，约 143 MB）；系统已装 WebView2 时可关闭</span></div>
-        <div class="switch on" id="sw-webview2" data-key="webview2"><i></i></div>
-      </div>
-      <div class="size-note" id="size-note">安装大小约 110 MB · 随时可在「设置 → 应用」中卸载</div>
-      <div class="actions" style="justify-content:center">
+      <div class="actions option-actions">
         <button class="btn btn-ghost" id="btn-opt-back">返回</button>
         <button class="btn btn-primary" id="btn-start-install">开始安装</button>
       </div>

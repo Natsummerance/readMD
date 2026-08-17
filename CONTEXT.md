@@ -71,7 +71,7 @@
 
 ## 测试现状（全部通过）
 
-- 修正器单测 37/37；转换/AI 23/23；导出单测 24/24；网页专项 10/10；Playwright UI 4/4；`--selftest` PASSED
+- 修正器单测 37/37；转换/AI 23/23；导出单测 24/24；网页专项 10/10；Playwright UI 5/5（含安装器紧凑视口）；`--selftest` PASSED
 - dist\ReadMD\ReadMD.exe --selftest 退出码 0（console=False 无输出）；`readmd.log` 启动里程碑：start / server_up / webview_imported / window_created / page_loaded
 - 安装器串行 静默安装→文件就位→静默卸载→目录清除，验证通过（并发下曾出现竞争残留，正常串行无问题）
 
