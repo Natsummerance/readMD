@@ -4,11 +4,11 @@
 
 # 📖 ReadMD · 轻量级 Markdown 阅读器
 
-**纯本地 · 秒开 · 离线可用** 的 Windows Markdown 阅读器。
+**纯本地 · 秒开 · 离线可用** 的 Windows / macOS Markdown 阅读器。
 
 双击 `.md` 即读，渲染前自动修正常见 Markdown 错误（表格 / 加粗 / 公式 / 标题），**只影响显示，绝不改写原文件**；集成 AI 助手、万物转 MD、扫描 OCR、网页转 MD、主动编辑与移动端共享。
 
-![platform](https://img.shields.io/badge/platform-Windows%2010%2F11%20%2B%20Win7%20Beta-0078d6?logo=windows&logoColor=white)
+![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-0078d6)
 ![version](https://img.shields.io/github/v/release/Natsummerance/readMD?color=3b6ef5)
 ![webview2](https://img.shields.io/badge/runtime-WebView2-4fc08d)
 ![repo size](https://img.shields.io/github/repo-size/Natsummerance/readMD)
@@ -21,11 +21,11 @@
 
 - ⚡ **秒开**：安装版为 onedir 目录安装，冷启动窗口可用 ≤1.5s（低配机 / 机械硬盘 ≤2s）；关闭窗口隐藏到系统托盘常驻，再双击 `.md` 瞬时唤起（<0.3s）
 - 🎨 **界面清爽**：44px 工具条 + 内联 SVG 图标、欢迎页最近文件网格、浅色 / 暗色 / sepia 三主题全套设计 token、大文档骨架屏、动画遵循系统「减弱动态效果」
-- 🤖 **AI 助手（v2.1.1 连接自定义）**：15+ 提供商预设，也可自填 Base URL + API Key（保存为该提供商自定义覆盖，可一键恢复默认）；支持 OpenAI `chat/completions` / `completions` / `responses` 与 Anthropic `messages` 四种响应方式，一键「获取模型」拉取可用模型列表（也可手动输入）；流式输出、一键应用到文档、实时监控本次与会话累计 token 用量；14 个 Prompt 模板 + 历史会话
+- 🤖 **AI 助手（v2.2.0 隐私与自定义连接）**：官方预设 + 可增删改的自定义连接；API Key 仅本机保存且配置接口不回传明文；获取模型后通过下拉框选择，连接面板可拖拽调宽
 - 🔄 **万物转 MD（v2.1.1 保存 + 批量 + 质量）**：docx / pptx / xlsx / pdf / html / csv / json 等转为 Markdown；单文件或批量（多选 / 整文件夹）一键转换，结果自动保存到源目录同名 `.md` 并直接以可编辑文件打开（同名默认跳过、可勾选覆盖）；docx 走专用解析（OMML 公式转 LaTeX、标题、表格、等宽代码块），pdf 走专用解析（表格还原 + 公式启发式），其余 MarkItDown 并逐文件回退；输出经严格校验（代码围栏 / 表格 / 公式定界符 / 编码 / 图片引用）
-- 🔍 **扫描转 MD（OCR）**：图片、扫描件 PDF 使用 Windows 10/11 内置 OCR（离线、免费、支持中文）；有文字层的 PDF 直接提取，无文字层逐页渲染识别
+- 🔍 **扫描转 MD（OCR）**：Windows 使用 WinRT、macOS 使用 Vision，均为系统原生离线识别；PDF 有文字层时直接提取
 - 🌐 **网页转 MD**：输入 URL 抓取正文（trafilatura），支持批量爬取同站最多 10 页合并为一份文档
-- ✏️ **主动编辑（v2.1.1 实时预览）**：基于 [CodeMirror 6](https://github.com/codemirror/codemirror.next) 的 Markdown 语法高亮 + 自动补全（18 种语法），一键插入表格 / 公式 / 任务列表等；编辑时可开启 **左侧 / 右侧 / 下方 / 上方实时预览**（300ms 防抖渲染，可选滚动同步），转换 / OCR / 网页结果同样可编辑；**插入图片可裁剪 / 缩放 / 旋转**，保存到文档 `images/` 目录；Ctrl+S 保存（首存自动 `.bak` 备份）
+- ✏️ **主动编辑（v2.2.0）**：单行分组工具栏、可搜索命令面板和分类公式选择器；实时预览支持上下左右停靠及拖拽分隔；图片编辑支持八向裁剪、任意角度、翻转、画布缩放/平移、输出尺寸与撤销重做
 - 📱 **移动端共享**：开启局域网共享后，手机扫码在同一 Wi-Fi 下阅读 / 转 MD / OCR / AI（随机令牌鉴权）
 - 📑 **阅读体验**：目录侧栏（滚动高亮）、全文搜索、三主题、字号缩放、打印 / 导出 PDF、文件夹浏览、大文档增量渲染（>300KB 或 6000 行分块渲染不卡顿）、文件外部修改自动刷新
 - 📤 **导出 PDF / DOCX / HTML（v2.1.0）**：一键导出当前文档，内置「简约 / 经典 / 商务」三套样式并可全量自定义（纸张 / 页边距 / 各级标题颜色与字号 / 表格表头与斑马纹 / 代码块 / 引用 / 页码等），自定义样式可保存为预设；公式在 PDF / DOCX 中本地渲染为图片，HTML 为单文件（内联 marked + MathJax，离线可开）
@@ -42,13 +42,17 @@
 | --- | --- |
 | **ReadMDSetup-版本.exe** | 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级 |
 | **ReadMD-portable-版本.exe** | 便携版，免安装，双击直接运行 |
+| **ReadMD-macos-x64-v2.2.0.zip** | Intel Mac 未签名版 |
+| **ReadMD-macos-arm64-v2.2.0.zip** | Apple Silicon Mac 未签名版 |
 | **ReadMDSetup-2.1.1-Beta-win7-x64.exe** | **Win7 兼容版**（v2.1.1 Beta，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
+>
+> macOS 包目前未签名。解压后首次启动请在 Finder 中右键 `ReadMD.app` →“打开”；如仍被拦截，请到“系统设置 → 隐私与安全性”允许打开。
 
 **方式二：源码运行（开发 / 自定义）**
 
-环境要求：Windows 10/11（自带 WebView2 运行时）、Python 3.9+。
+环境要求：Windows 10/11（WebView2）或 macOS 12+，Python 3.9+。
 
 ```bat
 双击 install.bat
@@ -88,6 +92,7 @@ python readmd.py --browser "文件.md"  rem 无 pywebview 时用浏览器兜底
 | Ctrl+F | 搜索（Enter 下一个 / Shift+Enter 上一个 / Esc 关闭） |
 | Ctrl+Shift+F | 目录侧栏 |
 | Ctrl+Shift+A | AI 助手面板 |
+| Ctrl+Shift+P | 编辑模式下打开 Markdown 命令面板 |
 | Ctrl+D | 切换主题 |
 | Ctrl+= / Ctrl+- | 增大 / 减小字号 |
 | Ctrl+R | 重新加载 |
@@ -137,7 +142,7 @@ python readmd.py --browser "文件.md"  rem 无 pywebview 时用浏览器兜底
 
 ### AI 助手
 
-- **提供商**：OpenAI / DeepSeek / Kimi / 智谱 GLM / 通义千问 / 硅基流动 / OpenRouter / Groq / xAI / Mistral / Gemini / 火山方舟 / 腾讯混元 / Ollama（本地）/ Anthropic 等 15+ 预设，自动导入 cc-switch 中配置过的提供商
+- **提供商**：OpenAI / DeepSeek / Kimi / 智谱 GLM / 通义千问 / 硅基流动 / OpenRouter / Groq / xAI / Mistral / Gemini / 火山方舟 / 腾讯混元 / Ollama（本地）/ Anthropic 等公开预设，并支持完全自定义连接
 - **API Key**：面板中填写即保存到本机（`%APPDATA%\ReadMD\ai.json`）；留空时自动读取环境变量（如 `DEEPSEEK_API_KEY`），无需重复填写
 - **自定义**：可直接修改任意预设的地址 / 模型 / Key；兼容 OpenAI Chat Completions 与 Anthropic Messages 双协议，绝大多数聚合网关 / NewAPI / One API 可直接使用
 - **动作**：快速阅读、润色、修改、扩充、续写、翻译、提问；默认处理全文，可勾选「仅处理选中文字」

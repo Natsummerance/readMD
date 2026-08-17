@@ -16,16 +16,23 @@ mammoth
 trafilatura
 requests
 
-# Scan/OCR-to-MD (WinRT OCR + PDF rendering)
+# Scan/OCR-to-MD (platform-specific backends)
 pymupdf
-winrt-Windows.Media.Ocr
-winrt-Windows.Graphics.Imaging
-winrt-Windows.Storage
-winrt-Windows.Storage.Streams
-winrt-Windows.Foundation
-winrt-Windows.Foundation.Collections
-winrt-Windows.Globalization
-# System tray (single-instance resident)
+
+# Windows-only: WinRT OCR
+pywinrt-Windows.Media.Ocr; sys_platform == 'win32'
+pywinrt-Windows.Graphics.Imaging; sys_platform == 'win32'
+pywinrt-Windows.Storage; sys_platform == 'win32'
+pywinrt-Windows.Storage.Streams; sys_platform == 'win32'
+pywinrt-Windows.Foundation; sys_platform == 'win32'
+pywinrt-Windows.Foundation.Collections; sys_platform == 'win32'
+pywinrt-Windows.Globalization; sys_platform == 'win32'
+
+# macOS-only: Vision OCR via PyObjC
+pyobjc-framework-Vision; sys_platform == 'darwin'
+pyobjc-framework-Quartz; sys_platform == 'darwin'
+
+# System tray (Windows/macOS/Linux)
 pystray
 
 # Export-to-PDF / formula-to-image (lazy-loaded)

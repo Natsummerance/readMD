@@ -1,0 +1,158 @@
+name: Test, package and release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  READMD_VERSION: '2.2.0'
+  PYTHONUTF8: '1'
+
+jobs:
+  test:
+    name: Test · ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-15-intel, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-test.txt
+      - name: Install Playwright
+        working-directory: ui-tests
+        run: |
+          npm ci
+          npx playwright install chromium
+      - name: Run regression suite
+        run: |
+          python readmd_fix_test.py
+          python readmd_convert_test.py
+          python readmd_export_test.py
+          python tools/privacy_scan.py
+          python readmd.py --selftest
+      - name: Run Playwright UI tests
+        working-directory: ui-tests
+        run: npm test
+
+  windows-package:
+    name: Package · Windows
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: python -m pip install --disable-pip-version-check -r requirements.txt pyinstaller
+      - run: python tools/make_icon.py
+      - name: Build application and installer
+        shell: pwsh
+        run: |
+          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD --icon assets/readmd.ico --add-data "assets;assets" --add-data "readmd_modules;readmd_modules" --add-data "readmd_fix.py;." --hidden-import readmd_fix --collect-data magika --collect-submodules readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable --icon assets/readmd.ico --add-data "assets;assets" --add-data "readmd_modules;readmd_modules" --add-data "readmd_fix.py;." --hidden-import readmd_fix --collect-data magika --collect-submodules readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall --icon assets/readmd.ico --add-data "installer;installer" installer/setup_app.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup --icon assets/readmd.ico --add-data "installer;installer" --add-binary "dist/ReadMD;ReadMD" --add-binary "dist/ReadMDUninstall.exe;." installer/setup_app.py
+          Move-Item dist/ReadMDSetup.exe "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
+          Move-Item dist/ReadMD-portable.exe "dist/ReadMD-portable-v$env:READMD_VERSION.exe"
+          & "dist/ReadMD/ReadMD.exe" --selftest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-assets
+          path: |
+            dist/ReadMDSetup-v2.2.0.exe
+            dist/ReadMD-portable-v2.2.0.exe
+          if-no-files-found: error
+
+  macos-package:
+    name: Package · macOS · ${{ matrix.arch }}
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15-intel
+            arch: x64
+            machine: x86_64
+          - os: macos-14
+            arch: arm64
+            machine: arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: python -m pip install --disable-pip-version-check -r requirements.txt pyinstaller
+      - name: Build and verify app bundle
+        run: |
+          python -m PyInstaller --noconfirm --clean ReadMD-macOS.spec
+          test "$(uname -m)" = "${{ matrix.machine }}"
+          file dist/ReadMD.app/Contents/MacOS/ReadMD | grep "${{ matrix.machine }}"
+          plutil -lint dist/ReadMD.app/Contents/Info.plist
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' dist/ReadMD.app/Contents/Info.plist)" = "$READMD_VERSION"
+          dist/ReadMD.app/Contents/MacOS/ReadMD --selftest
+          ditto -c -k --sequesterRsrc --keepParent dist/ReadMD.app "ReadMD-macos-${{ matrix.arch }}-v${READMD_VERSION}.zip"
+          unzip -t "ReadMD-macos-${{ matrix.arch }}-v${READMD_VERSION}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}-asset
+          path: ReadMD-macos-${{ matrix.arch }}-v2.2.0.zip
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows-package, macos-package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-asset*'
+          path: release-assets
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-assets
+          path: release-assets
+      - name: Verify assets and checksums
+        run: |
+          test "$(find release-assets -maxdepth 1 -type f | wc -l)" -eq 4
+          test -s release-assets/ReadMDSetup-v2.2.0.exe
+          test -s release-assets/ReadMD-portable-v2.2.0.exe
+          test -s release-assets/ReadMD-macos-x64-v2.2.0.zip
+          test -s release-assets/ReadMD-macos-arm64-v2.2.0.zip
+          (cd release-assets && sha256sum * > SHA256SUMS.txt)
+          echo '### SHA-256' >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          cat release-assets/SHA256SUMS.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: ReadMD v2.2.0
+          body_path: release_notes.md
+          files: |
+            release-assets/ReadMDSetup-v2.2.0.exe
+            release-assets/ReadMD-portable-v2.2.0.exe
+            release-assets/ReadMD-macos-x64-v2.2.0.zip
+            release-assets/ReadMD-macos-arm64-v2.2.0.zip
+          fail_on_unmatched_files: true

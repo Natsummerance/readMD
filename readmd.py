@@ -35,7 +35,21 @@ import readmd_fix
 import readmd_modules as RM
 
 APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'ReadMD')
+
+def _platform_data_dir():
+    """跨平台数据目录：Windows APPDATA, macOS ~/Library/Application Support, Linux ~/.local/share."""
+    if sys.platform == 'darwin':
+        return os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'ReadMD')
+    if sys.platform == 'win32':
+        return os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'ReadMD')
+    # Linux / other
+    xdg = os.environ.get('XDG_DATA_HOME') or os.path.join(os.path.expanduser('~'), '.local', 'share')
+    return os.path.join(xdg, 'ReadMD')
+
+IS_MAC = sys.platform == 'darwin'
+IS_WIN = sys.platform == 'win32'
+
+DATA_DIR = _platform_data_dir()
 SETTINGS_FILE = os.path.join(DATA_DIR, 'settings.json')
 RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
 PROMPTS_FILE = os.path.join(DATA_DIR, 'prompts.json')
@@ -57,7 +71,7 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-           or _bundle_version() or '2.1.1')
+           or _bundle_version() or '2.2.0')
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 CONVERT_EXTS = ('.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm',
@@ -650,7 +664,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(500, {'error': 'AI 配置失败：%s' % e})
 
     def _api_ai_models(self):
-        """通过 API Key 拉取模型列表（GET /api/ai/models?provider&base_url&key&mode）。"""
+        """拉取模型列表；保存过的 Key 只在服务端解析，不回传给浏览器。"""
         if not RM.is_ready('ai'):
             RM.load_all()
             self._send_json(409, {'error': 'AI 模块加载中，请稍候再试'})
@@ -659,8 +673,10 @@ class Handler(BaseHTTPRequestHandler):
             u = urlparse(self.path)
             q = parse_qs(u.query)
             mod = RM.get('ai')
+            provider = mod.find_provider(q.get('provider', [''])[0]) or {}
+            key = q.get('key', [''])[0] or mod.resolve_key(provider)
             ids = mod.list_models(q.get('base_url', [''])[0] or None,
-                                  q.get('key', [''])[0] or '',
+                                  key,
                                   q.get('mode', ['auto'])[0])
             self._send_json(200, {'models': ids})
         except Exception as e:
@@ -1245,9 +1261,14 @@ class Api(object):
             return []
 
     def open_dir(self, path):
-        """在资源管理器中打开目录。"""
+        """在文件管理器中打开目录。"""
         try:
-            subprocess.Popen(['explorer', os.path.normpath(path)])
+            if IS_MAC:
+                subprocess.Popen(['open', os.path.normpath(path)])
+            elif IS_WIN:
+                subprocess.Popen(['explorer', os.path.normpath(path)])
+            else:
+                subprocess.Popen(['xdg-open', os.path.normpath(path)])
             return True
         except Exception:
             return False
@@ -1338,9 +1359,14 @@ class Api(object):
             return {'ok': False, 'error': '导出失败：%s' % e}
 
     def reveal_path(self, path):
-        """在资源管理器中选中该文件。"""
+        """在文件管理器中选中该文件。"""
         try:
-            subprocess.Popen(['explorer', '/select,', os.path.normpath(path)])
+            if IS_MAC:
+                subprocess.Popen(['open', '-R', os.path.normpath(path)])
+            elif IS_WIN:
+                subprocess.Popen(['explorer', '/select,', os.path.normpath(path)])
+            else:
+                subprocess.Popen(['xdg-open', os.path.dirname(os.path.normpath(path))])
             return True
         except Exception:
             return False
@@ -1378,7 +1404,12 @@ class Api(object):
     def open_path(self, path):
         """用系统默认程序打开文件（如图片、PDF 或外部文档）。"""
         try:
-            os.startfile(path)
+            if IS_MAC:
+                subprocess.Popen(['open', path])
+            elif IS_WIN:
+                os.startfile(path)
+            else:
+                subprocess.Popen(['xdg-open', path])
             return True
         except Exception:
             return False
@@ -1454,10 +1485,16 @@ def _quote(s):
 
 
 def install_association():
-    """把 .md 等扩展名关联到 ReadMD（HKCU，无需管理员权限）。
+    """把 .md 等扩展名关联到 ReadMD。
 
-    打包版（PyInstaller exe）直接关联 exe；源码版关联 pythonw + readmd.py。
+    Windows: HKCU 注册表（无需管理员）。
+    macOS / Linux: 提示用户手动设置（系统不支持无 .app 注册）。
     """
+    if not IS_WIN:
+        if IS_MAC:
+            return ('macOS 不支持自动注册文件关联。请右键 .md 文件 → 显示简介 →'
+                    ' 打开方式 → 选择 ReadMD → 全部更改')
+        return 'Linux 请使用 xdg-mime 手动设置 .md 文件关联'
     try:
         import shutil
         frozen = getattr(sys, 'frozen', False)
@@ -1513,7 +1550,7 @@ def run_selftest():
         if os.path.isfile(setup_py):
             with open(setup_py, encoding='utf-8') as f:
                 _src = f.read()
-            # 常规链：APP_VERSION = '2.1.1'；Win7 链：APP_VERSION = os.environ.get(...) or '2.1.1'
+            # 常规链：APP_VERSION 与 VERSION 一致；Win7 链使用环境变量覆盖。
             m1 = _re.search(r"APP_VERSION\s*=\s*\(?\s*os\.environ\.get\('READMD_VERSION_OVERRIDE'\)[\s\S]*?or\s+'([^']+)'", _src)
             m2 = _re.search(r"APP_VERSION\s*=\s*'([^']+)'", _src)
             if os.environ.get('READMD_VERSION_OVERRIDE'):
@@ -1758,7 +1795,8 @@ def main():
     try:
         import webview
     except ImportError:
-        safe_print('未安装 pywebview。请先运行 install.bat，或用 --browser 模式。')
+        safe_print('未安装 pywebview。请先运行 install%s，或用 --browser 模式。' %
+                   ('.sh' if sys.platform != 'win32' else '.bat'))
         safe_print('快速兜底：python readmd.py --browser "%s"' % (initial or ''))
         return 1
 
@@ -1809,8 +1847,17 @@ def main():
         logging.exception('webview start failed')
         safe_print('启动失败：%s' % e)
         try:
-            import ctypes
-            ctypes.windll.user32.MessageBoxW(0, 'ReadMD 启动失败：%s' % e, 'ReadMD', 0x10)
+            if IS_WIN:
+                import ctypes
+                ctypes.windll.user32.MessageBoxW(0, 'ReadMD 启动失败：%s' % e, 'ReadMD', 0x10)
+            elif IS_MAC:
+                # osascript 不接受单引号，硬编码消息避免注入
+                subprocess.Popen(['osascript', '-e',
+                    'tell app "System Events" to display dialog '
+                    '"ReadMD 启动失败，请查看日志。" with title "ReadMD" '
+                    'buttons {"OK"} default button "OK" '
+                    'with icon stop'],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception:
             pass
         return 1
@@ -1831,7 +1878,17 @@ def _start_tray(window):
     except Exception:
         return None
     try:
-        img = Image.open(os.path.join(APP_DIR, 'assets', 'readmd.ico'))
+        # macOS pystray 需要 PNG；优先 .png 兜底 .ico
+        icon_candidates = ['icon-256.png', 'readmd.ico']
+        img = None
+        for fname in icon_candidates:
+            p = os.path.join(APP_DIR, 'assets', fname)
+            if os.path.isfile(p):
+                try:
+                    img = Image.open(p)
+                    break
+                except Exception:
+                    continue
     except Exception:
         img = None
 

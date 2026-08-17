@@ -351,6 +351,56 @@ class TestAi(unittest.TestCase):
         if anth:
             self.assertEqual(anth['mode'], 'messages')
 
+    def test_config_v2_resets_legacy_and_masks_key(self):
+        """旧格式升级时清空自定义项；配置接口绝不返回保存的 Key。"""
+        path = self.ai.CONFIG_FILE
+        old = None
+        if os.path.isfile(path):
+            with open(path, 'rb') as f:
+                old = f.read()
+        try:
+            self.ai._write_cfg({'providers': [{'name': 'old connection', 'api_key': 'secret'}],
+                                'current': {'provider': 'old connection', 'model': 'old'}})
+            migrated = self.ai.get_config()
+            self.assertEqual(migrated['custom'], [])
+            self.assertEqual(migrated['current'], {})
+
+            self.ai.save_config({'providers': [{'name': 'my connection', 'base_url': self.base,
+                                                'mode': 'auto', 'models': ['mock-a'], 'api_key': 'secret'}],
+                                 'current': {'provider': 'my connection', 'model': 'mock-a'}})
+            public = self.ai.get_config()
+            custom = public['custom'][0]
+            self.assertTrue(custom['id'].startswith('custom:'))
+            self.assertTrue(custom['has_key'])
+            self.assertNotIn('api_key', custom)
+            self.assertEqual(self.ai.resolve_key(self.ai.find_provider('my connection')), 'secret')
+
+            # 空 Key 表示“不改动”，避免编辑 URL/模型时意外丢失密钥。
+            self.ai.save_config({'providers': [{'name': 'my connection', 'base_url': self.base,
+                                                'mode': 'auto', 'models': ['mock-b']}],
+                                 'current': {'provider': 'my connection', 'model': 'mock-b'}})
+            self.assertEqual(self.ai.resolve_key(self.ai.find_provider('my connection')), 'secret')
+
+            # 重命名依赖稳定 ID，且 clear_key 必须显式删除密钥。
+            provider_id = self.ai.get_config()['custom'][0]['id']
+            self.ai.save_config({'providers': [{'id': provider_id, 'name': 'renamed connection',
+                                                'base_url': self.base, 'mode': 'auto',
+                                                'models': ['mock-b'], 'clear_key': True}],
+                                 'current': {'provider_id': provider_id, 'model': 'mock-b'}})
+            renamed = self.ai.get_config()
+            self.assertEqual(renamed['custom'][0]['id'], provider_id)
+            self.assertFalse(renamed['custom'][0]['has_key'])
+            self.assertEqual(renamed['current']['provider_id'], provider_id)
+        finally:
+            if old is None:
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+            else:
+                with open(path, 'wb') as f:
+                    f.write(old)
+
 
 def main():
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])

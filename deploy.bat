@@ -4,10 +4,9 @@ rem ============================================================
 rem  ReadMD Deploy - one-click: test + build + push + release
 rem
 rem  Usage:
-rem    deploy.bat                   full deploy (test + build + push + release)
-rem    deploy.bat --skip-build      reuse existing dist exes (faster)
-rem    deploy.bat --skip-tests      skip the self-test round
-rem    deploy.bat --tag v2.0.1      release tag (default v2.0.1)
+rem    deploy.bat                   test + commit + push main + push v2.2.0 tag
+rem    deploy.bat --skip-tests      skip the local test round
+rem    deploy.bat --tag v2.2.0      release tag (default v2.2.0)
 rem
 rem  Requirements: GITHUB_TOKEN in system/user env vars.
 rem ============================================================
@@ -15,13 +14,11 @@ setlocal
 cd /d "%~dp0"
 title ReadMD Deploy
 
-set "TAG=v2.1.1"
-set "SKIP_BUILD=0"
+set "TAG=v2.2.0"
 set "SKIP_TESTS=0"
 
 :parse
 if "%~1"=="" goto :parse_done
-if /i "%~1"=="--skip-build" set "SKIP_BUILD=1"
 if /i "%~1"=="--skip-tests" set "SKIP_TESTS=1"
 if /i "%~1"=="--tag" set "TAG=%~2"
 shift
@@ -65,49 +62,7 @@ if errorlevel 1 goto :err
 echo   all tests passed
 :tests_done
 
-echo [4/6] Building packages ...
-if "%SKIP_BUILD%"=="1" goto :build_done
-if exist "dist\ReadMDSetup.exe" if exist "dist\ReadMD\ReadMD.exe" (
-    echo   dist exes already exist. Rebuilding anyway (delete dist to skip).
-)
-".venv\Scripts\python.exe" tools\make_icon.py
-if errorlevel 1 goto :err
-".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onedir --windowed ^
-    --name ReadMD --icon "assets\readmd.ico" ^
-    --add-data "assets;assets" ^
-    --add-data "readmd_modules;readmd_modules" ^
-    --add-data "readmd_fix.py;." ^
-    --hidden-import readmd_fix ^
-    --collect-data magika ^
-    --collect-submodules readmd_modules ^
-    readmd.py
-if errorlevel 1 goto :err
-".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
-    --name ReadMD-portable --icon "assets\readmd.ico" ^
-    --add-data "assets;assets" ^
-    --add-data "readmd_modules;readmd_modules" ^
-    --add-data "readmd_fix.py;." ^
-    --hidden-import readmd_fix ^
-    --collect-data magika ^
-    --collect-submodules readmd_modules ^
-    readmd.py
-if errorlevel 1 goto :err
-".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
-    --name ReadMDUninstall --icon "assets\readmd.ico" ^
-    --add-data "installer;installer" ^
-    installer\setup_app.py
-if errorlevel 1 goto :err
-".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
-    --name ReadMDSetup --icon "assets\readmd.ico" ^
-    --add-data "installer;installer" ^
-    --add-binary "dist\ReadMD;ReadMD" ^
-    --add-binary "dist\ReadMDUninstall.exe;." ^
-    installer\setup_app.py
-if errorlevel 1 goto :err
-echo   build done
-:build_done
-
-echo [5/6] Committing and pushing to GitHub ...
+echo [4/6] Committing and pushing main ...
 git add -A
 git diff --cached --quiet
 if errorlevel 1 (
@@ -116,19 +71,27 @@ if errorlevel 1 (
 ) else (
     echo   nothing new to commit
 )
+git branch --show-current | findstr /x "main" >nul
+if errorlevel 1 (
+    echo   deploy.bat must run from main after the release branch is merged.
+    goto :err
+)
 git push origin main
 if errorlevel 1 goto :err
 echo   pushed
 
-echo [6/6] Publishing GitHub Release %TAG% ...
-if exist "release_notes.md" (
-    ".venv\Scripts\python.exe" release.py --tag %TAG% --name "ReadMD %TAG%" --update --body-file release_notes.md
-    if errorlevel 1 goto :err
+echo [5/6] Creating release tag ...
+git rev-parse "%TAG%" >nul 2>&1
+if not errorlevel 1 (
+    echo   tag %TAG% already exists; refusing to move it.
+    goto :err
 )
-".venv\Scripts\python.exe" release.py --tag %TAG%
+git tag -a "%TAG%" -m "ReadMD %TAG%"
+git push origin "%TAG%"
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" release.py --tag %TAG% --verify
-if errorlevel 1 goto :err
+
+echo [6/6] GitHub Actions will test, package and publish the Release.
+echo   https://github.com/Natsummerance/readMD/actions
 
 echo.
 echo ============================================================

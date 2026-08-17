@@ -2,10 +2,8 @@
 """发布 ReadMD 到 GitHub Releases（无需 gh CLI，纯标准库）。
 
 用法：
-    python release.py --verify [--tag v2.0.1]        # 校验线上 Release 与本地产物（名称/大小/SHA256）
-    python release.py --update [--tag v2.0.1]        # 更新已存在 Release 的标题与说明
-    python release.py [--tag v2.0.1]                 # 创建 Release（已存在则跳过），上传缺失资产
-    python release.py --force-upload [--tag v2.0.1]  # 强制重传全部资产（覆盖同名）
+    python release.py --verify [--tag v2.2.0]        # 校验 CI 创建的 Release（名称/大小/SHA256）
+    python release.py --update [--tag v2.2.0]        # 必要时维护已存在 Release
 
 通用参数：--name 标题  --body-file 说明文件  --draft  --skip-assets  --asset 指定单个资产名
 需要环境变量 GITHUB_TOKEN（可存系统变量）。
@@ -203,8 +201,9 @@ def upload_all(rel, args, tok):
 
 DEFAULT_BODY = """## 下载
 
-> 安装包（推荐）：下载 **ReadMDSetup-v2.0.1.exe**，双击即可安装（内含动画安装界面，支持设为 .md 默认打开方式，可随时在「设置 → 应用」中卸载）。
-> 便携版：**ReadMD-portable-v2.0.1.exe** 免安装，双击直接运行。
+> 安装包（推荐）：下载 **ReadMDSetup-v2.2.0.exe**。
+> 便携版：下载 **ReadMD-portable-v2.2.0.exe**。
+> macOS：按芯片下载 x64 或 arm64 ZIP；当前版本未签名，首次打开请在 Finder 中右键选择“打开”。
 
 ## 修复（v2.0.1）
 
@@ -234,8 +233,8 @@ DEFAULT_BODY = """## 下载
 
 def main():
     ap = argparse.ArgumentParser(description="发布 ReadMD Release（纯标准库，无需 gh CLI）")
-    ap.add_argument("--tag", default="v2.0.1")
-    ap.add_argument("--name", default="ReadMD v2.0.1")
+    ap.add_argument("--tag", default="v2.2.0")
+    ap.add_argument("--name", default="ReadMD v2.2.0")
     ap.add_argument("--body-file")
     ap.add_argument("--draft", action="store_true")
     ap.add_argument("--skip-assets", action="store_true")

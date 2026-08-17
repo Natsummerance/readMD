@@ -74,32 +74,29 @@
   <div class="md-tool" id="md-tool">
     <button class="md-tool-btn" data-md="bold" title="加粗：**文本**">B</button>
     <button class="md-tool-btn" data-md="italic" title="斜体：*文本*"><i>I</i></button>
-    <button class="md-tool-btn" data-md="strike" title="删除线：~~文本~~">S&#773;</button>
-    <button class="md-tool-btn" data-md="h2" title="标题：## 文本">H</button>
-    <button class="md-tool-btn" data-md="quote" title="引用：> 文本">&#10077;</button>
-    <button class="md-tool-btn" data-md="list" title="无序列表：- 项">&#8226;</button>
-    <button class="md-tool-btn" data-md="task" title="任务列表：- [ ] 项">&#9744;</button>
-    <button class="md-tool-btn" data-md="link" title="链接：[文本](url)">&#128279;</button>
-    <button class="md-tool-btn" data-md="image" title="图片：![描述](url)">&#128444;</button>
-    <button class="md-tool-btn" data-md="code" title="行内代码：`代码`">&lt;/&gt;</button>
-    <button class="md-tool-btn" data-md="codeblock" title="代码块：```代码```">&#9003;</button>
-    <button class="md-tool-btn" data-md="math" title="公式：$x^2$">&#8721;</button>
-    <button class="md-tool-btn" data-md="table" title="表格：| 列1 | 列2 |">&#9700;</button>
-    <button class="md-tool-btn" data-md="hr" title="分隔线：---">&#8213;</button>
+    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-text-menu">文本⌄</button>
+      <div id="md-text-menu" class="md-menu hidden"><button data-md="strike">删除线</button><button data-md="code">行内代码</button><button data-md="link">链接</button></div></div>
+    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-structure-menu">结构⌄</button>
+      <div id="md-structure-menu" class="md-menu hidden"><button data-md="h2">标题</button><button data-md="quote">引用</button><button data-md="list">无序列表</button><button data-md="ordered">有序列表</button><button data-md="task">任务列表</button><button data-md="codeblock">代码块</button><button data-md="hr">分隔线</button></div></div>
+    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-insert-menu">插入⌄</button>
+      <div id="md-insert-menu" class="md-menu hidden"><button data-md="image">图片</button><button data-md="table">表格</button><button data-md="link">链接</button></div></div>
+    <button id="formula-open" class="md-tool-btn md-group" title="公式选择器">∑ 公式</button>
+    <button id="md-command-open" class="md-tool-btn" title="命令面板 (Ctrl/Cmd+Shift+P)">⌘</button>
   </div>
-  <div class="pv-ctl" role="group" aria-label="预览布局">
-    <button class="pv-btn active" data-pv="none" title="无预览（直接编辑）" aria-label="无预览">无</button>
-    <button class="pv-btn" data-pv="left" title="左侧实时预览" aria-label="左侧预览">左</button>
-    <button class="pv-btn" data-pv="right" title="右侧实时预览" aria-label="右侧预览">右</button>
-    <button class="pv-btn" data-pv="bottom" title="下方实时预览" aria-label="下方预览">下</button>
-    <button class="pv-btn" data-pv="top" title="上方实时预览" aria-label="上方预览">上</button>
-    <label class="ai-sel pv-sync"><input id="pv-sync" type="checkbox" title="编辑器与预览滚动联动"> 滚动同步</label>
+  <span class="edit-tip">Ctrl+S 保存 · Esc 取消</span>
+  <div class="pv-ctl md-menu-wrap" aria-label="预览布局">
+    <button id="pv-trigger" class="md-tool-btn md-group" aria-haspopup="true" aria-expanded="false">预览：无⌄</button>
+    <div id="pv-menu" class="pv-menu hidden" role="menu">
+      <div class="pv-grid" aria-label="预览停靠方向">
+        <button class="pv-btn" data-pv="top" title="上方预览">↑</button><span></span><button class="pv-btn" data-pv="none" title="关闭预览">×</button>
+        <button class="pv-btn" data-pv="left" title="左侧预览">←</button><span class="pv-center">预览</span><button class="pv-btn" data-pv="right" title="右侧预览">→</button>
+        <span></span><button class="pv-btn" data-pv="bottom" title="下方预览">↓</button><span></span>
+      </div>
+      <label class="ai-sel pv-sync"><input id="pv-sync" type="checkbox"> 同步滚动</label>
+    </div>
   </div>
-  <div class="edit-actions">
-    <span class="edit-tip">Ctrl+S 保存 · Esc 取消 · 输入 Markdown 时自动补全</span>
-    <button id="edit-save" class="tb-btn accent">&#128190; 保存 (Ctrl+S)</button>
-    <button id="edit-cancel" class="tb-btn">取消 (Esc)</button>
-  </div>
+  <button id="edit-save" class="tb-btn accent">保存</button>
+  <button id="edit-cancel" class="tb-btn">取消</button>
 </div>
 
 <div id="layout">
@@ -157,12 +154,14 @@
     </main>
     <textarea id="edit-area" class="hidden" spellcheck="false"></textarea>
     <div id="edit-wrap" class="hidden"><div id="edit-cm"></div></div>
+    <div id="pv-splitter" class="hidden" role="separator" tabindex="0" aria-label="调整编辑与预览比例"></div>
     <div id="preview-wrap" class="hidden"><div id="preview-pane" class="markdown-body"></div></div>
   </div>
 </div>
 
 <!-- AI 助手面板 -->
 <div id="ai-panel" class="hidden">
+  <div id="ai-resize-handle" title="拖动调整 AI 面板宽度" aria-hidden="true"></div>
   <div class="ai-head">
     <span>&#129302; AI 助手</span>
     <button id="ai-close" class="tb-btn icon" title="关闭">&#10005;</button>
@@ -173,7 +172,15 @@
       <div class="conn-grid">
         <div class="conn-field">
           <label for="ai-provider">提供商</label>
-          <select id="ai-provider" title="选择提供商（预设或自定义）"></select>
+          <div class="conn-inline">
+            <select id="ai-provider" title="选择提供商（预设或自定义）"></select>
+            <button id="ai-provider-new" class="tb-btn icon" title="新建自定义连接" aria-label="新建自定义连接">＋</button>
+            <button id="ai-provider-delete" class="tb-btn icon" title="删除当前自定义连接" aria-label="删除当前自定义连接">−</button>
+          </div>
+        </div>
+        <div class="conn-field">
+          <label for="ai-provider-name">配置名称</label>
+          <input id="ai-provider-name" type="text" placeholder="我的 AI 连接" maxlength="60" autocomplete="off">
         </div>
         <div class="conn-field">
           <label for="ai-mode">响应方式</label>
@@ -197,13 +204,13 @@
           <div class="conn-inline">
             <input id="ai-key" type="password" placeholder="必填（本地 Ollama 可留空）" autocomplete="off">
             <button id="ai-key-toggle" class="tb-btn icon" title="显示 / 隐藏" aria-label="显示或隐藏 API Key">&#128065;</button>
+            <button id="ai-key-clear" class="tb-btn icon" title="清除已保存的 API Key" aria-label="清除已保存的 API Key">&#9003;</button>
           </div>
         </div>
         <div class="conn-field">
           <label for="ai-model">模型</label>
           <div class="conn-inline">
-            <input id="ai-model" list="ai-model-list" placeholder="选择或输入模型名" autocomplete="off" spellcheck="false">
-            <datalist id="ai-model-list"></datalist>
+            <select id="ai-model" title="选择模型"></select>
             <button id="ai-models-btn" class="tb-btn" title="通过 API Key 获取可用模型列表">获取模型</button>
           </div>
         </div>
@@ -254,37 +261,49 @@
   </div>
 </div>
 
+<!-- 最近文件：顶栏与欢迎页共用同一份本地记录 -->
+<div id="history-modal" class="hidden" role="dialog" aria-modal="true" aria-label="最近文件">
+  <div id="history-box">
+    <div class="export-head">
+      <h3>最近文件</h3>
+      <button id="history-close" class="tb-btn icon" aria-label="关闭">&#10005;</button>
+    </div>
+    <ul id="history-list" class="recent-list"></ul>
+    <div class="url-actions">
+      <button id="history-clear" class="tb-btn">清空记录</button>
+    </div>
+  </div>
+</div>
 
 
 <!-- 图片编辑器弹窗 -->
-<div id="img-modal" class="hidden">
+<div id="img-modal" class="hidden" role="dialog" aria-modal="true" aria-label="图片编辑器">
   <div id="img-box">
-    <h3>&#128444; 插入图片（裁剪 / 缩放 / 旋转）</h3>
+    <div class="export-head"><h3>&#128444; 图片编辑器</h3><button id="img-close-x" class="tb-btn icon" aria-label="关闭">&#10005;</button></div>
     <div class="img-source">
       <button id="img-file" class="tb-btn accent">&#128194; 选择本地图片…</button>
       <input id="img-url-input" type="text" placeholder="或粘贴图片 URL 直接插入" autocomplete="off">
       <button id="img-url-load" class="tb-btn">插入 URL</button>
     </div>
-    <div class="img-stage" id="img-stage">
-      <canvas id="img-canvas"></canvas>
-      <div id="img-crop" class="img-crop">
-        <div class="crop-handle crop-se"></div>
+    <div class="img-workspace">
+      <div class="img-stage" id="img-stage" tabindex="0" aria-label="图片裁剪画布，方向键移动裁剪框">
+        <canvas id="img-canvas"></canvas>
+        <div id="img-crop" class="img-crop">
+          <i class="crop-grid-line crop-grid-v one"></i><i class="crop-grid-line crop-grid-v two"></i><i class="crop-grid-line crop-grid-h one"></i><i class="crop-grid-line crop-grid-h two"></i>
+          <button class="crop-handle crop-nw" data-handle="nw" aria-label="左上裁剪手柄"></button><button class="crop-handle crop-n" data-handle="n" aria-label="上裁剪手柄"></button><button class="crop-handle crop-ne" data-handle="ne" aria-label="右上裁剪手柄"></button>
+          <button class="crop-handle crop-e" data-handle="e" aria-label="右裁剪手柄"></button><button class="crop-handle crop-se" data-handle="se" aria-label="右下裁剪手柄"></button><button class="crop-handle crop-s" data-handle="s" aria-label="下裁剪手柄"></button>
+          <button class="crop-handle crop-sw" data-handle="sw" aria-label="左下裁剪手柄"></button><button class="crop-handle crop-w" data-handle="w" aria-label="左裁剪手柄"></button>
+        </div>
+        <div id="img-hint" class="img-hint">选择本地图片开始编辑；空白处拖拽可重新框选</div>
       </div>
-      <div id="img-hint" class="img-hint">请先选择本地图片开始编辑（拖拽虚线框裁剪，右下角手柄调整大小）</div>
-    </div>
-    <div class="img-controls">
-      <button id="img-rot-l" class="tb-btn" title="逆时针旋转 90°">&#8634; 左转</button>
-      <button id="img-rot-r" class="tb-btn" title="顺时针旋转 90°">&#8635; 右转</button>
-      <label class="img-ctl">角度 <input id="img-angle" type="range" min="0" max="360" value="0"></label>
-      <label class="img-ctl">缩放 <input id="img-scale" type="range" min="10" max="300" value="100"><span id="img-scale-val">100%</span></label>
-      <select id="img-ratio" title="裁剪比例">
-        <option value="free">自由比例</option>
-        <option value="1:1">1:1 方形</option>
-        <option value="4:3">4:3</option>
-        <option value="16:9">16:9</option>
-        <option value="orig">原图比例</option>
-      </select>
-      <button id="img-reset" class="tb-btn">重置</button>
+      <aside class="img-inspector">
+        <div class="img-section"><strong>变换</strong><div class="img-btn-row"><button id="img-rot-l" class="tb-btn">↶ 90°</button><button id="img-rot-r" class="tb-btn">↷ 90°</button><button id="img-flip-x" class="tb-btn">水平翻转</button><button id="img-flip-y" class="tb-btn">垂直翻转</button></div>
+          <label class="img-ctl">角度 <input id="img-angle" type="range" min="-180" max="180" step="0.1" value="0"><input id="img-angle-number" class="img-number" type="number" min="-180" max="180" step="0.1" value="0">°</label></div>
+        <div class="img-section"><strong>查看</strong><label class="img-ctl">画布缩放 <input id="img-view-zoom" type="range" min="25" max="400" value="100"><span id="img-view-zoom-val">100%</span></label><p class="img-help">滚轮缩放 · 空格拖拽平移 · +/- 缩放</p></div>
+        <div class="img-section"><strong>裁剪与输出</strong><select id="img-ratio" title="裁剪比例"><option value="free">自由比例</option><option value="1:1">1:1 方形</option><option value="4:3">4:3</option><option value="3:2">3:2</option><option value="16:9">16:9</option><option value="orig">原图比例</option></select>
+          <div class="img-size-row"><label>宽 <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" title="锁定宽高比">🔗</button><label>高 <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
+        <div class="img-btn-row"><button id="img-undo" class="tb-btn" disabled>撤销</button><button id="img-redo" class="tb-btn" disabled>重做</button><button id="img-reset" class="tb-btn">重置</button></div>
+      </aside>
     </div>
     <div class="img-info"><span id="img-info"></span></div>
     <div class="url-actions">
@@ -294,6 +313,9 @@
     <p class="fix-note">图片将保存到文档同目录的 <code>images/</code> 子文件夹，并以相对路径插入 Markdown（仅在编辑本地 .md 时可用）。</p>
   </div>
 </div>
+
+<div id="md-command-modal" class="hidden" role="dialog" aria-modal="true" aria-label="Markdown 命令面板"><div class="command-box"><input id="md-command-search" type="search" placeholder="搜索 Markdown 命令…"><div id="md-command-list" class="command-list"></div><p class="fix-note">↑↓ 选择 · Enter 插入 · Esc 关闭</p></div></div>
+<div id="formula-modal" class="hidden" role="dialog" aria-modal="true" aria-label="公式选择器"><div class="formula-box"><div class="export-head"><h3>公式选择器</h3><button id="formula-close" class="tb-btn icon" aria-label="关闭">×</button></div><div class="formula-top"><input id="formula-search" type="search" placeholder="搜索名称或 TeX…"><select id="formula-mode"><option value="inline">行内公式</option><option value="block">块级公式</option></select></div><div id="formula-cats" class="formula-cats"></div><div id="formula-list" class="formula-list"></div><div id="formula-preview" class="formula-preview">选择公式模板查看预览</div></div></div>
 
 <!-- Prompt 模板管理弹窗 -->
 <div id="tpl-modal" class="hidden">

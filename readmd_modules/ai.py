@@ -1,17 +1,30 @@
 # -*- coding: utf-8 -*-
 """ReadMD AI 模块：外部大模型 API 接入（OpenAI 兼容 / Anthropic 双协议）。
 
-提供商预设参考本地 cc-switch（claudeProviderPresets / codex 用户配置），
-并补充主流 OpenAI 兼容厂商。API Key 优先级：界面配置 > 环境变量 > 空。
+提供商预设覆盖主流 OpenAI 兼容厂商。用户自定义连接仅保存于本机；
+API Key 优先级：界面配置 > 环境变量 > 空。
 """
 import json
 import logging
 import os
+import sys
+import uuid
 import urllib.request
 import urllib.error
 
-DATA_DIR = os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'ReadMD')
+
+def _platform_data_dir():
+    if sys.platform == 'darwin':
+        return os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'ReadMD')
+    if sys.platform == 'win32':
+        return os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'ReadMD')
+    xdg = os.environ.get('XDG_DATA_HOME') or os.path.join(os.path.expanduser('~'), '.local', 'share')
+    return os.path.join(xdg, 'ReadMD')
+
+
+DATA_DIR = _platform_data_dir()
 CONFIG_FILE = os.path.join(DATA_DIR, 'ai.json')
+CONFIG_SCHEMA_VERSION = 2
 
 # 内置预设（只读模板，可被自定义覆盖）
 PRESETS = [
@@ -73,22 +86,6 @@ PRESETS = [
      "note": "Anthropic 官方 Messages 协议（国内直连需代理）"},
 ]
 
-# 从 cc-switch 导入的用户提供商（首次运行时写入自定义配置）
-CCSWITCH_SEED = [
-    {"name": "DeepSeek (cc-switch)", "base_url": "https://api.deepseek.com/v1", "format": "openai",
-     "models": ["deepseek-chat", "deepseek-reasoner"],
-     "env_key": "DEEPSEEK_API_KEY", "website": "https://platform.deepseek.com"},
-    {"name": "xem8k5", "base_url": "https://ai.xem8k5.top/v1", "format": "openai",
-     "models": ["gpt-image-2", "gpt-4o", "claude-haiku-4-5"],
-     "env_key": "XEM8K5_API_KEY", "website": "https://ai.xem8k5.top"},
-    {"name": "hotapi", "base_url": "https://www.hotapi.top/v1", "format": "openai",
-     "models": ["gpt-image-2", "gpt-4o", "claude-sonnet-4-5"],
-     "env_key": "HOTAPI_API_KEY", "website": "https://www.hotapi.top"},
-    {"name": "penguinsaichat", "base_url": "https://api.penguinsaichat.dpdns.org/v1", "format": "openai",
-     "models": ["claude-haiku-4-5", "claude-sonnet-4-5", "gpt-4o"],
-     "env_key": "PENGUINSAICHAT_API_KEY", "website": "https://api.penguinsaichat.dpdns.org"},
-]
-
 # 动作预设（前端会附带，服务端兜底一份，防止直接调 API 时缺少）
 ACTIONS = {
     "quick_read": ("快速阅读", "你是 ReadMD 的文档阅读助手。对用户给出的 Markdown 文档做快速阅读，"
@@ -107,23 +104,37 @@ ACTIONS = {
 
 def load():
     """模块就绪钩子（ai 模块纯标准库，秒级加载）。"""
-    ensure_seed()
+    ensure_config()
 
 
-def ensure_seed():
+def ensure_config():
+    """升级到 v2 配置格式。
+
+    v2.1.1 曾把非通用连接写入用户配置，但旧格式未保存来源标记，无法在
+    不保留任何识别信息的前提下安全区分它们。首次迁移因此清空旧自定义项，
+    仅保留公开预设；之后用户新建的连接保持在本机。
+    """
     cfg = _read_cfg()
-    if not cfg.get("seeded"):
-        custom = cfg.get("providers", [])
-        names = {p.get("name") for p in custom}
-        for p in CCSWITCH_SEED:
-            if p["name"] not in names:
-                p = dict(p, custom=True, api_key="")
-                custom.append(p)
-        cfg["providers"] = custom
-        cfg["seeded"] = True
-        if not cfg.get("current"):
-            cfg["current"] = {"provider": CCSWITCH_SEED[0]["name"], "model": CCSWITCH_SEED[0]["models"][0]}
+    if cfg.get("schema_version") != CONFIG_SCHEMA_VERSION:
+        cfg = {"schema_version": CONFIG_SCHEMA_VERSION, "providers": [], "current": {}}
         _write_cfg(cfg)
+    else:
+        cfg.setdefault("providers", [])
+        cfg.setdefault("current", {})
+        changed = False
+        for provider in cfg["providers"]:
+            if isinstance(provider, dict) and not provider.get("id"):
+                provider["id"] = "custom:" + uuid.uuid4().hex
+                changed = True
+        current = cfg["current"]
+        if current.get("provider") and not current.get("provider_id"):
+            legacy_name = current.get("provider")
+            match = next((p for p in cfg["providers"] if p.get("name") == legacy_name), None)
+            current["provider_id"] = (match or {}).get("id", "preset:" + str(legacy_name))
+            current.pop("provider", None)
+            changed = True
+        if changed:
+            _write_cfg(cfg)
     return cfg
 
 
@@ -132,7 +143,7 @@ def _read_cfg():
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     except Exception:
-        return {"providers": [], "current": {}}
+        return {"schema_version": CONFIG_SCHEMA_VERSION, "providers": [], "current": {}}
 
 
 def _write_cfg(cfg):
@@ -148,41 +159,72 @@ def _write_cfg(cfg):
 
 
 def get_config():
-    cfg = ensure_seed()
+    cfg = ensure_config()
     custom = cfg.get("providers", [])
 
     def annotate(p):
         d = dict(p)
+        d.setdefault("id", "preset:" + str(d.get("name") or "provider"))
         d["has_key"] = bool(resolve_key(d))
         d["key_source"] = key_source(d)
         d["mode"] = p.get("mode") or ("messages" if p.get("format") == "anthropic" else "auto")
+        # 配置接口只提供状态，绝不把保存在磁盘中的 API Key 回传给前端。
+        d.pop("api_key", None)
         return d
 
     presets = [annotate(dict(p)) for p in PRESETS]
     customs = [annotate(dict(p)) for p in custom]
-    return {"presets": presets, "custom": customs, "current": cfg.get("current", {})}
+    return {"schema_version": CONFIG_SCHEMA_VERSION, "presets": presets,
+            "custom": customs, "current": cfg.get("current", {})}
 
 
 def save_config(payload):
-    cfg = _read_cfg()
+    cfg = ensure_config()
     if "providers" in payload:
-        cfg["providers"] = payload["providers"]
+        old = {p.get("id"): p for p in cfg.get("providers", []) if isinstance(p, dict)}
+        old_by_name = {p.get("name"): p for p in cfg.get("providers", []) if isinstance(p, dict)}
+        providers = []
+        names = set()
+        for raw in payload.get("providers") or []:
+            if not isinstance(raw, dict):
+                continue
+            p = dict(raw)
+            provider_id = str(p.get("id") or "").strip()
+            if not provider_id.startswith("custom:"):
+                provider_id = "custom:" + uuid.uuid4().hex
+            name = str(p.get("name") or "").strip()
+            if not name or name in names:
+                continue
+            names.add(name)
+            p["name"] = name
+            p["id"] = provider_id
+            p["custom"] = True
+            p["models"] = [str(m).strip() for m in (p.get("models") or []) if str(m).strip()]
+            # 前端不会收到旧 Key；编辑其它字段时保留原 Key。只有显式标记才清除。
+            previous = old.get(provider_id) or old_by_name.get(name) or {}
+            if not p.get("api_key") and previous.get("api_key") and not p.pop("clear_key", False):
+                p["api_key"] = previous["api_key"]
+            else:
+                p.pop("clear_key", None)
+            providers.append(p)
+        cfg["providers"] = providers
     if "current" in payload:
-        cfg["current"] = payload["current"]
-    if payload.get("seeded") is not None:
-        cfg["seeded"] = payload["seeded"]
+        current = payload.get("current") or {}
+        cfg["current"] = {"provider_id": str(current.get("provider_id") or current.get("provider") or ""),
+                          "model": str(current.get("model") or "")}
+    cfg["schema_version"] = CONFIG_SCHEMA_VERSION
     _write_cfg(cfg)
     return True
 
 
-def find_provider(name):
-    for p in PRESETS:
-        if p["name"] == name:
-            return dict(p)
-    cfg = _read_cfg()
+def find_provider(identifier):
+    cfg = ensure_config()
     for p in cfg.get("providers", []):
-        if p["name"] == name:
+        if p.get("id") == identifier or p.get("name") == identifier:
             return dict(p, custom=True)
+    for p in PRESETS:
+        if "preset:" + p["name"] == identifier or p["name"] == identifier:
+            return dict(p, id="preset:" + p["name"])
     return None
 
 

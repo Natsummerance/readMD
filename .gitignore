@@ -8,8 +8,12 @@ Thumbs.db
 build/
 dist/
 *.spec
+!ReadMD-macOS.spec
 
 tools/cm-bundle/node_modules/
+ui-tests/node_modules/
+ui-tests/test-results/
+ui-tests/playwright-report/
 .venv-win7/
 installer/webview2_runtime/
 release_body_win7_beta.md

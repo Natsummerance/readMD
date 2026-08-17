@@ -44,6 +44,7 @@ const state = {
   theme: 'auto',
   fontSize: 100,
   lineWidth: 860,
+  aiPanelWidth: 432,
   autoReload: true,
   history: [],
   histIdx: -1,
@@ -63,7 +64,7 @@ const state = {
     templates: [], templateId: '', messages: [], sessionId: null, sessions: [],
     usage: null, sessUsage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
   },
-  pvLayout: 'none', pvSync: false,
+  pvLayout: 'none', pvSync: false, pvSplitX: 50, pvSplitY: 46,
   export: {
     fmt: 'pdf', defaults: null, presets: {}, custom: {}, options: null, last: null, ready: false,
   },
@@ -86,8 +87,9 @@ async function loadSettings() {
 
 async function saveSettings() {
   const s = {
-    theme: state.theme, fontSize: state.fontSize, lineWidth: state.lineWidth,
+    theme: state.theme, fontSize: state.fontSize, lineWidth: state.lineWidth, aiPanelWidth: state.aiPanelWidth,
     autoReload: state.autoReload, pvLayout: state.pvLayout, pvSync: state.pvSync,
+    pvSplitX: state.pvSplitX, pvSplitY: state.pvSplitY,
   };
   try {
     if (hasPy) await py.save_settings(s);
@@ -103,6 +105,7 @@ function applySettings() {
   document.body.dataset.theme = theme;
   document.body.style.setProperty('--fs', (state.fontSize / 100).toFixed(2));
   document.body.style.setProperty('--line-width', state.lineWidth + 'px');
+  document.body.style.setProperty('--ai-panel-width', state.aiPanelWidth + 'px');
   $('btn-theme').textContent = theme === 'dark' ? '\u2600' : '\u263E';
 }
 
@@ -186,16 +189,10 @@ function moduleBlocked(name) {
 
 /* ---------------- 最近文件 ---------------- */
 
-async function refreshRecent() {
-  const box = $('recent-box');
-  const list = $('recent-list');
-  if (!hasPy) { box.classList.add('hidden'); return; }
-  let rec = [];
-  try { rec = await py.get_recent() || []; } catch (e) { rec = []; }
-  if (!rec.length) { box.classList.add('hidden'); return; }
-  box.classList.remove('hidden');
+function renderRecentList(list, rec, onOpen) {
+  if (!list) return;
   list.innerHTML = '';
-  rec.slice(0, 12).forEach(p => {
+  rec.slice(0, 24).forEach(p => {
     const li = document.createElement('li');
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -203,19 +200,48 @@ async function refreshRecent() {
     const name = String(p).split(/[\\/]/).pop() || p;
     const dir = String(p).slice(0, String(p).length - name.length).replace(/[\\/]+$/, '') || '';
     const nm = document.createElement('span');
-    nm.className = 'recent-name';
-    nm.textContent = name;
-    nm.title = p;
+    nm.className = 'recent-name'; nm.textContent = name; nm.title = p;
     const dp = document.createElement('span');
-    dp.className = 'recent-dir';
-    dp.textContent = dir;
-    dp.title = p;
-    btn.appendChild(nm);
-    btn.appendChild(dp);
-    btn.addEventListener('click', e => { e.preventDefault(); loadFile(p); });
-    li.appendChild(btn);
-    list.appendChild(li);
+    dp.className = 'recent-dir'; dp.textContent = dir; dp.title = p;
+    btn.appendChild(nm); btn.appendChild(dp);
+    btn.addEventListener('click', e => { e.preventDefault(); onOpen(p); });
+    li.appendChild(btn); list.appendChild(li);
   });
+}
+
+async function getRecentEntries() {
+  if (!hasPy) return [];
+  try { return await py.get_recent() || []; } catch (e) { return []; }
+}
+
+async function refreshRecent() {
+  const box = $('recent-box');
+  if (!hasPy) { box.classList.add('hidden'); return; }
+  const rec = await getRecentEntries();
+  if (!rec.length) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  renderRecentList($('recent-list'), rec, loadFile);
+}
+
+async function openHistoryModal() {
+  const rec = await getRecentEntries();
+  const modal = $('history-modal');
+  const list = $('history-list');
+  list.innerHTML = '';
+  if (!rec.length) {
+    const li = document.createElement('li');
+    li.className = 'empty'; li.textContent = '暂无最近文件'; list.appendChild(li);
+  } else {
+    renderRecentList(list, rec, p => { modal.classList.add('hidden'); loadFile(p); });
+  }
+  modal.classList.remove('hidden');
+}
+
+async function clearRecent() {
+  if (hasPy) await py.clear_recent();
+  await refreshRecent();
+  const list = $('history-list');
+  if (list) list.innerHTML = '<li class="empty">暂无最近文件</li>';
 }
 
 async function addRecent(path) {
@@ -921,8 +947,9 @@ async function onAiSessionChange() {
     if (!r.ok) { showToast('加载会话失败'); return; }
     const s = (await r.json()).session;
     if (!s) { showToast('会话不存在'); return; }
-    if (s.provider && [...$('ai-provider').options].some(o => o.value === s.provider)) {
-      $('ai-provider').value = s.provider;
+    const savedProvider = (state.ai.providers || []).find(p => p.id === s.provider || p.name === s.provider);
+    if (savedProvider) {
+      $('ai-provider').value = savedProvider.id;
       onAiProviderChange();
       if (s.model) $('ai-model').value = s.model;
       syncAiKey();
@@ -1048,7 +1075,7 @@ async function loadAiConfig() {
     if (!r.ok) return null;
     state.ai.config = await r.json();
     const cfg = state.ai.config;
-    state.ai.providers = [...(cfg.custom || []), ...(cfg.presets || [])];
+    state.ai.providers = mergeAiProviders(cfg.custom || [], cfg.presets || []);
     fillAiProviders(state.ai.providers, cfg.current || {});
     loadAiPrompts();
     loadAiSessions();
@@ -1058,43 +1085,61 @@ async function loadAiConfig() {
   return null;
 }
 
+function mergeAiProviders(custom, presets) {
+  return [...(custom || []), ...(presets || [])];
+}
+
 function fillAiProviders(merged, current) {
   const sel = $('ai-provider');
-  const curName = (current && current.provider) || (merged[0] && merged[0].name) || '';
+  const curId = (current && (current.provider_id || current.provider)) || (merged[0] && merged[0].id) || '';
   sel.innerHTML = '';
+  const customGroup = document.createElement('optgroup'); customGroup.label = '自定义连接';
+  const presetGroup = document.createElement('optgroup'); presetGroup.label = '官方预设';
   merged.forEach(p => {
     const o = document.createElement('option');
-    o.value = p.name;
-    o.textContent = p.name + (p.custom ? ' (自定义)' : '');
-    sel.appendChild(o);
+    o.value = p.id;
+    o.textContent = p.name;
+    (p.custom ? customGroup : presetGroup).appendChild(o);
   });
-  if (curName) sel.value = curName;
+  if (customGroup.children.length) sel.appendChild(customGroup);
+  if (presetGroup.children.length) sel.appendChild(presetGroup);
+  if (curId) sel.value = curId;
   onAiProviderChange();
-  const curModel = (current && current.model) || '';
-  if (curModel) $('ai-model').value = curModel;
 }
 
 function currentAiProvider() {
-  const name = $('ai-provider').value;
-  return (state.ai.providers || []).find(p => p.name === name) || null;
+  const id = $('ai-provider').value;
+  return (state.ai.providers || []).find(p => p.id === id || p.name === id) || null;
 }
 
 function aiPresetBase(p) {
   return (p && p.base_url) || '';
 }
 
+function fillAiModels(models, selected) {
+  const sel = $('ai-model');
+  sel.innerHTML = '';
+  const list = Array.isArray(models) ? models.filter(Boolean) : [];
+  const placeholder = new Option(list.length ? '选择模型' : '请先获取模型', '');
+  placeholder.disabled = true; placeholder.selected = !list.length;
+  sel.appendChild(placeholder);
+  list.forEach(id => sel.appendChild(new Option(id, id)));
+  sel.disabled = !list.length;
+  if (list.length) sel.value = list.indexOf(selected) >= 0 ? selected : list[0];
+}
+
 function onAiProviderChange() {
   const p = currentAiProvider();
-  const dl = $('ai-model-list');
-  if (dl) dl.innerHTML = '';
-  $('ai-model').value = '';
-  if (!p) { syncAiKey(); return; }
+  if (!p) { fillAiModels([], ''); syncAiKey(); return; }
   const base = aiPresetBase(p);
   $('ai-base-url').value = base;
   const mode = p.mode || (p.format === 'anthropic' ? 'messages' : 'auto');
   $('ai-mode').value = (mode === 'anthropic') ? 'messages' : mode;
-  const curModel = (state.ai.config && state.ai.config.current && state.ai.config.current.model) || '';
-  if (curModel) $('ai-model').value = curModel;
+  const current = (state.ai.config && state.ai.config.current) || {};
+  fillAiModels(p.models, (current.provider_id || current.provider) === p.id ? current.model : '');
+  $('ai-provider-name').value = p.name || '';
+  $('ai-provider-name').disabled = !p.custom;
+  $('ai-provider-delete').disabled = !p.custom;
   syncAiKey();
 }
 
@@ -1103,7 +1148,8 @@ function syncAiKey() {
   const inp = $('ai-key');
   const status = $('ai-conn-status');
   if (!p) { inp.value = ''; inp.placeholder = ''; if (status) status.textContent = ''; return; }
-  inp.value = p.api_key || '';
+  // API Key 不会从后端回传；切换连接时也不保留前一个连接的输入值。
+  inp.value = '';
   inp.placeholder = (p.key_source && p.key_source.indexOf('env:') === 0)
     ? '已从环境变量 ' + p.key_source.slice(4) + ' 读取，可覆盖'
     : (p.name.indexOf('Ollama') >= 0 ? 'API Key（本地 Ollama 可留空）' : 'API Key（必填）');
@@ -1114,38 +1160,84 @@ function syncAiKey() {
   }
 }
 
-async function saveAiSelection() {
+function newAiProvider() {
+  if (!state.ai.config) return;
+  const custom = state.ai.config.custom || (state.ai.config.custom = []);
+  let seq = custom.length + 1;
+  let name = '自定义连接 ' + seq;
+  while ((state.ai.providers || []).some(p => p.name === name)) name = '自定义连接 ' + (++seq);
+  const uid = (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : String(Date.now()) + Math.random().toString(16).slice(2));
+  const p = { id: 'custom:' + uid, name, custom: true, base_url: '', format: 'openai', mode: 'auto', models: [] };
+  custom.push(p);
+  state.ai.providers = mergeAiProviders(custom, state.ai.config.presets || []);
+  fillAiProviders(state.ai.providers, { provider_id: p.id, model: '' });
+  $('ai-provider-name').focus(); $('ai-provider-name').select();
+}
+
+async function deleteAiProvider() {
+  const p = currentAiProvider();
+  if (!p || !p.custom || !state.ai.config) return;
+  if (!window.confirm('删除自定义连接“' + p.name + '”？此操作不会影响官方预设。')) return;
+  const custom = (state.ai.config.custom || []).filter(c => c.id !== p.id);
+  const fallback = (state.ai.config.presets || [])[0] || custom[0] || {};
+  const current = { provider_id: fallback.id || '', model: '' };
+  try {
+    const r = await apiFetch('/api/ai/config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ providers: custom, current }),
+    });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || '保存失败');
+    state.ai.config.custom = custom; state.ai.config.current = current;
+    state.ai.providers = mergeAiProviders(custom, state.ai.config.presets || []);
+    fillAiProviders(state.ai.providers, current);
+    showToast('已删除自定义连接');
+  } catch (e) { showToast('删除失败：' + e.message); }
+}
+
+async function saveAiSelection(silent) {
   const p = currentAiProvider();
   if (!p || !state.ai.config) return;
   const custom = (state.ai.config.custom || []).map(c => Object.assign({}, c));
   const keyVal = $('ai-key').value.trim();
   const baseUrl = $('ai-base-url').value.trim();
   const mode = $('ai-mode').value || 'auto';
-  let over = custom.find(c => c.name === p.name);
+  const requestedName = $('ai-provider-name').value.trim() || p.name;
+  if (p.custom && requestedName !== p.name && custom.some(c => c.name === requestedName)) {
+    showToast('自定义连接名称已存在'); return;
+  }
+  let over = custom.find(c => c.id === p.id);
   if (!over) {
     over = Object.assign({}, p);
     delete over.has_key; delete over.key_source;
+    if (!String(over.id || '').startsWith('custom:')) {
+      const uid = (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : String(Date.now()) + Math.random().toString(16).slice(2));
+      over.id = 'custom:' + uid;
+    }
     over.custom = true;
     custom.push(over);
+  }
+  if (p.custom && requestedName !== p.name) {
+    over.name = requestedName;
   }
   if (baseUrl) over.base_url = baseUrl;
   else delete over.base_url;
   over.mode = mode;
   if (mode === 'messages') over.format = 'anthropic';
-  if (keyVal) over.api_key = keyVal; else delete over.api_key;
-  const current = { provider: p.name, model: $('ai-model').value || '' };
+  else over.format = 'openai';
+  if (keyVal) over.api_key = keyVal;
+  over.models = Array.from($('ai-model').options).map(o => o.value).filter(Boolean);
+  if (p.clear_key) over.clear_key = true;
+  const current = { provider_id: over.id, model: $('ai-model').value || '' };
   try {
     const r = await apiFetch('/api/ai/config', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ providers: custom, current }),
     });
     if (r.ok) {
-      state.ai.config.custom = custom;
-      state.ai.config.current = current;
-      state.ai.providers = [...custom, ...(state.ai.config.presets || [])];
+      await loadAiConfig();
       const status = $('ai-conn-status');
       if (status) status.textContent = '已保存✓';
-      showToast('连接设置已保存');
+      if (!silent) showToast('连接设置已保存');
     } else {
       const d = await r.json().catch(() => ({}));
       throw new Error(d.error || 'HTTP ' + r.status);
@@ -1189,31 +1281,27 @@ async function loadAiModels() {
   if (!baseUrl) { showToast('请先填写 Base URL'); return; }
   const p = currentAiProvider();
   const local = p && p.name.indexOf('Ollama') >= 0;
-  if (!local && !key) { showToast('请先填写 API Key'); return; }
+  if (!local && !key && !(p && p.has_key)) { showToast('请先填写 API Key'); return; }
   const btn = $('ai-models-btn');
   const old = btn.textContent;
   btn.disabled = true; btn.textContent = '获取中…';
   const status = $('ai-conn-status');
   try {
-    const q = new URLSearchParams({ base_url: baseUrl, key: key, mode: mode });
+    const q = new URLSearchParams({ provider: (p && p.id) || '', base_url: baseUrl, key: key, mode: mode });
     const r = await apiFetch('/api/ai/models?' + q.toString());
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
     const ids = d.models || [];
-    const dl = $('ai-model-list');
-    dl.innerHTML = '';
-    ids.forEach(id => {
-      const o = document.createElement('option');
-      o.value = id;
-      dl.appendChild(o);
-    });
     if (ids.length) {
-      if (ids.indexOf($('ai-model').value) < 0) $('ai-model').value = ids[0];
+      p.models = ids;
+      fillAiModels(ids, $('ai-model').value);
+      await saveAiSelection(true);
       if (status) status.textContent = '获取到 ' + ids.length + ' 个模型✓';
       showToast('已获取 ' + ids.length + ' 个模型');
     } else {
-      if (status) status.textContent = '接口未返回模型，可手动输入';
-      showToast('接口未返回模型，可手动输入模型名');
+      fillAiModels([], '');
+      if (status) status.textContent = '接口未返回可选模型';
+      showToast('接口未返回可选模型');
     }
   } catch (e) {
     if (status) status.textContent = '获取失败';
@@ -1228,6 +1316,15 @@ function toggleAiKey() {
   const inp = $('ai-key');
   inp.type = (inp.type === 'password') ? 'text' : 'password';
   $('ai-key-toggle').title = inp.type === 'password' ? '显示 / 隐藏' : '隐藏';
+}
+
+function clearAiKey() {
+  const p = currentAiProvider();
+  if (!p) return;
+  p.clear_key = true;
+  p.has_key = false;
+  $('ai-key').value = '';
+  $('ai-conn-status').textContent = '保存后清除已存 Key';
 }
 
 function resetAiUrl() {
@@ -1325,7 +1422,7 @@ async function runAi(action) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        provider: p.name, model: model, api_key: keyVal || undefined,
+        provider: p.id, model: model, api_key: keyVal || undefined,
         base_url: baseUrl || undefined, mode: mode, stream: stream,
         messages: [{ role: 'system', content: sys }].concat(msgs),
         temperature: 0.7,
@@ -1583,6 +1680,12 @@ function createEditor(doc) {
     ],
   });
   cmView = new CM.EditorView({ state: st, parent: $('edit-cm') });
+  cmView.dom.addEventListener('keydown', e => {
+    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+    const pos = cmView.state.selection.main.head;
+    const line = cmView.state.doc.lineAt(pos);
+    if (!cmView.state.sliceDoc(line.from, pos).trim()) { e.preventDefault(); openMdCommandPalette(); }
+  });
   cmView.focus();
   return true;
 }
@@ -1656,9 +1759,11 @@ function cmInsertSyntax(kind) {
     case 'strike': wrap('~~', '文本', '~~'); break;
     case 'code': wrap('`', '代码', '`'); break;
     case 'math': wrap('$', 'x^2', '$'); break;
+    case 'mathblock': insert = '$$\n' + (selected || 'x^2') + '\n$$'; cursor = sel.from + insert.length - 3; break;
     case 'h2': insert = '## ' + (selected || '标题'); cursor = sel.from + insert.length; break;
     case 'quote': insert = '> ' + (selected || '引用'); cursor = sel.from + insert.length; break;
     case 'list': insert = '- ' + (selected || '项目'); cursor = sel.from + insert.length; break;
+    case 'ordered': insert = '1. ' + (selected || '项目'); cursor = sel.from + insert.length; break;
     case 'task': insert = '- [ ] ' + (selected || '任务'); cursor = sel.from + insert.length; break;
     case 'link': insert = '[' + (selected || '文本') + '](url)'; cursor = sel.from + 1 + (selected || '文本').length; break;
     case 'image': insert = '![' + (selected || '描述') + '](url)'; cursor = sel.from + 2 + (selected || '描述').length; break;
@@ -1672,15 +1777,85 @@ function cmInsertSyntax(kind) {
   cmView.focus();
 }
 
+const MD_COMMANDS = [
+  ['加粗', 'bold', '**文本**'], ['斜体', 'italic', '*文本*'], ['删除线', 'strike', '~~文本~~'],
+  ['二级标题', 'h2', '## 标题'], ['引用', 'quote', '> 引用'], ['无序列表', 'list', '- 项目'],
+  ['有序列表', 'ordered', '1. 项目'], ['任务列表', 'task', '- [ ] 任务'], ['链接', 'link', '[文本](url)'],
+  ['图片', 'image', '本地图片或 URL'], ['行内代码', 'code', '`代码`'], ['代码块', 'codeblock', '```'],
+  ['表格', 'table', '| 列1 | 列2 |'], ['分隔线', 'hr', '---'], ['行内公式', 'math', '$x^2$'], ['块级公式', 'mathblock', '$$…$$'],
+];
+let mdCommandIndex = 0;
+
+function closeMdPopups() {
+  document.querySelectorAll('.md-menu, .pv-menu').forEach(el => el.classList.add('hidden'));
+  const trigger = $('pv-trigger'); if (trigger) trigger.setAttribute('aria-expanded', 'false');
+}
+
+function openMdCommandPalette() {
+  if (!state.editing) return;
+  closeMdPopups();
+  $('md-command-modal').classList.remove('hidden');
+  $('md-command-search').value = '';
+  mdCommandIndex = 0; renderMdCommands();
+  setTimeout(() => $('md-command-search').focus(), 0);
+}
+
+function closeMdCommandPalette() { $('md-command-modal').classList.add('hidden'); if (cmView) cmView.focus(); }
+
+function renderMdCommands() {
+  const q = $('md-command-search').value.trim().toLowerCase();
+  const rows = MD_COMMANDS.filter(c => !q || (c[0] + ' ' + c[2]).toLowerCase().includes(q));
+  mdCommandIndex = Math.max(0, Math.min(mdCommandIndex, rows.length - 1));
+  const list = $('md-command-list'); list.innerHTML = '';
+  rows.forEach((c, i) => {
+    const b = document.createElement('button'); b.className = 'command-item' + (i === mdCommandIndex ? ' active' : '');
+    b.innerHTML = '<span></span><small></small>'; b.querySelector('span').textContent = c[0]; b.querySelector('small').textContent = c[2];
+    b.addEventListener('click', () => runMdCommand(c[1])); list.appendChild(b);
+  });
+}
+
+function runMdCommand(kind) { closeMdCommandPalette(); if (kind === 'image') openImgModal(); else if (kind === 'math' || kind === 'mathblock') openFormulaModal(kind === 'mathblock' ? 'block' : 'inline'); else cmInsertSyntax(kind); }
+
+const FORMULAS = [
+  ['常用','平方根','sqrt root','\\sqrt{x}'], ['常用','分式','fraction frac','\\frac{a}{b}'], ['常用','幂与下标','power subscript','x^{n}_{i}'], ['常用','二次公式','quadratic','x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}'],
+  ['希腊','阿尔法','alpha','\\alpha'], ['希腊','贝塔','beta','\\beta'], ['希腊','伽马','gamma','\\gamma'], ['希腊','派','pi','\\pi'], ['希腊','西塔','theta','\\theta'], ['希腊','欧米伽','omega','\\omega'],
+  ['运算','乘除','times divide','a\\times b\\div c'], ['运算','正负','plus minus pm','a\\pm b'], ['运算','点乘','dot','a\\cdot b'],
+  ['关系','小于等于','less equal','a\\le b'], ['关系','大于等于','greater equal','a\\ge b'], ['关系','不等于','not equal','a\\ne b'], ['关系','约等于','approx','a\\approx b'],
+  ['箭头','右箭头','right arrow','A\\rightarrow B'], ['箭头','双向箭头','leftright arrow','A\\leftrightarrow B'], ['箭头','推出','implies','A\\Rightarrow B'],
+  ['函数','正弦','sin','\\sin x'], ['函数','对数','log','\\log_{a}x'], ['函数','指数','exp','e^{x}'],
+  ['结构','求和','sum','\\sum_{i=1}^{n} x_i'], ['结构','积分','integral','\\int_{a}^{b} f(x)\\,dx'], ['结构','极限','limit','\\lim_{x\\to 0} f(x)'], ['结构','矩阵','matrix','\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}'], ['结构','分段函数','cases','f(x)=\\begin{cases}x,&x\\ge0\\\\-x,&x<0\\end{cases}'],
+];
+let formulaCategory = '常用';
+
+function openFormulaModal(mode) { if (!state.editing) return; closeMdPopups(); $('formula-mode').value = mode || 'inline'; $('formula-modal').classList.remove('hidden'); $('formula-search').value = ''; renderFormulaPicker(); setTimeout(() => $('formula-search').focus(), 0); }
+function closeFormulaModal() { $('formula-modal').classList.add('hidden'); if (cmView) cmView.focus(); }
+function renderFormulaPicker() {
+  const cats = [...new Set(FORMULAS.map(f => f[0]))]; const catBox = $('formula-cats'); catBox.innerHTML = '';
+  cats.forEach(c => { const b = document.createElement('button'); b.textContent = c; b.classList.toggle('active', c === formulaCategory); b.addEventListener('click', () => { formulaCategory = c; renderFormulaPicker(); }); catBox.appendChild(b); });
+  const q = $('formula-search').value.trim().toLowerCase(); const rows = FORMULAS.filter(f => (q ? (f.join(' ').toLowerCase().includes(q)) : f[0] === formulaCategory));
+  const list = $('formula-list'); list.innerHTML = '';
+  rows.forEach(f => { const b = document.createElement('button'); b.className = 'formula-item'; b.innerHTML = '<span></span><small></small>'; b.querySelector('span').textContent = f[1]; b.querySelector('small').textContent = f[3]; b.addEventListener('mouseenter', () => previewFormula(f[3])); b.addEventListener('focus', () => previewFormula(f[3])); b.addEventListener('click', () => insertFormula(f[3])); list.appendChild(b); });
+}
+function previewFormula(tex) { const p = $('formula-preview'); p.textContent = '$$' + tex + '$$'; renderMath(p); }
+function insertFormula(tex) { const mode = $('formula-mode').value; closeFormulaModal(); if (!cmView) return; const sel = cmView.state.selection.main; const selected = cmView.state.sliceDoc(sel.from, sel.to); const body = selected || tex; const insert = mode === 'block' ? '\n$$\n' + body + '\n$$\n' : '$' + body + '$'; cmView.dispatch({changes:{from:sel.from,to:sel.to,insert},selection:{anchor:sel.from+insert.length}}); cmView.focus(); }
+
 /* ---------------- 图片编辑器（插入 / 裁剪 / 缩放 / 旋转） ---------------- */
 
 const imgState = {
   img: null, rawW: 0, rawH: 0,
-  angle: 0, scale: 100, ratio: 'free',
+  angle: 0, scale: 100, ratio: 'free', viewZoom: 100, panX: 0, panY: 0,
+  flipX: false, flipY: false, sizeLock: true, outW: 0, outH: 0,
   rotW: 0, rotH: 0, fitScale: 1, offX: 0, offY: 0,
   crop: { x: 0, y: 0, w: 0, h: 0 },
-  drag: null, // { mode:'move'|'resize', sx, sy, cx, cy, cw, ch }
+  drag: null, history: [], redo: [], spaceDown: false,
 };
+
+function imgSnapshot() { return {angle:imgState.angle,scale:imgState.scale,ratio:imgState.ratio,viewZoom:imgState.viewZoom,panX:imgState.panX,panY:imgState.panY,flipX:imgState.flipX,flipY:imgState.flipY,sizeLock:imgState.sizeLock,outW:imgState.outW,outH:imgState.outH,crop:Object.assign({},imgState.crop)}; }
+function pushImgHistory() { if (!imgState.img) return; imgState.history.push(imgSnapshot()); if (imgState.history.length > 40) imgState.history.shift(); imgState.redo = []; updateImgHistoryButtons(); }
+function restoreImgSnapshot(s) { if (!s) return; Object.assign(imgState, s); imgState.crop = Object.assign({}, s.crop); syncImgControls(); drawImg(); }
+function undoImg() { const s=imgState.history.pop(); if (!s) return; imgState.redo.push(imgSnapshot()); restoreImgSnapshot(s); updateImgHistoryButtons(); }
+function redoImg() { const s=imgState.redo.pop(); if (!s) return; imgState.history.push(imgSnapshot()); restoreImgSnapshot(s); updateImgHistoryButtons(); }
+function updateImgHistoryButtons() { $('img-undo').disabled=!imgState.history.length; $('img-redo').disabled=!imgState.redo.length; }
 
 function openImgModal() {
   if (!state.dir) { showToast('图片编辑仅支持本地 Markdown 文件'); return; }
@@ -1747,15 +1922,16 @@ function drawImg() {
   ctx.fillStyle = '#101418';
   ctx.fillRect(0, 0, cw, ch);
   computeRotated();
-  imgState.fitScale = Math.min(cw / imgState.rotW, ch / imgState.rotH);
-  imgState.offX = (cw - imgState.rotW * imgState.fitScale) / 2;
-  imgState.offY = (ch - imgState.rotH * imgState.fitScale) / 2;
+  imgState.fitScale = Math.min(cw / imgState.rotW, ch / imgState.rotH) * imgState.viewZoom / 100;
+  imgState.offX = (cw - imgState.rotW * imgState.fitScale) / 2 + imgState.panX;
+  imgState.offY = (ch - imgState.rotH * imgState.fitScale) / 2 + imgState.panY;
   const tmp = document.createElement('canvas');
   tmp.width = imgState.rotW;
   tmp.height = imgState.rotH;
   const tctx = tmp.getContext('2d');
   tctx.translate(imgState.rotW / 2, imgState.rotH / 2);
   tctx.rotate(imgState.angle * Math.PI / 180);
+  tctx.scale(imgState.flipX ? -1 : 1, imgState.flipY ? -1 : 1);
   tctx.drawImage(imgState.img, -imgState.rawW / 2, -imgState.rawH / 2, imgState.rawW, imgState.rawH);
   ctx.drawImage(tmp, imgState.offX, imgState.offY, imgState.rotW * imgState.fitScale, imgState.rotH * imgState.fitScale);
   clampCrop();
@@ -1766,6 +1942,7 @@ function drawImg() {
 function ratioValue() {
   if (imgState.ratio === '1:1') return 1;
   if (imgState.ratio === '4:3') return 4 / 3;
+  if (imgState.ratio === '3:2') return 3 / 2;
   if (imgState.ratio === '16:9') return 16 / 9;
   if (imgState.ratio === 'orig') {
     const r = imgState.rotW / imgState.rotH;
@@ -1809,19 +1986,19 @@ function updateImgInfo() {
   if (!el) return;
   const r = imgRect();
   if (!imgState.img || !r.w) { el.textContent = '尚未加载图片'; return; }
-  const ow = Math.max(1, Math.round(imgState.crop.w / imgState.fitScale * imgState.scale / 100));
-  const oh = Math.max(1, Math.round(imgState.crop.h / imgState.fitScale * imgState.scale / 100));
-  el.textContent = '原图 ' + imgState.rawW + '×' + imgState.rawH + ' · 角度 ' + imgState.angle + '° · 缩放 ' + imgState.scale + '% · 输出 ' + ow + '×' + oh + ' px';
+  const naturalW = Math.max(1, Math.round(imgState.crop.w / imgState.fitScale));
+  const naturalH = Math.max(1, Math.round(imgState.crop.h / imgState.fitScale));
+  if (!imgState.outW || !imgState.outH) { imgState.outW = naturalW; imgState.outH = naturalH; }
+  $('img-out-w').value = imgState.outW; $('img-out-h').value = imgState.outH;
+  el.textContent = '原图 ' + imgState.rawW + '×' + imgState.rawH + ' · 裁剪 ' + naturalW + '×' + naturalH + ' · 输出 ' + imgState.outW + '×' + imgState.outH + ' px';
 }
 
 function resetImg() {
   imgState.angle = 0;
   imgState.scale = 100;
   imgState.ratio = 'free';
-  $('img-angle').value = 0;
-  $('img-scale').value = 100;
-  $('img-scale-val').textContent = '100%';
-  $('img-ratio').value = 'free';
+  imgState.viewZoom = 100; imgState.panX = 0; imgState.panY = 0; imgState.flipX = false; imgState.flipY = false; imgState.outW = 0; imgState.outH = 0; imgState.sizeLock = true;
+  imgState.history = []; imgState.redo = []; syncImgControls(); updateImgHistoryButtons();
   if (imgState.img) {
     computeRotated();
     const stage = $('img-stage');
@@ -1843,12 +2020,21 @@ function resetImg() {
   drawImg();
 }
 
+function resetImgEditing() { if (!imgState.img) { resetImg(); return; } const previous=imgSnapshot(); resetImg(); imgState.history=[previous]; imgState.redo=[]; updateImgHistoryButtons(); }
+
 function rotateImg(delta) {
   if (!imgState.img) return;
-  imgState.angle = ((imgState.angle + delta) % 360 + 360) % 360;
-  $('img-angle').value = imgState.angle;
+  pushImgHistory(); imgState.angle += delta;
+  while (imgState.angle > 180) imgState.angle -= 360; while (imgState.angle < -180) imgState.angle += 360;
+  imgState.outW = 0; imgState.outH = 0; syncImgControls();
   drawImg();
 }
+
+function syncImgControls() { $('img-angle').value=imgState.angle; $('img-angle-number').value=imgState.angle; $('img-view-zoom').value=imgState.viewZoom; $('img-view-zoom-val').textContent=Math.round(imgState.viewZoom)+'%'; $('img-ratio').value=imgState.ratio; $('img-size-lock').classList.toggle('active',imgState.sizeLock); $('img-size-lock').setAttribute('aria-pressed',imgState.sizeLock?'true':'false'); }
+
+function setImgAngle(v) { if (!imgState.img) return; imgState.angle=Math.max(-180,Math.min(180,Number(v)||0)); imgState.outW=0; imgState.outH=0; syncImgControls(); drawImg(); }
+function setImgZoom(v, keepHistory) { if (!imgState.img) return; if (keepHistory) pushImgHistory(); const old=imgRect(); const crop=Object.assign({},imgState.crop); imgState.viewZoom=Math.max(25,Math.min(400,Number(v)||100)); drawImg(); const now=imgRect(); if (old.w>0) { imgState.crop={x:now.x+(crop.x-old.x)/old.w*now.w,y:now.y+(crop.y-old.y)/old.h*now.h,w:crop.w/old.w*now.w,h:crop.h/old.h*now.h}; clampCrop(); updateCropUI(); } syncImgControls(); updateImgInfo(); }
+function flipImg(axis) { if(!imgState.img)return; pushImgHistory(); if(axis==='x')imgState.flipX=!imgState.flipX; else imgState.flipY=!imgState.flipY; drawImg(); }
 
 function applyRatio() {
   if (!imgState.img) return;
@@ -1863,13 +2049,17 @@ function stagePointer(e) {
   const rect = stage.getBoundingClientRect();
   const px = e.clientX - rect.left;
   const py = e.clientY - rect.top;
-  const cropEl = $('img-crop');
-  const handle = e.target && e.target.classList && e.target.classList.contains('crop-handle');
+  const handle = e.target && e.target.dataset && e.target.dataset.handle;
   const inCrop = px >= imgState.crop.x - 4 && px <= imgState.crop.x + imgState.crop.w + 4 &&
                  py >= imgState.crop.y - 4 && py <= imgState.crop.y + imgState.crop.h + 4;
+  pushImgHistory();
+  if (imgState.spaceDown || e.button === 1) {
+    imgState.drag = {mode:'pan',sx:px,sy:py,panX:imgState.panX,panY:imgState.panY};
+    stage.setPointerCapture(e.pointerId); e.preventDefault(); return;
+  }
   if (handle || (inCrop && !e.shiftKey)) {
     imgState.drag = handle
-      ? { mode: 'resize', sx: px, sy: py, cx: imgState.crop.x, cy: imgState.crop.y, cw: imgState.crop.w, ch: imgState.crop.h }
+      ? { mode: 'resize', handle, sx: px, sy: py, cx: imgState.crop.x, cy: imgState.crop.y, cw: imgState.crop.w, ch: imgState.crop.h }
       : { mode: 'move', sx: px, sy: py, cx: imgState.crop.x, cy: imgState.crop.y, cw: imgState.crop.w, ch: imgState.crop.h };
     stage.setPointerCapture(e.pointerId);
     e.preventDefault();
@@ -1890,22 +2080,21 @@ function stagePointerMove(e) {
   const r = imgRect();
   const d = imgState.drag;
   const rv = ratioValue();
-  if (d.mode === 'move') {
+  if (d.mode === 'pan') {
+    imgState.panX=d.panX+(px-d.sx); imgState.panY=d.panY+(py-d.sy); drawImg();
+  } else if (d.mode === 'move') {
     let nx = d.cx + (px - d.sx);
     let ny = d.cy + (py - d.sy);
     nx = Math.max(r.x, Math.min(nx, r.x + r.w - d.cw));
     ny = Math.max(r.y, Math.min(ny, r.y + r.h - d.ch));
     imgState.crop.x = nx; imgState.crop.y = ny;
   } else if (d.mode === 'resize') {
-    let nw = Math.max(24, Math.min(px - d.cx, r.w));
-    let nh = Math.max(24, Math.min(py - d.cy, r.h));
-    if (rv > 0) {
-      if (nw / rv > r.h) { nw = r.h * rv; nh = r.h; }
-      else nh = nw / rv;
-    }
-    imgState.crop.w = nw; imgState.crop.h = nh;
-    if (imgState.crop.x + nw > r.x + r.w) imgState.crop.x = r.x + r.w - nw;
-    if (imgState.crop.y + nh > r.y + r.h) imgState.crop.y = r.y + r.h - nh;
+    let l=d.cx,t=d.cy,rr=d.cx+d.cw,bb=d.cy+d.ch; const dx=px-d.sx,dy=py-d.sy;
+    if(d.handle.includes('w'))l+=dx; if(d.handle.includes('e'))rr+=dx; if(d.handle.includes('n'))t+=dy; if(d.handle.includes('s'))bb+=dy;
+    l=Math.max(r.x,Math.min(l,rr-24)); rr=Math.min(r.x+r.w,Math.max(rr,l+24)); t=Math.max(r.y,Math.min(t,bb-24)); bb=Math.min(r.y+r.h,Math.max(bb,t+24));
+    let w=rr-l,h=bb-t;
+    if(rv>0){ if(d.handle==='n'||d.handle==='s'){w=h*rv;l=(l+rr-w)/2;rr=l+w;} else {h=w/rv;t=(t+bb-h)/2;bb=t+h;} if(l<r.x){l=r.x;rr=l+w;} if(rr>r.x+r.w){rr=r.x+r.w;l=rr-w;} if(t<r.y){t=r.y;bb=t+h;} if(bb>r.y+r.h){bb=r.y+r.h;t=bb-h;} }
+    imgState.crop={x:l,y:t,w:rr-l,h:bb-t}; imgState.outW=0; imgState.outH=0;
   } else if (d.mode === 'draw') {
     let x = Math.min(d.sx, px), y = Math.min(d.sy, py);
     let w = Math.abs(px - d.sx), h = Math.abs(py - d.sy);
@@ -1920,6 +2109,7 @@ function stagePointerMove(e) {
       y = Math.max(r.y, Math.min(y, r.y + r.h - h));
     }
     imgState.crop = { x, y, w, h };
+    imgState.outW=0; imgState.outH=0;
   }
   updateCropUI();
   updateImgInfo();
@@ -1928,6 +2118,7 @@ function stagePointerMove(e) {
 
 function stagePointerUp(e) {
   imgState.drag = null;
+  updateImgHistoryButtons();
   try { $('img-stage').releasePointerCapture(e.pointerId); } catch (err) { /* ignore */ }
 }
 
@@ -1955,14 +2146,15 @@ async function exportAndInsertImg() {
   const srcY = (imgState.crop.y - r.y) / imgState.fitScale;
   const srcW = imgState.crop.w / imgState.fitScale;
   const srcH = imgState.crop.h / imgState.fitScale;
-  const outW = Math.max(1, Math.round(srcW * imgState.scale / 100));
-  const outH = Math.max(1, Math.round(srcH * imgState.scale / 100));
+  const outW = Math.max(1, Math.round(imgState.outW || srcW));
+  const outH = Math.max(1, Math.round(imgState.outH || srcH));
   const tmp = document.createElement('canvas');
   tmp.width = imgState.rotW;
   tmp.height = imgState.rotH;
   const tctx = tmp.getContext('2d');
   tctx.translate(imgState.rotW / 2, imgState.rotH / 2);
   tctx.rotate(imgState.angle * Math.PI / 180);
+  tctx.scale(imgState.flipX ? -1 : 1, imgState.flipY ? -1 : 1);
   tctx.drawImage(imgState.img, -imgState.rawW / 2, -imgState.rawH / 2, imgState.rawW, imgState.rawH);
   const out = document.createElement('canvas');
   out.width = outW;
@@ -2010,6 +2202,9 @@ function setPvLayout(layout) {
   if (['none', 'left', 'right', 'bottom', 'top'].indexOf(layout) < 0) layout = 'none';
   state.pvLayout = layout;
   document.querySelectorAll('.pv-btn').forEach(b => b.classList.toggle('active', b.dataset.pv === layout));
+  const names = {none:'无',left:'左',right:'右',bottom:'下',top:'上'};
+  const narrow = window.innerWidth < 600 && (layout === 'left' || layout === 'right');
+  if ($('pv-trigger')) $('pv-trigger').textContent = narrow ? '预览：' + names[layout] + '（窄屏置底）⌄' : '预览：' + names[layout] + '⌄';
   const mc = $('main-col');
   const pw = $('preview-wrap');
   if (!mc || !pw) return;
@@ -2017,11 +2212,40 @@ function setPvLayout(layout) {
   if (state.editing && layout !== 'none') {
     mc.classList.add('pv-' + layout);
     pw.classList.remove('hidden');
+    $('pv-splitter').classList.remove('hidden');
+    applyPvSplit();
     schedulePreview();
   } else {
     pw.classList.add('hidden');
+    $('pv-splitter').classList.add('hidden');
   }
   saveSettings();
+}
+
+function applyPvSplit() {
+  const pw = $('preview-wrap'); if (!pw) return;
+  const horizontal = state.pvLayout === 'left' || state.pvLayout === 'right';
+  const pct = horizontal ? state.pvSplitX : state.pvSplitY;
+  pw.style.flexBasis = pct + '%';
+}
+
+function bindPvSplitter() {
+  const bar = $('pv-splitter'); const mc = $('main-col'); if (!bar || !mc) return;
+  const update = e => {
+    const r = mc.getBoundingClientRect(); let pct;
+    if (state.pvLayout === 'left') pct = (e.clientX - r.left) / r.width * 100;
+    else if (state.pvLayout === 'right') pct = (r.right - e.clientX) / r.width * 100;
+    else if (state.pvLayout === 'top') pct = (e.clientY - r.top) / r.height * 100;
+    else pct = (r.bottom - e.clientY) / r.height * 100;
+    pct = Math.max(25, Math.min(70, pct));
+    if (state.pvLayout === 'left' || state.pvLayout === 'right') state.pvSplitX = pct; else state.pvSplitY = pct;
+    applyPvSplit();
+  };
+  bar.addEventListener('pointerdown', e => { bar.setPointerCapture(e.pointerId); update(e); });
+  bar.addEventListener('pointermove', e => { if (bar.hasPointerCapture(e.pointerId)) update(e); });
+  bar.addEventListener('pointerup', e => { if (bar.hasPointerCapture(e.pointerId)) bar.releasePointerCapture(e.pointerId); saveSettings(); });
+  bar.addEventListener('keydown', e => { if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return; e.preventDefault(); const delta = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 2 : -2; if (state.pvLayout === 'left' || state.pvLayout === 'right') state.pvSplitX = Math.max(25, Math.min(70, state.pvSplitX + delta)); else state.pvSplitY = Math.max(25, Math.min(70, state.pvSplitY + delta)); applyPvSplit(); saveSettings(); });
+  window.addEventListener('resize', () => setPvLayout(state.pvLayout));
 }
 
 function schedulePreview() {
@@ -2548,6 +2772,31 @@ function closeWebDialog() {
   $('url-modal').classList.add('hidden');
 }
 
+function bindAiResize() {
+  const handle = $('ai-resize-handle');
+  if (!handle) return;
+  let startX = 0, startWidth = 0;
+  handle.addEventListener('pointerdown', e => {
+    startX = e.clientX; startWidth = state.aiPanelWidth;
+    handle.setPointerCapture(e.pointerId);
+    document.body.classList.add('ai-resizing');
+  });
+  handle.addEventListener('pointermove', e => {
+    if (!handle.hasPointerCapture(e.pointerId)) return;
+    const max = Math.max(360, Math.floor(window.innerWidth * 0.94));
+    state.aiPanelWidth = Math.max(360, Math.min(max, startWidth + startX - e.clientX));
+    document.body.style.setProperty('--ai-panel-width', state.aiPanelWidth + 'px');
+  });
+  const finish = e => {
+    if (!handle.hasPointerCapture(e.pointerId)) return;
+    handle.releasePointerCapture(e.pointerId);
+    document.body.classList.remove('ai-resizing');
+    saveSettings();
+  };
+  handle.addEventListener('pointerup', finish);
+  handle.addEventListener('pointercancel', finish);
+}
+
 /* ---------------- 事件绑定 ---------------- */
 
 function bindEvents() {
@@ -2594,17 +2843,29 @@ function bindEvents() {
   $('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('url-go').click(); });
 
   $('btn-edit').addEventListener('click', toggleEdit);
-  document.querySelectorAll('#md-tool .md-tool-btn').forEach(b => b.addEventListener('click', () => {
-    if (b.dataset.md === 'image') openImgModal();
-    else cmInsertSyntax(b.dataset.md);
+  document.querySelectorAll('#md-tool [data-md]').forEach(b => b.addEventListener('click', () => {
+    closeMdPopups(); if (b.dataset.md === 'image') openImgModal(); else cmInsertSyntax(b.dataset.md);
   }));
+  document.querySelectorAll('#md-tool [data-menu]').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation(); const menu = $(b.dataset.menu); const wasHidden = menu.classList.contains('hidden'); closeMdPopups(); if (wasHidden) menu.classList.remove('hidden');
+  }));
+  $('md-command-open').addEventListener('click', openMdCommandPalette);
+  $('md-command-search').addEventListener('input', () => { mdCommandIndex = 0; renderMdCommands(); });
+  $('md-command-search').addEventListener('keydown', e => { const items = [...$('md-command-list').querySelectorAll('.command-item')]; if (e.key === 'ArrowDown') { e.preventDefault(); mdCommandIndex = Math.min(items.length - 1, mdCommandIndex + 1); renderMdCommands(); } else if (e.key === 'ArrowUp') { e.preventDefault(); mdCommandIndex = Math.max(0, mdCommandIndex - 1); renderMdCommands(); } else if (e.key === 'Enter' && items[mdCommandIndex]) { e.preventDefault(); items[mdCommandIndex].click(); } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMdCommandPalette(); } });
+  $('md-command-modal').addEventListener('click', e => { if (e.target === $('md-command-modal')) closeMdCommandPalette(); });
+  $('formula-open').addEventListener('click', () => openFormulaModal('inline'));
+  $('formula-close').addEventListener('click', closeFormulaModal);
+  $('formula-search').addEventListener('input', renderFormulaPicker);
+  $('formula-modal').addEventListener('click', e => { if (e.target === $('formula-modal')) closeFormulaModal(); });
   $('edit-save').addEventListener('click', saveEdit);
   $('edit-cancel').addEventListener('click', exitEdit);
-  document.querySelectorAll('.pv-btn').forEach(b => b.addEventListener('click', () => setPvLayout(b.dataset.pv)));
+  $('pv-trigger').addEventListener('click', e => { e.stopPropagation(); const m = $('pv-menu'); const show = m.classList.contains('hidden'); closeMdPopups(); m.classList.toggle('hidden', !show); $('pv-trigger').setAttribute('aria-expanded', show ? 'true' : 'false'); });
+  document.querySelectorAll('.pv-btn').forEach(b => b.addEventListener('click', () => { setPvLayout(b.dataset.pv); closeMdPopups(); }));
   const pvSyncEl = $('pv-sync');
   if (pvSyncEl) pvSyncEl.addEventListener('change', e => { state.pvSync = e.target.checked; saveSettings(); });
   const pvWrap = $('preview-wrap');
   if (pvWrap) pvWrap.addEventListener('scroll', pvSyncFromPreview);
+  bindPvSplitter();
   $('img-file').addEventListener('click', () => $('img-file-input').click());
   $('img-file-input').addEventListener('change', e => {
     const f = e.target.files && e.target.files[0];
@@ -2615,25 +2876,35 @@ function bindEvents() {
   $('img-url-input').addEventListener('keydown', e => { if (e.key === 'Enter') insertImgUrl(); });
   $('img-rot-l').addEventListener('click', () => rotateImg(-90));
   $('img-rot-r').addEventListener('click', () => rotateImg(90));
-  $('img-angle').addEventListener('input', e => { imgState.angle = +e.target.value; drawImg(); });
-  $('img-scale').addEventListener('input', e => {
-    imgState.scale = +e.target.value;
-    $('img-scale-val').textContent = imgState.scale + '%';
-    updateImgInfo();
-  });
-  $('img-ratio').addEventListener('change', e => { imgState.ratio = e.target.value; applyRatio(); });
-  $('img-reset').addEventListener('click', resetImg);
+  $('img-angle').addEventListener('pointerdown', pushImgHistory);
+  $('img-angle').addEventListener('input', e => setImgAngle(e.target.value));
+  $('img-angle-number').addEventListener('change', e => { pushImgHistory(); setImgAngle(e.target.value); });
+  $('img-view-zoom').addEventListener('pointerdown', pushImgHistory);
+  $('img-view-zoom').addEventListener('input', e => setImgZoom(e.target.value, false));
+  $('img-flip-x').addEventListener('click', () => flipImg('x'));
+  $('img-flip-y').addEventListener('click', () => flipImg('y'));
+  $('img-ratio').addEventListener('change', e => { pushImgHistory(); imgState.ratio = e.target.value; imgState.outW=0; imgState.outH=0; applyRatio(); });
+  $('img-size-lock').addEventListener('click', () => { imgState.sizeLock=!imgState.sizeLock; syncImgControls(); });
+  $('img-out-w').addEventListener('change', e => { const oldW=imgState.outW||1, oldH=imgState.outH||1; imgState.outW=Math.max(1,Math.min(16000,+e.target.value||1)); if(imgState.sizeLock)imgState.outH=Math.max(1,Math.round(imgState.outW*oldH/oldW)); updateImgInfo(); });
+  $('img-out-h').addEventListener('change', e => { const oldW=imgState.outW||1, oldH=imgState.outH||1; imgState.outH=Math.max(1,Math.min(16000,+e.target.value||1)); if(imgState.sizeLock)imgState.outW=Math.max(1,Math.round(imgState.outH*oldW/oldH)); updateImgInfo(); });
+  $('img-undo').addEventListener('click', undoImg); $('img-redo').addEventListener('click', redoImg);
+  $('img-reset').addEventListener('click', resetImgEditing);
   $('img-insert').addEventListener('click', exportAndInsertImg);
   $('img-close').addEventListener('click', closeImgModal);
+  $('img-close-x').addEventListener('click', closeImgModal);
   $('img-modal').addEventListener('click', e => { if (e.target === $('img-modal')) closeImgModal(); });
   const stage = $('img-stage');
   stage.addEventListener('pointerdown', stagePointer);
   stage.addEventListener('pointermove', stagePointerMove);
   stage.addEventListener('pointerup', stagePointerUp);
   stage.addEventListener('pointercancel', stagePointerUp);
+  stage.addEventListener('wheel', e => { if(!imgState.img)return; e.preventDefault(); setImgZoom(imgState.viewZoom*(e.deltaY>0?.9:1.1), true); }, {passive:false});
+  stage.addEventListener('keydown', e => { if(e.key===' '){imgState.spaceDown=true;e.preventDefault();return;} if((e.key==='+'||e.key==='=')&&imgState.img){e.preventDefault();setImgZoom(imgState.viewZoom+10,true);return;} if(e.key==='-'&&imgState.img){e.preventDefault();setImgZoom(imgState.viewZoom-10,true);return;} if(!e.key.startsWith('Arrow')||!imgState.img)return; e.preventDefault();pushImgHistory(); const n=e.shiftKey?10:1; if(e.key==='ArrowLeft')imgState.crop.x-=n;if(e.key==='ArrowRight')imgState.crop.x+=n;if(e.key==='ArrowUp')imgState.crop.y-=n;if(e.key==='ArrowDown')imgState.crop.y+=n;clampCrop();updateCropUI();updateImgInfo(); });
+  stage.addEventListener('keyup', e => { if(e.key===' ')imgState.spaceDown=false; });
+  stage.addEventListener('blur', () => { imgState.spaceDown=false; });
   $('btn-saveas').addEventListener('click', saveAs);
 
-  $('btn-recent').addEventListener('click', refreshRecent);
+  $('btn-recent').addEventListener('click', openHistoryModal);
   $('btn-reload').addEventListener('click', () => { if (state.file && state.mode === 'file') loadFile(state.file); });
   $('btn-toc').addEventListener('click', () => toggleSide('toc'));
   $('btn-fix').addEventListener('click', showFixModal);
@@ -2998,10 +3269,10 @@ async function expSavePreset() {
   });
   $('btn-assoc').addEventListener('click', installAssoc);
   $('top-btn').addEventListener('click', () => { $('content').scrollTo({ top: 0, behavior: 'smooth' }); });
-  $('recent-clear').addEventListener('click', async () => {
-    if (hasPy) await py.clear_recent();
-    refreshRecent();
-  });
+  $('recent-clear').addEventListener('click', clearRecent);
+  $('history-clear').addEventListener('click', clearRecent);
+  $('history-close').addEventListener('click', () => $('history-modal').classList.add('hidden'));
+  $('history-modal').addEventListener('click', e => { if (e.target === $('history-modal')) $('history-modal').classList.add('hidden'); });
 
   $('search-close').addEventListener('click', closeSearch);
   $('search-next').addEventListener('click', () => jumpToMark(1));
@@ -3015,9 +3286,12 @@ async function expSavePreset() {
   $('w-ai').addEventListener('click', toggleAiPanel);
   $('ai-close').addEventListener('click', () => { $('ai-panel').classList.add('hidden'); });
   $('ai-provider').addEventListener('change', onAiProviderChange);
+  $('ai-provider-new').addEventListener('click', newAiProvider);
+  $('ai-provider-delete').addEventListener('click', deleteAiProvider);
   $('ai-mode').addEventListener('change', () => { /* 协议变更由保存设置时生效 */ });
   $('ai-url-reset').addEventListener('click', resetAiUrl);
   $('ai-key-toggle').addEventListener('click', toggleAiKey);
+  $('ai-key-clear').addEventListener('click', clearAiKey);
   $('ai-models-btn').addEventListener('click', loadAiModels);
   $('ai-save-key').addEventListener('click', saveAiSelection);
   document.querySelectorAll('.ai-act').forEach(b => b.addEventListener('click', () => runAi(b.dataset.act)));
@@ -3038,6 +3312,7 @@ async function expSavePreset() {
   $('ai-save-session').addEventListener('click', saveCurrentSession);
   $('ai-del-session').addEventListener('click', deleteCurrentSession);
   $('ai-clear-ctx').addEventListener('click', clearAiContext);
+  bindAiResize();
 
   $('btn-share').addEventListener('click', openShareModal);
   $('share-start').addEventListener('click', startShare);
@@ -3064,13 +3339,18 @@ async function expSavePreset() {
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleSide('toc'); }
     else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); toggleTheme(); }
     else if (mod && e.key.toLowerCase() === 'r') { e.preventDefault(); if (state.file && state.mode === 'file') loadFile(state.file); }
-    else if (mod && e.key.toLowerCase() === 'p') { e.preventDefault(); openExportModal(); }
+    else if (mod && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); openExportModal(); }
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); toggleAiPanel(); }
+    else if (mod && e.shiftKey && e.key.toLowerCase() === 'p' && state.editing) { e.preventDefault(); openMdCommandPalette(); }
     else if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoom(10); }
     else if (mod && e.key === '-') { e.preventDefault(); zoom(-10); }
     else if (mod && e.key === 'ArrowLeft') { e.preventDefault(); historyBack(); }
     else if (mod && e.key === 'ArrowRight') { e.preventDefault(); historyForward(); }
     else if (e.key === 'Escape') {
+      if (!$('md-command-modal').classList.contains('hidden')) { closeMdCommandPalette(); return; }
+      if (!$('formula-modal').classList.contains('hidden')) { closeFormulaModal(); return; }
+      if (!$('img-modal').classList.contains('hidden')) { closeImgModal(); return; }
+      if (!$('history-modal').classList.contains('hidden')) { $('history-modal').classList.add('hidden'); return; }
       if (moreMenu && moreMenu.classList.contains('open')) { moreMenu.classList.remove('open'); }
       closeSearch();
       $('fix-modal').classList.add('hidden');
@@ -3078,12 +3358,13 @@ async function expSavePreset() {
       $('ai-panel').classList.add('hidden');
       $('share-modal').classList.add('hidden');
       $('tpl-modal').classList.add('hidden');
-      $('img-modal').classList.add('hidden');
       $('convert-modal').classList.add('hidden');
+      closeMdCommandPalette(); closeFormulaModal(); closeMdPopups();
       stopConvertPoll();
       if (state.editing) exitEdit();
     }
   });
+  document.addEventListener('click', closeMdPopups);
 }
 
 function loadFileDialog() {

@@ -4,20 +4,20 @@
 
 ## 项目一句话
 
-纯本地、秒开、离线可用的 Windows Markdown 阅读器：双击 .md 即读，渲染前自动修正常见 MD 错误（只影响显示不改原文件），并集成 AI 助手 / 万物转 MD / 扫描 OCR / 网页转 MD / 主动编辑 / 移动端共享 / 大文档增量渲染 / 导出 PDF·DOCX·HTML。v2.0 起安装版为 onedir 目录安装（冷启动 ≤1.5s）+ 单实例常驻托盘（再次打开 <0.3s）。
+纯本地、秒开、离线可用的 Windows / macOS Markdown 阅读器，集成 AI 助手、转换、OCR、网页提取、主动编辑与文档导出。
 
 ## 位置与仓库
 
-- 本地：`T:\Programming\Project\codex\creator\readmd`（Windows，PowerShell，.venv 已建好）
+- 本地：任意工作区目录（不得在仓库记录开发者绝对路径）
 - GitHub：`https://github.com/Natsummerance/readMD`（public，main 分支）
-- 账号：Natsummerance / 2734763029@qq.com；发布 token 在系统环境变量 `GITHUB_TOKEN`
-- 最新 Release：v2.1.1（ReadMDSetup-v2.1.1.exe 安装包 + ReadMD-portable-v2.1.1.exe 便携版）
+- 发布凭据仅由 GitHub Actions 管理，不在源码或文档记录个人账号、邮箱或 Token
+- 当前开发版本：v2.2.0；Windows + Intel/Apple Silicon macOS 由 CI 构建
 - Win7 兼容版：**v2.1.1 Beta**（pre-release tag `v2.1.1-beta`，资产 `ReadMDSetup-2.1.1-Beta-win7-x64.exe`）——Win7 SP1 x64 + 内嵌固定版 WebView2 109 运行时；独立 Python 3.9.13 构建链（`.venv-win7` / `win7-reqs.txt` / `build_win7.bat` / `ReadMD-win7.spec` / `ReadMDSetup-win7.spec` / `tools\win7_pywebview_edgechromium.patch` / `tools\bundle_runtime.py`）；功能裁剪：仅 docx / pdf 转 MD + 导出（OCR / AI / 网页 / 其他格式在 Win7 下提示不可用）
 
 ## 功能清单（按开发顺序）
 
 1. 初版阅读器：本地 127.0.0.1 HTTP 服务 + pywebview 原生窗口，秒开；自动修正表格/加粗/公式/标题；自动刷新、目录、搜索、三主题、字号、最近文件、文件夹浏览、打印/导出 PDF
-2. AI 助手（v1.1）：15+ 提供商预设（OpenAI/DeepSeek/Kimi/智谱/通义/硅基流动/OpenRouter/xAI/Groq/Mistral/Gemini/火山方舟等，参考本地 cc-switch 预设），OpenAI 兼容 + Anthropic 双协议，Key 可读环境变量，流式输出，结果一键应用到文档，支持自定义提供商
+2. AI 助手（v2.2）：公开官方预设 + 自定义连接，OpenAI 兼容 + Anthropic 双协议，Key 可读环境变量且接口不回传明文，流式输出，结果一键应用到文档
 3. 万物转 MD：MarkItDown（docx/pptx/xlsx/pdf/html/csv/json）；扫描转 MD：Windows 内置 WinRT OCR（离线中文）+ PyMuPDF；网页转 MD：trafilatura + 批量爬取同站最多 10 页。三者均为渲染完成后后台懒加载
 4. Prompt 模板管理（14+ 内置）+ AI 多轮历史会话（可保存恢复）+ 大文档增量流式渲染（>300KB 或 6000 行分块渲染）
 5. 主动编辑（v1.3）：CodeMirror 6（GitHub 开源）——18 种 Markdown 语法自动补全、工具栏插入各种 MD 字符、语法高亮、亮暗主题跟随、Ctrl+S 保存（自动 .bak 备份）
@@ -53,18 +53,18 @@
 | installer/setup_app.py | 安装器主程序（含静默模式、onedir 整目录拷贝安装）；setup.html 动画界面；build_setup.bat 打包 |
 | tools/make_icon.py | 多尺寸图标生成（纯标准库） |
 | tools/cm-bundle/ | CodeMirror 6 构建源（npm + esbuild） |
-| deploy.bat | ★一键部署：token→测试→打包→git push→发布→SHA256 校验 |
-| release.py | GitHub Release 工具（--verify/--update/--force-upload/--skip-assets/--asset） |
-| release_notes.md | Release 发布说明（含 SHA256 表），deploy.bat 自动读取 |
+| deploy.bat | 本地测试、提交并推送 main 与版本标签；不创建 Release |
+| release.py | Release 维护/校验辅助工具；CI 是唯一发布方 |
+| release_notes.md | GitHub Actions 使用的 Release 发布说明 |
 | package.bat / setup.bat / install.bat / run.bat / uninstall.bat | 打包/安装/运行脚本 |
 
 ## 打包与发布
 
 - `package.bat`：一次产出两版——onedir 安装版 `dist\ReadMD\ReadMD.exe`（秒开）+ 便携单文件 `dist\ReadMD-portable.exe`（windowed，console=False，图标 readmd.ico）
 - `installer/build_setup.bat`：先 ReadMDUninstall.exe，再 ReadMDSetup.exe（内嵌 onedir 目录 `ReadMD/` + 卸载器；v2.0.1 起不再使用 PyInstaller splash 启动画面，避免黑屏弹窗卡死安装流程）
-- `deploy.bat [--skip-build] [--skip-tests] [--tag v2.0.1]`：完整一键部署
-- `release.py --verify`：线上资产与本地 SHA256 全比对；`--update` 更新说明；`--force-upload` 覆盖重传
-- Release 资产规范：只传 2 个（安装包 + 便携版），图标在仓库内不再上传
+- `deploy.bat [--skip-tests] [--tag v2.2.0]`：测试并推送 main 与标签
+- GitHub Actions 在 Windows、Intel macOS、Apple Silicon macOS 测试后生成四个 Release 资产
+- Release 由 CI 唯一创建，并在发布前校验架构、版本、大小与 SHA-256
 
 ## 测试现状（全部通过）
 
@@ -74,8 +74,6 @@
 
 ## 环境注意事项
 
-- apply_patch 命令不可用（WindowsApps 权限拒绝），写文件用 PowerShell Set-Content -Encoding utf8 或 Python
-- Remove-Item -Recurse 被策略拦截，删目录用 `[System.IO.Directory]::Delete(path, $true)`
 - requirements.txt 必须保持纯 ASCII（中文注释会让 pip 在 GBK 区域设置下解码失败，之前因此修复过一次）
 - v2.0 新增依赖 pystray（托盘）；单实例控制端口 26891 固定，占用时回退随机端口并禁用单实例
 - v2.1 新增依赖 reportlab（PDF）、matplotlib（公式成图），全部惰性导入（mdexport 包不进 MODULES 自动加载）；requirements.txt 保持纯 ASCII
