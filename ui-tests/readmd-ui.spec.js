@@ -108,6 +108,7 @@ test('web to Markdown renders dynamic pages with progress and actionable errors'
   await page.locator('#url-go').click();
   await expect(page.locator('#url-progress')).toBeVisible();
   await page.waitForFunction(() => state.source === 'url');
+  await expect(page.locator('#url-modal')).toBeVisible();
   expect(await page.locator('#url-input').inputValue()).toBe('https://example.com/article');
   expect(extractCalls).toBe(2);
   await expect(page.locator('#content')).toContainText('动态正文内容');

@@ -867,7 +867,6 @@ async function webToMd(url, crawl, forceRender) {
     const title = (first.meta && first.meta.title) || url;
     await renderVirtual('url', title, first.asset_dir || '', content, [], { assets });
     if (warnings.length) showToast(warnings[0] + (warnings.length > 1 ? '（另有 ' + (warnings.length - 1) + ' 条）' : ''));
-    setTimeout(() => { if (!webRun.running) $('url-modal').classList.add('hidden'); }, 300);
   } catch (error) {
     const cancelled = error.code === 'cancelled' || webRun.cancelled;
     setWebStatus(cancelled ? '网页转换已取消。' : (error.message || '网页转换失败'), cancelled ? '' : 'error');
