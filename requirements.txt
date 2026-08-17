@@ -20,13 +20,13 @@ requests
 pymupdf
 
 # Windows-only: WinRT OCR
-pywinrt-Windows.Media.Ocr; sys_platform == 'win32'
-pywinrt-Windows.Graphics.Imaging; sys_platform == 'win32'
-pywinrt-Windows.Storage; sys_platform == 'win32'
-pywinrt-Windows.Storage.Streams; sys_platform == 'win32'
-pywinrt-Windows.Foundation; sys_platform == 'win32'
-pywinrt-Windows.Foundation.Collections; sys_platform == 'win32'
-pywinrt-Windows.Globalization; sys_platform == 'win32'
+winrt-Windows.Media.Ocr; sys_platform == 'win32'
+winrt-Windows.Graphics.Imaging; sys_platform == 'win32'
+winrt-Windows.Storage; sys_platform == 'win32'
+winrt-Windows.Storage.Streams; sys_platform == 'win32'
+winrt-Windows.Foundation; sys_platform == 'win32'
+winrt-Windows.Foundation.Collections; sys_platform == 'win32'
+winrt-Windows.Globalization; sys_platform == 'win32'
 
 # macOS-only: Vision OCR via PyObjC
 pyobjc-framework-Vision; sys_platform == 'darwin'
