@@ -9,6 +9,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, ROOT)
@@ -16,6 +17,7 @@ sys.path.insert(0, ROOT)
 from readmd_modules.mdexport import parser as P
 from readmd_modules.mdexport import styles as S
 from readmd_modules.mdexport import formula as F
+from readmd_modules.mdexport import pdf_render as PDF
 import readmd_modules.mdexport as E
 
 SAMPLE = '''# 标题一
@@ -179,6 +181,20 @@ class TestImageResolver(unittest.TestCase):
             self.assertIsNone(r.resolve('missing.png'))
             self.assertIsNone(r.resolve('http://x/y.png'))
             self.assertTrue(len(warns) >= 1)
+
+
+class TestPdfFonts(unittest.TestCase):
+    def test_missing_system_font_keeps_registered_fallback(self):
+        previous = PDF._registered_font_name
+        try:
+            PDF._registered_font_name = None
+            with mock.patch.object(PDF, '_first_existing', return_value='/missing/font.ttf'):
+                first = PDF.register_fonts()
+                second = PDF.register_fonts()
+            self.assertEqual(first, second)
+            self.assertTrue(PDF._font_ready(second))
+        finally:
+            PDF._registered_font_name = previous
 
 
 class TestExportSmoke(unittest.TestCase):

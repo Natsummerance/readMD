@@ -12,6 +12,7 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (BaseDocTemplate, Frame, Image, PageBreak,
                                 Paragraph, Spacer, Table, TableStyle,
@@ -24,7 +25,7 @@ from . import parser as _parser
 _PAGE_MAP = {'A4': A4, 'A5': A5, 'B5': B5, 'Letter': letter, 'Legal': legal}
 _TA = {'left': TA_LEFT, 'center': TA_CENTER, 'right': TA_RIGHT, 'justify': TA_JUSTIFY}
 
-_fonts_registered = False
+_registered_font_name = None
 
 
 def _first_existing(*paths):
@@ -36,9 +37,9 @@ def _first_existing(*paths):
 
 def register_fonts():
     """注册中文字体（微软雅黑 + 粗体，回退黑体）。"""
-    global _fonts_registered
-    if _fonts_registered:
-        return 'MicrosoftYaHei' if _font_ready('MicrosoftYaHei') else 'SimHei'
+    global _registered_font_name
+    if _registered_font_name and _font_ready(_registered_font_name):
+        return _registered_font_name
     try:
         regular = _first_existing(
             r'C:\Windows\Fonts\msyh.ttc',
@@ -59,7 +60,7 @@ def register_fonts():
                                                   normal='MicrosoftYaHei', bold='MicrosoftYaHei-Bold')
                 except Exception:
                     pass
-            _fonts_registered = True
+            _registered_font_name = 'MicrosoftYaHei'
             return 'MicrosoftYaHei'
     except Exception:
         pass
@@ -67,12 +68,19 @@ def register_fonts():
     if os.path.exists(fallback):
         try:
             pdfmetrics.registerFont(TTFont('SimHei', fallback))
-            _fonts_registered = True
+            _registered_font_name = 'SimHei'
             return 'SimHei'
         except Exception:
             pass
-    _fonts_registered = True
-    return 'Helvetica'
+    try:
+        pdfmetrics.registerFont(UnicodeCIDFont('STSong-Light'))
+        pdfmetrics.registerFontFamily('STSong-Light', normal='STSong-Light',
+                                      bold='STSong-Light', italic='STSong-Light',
+                                      boldItalic='STSong-Light')
+        _registered_font_name = 'STSong-Light'
+    except Exception:
+        _registered_font_name = 'Helvetica'
+    return _registered_font_name
 
 
 def _font_ready(name):
