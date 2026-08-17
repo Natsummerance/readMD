@@ -11,14 +11,14 @@
 - 本地：任意工作区目录（不得在仓库记录开发者绝对路径）
 - GitHub：`https://github.com/Natsummerance/readMD`（public，main 分支）
 - 发布凭据仅由 GitHub Actions 管理，不在源码或文档记录个人账号、邮箱或 Token
-- 当前发布版本：v2.2.0（Windows）；当前开发版本：v2.2.1（独立原生 macOS 构建）
+- 当前开发/发布目标：v2.2.2（Windows + Intel macOS + Apple Silicon macOS 同一 Release）
 - Win7 兼容版：**v2.1.1 Beta**（pre-release tag `v2.1.1-beta`，资产 `ReadMDSetup-2.1.1-Beta-win7-x64.exe`）——Win7 SP1 x64 + 内嵌固定版 WebView2 109 运行时；独立 Python 3.9.13 构建链（`.venv-win7` / `win7-reqs.txt` / `build_win7.bat` / `ReadMD-win7.spec` / `ReadMDSetup-win7.spec` / `tools\win7_pywebview_edgechromium.patch` / `tools\bundle_runtime.py`）；功能裁剪：仅 docx / pdf 转 MD + 导出（OCR / AI / 网页 / 其他格式在 Win7 下提示不可用）
 
 ## 功能清单（按开发顺序）
 
 1. 初版阅读器：本地 127.0.0.1 HTTP 服务 + pywebview 原生窗口，秒开；自动修正表格/加粗/公式/标题；自动刷新、目录、搜索、三主题、字号、最近文件、文件夹浏览、打印/导出 PDF
 2. AI 助手（v2.2）：公开官方预设 + 自定义连接，OpenAI 兼容 + Anthropic 双协议，Key 可读环境变量且接口不回传明文，流式输出，结果一键应用到文档
-3. 万物转 MD：MarkItDown（docx/pptx/xlsx/pdf/html/csv/json）；扫描转 MD：Windows 内置 WinRT OCR（离线中文）+ PyMuPDF；网页转 MD：trafilatura + 批量爬取同站最多 10 页。三者均为渲染完成后后台懒加载
+3. 万物转 MD：MarkItDown（docx/pptx/xlsx/pdf/html/csv/json）；扫描转 MD：Windows WinRT / macOS Vision；网页转 MD：Trafilatura → 系统 WebView → Mozilla Readability → 完整页面降级，支持同站最多 10 页与可选图片本地化。三者均为渲染完成后后台懒加载
 4. Prompt 模板管理（14+ 内置）+ AI 多轮历史会话（可保存恢复）+ 大文档增量流式渲染（>300KB 或 6000 行分块渲染）
 5. 主动编辑（v1.3）：CodeMirror 6（GitHub 开源）——18 种 Markdown 语法自动补全、工具栏插入各种 MD 字符、语法高亮、亮暗主题跟随、Ctrl+S 保存（自动 .bak 备份）
 6. 插入图片（v1.4）：Canvas 所见即所得裁剪/缩放/旋转，保存到文档 images/ 目录
@@ -31,6 +31,8 @@
 13. AI 连接自定义（v2.1.1）：AI 面板顶部新增「连接设置」卡片——提供商预设可选但 API Key 必填（本地 Ollama 除外）、Base URL 可编辑（保存为该提供商自定义覆盖，可一键恢复预设）、响应方式四选（auto/chat completions/completions/responses/Anthropic messages）、流式开关；「获取模型」按钮通过 Key 拉取模型列表填入 datalist（失败回退预设并可手输模型名）；对话实时监控 token 用量（本次 + 会话累计，随会话存入 history）
 14. 编辑实时预览（v2.1.1）：编辑工具栏新增「无/左/右/下/上」五档预览布局（默认无，与旧版一致），300ms 防抖实时渲染（复用 marked + MathJax 管线 + 当前主题），可选「滚动同步」按比例双向联动；转换/OCR/网页虚拟文档解锁编辑，无文件保存走另存为并切换为文件模式
 15. 转换保存 / 批量 / 质量（v2.1.1）：单文件与批量转换一律自动保存到源目录同名 .md（同名默认跳过，可勾选覆盖）；「转 Markdown」弹窗支持多选文件 / 整文件夹（递归 ≤200 个）+ 实时进度列表 + 打开结果目录；docx 专用解析（OMML 公式→LaTeX、标题、表格、等宽字体代码块、样式级列表），pdf 专用解析（PyMuPDF find_tables 还原表格 + 公式启发式），其余走 MarkItDown 并逐文件回退；统一 mdcheck 严格校验（围栏闭合/表格/公式定界符/替换符/图片存在性，安全项自动修复）
+16. 网页转 MD 重构（v2.2.2）：可诊断 HTTP 下载、重定向/编码/大小限制、Trafilatura 双级抽取、WebView2/WKWebView 动态渲染、离线 Mozilla Readability、完整页面降级、批量进度/取消、图片资源随另存迁移及 SSRF/HTML 清洗
+17. Windows 文件关联图标与应用 Logo 分离：`.md/.markdown` 使用多尺寸简约文档图标，ReadMD EXE、安装器和快捷方式继续使用原应用 Logo
 
 ## 关键文件
 
@@ -46,7 +48,8 @@
 | readmd_modules/__init__.py | 懒加载注册表（convert/ocr/web/ai），load_all() 后台加载 |
 | readmd_modules/convert.py | 转换：docx/pdf 专用解析（OMML→LaTeX、表格、代码块）+ MarkItDown 兜底 |
 | readmd_modules/ocr.py | WinRT OCR + PyMuPDF |
-| readmd_modules/web.py | trafilatura 网页提取 |
+| readmd_modules/web.py | 安全下载、Trafilatura/Readability/完整页面抽取、链接与图片资源处理 |
+| readmd_web_test.py | 网页下载、抽取、安全、图片与 API 的本地 HTTP 夹具测试 |
 | readmd_modules/ai.py | AI 提供商注册表 + 四协议请求（chat/completions/completions/responses/messages）+ 模型列表拉取 + 用量解析 |
 | assets/ | 前端（index.html/style.css/app.js + vendor 全离线：marked/MathJax/qrcode/codemirror.bundle） |
 | DESIGN.md | v2.0 设计规范：色盘/字体/间距/圆角/阴影 token，三主题 |
@@ -62,13 +65,13 @@
 
 - `package.bat`：一次产出两版——onedir 安装版 `dist\ReadMD\ReadMD.exe`（秒开）+ 便携单文件 `dist\ReadMD-portable.exe`（windowed，console=False，图标 readmd.ico）
 - `installer/build_setup.bat`：先 ReadMDUninstall.exe，再 ReadMDSetup.exe（内嵌 onedir 目录 `ReadMD/` + 卸载器；v2.0.1 起不再使用 PyInstaller splash 启动画面，避免黑屏弹窗卡死安装流程）
-- `deploy.bat [--skip-tests] [--tag v2.2.0]`：测试并推送 main 与标签
-- `release.yml` 仅处理 v2.2.0 Windows；`release-macos.yml` 使用 requirements-macos.txt，仅处理 v2.2.1 Intel/Apple Silicon macOS
+- `deploy.bat [--skip-tests] [--tag v2.2.2]`：测试并推送 main 与标签，明确排除用户本地 `IDEA.md`
+- `release.yml` 在 Windows、Intel macOS、Apple Silicon macOS 测试后统一打包四个 v2.2.2 资产
 - Release 由 CI 唯一创建，并在发布前校验架构、版本、大小与 SHA-256
 
 ## 测试现状（全部通过）
 
-- 修正器单测 37/37；转换/AI 22/22；导出单测 24/24；Playwright UI 3/3；`--selftest` PASSED
+- 修正器单测 37/37；转换/AI 23/23；导出单测 24/24；网页专项 10/10；Playwright UI 4/4；`--selftest` PASSED
 - dist\ReadMD\ReadMD.exe --selftest 退出码 0（console=False 无输出）；`readmd.log` 启动里程碑：start / server_up / webview_imported / window_created / page_loaded
 - 安装器串行 静默安装→文件就位→静默卸载→目录清除，验证通过（并发下曾出现竞争残留，正常串行无问题）
 

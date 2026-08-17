@@ -1,25 +1,30 @@
-# ReadMD v2.2.0
+# ReadMD v2.2.2
 
 ## 下载
 
-- Windows 安装版：`ReadMDSetup-v2.2.0.exe`
-- Windows 便携版：`ReadMD-portable-v2.2.0.exe`
-v2.2.0 先发布 Windows 版。macOS 将采用独立原生依赖与构建流程，在 v2.2.1 单独发布。
+- Windows 安装版：`ReadMDSetup-v2.2.2.exe`
+- Windows 便携版：`ReadMD-portable-v2.2.2.exe`
+- Intel Mac：`ReadMD-macos-x64-v2.2.2.zip`
+- Apple Silicon Mac：`ReadMD-macos-arm64-v2.2.2.zip`
 
-## 本次更新
+## 网页转 Markdown 重构
 
-- 修复导出设置全部展开后遮挡的问题，弹窗标题和操作区固定，设置内容独立滚动。
-- 修复顶栏“最近文件”按钮无响应，阅读和编辑状态均可打开历史面板。
-- AI 配置升级到 schema v2：移除旧私人配置、支持自定义连接 CRUD、API Key 不再通过接口回传、模型改为获取后下拉选择，面板可拖拽调宽。
-- 编辑工具栏收敛为单行，新增分组 Markdown 命令、可搜索命令面板和分类公式选择器。
-- 图片编辑升级为八向裁剪、任意角度、翻转、画布缩放/平移、输出尺寸与撤销重做。
-- 预览方向改为工具栏右侧紧凑停靠组件，支持拖拽调整编辑/预览比例；桌面窄窗口不再把左右预览错误放到下方。
-- 已完成 macOS 原生数据目录、Finder 打开/定位、Vision OCR 与文档类型声明的基础适配；独立 macOS 构建顺延至 v2.2.1。
+- 修复网页下载成功却统一提示“未爬取到正文”的问题，超时、DNS、TLS、403、429、非 HTML、超限响应与正文过短现在会给出具体提示。
+- 使用 Trafilatura 智能正文与高召回双层提取；静态内容不足时，桌面应用自动使用系统 WebView 渲染，并通过离线 Mozilla Readability 提取正文。
+- 新增完整页面模式、强制动态渲染、重试、取消、逐页进度与同站最多 10 页批量抓取；单页失败不会丢失已成功内容。
+- 保留表格、代码、链接、图片和文章元数据，并将相对地址改为绝对地址。
+- 可选下载网页图片；另存 Markdown 时自动生成同名 `.assets` 目录并重写相对路径。
+- 仅访问公开 HTTP/HTTPS 地址，不绕过登录、验证码、付费墙或站点访问限制，也不保留网页 Cookie。
 
-## 隐私说明
+## Windows 文件图标
 
-v2.2.0 首次启动会清空旧版 AI 自定义连接及当前选择，用户需要重新配置。官方预设保留；源码、接口响应和发布产物不包含旧私人连接或 API Key 明文。
+- `.md/.markdown` 文件关联改用独立的简约 Markdown 文档图标；ReadMD 应用 Logo 保持不变。
+- 新图标包含多种尺寸，在资源管理器的小图标、列表、平铺视图中均保持清晰。
 
-## 校验
+## 构建与校验
 
-Release 由 GitHub Actions 在 Windows 测试与两个 EXE 自检通过后自动生成。工作流会验证文件名、非零大小、应用版本与 SHA-256。
+- Windows、Intel macOS 与 Apple Silicon macOS 使用同一标签工作流完成测试、打包和 Release 发布。
+- 冻结包会验证 Trafilatura 配置、Mozilla Readability、Markdown 文件图标、应用版本、目标架构与隐私扫描。
+- Release job 校验四个资产名称、非零大小并生成 SHA-256 摘要。
+
+macOS 包尚未签名。首次打开请在 Finder 中右键 ReadMD →“打开”；若仍被拦截，请前往“系统设置 → 隐私与安全性”选择“仍要打开”。

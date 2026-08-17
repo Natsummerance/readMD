@@ -53,7 +53,7 @@ def _bundle_version():
 
 
 APP_VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-               or _bundle_version() or '2.2.1')
+               or _bundle_version() or '2.2.2')
 PUBLISHER = 'Natsummerance'
 PROG_ID = 'ReadMD.markdown'
 EXTENSIONS = ['.md', '.markdown', '.mdown', '.mkd']
@@ -267,10 +267,13 @@ def backup_assoc():
 
 def write_assoc(inst_dir):
     exe = os.path.join(inst_dir, APP_EXE)
+    icon = os.path.join(inst_dir, '_internal', 'assets', 'markdown-file.ico')
+    if not os.path.isfile(icon):
+        icon = os.path.join(inst_dir, 'assets', 'markdown-file.ico')
     for ext in EXTENSIONS:
         reg_set(r'Software\Classes\%s' % ext, '', PROG_ID)
     reg_set(r'Software\Classes\%s' % PROG_ID, '', 'ReadMD Markdown Reader')
-    reg_set(r'Software\Classes\%s\DefaultIcon' % PROG_ID, '', '"%s",0' % exe)
+    reg_set(r'Software\Classes\%s\DefaultIcon' % PROG_ID, '', '"%s",0' % icon)
     reg_set(r'Software\Classes\%s\shell\open\command' % PROG_ID, '',
             '"%s" "%%1"' % exe, typ=winreg.REG_EXPAND_SZ)
     reg_set(r'Software\Classes\%s\shell\openwith' % PROG_ID, '', '')

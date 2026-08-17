@@ -71,7 +71,7 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-           or _bundle_version() or '2.2.1')
+           or _bundle_version() or '2.2.2')
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 CONVERT_EXTS = ('.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm',
@@ -1442,6 +1442,13 @@ class Api(object):
             if not isinstance(result, dict):
                 return {'ok': False, 'code': 'render_failed',
                         'error': '动态网页渲染没有返回可用内容'}
+            try:
+                result['final_url'] = mod._validate_public_url(
+                    result.get('final_url') or safe_url, allow_private=False)
+            except Exception as exc:
+                return {'ok': False,
+                        'code': getattr(exc, 'code', 'blocked_address'),
+                        'error': getattr(exc, 'message', str(exc))}
             if len(result.get('html') or '') > 25 * 1024 * 1024:
                 return {'ok': False, 'code': 'too_large',
                         'error': '动态渲染后的网页超过 25 MB 限制'}
@@ -1699,10 +1706,15 @@ def install_association():
     try:
         import shutil
         frozen = getattr(sys, 'frozen', False)
+        icon_source = os.path.join(APP_DIR, 'assets', 'markdown-file.ico')
+        icon_dir = os.path.join(DATA_DIR, 'icons')
+        icon_file = os.path.join(icon_dir, 'markdown-file.ico')
+        os.makedirs(icon_dir, exist_ok=True)
+        shutil.copy2(icon_source, icon_file)
+        icon = '%s,0' % _quote(icon_file)
         if frozen:
             pyw = sys.executable
             cmd = '%s "%%1"' % _quote(pyw)
-            icon = '%s,0' % _quote(pyw)  # exe 自带图标
         else:
             pyw = None
             for cand in (os.path.join(APP_DIR, '.venv', 'Scripts', 'pythonw.exe'),):
@@ -1718,7 +1730,6 @@ def install_association():
                     pyw = py  # 退化为 python（可能闪一个控制台）
             script = os.path.join(APP_DIR, 'readmd.py')
             cmd = '%s %s "%%1"' % (_quote(pyw), _quote(script))
-            icon = '%s,0' % _quote(os.path.join(APP_DIR, 'assets', 'readmd.ico'))
         for ext in ('.md', '.markdown', '.mdown', '.mkd'):
             subprocess.run(['reg', 'add', r'HKCU\Software\Classes\%s' % ext, '/ve',
                             '/d', 'ReadMD.markdown', '/f'],
@@ -1748,8 +1759,20 @@ def run_selftest():
     try:
         reader_asset = os.path.join(APP_DIR, 'assets', 'vendor', 'readability.bundle.js')
         reader_license = os.path.join(APP_DIR, 'assets', 'vendor', 'readability.LICENSE.md')
+        file_icon = os.path.join(APP_DIR, 'assets', 'markdown-file.ico')
+        app_icon = os.path.join(APP_DIR, 'assets', 'readmd.ico')
         assert os.path.isfile(reader_asset) and os.path.getsize(reader_asset) > 10000
         assert os.path.isfile(reader_license) and os.path.getsize(reader_license) > 400
+        assert os.path.isfile(file_icon) and os.path.getsize(file_icon) > 1000
+        with open(file_icon, 'rb') as _icon_handle:
+            assert _icon_handle.read(4) == b'\x00\x00\x01\x00'
+        if os.path.isfile(app_icon):
+            import hashlib as _hashlib
+            with open(file_icon, 'rb') as _file_icon_handle:
+                file_icon_hash = _hashlib.sha256(_file_icon_handle.read()).digest()
+            with open(app_icon, 'rb') as _app_icon_handle:
+                app_icon_hash = _hashlib.sha256(_app_icon_handle.read()).digest()
+            assert file_icon_hash != app_icon_hash
         import trafilatura as _tra
         tra_cfg = os.path.join(os.path.dirname(_tra.__file__), 'settings.cfg')
         assert os.path.isfile(tra_cfg), 'trafilatura/settings.cfg missing'
@@ -1758,7 +1781,7 @@ def run_selftest():
                    ('web extraction content ' * 30) + '</p></article></body></html>')
         extracted = _web.extract_html('https://example.com/selftest', fixture)
         assert extracted.get('ok') and 'web extraction content' in extracted.get('content', '')
-        safe_print('web extraction resources OK')
+        safe_print('web extraction and file association resources OK')
     except Exception as e:
         safe_print('web extraction resource selftest failed:', e)
         ok = False

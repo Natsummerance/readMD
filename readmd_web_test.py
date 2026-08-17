@@ -65,6 +65,8 @@ class FixtureHandler(BaseHTTPRequestHandler):
         elif self.path == '/image.png':
             # Header is enough for the localizer; image decoding is not its job.
             self._send(200, b'\x89PNG\r\n\x1a\nfixture', 'image/png')
+        elif self.path == '/image-redirect':
+            self._send(302, headers={'Location': '/image.png'})
         else:
             self._send(404, b'not found', 'text/plain')
 
@@ -87,6 +89,7 @@ class TestWebExtraction(unittest.TestCase):
         self.assertTrue(result['ok'], result)
         self.assertEqual(result['engine'], 'trafilatura')
         self.assertIn('本地测试文章', result['content'])
+        self.assertEqual(result['content'].count('# 本地测试文章'), 1)
         self.assertIn('测试作者', result['content'])
         self.assertIn('print("ok")', result['content'])
         self.assertIn(self.base + '/next', result['links'])
@@ -142,7 +145,7 @@ class TestWebExtraction(unittest.TestCase):
         self.assertIn('WebView 作者', result['content'])
 
     def test_localize_images_and_manifest(self):
-        markdown = '![封面](%s/image.png)' % self.base
+        markdown = '![封面](%s/image-redirect)' % self.base
         with tempfile.TemporaryDirectory() as directory:
             content, manifest, warnings = WEB.localize_images(
                 markdown, directory, allow_private=True)

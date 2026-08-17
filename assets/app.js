@@ -264,6 +264,7 @@ async function loadFile(path) {
     const d = await r.json();
     state.mode = 'file';
     state.source = 'file';
+    state.webAssets = [];
     state.file = d.path;
     state.dir = d.dir;
     state.mtime = d.mtime;
@@ -856,11 +857,12 @@ async function webToMd(url, crawl, forceRender) {
       }
     }
     if (crawl) {
-      sections.push('\n---\n\n## 抓取统计\n\n成功 ' + sections.length + ' 页，失败 ' + failures.length + ' 页。' +
+      const successCount = sections.length;
+      sections.push('\n---\n\n## 抓取统计\n\n成功 ' + successCount + ' 页，失败 ' + failures.length + ' 页。' +
         (failures.length ? '\n\n' + failures.map(x => '- ' + x.url + '：' + x.error).join('\n') : ''));
     }
     const content = sections.join('\n\n---\n\n');
-    setWebProgress(100, '网页转换完成', sections.length + ' 页');
+    setWebProgress(100, '网页转换完成', (crawl ? sections.length - 1 : sections.length) + ' 页');
     setWebStatus('提取成功' + (warnings.length ? '，有 ' + warnings.length + ' 条提示' : '') + '。', 'success');
     const title = (first.meta && first.meta.title) || url;
     await renderVirtual('url', title, first.asset_dir || '', content, [], { assets });

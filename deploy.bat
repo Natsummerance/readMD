@@ -4,17 +4,17 @@ rem ============================================================
 rem  ReadMD Deploy - one-click: test + build + push + release
 rem
 rem  Usage:
-rem    deploy.bat                   test + commit + push main + push v2.2.0 tag
+rem    deploy.bat                   test + commit + push main + push v2.2.2 tag
 rem    deploy.bat --skip-tests      skip the local test round
-rem    deploy.bat --tag v2.2.0      release tag (default v2.2.0)
+rem    deploy.bat --tag v2.2.2      release tag (default v2.2.2)
 rem
-rem  Requirements: GITHUB_TOKEN in system/user env vars.
+rem  GitHub Actions is the only Release publisher.
 rem ============================================================
 setlocal
 cd /d "%~dp0"
 title ReadMD Deploy
 
-set "TAG=v2.2.0"
+set "TAG=v2.2.2"
 set "SKIP_TESTS=0"
 
 :parse
@@ -29,17 +29,10 @@ echo ============================================================
 echo  ReadMD Deploy  (tag=%TAG%)
 echo ============================================================
 
-echo [1/6] Checking GITHUB_TOKEN ...
-if "%GITHUB_TOKEN%"=="" (
-    echo.
-    echo   GITHUB_TOKEN is not set in this terminal.
-    echo   Set it once in Windows system env vars, then reopen terminal:
-    echo     setx GITHUB_TOKEN ghp_xxxxxxxxxxxx
-    echo.
-    pause
-    exit /b 1
-)
-echo   token OK (starts with %GITHUB_TOKEN:~0,4%)
+echo [1/6] Checking repository ...
+git rev-parse --is-inside-work-tree >nul 2>&1
+if errorlevel 1 goto :err
+echo   repository OK
 
 echo [2/6] Preparing venv ...
 if not exist ".venv\Scripts\python.exe" (
@@ -47,7 +40,7 @@ if not exist ".venv\Scripts\python.exe" (
     python -m venv .venv
     if errorlevel 1 goto :err
 )
-".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r requirements.txt pyinstaller
+".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r requirements-test.txt
 if errorlevel 1 goto :err
 echo   venv ready
 
@@ -55,15 +48,27 @@ if "%SKIP_TESTS%"=="1" goto :tests_done
 echo [3/6] Running tests ...
 ".venv\Scripts\python.exe" readmd_fix_test.py
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" readmd.py --selftest
+".venv\Scripts\python.exe" readmd_convert_test.py
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" readmd.py --mods
+".venv\Scripts\python.exe" readmd_export_test.py
+if errorlevel 1 goto :err
+".venv\Scripts\python.exe" readmd_web_test.py
+if errorlevel 1 goto :err
+".venv\Scripts\python.exe" tools\privacy_scan.py
+if errorlevel 1 goto :err
+".venv\Scripts\python.exe" readmd.py --selftest
 if errorlevel 1 goto :err
 echo   all tests passed
 :tests_done
 
 echo [4/6] Committing and pushing main ...
-git add -A
+rem Preserve the user's local IDEA.md and never stage it for a release.
+git add -A -- . ":(exclude)IDEA.md"
+git diff --cached --name-only | findstr /x /i "IDEA.md" >nul
+if not errorlevel 1 (
+    echo   refusing to stage IDEA.md
+    goto :err
+)
 git diff --cached --quiet
 if errorlevel 1 (
     git commit -m "ReadMD deploy: %TAG%"

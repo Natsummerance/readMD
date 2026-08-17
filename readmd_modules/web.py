@@ -336,6 +336,13 @@ def _markdownify_html(html):
 
 def _format_document(markdown, meta):
     title = (meta.get('title') or meta.get('canonical_url') or '网页').strip()
+    body = (markdown or '').strip()
+    body_lines = body.splitlines()
+    if body_lines and body_lines[0].startswith('# '):
+        extracted_title = re.sub(r'\s+', ' ', body_lines[0][2:].strip()).casefold()
+        document_title = re.sub(r'\s+', ' ', title).casefold()
+        if extracted_title == document_title:
+            body = '\n'.join(body_lines[1:]).lstrip()
     lines = ['# ' + title, '', '> 来源：' + (meta.get('canonical_url') or '')]
     extra = []
     if meta.get('author'):
@@ -346,7 +353,7 @@ def _format_document(markdown, meta):
         extra.append('站点：' + meta['site'])
     if extra:
         lines.append('> ' + ' · '.join(extra))
-    lines.extend(['', markdown.strip()])
+    lines.extend(['', body])
     return '\n'.join(lines).strip() + '\n'
 
 
@@ -438,16 +445,33 @@ def localize_images(markdown, asset_root, task_id=None, allow_private=False):
     try:
         for image_url in urls:
             _check_cancel(task_id)
+            response = None
             try:
                 safe_url = _validate_public_url(image_url, allow_private=allow_private)
-                response = session.get(safe_url, timeout=(8, 15), stream=True,
-                                       allow_redirects=False)
+                for redirect_no in range(4):
+                    response = session.get(safe_url, timeout=(8, 15), stream=True,
+                                           allow_redirects=False)
+                    if response.status_code not in (301, 302, 303, 307, 308):
+                        break
+                    location = response.headers.get('Location')
+                    response.close()
+                    response = None
+                    if not location or redirect_no >= 3:
+                        raise WebError('image_redirect', '图片重定向次数过多')
+                    safe_url = _validate_public_url(
+                        urljoin(safe_url, location), allow_private=allow_private)
                 if response.status_code != 200:
                     raise WebError('image_http', 'HTTP %d' % response.status_code)
                 ctype = (response.headers.get('Content-Type') or '').split(';', 1)[0].lower()
                 ext = ALLOWED_IMAGE_TYPES.get(ctype)
                 if not ext:
                     raise WebError('image_type', '不支持的图片类型 %s' % (ctype or 'unknown'))
+                try:
+                    declared_size = int(response.headers.get('Content-Length') or 0)
+                except (TypeError, ValueError):
+                    declared_size = 0
+                if declared_size > MAX_IMAGE_BYTES or total + declared_size > MAX_IMAGE_TOTAL:
+                    raise WebError('image_too_large', '图片超过下载大小限制')
                 data, size = [], 0
                 for chunk in response.iter_content(64 * 1024):
                     _check_cancel(task_id)
@@ -468,6 +492,9 @@ def localize_images(markdown, asset_root, task_id=None, allow_private=False):
                                  'size': size, 'type': ctype})
             except Exception as exc:
                 warnings.append('图片下载失败：%s（%s）' % (image_url, exc))
+            finally:
+                if response is not None:
+                    response.close()
     finally:
         session.close()
     return markdown, manifest, warnings

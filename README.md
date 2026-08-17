@@ -24,7 +24,8 @@
 - 🤖 **AI 助手（v2.2.0 隐私与自定义连接）**：官方预设 + 可增删改的自定义连接；API Key 仅本机保存且配置接口不回传明文；获取模型后通过下拉框选择，连接面板可拖拽调宽
 - 🔄 **万物转 MD（v2.1.1 保存 + 批量 + 质量）**：docx / pptx / xlsx / pdf / html / csv / json 等转为 Markdown；单文件或批量（多选 / 整文件夹）一键转换，结果自动保存到源目录同名 `.md` 并直接以可编辑文件打开（同名默认跳过、可勾选覆盖）；docx 走专用解析（OMML 公式转 LaTeX、标题、表格、等宽代码块），pdf 走专用解析（表格还原 + 公式启发式），其余 MarkItDown 并逐文件回退；输出经严格校验（代码围栏 / 表格 / 公式定界符 / 编码 / 图片引用）
 - 🔍 **扫描转 MD（OCR）**：Windows 使用 WinRT、macOS 使用 Vision，均为系统原生离线识别；PDF 有文字层时直接提取
-- 🌐 **网页转 MD**：输入 URL 抓取正文（trafilatura），支持批量爬取同站最多 10 页合并为一份文档
+- 🌐 **网页转 MD（v2.2.2）**：Trafilatura 双级抽取，静态正文不足时自动使用 WebView2 / WKWebView + Mozilla Readability 渲染；支持完整页面降级、同站最多 10 页、明确错误诊断和可选图片本地化
+- 📄 **独立文件图标**：Windows 文件关联使用简约的 Markdown 文档图标，应用 Logo 仅用于 ReadMD 程序和快捷方式
 - ✏️ **主动编辑（v2.2.0）**：单行分组工具栏、可搜索命令面板和分类公式选择器；实时预览支持上下左右停靠及拖拽分隔；图片编辑支持八向裁剪、任意角度、翻转、画布缩放/平移、输出尺寸与撤销重做
 - 📱 **移动端共享**：开启局域网共享后，手机扫码在同一 Wi-Fi 下阅读 / 转 MD / OCR / AI（随机令牌鉴权）
 - 📑 **阅读体验**：目录侧栏（滚动高亮）、全文搜索、三主题、字号缩放、打印 / 导出 PDF、文件夹浏览、大文档增量渲染（>300KB 或 6000 行分块渲染不卡顿）、文件外部修改自动刷新
@@ -42,13 +43,13 @@
 | --- | --- |
 | **ReadMDSetup-版本.exe** | 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级 |
 | **ReadMD-portable-版本.exe** | 便携版，免安装，双击直接运行 |
-| **ReadMD-macos-x64-v2.2.1.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
-| **ReadMD-macos-arm64-v2.2.1.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
+| **ReadMD-macos-x64-v2.2.2.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
+| **ReadMD-macos-arm64-v2.2.2.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
 | **ReadMDSetup-2.1.1-Beta-win7-x64.exe** | **Win7 兼容版**（v2.1.1 Beta，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
 >
-> v2.2.0 为 Windows 版；v2.2.1 是独立 macOS 版。macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动需在 Finder 中右键 `ReadMD.app` →“打开”。
+> v2.2.2 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动需在 Finder 中右键 `ReadMD.app` →“打开”。
 
 **方式二：源码运行（开发 / 自定义）**
 
@@ -65,7 +66,7 @@ macOS 源码运行或打包使用独立依赖：
 ./setup.sh               # 构建未签名 ReadMD.app
 ```
 
-脚本会创建 `.venv`、安装依赖并注册 `.md / .markdown / .mdown / .mkd` 文件关联（HKCU，无需管理员）。之后直接双击任意 `.md` 文件即可用 ReadMD 打开；或：
+脚本会创建 `.venv`、安装依赖并注册 `.md / .markdown / .mdown / .mkd` 文件关联（HKCU，无需管理员）。文件关联使用白色文档页 + 蓝色 MD 标识的独立图标，不会复用应用 Logo。之后直接双击任意 `.md` 文件即可用 ReadMD 打开；或：
 
 ```bat
 run.bat                              rem 一键运行
@@ -130,7 +131,8 @@ python readmd.py --browser "文件.md"  rem 无 pywebview 时用浏览器兜底
 
 - **文件转换**：工具栏「转换」选择任意文件（或直接 `python readmd.py 文件.docx`），MarkItDown 转成 Markdown 后自动过修正器并渲染；未提取到文字时提示改用 OCR
 - **扫描 / 图片**：工具栏「OCR」选择图片或 PDF；Windows 内置 OCR 离线识别（需系统已安装对应语言包，中文一般自带）；扫描版 PDF 逐页渲染后识别
-- **网页**：工具栏「网页」输入 URL；勾选“批量爬取”会抓取同站最多 10 个链接合并为一份文档
+- **网页**：工具栏「网页」输入 URL；默认智能提取正文，静态页面内容不足时桌面版会自动通过系统 WebView 动态渲染。可切换“保留完整页面”、合并同站最多 10 页，或选择把安全的远程图片下载到本地资源目录
+- **网页限制**：仅处理公开 HTTP/HTTPS 页面，不绕过登录、验证码和付费墙；本机、局域网及云元数据地址会被安全策略阻止。局域网共享页面可使用静态抓取，动态渲染需在桌面应用中执行
 - 转换 / OCR / 网页模块均为**首次渲染完成后的后台懒加载**，不影响 Markdown 阅读的启动速度
 
 ### 大文档增量渲染
@@ -181,7 +183,7 @@ readmd/
 ├─ readmd_modules/      # 懒加载扩展模块
 │  ├─ convert.py        #   万物转 MD（MarkItDown）
 │  ├─ ocr.py            #   扫描转 MD（WinRT OCR + PyMuPDF）
-│  ├─ web.py            #   网页转 MD（trafilatura + 批量爬取）
+│  ├─ web.py            #   网页转 MD（安全下载 + Trafilatura / Readability / 图片本地化）
 │  └─ ai.py             #   AI 助手（双协议 + 提供商注册表）
 ├─ DESIGN.md            # 设计规范（色盘 / 字体 / 间距 / 圆角 token）
 ├─ installer/           # 安装器（动画 UI + onedir 目录安装）
