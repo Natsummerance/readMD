@@ -462,11 +462,17 @@ mark.hl.cur { background: var(--hl-cur); }
   box-shadow: var(--shadow-3);
 }
 #fix-box { padding: 20px 24px; width: min(560px, 90vw); max-height: 72vh; display: flex; flex-direction: column; }
-#url-box { padding: 22px 24px; width: min(520px, 90vw); }
+#url-box { padding: 0; width: min(620px, 94vw); max-height: min(720px, 92vh); overflow: auto; }
 #share-box { padding: 22px 24px; width: min(460px, 92vw); max-height: 84vh; display: flex; flex-direction: column; }
 #tpl-box { padding: 20px 24px; width: min(760px, 94vw); max-height: 86vh; display: flex; flex-direction: column; }
 #img-box { padding: 18px 22px; width: min(760px, 95vw); max-height: 92vh; display: flex; flex-direction: column; gap: 10px; }
 #fix-box h3, #url-box h3, #share-box h3, #tpl-box h3, #img-box h3 { margin: 0 0 12px; font-size: 15px; }
+#url-box h3 { margin: 0; font-size: 17px; }
+.url-head { display: flex; justify-content: space-between; gap: 16px; padding: 22px 24px 16px; border-bottom: 1px solid var(--border); }
+.url-head p { margin: 5px 0 0; color: var(--fg3); font-size: 12px; line-height: 1.5; }
+.url-head .icon-btn { min-width: 44px; min-height: 44px; margin: -8px -8px 0 0; border: 0; border-radius: var(--radius-s); background: transparent; color: var(--fg2); font-size: 24px; cursor: pointer; }
+.url-head .icon-btn:hover { background: var(--bg); color: var(--fg); }
+.url-field { display: block; margin: 18px 24px 7px; font-size: 12px; font-weight: 650; color: var(--fg2); }
 #fix-count { color: var(--accent); font-size: 13px; }
 #fix-list { overflow: auto; flex: 1; margin: 0; padding: 0; list-style: none; font-size: 13px; }
 #fix-list li { padding: 6px 10px; border-radius: var(--radius-s); }
@@ -493,9 +499,32 @@ mark.hl.cur { background: var(--hl-cur); }
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
-#url-input { width: 100%; font-size: 14px; margin-bottom: 10px; }
-.url-crawl { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--fg2); margin-bottom: 12px; }
-.url-crawl input { accent-color: var(--accent); }
+#url-input { width: calc(100% - 48px); min-height: 44px; font-size: 14px; margin: 0 24px 14px; }
+.url-options { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 10px; padding: 0 24px 14px; }
+.url-option, .url-check { min-height: 64px; border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--bg); }
+.url-option { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; color: var(--fg3); font-size: 11px; }
+.url-option select { width: 100%; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: 13px; outline: 0; }
+.url-check { display: flex; align-items: center; gap: 9px; padding: 9px 10px; color: var(--fg2); font-size: 12px; cursor: pointer; }
+.url-check input { accent-color: var(--accent); width: 17px; height: 17px; flex: 0 0 auto; }
+.url-check span { display: flex; flex-direction: column; gap: 2px; }
+.url-check small { color: var(--fg3); font-size: 10px; }
+.url-progress { margin: 0 24px 10px; padding: 12px; border-radius: var(--radius-m); background: var(--accent-soft); }
+.url-progress-track { height: 5px; overflow: hidden; border-radius: 999px; background: var(--border); }
+.url-progress-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--accent); transition: width .2s ease; }
+.url-progress-copy { display: flex; justify-content: space-between; gap: 10px; margin-top: 8px; font-size: 12px; }
+.url-progress-copy strong { font-weight: 600; }
+.url-progress-copy span { color: var(--fg3); font-variant-numeric: tabular-nums; }
+.url-status { min-height: 40px; margin: 0 24px 12px; padding: 9px 11px; border-radius: var(--radius-s); background: var(--bg); color: var(--fg3); font-size: 12px; line-height: 1.5; }
+.url-status.error { color: var(--danger, #c33); background: color-mix(in srgb, var(--danger, #c33) 9%, transparent); }
+.url-status.success { color: var(--accent); }
+#url-box .url-actions { padding: 0 24px; flex-wrap: wrap; }
+#url-box .url-actions .tb-btn { min-height: 44px; }
+#url-box .fix-note { margin: 14px 24px 20px; }
+@media (max-width: 620px) {
+  .url-options { grid-template-columns: 1fr; }
+  #url-box .url-actions .tb-btn { flex: 1 1 140px; }
+}
+@media (prefers-reduced-motion: reduce) { .url-progress-track span { transition: none; } }
 
 /* ---------- 忙碌遮罩 ---------- */
 #busy {

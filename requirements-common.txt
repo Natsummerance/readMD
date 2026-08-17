@@ -12,9 +12,10 @@ lxml
 lxml_html_clean
 mammoth
 
-# Webpage-to-MD
-trafilatura
-requests
+# Webpage-to-MD (v2.2.x API is covered by the extraction regression suite)
+trafilatura>=2.2,<2.3
+requests>=2.32,<3
+markdownify>=1.2,<2
 
 # PDF text extraction / scanned-page rendering
 pymupdf

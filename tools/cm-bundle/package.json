@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "dependencies": {
+    "@mozilla/readability": "0.6.0",
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.10.4",
     "@codemirror/lang-markdown": "^6.5.1",
@@ -12,5 +13,9 @@
     "@codemirror/theme-one-dark": "^6.1.3",
     "@codemirror/view": "^6.43.7",
     "esbuild": "^0.28.1"
+  },
+  "scripts": {
+    "build:codemirror": "esbuild entry.js --bundle --minify --format=iife --outfile=../../assets/vendor/codemirror.bundle.js",
+    "build:readability": "esbuild readability-entry.js --bundle --minify --format=iife --global-name=ReadMDReadabilityBundle --outfile=../../assets/vendor/readability.bundle.js"
   }
 }

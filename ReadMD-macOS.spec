@@ -6,6 +6,7 @@ datas = [('assets', 'assets'), ('readmd_fix.py', '.')]
 hiddenimports = ['readmd_fix', 'Vision', 'Quartz', 'Foundation', 'objc']
 datas += collect_data_files('magika')
 datas += collect_data_files('docx')
+datas += collect_data_files('trafilatura')
 hiddenimports += collect_submodules('readmd_modules')
 
 a = Analysis(

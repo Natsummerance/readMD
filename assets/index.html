@@ -366,16 +366,38 @@
   </div>
 </div>
 
-<div id="url-modal" class="hidden">
+<div id="url-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="url-title">
   <div id="url-box">
-    <h3>&#127760; 网页转 MD</h3>
-    <input id="url-input" type="text" placeholder="https://example.com/article" autocomplete="off">
-    <label class="url-crawl"><input id="url-crawl" type="checkbox"> 批量爬取同站链接（最多 10 个页面，合并为一个文档）</label>
-    <div class="url-actions">
-      <button id="url-go" class="tb-btn accent">抓取</button>
-      <button id="url-close" class="tb-btn">取消</button>
+    <div class="url-head">
+      <div>
+        <h3 id="url-title">&#127760; 网页转 Markdown</h3>
+        <p>智能提取正文，必要时使用系统浏览器内核渲染动态页面。</p>
+      </div>
+      <button id="url-close" class="icon-btn" aria-label="关闭网页转换">×</button>
     </div>
-    <p class="fix-note">使用 trafilatura 提取正文，对文章 / 博客 / 新闻类页面效果最佳。</p>
+    <label class="url-field" for="url-input">网页地址</label>
+    <input id="url-input" type="url" inputmode="url" placeholder="example.com/article" autocomplete="url">
+    <div class="url-options">
+      <label class="url-option"><span>提取模式</span>
+        <select id="url-mode">
+          <option value="smart">智能正文</option>
+          <option value="full">保留完整页面</option>
+        </select>
+      </label>
+      <label class="url-check"><input id="url-crawl" type="checkbox"> <span>同站批量抓取<small>最多 10 页</small></span></label>
+      <label class="url-check"><input id="url-images" type="checkbox"> <span>下载图片到本地<small>默认仅保留远程链接</small></span></label>
+    </div>
+    <div id="url-progress" class="url-progress hidden" aria-hidden="true">
+      <div class="url-progress-track"><span id="url-progress-bar"></span></div>
+      <div class="url-progress-copy"><strong id="url-progress-title">准备抓取…</strong><span id="url-progress-count"></span></div>
+    </div>
+    <div id="url-status" class="url-status" role="status" aria-live="polite">请输入公开的 HTTP/HTTPS 网页地址。</div>
+    <div class="url-actions">
+      <button id="url-go" class="tb-btn accent">智能抓取</button>
+      <button id="url-render" class="tb-btn">动态渲染抓取</button>
+      <button id="url-cancel" class="tb-btn hidden">取消任务</button>
+    </div>
+    <p class="fix-note">不绕过登录、验证码或付费墙。动态渲染使用 WebView2 / WKWebView，不会额外安装 Chromium。</p>
   </div>
 </div>
 

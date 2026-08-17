@@ -41,6 +41,7 @@ const state = {
   mode: 'welcome',     // file | virtual
   source: '',          // file | convert | ocr | url
   sourceName: '',
+  webAssets: [],       // 网页图片临时资源；另存时复制到 <文档名>.assets
   theme: 'auto',
   fontSize: 100,
   lineWidth: 860,
@@ -500,11 +501,12 @@ function openPath(p) {
 
 /* ---------------- 虚拟文档（转换/网页/OCR） ---------------- */
 
-async function renderVirtual(source, name, dir, content, fixes) {
+async function renderVirtual(source, name, dir, content, fixes, extras) {
   exitEdit();
   state.mode = 'virtual';
   state.source = source;
   state.sourceName = name;
+  state.webAssets = source === 'url' ? (((extras || {}).assets) || []) : [];
   state.file = null;
   state.dir = dir || '';
   state.mtime = 0;
@@ -708,19 +710,169 @@ async function ocrFile(path) {
   finally { busy(false); }
 }
 
-async function webToMd(url, crawl) {
-  if (!url) return;
-  if (!(await ensureModule('web'))) return;
-  busy(true);
+const webRun = { running: false, cancelled: false, taskId: '', lastUrl: '' };
+
+function normalizeWebUrl(url) {
+  url = String(url || '').trim();
+  if (url && !/^[a-z][a-z0-9+.-]*:\/\//i.test(url)) url = 'https://' + url;
+  return url;
+}
+
+function setWebStatus(text, kind) {
+  const el = $('url-status');
+  el.textContent = text || '';
+  el.classList.toggle('error', kind === 'error');
+  el.classList.toggle('success', kind === 'success');
+}
+
+function setWebProgress(percent, title, count) {
+  const wrap = $('url-progress');
+  wrap.classList.remove('hidden');
+  wrap.setAttribute('aria-hidden', 'false');
+  $('url-progress-bar').style.width = Math.max(0, Math.min(100, percent || 0)) + '%';
+  $('url-progress-title').textContent = title || '处理中…';
+  $('url-progress-count').textContent = count || '';
+}
+
+function setWebRunning(running) {
+  webRun.running = running;
+  $('url-go').disabled = running;
+  $('url-render').disabled = running || !hasPy;
+  $('url-cancel').classList.toggle('hidden', !running);
+  $('url-input').disabled = running;
+  $('url-mode').disabled = running;
+  $('url-crawl').disabled = running;
+  $('url-images').disabled = running;
+}
+
+async function postWebExtract(payload) {
+  const response = await apiFetch('/api/web/extract', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  let data = {};
+  try { data = await response.json(); } catch (e) { data = { error: '服务器返回了无法解析的响应' }; }
+  if (!response.ok) {
+    const error = new Error(data.error || ('网页转换失败（HTTP ' + response.status + '）'));
+    error.code = data.code || 'request_failed';
+    throw error;
+  }
+  return data;
+}
+
+async function extractOneWebPage(url, options, forceRender) {
+  const base = {
+    task_id: webRun.taskId, url, mode: options.mode,
+    download_images: options.downloadImages,
+  };
+  let data = null;
+  if (!forceRender) {
+    setWebProgress(options.progress || 12, '下载并分析静态页面…', options.count || '');
+    data = await postWebExtract(base);
+    if (data.ok) return data;
+    if (!data.render_required) {
+      const error = new Error(data.error || '未能提取网页正文');
+      error.code = data.code || 'extract_failed';
+      throw error;
+    }
+  }
+  if (!hasPy || !py.render_web_page) {
+    const error = new Error(LAN_TOKEN
+      ? '该页面需要 JavaScript。请在 ReadMD 桌面应用中使用动态渲染抓取。'
+      : '当前环境不支持系统 WebView 动态渲染。');
+    error.code = 'render_unavailable';
+    throw error;
+  }
+  setWebProgress(Math.max(options.progress || 12, 24), '使用系统浏览器内核渲染…', options.count || '最长 15 秒');
+  const rendered = await py.render_web_page(url, webRun.taskId, 15000);
+  if (!rendered || !rendered.ok) {
+    const error = new Error((rendered && rendered.error) || '动态网页渲染失败');
+    error.code = (rendered && rendered.code) || 'render_failed';
+    throw error;
+  }
+  setWebProgress(Math.max(options.progress || 12, 32), '使用 Mozilla Readability 提取…', options.count || '');
+  data = await postWebExtract(Object.assign({}, base, {
+    html: rendered.html || '', final_url: rendered.final_url || url,
+    readability: rendered.readability || null,
+  }));
+  if (!data.ok) {
+    const error = new Error(data.error || '动态页面中仍未识别到正文');
+    error.code = data.code || 'extract_failed';
+    throw error;
+  }
+  return data;
+}
+
+async function cancelWebTask() {
+  if (!webRun.running) return;
+  webRun.cancelled = true;
+  setWebStatus('正在取消网页转换…');
   try {
-    const r = await apiFetch('/api/url?u=' + encodeURIComponent(url) + '&crawl=' + (crawl ? '1' : '0'));
-    const d = await r.json();
-    if (r.status === 409) { showToast(d.error || '模块加载中…'); return; }
-    if (!r.ok) { showToast(d.error || '抓取失败'); return; }
-    if (!d.content) { showToast(d.note || '未能提取到正文'); return; }
-    renderVirtual('url', url, d.dir, d.content, d.fixes);
-  } catch (e) { showToast('抓取失败：' + e.message); }
-  finally { busy(false); }
+    await apiFetch('/api/web/cancel', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task_id: webRun.taskId }),
+    });
+  } catch (e) { /* local cancellation still applies */ }
+  try { if (hasPy && py.cancel_web_render) await py.cancel_web_render(webRun.taskId); } catch (e) { /* ignore */ }
+}
+
+async function webToMd(url, crawl, forceRender) {
+  url = normalizeWebUrl(url);
+  if (!url || webRun.running) return;
+  $('url-input').value = url;
+  if (!(await ensureModule('web'))) return;
+  webRun.taskId = 'web-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+  webRun.lastUrl = url;
+  webRun.cancelled = false;
+  setWebRunning(true);
+  setWebStatus('正在准备网页转换…');
+  const options = {
+    mode: $('url-mode').value === 'full' ? 'full' : 'smart',
+    downloadImages: $('url-images').checked,
+  };
+  const sections = [], assets = [], warnings = [], failures = [];
+  try {
+    const first = await extractOneWebPage(url, Object.assign({}, options, { progress: 10 }), !!forceRender);
+    if (webRun.cancelled) throw Object.assign(new Error('已取消网页转换'), { code: 'cancelled' });
+    sections.push(first.content);
+    assets.push(...(first.assets || []));
+    warnings.push(...(first.warnings || []));
+    const links = crawl ? (first.links || []).slice(0, 9) : [];
+    const total = 1 + links.length;
+    for (let i = 0; i < links.length; i++) {
+      if (webRun.cancelled) throw Object.assign(new Error('已取消网页转换'), { code: 'cancelled' });
+      const pageNo = i + 2;
+      const progress = 35 + Math.round((i / Math.max(1, links.length)) * 55);
+      setWebProgress(progress, '抓取同站页面…', pageNo + ' / ' + total);
+      try {
+        const result = await extractOneWebPage(links[i], Object.assign({}, options, {
+          progress, count: pageNo + ' / ' + total,
+        }), false);
+        sections.push(result.content.replace(/^# /, '## '));
+        assets.push(...(result.assets || []));
+        warnings.push(...(result.warnings || []));
+      } catch (error) {
+        failures.push({ url: links[i], error: error.message });
+      }
+    }
+    if (crawl) {
+      sections.push('\n---\n\n## 抓取统计\n\n成功 ' + sections.length + ' 页，失败 ' + failures.length + ' 页。' +
+        (failures.length ? '\n\n' + failures.map(x => '- ' + x.url + '：' + x.error).join('\n') : ''));
+    }
+    const content = sections.join('\n\n---\n\n');
+    setWebProgress(100, '网页转换完成', sections.length + ' 页');
+    setWebStatus('提取成功' + (warnings.length ? '，有 ' + warnings.length + ' 条提示' : '') + '。', 'success');
+    const title = (first.meta && first.meta.title) || url;
+    await renderVirtual('url', title, first.asset_dir || '', content, [], { assets });
+    if (warnings.length) showToast(warnings[0] + (warnings.length > 1 ? '（另有 ' + (warnings.length - 1) + ' 条）' : ''));
+    setTimeout(() => { if (!webRun.running) $('url-modal').classList.add('hidden'); }, 300);
+  } catch (error) {
+    const cancelled = error.code === 'cancelled' || webRun.cancelled;
+    setWebStatus(cancelled ? '网页转换已取消。' : (error.message || '网页转换失败'), cancelled ? '' : 'error');
+    setWebProgress(0, cancelled ? '已取消' : '转换未完成', '');
+  } finally {
+    setWebRunning(false);
+  }
 }
 
 /* ---------------- 文件选择（含浏览器兜底） ---------------- */
@@ -2368,7 +2520,7 @@ async function saveEdit() {
     let out = null;
     if (hasPy) {
       busy(true);
-      try { out = await py.save_as(content, suggested); }
+      try { out = await py.save_as(content, suggested, state.webAssets || []); }
       catch (e) { showToast('保存失败：' + e.message); busy(false); return; }
       busy(false);
       if (!out) { showToast('已取消保存'); return; }
@@ -2414,7 +2566,7 @@ async function saveAs() {
   const name = (state.sourceName || state.file || 'document').replace(/[\\/]/g, '_');
   const suggested = name.replace(/\.[^.]+$/, '') + '.md';
   if (hasPy) {
-    const out = await py.save_as(content, suggested);
+    const out = await py.save_as(content, suggested, state.webAssets || []);
     if (out) showToast('已保存：' + out);
   } else {
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
@@ -2765,10 +2917,17 @@ function installAssoc() {
 function openWebDialog() {
   if (moduleBlocked('web')) return;
   $('url-modal').classList.remove('hidden');
+  $('url-render').disabled = !hasPy;
+  $('url-progress').classList.add('hidden');
+  $('url-progress').setAttribute('aria-hidden', 'true');
+  setWebStatus(LAN_TOKEN
+    ? '局域网页面支持增强静态抓取；动态渲染请使用桌面应用。'
+    : '请输入公开的 HTTP/HTTPS 网页地址。');
   $('url-input').focus();
 }
 
 function closeWebDialog() {
+  if (webRun.running) { cancelWebTask(); return; }
   $('url-modal').classList.add('hidden');
 }
 
@@ -2835,12 +2994,14 @@ function bindEvents() {
   $('url-go').addEventListener('click', () => {
     const url = $('url-input').value.trim();
     const crawl = $('url-crawl').checked;
-    closeWebDialog();
-    webToMd(url, crawl);
+    webToMd(url, crawl, false);
   });
+  $('url-render').addEventListener('click', () => webToMd($('url-input').value.trim(), $('url-crawl').checked, true));
+  $('url-cancel').addEventListener('click', cancelWebTask);
   $('url-close').addEventListener('click', closeWebDialog);
-  $('url-modal').addEventListener('click', e => { if (e.target === $('url-modal')) closeWebDialog(); });
+  $('url-modal').addEventListener('click', e => { if (e.target === $('url-modal') && !webRun.running) closeWebDialog(); });
   $('url-input').addEventListener('keydown', e => { if (e.key === 'Enter') $('url-go').click(); });
+  $('url-modal').addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); closeWebDialog(); } });
 
   $('btn-edit').addEventListener('click', toggleEdit);
   document.querySelectorAll('#md-tool [data-md]').forEach(b => b.addEventListener('click', () => {

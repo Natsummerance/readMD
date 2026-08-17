@@ -556,6 +556,10 @@ class Handler(BaseHTTPRequestHandler):
             u = unquote(qs.get('u', [''])[0])
             crawl = qs.get('crawl', ['0'])[0] == '1'
             self._api_url(u, crawl)
+        elif path == '/api/web/extract':
+            self._api_web_extract()
+        elif path == '/api/web/cancel':
+            self._api_web_cancel()
         elif path == '/api/save':
             self._do_save()
         elif path == '/api/upload':
@@ -1013,6 +1017,76 @@ class Handler(BaseHTTPRequestHandler):
             logging.exception('url convert failed: %s', u)
             self._send_json(500, {'error': '抓取失败：%s' % e})
 
+    def _api_web_extract(self):
+        """v2.2.2 webpage extractor; accepts downloaded or WebView HTML."""
+        if not RM.is_ready('web'):
+            RM.load_all()
+            self._send_json(409, {'ok': False, 'code': 'module_loading',
+                                  'error': '网页模块加载中，请稍候再试'})
+            return
+        try:
+            length = int(self.headers.get('Content-Length', 0) or 0)
+            if length <= 0:
+                self._send_json(400, {'ok': False, 'code': 'invalid_request',
+                                      'error': '请求内容为空'})
+                return
+            if length > 25 * 1024 * 1024:
+                self._send_json(413, {'ok': False, 'code': 'too_large',
+                                      'error': '渲染后的网页超过 25 MB 限制'})
+                return
+            body = json.loads(self.rfile.read(length).decode('utf-8'))
+        except Exception:
+            self._send_json(400, {'ok': False, 'code': 'invalid_request',
+                                  'error': '请求格式错误'})
+            return
+        task_id = str(body.get('task_id') or '')
+        try:
+            mod = RM.get('web')
+            mod.reset_cancel(task_id)
+            url = body.get('url') or ''
+            mode = body.get('mode') if body.get('mode') in ('smart', 'full') else 'smart'
+            rendered_html = body.get('html')
+            if rendered_html is not None:
+                result = mod.extract_html(
+                    body.get('final_url') or url, rendered_html, mode=mode,
+                    readability=body.get('readability') or None, rendered=True)
+            else:
+                result = mod.fetch_document(
+                    url, mode=mode, task_id=task_id,
+                    allow_private=os.environ.get('READMD_WEB_TEST_ALLOW_PRIVATE') == '1')
+            if result.get('ok') and body.get('download_images'):
+                asset_dir = os.path.join(DATA_DIR, 'web-assets',
+                                         task_id or secrets.token_hex(8))
+                content, assets, image_warnings = mod.localize_images(
+                    result.get('content') or '', asset_dir, task_id=task_id,
+                    allow_private=os.environ.get('READMD_WEB_TEST_ALLOW_PRIVATE') == '1')
+                result['content'] = content
+                result['assets'] = assets
+                result.setdefault('warnings', []).extend(image_warnings)
+                result['asset_dir'] = asset_dir if assets else ''
+            self._send_json(200, result)
+        except Exception as exc:
+            try:
+                from readmd_modules.web import WebError
+            except Exception:
+                WebError = ()
+            if WebError and isinstance(exc, WebError):
+                self._send_json(exc.http_status, exc.as_dict())
+            else:
+                logging.exception('web extraction failed: %s', body.get('url'))
+                self._send_json(500, {'ok': False, 'code': 'internal_error',
+                                      'error': '网页转换失败：%s' % exc})
+
+    def _api_web_cancel(self):
+        try:
+            length = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(length).decode('utf-8')) if length else {}
+            mod = RM.get('web')
+            mod.cancel(body.get('task_id') or '')
+            self._send_json(200, {'ok': True})
+        except Exception as exc:
+            self._send_json(500, {'ok': False, 'error': str(exc)})
+
     def _do_upload(self, ext):
         """浏览器兜底模式：接收文件字节写入临时目录，返回可转换的路径。"""
         try:
@@ -1196,6 +1270,7 @@ class Api(object):
 
     def __init__(self):
         self._window = None
+        self._web_render_lock = threading.Lock()
 
     def choose_file(self):
         import webview
@@ -1283,6 +1358,113 @@ class Api(object):
         st, err = RM.status()
         return {'modules': st, 'errors': err}
 
+    def render_web_page(self, url, task_id='', timeout_ms=15000):
+        """Render a JavaScript page in an isolated system WebView.
+
+        The remote page never receives ReadMD's JS bridge. Mozilla Readability
+        is injected only after loading and the temporary window is destroyed.
+        """
+        if is_win7():
+            return {'ok': False, 'code': 'render_unavailable',
+                    'error': 'Win7 版不支持动态网页渲染'}
+        try:
+            mod = RM.get('web')
+            safe_url = mod._validate_public_url(url, allow_private=False)
+        except Exception as exc:
+            return {'ok': False, 'code': getattr(exc, 'code', 'invalid_url'),
+                    'error': getattr(exc, 'message', str(exc))}
+        try:
+            timeout_ms = max(3000, min(25000, int(timeout_ms or 15000)))
+        except Exception:
+            timeout_ms = 15000
+        if not self._web_render_lock.acquire(blocking=False):
+            return {'ok': False, 'code': 'renderer_busy',
+                    'error': '动态网页渲染器正在处理另一个页面'}
+        reader_window = None
+        try:
+            import webview
+            reader_window = webview.create_window(
+                'ReadMD Web Extractor', safe_url, hidden=True, focus=False,
+                width=1100, height=800, resizable=False, text_select=False)
+            if reader_window is None:
+                return {'ok': False, 'code': 'render_unavailable',
+                        'error': '无法创建系统网页渲染器'}
+            deadline = time.time() + timeout_ms / 1000.0
+            loaded = getattr(getattr(reader_window, 'events', None), 'loaded', None)
+            if loaded is not None:
+                loaded.wait(max(0.1, min(10.0, deadline - time.time())))
+            last_length, stable = -1, 0
+            while time.time() < deadline:
+                if mod.is_cancelled(task_id):
+                    return {'ok': False, 'code': 'cancelled', 'error': '已取消网页转换'}
+                try:
+                    state = reader_window.evaluate_js(
+                        "({ready:document.readyState,n:(document.body&&document.body.innerText||'').length})") or {}
+                    length = int(state.get('n') or 0) if isinstance(state, dict) else 0
+                    if length > 0 and length == last_length:
+                        stable += 1
+                    else:
+                        stable = 0
+                    last_length = length
+                    if state.get('ready') == 'complete' and stable >= 2:
+                        break
+                except Exception:
+                    pass
+                time.sleep(0.5)
+            if time.time() >= deadline:
+                return {'ok': False, 'code': 'render_timeout',
+                        'error': '动态渲染超时，请重试或改用完整页面模式'}
+            reader_path = os.path.join(APP_DIR, 'assets', 'vendor', 'readability.bundle.js')
+            if not os.path.isfile(reader_path):
+                return {'ok': False, 'code': 'reader_missing',
+                        'error': 'Mozilla Readability 离线资源缺失'}
+            with open(reader_path, encoding='utf-8') as handle:
+                reader_window.evaluate_js(handle.read())
+            result = reader_window.evaluate_js("""
+                (() => {
+                  let article = null;
+                  try {
+                    const clone = document.cloneNode(true);
+                    article = new window.ReadMDReadability.Readability(clone, {charThreshold: 40}).parse();
+                  } catch (e) { article = null; }
+                  const compact = article ? {
+                    title: article.title || '', byline: article.byline || '',
+                    publishedTime: article.publishedTime || '', siteName: article.siteName || '',
+                    excerpt: article.excerpt || '', content: article.content || '',
+                    length: article.length || 0, url: location.href
+                  } : null;
+                  return {ok:true, final_url:location.href,
+                          title:document.title || '',
+                          html:document.documentElement.outerHTML,
+                          readability:compact};
+                })()
+            """)
+            if not isinstance(result, dict):
+                return {'ok': False, 'code': 'render_failed',
+                        'error': '动态网页渲染没有返回可用内容'}
+            if len(result.get('html') or '') > 25 * 1024 * 1024:
+                return {'ok': False, 'code': 'too_large',
+                        'error': '动态渲染后的网页超过 25 MB 限制'}
+            return result
+        except Exception as exc:
+            logging.exception('system WebView extraction failed: %s', safe_url)
+            return {'ok': False, 'code': 'render_failed',
+                    'error': '系统网页渲染失败：%s' % exc}
+        finally:
+            if reader_window is not None:
+                try:
+                    reader_window.destroy()
+                except Exception:
+                    pass
+            self._web_render_lock.release()
+
+    def cancel_web_render(self, task_id=''):
+        try:
+            RM.get('web').cancel(task_id)
+            return True
+        except Exception:
+            return False
+
     def save_file(self, path, content, encoding):
         """编辑保存：写回文件，首次保存自动生成 .bak 备份。"""
         try:
@@ -1298,7 +1480,7 @@ class Api(object):
             logging.exception('save_file failed')
             return {'ok': False, 'error': str(e)}
 
-    def save_as(self, content, suggested):
+    def save_as(self, content, suggested, assets=None):
         """把转换 / 网页 / OCR 结果另存为 .md 文件。"""
         import webview
         if self._window is None:
@@ -1309,6 +1491,23 @@ class Api(object):
                 file_types=('Markdown (*.md)',))
             if not target:
                 return None
+            assets = assets or []
+            if assets:
+                import shutil
+                stem = os.path.splitext(os.path.basename(target))[0]
+                asset_name = stem + '.assets'
+                asset_dir = os.path.join(os.path.dirname(target), asset_name)
+                os.makedirs(asset_dir, exist_ok=True)
+                for item in assets:
+                    source = item.get('path') if isinstance(item, dict) else ''
+                    name = item.get('name') if isinstance(item, dict) else ''
+                    if not source or not name or not os.path.isfile(source):
+                        continue
+                    destination = os.path.join(asset_dir, os.path.basename(name))
+                    shutil.copy2(source, destination)
+                    relative = asset_name + '/' + os.path.basename(name)
+                    content = content.replace(source.replace('\\', '/'), relative)
+                    content = content.replace(source, relative)
             with open(target, 'w', encoding='utf-8', newline='') as f:
                 f.write(content)
             return target
@@ -1546,6 +1745,23 @@ def install_association():
 
 def run_selftest():
     ok = True
+    try:
+        reader_asset = os.path.join(APP_DIR, 'assets', 'vendor', 'readability.bundle.js')
+        reader_license = os.path.join(APP_DIR, 'assets', 'vendor', 'readability.LICENSE.md')
+        assert os.path.isfile(reader_asset) and os.path.getsize(reader_asset) > 10000
+        assert os.path.isfile(reader_license) and os.path.getsize(reader_license) > 400
+        import trafilatura as _tra
+        tra_cfg = os.path.join(os.path.dirname(_tra.__file__), 'settings.cfg')
+        assert os.path.isfile(tra_cfg), 'trafilatura/settings.cfg missing'
+        import readmd_modules.web as _web
+        fixture = ('<html><head><title>Selftest article</title></head><body><article><p>' +
+                   ('web extraction content ' * 30) + '</p></article></body></html>')
+        extracted = _web.extract_html('https://example.com/selftest', fixture)
+        assert extracted.get('ok') and 'web extraction content' in extracted.get('content', '')
+        safe_print('web extraction resources OK')
+    except Exception as e:
+        safe_print('web extraction resource selftest failed:', e)
+        ok = False
     try:
         import re as _re
         setup_py = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'installer', 'setup_app.py')

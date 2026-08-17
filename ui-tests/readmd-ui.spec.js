@@ -65,3 +65,62 @@ test('export scroll, history and AI narrow layout remain usable', async ({ page 
   await expect(page.locator('#ai-model')).toBeVisible();
   expect(errors).toEqual([]);
 });
+
+test('web to Markdown renders dynamic pages with progress and actionable errors', async ({ page }) => {
+  const errors = []; page.on('pageerror', e => errors.push(String(e)));
+  await page.addInitScript(() => {
+    window.pywebview = { api: {
+      render_web_page: async url => ({
+        ok: true, final_url: url, html: '<html><body><article>rendered</article></body></html>',
+        readability: { title: '动态文章', content: '<article><h1>动态文章</h1><p>动态正文内容</p></article>' },
+      }),
+      cancel_web_render: async () => true,
+      get_settings: async () => ({}), get_recent: async () => [],
+      start_modules: async () => true, get_modules_status: async () => ({ modules: { web: 'ready' }, errors: {} }),
+    } };
+  });
+  let extractCalls = 0;
+  await page.route('**/api/modules', route => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ modules: { web: 'ready', convert: 'ready', ocr: 'ready', ai: 'ready' }, errors: {} }),
+  }));
+  await page.route('**/api/web/extract', async route => {
+    extractCalls++;
+    const body = route.request().postDataJSON();
+    if (!body.html) {
+      await new Promise(resolve => setTimeout(resolve, 80));
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        ok: false, render_required: true, code: 'render_required', error: '需要渲染',
+      }) });
+    }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      ok: true, content: '# 动态文章\n\n动态正文内容', engine: 'mozilla-readability',
+      meta: { title: '动态文章' }, warnings: [], links: [], assets: [],
+    }) });
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => typeof openWebDialog === 'function');
+  await page.evaluate(() => openWebDialog());
+  await expect(page.locator('#url-modal')).toBeVisible();
+  await expect(page.locator('#url-mode')).toHaveValue('smart');
+  await expect(page.locator('#url-images')).not.toBeChecked();
+  await page.locator('#url-input').fill('example.com/article');
+  await page.locator('#url-go').click();
+  await expect(page.locator('#url-progress')).toBeVisible();
+  await page.waitForFunction(() => state.source === 'url');
+  expect(await page.locator('#url-input').inputValue()).toBe('https://example.com/article');
+  expect(extractCalls).toBe(2);
+  await expect(page.locator('#content')).toContainText('动态正文内容');
+
+  await page.unroute('**/api/web/extract');
+  await page.route('**/api/web/extract', route => route.fulfill({
+    status: 403, contentType: 'application/json',
+    body: JSON.stringify({ ok: false, code: 'forbidden', error: '服务器拒绝访问该网页（403）' }),
+  }));
+  await page.evaluate(() => openWebDialog());
+  await page.locator('#url-input').fill('https://blocked.example/article');
+  await page.locator('#url-go').click();
+  await expect(page.locator('#url-status')).toContainText('服务器拒绝访问');
+  await expect(page.locator('#url-status')).toHaveClass(/error/);
+  expect(errors).toEqual([]);
+});
