@@ -63,13 +63,18 @@ jobs:
       - name: Build application and installer
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD --icon assets/readmd.ico --add-data "assets;assets" --add-data "readmd_modules;readmd_modules" --add-data "readmd_fix.py;." --hidden-import readmd_fix --collect-data magika --collect-submodules readmd_modules readmd.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable --icon assets/readmd.ico --add-data "assets;assets" --add-data "readmd_modules;readmd_modules" --add-data "readmd_fix.py;." --hidden-import readmd_fix --collect-data magika --collect-submodules readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD --icon assets/readmd.ico --add-data "assets;assets" --add-data "readmd_modules;readmd_modules" --add-data "readmd_fix.py;." --hidden-import readmd_fix --collect-data magika --collect-data docx --collect-submodules readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable --icon assets/readmd.ico --add-data "assets;assets" --add-data "readmd_modules;readmd_modules" --add-data "readmd_fix.py;." --hidden-import readmd_fix --collect-data magika --collect-data docx --collect-submodules readmd_modules readmd.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall --icon assets/readmd.ico --add-data "installer;installer" installer/setup_app.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup --icon assets/readmd.ico --add-data "installer;installer" --add-binary "dist/ReadMD;ReadMD" --add-binary "dist/ReadMDUninstall.exe;." installer/setup_app.py
           Move-Item dist/ReadMDSetup.exe "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
           Move-Item dist/ReadMD-portable.exe "dist/ReadMD-portable-v$env:READMD_VERSION.exe"
           & "dist/ReadMD/ReadMD.exe" --selftest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "dist/ReadMD-portable-v$env:READMD_VERSION.exe" --selftest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "dist/ReadMDSetup-v$env:READMD_VERSION.exe" --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - uses: actions/upload-artifact@v4
         with:
           name: windows-assets

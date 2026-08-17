@@ -5,6 +5,7 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 datas = [('assets', 'assets'), ('readmd_modules', 'readmd_modules'), ('readmd_fix.py', '.')]
 hiddenimports = ['readmd_fix', 'Vision', 'Quartz', 'Foundation', 'objc']
 datas += collect_data_files('magika')
+datas += collect_data_files('docx')
 hiddenimports += collect_submodules('readmd_modules')
 
 a = Analysis(
