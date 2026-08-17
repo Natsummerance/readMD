@@ -1,0 +1,27 @@
+pywebview>=5.1
+
+# Everything-to-MD (MarkItDown)
+markitdown
+pdfminer.six
+python-docx
+python-pptx
+openpyxl
+pandas
+beautifulsoup4
+lxml
+lxml_html_clean
+mammoth
+
+# Webpage-to-MD
+trafilatura
+requests
+
+# PDF text extraction / scanned-page rendering
+pymupdf
+
+# Native system tray backend selected by the current platform
+pystray
+
+# Export-to-PDF / formula-to-image (lazy-loaded)
+reportlab
+matplotlib

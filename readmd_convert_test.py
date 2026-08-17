@@ -402,6 +402,20 @@ class TestAi(unittest.TestCase):
                     f.write(old)
 
 
+class TestPlatformDependencies(unittest.TestCase):
+    def test_macos_requirements_exclude_windows_projections(self):
+        root = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(root, 'requirements-macos.txt'), encoding='utf-8') as f:
+            packages = [line.strip().lower() for line in f
+                        if line.strip() and not line.lstrip().startswith(('#', '-r'))]
+        self.assertFalse(any('winrt' in package or 'winreg' in package for package in packages))
+        self.assertTrue(any('pyobjc-framework-vision' in package for package in packages))
+        with open(os.path.join(root, 'ReadMD-macOS.spec'), encoding='utf-8') as f:
+            spec = f.read()
+        self.assertNotIn("('readmd_modules', 'readmd_modules')", spec)
+        self.assertIn("'readmd_modules.windows_native'", spec)
+
+
 def main():
     suite = unittest.defaultTestLoader.loadTestsFromModule(sys.modules[__name__])
     result = unittest.TextTestRunner(verbosity=1).run(suite)

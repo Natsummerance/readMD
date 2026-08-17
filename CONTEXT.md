@@ -11,7 +11,7 @@
 - 本地：任意工作区目录（不得在仓库记录开发者绝对路径）
 - GitHub：`https://github.com/Natsummerance/readMD`（public，main 分支）
 - 发布凭据仅由 GitHub Actions 管理，不在源码或文档记录个人账号、邮箱或 Token
-- 当前发布版本：v2.2.0（Windows）；macOS 独立适配目标为 v2.2.1
+- 当前发布版本：v2.2.0（Windows）；当前开发版本：v2.2.1（独立原生 macOS 构建）
 - Win7 兼容版：**v2.1.1 Beta**（pre-release tag `v2.1.1-beta`，资产 `ReadMDSetup-2.1.1-Beta-win7-x64.exe`）——Win7 SP1 x64 + 内嵌固定版 WebView2 109 运行时；独立 Python 3.9.13 构建链（`.venv-win7` / `win7-reqs.txt` / `build_win7.bat` / `ReadMD-win7.spec` / `ReadMDSetup-win7.spec` / `tools\win7_pywebview_edgechromium.patch` / `tools\bundle_runtime.py`）；功能裁剪：仅 docx / pdf 转 MD + 导出（OCR / AI / 网页 / 其他格式在 Win7 下提示不可用）
 
 ## 功能清单（按开发顺序）
@@ -63,18 +63,18 @@
 - `package.bat`：一次产出两版——onedir 安装版 `dist\ReadMD\ReadMD.exe`（秒开）+ 便携单文件 `dist\ReadMD-portable.exe`（windowed，console=False，图标 readmd.ico）
 - `installer/build_setup.bat`：先 ReadMDUninstall.exe，再 ReadMDSetup.exe（内嵌 onedir 目录 `ReadMD/` + 卸载器；v2.0.1 起不再使用 PyInstaller splash 启动画面，避免黑屏弹窗卡死安装流程）
 - `deploy.bat [--skip-tests] [--tag v2.2.0]`：测试并推送 main 与标签
-- GitHub Actions 为 v2.2.0 生成 Windows 安装版与便携版两个 Release 资产；macOS 从 v2.2.1 起使用独立流程
+- `release.yml` 仅处理 v2.2.0 Windows；`release-macos.yml` 使用 requirements-macos.txt，仅处理 v2.2.1 Intel/Apple Silicon macOS
 - Release 由 CI 唯一创建，并在发布前校验架构、版本、大小与 SHA-256
 
 ## 测试现状（全部通过）
 
-- 修正器单测 37/37；导出单测 22/22；`--selftest`（HTTP 服务 + 单实例 ping/open + prompts 历史 + 图片保存 + 导出三格式冒烟）PASSED；`--mods` 四模块 ready
+- 修正器单测 37/37；转换/AI 22/22；导出单测 24/24；Playwright UI 3/3；`--selftest` PASSED
 - dist\ReadMD\ReadMD.exe --selftest 退出码 0（console=False 无输出）；`readmd.log` 启动里程碑：start / server_up / webview_imported / window_created / page_loaded
 - 安装器串行 静默安装→文件就位→静默卸载→目录清除，验证通过（并发下曾出现竞争残留，正常串行无问题）
 
 ## 环境注意事项
 
-- requirements.txt 必须保持纯 ASCII（中文注释会让 pip 在 GBK 区域设置下解码失败，之前因此修复过一次）
+- 平台依赖分为 requirements-common.txt、requirements-windows.txt 与 requirements-macos.txt；macOS 构建禁止安装/打包 WinRT、winreg 和 Windows 安装器代码
 - v2.0 新增依赖 pystray（托盘）；单实例控制端口 26891 固定，占用时回退随机端口并禁用单实例
 - v2.1 新增依赖 reportlab（PDF）、matplotlib（公式成图），全部惰性导入（mdexport 包不进 MODULES 自动加载）；requirements.txt 保持纯 ASCII
 - 注册表关联 HKCU\Software\Classes\ReadMD.markdown → dist\ReadMD\ReadMD.exe（测试残留的悬空路径已修复）

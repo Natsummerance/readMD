@@ -2,7 +2,7 @@
 # ReadMD macOS .app bundle spec
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
-datas = [('assets', 'assets'), ('readmd_modules', 'readmd_modules'), ('readmd_fix.py', '.')]
+datas = [('assets', 'assets'), ('readmd_fix.py', '.')]
 hiddenimports = ['readmd_fix', 'Vision', 'Quartz', 'Foundation', 'objc']
 datas += collect_data_files('magika')
 datas += collect_data_files('docx')
@@ -17,7 +17,11 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['winrt', 'pywinrt'],  # exclude Windows-only modules
+    excludes=[
+        'winrt', 'pywinrt', 'winreg',
+        'readmd_modules.windows_native',
+        'installer',
+    ],
     noarchive=False,
     optimize=0,
 )
@@ -58,12 +62,12 @@ app = BUNDLE(
     name='ReadMD.app',
     icon='assets/ReadMD.icns',
     bundle_identifier='io.github.natsummerance.readmd',
-    version='2.2.0',
+    version='2.2.1',
     info_plist={
         'CFBundleName': 'ReadMD',
         'CFBundleDisplayName': 'ReadMD',
-        'CFBundleVersion': '2.2.0',
-        'CFBundleShortVersionString': '2.2.0',
+        'CFBundleVersion': '2.2.1',
+        'CFBundleShortVersionString': '2.2.1',
         'NSPrincipalClass': 'NSApplication',
         'NSHighResolutionCapable': True,
         'CFBundleDocumentTypes': [

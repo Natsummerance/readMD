@@ -1,23 +1,4 @@
-pywebview>=5.1
-
-# Everything-to-MD (MarkItDown)
-markitdown
-pdfminer.six
-python-docx
-python-pptx
-openpyxl
-pandas
-beautifulsoup4
-lxml
-lxml_html_clean
-mammoth
-
-# Webpage-to-MD
-trafilatura
-requests
-
-# Scan/OCR-to-MD (platform-specific backends)
-pymupdf
+-r requirements-common.txt
 
 # Windows-only: WinRT OCR
 winrt-Windows.Media.Ocr; sys_platform == 'win32'
@@ -28,13 +9,9 @@ winrt-Windows.Foundation; sys_platform == 'win32'
 winrt-Windows.Foundation.Collections; sys_platform == 'win32'
 winrt-Windows.Globalization; sys_platform == 'win32'
 
-# macOS-only: Vision OCR via PyObjC
+# macOS-native Cocoa/WebKit shell and Vision OCR
+pyobjc-framework-Cocoa; sys_platform == 'darwin'
+pyobjc-framework-WebKit; sys_platform == 'darwin'
 pyobjc-framework-Vision; sys_platform == 'darwin'
 pyobjc-framework-Quartz; sys_platform == 'darwin'
-
-# System tray (Windows/macOS/Linux)
-pystray
-
-# Export-to-PDF / formula-to-image (lazy-loaded)
-reportlab
-matplotlib
+pyobjc-framework-UniformTypeIdentifiers; sys_platform == 'darwin'

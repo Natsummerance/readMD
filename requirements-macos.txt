@@ -1,0 +1,8 @@
+-r requirements-common.txt
+
+# macOS-native Cocoa/WebKit shell and Vision OCR. No WinRT packages belong here.
+pyobjc-framework-Cocoa
+pyobjc-framework-WebKit
+pyobjc-framework-Vision
+pyobjc-framework-Quartz
+pyobjc-framework-UniformTypeIdentifiers

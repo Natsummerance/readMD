@@ -71,7 +71,7 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-           or _bundle_version() or '2.2.0')
+           or _bundle_version() or '2.2.1')
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 CONVERT_EXTS = ('.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm',
@@ -1264,7 +1264,8 @@ class Api(object):
         """在文件管理器中打开目录。"""
         try:
             if IS_MAC:
-                subprocess.Popen(['open', os.path.normpath(path)])
+                from readmd_modules import macos_native
+                return macos_native.open_path(path)
             elif IS_WIN:
                 subprocess.Popen(['explorer', os.path.normpath(path)])
             else:
@@ -1362,7 +1363,8 @@ class Api(object):
         """在文件管理器中选中该文件。"""
         try:
             if IS_MAC:
-                subprocess.Popen(['open', '-R', os.path.normpath(path)])
+                from readmd_modules import macos_native
+                return macos_native.reveal_path(path)
             elif IS_WIN:
                 subprocess.Popen(['explorer', '/select,', os.path.normpath(path)])
             else:
@@ -1842,22 +1844,20 @@ def main():
 
     setup_win7_webview2_env()
     try:
-        webview.start()
+        if IS_MAC:
+            webview.start(gui='cocoa')
+        else:
+            webview.start()
     except Exception as e:
         logging.exception('webview start failed')
         safe_print('启动失败：%s' % e)
         try:
             if IS_WIN:
-                import ctypes
-                ctypes.windll.user32.MessageBoxW(0, 'ReadMD 启动失败：%s' % e, 'ReadMD', 0x10)
+                from readmd_modules import windows_native
+                windows_native.show_error('ReadMD', '启动失败：%s' % e)
             elif IS_MAC:
-                # osascript 不接受单引号，硬编码消息避免注入
-                subprocess.Popen(['osascript', '-e',
-                    'tell app "System Events" to display dialog '
-                    '"ReadMD 启动失败，请查看日志。" with title "ReadMD" '
-                    'buttons {"OK"} default button "OK" '
-                    'with icon stop'],
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                from readmd_modules import macos_native
+                macos_native.show_error('ReadMD', '启动失败，请查看日志。')
         except Exception:
             pass
         return 1

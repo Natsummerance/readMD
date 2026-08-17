@@ -24,7 +24,7 @@ echo "[2/6] Creating venv and installing dependencies ..."
 if [ ! -f ".venv/bin/python" ]; then
     $PY3 -m venv .venv
 fi
-".venv/bin/python" -m pip install --disable-pip-version-check -q -r requirements.txt pyinstaller
+".venv/bin/python" -m pip install --disable-pip-version-check -q -r requirements-test-macos.txt
 
 echo "[3/6] Generating icon ..."
 if [ -f "tools/make_icon.py" ]; then

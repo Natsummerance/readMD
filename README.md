@@ -42,11 +42,13 @@
 | --- | --- |
 | **ReadMDSetup-版本.exe** | 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级 |
 | **ReadMD-portable-版本.exe** | 便携版，免安装，双击直接运行 |
+| **ReadMD-macos-x64-v2.2.1.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
+| **ReadMD-macos-arm64-v2.2.1.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
 | **ReadMDSetup-2.1.1-Beta-win7-x64.exe** | **Win7 兼容版**（v2.1.1 Beta，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
 >
-> v2.2.0 先发布 Windows 版。macOS 将拆分原生依赖和构建流程，在 v2.2.1 单独发布。
+> v2.2.0 为 Windows 版；v2.2.1 是独立 macOS 版。macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动需在 Finder 中右键 `ReadMD.app` →“打开”。
 
 **方式二：源码运行（开发 / 自定义）**
 
@@ -54,6 +56,13 @@
 
 ```bat
 双击 install.bat
+```
+
+macOS 源码运行或打包使用独立依赖：
+
+```bash
+./install.sh             # 安装 requirements-macos.txt
+./setup.sh               # 构建未签名 ReadMD.app
 ```
 
 脚本会创建 `.venv`、安装依赖并注册 `.md / .markdown / .mdown / .mkd` 文件关联（HKCU，无需管理员）。之后直接双击任意 `.md` 文件即可用 ReadMD 打开；或：

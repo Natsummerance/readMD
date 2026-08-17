@@ -23,7 +23,11 @@ echo "[2/4] Creating virtual environment and installing dependencies ..."
 if [ ! -f ".venv/bin/python" ]; then
     $PY3 -m venv .venv
 fi
-".venv/bin/python" -m pip install --disable-pip-version-check -q -r requirements.txt
+REQ_FILE="requirements-common.txt"
+if [ "$(uname -s)" = "Darwin" ]; then
+    REQ_FILE="requirements-macos.txt"
+fi
+".venv/bin/python" -m pip install --disable-pip-version-check -q -r "$REQ_FILE"
 
 echo "[3/4] Generating icon ..."
 if [ -f "tools/make_icon.py" ]; then
