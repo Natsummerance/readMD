@@ -1,11 +1,13 @@
-# -*- coding: utf-8 -*-
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+sys.path.insert(0, ROOT)
 
-import os, sys, unittest
+import readmd
+import unittest
 from unittest import mock
+
 
 
 

@@ -8,7 +8,8 @@ Thumbs.db
 build/
 dist/
 *.spec
-!ReadMD-macOS.spec
+!release/ReadMD-macOS.spec
+
 
 tools/cm-bundle/node_modules/
 ui-tests/node_modules/

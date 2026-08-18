@@ -6,7 +6,7 @@ rem    dist\ReadMD\ReadMD.exe         安装版（onedir，秒开，安装包内
 rem    dist\ReadMD-portable.exe       便携版（单文件，免安装）
 rem ============================================================
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0..\.."
 title ReadMD Packager
 set "READMD_VERSION=2.2.6"
 set "READMD_VERSION_OVERRIDE=%READMD_VERSION%"
@@ -45,7 +45,7 @@ echo [4/5] Building install edition (onedir, instant start) ...
     --collect-data matplotlib ^
     --collect-data trafilatura ^
     --collect-submodules src.readmd_modules ^
-    ../readmd.py
+    readmd.py
 if errorlevel 1 goto :err
 
 echo [5/5] Building portable edition (single-file) ...
@@ -61,8 +61,9 @@ echo [5/5] Building portable edition (single-file) ...
     --collect-data matplotlib ^
     --collect-data trafilatura ^
     --collect-submodules src.readmd_modules ^
-    ../readmd.py
+    readmd.py
 if errorlevel 1 goto :err
+
 
 echo.
 echo Done!

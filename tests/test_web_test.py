@@ -236,11 +236,12 @@ class TestWebExtraction(unittest.TestCase):
         self.assertTrue(fetched.get('content_type_mismatch'))
 
     def test_offline_defuddle_bundle_is_packaged(self):
-        root = os.path.dirname(os.path.abspath(__file__))
+        root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
         bundle = os.path.join(root, 'assets', 'vendor', 'defuddle.bundle.js')
         license_path = os.path.join(root, 'assets', 'vendor', 'defuddle.LICENSE.txt')
         self.assertTrue(os.path.isfile(bundle) and os.path.getsize(bundle) > 100000)
         self.assertTrue(os.path.isfile(license_path) and os.path.getsize(license_path) > 500)
+
 
     def test_localize_images_and_manifest(self):
         markdown = '![封面](%s/image-redirect)' % self.base

@@ -11,7 +11,7 @@ rem
 rem  GitHub Actions is the only Release publisher.
 rem ============================================================
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0..\.."
 title ReadMD Deploy
 
 set "TAG=v2.2.6"
@@ -46,15 +46,15 @@ echo   venv ready
 
 if "%SKIP_TESTS%"=="1" goto :tests_done
 echo [3/7] Running tests ...
-".venv\Scripts\python.exe" ../tests/test_fix_test.py
+".venv\Scripts\python.exe" tests/test_fix_test.py
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" ../../tests/test_convert_test.py
+".venv\Scripts\python.exe" tests/test_convert_test.py
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" ../../tests/test_export_test.py
+".venv\Scripts\python.exe" tests/test_export_test.py
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" ../../tests/test_web_test.py
+".venv\Scripts\python.exe" tests/test_web_test.py
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" ../../tests/test_api_test.py
+".venv\Scripts\python.exe" tests/test_api_test.py
 if errorlevel 1 goto :err
 ".venv\Scripts\python.exe" tools\privacy_scan.py
 if errorlevel 1 goto :err
@@ -62,6 +62,7 @@ if errorlevel 1 goto :err
 if errorlevel 1 goto :err
 echo   all tests passed
 :tests_done
+
 
 echo [4/7] Committing and pushing main ...
 rem Stage this worktree only.  IDEA.md is personal/local and is explicitly excluded.

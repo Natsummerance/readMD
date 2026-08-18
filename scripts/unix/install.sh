@@ -4,7 +4,7 @@
 #  - create venv, install deps, generate icon, print instructions
 # ============================================================
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../.."
 
 echo "[1/4] Checking Python ..."
 if ! command -v python3 &>/dev/null; then
@@ -37,10 +37,11 @@ fi
 echo "[4/4] Done!"
 echo
 echo "  To run ReadMD:"
-echo "    ./run.sh [file.md]"
-echo "    or: .venv/bin/python ../readmd.py [file.md]"
+echo "    ./scripts/run.sh [file.md]"
+echo "    or: .venv/bin/python readmd.py [file.md]"
 echo
 echo "  macOS: To set ReadMD as default .md opener,"
 echo "    right-click any .md file → Get Info → Open with → Change All..."
 echo
-chmod +x run.sh 2>/dev/null || true
+chmod +x scripts/run.sh 2>/dev/null || true
+

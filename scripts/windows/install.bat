@@ -4,7 +4,7 @@ rem  ReadMD Installer - setup venv, install deps, register .md
 rem  (if dist\ReadMD\ReadMD.exe exists, it is used instead of pythonw)
 rem ============================================================
 setlocal
-cd /d "%~dp0"
+cd /d "%~dp0..\.."
 title ReadMD Installer
 
 echo [1/4] Checking Python ...
@@ -33,17 +33,18 @@ if errorlevel 1 goto :err
 
 echo [4/4] Registering file association (current user, no admin needed) ...
 set "EXE="
-if exist "%~dp0dist\ReadMD\ReadMD.exe" set "EXE=%~dp0dist\ReadMD\ReadMD.exe"
-if "%EXE%"=="" if exist "%~dp0dist\ReadMD-portable.exe" set "EXE=%~dp0dist\ReadMD-portable.exe"
+if exist "%CD%\dist\ReadMD\ReadMD.exe" set "EXE=%CD%\dist\ReadMD\ReadMD.exe"
+if "%EXE%"=="" if exist "%CD%\dist\ReadMD-portable.exe" set "EXE=%CD%\dist\ReadMD-portable.exe"
 if "%EXE%"=="" (
-    set "PYW=%~dp0.venv\Scripts\pythonw.exe"
-    set "ICON=%~dp0assets\readmd.ico"
-    set "SCRIPT=%~dp0..\readmd.py"
+    set "PYW=%CD%\.venv\Scripts\pythonw.exe"
+    set "ICON=%CD%\assets\readmd.ico"
+    set "SCRIPT=%CD%\readmd.py"
 ) else (
     set "PYW=%EXE%"
     set "ICON=%EXE%"
     set "SCRIPT="
 )
+
 
 if not exist "%APPDATA%\ReadMD\backup" mkdir "%APPDATA%\ReadMD\backup"
 reg export "HKCU\Software\Classes\.md" "%APPDATA%\ReadMD\backup\.md.reg.bak" /y >nul 2>nul

@@ -4,11 +4,11 @@
 #  - install deps + package an unsigned .app bundle
 # ============================================================
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../.."
 
 if [ "$(uname -s)" != "Darwin" ]; then
     echo "setup.sh builds a macOS .app and must run on macOS."
-    echo "On Linux, use install.sh then ./run.sh instead."
+    echo "On Linux, use install.sh then ./scripts/run.sh instead."
     exit 1
 fi
 
@@ -47,11 +47,12 @@ fi
 
 echo "[6/6] Done!"
 echo
-echo "  To run from source:  ./run.sh [file.md]"
+echo "  To run from source:  ./scripts/run.sh [file.md]"
 echo "  To run packaged:     open \"$APP_PATH\""
 echo "  This app is unsigned. On first launch, Control-click it and choose Open."
 echo
 echo "  macOS: To set ReadMD as default .md opener,"
 echo "    right-click any .md → Get Info → Open with → Change All..."
 echo
-chmod +x run.sh install.sh setup.sh 2>/dev/null || true
+chmod +x scripts/run.sh scripts/unix/install.sh scripts/unix/setup.sh 2>/dev/null || true
+

@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
-"""Regression tests for desktop bridge file operations."""
-
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+sys.path.insert(0, ROOT)
 
 import readmd
 import json
@@ -13,8 +11,6 @@ import time
 import unittest
 from unittest import mock
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(ROOT, '..'))
 
 
 

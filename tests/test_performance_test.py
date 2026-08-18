@@ -1,17 +1,12 @@
-# -*- coding: utf-8 -*-
-"""Focused regression tests for the v2.2.4 on-demand startup path.
-
-Run with: ``python -m unittest test_performance_test``
-"""
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+sys.path.insert(0, ROOT)
 
-
+import readmd
 import importlib
 import json
-import os
 import tempfile
 import threading
 import time
@@ -22,6 +17,7 @@ import urllib.request
 from unittest import mock
 
 import src.readmd_modules as registry
+
 
 
 def wait_for(predicate, timeout=2):

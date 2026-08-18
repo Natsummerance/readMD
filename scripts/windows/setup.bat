@@ -4,7 +4,7 @@ rem  ReadMD Setup - one-click: install deps + package exe
 rem  + register as default .md app + launch
 rem ============================================================
 setlocal enabledelayedexpansion
-cd /d "%~dp0"
+cd /d "%~dp0..\.."
 title ReadMD Setup
 
 echo [1/6] Checking Python ...
@@ -37,11 +37,12 @@ echo [4/6] Packaging ReadMD (onedir install edition) ...
     --hidden-import src.readmd_fix ^
     --collect-data magika ^
     --collect-submodules src.readmd_modules ^
-    ../readmd.py
+    readmd.py
 if errorlevel 1 goto :err
 
 echo [5/6] Registering as default .md app (current user) ...
-set "EXE=%~dp0dist\ReadMD\ReadMD.exe"
+set "EXE=%CD%\dist\ReadMD\ReadMD.exe"
+
 if not exist "%APPDATA%\ReadMD\backup" mkdir "%APPDATA%\ReadMD\backup"
 reg export "HKCU\Software\Classes\.md" "%APPDATA%\ReadMD\backup\.md.reg.bak" /y >nul 2>nul
 for %%E in (.md .markdown .mdown .mkd) do (

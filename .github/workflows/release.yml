@@ -260,7 +260,7 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           name: ReadMD v2.2.6
-          body_path: release_notes.md
+          body_path: release/release_notes.md
           files: |
             release-assets/ReadMDSetup-v2.2.6.exe
             release-assets/ReadMD-portable-v2.2.6.exe
@@ -268,3 +268,4 @@ jobs:
             release-assets/ReadMD-macos-arm64-v2.2.6.zip
             release-assets/SHA256SUMS.txt
           fail_on_unmatched_files: true
+

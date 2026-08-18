@@ -20,7 +20,8 @@ def main():
     args = parser.parse_args()
     if args.runs <= 0 or args.timeout <= 0:
         parser.error('--runs and --timeout must be positive')
-    app = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'readmd.py')
+    app = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'readmd.py')
+
     reports = []
     with tempfile.TemporaryDirectory(prefix='readmd-startup-probe-') as directory:
         for index in range(args.runs):

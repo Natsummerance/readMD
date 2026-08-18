@@ -17,10 +17,9 @@ rem    dist\ReadMDSetup-2.1.1-Beta-win7-x64.exe  最终发布资产
 rem ============================================================
 
 setlocal
-
-cd /d "%~dp0"
-
+cd /d "%~dp0..\.."
 title ReadMD Win7 Packager
+
 
 
 

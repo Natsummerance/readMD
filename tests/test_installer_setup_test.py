@@ -1,19 +1,18 @@
-# -*- coding: utf-8 -*-
-"""Focused regression tests for the recovery-safe Windows installer."""
 import sys
 import os
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+sys.path.insert(0, ROOT)
 
-
+import installer.setup_app as setup
 import readmd
 import json
-import os
 import shutil
 import tempfile
 import unittest
 from collections import namedtuple
 from unittest import mock
+
 
 
 
@@ -138,15 +137,16 @@ class ElevationPayloadTests(unittest.TestCase):
 
 class InstallerHtmlTests(unittest.TestCase):
     def test_recovery_controls_and_accessibility_are_present(self):
-        with open(os.path.join(os.path.dirname(__file__), 'installer', 'setup.html'), encoding='utf-8') as f:
+        with open(os.path.join(ROOT, 'installer', 'setup.html'), encoding='utf-8') as f:
             html = f.read()
         for required in ('preflight_install', 'btn-err-close-retry', 'btn-err-admin', 'btn-err-change',
                          'aria-live="polite"', 'prefers-reduced-motion', '默认用户目录无需管理员'):
             self.assertIn(required, html)
 
     def test_recovery_actions_are_pinned_outside_the_scrollable_error_content(self):
-        with open(os.path.join(os.path.dirname(__file__), 'installer', 'setup.html'), encoding='utf-8') as f:
+        with open(os.path.join(ROOT, 'installer', 'setup.html'), encoding='utf-8') as f:
             html = f.read()
+
         self.assertIn('#page-installing{justify-content:flex-start', html)
         self.assertIn('.install-scroll{', html)
         self.assertIn('overflow-y:auto', html)

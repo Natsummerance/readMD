@@ -1,10 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 # ReadMD macOS .app bundle spec
+import os
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
+ROOT_DIR = os.path.abspath(os.path.join(SPECPATH, '..'))
+
 datas = [
-    ('assets', 'assets'),
-    ('../src/readmd_fix.py', '.'),
+    (os.path.join(ROOT_DIR, 'assets'), 'assets'),
+    (os.path.join(ROOT_DIR, 'src', 'readmd_fix.py'), 'src'),
 ]
 hiddenimports = ['src.readmd_fix', 'Vision', 'Quartz', 'Foundation', 'objc']
 datas += collect_data_files('magika')
@@ -15,8 +18,8 @@ datas += collect_data_files('trafilatura')
 hiddenimports += collect_submodules('src.readmd_modules')
 
 a = Analysis(
-    ['../readmd.py'],
-    pathex=[],
+    [os.path.join(ROOT_DIR, 'readmd.py')],
+    pathex=[ROOT_DIR],
     binaries=[],
     datas=datas,
     hiddenimports=hiddenimports,
@@ -49,7 +52,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['assets/ReadMD.icns'],
+    icon=[os.path.join(ROOT_DIR, 'assets', 'ReadMD.icns')],
 )
 
 coll = COLLECT(
@@ -66,7 +69,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='ReadMD.app',
-    icon='assets/ReadMD.icns',
+    icon=os.path.join(ROOT_DIR, 'assets', 'ReadMD.icns'),
     bundle_identifier='io.github.natsummerance.readmd',
     version='2.2.6',
     info_plist={
@@ -87,3 +90,4 @@ app = BUNDLE(
         ],
     },
 )
+
