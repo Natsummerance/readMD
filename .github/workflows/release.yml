@@ -25,9 +25,9 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-          cache-dependency-path: requirements-test.txt
+          cache-dependency-path: config/requirements-test.txt
       - name: Install Windows test dependencies
-        run: python -m pip install --disable-pip-version-check -r requirements-test.txt
+        run: python -m pip install --disable-pip-version-check -r config/requirements-test.txt
       - name: Install Playwright
         working-directory: ui-tests
         run: |
@@ -35,13 +35,13 @@ jobs:
           npx playwright install chromium
       - name: Run Windows regression suite
         run: |
-          python readmd_fix_test.py
-          python readmd_convert_test.py
-          python readmd_export_test.py
-          python readmd_web_test.py
-          python readmd_api_test.py
-          python installer_setup_test.py
-          python -m unittest readmd_performance_test
+          python tests/test_fix_test.py
+          python tests/test_convert_test.py
+          python tests/test_export_test.py
+          python tests/test_web_test.py
+          python tests/test_api_test.py
+          python tests/test_installer_setup_test.py
+          python -m unittest tests.test_performance_test
           python tools/privacy_scan.py
           python readmd.py --selftest
       - name: Run Playwright UI tests
@@ -67,9 +67,9 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-          cache-dependency-path: requirements-test-macos.txt
+          cache-dependency-path: config/requirements-test-macos.txt
       - name: Install macOS test dependencies
-        run: python -m pip install --disable-pip-version-check -r requirements-test-macos.txt
+        run: python -m pip install --disable-pip-version-check -r config/requirements-test-macos.txt
       - name: Assert macOS excludes Windows projections
         run: |
           python - <<'PY'
@@ -80,9 +80,9 @@ jobs:
           PY
       - name: Run parser, clipboard-bridge and self-test checks
         run: |
-          python readmd_fix_test.py
-          python readmd_convert_test.py
-          python readmd_api_test.py
+          python tests/test_fix_test.py
+          python tests/test_convert_test.py
+          python tests/test_api_test.py
           python readmd.py --selftest
 
   windows-package:
@@ -97,7 +97,7 @@ jobs:
           python-version: '3.11'
           cache: pip
           cache-dependency-path: requirements-windows.txt
-      - run: python -m pip install --disable-pip-version-check -r requirements-windows.txt pyinstaller
+      - run: python -m pip install --disable-pip-version-check -r config/requirements-windows.txt pyinstaller
       - run: python tools/make_icon.py
       - run: python tools/make_file_icon.py
       - name: Build, probe and smoke-test Windows assets
@@ -105,8 +105,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if ((python -c "import readmd; print(readmd.VERSION)") -ne $env:READMD_VERSION) { throw 'source version mismatch' }
-          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD --icon assets/readmd.ico --add-data "assets;assets" --add-data "readmd_modules;readmd_modules" --add-data "readmd_fix.py;." --hidden-import readmd_fix --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules readmd_modules readmd.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable --icon assets/readmd.ico --add-data "assets;assets" --add-data "readmd_modules;readmd_modules" --add-data "readmd_fix.py;." --hidden-import readmd_fix --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_modules readmd.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall --icon assets/readmd.ico --add-data "installer;installer" installer/setup_app.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup --icon assets/readmd.ico --add-data "installer;installer" --add-binary "dist/ReadMD;ReadMD" --add-binary "dist/ReadMDUninstall.exe;." installer/setup_app.py
           Move-Item dist/ReadMDSetup.exe "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
@@ -168,8 +168,8 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-          cache-dependency-path: requirements-test-macos.txt
-      - run: python -m pip install --disable-pip-version-check -r requirements-test-macos.txt
+          cache-dependency-path: config/requirements-test-macos.txt
+      - run: python -m pip install --disable-pip-version-check -r config/requirements-test-macos.txt
       - name: Build and verify native app bundle
         run: |
           set -euo pipefail
