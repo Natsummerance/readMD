@@ -3,8 +3,12 @@
 
 运行：python test_export_test.py   （退出码 0 = 全部通过）
 """
+import sys
+import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
+
 import os
 import shutil
 import sys
@@ -13,7 +17,6 @@ import unittest
 from unittest import mock
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(ROOT, '..'))
 
 from src.readmd_modules.mdexport import parser as P
 from src.readmd_modules.mdexport import styles as S
@@ -21,7 +24,6 @@ from src.readmd_modules.mdexport import formula as F
 from src.readmd_modules.mdexport import docx_render as DOCX
 from src.readmd_modules.mdexport import pdf_render as PDF
 import src.readmd_modules.mdexport as E
-import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..")); import readmd
 
 SAMPLE = '''# 标题一
 

@@ -3,8 +3,12 @@
 
 Run with: ``python -m unittest test_performance_test``
 """
+import sys
+import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
+
 import importlib
 import json
 import os
@@ -17,7 +21,6 @@ import urllib.error
 import urllib.request
 from unittest import mock
 
-import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..")); import readmd
 import src.readmd_modules as registry
 
 

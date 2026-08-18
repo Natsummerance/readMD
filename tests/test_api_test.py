@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """Regression tests for desktop bridge file operations."""
 
+import sys
+import os
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+
 import readmd
 import json
-import os
-import sys
 import tempfile
 import time
 import unittest

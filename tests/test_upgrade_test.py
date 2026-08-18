@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
-import os, sys, unittest
-from unittest import mock
+import sys
+import os
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
-import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..")); import readmd
+import os, sys, unittest
+from unittest import mock
+
 
 
 class TestUpgradeCheck(unittest.TestCase):
