@@ -1012,13 +1012,22 @@ class Handler(BaseHTTPRequestHandler):
             return
         milestone('boot', 'first_document')
         text, enc = read_text(p)
+        raw = text
+        structured = False
+        if name.lower().endswith('.txt'):
+            import readmd_modules.txtmd as txtmd
+            md, tstats = txtmd.to_markdown(text)
+            if tstats.get('changed'):
+                text = md
+                structured = True
         fr = readmd_fix.fix_markdown(text)
         d.update({
             'encoding': enc,
             'content': fr.text,
-            'original': text,
+            'original': raw,
             'fixes': fr.fixes,
             'stats': fr.stats,
+            'structured': structured,
         })
         self._send_json(200, d)
 
@@ -1071,6 +1080,9 @@ class Handler(BaseHTTPRequestHandler):
         if is_win7() and os.path.splitext(p)[1].lower() not in WIN7_CONVERT_EXTS:
             self._send_json(415, {'error': WIN7_UNAVAILABLE})
             return
+        if os.path.splitext(p)[1].lower() == '.txt':
+            self._convert_txt(p)
+            return
         if not self._module_ready('convert', '转换模块加载中，请稍候再试'):
             return
         try:
@@ -1106,6 +1118,42 @@ class Handler(BaseHTTPRequestHandler):
                                   'skipped': skipped, 'warns': warns})
         except Exception as e:
             logging.exception('convert failed: %s', p)
+            self._send_json(500, {'error': '转换失败：%s' % e})
+
+    def _convert_txt(self, p):
+        """TXT 智能转换（纯 Python，不依赖 convert 模块）。"""
+        import readmd_modules.txtmd as txtmd
+        import readmd_modules.mdcheck as MDC
+        try:
+            text, enc = txtmd.read_text(p)
+            md, tstats = txtmd.to_markdown(text)
+            if not md.strip():
+                self._send_json(200, {'content': '', 'name': os.path.basename(p),
+                                      'dir': os.path.dirname(p), 'source': 'convert',
+                                      'engine': 'txt 智能识别',
+                                      'note': '文件为空，没有可转换的内容'})
+                return
+            fixed, warns = MDC.check(md, os.path.dirname(os.path.abspath(p)))
+            fixes = [w['msg'] for w in warns if w.get('level') == 'auto']
+            out = _md_output_path(p)
+            overwrite = parse_qs(urlparse(self.path).query).get('overwrite', ['0'])[0] == '1'
+            saved, skipped = False, False
+            if os.path.exists(out) and not overwrite:
+                skipped = True
+            else:
+                try:
+                    _write_md(out, fixed)
+                    saved = True
+                except Exception as e:  # noqa: BLE001
+                    logging.exception('convert txt autosave failed')
+            self._send_json(200, {'content': fixed, 'fixes': fixes,
+                                  'name': os.path.basename(p),
+                                  'dir': os.path.dirname(p), 'source': 'convert', 'path': p,
+                                  'engine': 'txt 智能识别' if tstats.get('changed') else 'TXT',
+                                  'out': out, 'saved': saved,
+                                  'skipped': skipped, 'warns': warns})
+        except Exception as e:
+            logging.exception('convert txt failed: %s', p)
             self._send_json(500, {'error': '转换失败：%s' % e})
 
     def _api_convert_batch(self):

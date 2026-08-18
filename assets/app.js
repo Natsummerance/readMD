@@ -370,6 +370,7 @@ async function loadFile(path) {
     exitEdit();
     clearAiOutput();
     setProgress(100);
+    if (d.structured) showToast('已智能识别 TXT 结构（标题 / 表格 / 列表 / 目录）');
     afterRender();
   } catch (e) {
     console.error(e);
