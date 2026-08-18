@@ -1663,7 +1663,7 @@ class Api(object):
                 return {'ok': False, 'code': 'network_guard_unavailable',
                         'error': '无法启用网页私网访问保护，已停止动态渲染'}
             if mac_offline:
-                reader_window.load_html(source_html)
+                reader_window.load_html(source_html, base_uri=safe_url)
             else:
                 reader_window.load_url(safe_url)
             deadline = time.time() + timeout_ms / 1000.0
@@ -2440,6 +2440,23 @@ def run_webview_selftest():
                 time.sleep(0.25)
                 if hits['probe']:
                     raise AssertionError('private cross-origin request escaped guard')
+                if IS_MAC:
+                    offline_html = ('''<!doctype html><html><head><title>Offline guard</title></head>
+                      <body><main><h1>Offline public document</h1><p>The macOS renderer
+                      must preserve the verified public base URL while blocking every
+                      network request from untrusted page HTML.</p><a href="next">next</a>
+                      <img src="http://127.0.0.1:%d/offline-probe"></main></body></html>'''
+                                    % probe.server_port)
+                    offline = api.render_web_page(
+                        'https://93.184.216.34/selftest', 'offline-guard-selftest',
+                        15000, False, '', offline_html)
+                    if not offline.get('ok'):
+                        raise AssertionError(offline)
+                    if not str(offline.get('final_url', '')).startswith(
+                            'https://93.184.216.34/'):
+                        raise AssertionError('offline renderer lost verified base URL')
+                    if hits['probe']:
+                        raise AssertionError('offline HTML escaped network guard')
                 outcome.update(ok=True, error='')
             except Exception as exc:
                 outcome.update(ok=False, error=str(exc))
