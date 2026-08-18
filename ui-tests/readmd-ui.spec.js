@@ -144,32 +144,44 @@ test('module entry actively starts an idle module once before polling', async ({
   expect(states).toEqual(expect.arrayContaining(['idle', 'loading', 'ready']));
 });
 
-test('chat import previews clipboard, atomic file, and public link sources', async ({ page }) => {
-  const imports = [];
-  const result = { ok: true, title: '导入测试', source: 'ChatGPT', message_count: 2, warnings: ['已忽略系统消息'], content: '# 导入测试\n\n> 来源：ChatGPT\n\n## 用户\n\n你好\n\n## AI 助手\n\n你好！\n' };
+test('welcome keeps toolbar disabled and six modules; clipboard lives in more menu', async ({ page }) => {
   await page.addInitScript(() => {
     window.pywebview = { api: {
-      authorize_clipboard_read: async () => ({ ok: true, token: 'one-time' }),
-      read_clipboard: async token => token === 'one-time' ? { text: 'clipboard chat' } : { error: 'bad token' },
-      choose_chat_file: async () => ({ ok: true, title: '文件对话', source: '文件', message_count: 2, content: '# 文件对话\n\n## 用户\n\n文件问题\n\n## AI 助手\n\n文件回答\n' }),
       get_settings: async () => ({}), get_recent: async () => [], start_modules: async () => true,
       get_modules_status: async () => ({ modules: {}, errors: {} }),
     } };
   });
-  await page.route('**/api/chat/import', route => { imports.push(route.request().postDataJSON()); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(result) }); });
   await page.goto('/');
+  await expect(page.locator('#btn-print')).toBeDisabled();
+  await expect(page.locator('#btn-a')).toBeDisabled();
+  await expect(page.locator('#btn-A')).toBeDisabled();
+  for (const id of ['w-open', 'w-folder', 'w-ai', 'w-convert', 'w-web', 'w-ocr']) {
+    await expect(page.locator('#' + id)).toBeVisible();
+  }
+  await expect(page.locator('#btn-clipboard-new')).toBeHidden();
   await page.locator('#btn-more').click();
-  await page.locator('#btn-chat-import').click();
-  await page.locator('#chat-import-clipboard').click();
-  await expect(page.locator('#chat-import-preview')).toBeVisible();
-  expect(imports[0]).toEqual({ text: 'clipboard chat' });
-  await page.locator('#chat-import-file').click();
-  await expect(page.locator('#chat-import-preview-title')).toHaveText('文件对话');
-  await page.locator('#chat-import-url').fill('https://share.example/chat');
-  await page.locator('#chat-import-url-go').click();
-  expect(imports[1]).toEqual({ url: 'https://share.example/chat' });
-  await page.locator('#chat-import-load').click();
-  await expect(page.locator('#ai-output')).toContainText('你好！');
+  await expect(page.locator('#btn-clipboard-new')).toBeVisible();
+});
+
+test('opened file re-enables export/font tools and shows home button', async ({ page }) => {
+  const errors = []; page.on('pageerror', e => errors.push(String(e)));
+  await page.addInitScript(() => {
+    window.pywebview = { api: {
+      get_settings: async () => ({}), get_recent: async () => [], start_modules: async () => true,
+      get_modules_status: async () => ({ modules: {}, errors: {} }),
+      choose_file: async () => 'C:/docs/readme.md',
+    } };
+  });
+  await page.route('**/api/file*', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, path: 'C:/docs/readme.md', dir: 'C:/docs', name: 'readme.md', content: '# 标题\n\n正文', original: '# 标题\n\n正文', encoding: 'utf-8', size: 99, fixes: [], stats: {} }) }));
+  await page.goto('/');
+  await page.locator('#w-open').click();
+  await expect(page.locator('#btn-print')).toBeEnabled();
+  await expect(page.locator('#btn-a')).toBeEnabled();
+  await expect(page.locator('#btn-A')).toBeEnabled();
+  await expect(page.locator('#btn-home')).toBeVisible();
+  await page.locator('#btn-home').click();
+  await expect(page.locator('#w-open')).toBeVisible();
+  expect(errors).toEqual([]);
 });
 
 test('toolbar filename supports accessible inline rename', async ({ page }) => {

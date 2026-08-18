@@ -1,7 +1,7 @@
 {
   "name": "readmd-ui-tests",
   "private": true,
-  "version": "2.2.5",
+  "version": "2.2.6",
   "devDependencies": {
     "@playwright/test": "1.54.0"
   },

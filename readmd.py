@@ -104,7 +104,7 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-           or _bundle_version() or '2.2.5')
+           or _bundle_version() or '2.2.6')
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 CONVERT_EXTS = ('.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm',
@@ -119,7 +119,7 @@ _UPGRADE_CACHE = {'done': False, 'result': None}
 
 
 def _parse_version(value):
-    """'v2.2.5' / '2.2.5' -> (2, 2, 5)；无法解析返回 None。"""
+    """'v2.2.6' / '2.2.6' -> (2, 2, 5)；无法解析返回 None。"""
     try:
         parts = []
         for chunk in re.sub(r'^v', '', str(value or '')).replace('-', '.').split('.'):
@@ -743,8 +743,6 @@ class Handler(BaseHTTPRequestHandler):
             self._api_web_extract()
         elif path == '/api/web/cancel':
             self._api_web_cancel()
-        elif path == '/api/chat/import':
-            self._api_chat_import()
         elif path == '/api/save':
             self._do_save()
         elif path == '/api/upload':
@@ -1376,60 +1374,6 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             self._send_json(500, {'ok': False, 'error': str(exc)})
 
-    def _api_chat_import(self):
-        """Import a copied/exported chat without retaining the raw payload."""
-        from readmd_modules import chat_import
-        try:
-            length = int(self.headers.get('Content-Length', 0) or 0)
-            if length <= 0 or length > chat_import.MAX_TEXT_BYTES:
-                raise chat_import.ChatImportError(
-                    'too_large' if length > chat_import.MAX_TEXT_BYTES else 'invalid_request',
-                    '请求内容为空或超过 10 MB 限制')
-            body = json.loads(self.rfile.read(length).decode('utf-8'))
-            if not isinstance(body, dict):
-                raise chat_import.ChatImportError('invalid_request', '请求格式错误')
-            url = str(body.get('url') or '').strip()
-            if url:
-                # Reuse the normal downloader's URL validation/redirect rules;
-                # chat pages are parsed directly rather than article-extracted.
-                if not self._module_ready('web', '网页模块加载中，请稍候再试'):
-                    return
-                fetched = RM.get('web').fetch_html(url)
-                page_html = fetched.get('html', '')
-                if len(page_html.encode('utf-8')) > chat_import.MAX_TEXT_BYTES:
-                    raise chat_import.ChatImportError('too_large', '网页对话 HTML 超过 10 MB 限制')
-                parsed_url = urlparse(fetched.get('url') or url)
-                safe_source_url = parsed_url._replace(query='', fragment='').geturl()
-                conversation = chat_import.import_bytes(
-                    page_html.encode('utf-8'), 'chat.html', safe_source_url)
-                conversation.source = '网页对话'
-            elif body.get('html') is not None:
-                value = body.get('html')
-                if not isinstance(value, str):
-                    raise chat_import.ChatImportError('invalid_request', 'HTML 内容格式错误')
-                conversation = chat_import.import_bytes(value.encode('utf-8'), 'chat.html')
-            elif body.get('text') is not None:
-                value = body.get('text')
-                if not isinstance(value, str):
-                    raise chat_import.ChatImportError('invalid_request', '文本内容格式错误')
-                conversation = chat_import.import_bytes(value.encode('utf-8'), 'chat.txt')
-            else:
-                raise chat_import.ChatImportError('invalid_request', '请提供文本、HTML 或 URL')
-            self._send_json(200, chat_import.result(conversation))
-        except chat_import.ChatImportError as exc:
-            self._send_json(422 if exc.code not in ('invalid_request', 'too_large') else
-                            (413 if exc.code == 'too_large' else 400), exc.as_dict())
-        except Exception as exc:
-            try:
-                from readmd_modules.web import WebError
-            except Exception:
-                WebError = ()
-            if WebError and isinstance(exc, WebError):
-                self._send_json(exc.http_status, exc.as_dict())
-            else:
-                logging.exception('chat import failed')
-                self._send_json(500, {'ok': False, 'code': 'internal_error',
-                                      'error': '对话导入失败，请检查导出文件格式'})
 
     def _do_upload(self, ext):
         """浏览器兜底模式：接收文件字节写入临时目录，返回可转换的路径。"""

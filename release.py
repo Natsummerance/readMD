@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""维护由 GitHub Actions 创建的 ReadMD v2.2.5 Release。
+"""维护由 GitHub Actions 创建的 ReadMD v2.2.6 Release。
 
 用法：
-    python release.py --verify [--tag v2.2.5]  # 校验既有 Release 的五个资产
-    python release.py --update [--tag v2.2.5]  # 仅更新既有 Release 的标题/说明
+    python release.py --verify [--tag v2.2.6]  # 校验既有 Release 的五个资产
+    python release.py --update [--tag v2.2.6]  # 仅更新既有 Release 的标题/说明
 
 本工具不会创建 Release、创建标签或上传/删除资产；发布只由 release.yml 的
-``v2.2.5`` tag job 执行。
+``v2.2.6`` tag job 执行。
 """
 import argparse
 import hashlib
@@ -124,8 +124,8 @@ def update_release(args, tok):
 
 def main():
     parser = argparse.ArgumentParser(description="维护既有 ReadMD Release")
-    parser.add_argument("--tag", default="v2.2.5")
-    parser.add_argument("--name", default="ReadMD v2.2.5")
+    parser.add_argument("--tag", default="v2.2.6")
+    parser.add_argument("--name", default="ReadMD v2.2.6")
     parser.add_argument("--body-file")
     parser.add_argument("--verify", action="store_true", help="校验既有 Release 的五个资产")
     parser.add_argument("--update", action="store_true", help="更新既有 Release 的标题/说明")

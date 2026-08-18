@@ -152,7 +152,7 @@ class InstallerHtmlTests(unittest.TestCase):
 
 
 class InstallerGuiStateTests(unittest.TestCase):
-    """升级（已安装）时目录框应自动预填已检测到的旧目录（v2.2.5 M4）。"""
+    """升级（已安装）时目录框应自动预填已检测到的旧目录（v2.2.6 M4）。"""
 
     def _run_gui(self):
         import sys

@@ -156,12 +156,9 @@ function updateModuleUi() {
   [['btn-convert', 'convert'], ['btn-web', 'web'], ['btn-ocr', 'ocr'], ['btn-ai', 'ai']].forEach(([id, key]) => {
     const el = $(id);
     if (!el) return;
+    el.disabled = false;
     if (disabled(key)) {
-      // Win7 版：按钮保持可点击，点击后提示“暂不支持”
-      el.disabled = false;
       el.title = 'Win7 版暂不支持该功能';
-    } else {
-      el.disabled = !ready(key);
     }
   });
   ['w-convert', 'w-web', 'w-ocr', 'w-ai'].forEach(id => {
@@ -523,9 +520,30 @@ async function renderContentIncremental(content, savedTop) {
   postProcess();
 }
 
+function ensureHeadingIds(body) {
+  const headings = body.querySelectorAll('h1, h2, h3, h4, h5, h6');
+  const seen = {};
+  headings.forEach((h, i) => {
+    if (!h.id) {
+      let slug = h.textContent.trim().toLowerCase()
+        .replace(/[^\w\u4e00-\u9fff\s-]/g, '')
+        .replace(/\s+/g, '-');
+      if (!slug) slug = 'toc-h-' + i;
+      if (seen[slug]) {
+        seen[slug]++;
+        slug = slug + '-' + seen[slug];
+      } else {
+        seen[slug] = 1;
+      }
+      h.id = slug;
+    }
+  });
+}
+
 function postProcess() {
   const body = document.querySelector('#content .markdown-body');
   if (!body) return;
+  ensureHeadingIds(body);
   fixLinks(body);
   fixImages(body);
   buildToc();
@@ -544,7 +562,23 @@ function resolvePath(baseDir, rel) {
 function fixLinks(body) {
   body.querySelectorAll('a').forEach(a => {
     const href = a.getAttribute('href') || '';
-    if (href.startsWith('#')) return;
+    if (href.startsWith('#')) {
+      a.addEventListener('click', e => {
+        e.preventDefault();
+        const targetId = href.slice(1);
+        let el = document.getElementById(targetId);
+        if (!el) {
+          try {
+            const decoded = decodeURIComponent(targetId);
+            el = document.getElementById(decoded) || body.querySelector('[name="' + CSS.escape(decoded) + '"]');
+          } catch (ex) {}
+        }
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+      return;
+    }
     if (/^(https?:|mailto:)/i.test(href)) {
       a.addEventListener('click', e => {
         e.preventDefault();
@@ -1968,51 +2002,6 @@ function closeAiModal(id) {
   modal.classList.add('hidden');
   if (aiModalReturnFocus && aiModalReturnFocus.focus) aiModalReturnFocus.focus();
 }
-function openChatImportModal() {
-  chatImportResult = null; $('chat-import-preview').classList.add('hidden'); $('chat-import-load').disabled = true; $('chat-import-save').disabled = true;
-  $('chat-import-status').textContent = '请选择一个来源。剪贴板只会在点击“从剪贴板读取”后访问。';
-  openAiModal('chat-import-modal', $('btn-chat-import'));
-}
-function importStatus(text) { $('chat-import-status').textContent = text; }
-function importError(error) {
-  const raw = String((error && error.message) || error || '未知错误');
-  const message = /login|sign.?in|登录/i.test(raw) ? '页面需要登录或尚未加载完整对话。请导出文件后再导入。' : /empty|空|no_conversation|没有识别/i.test(raw) ? '没有识别到对话。请确认剪贴板或链接内容完整。' : raw;
-  importStatus('导入失败：' + message); showToast('导入失败：' + message);
-}
-async function postChatImport(payload) {
-  importStatus('正在安全解析…');
-  const r = await apiFetch('/api/chat/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok || !d.ok) throw new Error(d.error || d.code || '导入失败');
-  showChatImportPreview(d); return d;
-}
-function showChatImportPreview(data) {
-  chatImportResult = data;
-  const markdown = data.content || data.markdown || '';
-  $('chat-import-preview-title').textContent = data.title || '导入的对话';
-  $('chat-import-preview-meta').textContent = (data.source || '未知来源') + ' · ' + (data.message_count || (data.conversation && data.conversation.messages || []).length || 0) + ' 条消息';
-  const warningList = $('chat-import-warnings'); warningList.textContent = '';
-  (data.warnings || []).forEach(w => { const li = document.createElement('li'); li.textContent = w; warningList.appendChild(li); });
-  $('chat-import-markdown').textContent = markdown.length > 7000 ? markdown.slice(0, 7000) + '\n…（预览已截断）' : markdown;
-  $('chat-import-preview').classList.remove('hidden'); $('chat-import-load').disabled = !markdown; $('chat-import-save').disabled = !markdown;
-  importStatus((data.warnings || []).length ? '已解析，含 ' + data.warnings.length + ' 条提示。请检查预览。' : '已解析。请检查预览后载入或保存。');
-}
-async function importFromClipboard() {
-  try {
-    if (!hasPy || !py) throw new Error('桌面应用不可用；请改用本地文件或公开链接');
-    importStatus('等待读取剪贴板…');
-    let clip;
-    if (py.authorize_clipboard_read) {
-      const permit = await py.authorize_clipboard_read();
-      if (!permit || !permit.ok || !permit.token) throw new Error((permit && permit.error) || '剪贴板授权失败，请重试');
-      clip = await py.read_clipboard(permit.token);
-    } else {
-      try { clip = await py.read_clipboard({ user_intent_token: true }); } catch (e) { clip = await py.read_clipboard(true); }
-    }
-    if (!clip || clip.error || (!clip.text && !clip.html)) throw new Error((clip && clip.error) || '剪贴板为空或不包含可导入文本');
-    await postChatImport(clip.html ? { html: clip.html } : { text: clip.text });
-  } catch (e) { importError(e); }
-}
 async function createFromClipboard() {
   try {
     if (!hasPy || !py) throw new Error('桌面版才能读取剪贴板；请用浏览器复制文件导入');
@@ -2032,52 +2021,6 @@ async function createFromClipboard() {
     showToast('已从剪贴板新建文档（Ctrl+S 可保存）');
   } catch (e) { showToast(e.message || '读取剪贴板失败'); }
 }
-async function importFromChatFile() {
-  try {
-    if (hasPy && py && py.choose_and_import_chat_file) {
-      const result = await py.choose_and_import_chat_file();
-      if (!result || result.code === 'cancelled') { importStatus('未选择文件。'); return; }
-      if (!result.ok) throw new Error(result.error || '文件导入失败'); showChatImportPreview(result); return;
-    }
-    if (hasPy && py && py.choose_chat_file) {
-      const result = await py.choose_chat_file();
-      if (!result || result.code === 'cancelled') { importStatus('未选择文件。'); return; }
-      if (!result.ok) throw new Error(result.error || '文件导入失败'); showChatImportPreview(result); return;
-    }
-    $('chat-import-browser-file').click();
-  } catch (e) { importError(e); }
-}
-async function importBrowserFile(file) {
-  if (!file) return;
-  try {
-    if (/\.zip$/i.test(file.name)) throw new Error('浏览器模式不支持 ZIP；请在桌面版选择此文件');
-    const text = await file.text(); await postChatImport(/\.html?$/i.test(file.name) ? { html: text } : { text });
-  } catch (e) { importError(e); }
-}
-async function importFromUrl() {
-  const url = $('chat-import-url').value.trim();
-  if (!/^https:\/\//i.test(url)) { importStatus('请输入公开的 HTTPS 分享链接。'); return; }
-  try { await postChatImport({ url }); } catch (e) { importError(e); }
-}
-function messagesFromImportedMarkdown(markdown) {
-  const result = []; const re = /^##\s+(用户|AI 助手)\s*$/gm; let match, last = null;
-  while ((match = re.exec(markdown))) { if (last) { const text = markdown.slice(last.start, match.index).trim(); if (text) result.push({ role: last.role, content: text }); } last = { role: match[1] === '用户' ? 'user' : 'assistant', start: re.lastIndex }; }
-  if (last) { const text = markdown.slice(last.start).trim(); if (text) result.push({ role: last.role, content: text }); }
-  return result;
-}
-function loadImportedChat() {
-  if (!chatImportResult) return;
-  const markdown = chatImportResult.content || chatImportResult.markdown || '';
-  const messages = (chatImportResult.conversation && chatImportResult.conversation.messages) || messagesFromImportedMarkdown(markdown);
-  if (!messages.length) { importStatus('预览中没有可载入的用户/AI消息；可改为保存 Markdown。'); return; }
-  const ephemeral = !!$('ai-incognito').checked;
-  state.ai.messages = messages.filter(m => m && (m.role === 'user' || m.role === 'assistant') && m.content)
-    .map(m => Object.assign({}, m, ephemeral ? { ephemeral: true } : {}));
-  state.ai.raw = (state.ai.messages.filter(m => m.role === 'assistant').slice(-1)[0] || {}).content || '';
-  state.ai.sessionId = null; state.ai.sessUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }; renderAiHistory();
-  closeAiModal('chat-import-modal'); $('ai-panel').classList.remove('hidden'); $('ai-prompt').focus(); showToast('已载入导入的对话；发送下一条即可继续');
-}
-async function saveImportedChat() { if (chatImportResult) await saveMarkdownText(chatImportResult.content || chatImportResult.markdown || '', (chatImportResult.title || 'imported-chat').replace(/[\\/:*?"<>|]/g, '-') + '.md'); }
 
 function aiErrorHint(error) {
   const raw = String((error && error.message) || error || '未知错误');
@@ -3042,18 +2985,22 @@ function renderMath(body) {
 
 function buildToc() {
   const list = $('toc-list');
+  if (!list) return;
   list.innerHTML = '';
-  const headings = document.querySelectorAll('#content h1, #content h2, #content h3');
+  const headings = document.querySelectorAll('#content h1, #content h2, #content h3, #content h4, #content h5, #content h6');
   headings.forEach((h, i) => {
-    if (!h.id) h.id = 'toc-' + i;
+    if (!h.id) h.id = 'toc-h-' + i;
     const a = document.createElement('a');
     a.href = '#' + h.id;
     a.textContent = h.textContent.trim() || ('章节 ' + (i + 1));
-    a.className = 'lv' + (+h.tagName[1]);
+    const lv = Math.min(+h.tagName[1], 3);
+    a.className = 'lv' + lv;
     a.addEventListener('click', e => {
       e.preventDefault();
       const el = document.getElementById(h.id);
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     });
     list.appendChild(a);
   });
@@ -3150,25 +3097,140 @@ async function listFolder(dir) {
 function renderFolderList() {
   const box = $('file-list');
   box.innerHTML = '';
-  const label = document.createElement('div');
-  label.className = 'dir-label';
-  label.textContent = state.folder || '';
-  box.appendChild(label);
-  if (!state.folderFiles.length) {
+  if (!state.folder) return;
+
+  const folderName = state.folder.replace(/\\/g, '/').split('/').filter(Boolean).pop() || state.folder;
+  const header = document.createElement('div');
+  header.className = 'dir-header';
+  header.textContent = '📁 ' + folderName;
+  header.title = state.folder;
+  box.appendChild(header);
+
+  if (!state.folderFiles || !state.folderFiles.length) {
     const empty = document.createElement('div');
     empty.className = 'dir-label';
     empty.textContent = '（未找到 Markdown 文件）';
     box.appendChild(empty);
     return;
   }
-  state.folderFiles.forEach(p => {
-    const btn = document.createElement('button');
-    btn.className = 'file-item';
-    btn.textContent = p;
-    btn.title = p;
-    if (p === state.file) btn.style.color = 'var(--accent)';
-    btn.addEventListener('click', () => loadFile(p));
-    box.appendChild(btn);
+
+  const normRoot = state.folder.replace(/\\/g, '/').replace(/\/$/, '');
+  const rootNode = { name: folderName, type: 'dir', path: state.folder, children: {} };
+
+  state.folderFiles.forEach(fullPath => {
+    const normPath = fullPath.replace(/\\/g, '/');
+    let rel = normPath;
+    if (normPath.toLowerCase().startsWith(normRoot.toLowerCase() + '/')) {
+      rel = normPath.slice(normRoot.length + 1);
+    }
+    const parts = rel.split('/').filter(Boolean);
+    let curr = rootNode;
+    parts.forEach((part, idx) => {
+      const isFile = (idx === parts.length - 1);
+      if (!curr.children[part]) {
+        curr.children[part] = {
+          name: part,
+          type: isFile ? 'file' : 'dir',
+          path: isFile ? fullPath : (normRoot + '/' + parts.slice(0, idx + 1).join('/')),
+          children: isFile ? null : {}
+        };
+      }
+      if (!isFile) {
+        curr = curr.children[part];
+      }
+    });
+  });
+
+  const treeContainer = document.createElement('div');
+  treeContainer.className = 'tree-children';
+  renderTreeNodes(treeContainer, rootNode.children, 0);
+  box.appendChild(treeContainer);
+}
+
+function renderTreeNodes(container, childrenObj, depth) {
+  const keys = Object.keys(childrenObj || {}).sort((a, b) => {
+    const itemA = childrenObj[a];
+    const itemB = childrenObj[b];
+    if (itemA.type !== itemB.type) {
+      return itemA.type === 'dir' ? -1 : 1;
+    }
+    return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+  });
+
+  keys.forEach(key => {
+    const item = childrenObj[key];
+    const nodeEl = document.createElement('div');
+    nodeEl.className = 'tree-node';
+
+    const row = document.createElement('div');
+    row.className = 'tree-row';
+    if (item.type === 'file' && item.path === state.file) {
+      row.classList.add('active');
+    }
+
+    const toggle = document.createElement('span');
+    toggle.className = 'tree-toggle';
+
+    if (item.type === 'dir') {
+      const childrenCount = Object.keys(item.children || {}).length;
+      if (childrenCount > 0) {
+        toggle.textContent = '▶';
+        toggle.classList.add('open');
+      } else {
+        toggle.classList.add('empty');
+      }
+
+      const icon = document.createElement('span');
+      icon.textContent = '📁 ';
+      icon.style.fontSize = '12px';
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'tree-name';
+      nameEl.textContent = item.name;
+
+      row.appendChild(toggle);
+      row.appendChild(icon);
+      row.appendChild(nameEl);
+      nodeEl.appendChild(row);
+
+      const childrenContainer = document.createElement('div');
+      childrenContainer.className = 'tree-children';
+      renderTreeNodes(childrenContainer, item.children, depth + 1);
+      nodeEl.appendChild(childrenContainer);
+
+      row.addEventListener('click', e => {
+        e.stopPropagation();
+        const collapsed = childrenContainer.classList.toggle('collapsed');
+        if (collapsed) {
+          toggle.classList.remove('open');
+        } else {
+          toggle.classList.add('open');
+        }
+      });
+    } else {
+      toggle.classList.add('empty');
+
+      const icon = document.createElement('span');
+      icon.textContent = '📄 ';
+      icon.style.fontSize = '12px';
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'tree-name';
+      nameEl.textContent = item.name;
+
+      row.appendChild(toggle);
+      row.appendChild(icon);
+      row.appendChild(nameEl);
+      row.title = item.path;
+      nodeEl.appendChild(row);
+
+      row.addEventListener('click', e => {
+        e.stopPropagation();
+        loadFile(item.path);
+      });
+    }
+
+    container.appendChild(nodeEl);
   });
 }
 
@@ -3271,6 +3333,17 @@ function updateStatus() {
   $('btn-edit').disabled = !canEdit && !state.editing;
   $('btn-reload').disabled = !canReload;
   $('btn-saveas').disabled = !canSaveas;
+
+  const isWelcome = state.mode === 'welcome';
+  if ($('btn-print')) $('btn-print').disabled = isWelcome;
+  if ($('btn-a')) $('btn-a').disabled = isWelcome;
+  if ($('btn-A')) $('btn-A').disabled = isWelcome;
+
+  const btnHome = $('btn-home');
+  if (btnHome) {
+    if (isWelcome) btnHome.classList.add('hidden');
+    else btnHome.classList.remove('hidden');
+  }
 }
 
 /* ---------------- 自动刷新 ---------------- */
@@ -3381,13 +3454,49 @@ function bindAiResize() {
   handle.addEventListener('pointercancel', finish);
 }
 
+function goHome() {
+  state.mode = 'welcome';
+  state.file = null;
+  state.sourceName = '';
+  state.original = '';
+  state.fixed = '';
+  state.stats = null;
+  state.size = 0;
+  state.encoding = '';
+  state.editing = false;
+  if (state.welcomeHtml) {
+    $('content').innerHTML = state.welcomeHtml;
+    refreshRecent();
+    bindWelcomeEvents();
+  }
+  const editBar = $('edit-bar'); if (editBar) editBar.classList.add('hidden');
+  const editWrap = $('edit-wrap'); if (editWrap) editWrap.classList.add('hidden');
+  const pvWrap = $('preview-wrap'); if (pvWrap) pvWrap.classList.add('hidden');
+  const pvSplitter = $('pv-splitter'); if (pvSplitter) pvSplitter.classList.add('hidden');
+  const content = $('content'); if (content) content.classList.remove('hidden');
+  const side = $('side'); if (side) side.classList.add('hidden');
+  closeSearch();
+  closeMdPopups();
+  updateStatus();
+}
+
+function bindWelcomeEvents() {
+  if ($('w-open')) $('w-open').onclick = () => { loadFileDialog(); };
+  if ($('w-folder')) $('w-folder').onclick = openFolder;
+  if ($('w-ai')) $('w-ai').onclick = toggleAiPanel;
+  if ($('w-convert')) $('w-convert').onclick = openConvertModal;
+  if ($('w-web')) $('w-web').onclick = openWebDialog;
+  if ($('w-ocr')) $('w-ocr').onclick = () => chooseFile('ocr');
+  if ($('recent-clear')) $('recent-clear').onclick = clearRecent;
+}
+
 /* ---------------- 事件绑定 ---------------- */
 
 function bindEvents() {
+  bindWelcomeEvents();
+  if ($('btn-home')) $('btn-home').addEventListener('click', goHome);
   $('btn-open').addEventListener('click', () => { loadFileDialog(); });
-  $('w-open').addEventListener('click', () => { loadFileDialog(); });
   $('btn-folder').addEventListener('click', openFolder);
-  $('w-folder').addEventListener('click', openFolder);
 
   const moreBtn = $('btn-more');
   const moreMenu = $('more-menu');
@@ -3404,17 +3513,6 @@ function bindEvents() {
   }
 
   $('btn-convert').addEventListener('click', openConvertModal);
-  $('btn-chat-import').addEventListener('click', openChatImportModal);
-  $('chat-import-close').addEventListener('click', () => closeAiModal('chat-import-modal'));
-  $('chat-import-modal').addEventListener('click', e => { if (e.target === $('chat-import-modal')) closeAiModal('chat-import-modal'); });
-  $('chat-import-clipboard').addEventListener('click', importFromClipboard);
-  $('chat-import-file').addEventListener('click', importFromChatFile);
-  $('chat-import-url-go').addEventListener('click', importFromUrl);
-  $('chat-import-url').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); importFromUrl(); } });
-  $('chat-import-browser-file').addEventListener('change', e => { importBrowserFile((e.target.files || [])[0]); e.target.value = ''; });
-  $('chat-import-load').addEventListener('click', loadImportedChat);
-  $('chat-import-save').addEventListener('click', saveImportedChat);
-  $('w-convert').addEventListener('click', openConvertModal);
   $('convert-files').addEventListener('click', pickConvertFiles);
   $('convert-folder').addEventListener('click', pickConvertFolder);
   $('convert-close').addEventListener('click', closeConvertModal);
@@ -3423,10 +3521,8 @@ function bindEvents() {
   });
   $('convert-modal').addEventListener('click', e => { if (e.target === $('convert-modal')) closeConvertModal(); });
   $('btn-ocr').addEventListener('click', () => chooseFile('ocr'));
-  $('w-ocr').addEventListener('click', () => chooseFile('ocr'));
   $('btn-web').addEventListener('click', openWebDialog);
-  $('w-web').addEventListener('click', openWebDialog);
-  $('btn-clipboard-new').addEventListener('click', createFromClipboard);
+  if ($('btn-clipboard-new')) $('btn-clipboard-new').addEventListener('click', createFromClipboard);
   $('toast').addEventListener('click', () => {
     if (!upgradeUrl) return;
     const url = upgradeUrl; upgradeUrl = null;
@@ -3950,7 +4046,7 @@ async function expSavePreset() {
   document.addEventListener('keydown', e => {
     const mod = e.ctrlKey || e.metaKey;
     if (e.key === 'Escape') {
-      const modal = ['chat-import-modal', 'ai-history-modal', 'ai-settings-modal'].find(id => !$(id).classList.contains('hidden'));
+      const modal = ['ai-history-modal', 'ai-settings-modal'].find(id => !$(id).classList.contains('hidden'));
       if (modal) { e.preventDefault(); closeAiModal(modal); return; }
     }
     if (e.key === 'F2') { e.preventDefault(); openFileRename(); }
@@ -4044,9 +4140,11 @@ async function openInitialFile(path) {
 async function init() {
   bindPy();
   await loadSettings();
+  if ($('content')) state.welcomeHtml = $('content').innerHTML;
   bindEvents();
   refreshRecent();
   updateModuleUi();
+  updateStatus();
   const params = new URLSearchParams(location.search);
   const file = params.get('file');
   if (file) {

@@ -347,20 +347,7 @@ class TestWebApi(unittest.TestCase):
         self.assertEqual(result['engine'], 'defuddle')
         self.assertIn('Bridge', result['content'])
 
-    def test_chat_import_endpoint_accepts_html_and_rejects_login_page(self):
-        status, result = self.post('/api/chat/import', {
-            'html': '<title>Shared chat</title><div data-message-author-role="user">$x^2$</div>'
-                    '<div data-message-author-role="assistant"><pre>print(1)</pre></div>',
-        })
-        self.assertEqual(status, 200)
-        self.assertTrue(result['ok'], result)
-        self.assertIn('## 用户', result['content'])
-        self.assertIn('```', result['content'])
-        status, result = self.post('/api/chat/import', {
-            'html': '<html><body><form>Sign in</form></body></html>',
-        })
-        self.assertEqual(status, 422)
-        self.assertEqual(result['code'], 'no_conversation')
+
 
 
 def main():

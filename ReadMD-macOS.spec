@@ -71,12 +71,12 @@ app = BUNDLE(
     name='ReadMD.app',
     icon='assets/ReadMD.icns',
     bundle_identifier='io.github.natsummerance.readmd',
-    version='2.2.5',
+    version='2.2.6',
     info_plist={
         'CFBundleName': 'ReadMD',
         'CFBundleDisplayName': 'ReadMD',
-        'CFBundleVersion': '2.2.5',
-        'CFBundleShortVersionString': '2.2.5',
+        'CFBundleVersion': '2.2.6',
+        'CFBundleShortVersionString': '2.2.6',
         'NSPrincipalClass': 'NSApplication',
         'NSHighResolutionCapable': True,
         'CFBundleDocumentTypes': [

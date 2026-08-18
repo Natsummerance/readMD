@@ -11,6 +11,9 @@
 <body>
 <header id="toolbar">
   <div class="tb-group tb-left">
+    <button id="btn-toc" class="tb-btn icon" title="目录 (Ctrl+Shift+F)" aria-label="目录">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+    </button>
     <button id="btn-open" class="tb-btn" title="打开 Markdown 文件 (Ctrl+O)" aria-label="打开文件">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
       <span class="tb-label">打开</span>
@@ -30,9 +33,6 @@
     <button id="btn-search" class="tb-btn icon" title="搜索 (Ctrl+F)" aria-label="搜索">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     </button>
-    <button id="btn-toc" class="tb-btn icon" title="目录 (Ctrl+Shift+F)" aria-label="目录">
-      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
-    </button>
     <button id="btn-theme" class="tb-btn icon" title="切换主题 (Ctrl+D)" aria-label="切换主题">&#9789;</button>
     <button id="btn-a" class="tb-btn" title="减小字号 (Ctrl+-)" aria-label="减小字号">A&minus;</button>
     <button id="btn-A" class="tb-btn" title="增大字号 (Ctrl+=)" aria-label="增大字号">A+</button>
@@ -43,7 +43,7 @@
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>
       <span class="tb-label">编辑</span>
     </button>
-    <button id="btn-ai" class="tb-btn accent" title="AI 助手：快速阅读 / 修改 / 扩充 / 续写 / 润色 (Ctrl+Shift+A)" aria-label="AI 助手" disabled>
+    <button id="btn-ai" class="tb-btn accent" title="AI 助手：快速阅读 / 修改 / 扩充 / 续写 / 润色 (Ctrl+Shift+A)" aria-label="AI 助手">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
       <span class="tb-label">AI</span>
     </button>
@@ -51,14 +51,14 @@
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
     </button>
     <div id="more-menu" class="more-menu">
-      <button id="btn-convert" class="more-item" disabled><span>转换</span><em>万物转 MD</em></button>
-      <button id="btn-web" class="more-item" disabled><span>网页</span><em>网页转 MD</em></button>
-      <button id="btn-ocr" class="more-item" disabled><span>OCR</span><em>扫描转 MD</em></button>
+      <button id="btn-convert" class="more-item"><span>转换</span><em>万物转 MD</em></button>
+      <button id="btn-web" class="more-item"><span>网页</span><em>网页转 MD</em></button>
+      <button id="btn-ocr" class="more-item"><span>OCR</span><em>扫描转 MD</em></button>
+      <button id="btn-clipboard-new" class="more-item"><span>剪贴板</span><em>从剪贴板新建</em></button>
       <button id="btn-saveas" class="more-item" disabled><span>另存为</span><em>.md 文件</em></button>
       <button id="btn-assoc" class="more-item"><span>设为默认</span><em>.md 打开方式</em></button>
       <button id="btn-share" class="more-item"><span>共享</span><em>手机扫码阅读</em></button>
       <button id="btn-fix" class="more-item"><span>修复详情</span><em>本次自动修正</em></button>
-      <button id="btn-chat-import" class="more-item"><span>导入对话</span><em>剪贴板 / 文件 / 链接</em></button>
     </div>
   </div>
 </header>
@@ -125,7 +125,7 @@
               <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/></svg>
               <span>打开文件夹</span><em>目录浏览</em>
             </button>
-            <button id="w-ai" class="big-btn" title="AI 助手：快速阅读 / 润色 / 修改 / 续写" disabled>
+            <button id="w-ai" class="big-btn" title="AI 助手：快速阅读 / 润色 / 修改 / 续写">
               <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
               <span>AI 助手</span><em>Ctrl+Shift+A</em>
             </button>
@@ -140,10 +140,6 @@
             <button id="w-ocr" class="big-btn" title="扫描件 / 图片离线 OCR 为 Markdown">
               <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h3"/><path d="M17 4h3v3"/><path d="M20 17v3h-3"/><path d="M7 20H4v-3"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
               <span>扫描转 MD</span><em>离线 OCR</em>
-            </button>
-            <button id="btn-clipboard-new" class="big-btn" title="从剪贴板粘贴内容新建 Markdown 文档（桌面版）">
-              <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 2h-4.18C14.4.84 13.3 0 12 0S9.6.84 9.18 2H5c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm7 18H5V4h2v3h10V4h2v16z"/></svg>
-              <span>从剪贴板新建</span><em>Ctrl+V</em>
             </button>
           </div>
           <div id="recent-box" class="hidden">
@@ -291,18 +287,6 @@
   </div>
 </div>
 
-<!-- 对话导入：内容只在明确操作后读取，先预览再保存 -->
-<div id="chat-import-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="chat-import-title">
-  <div id="chat-import-box">
-    <div class="export-head"><h3 id="chat-import-title">导入对话</h3><button id="chat-import-close" class="tb-btn icon" aria-label="关闭导入对话">×</button></div>
-    <p class="fix-note">选择来源后先安全解析预览；不会导入密钥、系统提示或工具消息。</p>
-    <div class="chat-import-sources"><button id="chat-import-clipboard" class="tb-btn accent">从剪贴板读取</button><button id="chat-import-file" class="tb-btn">选择本地文件</button><label class="chat-import-url"><input id="chat-import-url" type="url" placeholder="公开分享链接（https://…）"><button id="chat-import-url-go" class="tb-btn">解析链接</button></label></div>
-    <input id="chat-import-browser-file" class="hidden" type="file" accept=".json,.html,.htm,.zip,.md,.txt">
-    <div id="chat-import-status" class="chat-import-status" role="status" aria-live="polite">请选择一个来源。</div>
-    <section id="chat-import-preview" class="chat-import-preview hidden" aria-label="导入预览"><h4 id="chat-import-preview-title"></h4><p id="chat-import-preview-meta"></p><ul id="chat-import-warnings"></ul><pre id="chat-import-markdown"></pre></section>
-    <div class="chat-import-actions"><button id="chat-import-load" class="tb-btn" disabled>载入 AI 会话</button><button id="chat-import-save" class="tb-btn accent" disabled>保存 Markdown</button></div>
-  </div>
-</div>
 
 <!-- 最近文件：顶栏与欢迎页共用同一份本地记录 -->
 <div id="history-modal" class="hidden" role="dialog" aria-modal="true" aria-label="最近文件">
@@ -533,6 +517,7 @@
 <div id="progress"></div>
 <div id="busy" class="hidden"><span>处理中…</span></div>
 <button id="top-btn" class="hidden" title="回到顶部">&#8593;</button>
+<button id="btn-home" class="hidden" title="返回主页">返回主页</button>
 <input id="file-input" type="file" class="hidden">
 <input id="img-file-input" type="file" accept="image/*" class="hidden">
 

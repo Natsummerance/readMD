@@ -39,7 +39,7 @@ BLOCKED_TAGS = ('script', 'style', 'form', 'iframe',
 USER_AGENT = (
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
     'AppleWebKit/537.36 (KHTML, like Gecko) '
-    'Chrome/131.0 Safari/537.36 ReadMD/2.2.5'
+    'Chrome/131.0 Safari/537.36 ReadMD/2.2.6'
 )
 
 RETRY_STATUSES = {408, 425, 429, 502, 503, 504}

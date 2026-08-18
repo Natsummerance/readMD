@@ -9,9 +9,9 @@ import readmd
 class TestUpgradeCheck(unittest.TestCase):
 
     def test_parse_version(self):
-        self.assertEqual(readmd._parse_version('v2.2.5'), (2, 2, 5))
+        self.assertEqual(readmd._parse_version('v2.2.6'), (2, 2, 6))
         self.assertEqual(readmd._parse_version('2.10.0'), (2, 10, 0))
-        self.assertIsNone(readmd._parse_version('2.2.5-rc1'))
+        self.assertIsNone(readmd._parse_version('2.2.6-rc1'))
         self.assertIsNone(readmd._parse_version(''))
         self.assertIsNone(readmd._parse_version('latest'))
 
@@ -45,7 +45,7 @@ class TestUpgradeCheck(unittest.TestCase):
                     return_value=mock.MagicMock(
                         __enter__=lambda s: s,
                         __exit__=lambda *a: None,
-                        read=lambda n: b'{"tag_name": "v2.2.5", "html_url": "https://github.com/Natsummerance/readMD/releases/tag/v2.2.5"}'),
+                        read=lambda n: b'{"tag_name": "v2.2.6", "html_url": "https://github.com/Natsummerance/readMD/releases/tag/v2.2.6"}'),
                     create=True):
                 self.assertIsNone(readmd.check_latest_release())
         readmd._UPGRADE_CACHE['done'] = False

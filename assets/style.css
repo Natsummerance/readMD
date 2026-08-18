@@ -294,7 +294,50 @@ button { font-family: inherit; }
   white-space: nowrap;
 }
 #file-list .file-item:hover { background: var(--bg3); color: var(--accent); }
-#file-list .dir-label { font-size: 12px; color: var(--fg3); padding: 8px 10px 4px; font-weight: 600; }
+#file-list .dir-label { font-size: 12px; color: var(--fg3); padding: 8px 10px 4px; font-weight: 600; word-break: break-all; }
+
+#file-list .dir-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg2);
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tree-node { user-select: none; }
+.tree-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--fg2);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.tree-row:hover { background: var(--bg3); color: var(--fg); }
+.tree-row.active { color: var(--accent); font-weight: 600; background: var(--accent-soft); }
+.tree-toggle {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: var(--fg3);
+  flex: 0 0 auto;
+  transition: transform .12s ease;
+}
+.tree-toggle.open { transform: rotate(90deg); }
+.tree-toggle.empty { visibility: hidden; }
+.tree-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.tree-children { padding-left: 12px; }
+.tree-children.collapsed { display: none; }
 
 /* ---------- 正文 ---------- */
 #content { flex: 1 1 auto; overflow-y: auto; min-width: 0; }
@@ -908,6 +951,26 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
 }
 #top-btn.hidden { display: none; }
 #top-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+#btn-home {
+  position: fixed;
+  right: 70px;
+  bottom: 44px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 19px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--fg2);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-2);
+  z-index: 90;
+  transition: color .12s, border-color .12s, background-color .12s;
+}
+#btn-home.hidden { display: none; }
+#btn-home:hover { color: var(--accent); border-color: var(--accent); background: var(--bg3); }
 
 /* ---------- 大文档增量渲染 ---------- */
 #render-progress {

@@ -57,7 +57,7 @@ def _bundle_version():
 
 
 APP_VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-               or _bundle_version() or '2.2.5')
+               or _bundle_version() or '2.2.6')
 PUBLISHER = 'Natsummerance'
 PROG_ID = 'ReadMD.markdown'
 EXTENSIONS = ['.md', '.markdown', '.mdown', '.mkd']
