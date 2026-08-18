@@ -14,7 +14,8 @@ setlocal
 cd /d "%~dp0..\.."
 title ReadMD Deploy
 
-set "TAG=v2.2.7"
+set "TAG=v2.2.8"
+
 
 set "SKIP_TESTS=0"
 

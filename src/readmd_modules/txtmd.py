@@ -73,9 +73,11 @@ def _heading_level(line):
         return None
     if len(stripped) > _MAX_HEADING_LEN:
         return None
-    if _HEAD_CN.match(stripped):
-        return (1 if stripped[1:2] == u'\u7ae0' else 2), stripped
+    m_cn = _HEAD_CN.match(stripped)
+    if m_cn:
+        return (1 if any(ch in m_cn.group(0) for ch in (u'\u7ae0', u'\u7bc7')) else 2), stripped
     if _HEAD_CN2.match(stripped):
+
         return 2, stripped
     m = _HEAD_SUB.match(stripped)
     if m and len(stripped) > m.end():

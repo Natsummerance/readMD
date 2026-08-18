@@ -69,7 +69,8 @@ def _bundle_version():
 
 
 APP_VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-               or _bundle_version() or '2.2.7')
+               or _bundle_version() or '2.2.8')
+
 
 
 PUBLISHER = 'Natsummerance'

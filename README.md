@@ -43,16 +43,17 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| **ReadMDSetup-v2.2.7.exe** | Windows 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级（未签名） |
-| **ReadMD-portable-v2.2.7.exe** | Windows 便携版，免安装，双击直接运行（未签名） |
-| **ReadMD-macos-x64-v2.2.7.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
-| **ReadMD-macos-arm64-v2.2.7.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
+| **ReadMDSetup-v2.2.8.exe** | Windows 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级（未签名） |
+| **ReadMD-portable-v2.2.8.exe** | Windows 便携版，免安装，双击直接运行（未签名） |
+| **ReadMD-macos-x64-v2.2.8.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
+| **ReadMD-macos-arm64-v2.2.8.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
 | **SHA256SUMS.txt** | 四个发布文件的 SHA-256 完整性校验清单 |
-| **ReadMDSetup-2.2.7-win7-x64.exe** | **Win7 兼容版**（v2.2.7 Win7，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
+| **ReadMDSetup-2.2.8-win7-x64.exe** | **Win7 兼容版**（v2.2.8 Win7，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
 >
-> v2.2.7 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。所有发布包均未签名：Windows 如出现 SmartScreen，请先核验 SHA-256 后通过“更多信息 → 仍要运行”；macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动请在 Finder 中右键 `ReadMD.app` →“打开”。
+> v2.2.8 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。所有发布包均未签名：Windows 如出现 SmartScreen，请先核验 SHA-256 后通过“更多信息 → 仍要运行”；macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动请在 Finder 中右键 `ReadMD.app` →“打开”。
+
 
 
 > ReadMD 免费使用，不要求订阅或内置账号。下载文件和 `SHA256SUMS.txt` 后，Windows 在 PowerShell 运行 `Get-FileHash .\文件名 -Algorithm SHA256`，macOS 在终端运行 `shasum -a 256 文件名`，把输出与同名清单行完全比对。校验通过代表下载完整，不代表代码签名。
@@ -247,7 +248,17 @@ python release.py --update             rem 更新已存在 Release 的标题与�
 
 ## 📝 更新日志
 
+- **v2.2.8**：**软件内自动更新 + LaTeX 全量自修复 + OCR 智能排版规范化**
+  - 🚀 **软件内自动检查与本地更新系统**：启动静默检查 GitHub Releases，状态栏小圆点与更多菜单提示，弹窗完整渲染 Markdown 更新日志；智能匹配 Windows 安装版/便携版/macOS 包并校验 SHA256；支持一键热更重启与国内加速镜像
+  - 🧮 **LaTeX 全量兼容与公式自修复算法**：支持 `\begin{cases}`, `\begin{align}`, `\begin{matrix}`, `\begin{equation}` 等多行 TeX 原生环境；智能配平花括号 `{}`、修复转义反斜杠、HTML 实体还原、Unicode 符号自动转 LaTeX，渲染失败优雅降级源码卡片
+  - 🖼️ **OCR 智能排版与格式规范化**：清除 CJK 汉字间虚假空格、修复跨行断字连字符、智能聚合句内硬断行、自动提升章节标题与有序/无序列表
+  - 🔍 **空文档状态搜索保护**：主页与无文档状态下，顶栏搜索按钮设为 disabled 并拦截 `Ctrl+F` 快捷键，关闭所有标签自动清理搜索栏
+  - 🤖 **欢迎页 AI 助手按钮修复**：解决首屏欢迎页点击 AI 助手按钮因双重绑定被立即关闭的问题，单次点击稳定唤出
+  - 🪟 **安装程序窗口化界面去重**：清除 HTML 内部冗余关闭与最小化按钮，统一使用操作系统原生窗口外框控制
+  - 🪟 **Win7 兼容版同步升级**：打包构建链同步升级至 v2.2.8
+
 - **v2.2.7**：**多标签页窗口模式 + 全格式拖拽 + 导出高保真预览**
+
   - 🗂️ **多标签页系统**：支持打开多个页面，标签拖拽排序、双击重命名（联动磁盘文件/虚拟文档）、溢出自动折叠（Hover 查看/Click 锁定）、右键菜单，全部关闭后自动返回主页
   - 📥 **全格式拖拽支持与悬浮动效**：全局拦截拖拽并智能分流（Markdown 标签页打开 / Office & PDF 批量转换 / URL 网页抓取 / 纯文本建档），配备毛玻璃光晕动效
   - 📋 **剪贴板极速建档**：任意界面 `Ctrl+V` 生成虚拟 MD 文档，`Ctrl+S` 可指定位置保存

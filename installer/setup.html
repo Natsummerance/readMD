@@ -209,12 +209,9 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
 <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <header class="titlebar">
-  <div class="ttl" id="win-title">ReadMD 安装程序</div>
-  <div class="tb-right">
-    <button class="win-btn" id="btn-min" aria-label="最小化" title="最小化">&#8211;</button>
-    <button class="win-btn danger" id="btn-close" aria-label="关闭" title="关闭">&#10005;</button>
-  </div>
+  <div class="ttl" id="win-title">ReadMD 安装向导</div>
 </header>
+
 
 <main id="stage">
   <!-- 欢迎 -->
@@ -669,11 +666,12 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
       requestPreflight();
     });
   });
-  $('btn-min').addEventListener('click', function(){ call('minimize'); });
-  $('btn-close').addEventListener('click', function(){
+  if ($('btn-min')) $('btn-min').addEventListener('click', function(){ call('minimize'); });
+  if ($('btn-close')) $('btn-close').addEventListener('click', function(){
     if (installing){ toast('请等待安装完成'); return; }
     call('close');
   });
+
   $('confirm-cancel').addEventListener('click', hideConfirm);
   $('opt-dir').addEventListener('input', requestPreflight);
   document.addEventListener('keydown', function(e){

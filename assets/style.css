@@ -1940,3 +1940,177 @@ body[data-theme="dark"] .conn-status { color: var(--fg3); }
   gap: 8px;
 }
 
+/* ---------- 自动更新系统样式 ---------- */
+#update-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#update-modal.hidden { display: none !important; }
+.update-box {
+  width: min(580px, 94vw);
+  max-height: 85vh;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: var(--shadow-2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modal-pop .2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.update-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.update-title-wrap h3 {
+  margin: 0;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.update-ver-tag {
+  background: linear-gradient(135deg, var(--accent), #7b3ff2);
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: .5px;
+}
+.update-pub-time {
+  font-size: 11px;
+  color: var(--fg3);
+}
+.update-body {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.update-notes-head {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg2);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.update-notes-content {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: 12px 14px;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.update-asset-card {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.update-asset-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.update-asset-name {
+  font-weight: 600;
+  color: var(--fg);
+  font-family: var(--mono);
+}
+.update-asset-size {
+  color: var(--fg3);
+}
+.update-progress-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.update-progress-wrap.hidden { display: none !important; }
+.update-progress-bar {
+  height: 6px;
+  background: var(--bg);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+.update-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), #7b3ff2);
+  border-radius: 999px;
+  transition: width .2s ease;
+}
+.update-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--fg3);
+}
+.update-options {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--fg2);
+}
+.update-foot {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.status-update-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  background: linear-gradient(135deg, rgba(59,110,245,.15), rgba(123,63,242,.15));
+  border: 1px solid rgba(59,110,245,.35);
+  border-radius: 999px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  animation: update-glow 2.4s ease-in-out infinite;
+  transition: transform .15s ease, background .15s ease;
+}
+.status-update-badge:hover {
+  transform: translateY(-1px);
+  background: linear-gradient(135deg, rgba(59,110,245,.25), rgba(123,63,242,.25));
+}
+.status-update-badge.hidden { display: none !important; }
+@keyframes update-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(59,110,245,0); }
+  50% { box-shadow: 0 0 8px 1px rgba(59,110,245,.35); }
+}
+.update-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f43f5e;
+  display: inline-block;
+  margin-left: auto;
+  box-shadow: 0 0 4px #f43f5e;
+}
+.update-dot.hidden { display: none !important; }
+
+

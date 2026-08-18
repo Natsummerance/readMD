@@ -3314,16 +3314,78 @@ async function saveAs() {
 }
 
 
-/* ---------------- 数学公式 ---------------- */
+/* ---------------- 数学公式与 LaTeX 兼容自修复 ---------------- */
+
+function repairLatex(latex) {
+  if (!latex) return '';
+  let t = latex.trim();
+
+  // 1. HTML 实体还原
+  t = t.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+
+  // 2. 常见 Unicode 数学符号自动转标准 LaTeX 指令
+  const uMap = {
+    '×': '\\times ', '÷': '\\div ', '±': '\\pm ', '∓': '\\mp ',
+    '≤': '\\le ', '≥': '\\ge ', '≠': '\\ne ', '≈': '\\approx ',
+    '≡': '\\equiv ', '∞': '\\infty ', '∑': '\\sum ', '∏': '\\prod ',
+    '∫': '\\int ', '√': '\\sqrt', '∈': '\\in ', '∉': '\\notin ',
+    '⊂': '\\subset ', '⊆': '\\subseteq ', '∪': '\\cup ', '∩': '\\cap ',
+    '∀': '\\forall ', '∃': '\\exists ', '∇': '\\nabla ', '∂': '\\partial ',
+    'α': '\\alpha ', 'β': '\\beta ', 'γ': '\\gamma ', 'δ': '\\delta ',
+    'ε': '\\varepsilon ', 'θ': '\\theta ', 'λ': '\\lambda ', 'μ': '\\mu ',
+    'π': '\\pi ', 'σ': '\\sigma ', 'τ': '\\tau ', 'φ': '\\varphi ',
+    'ω': '\\omega ', 'Δ': '\\Delta ', 'Ω': '\\Omega '
+  };
+  for (const [u, r] of Object.entries(uMap)) {
+    if (t.includes(u)) t = t.replaceAll(u, r);
+  }
+
+  // 3. 修复在 Markdown 解析中被破坏的 \\ 换行转义（例如在 cases / align / matrix 中）
+  t = t.replace(/(\\\s*\n|\s*\\\\(?!\n))\s*/g, ' \\\\ \n');
+
+  // 4. 自动配平未闭合的花括号 {}
+  let openBraces = 0;
+  let i = 0;
+  while (i < t.length) {
+    if (t[i] === '\\') { i += 2; continue; }
+    if (t[i] === '{') openBraces++;
+    else if (t[i] === '}') { if (openBraces > 0) openBraces--; }
+    i++;
+  }
+  if (openBraces > 0) {
+    t += '}'.repeat(openBraces);
+  }
+
+  return t;
+}
 
 function protectMath(src) {
   const saved = [];
-  const save = m => { saved.push(m); return '\x01M' + (saved.length - 1) + '\x01'; };
+  const save = m => {
+    saved.push(m);
+    return '\x01M' + (saved.length - 1) + '\x01';
+  };
   const looksMath = body => /[\\^_{}]/.test(body) || (/[A-Za-z\u0391-\u03C9]/.test(body) && !/\s/.test(body));
-  src = src.replace(/\$\$([\s\S]+?)\$\$/g, (m, b) => save('$$' + b + '$$'));
-  src = src.replace(/\\\(([\s\S]+?)\\\)/g, (m, b) => save('\\(' + b + '\\)'));
-  src = src.replace(/\\\[([\s\S]+?)\\\]/g, (m, b) => save('\\[' + b + '\\]'));
-  src = src.replace(/(^|[^\\$A-Za-z0-9])\$([^$\n]+?)\$/g, (m, pre, b) => looksMath(b) ? pre + save('$' + b + '$') : m);
+
+  // 1. 优先保护标准多行块级 $$...$$
+  src = src.replace(/\$\$([\s\S]+?)\$\$/g, (m, b) => save('$$' + repairLatex(b) + '$$'));
+
+  // 2. 保护未包裹在 $$ 里的裸 LaTeX 多行环境（\begin{cases}...\end{cases}, align, matrix, equation, gather 等）
+  const envPattern = /\\begin\{(cases|align\*?|aligned|matrix|pmatrix|bmatrix|vmatrix|Vmatrix|equation\*?|gather\*?|array|split|smallmatrix)\}([\s\S]*?)\\end\{\1\}/g;
+  src = src.replace(envPattern, (m, env, body) => save('$$\\begin{' + env + '}' + repairLatex(body) + '\\end{' + env + '}$$'));
+
+  // 3. 保护 \(...\) 与 \[...\]
+  src = src.replace(/\\\(([\s\S]+?)\\\)/g, (m, b) => save('\\(' + repairLatex(b) + '\\)'));
+  src = src.replace(/\\\[([\s\S]+?)\\\]/g, (m, b) => save('\\[' + repairLatex(b) + '\\]'));
+
+  // 4. 保护行内 $...$ 公式
+  src = src.replace(/(^|[^\\$A-Za-z0-9])\$([^$\n]+?)\$/g, (m, pre, b) => {
+    if (looksMath(b)) {
+      return pre + save('$' + repairLatex(b) + '$');
+    }
+    return m;
+  });
+
   return { src, saved };
 }
 
@@ -3333,21 +3395,40 @@ function restoreMath(html, saved) {
 
 function renderMath(body) {
   const html = body.innerHTML;
-  if (!/\$\$|\\\(|\\\[|\$[^$\n]+\$/.test(html)) return;
+  if (!/\$\$|\\\(|\\\[|\$[^$\n]+\$|\\begin\{/.test(html)) return;
   if (window.MathJax) {
-    try { MathJax.typesetPromise([body]).catch(() => {}); } catch (e) { /* ignore */ }
+    try {
+      MathJax.typesetPromise([body]).catch(err => {
+        console.warn('MathJax typeset catch:', err);
+      });
+    } catch (e) { /* ignore */ }
     return;
   }
   window.MathJax = {
-    tex: { inlineMath: [['$', '$'], ['\\(', '\\)']], displayMath: [['$$', '$$'], ['\\[', '\\]']] },
-    options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code'] },
+    tex: {
+      inlineMath: [['$', '$'], ['\\(', '\\)']],
+      displayMath: [['$$', '$$'], ['\\[', '\\]']],
+      packages: {'[+]': ['cases', 'ams', 'color', 'html']},
+      formatError: (jax, err) => {
+        console.warn('TeX format error:', err);
+        return jax.formatError(err);
+      }
+    },
+    options: {
+      skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+    },
     startup: { typeset: false },
   };
   const s = document.createElement('script');
   s.src = '/assets/vendor/mathjax/tex-svg.js';
-  s.onload = () => { try { MathJax.typesetPromise([body]).catch(() => {}); } catch (e) { /* ignore */ } };
+  s.onload = () => {
+    try {
+      MathJax.typesetPromise([body]).catch(() => {});
+    } catch (e) { /* ignore */ }
+  };
   document.head.appendChild(s);
 }
+
 
 /* ---------------- 目录 ---------------- */
 
@@ -3707,6 +3788,7 @@ function updateStatus() {
   if ($('btn-print')) $('btn-print').disabled = isWelcome;
   if ($('btn-a')) $('btn-a').disabled = isWelcome;
   if ($('btn-A')) $('btn-A').disabled = isWelcome;
+  if ($('btn-search')) $('btn-search').disabled = isWelcome;
 
   const btnHome = $('btn-home');
   if (btnHome) {
@@ -3714,6 +3796,7 @@ function updateStatus() {
     else btnHome.classList.remove('hidden');
   }
 }
+
 
 /* ---------------- 自动刷新 ---------------- */
 
@@ -4585,8 +4668,17 @@ async function expSavePreset() {
   });
 
   $('btn-ai').addEventListener('click', toggleAiPanel);
-  $('w-ai').addEventListener('click', toggleAiPanel);
+  if ($('btn-check-update')) $('btn-check-update').addEventListener('click', () => { closeMoreMenu(); checkUpdate(false); });
+  if ($('status-update-badge')) $('status-update-badge').addEventListener('click', openUpdateModal);
+  if ($('update-close')) $('update-close').addEventListener('click', closeUpdateModal);
+  if ($('btn-update-start')) $('btn-update-start').addEventListener('click', startUpdateDownload);
+  if ($('btn-update-cancel')) $('btn-update-cancel').addEventListener('click', cancelUpdateDownload);
+  if ($('btn-update-browser')) $('btn-update-browser').addEventListener('click', () => {
+    if (updateInfo && updateInfo.html_url) openExternal(updateInfo.html_url);
+    else if (upgradeUrl) openExternal(upgradeUrl);
+  });
   $('ai-close').addEventListener('click', () => { $('ai-panel').classList.add('hidden'); });
+
   $('ai-settings-open').addEventListener('click', () => openAiModal('ai-settings-modal', $('ai-settings-open')));
   $('ai-settings-close').addEventListener('click', () => closeAiModal('ai-settings-modal'));
   $('ai-settings-modal').addEventListener('click', e => { if (e.target === $('ai-settings-modal')) closeAiModal('ai-settings-modal'); });
@@ -4657,7 +4749,11 @@ async function expSavePreset() {
     }
     if (e.key === 'F2') { e.preventDefault(); openFileRename(); }
     else if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); $('btn-open').click(); }
-    else if (mod && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleSearch(); }
+    else if (mod && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      if (state.mode !== 'welcome' && (state.file || state.original)) toggleSearch();
+    }
+
     else if (mod && e.key.toLowerCase() === 'u') { e.preventDefault(); openWebDialog(); }
     else if (mod && e.key.toLowerCase() === 'e') { e.preventDefault(); if (!$('btn-edit').disabled) toggleEdit(); }
     else if (mod && e.key.toLowerCase() === 's') {
@@ -4726,6 +4822,7 @@ function loadFileDialog() {
 }
 
 function toggleSearch() {
+  if (state.mode === 'welcome' || (!state.file && !state.original)) return;
   const bar = $('search-bar');
   if (bar.classList.contains('hidden')) {
     bar.classList.remove('hidden');
@@ -4741,7 +4838,7 @@ function closeSearch() {
   clearMarks();
 }
 
-/* ---------------- 初始化 ---------------- */
+/* ---------------- 初始化与自动更新系统 ---------------- */
 
 async function openInitialFile(path) {
   if (!path) return;
@@ -4769,15 +4866,189 @@ async function init() {
   finishInit();
 }
 
+let updateInfo = null;
+let updateTimer = null;
+let isUpdating = false;
 let upgradeUrl = null;
-async function checkUpgrade() {
+
+async function checkUpdate(silent = true) {
   try {
-    if (!hasPy || !py || !py.check_upgrade) return;
-    const r = await py.check_upgrade();
-    if (!r || !r.url) return;
-    upgradeUrl = r.url;
-    showToast('发现新版本 ' + r.latest + '，点击查看更新', 6000);
-  } catch (e) { /* 静默：网络不可用时不打扰用户 */ }
+    let res = null;
+    if (hasPy && py.check_update) {
+      res = await py.check_update();
+    } else {
+      const resp = await fetch('/api/update/check');
+      if (resp.ok) res = await resp.json();
+    }
+    if (!res || !res.ok) {
+      if (!silent) showToast(res && res.error ? '检查更新失败：' + res.error : '检查更新失败，请稍后重试');
+      return;
+    }
+    if (res.has_update) {
+      updateInfo = res;
+      upgradeUrl = res.html_url;
+      if ($('status-update-badge')) {
+        $('status-update-badge').classList.remove('hidden');
+        if ($('update-badge-ver')) $('update-badge-ver').textContent = res.latest_version;
+      }
+      if ($('update-menu-dot')) $('update-menu-dot').classList.remove('hidden');
+      if (!silent) {
+        openUpdateModal();
+      } else {
+        showToast('🎉 发现新版本 ' + res.latest_version + '，点击底部状态栏查看更新', 5000);
+      }
+    } else {
+      if (!silent) showToast('当前已是最新版本 (v' + (res.current_version || '2.2.8') + ')');
+    }
+  } catch (e) {
+    if (!silent) showToast('检查更新出错：' + e.message);
+  }
+}
+
+function openUpdateModal() {
+  if (!updateInfo) {
+    checkUpdate(false);
+    return;
+  }
+  $('update-modal').classList.remove('hidden');
+  $('update-new-ver').textContent = updateInfo.latest_version || '';
+  $('update-pub-time').textContent = updateInfo.published_at ? new Date(updateInfo.published_at).toLocaleDateString() : '';
+
+  const notesEl = $('update-notes-content');
+  if (updateInfo.release_notes) {
+    notesEl.innerHTML = marked.parse(updateInfo.release_notes);
+  } else {
+    notesEl.textContent = '暂无详细更新说明。';
+  }
+
+  if (updateInfo.asset) {
+    $('update-asset-name').textContent = updateInfo.asset.name || '安装包';
+    const mb = updateInfo.asset.size ? (updateInfo.asset.size / (1024 * 1024)).toFixed(1) + ' MB' : '';
+    $('update-asset-size').textContent = mb;
+    $('btn-update-start').disabled = false;
+    $('btn-update-start').textContent = '立即下载并更新';
+  } else {
+    $('update-asset-name').textContent = '未找到匹配当前系统的二进制资产';
+    $('update-asset-size').textContent = '';
+    $('btn-update-start').disabled = true;
+    $('btn-update-start').textContent = '暂无对应安装包';
+  }
+}
+
+function closeUpdateModal() {
+  $('update-modal').classList.add('hidden');
+}
+
+async function startUpdateDownload() {
+  if (!updateInfo || !updateInfo.asset || isUpdating) return;
+  const asset = updateInfo.asset;
+  const useMirror = $('update-use-mirror') && $('update-use-mirror').checked;
+
+  $('btn-update-start').disabled = true;
+  $('btn-update-cancel').classList.remove('hidden');
+  $('update-progress-wrap').classList.remove('hidden');
+  $('update-progress-fill').style.width = '0%';
+  $('update-progress-text').textContent = '准备下载…';
+  $('update-progress-speed').textContent = '';
+  isUpdating = true;
+
+  try {
+    let started = false;
+    if (hasPy && py.start_download_update) {
+      const res = await py.start_download_update(asset.download_url, asset.name, null, useMirror);
+      started = res && res.ok;
+    } else {
+      const resp = await fetch('/api/update/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          download_url: asset.download_url,
+          target_filename: asset.name,
+          use_mirror: useMirror,
+        }),
+      });
+      const res = await resp.json();
+      started = res && res.ok;
+    }
+
+    if (!started) {
+      showToast('启动下载失败');
+      isUpdating = false;
+      $('btn-update-start').disabled = false;
+      return;
+    }
+
+    if (updateTimer) clearInterval(updateTimer);
+    updateTimer = setInterval(async () => {
+      let st = null;
+      if (hasPy && py.get_download_status) {
+        st = await py.get_download_status();
+      } else {
+        const resp = await fetch('/api/update/status');
+        if (resp.ok) st = await resp.json();
+      }
+      if (!st) return;
+
+      if (st.status === 'downloading') {
+        const pct = st.percent || 0;
+        $('update-progress-fill').style.width = pct + '%';
+        const speedMb = ((st.speed_bps || 0) / (1024 * 1024)).toFixed(1);
+        const curMb = ((st.downloaded_bytes || 0) / (1024 * 1024)).toFixed(1);
+        const totMb = ((st.total_bytes || 0) / (1024 * 1024)).toFixed(1);
+        $('update-progress-text').textContent = `正在下载… ${pct}% (${curMb}MB / ${totMb}MB)`;
+        $('update-progress-speed').textContent = `${speedMb} MB/s`;
+      } else if (st.status === 'verifying') {
+        $('update-progress-fill').style.width = '100%';
+        $('update-progress-text').textContent = '正在校验文件完整性 (SHA256)…';
+      } else if (st.status === 'ready') {
+        clearInterval(updateTimer);
+        updateTimer = null;
+        isUpdating = false;
+        $('update-progress-text').textContent = '下载校验完成！正在准备安装…';
+        $('btn-update-start').textContent = '正在重启并安装…';
+        setTimeout(async () => {
+          if (hasPy && py.apply_update) {
+            await py.apply_update(st.target_file, updateInfo.flavor);
+          } else {
+            await fetch('/api/update/apply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ file_path: st.target_file, flavor: updateInfo.flavor }),
+            });
+          }
+        }, 800);
+      } else if (st.status === 'error') {
+        clearInterval(updateTimer);
+        updateTimer = null;
+        isUpdating = false;
+        $('update-progress-text').textContent = '下载失败：' + (st.error || '未知网络错误');
+        $('btn-update-start').disabled = false;
+        $('btn-update-start').textContent = '重试下载';
+        $('btn-update-cancel').classList.add('hidden');
+      } else if (st.status === 'cancelled') {
+        clearInterval(updateTimer);
+        updateTimer = null;
+        isUpdating = false;
+        $('update-progress-text').textContent = '下载已取消';
+        $('btn-update-start').disabled = false;
+        $('btn-update-start').textContent = '重新下载';
+        $('btn-update-cancel').classList.add('hidden');
+      }
+    }, 400);
+
+  } catch (e) {
+    showToast('下载出错：' + e.message);
+    isUpdating = false;
+    $('btn-update-start').disabled = false;
+  }
+}
+
+async function cancelUpdateDownload() {
+  if (hasPy && py.cancel_download) {
+    await py.cancel_download();
+  } else {
+    await fetch('/api/update/cancel', { method: 'POST' });
+  }
 }
 
 function finishInit() {
@@ -4786,10 +5057,11 @@ function finishInit() {
     window.__trayOpenFile = loadFileDialog;
   }
   startControlPoll();
-  checkUpgrade();
+  setTimeout(() => checkUpdate(true), 2500);
 }
 
 async function restoreLastFile() {
+
   if (state.file) return;
   let last = null;
   try {

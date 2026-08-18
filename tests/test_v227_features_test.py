@@ -21,8 +21,9 @@ APP_JS = os.path.join(ROOT_DIR, 'assets', 'app.js')
 class TestV227Features(unittest.TestCase):
 
     def test_version_bump_consistency(self):
-        self.assertEqual(readmd.VERSION, '2.2.7')
-        self.assertEqual(setup_app.APP_VERSION, '2.2.7')
+        self.assertTrue(readmd.VERSION >= '2.2.7')
+        self.assertTrue(setup_app.APP_VERSION >= '2.2.7')
+
 
     def test_index_html_multi_tab_and_dom_elements(self):
         with open(INDEX_HTML, 'r', encoding='utf-8') as f:

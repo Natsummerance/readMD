@@ -43,11 +43,56 @@ def _setup_cjk():
     _cjk_setup = True
 
 
+def repair_latex(latex):
+    """自修复常见残缺或非标 LaTeX 公式（配平括号、转义修复、Unicode 数学符号转 LaTeX）。"""
+    if not latex:
+        return ''
+    t = latex.strip()
+
+    # 1. HTML 实体还原
+    t = t.replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>').replace('&quot;', '"')
+
+    # 2. 常用数学 Unicode 符号转标准 LaTeX
+    unicode_map = [
+        ('×', r'\times '), ('÷', r'\div '), ('±', r'\pm '), ('∓', r'\mp '),
+        ('≤', r'\le '), ('≥', r'\ge '), ('≠', r'\ne '), ('≈', r'\approx '),
+        ('≡', r'\equiv '), ('∞', r'\infty '), ('∑', r'\sum '), ('∏', r'\prod '),
+        ('∫', r'\int '), ('√', r'\sqrt'), ('∈', r'\in '), ('∉', r'\notin '),
+        ('⊂', r'\subset '), ('⊆', r'\subseteq '), ('∪', r'\cup '), ('∩', r'\cap '),
+        ('∀', r'\forall '), ('∃', r'\exists '), ('∇', r'\nabla '), ('∂', r'\partial '),
+        ('α', r'\alpha '), ('β', r'\beta '), ('γ', r'\gamma '), ('δ', r'\delta '),
+        ('ε', r'\varepsilon '), ('θ', r'\theta '), ('λ', r'\lambda '), ('μ', r'\mu '),
+        ('π', r'\pi '), ('σ', r'\sigma '), ('τ', r'\tau '), ('φ', r'\varphi '),
+        ('ω', r'\omega '), ('Δ', r'\Delta '), ('Ω', r'\Omega '),
+    ]
+    for u, l in unicode_map:
+        t = t.replace(u, l)
+
+    # 3. 自动配平花括号
+    # 统计未转义的 { 与 }
+    open_braces = 0
+    i = 0
+    while i < len(t):
+        if t[i] == '\\':
+            i += 2
+            continue
+        if t[i] == '{':
+            open_braces += 1
+        elif t[i] == '}':
+            if open_braces > 0:
+                open_braces -= 1
+        i += 1
+    if open_braces > 0:
+        t = t + ('}' * open_braces)
+
+    return t
+
+
 def render_latex(latex, dpi=220):
     """渲染公式为透明 PNG bytes；失败返回 None。"""
     try:
         plt = _matplotlib()
-        text = latex.strip()
+        text = repair_latex(latex)
         if not text:
             return None
         if _CJK_RE.search(text):
@@ -69,6 +114,7 @@ def render_latex(latex, dpi=220):
     except Exception:
         logging.exception('formula render failed: %s', latex)
         return None
+
 
 
 def png_size(data):

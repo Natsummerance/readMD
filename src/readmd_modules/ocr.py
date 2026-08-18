@@ -186,6 +186,97 @@ def load():
     return True
 
 
+def normalize_ocr_text(text):
+    """智能清洗与格式化 OCR 原始文本，输出排版规范的 Markdown。
+
+    处理：
+    1. CJK 字符间由 OCR 插入的无意义空格清除（如 '这 是 一 个 示 例' -> '这是一个示例'）；
+    2. 英文跨行断字连字符合并（如 'infor-\\nmation' -> 'information'）；
+    3. 句内断行智能连接，保留自然段落与句末断行；
+    4. 结合 txtmd 启发式提取标题 (# / ##)、列表 (- / 1.) 和表格。
+    """
+    if not text or not text.strip():
+        return ''
+
+    import re
+
+    # 1. 规范化换行与特殊空格
+    src = text.replace('\r\n', '\n').replace('\r', '\n')
+    src = re.sub(r'[\u3000\u00a0\u200b\ufeff]', ' ', src)
+
+    # 2. CJK 字符与标点间同行多余空格剔除（不能跨行吃掉换行符）
+    cjk_char = r'[\u4e00-\u9fa5]'
+    cjk_punc = r'[\u3002\uff01\uff1f\uff1b\uff0c\u3001\uff1a\uff08\uff09\u300a\u300b\u3010\u3011\u201c\u201d\u2018\u2019]'
+    h_space = r'[^\S\n]+'
+    src = re.sub(r'(%s)%s(?=%s)' % (cjk_char, h_space, cjk_char), r'\1', src)
+    src = re.sub(r'(%s)%s(?=%s)' % (cjk_char, h_space, cjk_char), r'\1', src)
+    src = re.sub(r'(%s)%s(?=%s)' % (cjk_char, h_space, cjk_punc), r'\1', src)
+    src = re.sub(r'(%s)%s(?=%s)' % (cjk_punc, h_space, cjk_char), r'\1', src)
+
+
+    # 3. 英文跨行连字符修复 (如 'auto-\ncomplete' -> 'autocomplete')
+    src = re.sub(r'([a-zA-Z]{2,})-\n([a-zA-Z]{2,})', r'\1\2', src)
+
+    # 4. 智能合并单句被 OCR 硬换行切断的行
+    lines = [l.rstrip() for l in src.split('\n')]
+    merged_lines = []
+
+    _CN_NUM = u'\u4e00\u4e8c\u4e09\u56db\u4e94\u516d\u4e03\u516b\u4e5d\u5341\u767e\u5343\u4e07\u4e24'
+    _HEAD_PATTERN = re.compile(r'^(第[%s0-9]+[章节回部篇卷]|[（(]?[%s0-9]{1,3}[）)、．.]|\d{1,3}\.\d|#{1,6}\s)' % (_CN_NUM, _CN_NUM))
+    _LIST_PATTERN = re.compile(r'^([ \t]*[\u2022\u00b7\u25e6\u25aa\u25cf*\-+]|\d{1,3}[、\uff0e.]|[（(]\d{1,3}[）)])\s*')
+    _SENT_END = u'。！？!?…:：；;'
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        if not stripped:
+            merged_lines.append('')
+            i += 1
+            continue
+
+        is_structured = bool(_HEAD_PATTERN.match(stripped) or _LIST_PATTERN.match(stripped) or '\t' in stripped or stripped.startswith('|'))
+        if is_structured:
+            merged_lines.append(line)
+            i += 1
+            continue
+
+        curr = line
+        while i + 1 < len(lines):
+            next_line = lines[i + 1]
+            next_stripped = next_line.strip()
+            if not next_stripped:
+                break
+            if _HEAD_PATTERN.match(next_stripped) or _LIST_PATTERN.match(next_stripped) or '\t' in next_stripped or next_stripped.startswith('|'):
+                break
+            if curr.rstrip() and curr.rstrip()[-1] in _SENT_END:
+                break
+            if len(curr.strip()) <= 30 and not any(ch in curr for ch in u'，,。；'):
+                break
+
+            last_char = curr.rstrip()[-1] if curr.rstrip() else ''
+            next_first = next_stripped[0] if next_stripped else ''
+            is_cjk_boundary = bool(re.match(r'[\u4e00-\u9fa5]', last_char) and re.match(r'[\u4e00-\u9fa5]', next_first))
+            sep = '' if is_cjk_boundary else ' '
+
+            curr = curr.rstrip() + sep + next_stripped
+            i += 1
+
+        merged_lines.append(curr)
+        i += 1
+
+
+    cleaned_text = '\n'.join(merged_lines)
+
+    # 5. 调用 txtmd 模块进行 Markdown 结构化整理
+    try:
+        from src.readmd_modules import txtmd
+        md_text, _ = txtmd.to_markdown(cleaned_text)
+        return md_text.strip()
+    except Exception:
+        return cleaned_text.strip()
+
+
 def ocr_image(path, dpi=None):
     """识别单张图片，返回识别文本。"""
     with open(path, 'rb') as f:
@@ -195,11 +286,12 @@ def ocr_image(path, dpi=None):
 
 
 def ocr_image_to_md(path):
-    """图片 → Markdown（附原图引用，避免信息丢失）。"""
+    """图片 → Markdown（经智能规范化排版，并附原图引用）。"""
     text = ocr_image(path)
     body = []
     if text:
-        body.append(text)
+        formatted_text = normalize_ocr_text(text)
+        body.append(formatted_text or text)
     else:
         body.append('> （未识别出文字，仅保留原图）')
     md = '![原图](%s)\n\n%s' % (path, '\n\n'.join(body))
@@ -207,7 +299,7 @@ def ocr_image_to_md(path):
 
 
 def ocr_pdf_to_md(path, max_pages=200):
-    """PDF → Markdown：有文字层直接提取，否则逐页 OCR。"""
+    """PDF → Markdown：有文字层直接提取，否则逐页 OCR，并统一执行智能排版规范化。"""
     import fitz
     doc = fitz.open(path)
     pages = list(doc)[:max_pages]
@@ -224,7 +316,8 @@ def ocr_pdf_to_md(path, max_pages=200):
                 text = ''
         if not text:
             continue
-        parts.append('## 第 %d 页\n\n%s' % (idx, text))
+        formatted_page = normalize_ocr_text(text)
+        parts.append('## 第 %d 页\n\n%s' % (idx, formatted_page or text))
     doc.close()
     if not parts:
         return '> （PDF 未提取到文字，且 OCR 无结果）'
@@ -237,3 +330,4 @@ def ocr_any(path):
     if ext == '.pdf':
         return ocr_pdf_to_md(path)
     return ocr_image_to_md(path)
+

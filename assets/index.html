@@ -67,7 +67,9 @@
       <button id="btn-assoc" class="more-item"><span>设为默认</span><em>.md 打开方式</em></button>
       <button id="btn-share" class="more-item"><span>共享</span><em>手机扫码阅读</em></button>
       <button id="btn-fix" class="more-item"><span>修复详情</span><em>本次自动修正</em></button>
+      <button id="btn-check-update" class="more-item"><span>检查更新</span><em>发现新版本</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
     </div>
+
   </div>
 </header>
 <div id="doc-tabs-secondary-bar" class="doc-tabs-secondary-bar hidden" role="tablist" aria-label="已打开文档"></div>
@@ -557,7 +559,49 @@
   </div>
 </div>
 
+<!-- 版本更新弹窗 -->
+<div id="update-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="update-modal-title">
+  <div id="update-box" class="update-box">
+    <div class="export-head">
+      <div class="update-title-wrap">
+        <h3 id="update-modal-title">发现新版本 <span id="update-new-ver" class="update-ver-tag"></span></h3>
+        <small id="update-pub-time" class="update-pub-time"></small>
+      </div>
+      <button id="update-close" class="tb-btn icon" aria-label="关闭更新窗口">&#10005;</button>
+    </div>
+    <div class="update-body">
+      <div class="update-notes-head">更新日志</div>
+      <div id="update-notes-content" class="update-notes-content markdown-body"></div>
+      
+      <div class="update-asset-card">
+        <div class="update-asset-info">
+          <span class="update-asset-name" id="update-asset-name">—</span>
+          <span class="update-asset-size" id="update-asset-size">—</span>
+        </div>
+        <div id="update-progress-wrap" class="update-progress-wrap hidden">
+          <div class="update-progress-bar"><div id="update-progress-fill" class="update-progress-fill"></div></div>
+          <div class="update-progress-meta">
+            <span id="update-progress-text">正在下载… 0%</span>
+            <span id="update-progress-speed">0 MB/s</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="update-options">
+        <label class="ai-sel"><input id="update-use-mirror" type="checkbox"> 使用国内镜像加速下载</label>
+      </div>
+    </div>
+    <div class="update-foot">
+      <button id="btn-update-browser" class="tb-btn">在浏览器中打开</button>
+      <span class="export-spacer"></span>
+      <button id="btn-update-cancel" class="tb-btn hidden">取消下载</button>
+      <button id="btn-update-start" class="tb-btn accent">立即下载并更新</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="hidden"></div>
+
 <div id="progress"></div>
 <div id="busy" class="hidden"><span>处理中…</span></div>
 <button id="top-btn" class="hidden" title="回到顶部">&#8593;</button>
@@ -594,7 +638,11 @@
   <span id="status-left"></span>
   <span id="status-right"></span>
   <span id="status-mods"></span>
+  <button id="status-update-badge" class="status-update-badge hidden" title="点击查看新版本并更新">
+    <span class="update-sparkle">✨</span> 新版本 <span id="update-badge-ver"></span>
+  </button>
   <button id="btn-home" class="status-btn-home hidden" title="返回主页">
+
     <svg class="status-home-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
     <span>返回主页</span>
   </button>

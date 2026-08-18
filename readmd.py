@@ -104,7 +104,8 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-           or _bundle_version() or '2.2.7')
+           or _bundle_version() or '2.2.8')
+
 
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
@@ -766,8 +767,19 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, stop_lan_server())
         elif path == '/api/share/status':
             self._send_json(200, share_status())
+        elif path == '/api/update/check':
+            self._api_update_check()
+        elif path == '/api/update/download':
+            self._api_update_download()
+        elif path == '/api/update/status':
+            self._api_update_status()
+        elif path == '/api/update/cancel':
+            self._api_update_cancel()
+        elif path == '/api/update/apply':
+            self._api_update_apply()
         elif path == '/api/ping':
             self._send_json(200, {'ok': self._api_ping(qs)})
+
         elif path == '/api/control/open':
             self._api_control_open()
         elif path == '/api/control/next':
@@ -849,9 +861,59 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             pass
 
+    def _api_update_check(self):
+        try:
+            from src.readmd_modules import updater
+            res = updater.check_update(VERSION)
+            self._send_json(200 if res.get('ok') else 500, res)
+        except Exception as e:
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
+    def _api_update_download(self):
+        try:
+            from src.readmd_modules import updater
+            length = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(length).decode('utf-8')) if length > 0 else {}
+            download_url = body.get('download_url', '')
+            target_filename = body.get('target_filename', '')
+            expected_sha = body.get('expected_sha', None)
+            use_mirror = bool(body.get('use_mirror', False))
+            if not download_url or not target_filename:
+                self._send_json(400, {'ok': False, 'error': '缺少下载参数'})
+                return
+            ok, msg = updater.start_download_update(download_url, target_filename, expected_sha, use_mirror)
+            self._send_json(200 if ok else 400, {'ok': ok, 'message': msg})
+        except Exception as e:
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
+    def _api_update_status(self):
+        try:
+            from src.readmd_modules import updater
+            self._send_json(200, updater.get_download_status())
+        except Exception as e:
+            self._send_json(500, {'status': 'error', 'error': str(e)})
+
+    def _api_update_cancel(self):
+        try:
+            from src.readmd_modules import updater
+            self._send_json(200, {'ok': updater.cancel_download()})
+        except Exception as e:
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
+    def _api_update_apply(self):
+        try:
+            from src.readmd_modules import updater
+            length = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(length).decode('utf-8')) if length > 0 else {}
+            ok, msg = updater.apply_update(body.get('file_path'), body.get('flavor'))
+            self._send_json(200 if ok else 400, {'ok': ok, 'message': msg})
+        except Exception as e:
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
     def _api_ping(self, qs):
         t = qs.get('t', [''])[0]
         return bool(t) and t == _read_instance().get('token', '')
+
 
     def _api_control_open(self):
         n = int(self.headers.get('Content-Length', 0) or 0)
@@ -2340,7 +2402,30 @@ class Api(object):
         except Exception:
             return False
 
+    def check_update(self):
+        from src.readmd_modules import updater
+        return updater.check_update(VERSION)
+
+    def start_download_update(self, download_url, target_filename, expected_sha=None, use_mirror=False):
+        from src.readmd_modules import updater
+        ok, msg = updater.start_download_update(download_url, target_filename, expected_sha, use_mirror)
+        return {'ok': ok, 'message': msg}
+
+    def get_download_status(self):
+        from src.readmd_modules import updater
+        return updater.get_download_status()
+
+    def cancel_download(self):
+        from src.readmd_modules import updater
+        return {'ok': updater.cancel_download()}
+
+    def apply_update(self, file_path=None, flavor=None):
+        from src.readmd_modules import updater
+        ok, msg = updater.apply_update(file_path, flavor)
+        return {'ok': ok, 'message': msg}
+
     def get_settings(self):
+
         return load_json(SETTINGS_FILE, {})
 
     def save_settings(self, settings):
