@@ -2013,6 +2013,25 @@ async function importFromClipboard() {
     await postChatImport(clip.html ? { html: clip.html } : { text: clip.text });
   } catch (e) { importError(e); }
 }
+async function createFromClipboard() {
+  try {
+    if (!hasPy || !py) throw new Error('桌面版才能读取剪贴板；请用浏览器复制文件导入');
+    let clip;
+    if (py.authorize_clipboard_read) {
+      const permit = await py.authorize_clipboard_read();
+      if (!permit || !permit.ok || !permit.token) throw new Error((permit && permit.error) || '剪贴板授权失败，请重试');
+      clip = await py.read_clipboard(permit.token);
+    } else {
+      try { clip = await py.read_clipboard({ user_intent_token: true }); } catch (e) { clip = await py.read_clipboard(true); }
+    }
+    if (!clip || clip.error || (!clip.text && !clip.html)) throw new Error((clip && clip.error) || '剪贴板为空或不包含可导入文本');
+    const markdown = clip.text || '';
+    if (!markdown.trim()) throw new Error('剪贴板为空或不包含可导入文本');
+    const name = '剪贴板-' + new Date().toISOString().slice(0, 10) + '.md';
+    renderVirtual('clipboard', name, '', markdown, []);
+    showToast('已从剪贴板新建文档（Ctrl+S 可保存）');
+  } catch (e) { showToast(e.message || '读取剪贴板失败'); }
+}
 async function importFromChatFile() {
   try {
     if (hasPy && py && py.choose_and_import_chat_file) {
@@ -3231,7 +3250,7 @@ function historyForward() {
 }
 
 function updateStatus() {
-  $('status-left').textContent = (state.mode === 'virtual' ? '[' + { convert: '转换', ocr: 'OCR', url: '网页' }[state.source] + '] ' : '') + (state.sourceName || state.file || '');
+  $('status-left').textContent = (state.mode === 'virtual' ? '[' + { convert: '转换', ocr: 'OCR', url: '网页', clipboard: '剪贴板' }[state.source] + '] ' : '') + (state.sourceName || state.file || '');
   const parts = [];
   if (state.stats) {
     const s = state.stats;
@@ -3407,6 +3426,7 @@ function bindEvents() {
   $('w-ocr').addEventListener('click', () => chooseFile('ocr'));
   $('btn-web').addEventListener('click', openWebDialog);
   $('w-web').addEventListener('click', openWebDialog);
+  $('btn-clipboard-new').addEventListener('click', createFromClipboard);
   $('url-go').addEventListener('click', () => {
     const url = $('url-input').value.trim();
     const crawl = $('url-crawl').checked;
@@ -3934,6 +3954,13 @@ async function expSavePreset() {
     else if (mod && e.key.toLowerCase() === 'e') { e.preventDefault(); if (!$('btn-edit').disabled) toggleEdit(); }
     else if (mod && e.key.toLowerCase() === 's') {
       if (state.editing) { e.preventDefault(); saveEdit(); }
+    }
+    else if (mod && !e.shiftKey && e.key.toLowerCase() === 'v') {
+      const t = e.target;
+      const inField = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable || (t.closest && t.closest('.CodeMirror, .cm-editor, [contenteditable="true"]')));
+      if (inField) return; // 输入框内放行浏览器默认粘贴
+      e.preventDefault();
+      createFromClipboard();
     }
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleSide('toc'); }
     else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); toggleTheme(); }
