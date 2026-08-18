@@ -96,7 +96,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-          cache-dependency-path: requirements-windows.txt
+          cache-dependency-path: config/requirements-windows.txt
       - run: python -m pip install --disable-pip-version-check -r config/requirements-windows.txt pyinstaller
       - run: python tools/make_icon.py
       - run: python tools/make_file_icon.py
