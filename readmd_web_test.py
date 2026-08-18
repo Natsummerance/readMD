@@ -340,9 +340,6 @@ class TestWebApi(unittest.TestCase):
         })
         self.assertEqual(status, 422)
         self.assertEqual(result['code'], 'no_conversation')
-        status, result = self.post('/api/chat/import', {'url': self.fixture + '/article'})
-        self.assertEqual(status, 422)
-        self.assertEqual(result['code'], 'no_conversation')
 
 
 def main():

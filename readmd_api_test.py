@@ -155,14 +155,33 @@ class TestChatImportBridge(unittest.TestCase):
                     {'role': 'user', 'content': 'hello'},
                     {'role': 'assistant', 'content': 'world'},
                 ]}, handle)
-            result = readmd.Api().import_chat_file(path)
+            api = readmd.Api()
+            result = api.import_chat_file(path)
+            self.assertEqual(result.get('code'), 'unauthorized_path')
+            api._authorize_chat_import_path(path)  # chooser records this grant in production.
+            result = api.import_chat_file(path)
             self.assertTrue(result.get('ok'), result)
             self.assertEqual(result.get('message_count'), 2)
             unsupported = os.path.join(td, 'untrusted.exe')
             with open(unsupported, 'wb') as handle:
                 handle.write(b'x')
-            result = readmd.Api().import_chat_file(unsupported)
-            self.assertEqual(result.get('code'), 'unsupported_type')
+            result = api.import_chat_file(unsupported)
+            self.assertEqual(result.get('code'), 'unauthorized_path')
+
+    def test_chat_import_grant_is_single_use_and_clipboard_needs_token(self):
+        api = readmd.Api()
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, 'chat.txt')
+            with open(path, 'w', encoding='utf-8') as handle:
+                handle.write('hello')
+            api._authorize_chat_import_path(path)
+            self.assertTrue(api.import_chat_file(path).get('ok'))
+            self.assertEqual(api.import_chat_file(path).get('code'), 'unauthorized_path')
+        self.assertEqual(api.read_clipboard().get('source_type'), 'unauthorized')
+        token = api.authorize_clipboard_read()['token']
+        with mock.patch.dict('sys.modules', {'tkinter': None}):
+            result = api.read_clipboard(token)
+        self.assertNotEqual(result.get('source_type'), 'unauthorized')
 
 
 if __name__ == '__main__':

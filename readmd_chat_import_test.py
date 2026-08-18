@@ -65,6 +65,22 @@ class ChatImportTest(unittest.TestCase):
         self.assertNotIn('secret', result['content'])
         self.assertNotIn('onerror', result['content'])
         self.assertNotIn('<script', result['content'].lower())
+        self.assertNotIn('javascript:', result['content'].lower())
+
+    def test_metadata_attachments_html_and_markdown_uris_are_safe(self):
+        conversation = CI.Conversation('<img src=x onerror=bad()> title', '<b>source</b>',
+                                       'javascript:alert(1)', '<svg onload=bad()>today', [
+            CI.Message('user', '&lt;img src=x onerror=bad()&gt;safe [bad](data:text/html,x) '
+                       '![bad](file:///secret) [good](https://example.com/a)', attachments=[
+                           {'name': '<img onerror=bad()>file.md'}])])
+        result = CI.result(conversation)
+        self.assertNotIn('<img', result['content'].lower())
+        self.assertNotIn('onerror', result['content'].lower())
+        self.assertNotIn('javascript:', result['content'].lower())
+        self.assertNotIn('data:text', result['content'].lower())
+        self.assertNotIn('file:', result['content'].lower())
+        self.assertIn('[good](https://example.com/a)', result['content'])
+        self.assertEqual(result['source_url'], '')
 
     def test_zip_rejects_traversal_bomb_and_expansion_limit(self):
         def archive(name, data, compression=zipfile.ZIP_DEFLATED):
@@ -96,6 +112,35 @@ class ChatImportTest(unittest.TestCase):
             with self.assertRaises(CI.ChatImportError) as caught:
                 CI.import_file(path)
             self.assertEqual(caught.exception.code, 'unsupported_type')
+
+    def test_json_text_and_zip_member_limits_apply_before_parsing(self):
+        payload = b'{' + b' ' * (11 * 1024 * 1024) + b'}'
+        with self.assertRaises(CI.ChatImportError) as caught:
+            CI.import_bytes(payload, 'large.json')
+        self.assertEqual(caught.exception.code, 'too_large')
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, 'large.json')
+            with open(path, 'wb') as handle:
+                handle.write(payload)
+            with self.assertRaises(CI.ChatImportError) as caught:
+                CI.import_file(path)
+        self.assertEqual(caught.exception.code, 'too_large')
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w', zipfile.ZIP_STORED) as zf:
+            zf.writestr('large.json', b'{' + b' ' * 64 + b'}')
+        with mock.patch.object(CI, 'MAX_TEXT_BYTES', 32):
+            with self.assertRaises(CI.ChatImportError) as caught:
+                CI.import_bytes(buf.getvalue(), 'large.zip')
+        self.assertEqual(caught.exception.code, 'zip_member_too_large')
+
+    def test_zip_member_count_is_rejected_before_processing(self):
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, 'w') as zf:
+            for index in range(CI.MAX_ZIP_MEMBERS + 1):
+                zf.writestr('skip-%04d.bin' % index, b'x')
+        with self.assertRaises(CI.ChatImportError) as caught:
+            CI.import_bytes(buf.getvalue(), 'many.zip')
+        self.assertEqual(caught.exception.code, 'too_many_zip_members')
 
     def test_login_or_non_chat_html_has_actionable_error(self):
         page = '<html><title>Sign in</title><body><form>Log in</form></body></html>'

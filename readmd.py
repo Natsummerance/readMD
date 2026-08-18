@@ -1206,10 +1206,14 @@ class Handler(BaseHTTPRequestHandler):
                 # Reuse the normal downloader's URL validation/redirect rules;
                 # chat pages are parsed directly rather than article-extracted.
                 from readmd_modules import web as web_module
-                fetched = web_module.fetch_html(
-                    url, allow_private=os.environ.get('READMD_WEB_TEST_ALLOW_PRIVATE') == '1')
+                fetched = web_module.fetch_html(url, allow_private=False)
+                page_html = fetched.get('html', '')
+                if len(page_html.encode('utf-8')) > chat_import.MAX_TEXT_BYTES:
+                    raise chat_import.ChatImportError('too_large', '网页对话 HTML 超过 10 MB 限制')
+                parsed_url = urlparse(fetched.get('url') or url)
+                safe_source_url = parsed_url._replace(query='', fragment='').geturl()
                 conversation = chat_import.import_bytes(
-                    fetched.get('html', '').encode('utf-8'), 'chat.html', fetched.get('url') or url)
+                    page_html.encode('utf-8'), 'chat.html', safe_source_url)
                 conversation.source = '网页对话'
             elif body.get('html') is not None:
                 value = body.get('html')
@@ -1425,6 +1429,9 @@ class Api(object):
         self._web_render_lock = threading.Lock()
         self._web_private_lock = threading.Lock()
         self._web_private_grants = {}
+        self._chat_import_lock = threading.Lock()
+        self._chat_import_paths = {}
+        self._clipboard_tokens = {}
 
     @staticmethod
     def _web_origin(url):
@@ -1633,12 +1640,24 @@ class Api(object):
             logging.exception('choose_file failed')
             return None
 
-    def read_clipboard(self):
+    def authorize_clipboard_read(self):
+        """Grant one short-lived clipboard read after an explicit UI action."""
+        token = secrets.token_urlsafe(18)
+        with self._chat_import_lock:
+            self._clipboard_tokens[token] = time.time() + 30
+        return {'ok': True, 'token': token, 'expires_at': int(time.time() + 30)}
+
+    def read_clipboard(self, token=''):
         """Return clipboard data in a small, platform-neutral bridge shape.
 
         HTML is best-effort because pywebview backends expose different native
         clipboard APIs.  Callers can always fall back to ``text``.
         """
+        with self._chat_import_lock:
+            expires_at = self._clipboard_tokens.pop(str(token or ''), 0)
+        if not token or time.time() > expires_at:
+            return {'text': '', 'html': '', 'source_type': 'unauthorized',
+                    'error': '请通过用户操作重新授权读取剪贴板'}
         text, html = '', ''
         try:
             if IS_WIN:
@@ -1650,7 +1669,14 @@ class Api(object):
                     fmt = win32clipboard.RegisterClipboardFormat('HTML Format')
                     if win32clipboard.IsClipboardFormatAvailable(fmt):
                         raw = win32clipboard.GetClipboardData(fmt)
-                        html = raw.decode('utf-8', errors='replace') if isinstance(raw, bytes) else str(raw or '')
+                        if isinstance(raw, bytes) and len(raw) <= 10 * 1024 * 1024:
+                            html = raw.decode('utf-8', errors='replace')
+                            # CF_HTML can contain unrelated clipboard bytes;
+                            # expose only the declared fragment where possible.
+                            start = re.search(r'StartFragment:(\d+)', html)
+                            end = re.search(r'EndFragment:(\d+)', html)
+                            if start and end:
+                                html = html[int(start.group(1)):int(end.group(1))]
                 finally:
                     win32clipboard.CloseClipboard()
             if not text:
@@ -1664,12 +1690,15 @@ class Api(object):
         except Exception:
             # Do not log clipboard content or format bytes.
             pass
-        return {'text': text if isinstance(text, str) else '',
-                'html': html if isinstance(html, str) else '',
-                'source_type': 'html' if html else ('text' if text else 'empty')}
+        if isinstance(html, str) and len(html.encode('utf-8')) <= 10 * 1024 * 1024:
+            return {'text': '', 'html': html, 'source_type': 'html'}
+        if isinstance(text, str) and len(text.encode('utf-8')) <= 10 * 1024 * 1024:
+            return {'text': text, 'html': '', 'source_type': 'text'}
+        return {'text': '', 'html': '', 'source_type': 'too_large',
+                'error': '剪贴板内容超过 10 MB 限制'}
 
     def choose_chat_import_file(self):
-        """Select one supported chat export; no arbitrary JS path is accepted here."""
+        """Select one export and grant that exact path one short-lived import."""
         import webview
         if self._window is None:
             return None
@@ -1677,16 +1706,41 @@ class Api(object):
             files = self._window.create_file_dialog(
                 webview.OPEN_DIALOG,
                 file_types=('对话导出 (*.json;*.html;*.htm;*.zip;*.md;*.txt)',))
-            return normalize_dialog_path(files)
+            path = normalize_dialog_path(files)
+            if path:
+                self._authorize_chat_import_path(path)
+            return path
         except Exception:
             return None
 
+    def _authorize_chat_import_path(self, path):
+        path = os.path.realpath(os.path.abspath(os.fspath(path)))
+        stat = os.stat(path)
+        with self._chat_import_lock:
+            self._chat_import_paths[path] = (time.time() + 60, stat.st_size, stat.st_mtime_ns)
+
+    def choose_chat_file(self):
+        """Atomically select and import a chat export; preferred UI bridge API."""
+        path = self.choose_chat_import_file()
+        return self.import_chat_file(path) if path else {'ok': False, 'code': 'cancelled',
+                                                         'error': '未选择对话导出文件'}
+
     def import_chat_file(self, path):
-        """Parse a path returned by ``choose_chat_import_file`` (or native UI)."""
+        """Consume a chooser-issued path grant; arbitrary paths are rejected."""
         try:
             from readmd_modules import chat_import
-            result = chat_import.result(chat_import.import_file(path))
-            result['path'] = os.path.abspath(os.fspath(path))
+            normalized = os.path.realpath(os.path.abspath(os.fspath(path)))
+            with self._chat_import_lock:
+                grant = self._chat_import_paths.pop(normalized, None)
+            if not grant or time.time() > grant[0]:
+                return {'ok': False, 'code': 'unauthorized_path',
+                        'error': '请通过“选择对话文件”重新选择要导入的文件'}
+            stat = os.stat(normalized)
+            if (stat.st_size, stat.st_mtime_ns) != grant[1:]:
+                return {'ok': False, 'code': 'file_changed',
+                        'error': '选择后文件已变化，请重新选择'}
+            result = chat_import.result(chat_import.import_file(normalized))
+            result['path'] = normalized
             return result
         except Exception as exc:
             if hasattr(exc, 'as_dict'):

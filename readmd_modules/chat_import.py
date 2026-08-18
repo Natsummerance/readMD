@@ -13,6 +13,7 @@ import html
 import json
 import os
 import re
+import struct
 import zipfile
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
@@ -23,7 +24,11 @@ MAX_TEXT_BYTES = 10 * 1024 * 1024
 MAX_ZIP_BYTES = 100 * 1024 * 1024
 MAX_ZIP_EXPANDED = 200 * 1024 * 1024
 MAX_ZIP_RATIO = 100
+MAX_ZIP_MEMBERS = 1000
+MAX_ZIP_NAME_BYTES = 1024
 KNOWN_EXTENSIONS = ('.json', '.html', '.htm', '.md', '.txt')
+_DANGEROUS_URI = re.compile(r'^\s*(?:javascript|data|file|vbscript)\s*:', re.I)
+_RAW_TAG = re.compile(r'(?is)<[^>]*>')
 
 
 class ChatImportError(Exception):
@@ -161,8 +166,21 @@ def _chatgpt(data, source_url=''):
     mapping = item.get('mapping')
     if not isinstance(mapping, dict):
         return None
+    ordered = []
+    current = item.get('current_node')
+    seen = set()
+    while current and current in mapping and current not in seen:
+        seen.add(current)
+        ordered.append(mapping[current])
+        current = mapping[current].get('parent') if isinstance(mapping[current], dict) else None
+    if ordered:
+        ordered.reverse()
+    else:
+        ordered = list(mapping.values())
+        ordered.sort(key=lambda node: _string((node.get('message') or {}).get('create_time'))
+                     if isinstance(node, dict) else '')
     messages = []
-    for node in mapping.values():
+    for node in ordered:
         message = node.get('message') if isinstance(node, dict) else None
         parsed = _message(message)
         if parsed:
@@ -218,9 +236,9 @@ class _ChatHTML(HTMLParser):
             return
         if tag == 'title': self._title_depth += 1
         role = _role(attrs.get('data-message-author-role') or attrs.get('data-role') or attrs.get('role'))
-        klass = (attrs.get('class') or '').lower()
-        if not role and ('assistant' in klass or 'model' in klass): role = 'assistant'
-        if not role and ('user' in klass or 'human' in klass): role = 'user'
+        classes = set((attrs.get('class') or '').lower().split())
+        if not role and classes.intersection(('assistant', 'model', 'chat-assistant', 'message-assistant')): role = 'assistant'
+        if not role and classes.intersection(('user', 'human', 'chat-user', 'message-user')): role = 'user'
         if role:
             if self._current and self._current.content.strip(): self.messages.append(self._current)
             self._current = Message(role, '')
@@ -228,7 +246,7 @@ class _ChatHTML(HTMLParser):
         elif tag == 'code' and not self._pre: self._append('`')
         elif tag == 'br': self._append('\n')
         elif tag in ('p', 'div', 'section', 'li', 'tr', 'h1', 'h2', 'h3'): self._append('\n')
-        elif tag == 'a' and attrs.get('href') and not attrs['href'].lower().startswith('javascript:'):
+        elif tag == 'a' and attrs.get('href') and _safe_uri(attrs['href']):
             self._links.append(attrs['href']); self._append('[')
         elif tag in ('td', 'th'): self._append('| ')
 
@@ -256,6 +274,9 @@ class _ChatHTML(HTMLParser):
 
 
 def parse_html(value, source_url=''):
+    if _looks_like_login(value):
+        return Conversation('需要登录的网页', 'HTML 对话', source_url,
+                            warnings=['页面看起来是登录或验证页，未导入任何对话'])
     parser = _ChatHTML()
     parser.feed(value)
     parser.close()
@@ -264,36 +285,61 @@ def parse_html(value, source_url=''):
                         messages=parser.messages)
 
 
+def _looks_like_login(text):
+    plain = _RAW_TAG.sub(' ', text or '').lower()
+    return bool(re.search(r'\b(?:log[ -]?in|sign[ -]?in|authenticate|verification)\b|登录|验证', plain) and
+                re.search(r'(?is)<(?:form|input|button)\b', text or ''))
+
+
+def _safe_uri(uri):
+    return not _DANGEROUS_URI.match(uri or '')
+
+
 def _clean_markdown(text):
     # Stored exports sometimes contain executable HTML.  Keep the textual
     # conversation and harmless Markdown/HTML while dropping active payloads.
+    text = html.unescape(text or '')
     text = re.sub(r'(?is)<(script|style|iframe|object|embed|form)\b.*?</\1\s*>', '', text)
-    text = re.sub(r'\s+on[a-z]+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]+)', '', text, flags=re.I)
-    text = re.sub(r'(?i)(href|src)\s*=\s*(["\'])\s*javascript:[^"\']*\2', r'\1=\2#\2', text)
-    return text.strip()
+    # Do not leave any raw HTML for marked/preview to interpret.  Its text is
+    # retained, while code fences/tables/formulas are ordinary Markdown.
+    text = _RAW_TAG.sub('', text)
+
+    def markdown_link(match):
+        label, destination = match.group(1), match.group(2).strip().strip('<>')
+        return label if not _safe_uri(destination) else '%s(%s)' % (label, destination)
+    text = re.sub(r'(!?\[[^\]]*\])\(\s*(<[^>]*>|[^\s)]+)(?:\s+[^)]*)?\)', markdown_link, text)
+    return text.replace('\x00', '').strip()
+
+
+def _safe_metadata(value, limit=300):
+    value = _RAW_TAG.sub('', html.unescape(_string(value, limit)))
+    value = value.replace('\x00', '').replace('\r', ' ').replace('\n', ' ').strip()
+    return re.sub(r'([\\`*_{}\[\]<>])', r'\\\1', value)[:limit]
 
 
 def to_markdown(conversation):
-    title = re.sub(r'[\r\n#]+', ' ', conversation.title or '导入的对话').strip()
-    lines = ['# ' + title, '', '> 来源：' + (conversation.source or '未知')]
-    if conversation.source_url: lines.append('> 原始地址：' + conversation.source_url)
+    title = _safe_metadata(conversation.title or '导入的对话')
+    lines = ['# ' + title, '', '> 来源：' + _safe_metadata(conversation.source or '未知')]
+    if conversation.source_url:
+        lines.append('> 原始地址：' + (_safe_metadata(conversation.source_url, 2000)
+                                      if _safe_uri(conversation.source_url) else '（已移除不安全地址）'))
     lines.append('> 转换时间：' + datetime.datetime.now().astimezone().strftime('%Y-%m-%d %H:%M'))
-    if conversation.created_at: lines.append('> 对话创建时间：' + conversation.created_at)
+    if conversation.created_at: lines.append('> 对话创建时间：' + _safe_metadata(conversation.created_at))
     for message in conversation.messages:
         lines.extend(['', '## ' + ('用户' if message.role == 'user' else 'AI 助手'), '',
                       _clean_markdown(message.content)])
         for attachment in message.attachments:
-            if attachment.get('name'): lines.append('\n附件：' + attachment['name'])
+            if attachment.get('name'): lines.append('\n附件：' + _safe_metadata(attachment['name'], 200))
     return '\n'.join(lines).strip() + '\n'
 
 
 def _parse_one(data, filename='', source_url=''):
     suffix = os.path.splitext(filename.lower())[1]
+    if len(data) > MAX_TEXT_BYTES:
+        raise ChatImportError('too_large', '导入内容超过 10 MB 限制')
     if suffix in ('.html', '.htm'):
-        if len(data) > MAX_TEXT_BYTES: raise ChatImportError('too_large', 'HTML 内容超过 10 MB 限制')
         return parse_html(_decode(data), source_url)
     if suffix in ('.md', '.txt'):
-        if len(data) > MAX_TEXT_BYTES: raise ChatImportError('too_large', '文本内容超过 10 MB 限制')
         return Conversation(os.path.splitext(os.path.basename(filename))[0] or '导入的文本', '纯文本 / Markdown', source_url,
                             messages=[Message('user', _clean_markdown(_decode(data)))])
     try:
@@ -302,12 +348,28 @@ def _parse_one(data, filename='', source_url=''):
         raise ChatImportError('invalid_json', 'JSON 对话导出文件无法解析')
 
 
+def _zip_eocd_count(raw):
+    """Reject oversized central directories before ZipFile builds its list."""
+    tail = raw[-(65557):]
+    pos = tail.rfind(b'PK\x05\x06')
+    if pos < 0 or len(tail) < pos + 22:
+        raise ChatImportError('invalid_zip', '压缩包无效或已损坏')
+    entries = struct.unpack_from('<H', tail, pos + 10)[0]
+    if entries == 0xffff or entries > MAX_ZIP_MEMBERS:
+        raise ChatImportError('too_many_zip_members', '压缩包文件数量超过 1000 个限制')
+
+
 def _safe_zip_members(raw):
     if len(raw) > MAX_ZIP_BYTES: raise ChatImportError('zip_too_large', '压缩包超过 100 MB 限制')
+    _zip_eocd_count(raw)
     try: archive = zipfile.ZipFile(BytesIO(raw))
     except (zipfile.BadZipFile, OSError): raise ChatImportError('invalid_zip', '压缩包无效或已损坏')
+    if len(archive.infolist()) > MAX_ZIP_MEMBERS:
+        archive.close(); raise ChatImportError('too_many_zip_members', '压缩包文件数量超过 1000 个限制')
     chosen, total, warnings = [], 0, []
     for info in archive.infolist():
+        if len(info.filename.encode('utf-8', errors='replace')) > MAX_ZIP_NAME_BYTES:
+            archive.close(); raise ChatImportError('unsafe_zip_path', '压缩包文件名过长')
         path = PurePosixPath(info.filename.replace('\\', '/'))
         if path.is_absolute() or '..' in path.parts or ':' in path.parts[0:1]:
             archive.close(); raise ChatImportError('unsafe_zip_path', '压缩包包含不安全的文件路径')
@@ -316,6 +378,8 @@ def _safe_zip_members(raw):
         total += info.file_size
         if total > MAX_ZIP_EXPANDED:
             archive.close(); raise ChatImportError('zip_expanded_too_large', '压缩包展开后超过 200 MB 限制')
+        if info.file_size > MAX_TEXT_BYTES:
+            archive.close(); raise ChatImportError('zip_member_too_large', '压缩包内单个文件超过 10 MB 限制')
         if info.file_size > 1024 * 1024 and info.compress_size and info.file_size / info.compress_size > MAX_ZIP_RATIO:
             archive.close(); raise ChatImportError('suspicious_zip', '压缩包压缩比异常，已拒绝导入')
         chosen.append(info)
@@ -330,19 +394,22 @@ def import_bytes(data, filename='', source_url=''):
     if suffix == '.zip' or raw[:4] == b'PK\x03\x04':
         archive, members, warnings = _safe_zip_members(raw)
         try:
-            successes = []
+            result, success_count = None, 0
             for info in members:
                 try:
                     with archive.open(info) as item:
-                        content = item.read(MAX_TEXT_BYTES + 1 if os.path.splitext(info.filename.lower())[1] in ('.html', '.htm', '.md', '.txt') else info.file_size + 1)
-                    successes.append(_parse_one(content, info.filename, source_url))
+                        content = item.read(MAX_TEXT_BYTES + 1)
+                    parsed = _parse_one(content, info.filename, source_url)
+                    if parsed.messages:
+                        success_count += 1
+                        if result is None:
+                            result = parsed
                 except ChatImportError as exc:
                     warnings.append('%s：%s' % (os.path.basename(info.filename), exc.message))
                 except Exception:
                     warnings.append('%s：无法解析，已跳过' % os.path.basename(info.filename))
-            if not successes: raise ChatImportError('no_supported_chat', '压缩包中没有可导入的对话')
-            result = successes[0]
-            if len(successes) > 1: warnings.append('压缩包包含多个对话，当前返回第一个可解析对话')
+            if result is None: raise ChatImportError('no_supported_chat', '压缩包中没有可导入的对话')
+            if success_count > 1: warnings.append('压缩包包含 %d 个可解析对话，当前返回第一个' % success_count)
             result.warnings.extend(warnings)
             return result
         finally: archive.close()
@@ -357,13 +424,18 @@ def import_file(path):
     if os.path.splitext(path.lower())[1] not in KNOWN_EXTENSIONS + ('.zip',):
         raise ChatImportError('unsupported_type', '仅支持 JSON、HTML、ZIP、Markdown 或文本对话导出')
     size = os.path.getsize(path)
-    if size > MAX_ZIP_BYTES: raise ChatImportError('too_large', '导入文件超过大小限制')
+    maximum = MAX_ZIP_BYTES if os.path.splitext(path.lower())[1] == '.zip' else MAX_TEXT_BYTES
+    if size > maximum: raise ChatImportError('too_large', '导入文件超过大小限制')
     with open(path, 'rb') as handle: return import_bytes(handle.read(), path)
 
 
 def result(conversation):
     if not conversation.messages:
         raise ChatImportError('no_conversation', '没有识别到用户与 AI 的对话；请确认页面已加载完整对话且未停留在登录页')
-    return {'ok': True, 'content': to_markdown(conversation), 'title': conversation.title,
-            'source': conversation.source, 'source_url': conversation.source_url,
-            'warnings': conversation.warnings, 'message_count': len(conversation.messages)}
+    return {'ok': True, 'content': to_markdown(conversation),
+            'title': _safe_metadata(conversation.title),
+            'source': _safe_metadata(conversation.source),
+            'source_url': (_safe_metadata(conversation.source_url, 2000)
+                           if _safe_uri(conversation.source_url) else ''),
+            'warnings': [_safe_metadata(item, 500) for item in conversation.warnings],
+            'message_count': len(conversation.messages)}
