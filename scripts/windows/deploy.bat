@@ -46,15 +46,15 @@ echo   venv ready
 
 if "%SKIP_TESTS%"=="1" goto :tests_done
 echo [3/7] Running tests ...
-".venv\Scripts\python.exe" readmd_fix_test.py
+".venv\Scripts\python.exe" ../tests/test_fix_test.py
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" readmd_convert_test.py
+".venv\Scripts\python.exe" ../../tests/test_convert_test.py
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" readmd_export_test.py
+".venv\Scripts\python.exe" ../../tests/test_export_test.py
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" readmd_web_test.py
+".venv\Scripts\python.exe" ../../tests/test_web_test.py
 if errorlevel 1 goto :err
-".venv\Scripts\python.exe" readmd_api_test.py
+".venv\Scripts\python.exe" ../../tests/test_api_test.py
 if errorlevel 1 goto :err
 ".venv\Scripts\python.exe" tools\privacy_scan.py
 if errorlevel 1 goto :err

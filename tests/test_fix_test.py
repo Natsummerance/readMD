@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""ReadMD 修正器单元测试：python readmd_fix_test.py"""
+"""ReadMD 修正器单元测试：python test_fix_test.py"""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from readmd_fix import fix_markdown
+from src.readmd_fix import fix_markdown
 
 QUIET = False
 FAIL = 0

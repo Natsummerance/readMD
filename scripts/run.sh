@@ -10,4 +10,4 @@ if [ ! -f ".venv/bin/python" ]; then
     exit 1
 fi
 
-exec ".venv/bin/python" "readmd.py" "$@"
+exec ".venv/bin/python" "../readmd.py" "$@"

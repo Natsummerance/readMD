@@ -2,7 +2,7 @@
 import os, sys, tempfile, unittest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from readmd_modules import txtmd
+from src.readmd_modules import txtmd
 
 
 class TestTxtMd(unittest.TestCase):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Focused regression tests for the v2.2.4 on-demand startup path.
 
-Run with: ``python -m unittest readmd_performance_test``
+Run with: ``python -m unittest test_performance_test``
 """
 
 import importlib
@@ -16,8 +16,8 @@ import urllib.error
 import urllib.request
 from unittest import mock
 
-import readmd
-import readmd_modules as registry
+import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..")); import readmd
+import src.readmd_modules as registry
 
 
 def wait_for(predicate, timeout=2):
@@ -51,7 +51,7 @@ class RegistryTest(unittest.TestCase):
             for thread in threads:
                 thread.start()
             self.assertTrue(entered.wait(1))
-            self.assertEqual(['readmd_modules.convert'], calls)
+            self.assertEqual(['src.readmd_modules.convert'], calls)
             release.set()
             for thread in threads:
                 thread.join(1)

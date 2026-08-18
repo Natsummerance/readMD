@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """ReadMD v2.1.0 导出模块测试。
 
-运行：python readmd_export_test.py   （退出码 0 = 全部通过）
+运行：python test_export_test.py   （退出码 0 = 全部通过）
 """
 
 import os
@@ -12,15 +12,15 @@ import unittest
 from unittest import mock
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.join(ROOT, '..'))
 
-from readmd_modules.mdexport import parser as P
-from readmd_modules.mdexport import styles as S
-from readmd_modules.mdexport import formula as F
-from readmd_modules.mdexport import docx_render as DOCX
-from readmd_modules.mdexport import pdf_render as PDF
-import readmd_modules.mdexport as E
-import readmd
+from src.readmd_modules.mdexport import parser as P
+from src.readmd_modules.mdexport import styles as S
+from src.readmd_modules.mdexport import formula as F
+from src.readmd_modules.mdexport import docx_render as DOCX
+from src.readmd_modules.mdexport import pdf_render as PDF
+import src.readmd_modules.mdexport as E
+import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..")); import readmd
 
 SAMPLE = '''# 标题一
 
@@ -299,7 +299,7 @@ class TestExportBridge(unittest.TestCase):
         self.assertTrue(readmd.normalize_dialog_path('report', '.pdf').endswith('report.pdf'))
 
     def test_failed_export_keeps_existing_destination(self):
-        from readmd_modules.mdexport import html_render
+        from src.readmd_modules.mdexport import html_render
 
         with tempfile.TemporaryDirectory() as td:
             target = os.path.join(td, 'kept.html')

@@ -4,18 +4,18 @@ from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 datas = [
     ('assets', 'assets'),
-    ('readmd_fix.py', '.'),
+    ('../src/readmd_fix.py', '.'),
 ]
-hiddenimports = ['readmd_fix', 'Vision', 'Quartz', 'Foundation', 'objc']
+hiddenimports = ['src.readmd_fix', 'Vision', 'Quartz', 'Foundation', 'objc']
 datas += collect_data_files('magika')
 datas += collect_data_files('docx')
 datas += collect_data_files('reportlab')
 datas += collect_data_files('matplotlib')
 datas += collect_data_files('trafilatura')
-hiddenimports += collect_submodules('readmd_modules')
+hiddenimports += collect_submodules('src.readmd_modules')
 
 a = Analysis(
-    ['readmd.py'],
+    ['../readmd.py'],
     pathex=[],
     binaries=[],
     datas=datas,
@@ -25,7 +25,7 @@ a = Analysis(
     runtime_hooks=[],
     excludes=[
         'winrt', 'pywinrt', 'winreg',
-        'readmd_modules.windows_native',
+        'src.readmd_modules.windows_native',
         'installer',
     ],
     noarchive=False,

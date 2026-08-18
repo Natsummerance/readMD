@@ -38,7 +38,7 @@ echo "[4/4] Done!"
 echo
 echo "  To run ReadMD:"
 echo "    ./run.sh [file.md]"
-echo "    or: .venv/bin/python readmd.py [file.md]"
+echo "    or: .venv/bin/python ../readmd.py [file.md]"
 echo
 echo "  macOS: To set ReadMD as default .md opener,"
 echo "    right-click any .md file → Get Info → Open with → Change All..."

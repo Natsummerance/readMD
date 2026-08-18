@@ -10,9 +10,8 @@ import unittest
 from unittest import mock
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, ROOT)
+sys.path.insert(0, os.path.join(ROOT, '..'))
 
-import readmd
 
 
 class TestRenameFile(unittest.TestCase):
@@ -133,7 +132,7 @@ class TestPrivateWebAuthorization(unittest.TestCase):
 
     def test_request_guard_blocks_ungranted_private_resources(self):
         api = readmd.Api()
-        with mock.patch('readmd_modules.web.socket.getaddrinfo') as lookup:
+        with mock.patch('src.readmd_modules.web.socket.getaddrinfo') as lookup:
             lookup.return_value = [(2, 1, 6, '', ('127.0.0.1', 0))]
             self.assertFalse(api._web_request_allowed(
                 'http://local.invalid/metadata', 'task-a', ''))

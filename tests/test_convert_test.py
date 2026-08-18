@@ -4,8 +4,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-import readmd_modules.mdcheck as MDC
-from readmd_modules import convert as CV
+import src.readmd_modules.mdcheck as MDC
+from src.readmd_modules import convert as CV
 
 
 class MockAI(BaseHTTPRequestHandler):
@@ -270,7 +270,7 @@ class TestConvertApi(unittest.TestCase):
 class TestAi(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from readmd_modules import ai
+        from src.readmd_modules import ai
         cls.ai = ai
         cls.mock = ThreadingHTTPServer(('127.0.0.1', 0), MockAI)
         threading.Thread(target=cls.mock.serve_forever, daemon=True).start()
@@ -412,8 +412,8 @@ class TestPlatformDependencies(unittest.TestCase):
         self.assertTrue(any('pyobjc-framework-vision' in package for package in packages))
         with open(os.path.join(root, 'ReadMD-macOS.spec'), encoding='utf-8') as f:
             spec = f.read()
-        self.assertNotIn("('readmd_modules', 'readmd_modules')", spec)
-        self.assertIn("'readmd_modules.windows_native'", spec)
+        self.assertNotIn("('src/readmd_modules', 'src/readmd_modules')", spec)
+        self.assertIn("'src.readmd_modules.windows_native'", spec)
 
 
 def main():

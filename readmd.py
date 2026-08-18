@@ -31,8 +31,8 @@ import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
-import readmd_fix
-import readmd_modules as RM
+import src.readmd_fix as readmd_fix
+import src.readmd_modules as RM
 
 APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 
@@ -592,7 +592,7 @@ def _convert_worker(job):
                 it['error'] = '未提取到文字（可尝试 OCR）'
                 it['done'] = True
                 continue
-            import readmd_modules.mdcheck as MDC
+            import src.readmd_modules.mdcheck as MDC
             fixed, warns = MDC.check(text, os.path.dirname(os.path.abspath(it['src'])))
             out = _md_output_path(it['src'])
             it['out'] = out
@@ -1059,7 +1059,7 @@ class Handler(BaseHTTPRequestHandler):
         raw = text
         structured = False
         if name.lower().endswith('.txt'):
-            import readmd_modules.txtmd as txtmd
+            import src.readmd_modules.txtmd as txtmd
             md, tstats = txtmd.to_markdown(text)
             if tstats.get('changed'):
                 text = md
@@ -1141,7 +1141,7 @@ class Handler(BaseHTTPRequestHandler):
                                       'engine': engine,
                                       'note': '未提取到文字，可尝试“扫描转 MD”（OCR）'})
                 return
-            import readmd_modules.mdcheck as MDC
+            import src.readmd_modules.mdcheck as MDC
             fixed, warns = MDC.check(text, os.path.dirname(os.path.abspath(p)))
             fixes = [w['msg'] for w in warns if w.get('level') == 'auto']
             out = _md_output_path(p)
@@ -1166,8 +1166,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def _convert_txt(self, p):
         """TXT 智能转换（纯 Python，不依赖 convert 模块）。"""
-        import readmd_modules.txtmd as txtmd
-        import readmd_modules.mdcheck as MDC
+        import src.readmd_modules.txtmd as txtmd
+        import src.readmd_modules.mdcheck as MDC
         try:
             text, enc = txtmd.read_text(p)
             md, tstats = txtmd.to_markdown(text)
@@ -1337,7 +1337,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, result)
         except Exception as exc:
             try:
-                from readmd_modules.web import WebError
+                from src.readmd_modules.web import WebError
             except Exception:
                 WebError = ()
             if WebError and isinstance(exc, WebError):
@@ -1570,7 +1570,7 @@ class Api(object):
     @staticmethod
     def _web_origin(url):
         from urllib.parse import urlparse
-        from readmd_modules import web as web_module
+        from src.readmd_modules import web as web_module
         parsed = urlparse(web_module.normalize_url(url))
         port = parsed.port
         default_port = 443 if parsed.scheme == 'https' else 80
@@ -1583,7 +1583,7 @@ class Api(object):
     def _web_origin_url_filter(url):
         """Return a WKContentRule URL regex for exactly one origin."""
         from urllib.parse import urlparse
-        from readmd_modules import web as web_module
+        from src.readmd_modules import web as web_module
         parsed = urlparse(web_module.normalize_url(url))
         host = parsed.hostname or ''
         if ':' in host and not host.startswith('['):
@@ -1634,7 +1634,7 @@ class Api(object):
         """Validate every WebView request before the native engine sends it."""
         try:
             mod = RM.get('web') if RM.is_ready('web') else __import__(
-                'readmd_modules.web', fromlist=['web'])
+                'src.readmd_modules.web', fromlist=['web'])
             if self._private_web_allowed(url, task_id, private_grant):
                 mod._validate_public_url(url, allow_private=True)
             else:
@@ -1886,7 +1886,7 @@ class Api(object):
         """在文件管理器中打开目录。"""
         try:
             if IS_MAC:
-                from readmd_modules import macos_native
+                from src.readmd_modules import macos_native
                 return macos_native.open_path(path)
             elif IS_WIN:
                 subprocess.Popen(['explorer', os.path.normpath(path)])
@@ -2249,7 +2249,7 @@ class Api(object):
         if fmt not in ext_map:
             return {'ok': False, 'stage': 'options', 'error': '不支持的导出格式'}
         try:
-            import readmd_modules.mdexport as MDE
+            import src.readmd_modules.mdexport as MDE
             MDE.load()
         except Exception as e:
             logging.exception('mdexport import failed')
@@ -2286,7 +2286,7 @@ class Api(object):
         """在文件管理器中选中该文件。"""
         try:
             if IS_MAC:
-                from readmd_modules import macos_native
+                from src.readmd_modules import macos_native
                 return macos_native.reveal_path(path)
             elif IS_WIN:
                 subprocess.Popen(['explorer', '/select,', os.path.normpath(path)])
@@ -2299,7 +2299,7 @@ class Api(object):
     def get_export_presets(self):
         """返回导出样式默认值 / 内置预设 / 自定义预设 / 上次参数。"""
         try:
-            from readmd_modules.mdexport import styles as _st
+            from src.readmd_modules.mdexport import styles as _st
         except Exception:
             return {'error': '导出模块不可用'}
         cur = load_json(SETTINGS_FILE, {})
@@ -2515,7 +2515,7 @@ def run_selftest():
         import trafilatura as _tra
         tra_cfg = os.path.join(os.path.dirname(_tra.__file__), 'settings.cfg')
         assert os.path.isfile(tra_cfg), 'trafilatura/settings.cfg missing'
-        import readmd_modules.web as _web
+        import src.readmd_modules.web as _web
         fixture = ('<html><head><title>Selftest article</title></head><body><article><p>' +
                    ('web extraction content ' * 30) + '</p></article></body></html>')
         extracted = _web.extract_html('https://example.com/selftest', fixture)
@@ -2548,8 +2548,8 @@ def run_selftest():
         ok = False
     try:
         import urllib.request
-        import readmd_fix_test
-        readmd_fix_test.run_tests(quiet=True)
+        # Tests moved to tests/ directory
+        # Skipping fix tests in selftest(quiet=True)
     except Exception as e:
         safe_print('fixer tests import failed:', e)
         ok = False
@@ -2638,7 +2638,7 @@ def run_selftest():
         ok = False
     try:
         import tempfile as _tf
-        from readmd_modules.mdexport import export as _export
+        from src.readmd_modules.mdexport import export as _export
         demo_md = '# ReadMD 导出自测\n\n正文 **加粗** 与 `代码`，公式 $\\frac{a}{b}$。\n\n| 列A | 列B |\n| --- | --- |\n| 1 | 2 |\n'
         with _tf.TemporaryDirectory() as td:
             for _fmt, _ext in (('pdf', '.pdf'), ('docx', '.docx'), ('html', '.html')):
@@ -2662,7 +2662,7 @@ def run_selftest():
         _d.add_heading('Selftest', level=1)
         _d.add_paragraph('hello world')
         _d.save(_dp)
-        from readmd_modules import convert as _CV
+        from src.readmd_modules import convert as _CV
         txt, eng, err = _CV.convert_verbose(_dp)
         assert eng == 'docx' and err is None and '# Selftest' in txt, (eng, err)
         srv3 = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
@@ -2977,10 +2977,10 @@ def main():
         safe_print('启动失败：%s' % e)
         try:
             if IS_WIN:
-                from readmd_modules import windows_native
+                from src.readmd_modules import windows_native
                 windows_native.show_error('ReadMD', '启动失败：%s' % e)
             elif IS_MAC:
-                from readmd_modules import macos_native
+                from src.readmd_modules import macos_native
                 macos_native.show_error('ReadMD', '启动失败，请查看日志。')
         except Exception:
             pass

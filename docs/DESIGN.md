@@ -97,7 +97,7 @@
 - HTML 主题：htmlTheme 亮/暗/米色决定页面背景与正文色，其余样式 token 直接映射 CSS
 
 ### 交付门禁（导出相关）
-- readmd_export_test.py 22/22；selftest 含导出三格式冒烟
+- ../tests/test_export_test.py 22/22；selftest 含导出三格式冒烟
 - 导出后 PDF 可用 pymupdf 打开、DOCX 可用 python-docx 打开、HTML 含 DOCTYPE + marked + MathJax
 - 公式含中文不产生缺字告警；缺失图片有 warn 提示且不中断导出
 

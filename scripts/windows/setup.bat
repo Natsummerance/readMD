@@ -32,12 +32,12 @@ echo [4/6] Packaging ReadMD (onedir install edition) ...
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onedir --windowed ^
     --name ReadMD --icon "assets\readmd.ico" ^
     --add-data "assets;assets" ^
-    --add-data "readmd_modules;readmd_modules" ^
-    --add-data "readmd_fix.py;." ^
-    --hidden-import readmd_fix ^
+    --add-data "src/readmd_modules;src/readmd_modules" ^
+    --add-data "src/readmd_fix.py;src" ^
+    --hidden-import src.readmd_fix ^
     --collect-data magika ^
-    --collect-submodules readmd_modules ^
-    readmd.py
+    --collect-submodules src.readmd_modules ^
+    ../readmd.py
 if errorlevel 1 goto :err
 
 echo [5/6] Registering as default .md app (current user) ...

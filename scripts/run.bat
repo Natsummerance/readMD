@@ -9,5 +9,5 @@ if not exist ".venv\Scripts\pythonw.exe" (
     pause
     exit /b 1
 )
-start "" ".venv\Scripts\pythonw.exe" "%~dp0readmd.py" %*
+start "" ".venv\Scripts\pythonw.exe" "%~dp0..\readmd.py" %*
 exit /b 0

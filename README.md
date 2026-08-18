@@ -183,9 +183,9 @@ python readmd.py --browser "文件.md"  rem 无 pywebview 时用浏览器兜底
 ```
 readmd/
 ├─ readmd.py            # 主程序（本地服务 + 窗口 + 单实例托盘 + 里程碑打点）
-├─ readmd_fix.py        # 自动修正器（纯标准库）
-├─ readmd_fix_test.py   # 修正器测试（37 项，python readmd_fix_test.py）
-├─ readmd_modules/      # 懒加载扩展模块
+├─ src/readmd_fix.py        # 自动修正器（纯标准库）
+├─ tests/test_fix_test.py   # 修正器测试（37 项，python tests/test_fix_test.py）
+├─ src/readmd_modules/      # 懒加载扩展模块
 │  ├─ convert.py        #   万物转 MD（MarkItDown）
 │  ├─ ocr.py            #   扫描转 MD（WinRT OCR + PyMuPDF）
 │  ├─ web.py            #   网页转 MD（安全下载 + Trafilatura / Readability / 图片本地化）

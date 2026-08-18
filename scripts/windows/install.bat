@@ -38,7 +38,7 @@ if "%EXE%"=="" if exist "%~dp0dist\ReadMD-portable.exe" set "EXE=%~dp0dist\ReadM
 if "%EXE%"=="" (
     set "PYW=%~dp0.venv\Scripts\pythonw.exe"
     set "ICON=%~dp0assets\readmd.ico"
-    set "SCRIPT=%~dp0readmd.py"
+    set "SCRIPT=%~dp0..\readmd.py"
 ) else (
     set "PYW=%EXE%"
     set "ICON=%EXE%"

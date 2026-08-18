@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import requests
 
-from readmd_modules import web as WEB
+from src.readmd_modules import web as WEB
 
 
 ARTICLE = '''<!doctype html><html><head><title>本地测试文章</title>

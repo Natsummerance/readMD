@@ -1,6 +1,6 @@
 # ReadMD 开发上下文（CONTEXT）
 
-> 本文档用于快速恢复开发上下文。新会话开始时先读：README.md、readmd.py、readmd_fix.py、readmd_modules/*.py、installer/setup_app.py、deploy.bat、release.py。
+> 本文档用于快速恢复开发上下文。新会话开始时先读：README.md、readmd.py、../src/readmd_fix.py、../src/readmd_modules/*.py、installer/setup_app.py、deploy.bat、release.py。
 
 ## 项目一句话
 
@@ -35,26 +35,26 @@
 17. Windows 文件关联图标与应用 Logo 分离：`.md/.markdown` 使用多尺寸简约文档图标，ReadMD EXE、安装器和快捷方式继续使用原应用 Logo
 18. 上一版：修复 PDF/DOCX/HTML 保存路径与原子写入；网页链加入离线 Defuddle、交互 WebView、短内容判定与临时内网授权；顶栏文件名支持点击/F2 重命名并同步本地引用
 19. v2.2.4：阅读优先、可选模块按功能加载；启动 probe 只记录版本/里程碑；AI 可预览导入一次性授权剪贴板、用户选择的导出文件和公开 URL 对话，受大小/资源/危险 URI 限制
-20. v2.2.5：TXT 智能转 Markdown（readmd_modules/txtmd.py：标题/对齐表格/分点/目录锚点，打开与转换双入口）；首页 Ctrl+V 或「从剪贴板新建」以虚拟文档创建 MD（Ctrl+S 存盘，不弹另存为）；URL 导入全放开（私网/局域网不再拦截，纯本地无安全审查）；安装器升级自动匹配旧目录；启动静默检查 GitHub 最新 Release 的 Toast 升级推送
+20. v2.2.5：TXT 智能转 Markdown（../src/readmd_modules/txtmd.py：标题/对齐表格/分点/目录锚点，打开与转换双入口）；首页 Ctrl+V 或「从剪贴板新建」以虚拟文档创建 MD（Ctrl+S 存盘，不弹另存为）；URL 导入全放开（私网/局域网不再拦截，纯本地无安全审查）；安装器升级自动匹配旧目录；启动静默检查 GitHub 最新 Release 的 Toast 升级推送
 
 ## 关键文件
 
 | 文件 | 作用 |
 | --- | --- |
 | readmd.py | 主程序（本地服务+窗口），含单实例控制/托盘、启动里程碑打点、run_selftest()、install_association()、Prompt/历史会话 API |
-| readmd_fix.py | 自动修正器（纯标准库），fix_markdown() 返回 text + fixes 列表 |
-| readmd_fix_test.py | 修正器 37 项单元测试，python readmd_fix_test.py |
-| readmd_convert_test.py | 转换/校验/AI 协议 21 项单元测试，python readmd_convert_test.py |
-| readmd_modules/mdcheck.py | 转换后严格校验（围栏/表格/公式/替换符/图片）+ 安全自动修复 |
-| readmd_export_test.py | 导出模块 22 项单元测试（parser/styles/formula/三格式 smoke），python readmd_export_test.py |
-| readmd_modules/mdexport/ | v2.1.0 导出包（惰性加载，不进 MODULES 自动加载）：parser.py / styles.py / formula.py / pdf_render.py / docx_render.py / html_render.py |
-| readmd_modules/__init__.py | 懒加载注册表（convert/ocr/web/ai），load_all() 后台加载 |
-| readmd_modules/convert.py | 转换：docx/pdf 专用解析（OMML→LaTeX、表格、代码块）+ MarkItDown 兜底 |
-| readmd_modules/ocr.py | WinRT OCR + PyMuPDF |
-| readmd_modules/web.py | 安全下载、Trafilatura/Readability/完整页面抽取、链接与图片资源处理 |
-| readmd_web_test.py | 网页下载、抽取、安全、图片与 API 的本地 HTTP 夹具测试 |
-| readmd_api_test.py | 桌面桥接重命名与内网临时授权测试 |
-| readmd_modules/ai.py | AI 提供商注册表 + 四协议请求（chat/completions/completions/responses/messages）+ 模型列表拉取 + 用量解析 |
+| ../src/readmd_fix.py | 自动修正器（纯标准库），fix_markdown() 返回 text + fixes 列表 |
+| ../tests/test_fix_test.py | 修正器 37 项单元测试，python ../tests/test_fix_test.py |
+| ../tests/test_convert_test.py | 转换/校验/AI 协议 21 项单元测试，python ../tests/test_convert_test.py |
+| ../src/readmd_modules/mdcheck.py | 转换后严格校验（围栏/表格/公式/替换符/图片）+ 安全自动修复 |
+| ../tests/test_export_test.py | 导出模块 22 项单元测试（parser/styles/formula/三格式 smoke），python ../tests/test_export_test.py |
+| ../src/readmd_modules/mdexport/ | v2.1.0 导出包（惰性加载，不进 MODULES 自动加载）：parser.py / styles.py / formula.py / pdf_render.py / docx_render.py / html_render.py |
+| ../src/readmd_modules/__init__.py | 懒加载注册表（convert/ocr/web/ai），load_all() 后台加载 |
+| ../src/readmd_modules/convert.py | 转换：docx/pdf 专用解析（OMML→LaTeX、表格、代码块）+ MarkItDown 兜底 |
+| ../src/readmd_modules/ocr.py | WinRT OCR + PyMuPDF |
+| ../src/readmd_modules/web.py | 安全下载、Trafilatura/Readability/完整页面抽取、链接与图片资源处理 |
+| ../tests/test_web_test.py | 网页下载、抽取、安全、图片与 API 的本地 HTTP 夹具测试 |
+| ../tests/test_api_test.py | 桌面桥接重命名与内网临时授权测试 |
+| ../src/readmd_modules/ai.py | AI 提供商注册表 + 四协议请求（chat/completions/completions/responses/messages）+ 模型列表拉取 + 用量解析 |
 | assets/ | 前端（index.html/style.css/app.js + vendor 全离线：marked/MathJax/qrcode/codemirror.bundle） |
 | DESIGN.md | v2.0 设计规范：色盘/字体/间距/圆角/阴影 token，三主题 |
 | installer/setup_app.py | 安装器主程序（含静默模式、onedir 整目录拷贝安装）；setup.html 动画界面；build_setup.bat 打包 |
@@ -75,7 +75,7 @@
 
 ## 测试现状（全部通过）
 
-- v2.2.5 Windows 发布前必须运行完整回归（含 readmd_txtmd_test / readmd_upgrade_test / readmd_web_test）、安装器/性能回归、Playwright、隐私扫描、`--selftest`、冻结 smoke 与启动 probe；macOS 运行解析/剪贴板桥接/`--selftest` 与 Bundle 架构资源检查
+- v2.2.5 Windows 发布前必须运行完整回归（含 ../../tests/test_txtmd_test / ../../tests/test_upgrade_test / ../../tests/test_web_test）、安装器/性能回归、Playwright、隐私扫描、`--selftest`、冻结 smoke 与启动 probe；macOS 运行解析/剪贴板桥接/`--selftest` 与 Bundle 架构资源检查
 - dist\ReadMD\ReadMD.exe --selftest 退出码 0（console=False 无输出）；`readmd.log` 启动里程碑：start / server_up / webview_imported / window_created / page_loaded
 - 安装器串行 静默安装→文件就位→静默卸载→目录清除，验证通过（并发下曾出现竞争残留，正常串行无问题）
 
@@ -96,19 +96,19 @@
 
 ## 最近一次变更（v2.2.5 修复）
 
-- readmd_modules/txtmd.py：纯文本智能结构化——标题层级、对齐表格（复用 mdcheck 对齐能力）、分点列表与目录锚点；打开 `.txt` 自动结构化渲染，转换入口输出智能 MD；readmd_txtmd_test.py 13 用例
+- ../src/readmd_modules/txtmd.py：纯文本智能结构化——标题层级、对齐表格（复用 mdcheck 对齐能力）、分点列表与目录锚点；打开 `.txt` 自动结构化渲染，转换入口输出智能 MD；../tests/test_txtmd_test.py 13 用例
 - 剪贴板新建（M2）：全局 keydown Ctrl+V（排除 input/textarea/CodeMirror 焦点）→ 一次性剪贴板授权 → Markdown 解析 → renderVirtual('clipboard', ...) 可编辑虚拟文档；欢迎页「从剪贴板新建」按钮；「从剪贴板获取对话」复用同一解析路径
-- URL 全放开（M3）：readmd_modules/web.py 默认 allow_private（fetch_html/fetch_document/localize_images/redirect 同步放开）；_api_chat_import 与 w-web 一致放开；修复 URL 导入绕过 _module_ready 懒加载门禁导致首次同步挂起；readmd_web_test.py 私网拒绝用例改为放行断言（21 用例）
-- 安装器（M4）：setup_app.py state['default_dir'] 改用 detect_install_dir()，升级时预填旧目录自动匹配；setup.html 目录输入框与「检测到已安装版本」文案联动；installer_setup_test.py 12 用例
-- 升级推送（M5）：readmd.py _parse_version() + check_latest_release()（GET api.github.com/repos/Natsummerance/readMD/releases/latest，4s 超时失败静默，进程内缓存）；Api.check_upgrade()；assets/app.js finishInit() 非阻塞 checkUpgrade() + Toast 点击打开 Release 页；readmd_upgrade_test.py 4 用例
+- URL 全放开（M3）：../src/readmd_modules/web.py 默认 allow_private（fetch_html/fetch_document/localize_images/redirect 同步放开）；_api_chat_import 与 w-web 一致放开；修复 URL 导入绕过 _module_ready 懒加载门禁导致首次同步挂起；../tests/test_web_test.py 私网拒绝用例改为放行断言（21 用例）
+- 安装器（M4）：setup_app.py state['default_dir'] 改用 detect_install_dir()，升级时预填旧目录自动匹配；setup.html 目录输入框与「检测到已安装版本」文案联动；../tests/test_installer_setup.py 12 用例
+- 升级推送（M5）：readmd.py _parse_version() + check_latest_release()（GET api.github.com/repos/Natsummerance/readMD/releases/latest，4s 超时失败静默，进程内缓存）；Api.check_upgrade()；assets/app.js finishInit() 非阻塞 checkUpgrade() + Toast 点击打开 Release 页；../tests/test_upgrade_test.py 4 用例
 - 版本/发布：readmd.py VERSION=2.2.5；release.yml / release.py / package / installer / macOS spec / ui-tests 全部同步 v2.2.5；release_notes.md / release_notes_macos.md 重写
 
 ## 最近一次变更（v2.1.0 导出）
 
-- 新增 readmd_modules/mdexport/ 导出包：parser（块 AST + 行内节点 + 公式提取）、styles（schema + 3 预设 + sanitize）、formula（matplotlib mathtext 渲染公式为透明 PNG，含中文公式；不支持语法回退文本并提示）、pdf_render（reportlab：微软雅黑 TTF + Consolas 等宽注册、样式 token 到 ParagraphStyle/TableStyle、封面/目录/书签/页码/元数据、multiBuild）、docx_render（python-docx：内置 Heading 样式 + eastAsia 字体、表头底纹/斑马纹/双写列宽、代码块底纹、公式 run.add_picture、页脚 PAGE 域）、html_render（单文件内联 marked+MathJax+主题 CSS）
+- 新增 ../src/readmd_modules/mdexport/ 导出包：parser（块 AST + 行内节点 + 公式提取）、styles（schema + 3 预设 + sanitize）、formula（matplotlib mathtext 渲染公式为透明 PNG，含中文公式；不支持语法回退文本并提示）、pdf_render（reportlab：微软雅黑 TTF + Consolas 等宽注册、样式 token 到 ParagraphStyle/TableStyle、封面/目录/书签/页码/元数据、multiBuild）、docx_render（python-docx：内置 Heading 样式 + eastAsia 字体、表头底纹/斑马纹/双写列宽、代码块底纹、公式 run.add_picture、页脚 PAGE 域）、html_render（单文件内联 marked+MathJax+主题 CSS）
 - readmd.py：Api.export_doc（SAVE_DIALOG → mdexport.export）/ reveal_path / get_export_presets / save_export_presets；selftest 增加导出三格式冒烟；VERSION=2.1.0
 - 前端：btn-print 与 Ctrl+P 打开导出面板（export-modal），schema 驱动 8 组参数渲染，预设/自定义预设/恢复默认，导出后「打开 / 所在文件夹」，exportLast/exportPresets 经 settings.json 持久化
-- 打包注意：package.bat 的 --collect-submodules readmd_modules 已覆盖 mdexport；reportlab/matplotlib 由 PyInstaller hook 收集；构建后用 dist exe 验证 --selftest 的 export OK
+- 打包注意：package.bat 的 --collect-submodules src.readmd_modules 已覆盖 mdexport；reportlab/matplotlib 由 PyInstaller hook 收集；构建后用 dist exe 验证 --selftest 的 export OK
 
 ## 最近一次变更（v2.0.1 安装器修复）
 
