@@ -81,14 +81,14 @@
 
 ## 环境注意事项
 
-- 平台依赖分为 requirements-common.txt、requirements-windows.txt 与 requirements-macos.txt；macOS 构建禁止安装/打包 WinRT、winreg 和 Windows 安装器代码
+- 平台依赖分为 config/requirements-common.txt、config/requirements-windows.txt 与 config/requirements-macos.txt；macOS 构建禁止安装/打包 WinRT、winreg 和 Windows 安装器代码
 - v2.0 新增依赖 pystray（托盘）；单实例控制端口 26891 固定，占用时回退随机端口并禁用单实例
-- v2.1 新增依赖 reportlab（PDF）、matplotlib（公式成图），全部惰性导入（mdexport 包不进 MODULES 自动加载）；requirements.txt 保持纯 ASCII
+- v2.1 新增依赖 reportlab（PDF）、matplotlib（公式成图），全部惰性导入（mdexport 包不进 MODULES 自动加载）；config/requirements.txt 保持纯 ASCII
 - 注册表关联 HKCU\Software\Classes\ReadMD.markdown → dist\ReadMD\ReadMD.exe（测试残留的悬空路径已修复）
 
 ## 已知待办 / 隐患
 
-- requirements.txt 中 lxml 6.1.1 有 `does not provide extra 'html_clean'` WARNING（无碍）
+- config/requirements.txt 中 lxml 6.1.1 有 `does not provide extra 'html_clean'` WARNING（无碍）
 - 常驻托盘占用内存约 50–100MB；如后续更在意内存可改「关闭=销毁窗口」
 - onedir 版 selftest 的 frozen 分支会调 `/api/modules` 触发重量模块加载（原 onefile 已如此），验证时注意区分
 - .spec 文件被 .gitignore 忽略（`*.spec`），本地保留用于重建；新环境可用 .bat 命令行参数打包

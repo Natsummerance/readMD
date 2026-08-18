@@ -4,6 +4,7 @@
 Run with: ``python -m unittest test_performance_test``
 """
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import importlib
 import json
 import os

@@ -74,7 +74,7 @@ if not exist "%WVENV%\Scripts\python.exe" (
 
 )
 
-"%WVENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r win7-reqs.txt
+"%WVENV%\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r config/win7-reqs.txt
 
 if errorlevel 1 goto :err
 
@@ -110,11 +110,11 @@ if errorlevel 1 goto :err
 
 echo [6/7] build onedir app + uninstaller ...
 
-"%WVENV%\Scripts\python.exe" -m PyInstaller --noconfirm --clean ReadMD-win7.spec
+"%WVENV%\Scripts\python.exe" -m PyInstaller --noconfirm --clean release/ReadMD-win7.spec
 
 if errorlevel 1 goto :err
 
-"%WVENV%\Scripts\python.exe" -m PyInstaller --noconfirm --clean ReadMDUninstall-win7.spec
+"%WVENV%\Scripts\python.exe" -m PyInstaller --noconfirm --clean release/ReadMDUninstall-win7.spec
 
 if errorlevel 1 goto :err
 
@@ -122,7 +122,7 @@ if errorlevel 1 goto :err
 
 echo [7/7] build setup (embeds app + uninstaller + runtime) ...
 
-"%WVENV%\Scripts\python.exe" -m PyInstaller --noconfirm --clean ReadMDSetup-win7.spec
+"%WVENV%\Scripts\python.exe" -m PyInstaller --noconfirm --clean release/ReadMDSetup-win7.spec
 
 if errorlevel 1 goto :err
 

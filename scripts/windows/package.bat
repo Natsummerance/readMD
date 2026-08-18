@@ -25,7 +25,7 @@ if not exist ".venv\Scripts\python.exe" (
     python -m venv .venv
     if errorlevel 1 goto :err
 )
-".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r requirements.txt pyinstaller
+".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r config/requirements.txt pyinstaller
 if errorlevel 1 goto :err
 
 echo [3/5] Generating icon ...

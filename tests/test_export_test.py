@@ -4,6 +4,7 @@
 运行：python test_export_test.py   （退出码 0 = 全部通过）
 """
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import os
 import shutil
 import sys

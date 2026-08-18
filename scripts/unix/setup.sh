@@ -24,7 +24,7 @@ echo "[2/6] Creating venv and installing dependencies ..."
 if [ ! -f ".venv/bin/python" ]; then
     $PY3 -m venv .venv
 fi
-".venv/bin/python" -m pip install --disable-pip-version-check -q -r requirements-test-macos.txt
+".venv/bin/python" -m pip install --disable-pip-version-check -q -r config/requirements-test-macos.txt
 
 echo "[3/6] Generating icon ..."
 if [ -f "tools/make_icon.py" ]; then
@@ -32,7 +32,7 @@ if [ -f "tools/make_icon.py" ]; then
 fi
 
 echo "[4/6] Packaging ReadMD (.app bundle) ..."
-".venv/bin/python" -m PyInstaller --noconfirm --clean ReadMD-macOS.spec
+".venv/bin/python" -m PyInstaller --noconfirm --clean release/ReadMD-macOS.spec
 
 echo "[5/6] Preparing .app ..."
 APP_PATH="dist/ReadMD.app"

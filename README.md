@@ -10,6 +10,8 @@
 
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-0078d6)
 ![version](https://img.shields.io/github/v/release/Natsummerance/readMD?color=3b6ef5)
+
+**v2.2.6 最新特性**：工具栏智能状态管理 · 主页六模块布局 · VSCode 风格目录树 · 目录锚点跳转 · 一键返回主页 · 根目录重构整理
 ![webview2](https://img.shields.io/badge/runtime-WebView2-4fc08d)
 ![repo size](https://img.shields.io/github/repo-size/Natsummerance/readMD)
 
@@ -23,6 +25,15 @@
 - 🎨 **界面清爽**：44px 工具条 + 内联 SVG 图标、欢迎页最近文件网格、浅色 / 暗色 / sepia 三主题全套设计 token、大文档骨架屏、动画遵循系统「减弱动态效果」
 - 🤖 **AI 助手与对话导入（v2.2.4）**：官方预设 + 可增删改的自定义连接；API Key 仅本机保存且配置接口不回传明文。可从一次性授权剪贴板、用户选择的导出文件或公开网页地址预览并导入对话；导入会限制大小、压缩包展开量和危险链接，不记录原始剪贴板内容
 - ⚡ **按需加载与启动探针（v2.2.4）**：先打开阅读界面，再在用户实际使用时加载转换、OCR、网页或 AI 模块；启动探针只输出里程碑与版本，不包含文档路径或内容
+- 🎨 **UX 优化（v2.2.6）**：
+  - **智能按钮状态**：未打开文件时，导出 / 字号调整按钮自动禁用，避免误操作
+  - **主页六模块**：固定展示「打开 Markdown」「打开文件夹」「AI 助手」「万物转 MD」「网页转 MD」「扫描转 MD」六大核心功能
+  - **VSCode 风格目录树**：打开文件夹后以树形结构展示，支持折叠/展开，自动过滤上级目录名称
+  - **目录锚点跳转**：点击目录项平滑滚动到对应章节，提升长文档导航体验
+  - **一键返回主页**：右下角「返回主页」按钮，随时回到欢迎页
+  - **目录按钮最左侧**：工具栏目录按钮移至最左侧，符合阅读习惯
+  - **剪贴板导入优化**：从主页移除「从剪贴板新建」，改为右上角下拉菜单中的快捷入口
+  - **根目录重构**：源代码归档到 `src/`，测试归档到 `tests/`，脚本分类到 `scripts/`，保持根目录整洁
 - 🔄 **万物转 MD（v2.1.1 保存 + 批量 + 质量）**：docx / pptx / xlsx / pdf / html / csv / json 等转为 Markdown；单文件或批量（多选 / 整文件夹）一键转换，结果自动保存到源目录同名 `.md` 并直接以可编辑文件打开（同名默认跳过、可勾选覆盖）；docx 走专用解析（OMML 公式转 LaTeX、标题、表格、等宽代码块），pdf 走专用解析（表格还原 + 公式启发式），其余 MarkItDown 并逐文件回退；输出经严格校验（代码围栏 / 表格 / 公式定界符 / 编码 / 图片引用）
 - 🔍 **扫描转 MD（OCR）**：Windows 使用 WinRT、macOS 使用 Vision，均为系统原生离线识别；PDF 有文字层时直接提取
 - 🌐 **网页转 MD**：Trafilatura 双级抽取，静态正文不足时自动使用 WebView2 / WKWebView + 离线 Defuddle / Mozilla Readability；支持短公告与文档页、同站 1–30 页、显式内网授权、明确错误诊断和可选图片本地化。未授权公网 HTML 统一断网渲染，避免页面脚本借系统 WebView 访问本机或局域网；临时交互仅用于用户明确授权的内网页面
@@ -43,16 +54,16 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| **ReadMDSetup-v2.2.4.exe** | Windows 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级（未签名） |
-| **ReadMD-portable-v2.2.4.exe** | Windows 便携版，免安装，双击直接运行（未签名） |
-| **ReadMD-macos-x64-v2.2.4.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
-| **ReadMD-macos-arm64-v2.2.4.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
+| **ReadMDSetup-v2.2.6.exe** | Windows 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级（未签名） |
+| **ReadMD-portable-v2.2.6.exe** | Windows 便携版，免安装，双击直接运行（未签名） |
+| **ReadMD-macos-x64-v2.2.6.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
+| **ReadMD-macos-arm64-v2.2.6.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
 | **SHA256SUMS.txt** | 四个发布文件的 SHA-256 完整性校验清单 |
 | **ReadMDSetup-2.1.1-Beta-win7-x64.exe** | **Win7 兼容版**（v2.1.1 Beta，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
 >
-> v2.2.4 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。所有发布包均未签名：Windows 如出现 SmartScreen，请先核验 SHA-256 后通过“更多信息 → 仍要运行”；macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动请在 Finder 中右键 `ReadMD.app` →“打开”。
+> v2.2.6 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。所有发布包均未签名：Windows 如出现 SmartScreen，请先核验 SHA-256 后通过“更多信息 → 仍要运行”；macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动请在 Finder 中右键 `ReadMD.app` →“打开”。
 
 > ReadMD 免费使用，不要求订阅或内置账号。下载文件和 `SHA256SUMS.txt` 后，Windows 在 PowerShell 运行 `Get-FileHash .\文件名 -Algorithm SHA256`，macOS 在终端运行 `shasum -a 256 文件名`，把输出与同名清单行完全比对。校验通过代表下载完整，不代表代码签名。
 
@@ -67,7 +78,7 @@
 macOS 源码运行或打包使用独立依赖：
 
 ```bash
-./install.sh             # 安装 requirements-macos.txt
+./install.sh             # 安装 config/requirements-macos.txt
 ./setup.sh               # 构建未签名 ReadMD.app
 ```
 
@@ -245,6 +256,17 @@ python release.py --update             rem 更新已存在 Release 的标题与�
 `release.py` 不创建 Release、标签或资产；请只在 CI 已发布 `v2.2.4` 后使用它维护说明或复核资产。
 
 ## 📝 更新日志
+
+- **v2.2.6**：**UX 全面优化 + 项目结构重构**
+  - ✨ **智能按钮状态管理**：未打开文件时，导出 / 字号调整按钮自动禁用，避免误操作
+  - 🏠 **主页六模块布局**：固定展示「打开 Markdown」「打开文件夹」「AI 助手」「万物转 MD」「网页转 MD」「扫描转 MD」六大核心功能，界面更清晰
+  - 📂 **VSCode 风格目录树**：打开文件夹后以树形结构展示，支持折叠/展开，自动过滤上级目录名称，浏览体验大幅提升
+  - 🔗 **目录锚点跳转**：点击目录项平滑滚动到对应章节，长文档导航更高效
+  - 🔙 **一键返回主页**：右下角「返回主页」按钮，随时回到欢迎页
+  - 📍 **目录按钮最左侧**：工具栏目录按钮移至最左侧，符合阅读习惯
+  - 📋 **剪贴板导入优化**：从主页移除「从剪贴板新建」，改为右上角下拉菜单中的快捷入口
+  - 🗂️ **根目录重构整理**：源代码归档到 `src/`，测试归档到 `tests/`，脚本分类到 `scripts/windows/` 和 `scripts/unix/`，配置文件移至 `config/`，发布文件移至 `release/`，文档移至 `docs/`。根目录仅保留 `readmd.py`、`README.md` 和 `.gitignore`，大幅提升项目结构清晰度
+  - 🛠️ **路径引用全面更新**：所有 Python 导入、脚本路径、文档引用均已同步更新，确保功能完全正常
 
 - **v2.2.4**：可选模块按功能按需加载；新增不包含文档数据的启动探针；AI 面板支持预览后导入一次性授权剪贴板、用户选择的导出文件和公开网页对话，并对大小、压缩包与危险链接设限。
 

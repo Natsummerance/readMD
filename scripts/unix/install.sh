@@ -23,9 +23,9 @@ echo "[2/4] Creating virtual environment and installing dependencies ..."
 if [ ! -f ".venv/bin/python" ]; then
     $PY3 -m venv .venv
 fi
-REQ_FILE="requirements-common.txt"
+REQ_FILE="config/requirements-common.txt"
 if [ "$(uname -s)" = "Darwin" ]; then
-    REQ_FILE="requirements-macos.txt"
+    REQ_FILE="config/requirements-macos.txt"
 fi
 ".venv/bin/python" -m pip install --disable-pip-version-check -q -r "$REQ_FILE"
 

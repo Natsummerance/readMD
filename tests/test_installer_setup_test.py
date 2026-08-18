@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Focused regression tests for the recovery-safe Windows installer."""
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
+import readmd
 import json
 import os
 import shutil
@@ -9,7 +11,7 @@ import unittest
 from collections import namedtuple
 from unittest import mock
 
-from installer import setup_app as setup
+import sys; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..")); from installer import setup_app as setup
 
 
 class InstallerPreflightTests(unittest.TestCase):
