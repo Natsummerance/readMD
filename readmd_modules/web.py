@@ -145,7 +145,9 @@ def _validate_public_url(url, allow_private=False):
 def _session():
     requests, _tra, _bs, _md = load()
     session = requests.Session()
-    session.trust_env = True
+    # Direct connections let us verify the actual peer address. Environment
+    # proxies would move that trust boundary outside ReadMD and re-open SSRF.
+    session.trust_env = False
     session.headers.update({
         'User-Agent': USER_AGENT,
         'Accept': 'text/html,application/xhtml+xml;q=0.9,*/*;q=0.2',
@@ -154,6 +156,32 @@ def _session():
         'Cache-Control': 'no-cache',
     })
     return session
+
+
+def _validate_response_peer(response, allow_private=False):
+    """Reject DNS rebinding by checking the connected socket, not only DNS."""
+    if allow_private:
+        return
+    raw = getattr(response, 'raw', None)
+    candidates = [
+        getattr(getattr(raw, '_connection', None), 'sock', None),
+        getattr(getattr(raw, 'connection', None), 'sock', None),
+    ]
+    fp = getattr(raw, '_fp', None)
+    candidates.append(getattr(getattr(getattr(fp, 'fp', None), 'raw', None),
+                              '_sock', None))
+    sock = next((item for item in candidates
+                 if item is not None and hasattr(item, 'getpeername')), None)
+    if sock is None:
+        raise WebError('peer_unverified', '无法验证网页服务器的实际网络地址', 502)
+    try:
+        peer = sock.getpeername()[0].split('%', 1)[0]
+        address = ipaddress.ip_address(peer)
+    except (OSError, ValueError, TypeError, IndexError) as exc:
+        raise WebError('peer_unverified', '无法验证网页服务器的实际网络地址',
+                       502, str(exc))
+    if not address.is_global:
+        raise WebError('private_address', '网页连接被重定向到本机或局域网地址', 403)
 
 
 def _request_error(exc):
@@ -208,6 +236,11 @@ def fetch_html(url, timeout=25, max_bytes=MAX_HTML_BYTES, task_id=None,
                                     allow_redirects=False)
             except requests.exceptions.RequestException as exc:
                 raise _request_error(exc)
+            try:
+                _validate_response_peer(response, allow_private=allow_private)
+            except Exception:
+                response.close()
+                raise
             status = response.status_code
             if status in (301, 302, 303, 307, 308):
                 location = response.headers.get('Location')

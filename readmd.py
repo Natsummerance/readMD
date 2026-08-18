@@ -1465,6 +1465,14 @@ class Api(object):
 
                     def guard(sender, args):
                         request_url = str(args.Request.Uri)
+                        if offline:
+                            if request_url.lower().startswith(
+                                    ('about:blank', 'data:', 'blob:')):
+                                return
+                            args.Response = sender.Environment.CreateWebResourceResponse(
+                                None, 403, 'Blocked by ReadMD',
+                                'Content-Type: text/plain; charset=utf-8')
+                            return
                         if self._web_request_allowed(
                                 request_url, task_id, private_grant):
                             return
@@ -1474,6 +1482,19 @@ class Api(object):
 
                     core.WebResourceRequested += guard
                     native.browser._readmd_network_guard = guard
+                    def navigation_guard(sender, args):
+                        request_url = str(args.Uri or '')
+                        internal = request_url.lower().startswith(
+                            ('about:blank', 'data:', 'blob:'))
+                        if offline and internal:
+                            return
+                        if not offline and self._web_request_allowed(
+                                request_url, task_id, private_grant):
+                            return
+                        args.Cancel = True
+
+                    core.NavigationStarting += navigation_guard
+                    native.browser._readmd_navigation_guard = navigation_guard
                     installed[0] = True
 
                 native.Invoke(Action(install))
@@ -1489,14 +1510,20 @@ class Api(object):
                 finished = threading.Event()
                 success = [False]
                 if offline:
-                    rules = [{'trigger': {'url-filter': r'^(?:https?|wss?|ftp|file)://'},
-                              'action': {'type': 'block'}}]
+                    rules = [
+                        {'trigger': {'url-filter': '.*'},
+                         'action': {'type': 'block'}},
+                        {'trigger': {'url-filter': r'^(?:about:blank|data:|blob:)'},
+                         'action': {'type': 'ignore-previous-rules'}},
+                    ]
                 else:
                     allowed_origin_filter = self._web_origin_url_filter(allowed_url)
                     rules = [
-                        {'trigger': {'url-filter': r'^(?:https?|wss?|ftp|file)://'},
+                        {'trigger': {'url-filter': '.*'},
                          'action': {'type': 'block'}},
                         {'trigger': {'url-filter': allowed_origin_filter},
+                         'action': {'type': 'ignore-previous-rules'}},
+                        {'trigger': {'url-filter': r'^(?:about:blank|data:|blob:)'},
                          'action': {'type': 'ignore-previous-rules'}},
                     ]
 
@@ -1623,13 +1650,13 @@ class Api(object):
             return {'ok': False, 'code': 'render_unavailable',
                     'error': 'Win7 版不支持动态网页渲染'}
         allow_private = self._private_web_allowed(url, task_id, private_grant)
-        mac_offline = IS_MAC and not allow_private
-        if mac_offline and interactive:
+        offline_render = not allow_private
+        if offline_render and interactive:
             return {'ok': False, 'code': 'interactive_unavailable',
-                    'error': 'macOS 安全模式不允许网页联网交互；可重试静态抓取或保留完整页面'}
-        if mac_offline and not source_html:
+                    'error': '安全模式不允许未授权网页联网交互；可重试静态抓取或保留完整页面'}
+        if offline_render and not source_html:
             return {'ok': False, 'code': 'render_source_missing',
-                    'error': 'macOS 安全模式缺少已验证的网页 HTML，无法动态渲染'}
+                    'error': '安全模式缺少已验证的网页 HTML，无法动态渲染'}
         try:
             mod = RM.get('web')
             safe_url = mod._validate_public_url(url, allow_private=allow_private)
@@ -1659,10 +1686,10 @@ class Api(object):
                 blank_loaded.wait(5.0)
             if not self._install_webview_network_guard(
                     reader_window, task_id, private_grant, safe_url,
-                    offline=mac_offline):
+                    offline=offline_render):
                 return {'ok': False, 'code': 'network_guard_unavailable',
                         'error': '无法启用网页私网访问保护，已停止动态渲染'}
-            if mac_offline:
+            if offline_render:
                 reader_window.load_html(source_html, base_uri=safe_url)
             else:
                 reader_window.load_url(safe_url)
@@ -1755,7 +1782,10 @@ class Api(object):
                 return {'ok': False, 'code': 'render_failed',
                         'error': '动态网页渲染没有返回可用内容'}
             try:
-                final_url = result.get('final_url') or safe_url
+                # NavigateToString/loadHTMLString may expose data:/about: as
+                # location.href. Offline HTML is already bound to safe_url.
+                final_url = safe_url if offline_render else (
+                    result.get('final_url') or safe_url)
                 if allow_private and not self._private_web_allowed(
                         final_url, task_id, private_grant):
                     return {'ok': False, 'code': 'private_origin_changed',
@@ -2440,23 +2470,22 @@ def run_webview_selftest():
                 time.sleep(0.25)
                 if hits['probe']:
                     raise AssertionError('private cross-origin request escaped guard')
-                if IS_MAC:
-                    offline_html = ('''<!doctype html><html><head><title>Offline guard</title></head>
-                      <body><main><h1>Offline public document</h1><p>The macOS renderer
+                offline_html = ('''<!doctype html><html><head><title>Offline guard</title></head>
+                      <body><main><h1>Offline public document</h1><p>The native renderer
                       must preserve the verified public base URL while blocking every
                       network request from untrusted page HTML.</p><a href="next">next</a>
                       <img src="http://127.0.0.1:%d/offline-probe"></main></body></html>'''
-                                    % probe.server_port)
-                    offline = api.render_web_page(
-                        'https://93.184.216.34/selftest', 'offline-guard-selftest',
-                        15000, False, '', offline_html)
-                    if not offline.get('ok'):
-                        raise AssertionError(offline)
-                    if not str(offline.get('final_url', '')).startswith(
-                            'https://93.184.216.34/'):
-                        raise AssertionError('offline renderer lost verified base URL')
-                    if hits['probe']:
-                        raise AssertionError('offline HTML escaped network guard')
+                                % probe.server_port)
+                offline = api.render_web_page(
+                    'https://93.184.216.34/selftest', 'offline-guard-selftest',
+                    15000, False, '', offline_html)
+                if not offline.get('ok'):
+                    raise AssertionError(offline)
+                if not str(offline.get('final_url', '')).startswith(
+                        'https://93.184.216.34/'):
+                    raise AssertionError('offline renderer lost verified base URL')
+                if hits['probe']:
+                    raise AssertionError('offline HTML escaped network guard')
                 outcome.update(ok=True, error='')
             except Exception as exc:
                 outcome.update(ok=False, error=str(exc))

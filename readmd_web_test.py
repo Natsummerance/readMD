@@ -78,6 +78,25 @@ class FixtureHandler(BaseHTTPRequestHandler):
 
 
 class TestWebExtraction(unittest.TestCase):
+    def test_connected_peer_is_checked_after_dns_resolution(self):
+        class PeerSocket:
+            def __init__(self, address):
+                self.address = address
+
+            def getpeername(self):
+                return self.address, 443
+
+        def response_for(address):
+            connection = type('Connection', (), {'sock': PeerSocket(address)})()
+            raw = type('Raw', (), {'_connection': connection, 'connection': None,
+                                    '_fp': None})()
+            return type('Response', (), {'raw': raw})()
+
+        WEB._validate_response_peer(response_for('93.184.216.34'))
+        with self.assertRaises(WEB.WebError) as raised:
+            WEB._validate_response_peer(response_for('127.0.0.1'))
+        self.assertEqual(raised.exception.code, 'private_address')
+
     @classmethod
     def setUpClass(cls):
         cls.server = ThreadingHTTPServer(('127.0.0.1', 0), FixtureHandler)
