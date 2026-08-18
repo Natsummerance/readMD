@@ -4,9 +4,9 @@ rem ============================================================
 rem  ReadMD Deploy - test + push main/tag + wait for CI release
 rem
 rem  Usage:
-rem    deploy.bat                   test + commit + push main + push v2.2.4 tag
+rem    deploy.bat                   test + commit + push main + push v2.2.5 tag
 rem    deploy.bat --skip-tests      skip the local test round
-rem    deploy.bat --tag v2.2.4      release tag (default v2.2.4)
+rem    deploy.bat --tag v2.2.5      release tag (default v2.2.5)
 rem
 rem  GitHub Actions is the only Release publisher.
 rem ============================================================
@@ -14,7 +14,7 @@ setlocal
 cd /d "%~dp0"
 title ReadMD Deploy
 
-set "TAG=v2.2.4"
+set "TAG=v2.2.5"
 set "SKIP_TESTS=0"
 
 :parse
@@ -97,7 +97,7 @@ git tag -a "%TAG%" -m "ReadMD %TAG%"
 git push origin "%TAG%"
 if errorlevel 1 goto :err
 
-echo [6/7] Waiting for the v2.2.4 tag workflow ...
+echo [6/7] Waiting for the v2.2.5 tag workflow ...
 where gh >nul 2>&1
 if errorlevel 1 (
     echo   GitHub CLI is required to wait for CI. Install/authenticate gh, then retry.
