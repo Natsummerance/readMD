@@ -78,7 +78,7 @@
 macOS 源码运行或打包使用独立依赖：
 
 ```bash
-./install.sh             # 安装 requirements-macos.txt
+./install.sh             # 安装 config/requirements-macos.txt
 ./setup.sh               # 构建未签名 ReadMD.app
 ```
 

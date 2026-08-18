@@ -13,7 +13,7 @@ title ReadMD Setup Builder
 echo [1/3] Checking venv and dist\ReadMD\ReadMD.exe ...
 if not exist ".venv\Scripts\python.exe" (
     python -m venv .venv
-    ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r requirements.txt pyinstaller
+    ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r config/requirements.txt pyinstaller
 )
 if not exist "dist\ReadMD\ReadMD.exe" (
     echo ReadMD onedir build not found. Run package.bat first.
