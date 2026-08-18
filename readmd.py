@@ -632,6 +632,8 @@ class Handler(BaseHTTPRequestHandler):
             self._api_web_extract()
         elif path == '/api/web/cancel':
             self._api_web_cancel()
+        elif path == '/api/chat/import':
+            self._api_chat_import()
         elif path == '/api/save':
             self._do_save()
         elif path == '/api/upload':
@@ -1187,6 +1189,56 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             self._send_json(500, {'ok': False, 'error': str(exc)})
 
+    def _api_chat_import(self):
+        """Import a copied/exported chat without retaining the raw payload."""
+        from readmd_modules import chat_import
+        try:
+            length = int(self.headers.get('Content-Length', 0) or 0)
+            if length <= 0 or length > chat_import.MAX_TEXT_BYTES:
+                raise chat_import.ChatImportError(
+                    'too_large' if length > chat_import.MAX_TEXT_BYTES else 'invalid_request',
+                    '请求内容为空或超过 10 MB 限制')
+            body = json.loads(self.rfile.read(length).decode('utf-8'))
+            if not isinstance(body, dict):
+                raise chat_import.ChatImportError('invalid_request', '请求格式错误')
+            url = str(body.get('url') or '').strip()
+            if url:
+                # Reuse the normal downloader's URL validation/redirect rules;
+                # chat pages are parsed directly rather than article-extracted.
+                from readmd_modules import web as web_module
+                fetched = web_module.fetch_html(
+                    url, allow_private=os.environ.get('READMD_WEB_TEST_ALLOW_PRIVATE') == '1')
+                conversation = chat_import.import_bytes(
+                    fetched.get('html', '').encode('utf-8'), 'chat.html', fetched.get('url') or url)
+                conversation.source = '网页对话'
+            elif body.get('html') is not None:
+                value = body.get('html')
+                if not isinstance(value, str):
+                    raise chat_import.ChatImportError('invalid_request', 'HTML 内容格式错误')
+                conversation = chat_import.import_bytes(value.encode('utf-8'), 'chat.html')
+            elif body.get('text') is not None:
+                value = body.get('text')
+                if not isinstance(value, str):
+                    raise chat_import.ChatImportError('invalid_request', '文本内容格式错误')
+                conversation = chat_import.import_bytes(value.encode('utf-8'), 'chat.txt')
+            else:
+                raise chat_import.ChatImportError('invalid_request', '请提供文本、HTML 或 URL')
+            self._send_json(200, chat_import.result(conversation))
+        except chat_import.ChatImportError as exc:
+            self._send_json(422 if exc.code not in ('invalid_request', 'too_large') else
+                            (413 if exc.code == 'too_large' else 400), exc.as_dict())
+        except Exception as exc:
+            try:
+                from readmd_modules.web import WebError
+            except Exception:
+                WebError = ()
+            if WebError and isinstance(exc, WebError):
+                self._send_json(exc.http_status, exc.as_dict())
+            else:
+                logging.exception('chat import failed')
+                self._send_json(500, {'ok': False, 'code': 'internal_error',
+                                      'error': '对话导入失败，请检查导出文件格式'})
+
     def _do_upload(self, ext):
         """浏览器兜底模式：接收文件字节写入临时目录，返回可转换的路径。"""
         try:
@@ -1580,6 +1632,67 @@ class Api(object):
         except Exception as e:
             logging.exception('choose_file failed')
             return None
+
+    def read_clipboard(self):
+        """Return clipboard data in a small, platform-neutral bridge shape.
+
+        HTML is best-effort because pywebview backends expose different native
+        clipboard APIs.  Callers can always fall back to ``text``.
+        """
+        text, html = '', ''
+        try:
+            if IS_WIN:
+                import win32clipboard  # optional pywin32 dependency
+                win32clipboard.OpenClipboard()
+                try:
+                    if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
+                        text = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT) or ''
+                    fmt = win32clipboard.RegisterClipboardFormat('HTML Format')
+                    if win32clipboard.IsClipboardFormatAvailable(fmt):
+                        raw = win32clipboard.GetClipboardData(fmt)
+                        html = raw.decode('utf-8', errors='replace') if isinstance(raw, bytes) else str(raw or '')
+                finally:
+                    win32clipboard.CloseClipboard()
+            if not text:
+                try:
+                    import tkinter
+                    root = tkinter.Tk(); root.withdraw()
+                    text = root.clipboard_get() or ''
+                    root.destroy()
+                except Exception:
+                    pass
+        except Exception:
+            # Do not log clipboard content or format bytes.
+            pass
+        return {'text': text if isinstance(text, str) else '',
+                'html': html if isinstance(html, str) else '',
+                'source_type': 'html' if html else ('text' if text else 'empty')}
+
+    def choose_chat_import_file(self):
+        """Select one supported chat export; no arbitrary JS path is accepted here."""
+        import webview
+        if self._window is None:
+            return None
+        try:
+            files = self._window.create_file_dialog(
+                webview.OPEN_DIALOG,
+                file_types=('对话导出 (*.json;*.html;*.htm;*.zip;*.md;*.txt)',))
+            return normalize_dialog_path(files)
+        except Exception:
+            return None
+
+    def import_chat_file(self, path):
+        """Parse a path returned by ``choose_chat_import_file`` (or native UI)."""
+        try:
+            from readmd_modules import chat_import
+            result = chat_import.result(chat_import.import_file(path))
+            result['path'] = os.path.abspath(os.fspath(path))
+            return result
+        except Exception as exc:
+            if hasattr(exc, 'as_dict'):
+                return exc.as_dict()
+            return {'ok': False, 'code': 'import_failed',
+                    'error': '对话文件导入失败，请重新选择导出文件'}
 
     def choose_folder(self):
         import webview

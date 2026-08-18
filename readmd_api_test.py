@@ -146,5 +146,24 @@ class TestPrivateWebAuthorization(unittest.TestCase):
                 'http://other.invalid/image.png', 'task-private', granted['grant']))
 
 
+class TestChatImportBridge(unittest.TestCase):
+    def test_import_chat_file_accepts_only_supported_export_types(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = os.path.join(td, 'conversation.json')
+            with open(path, 'w', encoding='utf-8') as handle:
+                json.dump({'messages': [
+                    {'role': 'user', 'content': 'hello'},
+                    {'role': 'assistant', 'content': 'world'},
+                ]}, handle)
+            result = readmd.Api().import_chat_file(path)
+            self.assertTrue(result.get('ok'), result)
+            self.assertEqual(result.get('message_count'), 2)
+            unsupported = os.path.join(td, 'untrusted.exe')
+            with open(unsupported, 'wb') as handle:
+                handle.write(b'x')
+            result = readmd.Api().import_chat_file(unsupported)
+            self.assertEqual(result.get('code'), 'unsupported_type')
+
+
 if __name__ == '__main__':
     unittest.main(verbosity=2)
