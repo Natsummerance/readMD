@@ -112,6 +112,52 @@ CONVERT_EXTS = ('.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.htm
 WIN7_CONVERT_EXTS = ('.docx', '.pdf')
 WIN7_UNAVAILABLE = '该功能在 Win7 版暂不支持（本版本仅保留 docx / pdf 转 MD 与导出功能）'
 
+# ------------------------------------------------------------------ 升级推送（静默）
+
+_UPGRADE_RELEASE_URL = 'https://api.github.com/repos/Natsummerance/readMD/releases/latest'
+_UPGRADE_CACHE = {'done': False, 'result': None}
+
+
+def _parse_version(value):
+    """'v2.2.5' / '2.2.5' -> (2, 2, 5)；无法解析返回 None。"""
+    try:
+        parts = []
+        for chunk in re.sub(r'^v', '', str(value or '')).replace('-', '.').split('.'):
+            if not chunk.isdigit():
+                return None
+            parts.append(int(chunk))
+        return tuple(parts) if parts else None
+    except Exception:
+        return None
+
+
+def check_latest_release():
+    """查询 GitHub 最新 Release；失败/超时静默返回 None，结果进程内缓存。"""
+    if _UPGRADE_CACHE['done']:
+        return _UPGRADE_CACHE['result']
+    result = None
+    try:
+        import urllib.request as _urlreq
+        req = _urlreq.Request(_UPGRADE_RELEASE_URL, headers={
+            'User-Agent': 'ReadMD/%s' % VERSION,
+            'Accept': 'application/vnd.github+json',
+        })
+        with _urlreq.urlopen(req, timeout=4) as resp:
+            data = json.loads(resp.read(1024 * 1024).decode('utf-8'))
+        tag = str(data.get('tag_name') or '')
+        latest = _parse_version(tag)
+        current = _parse_version(VERSION)
+        if latest and current and latest > current:
+            result = {
+                'latest': tag,
+                'url': str(data.get('html_url') or _UPGRADE_RELEASE_URL),
+            }
+    except Exception:
+        logging.debug('upgrade check failed (silent)', exc_info=True)
+    _UPGRADE_CACHE['done'] = True
+    _UPGRADE_CACHE['result'] = result
+    return result
+
 CONTROL_PORT = 26891
 INSTANCE_FILE = os.path.join(DATA_DIR, 'instance.json')
 _CONVERT_JOBS = {}
@@ -2444,6 +2490,13 @@ class Api(object):
 
     def get_app_info(self):
         return {'version': VERSION, 'python': sys.version.split()[0]}
+
+    def check_upgrade(self):
+        """启动后前端调用：静默检查 GitHub 最新 Release（失败返回空结果）。"""
+        try:
+            return check_latest_release() or {}
+        except Exception:
+            return {}
 
     def report_ready(self):
         """前端页面加载完成（启动里程碑：page_loaded）。"""

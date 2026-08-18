@@ -3427,6 +3427,12 @@ function bindEvents() {
   $('btn-web').addEventListener('click', openWebDialog);
   $('w-web').addEventListener('click', openWebDialog);
   $('btn-clipboard-new').addEventListener('click', createFromClipboard);
+  $('toast').addEventListener('click', () => {
+    if (!upgradeUrl) return;
+    const url = upgradeUrl; upgradeUrl = null;
+    if (py && py.open_external) { py.open_external(url); }
+    else window.open(url, '_blank');
+  });
   $('url-go').addEventListener('click', () => {
     const url = $('url-input').value.trim();
     const crawl = $('url-crawl').checked;
@@ -4052,12 +4058,24 @@ async function init() {
   finishInit();
 }
 
+let upgradeUrl = null;
+async function checkUpgrade() {
+  try {
+    if (!hasPy || !py || !py.check_upgrade) return;
+    const r = await py.check_upgrade();
+    if (!r || !r.url) return;
+    upgradeUrl = r.url;
+    showToast('发现新版本 ' + r.latest + '，点击查看更新', 6000);
+  } catch (e) { /* 静默：网络不可用时不打扰用户 */ }
+}
+
 function finishInit() {
   if (hasPy) {
     if (py.report_ready) { try { py.report_ready(); } catch (e) { /* ignore */ } }
     window.__trayOpenFile = loadFileDialog;
   }
   startControlPoll();
+  checkUpgrade();
 }
 
 async function restoreLastFile() {
