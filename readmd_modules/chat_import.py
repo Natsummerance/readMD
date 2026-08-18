@@ -14,11 +14,13 @@ import json
 import os
 import re
 import struct
+import unicodedata
 import zipfile
 from dataclasses import dataclass, field
 from html.parser import HTMLParser
 from io import BytesIO
 from pathlib import PurePosixPath
+from urllib.parse import unquote
 
 MAX_TEXT_BYTES = 10 * 1024 * 1024
 MAX_ZIP_BYTES = 100 * 1024 * 1024
@@ -292,23 +294,64 @@ def _looks_like_login(text):
 
 
 def _safe_uri(uri):
-    return not _DANGEROUS_URI.match(uri or '')
+    value = html.unescape(str(uri or ''))
+    for _ in range(3):
+        decoded = unquote(value)
+        if decoded == value:
+            break
+        value = decoded
+    value = ''.join(char for char in unicodedata.normalize('NFKC', value)
+                    if not char.isspace() and ord(char) >= 32)
+    if _DANGEROUS_URI.match(value):
+        return False
+    scheme = re.match(r'^([a-z][a-z0-9+.-]*):', value, re.I)
+    return not scheme or scheme.group(1).lower() in ('http', 'https', 'mailto')
+
+
+def _remote_uri(uri):
+    return bool(re.match(r'^\s*https?\s*:', str(uri or ''), re.I))
+
+
+def _sanitize_markdown_segment(text):
+    def autolink(match):
+        destination = match.group(1).strip()
+        return ('[%s](%s)' % (destination, destination)
+                if _safe_uri(destination) else '')
+
+    # Preserve safe Markdown autolinks before ordinary HTML is removed.
+    text = re.sub(r'<\s*((?:[a-z][a-z0-9+.-]*:)[^\s<>]+)\s*>', autolink, text,
+                  flags=re.I)
+    text = re.sub(r'(?is)<(script|style|iframe|object|embed|form)\b.*?</\1\s*>', '', text)
+    # Do not leave any raw HTML for marked/preview to interpret.  Its text is
+    # retained, while code fences/tables/formulas are ordinary Markdown.
+    text = _RAW_TAG.sub('', text)
+
+    # Reference images can otherwise load a remote image through a later
+    # ``[id]: URL`` definition.  Render them as ordinary links instead.
+    text = re.sub(r'!\[([^\]]*)\](?=\s*(?:\[[^\]]*\]|\[|$))', r'[\1]', text)
+
+    def markdown_link(match):
+        label, destination = match.group(1), match.group(2).strip().strip('<>')
+        if not _safe_uri(destination):
+            return label
+        if label.startswith('!') and _remote_uri(destination):
+            return '[%s](%s)' % (label[2:-1], destination)
+        return '%s(%s)' % (label, destination)
+    text = re.sub(r'(!?\[[^\]]*\])\(\s*(<[^>]*>|[^\s)]+)(?:\s+[^)]*)?\)', markdown_link, text)
+
+    def reference_definition(match):
+        return match.group(0) if _safe_uri(match.group(1).strip('<>')) else ''
+    text = re.sub(r'(?m)^\s*\[[^\]]+\]:[ \t]*(<[^>]*>|\S+)(?:[ \t]+.*)?$', reference_definition, text)
+    return text
 
 
 def _clean_markdown(text):
     # Stored exports sometimes contain executable HTML.  Keep the textual
     # conversation and harmless Markdown/HTML while dropping active payloads.
     text = html.unescape(text or '')
-    text = re.sub(r'(?is)<(script|style|iframe|object|embed|form)\b.*?</\1\s*>', '', text)
-    # Do not leave any raw HTML for marked/preview to interpret.  Its text is
-    # retained, while code fences/tables/formulas are ordinary Markdown.
-    text = _RAW_TAG.sub('', text)
-
-    def markdown_link(match):
-        label, destination = match.group(1), match.group(2).strip().strip('<>')
-        return label if not _safe_uri(destination) else '%s(%s)' % (label, destination)
-    text = re.sub(r'(!?\[[^\]]*\])\(\s*(<[^>]*>|[^\s)]+)(?:\s+[^)]*)?\)', markdown_link, text)
-    return text.replace('\x00', '').strip()
+    parts = re.split(r'(```[\s\S]*?```)', text)
+    return ''.join(part if part.startswith('```') else _sanitize_markdown_segment(part)
+                   for part in parts).replace('\x00', '').strip()
 
 
 def _safe_metadata(value, limit=300):
@@ -380,7 +423,7 @@ def _safe_zip_members(raw):
             archive.close(); raise ChatImportError('zip_expanded_too_large', '压缩包展开后超过 200 MB 限制')
         if info.file_size > MAX_TEXT_BYTES:
             archive.close(); raise ChatImportError('zip_member_too_large', '压缩包内单个文件超过 10 MB 限制')
-        if info.file_size > 1024 * 1024 and info.compress_size and info.file_size / info.compress_size > MAX_ZIP_RATIO:
+        if info.file_size and (not info.compress_size or info.file_size / info.compress_size > MAX_ZIP_RATIO):
             archive.close(); raise ChatImportError('suspicious_zip', '压缩包压缩比异常，已拒绝导入')
         chosen.append(info)
     return archive, chosen, warnings

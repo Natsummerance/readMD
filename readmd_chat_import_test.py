@@ -82,6 +82,29 @@ class ChatImportTest(unittest.TestCase):
         self.assertIn('[good](https://example.com/a)', result['content'])
         self.assertEqual(result['source_url'], '')
 
+    def test_all_markdown_url_forms_are_safe_and_code_is_unchanged(self):
+        raw = '''[link][p]
+[p]: javascript:alert(1)
+![track](http://127.0.0.1/pixel.png)
+![payload](data:image/png;base64,AAAA)
+[good](https://example.com/docs)
+<javascript:alert(1)> <https://example.com/auto>
+<a href="vbscript:msgbox(1)">bad</a><img src="file:///secret">
+```
+[code](javascript:keep-as-text) ![image](http://127.0.0.1/keep)
+```'''
+        content = CI.result(CI.Conversation('urls', 'test', messages=[
+            CI.Message('user', raw)]) )['content']
+        self.assertNotIn('[p]: javascript:', content.lower())
+        self.assertNotIn('![track](', content)
+        self.assertNotIn('![payload](', content)
+        self.assertNotIn('data:image', content.lower())
+        self.assertIn('[track](http://127.0.0.1/pixel.png)', content)
+        self.assertIn('[good](https://example.com/docs)', content)
+        self.assertIn('[https://example.com/auto](https://example.com/auto)', content)
+        self.assertNotIn('vbscript:', content.lower())
+        self.assertIn('[code](javascript:keep-as-text) ![image](http://127.0.0.1/keep)', content)
+
     def test_zip_rejects_traversal_bomb_and_expansion_limit(self):
         def archive(name, data, compression=zipfile.ZIP_DEFLATED):
             buf = io.BytesIO()
