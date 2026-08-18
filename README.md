@@ -21,16 +21,17 @@
 
 - ⚡ **秒开**：安装版为 onedir 目录安装，冷启动窗口可用 ≤1.5s（低配机 / 机械硬盘 ≤2s）；关闭窗口隐藏到系统托盘常驻，再双击 `.md` 瞬时唤起（<0.3s）
 - 🎨 **界面清爽**：44px 工具条 + 内联 SVG 图标、欢迎页最近文件网格、浅色 / 暗色 / sepia 三主题全套设计 token、大文档骨架屏、动画遵循系统「减弱动态效果」
-- 🤖 **AI 助手（v2.2.0 隐私与自定义连接）**：官方预设 + 可增删改的自定义连接；API Key 仅本机保存且配置接口不回传明文；获取模型后通过下拉框选择，连接面板可拖拽调宽
+- 🤖 **AI 助手与对话导入（v2.2.4）**：官方预设 + 可增删改的自定义连接；API Key 仅本机保存且配置接口不回传明文。可从一次性授权剪贴板、用户选择的导出文件或公开网页地址预览并导入对话；导入会限制大小、压缩包展开量和危险链接，不记录原始剪贴板内容
+- ⚡ **按需加载与启动探针（v2.2.4）**：先打开阅读界面，再在用户实际使用时加载转换、OCR、网页或 AI 模块；启动探针只输出里程碑与版本，不包含文档路径或内容
 - 🔄 **万物转 MD（v2.1.1 保存 + 批量 + 质量）**：docx / pptx / xlsx / pdf / html / csv / json 等转为 Markdown；单文件或批量（多选 / 整文件夹）一键转换，结果自动保存到源目录同名 `.md` 并直接以可编辑文件打开（同名默认跳过、可勾选覆盖）；docx 走专用解析（OMML 公式转 LaTeX、标题、表格、等宽代码块），pdf 走专用解析（表格还原 + 公式启发式），其余 MarkItDown 并逐文件回退；输出经严格校验（代码围栏 / 表格 / 公式定界符 / 编码 / 图片引用）
 - 🔍 **扫描转 MD（OCR）**：Windows 使用 WinRT、macOS 使用 Vision，均为系统原生离线识别；PDF 有文字层时直接提取
-- 🌐 **网页转 MD（v2.2.3）**：Trafilatura 双级抽取，静态正文不足时自动使用 WebView2 / WKWebView + 离线 Defuddle / Mozilla Readability；支持短公告与文档页、同站 1–30 页、显式内网授权、明确错误诊断和可选图片本地化。未授权公网 HTML 统一断网渲染，避免页面脚本借系统 WebView 访问本机或局域网；临时交互仅用于用户明确授权的内网页面
+- 🌐 **网页转 MD**：Trafilatura 双级抽取，静态正文不足时自动使用 WebView2 / WKWebView + 离线 Defuddle / Mozilla Readability；支持短公告与文档页、同站 1–30 页、显式内网授权、明确错误诊断和可选图片本地化。未授权公网 HTML 统一断网渲染，避免页面脚本借系统 WebView 访问本机或局域网；临时交互仅用于用户明确授权的内网页面
 - 📄 **独立文件图标**：Windows 文件关联使用简约的 Markdown 文档图标，应用 Logo 仅用于 ReadMD 程序和快捷方式
 - ✏️ **主动编辑（v2.2.0）**：单行分组工具栏、可搜索命令面板和分类公式选择器；实时预览支持上下左右停靠及拖拽分隔；图片编辑支持八向裁剪、任意角度、翻转、画布缩放/平移、输出尺寸与撤销重做
 - 📱 **移动端共享**：开启局域网共享后，手机扫码在同一 Wi-Fi 下阅读 / 转 MD / OCR / AI（随机令牌鉴权）
 - 📑 **阅读体验**：目录侧栏（滚动高亮）、全文搜索、三主题、字号缩放、打印 / 导出 PDF、文件夹浏览、大文档增量渲染（>300KB 或 6000 行分块渲染不卡顿）、文件外部修改自动刷新
-- 📤 **导出 PDF / DOCX / HTML（v2.2.3 修复）**：统一兼容 Windows/macOS 保存对话框路径，使用同目录临时文件原子替换；公式在 PDF / DOCX 中本地渲染为图片，HTML 为离线单文件
-- 📝 **文件重命名（v2.2.3）**：打开本地文件后，点击顶栏文件名或按 F2 可直接重命名，自动同步最近文件和本地历史引用
+- 📤 **导出 PDF / DOCX / HTML**：统一兼容 Windows/macOS 保存对话框路径，使用同目录临时文件原子替换；公式在 PDF / DOCX 中本地渲染为图片，HTML 为离线单文件
+- 📝 **文件重命名**：打开本地文件后，点击顶栏文件名或按 F2 可直接重命名，自动同步最近文件和本地历史引用
 - 🛠 **自动修正**：表格缺分隔行 / 列数不齐、未闭合 `**` `__` `*`、未闭合 `$` `$$`、`#标题` 缺空格、BOM、CRLF 等，逐处列出修改
 - 🖥 **默认打开方式**：可设为 Windows 默认 `.md` 应用（当前用户级，无需管理员）
 
@@ -42,15 +43,18 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| **ReadMDSetup-版本.exe** | 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级 |
-| **ReadMD-portable-版本.exe** | 便携版，免安装，双击直接运行 |
-| **ReadMD-macos-x64-v2.2.3.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
-| **ReadMD-macos-arm64-v2.2.3.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
+| **ReadMDSetup-v2.2.4.exe** | Windows 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级（未签名） |
+| **ReadMD-portable-v2.2.4.exe** | Windows 便携版，免安装，双击直接运行（未签名） |
+| **ReadMD-macos-x64-v2.2.4.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
+| **ReadMD-macos-arm64-v2.2.4.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
+| **SHA256SUMS.txt** | 四个发布文件的 SHA-256 完整性校验清单 |
 | **ReadMDSetup-2.1.1-Beta-win7-x64.exe** | **Win7 兼容版**（v2.1.1 Beta，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
 >
-> v2.2.3 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动需在 Finder 中右键 `ReadMD.app` →“打开”。
+> v2.2.4 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。所有发布包均未签名：Windows 如出现 SmartScreen，请先核验 SHA-256 后通过“更多信息 → 仍要运行”；macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动请在 Finder 中右键 `ReadMD.app` →“打开”。
+
+> ReadMD 免费使用，不要求订阅或内置账号。下载文件和 `SHA256SUMS.txt` 后，Windows 在 PowerShell 运行 `Get-FileHash .\文件名 -Algorithm SHA256`，macOS 在终端运行 `shasum -a 256 文件名`，把输出与同名清单行完全比对。校验通过代表下载完整，不代表代码签名。
 
 **方式二：源码运行（开发 / 自定义）**
 
@@ -202,9 +206,9 @@ readmd/
 ├─ install.bat          # 一键安装依赖 + 注册文件关联
 ├─ run.bat              # 一键运行（venv pythonw）
 ├─ uninstall.bat        # 移除文件关联（保留备份）
-├─ deploy.bat           # ★一键部署：测试 → 打包 → 推送 → 发布 Release
-├─ release.py           # GitHub Release 工具（--verify / --update / --force-upload）
-└─ release_notes.md     # Release 发布说明（deploy.bat 自动读取）
+├─ deploy.bat           # ★一键部署：测试 → 推送 main/tag → 等待 CI 发布
+├─ release.py           # 既有 Release 校验/文案维护（不会创建或上传）
+└─ release_notes.md     # GitHub Actions 使用的 Release 发布说明
 ```
 
 ## 🔨 打包 / 一键安装
@@ -217,31 +221,32 @@ readmd/
 | `setup.bat` | 一键完成：装依赖 → 打包 onedir exe → 注册默认打开方式 → 启动 |
 | `uninstall.bat` | 移除关联并尝试恢复安装前备份 |
 | `installer\build_setup.bat` | 构建 `dist\ReadMDSetup.exe`（内嵌 onedir 目录）与 `dist\ReadMDUninstall.exe` |
-| `release.py` | 创建 GitHub Release 并上传安装包 / 便携版，校验 SHA256 |
+| `release.py` | 校验既有 Release 的五个资产或更新其文案；不会创建 Release 或上传资产 |
 
 > 安装版为目录安装（约 200MB，含 OCR 与转换依赖，冷启动无需解压、秒开）；便携版为单文件（首次启动需解压、稍慢）。日常开发推荐源码版（`install.bat` + `run.bat`）。
 
 ## 🌍 一键部署与发布
 
-环境要求：已安装 Git，并配置系统环境变量 `GITHUB_TOKEN`（仓库 `Natsummerance/readMD` 需 `repo` 权限）。
+环境要求：已安装 Git 与已登录的 [GitHub CLI](https://cli.github.com/)。`deploy.bat` 只推送 `main` 和不可移动的版本标签，并等待 CI；CI 是唯一的 Release 发布方。
 
 ```bat
-deploy.bat                 rem 完整流程：测试 → 打包 → 推送 → 发布 Release
-deploy.bat --skip-build    rem 复用已有 dist 产物，只跑测试 + 推送 + 发布
+deploy.bat                 rem 完整流程：测试 → 推送 main/tag → 等待 CI 发布
 deploy.bat --skip-tests    rem 跳过自测
-deploy.bat --tag v2.0.1    rem 指定发布标签（默认 v2.0.1）
+deploy.bat --tag v2.2.4    rem 指定发布标签（默认 v2.2.4）
 ```
 
 也可以单独使用 `release.py`：
 
 ```bat
-python release.py --verify             rem 校验线上与本地产物一致性（名称 / 大小 / SHA256）
+python release.py --verify             rem 校验既有 Release 的四资产 + SHA256SUMS.txt
 python release.py --update             rem 更新已存在 Release 的标题与说明（读 release_notes.md）
-python release.py --force-upload       rem 同名资产先删除再重传
-python release.py                      rem 创建 Release（已存在则跳过）+ 上传缺失资产
 ```
 
+`release.py` 不创建 Release、标签或资产；请只在 CI 已发布 `v2.2.4` 后使用它维护说明或复核资产。
+
 ## 📝 更新日志
+
+- **v2.2.4**：可选模块按功能按需加载；新增不包含文档数据的启动探针；AI 面板支持预览后导入一次性授权剪贴板、用户选择的导出文件和公开网页对话，并对大小、压缩包与危险链接设限。
 
 - **v2.1.0**：新增「导出」——PDF / DOCX / HTML 一键导出；导出面板（打印按钮升级）：内置「简约 / 经典 / 商务」样式预设 + 全量可视化定制（页面 / 标题 / 表格 / 代码块 / 引用 / 页码等），可保存自定义预设；公式在 PDF / DOCX 中本地渲染为图片，HTML 为单文件离线可开；图片按文档目录嵌入
 - **v2.0.1（安装器修复）**：移除安装包 / 卸载器的 PyInstaller 启动画面，修复低配机黑屏置顶弹窗卡死安装流程的问题；安装版本号统一为 2.0.1

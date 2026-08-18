@@ -8,8 +8,10 @@ rem ============================================================
 setlocal
 cd /d "%~dp0"
 title ReadMD Packager
+set "READMD_VERSION=2.2.4"
+set "READMD_VERSION_OVERRIDE=%READMD_VERSION%"
 
-echo [1/5] Checking Python ...
+echo [1/5] Checking Python for ReadMD v%READMD_VERSION% ...
 where python >nul 2>nul
 if errorlevel 1 (
     echo Python not found. Please install Python 3.9+ first:

@@ -1,12 +1,13 @@
-# ReadMD v2.2.1 for macOS
+# ReadMD v2.2.4 for macOS
 
-这是拆分平台依赖后的首个独立 macOS 版本：
+ReadMD 是免费的本地 Markdown 阅读器。
 
-- Intel Mac：`ReadMD-macos-x64-v2.2.1.zip`
-- Apple Silicon Mac：`ReadMD-macos-arm64-v2.2.1.zip`
+- Intel Mac：`ReadMD-macos-x64-v2.2.4.zip`
+- Apple Silicon Mac：`ReadMD-macos-arm64-v2.2.4.zip`
+- 完整性清单：`SHA256SUMS.txt`
 
-macOS 构建只安装 common 依赖及 Cocoa、WebKit、Vision、Quartz、Uniform Type Identifiers 等原生框架，不包含 WinRT、注册表或 Windows 安装器代码。Finder 打开/定位、错误弹窗和 OCR 均通过 PyObjC 调用系统 API；应用声明 Markdown 文档编辑器角色并显式使用 Cocoa 后端。
+v2.2.4 将可选功能改为按需加载，增加启动探针，并支持从一次性授权剪贴板、用户选择的导出文件或公开网页地址预览并导入对话内容。导入会限制大小与危险内容，原始剪贴板数据不会写入日志。
 
-本版本延续 v2.2.0 的导出滚动、历史记录、AI schema v2 脱敏与模型下拉、图片编辑、Markdown 命令/公式选择器和预览停靠升级。
+> 两个 `.app` 均未签名。解压后首次启动请在 Finder 中右键 `ReadMD.app` →“打开”；如仍被阻止，请到“系统设置 → 隐私与安全性”确认打开。
 
-> 两个 `.app` 均未签名。解压后首次启动请在 Finder 中右键 `ReadMD.app` →“打开”；如仍被阻止，请到“系统设置 → 隐私与安全性”允许打开。
+校验方法：下载 ZIP 与 `SHA256SUMS.txt` 后运行 `shasum -a 256 ReadMD-macos-arm64-v2.2.4.zip`（Intel 包替换文件名），再与清单同名行比较。哈希相同表示下载内容完整，不表示代码已签名。
