@@ -116,6 +116,32 @@ test('AI keeps configured keys usable, autosaves, and supports incognito history
   await page.locator('#ai-prompt').press('Enter');
   await expect(page.locator('#ai-output')).toContainText('已完成');
   expect(saves.length).toBe(1);
+  await page.locator('#ai-incognito').uncheck();
+  await page.locator('#ai-prompt').fill('第三次会保存');
+  await page.locator('#ai-prompt').press('Enter');
+  await expect.poll(() => saves.length).toBe(2);
+  const savedText = saves[1].session.messages.map(message => message.content).join('\n');
+  expect(savedText).not.toContain('再说一次');
+  expect(savedText).toContain('第三次会保存');
+});
+
+test('module entry actively starts an idle module once before polling', async ({ page }) => {
+  let starts = 0, checks = 0;
+  const states = [];
+  await page.goto('/');
+  await page.route('**/api/modules/load', route => {
+    starts++; expect(route.request().method()).toBe('POST');
+    expect(route.request().postDataJSON()).toEqual({ name: 'convert' });
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+  });
+  await page.route('**/api/modules', route => {
+    const value = ['idle', 'loading', 'ready'][Math.min(checks++, 2)]; states.push(value);
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ modules: { convert: value } }) });
+  });
+  await page.waitForFunction(() => typeof ensureModule === 'function');
+  expect(await page.evaluate(() => Promise.all([ensureModule('convert', 4000), ensureModule('convert', 4000)]))).toEqual([true, true]);
+  expect(starts).toBe(1);
+  expect(states).toEqual(expect.arrayContaining(['idle', 'loading', 'ready']));
 });
 
 test('chat import previews clipboard, atomic file, and public link sources', async ({ page }) => {

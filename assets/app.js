@@ -4,6 +4,7 @@
 const $ = id => document.getElementById(id);
 let py = (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
 let hasPy = !!py;
+const moduleLoadRequests = Object.create(null);
 
 /* pywebview 桥接注入可能晚于页面脚本执行（低配机实测晚 ~1s）。
    启动前短暂等待桥接，确保 report_ready / 托盘打开 / 单实例控制轮询可用。 */
@@ -615,13 +616,19 @@ async function renderVirtual(source, name, dir, content, fixes, extras) {
 async function ensureModule(name, timeoutMs) {
   const t0 = Date.now();
   const limit = timeoutMs || 60000;
+  if (!moduleLoadRequests[name]) {
+    moduleLoadRequests[name] = apiFetch('/api/modules/load', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
+    }).catch(() => null);
+  }
+  await moduleLoadRequests[name];
   while (Date.now() - t0 < limit) {
     try {
       const r = await apiFetch('/api/modules');
       const d = await r.json();
       const st = d.modules && d.modules[name];
       if (st === 'ready') return true;
-      if (st === 'error') { showToast('模块「' + name + '」加载失败，请重试'); return false; }
+      if (st === 'error') { delete moduleLoadRequests[name]; showToast('模块「' + name + '」加载失败，请重试'); return false; }
     } catch (e) { /* ignore */ }
     await new Promise(r => setTimeout(r, 800));
   }
@@ -1355,8 +1362,8 @@ function renderAiHistory() {
 }
 
 async function saveCurrentSession(silent) {
-  const msgs = state.ai.messages || [];
-  if (!msgs.length) { showToast('当前没有对话内容'); return; }
+  const msgs = (state.ai.messages || []).filter(m => m && !m.ephemeral);
+  if (!msgs.length) { if (!silent) showToast((state.ai.messages || []).length ? '当前会话为无痕内容，不会保存' : '当前没有对话内容'); return false; }
   const title = ($('ai-prompt').value.trim() || msgs[0].content || '未命名会话').slice(0, 40).replace(/\s+/g, ' ');
   const sess = {
     id: state.ai.sessionId || undefined,
@@ -1378,7 +1385,8 @@ async function saveCurrentSession(silent) {
     await loadAiSessions();
     $('ai-session').value = state.ai.sessionId;
     if (!silent) showToast('会话已保存');
-  } catch (e) { showToast('保存失败：' + e.message); }
+    return true;
+  } catch (e) { if (!silent) showToast('保存失败：' + e.message); return false; }
 }
 
 async function deleteCurrentSession() {
@@ -1741,6 +1749,7 @@ async function runAi(action) {
   const { text, isSelection } = getAiTargetText();
   if (!text || !text.trim()) { showToast('没有可处理的文档内容'); return; }
   const prompt = $('ai-prompt').value.trim();
+  const isIncognito = $('ai-incognito').checked;
   const model = $('ai-model').value.trim() || (p.models || [''])[0] || '';
   const mode = $('ai-mode').value || 'auto';
   const baseUrl = $('ai-base-url').value.trim();
@@ -1763,7 +1772,7 @@ async function runAi(action) {
   else userMsg = '文档如下：\n\n' + docs;
 
   const msgs = (state.ai.messages || []).slice(-40);
-  msgs.push({ role: 'user', content: userMsg });
+  msgs.push({ role: 'user', content: userMsg, ephemeral: isIncognito });
 
   const out = $('ai-output');
   const userBubble = document.createElement('div');
@@ -1856,13 +1865,13 @@ async function runAi(action) {
     aiTag.textContent = 'AI · 回答 ' + userSeq + ' · ' + model + fmtAiUsage(state.ai.usage);
     if (state.ai.raw) {
       aiTag.appendChild(aiAnswerCopyButton(state.ai.raw));
-      const last = { role: 'assistant', content: state.ai.raw };
+      const last = { role: 'assistant', content: state.ai.raw, ephemeral: isIncognito };
       if (state.ai.usage) last.usage = state.ai.usage;
       msgs.push(last);
       state.ai.messages = msgs;
-      if (!$('ai-incognito').checked) await saveCurrentSession(true);
+      const saved = isIncognito ? false : await saveCurrentSession(true);
       updateAiRawButtons();
-      showToast($('ai-incognito').checked ? 'AI 完成（无痕会话未保存）' : 'AI 完成，已自动保存会话');
+      showToast(isIncognito ? 'AI 完成（无痕会话未保存）' : (saved ? 'AI 完成，已自动保存会话' : 'AI 完成，但会话保存失败；可在历史中重试'));
     } else {
       msgs.pop();
     }
@@ -1870,7 +1879,7 @@ async function runAi(action) {
     if (e.name === 'AbortError') {
       aiTag.textContent = 'AI · 回答 ' + userSeq + '（已停止）';
       if (state.ai.raw) {
-        const last = { role: 'assistant', content: state.ai.raw };
+        const last = { role: 'assistant', content: state.ai.raw, ephemeral: isIncognito };
         if (state.ai.usage) last.usage = state.ai.usage;
         msgs.push(last);
         state.ai.messages = msgs;
@@ -2041,7 +2050,9 @@ function loadImportedChat() {
   const markdown = chatImportResult.content || chatImportResult.markdown || '';
   const messages = (chatImportResult.conversation && chatImportResult.conversation.messages) || messagesFromImportedMarkdown(markdown);
   if (!messages.length) { importStatus('预览中没有可载入的用户/AI消息；可改为保存 Markdown。'); return; }
-  state.ai.messages = messages.filter(m => m && (m.role === 'user' || m.role === 'assistant') && m.content);
+  const ephemeral = !!$('ai-incognito').checked;
+  state.ai.messages = messages.filter(m => m && (m.role === 'user' || m.role === 'assistant') && m.content)
+    .map(m => Object.assign({}, m, ephemeral ? { ephemeral: true } : {}));
   state.ai.raw = (state.ai.messages.filter(m => m.role === 'assistant').slice(-1)[0] || {}).content || '';
   state.ai.sessionId = null; state.ai.sessUsage = { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }; renderAiHistory();
   closeAiModal('chat-import-modal'); $('ai-panel').classList.remove('hidden'); $('ai-prompt').focus(); showToast('已载入导入的对话；发送下一条即可继续');
