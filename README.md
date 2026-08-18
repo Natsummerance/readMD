@@ -13,6 +13,23 @@
 ![webview2](https://img.shields.io/badge/runtime-WebView2-4fc08d)
 ![repo size](https://img.shields.io/github/repo-size/Natsummerance/readMD)
 
+<br>
+
+<p align="center">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.2.8.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_安装包下载-v2.2.8-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 安装包下载">
+  </a>
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.2.8.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_便携版下载-v2.2.8-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 便携版下载">
+  </a>
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.2.8.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(M系列芯片)-v2.2.8-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64 下载">
+  </a>
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.2.8.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel芯片)-v2.2.8-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel 下载">
+  </a>
+</p>
+
 </div>
 
 ---
@@ -37,22 +54,23 @@
 
 ## 🚀 快速开始
 
-**方式一：直接下载（推荐）**
+**方式一：一键直接下载（推荐 · 点击即可直接下载）**
 
-不用拉取源码：到 [GitHub Releases](https://github.com/Natsummerance/readMD/releases) 下载：
+点击下方对应平台链接，无需跳转查找 Release 页面即可直接高速下载：
 
-| 文件 | 说明 |
-| --- | --- |
-| **ReadMDSetup-v2.2.8.exe** | Windows 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级（未签名） |
-| **ReadMD-portable-v2.2.8.exe** | Windows 便携版，免安装，双击直接运行（未签名） |
-| **ReadMD-macos-x64-v2.2.8.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
-| **ReadMD-macos-arm64-v2.2.8.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
-| **SHA256SUMS.txt** | 四个发布文件的 SHA-256 完整性校验清单 |
-| **ReadMDSetup-2.2.8-win7-x64.exe** | **Win7 兼容版**（v2.2.8 Win7，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
+| 平台 / 类型 | 一键直接下载 | 说明 |
+| :--- | :--- | :--- |
+| 🪟 **Windows 安装版** | [⬇️ **ReadMDSetup-v2.2.8.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.2.8.exe) | 动画安装向导，可自动关联 `.md` 为默认打开方式；已安装时运行即平滑升级（未签名） |
+| 💼 **Windows 便携版** | [⬇️ **ReadMD-portable-v2.2.8.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.2.8.exe) | 免安装绿色版，解压即用，随身携带（未签名） |
+| 🍏 **macOS Apple Silicon** | [⬇️ **ReadMD-macos-arm64-v2.2.8.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.2.8.zip) | 适用于 M1 / M2 / M3 / M4 系列芯片 Mac 原生构建（未签名） |
+| 💻 **macOS Intel** | [⬇️ **ReadMD-macos-x64-v2.2.8.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.2.8.zip) | 适用于 Intel 处理器 Mac 原生构建（未签名） |
+| 🪟 **Win7 兼容版** | [⬇️ **ReadMDSetup-2.2.8-win7-x64.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-2.2.8-win7-x64.exe) | 专为 Windows 7 SP1 x64 环境优化的兼容安装包 |
+| 🔐 **SHA-256 清单** | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | 全量发布文件的 SHA-256 完整性校验清单 |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
 >
 > v2.2.8 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。所有发布包均未签名：Windows 如出现 SmartScreen，请先核验 SHA-256 后通过“更多信息 → 仍要运行”；macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动请在 Finder 中右键 `ReadMD.app` →“打开”。
+
 
 
 
