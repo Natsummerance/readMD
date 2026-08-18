@@ -1,24 +1,30 @@
 # -*- coding: utf-8 -*-
-"""ReadMD 扩展模块注册表：转换 / OCR / 网页提取，全部懒加载。
+"""Thread-safe, on-demand registry for ReadMD's optional feature modules.
 
-设计目标：打开 .md 文件时先渲染正文（秒开），渲染完成后再由前端
-触发 load_all()，在后台线程中逐个导入重依赖模块。前端轮询 status()
-获取加载进度，未就绪的功能按钮保持禁用。
+Importing this package must remain cheap. A feature is imported only after its
+own endpoint (or the explicit ``/api/modules/load`` action) asks for it.
+``load_all`` remains for command-line self tests and old integrations only.
 """
 
 import importlib
 import logging
 import threading
 
-MODULES = ['convert', 'ocr', 'web', 'ai']
 
-_status = {m: 'idle' for m in MODULES}
+MODULES = ('convert', 'ocr', 'web', 'ai')
+
+_status = {name: 'idle' for name in MODULES}
 _error = {}
-_lock = threading.Lock()
-_loader_thread = None
+_lock = threading.RLock()
+_threads = {}
+
+
+def _known(name):
+    return name in MODULES
 
 
 def status():
+    """Return snapshots only; this function deliberately never starts imports."""
     with _lock:
         return dict(_status), dict(_error)
 
@@ -29,55 +35,67 @@ def is_ready(name):
 
 
 def set_disabled(names, reason=''):
-    """把不支持运行的模块标记为 disabled（Win7 版：OCR / AI / 网页）。
-
-    标记后：状态汇报为 'disabled'（前端据此禁用入口并提示），
-    不会进入后台加载；load() 也不受影响。
-    """
-    global MODULES
+    """Mark unavailable platform features without removing them from the whitelist."""
     with _lock:
-        MODULES = [m for m in MODULES if m not in names]
-        for m in names:
-            if m not in _status:
-                _status[m] = 'idle'
-            _status[m] = 'disabled'
+        for name in names:
+            if not _known(name):
+                continue
+            _status[name] = 'disabled'
             if reason:
-                _error[m] = reason
+                _error[name] = reason
+
+
+def load(name):
+    """Start loading one whitelisted module and return its current state.
+
+    The import runs on a daemon thread. Concurrent callers share that thread;
+    a module which previously failed is intentionally retried on the next call.
+    """
+    if not _known(name):
+        raise ValueError('unknown ReadMD module: %s' % name)
+    with _lock:
+        current = _status[name]
+        if current in ('ready', 'disabled', 'loading'):
+            return current
+        # ``error`` is retryable. Clear its old diagnostic before retrying.
+        _error.pop(name, None)
+        _status[name] = 'loading'
+        thread = threading.Thread(target=_run_one, args=(name,), daemon=True,
+                                  name='readmd-module-%s' % name)
+        _threads[name] = thread
+        thread.start()
+        return 'loading'
+
+
+def _run_one(name):
+    try:
+        mod = importlib.import_module('readmd_modules.' + name)
+        mod.load()
+    except Exception as exc:  # noqa: BLE001
+        logging.exception('module %s load failed', name)
+        with _lock:
+            _status[name] = 'error'
+            _error[name] = str(exc)
+    else:
+        with _lock:
+            _status[name] = 'ready'
+            _error.pop(name, None)
+        logging.info('module %s ready', name)
 
 
 def load_all():
-    """后台加载全部模块（幂等，重复调用无副作用）。"""
-    global _loader_thread
-    with _lock:
-        if _loader_thread is not None and _loader_thread.is_alive():
-            return
-        for m in MODULES:
-            if _status[m] in ('ready', 'error', 'disabled'):
-                continue
-            _status[m] = 'loading'
-        _loader_thread = threading.Thread(target=_run, daemon=True, name='readmd-modules')
-        _loader_thread.start()
-
-
-def _run():
-    for m in MODULES:
-        try:
-            mod = importlib.import_module('readmd_modules.' + m)
-            mod.load()
-            with _lock:
-                _status[m] = 'ready'
-            logging.info('module %s ready', m)
-        except Exception as e:  # noqa: BLE001
-            logging.exception('module %s load failed', m)
-            with _lock:
-                _status[m] = 'error'
-                _error[m] = str(e)
+    """Compatibility/self-test helper; ordinary HTTP requests must not call it."""
+    return {name: load(name) for name in MODULES}
 
 
 def get(name):
-    """获取已加载模块；未就绪抛 ModuleNotReady。"""
-    if not is_ready(name):
-        raise ModuleNotReady(name, _error.get(name))
+    """Get an already-ready module, otherwise raise :class:`ModuleNotReady`."""
+    if not _known(name):
+        raise ModuleNotReady(name, '未知模块')
+    with _lock:
+        current, reason = _status[name], _error.get(name)
+    if current != 'ready':
+        raise ModuleNotReady(name, reason or current)
     return importlib.import_module('readmd_modules.' + name)
 
 
@@ -89,17 +107,13 @@ class ModuleNotReady(Exception):
 
 
 def load_forced(name):
-    """同步强制加载单个模块（用于 --mods 自检）。"""
-    try:
-        mod = importlib.import_module('readmd_modules.' + name)
-        mod.load()
-        with _lock:
-            _status[name] = 'ready'
-            _error.pop(name, None)
-        return True
-    except Exception as e:  # noqa: BLE001
-        logging.exception('module %s forced load failed', name)
-        with _lock:
-            _status[name] = 'error'
-            _error[name] = str(e)
+    """Synchronously load one module, used exclusively by ``--mods`` selftest."""
+    if not _known(name):
         return False
+    with _lock:
+        if _status[name] == 'disabled':
+            return False
+        _status[name] = 'loading'
+        _error.pop(name, None)
+    _run_one(name)
+    return is_ready(name)

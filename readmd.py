@@ -104,7 +104,7 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-           or _bundle_version() or '2.2.3')
+           or _bundle_version() or '2.2.4')
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 CONVERT_EXTS = ('.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm',
@@ -119,6 +119,11 @@ _CONVERT_JOB_SEQ = [0]
 _CONVERT_LOCK = threading.Lock()
 
 _T0 = time.time()
+_BOOT_LOCK = threading.Lock()
+_BOOT_MILESTONES = {}
+_STARTUP_PROBE = {'enabled': False, 'timeout': 20.0, 'json_path': '',
+                  'window': None, 'finished': False, 'timed_out': False,
+                  'timer': None}
 
 
 def is_win7():
@@ -152,10 +157,67 @@ def setup_win7_webview2_env():
 
 def milestone(group, name):
     """启动里程碑打点：写入 readmd.log，用于验证“秒开”。"""
+    elapsed = int((time.time() - _T0) * 1000)
+    if group == 'boot':
+        with _BOOT_LOCK:
+            _BOOT_MILESTONES.setdefault(name, elapsed)
     try:
-        logging.info('[%s] %dms %s', group, int((time.time() - _T0) * 1000), name)
+        logging.info('[%s] %dms %s', group, elapsed, name)
     except Exception:
         pass
+
+
+def startup_probe_summary(milestones=None, timed_out=False):
+    """Build a privacy-safe startup report; deliberately contains no document data."""
+    milestones = dict(_BOOT_MILESTONES if milestones is None else milestones)
+    names = ('server_up', 'window_created', 'window_loaded', 'page_loaded',
+             'first_document')
+    return {'version': VERSION, 'timed_out': bool(timed_out),
+            'milestones_ms': {name: milestones.get(name) for name in names}}
+
+
+def write_startup_probe(path='', timed_out=False):
+    """Print and optionally atomically persist a startup probe report."""
+    report = startup_probe_summary(timed_out=timed_out)
+    encoded = json.dumps(report, ensure_ascii=False, sort_keys=True)
+    safe_print(encoded)
+    if path:
+        directory = os.path.dirname(os.path.abspath(path))
+        tmp = os.path.join(directory, '.%s.%s.tmp' %
+                           (os.path.basename(path), os.getpid()))
+        try:
+            with open(tmp, 'w', encoding='utf-8') as handle:
+                handle.write(encoded + '\n')
+            os.replace(tmp, path)
+        except Exception:
+            try:
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+            except Exception:
+                pass
+            raise
+    return report
+
+
+def _finish_startup_probe(timed_out=False):
+    """End a probe run without persisting document paths or document content."""
+    with _BOOT_LOCK:
+        if not _STARTUP_PROBE.get('enabled') or _STARTUP_PROBE.get('finished'):
+            return
+        _STARTUP_PROBE['finished'] = True
+        _STARTUP_PROBE['timed_out'] = bool(timed_out)
+        timer = _STARTUP_PROBE.get('timer')
+    if timer is not None:
+        try:
+            timer.cancel()
+        except Exception:
+            pass
+    window = _STARTUP_PROBE.get('window')
+    if window is not None:
+        try:
+            window.destroy()
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------- 单实例常驻
@@ -598,7 +660,9 @@ class Handler(BaseHTTPRequestHandler):
             mime = mimetypes.guess_type(fp)[0] or 'application/octet-stream'
             if mime.startswith('text/') or mime in ('application/javascript', 'application/json'):
                 mime += '; charset=utf-8'
-            self._send_file(fp, mime)
+            self._send_file(fp, mime, immutable=bool(
+                parse_qs(u.query).get('v') or parse_qs(u.query).get('version') or
+                parse_qs(u.query).get('hash')))
         elif path == '/api/file':
             p = unquote(qs.get('p', [''])[0])
             if not p:
@@ -609,9 +673,10 @@ class Handler(BaseHTTPRequestHandler):
             p = unquote(qs.get('p', [''])[0])
             self._api_list(p)
         elif path == '/api/modules':
-            RM.load_all()  # 幂等：任意前端轮询即触发后台加载（渲染完成后的首次轮询才会发生）
             st, err = RM.status()
             self._send_json(200, {'modules': st, 'errors': err, 'win7': is_win7()})
+        elif path == '/api/modules/load':
+            self._api_modules_load()
         elif path == '/api/convert/collect':
             self._api_convert_collect()
         elif path == '/api/convert/batch':
@@ -669,11 +734,11 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send(404, 'text/plain; charset=utf-8', b'not found')
 
-    def _send(self, code, ctype, body):
+    def _send(self, code, ctype, body, cache_control='no-cache'):
         self.send_response(code)
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
-        self.send_header('Cache-Control', 'no-cache')
+        self.send_header('Cache-Control', cache_control)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(body)
@@ -681,6 +746,43 @@ class Handler(BaseHTTPRequestHandler):
     def _send_json(self, code, obj):
         self._send(code, 'application/json; charset=utf-8',
                    json.dumps(obj, ensure_ascii=False).encode('utf-8'))
+
+    def _module_ready(self, name, message):
+        """Ensure exactly one feature module is being loaded for this request."""
+        if RM.is_ready(name):
+            return True
+        state = RM.load(name)
+        st, errors = RM.status()
+        state = st.get(name, state)
+        if state in ('disabled', 'error'):
+            self._send_json(503, {'error': errors.get(name) or message,
+                                  'module': name, 'status': state})
+        else:
+            # ``load`` turns an old error into a retrying loading state.
+            self._send_json(409, {'error': message, 'module': name,
+                                  'status': st.get(name, state)})
+        return False
+
+    def _api_modules_load(self):
+        if self.command != 'POST':
+            self._send_json(405, {'error': '仅支持 POST 请求'})
+            return
+        try:
+            length = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(length).decode('utf-8')) if length else {}
+        except Exception:
+            self._send_json(400, {'error': '请求格式错误'})
+            return
+        name = body.get('name') if isinstance(body, dict) else None
+        if name not in RM.MODULES:
+            self._send_json(400, {'error': '不支持的模块', 'name': name})
+            return
+        state = RM.load(name)
+        statuses, errors = RM.status()
+        state = statuses.get(name, state)
+        code = 200 if state == 'ready' else (503 if state in ('disabled', 'error') else 202)
+        self._send_json(code, {'name': name, 'status': state,
+                               'error': errors.get(name, '')})
 
     def _send_index(self):
         """返回首页；局域网模式下注入 token 供前端 fetch 携带。"""
@@ -724,9 +826,7 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json(200, {'ok': True})
 
     def _api_ai_config(self):
-        if not RM.is_ready('ai'):
-            RM.load_all()
-            self._send_json(409, {'error': 'AI 模块加载中，请稍候再试'})
+        if not self._module_ready('ai', 'AI 模块加载中，请稍候再试'):
             return
         try:
             mod = RM.get('ai')
@@ -743,9 +843,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _api_ai_models(self):
         """拉取模型列表；保存过的 Key 只在服务端解析，不回传给浏览器。"""
-        if not RM.is_ready('ai'):
-            RM.load_all()
-            self._send_json(409, {'error': 'AI 模块加载中，请稍候再试'})
+        if not self._module_ready('ai', 'AI 模块加载中，请稍候再试'):
             return
         try:
             u = urlparse(self.path)
@@ -763,9 +861,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _api_ai_chat(self):
         """AI 对话：SSE 流式返回，兼容 OpenAI / Anthropic 双协议。"""
-        if not RM.is_ready('ai'):
-            RM.load_all()
-            self._send_json(409, {'error': 'AI 模块加载中，请稍候再试'})
+        if not self._module_ready('ai', 'AI 模块加载中，请稍候再试'):
             return
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
@@ -889,12 +985,13 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             logging.exception('ai history failed')
             self._send_json(500, {'error': '会话操作失败：%s' % e})
-    def _send_file(self, fp, ctype):
+    def _send_file(self, fp, ctype, immutable=False):
         if not os.path.isfile(fp):
             self._send(404, 'text/plain; charset=utf-8', b'not found')
             return
         with open(fp, 'rb') as f:
-            self._send(200, ctype, f.read())
+            self._send(200, ctype, f.read(),
+                       'public, max-age=31536000, immutable' if immutable else 'no-cache')
 
     def _api_file(self, p, meta_only):
         if not os.path.isfile(p):
@@ -913,6 +1010,7 @@ class Handler(BaseHTTPRequestHandler):
         if meta_only:
             self._send_json(200, d)
             return
+        milestone('boot', 'first_document')
         text, enc = read_text(p)
         fr = readmd_fix.fix_markdown(text)
         d.update({
@@ -973,9 +1071,7 @@ class Handler(BaseHTTPRequestHandler):
         if is_win7() and os.path.splitext(p)[1].lower() not in WIN7_CONVERT_EXTS:
             self._send_json(415, {'error': WIN7_UNAVAILABLE})
             return
-        if not RM.is_ready('convert'):
-            RM.load_all()
-            self._send_json(409, {'error': '转换模块加载中，请稍候再试'})
+        if not self._module_ready('convert', '转换模块加载中，请稍候再试'):
             return
         try:
             mod = RM.get('convert')
@@ -1026,9 +1122,7 @@ class Handler(BaseHTTPRequestHandler):
         if not paths:
             self._send_json(400, {'error': '没有可转换的文件'})
             return
-        if not RM.is_ready('convert'):
-            RM.load_all()
-            self._send_json(409, {'error': '转换模块加载中，请稍候再试'})
+        if not self._module_ready('convert', '转换模块加载中，请稍候再试'):
             return
         try:
             jid = _start_convert_job(paths, bool(body.get('overwrite')))
@@ -1054,9 +1148,7 @@ class Handler(BaseHTTPRequestHandler):
         if not os.path.isfile(p):
             self._send_json(404, {'error': '文件不存在'})
             return
-        if not RM.is_ready('ocr'):
-            RM.load_all()
-            self._send_json(409, {'error': 'OCR 模块加载中，请稍候再试'})
+        if not self._module_ready('ocr', 'OCR 模块加载中，请稍候再试'):
             return
         try:
             mod = RM.get('ocr')
@@ -1073,9 +1165,7 @@ class Handler(BaseHTTPRequestHandler):
         if not u:
             self._send_json(400, {'error': '缺少 URL'})
             return
-        if not RM.is_ready('web'):
-            RM.load_all()
-            self._send_json(409, {'error': '网页模块加载中，请稍候再试'})
+        if not self._module_ready('web', '网页模块加载中，请稍候再试'):
             return
         try:
             mod = RM.get('web')
@@ -1094,9 +1184,13 @@ class Handler(BaseHTTPRequestHandler):
     def _api_web_extract(self):
         """v2.2.3 webpage extractor; accepts downloaded or WebView HTML."""
         if not RM.is_ready('web'):
-            RM.load_all()
-            self._send_json(409, {'ok': False, 'code': 'module_loading',
-                                  'error': '网页模块加载中，请稍候再试'})
+            state = RM.load('web')
+            st, errors = RM.status()
+            state = st.get('web', state)
+            self._send_json(503 if state in ('disabled', 'error') else 409,
+                            {'ok': False, 'code': 'module_loading', 'module': 'web',
+                             'status': st.get('web', state),
+                             'error': errors.get('web') or '网页模块加载中，请稍候再试'})
             return
         try:
             length = int(self.headers.get('Content-Length', 0) or 0)
@@ -1180,6 +1274,8 @@ class Handler(BaseHTTPRequestHandler):
                                       'error': '网页转换失败：%s' % exc})
 
     def _api_web_cancel(self):
+        if not self._module_ready('web', '网页模块加载中，请稍候再试'):
+            return
         try:
             length = int(self.headers.get('Content-Length', 0) or 0)
             body = json.loads(self.rfile.read(length).decode('utf-8')) if length else {}
@@ -1426,6 +1522,9 @@ class Api(object):
 
     def __init__(self):
         self._window = None
+        self._page_ready = False
+        self._ready_lock = threading.Lock()
+        self._on_page_ready = None
         self._web_render_lock = threading.Lock()
         self._web_private_lock = threading.Lock()
         self._web_private_grants = {}
@@ -1813,9 +1912,8 @@ class Api(object):
             return False
 
     def start_modules(self):
-        """渲染完成后由前端触发：后台加载转换 / OCR / 网页模块。"""
-        RM.load_all()
-        return True
+        """Compatibility bridge: module loading is now initiated per feature."""
+        return self.get_modules_status()
 
     def get_modules_status(self):
         st, err = RM.status()
@@ -1835,6 +1933,9 @@ class Api(object):
         if offline_render and not source_html:
             return {'ok': False, 'code': 'render_source_missing',
                     'error': '安全模式缺少已验证的网页 HTML，无法动态渲染'}
+        if not RM.is_ready('web'):
+            return {'ok': False, 'code': 'module_loading', 'module': 'web',
+                    'status': RM.load('web'), 'error': '网页模块加载中，请稍候再试'}
         try:
             mod = RM.get('web')
             safe_url = mod._validate_public_url(url, allow_private=allow_private)
@@ -2300,7 +2401,18 @@ class Api(object):
 
     def report_ready(self):
         """前端页面加载完成（启动里程碑：page_loaded）。"""
+        with self._ready_lock:
+            if self._page_ready:
+                return True
+            self._page_ready = True
         milestone('boot', 'page_loaded')
+        callback = self._on_page_ready
+        if callback is not None:
+            try:
+                callback()
+            except Exception:
+                logging.exception('page-ready callback failed')
+        _finish_startup_probe(False)
         return True
 
     def show_window(self):
@@ -2693,6 +2805,7 @@ def run_webview_selftest():
 # ---------------------------------------------------------------- 启动
 
 def main():
+    global _T0
     parser = argparse.ArgumentParser(description='ReadMD - 轻量级 Markdown 阅读器')
     parser.add_argument('file', nargs='?', help='要打开的 .md 文件')
     parser.add_argument('--browser', action='store_true', help='用默认浏览器打开（兜底模式）')
@@ -2703,7 +2816,27 @@ def main():
     parser.add_argument('--mods', action='store_true', help='加载全部扩展模块并报告状态')
     parser.add_argument('--share', action='store_true', help='启动后自动开启局域网共享（手机扫码访问）')
     parser.add_argument('--assoc', action='store_true', help='注册 .md 默认打开方式后退出')
+    parser.add_argument('--startup-probe', action='store_true',
+                        help='记录启动里程碑并在页面就绪后自动退出')
+    parser.add_argument('--startup-probe-json', metavar='PATH',
+                        help='把 --startup-probe 的 JSON 报告原子写入 PATH')
+    parser.add_argument('--startup-probe-timeout', type=float, default=20.0, metavar='SECONDS',
+                        help='启动 probe 超时秒数（默认 20）')
     args = parser.parse_args()
+
+    if args.startup_probe_json and not args.startup_probe:
+        parser.error('--startup-probe-json 需要 --startup-probe')
+    if args.startup_probe and args.browser:
+        parser.error('--startup-probe 不能与 --browser 同时使用')
+    if args.startup_probe_timeout <= 0:
+        parser.error('--startup-probe-timeout 必须大于 0')
+    if args.startup_probe:
+        _T0 = time.time()
+        with _BOOT_LOCK:
+            _BOOT_MILESTONES.clear()
+            _STARTUP_PROBE.update({'enabled': True, 'timeout': args.startup_probe_timeout,
+                                   'json_path': args.startup_probe_json or '', 'window': None,
+                                   'finished': False, 'timed_out': False, 'timer': None})
 
     if args.assoc:
         r = install_association()
@@ -2733,7 +2866,7 @@ def main():
         RM.set_disabled(('ocr', 'web', 'ai'), WIN7_UNAVAILABLE)
 
     # 单实例：已有常驻实例 → 转发文件 / 唤起窗口后立即退出（秒开）
-    alive = instance_alive()
+    alive = None if args.startup_probe else instance_alive()
     if alive is not None:
         port, token = alive
         if not args.file or forward_open(port, token, os.path.abspath(args.file)):
@@ -2778,6 +2911,8 @@ def main():
         safe_print('未安装 pywebview。请先运行 install%s，或用 --browser 模式。' %
                    ('.sh' if sys.platform != 'win32' else '.bat'))
         safe_print('快速兜底：python readmd.py --browser "%s"' % (initial or ''))
+        if args.startup_probe:
+            write_startup_probe(args.startup_probe_json, timed_out=False)
         return 1
 
     api = Api()
@@ -2789,12 +2924,24 @@ def main():
             text_select=True, zoomable=True, background_color='#f7f7f5')
     except Exception as e:
         safe_print('创建窗口失败：%s' % e)
+        if args.startup_probe:
+            write_startup_probe(args.startup_probe_json, timed_out=False)
         return 1
     api._window = window
+    api._on_page_ready = lambda: _start_tray_once(window)
     with _control_lock:
         _CONTROL['window'] = window
         _CONTROL['ready'] = True
     milestone('boot', 'window_created')
+
+    if args.startup_probe:
+        with _BOOT_LOCK:
+            _STARTUP_PROBE['window'] = window
+            timer = threading.Timer(args.startup_probe_timeout, _finish_startup_probe,
+                                    kwargs={'timed_out': True})
+            timer.daemon = True
+            _STARTUP_PROBE['timer'] = timer
+        timer.start()
 
     # 页面加载完成（Python 侧兜底；JS report_ready 为精确 page_loaded 打点）
     def _on_loaded():
@@ -2807,6 +2954,10 @@ def main():
 
     # 关闭按钮 → 隐藏到托盘（真正退出走托盘“退出”）
     def _on_closing():
+        # Before the UI reports ready there is no tray affordance. Let the
+        # native close proceed instead of creating a hidden, unreachable app.
+        if not api._page_ready:
+            return True
         try:
             window.hide()
         except Exception:
@@ -2817,8 +2968,6 @@ def main():
         window.events.closing += _on_closing
     except Exception:
         pass
-
-    _start_tray(window)
 
     setup_win7_webview2_env()
     try:
@@ -2838,14 +2987,37 @@ def main():
                 macos_native.show_error('ReadMD', '启动失败，请查看日志。')
         except Exception:
             pass
+        if args.startup_probe:
+            write_startup_probe(args.startup_probe_json,
+                                timed_out=bool(_STARTUP_PROBE.get('timed_out')))
         return 1
+
+    if args.startup_probe:
+        timed_out = bool(_STARTUP_PROBE.get('timed_out'))
+        try:
+            write_startup_probe(args.startup_probe_json, timed_out=timed_out)
+        except Exception as exc:
+            safe_print('startup probe write failed: %s' % exc)
+            return 1
+        _clear_instance()
+        return 1 if timed_out else 0
 
     # 窗口真正被销毁时（托盘退出走 os._exit，通常到不了这里）
     _clear_instance()
     return 0
 
 
-_tray_icon = {'icon': None}
+_tray_icon = {'icon': None, 'started': False}
+_tray_lock = threading.Lock()
+
+
+def _start_tray_once(window):
+    """Create the tray only after the page is usable, and never twice."""
+    with _tray_lock:
+        if _tray_icon['started']:
+            return _tray_icon['icon']
+        _tray_icon['started'] = True
+        return _start_tray(window)
 
 
 def _start_tray(window):
