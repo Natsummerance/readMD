@@ -1182,7 +1182,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(500, {'error': '抓取失败：%s' % e})
 
     def _api_web_extract(self):
-        """v2.2.3 webpage extractor; accepts downloaded or WebView HTML."""
+        """v2.2.4 webpage extractor; accepts downloaded or WebView HTML."""
         if not RM.is_ready('web'):
             state = RM.load('web')
             st, errors = RM.status()

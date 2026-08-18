@@ -39,7 +39,7 @@ BLOCKED_TAGS = ('script', 'style', 'form', 'iframe',
 USER_AGENT = (
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
     'AppleWebKit/537.36 (KHTML, like Gecko) '
-    'Chrome/131.0 Safari/537.36 ReadMD/2.2.3'
+    'Chrome/131.0 Safari/537.36 ReadMD/2.2.4'
 )
 
 RETRY_STATUSES = {408, 425, 429, 502, 503, 504}
@@ -703,7 +703,7 @@ def _extract_links(html, base_url, limit=10):
 
 
 def crawl(url, max_links=10, timeout=25):
-    """Legacy synchronous crawl; the v2.2.3 UI adds progress and cancellation."""
+    """Legacy synchronous crawl; the v2.2.4 UI adds progress and cancellation."""
     first = fetch_document(url, timeout=timeout)
     if not first.get('ok'):
         return None
