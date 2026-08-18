@@ -17,3 +17,6 @@ ui-tests/playwright-report/
 .venv-win7/
 installer/webview2_runtime/
 release_body_win7_beta.md
+
+.token-optimizer/
+
