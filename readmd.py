@@ -1267,9 +1267,7 @@ class Handler(BaseHTTPRequestHandler):
                     defuddle=body.get('defuddle') or None,
                     readability=body.get('readability') or None, rendered=True)
             else:
-                result = mod.fetch_document(
-                    url, mode=mode, task_id=task_id,
-                    allow_private=os.environ.get('READMD_WEB_TEST_ALLOW_PRIVATE') == '1')
+                result = mod.fetch_document(url, mode=mode, task_id=task_id)
             previous = body.get('diagnostics')
             if isinstance(previous, dict):
                 prior_chain = previous.get('engine_chain')
@@ -1287,8 +1285,7 @@ class Handler(BaseHTTPRequestHandler):
                 asset_dir = os.path.join(DATA_DIR, 'web-assets',
                                          task_id or secrets.token_hex(8))
                 content, assets, image_warnings = mod.localize_images(
-                    result.get('content') or '', asset_dir, task_id=task_id,
-                    allow_private=os.environ.get('READMD_WEB_TEST_ALLOW_PRIVATE') == '1')
+                    result.get('content') or '', asset_dir, task_id=task_id)
                 result['content'] = content
                 result['assets'] = assets
                 result.setdefault('warnings', []).extend(image_warnings)
@@ -1349,8 +1346,9 @@ class Handler(BaseHTTPRequestHandler):
             if url:
                 # Reuse the normal downloader's URL validation/redirect rules;
                 # chat pages are parsed directly rather than article-extracted.
-                from readmd_modules import web as web_module
-                fetched = web_module.fetch_html(url, allow_private=False)
+                if not self._module_ready('web', '网页模块加载中，请稍候再试'):
+                    return
+                fetched = RM.get('web').fetch_html(url)
                 page_html = fetched.get('html', '')
                 if len(page_html.encode('utf-8')) > chat_import.MAX_TEXT_BYTES:
                     raise chat_import.ChatImportError('too_large', '网页对话 HTML 超过 10 MB 限制')

@@ -121,7 +121,7 @@ def normalize_url(url):
                        parsed.params, parsed.query, ''))
 
 
-def _validate_public_url(url, allow_private=False):
+def _validate_public_url(url, allow_private=True):
     normalized = normalize_url(url)
     host = urlparse(normalized).hostname
     try:
@@ -142,7 +142,7 @@ def _validate_public_url(url, allow_private=False):
     return normalized
 
 
-def _session(allow_private=False):
+def _session(allow_private=True):
     requests, _tra, _bs, _md = load()
 
     class PinnedHTTPAdapter(requests.adapters.HTTPAdapter):
@@ -206,7 +206,7 @@ def _session(allow_private=False):
     return session
 
 
-def _validate_response_peer(response, allow_private=False):
+def _validate_response_peer(response, allow_private=True):
     """Reject DNS rebinding by checking the connected socket, not only DNS."""
     if allow_private:
         return
@@ -269,7 +269,7 @@ def _wait_retry(delay, task_id):
 
 
 def fetch_html(url, timeout=25, max_bytes=MAX_HTML_BYTES, task_id=None,
-               allow_private=False, session=None):
+               allow_private=True, session=None):
     """Download an HTML document with bounded redirects and response size."""
     requests, _tra, _bs, _md = load()
     current = _validate_public_url(url, allow_private=allow_private)
@@ -603,7 +603,7 @@ def extract_html(url, html, mode='smart', readability=None, defuddle=None,
 
 
 def fetch_document(url, mode='smart', timeout=25, task_id=None,
-                   allow_private=False):
+                   allow_private=True):
     fetched = fetch_html(url, timeout=timeout, task_id=task_id,
                          allow_private=allow_private)
     result = extract_html(fetched['url'], fetched['html'], mode=mode)
@@ -621,7 +621,7 @@ def _image_urls(markdown):
             for match in re.finditer(pattern, markdown or '', re.I)]
 
 
-def localize_images(markdown, asset_root, task_id=None, allow_private=False):
+def localize_images(markdown, asset_root, task_id=None, allow_private=True):
     """Download safe raster images and rewrite Markdown to temporary paths."""
     urls = []
     for value in _image_urls(markdown):

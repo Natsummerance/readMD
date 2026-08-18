@@ -17,6 +17,8 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+import requests
+
 from readmd_modules import web as WEB
 
 
@@ -79,7 +81,25 @@ class FixtureHandler(BaseHTTPRequestHandler):
 
 
 class TestWebExtraction(unittest.TestCase):
-    def test_pinned_adapter_rejects_rebound_private_ip_before_send(self):
+    def test_pinned_adapter_allows_private_ip_by_default(self):
+        session = WEB._session()
+        private_answer = [(2, 1, 6, '', ('127.0.0.1', 443))]
+        request = requests.Request(
+            'GET', 'https://rebind.invalid/article').prepare()
+        fake = mock.MagicMock()
+        fake.url = 'https://rebind.invalid/article'
+        fake.status_code = 200
+        fake.headers = {}
+        with mock.patch.object(WEB.socket, 'getaddrinfo',
+                               return_value=private_answer), \
+                mock.patch('requests.adapters.HTTPAdapter.send',
+                           return_value=fake) as base_send:
+            adapter = session.get_adapter('https://rebind.invalid/article')
+            adapter.send(request, timeout=1)
+            base_send.assert_called_once()
+        session.close()
+
+    def test_pinned_adapter_rejects_private_ip_when_opt_out(self):
         session = WEB._session(allow_private=False)
         private_answer = [(2, 1, 6, '', ('127.0.0.1', 443))]
         with mock.patch.object(WEB.socket, 'getaddrinfo',
@@ -105,8 +125,10 @@ class TestWebExtraction(unittest.TestCase):
             return type('Response', (), {'raw': raw})()
 
         WEB._validate_response_peer(response_for('93.184.216.34'))
+        WEB._validate_response_peer(response_for('127.0.0.1'))
         with self.assertRaises(WEB.WebError) as raised:
-            WEB._validate_response_peer(response_for('127.0.0.1'))
+            WEB._validate_response_peer(response_for('127.0.0.1'),
+                                        allow_private=False)
         self.assertEqual(raised.exception.code, 'private_address')
 
     @classmethod
@@ -153,13 +175,12 @@ class TestWebExtraction(unittest.TestCase):
             self.assertEqual(caught.exception.code, code)
             self.assertEqual(caught.exception.http_status, status)
 
-    def test_size_limit_and_private_address_block(self):
+    def test_size_limit_and_scheme_validation(self):
         with self.assertRaises(WEB.WebError) as caught:
-            WEB.fetch_html(self.base + '/article', max_bytes=100, allow_private=True)
+            WEB.fetch_html(self.base + '/article', max_bytes=100)
         self.assertEqual(caught.exception.code, 'too_large')
-        with self.assertRaises(WEB.WebError) as caught:
-            WEB.fetch_html(self.base + '/article')
-        self.assertEqual(caught.exception.code, 'private_address')
+        fetched = WEB.fetch_html(self.base + '/article')
+        self.assertIn('本地测试文章', fetched['html'])
         for value in ('file:///etc/passwd', 'javascript:alert(1)'):
             with self.assertRaises(WEB.WebError):
                 WEB.normalize_url(value)
