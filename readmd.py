@@ -1459,6 +1459,24 @@ class Api(object):
                 from System import Action
                 native = reader_window.native
                 installed = [False]
+                private_origin = (self._web_origin(allowed_url)
+                                  if self._private_web_allowed(
+                                      allowed_url, task_id, private_grant)
+                                  else '')
+
+                def allowed_by_mode(request_url):
+                    if offline:
+                        return request_url.lower().startswith(
+                            ('about:blank', 'data:', 'blob:'))
+                    if private_origin:
+                        try:
+                            return (request_url.lower().startswith(
+                                        ('about:blank', 'data:', 'blob:')) or
+                                    self._web_origin(request_url) == private_origin)
+                        except Exception:
+                            return False
+                    return self._web_request_allowed(
+                        request_url, task_id, private_grant)
 
                 def install():
                     core = native.browser.webview.CoreWebView2
@@ -1466,15 +1484,13 @@ class Api(object):
                     def guard(sender, args):
                         request_url = str(args.Request.Uri)
                         if offline:
-                            if request_url.lower().startswith(
-                                    ('about:blank', 'data:', 'blob:')):
+                            if allowed_by_mode(request_url):
                                 return
                             args.Response = sender.Environment.CreateWebResourceResponse(
                                 None, 403, 'Blocked by ReadMD',
                                 'Content-Type: text/plain; charset=utf-8')
                             return
-                        if self._web_request_allowed(
-                                request_url, task_id, private_grant):
+                        if allowed_by_mode(request_url):
                             return
                         args.Response = sender.Environment.CreateWebResourceResponse(
                             None, 403, 'Blocked by ReadMD',
@@ -1484,12 +1500,7 @@ class Api(object):
                     native.browser._readmd_network_guard = guard
                     def navigation_guard(sender, args):
                         request_url = str(args.Uri or '')
-                        internal = request_url.lower().startswith(
-                            ('about:blank', 'data:', 'blob:'))
-                        if offline and internal:
-                            return
-                        if not offline and self._web_request_allowed(
-                                request_url, task_id, private_grant):
+                        if allowed_by_mode(request_url):
                             return
                         args.Cancel = True
 

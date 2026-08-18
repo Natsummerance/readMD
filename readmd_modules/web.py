@@ -142,8 +142,53 @@ def _validate_public_url(url, allow_private=False):
     return normalized
 
 
-def _session():
+def _session(allow_private=False):
     requests, _tra, _bs, _md = load()
+
+    class PinnedHTTPAdapter(requests.adapters.HTTPAdapter):
+        """Pin urllib3's connection target to the address we validated."""
+
+        def send(self, request, *args, **kwargs):
+            parsed = urlparse(request.url)
+            try:
+                infos = socket.getaddrinfo(parsed.hostname, parsed.port,
+                                           type=socket.SOCK_STREAM)
+            except socket.gaierror as exc:
+                raise requests.exceptions.ConnectionError(
+                    'DNS resolution failed: %s' % exc)
+            addresses = []
+            for item in infos:
+                value = item[4][0].split('%', 1)[0]
+                try:
+                    address = ipaddress.ip_address(value)
+                except ValueError:
+                    continue
+                if allow_private or address.is_global:
+                    addresses.append(value)
+            if not addresses:
+                raise requests.exceptions.ConnectionError(
+                    'No permitted address for target host')
+            pinned_ip = addresses[0]
+            proxies = kwargs.get('proxies')
+            verify = kwargs.get('verify', True)
+            cert = kwargs.get('cert')
+            if hasattr(self, 'get_connection_with_tls_context'):
+                pool = self.get_connection_with_tls_context(
+                    request, verify, proxies=proxies, cert=cert)
+            else:  # requests < 2.32
+                pool = self.get_connection(request.url, proxies)
+            base_connection = pool.ConnectionCls
+
+            class PinnedConnection(base_connection):
+                def __init__(self, *conn_args, **conn_kwargs):
+                    super().__init__(*conn_args, **conn_kwargs)
+                    self._dns_host = pinned_ip
+
+            # This session is task-local and requests are serial. Any reused
+            # connection is already pinned to an address validated earlier.
+            pool.ConnectionCls = PinnedConnection
+            return super().send(request, *args, **kwargs)
+
     session = requests.Session()
     # Direct connections let us verify the actual peer address. Environment
     # proxies would move that trust boundary outside ReadMD and re-open SSRF.
@@ -155,6 +200,9 @@ def _session():
         'Accept-Encoding': 'gzip, deflate',
         'Cache-Control': 'no-cache',
     })
+    adapter = PinnedHTTPAdapter()
+    session.mount('http://', adapter)
+    session.mount('https://', adapter)
     return session
 
 
@@ -225,7 +273,7 @@ def fetch_html(url, timeout=25, max_bytes=MAX_HTML_BYTES, task_id=None,
     """Download an HTML document with bounded redirects and response size."""
     requests, _tra, _bs, _md = load()
     current = _validate_public_url(url, allow_private=allow_private)
-    sess = session or _session()
+    sess = session or _session(allow_private=allow_private)
     history = []
     try:
         retry_count = 0
@@ -583,7 +631,7 @@ def localize_images(markdown, asset_root, task_id=None, allow_private=False):
     if not urls:
         return markdown, [], []
     os.makedirs(asset_root, exist_ok=True)
-    session = _session()
+    session = _session(allow_private=allow_private)
     manifest, warnings, total = [], [], 0
     try:
         for image_url in urls:
