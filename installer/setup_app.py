@@ -22,8 +22,12 @@ import tempfile
 import threading
 import time
 import uuid
-import winreg
+try:
+    import winreg
+except ImportError:
+    winreg = None
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
 from urllib.parse import urlparse
 
 
