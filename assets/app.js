@@ -857,6 +857,7 @@ async function extractOneWebPage(url, options, forceRender) {
   };
   let data = null;
   let diagnostics = null;
+  let renderSourceHtml = '';
   if (!forceRender && !options.privateGrant) {
     setWebProgress(options.progress || 12, '下载并分析静态页面…', options.count || '');
     data = await postWebExtract(base);
@@ -865,6 +866,7 @@ async function extractOneWebPage(url, options, forceRender) {
       engine_chain: data.engine_chain || ['http'], attempts: data.attempts || 1,
       fallback_reason: data.fallback_reason || data.code || 'render_required',
     };
+    renderSourceHtml = data.render_html || '';
     if (!data.render_required) {
       const error = new Error(data.error || '未能提取网页正文');
       error.code = data.code || 'extract_failed';
@@ -884,9 +886,13 @@ async function extractOneWebPage(url, options, forceRender) {
       options.count || (interactive ? '最多等待 5 分钟' : '最长 25 秒'));
     const rendered = await py.render_web_page(
       url, webRun.taskId, interactive ? 300000 : 25000,
-      interactive, options.privateGrant || '');
+      interactive, options.privateGrant || '', renderSourceHtml);
     if (!rendered || !rendered.ok) return { rendered, data: null };
     setWebProgress(Math.max(options.progress || 12, 32), '使用 Defuddle / Readability 提取…', options.count || '');
+    const renderNode = interactive ? 'interactive-webview' : 'system-webview';
+    diagnostics = diagnostics || { engine_chain: [], attempts: 0, fallback_reason: forceRender ? 'forced_render' : 'render_required' };
+    diagnostics.engine_chain = (diagnostics.engine_chain || []).concat([renderNode]);
+    diagnostics.attempts = (diagnostics.attempts || 0) + 1;
     const extracted = await postWebExtract(Object.assign({}, base, {
       html: rendered.html || '', final_url: rendered.final_url || url,
       defuddle: rendered.defuddle || null,

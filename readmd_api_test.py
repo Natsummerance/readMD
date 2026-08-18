@@ -100,6 +100,14 @@ class TestRenameFile(unittest.TestCase):
 
 
 class TestPrivateWebAuthorization(unittest.TestCase):
+    def test_wk_origin_filter_handles_default_ports_and_ipv6(self):
+        https_filter = readmd.Api._web_origin_url_filter('https://example.com/docs')
+        self.assertRegex('https://example.com/page', https_filter)
+        self.assertRegex('https://example.com:443/page', https_filter)
+        self.assertNotRegex('https://example.com.evil/page', https_filter)
+        self.assertEqual(readmd.Api._web_origin('http://[::1]/docs'),
+                         'http://[::1]:80')
+
     def test_grant_is_task_origin_bound_and_revocable(self):
         api = readmd.Api()
         granted = api.authorize_private_web('http://127.0.0.1:8080/page', 'task-a')

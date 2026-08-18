@@ -1381,7 +1381,28 @@ class Api(object):
         parsed = urlparse(web_module.normalize_url(url))
         port = parsed.port
         default_port = 443 if parsed.scheme == 'https' else 80
-        return '%s://%s:%d' % (parsed.scheme, parsed.hostname, port or default_port)
+        host = parsed.hostname or ''
+        if ':' in host and not host.startswith('['):
+            host = '[%s]' % host
+        return '%s://%s:%d' % (parsed.scheme, host, port or default_port)
+
+    @staticmethod
+    def _web_origin_url_filter(url):
+        """Return a WKContentRule URL regex for exactly one origin."""
+        from urllib.parse import urlparse
+        from readmd_modules import web as web_module
+        parsed = urlparse(web_module.normalize_url(url))
+        host = parsed.hostname or ''
+        if ':' in host and not host.startswith('['):
+            host = '[%s]' % host
+        default_port = 443 if parsed.scheme == 'https' else 80
+        port = parsed.port
+        base = re.escape('%s://%s' % (parsed.scheme, host))
+        if port is None or port == default_port:
+            authority = base + r'(?::%d)?' % default_port
+        else:
+            authority = base + re.escape(':%d' % port)
+        return '^' + authority + r'(?:/|$)'
 
     def authorize_private_web(self, url, task_id):
         """签发仅供桌面 WebView 使用的短期、任务与源站绑定授权。"""
@@ -1430,7 +1451,8 @@ class Api(object):
             return False
 
     def _install_webview_network_guard(self, reader_window, task_id,
-                                       private_grant, allowed_url):
+                                       private_grant, allowed_url,
+                                       offline=False):
         """Install a fail-closed native request guard before remote navigation."""
         if IS_WIN:
             try:
@@ -1463,27 +1485,20 @@ class Api(object):
             try:
                 import WebKit
                 from PyObjCTools import AppHelper
-                from urllib.parse import urlparse
                 from webview.platforms.cocoa import BrowserView
                 finished = threading.Event()
                 success = [False]
-                allowed_host = urlparse(allowed_url).hostname or ''
-                private_filter = (
-                    r'^https?://(?:localhost(?:[:/]|$)|127\.|0\.|10\.|'
-                    r'169\.254\.|192\.168\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|'
-                    r'\[?(?:0*:)*0*1\]?(?:[:/]|$)|\[?f[cd][0-9a-f]{2}:|'
-                    r'\[?fe[89ab][0-9a-f]:)')
-                private_trigger = {'url-filter': private_filter}
-                if self._private_web_allowed(
-                        allowed_url, task_id, private_grant):
-                    private_trigger['unless-domain'] = [allowed_host]
-                rules = [
-                    {'trigger': private_trigger,
-                     'action': {'type': 'block'}},
-                    {'trigger': {'url-filter': '.*', 'resource-type': ['document'],
-                                 'unless-domain': [allowed_host]},
-                     'action': {'type': 'block'}},
-                ]
+                if offline:
+                    rules = [{'trigger': {'url-filter': r'^(?:https?|wss?|ftp|file)://'},
+                              'action': {'type': 'block'}}]
+                else:
+                    allowed_origin_filter = self._web_origin_url_filter(allowed_url)
+                    rules = [
+                        {'trigger': {'url-filter': r'^(?:https?|wss?|ftp|file)://'},
+                         'action': {'type': 'block'}},
+                        {'trigger': {'url-filter': allowed_origin_filter},
+                         'action': {'type': 'ignore-previous-rules'}},
+                    ]
 
                 def install():
                     instance = BrowserView.get_instance('window', reader_window.native)
@@ -1602,12 +1617,19 @@ class Api(object):
         return {'modules': st, 'errors': err}
 
     def render_web_page(self, url, task_id='', timeout_ms=25000,
-                        interactive=False, private_grant=''):
+                        interactive=False, private_grant='', source_html=''):
         """在无 JS bridge、无持久会话的临时系统 WebView 中渲染网页。"""
         if is_win7():
             return {'ok': False, 'code': 'render_unavailable',
                     'error': 'Win7 版不支持动态网页渲染'}
         allow_private = self._private_web_allowed(url, task_id, private_grant)
+        mac_offline = IS_MAC and not allow_private
+        if mac_offline and interactive:
+            return {'ok': False, 'code': 'interactive_unavailable',
+                    'error': 'macOS 安全模式不允许网页联网交互；可重试静态抓取或保留完整页面'}
+        if mac_offline and not source_html:
+            return {'ok': False, 'code': 'render_source_missing',
+                    'error': 'macOS 安全模式缺少已验证的网页 HTML，无法动态渲染'}
         try:
             mod = RM.get('web')
             safe_url = mod._validate_public_url(url, allow_private=allow_private)
@@ -1636,10 +1658,14 @@ class Api(object):
             if blank_loaded is not None:
                 blank_loaded.wait(5.0)
             if not self._install_webview_network_guard(
-                    reader_window, task_id, private_grant, safe_url):
+                    reader_window, task_id, private_grant, safe_url,
+                    offline=mac_offline):
                 return {'ok': False, 'code': 'network_guard_unavailable',
                         'error': '无法启用网页私网访问保护，已停止动态渲染'}
-            reader_window.load_url(safe_url)
+            if mac_offline:
+                reader_window.load_html(source_html)
+            else:
+                reader_window.load_url(safe_url)
             deadline = time.time() + timeout_ms / 1000.0
             loaded = getattr(getattr(reader_window, 'events', None), 'loaded', None)
             if loaded is not None:
@@ -2357,6 +2383,89 @@ def run_selftest():
     return 0 if ok else 1
 
 
+def run_webview_selftest():
+    """Exercise the native WebView network guard against a private subresource."""
+    hits = {'probe': 0}
+
+    class ProbeHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            hits['probe'] += 1
+            self.send_response(204)
+            self.end_headers()
+
+        def log_message(self, *_args):
+            pass
+
+    probe = ThreadingHTTPServer(('127.0.0.1', 0), ProbeHandler)
+    threading.Thread(target=probe.serve_forever, daemon=True).start()
+
+    class PageHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            body = ('''<!doctype html><html><head><title>Guard selftest</title></head>
+              <body><main><h1>Native WebView guard selftest</h1>
+              <p>This local fixture verifies that the rendered document remains readable
+              while a cross-origin private subresource request is denied before sending.</p>
+              <img src="http://127.0.0.1:%d/probe"></main></body></html>'''
+                    % probe.server_port).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *_args):
+            pass
+
+    page = ThreadingHTTPServer(('127.0.0.1', 0), PageHandler)
+    threading.Thread(target=page.serve_forever, daemon=True).start()
+    outcome = {'ok': False, 'error': 'WebView callback did not run'}
+    try:
+        import webview
+        RM.load_forced('web')
+        api = Api()
+        host = webview.create_window('ReadMD WebView selftest', 'about:blank',
+                                     hidden=True, width=320, height=240)
+
+        def exercise():
+            task_id = 'native-guard-selftest'
+            target = 'http://127.0.0.1:%d/article' % page.server_port
+            try:
+                grant = api.authorize_private_web(target, task_id)
+                if not grant.get('ok'):
+                    raise AssertionError(grant)
+                rendered = api.render_web_page(
+                    target, task_id, 15000, False, grant['grant'], '')
+                if not rendered.get('ok'):
+                    raise AssertionError(rendered)
+                time.sleep(0.25)
+                if hits['probe']:
+                    raise AssertionError('private cross-origin request escaped guard')
+                outcome.update(ok=True, error='')
+            except Exception as exc:
+                outcome.update(ok=False, error=str(exc))
+            finally:
+                api.revoke_private_web(task_id)
+                try:
+                    host.destroy()
+                except Exception:
+                    pass
+
+        if IS_MAC:
+            webview.start(exercise, gui='cocoa', private_mode=True)
+        else:
+            webview.start(exercise, private_mode=True)
+    except Exception as exc:
+        outcome.update(ok=False, error=str(exc))
+    finally:
+        for server in (page, probe):
+            server.shutdown()
+            server.server_close()
+    safe_print('webview network guard %s%s' % (
+        'PASSED' if outcome['ok'] else 'FAILED',
+        '' if outcome['ok'] else ': ' + outcome['error']))
+    return 0 if outcome['ok'] else 1
+
+
 # ---------------------------------------------------------------- 启动
 
 def main():
@@ -2365,6 +2474,8 @@ def main():
     parser.add_argument('--browser', action='store_true', help='用默认浏览器打开（兜底模式）')
     parser.add_argument('--port', type=int, default=0, help='本地服务端口（默认随机）')
     parser.add_argument('--selftest', action='store_true', help='运行自测')
+    parser.add_argument('--webview-selftest', action='store_true',
+                        help='运行原生 WebView 私网隔离自测')
     parser.add_argument('--mods', action='store_true', help='加载全部扩展模块并报告状态')
     parser.add_argument('--share', action='store_true', help='启动后自动开启局域网共享（手机扫码访问）')
     parser.add_argument('--assoc', action='store_true', help='注册 .md 默认打开方式后退出')
@@ -2377,6 +2488,9 @@ def main():
 
     if args.selftest:
         sys.exit(run_selftest())
+
+    if args.webview_selftest:
+        sys.exit(run_webview_selftest())
 
     if args.mods:
         ok = True

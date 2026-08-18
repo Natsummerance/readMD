@@ -137,6 +137,7 @@ class TestWebExtraction(unittest.TestCase):
         smart = WEB.fetch_document(self.base + '/dynamic', allow_private=True)
         self.assertFalse(smart['ok'])
         self.assertTrue(smart['render_required'])
+        self.assertIn('<script>', smart['render_html'])
         full = WEB.fetch_document(self.base + '/dynamic', mode='full', allow_private=True)
         self.assertTrue(full['ok'], full)
         self.assertEqual(full['engine'], 'full-page')

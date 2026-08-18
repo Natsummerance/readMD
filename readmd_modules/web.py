@@ -110,7 +110,7 @@ def normalize_url(url):
     if not parsed.hostname:
         raise WebError('invalid_url', '网页地址格式不正确', 400)
     host = parsed.hostname.encode('idna').decode('ascii')
-    netloc = host
+    netloc = '[%s]' % host if ':' in host else host
     try:
         port = parsed.port
     except ValueError:
@@ -529,6 +529,8 @@ def fetch_document(url, mode='smart', timeout=25, task_id=None,
     result['fetch'] = {key: fetched[key] for key in
                        ('url', 'requested_url', 'status', 'content_type',
                         'bytes', 'redirects', 'encoding')}
+    if not result.get('ok') and result.get('render_required'):
+        result['render_html'] = fetched['html']
     return result
 
 
