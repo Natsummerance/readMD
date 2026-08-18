@@ -24,12 +24,13 @@
 - 🤖 **AI 助手（v2.2.0 隐私与自定义连接）**：官方预设 + 可增删改的自定义连接；API Key 仅本机保存且配置接口不回传明文；获取模型后通过下拉框选择，连接面板可拖拽调宽
 - 🔄 **万物转 MD（v2.1.1 保存 + 批量 + 质量）**：docx / pptx / xlsx / pdf / html / csv / json 等转为 Markdown；单文件或批量（多选 / 整文件夹）一键转换，结果自动保存到源目录同名 `.md` 并直接以可编辑文件打开（同名默认跳过、可勾选覆盖）；docx 走专用解析（OMML 公式转 LaTeX、标题、表格、等宽代码块），pdf 走专用解析（表格还原 + 公式启发式），其余 MarkItDown 并逐文件回退；输出经严格校验（代码围栏 / 表格 / 公式定界符 / 编码 / 图片引用）
 - 🔍 **扫描转 MD（OCR）**：Windows 使用 WinRT、macOS 使用 Vision，均为系统原生离线识别；PDF 有文字层时直接提取
-- 🌐 **网页转 MD（v2.2.2）**：Trafilatura 双级抽取，静态正文不足时自动使用 WebView2 / WKWebView + Mozilla Readability 渲染；支持完整页面降级、同站最多 10 页、明确错误诊断和可选图片本地化
+- 🌐 **网页转 MD（v2.2.3）**：Trafilatura 双级抽取，静态正文不足时自动使用 WebView2 / WKWebView + 离线 Defuddle / Mozilla Readability；支持短公告与文档页、交互式抓取、同站 1–30 页、显式内网授权、明确错误诊断和可选图片本地化
 - 📄 **独立文件图标**：Windows 文件关联使用简约的 Markdown 文档图标，应用 Logo 仅用于 ReadMD 程序和快捷方式
 - ✏️ **主动编辑（v2.2.0）**：单行分组工具栏、可搜索命令面板和分类公式选择器；实时预览支持上下左右停靠及拖拽分隔；图片编辑支持八向裁剪、任意角度、翻转、画布缩放/平移、输出尺寸与撤销重做
 - 📱 **移动端共享**：开启局域网共享后，手机扫码在同一 Wi-Fi 下阅读 / 转 MD / OCR / AI（随机令牌鉴权）
 - 📑 **阅读体验**：目录侧栏（滚动高亮）、全文搜索、三主题、字号缩放、打印 / 导出 PDF、文件夹浏览、大文档增量渲染（>300KB 或 6000 行分块渲染不卡顿）、文件外部修改自动刷新
-- 📤 **导出 PDF / DOCX / HTML（v2.1.0）**：一键导出当前文档，内置「简约 / 经典 / 商务」三套样式并可全量自定义（纸张 / 页边距 / 各级标题颜色与字号 / 表格表头与斑马纹 / 代码块 / 引用 / 页码等），自定义样式可保存为预设；公式在 PDF / DOCX 中本地渲染为图片，HTML 为单文件（内联 marked + MathJax，离线可开）
+- 📤 **导出 PDF / DOCX / HTML（v2.2.3 修复）**：统一兼容 Windows/macOS 保存对话框路径，使用同目录临时文件原子替换；公式在 PDF / DOCX 中本地渲染为图片，HTML 为离线单文件
+- 📝 **文件重命名（v2.2.3）**：打开本地文件后，点击顶栏文件名或按 F2 可直接重命名，自动同步最近文件和本地历史引用
 - 🛠 **自动修正**：表格缺分隔行 / 列数不齐、未闭合 `**` `__` `*`、未闭合 `$` `$$`、`#标题` 缺空格、BOM、CRLF 等，逐处列出修改
 - 🖥 **默认打开方式**：可设为 Windows 默认 `.md` 应用（当前用户级，无需管理员）
 
@@ -43,13 +44,13 @@
 | --- | --- |
 | **ReadMDSetup-版本.exe** | 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级 |
 | **ReadMD-portable-版本.exe** | 便携版，免安装，双击直接运行 |
-| **ReadMD-macos-x64-v2.2.2.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
-| **ReadMD-macos-arm64-v2.2.2.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
+| **ReadMD-macos-x64-v2.2.3.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
+| **ReadMD-macos-arm64-v2.2.3.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
 | **ReadMDSetup-2.1.1-Beta-win7-x64.exe** | **Win7 兼容版**（v2.1.1 Beta，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
 >
-> v2.2.2 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动需在 Finder 中右键 `ReadMD.app` →“打开”。
+> v2.2.3 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动需在 Finder 中右键 `ReadMD.app` →“打开”。
 
 **方式二：源码运行（开发 / 自定义）**
 

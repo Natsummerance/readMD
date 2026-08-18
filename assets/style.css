@@ -147,6 +147,12 @@ button { font-family: inherit; }
 #btn-ai .tb-ic, #w-ai .bb-ic { fill: currentColor; stroke: none; }
 .file-title {
   margin-left: 8px;
+  height: 30px;
+  padding: 0 25px 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-s);
+  background: transparent;
+  position: relative;
   font-size: 13px;
   font-weight: 600;
   color: var(--fg);
@@ -154,7 +160,18 @@ button { font-family: inherit; }
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 40vw;
+  cursor: text;
+  -webkit-app-region: no-drag;
 }
+.file-title::after { content: '\270E'; position: absolute; right: 7px; opacity: 0; color: var(--accent); transition: opacity .12s ease; }
+.file-title:hover { background: var(--bg3); border-color: var(--border); }
+.file-title:hover::after, .file-title:focus-visible::after { opacity: .9; }
+.file-title:disabled { cursor: default; opacity: 1; padding-right: 8px; }
+.file-title:disabled::after { display: none; }
+.file-title:disabled:hover { background: transparent; border-color: transparent; }
+.file-rename-wrap { display: inline-flex; align-items: center; min-width: 140px; max-width: 40vw; height: 32px; margin-left: 8px; border: 1px solid var(--accent); border-radius: var(--radius-s); background: var(--bg); box-shadow: 0 0 0 3px var(--accent-soft); overflow: hidden; -webkit-app-region: no-drag; }
+.file-rename-wrap input { min-width: 60px; width: 18ch; height: 100%; padding: 0 2px 0 8px; border: 0; outline: 0; background: transparent; color: var(--fg); font: 600 13px/1 var(--font-ui); }
+.file-rename-ext { padding: 0 8px 0 1px; color: var(--fg3); font-size: 12px; }
 
 /* ---------- 更多菜单 ---------- */
 #more-menu {
@@ -500,10 +517,10 @@ mark.hl.cur { background: var(--hl-cur); }
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 #url-input { width: calc(100% - 48px); min-height: 44px; font-size: 14px; margin: 0 24px 14px; }
-.url-options { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 10px; padding: 0 24px 14px; }
+.url-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px; padding: 0 24px 14px; }
 .url-option, .url-check { min-height: 64px; border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--bg); }
 .url-option { display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; color: var(--fg3); font-size: 11px; }
-.url-option select { width: 100%; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: 13px; outline: 0; }
+.url-option select, .url-option input { width: 100%; min-height: 28px; border: 0; background: transparent; color: var(--fg); font: inherit; font-size: 13px; outline: 0; }
 .url-check { display: flex; align-items: center; gap: 9px; padding: 9px 10px; color: var(--fg2); font-size: 12px; cursor: pointer; }
 .url-check input { accent-color: var(--accent); width: 17px; height: 17px; flex: 0 0 auto; }
 .url-check span { display: flex; flex-direction: column; gap: 2px; }

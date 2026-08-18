@@ -3,7 +3,7 @@ name: Test, package and release ReadMD
 on:
   push:
     branches: [main]
-    tags: ['v2.2.2']
+    tags: ['v2.2.3']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  READMD_VERSION: '2.2.2'
+  READMD_VERSION: '2.2.3'
   PYTHONUTF8: '1'
 
 jobs:
@@ -61,6 +61,7 @@ jobs:
           python readmd_convert_test.py
           python readmd_export_test.py
           python readmd_web_test.py
+          python readmd_api_test.py
           python tools/privacy_scan.py
           python readmd.py --selftest
       - name: Run Playwright UI tests
@@ -69,7 +70,7 @@ jobs:
 
   windows-package:
     name: Package · Windows x64
-    if: github.ref == 'refs/tags/v2.2.2'
+    if: github.ref == 'refs/tags/v2.2.3'
     needs: test
     runs-on: windows-latest
     steps:
@@ -85,8 +86,8 @@ jobs:
       - name: Build and verify Windows assets
         shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD --icon assets/readmd.ico --add-data "assets;assets" --add-data "readmd_modules;readmd_modules" --add-data "readmd_fix.py;." --hidden-import readmd_fix --collect-data magika --collect-data docx --collect-data trafilatura --collect-submodules readmd_modules readmd.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable --icon assets/readmd.ico --add-data "assets;assets" --add-data "readmd_modules;readmd_modules" --add-data "readmd_fix.py;." --hidden-import readmd_fix --collect-data magika --collect-data docx --collect-data trafilatura --collect-submodules readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD --icon assets/readmd.ico --add-data "assets;assets" --add-data "readmd_modules;readmd_modules" --add-data "readmd_fix.py;." --hidden-import readmd_fix --collect-data magika --collect-all docx --collect-all reportlab --collect-all matplotlib --collect-data trafilatura --collect-submodules readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable --icon assets/readmd.ico --add-data "assets;assets" --add-data "readmd_modules;readmd_modules" --add-data "readmd_fix.py;." --hidden-import readmd_fix --collect-data magika --collect-all docx --collect-all reportlab --collect-all matplotlib --collect-data trafilatura --collect-submodules readmd_modules readmd.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall --icon assets/readmd.ico --add-data "installer;installer" installer/setup_app.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup --icon assets/readmd.ico --add-data "installer;installer" --add-binary "dist/ReadMD;ReadMD" --add-binary "dist/ReadMDUninstall.exe;." installer/setup_app.py
           Move-Item dist/ReadMDSetup.exe "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
@@ -98,18 +99,20 @@ jobs:
           & "dist/ReadMDSetup-v$env:READMD_VERSION.exe" --version
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (!(Test-Path "dist/ReadMD/_internal/assets/markdown-file.ico")) { throw "Markdown association icon missing" }
+          if (!(Test-Path "dist/ReadMD/_internal/assets/vendor/defuddle.bundle.js")) { throw "Defuddle bundle missing" }
+          if (!(Test-Path "dist/ReadMD/_internal/assets/vendor/defuddle.LICENSE.txt")) { throw "Defuddle license missing" }
           python tools/privacy_scan.py dist/ReadMD "dist/ReadMD-portable-v$env:READMD_VERSION.exe" "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
       - uses: actions/upload-artifact@v4
         with:
           name: release-windows
           path: |
-            dist/ReadMDSetup-v2.2.2.exe
-            dist/ReadMD-portable-v2.2.2.exe
+            dist/ReadMDSetup-v2.2.3.exe
+            dist/ReadMD-portable-v2.2.3.exe
           if-no-files-found: error
 
   macos-package:
     name: Package · macOS ${{ matrix.arch }}
-    if: github.ref == 'refs/tags/v2.2.2'
+    if: github.ref == 'refs/tags/v2.2.3'
     needs: test
     strategy:
       fail-fast: false
@@ -144,6 +147,8 @@ jobs:
             exit 1
           fi
           test -s dist/ReadMD.app/Contents/Resources/assets/vendor/readability.bundle.js
+          test -s dist/ReadMD.app/Contents/Resources/assets/vendor/defuddle.bundle.js
+          test -s dist/ReadMD.app/Contents/Resources/assets/vendor/defuddle.LICENSE.txt
           find dist/ReadMD.app -path '*/trafilatura/settings.cfg' -type f | grep .
           dist/ReadMD.app/Contents/MacOS/ReadMD --selftest
           python tools/privacy_scan.py dist/ReadMD.app
@@ -152,12 +157,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: release-macos-${{ matrix.arch }}
-          path: ReadMD-macos-${{ matrix.arch }}-v2.2.2.zip
+          path: ReadMD-macos-${{ matrix.arch }}-v2.2.3.zip
           if-no-files-found: error
 
   release:
-    name: Publish ReadMD v2.2.2
-    if: github.ref == 'refs/tags/v2.2.2'
+    name: Publish ReadMD v2.2.3
+    if: github.ref == 'refs/tags/v2.2.3'
     needs: [windows-package, macos-package]
     runs-on: ubuntu-latest
     permissions:
@@ -172,19 +177,19 @@ jobs:
       - name: Verify four assets and checksums
         run: |
           test "$(find release-assets -maxdepth 1 -type f | wc -l)" -eq 4
-          test -s release-assets/ReadMDSetup-v2.2.2.exe
-          test -s release-assets/ReadMD-portable-v2.2.2.exe
-          test -s release-assets/ReadMD-macos-x64-v2.2.2.zip
-          test -s release-assets/ReadMD-macos-arm64-v2.2.2.zip
+          test -s release-assets/ReadMDSetup-v2.2.3.exe
+          test -s release-assets/ReadMD-portable-v2.2.3.exe
+          test -s release-assets/ReadMD-macos-x64-v2.2.3.zip
+          test -s release-assets/ReadMD-macos-arm64-v2.2.3.zip
           (cd release-assets && sha256sum * > SHA256SUMS.txt)
           cat release-assets/SHA256SUMS.txt >> "$GITHUB_STEP_SUMMARY"
       - uses: softprops/action-gh-release@v2
         with:
-          name: ReadMD v2.2.2
+          name: ReadMD v2.2.3
           body_path: release_notes.md
           files: |
-            release-assets/ReadMDSetup-v2.2.2.exe
-            release-assets/ReadMD-portable-v2.2.2.exe
-            release-assets/ReadMD-macos-x64-v2.2.2.zip
-            release-assets/ReadMD-macos-arm64-v2.2.2.zip
+            release-assets/ReadMDSetup-v2.2.3.exe
+            release-assets/ReadMD-portable-v2.2.3.exe
+            release-assets/ReadMD-macos-x64-v2.2.3.zip
+            release-assets/ReadMD-macos-arm64-v2.2.3.zip
           fail_on_unmatched_files: true

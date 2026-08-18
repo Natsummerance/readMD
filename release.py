@@ -2,8 +2,8 @@
 """发布 ReadMD 到 GitHub Releases（无需 gh CLI，纯标准库）。
 
 用法：
-    python release.py --verify [--tag v2.2.2]        # 校验 CI 创建的四资产 Release
-    python release.py --update [--tag v2.2.2]        # 仅维护已存在 Release 的文案
+    python release.py --verify [--tag v2.2.3]        # 校验 CI 创建的四资产 Release
+    python release.py --update [--tag v2.2.3]        # 仅维护已存在 Release 的文案
 
 通用参数：--name 标题  --body-file 说明文件  --draft  --skip-assets  --asset 指定单个资产名
 需要环境变量 GITHUB_TOKEN（可存系统变量）。
@@ -72,7 +72,7 @@ def sha256(path):
 
 
 def build_assets(base, tag):
-    """v2.2.2 统一发布的 Windows 与 macOS 四个资产。"""
+    """v2.2.3 统一发布的 Windows 与 macOS 四个资产。"""
     v = tag.lstrip("v")
     return [
         (os.path.join(base, "dist", "ReadMDSetup-v%s.exe" % v), "ReadMDSetup-v%s.exe" % v),
@@ -201,23 +201,23 @@ def upload_all(rel, args, tok):
 
 DEFAULT_BODY = """## 下载
 
-> 安装包（推荐）：下载 **ReadMDSetup-v2.2.2.exe**。
-> 便携版：下载 **ReadMD-portable-v2.2.2.exe**。
+> 安装包（推荐）：下载 **ReadMDSetup-v2.2.3.exe**。
+> 便携版：下载 **ReadMD-portable-v2.2.3.exe**。
 > macOS：按芯片下载 x64 或 arm64 ZIP；当前版本未签名，首次打开请在 Finder 中右键选择“打开”。
 
-## v2.2.2
+## v2.2.3
 
-- 网页转 Markdown 采用 Trafilatura 双级提取、系统 WebView 与离线 Mozilla Readability 回退。
-- 支持明确错误、进度、取消、同站批量抓取和可选图片本地化。
-- Windows Markdown 文件关联使用独立文档图标，ReadMD 应用 Logo 保持不变。
+- 修复 PDF、DOCX、HTML 导出的保存路径类型错误，并改为原子写入。
+- 网页转 Markdown 增加离线 Defuddle、交互式 WebView、短内容识别和显式内网页面授权。
+- 顶栏文件名支持点击或 F2 直接重命名当前本地 Markdown 文件。
 - Windows、Intel macOS 和 Apple Silicon macOS 由同一 GitHub Actions 工作流发布。
 """
 
 
 def main():
     ap = argparse.ArgumentParser(description="发布 ReadMD Release（纯标准库，无需 gh CLI）")
-    ap.add_argument("--tag", default="v2.2.2")
-    ap.add_argument("--name", default="ReadMD v2.2.2")
+    ap.add_argument("--tag", default="v2.2.3")
+    ap.add_argument("--name", default="ReadMD v2.2.3")
     ap.add_argument("--body-file")
     ap.add_argument("--draft", action="store_true")
     ap.add_argument("--skip-assets", action="store_true")

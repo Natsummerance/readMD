@@ -251,6 +251,92 @@ async function addRecent(path) {
 
 /* ---------------- 打开 / 渲染 ---------------- */
 
+function setFileTitle(name, canRename, fullPath) {
+  const el = $('file-title');
+  if (!el) return;
+  el.textContent = name || '';
+  el.disabled = !canRename;
+  el.title = canRename ? ((fullPath || name) + '\n点击重命名（F2）') : (name || '');
+  el.setAttribute('aria-label', canRename ? ('当前文件 ' + name + '，点击重命名') : (name || '当前文档'));
+}
+
+function cancelFileRename() {
+  const wrap = $('file-rename-wrap');
+  if (wrap) wrap.remove();
+  const title = $('file-title');
+  if (title) title.classList.remove('hidden');
+}
+
+function openFileRename() {
+  if (!hasPy || state.mode !== 'file' || !state.file) {
+    showToast('请先在桌面应用中打开本地 Markdown 文件');
+    return;
+  }
+  if (state.editing) {
+    showToast('请先保存或取消当前编辑，再重命名');
+    return;
+  }
+  if ($('file-rename-wrap')) return;
+  const name = String(state.file).split(/[\\/]/).pop();
+  const dot = name.lastIndexOf('.');
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const extension = dot > 0 ? name.slice(dot) : '';
+  const wrap = document.createElement('span');
+  wrap.id = 'file-rename-wrap'; wrap.className = 'file-rename-wrap';
+  const input = document.createElement('input');
+  input.id = 'file-rename-input'; input.type = 'text'; input.value = stem;
+  input.maxLength = Math.max(1, 255 - extension.length);
+  input.setAttribute('aria-label', '新文件名');
+  input.autocomplete = 'off'; input.spellcheck = false;
+  const ext = document.createElement('span');
+  ext.id = 'file-rename-ext'; ext.className = 'file-rename-ext'; ext.textContent = extension;
+  wrap.appendChild(input); wrap.appendChild(ext);
+  const title = $('file-title');
+  title.classList.add('hidden'); title.insertAdjacentElement('afterend', wrap);
+  let committing = false;
+  const commit = async () => {
+    if (committing) return;
+    const nextStem = input.value;
+    if (nextStem === stem) { cancelFileRename(); return; }
+    committing = true; input.disabled = true; busy(true);
+    try {
+      const oldPath = state.file;
+      const result = await py.rename_file(oldPath, nextStem);
+      if (!result || !result.ok) {
+        showToast('重命名失败：' + ((result && result.error) || '未知错误'));
+        input.disabled = false; committing = false; input.focus(); input.select();
+        return;
+      }
+      const newPath = result.path;
+      const oldKey = normalizePath(oldPath), newKey = normalizePath(newPath);
+      if (Object.prototype.hasOwnProperty.call(state.scrollPos, oldKey)) {
+        state.scrollPos[newKey] = state.scrollPos[oldKey]; delete state.scrollPos[oldKey];
+      }
+      state.history = state.history.map(p => normalizePath(p) === oldKey ? newPath : p);
+      state.folderFiles = state.folderFiles.map(p => normalizePath(p) === oldKey ? newPath : p);
+      state.file = newPath;
+      state.dir = String(newPath).replace(/[\\/][^\\/]*$/, '');
+      const newName = result.name || String(newPath).split(/[\\/]/).pop();
+      document.title = newName + ' - ReadMD';
+      setFileTitle(newName, true, newPath);
+      saveLastFile(newPath); addRecent(newPath); updateStatus();
+      if (state.folderFiles.length) renderFolderList();
+      cancelFileRename();
+      const warnings = result.warnings || [];
+      showToast(warnings.length ? ('已重命名；' + warnings[0]) : ('已重命名为 ' + newName), warnings.length ? 4200 : 2400);
+    } catch (e) {
+      showToast('重命名失败：' + e.message);
+      input.disabled = false; committing = false; input.focus(); input.select();
+    } finally { busy(false); }
+  };
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { e.preventDefault(); cancelFileRename(); title.focus(); }
+  });
+  input.addEventListener('blur', () => { if (!committing) cancelFileRename(); });
+  input.focus(); input.select();
+}
+
 async function loadFile(path) {
   if (!path) return;
   setProgress(8);
@@ -275,7 +361,7 @@ async function loadFile(path) {
     setFixes(d.fixes || [], d.stats || {});
     renderContent(d.content, d.name);
     document.title = d.name + ' - ReadMD';
-    $('file-title').textContent = d.name;
+    setFileTitle(d.name, hasPy, d.path);
     addRecent(d.path);
     pushHistory(d.path);
     saveLastFile(d.path);
@@ -519,7 +605,7 @@ async function renderVirtual(source, name, dir, content, fixes, extras) {
   clearAiOutput();
   renderContent(content, name);
   document.title = (name || '转换结果') + ' - ReadMD';
-  $('file-title').textContent = (name || '转换结果').slice(0, 80);
+  setFileTitle((name || '转换结果').slice(0, 80), false, '');
   $('btn-reload').disabled = true;
   updateStatus();
   setProgress(100);
@@ -711,7 +797,7 @@ async function ocrFile(path) {
   finally { busy(false); }
 }
 
-const webRun = { running: false, cancelled: false, taskId: '', lastUrl: '' };
+const webRun = { running: false, cancelled: false, taskId: '', lastUrl: '', privateGrant: '' };
 
 function normalizeWebUrl(url) {
   url = String(url || '').trim();
@@ -739,11 +825,14 @@ function setWebRunning(running) {
   webRun.running = running;
   $('url-go').disabled = running;
   $('url-render').disabled = running || !hasPy;
+  $('url-full').disabled = running;
   $('url-cancel').classList.toggle('hidden', !running);
   $('url-input').disabled = running;
   $('url-mode').disabled = running;
   $('url-crawl').disabled = running;
+  $('url-pages').disabled = running;
   $('url-images').disabled = running;
+  $('url-private').disabled = running || !hasPy;
 }
 
 async function postWebExtract(payload) {
@@ -767,7 +856,7 @@ async function extractOneWebPage(url, options, forceRender) {
     download_images: options.downloadImages,
   };
   let data = null;
-  if (!forceRender) {
+  if (!forceRender && !options.privateGrant) {
     setWebProgress(options.progress || 12, '下载并分析静态页面…', options.count || '');
     data = await postWebExtract(base);
     if (data.ok) return data;
@@ -784,24 +873,33 @@ async function extractOneWebPage(url, options, forceRender) {
     error.code = 'render_unavailable';
     throw error;
   }
-  setWebProgress(Math.max(options.progress || 12, 24), '使用系统浏览器内核渲染…', options.count || '最长 15 秒');
-  const rendered = await py.render_web_page(url, webRun.taskId, 15000);
-  if (!rendered || !rendered.ok) {
-    const error = new Error((rendered && rendered.error) || '动态网页渲染失败');
-    error.code = (rendered && rendered.code) || 'render_failed';
-    throw error;
+  const runRender = async interactive => {
+    setWebProgress(Math.max(options.progress || 12, interactive ? 28 : 24),
+      interactive ? '请在临时窗口完成验证后点击“提取此页”…' : '使用系统浏览器内核渲染…',
+      options.count || (interactive ? '最多等待 5 分钟' : '最长 25 秒'));
+    const rendered = await py.render_web_page(
+      url, webRun.taskId, interactive ? 300000 : 25000,
+      interactive, options.privateGrant || '');
+    if (!rendered || !rendered.ok) return { rendered, data: null };
+    setWebProgress(Math.max(options.progress || 12, 32), '使用 Defuddle / Readability 提取…', options.count || '');
+    const extracted = await postWebExtract(Object.assign({}, base, {
+      html: rendered.html || '', final_url: rendered.final_url || url,
+      defuddle: rendered.defuddle || null,
+      readability: rendered.readability || null,
+    }));
+    return { rendered, data: extracted };
+  };
+  let attempt = await runRender(false);
+  if (attempt.data && attempt.data.ok) return attempt.data;
+  if (attempt.rendered && attempt.rendered.code === 'cancelled') {
+    const error = new Error(attempt.rendered.error || '已取消网页转换'); error.code = 'cancelled'; throw error;
   }
-  setWebProgress(Math.max(options.progress || 12, 32), '使用 Mozilla Readability 提取…', options.count || '');
-  data = await postWebExtract(Object.assign({}, base, {
-    html: rendered.html || '', final_url: rendered.final_url || url,
-    readability: rendered.readability || null,
-  }));
-  if (!data.ok) {
-    const error = new Error(data.error || '动态页面中仍未识别到正文');
-    error.code = data.code || 'extract_failed';
-    throw error;
-  }
-  return data;
+  attempt = await runRender(true);
+  if (attempt.data && attempt.data.ok) return attempt.data;
+  const response = attempt.data || attempt.rendered || {};
+  const error = new Error(response.error || '交互式抓取后仍未识别到正文');
+  error.code = response.code || 'extract_failed';
+  throw error;
 }
 
 async function cancelWebTask() {
@@ -815,6 +913,7 @@ async function cancelWebTask() {
     });
   } catch (e) { /* local cancellation still applies */ }
   try { if (hasPy && py.cancel_web_render) await py.cancel_web_render(webRun.taskId); } catch (e) { /* ignore */ }
+  try { if (hasPy && py.revoke_private_web) await py.revoke_private_web(webRun.taskId); } catch (e) { /* ignore */ }
 }
 
 async function webToMd(url, crawl, forceRender) {
@@ -825,20 +924,30 @@ async function webToMd(url, crawl, forceRender) {
   webRun.taskId = 'web-' + Date.now() + '-' + Math.random().toString(16).slice(2);
   webRun.lastUrl = url;
   webRun.cancelled = false;
+  webRun.privateGrant = '';
   setWebRunning(true);
   setWebStatus('正在准备网页转换…');
   const options = {
     mode: $('url-mode').value === 'full' ? 'full' : 'smart',
     downloadImages: $('url-images').checked,
+    pageLimit: Math.max(1, Math.min(30, Number($('url-pages').value) || 10)),
+    privateGrant: '',
   };
   const sections = [], assets = [], warnings = [], failures = [];
   try {
+    if ($('url-private').checked) {
+      if (!hasPy || !py.authorize_private_web) throw Object.assign(new Error('允许本地网络页面仅在桌面应用中可用'), { code: 'private_unavailable' });
+      const authorization = await py.authorize_private_web(url, webRun.taskId);
+      if (!authorization || !authorization.ok) throw Object.assign(new Error((authorization && authorization.error) || '无法授权本地网络页面'), { code: (authorization && authorization.code) || 'private_denied' });
+      options.privateGrant = authorization.grant;
+      webRun.privateGrant = authorization.grant;
+    }
     const first = await extractOneWebPage(url, Object.assign({}, options, { progress: 10 }), !!forceRender);
     if (webRun.cancelled) throw Object.assign(new Error('已取消网页转换'), { code: 'cancelled' });
     sections.push(first.content);
     assets.push(...(first.assets || []));
     warnings.push(...(first.warnings || []));
-    const links = crawl ? (first.links || []).slice(0, 9) : [];
+    const links = crawl ? (first.links || []).slice(0, options.pageLimit - 1) : [];
     const total = 1 + links.length;
     for (let i = 0; i < links.length; i++) {
       if (webRun.cancelled) throw Object.assign(new Error('已取消网页转换'), { code: 'cancelled' });
@@ -872,6 +981,8 @@ async function webToMd(url, crawl, forceRender) {
     setWebStatus(cancelled ? '网页转换已取消。' : (error.message || '网页转换失败'), cancelled ? '' : 'error');
     setWebProgress(0, cancelled ? '已取消' : '转换未完成', '');
   } finally {
+    try { if (hasPy && py.revoke_private_web) await py.revoke_private_web(webRun.taskId); } catch (e) { /* ignore */ }
+    webRun.privateGrant = '';
     setWebRunning(false);
   }
 }
@@ -2919,6 +3030,7 @@ function openWebDialog() {
   if (moduleBlocked('web')) return;
   $('url-modal').classList.remove('hidden');
   $('url-render').disabled = !hasPy;
+  $('url-private').disabled = !hasPy;
   $('url-progress').classList.add('hidden');
   $('url-progress').setAttribute('aria-hidden', 'true');
   setWebStatus(LAN_TOKEN
@@ -2998,6 +3110,10 @@ function bindEvents() {
     webToMd(url, crawl, false);
   });
   $('url-render').addEventListener('click', () => webToMd($('url-input').value.trim(), $('url-crawl').checked, true));
+  $('url-full').addEventListener('click', () => {
+    $('url-mode').value = 'full';
+    webToMd($('url-input').value.trim(), $('url-crawl').checked, false);
+  });
   $('url-cancel').addEventListener('click', cancelWebTask);
   $('url-close').addEventListener('click', closeWebDialog);
   $('url-modal').addEventListener('click', e => { if (e.target === $('url-modal') && !webRun.running) closeWebDialog(); });
@@ -3065,6 +3181,7 @@ function bindEvents() {
   stage.addEventListener('keyup', e => { if(e.key===' ')imgState.spaceDown=false; });
   stage.addEventListener('blur', () => { imgState.spaceDown=false; });
   $('btn-saveas').addEventListener('click', saveAs);
+  $('file-title').addEventListener('click', openFileRename);
 
   $('btn-recent').addEventListener('click', openHistoryModal);
   $('btn-reload').addEventListener('click', () => { if (state.file && state.mode === 'file') loadFile(state.file); });
@@ -3491,7 +3608,8 @@ async function expSavePreset() {
 
   document.addEventListener('keydown', e => {
     const mod = e.ctrlKey || e.metaKey;
-    if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); $('btn-open').click(); }
+    if (e.key === 'F2') { e.preventDefault(); openFileRename(); }
+    else if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); $('btn-open').click(); }
     else if (mod && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleSearch(); }
     else if (mod && e.key.toLowerCase() === 'u') { e.preventDefault(); openWebDialog(); }
     else if (mod && e.key.toLowerCase() === 'e') { e.preventDefault(); if (!$('btn-edit').disabled) toggleEdit(); }

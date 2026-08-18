@@ -20,6 +20,7 @@ from readmd_modules.mdexport import formula as F
 from readmd_modules.mdexport import docx_render as DOCX
 from readmd_modules.mdexport import pdf_render as PDF
 import readmd_modules.mdexport as E
+import readmd
 
 SAMPLE = '''# 标题一
 
@@ -262,6 +263,62 @@ class TestExportSmoke(unittest.TestCase):
             r = E.export('pdf', md, td, out)
             self.assertTrue(r['ok'])
             self.assertTrue(any('图片' in w for w in r['warns']))
+
+
+class TestExportBridge(unittest.TestCase):
+    """Catch pywebview SAVE_DIALOG result-shape regressions."""
+
+    class _Window(object):
+        def __init__(self, targets):
+            self.targets = iter(targets)
+
+        def create_file_dialog(self, *args, **kwargs):
+            # pywebview 6.x WinForms returns a one-item tuple for SAVE_DIALOG.
+            return (next(self.targets),)
+
+    def test_windows_save_dialog_tuple_exports_all_formats(self):
+        with tempfile.TemporaryDirectory() as td:
+            targets = [os.path.join(td, 'bridge.' + fmt)
+                       for fmt in ('pdf', 'docx', 'html')]
+            api = readmd.Api()
+            api._window = self._Window(targets)
+            for fmt, target in zip(('pdf', 'docx', 'html'), targets):
+                result = api.export_doc(fmt, {
+                    'content': '# Bridge\n\nExport path contract.',
+                    'baseDir': td,
+                    'suggestedName': 'bridge',
+                    'options': {},
+                })
+                self.assertTrue(result.get('ok'), (fmt, result))
+                self.assertEqual(result.get('path'), target)
+                self.assertTrue(os.path.isfile(target))
+
+    def test_dialog_path_normalization_rejects_multiple_targets(self):
+        with self.assertRaises(ValueError):
+            readmd.normalize_dialog_path(('a.pdf', 'b.pdf'), '.pdf')
+        self.assertTrue(readmd.normalize_dialog_path('report', '.pdf').endswith('report.pdf'))
+
+    def test_failed_export_keeps_existing_destination(self):
+        from readmd_modules.mdexport import html_render
+
+        with tempfile.TemporaryDirectory() as td:
+            target = os.path.join(td, 'kept.html')
+            with open(target, 'w', encoding='utf-8') as handle:
+                handle.write('original')
+
+            def partial_then_fail(content, out_path, *args, **kwargs):
+                with open(out_path, 'w', encoding='utf-8') as handle:
+                    handle.write('partial')
+                raise RuntimeError('renderer stopped')
+
+            with mock.patch.object(html_render, 'render', partial_then_fail):
+                result = E.export('html', '# Test', td, target)
+
+            self.assertFalse(result.get('ok'))
+            self.assertEqual(result.get('stage'), 'render')
+            with open(target, encoding='utf-8') as handle:
+                self.assertEqual(handle.read(), 'original')
+            self.assertFalse(any('.readmd-' in name for name in os.listdir(td)))
 
 
 def main():

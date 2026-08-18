@@ -6,8 +6,13 @@ datas = [('assets', 'assets'), ('readmd_fix.py', '.')]
 hiddenimports = ['readmd_fix', 'Vision', 'Quartz', 'Foundation', 'objc']
 datas += collect_data_files('magika')
 datas += collect_data_files('docx')
+datas += collect_data_files('reportlab')
+datas += collect_data_files('matplotlib')
 datas += collect_data_files('trafilatura')
 hiddenimports += collect_submodules('readmd_modules')
+hiddenimports += collect_submodules('docx')
+hiddenimports += collect_submodules('reportlab')
+hiddenimports += collect_submodules('matplotlib')
 
 a = Analysis(
     ['readmd.py'],
@@ -63,12 +68,12 @@ app = BUNDLE(
     name='ReadMD.app',
     icon='assets/ReadMD.icns',
     bundle_identifier='io.github.natsummerance.readmd',
-    version='2.2.2',
+    version='2.2.3',
     info_plist={
         'CFBundleName': 'ReadMD',
         'CFBundleDisplayName': 'ReadMD',
-        'CFBundleVersion': '2.2.2',
-        'CFBundleShortVersionString': '2.2.2',
+        'CFBundleVersion': '2.2.3',
+        'CFBundleShortVersionString': '2.2.3',
         'NSPrincipalClass': 'NSApplication',
         'NSHighResolutionCapable': True,
         'CFBundleDocumentTypes': [

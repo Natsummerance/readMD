@@ -61,32 +61,69 @@ def export(fmt, content, base_dir, out_path, options=None, source_name=''):
     fmt = (fmt or '').lower()
     if fmt not in EXTS:
         return {'ok': False, 'error': '不支持的导出格式：%s' % fmt}
-    style = _styles.sanitize(options)
     warns = []
-    blocks = _parser.parse(content)
+    stage = 'options'
+    output_tmp = None
+    try:
+        out_path = os.fspath(out_path)
+        if isinstance(out_path, bytes):
+            out_path = os.fsdecode(out_path)
+        if not isinstance(out_path, str) or not out_path:
+            raise ValueError('导出目标路径无效')
+        style = _styles.sanitize(options)
+        stage = 'parse'
+        blocks = _parser.parse(content)
+    except Exception as e:
+        return {'ok': False, 'stage': stage, 'error': str(e), 'warns': warns}
+
     tmpdir = tempfile.mkdtemp(prefix='readmd-export-')
     try:
         # 公式预渲染（PDF/DOCX 用图；HTML 走 MathJax，不在此渲染）
         if fmt in ('pdf', 'docx'):
+            stage = 'formula'
             from . import formula
             formula.prepare(blocks, style, warns)
         resolve = ImageResolver(base_dir, warns).resolve
+
+        stage = 'write'
+        output_dir = os.path.dirname(os.path.abspath(out_path))
+        fd, output_tmp = tempfile.mkstemp(
+            prefix='.%s.readmd-' % os.path.basename(out_path),
+            suffix=EXTS[fmt], dir=output_dir)
+        os.close(fd)
+        os.remove(output_tmp)
+
+        stage = 'render'
         if fmt == 'pdf':
             from . import pdf_render
-            pdf_render.render(blocks, out_path, style, tmpdir, resolve, warns)
+            pdf_render.render(blocks, output_tmp, style, tmpdir, resolve, warns)
         elif fmt == 'docx':
             from . import docx_render
-            docx_render.render(blocks, out_path, style, tmpdir, resolve, warns)
+            docx_render.render(blocks, output_tmp, style, tmpdir, resolve, warns)
         elif fmt == 'html':
             from . import html_render
-            html_render.render(content, out_path, style, source_name, ASSETS_DIR, warns)
+            html_render.render(content, output_tmp, style, source_name, ASSETS_DIR, warns)
+
+        if not os.path.isfile(output_tmp) or os.path.getsize(output_tmp) <= 0:
+            raise RuntimeError('导出器未生成有效文件')
+        stage = 'finalize'
+        os.replace(output_tmp, out_path)
+        output_tmp = None
         size = os.path.getsize(out_path) if os.path.exists(out_path) else 0
         return {'ok': True, 'path': out_path, 'size': size, 'warns': warns}
     except Exception as e:
         import logging
         logging.exception('export %s failed', fmt)
-        return {'ok': False, 'error': str(e), 'warns': warns}
+        if isinstance(e, (ImportError, ModuleNotFoundError)):
+            stage = 'dependency'
+        return {'ok': False, 'stage': stage, 'error': str(e), 'warns': warns}
     finally:
+        if output_tmp:
+            try:
+                if os.path.exists(output_tmp):
+                    os.remove(output_tmp)
+            except Exception:
+                pass
         try:
             shutil.rmtree(tmpdir, ignore_errors=True)
         except Exception:

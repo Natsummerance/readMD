@@ -11,7 +11,7 @@
 - 本地：任意工作区目录（不得在仓库记录开发者绝对路径）
 - GitHub：`https://github.com/Natsummerance/readMD`（public，main 分支）
 - 发布凭据仅由 GitHub Actions 管理，不在源码或文档记录个人账号、邮箱或 Token
-- 当前开发/发布目标：v2.2.2（Windows + Intel macOS + Apple Silicon macOS 同一 Release）
+- 当前开发/发布目标：v2.2.3（Windows + Intel macOS + Apple Silicon macOS 同一 Release）
 - Win7 兼容版：**v2.1.1 Beta**（pre-release tag `v2.1.1-beta`，资产 `ReadMDSetup-2.1.1-Beta-win7-x64.exe`）——Win7 SP1 x64 + 内嵌固定版 WebView2 109 运行时；独立 Python 3.9.13 构建链（`.venv-win7` / `win7-reqs.txt` / `build_win7.bat` / `ReadMD-win7.spec` / `ReadMDSetup-win7.spec` / `tools\win7_pywebview_edgechromium.patch` / `tools\bundle_runtime.py`）；功能裁剪：仅 docx / pdf 转 MD + 导出（OCR / AI / 网页 / 其他格式在 Win7 下提示不可用）
 
 ## 功能清单（按开发顺序）
@@ -33,6 +33,7 @@
 15. 转换保存 / 批量 / 质量（v2.1.1）：单文件与批量转换一律自动保存到源目录同名 .md（同名默认跳过，可勾选覆盖）；「转 Markdown」弹窗支持多选文件 / 整文件夹（递归 ≤200 个）+ 实时进度列表 + 打开结果目录；docx 专用解析（OMML 公式→LaTeX、标题、表格、等宽字体代码块、样式级列表），pdf 专用解析（PyMuPDF find_tables 还原表格 + 公式启发式），其余走 MarkItDown 并逐文件回退；统一 mdcheck 严格校验（围栏闭合/表格/公式定界符/替换符/图片存在性，安全项自动修复）
 16. 网页转 MD 重构（v2.2.2）：可诊断 HTTP 下载、重定向/编码/大小限制、Trafilatura 双级抽取、WebView2/WKWebView 动态渲染、离线 Mozilla Readability、完整页面降级、批量进度/取消、图片资源随另存迁移及 SSRF/HTML 清洗
 17. Windows 文件关联图标与应用 Logo 分离：`.md/.markdown` 使用多尺寸简约文档图标，ReadMD EXE、安装器和快捷方式继续使用原应用 Logo
+18. v2.2.3：修复 PDF/DOCX/HTML 保存路径与原子写入；网页链加入离线 Defuddle、交互 WebView、短内容判定与临时内网授权；顶栏文件名支持点击/F2 重命名并同步本地引用
 
 ## 关键文件
 
@@ -50,6 +51,7 @@
 | readmd_modules/ocr.py | WinRT OCR + PyMuPDF |
 | readmd_modules/web.py | 安全下载、Trafilatura/Readability/完整页面抽取、链接与图片资源处理 |
 | readmd_web_test.py | 网页下载、抽取、安全、图片与 API 的本地 HTTP 夹具测试 |
+| readmd_api_test.py | 桌面桥接重命名与内网临时授权测试 |
 | readmd_modules/ai.py | AI 提供商注册表 + 四协议请求（chat/completions/completions/responses/messages）+ 模型列表拉取 + 用量解析 |
 | assets/ | 前端（index.html/style.css/app.js + vendor 全离线：marked/MathJax/qrcode/codemirror.bundle） |
 | DESIGN.md | v2.0 设计规范：色盘/字体/间距/圆角/阴影 token，三主题 |
@@ -65,13 +67,13 @@
 
 - `package.bat`：一次产出两版——onedir 安装版 `dist\ReadMD\ReadMD.exe`（秒开）+ 便携单文件 `dist\ReadMD-portable.exe`（windowed，console=False，图标 readmd.ico）
 - `installer/build_setup.bat`：先 ReadMDUninstall.exe，再 ReadMDSetup.exe（内嵌 onedir 目录 `ReadMD/` + 卸载器；v2.0.1 起不再使用 PyInstaller splash 启动画面，避免黑屏弹窗卡死安装流程）
-- `deploy.bat [--skip-tests] [--tag v2.2.2]`：测试并推送 main 与标签，明确排除用户本地 `IDEA.md`
-- `release.yml` 在 Windows、Intel macOS、Apple Silicon macOS 测试后统一打包四个 v2.2.2 资产
+- `deploy.bat [--skip-tests] [--tag v2.2.3]`：测试并推送 main 与标签，明确排除用户本地 `IDEA.md`
+- `release.yml` 在 Windows、Intel macOS、Apple Silicon macOS 测试后统一打包四个 v2.2.3 资产
 - Release 由 CI 唯一创建，并在发布前校验架构、版本、大小与 SHA-256
 
 ## 测试现状（全部通过）
 
-- 修正器单测 37/37；转换/AI 23/23；导出单测 24/24；网页专项 10/10；Playwright UI 5/5（含安装器紧凑视口）；`--selftest` PASSED
+- v2.2.3 发布前必须运行修正、转换/AI、导出、网页、桌面桥接、Playwright UI、隐私扫描及 `--selftest`；最终数量以发布提交的实际输出为准
 - dist\ReadMD\ReadMD.exe --selftest 退出码 0（console=False 无输出）；`readmd.log` 启动里程碑：start / server_up / webview_imported / window_created / page_loaded
 - 安装器串行 静默安装→文件就位→静默卸载→目录清除，验证通过（并发下曾出现竞争残留，正常串行无问题）
 

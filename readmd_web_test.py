@@ -62,6 +62,11 @@ class FixtureHandler(BaseHTTPRequestHandler):
             self._send(429, b'slow down', 'text/plain')
         elif self.path == '/plain':
             self._send(200, b'plain', 'text/plain')
+        elif self.path == '/mislabel':
+            self._send(200, ARTICLE.encode('utf-8'), 'text/plain')
+        elif self.path == '/noscript':
+            body = '<html><head><title>Fallback</title></head><body><div id="app"></div><noscript><article><h1>Fallback</h1><p>%s</p></article></noscript></body></html>' % ('noscript body ' * 30)
+            self._send(200, body.encode('utf-8'))
         elif self.path == '/image.png':
             # Header is enough for the localizer; image decoding is not its job.
             self._send(200, b'\x89PNG\r\n\x1a\nfixture', 'image/png')
@@ -93,6 +98,8 @@ class TestWebExtraction(unittest.TestCase):
         self.assertIn('测试作者', result['content'])
         self.assertIn('print("ok")', result['content'])
         self.assertIn(self.base + '/next', result['links'])
+        self.assertIn(self.base + '/next#part', result['content'])
+        self.assertIn(self.base + '/image.png', result['content'])
         self.assertNotIn('alert(1)', result['content'])
         self.assertNotIn('onerror', result['content'])
 
@@ -143,6 +150,43 @@ class TestWebExtraction(unittest.TestCase):
         self.assertTrue(result['ok'], result)
         self.assertEqual(result['engine'], 'mozilla-readability')
         self.assertIn('WebView 作者', result['content'])
+
+    def test_defuddle_payload_precedes_readability_and_preserves_metadata(self):
+        shell = '<html><head><title>Shell</title></head><body><div id="app"></div></body></html>'
+        defuddle = {
+            'title': 'Defuddle article', 'author': 'Extractor Author',
+            'published': '2026-08-18', 'site': 'Docs',
+            'contentMarkdown': '## Section\n\nShort but useful content with `code` and [docs](/docs).',
+        }
+        result = WEB.extract_html('https://example.com/post', shell,
+                                  defuddle=defuddle, rendered=True)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['engine'], 'defuddle')
+        self.assertIn('Extractor Author', result['content'])
+        self.assertIn('`code`', result['content'])
+        self.assertIn('https://example.com/docs', result['content'])
+
+    def test_short_semantic_and_noscript_articles_are_not_rejected_by_length(self):
+        short = WEB.extract_html(
+            'https://example.com/status',
+            '<html><head><title>Status</title></head><body><main><h1>Status</h1><p>Service restored.</p><p>All systems operational.</p></main></body></html>')
+        self.assertTrue(short['ok'], short)
+        self.assertIn(short['engine'], ('trafilatura', 'trafilatura-recall', 'semantic-page'))
+        fallback = WEB.fetch_document(self.base + '/noscript', allow_private=True)
+        self.assertTrue(fallback['ok'], fallback)
+        self.assertIn('noscript body', fallback['content'])
+
+    def test_html_sniff_accepts_mislabelled_content_type(self):
+        fetched = WEB.fetch_html(self.base + '/mislabel', allow_private=True)
+        self.assertIn('<article>', fetched['html'])
+        self.assertTrue(fetched.get('content_type_mismatch'))
+
+    def test_offline_defuddle_bundle_is_packaged(self):
+        root = os.path.dirname(os.path.abspath(__file__))
+        bundle = os.path.join(root, 'assets', 'vendor', 'defuddle.bundle.js')
+        license_path = os.path.join(root, 'assets', 'vendor', 'defuddle.LICENSE.txt')
+        self.assertTrue(os.path.isfile(bundle) and os.path.getsize(bundle) > 100000)
+        self.assertTrue(os.path.isfile(license_path) and os.path.getsize(license_path) > 500)
 
     def test_localize_images_and_manifest(self):
         markdown = '![封面](%s/image-redirect)' % self.base
@@ -214,6 +258,32 @@ class TestWebApi(unittest.TestCase):
         })
         self.assertEqual(status, 200)
         self.assertTrue(result['ok'], result)
+
+    def test_fetch_failures_request_system_webview_fallback(self):
+        status, result = self.post('/api/web/extract', {
+            'task_id': 'api-forbidden', 'url': self.fixture + '/forbidden',
+            'mode': 'smart', 'download_images': False,
+        })
+        self.assertEqual(status, 200)
+        self.assertFalse(result['ok'])
+        self.assertTrue(result['render_required'])
+        self.assertEqual(result['fallback_reason'], 'forbidden')
+        self.assertIn('http', result['engine_chain'])
+
+    def test_rendered_defuddle_payload_is_used_before_readability(self):
+        status, result = self.post('/api/web/extract', {
+            'task_id': 'api-defuddle', 'url': self.fixture + '/dynamic',
+            'mode': 'smart', 'html': '<html><body><div id="app"></div></body></html>',
+            'defuddle': {
+                'title': 'Defuddle API', 'author': 'Bridge',
+                'contentMarkdown': '## Result\n\nUseful rendered content from Defuddle.',
+            },
+            'readability': {'title': 'Wrong fallback', 'content': '<p>Readability fallback content.</p>'},
+        })
+        self.assertEqual(status, 200)
+        self.assertTrue(result['ok'], result)
+        self.assertEqual(result['engine'], 'defuddle')
+        self.assertIn('Bridge', result['content'])
 
 
 def main():

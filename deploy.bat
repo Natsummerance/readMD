@@ -4,9 +4,9 @@ rem ============================================================
 rem  ReadMD Deploy - one-click: test + build + push + release
 rem
 rem  Usage:
-rem    deploy.bat                   test + commit + push main + push v2.2.2 tag
+rem    deploy.bat                   test + commit + push main + push v2.2.3 tag
 rem    deploy.bat --skip-tests      skip the local test round
-rem    deploy.bat --tag v2.2.2      release tag (default v2.2.2)
+rem    deploy.bat --tag v2.2.3      release tag (default v2.2.3)
 rem
 rem  GitHub Actions is the only Release publisher.
 rem ============================================================
@@ -14,7 +14,7 @@ setlocal
 cd /d "%~dp0"
 title ReadMD Deploy
 
-set "TAG=v2.2.2"
+set "TAG=v2.2.3"
 set "SKIP_TESTS=0"
 
 :parse
@@ -53,6 +53,8 @@ if errorlevel 1 goto :err
 ".venv\Scripts\python.exe" readmd_export_test.py
 if errorlevel 1 goto :err
 ".venv\Scripts\python.exe" readmd_web_test.py
+if errorlevel 1 goto :err
+".venv\Scripts\python.exe" readmd_api_test.py
 if errorlevel 1 goto :err
 ".venv\Scripts\python.exe" tools\privacy_scan.py
 if errorlevel 1 goto :err

@@ -90,12 +90,56 @@ test('export scroll, history and AI narrow layout remain usable', async ({ page 
   expect(errors).toEqual([]);
 });
 
+test('toolbar filename supports accessible inline rename', async ({ page }) => {
+  const errors = []; page.on('pageerror', e => errors.push(String(e)));
+  await page.addInitScript(() => {
+    window.renameCalls = [];
+    window.pywebview = { api: {
+      rename_file: async (path, stem) => {
+        window.renameCalls.push({ path, stem });
+        return { ok: true, old_path: path, path: 'C:\\docs\\new name.md',
+          name: 'new name.md', warnings: [] };
+      },
+      get_settings: async () => ({}), get_recent: async () => [],
+      start_modules: async () => true,
+      get_modules_status: async () => ({ modules: {}, errors: {} }),
+    } };
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => typeof openFileRename === 'function');
+  await page.evaluate(() => {
+    state.mode = 'file'; state.source = 'file'; state.file = 'C:\\docs\\old.md';
+    state.dir = 'C:\\docs'; state.editing = false;
+    setFileTitle('old.md', true, state.file);
+  });
+
+  await page.locator('#file-title').click();
+  const input = page.locator('#file-rename-input');
+  await expect(input).toBeVisible();
+  await expect(input).toHaveValue('old');
+  await expect(page.locator('#file-rename-ext')).toHaveText('.md');
+  await input.fill('new name');
+  await input.press('Enter');
+  await expect(page.locator('#file-title')).toHaveText('new name.md');
+  expect(await page.evaluate(() => state.file)).toBe('C:\\docs\\new name.md');
+  expect(await page.evaluate(() => window.renameCalls)).toEqual([
+    { path: 'C:\\docs\\old.md', stem: 'new name' },
+  ]);
+
+  await page.evaluate(() => { state.editing = true; });
+  await page.keyboard.press('F2');
+  await expect(page.locator('#file-rename-input')).toHaveCount(0);
+  await expect(page.locator('#toast')).toContainText('请先保存');
+  expect(errors).toEqual([]);
+});
+
 test('web to Markdown renders dynamic pages with progress and actionable errors', async ({ page }) => {
   const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await page.addInitScript(() => {
     window.pywebview = { api: {
       render_web_page: async url => ({
         ok: true, final_url: url, html: '<html><body><article>rendered</article></body></html>',
+        defuddle: { title: '动态文章', contentMarkdown: '动态正文内容' },
         readability: { title: '动态文章', content: '<article><h1>动态文章</h1><p>动态正文内容</p></article>' },
       }),
       cancel_web_render: async () => true,
@@ -128,6 +172,9 @@ test('web to Markdown renders dynamic pages with progress and actionable errors'
   await expect(page.locator('#url-modal')).toBeVisible();
   await expect(page.locator('#url-mode')).toHaveValue('smart');
   await expect(page.locator('#url-images')).not.toBeChecked();
+  await expect(page.locator('#url-pages')).toHaveValue('10');
+  await expect(page.locator('#url-pages')).toHaveAttribute('max', '30');
+  await expect(page.locator('#url-private')).not.toBeChecked();
   await page.locator('#url-input').fill('example.com/article');
   await page.locator('#url-go').click();
   await expect(page.locator('#url-progress')).toBeVisible();
@@ -148,4 +195,19 @@ test('web to Markdown renders dynamic pages with progress and actionable errors'
   await expect(page.locator('#url-status')).toContainText('服务器拒绝访问');
   await expect(page.locator('#url-status')).toHaveClass(/error/);
   expect(errors).toEqual([]);
+});
+
+test('offline Defuddle bundle extracts Markdown from a rendered DOM', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    document.title = 'Defuddle browser fixture';
+    document.body.innerHTML = '<main><article><h1>Fixture</h1><p>' +
+      'Rendered article content for the offline extraction regression test. '.repeat(12) +
+      '</p><pre><code>const ready = true;</code></pre></article></main>';
+  });
+  await page.addScriptTag({ url: '/assets/vendor/defuddle.bundle.js' });
+  const result = await page.evaluate(() => window.ReadMDDefuddle.parse(document.cloneNode(true), location.href));
+  expect(result.title).toContain('Defuddle browser fixture');
+  expect(result.contentMarkdown).toContain('Rendered article content');
+  expect(result.contentMarkdown).toContain('const ready = true');
 });

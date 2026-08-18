@@ -15,29 +15,32 @@ import os
 import re
 import socket
 import threading
+import time
 from urllib.parse import urljoin, urlparse, urlunparse
 
 _deps = None
 _cancelled = set()
 _cancel_lock = threading.Lock()
 
-MAX_HTML_BYTES = 20 * 1024 * 1024
+MAX_HTML_BYTES = 50 * 1024 * 1024
 MAX_IMAGE_BYTES = 15 * 1024 * 1024
 MAX_IMAGE_TOTAL = 100 * 1024 * 1024
 MAX_IMAGES = 100
-MAX_REDIRECTS = 5
-MIN_ARTICLE_CHARS = 120
+MAX_REDIRECTS = 10
+MIN_ARTICLE_CHARS = 40
 ALLOWED_IMAGE_TYPES = {
     'image/jpeg': '.jpg', 'image/png': '.png', 'image/gif': '.gif',
     'image/webp': '.webp', 'image/avif': '.avif',
 }
-BLOCKED_TAGS = ('script', 'style', 'noscript', 'template', 'form', 'iframe',
+BLOCKED_TAGS = ('script', 'style', 'form', 'iframe',
                 'object', 'embed', 'canvas', 'svg')
 USER_AGENT = (
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
     'AppleWebKit/537.36 (KHTML, like Gecko) '
-    'Chrome/124.0 Safari/537.36 ReadMD/2.2.2'
+    'Chrome/131.0 Safari/537.36 ReadMD/2.2.3'
 )
+
+RETRY_STATUSES = {408, 425, 429, 502, 503, 504}
 
 
 class WebError(Exception):
@@ -169,6 +172,7 @@ def fetch_html(url, timeout=25, max_bytes=MAX_HTML_BYTES, task_id=None,
     sess = session or _session()
     history = []
     try:
+        retry_count = 0
         for _ in range(MAX_REDIRECTS + 1):
             _check_cancel(task_id)
             try:
@@ -186,6 +190,17 @@ def fetch_html(url, timeout=25, max_bytes=MAX_HTML_BYTES, task_id=None,
                 current = _validate_public_url(urljoin(current, location),
                                                allow_private=allow_private)
                 continue
+            if status in RETRY_STATUSES and retry_count < 2:
+                retry_after = response.headers.get('Retry-After')
+                response.close()
+                retry_count += 1
+                try:
+                    delay = min(2.0, max(0.0, float(retry_after)))
+                except (TypeError, ValueError):
+                    delay = 0.15 * retry_count
+                if delay:
+                    time.sleep(delay)
+                continue
             if status == 401:
                 response.close()
                 raise WebError('login_required', '该网页需要登录后访问', 401)
@@ -200,15 +215,12 @@ def fetch_html(url, timeout=25, max_bytes=MAX_HTML_BYTES, task_id=None,
                 raise WebError('http_error', '网页服务器返回 HTTP %d' % status,
                                502, str(status))
             ctype = (response.headers.get('Content-Type') or '').lower()
-            if ctype and not any(x in ctype for x in ('text/html', 'application/xhtml+xml')):
-                response.close()
-                raise WebError('not_html', '该地址返回的不是 HTML 网页', 415, ctype)
             declared = response.headers.get('Content-Length')
             if declared:
                 try:
                     if int(declared) > max_bytes:
                         response.close()
-                        raise WebError('too_large', '网页内容超过 20 MB 限制', 413)
+                        raise WebError('too_large', '网页内容超过 50 MB 限制', 413)
                 except ValueError:
                     pass
             chunks, total = [], 0
@@ -219,7 +231,7 @@ def fetch_html(url, timeout=25, max_bytes=MAX_HTML_BYTES, task_id=None,
                         continue
                     total += len(chunk)
                     if total > max_bytes:
-                        raise WebError('too_large', '网页内容超过 20 MB 限制', 413)
+                        raise WebError('too_large', '网页内容超过 50 MB 限制', 413)
                     chunks.append(chunk)
                 raw = b''.join(chunks)
                 if not raw:
@@ -236,10 +248,18 @@ def fetch_html(url, timeout=25, max_bytes=MAX_HTML_BYTES, task_id=None,
                 html = raw.decode(encoding or 'utf-8', errors='replace')
             except LookupError:
                 html = raw.decode('utf-8', errors='replace')
+            declared_html = (not ctype or any(
+                x in ctype for x in ('text/html', 'application/xhtml+xml')))
+            sniffed_html = bool(re.search(
+                r'<!doctype\s+html|<html\b|<head\b|<body\b|<article\b|<main\b',
+                html[:8192], re.I))
+            if not declared_html and not sniffed_html:
+                raise WebError('not_html', '该地址返回的不是 HTML 网页', 415, ctype)
             return {'url': current, 'requested_url': normalize_url(url),
                     'html': html, 'status': status, 'content_type': ctype,
                     'bytes': total, 'redirects': history,
-                    'encoding': encoding or 'utf-8'}
+                    'encoding': encoding or 'utf-8',
+                    'content_type_mismatch': bool(not declared_html and sniffed_html)}
         raise WebError('too_many_redirects', '网页重定向次数过多', 502)
     finally:
         if session is None:
@@ -336,7 +356,7 @@ def _markdownify_html(html):
 
 def _format_document(markdown, meta):
     title = (meta.get('title') or meta.get('canonical_url') or '网页').strip()
-    body = (markdown or '').strip()
+    body = _sanitize_markdown(markdown, meta.get('canonical_url') or '').strip()
     body_lines = body.splitlines()
     if body_lines and body_lines[0].startswith('# '):
         extracted_title = re.sub(r'\s+', ' ', body_lines[0][2:].strip()).casefold()
@@ -357,21 +377,52 @@ def _format_document(markdown, meta):
     return '\n'.join(lines).strip() + '\n'
 
 
-def extract_html(url, html, mode='smart', readability=None, rendered=False):
+def _useful(markdown, soup=None, minimum=MIN_ARTICLE_CHARS):
+    length = _plain_length(markdown)
+    if length >= minimum:
+        return True
+    if length < 20 or soup is None:
+        return False
+    root = soup.find('article') or soup.find('main')
+    return bool(root and root.find(['p', 'pre', 'table', 'ul', 'ol', 'blockquote']))
+
+
+def _sanitize_markdown(markdown, base_url=''):
+    value = markdown or ''
+    value = re.sub(r'<\s*(script|style|iframe|object|embed)\b[^>]*>.*?<\s*/\s*\1\s*>',
+                   '', value, flags=re.I | re.S)
+    value = re.sub(r'<[^>]+>', '', value)
+    value = re.sub(r'(\]\()\s*(?:javascript|data|file):[^)]*(\))', r'\1#\2',
+                   value, flags=re.I)
+    def absolute_link(match):
+        prefix, target, suffix = match.groups()
+        raw = target.strip().strip('<>')
+        absolute = urljoin(base_url, raw) if base_url else raw
+        if urlparse(absolute).scheme.lower() not in ('http', 'https'):
+            absolute = '#'
+        return prefix + absolute + suffix
+    value = re.sub(r'(!?\[[^\]]*\]\()([^\s)]+)([^)]*\))', absolute_link, value)
+    return value.strip()
+
+
+def extract_html(url, html, mode='smart', readability=None, defuddle=None,
+                 rendered=False):
     """Extract sanitized Markdown from downloaded or WebView-rendered HTML."""
-    _requests, tra, _BeautifulSoup, _markdownify = load()
     url = normalize_url(url)
+    _requests, tra, BeautifulSoup, _markdownify = load()
+    source_soup = BeautifulSoup(html or '', 'lxml')
     soup = _clean_soup(html, url)
-    meta = _metadata(soup, url)
-    sanitized = str(soup)
+    meta = _metadata(source_soup, url)
     warnings = []
-    candidates = _candidate_links(soup, url)
+    candidates = _candidate_links(source_soup, url)
+    engine_chain = []
     for engine, options in (
             ('trafilatura', {}),
             ('trafilatura-recall', {'favor_recall': True})):
+        engine_chain.append(engine)
         try:
             markdown = tra.extract(
-                sanitized, url=url, output_format='markdown',
+                html or '', url=url, output_format='markdown',
                 include_comments=False, include_tables=True,
                 include_images=True, include_links=True,
                 include_formatting=True, deduplicate=True, **options)
@@ -379,12 +430,28 @@ def extract_html(url, html, mode='smart', readability=None, rendered=False):
             logging.warning('%s extraction failed: %s', engine, exc)
             warnings.append('%s 提取器失败' % engine)
             markdown = None
-        if markdown and _plain_length(markdown) >= MIN_ARTICLE_CHARS:
+        if markdown and _useful(markdown, source_soup):
             return {'ok': True, 'content': _format_document(markdown, meta),
                     'meta': meta, 'engine': engine, 'warnings': warnings,
-                    'links': candidates, 'word_count': _plain_length(markdown)}
+                    'links': candidates, 'word_count': _plain_length(markdown),
+                    'engine_chain': engine_chain, 'attempts': len(engine_chain)}
+
+    if defuddle and (defuddle.get('contentMarkdown') or defuddle.get('markdown')):
+        engine_chain.append('defuddle')
+        markdown = _sanitize_markdown(
+            defuddle.get('contentMarkdown') or defuddle.get('markdown'), url)
+        for source, target in (('title', 'title'), ('author', 'author'),
+                               ('published', 'date'), ('site', 'site')):
+            if defuddle.get(source):
+                meta[target] = str(defuddle[source]).strip()
+        if _useful(markdown, minimum=20):
+            return {'ok': True, 'content': _format_document(markdown, meta),
+                    'meta': meta, 'engine': 'defuddle', 'warnings': warnings,
+                    'links': candidates, 'word_count': _plain_length(markdown),
+                    'engine_chain': engine_chain, 'attempts': len(engine_chain)}
 
     if readability and readability.get('content'):
+        engine_chain.append('mozilla-readability')
         reader_url = readability.get('url') or url
         reader_soup = _clean_soup(readability.get('content'), reader_url)
         markdown = _markdownify_html(str(reader_soup))
@@ -392,25 +459,39 @@ def extract_html(url, html, mode='smart', readability=None, rendered=False):
                                ('publishedTime', 'date'), ('siteName', 'site')):
             if readability.get(source):
                 meta[target] = str(readability[source]).strip()
-        if markdown and _plain_length(markdown) >= 40:
+        if markdown and _useful(markdown, reader_soup, minimum=20):
             return {'ok': True, 'content': _format_document(markdown, meta),
                     'meta': meta, 'engine': 'mozilla-readability',
                     'warnings': warnings, 'links': candidates,
-                    'word_count': _plain_length(markdown)}
+                    'word_count': _plain_length(markdown),
+                    'engine_chain': engine_chain, 'attempts': len(engine_chain)}
+
+    semantic_root = soup.find('article') or soup.find('main')
+    if semantic_root is not None:
+        engine_chain.append('semantic-page')
+        markdown = _markdownify_html(str(semantic_root))
+        if _useful(markdown, soup, minimum=20):
+            return {'ok': True, 'content': _format_document(markdown, meta),
+                    'meta': meta, 'engine': 'semantic-page', 'warnings': warnings,
+                    'links': candidates, 'word_count': _plain_length(markdown),
+                    'engine_chain': engine_chain, 'attempts': len(engine_chain)}
 
     if mode == 'full' or rendered:
+        engine_chain.append('full-page')
         root = soup.find('article') or soup.find('main') or soup.body or soup
         markdown = _markdownify_html(str(root))
         if markdown and _plain_length(markdown) >= 20:
             warnings.append('未识别出标准文章结构，已保留清理后的完整页面')
             return {'ok': True, 'content': _format_document(markdown, meta),
                     'meta': meta, 'engine': 'full-page', 'warnings': warnings,
-                    'links': candidates, 'word_count': _plain_length(markdown)}
+                    'links': candidates, 'word_count': _plain_length(markdown),
+                    'engine_chain': engine_chain, 'attempts': len(engine_chain)}
 
     return {'ok': False, 'code': 'render_required',
             'error': '下载成功，但静态页面中没有足够正文',
             'render_required': True, 'meta': meta, 'warnings': warnings,
-            'links': candidates}
+            'links': candidates, 'engine_chain': engine_chain,
+            'attempts': len(engine_chain), 'fallback_reason': 'content_too_short'}
 
 
 def fetch_document(url, mode='smart', timeout=25, task_id=None,
@@ -512,7 +593,7 @@ def _extract_links(html, base_url, limit=10):
 
 
 def crawl(url, max_links=10, timeout=25):
-    """Legacy synchronous crawl; the v2.2.2 UI adds progress and cancellation."""
+    """Legacy synchronous crawl; the v2.2.3 UI adds progress and cancellation."""
     first = fetch_document(url, timeout=timeout)
     if not first.get('ok'):
         return None

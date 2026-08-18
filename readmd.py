@@ -55,6 +55,39 @@ RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
 PROMPTS_FILE = os.path.join(DATA_DIR, 'prompts.json')
 HISTORY_FILE = os.path.join(DATA_DIR, 'chat_history.json')
 LOG_FILE = os.path.join(DATA_DIR, 'readmd.log')
+
+
+def normalize_dialog_path(value, extension=''):
+    """Return one filesystem path from a pywebview file-dialog result.
+
+    WinForms returns a one-item tuple while Cocoa returns a string.  Keeping
+    this normalization at the bridge boundary prevents platform-specific
+    container types leaking into renderers and ordinary file APIs.
+    """
+    if value is None or value == '':
+        return None
+    if isinstance(value, (tuple, list)):
+        if not value:
+            return None
+        if len(value) != 1:
+            raise ValueError('保存对话框返回了多个路径')
+        value = value[0]
+    try:
+        path = os.fspath(value)
+    except TypeError:
+        raise ValueError('保存对话框返回了无效路径')
+    if isinstance(path, bytes):
+        path = os.fsdecode(path)
+    path = str(path).strip()
+    if not path:
+        return None
+    if extension:
+        ext = extension if extension.startswith('.') else '.' + extension
+        if not path.lower().endswith(ext.lower()):
+            path += ext
+    return os.path.abspath(path)
+
+
 def _bundle_version():
     """frozen 构建内嵌 version.txt（Win7 链：2.1.1 Beta）。"""
     try:
@@ -71,7 +104,7 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-           or _bundle_version() or '2.2.2')
+           or _bundle_version() or '2.2.3')
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 CONVERT_EXTS = ('.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm',
@@ -256,8 +289,37 @@ def save_json(path, data):
         with open(tmp, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         os.replace(tmp, path)
+        return True
     except Exception as e:
         logging.exception('save_json failed: %s', path)
+        return False
+
+
+_WINDOWS_RESERVED_NAMES = {
+    'CON', 'PRN', 'AUX', 'NUL',
+    *('COM%d' % i for i in range(1, 10)),
+    *('LPT%d' % i for i in range(1, 10)),
+}
+
+
+def _validate_rename_stem(stem, extension):
+    stem = str(stem or '')
+    if not stem or stem != stem.strip():
+        raise ValueError('文件名不能为空或以空格开头、结尾')
+    if stem.endswith('.') or any(ord(ch) < 32 for ch in stem):
+        raise ValueError('文件名包含无效字符')
+    if any(ch in stem for ch in '<>:"/\\|?*'):
+        raise ValueError('文件名不能包含 < > : " / \\ | ? *')
+    if stem.split('.', 1)[0].upper() in _WINDOWS_RESERVED_NAMES:
+        raise ValueError('该名称是 Windows 系统保留名')
+    filename = stem + extension
+    if len(filename) > 255:
+        raise ValueError('文件名过长')
+    return stem
+
+
+def _paths_equal(left, right):
+    return os.path.normcase(os.path.abspath(left)) == os.path.normcase(os.path.abspath(right))
 
 
 
@@ -1018,7 +1080,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(500, {'error': '抓取失败：%s' % e})
 
     def _api_web_extract(self):
-        """v2.2.2 webpage extractor; accepts downloaded or WebView HTML."""
+        """v2.2.3 webpage extractor; accepts downloaded or WebView HTML."""
         if not RM.is_ready('web'):
             RM.load_all()
             self._send_json(409, {'ok': False, 'code': 'module_loading',
@@ -1030,9 +1092,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(400, {'ok': False, 'code': 'invalid_request',
                                       'error': '请求内容为空'})
                 return
-            if length > 25 * 1024 * 1024:
+            if length > 50 * 1024 * 1024:
                 self._send_json(413, {'ok': False, 'code': 'too_large',
-                                      'error': '渲染后的网页超过 25 MB 限制'})
+                                      'error': '渲染后的网页超过 50 MB 限制'})
                 return
             body = json.loads(self.rfile.read(length).decode('utf-8'))
         except Exception:
@@ -1042,13 +1104,13 @@ class Handler(BaseHTTPRequestHandler):
         task_id = str(body.get('task_id') or '')
         try:
             mod = RM.get('web')
-            mod.reset_cancel(task_id)
             url = body.get('url') or ''
             mode = body.get('mode') if body.get('mode') in ('smart', 'full') else 'smart'
             rendered_html = body.get('html')
             if rendered_html is not None:
                 result = mod.extract_html(
                     body.get('final_url') or url, rendered_html, mode=mode,
+                    defuddle=body.get('defuddle') or None,
                     readability=body.get('readability') or None, rendered=True)
             else:
                 result = mod.fetch_document(
@@ -1071,7 +1133,22 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 WebError = ()
             if WebError and isinstance(exc, WebError):
-                self._send_json(exc.http_status, exc.as_dict())
+                renderable = {
+                    'timeout', 'tls_failed', 'proxy_failed', 'network_failed',
+                    'forbidden', 'rate_limited', 'not_html', 'empty_response',
+                    'http_error', 'login_required', 'redirect_failed',
+                }
+                if exc.code in renderable:
+                    payload = exc.as_dict()
+                    payload.update({
+                        'render_required': True,
+                        'fallback_reason': exc.code,
+                        'engine_chain': ['http'],
+                        'attempts': 1,
+                    })
+                    self._send_json(200, payload)
+                else:
+                    self._send_json(exc.http_status, exc.as_dict())
             else:
                 logging.exception('web extraction failed: %s', body.get('url'))
                 self._send_json(500, {'ok': False, 'code': 'internal_error',
@@ -1271,6 +1348,55 @@ class Api(object):
     def __init__(self):
         self._window = None
         self._web_render_lock = threading.Lock()
+        self._web_private_lock = threading.Lock()
+        self._web_private_grants = {}
+
+    @staticmethod
+    def _web_origin(url):
+        from urllib.parse import urlparse
+        from readmd_modules import web as web_module
+        parsed = urlparse(web_module.normalize_url(url))
+        port = parsed.port
+        default_port = 443 if parsed.scheme == 'https' else 80
+        return '%s://%s:%d' % (parsed.scheme, parsed.hostname, port or default_port)
+
+    def authorize_private_web(self, url, task_id):
+        """签发仅供桌面 WebView 使用的短期、任务与源站绑定授权。"""
+        task_id = str(task_id or '').strip()
+        if not task_id:
+            return {'ok': False, 'code': 'invalid_task', 'error': '缺少网页转换任务 ID'}
+        try:
+            origin = self._web_origin(url)
+        except Exception as exc:
+            return {'ok': False, 'code': getattr(exc, 'code', 'invalid_url'),
+                    'error': getattr(exc, 'message', str(exc))}
+        grant = secrets.token_urlsafe(24)
+        expires_at = time.time() + 600
+        with self._web_private_lock:
+            self._web_private_grants[task_id] = {
+                'grant': grant, 'origin': origin, 'expires_at': expires_at,
+            }
+        return {'ok': True, 'grant': grant, 'origin': origin,
+                'expires_at': int(expires_at)}
+
+    def _private_web_allowed(self, url, task_id, grant):
+        task_id, grant = str(task_id or ''), str(grant or '')
+        with self._web_private_lock:
+            record = self._web_private_grants.get(task_id)
+            if not record or time.time() >= record.get('expires_at', 0):
+                self._web_private_grants.pop(task_id, None)
+                return False
+            expected = record.get('grant') or ''
+            origin = record.get('origin')
+        try:
+            return secrets.compare_digest(expected, grant) and self._web_origin(url) == origin
+        except Exception:
+            return False
+
+    def revoke_private_web(self, task_id):
+        with self._web_private_lock:
+            self._web_private_grants.pop(str(task_id or ''), None)
+        return True
 
     def choose_file(self):
         import webview
@@ -1358,25 +1484,24 @@ class Api(object):
         st, err = RM.status()
         return {'modules': st, 'errors': err}
 
-    def render_web_page(self, url, task_id='', timeout_ms=15000):
-        """Render a JavaScript page in an isolated system WebView.
-
-        The remote page never receives ReadMD's JS bridge. Mozilla Readability
-        is injected only after loading and the temporary window is destroyed.
-        """
+    def render_web_page(self, url, task_id='', timeout_ms=25000,
+                        interactive=False, private_grant=''):
+        """在无 JS bridge、无持久会话的临时系统 WebView 中渲染网页。"""
         if is_win7():
             return {'ok': False, 'code': 'render_unavailable',
                     'error': 'Win7 版不支持动态网页渲染'}
+        allow_private = self._private_web_allowed(url, task_id, private_grant)
         try:
             mod = RM.get('web')
-            safe_url = mod._validate_public_url(url, allow_private=False)
+            safe_url = mod._validate_public_url(url, allow_private=allow_private)
         except Exception as exc:
             return {'ok': False, 'code': getattr(exc, 'code', 'invalid_url'),
                     'error': getattr(exc, 'message', str(exc))}
         try:
-            timeout_ms = max(3000, min(25000, int(timeout_ms or 15000)))
+            timeout_ms = max(3000, min(300000 if interactive else 60000,
+                                      int(timeout_ms or (300000 if interactive else 25000))))
         except Exception:
-            timeout_ms = 15000
+            timeout_ms = 300000 if interactive else 25000
         if not self._web_render_lock.acquire(blocking=False):
             return {'ok': False, 'code': 'renderer_busy',
                     'error': '动态网页渲染器正在处理另一个页面'}
@@ -1384,8 +1509,9 @@ class Api(object):
         try:
             import webview
             reader_window = webview.create_window(
-                'ReadMD Web Extractor', safe_url, hidden=True, focus=False,
-                width=1100, height=800, resizable=False, text_select=False)
+                'ReadMD 临时网页提取器', safe_url, hidden=not interactive,
+                focus=bool(interactive), width=1100, height=800,
+                resizable=bool(interactive), text_select=bool(interactive))
             if reader_window is None:
                 return {'ok': False, 'code': 'render_unavailable',
                         'error': '无法创建系统网页渲染器'}
@@ -1393,20 +1519,39 @@ class Api(object):
             loaded = getattr(getattr(reader_window, 'events', None), 'loaded', None)
             if loaded is not None:
                 loaded.wait(max(0.1, min(10.0, deadline - time.time())))
-            last_length, stable = -1, 0
+            last_length, last_resources, stable = -1, -1, 0
             while time.time() < deadline:
                 if mod.is_cancelled(task_id):
                     return {'ok': False, 'code': 'cancelled', 'error': '已取消网页转换'}
                 try:
+                    if interactive:
+                        reader_window.evaluate_js("""
+                          (() => {
+                            if (document.getElementById('__readmd_capture_bar')) return;
+                            const bar=document.createElement('div');
+                            bar.id='__readmd_capture_bar';
+                            bar.style='position:fixed;z-index:2147483647;top:0;left:0;right:0;padding:10px 16px;background:#172033;color:white;font:14px system-ui;display:flex;gap:10px;align-items:center;box-shadow:0 2px 12px #0005';
+                            bar.innerHTML='<strong style="margin-right:auto">完成登录或验证后，提取当前页面</strong><button id="__readmd_capture" style="min-height:40px;padding:0 16px;border:0;border-radius:8px;background:#3182f6;color:white">提取此页</button><button id="__readmd_abort" style="min-height:40px;padding:0 16px;border:1px solid #ffffff55;border-radius:8px;background:transparent;color:white">取消</button>';
+                            document.documentElement.appendChild(bar);
+                            document.getElementById('__readmd_capture').onclick=()=>window.__readmdCaptureAction='capture';
+                            document.getElementById('__readmd_abort').onclick=()=>window.__readmdCaptureAction='cancel';
+                          })()
+                        """)
                     state = reader_window.evaluate_js(
-                        "({ready:document.readyState,n:(document.body&&document.body.innerText||'').length})") or {}
+                        "({ready:document.readyState,n:(document.body&&document.body.innerText||'').length,r:(performance.getEntriesByType&&performance.getEntriesByType('resource').length)||0,action:window.__readmdCaptureAction||''})") or {}
+                    if isinstance(state, dict) and state.get('action') == 'cancel':
+                        return {'ok': False, 'code': 'cancelled', 'error': '已取消交互式抓取'}
+                    if interactive and isinstance(state, dict) and state.get('action') == 'capture':
+                        break
                     length = int(state.get('n') or 0) if isinstance(state, dict) else 0
-                    if length > 0 and length == last_length:
+                    resources = int(state.get('r') or 0) if isinstance(state, dict) else 0
+                    if length > 0 and length == last_length and resources == last_resources:
                         stable += 1
                     else:
                         stable = 0
                     last_length = length
-                    if state.get('ready') == 'complete' and stable >= 2:
+                    last_resources = resources
+                    if not interactive and state.get('ready') == 'complete' and stable >= 3:
                         break
                 except Exception:
                     pass
@@ -1415,13 +1560,28 @@ class Api(object):
                 return {'ok': False, 'code': 'render_timeout',
                         'error': '动态渲染超时，请重试或改用完整页面模式'}
             reader_path = os.path.join(APP_DIR, 'assets', 'vendor', 'readability.bundle.js')
-            if not os.path.isfile(reader_path):
+            defuddle_path = os.path.join(APP_DIR, 'assets', 'vendor', 'defuddle.bundle.js')
+            if not os.path.isfile(reader_path) or not os.path.isfile(defuddle_path):
                 return {'ok': False, 'code': 'reader_missing',
-                        'error': 'Mozilla Readability 离线资源缺失'}
+                        'error': '网页正文提取器离线资源缺失'}
+            with open(defuddle_path, encoding='utf-8') as handle:
+                reader_window.evaluate_js(handle.read())
             with open(reader_path, encoding='utf-8') as handle:
                 reader_window.evaluate_js(handle.read())
             result = reader_window.evaluate_js("""
                 (() => {
+                  const bar=document.getElementById('__readmd_capture_bar'); if(bar) bar.remove();
+                  let defuddle = null;
+                  try {
+                    const parsed=window.ReadMDDefuddle.parse(document.cloneNode(true), location.href);
+                    defuddle=parsed ? {
+                      title:parsed.title||'', author:parsed.author||'',
+                      published:parsed.published||parsed.publishedTime||'',
+                      site:parsed.site||parsed.siteName||'',
+                      contentMarkdown:parsed.contentMarkdown||parsed.markdown||'',
+                      content:parsed.content||''
+                    } : null;
+                  } catch (e) { defuddle = null; }
                   let article = null;
                   try {
                     const clone = document.cloneNode(true);
@@ -1436,6 +1596,7 @@ class Api(object):
                   return {ok:true, final_url:location.href,
                           title:document.title || '',
                           html:document.documentElement.outerHTML,
+                          defuddle:defuddle,
                           readability:compact};
                 })()
             """)
@@ -1443,15 +1604,20 @@ class Api(object):
                 return {'ok': False, 'code': 'render_failed',
                         'error': '动态网页渲染没有返回可用内容'}
             try:
+                final_url = result.get('final_url') or safe_url
+                if allow_private and not self._private_web_allowed(
+                        final_url, task_id, private_grant):
+                    return {'ok': False, 'code': 'private_origin_changed',
+                            'error': '内网页面跳转到了未授权的源站，请重新授权'}
                 result['final_url'] = mod._validate_public_url(
-                    result.get('final_url') or safe_url, allow_private=False)
+                    final_url, allow_private=allow_private)
             except Exception as exc:
                 return {'ok': False,
                         'code': getattr(exc, 'code', 'blocked_address'),
                         'error': getattr(exc, 'message', str(exc))}
-            if len(result.get('html') or '') > 25 * 1024 * 1024:
+            if len(result.get('html') or '') > 50 * 1024 * 1024:
                 return {'ok': False, 'code': 'too_large',
-                        'error': '动态渲染后的网页超过 25 MB 限制'}
+                        'error': '动态渲染后的网页超过 50 MB 限制'}
             return result
         except Exception as exc:
             logging.exception('system WebView extraction failed: %s', safe_url)
@@ -1459,6 +1625,10 @@ class Api(object):
                     'error': '系统网页渲染失败：%s' % exc}
         finally:
             if reader_window is not None:
+                try:
+                    reader_window.clear_cookies()
+                except Exception:
+                    pass
                 try:
                     reader_window.destroy()
                 except Exception:
@@ -1471,6 +1641,100 @@ class Api(object):
             return True
         except Exception:
             return False
+
+    def rename_file(self, path, new_stem):
+        """在原目录内重命名当前 Markdown 文件并同步本地引用。"""
+        old_path = os.path.abspath(os.fspath(path)) if path else ''
+        if not old_path or not os.path.isfile(old_path):
+            return {'ok': False, 'code': 'not_found', 'error': '文件不存在或已被移动'}
+        extension = os.path.splitext(old_path)[1]
+        if extension.lower() not in MD_EXTS:
+            return {'ok': False, 'code': 'unsupported_type',
+                    'error': '只能重命名 Markdown 或文本文件'}
+        try:
+            stem = _validate_rename_stem(new_stem, extension)
+        except ValueError as exc:
+            return {'ok': False, 'code': 'invalid_name', 'error': str(exc)}
+
+        new_path = os.path.join(os.path.dirname(old_path), stem + extension)
+        if old_path == new_path:
+            return {'ok': True, 'path': old_path, 'name': os.path.basename(old_path),
+                    'warnings': []}
+        same_normalized = _paths_equal(old_path, new_path)
+        if os.path.exists(new_path) and not same_normalized:
+            return {'ok': False, 'code': 'target_exists',
+                    'error': '同目录下已存在同名文件'}
+
+        try:
+            if same_normalized:
+                temp_path = old_path + '.readmd-rename-' + secrets.token_hex(6)
+                os.rename(old_path, temp_path)
+                try:
+                    os.rename(temp_path, new_path)
+                except Exception:
+                    os.rename(temp_path, old_path)
+                    raise
+            else:
+                os.rename(old_path, new_path)
+        except Exception as exc:
+            logging.exception('rename_file failed: %s', old_path)
+            return {'ok': False, 'code': 'rename_failed', 'error': str(exc)}
+
+        warnings = []
+        old_backup, new_backup = old_path + '.bak', new_path + '.bak'
+        if os.path.isfile(old_backup):
+            if _paths_equal(old_backup, new_backup) and old_backup != new_backup:
+                backup_tmp = old_backup + '.readmd-rename-' + secrets.token_hex(6)
+                try:
+                    os.rename(old_backup, backup_tmp)
+                    try:
+                        os.rename(backup_tmp, new_backup)
+                    except Exception:
+                        os.rename(backup_tmp, old_backup)
+                        raise
+                except Exception as exc:
+                    logging.warning('case-only backup rename failed: %s', exc)
+                    warnings.append('文件已重命名，但备份文件大小写未能同步')
+            elif os.path.exists(new_backup):
+                warnings.append('旧备份未移动：目标备份已存在')
+            else:
+                try:
+                    os.rename(old_backup, new_backup)
+                except Exception as exc:
+                    logging.warning('rename backup failed: %s', exc)
+                    warnings.append('文件已重命名，但旧备份未能同步移动')
+
+        try:
+            recent = load_json(RECENT_FILE, [])
+            updated = []
+            for item in recent if isinstance(recent, list) else []:
+                value = new_path if _paths_equal(item, old_path) else item
+                if not any(_paths_equal(value, existing) for existing in updated):
+                    updated.append(value)
+            if not save_json(RECENT_FILE, updated):
+                warnings.append('最近文件记录未能同步')
+
+            settings = load_json(SETTINGS_FILE, {})
+            if isinstance(settings, dict) and settings.get('last') and _paths_equal(settings['last'], old_path):
+                settings['last'] = new_path
+                if not save_json(SETTINGS_FILE, settings):
+                    warnings.append('上次打开记录未能同步')
+
+            history = load_json(HISTORY_FILE, {'sessions': []})
+            changed = False
+            if isinstance(history, dict):
+                for session in history.get('sessions', []):
+                    if session.get('doc') and _paths_equal(session['doc'], old_path):
+                        session['doc'] = new_path
+                        changed = True
+            if changed and not save_json(HISTORY_FILE, history):
+                warnings.append('AI 历史文档引用未能同步')
+        except Exception as exc:
+            logging.exception('rename metadata sync failed')
+            warnings.append('文件已重命名，但部分历史记录未能同步')
+
+        return {'ok': True, 'path': new_path, 'name': os.path.basename(new_path),
+                'old_path': old_path, 'warnings': warnings}
 
     def save_file(self, path, content, encoding):
         """编辑保存：写回文件，首次保存自动生成 .bak 备份。"""
@@ -1496,6 +1760,7 @@ class Api(object):
             target = self._window.create_file_dialog(
                 webview.SAVE_DIALOG, save_filename=suggested,
                 file_types=('Markdown (*.md)',))
+            target = normalize_dialog_path(target, '.md')
             if not target:
                 return None
             assets = assets or []
@@ -1553,9 +1818,15 @@ class Api(object):
                 file_types=(ext_map[fmt],))
         except Exception as e:
             logging.exception('save dialog failed')
-            return {'ok': False, 'error': '保存对话框失败：%s' % e}
+            return {'ok': False, 'stage': 'save_dialog',
+                    'error': '保存对话框失败：%s' % e}
         if not target:
             return {'ok': False, 'canceled': True}
+        try:
+            target = normalize_dialog_path(target, '.' + fmt)
+        except ValueError as e:
+            logging.exception('save dialog returned invalid path')
+            return {'ok': False, 'stage': 'save_dialog', 'error': str(e)}
         try:
             return MDE.export(fmt, payload.get('content') or '',
                               payload.get('baseDir') or '', target,
@@ -1759,10 +2030,14 @@ def run_selftest():
     try:
         reader_asset = os.path.join(APP_DIR, 'assets', 'vendor', 'readability.bundle.js')
         reader_license = os.path.join(APP_DIR, 'assets', 'vendor', 'readability.LICENSE.md')
+        defuddle_asset = os.path.join(APP_DIR, 'assets', 'vendor', 'defuddle.bundle.js')
+        defuddle_license = os.path.join(APP_DIR, 'assets', 'vendor', 'defuddle.LICENSE.txt')
         file_icon = os.path.join(APP_DIR, 'assets', 'markdown-file.ico')
         app_icon = os.path.join(APP_DIR, 'assets', 'readmd.ico')
         assert os.path.isfile(reader_asset) and os.path.getsize(reader_asset) > 10000
         assert os.path.isfile(reader_license) and os.path.getsize(reader_license) > 400
+        assert os.path.isfile(defuddle_asset) and os.path.getsize(defuddle_asset) > 100000
+        assert os.path.isfile(defuddle_license) and os.path.getsize(defuddle_license) > 500
         assert os.path.isfile(file_icon) and os.path.getsize(file_icon) > 1000
         with open(file_icon, 'rb') as _icon_handle:
             assert _icon_handle.read(4) == b'\x00\x00\x01\x00'
