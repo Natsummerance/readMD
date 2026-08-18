@@ -10,6 +10,7 @@ import tempfile
 import threading
 from datetime import datetime, timedelta, timezone
 import unittest
+from unittest import mock
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -78,6 +79,17 @@ class FixtureHandler(BaseHTTPRequestHandler):
 
 
 class TestWebExtraction(unittest.TestCase):
+    def test_pinned_adapter_rejects_rebound_private_ip_before_send(self):
+        session = WEB._session(allow_private=False)
+        private_answer = [(2, 1, 6, '', ('127.0.0.1', 443))]
+        with mock.patch.object(WEB.socket, 'getaddrinfo',
+                               return_value=private_answer), \
+                mock.patch('requests.adapters.HTTPAdapter.send') as base_send:
+            with self.assertRaises(Exception):
+                session.get('https://rebind.invalid/article', timeout=1)
+            base_send.assert_not_called()
+        session.close()
+
     def test_connected_peer_is_checked_after_dns_resolution(self):
         class PeerSocket:
             def __init__(self, address):
