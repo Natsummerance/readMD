@@ -16,6 +16,8 @@ import re
 import socket
 import threading
 import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from urllib.parse import urljoin, urlparse, urlunparse
 
 _deps = None
@@ -41,6 +43,7 @@ USER_AGENT = (
 )
 
 RETRY_STATUSES = {408, 425, 429, 502, 503, 504}
+MAX_RETRY_AFTER = 30.0
 
 
 class WebError(Exception):
@@ -164,6 +167,31 @@ def _request_error(exc):
     return WebError('network_failed', '无法连接到网页服务器', 502, str(exc))
 
 
+def _retry_after_delay(value):
+    """Parse Retry-After seconds or HTTP-date with a bounded 30s wait."""
+    if value is None or str(value).strip() == '':
+        return 0.0
+    raw = str(value).strip()
+    try:
+        delay = float(raw)
+    except ValueError:
+        try:
+            target = parsedate_to_datetime(raw)
+            if target.tzinfo is None:
+                target = target.replace(tzinfo=timezone.utc)
+            delay = (target - datetime.now(timezone.utc)).total_seconds()
+        except (TypeError, ValueError, OverflowError):
+            return 0.0
+    return min(MAX_RETRY_AFTER, max(0.0, delay))
+
+
+def _wait_retry(delay, task_id):
+    deadline = time.time() + max(0.0, delay)
+    while time.time() < deadline:
+        _check_cancel(task_id)
+        time.sleep(min(0.1, deadline - time.time()))
+
+
 def fetch_html(url, timeout=25, max_bytes=MAX_HTML_BYTES, task_id=None,
                allow_private=False, session=None):
     """Download an HTML document with bounded redirects and response size."""
@@ -194,12 +222,11 @@ def fetch_html(url, timeout=25, max_bytes=MAX_HTML_BYTES, task_id=None,
                 retry_after = response.headers.get('Retry-After')
                 response.close()
                 retry_count += 1
-                try:
-                    delay = min(2.0, max(0.0, float(retry_after)))
-                except (TypeError, ValueError):
+                delay = _retry_after_delay(retry_after)
+                if not delay:
                     delay = 0.15 * retry_count
                 if delay:
-                    time.sleep(delay)
+                    _wait_retry(delay, task_id)
                 continue
             if status == 401:
                 response.close()

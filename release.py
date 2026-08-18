@@ -119,8 +119,7 @@ def ensure_release(args, tok):
 def update_release(args, tok):
     rel = get_release(args.tag, tok)
     if rel is None:
-        print("Release %s 不存在，改用创建模式..." % args.tag)
-        return ensure_release(args, tok)
+        raise SystemExit("Release %s 不存在；Release 只能由 GitHub Actions 创建" % args.tag)
     patch = {"name": args.name}
     if args.body_file:
         with open(args.body_file, encoding="utf-8") as f:

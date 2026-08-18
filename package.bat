@@ -38,9 +38,9 @@ echo [4/5] Building install edition (onedir, instant start) ...
     --add-data "readmd_fix.py;." ^
     --hidden-import readmd_fix ^
     --collect-data magika ^
-    --collect-all docx ^
-    --collect-all reportlab ^
-    --collect-all matplotlib ^
+    --collect-data docx ^
+    --collect-data reportlab ^
+    --collect-data matplotlib ^
     --collect-data trafilatura ^
     --collect-submodules readmd_modules ^
     readmd.py
@@ -54,9 +54,9 @@ echo [5/5] Building portable edition (single-file) ...
     --add-data "readmd_fix.py;." ^
     --hidden-import readmd_fix ^
     --collect-data magika ^
-    --collect-all docx ^
-    --collect-all reportlab ^
-    --collect-all matplotlib ^
+    --collect-data docx ^
+    --collect-data reportlab ^
+    --collect-data matplotlib ^
     --collect-data trafilatura ^
     --collect-submodules readmd_modules ^
     readmd.py

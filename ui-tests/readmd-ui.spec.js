@@ -126,6 +126,12 @@ test('toolbar filename supports accessible inline rename', async ({ page }) => {
     { path: 'C:\\docs\\old.md', stem: 'new name' },
   ]);
 
+  await page.keyboard.press('F2');
+  await expect(page.locator('#file-rename-input')).toBeVisible();
+  await page.locator('#file-rename-input').press('Escape');
+  await expect(page.locator('#file-rename-input')).toHaveCount(0);
+  await expect(page.locator('#file-title')).toHaveText('new name.md');
+
   await page.evaluate(() => { state.editing = true; });
   await page.keyboard.press('F2');
   await expect(page.locator('#file-rename-input')).toHaveCount(0);
@@ -147,7 +153,7 @@ test('web to Markdown renders dynamic pages with progress and actionable errors'
       start_modules: async () => true, get_modules_status: async () => ({ modules: { web: 'ready' }, errors: {} }),
     } };
   });
-  let extractCalls = 0;
+  let extractCalls = 0, renderedPayload = null;
   await page.route('**/api/modules', route => route.fulfill({
     status: 200, contentType: 'application/json',
     body: JSON.stringify({ modules: { web: 'ready', convert: 'ready', ocr: 'ready', ai: 'ready' }, errors: {} }),
@@ -161,6 +167,7 @@ test('web to Markdown renders dynamic pages with progress and actionable errors'
         ok: false, render_required: true, code: 'render_required', error: '需要渲染',
       }) });
     }
+    renderedPayload = body;
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
       ok: true, content: '# 动态文章\n\n动态正文内容', engine: 'mozilla-readability',
       meta: { title: '动态文章' }, warnings: [], links: [], assets: [],
@@ -182,6 +189,8 @@ test('web to Markdown renders dynamic pages with progress and actionable errors'
   await expect(page.locator('#url-modal')).toBeVisible();
   expect(await page.locator('#url-input').inputValue()).toBe('https://example.com/article');
   expect(extractCalls).toBe(2);
+  expect(renderedPayload.defuddle.contentMarkdown).toContain('动态正文');
+  expect(renderedPayload.diagnostics.fallback_reason).toBe('render_required');
   await expect(page.locator('#content')).toContainText('动态正文内容');
 
   await page.unroute('**/api/web/extract');
@@ -210,4 +219,46 @@ test('offline Defuddle bundle extracts Markdown from a rendered DOM', async ({ p
   expect(result.title).toContain('Defuddle browser fixture');
   expect(result.contentMarkdown).toContain('Rendered article content');
   expect(result.contentMarkdown).toContain('const ready = true');
+});
+
+test('cancelling a batch keeps pages already extracted', async ({ page }) => {
+  const seenUrls = [];
+  await page.addInitScript(() => {
+    window.pywebview = { api: {
+      get_settings: async () => ({}), get_recent: async () => [], start_modules: async () => true,
+      get_modules_status: async () => ({ modules: { web: 'ready' }, errors: {} }),
+      cancel_web_render: async () => true, revoke_private_web: async () => true,
+    } };
+  });
+  await page.route('**/api/modules', route => route.fulfill({
+    status: 200, contentType: 'application/json',
+    body: JSON.stringify({ modules: { web: 'ready' }, errors: {} }),
+  }));
+  await page.route('**/api/web/cancel', route => route.fulfill({
+    status: 200, contentType: 'application/json', body: '{"ok":true}',
+  }));
+  await page.route('**/api/web/extract', async route => {
+    const body = route.request().postDataJSON();
+    seenUrls.push(body.url);
+    if (body.url.includes('/two')) await new Promise(resolve => setTimeout(resolve, 2000));
+    const first = body.url.includes('/one');
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      ok: true, content: '# ' + (first ? 'One' : 'Two') + '\n\nExtracted body',
+      meta: { title: first ? 'One' : 'Two' }, warnings: [], assets: [],
+      links: first ? ['https://example.com/two', 'https://example.com/three'] : [],
+    }) });
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => typeof openWebDialog === 'function');
+  await page.evaluate(() => openWebDialog());
+  await page.locator('#url-input').fill('https://example.com/one');
+  await page.locator('#url-crawl').check();
+  await page.locator('#url-go').click();
+  await expect.poll(() => seenUrls.length).toBe(2);
+  await page.locator('#url-cancel').click();
+  await page.waitForFunction(() => !webRun.running);
+  await expect(page.locator('#content')).toContainText('One');
+  await expect(page.locator('#content')).toContainText('抓取统计');
+  await expect(page.locator('#content')).toContainText('跳过');
+  await expect(page.locator('#url-status')).toContainText('已保留成功抓取');
 });

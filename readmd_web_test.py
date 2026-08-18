@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 import threading
+from datetime import datetime, timedelta, timezone
 import unittest
 import urllib.error
 import urllib.request
@@ -204,6 +205,14 @@ class TestWebExtraction(unittest.TestCase):
             WEB.fetch_html(self.base + '/article', task_id='fixture-task', allow_private=True)
         self.assertEqual(caught.exception.code, 'cancelled')
         WEB.reset_cancel('fixture-task')
+
+    def test_retry_after_supports_seconds_and_http_date_with_bounded_wait(self):
+        self.assertEqual(WEB._retry_after_delay('5'), 5.0)
+        future = datetime.now(timezone.utc) + timedelta(seconds=20)
+        delay = WEB._retry_after_delay(future.strftime('%a, %d %b %Y %H:%M:%S GMT'))
+        self.assertGreaterEqual(delay, 18)
+        self.assertLessEqual(delay, 30)
+        self.assertEqual(WEB._retry_after_delay('600'), 30.0)
 
 
 class TestWebApi(unittest.TestCase):

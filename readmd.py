@@ -322,6 +322,16 @@ def _paths_equal(left, right):
     return os.path.normcase(os.path.abspath(left)) == os.path.normcase(os.path.abspath(right))
 
 
+def _same_file_target(left, right):
+    """Handle case-only names on case-insensitive macOS/Windows volumes."""
+    if _paths_equal(left, right):
+        return True
+    try:
+        return os.path.exists(left) and os.path.exists(right) and os.path.samefile(left, right)
+    except (OSError, ValueError):
+        return False
+
+
 
 # ---------------------------------------------------------------- AI 模板 / 历史会话
 
@@ -1116,6 +1126,19 @@ class Handler(BaseHTTPRequestHandler):
                 result = mod.fetch_document(
                     url, mode=mode, task_id=task_id,
                     allow_private=os.environ.get('READMD_WEB_TEST_ALLOW_PRIVATE') == '1')
+            previous = body.get('diagnostics')
+            if isinstance(previous, dict):
+                prior_chain = previous.get('engine_chain')
+                if isinstance(prior_chain, list):
+                    result['engine_chain'] = prior_chain[:12] + list(
+                        result.get('engine_chain') or [])
+                try:
+                    result['attempts'] = min(99, max(0, int(previous.get('attempts') or 0)) +
+                                             int(result.get('attempts') or 0))
+                except (TypeError, ValueError):
+                    pass
+                if previous.get('fallback_reason'):
+                    result['fallback_reason'] = str(previous['fallback_reason'])[:80]
             if result.get('ok') and body.get('download_images'):
                 asset_dir = os.path.join(DATA_DIR, 'web-assets',
                                          task_id or secrets.token_hex(8))
@@ -1393,6 +1416,100 @@ class Api(object):
         except Exception:
             return False
 
+    def _web_request_allowed(self, url, task_id='', private_grant=''):
+        """Validate every WebView request before the native engine sends it."""
+        try:
+            mod = RM.get('web') if RM.is_ready('web') else __import__(
+                'readmd_modules.web', fromlist=['web'])
+            if self._private_web_allowed(url, task_id, private_grant):
+                mod._validate_public_url(url, allow_private=True)
+            else:
+                mod._validate_public_url(url, allow_private=False)
+            return True
+        except Exception:
+            return False
+
+    def _install_webview_network_guard(self, reader_window, task_id,
+                                       private_grant, allowed_url):
+        """Install a fail-closed native request guard before remote navigation."""
+        if IS_WIN:
+            try:
+                from System import Action
+                native = reader_window.native
+                installed = [False]
+
+                def install():
+                    core = native.browser.webview.CoreWebView2
+
+                    def guard(sender, args):
+                        request_url = str(args.Request.Uri)
+                        if self._web_request_allowed(
+                                request_url, task_id, private_grant):
+                            return
+                        args.Response = sender.Environment.CreateWebResourceResponse(
+                            None, 403, 'Blocked by ReadMD',
+                            'Content-Type: text/plain; charset=utf-8')
+
+                    core.WebResourceRequested += guard
+                    native.browser._readmd_network_guard = guard
+                    installed[0] = True
+
+                native.Invoke(Action(install))
+                return installed[0]
+            except Exception:
+                logging.exception('failed to install WebView2 network guard')
+                return False
+        if IS_MAC:
+            try:
+                import WebKit
+                from PyObjCTools import AppHelper
+                from urllib.parse import urlparse
+                from webview.platforms.cocoa import BrowserView
+                finished = threading.Event()
+                success = [False]
+                allowed_host = urlparse(allowed_url).hostname or ''
+                private_filter = (
+                    r'^https?://(?:localhost(?:[:/]|$)|127\.|0\.|10\.|'
+                    r'169\.254\.|192\.168\.|172\.(?:1[6-9]|2[0-9]|3[01])\.|'
+                    r'\[?(?:0*:)*0*1\]?(?:[:/]|$)|\[?f[cd][0-9a-f]{2}:|'
+                    r'\[?fe[89ab][0-9a-f]:)')
+                private_trigger = {'url-filter': private_filter}
+                if self._private_web_allowed(
+                        allowed_url, task_id, private_grant):
+                    private_trigger['unless-domain'] = [allowed_host]
+                rules = [
+                    {'trigger': private_trigger,
+                     'action': {'type': 'block'}},
+                    {'trigger': {'url-filter': '.*', 'resource-type': ['document'],
+                                 'unless-domain': [allowed_host]},
+                     'action': {'type': 'block'}},
+                ]
+
+                def install():
+                    instance = BrowserView.get_instance('window', reader_window.native)
+                    if instance is None:
+                        finished.set()
+                        return
+                    store = WebKit.WKContentRuleListStore.defaultStore()
+
+                    def compiled(rule_list, error):
+                        if rule_list is not None and error is None:
+                            instance.webview.configuration().userContentController().addContentRuleList_(rule_list)
+                            instance._readmd_content_rule = rule_list
+                            success[0] = True
+                        finished.set()
+
+                    store.compileContentRuleListForIdentifier_encodedContentRuleList_completionHandler_(
+                        'ReadMDPrivateNetworkGuard', json.dumps(rules), compiled)
+
+                AppHelper.callAfter(install)
+                finished.wait(5.0)
+                return success[0]
+            except Exception:
+                logging.exception('failed to install WKWebView network guard')
+                return False
+        return False
+
     def revoke_private_web(self, task_id):
         with self._web_private_lock:
             self._web_private_grants.pop(str(task_id or ''), None)
@@ -1509,12 +1626,20 @@ class Api(object):
         try:
             import webview
             reader_window = webview.create_window(
-                'ReadMD 临时网页提取器', safe_url, hidden=not interactive,
+                'ReadMD 临时网页提取器', 'about:blank', hidden=not interactive,
                 focus=bool(interactive), width=1100, height=800,
                 resizable=bool(interactive), text_select=bool(interactive))
             if reader_window is None:
                 return {'ok': False, 'code': 'render_unavailable',
                         'error': '无法创建系统网页渲染器'}
+            blank_loaded = getattr(getattr(reader_window, 'events', None), 'loaded', None)
+            if blank_loaded is not None:
+                blank_loaded.wait(5.0)
+            if not self._install_webview_network_guard(
+                    reader_window, task_id, private_grant, safe_url):
+                return {'ok': False, 'code': 'network_guard_unavailable',
+                        'error': '无法启用网页私网访问保护，已停止动态渲染'}
+            reader_window.load_url(safe_url)
             deadline = time.time() + timeout_ms / 1000.0
             loaded = getattr(getattr(reader_window, 'events', None), 'loaded', None)
             if loaded is not None:
@@ -1660,7 +1785,7 @@ class Api(object):
         if old_path == new_path:
             return {'ok': True, 'path': old_path, 'name': os.path.basename(old_path),
                     'warnings': []}
-        same_normalized = _paths_equal(old_path, new_path)
+        same_normalized = _same_file_target(old_path, new_path)
         if os.path.exists(new_path) and not same_normalized:
             return {'ok': False, 'code': 'target_exists',
                     'error': '同目录下已存在同名文件'}
@@ -1683,7 +1808,7 @@ class Api(object):
         warnings = []
         old_backup, new_backup = old_path + '.bak', new_path + '.bak'
         if os.path.isfile(old_backup):
-            if _paths_equal(old_backup, new_backup) and old_backup != new_backup:
+            if _same_file_target(old_backup, new_backup) and old_backup != new_backup:
                 backup_tmp = old_backup + '.readmd-rename-' + secrets.token_hex(6)
                 try:
                     os.rename(old_backup, backup_tmp)
@@ -1795,20 +1920,21 @@ class Api(object):
         """
         import webview
         if self._window is None:
-            return {'ok': False, 'error': '窗口未就绪'}
+            return {'ok': False, 'stage': 'save_dialog', 'error': '窗口未就绪'}
         payload = payload or {}
         fmt = (fmt or '').lower()
         ext_map = {'pdf': 'PDF 文档 (*.pdf)',
                    'docx': 'Word 文档 (*.docx)',
                    'html': 'HTML 网页 (*.html)'}
         if fmt not in ext_map:
-            return {'ok': False, 'error': '不支持的导出格式'}
+            return {'ok': False, 'stage': 'options', 'error': '不支持的导出格式'}
         try:
             import readmd_modules.mdexport as MDE
             MDE.load()
         except Exception as e:
             logging.exception('mdexport import failed')
-            return {'ok': False, 'error': '导出模块加载失败：%s' % e}
+            return {'ok': False, 'stage': 'dependency',
+                    'error': '导出模块加载失败：%s' % e}
         suggested = (payload.get('suggestedName') or 'export').strip() or 'export'
         if not suggested.lower().endswith('.' + fmt):
             suggested += '.' + fmt
@@ -1834,7 +1960,7 @@ class Api(object):
                               source_name=payload.get('suggestedName') or '')
         except Exception as e:
             logging.exception('export failed')
-            return {'ok': False, 'error': '导出失败：%s' % e}
+            return {'ok': False, 'stage': 'render', 'error': '导出失败：%s' % e}
 
     def reveal_path(self, path):
         """在文件管理器中选中该文件。"""

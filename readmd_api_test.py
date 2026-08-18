@@ -81,6 +81,23 @@ class TestRenameFile(unittest.TestCase):
             self.assertEqual(os.path.basename(result['path']), 'title.md')
             self.assertTrue(os.path.isfile(result['path']))
 
+    def test_case_only_rename_uses_samefile_on_macos_style_filesystem(self):
+        with tempfile.TemporaryDirectory() as td:
+            old = os.path.join(td, 'Title.md')
+            new = os.path.join(td, 'title.md')
+            with open(old, 'w', encoding='utf-8') as handle:
+                handle.write('case')
+            paths = self._metadata_paths(td)
+            real_exists = os.path.exists
+            with mock.patch.multiple(readmd, **paths), \
+                    mock.patch.object(readmd.os.path, 'exists',
+                                      side_effect=lambda path: True if path == new else real_exists(path)), \
+                    mock.patch.object(readmd.os.path, 'samefile', return_value=True), \
+                    mock.patch.object(readmd, '_paths_equal', return_value=False):
+                result = readmd.Api().rename_file(old, 'title')
+            self.assertTrue(result.get('ok'), result)
+            self.assertEqual(result['path'], new)
+
 
 class TestPrivateWebAuthorization(unittest.TestCase):
     def test_grant_is_task_origin_bound_and_revocable(self):
@@ -105,6 +122,20 @@ class TestPrivateWebAuthorization(unittest.TestCase):
         api._web_private_grants['task-expired']['expires_at'] = time.time() - 1
         self.assertFalse(api._private_web_allowed(
             'http://10.0.0.2/next', 'task-expired', granted['grant']))
+
+    def test_request_guard_blocks_ungranted_private_resources(self):
+        api = readmd.Api()
+        with mock.patch('readmd_modules.web.socket.getaddrinfo') as lookup:
+            lookup.return_value = [(2, 1, 6, '', ('127.0.0.1', 0))]
+            self.assertFalse(api._web_request_allowed(
+                'http://local.invalid/metadata', 'task-a', ''))
+            granted = api.authorize_private_web(
+                'http://local.invalid/docs', 'task-private')
+            self.assertTrue(granted.get('ok'), granted)
+            self.assertTrue(api._web_request_allowed(
+                'http://local.invalid/image.png', 'task-private', granted['grant']))
+            self.assertFalse(api._web_request_allowed(
+                'http://other.invalid/image.png', 'task-private', granted['grant']))
 
 
 if __name__ == '__main__':

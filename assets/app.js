@@ -331,7 +331,7 @@ function openFileRename() {
   };
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); commit(); }
-    else if (e.key === 'Escape') { e.preventDefault(); cancelFileRename(); title.focus(); }
+    else if (e.key === 'Escape') { e.preventDefault(); input.blur(); title.focus(); }
   });
   input.addEventListener('blur', () => { if (!committing) cancelFileRename(); });
   input.focus(); input.select();
@@ -856,10 +856,15 @@ async function extractOneWebPage(url, options, forceRender) {
     download_images: options.downloadImages,
   };
   let data = null;
+  let diagnostics = null;
   if (!forceRender && !options.privateGrant) {
     setWebProgress(options.progress || 12, '下载并分析静态页面…', options.count || '');
     data = await postWebExtract(base);
     if (data.ok) return data;
+    diagnostics = {
+      engine_chain: data.engine_chain || ['http'], attempts: data.attempts || 1,
+      fallback_reason: data.fallback_reason || data.code || 'render_required',
+    };
     if (!data.render_required) {
       const error = new Error(data.error || '未能提取网页正文');
       error.code = data.code || 'extract_failed';
@@ -886,6 +891,7 @@ async function extractOneWebPage(url, options, forceRender) {
       html: rendered.html || '', final_url: rendered.final_url || url,
       defuddle: rendered.defuddle || null,
       readability: rendered.readability || null,
+      diagnostics,
     }));
     return { rendered, data: extracted };
   };
@@ -934,6 +940,7 @@ async function webToMd(url, crawl, forceRender) {
     privateGrant: '',
   };
   const sections = [], assets = [], warnings = [], failures = [];
+  let first = null, batchTotal = 1;
   try {
     if ($('url-private').checked) {
       if (!hasPy || !py.authorize_private_web) throw Object.assign(new Error('允许本地网络页面仅在桌面应用中可用'), { code: 'private_unavailable' });
@@ -942,13 +949,14 @@ async function webToMd(url, crawl, forceRender) {
       options.privateGrant = authorization.grant;
       webRun.privateGrant = authorization.grant;
     }
-    const first = await extractOneWebPage(url, Object.assign({}, options, { progress: 10 }), !!forceRender);
+    first = await extractOneWebPage(url, Object.assign({}, options, { progress: 10 }), !!forceRender);
     if (webRun.cancelled) throw Object.assign(new Error('已取消网页转换'), { code: 'cancelled' });
     sections.push(first.content);
     assets.push(...(first.assets || []));
     warnings.push(...(first.warnings || []));
     const links = crawl ? (first.links || []).slice(0, options.pageLimit - 1) : [];
     const total = 1 + links.length;
+    batchTotal = total;
     for (let i = 0; i < links.length; i++) {
       if (webRun.cancelled) throw Object.assign(new Error('已取消网页转换'), { code: 'cancelled' });
       const pageNo = i + 2;
@@ -958,16 +966,18 @@ async function webToMd(url, crawl, forceRender) {
         const result = await extractOneWebPage(links[i], Object.assign({}, options, {
           progress, count: pageNo + ' / ' + total,
         }), false);
+        if (webRun.cancelled) throw Object.assign(new Error('已取消网页转换'), { code: 'cancelled' });
         sections.push(result.content.replace(/^# /, '## '));
         assets.push(...(result.assets || []));
         warnings.push(...(result.warnings || []));
       } catch (error) {
+        if (error.code === 'cancelled' || webRun.cancelled) throw error;
         failures.push({ url: links[i], error: error.message });
       }
     }
     if (crawl) {
       const successCount = sections.length;
-      sections.push('\n---\n\n## 抓取统计\n\n成功 ' + successCount + ' 页，失败 ' + failures.length + ' 页。' +
+      sections.push('\n---\n\n## 抓取统计\n\n成功 ' + successCount + ' 页，跳过 0 页，失败 ' + failures.length + ' 页。' +
         (failures.length ? '\n\n' + failures.map(x => '- ' + x.url + '：' + x.error).join('\n') : ''));
     }
     const content = sections.join('\n\n---\n\n');
@@ -978,7 +988,15 @@ async function webToMd(url, crawl, forceRender) {
     if (warnings.length) showToast(warnings[0] + (warnings.length > 1 ? '（另有 ' + (warnings.length - 1) + ' 条）' : ''));
   } catch (error) {
     const cancelled = error.code === 'cancelled' || webRun.cancelled;
-    setWebStatus(cancelled ? '网页转换已取消。' : (error.message || '网页转换失败'), cancelled ? '' : 'error');
+    if (cancelled && sections.length && first) {
+      const skipped = Math.max(0, batchTotal - sections.length - failures.length);
+      sections.push('\n---\n\n## 抓取统计\n\n成功 ' + sections.length + ' 页，跳过 ' + skipped + ' 页，失败 ' + failures.length + ' 页。');
+      await renderVirtual('url', (first.meta && first.meta.title) || url,
+        first.asset_dir || '', sections.join('\n\n---\n\n'), [], { assets });
+      setWebStatus('网页转换已取消，已保留成功抓取的 ' + (sections.length - 1) + ' 页。', 'success');
+    } else {
+      setWebStatus(cancelled ? '网页转换已取消。' : (error.message || '网页转换失败'), cancelled ? '' : 'error');
+    }
     setWebProgress(0, cancelled ? '已取消' : '转换未完成', '');
   } finally {
     try { if (hasPy && py.revoke_private_web) await py.revoke_private_web(webRun.taskId); } catch (e) { /* ignore */ }
