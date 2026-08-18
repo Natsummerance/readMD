@@ -1167,8 +1167,22 @@ function renderConvertProgress(d) {
   } else {
     status.textContent = '完成：成功 ' + ok + ' · 跳过 ' + skipped + ' · 失败 ' + err + (warnCount ? ' · 警告 ' + warnCount : '');
     $('convert-open-dir').classList.remove('hidden');
+    if (!d._autoOpened) {
+      d._autoOpened = true;
+      const okItems = (d.items || []).filter(it => it.status === 'ok' && it.out);
+      if (okItems.length > 0) {
+        (async () => {
+          for (const it of okItems) {
+            await loadFile(it.out);
+          }
+          closeConvertModal();
+          showToast('转换完成，已自动在新标签页中打开');
+        })();
+      }
+    }
   }
 }
+
 
 
 
@@ -1430,9 +1444,10 @@ async function uploadFile(file) {
 }
 
 function convertOrOcr(p, mode) {
-  if (mode === 'ocr' || IMG_RE.test(p) || /\.pdf$/i.test(p)) ocrFile(p);
+  if (mode === 'ocr' || (mode !== 'convert' && IMG_RE.test(p))) ocrFile(p);
   else convertFile(p);
 }
+
 
 /* ---------------- AI 助手 ---------------- */
 
@@ -4005,19 +4020,18 @@ function bindGlobalDragAndDrop() {
     if (dt.files && dt.files.length > 0) {
       const files = Array.from(dt.files);
       const mdFiles = files.filter(f => MD_RE.test(f.name || ''));
-      const convertFiles = files.filter(f => !MD_RE.test(f.name || '') && CONVERT_EXTS.some(ext => (f.name || '').toLowerCase().endsWith(ext)));
+      const otherFiles = files.filter(f => !MD_RE.test(f.name || ''));
 
       if (mdFiles.length > 0) {
         for (const f of mdFiles) {
           const path = f.path ? f.path : await uploadFile(f);
           if (path) await loadFile(path);
         }
-      } else if (convertFiles.length > 0) {
-        await openConvertModalWithFiles(convertFiles);
-      } else {
-        for (const f of files) {
+      }
+      if (otherFiles.length > 0) {
+        for (const f of otherFiles) {
           const path = f.path ? f.path : await uploadFile(f);
-          if (path) convertOrOcr(path, 'convert');
+          if (path) await convertOrOcr(path, 'convert');
         }
       }
       return;
@@ -4043,12 +4057,18 @@ function bindGlobalDragAndDrop() {
 }
 
 async function openConvertModalWithFiles(files) {
-  openConvertModal();
+  if (!files || !files.length) return;
+  const paths = [];
   for (const f of files) {
     const path = f.path ? f.path : await uploadFile(f);
-    if (path) addConvertQueue([path]);
+    if (path) paths.push(path);
+  }
+  if (paths.length > 0) {
+    openConvertModal();
+    await startBatchConvert(paths, $('convert-overwrite') ? $('convert-overwrite').checked : false);
   }
 }
+
 
 function bindTabOverflowEvents() {
   const overflowBtn = $('doc-tabs-overflow-btn');
@@ -4422,12 +4442,331 @@ function renderExportModal() {
   $('export-reveal').classList.add('hidden');
 }
 
+function generateExportPreviewCss(opts, fmt) {
+  opts = opts || {};
+  const ty = opts.typography || {};
+  const hd = opts.headings || {};
+  const tb = opts.table || {};
+  const code = opts.code || {};
+  const quote = opts.quote || {};
+  const link = opts.link || {};
+  const hr = opts.hr || {};
+  const page = opts.page || {};
+  const htmlTheme = opts.htmlTheme || 'light';
+
+  const fontMap = {
+    'MicrosoftYaHei': '"Microsoft YaHei", "Microsoft YaHei UI", "PingFang SC", "微软雅黑", sans-serif',
+    'SimHei': '"SimHei", "黑体", sans-serif',
+    'SimSun': '"SimSun", "宋体", serif',
+    'KaiTi': '"KaiTi", "楷体", serif',
+    'DengXian': '"DengXian", "等线", sans-serif',
+    'Arial': 'Arial, sans-serif',
+  };
+  const fontFamily = fontMap[ty.font] || fontMap['MicrosoftYaHei'];
+
+  let pageBg = '#ffffff';
+  let baseFg = ty.color || '#262626';
+  let codeBg = code.bg || '#f5f6f8';
+  let quoteBg = quote.bg || '#f3f6ff';
+
+  if (fmt === 'html') {
+    if (htmlTheme === 'dark') {
+      pageBg = '#14161a';
+      baseFg = '#d6d9de';
+      codeBg = '#1e2228';
+      quoteBg = '#1c2230';
+    } else if (htmlTheme === 'sepia') {
+      pageBg = '#faf4e7';
+      baseFg = '#3b2f1d';
+      codeBg = '#f2ecdd';
+      quoteBg = '#f2ead6';
+    }
+  }
+
+  const h1 = hd.h1 || { size: 20, color: '#1a1a1a', bold: true, align: 'left', before: 18, after: 10 };
+  const h2 = hd.h2 || { size: 16, color: '#1f2937', bold: true, align: 'left', before: 14, after: 8 };
+  const h3 = hd.h3 || { size: 14, color: '#2d3748', bold: true, align: 'left', before: 12, after: 6 };
+  const h4 = hd.h4 || { size: 12, color: '#374151', bold: true, align: 'left', before: 10, after: 6 };
+  const h5 = hd.h5 || { size: 11, color: '#4a5568', bold: true, align: 'left', before: 8, after: 4 };
+  const h6 = hd.h6 || { size: 10.5, color: '#4a5568', bold: true, align: 'left', before: 8, after: 4 };
+
+  return `
+    /* Mini Preview Dynamic Styling */
+    #export-preview-mini-page {
+      background: ${pageBg} !important;
+      color: ${baseFg} !important;
+      font-family: ${fontFamily} !important;
+      text-align: ${ty.align || 'left'} !important;
+    }
+    #export-preview-mini-content {
+      color: ${baseFg} !important;
+      font-family: ${fontFamily} !important;
+      font-size: 3.5px !important;
+      line-height: ${ty.lineHeight || 1.6} !important;
+    }
+    #export-preview-mini-content p, #export-preview-mini-content li, #export-preview-mini-content span, #export-preview-mini-content div {
+      color: ${baseFg} !important;
+      font-size: ${(ty.size || 11) * 0.32}px !important;
+      line-height: ${ty.lineHeight || 1.6} !important;
+      text-align: ${ty.align || 'left'} !important;
+    }
+    #export-preview-mini-content p {
+      margin: ${(ty.spacing || 6) * 0.25}px 0 !important;
+    }
+    #export-preview-mini-content h1 {
+      color: ${h1.color || '#1a1a1a'} !important;
+      font-size: ${(h1.size || 20) * 0.35}px !important;
+      font-weight: ${h1.bold ? 'bold' : 'normal'} !important;
+      text-align: ${h1.align || 'left'} !important;
+      margin-top: ${(h1.before || 18) * 0.2}px !important;
+      margin-bottom: ${(h1.after || 10) * 0.2}px !important;
+      border-bottom: none !important;
+    }
+    #export-preview-mini-content h2 {
+      color: ${h2.color || '#1f2937'} !important;
+      font-size: ${(h2.size || 16) * 0.35}px !important;
+      font-weight: ${h2.bold ? 'bold' : 'normal'} !important;
+      text-align: ${h2.align || 'left'} !important;
+      margin-top: ${(h2.before || 14) * 0.2}px !important;
+      margin-bottom: ${(h2.after || 8) * 0.2}px !important;
+      border-bottom: none !important;
+    }
+    #export-preview-mini-content h3 {
+      color: ${h3.color || '#2d3748'} !important;
+      font-size: ${(h3.size || 14) * 0.35}px !important;
+      font-weight: ${h3.bold ? 'bold' : 'normal'} !important;
+      text-align: ${h3.align || 'left'} !important;
+      margin-top: ${(h3.before || 12) * 0.2}px !important;
+      margin-bottom: ${(h3.after || 6) * 0.2}px !important;
+    }
+    #export-preview-mini-content h4, #export-preview-mini-content h5, #export-preview-mini-content h6 {
+      color: ${h4.color || '#374151'} !important;
+      font-size: ${(h4.size || 12) * 0.35}px !important;
+      font-weight: ${h4.bold ? 'bold' : 'normal'} !important;
+      text-align: ${h4.align || 'left'} !important;
+    }
+    #export-preview-mini-content table {
+      border-collapse: collapse !important;
+      width: ${tb.widthPct || 100}% !important;
+      margin: 3px auto !important;
+      font-size: ${(tb.cellSize || 10) * 0.32}px !important;
+    }
+    #export-preview-mini-content th, #export-preview-mini-content td {
+      border: 0.5px solid ${tb.borderColor || '#c8cdd4'} !important;
+      padding: 1px 2px !important;
+      text-align: ${tb.align || 'left'} !important;
+      color: ${baseFg} !important;
+    }
+    #export-preview-mini-content th {
+      background: ${tb.headerBg || '#3b6ef5'} !important;
+      color: ${tb.headerColor || '#ffffff'} !important;
+      font-weight: ${tb.headerBold ? 'bold' : 'normal'} !important;
+    }
+    #export-preview-mini-content tbody tr:nth-child(even) td {
+      background: ${tb.banded ? (tb.bandColor || '#f3f5f9') : 'transparent'} !important;
+    }
+    #export-preview-mini-content pre {
+      background: ${codeBg} !important;
+      color: ${code.color || '#2f3b4a'} !important;
+      border: 0.5px solid ${code.borderColor || '#dfe3e8'} !important;
+      border-radius: ${code.rounded ? '2px' : '0'} !important;
+      padding: 2px 3px !important;
+      font-size: ${(code.size || 9.5) * 0.32}px !important;
+      margin: 2px 0 !important;
+    }
+    #export-preview-mini-content code {
+      font-family: ${code.font || 'Consolas'}, Consolas, monospace !important;
+    }
+    #export-preview-mini-content :not(pre) > code {
+      background: ${codeBg} !important;
+      color: #c7254e !important;
+      padding: 0 1px !important;
+    }
+    #export-preview-mini-content blockquote {
+      margin: 2px 0 !important;
+      padding: 1px 4px !important;
+      background: ${quoteBg} !important;
+      color: ${quote.color || '#4a5568'} !important;
+      border-left: 2px solid ${quote.barColor || '#3b6ef5'} !important;
+    }
+    #export-preview-mini-content blockquote p {
+      color: ${quote.color || '#4a5568'} !important;
+    }
+    #export-preview-mini-content a {
+      color: ${link.color || '#2b6cb0'} !important;
+    }
+    #export-preview-mini-content hr {
+      border: none !important;
+      border-top: 0.5px solid ${hr.color || '#d8dce2'} !important;
+      margin: 3px 0 !important;
+    }
+
+    /* Full Modal Preview Dynamic Styling */
+    #export-preview-full-page {
+      background: ${pageBg} !important;
+      color: ${baseFg} !important;
+      font-family: ${fontFamily} !important;
+      font-size: ${ty.size || 11}pt !important;
+      line-height: ${ty.lineHeight || 1.6} !important;
+      text-align: ${ty.align || 'left'} !important;
+      padding: ${page.marginTop || 20}mm ${page.marginRight || 18}mm ${page.marginBottom || 20}mm ${page.marginLeft || 18}mm !important;
+      ${page.orientation === 'landscape' ? 'width: 270mm; min-height: 190mm;' : 'width: 190mm; min-height: 270mm;'}
+    }
+    #export-preview-full-page p, #export-preview-full-page li, #export-preview-full-page span, #export-preview-full-page div {
+      color: ${baseFg} !important;
+      font-size: ${ty.size || 11}pt !important;
+      line-height: ${ty.lineHeight || 1.6} !important;
+      text-align: ${ty.align || 'left'} !important;
+    }
+    #export-preview-full-page p {
+      margin: ${ty.spacing || 6}pt 0 !important;
+    }
+    #export-preview-full-page h1 {
+      color: ${h1.color || '#1a1a1a'} !important;
+      font-size: ${h1.size || 20}pt !important;
+      font-weight: ${h1.bold ? 'bold' : 'normal'} !important;
+      text-align: ${h1.align || 'left'} !important;
+      margin-top: ${h1.before || 18}pt !important;
+      margin-bottom: ${h1.after || 10}pt !important;
+      line-height: 1.35 !important;
+      border-bottom: none !important;
+    }
+    #export-preview-full-page h2 {
+      color: ${h2.color || '#1f2937'} !important;
+      font-size: ${h2.size || 16}pt !important;
+      font-weight: ${h2.bold ? 'bold' : 'normal'} !important;
+      text-align: ${h2.align || 'left'} !important;
+      margin-top: ${h2.before || 14}pt !important;
+      margin-bottom: ${h2.after || 8}pt !important;
+      line-height: 1.35 !important;
+      border-bottom: none !important;
+    }
+    #export-preview-full-page h3 {
+      color: ${h3.color || '#2d3748'} !important;
+      font-size: ${h3.size || 14}pt !important;
+      font-weight: ${h3.bold ? 'bold' : 'normal'} !important;
+      text-align: ${h3.align || 'left'} !important;
+      margin-top: ${h3.before || 12}pt !important;
+      margin-bottom: ${h3.after || 6}pt !important;
+      line-height: 1.35 !important;
+    }
+    #export-preview-full-page h4 {
+      color: ${h4.color || '#374151'} !important;
+      font-size: ${h4.size || 12}pt !important;
+      font-weight: ${h4.bold ? 'bold' : 'normal'} !important;
+      text-align: ${h4.align || 'left'} !important;
+      margin-top: ${h4.before || 10}pt !important;
+      margin-bottom: ${h4.after || 6}pt !important;
+    }
+    #export-preview-full-page h5 {
+      color: ${h5.color || '#4a5568'} !important;
+      font-size: ${h5.size || 11}pt !important;
+      font-weight: ${h5.bold ? 'bold' : 'normal'} !important;
+      text-align: ${h5.align || 'left'} !important;
+      margin-top: ${h5.before || 8}pt !important;
+      margin-bottom: ${h5.after || 4}pt !important;
+    }
+    #export-preview-full-page h6 {
+      color: ${h6.color || '#4a5568'} !important;
+      font-size: ${h6.size || 10.5}pt !important;
+      font-weight: ${h6.bold ? 'bold' : 'normal'} !important;
+      text-align: ${h6.align || 'left'} !important;
+      margin-top: ${h6.before || 8}pt !important;
+      margin-bottom: ${h6.after || 4}pt !important;
+    }
+    #export-preview-full-page table {
+      border-collapse: collapse !important;
+      width: ${tb.widthPct || 100}% !important;
+      margin: 12pt auto !important;
+      font-size: ${tb.cellSize || 10}pt !important;
+    }
+    #export-preview-full-page th, #export-preview-full-page td {
+      border: ${tb.borderWidth || 0.75}px solid ${tb.borderColor || '#c8cdd4'} !important;
+      padding: ${tb.cellPadding || 6}px !important;
+      text-align: ${tb.align || 'left'} !important;
+      color: ${baseFg} !important;
+    }
+    #export-preview-full-page th {
+      background: ${tb.headerBg || '#3b6ef5'} !important;
+      color: ${tb.headerColor || '#ffffff'} !important;
+      font-weight: ${tb.headerBold ? 'bold' : 'normal'} !important;
+    }
+    #export-preview-full-page tbody tr:nth-child(even) td {
+      background: ${tb.banded ? (tb.bandColor || '#f3f5f9') : 'transparent'} !important;
+    }
+    #export-preview-full-page pre {
+      background: ${codeBg} !important;
+      color: ${code.color || '#2f3b4a'} !important;
+      border: ${code.borderWidth || 0.5}px solid ${code.borderColor || '#dfe3e8'} !important;
+      border-radius: ${code.rounded ? '6px' : '0'} !important;
+      padding: 10pt 12pt !important;
+      overflow: auto !important;
+      font-family: ${code.font || 'Consolas'}, Consolas, monospace !important;
+      font-size: ${code.size || 9.5}pt !important;
+      line-height: 1.5 !important;
+      margin: 8pt 0 !important;
+    }
+    #export-preview-full-page code {
+      font-family: ${code.font || 'Consolas'}, Consolas, monospace !important;
+    }
+    #export-preview-full-page :not(pre) > code {
+      background: ${codeBg} !important;
+      color: #c7254e !important;
+      padding: 2px 5px !important;
+      border-radius: 4px !important;
+      font-size: 0.92em !important;
+    }
+    #export-preview-full-page blockquote {
+      margin: 8pt 0 !important;
+      padding: 8pt 14pt !important;
+      background: ${quoteBg} !important;
+      color: ${quote.color || '#4a5568'} !important;
+      border-left: 4px solid ${quote.barColor || '#3b6ef5'} !important;
+    }
+    #export-preview-full-page blockquote p {
+      color: ${quote.color || '#4a5568'} !important;
+      margin: 4pt 0 !important;
+    }
+    #export-preview-full-page a {
+      color: ${link.color || '#2b6cb0'} !important;
+      text-decoration: underline !important;
+    }
+    #export-preview-full-page hr {
+      border: none !important;
+      border-top: 1px solid ${hr.color || '#d8dce2'} !important;
+      margin: 14pt 0 !important;
+    }
+    #export-preview-full-page img {
+      max-width: 100% !important;
+      height: auto !important;
+    }
+  `;
+}
+
 function updateExportLivePreview() {
   const fmt = state.export.fmt;
+  const opts = collectExportOptions();
   const badge = $('export-preview-badge');
   const sel = $('exp-preset');
   const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : '默认';
   if (badge) badge.textContent = fmt.toUpperCase() + ' · ' + presetName;
+
+  const paperMeta = $('export-preview-paper-meta');
+  if (paperMeta) {
+    const page = opts.page || {};
+    const sz = page.size || 'A4';
+    const ori = (page.orientation === 'landscape') ? '横向' : '纵向';
+    paperMeta.textContent = sz + ' · ' + ori + ' · ' + presetName;
+  }
+
+  // 注入或更新动态样式表
+  let styleEl = $('export-preview-dynamic-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'export-preview-dynamic-style';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = generateExportPreviewCss(opts, fmt);
 
   const content = currentExportContent();
   const miniHost = $('export-preview-mini-content');
@@ -4497,8 +4836,21 @@ function renderExportSections() {
     host.appendChild(wrap);
   });
   applyExportOptionsToDom();
+
+  // 绑定配置项实时变动事件
+  host.querySelectorAll('input, select').forEach(el => {
+    const onValChange = () => {
+      const sel = $('exp-preset');
+      if (sel) sel.value = '__custom__';
+      updateExportLivePreview();
+    };
+    el.addEventListener('input', onValChange);
+    el.addEventListener('change', onValChange);
+  });
+
   updateExportLivePreview();
 }
+
 
 
 function expFieldEl(f) {

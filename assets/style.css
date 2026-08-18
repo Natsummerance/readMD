@@ -1816,15 +1816,18 @@ body[data-theme="dark"] .conn-status { color: var(--fg3); }
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   padding: 6px;
   overflow: hidden;
-  font-size: 4px;
-  line-height: 1.25;
+  font-size: 3.5px;
+  line-height: 1.35;
   pointer-events: none;
   transform: scale(0.95);
+  box-sizing: border-box;
+  word-break: break-word;
 }
-.export-preview-mini-content h1 { font-size: 8px; margin: 0 0 4px; color: #111; }
-.export-preview-mini-content h2 { font-size: 7px; margin: 3px 0 2px; color: #222; }
-.export-preview-mini-content p { margin: 2px 0; }
-.export-preview-mini-content code, .export-preview-mini-content pre { font-size: 3.5px; background: #eee; padding: 1px; }
+.export-preview-mini-content {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
 .export-preview-overlay {
   position: absolute;
   inset: 0;
@@ -1899,7 +1902,10 @@ body[data-theme="dark"] .conn-status { color: var(--fg3); }
   font-size: 13.5px;
   line-height: 1.6;
   border-radius: 2px;
+  box-sizing: border-box;
+  word-break: break-word;
 }
+
 
 /* 导出右侧折叠配置项 */
 .exp-group {

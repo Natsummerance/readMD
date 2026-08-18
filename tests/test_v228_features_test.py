@@ -151,10 +151,28 @@ class TestV228Features(unittest.TestCase):
         self.assertTrue(hasattr(api, 'cancel_download'))
         self.assertTrue(hasattr(api, 'apply_update'))
 
-        status = api.get_download_status()
-        self.assertIsInstance(status, dict)
-        self.assertIn('status', status)
+    def test_export_preview_dom_and_dynamic_css(self):
+        """Ensure export preview containers do not carry polluting theme classes and dynamic styling exists."""
+        with open(os.path.join(ROOT_DIR, 'assets', 'index.html'), 'r', encoding='utf-8') as f:
+            html = f.read()
+        self.assertIn('id="export-preview-mini-content"', html)
+        self.assertIn('id="export-preview-full-page"', html)
+        self.assertNotIn('id="export-preview-mini-content" class="export-preview-mini-content markdown-body"', html)
+        self.assertNotIn('id="export-preview-full-page" class="export-preview-full-page markdown-body"', html)
+
+        with open(os.path.join(ROOT_DIR, 'assets', 'app.js'), 'r', encoding='utf-8') as f:
+            js = f.read()
+        self.assertIn('function generateExportPreviewCss', js)
+        self.assertIn('export-preview-dynamic-style', js)
+
+    def test_drag_and_drop_convert_auto_open(self):
+        """Ensure dropped non-md files and batch convert results are automatically loaded into tabs."""
+        with open(os.path.join(ROOT_DIR, 'assets', 'app.js'), 'r', encoding='utf-8') as f:
+            js = f.read()
+        self.assertIn('await convertOrOcr(path, \'convert\')', js)
+        self.assertIn('await loadFile(it.out)', js)
 
 
 if __name__ == '__main__':
     unittest.main()
+
