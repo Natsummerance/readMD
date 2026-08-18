@@ -45,17 +45,12 @@ body{
 @keyframes drift2{to{transform:translate(-70px,120px) scale(1.08)}}
 @keyframes drift3{to{transform:translate(60px,-60px) scale(1.15)}}
 /* ---------- 标题栏 ---------- */
-.titlebar{position:relative; z-index:5; height:52px; display:flex; align-items:center;
-  padding:0 16px; -webkit-app-region:drag; background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,0))}
-.traffic{display:flex; gap:8px; align-items:center}
-.traffic i{width:12px;height:12px;border-radius:50%; display:block}
-.traffic i:nth-child(1){background:var(--danger)}
-.traffic i:nth-child(2){background:var(--warn)}
-.traffic i:nth-child(3){background:var(--ok)}
-.titlebar .ttl{flex:1; text-align:center; font-size:12.5px; font-weight:600; letter-spacing:.02em; color:var(--text3)}
-.tb-right{display:flex; gap:8px; -webkit-app-region:no-drag}
-.win-btn{width:34px;height:30px;border-radius:9px; border:1px solid var(--border2);
-  background:var(--glass); color:var(--text2); font-size:13px; line-height:1; cursor:pointer;
+.titlebar{position:relative; z-index:5; height:36px; display:flex; align-items:center;
+  padding:0 0 0 14px; -webkit-app-region:drag; background:rgba(255,255,255,.035); border-bottom:1px solid var(--border)}
+.titlebar .ttl{flex:1; text-align:left; font-size:12px; font-weight:600; letter-spacing:.01em; color:var(--text2)}
+.tb-right{display:flex; align-self:stretch; -webkit-app-region:no-drag}
+.win-btn{width:46px;height:36px;border:0; border-radius:0;
+  background:transparent; color:var(--text2); font-size:14px; line-height:1; cursor:pointer;
   display:flex; align-items:center; justify-content:center; transition:transform .12s var(--ease), background .2s, color .2s}
 .win-btn:hover{background:rgba(255,255,255,.14); color:var(--text)}
 .win-btn:active{transform:scale(.9)}
@@ -63,7 +58,7 @@ body{
 /* ---------- 主舞台 ---------- */
 main{position:relative; z-index:2; flex:1; min-height:0; overflow:hidden}
 .page{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
-  justify-content:center; padding:24px 56px 40px; opacity:0; pointer-events:none;
+  justify-content:center; padding:18px 42px 16px; opacity:0; pointer-events:none;
   transform:translateX(var(--from,46px)) scale(.99); transition:opacity .4s var(--ease), transform .5s var(--ease)}
 .page.active{opacity:1; transform:none; pointer-events:auto}
 .page.back{--from:-46px}
@@ -94,7 +89,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
 .btn-danger{color:#fff; background:linear-gradient(135deg,#ff5f57,#ff3b30); box-shadow:0 10px 28px rgba(255,59,48,.35)}
 .btn-danger:hover{filter:brightness(1.06)}
 .btn[disabled]{opacity:.5; pointer-events:none}
-.btn-sm{height:38px; padding:0 18px; font-size:13px; border-radius:11px}
+.btn-sm{height:44px; padding:0 18px; font-size:13px; border-radius:11px}
 .link-btn{background:none; border:0; color:var(--text3); cursor:pointer; font-size:12.5px; text-decoration:underline;
   text-underline-offset:3px; margin-top:14px; font-family:inherit}
 .link-btn:hover{color:var(--text2)}
@@ -125,6 +120,8 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
   color:var(--text); font-family:inherit; font-size:12.5px; padding:0 14px; outline:none;
   transition:border-color .2s, box-shadow .2s; -webkit-app-region:no-drag}
 .path-row input:focus{border-color:var(--accent); box-shadow:0 0 0 3px rgba(59,110,245,.22)}
+.preflight-note{min-height:18px; font-size:12px; color:var(--text3); padding:0 4px; line-height:1.45}
+.preflight-note.error{color:var(--danger)}
 /* 开关 */
 .switch{position:relative; width:46px; height:27px; border-radius:999px; background:rgba(255,255,255,.16);
   border:1px solid var(--border2); cursor:pointer; transition:background .25s var(--ease), border-color .25s; flex:none}
@@ -202,11 +199,10 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
 <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 
 <header class="titlebar">
-  <div class="traffic"><i></i><i></i><i></i></div>
   <div class="ttl" id="win-title">ReadMD 安装程序</div>
   <div class="tb-right">
-    <button class="win-btn" id="btn-min" title="最小化">&#8211;</button>
-    <button class="win-btn danger" id="btn-close" title="关闭">&#10005;</button>
+    <button class="win-btn" id="btn-min" aria-label="最小化" title="最小化">&#8211;</button>
+    <button class="win-btn danger" id="btn-close" aria-label="关闭" title="关闭">&#10005;</button>
   </div>
 </header>
 
@@ -229,7 +225,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
       <path d="M78 88 L94 88 L94 104 L101 97 L94 90 L94 88 Z" fill="#fff"/>
     </svg>
     <h1 id="welcome-title">欢迎使用 ReadMD</h1>
-    <p class="sub" id="welcome-sub">轻量级 Markdown 阅读器 — 秒开渲染、自动纠错、AI 助手、万物转 MD。<br>安装过程纯本地完成，无需管理员权限。</p>
+    <p class="sub" id="welcome-sub">轻量级 Markdown 阅读器 — 秒开渲染、自动纠错、AI 助手、万物转 MD。<br>默认用户目录无需管理员。</p>
     <div class="chips">
       <span class="chip">&#9889; 秒开</span><span class="chip">&#129302; AI 助手</span>
       <span class="chip">&#128444; 图片编辑</span><span class="chip">&#128260; 万物转 MD</span>
@@ -256,9 +252,10 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
           </div>
         </div>
         <div class="path-row">
-          <input id="opt-dir" spellcheck="false" autocomplete="off">
-          <button class="btn btn-ghost btn-sm" id="btn-browse">更改…</button>
+          <input id="opt-dir" aria-label="安装目录" spellcheck="false" autocomplete="off">
+          <button class="btn btn-ghost btn-sm" id="btn-browse" aria-label="选择安装目录">更改…</button>
         </div>
+        <p class="preflight-note" id="preflight-note" role="status" aria-live="polite">正在检查安装目录…</p>
         <div class="opt-card">
           <div class="ic">&#128196;</div>
           <div class="opt-t"><b>设为 .md 默认打开方式</b><span>双击 .md 文件直接使用 ReadMD 打开</span></div>
@@ -305,7 +302,9 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
         <b>操作未完成</b>
         <p id="err-text"></p>
         <div class="actions" style="margin-top:14px">
-          <button class="btn btn-ghost btn-sm" id="btn-err-back">返回</button>
+          <button class="btn btn-ghost btn-sm" id="btn-err-change">更换目录</button>
+          <button class="btn btn-ghost btn-sm" id="btn-err-close-retry">关闭 ReadMD 后重试</button>
+          <button class="btn btn-primary btn-sm" id="btn-err-admin">以管理员身份重试</button>
           <button class="btn btn-primary btn-sm" id="btn-err-retry">重试</button>
         </div>
       </div>
@@ -351,6 +350,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
     uninstall:[['stop','关闭运行中的 ReadMD'],['assoc','移除文件关联'],['shortcut','删除快捷方式'],['uninst','移除卸载信息'],['delete','清理安装目录']]
   };
   var state = { mode:'install', installed:null, default_dir:'', version:'', running:false, win7:false, webview2Default:false };
+  var lastPreflight = null;
   var steps = [];
   var installing = false;
   var done = false;
@@ -426,6 +426,8 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
     var m = {
       get_state: function(){ return Promise.resolve({ mode:'install', installed:null, default_dir:'C:\\Users\\demo\\AppData\\Local\\Programs\\ReadMD', version:'2.0.1', running:false }); },
       get_progress: function(){ return Promise.resolve(mockProgress); },
+      preflight_install: function(){ return Promise.resolve({ok:true,code:'ok',message:'安装位置可用。',path:'C:\\Users\\demo\\AppData\\Local\\Programs\\ReadMD',actions:['install']}); },
+      elevate: function(){ return Promise.resolve({ok:true,code:'elevation_started',message:'已请求管理员权限。'}); },
       start_install: function(o){ options = o || options; mockProgress = { running:true, percent:0, step:'prepare', text:'准备安装目录', done:false, error:'' }; mockRun(); return Promise.resolve(true); },
       start_uninstall: function(){ mockProgress = { running:true, percent:0, step:'stop', text:'关闭运行中的 ReadMD', done:false, error:'' }; mockRun(); return Promise.resolve(true); },
       choose_dir: function(){ return Promise.resolve(null); },
@@ -459,7 +461,8 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
         applyProgress(prog);
         if (prog.error && !prog.done){
           $('err-card').style.display = 'flex';
-          $('err-text').textContent = prog.error;
+          $('err-text').textContent = (prog.code ? '[' + prog.code + '] ' : '') + prog.error + (prog.path ? '\n' + prog.path : '');
+          setErrorActions(prog.actions || []);
           $('inst-title').textContent = '遇到了一点问题';
           installing = false;
           return;
@@ -507,7 +510,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
     $('welcome-title').textContent = un ? '卸载 ReadMD？' : '欢迎使用 ReadMD';
     $('welcome-sub').innerHTML = un
       ? '将移除文件关联、快捷方式与安装目录。你的文档与设置不会受影响。'
-      : '轻量级 Markdown 阅读器 — 秒开渲染、自动纠错、AI 助手、万物转 MD。<br>安装过程纯本地完成，无需管理员权限。';
+      : '轻量级 Markdown 阅读器 — 秒开渲染、自动纠错、AI 助手、万物转 MD。<br>默认用户目录无需管理员。';
     $('welcome-ver').textContent = 'v' + state.version + ' · 由 Natsummerance 发布';
     if (state.installed){
       $('btn-uninstall-link').style.display = 'block';
@@ -540,9 +543,10 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
     if (!dir){ toast('请先填写安装目录'); return; }
     var opts = { dir: dir, assoc: options.assoc, desktop: options.desktop, startmenu: options.startmenu, webview2: options.webview2 };
     state.default_dir = dir;
-    if (MOCK || !state.running){
-      beginInstall(opts); return;
+    if (lastPreflight && !lastPreflight.ok){
+      showPreflight(lastPreflight); return;
     }
+    if (MOCK || !state.running){ beginInstall(opts); return; }
     $('confirm-title').textContent = 'ReadMD 正在运行';
     $('confirm-text').textContent = '安装前需要关闭正在运行的 ReadMD。未保存的编辑内容可能会丢失，是否继续？';
     $('confirm-ok').onclick = function(){ hideConfirm(); opts.force = true; beginInstall(opts); };
@@ -555,7 +559,12 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
     $('inst-title').textContent = '正在安装…';
     renderSteps(); applyProgress({ percent:0, step:'', text:'准备中…' });
     go('page-installing');
-    callArgs('start_install', opts);
+    Promise.resolve(callArgs('start_install', opts)).then(function(result){
+      if (result && result.ok === false){
+        $('err-card').style.display = 'flex'; $('err-text').textContent = '[' + result.code + '] ' + result.message;
+        setErrorActions(result.actions || []); $('inst-title').textContent = '遇到了一点问题'; installing = false;
+      }
+    });
   }
   function startUninstall(){
     done = false; installing = true;
@@ -568,6 +577,32 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
   function showConfirm(){ $('confirm').classList.add('show'); }
   function hideConfirm(){ $('confirm').classList.remove('show'); }
 
+  function setErrorActions(actions){
+    actions = actions || [];
+    $('btn-err-close-retry').style.display = actions.indexOf('close_app_retry') >= 0 ? '' : 'none';
+    $('btn-err-admin').style.display = actions.indexOf('elevate') >= 0 ? '' : 'none';
+    $('btn-err-change').style.display = actions.indexOf('change_dir') >= 0 ? '' : 'none';
+    $('btn-err-retry').style.display = actions.indexOf('close_app_retry') >= 0 ? 'none' : '';
+  }
+  function showPreflight(result){
+    lastPreflight = result;
+    var note = $('preflight-note');
+    if (!note) return;
+    note.textContent = (result.ok ? '✓ ' : '⚠ ') + (result.message || '无法检查安装目录');
+    note.classList.toggle('error', !result.ok);
+    $('btn-start-install').disabled = !result.ok;
+  }
+  var preflightTimer = null;
+  function requestPreflight(){
+    if (state.mode === 'uninstall') return;
+    clearTimeout(preflightTimer);
+    preflightTimer = setTimeout(function(){
+      var opts = {dir:$('opt-dir').value.trim(), assoc:options.assoc, desktop:options.desktop, startmenu:options.startmenu, webview2:options.webview2};
+      if (!opts.dir) { showPreflight({ok:false,message:'请填写安装目录。'}); return; }
+      Promise.resolve(callArgs('preflight_install', opts)).then(function(result){ if (result) showPreflight(result); });
+    }, 260);
+  }
+
   // ---- 事件 ----
   $('btn-install').addEventListener('click', function(){
     if (state.mode === 'uninstall'){
@@ -576,7 +611,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
       $('confirm-ok').onclick = function(){ hideConfirm(); startUninstall(); };
       showConfirm();
     } else {
-      go('page-options');
+      go('page-options'); requestPreflight();
     }
   });
   $('btn-exit').addEventListener('click', function(){ call('close'); });
@@ -589,14 +624,22 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
   $('btn-browse').addEventListener('click', function(){
     var cur = $('opt-dir').value;
     Promise.resolve(callArgs('choose_dir', cur)).then(function(r){
-      if (r && r[0]){ $('opt-dir').value = r[0]; state.default_dir = r[0]; }
+      if (r && r[0]){ $('opt-dir').value = r[0]; state.default_dir = r[0]; requestPreflight(); }
       else if (MOCK){ toast('（演示模式：目录选择已模拟）'); }
     });
   });
   $('btn-start-install').addEventListener('click', startInstall);
-  $('btn-err-back').addEventListener('click', function(){
+  $('btn-err-change').addEventListener('click', function(){
     $('err-card').style.display = 'none';
     go(state.mode === 'uninstall' ? 'page-welcome' : 'page-options', true);
+    $('opt-dir').focus();
+  });
+  $('btn-err-close-retry').addEventListener('click', function(){
+    beginInstall({dir:$('opt-dir').value.trim(), assoc:options.assoc, desktop:options.desktop, startmenu:options.startmenu, webview2:options.webview2, force:true});
+  });
+  $('btn-err-admin').addEventListener('click', function(){
+    var opts = {dir:$('opt-dir').value.trim(), assoc:options.assoc, desktop:options.desktop, startmenu:options.startmenu, webview2:options.webview2, force:true};
+    Promise.resolve(callArgs('elevate', opts)).then(function(r){ toast(r && r.ok ? '已启动管理员安装器。' : ((r && r.message) || '无法请求管理员权限')); if (r && r.ok) call('close'); });
   });
   $('btn-err-retry').addEventListener('click', function(){
     if (state.mode === 'uninstall') startUninstall(); else beginInstall({
@@ -607,6 +650,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
     sw.addEventListener('click', function(){
       sw.classList.toggle('on');
       options[sw.dataset.key] = sw.classList.contains('on');
+      requestPreflight();
     });
   });
   $('btn-min').addEventListener('click', function(){ call('minimize'); });
@@ -615,6 +659,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
     call('close');
   });
   $('confirm-cancel').addEventListener('click', hideConfirm);
+  $('opt-dir').addEventListener('input', requestPreflight);
   document.addEventListener('keydown', function(e){
     if (e.key === 'Escape'){
       if ($('confirm').classList.contains('show')){ hideConfirm(); }

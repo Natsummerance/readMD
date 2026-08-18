@@ -10,14 +10,18 @@
 """
 
 import argparse
+import ctypes
 import json
 import mimetypes
 import os
+import secrets
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
+import uuid
 import winreg
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
@@ -75,6 +79,29 @@ UNINSTALL_STEPS = [
     ('delete', '清理安装目录'),
 ]
 UNINSTALL_KEY = r'Software\Microsoft\Windows\CurrentVersion\Uninstall\ReadMD'
+ELEVATION_SCHEMA = 1
+ELEVATION_TTL_SECONDS = 300
+
+
+class InstallError(RuntimeError):
+    """An install failure which is safe to expose to the installer UI."""
+
+    def __init__(self, code, message, path='', actions=None):
+        super().__init__(message)
+        self.code = code
+        self.path = path or ''
+        self.actions = list(actions or [])
+
+    def as_dict(self):
+        return {'ok': False, 'code': self.code, 'message': str(self),
+                'path': self.path, 'actions': self.actions}
+
+
+def _result(ok=True, code='ok', path='', message='', actions=None, **extra):
+    result = {'ok': ok, 'code': code, 'path': path, 'message': message,
+              'actions': list(actions or [])}
+    result.update(extra)
+    return result
 
 
 def resource_path(name):
@@ -228,6 +255,233 @@ def stop_app():
         pass
 
 
+# ---------------------------------------------------------------- 安装前检查 / 提权
+def _normal_install_dir(value):
+    """Return an absolute installation directory, never a volume root."""
+    if not isinstance(value, str) or not value.strip() or '\x00' in value:
+        raise InstallError('invalid_dir', '安装目录无效', str(value or ''))
+    path = os.path.abspath(os.path.normpath(os.path.expandvars(os.path.expanduser(value.strip()))))
+    drive, tail = os.path.splitdrive(path)
+    if path == os.path.dirname(path) or tail in ('', os.sep, '/', '\\'):
+        raise InstallError('invalid_dir', '不能将程序安装到磁盘根目录', path)
+    return path
+
+
+def _is_child(path, parent):
+    try:
+        return os.path.commonpath([os.path.abspath(path), os.path.abspath(parent)]) == os.path.abspath(parent)
+    except ValueError:
+        return False
+
+
+def _is_admin():
+    if os.name != 'nt':
+        return True
+    try:
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except Exception:
+        return False
+
+
+def _protected_install_path(path):
+    """System locations that normally require elevation. LocalAppData stays user-writable."""
+    path = os.path.normcase(os.path.abspath(path))
+    local = os.environ.get('LOCALAPPDATA')
+    if local and _is_child(path, local):
+        return False
+    protected = [os.environ.get('ProgramFiles'), os.environ.get('ProgramFiles(x86)'),
+                 os.environ.get('WINDIR'), os.environ.get('SystemRoot')]
+    return any(root and _is_child(path, root) for root in protected)
+
+
+def _bundle_size():
+    """Conservative source-size estimate used by the disk-space preflight."""
+    root = bundled_app_dir()
+    if root:
+        try:
+            return sum(os.path.getsize(os.path.join(base, f))
+                       for base, _dirs, files in os.walk(root) for f in files)
+        except OSError:
+            pass
+    exe = bundled_exe(APP_EXE)
+    try:
+        return os.path.getsize(exe) if exe else 110 * 1024 * 1024
+    except OSError:
+        return 110 * 1024 * 1024
+
+
+def preflight_install(directory, options=None, *, disk_usage=shutil.disk_usage,
+                      running_check=app_running, admin_check=_is_admin,
+                      write_probe=True):
+    """Check an install target without changing an existing ReadMD installation.
+
+    The returned dictionary is deliberately stable for the web UI and for callers
+    which need to decide whether to retry, close ReadMD, or request elevation.
+    """
+    options = options or {}
+    try:
+        path = _normal_install_dir(directory)
+    except InstallError as exc:
+        return exc.as_dict()
+    parent = os.path.dirname(path)
+    if not _is_child(path, parent):  # defensive, also protects future path changes
+        return _result(False, 'invalid_dir', path, '安装目录不在其父目录中')
+    if _protected_install_path(path) and not admin_check():
+        return _result(False, 'requires_admin', path, '此目录受 Windows 保护，需要管理员权限。',
+                       ['elevate', 'change_dir'])
+    try:
+        os.makedirs(parent, exist_ok=True)
+    except PermissionError:
+        return _result(False, 'permission_denied', parent, '无法创建或写入安装目录。',
+                       ['elevate', 'change_dir'])
+    except OSError as exc:
+        return _result(False, 'invalid_dir', parent, '无法使用安装目录：%s' % exc, ['change_dir'])
+    try:
+        free = disk_usage(parent).free
+        required = _bundle_size() + 32 * 1024 * 1024
+        if options.get('webview2'):
+            required += 160 * 1024 * 1024
+        if free < required:
+            return _result(False, 'no_space', path, '可用空间不足。', ['change_dir'],
+                           free_bytes=free, required_bytes=required)
+    except OSError:
+        # A network filesystem may not report space; the real write probe below is
+        # still authoritative.
+        pass
+    if write_probe:
+        probe = None
+        try:
+            probe = os.path.join(parent, '.readmd-write-probe-%s' % uuid.uuid4().hex)
+            with open(probe, 'xb') as f:
+                f.write(b'ReadMD')
+            os.remove(probe)
+        except PermissionError:
+            return _result(False, 'permission_denied', parent, '目录不可写。', ['elevate', 'change_dir'])
+        except OSError as exc:
+            return _result(False, 'permission_denied', parent, '目录写入测试失败：%s' % exc,
+                           ['elevate', 'change_dir'])
+        finally:
+            if probe and os.path.isfile(probe):
+                try:
+                    os.remove(probe)
+                except OSError:
+                    pass
+    old = None
+    if os.path.exists(path) and not os.path.isdir(path):
+        return _result(False, 'invalid_dir', path, '安装位置已被同名文件占用。', ['change_dir'])
+    if os.path.isdir(path):
+        try:
+            with open(os.path.join(path, 'install.json'), encoding='utf-8') as f:
+                old = json.load(f).get('version')
+        except Exception:
+            old = 'unknown' if os.path.isfile(os.path.join(path, APP_EXE)) else None
+    running = bool(running_check())
+    if running and not options.get('force'):
+        return _result(False, 'file_in_use', path, 'ReadMD 正在运行，请关闭后再升级。',
+                       ['close_app_retry', 'change_dir'], old_version=old, running=True)
+    return _result(True, 'ok', path, '可以安装。', ['install'], old_version=old, running=running)
+
+
+def _elevation_payload_dir(temp_dir=None):
+    return os.path.abspath(temp_dir or tempfile.gettempdir())
+
+
+def create_elevation_payload(options, *, temp_dir=None, now=None, token=None):
+    """Create a short-lived, single-use handoff file for UAC relaunch."""
+    now = time.time() if now is None else now
+    target = _normal_install_dir((options or {}).get('dir', ''))
+    directory = _elevation_payload_dir(temp_dir)
+    os.makedirs(directory, exist_ok=True)
+    token = token or secrets.token_hex(16)  # 128 bits; passed only to the child process.
+    payload = {'schema': ELEVATION_SCHEMA, 'token': token, 'expires_at': now + ELEVATION_TTL_SECONDS,
+               'target_dir': target, 'options': dict(options or {}, dir=target)}
+    path = os.path.join(directory, 'readmd-elevation-%s.json' % uuid.uuid4().hex)
+    # x prevents an attacker from substituting a pre-existing filename.
+    with open(path, 'x', encoding='utf-8') as f:
+        json.dump(payload, f, ensure_ascii=False)
+    return path, token
+
+
+def _payload_owner_is_current_user(path):
+    """Validate the payload owner. UAC keeps the same user SID in normal use."""
+    if os.name != 'nt':
+        try:
+            return os.stat(path).st_uid == os.getuid()
+        except (AttributeError, OSError):
+            return False
+    try:
+        if os.path.islink(path):
+            return False
+        script = ('$acl = Get-Acl -LiteralPath $args[0]; '
+                  '$me = [Security.Principal.WindowsIdentity]::GetCurrent().Name; '
+                  'Write-Output $acl.Owner; Write-Output $me')
+        result = subprocess.run(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command', script, path],
+                                capture_output=True, creationflags=subprocess.CREATE_NO_WINDOW, timeout=5)
+        owners = result.stdout.decode('utf-8', 'replace').splitlines()
+        return result.returncode == 0 and len(owners) >= 2 and owners[0].strip().lower() == owners[1].strip().lower()
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def consume_elevation_payload(path, token, *, temp_dir=None, now=None, owner_check=_payload_owner_is_current_user):
+    """Validate then delete an elevated handoff file before using its contents."""
+    expected_dir = _elevation_payload_dir(temp_dir)
+    real = os.path.abspath(path or '')
+    if not _is_child(real, expected_dir) or os.path.dirname(real) != expected_dir:
+        raise InstallError('invalid_elevation_payload', '提权请求来源无效。', real)
+    if not owner_check(real):
+        raise InstallError('invalid_elevation_payload', '提权请求所有者无效。', real)
+    try:
+        with open(real, encoding='utf-8') as f:
+            payload = json.load(f)
+    except (OSError, ValueError) as exc:
+        raise InstallError('invalid_elevation_payload', '提权请求无法读取。', real) from exc
+    finally:
+        # Single use even if validation fails; never leave a reusable command.
+        try:
+            os.remove(real)
+        except OSError:
+            pass
+    now = time.time() if now is None else now
+    if (not isinstance(payload, dict) or payload.get('schema') != ELEVATION_SCHEMA
+            or not secrets.compare_digest(str(payload.get('token', '')), str(token or ''))
+            or not isinstance(payload.get('expires_at'), (int, float))
+            or payload['expires_at'] < now):
+        raise InstallError('invalid_elevation_payload', '提权请求已失效或被篡改。', real)
+    options = payload.get('options')
+    if not isinstance(options, dict) or payload.get('target_dir') != options.get('dir'):
+        raise InstallError('invalid_elevation_payload', '提权请求目标目录无效。', real)
+    options['dir'] = _normal_install_dir(options['dir'])
+    return options
+
+
+def request_elevation(options, *, payload_writer=create_elevation_payload, shell_execute=None):
+    """Restart this installer via ShellExecuteW(runas) using a one-shot payload."""
+    path, token = payload_writer(options)
+    if shell_execute is None:
+        if os.name != 'nt':
+            return _result(False, 'requires_admin', options.get('dir', ''), '当前系统不支持 UAC。')
+        shell_execute = ctypes.windll.shell32.ShellExecuteW
+    executable = sys.executable
+    prefix = '' if getattr(sys, 'frozen', False) else '"%s" ' % os.path.abspath(__file__)
+    args = '%s--elevated-payload "%s" --elevation-token "%s"' % (prefix, path, token)
+    try:
+        result = shell_execute(None, 'runas', executable, args, None, 1)
+    except Exception as exc:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        return _result(False, 'elevation_failed', options.get('dir', ''), '无法请求管理员权限：%s' % exc)
+    if isinstance(result, int) and result <= 32:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        return _result(False, 'elevation_failed', options.get('dir', ''), '管理员权限请求被取消或失败。')
+    return _result(True, 'elevation_started', options.get('dir', ''), '已请求管理员权限。', ['close'])
+
+
 # ---------------------------------------------------------------- 注册表
 def reg_set(path, name, value, typ=winreg.REG_SZ):
     with winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, path, 0, winreg.KEY_SET_VALUE) as k:
@@ -357,14 +611,15 @@ def _copy_file(src, dst, optional=False):
     if src is None or not os.path.isfile(src):
         if optional:
             return
-        raise RuntimeError('缺少程序文件：%s' % src)
+        raise InstallError('verification_failed', '缺少程序文件：%s' % src, str(src or ''))
     for i in range(5):
         try:
             shutil.copy2(src, dst)
             return
         except PermissionError:
             time.sleep(0.5)
-    raise RuntimeError('文件被占用，无法写入：%s' % dst)
+    raise InstallError('file_in_use', '文件被占用，无法写入：%s' % dst, dst,
+                       ['close_app_retry', 'change_dir'])
 
 
 def _copy_tree(src_dir, dst_dir):
@@ -384,64 +639,143 @@ def _copy_tree(src_dir, dst_dir):
                 except PermissionError:
                     time.sleep(0.5)
             else:
-                raise RuntimeError('文件被占用，无法写入：%s' % dst)
+                raise InstallError('file_in_use', '文件被占用，无法写入：%s' % dst, dst,
+                                   ['close_app_retry', 'change_dir'])
 
 
-def do_install(opts, progress):
-    inst_dir = os.path.abspath(opts['dir'])
-    if not inst_dir or inst_dir == os.path.dirname(inst_dir):
-        raise RuntimeError('无效的安装目录')
-    progress(0, 'prepare', '准备安装目录')
-    os.makedirs(inst_dir, exist_ok=True)
-    if not os.access(inst_dir, os.W_OK):
-        raise RuntimeError('目录不可写：%s' % inst_dir)
-    if opts.get('force') and app_running():
-        stop_app()
-    progress(22, 'copy', '复制程序文件')
-    # 升级兼容：先清掉旧 onedir 的 _internal 残留（避免陈旧 DLL / 资源）
-    old_internal = os.path.join(inst_dir, '_internal')
-    if os.path.isdir(old_internal):
-        try:
-            shutil.rmtree(old_internal)
-        except OSError:
-            pass
-    app_dir = bundled_app_dir()
-    if app_dir is not None:
-        _copy_tree(app_dir, inst_dir)
-    else:
-        _copy_file(bundled_exe(APP_EXE), os.path.join(inst_dir, APP_EXE))
-    _copy_file(bundled_exe(UNINST_EXE), os.path.join(inst_dir, UNINST_EXE), optional=True)
+def _safe_remove_install_child(path, parent):
+    """Delete only a uniquely named child we created in this install operation."""
+    if not _is_child(path, parent) or os.path.dirname(os.path.abspath(path)) != os.path.abspath(parent):
+        raise InstallError('invalid_dir', '拒绝清理安装目录以外的路径。', path)
+    if os.path.isdir(path):
+        shutil.rmtree(path)
+
+
+def _stage_name(parent, label):
+    path = os.path.join(parent, '.%s.%s-%s' % (APP_NAME.lower(), label, uuid.uuid4().hex))
+    if not _is_child(path, parent) or os.path.dirname(path) != os.path.abspath(parent):
+        raise InstallError('invalid_dir', '无法创建安全的临时安装目录。', path)
+    return path
+
+
+def _write_install_manifest(inst_dir, opts):
     with open(os.path.join(inst_dir, 'install.json'), 'w', encoding='utf-8') as f:
         json.dump({'app': APP_NAME, 'version': APP_VERSION,
                    'installed_at': time.strftime('%Y-%m-%d %H:%M:%S'),
                    'dir': inst_dir, 'assoc': bool(opts.get('assoc', True)),
                    'webview2': bool(opts.get('webview2', False))},
                   f, ensure_ascii=False, indent=2)
-    # Win7：把内置固定版 WebView2 109 运行时复制到安装目录（约 143MB）
-    progress(34, 'runtime', '安装 WebView2 运行时')
+
+
+def _validate_staged_install(path):
+    missing = [name for name in (APP_EXE, 'install.json') if not os.path.isfile(os.path.join(path, name))]
+    if missing:
+        raise InstallError('verification_failed', '安装文件校验失败：%s' % ', '.join(missing), path)
+
+
+def _copy_install_payload(stage_dir, opts):
+    app_dir = bundled_app_dir()
+    if app_dir is not None:
+        _copy_tree(app_dir, stage_dir)
+    else:
+        _copy_file(bundled_exe(APP_EXE), os.path.join(stage_dir, APP_EXE))
+    _copy_file(bundled_exe(UNINST_EXE), os.path.join(stage_dir, UNINST_EXE), optional=True)
     if opts.get('webview2', False):
         rt = bundled_webview2_runtime_dir()
         if rt is not None:
-            _copy_tree(rt, os.path.join(inst_dir, 'webview2_runtime'))
-        else:
-            progress(34, 'runtime', '未找到内置运行时，跳过')
-    progress(46, 'assoc', '注册文件关联')
-    if opts.get('assoc', True):
-        backup_assoc()
-        write_assoc(inst_dir)
-    progress(68, 'shortcut', '创建快捷方式')
-    app_path = os.path.join(inst_dir, APP_EXE)
-    if opts.get('desktop', True):
-        d = get_special_folder('Desktop')
-        if d:
-            create_shortcut(app_path, os.path.join(d, APP_NAME + '.lnk'), app_path)
-    if opts.get('startmenu', True):
-        p = get_special_folder('Programs')
-        if p:
-            create_shortcut(app_path, os.path.join(p, APP_NAME + '.lnk'), app_path)
-    progress(88, 'uninst', '写入卸载信息')
-    write_uninstall_entry(inst_dir)
-    progress(100, 'done', '安装完成')
+            _copy_tree(rt, os.path.join(stage_dir, 'webview2_runtime'))
+    _write_install_manifest(stage_dir, opts)
+    _validate_staged_install(stage_dir)
+
+
+def _commit_staged_install(stage_dir, inst_dir):
+    """Swap staged files into place, restoring the prior version on any failure."""
+    parent = os.path.dirname(inst_dir)
+    backup = None
+    moved_old = False
+    try:
+        if os.path.exists(inst_dir):
+            backup = _stage_name(parent, 'backup')
+            os.replace(inst_dir, backup)  # same parent/volume: atomic rename
+            moved_old = True
+        os.replace(stage_dir, inst_dir)
+    except Exception as exc:
+        # If the new directory was moved into place before a later exception,
+        # remove only the known destination and restore the original atomically.
+        try:
+            if moved_old and backup and os.path.isdir(backup):
+                if os.path.isdir(inst_dir):
+                    _safe_remove_install_child(inst_dir, parent)
+                os.replace(backup, inst_dir)
+        except Exception as rollback_error:
+            raise InstallError('rollback_failed', '替换安装失败，且旧版本恢复失败：%s' % rollback_error,
+                               inst_dir, ['change_dir']) from exc
+        code = 'file_in_use' if isinstance(exc, PermissionError) else 'replace_failed'
+        raise InstallError(code, '无法替换当前安装，旧版本已保留：%s' % exc, inst_dir,
+                           ['close_app_retry', 'elevate', 'change_dir']) from exc
+    # A backup is no longer needed only after the new directory is in place.
+    if backup and os.path.isdir(backup):
+        try:
+            _safe_remove_install_child(backup, parent)
+        except OSError:
+            # It is safe to leave a uniquely named backup for deferred cleanup;
+            # never trade the working new install for cleanup convenience.
+            pass
+
+
+def do_install(opts, progress):
+    opts = opts or {}
+    check = preflight_install(opts.get('dir', ''), opts)
+    if not check['ok']:
+        raise InstallError(check['code'], check['message'], check.get('path', ''), check.get('actions'))
+    inst_dir = check['path']
+    parent = os.path.dirname(inst_dir)
+    if opts.get('force') and app_running():
+        stop_app()
+        if app_running():
+            raise InstallError('file_in_use', 'ReadMD 仍在运行，无法升级。', inst_dir,
+                               ['close_app_retry', 'change_dir'])
+    stage_dir = _stage_name(parent, 'staging')
+    progress(0, 'prepare', '准备安全的临时安装目录')
+    try:
+        os.makedirs(stage_dir, exist_ok=False)
+        progress(22, 'copy', '复制并校验程序文件')
+        _copy_install_payload(stage_dir, opts)
+        progress(34, 'runtime', '切换到新版本')
+        _commit_staged_install(stage_dir, inst_dir)
+        # From here stage_dir no longer exists. Desktop/registry work is performed
+        # only after a verified executable is in its final location.
+        progress(46, 'assoc', '注册文件关联')
+        if opts.get('assoc', True):
+            backup_assoc()
+            write_assoc(inst_dir)
+        progress(68, 'shortcut', '创建快捷方式')
+        app_path = os.path.join(inst_dir, APP_EXE)
+        if opts.get('desktop', True):
+            d = get_special_folder('Desktop')
+            if d:
+                create_shortcut(app_path, os.path.join(d, APP_NAME + '.lnk'), app_path)
+        if opts.get('startmenu', True):
+            p = get_special_folder('Programs')
+            if p:
+                create_shortcut(app_path, os.path.join(p, APP_NAME + '.lnk'), app_path)
+        progress(88, 'uninst', '写入卸载信息')
+        write_uninstall_entry(inst_dir)
+        progress(100, 'done', '安装完成')
+    except InstallError:
+        raise
+    except PermissionError as exc:
+        raise InstallError('permission_denied', '安装目录没有写入权限。', getattr(exc, 'filename', inst_dir),
+                           ['elevate', 'change_dir']) from exc
+    except OSError as exc:
+        raise InstallError('install_failed', '安装失败：%s' % exc, getattr(exc, 'filename', inst_dir),
+                           ['close_app_retry', 'change_dir']) from exc
+    finally:
+        if os.path.isdir(stage_dir):
+            try:
+                _safe_remove_install_child(stage_dir, parent)
+            except OSError:
+                pass
 
 
 def _cleanup_dir(path):
@@ -565,11 +899,26 @@ class Api(object):
         except Exception:
             return None
 
+    def preflight_install(self, opts):
+        opts = opts or {}
+        return preflight_install(opts.get('dir', ''), opts)
+
+    def elevate(self, opts):
+        return request_elevation(opts or {})
+
     def start_install(self, opts):
         opts = opts or {}
         opts.setdefault('force', False)
+        check = preflight_install(opts.get('dir', ''), opts)
+        if not check['ok']:
+            with self._lock:
+                self._state['progress'] = {'running': False, 'percent': 0, 'step': 'error',
+                                           'text': '安装前检查未通过', 'done': False,
+                                           'error': check['message'], 'code': check['code'],
+                                           'path': check['path'], 'actions': check['actions']}
+            return check
         threading.Thread(target=self._run_install, args=(opts,), daemon=True).start()
-        return True
+        return _result(True, 'started', check['path'], '安装已开始。')
 
     def start_uninstall(self):
         threading.Thread(target=self._run_uninstall, daemon=True).start()
@@ -611,33 +960,45 @@ class Api(object):
         def cb(p, step, text):
             with self._lock:
                 self._state['progress'] = {'running': True, 'percent': p, 'step': step,
-                                           'text': text, 'done': False, 'error': ''}
+                                           'text': text, 'done': False, 'error': '', 'code': '',
+                                           'path': '', 'actions': []}
         try:
             do_install(opts, cb)
             with self._lock:
                 self._state['progress'] = {'running': False, 'percent': 100, 'step': 'done',
-                                           'text': '安装完成', 'done': True, 'error': ''}
+                                           'text': '安装完成', 'done': True, 'error': '', 'code': '',
+                                           'path': '', 'actions': []}
                 self._state['installed'] = is_installed()
+        except InstallError as e:
+            with self._lock:
+                self._state['progress'] = {'running': False, 'percent': 0, 'step': 'error',
+                                           'text': '安装失败', 'done': False, 'error': str(e),
+                                           'code': e.code, 'path': e.path, 'actions': e.actions}
         except Exception as e:
             with self._lock:
                 self._state['progress'] = {'running': False, 'percent': 0, 'step': 'error',
-                                           'text': '安装失败', 'done': False, 'error': str(e)}
+                                           'text': '安装失败', 'done': False, 'error': str(e),
+                                           'code': 'install_failed', 'path': '',
+                                           'actions': ['close_app_retry', 'change_dir']}
 
     def _run_uninstall(self):
         def cb(p, step, text):
             with self._lock:
                 self._state['progress'] = {'running': True, 'percent': p, 'step': step,
-                                           'text': text, 'done': False, 'error': ''}
+                                           'text': text, 'done': False, 'error': '', 'code': '',
+                                           'path': '', 'actions': []}
         try:
             do_uninstall(cb)
             with self._lock:
                 self._state['progress'] = {'running': False, 'percent': 100, 'step': 'done',
-                                           'text': '卸载完成', 'done': True, 'error': ''}
+                                           'text': '卸载完成', 'done': True, 'error': '', 'code': '',
+                                           'path': '', 'actions': []}
                 self._state['installed'] = is_installed()
         except Exception as e:
             with self._lock:
                 self._state['progress'] = {'running': False, 'percent': 0, 'step': 'error',
-                                           'text': '卸载失败', 'done': False, 'error': str(e)}
+                                           'text': '卸载失败', 'done': False, 'error': str(e),
+                                           'code': 'uninstall_failed', 'path': '', 'actions': ['change_dir']}
 
 
 # ---------------------------------------------------------------- 入口
@@ -688,7 +1049,8 @@ def run_gui(uninstall_mode):
         'running': app_running(),
         'win7': is_win7(),
         'webview2Default': is_win7() and not system_webview2_installed(),
-        'progress': {'running': False, 'percent': 0, 'step': '', 'text': '', 'done': False, 'error': ''},
+        'progress': {'running': False, 'percent': 0, 'step': '', 'text': '', 'done': False, 'error': '',
+                     'code': '', 'path': '', 'actions': []},
     }
     if state['mode'] == 'uninstall' and inst is None:
         state['mode'] = 'install'
@@ -697,13 +1059,13 @@ def run_gui(uninstall_mode):
     try:
         window = webview.create_window(
             'ReadMD 安装程序', url,
-            js_api=api, width=980, height=700, min_size=(880, 640),
+            js_api=api, width=720, height=480, min_size=(720, 480),
             frameless=True, easy_drag=True, shadow=True, resizable=True,
             text_select=True, background_color='#0a0e18')
     except Exception:
         window = webview.create_window(
             'ReadMD 安装程序', url,
-            js_api=api, width=980, height=700, min_size=(880, 640),
+            js_api=api, width=720, height=480, min_size=(720, 480),
             text_select=True, background_color='#0a0e18')
     api._window = window
     # Win7：安装器 UI 同样使用内置固定版运行时（打过补丁的 pywebview）
@@ -721,12 +1083,23 @@ def main():
     ap.add_argument('--install-silent', nargs='?', const='', metavar='DIR', help='静默安装')
     ap.add_argument('--uninstall-silent', action='store_true', help='静默卸载')
     ap.add_argument('--force', action='store_true', help='静默安装时强制关闭运行中的 ReadMD')
+    ap.add_argument('--elevated-payload', metavar='FILE', help=argparse.SUPPRESS)
+    ap.add_argument('--elevation-token', metavar='TOKEN', help=argparse.SUPPRESS)
     ap.add_argument('--version', action='store_true', help='输出版本号')
     args = ap.parse_args()
 
     if args.version:
         print(APP_VERSION)
         return 0
+    if args.elevated_payload is not None:
+        try:
+            opts = consume_elevation_payload(args.elevated_payload, args.elevation_token)
+        except InstallError as exc:
+            print('ELEVATION FAILED [%s] %s' % (exc.code, exc))
+            return 2
+        # The elevated copy is deliberately non-interactive: it uses only the
+        # validated one-shot payload and reports a normal stable error code.
+        return run_install_silent(opts)
     if args.install_silent is not None:
         d = args.install_silent or default_install_dir()
         return run_install_silent({'dir': d, 'assoc': True, 'desktop': False,
