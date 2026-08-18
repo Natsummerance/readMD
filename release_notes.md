@@ -1,21 +1,23 @@
-# ReadMD v2.2.4
+# ReadMD v2.2.5
 
 ReadMD 是免费的本地 Markdown 阅读器；不会要求订阅或内置账号。
 
 ## 下载
 
-- Windows 安装版：`ReadMDSetup-v2.2.4.exe`
-- Windows 便携版：`ReadMD-portable-v2.2.4.exe`
-- Intel Mac：`ReadMD-macos-x64-v2.2.4.zip`
-- Apple Silicon Mac：`ReadMD-macos-arm64-v2.2.4.zip`
+- Windows 安装版：`ReadMDSetup-v2.2.5.exe`
+- Windows 便携版：`ReadMD-portable-v2.2.5.exe`
+- Intel Mac：`ReadMD-macos-x64-v2.2.5.zip`
+- Apple Silicon Mac：`ReadMD-macos-arm64-v2.2.5.zip`
 - 校验清单：`SHA256SUMS.txt`
 
 ## 本次更新
 
-- 启动时只加载阅读所需部分；转换、OCR、网页与 AI 等可选模块改为按功能请求加载，并增加隐私安全的启动探针。
-- AI 面板可导入用户主动提供的对话内容：一次性授权的剪贴板、用户选择的导出文件，以及公开网页地址；导入前预览，解析后的内容才进入当前会话。
-- 对话导入限制大小、压缩包展开量和危险链接；剪贴板授权与文件授权均为一次性、短时有效，不记录原始剪贴板内容。
-- Windows、Intel macOS 和 Apple Silicon macOS 由同一标签工作流构建；发布前执行回归、隐私扫描、冻结包/Bundle 资源检查、架构检查和 SHA-256 校验。
+- 纯文本 TXT 智能转 Markdown：自动识别标题层级、对齐表格、分点列表并生成目录锚点；打开 `.txt` 直接结构化渲染，转 Markdown 输出智能 MD。
+- 剪贴板一键新建：复制任意 Markdown（网页端与 GPT、Claude、Gemini、DeepSeek 等 AI 对话回复）后，在首页按 `Ctrl+V` 即可创建可编辑 MD 文档；也可点击「从剪贴板新建」，原「从剪贴板获取对话」复用同一解析路径。
+- URL 导入全放开：百度、维基百科、局域网与私有地址等任何网页均可转换为 Markdown。ReadMD 纯本地运行、数据不上传，不再做无谓的安全拦截。
+- 安装器升级自动匹配旧版本目录：检测到已安装版本时预填原安装位置，无需手动选择目录。
+- 内置升级推送：启动时静默检查 GitHub 最新 Release，发现新版本时以 Toast 提示并一键跳转下载页；检查失败静默，不阻塞使用，不上传任何数据。
+- LaTeX 相关调研按计划推迟到 v2.2.6。
 
 ## 安装与安全提示
 
@@ -28,14 +30,14 @@ Windows 与 macOS 安装包均为**未签名**版本。Windows 首次运行可�
 Windows PowerShell：
 
 ```powershell
-Get-FileHash .\ReadMDSetup-v2.2.4.exe -Algorithm SHA256
+Get-FileHash .\ReadMDSetup-v2.2.5.exe -Algorithm SHA256
 Get-Content .\SHA256SUMS.txt
 ```
 
 macOS 终端：
 
 ```bash
-shasum -a 256 ReadMD-macos-arm64-v2.2.4.zip
+shasum -a 256 ReadMD-macos-arm64-v2.2.5.zip
 cat SHA256SUMS.txt
 ```
 

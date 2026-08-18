@@ -11,7 +11,7 @@
 - 本地：任意工作区目录（不得在仓库记录开发者绝对路径）
 - GitHub：`https://github.com/Natsummerance/readMD`（public，main 分支）
 - 发布凭据仅由 GitHub Actions 管理，不在源码或文档记录个人账号、邮箱或 Token
-- 当前开发/发布目标：v2.2.4（Windows + Intel macOS + Apple Silicon macOS 同一 Release；四应用资产 + SHA256SUMS.txt）
+- 当前开发/发布目标：v2.2.5（Windows + Intel macOS + Apple Silicon macOS 同一 Release；四应用资产 + SHA256SUMS.txt）
 - Win7 兼容版：**v2.1.1 Beta**（pre-release tag `v2.1.1-beta`，资产 `ReadMDSetup-2.1.1-Beta-win7-x64.exe`）——Win7 SP1 x64 + 内嵌固定版 WebView2 109 运行时；独立 Python 3.9.13 构建链（`.venv-win7` / `win7-reqs.txt` / `build_win7.bat` / `ReadMD-win7.spec` / `ReadMDSetup-win7.spec` / `tools\win7_pywebview_edgechromium.patch` / `tools\bundle_runtime.py`）；功能裁剪：仅 docx / pdf 转 MD + 导出（OCR / AI / 网页 / 其他格式在 Win7 下提示不可用）
 
 ## 功能清单（按开发顺序）
@@ -35,6 +35,7 @@
 17. Windows 文件关联图标与应用 Logo 分离：`.md/.markdown` 使用多尺寸简约文档图标，ReadMD EXE、安装器和快捷方式继续使用原应用 Logo
 18. 上一版：修复 PDF/DOCX/HTML 保存路径与原子写入；网页链加入离线 Defuddle、交互 WebView、短内容判定与临时内网授权；顶栏文件名支持点击/F2 重命名并同步本地引用
 19. v2.2.4：阅读优先、可选模块按功能加载；启动 probe 只记录版本/里程碑；AI 可预览导入一次性授权剪贴板、用户选择的导出文件和公开 URL 对话，受大小/资源/危险 URI 限制
+20. v2.2.5：TXT 智能转 Markdown（readmd_modules/txtmd.py：标题/对齐表格/分点/目录锚点，打开与转换双入口）；首页 Ctrl+V 或「从剪贴板新建」以虚拟文档创建 MD（Ctrl+S 存盘，不弹另存为）；URL 导入全放开（私网/局域网不再拦截，纯本地无安全审查）；安装器升级自动匹配旧目录；启动静默检查 GitHub 最新 Release 的 Toast 升级推送
 
 ## 关键文件
 
@@ -68,13 +69,13 @@
 
 - `package.bat`：一次产出两版——onedir 安装版 `dist\ReadMD\ReadMD.exe`（秒开）+ 便携单文件 `dist\ReadMD-portable.exe`（windowed，console=False，图标 readmd.ico）
 - `installer/build_setup.bat`：先 ReadMDUninstall.exe，再 ReadMDSetup.exe（内嵌 onedir 目录 `ReadMD/` + 卸载器；v2.0.1 起不再使用 PyInstaller splash 启动画面，避免黑屏弹窗卡死安装流程）
-- `deploy.bat [--skip-tests] [--tag v2.2.4]`：测试、推送 main 与标签并等待对应 CI；明确排除用户本地 `IDEA.md`，不创建 Release
-- `release.yml` 的 main 构建只上传 RC artifacts；仅 `v2.2.4` 标签在 Windows、Intel macOS、Apple Silicon macOS 门禁后发布四应用资产与 `SHA256SUMS.txt`
+- `deploy.bat [--skip-tests] [--tag v2.2.5]`：测试、推送 main 与标签并等待对应 CI；明确排除用户本地 `IDEA.md`，不创建 Release
+- `release.yml` 的 main 构建只上传 RC artifacts；仅 `v2.2.5` 标签在 Windows、Intel macOS、Apple Silicon macOS 门禁后发布四应用资产与 `SHA256SUMS.txt`
 - Release 由 CI 唯一创建，并在发布前校验版本、架构、资源、非零、隐私与 SHA-256；未使用或声称可信签名
 
 ## 测试现状（全部通过）
 
-- v2.2.4 Windows 发布前必须运行完整回归、安装器/性能回归、Playwright、隐私扫描、`--selftest`、冻结 smoke 与启动 probe；macOS 运行解析/剪贴板桥接/`--selftest` 与 Bundle 架构资源检查
+- v2.2.5 Windows 发布前必须运行完整回归（含 readmd_txtmd_test / readmd_upgrade_test / readmd_web_test）、安装器/性能回归、Playwright、隐私扫描、`--selftest`、冻结 smoke 与启动 probe；macOS 运行解析/剪贴板桥接/`--selftest` 与 Bundle 架构资源检查
 - dist\ReadMD\ReadMD.exe --selftest 退出码 0（console=False 无输出）；`readmd.log` 启动里程碑：start / server_up / webview_imported / window_created / page_loaded
 - 安装器串行 静默安装→文件就位→静默卸载→目录清除，验证通过（并发下曾出现竞争残留，正常串行无问题）
 
@@ -92,6 +93,15 @@
 - onedir 版 selftest 的 frozen 分支会调 `/api/modules` 触发重量模块加载（原 onefile 已如此），验证时注意区分
 - .spec 文件被 .gitignore 忽略（`*.spec`），本地保留用于重建；新环境可用 .bat 命令行参数打包
 - AI Key 无内置密钥，全部依赖用户配置/环境变量
+
+## 最近一次变更（v2.2.5 修复）
+
+- readmd_modules/txtmd.py：纯文本智能结构化——标题层级、对齐表格（复用 mdcheck 对齐能力）、分点列表与目录锚点；打开 `.txt` 自动结构化渲染，转换入口输出智能 MD；readmd_txtmd_test.py 13 用例
+- 剪贴板新建（M2）：全局 keydown Ctrl+V（排除 input/textarea/CodeMirror 焦点）→ 一次性剪贴板授权 → Markdown 解析 → renderVirtual('clipboard', ...) 可编辑虚拟文档；欢迎页「从剪贴板新建」按钮；「从剪贴板获取对话」复用同一解析路径
+- URL 全放开（M3）：readmd_modules/web.py 默认 allow_private（fetch_html/fetch_document/localize_images/redirect 同步放开）；_api_chat_import 与 w-web 一致放开；修复 URL 导入绕过 _module_ready 懒加载门禁导致首次同步挂起；readmd_web_test.py 私网拒绝用例改为放行断言（21 用例）
+- 安装器（M4）：setup_app.py state['default_dir'] 改用 detect_install_dir()，升级时预填旧目录自动匹配；setup.html 目录输入框与「检测到已安装版本」文案联动；installer_setup_test.py 12 用例
+- 升级推送（M5）：readmd.py _parse_version() + check_latest_release()（GET api.github.com/repos/Natsummerance/readMD/releases/latest，4s 超时失败静默，进程内缓存）；Api.check_upgrade()；assets/app.js finishInit() 非阻塞 checkUpgrade() + Toast 点击打开 Release 页；readmd_upgrade_test.py 4 用例
+- 版本/发布：readmd.py VERSION=2.2.5；release.yml / release.py / package / installer / macOS spec / ui-tests 全部同步 v2.2.5；release_notes.md / release_notes_macos.md 重写
 
 ## 最近一次变更（v2.1.0 导出）
 
