@@ -57,7 +57,7 @@ class RegistryTest(unittest.TestCase):
                 thread.join(1)
             self.assertTrue(wait_for(lambda: self.registry.is_ready('convert')))
         with self.assertRaises(ValueError):
-            self.registry.load('chat_import')
+            self.registry.load('nope')
 
     def test_failed_load_retries(self):
         attempts = [0]
@@ -112,7 +112,7 @@ class HttpModuleTest(unittest.TestCase):
             self.assertEqual(202, status)
             self.assertEqual('convert', payload['name'])
             self.assertEqual(['convert'], calls)
-            status, _ = self.request('/api/modules/load', b'{"name":"chat_import"}')
+            status, _ = self.request('/api/modules/load', b'{"name":"nope"}')
             self.assertEqual(400, status)
 
 

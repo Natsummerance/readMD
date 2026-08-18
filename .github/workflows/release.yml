@@ -40,7 +40,6 @@ jobs:
           python readmd_export_test.py
           python readmd_web_test.py
           python readmd_api_test.py
-          python readmd_chat_import_test.py
           python installer_setup_test.py
           python -m unittest readmd_performance_test
           python tools/privacy_scan.py
@@ -84,7 +83,6 @@ jobs:
           python readmd_fix_test.py
           python readmd_convert_test.py
           python readmd_api_test.py
-          python readmd_chat_import_test.py
           python readmd.py --selftest
 
   windows-package:
@@ -128,7 +126,6 @@ jobs:
           if (!(Test-Path 'dist/ReadMD/_internal/assets/markdown-file.ico')) { throw 'Markdown association icon missing' }
           if (!(Test-Path 'dist/ReadMD/_internal/assets/vendor/defuddle.bundle.js')) { throw 'Defuddle bundle missing' }
           if (!(Test-Path 'dist/ReadMD/_internal/assets/vendor/defuddle.LICENSE.txt')) { throw 'Defuddle license missing' }
-          if (!(Test-Path 'dist/ReadMD/_internal/readmd_modules/chat_import.py')) { throw 'chat importer missing' }
           python tools/privacy_scan.py dist/ReadMD "dist/ReadMD-portable-v$env:READMD_VERSION.exe" "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
       - name: Upload main-branch release candidate
         if: github.ref == 'refs/heads/main'
@@ -190,7 +187,6 @@ jobs:
           test -s dist/ReadMD.app/Contents/Resources/assets/vendor/readability.bundle.js
           test -s dist/ReadMD.app/Contents/Resources/assets/vendor/defuddle.bundle.js
           test -s dist/ReadMD.app/Contents/Resources/assets/vendor/defuddle.LICENSE.txt
-          test -s dist/ReadMD.app/Contents/Resources/readmd_modules/chat_import.py
           dist/ReadMD.app/Contents/MacOS/ReadMD --selftest
           python tools/privacy_scan.py dist/ReadMD.app
           ditto -c -k --sequesterRsrc --keepParent dist/ReadMD.app "ReadMD-macos-${{ matrix.arch }}-v${READMD_VERSION}.zip"
@@ -257,7 +253,6 @@ jobs:
           for arch in x64 arm64; do
             test -s "verify-macos/$arch/ReadMD.app/Contents/Resources/assets/vendor/defuddle.bundle.js"
             test -s "verify-macos/$arch/ReadMD.app/Contents/Resources/assets/vendor/defuddle.LICENSE.txt"
-            test -s "verify-macos/$arch/ReadMD.app/Contents/Resources/readmd_modules/chat_import.py"
           done
           python tools/privacy_scan.py release-assets verify-macos
           (cd release-assets && sha256sum ReadMDSetup-v2.2.6.exe ReadMD-portable-v2.2.6.exe ReadMD-macos-x64-v2.2.6.zip ReadMD-macos-arm64-v2.2.6.zip > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)

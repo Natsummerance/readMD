@@ -1564,8 +1564,7 @@ class Api(object):
         self._web_render_lock = threading.Lock()
         self._web_private_lock = threading.Lock()
         self._web_private_grants = {}
-        self._chat_import_lock = threading.Lock()
-        self._chat_import_paths = {}
+        self._clipboard_lock = threading.Lock()
         self._clipboard_tokens = {}
 
     @staticmethod
@@ -1778,7 +1777,7 @@ class Api(object):
     def authorize_clipboard_read(self):
         """Grant one short-lived clipboard read after an explicit UI action."""
         token = secrets.token_urlsafe(18)
-        with self._chat_import_lock:
+        with self._clipboard_lock:
             self._clipboard_tokens[token] = time.time() + 30
         return {'ok': True, 'token': token, 'expires_at': int(time.time() + 30)}
 
@@ -1788,7 +1787,7 @@ class Api(object):
         HTML is best-effort because pywebview backends expose different native
         clipboard APIs.  Callers can always fall back to ``text``.
         """
-        with self._chat_import_lock:
+        with self._clipboard_lock:
             expires_at = self._clipboard_tokens.pop(str(token or ''), 0)
         if not token or time.time() > expires_at:
             return {'text': '', 'html': '', 'source_type': 'unauthorized',
@@ -1832,56 +1831,6 @@ class Api(object):
         return {'text': '', 'html': '', 'source_type': 'too_large',
                 'error': '剪贴板内容超过 10 MB 限制'}
 
-    def choose_chat_import_file(self):
-        """Select one export and grant that exact path one short-lived import."""
-        import webview
-        if self._window is None:
-            return None
-        try:
-            files = self._window.create_file_dialog(
-                webview.OPEN_DIALOG,
-                file_types=('对话导出 (*.json;*.html;*.htm;*.zip;*.md;*.txt)',))
-            path = normalize_dialog_path(files)
-            if path:
-                self._authorize_chat_import_path(path)
-            return path
-        except Exception:
-            return None
-
-    def _authorize_chat_import_path(self, path):
-        path = os.path.realpath(os.path.abspath(os.fspath(path)))
-        stat = os.stat(path)
-        with self._chat_import_lock:
-            self._chat_import_paths[path] = (time.time() + 60, stat.st_size, stat.st_mtime_ns)
-
-    def choose_chat_file(self):
-        """Atomically select and import a chat export; preferred UI bridge API."""
-        path = self.choose_chat_import_file()
-        return self.import_chat_file(path) if path else {'ok': False, 'code': 'cancelled',
-                                                         'error': '未选择对话导出文件'}
-
-    def import_chat_file(self, path):
-        """Consume a chooser-issued path grant; arbitrary paths are rejected."""
-        try:
-            from readmd_modules import chat_import
-            normalized = os.path.realpath(os.path.abspath(os.fspath(path)))
-            with self._chat_import_lock:
-                grant = self._chat_import_paths.pop(normalized, None)
-            if not grant or time.time() > grant[0]:
-                return {'ok': False, 'code': 'unauthorized_path',
-                        'error': '请通过“选择对话文件”重新选择要导入的文件'}
-            stat = os.stat(normalized)
-            if (stat.st_size, stat.st_mtime_ns) != grant[1:]:
-                return {'ok': False, 'code': 'file_changed',
-                        'error': '选择后文件已变化，请重新选择'}
-            result = chat_import.result(chat_import.import_file(normalized))
-            result['path'] = normalized
-            return result
-        except Exception as exc:
-            if hasattr(exc, 'as_dict'):
-                return exc.as_dict()
-            return {'ok': False, 'code': 'import_failed',
-                    'error': '对话文件导入失败，请重新选择导出文件'}
 
     def choose_folder(self):
         import webview
