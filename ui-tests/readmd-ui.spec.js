@@ -86,8 +86,64 @@ test('export scroll, history and AI narrow layout remain usable', async ({ page 
   await page.locator('#btn-recent').click(); await expect(page.locator('#history-modal')).toBeVisible();
   await page.evaluate(() => document.querySelector('#ai-panel').classList.remove('hidden'));
   expect((await page.locator('#ai-panel').boundingBox()).width).toBeLessThanOrEqual(685);
-  await expect(page.locator('#ai-model')).toBeVisible();
+  await expect(page.locator('#ai-model-summary')).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('AI keeps configured keys usable, autosaves, and supports incognito history', async ({ page }) => {
+  const saves = [];
+  await page.route('**/api/ai/config', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+    current: { provider_id: 'openai', model: 'gpt-test' }, custom: [], presets: [{ id: 'openai', name: 'OpenAI', has_key: true, key_source: 'local', models: ['gpt-test'], base_url: 'https://api.example/v1' }],
+  }) }));
+  await page.route('**/api/ai/prompts', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{"templates":[]}' }));
+  await page.route('**/api/ai/history', async route => {
+    if (route.request().method() === 'POST') { saves.push(route.request().postDataJSON()); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, session: { id: 'saved-1' } }) }); }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{"sessions":[]}' });
+  });
+  await page.route('**/api/ai/chat', route => route.fulfill({ status: 200, contentType: 'text/event-stream', body: 'data: {"d":"已完成"}\n\ndata: {"done":true}\n\n' }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof toggleAiPanel === 'function');
+  await page.evaluate(() => { state.original = '# 文档\n\n内容'; toggleAiPanel(); });
+  await expect(page.locator('#ai-panel')).toBeVisible();
+  await expect(page.locator('#ai-connection-label')).toContainText('已就绪');
+  await page.locator('#ai-prompt').fill('总结');
+  await page.locator('#ai-prompt').press('Enter');
+  await expect(page.locator('#ai-output')).toContainText('已完成');
+  expect(saves.length).toBe(1);
+  await expect(page.locator('.ai-msg-copy')).toBeVisible();
+  await page.locator('#ai-incognito').check();
+  await page.locator('#ai-prompt').fill('再说一次');
+  await page.locator('#ai-prompt').press('Enter');
+  await expect(page.locator('#ai-output')).toContainText('已完成');
+  expect(saves.length).toBe(1);
+});
+
+test('chat import previews clipboard, atomic file, and public link sources', async ({ page }) => {
+  const imports = [];
+  const result = { ok: true, title: '导入测试', source: 'ChatGPT', message_count: 2, warnings: ['已忽略系统消息'], content: '# 导入测试\n\n> 来源：ChatGPT\n\n## 用户\n\n你好\n\n## AI 助手\n\n你好！\n' };
+  await page.addInitScript(() => {
+    window.pywebview = { api: {
+      authorize_clipboard_read: async () => ({ ok: true, token: 'one-time' }),
+      read_clipboard: async token => token === 'one-time' ? { text: 'clipboard chat' } : { error: 'bad token' },
+      choose_chat_file: async () => ({ ok: true, title: '文件对话', source: '文件', message_count: 2, content: '# 文件对话\n\n## 用户\n\n文件问题\n\n## AI 助手\n\n文件回答\n' }),
+      get_settings: async () => ({}), get_recent: async () => [], start_modules: async () => true,
+      get_modules_status: async () => ({ modules: {}, errors: {} }),
+    } };
+  });
+  await page.route('**/api/chat/import', route => { imports.push(route.request().postDataJSON()); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(result) }); });
+  await page.goto('/');
+  await page.locator('#btn-more').click();
+  await page.locator('#btn-chat-import').click();
+  await page.locator('#chat-import-clipboard').click();
+  await expect(page.locator('#chat-import-preview')).toBeVisible();
+  expect(imports[0]).toEqual({ text: 'clipboard chat' });
+  await page.locator('#chat-import-file').click();
+  await expect(page.locator('#chat-import-preview-title')).toHaveText('文件对话');
+  await page.locator('#chat-import-url').fill('https://share.example/chat');
+  await page.locator('#chat-import-url-go').click();
+  expect(imports[1]).toEqual({ url: 'https://share.example/chat' });
+  await page.locator('#chat-import-load').click();
+  await expect(page.locator('#ai-output')).toContainText('你好！');
 });
 
 test('toolbar filename supports accessible inline rename', async ({ page }) => {

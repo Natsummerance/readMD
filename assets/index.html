@@ -58,6 +58,7 @@
       <button id="btn-assoc" class="more-item"><span>设为默认</span><em>.md 打开方式</em></button>
       <button id="btn-share" class="more-item"><span>共享</span><em>手机扫码阅读</em></button>
       <button id="btn-fix" class="more-item"><span>修复详情</span><em>本次自动修正</em></button>
+      <button id="btn-chat-import" class="more-item"><span>导入对话</span><em>剪贴板 / 文件 / 链接</em></button>
     </div>
   </div>
 </header>
@@ -163,13 +164,54 @@
 <div id="ai-panel" class="hidden">
   <div id="ai-resize-handle" title="拖动调整 AI 面板宽度" aria-hidden="true"></div>
   <div class="ai-head">
-    <span>&#129302; AI 助手</span>
-    <button id="ai-close" class="tb-btn icon" title="关闭">&#10005;</button>
+    <span>&#129302; AI 对话</span>
+    <div class="ai-head-actions"><button id="ai-settings-open" class="tb-btn" title="连接设置">设置</button><button id="ai-close" class="tb-btn icon" title="关闭" aria-label="关闭 AI 对话">&#10005;</button></div>
   </div>
   <div class="ai-body">
-    <details class="ai-conn" open>
-      <summary class="ai-conn-summary">连接设置<span class="ai-conn-hint">自填 Base URL + API Key，可选预设</span></summary>
-      <div class="conn-grid">
+    <div class="ai-conversation-bar">
+      <div class="ai-connection-summary"><span id="ai-connection-dot" class="conn-dot" aria-hidden="true"></span><span id="ai-connection-label" aria-live="polite">正在读取连接…</span></div>
+      <span id="ai-model-summary" class="ai-model-summary" aria-label="当前模型">未选择模型</span>
+      <button id="ai-history-open" class="tb-btn" title="会话历史">历史</button>
+    </div>
+    <div class="ai-actions" aria-label="快捷动作">
+      <button class="ai-act" data-act="quick_read" title="快速阅读全文并输出概述与要点">阅读</button>
+      <button class="ai-act" data-act="polish" title="润色文档，保持结构与 Markdown 标记">润色</button>
+      <button class="ai-act" data-act="modify" title="按补充要求修改文档">修改</button>
+      <button class="ai-act" data-act="expand" title="扩充内容，补充细节与示例">扩充</button>
+      <button class="ai-act" data-act="continue" title="从文档末尾续写">续写</button>
+      <button class="ai-act" data-act="translate" title="翻译（可在下方填写目标语言）">翻译</button>
+      <button class="ai-act" data-act="ask" title="就文档内容提问">提问</button>
+    </div>
+    <div class="ai-output-wrap" aria-label="对话内容">
+      <div id="ai-output" aria-live="polite"></div>
+    </div>
+    <div class="ai-composer">
+      <textarea id="ai-prompt" rows="3" placeholder="输入问题或补充要求… Enter 发送，Shift+Enter 换行" autocomplete="off"></textarea>
+      <div class="ai-composer-actions">
+        <label class="ai-sel"><input id="ai-selection" type="checkbox"> 仅处理选中文字</label>
+        <label class="ai-sel"><input id="ai-incognito" type="checkbox"> 无痕</label>
+        <span id="ai-usage">Token 用量：—</span>
+        <span class="ai-grow"></span>
+        <button id="ai-clear-ctx" class="tb-btn" title="开始一轮新对话">新对话</button>
+        <button id="ai-stop" class="tb-btn" disabled>停止</button>
+        <button id="ai-run" class="tb-btn accent">发送</button>
+      </div>
+      <div class="ai-result-actions">
+        <button id="ai-apply" class="tb-btn" disabled>应用到文档</button>
+        <button id="ai-copy" class="tb-btn" disabled>复制最后回答</button>
+        <button id="ai-saveas" class="tb-btn" disabled>另存回答</button>
+        <span id="ai-status" role="status" aria-live="polite"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AI 设置：连接细节不打断对话 -->
+<div id="ai-settings-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="ai-settings-title">
+  <div id="ai-settings-box" class="ai-drawer-box">
+    <div class="export-head"><h3 id="ai-settings-title">AI 连接设置</h3><button id="ai-settings-close" class="tb-btn icon" aria-label="关闭连接设置">×</button></div>
+    <p class="ai-settings-intro">密钥只保存在本机。连接状态会区分鉴权、限流和网络问题。</p>
+    <div class="conn-grid">
         <div class="conn-field">
           <label for="ai-provider">提供商</label>
           <div class="conn-inline">
@@ -192,6 +234,7 @@
             <option value="messages">Anthropic messages</option>
           </select>
         </div>
+        <details class="conn-advanced"><summary>高级设置（协议、Base URL、流式）</summary><div class="conn-advanced-grid">
         <div class="conn-field">
           <label for="ai-base-url">Base URL</label>
           <div class="conn-inline">
@@ -217,47 +260,43 @@
         <div class="conn-field conn-stream">
           <label class="ai-sel"><input id="ai-stream" type="checkbox" checked> 流式输出</label>
         </div>
+        </div></details>
         <div class="conn-actions">
           <button id="ai-save-key" class="tb-btn accent">保存设置</button>
-          <span id="ai-conn-status" class="conn-status"></span>
+          <button id="ai-test-connection" class="tb-btn">测试连接</button>
+          <span id="ai-conn-status" class="conn-status" role="status" aria-live="polite"></span>
         </div>
       </div>
-    </details>
-    <div class="ai-usage-bar">Token 用量：<span id="ai-usage"></span></div>
-    <div class="ai-row">
+  </div>
+</div>
+
+<!-- AI 历史：筛选、改名和导出不占用对话区域 -->
+<div id="ai-history-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="ai-history-title">
+  <div id="ai-history-box" class="ai-drawer-box">
+    <div class="export-head"><h3 id="ai-history-title">会话历史</h3><button id="ai-history-close" class="tb-btn icon" aria-label="关闭会话历史">×</button></div>
+    <input id="ai-history-search" type="search" placeholder="搜索会话标题…" aria-label="搜索会话历史">
+    <div id="ai-history-list" class="ai-history-list"></div>
+    <div class="ai-history-actions"><button id="ai-history-copy" class="tb-btn">复制整段 Markdown</button><button id="ai-history-export" class="tb-btn">导出会话 .md</button><button id="ai-history-clear" class="tb-btn">清空历史</button></div>
+    <!-- 保留旧 ID，供自动化和旧调用兼容 -->
+    <select id="ai-session" class="hidden" aria-hidden="true"></select>
+    <button id="ai-save-session" class="hidden" tabindex="-1">存</button><button id="ai-del-session" class="hidden" tabindex="-1">删</button>
+    <div class="ai-row ai-template-row">
       <select id="ai-template" title="Prompt 模板：选择后应用到本次对话"></select>
       <button id="ai-tpl-btn" class="tb-btn" title="模板管理（新建 / 编辑 / 删除）">模板</button>
-      <select id="ai-session" title="历史会话：加载 / 切换"></select>
-      <button id="ai-save-session" class="tb-btn" title="保存当前会话">存</button>
-      <button id="ai-del-session" class="tb-btn" title="删除当前会话">删</button>
     </div>
-    <div class="ai-actions">
-      <button class="ai-act" data-act="quick_read" title="快速阅读全文并输出概述与要点">&#128218; 阅读</button>
-      <button class="ai-act" data-act="polish" title="润色文档，保持结构与 Markdown 标记">&#10024; 润色</button>
-      <button class="ai-act" data-act="modify" title="按补充要求修改文档">&#128295; 修改</button>
-      <button class="ai-act" data-act="expand" title="扩充内容，补充细节与示例">&#128218;&#8599; 扩充</button>
-      <button class="ai-act" data-act="continue" title="从文档末尾续写">&#9997;&#65039; 续写</button>
-      <button class="ai-act" data-act="translate" title="翻译（可在下方填写目标语言）">&#128172; 翻译</button>
-      <button class="ai-act" data-act="ask" title="就文档内容提问">&#10067; 提问</button>
-    </div>
-    <div class="ai-row">
-      <input id="ai-prompt" type="text" placeholder="补充要求 / 提问内容 / 翻译目标语言（可选）" autocomplete="off">
-    </div>
-    <div class="ai-row ai-row2">
-      <label class="ai-sel"><input id="ai-selection" type="checkbox"> 仅处理选中文字</label>
-      <button id="ai-clear-ctx" class="tb-btn" title="清空对话上下文，开始新一轮对话">清空</button>
-    </div>
-    <div class="ai-output-wrap">
-      <div id="ai-output"></div>
-    </div>
-    <div class="ai-foot">
-      <button id="ai-run" class="tb-btn accent">&#10148; 发送</button>
-      <button id="ai-stop" class="tb-btn" disabled>&#9632; 停止</button>
-      <button id="ai-apply" class="tb-btn" disabled>应用到文档</button>
-      <button id="ai-copy" class="tb-btn" disabled>复制</button>
-      <button id="ai-saveas" class="tb-btn" disabled>另存为</button>
-      <span id="ai-status"></span>
-    </div>
+  </div>
+</div>
+
+<!-- 对话导入：内容只在明确操作后读取，先预览再保存 -->
+<div id="chat-import-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="chat-import-title">
+  <div id="chat-import-box">
+    <div class="export-head"><h3 id="chat-import-title">导入对话</h3><button id="chat-import-close" class="tb-btn icon" aria-label="关闭导入对话">×</button></div>
+    <p class="fix-note">选择来源后先安全解析预览；不会导入密钥、系统提示或工具消息。</p>
+    <div class="chat-import-sources"><button id="chat-import-clipboard" class="tb-btn accent">从剪贴板读取</button><button id="chat-import-file" class="tb-btn">选择本地文件</button><label class="chat-import-url"><input id="chat-import-url" type="url" placeholder="公开分享链接（https://…）"><button id="chat-import-url-go" class="tb-btn">解析链接</button></label></div>
+    <input id="chat-import-browser-file" class="hidden" type="file" accept=".json,.html,.htm,.zip,.md,.txt">
+    <div id="chat-import-status" class="chat-import-status" role="status" aria-live="polite">请选择一个来源。</div>
+    <section id="chat-import-preview" class="chat-import-preview hidden" aria-label="导入预览"><h4 id="chat-import-preview-title"></h4><p id="chat-import-preview-meta"></p><ul id="chat-import-warnings"></ul><pre id="chat-import-markdown"></pre></section>
+    <div class="chat-import-actions"><button id="chat-import-load" class="tb-btn" disabled>载入 AI 会话</button><button id="chat-import-save" class="tb-btn accent" disabled>保存 Markdown</button></div>
   </div>
 </div>
 
