@@ -151,5 +151,55 @@ class InstallerHtmlTests(unittest.TestCase):
         self.assertLess(html.index('id="err-card"'), html.index('id="recovery-actions"'))
 
 
+class InstallerGuiStateTests(unittest.TestCase):
+    """升级（已安装）时目录框应自动预填已检测到的旧目录（v2.2.5 M4）。"""
+
+    def _run_gui(self):
+        import sys
+        fake_webview = mock.Mock()
+        captured = {}
+
+        def create_window(title, url, **kwargs):
+            captured['api'] = kwargs.get('js_api')
+            return mock.Mock()
+
+        fake_webview.create_window.side_effect = create_window
+        with mock.patch.dict(sys.modules, {'webview': fake_webview}), \
+             mock.patch.object(setup, 'server_port', 0, create=True), \
+             mock.patch.object(setup, 'is_win7', return_value=False), \
+             mock.patch.object(setup, 'app_running', return_value=False), \
+             mock.patch.object(setup, 'bundled_webview2_runtime_dir', return_value=None):
+            setup.run_gui(False)
+        return captured['api'].get_state()
+
+    def test_gui_prefills_detected_dir_when_upgrading(self):
+        with tempfile.TemporaryDirectory() as parent:
+            old_dir = os.path.join(parent, 'ReadMD')
+            os.makedirs(old_dir)
+            with open(os.path.join(old_dir, setup.APP_EXE), 'w', encoding='utf-8') as f:
+                f.write('old')
+            with open(os.path.join(old_dir, 'install.json'), 'w', encoding='utf-8') as f:
+                json.dump({'version': '1.4.0'}, f)
+            default_dir = os.path.join(parent, 'AnotherDefault')
+            # 模拟注册表命中：检测到的旧目录不同于默认目录，升级时必须预填旧目录。
+            with mock.patch.object(setup, 'detect_install_dir', return_value=old_dir), \
+                 mock.patch.object(setup, 'default_install_dir', return_value=default_dir):
+                state = self._run_gui()
+                detected = setup.detect_install_dir()
+            self.assertEqual(state['installed'], {'dir': old_dir, 'version': '1.4.0'})
+            self.assertEqual(state['default_dir'], detected)
+            self.assertEqual(state['default_dir'], old_dir)
+            self.assertNotEqual(state['default_dir'], default_dir)
+
+    def test_gui_uses_default_dir_when_not_installed(self):
+        with tempfile.TemporaryDirectory() as parent:
+            default_dir = os.path.join(parent, 'ReadMD')
+            with mock.patch.object(setup, 'detect_install_dir', return_value=None), \
+                 mock.patch.object(setup, 'default_install_dir', return_value=default_dir):
+                state = self._run_gui()
+            self.assertIsNone(state['installed'])
+            self.assertEqual(state['default_dir'], default_dir)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -1044,7 +1044,7 @@ def run_gui(uninstall_mode):
     state = {
         'mode': 'uninstall' if (uninstall_mode or is_uninstaller()) else 'install',
         'installed': inst,
-        'default_dir': default_install_dir(),
+        'default_dir': (inst or {}).get('dir') or default_install_dir(),
         'version': APP_VERSION,
         'running': app_running(),
         'win7': is_win7(),
