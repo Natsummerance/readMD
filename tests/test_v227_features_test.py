@@ -1,15 +1,21 @@
 """Regression and unit test suite for ReadMD v2.2.7 features."""
 
 import os
+import sys
 import unittest
 import re
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
 import readmd
 from installer import setup_app
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INDEX_HTML = os.path.join(ROOT_DIR, 'assets', 'index.html')
 STYLE_CSS = os.path.join(ROOT_DIR, 'assets', 'style.css')
 APP_JS = os.path.join(ROOT_DIR, 'assets', 'app.js')
+
 
 
 class TestV227Features(unittest.TestCase):
