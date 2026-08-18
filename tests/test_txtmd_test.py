@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import os, sys, tempfile, unittest
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 from src.readmd_modules import txtmd
 

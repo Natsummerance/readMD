@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Regression tests for desktop bridge file operations."""
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import json
 import os
 import sys
