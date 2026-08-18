@@ -2954,6 +2954,11 @@ def main():
 
     # 关闭按钮 → 隐藏到托盘（真正退出走托盘“退出”）
     def _on_closing():
+        # Startup probes must destroy the window so the frozen process can
+        # flush its JSON report and exit.  Hiding it would leave CI waiting on
+        # an unreachable tray process.
+        if args.startup_probe:
+            return True
         # Before the UI reports ready there is no tray affordance. Let the
         # native close proceed instead of creating a hidden, unreachable app.
         if not api._page_ready:
