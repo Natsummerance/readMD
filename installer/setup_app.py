@@ -25,8 +25,16 @@ import uuid
 try:
     import winreg
 except ImportError:
-    winreg = None
+    class _MockWinreg:
+        REG_SZ = 1
+        REG_EXPAND_SZ = 2
+        REG_DWORD = 4
+        HKEY_CURRENT_USER = None
+        HKEY_LOCAL_MACHINE = None
+        KEY_SET_VALUE = 0
+    winreg = _MockWinreg()
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
 
 from urllib.parse import urlparse
 
