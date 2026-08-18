@@ -43,16 +43,17 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| **ReadMDSetup-v2.2.6.exe** | Windows 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级（未签名） |
-| **ReadMD-portable-v2.2.6.exe** | Windows 便携版，免安装，双击直接运行（未签名） |
-| **ReadMD-macos-x64-v2.2.6.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
-| **ReadMD-macos-arm64-v2.2.6.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
+| **ReadMDSetup-v2.2.7.exe** | Windows 安装包，动画安装向导，可设为 `.md` 默认打开方式；已安装时运行即升级（未签名） |
+| **ReadMD-portable-v2.2.7.exe** | Windows 便携版，免安装，双击直接运行（未签名） |
+| **ReadMD-macos-x64-v2.2.7.zip** | Intel Mac 原生 Cocoa/Vision 未签名版 |
+| **ReadMD-macos-arm64-v2.2.7.zip** | Apple Silicon 原生 Cocoa/Vision 未签名版 |
 | **SHA256SUMS.txt** | 四个发布文件的 SHA-256 完整性校验清单 |
-| **ReadMDSetup-2.1.1-Beta-win7-x64.exe** | **Win7 兼容版**（v2.1.1 Beta，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
+| **ReadMDSetup-2.2.7-win7-x64.exe** | **Win7 兼容版**（v2.2.7 Win7，仅 Win10/11 之外的 Windows 7 SP1 x64 机器使用） |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
 >
-> v2.2.6 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。所有发布包均未签名：Windows 如出现 SmartScreen，请先核验 SHA-256 后通过“更多信息 → 仍要运行”；macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动请在 Finder 中右键 `ReadMD.app` →“打开”。
+> v2.2.7 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。所有发布包均未签名：Windows 如出现 SmartScreen，请先核验 SHA-256 后通过“更多信息 → 仍要运行”；macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动请在 Finder 中右键 `ReadMD.app` →“打开”。
+
 
 > ReadMD 免费使用，不要求订阅或内置账号。下载文件和 `SHA256SUMS.txt` 后，Windows 在 PowerShell 运行 `Get-FileHash .\文件名 -Algorithm SHA256`，macOS 在终端运行 `shasum -a 256 文件名`，把输出与同名清单行完全比对。校验通过代表下载完整，不代表代码签名。
 
@@ -246,7 +247,18 @@ python release.py --update             rem 更新已存在 Release 的标题与�
 
 ## 📝 更新日志
 
+- **v2.2.7**：**多标签页窗口模式 + 全格式拖拽 + 导出高保真预览**
+  - 🗂️ **多标签页系统**：支持打开多个页面，标签拖拽排序、双击重命名（联动磁盘文件/虚拟文档）、溢出自动折叠（Hover 查看/Click 锁定）、右键菜单，全部关闭后自动返回主页
+  - 📥 **全格式拖拽支持与悬浮动效**：全局拦截拖拽并智能分流（Markdown 标签页打开 / Office & PDF 批量转换 / URL 网页抓取 / 纯文本建档），配备毛玻璃光晕动效
+  - 📋 **剪贴板极速建档**：任意界面 `Ctrl+V` 生成虚拟 MD 文档，`Ctrl+S` 可指定位置保存
+  - 📑 **导出文档实时微缩预览**：配置参数默认折叠收拢，左侧下方嵌入高保真排版小窗并支持点击放大预览
+  - 🔙 **返回主页移至底部栏**：移入底部状态栏右侧模块区旁，视觉更统一
+  - 🛠️ **修复侧边栏与预览按键**：修复展开文件树时点击目录按钮直接收回侧边栏；修复编辑界面顶部预览方向按键位置
+  - 🌐 **网页抓取本地网络放行**：默认允许局域网与本地网络页面解析
+  - 🪟 **Win7 兼容版同步升级**：升级 Win7 打包构建链至 v2.2.7
+
 - **v2.2.6**：**UX 全面优化 + 项目结构重构**
+
   - ✨ **智能按钮状态管理**：未打开文件时，导出 / 字号调整按钮自动禁用，避免误操作
   - 🏠 **主页六模块布局**：固定展示「打开 Markdown」「打开文件夹」「AI 助手」「万物转 MD」「网页转 MD」「扫描转 MD」六大核心功能，界面更清晰
   - 📂 **VSCode 风格目录树**：打开文件夹后以树形结构展示，支持折叠/展开，自动过滤上级目录名称，浏览体验大幅提升

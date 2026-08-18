@@ -8,8 +8,9 @@ rem ============================================================
 setlocal
 cd /d "%~dp0..\.."
 title ReadMD Packager
-set "READMD_VERSION=2.2.6"
+set "READMD_VERSION=2.2.7"
 set "READMD_VERSION_OVERRIDE=%READMD_VERSION%"
+
 
 echo [1/5] Checking Python for ReadMD v%READMD_VERSION% ...
 where python >nul 2>nul

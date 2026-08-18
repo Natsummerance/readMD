@@ -57,7 +57,9 @@ def _bundle_version():
 
 
 APP_VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-               or _bundle_version() or '2.2.6')
+               or _bundle_version() or '2.2.7')
+
+
 PUBLISHER = 'Natsummerance'
 PROG_ID = 'ReadMD.markdown'
 EXTENSIONS = ['.md', '.markdown', '.mdown', '.mkd']
@@ -1059,14 +1061,14 @@ def run_gui(uninstall_mode):
     try:
         window = webview.create_window(
             'ReadMD 安装程序', url,
-            js_api=api, width=720, height=480, min_size=(720, 480),
-            frameless=True, easy_drag=True, shadow=True, resizable=True,
-            text_select=True, background_color='#0a0e18')
+            js_api=api, width=760, height=520, min_size=(560, 380),
+            resizable=True, text_select=True, background_color='#0a0e18')
     except Exception:
         window = webview.create_window(
             'ReadMD 安装程序', url,
-            js_api=api, width=720, height=480, min_size=(720, 480),
+            js_api=api, width=760, height=520, min_size=(560, 380),
             text_select=True, background_color='#0a0e18')
+
     api._window = window
     # Win7：安装器 UI 同样使用内置固定版运行时（打过补丁的 pywebview）
     rt = bundled_webview2_runtime_dir()

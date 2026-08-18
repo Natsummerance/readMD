@@ -104,7 +104,8 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-           or _bundle_version() or '2.2.6')
+           or _bundle_version() or '2.2.7')
+
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 CONVERT_EXTS = ('.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm',

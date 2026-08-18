@@ -3,7 +3,7 @@ name: Test, package and release ReadMD
 on:
   push:
     branches: [main]
-    tags: ['v2.2.6']
+    tags: ['v2.2.7', 'v*']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -12,8 +12,9 @@ permissions:
   contents: read
 
 env:
-  READMD_VERSION: '2.2.6'
+  READMD_VERSION: '2.2.7'
   PYTHONUTF8: '1'
+
 
 jobs:
   windows-test:
@@ -41,6 +42,7 @@ jobs:
           python tests/test_web_test.py
           python tests/test_api_test.py
           python tests/test_installer_setup_test.py
+          python tests/test_v227_features_test.py
           python tests/test_performance_test.py
           python tools/privacy_scan.py
           python readmd.py --selftest
@@ -83,11 +85,13 @@ jobs:
           python tests/test_fix_test.py
           python tests/test_convert_test.py
           python tests/test_api_test.py
+          python tests/test_v227_features_test.py
           python readmd.py --selftest
+
 
   windows-package:
     name: Package · Windows x64
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/tags/v2.2.6'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     needs: windows-test
     runs-on: windows-latest
     steps:
@@ -138,7 +142,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Upload tagged release assets
-        if: github.ref == 'refs/tags/v2.2.6'
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: release-windows
@@ -149,7 +153,7 @@ jobs:
 
   macos-package:
     name: Package · macOS ${{ matrix.arch }}
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/tags/v2.2.6'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     needs: macos-test
     strategy:
       fail-fast: false
@@ -200,7 +204,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Upload tagged release asset
-        if: github.ref == 'refs/tags/v2.2.6'
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: release-macos-${{ matrix.arch }}
@@ -208,8 +212,8 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Publish ReadMD v2.2.6
-    if: github.ref == 'refs/tags/v2.2.6'
+    name: Publish ReadMD v2.2.7
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: [windows-package, macos-package]
     runs-on: ubuntu-latest
     permissions:
@@ -228,24 +232,24 @@ jobs:
         run: |
           set -euo pipefail
           test "$(find release-assets -maxdepth 1 -type f | wc -l)" -eq 4
-          for asset in ReadMDSetup-v2.2.6.exe ReadMD-portable-v2.2.6.exe ReadMD-macos-x64-v2.2.6.zip ReadMD-macos-arm64-v2.2.6.zip; do
+          for asset in ReadMDSetup-v2.2.7.exe ReadMD-portable-v2.2.7.exe ReadMD-macos-x64-v2.2.7.zip ReadMD-macos-arm64-v2.2.7.zip; do
             test -s "release-assets/$asset"
           done
-          grep -F "or _bundle_version() or '2.2.6'" readmd.py
-          grep -F "or _bundle_version() or '2.2.6'" installer/setup_app.py
-          grep -F "version='2.2.6'" release/ReadMD-macOS.spec
+          grep -F "or _bundle_version() or '2.2.7'" readmd.py
+          grep -F "or _bundle_version() or '2.2.7'" installer/setup_app.py
+          grep -F "version='2.2.7'" release/ReadMD-macOS.spec
           test -s assets/vendor/defuddle.bundle.js
           test -s assets/vendor/defuddle.LICENSE.txt
           rm -rf verify-macos
           mkdir -p verify-macos/x64 verify-macos/arm64
-          unzip -q release-assets/ReadMD-macos-x64-v2.2.6.zip -d verify-macos/x64
-          unzip -q release-assets/ReadMD-macos-arm64-v2.2.6.zip -d verify-macos/arm64
+          unzip -q release-assets/ReadMD-macos-x64-v2.2.7.zip -d verify-macos/x64
+          unzip -q release-assets/ReadMD-macos-arm64-v2.2.7.zip -d verify-macos/arm64
           python - <<'PY'
           import plistlib
           for arch in ('x64', 'arm64'):
               with open('verify-macos/%s/ReadMD.app/Contents/Info.plist' % arch, 'rb') as handle:
                   info = plistlib.load(handle)
-              assert info['CFBundleShortVersionString'] == '2.2.6', (arch, info)
+              assert info['CFBundleShortVersionString'] == '2.2.7', (arch, info)
           print('macOS bundle versions OK')
           PY
           file verify-macos/x64/ReadMD.app/Contents/MacOS/ReadMD | grep -E 'x86_64|x86-64'
@@ -255,17 +259,18 @@ jobs:
             test -s "verify-macos/$arch/ReadMD.app/Contents/Resources/assets/vendor/defuddle.LICENSE.txt"
           done
           python tools/privacy_scan.py release-assets verify-macos
-          (cd release-assets && sha256sum ReadMDSetup-v2.2.6.exe ReadMD-portable-v2.2.6.exe ReadMD-macos-x64-v2.2.6.zip ReadMD-macos-arm64-v2.2.6.zip > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
+          (cd release-assets && sha256sum ReadMDSetup-v2.2.7.exe ReadMD-portable-v2.2.7.exe ReadMD-macos-x64-v2.2.7.zip ReadMD-macos-arm64-v2.2.7.zip > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
           cat release-assets/SHA256SUMS.txt >> "$GITHUB_STEP_SUMMARY"
       - uses: softprops/action-gh-release@v2
         with:
-          name: ReadMD v2.2.6
+          name: ReadMD v2.2.7
           body_path: release/release_notes.md
           files: |
-            release-assets/ReadMDSetup-v2.2.6.exe
-            release-assets/ReadMD-portable-v2.2.6.exe
-            release-assets/ReadMD-macos-x64-v2.2.6.zip
-            release-assets/ReadMD-macos-arm64-v2.2.6.zip
+            release-assets/ReadMDSetup-v2.2.7.exe
+            release-assets/ReadMD-portable-v2.2.7.exe
+            release-assets/ReadMD-macos-x64-v2.2.7.zip
+            release-assets/ReadMD-macos-arm64-v2.2.7.zip
             release-assets/SHA256SUMS.txt
           fail_on_unmatched_files: true
+
 

@@ -28,8 +28,11 @@ function apiFetch(url, opts) {
 
 const MD_RE = /\.(md|markdown|mdown|mkd|mdx|txt)$/i;
 const IMG_RE = /\.(png|jpe?g|bmp|webp|gif|tiff?)$/i;
+const CONVERT_EXTS = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm', '.epub', '.mobi', '.rtf', '.odt', '.csv', '.tsv', '.json', '.xml', '.yaml', '.yml', '.rst', '.tex', '.latex'];
 
 const state = {
+  tabs: [],            // 多标签列表：{ id, mode, source, path, dir, name, title, content, original, fixed, fixes, stats, size, mtime, encoding, webAssets, isDirty, scrollPos, isVirtual }
+  activeTabId: null,   // 当前活动标签 ID
   file: null,          // 当前真实文件路径（虚拟文档为 null）
   dir: null,
   mtime: 0,
@@ -39,8 +42,8 @@ const state = {
   stats: null,
   original: '',
   fixed: '',
-  mode: 'welcome',     // file | virtual
-  source: '',          // file | convert | ocr | url
+  mode: 'welcome',     // file | virtual | welcome
+  source: '',          // file | convert | ocr | url | clipboard
   sourceName: '',
   webAssets: [],       // 网页图片临时资源；另存时复制到 <文档名>.assets
   theme: 'auto',
@@ -71,6 +74,7 @@ const state = {
     fmt: 'pdf', defaults: null, presets: {}, custom: {}, options: null, last: null, ready: false,
   },
 };
+
 
 /* ---------------- 设置 ---------------- */
 
@@ -247,6 +251,303 @@ async function addRecent(path) {
   if (hasPy && path) { try { await py.add_recent(path); } catch (e) { /* ignore */ } }
 }
 
+/* ---------------- 多标签页系统 (Multi-Tab Management) ---------------- */
+
+function getActiveTab() {
+  return state.tabs.find(t => t.id === state.activeTabId) || null;
+}
+
+function findTabByPath(filePath) {
+  if (!filePath) return null;
+  const targetKey = normalizePath(filePath);
+  return state.tabs.find(t => t.path && normalizePath(t.path) === targetKey) || null;
+}
+
+function syncStateFromActiveTab() {
+  const tab = getActiveTab();
+  if (!tab) return;
+  state.mode = tab.mode || 'file';
+  state.source = tab.source || 'file';
+  state.sourceName = tab.title || tab.name || '';
+  state.file = tab.path;
+  state.dir = tab.dir || '';
+  state.mtime = tab.mtime || 0;
+  state.size = tab.size || 0;
+  state.encoding = tab.encoding || 'utf-8';
+  state.fixed = tab.content || '';
+  state.original = tab.original || tab.content || '';
+  state.fixes = tab.fixes || [];
+  state.stats = tab.stats || {};
+  state.webAssets = tab.webAssets || [];
+}
+
+function renderTabsBar() {
+  const bar = $('doc-tabs-bar');
+  const secBar = $('doc-tabs-secondary-bar');
+  const dropdown = $('doc-tabs-dropdown');
+  const overflowWrap = $('doc-tabs-overflow-wrap');
+  const btnHome = $('btn-home');
+
+  if (state.tabs.length === 0) {
+    if (bar) bar.innerHTML = '';
+    if (secBar) { secBar.innerHTML = ''; secBar.classList.add('hidden'); }
+    if (overflowWrap) overflowWrap.classList.add('hidden');
+    if (btnHome) btnHome.classList.add('hidden');
+    return;
+  }
+
+  if (btnHome) btnHome.classList.remove('hidden');
+
+  const createTabEl = (tab) => {
+    const el = document.createElement('div');
+    el.className = 'tab-item' + (tab.id === state.activeTabId ? ' active' : '');
+    el.dataset.tabId = tab.id;
+    el.draggable = true;
+    el.title = tab.path || tab.title || tab.name;
+
+    if (tab.isDirty) {
+      const dot = document.createElement('span');
+      dot.className = 'tab-dirty';
+      dot.title = '未保存';
+      el.appendChild(dot);
+    }
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'tab-title';
+    titleSpan.textContent = tab.title || tab.name || '未命名';
+    el.appendChild(titleSpan);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'tab-close';
+    closeBtn.innerHTML = '&times;';
+    closeBtn.title = '关闭标签';
+    closeBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      closeTab(tab.id);
+    });
+    el.appendChild(closeBtn);
+
+    el.addEventListener('click', () => switchTab(tab.id));
+
+    el.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      startTabInlineRename(tab, titleSpan, el);
+    });
+
+    el.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      openTabContextMenu(e, tab.id);
+    });
+
+    el.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', tab.id);
+      e.dataTransfer.effectAllowed = 'move';
+      el.classList.add('tab-dragging');
+    });
+    el.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+    el.addEventListener('drop', e => {
+      e.preventDefault();
+      const srcId = e.dataTransfer.getData('text/plain');
+      if (srcId && srcId !== tab.id) {
+        reorderTabs(srcId, tab.id);
+      }
+    });
+    el.addEventListener('dragend', () => el.classList.remove('tab-dragging'));
+
+    return el;
+  };
+
+  if (bar) {
+    bar.innerHTML = '';
+    state.tabs.forEach(tab => bar.appendChild(createTabEl(tab)));
+  }
+
+  if (dropdown) {
+    dropdown.innerHTML = '';
+    state.tabs.forEach(tab => {
+      const item = document.createElement('button');
+      item.className = 'doc-tabs-dropdown-item' + (tab.id === state.activeTabId ? ' active' : '');
+      item.innerHTML = '<span>' + (tab.title || tab.name) + (tab.isDirty ? ' &bull;' : '') + '</span><small>' + (tab.path || (tab.isVirtual ? '虚拟' : '')) + '</small>';
+      item.addEventListener('click', () => {
+        switchTab(tab.id);
+        dropdown.classList.add('hidden');
+      });
+      dropdown.appendChild(item);
+    });
+  }
+
+  if (bar && overflowWrap) {
+    const isOverflow = bar.scrollWidth > bar.clientWidth + 6;
+    overflowWrap.classList.toggle('hidden', !isOverflow);
+  }
+
+  if (secBar) {
+    if (window.innerWidth < 650 && state.tabs.length > 0) {
+      secBar.innerHTML = '';
+      state.tabs.forEach(tab => secBar.appendChild(createTabEl(tab)));
+      secBar.classList.remove('hidden');
+      if (bar && bar.parentElement) bar.parentElement.classList.add('hidden');
+    } else {
+      secBar.classList.add('hidden');
+      if (bar && bar.parentElement) bar.parentElement.classList.remove('hidden');
+    }
+  }
+}
+
+function startTabInlineRename(tab, titleSpan, tabEl) {
+  if (tabEl.querySelector('.tab-title-input')) return;
+  const currentTitle = tab.title || tab.name || '';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'tab-title-input';
+  input.value = currentTitle;
+  
+  titleSpan.classList.add('hidden');
+  tabEl.insertBefore(input, titleSpan);
+  input.focus();
+  input.select();
+
+  let committed = false;
+  const commit = async () => {
+    if (committed) return;
+    committed = true;
+    const newName = input.value.trim();
+    input.remove();
+    titleSpan.classList.remove('hidden');
+    if (newName && newName !== currentTitle) {
+      await renameTab(tab.id, newName);
+    }
+  };
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { e.preventDefault(); committed = true; input.remove(); titleSpan.classList.remove('hidden'); }
+  });
+  input.addEventListener('blur', commit);
+}
+
+async function renameTab(tabId, newTitle) {
+  const tab = state.tabs.find(t => t.id === tabId);
+  if (!tab || !newTitle) return;
+  if (tab.mode === 'file' && tab.path && hasPy && py.rename_file) {
+    busy(true);
+    try {
+      const r = await py.rename_file(tab.path, newTitle);
+      if (r && r.ok) {
+        tab.path = r.path;
+        tab.name = r.name;
+        tab.title = r.name;
+        if (state.activeTabId === tab.id) {
+          state.file = r.path;
+          document.title = r.name + ' - ReadMD';
+          setFileTitle(r.name, true, r.path);
+        }
+        showToast('已重命名为 ' + r.name);
+      } else {
+        showToast('重命名失败：' + ((r && r.error) || '重命名失败'));
+      }
+    } catch (e) {
+      showToast('重命名失败：' + e.message);
+    } finally {
+      busy(false);
+    }
+  } else {
+    tab.title = newTitle;
+    tab.name = newTitle;
+    if (state.activeTabId === tab.id) {
+      state.sourceName = newTitle;
+      document.title = newTitle + ' - ReadMD';
+    }
+  }
+  renderTabsBar();
+}
+
+function reorderTabs(srcId, destId) {
+  const srcIdx = state.tabs.findIndex(t => t.id === srcId);
+  const destIdx = state.tabs.findIndex(t => t.id === destId);
+  if (srcIdx < 0 || destIdx < 0) return;
+  const [removed] = state.tabs.splice(srcIdx, 1);
+  state.tabs.splice(destIdx, 0, removed);
+  renderTabsBar();
+}
+
+function openTabContextMenu(e, tabId) {
+  const menu = $('tab-context-menu');
+  if (!menu) return;
+  menu.dataset.tabId = tabId;
+  menu.style.left = Math.min(window.innerWidth - 180, e.clientX) + 'px';
+  menu.style.top = Math.min(window.innerHeight - 200, e.clientY) + 'px';
+  menu.classList.remove('hidden');
+}
+
+function switchTab(tabId) {
+  if (state.activeTabId === tabId) return;
+  const prevTab = getActiveTab();
+  if (prevTab) {
+    if (state.editing) {
+      prevTab.content = getEditContent();
+      prevTab.fixed = prevTab.content;
+      prevTab.isDirty = true;
+    }
+    prevTab.scrollPos = $('content').scrollTop || 0;
+  }
+  exitEdit();
+  state.activeTabId = tabId;
+  syncStateFromActiveTab();
+  const nextTab = getActiveTab();
+  if (!nextTab) return;
+  setFixes(nextTab.fixes || [], nextTab.stats || {});
+  renderContent(nextTab.content, nextTab.title || nextTab.name);
+  document.title = (nextTab.title || nextTab.name) + ' - ReadMD';
+  setFileTitle(nextTab.title || nextTab.name, !nextTab.isVirtual && hasPy, nextTab.path);
+  if (nextTab.scrollPos) {
+    requestAnimationFrame(() => { $('content').scrollTop = nextTab.scrollPos; });
+  }
+  updateStatus();
+  renderTabsBar();
+  afterRender();
+}
+
+async function closeTab(tabId, force = false) {
+  const tab = state.tabs.find(t => t.id === tabId);
+  if (!tab) return;
+  if (tab.isDirty && !force) {
+    const ok = confirm('文档「' + (tab.title || tab.name) + '」有未保存的修改，确定要关闭吗？');
+    if (!ok) return;
+  }
+  const idx = state.tabs.findIndex(t => t.id === tabId);
+  state.tabs.splice(idx, 1);
+  if (state.activeTabId === tabId) {
+    if (state.tabs.length > 0) {
+      const nextIdx = Math.min(idx, state.tabs.length - 1);
+      switchTab(state.tabs[nextIdx].id);
+    } else {
+      state.activeTabId = null;
+      goHome();
+    }
+  }
+  renderTabsBar();
+}
+
+function closeOtherTabs(keepTabId) {
+  const keepTab = state.tabs.find(t => t.id === keepTabId);
+  if (!keepTab) return;
+  state.tabs = [keepTab];
+  state.activeTabId = keepTabId;
+  syncStateFromActiveTab();
+  renderTabsBar();
+}
+
+function closeAllTabs() {
+  state.tabs = [];
+  state.activeTabId = null;
+  goHome();
+  renderTabsBar();
+}
+
 /* ---------------- 打开 / 渲染 ---------------- */
 
 function setFileTitle(name, canRename, fullPath) {
@@ -256,87 +557,101 @@ function setFileTitle(name, canRename, fullPath) {
   el.disabled = !canRename;
   el.title = canRename ? ((fullPath || name) + '\n点击重命名（F2）') : (name || '');
   el.setAttribute('aria-label', canRename ? ('当前文件 ' + name + '，点击重命名') : (name || '当前文档'));
+  if (state.tabs && state.tabs.length > 0) {
+    el.classList.add('hidden');
+    const tabsCont = $('doc-tabs-container');
+    if (tabsCont) tabsCont.classList.remove('hidden');
+  } else if (name) {
+    el.classList.remove('hidden');
+    const tabsCont = $('doc-tabs-container');
+    if (tabsCont) tabsCont.classList.add('hidden');
+  }
 }
 
 function cancelFileRename() {
   const wrap = $('file-rename-wrap');
   if (wrap) wrap.remove();
   const title = $('file-title');
-  if (title) title.classList.remove('hidden');
+  if (title && (!state.tabs || state.tabs.length === 0)) title.classList.remove('hidden');
 }
 
 function openFileRename() {
-  if (!hasPy || state.mode !== 'file' || !state.file) {
-    showToast('请先在桌面应用中打开本地 Markdown 文件');
-    return;
-  }
   if (state.editing) {
-    showToast('请先保存或取消当前编辑，再重命名');
+    showToast('编辑模式下不可重命名，请先保存或退出编辑');
     return;
   }
-  if ($('file-rename-wrap')) return;
-  const name = String(state.file).split(/[\\/]/).pop();
-  const dot = name.lastIndexOf('.');
-  const stem = dot > 0 ? name.slice(0, dot) : name;
-  const extension = dot > 0 ? name.slice(dot) : '';
-  const wrap = document.createElement('span');
-  wrap.id = 'file-rename-wrap'; wrap.className = 'file-rename-wrap';
-  const input = document.createElement('input');
-  input.id = 'file-rename-input'; input.type = 'text'; input.value = stem;
-  input.maxLength = Math.max(1, 255 - extension.length);
-  input.setAttribute('aria-label', '新文件名');
-  input.autocomplete = 'off'; input.spellcheck = false;
-  const ext = document.createElement('span');
-  ext.id = 'file-rename-ext'; ext.className = 'file-rename-ext'; ext.textContent = extension;
-  wrap.appendChild(input); wrap.appendChild(ext);
+  const activeTab = getActiveTab();
+  if (activeTab && state.tabs.length > 0) {
+    const bar = $('doc-tabs-bar');
+    const tabEl = bar ? bar.querySelector(`[data-tab-id="${activeTab.id}"]`) : null;
+    if (tabEl) {
+      const titleSpan = tabEl.querySelector('.tab-title');
+      if (titleSpan) { startTabInlineRename(activeTab, titleSpan, tabEl); return; }
+    }
+  }
   const title = $('file-title');
-  title.classList.add('hidden'); title.insertAdjacentElement('afterend', wrap);
-  let committing = false;
-  const commit = async () => {
-    if (committing) return;
-    const nextStem = input.value;
-    if (nextStem === stem) { cancelFileRename(); return; }
-    committing = true; input.disabled = true; busy(true);
-    try {
-      const oldPath = state.file;
-      const result = await py.rename_file(oldPath, nextStem);
-      if (!result || !result.ok) {
-        showToast('重命名失败：' + ((result && result.error) || '未知错误'));
-        input.disabled = false; committing = false; input.focus(); input.select();
-        return;
+  if (!title) return;
+  const current = state.file || title.textContent || '';
+  if (!current) return;
+  const oldName = current.split(/[\\/]/).pop() || '';
+  const dot = oldName.lastIndexOf('.');
+  const stem = dot > 0 ? oldName.slice(0, dot) : oldName;
+  const ext = dot > 0 ? oldName.slice(dot) : '';
+
+  cancelFileRename();
+  title.classList.add('hidden');
+  const wrap = document.createElement('div');
+  wrap.id = 'file-rename-wrap';
+  wrap.className = 'file-rename-wrap';
+  wrap.innerHTML = '<input id="file-rename-input" class="file-rename-input" value="' + stem.replace(/"/g, '&quot;') + '" spellcheck="false" autocomplete="off" aria-label="文件名称"><span id="file-rename-ext" class="file-rename-ext">' + ext + '</span>';
+  title.parentNode.insertBefore(wrap, title.nextSibling);
+
+  const input = wrap.querySelector('#file-rename-input');
+  input.focus();
+  input.select();
+
+  let committed = false;
+  async function commit() {
+    if (committed) return;
+    committed = true;
+    const nextStem = input.value.trim();
+    if (!nextStem || nextStem === stem) { cancelFileRename(); return; }
+    if (hasPy && py.rename_file && state.file) {
+      try {
+        const res = await py.rename_file(state.file, nextStem);
+        if (res && res.ok) {
+          state.file = res.path;
+          state.sourceName = res.name;
+          setFileTitle(res.name, true, res.path);
+          addRecent(res.path);
+          showToast('已重命名为：' + res.name);
+        } else {
+          showToast('重命名失败：' + ((res && res.error) || '未知错误'));
+        }
+      } catch (e) {
+        showToast('重命名失败：' + e.message);
       }
-      const newPath = result.path;
-      const oldKey = normalizePath(oldPath), newKey = normalizePath(newPath);
-      if (Object.prototype.hasOwnProperty.call(state.scrollPos, oldKey)) {
-        state.scrollPos[newKey] = state.scrollPos[oldKey]; delete state.scrollPos[oldKey];
-      }
-      state.history = state.history.map(p => normalizePath(p) === oldKey ? newPath : p);
-      state.folderFiles = state.folderFiles.map(p => normalizePath(p) === oldKey ? newPath : p);
-      state.file = newPath;
-      state.dir = String(newPath).replace(/[\\/][^\\/]*$/, '');
-      const newName = result.name || String(newPath).split(/[\\/]/).pop();
-      document.title = newName + ' - ReadMD';
-      setFileTitle(newName, true, newPath);
-      saveLastFile(newPath); addRecent(newPath); updateStatus();
-      if (state.folderFiles.length) renderFolderList();
-      cancelFileRename();
-      const warnings = result.warnings || [];
-      showToast(warnings.length ? ('已重命名；' + warnings[0]) : ('已重命名为 ' + newName), warnings.length ? 4200 : 2400);
-    } catch (e) {
-      showToast('重命名失败：' + e.message);
-      input.disabled = false; committing = false; input.focus(); input.select();
-    } finally { busy(false); }
-  };
+    } else {
+      setFileTitle(nextStem + ext, true, nextStem + ext);
+    }
+    cancelFileRename();
+  }
+
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); commit(); }
-    else if (e.key === 'Escape') { e.preventDefault(); input.blur(); title.focus(); }
+    else if (e.key === 'Escape') { e.preventDefault(); cancelFileRename(); }
   });
-  input.addEventListener('blur', () => { if (!committing) cancelFileRename(); });
-  input.focus(); input.select();
+  input.addEventListener('blur', () => { setTimeout(() => { if (!committed) commit(); }, 150); });
 }
+
 
 async function loadFile(path) {
   if (!path) return;
+  const existingTab = findTabByPath(path);
+  if (existingTab) {
+    switchTab(existingTab.id);
+    return;
+  }
   setProgress(8);
   try {
     const r = await apiFetch('/api/file?p=' + encodeURIComponent(path));
@@ -346,16 +661,30 @@ async function loadFile(path) {
       return;
     }
     const d = await r.json();
-    state.mode = 'file';
-    state.source = 'file';
-    state.webAssets = [];
-    state.file = d.path;
-    state.dir = d.dir;
-    state.mtime = d.mtime;
-    state.size = d.size;
-    state.encoding = d.encoding;
-    state.fixed = d.content;
-    state.original = d.original;
+    const newTab = {
+      id: 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      mode: 'file',
+      source: 'file',
+      path: d.path,
+      dir: d.dir,
+      name: d.name,
+      title: d.name,
+      content: d.content,
+      original: d.original,
+      fixed: d.content,
+      fixes: d.fixes || [],
+      stats: d.stats || {},
+      size: d.size,
+      mtime: d.mtime,
+      encoding: d.encoding,
+      webAssets: [],
+      isDirty: false,
+      scrollPos: 0,
+      isVirtual: false,
+    };
+    state.tabs.push(newTab);
+    state.activeTabId = newTab.id;
+    syncStateFromActiveTab();
     setFixes(d.fixes || [], d.stats || {});
     renderContent(d.content, d.name);
     document.title = d.name + ' - ReadMD';
@@ -366,6 +695,7 @@ async function loadFile(path) {
     updateStatus();
     exitEdit();
     clearAiOutput();
+    renderTabsBar();
     setProgress(100);
     if (d.structured) showToast('已智能识别 TXT 结构（标题 / 表格 / 列表 / 目录）');
     afterRender();
@@ -375,6 +705,7 @@ async function loadFile(path) {
     setProgress(0);
   }
 }
+
 
 /* ---------------- 外部唤起（单实例常驻：托盘 / 双击 .md） ---------------- */
 
@@ -626,27 +957,43 @@ function openPath(p) {
 
 async function renderVirtual(source, name, dir, content, fixes, extras) {
   exitEdit();
-  state.mode = 'virtual';
-  state.source = source;
-  state.sourceName = name;
-  state.webAssets = source === 'url' ? (((extras || {}).assets) || []) : [];
-  state.file = null;
-  state.dir = dir || '';
-  state.mtime = 0;
-  state.size = 0;
-  state.encoding = 'utf-8';
-  state.fixed = content;
-  state.original = content;
+  const title = name || '未命名.md';
+  const newTab = {
+    id: 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    mode: 'virtual',
+    source: source || 'virtual',
+    path: null,
+    dir: dir || '',
+    name: title,
+    title: title,
+    content: content,
+    original: content,
+    fixed: content,
+    fixes: fixes || [],
+    stats: {},
+    size: 0,
+    mtime: 0,
+    encoding: 'utf-8',
+    webAssets: source === 'url' ? (((extras || {}).assets) || []) : [],
+    isDirty: source === 'clipboard',
+    scrollPos: 0,
+    isVirtual: true,
+  };
+  state.tabs.push(newTab);
+  state.activeTabId = newTab.id;
+  syncStateFromActiveTab();
   setFixes(fixes || [], {});
   clearAiOutput();
-  renderContent(content, name);
-  document.title = (name || '转换结果') + ' - ReadMD';
-  setFileTitle((name || '转换结果').slice(0, 80), false, '');
+  renderContent(content, title);
+  document.title = title + ' - ReadMD';
+  setFileTitle(title.slice(0, 80), false, '');
   $('btn-reload').disabled = true;
   updateStatus();
+  renderTabsBar();
   setProgress(100);
   afterRender();
 }
+
 
 async function ensureModule(name, timeoutMs) {
   const t0 = Date.now();
@@ -990,13 +1337,14 @@ async function webToMd(url, crawl, forceRender) {
   const sections = [], assets = [], warnings = [], failures = [];
   let first = null, batchTotal = 1;
   try {
-    if ($('url-private').checked) {
-      if (!hasPy || !py.authorize_private_web) throw Object.assign(new Error('允许本地网络页面仅在桌面应用中可用'), { code: 'private_unavailable' });
+    if ($('url-private').checked && hasPy && py.authorize_private_web) {
       const authorization = await py.authorize_private_web(url, webRun.taskId);
-      if (!authorization || !authorization.ok) throw Object.assign(new Error((authorization && authorization.error) || '无法授权本地网络页面'), { code: (authorization && authorization.code) || 'private_denied' });
-      options.privateGrant = authorization.grant;
-      webRun.privateGrant = authorization.grant;
+      if (authorization && authorization.ok) {
+        options.privateGrant = authorization.grant;
+        webRun.privateGrant = authorization.grant;
+      }
     }
+
     first = await extractOneWebPage(url, Object.assign({}, options, { progress: 10 }), !!forceRender);
     if (webRun.cancelled) throw Object.assign(new Error('已取消网页转换'), { code: 'cancelled' });
     sections.push(first.content);
@@ -2934,7 +3282,26 @@ async function saveAs() {
   const suggested = name.replace(/\.[^.]+$/, '') + '.md';
   if (hasPy) {
     const out = await py.save_as(content, suggested, state.webAssets || []);
-    if (out) showToast('已保存：' + out);
+    if (out) {
+      const activeTab = getActiveTab();
+      if (activeTab) {
+        activeTab.path = out;
+        activeTab.dir = String(out).replace(/[\\/][^\\/]*$/, '');
+        activeTab.mode = 'file';
+        activeTab.isVirtual = false;
+        activeTab.isDirty = false;
+        activeTab.name = String(out).split(/[\\/]/).pop();
+        activeTab.title = activeTab.name;
+        state.file = out;
+        state.dir = activeTab.dir;
+        state.mode = 'file';
+        renderTabsBar();
+        document.title = activeTab.name + ' - ReadMD';
+        setFileTitle(activeTab.name, true, out);
+        addRecent(out);
+      }
+      showToast('已保存：' + out);
+    }
   } else {
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
     const a = document.createElement('a');
@@ -2945,6 +3312,7 @@ async function saveAs() {
     showToast('已下载：' + suggested);
   }
 }
+
 
 /* ---------------- 数学公式 ---------------- */
 
@@ -3253,12 +3621,13 @@ function showSide(tab) {
 
 function toggleSide(tab) {
   const side = $('side');
-  if (!side.classList.contains('hidden') && (tab === null || $('tab-' + tab).classList.contains('active'))) {
+  if (!side.classList.contains('hidden')) {
     side.classList.add('hidden');
     return;
   }
   showSide(tab || 'toc');
 }
+
 
 /* ---------------- 修正详情 ---------------- */
 
@@ -3464,6 +3833,7 @@ function goHome() {
   state.size = 0;
   state.encoding = '';
   state.editing = false;
+  state.activeTabId = null;
   if (state.welcomeHtml) {
     $('content').innerHTML = state.welcomeHtml;
     refreshRecent();
@@ -3478,7 +3848,9 @@ function goHome() {
   closeSearch();
   closeMdPopups();
   updateStatus();
+  renderTabsBar();
 }
+
 
 function bindWelcomeEvents() {
   if ($('w-open')) $('w-open').onclick = () => { loadFileDialog(); };
@@ -3490,9 +3862,183 @@ function bindWelcomeEvents() {
   if ($('recent-clear')) $('recent-clear').onclick = clearRecent;
 }
 
+/* ---------------- 全局拖拽与标签交互支持 ---------------- */
+
+let dragCounter = 0;
+
+function bindGlobalDragAndDrop() {
+  const overlay = $('drag-overlay');
+  const title = $('drag-title');
+  const desc = $('drag-desc');
+
+  window.addEventListener('dragenter', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter++;
+    if (overlay) {
+      overlay.classList.remove('hidden');
+      if (title && desc) {
+        const types = (e.dataTransfer && e.dataTransfer.types) ? Array.from(e.dataTransfer.types) : [];
+        if (types.includes('Files')) {
+          title.textContent = '松开以导入文档';
+          desc.textContent = 'Markdown 文件将在新标签页中打开；Word/PDF 等将自动导入转换';
+        } else if (types.includes('text/uri-list')) {
+          title.textContent = '松开以抓取网页';
+          desc.textContent = '自动解析 URL 网页并提取为 Markdown 文档';
+        } else {
+          title.textContent = '松开以在此打开';
+          desc.textContent = '拖入纯文本将自动生成为虚拟 Markdown 文档';
+        }
+      }
+    }
+  });
+
+  window.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+  });
+
+  window.addEventListener('dragleave', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter--;
+    if (dragCounter <= 0) {
+      dragCounter = 0;
+      if (overlay) overlay.classList.add('hidden');
+    }
+  });
+
+  window.addEventListener('drop', async e => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounter = 0;
+    if (overlay) overlay.classList.add('hidden');
+
+    const dt = e.dataTransfer;
+    if (!dt) return;
+
+    // 1. 处理文件拖拽
+    if (dt.files && dt.files.length > 0) {
+      const files = Array.from(dt.files);
+      const mdFiles = files.filter(f => MD_RE.test(f.name || ''));
+      const convertFiles = files.filter(f => !MD_RE.test(f.name || '') && CONVERT_EXTS.some(ext => (f.name || '').toLowerCase().endsWith(ext)));
+
+      if (mdFiles.length > 0) {
+        for (const f of mdFiles) {
+          const path = f.path ? f.path : await uploadFile(f);
+          if (path) await loadFile(path);
+        }
+      } else if (convertFiles.length > 0) {
+        await openConvertModalWithFiles(convertFiles);
+      } else {
+        for (const f of files) {
+          const path = f.path ? f.path : await uploadFile(f);
+          if (path) convertOrOcr(path, 'convert');
+        }
+      }
+      return;
+    }
+
+    // 2. 处理 URL 或纯文本拖拽
+    const uri = dt.getData('text/uri-list') || '';
+    const text = dt.getData('text/plain') || '';
+    const targetUrl = (uri || text).trim();
+    if (/^https?:\/\//i.test(targetUrl)) {
+      openWebDialog();
+      const input = $('url-input');
+      if (input) {
+        input.value = targetUrl;
+        $('url-go').click();
+      }
+    } else if (text.trim()) {
+      const name = '新建文本-' + new Date().toISOString().slice(0, 10) + '.md';
+      renderVirtual('clipboard', name, '', text, []);
+      showToast('已从拖拽文本新建文档（Ctrl+S 可保存）');
+    }
+  });
+}
+
+async function openConvertModalWithFiles(files) {
+  openConvertModal();
+  for (const f of files) {
+    const path = f.path ? f.path : await uploadFile(f);
+    if (path) addConvertQueue([path]);
+  }
+}
+
+function bindTabOverflowEvents() {
+  const overflowBtn = $('doc-tabs-overflow-btn');
+  const dropdown = $('doc-tabs-dropdown');
+  const overflowWrap = $('doc-tabs-overflow-wrap');
+  if (!overflowBtn || !dropdown || !overflowWrap) return;
+
+  let isPinned = false;
+
+  overflowWrap.addEventListener('mouseenter', () => {
+    if (!isPinned) dropdown.classList.remove('hidden');
+  });
+  overflowWrap.addEventListener('mouseleave', () => {
+    if (!isPinned) dropdown.classList.add('hidden');
+  });
+
+  overflowBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    isPinned = !isPinned;
+    dropdown.classList.toggle('hidden', !isPinned);
+  });
+
+  document.addEventListener('click', e => {
+    if (!overflowWrap.contains(e.target)) {
+      isPinned = false;
+      dropdown.classList.add('hidden');
+    }
+  });
+}
+
+function bindTabContextMenuEvents() {
+  const menu = $('tab-context-menu');
+  if (!menu) return;
+
+  menu.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabId = menu.dataset.tabId;
+      const action = btn.dataset.action;
+      menu.classList.add('hidden');
+      if (!tabId) return;
+      const tab = state.tabs.find(t => t.id === tabId);
+      if (!tab) return;
+
+      if (action === 'close') {
+        closeTab(tabId);
+      } else if (action === 'close-others') {
+        closeOtherTabs(tabId);
+      } else if (action === 'close-all') {
+        closeAllTabs();
+      } else if (action === 'rename') {
+        const bar = $('doc-tabs-bar');
+        const tabEl = bar ? bar.querySelector(`[data-tab-id="${tabId}"]`) : null;
+        if (tabEl) {
+          const titleSpan = tabEl.querySelector('.tab-title');
+          if (titleSpan) startTabInlineRename(tab, titleSpan, tabEl);
+        }
+      } else if (action === 'copy-path') {
+        copyText(tab.path || tab.title || '', '已复制文件路径');
+      }
+    });
+  });
+
+  document.addEventListener('click', e => {
+    if (!menu.contains(e.target)) {
+      menu.classList.add('hidden');
+    }
+  });
+}
+
 /* ---------------- 事件绑定 ---------------- */
 
 function bindEvents() {
+
   bindWelcomeEvents();
   if ($('btn-home')) $('btn-home').addEventListener('click', goHome);
   $('btn-open').addEventListener('click', () => { loadFileDialog(); });
@@ -3786,10 +4332,40 @@ function renderExportModal() {
   $('export-modal').classList.remove('hidden');
   renderExportSections();
   renderExportPresetSelect();
+  updateExportLivePreview();
   const r = $('export-result');
   r.textContent = ''; r.className = 'export-result';
   $('export-open').classList.add('hidden');
   $('export-reveal').classList.add('hidden');
+}
+
+function updateExportLivePreview() {
+  const fmt = state.export.fmt;
+  const badge = $('export-preview-badge');
+  const sel = $('exp-preset');
+  const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : '默认';
+  if (badge) badge.textContent = fmt.toUpperCase() + ' · ' + presetName;
+
+  const content = currentExportContent();
+  const miniHost = $('export-preview-mini-content');
+  if (miniHost) {
+    const previewChunk = (content || '').slice(0, 1500);
+    const prot = protectMath(previewChunk);
+    const html = marked.parse(prot.src, { gfm: true, breaks: false });
+    miniHost.innerHTML = restoreMath(html, prot.saved);
+    renderMath(miniHost);
+  }
+
+  const fullModal = $('export-preview-modal');
+  if (fullModal && !fullModal.classList.contains('hidden')) {
+    const fullHost = $('export-preview-full-page');
+    if (fullHost) {
+      const fullProt = protectMath(content || '');
+      const fullHtml = marked.parse(fullProt.src, { gfm: true, breaks: false });
+      fullHost.innerHTML = restoreMath(fullHtml, fullProt.saved);
+      renderMath(fullHost);
+    }
+  }
 }
 
 function expFieldApplicable(f, fmt) {
@@ -3807,7 +4383,7 @@ function renderExportSections() {
       : fields.some(f => expFieldApplicable(f, fmt));
     if (!applicable) return;
     const wrap = document.createElement('div');
-    wrap.className = 'exp-sec open';
+    wrap.className = 'exp-sec'; // 默认折叠
     const head = document.createElement('button');
     head.type = 'button';
     head.className = 'exp-sec-head';
@@ -3838,7 +4414,9 @@ function renderExportSections() {
     host.appendChild(wrap);
   });
   applyExportOptionsToDom();
+  updateExportLivePreview();
 }
+
 
 function expFieldEl(f) {
   const box = document.createElement('div');
@@ -3952,9 +4530,29 @@ async function expSavePreset() {
 
   $('btn-print').addEventListener('click', openExportModal);
 
-  // 导出面板事件
+  // 导出面板与预览事件
   $('export-close').addEventListener('click', closeExportModal);
   $('export-modal').addEventListener('click', e => { if (e.target === $('export-modal')) closeExportModal(); });
+  if ($('export-preview-card')) {
+    $('export-preview-card').addEventListener('click', () => {
+      const modal = $('export-preview-modal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        updateExportLivePreview();
+      }
+    });
+  }
+  if ($('export-preview-close')) {
+    $('export-preview-close').addEventListener('click', () => {
+      const modal = $('export-preview-modal');
+      if (modal) modal.classList.add('hidden');
+    });
+  }
+  if ($('export-preview-modal')) {
+    $('export-preview-modal').addEventListener('click', e => {
+      if (e.target === $('export-preview-modal')) $('export-preview-modal').classList.add('hidden');
+    });
+  }
   document.querySelectorAll('.exp-fmt').forEach(btn => btn.addEventListener('click', () => {
     document.querySelectorAll('.exp-fmt').forEach(b => { b.classList.toggle('active', b === btn); b.setAttribute('aria-selected', b === btn ? 'true' : 'false'); });
     state.export.fmt = btn.dataset.fmt;
@@ -4043,11 +4641,19 @@ async function expSavePreset() {
     $('top-btn').classList.toggle('hidden', $('content').scrollTop < 600);
   });
 
+  // 绑定全局拖拽
+  bindGlobalDragAndDrop();
+  bindTabOverflowEvents();
+  bindTabContextMenuEvents();
+  window.addEventListener('resize', () => {
+    renderTabsBar();
+  });
+
   document.addEventListener('keydown', e => {
     const mod = e.ctrlKey || e.metaKey;
     if (e.key === 'Escape') {
-      const modal = ['ai-history-modal', 'ai-settings-modal'].find(id => !$(id).classList.contains('hidden'));
-      if (modal) { e.preventDefault(); closeAiModal(modal); return; }
+      const modal = ['ai-history-modal', 'ai-settings-modal', 'export-preview-modal'].find(id => $(id) && !$(id).classList.contains('hidden'));
+      if (modal) { e.preventDefault(); closeAiModal(modal); if (modal === 'export-preview-modal') $(modal).classList.add('hidden'); return; }
     }
     if (e.key === 'F2') { e.preventDefault(); openFileRename(); }
     else if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); $('btn-open').click(); }
@@ -4056,6 +4662,10 @@ async function expSavePreset() {
     else if (mod && e.key.toLowerCase() === 'e') { e.preventDefault(); if (!$('btn-edit').disabled) toggleEdit(); }
     else if (mod && e.key.toLowerCase() === 's') {
       if (state.editing) { e.preventDefault(); saveEdit(); }
+      else if (state.mode === 'virtual' || (getActiveTab() && getActiveTab().isVirtual)) {
+        e.preventDefault();
+        saveAs();
+      }
     }
     else if (mod && !e.shiftKey && e.key.toLowerCase() === 'v') {
       const t = e.target;
@@ -4079,6 +4689,8 @@ async function expSavePreset() {
       if (!$('formula-modal').classList.contains('hidden')) { closeFormulaModal(); return; }
       if (!$('img-modal').classList.contains('hidden')) { closeImgModal(); return; }
       if (!$('history-modal').classList.contains('hidden')) { $('history-modal').classList.add('hidden'); return; }
+      if ($('export-preview-modal') && !$('export-preview-modal').classList.contains('hidden')) { $('export-preview-modal').classList.add('hidden'); return; }
+      if ($('tab-context-menu') && !$('tab-context-menu').classList.contains('hidden')) { $('tab-context-menu').classList.add('hidden'); return; }
       if (moreMenu && moreMenu.classList.contains('open')) { moreMenu.classList.remove('open'); }
       closeSearch();
       $('fix-modal').classList.add('hidden');
@@ -4094,6 +4706,7 @@ async function expSavePreset() {
   });
   document.addEventListener('click', closeMdPopups);
 }
+
 
 function loadFileDialog() {
   if (hasPy) {

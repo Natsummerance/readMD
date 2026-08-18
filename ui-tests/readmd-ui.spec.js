@@ -275,7 +275,8 @@ test('web to Markdown renders dynamic pages with progress and actionable errors'
   await expect(page.locator('#url-images')).not.toBeChecked();
   await expect(page.locator('#url-pages')).toHaveValue('10');
   await expect(page.locator('#url-pages')).toHaveAttribute('max', '30');
-  await expect(page.locator('#url-private')).not.toBeChecked();
+  await expect(page.locator('#url-private')).toBeChecked();
+
   await page.locator('#url-input').fill('example.com/article');
   await page.locator('#url-go').click();
   await expect(page.locator('#url-progress')).toBeVisible();
