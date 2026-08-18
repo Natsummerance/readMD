@@ -139,6 +139,17 @@ class InstallerHtmlTests(unittest.TestCase):
                          'aria-live="polite"', 'prefers-reduced-motion', '默认用户目录无需管理员'):
             self.assertIn(required, html)
 
+    def test_recovery_actions_are_pinned_outside_the_scrollable_error_content(self):
+        with open(os.path.join(os.path.dirname(__file__), 'installer', 'setup.html'), encoding='utf-8') as f:
+            html = f.read()
+        self.assertIn('#page-installing{justify-content:flex-start', html)
+        self.assertIn('.install-scroll{', html)
+        self.assertIn('overflow-y:auto', html)
+        self.assertIn('.recovery-actions{', html)
+        self.assertIn('flex:none', html)
+        self.assertIn('.recovery-actions .btn{min-height:44px}', html)
+        self.assertLess(html.index('id="err-card"'), html.index('id="recovery-actions"'))
+
 
 if __name__ == '__main__':
     unittest.main()

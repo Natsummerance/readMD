@@ -132,6 +132,15 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
 .size-note{font-size:12px; color:var(--text3); text-align:center}
 /* ---------- 安装页 ---------- */
 .inst-wrap{width:100%; max-width:520px; display:flex; flex-direction:column; gap:22px}
+#page-installing{justify-content:flex-start; padding-bottom:0}
+#page-installing>h1{flex:none; margin:2px 0 12px}
+.install-scroll{width:100%; max-width:520px; flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  padding:4px 8px 14px; scrollbar-width:thin; scrollbar-color:var(--border2) transparent}
+.install-scroll::-webkit-scrollbar{width:8px}
+.install-scroll::-webkit-scrollbar-thumb{background:var(--border2); border-radius:999px; border:2px solid transparent; background-clip:padding-box}
+.recovery-actions{width:100%; max-width:520px; flex:none; display:none; flex-wrap:wrap; gap:8px;
+  justify-content:flex-end; padding:10px 8px 12px; border-top:1px solid var(--border); background:var(--bg2)}
+.recovery-actions .btn{min-height:44px}
 .steps{display:flex; flex-direction:column; gap:10px}
 .step{display:flex; align-items:center; gap:13px; opacity:.42; transform:translateX(-10px);
   transition:opacity .4s var(--ease), transform .5s var(--ease)}
@@ -288,26 +297,28 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
   <!-- 安装中 -->
   <section class="page" id="page-installing">
     <h1 id="inst-title">正在安装…</h1>
-    <div class="inst-wrap" style="margin-top:30px">
-      <div class="steps" id="steps"></div>
-      <div class="prog">
-        <div class="track"><div class="fill" id="prog-fill"></div></div>
-        <div class="pct" id="prog-pct">0%</div>
+    <div class="install-scroll" id="install-scroll" tabindex="-1">
+      <div class="inst-wrap">
+        <div class="steps" id="steps"></div>
+        <div class="prog">
+          <div class="track"><div class="fill" id="prog-fill"></div></div>
+          <div class="pct" id="prog-pct">0%</div>
+        </div>
+        <div class="stat" id="prog-stat"></div>
       </div>
-      <div class="stat" id="prog-stat"></div>
-    </div>
-    <div class="err-card" id="err-card" style="display:none">
-      <div class="eic">&#9888;</div>
-      <div>
-        <b>操作未完成</b>
-        <p id="err-text"></p>
-        <div class="actions" style="margin-top:14px">
-          <button class="btn btn-ghost btn-sm" id="btn-err-change">更换目录</button>
-          <button class="btn btn-ghost btn-sm" id="btn-err-close-retry">关闭 ReadMD 后重试</button>
-          <button class="btn btn-primary btn-sm" id="btn-err-admin">以管理员身份重试</button>
-          <button class="btn btn-primary btn-sm" id="btn-err-retry">重试</button>
+      <div class="err-card" id="err-card" style="display:none">
+        <div class="eic">&#9888;</div>
+        <div>
+          <b>操作未完成</b>
+          <p id="err-text"></p>
         </div>
       </div>
+    </div>
+    <div class="recovery-actions" id="recovery-actions" aria-label="恢复安装操作">
+      <button class="btn btn-ghost btn-sm" id="btn-err-change">更换目录</button>
+      <button class="btn btn-ghost btn-sm" id="btn-err-close-retry">关闭 ReadMD 后重试</button>
+      <button class="btn btn-primary btn-sm" id="btn-err-admin">以管理员身份重试</button>
+      <button class="btn btn-primary btn-sm" id="btn-err-retry">重试</button>
     </div>
   </section>
 
@@ -461,6 +472,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
         applyProgress(prog);
         if (prog.error && !prog.done){
           $('err-card').style.display = 'flex';
+          $('recovery-actions').style.display = 'flex';
           $('err-text').textContent = (prog.code ? '[' + prog.code + '] ' : '') + prog.error + (prog.path ? '\n' + prog.path : '');
           setErrorActions(prog.actions || []);
           $('inst-title').textContent = '遇到了一点问题';
@@ -556,12 +568,13 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
   function beginInstall(opts){
     done = false; installing = true;
     $('err-card').style.display = 'none';
+    $('recovery-actions').style.display = 'none';
     $('inst-title').textContent = '正在安装…';
     renderSteps(); applyProgress({ percent:0, step:'', text:'准备中…' });
     go('page-installing');
     Promise.resolve(callArgs('start_install', opts)).then(function(result){
       if (result && result.ok === false){
-        $('err-card').style.display = 'flex'; $('err-text').textContent = '[' + result.code + '] ' + result.message;
+        $('err-card').style.display = 'flex'; $('recovery-actions').style.display = 'flex'; $('err-text').textContent = '[' + result.code + '] ' + result.message;
         setErrorActions(result.actions || []); $('inst-title').textContent = '遇到了一点问题'; installing = false;
       }
     });
@@ -569,6 +582,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
   function startUninstall(){
     done = false; installing = true;
     $('err-card').style.display = 'none';
+    $('recovery-actions').style.display = 'none';
     $('inst-title').textContent = '正在卸载…';
     renderSteps(); applyProgress({ percent:0, step:'', text:'准备中…' });
     go('page-installing');
@@ -631,6 +645,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
   $('btn-start-install').addEventListener('click', startInstall);
   $('btn-err-change').addEventListener('click', function(){
     $('err-card').style.display = 'none';
+    $('recovery-actions').style.display = 'none';
     go(state.mode === 'uninstall' ? 'page-welcome' : 'page-options', true);
     $('opt-dir').focus();
   });
