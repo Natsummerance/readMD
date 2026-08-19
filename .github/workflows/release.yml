@@ -272,8 +272,8 @@ jobs:
           cache-dependency-path: config/requirements-linux.txt
       - name: Install system dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          for i in {1..3}; do sudo apt-get update && break || sleep 5; done
+          sudo apt-get install -y --no-install-recommends \
             libwebkit2gtk-4.1-0 \
             libwebkit2gtk-4.1-dev \
             libgtk-3-0 \

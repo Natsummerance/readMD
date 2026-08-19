@@ -1,47 +1,56 @@
 {
   "name": "readmd-vscode",
-  "displayName": "ReadMD for VSCode",
-  "description": "Clean, high-performance Markdown viewer & editor extension with auto-repair, LaTeX PRO, and multi-format conversion.",
-  "version": "2.3.2",
+  "displayName": "ReadMD —— 高性能 Markdown 智能预览与自愈修复",
+  "description": "轻量级本地 Markdown 智能阅读与编辑扩展：实时双向同步预览、格式自愈修复、LaTeX PRO 学术公式支持、BibTeX 智能卡片与 Markdown ⇄ LaTeX 互转。",
+  "version": "2.3.3",
   "publisher": "Natsummerance",
   "icon": "icon.png",
   "license": "MIT",
-
+  "homepage": "https://github.com/Natsummerance/readMD",
   "repository": {
     "type": "git",
     "url": "https://github.com/Natsummerance/readMD.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Natsummerance/readMD/issues"
   },
   "engines": {
     "vscode": "^1.80.0"
   },
   "categories": [
-    "Other",
     "Formatters",
-    "Visualization"
+    "Visualization",
+    "Other"
   ],
   "keywords": [
     "markdown",
     "latex",
-    "bibtex",
     "preview",
-    "readmd"
+    "formatter",
+    "bibtex",
+    "readmd",
+    "equation",
+    "math"
   ],
   "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
   "contributes": {
     "commands": [
       {
         "command": "readmd.preview",
-        "title": "ReadMD: Open Custom Preview",
+        "title": "ReadMD: 打开智能实时双向预览 (Open Custom Preview)",
         "icon": "$(book)"
       },
       {
         "command": "readmd.fixCurrentDocument",
-        "title": "ReadMD: Auto-Fix Markdown Formatting Errors",
+        "title": "ReadMD: 智能诊断并自愈修复格式错误 (Auto-Fix Markdown Formatting)",
         "icon": "$(wrench)"
       },
       {
         "command": "readmd.convertToLatex",
-        "title": "ReadMD: Convert Current Markdown to LaTeX",
+        "title": "ReadMD: 一键编译转为学术 LaTeX 源码 (Convert Markdown to LaTeX)",
         "icon": "$(file-code)"
       }
     ],
@@ -72,6 +81,8 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "package": "vsce package --no-dependencies",
+    "publish:ovsx": "node publish-ovsx.js",
+    "release:ovsx": "npm run package && npm run publish:ovsx",
     "publish": "vsce publish"
   },
   "devDependencies": {
@@ -81,4 +92,3 @@
     "typescript": "^5.3.0"
   }
 }
-
