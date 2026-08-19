@@ -18,7 +18,8 @@ APP_DIR = (sys._MEIPASS if getattr(sys, 'frozen', False)
            else os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 ASSETS_DIR = os.path.join(APP_DIR, 'assets')
 
-EXTS = {'pdf': '.pdf', 'docx': '.docx', 'html': '.html'}
+EXTS = {'pdf': '.pdf', 'docx': '.docx', 'html': '.html', 'tex': '.tex'}
+
 
 
 def load():
@@ -103,6 +104,14 @@ def export(fmt, content, base_dir, out_path, options=None, source_name=''):
         elif fmt == 'html':
             from . import html_render
             html_render.render(content, output_tmp, style, source_name, ASSETS_DIR, warns)
+        elif fmt == 'tex':
+            from .. import texmd
+            title = (style.get('title') if isinstance(style, dict) else None) or source_name or 'Document'
+            author = (style.get('author') if isinstance(style, dict) else None) or ''
+            tex_out = texmd.md_to_latex(content, title=title, author=author, standalone=True)
+            with open(output_tmp, 'w', encoding='utf-8') as f:
+                f.write(tex_out)
+
 
         if not os.path.isfile(output_tmp) or os.path.getsize(output_tmp) <= 0:
             raise RuntimeError('导出器未生成有效文件')

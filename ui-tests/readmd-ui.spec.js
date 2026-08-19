@@ -271,9 +271,8 @@ test('web to Markdown renders dynamic pages with progress and actionable errors'
   await page.waitForFunction(() => typeof openWebDialog === 'function');
   await page.evaluate(() => openWebDialog());
   await expect(page.locator('#url-modal')).toBeVisible();
-  await expect(page.locator('#url-mode')).toHaveValue('smart');
   await expect(page.locator('#url-images')).not.toBeChecked();
-  await expect(page.locator('#url-pages')).toHaveValue('10');
+  await expect(page.locator('#url-pages')).toHaveValue('1');
   await expect(page.locator('#url-pages')).toHaveAttribute('max', '30');
   await expect(page.locator('#url-private')).toBeChecked();
 
@@ -347,8 +346,9 @@ test('cancelling a batch keeps pages already extracted', async ({ page }) => {
   await page.waitForFunction(() => typeof openWebDialog === 'function');
   await page.evaluate(() => openWebDialog());
   await page.locator('#url-input').fill('https://example.com/one');
-  await page.locator('#url-crawl').check();
+  await page.locator('#url-pages').fill('3');
   await page.locator('#url-go').click();
+
   await expect.poll(() => seenUrls.length).toBe(2);
   await page.locator('#url-cancel').click();
   await page.waitForFunction(() => !webRun.running);
@@ -357,3 +357,128 @@ test('cancelling a batch keeps pages already extracted', async ({ page }) => {
   await expect(page.locator('#content')).toContainText('跳过');
   await expect(page.locator('#url-status')).toContainText('已保留成功抓取');
 });
+
+test('tab reordering reorders tabs and is isolated from global drag overlay', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.pywebview = { api: {
+      get_settings: async () => ({}), get_recent: async () => [], start_modules: async () => true,
+      get_modules_status: async () => ({ modules: {}, errors: {} }),
+    } };
+  });
+  await page.goto('/');
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'tab1', title: 'Doc One', content: '# One', isDirty: false },
+      { id: 'tab2', title: 'Doc Two', content: '# Two', isDirty: false },
+      { id: 'tab3', title: 'Doc Three', content: '# Three', isDirty: false },
+    ];
+    state.activeTabId = 'tab1';
+    renderTabsBar();
+  });
+  const tabItems = page.locator('.tab-item');
+  await expect(tabItems).toHaveCount(3);
+  await expect(tabItems.nth(0)).toContainText('Doc One');
+  await expect(tabItems.nth(1)).toContainText('Doc Two');
+
+  // Test reordering function
+  await page.evaluate(() => reorderTabs('tab3', 'tab1', false));
+  await expect(page.locator('.tab-item').nth(0)).toContainText('Doc Three');
+  await expect(page.locator('.tab-item').nth(1)).toContainText('Doc One');
+
+  // Ensure drag overlay stays hidden when dragging tab
+  await page.evaluate(() => {
+    state.isDraggingTab = true;
+    window.dispatchEvent(new Event('dragenter'));
+  });
+  await expect(page.locator('#drag-overlay')).toBeHidden();
+  await page.evaluate(() => { state.isDraggingTab = false; });
+});
+
+test('smart in-document TOC auto-matches headings and resolves anchor jumps', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    renderContent(`
+# 目录
+- [1. 介绍](#invalid-slug-1)
+- [快速开始](#quick-start)
+
+# 1. 介绍
+这是介绍内容。
+
+## 快速开始 (Quick Start)
+这是快速开始内容。
+`, 'TOC Test');
+  });
+
+  const heading1 = page.locator('#content h1:has-text("1. 介绍")');
+  await expect(heading1).toBeVisible();
+
+  // Click on the in-document TOC link with mismatched slug
+  const tocLink = page.locator('#content a:has-text("1. 介绍")');
+  await expect(tocLink).toBeVisible();
+  await tocLink.click();
+
+  // Heading gets the target highlight animation class
+  await expect(heading1).toHaveClass(/heading-target-highlight/);
+});
+
+test('editor undo, redo buttons and floating selection toolbar are functional', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(async () => {
+    state.file = 'test.md';
+    state.original = '# Initial Content';
+    state.activeTabId = 'tab_test';
+    state.tabs = [{ id: 'tab_test', title: 'test.md', content: '# Initial Content', isDirty: false }];
+    await toggleEdit();
+  });
+
+  await expect(page.locator('#edit-bar')).toBeVisible();
+  await expect(page.locator('#edit-undo')).toBeVisible();
+  await expect(page.locator('#edit-redo')).toBeVisible();
+
+  // Test floating selection toolbar visibility toggle
+  await page.evaluate(() => {
+    const toolbar = document.getElementById('cm-selection-toolbar');
+    toolbar.classList.remove('hidden');
+  });
+  await expect(page.locator('#cm-selection-toolbar')).toBeVisible();
+  await expect(page.locator('#cm-sel-copy')).toBeVisible();
+  await expect(page.locator('#cm-sel-cut')).toBeVisible();
+  await expect(page.locator('#cm-sel-paste')).toBeVisible();
+
+  await page.evaluate(() => hideCmSelectionToolbar());
+  await expect(page.locator('#cm-selection-toolbar')).toBeHidden();
+});
+
+test('tab inline rename fixes extension and expands space by folding sibling tabs', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'tab1', title: 'Report2026_Q3_LongFileName.md', name: 'Report2026_Q3_LongFileName.md', content: '# Q3', isDirty: false },
+      { id: 'tab2', title: 'DocTwo.md', name: 'DocTwo.md', content: '# Two', isDirty: false },
+      { id: 'tab3', title: 'DocThree.md', name: 'DocThree.md', content: '# Three', isDirty: false },
+    ];
+    state.activeTabId = 'tab1';
+    renderTabsBar();
+  });
+
+  const tab1 = page.locator('.tab-item').first();
+  await tab1.dblclick();
+
+  // Renaming active class and wrap
+  await expect(tab1).toHaveClass(/tab-renaming-active/);
+  await expect(page.locator('#doc-tabs-bar')).toHaveClass(/tab-renaming-mode/);
+
+  // Input contains stem only, ext is in separate fixed span
+  const input = tab1.locator('.tab-title-input');
+  await expect(input).toHaveValue('Report2026_Q3_LongFileName');
+  const extSpan = tab1.locator('.tab-rename-ext');
+  await expect(extSpan).toHaveText('.md');
+
+  // Cancel with Escape restores layout
+  await input.press('Escape');
+  await expect(tab1).not.toHaveClass(/tab-renaming-active/);
+  await expect(page.locator('#doc-tabs-bar')).not.toHaveClass(/tab-renaming-mode/);
+});
+
+

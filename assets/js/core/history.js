@@ -1,0 +1,241 @@
+'use strict';
+/* ============================================================
+   ReadMD Core - History, Welcome & Auto Reload
+   ============================================================ */
+
+/* ---------------- 最近文件 ---------------- */
+
+function renderRecentList(list, rec, onOpen) {
+  if (!list) return;
+  list.innerHTML = '';
+  rec.slice(0, 24).forEach(p => {
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'recent-card';
+    const name = String(p).split(/[\\/]/).pop() || p;
+    const dir = String(p).slice(0, String(p).length - name.length).replace(/[\\/]+$/, '') || '';
+    const nm = document.createElement('span');
+    nm.className = 'recent-name'; nm.textContent = name; nm.title = p;
+    const dp = document.createElement('span');
+    dp.className = 'recent-dir'; dp.textContent = dir; dp.title = p;
+    btn.appendChild(nm); btn.appendChild(dp);
+    btn.addEventListener('click', e => { e.preventDefault(); onOpen(p); });
+    li.appendChild(btn); list.appendChild(li);
+  });
+}
+
+async function getRecentEntries() {
+  if (!hasPy) return [];
+  try { return await py.get_recent() || []; } catch (e) { return []; }
+}
+
+async function refreshRecent() {
+  const box = $('recent-box');
+  if (!hasPy) { box.classList.add('hidden'); return; }
+  const rec = await getRecentEntries();
+  if (!rec.length) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  renderRecentList($('recent-list'), rec, loadFile);
+}
+
+async function openHistoryModal() {
+  const rec = await getRecentEntries();
+  const modal = $('history-modal');
+  const list = $('history-list');
+  list.innerHTML = '';
+  if (!rec.length) {
+    const li = document.createElement('li');
+    li.className = 'empty'; li.textContent = '暂无最近文件'; list.appendChild(li);
+  } else {
+    renderRecentList(list, rec, p => { modal.classList.add('hidden'); loadFile(p); });
+  }
+  modal.classList.remove('hidden');
+}
+
+async function clearRecent() {
+  if (hasPy) await py.clear_recent();
+  await refreshRecent();
+  const list = $('history-list');
+  if (list) list.innerHTML = '<li class="empty">暂无最近文件</li>';
+}
+
+async function addRecent(path) {
+  if (hasPy && path) { try { await py.add_recent(path); } catch (e) { /* ignore */ } }
+}
+
+/* ---------------- 历史 / 状态 ---------------- */
+
+function normalizePath(p) {
+  return String(p || '').replace(/\\/g, '/').toLowerCase();
+}
+
+function pushHistory(path) {
+  const n = normalizePath(path);
+  state.history = state.history.slice(0, state.histIdx + 1);
+  if (state.history[state.histIdx] !== n) {
+    state.history.push(n);
+    state.histIdx = state.history.length - 1;
+  }
+}
+
+function historyBack() {
+  if (state.histIdx > 0) {
+    state.histIdx--;
+    loadFile(state.history[state.histIdx]);
+  }
+}
+
+function historyForward() {
+  if (state.histIdx < state.history.length - 1) {
+    state.histIdx++;
+    loadFile(state.history[state.histIdx]);
+  }
+}
+
+function updateStatus() {
+  $('status-left').textContent = (state.mode === 'virtual' ? '[' + { convert: '转换', ocr: 'OCR', url: '网页', clipboard: '剪贴板' }[state.source] + '] ' : '') + (state.sourceName || state.file || '');
+  const parts = [];
+  if (state.stats) {
+    const s = state.stats;
+    const p2 = [];
+    if (s.table) p2.push('表格 ' + s.table);
+    if (s.bold) p2.push('加粗 ' + s.bold);
+    if (s.math) p2.push('公式 ' + s.math);
+    if (s.heading) p2.push('标题 ' + s.heading);
+    if (s.misc) p2.push('其他 ' + s.misc);
+    parts.push(p2.length ? '修正 ' + p2.join('、') : '无需修正');
+  }
+  if (state.size) parts.push((state.size / 1024).toFixed(1) + ' KB');
+  if (state.encoding) parts.push(state.encoding);
+  $('status-right').textContent = parts.join(' · ');
+  const canEdit = (state.mode === 'file' || state.mode === 'virtual') && !!state.original && !state.editing;
+  const canReload = state.mode === 'file';
+  const canSaveas = state.mode === 'virtual' || state.fixed !== '';
+  $('btn-edit').disabled = !canEdit && !state.editing;
+  $('btn-reload').disabled = !canReload;
+  $('btn-saveas').disabled = !canSaveas;
+
+  const isWelcome = state.mode === 'welcome';
+  if ($('btn-print')) $('btn-print').disabled = isWelcome;
+  if ($('btn-a')) $('btn-a').disabled = isWelcome;
+  if ($('btn-A')) $('btn-A').disabled = isWelcome;
+  if ($('btn-search')) $('btn-search').disabled = isWelcome;
+
+  const btnHome = $('btn-home');
+  if (btnHome) {
+    if (isWelcome) btnHome.classList.add('hidden');
+    else btnHome.classList.remove('hidden');
+  }
+}
+
+function goHome() {
+  state.mode = 'welcome';
+  state.file = null;
+  state.sourceName = '';
+  state.original = '';
+  state.fixed = '';
+  state.stats = null;
+  state.size = 0;
+  state.encoding = '';
+  state.editing = false;
+  state.activeTabId = null;
+  state.headings = [];
+  document.title = 'ReadMD';
+  setFileTitle('', false);
+
+  if ($('toc')) $('toc').innerHTML = '';
+  if ($('outline')) $('outline').innerHTML = '';
+
+  if (state.welcomeHtml) {
+    $('content').innerHTML = state.welcomeHtml;
+    refreshRecent();
+    bindWelcomeEvents();
+  }
+  const editBar = $('edit-bar'); if (editBar) editBar.classList.add('hidden');
+  const editWrap = $('edit-wrap'); if (editWrap) editWrap.classList.add('hidden');
+  const pvWrap = $('preview-wrap'); if (pvWrap) pvWrap.classList.add('hidden');
+  const pvSplitter = $('pv-splitter'); if (pvSplitter) pvSplitter.classList.add('hidden');
+  const content = $('content'); if (content) content.classList.remove('hidden');
+  const side = $('side'); if (side) side.classList.add('hidden');
+  document.querySelectorAll('#toolbar .tool-btn').forEach(b => b.classList.remove('active'));
+  closeSearch();
+  closeMdPopups();
+  updateStatus();
+  renderTabsBar();
+}
+
+function bindWelcomeEvents() {
+  if ($('w-open')) $('w-open').onclick = () => { loadFileDialog(); };
+  if ($('w-folder')) $('w-folder').onclick = openFolder;
+  if ($('w-ai')) $('w-ai').onclick = toggleAiPanel;
+  if ($('w-convert')) $('w-convert').onclick = openConvertModal;
+  if ($('w-web')) $('w-web').onclick = openWebDialog;
+  if ($('w-ocr')) $('w-ocr').onclick = () => chooseFile('ocr');
+  if ($('recent-clear')) $('recent-clear').onclick = clearRecent;
+}
+
+
+
+/* ---------------- 自动刷新 ---------------- */
+
+let autoReloadTimer = null;
+function startAutoReload() {
+  stopAutoReload();
+  autoReloadTimer = setInterval(async () => {
+    if (!state.file || !state.autoReload || state.mode !== 'file') return;
+    try {
+      const r = await apiFetch('/api/file?p=' + encodeURIComponent(state.file) + '&meta=1');
+      if (!r.ok) return;
+      const d = await r.json();
+      if (d.mtime !== state.mtime) {
+        const sc = $('content').scrollTop;
+        await loadFile(state.file);
+        if (sc) $('content').scrollTop = sc;
+      }
+    } catch (e) { /* ignore */ }
+  }, 2500);
+}
+function stopAutoReload() {
+  if (autoReloadTimer) clearInterval(autoReloadTimer);
+  autoReloadTimer = null;
+}
+
+/* ---------------- 工具 ---------------- */
+
+function showToast(msg, ms) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.add('hidden'), ms || 2600);
+}
+
+function setProgress(p) {
+  const el = $('progress');
+  el.style.width = p + '%';
+  if (p >= 100) setTimeout(() => { el.style.width = '0'; }, 400);
+}
+
+function busy(on) {
+  state.busyCount = Math.max(0, state.busyCount + (on ? 1 : -1));
+  $('busy').classList.toggle('hidden', state.busyCount === 0);
+}
+
+function saveLastFile(path) {
+  localStorage.setItem('readmd-last', path);
+  if (hasPy) {
+    try { py.save_settings({ last: path }); } catch (e) { /* ignore */ }
+  }
+}
+
+function afterRender() {
+  startModules();
+}
+
+function installAssoc() {
+  if (!hasPy) { showToast('浏览器模式下请在命令行运行 install.bat'); return; }
+  py.install_association().then(ok => {
+    showToast(ok === true ? '已设置为 .md 默认打开方式' : ('注册失败：' + ok));
+  });
+}

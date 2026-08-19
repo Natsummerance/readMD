@@ -70,10 +70,20 @@ def convert_verbose(path):
                 return _markitdown_convert(path), 'markitdown', None
             except Exception as e2:  # noqa: BLE001
                 return '', '', '%s（MarkItDown 兜底也失败：%s）' % (e, e2)
+    if ext in ('.tex', '.latex'):
+        try:
+            from . import texmd
+            with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                tex_content = f.read()
+            return texmd.latex_to_md(tex_content), 'texmd', None
+        except Exception as e:  # noqa: BLE001
+            return '', '', 'LaTeX 转换失败：%s' % e
+
     try:
         return _markitdown_convert(path), 'markitdown', None
     except Exception as e:  # noqa: BLE001
         return '', '', str(e)
+
 
 
 def _markitdown_convert(path):

@@ -25,7 +25,8 @@ title ReadMD Win7 Packager
 
 rem ---- 版本串（Win7 版专用；常规链保持 2.1.1）----
 
-if "%READMD_VERSION_OVERRIDE%"=="" set "READMD_VERSION_OVERRIDE=2.2.8-win7"
+if "%READMD_VERSION_OVERRIDE%"=="" set "READMD_VERSION_OVERRIDE=2.2.9-win7"
+
 
 
 

@@ -103,8 +103,8 @@ def _bundle_version():
     return None
 
 
-VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-           or _bundle_version() or '2.2.8')
+VERSION = (os.environ.get('READMD_BUILD_VERSION')
+           or _bundle_version() or '2.2.9')
 
 
 
@@ -1855,10 +1855,10 @@ class Api(object):
         if not token or time.time() > expires_at:
             return {'text': '', 'html': '', 'source_type': 'unauthorized',
                     'error': '请通过用户操作重新授权读取剪贴板'}
-        text, html = '', ''
+        text, html, image_path = '', '', ''
         try:
             if IS_WIN:
-                import win32clipboard  # optional pywin32 dependency
+                import win32clipboard
                 win32clipboard.OpenClipboard()
                 try:
                     if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
@@ -1867,16 +1867,16 @@ class Api(object):
                     if win32clipboard.IsClipboardFormatAvailable(fmt):
                         raw = win32clipboard.GetClipboardData(fmt)
                         if isinstance(raw, bytes) and len(raw) <= 10 * 1024 * 1024:
-                            html = raw.decode('utf-8', errors='replace')
-                            # CF_HTML can contain unrelated clipboard bytes;
-                            # expose only the declared fragment where possible.
-                            start = re.search(r'StartFragment:(\d+)', html)
-                            end = re.search(r'EndFragment:(\d+)', html)
+                            html_str = raw.decode('utf-8', errors='replace')
+                            start = re.search(r'StartFragment:(\d+)', html_str)
+                            end = re.search(r'EndFragment:(\d+)', html_str)
                             if start and end:
-                                html = html[int(start.group(1)):int(end.group(1))]
+                                html = html_str[int(start.group(1)):int(end.group(1))]
+                            else:
+                                html = html_str
                 finally:
                     win32clipboard.CloseClipboard()
-            if not text:
+            if not text and not html:
                 try:
                     import tkinter
                     root = tkinter.Tk(); root.withdraw()
@@ -1884,15 +1884,30 @@ class Api(object):
                     root.destroy()
                 except Exception:
                     pass
+            if not text and not html:
+                try:
+                    from PIL import ImageGrab, Image
+                    img = ImageGrab.grabclipboard()
+                    if isinstance(img, Image.Image):
+                        tmp_img = os.path.join(tempfile.gettempdir(), 'readmd_clip_%d.png' % int(time.time() * 1000))
+                        img.save(tmp_img, 'PNG')
+                        image_path = tmp_img
+                except Exception:
+                    pass
         except Exception:
-            # Do not log clipboard content or format bytes.
             pass
-        if isinstance(html, str) and len(html.encode('utf-8')) <= 10 * 1024 * 1024:
-            return {'text': '', 'html': html, 'source_type': 'html'}
-        if isinstance(text, str) and len(text.encode('utf-8')) <= 10 * 1024 * 1024:
+
+        if image_path and os.path.isfile(image_path):
+            return {'text': '', 'html': '', 'image': image_path, 'source_type': 'image'}
+        if html and len(html.encode('utf-8')) <= 10 * 1024 * 1024:
+            return {'text': text or '', 'html': html, 'source_type': 'html'}
+        if text and len(text.encode('utf-8')) <= 10 * 1024 * 1024:
             return {'text': text, 'html': '', 'source_type': 'text'}
+        if not text and not html and not image_path:
+            return {'text': '', 'html': '', 'source_type': 'empty', 'error': '剪贴板为空或不包含支持的内容'}
         return {'text': '', 'html': '', 'source_type': 'too_large',
                 'error': '剪贴板内容超过 10 MB 限制'}
+
 
 
     def choose_folder(self):
@@ -2308,7 +2323,9 @@ class Api(object):
         fmt = (fmt or '').lower()
         ext_map = {'pdf': 'PDF 文档 (*.pdf)',
                    'docx': 'Word 文档 (*.docx)',
-                   'html': 'HTML 网页 (*.html)'}
+                   'html': 'HTML 网页 (*.html)',
+                   'tex': 'LaTeX 文档 (*.tex)'}
+
         if fmt not in ext_map:
             return {'ok': False, 'stage': 'options', 'error': '不支持的导出格式'}
         try:

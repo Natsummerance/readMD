@@ -91,13 +91,23 @@ class TestV227Features(unittest.TestCase):
         self.assertIn('.export-preview-full-page', css)
 
     def test_app_js_logic(self):
-        with open(APP_JS, 'r', encoding='utf-8') as f:
-            js = f.read()
+        js_files = [APP_JS]
+        js_dir = os.path.join(ROOT_DIR, 'assets', 'js')
+        if os.path.exists(js_dir):
+            for root, _, files in os.walk(js_dir):
+                for f in files:
+                    if f.endswith('.js'):
+                        js_files.append(os.path.join(root, f))
+        js = ''
+        for fp in js_files:
+            with open(fp, 'r', encoding='utf-8') as f:
+                js += '\n' + f.read()
 
         # Multi-tab methods
         self.assertIn('state.tabs', js)
         self.assertIn('state.activeTabId', js)
         self.assertIn('function renderTabsBar()', js)
+
         self.assertIn('function switchTab(', js)
         self.assertIn('function closeTab(', js)
         self.assertIn('function closeOtherTabs(', js)

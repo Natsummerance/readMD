@@ -16,17 +16,17 @@
 <br>
 
 <p align="center">
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.2.8.exe">
-    <img src="https://img.shields.io/badge/⬇️_Windows_安装包下载-v2.2.8-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 安装包下载">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.2.9.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_安装包下载-v2.2.9-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 安装包下载">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.2.8.exe">
-    <img src="https://img.shields.io/badge/⬇️_Windows_便携版下载-v2.2.8-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 便携版下载">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.2.9.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_便携版下载-v2.2.9-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 便携版下载">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.2.8.zip">
-    <img src="https://img.shields.io/badge/⬇️_macOS_(M系列芯片)-v2.2.8-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64 下载">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.2.9.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(M系列芯片)-v2.2.9-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64 下载">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.2.8.zip">
-    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel芯片)-v2.2.8-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel 下载">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.2.9.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel芯片)-v2.2.9-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel 下载">
   </a>
 </p>
 
@@ -40,14 +40,14 @@
 - 🎨 **界面清爽**：44px 工具条 + 内联 SVG 图标、欢迎页最近文件网格、浅色 / 暗色 / sepia 三主题全套设计 token、大文档骨架屏、动画遵循系统「减弱动态效果」
 - 🤖 **AI 助手与对话导入（v2.2.4）**：官方预设 + 可增删改的自定义连接；API Key 仅本机保存且配置接口不回传明文。可从一次性授权剪贴板、用户选择的导出文件或公开网页地址预览并导入对话；导入会限制大小、压缩包展开量和危险链接，不记录原始剪贴板内容
 - ⚡ **按需加载与启动探针（v2.2.4）**：先打开阅读界面，再在用户实际使用时加载转换、OCR、网页或 AI 模块；启动探针只输出里程碑与版本，不包含文档路径或内容
-- 🔄 **万物转 MD（v2.1.1 保存 + 批量 + 质量）**：docx / pptx / xlsx / pdf / html / csv / json 等转为 Markdown；单文件或批量（多选 / 整文件夹）一键转换，结果自动保存到源目录同名 `.md` 并直接以可编辑文件打开（同名默认跳过、可勾选覆盖）；docx 走专用解析（OMML 公式转 LaTeX、标题、表格、等宽代码块），pdf 走专用解析（表格还原 + 公式启发式），其余 MarkItDown 并逐文件回退；输出经严格校验（代码围栏 / 表格 / 公式定界符 / 编码 / 图片引用）
-- 🔍 **扫描转 MD（OCR）**：Windows 使用 WinRT、macOS 使用 Vision，均为系统原生离线识别；PDF 有文字层时直接提取
-- 🌐 **网页转 MD**：Trafilatura 双级抽取，静态正文不足时自动使用 WebView2 / WKWebView + 离线 Defuddle / Mozilla Readability；支持短公告与文档页、同站 1–30 页、显式内网授权、明确错误诊断和可选图片本地化。未授权公网 HTML 统一断网渲染，避免页面脚本借系统 WebView 访问本机或局域网；临时交互仅用于用户明确授权的内网页面
+- 🔄 **万物转 MD（v2.2.9 升级 LaTeX 支持）**：docx / pptx / xlsx / pdf / html / csv / json / tex 等转为 Markdown；单文件或批量（多选 / 整文件夹）一键转换，结果自动保存到源目录同名 `.md` 并直接以新标签页打开；docx 走专用解析（OMML 公式转 LaTeX、标题、表格、等宽代码块），pdf 走专用解析（表格还原 + 公式启发式），tex 走专用 LaTeX ⇄ MD 纯 Python 引擎；输出经严格校验
+- 🔍 **扫描转 MD（OCR）**：Windows 使用 WinRT、macOS 使用 Vision，均为系统原生离线识别；剪贴板截图一键启动 OCR 提取排版文字
+- 🌐 **网页转 MD（v2.2.9 极简交互与双动作卡片）**：Trafilatura 双级抽取，静态正文不足时自动使用系统 WebView 内核 + 离线 Defuddle / Mozilla Readability 动态渲染；同站 1–30 页可滚轮/步进微调，提供剪贴板一键粘贴网址与边缘化局域网授权
 - 📄 **独立文件图标**：Windows 文件关联使用简约的 Markdown 文档图标，应用 Logo 仅用于 ReadMD 程序和快捷方式
 - ✏️ **主动编辑（v2.2.0）**：单行分组工具栏、可搜索命令面板和分类公式选择器；实时预览支持上下左右停靠及拖拽分隔；图片编辑支持八向裁剪、任意角度、翻转、画布缩放/平移、输出尺寸与撤销重做
 - 📱 **移动端共享**：开启局域网共享后，手机扫码在同一 Wi-Fi 下阅读 / 转 MD / OCR / AI（随机令牌鉴权）
-- 📑 **阅读体验**：目录侧栏（滚动高亮）、全文搜索、三主题、字号缩放、打印 / 导出 PDF、文件夹浏览、大文档增量渲染（>300KB 或 6000 行分块渲染不卡顿）、文件外部修改自动刷新
-- 📤 **导出 PDF / DOCX / HTML**：统一兼容 Windows/macOS 保存对话框路径，使用同目录临时文件原子替换；公式在 PDF / DOCX 中本地渲染为图片，HTML 为离线单文件
+- 📑 **阅读体验**：多标签页系统、未保存修改确认弹窗、目录侧栏（滚动高亮）、全文搜索、三主题、字号缩放、打印 / 导出 PDF、文件夹浏览、大文档增量渲染、文件外部修改自动刷新
+- 📤 **导出 PDF / DOCX / HTML / LaTeX**：统一兼容 Windows/macOS 保存对话框路径，支持一键导出排版完备的 LaTeX (.tex) 论文源码
 - 📝 **文件重命名**：打开本地文件后，点击顶栏文件名或按 F2 可直接重命名，自动同步最近文件和本地历史引用
 - 🛠 **自动修正**：表格缺分隔行 / 列数不齐、未闭合 `**` `__` `*`、未闭合 `$` `$$`、`#标题` 缺空格、BOM、CRLF 等，逐处列出修改
 - 🖥 **默认打开方式**：可设为 Windows 默认 `.md` 应用（当前用户级，无需管理员）
@@ -60,16 +60,17 @@
 
 | 平台 / 类型 | 一键直接下载 | 说明 |
 | :--- | :--- | :--- |
-| 🪟 **Windows 安装版** | [⬇️ **ReadMDSetup-v2.2.8.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.2.8.exe) | 动画安装向导，可自动关联 `.md` 为默认打开方式；已安装时运行即平滑升级（未签名） |
-| 💼 **Windows 便携版** | [⬇️ **ReadMD-portable-v2.2.8.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.2.8.exe) | 免安装绿色版，解压即用，随身携带（未签名） |
-| 🍏 **macOS Apple Silicon** | [⬇️ **ReadMD-macos-arm64-v2.2.8.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.2.8.zip) | 适用于 M1 / M2 / M3 / M4 系列芯片 Mac 原生构建（未签名） |
-| 💻 **macOS Intel** | [⬇️ **ReadMD-macos-x64-v2.2.8.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.2.8.zip) | 适用于 Intel 处理器 Mac 原生构建（未签名） |
-| 🪟 **Win7 兼容版** | [⬇️ **ReadMDSetup-2.2.8-win7-x64.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-2.2.8-win7-x64.exe) | 专为 Windows 7 SP1 x64 环境优化的兼容安装包 |
+| 🪟 **Windows 安装版** | [⬇️ **ReadMDSetup-v2.2.9.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.2.9.exe) | 动画安装向导，可自动关联 `.md` 为默认打开方式；已安装时运行即平滑升级（未签名） |
+| 💼 **Windows 便携版** | [⬇️ **ReadMD-portable-v2.2.9.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.2.9.exe) | 免安装绿色版，解压即用，随身携带（未签名） |
+| 🍏 **macOS Apple Silicon** | [⬇️ **ReadMD-macos-arm64-v2.2.9.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.2.9.zip) | 适用于 M1 / M2 / M3 / M4 系列芯片 Mac 原生构建（未签名） |
+| 💻 **macOS Intel** | [⬇️ **ReadMD-macos-x64-v2.2.9.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.2.9.zip) | 适用于 Intel 处理器 Mac 原生构建（未签名） |
+| 🪟 **Win7 兼容版** | [⬇️ **ReadMDSetup-2.2.9-win7-x64.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-2.2.9-win7-x64.exe) | 专为 Windows 7 SP1 x64 环境优化的兼容安装包 |
 | 🔐 **SHA-256 清单** | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | 全量发布文件的 SHA-256 完整性校验清单 |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
 >
-> v2.2.8 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。所有发布包均未签名：Windows 如出现 SmartScreen，请先核验 SHA-256 后通过“更多信息 → 仍要运行”；macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动请在 Finder 中右键 `ReadMD.app` →“打开”。
+> v2.2.9 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。所有发布包均未签名：Windows 如出现 SmartScreen，请先核验 SHA-256 后通过“更多信息 → 仍要运行”；macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动请在 Finder 中右键 `ReadMD.app` →“打开”。
+
 
 
 
@@ -262,11 +263,27 @@ python release.py --verify             rem 校验既有 Release 的四资产 + S
 python release.py --update             rem 更新已存在 Release 的标题与说明（读 release_notes.md）
 ```
 
-`release.py` 不创建 Release、标签或资产；请只在 CI 已发布 `v2.2.4` 后使用它维护说明或复核资产。
+## 🗺️ 路线图与生态规划 (Roadmap)
+
+- 🧩 **v2.3.0 规划（开发者生态与 AI 协议）**：
+  - 🔌 **VSCode 深度集成插件**：推出官方 ReadMD VSCode 扩展，无缝集成双向编辑、实时高保真预览、公式自动修复与一键导出。
+  - 🤖 **MCP (Model Context Protocol) Server**：接入标准 MCP 协议，支持 Claude Code / Cursor / Windsurf / Codex 等 AI 助手直接读取、转换、搜索本地 Markdown 与知识库。
+- 🐧 **v2.3.1 规划（全平台与国产化生态）**：
+  - 💻 **Linux 原生发行版支持**：提供针对 Ubuntu / Debian (`.deb`)、Fedora / RHEL (`.rpm`) 及通用 `AppImage` 的独立发布包。
+  - 🇨🇳 **国产操作系统深度适配**：全面适配银河麒麟 (KylinOS)、统信 UOS 等国产操作系统及龙芯 (LoongArch) / 飞腾 (ARM64) 硬件平台。
 
 ## 📝 更新日志
 
+- **v2.2.9**：**全能剪贴板智能建档 + 未保存关闭安全弹窗 + 状态深度清理 + 网页抓取现代重构 + LaTeX 双向互转**
+  - 📋 **全能智能剪贴板自适应分流**：不管剪贴板是什么内容，一键自适应识别建档——富文本自动经 Turndown 转为 Markdown，图片/截图自动调起本地 OCR 引擎提取排版文字，单个 URL 自动填入网页转 MD 弹窗，纯文本/公式秒级新建标签页。
+  - 💾 **未保存修改自定义确认模态弹窗**：关闭未保存标签页时，弹出优雅现代化对话框，提供「保存 / 不保存 / 取消」三态操作；批量关闭与关闭其他标签时安全异步遍历，点击取消即刻中断，彻底防止数据误失。
+  - 🧹 **标签关闭与返回主页全局状态深度清理**：关闭全部标签或返回主页时，彻底清空大纲与目录缓存、搜索高亮、侧边栏激活状态与文档标题，杜绝任何视觉与数据残留。
+  - 🌐 **网页抓取现代极简界面重构**：去除暗色模式下白底白字的模式下拉框，改用双核心动作卡片（【⚡ 智能提取正文】为主操作 / 【🖥️ 完整动态渲染】为辅助操作）；合并同站抓取为数字步进器（默认1页，支持加减按钮、滚轮增减、1~30页限制），局域网授权协议边缘化放置，支持剪贴板一键粘贴网址。
+  - 🧮 **轻量级 LaTeX ⇄ Markdown 双向互转**：内置纯 Python 互转引擎（零 TeXLive/Pandoc 外部依赖），导出面板新增 LaTeX (.tex) 格式支持（生成包含宏包与 booktabs 表格的标准学术论文源码）；万物转 MD 与全局拖拽原生支持 `.tex` / `.latex` 文件一键转换为 Markdown。
+  - 🪟 **Win7 兼容版同步升级**：打包构建链同步升级至 v2.2.9。
+
 - **v2.2.8**：**软件内自动更新 + LaTeX 全量自修复 + OCR 智能排版规范化 + 导出实时高保真渲染**
+
   - 🚀 **软件内自动检查与本地更新系统**：启动静默检查 GitHub Releases，状态栏小圆点与更多菜单提示，弹窗完整渲染 Markdown 更新日志；智能匹配 Windows 安装版/便携版/macOS 包并校验 SHA256；支持一键热更重启与国内加速镜像
   - 🧮 **LaTeX 全量兼容与公式自修复算法**：支持 `\begin{cases}`, `\begin{align}`, `\begin{matrix}`, `\begin{equation}` 等多行 TeX 原生环境；智能配平花括号 `{}`、修复转义反斜杠、HTML 实体还原、Unicode 符号自动转 LaTeX，渲染失败优雅降级源码卡片
   - 📥 **万物转 MD 拖拽与批量转换自动开标签**：拖入 Word、PDF、PPT、Excel、EPUB、TXT 或在弹窗中批量转换后，自动将转换生成的 Markdown 文档打开至新标签页
