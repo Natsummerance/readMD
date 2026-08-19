@@ -62,6 +62,11 @@
 /* ----------------------------------------------------------------------------------------------
    顶层 UI 事件集中绑定与调度器
    ---------------------------------------------------------------------------------------------- */
+function closeMoreMenu() {
+  const menu = $('more-menu');
+  if (menu) menu.classList.remove('open');
+}
+
 function bindEvents() {
 
   /* --- 1. 欢迎页与全局导航 (Welcome & Navigation) [联动: history.js, render.js, folder.js] --- */
@@ -80,10 +85,11 @@ function bindEvents() {
     });
     document.addEventListener('click', e => {
       if (moreMenu.classList.contains('open') && !moreMenu.contains(e.target) && e.target !== moreBtn) {
-        moreMenu.classList.remove('open');
+        closeMoreMenu();
       }
     });
   }
+
 
   /* --- 3. 万物转 MD 模态框与文件批量导入 [联动: features/convert.js] --- */
   $('btn-convert').addEventListener('click', openConvertModal);
@@ -303,7 +309,12 @@ function bindEvents() {
   $('search-close').addEventListener('click', closeSearch);
   $('search-next').addEventListener('click', () => jumpToMark(1));
   $('search-prev').addEventListener('click', () => jumpToMark(-1));
-  $('search-input').addEventListener('input', e => doSearch(e.target.value));
+  let searchDebounce = null;
+  $('search-input').addEventListener('input', e => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => doSearch(e.target.value), 40);
+  });
+
   $('search-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); jumpToMark(e.shiftKey ? -1 : 1); }
   });
@@ -365,7 +376,7 @@ function bindEvents() {
   $('ai-history-open').addEventListener('click', () => { openAiModal('ai-history-modal', $('ai-history-open')); loadAiSessions(); });
   $('ai-history-close').addEventListener('click', () => closeAiModal('ai-history-modal'));
   $('ai-history-modal').addEventListener('click', e => { if (e.target === $('ai-history-modal')) closeAiModal('ai-history-modal'); });
-  $('ai-history-search').addEventListener('input', renderAiSessionList);
+  $('ai-history-search').addEventListener('input', renderAiSessionSelect);
   $('ai-history-copy').addEventListener('click', copyCurrentConversation);
   $('ai-history-export').addEventListener('click', exportCurrentConversation);
   $('ai-history-clear').addEventListener('click', clearAiSessions);
@@ -391,7 +402,7 @@ function bindEvents() {
   $('ai-tpl-btn').addEventListener('click', openTplModal);
   $('tpl-new').addEventListener('click', () => selectTpl(null));
   $('tpl-save').addEventListener('click', saveTplForm);
-  $('tpl-del').addEventListener('click', deleteTplForm);
+  $('tpl-del').addEventListener('click', deleteCurrentTpl);
   $('tpl-close').addEventListener('click', () => $('tpl-modal').classList.add('hidden'));
   $('tpl-modal').addEventListener('click', e => { if (e.target === $('tpl-modal')) $('tpl-modal').classList.add('hidden'); });
   $('ai-session').addEventListener('change', onAiSessionChange);
@@ -414,9 +425,11 @@ function bindEvents() {
     $('top-btn').classList.toggle('hidden', $('content').scrollTop < 600);
   });
 
-  /* --- 17. 客户端内版本检查、语言切换与自动升级 [联动: core/i18n.js, features/updater.js] --- */
+  /* --- 17. 客户端内版本检查、语言切换、开机自启与自动升级 [联动: core/i18n.js, features/updater.js] --- */
   if ($('btn-lang')) $('btn-lang').addEventListener('click', () => { closeMoreMenu(); if (window.i18n) window.i18n.openModal(); });
+  if ($('btn-autostart')) $('btn-autostart').addEventListener('click', () => { closeMoreMenu(); toggleAutostart(); });
   if ($('btn-check-update')) $('btn-check-update').addEventListener('click', () => { closeMoreMenu(); checkUpdate(false); });
+
   if ($('status-update-badge')) $('status-update-badge').addEventListener('click', openUpdateModal);
   if ($('update-close')) $('update-close').addEventListener('click', closeUpdateModal);
   if ($('btn-update-start')) $('btn-update-start').addEventListener('click', startUpdateDownload);
@@ -587,9 +600,11 @@ function finishInit() {
     if (py.report_ready) { try { py.report_ready(); } catch (e) { /* ignore */ } }
     window.__trayOpenFile = loadFileDialog;
   }
+  checkAutostart(); // 初始化开机自启状态
   startControlPoll(); // 启动后端单例 IPC 唤醒与文件打开指令轮询
   setTimeout(() => checkUpdate(true), 2500); // 延迟 2.5s 静默检查软件更新
 }
+
 
 /* ----------------------------------------------------------------------------------------------
    恢复上次会话文件 (Restore Last Session State)

@@ -1,0 +1,17 @@
+[Desktop Entry]
+Name=ReadMD
+GenericName=Markdown Reader & Editor
+Comment=Lightweight local Markdown reader with auto-repair, LaTeX PRO, multi-format conversion, and AI assistant
+Exec=readmd %U
+Icon=readmd
+Terminal=false
+Type=Application
+Categories=Office;TextEditor;Utility;
+MimeType=text/markdown;text/x-markdown;text/plain;application/x-markdown;
+Keywords=markdown;editor;reader;latex;bibtex;信创;
+StartupWMClass=ReadMD
+Actions=NewWindow;
+
+[Desktop Action NewWindow]
+Name=New Window
+Exec=readmd

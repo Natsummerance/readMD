@@ -48,8 +48,10 @@ def _platform_data_dir():
 
 IS_MAC = sys.platform == 'darwin'
 IS_WIN = sys.platform == 'win32'
+IS_LINUX = sys.platform.startswith('linux')
 
 DATA_DIR = _platform_data_dir()
+
 SETTINGS_FILE = os.path.join(DATA_DIR, 'settings.json')
 RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
 PROMPTS_FILE = os.path.join(DATA_DIR, 'prompts.json')
@@ -145,7 +147,8 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_BUILD_VERSION')
-           or _bundle_version() or '2.3.0')
+           or _bundle_version() or '2.3.1')
+
 
 
 
@@ -754,9 +757,12 @@ class Handler(BaseHTTPRequestHandler):
             mime = mimetypes.guess_type(fp)[0] or 'application/octet-stream'
             if mime.startswith('text/') or mime in ('application/javascript', 'application/json'):
                 mime += '; charset=utf-8'
+            is_cached = rel.startswith('vendor/') or rel.startswith('i18n/')
             self._send_file(fp, mime, immutable=bool(
+                is_cached or
                 parse_qs(u.query).get('v') or parse_qs(u.query).get('version') or
                 parse_qs(u.query).get('hash')))
+
         elif path == '/api/file':
             p = unquote(qs.get('p', [''])[0])
             if not p:
@@ -825,6 +831,16 @@ class Handler(BaseHTTPRequestHandler):
             self._api_update_apply()
         elif path == '/api/system/language':
             self._api_system_language()
+        elif path == '/api/autostart/get':
+            self._send_json(200, {'ok': True, 'enabled': Api().get_autostart()})
+        elif path == '/api/autostart/set':
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            try:
+                body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            except Exception:
+                body = {}
+            self._send_json(200, Api().set_autostart(bool(body.get('enabled'))))
+
         elif path == '/api/bibtex':
             self._api_bibtex(qs)
         elif path == '/api/ping':
@@ -1924,16 +1940,20 @@ class Api(object):
         if not token or time.time() > expires_at:
             return {'text': '', 'html': '', 'source_type': 'unauthorized',
                     'error': '请通过用户操作重新授权读取剪贴板'}
-        text, html, image_path = '', '', ''
+        text, html, image_path, file_list = '', '', '', []
         try:
             if IS_WIN:
                 import win32clipboard
                 win32clipboard.OpenClipboard()
                 try:
-                    if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
+                    if win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_HDROP):
+                        raw_files = win32clipboard.GetClipboardData(win32clipboard.CF_HDROP)
+                        if raw_files:
+                            file_list = [f for f in raw_files if os.path.exists(f)]
+                    if not file_list and win32clipboard.IsClipboardFormatAvailable(win32clipboard.CF_UNICODETEXT):
                         text = win32clipboard.GetClipboardData(win32clipboard.CF_UNICODETEXT) or ''
                     fmt = win32clipboard.RegisterClipboardFormat('HTML Format')
-                    if win32clipboard.IsClipboardFormatAvailable(fmt):
+                    if not file_list and win32clipboard.IsClipboardFormatAvailable(fmt):
                         raw = win32clipboard.GetClipboardData(fmt)
                         if isinstance(raw, bytes) and len(raw) <= 10 * 1024 * 1024:
                             html_str = raw.decode('utf-8', errors='replace')
@@ -1945,7 +1965,26 @@ class Api(object):
                                 html = html_str
                 finally:
                     win32clipboard.CloseClipboard()
-            if not text and not html:
+            elif IS_MAC:
+                try:
+                    p = subprocess.run(['pbpaste'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=2)
+                    if p.returncode == 0:
+                        text = p.stdout.decode('utf-8', errors='replace')
+                except Exception:
+                    pass
+            else:
+                try:
+                    p = subprocess.run(['wl-paste', '-t', 'text/plain'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=2)
+                    if p.returncode == 0:
+                        text = p.stdout.decode('utf-8', errors='replace')
+                    else:
+                        p = subprocess.run(['xclip', '-selection', 'clipboard', '-o'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=2)
+                        if p.returncode == 0:
+                            text = p.stdout.decode('utf-8', errors='replace')
+                except Exception:
+                    pass
+
+            if not text and not html and not file_list:
                 try:
                     import tkinter
                     root = tkinter.Tk(); root.withdraw()
@@ -1953,7 +1992,7 @@ class Api(object):
                     root.destroy()
                 except Exception:
                     pass
-            if not text and not html:
+            if not text and not html and not file_list:
                 try:
                     from PIL import ImageGrab, Image
                     img = ImageGrab.grabclipboard()
@@ -1961,21 +2000,26 @@ class Api(object):
                         tmp_img = os.path.join(tempfile.gettempdir(), 'readmd_clip_%d.png' % int(time.time() * 1000))
                         img.save(tmp_img, 'PNG')
                         image_path = tmp_img
+                    elif isinstance(img, list):
+                        file_list = [f for f in img if os.path.exists(f)]
                 except Exception:
                     pass
         except Exception:
             pass
 
+        if file_list:
+            return {'text': '', 'html': '', 'files': file_list, 'source_type': 'files'}
         if image_path and os.path.isfile(image_path):
-            return {'text': '', 'html': '', 'image': image_path, 'source_type': 'image'}
+            return {'text': '', 'html': '', 'image': image_path, 'image_path': image_path, 'source_type': 'image'}
         if html and len(html.encode('utf-8')) <= 10 * 1024 * 1024:
             return {'text': text or '', 'html': html, 'source_type': 'html'}
         if text and len(text.encode('utf-8')) <= 10 * 1024 * 1024:
             return {'text': text, 'html': '', 'source_type': 'text'}
-        if not text and not html and not image_path:
+        if not text and not html and not image_path and not file_list:
             return {'text': '', 'html': '', 'source_type': 'empty', 'error': '剪贴板为空或不包含支持的内容'}
         return {'text': '', 'html': '', 'source_type': 'too_large',
                 'error': '剪贴板内容超过 10 MB 限制'}
+
 
 
 
@@ -2043,9 +2087,101 @@ class Api(object):
         except Exception:
             return False
 
+    def get_autostart(self):
+        """检查开机自启动是否已开启。"""
+        try:
+            if IS_WIN:
+                import winreg
+                try:
+                    with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_READ) as key:
+                        val, _ = winreg.QueryValueEx(key, "ReadMD")
+                        return bool(val)
+                except (FileNotFoundError, OSError):
+                    return False
+            elif IS_LINUX:
+                autostart_file = os.path.expanduser('~/.config/autostart/io.github.natsummerance.readmd.desktop')
+                return os.path.isfile(autostart_file)
+            elif IS_MAC:
+                plist_path = os.path.expanduser('~/Library/LaunchAgents/io.github.natsummerance.readmd.plist')
+                return os.path.isfile(plist_path)
+            return False
+        except Exception as e:
+            logging.exception('get_autostart failed: %s', e)
+            return False
+
+    def set_autostart(self, enabled: bool):
+        """设置开机自启动开启或关闭。"""
+        try:
+            enabled = bool(enabled)
+            if IS_WIN:
+                import winreg
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Run", 0, winreg.KEY_SET_VALUE) as key:
+                    if enabled:
+                        exe_path = sys.executable
+                        if getattr(sys, 'frozen', False):
+                            cmd = f'"{exe_path}"'
+                        else:
+                            main_script = os.path.abspath(sys.argv[0])
+                            cmd = f'"{exe_path}" "{main_script}"'
+                        winreg.SetValueEx(key, "ReadMD", 0, winreg.REG_SZ, cmd)
+                    else:
+                        try:
+                            winreg.DeleteValue(key, "ReadMD")
+                        except (FileNotFoundError, OSError):
+                            pass
+                return {'ok': True, 'enabled': enabled}
+            elif IS_LINUX:
+                autostart_dir = os.path.expanduser('~/.config/autostart')
+                autostart_file = os.path.join(autostart_dir, 'io.github.natsummerance.readmd.desktop')
+                if enabled:
+                    os.makedirs(autostart_dir, exist_ok=True)
+                    desktop_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'scripts', 'linux', 'io.github.natsummerance.readmd.desktop')
+                    if os.path.isfile(desktop_src):
+                        import shutil
+                        shutil.copy(desktop_src, autostart_file)
+                    else:
+                        with open(autostart_file, 'w', encoding='utf-8') as f:
+                            f.write("[Desktop Entry]\nName=ReadMD\nExec=readmd\nType=Application\n")
+                else:
+                    if os.path.isfile(autostart_file):
+                        os.remove(autostart_file)
+                return {'ok': True, 'enabled': enabled}
+            elif IS_MAC:
+                plist_dir = os.path.expanduser('~/Library/LaunchAgents')
+                plist_path = os.path.join(plist_dir, 'io.github.natsummerance.readmd.plist')
+                if enabled:
+                    os.makedirs(plist_dir, exist_ok=True)
+                    exe_path = sys.executable
+                    plist_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>io.github.natsummerance.readmd</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>{exe_path}</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+</dict>
+</plist>
+"""
+                    with open(plist_path, 'w', encoding='utf-8') as f:
+                        f.write(plist_content)
+                else:
+                    if os.path.isfile(plist_path):
+                        os.remove(plist_path)
+                return {'ok': True, 'enabled': enabled}
+            return {'ok': False, 'error': 'Unsupported platform'}
+        except Exception as e:
+            logging.exception('set_autostart failed: %s', e)
+            return {'ok': False, 'error': str(e)}
+
     def start_modules(self):
         """Compatibility bridge: module loading is now initiated per feature."""
         return self.get_modules_status()
+
 
     def get_modules_status(self):
         st, err = RM.status()
@@ -3157,9 +3293,21 @@ def main():
         pass
 
     setup_win7_webview2_env()
+    if IS_LINUX:
+        try:
+            from src.readmd_modules import linux_native
+            linux_native.setup_linux_env()
+        except Exception:
+            pass
+
     try:
         if IS_MAC:
             webview.start(gui='cocoa')
+        elif IS_LINUX:
+            try:
+                webview.start(gui='gtk')
+            except Exception:
+                webview.start()
         else:
             webview.start()
     except Exception as e:
@@ -3172,12 +3320,16 @@ def main():
             elif IS_MAC:
                 from src.readmd_modules import macos_native
                 macos_native.show_error('ReadMD', '启动失败，请查看日志。')
+            elif IS_LINUX:
+                from src.readmd_modules import linux_native
+                linux_native.show_notification('ReadMD 启动失败', str(e))
         except Exception:
             pass
         if args.startup_probe:
             write_startup_probe(args.startup_probe_json,
                                 timed_out=bool(_STARTUP_PROBE.get('timed_out')))
         return 1
+
 
     if args.startup_probe:
         timed_out = bool(_STARTUP_PROBE.get('timed_out'))

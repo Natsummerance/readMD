@@ -10,35 +10,49 @@
 
 <img src="assets/icon-256.png" width="96" alt="ReadMD logo">
 
-# 📖 ReadMD · Lightweight Markdown Viewer & Editor
+# 📖 ReadMD · Lightweight Multi-Platform Markdown Viewer & Editor
 
-**Pure Local · Instant Launch · Offline Ready** Markdown Viewer & Editor for Windows and macOS.
+**Pure Local · Instant Launch · Offline Ready · Cross-Platform Native Experience**
 
-Double-click any `.md` file to read instantly. ReadMD automatically repairs common Markdown formatting errors (tables, bold, LaTeX math, unspaced headings) before rendering—**only modifying the visual preview, never altering your original source file**. Built-in AI assistant, universal file conversion, native OCR, web-to-Markdown extraction, live editing, and local network mobile sharing.
+Double-click any `.md` file to read immediately. ReadMD automatically fixes common Markdown syntax errors (tables, bold, math formulas, headers) before rendering—**modifying visual display only, never altering the original file**. Built-in AI assistant, universal format converter, native OCR, web-to-Markdown, LaTeX PRO academic suite, Zen Mode, and local network mobile sharing.
 
-![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-0078d6)
-![version](https://img.shields.io/badge/version-v2.3.0-3b6ef5)
-![webview2](https://img.shields.io/badge/runtime-WebView2-4fc08d)
-![license](https://img.shields.io/badge/license-MIT-green)
+![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20HarmonyOS-0078d6)
+![version](https://img.shields.io/badge/version-v2.3.1-3b6ef5)
+![webview2](https://img.shields.io/badge/runtime-WebView2%20%7C%20WebKit%20%7C%20ArkWeb-4fc08d)
+![repo size](https://img.shields.io/github/repo-size/Natsummerance/readMD)
 ![i18n](https://img.shields.io/badge/i18n-46%20Languages-orange)
+![license](https://img.shields.io/badge/license-MIT-green)
 
 <br>
 
 <p align="center">
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.0.exe">
-    <img src="https://img.shields.io/badge/⬇️_Windows_Setup-v2.3.0-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Setup Download">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.1.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_Setup-v2.3.1-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Setup">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.0.exe">
-    <img src="https://img.shields.io/badge/⬇️_Windows_Portable-v2.3.0-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Portable Download">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.1.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_Portable-v2.3.1-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Portable">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.0.zip">
-    <img src="https://img.shields.io/badge/⬇️_macOS_(Apple_Silicon)-v2.3.0-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64 Download">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.1.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(Apple_Silicon)-v2.3.1-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.0.zip">
-    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel)-v2.3.0-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel Download">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.1.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel)-v2.3.1-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.0.vsix">
-    <img src="https://img.shields.io/badge/🧩_VSCode_VSIX-v2.3.0-6366f1?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VSCode VSIX Download">
+  <br>
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.1.AppImage">
+    <img src="https://img.shields.io/badge/⬇️_Linux_AppImage-v2.3.1-ea580c?style=for-the-badge&logo=linux&logoColor=white" alt="Linux AppImage">
+  </a>
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.1_amd64.deb">
+    <img src="https://img.shields.io/badge/⬇️_Debian_Ubuntu_UOS_Deb-v2.3.1-b91c1c?style=for-the-badge&logo=debian&logoColor=white" alt="Deb Package">
+  </a>
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.1.hap">
+    <img src="https://img.shields.io/badge/📱_HarmonyOS_HAP-v2.3.1-059669?style=for-the-badge&logo=huawei&logoColor=white" alt="HarmonyOS HAP">
+  </a>
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.1.vsix">
+    <img src="https://img.shields.io/badge/🧩_VSCode_VSIX-v2.3.1-6366f1?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VSCode VSIX">
+  </a>
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.1.zip">
+    <img src="https://img.shields.io/badge/🤖_MCP_Server-v2.3.1-0d9488?style=for-the-badge&logo=fastapi&logoColor=white" alt="MCP Server">
   </a>
 </p>
 
@@ -48,135 +62,61 @@ Double-click any `.md` file to read instantly. ReadMD automatically repairs comm
 
 ## ✨ Key Features
 
-- ⚡ **Instant Launch**: Installed version uses directory deployment (onedir) with cold start ≤ 1.5s (≤ 2s on low-end machines). Window minimize to system tray enables instant wake-up in < 0.3s.
-- 🌍 **Global 46+ Languages (v2.3.0)**: Automatically detects system language on first startup. Complete support for LTR & RTL layouts (Arabic, Hebrew, Uyghur) and Asian/European languages.
-- 📐 **LaTeX PRO Academic Suite (v2.3.0)**: Zero-config auto-scanning of `.bib` bibliography files in the same directory. Interactive hover cards for citations (with DOI jump & BibTeX copying), plus academic callouts for Theorem, Lemma, Proof (with Q.E.D. symbol), and Definition.
-- 🧘 **Editor Studio PRO (v2.3.0)**: Immersive Zen Mode (<kbd>F11</kbd> / <kbd>Esc</kbd>), 10x10 interactive table grid builder, smart Excel/CSV-to-Markdown paste conversion, and live word count & reading time stats.
-- 🔌 **VSCode Extension & MCP Server (v2.3.0)**: Standalone VSCode extension with live sync preview and one-click auto-repair, plus standard FastMCP stdio server for Claude Desktop, Cursor, Antigravity, and Cline.
-- 🛡️ **In-App Auto-Updater**: Smooth background check with mirror fallback and zero-lock file release mechanism.
-- 🎨 **Minimalist Design**: 44px compact toolbar, Light / Dark / Sepia themes, skeleton screens for large files, and system "prefers-reduced-motion" compliance.
-- 🤖 **AI Assistant & Chat Import**: Preset providers (OpenAI, DeepSeek, Kimi, Anthropic, Ollama, etc.) with local encrypted API key storage. Supports context-aware chat, polishing, code review, and prompt templates.
-- 🔄 **Universal Conversion**: Converts Word (.docx), PowerPoint (.pptx), Excel (.xlsx), PDF, HTML, and LaTeX (.tex) into clean Markdown with automatic tab opening.
-- 🔍 **Native OCR**: Uses Windows WinRT and macOS Vision offline OCR engines. One-click clipboard image text extraction.
-- 🌐 **Web to Markdown**: Two-stage extraction with Trafilatura and fallback to headless WebView with Defuddle / Readability for dynamic single-page apps.
-- 📱 **Mobile Sharing**: Scan QR code to read and edit on local Wi-Fi with cryptographically random token authentication.
-- 📤 **Export to PDF / DOCX / HTML / LaTeX**: Custom paper size, margins, font colors, code block styling, and complete LaTeX paper source generation.
-- 🛠 **Non-Destructive Auto-Repair**: Fixes table column misalignment, missing separator rows, unclosed formatting (`**`, `*`, `$`, `$$`), unspaced `#` headers, and BOM/CRLF issues.
+- ⚡ **Instant Launch**: Directory deployment (`onedir`) provides cold start in ≤ 1.5s; system tray minimize allows instant wake-up in < 0.3s.
+- 💻 **Complete Platform Coverage**: Windows (Win 7 ~ 11), macOS (Apple Silicon / Intel), Linux (Ubuntu, Debian, Fedora, Arch), Domestic OS (KylinOS, UOS, Deepin, openEuler), and HarmonyOS NEXT (OpenHarmony).
+- 🌍 **Global 46 Languages**: Automatic OS language detection, LTR and RTL support (Arabic, Hebrew, Uyghur), with 100% verified native localization.
+- 📐 **LaTeX PRO Academic Suite**: Zero-configuration `.bib` bibliography hover cards, academic callout boxes (Theorem, Lemma, Proof with Q.E.D. ■, Definition), and export to LaTeX.
+- 🧘 **Editor Studio PRO**: Zen Mode (<kbd>F11</kbd> / <kbd>Esc</kbd>), 10×10 visual table builder, smart Excel/CSV paste-to-table, and real-time word count.
+- 🔌 **VSCode Extension & FastMCP Server**: Standalone VSCode extension with live sync preview and auto-fix; standard FastMCP stdio server for Claude Desktop, Cursor, and AI agents.
+- 🔄 **Universal Conversion & Native OCR**: Word, PPT, Excel, PDF, HTML, LaTeX conversion to clean Markdown; OS-level offline OCR for images and screenshots.
+- 🌐 **Web to Markdown & LAN Sharing**: Two-stage intelligent extraction; mobile QR-code scanning for reading and editing over local Wi-Fi.
+- 🛠 **Non-Destructive Auto-Repair**: Fixes unclosed symbols, misaligned tables, and math syntax errors strictly in memory during render.
 
 ---
 
-## 🚀 Direct Downloads
+## 🚀 Direct Downloads & Platforms Matrix (Release Assets)
 
-| Platform / Type | Direct Download Link | Description |
-| :--- | :--- | :--- |
-| 🪟 **Windows Installer** | [⬇️ **ReadMDSetup-v2.3.0.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.0.exe) | Smooth setup wizard with automatic `.md` file associations |
-| 💼 **Windows Portable** | [⬇️ **ReadMD-portable-v2.3.0.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.0.exe) | Single executable, green portable edition |
-| 🍏 **macOS Apple Silicon** | [⬇️ **ReadMD-macos-arm64-v2.3.0.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.0.zip) | Native build for Apple Silicon Macs (M1 / M2 / M3 / M4) |
-| 💻 **macOS Intel** | [⬇️ **ReadMD-macos-x64-v2.3.0.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.0.zip) | Native build for Intel Macs |
-| 🧩 **VSCode Extension** | [⬇️ **readmd-vscode-2.3.0.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.0.vsix) | Offline VSIX extension package for Visual Studio Code |
-| 🔐 **SHA-256 Checksums** | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | Integrity verification checksum list |
-
----
-
-## 🧩 VSCode Extension Installation Guide
-
-ReadMD provides an official lightweight VSCode extension that brings ReadMD's signature rendering style, live synchronized preview, and non-destructive syntax repair into Visual Studio Code.
-
-### Method 1: Install from VSIX in VSCode (Recommended)
-1. Download [`readmd-vscode-2.3.0.vsix`](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.0.vsix);
-2. In VSCode, press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> (or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> on macOS) to open the Extensions tab;
-3. Click the **`...` (Views and More Actions)** button at the top right of the Extensions panel;
-4. Select **`Install from VSIX...`**;
-5. Select the downloaded `.vsix` file to install immediately!
-
-### Method 2: Install via Command Line
-Run the following in your terminal:
-```bash
-code --install-extension readmd-vscode-2.3.0.vsix
-```
-
-### Features:
-- **📖 Live Synced Preview**: Click the book icon on the editor title bar or run `ReadMD: Open Custom Preview` for a high-fidelity side-by-side preview;
-- **🛠️ One-Click Auto-Fix**: Right-click in any Markdown file and select `ReadMD: Auto-Fix Markdown Formatting Errors` to fix broken tables, formulas, and unclosed tags;
-- **📐 Convert to LaTeX**: Right-click and choose `ReadMD: Convert Current Markdown to LaTeX` to generate ready-to-compile academic LaTeX source.
+| OS / Platform | Architecture / Format | Direct Download Link (GitHub Release) | Description |
+| :--- | :--- | :--- | :--- |
+| 🪟 **Windows** | x64 (Installer) | [⬇️ **ReadMDSetup-v2.3.1.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.1.exe) | Setup wizard with automatic `.md` file associations |
+| 💼 **Windows** | x64 (Portable) | [⬇️ **ReadMD-portable-v2.3.1.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.1.exe) | Standalone single executable, no installation needed |
+| 🍏 **macOS** | Apple Silicon (M-Series) | [⬇️ **ReadMD-macos-arm64-v2.3.1.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.1.zip) | Native build for Apple Silicon Macs with Vision OCR |
+| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.1.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.1.zip) | Native build for Intel Macs with Vision OCR |
+| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.1.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.1.AppImage) | Portable Linux AppImage for Ubuntu, Debian, Fedora, Arch |
+| 🇨🇳 **Domestic OS / Linux** | UOS / Kylin / Deepin / Debian / Ubuntu | [⬇️ **readmd_2.3.1_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.1_amd64.deb) | Native Deb package with desktop entry & MIME association |
+| 📱 **HarmonyOS NEXT** | OpenHarmony (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.1.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.1.hap) | HarmonyOS native application package (.hap) |
+| 🧩 **VSCode Extension** | Universal VSIX | [⬇️ **readmd-vscode-2.3.1.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.1.vsix) | Offline VSIX extension with sync preview & auto-repair |
+| 🤖 **MCP Server** | FastMCP stdio Package | [⬇️ **readmd-mcp-server-2.3.1.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.1.zip) | Standalone FastMCP server for Claude Desktop / Cursor |
+| 🔐 **SHA-256 Hashes** | Checksum List | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | Complete SHA-256 integrity verification list |
 
 ---
 
-## 🤖 MCP (Model Context Protocol) Server Setup
+## 💻 Multi-System & Native OS Integration
 
-ReadMD includes a standard FastMCP (stdio) server, enabling AI coding assistants (Claude Desktop, Cursor, Antigravity, Cline, Continue) to leverage ReadMD's parsing, conversion, and self-healing engine.
+### 1. Linux & Chinese Domestic OS (KylinOS / UOS / Deepin / openEuler)
+- **Direct Installation**: Download [`readmd_2.3.1_amd64.deb`](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.1_amd64.deb) to install directly, or run [`ReadMD-linux-x86_64-v2.3.1.AppImage`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.1.AppImage).
+- **Environment Detection**: `src/readmd_modules/linux_native.py` detects OS distributions and dynamically adapts Wayland / X11 display backends.
+- **Desktop Themes**: Probes DDE, UKUI, GNOME, and KDE dark mode settings via `gsettings`.
+- **Desktop Entry**: Includes FreeDesktop launcher and MIME XML declaration.
+- **Linglong Format**: Declarative `packages/linglong/linglong.yaml` for UOS AppStore distribution.
 
-### Configuration
+### 2. HarmonyOS NEXT (Pure Harmony) & OpenHarmony
+- **HAP Package**: Download [`ReadMD-harmonyos-v2.3.1.hap`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.1.hap) or compile from source in DevEco Studio NEXT (`packages/harmonyos-app/`).
+- **ArkUI + ArkWeb**: Reuses ReadMD offline rendering engine inside ArkWeb containers.
+- **ReadMDBridge (`ReadMDBridge.ets`)**:
+  - Clipboard integration (`@ohos.pasteboard`);
+  - Native file picker and file system (`@ohos.file.picker` / `@ohos.file.fs`);
+  - System locale detection (`@ohos.i18n`);
+  - Native offline OCR (`@ohos.ai.OCR`).
 
-#### 1. Claude Desktop
-Add this to your `claude_desktop_config.json`:
-```json
-{
-  "mcpServers": {
-    "readmd": {
-      "command": "python",
-      "args": ["/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"]
-    }
-  }
-}
-```
-
-#### 2. Cursor / Cline
-In MCP Settings, configure:
-- **Name**: `readmd`
-- **Command**: `python`
-- **Args**: `["/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"]`
-
-#### 🛠️ Provided MCP Tools:
-| Tool Name | Description |
-| :--- | :--- |
-| **`readmd_fix_markdown`** | Automatically repairs Markdown formatting errors without losing content |
-| **`readmd_convert_to_markdown`** | Converts Word, PDF, PPT, Excel, LaTeX, or HTML to clean Markdown |
-| **`readmd_latex_to_md`** | Accurately converts LaTeX math and documents to standard Markdown |
-| **`readmd_md_to_latex`** | Compiles Markdown into academic standalone LaTeX with booktabs tables |
-| **`readmd_parse_bibtex`** | Parses `.bib` files and returns structured citation metadata |
+### 3. Windows & macOS
+- **Windows**: Native WinRT OCR, Edge WebView2 hardware-accelerated rendering, single-instance tray daemon.
+- **macOS**: Apple Vision offline OCR framework, native WebKit window, Touch Bar shortcuts.
 
 ---
 
-## 📐 LaTeX PRO & Academic Citations
+<div align="center">
 
-- **BibTeX Auto-Scanning**: Open any Markdown document, and ReadMD will automatically discover adjacent `.bib` files. Citations like `[@vaswani2017attention]` or `@knuth1984texbook` are rendered as clickable badges.
-- **Hover Citation Card**: Hover over any citation badge to view title, authors, year, journal, DOI link, and a one-click copy BibTeX button.
-- **Academic Callout Blocks**:
-  - `::: theorem [Cauchy-Schwarz Inequality]` -> Theorem callout box
-  - `::: lemma [Lemma title]` -> Lemma callout box
-  - `::: proof` -> Proof callout box with Q.E.D. ■ symbol
-  - `::: definition [Manifold]` -> Definition callout box
+**ReadMD** · Pure local-first, distraction-free Markdown across all platforms.
 
----
-
-## 🧘 Editor Studio PRO
-
-- **Zen Mode**: Press <kbd>F11</kbd> or click the Zen button to enter distraction-free full-screen writing. Press <kbd>Esc</kbd> or click the top-right exit button to return.
-- **10x10 Table Designer**: Click "Insert Table" and slide over the interactive grid to insert perfectly formatted tables.
-- **Smart Excel / CSV Paste**: Copy tabular cells from Excel, Google Sheets, or WPS, and paste directly into the editor—ReadMD converts them into aligned Markdown tables automatically.
-- **Real-Time Document Stats**: Live counters for character count, word count, and estimated reading time.
-
----
-
-## ⌨️ Common Keyboard Shortcuts
-
-| Shortcut | Description |
-| :--- | :--- |
-| <kbd>F11</kbd> / <kbd>Esc</kbd> | Toggle Zen Mode / Exit Fullscreen |
-| <kbd>F2</kbd> | Rename current file (extension protected) |
-| <kbd>Ctrl</kbd> + <kbd>O</kbd> | Open local file |
-| <kbd>Ctrl</kbd> + <kbd>E</kbd> | Toggle between Reader and Editor |
-| <kbd>Ctrl</kbd> + <kbd>S</kbd> | Save document |
-| <kbd>Ctrl</kbd> + <kbd>F</kbd> | Full text search & replace |
-| <kbd>Ctrl</kbd> + <kbd>P</kbd> | Export to PDF / DOCX / HTML / LaTeX |
-| <kbd>Ctrl</kbd> + <kbd>D</kbd> | Cycle Themes (Light / Dark / Sepia) |
-| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd> | Open AI Assistant |
-| <kbd>Ctrl</kbd> + <kbd>=</kbd> / <kbd>-</kbd> | Increase / Decrease Font Size |
-
----
-
-<p align="center">
-  <b>ReadMD</b> is free, open-source, and offline-first.<br>
-  Crafted with ❤️ by <a href="https://github.com/Natsummerance">Natsummerance</a>.
-</p>
+</div>

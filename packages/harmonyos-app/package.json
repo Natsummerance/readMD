@@ -1,0 +1,11 @@
+{
+  "name": "readmd-harmonyos",
+  "version": "2.3.1",
+  "description": "ReadMD for HarmonyOS NEXT & OpenHarmony",
+  "main": "index.ets",
+  "author": "Natsummerance",
+  "license": "MIT",
+  "scripts": {
+    "build": "hvigorw assembleHap"
+  }
+}

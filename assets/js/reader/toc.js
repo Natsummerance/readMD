@@ -6,6 +6,7 @@
 /* ---------------- 目录 ---------------- */
 
 function buildToc() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const list = $('toc-list');
   if (!list) return;
   list.innerHTML = '';
@@ -14,8 +15,9 @@ function buildToc() {
     if (!h.id) h.id = 'toc-h-' + i;
     const a = document.createElement('a');
     a.href = '#' + h.id;
-    a.textContent = h.textContent.trim() || ('章节 ' + (i + 1));
+    a.textContent = h.textContent.trim() || ((_t('toc.sectionDefault') || '章节') + ' ' + (i + 1));
     const lv = Math.min(+h.tagName[1], 3);
+
     a.className = 'lv' + lv;
     a.addEventListener('click', e => {
       e.preventDefault();

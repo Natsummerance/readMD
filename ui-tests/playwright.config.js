@@ -8,7 +8,8 @@ module.exports = defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:28473',
     viewport: { width: 720, height: 600 },
-    trace: 'retain-on-failure'
+    trace: 'retain-on-failure',
+    locale: 'zh-CN',
   },
   webServer: {
     command: 'python ../tools/ui_server.py',

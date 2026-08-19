@@ -11,132 +11,135 @@
 <body>
 <header id="toolbar">
   <div class="tb-group tb-left">
-    <button id="btn-toc" class="tb-btn icon" title="目录 (Ctrl+Shift+F)" aria-label="目录">
+    <button id="btn-toc" class="tb-btn icon" title="目录 (Ctrl+Shift+F)" aria-label="目录" data-i18n-title="sidebar.toc" data-i18n-aria="sidebar.toc">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
     </button>
-    <button id="btn-open" class="tb-btn" title="打开 Markdown 文件 (Ctrl+O)" aria-label="打开文件">
+    <button id="btn-open" class="tb-btn" title="打开 Markdown 文件 (Ctrl+O)" aria-label="打开文件" data-i18n-title="toolbar.open" data-i18n-aria="toolbar.open">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
-      <span class="tb-label">打开</span>
+      <span class="tb-label" data-i18n="app.open">打开</span>
     </button>
-    <button id="btn-folder" class="tb-btn icon" title="打开文件夹" aria-label="打开文件夹">
+    <button id="btn-folder" class="tb-btn icon" title="打开文件夹" aria-label="打开文件夹" data-i18n-title="toolbar.openFolder" data-i18n-aria="toolbar.openFolder">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/></svg>
     </button>
-    <button id="btn-recent" class="tb-btn icon" title="最近文件" aria-label="最近文件">
+    <button id="btn-recent" class="tb-btn icon" title="最近文件" aria-label="最近文件" data-i18n-title="app.recent" data-i18n-aria="app.recent">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
     </button>
-    <button id="btn-reload" class="tb-btn icon" title="重新加载 (Ctrl+R)" aria-label="重新加载">
+    <button id="btn-reload" class="tb-btn icon" title="重新加载 (Ctrl+R)" aria-label="重新加载" data-i18n-title="sidebar.refresh" data-i18n-aria="sidebar.refresh">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg>
     </button>
-    <button id="file-title" class="file-title hidden" type="button" title="当前文件名" aria-label="当前文件名" disabled></button>
+    <button id="file-title" class="file-title hidden" type="button" title="当前文件名" aria-label="当前文件名" data-i18n-title="reader.currentDoc" data-i18n-aria="reader.currentDoc" disabled></button>
     <div id="doc-tabs-container" class="doc-tabs-container">
-      <div id="doc-tabs-bar" class="doc-tabs-bar" role="tablist" aria-label="已打开文档"></div>
+      <div id="doc-tabs-bar" class="doc-tabs-bar" role="tablist" aria-label="已打开文档" data-i18n-aria="tabs.openDocs"></div>
       <div id="doc-tabs-overflow-wrap" class="doc-tabs-overflow-wrap hidden">
-        <button id="doc-tabs-overflow-btn" class="doc-tabs-overflow-btn" title="查看被折叠的标签页" aria-haspopup="true">⌄</button>
+        <button id="doc-tabs-overflow-btn" class="doc-tabs-overflow-btn" title="查看被折叠的标签页" data-i18n-title="tabs.overflowTooltip" aria-haspopup="true">⌄</button>
         <div id="doc-tabs-dropdown" class="doc-tabs-dropdown hidden" role="menu"></div>
       </div>
     </div>
   </div>
   <div class="tb-group tb-right">
 
-    <button id="btn-search" class="tb-btn icon" title="搜索 (Ctrl+F)" aria-label="搜索">
+    <button id="btn-search" class="tb-btn icon" title="搜索 (Ctrl+F)" aria-label="搜索" data-i18n-title="toolbar.search" data-i18n-aria="toolbar.search">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     </button>
-    <button id="btn-theme" class="tb-btn icon" title="切换主题 (Ctrl+D)" aria-label="切换主题">&#9789;</button>
-    <button id="btn-a" class="tb-btn" title="减小字号 (Ctrl+-)" aria-label="减小字号">A&minus;</button>
-    <button id="btn-A" class="tb-btn" title="增大字号 (Ctrl+=)" aria-label="增大字号">A+</button>
-    <button id="btn-print" class="tb-btn icon" title="导出 PDF / DOCX / HTML (Ctrl+P)" aria-label="导出">
+    <button id="btn-theme" class="tb-btn icon" title="切换主题 (Ctrl+D)" aria-label="切换主题" data-i18n-title="toolbar.theme" data-i18n-aria="toolbar.theme">&#9789;</button>
+    <button id="btn-a" class="tb-btn" title="减小字号 (Ctrl+-)" aria-label="减小字号" data-i18n-title="toolbar.zoomOut" data-i18n-aria="toolbar.zoomOut">A&minus;</button>
+    <button id="btn-A" class="tb-btn" title="增大字号 (Ctrl+=)" aria-label="增大字号" data-i18n-title="toolbar.zoomIn" data-i18n-aria="toolbar.zoomIn">A+</button>
+    <button id="btn-print" class="tb-btn icon" title="导出文档 (Ctrl+P)" aria-label="导出" data-i18n-title="toolbar.export" data-i18n-aria="toolbar.export">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8V4h10v4"/><rect x="4" y="8" width="16" height="8" rx="1"/><path d="M7 16h10v4H7z"/></svg>
     </button>
-    <button id="btn-edit" class="tb-btn" title="编辑当前 Markdown (Ctrl+E)" aria-label="编辑" disabled>
+    <button id="btn-edit" class="tb-btn" title="编辑当前 Markdown (Ctrl+E)" aria-label="编辑" data-i18n-title="toolbar.edit" data-i18n-aria="toolbar.edit" disabled>
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>
-      <span class="tb-label">编辑</span>
+      <span class="tb-label" data-i18n="toolbar.edit">编辑</span>
     </button>
-    <button id="btn-ai" class="tb-btn accent" title="AI 助手：快速阅读 / 修改 / 扩充 / 续写 / 润色 (Ctrl+Shift+A)" aria-label="AI 助手">
+    <button id="btn-ai" class="tb-btn accent" title="AI 助手 (Ctrl+Shift+A)" aria-label="AI 助手" data-i18n-title="toolbar.ai" data-i18n-aria="toolbar.ai">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
-      <span class="tb-label">AI</span>
+      <span class="tb-label" data-i18n="app.ai">AI</span>
     </button>
-    <button id="btn-more" class="tb-btn icon" title="更多功能" aria-label="更多功能" data-i18n-title="toolbar.more" aria-haspopup="true">
-
+    <button id="btn-more" class="tb-btn icon" title="更多功能" aria-label="更多功能" data-i18n-title="toolbar.more" data-i18n-aria="toolbar.more" aria-haspopup="true">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
     </button>
     <div id="more-menu" class="more-menu">
-      <button id="btn-convert" class="more-item"><span>转换</span><em>万物转 MD</em></button>
-      <button id="btn-web" class="more-item"><span>网页</span><em>网页转 MD</em></button>
-      <button id="btn-ocr" class="more-item"><span>OCR</span><em>扫描转 MD</em></button>
-      <button id="btn-clipboard-new" class="more-item"><span>剪贴板</span><em>从剪贴板新建</em></button>
-      <button id="btn-saveas" class="more-item" disabled><span>另存为</span><em>.md 文件</em></button>
-      <button id="btn-assoc" class="more-item"><span>设为默认</span><em>.md 打开方式</em></button>
-      <button id="btn-share" class="more-item"><span>共享</span><em>手机扫码阅读</em></button>
-      <button id="btn-fix" class="more-item"><span>修复详情</span><em>本次自动修正</em></button>
-      <button id="btn-lang" class="more-item"><span data-i18n="app.language">语言设置</span><em id="lang-current-label">简体中文</em></button>
-      <button id="btn-check-update" class="more-item"><span data-i18n="app.checkUpdate">检查更新</span><em>发现新版本</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
+      <button id="btn-convert" class="more-item"><span data-i18n="menu.convert">转换</span><em data-i18n="menu.convertSub">万物转 MD</em></button>
+      <button id="btn-web" class="more-item"><span data-i18n="menu.web">网页</span><em data-i18n="menu.webSub">网页转 MD</em></button>
+      <button id="btn-ocr" class="more-item"><span data-i18n="menu.ocr">OCR</span><em data-i18n="menu.ocrSub">扫描转 MD</em></button>
+      <button id="btn-clipboard-new" class="more-item"><span data-i18n="menu.clipboard">剪贴板</span><em data-i18n="menu.clipboardSub">从剪贴板新建</em></button>
+      <button id="btn-saveas" class="more-item" disabled><span data-i18n="menu.saveAs">另存为</span><em data-i18n="menu.saveAsSub">.md 文件</em></button>
+      <button id="btn-assoc" class="more-item"><span data-i18n="menu.assoc">设为默认</span><em data-i18n="menu.assocSub">.md 打开方式</em></button>
+      <button id="btn-share" class="more-item"><span data-i18n="menu.share">共享</span><em data-i18n="menu.shareSub">手机扫码阅读</em></button>
+      <button id="btn-fix" class="more-item"><span data-i18n="menu.fix">修复详情</span><em data-i18n="menu.fixSub">本次自动修正</em></button>
+      <button id="btn-lang" class="more-item"><span data-i18n="menu.lang">语言</span><em id="lang-current-label">简体中文</em></button>
+      <button id="btn-autostart" class="more-item"><span data-i18n="menu.autoStart">开机自启</span><em id="autostart-status-label" data-i18n="app.disabled">未开启</em></button>
+      <button id="btn-check-update" class="more-item"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.1</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
     </div>
+
 
   </div>
 </header>
-<div id="doc-tabs-secondary-bar" class="doc-tabs-secondary-bar hidden" role="tablist" aria-label="已打开文档"></div>
+<div id="doc-tabs-secondary-bar" class="doc-tabs-secondary-bar hidden" role="tablist" aria-label="已打开文档" data-i18n-aria="tabs.openDocs"></div>
+
 
 <div id="search-bar" class="hidden">
-
   <input id="search-input" type="text" placeholder="在文档中搜索..." data-i18n-placeholder="search.placeholder">
   <span id="search-count" class="search-count"></span>
-  <button id="search-prev" class="tb-btn" title="上一个 (Shift+Enter)">&#8593;</button>
-  <button id="search-next" class="tb-btn" title="下一个 (Enter)">&#8595;</button>
-  <button id="search-close" class="tb-btn" title="关闭 (Esc)">&#10005;</button>
+  <button id="search-prev" class="tb-btn" title="上一个 (Shift+Enter)" data-i18n-title="search.prev" data-i18n-aria="search.prev">&#8593;</button>
+  <button id="search-next" class="tb-btn" title="下一个 (Enter)" data-i18n-title="search.next" data-i18n-aria="search.next">&#8595;</button>
+  <button id="search-close" class="tb-btn" title="关闭 (Esc)" data-i18n-title="search.close" data-i18n-aria="search.close">&#10005;</button>
 </div>
+
 
 <div id="edit-bar" class="hidden">
   <div class="md-tool" id="md-tool">
-    <button class="md-tool-btn" data-md="bold" title="加粗：**文本**" data-i18n="editor.bold">加粗</button>
-    <button class="md-tool-btn" data-md="italic" title="斜体：*文本*"><i>I</i></button>
+    <button class="md-tool-btn" data-md="bold" title="加粗：**文本**" data-i18n="editor.bold" data-i18n-title="editor.boldTip">加粗</button>
+    <button class="md-tool-btn" data-md="italic" title="斜体：*文本*" data-i18n-title="editor.italicTip" data-i18n-aria="editor.italic"><i>I</i></button>
     <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-text-menu" data-i18n="editor.text">文本⌄</button>
-      <div id="md-text-menu" class="md-menu hidden"><button data-md="strike">删除线</button><button data-md="code">行内代码</button><button data-md="link">链接</button></div></div>
+      <div id="md-text-menu" class="md-menu hidden"><button data-md="strike" data-i18n="editor.strikethrough">删除线</button><button data-md="code" data-i18n="editor.codeInline">行内代码</button><button data-md="link" data-i18n="editor.link">链接</button></div></div>
     <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-structure-menu" data-i18n="editor.structure">结构⌄</button>
-      <div id="md-structure-menu" class="md-menu hidden"><button data-md="h2">标题</button><button data-md="quote">引用</button><button data-md="list">无序列表</button><button data-md="ordered">有序列表</button><button data-md="task">任务列表</button><button data-md="codeblock">代码块</button><button data-md="hr">分隔线</button></div></div>
+      <div id="md-structure-menu" class="md-menu hidden"><button data-md="h2" data-i18n="editor.h2">标题</button><button data-md="quote" data-i18n="editor.quote">引用</button><button data-md="list" data-i18n="editor.ul">无序列表</button><button data-md="ordered" data-i18n="editor.ol">有序列表</button><button data-md="task" data-i18n="editor.taskList">任务列表</button><button data-md="codeblock" data-i18n="editor.codeBlock">代码块</button><button data-md="hr" data-i18n="editor.hr">分隔线</button></div></div>
     <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-insert-menu" data-i18n="editor.insert">插入⌄</button>
-      <div id="md-insert-menu" class="md-menu hidden"><button data-md="image">图片</button><button id="btn-insert-table" data-md="table">表格</button><button data-md="link">链接</button></div></div>
-    <button id="formula-open" class="md-tool-btn md-group" title="公式选择器" data-i18n="editor.formula">∑ 公式</button>
-    <button id="md-command-open" class="md-tool-btn" title="命令面板 (Ctrl/Cmd+Shift+P)">⌘</button>
-    <button id="btn-zen-mode" class="md-tool-btn" title="禅模式 / 专注模式 (F11)" data-i18n="editor.zenMode">禅模式</button>
+      <div id="md-insert-menu" class="md-menu hidden"><button data-md="image" data-i18n="editor.image">图片</button><button id="btn-insert-table" data-md="table" data-i18n="editor.table">表格</button><button data-md="link" data-i18n="editor.link">链接</button></div></div>
+    <button id="formula-open" class="md-tool-btn md-group" title="公式选择器" data-i18n="editor.formula" data-i18n-title="dialog.formulaTitle">∑ 公式</button>
+    <button id="md-command-open" class="md-tool-btn" title="命令面板 (Ctrl/Cmd+Shift+P)" data-i18n-title="editor.command" data-i18n-aria="editor.command">⌘</button>
+    <button id="btn-zen-mode" class="md-tool-btn" title="禅模式 / 专注模式 (F11)" data-i18n="editor.zenMode" data-i18n-title="editor.zenMode">禅模式</button>
   </div>
-  <span class="edit-tip"><span id="edit-doc-stats">0 字 · 阅读约 1 分钟</span> · Ctrl+S 保存 · Esc 取消</span>
+  <span class="edit-tip"><span id="edit-doc-stats">0 字 · 阅读约 1 分钟</span> <span data-i18n="editor.shortcutsTip">· Ctrl+S 保存 · Esc 取消</span></span>
   <div class="edit-actions-right">
-    <button id="edit-undo" class="md-tool-btn icon" title="撤销 (Ctrl+Z)" aria-label="撤销">
+    <button id="edit-undo" class="md-tool-btn icon" title="撤销 (Ctrl+Z)" aria-label="撤销" data-i18n-title="editor.undo" data-i18n-aria="editor.undo">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
     </button>
-    <button id="edit-redo" class="md-tool-btn icon" title="重做 (Ctrl+Y)" aria-label="重做">
+    <button id="edit-redo" class="md-tool-btn icon" title="重做 (Ctrl+Y)" aria-label="重做" data-i18n-title="editor.redo" data-i18n-aria="editor.redo">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 14l5-5-5-5"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/></svg>
     </button>
-    <div class="pv-ctl md-menu-wrap" aria-label="预览布局">
-      <button id="pv-trigger" class="md-tool-btn md-group" aria-haspopup="true" aria-expanded="false">预览：无⌄</button>
+    <div class="pv-ctl md-menu-wrap" aria-label="预览布局" data-i18n-aria="editor.previewLayout">
+      <button id="pv-trigger" class="md-tool-btn md-group" aria-haspopup="true" aria-expanded="false"><span data-i18n="editor.preview">预览：无</span>⌄</button>
       <div id="pv-menu" class="pv-menu hidden" role="menu">
 
-        <div class="pv-grid" aria-label="预览停靠方向">
-          <span></span><button class="pv-btn" data-pv="top" title="上方预览">↑</button><button class="pv-btn" data-pv="none" title="关闭预览">×</button>
-          <button class="pv-btn" data-pv="left" title="左侧预览">←</button><span class="pv-center">预览</span><button class="pv-btn" data-pv="right" title="右侧预览">→</button>
-          <span></span><button class="pv-btn" data-pv="bottom" title="下方预览">↓</button><span></span>
+        <div class="pv-grid" aria-label="预览停靠方向" data-i18n-aria="editor.previewDockDir">
+          <span></span><button class="pv-btn" data-pv="top" title="上方预览" data-i18n-title="editor.previewTop">↑</button><button class="pv-btn" data-pv="none" title="关闭预览" data-i18n-title="editor.previewNone">×</button>
+          <button class="pv-btn" data-pv="left" title="左侧预览" data-i18n-title="editor.previewLeft">←</button><span class="pv-center" data-i18n="editor.preview">预览</span><button class="pv-btn" data-pv="right" title="右侧预览" data-i18n-title="editor.previewRight">→</button>
+          <span></span><button class="pv-btn" data-pv="bottom" title="下方预览" data-i18n-title="editor.previewBottom">↓</button><span></span>
         </div>
-        <label class="ai-sel pv-sync"><input id="pv-sync" type="checkbox"> 同步滚动</label>
+        <label class="ai-sel pv-sync"><input id="pv-sync" type="checkbox"><span data-i18n="editor.previewSync"> 同步滚动</span></label>
       </div>
     </div>
   </div>
-  <button id="edit-save" class="tb-btn accent">保存</button>
-  <button id="edit-cancel" class="tb-btn">取消</button>
+  <button id="edit-save" class="tb-btn accent" data-i18n="editor.save">保存</button>
+  <button id="edit-cancel" class="tb-btn" data-i18n="editor.cancel">取消</button>
 </div>
 
 <!-- 编辑器选中文本浮动快捷操作栏 -->
-<div id="cm-selection-toolbar" class="cm-selection-toolbar hidden" role="toolbar" aria-label="选中文本快捷操作">
-  <button id="cm-sel-copy" class="cm-sel-btn" title="复制 (Ctrl+C)">
+<div id="cm-selection-toolbar" class="cm-selection-toolbar hidden" role="toolbar" aria-label="选中文本快捷操作" data-i18n-aria="editor.selectionToolbar">
+  <button id="cm-sel-copy" class="cm-sel-btn" title="复制 (Ctrl+C)" data-i18n-title="editor.copy">
     <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-    <span>复制</span>
+    <span data-i18n="editor.copy">复制</span>
   </button>
-  <button id="cm-sel-cut" class="cm-sel-btn" title="剪切 (Ctrl+X)">
+  <button id="cm-sel-cut" class="cm-sel-btn" title="剪切 (Ctrl+X)" data-i18n-title="editor.cut">
     <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
-    <span>剪切</span>
+    <span data-i18n="editor.cut">剪切</span>
   </button>
-  <button id="cm-sel-paste" class="cm-sel-btn" title="粘贴 (Ctrl+V)">
+  <button id="cm-sel-paste" class="cm-sel-btn" title="粘贴 (Ctrl+V)" data-i18n-title="editor.paste">
     <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-    <span>粘贴</span>
+    <span data-i18n="editor.paste">粘贴</span>
+
   </button>
 </div>
 
@@ -144,8 +147,8 @@
 <div id="layout">
   <aside id="side" class="hidden">
     <div id="side-tabs">
-      <button id="tab-toc" class="side-tab active">目录</button>
-      <button id="tab-files" class="side-tab">文件</button>
+      <button id="tab-toc" class="side-tab active" data-i18n="sidebar.toc">目录</button>
+      <button id="tab-files" class="side-tab" data-i18n="sidebar.files">文件</button>
     </div>
     <nav id="toc-list" class="side-body"></nav>
     <div id="file-list" class="side-body hidden"></div>
@@ -156,91 +159,105 @@
       <div id="welcome">
         <div class="welcome-inner">
           <div class="logo">Read<span>MD</span></div>
-          <p class="welcome-sub">轻量本地 Markdown 阅读器 · 自动修正 · 万物转 MD · AI 助手</p>
+          <p class="welcome-sub" data-i18n="app.slogan">轻量本地 Markdown 阅读器 · 自动修正 · 万物转 MD · AI 助手</p>
           <div class="welcome-btns">
-            <button id="w-open" class="big-btn" title="打开本地 Markdown 文件">
+            <button id="w-open" class="big-btn" title="打开本地 Markdown 文件" data-i18n-title="toolbar.open">
               <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z"/><path d="M14 3v6h6"/></svg>
-              <span>打开 Markdown</span><em>Ctrl+O</em>
+              <span data-i18n="app.open">打开 Markdown</span><em>Ctrl+O</em>
             </button>
-            <button id="w-folder" class="big-btn" title="打开文件夹，浏览其中所有 Markdown">
+            <button id="w-folder" class="big-btn" title="打开文件夹，浏览其中所有 Markdown" data-i18n-title="toolbar.openFolder">
               <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/></svg>
-              <span>打开文件夹</span><em>目录浏览</em>
+              <span data-i18n="app.folder">打开文件夹</span><em data-i18n="app.folderSub">目录浏览</em>
             </button>
-            <button id="w-ai" class="big-btn" title="AI 助手：快速阅读 / 润色 / 修改 / 续写">
+            <button id="w-ai" class="big-btn" title="AI 助手" data-i18n-title="toolbar.ai">
               <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
-              <span>AI 助手</span><em>Ctrl+Shift+A</em>
+              <span data-i18n="app.ai">AI 助手</span><em>Ctrl+Shift+A</em>
             </button>
-            <button id="w-convert" class="big-btn" title="docx / pptx / xlsx / pdf / html 等转为 Markdown">
+            <button id="w-convert" class="big-btn" title="万物转 MD" data-i18n-title="menu.convert">
               <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>
-              <span>万物转 MD</span><em>docx · pdf · xlsx…</em>
+              <span data-i18n="app.convert">万物转 MD</span><em>docx · pdf · xlsx…</em>
             </button>
-            <button id="w-web" class="big-btn" title="输入网址抓取正文为 Markdown">
+            <button id="w-web" class="big-btn" title="网页转 MD" data-i18n-title="menu.web">
               <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18a15 15 0 0 1 0-18z"/></svg>
-              <span>网页转 MD</span><em>Ctrl+U</em>
+              <span data-i18n="app.web">网页转 MD</span><em>Ctrl+U</em>
             </button>
-            <button id="w-ocr" class="big-btn" title="扫描件 / 图片离线 OCR 为 Markdown">
+            <button id="w-ocr" class="big-btn" title="扫描转 MD" data-i18n-title="menu.ocr">
               <svg class="bb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V4h3"/><path d="M17 4h3v3"/><path d="M20 17v3h-3"/><path d="M7 20H4v-3"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>
-              <span>扫描转 MD</span><em>离线 OCR</em>
+              <span data-i18n="app.ocr">扫描转 MD</span><em data-i18n="app.ocrSub">离线 OCR</em>
             </button>
           </div>
           <div id="recent-box" class="hidden">
             <div class="recent-head">
-              <h3>最近打开</h3>
-              <button id="recent-clear" class="link-btn">清空记录</button>
+              <h3 data-i18n="app.recent">最近打开</h3>
+              <button id="recent-clear" class="link-btn" data-i18n="app.clearRecent">清空记录</button>
             </div>
             <ul id="recent-list"></ul>
           </div>
-          <p class="welcome-hint">直接双击 .md 秒开 · 自动修正常见格式错误（不改原文件）· 快捷键 Ctrl+O 打开 · Ctrl+F 搜索 · Ctrl+E 编辑 · Ctrl+P 打印</p>
+          <p class="welcome-hint" data-i18n="app.welcomeHint">直接双击 .md 秒开 · 自动修正常见格式错误（不改原文件）· 快捷键 Ctrl+O 打开 · Ctrl+F 搜索 · Ctrl+E 编辑 · Ctrl+P 打印</p>
         </div>
       </div>
+
     </main>
+
     <textarea id="edit-area" class="hidden" spellcheck="false"></textarea>
     <div id="edit-wrap" class="hidden"><div id="edit-cm"></div></div>
-    <div id="pv-splitter" class="hidden" role="separator" tabindex="0" aria-label="调整编辑与预览比例"></div>
+    <div id="pv-splitter" class="hidden" role="separator" tabindex="0" aria-label="调整编辑与预览比例" data-i18n-aria="editor.pvSplitterAria"></div>
     <div id="preview-wrap" class="hidden"><div id="preview-pane" class="markdown-body"></div></div>
   </div>
 </div>
 
 <!-- AI 助手面板 -->
 <div id="ai-panel" class="hidden">
-  <div id="ai-resize-handle" title="拖动调整 AI 面板宽度" aria-hidden="true"></div>
+  <div id="ai-resize-handle" title="拖动调整 AI 面板宽度" data-i18n-title="ai.resizeHandle" aria-hidden="true"></div>
   <div class="ai-head">
-    <span>&#129302; AI 对话</span>
-    <div class="ai-head-actions"><button id="ai-settings-open" class="tb-btn" title="连接设置">设置</button><button id="ai-close" class="tb-btn icon" title="关闭" aria-label="关闭 AI 对话">&#10005;</button></div>
+    <span class="ai-head-title">
+      <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3.5"/></svg>
+      <span data-i18n="ai.title">AI 对话</span>
+    </span>
+    <div class="ai-head-actions">
+      <button id="ai-settings-open" class="tb-btn icon" title="AI 连接设置" aria-label="AI 连接设置" data-i18n-title="ai.settings" data-i18n-aria="ai.settings">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <button id="ai-close" class="tb-btn icon" title="关闭" aria-label="关闭 AI 对话" data-i18n-title="toolbar.close" data-i18n-aria="toolbar.close">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
   </div>
+
   <div class="ai-body">
     <div class="ai-conversation-bar">
-      <div class="ai-connection-summary"><span id="ai-connection-dot" class="conn-dot" aria-hidden="true"></span><span id="ai-connection-label" aria-live="polite">正在读取连接…</span></div>
-      <span id="ai-model-summary" class="ai-model-summary" aria-label="当前模型">未选择模型</span>
-      <button id="ai-history-open" class="tb-btn" title="会话历史">历史</button>
+      <div class="ai-connection-summary"><span id="ai-connection-dot" class="conn-dot" aria-hidden="true"></span><span id="ai-connection-label" aria-live="polite" data-i18n="ai.statusReading">正在读取连接…</span></div>
+      <span id="ai-model-summary" class="ai-model-summary" aria-label="当前模型" data-i18n-aria="ai.currentModelAria" data-i18n="ai.customModel">未选择模型</span>
+      <button id="ai-history-open" class="tb-btn" title="会话历史" data-i18n="ai.history" data-i18n-title="ai.historyTitle">历史</button>
     </div>
-    <div class="ai-actions" aria-label="快捷动作">
-      <button class="ai-act" data-act="quick_read" title="快速阅读全文并输出概述与要点">阅读</button>
-      <button class="ai-act" data-act="polish" title="润色文档，保持结构与 Markdown 标记">润色</button>
-      <button class="ai-act" data-act="modify" title="按补充要求修改文档">修改</button>
-      <button class="ai-act" data-act="expand" title="扩充内容，补充细节与示例">扩充</button>
-      <button class="ai-act" data-act="continue" title="从文档末尾续写">续写</button>
-      <button class="ai-act" data-act="translate" title="翻译（可在下方填写目标语言）">翻译</button>
-      <button class="ai-act" data-act="ask" title="就文档内容提问">提问</button>
+    <div class="ai-actions" aria-label="快捷动作" data-i18n-aria="ai.actionsAria">
+      <button class="ai-act" data-act="quick_read" title="总结全文" data-i18n="ai.quickSummarize" data-i18n-title="ai.quickSummarize">总结全文</button>
+      <button class="ai-act" data-act="polish" title="润色文稿" data-i18n="ai.quickPolish" data-i18n-title="ai.quickPolish">润色文稿</button>
+      <button class="ai-act" data-act="modify" title="提取待办" data-i18n="ai.quickTodo" data-i18n-title="ai.quickTodo">提取待办</button>
+      <button class="ai-act" data-act="expand" title="续写内容" data-i18n="ai.quickContinue" data-i18n-title="ai.quickContinue">续写内容</button>
+      <button class="ai-act" data-act="continue" title="翻译为英文" data-i18n="ai.quickTranslateEn" data-i18n-title="ai.quickTranslateEn">翻译为英文</button>
+      <button class="ai-act" data-act="translate" title="纠正语法" data-i18n="ai.quickGrammar" data-i18n-title="ai.quickGrammar">纠正语法</button>
+      <button class="ai-act" data-act="ask" title="向 AI 提问" data-i18n="ai.send" data-i18n-title="ai.send">提问</button>
     </div>
-    <div class="ai-output-wrap" aria-label="对话内容">
+    <div class="ai-output-wrap" aria-label="对话内容" data-i18n-aria="ai.outputAria">
       <div id="ai-output" aria-live="polite"></div>
     </div>
     <div class="ai-composer">
-      <textarea id="ai-prompt" rows="3" placeholder="输入问题或补充要求… Enter 发送，Shift+Enter 换行" autocomplete="off"></textarea>
+      <textarea id="ai-prompt" rows="3" placeholder="向 AI 提问，或选择上方快捷指令... (Enter 发送, Shift+Enter 换行)" data-i18n-placeholder="ai.promptPlaceholder" autocomplete="off"></textarea>
       <div class="ai-composer-actions">
-        <label class="ai-sel"><input id="ai-selection" type="checkbox"> 仅处理选中文字</label>
-        <label class="ai-sel"><input id="ai-incognito" type="checkbox"> 无痕</label>
-        <span id="ai-usage">Token 用量：—</span>
+
+        <label class="ai-sel"><input id="ai-selection" type="checkbox"> <span data-i18n="editor.text">仅处理选中文字</span></label>
+        <label class="ai-sel"><input id="ai-incognito" type="checkbox"> <span data-i18n="ai.incognito">无痕</span></label>
+        <span id="ai-usage">Token：—</span>
         <span class="ai-grow"></span>
-        <button id="ai-clear-ctx" class="tb-btn" title="开始一轮新对话">新对话</button>
-        <button id="ai-stop" class="tb-btn" disabled>停止</button>
-        <button id="ai-run" class="tb-btn accent">发送</button>
+        <button id="ai-clear-ctx" class="tb-btn" title="开始一轮新对话" data-i18n="ai.newSession" data-i18n-title="ai.newSession">新对话</button>
+        <button id="ai-stop" class="tb-btn" data-i18n="ai.stop" disabled>停止</button>
+        <button id="ai-run" class="tb-btn accent" data-i18n="ai.send">发送</button>
       </div>
       <div class="ai-result-actions">
-        <button id="ai-apply" class="tb-btn" disabled>应用到文档</button>
-        <button id="ai-copy" class="tb-btn" disabled>复制最后回答</button>
-        <button id="ai-saveas" class="tb-btn" disabled>另存回答</button>
+        <button id="ai-apply" class="tb-btn" data-i18n="ai.apply" disabled>应用到正文</button>
+        <button id="ai-copy" class="tb-btn" data-i18n="ai.copy" disabled>复制回答</button>
+        <button id="ai-saveas" class="tb-btn" data-i18n="ai.saveAsMd" disabled>另存为 MD</button>
         <span id="ai-status" role="status" aria-live="polite"></span>
       </div>
     </div>
@@ -250,61 +267,68 @@
 <!-- AI 设置：连接细节不打断对话 -->
 <div id="ai-settings-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="ai-settings-title">
   <div id="ai-settings-box" class="ai-drawer-box">
-    <div class="export-head"><h3 id="ai-settings-title">AI 连接设置</h3><button id="ai-settings-close" class="tb-btn icon" aria-label="关闭连接设置">×</button></div>
-    <p class="ai-settings-intro">密钥只保存在本机。连接状态会区分鉴权、限流和网络问题。</p>
+    <div class="export-head"><h3 id="ai-settings-title" data-i18n="ai.settings">AI 连接设置</h3><button id="ai-settings-close" class="tb-btn icon" aria-label="关闭连接设置" data-i18n-aria="toolbar.close">×</button></div>
+    <p class="ai-settings-intro" data-i18n="ai.settingsDesc">密钥只保存在本机。连接状态会区分鉴权、限流和网络问题。</p>
     <div class="conn-grid">
         <div class="conn-field">
-          <label for="ai-provider">提供商</label>
+          <label for="ai-provider" data-i18n="ai.provider">提供商</label>
           <div class="conn-inline">
-            <select id="ai-provider" title="选择提供商（预设或自定义）"></select>
-            <button id="ai-provider-new" class="tb-btn icon" title="新建自定义连接" aria-label="新建自定义连接">＋</button>
-            <button id="ai-provider-delete" class="tb-btn icon" title="删除当前自定义连接" aria-label="删除当前自定义连接">−</button>
+            <select id="ai-provider" title="选择提供商（预设或自定义）" data-i18n-title="ai.provider"></select>
+            <button id="ai-provider-new" class="tb-btn icon" title="新建自定义连接" aria-label="新建自定义连接" data-i18n-title="ai.newProvider" data-i18n-aria="ai.newProvider">＋</button>
+            <button id="ai-provider-delete" class="tb-btn icon" title="删除当前自定义连接" aria-label="删除当前自定义连接" data-i18n-title="ai.deleteProvider" data-i18n-aria="ai.deleteProvider">−</button>
           </div>
         </div>
         <div class="conn-field">
-          <label for="ai-provider-name">配置名称</label>
-          <input id="ai-provider-name" type="text" placeholder="我的 AI 连接" maxlength="60" autocomplete="off">
+          <label for="ai-provider-name" data-i18n="ai.customProvider">配置名称</label>
+          <input id="ai-provider-name" type="text" placeholder="我的 AI 连接" data-i18n-placeholder="ai.customNamePlaceholder" maxlength="60" autocomplete="off">
         </div>
         <div class="conn-field">
-          <label for="ai-mode">响应方式</label>
-          <select id="ai-mode" title="接口协议 / 端点">
-            <option value="auto">自动（按提供商）</option>
+          <label for="ai-mode" data-i18n="ai.protocol">响应方式</label>
+          <select id="ai-mode" title="接口协议 / 端点" data-i18n-title="ai.protocol">
+            <option value="auto" data-i18n="ai.modeAuto">自动（按提供商）</option>
             <option value="chat">OpenAI chat/completions</option>
             <option value="completion">OpenAI completions</option>
             <option value="responses">OpenAI responses</option>
             <option value="messages">Anthropic messages</option>
           </select>
         </div>
-        <details class="conn-advanced"><summary>高级设置（协议、Base URL、流式）</summary><div class="conn-advanced-grid">
+        <details class="conn-advanced"><summary data-i18n="ai.advanced">高级参数</summary><div class="conn-advanced-grid">
         <div class="conn-field">
-          <label for="ai-base-url">Base URL</label>
+          <label for="ai-base-url" data-i18n="ai.baseUrl">Base URL</label>
           <div class="conn-inline">
             <input id="ai-base-url" type="text" placeholder="https://api.example.com/v1" autocomplete="off" spellcheck="false">
-            <button id="ai-url-reset" class="tb-btn icon" title="恢复预设地址" aria-label="恢复预设地址">&#8635;</button>
+            <button id="ai-url-reset" class="tb-btn icon" title="恢复预设地址" aria-label="恢复预设地址" data-i18n-title="ai.resetUrl" data-i18n-aria="ai.resetUrl">
+              <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+            </button>
           </div>
         </div>
         <div class="conn-field">
-          <label for="ai-key">API Key</label>
+          <label for="ai-key" data-i18n="ai.apiKey">API Key</label>
           <div class="conn-inline">
-            <input id="ai-key" type="password" placeholder="必填（本地 Ollama 可留空）" autocomplete="off">
-            <button id="ai-key-toggle" class="tb-btn icon" title="显示 / 隐藏" aria-label="显示或隐藏 API Key">&#128065;</button>
-            <button id="ai-key-clear" class="tb-btn icon" title="清除已保存的 API Key" aria-label="清除已保存的 API Key">&#9003;</button>
+            <input id="ai-key" type="password" placeholder="必填（本地 Ollama 可留空）" data-i18n-placeholder="ai.apiKeyPlaceholder" autocomplete="off">
+            <button id="ai-key-toggle" class="tb-btn icon" title="显示 / 隐藏" aria-label="显示或隐藏 API Key" data-i18n-title="ai.toggleKey" data-i18n-aria="ai.toggleKey">
+              <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button id="ai-key-clear" class="tb-btn icon" title="清除已保存的 API Key" aria-label="清除已保存的 API Key" data-i18n-title="ai.clearKey" data-i18n-aria="ai.clearKey">
+              <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
           </div>
         </div>
+
         <div class="conn-field">
-          <label for="ai-model">模型</label>
+          <label for="ai-model" data-i18n="ai.model">模型</label>
           <div class="conn-inline">
-            <select id="ai-model" title="选择模型"></select>
-            <button id="ai-models-btn" class="tb-btn" title="通过 API Key 获取可用模型列表">获取模型</button>
+            <select id="ai-model" title="选择模型" data-i18n-title="ai.model"></select>
+            <button id="ai-models-btn" class="tb-btn" title="通过 API Key 获取可用模型列表" data-i18n="ai.fetchModels" data-i18n-title="ai.fetchModels">获取模型</button>
           </div>
         </div>
         <div class="conn-field conn-stream">
-          <label class="ai-sel"><input id="ai-stream" type="checkbox" checked> 流式输出</label>
+          <label class="ai-sel"><input id="ai-stream" type="checkbox" checked> <span data-i18n="ai.stream">流式输出</span></label>
         </div>
         </div></details>
         <div class="conn-actions">
-          <button id="ai-save-key" class="tb-btn accent">保存设置</button>
-          <button id="ai-test-connection" class="tb-btn">测试连接</button>
+          <button id="ai-save-key" class="tb-btn accent" data-i18n="ai.saveSettings">保存连接设置</button>
+          <button id="ai-test-connection" class="tb-btn" data-i18n="ai.testConnection">测试连接</button>
           <span id="ai-conn-status" class="conn-status" role="status" aria-live="polite"></span>
         </div>
       </div>
@@ -314,122 +338,125 @@
 <!-- AI 历史：筛选、改名和导出不占用对话区域 -->
 <div id="ai-history-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="ai-history-title">
   <div id="ai-history-box" class="ai-drawer-box">
-    <div class="export-head"><h3 id="ai-history-title">会话历史</h3><button id="ai-history-close" class="tb-btn icon" aria-label="关闭会话历史">×</button></div>
-    <input id="ai-history-search" type="search" placeholder="搜索会话标题…" aria-label="搜索会话历史">
+    <div class="export-head"><h3 id="ai-history-title" data-i18n="ai.historyTitle">会话历史</h3><button id="ai-history-close" class="tb-btn icon" aria-label="关闭会话历史" data-i18n-aria="toolbar.close">×</button></div>
+    <input id="ai-history-search" type="search" placeholder="搜索历史会话..." data-i18n-placeholder="ai.searchHistory" aria-label="搜索会话历史" data-i18n-aria="ai.searchHistory">
     <div id="ai-history-list" class="ai-history-list"></div>
-    <div class="ai-history-actions"><button id="ai-history-copy" class="tb-btn">复制整段 Markdown</button><button id="ai-history-export" class="tb-btn">导出会话 .md</button><button id="ai-history-clear" class="tb-btn">清空历史</button></div>
+    <div class="ai-history-actions"><button id="ai-history-copy" class="tb-btn" data-i18n="ai.copy">复制回答</button><button id="ai-history-export" class="tb-btn" data-i18n="ai.exportHistory">导出记录</button><button id="ai-history-clear" class="tb-btn" data-i18n="ai.clearHistory">清空历史</button></div>
     <!-- 保留旧 ID，供自动化和旧调用兼容 -->
     <select id="ai-session" class="hidden" aria-hidden="true"></select>
-    <button id="ai-save-session" class="hidden" tabindex="-1">存</button><button id="ai-del-session" class="hidden" tabindex="-1">删</button>
+    <button id="ai-save-session" class="hidden" tabindex="-1" data-i18n="ai.save">存</button><button id="ai-del-session" class="hidden" tabindex="-1" data-i18n="ai.delete">删</button>
     <div class="ai-row ai-template-row">
-      <select id="ai-template" title="Prompt 模板：选择后应用到本次对话"></select>
-      <button id="ai-tpl-btn" class="tb-btn" title="模板管理（新建 / 编辑 / 删除）">模板</button>
+      <select id="ai-template" title="Prompt 模板：选择后应用到本次对话" data-i18n-title="ai.tplSelectTitle"></select>
+      <button id="ai-tpl-btn" class="tb-btn" title="模板管理" data-i18n="ai.templateManage" data-i18n-title="ai.templateManage">模板</button>
     </div>
   </div>
 </div>
 
 
+
+
 <!-- 最近文件：顶栏与欢迎页共用同一份本地记录 -->
-<div id="history-modal" class="hidden" role="dialog" aria-modal="true" aria-label="最近文件">
+<div id="history-modal" class="hidden" role="dialog" aria-modal="true" aria-label="最近文件" data-i18n-aria="app.recent">
   <div id="history-box">
     <div class="export-head">
-      <h3>最近文件</h3>
-      <button id="history-close" class="tb-btn icon" aria-label="关闭">&#10005;</button>
+      <h3 data-i18n="app.recent">最近文件</h3>
+      <button id="history-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">&#10005;</button>
     </div>
     <ul id="history-list" class="recent-list"></ul>
     <div class="url-actions">
-      <button id="history-clear" class="tb-btn">清空记录</button>
+      <button id="history-clear" class="tb-btn" data-i18n="app.clearRecent">清空记录</button>
     </div>
   </div>
 </div>
 
 
 <!-- 图片编辑器弹窗 -->
-<div id="img-modal" class="hidden" role="dialog" aria-modal="true" aria-label="图片编辑器">
+<div id="img-modal" class="hidden" role="dialog" aria-modal="true" aria-label="图片编辑器" data-i18n-aria="img.title">
   <div id="img-box">
-    <div class="export-head"><h3>&#128444; 图片编辑器</h3><button id="img-close-x" class="tb-btn icon" aria-label="关闭">&#10005;</button></div>
+    <div class="export-head"><h3 data-i18n="img.title">&#128444; 图片编辑器</h3><button id="img-close-x" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">&#10005;</button></div>
     <div class="img-source">
-      <button id="img-file" class="tb-btn accent">&#128194; 选择本地图片…</button>
-      <input id="img-url-input" type="text" placeholder="或粘贴图片 URL 直接插入" autocomplete="off">
-      <button id="img-url-load" class="tb-btn">插入 URL</button>
+      <button id="img-file" class="tb-btn accent" data-i18n="img.selectLocal">&#128194; 选择本地图片…</button>
+      <input id="img-url-input" type="text" placeholder="或粘贴图片 URL 直接插入" data-i18n-placeholder="img.urlPlaceholder" autocomplete="off">
+      <button id="img-url-load" class="tb-btn" data-i18n="img.insertUrl">插入 URL</button>
     </div>
     <div class="img-workspace">
-      <div class="img-stage" id="img-stage" tabindex="0" aria-label="图片裁剪画布，方向键移动裁剪框">
+      <div class="img-stage" id="img-stage" tabindex="0" aria-label="图片裁剪画布" data-i18n-aria="img.canvasAria">
         <canvas id="img-canvas"></canvas>
         <div id="img-crop" class="img-crop">
           <i class="crop-grid-line crop-grid-v one"></i><i class="crop-grid-line crop-grid-v two"></i><i class="crop-grid-line crop-grid-h one"></i><i class="crop-grid-line crop-grid-h two"></i>
-          <button class="crop-handle crop-nw" data-handle="nw" aria-label="左上裁剪手柄"></button><button class="crop-handle crop-n" data-handle="n" aria-label="上裁剪手柄"></button><button class="crop-handle crop-ne" data-handle="ne" aria-label="右上裁剪手柄"></button>
-          <button class="crop-handle crop-e" data-handle="e" aria-label="右裁剪手柄"></button><button class="crop-handle crop-se" data-handle="se" aria-label="右下裁剪手柄"></button><button class="crop-handle crop-s" data-handle="s" aria-label="下裁剪手柄"></button>
-          <button class="crop-handle crop-sw" data-handle="sw" aria-label="左下裁剪手柄"></button><button class="crop-handle crop-w" data-handle="w" aria-label="左裁剪手柄"></button>
+          <button class="crop-handle crop-nw" data-handle="nw" aria-label="左上裁剪手柄" data-i18n-aria="img.cropHandleNw"></button><button class="crop-handle crop-n" data-handle="n" aria-label="上裁剪手柄" data-i18n-aria="img.cropHandleN"></button><button class="crop-handle crop-ne" data-handle="ne" aria-label="右上裁剪手柄" data-i18n-aria="img.cropHandleNe"></button>
+          <button class="crop-handle crop-e" data-handle="e" aria-label="右裁剪手柄" data-i18n-aria="img.cropHandleE"></button><button class="crop-handle crop-se" data-handle="se" aria-label="右下裁剪手柄" data-i18n-aria="img.cropHandleSe"></button><button class="crop-handle crop-s" data-handle="s" aria-label="下裁剪手柄" data-i18n-aria="img.cropHandleS"></button>
+          <button class="crop-handle crop-sw" data-handle="sw" aria-label="左下裁剪手柄" data-i18n-aria="img.cropHandleSw"></button><button class="crop-handle crop-w" data-handle="w" aria-label="左裁剪手柄" data-i18n-aria="img.cropHandleW"></button>
         </div>
-        <div id="img-hint" class="img-hint">选择本地图片开始编辑；空白处拖拽可重新框选</div>
+        <div id="img-hint" class="img-hint" data-i18n="img.hint">选择本地图片开始编辑；空白处拖拽可重新框选</div>
       </div>
+
       <aside class="img-inspector">
-        <div class="img-section"><strong>变换</strong><div class="img-btn-row"><button id="img-rot-l" class="tb-btn">↶ 90°</button><button id="img-rot-r" class="tb-btn">↷ 90°</button><button id="img-flip-x" class="tb-btn">水平翻转</button><button id="img-flip-y" class="tb-btn">垂直翻转</button></div>
-          <label class="img-ctl">角度 <input id="img-angle" type="range" min="-180" max="180" step="0.1" value="0"><input id="img-angle-number" class="img-number" type="number" min="-180" max="180" step="0.1" value="0">°</label></div>
-        <div class="img-section"><strong>查看</strong><label class="img-ctl">画布缩放 <input id="img-view-zoom" type="range" min="25" max="400" value="100"><span id="img-view-zoom-val">100%</span></label><p class="img-help">滚轮缩放 · 空格拖拽平移 · +/- 缩放</p></div>
-        <div class="img-section"><strong>裁剪与输出</strong><select id="img-ratio" title="裁剪比例"><option value="free">自由比例</option><option value="1:1">1:1 方形</option><option value="4:3">4:3</option><option value="3:2">3:2</option><option value="16:9">16:9</option><option value="orig">原图比例</option></select>
-          <div class="img-size-row"><label>宽 <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" title="锁定宽高比">🔗</button><label>高 <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
-        <div class="img-btn-row"><button id="img-undo" class="tb-btn" disabled>撤销</button><button id="img-redo" class="tb-btn" disabled>重做</button><button id="img-reset" class="tb-btn">重置</button></div>
+        <div class="img-section"><strong data-i18n="img.transform">变换</strong><div class="img-btn-row"><button id="img-rot-l" class="tb-btn">↶ 90°</button><button id="img-rot-r" class="tb-btn">↷ 90°</button><button id="img-flip-x" class="tb-btn" data-i18n="img.flipH">水平翻转</button><button id="img-flip-y" class="tb-btn" data-i18n="img.flipV">垂直翻转</button></div>
+          <label class="img-ctl"><span data-i18n="img.angle">角度</span> <input id="img-angle" type="range" min="-180" max="180" step="0.1" value="0"><input id="img-angle-number" class="img-number" type="number" min="-180" max="180" step="0.1" value="0">°</label></div>
+        <div class="img-section"><strong data-i18n="img.view">查看</strong><label class="img-ctl"><span data-i18n="img.zoom">画布缩放</span> <input id="img-view-zoom" type="range" min="25" max="400" value="100"><span id="img-view-zoom-val">100%</span></label><p class="img-help" data-i18n="img.help">滚轮缩放 · 空格拖拽平移 · +/- 缩放</p></div>
+        <div class="img-section"><strong data-i18n="img.cropAndOutput">裁剪与输出</strong><select id="img-ratio" title="裁剪比例" data-i18n-title="img.ratio"><option value="free" data-i18n="img.ratioFree">自由比例</option><option value="1:1" data-i18n="img.ratio1_1">1:1 方形</option><option value="4:3" data-i18n="img.ratio4_3">4:3</option><option value="3:2" data-i18n="img.ratio3_2">3:2</option><option value="16:9" data-i18n="img.ratio16_9">16:9</option><option value="orig" data-i18n="img.ratioOrig">原图比例</option></select>
+          <div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" title="锁定宽高比" data-i18n-title="img.lockRatio">🔗</button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
+        <div class="img-btn-row"><button id="img-undo" class="tb-btn" data-i18n="editor.undo" disabled>撤销</button><button id="img-redo" class="tb-btn" data-i18n="editor.redo" disabled>重做</button><button id="img-reset" class="tb-btn" data-i18n="img.reset">重置</button></div>
       </aside>
     </div>
     <div class="img-info"><span id="img-info"></span></div>
     <div class="url-actions">
-      <button id="img-insert" class="tb-btn accent" disabled>&#11015; 插入到文档</button>
-      <button id="img-close" class="tb-btn">关闭</button>
+      <button id="img-insert" class="tb-btn accent" data-i18n="dialog.imgInsert" disabled>&#11015; 插入到文档</button>
+      <button id="img-close" class="tb-btn" data-i18n="toolbar.close">关闭</button>
     </div>
-    <p class="fix-note">图片将保存到文档同目录的 <code>images/</code> 子文件夹，并以相对路径插入 Markdown（仅在编辑本地 .md 时可用）。</p>
+    <p class="fix-note" data-i18n="img.saveNote">图片将保存到文档同目录的 <code>images/</code> 子文件夹，并以相对路径插入 Markdown（仅在编辑本地 .md 时可用）。</p>
   </div>
 </div>
 
-<div id="md-command-modal" class="hidden" role="dialog" aria-modal="true" aria-label="Markdown 命令面板"><div class="command-box"><input id="md-command-search" type="search" placeholder="搜索 Markdown 命令…"><div id="md-command-list" class="command-list"></div><p class="fix-note">↑↓ 选择 · Enter 插入 · Esc 关闭</p></div></div>
-<div id="formula-modal" class="hidden" role="dialog" aria-modal="true" aria-label="公式选择器"><div class="formula-box"><div class="export-head"><h3>公式选择器</h3><button id="formula-close" class="tb-btn icon" aria-label="关闭">×</button></div><div class="formula-top"><input id="formula-search" type="search" placeholder="搜索名称或 TeX…"><select id="formula-mode"><option value="inline">行内公式</option><option value="block">块级公式</option></select></div><div id="formula-cats" class="formula-cats"></div><div id="formula-list" class="formula-list"></div><div id="formula-preview" class="formula-preview">选择公式模板查看预览</div></div></div>
+<div id="md-command-modal" class="hidden" role="dialog" aria-modal="true" aria-label="Markdown 命令面板" data-i18n-aria="dialog.commandTitle"><div class="command-box"><input id="md-command-search" type="search" placeholder="搜索 Markdown 命令…" data-i18n-placeholder="editor.command"><div id="md-command-list" class="command-list"></div><p class="fix-note" data-i18n="dialog.commandHint">↑↓ 选择 · Enter 插入 · Esc 关闭</p></div></div>
+<div id="formula-modal" class="hidden" role="dialog" aria-modal="true" aria-label="公式选择器" data-i18n-aria="formula.title"><div class="formula-box"><div class="export-head"><h3 data-i18n="formula.title">公式选择器</h3><button id="formula-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">×</button></div><div class="formula-top"><input id="formula-search" type="search" placeholder="搜索名称或 TeX…" data-i18n-placeholder="formula.searchPlaceholder"><select id="formula-mode"><option value="inline" data-i18n="formula.inline">行内公式</option><option value="block" data-i18n="formula.block">块级公式</option></select></div><div id="formula-cats" class="formula-cats"></div><div id="formula-list" class="formula-list"></div><div id="formula-preview" class="formula-preview" data-i18n="formula.previewPrompt">选择公式模板查看预览</div></div></div>
 
 <!-- Prompt 模板管理弹窗 -->
 <div id="tpl-modal" class="hidden">
   <div id="tpl-box">
-    <h3>&#128221; Prompt 模板管理</h3>
+    <h3 data-i18n="tpl.title">&#128221; Prompt 模板管理</h3>
     <div class="tpl-layout">
       <ul id="tpl-list" class="tpl-list"></ul>
       <div class="tpl-form">
         <input id="tpl-id" type="hidden">
-        <input id="tpl-name" type="text" placeholder="模板名称（如：总结要点 / 生成周报）">
+        <input id="tpl-name" type="text" placeholder="模板名称（如：总结要点 / 生成周报）" data-i18n-placeholder="tpl.namePlaceholder">
         <select id="tpl-action">
-          <option value="quick_read">动作：快速阅读</option>
-          <option value="polish">动作：润色</option>
-          <option value="modify">动作：修改</option>
-          <option value="expand">动作：扩充</option>
-          <option value="continue">动作：续写</option>
-          <option value="translate">动作：翻译</option>
-          <option value="ask">动作：提问</option>
-          <option value="custom">自定义动作</option>
+          <option value="quick_read" data-i18n="tpl.actionQuickRead">动作：快速阅读</option>
+          <option value="polish" data-i18n="tpl.actionPolish">动作：润色</option>
+          <option value="modify" data-i18n="tpl.actionModify">动作：修改</option>
+          <option value="expand" data-i18n="tpl.actionExpand">动作：扩充</option>
+          <option value="continue" data-i18n="tpl.actionContinue">动作：续写</option>
+          <option value="translate" data-i18n="tpl.actionTranslate">动作：翻译</option>
+          <option value="ask" data-i18n="tpl.actionAsk">动作：提问</option>
+          <option value="custom" data-i18n="tpl.actionCustom">自定义动作</option>
         </select>
-        <textarea id="tpl-system" rows="4" placeholder="系统提示词：角色设定与任务说明"></textarea>
-        <textarea id="tpl-user" rows="3" placeholder="用户消息模板（可选）：可用 {doc} 代表文档内容、{prompt} 代表补充要求；留空则自动拼接文档"></textarea>
+        <textarea id="tpl-system" rows="4" placeholder="系统提示词：角色设定与任务说明" data-i18n-placeholder="tpl.systemPlaceholder"></textarea>
+        <textarea id="tpl-user" rows="3" placeholder="用户消息模板（可选）：可用 {doc} 代表文档内容、{prompt} 代表补充要求；留空则自动拼接文档" data-i18n-placeholder="tpl.userPlaceholder"></textarea>
       </div>
     </div>
     <div class="url-actions">
-      <button id="tpl-new" class="tb-btn">新建</button>
-      <button id="tpl-save" class="tb-btn accent">保存</button>
-      <button id="tpl-del" class="tb-btn">删除</button>
-      <button id="tpl-close" class="tb-btn">关闭</button>
+      <button id="tpl-new" class="tb-btn" data-i18n="ai.newSession">新建</button>
+      <button id="tpl-save" class="tb-btn accent" data-i18n="editor.save">保存</button>
+      <button id="tpl-del" class="tb-btn" data-i18n="tpl.delete">删除</button>
+      <button id="tpl-close" class="tb-btn" data-i18n="toolbar.close">关闭</button>
     </div>
-    <p class="fix-note">内置模板可直接编辑并保存（覆盖默认行为）；删除内置模板即恢复默认。{doc} / {prompt} 会在发送时自动替换为文档内容与补充要求。</p>
+    <p class="fix-note" data-i18n="tpl.hint">内置模板可直接编辑并保存（覆盖默认行为）；删除内置模板即恢复默认。{doc} / {prompt} 会在发送时自动替换为文档内容与补充要求。</p>
   </div>
 </div>
 
 <!-- 移动端共享弹窗 -->
 <div id="share-modal" class="hidden">
   <div id="share-box">
-    <h3>&#128241; 移动端共享</h3>
-    <p class="fix-note">启动后手机连同一 Wi-Fi，扫描二维码即可在手机浏览器阅读当前文档（也支持转 MD / OCR / 网页 / AI）。局域网访问需携带本次随机令牌，关闭共享即失效。</p>
+    <h3 data-i18n="share.title">&#128241; 移动端共享</h3>
+    <p class="fix-note" data-i18n="share.desc">启动后手机连同一 Wi-Fi，扫描二维码即可在手机浏览器阅读当前文档（也支持转 MD / OCR / 网页 / AI）。局域网访问需携带本次随机令牌，关闭共享即失效。</p>
     <div id="share-qr"></div>
     <p id="share-url" class="share-url"></p>
     <p id="share-token" class="share-token"></p>
     <div class="url-actions">
-      <button id="share-start" class="tb-btn accent">开启共享</button>
-      <button id="share-stop" class="tb-btn" disabled>关闭共享</button>
-      <button id="share-close" class="tb-btn">关闭</button>
+      <button id="share-start" class="tb-btn accent" data-i18n="share.startServer">开启共享</button>
+      <button id="share-stop" class="tb-btn" data-i18n="share.stopServer" disabled>关闭共享</button>
+      <button id="share-close" class="tb-btn" data-i18n="toolbar.close">关闭</button>
     </div>
   </div>
 </div>
@@ -438,134 +465,155 @@
   <div id="url-box">
     <div class="url-head">
       <div>
-        <h3 id="url-title">&#127760; 网页转 Markdown</h3>
-        <p>智能提取网页正文或高精度动态渲染，支持单篇与同站批量抓取。</p>
+        <h3 id="url-title">
+          <svg class="url-title-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span data-i18n="web.title">网页转 Markdown</span>
+        </h3>
+        <p data-i18n="web.desc">智能提取网页正文或高精度动态渲染，支持单篇与同站批量抓取。</p>
       </div>
-      <button id="url-close" class="icon-btn" aria-label="关闭网页转换">×</button>
+      <button id="url-close" class="icon-btn" aria-label="关闭网页转换" data-i18n-aria="toolbar.close">×</button>
     </div>
     
     <div class="url-input-wrap">
-      <input id="url-input" type="url" inputmode="url" placeholder="粘贴网页地址 (如 https://example.com/article)" autocomplete="url">
-      <button id="url-paste-btn" class="tb-btn icon" title="从剪贴板粘贴" aria-label="粘贴网址">&#128203;</button>
+      <input id="url-input" type="url" inputmode="url" placeholder="输入网页 URL (如 https://example.com/post)..." data-i18n-placeholder="web.urlPlaceholder" autocomplete="url">
+      <button id="url-paste-btn" class="tb-btn icon" title="从剪贴板粘贴" aria-label="粘贴网址" data-i18n-title="web.pasteTitle" data-i18n-aria="web.pasteAria">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+      </button>
     </div>
 
     <div class="url-options-row">
       <div class="url-stepper-group">
-        <label for="url-pages" class="url-stepper-label">同站抓取页数</label>
+        <label for="url-pages" class="url-stepper-label" data-i18n="web.pagesLabel">同站抓取页数</label>
         <div class="url-stepper">
-          <button id="url-pages-dec" class="stepper-btn" type="button" aria-label="减少页数">-</button>
-          <input id="url-pages" type="number" min="1" max="30" value="1" step="1" inputmode="numeric" aria-label="抓取页数">
-          <button id="url-pages-inc" class="stepper-btn" type="button" aria-label="增加页数">+</button>
+          <button id="url-pages-dec" class="stepper-btn" type="button" aria-label="减少页数" data-i18n-aria="web.decPages">-</button>
+          <input id="url-pages" type="number" min="1" max="30" value="1" step="1" inputmode="numeric" aria-label="抓取页数" data-i18n-aria="web.pagesAria">
+          <button id="url-pages-inc" class="stepper-btn" type="button" aria-label="增加页数" data-i18n-aria="web.incPages">+</button>
+
         </div>
       </div>
-      <label class="url-check-pill"><input id="url-images" type="checkbox"> <span>📥 本地化图片</span></label>
+      <label class="url-check-pill">
+        <input id="url-images" type="checkbox">
+        <svg class="pill-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        <span data-i18n="web.localizeImages">本地化图片</span>
+      </label>
     </div>
 
     <div id="url-progress" class="url-progress hidden" aria-hidden="true">
       <div class="url-progress-track"><span id="url-progress-bar"></span></div>
-      <div class="url-progress-copy"><strong id="url-progress-title">准备抓取…</strong><span id="url-progress-count"></span></div>
+      <div class="url-progress-copy"><strong id="url-progress-title" data-i18n="web.progressReady">准备抓取…</strong><span id="url-progress-count"></span></div>
     </div>
     <div id="url-status" class="url-status hidden" role="status" aria-live="polite"></div>
 
     <div class="url-actions-grid">
       <button id="url-go" class="tb-btn accent primary-action">
-        <span class="btn-main-icon">⚡</span>
+        <span class="btn-main-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </span>
         <div class="btn-text-group">
-          <strong>智能提取正文</strong>
-          <small>快速剔除广告与导航</small>
+          <strong data-i18n="web.fetch">智能提取正文</strong>
+          <small data-i18n="web.safeMode">安全提取</small>
         </div>
       </button>
       <button id="url-render" class="tb-btn secondary-action">
-        <span class="btn-main-icon">🖥️</span>
+        <span class="btn-main-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </span>
         <div class="btn-text-group">
-          <strong>完整动态渲染</strong>
-          <small>保留复杂排版与脚本</small>
+          <strong data-i18n="web.fullRender">完整动态渲染</strong>
+          <small data-i18n="web.renderDesc">保留复杂排版与脚本</small>
         </div>
       </button>
-      <button id="url-cancel" class="tb-btn hidden">取消任务</button>
+      <button id="url-cancel" class="tb-btn hidden" data-i18n="convert.cancel">取消</button>
     </div>
 
     <div class="url-footer-edge">
       <label class="edge-agreement">
         <input id="url-private" type="checkbox" checked>
-        <span>允许访问局域网 / 本地网络页面（临时授权 10 分钟）</span>
+        <span data-i18n="web.allowLocal">允许访问局域网 / 本地网络页面（临时授权 10 分钟）</span>
       </label>
     </div>
   </div>
 </div>
 
-<div id="close-confirm-modal" class="hidden" role="dialog" aria-modal="true" aria-label="未保存修改提示">
+<div id="close-confirm-modal" class="hidden" role="dialog" aria-modal="true" aria-label="未保存修改提示" data-i18n-aria="dialog.unsavedTitle">
   <div id="close-confirm-box">
     <div class="close-confirm-head">
-      <span class="close-confirm-icon">⚠️</span>
+      <div class="close-confirm-icon-wrap">
+        <svg class="close-confirm-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
       <div>
-        <h3 id="close-confirm-title">是否保存对文档的修改？</h3>
-        <p id="close-confirm-desc">「文档」已被修改，如果直接关闭，未保存的内容将会丢失。</p>
+        <h3 id="close-confirm-title" data-i18n="dialog.unsavedTitle">是否保存对文档的修改？</h3>
+        <p id="close-confirm-desc" data-i18n="dialog.unsavedMsgDesc">「文档」已被修改，如果直接关闭，未保存的内容将会丢失。</p>
       </div>
     </div>
     <div class="close-confirm-actions">
-      <button id="close-confirm-save" class="tb-btn accent">💾 保存并关闭</button>
-      <button id="close-confirm-discard" class="tb-btn danger">🗑️ 不保存</button>
-      <button id="close-confirm-cancel" class="tb-btn">取消</button>
+      <button id="close-confirm-save" class="tb-btn accent" data-i18n="dialog.save">保存修改</button>
+      <button id="close-confirm-discard" class="tb-btn danger" data-i18n="dialog.dontSave">不保存</button>
+      <button id="close-confirm-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
     </div>
+  </div>
+</div>
+
+
   </div>
 </div>
 
 <div id="fix-modal" class="hidden">
   <div id="fix-box">
-    <h3>本次自动修正详情 <span id="fix-count"></span></h3>
+    <h3 data-i18n="dialog.fixTitle">本次自动修正详情 <span id="fix-count"></span></h3>
     <ul id="fix-list"></ul>
     <div class="fix-actions">
-      <button id="fix-save" class="tb-btn">另存为修正后文件</button>
-      <button id="fix-close" class="tb-btn">关闭</button>
+      <button id="fix-save" class="tb-btn" data-i18n="app.saveAs">另存为修正后文件</button>
+      <button id="fix-close" class="tb-btn" data-i18n="toolbar.close">关闭</button>
     </div>
-    <p class="fix-note">修正仅用于本次阅读，不会改写原文件。</p>
+    <p class="fix-note" data-i18n="fixes.note">修正仅用于本次阅读，不会改写原文件。</p>
   </div>
 </div>
 
+
 <!-- 导出面板（PDF / DOCX / HTML / LaTeX + 样式定制） -->
-<div id="export-modal" class="hidden" role="dialog" aria-modal="true" aria-label="导出文档">
+<div id="export-modal" class="hidden" role="dialog" aria-modal="true" aria-label="导出文档" data-i18n-aria="export.title">
   <div id="export-box">
     <div class="export-head">
-      <h3>导出文档</h3>
-      <button id="export-close" class="tb-btn icon" aria-label="关闭">&#10005;</button>
+      <h3 data-i18n="export.title">导出文档</h3>
+      <button id="export-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">&#10005;</button>
     </div>
     <div class="export-body">
       <div class="export-side">
-        <div class="exp-fmts" role="tablist" aria-label="导出格式">
+        <div class="exp-fmts" role="tablist" aria-label="导出格式" data-i18n-aria="export.formatsAria">
           <button class="exp-fmt active" data-fmt="pdf" role="tab" aria-selected="true">PDF</button>
           <button class="exp-fmt" data-fmt="docx" role="tab" aria-selected="false">DOCX</button>
           <button class="exp-fmt" data-fmt="html" role="tab" aria-selected="false">HTML</button>
           <button class="exp-fmt" data-fmt="tex" role="tab" aria-selected="false">LaTeX</button>
         </div>
 
-        <button id="export-print" class="exp-print" title="使用浏览器打印对话框（可另存为 PDF）">&#128424; 打印当前文档</button>
+        <button id="export-print" class="exp-print" title="使用浏览器打印对话框（可另存为 PDF）" data-i18n-title="export.printTitle" data-i18n="export.printDoc">&#128424; 打印当前文档</button>
         <div class="exp-preset-row">
-          <label for="exp-preset">样式预设</label>
+          <label for="exp-preset" data-i18n="export.stylePreset">样式预设</label>
           <select id="exp-preset"></select>
         </div>
         <div class="exp-preset-actions">
-          <button id="exp-save-preset" class="tb-btn">存为预设&#8230;</button>
-          <button id="exp-reset" class="tb-btn">恢复默认</button>
+          <button id="exp-save-preset" class="tb-btn" data-i18n="export.savePreset">存为预设&#8230;</button>
+          <button id="exp-reset" class="tb-btn" data-i18n="export.restoreDefaults">恢复默认</button>
         </div>
         <div id="exp-save-name" class="exp-save-name hidden">
-          <input id="exp-save-input" type="text" placeholder="预设名称" maxlength="20" autocomplete="off">
+          <input id="exp-save-input" type="text" placeholder="预设名称" data-i18n-placeholder="export.presetName" maxlength="20" autocomplete="off">
           <div class="exp-save-btns">
-            <button id="exp-save-ok" class="tb-btn accent">保存</button>
-            <button id="exp-save-cancel" class="tb-btn">取消</button>
+            <button id="exp-save-ok" class="tb-btn accent" data-i18n="editor.save">保存</button>
+            <button id="exp-save-cancel" class="tb-btn" data-i18n="editor.cancel">取消</button>
           </div>
         </div>
-        <div id="export-preview-card" class="export-preview-card" title="点击打开全屏排版预览">
+        <div id="export-preview-card" class="export-preview-card" title="点击打开全屏排版预览" data-i18n-title="export.previewCardTitle">
           <div class="export-preview-header">
-            <span class="export-preview-title">排版预览</span>
-            <span id="export-preview-badge" class="export-preview-badge">PDF · 默认</span>
+            <span class="export-preview-title" data-i18n="export.preview">排版预览</span>
+            <span id="export-preview-badge" class="export-preview-badge" data-i18n="export.previewBadgePdf">PDF · 默认</span>
           </div>
           <div class="export-preview-viewport">
             <div id="export-preview-mini-page" class="export-preview-mini-page">
               <div id="export-preview-mini-content" class="export-preview-mini-content"></div>
             </div>
             <div class="export-preview-overlay">
-              <span class="export-preview-hint">🔍 点击放大预览</span>
+              <span class="export-preview-hint" data-i18n="export.zoomPreview">🔍 点击放大预览</span>
             </div>
           </div>
         </div>
@@ -575,24 +623,25 @@
     <div class="export-foot">
       <span id="export-result" class="export-result"></span>
       <span class="export-spacer"></span>
-      <button id="export-open" class="tb-btn hidden">打开</button>
-      <button id="export-reveal" class="tb-btn hidden">所在文件夹</button>
-      <button id="export-run" class="tb-btn accent">导出</button>
+      <button id="export-open" class="tb-btn hidden" data-i18n="app.open">打开</button>
+      <button id="export-reveal" class="tb-btn hidden" data-i18n="export.openFolder">所在文件夹</button>
+      <button id="export-run" class="tb-btn accent" data-i18n="export.exportAction">导出</button>
     </div>
-    <p class="fix-note">公式在 PDF / DOCX 中渲染为图片（本地离线）；HTML 为单文件（内联 marked + MathJax），图片保持相对路径，请连同原目录一起保存。样式参数会自动记忆。</p>
+    <p class="fix-note" data-i18n="export.noteOfflineMath">公式在 PDF / DOCX 中渲染为图片（本地离线）；HTML 为单文件（内联 marked + MathJax），图片保持相对路径，请连同原目录一起保存。样式参数会自动记忆。</p>
   </div>
 </div>
 
 <!-- 导出放大预览弹窗 -->
-<div id="export-preview-modal" class="hidden" role="dialog" aria-modal="true" aria-label="导出排版预览">
+<div id="export-preview-modal" class="hidden" role="dialog" aria-modal="true" aria-label="导出排版预览" data-i18n-aria="export.preview">
   <div id="export-preview-box">
     <div class="export-head">
-      <h3>导出排版大图预览</h3>
+      <h3 data-i18n="export.preview">导出排版大图预览</h3>
       <div class="export-preview-head-meta">
-        <span id="export-preview-paper-meta">A4 · 纵向</span>
-        <button id="export-preview-close" class="tb-btn icon" aria-label="关闭预览">&#10005;</button>
+        <span id="export-preview-paper-meta" data-i18n="export.previewPaperMetaA4">A4 · 纵向</span>
+        <button id="export-preview-close" class="tb-btn icon" aria-label="关闭预览" data-i18n-aria="toolbar.close">&#10005;</button>
       </div>
     </div>
+
     <div class="export-preview-modal-body">
       <div class="export-preview-paper-wrapper">
         <div id="export-preview-full-page" class="export-preview-full-page"></div>
@@ -606,23 +655,23 @@
 <div id="convert-modal" class="hidden">
   <div id="convert-box">
     <div class="export-head">
-      <h3>转 Markdown</h3>
-      <button id="convert-close" class="tb-btn icon" aria-label="关闭">&#10005;</button>
+      <h3 data-i18n="convert.title">转 Markdown</h3>
+      <button id="convert-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">&#10005;</button>
     </div>
     <div class="convert-body">
       <div class="convert-actions">
-        <button id="convert-files" class="tb-btn accent">选择文件（可多选）</button>
-        <button id="convert-folder" class="tb-btn">选择文件夹</button>
-        <label class="ai-sel"><input id="convert-overwrite" type="checkbox"> 覆盖已存在的 .md</label>
+        <button id="convert-files" class="tb-btn accent" data-i18n="convert.selectFiles">选择文件（可多选）</button>
+        <button id="convert-folder" class="tb-btn" data-i18n="convert.selectFolder">选择文件夹</button>
+        <label class="ai-sel"><input id="convert-overwrite" type="checkbox"> <span data-i18n="convert.overwrite">覆盖已存在的 .md</span></label>
       </div>
       <div id="convert-list" class="convert-list"></div>
       <div class="convert-foot">
         <span id="convert-status" class="convert-status"></span>
         <span class="export-spacer"></span>
-        <button id="convert-open-dir" class="tb-btn hidden">打开结果目录</button>
+        <button id="convert-open-dir" class="tb-btn hidden" data-i18n="convert.openDir">打开结果目录</button>
       </div>
     </div>
-    <p class="fix-note" id="convert-note">转换结果自动保存为源文件同目录同名 .md（如 report.docx → report.md）。docx 公式、PDF 表格走专用解析，其余格式自动回退通用转换；输出经过严格校验（表格 / 代码围栏 / 公式 / 图片引用）。</p>
+    <p class="fix-note" id="convert-note" data-i18n="convert.note">转换结果自动保存为源文件同目录同名 .md（如 report.docx → report.md）。docx 公式、PDF 表格走专用解析，其余格式自动回退通用转换；输出经过严格校验（表格 / 代码围栏 / 公式 / 图片引用）。</p>
   </div>
 </div>
 
@@ -631,13 +680,13 @@
   <div id="update-box" class="update-box">
     <div class="export-head">
       <div class="update-title-wrap">
-        <h3 id="update-modal-title">发现新版本 <span id="update-new-ver" class="update-ver-tag"></span></h3>
+        <h3 id="update-modal-title"><span data-i18n="update.title">发现新版本</span> <span id="update-new-ver" class="update-ver-tag"></span></h3>
         <small id="update-pub-time" class="update-pub-time"></small>
       </div>
-      <button id="update-close" class="tb-btn icon" aria-label="关闭更新窗口">&#10005;</button>
+      <button id="update-close" class="tb-btn icon" aria-label="关闭更新窗口" data-i18n-aria="toolbar.close">&#10005;</button>
     </div>
     <div class="update-body">
-      <div class="update-notes-head">更新日志</div>
+      <div class="update-notes-head" data-i18n="update.log">更新日志</div>
       <div id="update-notes-content" class="update-notes-content markdown-body"></div>
       
       <div class="update-asset-card">
@@ -648,21 +697,21 @@
         <div id="update-progress-wrap" class="update-progress-wrap hidden">
           <div class="update-progress-bar"><div id="update-progress-fill" class="update-progress-fill"></div></div>
           <div class="update-progress-meta">
-            <span id="update-progress-text">正在下载… 0%</span>
+            <span id="update-progress-text" data-i18n="update.prepDownload">正在下载… 0%</span>
             <span id="update-progress-speed">0 MB/s</span>
           </div>
         </div>
       </div>
 
       <div class="update-options">
-        <label class="ai-sel"><input id="update-use-mirror" type="checkbox"> 使用国内镜像加速下载</label>
+        <label class="ai-sel"><input id="update-use-mirror" type="checkbox"> <span data-i18n="update.useMirror">使用国内镜像加速下载</span></label>
       </div>
     </div>
     <div class="update-foot">
-      <button id="btn-update-browser" class="tb-btn">在浏览器中打开</button>
+      <button id="btn-update-browser" class="tb-btn" data-i18n="update.viewOnBrowser">在浏览器中打开</button>
       <span class="export-spacer"></span>
-      <button id="btn-update-cancel" class="tb-btn hidden">取消下载</button>
-      <button id="btn-update-start" class="tb-btn accent">立即下载并更新</button>
+      <button id="btn-update-cancel" class="tb-btn hidden" data-i18n="update.cancel">取消下载</button>
+      <button id="btn-update-start" class="tb-btn accent" data-i18n="update.installNow">立即下载并更新</button>
     </div>
   </div>
 </div>
@@ -670,19 +719,19 @@
 <div id="toast" class="hidden"></div>
 
 <div id="progress"></div>
-<div id="busy" class="hidden"><span>处理中…</span></div>
-<button id="top-btn" class="hidden" title="回到顶部">&#8593;</button>
+<div id="busy" class="hidden"><span data-i18n="app.processing">处理中…</span></div>
+<button id="top-btn" class="hidden" title="回到顶部" data-i18n-title="toolbar.backToTop">&#8593;</button>
 <input id="file-input" type="file" class="hidden">
 <input id="img-file-input" type="file" accept="image/*" class="hidden">
 
 <!-- 标签右键菜单 -->
 <div id="tab-context-menu" class="tab-context-menu hidden" role="menu">
-  <button data-action="close">关闭标签</button>
-  <button data-action="close-others">关闭其他标签</button>
-  <button data-action="close-all">关闭所有标签</button>
+  <button data-action="close" data-i18n="tabs.closeTab">关闭标签</button>
+  <button data-action="close-others" data-i18n="tabs.closeOthers">关闭其他标签</button>
+  <button data-action="close-all" data-i18n="tabs.closeAll">关闭所有标签</button>
   <div class="tab-context-sep"></div>
-  <button data-action="rename">重命名 (F2 / 双击)</button>
-  <button data-action="copy-path">复制文件路径</button>
+  <button data-action="rename" data-i18n="tabs.rename">重命名 (F2 / 双击)</button>
+  <button data-action="copy-path" data-i18n="tabs.copyPath">复制文件路径</button>
 </div>
 
 <!-- 全局拖拽遮罩 -->
@@ -696,8 +745,8 @@
         <line x1="9" y1="15" x2="15" y2="15"></line>
       </svg>
     </div>
-    <h3 id="drag-title">松开以在 ReadMD 中打开</h3>
-    <p id="drag-desc">支持 Markdown 文档、多格式转换 (DOCX/PDF/EPUB)、网页链接解析及剪贴板文本快速建档</p>
+    <h3 id="drag-title" data-i18n="dialog.dropTitle">松开以在 ReadMD 中打开</h3>
+    <p id="drag-desc" data-i18n="dialog.dropDesc">支持 Markdown 文档、多格式转换 (DOCX/PDF/EPUB)、网页链接解析及剪贴板文本快速建档</p>
   </div>
 </div>
 
@@ -724,26 +773,34 @@
     </div>
     <div style="padding: 12px 16px; text-align: center;">
       <div id="table-grid-picker" class="table-grid-picker"></div>
-      <div id="table-grid-label" class="table-grid-label">3 × 3 表格</div>
+      <div id="table-grid-label" class="table-grid-label" data-i18n="editor.table3x3">3 × 3 表格</div>
     </div>
   </div>
 </div>
 
+
 <!-- 禅模式退出浮动按钮 -->
-<button id="zen-exit-btn" class="zen-exit-btn" onclick="toggleZenMode(false)">退出禅模式 (F11 / Esc)</button>
+<button id="zen-exit-btn" class="zen-exit-btn" onclick="toggleZenMode(false)" data-i18n="editor.zenExit">退出禅模式 (F11 / Esc)</button>
 
 <footer id="statusbar">
-  <span id="status-left"></span>
+  <div class="statusbar-left-group">
+    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.1</span>
+    <span id="status-left"></span>
+  </div>
   <span id="status-right"></span>
   <span id="status-mods"></span>
-  <button id="status-update-badge" class="status-update-badge hidden" title="点击查看新版本并更新">
-    <span class="update-sparkle">✨</span> 新版本 <span id="update-badge-ver"></span>
+  <button id="status-update-badge" class="status-update-badge hidden" title="点击查看新版本并更新" data-i18n-title="status.clickToUpdate">
+    <svg class="update-badge-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l2.4 7.4H22l-6 4.6 2.3 7.2-6.3-4.6-6.3 4.6 2.3-7.2-6-4.6h7.6z"/></svg>
+    <span data-i18n="status.newVersion">新版本</span> <span id="update-badge-ver"></span>
   </button>
-  <button id="btn-home" class="status-btn-home hidden" title="返回主页">
+
+  <button id="btn-home" class="status-btn-home hidden" title="返回主页" data-i18n-title="toolbar.home">
     <svg class="status-home-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-    <span>返回主页</span>
+    <span data-i18n="toolbar.home">返回主页</span>
   </button>
 </footer>
+
+
 
 <script src="/assets/vendor/marked.min.js"></script>
 <script src="/assets/vendor/qrcode.min.js"></script>

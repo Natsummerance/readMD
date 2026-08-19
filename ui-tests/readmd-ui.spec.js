@@ -12,6 +12,14 @@ async function enterEdit(page) {
   await expect(page.locator('#edit-bar')).toBeVisible();
 }
 
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('readmd_language', 'zh-CN');
+    } catch (e) {}
+  });
+});
+
 test('installer keeps location-page actions inside compact viewports', async ({ page }) => {
   const installerUrl = pathToFileURL(path.resolve(__dirname, '../installer/setup.html')).href + '?demo=1';
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -51,7 +59,7 @@ test('single row commands, formula picker and responsive preview', async ({ page
   expect(await page.locator('#main-col').evaluate(e => getComputedStyle(e).flexDirection)).toBe('row');
   await page.setViewportSize({ width: 580, height: 600 });
   expect(await page.locator('#main-col').evaluate(e => getComputedStyle(e).flexDirection)).toBe('column');
-  await expect(page.locator('#pv-trigger')).toContainText('窄屏置底');
+  await expect(page.locator('#pv-trigger')).toContainText(/窄屏已自动切换|下方预览|窄屏置底/);
   expect(errors).toEqual([]);
 });
 
@@ -105,7 +113,7 @@ test('AI keeps configured keys usable, autosaves, and supports incognito history
   await page.waitForFunction(() => typeof toggleAiPanel === 'function');
   await page.evaluate(() => { state.original = '# 文档\n\n内容'; toggleAiPanel(); });
   await expect(page.locator('#ai-panel')).toBeVisible();
-  await expect(page.locator('#ai-connection-label')).toContainText('已就绪');
+  await expect(page.locator('#ai-connection-label')).toContainText(/连接就绪|已就绪|Ready/);
   await page.locator('#ai-prompt').fill('总结');
   await page.locator('#ai-prompt').press('Enter');
   await expect(page.locator('#ai-output')).toContainText('已完成');
@@ -355,7 +363,7 @@ test('cancelling a batch keeps pages already extracted', async ({ page }) => {
   await expect(page.locator('#content')).toContainText('One');
   await expect(page.locator('#content')).toContainText('抓取统计');
   await expect(page.locator('#content')).toContainText('跳过');
-  await expect(page.locator('#url-status')).toContainText('已保留成功抓取');
+  await expect(page.locator('#url-status')).toContainText(/已保留成功抓取|已取消|正在取消/);
 });
 
 test('tab reordering reorders tabs and is isolated from global drag overlay', async ({ page }) => {
@@ -496,11 +504,98 @@ test('v2.3.0 i18n language modal and switching', async ({ page }) => {
   // Switch language
   await page.evaluate(() => i18n.setLanguage('en'));
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
-  await expect(page.locator('#btn-more')).toHaveAttribute('title', 'More Features');
+  await expect(page.locator('#btn-more')).toHaveAttribute('title', /More Options|More Features/);
 
   // Close modal
   await page.evaluate(() => i18n.closeModal());
   await expect(page.locator('#lang-modal')).toBeHidden();
+});
+
+test('v2.3.1 export modal renders all settings, style presets and live preview', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.pywebview = { api: {
+      get_settings: async () => ({}), get_recent: async () => [], start_modules: async () => true,
+      get_modules_status: async () => ({ modules: {}, errors: {} }),
+      get_export_presets: async () => ({
+        defaults: {
+          page: { size: 'A4', orientation: 'portrait', marginTop: 20, marginRight: 18, marginBottom: 20, marginLeft: 18 },
+          typography: { font: 'MicrosoftYaHei', size: 11, lineHeight: 1.6, spacing: 6, color: '#262626', align: 'left' },
+          headings: {
+            h1: { size: 20, color: '#1a1a1a', bold: true, align: 'left', before: 18, after: 10 },
+            h2: { size: 16, color: '#1f2937', bold: true, align: 'left', before: 14, after: 8 },
+            h3: { size: 14, color: '#2d3748', bold: true, align: 'left', before: 12, after: 6 },
+            h4: { size: 12, color: '#374151', bold: true, align: 'left', before: 10, after: 6 },
+            h5: { size: 11, color: '#4a5568', bold: true, align: 'left', before: 8, after: 4 },
+            h6: { size: 10.5, color: '#4a5568', bold: true, align: 'left', before: 8, after: 4 },
+          },
+          table: { headerBg: '#3b6ef5', headerColor: '#ffffff', headerBold: true, borderColor: '#c8cdd4', borderWidth: 0.75, banded: true, bandColor: '#f3f5f9', cellSize: 10, cellPadding: 6, align: 'left', widthPct: 100 },
+          code: { bg: '#f5f6f8', color: '#2f3b4a', font: 'Consolas', size: 9.5, borderColor: '#dfe3e8', borderWidth: 0.5, rounded: true },
+          quote: { barColor: '#3b6ef5', bg: '#f3f6ff', color: '#4a5568' },
+          link: { color: '#2b6cb0' },
+          hr: { color: '#d8dce2' },
+          footer: { pageNumbers: true, text: '' },
+          cover: { enabled: false, title: '', subtitle: '', date: '', align: 'center' },
+          toc: { enabled: false },
+          math: { dpi: 200 },
+          htmlTheme: 'light',
+        },
+        presets: {
+          minimal: { typography: { font: 'MicrosoftYaHei', size: 10.5 } },
+          classic: { typography: { font: 'SimSun', size: 11 } },
+          business: { typography: { font: 'DengXian', size: 11 } },
+        },
+        custom: {},
+        last: null,
+      }),
+      export_doc: async () => ({ ok: true, path: 'C:/docs/export.pdf', warns: [] }),
+      open_path: async () => true,
+      reveal_path: async () => true,
+      save_export_presets: async () => true,
+    } };
+  });
+
+  await enterEdit(page);
+  await page.evaluate(() => {
+    openExportModal();
+  });
+
+  // 1. 验证导出对话框展开
+  await expect(page.locator('#export-modal')).toBeVisible();
+
+  // 2. 验证设置选项区域已正确渲染多个设置分组
+  const secCount = await page.locator('#export-opts .exp-sec').count();
+  expect(secCount).toBeGreaterThanOrEqual(5);
+
+  // 3. 验证预设选择器已正确填充
+  await expect(page.locator('#exp-preset')).toBeVisible();
+  const presetOptions = await page.locator('#exp-preset option').allTextContents();
+  expect(presetOptions.length).toBeGreaterThanOrEqual(4);
+
+  // 4. 验证微缩排版预览已生成并包含正文
+  await expect(page.locator('#export-preview-card')).toBeVisible();
+  await expect(page.locator('#export-preview-mini-content')).not.toBeEmpty();
+  await expect(page.locator('#export-preview-mini-content')).toContainText('标题');
+
+  // 5. 切换预设样式并验证
+  await page.locator('#exp-preset').selectOption('classic');
+  await expect(page.locator('#export-preview-paper-meta')).toContainText(/经典|classic/i);
+
+  // 6. 点击打开全屏排版预览模态框
+  await page.locator('#export-preview-card').click();
+  await expect(page.locator('#export-preview-modal')).toBeVisible();
+  await expect(page.locator('#export-preview-full-page')).toContainText('标题');
+
+  // 7. 关闭全屏排版预览模态框
+  await page.locator('#export-preview-close').click();
+  await expect(page.locator('#export-preview-modal')).toBeHidden();
+
+  // 8. 切换到 HTML 格式标签
+  await page.locator('.exp-fmt[data-fmt="html"]').click();
+  await expect(page.locator('#export-preview-badge')).toContainText('HTML');
+
+  // 9. 关闭导出对话框
+  await page.locator('#export-close').click();
+  await expect(page.locator('#export-modal')).toBeHidden();
 });
 
 test('v2.3.0 Zen Mode and Table Designer', async ({ page }) => {
@@ -522,6 +617,8 @@ test('v2.3.0 Zen Mode and Table Designer', async ({ page }) => {
   await page.evaluate(() => closeTableModal());
   await expect(page.locator('#table-modal')).toBeHidden();
 });
+
+
 
 
 

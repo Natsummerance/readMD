@@ -1,0 +1,4 @@
+-r requirements-common.txt
+
+# Linux-native Tesseract OCR
+pytesseract

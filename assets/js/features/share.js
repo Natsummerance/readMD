@@ -11,14 +11,15 @@ async function openShareModal() {
 }
 
 async function refreshShareStatus() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   try {
     const r = await apiFetch('/api/share/status');
     const d = await r.json();
     if (d.running) {
       $('share-start').disabled = true;
       $('share-stop').disabled = false;
-      $('share-url').textContent = '手机浏览器打开：' + d.url;
-      $('share-token').textContent = '访问令牌：' + d.token;
+      $('share-url').textContent = (_t('share.mobileUrlLabel') || '手机浏览器打开：') + d.url;
+      $('share-token').textContent = (_t('share.tokenLabel') || '访问令牌：') + d.token;
       renderQr(d.url);
     } else {
       $('share-start').disabled = false;
@@ -26,7 +27,7 @@ async function refreshShareStatus() {
       $('share-url').textContent = '';
       $('share-token').textContent = '';
       const q = $('share-qr');
-      q.innerHTML = '<p class="fix-note">尚未开启共享</p>';
+      q.innerHTML = '<p class="fix-note">' + (_t('share.notRunning') || '尚未开启共享') + '</p>';
     }
   } catch (e) { /* ignore */ }
 }
@@ -46,19 +47,22 @@ function renderQr(text) {
 }
 
 async function startShare() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   try {
     const r = await apiFetch('/api/share/start', { method: 'POST' });
     const d = await r.json();
     if (d.error) { showToast(d.error); return; }
-    showToast('共享已开启');
-  } catch (e) { showToast('开启失败：' + e.message); }
+    showToast(_t('toast.shareStarted') || '共享已开启');
+  } catch (e) { showToast((_t('toast.shareStartFail') || '开启失败：') + e.message); }
   refreshShareStatus();
 }
 
 async function stopShare() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   try {
     await apiFetch('/api/share/stop', { method: 'POST' });
-    showToast('共享已关闭');
-  } catch (e) { showToast('关闭失败：' + e.message); }
+    showToast(_t('toast.shareStopped') || '共享已关闭');
+  } catch (e) { showToast((_t('toast.shareStopFail') || '关闭失败：') + e.message); }
   refreshShareStatus();
 }
+

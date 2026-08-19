@@ -14,13 +14,22 @@ function getEditContent() {
 }
 
 function setPvLayout(layout) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (['none', 'left', 'right', 'bottom', 'top'].indexOf(layout) < 0) layout = 'none';
   state.pvLayout = layout;
   document.querySelectorAll('.pv-btn').forEach(b => b.classList.toggle('active', b.dataset.pv === layout));
-  const names = {none:'无',left:'左',right:'右',bottom:'下',top:'上'};
+  const names = {
+    none: _t('editor.previewNone') || '无',
+    left: _t('editor.previewLeft') || '左',
+    right: _t('editor.previewRight') || '右',
+    bottom: _t('editor.previewBottom') || '下',
+    top: _t('editor.previewTop') || '上'
+  };
   const narrow = window.innerWidth < 600 && (layout === 'left' || layout === 'right');
-  if ($('pv-trigger')) $('pv-trigger').textContent = narrow ? '预览：' + names[layout] + '（窄屏置底）⌄' : '预览：' + names[layout] + '⌄';
+  const previewLabel = _t('editor.preview') || '预览';
+  if ($('pv-trigger')) $('pv-trigger').textContent = narrow ? previewLabel + '：' + names[layout] + '（' + (_t('editor.narrowScreenBottom') || '窄屏置底') + '）⌄' : previewLabel + '：' + names[layout] + '⌄';
   const mc = $('main-col');
+
   const pw = $('preview-wrap');
   if (!mc || !pw) return;
   mc.classList.remove('pv-left', 'pv-right', 'pv-bottom', 'pv-top');
@@ -80,7 +89,8 @@ function renderPreview() {
     const prot = protectMath(src);
     html = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
   } catch (e) {
-    html = '<p class="ai-err">预览渲染失败</p>';
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    html = '<p class="ai-err">' + (_t('editor.previewRenderFail') || '预览渲染失败') + '</p>';
   }
   pane.innerHTML = html;
   fixLinks(pane);
@@ -118,12 +128,13 @@ function applyPvUi() {
 }
 
 async function toggleEdit() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (state.editing) { exitEdit(); return; }
-  if (state.original === undefined || state.original === '') { showToast('没有可编辑的内容'); return; }
+  if (state.original === undefined || state.original === '') { showToast(_t('toast.noEditableContent') || '没有可编辑的内容'); return; }
   $('edit-bar').classList.remove('hidden');
   $('content').classList.add('hidden');
   state.editing = true;
-  setEditBtn('编辑中');
+  setEditBtn(_t('editor.editing') || '编辑中');
   pvLast = '';
   try {
     await loadCodeMirror();
@@ -146,6 +157,7 @@ async function toggleEdit() {
 }
 
 function exitEdit() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (pvTimer) { clearTimeout(pvTimer); pvTimer = null; }
   if (pvEditorEl) {
     pvEditorEl.removeEventListener('scroll', pvSyncFromEditor);
@@ -161,7 +173,7 @@ function exitEdit() {
     $('edit-area').classList.add('hidden');
     $('edit-wrap').classList.add('hidden');
     $('content').classList.remove('hidden');
-    setEditBtn('编辑');
+    setEditBtn(_t('toolbar.edit') || '编辑');
     return;
   }
   destroyEditor();
@@ -170,10 +182,11 @@ function exitEdit() {
   $('edit-wrap').classList.add('hidden');
   $('content').classList.remove('hidden');
   state.editing = false;
-  setEditBtn('编辑');
+  setEditBtn(_t('toolbar.edit') || '编辑');
 }
 
 async function saveEdit() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!state.editing) return;
   const content = cmView ? cmView.state.doc.toString() : $('edit-area').value;
   if (!state.file) {
@@ -184,10 +197,10 @@ async function saveEdit() {
     if (hasPy) {
       busy(true);
       try { out = await py.save_as(content, suggested, state.webAssets || []); }
-      catch (e) { showToast('保存失败：' + e.message); busy(false); return; }
+      catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); busy(false); return; }
       busy(false);
-      if (!out) { showToast('已取消保存'); return; }
-      showToast('已保存：' + out);
+      if (!out) { showToast(_t('toast.saveCancelled') || '已取消保存'); return; }
+      showToast((_t('toast.savedPrefix') || '已保存：') + out);
       exitEdit();
       await loadFile(out);
     } else {
@@ -197,7 +210,7 @@ async function saveEdit() {
       a.download = suggested;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-      showToast('已下载：' + suggested);
+      showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
     }
     return;
   }
@@ -214,17 +227,18 @@ async function saveEdit() {
       ok = await r.json();
     }
     if (ok && ok.ok !== false) {
-      showToast(ok.backup ? '已保存（备份：' + ok.backup + '）' : '已保存');
+      showToast(ok.backup ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）')) : (_t('toast.savedSuccess') || '已保存'));
       exitEdit();
       await loadFile(state.file);
     } else {
-      showToast('保存失败：' + ((ok && ok.error) || '未知错误'));
+      showToast((_t('toast.saveFailed') || '保存失败：') + ((ok && ok.error) || (_t('toast.unknownError') || '未知错误')));
     }
-  } catch (e) { showToast('保存失败：' + e.message); }
+  } catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); }
   finally { busy(false); }
 }
 
 async function saveAs() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const content = state.fixed || state.original || '';
   const name = (state.sourceName || state.file || 'document').replace(/[\\/]/g, '_');
   const suggested = name.replace(/\.[^.]+$/, '') + '.md';
@@ -248,7 +262,7 @@ async function saveAs() {
         setFileTitle(activeTab.name, true, out);
         addRecent(out);
       }
-      showToast('已保存：' + out);
+      showToast((_t('toast.savedPrefix') || '已保存：') + out);
     }
   } else {
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
@@ -257,6 +271,7 @@ async function saveAs() {
     a.download = suggested;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-    showToast('已下载：' + suggested);
+    showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
   }
 }
+

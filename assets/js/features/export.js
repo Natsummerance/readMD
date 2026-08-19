@@ -9,78 +9,89 @@ const EXPORT_FONTS = ['MicrosoftYaHei', 'SimHei', 'SimSun', 'KaiTi', 'DengXian',
 const EXPORT_MONO = ['Consolas', 'Courier New', 'SimHei'];
 const EXPORT_ALIGNS = ['left', 'center', 'right', 'justify'];
 const EXPORT_PAGES = ['A4', 'A5', 'B5', 'Letter', 'Legal'];
-const EXPORT_PRESET_NAMES = { minimal: '简约', classic: '经典', business: '商务' };
 
-/* 每个字段: {k: 点路径, label, type, opts, min, max, step, full, fmts} */
-const EXPORT_SECTIONS = [
-  { title: '页面设置', fmts: ['pdf', 'docx'], fields: [
-    { k: 'page.size', label: '纸张', type: 'select', opts: EXPORT_PAGES },
-    { k: 'page.orientation', label: '方向', type: 'select', opts: [['portrait', '纵向'], ['landscape', '横向']] },
-    { k: 'page.marginTop', label: '上边距 mm', type: 'number', min: 0, max: 60 },
-    { k: 'page.marginRight', label: '右边距 mm', type: 'number', min: 0, max: 60 },
-    { k: 'page.marginBottom', label: '下边距 mm', type: 'number', min: 0, max: 60 },
-    { k: 'page.marginLeft', label: '左边距 mm', type: 'number', min: 0, max: 60 },
-  ]},
-  { title: '封面与目录', fmts: ['pdf', 'docx'], fields: [
-    { k: 'cover.enabled', label: '启用封面页', type: 'checkbox' },
-    { k: 'cover.title', label: '封面标题（留空用文件名）', type: 'text', full: true },
-    { k: 'cover.subtitle', label: '封面副标题', type: 'text', full: true },
-    { k: 'cover.date', label: '封面日期', type: 'text' },
-    { k: 'cover.align', label: '封面对齐', type: 'select', opts: [['center', '居中'], ['left', '左对齐'], ['right', '右对齐']] },
-    { k: 'toc.enabled', label: 'PDF 目录页', type: 'checkbox', fmts: ['pdf'] },
-  ]},
-  { title: '正文排版', fmts: ['pdf', 'docx', 'html'], fields: [
-    { k: 'typography.font', label: '正文字体', type: 'select', opts: EXPORT_FONTS.map(f => [f, f]) },
-    { k: 'typography.size', label: '字号 pt', type: 'number', min: 8, max: 20 },
-    { k: 'typography.lineHeight', label: '行距', type: 'number', min: 1, max: 2.5, step: 0.1 },
-    { k: 'typography.spacing', label: '段间距 pt', type: 'number', min: 0, max: 30 },
-    { k: 'typography.color', label: '正文颜色', type: 'color' },
-    { k: 'typography.align', label: '对齐', type: 'select', opts: EXPORT_ALIGNS.map(a => [a, a]) },
-  ]},
-  { title: '标题（各级颜色 / 字号 / 加粗 / 对齐）', fmts: ['pdf', 'docx', 'html'], headingRows: true },
-  { title: '表格', fmts: ['pdf', 'docx', 'html'], fields: [
-    { k: 'table.headerBg', label: '表头背景', type: 'color' },
-    { k: 'table.headerColor', label: '表头文字色', type: 'color' },
-    { k: 'table.headerBold', label: '表头加粗', type: 'checkbox' },
-    { k: 'table.borderColor', label: '边框颜色', type: 'color' },
-    { k: 'table.borderWidth', label: '边框宽度 pt', type: 'number', min: 0, max: 3, step: 0.25 },
-    { k: 'table.banded', label: '斑马纹', type: 'checkbox' },
-    { k: 'table.bandColor', label: '斑马纹颜色', type: 'color' },
-    { k: 'table.cellSize', label: '单元格字号 pt', type: 'number', min: 7, max: 16 },
-    { k: 'table.cellPadding', label: '单元格内边距 pt', type: 'number', min: 0, max: 20 },
-    { k: 'table.align', label: '对齐', type: 'select', opts: EXPORT_ALIGNS.map(a => [a, a]) },
-    { k: 'table.widthPct', label: '表格宽度 %', type: 'number', min: 50, max: 100 },
-  ]},
-  { title: '代码块', fmts: ['pdf', 'docx', 'html'], fields: [
-    { k: 'code.bg', label: '背景色', type: 'color' },
-    { k: 'code.color', label: '文字色', type: 'color' },
-    { k: 'code.font', label: '等宽字体', type: 'select', opts: EXPORT_MONO.map(f => [f, f]) },
-    { k: 'code.size', label: '字号 pt', type: 'number', min: 6, max: 16 },
-    { k: 'code.borderColor', label: '边框颜色', type: 'color' },
-    { k: 'code.borderWidth', label: '边框宽度 pt', type: 'number', min: 0, max: 3, step: 0.25 },
-    { k: 'code.rounded', label: '圆角（HTML）', type: 'checkbox', fmts: ['html'] },
-  ]},
-  { title: '引用与链接', fmts: ['pdf', 'docx', 'html'], fields: [
-    { k: 'quote.barColor', label: '引用左边条色', type: 'color' },
-    { k: 'quote.bg', label: '引用背景', type: 'color' },
-    { k: 'quote.color', label: '引用文字色', type: 'color' },
-    { k: 'link.color', label: '链接颜色', type: 'color' },
-    { k: 'hr.color', label: '分割线颜色', type: 'color' },
-  ]},
-  { title: '页脚与元数据', fmts: ['pdf', 'docx'], fields: [
-    { k: 'footer.pageNumbers', label: '显示页码', type: 'checkbox' },
-    { k: 'footer.text', label: '页脚文字', type: 'text', full: true },
-    { k: 'meta.title', label: '文档标题（PDF 元数据）', type: 'text', full: true },
-    { k: 'meta.author', label: '作者', type: 'text' },
-    { k: 'meta.subject', label: '主题', type: 'text' },
-  ]},
-  { title: '数学公式', fmts: ['pdf', 'docx'], fields: [
-    { k: 'math.dpi', label: '渲染分辨率 DPI', type: 'number', min: 100, max: 500, step: 10 },
-  ]},
-  { title: 'HTML 主题', fmts: ['html'], fields: [
-    { k: 'htmlTheme', label: '页面主题', type: 'select', opts: [['light', '亮色'], ['dark', '暗色'], ['sepia', '米色']] },
-  ]},
-];
+function getExportPresetNames() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  return {
+    minimal: _t('export.presetMinimal') || '简约',
+    classic: _t('export.presetClassic') || '经典',
+    business: _t('export.presetBusiness') || '商务'
+  };
+}
+
+function getExportSections() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  return [
+    { title: _t('export.secPage') || '页面设置', fmts: ['pdf', 'docx'], fields: [
+      { k: 'page.size', label: _t('export.pageSize') || '纸张', type: 'select', opts: EXPORT_PAGES },
+      { k: 'page.orientation', label: _t('export.pageOrientation') || '方向', type: 'select', opts: [['portrait', _t('export.portrait') || '纵向'], ['landscape', _t('export.landscape') || '横向']] },
+      { k: 'page.marginTop', label: _t('export.marginTop') || '上边距 mm', type: 'number', min: 0, max: 60 },
+      { k: 'page.marginRight', label: _t('export.marginRight') || '右边距 mm', type: 'number', min: 0, max: 60 },
+      { k: 'page.marginBottom', label: _t('export.marginBottom') || '下边距 mm', type: 'number', min: 0, max: 60 },
+      { k: 'page.marginLeft', label: _t('export.marginLeft') || '左边距 mm', type: 'number', min: 0, max: 60 },
+    ]},
+    { title: _t('export.secCoverToc') || '封面与目录', fmts: ['pdf', 'docx'], fields: [
+      { k: 'cover.enabled', label: _t('export.enableCover') || '启用封面页', type: 'checkbox' },
+      { k: 'cover.title', label: _t('export.coverTitle') || '封面标题（留空用文件名）', type: 'text', full: true },
+      { k: 'cover.subtitle', label: _t('export.coverSubtitle') || '封面副标题', type: 'text', full: true },
+      { k: 'cover.date', label: _t('export.coverDate') || '封面日期', type: 'text' },
+      { k: 'cover.align', label: _t('export.coverAlign') || '封面对齐', type: 'select', opts: [['center', _t('export.alignCenter') || '居中'], ['left', _t('export.alignLeft') || '左对齐'], ['right', _t('export.alignRight') || '右对齐']] },
+      { k: 'toc.enabled', label: _t('export.enablePdfToc') || 'PDF 目录页', type: 'checkbox', fmts: ['pdf'] },
+    ]},
+    { title: _t('export.secTypography') || '正文排版', fmts: ['pdf', 'docx', 'html'], fields: [
+      { k: 'typography.font', label: _t('export.bodyFont') || '正文字体', type: 'select', opts: EXPORT_FONTS.map(f => [f, f]) },
+      { k: 'typography.size', label: _t('export.bodySize') || '字号 pt', type: 'number', min: 8, max: 20 },
+      { k: 'typography.lineHeight', label: _t('export.lineHeight') || '行距', type: 'number', min: 1, max: 2.5, step: 0.1 },
+      { k: 'typography.spacing', label: _t('export.paragraphSpacing') || '段间距 pt', type: 'number', min: 0, max: 30 },
+      { k: 'typography.color', label: _t('export.bodyColor') || '正文颜色', type: 'color' },
+      { k: 'typography.align', label: _t('export.align') || '对齐', type: 'select', opts: [['left', _t('export.alignLeft') || '左对齐'], ['center', _t('export.alignCenter') || '居中'], ['right', _t('export.alignRight') || '右对齐'], ['justify', _t('export.alignJustify') || '两端对齐']] },
+    ]},
+    { title: _t('export.secHeadings') || '标题（各级颜色 / 字号 / 加粗 / 对齐）', fmts: ['pdf', 'docx', 'html'], headingRows: true },
+    { title: _t('export.secTable') || '表格', fmts: ['pdf', 'docx', 'html'], fields: [
+      { k: 'table.headerBg', label: _t('export.tableHeaderBg') || '表头背景', type: 'color' },
+      { k: 'table.headerColor', label: _t('export.tableHeaderColor') || '表头文字色', type: 'color' },
+      { k: 'table.headerBold', label: _t('export.tableHeaderBold') || '表头加粗', type: 'checkbox' },
+      { k: 'table.borderColor', label: _t('export.tableBorderColor') || '边框颜色', type: 'color' },
+      { k: 'table.borderWidth', label: _t('export.tableBorderWidth') || '边框宽度 pt', type: 'number', min: 0, max: 3, step: 0.25 },
+      { k: 'table.banded', label: _t('export.tableBanded') || '斑马纹', type: 'checkbox' },
+      { k: 'table.bandColor', label: _t('export.tableBandColor') || '斑马纹颜色', type: 'color' },
+      { k: 'table.cellSize', label: _t('export.tableCellSize') || '单元格字号 pt', type: 'number', min: 7, max: 16 },
+      { k: 'table.cellPadding', label: _t('export.tableCellPadding') || '单元格内边距 pt', type: 'number', min: 0, max: 20 },
+      { k: 'table.align', label: _t('export.align') || '对齐', type: 'select', opts: [['left', _t('export.alignLeft') || '左对齐'], ['center', _t('export.alignCenter') || '居中'], ['right', _t('export.alignRight') || '右对齐'], ['justify', _t('export.alignJustify') || '两端对齐']] },
+      { k: 'table.widthPct', label: _t('export.tableWidthPct') || '表格宽度 %', type: 'number', min: 50, max: 100 },
+    ]},
+    { title: _t('export.secCode') || '代码块', fmts: ['pdf', 'docx', 'html'], fields: [
+      { k: 'code.bg', label: _t('export.codeBg') || '背景色', type: 'color' },
+      { k: 'code.color', label: _t('export.codeColor') || '文字色', type: 'color' },
+      { k: 'code.font', label: _t('export.codeFont') || '等宽字体', type: 'select', opts: EXPORT_MONO.map(f => [f, f]) },
+      { k: 'code.size', label: _t('export.codeSize') || '字号 pt', type: 'number', min: 6, max: 16 },
+      { k: 'code.borderColor', label: _t('export.codeBorderColor') || '边框颜色', type: 'color' },
+      { k: 'code.borderWidth', label: _t('export.codeBorderWidth') || '边框宽度 pt', type: 'number', min: 0, max: 3, step: 0.25 },
+      { k: 'code.rounded', label: _t('export.codeRounded') || '圆角（HTML）', type: 'checkbox', fmts: ['html'] },
+    ]},
+    { title: _t('export.secQuoteLink') || '引用与链接', fmts: ['pdf', 'docx', 'html'], fields: [
+      { k: 'quote.barColor', label: _t('export.quoteBarColor') || '引用左边条色', type: 'color' },
+      { k: 'quote.bg', label: _t('export.quoteBg') || '引用背景', type: 'color' },
+      { k: 'quote.color', label: _t('export.quoteColor') || '引用文字色', type: 'color' },
+      { k: 'link.color', label: _t('export.linkColor') || '链接颜色', type: 'color' },
+      { k: 'hr.color', label: _t('export.hrColor') || '分割线颜色', type: 'color' },
+    ]},
+    { title: _t('export.secFooterMeta') || '页脚与元数据', fmts: ['pdf', 'docx'], fields: [
+      { k: 'footer.pageNumbers', label: _t('export.showPageNumbers') || '显示页码', type: 'checkbox' },
+      { k: 'footer.text', label: _t('export.footerTextLabel') || '页脚文字', type: 'text', full: true },
+      { k: 'meta.title', label: _t('export.docMetaTitle') || '文档标题（PDF 元数据）', type: 'text', full: true },
+      { k: 'meta.author', label: _t('export.metaAuthor') || '作者', type: 'text' },
+      { k: 'meta.subject', label: _t('export.metaSubject') || '主题', type: 'text' },
+    ]},
+    { title: _t('export.secMath') || '数学公式', fmts: ['pdf', 'docx'], fields: [
+      { k: 'math.dpi', label: _t('export.mathDpi') || '渲染分辨率 DPI', type: 'number', min: 100, max: 500, step: 10 },
+    ]},
+    { title: _t('export.secHtmlTheme') || 'HTML 主题', fmts: ['html'], fields: [
+      { k: 'htmlTheme', label: _t('export.htmlThemeLabel') || '页面主题', type: 'select', opts: [['light', _t('export.themeLight') || '亮色'], ['dark', _t('export.themeDark') || '暗色'], ['sepia', _t('export.themeSepia') || '米色']] },
+    ]},
+  ];
+}
+
 
 function expGet(obj, path) {
   return path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj);
@@ -129,11 +140,12 @@ async function loadExportPresets() {
 }
 
 function openExportModal() {
-  if (!bindPy()) { showToast('浏览器模式请使用桌面版导出'); return; }
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (!bindPy()) { showToast(_t('toast.exportBrowserNotice') || '浏览器模式请使用桌面版导出'); return; }
   if (!state.export.ready) {
     loadExportPresets().then(ok => {
       if (ok) { state.export.ready = true; renderExportModal(); }
-      else showToast('导出模块加载失败');
+      else showToast(_t('toast.exportModuleLoadFail') || '导出模块加载失败');
     });
     return;
   }
@@ -144,24 +156,29 @@ function closeExportModal() { $('export-modal').classList.add('hidden'); }
 
 function currentExportContent() {
   if (state.editing) {
-    return (window.cmView && window.cmView.state) ? window.cmView.state.doc.toString()
-      : ($('edit-area') && $('edit-area').value || '');
+    if (typeof getEditContent === 'function') {
+      const txt = getEditContent();
+      if (txt) return txt;
+    }
+    return ($('edit-area') && $('edit-area').value) || state.original || state.fixed || '';
   }
   if (state.mode === 'file') return state.original || state.fixed || '';
-  return state.fixed || '';
+  return state.fixed || state.original || '';
 }
 function currentExportName() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   let n = '';
   if (state.mode === 'file' && state.file) n = state.file.split(/[\\/]/).pop();
-  else n = (state.sourceName || '导出').split(/[\\/]/).pop();
+  else n = (state.sourceName || (_t('export.defaultExportName') || '导出')).split(/[\\/]/).pop();
   n = n.replace(/\.[^.]+$/, '');
-  return n || '导出';
+  return n || (_t('export.defaultExportName') || '导出');
 }
+
 
 function renderExportModal() {
   $('export-modal').classList.remove('hidden');
-  renderExportSections();
   renderExportPresetSelect();
+  renderExportSections();
   updateExportLivePreview();
   const r = $('export-result');
   r.textContent = ''; r.className = 'export-result';
@@ -471,20 +488,22 @@ function generateExportPreviewCss(opts, fmt) {
 }
 
 function updateExportLivePreview() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const fmt = state.export.fmt;
   const opts = collectExportOptions();
   const badge = $('export-preview-badge');
   const sel = $('exp-preset');
-  const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : '默认';
+  const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : (_t('export.presetDefault') || '默认');
   if (badge) badge.textContent = fmt.toUpperCase() + ' · ' + presetName;
 
   const paperMeta = $('export-preview-paper-meta');
   if (paperMeta) {
     const page = opts.page || {};
     const sz = page.size || 'A4';
-    const ori = (page.orientation === 'landscape') ? '横向' : '纵向';
+    const ori = (page.orientation === 'landscape') ? (_t('export.orientationLandscape') || '横向') : (_t('export.orientationPortrait') || '纵向');
     paperMeta.textContent = sz + ' · ' + ori + ' · ' + presetName;
   }
+
 
   // 注入或更新动态样式表
   let styleEl = $('export-preview-dynamic-style');
@@ -518,21 +537,22 @@ function updateExportLivePreview() {
 }
 
 function expFieldApplicable(f, fmt) {
-  const own = f.fmts || EXPORT_SECTIONS.reduce((a, s) => a.concat((s.fields || []).map(x => x.k)), []);
   return (f.fmts || ['pdf', 'docx', 'html']).indexOf(fmt) >= 0;
 }
 
 function renderExportSections() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const fmt = state.export.fmt;
   const host = $('export-opts');
   host.textContent = '';
-  EXPORT_SECTIONS.forEach(sec => {
+  const sections = getExportSections();
+  sections.forEach(sec => {
     const fields = sec.fields || [];
     const applicable = sec.headingRows ? (sec.fmts.indexOf(fmt) >= 0)
       : fields.some(f => expFieldApplicable(f, fmt));
     if (!applicable) return;
     const wrap = document.createElement('div');
-    wrap.className = 'exp-sec'; // 默认折叠
+    wrap.className = 'exp-sec'; // 默认折叠，点击标题展开
     const head = document.createElement('button');
     head.type = 'button';
     head.className = 'exp-sec-head';
@@ -545,9 +565,9 @@ function renderExportSections() {
         row.className = 'exp-field full exp-h-row';
         row.innerHTML =
           '<label>H' + i + '</label>' +
-          '<input type="number" data-k="headings.h' + i + '.size" min="8" max="40" title="字号">' +
-          '<input type="color" data-k="headings.h' + i + '.color" title="颜色">' +
-          '<label class="exp-check">加粗<input type="checkbox" data-k="headings.h' + i + '.bold"></label>' +
+          '<input type="number" data-k="headings.h' + i + '.size" min="8" max="40" title="' + (_t('export.bodySize') || '字号') + '">' +
+          '<input type="color" data-k="headings.h' + i + '.color" title="' + (_t('export.bodyColor') || '颜色') + '">' +
+          '<label class="exp-check">' + (_t('export.bold') || '加粗') + '<input type="checkbox" data-k="headings.h' + i + '.bold"></label>' +
           '<select data-k="headings.h' + i + '.align">' + EXPORT_ALIGNS.map(a => '<option value="' + a + '">' + a + '</option>').join('') + '</select>';
         body.appendChild(row);
       }
@@ -624,12 +644,14 @@ function collectExportOptions() {
 }
 
 function renderExportPresetSelect() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const sel = $('exp-preset');
   sel.textContent = '';
+  const presetNames = getExportPresetNames();
   const names = Object.keys(state.export.presets || {}).concat(Object.keys(state.export.custom || {}));
-  sel.appendChild(new Option('自定义', '__custom__'));
+  sel.appendChild(new Option(_t('export.presetCustom') || '自定义', '__custom__'));
   names.forEach(n => {
-    sel.appendChild(new Option(EXPORT_PRESET_NAMES[n] || n, n));
+    sel.appendChild(new Option(presetNames[n] || n, n));
   });
   sel.value = '__custom__';
   sel.onchange = () => {
@@ -640,6 +662,7 @@ function renderExportPresetSelect() {
     renderExportSections();
   };
 }
+
 
 async function runExport() {
   const fmt = state.export.fmt;
@@ -652,26 +675,28 @@ async function runExport() {
   };
   busy(true);
   let r = null;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   try {
     r = await py.export_doc(fmt, payload);
-  } catch (e) { showToast('导出失败：' + e.message); busy(false); return; }
+  } catch (e) { showToast((_t('toast.exportFailed') || '导出失败：') + e.message); busy(false); return; }
   busy(false);
-  if (!r) { showToast('导出失败'); return; }
+  if (!r) { showToast(_t('toast.exportFailedSimple') || '导出失败'); return; }
   if (r.canceled) return;
-  if (!r.ok) { showToast('导出失败：' + (r.error || '未知错误')); return; }
+  if (!r.ok) { showToast((_t('toast.exportFailed') || '导出失败：') + (r.error || (_t('toast.unknownError') || '未知错误'))); return; }
   const res = $('export-result');
-  res.textContent = '已导出：' + r.path;
+  res.textContent = (_t('toast.exportedPrefix') || '已导出：') + r.path;
   res.className = 'export-result ok';
   $('export-open').classList.remove('hidden');
   $('export-reveal').classList.remove('hidden');
   $('export-open').onclick = () => py.open_path(r.path);
   $('export-reveal').onclick = () => py.reveal_path(r.path);
   try { py.save_export_presets({ last: { fmt: fmt, options: options } }); } catch (e) { /* ignore */ }
-  if (r.warns && r.warns.length) showToast('导出完成，' + r.warns.length + ' 条提示');
-  else showToast('导出成功');
+  if (r.warns && r.warns.length) showToast(_t('toast.exportCompleteWarns', { count: r.warns.length }) || ('导出完成，' + r.warns.length + ' 条提示'));
+  else showToast(_t('toast.exportSuccess') || '导出成功');
 }
 
 async function expSavePreset() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const box = $('exp-save-name');
   box.classList.remove('hidden');
   const input = $('exp-save-input');
@@ -679,13 +704,18 @@ async function expSavePreset() {
   input.focus();
   $('exp-save-ok').onclick = async () => {
     const name = input.value.trim();
-    if (!name) { showToast('请输入预设名称'); return; }
-    if (EXPORT_PRESET_NAMES[name]) { showToast('名称与内置预设冲突'); return; }
+    if (!name) { showToast(_t('toast.enterPresetName') || '请输入预设名称'); return; }
+    const presetNames = getExportPresetNames();
+    if (presetNames[name] || (state.export.presets && state.export.presets[name])) {
+      showToast(_t('toast.presetNameConflict') || '名称与内置预设冲突');
+      return;
+    }
     state.export.custom[name] = collectExportOptions();
     try { await py.save_export_presets({ custom: state.export.custom }); } catch (e) { /* ignore */ }
     renderExportPresetSelect();
     box.classList.add('hidden');
-    showToast('预设已保存：' + name);
+    showToast(_t('toast.presetSaved', { name }) || ('预设已保存：' + name));
   };
   $('exp-save-cancel').onclick = () => box.classList.add('hidden');
 }
+

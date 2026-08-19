@@ -27,6 +27,7 @@ async function pollModules() {
 }
 
 function updateModuleUi() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const m = state.modules;
   const ready = n => m[n] === 'ready';
   const disabled = n => m[n] === 'disabled';
@@ -35,7 +36,7 @@ function updateModuleUi() {
     if (!el) return;
     el.disabled = false;
     if (disabled(key)) {
-      el.title = 'Win7 版暂不支持该功能';
+      el.title = _t('status.win7Unsupported') || 'Win7 版暂不支持该功能';
     }
   });
   ['w-convert', 'w-web', 'w-ocr', 'w-ai'].forEach(id => {
@@ -45,25 +46,32 @@ function updateModuleUi() {
   if (ready('ai') && !state.ai.config) loadAiConfig();
   const parts = [];
   for (const [k, v] of Object.entries(m)) {
-    const label = { convert: '转换', ocr: 'OCR', web: '网页', ai: 'AI' }[k] || k;
+    const label = {
+      convert: _t('menu.convert') || '转换',
+      ocr: _t('menu.ocr') || 'OCR',
+      web: _t('menu.web') || '网页',
+      ai: _t('toolbar.ai') || 'AI'
+    }[k] || k;
     if (v === 'ready') parts.push(label + '\u2713');
     else if (v === 'error') parts.push(label + '\u2717');
-    else if (v === 'disabled') parts.push(label + ' Win7 暂不支持');
+    else if (v === 'disabled') parts.push(label + ' ' + (_t('status.win7UnsupportedShort') || 'Win7 暂不支持'));
     else parts.push(label + '\u2026');
   }
   const el = $('status-mods');
-  if (el) el.textContent = parts.length ? '模块 ' + parts.join(' ') : '';
+  if (el) el.textContent = parts.length ? (_t('status.modulePrefix') || '模块 ') + parts.join(' ') : '';
 }
 
 function moduleBlocked(name) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (state.modules[name] === 'disabled') {
-    showToast('该功能在 Win7 版暂不支持（本版本仅保留 docx / pdf 转 MD 与导出功能）', 3400);
+    showToast(_t('toast.win7Blocked') || '该功能在 Win7 版暂不支持（本版本仅保留 docx / pdf 转 MD 与导出功能）', 3400);
     return true;
   }
   return false;
 }
 
 async function ensureModule(name, timeoutMs) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const t0 = Date.now();
   const limit = timeoutMs || 60000;
   if (!moduleLoadRequests[name]) {
@@ -78,10 +86,15 @@ async function ensureModule(name, timeoutMs) {
       const d = await r.json();
       const st = d.modules && d.modules[name];
       if (st === 'ready') return true;
-      if (st === 'error') { delete moduleLoadRequests[name]; showToast('模块「' + name + '」加载失败，请重试'); return false; }
+      if (st === 'error') {
+        delete moduleLoadRequests[name];
+        showToast(_t('toast.moduleLoadFail', { name }) || ('模块「' + name + '」加载失败，请重试'));
+        return false;
+      }
     } catch (e) { /* ignore */ }
     await new Promise(r => setTimeout(r, 800));
   }
-  showToast('模块加载超时，请重试');
+  showToast(_t('toast.moduleTimeout') || '模块加载超时，请重试');
   return false;
 }
+

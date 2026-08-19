@@ -21,20 +21,22 @@ function bindGlobalDragAndDrop() {
     e.stopPropagation();
     dragCounter++;
     if (overlay) {
+      const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
       overlay.classList.remove('hidden');
       if (title && desc) {
         if (types.includes('Files')) {
-          title.textContent = '松开以导入文档';
-          desc.textContent = 'Markdown 文件将在新标签页中打开；Word/PDF 等将自动导入转换';
+          title.textContent = _t('dialog.dropTitle') || '松开以导入文档';
+          desc.textContent = _t('dialog.dropDesc') || 'Markdown 文件将在新标签页中打开；Word/PDF 等将自动导入转换';
         } else if (types.includes('text/uri-list')) {
-          title.textContent = '松开以抓取网页';
-          desc.textContent = '自动解析 URL 网页并提取为 Markdown 文档';
+          title.textContent = _t('dialog.dropUrlTitle') || '松开以抓取网页';
+          desc.textContent = _t('dialog.dropUrlDesc') || '自动解析 URL 网页并提取为 Markdown 文档';
         } else {
-          title.textContent = '松开以在此打开';
-          desc.textContent = '拖入纯文本将自动生成为虚拟 Markdown 文档';
+          title.textContent = _t('dialog.dropTextTitle') || '松开以在此打开';
+          desc.textContent = _t('dialog.dropTextDesc') || '拖入纯文本将自动生成为虚拟 Markdown 文档';
         }
       }
     }
+
   });
 
   window.addEventListener('dragover', e => {
@@ -106,9 +108,10 @@ function bindGlobalDragAndDrop() {
         $('url-go').click();
       }
     } else if (text.trim()) {
-      const name = '新建文本-' + new Date().toISOString().slice(0, 10) + '.md';
+      const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+      const name = (_t('tabs.untitled') || '新建文本') + '-' + new Date().toISOString().slice(0, 10) + '.md';
       renderVirtual('clipboard', name, '', text, []);
-      showToast('已从拖拽文本新建文档（Ctrl+S 可保存）');
+      showToast(_t('toast.droppedCreated') || '已从拖拽文本新建文档（Ctrl+S 可保存）');
     }
   });
 }
@@ -162,6 +165,7 @@ function bindTabContextMenuEvents() {
 
   menu.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
+      const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
       const tabId = menu.dataset.tabId;
       const action = btn.dataset.action;
       menu.classList.add('hidden');
@@ -183,10 +187,11 @@ function bindTabContextMenuEvents() {
           if (titleSpan) startTabInlineRename(tab, titleSpan, tabEl);
         }
       } else if (action === 'copy-path') {
-        copyText(tab.path || tab.title || '', '已复制文件路径');
+        copyText(tab.path || tab.title || '', _t('toast.copiedPath') || '已复制文件路径');
       }
     });
   });
+
 
   document.addEventListener('click', e => {
     if (!menu.contains(e.target)) {

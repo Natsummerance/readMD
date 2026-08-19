@@ -6,7 +6,8 @@
 /* ---------------- 文件夹浏览 ---------------- */
 
 async function openFolder() {
-  if (!hasPy) { showToast('浏览器模式下请使用“打开文件”'); return; }
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (!hasPy) { showToast(_t('toast.openFolderBrowserNotice') || '浏览器模式下请使用“打开文件”'); return; }
   let dir;
   try { dir = await py.choose_folder(); } catch (e) { dir = null; }
   if (!dir) return;
@@ -14,6 +15,7 @@ async function openFolder() {
 }
 
 async function listFolder(dir) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   try {
     const r = await apiFetch('/api/list?p=' + encodeURIComponent(dir));
     const d = await r.json();
@@ -21,8 +23,9 @@ async function listFolder(dir) {
     state.folderFiles = d.files || [];
     renderFolderList();
     showSide('files');
-  } catch (e) { showToast('读取文件夹失败'); }
+  } catch (e) { showToast(_t('toast.readFolderFail') || '读取文件夹失败'); }
 }
+
 
 function renderFolderList() {
   const box = $('file-list');
@@ -37,12 +40,14 @@ function renderFolderList() {
   box.appendChild(header);
 
   if (!state.folderFiles || !state.folderFiles.length) {
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     const empty = document.createElement('div');
     empty.className = 'dir-label';
-    empty.textContent = '（未找到 Markdown 文件）';
+    empty.textContent = _t('sidebar.emptyFiles') || '（未找到 Markdown 文件）';
     box.appendChild(empty);
     return;
   }
+
 
   const normRoot = state.folder.replace(/\\/g, '/').replace(/\/$/, '');
   const rootNode = { name: folderName, type: 'dir', path: state.folder, children: {} };

@@ -136,12 +136,13 @@ function updateCmSelectionToolbar() {
 
 async function cmCopySelection() {
   if (!cmView) return;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const sel = cmView.state.selection.main;
   if (sel.empty) return;
   const text = cmView.state.sliceDoc(sel.from, sel.to);
   try {
     await navigator.clipboard.writeText(text);
-    showToast('已复制所选文本', 1500);
+    showToast(_t('toast.copiedSelection') || '已复制所选文本', 1500);
   } catch (e) {
     document.execCommand('copy');
   }
@@ -150,6 +151,7 @@ async function cmCopySelection() {
 
 async function cmCutSelection() {
   if (!cmView) return;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const sel = cmView.state.selection.main;
   if (sel.empty) return;
   const text = cmView.state.sliceDoc(sel.from, sel.to);
@@ -162,12 +164,13 @@ async function cmCutSelection() {
     changes: { from: sel.from, to: sel.to, insert: '' },
     selection: { anchor: sel.from }
   });
-  showToast('已剪切所选文本', 1500);
+  showToast(_t('toast.cutSelection') || '已剪切所选文本', 1500);
   hideCmSelectionToolbar();
 }
 
 async function cmPasteSelection() {
   if (!cmView) return;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   let text = '';
   try {
     if (hasPy && py.read_clipboard) {
@@ -179,7 +182,7 @@ async function cmPasteSelection() {
     }
   } catch (e) {}
   if (!text) {
-    showToast('剪贴板中没有可粘贴的文本');
+    showToast(_t('toast.noPasteText') || '剪贴板中没有可粘贴的文本');
     return;
   }
   const sel = cmView.state.selection.main;
@@ -189,6 +192,7 @@ async function cmPasteSelection() {
   });
   hideCmSelectionToolbar();
 }
+
 
 document.addEventListener('pointerdown', e => {
   const toolbar = $('cm-selection-toolbar');
@@ -220,29 +224,37 @@ function applyCmTheme() {
 /* Markdown 自动补全（基于 GitHub 开源 @codemirror/autocomplete） */
 function cmMarkdownCompletions() {
   const CM = window.ReadMDCodeMirror;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const item = (label, snippetText, detail, type) => ({
     label, detail, type, apply: CM.snippet(snippetText),
   });
+  const headingWord = _t('editor.headingWord') || 'Heading';
+  const textWord = _t('editor.textWord') || 'text';
+  const codeWord = _t('editor.codeWord') || 'code';
+  const descWord = _t('editor.descWord') || 'desc';
+  const taskWord = _t('editor.taskWord') || 'task';
+
   const ALL = [
-    item("# 标题", "# ${标题}", "一级标题", "markdown"),
-    item("## 标题", "## ${标题}", "二级标题", "markdown"),
-    item("### 标题", "### ${标题}", "三级标题", "markdown"),
-    item("#### 标题", "#### ${标题}", "四级标题", "markdown"),
-    item("**加粗**", "**${文本}**", "加粗", "markdown"),
-    item("*斜体*", "*${文本}*", "斜体", "markdown"),
-    item("~~删除线~~", "~~${文本}~~", "删除线", "markdown"),
-    item("`行内代码`", "`${代码}`", "行内代码", "markdown"),
-    item("```代码块", "```\n${代码}\n```", "代码块", "markdown"),
-    item("[链接文本](url)", "[${文本}](url)", "链接", "markdown"),
-    item("![图片描述](url)", "![${描述}](url)", "图片", "markdown"),
-    item("> 引用", "> ${引用}", "引用块", "markdown"),
-    item("$公式$", "$x^2$", "行内公式", "markdown"),
-    item("$$公式$$", "$$\n${公式}\n$$", "块级公式", "markdown"),
-    item("| 表格 |", "| 列1 | 列2 |\n|---|---|\n| ${值} |  |", "表格", "markdown"),
-    item("- 列表项", "- ${项目}", "无序列表", "markdown"),
-    item("- [ ] 任务", "- [ ] ${任务}", "任务列表", "markdown"),
-    item("--- 分隔线", "---", "分隔线", "markdown"),
-  ];  return context => {
+    item('# ' + headingWord, '# ${' + headingWord + '}', _t('editor.h1') || '一级标题', 'markdown'),
+    item('## ' + headingWord, '## ${' + headingWord + '}', _t('editor.h2') || '二级标题', 'markdown'),
+    item('### ' + headingWord, '### ${' + headingWord + '}', _t('editor.h3') || '三级标题', 'markdown'),
+    item('#### ' + headingWord, '#### ${' + headingWord + '}', _t('editor.h4') || '四级标题', 'markdown'),
+    item('**' + (_t('editor.bold') || '加粗') + '**', '**${' + textWord + '}**', _t('editor.bold') || '加粗', 'markdown'),
+    item('*' + (_t('editor.italic') || '斜体') + '*', '*${' + textWord + '}*', _t('editor.italic') || '斜体', 'markdown'),
+    item('~~' + (_t('editor.strikethrough') || '删除线') + '~~', '~~${' + textWord + '}~~', _t('editor.strikethrough') || '删除线', 'markdown'),
+    item('`' + (_t('editor.codeInline') || '行内代码') + '`', '`${' + codeWord + '}`', _t('editor.codeInline') || '行内代码', 'markdown'),
+    item('```' + (_t('editor.codeBlock') || '代码块'), '```\n${' + codeWord + '}\n```', _t('editor.codeBlock') || '代码块', 'markdown'),
+    item('[' + textWord + '](url)', '[${' + textWord + '}](url)', _t('editor.link') || '链接', 'markdown'),
+    item('![' + descWord + '](url)', '![${' + descWord + '}](url)', _t('editor.image') || '图片', 'markdown'),
+    item('> ' + (_t('editor.quote') || '引用'), '> ${' + textWord + '}', _t('editor.quote') || '引用块', 'markdown'),
+    item('$x^2$', '$x^2$', _t('editor.mathInline') || '行内公式', 'markdown'),
+    item('$$...$$', '$$\n${' + textWord + '}\n$$', _t('editor.mathBlock') || '块级公式', 'markdown'),
+    item('| ' + (_t('editor.table') || '表格') + ' |', '| Col 1 | Col 2 |\n|---|---|\n| ${' + textWord + '} |  |', _t('editor.table') || '表格', 'markdown'),
+    item('- ' + (_t('editor.listUnordered') || '列表项'), '- ${' + textWord + '}', _t('editor.listUnordered') || '无序列表', 'markdown'),
+    item('- [ ] ' + (_t('editor.listTask') || '任务'), '- [ ] ${' + taskWord + '}', _t('editor.listTask') || '任务列表', 'markdown'),
+    item('--- ' + (_t('editor.hr') || '分隔线'), '---', _t('editor.hr') || '分隔线', 'markdown'),
+  ];
+  return context => {
     const before = context.matchBefore(/[\w#*_`\[!>|\$~:]{0,8}/);
     if (!before) return null;
     const w = before.text.toLowerCase();
@@ -252,33 +264,43 @@ function cmMarkdownCompletions() {
   };
 }
 
+
 /* 语法引用 / 插入工具栏 */
 function cmInsertSyntax(kind) {
   if (!cmView) return;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const sel = cmView.state.selection.main;
   const selected = cmView.state.sliceDoc(sel.from, sel.to);
   let insert = null;
   let cursor = sel.from;
+  const textPlaceholder = _t('editor.textWord') || 'text';
+  const codePlaceholder = _t('editor.codeWord') || 'code';
+  const headingPlaceholder = _t('editor.headingWord') || 'Heading';
+  const quotePlaceholder = _t('editor.quote') || 'Quote';
+  const itemPlaceholder = _t('editor.itemWord') || 'item';
+  const taskPlaceholder = _t('editor.taskWord') || 'task';
+  const descPlaceholder = _t('editor.descWord') || 'desc';
+
   const wrap = (b, d, a) => {
     insert = b + (selected || d) + a;
     cursor = sel.from + b.length + (selected || d).length;
   };
   switch (kind) {
-    case 'bold': wrap('**', '文本', '**'); break;
-    case 'italic': wrap('*', '文本', '*'); break;
-    case 'strike': wrap('~~', '文本', '~~'); break;
-    case 'code': wrap('`', '代码', '`'); break;
+    case 'bold': wrap('**', textPlaceholder, '**'); break;
+    case 'italic': wrap('*', textPlaceholder, '*'); break;
+    case 'strike': wrap('~~', textPlaceholder, '~~'); break;
+    case 'code': wrap('`', codePlaceholder, '`'); break;
     case 'math': wrap('$', 'x^2', '$'); break;
     case 'mathblock': insert = '$$\n' + (selected || 'x^2') + '\n$$'; cursor = sel.from + insert.length - 3; break;
-    case 'h2': insert = '## ' + (selected || '标题'); cursor = sel.from + insert.length; break;
-    case 'quote': insert = '> ' + (selected || '引用'); cursor = sel.from + insert.length; break;
-    case 'list': insert = '- ' + (selected || '项目'); cursor = sel.from + insert.length; break;
-    case 'ordered': insert = '1. ' + (selected || '项目'); cursor = sel.from + insert.length; break;
-    case 'task': insert = '- [ ] ' + (selected || '任务'); cursor = sel.from + insert.length; break;
-    case 'link': insert = '[' + (selected || '文本') + '](url)'; cursor = sel.from + 1 + (selected || '文本').length; break;
-    case 'image': insert = '![' + (selected || '描述') + '](url)'; cursor = sel.from + 2 + (selected || '描述').length; break;
-    case 'codeblock': insert = '```\n' + (selected || '代码') + '\n```'; cursor = sel.from + 4 + (selected || '代码').length; break;
-    case 'table': insert = '| 列1 | 列2 |\n|---|---|\n| ' + (selected || '值') + ' |  |'; cursor = sel.from + insert.length; break;
+    case 'h2': insert = '## ' + (selected || headingPlaceholder); cursor = sel.from + insert.length; break;
+    case 'quote': insert = '> ' + (selected || quotePlaceholder); cursor = sel.from + insert.length; break;
+    case 'list': insert = '- ' + (selected || itemPlaceholder); cursor = sel.from + insert.length; break;
+    case 'ordered': insert = '1. ' + (selected || itemPlaceholder); cursor = sel.from + insert.length; break;
+    case 'task': insert = '- [ ] ' + (selected || taskPlaceholder); cursor = sel.from + insert.length; break;
+    case 'link': insert = '[' + (selected || textPlaceholder) + '](url)'; cursor = sel.from + 1 + (selected || textPlaceholder).length; break;
+    case 'image': insert = '![' + (selected || descPlaceholder) + '](url)'; cursor = sel.from + 2 + (selected || descPlaceholder).length; break;
+    case 'codeblock': insert = '```\n' + (selected || codePlaceholder) + '\n```'; cursor = sel.from + 4 + (selected || codePlaceholder).length; break;
+    case 'table': insert = '| Col 1 | Col 2 |\n|---|---|\n| ' + (selected || textPlaceholder) + ' |  |'; cursor = sel.from + insert.length; break;
     case 'hr': insert = '\n---\n'; cursor = sel.from + insert.length; break;
     default: return;
   }
@@ -287,13 +309,28 @@ function cmInsertSyntax(kind) {
   cmView.focus();
 }
 
-const MD_COMMANDS = [
-  ['加粗', 'bold', '**文本**'], ['斜体', 'italic', '*文本*'], ['删除线', 'strike', '~~文本~~'],
-  ['二级标题', 'h2', '## 标题'], ['引用', 'quote', '> 引用'], ['无序列表', 'list', '- 项目'],
-  ['有序列表', 'ordered', '1. 项目'], ['任务列表', 'task', '- [ ] 任务'], ['链接', 'link', '[文本](url)'],
-  ['图片', 'image', '本地图片或 URL'], ['行内代码', 'code', '`代码`'], ['代码块', 'codeblock', '```'],
-  ['表格', 'table', '| 列1 | 列2 |'], ['分隔线', 'hr', '---'], ['行内公式', 'math', '$x^2$'], ['块级公式', 'mathblock', '$$…$$'],
-];
+
+function getMdCommands() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  return [
+    [_t('editor.bold') || '加粗', 'bold', '**' + (_t('editor.text') || '文本') + '**'],
+    [_t('editor.italic') || '斜体', 'italic', '*' + (_t('editor.text') || '文本') + '*'],
+    [_t('editor.strikethrough') || '删除线', 'strike', '~~' + (_t('editor.text') || '文本') + '~~'],
+    [_t('editor.h2') || '二级标题', 'h2', '## ' + (_t('editor.h2') || '标题')],
+    [_t('editor.quote') || '引用', 'quote', '> ' + (_t('editor.quote') || '引用')],
+    [_t('editor.ul') || '无序列表', 'list', '- ' + (_t('editor.text') || '项目')],
+    [_t('editor.ol') || '有序列表', 'ordered', '1. ' + (_t('editor.text') || '项目')],
+    [_t('editor.taskList') || '任务列表', 'task', '- [ ] ' + (_t('editor.taskList') || '任务')],
+    [_t('editor.link') || '链接', 'link', '[' + (_t('editor.text') || '文本') + '](url)'],
+    [_t('editor.image') || '图片', 'image', _t('img.title') || '本地图片或 URL'],
+    [_t('editor.codeInline') || '行内代码', 'code', '`' + (_t('editor.codeInline') || '代码') + '`'],
+    [_t('editor.codeBlock') || '代码块', 'codeblock', '```'],
+    [_t('editor.table') || '表格', 'table', '| ' + (_t('editor.table') || '列1') + ' | ' + (_t('editor.table') || '列2') + ' |'],
+    [_t('editor.hr') || '分隔线', 'hr', '---'],
+    [_t('formula.inline') || '行内公式', 'math', '$x^2$'],
+    [_t('formula.block') || '块级公式', 'mathblock', '$$…$$'],
+  ];
+}
 let mdCommandIndex = 0;
 
 function closeMdPopups() {
@@ -314,7 +351,8 @@ function closeMdCommandPalette() { $('md-command-modal').classList.add('hidden')
 
 function renderMdCommands() {
   const q = $('md-command-search').value.trim().toLowerCase();
-  const rows = MD_COMMANDS.filter(c => !q || (c[0] + ' ' + c[2]).toLowerCase().includes(q));
+  const commands = getMdCommands();
+  const rows = commands.filter(c => !q || (c[0] + ' ' + c[2]).toLowerCase().includes(q));
   mdCommandIndex = Math.max(0, Math.min(mdCommandIndex, rows.length - 1));
   const list = $('md-command-list'); list.innerHTML = '';
   rows.forEach((c, i) => {
@@ -329,23 +367,62 @@ function runMdCommand(kind) { closeMdCommandPalette(); if (kind === 'image') ope
 const FORMULAS = [
   ['常用','平方根','sqrt root','\\sqrt{x}'], ['常用','分式','fraction frac','\\frac{a}{b}'], ['常用','幂与下标','power subscript','x^{n}_{i}'], ['常用','二次公式','quadratic','x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}'],
   ['希腊','阿尔法','alpha','\\alpha'], ['希腊','贝塔','beta','\\beta'], ['希腊','伽马','gamma','\\gamma'], ['希腊','派','pi','\\pi'], ['希腊','西塔','theta','\\theta'], ['希腊','欧米伽','omega','\\omega'],
-  ['运算','乘除','times divide','a\\times b\\div c'], ['运算','正负','plus minus pm','a\\pm b'], ['运算','点乘','dot','a\\cdot b'],
-  ['关系','小于等于','less equal','a\\le b'], ['关系','大于等于','greater equal','a\\ge b'], ['关系','不等于','not equal','a\\ne b'], ['关系','约等于','approx','a\\approx b'],
+  ['运算','加减','plus minus','\\pm'], ['运算','乘号','times multiply','\\times'], ['运算','除号','divide','\\div'],
+  ['关系','小于等于','less equal','\\le'], ['关系','大于等于','greater equal','\\ge'], ['关系','不等于','not equal','\\ne'], ['关系','约等于','approx','\\approx'],
   ['箭头','右箭头','right arrow','A\\rightarrow B'], ['箭头','双向箭头','leftright arrow','A\\leftrightarrow B'], ['箭头','推出','implies','A\\Rightarrow B'],
   ['函数','正弦','sin','\\sin x'], ['函数','对数','log','\\log_{a}x'], ['函数','指数','exp','e^{x}'],
   ['结构','求和','sum','\\sum_{i=1}^{n} x_i'], ['结构','积分','integral','\\int_{a}^{b} f(x)\\,dx'], ['结构','极限','limit','\\lim_{x\\to 0} f(x)'], ['结构','矩阵','matrix','\\begin{bmatrix}a&b\\\\c&d\\end{bmatrix}'], ['结构','分段函数','cases','f(x)=\\begin{cases}x,&x\\ge0\\\\-x,&x<0\\end{cases}'],
 ];
+const FORMULA_CAT_NAMES = {
+  '常用': 'formula.catCommon',
+  '希腊': 'formula.catGreek',
+  '运算': 'formula.catCalc',
+  '关系': 'formula.catRel',
+  '箭头': 'formula.catArrows',
+  '函数': 'formula.catFuncs',
+  '结构': 'formula.catStruct'
+};
+
+const FORMULA_ITEM_KEYS = {
+  '平方根': 'formula.sqrt', '分式': 'formula.frac', '幂与下标': 'formula.powerSub', '二次公式': 'formula.quadratic',
+  '阿尔法': 'formula.alpha', '贝塔': 'formula.beta', '伽马': 'formula.gamma', '派': 'formula.pi', '西塔': 'formula.theta', '欧米伽': 'formula.omega',
+  '加减': 'formula.plusMinus', '乘号': 'formula.times', '除号': 'formula.divide',
+  '小于等于': 'formula.le', '大于等于': 'formula.ge', '不等于': 'formula.ne', '约等于': 'formula.approx',
+  '右箭头': 'formula.rightArrow', '双向箭头': 'formula.bothArrow', '推出': 'formula.implies',
+  '正弦': 'formula.sin', '对数': 'formula.log', '指数': 'formula.exp',
+  '求和': 'formula.sum', '积分': 'formula.integral', '极限': 'formula.limit', '矩阵': 'formula.matrix', '分段函数': 'formula.cases'
+};
 let formulaCategory = '常用';
 
 function openFormulaModal(mode) { if (!state.editing) return; closeMdPopups(); $('formula-mode').value = mode || 'inline'; $('formula-modal').classList.remove('hidden'); $('formula-search').value = ''; renderFormulaPicker(); setTimeout(() => $('formula-search').focus(), 0); }
 function closeFormulaModal() { $('formula-modal').classList.add('hidden'); if (cmView) cmView.focus(); }
 function renderFormulaPicker() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const cats = [...new Set(FORMULAS.map(f => f[0]))]; const catBox = $('formula-cats'); catBox.innerHTML = '';
-  cats.forEach(c => { const b = document.createElement('button'); b.textContent = c; b.classList.toggle('active', c === formulaCategory); b.addEventListener('click', () => { formulaCategory = c; renderFormulaPicker(); }); catBox.appendChild(b); });
+  cats.forEach(c => {
+    const b = document.createElement('button');
+    const labelKey = FORMULA_CAT_NAMES[c] || c;
+    b.textContent = _t(labelKey) || c;
+    b.classList.toggle('active', c === formulaCategory);
+    b.addEventListener('click', () => { formulaCategory = c; renderFormulaPicker(); });
+    catBox.appendChild(b);
+  });
   const q = $('formula-search').value.trim().toLowerCase(); const rows = FORMULAS.filter(f => (q ? (f.join(' ').toLowerCase().includes(q)) : f[0] === formulaCategory));
   const list = $('formula-list'); list.innerHTML = '';
-  rows.forEach(f => { const b = document.createElement('button'); b.className = 'formula-item'; b.innerHTML = '<span></span><small></small>'; b.querySelector('span').textContent = f[1]; b.querySelector('small').textContent = f[3]; b.addEventListener('mouseenter', () => previewFormula(f[3])); b.addEventListener('focus', () => previewFormula(f[3])); b.addEventListener('click', () => insertFormula(f[3])); list.appendChild(b); });
+  rows.forEach(f => {
+    const b = document.createElement('button');
+    b.className = 'formula-item';
+    b.innerHTML = '<span></span><small></small>';
+    const itemKey = FORMULA_ITEM_KEYS[f[1]];
+    b.querySelector('span').textContent = (itemKey ? _t(itemKey) : null) || f[1];
+    b.querySelector('small').textContent = f[3];
+    b.addEventListener('mouseenter', () => previewFormula(f[3]));
+    b.addEventListener('focus', () => previewFormula(f[3]));
+    b.addEventListener('click', () => insertFormula(f[3]));
+    list.appendChild(b);
+  });
 }
+
 function previewFormula(tex) { const p = $('formula-preview'); p.textContent = '$$' + tex + '$$'; renderMath(p); }
 function insertFormula(tex) { const mode = $('formula-mode').value; closeFormulaModal(); if (!cmView) return; const sel = cmView.state.selection.main; const selected = cmView.state.sliceDoc(sel.from, sel.to); const body = selected || tex; const insert = mode === 'block' ? '\n$$\n' + body + '\n$$\n' : '$' + body + '$'; cmView.dispatch({changes:{from:sel.from,to:sel.to,insert},selection:{anchor:sel.from+insert.length}}); cmView.focus(); }
 
@@ -356,6 +433,7 @@ function insertFormula(tex) { const mode = $('formula-mode').value; closeFormula
 let isZenMode = false;
 
 function toggleZenMode(enable) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (typeof enable === 'boolean') {
     isZenMode = enable;
   } else {
@@ -363,10 +441,11 @@ function toggleZenMode(enable) {
   }
   document.body.classList.toggle('zen-mode', isZenMode);
   if (isZenMode) {
-    showToast('已进入禅模式 (按 F11 或 Esc 退出)', 2000);
+    showToast(_t('toast.zenEntered') || '已进入禅模式 (按 F11 或 Esc 退出)', 2000);
     if (cmView) cmView.focus();
   }
 }
+
 
 document.addEventListener('keydown', e => {
   if (e.key === 'F11' && state.editing) {
@@ -381,9 +460,10 @@ document.addEventListener('keydown', e => {
 function updateDocStatistics() {
   const statsEl = $('edit-doc-stats');
   if (!statsEl) return;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : `${p.words} 字 · 阅读约 ${p.min} 分钟`;
   const docText = typeof getEditContent === 'function' ? getEditContent() : (cmView ? cmView.state.doc.toString() : ($('edit-area') && $('edit-area').value || ''));
   if (!docText) {
-    statsEl.textContent = '0 字 · 阅读约 1 分钟';
+    statsEl.textContent = _t('editor.statsFormat', { words: 0, min: 1 });
     return;
   }
 
@@ -393,8 +473,9 @@ function updateDocStatistics() {
   const nonCjk = docText.replace(/[\u4e00-\u9fa5]/g, ' ').trim().split(/\s+/).filter(Boolean).length;
   const totalWords = cjk + nonCjk;
   const minutes = Math.max(1, Math.ceil(totalWords / 300));
-  statsEl.textContent = `${totalWords} 字 · 阅读约 ${minutes} 分钟`;
+  statsEl.textContent = _t('editor.statsFormat', { words: totalWords, min: minutes });
 }
+
 
 /* 智能 Excel / CSV 粘贴转 Markdown 表格 */
 function handleSmartExcelPaste(e) {
@@ -407,12 +488,14 @@ function handleSmartExcelPaste(e) {
 
   // 确认为多行多列表格数据
   e.preventDefault();
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const colCount = Math.max(...lines.map(r => r.length));
   const mdRows = [];
   
   // 表头
-  const headers = lines[0].map(c => c.trim() || '列');
-  while (headers.length < colCount) headers.push('列' + (headers.length + 1));
+  const defaultCol = _t('editor.table') || '列';
+  const headers = lines[0].map(c => c.trim() || defaultCol);
+  while (headers.length < colCount) headers.push(defaultCol + (headers.length + 1));
   mdRows.push('| ' + headers.join(' | ') + ' |');
   mdRows.push('| ' + headers.map(() => '---').join(' | ') + ' |');
 
@@ -434,7 +517,7 @@ function handleSmartExcelPaste(e) {
   } else if ($('edit-area')) {
     document.execCommand('insertText', false, tableMd);
   }
-  showToast(`已将剪贴板中 ${lines.length} 行表格转为 Markdown 表格`, 2000);
+  showToast(_t('toast.tableConverted', { count: lines.length }) || `已将剪贴板中 ${lines.length} 行表格转为 Markdown 表格`, 2000);
 }
 
 /* 交互式表格设计器 */
@@ -457,6 +540,7 @@ function closeTableModal() {
 }
 
 function initTableGridPicker() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const picker = $('table-grid-picker');
   const label = $('table-grid-label');
   if (!picker) return;
@@ -473,7 +557,7 @@ function initTableGridPicker() {
       cell.addEventListener('mouseenter', () => {
         selectedRows = r;
         selectedCols = c;
-        if (label) label.textContent = `${r} 行 × ${c} 列 表格`;
+        if (label) label.textContent = _t('editor.tableDimensions', { rows: r, cols: c }) || `${r} 行 × ${c} 列 表格`;
         picker.querySelectorAll('.table-grid-cell').forEach(el => {
           const er = +el.dataset.row;
           const ec = +el.dataset.col;
@@ -490,17 +574,21 @@ function initTableGridPicker() {
 }
 
 function insertCustomTable(rows, cols) {
-  const headers = Array.from({ length: cols }, (_, i) => `表头 ${i + 1}`);
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const headerPrefix = _t('editor.tableHeaderPrefix') || 'Header';
+  const cellWord = _t('editor.tableCell') || 'Cell';
+  const headers = Array.from({ length: cols }, (_, i) => `${headerPrefix} ${i + 1}`);
   const sep = Array.from({ length: cols }, () => '---');
   const mdLines = [
     '| ' + headers.join(' | ') + ' |',
     '| ' + sep.join(' | ') + ' |'
   ];
   for (let r = 0; r < rows; r++) {
-    const row = Array.from({ length: cols }, () => '单元格');
+    const row = Array.from({ length: cols }, () => cellWord);
     mdLines.push('| ' + row.join(' | ') + ' |');
   }
   const tableMd = '\n' + mdLines.join('\n') + '\n';
+
   if (cmView) {
     const sel = cmView.state.selection.main;
     cmView.dispatch({

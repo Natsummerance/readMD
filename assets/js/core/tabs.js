@@ -57,22 +57,23 @@ function renderTabsBar() {
     el.draggable = true;
     el.title = tab.path || tab.title || tab.name;
 
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     if (tab.isDirty) {
       const dot = document.createElement('span');
       dot.className = 'tab-dirty';
-      dot.title = '未保存';
+      dot.title = _t('tabs.dirty') || '未保存';
       el.appendChild(dot);
     }
 
     const titleSpan = document.createElement('span');
     titleSpan.className = 'tab-title';
-    titleSpan.textContent = tab.title || tab.name || '未命名';
+    titleSpan.textContent = tab.title || tab.name || (_t('tabs.untitled') || '未命名');
     el.appendChild(titleSpan);
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'tab-close';
     closeBtn.innerHTML = '&times;';
-    closeBtn.title = '关闭标签';
+    closeBtn.title = _t('tabs.closeTab') || '关闭标签';
     closeBtn.addEventListener('click', e => {
       e.stopPropagation();
       closeTab(tab.id);
@@ -83,6 +84,7 @@ function renderTabsBar() {
 
     el.addEventListener('dblclick', e => {
       e.stopPropagation();
+
       startTabInlineRename(tab, titleSpan, el);
     });
 
@@ -143,13 +145,14 @@ function renderTabsBar() {
     state.tabs.forEach(tab => {
       const item = document.createElement('button');
       item.className = 'doc-tabs-dropdown-item' + (tab.id === state.activeTabId ? ' active' : '');
-      item.innerHTML = '<span>' + (tab.title || tab.name) + (tab.isDirty ? ' &bull;' : '') + '</span><small>' + (tab.path || (tab.isVirtual ? '虚拟' : '')) + '</small>';
+      item.innerHTML = '<span>' + (tab.title || tab.name) + (tab.isDirty ? ' &bull;' : '') + '</span><small>' + (tab.path || (tab.isVirtual ? (_t('tabs.virtual') || '虚拟') : '')) + '</small>';
       item.addEventListener('click', () => {
         switchTab(tab.id);
         dropdown.classList.add('hidden');
       });
       dropdown.appendChild(item);
     });
+
   }
 
   if (bar && overflowWrap) {
@@ -182,9 +185,10 @@ function startTabInlineRename(tab, titleSpan, tabEl) {
   tabEl.classList.add('tab-renaming-active');
 
   titleSpan.classList.add('hidden');
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const wrap = document.createElement('div');
   wrap.className = 'tab-rename-wrap';
-  wrap.innerHTML = '<input type="text" class="tab-title-input" spellcheck="false" autocomplete="off" aria-label="文件名称"><span class="tab-rename-ext">' + ext + '</span>';
+  wrap.innerHTML = '<input type="text" class="tab-title-input" spellcheck="false" autocomplete="off" aria-label="' + (_t('tabs.rename') || '重命名文件') + '"><span class="tab-rename-ext">' + ext + '</span>';
   const input = wrap.querySelector('.tab-title-input');
   input.value = stem;
   tabEl.insertBefore(wrap, titleSpan);
@@ -219,6 +223,7 @@ function startTabInlineRename(tab, titleSpan, tabEl) {
 
 
 async function renameTab(tabId, newTitle) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const tab = state.tabs.find(t => t.id === tabId);
   if (!tab || !newTitle) return;
   if (tab.mode === 'file' && tab.path && hasPy && py.rename_file) {
@@ -234,18 +239,19 @@ async function renameTab(tabId, newTitle) {
           document.title = r.name + ' - ReadMD';
           setFileTitle(r.name, true, r.path);
         }
-        showToast('已重命名为 ' + r.name);
+        showToast(_t('toast.renamedTo', { name: r.name }) || ('已重命名为 ' + r.name));
       } else {
-        showToast('重命名失败：' + ((r && r.error) || '重命名失败'));
+        showToast((_t('toast.renameFailed') || '重命名失败：') + ((r && r.error) || ''));
       }
     } catch (e) {
-      showToast('重命名失败：' + e.message);
+      showToast((_t('toast.renameFailed') || '重命名失败：') + e.message);
     } finally {
       busy(false);
     }
   } else {
     tab.title = newTitle;
     tab.name = newTitle;
+
     if (state.activeTabId === tab.id) {
       state.sourceName = newTitle;
       document.title = newTitle + ' - ReadMD';
@@ -307,15 +313,16 @@ function switchTab(tabId) {
 }
 
 function promptDirtyClose(tabName) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   return new Promise(resolve => {
     const modal = $('close-confirm-modal');
     if (!modal) {
-      const ok = confirm(`文档「${tabName}」有未保存的修改，确定要关闭吗？`);
+      const ok = confirm(_t('dialog.unsavedMsg', { name: tabName }) || `文档「${tabName}」有未保存的修改，确定要关闭吗？`);
       resolve(ok ? 'discard' : 'cancel');
       return;
     }
-    const nameEl = $('close-confirm-name');
-    if (nameEl) nameEl.textContent = tabName || '当前文档';
+    const descEl = $('close-confirm-desc');
+    if (descEl) descEl.textContent = _t('dialog.unsavedMsgDesc', { name: tabName || (_t('tabs.untitled') || '文档') }) || `「${tabName || '文档'}」已被修改，如果直接关闭，未保存的内容将会丢失。`;
     modal.classList.remove('hidden');
 
     const cleanUp = (action) => {
@@ -331,6 +338,7 @@ function promptDirtyClose(tabName) {
     $('close-confirm-cancel').onclick = () => cleanUp('cancel');
   });
 }
+
 
 async function closeTab(tabId, force = false) {
   const tab = state.tabs.find(t => t.id === tabId);

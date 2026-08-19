@@ -40,13 +40,14 @@ async function refreshRecent() {
 }
 
 async function openHistoryModal() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const rec = await getRecentEntries();
   const modal = $('history-modal');
   const list = $('history-list');
   list.innerHTML = '';
   if (!rec.length) {
     const li = document.createElement('li');
-    li.className = 'empty'; li.textContent = '暂无最近文件'; list.appendChild(li);
+    li.className = 'empty'; li.textContent = _t('history.noRecentFiles') || '暂无最近文件'; list.appendChild(li);
   } else {
     renderRecentList(list, rec, p => { modal.classList.add('hidden'); loadFile(p); });
   }
@@ -54,11 +55,13 @@ async function openHistoryModal() {
 }
 
 async function clearRecent() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (hasPy) await py.clear_recent();
   await refreshRecent();
   const list = $('history-list');
-  if (list) list.innerHTML = '<li class="empty">暂无最近文件</li>';
+  if (list) list.innerHTML = '<li class="empty">' + (_t('history.noRecentFiles') || '暂无最近文件') + '</li>';
 }
+
 
 async function addRecent(path) {
   if (hasPy && path) { try { await py.add_recent(path); } catch (e) { /* ignore */ } }
@@ -94,17 +97,24 @@ function historyForward() {
 }
 
 function updateStatus() {
-  $('status-left').textContent = (state.mode === 'virtual' ? '[' + { convert: '转换', ocr: 'OCR', url: '网页', clipboard: '剪贴板' }[state.source] + '] ' : '') + (state.sourceName || state.file || '');
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const srcLabels = {
+    convert: _t('menu.convert'),
+    ocr: _t('menu.ocr'),
+    url: _t('menu.web'),
+    clipboard: _t('menu.clipboard')
+  };
+  $('status-left').textContent = (state.mode === 'virtual' ? '[' + (srcLabels[state.source] || state.source) + '] ' : '') + (state.sourceName || state.file || '');
   const parts = [];
   if (state.stats) {
     const s = state.stats;
     const p2 = [];
-    if (s.table) p2.push('表格 ' + s.table);
-    if (s.bold) p2.push('加粗 ' + s.bold);
-    if (s.math) p2.push('公式 ' + s.math);
-    if (s.heading) p2.push('标题 ' + s.heading);
-    if (s.misc) p2.push('其他 ' + s.misc);
-    parts.push(p2.length ? '修正 ' + p2.join('、') : '无需修正');
+    if (s.table) p2.push(_t('editor.table') + ' ' + s.table);
+    if (s.bold) p2.push(_t('editor.bold') + ' ' + s.bold);
+    if (s.math) p2.push(_t('editor.formula') + ' ' + s.math);
+    if (s.heading) p2.push(_t('editor.h2') + ' ' + s.heading);
+    if (s.misc) p2.push(_t('status.fixes') + ' ' + s.misc);
+    parts.push(p2.length ? _t('status.fixes') + ' ' + p2.join('、') : _t('status.noFixNeeded'));
   }
   if (state.size) parts.push((state.size / 1024).toFixed(1) + ' KB');
   if (state.encoding) parts.push(state.encoding);
@@ -151,6 +161,9 @@ function goHome() {
     $('content').innerHTML = state.welcomeHtml;
     refreshRecent();
     bindWelcomeEvents();
+    if (window.i18n && typeof window.i18n.translateDOM === 'function') {
+      window.i18n.translateDOM($('content'));
+    }
   }
   const editBar = $('edit-bar'); if (editBar) editBar.classList.add('hidden');
   const editWrap = $('edit-wrap'); if (editWrap) editWrap.classList.add('hidden');
@@ -164,6 +177,7 @@ function goHome() {
   updateStatus();
   renderTabsBar();
 }
+
 
 function bindWelcomeEvents() {
   if ($('w-open')) $('w-open').onclick = () => { loadFileDialog(); };
@@ -205,11 +219,15 @@ function stopAutoReload() {
 
 function showToast(msg, ms) {
   const t = $('toast');
+  if (window.i18n && typeof msg === 'string') {
+    msg = window.i18n.t(msg);
+  }
   t.textContent = msg;
   t.classList.remove('hidden');
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => t.classList.add('hidden'), ms || 2600);
 }
+
 
 function setProgress(p) {
   const el = $('progress');
@@ -234,8 +252,10 @@ function afterRender() {
 }
 
 function installAssoc() {
-  if (!hasPy) { showToast('浏览器模式下请在命令行运行 install.bat'); return; }
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (!hasPy) { showToast(_t('toast.assocBrowserNotice') || '浏览器模式下请在命令行运行 install.bat'); return; }
   py.install_association().then(ok => {
-    showToast(ok === true ? '已设置为 .md 默认打开方式' : ('注册失败：' + ok));
+    showToast(ok === true ? (_t('toast.assocSuccess') || '已设置为 .md 默认打开方式') : ((_t('toast.assocFailed') || '注册失败：') + ok));
   });
 }
+

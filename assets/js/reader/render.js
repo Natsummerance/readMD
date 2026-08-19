@@ -6,12 +6,13 @@
 /* ---------------- 打开 / 渲染 ---------------- */
 
 function setFileTitle(name, canRename, fullPath) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const el = $('file-title');
   if (!el) return;
   el.textContent = name || '';
   el.disabled = !canRename;
-  el.title = canRename ? ((fullPath || name) + '\n点击重命名（F2）') : (name || '');
-  el.setAttribute('aria-label', canRename ? ('当前文件 ' + name + '，点击重命名') : (name || '当前文档'));
+  el.title = canRename ? ((fullPath || name) + '\n' + (_t('reader.clickToRename') || '点击重命名（F2）')) : (name || '');
+  el.setAttribute('aria-label', canRename ? ((_t('reader.currentFilePrefix') || '当前文件 ') + name + (_t('reader.clickToRenameSuffix') || '，点击重命名')) : (name || (_t('reader.currentDoc') || '当前文档')));
   if (state.tabs && state.tabs.length > 0) {
     el.classList.add('hidden');
     const tabsCont = $('doc-tabs-container');
@@ -31,8 +32,9 @@ function cancelFileRename() {
 }
 
 function openFileRename() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (state.editing) {
-    showToast('编辑模式下不可重命名，请先保存或退出编辑');
+    showToast(_t('toast.renameBlockedEdit') || '编辑模式下不可重命名，请先保存或退出编辑');
     return;
   }
   const activeTab = getActiveTab();
@@ -58,7 +60,7 @@ function openFileRename() {
   const wrap = document.createElement('div');
   wrap.id = 'file-rename-wrap';
   wrap.className = 'file-rename-wrap';
-  wrap.innerHTML = '<input id="file-rename-input" class="file-rename-input" value="' + stem.replace(/"/g, '&quot;') + '" spellcheck="false" autocomplete="off" aria-label="文件名称"><span id="file-rename-ext" class="file-rename-ext">' + ext + '</span>';
+  wrap.innerHTML = '<input id="file-rename-input" class="file-rename-input" value="' + stem.replace(/"/g, '&quot;') + '" spellcheck="false" autocomplete="off" aria-label="' + (_t('tabs.rename') || '文件名称') + '"><span id="file-rename-ext" class="file-rename-ext">' + ext + '</span>';
   title.parentNode.insertBefore(wrap, title.nextSibling);
 
   const input = wrap.querySelector('#file-rename-input');
@@ -79,12 +81,12 @@ function openFileRename() {
           state.sourceName = res.name;
           setFileTitle(res.name, true, res.path);
           addRecent(res.path);
-          showToast('已重命名为：' + res.name);
+          showToast(_t('toast.renamedTo', { name: res.name }) || ('已重命名为：' + res.name));
         } else {
-          showToast('重命名失败：' + ((res && res.error) || '未知错误'));
+          showToast((_t('toast.renameFailed') || '重命名失败：') + ((res && res.error) || (_t('toast.unknownError') || '未知错误')));
         }
       } catch (e) {
-        showToast('重命名失败：' + e.message);
+        showToast((_t('toast.renameFailed') || '重命名失败：') + e.message);
       }
     } else {
       setFileTitle(nextStem + ext, true, nextStem + ext);
@@ -101,6 +103,7 @@ function openFileRename() {
 
 
 async function loadFile(path) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!path) return;
   const existingTab = findTabByPath(path);
   if (existingTab) {
@@ -112,7 +115,7 @@ async function loadFile(path) {
     const r = await apiFetch('/api/file?p=' + encodeURIComponent(path));
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
-      showToast('无法打开：' + (d.error || r.status));
+      showToast((_t('toast.openFailed') || '无法打开：') + (d.error || r.status));
       return;
     }
     const d = await r.json();
@@ -154,14 +157,15 @@ async function loadFile(path) {
     clearAiOutput();
     renderTabsBar();
     setProgress(100);
-    if (d.structured) showToast('已智能识别 TXT 结构（标题 / 表格 / 列表 / 目录）');
+    if (d.structured) showToast(_t('toast.txtStructureRecognized') || '已智能识别 TXT 结构（标题 / 表格 / 列表 / 目录）');
     afterRender();
   } catch (e) {
     console.error(e);
-    showToast('加载失败：' + e.message);
+    showToast((_t('toast.loadFailed') || '加载失败：') + e.message);
     setProgress(0);
   }
 }
+
 
 
 /* ---------------- 外部唤起（单实例常驻：托盘 / 双击 .md） ---------------- */
@@ -200,17 +204,19 @@ function setEditBtn(label) {
 }
 
 function setFixes(fixes, stats) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   state.fixes = fixes || [];
   state.stats = stats || {};
   const n = state.fixes.length;
   const el = $('btn-fix');
   if (!el) return;
   const sp = el.querySelector('span');
-  const lbl = n ? ('修复详情（' + n + '）') : '修复详情';
+  const lbl = n ? (_t('reader.fixesBtn', { count: n }) || ('修复详情（' + n + '）')) : (_t('reader.fixesBtnSimple') || '修复详情');
   if (sp) sp.textContent = lbl;
   else el.textContent = lbl;
-  el.title = n ? ('本次自动修正 ' + n + ' 处') : '本次自动修正详情';
+  el.title = n ? (_t('reader.fixesBtnTitle', { count: n }) || ('本次自动修正 ' + n + ' 处')) : (_t('reader.fixesBtnTitleSimple') || '本次自动修正详情');
 }
+
 
 const INCREMENTAL_THRESHOLD = 300 * 1024; // 300KB 以上走增量渲染
 const INCREMENTAL_LINES = 6000;
@@ -340,10 +346,11 @@ async function renderContentIncremental(content, savedTop) {
       div.innerHTML = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
       frag.appendChild(div);
     }
-    body.appendChild(frag);
     const pct = Math.round((end / total) * 100);
-    if (pct >= 100 || pct % 10 < 8) prog.textContent = '渲染中… ' + Math.min(pct, 100) + '%';
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    if (pct >= 100 || pct % 10 < 8) prog.textContent = (_t('reader.renderingProgress', { percent: Math.min(pct, 100) }) || ('渲染中… ' + Math.min(pct, 100) + '%'));
     if (end < total) await new Promise(r => setTimeout(r, 0));
+
   }
   prog.remove();
   if (savedTop) el.scrollTop = savedTop;
@@ -470,10 +477,12 @@ function processBibCitations(body) {
   });
 
   if (usedKeys.size > 0 && !body.querySelector('.academic-references')) {
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     const refSection = document.createElement('section');
     refSection.className = 'academic-references';
-    refSection.innerHTML = '<h3>References / 参考文献</h3><ol></ol>';
+    refSection.innerHTML = '<h3>' + (_t('reader.referencesHeading') || 'References / 参考文献') + '</h3><ol></ol>';
     const ol = refSection.querySelector('ol');
+
     for (const key of usedKeys) {
       const entry = currentDocCitations[key];
       const li = document.createElement('li');
@@ -503,6 +512,7 @@ function showBibHoverCard(e, key) {
   const entry = currentDocCitations[key];
   if (!entry) return;
 
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   bibCardEl = document.createElement('div');
   bibCardEl.className = 'bib-hover-card';
   bibCardEl.dataset.key = key;
@@ -512,7 +522,7 @@ function showBibHoverCard(e, key) {
     <div class="bib-card-journal">${entry.journal || entry.booktitle || ''}</div>
     <div class="bib-card-actions">
       ${entry.doi ? `<a class="bib-card-btn" href="https://doi.org/${entry.doi}" target="_blank">DOI</a>` : ''}
-      <button class="bib-card-btn" id="bib-copy-btn">复制 BibTeX</button>
+      <button class="bib-card-btn" id="bib-copy-btn">${_t('reader.copyBibtex') || '复制 BibTeX'}</button>
     </div>
   `;
   document.body.appendChild(bibCardEl);
@@ -536,9 +546,10 @@ function showBibHoverCard(e, key) {
   bibCardEl.querySelector('#bib-copy-btn').addEventListener('click', () => {
     const bibText = `@${entry.entry_type || 'article'}{${key},\n  title={${entry.title || ''}},\n  author={${entry.author || ''}},\n  year={${entry.year || ''}}\n}`;
     navigator.clipboard.writeText(bibText);
-    showToast('已复制 BibTeX 引用', 1500);
+    showToast(_t('toast.copiedBibtex') || '已复制 BibTeX 引用', 1500);
   });
 }
+
 
 function scheduleHideBibHoverCard() {
   if (bibHideTimer) clearTimeout(bibHideTimer);
@@ -605,7 +616,8 @@ function fixLinks(body) {
           el.classList.add('heading-target-highlight');
           setTimeout(() => el.classList.remove('heading-target-highlight'), 1500);
         } else {
-          showToast('未找到对应的文档小标题目标：' + (a.textContent || href), 2500);
+          const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+          showToast((_t('toast.headingNotFound') || '未找到对应的文档小标题目标：') + (a.textContent || href), 2500);
         }
       });
       return;
@@ -631,6 +643,7 @@ function fixLinks(body) {
 }
 
 function fixImages(body) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   body.querySelectorAll('img').forEach(im => {
     let src = im.getAttribute('src') || '';
     if (/^(https?:|data:)/i.test(src)) return;
@@ -645,7 +658,10 @@ function fixImages(body) {
       p = resolvePath(state.dir, src);
     }
     im.src = '/raw?p=' + encodeURIComponent(p);
-    im.onerror = () => { im.style.opacity = .45; im.alt = '[图片无法加载] ' + im.alt; };
+    im.onerror = () => {
+      im.style.opacity = .45;
+      im.alt = (_t('reader.imgLoadFailAlt') || '[图片无法加载] ') + im.alt;
+    };
   });
 }
 
@@ -657,8 +673,9 @@ function openPath(p) {
 /* ---------------- 虚拟文档（转换/网页/OCR） ---------------- */
 
 async function renderVirtual(source, name, dir, content, fixes, extras) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   exitEdit();
-  const title = name || '未命名.md';
+  const title = name || ((_t('tabs.untitled') || '未命名') + '.md');
   const newTab = {
     id: 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     mode: 'virtual',
@@ -697,6 +714,7 @@ async function renderVirtual(source, name, dir, content, fixes, extras) {
 
 
 async function ensureModule(name, timeoutMs) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const t0 = Date.now();
   const limit = timeoutMs || 60000;
   if (!moduleLoadRequests[name]) {
@@ -711,42 +729,49 @@ async function ensureModule(name, timeoutMs) {
       const d = await r.json();
       const st = d.modules && d.modules[name];
       if (st === 'ready') return true;
-      if (st === 'error') { delete moduleLoadRequests[name]; showToast('模块「' + name + '」加载失败，请重试'); return false; }
+      if (st === 'error') {
+        delete moduleLoadRequests[name];
+        showToast(_t('toast.moduleLoadFail', { name }) || ('模块「' + name + '」加载失败，请重试'));
+        return false;
+      }
     } catch (e) { /* ignore */ }
     await new Promise(r => setTimeout(r, 800));
   }
-  showToast('模块加载超时，请重试');
+  showToast(_t('toast.moduleTimeout') || '模块加载超时，请重试');
   return false;
 }
 
 async function convertFile(path) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!(await ensureModule('convert'))) return;
   busy(true);
   try {
     const r = await apiFetch('/api/convert?p=' + encodeURIComponent(path));
     const d = await r.json();
-    if (r.status === 409) { showToast(d.error || '模块加载中…'); return; }
-    if (!r.ok) { showToast(d.error || '转换失败'); return; }
-    if (!d.content) { showToast(d.note || '未提取到内容'); return; }
+    if (r.status === 409) { showToast(d.error || (_t('toast.moduleLoading') || '模块加载中…')); return; }
+    if (!r.ok) { showToast(d.error || (_t('toast.convertFailed') || '转换失败')); return; }
+    if (!d.content) { showToast(d.note || (_t('toast.convertNoContent') || '未提取到内容')); return; }
     showConvertWarns(d.warns);
     if (d.saved && d.out) {
-      showToast('已保存：' + d.out);
+      showToast((_t('toast.savedPrefix') || '已保存：') + d.out);
       await loadFile(d.out);
     } else if (d.skipped) {
-      showToast('已存在同名 .md，跳过保存（可在批量转换中勾选“覆盖已存在”）', 3400);
+      showToast(_t('toast.skippedExistsNotice') || '已存在同名 .md，跳过保存（可在批量转换中勾选“覆盖已存在”）', 3400);
       renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
     } else {
       renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
     }
-  } catch (e) { showToast('转换失败：' + e.message); }
+  } catch (e) { showToast((_t('toast.convertFailPrefix') || '转换失败：') + e.message); }
   finally { busy(false); }
 }
 
 function showConvertWarns(warns) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!warns || !warns.length) return;
   const bad = warns.filter(w => w.level === 'warn' || w.level === 'error');
-  if (bad.length) showToast('转换完成，' + bad.length + ' 条质量警告（' + (bad[0].msg || '见校验报告') + '）', 3600);
+  if (bad.length) showToast(_t('toast.convertWarns', { count: bad.length, first: (bad[0].msg || (_t('toast.seeCheckReport') || '见校验报告')) }) || ('转换完成，' + bad.length + ' 条质量警告（' + (bad[0].msg || '见校验报告') + '）'), 3600);
 }
+
 
 function loadFileDialog() {
   if (hasPy) {

@@ -8,7 +8,8 @@ rem ============================================================
 setlocal
 cd /d "%~dp0..\.."
 title ReadMD Packager
-set "READMD_VERSION=2.3.0"
+set "READMD_VERSION=2.3.1"
+
 
 
 set "READMD_VERSION_OVERRIDE=%READMD_VERSION%"

@@ -9,6 +9,7 @@ let isUpdating = false;
 let upgradeUrl = null;
 
 async function checkUpdate(silent = true) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   try {
     let res = null;
     if (hasPy && py.check_update) {
@@ -18,8 +19,12 @@ async function checkUpdate(silent = true) {
       if (resp.ok) res = await resp.json();
     }
     if (!res || !res.ok) {
-      if (!silent) showToast(res && res.error ? '检查更新失败：' + res.error : '检查更新失败，请稍后重试');
+      if (!silent) showToast(res && res.error ? _t('update.checkFail') + '：' + res.error : _t('update.checkFail'));
       return;
+    }
+    if (res && res.current_version) {
+      if ($('status-version')) $('status-version').textContent = 'v' + res.current_version;
+      if ($('menu-version-label')) $('menu-version-label').textContent = _t('update.currentVer', { ver: res.current_version }) || ('当前版本 v' + res.current_version);
     }
     if (res.has_update) {
       updateInfo = res;
@@ -32,17 +37,19 @@ async function checkUpdate(silent = true) {
       if (!silent) {
         openUpdateModal();
       } else {
-        showToast('🎉 发现新版本 ' + res.latest_version + '，点击底部状态栏查看更新', 5000);
+        showToast(_t('update.foundNew', { ver: res.latest_version }) || ('发现新版本 ' + res.latest_version), 5000);
       }
     } else {
-      if (!silent) showToast('当前已是最新版本 (v' + (res.current_version || '2.2.8') + ')');
+      if (!silent) showToast(_t('update.latest', { ver: res.current_version || '2.3.1' }) || ('当前已是最新版本 (v' + (res.current_version || '2.3.1') + ')'));
     }
   } catch (e) {
-    if (!silent) showToast('检查更新出错：' + e.message);
+    if (!silent) showToast(_t('update.checkFail') + '：' + e.message);
   }
 }
 
+
 function openUpdateModal() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!updateInfo) {
     checkUpdate(false);
     return;
@@ -55,28 +62,31 @@ function openUpdateModal() {
   if (updateInfo.release_notes) {
     notesEl.innerHTML = marked.parse(updateInfo.release_notes);
   } else {
-    notesEl.textContent = '暂无详细更新说明。';
+    notesEl.textContent = _t('update.noNotes') || '暂无详细更新说明。';
   }
 
   if (updateInfo.asset) {
-    $('update-asset-name').textContent = updateInfo.asset.name || '安装包';
+    $('update-asset-name').textContent = updateInfo.asset.name || (_t('update.package') || '安装包');
     const mb = updateInfo.asset.size ? (updateInfo.asset.size / (1024 * 1024)).toFixed(1) + ' MB' : '';
+
     $('update-asset-size').textContent = mb;
     $('btn-update-start').disabled = false;
-    $('btn-update-start').textContent = '立即下载并更新';
+    $('btn-update-start').textContent = _t('update.installNow') || '立即下载并更新';
   } else {
-    $('update-asset-name').textContent = '未找到匹配当前系统的二进制资产';
+    $('update-asset-name').textContent = _t('update.noAsset') || '未找到匹配当前系统的二进制资产';
     $('update-asset-size').textContent = '';
     $('btn-update-start').disabled = true;
-    $('btn-update-start').textContent = '暂无对应安装包';
+    $('btn-update-start').textContent = _t('update.noAsset') || '暂无对应安装包';
   }
 }
+
 
 function closeUpdateModal() {
   $('update-modal').classList.add('hidden');
 }
 
 async function startUpdateDownload() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!updateInfo || !updateInfo.asset || isUpdating) return;
   const asset = updateInfo.asset;
   const useMirror = $('update-use-mirror') && $('update-use-mirror').checked;
@@ -85,7 +95,7 @@ async function startUpdateDownload() {
   $('btn-update-cancel').classList.remove('hidden');
   $('update-progress-wrap').classList.remove('hidden');
   $('update-progress-fill').style.width = '0%';
-  $('update-progress-text').textContent = '准备下载…';
+  $('update-progress-text').textContent = _t('update.prepDownload') || '准备下载…';
   $('update-progress-speed').textContent = '';
   isUpdating = true;
 
@@ -109,7 +119,7 @@ async function startUpdateDownload() {
     }
 
     if (!started) {
-      showToast('启动下载失败');
+      showToast(_t('toast.updateStartFail') || '启动下载失败');
       isUpdating = false;
       $('btn-update-start').disabled = false;
       return;
@@ -132,17 +142,18 @@ async function startUpdateDownload() {
         const speedMb = ((st.speed_bps || 0) / (1024 * 1024)).toFixed(1);
         const curMb = ((st.downloaded_bytes || 0) / (1024 * 1024)).toFixed(1);
         const totMb = ((st.total_bytes || 0) / (1024 * 1024)).toFixed(1);
-        $('update-progress-text').textContent = `正在下载… ${pct}% (${curMb}MB / ${totMb}MB)`;
+        const dlLabel = _t('update.downloading') || '正在下载…';
+        $('update-progress-text').textContent = `${dlLabel} ${pct}% (${curMb}MB / ${totMb}MB)`;
         $('update-progress-speed').textContent = `${speedMb} MB/s`;
       } else if (st.status === 'verifying') {
         $('update-progress-fill').style.width = '100%';
-        $('update-progress-text').textContent = '正在校验文件完整性 (SHA256)…';
+        $('update-progress-text').textContent = _t('update.verifying') || '正在校验文件完整性 (SHA256)…';
       } else if (st.status === 'ready') {
         clearInterval(updateTimer);
         updateTimer = null;
         isUpdating = false;
-        $('update-progress-text').textContent = '下载校验完成！正在准备安装…';
-        $('btn-update-start').textContent = '正在重启并安装…';
+        $('update-progress-text').textContent = _t('update.downloadDone') || '下载校验完成！正在准备安装…';
+        $('btn-update-start').textContent = _t('update.restarting') || '正在重启并安装…';
         setTimeout(async () => {
           if (hasPy && py.apply_update) {
             await py.apply_update(st.target_file, updateInfo.flavor);
@@ -158,23 +169,23 @@ async function startUpdateDownload() {
         clearInterval(updateTimer);
         updateTimer = null;
         isUpdating = false;
-        $('update-progress-text').textContent = '下载失败：' + (st.error || '未知网络错误');
+        $('update-progress-text').textContent = (_t('update.downloadFailPrefix') || '下载失败：') + (st.error || (_t('toast.unknownNetworkErr') || '未知网络错误'));
         $('btn-update-start').disabled = false;
-        $('btn-update-start').textContent = '重试下载';
+        $('btn-update-start').textContent = _t('update.retryDownload') || '重试下载';
         $('btn-update-cancel').classList.add('hidden');
       } else if (st.status === 'cancelled') {
         clearInterval(updateTimer);
         updateTimer = null;
         isUpdating = false;
-        $('update-progress-text').textContent = '下载已取消';
+        $('update-progress-text').textContent = _t('update.downloadCancelled') || '下载已取消';
         $('btn-update-start').disabled = false;
-        $('btn-update-start').textContent = '重新下载';
+        $('btn-update-start').textContent = _t('update.redownload') || '重新下载';
         $('btn-update-cancel').classList.add('hidden');
       }
     }, 400);
 
   } catch (e) {
-    showToast('下载出错：' + e.message);
+    showToast((_t('toast.downloadError') || '下载出错：') + e.message);
     isUpdating = false;
     $('btn-update-start').disabled = false;
   }
@@ -187,3 +198,4 @@ async function cancelUpdateDownload() {
     await fetch('/api/update/cancel', { method: 'POST' });
   }
 }
+

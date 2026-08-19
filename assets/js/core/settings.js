@@ -56,3 +56,62 @@ function zoom(delta) {
   applySettings();
   saveSettings();
 }
+
+async function checkAutostart() {
+  try {
+    let enabled = false;
+    if (typeof hasPy !== 'undefined' && hasPy && py.get_autostart) {
+      enabled = await py.get_autostart();
+    } else {
+      const r = await fetch('/api/autostart/get');
+      if (r.ok) {
+        const j = await r.json();
+        enabled = !!j.enabled;
+      }
+    }
+    updateAutostartUI(enabled);
+  } catch (e) { /* ignore */ }
+}
+
+function updateAutostartUI(enabled) {
+  const lbl = $('autostart-status-label');
+  if (lbl) {
+    lbl.textContent = enabled ? (window.i18n ? window.i18n.t('app.enabled') : '已开启') : (window.i18n ? window.i18n.t('app.disabled') : '未开启');
+  }
+  state.autostart = enabled;
+}
+
+async function toggleAutostart() {
+  const next = !state.autostart;
+  try {
+    let res = null;
+    if (typeof hasPy !== 'undefined' && hasPy && py.set_autostart) {
+      res = await py.set_autostart(next);
+    } else {
+      const r = await fetch('/api/autostart/set', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: next })
+      });
+      if (r.ok) res = await r.json();
+    }
+    if (res && res.ok) {
+      updateAutostartUI(next);
+      if (typeof showToast === 'function') {
+        showToast(next ? (window.i18n ? window.i18n.t('app.autostartOn') : '已开启开机自启动') : (window.i18n ? window.i18n.t('app.autostartOff') : '已关闭开机自启动'));
+      }
+    } else {
+      if (typeof showToast === 'function') {
+        const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+        showToast((_t('toast.autostartFail') || '设置开机自启失败：') + (res && res.error ? res.error : (_t('toast.unknownError') || '未知错误')));
+      }
+    }
+  } catch (e) {
+    if (typeof showToast === 'function') {
+      const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+      showToast((_t('toast.autostartFail') || '设置开机自启失败：') + e.message);
+    }
+  }
+}
+
+

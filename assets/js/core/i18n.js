@@ -57,30 +57,59 @@ window.i18n = {
   dict: {},
   fallbackDict: {},
 
-  /** 初始化多语言模块 */
+  /** 初始化多语言模块（毫秒级极速初始化，零阻塞启动） */
   async init() {
-    try {
-      const urls = ['/assets/i18n/meta.json', '/i18n/meta.json', 'i18n/meta.json'];
-      for (const u of urls) {
-        try {
-          const resp = await fetch(u);
-          if (resp.ok) {
-            this.meta = await resp.json();
-            break;
-          }
-        } catch (err) {}
-      }
-    } catch (e) {
-      console.warn('[i18n] Load meta failed:', e);
-    }
-
     // 首选语言决策：1. LocalStorage 缓存 2. 系统侦测
-    let preferred = localStorage.getItem('readmd_language');
+    let preferred = null;
+    try {
+      preferred = localStorage.getItem('readmd_language');
+    } catch (e) {}
+
     if (!preferred) {
       preferred = await this.detectSystemLanguage();
     }
+    preferred = preferred || 'zh-CN';
 
-    await this.setLanguage(preferred || 'zh-CN', false);
+    // 如果是默认简体中文，DOM 本身即为中文，直接初始化并异步载入词库
+    if (preferred === 'zh-CN') {
+      this.currentLang = 'zh-CN';
+      document.documentElement.setAttribute('dir', 'ltr');
+      document.documentElement.setAttribute('lang', 'zh-CN');
+      const currentLabel = document.getElementById('lang-current-label');
+      if (currentLabel) currentLabel.textContent = '简体中文';
+      // 异步在空闲时预热字典
+      setTimeout(() => {
+        this.fetchDict('zh-CN').then(d => { if (d) this.dict = d; });
+        this.loadFallback();
+      }, 200);
+      return;
+    }
+
+    // 非中文环境快速载入目标语言并翻译
+    await this.setLanguage(preferred, false);
+    setTimeout(() => this.loadFallback(), 500);
+  },
+
+  /** 异步载入第一兜底英文词库 */
+  async loadFallback() {
+    if (Object.keys(this.fallbackDict).length > 0) return;
+    try {
+      const d = await this.fetchDict('en');
+      if (d) this.fallbackDict = d;
+    } catch (e) {}
+  },
+
+  /** 高效获取语言词库 JSON */
+  async fetchDict(langCode) {
+    try {
+      const resp = await fetch(`/assets/i18n/${langCode}.json`);
+      if (resp.ok) return await resp.json();
+    } catch (e) {}
+    try {
+      const resp = await fetch(`assets/i18n/${langCode}.json`);
+      if (resp.ok) return await resp.json();
+    } catch (e) {}
+    return null;
   },
 
   /** 侦测宿主操作系统语言 */
@@ -90,9 +119,7 @@ window.i18n = {
         const pyLang = await py.get_system_language();
         if (pyLang && this.meta[pyLang]) return pyLang;
       }
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
 
     const browserLangs = navigator.languages || [navigator.language || 'zh-CN'];
     for (const l of browserLangs) {
@@ -115,32 +142,18 @@ window.i18n = {
       langCode = 'zh-CN';
     }
 
-    const urls = [
-      `/assets/i18n/${langCode}.json`,
-      `/i18n/${langCode}.json`,
-      `i18n/${langCode}.json`
-    ];
-
-    let loaded = false;
-    for (const u of urls) {
-      try {
-        const resp = await fetch(u);
-        if (resp.ok) {
-          this.dict = await resp.json();
-          this.currentLang = langCode;
-          loaded = true;
-          break;
-        }
-      } catch (err) {}
-    }
-
-    if (!loaded) {
-      console.warn(`[i18n] Failed to load ${langCode}, fallback to zh-CN`);
+    const dict = await this.fetchDict(langCode);
+    if (dict) {
+      this.dict = dict;
+      this.currentLang = langCode;
+    } else if (langCode === 'zh-CN') {
       this.currentLang = 'zh-CN';
     }
 
     if (save) {
-      localStorage.setItem('readmd_language', this.currentLang);
+      try {
+        localStorage.setItem('readmd_language', this.currentLang);
+      } catch (e) {}
     }
 
     // 设置书写方向与语言标识
@@ -152,13 +165,26 @@ window.i18n = {
     // 动态更新 DOM 文本
     this.translateDOM();
 
+    // 更新菜单中的当前语言标签
+    const currentLabel = document.getElementById('lang-current-label');
+    if (currentLabel) {
+      currentLabel.textContent = langMeta.native || langMeta.name || this.currentLang;
+    }
+
     // 派发切换事件
     window.dispatchEvent(new CustomEvent('readmd:language-changed', { detail: { lang: this.currentLang } }));
   },
 
+
   /** 获取翻译词条，支持 {count}, {name} 占位符替换 */
   t(key, params = {}) {
-    let str = this.dict[key] || this.fallbackDict[key] || key;
+    let str = this.dict[key];
+    if (str === undefined || str === null || str === '') {
+      str = this.fallbackDict[key];
+    }
+    if (str === undefined || str === null || str === '') {
+      str = key;
+    }
     if (typeof str === 'string' && params) {
       for (const [k, v] of Object.entries(params)) {
         str = str.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
@@ -174,6 +200,11 @@ window.i18n = {
       if (key) el.textContent = this.t(key);
     });
 
+    root.querySelectorAll('[data-i18n-html]').forEach(el => {
+      const key = el.getAttribute('data-i18n-html');
+      if (key) el.innerHTML = this.t(key);
+    });
+
     root.querySelectorAll('[data-i18n-title]').forEach(el => {
       const key = el.getAttribute('data-i18n-title');
       if (key) el.setAttribute('title', this.t(key));
@@ -183,7 +214,13 @@ window.i18n = {
       const key = el.getAttribute('data-i18n-placeholder');
       if (key) el.setAttribute('placeholder', this.t(key));
     });
+
+    root.querySelectorAll('[data-i18n-aria]').forEach(el => {
+      const key = el.getAttribute('data-i18n-aria');
+      if (key) el.setAttribute('aria-label', this.t(key));
+    });
   },
+
 
   /** 打开语言选择对话框 */
   openModal() {
@@ -194,7 +231,9 @@ window.i18n = {
     const searchInput = document.getElementById('lang-search-input');
     if (searchInput) {
       searchInput.value = '';
-      searchInput.focus();
+      setTimeout(() => {
+        try { searchInput.focus(); } catch (e) {}
+      }, 50);
     }
     this.renderLanguageGrid('');
   },
@@ -221,10 +260,14 @@ window.i18n = {
       }
 
       const item = document.createElement('div');
-      item.className = 'lang-item' + (code === this.currentLang ? ' active' : '');
+      const isActive = code === this.currentLang;
+      item.className = 'lang-item' + (isActive ? ' active' : '');
       item.innerHTML = `
-        <div class="lang-item-native">${native}</div>
-        <div class="lang-item-sub">${name} (${code})</div>
+        <div class="lang-item-content">
+          <div class="lang-item-native">${native}</div>
+          <div class="lang-item-sub">${name} (${code})</div>
+        </div>
+        ${isActive ? '<div class="lang-item-check"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>' : ''}
       `;
       item.addEventListener('click', async () => {
         await this.setLanguage(code, true);
@@ -237,3 +280,4 @@ window.i18n = {
     }
   }
 };
+

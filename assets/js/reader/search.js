@@ -66,9 +66,11 @@ function jumpToMark(dir) {
 }
 
 function updateSearchCount() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const total = state.currentMarks.length;
-  $('search-count').textContent = total ? ((state.searchIndex % total) + 1) + '/' + total : (state.lastQuery ? '无结果' : '');
+  $('search-count').textContent = total ? ((state.searchIndex % total) + 1) + '/' + total : (state.lastQuery ? (_t('search.noMatches') || '无结果') : '');
 }
+
 
 function toggleSearch() {
   if (state.mode === 'welcome' || (!state.file && !state.original)) return;

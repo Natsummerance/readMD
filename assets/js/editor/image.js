@@ -22,7 +22,8 @@ function redoImg() { const s=imgState.redo.pop(); if (!s) return; imgState.histo
 function updateImgHistoryButtons() { $('img-undo').disabled=!imgState.history.length; $('img-redo').disabled=!imgState.redo.length; }
 
 function openImgModal() {
-  if (!state.dir) { showToast('图片编辑仅支持本地 Markdown 文件'); return; }
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (!state.dir) { showToast(_t('toast.imgLocalOnly') || '图片编辑仅支持本地 Markdown 文件'); return; }
   $('img-modal').classList.remove('hidden');
   resetImg();
   drawImg();
@@ -36,16 +37,18 @@ function closeImgModal() {
 }
 
 function loadImgFromFile(file) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!file) return;
   const fr = new FileReader();
   fr.onload = () => {
-    try { loadImgSrc(fr.result); } catch (e) { showToast('图片读取失败：' + e.message); }
+    try { loadImgSrc(fr.result); } catch (e) { showToast((_t('toast.imgReadFail') || '图片读取失败：') + e.message); }
   };
-  fr.onerror = () => showToast('图片读取失败');
+  fr.onerror = () => showToast(_t('toast.imgReadFail') || '图片读取失败');
   fr.readAsDataURL(file);
 }
 
 function loadImgSrc(src) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const im = new Image();
   im.onload = () => {
     imgState.img = im;
@@ -57,9 +60,10 @@ function loadImgSrc(src) {
     $('img-crop').classList.add('active');
     updateImgInfo();
   };
-  im.onerror = () => showToast('图片加载失败（URL 可能被跨域限制）');
+  im.onerror = () => showToast(_t('toast.imgLoadCorsFail') || '图片加载失败（URL 可能被跨域限制）');
   im.src = src;
 }
+
 
 function computeRotated() {
   const a = ((imgState.angle % 360) + 360) % 360;
@@ -146,16 +150,18 @@ function updateCropUI() {
 }
 
 function updateImgInfo() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const el = $('img-info');
   if (!el) return;
   const r = imgRect();
-  if (!imgState.img || !r.w) { el.textContent = '尚未加载图片'; return; }
+  if (!imgState.img || !r.w) { el.textContent = _t('img.noImageLoaded') || '尚未加载图片'; return; }
   const naturalW = Math.max(1, Math.round(imgState.crop.w / imgState.fitScale));
   const naturalH = Math.max(1, Math.round(imgState.crop.h / imgState.fitScale));
   if (!imgState.outW || !imgState.outH) { imgState.outW = naturalW; imgState.outH = naturalH; }
   $('img-out-w').value = imgState.outW; $('img-out-h').value = imgState.outH;
-  el.textContent = '原图 ' + imgState.rawW + '×' + imgState.rawH + ' · 裁剪 ' + naturalW + '×' + naturalH + ' · 输出 ' + imgState.outW + '×' + imgState.outH + ' px';
+  el.textContent = (_t('img.origImage') || '原图') + ' ' + imgState.rawW + '×' + imgState.rawH + ' · ' + (_t('img.cropLabel') || '裁剪') + ' ' + naturalW + '×' + naturalH + ' · ' + (_t('img.outLabel') || '输出') + ' ' + imgState.outW + '×' + imgState.outH + ' px';
 }
+
 
 function resetImg() {
   imgState.angle = 0;
@@ -287,23 +293,26 @@ function stagePointerUp(e) {
 }
 
 function insertImgUrl() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const url = $('img-url-input').value.trim();
-  if (!url) { showToast('请输入图片 URL'); return; }
-  if (!cmView) { showToast('请先进入编辑模式'); return; }
+  if (!url) { showToast(_t('toast.imgEnterUrl') || '请输入图片 URL'); return; }
+  if (!cmView) { showToast(_t('toast.imgEnterEditFirst') || '请先进入编辑模式'); return; }
   cmInsertImage(url);
   closeImgModal();
-  showToast('已插入图片 URL');
+  showToast(_t('toast.imgUrlInserted') || '已插入图片 URL');
 }
 
 function cmInsertImage(rel) {
   if (!cmView) return;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const sel = cmView.state.selection.main;
-  const insert = '![图片](' + rel + ')';
+  const insert = '![' + (_t('editor.image') || '图片') + '](' + rel + ')';
   cmView.dispatch({ changes: { from: sel.from, to: sel.to, insert }, selection: { anchor: sel.from + insert.length } });
   cmView.focus();
 }
 
 async function exportAndInsertImg() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!imgState.img) return;
   const r = imgRect();
   const srcX = (imgState.crop.x - r.x) / imgState.fitScale;
@@ -328,7 +337,7 @@ async function exportAndInsertImg() {
   octx.imageSmoothingQuality = 'high';
   octx.drawImage(tmp, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
   const blob = await new Promise(res => out.toBlob(res, 'image/png'));
-  if (!blob) { showToast('图片导出失败'); return; 
+  if (!blob) { showToast(_t('toast.imgExportFail') || '图片导出失败'); return; 
   }
   const b64 = await new Promise(res => {
     const fr = new FileReader();
@@ -345,9 +354,9 @@ async function exportAndInsertImg() {
     if (!resp.ok || !d.ok) throw new Error(d.error || '保存失败');
     cmInsertImage(d.rel);
     closeImgModal();
-    showToast('图片已插入（' + d.rel + '）');
+    showToast(_t('toast.imgInsertedRel', { rel: d.rel }) || ('图片已插入（' + d.rel + '）'));
   } catch (e) {
-    showToast('图片保存失败：' + e.message);
+    showToast((_t('toast.imgSaveFail') || '图片保存失败：') + e.message);
   } finally {
     busy(false);
   }
