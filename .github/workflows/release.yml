@@ -180,6 +180,7 @@ jobs:
             dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix
             dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip
           if-no-files-found: error
+          overwrite: true
           retention-days: 7
       - name: Upload tagged release assets
         if: startsWith(github.ref, 'refs/tags/v')
@@ -192,6 +193,7 @@ jobs:
             dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix
             dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip
           if-no-files-found: error
+          overwrite: true
 
   macos-package:
     name: Package · macOS ${{ matrix.arch }}
@@ -224,7 +226,7 @@ jobs:
           file dist/ReadMD.app/Contents/MacOS/ReadMD | grep "${{ matrix.machine }}"
           plutil -lint dist/ReadMD.app/Contents/Info.plist
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' dist/ReadMD.app/Contents/Info.plist)" = 'io.github.natsummerance.readmd'
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' dist/ReadMD.app/Contents/Info.plist)" = "$READMD_VERSION"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' dist/ReadMD.app/Contents/Info.plist)" = "${{ env.READMD_VERSION }}"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDocumentTypes:0:CFBundleTypeRole' dist/ReadMD.app/Contents/Info.plist)" = 'Editor'
           if find dist/ReadMD.app -iname '*winrt*' -o -iname '*windows_native*' -o -iname '*winreg*' | grep .; then
             echo 'Windows-only dependency found in macOS bundle' >&2
@@ -236,8 +238,8 @@ jobs:
           test -s dist/ReadMD.app/Contents/Resources/assets/js/core/state.js
           dist/ReadMD.app/Contents/MacOS/ReadMD --selftest
           python tools/privacy_scan.py dist/ReadMD.app
-          ditto -c -k --sequesterRsrc --keepParent dist/ReadMD.app "ReadMD-macos-${{ matrix.arch }}-v${READMD_VERSION}.zip"
-          unzip -t "ReadMD-macos-${{ matrix.arch }}-v${READMD_VERSION}.zip"
+          ditto -c -k --sequesterRsrc --keepParent dist/ReadMD.app "ReadMD-macos-${{ matrix.arch }}-v${{ env.READMD_VERSION }}.zip"
+          unzip -t "ReadMD-macos-${{ matrix.arch }}-v${{ env.READMD_VERSION }}.zip"
       - name: Upload main-branch release candidate
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
@@ -245,6 +247,7 @@ jobs:
           name: rc-macos-${{ matrix.arch }}-${{ github.sha }}
           path: ReadMD-macos-${{ matrix.arch }}-v${{ env.READMD_VERSION }}.zip
           if-no-files-found: error
+          overwrite: true
           retention-days: 7
       - name: Upload tagged release asset
         if: startsWith(github.ref, 'refs/tags/v')
@@ -253,6 +256,7 @@ jobs:
           name: release-macos-${{ matrix.arch }}
           path: ReadMD-macos-${{ matrix.arch }}-v${{ env.READMD_VERSION }}.zip
           if-no-files-found: error
+          overwrite: true
 
   linux-package:
     name: Package · Linux & HarmonyOS
@@ -291,8 +295,8 @@ jobs:
       - name: Verify build outputs
         run: |
           ls -la dist/
-          test -s "dist/ReadMD-harmonyos-v${READMD_VERSION}.hap"
-          test -s "dist/readmd_${READMD_VERSION}_amd64.deb"
+          test -s "dist/ReadMD-harmonyos-v${{ env.READMD_VERSION }}.hap"
+          test -s "dist/readmd_${{ env.READMD_VERSION }}_amd64.deb"
       - name: Upload main-branch release candidate
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
@@ -303,6 +307,7 @@ jobs:
             dist/readmd_${{ env.READMD_VERSION }}_amd64.deb
             dist/ReadMD-harmonyos-v${{ env.READMD_VERSION }}.hap
           if-no-files-found: ignore
+          overwrite: true
           retention-days: 7
       - name: Upload tagged release assets
         if: startsWith(github.ref, 'refs/tags/v')
@@ -314,6 +319,7 @@ jobs:
             dist/readmd_${{ env.READMD_VERSION }}_amd64.deb
             dist/ReadMD-harmonyos-v${{ env.READMD_VERSION }}.hap
           if-no-files-found: ignore
+          overwrite: true
 
   release:
     name: Publish ReadMD v2.3.2
