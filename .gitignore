@@ -24,7 +24,8 @@ release_body_win7_beta.md
 
 IDEA.md
 
-# v2.3.1 i18n build/audit temp files (auto-generated, not for tracking)
+# v2.3.1 / v2.3.2 i18n build/audit temp files & archives (not for tracking)
+tools/archive/
 docs/dev/
 all_categories_dump.txt
 all_keys.json
