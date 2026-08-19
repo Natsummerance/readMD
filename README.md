@@ -1,3 +1,12 @@
+<p align="center">
+  🌐 <b>Languages / 多语言版本</b>: 
+  <b>简体中文</b> | 
+  <a href="README.zh-TW.md">繁體中文</a> | 
+  <a href="README.en.md">English</a> | 
+  <a href="README.ja.md">日本語</a>
+</p>
+
+
 <div align="center">
 
 <img src="assets/icon-256.png" width="96" alt="ReadMD logo">
@@ -12,45 +21,50 @@
 ![version](https://img.shields.io/github/v/release/Natsummerance/readMD?color=3b6ef5)
 ![webview2](https://img.shields.io/badge/runtime-WebView2-4fc08d)
 ![repo size](https://img.shields.io/github/repo-size/Natsummerance/readMD)
+![i18n](https://img.shields.io/badge/i18n-46%20Languages-orange)
 
 <br>
 
 <p align="center">
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.2.9.exe">
-    <img src="https://img.shields.io/badge/⬇️_Windows_安装包下载-v2.2.9-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 安装包下载">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.0.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_安装包下载-v2.3.0-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 安装包下载">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.2.9.exe">
-    <img src="https://img.shields.io/badge/⬇️_Windows_便携版下载-v2.2.9-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 便携版下载">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.0.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_便携版下载-v2.3.0-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 便携版下载">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.2.9.zip">
-    <img src="https://img.shields.io/badge/⬇️_macOS_(M系列芯片)-v2.2.9-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64 下载">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.0.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(M系列芯片)-v2.3.0-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64 下载">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.2.9.zip">
-    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel芯片)-v2.2.9-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel 下载">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.0.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel芯片)-v2.3.0-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel 下载">
+  </a>
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.0.vsix">
+    <img src="https://img.shields.io/badge/🧩_VSCode_插件下载-v2.3.0-6366f1?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VSCode VSIX 下载">
   </a>
 </p>
 
 </div>
+
 
 ---
 
 ## ✨ 特性
 
 - ⚡ **秒开**：安装版为 onedir 目录安装，冷启动窗口可用 ≤1.5s（低配机 / 机械硬盘 ≤2s）；关闭窗口隐藏到系统托盘常驻，再双击 `.md` 瞬时唤起（<0.3s）
+- 🌍 **全球 45+ 语种 i18n 体系（v2.3.0）**：初次启动自动根据系统语言初始化，包含简体中文、繁中（台/港）、英语、西/法/德/意/日/韩/俄、阿拉伯语/希伯来语（RTL 双向排版）以及藏语、维吾尔语、蒙古语等；配套多模型（DeepSeek / Qwen / Mimo / Google）自动翻译维护工具链
+- 📐 **LaTeX PRO 学术增强（v2.3.0）**：零配置自动扫描同目录 `.bib` 参考文献数据库并生成悬浮交互卡片；提供定理 (Theorem)、引理 (Lemma)、证明 (Proof with Q.E.D.)、定义 (Definition) 等学术 Callout 盒子
+- 🧘 **Editor Studio PRO 极致体验（v2.3.0）**：Zen Mode 沉浸禅模式（F11 / Esc 切换）；10x10 可视化表格网格设计器；Excel / CSV 智能粘贴直接转 Markdown 表格；实时字数、词数与阅读时长看板
+- 🔌 **VSCode 插件与 MCP Server（v2.3.0）**：采用 Monorepo 统一分包架构（`packages/mcp-server` & `packages/vscode-extension`），让 Claude Desktop、Cursor 及 VSCode 具备 ReadMD 核心自愈修复与学术排版能力，客户端安装包零冗余
+- 🛡️ **软件内更新器排查与修复（v2.3.0）**：修复调起安装包后旧进程文件句柄锁死问题，启动自动清理 `%TEMP%` 残留安装包，支持多镜像源毫秒级降级与优雅手动检查反馈
 - 🎨 **界面清爽**：44px 工具条 + 内联 SVG 图标、欢迎页最近文件网格、浅色 / 暗色 / sepia 三主题全套设计 token、大文档骨架屏、动画遵循系统「减弱动态效果」
-- 🤖 **AI 助手与对话导入（v2.2.4）**：官方预设 + 可增删改的自定义连接；API Key 仅本机保存且配置接口不回传明文。可从一次性授权剪贴板、用户选择的导出文件或公开网页地址预览并导入对话；导入会限制大小、压缩包展开量和危险链接，不记录原始剪贴板内容
-- ⚡ **按需加载与启动探针（v2.2.4）**：先打开阅读界面，再在用户实际使用时加载转换、OCR、网页或 AI 模块；启动探针只输出里程碑与版本，不包含文档路径或内容
-- 🔄 **万物转 MD（v2.2.9 升级 LaTeX 支持）**：docx / pptx / xlsx / pdf / html / csv / json / tex 等转为 Markdown；单文件或批量（多选 / 整文件夹）一键转换，结果自动保存到源目录同名 `.md` 并直接以新标签页打开；docx 走专用解析（OMML 公式转 LaTeX、标题、表格、等宽代码块），pdf 走专用解析（表格还原 + 公式启发式），tex 走专用 LaTeX ⇄ MD 纯 Python 引擎；输出经严格校验
+- 🤖 **AI 助手与对话导入**：官方预设 + 可增删改的自定义连接；API Key 仅本机保存且配置接口不回传明文。可从一次性授权剪贴板、用户选择的导出文件或公开网页地址预览并导入对话
+- 🔄 **万物转 MD**：docx / pptx / xlsx / pdf / html / csv / json / tex 等转为 Markdown；单文件或批量（多选 / 整文件夹）一键转换，结果自动保存到源目录同名 `.md` 并直接以新标签页打开
 - 🔍 **扫描转 MD（OCR）**：Windows 使用 WinRT、macOS 使用 Vision，均为系统原生离线识别；剪贴板截图一键启动 OCR 提取排版文字
-- 🌐 **网页转 MD（v2.2.9 极简交互与双动作卡片）**：Trafilatura 双级抽取，静态正文不足时自动使用系统 WebView 内核 + 离线 Defuddle / Mozilla Readability 动态渲染；同站 1–30 页可滚轮/步进微调，提供剪贴板一键粘贴网址与边缘化局域网授权
-- 📄 **独立文件图标**：Windows 文件关联使用简约的 Markdown 文档图标，应用 Logo 仅用于 ReadMD 程序和快捷方式
-- ✏️ **主动编辑（v2.2.0）**：单行分组工具栏、可搜索命令面板和分类公式选择器；实时预览支持上下左右停靠及拖拽分隔；图片编辑支持八向裁剪、任意角度、翻转、画布缩放/平移、输出尺寸与撤销重做
+- 🌐 **网页转 MD**：Trafilatura 双级抽取，静态正文不足时自动使用系统 WebView 内核 + 离线 Defuddle / Mozilla Readability 动态渲染
 - 📱 **移动端共享**：开启局域网共享后，手机扫码在同一 Wi-Fi 下阅读 / 转 MD / OCR / AI（随机令牌鉴权）
-- 📑 **阅读体验**：多标签页系统、未保存修改确认弹窗、目录侧栏（滚动高亮）、全文搜索、三主题、字号缩放、打印 / 导出 PDF、文件夹浏览、大文档增量渲染、文件外部修改自动刷新
+- 📑 **阅读体验**：多标签页系统、双击重命名固定扩展名防误触、目录侧栏（滚动高亮）、全文搜索、三主题、字号缩放、打印 / 导出 PDF、文件夹浏览、大文档增量渲染、文件外部修改自动刷新
 - 📤 **导出 PDF / DOCX / HTML / LaTeX**：统一兼容 Windows/macOS 保存对话框路径，支持一键导出排版完备的 LaTeX (.tex) 论文源码
-- 📝 **文件重命名**：打开本地文件后，点击顶栏文件名或按 F2 可直接重命名，自动同步最近文件和本地历史引用
 - 🛠 **自动修正**：表格缺分隔行 / 列数不齐、未闭合 `**` `__` `*`、未闭合 `$` `$$`、`#标题` 缺空格、BOM、CRLF 等，逐处列出修改
-- 🖥 **默认打开方式**：可设为 Windows 默认 `.md` 应用（当前用户级，无需管理员）
 
 ## 🚀 快速开始
 
@@ -60,16 +74,124 @@
 
 | 平台 / 类型 | 一键直接下载 | 说明 |
 | :--- | :--- | :--- |
-| 🪟 **Windows 安装版** | [⬇️ **ReadMDSetup-v2.2.9.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.2.9.exe) | 动画安装向导，可自动关联 `.md` 为默认打开方式；已安装时运行即平滑升级（未签名） |
-| 💼 **Windows 便携版** | [⬇️ **ReadMD-portable-v2.2.9.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.2.9.exe) | 免安装绿色版，解压即用，随身携带（未签名） |
-| 🍏 **macOS Apple Silicon** | [⬇️ **ReadMD-macos-arm64-v2.2.9.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.2.9.zip) | 适用于 M1 / M2 / M3 / M4 系列芯片 Mac 原生构建（未签名） |
-| 💻 **macOS Intel** | [⬇️ **ReadMD-macos-x64-v2.2.9.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.2.9.zip) | 适用于 Intel 处理器 Mac 原生构建（未签名） |
-| 🪟 **Win7 兼容版** | [⬇️ **ReadMDSetup-2.2.9-win7-x64.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-2.2.9-win7-x64.exe) | 专为 Windows 7 SP1 x64 环境优化的兼容安装包 |
+| 🪟 **Windows 安装版** | [⬇️ **ReadMDSetup-v2.3.0.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.0.exe) | 动画安装向导，可自动关联 `.md` 为默认打开方式；已安装时运行即平滑升级（未签名） |
+| 💼 **Windows 便携版** | [⬇️ **ReadMD-portable-v2.3.0.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.0.exe) | 免安装绿色版，解压即用，随身携带（未签名） |
+| 🍏 **macOS Apple Silicon** | [⬇️ **ReadMD-macos-arm64-v2.3.0.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.0.zip) | 适用于 M1 / M2 / M3 / M4 系列芯片 Mac 原生构建（未签名） |
+| 💻 **macOS Intel** | [⬇️ **ReadMD-macos-x64-v2.3.0.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.0.zip) | 适用于 Intel 处理器 Mac 原生构建（未签名） |
+| 🧩 **VSCode 插件离线包** | [⬇️ **readmd-vscode-2.3.0.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.0.vsix) | VSCode 扩展安装包，支持双向同步预览与一键格式自愈修复 |
 | 🔐 **SHA-256 清单** | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | 全量发布文件的 SHA-256 完整性校验清单 |
 
 > 安装包自带 `ReadMDUninstall.exe` 卸载器，卸载时仅移除安装器创建的关联与文件，不动你的文档与配置。
 >
-> v2.2.9 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。所有发布包均未签名：Windows 如出现 SmartScreen，请先核验 SHA-256 后通过“更多信息 → 仍要运行”；macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动请在 Finder 中右键 `ReadMD.app` →“打开”。
+> v2.3.0 在同一个 Release 中提供 Windows 安装版/便携版及 Intel/Apple Silicon macOS 包。所有发布包均未签名：Windows 如出现 SmartScreen，请先核验 SHA-256 后通过“更多信息 → 仍要运行”；macOS 包不包含 WinRT 或 Windows 安装器依赖，首次启动请在 Finder 中右键 `ReadMD.app` →“打开”。
+
+---
+
+## 🧩 VSCode 插件极速安装与使用指南
+
+ReadMD 官方 VSCode 扩展为 Visual Studio Code 带来原汁原味的 ReadMD 极简双向预览、格式自愈修复与 LaTeX 转换能力。
+
+### 安装方式一：VSCode 界面一键安装（推荐）
+1. 下载 [`readmd-vscode-2.3.0.vsix`](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.0.vsix)；
+2. 在 VSCode 中按快捷键 <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd>（Mac 上为 <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd>）打开扩展面板；
+3. 点击扩展面板右上角的 **`...` 更多操作** 按钮，选择 **从 VSIX 安装... (Install from VSIX...)**；
+4. 选中下载的 `.vsix` 文件即可秒级完成安装！
+
+### 安装方式二：命令行一键安装
+直接在终端中运行：
+```bash
+code --install-extension readmd-vscode-2.3.0.vsix
+```
+
+### 核心功能与使用：
+- **📖 实时同步预览**：打开任一 Markdown 文档，点击右上角书本图标或按命令面板 `ReadMD: Open Custom Preview`，在侧边栏开启与 ReadMD 样式完全一致的高清预览；
+- **🛠️ 一键格式自愈修复**：在 Markdown 编辑器中右键选择 `ReadMD: Auto-Fix Markdown Formatting Errors`，自动诊断并修复公式断裂、表格错位、代码块未闭合等格式问题；
+- **📐 转换为 LaTeX 论文**：右键选择 `ReadMD: Convert Current Markdown to LaTeX`，将 Markdown 一键生成标准学术 LaTeX 源码。
+
+---
+
+## 🤖 MCP (Model Context Protocol) Server 接入指南
+
+ReadMD 内置标准 FastMCP (stdio) 服务，赋能 Claude Desktop、Cursor、Antigravity、VSCode (Cline / Continue / Roo Code) 等 AI 编程助手直接调用 ReadMD 核心文档处理与自愈能力。
+
+### 客户端配置示例
+
+#### 1. Claude Desktop 配置
+编辑 `%APPDATA%\Claude\claude_desktop_config.json`（Windows）或 `~/Library/Application Support/Claude/claude_desktop_config.json`（macOS）：
+
+```json
+{
+  "mcpServers": {
+    "readmd": {
+      "command": "python",
+      "args": ["/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"]
+    }
+  }
+}
+```
+
+#### 2. Cursor / VSCode Cline 配置
+在 Cursor MCP 设置或 Cline MCP Settings 中添加：
+- **Name**: `readmd`
+- **Type**: `command`
+- **Command**: `python`
+- **Args**: `["/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"]`
+
+#### 🛠️ 提供的核心 MCP Tools 清单：
+| 工具名称 | 功能描述 |
+| :--- | :--- |
+| **`readmd_fix_markdown`** | 自动修复 Markdown 文本语法与格式错误（公式、表格、缩进、转义等） |
+| **`readmd_convert_to_markdown`** | 本地各种格式（Word/PDF/PPT/Excel/LaTeX/HTML/EPUB）转为干净 Markdown |
+| **`readmd_latex_to_md`** | 将 LaTeX 论文或公式源码精确转为标准 Markdown |
+| **`readmd_md_to_latex`** | 将 Markdown 编译为排版标准的独立学术 LaTeX 源码（含 booktabs 表格） |
+| **`readmd_parse_bibtex`** | 扫描并解析 BibTeX (`.bib`) 参考文献库，提取结构化论文引用元数据 |
+
+---
+
+## 📐 LaTeX PRO 学术增强与 BibTeX 引用
+
+ReadMD v2.3.0 专为科研与学术论文写作深度优化：
+1. **BibTeX 零配置自动扫描**：
+   - 当打开任一 Markdown 文档时，ReadMD 会自动扫描同目录下的 `.bib` 参考文献数据库；
+   - 文中书写 `[@vaswani2017attention]` 或 `@knuth1984texbook` 会自动渲染为学术引用徽章；
+   - **浮动卡片交互**：鼠标悬停引用徽章，弹出包含论文标题、作者、年份、期刊、DOI 链接及一键复制 BibTeX 的浮动交互卡片；
+   - 文档末尾自动汇总生成排版规范的参考文献列表 (References)。
+2. **学术定理 Callout 盒子**：
+   - `::: theorem [柯西-施瓦茨不等式]` -> 定理高亮块
+   - `::: lemma [引理名称]` -> 引理高亮块
+   - `::: proof` -> 证明块（自动附带文末 Q.E.D. ■ 徽标）
+   - `::: definition [流形]` -> 数学概念定义块
+
+---
+
+## 🧘 Editor Studio PRO 极致编辑体验
+
+- **Zen Mode 沉浸禅模式**：按 <kbd>F11</kbd> 或点击编辑栏「🧘 禅模式」，全屏隐藏所有工具栏与干扰元素，支持按 <kbd>Esc</kbd> 或右上角退出按钮随时平滑复原；
+- **10x10 可视化表格网格设计器**：点击「插入表格」，鼠标在 10×10 网格上自由滑选行列，一键生成对齐工整的 Markdown 表格骨架；
+- **智能 Excel / CSV 粘贴转换**：从 Excel、WPS、Numbers 或网页直接复制多行多列数据，在编辑器中粘贴时自动识别并转为标准 Markdown 表格；
+- **实时文档统计看板**：编辑栏实时计算中文字数、西文词数与预计阅读时间。
+
+---
+
+## 🌍 全球 46+ 语种 i18n 体系与多模型自动翻译
+
+ReadMD 支持全球 46 种语言，初次启动自动根据操作系统区域语言初始化。
+
+### 自动化翻译工具链 (`tools/i18n_sync.py`)
+无需人工繁琐维护多语言，支持调用 Google Translate 或高性价比 AI 小模型（DeepSeek-V3 / Qwen-Max / Mimo / GLM）进行增量词条自动翻译与校验：
+
+```bash
+# 仅校验 46 语种字典完整性
+python tools/i18n_sync.py --validate-only
+
+# 使用免费 Google Translate 自动补齐缺失词条
+python tools/i18n_sync.py --provider google
+
+# 使用 DeepSeek / Qwen / Mimo 自动翻译
+python tools/i18n_sync.py --provider openai --api-key YOUR_KEY --model deepseek-chat
+```
+
+
 
 
 

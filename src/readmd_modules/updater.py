@@ -140,18 +140,61 @@ def match_release_asset(assets, flavor=None):
     return selected, sha_asset
 
 
-def check_update(current_version, timeout=8):
-    """请求 GitHub API 获取最新 Release 信息，并返回更新详情。"""
+def clean_old_update_artifacts():
+    """扫描并清理 %TEMP% 中残留的历史更新安装包与更新脚本。"""
+    temp_dir = tempfile.gettempdir()
     try:
-        req = urllib.request.Request(GITHUB_API_LATEST)
-        req.add_header('User-Agent', f'ReadMD/{current_version}')
-        req.add_header('Accept', 'application/vnd.github.v3+json')
-        
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            if resp.status != 200:
-                return {'ok': False, 'error': f'HTTP {resp.status}'}
-            data = json.loads(resp.read().decode('utf-8'))
+        now = time.time()
+        for fname in os.listdir(temp_dir):
+            if (fname.startswith('ReadMDSetup') or fname.startswith('ReadMD-portable')) and fname.endswith('.exe'):
+                fp = os.path.join(temp_dir, fname)
+                try:
+                    if now - os.path.getmtime(fp) > 600:
+                        os.unlink(fp)
+                except Exception:
+                    pass
+            elif fname in ('readmd_update.bat', 'readmd_installer.bat'):
+                fp = os.path.join(temp_dir, fname)
+                try:
+                    os.unlink(fp)
+                except Exception:
+                    pass
+    except Exception as e:
+        logging.debug('Clean old update artifacts failed: %s', e)
 
+
+def _fetch_release_json(url, timeout=5):
+    req = urllib.request.Request(url)
+    req.add_header('User-Agent', 'ReadMD-Updater')
+    req.add_header('Accept', 'application/vnd.github.v3+json')
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        if resp.status == 200:
+            return json.loads(resp.read().decode('utf-8'))
+    return None
+
+
+def check_update(current_version, timeout=4):
+    """请求 GitHub API 获取最新 Release 信息（支持国内加速镜像自动降级），并返回更新详情。"""
+    data = None
+    urls_to_try = [
+        GITHUB_API_LATEST,
+        'https://ghfast.top/' + GITHUB_API_LATEST,
+        'https://ghproxy.net/' + GITHUB_API_LATEST,
+    ]
+    last_err = ''
+    for url in urls_to_try:
+        try:
+            data = _fetch_release_json(url, timeout=timeout)
+            if data and data.get('tag_name'):
+                break
+        except Exception as e:
+            last_err = str(e)
+            continue
+
+    if not data:
+        return {'ok': False, 'error': last_err or '无法连接到更新服务器，请检查网络'}
+
+    try:
         latest_tag = data.get('tag_name', '')
         has_update = is_newer_version(latest_tag, current_version)
         flavor = detect_app_flavor()
@@ -176,7 +219,7 @@ def check_update(current_version, timeout=8):
             'sha_url': sha_asset.get('browser_download_url') if sha_asset else None,
         }
     except Exception as e:
-        logging.warning('Check update failed: %s', e)
+        logging.warning('Check update parse failed: %s', e)
         return {'ok': False, 'error': str(e)}
 
 
@@ -236,7 +279,6 @@ def download_asset_thread(download_url, target_filename, expected_sha=None, use_
     global _download_state
     url = download_url
     if use_mirror:
-        # 使用加速前缀
         url = MIRROR_PREFIXES[0] + download_url
 
     temp_dir = tempfile.gettempdir()
@@ -337,7 +379,7 @@ def start_download_update(download_url, target_filename, expected_sha=None, use_
 
 
 def apply_update(file_path=None, flavor=None):
-    """执行本地更新并准备重启。"""
+    """执行本地更新并安全退出当前程序以释放文件锁。"""
     with _download_lock:
         path = file_path or _download_state.get('target_file')
     if not path or not os.path.isfile(path):
@@ -346,13 +388,20 @@ def apply_update(file_path=None, flavor=None):
     if flavor is None:
         flavor = detect_app_flavor()
 
+    def _schedule_exit():
+        def _do_exit():
+            time.sleep(0.6)
+            os._exit(0)
+        threading.Thread(target=_do_exit, daemon=True).start()
+
     try:
         if sys.platform == 'win32':
             if flavor == 'win_installer':
-                # 运行安装包进行覆盖安装
-                cmd = f'"{path}" /UPDATE'
+                # 运行安装包进行覆盖安装，并退出当前进程
+                cmd = f'"{path}"'
                 subprocess.Popen(cmd, shell=True)
-                return True, '正在启动安装器…'
+                _schedule_exit()
+                return True, '正在启动安装器并重启…'
             elif flavor == 'win_portable':
                 # 便携版热替换脚本
                 current_exe = sys.executable
@@ -371,17 +420,19 @@ del "%~f0"
                 with open(bat_path, 'w', encoding='ansi', errors='ignore') as f:
                     f.write(bat_content)
                 subprocess.Popen(f'cmd.exe /c "{bat_path}"', shell=True)
-                return True, '正在替换便携版程序…'
+                _schedule_exit()
+                return True, '正在替换便携版程序并重启…'
             else:
-                # 源码/开发模式下直接启动新安装器
                 subprocess.Popen(f'"{path}"', shell=True)
+                _schedule_exit()
                 return True, '已启动更新程序'
         elif sys.platform == 'darwin':
-            # macOS 解压并打开
             subprocess.Popen(['open', path])
+            _schedule_exit()
             return True, '已打开更新包'
         else:
             return False, '当前平台暂不支持自动替换，请手动解压运行'
     except Exception as e:
         logging.exception('Apply update failed: %s', e)
         return False, str(e)
+

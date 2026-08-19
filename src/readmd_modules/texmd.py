@@ -499,3 +499,9 @@ def latex_to_md(tex_content: str) -> str:
         fm_header = '---\n' + '\n'.join(frontmatter) + '\n---\n\n'
         return fm_header + cleaned_body
     return cleaned_body
+
+
+# Aliases for compatibility
+latex_to_markdown = latex_to_md
+markdown_to_latex = md_to_latex
+

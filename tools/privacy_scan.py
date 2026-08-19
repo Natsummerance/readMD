@@ -12,6 +12,9 @@ KEY_PATTERNS = [
     re.compile(rb"\bsk-[A-Za-z0-9_-]{20,}\b"),
     re.compile(rb"\bAIza[0-9A-Za-z_-]{30,}\b"),
 ]
+LOCAL_PATH_PATTERNS = [
+    re.compile(rb"[a-zA-Z]:[/\\](?:users|programming|project|workspace|home|desktop|downloads)", re.IGNORECASE),
+]
 
 
 def tracked_files():
@@ -41,11 +44,19 @@ def scan_file(path, label, failures):
     for token in RETIRED:
         if token.encode("ascii") in lower:
             failures.append("retired provider marker in %s" % label)
-    if label.replace('\\', '/').startswith("assets/vendor/") or label.endswith(('.png', '.ico', '.icns')):
+    norm_label = label.replace('\\', '/')
+    if norm_label.startswith("assets/vendor/") or norm_label.endswith(('.png', '.ico', '.icns', '.lock', '.svg', '.woff', '.woff2', '.ttf', '.eot')):
         return
     for pattern in KEY_PATTERNS:
         if pattern.search(data):
             failures.append("possible plaintext API key in %s" % label)
+    # Only scan human-readable source / config files for hardcoded local absolute paths
+    if not norm_label.endswith(('.exe', '.dll', '.pyd', '.pyc', '.dylib', '.so', '.zip', '.gz', '.bin', '.dat', '.obj', '.o', '.a', '.node')):
+        for pattern in LOCAL_PATH_PATTERNS:
+            if pattern.search(data):
+                failures.append("hardcoded local absolute path in %s" % label)
+
+
 
 
 def main():

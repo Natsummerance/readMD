@@ -88,7 +88,48 @@ def normalize_dialog_path(value, extension=''):
     return os.path.abspath(path)
 
 
+def get_system_language():
+
+    """获取当前系统默认语言代码，如 'zh-CN', 'en', 'ja', 'ko' 等。"""
+    try:
+        if sys.platform == 'win32':
+            import ctypes
+            lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+            primary = lang_id & 0x3ff
+            sub = (lang_id >> 10) & 0x3f
+            if primary == 0x04:
+                if sub in (0x02, 0x04):
+                    return 'zh-HK' if sub == 0x04 else 'zh-TW'
+                return 'zh-CN'
+            lang_map = {
+                0x09: 'en', 0x11: 'ja', 0x12: 'ko', 0x0c: 'fr', 0x07: 'de',
+                0x0a: 'es', 0x16: 'pt', 0x19: 'ru', 0x10: 'it', 0x01: 'ar',
+                0x0d: 'he', 0x1e: 'th', 0x2a: 'vi', 0x21: 'id', 0x39: 'hi',
+                0x45: 'bn', 0x55: 'my', 0x54: 'lo', 0x53: 'km', 0x3e: 'ms',
+                0x06: 'da', 0x0b: 'fi', 0x14: 'no', 0x1d: 'sv', 0x13: 'nl',
+                0x1a: 'hr', 0x18: 'ro', 0x61: 'ne', 0x24: 'sl', 0x1f: 'tr',
+                0x22: 'uk', 0x08: 'el', 0x0e: 'hu'
+            }
+            if primary in lang_map:
+                return lang_map[primary]
+    except Exception:
+        pass
+
+    try:
+        import locale
+        loc = locale.getdefaultlocale()[0]
+        if loc:
+            loc = loc.replace('_', '-')
+            if loc.startswith('zh'):
+                return 'zh-HK' if 'HK' in loc or 'Hant' in loc else ('zh-TW' if 'TW' in loc else 'zh-CN')
+            return loc.split('-')[0]
+    except Exception:
+        pass
+    return 'zh-CN'
+
+
 def _bundle_version():
+
     """frozen 构建内嵌 version.txt（Win7 链：2.1.1 Beta）。"""
     try:
         if getattr(sys, 'frozen', False):
@@ -104,7 +145,8 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_BUILD_VERSION')
-           or _bundle_version() or '2.2.9')
+           or _bundle_version() or '2.3.0')
+
 
 
 
@@ -698,13 +740,17 @@ class Handler(BaseHTTPRequestHandler):
         qs = parse_qs(u.query)
         if path in ('/', '/index.html'):
             self._send_index()
-        elif path.startswith('/assets/'):
-            rel = path[len('/assets/'):]
+        elif path.startswith('/assets/') or path.startswith('/i18n/'):
+            if path.startswith('/assets/'):
+                rel = path[len('/assets/'):]
+            else:
+                rel = path.lstrip('/')
             fp = os.path.normpath(os.path.join(APP_DIR, 'assets', rel))
             base = os.path.normpath(os.path.join(APP_DIR, 'assets'))
             if not fp.startswith(base):
                 self._send(403, 'text/plain; charset=utf-8', b'forbidden')
                 return
+
             mime = mimetypes.guess_type(fp)[0] or 'application/octet-stream'
             if mime.startswith('text/') or mime in ('application/javascript', 'application/json'):
                 mime += '; charset=utf-8'
@@ -777,7 +823,13 @@ class Handler(BaseHTTPRequestHandler):
             self._api_update_cancel()
         elif path == '/api/update/apply':
             self._api_update_apply()
+        elif path == '/api/system/language':
+            self._api_system_language()
+        elif path == '/api/bibtex':
+            self._api_bibtex(qs)
         elif path == '/api/ping':
+
+
             self._send_json(200, {'ok': self._api_ping(qs)})
 
         elif path == '/api/control/open':
@@ -910,7 +962,24 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             self._send_json(500, {'ok': False, 'error': str(e)})
 
+    def _api_system_language(self):
+        try:
+            self._send_json(200, {'ok': True, 'language': get_system_language()})
+        except Exception as e:
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
+    def _api_bibtex(self, qs):
+        try:
+            from src.readmd_modules import bibtex
+            p = unquote(qs.get('p', [''])[0])
+            res = bibtex.find_and_load_bib_for_file(p)
+            self._send_json(200, {'ok': True, 'citations': res})
+        except Exception as e:
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
     def _api_ping(self, qs):
+
+
         t = qs.get('t', [''])[0]
         return bool(t) and t == _read_instance().get('token', '')
 
@@ -2441,7 +2510,19 @@ class Api(object):
         ok, msg = updater.apply_update(file_path, flavor)
         return {'ok': ok, 'message': msg}
 
+    def get_system_language(self):
+        return get_system_language()
+
+    def get_bibtex(self, file_path):
+        try:
+            from src.readmd_modules import bibtex
+            return bibtex.find_and_load_bib_for_file(file_path)
+        except Exception:
+            return {}
+
     def get_settings(self):
+
+
 
         return load_json(SETTINGS_FILE, {})
 
@@ -2971,7 +3052,13 @@ def main():
     if server.server_port == CONTROL_PORT:
         _write_instance(CONTROL_PORT, secrets.token_urlsafe(16))
     milestone('boot', 'server_up')
+    try:
+        from src.readmd_modules import updater
+        updater.clean_old_update_artifacts()
+    except Exception:
+        pass
     if args.share:
+
         d = start_lan_server()
         if d.get('ok'):
             safe_print('局域网共享已开启：%s' % d.get('url'))

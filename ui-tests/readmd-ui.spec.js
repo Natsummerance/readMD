@@ -481,4 +481,47 @@ test('tab inline rename fixes extension and expands space by folding sibling tab
   await expect(page.locator('#doc-tabs-bar')).not.toHaveClass(/tab-renaming-mode/);
 });
 
+test('v2.3.0 i18n language modal and switching', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => window.i18n && typeof window.i18n.openModal === 'function');
+
+  // Open language modal
+  await page.evaluate(() => i18n.openModal());
+  await expect(page.locator('#lang-modal')).toBeVisible();
+
+  // Search filter
+  await page.locator('#lang-search-input').fill('English');
+  await expect(page.locator('#lang-grid')).toContainText('English');
+
+  // Switch language
+  await page.evaluate(() => i18n.setLanguage('en'));
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page.locator('#btn-more')).toHaveAttribute('title', 'More Features');
+
+  // Close modal
+  await page.evaluate(() => i18n.closeModal());
+  await expect(page.locator('#lang-modal')).toBeHidden();
+});
+
+test('v2.3.0 Zen Mode and Table Designer', async ({ page }) => {
+  await enterEdit(page);
+
+  // Toggle Zen Mode
+  await page.evaluate(() => toggleZenMode(true));
+  await expect(page.locator('body')).toHaveClass(/zen-mode/);
+  await expect(page.locator('#zen-exit-btn')).toBeVisible();
+
+  await page.evaluate(() => toggleZenMode(false));
+  await expect(page.locator('body')).not.toHaveClass(/zen-mode/);
+
+  // Open Table Modal
+  await page.evaluate(() => openTableModal());
+  await expect(page.locator('#table-modal')).toBeVisible();
+  await expect(page.locator('.table-grid-cell')).toHaveCount(100);
+
+  await page.evaluate(() => closeTableModal());
+  await expect(page.locator('#table-modal')).toBeHidden();
+});
+
+
 

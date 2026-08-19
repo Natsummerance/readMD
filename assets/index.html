@@ -55,7 +55,8 @@
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
       <span class="tb-label">AI</span>
     </button>
-    <button id="btn-more" class="tb-btn icon" title="更多功能" aria-label="更多功能" aria-haspopup="true">
+    <button id="btn-more" class="tb-btn icon" title="更多功能" aria-label="更多功能" data-i18n-title="toolbar.more" aria-haspopup="true">
+
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
     </button>
     <div id="more-menu" class="more-menu">
@@ -67,7 +68,8 @@
       <button id="btn-assoc" class="more-item"><span>设为默认</span><em>.md 打开方式</em></button>
       <button id="btn-share" class="more-item"><span>共享</span><em>手机扫码阅读</em></button>
       <button id="btn-fix" class="more-item"><span>修复详情</span><em>本次自动修正</em></button>
-      <button id="btn-check-update" class="more-item"><span>检查更新</span><em>发现新版本</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
+      <button id="btn-lang" class="more-item"><span data-i18n="app.language">语言设置</span><em id="lang-current-label">简体中文</em></button>
+      <button id="btn-check-update" class="more-item"><span data-i18n="app.checkUpdate">检查更新</span><em>发现新版本</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
     </div>
 
   </div>
@@ -76,7 +78,7 @@
 
 <div id="search-bar" class="hidden">
 
-  <input id="search-input" type="text" placeholder="在文档中搜索...">
+  <input id="search-input" type="text" placeholder="在文档中搜索..." data-i18n-placeholder="search.placeholder">
   <span id="search-count" class="search-count"></span>
   <button id="search-prev" class="tb-btn" title="上一个 (Shift+Enter)">&#8593;</button>
   <button id="search-next" class="tb-btn" title="下一个 (Enter)">&#8595;</button>
@@ -85,18 +87,19 @@
 
 <div id="edit-bar" class="hidden">
   <div class="md-tool" id="md-tool">
-    <button class="md-tool-btn" data-md="bold" title="加粗：**文本**">B</button>
+    <button class="md-tool-btn" data-md="bold" title="加粗：**文本**" data-i18n="editor.bold">加粗</button>
     <button class="md-tool-btn" data-md="italic" title="斜体：*文本*"><i>I</i></button>
-    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-text-menu">文本⌄</button>
+    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-text-menu" data-i18n="editor.text">文本⌄</button>
       <div id="md-text-menu" class="md-menu hidden"><button data-md="strike">删除线</button><button data-md="code">行内代码</button><button data-md="link">链接</button></div></div>
-    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-structure-menu">结构⌄</button>
+    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-structure-menu" data-i18n="editor.structure">结构⌄</button>
       <div id="md-structure-menu" class="md-menu hidden"><button data-md="h2">标题</button><button data-md="quote">引用</button><button data-md="list">无序列表</button><button data-md="ordered">有序列表</button><button data-md="task">任务列表</button><button data-md="codeblock">代码块</button><button data-md="hr">分隔线</button></div></div>
-    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-insert-menu">插入⌄</button>
-      <div id="md-insert-menu" class="md-menu hidden"><button data-md="image">图片</button><button data-md="table">表格</button><button data-md="link">链接</button></div></div>
-    <button id="formula-open" class="md-tool-btn md-group" title="公式选择器">∑ 公式</button>
+    <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-insert-menu" data-i18n="editor.insert">插入⌄</button>
+      <div id="md-insert-menu" class="md-menu hidden"><button data-md="image">图片</button><button id="btn-insert-table" data-md="table">表格</button><button data-md="link">链接</button></div></div>
+    <button id="formula-open" class="md-tool-btn md-group" title="公式选择器" data-i18n="editor.formula">∑ 公式</button>
     <button id="md-command-open" class="md-tool-btn" title="命令面板 (Ctrl/Cmd+Shift+P)">⌘</button>
+    <button id="btn-zen-mode" class="md-tool-btn" title="禅模式 / 专注模式 (F11)" data-i18n="editor.zenMode">禅模式</button>
   </div>
-  <span class="edit-tip">Ctrl+S 保存 · Esc 取消</span>
+  <span class="edit-tip"><span id="edit-doc-stats">0 字 · 阅读约 1 分钟</span> · Ctrl+S 保存 · Esc 取消</span>
   <div class="edit-actions-right">
     <button id="edit-undo" class="md-tool-btn icon" title="撤销 (Ctrl+Z)" aria-label="撤销">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14L4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
@@ -107,6 +110,7 @@
     <div class="pv-ctl md-menu-wrap" aria-label="预览布局">
       <button id="pv-trigger" class="md-tool-btn md-group" aria-haspopup="true" aria-expanded="false">预览：无⌄</button>
       <div id="pv-menu" class="pv-menu hidden" role="menu">
+
         <div class="pv-grid" aria-label="预览停靠方向">
           <span></span><button class="pv-btn" data-pv="top" title="上方预览">↑</button><button class="pv-btn" data-pv="none" title="关闭预览">×</button>
           <button class="pv-btn" data-pv="left" title="左侧预览">←</button><span class="pv-center">预览</span><button class="pv-btn" data-pv="right" title="右侧预览">→</button>
@@ -697,6 +701,37 @@
   </div>
 </div>
 
+<!-- 语言选择对话框 -->
+<div id="lang-modal" class="modal hidden">
+  <div class="modal-dialog lang-modal-dialog">
+    <div class="modal-header">
+      <h3 data-i18n="lang.title">选择界面语言 (Language)</h3>
+      <button class="modal-close" onclick="i18n.closeModal()">✕</button>
+    </div>
+    <div class="lang-search-wrap">
+      <input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." data-i18n-placeholder="lang.search" oninput="i18n.renderLanguageGrid(this.value)">
+    </div>
+    <div id="lang-grid" class="lang-grid-container"></div>
+  </div>
+</div>
+
+<!-- 插入表格设计器对话框 -->
+<div id="table-modal" class="modal hidden">
+  <div class="modal-dialog" style="max-width: 320px;">
+    <div class="modal-header">
+      <h3 data-i18n="editor.table">插入表格</h3>
+      <button class="modal-close" onclick="closeTableModal()">✕</button>
+    </div>
+    <div style="padding: 12px 16px; text-align: center;">
+      <div id="table-grid-picker" class="table-grid-picker"></div>
+      <div id="table-grid-label" class="table-grid-label">3 × 3 表格</div>
+    </div>
+  </div>
+</div>
+
+<!-- 禅模式退出浮动按钮 -->
+<button id="zen-exit-btn" class="zen-exit-btn" onclick="toggleZenMode(false)">退出禅模式 (F11 / Esc)</button>
+
 <footer id="statusbar">
   <span id="status-left"></span>
   <span id="status-right"></span>
@@ -705,7 +740,6 @@
     <span class="update-sparkle">✨</span> 新版本 <span id="update-badge-ver"></span>
   </button>
   <button id="btn-home" class="status-btn-home hidden" title="返回主页">
-
     <svg class="status-home-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
     <span>返回主页</span>
   </button>
@@ -716,6 +750,7 @@
 
 <!-- Core Infrastructure -->
 <script src="/assets/js/core/state.js"></script>
+<script src="/assets/js/core/i18n.js"></script>
 <script src="/assets/js/core/settings.js"></script>
 <script src="/assets/js/core/modules.js"></script>
 <script src="/assets/js/core/tabs.js"></script>
@@ -749,5 +784,6 @@
 <script src="/assets/app.js"></script>
 </body>
 </html>
+
 
 

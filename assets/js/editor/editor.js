@@ -55,7 +55,10 @@ function createEditor(doc) {
       CM.keymap.of([CM.indentWithTab, ...CM.closeBracketsKeymap, ...CM.defaultKeymap, ...CM.historyKeymap, ...CM.completionKeymap]),
       CM.EditorView.lineWrapping,
       CM.EditorView.updateListener.of(u => {
-        if (u.docChanged) schedulePreview();
+        if (u.docChanged) {
+          schedulePreview();
+          updateDocStatistics();
+        }
         if (u.selectionSet || u.docChanged) updateCmSelectionToolbar();
       }),
     ],
@@ -69,8 +72,11 @@ function createEditor(doc) {
   });
   cmView.dom.addEventListener('mouseup', () => setTimeout(updateCmSelectionToolbar, 10));
   cmView.dom.addEventListener('keyup', () => setTimeout(updateCmSelectionToolbar, 10));
+  cmView.dom.addEventListener('paste', handleSmartExcelPaste);
+  updateDocStatistics();
   cmView.focus();
   return true;
+
 }
 
 function cmUndo() {
@@ -342,3 +348,165 @@ function renderFormulaPicker() {
 }
 function previewFormula(tex) { const p = $('formula-preview'); p.textContent = '$$' + tex + '$$'; renderMath(p); }
 function insertFormula(tex) { const mode = $('formula-mode').value; closeFormulaModal(); if (!cmView) return; const sel = cmView.state.selection.main; const selected = cmView.state.sliceDoc(sel.from, sel.to); const body = selected || tex; const insert = mode === 'block' ? '\n$$\n' + body + '\n$$\n' : '$' + body + '$'; cmView.dispatch({changes:{from:sel.from,to:sel.to,insert},selection:{anchor:sel.from+insert.length}}); cmView.focus(); }
+
+/* ============================================================
+   Editor Studio PRO: Zen Mode (禅模式) & 表格设计器 & 统计
+   ============================================================ */
+
+let isZenMode = false;
+
+function toggleZenMode(enable) {
+  if (typeof enable === 'boolean') {
+    isZenMode = enable;
+  } else {
+    isZenMode = !isZenMode;
+  }
+  document.body.classList.toggle('zen-mode', isZenMode);
+  if (isZenMode) {
+    showToast('已进入禅模式 (按 F11 或 Esc 退出)', 2000);
+    if (cmView) cmView.focus();
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'F11' && state.editing) {
+    e.preventDefault();
+    toggleZenMode();
+  } else if (e.key === 'Escape' && isZenMode) {
+    toggleZenMode(false);
+  }
+});
+
+/* 实时文档统计与阅读时长 */
+function updateDocStatistics() {
+  const statsEl = $('edit-doc-stats');
+  if (!statsEl) return;
+  const docText = typeof getEditContent === 'function' ? getEditContent() : (cmView ? cmView.state.doc.toString() : ($('edit-area') && $('edit-area').value || ''));
+  if (!docText) {
+    statsEl.textContent = '0 字 · 阅读约 1 分钟';
+    return;
+  }
+
+  const chars = docText.length;
+  // 中文字符 + 西文字数
+  const cjk = (docText.match(/[\u4e00-\u9fa5]/g) || []).length;
+  const nonCjk = docText.replace(/[\u4e00-\u9fa5]/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+  const totalWords = cjk + nonCjk;
+  const minutes = Math.max(1, Math.ceil(totalWords / 300));
+  statsEl.textContent = `${totalWords} 字 · 阅读约 ${minutes} 分钟`;
+}
+
+/* 智能 Excel / CSV 粘贴转 Markdown 表格 */
+function handleSmartExcelPaste(e) {
+  if (!e.clipboardData) return;
+  const text = e.clipboardData.getData('text/plain');
+  if (!text || !text.includes('\t') || !text.includes('\n')) return;
+
+  const lines = text.trim().split(/\r?\n/).map(l => l.split('\t'));
+  if (lines.length < 2 || lines[0].length < 2) return;
+
+  // 确认为多行多列表格数据
+  e.preventDefault();
+  const colCount = Math.max(...lines.map(r => r.length));
+  const mdRows = [];
+  
+  // 表头
+  const headers = lines[0].map(c => c.trim() || '列');
+  while (headers.length < colCount) headers.push('列' + (headers.length + 1));
+  mdRows.push('| ' + headers.join(' | ') + ' |');
+  mdRows.push('| ' + headers.map(() => '---').join(' | ') + ' |');
+
+  // 表体
+  for (let i = 1; i < lines.length; i++) {
+    const row = lines[i].map(c => c.trim().replace(/\|/g, '\\|'));
+    while (row.length < colCount) row.push('');
+    mdRows.push('| ' + row.join(' | ') + ' |');
+  }
+
+  const tableMd = '\n' + mdRows.join('\n') + '\n';
+  if (cmView) {
+    const sel = cmView.state.selection.main;
+    cmView.dispatch({
+      changes: { from: sel.from, to: sel.to, insert: tableMd },
+      selection: { anchor: sel.from + tableMd.length }
+    });
+    cmView.focus();
+  } else if ($('edit-area')) {
+    document.execCommand('insertText', false, tableMd);
+  }
+  showToast(`已将剪贴板中 ${lines.length} 行表格转为 Markdown 表格`, 2000);
+}
+
+/* 交互式表格设计器 */
+let selectedRows = 3;
+let selectedCols = 3;
+
+function openTableModal() {
+  if (!state.editing) return;
+  closeMdPopups();
+  const modal = $('table-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  initTableGridPicker();
+}
+
+function closeTableModal() {
+  const modal = $('table-modal');
+  if (modal) modal.classList.add('hidden');
+  if (cmView) cmView.focus();
+}
+
+function initTableGridPicker() {
+  const picker = $('table-grid-picker');
+  const label = $('table-grid-label');
+  if (!picker) return;
+  picker.innerHTML = '';
+  selectedRows = 3;
+  selectedCols = 3;
+
+  for (let r = 1; r <= 10; r++) {
+    for (let c = 1; c <= 10; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'table-grid-cell' + (r <= 3 && c <= 3 ? ' highlight' : '');
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      cell.addEventListener('mouseenter', () => {
+        selectedRows = r;
+        selectedCols = c;
+        if (label) label.textContent = `${r} 行 × ${c} 列 表格`;
+        picker.querySelectorAll('.table-grid-cell').forEach(el => {
+          const er = +el.dataset.row;
+          const ec = +el.dataset.col;
+          el.classList.toggle('highlight', er <= r && ec <= c);
+        });
+      });
+      cell.addEventListener('click', () => {
+        insertCustomTable(selectedRows, selectedCols);
+        closeTableModal();
+      });
+      picker.appendChild(cell);
+    }
+  }
+}
+
+function insertCustomTable(rows, cols) {
+  const headers = Array.from({ length: cols }, (_, i) => `表头 ${i + 1}`);
+  const sep = Array.from({ length: cols }, () => '---');
+  const mdLines = [
+    '| ' + headers.join(' | ') + ' |',
+    '| ' + sep.join(' | ') + ' |'
+  ];
+  for (let r = 0; r < rows; r++) {
+    const row = Array.from({ length: cols }, () => '单元格');
+    mdLines.push('| ' + row.join(' | ') + ' |');
+  }
+  const tableMd = '\n' + mdLines.join('\n') + '\n';
+  if (cmView) {
+    const sel = cmView.state.selection.main;
+    cmView.dispatch({
+      changes: { from: sel.from, to: sel.to, insert: tableMd },
+      selection: { anchor: sel.from + tableMd.length }
+    });
+    cmView.focus();
+  }
+}

@@ -140,8 +140,10 @@ async function loadFile(path) {
     state.tabs.push(newTab);
     state.activeTabId = newTab.id;
     syncStateFromActiveTab();
+    await loadDocCitations(d.path);
     setFixes(d.fixes || [], d.stats || {});
     renderContent(d.content, d.name);
+
     document.title = d.name + ' - ReadMD';
     setFileTitle(d.name, hasPy, d.path);
     addRecent(d.path);
@@ -213,6 +215,46 @@ function setFixes(fixes, stats) {
 const INCREMENTAL_THRESHOLD = 300 * 1024; // 300KB 以上走增量渲染
 const INCREMENTAL_LINES = 6000;
 
+let currentDocCitations = {};
+
+async function loadDocCitations(filePath) {
+  currentDocCitations = {};
+  if (!filePath) return;
+  try {
+    if (typeof hasPy !== 'undefined' && hasPy && py.get_bibtex) {
+      currentDocCitations = await py.get_bibtex(filePath) || {};
+    } else {
+      const resp = await fetch('/api/bibtex?p=' + encodeURIComponent(filePath));
+      if (resp.ok) {
+        const d = await resp.json();
+        if (d.ok) currentDocCitations = d.citations || {};
+      }
+    }
+  } catch (e) {
+    console.debug('Load bibtex failed:', e);
+  }
+}
+
+function transformAcademicCallouts(src) {
+  if (!src || !src.includes(':::')) return src;
+  const calloutMap = {
+    theorem: { name: 'Theorem', cls: 'academic-theorem' },
+    lemma: { name: 'Lemma', cls: 'academic-lemma' },
+    proof: { name: 'Proof', cls: 'academic-proof' },
+    definition: { name: 'Definition', cls: 'academic-definition' },
+    corollary: { name: 'Corollary', cls: 'academic-corollary' },
+    example: { name: 'Example', cls: 'academic-example' },
+  };
+
+  const re = /:::\s*(theorem|lemma|proof|definition|corollary|example)(?:\s+\[(.*?)\])?\s*\n([\s\S]*?)\n:::/gi;
+  return src.replace(re, (m, type, title, body) => {
+    const info = calloutMap[type.toLowerCase()] || { name: type, cls: 'academic-theorem' };
+    const titleHtml = title ? `<span class="academic-callout-title">${title}</span>` : '';
+    const qed = type.toLowerCase() === 'proof' ? ' <span class="proof-qed">■</span>' : '';
+    return `<div class="academic-callout ${info.cls}"><div class="academic-callout-header"><span class="academic-callout-tag">${info.name}</span>${titleHtml}</div><div class="academic-callout-body">${marked.parse(body.trim())}${qed}</div></div>`;
+  });
+}
+
 function renderContent(content, name) {
   const saved = state.scrollPos[normalizePath(name || state.file || '')] || 0;
   const big = content.length > INCREMENTAL_THRESHOLD || content.split('\n').length > INCREMENTAL_LINES;
@@ -220,13 +262,15 @@ function renderContent(content, name) {
     renderContentIncremental(content, saved);
     return;
   }
-  const prot = protectMath(content);
+  const transformed = transformAcademicCallouts(content);
+  const prot = protectMath(transformed);
   const html = marked.parse(prot.src, { gfm: true, breaks: false });
   const finalHtml = restoreMath(html, prot.saved);
   $('content').innerHTML = '<article class="markdown-body">' + finalHtml + '</article>';
   postProcess();
   if (saved) requestAnimationFrame(() => { $('content').scrollTop = saved; });
 }
+
 
 /* 大文档分块：优先按围栏代码块 / 空行切块，超长块按行硬切 */
 function splitMdBlocks(md) {
@@ -382,15 +426,150 @@ function ensureHeadingIds(body) {
   });
 }
 
+function processBibCitations(body) {
+  if (!body) return;
+  const keys = Object.keys(currentDocCitations);
+  if (!keys.length) return;
+  const usedKeys = new Set();
+
+  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, null, false);
+  const nodesToReplace = [];
+  let node;
+  while ((node = walker.nextNode())) {
+    if (node.parentElement && ['SCRIPT', 'STYLE', 'CODE', 'PRE'].includes(node.parentElement.tagName)) continue;
+    if (/@([a-zA-Z0-9_\-:]+)/.test(node.nodeValue)) {
+      nodesToReplace.push(node);
+    }
+  }
+
+  for (const n of nodesToReplace) {
+    const parent = n.parentNode;
+    if (!parent) continue;
+    const text = n.nodeValue;
+    const replaced = text.replace(/\[@([a-zA-Z0-9_\-:]+)\]|@([a-zA-Z0-9_\-:]+)/g, (match, k1, k2) => {
+      const citeKey = k1 || k2;
+      const entry = currentDocCitations[citeKey];
+      if (!entry) return match;
+      usedKeys.add(citeKey);
+      const label = entry.short_cite || `[${citeKey}]`;
+      return `<span class="bib-cite-badge" data-citekey="${citeKey}">${label}</span>`;
+    });
+    if (replaced !== text) {
+      const temp = document.createElement('span');
+      temp.innerHTML = replaced;
+      while (temp.firstChild) {
+        parent.insertBefore(temp.firstChild, n);
+      }
+      parent.removeChild(n);
+    }
+  }
+
+  body.querySelectorAll('.bib-cite-badge').forEach(badge => {
+    badge.addEventListener('mouseenter', e => showBibHoverCard(e, badge.dataset.citekey));
+    badge.addEventListener('mouseleave', () => scheduleHideBibHoverCard());
+  });
+
+  if (usedKeys.size > 0 && !body.querySelector('.academic-references')) {
+    const refSection = document.createElement('section');
+    refSection.className = 'academic-references';
+    refSection.innerHTML = '<h3>References / 参考文献</h3><ol></ol>';
+    const ol = refSection.querySelector('ol');
+    for (const key of usedKeys) {
+      const entry = currentDocCitations[key];
+      const li = document.createElement('li');
+      li.id = 'ref-' + key;
+      if (entry && entry.full_reference) {
+        li.innerHTML = marked.parseInline(entry.full_reference);
+      } else {
+        li.textContent = key;
+      }
+      ol.appendChild(li);
+    }
+    body.appendChild(refSection);
+  }
+}
+
+let bibCardEl = null;
+let bibHideTimer = null;
+
+function showBibHoverCard(e, key) {
+  if (bibHideTimer) {
+    clearTimeout(bibHideTimer);
+    bibHideTimer = null;
+  }
+  if (bibCardEl && bibCardEl.dataset.key === key) return;
+  hideBibHoverCard();
+
+  const entry = currentDocCitations[key];
+  if (!entry) return;
+
+  bibCardEl = document.createElement('div');
+  bibCardEl.className = 'bib-hover-card';
+  bibCardEl.dataset.key = key;
+  bibCardEl.innerHTML = `
+    <div class="bib-card-title">${entry.title || key}</div>
+    <div class="bib-card-author">${entry.author || ''} ${entry.year ? `(${entry.year})` : ''}</div>
+    <div class="bib-card-journal">${entry.journal || entry.booktitle || ''}</div>
+    <div class="bib-card-actions">
+      ${entry.doi ? `<a class="bib-card-btn" href="https://doi.org/${entry.doi}" target="_blank">DOI</a>` : ''}
+      <button class="bib-card-btn" id="bib-copy-btn">复制 BibTeX</button>
+    </div>
+  `;
+  document.body.appendChild(bibCardEl);
+
+  bibCardEl.addEventListener('mouseenter', () => {
+    if (bibHideTimer) {
+      clearTimeout(bibHideTimer);
+      bibHideTimer = null;
+    }
+  });
+  bibCardEl.addEventListener('mouseleave', () => {
+    scheduleHideBibHoverCard();
+  });
+
+  const rect = e.target.getBoundingClientRect();
+  let top = rect.bottom + window.scrollY + 6;
+  let left = Math.max(10, rect.left + window.scrollX - 20);
+  bibCardEl.style.top = top + 'px';
+  bibCardEl.style.left = left + 'px';
+
+  bibCardEl.querySelector('#bib-copy-btn').addEventListener('click', () => {
+    const bibText = `@${entry.entry_type || 'article'}{${key},\n  title={${entry.title || ''}},\n  author={${entry.author || ''}},\n  year={${entry.year || ''}}\n}`;
+    navigator.clipboard.writeText(bibText);
+    showToast('已复制 BibTeX 引用', 1500);
+  });
+}
+
+function scheduleHideBibHoverCard() {
+  if (bibHideTimer) clearTimeout(bibHideTimer);
+  bibHideTimer = setTimeout(() => {
+    hideBibHoverCard();
+  }, 220);
+}
+
+function hideBibHoverCard() {
+  if (bibHideTimer) {
+    clearTimeout(bibHideTimer);
+    bibHideTimer = null;
+  }
+  if (bibCardEl) {
+    bibCardEl.remove();
+    bibCardEl = null;
+  }
+}
+
+
 function postProcess() {
   const body = document.querySelector('#content .markdown-body');
   if (!body) return;
   ensureHeadingIds(body);
   fixLinks(body);
   fixImages(body);
+  processBibCitations(body);
   buildToc();
   renderMath(body);
 }
+
 
 function resolvePath(baseDir, rel) {
   try {

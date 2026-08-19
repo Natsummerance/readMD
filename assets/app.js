@@ -414,7 +414,8 @@ function bindEvents() {
     $('top-btn').classList.toggle('hidden', $('content').scrollTop < 600);
   });
 
-  /* --- 17. 客户端内版本检查与自动升级 [联动: features/updater.js] --- */
+  /* --- 17. 客户端内版本检查、语言切换与自动升级 [联动: core/i18n.js, features/updater.js] --- */
+  if ($('btn-lang')) $('btn-lang').addEventListener('click', () => { closeMoreMenu(); if (window.i18n) window.i18n.openModal(); });
   if ($('btn-check-update')) $('btn-check-update').addEventListener('click', () => { closeMoreMenu(); checkUpdate(false); });
   if ($('status-update-badge')) $('status-update-badge').addEventListener('click', openUpdateModal);
   if ($('update-close')) $('update-close').addEventListener('click', closeUpdateModal);
@@ -423,6 +424,21 @@ function bindEvents() {
   if ($('btn-update-browser')) $('btn-update-browser').addEventListener('click', () => {
     if (updateInfo && updateInfo.html_url) openExternal(updateInfo.html_url);
     else if (upgradeUrl) openExternal(upgradeUrl);
+  });
+
+  /* --- 17.1 编辑器增强：禅模式与表格设计器 [联动: editor/editor.js] --- */
+  if ($('btn-zen-mode')) $('btn-zen-mode').addEventListener('click', () => toggleZenMode());
+  if ($('btn-insert-table')) $('btn-insert-table').addEventListener('click', () => openTableModal());
+  if ($('lang-modal')) $('lang-modal').addEventListener('click', e => { if (e.target === $('lang-modal')) if (window.i18n) window.i18n.closeModal(); });
+  if ($('table-modal')) $('table-modal').addEventListener('click', e => { if (e.target === $('table-modal')) closeTableModal(); });
+  window.addEventListener('readmd:language-changed', e => {
+    const lang = e.detail.lang;
+    const labelEl = $('lang-current-label');
+    if (labelEl && window.i18n && window.i18n.meta[lang]) {
+      labelEl.textContent = window.i18n.meta[lang].native || lang;
+    }
+    updateStatus();
+    updateDocStatistics();
   });
 
   /* --- 18. 多标签页、全局拖拽与窗口响应 [联动: core/tabs.js, core/dragdrop.js] --- */
@@ -439,11 +455,24 @@ function bindEvents() {
     
     // 模态弹窗 ESC 优先拦截与层级关闭
     if (e.key === 'Escape') {
-      const modal = ['ai-history-modal', 'ai-settings-modal', 'export-preview-modal'].find(id => $(id) && !$(id).classList.contains('hidden'));
-      if (modal) { e.preventDefault(); closeAiModal(modal); if (modal === 'export-preview-modal') $(modal).classList.add('hidden'); return; }
+      const modal = ['ai-history-modal', 'ai-settings-modal', 'export-preview-modal', 'lang-modal', 'table-modal'].find(id => $(id) && !$(id).classList.contains('hidden'));
+      if (modal) {
+        e.preventDefault();
+        closeAiModal(modal);
+        if (modal === 'export-preview-modal') $(modal).classList.add('hidden');
+        if (modal === 'lang-modal' && window.i18n) window.i18n.closeModal();
+        if (modal === 'table-modal') closeTableModal();
+        return;
+      }
+      if (document.body.classList.contains('zen-mode')) {
+        e.preventDefault();
+        toggleZenMode(false);
+        return;
+      }
     }
     
-    if (e.key === 'F2') { e.preventDefault(); openFileRename(); } // F2: 文件重命名
+    if (e.key === 'F11' && state.editing) { e.preventDefault(); toggleZenMode(); }
+    else if (e.key === 'F2') { e.preventDefault(); openFileRename(); } // F2: 文件重命名
     else if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); $('btn-open').click(); } // Ctrl+O: 打开文件
     else if (mod && e.key.toLowerCase() === 'f') { // Ctrl+F: 全文搜索
       e.preventDefault();
@@ -491,11 +520,15 @@ function bindEvents() {
       $('share-modal').classList.add('hidden');
       $('tpl-modal').classList.add('hidden');
       $('convert-modal').classList.add('hidden');
+      if ($('lang-modal')) if (window.i18n) window.i18n.closeModal();
+      if ($('table-modal')) closeTableModal();
       closeMdCommandPalette(); closeFormulaModal(); closeMdPopups();
       stopConvertPoll();
+      if (document.body.classList.contains('zen-mode')) toggleZenMode(false);
       if (state.editing) exitEdit();
     }
   });
+
 
   document.addEventListener('click', closeMdPopups);
 }
@@ -521,7 +554,10 @@ async function init() {
   bindPy();
   // 2. 加载并应用本地持久化设置 (主题/字号/AI配置等)
   await loadSettings();
+  // 2.1 启动 i18n 国际化引擎并自动侦测系统语言
+  if (window.i18n) await window.i18n.init();
   // 3. 缓存欢迎界面骨架 HTML，以便随时通过 goHome() 复原
+
   if ($('content')) state.welcomeHtml = $('content').innerHTML;
   // 4. 执行集中事件绑定
   bindEvents();

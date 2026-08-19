@@ -1,0 +1,81 @@
+{
+  "name": "readmd-vscode",
+  "displayName": "ReadMD for VSCode",
+  "description": "Clean, high-performance Markdown viewer & editor extension with auto-repair, LaTeX PRO, and multi-format conversion.",
+  "version": "2.3.0",
+  "publisher": "Natsummerance",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Natsummerance/readMD.git"
+  },
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other",
+    "Formatters",
+    "Visualization"
+  ],
+  "keywords": [
+    "markdown",
+    "latex",
+    "bibtex",
+    "preview",
+    "readmd"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "readmd.preview",
+        "title": "ReadMD: Open Custom Preview",
+        "icon": "$(book)"
+      },
+      {
+        "command": "readmd.fixCurrentDocument",
+        "title": "ReadMD: Auto-Fix Markdown Formatting Errors",
+        "icon": "$(wrench)"
+      },
+      {
+        "command": "readmd.convertToLatex",
+        "title": "ReadMD: Convert Current Markdown to LaTeX",
+        "icon": "$(file-code)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "readmd.preview",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "readmd.fixCurrentDocument",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "1_modification"
+        },
+        {
+          "command": "readmd.convertToLatex",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "1_modification"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "vsce package --no-dependencies",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "@types/vscode": "^1.80.0",
+    "@vscode/vsce": "^2.24.0",
+    "typescript": "^5.3.0"
+  }
+}
+

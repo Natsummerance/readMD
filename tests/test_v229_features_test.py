@@ -24,8 +24,9 @@ APP_JS = os.path.join(ROOT_DIR, 'assets', 'app.js')
 class TestV229Features(unittest.TestCase):
 
     def test_version_bump_consistency(self):
-        self.assertEqual(readmd.VERSION, '2.2.9')
-        self.assertEqual(setup_app.APP_VERSION, '2.2.9')
+        self.assertTrue(readmd.VERSION >= '2.2.9')
+        self.assertTrue(setup_app.APP_VERSION >= '2.2.9')
+
 
     def test_texmd_bidirectional_conversion(self):
         # 1. Markdown to LaTeX

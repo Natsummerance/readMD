@@ -12,8 +12,9 @@ permissions:
   contents: read
 
 env:
-  READMD_VERSION: '2.2.9'
+  READMD_VERSION: '2.3.0'
   PYTHONUTF8: '1'
+
 
 jobs:
   windows-test:
@@ -132,6 +133,11 @@ jobs:
           if (!(Test-Path 'dist/ReadMD/_internal/assets/vendor/defuddle.LICENSE.txt')) { throw 'Defuddle license missing' }
           if (!(Test-Path 'dist/ReadMD/_internal/assets/js/core/state.js')) { throw 'Modular JS assets missing' }
           python tools/privacy_scan.py dist/ReadMD "dist/ReadMD-portable-v$env:READMD_VERSION.exe" "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
+      - name: Build VSCode extension VSIX
+        working-directory: packages/vscode-extension
+        run: |
+          npm ci
+          npx --yes @vscode/vsce package --no-dependencies --out ../../dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix
       - name: Upload main-branch release candidate
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
@@ -140,6 +146,7 @@ jobs:
           path: |
             dist/ReadMDSetup-v${{ env.READMD_VERSION }}.exe
             dist/ReadMD-portable-v${{ env.READMD_VERSION }}.exe
+            dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix
           if-no-files-found: error
           retention-days: 7
       - name: Upload tagged release assets
@@ -150,6 +157,7 @@ jobs:
           path: |
             dist/ReadMDSetup-v${{ env.READMD_VERSION }}.exe
             dist/ReadMD-portable-v${{ env.READMD_VERSION }}.exe
+            dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix
           if-no-files-found: error
 
   macos-package:
@@ -214,7 +222,7 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Publish ReadMD v2.2.9
+    name: Publish ReadMD v2.3.0
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [windows-package, macos-package]
     runs-on: ubuntu-latest
@@ -233,26 +241,26 @@ jobs:
       - name: Verify version, architecture, resources, privacy and hashes
         run: |
           set -euo pipefail
-          test "$(find release-assets -maxdepth 1 -type f | wc -l)" -eq 4
-          for asset in ReadMDSetup-v2.2.9.exe ReadMD-portable-v2.2.9.exe ReadMD-macos-x64-v2.2.9.zip ReadMD-macos-arm64-v2.2.9.zip; do
+          test "$(find release-assets -maxdepth 1 -type f | wc -l)" -eq 5
+          for asset in ReadMDSetup-v2.3.0.exe ReadMD-portable-v2.3.0.exe ReadMD-macos-x64-v2.3.0.zip ReadMD-macos-arm64-v2.3.0.zip readmd-vscode-2.3.0.vsix; do
             test -s "release-assets/$asset"
           done
-          grep -F "or _bundle_version() or '2.2.9'" readmd.py
-          grep -F "or _bundle_version() or '2.2.9'" installer/setup_app.py
-          grep -F "version='2.2.9'" release/ReadMD-macOS.spec
+          grep -F "or _bundle_version() or '2.3.0'" readmd.py
+          grep -F "or _bundle_version() or '2.3.0'" installer/setup_app.py
+          grep -F "version='2.3.0'" release/ReadMD-macOS.spec
           test -s assets/vendor/defuddle.bundle.js
           test -s assets/vendor/defuddle.LICENSE.txt
           test -s assets/js/core/state.js
           rm -rf verify-macos
           mkdir -p verify-macos/x64 verify-macos/arm64
-          unzip -q release-assets/ReadMD-macos-x64-v2.2.9.zip -d verify-macos/x64
-          unzip -q release-assets/ReadMD-macos-arm64-v2.2.9.zip -d verify-macos/arm64
+          unzip -q release-assets/ReadMD-macos-x64-v2.3.0.zip -d verify-macos/x64
+          unzip -q release-assets/ReadMD-macos-arm64-v2.3.0.zip -d verify-macos/arm64
           python - <<'PY'
           import plistlib
           for arch in ('x64', 'arm64'):
               with open('verify-macos/%s/ReadMD.app/Contents/Info.plist' % arch, 'rb') as handle:
                   info = plistlib.load(handle)
-              assert info['CFBundleShortVersionString'] == '2.2.9', (arch, info)
+              assert info['CFBundleShortVersionString'] == '2.3.0', (arch, info)
           print('macOS bundle versions OK')
           PY
           file verify-macos/x64/ReadMD.app/Contents/MacOS/ReadMD | grep -E 'x86_64|x86-64'
@@ -263,16 +271,19 @@ jobs:
             test -s "verify-macos/$arch/ReadMD.app/Contents/Resources/assets/js/core/state.js"
           done
           python tools/privacy_scan.py release-assets verify-macos
-          (cd release-assets && sha256sum ReadMDSetup-v2.2.9.exe ReadMD-portable-v2.2.9.exe ReadMD-macos-x64-v2.2.9.zip ReadMD-macos-arm64-v2.2.9.zip > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
+          (cd release-assets && sha256sum ReadMDSetup-v2.3.0.exe ReadMD-portable-v2.3.0.exe ReadMD-macos-x64-v2.3.0.zip ReadMD-macos-arm64-v2.3.0.zip readmd-vscode-2.3.0.vsix > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
           cat release-assets/SHA256SUMS.txt >> "$GITHUB_STEP_SUMMARY"
       - uses: softprops/action-gh-release@v2
         with:
-          name: ReadMD v2.2.9
+          name: ReadMD v2.3.0
           body_path: release/release_notes.md
           files: |
-            release-assets/ReadMDSetup-v2.2.9.exe
-            release-assets/ReadMD-portable-v2.2.9.exe
-            release-assets/ReadMD-macos-x64-v2.2.9.zip
-            release-assets/ReadMD-macos-arm64-v2.2.9.zip
+            release-assets/ReadMDSetup-v2.3.0.exe
+            release-assets/ReadMD-portable-v2.3.0.exe
+            release-assets/ReadMD-macos-x64-v2.3.0.zip
+            release-assets/ReadMD-macos-arm64-v2.3.0.zip
+            release-assets/readmd-vscode-2.3.0.vsix
             release-assets/SHA256SUMS.txt
           fail_on_unmatched_files: true
+
+

@@ -1,50 +1,36 @@
-# ReadMD v2.2.9
+# ReadMD v2.3.0
 
 ReadMD 是免费的本地 Markdown 阅读器；不会要求订阅或内置账号。
 
 ## 下载
 
-- Windows 安装版：`ReadMDSetup-v2.2.9.exe`
-- Windows 便携版：`ReadMD-portable-v2.2.9.exe`
-- Intel Mac：`ReadMD-macos-x64-v2.2.9.zip`
-- Apple Silicon Mac：`ReadMD-macos-arm64-v2.2.9.zip`
+- Windows 安装版：`ReadMDSetup-v2.3.0.exe`
+- Windows 便携版：`ReadMD-portable-v2.3.0.exe`
+- Intel Mac：`ReadMD-macos-x64-v2.3.0.zip`
+- Apple Silicon Mac：`ReadMD-macos-arm64-v2.3.0.zip`
 - 校验清单：`SHA256SUMS.txt`
 
 ## 本次更新
 
-1. **前端工程全面模块化重构**：
-   - 彻底拆解巨石前端脚本为 22 个分级分类子模块（`core/`, `reader/`, `editor/`, `features/`），`app.js` 作为集成总线提供完整架构索引、模块地图与开发联动注释。
-2. **标签页拖拽排序与智能重命名**：
-   - **标签拖拽排序**：实现纯净标签页拖拽排序并与全局文件拖入彻底隔离；
-   - **智能折叠腾挪重命名**：双击标签重命名时固定后缀名，正在重命名的标签展开显示完整文件名，并自动折叠压缩兄弟标签腾出空间，重命名后平滑复原。
-3. **Markdown 索引目录智能匹配与精准跳转**：
-   - 自动检测并识别文档内部 Table of Contents (TOC) 索引链接，采用归一化模糊语义匹配消除中英标点与序号差异，平滑定位到对应小标题并附带目标高亮动效。
-4. **编辑界面选中文本快捷浮动栏与撤销/重做**：
-   - 选中文本（拖动选中）时自动弹出复制、剪切、粘贴浮动胶囊快捷栏；
-   - 编辑工具栏右侧新增 ↩️ 撤销 (Undo) 与 ↪️ 重做 (Redo) 按钮。
-5. **全能智能剪贴板自适应建档**：
-   - 剪贴板任意内容智能识别分流：
-     - **富文本**（网页/Office复制）：经 Turndown 自动转为结构化 Markdown；
-     - **截图 / 图像**：自动调起本地 OCR 引擎提取排版文字并建档；
-     - **单个网址**：自动打开网页转 MD 弹窗并填入网址；
-     - **纯文本 / 数学公式**：秒级新建标签页直接阅读与编辑。
-6. **未保存修改自定义确认模态弹窗**：
-   - 关闭未保存标签页时，弹出高保真模态对话框，提供「保存 / 不保存 / 取消」三态确认；
-   - 批量关闭标签页与关闭其他标签时安全异步遍历，点击取消即刻安全中断，彻底防止数据误失。
-7. **标签关闭与返回主页全局状态深度清理**：
-   - 关闭全部标签或点击返回主页时，彻底清空大纲与目录缓存、搜索高亮、侧边栏激活状态与文档标题，不留任何视觉与数据残留。
-8. **网页抓取现代极简界面重构**：
-   - 去除暗色模式下白底白字的模式下拉框，改用双核心动作卡片（【⚡ 智能提取正文】为主操作 / 【🖥️ 完整动态渲染】为辅助操作）；
-   - 合并同站抓取为数字步进器（默认1页，支持加减按钮、滚轮增减、1~30页限制），局域网授权协议边缘化放置，支持剪贴板一键粘贴网址。
-9. **轻量级 LaTeX ⇄ Markdown 双向互转**：
-   - 内置纯 Python 双向转换引擎（零 TeXLive/Pandoc 依赖）；
-   - 导出面板新增 LaTeX (.tex) 格式支持（生成包含宏包与 booktabs 表格的标准学术论文源码）；
-   - 万物转 MD 与全局拖拽原生支持 `.tex` / `.latex` 文件一键转换为 Markdown。
-10. **生态演进路线图规划**：
-   - 将 **v2.3.0**（VSCode 插件与 MCP Server）与 **v2.3.1**（Linux 原生包与国产麒麟/统信 UOS 系统适配）正式写入项目规划。
-11. **Win7 兼容版同步升级到 v2.2.9**：
-   - 更新 Win7 打包构建链并保持核心功能兼容。
-
+1. **软件内更新器排查与关键修复**：
+   - 修复在应用内下载完安装包点击安装后卡死的问题：通过后台线程延迟主动退出主进程释放 Windows 文件句柄锁；
+   - 启动时自动扫描并清理 `%TEMP%` 历史残留安装包；
+   - 引入 GitHub 镜像源毫秒级智能降级与手动检查更新 Loading 状态反馈。
+2. **全球 45+ 语种 i18n 体系与多模型自动翻译工具链**：
+   - 首次启动自动侦测宿主操作系统语言（精准识别繁中台/港、简体中文、英文、日韩西法德等）；
+   - 支持 46 个全球语种（涵盖西欧、东亚、东南亚、阿拉伯语/希伯来语 RTL 双向排版，以及藏语、维吾尔语、蒙古语等少数民族语言）；
+   - 提供基于 Google Translate 与 OpenAI 兼容协议（DeepSeek / Qwen / Mimo / GLM）的多模型自动化翻译与字典校验工具链。
+3. **LaTeX PRO 学术增强引擎**：
+   - 零配置自动扫描同目录 `.bib` 参考文献文件，自动解析 BibTeX 并生成浮动卡片交互与文末 References 引用；
+   - 支持定理 (Theorem)、引理 (Lemma)、证明 (Proof with Q.E.D.)、定义 (Definition)、推论 (Corollary) 等学术 Callout 盒子。
+4. **Editor Studio PRO 极致编辑体验**：
+   - **Zen Mode 沉浸禅模式**：一键切换或按 F11 / Esc 隐藏所有工具栏与侧栏，专注于深度写作；
+   - **10x10 可视化表格网格设计器**：鼠标滑选行列一键插入格式规范的 Markdown 表格；
+   - **智能 Excel / CSV 粘贴转换**：从 Excel、WPS、Numbers 或网页复制表格直接粘贴即转为高质量 Markdown 表格；
+   - **实时文档统计**：编辑栏实时显示字数、词数与预计阅读时间。
+5. **VSCode 插件与 MCP Server 分包架构**：
+   - 采用 Monorepo 统一分包架构（`packages/mcp-server` & `packages/vscode-extension`）；
+   - 为 Claude Desktop、Cursor、Antigravity 提供标准 FastMCP 工具支持，客户端安装包零体积冗余。
 
 ## 安装与安全提示
 
@@ -57,15 +43,11 @@ Windows 与 macOS 安装包均为**未签名**版本。Windows 首次运行可�
 Windows PowerShell：
 
 ```powershell
-Get-FileHash .\ReadMDSetup-v2.2.9.exe -Algorithm SHA256
-Get-Content .\SHA256SUMS.txt
+Get-FileHash .\ReadMDSetup-v2.3.0.exe -Algorithm SHA256
 ```
 
-macOS Terminal：
+macOS 终端：
 
 ```bash
-shasum -a 256 ReadMD-macos-arm64-v2.2.9.zip
-cat SHA256SUMS.txt
+shasum -a 256 ReadMD-macos-arm64-v2.3.0.zip
 ```
-
-两处哈希值完全一致才继续使用。SHA-256 用于完整性校验，不代表代码签名。
