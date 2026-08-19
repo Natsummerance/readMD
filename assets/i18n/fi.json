@@ -209,7 +209,7 @@
   "convert.targetDir": "Tulostushakemisto",
   "convert.title": "Kaikki muuttuu Markdowniksi",
   "convert.useOcr": "Ota OCR-kuvatekstin tunnistus käyttöön (skannattu PDF/kuva)",
-  "dialog.cancel": "Peruuttaa",
+  "dialog.cancel": "Peruuta",
   "dialog.commandHint": "↑↓ Valitse · Enter lisätäksesi · Esc sulkeaksesi",
   "dialog.commandTitle": "Markdown-komentopaneeli",
   "dialog.dontSave": "Älä tallenna",

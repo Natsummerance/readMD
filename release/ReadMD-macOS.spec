@@ -71,7 +71,7 @@ app = BUNDLE(
     name='ReadMD.app',
     icon=os.path.join(ROOT_DIR, 'assets', 'ReadMD.icns'),
     bundle_identifier='io.github.natsummerance.readmd',
-    version='2.3.1',
+    version='2.3.2',
     info_plist={
         'CFBundleIdentifier': 'io.github.natsummerance.readmd',
         'CFBundleName': 'ReadMD',

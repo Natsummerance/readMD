@@ -209,7 +209,7 @@
   "convert.targetDir": "Output bibliotek",
   "convert.title": "Alt vender Markdown",
   "convert.useOcr": "Aktiver OCR billedtekstgenkendelse (scannet PDF/billede)",
-  "dialog.cancel": "Ophæve",
+  "dialog.cancel": "Annuller",
   "dialog.commandHint": "↑↓ Vælg · Enter for at indsætte · Esc for at lukke",
   "dialog.commandTitle": "Markdown kommandopanel",
   "dialog.dontSave": "Gem ikke",

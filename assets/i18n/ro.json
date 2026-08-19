@@ -209,7 +209,7 @@
   "convert.targetDir": "Director de ieșire",
   "convert.title": "Totul transformă Markdown",
   "convert.useOcr": "Activați recunoașterea textului imaginii OCR (PDF/imagine scanată)",
-  "dialog.cancel": "Anula",
+  "dialog.cancel": "Anulează",
   "dialog.commandHint": "↑↓ Selectați · Enter pentru a introduce · Esc pentru a închide",
   "dialog.commandTitle": "Panoul de comandă Markdown",
   "dialog.dontSave": "Nu salva",

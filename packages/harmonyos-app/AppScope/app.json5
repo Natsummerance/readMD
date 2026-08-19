@@ -3,7 +3,7 @@
     "bundleName": "io.github.natsummerance.readmd",
     "vendor": "Natsummerance",
     "versionCode": 20301,
-    "versionName": "2.3.1",
+    "versionName": "2.3.2",
     "icon": "$media:app_icon",
     "label": "$string:app_name"
   }

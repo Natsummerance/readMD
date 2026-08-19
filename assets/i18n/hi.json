@@ -209,7 +209,7 @@
   "convert.targetDir": "आउटपुट निर्देशिका",
   "convert.title": "सब कुछ मार्कडाउन में बदल जाता है",
   "convert.useOcr": "ओसीआर छवि पाठ पहचान सक्षम करें (स्कैन की गई पीडीएफ/छवि)",
-  "dialog.cancel": "रद्द करना",
+  "dialog.cancel": "रद्द करें",
   "dialog.commandHint": "↑↓ चुनें · डालने के लिए एंटर करें · बंद करने के लिए Esc चुनें",
   "dialog.commandTitle": "मार्कडाउन कमांड पैनल",
   "dialog.dontSave": "सहेजें नहीं",

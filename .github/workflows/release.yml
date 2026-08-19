@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 env:
-  READMD_VERSION: '2.3.1'
+  READMD_VERSION: '2.3.2'
   PYTHONUTF8: '1'
 
 
@@ -47,6 +47,7 @@ jobs:
           python tests/test_performance_test.py
           python tools/privacy_scan.py
           python tests/test_v231_features_test.py
+          python tests/test_v232_features_test.py
           python tests/test_i18n_coverage_test.py
           python readmd.py --selftest
       - name: Run Playwright UI tests
@@ -315,7 +316,7 @@ jobs:
           if-no-files-found: ignore
 
   release:
-    name: Publish ReadMD v2.3.1
+    name: Publish ReadMD v2.3.2
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [windows-package, macos-package, linux-package]
     runs-on: ubuntu-latest
@@ -336,25 +337,25 @@ jobs:
           set -euo pipefail
           echo "Downloaded release assets:"
           ls -la release-assets/
-          for asset in ReadMDSetup-v2.3.1.exe ReadMD-portable-v2.3.1.exe ReadMD-macos-x64-v2.3.1.zip ReadMD-macos-arm64-v2.3.1.zip readmd-vscode-2.3.1.vsix readmd_2.3.1_amd64.deb ReadMD-harmonyos-v2.3.1.hap readmd-mcp-server-2.3.1.zip; do
+          for asset in ReadMDSetup-v2.3.2.exe ReadMD-portable-v2.3.2.exe ReadMD-macos-x64-v2.3.2.zip ReadMD-macos-arm64-v2.3.2.zip readmd-vscode-2.3.2.vsix readmd_2.3.2_amd64.deb ReadMD-harmonyos-v2.3.2.hap readmd-mcp-server-2.3.2.zip; do
             test -s "release-assets/$asset"
           done
-          grep -F "or _bundle_version() or '2.3.1'" readmd.py
-          grep -F "or _bundle_version() or '2.3.1'" installer/setup_app.py
-          grep -F "version='2.3.1'" release/ReadMD-macOS.spec
+          grep -F "or _bundle_version() or '2.3.2'" readmd.py
+          grep -F "or _bundle_version() or '2.3.2'" installer/setup_app.py
+          grep -F "version='2.3.2'" release/ReadMD-macOS.spec
           test -s assets/vendor/defuddle.bundle.js
           test -s assets/vendor/defuddle.LICENSE.txt
           test -s assets/js/core/state.js
           rm -rf verify-macos
           mkdir -p verify-macos/x64 verify-macos/arm64
-          unzip -q release-assets/ReadMD-macos-x64-v2.3.1.zip -d verify-macos/x64
-          unzip -q release-assets/ReadMD-macos-arm64-v2.3.1.zip -d verify-macos/arm64
+          unzip -q release-assets/ReadMD-macos-x64-v2.3.2.zip -d verify-macos/x64
+          unzip -q release-assets/ReadMD-macos-arm64-v2.3.2.zip -d verify-macos/arm64
           python - <<'PY'
           import plistlib
           for arch in ('x64', 'arm64'):
               with open('verify-macos/%s/ReadMD.app/Contents/Info.plist' % arch, 'rb') as handle:
                   info = plistlib.load(handle)
-              assert info['CFBundleShortVersionString'] == '2.3.1', (arch, info)
+              assert info['CFBundleShortVersionString'] == '2.3.2', (arch, info)
           print('macOS bundle versions OK')
           PY
           file verify-macos/x64/ReadMD.app/Contents/MacOS/ReadMD | grep -E 'x86_64|x86-64'
@@ -369,7 +370,7 @@ jobs:
           cat release-assets/SHA256SUMS.txt >> "$GITHUB_STEP_SUMMARY"
       - uses: softprops/action-gh-release@v2
         with:
-          name: ReadMD v2.3.1
+          name: ReadMD v2.3.2
           body_path: release/release_notes.md
           files: release-assets/*
           fail_on_unmatched_files: true

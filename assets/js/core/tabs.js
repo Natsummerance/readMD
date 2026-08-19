@@ -313,29 +313,58 @@ function switchTab(tabId) {
 }
 
 function promptDirtyClose(tabName) {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const _t = (k, p) => {
+    if (window.i18n && window.i18n.t) {
+      const v = window.i18n.t(k, p);
+      if (v && v !== k) return v;
+    }
+    return null;
+  };
   return new Promise(resolve => {
     const modal = $('close-confirm-modal');
     if (!modal) {
-      const ok = confirm(_t('dialog.unsavedMsg', { name: tabName }) || `文档「${tabName}」有未保存的修改，确定要关闭吗？`);
+      const ok = confirm((_t('dialog.unsavedMsg', { name: tabName })) || `文档「${tabName}」有未保存的修改，确定要关闭吗？`);
       resolve(ok ? 'discard' : 'cancel');
       return;
     }
+    const titleEl = $('close-confirm-title');
+    if (titleEl) titleEl.textContent = _t('dialog.unsavedTitle') || '是否保存对文档的修改？';
     const descEl = $('close-confirm-desc');
     if (descEl) descEl.textContent = _t('dialog.unsavedMsgDesc', { name: tabName || (_t('tabs.untitled') || '文档') }) || `「${tabName || '文档'}」已被修改，如果直接关闭，未保存的内容将会丢失。`;
     modal.classList.remove('hidden');
+
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        cleanUp('cancel');
+      }
+    };
+
+    const onBackdropClick = (e) => {
+      if (e.target === modal) {
+        cleanUp('cancel');
+      }
+    };
 
     const cleanUp = (action) => {
       modal.classList.add('hidden');
       $('close-confirm-save').onclick = null;
       $('close-confirm-discard').onclick = null;
       $('close-confirm-cancel').onclick = null;
+      modal.removeEventListener('click', onBackdropClick);
+      document.removeEventListener('keydown', onKeyDown);
       resolve(action);
     };
 
     $('close-confirm-save').onclick = () => cleanUp('save');
     $('close-confirm-discard').onclick = () => cleanUp('discard');
     $('close-confirm-cancel').onclick = () => cleanUp('cancel');
+    modal.addEventListener('click', onBackdropClick);
+    document.addEventListener('keydown', onKeyDown);
+
+    // 聚焦主要行动按钮
+    const saveBtn = $('close-confirm-save');
+    if (saveBtn) setTimeout(() => saveBtn.focus(), 30);
   });
 }
 

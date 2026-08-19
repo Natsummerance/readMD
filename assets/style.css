@@ -809,63 +809,156 @@ mark.hl.cur { background: var(--hl-cur); }
   height: 13px;
 }
 
-/* ---------- 未保存关闭确认弹窗 ---------- */
+/* ---------- 未保存关闭确认弹窗 (Close Tab Dirty Confirmation Modal) ---------- */
 #close-confirm-modal {
   position: fixed;
   inset: 0;
-  background: var(--overlay);
+  background: color-mix(in srgb, var(--overlay, rgba(15, 23, 42, 0.45)) 75%, transparent);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 170;
+  z-index: 180;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s ease;
 }
-#close-confirm-modal.hidden { display: none; }
+#close-confirm-modal.hidden {
+  display: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
 #close-confirm-box {
-  background: var(--card);
-  color: var(--fg);
-  border-radius: var(--radius-l);
-  box-shadow: var(--shadow-3);
-  border: 1px solid var(--border);
-  width: min(440px, 92vw);
-  padding: 22px 24px;
+  background: var(--card, #ffffff);
+  color: var(--fg, #1e293b);
+  border-radius: var(--radius-l, 16px);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.08));
+  box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.05);
+  width: min(440px, calc(100vw - 32px));
+  padding: 24px 26px 20px 26px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
+  transform: scale(1) translateY(0);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+  animation: closeConfirmPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes closeConfirmPop {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 .close-confirm-head {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
+  gap: 16px;
 }
-.close-confirm-icon {
-  font-size: 26px;
-  line-height: 1;
+.close-confirm-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #f59e0b 14%, var(--card, #ffffff));
+  border: 1px solid color-mix(in srgb, #f59e0b 26%, transparent);
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px color-mix(in srgb, #f59e0b 15%, transparent);
+}
+.close-confirm-icon-svg {
+  width: 22px;
+  height: 22px;
+  stroke: #d97706;
+}
+.close-confirm-text {
+  flex: 1;
+  min-width: 0;
 }
 .close-confirm-head h3 {
-  margin: 0 0 6px;
-  font-size: 15px;
+  margin: 0 0 6px 0;
+  font-size: 16px;
   font-weight: 650;
+  letter-spacing: -0.015em;
+  color: var(--fg, #0f172a);
+  line-height: 1.35;
 }
 .close-confirm-head p {
   margin: 0;
-  font-size: 12.5px;
-  color: var(--fg2);
-  line-height: 1.5;
+  font-size: 13.5px;
+  color: var(--fg2, #64748b);
+  line-height: 1.55;
+  word-break: break-word;
 }
 .close-confirm-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid color-mix(in srgb, var(--border, #cbd5e1) 50%, transparent);
   flex-wrap: wrap;
 }
-.close-confirm-actions .tb-btn.danger {
-  background: color-mix(in srgb, var(--danger, #e53e3e) 12%, transparent);
-  color: var(--danger, #e53e3e);
-  border-color: color-mix(in srgb, var(--danger, #e53e3e) 30%, transparent);
+.close-confirm-actions .tb-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-m, 8px);
+  font-size: 13.5px;
+  font-weight: 550;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.close-confirm-actions .tb-btn.danger:hover {
-  background: var(--danger, #e53e3e);
-  color: #fff;
+.close-confirm-actions .tb-btn:active {
+  transform: scale(0.97);
+}
+.close-confirm-actions #close-confirm-save {
+  background: var(--accent, #3b82f6);
+  color: #ffffff;
+  border: 1px solid color-mix(in srgb, var(--accent, #3b82f6) 85%, #000);
+  box-shadow: 0 2px 6px color-mix(in srgb, var(--accent, #3b82f6) 35%, transparent);
+}
+.close-confirm-actions #close-confirm-save:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent, #3b82f6) 45%, transparent);
+}
+.close-confirm-actions #close-confirm-discard {
+  background: color-mix(in srgb, var(--danger, #ef4444) 10%, transparent);
+  color: var(--danger, #ef4444);
+  border: 1px solid color-mix(in srgb, var(--danger, #ef4444) 28%, transparent);
+}
+.close-confirm-actions #close-confirm-discard:hover {
+  background: color-mix(in srgb, var(--danger, #ef4444) 16%, transparent);
+  border-color: color-mix(in srgb, var(--danger, #ef4444) 40%, transparent);
+}
+.close-confirm-actions #close-confirm-cancel {
+  background: var(--bg2, transparent);
+  color: var(--fg, #334155);
+  border: 1px solid var(--border, #cbd5e1);
+}
+.close-confirm-actions #close-confirm-cancel:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.05));
+}
+body.theme-dark #close-confirm-box,
+[data-theme="dark"] #close-confirm-box {
+  background: var(--card, #1e2025);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 28px 56px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+body.theme-dark .close-confirm-icon-wrap,
+[data-theme="dark"] .close-confirm-icon-wrap {
+  background: color-mix(in srgb, #f59e0b 18%, transparent);
+  border-color: color-mix(in srgb, #f59e0b 32%, transparent);
+  color: #fbbf24;
+}
+body.theme-dark .close-confirm-icon-svg,
+[data-theme="dark"] .close-confirm-icon-svg {
+  stroke: #fbbf24;
 }
 
 #fix-count { color: var(--accent); font-size: 13px; }
@@ -2958,21 +3051,5 @@ body.zen-mode .zen-exit-btn {
   stroke: currentColor;
   fill: currentColor;
   opacity: 0.9;
-}
-.close-confirm-icon-wrap {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(220, 38, 38, 0.1);
-  color: #dc2626;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.close-confirm-icon-svg {
-  width: 20px;
-  height: 20px;
-  stroke: #dc2626;
 }
 

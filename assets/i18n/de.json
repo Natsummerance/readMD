@@ -209,7 +209,7 @@
   "convert.targetDir": "Ausgabeverzeichnis",
   "convert.title": "Alles dreht sich um Markdown",
   "convert.useOcr": "OCR-Bildtexterkennung aktivieren (gescanntes PDF/Bild)",
-  "dialog.cancel": "Stornieren",
+  "dialog.cancel": "Abbrechen",
   "dialog.commandHint": "↑↓ Wählen Sie · Enter zum Einfügen · Esc zum Schließen",
   "dialog.commandTitle": "Markdown-Befehlsfeld",
   "dialog.dontSave": "Nicht speichern",

@@ -209,7 +209,7 @@
   "convert.targetDir": "Utdatakatalog",
   "convert.title": "Alt snur Markdown",
   "convert.useOcr": "Aktiver OCR bildetekstgjenkjenning (skannet PDF/bilde)",
-  "dialog.cancel": "Kansellere",
+  "dialog.cancel": "Avbryt",
   "dialog.commandHint": "↑↓ Velg · Enter for å sette inn · Esc for å lukke",
   "dialog.commandTitle": "Markdown kommandopanel",
   "dialog.dontSave": "Ikke lagre",

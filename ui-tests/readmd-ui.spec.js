@@ -618,6 +618,51 @@ test('v2.3.0 Zen Mode and Table Designer', async ({ page }) => {
   await expect(page.locator('#table-modal')).toBeHidden();
 });
 
+test('v2.3.2 dirty tab close confirmation modal UI, styling, and actions', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.pywebview = { api: {
+      get_settings: async () => ({}), get_recent: async () => [], start_modules: async () => true,
+      get_modules_status: async () => ({ modules: {}, errors: {} }),
+    } };
+  });
+  await page.goto('/');
+  
+  // 1. 创建带有未保存修改的标签页
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'tab_dirty_1', title: '未保存测试文档.md', name: '未保存测试文档.md', content: '# 测试内容', isDirty: true }
+    ];
+    state.activeTabId = 'tab_dirty_1';
+    renderTabsBar();
+  });
+
+  // 2. 点击标签页关闭按钮，触发未保存确认弹窗
+  await page.locator('.tab-close').first().click();
+
+  // 3. 验证未保存弹窗与各控件正确渲染
+  const modal = page.locator('#close-confirm-modal');
+  await expect(modal).toBeVisible();
+  await expect(page.locator('#close-confirm-title')).toContainText(/保存|修改|Changes/i);
+  await expect(page.locator('#close-confirm-desc')).toContainText('未保存测试文档');
+  await expect(page.locator('#close-confirm-save')).toBeVisible();
+  await expect(page.locator('#close-confirm-discard')).toBeVisible();
+  await expect(page.locator('#close-confirm-cancel')).toBeVisible();
+
+  // 4. 点击取消按钮，弹窗关闭且标签页保持开启
+  await page.locator('#close-confirm-cancel').click();
+  await expect(modal).toBeHidden();
+  expect(await page.locator('.tab-item').count()).toBe(1);
+
+  // 5. 再次触发关闭，点击“不保存”，确认标签页顺利关闭并回到首页
+  await page.locator('.tab-close').first().click();
+  await expect(modal).toBeVisible();
+  await page.locator('#close-confirm-discard').click();
+  await expect(modal).toBeHidden();
+  expect(await page.locator('.tab-item').count()).toBe(0);
+  await expect(page.locator('#welcome')).toBeVisible();
+});
+
+
 
 
 
