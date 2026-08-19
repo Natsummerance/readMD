@@ -342,7 +342,7 @@ jobs:
           done
           grep -F "or _bundle_version() or '2.3.2'" readmd.py
           grep -F "or _bundle_version() or '2.3.2'" installer/setup_app.py
-          grep -F "version='2.3.2'" release/ReadMD-macOS.spec
+          python -c "import readmd; assert readmd.VERSION == '2.3.2'"
           test -s assets/vendor/defuddle.bundle.js
           test -s assets/vendor/defuddle.LICENSE.txt
           test -s assets/js/core/state.js

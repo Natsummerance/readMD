@@ -1,9 +1,17 @@
 # -*- mode: python ; coding: utf-8 -*-
 # ReadMD macOS .app bundle spec
 import os
+import sys
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 ROOT_DIR = os.path.abspath(os.path.join(SPECPATH, '..'))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+try:
+    import readmd
+    VERSION = getattr(readmd, 'VERSION', '2.3.2')
+except Exception:
+    VERSION = os.environ.get('READMD_VERSION', '2.3.2')
 
 datas = [
     (os.path.join(ROOT_DIR, 'assets'), 'assets'),
@@ -71,13 +79,13 @@ app = BUNDLE(
     name='ReadMD.app',
     icon=os.path.join(ROOT_DIR, 'assets', 'ReadMD.icns'),
     bundle_identifier='io.github.natsummerance.readmd',
-    version='2.3.2',
+    version=VERSION,
     info_plist={
         'CFBundleIdentifier': 'io.github.natsummerance.readmd',
         'CFBundleName': 'ReadMD',
         'CFBundleDisplayName': 'ReadMD',
-        'CFBundleVersion': '2.3.1',
-        'CFBundleShortVersionString': '2.3.1',
+        'CFBundleVersion': VERSION,
+        'CFBundleShortVersionString': VERSION,
 
         'CFBundlePackageType': 'APPL',
         'NSPrincipalClass': 'NSApplication',
