@@ -4,6 +4,7 @@
   "description": "Clean, high-performance Markdown viewer & editor extension with auto-repair, LaTeX PRO, and multi-format conversion.",
   "version": "2.3.2",
   "publisher": "Natsummerance",
+  "icon": "icon.png",
   "license": "MIT",
 
   "repository": {
