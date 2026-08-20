@@ -26,7 +26,7 @@ datas += collect_data_files('reportlab')
 datas += collect_data_files('matplotlib')
 datas += collect_data_files('trafilatura')
 hiddenimports += collect_submodules('src.readmd_core')
-hiddenimports += collect_submodules('src.readmd_modules')
+hiddenimports += [m for m in collect_submodules('src.readmd_modules') if not m.endswith('windows_native')]
 
 a = Analysis(
     [os.path.join(ROOT_DIR, 'readmd.py')],
@@ -38,7 +38,7 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        'winrt', 'pywinrt', 'winreg',
+        'winrt', 'pywinrt', 'winreg', 'win32api', 'win32con', 'win32gui', 'win32process',
         'src.readmd_modules.windows_native',
         'installer',
     ],

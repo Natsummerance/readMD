@@ -2129,19 +2129,16 @@ class Api(object):
         if not self._web_render_lock.acquire(blocking=False):
             return {'ok': False, 'code': 'renderer_busy',
                     'error': '动态网页渲染器正在处理另一个页面'}
-        reader_window = None
         try:
             import webview
+            target_init_url = safe_url if not offline_render else 'about:blank'
             reader_window = webview.create_window(
-                'ReadMD 临时网页提取器', 'about:blank', hidden=not interactive,
+                'ReadMD 网页渲染提取器', target_init_url, hidden=not interactive,
                 focus=bool(interactive), width=1100, height=800,
                 resizable=bool(interactive), text_select=bool(interactive))
             if reader_window is None:
                 return {'ok': False, 'code': 'render_unavailable',
                         'error': '无法创建系统网页渲染器'}
-            blank_loaded = getattr(getattr(reader_window, 'events', None), 'loaded', None)
-            if blank_loaded is not None:
-                blank_loaded.wait(5.0)
             if not self._install_webview_network_guard(
                     reader_window, task_id, private_grant, safe_url,
                     offline=offline_render):
@@ -2149,12 +2146,11 @@ class Api(object):
                         'error': '无法启用网页私网访问保护，已停止动态渲染'}
             if offline_render:
                 reader_window.load_html(source_html, base_uri=safe_url)
-            else:
-                reader_window.load_url(safe_url)
             deadline = time.time() + timeout_ms / 1000.0
             loaded = getattr(getattr(reader_window, 'events', None), 'loaded', None)
             if loaded is not None:
                 loaded.wait(max(0.1, min(10.0, deadline - time.time())))
+            time.sleep(0.5)
             last_length, last_resources, stable = -1, -1, 0
             while time.time() < deadline:
                 if mod.is_cancelled(task_id):

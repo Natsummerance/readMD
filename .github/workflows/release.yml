@@ -232,6 +232,8 @@ jobs:
             echo 'Windows-only dependency found in macOS bundle' >&2
             exit 1
           fi
+          mkdir -p dist/ReadMD.app/Contents/Resources/assets
+          cp -R assets/* dist/ReadMD.app/Contents/Resources/assets/ 2>/dev/null || true
           test -s dist/ReadMD.app/Contents/Resources/assets/vendor/readability.bundle.js
           test -s dist/ReadMD.app/Contents/Resources/assets/vendor/defuddle.bundle.js
           test -s dist/ReadMD.app/Contents/Resources/assets/vendor/defuddle.LICENSE.txt

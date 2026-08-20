@@ -396,58 +396,7 @@ def parse_gemini_dom_or_json(html):
 
     turns = []
 
-    # 策略 1: 解析 Google WIZ_global_data SSR 状态数据 (无需弹窗，极速且 100% 完整)
-    target_script = None
-    for s in soup.find_all("script"):
-        st = s.string or s.text or ""
-        if "window.WIZ_global_data" in st:
-            target_script = st
-            break
-
-    if target_script:
-        start = target_script.find("{")
-        end = target_script.rfind("}")
-        if start != -1 and end != -1:
-            try:
-                wiz = json.loads(target_script[start:end+1])
-                for k, v in wiz.items():
-                    if isinstance(v, str) and "∞" in v and len(v) > 50:
-                        # 可能包含通过 ∰ 分隔的多轮或多个示例
-                        sections = v.split("∰")
-                        for sec in sections:
-                            sec = sec.strip()
-                            if not sec or "∞" not in sec:
-                                continue
-                            parts = [p.strip() for p in sec.split("∞") if p.strip()]
-                            user_parts = []
-                            image_parts = []
-                            response_parts = []
-                            for p in parts:
-                                if p.startswith("http://") or p.startswith("https://"):
-                                    image_parts.append(f"![Gemini Image]({p})")
-                                elif not response_parts and not image_parts:
-                                    user_parts.append(p)
-                                else:
-                                    response_parts.append(p)
-
-                            user_text = "\n\n".join(user_parts).strip()
-                            response_text = "\n\n".join(response_parts).strip()
-                            if image_parts:
-                                response_text = "\n\n".join(image_parts) + ("\n\n" + response_text if response_text else "")
-
-                            if user_text and response_text:
-                                if title == 'Gemini 对话':
-                                    first_line = user_text.split('\n')[0].strip()
-                                    if first_line and len(first_line) < 60:
-                                        title = first_line
-                                turns.append({'role': 'user', 'text': _clean_chat_tokens(user_text)})
-                                turns.append({'role': 'assistant', 'text': _clean_chat_tokens(response_text)})
-                        if turns:
-                            return {'title': title, 'turns': turns}
-            except Exception:
-                pass
-
-    # 策略 2: 扫描具体对话节点
+    # 策略 1: 扫描具体对话节点与 Web Components
     query_and_response_nodes = soup.find_all(['user-query', 'model-response'])
     if query_and_response_nodes:
         for node in query_and_response_nodes:
@@ -455,8 +404,8 @@ def parse_gemini_dom_or_json(html):
             md_content = _html_to_clean_md(_clean_html_node(node))
             if md_content:
                 turns.append({'role': role, 'text': _clean_chat_tokens(md_content)})
-                
-    # 策略 3: 扫描外层容器
+
+    # 策略 2: 扫描具体对话外层容器
     if not turns:
         all_turns = soup.find_all(['div', 'article', 'section'], class_=re.compile(r'user-query-container|response-container|query-content|response-content|user-turn|model-turn|chat-turn|conversation-turn', re.I))
         for node in all_turns:
@@ -465,6 +414,55 @@ def parse_gemini_dom_or_json(html):
             if md_content and len(md_content) > 1:
                 if not turns or turns[-1]['text'] != md_content:
                     turns.append({'role': role, 'text': _clean_chat_tokens(md_content)})
+
+    # 策略 3: 解析 Google WIZ_global_data 中的对话字段
+    if not turns:
+        target_script = None
+        for s in soup.find_all("script"):
+            st = s.string or s.text or ""
+            if "window.WIZ_global_data" in st:
+                target_script = st
+                break
+
+        if target_script:
+            start = target_script.find("{")
+            end = target_script.rfind("}")
+            if start != -1 and end != -1:
+                try:
+                    wiz = json.loads(target_script[start:end+1])
+                    for k, v in wiz.items():
+                        if isinstance(v, str) and "∞" in v and len(v) > 50:
+                            sections = v.split("∰")
+                            for sec in sections:
+                                sec = sec.strip()
+                                if not sec or "∞" not in sec:
+                                    continue
+                                parts = [p.strip() for p in sec.split("∞") if p.strip()]
+                                user_parts = []
+                                image_parts = []
+                                response_parts = []
+                                for p in parts:
+                                    if p.startswith("http://") or p.startswith("https://"):
+                                        image_parts.append(f"![Gemini Image]({p})")
+                                    elif not response_parts and not image_parts:
+                                        user_parts.append(p)
+                                    else:
+                                        response_parts.append(p)
+
+                                user_text = "\n\n".join(user_parts).strip()
+                                response_text = "\n\n".join(response_parts).strip()
+                                if image_parts:
+                                    response_text = "\n\n".join(image_parts) + ("\n\n" + response_text if response_text else "")
+
+                                if user_text and response_text:
+                                    if title == 'Gemini 对话':
+                                        first_line = user_text.split('\n')[0].strip()
+                                        if first_line and len(first_line) < 60:
+                                            title = first_line
+                                    turns.append({'role': 'user', 'text': _clean_chat_tokens(user_text)})
+                                    turns.append({'role': 'assistant', 'text': _clean_chat_tokens(response_text)})
+                except Exception:
+                    pass
 
     # 策略 4: 扫描具有 data-message-author-role 标识的元素
     if not turns:
