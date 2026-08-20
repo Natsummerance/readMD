@@ -155,7 +155,34 @@ As demonstrated in previous work \cite{vaswani2017attention, devlin2018bert}.
     md = latex_to_md(tex)
     assert '[@vaswani2017attention; @devlin2018bert]' in md
     assert '## 参考文献' in md
-    assert '[@vaswani2017attention] Vaswani et al.' in md
+    assert '**[@vaswani2017attention]** Vaswani et al.' in md
+
+
+def test_academic_algorithms_and_subfigures():
+    """测试算法伪代码与子图环境解析。"""
+    tex = r"""
+\begin{algorithm}
+\caption{Model Training}
+\begin{algorithmic}
+\REQUIRE Dataset $D$
+\ENSURE Model $\theta$
+\FOR{$epoch = 1$ \TO $N$}
+\STATE $\theta \leftarrow \theta - \alpha \nabla L$
+\ENDFOR
+\RETURN $\theta$
+\end{algorithmic}
+\end{algorithm}
+
+\begin{subfigure}{0.45\textwidth}
+\includegraphics{img1.png}
+\caption{Sub-figure 1}
+\end{subfigure}
+"""
+    md = latex_to_md(tex)
+    assert '**算法：Model Training**' in md
+    assert '```pseudocode' in md
+    assert '**Input:** Dataset $D$' in md
+    assert '![Sub-figure 1](img1.png)' in md
 
 
 def test_md_to_latex_export_compilable():

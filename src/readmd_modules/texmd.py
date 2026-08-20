@@ -287,23 +287,57 @@ def latex_to_md(tex_content: str) -> str:
         val, _ = extract_mand_arg(text, date_match.end() - 1)
         date_val = (val or '').strip()
 
-    # 提取 Abstract
-    abstract_val = ''
-    abs_match = re.search(r'\\begin\{abstract\}', text)
-    if abs_match:
-        abs_end = text.find(r'\end{abstract}', abs_match.end())
-        if abs_end != -1:
-            abstract_val = text[abs_match.end():abs_end].strip()
-            text = text[:abs_match.start()] + text[abs_end + len(r'\end{abstract}'):]
-
-    # 4. 截取正文主体（若包含 \begin{document}）
+    # 4. 截取正文主体（若包含 \begin{document}，保留可能位于导言区的 abstract）
     if r'\begin{document}' in text:
-        text = text.split(r'\begin{document}', 1)[1]
+        preamble, doc_body = text.split(r'\begin{document}', 1)
+        abs_match = re.search(r'\\begin\{abstract\}(.*?)\\end\{abstract\}', preamble, flags=re.DOTALL)
+        if abs_match:
+            doc_body = abs_match.group(0) + '\n\n' + doc_body
+        text = doc_body
     if r'\end{document}' in text:
         text = text.split(r'\end{document}', 1)[0]
 
-    # 去除 \maketitle, \tableofcontents, \newpage, \clearpage
+    # 保护并转换 \verb|...|, \verb+...+, \verb!...! 为行内代码
+    def _repl_verb(m):
+        delim = m.group(1)
+        body = m.group(2)
+        return f'`{body}`'
+    text = re.sub(r'\\verb(.)(.*?)\1', _repl_verb, text)
+
+    # 常见文本符号替换
+    text = re.sub(r'\\textbackslash(?![a-zA-Z])', r'\\', text)
+    text = re.sub(r'\\textbar(?![a-zA-Z])', '|', text)
+    text = re.sub(r'\\textless(?![a-zA-Z])', '<', text)
+    text = re.sub(r'\\textgreater(?![a-zA-Z])', '>', text)
+    text = re.sub(r'\\textasciitilde(?![a-zA-Z])', '~', text)
+    text = re.sub(r'\\textasciicircum(?![a-zA-Z])', '^', text)
+    text = re.sub(r'\\(?:newline|linebreak)(?![a-zA-Z])', '\n', text)
+    text = re.sub(r'\\centerline\{([^}]+)\}', r'\1', text)
+
+    # 期刊元数据命令 (Elsevier, IEEE, Springer, ACM)
+    text = re.sub(r'\\cormark(?:\[.*?\])?', '*', text)
+    text = re.sub(r'\\cortext(?:\[.*?\])?\{([^}]+)\}', r'\n\n* \1\n\n', text)
+    text = re.sub(r'\\printcredits(?![a-zA-Z])', '', text)
+    text = re.sub(r'\\bio(?:\{.*?\})?(.*?)\\endbio', r'\n\n**作者简介：**\n\n\1\n\n', text, flags=re.DOTALL)
+    text = re.sub(r'\\ead(?:\[.*?\])?\{([^}]+)\}', r'<\1>', text)
+
+    # 经典 TeX 字体开关环境 {\bf ...}, {\it ...}, {\tt ...}, {\sc ...}
+    text = re.sub(r'\{\\bf\s+([^}]+)\}', r'**\1**', text)
+    text = re.sub(r'\{\\it\s+([^}]+)\}', r'*\1*', text)
+    text = re.sub(r'\{\\em\s+([^}]+)\}', r'*\1*', text)
+    text = re.sub(r'\{\\tt\s+([^}]+)\}', r'`\1`', text)
+    text = re.sub(r'\{\\sc\s+([^}]+)\}', r'<span style="font-variant: small-caps;">\1</span>', text)
+    text = re.sub(r'\{\\rm\s+([^}]+)\}', r'\1', text)
+    text = re.sub(r'\{\\sf\s+([^}]+)\}', r'\1', text)
+
+    # 去除分页与页面结构控制符
     text = re.sub(r'\\(?:maketitle|tableofcontents|newpage|clearpage|cleardoublepage)', '', text)
+    text = re.sub(r'\\(?:vspace\*?|hspace\*?)\{[^}]*\}', '', text)
+    text = re.sub(r'\\(?:vskip|hskip|kern)\s*[-+]?\d+(?:\.\d+)?[a-zA-Z]+', '', text)
+    text = re.sub(r'\\(?:centering|raggedright|raggedleft|noindent|indent|vfill|hfill|smallskip|medskip|bigskip)(?![a-zA-Z])', '', text)
+    text = re.sub(r'\\(?:Huge|huge|LARGE|Large|large|normalsize|small|footnotesize|scriptsize|tiny)(?![a-zA-Z])', '', text)
+    text = re.sub(r'\\rule\{[^}]*\}\{[^}]*\}', '\n\n---\n\n', text)
+    text = re.sub(r'\\hrule(?![a-zA-Z])', '\n\n---\n\n', text)
 
     # 5. 代码块处理 (\begin{lstlisting}, \begin{verbatim}, \begin{minted})
     def _repl_lstlisting(m):
@@ -317,14 +351,45 @@ def latex_to_md(tex_content: str) -> str:
 
     text = re.sub(r'\\begin\{lstlisting\}(?:\[(.*?)\])?(.*?)\\end\{lstlisting\}', _repl_lstlisting, text, flags=re.DOTALL)
     text = re.sub(r'\\begin\{minted\}(?:\[.*?\])?\{([a-zA-Z0-9_\+#]+)\}(.*?)\\end\{minted\}', r'\n```\1\n\2\n```\n', text, flags=re.DOTALL)
-    text = re.sub(r'\\begin\{verbatim\}(.*?)\\end\{verbatim\}', r'\n```\n\1\n```\n', text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{verbatim\*?\}(.*?)\\end\{verbatim\*?\}', r'\n```\n\1\n```\n', text, flags=re.DOTALL)
+
+    # 算法伪代码环境处理 (\begin{algorithm}, \begin{algorithmic})
+    def _repl_algorithm(m):
+        algo_body = m.group(1)
+        # 提取算法标题
+        cap_m = re.search(r'\\caption\{([^}]+)\}', algo_body)
+        title = cap_m.group(1).strip() if cap_m else 'Algorithm'
+        # 内部 algorithmic 处理
+        code_lines = []
+        for line in algo_body.splitlines():
+            line = line.strip()
+            if not line or line.startswith(r'\caption') or line.startswith(r'\label'):
+                continue
+            line = re.sub(r'\\(?:REQUIRE|INPUT)\b\s*', '**Input:** ', line)
+            line = re.sub(r'\\(?:ENSURE|OUTPUT)\b\s*', '**Output:** ', line)
+            line = re.sub(r'\\STATE\b\s*', '  ', line)
+            line = re.sub(r'\\FOR\{([^}]+)\}', r'**for** \1 **do**', line)
+            line = re.sub(r'\\ENDFOR\b', r'**end for**', line)
+            line = re.sub(r'\\IF\{([^}]+)\}', r'**if** \1 **then**', line)
+            line = re.sub(r'\\ELSE\b', r'**else**', line)
+            line = re.sub(r'\\ELSIF\{([^}]+)\}', r'**else if** \1 **then**', line)
+            line = re.sub(r'\\ENDIF\b', r'**end if**', line)
+            line = re.sub(r'\\WHILE\{([^}]+)\}', r'**while** \1 **do**', line)
+            line = re.sub(r'\\ENDWHILE\b', r'**end while**', line)
+            line = re.sub(r'\\RETURN\b\s*', '**return** ', line)
+            if line not in (r'\begin{algorithmic}', r'\end{algorithmic}'):
+                code_lines.append(line)
+        return f'\n\n**算法：{title}**\n\n```pseudocode\n' + '\n'.join(code_lines) + '\n```\n\n'
+
+    text = re.sub(r'\\begin\{algorithm\*?\}(?:\[.*?\])?(.*?)\\end\{algorithm\*?\}', _repl_algorithm, text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{algorithmic\}(.*?)\\end\{algorithmic\}', lambda m: '\n```pseudocode\n' + m.group(1).strip() + '\n```\n', text, flags=re.DOTALL)
 
     # 6. 数学环境规范化
     # 块级独立数学环境
     math_block_envs = [
         'equation', 'equation*', 'align', 'align*', 'aligned',
         'gather', 'gather*', 'multline', 'multline*', 'flalign', 'flalign*',
-        'split', 'alignat', 'alignat*'
+        'split', 'alignat', 'alignat*', 'eqnarray', 'eqnarray*'
     ]
     for env in math_block_envs:
         escaped_env = re.escape(env)
@@ -332,10 +397,11 @@ def latex_to_md(tex_content: str) -> str:
         def make_repl_math(e_name):
             def _repl_m(m):
                 m_body = m.group(1).strip()
-                # 去除 \label{...} 并保留干净公式
                 m_body = re.sub(r'\\label\{[^}]*\}', '', m_body).strip()
                 if e_name in ('equation', 'equation*'):
                     return f'\n\n$$\n{m_body}\n$$\n\n'
+                if e_name in ('eqnarray', 'eqnarray*'):
+                    return f'\n\n$$\n\\begin{{aligned}}\n{m_body}\n\\end{{aligned}}\n$$\n\n'
                 return f'\n\n$$\n\\begin{{{e_name}}}\n{m_body}\n\\end{{{e_name}}}\n$$\n\n'
             return _repl_m
         text = re.sub(pattern, make_repl_math(env), text, flags=re.DOTALL)
@@ -447,7 +513,6 @@ def latex_to_md(tex_content: str) -> str:
             cur_pos = m.end()
             opts = []
             while True:
-                # 探测下一个必选参数 {...}
                 test_pos = cur_pos
                 while test_pos < len(t_in) and t_in[test_pos].isspace():
                     test_pos += 1
@@ -490,17 +555,42 @@ def latex_to_md(tex_content: str) -> str:
     text = re.sub(r'\\Figure(?:Layout|Trim)Declare\{[^}]*\}\{[^}]*\}\{[^}]*\}', '', text)
     text = re.sub(r'\\Figure(?:Layout|Trim)Declare\{[^}]*\}\{[^}]*\}', '', text)
 
-    def _repl_figure(m):
-        f_body = m.group(1)
-        cap_m = re.search(r'\\caption\{([^}]+)\}', f_body)
-        caption = cap_m.group(1).strip() if cap_m else ''
-        img_m = re.search(r'\\includegraphics(?:\[.*?\])?\{([^}]+)\}', f_body)
-        img_path = img_m.group(1).strip() if img_m else ''
-        if img_path:
-            return f'\n\n![{caption}]({img_path})\n\n'
+    # 统一单双栏与包围图形环境
+    text = re.sub(r'\\begin\{(?:figure\*?|wrapfigure)\}(?:\[.*?\])?', r'\\begin{figure}', text)
+    text = re.sub(r'\\end\{(?:figure\*?|wrapfigure)\}', r'\\end{figure}', text)
+
+    def _extract_caption(body: str) -> str:
+        m = re.search(r'\\caption(?:of\{[a-zA-Z]+\})?(?:\[[^\]]*\])?\{', body)
+        if m:
+            cap_val, _ = extract_mand_arg(body, m.end() - 1)
+            if cap_val:
+                return re.sub(r'\\label\{[^}]*\}', '', cap_val).strip()
         return ''
 
-    text = re.sub(r'\\begin\{figure\*?\}(?:\[.*?\])?(.*?)\\end\{figure\*?\}', _repl_figure, text, flags=re.DOTALL)
+    # 子图 subfigure 处理
+    def _repl_subfigure(m):
+        sf_body = m.group(1)
+        caption = _extract_caption(sf_body)
+        img_m = re.search(r'\\includegraphics(?:\[.*?\])?\{([^}]+)\}', sf_body)
+        img_path = img_m.group(1).strip() if img_m else ''
+        if img_path:
+            return f'\n![{caption}]({img_path})\n'
+        return ''
+    text = re.sub(r'\\begin\{subfigure\}(?:\[.*?\])?(?:\{.*?\})?(.*?)\\end\{subfigure\}', _repl_subfigure, text, flags=re.DOTALL)
+
+    def _repl_figure(m):
+        f_body = m.group(1)
+        caption = _extract_caption(f_body)
+        # 查找所有包含的图片
+        imgs = re.findall(r'\\includegraphics(?:\[.*?\])?\{([^}]+)\}', f_body)
+        if imgs:
+            res = []
+            for img_p in imgs:
+                res.append(f'![{caption}]({img_p.strip()})')
+            return '\n\n' + '\n\n'.join(res) + '\n\n'
+        return ''
+
+    text = re.sub(r'\\begin\{figure\}(.*?)\\end\{figure\}', _repl_figure, text, flags=re.DOTALL)
 
     # 11. 复杂学术表格 (\begin{table}, \begin{tabular})
     def _parse_tabular(tbody: str) -> str:
@@ -550,18 +640,40 @@ def latex_to_md(tex_content: str) -> str:
 
     def _repl_table_env(m):
         tbl_full = m.group(0)
-        cap_m = re.search(r'\\caption\{([^}]+)\}', tbl_full)
-        caption_text = f'\n\n**表：{cap_m.group(1).strip()}**\n' if cap_m else ''
+        caption = _extract_caption(tbl_full)
+        caption_text = f'\n\n**表：{caption}**\n' if caption else ''
         tab_m = re.search(r'\\begin\{tabular\*?\}(?:\{[^}]*\})?\{([^}]*)\}(.*?)\\end\{tabular\*?\}', tbl_full, re.DOTALL)
         if tab_m:
             return caption_text + _parse_tabular(tab_m.group(2))
         return ''
 
-    text = re.sub(r'\\begin\{table\*?\}(?:\[.*?\])?(.*?)\\end\{table\*?\}', _repl_table_env, text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{(?:table\*?|wraptable)\}(?:\[.*?\])?(.*?)\\end\{(?:table\*?|wraptable)\}', _repl_table_env, text, flags=re.DOTALL)
     # 单独的 tabular
     text = re.sub(r'\\begin\{tabular\*?\}(?:\{[^}]*\})?\{([^}]*)\}(.*?)\\end\{tabular\*?\}', lambda m: _parse_tabular(m.group(2)), text, flags=re.DOTALL)
 
-    # 12. 章节标题解析 (Section Hierarchies)
+    # 12. 章节标题与学术元环境 (Section Hierarchies & Academic Environments)
+    # Abstract
+    def _repl_abstract(m):
+        abs_body = m.group(1).strip()
+        quoted = '\n'.join(f'> {l}' for l in abs_body.splitlines())
+        return f'\n\n> **摘要 (Abstract)**\n>\n{quoted}\n\n'
+    text = re.sub(r'\\begin\{abstract\}(.*?)\\end\{abstract\}', _repl_abstract, text, flags=re.DOTALL)
+
+    # Keywords
+    def _repl_keywords(m):
+        kw_content = m.group(1).strip()
+        return f'\n\n**关键词 (Keywords):** {kw_content}\n\n'
+    text = re.sub(r'\\begin\{(?:IEEEkeywords|keywords)\}(.*?)\\end\{(?:IEEEkeywords|keywords)\}', _repl_keywords, text, flags=re.DOTALL)
+    text = re.sub(r'\\keywords\{([^}]+)\}', r'\n\n**关键词 (Keywords):** \1\n\n', text)
+
+    # Acknowledgements
+    text = re.sub(r'\\begin\{(?:acknowledgements|acks)\}(.*?)\\end\{(?:acknowledgements|acks)\}', r'\n\n## 致谢 (Acknowledgements)\n\n\1\n\n', text, flags=re.DOTALL)
+    text = re.sub(r'\\section\*?\{(?:Acknowledgements|Acknowledgments|Acks)\}', r'## 致谢 (Acknowledgements)', text, flags=re.IGNORECASE)
+
+    # Appendix
+    text = re.sub(r'\\begin\{appendix\}(.*?)\\end\{appendix\}', r'\n\n# 附录 (Appendix)\n\n\1\n\n', text, flags=re.DOTALL)
+    text = re.sub(r'\\appendix(?![a-zA-Z])', r'\n\n# 附录 (Appendix)\n\n', text)
+
     sec_commands = [
         (r'\\part\*?', '# '),
         (r'\\chapter\*?', '# '),
@@ -585,7 +697,6 @@ def latex_to_md(tex_content: str) -> str:
             p_end = m.end()
             heading_val, p_end = extract_mand_arg(text, p_end)
             if heading_val is not None:
-                # 剔除可能内嵌的 \label{...}
                 heading_val = re.sub(r'\\label\{[^}]*\}', '', heading_val).strip()
                 out_chunks.append(f'\n\n{md_prefix}{heading_val}\n\n')
                 last_pos = p_end
@@ -595,28 +706,43 @@ def latex_to_md(tex_content: str) -> str:
         text = ''.join(out_chunks)
 
     # 13. 交叉引用与学术引用
-    # \eqref{eq:1} -> (1), \ref{sec:1} -> [sec:1]
+    # \eqref{eq:1} -> (1), \autoref{sec:1}, \cref{sec:1} -> [§sec:1]
     text = re.sub(r'\\eqref\{([^}]+)\}', r'(\1)', text)
+    text = re.sub(r'\\(?:autoref|cref|Cref|nameref)\{([^}]+)\}', r'[§\1]', text)
     text = re.sub(r'\\ref\{([^}]+)\}', r'[\1]', text)
     text = re.sub(r'\\pageref\{([^}]+)\}', r'[p.\1]', text)
 
-    # \cite{ref1, ref2} -> [@ref1; @ref2]
+    # \cite{ref1, ref2}, \citep, \citet, \citeauthor, \citeyear
     def _repl_cite(m):
         keys = [k.strip() for k in m.group(1).split(',') if k.strip()]
         return '[' + '; '.join(f'@{k}' for k in keys) + ']'
-    text = re.sub(r'\\(?:cite|citep|citet|parencite|textcite)(?:\[.*?\])*\{([^}]+)\}', _repl_cite, text)
+    text = re.sub(r'\\(?:cite|citep|citet|parencite|textcite|citeauthor|citeyear|nocite|citealp|citealt)(?:\[.*?\])*\{([^}]+)\}', _repl_cite, text)
 
-    # 13. 递归内联排版解析（使用平衡括号，彻底杜绝单层正则截断）
+    # 14. 递归内联排版解析（使用平衡括号，彻底杜绝单层正则截断）
+    footnotes_collected = []
+    def _format_footnote(fn_content: str) -> str:
+        fn_id = len(footnotes_collected) + 1
+        footnotes_collected.append((fn_id, fn_content.strip()))
+        return f'[^{fn_id}]'
+
     inline_map = [
-        (r'\\textbf', lambda c: f'**{c}**'),
-        (r'\\textbf\*', lambda c: f'**{c}**'),
-        (r'\\textit', lambda c: f'*{c}*'),
-        (r'\\emph', lambda c: f'*{c}*'),
-        (r'\\texttt', lambda c: f'`{c}`'),
-        (r'\\underline', lambda c: f'<u>{c}</u>'),
-        (r'\\sout', lambda c: f'~~{c}~~'),
-        (r'\\textsc', lambda c: f'<span style="font-variant: small-caps;">{c}</span>'),
-        (r'\\footnote', lambda c: f' [^{c}]')
+        (r'\\textbf\*?', lambda c: f'**{c}**'),
+        (r'\\textit\*?', lambda c: f'*{c}*'),
+        (r'\\emph\*?', lambda c: f'*{c}*'),
+        (r'\\textsl\*?', lambda c: f'*{c}*'),
+        (r'\\texttt\*?', lambda c: f'`{c}`'),
+        (r'\\path\*?', lambda c: f'`{c}`'),
+        (r'\\nolinkurl\*?', lambda c: f'`{c}`'),
+        (r'\\underline\*?', lambda c: f'<u>{c}</u>'),
+        (r'\\sout\*?', lambda c: f'~~{c}~~'),
+        (r'\\st\*?', lambda c: f'~~{c}~~'),
+        (r'\\textsc\*?', lambda c: f'<span style="font-variant: small-caps;">{c}</span>'),
+        (r'\\textsubscript\*?', lambda c: f'<sub>{c}</sub>'),
+        (r'\\textsuperscript\*?', lambda c: f'<sup>{c}</sup>'),
+        (r'\\textsf\*?', lambda c: f'{c}'),
+        (r'\\textmd\*?', lambda c: f'{c}'),
+        (r'\\textup\*?', lambda c: f'{c}'),
+        (r'\\footnote', _format_footnote)
     ]
 
     for cmd_tag, formatter in inline_map:
@@ -666,24 +792,24 @@ def latex_to_md(tex_content: str) -> str:
     text = _repl_href(text)
     text = re.sub(r'\\url\{([^}]+)\}', r'<\1>', text)
 
-    # 14. 参考文献环境 (\begin{thebibliography} ... \bibitem)
+    # 15. 参考文献环境 (\begin{thebibliography} ... \bibitem)
     def _repl_bib(m):
         b_body = m.group(1).strip()
         items = re.split(r'\\bibitem(?:\[(.*?)\])?\{([^}]+)\}', b_body)
-        bib_lines = ['\n\n## 参考文献\n']
+        bib_lines = ['\n\n## 参考文献 (References)\n']
         i = 1
         while i < len(items):
             label = items[i]
             key = items[i + 1]
             desc = items[i + 2].strip() if (i + 2 < len(items)) else ''
-            prefix = f'[{label}]' if label else f'[@{key}]'
+            prefix = f'**[{label}]**' if label else f'**[@{key}]**'
             bib_lines.append(f'- {prefix} {desc}')
             i += 3
         return '\n'.join(bib_lines) + '\n\n'
 
     text = re.sub(r'\\begin\{thebibliography\}(?:\{[^}]*\})?(.*?)\\end\{thebibliography\}', _repl_bib, text, flags=re.DOTALL)
 
-    # 15. 保护数学公式并清理普通文本中的 LaTeX 转义字符（精确切分，零 Token 泄漏风险）
+    # 16. 保护数学公式并清理普通文本中的 LaTeX 转义字符与经典引号（精确切分，零 Token 泄漏风险）
     def _unescape_plain_text(t: str) -> str:
         pattern = re.compile(r'(\$\$.*?\$\$|(?<!\\)\$.*?(?<!\\)\$)', re.DOTALL)
         parts = pattern.split(t)
@@ -692,13 +818,22 @@ def latex_to_md(tex_content: str) -> str:
             if i % 2 == 1:
                 out.append(p)
             else:
+                p = re.sub(r"``(.*?)''", r'“\1”', p, flags=re.DOTALL)
+                p = re.sub(r"`(.*?)'", r'‘\1’', p, flags=re.DOTALL)
                 p = p.replace(r'\%', '%').replace(r'\&', '&').replace(r'\_', '_').replace(r'\#', '#').replace(r'\{', '{').replace(r'\}', '}').replace('~', ' ')
                 out.append(p)
         return ''.join(out)
 
     text = _unescape_plain_text(text)
 
-    # 16. 构建 Frontmatter
+    # 17. 附录脚注列表 (Footnotes)
+    if footnotes_collected:
+        fn_lines = ['\n\n---\n\n### 脚注 (Footnotes)\n']
+        for fn_id, fn_text in footnotes_collected:
+            fn_lines.append(f'[^{fn_id}]: {fn_text}')
+        text += '\n' + '\n'.join(fn_lines) + '\n'
+
+    # 18. 构建 Frontmatter
     frontmatter = []
     if title_val:
         frontmatter.append(f'title: "{title_val}"')
@@ -712,8 +847,6 @@ def latex_to_md(tex_content: str) -> str:
     res_parts = []
     if frontmatter:
         res_parts.append('---\n' + '\n'.join(frontmatter) + '\n---\n')
-    if abstract_val:
-        res_parts.append(f'> **摘要**：{abstract_val}\n')
     res_parts.append(cleaned_body)
 
     return '\n\n'.join(res_parts).strip()
