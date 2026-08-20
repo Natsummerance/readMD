@@ -145,15 +145,30 @@ def add_inline(paragraph, nodes, style, tmpdir, resolve):
                         r = paragraph.add_run(nd['alt'] or nd['src'])
                         _set_font(r, size=size, color=color)
             elif t == 'math':
-                if nd.get('fallback'):
-                    r = paragraph.add_run(nd['latex'])
-                    _set_font(r, size=size, color=color, italic=True)
-                elif nd.get('png') and nd.get('w'):
+                latex = nd.get('latex', '')
+                inserted = False
+                if latex:
                     try:
-                        run = paragraph.add_run()
-                        run.add_picture(io.BytesIO(nd['png']), width=Pt(nd['w']))
+                        from ..latex2omml import latex_to_omml
+                        omml_xml = latex_to_omml(latex, is_block=False)
+                        element = parse_xml(omml_xml)
+                        paragraph._p.append(element)
+                        inserted = True
                     except Exception:
+                        inserted = False
+                if not inserted:
+                    if nd.get('fallback'):
                         r = paragraph.add_run(nd['latex'])
+                        _set_font(r, size=size, color=color, italic=True)
+                    elif nd.get('png') and nd.get('w'):
+                        try:
+                            run = paragraph.add_run()
+                            run.add_picture(io.BytesIO(nd['png']), width=Pt(nd['w']))
+                        except Exception:
+                            r = paragraph.add_run(nd['latex'])
+                            _set_font(r, size=size, color=color, italic=True)
+                    else:
+                        r = paragraph.add_run(nd.get('latex', ''))
                         _set_font(r, size=size, color=color, italic=True)
     _emit(nodes)
 
@@ -401,16 +416,32 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
                 r = p.add_run('\n'.join(inner))
                 _set_font(r, size=float(style['typography']['size']), color=_hex_rgb(style['quote']['color']))
         elif t == 'math':
-            if blk.get('fallback'):
-                p = doc.add_paragraph()
-                r = p.add_run(blk.get('latex', ''))
-                _set_font(r, size=float(style['typography']['size']), italic=True)
-            elif blk.get('png') and blk.get('w'):
+            latex = blk.get('latex', '')
+            inserted = False
+            if latex:
+                try:
+                    from ..latex2omml import latex_to_omml
+                    omml_xml = latex_to_omml(latex, is_block=True)
+                    element = parse_xml(omml_xml)
+                    p = doc.add_paragraph()
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    p._p.append(element)
+                    inserted = True
+                except Exception:
+                    inserted = False
+            if not inserted:
                 p = doc.add_paragraph()
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                try:
-                    p.add_run().add_picture(io.BytesIO(blk['png']), width=Pt(blk['w']))
-                except Exception:
+                if blk.get('fallback'):
+                    r = p.add_run(blk.get('latex', ''))
+                    _set_font(r, size=float(style['typography']['size']), italic=True)
+                elif blk.get('png') and blk.get('w'):
+                    try:
+                        p.add_run().add_picture(io.BytesIO(blk['png']), width=Pt(blk['w']))
+                    except Exception:
+                        r = p.add_run(blk.get('latex', ''))
+                        _set_font(r, size=float(style['typography']['size']), italic=True)
+                else:
                     r = p.add_run(blk.get('latex', ''))
                     _set_font(r, size=float(style['typography']['size']), italic=True)
         elif t == 'hr':

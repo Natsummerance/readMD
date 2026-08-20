@@ -17,12 +17,15 @@ import time
 import importlib.util
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if ROOT_DIR not in sys.path:
-    sys.path.insert(0, ROOT_DIR)
+sys.path.insert(0, ROOT_DIR)
 
 from src.readmd_modules import updater, bibtex, texmd
 import readmd
-from tools import i18n_sync
+
+i18n_sync_path = os.path.join(ROOT_DIR, 'tools', 'i18n_sync.py')
+spec_i18n = importlib.util.spec_from_file_location("readmd_tools_i18n_sync", i18n_sync_path)
+i18n_sync = importlib.util.module_from_spec(spec_i18n)
+spec_i18n.loader.exec_module(i18n_sync)
 
 mcp_path = os.path.join(ROOT_DIR, 'packages', 'mcp-server', 'readmd_mcp_server.py')
 spec = importlib.util.spec_from_file_location("readmd_mcp_server", mcp_path)

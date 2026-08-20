@@ -102,13 +102,44 @@ def _markitdown_convert(path):
 
 _M_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/math'
 
+_UNICODE_MATH_TO_LATEX = {
+    'α': r'\alpha', 'β': r'\beta', 'γ': r'\gamma', 'δ': r'\delta',
+    'ϵ': r'\epsilon', 'ε': r'\varepsilon', 'ζ': r'\zeta', 'η': r'\eta',
+    'θ': r'\theta', 'ϑ': r'\vartheta', 'ι': r'\iota', 'κ': r'\kappa',
+    'λ': r'\lambda', 'μ': r'\mu', 'ν': r'\nu', 'ξ': r'\xi',
+    'π': r'\pi', 'ϖ': r'\varpi', 'ρ': r'\rho', 'ϱ': r'\varrho',
+    'σ': r'\sigma', 'ς': r'\varsigma', 'τ': r'\tau', 'υ': r'\upsilon',
+    'ϕ': r'\phi', 'φ': r'\varphi', 'χ': r'\chi', 'ψ': r'\psi', 'ω': r'\omega',
+    'Γ': r'\Gamma', 'Δ': r'\Delta', 'Θ': r'\Theta', 'Λ': r'\Lambda',
+    'Ξ': r'\Xi', 'Π': r'\Pi', 'Σ': r'\Sigma', 'Υ': r'\Upsilon',
+    'Φ': r'\Phi', 'Ψ': r'\Psi', 'Ω': r'\Omega',
+    '±': r'\pm', '∓': r'\mp', '×': r'\times', '÷': r'\div', '·': r'\cdot',
+    '∗': r'\ast', '⋆': r'\star', '∘': r'\circ', '∙': r'\bullet',
+    '≤': r'\leq', '≥': r'\geq', '≠': r'\neq', '≈': r'\approx', '≡': r'\equiv',
+    '∼': r'\sim', '≃': r'\simeq', '≅': r'\cong', '∝': r'\propto',
+    '≪': r'\ll', '≫': r'\gg',
+    '→': r'\to', '←': r'\leftarrow', '⇒': r'\Rightarrow', '⇐': r'\Leftarrow',
+    '↔': r'\leftrightarrow', '⇔': r'\Leftrightarrow', '↦': r'\mapsto',
+    '↑': r'\uparrow', '↓': r'\downarrow',
+    '∞': r'\infty', '∂': r'\partial', '∇': r'\nabla', '′': r"'", 'ℏ': r'\hbar',
+    '∈': r'\in', '∉': r'\notin', '⊂': r'\subset', '⊆': r'\subseteq',
+    '⊃': r'\supset', '⊇': r'\supseteq', '∩': r'\cap', '∪': r'\cup',
+    '∖': r'\setminus', '∀': r'\forall', '∃': r'\exists', '¬': r'\neg',
+    '∧': r'\land', '∨': r'\lor', '∅': r'\emptyset',
+    '…': r'\ldots', '⋯': r'\cdots', '⋮': r'\vdots', '⋱': r'\ddots',
+    '∠': r'\angle', '⊥': r'\perp', '∥': r'\parallel',
+    '∑': r'\sum', '∏': r'\prod', '∐': r'\coprod',
+    '∫': r'\int', '∬': r'\iint', '∭': r'\iiint', '∮': r'\oint',
+    '⋂': r'\bigcap', '⋃': r'\bigcup'
+}
+
 
 def _mq(tag):
     return '{%s}%s' % (_M_NS, tag)
 
 
 def _omml_to_latex(el):
-    """递归把 OMML 元素转为 LaTeX 片段（基础结构：分数/上下标/根号/求和积分等）。"""
+    """递归把 OMML 元素转为高质量 LaTeX 表达式。"""
     if el is None:
         return ''
     tag = el.tag
@@ -117,88 +148,211 @@ def _omml_to_latex(el):
     local = tag.split('}')[1]
 
     def kids(e):
+        if e is None:
+            return ''
         return ''.join(_omml_to_latex(c) for c in e)
 
     if local == 't':
-        return (el.text or '').replace('\u200b', '').replace('\u2061', '')
-    if local in ('r', 'oMath', 'oMathPara', 'm', 'e', 'num', 'den', 'sub',
-                 'sup', 'deg', 'chr', 'fName', 'acc', 'd', 'delim', 'eqArr',
-                 'limLow', 'limUpp', 'groupChr', 'bar', 'phant', 'box',
-                 'borderBox', 'func'):
+        txt = (el.text or '').replace('\u200b', '').replace('\u2061', '')
+        # 替换 Unicode 数学符号
+        out_chars = []
+        for ch in txt:
+            if ch in _UNICODE_MATH_TO_LATEX:
+                out_chars.append(_UNICODE_MATH_TO_LATEX[ch] + ' ')
+            else:
+                out_chars.append(ch)
+        return ''.join(out_chars)
+
+    if local in ('r', 'oMath', 'oMathPara', 'e', 'num', 'den', 'sub',
+                 'sup', 'deg', 'chr', 'fName', 'acc', 'delim',
+                 'phant', 'func'):
         return kids(el)
+
     if local == 'f':  # 分数
         num = el.find(_mq('num'))
         den = el.find(_mq('den'))
-        return r'\frac{%s}{%s}' % (kids(num), kids(den))
+        fPr = el.find(_mq('fPr'))
+        if fPr is not None:
+            t_type = fPr.find(_mq('type'))
+            if t_type is not None and (t_type.get(_mq('val')) == 'noBar' or t_type.get('val') == 'noBar'):
+                return r'\binom{%s}{%s}' % (kids(num).strip(), kids(den).strip())
+        return r'\frac{%s}{%s}' % (kids(num).strip(), kids(den).strip())
+
     if local == 'sSup':
         base = el.find(_mq('e'))
         sup = el.find(_mq('sup'))
-        return '{%s}^{%s}' % (kids(base), kids(sup))
+        return '{%s}^{%s}' % (kids(base).strip(), kids(sup).strip())
+
     if local == 'sSub':
         base = el.find(_mq('e'))
         sub = el.find(_mq('sub'))
-        return '{%s}_{%s}' % (kids(base), kids(sub))
+        return '{%s}_{%s}' % (kids(base).strip(), kids(sub).strip())
+
     if local == 'sSubSup':
         base = el.find(_mq('e'))
         sub = el.find(_mq('sub'))
         sup = el.find(_mq('sup'))
-        return '{%s}_{%s}^{%s}' % (kids(base), kids(sub), kids(sup))
+        return '{%s}_{%s}^{%s}' % (kids(base).strip(), kids(sub).strip(), kids(sup).strip())
+
     if local == 'rad':  # 根式
         deg = el.find(_mq('deg'))
         e_el = el.find(_mq('e'))
-        inner = kids(e_el)
+        inner = kids(e_el).strip()
         d = kids(deg).strip()
         if d:
             return r'\sqrt[%s]{%s}' % (d, inner)
         return r'\sqrt{%s}' % inner
+
     if local == 'nary':  # 求和/积分/连乘
-        chr_el = el.find(_mq('chr'))
+        chr_el = el.find(_mq('naryPr'))
+        c = ''
+        if chr_el is not None:
+            c_node = chr_el.find(_mq('chr'))
+            if c_node is not None:
+                c = c_node.get(_mq('val'), c_node.get('val', ''))
+        if not c:
+            c_node = el.find(_mq('chr'))
+            if c_node is not None:
+                c = c_node.get(_mq('val'), c_node.get('val', '')) or kids(c_node)
+        c = c.strip()
+        op = {'\u2211': r'\sum', '\u222b': r'\int', '\u220f': r'\prod',
+              '\u222e': r'\oint', '\u22c2': r'\bigcap', '\u22c3': r'\bigcup',
+              '∑': r'\sum', '∫': r'\int', '∏': r'\prod', '∮': r'\oint'}.get(c, c or r'\int' if 'int' in c else r'\sum')
         sub = el.find(_mq('sub'))
         sup = el.find(_mq('sup'))
         e_el = el.find(_mq('e'))
-        c = kids(chr_el)
-        op = {'\u2211': r'\sum', '\u222b': r'\int', '\u220f': r'\prod',
-              '\u222e': r'\oint', '\u22c2': r'\bigcap', '\u22c3': r'\bigcup'}.get(c, c)
-        s, p = kids(sub), kids(sup)
-        inner = kids(e_el)
-        if s or p:
-            return '%s_{%s}^{%s} %s' % (op, s, p, inner)
-        return '%s %s' % (op, inner)
+        s, p = kids(sub).strip(), kids(sup).strip()
+        inner = kids(e_el).strip()
+        subsup = ''
+        if s and p:
+            subsup = '_{%s}^{%s}' % (s, p)
+        elif s:
+            subsup = '_{%s}' % s
+        elif p:
+            subsup = '^{%s}' % p
+
+        if inner:
+            return '%s%s %s' % (op, subsup, inner)
+        return '%s%s' % (op, subsup)
+
+    if local == 'd':  # 定界符 / 括号组
+        dpr = el.find(_mq('dPr'))
+        beg = '('
+        end = ')'
+        if dpr is not None:
+            beg_el = dpr.find(_mq('begChr'))
+            end_el = dpr.find(_mq('endChr'))
+            if beg_el is not None:
+                beg = beg_el.get(_mq('val'), beg_el.get('val', '('))
+            if end_el is not None:
+                end = end_el.get(_mq('val'), end_el.get('val', ')'))
+
+        delim_map = {
+            '(': (r'\left(', r'\right)'),
+            '[': (r'\left[', r'\right]'),
+            '{': (r'\left\{', r'\right\}'),
+            '|': (r'\left|', r'\right|'),
+            '‖': (r'\left\|', r'\right\|'),
+            '⟨': (r'\left\langle', r'\right\rangle'),
+            '<': (r'\left\langle', r'\right\rangle'),
+            '': (r'\left.', r'\right.')
+        }
+        l_beg, _ = delim_map.get(beg, (r'\left%s' % beg if beg else r'\left.', ''))
+        _, r_end = delim_map.get(end, ('', r'\right%s' % end if end else r'\right.'))
+
+        e_el = el.find(_mq('e'))
+        inner = kids(e_el).strip()
+
+        # 如果内部为矩阵，转换为标准 pmatrix / bmatrix / vmatrix
+        if inner.startswith(r'\begin{matrix}') and inner.endswith(r'\end{matrix}'):
+            mat_body = inner[len(r'\begin{matrix}'):-len(r'\end{matrix}')].strip()
+            if beg == '(' and end == ')':
+                return r'\begin{pmatrix} %s \end{pmatrix}' % mat_body
+            if beg == '[' and end == ']':
+                return r'\begin{bmatrix} %s \end{bmatrix}' % mat_body
+            if beg == '{' and end == '}':
+                return r'\begin{Bmatrix} %s \end{Bmatrix}' % mat_body
+            if beg == '|' and end == '|':
+                return r'\begin{vmatrix} %s \end{vmatrix}' % mat_body
+
+        return '%s %s %s' % (l_beg, inner, r_end)
+
+    if local == 'm':  # 矩阵
+        rows = el.findall(_mq('mr'))
+        if rows:
+            row_strs = []
+            for r in rows:
+                cells = r.findall(_mq('e'))
+                row_strs.append(' & '.join(kids(c).strip() for c in cells))
+            return r'\begin{matrix} %s \end{matrix}' % r' \\ '.join(row_strs)
+        return kids(el)
+
+    if local == 'eqArr':  # 方程组 / 多行对齐
+        rows = el.findall(_mq('e'))
+        if rows:
+            row_strs = [kids(r).strip() for r in rows if kids(r).strip()]
+            return r'\begin{aligned} %s \end{aligned}' % r' \\ '.join(row_strs)
+        return kids(el)
+
+    if local == 'limLow':  # 下标极限 / 最小值
+        e_el = el.find(_mq('e'))
+        lim_el = el.find(_mq('lim'))
+        return '{%s}_{%s}' % (kids(e_el).strip(), kids(lim_el).strip())
+
+    if local == 'limUpp':  # 上标极限
+        e_el = el.find(_mq('e'))
+        lim_el = el.find(_mq('lim'))
+        return '{%s}^{%s}' % (kids(e_el).strip(), kids(lim_el).strip())
+
+    if local in ('box', 'borderBox'):  # 框选
+        e_el = el.find(_mq('e'))
+        return r'\boxed{%s}' % kids(e_el).strip()
+
     if local == 'func':  # 函数
         fname = el.find(_mq('fName'))
         e_el = el.find(_mq('e'))
-        return r'%s(%s)' % (kids(fname), kids(e_el))
-    if local == 'acc':  # 帽子/箭头
+        fn_str = kids(fname).strip()
+        in_str = kids(e_el).strip()
+        if in_str:
+            return r'%s(%s)' % (fn_str, in_str)
+        return fn_str
+
+    if local == 'acc':  # 帽子/箭头/重音
         acc = el.find(_mq('acc'))
         e_el = el.find(_mq('e'))
-        a = kids(acc)
-        inner = kids(e_el)
-        marks = {'\u02c6': r'\hat', '\u00af': r'\bar', '\u2192': r'\vec',
-                 '\u02dc': r'\tilde', '\u0307': r'\dot', '\u0308': r'\ddot'}
+        a = kids(acc).strip()
+        inner = kids(e_el).strip()
+        marks = {'\u02c6': r'\hat', '^': r'\hat', '\u00af': r'\bar', '¯': r'\bar',
+                 '\u2192': r'\vec', '→': r'\vec', '\u02dc': r'\tilde', '~': r'\tilde',
+                 '\u0307': r'\dot', '˙': r'\dot', '\u0308': r'\ddot', '¨': r'\ddot',
+                 'ˇ': r'\check', '´': r'\acute', '`': r'\grave'}
         cmd = marks.get(a, '')
         return (cmd + '{%s}' % inner) if cmd else inner
+
     if local == 'bar':  # 上下横线
-        pos = el.find(_mq('barPr'))
         e_el = el.find(_mq('e'))
-        return r'\overline{%s}' % kids(e_el)
+        return r'\overline{%s}' % kids(e_el).strip()
+
     if local == 'groupChr':  # 括号/花括号
         chr_el = el.find(_mq('chr'))
         e_el = el.find(_mq('e'))
-        c = kids(chr_el)
+        c = kids(chr_el).strip()
         pairs = {'{': r'\left\{ %s \right\}', '}': r'\left\{ %s \right\}',
                  '[': r'\left[ %s \right]', ']': r'\left[ %s \right]',
                  '(': r'\left( %s \right)', ')': r'\left( %s \right)',
                  '|': r'\left| %s \right|'}
         if c in pairs:
-            return pairs[c] % kids(e_el)
-        return kids(e_el)
+            return pairs[c] % kids(e_el).strip()
+        return kids(e_el).strip()
+
     if local in ('rPr', 'ctrlPr', 'argPr', 'eqArrPr', 'naryPr', 'sSupPr',
                  'sSubPr', 'sSubSupPr', 'radPr', 'fPr', 'accPr', 'barPr',
                  'delimPr', 'funcPr', 'limLowPr', 'limUppPr', 'groupChrPr',
                  'phantPr', 'boxPr', 'borderBoxPr', 'mathPr', 'wrapPr',
-                 'intLim', 'naryLim', 'subHide', 'supHide'):
+                 'intLim', 'naryLim', 'subHide', 'supHide', 'mPr', 'mrPr'):
         return ''
-    # 未知标签：取文本兜底
+
+    # 未知标签：取子节点文本兜底
     return kids(el)
 
 
@@ -250,18 +404,63 @@ def _lang_hint(text):
     return ''
 
 
-def _docx_equations(p):
-    """返回段落中所有 m:oMath 元素转出的 LaTeX 片段。"""
-    out = []
-    for om in p._p.iter(_mq('oMath')):
-        latex = _omml_to_latex(om).strip()
-        if latex:
-            out.append(latex)
-    return out
+def _para_inline_with_math(p, doc=None):
+    """按段落子节点物理先后顺序提取文字、格式、超链接与 OMML 公式。"""
+    from docx.text.run import Run
+    parts = []
+
+    for child in p._p:
+        tag = child.tag
+        if not isinstance(tag, str):
+            continue
+        local = tag.split('}')[-1]
+
+        if local == 'r':
+            r = Run(child, p)
+            t = r.text or ''
+            if not t:
+                continue
+            if _run_font_lower(r) in _MONO_FONTS:
+                t = '`' + t + '`'
+            if r.bold:
+                t = '**' + t + '**'
+            if r.italic:
+                t = '*' + t + '*'
+            parts.append(t)
+        elif local == 'hyperlink':
+            r_id = child.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id')
+            url = ''
+            if r_id and doc is not None and hasattr(doc, 'part') and r_id in doc.part.rels:
+                try:
+                    url = doc.part.rels[r_id].target_ref
+                except Exception:
+                    url = ''
+            link_text = ''.join((c.text or '') for c in child.findall('.//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}t'))
+            if url and link_text:
+                parts.append('[%s](%s)' % (link_text, url))
+            elif link_text:
+                parts.append(link_text)
+        elif local == 'oMath':
+            latex = _omml_to_latex(child).strip()
+            if latex:
+                parts.append('$%s$' % latex)
+        elif local == 'oMathPara':
+            for om in child.findall(_mq('oMath')):
+                latex = _omml_to_latex(om).strip()
+                if latex:
+                    parts.append('$$%s$$' % latex)
+
+    res = ''.join(parts).strip()
+    # 如果段落内只有一个 $...$，且包含复杂结构，提升为独立公式块 $$...$$
+    if res.startswith('$') and res.endswith('$') and not res.startswith('$$') and not res.endswith('$$'):
+        inner_m = res[1:-1].strip()
+        if len(inner_m) >= 60 or r'\begin{' in inner_m or r'\frac' in inner_m or r'\sum' in inner_m or r'\int' in inner_m or r'\aligned' in inner_m:
+            res = '$$%s$$' % inner_m
+    return res
 
 
-def _table_to_md(tbl):
-    """w:tbl → 规整管道表（按实际 tc 遍历，处理合并单元格去重）。"""
+def _table_to_md(tbl, doc=None):
+    """w:tbl → 规整管道表（按实际 tc 遍历，支持单元格内公式与合并去重）。"""
     from docx.table import _Cell
     rows = []
     for tr in tbl._tbl.findall('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tr'):
@@ -272,7 +471,7 @@ def _table_to_md(tbl):
                 continue
             seen.add(id(tc))
             c = _Cell(tc, tbl)
-            txt = '\n'.join(pp.text or '' for pp in c.paragraphs)
+            txt = '\n'.join(_para_inline_with_math(pp, doc) for pp in c.paragraphs)
             txt = txt.replace('\n', ' ').replace('|', '\\|').strip()
             cells.append(txt)
         rows.append(cells)
@@ -311,19 +510,6 @@ def docx2md(path):
 
     def handle_para(p):
         nonlocal code_buf, code_lang
-        eqs = _docx_equations(p)
-        if eqs:
-            flush_code()
-            text = _para_plain(p).strip()
-            for latex in eqs:
-                if len(latex) >= 80 or _para_plain(p).strip() == latex:
-                    lines.append('$$%s$$' % latex)
-                else:
-                    lines.append('$%s$' % latex)
-            if text and text not in eqs:
-                lines.append(text)
-            lines.append('')
-            return
         style_name = ''
         try:
             style_name = (p.style.name or '') if p.style is not None else ''
@@ -336,19 +522,19 @@ def docx2md(path):
             except ValueError:
                 level = 1
             level = max(1, min(6, level))
-            txt = _para_inline(p).strip()
+            txt = _para_inline_with_math(p, doc).strip()
             if txt:
                 lines.append('#' * level + ' ' + txt)
                 lines.append('')
             return
         if style_name and style_name.lower() == 'title':
             flush_code()
-            txt = _para_inline(p).strip()
+            txt = _para_inline_with_math(p, doc).strip()
             if txt:
                 lines.append('# ' + txt)
                 lines.append('')
             return
-        if _para_has_mono(p):
+        if _para_has_mono(p) and not p._p.findall('.//' + _mq('oMath')):
             txt = _para_plain(p).strip()
             if txt:
                 if not code_lang:
@@ -356,7 +542,7 @@ def docx2md(path):
                 code_buf.append(txt)
             return
         flush_code()
-        txt = _para_inline(p).strip()
+        txt = _para_inline_with_math(p, doc).strip()
         if not txt:
             return
         # 列表：段落级或样式级 numPr → "- "
@@ -390,7 +576,7 @@ def docx2md(path):
             handle_para(Paragraph(child, doc))
         elif child.tag == qn('w:tbl'):
             flush_code()
-            md = _table_to_md(Table(child, doc))
+            md = _table_to_md(Table(child, doc), doc)
             if md:
                 lines.append(md)
                 lines.append('')

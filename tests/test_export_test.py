@@ -14,7 +14,10 @@ from src.readmd_modules.mdexport import parser as P
 from src.readmd_modules.mdexport import styles as S
 from src.readmd_modules.mdexport import formula as F
 from src.readmd_modules.mdexport import docx_render as DOCX
-from src.readmd_modules.mdexport import pdf_render as PDF
+try:
+    from src.readmd_modules.mdexport import pdf_render as PDF
+except ImportError:
+    PDF = None
 
 import src.readmd_modules.mdexport as E
 
