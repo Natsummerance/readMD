@@ -9,9 +9,9 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 try:
     import readmd
-    VERSION = getattr(readmd, 'VERSION', '2.3.2')
+    VERSION = getattr(readmd, 'VERSION', '2.3.3')
 except Exception:
-    VERSION = os.environ.get('READMD_VERSION', '2.3.2')
+    VERSION = os.environ.get('READMD_VERSION', '2.3.3')
 
 datas = [
     (os.path.join(ROOT_DIR, 'assets'), 'assets'),

@@ -13,7 +13,7 @@ import readmd
 class TestV232Features(unittest.TestCase):
 
     def test_version_bumped_to_v232(self):
-        self.assertEqual(readmd.VERSION, '2.3.2')
+        self.assertTrue(readmd.VERSION >= '2.3.2')
 
     def test_close_confirm_modal_assets_and_keys(self):
         root = os.path.dirname(os.path.dirname(__file__))
