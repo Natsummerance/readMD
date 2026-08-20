@@ -343,9 +343,68 @@ def latex_to_md(tex_content: str) -> str:
     # 特殊块级定界符 \[ ... \]
     text = re.sub(r'\\\[(.*?)\\\]', r'\n\n$$\n\1\n$$\n\n', text, flags=re.DOTALL)
     # 行内定界符 \( ... \)
+    text = re.sub(r'\\\)\s*\\\(', r'\) \(', text)
     text = re.sub(r'\\\((.*?)\\\)', r'$\1$', text, flags=re.DOTALL)
 
-    # 7. 学术定理与证明环境 (Theorem, Lemma, Proof -> Callout Blockquotes)
+    # 7. 列表环境优先解析
+    def _repl_itemize(m):
+        body = m.group(1).strip()
+        items = re.split(r'\\item(?:\[(.*?)\])?(?:\s+|(?=[\\$]))', body)
+        res = []
+        i = 1
+        while i < len(items):
+            opt_tag = items[i]
+            it_text = items[i + 1].strip() if (i + 1 < len(items)) else ''
+            if opt_tag:
+                res.append(f'- **{opt_tag}** {it_text}')
+            else:
+                res.append(f'- {it_text}')
+            i += 2
+        return '\n\n' + '\n'.join(res) + '\n\n'
+
+    text = re.sub(r'\\begin\{itemize\}(.*?)\\end\{itemize\}', _repl_itemize, text, flags=re.DOTALL)
+
+    def _repl_enumerate(m):
+        body = m.group(1).strip()
+        items = re.split(r'\\item(?:\[(.*?)\])?(?:\s+|(?=[\\$]))', body)
+        res = []
+        idx = 1
+        i = 1
+        while i < len(items):
+            opt_tag = items[i]
+            it_text = items[i + 1].strip() if (i + 1 < len(items)) else ''
+            if opt_tag:
+                res.append(f'{idx}. **{opt_tag}** {it_text}')
+            else:
+                res.append(f'{idx}. {it_text}')
+            idx += 1
+            i += 2
+        return '\n\n' + '\n'.join(res) + '\n\n'
+
+    text = re.sub(r'\\begin\{enumerate\}(.*?)\\end\{enumerate\}', _repl_enumerate, text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{description\}(.*?)\\end\{description\}', _repl_itemize, text, flags=re.DOTALL)
+
+    # 圆圈序号列表 \begin{circlelist}
+    def _repl_circlelist(m):
+        body = m.group(1).strip()
+        items = re.split(r'\\item(?:\s+|(?=[\\$]))', body)
+        res = []
+        circle_nums = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩']
+        idx = 0
+        for it in items:
+            it = it.strip()
+            if it:
+                c_num = circle_nums[idx] if idx < len(circle_nums) else f'({idx+1})'
+                res.append(f'- **{c_num}** {it}')
+                idx += 1
+        return '\n\n' + '\n'.join(res) + '\n\n'
+
+    text = re.sub(r'\\begin\{circlelist\*?\}(.*?)\\end\{circlelist\*?\}', _repl_circlelist, text, flags=re.DOTALL)
+
+    # 兜底清理外部孤立 \item
+    text = re.sub(r'\\item(?:\[(.*?)\])?(?:\s+|(?=[\\$]))', lambda m: f'- **{m.group(1)}** ' if m.group(1) else '- ', text)
+
+    # 8. 学术定理与证明环境 (Theorem, Lemma, Proof -> Callout Blockquotes)
     theorem_map = {
         'theorem': '定理 (Theorem)',
         'lemma': '引理 (Lemma)',
@@ -372,13 +431,13 @@ def latex_to_md(tex_content: str) -> str:
             return _repl_th
         text = re.sub(pattern, make_repl_thm(thm_title), text, flags=re.DOTALL | re.IGNORECASE)
 
-    # 8. 题目、选项、答案与解析环境 (Exam & Problem Sets)
+    # 9. 题目、选项、答案与解析环境 (Exam & Problem Sets)
     def _repl_choices(t_in: str) -> str:
         pos = 0
         out_chunks = []
         last_pos = 0
-        pattern = re.compile(r'\\choices(?![a-zA-Z])')
-        labels = ['A', 'B', 'C', 'D', 'E', 'F']
+        pattern = re.compile(r'\\choices(?:five|four|three|six|two)?(?![a-zA-Z])')
+        labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
         while True:
             m = pattern.search(t_in, pos)
             if not m:
@@ -387,10 +446,17 @@ def latex_to_md(tex_content: str) -> str:
             out_chunks.append(t_in[last_pos:m.start()])
             cur_pos = m.end()
             opts = []
-            for _ in range(4):
-                opt_val, cur_pos = extract_mand_arg(t_in, cur_pos)
-                if opt_val is not None:
-                    opts.append(opt_val.strip())
+            while True:
+                # 探测下一个必选参数 {...}
+                test_pos = cur_pos
+                while test_pos < len(t_in) and t_in[test_pos].isspace():
+                    test_pos += 1
+                if test_pos < len(t_in) and t_in[test_pos] == '{':
+                    opt_val, cur_pos = extract_mand_arg(t_in, test_pos)
+                    if opt_val is not None:
+                        opts.append(opt_val.strip())
+                    else:
+                        break
                 else:
                     break
             if opts:
@@ -416,24 +482,7 @@ def latex_to_md(tex_content: str) -> str:
                   lambda m: '\n\n> **【解析】**\n>\n' + '\n'.join(f'> {l}' for l in m.group(1).strip().splitlines()) + '\n\n',
                   text, flags=re.DOTALL)
 
-    # 圆圈序号列表 \begin{circlelist}
-    def _repl_circlelist(m):
-        body = m.group(1).strip()
-        items = re.split(r'\\item\s+', body)
-        res = []
-        circle_nums = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩']
-        idx = 0
-        for it in items:
-            it = it.strip()
-            if it:
-                c_num = circle_nums[idx] if idx < len(circle_nums) else f'({idx+1})'
-                res.append(f'- **{c_num}** {it}')
-                idx += 1
-        return '\n\n' + '\n'.join(res) + '\n\n'
-
-    text = re.sub(r'\\begin\{circlelist\*?\}(.*?)\\end\{circlelist\*?\}', _repl_circlelist, text, flags=re.DOTALL)
-
-    # 9. 图形与多媒体及填空题标记 (\begin{figure} ... \includegraphics ...)
+    # 10. 图形与多媒体及填空题标记 (\begin{figure} ... \includegraphics ...)
     text = re.sub(r'\\fillinblank(?:\{[^}]*\})?', ' ______ ', text)
     text = re.sub(r'\\blank(?:\{[^}]*\})?', ' ______ ', text)
     text = re.sub(r'\\solutionfigure\{\\bitmapfigure(?:\[.*?\])?\{([^}]+)\}\}', r'\n\n![解析配图](\1)\n\n', text)
@@ -453,7 +502,7 @@ def latex_to_md(tex_content: str) -> str:
 
     text = re.sub(r'\\begin\{figure\*?\}(?:\[.*?\])?(.*?)\\end\{figure\*?\}', _repl_figure, text, flags=re.DOTALL)
 
-    # 10. 复杂学术表格 (\begin{table}, \begin{tabular})
+    # 11. 复杂学术表格 (\begin{table}, \begin{tabular})
     def _parse_tabular(tbody: str) -> str:
         rows = [r.strip() for r in tbody.split(r'\\') if r.strip()]
         md_table_rows = []
@@ -512,7 +561,7 @@ def latex_to_md(tex_content: str) -> str:
     # 单独的 tabular
     text = re.sub(r'\\begin\{tabular\*?\}(?:\{[^}]*\})?\{([^}]*)\}(.*?)\\end\{tabular\*?\}', lambda m: _parse_tabular(m.group(2)), text, flags=re.DOTALL)
 
-    # 10. 章节标题解析 (Section Hierarchies)
+    # 12. 章节标题解析 (Section Hierarchies)
     sec_commands = [
         (r'\\part\*?', '# '),
         (r'\\chapter\*?', '# '),
@@ -545,45 +594,7 @@ def latex_to_md(tex_content: str) -> str:
                 pos = p_end
         text = ''.join(out_chunks)
 
-    # 11. 列表解析 (itemize, enumerate, description)
-    def _repl_itemize(m):
-        body = m.group(1).strip()
-        items = re.split(r'\\item(?:\[(.*?)\])?\s+', body)
-        res = []
-        i = 1
-        while i < len(items):
-            opt_tag = items[i]
-            it_text = items[i + 1].strip() if (i + 1 < len(items)) else ''
-            if opt_tag:
-                res.append(f'- **{opt_tag}** {it_text}')
-            else:
-                res.append(f'- {it_text}')
-            i += 2
-        return '\n\n' + '\n'.join(res) + '\n\n'
-
-    text = re.sub(r'\\begin\{itemize\}(.*?)\\end\{itemize\}', _repl_itemize, text, flags=re.DOTALL)
-
-    def _repl_enumerate(m):
-        body = m.group(1).strip()
-        items = re.split(r'\\item(?:\[(.*?)\])?\s+', body)
-        res = []
-        idx = 1
-        i = 1
-        while i < len(items):
-            opt_tag = items[i]
-            it_text = items[i + 1].strip() if (i + 1 < len(items)) else ''
-            if opt_tag:
-                res.append(f'{idx}. **{opt_tag}** {it_text}')
-            else:
-                res.append(f'{idx}. {it_text}')
-            idx += 1
-            i += 2
-        return '\n\n' + '\n'.join(res) + '\n\n'
-
-    text = re.sub(r'\\begin\{enumerate\}(.*?)\\end\{enumerate\}', _repl_enumerate, text, flags=re.DOTALL)
-    text = re.sub(r'\\begin\{description\}(.*?)\\end\{description\}', _repl_itemize, text, flags=re.DOTALL)
-
-    # 12. 交叉引用与学术引用
+    # 13. 交叉引用与学术引用
     # \eqref{eq:1} -> (1), \ref{sec:1} -> [sec:1]
     text = re.sub(r'\\eqref\{([^}]+)\}', r'(\1)', text)
     text = re.sub(r'\\ref\{([^}]+)\}', r'[\1]', text)
@@ -672,21 +683,20 @@ def latex_to_md(tex_content: str) -> str:
 
     text = re.sub(r'\\begin\{thebibliography\}(?:\{[^}]*\})?(.*?)\\end\{thebibliography\}', _repl_bib, text, flags=re.DOTALL)
 
-    # 15. 保护数学公式并清理普通文本中的 LaTeX 转义字符
-    math_tokens = []
-    def _save_math(m):
-        tok = f'QQQTEXMDMATHTOKEN{len(math_tokens)}QQQ'
-        math_tokens.append(m.group(0))
-        return tok
+    # 15. 保护数学公式并清理普通文本中的 LaTeX 转义字符（精确切分，零 Token 泄漏风险）
+    def _unescape_plain_text(t: str) -> str:
+        pattern = re.compile(r'(\$\$.*?\$\$|(?<!\\)\$.*?(?<!\\)\$)', re.DOTALL)
+        parts = pattern.split(t)
+        out = []
+        for i, p in enumerate(parts):
+            if i % 2 == 1:
+                out.append(p)
+            else:
+                p = p.replace(r'\%', '%').replace(r'\&', '&').replace(r'\_', '_').replace(r'\#', '#').replace(r'\{', '{').replace(r'\}', '}').replace('~', ' ')
+                out.append(p)
+        return ''.join(out)
 
-    text = re.sub(r'\$\$.*?\$\$', _save_math, text, flags=re.DOTALL)
-    text = re.sub(r'(?<!\\)\$.*?(?<!\\)\$', _save_math, text, flags=re.DOTALL)
-
-    text = text.replace(r'\%', '%').replace(r'\&', '&').replace(r'\_', '_').replace(r'\#', '#').replace(r'\{', '{').replace(r'\}', '}')
-    text = text.replace('~', ' ')  # 不换行空格
-
-    for idx, mt in enumerate(math_tokens):
-        text = text.replace(f'QQQTEXMDMATHTOKEN{idx}QQQ', mt)
+    text = _unescape_plain_text(text)
 
     # 16. 构建 Frontmatter
     frontmatter = []
