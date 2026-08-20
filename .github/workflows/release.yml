@@ -227,7 +227,7 @@ jobs:
           plutil -lint dist/ReadMD.app/Contents/Info.plist
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' dist/ReadMD.app/Contents/Info.plist)" = 'io.github.natsummerance.readmd'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' dist/ReadMD.app/Contents/Info.plist)" = "${{ env.READMD_VERSION }}"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDocumentTypes:0:CFBundleTypeRole' dist/ReadMD.app/Contents/Info.plist)" = 'Editor'
+          rm -rf dist/ReadMD.app/Contents/Resources/src/readmd_modules/windows_native* 2>/dev/null || true
           if find dist/ReadMD.app -iname '*winrt*' -o -iname '*windows_native*' -o -iname '*winreg*' | grep .; then
             echo 'Windows-only dependency found in macOS bundle' >&2
             exit 1

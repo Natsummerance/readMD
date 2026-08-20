@@ -594,27 +594,8 @@ window.processDocImports = processDocImports;
 function parseMarkdownWithSourceMap(content, options = {}) {
   const breaks = !!(state && state.breakOnSingleNewline);
   const renderer = new marked.Renderer();
-  let currentLine = 1;
-
-  renderer.heading = function(text, level, raw) {
-    const slug = raw.toLowerCase().replace(/[^\w\u4e00-\u9fff\s-]/g, '').replace(/\s+/g, '-');
-    return `<h${level} id="${slug}" data-source-line="${currentLine}">${text}</h${level}>\n`;
-  };
-
-  renderer.paragraph = function(text) {
-    return `<p data-source-line="${currentLine}">${text}</p>\n`;
-  };
-
-  renderer.blockquote = function(quote) {
-    return `<blockquote data-source-line="${currentLine}">\n${quote}</blockquote>\n`;
-  };
-
-  renderer.table = function(header, body) {
-    return `<table data-source-line="${currentLine}">\n<thead>\n${header}</thead>\n<tbody>\n${body}</tbody>\n</table>\n`;
-  };
 
   renderer.code = function(code, infostring, escaped) {
-    const lineAttr = `data-source-line="${currentLine}"`;
     const info = (infostring || '').trim();
     const parts = info.split(/\s+/);
     const lang = parts[0] || '';
@@ -625,7 +606,7 @@ function parseMarkdownWithSourceMap(content, options = {}) {
       const encodedCode = encodeURIComponent(code);
       const isMatplotlib = info.includes('matplotlib=true') || info.includes('matplotlib=True');
       const isHidden = info.includes('hide=true') || info.includes('hide=True');
-      return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
+      return `<div class="code-chunk-card" data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
         <div class="code-chunk-header">
           <span class="code-chunk-badge">${lang.toUpperCase()}</span>
           <span class="code-chunk-status">就绪</span>
@@ -649,7 +630,7 @@ function parseMarkdownWithSourceMap(content, options = {}) {
     const diagramLangs = ['tikz', 'plantuml', 'puml', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'd2', 'ditaa'];
     if (diagramLangs.includes(lang.toLowerCase())) {
       const encodedCode = encodeURIComponent(code);
-      return `<div class="diagram-card" ${lineAttr} data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
+      return `<div class="diagram-card" data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
         <div class="diagram-header">
           <span class="diagram-badge">${lang.toUpperCase()} 图表</span>
           <button class="diagram-reload-btn" title="重新渲染">⟳ 刷新</button>
@@ -660,21 +641,10 @@ function parseMarkdownWithSourceMap(content, options = {}) {
     }
 
     // 3. Standard Code Block
-    return `<pre ${lineAttr}><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>\n`;
+    return `<pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>\n`;
   };
 
-  const tokens = marked.lexer(content, { gfm: true, breaks: breaks });
-  let html = '';
-  let lineCursor = 1;
-  for (const token of tokens) {
-    if (token.raw) {
-      currentLine = lineCursor;
-      lineCursor += token.raw.split('\n').length - 1;
-    }
-    html += marked.parser([token], { renderer: renderer, gfm: true, breaks: breaks });
-  }
-
-  return html;
+  return marked.parse(content, { renderer: renderer, gfm: true, breaks: breaks });
 }
 window.parseMarkdownWithSourceMap = parseMarkdownWithSourceMap;
 
@@ -683,7 +653,11 @@ async function renderContent(content, name) {
   const saved = state.scrollPos[normalizePath(name || state.file || '')] || 0;
   
   // 预处理 @import
-  content = await processDocImports(content, state.file || name || '');
+  if (content && /@import\s+["']/.test(content)) {
+    try {
+      content = await processDocImports(content, state.file || name || '');
+    } catch (e) {}
+  }
 
   const linesCount = (content || '').split('\n').length;
   const isUltraLong = linesCount > PAGINATION_THRESHOLD_LINES || (content || '').length > PAGINATION_THRESHOLD_BYTES;

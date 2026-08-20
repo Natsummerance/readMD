@@ -13,12 +13,21 @@ try:
 except Exception:
     VERSION = os.environ.get('READMD_VERSION', '2.3.4')
 
+modules_dir = os.path.join(ROOT_DIR, 'src', 'readmd_modules')
+module_datas = []
+if os.path.isdir(modules_dir):
+    for f in os.listdir(modules_dir):
+        fp = os.path.join(modules_dir, f)
+        if f.endswith('.py') and not f.startswith('windows_native') and f != '__pycache__':
+            module_datas.append((fp, 'src/readmd_modules'))
+        elif os.path.isdir(fp) and f != '__pycache__':
+            module_datas.append((fp, f'src/readmd_modules/{f}'))
+
 datas = [
     (os.path.join(ROOT_DIR, 'assets'), 'assets'),
     (os.path.join(ROOT_DIR, 'src', 'readmd_core'), 'src/readmd_core'),
-    (os.path.join(ROOT_DIR, 'src', 'readmd_modules'), 'src/readmd_modules'),
     (os.path.join(ROOT_DIR, 'src', 'readmd_fix.py'), 'src'),
-]
+] + module_datas
 hiddenimports = ['src.readmd_fix', 'src.readmd_core', 'Vision', 'Quartz', 'Foundation', 'objc']
 datas += collect_data_files('magika')
 datas += collect_data_files('docx')
