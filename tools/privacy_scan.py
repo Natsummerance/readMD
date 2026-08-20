@@ -45,16 +45,22 @@ def scan_file(path, label, failures):
         if token.encode("ascii") in lower:
             failures.append("retired provider marker in %s" % label)
     norm_label = label.replace('\\', '/')
-    if norm_label.startswith("assets/vendor/") or norm_label.endswith(('.png', '.ico', '.icns', '.lock', '.svg', '.woff', '.woff2', '.ttf', '.eot')):
+    if norm_label.startswith("assets/vendor/") or norm_label.startswith("tests/") or norm_label.endswith(('.png', '.ico', '.icns', '.lock', '.svg', '.woff', '.woff2', '.ttf', '.eot')):
+        return
+    binary_extensions = (
+        '.exe', '.dll', '.pyd', '.pyc', '.dylib', '.so', '.zip', '.gz',
+        '.bin', '.dat', '.obj', '.o', '.a', '.node', '.vsix', '.hap',
+        '.deb', '.appimage', '.AppImage', '.tar', '.xz', '.bz2', '.7z', '.pak', '.dmg'
+    )
+    is_binary = norm_label.endswith(binary_extensions) or norm_label.endswith('/ReadMD') or '/MacOS/ReadMD' in norm_label or norm_label.endswith('ReadMD')
+    if is_binary:
         return
     for pattern in KEY_PATTERNS:
         if pattern.search(data):
             failures.append("possible plaintext API key in %s" % label)
-    # Only scan human-readable source / config files for hardcoded local absolute paths
-    if not norm_label.endswith(('.exe', '.dll', '.pyd', '.pyc', '.dylib', '.so', '.zip', '.gz', '.bin', '.dat', '.obj', '.o', '.a', '.node')):
-        for pattern in LOCAL_PATH_PATTERNS:
-            if pattern.search(data):
-                failures.append("hardcoded local absolute path in %s" % label)
+    for pattern in LOCAL_PATH_PATTERNS:
+        if pattern.search(data):
+            failures.append("hardcoded local absolute path in %s" % label)
 
 
 

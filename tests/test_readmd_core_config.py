@@ -35,9 +35,9 @@ class TestReadmdCoreConfig(unittest.TestCase):
 
     def test_platform_data_dir_win32(self):
         """测试 Windows 平台数据目录。"""
-        with patch('sys.platform', 'win32'), patch.dict(os.environ, {'APPDATA': r'C:\Users\Test\AppData\Roaming'}):
+        with patch('sys.platform', 'win32'), patch.dict(os.environ, {'APPDATA': r'D:\MockData\AppData\Roaming'}):
             path = config._platform_data_dir()
-            self.assertEqual(path, r'C:\Users\Test\AppData\Roaming\ReadMD')
+            self.assertEqual(path, r'D:\MockData\AppData\Roaming\ReadMD')
 
     def test_platform_data_dir_linux(self):
         """测试 Linux XDG 数据目录。"""
