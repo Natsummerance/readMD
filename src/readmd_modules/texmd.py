@@ -547,7 +547,13 @@ def latex_to_md(tex_content: str) -> str:
                   lambda m: '\n\n> **【解析】**\n>\n' + '\n'.join(f'> {l}' for l in m.group(1).strip().splitlines()) + '\n\n',
                   text, flags=re.DOTALL)
 
-    # 10. 图形与多媒体及填空题标记 (\begin{figure} ... \includegraphics ...)
+    # 10. 常用排版块与引用块 (center, quote, quotation)
+    text = re.sub(r'\\begin\{(?:center|flushleft|flushright)\}(.*?)\\end\{(?:center|flushleft|flushright)\}', r'\n\n\1\n\n', text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{(?:quote|quotation)\}(.*?)\\end\{(?:quote|quotation)\}',
+                  lambda m: '\n\n> ' + '\n> '.join(m.group(1).strip().splitlines()) + '\n\n',
+                  text, flags=re.DOTALL)
+
+    # 11. 图形与多媒体及填空题标记 (\begin{figure} ... \includegraphics ...)
     text = re.sub(r'\\fillinblank(?:\{[^}]*\})?', ' ______ ', text)
     text = re.sub(r'\\blank(?:\{[^}]*\})?', ' ______ ', text)
     text = re.sub(r'\\solutionfigure\{\\bitmapfigure(?:\[.*?\])?\{([^}]+)\}\}', r'\n\n![解析配图](\1)\n\n', text)
