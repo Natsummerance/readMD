@@ -32,7 +32,7 @@ function setWebProgress(percent, title, count) {
   wrap.classList.remove('hidden');
   wrap.setAttribute('aria-hidden', 'false');
   $('url-progress-bar').style.width = Math.max(0, Math.min(100, percent || 0)) + '%';
-  $('url-progress-title').textContent = title || (_t('web.processing') || '处理中…');
+  $('url-progress-title').textContent = title || (_t('web.processing') || 'Processing...');
   $('url-progress-count').textContent = count || '';
 }
 

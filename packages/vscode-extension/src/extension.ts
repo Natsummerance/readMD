@@ -7,7 +7,7 @@ export function activate(context: vscode.ExtensionContext) {
   const previewDisposable = vscode.commands.registerCommand('readmd.preview', () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-      vscode.window.showInformationMessage('请先打开一个 Markdown 文档');
+      vscode.window.showInformationMessage('Please open a Markdown document first');
       return;
     }
 
@@ -74,12 +74,12 @@ print(json.dumps({'repaired': repaired, 'fixes': len(fixes)}))
               );
               editBuilder.replace(fullRange, res.repaired);
             });
-            vscode.window.showInformationMessage(`ReadMD: 已成功自动修正 ${res.fixes} 处格式错误！`);
+            vscode.window.showInformationMessage(`ReadMD: Successfully auto-corrected ${res.fixes} formatting issue(s)!`);
           } else {
-            vscode.window.showInformationMessage('ReadMD: 当前文档格式规范，未检测到需要修正的错误。');
+            vscode.window.showInformationMessage('ReadMD: Document format is correct, no issues detected.');
           }
         } catch (e) {
-          vscode.window.showErrorMessage('解析修复结果失败');
+          vscode.window.showErrorMessage('Failed to parse repair results');
         }
       }
     });

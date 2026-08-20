@@ -142,7 +142,7 @@ async function cmCopySelection() {
   const text = cmView.state.sliceDoc(sel.from, sel.to);
   try {
     await navigator.clipboard.writeText(text);
-    showToast(_t('toast.copiedSelection') || '已复制所选文本', 1500);
+    showToast(_t('toast.copiedSelection') || 'Selected text copied', 1500);
   } catch (e) {
     document.execCommand('copy');
   }
@@ -164,7 +164,7 @@ async function cmCutSelection() {
     changes: { from: sel.from, to: sel.to, insert: '' },
     selection: { anchor: sel.from }
   });
-  showToast(_t('toast.cutSelection') || '已剪切所选文本', 1500);
+  showToast(_t('toast.cutSelection') || 'Selected text cut', 1500);
   hideCmSelectionToolbar();
 }
 
@@ -182,7 +182,7 @@ async function cmPasteSelection() {
     }
   } catch (e) {}
   if (!text) {
-    showToast(_t('toast.noPasteText') || '剪贴板中没有可粘贴的文本');
+    showToast(_t('toast.noPasteText') || 'No pasteable text in clipboard');
     return;
   }
   const sel = cmView.state.selection.main;
@@ -441,7 +441,7 @@ function toggleZenMode(enable) {
   }
   document.body.classList.toggle('zen-mode', isZenMode);
   if (isZenMode) {
-    showToast(_t('toast.zenEntered') || '已进入禅模式 (按 F11 或 Esc 退出)', 2000);
+    showToast(_t('toast.zenEntered') || 'Entered Zen mode (press F11 or Esc to exit)', 2000);
     if (cmView) cmView.focus();
   }
 }

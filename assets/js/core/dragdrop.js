@@ -25,14 +25,14 @@ function bindGlobalDragAndDrop() {
       overlay.classList.remove('hidden');
       if (title && desc) {
         if (types.includes('Files')) {
-          title.textContent = _t('dialog.dropTitle') || '松开以导入文档';
-          desc.textContent = _t('dialog.dropDesc') || 'Markdown 文件将在新标签页中打开；Word/PDF 等将自动导入转换';
+          title.textContent = _t('dialog.dropTitle') || 'Release to import document';
+          desc.textContent = _t('dialog.dropDesc') || 'Markdown files will open in new tab; Word/PDF etc. will be auto-imported and converted';
         } else if (types.includes('text/uri-list')) {
-          title.textContent = _t('dialog.dropUrlTitle') || '松开以抓取网页';
-          desc.textContent = _t('dialog.dropUrlDesc') || '自动解析 URL 网页并提取为 Markdown 文档';
+          title.textContent = _t('dialog.dropUrlTitle') || 'Release to fetch webpage';
+          desc.textContent = _t('dialog.dropUrlDesc') || 'Auto-parse URL webpage and extract as Markdown document';
         } else {
-          title.textContent = _t('dialog.dropTextTitle') || '松开以在此打开';
-          desc.textContent = _t('dialog.dropTextDesc') || '拖入纯文本将自动生成为虚拟 Markdown 文档';
+          title.textContent = _t('dialog.dropTextTitle') || 'Release to open here';
+          desc.textContent = _t('dialog.dropTextDesc') || 'Dropped plain text will be auto-generated as virtual Markdown document';
         }
       }
     }
@@ -111,7 +111,7 @@ function bindGlobalDragAndDrop() {
       const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
       const name = (_t('tabs.untitled') || '新建文本') + '-' + new Date().toISOString().slice(0, 10) + '.md';
       renderVirtual('clipboard', name, '', text, []);
-      showToast(_t('toast.droppedCreated') || '已从拖拽文本新建文档（Ctrl+S 可保存）');
+      showToast(_t('toast.droppedCreated') || 'Created document from dropped text (Ctrl+S to save)');
     }
   });
 }

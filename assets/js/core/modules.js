@@ -58,13 +58,13 @@ function updateModuleUi() {
     else parts.push(label + '\u2026');
   }
   const el = $('status-mods');
-  if (el) el.textContent = parts.length ? (_t('status.modulePrefix') || '模块 ') + parts.join(' ') : '';
+  if (el) el.textContent = parts.length ? (_t('status.modulePrefix') || 'Module ') + parts.join(' ') : '';
 }
 
 function moduleBlocked(name) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (state.modules[name] === 'disabled') {
-    showToast(_t('toast.win7Blocked') || '该功能在 Win7 版暂不支持（本版本仅保留 docx / pdf 转 MD 与导出功能）', 3400);
+    showToast(_t('toast.win7Blocked') || 'This feature is not supported in Win7 version (only docx/pdf to MD and export are available)', 3400);
     return true;
   }
   return false;
@@ -94,7 +94,7 @@ async function ensureModule(name, timeoutMs) {
     } catch (e) { /* ignore */ }
     await new Promise(r => setTimeout(r, 800));
   }
-  showToast(_t('toast.moduleTimeout') || '模块加载超时，请重试');
+  showToast(_t('toast.moduleTimeout') || 'Module load timeout, please retry');
   return false;
 }
 

@@ -10,9 +10,9 @@ let convertLastDir = null;
 
 async function openConvertModal() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!hasPy) { showToast(_t('toast.convertBrowserNotice') || '浏览器模式请使用“打开文件”转换'); return; }
+  if (!hasPy) { showToast(_t('toast.convertBrowserNotice') || 'In browser mode, please use Open File to convert'); return; }
   const note = $('convert-note');
-  if (note) note.textContent = state.win7 ? (_t('convert.noteWin7') || 'Win7 版仅支持 docx / pdf 转 Markdown；转换结果自动保存为源文件同目录同名 .md。') : (_t('convert.note') || '转换结果自动保存为源文件同目录同名 .md（如 report.docx → report.md）。docx 公式、PDF 表格走专用解析，其余格式自动回退通用转换；输出经过严格校验（表格 / 代码围栏 / 公式 / 图片引用）。');
+  if (note) note.textContent = state.win7 ? (_t('convert.noteWin7') || 'Win7 version only supports docx/pdf to Markdown; results saved as .md in source directory.') : (_t('convert.note') || 'Results saved as .md in source directory. docx formulas and PDF tables use dedicated parsers; other formats fall back to general conversion with strict validation.');
   $('convert-modal').classList.remove('hidden');
   $('convert-list').innerHTML = '';
   $('convert-status').textContent = '';
@@ -41,10 +41,10 @@ async function pickConvertFolder() {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || (_t('convert.statusError') || '收集失败'));
     const files = d.files || [];
-    if (!files.length) { showToast(_t('convert.noConvertibleFiles') || '该目录下没有可转换的文件'); return; }
+    if (!files.length) { showToast(_t('convert.noConvertibleFiles') || 'No convertible files in this directory'); return; }
     convertLastDir = dir;
     await startBatchConvert(files, $('convert-overwrite').checked);
-  } catch (e) { showToast((_t('toast.collectFilesFail') || '收集文件失败：') + e.message); }
+  } catch (e) { showToast((_t('toast.collectFilesFail') || 'Failed to collect files: ') + e.message); }
 }
 
 async function startBatchConvert(files, overwrite) {
@@ -61,11 +61,11 @@ async function startBatchConvert(files, overwrite) {
     nm.title = p;
     const st = document.createElement('span');
     st.className = 'convert-state';
-    st.textContent = _t('convert.statusQueued') || '排队中';
+    st.textContent = _t('convert.statusQueued') || 'Queued';
     row.appendChild(nm); row.appendChild(st);
     list.appendChild(row);
   });
-  $('convert-status').textContent = _t('convert.statusPreparing') || '准备中…';
+  $('convert-status').textContent = _t('convert.statusPreparing') || 'Preparing...';
   try {
     const r = await apiFetch('/api/convert/batch', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -80,7 +80,7 @@ async function startBatchConvert(files, overwrite) {
     }
     pollConvertJob(d.job);
   } catch (e) {
-    $('convert-status').textContent = (_t('convert.statusStartFail') || '启动失败：') + e.message;
+    $('convert-status').textContent = (_t('convert.statusStartFail') || 'Start failed: ') + e.message;
   }
 }
 
@@ -110,7 +110,7 @@ function renderConvertProgress(d) {
     skipped: _t('convert.statusSkipped') || '跳过（已存在）',
     error: _t('convert.statusError') || '失败',
     canceled: _t('convert.statusCanceled') || '已取消',
-    queued: _t('convert.statusQueued') || '排队中'
+    queued: _t('convert.statusQueued') || 'Queued'
   };
   let ok = 0, skipped = 0, err = 0, warnCount = 0;
   (d.items || []).forEach((it, i) => {
@@ -143,7 +143,7 @@ function renderConvertProgress(d) {
             await loadFile(it.out);
           }
           closeConvertModal();
-          showToast(_t('toast.convertSuccess') || '转换完成，已自动在新标签页中打开');
+          showToast(_t('toast.convertSuccess') || 'Conversion completed, opened in new tab');
         })();
       }
     }
@@ -161,11 +161,11 @@ async function ocrFile(path) {
   try {
     const r = await apiFetch('/api/ocr?p=' + encodeURIComponent(path));
     const d = await r.json();
-    if (r.status === 409) { showToast(d.error || (_t('toast.moduleLoading') || '模块加载中…')); return; }
-    if (!r.ok) { showToast(d.error || (_t('toast.ocrFail') || 'OCR 失败')); return; }
-    if (!d.content) { showToast(d.note || (_t('toast.ocrNoText') || '未识别到文字')); return; }
+    if (r.status === 409) { showToast(d.error || (_t('toast.moduleLoading') || 'Module loading...')); return; }
+    if (!r.ok) { showToast(d.error || (_t('toast.ocrFail') || 'OCR failed')); return; }
+    if (!d.content) { showToast(d.note || (_t('toast.ocrNoText') || 'No text recognized')); return; }
     renderVirtual('ocr', d.name, d.dir, d.content, d.fixes);
-  } catch (e) { showToast((_t('toast.ocrFailPrefix') || 'OCR 失败：') + e.message); }
+  } catch (e) { showToast((_t('toast.ocrFailPrefix') || 'OCR failed: ') + e.message); }
   finally { busy(false); }
 }
 
@@ -222,7 +222,7 @@ async function uploadFile(file) {
     const r = await apiFetch('/api/upload?ext=' + encodeURIComponent(ext), { method: 'POST', body: file });
     const d = await r.json();
     return d.path || null;
-  } catch (e) { showToast(_t('toast.uploadFailed') || '上传失败'); return null; }
+  } catch (e) { showToast(_t('toast.uploadFailed') || 'Upload failed'); return null; }
 }
 
 function convertOrOcr(p, mode) {

@@ -58,7 +58,7 @@ function buildToc() {
     globalHeadings.forEach((h, i) => {
       const a = document.createElement('a');
       a.href = '#' + h.id;
-      a.textContent = h.text || ((_t('toc.sectionDefault') || '章节') + ' ' + (i + 1));
+      a.textContent = h.text || ((_t('toc.sectionDefault') || 'Section') + ' ' + (i + 1));
       a.className = 'lv' + h.level;
       if (h.pageIndex === state.pagination.currentPage) a.classList.add('toc-cur-page');
       a.setAttribute('data-page-idx', h.pageIndex);
@@ -95,7 +95,7 @@ function buildToc() {
     if (!h.id) h.id = 'toc-h-' + i;
     const a = document.createElement('a');
     a.href = '#' + h.id;
-    a.textContent = h.textContent.trim() || ((_t('toc.sectionDefault') || '章节') + ' ' + (i + 1));
+    a.textContent = h.textContent.trim() || ((_t('toc.sectionDefault') || 'Section') + ' ' + (i + 1));
     const lv = Math.min(+h.tagName[1], 3);
 
     a.className = 'lv' + lv;

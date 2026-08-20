@@ -144,12 +144,12 @@ function updateSearchCount() {
     const cur = globalSearchState.globalIndex + 1;
     const pIdx = globalSearchState.matches[globalSearchState.globalIndex]?.pageIndex;
     const pageNum = (typeof pIdx === 'number' ? pIdx + 1 : state.pagination.currentPage + 1);
-    $('search-count').textContent = total ? `${cur}/${total} (P.${pageNum})` : (state.lastQuery ? (_t('search.noMatches') || '无结果') : '');
+    $('search-count').textContent = total ? `${cur}/${total} (P.${pageNum})` : (state.lastQuery ? (_t('search.noMatches') || 'No results') : '');
     return;
   }
 
   const total = state.currentMarks.length;
-  $('search-count').textContent = total ? ((state.searchIndex % total) + 1) + '/' + total : (state.lastQuery ? (_t('search.noMatches') || '无结果') : '');
+  $('search-count').textContent = total ? ((state.searchIndex % total) + 1) + '/' + total : (state.lastQuery ? (_t('search.noMatches') || 'No results') : '');
 }
 
 function toggleSearch() {

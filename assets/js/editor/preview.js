@@ -27,7 +27,7 @@ function setPvLayout(layout) {
   };
   const narrow = window.innerWidth < 600 && (layout === 'left' || layout === 'right');
   const previewLabel = _t('editor.preview') || '预览';
-  if ($('pv-trigger')) $('pv-trigger').textContent = narrow ? previewLabel + '：' + names[layout] + '（' + (_t('editor.narrowScreenBottom') || '窄屏置底') + '）⌄' : previewLabel + '：' + names[layout] + '⌄';
+  if ($('pv-trigger')) $('pv-trigger').textContent = narrow ? previewLabel + '：' + names[layout] + '（' + (_t('editor.narrowScreenBottom') || 'Bottom on narrow screen') + '）⌄' : previewLabel + '：' + names[layout] + '⌄';
   const mc = $('main-col');
 
   const pw = $('preview-wrap');
@@ -130,7 +130,7 @@ function applyPvUi() {
 async function toggleEdit() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (state.editing) { exitEdit(); return; }
-  if (state.original === undefined || state.original === '') { showToast(_t('toast.noEditableContent') || '没有可编辑的内容'); return; }
+  if (state.original === undefined || state.original === '') { showToast(_t('toast.noEditableContent') || 'No editable content'); return; }
   $('edit-bar').classList.remove('hidden');
   $('content').classList.add('hidden');
   state.editing = true;
@@ -197,10 +197,10 @@ async function saveEdit() {
     if (hasPy) {
       busy(true);
       try { out = await py.save_as(content, suggested, state.webAssets || []); }
-      catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); busy(false); return; }
+      catch (e) { showToast((_t('toast.saveFailed') || 'Save failed: ') + e.message); busy(false); return; }
       busy(false);
-      if (!out) { showToast(_t('toast.saveCancelled') || '已取消保存'); return; }
-      showToast((_t('toast.savedPrefix') || '已保存：') + out);
+      if (!out) { showToast(_t('toast.saveCancelled') || 'Save cancelled'); return; }
+      showToast((_t('toast.savedPrefix') || 'Saved: ') + out);
       exitEdit();
       await loadFile(out);
     } else {
@@ -210,7 +210,7 @@ async function saveEdit() {
       a.download = suggested;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-      showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
+      showToast((_t('toast.downloadedPrefix') || 'Downloaded: ') + suggested);
     }
     return;
   }
@@ -227,13 +227,13 @@ async function saveEdit() {
       ok = await r.json();
     }
     if (ok && ok.ok !== false) {
-      showToast(ok.backup ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）')) : (_t('toast.savedSuccess') || '已保存'));
+      showToast(ok.backup ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）')) : (_t('toast.savedSuccess') || 'Saved'));
       exitEdit();
       await loadFile(state.file);
     } else {
-      showToast((_t('toast.saveFailed') || '保存失败：') + ((ok && ok.error) || (_t('toast.unknownError') || '未知错误')));
+      showToast((_t('toast.saveFailed') || 'Save failed: ') + ((ok && ok.error) || (_t('toast.unknownError') || 'Unknown error')));
     }
-  } catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); }
+  } catch (e) { showToast((_t('toast.saveFailed') || 'Save failed: ') + e.message); }
   finally { busy(false); }
 }
 
@@ -262,7 +262,7 @@ async function saveAs() {
         setFileTitle(activeTab.name, true, out);
         addRecent(out);
       }
-      showToast((_t('toast.savedPrefix') || '已保存：') + out);
+      showToast((_t('toast.savedPrefix') || 'Saved: ') + out);
     }
   } else {
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
@@ -271,7 +271,7 @@ async function saveAs() {
     a.download = suggested;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-    showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
+    showToast((_t('toast.downloadedPrefix') || 'Downloaded: ') + suggested);
   }
 }
 

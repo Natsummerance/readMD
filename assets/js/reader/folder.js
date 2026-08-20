@@ -7,7 +7,7 @@
 
 async function openFolder() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!hasPy) { showToast(_t('toast.openFolderBrowserNotice') || '浏览器模式下请使用“打开文件”'); return; }
+  if (!hasPy) { showToast(_t('toast.openFolderBrowserNotice') || 'Please use Open File in browser mode'); return; }
   let dir;
   try { dir = await py.choose_folder(); } catch (e) { dir = null; }
   if (!dir) return;
@@ -23,7 +23,7 @@ async function listFolder(dir) {
     state.folderFiles = d.files || [];
     renderFolderList();
     showSide('files');
-  } catch (e) { showToast(_t('toast.readFolderFail') || '读取文件夹失败'); }
+  } catch (e) { showToast(_t('toast.readFolderFail') || 'Failed to read folder'); }
 }
 
 
@@ -43,7 +43,7 @@ function renderFolderList() {
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     const empty = document.createElement('div');
     empty.className = 'dir-label';
-    empty.textContent = _t('sidebar.emptyFiles') || '（未找到 Markdown 文件）';
+    empty.textContent = _t('sidebar.emptyFiles') || '(No Markdown files found)';
     box.appendChild(empty);
     return;
   }

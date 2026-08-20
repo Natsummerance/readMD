@@ -141,11 +141,11 @@ async function loadExportPresets() {
 
 function openExportModal() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!bindPy()) { showToast(_t('toast.exportBrowserNotice') || '浏览器模式请使用桌面版导出'); return; }
+  if (!bindPy()) { showToast(_t('toast.exportBrowserNotice') || 'Please use desktop version for export in browser mode'); return; }
   if (!state.export.ready) {
     loadExportPresets().then(ok => {
       if (ok) { state.export.ready = true; renderExportModal(); }
-      else showToast(_t('toast.exportModuleLoadFail') || '导出模块加载失败');
+      else showToast(_t('toast.exportModuleLoadFail') || 'Export module load failed');
     });
     return;
   }
@@ -678,11 +678,11 @@ async function runExport() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   try {
     r = await py.export_doc(fmt, payload);
-  } catch (e) { showToast((_t('toast.exportFailed') || '导出失败：') + e.message); busy(false); return; }
+  } catch (e) { showToast((_t('toast.exportFailed') || 'Export failed: ') + e.message); busy(false); return; }
   busy(false);
-  if (!r) { showToast(_t('toast.exportFailedSimple') || '导出失败'); return; }
+  if (!r) { showToast(_t('toast.exportFailedSimple') || 'Export failed'); return; }
   if (r.canceled) return;
-  if (!r.ok) { showToast((_t('toast.exportFailed') || '导出失败：') + (r.error || (_t('toast.unknownError') || '未知错误'))); return; }
+  if (!r.ok) { showToast((_t('toast.exportFailed') || 'Export failed: ') + (r.error || (_t('toast.unknownError') || 'Unknown error'))); return; }
   const res = $('export-result');
   res.textContent = (_t('toast.exportedPrefix') || '已导出：') + r.path;
   res.className = 'export-result ok';

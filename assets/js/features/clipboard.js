@@ -54,7 +54,7 @@ async function createFromClipboard() {
     // 2. 如果剪贴板包含复制的图像/截图临时文件 -> 触发 OCR 提取
     const imgPath = clip.image || clip.image_path;
     if (imgPath) {
-      showToast(_t('toast.clipImageOcr') || '检测到剪贴板截图，正在进行离线 OCR 识别…', 3000);
+      showToast(_t('toast.clipImageOcr') || 'Detected screenshot in clipboard, performing offline OCR...', 3000);
       await convertOrOcr(imgPath, 'ocr');
       return;
     }
@@ -69,7 +69,7 @@ async function createFromClipboard() {
         if (mdFromHtml && mdFromHtml.trim().length > (clip.text || '').trim().length) {
           const name = clipNamePrefix + '-' + new Date().toISOString().slice(0, 10) + '_' + String(Date.now()).slice(-4) + '.md';
           await renderVirtual('clipboard', name, '', mdFromHtml, []);
-          showToast(_t('toast.clipHtmlConverted') || '已从剪贴板富文本转换为 Markdown（Ctrl+S 可保存）');
+          showToast(_t('toast.clipHtmlConverted') || 'Converted rich text from clipboard to Markdown (Ctrl+S to save)');
           return;
         }
       } catch (err) {
@@ -88,16 +88,16 @@ async function createFromClipboard() {
         input.value = text;
         input.focus();
       }
-      showToast(_t('toast.clipUrlPasted') || '已将剪贴板网址填入，点击「智能提取」即可抓取', 4000);
+      showToast(_t('toast.clipUrlPasted') || 'URL filled from clipboard, click Smart Extract to fetch', 4000);
       return;
     }
 
     // 5. 纯文本 / LaTeX 数学公式 / Markdown -> 直接新建虚拟标签页
     const name = clipNamePrefix + '-' + new Date().toISOString().slice(0, 10) + '_' + String(Date.now()).slice(-4) + '.md';
     await renderVirtual('clipboard', name, '', text, []);
-    showToast(_t('toast.clipCreated') || '已从剪贴板新建文档（Ctrl+S 可保存）');
+    showToast(_t('toast.clipCreated') || 'Created document from clipboard (Ctrl+S to save)');
   } catch (e) {
-    showToast(e.message || (_t('toast.clipReadFail') || '读取剪贴板失败'));
+    showToast(e.message || (_t('toast.clipReadFail') || 'Failed to read clipboard'));
   }
 }
 

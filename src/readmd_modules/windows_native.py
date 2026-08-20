@@ -4,5 +4,5 @@
 
 def show_error(title, message):
     import ctypes
-    ctypes.windll.user32.MessageBoxW(0, str(message), str(title), 0x10)
+    # Why: Direct Windows API calls needed for native OS features not available in Python standard library.user32.MessageBoxW(0, str(message), str(title), 0x10)
     return True

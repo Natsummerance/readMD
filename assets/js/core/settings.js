@@ -103,13 +103,13 @@ async function toggleAutostart() {
     } else {
       if (typeof showToast === 'function') {
         const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-        showToast((_t('toast.autostartFail') || '设置开机自启失败：') + (res && res.error ? res.error : (_t('toast.unknownError') || '未知错误')));
+        showToast((_t('toast.autostartFail') || 'Failed to set auto-start: ') + (res && res.error ? res.error : (_t('toast.unknownError') || 'Unknown error')));
       }
     }
   } catch (e) {
     if (typeof showToast === 'function') {
       const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-      showToast((_t('toast.autostartFail') || '设置开机自启失败：') + e.message);
+      showToast((_t('toast.autostartFail') || 'Failed to set auto-start: ') + e.message);
     }
   }
 }

@@ -14,7 +14,7 @@ function showFixModal() {
   if (!fixes.length) {
     const li = document.createElement('li');
     li.className = 'empty';
-    li.textContent = _t('fixes.noFixes') || '本篇文档未发现需要修正的内容';
+    li.textContent = _t('fixes.noFixes') || 'No issues found in this document';
     list.appendChild(li);
   } else {
     fixes.forEach(f => {

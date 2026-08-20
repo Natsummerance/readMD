@@ -61,13 +61,13 @@ function renderTabsBar() {
     if (tab.isDirty) {
       const dot = document.createElement('span');
       dot.className = 'tab-dirty';
-      dot.title = _t('tabs.dirty') || '未保存';
+      dot.title = _t('tabs.dirty') || 'Not saved';
       el.appendChild(dot);
     }
 
     const titleSpan = document.createElement('span');
     titleSpan.className = 'tab-title';
-    titleSpan.textContent = tab.title || tab.name || (_t('tabs.untitled') || '未命名');
+    titleSpan.textContent = tab.title || tab.name || (_t('tabs.untitled') || 'Untitled');
     el.appendChild(titleSpan);
 
     const closeBtn = document.createElement('button');
@@ -241,10 +241,10 @@ async function renameTab(tabId, newTitle) {
         }
         showToast(_t('toast.renamedTo', { name: r.name }) || ('已重命名为 ' + r.name));
       } else {
-        showToast((_t('toast.renameFailed') || '重命名失败：') + ((r && r.error) || ''));
+        showToast((_t('toast.renameFailed') || 'Rename failed: ') + ((r && r.error) || ''));
       }
     } catch (e) {
-      showToast((_t('toast.renameFailed') || '重命名失败：') + e.message);
+      showToast((_t('toast.renameFailed') || 'Rename failed: ') + e.message);
     } finally {
       busy(false);
     }
@@ -328,7 +328,7 @@ function promptDirtyClose(tabName) {
       return;
     }
     const titleEl = $('close-confirm-title');
-    if (titleEl) titleEl.textContent = _t('dialog.unsavedTitle') || '是否保存对文档的修改？';
+    if (titleEl) titleEl.textContent = _t('dialog.unsavedTitle') || 'Save changes to document?';
     const descEl = $('close-confirm-desc');
     if (descEl) descEl.textContent = _t('dialog.unsavedMsgDesc', { name: tabName || (_t('tabs.untitled') || '文档') }) || `「${tabName || '文档'}」已被修改，如果直接关闭，未保存的内容将会丢失。`;
     modal.classList.remove('hidden');

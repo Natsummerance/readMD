@@ -34,7 +34,7 @@ function cancelFileRename() {
 function openFileRename() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (state.editing) {
-    showToast(_t('toast.renameBlockedEdit') || '编辑模式下不可重命名，请先保存或退出编辑');
+    showToast(_t('toast.renameBlockedEdit') || 'Cannot rename in edit mode, please save or exit edit first');
     return;
   }
   const activeTab = getActiveTab();
@@ -83,10 +83,10 @@ function openFileRename() {
           addRecent(res.path);
           showToast(_t('toast.renamedTo', { name: res.name }) || ('已重命名为：' + res.name));
         } else {
-          showToast((_t('toast.renameFailed') || '重命名失败：') + ((res && res.error) || (_t('toast.unknownError') || '未知错误')));
+          showToast((_t('toast.renameFailed') || 'Rename failed: ') + ((res && res.error) || (_t('toast.unknownError') || 'Unknown error')));
         }
       } catch (e) {
-        showToast((_t('toast.renameFailed') || '重命名失败：') + e.message);
+        showToast((_t('toast.renameFailed') || 'Rename failed: ') + e.message);
       }
     } else {
       setFileTitle(nextStem + ext, true, nextStem + ext);
@@ -115,7 +115,7 @@ async function loadFile(path) {
     const r = await apiFetch('/api/file?p=' + encodeURIComponent(path));
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
-      showToast((_t('toast.openFailed') || '无法打开：') + (d.error || r.status));
+      showToast((_t('toast.openFailed') || 'Cannot open: ') + (d.error || r.status));
       return;
     }
     const d = await r.json();
@@ -157,11 +157,11 @@ async function loadFile(path) {
     clearAiOutput();
     renderTabsBar();
     setProgress(100);
-    if (d.structured) showToast(_t('toast.txtStructureRecognized') || '已智能识别 TXT 结构（标题 / 表格 / 列表 / 目录）');
+    if (d.structured) showToast(_t('toast.txtStructureRecognized') || 'Smart TXT structure recognized (headings/tables/lists/TOC)');
     afterRender();
   } catch (e) {
     console.error(e);
-    showToast((_t('toast.loadFailed') || '加载失败：') + e.message);
+    showToast((_t('toast.loadFailed') || 'Load failed: ') + e.message);
     setProgress(0);
   }
 }
@@ -457,11 +457,11 @@ function togglePaginationMode() {
 
   if (p.mode === 'paged') {
     p.mode = 'continuous';
-    showToast(_t('pagination.switchToContinuousToast') || '已切换至全卷连续阅读模式', 1800);
+    showToast(_t('pagination.switchToContinuousToast') || 'Switched to full volume continuous reading mode', 1800);
     renderContentIncremental(p.rawContent, 0);
   } else {
     p.mode = 'paged';
-    showToast(_t('pagination.switchToPagedToast') || '已切换至智能分页阅读模式', 1800);
+    showToast(_t('pagination.switchToPagedToast') || 'Switched to smart pagination reading mode', 1800);
     renderPage(0, null, false);
   }
   updatePaginationBar();
@@ -881,7 +881,7 @@ function showBibHoverCard(e, key) {
   bibCardEl.querySelector('#bib-copy-btn').addEventListener('click', () => {
     const bibText = `@${entry.entry_type || 'article'}{${key},\n  title={${entry.title || ''}},\n  author={${entry.author || ''}},\n  year={${entry.year || ''}}\n}`;
     navigator.clipboard.writeText(bibText);
-    showToast(_t('toast.copiedBibtex') || '已复制 BibTeX 引用', 1500);
+    showToast(_t('toast.copiedBibtex') || 'BibTeX citation copied', 1500);
   });
 }
 
@@ -952,7 +952,7 @@ function fixLinks(body) {
           setTimeout(() => el.classList.remove('heading-target-highlight'), 1500);
         } else {
           const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-          showToast((_t('toast.headingNotFound') || '未找到对应的文档小标题目标：') + (a.textContent || href), 2500);
+          showToast((_t('toast.headingNotFound') || 'Heading target not found: ') + (a.textContent || href), 2500);
         }
       });
       return;
@@ -1072,7 +1072,7 @@ async function ensureModule(name, timeoutMs) {
     } catch (e) { /* ignore */ }
     await new Promise(r => setTimeout(r, 800));
   }
-  showToast(_t('toast.moduleTimeout') || '模块加载超时，请重试');
+  showToast(_t('toast.moduleTimeout') || 'Module load timeout, please retry');
   return false;
 }
 
@@ -1083,20 +1083,20 @@ async function convertFile(path) {
   try {
     const r = await apiFetch('/api/convert?p=' + encodeURIComponent(path));
     const d = await r.json();
-    if (r.status === 409) { showToast(d.error || (_t('toast.moduleLoading') || '模块加载中…')); return; }
-    if (!r.ok) { showToast(d.error || (_t('toast.convertFailed') || '转换失败')); return; }
-    if (!d.content) { showToast(d.note || (_t('toast.convertNoContent') || '未提取到内容')); return; }
+    if (r.status === 409) { showToast(d.error || (_t('toast.moduleLoading') || 'Module loading...')); return; }
+    if (!r.ok) { showToast(d.error || (_t('toast.convertFailed') || 'Conversion failed')); return; }
+    if (!d.content) { showToast(d.note || (_t('toast.convertNoContent') || 'No content extracted')); return; }
     showConvertWarns(d.warns);
     if (d.saved && d.out) {
-      showToast((_t('toast.savedPrefix') || '已保存：') + d.out);
+      showToast((_t('toast.savedPrefix') || 'Saved: ') + d.out);
       await loadFile(d.out);
     } else if (d.skipped) {
-      showToast(_t('toast.skippedExistsNotice') || '已存在同名 .md，跳过保存（可在批量转换中勾选“覆盖已存在”）', 3400);
+      showToast(_t('toast.skippedExistsNotice') || 'Same-name .md exists, skipped (check Overwrite in batch convert)', 3400);
       renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
     } else {
       renderVirtual('convert', d.name, d.dir, d.content, d.fixes);
     }
-  } catch (e) { showToast((_t('toast.convertFailPrefix') || '转换失败：') + e.message); }
+  } catch (e) { showToast((_t('toast.convertFailPrefix') || 'Conversion failed: ') + e.message); }
   finally { busy(false); }
 }
 
@@ -1104,7 +1104,7 @@ function showConvertWarns(warns) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!warns || !warns.length) return;
   const bad = warns.filter(w => w.level === 'warn' || w.level === 'error');
-  if (bad.length) showToast(_t('toast.convertWarns', { count: bad.length, first: (bad[0].msg || (_t('toast.seeCheckReport') || '见校验报告')) }) || ('转换完成，' + bad.length + ' 条质量警告（' + (bad[0].msg || '见校验报告') + '）'), 3600);
+  if (bad.length) showToast(_t('toast.convertWarns', { count: bad.length, first: (bad[0].msg || (_t('toast.seeCheckReport') || 'see validation report')) }) || ('转换完成，' + bad.length + ' 条质量警告（' + (bad[0].msg || 'see validation report') + '）'), 3600);
 }
 
 

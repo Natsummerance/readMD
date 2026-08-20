@@ -23,7 +23,7 @@ function updateImgHistoryButtons() { $('img-undo').disabled=!imgState.history.le
 
 function openImgModal() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!state.dir) { showToast(_t('toast.imgLocalOnly') || '图片编辑仅支持本地 Markdown 文件'); return; }
+  if (!state.dir) { showToast(_t('toast.imgLocalOnly') || 'Image editing only supports local Markdown files'); return; }
   $('img-modal').classList.remove('hidden');
   resetImg();
   drawImg();
@@ -41,9 +41,9 @@ function loadImgFromFile(file) {
   if (!file) return;
   const fr = new FileReader();
   fr.onload = () => {
-    try { loadImgSrc(fr.result); } catch (e) { showToast((_t('toast.imgReadFail') || '图片读取失败：') + e.message); }
+    try { loadImgSrc(fr.result); } catch (e) { showToast((_t('toast.imgReadFail') || 'Image read failed: ') + e.message); }
   };
-  fr.onerror = () => showToast(_t('toast.imgReadFail') || '图片读取失败');
+  fr.onerror = () => showToast(_t('toast.imgReadFail') || 'Image read failed');
   fr.readAsDataURL(file);
 }
 
@@ -60,7 +60,7 @@ function loadImgSrc(src) {
     $('img-crop').classList.add('active');
     updateImgInfo();
   };
-  im.onerror = () => showToast(_t('toast.imgLoadCorsFail') || '图片加载失败（URL 可能被跨域限制）');
+  im.onerror = () => showToast(_t('toast.imgLoadCorsFail') || 'Image load failed (URL may be cross-origin restricted)');
   im.src = src;
 }
 
@@ -154,12 +154,12 @@ function updateImgInfo() {
   const el = $('img-info');
   if (!el) return;
   const r = imgRect();
-  if (!imgState.img || !r.w) { el.textContent = _t('img.noImageLoaded') || '尚未加载图片'; return; }
+  if (!imgState.img || !r.w) { el.textContent = _t('img.noImageLoaded') || 'No image loaded'; return; }
   const naturalW = Math.max(1, Math.round(imgState.crop.w / imgState.fitScale));
   const naturalH = Math.max(1, Math.round(imgState.crop.h / imgState.fitScale));
   if (!imgState.outW || !imgState.outH) { imgState.outW = naturalW; imgState.outH = naturalH; }
   $('img-out-w').value = imgState.outW; $('img-out-h').value = imgState.outH;
-  el.textContent = (_t('img.origImage') || '原图') + ' ' + imgState.rawW + '×' + imgState.rawH + ' · ' + (_t('img.cropLabel') || '裁剪') + ' ' + naturalW + '×' + naturalH + ' · ' + (_t('img.outLabel') || '输出') + ' ' + imgState.outW + '×' + imgState.outH + ' px';
+  el.textContent = (_t('img.origImage') || 'Original') + ' ' + imgState.rawW + '×' + imgState.rawH + ' · ' + (_t('img.cropLabel') || 'Crop') + ' ' + naturalW + '×' + naturalH + ' · ' + (_t('img.outLabel') || 'Output') + ' ' + imgState.outW + '×' + imgState.outH + ' px';
 }
 
 
@@ -295,11 +295,11 @@ function stagePointerUp(e) {
 function insertImgUrl() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const url = $('img-url-input').value.trim();
-  if (!url) { showToast(_t('toast.imgEnterUrl') || '请输入图片 URL'); return; }
-  if (!cmView) { showToast(_t('toast.imgEnterEditFirst') || '请先进入编辑模式'); return; }
+  if (!url) { showToast(_t('toast.imgEnterUrl') || 'Please enter image URL'); return; }
+  if (!cmView) { showToast(_t('toast.imgEnterEditFirst') || 'Please enter edit mode first'); return; }
   cmInsertImage(url);
   closeImgModal();
-  showToast(_t('toast.imgUrlInserted') || '已插入图片 URL');
+  showToast(_t('toast.imgUrlInserted') || 'Image URL inserted');
 }
 
 function cmInsertImage(rel) {
@@ -337,7 +337,7 @@ async function exportAndInsertImg() {
   octx.imageSmoothingQuality = 'high';
   octx.drawImage(tmp, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
   const blob = await new Promise(res => out.toBlob(res, 'image/png'));
-  if (!blob) { showToast(_t('toast.imgExportFail') || '图片导出失败'); return; 
+  if (!blob) { showToast(_t('toast.imgExportFail') || 'Image export failed'); return; 
   }
   const b64 = await new Promise(res => {
     const fr = new FileReader();
@@ -356,7 +356,7 @@ async function exportAndInsertImg() {
     closeImgModal();
     showToast(_t('toast.imgInsertedRel', { rel: d.rel }) || ('图片已插入（' + d.rel + '）'));
   } catch (e) {
-    showToast((_t('toast.imgSaveFail') || '图片保存失败：') + e.message);
+    showToast((_t('toast.imgSaveFail') || 'Image save failed: ') + e.message);
   } finally {
     busy(false);
   }

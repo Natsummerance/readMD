@@ -126,9 +126,9 @@ function afterRender() {
 
 function installAssoc() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!hasPy) { showToast(_t('toast.assocBrowserNotice') || '浏览器模式下请在命令行运行 install.bat'); return; }
+  if (!hasPy) { showToast(_t('toast.assocBrowserNotice') || 'In browser mode, please run install.bat in command line'); return; }
   py.install_association().then(ok => {
-    showToast(ok === true ? (_t('toast.assocSuccess') || '已设置为 .md 默认打开方式') : ((_t('toast.assocFailed') || '注册失败：') + ok));
+    showToast(ok === true ? (_t('toast.assocSuccess') || 'Set as default opener for .md files') : ((_t('toast.assocFailed') || 'Registration failed: ') + ok));
   });
 }
 

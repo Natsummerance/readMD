@@ -6,8 +6,8 @@
 /* ---------------- AI 助手 ---------------- */
 
 const AI_ACTIONS = {
-  quick_read: '快速阅读', polish: '润色', modify: '修改',
-  expand: '扩充', continue: '续写', translate: '翻译', ask: '提问',
+  quick_read: 'Quick Read', polish: 'Polish', modify: 'Modify',
+  expand: 'Expand', continue: 'Continue', translate: 'Translate', ask: 'Ask',
 };
 
 const AI_SYSTEM = {
@@ -34,10 +34,10 @@ function toggleAiPanel() {
 
 async function loadAiOnDemand() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  setAiConnectionState('loading', _t('ai.statusReading') || '正在读取连接…');
+  setAiConnectionState('loading', _t('ai.statusReading') || 'Reading connection...');
   try { await apiFetch('/api/modules/load', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'ai' }) }); } catch (e) { /* old servers use the normal poll path */ }
   const cfg = await loadAiConfig();
-  if (!cfg) setAiConnectionState('warn', _t('ai.statusOffline') || '未连接');
+  if (!cfg) setAiConnectionState('warn', _t('ai.statusOffline') || 'Not connected');
 }
 
 function setAiConnectionState(kind, label) {
@@ -51,11 +51,11 @@ function updateAiConnectionSummary() {
   const p = currentAiProvider();
   const model = $('ai-model');
   const summary = $('ai-model-summary');
-  if (summary) summary.textContent = (model && model.value) || (_t('ai.noModel') || '未选择模型');
-  if (!p) return setAiConnectionState('warn', _t('ai.noProvider') || '请选择连接');
+  if (summary) summary.textContent = (model && model.value) || (_t('ai.noModel') || 'No model selected');
+  if (!p) return setAiConnectionState('warn', _t('ai.noProvider') || 'Please select provider');
   const local = /ollama/i.test(p.name || '');
-  if (local || p.has_key || p.key_source) setAiConnectionState('ready', p.name + ' · ' + (_t('ai.statusReady') || '已就绪'));
-  else setAiConnectionState('warn', p.name + ' · ' + (_t('ai.needKey') || '需要 API Key'));
+  if (local || p.has_key || p.key_source) setAiConnectionState('ready', p.name + ' · ' + (_t('ai.statusReady') || 'Ready'));
+  else setAiConnectionState('warn', p.name + ' · ' + (_t('ai.needKey') || 'API Key required'));
 }
 /* ---------------- Prompt 模板 ---------------- */
 
@@ -76,7 +76,7 @@ function fillAiTemplates() {
   sel.innerHTML = '';
   const none = document.createElement('option');
   none.value = '';
-  none.textContent = _t('ai.defaultAction') || '默认动作（不使用模板）';
+  none.textContent = _t('ai.defaultAction') || 'Default action (no template)';
   sel.appendChild(none);
   (state.ai.templates || []).forEach(t => {
     const o = document.createElement('option');
@@ -101,8 +101,8 @@ function onAiTemplateChange() {
   document.querySelectorAll('.ai-act').forEach(b => {
     b.classList.toggle('active', !!(t && t.action && t.action !== 'custom' && b.dataset.act === t.action));
   });
-  if (t && t.action === 'translate') $('ai-prompt').placeholder = _t('ai.promptTranslatePlaceholder') || '翻译：目标语言（如：英语 / 日语）';
-  else $('ai-prompt').placeholder = _t('ai.promptDefaultPlaceholder') || '补充要求 / 提问内容 / 翻译目标语言（可选）';
+  if (t && t.action === 'translate') $('ai-prompt').placeholder = _t('ai.promptTranslatePlaceholder') || 'Translate: target language (e.g., English, Japanese)';
+  else $('ai-prompt').placeholder = _t('ai.promptDefaultPlaceholder') || 'Additional requirements / questions / translation target (optional)';
 }
 
 function openTplModal() {
@@ -120,7 +120,7 @@ function renderTplList() {
     const li = document.createElement('li');
     li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
     li.dataset.id = t.id;
-    li.title = (_t('ai.actionPrefix') || '动作：') + (t.action || 'custom') + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '含用户消息模板')) : '');
+    li.title = (_t('ai.actionPrefix') || 'Action: ') + (t.action || 'custom') + (t.user ? (' · ' + (_t('ai.hasUserTpl') || 'Has user message template')) : '');
     li.addEventListener('click', () => selectTpl(t.id));
     list.appendChild(li);
   });
@@ -146,7 +146,7 @@ async function saveTplForm() {
     system: $('tpl-system').value.trim(),
     user: $('tpl-user').value.trim(),
   };
-  if (!t.name) { showToast(_t('toast.tplNameReq') || '请输入模板名称'); return; }
+  if (!t.name) { showToast(_t('toast.tplNameReq') || 'Please enter template name'); return; }
   try {
     const r = await apiFetch('/api/ai/prompts', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -158,8 +158,8 @@ async function saveTplForm() {
     fillAiTemplates();
     renderTplList();
     selectTpl(d.saved_id);
-    showToast(_t('toast.tplSaved') || '模板已保存');
-  } catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); }
+    showToast(_t('toast.tplSaved') || 'Template saved');
+  } catch (e) { showToast((_t('toast.saveFailed') || 'Save failed: ') + e.message); }
 }
 
 async function deleteCurrentTpl() {
@@ -180,8 +180,8 @@ async function deleteCurrentTpl() {
     fillAiTemplates();
     renderTplList();
     selectTpl(null);
-    showToast(_t('toast.tplDeleted') || '模板已删除');
-  } catch (e) { showToast((_t('toast.deleteFailed') || '删除失败：') + e.message); }
+    showToast(_t('toast.tplDeleted') || 'Template deleted');
+  } catch (e) { showToast((_t('toast.deleteFailed') || 'Delete failed: ') + e.message); }
 }
 
 /* ---------------- 对话历史管理 ---------------- */
@@ -206,7 +206,7 @@ function renderAiSessionSelect() {
   if (!rows.length) {
     const empty = document.createElement('div');
     empty.className = 'ai-history-empty';
-    empty.textContent = _t('ai.historyEmpty') || '暂无历史会话';
+    empty.textContent = _t('ai.historyEmpty') || 'No session history';
     list.appendChild(empty);
     return;
   }
@@ -214,14 +214,14 @@ function renderAiSessionSelect() {
     const row = document.createElement('div'); row.className = 'ai-history-item';
     const load = document.createElement('button'); load.className = 'tb-btn ai-history-load';
     load.innerHTML = '<strong></strong><small></small>';
-    load.querySelector('strong').textContent = s.title || (_t('ai.untitledSession') || '未命名会话');
-    load.querySelector('small').textContent = fmtTime(s.updated) + ' · ' + (s.msgCount || 0) + ' ' + (_t('ai.msgCountUnit') || '条');
+    load.querySelector('strong').textContent = s.title || (_t('ai.untitledSession') || 'Untitled Session');
+    load.querySelector('small').textContent = fmtTime(s.updated) + ' · ' + (s.msgCount || 0) + ' ' + (_t('ai.msgCountUnit') || ' messages');
     load.addEventListener('click', async () => { $('ai-session').value = s.id; await onAiSessionChange(); closeAiModal('ai-history-modal'); });
-    const rename = document.createElement('button'); rename.className = 'tb-btn'; rename.textContent = _t('tabs.rename') || '改名'; rename.title = _t('ai.renameSession') || '重命名会话';
+    const rename = document.createElement('button'); rename.className = 'tb-btn'; rename.textContent = _t('tabs.rename') || 'Rename'; rename.title = _t('ai.renameSession') || 'Rename session';
     rename.addEventListener('click', () => renameAiSession(s));
-    const del = document.createElement('button'); del.className = 'tb-btn'; del.textContent = _t('tpl.delete') || '删'; del.title = _t('ai.deleteSession') || '删除会话';
+    const del = document.createElement('button'); del.className = 'tb-btn'; del.textContent = _t('tpl.delete') || 'Del'; del.title = _t('ai.deleteSession') || 'Delete session';
     del.addEventListener('click', async () => {
-      if (!window.confirm((_t('ai.confirmDeleteSession') || '确定删除会话：') + (s.title || (_t('ai.untitledSession') || '未命名会话')) + '？')) return;
+      if (!window.confirm((_t('ai.confirmDeleteSession') || 'Delete session: ') + (s.title || (_t('ai.untitledSession') || 'Untitled Session')) + '？')) return;
       await deleteAiSessionById(s.id);
     });
     row.append(load, rename, del); list.appendChild(row);
@@ -230,18 +230,18 @@ function renderAiSessionSelect() {
 
 async function renameAiSession(summary) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const title = window.prompt(_t('ai.sessionName') || '会话名称', summary.title || '');
+  const title = window.prompt(_t('ai.sessionName') || 'Session name', summary.title || '');
   if (title === null) return;
   const next = title.trim().slice(0, 80);
-  if (!next) { showToast(_t('toast.sessionNameEmpty') || '会话名称不能为空'); return; }
+  if (!next) { showToast(_t('toast.sessionNameEmpty') || 'Session name cannot be empty'); return; }
   try {
     const r = await apiFetch('/api/ai/history?id=' + encodeURIComponent(summary.id));
-    const d = await r.json(); if (!r.ok || !d.session) throw new Error(d.error || '会话不存在');
+    const d = await r.json(); if (!r.ok || !d.session) throw new Error(d.error || 'Session does not exist');
     d.session.title = next;
     const saved = await apiFetch('/api/ai/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', session: d.session }) });
     if (!saved.ok) throw new Error((await saved.json().catch(() => ({}))).error || '保存失败');
-    await loadAiSessions(); showToast(_t('toast.sessionRenamed') || '会话已重命名');
-  } catch (e) { showToast((_t('toast.renameFailed') || '重命名失败：') + e.message); }
+    await loadAiSessions(); showToast(_t('toast.sessionRenamed') || 'Session renamed');
+  } catch (e) { showToast((_t('toast.renameFailed') || 'Rename failed: ') + e.message); }
 }
 
 function fmtTime(ts) {
@@ -257,9 +257,9 @@ async function onAiSessionChange() {
   if (!id) return;
   try {
     const r = await apiFetch('/api/ai/history?id=' + encodeURIComponent(id));
-    if (!r.ok) { showToast(_t('toast.loadSessionFail') || '加载会话失败'); return; }
+    if (!r.ok) { showToast(_t('toast.loadSessionFail') || 'Failed to load session'); return; }
     const s = (await r.json()).session;
-    if (!s) { showToast(_t('toast.sessionNotExist') || '会话不存在'); return; }
+    if (!s) { showToast(_t('toast.sessionNotExist') || 'Session does not exist'); return; }
     const savedProvider = (state.ai.providers || []).find(p => p.id === s.provider || p.name === s.provider);
     if (savedProvider) {
       $('ai-provider').value = savedProvider.id;
@@ -274,8 +274,8 @@ async function onAiSessionChange() {
     state.ai.sessUsage = s.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
     updateAiUsage();
     renderAiHistory();
-    showToast(_t('toast.sessionLoaded') || '已加载会话');
-  } catch (e) { showToast(_t('toast.loadSessionFail') || '加载会话失败'); }
+    showToast(_t('toast.sessionLoaded') || 'Session loaded');
+  } catch (e) { showToast(_t('toast.loadSessionFail') || 'Failed to load session'); }
 }
 
 
@@ -294,7 +294,7 @@ function renderAiHistory() {
       tag.textContent = _t('ai.meTag', { seq: uSeq }) || ('我 · 提问 ' + uSeq);
       const body = document.createElement('div');
       body.className = 'ai-msg-body';
-      body.textContent = m.content.length > 3000 ? m.content.slice(0, 3000) + '\n' + (_t('ai.omittedLong') || '…（已省略）') : m.content;
+      body.textContent = m.content.length > 3000 ? m.content.slice(0, 3000) + '\n' + (_t('ai.omittedLong') || '... (omitted)') : m.content;
       ub.appendChild(tag); ub.appendChild(body);
       out.appendChild(ub);
     } else if (m.role === 'assistant' && m.content) { aSeq++;
@@ -321,8 +321,8 @@ function renderAiHistory() {
 async function saveCurrentSession(silent) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const msgs = (state.ai.messages || []).filter(m => m && !m.ephemeral);
-  if (!msgs.length) { if (!silent) showToast((state.ai.messages || []).length ? (_t('toast.incognitoNoSave') || '当前会话为无痕内容，不会保存') : (_t('toast.noConversationContent') || '当前没有对话内容')); return false; }
-  const title = ($('ai-prompt').value.trim() || msgs[0].content || (_t('ai.untitledSession') || '未命名会话')).slice(0, 40).replace(/\s+/g, ' ');
+  if (!msgs.length) { if (!silent) showToast((state.ai.messages || []).length ? (_t('toast.incognitoNoSave') || 'Current session is incognito, will not save') : (_t('toast.noConversationContent') || 'No conversation content')); return false; }
+  const title = ($('ai-prompt').value.trim() || msgs[0].content || (_t('ai.untitledSession') || 'Untitled Session')).slice(0, 40).replace(/\s+/g, ' ');
   const sess = {
     id: state.ai.sessionId || undefined,
     title: title,
@@ -342,9 +342,9 @@ async function saveCurrentSession(silent) {
     state.ai.sessionId = d.session.id;
     await loadAiSessions();
     $('ai-session').value = state.ai.sessionId;
-    if (!silent) showToast(_t('toast.sessionSaved') || '会话已保存');
+    if (!silent) showToast(_t('toast.sessionSaved') || 'Session saved');
     return true;
-  } catch (e) { if (!silent) showToast((_t('toast.saveFailed') || '保存失败：') + e.message); return false; }
+  } catch (e) { if (!silent) showToast((_t('toast.saveFailed') || 'Save failed: ') + e.message); return false; }
 }
 
 async function deleteCurrentSession() {
@@ -359,12 +359,12 @@ async function deleteCurrentSession() {
     if (!r.ok || !d.ok) throw new Error(d.error || '删除失败');
     if (state.ai.sessionId === id) { state.ai.sessionId = null; state.ai.messages = []; clearAiOutput(); }
     await loadAiSessions();
-    showToast(_t('toast.sessionDeleted') || '会话已删除');
-  } catch (e) { showToast((_t('toast.deleteFailed') || '删除失败：') + e.message); }
+    showToast(_t('toast.sessionDeleted') || 'Session deleted');
+  } catch (e) { showToast((_t('toast.deleteFailed') || 'Delete failed: ') + e.message); }
 }
 
 function clearAiContext() {
-  if (!(state.ai.messages || []).length) { showToast(_t('toast.noContext') || '当前没有上下文'); return; }
+  if (!(state.ai.messages || []).length) { showToast(_t('toast.noContext') || 'No context available'); return; }
   state.ai.messages = [];
   state.ai.sessionId = null;
   state.ai.raw = '';
@@ -373,7 +373,7 @@ function clearAiContext() {
   updateAiUsage();
   clearAiOutput();
   $('ai-session').value = '';
-  showToast(_t('toast.contextCleared') || '已清空上下文，开始新一轮');
+  showToast(_t('toast.contextCleared') || 'Context cleared, starting new round');
 }
 
 
@@ -412,8 +412,8 @@ function fillAiProviders(merged, current) {
   const sel = $('ai-provider');
   const curId = (current && (current.provider_id || current.provider)) || (merged[0] && merged[0].id) || '';
   sel.innerHTML = '';
-  const customGroup = document.createElement('optgroup'); customGroup.label = _t('ai.customConnections') || '自定义连接';
-  const presetGroup = document.createElement('optgroup'); presetGroup.label = _t('ai.officialPresets') || '官方预设';
+  const customGroup = document.createElement('optgroup'); customGroup.label = _t('ai.customConnections') || 'Custom Connections';
+  const presetGroup = document.createElement('optgroup'); presetGroup.label = _t('ai.officialPresets') || 'Official Presets';
   merged.forEach(p => {
     const o = document.createElement('option');
     o.value = p.id;
@@ -440,7 +440,7 @@ function fillAiModels(models, selected) {
   const sel = $('ai-model');
   sel.innerHTML = '';
   const list = Array.isArray(models) ? models.filter(Boolean) : [];
-  const placeholder = new Option(list.length ? (_t('ai.selectModel') || '选择模型') : (_t('ai.fetchModelsFirst') || '请先获取模型'), '');
+  const placeholder = new Option(list.length ? (_t('ai.selectModel') || 'Select model') : (_t('ai.fetchModelsFirst') || 'Fetch models first'), '');
   placeholder.disabled = true; placeholder.selected = !list.length;
   sel.appendChild(placeholder);
   list.forEach(id => sel.appendChild(new Option(id, id)));
@@ -486,7 +486,7 @@ function syncAiKey() {
 function aiAnswerCopyButton(content) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const button = document.createElement('button');
-  button.className = 'tb-btn ai-msg-copy'; button.textContent = _t('toast.copiedAnswer') || '复制回答';
+  button.className = 'tb-btn ai-msg-copy'; button.textContent = _t('toast.copiedAnswer') || 'Copy answer';
   button.addEventListener('click', () => copyText(String(content || ''), _t('toast.copiedAnswer') || '已复制回答'));
   return button;
 }
@@ -494,8 +494,8 @@ function aiAnswerCopyButton(content) {
 async function copyText(value, success) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!value) return;
-  try { await navigator.clipboard.writeText(value); showToast(success || (_t('toast.copied') || '已复制')); }
-  catch (e) { const ta = document.createElement('textarea'); ta.value = value; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showToast(success || (_t('toast.copied') || '已复制')); } catch (e2) { showToast(_t('toast.copyFailed') || '复制失败'); } ta.remove(); }
+  try { await navigator.clipboard.writeText(value); showToast(success || (_t('toast.copied') || 'Copied')); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = value; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showToast(success || (_t('toast.copied') || 'Copied')); } catch (e2) { showToast(_t('toast.copyFailed') || 'Copy failed'); } ta.remove(); }
 }
 
 async function deleteAiSessionById(id) {
@@ -505,8 +505,8 @@ async function deleteAiSessionById(id) {
     const r = await apiFetch('/api/ai/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id }) });
     const d = await r.json(); if (!r.ok || !d.ok) throw new Error(d.error || (_t('toast.deleteFailed') || '删除失败'));
     if (state.ai.sessionId === id) clearAiContext();
-    await loadAiSessions(); showToast(_t('toast.sessionDeleted') || '会话已删除');
-  } catch (e) { showToast((_t('toast.deleteFailed') || '删除失败：') + e.message); }
+    await loadAiSessions(); showToast(_t('toast.sessionDeleted') || 'Session deleted');
+  } catch (e) { showToast((_t('toast.deleteFailed') || 'Delete failed: ') + e.message); }
 }
 
 async function clearAiSessions() {
@@ -515,8 +515,8 @@ async function clearAiSessions() {
   try {
     const r = await apiFetch('/api/ai/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'clear' }) });
     if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || (_t('toast.clearFailed') || '清空失败'));
-    state.ai.sessionId = null; state.ai.sessions = []; fillAiSessions(); showToast(_t('toast.sessionsCleared') || '会话历史已清空');
-  } catch (e) { showToast((_t('toast.clearFailed') || '清空失败：') + e.message); }
+    state.ai.sessionId = null; state.ai.sessions = []; fillAiSessions(); showToast(_t('toast.sessionsCleared') || 'Session history cleared');
+  } catch (e) { showToast((_t('toast.clearFailed') || 'Clear failed: ') + e.message); }
 }
 
 function newAiProvider() {
@@ -524,7 +524,7 @@ function newAiProvider() {
   if (!state.ai.config) return;
   const custom = state.ai.config.custom || (state.ai.config.custom = []);
   let seq = custom.length + 1;
-  const connPrefix = _t('ai.customConnections') || '自定义连接';
+  const connPrefix = _t('ai.customConnections') || 'Custom Connections';
   let name = connPrefix + ' ' + seq;
   while ((state.ai.providers || []).some(p => p.name === name)) name = connPrefix + ' ' + (++seq);
   const uid = (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : String(Date.now()) + Math.random().toString(16).slice(2));
@@ -552,8 +552,8 @@ async function deleteAiProvider() {
     state.ai.config.custom = custom; state.ai.config.current = current;
     state.ai.providers = mergeAiProviders(custom, state.ai.config.presets || []);
     fillAiProviders(state.ai.providers, current);
-    showToast(_t('toast.customConnDeleted') || '已删除自定义连接');
-  } catch (e) { showToast((_t('toast.deleteFailed') || '删除失败：') + e.message); }
+    showToast(_t('toast.customConnDeleted') || 'Custom connection deleted');
+  } catch (e) { showToast((_t('toast.deleteFailed') || 'Delete failed: ') + e.message); }
 }
 
 
@@ -566,7 +566,7 @@ async function saveAiSelection(silent) {
   const mode = $('ai-mode').value || 'auto';
   const requestedName = $('ai-provider-name').value.trim() || p.name;
   if (p.custom && requestedName !== p.name && custom.some(c => c.name === requestedName)) {
-    showToast(_t('toast.customConnNameExists') || '自定义连接名称已存在'); return;
+    showToast(_t('toast.customConnNameExists') || 'Custom connection name already exists'); return;
   }
   let over = custom.find(c => c.id === p.id);
   if (!over) {
@@ -599,14 +599,14 @@ async function saveAiSelection(silent) {
     if (r.ok) {
       await loadAiConfig();
       const status = $('ai-conn-status');
-      if (status) status.textContent = (_t('status.saved') || '已保存') + '✓';
-      if (!silent) showToast(_t('toast.connSettingsSaved') || '连接设置已保存');
+      if (status) status.textContent = (_t('status.saved') || 'Saved') + '✓';
+      if (!silent) showToast(_t('toast.connSettingsSaved') || 'Connection settings saved');
     } else {
       const d = await r.json().catch(() => ({}));
       throw new Error(d.error || 'HTTP ' + r.status);
     }
   } catch (e) {
-    showToast((_t('toast.saveFailed') || '保存失败：') + e.message);
+    showToast((_t('toast.saveFailed') || 'Save failed: ') + e.message);
   }
 }
 
@@ -615,7 +615,7 @@ function getAiTargetText() {
   let sel = '';
   if ($('ai-selection').checked) {
     sel = ((window.getSelection && window.getSelection()) || {}).toString() || '';
-    if (!sel) showToast(_t('toast.noTextSelectionNotice') || '未选中文字，将处理全文');
+    if (!sel) showToast(_t('toast.noTextSelectionNotice') || 'No text selected, will process full text');
   }
   if (sel) return { text: sel, isSelection: true };
   const src = state.mode === 'file'
@@ -629,7 +629,7 @@ function setAiBusy(b) {
   state.ai.busy = b;
   $('ai-run').disabled = b;
   $('ai-stop').disabled = !b;
-  $('ai-status').textContent = b ? (_t('ai.generating') || '生成中…') : '';
+  $('ai-status').textContent = b ? (_t('ai.generating') || 'Generating...') : '';
 }
 
 function updateAiRawButtons() {
@@ -644,13 +644,13 @@ async function loadAiModels() {
   const baseUrl = $('ai-base-url').value.trim();
   const key = $('ai-key').value.trim();
   const mode = $('ai-mode').value || 'auto';
-  if (!baseUrl) { showToast(_t('toast.enterBaseUrlFirst') || '请先填写 Base URL'); return; }
+  if (!baseUrl) { showToast(_t('toast.enterBaseUrlFirst') || 'Please enter Base URL first'); return; }
   const p = currentAiProvider();
   const local = p && p.name.indexOf('Ollama') >= 0;
-  if (!local && !key && !(p && p.has_key)) { showToast(_t('toast.enterApiKeyFirst') || '请先填写 API Key'); return; }
+  if (!local && !key && !(p && p.has_key)) { showToast(_t('toast.enterApiKeyFirst') || 'Please enter API Key first'); return; }
   const btn = $('ai-models-btn');
   const old = btn.textContent;
-  btn.disabled = true; btn.textContent = _t('toast.fetchingModels') || '获取中…';
+  btn.disabled = true; btn.textContent = _t('toast.fetchingModels') || 'Fetching...';
   const status = $('ai-conn-status');
   try {
     const q = new URLSearchParams({ provider: (p && p.id) || '', base_url: baseUrl, key: key, mode: mode });
@@ -666,12 +666,12 @@ async function loadAiModels() {
       showToast(_t('toast.fetchedModels', { count: ids.length }) || ('已获取 ' + ids.length + ' 个模型'));
     } else {
       fillAiModels([], '');
-      if (status) status.textContent = _t('toast.noModelsReturned') || '接口未返回可选模型';
-      showToast(_t('toast.noModelsReturned') || '接口未返回可选模型');
+      if (status) status.textContent = _t('toast.noModelsReturned') || 'API did not return available models';
+      showToast(_t('toast.noModelsReturned') || 'API did not return available models');
     }
   } catch (e) {
-    if (status) status.textContent = _t('toast.fetchFail') || '获取失败';
-    showToast((_t('toast.fetchModelsFail') || '获取模型失败：') + e.message);
+    if (status) status.textContent = _t('toast.fetchFail') || 'Fetch failed';
+    showToast((_t('toast.fetchModelsFail') || 'Failed to fetch models: ') + e.message);
   } finally {
     btn.disabled = false;
     btn.textContent = old;
@@ -692,7 +692,7 @@ function clearAiKey() {
   p.clear_key = true;
   p.has_key = false;
   $('ai-key').value = '';
-  $('ai-conn-status').textContent = _t('ai.clearKeyOnSave') || '保存后清除已存 Key';
+  $('ai-conn-status').textContent = _t('ai.clearKeyOnSave') || 'Clear stored Key upon saving';
 }
 
 function resetAiUrl() {
@@ -702,7 +702,7 @@ function resetAiUrl() {
   $('ai-base-url').value = p.base_url || '';
   const mode = p.mode || (p.format === 'anthropic' ? 'messages' : 'auto');
   $('ai-mode').value = (mode === 'anthropic') ? 'messages' : mode;
-  showToast(_t('ai.resetUrlDone') || '已恢复预设地址');
+  showToast(_t('ai.resetUrlDone') || 'Preset URL restored');
 }
 
 function updateAiUsage() {
@@ -721,12 +721,12 @@ function updateAiUsage() {
 async function runAi(action) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const p = currentAiProvider();
-  if (!p) { showToast(_t('toast.selectProviderFirst') || '请先选择 AI 提供商'); return; }
+  if (!p) { showToast(_t('toast.selectProviderFirst') || 'Please select AI provider first'); return; }
   const keyVal = $('ai-key').value.trim();
   const local = p.name.indexOf('Ollama') >= 0;
-  if (!local && !keyVal && !p.has_key && !p.key_source) { showToast(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接'); return; }
+  if (!local && !keyVal && !p.has_key && !p.key_source) { showToast(_t('toast.noApiKeyNotice') || 'API Key not configured: please open settings to complete connection'); return; }
   const { text, isSelection } = getAiTargetText();
-  if (!text || !text.trim()) { showToast(_t('toast.noDocContentNotice') || '没有可处理的文档内容'); return; }
+  if (!text || !text.trim()) { showToast(_t('toast.noDocContentNotice') || 'No document content to process'); return; }
   const prompt = $('ai-prompt').value.trim();
   const isIncognito = $('ai-incognito').checked;
   const model = $('ai-model').value.trim() || (p.models || [''])[0] || '';
@@ -765,7 +765,7 @@ async function runAi(action) {
   uTag.textContent = (_t('ai.meTag', { seq: userSeq }) || ('我 · 提问 ' + userSeq)) + ' · ' + (_t('ai.action_' + action) || AI_ACTIONS[action] || action) + scopeText + ' · ' + model;
   const uBody = document.createElement('div');
   uBody.className = 'ai-msg-body';
-  uBody.textContent = userMsg.length > 2000 ? userMsg.slice(0, 2000) + '\n' + (_t('ai.omittedLong') || '…（已省略）') : userMsg;
+  uBody.textContent = userMsg.length > 2000 ? userMsg.slice(0, 2000) + '\n' + (_t('ai.omittedLong') || '... (omitted)') : userMsg;
   userBubble.appendChild(uTag); userBubble.appendChild(uBody);
   out.appendChild(userBubble);
 
@@ -773,7 +773,7 @@ async function runAi(action) {
   aiBubble.className = 'ai-msg ai';
   const aiTag = document.createElement('div');
   aiTag.className = 'ai-msg-tag';
-  aiTag.textContent = _t('ai.generating') || 'AI 生成中…';
+  aiTag.textContent = _t('ai.generating') || 'AI generating...';
   const aiBody = document.createElement('div');
   aiBody.className = 'ai-msg-body';
   aiBubble.appendChild(aiTag); aiBubble.appendChild(aiBody);
@@ -853,22 +853,22 @@ async function runAi(action) {
       state.ai.messages = msgs;
       const saved = isIncognito ? false : await saveCurrentSession(true);
       updateAiRawButtons();
-      showToast(isIncognito ? (_t('toast.aiIncognitoDone') || 'AI 完成（无痕会话未保存）') : (saved ? (_t('toast.aiSavedDone') || 'AI 完成，已自动保存会话') : (_t('toast.aiSaveFailDone') || 'AI 完成，但会话保存失败；可在历史中重试')));
+      showToast(isIncognito ? (_t('toast.aiIncognitoDone') || 'AI completed (incognito session unsaved)') : (saved ? (_t('toast.aiSavedDone') || 'AI completed and session saved automatically') : (_t('toast.aiSaveFailDone') || 'AI completed, but session save failed; retry from history')));
     } else {
       msgs.pop();
     }
   } catch (e) {
     if (e.name === 'AbortError') {
-      aiTag.textContent = (_t('ai.aiTag', { seq: userSeq }) || ('AI · 回答 ' + userSeq)) + ' ' + (_t('ai.stoppedSuffix') || '（已停止）');
+      aiTag.textContent = (_t('ai.aiTag', { seq: userSeq }) || ('AI · 回答 ' + userSeq)) + ' ' + (_t('ai.stoppedSuffix') || ' (stopped)');
       if (state.ai.raw) {
         const last = { role: 'assistant', content: state.ai.raw, ephemeral: isIncognito };
         if (state.ai.usage) last.usage = state.ai.usage;
         msgs.push(last);
         state.ai.messages = msgs;
       }
-      showToast(_t('ai.stopped') || '已停止');
+      showToast(_t('ai.stopped') || 'Stopped');
     } else {
-      aiTag.textContent = _t('ai.aiError') || 'AI · 出错';
+      aiTag.textContent = _t('ai.aiError') || 'AI · Error';
       const hint = aiErrorHint(e);
       setAiConnectionState(hint.kind, hint.summary);
       showToast(hint.message);
@@ -885,7 +885,7 @@ async function testAiConnection() {
   const p = currentAiProvider();
   if (!p) return;
   const button = $('ai-test-connection'); const before = button.textContent;
-  button.disabled = true; button.textContent = _t('toast.testingConn') || '测试中…';
+  button.disabled = true; button.textContent = _t('toast.testingConn') || 'Testing...';
   setAiConnectionState('loading', _t('toast.testingConn') || '正在测试连接…');
   try {
     const q = new URLSearchParams({ provider: p.id || '', base_url: $('ai-base-url').value.trim(), key: $('ai-key').value.trim(), mode: $('ai-mode').value || 'auto' });
@@ -893,8 +893,8 @@ async function testAiConnection() {
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.error || 'HTTP ' + r.status);
     setAiConnectionState('ready', _t('toast.connReady', { name: p.name }) || (p.name + ' · 连接正常'));
-    $('ai-conn-status').textContent = (_t('toast.connReady', { name: p.name }) || '连接正常') + (data.models && data.models.length ? (' · ' + data.models.length + ' ' + (_t('ai.modelsAvail') || '个模型可用')) : '');
-    showToast(_t('toast.connTestPass') || '连接测试通过');
+    $('ai-conn-status').textContent = (_t('toast.connReady', { name: p.name }) || 'Connection OK') + (data.models && data.models.length ? (' · ' + data.models.length + ' ' + (_t('ai.modelsAvail') || ' models available')) : '');
+    showToast(_t('toast.connTestPass') || 'Connection test passed');
   } catch (e) {
     const hint = aiErrorHint(e); setAiConnectionState(hint.kind, hint.summary); $('ai-conn-status').textContent = hint.message; showToast(hint.message);
   } finally { button.disabled = false; button.textContent = before; }
@@ -903,7 +903,7 @@ async function testAiConnection() {
 function aiConversationMarkdown(session) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const s = session || {};
-  const title = String(s.title || (_t('ai.untitledSession') || '未命名会话')).replace(/[\r\n]/g, ' ').slice(0, 300);
+  const title = String(s.title || (_t('ai.untitledSession') || 'Untitled Session')).replace(/[\r\n]/g, ' ').slice(0, 300);
   const lines = ['# ' + title, '', '> ' + (_t('ai.sourcePrefix') || '来源：') + 'ReadMD AI'];
   if (s.provider) lines.push('> ' + (_t('ai.providerPrefix') || '提供商：') + String(s.provider).slice(0, 120));
   if (s.model) lines.push('> ' + (_t('ai.modelPrefix') || '模型：') + String(s.model).slice(0, 160));
@@ -918,13 +918,13 @@ async function selectedConversationMarkdown() {
   if (!id && (state.ai.messages || []).length) return aiConversationMarkdown({ title: _t('ai.currentSession') || '当前会话', provider: $('ai-provider').value, model: $('ai-model').value, messages: state.ai.messages });
   if (!id) throw new Error(_t('toast.selectOrFinishSession') || '请先选择或完成一段会话');
   const r = await apiFetch('/api/ai/history?id=' + encodeURIComponent(id)); const d = await r.json();
-  if (!r.ok || !d.session) throw new Error(d.error || (_t('toast.sessionNotExist') || '会话不存在'));
+  if (!r.ok || !d.session) throw new Error(d.error || (_t('toast.sessionNotExist') || 'Session does not exist'));
   return aiConversationMarkdown(d.session);
 }
 
 async function copyCurrentConversation() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  try { await copyText(await selectedConversationMarkdown(), _t('toast.copiedConversation') || '已复制整段对话 Markdown'); } catch (e) { showToast(e.message); }
+  try { await copyText(await selectedConversationMarkdown(), _t('toast.copiedConversation') || 'Copied entire conversation Markdown'); } catch (e) { showToast(e.message); }
 }
 
 async function exportCurrentConversation() {
@@ -936,10 +936,10 @@ async function saveMarkdownText(markdown, suggested) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (hasPy && py.save_as) {
     const result = await py.save_as(markdown, suggested || 'conversation.md');
-    if (result) { showToast((_t('toast.savedPrefix') || '已保存：') + result); return; }
-    showToast(_t('toast.notSaved') || '未保存'); return;
+    if (result) { showToast((_t('toast.savedPrefix') || 'Saved: ') + result); return; }
+    showToast(_t('toast.notSaved') || 'Not saved'); return;
   }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown;charset=utf-8' })); a.download = suggested || 'conversation.md'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); showToast(_t('toast.downloadStarted') || '已开始下载');
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown;charset=utf-8' })); a.download = suggested || 'conversation.md'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); showToast(_t('toast.downloadStarted') || 'Download started');
 }
 
 /* ---------------- 安全对话导入 ---------------- */
@@ -1020,19 +1020,19 @@ async function applyAi() {
       const cur = state.original || state.fixed || '';
       const i = sel ? cur.indexOf(sel) : -1;
       if (i >= 0) next = cur.slice(0, i) + state.ai.raw + cur.slice(i + sel.length);
-      else { showToast(_t('toast.appliedSelectionFallback') || '未定位到选中文字，已改为全文应用'); }
+      else { showToast(_t('toast.appliedSelectionFallback') || 'Could not locate selected text, applied to entire document'); }
     }
     state.original = next;
     state.fixed = next;
     exitEdit();
     await toggleEdit();
-    showToast(_t('toast.appliedSavedNotice') || '已应用，请检查后 Ctrl+S 保存（首存自动备份）');
+    showToast(_t('toast.appliedSavedNotice') || 'Applied. Please verify and press Ctrl+S to save (automatic backup on first save)');
   } else {
     state.fixed = state.ai.raw;
     state.original = state.ai.raw;
     renderContent(state.ai.raw, (state.sourceName || (_t('ai.aiResult') || 'AI 结果')) + ' · AI');
     updateStatus();
-    showToast(_t('toast.appliedVirtualNotice') || '已应用（虚拟文档），可另存为 .md');
+    showToast(_t('toast.appliedVirtualNotice') || 'Applied as virtual document. You can save as .md');
   }
 }
 
@@ -1043,7 +1043,7 @@ async function saveAiAs() {
   const suggested = base.replace(/\.[^.]+$/, '') + '.ai.md';
   if (hasPy) {
     const out = await py.save_as(state.ai.raw, suggested);
-    if (out) showToast((_t('toast.savedPrefix') || '已保存：') + out);
+    if (out) showToast((_t('toast.savedPrefix') || 'Saved: ') + out);
   } else {
     const blob = new Blob([state.ai.raw], { type: 'text/markdown;charset=utf-8' });
     const a = document.createElement('a');

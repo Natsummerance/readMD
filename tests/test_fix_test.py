@@ -2,7 +2,7 @@
 """ReadMD 修正器单元测试：python test_fix_test.py"""
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
-from src.readmd_fix import fix_markdown
+from src.readmd_core.readmd_fix import fix_markdown
 
 QUIET = False
 FAIL = 0

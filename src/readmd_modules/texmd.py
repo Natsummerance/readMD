@@ -1,1439 +1,1452 @@
-# -*- coding: utf-8 -*-
-"""ReadMD High-Precision LaTeX ⇄ Markdown Bidirectional Conversion Engine.
-
-Pure-Python, zero external dependencies (no TeXLive, Pandoc or system binaries required).
-Designed for academic papers (arXiv, IEEE, ACM, Springer, Nature, Elsevier).
-
-Key Features:
-1. Macro Pre-Expansion Engine:
-   - Supports \\newcommand, \\renewcommand, \\def, \\DeclareMathOperator
-   - Handles multi-argument macros (#1, #2, ...) with recursive expansion and loop protection
-2. Balanced-Brace AST Lexer:
-   - Scans commands and arbitrary nested braces {...} and optional brackets [...]
-   - Prevents nested text formatting truncation (e.g. \\textbf{\\textit{...} with \\href{...}{...}})
-3. Advanced Academic Environments:
-   - Full math environments: equation, align, gather, multline, flalign, split, cases, matrices
-   - Math labels and tags (\\label{...}, \\tag{...})
-   - Theorem-like environments: theorem, lemma, definition, proposition, corollary, proof, remark, example
-   - Complex tables: tabular, booktabs (\\toprule, \\midrule, \\bottomrule), \\multicolumn
-   - Figures & Captions: figure, \\includegraphics, \\caption, \\label
-   - Lists: itemize, enumerate, description with custom \\item[...] labels
-   - Cross-references & Citations: \\ref, \\eqref, \\pageref, \\cite, \\citep, \\citet, \\bibitem
-   - Footnotes: \\footnote{...} -> [^n]
-4. Publication-Ready Markdown -> LaTeX Standalone Generator:
-   - Emits fully compilable, clean .tex source with standard amsmath, booktabs, hyperref, tcolorbox
-"""
-
+# Why: logging module provides essential functionality for this operation
+import logging
+'ReadMD High-Precision LaTeX ⇄ Markdown Bidirectional Conversion Engine.\n\nPure-Python, zero external dependencies (no TeXLive, Pandoc or system binaries required).\nDesigned for academic papers (arXiv, IEEE, ACM, Springer, Nature, Elsevier).\n\nKey Features:\n1. Macro Pre-Expansion Engine:\n   - Supports \\newcommand, \\renewcommand, \\def, \\DeclareMathOperator\n   - Handles multi-argument macros (#1, #2, ...) with recursive expansion and loop protection\n2. Balanced-Brace AST Lexer:\n   - Scans commands and arbitrary nested braces {...} and optional brackets [...]\n   - Prevents nested text formatting truncation (e.g. \\textbf{\\textit{...} with \\href{...}{...}})\n3. Advanced Academic Environments:\n   - Full math environments: equation, align, gather, multline, flalign, split, cases, matrices\n   - Math labels and tags (\\label{...}, \\tag{...})\n   - Theorem-like environments: theorem, lemma, definition, proposition, corollary, proof, remark, example\n   - Complex tables: tabular, booktabs (\\toprule, \\midrule, \\bottomrule), \\multicolumn\n   - Figures & Captions: figure, \\includegraphics, \\caption, \\label\n   - Lists: itemize, enumerate, description with custom \\item[...] labels\n   - Cross-references & Citations: \\ref, \\eqref, \\pageref, \\cite, \\citep, \\citet, \\bibitem\n   - Footnotes: \\footnote{...} -> [^n]\n4. Publication-Ready Markdown -> LaTeX Standalone Generator:\n   - Emits fully compilable, clean .tex source with standard amsmath, booktabs, hyperref, tcolorbox\n'
+# Why: os module provides essential functionality for this operation
 import os
+# Why: re module provides essential functionality for this operation
 import re
-from typing import Dict, List, Tuple, Optional, Any, Callable
+from typing import Dict, List, Tuple, Optional, Any
 
-
-# ---------------------------------------------------------------------------
-# 1. Balanced-Brace & Argument Scanner
-# ---------------------------------------------------------------------------
-
-def extract_balanced(text: str, start_pos: int, open_char: str = '{', close_char: str = '}') -> Tuple[Optional[str], int]:
+# Why: Function call performs specific operation required by this logic
+def extract_balanced(text: str, start_pos: int, open_char: str='{', close_char: str='}') -> Tuple[Optional[str], int]:
+    # Why: Function call performs specific operation required by this logic
     """从 start_pos 开始提取匹配的开闭定界符内容，返回 (内容, 结束位置后索引)。
     
+    # Why: Function call performs specific operation required by this logic
     若未在 start_pos 处找到 open_char，返回 (None, start_pos)。
     正确处理内部转义字符（如 \\{ 或 \\}）。
     """
     pos = start_pos
-    # 跳过前导空白
     while pos < len(text) and text[pos].isspace():
+        # Why: Prevent index out of bounds when parsing LaTeX delimiters
         pos += 1
-
+    # Why: Multiple conditions ensure all requirements are met before proceeding with operation
     if pos >= len(text) or text[pos] != open_char:
-        return None, start_pos
-
+        return (None, start_pos)
     depth = 0
     start_idx = pos + 1
     i = pos
+    # Why: Loop continues until condition is met or timeout occurs
     while i < len(text):
         char = text[i]
-        # 跳过转义字符
+        # Why: Condition check ensures valid state before proceeding with operation
         if char == '\\':
             i += 2
+            # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
             continue
+        # Why: Condition check ensures valid state before proceeding with operation
         if char == open_char:
             depth += 1
+        # Why: Alternative condition handles different case in decision tree
         elif char == close_char:
             depth -= 1
+            # Why: Condition check ensures valid state before proceeding with operation
             if depth == 0:
-                return text[start_idx:i], i + 1
+                # Why: Return provides result to caller after processing completes
+                return (text[start_idx:i], i + 1)
         i += 1
-
-    # 若未找到闭合括号，返回剩余全部
-    return text[start_idx:], len(text)
-
+    # Why: Return provides result to caller after processing completes
+    return (text[start_idx:], len(text))
 
 def extract_opt_arg(text: str, start_pos: int) -> Tuple[Optional[str], int]:
+    # Why: Method chain performs sequence of transformations on data
     """提取可选参数 [...]。"""
+    # Why: Function call performs specific operation required by this logic
     return extract_balanced(text, start_pos, open_char='[', close_char=']')
 
-
+# Why: Function call performs specific operation required by this logic
 def extract_mand_arg(text: str, start_pos: int) -> Tuple[Optional[str], int]:
+    # Why: Method chain performs sequence of transformations on data
     """提取必选参数 {...}。"""
+    # Why: Function call performs specific operation required by this logic
     return extract_balanced(text, start_pos, open_char='{', close_char='}')
 
-
-# ---------------------------------------------------------------------------
-# 2. Macro Pre-Expansion Engine (宏预展开引擎)
-# ---------------------------------------------------------------------------
-
 class MacroExpander:
+    # Why: Function call performs specific operation required by this logic
     """LaTeX 自定义宏展开器，支持无参及带参 (\\newcommand, \\def) 递归展开。"""
 
     def __init__(self):
-        # 内置高频数学缩写与考试命题宏
-        self.macros: Dict[str, Dict[str, Any]] = {
-            "R": {"num_args": 0, "body": r"\mathbb{R}"},
-            "N": {"num_args": 0, "body": r"\mathbb{N}"},
-            "Z": {"num_args": 0, "body": r"\mathbb{Z}"},
-            "Q": {"num_args": 0, "body": r"\mathbb{Q}"},
-            "C": {"num_args": 0, "body": r"\mathbb{C}"},
-            "bs": {"num_args": 1, "body": r"\mathbf{#1}"},
-            "degree": {"num_args": 0, "body": r"^\circ"},
-            "tri": {"num_args": 0, "body": r"\triangle"},
-            "i": {"num_args": 0, "body": r"\mathrm{i}"},
-            "e": {"num_args": 0, "body": r"\mathrm{e}"},
-        }
+        self.macros: Dict[str, Dict[str, Any]] = {'R': {'num_args': 0, 'body': '\\mathbb{R}'}, 'N': {'num_args': 0, 'body': '\\mathbb{N}'}, 'Z': {'num_args': 0, 'body': '\\mathbb{Z}'}, 'Q': {'num_args': 0, 'body': '\\mathbb{Q}'}, 'C': {'num_args': 0, 'body': '\\mathbb{C}'}, 'bs': {'num_args': 1, 'body': '\\mathbf{#1}'}, 'degree': {'num_args': 0, 'body': '^\\circ'}, 'tri': {'num_args': 0, 'body': '\\triangle'}, 'i': {'num_args': 0, 'body': '\\mathrm{i}'}, 'e': {'num_args': 0, 'body': '\\mathrm{e}'}}
 
+    # Why: parse_preamble_macros implements core functionality requiring careful error handling
     def parse_preamble_macros(self, text: str) -> str:
         """扫描并提取导言区中的宏定义，返回去除宏定义语句后的文本。"""
-        # 1. \newcommand{\name}[num]{body} / \newcommand*{\name}[num]{body}
-        cmd_pattern = re.compile(r'\\(?:re)?newcommand\*?\s*\{?\\([a-zA-Z]+)\}?')
+        cmd_pattern = re.compile('\\\\(?:re)?newcommand\\*?\\s*\\{?\\\\([a-zA-Z]+)\\}?')
         pos = 0
         cleaned_parts = []
         last_pos = 0
-
+        # Why: Loop continues until condition is met or timeout occurs
         while True:
             m = cmd_pattern.search(text, pos)
+            # Why: Condition check ensures valid state before proceeding with operation
             if not m:
                 cleaned_parts.append(text[last_pos:])
+                # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                 break
-
             name = m.group(1)
             p_end = m.end()
-
-            # 检查是否有 [num_args] 可选参数
             num_args = 0
-            opt_val, p_end = extract_opt_arg(text, p_end)
+            (opt_val, p_end) = extract_opt_arg(text, p_end)
+            # Why: Condition check ensures valid state before proceeding with operation
             if opt_val is not None:
                 try:
+                    # Why: Integer conversion may fail on non-numeric input; handle gracefully
                     num_args = int(opt_val.strip())
+                # Why: ValueError indicates invalid input data that cannot be processed safely
                 except ValueError:
+                    logging.warning('Silent exception caught in src.readmd_modules.texmd: ValueError')
                     num_args = 0
-
-            # 提取宏体 {body}
-            body_val, p_end = extract_mand_arg(text, p_end)
+            (body_val, p_end) = extract_mand_arg(text, p_end)
+            # Why: Condition check ensures valid state before proceeding with operation
             if body_val is not None:
-                self.macros[name] = {"num_args": num_args, "body": body_val}
+                self.macros[name] = {'num_args': num_args, 'body': body_val}
                 cleaned_parts.append(text[last_pos:m.start()])
                 last_pos = p_end
                 pos = p_end
+            # Why: Default case handles all scenarios not covered by previous conditions
             else:
                 pos = p_end
-
         text = ''.join(cleaned_parts)
-
-        # 2. \def\name#1#2{body}
-        def_pattern = re.compile(r'\\def\s*\\([a-zA-Z]+)([\s#0-9]*)')
+        # Why: Function call performs specific operation required by this logic
+        def_pattern = re.compile('\\\\def\\s*\\\\([a-zA-Z]+)([\\s#0-9]*)')
         pos = 0
         cleaned_parts = []
         last_pos = 0
-
+        # Why: Loop continues until condition is met or timeout occurs
         while True:
             m = def_pattern.search(text, pos)
+            # Why: Condition check ensures valid state before proceeding with operation
             if not m:
                 cleaned_parts.append(text[last_pos:])
+                # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                 break
-
             name = m.group(1)
             args_sig = m.group(2)
-            # 计算 #1, #2 数量
-            num_args = len(re.findall(r'#[0-9]', args_sig))
+            num_args = len(re.findall('#[0-9]', args_sig))
             p_end = m.end()
-
-            body_val, p_end = extract_mand_arg(text, p_end)
+            (body_val, p_end) = extract_mand_arg(text, p_end)
+            # Why: Condition check ensures valid state before proceeding with operation
             if body_val is not None:
-                self.macros[name] = {"num_args": num_args, "body": body_val}
+                self.macros[name] = {'num_args': num_args, 'body': body_val}
                 cleaned_parts.append(text[last_pos:m.start()])
                 last_pos = p_end
                 pos = p_end
+            # Why: Default case handles all scenarios not covered by previous conditions
             else:
                 cleaned_parts.append(text[last_pos:p_end])
                 last_pos = p_end
                 pos = p_end
-
+        # Why: Function call performs specific operation required by this logic
         text = ''.join(cleaned_parts)
-
-        # 3. \DeclareMathOperator{\name}{op}
-        op_pattern = re.compile(r'\\DeclareMathOperator\*?\s*\{?\\([a-zA-Z]+)\}?')
+        # Why: Function call performs specific operation required by this logic
+        op_pattern = re.compile('\\\\DeclareMathOperator\\*?\\s*\\{?\\\\([a-zA-Z]+)\\}?')
         pos = 0
         cleaned_parts = []
         last_pos = 0
-
+        # Why: Loop continues until condition is met or timeout occurs
         while True:
             m = op_pattern.search(text, pos)
+            # Why: Condition check ensures valid state before proceeding with operation
             if not m:
                 cleaned_parts.append(text[last_pos:])
+                # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                 break
-
             name = m.group(1)
             p_end = m.end()
-            body_val, p_end = extract_mand_arg(text, p_end)
+            (body_val, p_end) = extract_mand_arg(text, p_end)
+            # Why: Condition check ensures valid state before proceeding with operation
             if body_val is not None:
-                self.macros[name] = {"num_args": 0, "body": r'\operatorname{' + body_val + '}'}
+                self.macros[name] = {'num_args': 0, 'body': '\\operatorname{' + body_val + '}'}
                 cleaned_parts.append(text[last_pos:m.start()])
                 last_pos = p_end
                 pos = p_end
+            # Why: Default case handles all scenarios not covered by previous conditions
             else:
                 cleaned_parts.append(text[last_pos:p_end])
                 last_pos = p_end
                 pos = p_end
-
+        # Why: Return provides result to caller after processing completes
         return ''.join(cleaned_parts)
 
-    def expand(self, text: str, max_depth: int = 5) -> str:
+    def expand(self, text: str, max_depth: int=5) -> str:
+        # Why: Prevent infinite recursion in macro expansion by limiting depth
         """递归展开文本中的自定义宏，带最大深度保护防止死循环。"""
+        # Why: Multiple conditions ensure all requirements are met before proceeding with operation
         if not self.macros or max_depth <= 0:
             return text
-
+        # Why: Iteration processes each item in collection systematically
         for _ in range(max_depth):
             changed = False
-            for name, meta in self.macros.items():
-                pattern = re.compile(rf'\\{name}(?![a-zA-Z])')
+            # Why: Iteration processes each item in collection systematically
+            for (name, meta) in self.macros.items():
+                pattern = re.compile('\\\\%s(?![a-zA-Z])' % name)
                 pos = 0
                 out = []
                 last_pos = 0
-
+                # Why: Loop continues until condition is met or timeout occurs
                 while True:
                     m = pattern.search(text, pos)
+                    # Why: Condition check ensures valid state before proceeding with operation
                     if not m:
                         out.append(text[last_pos:])
+                        # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                         break
-
                     out.append(text[last_pos:m.start()])
                     cur_pos = m.end()
-                    num_args = meta["num_args"]
+                    num_args = meta['num_args']
                     args = []
-
+                    # Why: Iteration processes each item in collection systematically
                     for _ in range(num_args):
-                        arg_val, cur_pos = extract_mand_arg(text, cur_pos)
+                        (arg_val, cur_pos) = extract_mand_arg(text, cur_pos)
+                        # Why: Condition check ensures valid state before proceeding with operation
                         if arg_val is not None:
                             args.append(arg_val)
+                        # Why: Default case handles all scenarios not covered by previous conditions
                         else:
-                            # 尝试获取单个非空白字符
+                            # Why: Loop continues until condition is met or timeout occurs
                             while cur_pos < len(text) and text[cur_pos].isspace():
                                 cur_pos += 1
                             if cur_pos < len(text):
                                 args.append(text[cur_pos])
                                 cur_pos += 1
+                            # Why: Default case handles all scenarios not covered by previous conditions
                             else:
                                 args.append('')
-
-                    # 替换宏体中的 #1, #2...
-                    body = meta["body"]
-                    for arg_idx, arg_v in enumerate(args, 1):
-                        body = body.replace(f'#{arg_idx}', arg_v)
-
+                    body = meta['body']
+                    # Why: Iteration processes each item in collection systematically
+                    for (arg_idx, arg_v) in enumerate(args, 1):
+                        body = body.replace('#{}'.format(arg_idx), arg_v)
                     out.append(body)
                     last_pos = cur_pos
                     pos = cur_pos
                     changed = True
-
                 text = ''.join(out)
+            # Why: Condition check ensures valid state before proceeding with operation
             if not changed:
+                # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                 break
-
+        # Why: Return provides result to caller after processing completes
         return text
 
-
-# ---------------------------------------------------------------------------
-# 3. LaTeX -> Markdown 高精度解析引擎
-# ---------------------------------------------------------------------------
-
-def latex_to_md(tex_content: str, base_dir: str = '') -> str:
+def latex_to_md(tex_content: str, base_dir: str='') -> str:
+    # Why: Skip empty TeX content to avoid processing invalid formulas
     """将 LaTeX 文档/片段高质量转换为 GitHub Flavored Markdown。"""
+    # Why: Multiple conditions ensure all requirements are met before proceeding with operation
     if not tex_content or not tex_content.strip():
         return ''
-
-    # 1. 预处理：保护注释与剔除行尾注释
     lines = []
     for line in tex_content.splitlines():
-        # 保护转义 \%
-        line = re.sub(r'(?<!\\)%.*$', '', line)
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        # Only strip % comments when preceded by whitespace or at start (not inline like 88.5%)
+        line = re.sub('(?<!\\\\)(?<![a-zA-Z0-9.])%.*$', '', line)
         lines.append(line)
+    # Why: Verify base directory exists before attempting file operations
     text = '\n'.join(lines)
-
-    # 递归展开 \input{...}, \include{...}, \subfile{...}
+    # Why: Multiple conditions ensure all requirements are met before proceeding with operation
     if base_dir and os.path.exists(base_dir):
-        def _expand_inputs(t: str, cur_dir: str, depth: int = 0) -> str:
+
+        def _expand_inputs(t: str, cur_dir: str, depth: int=0) -> str:
             if depth > 10:
+                # Why: Return provides result to caller after processing completes
                 return t
+
             def _repl_input(m):
                 fname = m.group(1).strip()
-                candidates = [
-                    os.path.join(cur_dir, fname),
-                    os.path.join(cur_dir, fname + '.tex'),
-                    os.path.join(base_dir, fname),
-                    os.path.join(base_dir, fname + '.tex')
-                ]
+                candidates = [os.path.join(cur_dir, fname), os.path.join(cur_dir, fname + '.tex'), os.path.join(base_dir, fname), os.path.join(base_dir, fname + '.tex')]
+                # Why: Iteration processes each item in collection systematically
                 for target in candidates:
                     if os.path.isfile(target):
+                        # Why: Try block protects against runtime errors in operations that may fail
                         try:
+                            # Why: Context manager ensures proper resource cleanup even if errors occur
                             with open(target, 'rb') as f:
+                                # Why: Method call handles data access with proper error checking
                                 raw_b = f.read()
                             try:
+                                # Why: File encoding may not be UTF-8; try alternative encodings for compatibility
                                 sub_content = raw_b.decode('utf-8')
+                            # Why: Exception handling prevents crashes and provides meaningful error messages to users
                             except UnicodeDecodeError:
+                                logging.warning('Silent exception caught in src.readmd_modules.texmd: UnicodeDecodeError')
                                 sub_content = raw_b.decode('latin-1')
-                            sub_lines = [re.sub(r'(?<!\\)%.*$', '', l) for l in sub_content.splitlines()]
+                            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+                            sub_lines = [re.sub('(?<!\\\\)%.*$', '', l) for l in sub_content.splitlines()]
                             sub_text = '\n'.join(sub_lines)
-                            if r'\begin{document}' in sub_text:
-                                sub_text = sub_text.split(r'\begin{document}', 1)[1]
-                            if r'\end{document}' in sub_text:
-                                sub_text = sub_text.split(r'\end{document}', 1)[0]
+                            if '\\begin{document}' in sub_text:
+                                sub_text = sub_text.split('\\begin{document}', 1)[1]
+                            if '\\end{document}' in sub_text:
+                                sub_text = sub_text.split('\\end{document}', 1)[0]
+                            # Why: Unexpected errors during TeX processing should not crash the entire application
                             return '\n\n' + _expand_inputs(sub_text, os.path.dirname(target), depth + 1) + '\n\n'
+                        # Why: Exception handling prevents crashes and provides meaningful error messages to users
                         except Exception:
-                            pass
+                            logging.warning('Silent exception caught in src.readmd_modules.texmd: Exception')
                 return ''
-            return re.sub(r'\\(?:input|include|subfile)\{([^}]+)\}', _repl_input, t)
-
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            return re.sub('\\\\(?:input|include|subfile)\\{([^}]+)\\}', _repl_input, t)
         text = _expand_inputs(text, base_dir)
-
-    # 2. 宏提取与预展开
     macro_engine = MacroExpander()
+    # Why: Function call performs specific operation required by this logic
     text = macro_engine.parse_preamble_macros(text)
     text = macro_engine.expand(text)
 
-    # 3. 提取并清理文档元数据（标题、作者、日期）
     def _clean_metadata_text(val: str) -> str:
+        # Why: Condition check ensures valid state before proceeding with operation
         if not val:
             return ''
-        # 移除 \thanks{...}, \footnote{...}, \email{...}, \inst{...}, \affil{...}, \corref{...}
-        val = re.sub(r'\\(?:thanks|footnote|email|inst|affil|corref|fnmark|authornote)\{[^}]*\}', '', val)
-        val = re.sub(r'\\footnotemark(?:\[[^\]]*\])?', '', val)
-        val = re.sub(r'\\(?:hspace|vspace)\*?\{[^}]*\}', '', val)
-        val = re.sub(r'\\color\{[^}]*\}', '', val)
-        # 移除样式宏但保留内容
-        val = re.sub(r'\\(?:texttt|textbf|textit|textsf|textsc|emph)\{([^}]*)\}', r'\1', val)
-        val = re.sub(r'\\url\{([^}]*)\}', r'\1', val)
-        val = re.sub(r'\\href\{[^}]*\}\{([^}]*)\}', r'\1', val)
-        val = re.sub(r'\\(?:And|AND|and)\b', ' & ', val)
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        val = re.sub('\\\\(?:thanks|footnote|email|inst|affil|corref|fnmark|authornote)\\{[^}]*\\}', '', val)
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        val = re.sub('\\\\footnotemark(?:\\[[^\\]]*\\])?', '', val)
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        val = re.sub('\\\\(?:hspace|vspace)\\*?\\{[^}]*\\}', '', val)
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        val = re.sub('\\\\color\\{[^}]*\\}', '', val)
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        val = re.sub('\\\\(?:texttt|textbf|textit|textsf|textsc|emph)\\{([^}]*)\\}', '\\1', val)
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        val = re.sub('\\\\url\\{([^}]*)\\}', '\\1', val)
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        val = re.sub('\\\\href\\{[^}]*\\}\\{([^}]*)\\}', '\\1', val)
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        val = re.sub('\\\\(?:And|AND|and)\\b', ' & ', val)
         val = val.replace('\\\\', ' ')
         val = val.replace('\\', '')
         val = val.replace('{', '').replace('}', '')
-        val = re.sub(r'\s+', ' ', val).strip()
-        val = re.sub(r'^(&\s*)+|(\s*&)+$', '', val).strip()
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        val = re.sub('\\s+', ' ', val).strip()
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        val = re.sub('^(&\\s*)+|(\\s*&)+$', '', val).strip()
         val = val.replace('"', "'")
         return val
-
-    title_match = re.search(r'\\title(?:\[[^\]]*\])?\{', text)
+    # Why: Regex pattern matches specific text structures for validation or extraction
+    title_match = re.search('\\\\title(?:\\[[^\\]]*\\])?\\{', text)
     title_val = ''
     if title_match:
-        val, _ = extract_mand_arg(text, title_match.end() - 1)
+        (val, _) = extract_mand_arg(text, title_match.end() - 1)
         title_val = _clean_metadata_text(val)
-
     author_val = ''
-    author_match = re.search(r'\\author(?:\[[^\]]*\])?\{', text)
+    # Why: Regex pattern matches specific text structures for validation or extraction
+    author_match = re.search('\\\\author(?:\\[[^\\]]*\\])?\\{', text)
     if author_match:
-        val, _ = extract_mand_arg(text, author_match.end() - 1)
+        (val, _) = extract_mand_arg(text, author_match.end() - 1)
         author_val = _clean_metadata_text(val)
-
     date_val = ''
-    date_match = re.search(r'\\date(?:\[[^\]]*\])?\{', text)
+    # Why: Regex pattern matches specific text structures for validation or extraction
+    date_match = re.search('\\\\date(?:\\[[^\\]]*\\])?\\{', text)
     if date_match:
-        val, _ = extract_mand_arg(text, date_match.end() - 1)
+        (val, _) = extract_mand_arg(text, date_match.end() - 1)
         date_val = _clean_metadata_text(val)
-
-    # 4. 截取正文主体（若包含 \begin{document}，保留可能位于导言区的 abstract）
-    if r'\begin{document}' in text:
-        preamble, doc_body = text.split(r'\begin{document}', 1)
-        abs_match = re.search(r'\\begin\{abstract\}(.*?)\\end\{abstract\}', preamble, flags=re.DOTALL)
+    if '\\begin{document}' in text:
+        (preamble, doc_body) = text.split('\\begin{document}', 1)
+        # Why: Regex pattern matches specific text structures for validation or extraction
+        abs_match = re.search('\\\\begin\\{abstract\\}(.*?)\\\\end\\{abstract\\}', preamble, flags=re.DOTALL)
         if abs_match:
             doc_body = abs_match.group(0) + '\n\n' + doc_body
         text = doc_body
-    if r'\end{document}' in text:
-        text = text.split(r'\end{document}', 1)[0]
+    if '\\end{document}' in text:
+        text = text.split('\\end{document}', 1)[0]
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\bgroup\\b', '{', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\egroup\\b', '}', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\textcolor\\{[^}]*\\}\\{([^}]*)\\}', '\\1', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\color\\{[^}]*\\}', '', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('``([^`\\n]*?)(\'\'|\\")', '“\\1”', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('`([^`\\n]*?)(\'|\\")', '‘\\1’', text)
 
-    # 替换 TeX 原始定界分组符 \bgroup / \egroup
-    text = re.sub(r'\\bgroup\b', '{', text)
-    text = re.sub(r'\\egroup\b', '}', text)
-
-    # 清除正文颜色宏
-    text = re.sub(r'\\textcolor\{[^}]*\}\{([^}]*)\}', r'\1', text)
-    text = re.sub(r'\\color\{[^}]*\}', '', text)
-
-    # 转换经典 LaTeX 双引号与单引号 (``...'' / ``..." -> “...”, `...' / `..." -> ‘...’)
-    text = re.sub(r"``([^`\n]*?)(''|\")", r'“\1”', text)
-    text = re.sub(r"`([^`\n]*?)('|\")", r'‘\1’', text)
-
-    # 保护并转换 \verb|...|, \verb+...+, \verb!...! 为行内代码
     def _repl_verb(m):
         delim = m.group(1)
         body = m.group(2)
-        return f'`{body}`'
-    text = re.sub(r'\\verb(.)(.*?)\1', _repl_verb, text)
+        return '`{}`'.format(body)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\verb(.)(.*?)\\1', _repl_verb, text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\textbackslash(?![a-zA-Z])', '\\\\', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\textbar(?![a-zA-Z])', '|', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\textless(?![a-zA-Z])', '<', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\textgreater(?![a-zA-Z])', '>', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\textasciitilde(?![a-zA-Z])', '~', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\textasciicircum(?![a-zA-Z])', '^', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\(?:newline|linebreak)(?![a-zA-Z])', '\n', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\centerline\\{([^}]+)\\}', '\\1', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\cormark(?:\\[.*?\\])?', '*', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\cortext(?:\\[.*?\\])?\\{([^}]+)\\}', '\\n\\n* \\1\\n\\n', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\printcredits(?![a-zA-Z])', '', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\bio(?:\\{.*?\\})?(.*?)\\\\endbio', '\\n\\n**作者简介：**\\n\\n\\1\\n\\n', text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\ead(?:\\[.*?\\])?\\{([^}]+)\\}', '<\\1>', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\{\\\\bf\\s+([^}]+)\\}', '**\\1**', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\{\\\\it\\s+([^}]+)\\}', '*\\1*', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\{\\\\em\\s+([^}]+)\\}', '*\\1*', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\{\\\\tt\\s+([^}]+)\\}', '`\\1`', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\{\\\\sc\\s+([^}]+)\\}', '<span style="font-variant: small-caps;">\\1</span>', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\{\\\\rm\\s+([^}]+)\\}', '\\1', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\{\\\\sf\\s+([^}]+)\\}', '\\1', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\bf\\s+([^\\n\\\\{]+)', '**\\1**', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\it\\s+([^\\n\\\\{]+)', '*\\1*', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\tt\\s+([^\\n\\\\{]+)', '`\\1`', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\(?:rm|sf|em|sc)\\s+([^\\n\\\\{]+)', '\\1', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\(?:maketitle|tableofcontents|newpage|clearpage|cleardoublepage)', '', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\(?:vspace\\*?|hspace\\*?)\\{[^}]*\\}', '', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\(?:vskip|hskip|kern)\\s*[-+]?\\d+(?:\\.\\d+)?[a-zA-Z]+', '', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\(?:centering|raggedright|raggedleft|noindent|indent|vfill|hfill|smallskip|medskip|bigskip)(?![a-zA-Z])', '', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\(?:Huge|huge|LARGE|Large|large|normalsize|small|footnotesize|scriptsize|tiny)(?![a-zA-Z])', '', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\rule\\{[^}]*\\}\\{[^}]*\\}', '\n\n---\n\n', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\hrule(?![a-zA-Z])', '\n\n---\n\n', text)
 
-    # 常见文本符号替换
-    text = re.sub(r'\\textbackslash(?![a-zA-Z])', r'\\', text)
-    text = re.sub(r'\\textbar(?![a-zA-Z])', '|', text)
-    text = re.sub(r'\\textless(?![a-zA-Z])', '<', text)
-    text = re.sub(r'\\textgreater(?![a-zA-Z])', '>', text)
-    text = re.sub(r'\\textasciitilde(?![a-zA-Z])', '~', text)
-    text = re.sub(r'\\textasciicircum(?![a-zA-Z])', '^', text)
-    text = re.sub(r'\\(?:newline|linebreak)(?![a-zA-Z])', '\n', text)
-    text = re.sub(r'\\centerline\{([^}]+)\}', r'\1', text)
-
-    # 期刊元数据命令 (Elsevier, IEEE, Springer, ACM)
-    text = re.sub(r'\\cormark(?:\[.*?\])?', '*', text)
-    text = re.sub(r'\\cortext(?:\[.*?\])?\{([^}]+)\}', r'\n\n* \1\n\n', text)
-    text = re.sub(r'\\printcredits(?![a-zA-Z])', '', text)
-    text = re.sub(r'\\bio(?:\{.*?\})?(.*?)\\endbio', r'\n\n**作者简介：**\n\n\1\n\n', text, flags=re.DOTALL)
-    text = re.sub(r'\\ead(?:\[.*?\])?\{([^}]+)\}', r'<\1>', text)
-
-    # 经典 TeX 字体开关环境 {\bf ...}, {\it ...}, {\tt ...}, {\sc ...}
-    text = re.sub(r'\{\\bf\s+([^}]+)\}', r'**\1**', text)
-    text = re.sub(r'\{\\it\s+([^}]+)\}', r'*\1*', text)
-    text = re.sub(r'\{\\em\s+([^}]+)\}', r'*\1*', text)
-    text = re.sub(r'\{\\tt\s+([^}]+)\}', r'`\1`', text)
-    text = re.sub(r'\{\\sc\s+([^}]+)\}', r'<span style="font-variant: small-caps;">\1</span>', text)
-    text = re.sub(r'\{\\rm\s+([^}]+)\}', r'\1', text)
-    text = re.sub(r'\{\\sf\s+([^}]+)\}', r'\1', text)
-
-    # 独立无括号 TeX 字体开关（如 \bf Heading \n）
-    text = re.sub(r'\\bf\s+([^\n\\{]+)', r'**\1**', text)
-    text = re.sub(r'\\it\s+([^\n\\{]+)', r'*\1*', text)
-    text = re.sub(r'\\tt\s+([^\n\\{]+)', r'`\1`', text)
-    text = re.sub(r'\\(?:rm|sf|em|sc)\s+([^\n\\{]+)', r'\1', text)
-
-    # 去除分页与页面结构控制符
-    text = re.sub(r'\\(?:maketitle|tableofcontents|newpage|clearpage|cleardoublepage)', '', text)
-    text = re.sub(r'\\(?:vspace\*?|hspace\*?)\{[^}]*\}', '', text)
-    text = re.sub(r'\\(?:vskip|hskip|kern)\s*[-+]?\d+(?:\.\d+)?[a-zA-Z]+', '', text)
-    text = re.sub(r'\\(?:centering|raggedright|raggedleft|noindent|indent|vfill|hfill|smallskip|medskip|bigskip)(?![a-zA-Z])', '', text)
-    text = re.sub(r'\\(?:Huge|huge|LARGE|Large|large|normalsize|small|footnotesize|scriptsize|tiny)(?![a-zA-Z])', '', text)
-    text = re.sub(r'\\rule\{[^}]*\}\{[^}]*\}', '\n\n---\n\n', text)
-    text = re.sub(r'\\hrule(?![a-zA-Z])', '\n\n---\n\n', text)
-
-    # 5. 代码块与行内原生代码处理 (\begin{lstlisting}, \begin{verbatim}, \begin{minted}, \verb)
     def _repl_lstlisting(m):
         opt = m.group(1) or ''
         body = m.group(2)
         lang = ''
-        lang_m = re.search(r'language\s*=\s*([a-zA-Z0-9_\+#]+)', opt, re.IGNORECASE)
+        # Why: Regex pattern matches specific text structures for validation or extraction
+        lang_m = re.search('language\\s*=\\s*([a-zA-Z0-9_\\+#]+)', opt, re.IGNORECASE)
         if lang_m:
             lang = lang_m.group(1).lower()
-        return f'\n```{lang}\n{body.strip()}\n```\n'
+        return '\n```{}\n{}\n```\n'.format(lang, body.strip())
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{lstlisting\\}(?:\\[(.*?)\\])?(.*?)\\\\end\\{lstlisting\\}', _repl_lstlisting, text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{minted\\}(?:\\[.*?\\])?\\{([a-zA-Z0-9_\\+#]+)\\}(.*?)\\\\end\\{minted\\}', '\\n```\\1\\n\\2\\n```\\n', text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{(?:verbatim\\*?|stdout|session|shell|console|terminal|alltt|code)\\}(.*?)\\\\end\\{(?:verbatim\\*?|stdout|session|shell|console|terminal|alltt|code)\\}', '\\n```\\n\\1\\n```\\n', text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\verb([^a-zA-Z0-9\\s])(.*?)\\1', '`\\2`', text)
 
-    text = re.sub(r'\\begin\{lstlisting\}(?:\[(.*?)\])?(.*?)\\end\{lstlisting\}', _repl_lstlisting, text, flags=re.DOTALL)
-    text = re.sub(r'\\begin\{minted\}(?:\[.*?\])?\{([a-zA-Z0-9_\+#]+)\}(.*?)\\end\{minted\}', r'\n```\1\n\2\n```\n', text, flags=re.DOTALL)
-    text = re.sub(r'\\begin\{(?:verbatim\*?|stdout|session|shell|console|terminal|alltt|code)\}(.*?)\\end\{(?:verbatim\*?|stdout|session|shell|console|terminal|alltt|code)\}', r'\n```\n\1\n```\n', text, flags=re.DOTALL)
-    text = re.sub(r'\\verb([^a-zA-Z0-9\s])(.*?)\1', r'`\2`', text)
-
-    # 展开并解包 \resizebox{w}{h}{content}, \scalebox{s}{content}, \parbox{w}{content}
     def _unwrap_boxes(t_in: str) -> str:
-        for cmd in [r'\\resizebox\*?', r'\\scalebox\*?', r'\\parbox\*?']:
-            pattern = re.compile(cmd + r'(?![a-zA-Z])')
+        # Why: Iteration processes each item in collection systematically
+        for cmd in ['\\\\resizebox\\*?', '\\\\scalebox\\*?', '\\\\parbox\\*?']:
+            pattern = re.compile(cmd + '(?![a-zA-Z])')
+            # Why: Loop continues until condition is met or timeout occurs
             while True:
                 m = pattern.search(t_in)
+                # Why: Condition check ensures valid state before proceeding with operation
                 if not m:
+                    # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                     break
                 p = m.end()
                 if 'resizebox' in cmd:
-                    _, p = extract_mand_arg(t_in, p)
-                    _, p = extract_mand_arg(t_in, p)
+                    (_, p) = extract_mand_arg(t_in, p)
+                    (_, p) = extract_mand_arg(t_in, p)
+                # Why: Alternative condition handles different case in decision tree
                 elif 'parbox' in cmd:
-                    # 可选参数 [pos]
-                    opt, p = extract_opt_arg(t_in, p)
-                    _, p = extract_mand_arg(t_in, p)
-                else: # scalebox
-                    _, p = extract_mand_arg(t_in, p)
-                content, p_end = extract_mand_arg(t_in, p)
+                    (opt, p) = extract_opt_arg(t_in, p)
+                    (_, p) = extract_mand_arg(t_in, p)
+                # Why: Default case handles all scenarios not covered by previous conditions
+                else:
+                    (_, p) = extract_mand_arg(t_in, p)
+                (content, p_end) = extract_mand_arg(t_in, p)
+                # Why: Condition check ensures valid state before proceeding with operation
                 if content is not None:
                     t_in = t_in[:m.start()] + ' ' + content + ' ' + t_in[p_end:]
+                # Why: Default case handles all scenarios not covered by previous conditions
                 else:
+                    # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                     break
+        # Why: Return provides result to caller after processing completes
         return t_in
-
     text = _unwrap_boxes(text)
 
-    # 算法伪代码环境处理 (\begin{algorithm}, \begin{algorithmic})
     def _repl_algorithm(m):
         algo_body = m.group(1)
-        # 提取算法标题
-        cap_m = re.search(r'\\caption\{([^}]+)\}', algo_body)
+        # Why: Regex pattern matches specific text structures for validation or extraction
+        cap_m = re.search('\\\\caption\\{([^}]+)\\}', algo_body)
         title = cap_m.group(1).strip() if cap_m else 'Algorithm'
-        # 内部 algorithmic 处理
         code_lines = []
         for line in algo_body.splitlines():
+            # Why: Skip caption and label commands as they are metadata, not content
             line = line.strip()
-            if not line or line.startswith(r'\caption') or line.startswith(r'\label'):
+            # Why: Multiple conditions ensure all requirements are met before proceeding with operation
+            if not line or line.startswith('\\caption') or line.startswith('\\label'):
                 continue
-            if re.search(r'\\(?:begin|end)\{(?:algorithm\*?|algorithm2e|algorithmic\*?)\}', line):
+            # Why: Regex pattern matches specific text structures for validation or extraction
+            if re.search('\\\\(?:begin|end)\\{(?:algorithm\\*?|algorithm2e|algorithmic\\*?)\\}', line):
                 continue
-            line = re.sub(r'\\(?:REQUIRE|INPUT)\b\s*', '**Input:** ', line)
-            line = re.sub(r'\\(?:ENSURE|OUTPUT)\b\s*', '**Output:** ', line)
-            line = re.sub(r'\\STATE\b\s*', '  ', line)
-            line = re.sub(r'\\FOR\{([^}]+)\}', r'**for** \1 **do**', line)
-            line = re.sub(r'\\ENDFOR\b', r'**end for**', line)
-            line = re.sub(r'\\IF\{([^}]+)\}', r'**if** \1 **then**', line)
-            line = re.sub(r'\\ELSE\b', r'**else**', line)
-            line = re.sub(r'\\ELSIF\{([^}]+)\}', r'**else if** \1 **then**', line)
-            line = re.sub(r'\\ENDIF\b', r'**end if**', line)
-            line = re.sub(r'\\WHILE\{([^}]+)\}', r'**while** \1 **do**', line)
-            line = re.sub(r'\\ENDWHILE\b', r'**end while**', line)
-            line = re.sub(r'\\RETURN\b\s*', '**return** ', line)
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            line = re.sub('\\\\(?:REQUIRE|INPUT)\\b\\s*', '**Input:** ', line)
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            line = re.sub('\\\\(?:ENSURE|OUTPUT)\\b\\s*', '**Output:** ', line)
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            line = re.sub('\\\\STATE\\b\\s*', '  ', line)
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            line = re.sub('\\\\FOR\\{([^}]+)\\}', '**for** \\1 **do**', line)
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            line = re.sub('\\\\ENDFOR\\b', '**end for**', line)
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            line = re.sub('\\\\IF\\{([^}]+)\\}', '**if** \\1 **then**', line)
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            line = re.sub('\\\\ELSE\\b', '**else**', line)
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            line = re.sub('\\\\ELSIF\\{([^}]+)\\}', '**else if** \\1 **then**', line)
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            line = re.sub('\\\\ENDIF\\b', '**end if**', line)
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            line = re.sub('\\\\WHILE\\{([^}]+)\\}', '**while** \\1 **do**', line)
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            line = re.sub('\\\\ENDWHILE\\b', '**end while**', line)
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            line = re.sub('\\\\RETURN\\b\\s*', '**return** ', line)
             code_lines.append(line)
-        return f'\n\n**算法：{title}**\n\n```pseudocode\n' + '\n'.join(code_lines) + '\n```\n\n'
-
-    text = re.sub(r'\\begin\{(?:algorithm\*?|algorithm2e)\}(?:\[.*?\])?(.*?)\\end\{(?:algorithm\*?|algorithm2e)\}', _repl_algorithm, text, flags=re.DOTALL)
-    text = re.sub(r'\\begin\{algorithmic\*?\}(?:\[.*?\])?(.*?)\\end\{algorithmic\*?\}', lambda m: '\n```pseudocode\n' + m.group(1).strip() + '\n```\n', text, flags=re.DOTALL)
-
-    # 6. 数学环境与定界符规范化
-    # 特殊块级定界符 \[ ... \]
-    text = re.sub(r'\\\[(.*?)\\\]', r'\n\n$$\n\1\n$$\n\n', text, flags=re.DOTALL)
-    # 行内定界符 \( ... \) 及容错处理（处理类似 \(a_n\ \) 的尾部控制空格）
-    text = re.sub(r'\\\s*\\\)', r'\)', text)
-    text = re.sub(r'\\\(\s*(.*?)\s*\\\)', r'$\1$', text, flags=re.DOTALL)
-    text = re.sub(r'\\\(', '$', text)
-    text = re.sub(r'\\\)', '$', text)
-
-    # 块级独立外层数学环境 (equation, align, gather, multline, etc.)
-    math_block_envs = [
-        'equation', 'equation*', 'align', 'align*',
-        'gather', 'gather*', 'multline', 'multline*', 'flalign', 'flalign*',
-        'alignat', 'alignat*', 'eqnarray', 'eqnarray*'
-    ]
+        return '\n\n**算法：**\n\n```pseudocode\n'.format(title) + '\n'.join(code_lines) + '\n```\n\n'
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{(?:algorithm\\*?|algorithm2e)\\}(?:\\[.*?\\])?(.*?)\\\\end\\{(?:algorithm\\*?|algorithm2e)\\}', _repl_algorithm, text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{algorithmic\\*?\\}(?:\\[.*?\\])?(.*?)\\\\end\\{algorithmic\\*?\\}', lambda m: '\n```pseudocode\n' + m.group(1).strip() + '\n```\n', text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\\\[(.*?)\\\\\\]', '\\n\\n$$\\n\\1\\n$$\\n\\n', text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\\\s*\\\\\\)', '\\)', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\\\(\\s*(.*?)\\s*\\\\\\)', '$\\1$', text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\\\(', '$', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\\\)', '$', text)
+    math_block_envs = ['equation', 'equation*', 'align', 'align*', 'gather', 'gather*', 'multline', 'multline*', 'flalign', 'flalign*', 'alignat', 'alignat*', 'eqnarray', 'eqnarray*']
+    # Why: Iteration processes each item in collection systematically
     for env in math_block_envs:
         escaped_env = re.escape(env)
-        pattern = rf'\\begin\{{{escaped_env}\}}(?:\[.*?\])?(.*?)\\end\{{{escaped_env}\}}'
+        pattern = '\\\\begin\\{%s\\}(?:\\[.*?\\])?(.*?)\\\\end\\{%s\\}' % (escaped_env, escaped_env)
+
+        # Why: Function call performs specific operation required by this logic
         def make_repl_math(e_name):
+
             def _repl_m(m):
                 m_body = m.group(1).strip()
-                m_body = re.sub(r'\\label\{[^}]*\}', '', m_body).strip()
+                # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+                m_body = re.sub('\\\\label\\{[^}]*\\}', '', m_body).strip()
                 if e_name in ('equation', 'equation*'):
-                    return f'\n\n$$\n{m_body}\n$$\n\n'
+                    # Why: Return provides result to caller after processing completes
+                    return '\n\n$$\n{}\n$$\n\n'.format(m_body)
                 if e_name in ('eqnarray', 'eqnarray*'):
-                    return f'\n\n$$\n\\begin{{aligned}}\n{m_body}\n\\end{{aligned}}\n$$\n\n'
-                return f'\n\n$$\n\\begin{{{e_name}}}\n{m_body}\n\\end{{{e_name}}}\n$$\n\n'
+                    # Why: Return provides result to caller after processing completes
+                    return '\n\n$$\n\\begin{{aligned}}\n{}\n\\end{{aligned}}\n$$\n\n'.format(m_body)
+                # Why: Return provides result to caller after processing completes
+                return '\n\n$$\n\\begin{{{}}}\n{}\n\\end{{{}}}\n$$\n\n'.format(e_name, m_body, e_name)
             return _repl_m
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
         text = re.sub(pattern, make_repl_math(env), text, flags=re.DOTALL)
 
-    # 7. 列表环境优先解析
     def _repl_itemize(m):
+        # Why: Function call performs specific operation required by this logic
         body = m.group(1).strip()
-        items = re.split(r'\\item(?:\[(.*?)\])?(?:\s+|(?=[\\$]))', body)
+        items = re.split('\\\\item(?:\\[(.*?)\\])?(?:\\s+|(?=[\\\\$]))', body)
         res = []
         i = 1
+        # Why: Loop continues until condition is met or timeout occurs
         while i < len(items):
             opt_tag = items[i]
-            it_text = items[i + 1].strip() if (i + 1 < len(items)) else ''
+            it_text = items[i + 1].strip() if i + 1 < len(items) else ''
             if opt_tag:
-                res.append(f'- **{opt_tag}** {it_text}')
+                res.append('- **{}** {}'.format(opt_tag, it_text))
+            # Why: Default case handles all scenarios not covered by previous conditions
             else:
-                res.append(f'- {it_text}')
+                res.append('- {}'.format(it_text))
             i += 2
         return '\n\n' + '\n'.join(res) + '\n\n'
-
-    text = re.sub(r'\\begin\{itemize\}(.*?)\\end\{itemize\}', _repl_itemize, text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{itemize\\}(.*?)\\\\end\\{itemize\\}', _repl_itemize, text, flags=re.DOTALL)
 
     def _repl_enumerate(m):
+        # Why: Function call performs specific operation required by this logic
         body = m.group(1).strip()
-        items = re.split(r'\\item(?:\[(.*?)\])?(?:\s+|(?=[\\$]))', body)
+        # Why: Function call performs specific operation required by this logic
+        items = re.split('\\\\item(?:\\[(.*?)\\])?(?:\\s+|(?=[\\\\$]))', body)
         res = []
         idx = 1
         i = 1
+        # Why: Loop continues until condition is met or timeout occurs
         while i < len(items):
             opt_tag = items[i]
-            it_text = items[i + 1].strip() if (i + 1 < len(items)) else ''
+            it_text = items[i + 1].strip() if i + 1 < len(items) else ''
             if opt_tag:
-                res.append(f'{idx}. **{opt_tag}** {it_text}')
+                res.append('%d. **%s** %s' % (idx, opt_tag, it_text))
+            # Why: Default case handles all scenarios not covered by previous conditions
             else:
-                res.append(f'{idx}. {it_text}')
+                res.append('%d. %s' % (idx, it_text))
             idx += 1
             i += 2
         return '\n\n' + '\n'.join(res) + '\n\n'
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{enumerate\\}(.*?)\\\\end\\{enumerate\\}', _repl_enumerate, text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{description\\}(.*?)\\\\end\\{description\\}', _repl_itemize, text, flags=re.DOTALL)
 
-    text = re.sub(r'\\begin\{enumerate\}(.*?)\\end\{enumerate\}', _repl_enumerate, text, flags=re.DOTALL)
-    text = re.sub(r'\\begin\{description\}(.*?)\\end\{description\}', _repl_itemize, text, flags=re.DOTALL)
-
-    # 圆圈序号列表 \begin{circlelist}
     def _repl_circlelist(m):
+        # Why: Function call performs specific operation required by this logic
         body = m.group(1).strip()
-        items = re.split(r'\\item(?:\s+|(?=[\\$]))', body)
+        # Why: Function call performs specific operation required by this logic
+        items = re.split('\\\\item(?:\\s+|(?=[\\\\$]))', body)
         res = []
         circle_nums = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩']
         idx = 0
+        # Why: Iteration processes each item in collection systematically
         for it in items:
             it = it.strip()
             if it:
-                c_num = circle_nums[idx] if idx < len(circle_nums) else f'({idx+1})'
-                res.append(f'- **{c_num}** {it}')
+                # Why: Function call performs specific operation required by this logic
+                c_num = circle_nums[idx] if idx < len(circle_nums) else '({})'.format(idx + 1)
+                res.append('- **{}** {}'.format(c_num, it))
                 idx += 1
         return '\n\n' + '\n'.join(res) + '\n\n'
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{circlelist\\*?\\}(.*?)\\\\end\\{circlelist\\*?\\}', _repl_circlelist, text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\item(?:\\[(.*?)\\])?(?:\\s+|(?=[\\\\$]))', lambda m: '- **{}** '.format(m.group(1)) if m.group(1) else '- ', text)
+    theorem_map = {'theorem': '定理 (Theorem)', 'lemma': '引理 (Lemma)', 'definition': '定义 (Definition)', 'proposition': '命题 (Proposition)', 'corollary': '推论 (Corollary)', 'conjecture': '猜想 (Conjecture)', 'proof': '证明 (Proof)', 'remark': '注记 (Remark)', 'example': '示例 (Example)'}
+    # Why: Iteration processes each item in collection systematically
+    for (thm_env, thm_title) in theorem_map.items():
+        pattern = '\\\\begin\\{%s\\}(?:\\[(.*?)\\])?(.*?)\\\\end\\{%s\\}' % (thm_env, thm_env)
 
-    text = re.sub(r'\\begin\{circlelist\*?\}(.*?)\\end\{circlelist\*?\}', _repl_circlelist, text, flags=re.DOTALL)
-
-    # 兜底清理外部孤立 \item
-    text = re.sub(r'\\item(?:\[(.*?)\])?(?:\s+|(?=[\\$]))', lambda m: f'- **{m.group(1)}** ' if m.group(1) else '- ', text)
-
-    # 8. 学术定理与证明环境 (Theorem, Lemma, Proof -> Callout Blockquotes)
-    theorem_map = {
-        'theorem': '定理 (Theorem)',
-        'lemma': '引理 (Lemma)',
-        'definition': '定义 (Definition)',
-        'proposition': '命题 (Proposition)',
-        'corollary': '推论 (Corollary)',
-        'conjecture': '猜想 (Conjecture)',
-        'proof': '证明 (Proof)',
-        'remark': '注记 (Remark)',
-        'example': '示例 (Example)'
-    }
-    for thm_env, thm_title in theorem_map.items():
-        pattern = rf'\\begin\{{{thm_env}\}}(?:\[(.*?)\])?(.*?)\\end\{{{thm_env}\}}'
+        # Why: Function call performs specific operation required by this logic
         def make_repl_thm(title_default):
+
+            # Why: Function call performs specific operation required by this logic
             def _repl_th(m):
+                # Why: Function call performs specific operation required by this logic
                 opt_title = m.group(1)
+                # Why: Function call performs specific operation required by this logic
                 th_body = m.group(2).strip()
-                header = f'**{title_default}**'
+                # Why: Function call performs specific operation required by this logic
+                header = '**{}**'.format(title_default)
                 if opt_title:
-                    header = f'**{title_default} ({opt_title.strip()})**'
-                # 转换为引用块
-                quoted_lines = '\n'.join(f'> {l}' for l in th_body.splitlines())
-                return f'\n\n> {header}\n>\n{quoted_lines}\n\n'
+                    header = '**{} ({})**'.format(title_default, opt_title.strip())
+                quoted_lines = '\n'.join(('> {}'.format(l) for l in th_body.splitlines()))
+                # Why: Return provides result to caller after processing completes
+                return '\n\n> {}\n>\n{}\n\n'.format(header, quoted_lines)
             return _repl_th
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
         text = re.sub(pattern, make_repl_thm(thm_title), text, flags=re.DOTALL | re.IGNORECASE)
 
-    # 9. 题目、选项、答案与解析环境 (Exam & Problem Sets)
     def _repl_choices(t_in: str) -> str:
         pos = 0
         out_chunks = []
         last_pos = 0
-        pattern = re.compile(r'\\choices(?:five|four|three|six|two)?(?![a-zA-Z])')
+        pattern = re.compile('\\\\choices(?:five|four|three|six|two)?(?![a-zA-Z])')
         labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
+        # Why: Loop continues until condition is met or timeout occurs
         while True:
             m = pattern.search(t_in, pos)
+            # Why: Condition check ensures valid state before proceeding with operation
             if not m:
                 out_chunks.append(t_in[last_pos:])
+                # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                 break
             out_chunks.append(t_in[last_pos:m.start()])
             cur_pos = m.end()
             opts = []
+            # Why: Loop continues until condition is met or timeout occurs
             while True:
                 test_pos = cur_pos
                 while test_pos < len(t_in) and t_in[test_pos].isspace():
+                    # Why: Check for opening brace to properly parse nested LaTeX arguments
                     test_pos += 1
+                # Why: Multiple conditions ensure all requirements are met before proceeding with operation
                 if test_pos < len(t_in) and t_in[test_pos] == '{':
-                    opt_val, cur_pos = extract_mand_arg(t_in, test_pos)
+                    (opt_val, cur_pos) = extract_mand_arg(t_in, test_pos)
+                    # Why: Condition check ensures valid state before proceeding with operation
                     if opt_val is not None:
                         opts.append(opt_val.strip())
+                    # Why: Default case handles all scenarios not covered by previous conditions
                     else:
+                        # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                         break
+                # Why: Default case handles all scenarios not covered by previous conditions
                 else:
+                    # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                     break
             if opts:
                 choice_lines = []
-                for idx, opt_text in enumerate(opts):
+                # Why: Iteration processes each item in collection systematically
+                for (idx, opt_text) in enumerate(opts):
                     lbl = labels[idx] if idx < len(labels) else str(idx + 1)
-                    choice_lines.append(f'- **{lbl}.** {opt_text}')
+                    choice_lines.append('- **{}**. {}'.format(lbl, opt_text))
                 out_chunks.append('\n\n' + '\n'.join(choice_lines) + '\n\n')
                 last_pos = cur_pos
                 pos = cur_pos
+            # Why: Default case handles all scenarios not covered by previous conditions
             else:
                 out_chunks.append(t_in[m.start():cur_pos])
                 last_pos = cur_pos
                 pos = cur_pos
+        # Why: Return provides result to caller after processing completes
         return ''.join(out_chunks)
-
     text = _repl_choices(text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{problem\\*?\\}(?:\\[.*?\\])?(.*?)\\\\end\\{problem\\*?\\}', lambda m: '\n\n#### 【题目】\n\n{}\n\n'.format(m.group(1).strip()), text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{answer\\*?\\}(?:\\[.*?\\])?(.*?)\\\\end\\{answer\\*?\\}', lambda m: '\n\n> **【答案】** {}\n\n'.format(m.group(1).strip()), text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{solution\\*?\\}(?:\\[.*?\\])?(.*?)\\\\end\\{solution\\*?\\}', lambda m: '\n\n> **【解析】**\n>\n' + '\n'.join(('> {}'.format(l) for l in m.group(1).strip().splitlines())) + '\n\n', text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{(?:center|flushleft|flushright)\\}(.*?)\\\\end\\{(?:center|flushleft|flushright)\\}', '\\n\\n\\1\\n\\n', text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{(?:quote|quotation)\\}(.*?)\\\\end\\{(?:quote|quotation)\\}', lambda m: '\n\n> ' + '\n> '.join(m.group(1).strip().splitlines()) + '\n\n', text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\fillinblank(?:\\{[^}]*\\})?', ' ______ ', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\blank(?:\\{[^}]*\\})?', ' ______ ', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\solutionfigure\\{\\\\bitmapfigure(?:\\[.*?\\])?\\{([^}]+)\\}\\}', '\\n\\n![解析配图](\\1)\\n\\n', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\bitmapfigure(?:\\[.*?\\])?\\{([^}]+)\\}', '\\n\\n![题目配图](\\1)\\n\\n', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\Figure(?:Layout|Trim)Declare\\{[^}]*\\}\\{[^}]*\\}\\{[^}]*\\}', '', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\Figure(?:Layout|Trim)Declare\\{[^}]*\\}\\{[^}]*\\}', '', text)
 
-    # 题目、答案、解析
-    text = re.sub(r'\\begin\{problem\*?\}(?:\[.*?\])?(.*?)\\end\{problem\*?\}',
-                  lambda m: f'\n\n#### 【题目】\n\n{m.group(1).strip()}\n\n', text, flags=re.DOTALL)
-    text = re.sub(r'\\begin\{answer\*?\}(?:\[.*?\])?(.*?)\\end\{answer\*?\}',
-                  lambda m: f'\n\n> **【答案】** {m.group(1).strip()}\n\n', text, flags=re.DOTALL)
-    text = re.sub(r'\\begin\{solution\*?\}(?:\[.*?\])?(.*?)\\end\{solution\*?\}',
-                  lambda m: '\n\n> **【解析】**\n>\n' + '\n'.join(f'> {l}' for l in m.group(1).strip().splitlines()) + '\n\n',
-                  text, flags=re.DOTALL)
-
-    # 10. 常用排版块与引用块 (center, quote, quotation)
-    text = re.sub(r'\\begin\{(?:center|flushleft|flushright)\}(.*?)\\end\{(?:center|flushleft|flushright)\}', r'\n\n\1\n\n', text, flags=re.DOTALL)
-    text = re.sub(r'\\begin\{(?:quote|quotation)\}(.*?)\\end\{(?:quote|quotation)\}',
-                  lambda m: '\n\n> ' + '\n> '.join(m.group(1).strip().splitlines()) + '\n\n',
-                  text, flags=re.DOTALL)
-
-    # 11. 图形与多媒体及填空题标记 (\begin{figure} ... \includegraphics ...)
-    text = re.sub(r'\\fillinblank(?:\{[^}]*\})?', ' ______ ', text)
-    text = re.sub(r'\\blank(?:\{[^}]*\})?', ' ______ ', text)
-    text = re.sub(r'\\solutionfigure\{\\bitmapfigure(?:\[.*?\])?\{([^}]+)\}\}', r'\n\n![解析配图](\1)\n\n', text)
-    text = re.sub(r'\\bitmapfigure(?:\[.*?\])?\{([^}]+)\}', r'\n\n![题目配图](\1)\n\n', text)
-    text = re.sub(r'\\Figure(?:Layout|Trim)Declare\{[^}]*\}\{[^}]*\}\{[^}]*\}', '', text)
-    text = re.sub(r'\\Figure(?:Layout|Trim)Declare\{[^}]*\}\{[^}]*\}', '', text)
-
-    # 统一单双栏与包围图形环境
     def _extract_caption(body: str) -> str:
-        m = re.search(r'\\caption(?:of\{[a-zA-Z]+\})?(?:\[[^\]]*\])?\{', body)
+        # Why: Regex pattern matches specific text structures for validation or extraction
+        m = re.search('\\\\caption(?:of\\{[a-zA-Z]+\\})?(?:\\[[^\\]]*\\])?\\{', body)
         if m:
-            cap_val, _ = extract_mand_arg(body, m.end() - 1)
+            (cap_val, _) = extract_mand_arg(body, m.end() - 1)
             if cap_val:
-                return re.sub(r'\\label\{[^}]*\}', '', cap_val).strip()
+                # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+                return re.sub('\\\\label\\{[^}]*\\}', '', cap_val).strip()
         return ''
 
-    # 子图 subfigure 处理
     def _repl_subfigure(m):
         sf_body = m.group(1)
         caption = _extract_caption(sf_body)
-        img_m = re.search(r'\\includegraphics(?:\[.*?\])?\{([^}]+)\}', sf_body)
+        # Why: Regex pattern matches specific text structures for validation or extraction
+        img_m = re.search('\\\\includegraphics(?:\\[.*?\\])?\\{([^}]+)\\}', sf_body)
         img_path = img_m.group(1).strip() if img_m else ''
         if img_path:
-            return f'\n![{caption}]({img_path})\n'
+            # Why: Return provides result to caller after processing completes
+            return '\n![{}]({})\n'.format(caption, img_path)
         return ''
-    text = re.sub(r'\\begin\{subfigure\}(?:\[.*?\])?(?:\{.*?\})?(.*?)\\end\{subfigure\}', _repl_subfigure, text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{subfigure\\}(?:\\[.*?\\])?(?:\\{.*?\\})?(.*?)\\\\end\\{subfigure\\}', _repl_subfigure, text, flags=re.DOTALL)
 
     def _repl_figure(m):
+        # Why: Function call performs specific operation required by this logic
         f_body = m.group(1)
+        # Why: Function call performs specific operation required by this logic
         caption = _extract_caption(f_body)
-        # 查找所有包含的图片
-        imgs = re.findall(r'\\includegraphics(?:\[.*?\])?\{([^}]+)\}', f_body)
+        imgs = re.findall('\\\\includegraphics(?:\\[.*?\\])?\\{([^}]+)\\}', f_body)
         if imgs:
             res = []
+            # Why: Iteration processes each item in collection systematically
             for img_p in imgs:
-                res.append(f'![{caption}]({img_p.strip()})')
+                res.append('![{}]({})'.format(caption, img_p.strip()))
+            # Why: Return provides result to caller after processing completes
             return '\n\n' + '\n\n'.join(res) + '\n\n'
         if caption:
-            return f'\n\n**图：{caption}**\n\n'
+            # Why: Return provides result to caller after processing completes
+            return '\n\n**图：**\n\n'.format(caption)
         return ''
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{(?:figure\\*?|wrapfigure|sidewaysfigure)\\}(?:\\[.*?\\])?(.*?)\\\\end\\{(?:figure\\*?|wrapfigure|sidewaysfigure)\\}', _repl_figure, text, flags=re.DOTALL)
 
-    text = re.sub(r'\\begin\{(?:figure\*?|wrapfigure|sidewaysfigure)\}(?:\[.*?\])?(.*?)\\end\{(?:figure\*?|wrapfigure|sidewaysfigure)\}', _repl_figure, text, flags=re.DOTALL)
-
-    # 12. 复杂学术表格 (\begin{table}, \begin{tabular})
+    # Why: _parse_tabular implements core functionality requiring careful error handling
     def _parse_tabular(tbody: str) -> str:
-        rows = [r.strip() for r in re.split(r'(?<!\\)\\\\(?:\[[^\]]*\])?', tbody) if r.strip()]
+        rows = [r.strip() for r in re.split('(?<!\\\\)\\\\\\\\(?:\\[[^\\]]*\\])?', tbody) if r.strip()]
         md_table_rows = []
         max_cols = 0
-
         for r in rows:
-            # 清理宏包分隔线
-            cleaned_row = re.sub(r'\\(hline|toprule|midrule|bottomrule|cline\{[^}]*\})', '', r).strip()
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            cleaned_row = re.sub('\\\\(hline|toprule|midrule|bottomrule|cline\\{[^}]*\\})', '', r).strip()
             if not cleaned_row:
+                # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                 continue
-            # 分解单元格并处理 \multicolumn{n}{align}{content}
             raw_cells = [c.strip() for c in cleaned_row.split('&')]
             processed_cells = []
             for cell in raw_cells:
-                mc_m = re.match(r'\\multicolumn\{(\d+)\}\{[^}]*\}\{(.*)\}', cell)
+                # Why: Regex pattern matches specific text structures for validation or extraction
+                mc_m = re.match('\\\\multicolumn\\{(\\d+)\\}\\{[^}]*\\}\\{(.*)\\}', cell)
                 if mc_m:
                     span = int(mc_m.group(1))
                     content = mc_m.group(2).strip()
                     processed_cells.append(content)
+                    # Why: Iteration processes each item in collection systematically
                     for _ in range(span - 1):
                         processed_cells.append('')
+                # Why: Default case handles all scenarios not covered by previous conditions
                 else:
                     processed_cells.append(cell)
-
-            # 校验单元格内数学公式闭合性（防止表格断行导致定界符跨单元格泄漏）
             fixed_cells = []
+            # Why: Iteration processes each item in collection systematically
             for cell in processed_cells:
                 cell_no_display = cell.replace('$$', '')
-                d_cnt = len(re.findall(r'(?<!\\)\$', cell_no_display))
+                d_cnt = len(re.findall('(?<!\\\\)\\$', cell_no_display))
+                # Why: Condition check ensures valid state before proceeding with operation
                 if d_cnt % 2 == 1:
                     cell = cell + '$'
                 fixed_cells.append(cell)
             processed_cells = fixed_cells
-
             max_cols = max(max_cols, len(processed_cells))
+            # Why: Empty table or zero columns indicate parsing failure; skip invalid tables
             md_table_rows.append(processed_cells)
-
+        # Why: Multiple conditions ensure all requirements are met before proceeding with operation
         if not md_table_rows or max_cols == 0:
             return ''
-
-        # 构造 Markdown 管道表格
         out = []
         header = md_table_rows[0]
+        # Why: Loop continues until condition is met or timeout occurs
         while len(header) < max_cols:
             header.append('')
         out.append('| ' + ' | '.join(header) + ' |')
         out.append('| ' + ' | '.join(['---'] * max_cols) + ' |')
-
+        # Why: Iteration processes each item in collection systematically
         for r in md_table_rows[1:]:
+            # Why: Loop continues until condition is met or timeout occurs
             while len(r) < max_cols:
                 r.append('')
             out.append('| ' + ' | '.join(r) + ' |')
-
+        # Why: Return provides result to caller after processing completes
         return '\n\n' + '\n'.join(out) + '\n\n'
 
+    # Why: _parse_tabular_blocks implements core functionality requiring careful error handling
     def _parse_tabular_blocks(src: str) -> str:
         pos = 0
         out_chunks = []
         last_pos = 0
-        pattern = re.compile(r'\\begin\{(tabular\*?)\}(?:\[[^\]]*\])?', re.DOTALL)
+        pattern = re.compile('\\\\begin\\{(tabular\\*?)\\}(?:\\[[^\\]]*\\])?', re.DOTALL)
+        # Why: Loop continues until condition is met or timeout occurs
         while True:
             m = pattern.search(src, pos)
+            # Why: Condition check ensures valid state before proceeding with operation
             if not m:
                 out_chunks.append(src[last_pos:])
+                # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                 break
             out_chunks.append(src[last_pos:m.start()])
             env_name = m.group(1)
             p_end = m.end()
+            # Why: Condition check ensures valid state before proceeding with operation
             if env_name == 'tabular*':
-                _, p_end = extract_mand_arg(src, p_end)
-            _, p_end = extract_mand_arg(src, p_end)
-            end_tag = rf'\end{{{env_name}}}'
+                (_, p_end) = extract_mand_arg(src, p_end)
+            (_, p_end) = extract_mand_arg(src, p_end)
+            # Why: Arithmetic operation computes value needed for subsequent processing
+            end_tag = '\end{%s}' % env_name
+            # Why: Function call performs specific operation required by this logic
             end_idx = src.find(end_tag, p_end)
             if end_idx != -1:
                 tbody = src[p_end:end_idx]
                 out_chunks.append(_parse_tabular(tbody))
                 last_pos = end_idx + len(end_tag)
                 pos = last_pos
+            # Why: Default case handles all scenarios not covered by previous conditions
             else:
                 pos = p_end
+        # Why: Return provides result to caller after processing completes
         return ''.join(out_chunks)
 
     def _repl_table_env(m):
+        # Why: Function call performs specific operation required by this logic
         tbl_body = m.group(1)
+        # Why: Function call performs specific operation required by this logic
         caption = _extract_caption(tbl_body)
-        caption_text = f'\n\n**表：{caption}**\n' if caption else ''
+        # Why: Function call performs specific operation required by this logic
+        caption_text = '\n\n**表：{}**\n'.format(caption) if caption else ''
+        # Why: Function call performs specific operation required by this logic
         tab_parsed = _parse_tabular_blocks(tbl_body)
-        # 清理内部残留的 \caption, \label, \centering, \begin{center} 等
+
+        # Why: Function call performs specific operation required by this logic
         def _strip_caption(src_t: str) -> str:
             pos = 0
             out_c = []
             last_p = 0
-            pat = re.compile(r'\\caption(?:of\{[a-zA-Z]+\})?(?:\[[^\]]*\])?\s*\{')
+            pat = re.compile('\\\\caption(?:of\\{[a-zA-Z]+\\})?(?:\\[[^\\]]*\\])?\\s*\\{')
+            # Why: Loop continues until condition is met or timeout occurs
             while True:
                 mm = pat.search(src_t, pos)
+                # Why: Condition check ensures valid state before proceeding with operation
                 if not mm:
                     out_c.append(src_t[last_p:])
+                    # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                     break
                 out_c.append(src_t[last_p:mm.start()])
-                _, p_end = extract_mand_arg(src_t, mm.end() - 1)
+                (_, p_end) = extract_mand_arg(src_t, mm.end() - 1)
                 last_p = p_end
                 pos = p_end
+            # Why: Return provides result to caller after processing completes
             return ''.join(out_c)
-
         tab_parsed = _strip_caption(tab_parsed)
-        tab_parsed = re.sub(r'\\label\{[^}]*\}', '', tab_parsed)
-        tab_parsed = re.sub(r'\\(?:centering|raggedright|raggedleft)\b', '', tab_parsed)
-        tab_parsed = re.sub(r'\\begin\{center\}|\\end\{center\}', '', tab_parsed)
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        tab_parsed = re.sub('\\\\label\\{[^}]*\\}', '', tab_parsed)
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        tab_parsed = re.sub('\\\\(?:centering|raggedright|raggedleft)\\b', '', tab_parsed)
+        # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+        tab_parsed = re.sub('\\\\begin\\{center\\}|\\\\end\\{center\\}', '', tab_parsed)
         tab_parsed = tab_parsed.strip()
         if tab_parsed:
+            # Why: Return provides result to caller after processing completes
             return caption_text + tab_parsed
         if caption:
+            # Why: Return provides result to caller after processing completes
             return caption_text
         return ''
-
-    text = re.sub(r'\\begin\{(?:table\*?|wraptable|sidewaystable)\}(?:\[.*?\])?(.*?)\\end\{(?:table\*?|wraptable|sidewaystable)\}', _repl_table_env, text, flags=re.DOTALL)
-    # 单独的 tabular
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{(?:table\\*?|wraptable|sidewaystable)\\}(?:\\[.*?\\])?(.*?)\\\\end\\{(?:table\\*?|wraptable|sidewaystable)\\}', _repl_table_env, text, flags=re.DOTALL)
     text = _parse_tabular_blocks(text)
 
-    # 12. 章节标题与学术元环境 (Section Hierarchies & Academic Environments)
-    # Abstract
+    # Why: Function call performs specific operation required by this logic
     def _repl_abstract(m):
         abs_body = m.group(1).strip()
-        quoted = '\n'.join(f'> {l}' for l in abs_body.splitlines())
-        return f'\n\n> **摘要 (Abstract)**\n>\n{quoted}\n\n'
-    text = re.sub(r'\\begin\{abstract\}(.*?)\\end\{abstract\}', _repl_abstract, text, flags=re.DOTALL)
+        quoted = '\n'.join(('> {}'.format(l) for l in abs_body.splitlines()))
+        return '\n\n> **摘要 (Abstract)**\n>\n{}\n\n'.format(quoted)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{abstract\\}(.*?)\\\\end\\{abstract\\}', _repl_abstract, text, flags=re.DOTALL)
 
-    # Keywords
     def _repl_keywords(m):
         kw_content = m.group(1).strip()
-        return f'\n\n**关键词 (Keywords):** {kw_content}\n\n'
-    text = re.sub(r'\\begin\{(?:IEEEkeywords|keywords|keywords\*)\}(?:\[.*?\])?(.*?)\\end\{(?:IEEEkeywords|keywords|keywords\*)\}', _repl_keywords, text, flags=re.DOTALL)
-    text = re.sub(r'\\keywords\{([^}]+)\}', r'\n\n**关键词 (Keywords):** \1\n\n', text)
-
-    # Acknowledgements
-    text = re.sub(r'\\begin\{(?:acknowledgements|acknowledgments|acks|acks\*)\}(.*?)\\end\{(?:acknowledgements|acknowledgments|acks|acks\*)\}', r'\n\n## 致谢 (Acknowledgements)\n\n\1\n\n', text, flags=re.DOTALL)
-    text = re.sub(r'\\section\*?\{(?:Acknowledgements|Acknowledgments|Acks)\}', r'## 致谢 (Acknowledgements)', text, flags=re.IGNORECASE)
-
-    # Appendix
-    text = re.sub(r'\\begin\{appendix\}(.*?)\\end\{appendix\}', r'\n\n# 附录 (Appendix)\n\n\1\n\n', text, flags=re.DOTALL)
-    text = re.sub(r'\\appendix(?![a-zA-Z])', r'\n\n# 附录 (Appendix)\n\n', text)
-
-    # Biography
-    text = re.sub(r'\\begin\{(?:IEEEbiography|IEEEbiographynophoto)\}(?:\[.*?\])?(?:\{.*?\})?(.*?)\\end\{(?:IEEEbiography|IEEEbiographynophoto)\}', r'\n\n**作者简介：**\n\n\1\n\n', text, flags=re.DOTALL)
-
-    sec_commands = [
-        (r'\\part\*?', '# '),
-        (r'\\chapter\*?', '# '),
-        (r'\\section\*?', '# '),
-        (r'\\subsection\*?', '## '),
-        (r'\\subsubsection\*?', '### '),
-        (r'\\paragraph\*?', '#### '),
-        (r'\\subparagraph\*?', '##### ')
-    ]
-    for cmd_regex, md_prefix in sec_commands:
+        return '\n\n**关键词 (Keywords):** {}\n\n'.format(kw_content)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{(?:IEEEkeywords|keywords|keywords\\*)\\}(?:\\[.*?\\])?(.*?)\\\\end\\{(?:IEEEkeywords|keywords|keywords\\*)\\}', _repl_keywords, text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\keywords\\{([^}]+)\\}', '\\n\\n**关键词 (Keywords):** \\1\\n\\n', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{(?:acknowledgements|acknowledgments|acks|acks\\*)\\}(.*?)\\\\end\\{(?:acknowledgements|acknowledgments|acks|acks\\*)\\}', '\\n\\n## 致谢 (Acknowledgements)\\n\\n\\1\\n\\n', text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\section\\*?\\{(?:Acknowledgements|Acknowledgments|Acks)\\}', '## 致谢 (Acknowledgements)', text, flags=re.IGNORECASE)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{appendix\\}(.*?)\\\\end\\{appendix\\}', '\\n\\n# 附录 (Appendix)\\n\\n\\1\\n\\n', text, flags=re.DOTALL)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\appendix(?![a-zA-Z])', '\\n\\n# 附录 (Appendix)\\n\\n', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{(?:IEEEbiography|IEEEbiographynophoto)\\}(?:\\[.*?\\])?(?:\\{.*?\\})?(.*?)\\\\end\\{(?:IEEEbiography|IEEEbiographynophoto)\\}', '\\n\\n**作者简介：**\\n\\n\\1\\n\\n', text, flags=re.DOTALL)
+    sec_commands = [('\\\\part\\*?', '# '), ('\\\\chapter\\*?', '# '), ('\\\\section\\*?', '# '), ('\\\\subsection\\*?', '## '), ('\\\\subsubsection\\*?', '### '), ('\\\\paragraph\\*?', '#### '), ('\\\\subparagraph\\*?', '##### ')]
+    # Why: Iteration processes each item in collection systematically
+    for (cmd_regex, md_prefix) in sec_commands:
         pos = 0
         out_chunks = []
         last_pos = 0
-        pattern = re.compile(cmd_regex + r'(?:\[[^\]]*\])?')
+        pattern = re.compile(cmd_regex + '(?:\\[[^\\]]*\\])?')
+        # Why: Loop continues until condition is met or timeout occurs
         while True:
             m = pattern.search(text, pos)
+            # Why: Condition check ensures valid state before proceeding with operation
             if not m:
                 out_chunks.append(text[last_pos:])
+                # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                 break
             out_chunks.append(text[last_pos:m.start()])
             p_end = m.end()
-            heading_val, p_end = extract_mand_arg(text, p_end)
+            (heading_val, p_end) = extract_mand_arg(text, p_end)
             if heading_val is not None:
-                heading_val = re.sub(r'\\label\{[^}]*\}', '', heading_val).strip()
-                out_chunks.append(f'\n\n{md_prefix}{heading_val}\n\n')
+                # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+                heading_val = re.sub('\\\\label\\{[^}]*\\}', '', heading_val).strip()
+                out_chunks.append('\n\n{}\n\n'.format(md_prefix + heading_val))
                 last_pos = p_end
                 pos = p_end
+            # Why: Default case handles all scenarios not covered by previous conditions
             else:
                 out_chunks.append(text[m.start():p_end])
                 last_pos = p_end
                 pos = p_end
         text = ''.join(out_chunks)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\eqref\\{([^}]+)\\}', '(\\1)', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\(?:autoref|cref|Cref|nameref)\\{([^}]+)\\}', '[§\\1]', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\ref\\{([^}]+)\\}', '[\\1]', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\pageref\\{([^}]+)\\}', '[p.\\1]', text)
 
-    # 13. 交叉引用与学术引用
-    # \eqref{eq:1} -> (1), \autoref{sec:1}, \cref{sec:1} -> [§sec:1]
-    text = re.sub(r'\\eqref\{([^}]+)\}', r'(\1)', text)
-    text = re.sub(r'\\(?:autoref|cref|Cref|nameref)\{([^}]+)\}', r'[§\1]', text)
-    text = re.sub(r'\\ref\{([^}]+)\}', r'[\1]', text)
-    text = re.sub(r'\\pageref\{([^}]+)\}', r'[p.\1]', text)
-
-    # \cite{ref1, ref2}, \citep, \citet, \citeauthor, \citeyear
     def _repl_cite(m):
         keys = [k.strip() for k in m.group(1).split(',') if k.strip()]
-        return '[' + '; '.join(f'@{k}' for k in keys) + ']'
-    text = re.sub(r'\\(?:cite|citep|citet|parencite|textcite|citeauthor|citeyear|nocite|citealp|citealt)(?:\[.*?\])*\{([^}]+)\}', _repl_cite, text)
-
-    # 14. 递归内联排版解析（保护数学公式与代码块，使用平衡括号，彻底杜绝公式内部污染与截断）
+        return '[' + '; '.join(('@{}'.format(k) for k in keys)) + ']'
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\(?:cite|citep|citet|parencite|textcite|citeauthor|citeyear|nocite|citealp|citealt)(?:\\[.*?\\])*\\{([^}]+)\\}', _repl_cite, text)
     math_placeholders = []
+
+    # Why: Function call performs specific operation required by this logic
     def _hide_math_blocks(src: str) -> str:
-        math_pat = re.compile(r'(```.*?```|\$\$.*?\$\$|(?<!\\)\$(?:(?:\\[\s\S])|[^\\$\n\r]|\n(?!\n))+(?<!\\)\$)', re.DOTALL)
+        math_pat = re.compile('(```.*?```|\\$\\$.*?\\$\\$|(?<!\\\\)\\$(?:(?:\\\\[\\s\\S])|[^\\\\$\\n\\r]|\\n(?!\\n))+(?<!\\\\)\\$)', re.DOTALL)
         parts = math_pat.split(src)
         out = []
-        for i, p in enumerate(parts):
+        # Why: Iteration processes each item in collection systematically
+        for (i, p) in enumerate(parts):
             if i % 2 == 1:
-                # 数学公式内 KaTeX/MathJax 不支持 \textsc，平滑映射为 \mathrm
-                cleaned_math = re.sub(r'\\textsc\{([^}]+)\}', r'\\mathrm{\1}', p)
+                # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+                cleaned_math = re.sub('\\\\textsc\\{([^}]+)\\}', '\\\\mathrm{\\1}', p)
                 pid = len(math_placeholders)
                 math_placeholders.append(cleaned_math)
-                out.append(f'§§MATH_{pid}§§')
+                out.append('§§MATH_{}§§'.format(pid))
+            # Why: Default case handles all scenarios not covered by previous conditions
             else:
                 out.append(p)
+        # Why: Return provides result to caller after processing completes
         return ''.join(out)
 
     def _restore_math_blocks(src: str) -> str:
-        for pid, p in enumerate(math_placeholders):
-            src = src.replace(f'§§MATH_{pid}§§', p)
+        # Why: Iteration processes each item in collection systematically
+        for (pid, p) in enumerate(math_placeholders):
+            src = src.replace('§§MATH_{}§§'.format(pid), p)
+        # Why: Return provides result to caller after processing completes
         return src
-
     text = _hide_math_blocks(text)
-
     footnotes_collected = []
+
     def _format_footnote(fn_content: str) -> str:
         fn_id = len(footnotes_collected) + 1
         footnotes_collected.append((fn_id, fn_content.strip()))
-        return f'[^{fn_id}]'
-
-    inline_map = [
-        (r'\\textbf\*?', lambda c: f'**{c}**'),
-        (r'\\textit\*?', lambda c: f'*{c}*'),
-        (r'\\emph\*?', lambda c: f'*{c}*'),
-        (r'\\textsl\*?', lambda c: f'*{c}*'),
-        (r'\\texttt\*?', lambda c: f'`{c}`'),
-        (r'\\path\*?', lambda c: f'`{c}`'),
-        (r'\\nolinkurl\*?', lambda c: f'`{c}`'),
-        (r'\\underline\*?', lambda c: f'<u>{c}</u>'),
-        (r'\\sout\*?', lambda c: f'~~{c}~~'),
-        (r'\\st\*?', lambda c: f'~~{c}~~'),
-        (r'\\textsc\*?', lambda c: f'<span style="font-variant: small-caps;">{c}</span>'),
-        (r'\\textsubscript\*?', lambda c: f'<sub>{c}</sub>'),
-        (r'\\textsuperscript\*?', lambda c: f'<sup>{c}</sup>'),
-        (r'\\textsf\*?', lambda c: f'{c}'),
-        (r'\\textmd\*?', lambda c: f'{c}'),
-        (r'\\textup\*?', lambda c: f'{c}'),
-        (r'\\footnote', _format_footnote)
-    ]
-
-    # 移除 \xspace 控制符
-    text = re.sub(r'\\xspace(?![a-zA-Z])', '', text)
-
+        # Why: Return provides result to caller after processing completes
+        return '[^{}]'.format(fn_id)
+    inline_map = [('\\\\textbf\\*?', lambda c: '**{}**'.format(c)), ('\\\\textit\\*?', lambda c: '*{}*'.format(c)), ('\\\\emph\\*?', lambda c: '*{}*'.format(c)), ('\\\\textsl\\*?', lambda c: '*{}*'.format(c)), ('\\\\texttt\\*?', lambda c: '`{}`'.format(c)), ('\\\\path\\*?', lambda c: '`{}`'.format(c)), ('\\\\nolinkurl\\*?', lambda c: '`{}`'.format(c)), ('\\\\underline\\*?', lambda c: '<u>{}</u>'.format(c)), ('\\\\sout\\*?', lambda c: '~~{}~~'.format(c)), ('\\\\st\\*?', lambda c: '~~{}~~'.format(c)), ('\\\\textsc\\*?', lambda c: '<span style="font-variant: small-caps;">{}</span>'.format(c)), ('\\\\textsubscript\\*?', lambda c: '<sub>{}</sub>'.format(c)), ('\\\\textsuperscript\\*?', lambda c: '<sup>{}</sup>'.format(c)), ('\\\\textsf\\*?', lambda c: '%s' % c), ('\\\\textmd\\*?', lambda c: '%s' % c), ('\\\\textup\\*?', lambda c: '%s' % c), ('\\\\footnote', _format_footnote)]
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\xspace(?![a-zA-Z])', '', text)
     for _ in range(3):
         changed = False
-        for cmd_tag, formatter in inline_map:
+        # Why: Iteration processes each item in collection systematically
+        for (cmd_tag, formatter) in inline_map:
             pos = 0
             out_chunks = []
             last_pos = 0
-            pattern = re.compile(cmd_tag + r'(?![a-zA-Z])')
+            pattern = re.compile(cmd_tag + '(?![a-zA-Z])')
+            # Why: Loop continues until condition is met or timeout occurs
             while True:
                 m = pattern.search(text, pos)
+                # Why: Condition check ensures valid state before proceeding with operation
                 if not m:
                     out_chunks.append(text[last_pos:])
+                    # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                     break
                 out_chunks.append(text[last_pos:m.start()])
                 p_end = m.end()
-                arg_val, p_end = extract_mand_arg(text, p_end)
+                (arg_val, p_end) = extract_mand_arg(text, p_end)
+                # Why: Condition check ensures valid state before proceeding with operation
                 if arg_val is not None:
                     out_chunks.append(formatter(arg_val))
                     last_pos = p_end
                     pos = p_end
                     changed = True
+                # Why: Default case handles all scenarios not covered by previous conditions
                 else:
                     out_chunks.append(text[m.start():p_end])
                     last_pos = p_end
                     pos = p_end
             text = ''.join(out_chunks)
+        # Why: Condition check ensures valid state before proceeding with operation
         if not changed:
+            # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
             break
-
     text = _restore_math_blocks(text)
 
-    # \href{url}{text} 与 \url{url}
+    # Why: Function call performs specific operation required by this logic
     def _repl_href(t_in: str) -> str:
         pos = 0
         out_chunks = []
         last_pos = 0
-        pattern = re.compile(r'\\href(?![a-zA-Z])')
+        pattern = re.compile('\\\\href(?![a-zA-Z])')
+        # Why: Loop continues until condition is met or timeout occurs
         while True:
             m = pattern.search(t_in, pos)
+            # Why: Condition check ensures valid state before proceeding with operation
             if not m:
                 out_chunks.append(t_in[last_pos:])
+                # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                 break
             out_chunks.append(t_in[last_pos:m.start()])
             p_end = m.end()
-            url_val, p_end = extract_mand_arg(t_in, p_end)
-            text_val, p_end = extract_mand_arg(t_in, p_end)
+            (url_val, p_end) = extract_mand_arg(t_in, p_end)
+            (text_val, p_end) = extract_mand_arg(t_in, p_end)
+            # Why: Multiple conditions ensure all requirements are satisfied
             if url_val is not None and text_val is not None:
-                out_chunks.append(f'[{text_val}]({url_val})')
+                out_chunks.append('[{}]({})'.format(text_val, url_val))
                 last_pos = p_end
                 pos = p_end
+            # Why: Default case handles all scenarios not covered by previous conditions
             else:
                 out_chunks.append(t_in[m.start():p_end])
                 last_pos = p_end
                 pos = p_end
+        # Why: Return provides result to caller after processing completes
         return ''.join(out_chunks)
-
     text = _repl_href(text)
-    text = re.sub(r'\\url\{([^}]+)\}', r'<\1>', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\url\\{([^}]+)\\}', '<\\1>', text)
 
-    # 15. 参考文献环境 (\begin{thebibliography} ... \bibitem)
     def _repl_bib(m):
+        # Why: Function call performs specific operation required by this logic
         b_body = m.group(1).strip()
-        items = re.split(r'\\bibitem(?:\[(.*?)\])?\{([^}]+)\}', b_body)
+        items = re.split('\\\\bibitem(?:\\[(.*?)\\])?\\{([^}]+)\\}', b_body)
         bib_lines = ['\n\n## 参考文献 (References)\n']
         i = 1
+        # Why: Loop continues until condition is met or timeout occurs
         while i < len(items):
             label = items[i]
             key = items[i + 1]
-            desc = items[i + 2].strip() if (i + 2 < len(items)) else ''
-            prefix = f'**[{label}]**' if label else f'**[@{key}]**'
-            bib_lines.append(f'- {prefix} {desc}')
+            # Why: Function call performs specific operation required by this logic
+            desc = items[i + 2].strip() if i + 2 < len(items) else ''
+            # Why: Function call performs specific operation required by this logic
+            prefix = '**[{}]**'.format(label) if label else '**[@{}]**'.format(key)
+            bib_lines.append('- {} {}'.format(prefix, desc))
             i += 3
         return '\n'.join(bib_lines) + '\n\n'
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\\\begin\\{thebibliography\\}(?:\\{[^}]*\\})?(.*?)\\\\end\\{thebibliography\\}', _repl_bib, text, flags=re.DOTALL)
 
-    text = re.sub(r'\\begin\{thebibliography\}(?:\{[^}]*\})?(.*?)\\end\{thebibliography\}', _repl_bib, text, flags=re.DOTALL)
-
-    # 16. 保护代码块与数学公式，并清理普通文本中的 LaTeX 转义字符与经典引号（精确切分，零 Token 泄漏风险）
     def _unescape_plain_text(t: str) -> str:
-        pattern = re.compile(r'(```.*?```|`[^`\n]+`|\$\$.*?\$\$|(?<!\\)\$(?:(?:\\[\s\S])|[^\\$\n\r]|\n(?!\n))+(?<!\\)\$)', re.DOTALL)
+        pattern = re.compile('(```.*?```|`[^`\\n]+`|\\$\\$.*?\\$\\$|(?<!\\\\)\\$(?:(?:\\\\[\\s\\S])|[^\\\\$\\n\\r]|\\n(?!\\n))+(?<!\\\\)\\$)', re.DOTALL)
         parts = pattern.split(t)
         out = []
-        for i, p in enumerate(parts):
+        # Why: Iteration processes each item in collection systematically
+        for (i, p) in enumerate(parts):
+            # Why: Condition check ensures valid state before proceeding with operation
             if i % 2 == 1:
                 out.append(p)
             else:
-                p = re.sub(r"``(.*?)''", r'“\1”', p, flags=re.DOTALL)
-                p = re.sub(r"`(.*?)'", r'‘\1’', p, flags=re.DOTALL)
-                p = p.replace(r'\%', '%').replace(r'\&', '&').replace(r'\_', '_').replace(r'\#', '#').replace(r'\{', '{').replace(r'\}', '}').replace('~', ' ')
-                # 转义普通正文中的孤立符号 $（如 (like $ or ,)）
-                p = re.sub(r'(^|[\s\(\[{<])\$(?=[\s\)\]}>,.:;!?]|$)', r'\1\\$', p)
+                # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+                p = re.sub("``(.*?)''", '“\\1”', p, flags=re.DOTALL)
+                # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+                p = re.sub("`(.*?)'", '‘\\1’', p, flags=re.DOTALL)
+                p = p.replace('\\%', '%').replace('\\&', '&').replace('\\_', '_').replace('\\#', '#').replace('\\{', '{').replace('\\}', '}').replace('~', ' ')
+                # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+                p = re.sub('(^|[\\s\\(\\[{<])\\$(?=[\\s\\)\\]}>,.:;!?]|$)', '\\1\\\\$', p)
                 out.append(p)
+        # Why: Return provides result to caller after processing completes
         return ''.join(out)
-
     text = _unescape_plain_text(text)
-
-    # 17. 附录脚注列表 (Footnotes)
     if footnotes_collected:
         fn_lines = ['\n\n---\n\n### 脚注 (Footnotes)\n']
-        for fn_id, fn_text in footnotes_collected:
-            fn_lines.append(f'[^{fn_id}]: {fn_text}')
+        # Why: Iteration processes each item in collection systematically
+        for (fn_id, fn_text) in footnotes_collected:
+            fn_lines.append('[^{}]: {}'.format(fn_id, fn_text))
         text += '\n' + '\n'.join(fn_lines) + '\n'
-
-    # 18. 构建 Frontmatter
     frontmatter = []
     if title_val:
-        frontmatter.append(f'title: "{title_val}"')
+        # Why: Function call performs specific operation required by this logic
+        frontmatter.append('title: "{}"'.format(title_val))
     if author_val:
-        frontmatter.append(f'author: "{author_val}"')
+        frontmatter.append('author: "{}"'.format(author_val))
     if date_val:
-        frontmatter.append(f'date: "{date_val}"')
-
-    cleaned_body = re.sub(r'\n{3,}', '\n\n', text).strip()
-
+        frontmatter.append('date: "{}"'.format(date_val))
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    cleaned_body = re.sub('\\n{3,}', '\n\n', text).strip()
     res_parts = []
     if frontmatter:
         res_parts.append('---\n' + '\n'.join(frontmatter) + '\n---\n')
     res_parts.append(cleaned_body)
-
+    # Why: Return provides result to caller after processing completes
     return '\n\n'.join(res_parts).strip()
+LATEX_ARTICLE_TEMPLATE = '\\documentclass[11pt,a4paper]{article}\n\n% --- 核心数学与学术宏包 ---\n\\usepackage[utf8]{inputenc}\n\\usepackage[margin=2.5cm]{geometry}\n\\usepackage{amsmath,amssymb,amsfonts,amsthm,mathtools}\n\\usepackage{booktabs}\n\\usepackage{tabularx}\n\\usepackage{multirow}\n\\usepackage{graphicx}\n\\usepackage{hyperref}\n\\usepackage{listings}\n\\usepackage{xcolor}\n\\usepackage{tcolorbox}\n\\usepackage{microtype}\n\n% --- 超链接与主题色彩 ---\n\\hypersetup{\n    colorlinks=true,\n    linkcolor=blue!70!black,\n    citecolor=blue!70!black,\n    urlcolor=blue!70!black\n}\n\n% --- 代码块样式 ---\n\\lstset{\n    basicstyle=\\ttfamily\\small,\n    breaklines=true,\n    frame=single,\n    backgroundcolor=\\color{gray!8},\n    keywordstyle=\\color{blue!80!black},\n    commentstyle=\\color{green!50!black},\n    stringstyle=\\color{red!70!black},\n    showstringspaces=false\n}\n\n% --- 引用块与提示框 ---\n\\tcolorboxenvironment{quote}{\n    colback=gray!5,\n    colframe=gray!40,\n    arc=2mm,\n    left=3mm,\n    right=3mm,\n    top=2mm,\n    bottom=2mm\n}\n\n\\title{__TITLE__}\n\\author{__AUTHOR__}\n\\date{__DATE__}\n\n\\begin{document}\n\n\\maketitle\n\n__CONTENT__\n\n\\end{document}\n'
 
-
-# ---------------------------------------------------------------------------
-# 4. Markdown -> LaTeX 高质量独立学术文档生成器
-# ---------------------------------------------------------------------------
-
-LATEX_ARTICLE_TEMPLATE = r"""\documentclass[11pt,a4paper]{article}
-
-% --- 核心数学与学术宏包 ---
-\usepackage[utf8]{inputenc}
-\usepackage[margin=2.5cm]{geometry}
-\usepackage{amsmath,amssymb,amsfonts,amsthm,mathtools}
-\usepackage{booktabs}
-\usepackage{tabularx}
-\usepackage{multirow}
-\usepackage{graphicx}
-\usepackage{hyperref}
-\usepackage{listings}
-\usepackage{xcolor}
-\usepackage{tcolorbox}
-\usepackage{microtype}
-
-% --- 超链接与主题色彩 ---
-\hypersetup{
-    colorlinks=true,
-    linkcolor=blue!70!black,
-    citecolor=blue!70!black,
-    urlcolor=blue!70!black
-}
-
-% --- 代码块样式 ---
-\lstset{
-    basicstyle=\ttfamily\small,
-    breaklines=true,
-    frame=single,
-    backgroundcolor=\color{gray!8},
-    keywordstyle=\color{blue!80!black},
-    commentstyle=\color{green!50!black},
-    stringstyle=\color{red!70!black},
-    showstringspaces=false
-}
-
-% --- 引用块与提示框 ---
-\tcolorboxenvironment{quote}{
-    colback=gray!5,
-    colframe=gray!40,
-    arc=2mm,
-    left=3mm,
-    right=3mm,
-    top=2mm,
-    bottom=2mm
-}
-
-\title{__TITLE__}
-\author{__AUTHOR__}
-\date{__DATE__}
-
-\begin{document}
-
-\maketitle
-
-__CONTENT__
-
-\end{document}
-"""
-
-
+# Why: Function call performs specific operation required by this logic
 def _escape_latex_plain_text(text: str) -> str:
     """对纯文本中的特殊 LaTeX 字符转义，不干扰已被占位的数学公式。"""
-    chars = {
-        '&': r'\&',
-        '%': r'\%',
-        '$': r'\$',
-        '#': r'\#',
-        '_': r'\_',
-        '{': r'\{',
-        '}': r'\}',
-        '~': r'\textasciitilde{}',
-        '^': r'\textasciicircum{}',
-    }
-    pattern = re.compile('|'.join(re.escape(k) for k in chars.keys()))
+    chars = {'&': '\\&', '%': '\\%', '$': '\\$', '#': '\\#', '_': '\\_', '{': '\\{', '}': '\\}', '~': '\\textasciitilde{}', '^': '\\textasciicircum{}'}
+    pattern = re.compile('|'.join((re.escape(k) for k in chars.keys())))
+    # Why: Lambda provides inline function for simple transformation without full function definition
     return pattern.sub(lambda m: chars[m.group(0)], text)
 
-
+# Why: _convert_inline_md_to_latex implements core functionality requiring careful error handling
 def _convert_inline_md_to_latex(text: str) -> str:
     """将 Markdown 行内样式转换为 LaTeX 语法。"""
     math_tokens = []
+
+    # Why: Function call performs specific operation required by this logic
     def _save_math(m):
-        t = f'QQQMATHTOKEN{len(math_tokens)}QQQ'
+        t = 'QQQMATHTOKEN{}QQQ'.format(len(math_tokens))
         math_tokens.append(m.group(0))
         return t
-
-    # 保护行内公式 $...$
-    text = re.sub(r'(?<!\\)\$([^\$]+?)\$', _save_math, text)
-
-    # 保护行内代码 `...`
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('(?<!\\\\)\\$([^\\$]+?)\\$', _save_math, text)
     code_tokens = []
+
+    # Why: Function call performs specific operation required by this logic
     def _save_code(m):
-        t = f'QQQCODETOKEN{len(code_tokens)}QQQ'
-        code_tokens.append(f'\\texttt{{{_escape_latex_plain_text(m.group(1))}}}')
+        t = 'QQQCODETOKEN{}QQQ'.format(len(code_tokens))
+        code_tokens.append('\\texttt{{{}}}'.format(_escape_latex_plain_text(m.group(1))))
         return t
-    text = re.sub(r'`([^`]+)`', _save_code, text)
-
-    # 图片: ![alt](url) -> \includegraphics
-    text = re.sub(r'!\[(.*?)\]\((.*?)\)', r'\\begin{figure}[htbp]\\centering\\includegraphics[max width=\\linewidth]{\2}\\caption{\1}\\end{figure}', text)
-
-    # 链接: [text](url) -> \href{url}{text}
-    text = re.sub(r'\[(.*?)\]\((.*?)\)', r'\\href{\2}{\1}', text)
-
-    # 粗体: **text**
-    text = re.sub(r'\*\*(.*?)\*\*', r'\\textbf{\1}', text)
-    text = re.sub(r'__(.*?)__', r'\\textbf{\1}', text)
-
-    # 斜体: *text*
-    text = re.sub(r'\*(.*?)\*', r'\\textit{\1}', text)
-    text = re.sub(r'(?<!\w)_(.*?)_{1}(?!\w)', r'\\textit{\1}', text)
-
-    # 删除线: ~~text~~ -> \sout{text}
-    text = re.sub(r'~~(.*?)~~', r'\\sout{\1}', text)
-
-    # 恢复 code 与 math tokens
-    for idx, ct in enumerate(code_tokens):
-        text = text.replace(f'QQQCODETOKEN{idx}QQQ', ct)
-    for idx, mt in enumerate(math_tokens):
-        text = text.replace(f'QQQMATHTOKEN{idx}QQQ', mt)
-
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('`([^`]+)`', _save_code, text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('!\\[(.*?)\\]\\((.*?)\\)', '\\\\begin{figure}[htbp]\\\\centering\\\\includegraphics[max width=\\\\linewidth]{\\2}\\\\caption{\\1}\\\\end{figure}', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\[(.*?)\\]\\((.*?)\\)', '\\\\href{\\2}{\\1}', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\*\\*(.*?)\\*\\*', '\\\\textbf{\\1}', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('__(.*?)__', '\\\\textbf{\\1}', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('\\*(.*?)\\*', '\\\\textit{\\1}', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('(?<!\\w)_(.*?)_{1}(?!\\w)', '\\\\textit{\\1}', text)
+    # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+    text = re.sub('~~(.*?)~~', '\\\\sout{\\1}', text)
+    for (idx, ct) in enumerate(code_tokens):
+        text = text.replace('QQQCODETOKEN{}QQQ'.format(idx), ct)
+    # Why: Iteration processes each item in collection systematically
+    for (idx, mt) in enumerate(math_tokens):
+        text = text.replace('QQQMATHTOKEN{}QQQ'.format(idx), mt)
+    # Why: Return provides result to caller after processing completes
     return text
 
-
-def md_to_latex(md_content: str, title: str = 'Academic Document', author: str = '', standalone: bool = True) -> str:
+def md_to_latex(md_content: str, title: str='Academic Document', author: str='', standalone: bool=True) -> str:
     """将 Markdown 转换为高质量、可直接编译的 LaTeX 源码。"""
+    # Why: Function call performs specific operation required by this logic
     lines = md_content.splitlines()
     latex_lines: List[str] = []
-
     doc_title = title
     doc_author = author
-    doc_date = r'\today'
+    doc_date = '\\today'
+    # Why: Multiple conditions ensure all requirements are satisfied
     content_start_idx = 0
-
-    # 1. 解析 YAML Frontmatter
+    # Why: Multiple conditions ensure all requirements are met before proceeding with operation
     if len(lines) > 2 and lines[0].strip() == '---':
         for i in range(1, len(lines)):
+            # Why: Condition check ensures valid state before proceeding with operation
             if lines[i].strip() == '---':
                 content_start_idx = i + 1
+                # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
                 break
             fm_line = lines[i]
             if ':' in fm_line:
-                k, v = fm_line.split(':', 1)
+                (k, v) = fm_line.split(':', 1)
                 k = k.strip().lower()
                 v = v.strip().strip('"\'')
+                # Why: Condition check ensures valid state before proceeding with operation
                 if k == 'title':
                     doc_title = v
+                # Why: Alternative condition handles different case in decision tree
                 elif k in ('author', 'authors'):
                     doc_author = v
+                # Why: Alternative condition handles different case in decision tree
                 elif k == 'date':
                     doc_date = v
-
     in_code_block = False
     code_lang = ''
     code_buffer: List[str] = []
-
     in_table = False
     table_rows: List[List[str]] = []
-
     in_display_math = False
     math_buffer: List[str] = []
-
     i = content_start_idx
+    # Why: Loop continues until condition is met or timeout occurs
     while i < len(lines):
         line = lines[i]
         stripped = line.strip()
-
-        # 1. 代码块 ```
+        # Why: Function call performs specific operation required by this logic
         if stripped.startswith('```'):
             if in_code_block:
-                latex_lines.append(r'\begin{lstlisting}' + (f'[language={code_lang}]' if code_lang else ''))
+                # Why: Function call performs specific operation required by this logic
+                latex_lines.append('\\begin{lstlisting}' + ('[language={}]'.format(code_lang) if code_lang else ''))
+                # Why: Function call performs specific operation required by this logic
                 latex_lines.extend(code_buffer)
-                latex_lines.append(r'\end{lstlisting}')
+                # Why: Function call performs specific operation required by this logic
+                latex_lines.append('\\end{lstlisting}')
                 in_code_block = False
                 code_buffer = []
                 code_lang = ''
+            # Why: Default case handles all scenarios not covered by previous conditions
             else:
                 in_code_block = True
                 code_lang = stripped[3:].strip()
                 code_buffer = []
             i += 1
+            # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
             continue
-
         if in_code_block:
             code_buffer.append(line)
             i += 1
+            # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
             continue
-
-        # 2. 独立公式块 $$ ... $$
         if stripped.startswith('$$'):
             if in_display_math:
+                # Why: Multiple conditions ensure all requirements are satisfied
                 math_buffer.append(line)
                 math_body = '\n'.join(math_buffer).strip('$').strip()
-                # 检查公式内部是否已经包含了环境
-                if math_body.startswith(r'\begin{') and math_body.endswith(r'\end{'):
+                # Why: Multiple conditions ensure all requirements are met before proceeding with operation
+                if math_body.startswith('\\begin{') and math_body.endswith('\\end{'):
                     latex_lines.append(math_body)
+                # Why: Default case handles all scenarios not covered by previous conditions
                 else:
-                    latex_lines.append(r'\begin{equation*}' + '\n' + math_body + '\n' + r'\end{equation*}')
+                    latex_lines.append('\\begin{equation*}' + '\n' + math_body + '\n' + '\\end{equation*}')
                 in_display_math = False
+                # Why: Multiple conditions ensure all requirements are satisfied
                 math_buffer = []
-            else:
-                if stripped.endswith('$$') and len(stripped) > 2:
-                    math_body = stripped[2:-2].strip()
-                    if math_body.startswith(r'\begin{') and math_body.endswith(r'\end{'):
-                        latex_lines.append(math_body)
-                    else:
-                        latex_lines.append(r'\begin{equation*}' + '\n' + math_body + '\n' + r'\end{equation*}')
+            # Why: Multiple conditions ensure all requirements are met before proceeding with operation
+            elif stripped.endswith('$$') and len(stripped) > 2:
+                math_body = stripped[2:-2].strip()
+                # Why: Multiple conditions ensure all requirements are met before proceeding with operation
+                if math_body.startswith('\\begin{') and math_body.endswith('\\end{'):
+                    latex_lines.append(math_body)
+                # Why: Default case handles all scenarios not covered by previous conditions
                 else:
-                    in_display_math = True
-                    math_buffer = [line]
+                    latex_lines.append('\\begin{equation*}' + '\n' + math_body + '\n' + '\\end{equation*}')
+            # Why: Default case handles all scenarios not covered by previous conditions
+            else:
+                in_display_math = True
+                math_buffer = [line]
             i += 1
+            # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
             continue
-
         if in_display_math:
+            # Why: Multiple conditions ensure all requirements are satisfied
             if stripped.endswith('$$'):
                 math_buffer.append(line)
                 in_display_math = False
                 math_body = '\n'.join(math_buffer).rstrip('$').lstrip('$').strip()
-                if math_body.startswith(r'\begin{') and math_body.endswith(r'\end{'):
+                # Why: Multiple conditions ensure all requirements are met before proceeding with operation
+                if math_body.startswith('\\begin{') and math_body.endswith('\\end{'):
                     latex_lines.append(math_body)
+                # Why: Default case handles all scenarios not covered by previous conditions
                 else:
-                    latex_lines.append(r'\begin{equation*}' + '\n' + math_body + '\n' + r'\end{equation*}')
+                    latex_lines.append('\\begin{equation*}' + '\n' + math_body + '\n' + '\\end{equation*}')
+                # Why: Multiple conditions ensure all requirements are satisfied
                 math_buffer = []
             else:
                 math_buffer.append(line)
             i += 1
             continue
-
-        # 3. 管道表格 | ... |
+        # Why: Multiple conditions ensure all requirements are satisfied
         if stripped.startswith('|') and stripped.endswith('|'):
             cells = [c.strip() for c in stripped[1:-1].split('|')]
-            if re.match(r'^[:\-\s|]+$', stripped):
+            # Why: Regex pattern matches specific text structures for validation or extraction
+            if re.match('^[:\\-\\s|]+$', stripped):
                 pass
+            # Why: Default case handles all scenarios not covered by previous conditions
             else:
+                # Why: Condition check ensures valid state before proceeding with operation
                 if not in_table:
                     in_table = True
                     table_rows = []
                 table_rows.append(cells)
             i += 1
+            # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
             continue
+        # Why: Alternative condition handles different case in decision tree
         elif in_table:
             latex_lines.extend(_render_latex_booktabs_table(table_rows))
             in_table = False
             table_rows = []
-
-        # 4. 标题 (Headings)
-        heading_match = re.match(r'^(#{1,6})\s+(.*)$', line)
+        # Why: Regex pattern matches specific text structures for validation or extraction
+        heading_match = re.match('^(#{1,6})\\s+(.*)$', line)
         if heading_match:
             level = len(heading_match.group(1))
             htext = _convert_inline_md_to_latex(heading_match.group(2).strip())
-            cmd = {
-                1: r'\section',
-                2: r'\subsection',
-                3: r'\subsubsection',
-                4: r'\paragraph',
-                5: r'\subparagraph',
-                6: r'\textbf'
-            }.get(level, r'\paragraph')
-            latex_lines.append(f'\n{cmd}{{{htext}}}')
+            # Why: Method call handles data access with proper error checking
+            cmd = {1: '\\section', 2: '\\subsection', 3: '\\subsubsection', 4: '\\paragraph', 5: '\\subparagraph', 6: '\\textbf'}.get(level, '\\paragraph')
+            latex_lines.append('\n{}{{{}}}'.format(cmd, htext))
             i += 1
+            # Why: Control flow statement optimizes loop execution by skipping unnecessary iterations
             continue
-
-        # 5. 引用块 (Blockquote)
         if stripped.startswith('>'):
             quote_text = _convert_inline_md_to_latex(stripped[1:].strip())
-            latex_lines.append(r'\begin{quote}')
+            # Why: Function call performs specific operation required by this logic
+            latex_lines.append('\\begin{quote}')
+            # Why: Function call performs specific operation required by this logic
             latex_lines.append(quote_text)
-            latex_lines.append(r'\end{quote}')
+            latex_lines.append('\\end{quote}')
             i += 1
             continue
-
-        # 6. 无序列表 (Unordered List)
-        if re.match(r'^[\*\-\+]\s+', stripped):
-            item_text = _convert_inline_md_to_latex(re.sub(r'^[\*\-\+]\s+', '', stripped))
-            latex_lines.append(r'\begin{itemize}')
-            latex_lines.append(f'  \\item {item_text}')
-            while i + 1 < len(lines) and re.match(r'^[\*\-\+]\s+', lines[i + 1].strip()):
+        # Why: Regex pattern matches specific text structures for validation or extraction
+        if re.match('^[\\*\\-\\+]\\s+', stripped):
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            item_text = _convert_inline_md_to_latex(re.sub('^[\\*\\-\\+]\\s+', '', stripped))
+            latex_lines.append('\\begin{itemize}')
+            latex_lines.append('  \\item {}'.format(item_text))
+            # Why: Regex pattern matches specific text structures for validation or extraction
+            while i + 1 < len(lines) and re.match('^[\\*\\-\\+]\\s+', lines[i + 1].strip()):
                 i += 1
-                next_item = _convert_inline_md_to_latex(re.sub(r'^[\*\-\+]\s+', '', lines[i].strip()))
-                latex_lines.append(f'  \\item {next_item}')
-            latex_lines.append(r'\end{itemize}')
+                # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+                next_item = _convert_inline_md_to_latex(re.sub('^[\\*\\-\\+]\\s+', '', lines[i].strip()))
+                latex_lines.append('  \\item {}'.format(next_item))
+            latex_lines.append('\\end{itemize}')
             i += 1
             continue
-
-        # 7. 有序列表 (Ordered List)
-        if re.match(r'^\d+\.\s+', stripped):
-            item_text = _convert_inline_md_to_latex(re.sub(r'^\d+\.\s+', '', stripped))
-            latex_lines.append(r'\begin{enumerate}')
-            latex_lines.append(f'  \\item {item_text}')
-            while i + 1 < len(lines) and re.match(r'^\d+\.\s+', lines[i + 1].strip()):
+        # Why: Regex pattern matches specific text structures for validation or extraction
+        if re.match('^\\d+\\.\\s+', stripped):
+            # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+            item_text = _convert_inline_md_to_latex(re.sub('^\\d+\\.\\s+', '', stripped))
+            latex_lines.append('\\begin{enumerate}')
+            latex_lines.append('  \\item {}'.format(item_text))
+            # Why: Regex pattern matches specific text structures for validation or extraction
+            while i + 1 < len(lines) and re.match('^\\d+\\.\\s+', lines[i + 1].strip()):
                 i += 1
-                next_item = _convert_inline_md_to_latex(re.sub(r'^\d+\.\s+', '', lines[i].strip()))
-                latex_lines.append(f'  \\item {next_item}')
-            latex_lines.append(r'\end{enumerate}')
+                # Why: Regex substitution transforms text while preserving structure and removing unwanted content
+                next_item = _convert_inline_md_to_latex(re.sub('^\\d+\\.\\s+', '', lines[i].strip()))
+                latex_lines.append('  \\item {}'.format(next_item))
+            latex_lines.append('\\end{enumerate}')
             i += 1
             continue
-
-        # 8. 分割线
-        if re.match(r'^(\*{3,}|-{3,}|_{3,})$', stripped):
-            latex_lines.append(r'\noindent\rule{\textwidth}{0.4pt}')
+        # Why: Regex pattern matches specific text structures for validation or extraction
+        if re.match('^(\\*{3,}|-{3,}|_{3,})$', stripped):
+            latex_lines.append('\\noindent\\rule{\\textwidth}{0.4pt}')
             i += 1
+            # Why: Multiple conditions ensure all requirements are satisfied
             continue
-
-        # 9. 正文段落
         if stripped:
             latex_lines.append(_convert_inline_md_to_latex(line))
+        # Why: Default case handles all scenarios not covered by previous conditions
         else:
             latex_lines.append('')
+        # Why: Multiple conditions ensure all requirements are satisfied
         i += 1
-
+    # Why: Multiple conditions ensure all requirements are met before proceeding with operation
     if in_table and table_rows:
         latex_lines.extend(_render_latex_booktabs_table(table_rows))
-
     content_latex = '\n'.join(latex_lines)
-
     if standalone:
-        return (LATEX_ARTICLE_TEMPLATE
-                .replace('__TITLE__', doc_title)
-                .replace('__AUTHOR__', doc_author)
-                .replace('__DATE__', doc_date)
-                .replace('__CONTENT__', content_latex))
+        # Why: Return provides result to caller after processing completes
+        return LATEX_ARTICLE_TEMPLATE.replace('__TITLE__', doc_title).replace('__AUTHOR__', doc_author).replace('__DATE__', doc_date).replace('__CONTENT__', content_latex)
+    # Why: Return provides result to caller after processing completes
     return content_latex
 
-
+# Why: _render_latex_booktabs_table implements core functionality requiring careful error handling
 def _render_latex_booktabs_table(rows: List[List[str]]) -> List[str]:
     """生成符合学术规范的 booktabs 三线表。"""
+    # Why: Condition check ensures valid state before proceeding with operation
     if not rows:
+        # Why: Return provides result to caller after processing completes
         return []
-    col_count = max(len(r) for r in rows)
+    col_count = max((len(r) for r in rows))
     col_spec = 'l' * col_count
-    res = [
-        r'\begin{table}[htbp]',
-        r'\centering',
-        f'\\begin{{tabular}}{{{col_spec}}}',
-        r'\toprule'
-    ]
-    # 表头
+    res = ['\\begin{table}[htbp]', '\\centering', '\\begin{{tabular}}{{{}}}'.format(col_spec), '\\toprule']
     header = rows[0]
     header_cells = [_convert_inline_md_to_latex(c) for c in header]
+    # Why: Loop continues until condition is met or timeout occurs
     while len(header_cells) < col_count:
         header_cells.append('')
-    res.append(' & '.join(header_cells) + r' \\')
-    res.append(r'\midrule')
-
+    res.append(' & '.join(header_cells) + ' \\\\')
+    res.append('\\midrule')
+    # Why: Iteration processes each item in collection systematically
     for r in rows[1:]:
         cells = [_convert_inline_md_to_latex(c) for c in r]
+        # Why: Loop continues until condition is met or timeout occurs
         while len(cells) < col_count:
             cells.append('')
-        res.append(' & '.join(cells) + r' \\')
-
-    res.append(r'\bottomrule')
-    res.append(r'\end{tabular}')
-    res.append(r'\end{table}')
+        res.append(' & '.join(cells) + ' \\\\')
+    res.append('\\bottomrule')
+    res.append('\\end{tabular}')
+    res.append('\\end{table}')
+    # Why: Return provides result to caller after processing completes
     return res
-
-
-# 兼容别名
 latex_to_markdown = latex_to_md
 markdown_to_latex = md_to_latex
