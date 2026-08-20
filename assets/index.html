@@ -63,6 +63,9 @@
       <button id="btn-web" class="more-item"><span data-i18n="menu.web">网页</span><em data-i18n="menu.webSub">网页转 MD</em></button>
       <button id="btn-ocr" class="more-item"><span data-i18n="menu.ocr">OCR</span><em data-i18n="menu.ocrSub">扫描转 MD</em></button>
       <button id="btn-clipboard-new" class="more-item"><span data-i18n="menu.clipboard">剪贴板</span><em data-i18n="menu.clipboardSub">从剪贴板新建</em></button>
+      <button id="btn-presentation-menu" class="more-item"><span data-i18n="menu.presentation">演讲演示</span><em data-i18n="menu.presentationSub">Reveal.js 全屏放映</em></button>
+      <button id="btn-style-custom" class="more-item"><span data-i18n="menu.customStyle">样式定制</span><em data-i18n="menu.customStyleSub">CSS / Head 注入</em></button>
+      <button id="btn-zen-menu" class="more-item"><span data-i18n="menu.zenMode">禅模式</span><em data-i18n="menu.zenModeSub">专注全屏写作 (F11)</em></button>
       <button id="btn-saveas" class="more-item" disabled><span data-i18n="menu.saveAs">另存为</span><em data-i18n="menu.saveAsSub">.md 文件</em></button>
       <button id="btn-assoc" class="more-item"><span data-i18n="menu.assoc">设为默认</span><em data-i18n="menu.assocSub">.md 打开方式</em></button>
       <button id="btn-share" class="more-item"><span data-i18n="menu.share">共享</span><em data-i18n="menu.shareSub">手机扫码阅读</em></button>
@@ -833,6 +836,26 @@
     <span data-i18n="toolbar.home">返回主页</span>
   </button>
 </footer>
+
+<div id="style-custom-modal" class="hidden">
+  <div class="style-modal-content">
+    <div class="style-modal-header">
+      <h3 style="margin:0;font-size:16px;">自定义样式与 HTML Head (style.less / head.html)</h3>
+      <button id="style-modal-close" class="tb-btn icon">✕</button>
+    </div>
+    <div class="style-modal-body">
+      <label style="font-weight:600;font-size:13px;">自定义 CSS / LESS 样式 (应用于全文预览与导出):</label>
+      <textarea id="style-custom-css" style="width:100%;height:140px;font-family:var(--font-mono);font-size:12px;padding:8px;border-radius:6px;border:1px solid var(--border);" placeholder="/* 例如：\n.markdown-body { font-size: 16px; }\n*/"></textarea>
+      
+      <label style="font-weight:600;font-size:13px;">自定义 HTML Head 注入 (引入外部字体、JS 脚本或图标):</label>
+      <textarea id="style-custom-head" style="width:100%;height:100px;font-family:var(--font-mono);font-size:12px;padding:8px;border-radius:6px;border:1px solid var(--border);" placeholder="&lt;!-- 例如：\n&lt;link rel='stylesheet' href='https://fonts.googleapis.com/...'&gt;\n--&gt;"></textarea>
+    </div>
+    <div class="style-modal-footer">
+      <button id="style-modal-cancel" class="tb-btn">取消</button>
+      <button id="style-modal-save" class="tb-btn accent">保存并即时生效</button>
+    </div>
+  </div>
+</div>
 
 
 

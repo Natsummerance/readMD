@@ -3219,4 +3219,375 @@ body.zen-mode .zen-exit-btn {
   .pagination-bar { padding: 4px 8px; }
 }
 
+/* ============================================================
+   ReadMD v2.3.4 高级交互组件样式 (Code Chunk / Diagrams / Zen / Presentation)
+   ============================================================ */
+
+/* ---------- 交互式多语言 Code Chunk ---------- */
+.code-chunk-card {
+  margin: 18px 0;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.code-chunk-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.07);
+}
+
+.code-chunk-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-chunk-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+}
+
+.code-chunk-status {
+  font-size: 12px;
+  color: var(--fg2);
+}
+
+.code-chunk-status.running {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.code-chunk-status.success {
+  color: #10b981;
+}
+
+.code-chunk-status.error {
+  color: #ef4444;
+}
+
+.code-chunk-timer {
+  font-size: 11px;
+  color: var(--fg3);
+  font-family: var(--font-mono);
+}
+
+.code-chunk-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.code-chunk-run-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.code-chunk-run-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.code-chunk-run-btn:active {
+  transform: translateY(0);
+}
+
+.code-chunk-src pre {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+.code-chunk-output {
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  padding: 12px 14px;
+}
+
+.code-chunk-output-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.code-chunk-stdout {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--fg);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.code-chunk-plot {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.code-chunk-plot img {
+  max-width: 100%;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-1);
+  cursor: zoom-in;
+}
+
+/* ---------- 专业图表渲染卡片 (Diagram Cards) ---------- */
+.diagram-card {
+  margin: 18px 0;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.diagram-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+
+.diagram-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.diagram-reload-btn {
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  color: var(--fg2);
+  cursor: pointer;
+}
+
+.diagram-reload-btn:hover {
+  color: var(--accent);
+}
+
+.diagram-preview {
+  padding: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+  overflow-x: auto;
+  background: var(--bg);
+}
+
+.diagram-preview svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.diagram-loading {
+  font-size: 12px;
+  color: var(--fg3);
+}
+
+.diagram-src-wrap {
+  padding: 6px 12px;
+  background: var(--bg3);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.diagram-src-wrap summary {
+  cursor: pointer;
+  color: var(--fg2);
+}
+
+/* ---------- 禅模式 / 专注模式 (Zen Mode) ---------- */
+body.zen-mode #toolbar,
+body.zen-mode #side,
+body.zen-mode #statusbar,
+body.zen-mode #doc-tabs-container,
+body.zen-mode .pagination-bar,
+body.zen-mode #cm-selection-toolbar {
+  display: none !important;
+}
+
+body.zen-mode #main {
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  padding: 0 !important;
+}
+
+body.zen-mode .markdown-body {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 40px 24px 100px;
+}
+
+.zen-exit-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  z-index: 9999;
+  transition: all 0.2s ease;
+}
+
+body.zen-mode .zen-exit-btn {
+  display: flex;
+}
+
+.zen-exit-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+/* ---------- 演示文稿全屏模态框 (Presentation Modal) ---------- */
+#presentation-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+}
+
+#presentation-modal.hidden {
+  display: none;
+}
+
+.presentation-iframe {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.presentation-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10001;
+  transition: all 0.2s ease;
+}
+
+.presentation-close-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: scale(1.1);
+}
+
+/* ---------- 自定义样式与 Head 模态框 ---------- */
+#style-custom-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+#style-custom-modal.hidden {
+  display: none;
+}
+
+.style-modal-content {
+  width: min(720px, 92vw);
+  background: var(--bg);
+  border-radius: var(--radius-l);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.style-modal-header {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.style-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.style-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  background: var(--bg2);
+}
+
+
 

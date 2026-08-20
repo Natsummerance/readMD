@@ -569,9 +569,122 @@ window.splitMdIntoPages = splitMdIntoPages;
 window.renderPage = renderPage;
 window.togglePaginationMode = togglePaginationMode;
 
-function renderContent(content, name) {
+async function processDocImports(mdText, filePath) {
+  if (!mdText || !/@import\s+["']/.test(mdText)) return mdText;
+  const dir = filePath ? filePath.replace(/[^\\/]+$/, '') : '';
+  try {
+    if (hasPy && py.process_imports) {
+      const res = await py.process_imports(mdText, dir, filePath);
+      return (res && res.ok) ? res.content : mdText;
+    } else {
+      const r = await apiFetch('/api/import/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: mdText, base_dir: dir, current_file: filePath })
+      });
+      const d = await r.json();
+      return (d && d.ok) ? d.content : mdText;
+    }
+  } catch (e) {
+    return mdText;
+  }
+}
+window.processDocImports = processDocImports;
+
+function parseMarkdownWithSourceMap(content, options = {}) {
+  const breaks = !!(state && state.breakOnSingleNewline);
+  const renderer = new marked.Renderer();
+  let currentLine = 1;
+
+  renderer.heading = function(text, level, raw) {
+    const slug = raw.toLowerCase().replace(/[^\w\u4e00-\u9fff\s-]/g, '').replace(/\s+/g, '-');
+    return `<h${level} id="${slug}" data-source-line="${currentLine}">${text}</h${level}>\n`;
+  };
+
+  renderer.paragraph = function(text) {
+    return `<p data-source-line="${currentLine}">${text}</p>\n`;
+  };
+
+  renderer.blockquote = function(quote) {
+    return `<blockquote data-source-line="${currentLine}">\n${quote}</blockquote>\n`;
+  };
+
+  renderer.table = function(header, body) {
+    return `<table data-source-line="${currentLine}">\n<thead>\n${header}</thead>\n<tbody>\n${body}</tbody>\n</table>\n`;
+  };
+
+  renderer.code = function(code, infostring, escaped) {
+    const lineAttr = `data-source-line="${currentLine}"`;
+    const info = (infostring || '').trim();
+    const parts = info.split(/\s+/);
+    const lang = parts[0] || '';
+    const hasCmd = info.includes('cmd=true') || info.includes('cmd=True') || info.includes('{cmd}');
+
+    // 1. Interactive Code Chunk
+    if (hasCmd) {
+      const encodedCode = encodeURIComponent(code);
+      const isMatplotlib = info.includes('matplotlib=true') || info.includes('matplotlib=True');
+      const isHidden = info.includes('hide=true') || info.includes('hide=True');
+      return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
+        <div class="code-chunk-header">
+          <span class="code-chunk-badge">${lang.toUpperCase()}</span>
+          <span class="code-chunk-status">就绪</span>
+          <span class="code-chunk-timer"></span>
+          <div class="code-chunk-actions">
+            <button class="code-chunk-run-btn" title="运行代码 (Shift+Enter)">▶ 运行</button>
+          </div>
+        </div>
+        <div class="code-chunk-src ${isHidden ? 'hidden' : ''}">
+          <pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>
+        </div>
+        <div class="code-chunk-output hidden">
+          <div class="code-chunk-output-header">执行输出</div>
+          <pre class="code-chunk-stdout"></pre>
+          <div class="code-chunk-plot"></div>
+        </div>
+      </div>\n`;
+    }
+
+    // 2. Specialized Diagrams
+    const diagramLangs = ['tikz', 'plantuml', 'puml', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'd2', 'ditaa'];
+    if (diagramLangs.includes(lang.toLowerCase())) {
+      const encodedCode = encodeURIComponent(code);
+      return `<div class="diagram-card" ${lineAttr} data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
+        <div class="diagram-header">
+          <span class="diagram-badge">${lang.toUpperCase()} 图表</span>
+          <button class="diagram-reload-btn" title="重新渲染">⟳ 刷新</button>
+        </div>
+        <div class="diagram-preview"><div class="diagram-loading">正在加载图表...</div></div>
+        <details class="diagram-src-wrap"><summary>查看代码</summary><pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre></details>
+      </div>\n`;
+    }
+
+    // 3. Standard Code Block
+    return `<pre ${lineAttr}><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>\n`;
+  };
+
+  const tokens = marked.lexer(content, { gfm: true, breaks: breaks });
+  let html = '';
+  let lineCursor = 1;
+  for (const token of tokens) {
+    if (token.raw) {
+      currentLine = lineCursor;
+      lineCursor += token.raw.split('\n').length - 1;
+    }
+    html += marked.parser([token], { renderer: renderer, gfm: true, breaks: breaks });
+  }
+
+  return html;
+}
+window.parseMarkdownWithSourceMap = parseMarkdownWithSourceMap;
+
+async function renderContent(content, name) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const saved = state.scrollPos[normalizePath(name || state.file || '')] || 0;
+  
+  // 预处理 @import
+  content = await processDocImports(content, state.file || name || '');
+
   const linesCount = (content || '').split('\n').length;
   const isUltraLong = linesCount > PAGINATION_THRESHOLD_LINES || (content || '').length > PAGINATION_THRESHOLD_BYTES;
 
@@ -603,7 +716,7 @@ function renderContent(content, name) {
   }
   const transformed = transformAcademicCallouts(content);
   const prot = protectMath(transformed);
-  const html = marked.parse(prot.src, { gfm: true, breaks: false });
+  const html = parseMarkdownWithSourceMap(prot.src);
   const finalHtml = restoreMath(html, prot.saved);
   $('content').innerHTML = '<article class="markdown-body">' + finalHtml + '</article>';
   postProcess();
@@ -905,8 +1018,8 @@ function hideBibHoverCard() {
 }
 
 
-function postProcess() {
-  const body = document.querySelector('#content .markdown-body');
+function postProcess(container) {
+  const body = container || document.querySelector('#content .markdown-body') || $('content');
   if (!body) return;
   ensureHeadingIds(body);
   fixLinks(body);
@@ -914,7 +1027,220 @@ function postProcess() {
   processBibCitations(body);
   buildToc();
   renderMath(body);
+  renderAllCodeChunks(body);
+  renderAllDiagrams(body);
 }
+
+function renderAllCodeChunks(container) {
+  const cards = (container || document).querySelectorAll('.code-chunk-card');
+  cards.forEach(card => {
+    if (card._bound) return;
+    card._bound = true;
+    const btn = card.querySelector('.code-chunk-run-btn');
+    const statusEl = card.querySelector('.code-chunk-status');
+    const timerEl = card.querySelector('.code-chunk-timer');
+    const outWrap = card.querySelector('.code-chunk-output');
+    const stdoutEl = card.querySelector('.code-chunk-stdout');
+    const plotEl = card.querySelector('.code-chunk-plot');
+
+    const lang = card.dataset.lang || 'python';
+    const code = decodeURIComponent(card.dataset.code || '');
+
+    const run = async () => {
+      statusEl.className = 'code-chunk-status running';
+      statusEl.textContent = '运行中...';
+      btn.disabled = true;
+      btn.textContent = '⏳ 执行中';
+      const t0 = Date.now();
+      const interval = setInterval(() => {
+        timerEl.textContent = ((Date.now() - t0) / 1000).toFixed(1) + 's';
+      }, 100);
+
+      try {
+        let res;
+        if (hasPy && py.run_code_chunk) {
+          res = await py.run_code_chunk(lang, code);
+        } else {
+          const r = await apiFetch('/api/code/run', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ lang: lang, code: code })
+          });
+          res = await r.json();
+        }
+
+        clearInterval(interval);
+        timerEl.textContent = ((Date.now() - t0) / 1000).toFixed(2) + 's';
+
+        if (res && res.ok) {
+          statusEl.className = 'code-chunk-status success';
+          statusEl.textContent = '执行成功';
+          outWrap.classList.remove('hidden');
+          stdoutEl.textContent = (res.stdout || '') + (res.stderr ? ('\n' + res.stderr) : '');
+          if (!stdoutEl.textContent.trim()) stdoutEl.textContent = '(无控制台输出)';
+          plotEl.innerHTML = '';
+          if (res.images && res.images.length > 0) {
+            res.images.forEach(imgSrc => {
+              const img = document.createElement('img');
+              img.src = imgSrc;
+              img.alt = 'Plot Output';
+              plotEl.appendChild(img);
+            });
+          }
+        } else {
+          statusEl.className = 'code-chunk-status error';
+          statusEl.textContent = '执行失败';
+          outWrap.classList.remove('hidden');
+          stdoutEl.textContent = (res && res.error) || (res && res.stderr) || '未知执行错误';
+        }
+      } catch (err) {
+        clearInterval(interval);
+        statusEl.className = 'code-chunk-status error';
+        statusEl.textContent = '调用失败';
+        outWrap.classList.remove('hidden');
+        stdoutEl.textContent = err.message || String(err);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '▶ 重新运行';
+      }
+    };
+
+    if (btn) btn.addEventListener('click', run);
+  });
+}
+window.renderAllCodeChunks = renderAllCodeChunks;
+
+function renderAllDiagrams(container) {
+  const cards = (container || document).querySelectorAll('.diagram-card');
+  cards.forEach(async card => {
+    if (card._rendered) return;
+    card._rendered = true;
+    const engine = card.dataset.diagramEngine || 'plantuml';
+    const code = decodeURIComponent(card.dataset.diagramCode || '');
+    const previewEl = card.querySelector('.diagram-preview');
+    const reloadBtn = card.querySelector('.diagram-reload-btn');
+
+    const render = async () => {
+      previewEl.innerHTML = '<div class="diagram-loading">正在渲染 ' + engine.toUpperCase() + ' 图表...</div>';
+      try {
+        if (engine === 'mermaid' && window.mermaid) {
+          const id = 'mermaid-' + Math.random().toString(36).slice(2);
+          const { svg } = await window.mermaid.render(id, code);
+          previewEl.innerHTML = svg;
+          return;
+        }
+
+        let res;
+        if (hasPy && py.render_diagram) {
+          res = await py.render_diagram(engine, code);
+        } else {
+          const r = await apiFetch('/api/diagram/render', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ engine: engine, code: code })
+          });
+          res = await r.json();
+        }
+
+        if (res && res.ok) {
+          if (res.type === 'url' && res.svg_url) {
+            previewEl.innerHTML = `<img src="${res.svg_url}" alt="${engine} diagram" style="max-width:100%;" />`;
+          } else if (res.type === 'html' && res.html) {
+            previewEl.innerHTML = res.html;
+          } else if (res.svg) {
+            previewEl.innerHTML = res.svg;
+          } else {
+            // Kroki 缺省在线矢量渲染
+            const krokiUrl = `https://kroki.io/${engine}/svg`;
+            const kr = await fetch(krokiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+              body: code
+            });
+            if (kr.ok) {
+              const svgText = await kr.text();
+              previewEl.innerHTML = svgText;
+            } else {
+              previewEl.innerHTML = `<pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre>`;
+            }
+          }
+        } else {
+          previewEl.innerHTML = `<p class="ai-err">图表渲染错误: ${(res && res.error) || '未知'}</p>`;
+        }
+      } catch (err) {
+        previewEl.innerHTML = `<pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre>`;
+      }
+    };
+
+    if (reloadBtn) reloadBtn.addEventListener('click', render);
+    render();
+  });
+}
+window.renderAllDiagrams = renderAllDiagrams;
+
+function toggleZenMode() {
+  document.body.classList.toggle('zen-mode');
+  const isZen = document.body.classList.contains('zen-mode');
+  let exitBtn = document.getElementById('zen-exit-btn');
+  if (isZen && !exitBtn) {
+    exitBtn = document.createElement('button');
+    exitBtn.id = 'zen-exit-btn';
+    exitBtn.className = 'zen-exit-btn';
+    exitBtn.innerHTML = '<span>⤢</span> <span>退出禅模式 (F11 / Esc)</span>';
+    exitBtn.addEventListener('click', toggleZenMode);
+    document.body.appendChild(exitBtn);
+  }
+  showToast(isZen ? '已进入禅模式（按 F11 或 Esc 退出）' : '已退出禅模式', 1500);
+}
+window.toggleZenMode = toggleZenMode;
+
+async function launchPresentationMode() {
+  const content = state.original || (cmView ? cmView.state.doc.toString() : '');
+  if (!content) {
+    showToast('当前没有可演示的文档内容');
+    return;
+  }
+  let modal = document.getElementById('presentation-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'presentation-modal';
+    modal.className = 'hidden';
+    modal.innerHTML = `
+      <button class="presentation-close-btn" title="退出演示 (Esc)">✕</button>
+      <iframe class="presentation-iframe" src="about:blank"></iframe>
+    `;
+    document.body.appendChild(modal);
+    modal.querySelector('.presentation-close-btn').addEventListener('click', () => {
+      modal.classList.add('hidden');
+      modal.querySelector('.presentation-iframe').src = 'about:blank';
+    });
+  }
+
+  showToast('正在生成演示文稿...', 1000);
+  try {
+    let res;
+    if (hasPy && py.export_presentation) {
+      res = await py.export_presentation(content);
+    } else {
+      const r = await apiFetch('/api/export/presentation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: content })
+      });
+      res = await r.json();
+    }
+    if (res && res.ok && res.html) {
+      modal.classList.remove('hidden');
+      const iframe = modal.querySelector('.presentation-iframe');
+      iframe.srcdoc = res.html;
+    } else {
+      showToast('演示文稿生成失败：' + ((res && res.error) || '未知错误'));
+    }
+  } catch (e) {
+    showToast('演示文稿生成失败：' + e.message);
+  }
+}
+window.launchPresentationMode = launchPresentationMode;
 
 
 function resolvePath(baseDir, rel) {

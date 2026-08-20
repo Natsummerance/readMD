@@ -214,6 +214,158 @@ def execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tru
                 except Exception:
                     pass
 
+    # 5. SQL 内存与本地 SQLite 调度
+    elif normalized_lang in ('sql', 'sqlite', 'sqlite3'):
+        try:
+            import sqlite3
+            con = sqlite3.connect(":memory:")
+            cur = con.cursor()
+            results = []
+            statements = [s.strip() for s in code.split(';') if s.strip()]
+            for stmt in statements:
+                cur.execute(stmt)
+                if cur.description:
+                    headers = [d[0] for d in cur.description]
+                    rows = cur.fetchall()
+                    col_widths = [len(h) for h in headers]
+                    for r in rows:
+                        for idx, val in enumerate(r):
+                            col_widths[idx] = max(col_widths[idx], len(str(val)))
+                    header_line = " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
+                    sep_line = "-+-".join("-" * col_widths[i] for i in range(len(headers)))
+                    row_lines = [" | ".join(str(val).ljust(col_widths[i]) for i, val in enumerate(r)) for r in rows]
+                    results.append(f"{header_line}\n{sep_line}\n" + "\n".join(row_lines))
+                else:
+                    results.append(f"Query OK, {cur.rowcount} rows affected.")
+            con.commit()
+            con.close()
+            return {
+                "ok": True,
+                "error": None,
+                "stdout": "\n\n".join(results),
+                "stderr": "",
+                "images": [],
+                "exit_code": 0,
+                "lang": "sql"
+            }
+        except Exception as e:
+            return {
+                "ok": False,
+                "error": f"SQL 执行错误: {str(e)}",
+                "stdout": "",
+                "stderr": str(e),
+                "images": [],
+                "exit_code": 1,
+                "lang": "sql"
+            }
+
+    # 6. Go 语言调度
+    elif normalized_lang in ('go', 'golang'):
+        go_bin = shutil.which('go')
+        if not go_bin:
+            return {
+                "ok": False,
+                "error": "本地未检测到 Go 环境 (请安装 Go 并将其加入 PATH)",
+                "stdout": "",
+                "stderr": "go not found in PATH",
+                "images": [],
+                "exit_code": 127,
+                "lang": normalized_lang
+            }
+        with tempfile.NamedTemporaryFile(suffix='.go', delete=False, mode='w', encoding='utf-8') as f:
+            # 如果没有 package main，自动包装
+            if 'package main' not in code:
+                code = f"package main\nimport \"fmt\"\nfunc main() {{\n{code}\n}}"
+            f.write(code)
+            tmp_script = f.name
+        try:
+            res = _run_process([go_bin, 'run', tmp_script], timeout=timeout)
+            res["lang"] = normalized_lang
+            return res
+        finally:
+            if os.path.exists(tmp_script):
+                try:
+                    os.remove(tmp_script)
+                except Exception:
+                    pass
+
+    # 7. Rust 脚本化调度
+    elif normalized_lang in ('rust', 'rs'):
+        rust_script = shutil.which('rust-script')
+        if rust_script:
+            res = _run_process([rust_script, '-e', code], timeout=timeout)
+            res["lang"] = normalized_lang
+            return res
+        rustc_bin = shutil.which('rustc')
+        if not rustc_bin:
+            return {
+                "ok": False,
+                "error": "本地未检测到 Rust 运行环境 (rustc 或 rust-script)",
+                "stdout": "",
+                "stderr": "rustc not found in PATH",
+                "images": [],
+                "exit_code": 127,
+                "lang": normalized_lang
+            }
+        with tempfile.NamedTemporaryFile(suffix='.rs', delete=False, mode='w', encoding='utf-8') as f:
+            if 'fn main()' not in code:
+                code = f"fn main() {{\n{code}\n}}"
+            f.write(code)
+            tmp_script = f.name
+        out_bin = tmp_script[:-3] + ('.exe' if sys.platform == 'win32' else '')
+        try:
+            c_res = _run_process([rustc_bin, tmp_script, '-o', out_bin], timeout=timeout)
+            if not c_res['ok'] or c_res['exit_code'] != 0:
+                c_res["lang"] = normalized_lang
+                return c_res
+            res = _run_process([out_bin], timeout=timeout)
+            res["lang"] = normalized_lang
+            return res
+        finally:
+            for p in (tmp_script, out_bin):
+                if os.path.exists(p):
+                    try:
+                        os.remove(p)
+                    except Exception:
+                        pass
+
+    # 8. C / C++ 编译调度
+    elif normalized_lang in ('c', 'cpp', 'c++'):
+        compiler = shutil.which('g++' if normalized_lang in ('cpp', 'c++') else 'gcc') or shutil.which('clang++' if normalized_lang in ('cpp', 'c++') else 'clang')
+        if not compiler:
+            return {
+                "ok": False,
+                "error": "本地未检测到 C/C++ 编译器 (gcc/g++/clang)",
+                "stdout": "",
+                "stderr": "compiler not found in PATH",
+                "images": [],
+                "exit_code": 127,
+                "lang": normalized_lang
+            }
+        suffix = '.cpp' if normalized_lang in ('cpp', 'c++') else '.c'
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False, mode='w', encoding='utf-8') as f:
+            if 'main(' not in code:
+                header = "#include <iostream>\nusing namespace std;\n" if suffix == '.cpp' else "#include <stdio.h>\n"
+                code = f"{header}int main() {{\n{code}\nreturn 0;\n}}"
+            f.write(code)
+            tmp_script = f.name
+        out_bin = tmp_script[:-len(suffix)] + ('.exe' if sys.platform == 'win32' else '')
+        try:
+            c_res = _run_process([compiler, tmp_script, '-o', out_bin], timeout=timeout)
+            if not c_res['ok'] or c_res['exit_code'] != 0:
+                c_res["lang"] = normalized_lang
+                return c_res
+            res = _run_process([out_bin], timeout=timeout)
+            res["lang"] = normalized_lang
+            return res
+        finally:
+            for p in (tmp_script, out_bin):
+                if os.path.exists(p):
+                    try:
+                        os.remove(p)
+                    except Exception:
+                        pass
+
     # 未知或未适配语言兜底
     return {
         "ok": False,

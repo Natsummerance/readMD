@@ -746,14 +746,24 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 body = {}
             self._send_json(200, Api().set_autostart(bool(body.get('enabled'))))
-
+        elif path == '/api/code/run':
+            self._api_code_run()
+        elif path == '/api/diagram/render':
+            self._api_diagram_render()
+        elif path == '/api/import/process':
+            self._api_import_process()
+        elif path == '/api/export/epub':
+            self._api_export_epub()
+        elif path == '/api/export/presentation':
+            self._api_export_presentation()
+        elif path == '/api/style/get':
+            self._api_style_get()
+        elif path == '/api/style/save':
+            self._api_style_save()
         elif path == '/api/bibtex':
             self._api_bibtex(qs)
         elif path == '/api/ping':
-
-
             self._send_json(200, {'ok': self._api_ping(qs)})
-
         elif path == '/api/control/open':
             self._api_control_open()
         elif path == '/api/control/next':
@@ -887,6 +897,102 @@ class Handler(BaseHTTPRequestHandler):
     def _api_system_language(self):
         try:
             self._send_json(200, {'ok': True, 'language': get_system_language()})
+        except Exception as e:
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
+    def _api_code_run(self):
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            lang = body.get('lang', 'python')
+            code = body.get('code', '')
+            cwd = body.get('cwd') or None
+            timeout = int(body.get('timeout', 10))
+            from src.readmd_modules import code_chunk_runner
+            res = code_chunk_runner.execute_code_chunk(lang, code, cwd=cwd, timeout=timeout)
+            self._send_json(200, res)
+        except Exception as e:
+            logging.exception('api_code_run failed')
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
+    def _api_diagram_render(self):
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            engine = body.get('engine', 'mermaid')
+            code = body.get('code', '')
+            from src.readmd_modules import diagrams
+            if engine in ('puml', 'plantuml'):
+                svg_url = diagrams.get_plantuml_svg_url(code)
+                self._send_json(200, {'ok': True, 'type': 'url', 'svg_url': svg_url})
+            elif engine == 'tikz':
+                html_out = diagrams.format_tikz_html(code)
+                self._send_json(200, {'ok': True, 'type': 'html', 'html': html_out})
+            else:
+                self._send_json(200, {'ok': True, 'engine': engine, 'code': code})
+        except Exception as e:
+            logging.exception('api_diagram_render failed')
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
+    def _api_import_process(self):
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            content = body.get('content', '')
+            base_dir = body.get('base_dir', '')
+            current_file = body.get('current_file', '')
+            from src.readmd_modules import import_processor
+            processed = import_processor.process_markdown_imports(content, base_dir=base_dir, current_file=current_file)
+            self._send_json(200, {'ok': True, 'content': processed})
+        except Exception as e:
+            logging.exception('api_import_process failed')
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
+    def _api_export_epub(self):
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            content = body.get('content', '')
+            out_path = body.get('out_path', '')
+            meta = body.get('meta') or {}
+            from src.readmd_modules.mdexport import epub_render
+            if not out_path:
+                out_path = os.path.join(tempfile.gettempdir(), f'readmd_export_{int(time.time()*1000)}.epub')
+            ok = epub_render.build_epub(content, out_path, meta=meta)
+            self._send_json(200, {'ok': ok, 'path': out_path})
+        except Exception as e:
+            logging.exception('api_export_epub failed')
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
+    def _api_export_presentation(self):
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            content = body.get('content', '')
+            theme = body.get('theme', 'black')
+            transition = body.get('transition', 'slide')
+            from src.readmd_modules.mdexport import presentation_render
+            html_out = presentation_render.generate_presentation_html(content, theme=theme, transition=transition)
+            self._send_json(200, {'ok': True, 'html': html_out})
+        except Exception as e:
+            logging.exception('api_export_presentation failed')
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
+    def _api_style_get(self):
+        try:
+            from src.readmd_core import style_injector
+            data = style_injector.get_custom_styles()
+            self._send_json(200, {'ok': True, 'data': data})
+        except Exception as e:
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
+    def _api_style_save(self):
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            from src.readmd_core import style_injector
+            ok = style_injector.save_custom_styles(body.get('css', ''), body.get('head', ''))
+            self._send_json(200, {'ok': ok})
         except Exception as e:
             self._send_json(500, {'ok': False, 'error': str(e)})
 
@@ -2095,6 +2201,72 @@ class Api(object):
     def get_modules_status(self):
         st, err = RM.status()
         return {'modules': st, 'errors': err}
+
+    def run_code_chunk(self, lang, code, cwd=None, timeout=10):
+        """执行多语言代码块。"""
+        try:
+            from src.readmd_modules import code_chunk_runner
+            return code_chunk_runner.execute_code_chunk(lang, code, cwd=cwd, timeout=int(timeout))
+        except Exception as e:
+            return {'ok': False, 'error': str(e), 'stdout': '', 'stderr': str(e), 'images': [], 'exit_code': 1}
+
+    def render_diagram(self, engine, code, options=None):
+        """渲染专业图表。"""
+        try:
+            from src.readmd_modules import diagrams
+            if engine in ('puml', 'plantuml'):
+                return {'ok': True, 'type': 'url', 'svg_url': diagrams.get_plantuml_svg_url(code)}
+            elif engine == 'tikz':
+                return {'ok': True, 'type': 'html', 'html': diagrams.format_tikz_html(code)}
+            return {'ok': True, 'engine': engine, 'code': code}
+        except Exception as e:
+            return {'ok': False, 'error': str(e)}
+
+    def process_imports(self, content, base_dir='', current_file=None):
+        """处理 @import 指令。"""
+        try:
+            from src.readmd_modules import import_processor
+            res = import_processor.process_markdown_imports(content, base_dir=base_dir, current_file=current_file)
+            return {'ok': True, 'content': res}
+        except Exception as e:
+            return {'ok': False, 'error': str(e), 'content': content}
+
+    def export_epub(self, content, output_path='', meta=None):
+        """导出 EPUB 3.0 电子书。"""
+        try:
+            from src.readmd_modules.mdexport import epub_render
+            if not output_path:
+                output_path = os.path.join(tempfile.gettempdir(), f'readmd_export_{int(time.time()*1000)}.epub')
+            ok = epub_render.build_epub(content, output_path, meta=meta or {})
+            return {'ok': ok, 'path': output_path}
+        except Exception as e:
+            return {'ok': False, 'error': str(e)}
+
+    def export_presentation(self, content, theme='black', transition='slide'):
+        """生成 Reveal.js 演示文稿 HTML。"""
+        try:
+            from src.readmd_modules.mdexport import presentation_render
+            html_out = presentation_render.generate_presentation_html(content, theme=theme, transition=transition)
+            return {'ok': True, 'html': html_out}
+        except Exception as e:
+            return {'ok': False, 'error': str(e)}
+
+    def get_custom_styles(self):
+        """获取自定义样式与 Head。"""
+        try:
+            from src.readmd_core import style_injector
+            return {'ok': True, 'data': style_injector.get_custom_styles()}
+        except Exception as e:
+            return {'ok': False, 'error': str(e)}
+
+    def save_custom_styles(self, css='', head_html=''):
+        """保存自定义样式与 Head。"""
+        try:
+            from src.readmd_core import style_injector
+            ok = style_injector.save_custom_styles(css, head_html)
+            return {'ok': ok}
+        except Exception as e:
+            return {'ok': False, 'error': str(e)}
 
     def render_web_page(self, url, task_id='', timeout_ms=25000,
                         interactive=False, private_grant='', source_html=''):

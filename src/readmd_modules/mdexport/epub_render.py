@@ -305,3 +305,6 @@ def export_epub(markdown_content: str, output_path: str,
             zf.writestr(f'OEBPS/{fn}', xhtml_content)
 
     return output_path
+
+# 兼容别名
+build_epub = export_epub

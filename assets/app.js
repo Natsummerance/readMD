@@ -101,10 +101,20 @@ function bindEvents() {
   });
   $('convert-modal').addEventListener('click', e => { if (e.target === $('convert-modal')) closeConvertModal(); });
 
-  /* --- 4. 离线 OCR / 网页抓取 / 剪贴板新建 [联动: convert.js, ocr.js, web.js, clipboard.js] --- */
+  /* --- 4. 离线 OCR / 网页抓取 / 剪贴板新建 / 演示 / 样式定制 [联动: convert.js, ocr.js, web.js, clipboard.js, render.js] --- */
   $('btn-ocr').addEventListener('click', () => chooseFile('ocr')); // 触发离线 OCR 识别
   $('btn-web').addEventListener('click', openWebDialog);           // 打开网页抓取弹窗
   if ($('btn-clipboard-new')) $('btn-clipboard-new').addEventListener('click', createFromClipboard); // 智能自适应全类型剪贴板新建
+  if ($('btn-presentation-menu')) $('btn-presentation-menu').addEventListener('click', () => { closeMoreMenu(); launchPresentationMode(); });
+  if ($('btn-style-custom')) $('btn-style-custom').addEventListener('click', () => { closeMoreMenu(); openStyleModal(); });
+  if ($('btn-zen-menu')) $('btn-zen-menu').addEventListener('click', () => { closeMoreMenu(); toggleZenMode(); });
+  if ($('btn-zen-mode')) $('btn-zen-mode').addEventListener('click', () => { toggleZenMode(); });
+
+  // 自定义样式模态框
+  if ($('style-modal-close')) $('style-modal-close').addEventListener('click', closeStyleModal);
+  if ($('style-modal-cancel')) $('style-modal-cancel').addEventListener('click', closeStyleModal);
+  if ($('style-modal-save')) $('style-modal-save').addEventListener('click', saveStyleModal);
+  if ($('style-custom-modal')) $('style-custom-modal').addEventListener('click', e => { if (e.target === $('style-custom-modal')) closeStyleModal(); });
 
   // Toast 提示点击（用于升级跳转等场景）
   $('toast').addEventListener('click', () => {
@@ -510,6 +520,10 @@ function bindEvents() {
       e.preventDefault();
       createFromClipboard();
     }
+    else if (mod && e.shiftKey && e.key.toLowerCase() === 's') { // Ctrl+Shift+S / Cmd+Shift+S: 即时行对齐
+      e.preventDefault();
+      if (window.alignEditorAndPreview) window.alignEditorAndPreview();
+    }
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleSide('toc'); } // Ctrl+Shift+F: 目录大纲
     else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); toggleTheme(); } // Ctrl+D: 主题切换
     else if (mod && e.key.toLowerCase() === 'r') { e.preventDefault(); if (state.file && state.mode === 'file') loadFile(state.file); } // Ctrl+R: 重载文件
@@ -623,6 +637,66 @@ async function restoreLastFile() {
   } catch (e) { /* ignore */ }
   if (!last) last = localStorage.getItem('readmd-last');
   if (last && /\.(md|markdown|mdown|mkd|mdx|txt)$/i.test(last)) loadFile(last);
+}
+
+/* ----------------------------------------------------------------------------------------------
+   自定义样式与 Head 模态框逻辑
+   ---------------------------------------------------------------------------------------------- */
+async function openStyleModal() {
+  const modal = $('style-custom-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  try {
+    let res;
+    if (hasPy && py.get_custom_styles) {
+      res = await py.get_custom_styles();
+    } else {
+      const r = await apiFetch('/api/style/get');
+      res = await r.json();
+    }
+    if (res && res.ok && res.data) {
+      if ($('style-custom-css')) $('style-custom-css').value = res.data.css || '';
+      if ($('style-custom-head')) $('style-custom-head').value = res.data.head || '';
+    }
+  } catch (e) {}
+}
+
+async function saveStyleModal() {
+  const css = $('style-custom-css') ? $('style-custom-css').value : '';
+  const head = $('style-custom-head') ? $('style-custom-head').value : '';
+  try {
+    let res;
+    if (hasPy && py.save_custom_styles) {
+      res = await py.save_custom_styles(css, head);
+    } else {
+      const r = await apiFetch('/api/style/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ css: css, head: head })
+      });
+      res = await r.json();
+    }
+    if (res && res.ok) {
+      showToast('自定义样式已保存并即时生效', 1500);
+      let dynStyle = $('readmd-user-custom-style');
+      if (!dynStyle) {
+        dynStyle = document.createElement('style');
+        dynStyle.id = 'readmd-user-custom-style';
+        document.head.appendChild(dynStyle);
+      }
+      dynStyle.textContent = css;
+      closeStyleModal();
+    } else {
+      showToast('保存失败');
+    }
+  } catch (e) {
+    showToast('保存失败：' + e.message);
+  }
+}
+
+function closeStyleModal() {
+  const modal = $('style-custom-modal');
+  if (modal) modal.classList.add('hidden');
 }
 
 /* ----------------------------------------------------------------------------------------------

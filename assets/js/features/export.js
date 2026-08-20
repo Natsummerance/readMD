@@ -667,29 +667,63 @@ function renderExportPresetSelect() {
 async function runExport() {
   const fmt = state.export.fmt;
   const options = collectExportOptions();
-  const payload = {
-    content: currentExportContent(),
-    baseDir: state.dir || '',
-    suggestedName: currentExportName(),
-    options: options,
-  };
+  const content = currentExportContent();
+  const baseDir = state.dir || '';
+  const suggestedName = currentExportName();
   busy(true);
   let r = null;
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+
   try {
-    r = await py.export_doc(fmt, payload);
-  } catch (e) { showToast((_t('toast.exportFailed') || '导出失败：') + e.message); busy(false); return; }
+    if (fmt === 'epub') {
+      if (hasPy && py.export_epub) {
+        r = await py.export_epub(content, '', options.meta || {});
+      } else {
+        const resp = await apiFetch('/api/export/epub', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: content, meta: options.meta || {} })
+        });
+        r = await resp.json();
+      }
+    } else if (fmt === 'presentation') {
+      if (hasPy && py.export_presentation) {
+        r = await py.export_presentation(content, options.theme || 'black', options.transition || 'slide');
+      } else {
+        const resp = await apiFetch('/api/export/presentation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: content, theme: options.theme || 'black', transition: options.transition || 'slide' })
+        });
+        r = await resp.json();
+      }
+    } else {
+      const payload = {
+        content: content,
+        baseDir: baseDir,
+        suggestedName: suggestedName,
+        options: options,
+      };
+      r = await py.export_doc(fmt, payload);
+    }
+  } catch (e) {
+    showToast((_t('toast.exportFailed') || '导出失败：') + e.message);
+    busy(false);
+    return;
+  }
   busy(false);
   if (!r) { showToast(_t('toast.exportFailedSimple') || '导出失败'); return; }
   if (r.canceled) return;
   if (!r.ok) { showToast((_t('toast.exportFailed') || '导出失败：') + (r.error || (_t('toast.unknownError') || '未知错误'))); return; }
   const res = $('export-result');
-  res.textContent = (_t('toast.exportedPrefix') || '已导出：') + r.path;
+  res.textContent = (_t('toast.exportedPrefix') || '已导出：') + (r.path || '导出完成');
   res.className = 'export-result ok';
-  $('export-open').classList.remove('hidden');
-  $('export-reveal').classList.remove('hidden');
-  $('export-open').onclick = () => py.open_path(r.path);
-  $('export-reveal').onclick = () => py.reveal_path(r.path);
+  if (r.path) {
+    $('export-open').classList.remove('hidden');
+    $('export-reveal').classList.remove('hidden');
+    $('export-open').onclick = () => py.open_path(r.path);
+    $('export-reveal').onclick = () => py.reveal_path(r.path);
+  }
   try { py.save_export_presets({ last: { fmt: fmt, options: options } }); } catch (e) { /* ignore */ }
   if (r.warns && r.warns.length) showToast(_t('toast.exportCompleteWarns', { count: r.warns.length }) || ('导出完成，' + r.warns.length + ' 条提示'));
   else showToast(_t('toast.exportSuccess') || '导出成功');

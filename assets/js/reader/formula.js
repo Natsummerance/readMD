@@ -56,6 +56,9 @@ function protectMath(src) {
   };
   const looksMath = body => /[\\^_{}]/.test(body) || (/[A-Za-z\u0391-\u03C9]/.test(body) && !/\s/.test(body));
 
+  // 0. 优先保护 ```math ... ``` 代码块
+  src = src.replace(/```math\b[^\n]*\n([\s\S]+?)```/g, (m, b) => save('$$' + repairLatex(b) + '$$'));
+
   // 1. 优先保护标准多行块级 $$...$$
   src = src.replace(/\$\$([\s\S]+?)\$\$/g, (m, b) => save('$$' + repairLatex(b) + '$$'));
 

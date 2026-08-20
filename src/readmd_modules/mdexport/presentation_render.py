@@ -151,3 +151,6 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
   </script>
 </body>
 </html>"""
+
+# 兼容别名
+generate_presentation_html = render_presentation_html

@@ -72,22 +72,37 @@ function bindPvSplitter() {
   window.addEventListener('resize', () => setPvLayout(state.pvLayout));
 }
 
+let isSyncingFromEditor = false;
+let isSyncingFromPreview = false;
+
 function schedulePreview() {
   if (pvTimer) clearTimeout(pvTimer);
+  if (state.liveUpdate === false) return; // Save-only mode
   pvTimer = setTimeout(renderPreview, 300);
 }
 
-function renderPreview() {
+async function renderPreview() {
   pvTimer = null;
   const pane = $('preview-pane');
   if (!pane || state.pvLayout === 'none' || !state.editing) return;
-  const src = getEditContent();
+  let src = getEditContent();
   if (src === pvLast) return;
   pvLast = src;
+
+  // 预处理 @import
+  if (window.processDocImports) {
+    src = await window.processDocImports(src, state.file || '');
+  }
+
   let html;
   try {
-    const prot = protectMath(src);
-    html = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
+    const transformed = window.transformAcademicCallouts ? transformAcademicCallouts(src) : src;
+    const prot = protectMath(transformed);
+    if (window.parseMarkdownWithSourceMap) {
+      html = restoreMath(parseMarkdownWithSourceMap(prot.src), prot.saved);
+    } else {
+      html = restoreMath(marked.parse(prot.src, { gfm: true, breaks: !!(state && state.breakOnSingleNewline) }), prot.saved);
+    }
   } catch (e) {
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     html = '<p class="ai-err">' + (_t('editor.previewRenderFail') || '预览渲染失败') + '</p>';
@@ -96,29 +111,132 @@ function renderPreview() {
   fixLinks(pane);
   fixImages(pane);
   renderMath(pane);
+  if (window.renderAllCodeChunks) renderAllCodeChunks(pane);
+  if (window.renderAllDiagrams) renderAllDiagrams(pane);
+}
+
+function getEditorVisibleLine() {
+  if (cmView && cmView.lineBlockAtHeight) {
+    try {
+      const lineBlock = cmView.lineBlockAtHeight(cmView.scrollDOM.scrollTop);
+      return cmView.state.doc.lineAt(lineBlock.from).number;
+    } catch (e) {
+      return 1;
+    }
+  } else if ($('edit-area')) {
+    const ta = $('edit-area');
+    const totalLines = ta.value.split('\n').length;
+    const pct = ta.scrollTop / Math.max(1, ta.scrollHeight - ta.clientHeight);
+    return Math.max(1, Math.round(pct * totalLines));
+  }
+  return 1;
 }
 
 function pvSyncFromEditor() {
-  if (!state.pvSync || state.pvLayout === 'none') return;
-  const src = pvEditorEl || $('edit-area');
+  if (!state.pvSync || state.pvLayout === 'none' || isSyncingFromPreview) return;
+  isSyncingFromEditor = true;
+
   const dst = $('preview-wrap');
-  if (!src || !dst) return;
-  const maxSrc = src.scrollHeight - src.clientHeight;
-  const maxDst = dst.scrollHeight - dst.clientHeight;
-  if (maxSrc <= 0 || maxDst <= 0) return;
-  dst.scrollTop = (src.scrollTop / maxSrc) * maxDst;
+  if (!dst) { isSyncingFromEditor = false; return; }
+
+  const currentLine = getEditorVisibleLine();
+  const pane = $('preview-pane');
+  if (!pane) { isSyncingFromEditor = false; return; }
+
+  // 查找带有 data-source-line 的所有元素
+  const lineEls = Array.from(pane.querySelectorAll('[data-source-line]'));
+  if (lineEls.length === 0) {
+    const src = pvEditorEl || $('edit-area');
+    if (src) {
+      const maxSrc = src.scrollHeight - src.clientHeight;
+      const maxDst = dst.scrollHeight - dst.clientHeight;
+      if (maxSrc > 0 && maxDst > 0) dst.scrollTop = (src.scrollTop / maxSrc) * maxDst;
+    }
+    isSyncingFromEditor = false;
+    return;
+  }
+
+  let targetEl = lineEls[0];
+  let nextEl = null;
+  for (let i = 0; i < lineEls.length; i++) {
+    const l = parseInt(lineEls[i].dataset.sourceLine, 10);
+    if (l <= currentLine) {
+      targetEl = lineEls[i];
+    } else {
+      nextEl = lineEls[i];
+      break;
+    }
+  }
+
+  if (targetEl) {
+    let targetScrollTop = targetEl.offsetTop;
+    if (nextEl) {
+      const l1 = parseInt(targetEl.dataset.sourceLine, 10);
+      const l2 = parseInt(nextEl.dataset.sourceLine, 10);
+      if (l2 > l1) {
+        const factor = (currentLine - l1) / (l2 - l1);
+        targetScrollTop += factor * (nextEl.offsetTop - targetEl.offsetTop);
+      }
+    }
+    dst.scrollTop = Math.max(0, targetScrollTop - 20);
+  }
+
+  setTimeout(() => { isSyncingFromEditor = false; }, 50);
 }
 
 function pvSyncFromPreview() {
-  if (!state.pvSync || state.pvLayout === 'none') return;
+  if (!state.pvSync || state.pvLayout === 'none' || isSyncingFromEditor) return;
+  isSyncingFromPreview = true;
+
   const src = $('preview-wrap');
-  const dst = pvEditorEl || $('edit-area');
-  if (!src || !dst) return;
-  const maxSrc = src.scrollHeight - src.clientHeight;
-  const maxDst = dst.scrollHeight - dst.clientHeight;
-  if (maxSrc <= 0 || maxDst <= 0) return;
-  dst.scrollTop = (src.scrollTop / maxSrc) * maxDst;
+  const pane = $('preview-pane');
+  if (!src || !pane) { isSyncingFromPreview = false; return; }
+
+  const scrollTop = src.scrollTop;
+  const lineEls = Array.from(pane.querySelectorAll('[data-source-line]'));
+  if (lineEls.length === 0) {
+    const dst = pvEditorEl || $('edit-area');
+    if (dst) {
+      const maxSrc = src.scrollHeight - src.clientHeight;
+      const maxDst = dst.scrollHeight - dst.clientHeight;
+      if (maxSrc > 0 && maxDst > 0) dst.scrollTop = (src.scrollTop / maxSrc) * maxDst;
+    }
+    isSyncingFromPreview = false;
+    return;
+  }
+
+  let matchedLine = 1;
+  for (let i = 0; i < lineEls.length; i++) {
+    if (lineEls[i].offsetTop <= scrollTop + 30) {
+      matchedLine = parseInt(lineEls[i].dataset.sourceLine, 10);
+    } else {
+      break;
+    }
+  }
+
+  if (cmView && window.ReadMDCodeMirror) {
+    try {
+      const doc = cmView.state.doc;
+      const targetLine = Math.min(doc.lines, Math.max(1, matchedLine));
+      const pos = doc.line(targetLine).from;
+      cmView.dispatch({
+        effects: window.ReadMDCodeMirror.EditorView.scrollIntoView(pos, { y: 'start' })
+      });
+    } catch (e) {}
+  } else if ($('edit-area')) {
+    const ta = $('edit-area');
+    const totalLines = ta.value.split('\n').length;
+    ta.scrollTop = (matchedLine / totalLines) * (ta.scrollHeight - ta.clientHeight);
+  }
+
+  setTimeout(() => { isSyncingFromPreview = false; }, 50);
 }
+
+function alignEditorAndPreview() {
+  pvSyncFromEditor();
+  showToast('已完成编辑器与预览视图精确行对齐', 1200);
+}
+window.alignEditorAndPreview = alignEditorAndPreview;
 
 function applyPvUi() {
   document.querySelectorAll('.pv-btn').forEach(b => b.classList.toggle('active', b.dataset.pv === state.pvLayout));
