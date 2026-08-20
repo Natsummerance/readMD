@@ -129,6 +129,7 @@ _UNICODE_MATH_TO_LATEX = {
     '…': r'\ldots', '⋯': r'\cdots', '⋮': r'\vdots', '⋱': r'\ddots',
     '∠': r'\angle', '⊥': r'\perp', '∥': r'\parallel',
     '⟨': r'\langle', '⟩': r'\rangle',
+    '⊗': r'\otimes', '⊕': r'\oplus', '⊙': r'\odot',
     '∑': r'\sum', '∏': r'\prod', '∐': r'\coprod',
     '∫': r'\int', '∬': r'\iint', '∭': r'\iiint', '∮': r'\oint',
     '⋂': r'\bigcap', '⋃': r'\bigcup'
@@ -164,7 +165,20 @@ def _omml_to_latex(el):
                 out_chars.append(ch)
         return ''.join(out_chars)
 
-    if local in ('r', 'oMath', 'oMathPara', 'e', 'num', 'den', 'sub',
+    if local == 'r':
+        rpr = el.find(_mq('rPr'))
+        inner = kids(el).strip()
+        if rpr is not None and inner:
+            if rpr.find(_mq('nor')) is not None:
+                return r'\text{%s}' % inner
+            if rpr.find(_mq('b')) is not None:
+                return r'\mathbf{%s}' % inner
+            i_el = rpr.find(_mq('i'))
+            if i_el is not None and (i_el.get(_mq('val')) == 'off' or i_el.get('val') == 'off'):
+                return r'\mathrm{%s}' % inner
+        return kids(el)
+
+    if local in ('oMath', 'oMathPara', 'e', 'num', 'den', 'sub',
                  'sup', 'deg', 'chr', 'fName', 'delim',
                  'phant'):
         return kids(el)

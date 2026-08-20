@@ -40,6 +40,7 @@ _MATH_SYMBOLS = {
     # 运算符与关系符
     r'\pm': '±', r'\mp': '∓', r'\times': '×', r'\div': '÷', r'\cdot': '·',
     r'\ast': '∗', r'\star': '⋆', r'\circ': '∘', r'\bullet': '∙',
+    r'\otimes': '⊗', r'\oplus': '⊕', r'\odot': '⊙',
     r'\leq': '≤', r'\le': '≤', r'\geq': '≥', r'\ge': '≥',
     r'\neq': '≠', r'\ne': '≠', r'\approx': '≈', r'\equiv': '≡',
     r'\sim': '∼', r'\simeq': '≃', r'\cong': '≅', r'\propto': '∝',
@@ -343,6 +344,19 @@ def _parse_latex_to_omml_inner(latex_str):
             body = tok.get_group('{', '}')
             body_omml = _parse_latex_to_omml_inner(body)
             out.append('<m:bar><m:barPr><m:pos m:val="top"/></m:barPr><m:e>%s</m:e></m:bar>' % body_omml)
+            continue
+
+        # 字体与文本包装 \text, \mathrm, \mathbf
+        if t in (r'\text', r'\mathrm', r'\mathbf', r'\mathbb', r'\mathcal', r'\boldsymbol'):
+            body = tok.get_group('{', '}')
+            if t == r'\text':
+                out.append('<m:r><m:rPr><m:nor/></m:rPr><m:t>%s</m:t></m:r>' % escape(body))
+            elif t in (r'\mathbf', r'\boldsymbol'):
+                out.append('<m:r><m:rPr><m:b/></m:rPr><m:t>%s</m:t></m:r>' % escape(body))
+            elif t == r'\mathrm':
+                out.append('<m:r><m:rPr><m:i m:val="off"/></m:rPr><m:t>%s</m:t></m:r>' % escape(body))
+            else:
+                out.append(_r(body))
             continue
 
         # 8. 常见函数名称 \sin, \cos, \ln, \lim
