@@ -59,6 +59,7 @@ _MATH_SYMBOLS = {
     # 标点与省略号
     r'\ldots': '…', r'\cdots': '⋯', r'\vdots': '⋮', r'\ddots': '⋱',
     r'\angle': '∠', r'\perp': '⊥', r'\parallel': '∥',
+    r'\langle': '⟨', r'\rangle': '⟩', r'\vert': '|',
     r'\,': ' ', r'\;': ' ', r'\quad': '  ', r'\qquad': '    ', r'\!': '',
     r'\%': '%', r'\_': '_', r'\&': '&', r'\#': '#',
 }

@@ -128,6 +128,7 @@ _UNICODE_MATH_TO_LATEX = {
     '∧': r'\land', '∨': r'\lor', '∅': r'\emptyset',
     '…': r'\ldots', '⋯': r'\cdots', '⋮': r'\vdots', '⋱': r'\ddots',
     '∠': r'\angle', '⊥': r'\perp', '∥': r'\parallel',
+    '⟨': r'\langle', '⟩': r'\rangle',
     '∑': r'\sum', '∏': r'\prod', '∐': r'\coprod',
     '∫': r'\int', '∬': r'\iint', '∭': r'\iiint', '∮': r'\oint',
     '⋂': r'\bigcap', '⋃': r'\bigcup'
@@ -164,8 +165,8 @@ def _omml_to_latex(el):
         return ''.join(out_chars)
 
     if local in ('r', 'oMath', 'oMathPara', 'e', 'num', 'den', 'sub',
-                 'sup', 'deg', 'chr', 'fName', 'acc', 'delim',
-                 'phant', 'func'):
+                 'sup', 'deg', 'chr', 'fName', 'delim',
+                 'phant'):
         return kids(el)
 
     if local == 'f':  # 分数
@@ -297,12 +298,20 @@ def _omml_to_latex(el):
     if local == 'limLow':  # 下标极限 / 最小值
         e_el = el.find(_mq('e'))
         lim_el = el.find(_mq('lim'))
-        return '{%s}_{%s}' % (kids(e_el).strip(), kids(lim_el).strip())
+        e_txt = kids(e_el).strip()
+        l_txt = kids(lim_el).strip()
+        if e_txt.lower() in ('lim', 'max', 'min', 'inf', 'sup', 'det', 'gcd'):
+            return r'\%s_{%s}' % (e_txt.lower(), l_txt)
+        return '{%s}_{%s}' % (e_txt, l_txt)
 
     if local == 'limUpp':  # 上标极限
         e_el = el.find(_mq('e'))
         lim_el = el.find(_mq('lim'))
-        return '{%s}^{%s}' % (kids(e_el).strip(), kids(lim_el).strip())
+        e_txt = kids(e_el).strip()
+        l_txt = kids(lim_el).strip()
+        if e_txt.lower() in ('lim', 'max', 'min', 'inf', 'sup', 'det', 'gcd'):
+            return r'\%s^{%s}' % (e_txt.lower(), l_txt)
+        return '{%s}^{%s}' % (e_txt, l_txt)
 
     if local in ('box', 'borderBox'):  # 框选
         e_el = el.find(_mq('e'))
@@ -313,20 +322,27 @@ def _omml_to_latex(el):
         e_el = el.find(_mq('e'))
         fn_str = kids(fname).strip()
         in_str = kids(e_el).strip()
+        known_funcs = {'sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'ln', 'log', 'lg', 'exp', 'arcsin', 'arccos', 'arctan', 'sinh', 'cosh', 'tanh'}
+        if fn_str.lower() in known_funcs:
+            fn_str = r'\%s' % fn_str.lower()
         if in_str:
             return r'%s(%s)' % (fn_str, in_str)
         return fn_str
 
     if local == 'acc':  # 帽子/箭头/重音
-        acc = el.find(_mq('acc'))
+        acc_pr = el.find(_mq('accPr'))
+        a = '^'  # 默认 hat
+        if acc_pr is not None:
+            chr_el = acc_pr.find(_mq('chr'))
+            if chr_el is not None:
+                a = chr_el.get(_mq('val'), chr_el.get('val', '^'))
         e_el = el.find(_mq('e'))
-        a = kids(acc).strip()
         inner = kids(e_el).strip()
         marks = {'\u02c6': r'\hat', '^': r'\hat', '\u00af': r'\bar', '¯': r'\bar',
                  '\u2192': r'\vec', '→': r'\vec', '\u02dc': r'\tilde', '~': r'\tilde',
                  '\u0307': r'\dot', '˙': r'\dot', '\u0308': r'\ddot', '¨': r'\ddot',
                  'ˇ': r'\check', '´': r'\acute', '`': r'\grave'}
-        cmd = marks.get(a, '')
+        cmd = marks.get(a, r'\hat')
         return (cmd + '{%s}' % inner) if cmd else inner
 
     if local == 'bar':  # 上下横线
