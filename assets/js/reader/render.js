@@ -595,7 +595,48 @@ function parseMarkdownWithSourceMap(content, options = {}) {
   const breaks = !!(state && state.breakOnSingleNewline);
   const renderer = new marked.Renderer();
 
-  renderer.code = function(code, infostring, escaped) {
+  // 1. 分词并记录顶级 AST 节点的源码起始行号
+  const tokens = marked.lexer(content, { gfm: true, breaks: breaks });
+  let lineCursor = 1;
+  tokens.forEach(tok => {
+    tok.sourceLine = lineCursor;
+    if (tok.raw) {
+      lineCursor += tok.raw.split('\n').length - 1;
+    }
+  });
+
+  // 2. 自定义渲染器注入 data-source-line 属性
+  renderer.heading = function(token) {
+    const text = typeof token === 'object' ? token.text : arguments[0];
+    const level = typeof token === 'object' ? token.depth : arguments[1];
+    const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
+    return `<h${level}${lineAttr}>${text}</h${level}>\n`;
+  };
+
+  renderer.paragraph = function(token) {
+    const text = typeof token === 'object' ? token.text : arguments[0];
+    const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
+    return `<p${lineAttr}>${text}</p>\n`;
+  };
+
+  renderer.blockquote = function(token) {
+    const quote = typeof token === 'object' ? token.text : arguments[0];
+    const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
+    return `<blockquote${lineAttr}>\n${quote}</blockquote>\n`;
+  };
+
+  renderer.table = function(token) {
+    const header = typeof token === 'object' ? token.header : arguments[0];
+    const body = typeof token === 'object' ? token.body : arguments[1];
+    const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
+    return `<table${lineAttr}>\n<thead>\n${header}</thead>\n<tbody>\n${body}</tbody>\n</table>\n`;
+  };
+
+  renderer.code = function(token) {
+    const code = typeof token === 'object' ? token.text : arguments[0];
+    const infostring = typeof token === 'object' ? token.lang : arguments[1];
+    const escaped = typeof token === 'object' ? token.escaped : arguments[2];
+    const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
     const info = (infostring || '').trim();
     const parts = info.split(/\s+/);
     const lang = parts[0] || '';
@@ -606,7 +647,7 @@ function parseMarkdownWithSourceMap(content, options = {}) {
       const encodedCode = encodeURIComponent(code);
       const isMatplotlib = info.includes('matplotlib=true') || info.includes('matplotlib=True');
       const isHidden = info.includes('hide=true') || info.includes('hide=True');
-      return `<div class="code-chunk-card" data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
+      return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
         <div class="code-chunk-header">
           <span class="code-chunk-badge">${lang.toUpperCase()}</span>
           <span class="code-chunk-status">就绪</span>
@@ -630,7 +671,7 @@ function parseMarkdownWithSourceMap(content, options = {}) {
     const diagramLangs = ['tikz', 'plantuml', 'puml', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'd2', 'ditaa'];
     if (diagramLangs.includes(lang.toLowerCase())) {
       const encodedCode = encodeURIComponent(code);
-      return `<div class="diagram-card" data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
+      return `<div class="diagram-card" ${lineAttr} data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
         <div class="diagram-header">
           <span class="diagram-badge">${lang.toUpperCase()} 图表</span>
           <button class="diagram-reload-btn" title="重新渲染">⟳ 刷新</button>
@@ -641,10 +682,10 @@ function parseMarkdownWithSourceMap(content, options = {}) {
     }
 
     // 3. Standard Code Block
-    return `<pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>\n`;
+    return `<pre ${lineAttr}><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>\n`;
   };
 
-  return marked.parse(content, { renderer: renderer, gfm: true, breaks: breaks });
+  return marked.parser(tokens, { renderer: renderer, gfm: true, breaks: breaks });
 }
 window.parseMarkdownWithSourceMap = parseMarkdownWithSourceMap;
 
