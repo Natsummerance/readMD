@@ -346,6 +346,7 @@ async function renderContentIncremental(content, savedTop) {
       div.innerHTML = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
       frag.appendChild(div);
     }
+    body.appendChild(frag);
     const pct = Math.round((end / total) * 100);
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     if (pct >= 100 || pct % 10 < 8) prog.textContent = (_t('reader.renderingProgress', { percent: Math.min(pct, 100) }) || ('渲染中… ' + Math.min(pct, 100) + '%'));

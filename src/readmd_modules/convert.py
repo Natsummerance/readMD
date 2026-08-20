@@ -75,7 +75,7 @@ def convert_verbose(path):
             from . import texmd
             with open(path, 'r', encoding='utf-8', errors='replace') as f:
                 tex_content = f.read()
-            return texmd.latex_to_md(tex_content), 'texmd', None
+            return texmd.latex_to_md(tex_content, base_dir=os.path.dirname(os.path.abspath(path))), 'texmd', None
         except Exception as e:  # noqa: BLE001
             return '', '', 'LaTeX 转换失败：%s' % e
 

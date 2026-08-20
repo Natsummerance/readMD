@@ -24,6 +24,7 @@ Key Features:
    - Emits fully compilable, clean .tex source with standard amsmath, booktabs, hyperref, tcolorbox
 """
 
+import os
 import re
 from typing import Dict, List, Tuple, Optional, Any, Callable
 
@@ -162,6 +163,8 @@ class MacroExpander:
                 last_pos = p_end
                 pos = p_end
             else:
+                cleaned_parts.append(text[last_pos:p_end])
+                last_pos = p_end
                 pos = p_end
 
         text = ''.join(cleaned_parts)
@@ -187,6 +190,8 @@ class MacroExpander:
                 last_pos = p_end
                 pos = p_end
             else:
+                cleaned_parts.append(text[last_pos:p_end])
+                last_pos = p_end
                 pos = p_end
 
         return ''.join(cleaned_parts)
@@ -250,7 +255,7 @@ class MacroExpander:
 # 3. LaTeX -> Markdown 高精度解析引擎
 # ---------------------------------------------------------------------------
 
-def latex_to_md(tex_content: str) -> str:
+def latex_to_md(tex_content: str, base_dir: str = '') -> str:
     """将 LaTeX 文档/片段高质量转换为 GitHub Flavored Markdown。"""
     if not tex_content or not tex_content.strip():
         return ''
@@ -263,29 +268,86 @@ def latex_to_md(tex_content: str) -> str:
         lines.append(line)
     text = '\n'.join(lines)
 
+    # 递归展开 \input{...}, \include{...}, \subfile{...}
+    if base_dir and os.path.exists(base_dir):
+        def _expand_inputs(t: str, cur_dir: str, depth: int = 0) -> str:
+            if depth > 10:
+                return t
+            def _repl_input(m):
+                fname = m.group(1).strip()
+                candidates = [
+                    os.path.join(cur_dir, fname),
+                    os.path.join(cur_dir, fname + '.tex'),
+                    os.path.join(base_dir, fname),
+                    os.path.join(base_dir, fname + '.tex')
+                ]
+                for target in candidates:
+                    if os.path.isfile(target):
+                        try:
+                            with open(target, 'rb') as f:
+                                raw_b = f.read()
+                            try:
+                                sub_content = raw_b.decode('utf-8')
+                            except UnicodeDecodeError:
+                                sub_content = raw_b.decode('latin-1')
+                            sub_lines = [re.sub(r'(?<!\\)%.*$', '', l) for l in sub_content.splitlines()]
+                            sub_text = '\n'.join(sub_lines)
+                            if r'\begin{document}' in sub_text:
+                                sub_text = sub_text.split(r'\begin{document}', 1)[1]
+                            if r'\end{document}' in sub_text:
+                                sub_text = sub_text.split(r'\end{document}', 1)[0]
+                            return '\n\n' + _expand_inputs(sub_text, os.path.dirname(target), depth + 1) + '\n\n'
+                        except Exception:
+                            pass
+                return ''
+            return re.sub(r'\\(?:input|include|subfile)\{([^}]+)\}', _repl_input, t)
+
+        text = _expand_inputs(text, base_dir)
+
     # 2. 宏提取与预展开
     macro_engine = MacroExpander()
     text = macro_engine.parse_preamble_macros(text)
     text = macro_engine.expand(text)
 
-    # 3. 提取文档元数据
+    # 3. 提取并清理文档元数据（标题、作者、日期）
+    def _clean_metadata_text(val: str) -> str:
+        if not val:
+            return ''
+        # 移除 \thanks{...}, \footnote{...}, \email{...}, \inst{...}, \affil{...}, \corref{...}
+        val = re.sub(r'\\(?:thanks|footnote|email|inst|affil|corref|fnmark|authornote)\{[^}]*\}', '', val)
+        val = re.sub(r'\\footnotemark(?:\[[^\]]*\])?', '', val)
+        val = re.sub(r'\\(?:hspace|vspace)\*?\{[^}]*\}', '', val)
+        val = re.sub(r'\\color\{[^}]*\}', '', val)
+        # 移除样式宏但保留内容
+        val = re.sub(r'\\(?:texttt|textbf|textit|textsf|textsc|emph)\{([^}]*)\}', r'\1', val)
+        val = re.sub(r'\\url\{([^}]*)\}', r'\1', val)
+        val = re.sub(r'\\href\{[^}]*\}\{([^}]*)\}', r'\1', val)
+        val = re.sub(r'\\(?:And|AND|and)\b', ' & ', val)
+        val = val.replace('\\\\', ' ')
+        val = val.replace('\\', '')
+        val = val.replace('{', '').replace('}', '')
+        val = re.sub(r'\s+', ' ', val).strip()
+        val = re.sub(r'^(&\s*)+|(\s*&)+$', '', val).strip()
+        val = val.replace('"', "'")
+        return val
+
     title_match = re.search(r'\\title(?:\[[^\]]*\])?\{', text)
     title_val = ''
     if title_match:
         val, _ = extract_mand_arg(text, title_match.end() - 1)
-        title_val = (val or '').strip()
+        title_val = _clean_metadata_text(val)
 
     author_val = ''
     author_match = re.search(r'\\author(?:\[[^\]]*\])?\{', text)
     if author_match:
         val, _ = extract_mand_arg(text, author_match.end() - 1)
-        author_val = (val or '').strip()
+        author_val = _clean_metadata_text(val)
 
     date_val = ''
     date_match = re.search(r'\\date(?:\[[^\]]*\])?\{', text)
     if date_match:
         val, _ = extract_mand_arg(text, date_match.end() - 1)
-        date_val = (val or '').strip()
+        date_val = _clean_metadata_text(val)
 
     # 4. 截取正文主体（若包含 \begin{document}，保留可能位于导言区的 abstract）
     if r'\begin{document}' in text:
@@ -296,6 +358,18 @@ def latex_to_md(tex_content: str) -> str:
         text = doc_body
     if r'\end{document}' in text:
         text = text.split(r'\end{document}', 1)[0]
+
+    # 替换 TeX 原始定界分组符 \bgroup / \egroup
+    text = re.sub(r'\\bgroup\b', '{', text)
+    text = re.sub(r'\\egroup\b', '}', text)
+
+    # 清除正文颜色宏
+    text = re.sub(r'\\textcolor\{[^}]*\}\{([^}]*)\}', r'\1', text)
+    text = re.sub(r'\\color\{[^}]*\}', '', text)
+
+    # 转换经典 LaTeX 双引号与单引号 (``...'' / ``..." -> “...”, `...' / `..." -> ‘...’)
+    text = re.sub(r"``([^`\n]*?)(''|\")", r'“\1”', text)
+    text = re.sub(r"`([^`\n]*?)('|\")", r'‘\1’', text)
 
     # 保护并转换 \verb|...|, \verb+...+, \verb!...! 为行内代码
     def _repl_verb(m):
@@ -330,6 +404,12 @@ def latex_to_md(tex_content: str) -> str:
     text = re.sub(r'\{\\rm\s+([^}]+)\}', r'\1', text)
     text = re.sub(r'\{\\sf\s+([^}]+)\}', r'\1', text)
 
+    # 独立无括号 TeX 字体开关（如 \bf Heading \n）
+    text = re.sub(r'\\bf\s+([^\n\\{]+)', r'**\1**', text)
+    text = re.sub(r'\\it\s+([^\n\\{]+)', r'*\1*', text)
+    text = re.sub(r'\\tt\s+([^\n\\{]+)', r'`\1`', text)
+    text = re.sub(r'\\(?:rm|sf|em|sc)\s+([^\n\\{]+)', r'\1', text)
+
     # 去除分页与页面结构控制符
     text = re.sub(r'\\(?:maketitle|tableofcontents|newpage|clearpage|cleardoublepage)', '', text)
     text = re.sub(r'\\(?:vspace\*?|hspace\*?)\{[^}]*\}', '', text)
@@ -339,7 +419,7 @@ def latex_to_md(tex_content: str) -> str:
     text = re.sub(r'\\rule\{[^}]*\}\{[^}]*\}', '\n\n---\n\n', text)
     text = re.sub(r'\\hrule(?![a-zA-Z])', '\n\n---\n\n', text)
 
-    # 5. 代码块处理 (\begin{lstlisting}, \begin{verbatim}, \begin{minted})
+    # 5. 代码块与行内原生代码处理 (\begin{lstlisting}, \begin{verbatim}, \begin{minted}, \verb)
     def _repl_lstlisting(m):
         opt = m.group(1) or ''
         body = m.group(2)
@@ -351,7 +431,35 @@ def latex_to_md(tex_content: str) -> str:
 
     text = re.sub(r'\\begin\{lstlisting\}(?:\[(.*?)\])?(.*?)\\end\{lstlisting\}', _repl_lstlisting, text, flags=re.DOTALL)
     text = re.sub(r'\\begin\{minted\}(?:\[.*?\])?\{([a-zA-Z0-9_\+#]+)\}(.*?)\\end\{minted\}', r'\n```\1\n\2\n```\n', text, flags=re.DOTALL)
-    text = re.sub(r'\\begin\{verbatim\*?\}(.*?)\\end\{verbatim\*?\}', r'\n```\n\1\n```\n', text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{(?:verbatim\*?|stdout|session|shell|console|terminal|alltt|code)\}(.*?)\\end\{(?:verbatim\*?|stdout|session|shell|console|terminal|alltt|code)\}', r'\n```\n\1\n```\n', text, flags=re.DOTALL)
+    text = re.sub(r'\\verb([^a-zA-Z0-9\s])(.*?)\1', r'`\2`', text)
+
+    # 展开并解包 \resizebox{w}{h}{content}, \scalebox{s}{content}, \parbox{w}{content}
+    def _unwrap_boxes(t_in: str) -> str:
+        for cmd in [r'\\resizebox\*?', r'\\scalebox\*?', r'\\parbox\*?']:
+            pattern = re.compile(cmd + r'(?![a-zA-Z])')
+            while True:
+                m = pattern.search(t_in)
+                if not m:
+                    break
+                p = m.end()
+                if 'resizebox' in cmd:
+                    _, p = extract_mand_arg(t_in, p)
+                    _, p = extract_mand_arg(t_in, p)
+                elif 'parbox' in cmd:
+                    # 可选参数 [pos]
+                    opt, p = extract_opt_arg(t_in, p)
+                    _, p = extract_mand_arg(t_in, p)
+                else: # scalebox
+                    _, p = extract_mand_arg(t_in, p)
+                content, p_end = extract_mand_arg(t_in, p)
+                if content is not None:
+                    t_in = t_in[:m.start()] + ' ' + content + ' ' + t_in[p_end:]
+                else:
+                    break
+        return t_in
+
+    text = _unwrap_boxes(text)
 
     # 算法伪代码环境处理 (\begin{algorithm}, \begin{algorithmic})
     def _repl_algorithm(m):
@@ -365,6 +473,8 @@ def latex_to_md(tex_content: str) -> str:
             line = line.strip()
             if not line or line.startswith(r'\caption') or line.startswith(r'\label'):
                 continue
+            if re.search(r'\\(?:begin|end)\{(?:algorithm\*?|algorithm2e|algorithmic\*?)\}', line):
+                continue
             line = re.sub(r'\\(?:REQUIRE|INPUT)\b\s*', '**Input:** ', line)
             line = re.sub(r'\\(?:ENSURE|OUTPUT)\b\s*', '**Output:** ', line)
             line = re.sub(r'\\STATE\b\s*', '  ', line)
@@ -377,19 +487,26 @@ def latex_to_md(tex_content: str) -> str:
             line = re.sub(r'\\WHILE\{([^}]+)\}', r'**while** \1 **do**', line)
             line = re.sub(r'\\ENDWHILE\b', r'**end while**', line)
             line = re.sub(r'\\RETURN\b\s*', '**return** ', line)
-            if line not in (r'\begin{algorithmic}', r'\end{algorithmic}'):
-                code_lines.append(line)
+            code_lines.append(line)
         return f'\n\n**算法：{title}**\n\n```pseudocode\n' + '\n'.join(code_lines) + '\n```\n\n'
 
-    text = re.sub(r'\\begin\{algorithm\*?\}(?:\[.*?\])?(.*?)\\end\{algorithm\*?\}', _repl_algorithm, text, flags=re.DOTALL)
-    text = re.sub(r'\\begin\{algorithmic\}(.*?)\\end\{algorithmic\}', lambda m: '\n```pseudocode\n' + m.group(1).strip() + '\n```\n', text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{(?:algorithm\*?|algorithm2e)\}(?:\[.*?\])?(.*?)\\end\{(?:algorithm\*?|algorithm2e)\}', _repl_algorithm, text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{algorithmic\*?\}(?:\[.*?\])?(.*?)\\end\{algorithmic\*?\}', lambda m: '\n```pseudocode\n' + m.group(1).strip() + '\n```\n', text, flags=re.DOTALL)
 
-    # 6. 数学环境规范化
-    # 块级独立数学环境
+    # 6. 数学环境与定界符规范化
+    # 特殊块级定界符 \[ ... \]
+    text = re.sub(r'\\\[(.*?)\\\]', r'\n\n$$\n\1\n$$\n\n', text, flags=re.DOTALL)
+    # 行内定界符 \( ... \) 及容错处理（处理类似 \(a_n\ \) 的尾部控制空格）
+    text = re.sub(r'\\\s*\\\)', r'\)', text)
+    text = re.sub(r'\\\(\s*(.*?)\s*\\\)', r'$\1$', text, flags=re.DOTALL)
+    text = re.sub(r'\\\(', '$', text)
+    text = re.sub(r'\\\)', '$', text)
+
+    # 块级独立外层数学环境 (equation, align, gather, multline, etc.)
     math_block_envs = [
-        'equation', 'equation*', 'align', 'align*', 'aligned',
+        'equation', 'equation*', 'align', 'align*',
         'gather', 'gather*', 'multline', 'multline*', 'flalign', 'flalign*',
-        'split', 'alignat', 'alignat*', 'eqnarray', 'eqnarray*'
+        'alignat', 'alignat*', 'eqnarray', 'eqnarray*'
     ]
     for env in math_block_envs:
         escaped_env = re.escape(env)
@@ -405,12 +522,6 @@ def latex_to_md(tex_content: str) -> str:
                 return f'\n\n$$\n\\begin{{{e_name}}}\n{m_body}\n\\end{{{e_name}}}\n$$\n\n'
             return _repl_m
         text = re.sub(pattern, make_repl_math(env), text, flags=re.DOTALL)
-
-    # 特殊块级定界符 \[ ... \]
-    text = re.sub(r'\\\[(.*?)\\\]', r'\n\n$$\n\1\n$$\n\n', text, flags=re.DOTALL)
-    # 行内定界符 \( ... \)
-    text = re.sub(r'\\\)\s*\\\(', r'\) \(', text)
-    text = re.sub(r'\\\((.*?)\\\)', r'$\1$', text, flags=re.DOTALL)
 
     # 7. 列表环境优先解析
     def _repl_itemize(m):
@@ -533,6 +644,8 @@ def latex_to_md(tex_content: str) -> str:
                 last_pos = cur_pos
                 pos = cur_pos
             else:
+                out_chunks.append(t_in[m.start():cur_pos])
+                last_pos = cur_pos
                 pos = cur_pos
         return ''.join(out_chunks)
 
@@ -562,9 +675,6 @@ def latex_to_md(tex_content: str) -> str:
     text = re.sub(r'\\Figure(?:Layout|Trim)Declare\{[^}]*\}\{[^}]*\}', '', text)
 
     # 统一单双栏与包围图形环境
-    text = re.sub(r'\\begin\{(?:figure\*?|wrapfigure)\}(?:\[.*?\])?', r'\\begin{figure}', text)
-    text = re.sub(r'\\end\{(?:figure\*?|wrapfigure)\}', r'\\end{figure}', text)
-
     def _extract_caption(body: str) -> str:
         m = re.search(r'\\caption(?:of\{[a-zA-Z]+\})?(?:\[[^\]]*\])?\{', body)
         if m:
@@ -594,13 +704,15 @@ def latex_to_md(tex_content: str) -> str:
             for img_p in imgs:
                 res.append(f'![{caption}]({img_p.strip()})')
             return '\n\n' + '\n\n'.join(res) + '\n\n'
+        if caption:
+            return f'\n\n**图：{caption}**\n\n'
         return ''
 
-    text = re.sub(r'\\begin\{figure\}(.*?)\\end\{figure\}', _repl_figure, text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{(?:figure\*?|wrapfigure|sidewaysfigure)\}(?:\[.*?\])?(.*?)\\end\{(?:figure\*?|wrapfigure|sidewaysfigure)\}', _repl_figure, text, flags=re.DOTALL)
 
-    # 11. 复杂学术表格 (\begin{table}, \begin{tabular})
+    # 12. 复杂学术表格 (\begin{table}, \begin{tabular})
     def _parse_tabular(tbody: str) -> str:
-        rows = [r.strip() for r in tbody.split(r'\\') if r.strip()]
+        rows = [r.strip() for r in re.split(r'(?<!\\)\\\\(?:\[[^\]]*\])?', tbody) if r.strip()]
         md_table_rows = []
         max_cols = 0
 
@@ -623,6 +735,16 @@ def latex_to_md(tex_content: str) -> str:
                 else:
                     processed_cells.append(cell)
 
+            # 校验单元格内数学公式闭合性（防止表格断行导致定界符跨单元格泄漏）
+            fixed_cells = []
+            for cell in processed_cells:
+                cell_no_display = cell.replace('$$', '')
+                d_cnt = len(re.findall(r'(?<!\\)\$', cell_no_display))
+                if d_cnt % 2 == 1:
+                    cell = cell + '$'
+                fixed_cells.append(cell)
+            processed_cells = fixed_cells
+
             max_cols = max(max_cols, len(processed_cells))
             md_table_rows.append(processed_cells)
 
@@ -644,18 +766,69 @@ def latex_to_md(tex_content: str) -> str:
 
         return '\n\n' + '\n'.join(out) + '\n\n'
 
+    def _parse_tabular_blocks(src: str) -> str:
+        pos = 0
+        out_chunks = []
+        last_pos = 0
+        pattern = re.compile(r'\\begin\{(tabular\*?)\}(?:\[[^\]]*\])?', re.DOTALL)
+        while True:
+            m = pattern.search(src, pos)
+            if not m:
+                out_chunks.append(src[last_pos:])
+                break
+            out_chunks.append(src[last_pos:m.start()])
+            env_name = m.group(1)
+            p_end = m.end()
+            if env_name == 'tabular*':
+                _, p_end = extract_mand_arg(src, p_end)
+            _, p_end = extract_mand_arg(src, p_end)
+            end_tag = rf'\end{{{env_name}}}'
+            end_idx = src.find(end_tag, p_end)
+            if end_idx != -1:
+                tbody = src[p_end:end_idx]
+                out_chunks.append(_parse_tabular(tbody))
+                last_pos = end_idx + len(end_tag)
+                pos = last_pos
+            else:
+                pos = p_end
+        return ''.join(out_chunks)
+
     def _repl_table_env(m):
-        tbl_full = m.group(0)
-        caption = _extract_caption(tbl_full)
+        tbl_body = m.group(1)
+        caption = _extract_caption(tbl_body)
         caption_text = f'\n\n**表：{caption}**\n' if caption else ''
-        tab_m = re.search(r'\\begin\{tabular\*?\}(?:\{[^}]*\})?\{([^}]*)\}(.*?)\\end\{tabular\*?\}', tbl_full, re.DOTALL)
-        if tab_m:
-            return caption_text + _parse_tabular(tab_m.group(2))
+        tab_parsed = _parse_tabular_blocks(tbl_body)
+        # 清理内部残留的 \caption, \label, \centering, \begin{center} 等
+        def _strip_caption(src_t: str) -> str:
+            pos = 0
+            out_c = []
+            last_p = 0
+            pat = re.compile(r'\\caption(?:of\{[a-zA-Z]+\})?(?:\[[^\]]*\])?\s*\{')
+            while True:
+                mm = pat.search(src_t, pos)
+                if not mm:
+                    out_c.append(src_t[last_p:])
+                    break
+                out_c.append(src_t[last_p:mm.start()])
+                _, p_end = extract_mand_arg(src_t, mm.end() - 1)
+                last_p = p_end
+                pos = p_end
+            return ''.join(out_c)
+
+        tab_parsed = _strip_caption(tab_parsed)
+        tab_parsed = re.sub(r'\\label\{[^}]*\}', '', tab_parsed)
+        tab_parsed = re.sub(r'\\(?:centering|raggedright|raggedleft)\b', '', tab_parsed)
+        tab_parsed = re.sub(r'\\begin\{center\}|\\end\{center\}', '', tab_parsed)
+        tab_parsed = tab_parsed.strip()
+        if tab_parsed:
+            return caption_text + tab_parsed
+        if caption:
+            return caption_text
         return ''
 
-    text = re.sub(r'\\begin\{(?:table\*?|wraptable)\}(?:\[.*?\])?(.*?)\\end\{(?:table\*?|wraptable)\}', _repl_table_env, text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{(?:table\*?|wraptable|sidewaystable)\}(?:\[.*?\])?(.*?)\\end\{(?:table\*?|wraptable|sidewaystable)\}', _repl_table_env, text, flags=re.DOTALL)
     # 单独的 tabular
-    text = re.sub(r'\\begin\{tabular\*?\}(?:\{[^}]*\})?\{([^}]*)\}(.*?)\\end\{tabular\*?\}', lambda m: _parse_tabular(m.group(2)), text, flags=re.DOTALL)
+    text = _parse_tabular_blocks(text)
 
     # 12. 章节标题与学术元环境 (Section Hierarchies & Academic Environments)
     # Abstract
@@ -669,16 +842,19 @@ def latex_to_md(tex_content: str) -> str:
     def _repl_keywords(m):
         kw_content = m.group(1).strip()
         return f'\n\n**关键词 (Keywords):** {kw_content}\n\n'
-    text = re.sub(r'\\begin\{(?:IEEEkeywords|keywords)\}(.*?)\\end\{(?:IEEEkeywords|keywords)\}', _repl_keywords, text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{(?:IEEEkeywords|keywords|keywords\*)\}(?:\[.*?\])?(.*?)\\end\{(?:IEEEkeywords|keywords|keywords\*)\}', _repl_keywords, text, flags=re.DOTALL)
     text = re.sub(r'\\keywords\{([^}]+)\}', r'\n\n**关键词 (Keywords):** \1\n\n', text)
 
     # Acknowledgements
-    text = re.sub(r'\\begin\{(?:acknowledgements|acks)\}(.*?)\\end\{(?:acknowledgements|acks)\}', r'\n\n## 致谢 (Acknowledgements)\n\n\1\n\n', text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{(?:acknowledgements|acknowledgments|acks|acks\*)\}(.*?)\\end\{(?:acknowledgements|acknowledgments|acks|acks\*)\}', r'\n\n## 致谢 (Acknowledgements)\n\n\1\n\n', text, flags=re.DOTALL)
     text = re.sub(r'\\section\*?\{(?:Acknowledgements|Acknowledgments|Acks)\}', r'## 致谢 (Acknowledgements)', text, flags=re.IGNORECASE)
 
     # Appendix
     text = re.sub(r'\\begin\{appendix\}(.*?)\\end\{appendix\}', r'\n\n# 附录 (Appendix)\n\n\1\n\n', text, flags=re.DOTALL)
     text = re.sub(r'\\appendix(?![a-zA-Z])', r'\n\n# 附录 (Appendix)\n\n', text)
+
+    # Biography
+    text = re.sub(r'\\begin\{(?:IEEEbiography|IEEEbiographynophoto)\}(?:\[.*?\])?(?:\{.*?\})?(.*?)\\end\{(?:IEEEbiography|IEEEbiographynophoto)\}', r'\n\n**作者简介：**\n\n\1\n\n', text, flags=re.DOTALL)
 
     sec_commands = [
         (r'\\part\*?', '# '),
@@ -708,6 +884,8 @@ def latex_to_md(tex_content: str) -> str:
                 last_pos = p_end
                 pos = p_end
             else:
+                out_chunks.append(text[m.start():p_end])
+                last_pos = p_end
                 pos = p_end
         text = ''.join(out_chunks)
 
@@ -724,7 +902,30 @@ def latex_to_md(tex_content: str) -> str:
         return '[' + '; '.join(f'@{k}' for k in keys) + ']'
     text = re.sub(r'\\(?:cite|citep|citet|parencite|textcite|citeauthor|citeyear|nocite|citealp|citealt)(?:\[.*?\])*\{([^}]+)\}', _repl_cite, text)
 
-    # 14. 递归内联排版解析（使用平衡括号，彻底杜绝单层正则截断）
+    # 14. 递归内联排版解析（保护数学公式与代码块，使用平衡括号，彻底杜绝公式内部污染与截断）
+    math_placeholders = []
+    def _hide_math_blocks(src: str) -> str:
+        math_pat = re.compile(r'(```.*?```|\$\$.*?\$\$|(?<!\\)\$(?:(?:\\[\s\S])|[^\\$\n\r]|\n(?!\n))+(?<!\\)\$)', re.DOTALL)
+        parts = math_pat.split(src)
+        out = []
+        for i, p in enumerate(parts):
+            if i % 2 == 1:
+                # 数学公式内 KaTeX/MathJax 不支持 \textsc，平滑映射为 \mathrm
+                cleaned_math = re.sub(r'\\textsc\{([^}]+)\}', r'\\mathrm{\1}', p)
+                pid = len(math_placeholders)
+                math_placeholders.append(cleaned_math)
+                out.append(f'§§MATH_{pid}§§')
+            else:
+                out.append(p)
+        return ''.join(out)
+
+    def _restore_math_blocks(src: str) -> str:
+        for pid, p in enumerate(math_placeholders):
+            src = src.replace(f'§§MATH_{pid}§§', p)
+        return src
+
+    text = _hide_math_blocks(text)
+
     footnotes_collected = []
     def _format_footnote(fn_content: str) -> str:
         fn_id = len(footnotes_collected) + 1
@@ -751,26 +952,38 @@ def latex_to_md(tex_content: str) -> str:
         (r'\\footnote', _format_footnote)
     ]
 
-    for cmd_tag, formatter in inline_map:
-        pos = 0
-        out_chunks = []
-        last_pos = 0
-        pattern = re.compile(cmd_tag + r'(?![a-zA-Z])')
-        while True:
-            m = pattern.search(text, pos)
-            if not m:
-                out_chunks.append(text[last_pos:])
-                break
-            out_chunks.append(text[last_pos:m.start()])
-            p_end = m.end()
-            arg_val, p_end = extract_mand_arg(text, p_end)
-            if arg_val is not None:
-                out_chunks.append(formatter(arg_val))
-                last_pos = p_end
-                pos = p_end
-            else:
-                pos = p_end
-        text = ''.join(out_chunks)
+    # 移除 \xspace 控制符
+    text = re.sub(r'\\xspace(?![a-zA-Z])', '', text)
+
+    for _ in range(3):
+        changed = False
+        for cmd_tag, formatter in inline_map:
+            pos = 0
+            out_chunks = []
+            last_pos = 0
+            pattern = re.compile(cmd_tag + r'(?![a-zA-Z])')
+            while True:
+                m = pattern.search(text, pos)
+                if not m:
+                    out_chunks.append(text[last_pos:])
+                    break
+                out_chunks.append(text[last_pos:m.start()])
+                p_end = m.end()
+                arg_val, p_end = extract_mand_arg(text, p_end)
+                if arg_val is not None:
+                    out_chunks.append(formatter(arg_val))
+                    last_pos = p_end
+                    pos = p_end
+                    changed = True
+                else:
+                    out_chunks.append(text[m.start():p_end])
+                    last_pos = p_end
+                    pos = p_end
+            text = ''.join(out_chunks)
+        if not changed:
+            break
+
+    text = _restore_math_blocks(text)
 
     # \href{url}{text} 与 \url{url}
     def _repl_href(t_in: str) -> str:
@@ -792,6 +1005,8 @@ def latex_to_md(tex_content: str) -> str:
                 last_pos = p_end
                 pos = p_end
             else:
+                out_chunks.append(t_in[m.start():p_end])
+                last_pos = p_end
                 pos = p_end
         return ''.join(out_chunks)
 
@@ -815,9 +1030,9 @@ def latex_to_md(tex_content: str) -> str:
 
     text = re.sub(r'\\begin\{thebibliography\}(?:\{[^}]*\})?(.*?)\\end\{thebibliography\}', _repl_bib, text, flags=re.DOTALL)
 
-    # 16. 保护数学公式并清理普通文本中的 LaTeX 转义字符与经典引号（精确切分，零 Token 泄漏风险）
+    # 16. 保护代码块与数学公式，并清理普通文本中的 LaTeX 转义字符与经典引号（精确切分，零 Token 泄漏风险）
     def _unescape_plain_text(t: str) -> str:
-        pattern = re.compile(r'(\$\$.*?\$\$|(?<!\\)\$.*?(?<!\\)\$)', re.DOTALL)
+        pattern = re.compile(r'(```.*?```|`[^`\n]+`|\$\$.*?\$\$|(?<!\\)\$(?:(?:\\[\s\S])|[^\\$\n\r]|\n(?!\n))+(?<!\\)\$)', re.DOTALL)
         parts = pattern.split(t)
         out = []
         for i, p in enumerate(parts):
@@ -827,6 +1042,8 @@ def latex_to_md(tex_content: str) -> str:
                 p = re.sub(r"``(.*?)''", r'“\1”', p, flags=re.DOTALL)
                 p = re.sub(r"`(.*?)'", r'‘\1’', p, flags=re.DOTALL)
                 p = p.replace(r'\%', '%').replace(r'\&', '&').replace(r'\_', '_').replace(r'\#', '#').replace(r'\{', '{').replace(r'\}', '}').replace('~', ' ')
+                # 转义普通正文中的孤立符号 $（如 (like $ or ,)）
+                p = re.sub(r'(^|[\s\(\[{<])\$(?=[\s\)\]}>,.:;!?]|$)', r'\1\\$', p)
                 out.append(p)
         return ''.join(out)
 
@@ -868,7 +1085,9 @@ LATEX_ARTICLE_TEMPLATE = r"""\documentclass[11pt,a4paper]{article}
 \usepackage[utf8]{inputenc}
 \usepackage[margin=2.5cm]{geometry}
 \usepackage{amsmath,amssymb,amsfonts,amsthm,mathtools}
-\usepackage{booktabs,tabularx,multirow}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{multirow}
 \usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{listings}
