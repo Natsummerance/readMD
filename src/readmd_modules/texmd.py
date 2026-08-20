@@ -85,7 +85,19 @@ class MacroExpander:
     """LaTeX 自定义宏展开器，支持无参及带参 (\\newcommand, \\def) 递归展开。"""
 
     def __init__(self):
-        self.macros: Dict[str, Dict[str, Any]] = {}
+        # 内置高频数学缩写与考试命题宏
+        self.macros: Dict[str, Dict[str, Any]] = {
+            "R": {"num_args": 0, "body": r"\mathbb{R}"},
+            "N": {"num_args": 0, "body": r"\mathbb{N}"},
+            "Z": {"num_args": 0, "body": r"\mathbb{Z}"},
+            "Q": {"num_args": 0, "body": r"\mathbb{Q}"},
+            "C": {"num_args": 0, "body": r"\mathbb{C}"},
+            "bs": {"num_args": 1, "body": r"\mathbf{#1}"},
+            "degree": {"num_args": 0, "body": r"^\circ"},
+            "tri": {"num_args": 0, "body": r"\triangle"},
+            "i": {"num_args": 0, "body": r"\mathrm{i}"},
+            "e": {"num_args": 0, "body": r"\mathrm{e}"},
+        }
 
     def parse_preamble_macros(self, text: str) -> str:
         """扫描并提取导言区中的宏定义，返回去除宏定义语句后的文本。"""
@@ -360,7 +372,75 @@ def latex_to_md(tex_content: str) -> str:
             return _repl_th
         text = re.sub(pattern, make_repl_thm(thm_title), text, flags=re.DOTALL | re.IGNORECASE)
 
-    # 8. 图形与多媒体 (\begin{figure} ... \includegraphics ...)
+    # 8. 题目、选项、答案与解析环境 (Exam & Problem Sets)
+    def _repl_choices(t_in: str) -> str:
+        pos = 0
+        out_chunks = []
+        last_pos = 0
+        pattern = re.compile(r'\\choices(?![a-zA-Z])')
+        labels = ['A', 'B', 'C', 'D', 'E', 'F']
+        while True:
+            m = pattern.search(t_in, pos)
+            if not m:
+                out_chunks.append(t_in[last_pos:])
+                break
+            out_chunks.append(t_in[last_pos:m.start()])
+            cur_pos = m.end()
+            opts = []
+            for _ in range(4):
+                opt_val, cur_pos = extract_mand_arg(t_in, cur_pos)
+                if opt_val is not None:
+                    opts.append(opt_val.strip())
+                else:
+                    break
+            if opts:
+                choice_lines = []
+                for idx, opt_text in enumerate(opts):
+                    lbl = labels[idx] if idx < len(labels) else str(idx + 1)
+                    choice_lines.append(f'- **{lbl}.** {opt_text}')
+                out_chunks.append('\n\n' + '\n'.join(choice_lines) + '\n\n')
+                last_pos = cur_pos
+                pos = cur_pos
+            else:
+                pos = cur_pos
+        return ''.join(out_chunks)
+
+    text = _repl_choices(text)
+
+    # 题目、答案、解析
+    text = re.sub(r'\\begin\{problem\*?\}(?:\[.*?\])?(.*?)\\end\{problem\*?\}',
+                  lambda m: f'\n\n#### 【题目】\n\n{m.group(1).strip()}\n\n', text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{answer\*?\}(?:\[.*?\])?(.*?)\\end\{answer\*?\}',
+                  lambda m: f'\n\n> **【答案】** {m.group(1).strip()}\n\n', text, flags=re.DOTALL)
+    text = re.sub(r'\\begin\{solution\*?\}(?:\[.*?\])?(.*?)\\end\{solution\*?\}',
+                  lambda m: '\n\n> **【解析】**\n>\n' + '\n'.join(f'> {l}' for l in m.group(1).strip().splitlines()) + '\n\n',
+                  text, flags=re.DOTALL)
+
+    # 圆圈序号列表 \begin{circlelist}
+    def _repl_circlelist(m):
+        body = m.group(1).strip()
+        items = re.split(r'\\item\s+', body)
+        res = []
+        circle_nums = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩']
+        idx = 0
+        for it in items:
+            it = it.strip()
+            if it:
+                c_num = circle_nums[idx] if idx < len(circle_nums) else f'({idx+1})'
+                res.append(f'- **{c_num}** {it}')
+                idx += 1
+        return '\n\n' + '\n'.join(res) + '\n\n'
+
+    text = re.sub(r'\\begin\{circlelist\*?\}(.*?)\\end\{circlelist\*?\}', _repl_circlelist, text, flags=re.DOTALL)
+
+    # 9. 图形与多媒体及填空题标记 (\begin{figure} ... \includegraphics ...)
+    text = re.sub(r'\\fillinblank(?:\{[^}]*\})?', ' ______ ', text)
+    text = re.sub(r'\\blank(?:\{[^}]*\})?', ' ______ ', text)
+    text = re.sub(r'\\solutionfigure\{\\bitmapfigure(?:\[.*?\])?\{([^}]+)\}\}', r'\n\n![解析配图](\1)\n\n', text)
+    text = re.sub(r'\\bitmapfigure(?:\[.*?\])?\{([^}]+)\}', r'\n\n![题目配图](\1)\n\n', text)
+    text = re.sub(r'\\Figure(?:Layout|Trim)Declare\{[^}]*\}\{[^}]*\}\{[^}]*\}', '', text)
+    text = re.sub(r'\\Figure(?:Layout|Trim)Declare\{[^}]*\}\{[^}]*\}', '', text)
+
     def _repl_figure(m):
         f_body = m.group(1)
         cap_m = re.search(r'\\caption\{([^}]+)\}', f_body)
@@ -373,7 +453,7 @@ def latex_to_md(tex_content: str) -> str:
 
     text = re.sub(r'\\begin\{figure\*?\}(?:\[.*?\])?(.*?)\\end\{figure\*?\}', _repl_figure, text, flags=re.DOTALL)
 
-    # 9. 复杂学术表格 (\begin{table}, \begin{tabular})
+    # 10. 复杂学术表格 (\begin{table}, \begin{tabular})
     def _parse_tabular(tbody: str) -> str:
         rows = [r.strip() for r in tbody.split(r'\\') if r.strip()]
         md_table_rows = []
@@ -592,9 +672,21 @@ def latex_to_md(tex_content: str) -> str:
 
     text = re.sub(r'\\begin\{thebibliography\}(?:\{[^}]*\})?(.*?)\\end\{thebibliography\}', _repl_bib, text, flags=re.DOTALL)
 
-    # 15. 转义特殊字符清理
+    # 15. 保护数学公式并清理普通文本中的 LaTeX 转义字符
+    math_tokens = []
+    def _save_math(m):
+        tok = f'QQQTEXMDMATHTOKEN{len(math_tokens)}QQQ'
+        math_tokens.append(m.group(0))
+        return tok
+
+    text = re.sub(r'\$\$.*?\$\$', _save_math, text, flags=re.DOTALL)
+    text = re.sub(r'(?<!\\)\$.*?(?<!\\)\$', _save_math, text, flags=re.DOTALL)
+
     text = text.replace(r'\%', '%').replace(r'\&', '&').replace(r'\_', '_').replace(r'\#', '#').replace(r'\{', '{').replace(r'\}', '}')
     text = text.replace('~', ' ')  # 不换行空格
+
+    for idx, mt in enumerate(math_tokens):
+        text = text.replace(f'QQQTEXMDMATHTOKEN{idx}QQQ', mt)
 
     # 16. 构建 Frontmatter
     frontmatter = []
