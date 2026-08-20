@@ -1,8 +1,8 @@
 {
   "name": "readmd-vscode",
   "displayName": "ReadMD —— 高性能 Markdown 智能预览与自愈修复",
-  "description": "轻量级本地 Markdown 智能阅读与编辑扩展：实时双向同步预览、格式自愈修复、LaTeX PRO 学术公式支持、BibTeX 智能卡片与 Markdown ⇄ LaTeX 互转。",
-  "version": "2.3.3",
+  "description": "轻量级本地 Markdown 智能阅读与编辑扩展：实时双向同步预览、格式自愈修复、全格式文档互转、排版级 PDF/Word/EPUB 导出、LaTeX/TikZ 科学绘图、多语言 Code Chunk、Reveal.js 演说模式、@import 模块化、[TOC]目录生成与 MCP 智能体协同。",
+  "version": "2.3.4",
   "publisher": "Natsummerance",
   "icon": "icon.png",
   "license": "MIT",
@@ -29,12 +29,28 @@
     "formatter",
     "bibtex",
     "readmd",
-    "equation",
-    "math"
+    "pdf",
+    "docx",
+    "presentation",
+    "revealjs",
+    "toc",
+    "mcp"
   ],
   "main": "./out/extension.js",
   "activationEvents": [
-    "onLanguage:markdown"
+    "onLanguage:markdown",
+    "onCommand:readmd.preview",
+    "onCommand:readmd.fixCurrentDocument",
+    "onCommand:readmd.openPresentation",
+    "onCommand:readmd.exportPresentation",
+    "onCommand:readmd.insertToc",
+    "onCommand:readmd.insertSlide",
+    "onCommand:readmd.processImports",
+    "onCommand:readmd.runCodeChunk",
+    "onCommand:readmd.exportDocument",
+    "onCommand:readmd.convertFileToMarkdown",
+    "onCommand:readmd.fetchWebToMarkdown",
+    "onCommand:readmd.setupMcpServer"
   ],
   "contributes": {
     "commands": [
@@ -49,31 +65,170 @@
         "icon": "$(wrench)"
       },
       {
+        "command": "readmd.openPresentation",
+        "title": "ReadMD: 开启全屏 Reveal.js 演说模式 (Open Presentation Mode)",
+        "icon": "$(screen-full)"
+      },
+      {
+        "command": "readmd.exportPresentation",
+        "title": "ReadMD: 导出 Reveal.js 演说 HTML (Export Presentation HTML)",
+        "icon": "$(file-media)"
+      },
+      {
+        "command": "readmd.insertToc",
+        "title": "ReadMD: 插入 [TOC] 自动目录 (Insert TOC)",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "readmd.insertSlide",
+        "title": "ReadMD: 插入 <!-- slide --> 幻灯片分页符 (Insert Slide Break)",
+        "icon": "$(split-horizontal)"
+      },
+      {
+        "command": "readmd.processImports",
+        "title": "ReadMD: 展平并编译 @import 模块化引用 (Flatten @import Modules)",
+        "icon": "$(references)"
+      },
+      {
+        "command": "readmd.runCodeChunk",
+        "title": "ReadMD: 安全运行光标所在 Python 代码块 (Run Code Chunk)",
+        "icon": "$(play)"
+      },
+      {
+        "command": "readmd.exportDocument",
+        "title": "ReadMD: 排版级导出文档 (Export to PDF / Word / HTML / LaTeX)",
+        "icon": "$(export)"
+      },
+      {
+        "command": "readmd.convertFileToMarkdown",
+        "title": "ReadMD: 转换为 Markdown (Convert to Markdown)",
+        "icon": "$(file-symlink-file)"
+      },
+      {
+        "command": "readmd.convertAnyFilePrompt",
+        "title": "ReadMD: 转换本地文档为 Markdown...",
+        "icon": "$(file-symlink-file)"
+      },
+      {
+        "command": "readmd.fetchWebToMarkdown",
+        "title": "ReadMD: 抓取网页 URL 为 Markdown (Fetch Web Page to Markdown)",
+        "icon": "$(globe)"
+      },
+      {
         "command": "readmd.convertToLatex",
         "title": "ReadMD: 一键编译转为学术 LaTeX 源码 (Convert Markdown to LaTeX)",
         "icon": "$(file-code)"
+      },
+      {
+        "command": "readmd.parseBibtex",
+        "title": "ReadMD: 解析 BibTeX 参考文献 (Parse BibTeX Database)",
+        "icon": "$(references)"
+      },
+      {
+        "command": "readmd.setupMcpServer",
+        "title": "ReadMD: 一键配置工作区 MCP Server (Setup ReadMD MCP Server)",
+        "icon": "$(hubot)"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "readmd-sidebar",
+          "title": "ReadMD 工具箱",
+          "icon": "icon.png"
+        }
+      ]
+    },
+    "views": {
+      "readmd-sidebar": [
+        {
+          "id": "readmdToolbox",
+          "name": "ReadMD 快捷工具箱"
+        }
+      ]
+    },
     "menus": {
       "editor/title": [
         {
           "command": "readmd.preview",
           "when": "resourceExtname == .md || resourceExtname == .markdown",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "command": "readmd.openPresentation",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "navigation@2"
+        },
+        {
+          "command": "readmd.fixCurrentDocument",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "navigation@3"
         }
       ],
       "editor/context": [
         {
           "command": "readmd.fixCurrentDocument",
           "when": "resourceExtname == .md || resourceExtname == .markdown",
-          "group": "1_modification"
+          "group": "1_modification@1"
+        },
+        {
+          "command": "readmd.insertToc",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "1_modification@2"
+        },
+        {
+          "command": "readmd.openPresentation",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "1_modification@3"
+        },
+        {
+          "command": "readmd.runCodeChunk",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "1_modification@4"
+        },
+        {
+          "command": "readmd.exportDocument",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "2_export@1"
+        },
+        {
+          "command": "readmd.exportPresentation",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "2_export@2"
         },
         {
           "command": "readmd.convertToLatex",
           "when": "resourceExtname == .md || resourceExtname == .markdown",
-          "group": "1_modification"
+          "group": "2_export@3"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "readmd.convertFileToMarkdown",
+          "when": "resourceExtname =~ /\\.(docx|pdf|pptx|xlsx|tex|txt|html|png|jpg|webp)$/i",
+          "group": "7_modification"
+        },
+        {
+          "command": "readmd.parseBibtex",
+          "when": "resourceExtname == .bib",
+          "group": "7_modification"
         }
       ]
+    },
+    "configuration": {
+      "title": "ReadMD",
+      "properties": {
+        "readmd.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "自定义 Python 可执行程序路径（留空则自动检测活动虚拟环境或系统 Python）"
+        },
+        "readmd.customCssPath": {
+          "type": "string",
+          "default": "",
+          "description": "用户自定义全局 custom.css 文件的绝对路径"
+        }
+      }
     }
   },
   "scripts": {

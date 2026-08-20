@@ -1,0 +1,72 @@
+{
+  "generator": "ReadMD Native Pipeline v2.3.4",
+  "total_documents": 11,
+  "documents": {
+    "README.md": {
+      "ok": true,
+      "path": "docs/mpe_crawled_docs/README.md",
+      "chars": 713,
+      "fixes_applied": 2
+    },
+    "usages.md": {
+      "ok": true,
+      "path": "docs/mpe_crawled_docs/usages.md",
+      "chars": 483,
+      "fixes_applied": 0
+    },
+    "markdown-basics.md": {
+      "ok": true,
+      "path": "docs/mpe_crawled_docs/markdown-basics.md",
+      "chars": 287,
+      "fixes_applied": 0
+    },
+    "math.md": {
+      "ok": true,
+      "path": "docs/mpe_crawled_docs/math.md",
+      "chars": 223,
+      "fixes_applied": 0
+    },
+    "diagrams.md": {
+      "ok": true,
+      "path": "docs/mpe_crawled_docs/diagrams.md",
+      "chars": 766,
+      "fixes_applied": 0
+    },
+    "file-imports.md": {
+      "ok": true,
+      "path": "docs/mpe_crawled_docs/file-imports.md",
+      "chars": 282,
+      "fixes_applied": 0
+    },
+    "code-chunk.md": {
+      "ok": true,
+      "path": "docs/mpe_crawled_docs/code-chunk.md",
+      "chars": 342,
+      "fixes_applied": 0
+    },
+    "presentation.md": {
+      "ok": true,
+      "path": "docs/mpe_crawled_docs/presentation.md",
+      "chars": 322,
+      "fixes_applied": 0
+    },
+    "toc.md": {
+      "ok": true,
+      "path": "docs/mpe_crawled_docs/toc.md",
+      "chars": 135,
+      "fixes_applied": 0
+    },
+    "export.md": {
+      "ok": true,
+      "path": "docs/mpe_crawled_docs/export.md",
+      "chars": 251,
+      "fixes_applied": 0
+    },
+    "customize-css.md": {
+      "ok": true,
+      "path": "docs/mpe_crawled_docs/customize-css.md",
+      "chars": 153,
+      "fixes_applied": 0
+    }
+  }
+}

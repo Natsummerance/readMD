@@ -1,0 +1,48 @@
+{
+  "claude_desktop": {
+    "mcpServers": {
+      "readmd": {
+        "command": "python",
+        "args": [
+          "${workspaceFolder}/packages/mcp-server/readmd_mcp_server.py"
+        ],
+        "env": {
+          "PYTHONIOENCODING": "utf-8"
+        }
+      }
+    }
+  },
+  "cursor": {
+    "mcpServers": {
+      "readmd": {
+        "command": "python",
+        "args": [
+          "${workspaceFolder}/packages/mcp-server/readmd_mcp_server.py"
+        ]
+      }
+    }
+  },
+  "vscode_mcp": {
+    "mcp": {
+      "servers": {
+        "readmd": {
+          "type": "stdio",
+          "command": "python",
+          "args": [
+            "${workspaceFolder}/packages/mcp-server/readmd_mcp_server.py"
+          ]
+        }
+      }
+    }
+  },
+  "antigravity": {
+    "mcpServers": {
+      "readmd": {
+        "command": "python",
+        "args": [
+          "${workspaceFolder}/packages/mcp-server/readmd_mcp_server.py"
+        ]
+      }
+    }
+  }
+}

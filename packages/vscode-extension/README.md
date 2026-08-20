@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="https://github.com/Natsummerance/readMD"><img src="https://img.shields.io/badge/GitHub-Natsummerance%2FreadMD-blue?logo=github" alt="GitHub"></a>
-  <a href="https://github.com/Natsummerance/readMD/releases"><img src="https://img.shields.io/badge/Version-v2.3.3-3b82f6" alt="Version"></a>
+  <a href="https://github.com/Natsummerance/readMD/releases"><img src="https://img.shields.io/badge/Version-v2.3.4-3b82f6" alt="Version"></a>
   <a href="https://github.com/Natsummerance/readMD/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"></a>
 </p>
 

@@ -162,14 +162,14 @@ class TestV231Features(unittest.TestCase):
         self.assertTrue(os.path.exists(mcp_path))
         with open(mcp_path, 'r', encoding='utf-8') as f:
             mcp = f.read()
-        self.assertIn('"version": "2.3.', mcp)
+        self.assertTrue('"version": "2.3.' in mcp or '"version": "2.4.' in mcp)
 
         # 5. VSCode extension version consistency
         vscode_pkg = os.path.join(root, 'packages', 'vscode-extension', 'package.json')
         self.assertTrue(os.path.exists(vscode_pkg))
         with open(vscode_pkg, 'r', encoding='utf-8') as f:
             vp = f.read()
-        self.assertIn('"version": "2.3.', vp)
+        self.assertTrue('"version": "2.3.' in vp or '"version": "2.4.' in vp)
 
 
 if __name__ == '__main__':

@@ -1,13 +1,42 @@
 import * as vscode from 'vscode';
-import * as cp from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
+import { ReadMDBridge } from './bridge';
+import { ReadMDToolboxProvider } from './sidebarProvider';
+
+let diagnosticStatusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext) {
-  // 注册预览命令
+  const bridge = new ReadMDBridge(context);
+
+  // 1. 注册侧边栏工具箱视图
+  const toolboxProvider = new ReadMDToolboxProvider();
+  vscode.window.registerTreeDataProvider('readmdToolbox', toolboxProvider);
+
+  // 2. 状态栏指示器
+  diagnosticStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  diagnosticStatusBarItem.command = 'readmd.fixCurrentDocument';
+  context.subscriptions.push(diagnosticStatusBarItem);
+
+  const updateStatusBar = () => {
+    const editor = vscode.window.activeTextEditor;
+    if (editor && (editor.document.languageId === 'markdown' || editor.document.fileName.endsWith('.md'))) {
+      diagnosticStatusBarItem.text = `$(wrench) ReadMD 自愈`;
+      diagnosticStatusBarItem.tooltip = '点击运行 ReadMD 智能诊断并修复 Markdown 格式错误';
+      diagnosticStatusBarItem.show();
+    } else {
+      diagnosticStatusBarItem.hide();
+    }
+  };
+
+  vscode.window.onDidChangeActiveTextEditor(updateStatusBar, null, context.subscriptions);
+  updateStatusBar();
+
+  // 3. 命令：实时双向同步增强预览 (含 KaTeX、Mermaid、WaveDrom、代码高亮)
   const previewDisposable = vscode.commands.registerCommand('readmd.preview', () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-      vscode.window.showInformationMessage('请先打开一个 Markdown 文档');
+      vscode.window.showInformationMessage('请先在编辑器中打开一个 Markdown 文档');
       return;
     }
 
@@ -23,7 +52,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     const updateWebview = () => {
       const text = editor.document.getText();
-      panel.webview.html = getWebviewContent(text);
+      panel.webview.html = getEnhancedWebviewContent(text, path.basename(editor.document.fileName));
     };
 
     updateWebview();
@@ -38,93 +67,611 @@ export function activate(context: vscode.ExtensionContext) {
     }, null, context.subscriptions);
   });
 
-  // 注册自动修复命令
+  // 4. 命令：智能自愈修复当前文档
   const fixDisposable = vscode.commands.registerCommand('readmd.fixCurrentDocument', async () => {
     const editor = vscode.window.activeTextEditor;
-    if (!editor) return;
+    if (!editor) {
+      vscode.window.showWarningMessage('请先打开需要修复的 Markdown 文档');
+      return;
+    }
 
     const doc = editor.document;
     const text = doc.getText();
 
-    // 尝试调用 Python 核心 readmd_fix
-    const pythonScript = path.join(context.extensionPath, '..', '..', 'src', 'readmd_fix.py');
-    const proc = cp.spawn('python', ['-c', `
-import sys, json, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(r'${pythonScript}')))
-from src import readmd_fix
-content = sys.stdin.read()
-repaired, fixes, stats = readmd_fix.fix_markdown_text(content)
-print(json.dumps({'repaired': repaired, 'fixes': len(fixes)}))
-    `]);
-
-    let out = '';
-    proc.stdout.on('data', data => { out += data.toString(); });
-    proc.stdin.write(text);
-    proc.stdin.end();
-
-    proc.on('close', code => {
-      if (code === 0 && out) {
-        try {
-          const res = jsonParse(out);
-          if (res.repaired && res.repaired !== text) {
-            editor.edit(editBuilder => {
-              const fullRange = new vscode.Range(
-                doc.positionAt(0),
-                doc.positionAt(text.length)
-              );
-              editBuilder.replace(fullRange, res.repaired);
-            });
-            vscode.window.showInformationMessage(`ReadMD: 已成功自动修正 ${res.fixes} 处格式错误！`);
-          } else {
-            vscode.window.showInformationMessage('ReadMD: 当前文档格式规范，未检测到需要修正的错误。');
-          }
-        } catch (e) {
-          vscode.window.showErrorMessage('解析修复结果失败');
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'ReadMD 正在诊断并修复 Markdown 格式...',
+      cancellable: false,
+    }, async () => {
+      try {
+        const res = await bridge.fixMarkdown(text);
+        if (res.ok && res.repaired_content && res.repaired_content !== text) {
+          await editor.edit(editBuilder => {
+            const fullRange = new vscode.Range(
+              doc.positionAt(0),
+              doc.positionAt(text.length)
+            );
+            editBuilder.replace(fullRange, res.repaired_content);
+          });
+          const detailMsg = res.fixes_count > 0 ? `（共修复 ${res.fixes_count} 处）` : '';
+          vscode.window.showInformationMessage(`ReadMD: 文档格式已成功自愈！${detailMsg}`);
+        } else {
+          vscode.window.showInformationMessage('ReadMD: 当前文档格式规范，未检测到需要修复的语法问题。');
         }
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`ReadMD 自愈失败: ${err.message}`);
       }
     });
   });
 
-  context.subscriptions.push(previewDisposable, fixDisposable);
+  // 5. 命令：Reveal.js 全屏演说模式
+  const presentationDisposable = vscode.commands.registerCommand('readmd.openPresentation', () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showWarningMessage('请先打开 Markdown 幻灯片文档');
+      return;
+    }
+
+    const panel = vscode.window.createWebviewPanel(
+      'readmdPresentation',
+      `演说: ${path.basename(editor.document.fileName)}`,
+      vscode.ViewColumn.Active,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+      }
+    );
+
+    const docText = editor.document.getText();
+    const docTitle = path.basename(editor.document.fileName, path.extname(editor.document.fileName));
+    panel.webview.html = getPresentationWebviewHtml(docText, docTitle);
+  });
+
+  // 6. 命令：导出演说 HTML
+  const exportPresentationDisposable = vscode.commands.registerCommand('readmd.exportPresentation', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return;
+
+    const defaultUri = vscode.Uri.file(
+      editor.document.fileName.replace(/\.[^/.]+$/, '') + '.slides.html'
+    );
+
+    const saveUri = await vscode.window.showSaveDialog({
+      defaultUri,
+      filters: { 'Reveal.js HTML Presentation': ['html'] },
+      title: '导出 Reveal.js 演说 HTML',
+    });
+
+    if (!saveUri) return;
+
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'ReadMD 正在编译 Reveal.js 演说稿...',
+      cancellable: false,
+    }, async () => {
+      try {
+        const text = editor.document.getText();
+        const docTitle = path.basename(editor.document.fileName, path.extname(editor.document.fileName));
+        await bridge.exportPresentation(text, saveUri.fsPath, docTitle);
+        const openBtn = '打开文件';
+        const choice = await vscode.window.showInformationMessage(`ReadMD: 成功导出 Reveal.js 演说稿！`, openBtn);
+        if (choice === openBtn) {
+          vscode.env.openExternal(saveUri);
+        }
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`演说稿导出失败: ${err.message}`);
+      }
+    });
+  });
+
+  // 7. 命令：插入 [TOC] 目录
+  const insertTocDisposable = vscode.commands.registerCommand('readmd.insertToc', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return;
+
+    editor.edit(editBuilder => {
+      editBuilder.insert(editor.selection.active, '\n[TOC]\n\n');
+    });
+    vscode.window.showInformationMessage('ReadMD: 已插入 [TOC] 自动目录标签');
+  });
+
+  // 8. 命令：插入分页符
+  const insertSlideDisposable = vscode.commands.registerCommand('readmd.insertSlide', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return;
+
+    editor.edit(editBuilder => {
+      editBuilder.insert(editor.selection.active, '\n<!-- slide -->\n\n');
+    });
+  });
+
+  // 9. 命令：展平 @import 引用
+  const processImportsDisposable = vscode.commands.registerCommand('readmd.processImports', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return;
+
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'ReadMD 正在展平并编译 @import 模块...',
+      cancellable: false,
+    }, async () => {
+      try {
+        const text = editor.document.getText();
+        const baseDir = path.dirname(editor.document.fileName);
+        const flattened = await bridge.processImports(text, baseDir);
+        const doc = await vscode.workspace.openTextDocument({
+          content: flattened,
+          language: 'markdown',
+        });
+        await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+        vscode.window.showInformationMessage('ReadMD: 已成功展平编译全部 @import 模块！');
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`展平模块失败: ${err.message}`);
+      }
+    });
+  });
+
+  // 10. 命令：安全运行代码块
+  const runCodeChunkDisposable = vscode.commands.registerCommand('readmd.runCodeChunk', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return;
+
+    const selection = editor.selection;
+    let codeText = editor.document.getText(selection);
+
+    if (!codeText.trim()) {
+      // 提取光标所在的代码块
+      const fullText = editor.document.getText();
+      const cursorOffset = editor.document.offsetAt(selection.active);
+      const codeBlockRegex = /```(?:python|py)\b[^\n]*\n([\s\S]*?)```/g;
+      let match;
+      while ((match = codeBlockRegex.exec(fullText)) !== null) {
+        if (cursorOffset >= match.index && cursorOffset <= match.index + match[0].length) {
+          codeText = match[1];
+          break;
+        }
+      }
+    }
+
+    if (!codeText.trim()) {
+      vscode.window.showInformationMessage('请将光标移至 Python 代码块内或选中需要运行的代码');
+      return;
+    }
+
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'ReadMD 正在安全执行代码块...',
+      cancellable: false,
+    }, async () => {
+      try {
+        const res = await bridge.runCodeChunk(codeText);
+        if (res.ok) {
+          let msg = res.stdout ? `输出:\n${res.stdout}` : '代码执行成功 (无标准输出)';
+          if (res.images && res.images.length > 0) {
+            msg += `\n[已生成 ${res.images.length} 张图表]`;
+          }
+          vscode.window.showInformationMessage(msg);
+        } else {
+          vscode.window.showErrorMessage(`代码运行异常:\n${res.stderr || res.error}`);
+        }
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`运行失败: ${err.message}`);
+      }
+    });
+  });
+
+  // 11. 命令：排版级导出文档 (PDF / Word / HTML / LaTeX)
+  const exportDisposable = vscode.commands.registerCommand('readmd.exportDocument', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      vscode.window.showWarningMessage('请先打开需要导出的 Markdown 文档');
+      return;
+    }
+
+    const formatPick = await vscode.window.showQuickPick([
+      { label: '$(file-pdf) PDF 文档 (.pdf)', value: 'pdf', description: '排版级高精度 PDF 导出' },
+      { label: '$(file-text) Word 文档 (.docx)', value: 'docx', description: '包含原生 OMML 数学公式与样式' },
+      { label: '$(book) EPUB 电子书 (.epub)', value: 'epub', description: '标准 EPUB 3.0 电子书 (支持微信读书/Apple Books)' },
+      { label: '$(browser) 独立 HTML 网页 (.html)', value: 'html', description: '内置 KaTeX / 主题切换单文件' },
+      { label: '$(file-code) 学术 LaTeX 源码 (.tex)', value: 'tex', description: '标准 pdflatex/xelatex 可编译源码' },
+    ], { placeHolder: '请选择要导出的目标文件格式' });
+
+    if (!formatPick) return;
+
+    const presetPick = await vscode.window.showQuickPick([
+      { label: 'minimal', description: '极简清爽 —— 适合日常阅读与通用笔记' },
+      { label: 'academic', description: '学术论文 —— 严谨衬线排版与经典字号' },
+      { label: 'report', description: '企业报告 —— 蓝调商务与结构化数据呈现' },
+      { label: 'tech', description: '技术文档 —— 强调代码块与等宽阅读' },
+      { label: 'warm', description: '温暖护眼 —— 暖色调与舒适字距' },
+      { label: 'elegant', description: '典雅文集 —— 优雅人文质感' },
+      { label: 'compact', description: '紧凑打印 —— 最大化页面空间利用率' },
+    ], { placeHolder: '请选择排版样式预设' });
+
+    if (!presetPick) return;
+
+    const currentExt = `.${formatPick.value}`;
+    const defaultUri = vscode.Uri.file(
+      editor.document.fileName.replace(/\.[^/.]+$/, '') + currentExt
+    );
+
+    const saveUri = await vscode.window.showSaveDialog({
+      defaultUri,
+      filters: { [formatPick.label]: [formatPick.value] },
+      title: `导出为 ${formatPick.value.toUpperCase()}`,
+    });
+
+    if (!saveUri) return;
+
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: `ReadMD 正在导出 ${formatPick.value.toUpperCase()}...`,
+      cancellable: false,
+    }, async () => {
+      try {
+        const text = editor.document.getText();
+        const docTitle = path.basename(editor.document.fileName, path.extname(editor.document.fileName));
+        if (formatPick.value === 'epub') {
+          await bridge.exportEpub(text, saveUri.fsPath, docTitle);
+        } else {
+          await bridge.exportDoc(text, saveUri.fsPath, formatPick.value, presetPick.label, docTitle);
+        }
+        const openBtn = '打开文件';
+        const choice = await vscode.window.showInformationMessage(`ReadMD: 成功导出至 ${path.basename(saveUri.fsPath)}！`, openBtn);
+        if (choice === openBtn) {
+          vscode.env.openExternal(saveUri);
+        }
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`导出失败: ${err.message}`);
+      }
+    });
+  });
+
+  // 12. 命令：外部文件直接转 Markdown
+  const convertFileDisposable = vscode.commands.registerCommand('readmd.convertFileToMarkdown', async (uri: vscode.Uri) => {
+    let filePath = uri ? uri.fsPath : '';
+    if (!filePath) {
+      const picks = await vscode.window.showOpenDialog({
+        canSelectMany: false,
+        openLabel: '转换为 Markdown',
+        filters: {
+          'Supported Documents': ['docx', 'pdf', 'pptx', 'xlsx', 'tex', 'txt', 'html', 'png', 'jpg', 'webp'],
+        },
+      });
+      if (picks && picks.length > 0) {
+        filePath = picks[0].fsPath;
+      }
+    }
+
+    if (!filePath) return;
+
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: `ReadMD 正在转换 ${path.basename(filePath)} 为 Markdown...`,
+      cancellable: false,
+    }, async () => {
+      try {
+        const markdown = await bridge.convertFile(filePath);
+        const doc = await vscode.workspace.openTextDocument({
+          content: markdown,
+          language: 'markdown',
+        });
+        await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
+        vscode.window.showInformationMessage(`ReadMD: 已成功转换 ${path.basename(filePath)}！`);
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`文档转换失败: ${err.message}`);
+      }
+    });
+  });
+
+  const convertAnyPromptDisposable = vscode.commands.registerCommand('readmd.convertAnyFilePrompt', () => {
+    vscode.commands.executeCommand('readmd.convertFileToMarkdown');
+  });
+
+  // 13. 命令：抓取网页为 Markdown
+  const fetchWebDisposable = vscode.commands.registerCommand('readmd.fetchWebToMarkdown', async () => {
+    const url = await vscode.window.showInputBox({
+      prompt: '请输入待抓取的目标网页 URL 地址 (如 https://example.com/article)',
+      placeHolder: 'https://...',
+      validateInput: (text) => {
+        return text && text.startsWith('http') ? null : 'URL 必须以 http:// 或 https:// 开头';
+      },
+    });
+
+    if (!url) return;
+
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: `ReadMD 正在深度抽取网页正文...`,
+      cancellable: false,
+    }, async () => {
+      try {
+        const res = await bridge.fetchWeb(url);
+        const doc = await vscode.workspace.openTextDocument({
+          content: res.markdown,
+          language: 'markdown',
+        });
+        await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
+        vscode.window.showInformationMessage(`ReadMD: 成功抓取文章《${res.title || url}》！`);
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`抓取网页失败: ${err.message}`);
+      }
+    });
+  });
+
+  // 14. 命令：一键编译转学术 LaTeX
+  const convertLatexDisposable = vscode.commands.registerCommand('readmd.convertToLatex', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return;
+
+    await vscode.window.withProgress({
+      location: vscode.ProgressLocation.Notification,
+      title: 'ReadMD 正在编译为学术 LaTeX 源码...',
+      cancellable: false,
+    }, async () => {
+      try {
+        const text = editor.document.getText();
+        const docTitle = path.basename(editor.document.fileName, path.extname(editor.document.fileName));
+        const tex = await bridge.mdToLatex(text, docTitle);
+        const doc = await vscode.workspace.openTextDocument({
+          content: tex,
+          language: 'latex',
+        });
+        await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+        vscode.window.showInformationMessage('ReadMD: 已成功生成标准学术 LaTeX 源码！');
+      } catch (err: any) {
+        vscode.window.showErrorMessage(`LaTeX 转换失败: ${err.message}`);
+      }
+    });
+  });
+
+  // 15. 命令：扫描解析 BibTeX 参考文献
+  const parseBibtexDisposable = vscode.commands.registerCommand('readmd.parseBibtex', async (uri: vscode.Uri) => {
+    let bibPath = uri ? uri.fsPath : '';
+    if (!bibPath) {
+      const bibFiles = await vscode.workspace.findFiles('**/*.bib', '**/node_modules/**', 5);
+      if (bibFiles.length > 0) {
+        bibPath = bibFiles[0].fsPath;
+      } else {
+        const picks = await vscode.window.showOpenDialog({
+          canSelectMany: false,
+          filters: { 'BibTeX Database': ['bib'] },
+          openLabel: '解析 BibTeX 数据库',
+        });
+        if (picks && picks.length > 0) {
+          bibPath = picks[0].fsPath;
+        }
+      }
+    }
+
+    if (!bibPath) {
+      vscode.window.showInformationMessage('未找到 .bib 文件');
+      return;
+    }
+
+    try {
+      const res = await bridge.parseBibtex(bibPath);
+      const entries = res?.entries || res;
+      const count = Object.keys(entries || {}).length;
+      vscode.window.showInformationMessage(`ReadMD: 成功解析 BibTeX 数据库 (${path.basename(bibPath)})，共加载 ${count} 篇学术条目！`);
+    } catch (err: any) {
+      vscode.window.showErrorMessage(`BibTeX 解析失败: ${err.message}`);
+    }
+  });
+
+  // 16. 命令：一键配置工作区 MCP Server
+  const setupMcpDisposable = vscode.commands.registerCommand('readmd.setupMcpServer', async () => {
+    const wsFolders = vscode.workspace.workspaceFolders;
+    const mcpScriptPath = path.join(context.extensionPath, '..', 'mcp-server', 'readmd_mcp_server.py');
+
+    const mcpConfig = {
+      mcpServers: {
+        readmd: {
+          command: 'python',
+          args: [mcpScriptPath],
+          env: {
+            PYTHONIOENCODING: 'utf-8',
+          },
+        },
+      },
+    };
+
+    const choice = await vscode.window.showQuickPick([
+      { label: '写入当前工作区 .vscode/mcp.json', value: 'vscode' },
+      { label: '写入当前工作区 .cursor/mcp.json (Cursor IDE)', value: 'cursor' },
+      { label: '复制 Claude Desktop 配置代码到剪贴板', value: 'clipboard' },
+    ], { placeHolder: '请选择要配置的目标客户端' });
+
+    if (!choice) return;
+
+    if (choice.value === 'clipboard') {
+      await vscode.env.clipboard.writeText(JSON.stringify(mcpConfig, null, 2));
+      vscode.window.showInformationMessage('ReadMD: 已将 MCP 配置 JSON 复制到剪贴板，可直接粘贴进 Claude Desktop 配置文件中！');
+      return;
+    }
+
+    if (!wsFolders || wsFolders.length === 0) {
+      vscode.window.showWarningMessage('请先在 VSCode 中打开一个工作区文件夹');
+      return;
+    }
+
+    const targetDir = path.join(wsFolders[0].uri.fsPath, choice.value === 'vscode' ? '.vscode' : '.cursor');
+    const targetFile = path.join(targetDir, 'mcp.json');
+
+    try {
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      fs.writeFileSync(targetFile, JSON.stringify(mcpConfig, null, 2), 'utf-8');
+      vscode.window.showInformationMessage(`ReadMD: 已成功在 ${targetFile} 生成 MCP 服务配置！`);
+    } catch (err: any) {
+      vscode.window.showErrorMessage(`写入 MCP 配置失败: ${err.message}`);
+    }
+  });
+
+  context.subscriptions.push(
+    previewDisposable,
+    fixDisposable,
+    presentationDisposable,
+    exportPresentationDisposable,
+    insertTocDisposable,
+    insertSlideDisposable,
+    processImportsDisposable,
+    runCodeChunkDisposable,
+    exportDisposable,
+    convertFileDisposable,
+    convertAnyPromptDisposable,
+    fetchWebDisposable,
+    convertLatexDisposable,
+    parseBibtexDisposable,
+    setupMcpDisposable
+  );
 }
 
-function jsonParse(str: string) {
-  return JSON.parse(str);
+function getPresentationWebviewHtml(markdown: string, title: string): string {
+  return `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>${title}</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/black.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+      <section data-markdown>
+        <textarea data-template>
+${markdown}
+        </textarea>
+      </section>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/markdown/markdown.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/math/math.js"></script>
+  <script>
+    Reveal.initialize({
+      controls: true,
+      progress: true,
+      center: true,
+      hash: true,
+      plugins: [ RevealMarkdown, RevealMath.KaTeX ]
+    });
+  </script>
+</body>
+</html>`;
 }
 
-function getWebviewContent(markdown: string): string {
+function getEnhancedWebviewContent(markdown: string, docTitle: string): string {
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ReadMD Preview</title>
+  <title>ReadMD: ${docTitle}</title>
+  <!-- KaTeX CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <style>
+    :root {
+      --rm-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      padding: 24px 32px;
-      line-height: 1.7;
+      font-family: var(--rm-font);
+      padding: 28px 36px;
+      line-height: 1.75;
       color: var(--vscode-editor-foreground);
       background-color: var(--vscode-editor-background);
-      max-width: 860px;
+      max-width: 880px;
       margin: 0 auto;
+      word-wrap: break-word;
     }
-    h1, h2, h3, h4 { color: var(--vscode-editor-foreground); font-weight: 600; }
-    h1 { border-bottom: 1px solid var(--vscode-widget-border, #ddd); padding-bottom: 8px; }
-    code { background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.1)); padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-    pre code { display: block; padding: 12px; overflow-x: auto; }
-    blockquote { border-left: 4px solid var(--vscode-textBlockQuote-border, #3b82f6); margin: 12px 0; padding-left: 16px; color: var(--vscode-textBlockQuote-foreground, #666); }
-    table { border-collapse: collapse; width: 100%; margin: 16px 0; }
-    th, td { border: 1px solid var(--vscode-widget-border, #ddd); padding: 8px 12px; text-align: left; }
-    th { background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.1)); }
+    h1, h2, h3, h4, h5, h6 {
+      color: var(--vscode-editor-foreground);
+      font-weight: 600;
+      line-height: 1.35;
+      margin-top: 1.5em;
+      margin-bottom: 0.6em;
+    }
+    h1 { font-size: 2em; border-bottom: 1px solid var(--vscode-widget-border, rgba(127,127,127,0.2)); padding-bottom: 0.3em; }
+    h2 { font-size: 1.5em; border-bottom: 1px solid var(--vscode-widget-border, rgba(127,127,127,0.15)); padding-bottom: 0.25em; }
+    p, li { font-size: 15px; }
+    code {
+      background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.12));
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 13.5px;
+    }
+    pre {
+      background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.08));
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,0.2));
+      border-radius: 6px;
+      padding: 14px 16px;
+      overflow-x: auto;
+    }
+    pre code { background: transparent; padding: 0; }
+    blockquote {
+      border-left: 4px solid var(--vscode-textBlockQuote-border, #3b82f6);
+      background: rgba(59, 130, 246, 0.05);
+      margin: 16px 0;
+      padding: 10px 16px;
+      border-radius: 0 4px 4px 0;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 20px 0;
+      font-size: 14.5px;
+    }
+    th, td {
+      border: 1px solid var(--vscode-widget-border, rgba(127,127,127,0.25));
+      padding: 8px 14px;
+      text-align: left;
+    }
+    th {
+      background: var(--vscode-textCodeBlock-background, rgba(127,127,127,0.15));
+      font-weight: 600;
+    }
+    tr:nth-child(even) {
+      background: rgba(127,127,127,0.03);
+    }
+    img { max-width: 100%; border-radius: 6px; }
+    hr {
+      border: none;
+      border-top: 1px solid var(--vscode-widget-border, rgba(127,127,127,0.2));
+      margin: 24px 0;
+    }
+    .katex-display { margin: 1.2em 0; overflow-x: auto; overflow-y: hidden; }
   </style>
+  <link rel="stylesheet" type="text/css" href="https://tikzjax.com/v1/fonts.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.3.0/dist/mermaid.min.js"></script>
+  <script src="https://tikzjax.com/v1/tikzjax.js"></script>
 </head>
 <body>
   <div id="content"></div>
   <script>
     const raw = ${JSON.stringify(markdown)};
-    document.getElementById('content').innerHTML = marked.parse(raw);
+    const el = document.getElementById('content');
+    el.innerHTML = marked.parse(raw);
+    if (window.renderMathInElement) {
+      renderMathInElement(el, {
+        delimiters: [
+          {left: '$$', right: '$$', display: true},
+          {left: '$', right: '$', display: false},
+          {left: '\\\\[', right: '\\\\]', display: true},
+          {left: '\\\\(', right: '\\\\)', display: false}
+        ],
+        throwOnError: false
+      });
+    }
+    if (window.mermaid) {
+      mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    }
   </script>
 </body>
 </html>`;

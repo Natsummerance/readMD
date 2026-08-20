@@ -64,7 +64,6 @@ def _winrt_ocr_bytes(data, lang_tag):
 def _mac_vision_ocr_bytes(data):
     """macOS Vision 框架 OCR：直接接受图片 bytes，返回识别文本。"""
     try:
-        import objc
         from Foundation import NSData
         from Quartz import CGImageSourceCreateWithData, CGImageSourceCreateImageAtIndex
         import Vision

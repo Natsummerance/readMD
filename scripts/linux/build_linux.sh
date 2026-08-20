@@ -2,7 +2,7 @@
 # ReadMD Linux & 信创全架构 (x86_64 / aarch64 / loongarch64) 与鸿蒙打包脚本
 set -euo pipefail
 
-VERSION="${READMD_BUILD_VERSION:-${READMD_VERSION:-$(python3 -c 'import readmd; print(readmd.VERSION)' 2>/dev/null || echo '2.3.3')}}"
+VERSION="${READMD_BUILD_VERSION:-${READMD_VERSION:-$(python3 -c 'import readmd; print(readmd.VERSION)' 2>/dev/null || echo '2.3.4')}}"
 ARCH="$(uname -m)"
 DEB_ARCH="amd64"
 if [ "${ARCH}" = "aarch64" ]; then
@@ -21,14 +21,17 @@ python3 -m PyInstaller \
   --name "ReadMD" \
   --icon "assets/ReadMD.png" \
   --add-data "assets:assets" \
+  --add-data "src/readmd_core:src/readmd_core" \
   --add-data "src/readmd_modules:src/readmd_modules" \
   --add-data "src/readmd_fix.py:src" \
   --hidden-import src.readmd_fix \
+  --hidden-import src.readmd_core \
   --collect-data magika \
   --collect-data docx \
   --collect-data reportlab \
   --collect-data matplotlib \
   --collect-data trafilatura \
+  --collect-submodules src.readmd_core \
   --collect-submodules src.readmd_modules \
   readmd.py
 

@@ -15,14 +15,12 @@ import logging
 import os
 import platform
 import re
-import shutil
 import subprocess
 import sys
 import tempfile
 import threading
 import time
 import urllib.request
-from urllib.parse import urlparse
 
 GITHUB_REPO = 'Natsummerance/readMD'
 GITHUB_API_LATEST = f'https://api.github.com/repos/{GITHUB_REPO}/releases/latest'
@@ -106,7 +104,7 @@ def match_release_asset(assets, flavor=None):
     for a in assets:
         name = a.get('name', '').lower()
         if flavor == 'win_portable':
-            if 'portable' in name and name.endswith('.exe'):
+            if 'portable' in name and (name.endswith('.exe') or name.endswith('.zip')):
                 selected = a
                 break
         elif flavor in ('win_installer', 'source'):
@@ -223,26 +221,7 @@ def check_update(current_version, timeout=4):
         return {'ok': False, 'error': str(e)}
 
 
-def fetch_sha256_map(sha_url, timeout=10):
-    """从 SHA256SUMS.txt 获取文件名到散列值的映射。"""
-    if not sha_url:
-        return {}
-    try:
-        req = urllib.request.Request(sha_url)
-        req.add_header('User-Agent', 'ReadMD-Updater')
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            text = resp.read().decode('utf-8', errors='replace')
-        res = {}
-        for line in text.splitlines():
-            parts = line.strip().split()
-            if len(parts) >= 2:
-                h = parts[0].strip().lower()
-                fn = parts[1].lstrip('*').strip()
-                res[fn] = h
-        return res
-    except Exception as e:
-        logging.warning('Fetch SHA256 map failed: %s', e)
-        return {}
+
 
 
 def compute_file_sha256(file_path):

@@ -10,7 +10,6 @@ v2.1.1 质量升级：
 """
 
 import os
-import re
 
 _engine = None
 
@@ -34,11 +33,6 @@ _MATH_CHARS = set('+-*/=<>^_~%∑∫√∞≈≠±×÷∂∇∏πθαβγδφψ�
 def load():
     # 惰性加载：docx / pdf 专用解析不依赖 markitdown（Win7 版未安装）
     return _engine
-
-
-def supported_hint():
-    return ('支持：PDF / Word / PowerPoint / Excel / HTML / CSV / JSON / XML / '
-            '邮件 / 压缩包等；图片与扫描件请用 OCR 模块')
 
 
 # ---------------------------------------------------------------- 入口
@@ -410,20 +404,7 @@ def _para_plain(p):
     return ''.join((r.text or '') for r in p.runs)
 
 
-def _para_inline(p):
-    parts = []
-    for r in p.runs:
-        t = r.text or ''
-        if not t:
-            continue
-        if _run_font_lower(r) in _MONO_FONTS:
-            t = '`' + t + '`'
-        if r.bold:
-            t = '**' + t + '**'
-        if r.italic:
-            t = '*' + t + '*'
-        parts.append(t)
-    return ''.join(parts)
+
 
 
 def _lang_hint(text):

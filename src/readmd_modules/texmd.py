@@ -26,7 +26,7 @@ Key Features:
 
 import os
 import re
-from typing import Dict, List, Tuple, Optional, Any, Callable
+from typing import Dict, List, Tuple, Optional, Any
 
 
 # ---------------------------------------------------------------------------

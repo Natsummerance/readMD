@@ -9,20 +9,23 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 try:
     import readmd
-    VERSION = getattr(readmd, 'VERSION', '2.3.3')
+    VERSION = getattr(readmd, 'VERSION', '2.3.4')
 except Exception:
-    VERSION = os.environ.get('READMD_VERSION', '2.3.3')
+    VERSION = os.environ.get('READMD_VERSION', '2.3.4')
 
 datas = [
     (os.path.join(ROOT_DIR, 'assets'), 'assets'),
+    (os.path.join(ROOT_DIR, 'src', 'readmd_core'), 'src/readmd_core'),
+    (os.path.join(ROOT_DIR, 'src', 'readmd_modules'), 'src/readmd_modules'),
     (os.path.join(ROOT_DIR, 'src', 'readmd_fix.py'), 'src'),
 ]
-hiddenimports = ['src.readmd_fix', 'Vision', 'Quartz', 'Foundation', 'objc']
+hiddenimports = ['src.readmd_fix', 'src.readmd_core', 'Vision', 'Quartz', 'Foundation', 'objc']
 datas += collect_data_files('magika')
 datas += collect_data_files('docx')
 datas += collect_data_files('reportlab')
 datas += collect_data_files('matplotlib')
 datas += collect_data_files('trafilatura')
+hiddenimports += collect_submodules('src.readmd_core')
 hiddenimports += collect_submodules('src.readmd_modules')
 
 a = Analysis(

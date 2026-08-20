@@ -17,7 +17,6 @@ r"""LaTeX -> OMML (Office Math Markup Language) 编译器。
 10. 重音与修饰符：\vec, \hat, \bar, \dot, \ddot, \tilde, \overline, \boxed
 """
 
-import re
 from xml.sax.saxutils import escape
 
 _M_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/math'

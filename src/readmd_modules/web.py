@@ -524,6 +524,30 @@ def extract_html(url, html, mode='smart', readability=None, defuddle=None,
     warnings = []
     candidates = _candidate_links(source_soup, url)
     engine_chain = []
+
+    # 1. 优先尝试 AI 对话专业解析引擎 (Gemini, ChatGPT, Claude, DeepSeek, Kimi, Perplexity 等)
+    try:
+        from .ai_chat_parser import try_parse_ai_chat
+        ai_chat_res = try_parse_ai_chat(url, html)
+        if ai_chat_res and ai_chat_res.get('markdown'):
+            engine_chain.append('ai-chat-parser')
+            if ai_chat_res.get('title'):
+                meta['title'] = ai_chat_res['title']
+            return {
+                'ok': True,
+                'content': ai_chat_res['markdown'],
+                'meta': meta,
+                'engine': 'ai-chat-parser',
+                'warnings': warnings,
+                'links': candidates,
+                'word_count': _plain_length(ai_chat_res['markdown']),
+                'engine_chain': engine_chain,
+                'attempts': len(engine_chain),
+                'turns_count': ai_chat_res.get('turns_count', 0)
+            }
+    except Exception as exc:
+        logging.warning('ai_chat_parser failed: %s', exc)
+
     for engine, options in (
             ('trafilatura', {}),
             ('trafilatura-recall', {'favor_recall': True})):
@@ -698,8 +722,7 @@ def fetch_url(url, timeout=25):
     return result.get('content') if result.get('ok') else None
 
 
-def _extract_links(html, base_url, limit=10):
-    return _candidate_links(_clean_soup(html, base_url), base_url, limit)
+
 
 
 def crawl(url, max_links=10, timeout=25):

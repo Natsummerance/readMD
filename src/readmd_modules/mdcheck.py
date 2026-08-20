@@ -13,7 +13,7 @@
 import os
 import re
 
-import src.readmd_fix as readmd_fix
+from ..readmd_core import readmd_fix
 
 _FENCE_RE = re.compile(r'^(\s{0,3})(`{3,}|~{3,})\s*(\S*)\s*$')
 _REPLACE_CHAR = '\ufffd'

@@ -15,7 +15,6 @@
 """
 
 import argparse
-import io
 import json
 import logging
 import mimetypes
@@ -28,106 +27,31 @@ import sys
 import time
 import threading
 import webbrowser
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
-import src.readmd_fix as readmd_fix
+from src.readmd_core import (
+    DATA_DIR,
+    SETTINGS_FILE,
+    RECENT_FILE,
+    PROMPTS_FILE,
+    HISTORY_FILE,
+    LOG_FILE,
+    IS_MAC,
+    IS_WIN,
+    IS_LINUX,
+    get_system_language,
+    normalize_dialog_path,
+    load_json,
+    save_json,
+    read_text,
+    readmd_fix,
+)
 import src.readmd_modules as RM
+from src.readmd_modules.validators import validate_file_path, validate_command
 
 APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
-
-def _platform_data_dir():
-    """跨平台数据目录：Windows APPDATA, macOS ~/Library/Application Support, Linux ~/.local/share."""
-    if sys.platform == 'darwin':
-        return os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'ReadMD')
-    if sys.platform == 'win32':
-        return os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'ReadMD')
-    # Linux / other
-    xdg = os.environ.get('XDG_DATA_HOME') or os.path.join(os.path.expanduser('~'), '.local', 'share')
-    return os.path.join(xdg, 'ReadMD')
-
-IS_MAC = sys.platform == 'darwin'
-IS_WIN = sys.platform == 'win32'
-IS_LINUX = sys.platform.startswith('linux')
-
-DATA_DIR = _platform_data_dir()
-
-SETTINGS_FILE = os.path.join(DATA_DIR, 'settings.json')
-RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
-PROMPTS_FILE = os.path.join(DATA_DIR, 'prompts.json')
-HISTORY_FILE = os.path.join(DATA_DIR, 'chat_history.json')
-LOG_FILE = os.path.join(DATA_DIR, 'readmd.log')
-
-
-def normalize_dialog_path(value, extension=''):
-    """Return one filesystem path from a pywebview file-dialog result.
-
-    WinForms returns a one-item tuple while Cocoa returns a string.  Keeping
-    this normalization at the bridge boundary prevents platform-specific
-    container types leaking into renderers and ordinary file APIs.
-    """
-    if value is None or value == '':
-        return None
-    if isinstance(value, (tuple, list)):
-        if not value:
-            return None
-        if len(value) != 1:
-            raise ValueError('保存对话框返回了多个路径')
-        value = value[0]
-    try:
-        path = os.fspath(value)
-    except TypeError:
-        raise ValueError('保存对话框返回了无效路径')
-    if isinstance(path, bytes):
-        path = os.fsdecode(path)
-    path = str(path).strip()
-    if not path:
-        return None
-    if extension:
-        ext = extension if extension.startswith('.') else '.' + extension
-        if not path.lower().endswith(ext.lower()):
-            path += ext
-    return os.path.abspath(path)
-
-
-def get_system_language():
-
-    """获取当前系统默认语言代码，如 'zh-CN', 'en', 'ja', 'ko' 等。"""
-    try:
-        if sys.platform == 'win32':
-            import ctypes
-            lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
-            primary = lang_id & 0x3ff
-            sub = (lang_id >> 10) & 0x3f
-            if primary == 0x04:
-                if sub in (0x02, 0x04):
-                    return 'zh-HK' if sub == 0x04 else 'zh-TW'
-                return 'zh-CN'
-            lang_map = {
-                0x09: 'en', 0x11: 'ja', 0x12: 'ko', 0x0c: 'fr', 0x07: 'de',
-                0x0a: 'es', 0x16: 'pt', 0x19: 'ru', 0x10: 'it', 0x01: 'ar',
-                0x0d: 'he', 0x1e: 'th', 0x2a: 'vi', 0x21: 'id', 0x39: 'hi',
-                0x45: 'bn', 0x55: 'my', 0x54: 'lo', 0x53: 'km', 0x3e: 'ms',
-                0x06: 'da', 0x0b: 'fi', 0x14: 'no', 0x1d: 'sv', 0x13: 'nl',
-                0x1a: 'hr', 0x18: 'ro', 0x61: 'ne', 0x24: 'sl', 0x1f: 'tr',
-                0x22: 'uk', 0x08: 'el', 0x0e: 'hu'
-            }
-            if primary in lang_map:
-                return lang_map[primary]
-    except Exception:
-        pass
-
-    try:
-        import locale
-        loc = locale.getdefaultlocale()[0]
-        if loc:
-            loc = loc.replace('_', '-')
-            if loc.startswith('zh'):
-                return 'zh-HK' if 'HK' in loc or 'Hant' in loc else ('zh-TW' if 'TW' in loc else 'zh-CN')
-            return loc.split('-')[0]
-    except Exception:
-        pass
-    return 'zh-CN'
 
 
 def _bundle_version():
@@ -147,7 +71,7 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_BUILD_VERSION')
-           or _bundle_version() or '2.3.3')
+           or _bundle_version() or '2.3.4')
 
 
 
@@ -429,25 +353,7 @@ def setup_logging():
         pass
 
 
-def load_json(path, default):
-    try:
-        with open(path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception:
-        return default
 
-
-def save_json(path, data):
-    try:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        tmp = path + '.tmp'
-        with open(tmp, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, path)
-        return True
-    except Exception as e:
-        logging.exception('save_json failed: %s', path)
-        return False
 
 
 _WINDOWS_RESERVED_NAMES = {
@@ -2076,13 +1982,16 @@ class Api(object):
     def open_dir(self, path):
         """在文件管理器中打开目录。"""
         try:
+            safe_path = validate_file_path(path)
             if IS_MAC:
                 from src.readmd_modules import macos_native
-                return macos_native.open_path(path)
+                return macos_native.open_path(safe_path)
             elif IS_WIN:
-                subprocess.Popen(['explorer', os.path.normpath(path)])
+                cmd = validate_command(['explorer', safe_path])
+                subprocess.Popen(cmd)
             else:
-                subprocess.Popen(['xdg-open', os.path.normpath(path)])
+                cmd = validate_command(['xdg-open', safe_path])
+                subprocess.Popen(cmd)
             return True
         except Exception:
             return False
@@ -2194,7 +2103,9 @@ class Api(object):
             return {'ok': False, 'code': 'render_unavailable',
                     'error': 'Win7 版不支持动态网页渲染'}
         allow_private = self._private_web_allowed(url, task_id, private_grant)
-        offline_render = not allow_private
+        # 仅在非公网 URL 且传入离线 source_html 时启用离线渲染模式；公网 http/https 正常联网渲染
+        is_remote_http = url.lower().startswith(('http://', 'https://'))
+        offline_render = bool(source_html and not is_remote_http)
         if offline_render and interactive:
             return {'ok': False, 'code': 'interactive_unavailable',
                     'error': '安全模式不允许未授权网页联网交互；可重试静态抓取或保留完整页面'}
@@ -2570,13 +2481,16 @@ class Api(object):
     def reveal_path(self, path):
         """在文件管理器中选中该文件。"""
         try:
+            safe_path = validate_file_path(path)
             if IS_MAC:
                 from src.readmd_modules import macos_native
-                return macos_native.reveal_path(path)
+                return macos_native.reveal_path(safe_path)
             elif IS_WIN:
-                subprocess.Popen(['explorer', '/select,', os.path.normpath(path)])
+                cmd = validate_command(['explorer', '/select,', safe_path])
+                subprocess.Popen(cmd)
             else:
-                subprocess.Popen(['xdg-open', os.path.dirname(os.path.normpath(path))])
+                cmd = validate_command(['xdg-open', os.path.dirname(safe_path)])
+                subprocess.Popen(cmd)
             return True
         except Exception:
             return False
@@ -2867,9 +2781,9 @@ def run_selftest():
         safe_print('version consistency failed:', e)
         ok = False
     try:
-        import urllib.request
         # Tests moved to tests/ directory
         # Skipping fix tests in selftest(quiet=True)
+        pass
     except Exception as e:
         safe_print('fixer tests import failed:', e)
         ok = False

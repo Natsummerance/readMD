@@ -57,6 +57,22 @@ window.i18n = {
   dict: {},
   fallbackDict: {},
 
+  zhDefaults: {
+    'app.disabled': '未开启',
+    'app.enabled': '已开启',
+    'app.loading': '加载中...',
+    'app.success': '成功',
+    'app.failed': '失败',
+    'menu.checkUpdate': '检查更新',
+    'menu.autoStart': '开机自启',
+    'menu.assoc': '设为默认',
+    'menu.clipboard': '剪贴板',
+    'menu.saveAs': '另存为',
+    'menu.share': '共享',
+    'menu.fix': '修复详情',
+    'menu.lang': '语言'
+  },
+
   /** 初始化多语言模块（毫秒级极速初始化，零阻塞启动） */
   async init() {
     // 首选语言决策：1. LocalStorage 缓存 2. 系统侦测
@@ -70,18 +86,16 @@ window.i18n = {
     }
     preferred = preferred || 'zh-CN';
 
-    // 如果是默认简体中文，DOM 本身即为中文，直接初始化并异步载入词库
+    // 如果是默认简体中文，DOM 本身即为中文，直接初始化并载入词库
     if (preferred === 'zh-CN') {
       this.currentLang = 'zh-CN';
       document.documentElement.setAttribute('dir', 'ltr');
       document.documentElement.setAttribute('lang', 'zh-CN');
       const currentLabel = document.getElementById('lang-current-label');
       if (currentLabel) currentLabel.textContent = '简体中文';
-      // 异步在空闲时预热字典
-      setTimeout(() => {
-        this.fetchDict('zh-CN').then(d => { if (d) this.dict = d; });
-        this.loadFallback();
-      }, 200);
+      const d = await this.fetchDict('zh-CN');
+      if (d) this.dict = d;
+      this.loadFallback();
       return;
     }
 
@@ -178,9 +192,12 @@ window.i18n = {
 
   /** 获取翻译词条，支持 {count}, {name} 占位符替换 */
   t(key, params = {}) {
-    let str = this.dict[key];
+    let str = this.dict ? this.dict[key] : undefined;
     if (str === undefined || str === null || str === '') {
-      str = this.fallbackDict[key];
+      str = this.fallbackDict ? this.fallbackDict[key] : undefined;
+    }
+    if ((str === undefined || str === null || str === '') && this.zhDefaults && this.zhDefaults[key]) {
+      str = this.zhDefaults[key];
     }
     if (str === undefined || str === null || str === '') {
       str = key;

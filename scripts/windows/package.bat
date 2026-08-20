@@ -8,7 +8,7 @@ rem ============================================================
 setlocal
 cd /d "%~dp0..\.."
 title ReadMD Packager
-set "READMD_VERSION=2.3.3"
+set "READMD_VERSION=2.3.4"
 
 
 
@@ -40,14 +40,17 @@ echo [4/5] Building install edition (onedir, instant start) ...
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onedir --windowed ^
     --name ReadMD --icon "assets\readmd.ico" ^
     --add-data "assets;assets" ^
+    --add-data "src/readmd_core;src/readmd_core" ^
     --add-data "src/readmd_modules;src/readmd_modules" ^
     --add-data "src/readmd_fix.py;src" ^
     --hidden-import src.readmd_fix ^
+    --hidden-import src.readmd_core ^
     --collect-data magika ^
     --collect-data docx ^
     --collect-data reportlab ^
     --collect-data matplotlib ^
     --collect-data trafilatura ^
+    --collect-submodules src.readmd_core ^
     --collect-submodules src.readmd_modules ^
     readmd.py
 if errorlevel 1 goto :err
@@ -56,14 +59,17 @@ echo [5/5] Building portable edition (single-file) ...
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
     --name ReadMD-portable --icon "assets\readmd.ico" ^
     --add-data "assets;assets" ^
+    --add-data "src/readmd_core;src/readmd_core" ^
     --add-data "src/readmd_modules;src/readmd_modules" ^
     --add-data "src/readmd_fix.py;src" ^
     --hidden-import src.readmd_fix ^
+    --hidden-import src.readmd_core ^
     --collect-data magika ^
     --collect-data docx ^
     --collect-data reportlab ^
     --collect-data matplotlib ^
     --collect-data trafilatura ^
+    --collect-submodules src.readmd_core ^
     --collect-submodules src.readmd_modules ^
     readmd.py
 if errorlevel 1 goto :err

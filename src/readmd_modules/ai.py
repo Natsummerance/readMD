@@ -7,22 +7,14 @@ API Key 优先级：界面配置 > 环境变量 > 空。
 import json
 import logging
 import os
-import sys
 import uuid
 import urllib.request
 import urllib.error
 
 
-def _platform_data_dir():
-    if sys.platform == 'darwin':
-        return os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'ReadMD')
-    if sys.platform == 'win32':
-        return os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'ReadMD')
-    xdg = os.environ.get('XDG_DATA_HOME') or os.path.join(os.path.expanduser('~'), '.local', 'share')
-    return os.path.join(xdg, 'ReadMD')
+from ..readmd_core.config import DATA_DIR
+from .crypto import encrypt_api_key, decrypt_api_key
 
-
-DATA_DIR = _platform_data_dir()
 CONFIG_FILE = os.path.join(DATA_DIR, 'ai.json')
 CONFIG_SCHEMA_VERSION = 2
 
@@ -202,7 +194,9 @@ def save_config(payload):
             p["models"] = [str(m).strip() for m in (p.get("models") or []) if str(m).strip()]
             # 前端不会收到旧 Key；编辑其它字段时保留原 Key。只有显式标记才清除。
             previous = old.get(provider_id) or old_by_name.get(name) or {}
-            if not p.get("api_key") and previous.get("api_key") and not p.pop("clear_key", False):
+            if p.get("api_key"):
+                p["api_key"] = encrypt_api_key(p["api_key"])
+            elif previous.get("api_key") and not p.pop("clear_key", False):
                 p["api_key"] = previous["api_key"]
             else:
                 p.pop("clear_key", None)
@@ -231,7 +225,7 @@ def find_provider(identifier):
 def resolve_key(p):
     """API Key：界面配置 > 环境变量。"""
     if p.get("api_key"):
-        return p["api_key"]
+        return decrypt_api_key(p["api_key"])
     env = p.get("env_key") or ""
     if env:
         v = os.environ.get(env, "")

@@ -17,7 +17,7 @@
 連按兩下 `.md` 檔案立即閱讀。ReadMD 在渲染前自動修正常見語法錯誤（表格、粗體、LaTeX 公式、標題缺少空格等），**僅優化視覺預覽呈現，絕不竄改原檔案內容**；內建 AI 助手、萬物轉 MD、原生離線 OCR、網頁轉 MD、LaTeX PRO 學術增強、Zen 禪模式與區域網路行動端共用。
 
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Kylin%20%7C%20UOS%20%7C%20HarmonyOS-0078d6)
-![version](https://img.shields.io/badge/version-v2.3.3-3b6ef5)
+![version](https://img.shields.io/badge/version-v2.3.4-3b6ef5)
 ![webview2](https://img.shields.io/badge/runtime-WebView2%20%7C%20WebKit%20%7C%20ArkWeb-4fc08d)
 ![repo size](https://img.shields.io/github/repo-size/Natsummerance/readMD)
 ![i18n](https://img.shields.io/badge/i18n-46%20Languages-orange)
@@ -26,33 +26,33 @@
 <br>
 
 <p align="center">
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.3.exe">
-    <img src="https://img.shields.io/badge/⬇️_Windows_安裝版-v2.3.3-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 安裝版">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.4.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_安裝版-v2.3.4-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 安裝版">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.3.exe">
-    <img src="https://img.shields.io/badge/⬇️_Windows_免安裝版-v2.3.3-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 免安裝版">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.4.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_免安裝版-v2.3.4-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 免安裝版">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.3.zip">
-    <img src="https://img.shields.io/badge/⬇️_macOS_(M系列晶片)-v2.3.3-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.4.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(M系列晶片)-v2.3.4-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.3.zip">
-    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel晶片)-v2.3.3-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.4.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel晶片)-v2.3.4-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel">
   </a>
   <br>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.3.AppImage">
-    <img src="https://img.shields.io/badge/⬇️_Linux_AppImage-v2.3.3-ea580c?style=for-the-badge&logo=linux&logoColor=white" alt="Linux AppImage">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.4.AppImage">
+    <img src="https://img.shields.io/badge/⬇️_Linux_AppImage-v2.3.4-ea580c?style=for-the-badge&logo=linux&logoColor=white" alt="Linux AppImage">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.3_amd64.deb">
-    <img src="https://img.shields.io/badge/⬇️_信創·統信UOS·麒麟_Deb-v2.3.3-b91c1c?style=for-the-badge&logo=debian&logoColor=white" alt="Deb 安裝套件">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.4_amd64.deb">
+    <img src="https://img.shields.io/badge/⬇️_信創·統信UOS·麒麟_Deb-v2.3.4-b91c1c?style=for-the-badge&logo=debian&logoColor=white" alt="Deb 安裝套件">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.3.hap">
-    <img src="https://img.shields.io/badge/📱_鴻蒙_HarmonyOS_HAP-v2.3.3-059669?style=for-the-badge&logo=huawei&logoColor=white" alt="HarmonyOS HAP">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.4.hap">
+    <img src="https://img.shields.io/badge/📱_鴻蒙_HarmonyOS_HAP-v2.3.4-059669?style=for-the-badge&logo=huawei&logoColor=white" alt="HarmonyOS HAP">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.3.vsix">
-    <img src="https://img.shields.io/badge/🧩_VSCode_擴充套件-v2.3.3-6366f1?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VSCode VSIX">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.4.vsix">
+    <img src="https://img.shields.io/badge/🧩_VSCode_擴充套件-v2.3.4-6366f1?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VSCode VSIX">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.3.zip">
-    <img src="https://img.shields.io/badge/🤖_MCP_Server-v2.3.3-0d9488?style=for-the-badge&logo=fastapi&logoColor=white" alt="MCP Server">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.4.zip">
+    <img src="https://img.shields.io/badge/🤖_MCP_Server-v2.3.4-0d9488?style=for-the-badge&logo=fastapi&logoColor=white" alt="MCP Server">
   </a>
 </p>
 
@@ -77,15 +77,15 @@
 
 | 作業系統 / 平台 | 架構 / 格式 | 直接下載連結 (GitHub Release) | 說明 |
 | :--- | :--- | :--- | :--- |
-| 🪟 **Windows** | x64 (安裝版) | [⬇️ **ReadMDSetup-v2.3.3.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.3.exe) | 具備安裝精靈，自動註冊 `.md` 檔案關聯 |
-| 💼 **Windows** | x64 (免安裝便攜版) | [⬇️ **ReadMD-portable-v2.3.3.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.3.exe) | 單一執行檔，解壓縮即用，隨身攜帶 |
-| 🍏 **macOS** | Apple Silicon (M系列) | [⬇️ **ReadMD-macos-arm64-v2.3.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.3.zip) | M1 / M2 / M3 / M4 原生建置（含 Vision 離線 OCR） |
-| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.3.zip) | Intel 處理器 Mac 原生建置（含 Vision 離线 OCR） |
-| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.3.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.3.AppImage) | Linux 通用免安裝 AppImage，賦予執行權限後即可開啟 |
-| 🇨🇳 **國產信創系統** | 統信 UOS / 銀河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.3_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.3_amd64.deb) | Deb 原生安裝套件，整合應用程式圖示、MIME 關聯與 UKUI/DDE 適配 |
-| 📱 **HarmonyOS NEXT** | 純血鴻蒙 / OpenHarmony (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.3.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.3.hap) | 鴻蒙原生應用安裝套件，ArkTS + ArkUI + ArkWeb 架構 |
-| 🧩 **VSCode 擴充外掛** | 通用 VSIX 套件 | [⬇️ **readmd-vscode-2.3.3.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.3.vsix) | VSCode 離線擴充安裝套件 |
-| 🤖 **MCP Server** | FastMCP stdio 套件 | [⬇️ **readmd-mcp-server-2.3.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.3.zip) | FastMCP 獨立伺服端，支援 Claude Desktop / Cursor |
+| 🪟 **Windows** | x64 (安裝版) | [⬇️ **ReadMDSetup-v2.3.4.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.4.exe) | 具備安裝精靈，自動註冊 `.md` 檔案關聯 |
+| 💼 **Windows** | x64 (免安裝便攜版) | [⬇️ **ReadMD-portable-v2.3.4.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.4.exe) | 單一執行檔，解壓縮即用，隨身攜帶 |
+| 🍏 **macOS** | Apple Silicon (M系列) | [⬇️ **ReadMD-macos-arm64-v2.3.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.4.zip) | M1 / M2 / M3 / M4 原生建置（含 Vision 離線 OCR） |
+| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.4.zip) | Intel 處理器 Mac 原生建置（含 Vision 離线 OCR） |
+| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.4.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.4.AppImage) | Linux 通用免安裝 AppImage，賦予執行權限後即可開啟 |
+| 🇨🇳 **國產信創系統** | 統信 UOS / 銀河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.4_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.4_amd64.deb) | Deb 原生安裝套件，整合應用程式圖示、MIME 關聯與 UKUI/DDE 適配 |
+| 📱 **HarmonyOS NEXT** | 純血鴻蒙 / OpenHarmony (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.4.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.4.hap) | 鴻蒙原生應用安裝套件，ArkTS + ArkUI + ArkWeb 架構 |
+| 🧩 **VSCode 擴充外掛** | 通用 VSIX 套件 | [⬇️ **readmd-vscode-2.3.4.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.4.vsix) | VSCode 離線擴充安裝套件 |
+| 🤖 **MCP Server** | FastMCP stdio 套件 | [⬇️ **readmd-mcp-server-2.3.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.4.zip) | FastMCP 獨立伺服端，支援 Claude Desktop / Cursor |
 | 🔐 **SHA-256 驗證** | 雜湊清單 | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | 發行檔案 SHA-256 完整性雜湊清單 |
 
 ---
