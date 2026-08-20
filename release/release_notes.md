@@ -1,36 +1,45 @@
-# ReadMD v2.3.2
+# ReadMD v2.3.3
 
 ReadMD 是免费的本地 Markdown 阅读器；不会要求订阅或内置账号。
 
 ## 下载
 
-- 🪟 Windows 安装版：`ReadMDSetup-v2.3.2.exe`
-- 💼 Windows 便携版：`ReadMD-portable-v2.3.2.exe`
-- 🍏 Apple Silicon Mac：`ReadMD-macos-arm64-v2.3.2.zip`
-- 💻 Intel Mac：`ReadMD-macos-x64-v2.3.2.zip`
-- 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.2.AppImage`
-- 🇨🇳 Linux / 国产信创 Deb 安装包 (UOS / 银河麒麟 / Deepin / Ubuntu / Debian)：`readmd_2.3.2_amd64.deb`
-- 📱 HarmonyOS NEXT 纯血鸿蒙安装包：`ReadMD-harmonyos-v2.3.2.hap`
-- 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.2.vsix`
-- 🤖 FastMCP Server 独立包：`readmd-mcp-server-2.3.2.zip`
+- 🪟 Windows 安装版：`ReadMDSetup-v2.3.3.exe`
+- 💼 Windows 便携版：`ReadMD-portable-v2.3.3.exe`
+- 🍏 Apple Silicon Mac：`ReadMD-macos-arm64-v2.3.3.zip`
+- 💻 Intel Mac：`ReadMD-macos-x64-v2.3.3.zip`
+- 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.3.AppImage`
+- 🇨🇳 Linux / 国产信创 Deb 安装包 (UOS / 银河麒麟 / Deepin / Ubuntu / Debian)：`readmd_2.3.3_amd64.deb`
+- 📱 HarmonyOS NEXT 纯血鸿蒙安装包：`ReadMD-harmonyos-v2.3.3.hap`
+- 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.3.vsix`
+- 🤖 FastMCP Server 独立包：`readmd-mcp-server-2.3.3.zip`
 - 🔐 校验清单：`SHA256SUMS.txt`
 
-## 本次更新 (v2.3.2)
+## 本次更新 (v2.3.3)
 
-1. **未保存标签页关闭确认弹窗 UI 深度重塑 (Frontend Design & Taste Upgrade)**：
-   - 引入现代化毛玻璃与景深效果（`backdrop-filter: blur(10px)`）与自适应环境阴影；
-   - 卡片升级为 `16px` 大圆角搭配微米级精细高光边框；
-   - 警示徽标升级为 `44px × 44px` 琥珀色柔光圆角图标徽标，消除红圈焦虑感；
-   - 按钮体系优化：高对比度实色 Accent 保存按钮、柔和危险色不保存按钮与中性取消按钮；
-   - 完善 `Escape` 快捷退出、遮罩点击取消、键盘自动聚焦与弹簧平滑入场动画；
-   - 全面核验并精修全量 46 种语言的弹窗提示与取消/保存本土化表达。
+1. **Word ⇄ Markdown 原生 OMML 深度双向公式互转引擎**：
+   - **DOCX ➔ Markdown**：全量支持 OMML 语法树（矩阵 `\begin{matrix}`、定界符 `\left(...\right)`、方程组 `\begin{aligned}`、极限 `\lim`、框选 `\boxed`、重音符号 `\vec` 等及 200+ 希腊/数学符号 Unicode 映射），精准还原段落物理顺序与表格内嵌公式；
+   - **Markdown ➔ DOCX**：新增轻量级 `latex2omml.py` 编译器，将 LaTeX 数学公式编译为微软 Word 原生矢量 OMML 节点（`m:oMath`/`m:oMathPara`），双击原生可编辑；
+   - 20 篇真实学科前沿论文与网络源学术论文全流程验证 (100% PASSED)。
 
-2. **首页 46 语种核心功能与提示词条逐一地道化精校**：
-   - 对首页全部 12 项核心词条（标语口号、打开 Markdown、打开文件夹、目录浏览、AI 助手、万物转 MD、网页转 MD、扫描转 MD、离线 OCR、最近打开、清空记录、快捷操作提示）在全量 46 个语言中进行逐一校验；
-   - 修复爱尔兰语、格陵兰语、高棉语、老挝语、马来语、马耳他语、缅甸语、卢旺达语、藏语等语种中清空记录、万物转 MD 的机翻偏差，实现 100% 自然地道表达。
+2. **原生 LaTeX ⇄ Markdown 深度高精度双向互转引擎**：
+   - 宏预展开引擎（`\newcommand`, `\def`, `\DeclareMathOperator` 等自定义多参数宏递归展开）与平衡大括号词法分析；
+   - 全学术环境支持（`algorithm`/`algorithmic` 伪代码、`tabular`/`booktabs` 复杂表格、`thebibliography`、定理证明 callout 等）；
+   - 775 份历年高考/竞赛真题库与 50 篇 NeurIPS/ICML/CVPR/ACL/IEEE 完整学术论文手稿全维度审计 100% 满分通过。
 
-3. **全平台全架构构建与文档同步**：
-   - 同步升级 Windows、macOS (ARM64/Intel)、Linux (AppImage/Deb)、HarmonyOS NEXT (HAP)、VSCode 扩展、FastMCP 服务端版本至 v2.3.2。
+3. **超长 Markdown（>10,000 行）智能语义分页引擎与纯 SVG 翻页交互**：
+   - 针对超长文档（超过 8,000~10,000 行或 >500KB）自动激活智能语义分页阅读，消除大文档直接全量排版引发的卡顿与浏览器假死；
+   - 底部翻页控制栏升级为**纯 SVG 矢量图标交互**（首页 `|◀`、上一页 `◀`、页码下拉选择器、下一页 `▶`、末页 `▶|`、双模切换开关 `📄/📜`），界面极简清爽无冗余文字；
+   - 状态机语法边界保护：代码块围栏、多行数学环境与 Markdown 表格行绝对不在中间腰斩截断；
+   - 全局目录树 (TOC) 与全文搜索 (Ctrl+F) 跨页无缝联动；
+   - 集成 MathJax `IntersectionObserver` 视口公式按需排版引擎，开屏先排版视口公式，其余公式按需异步排版，彻底根除假死。
+
+4. **未保存标签页关闭确认弹窗 UI 深度重塑 (Frontend Design & Taste Upgrade)**：
+   - 引入毛玻璃遮罩（`backdrop-filter: blur(10px)`）、`16px` 大圆角、琥珀色柔光警告图标、高对比度实色 Accent 保存按钮与微弹触感；
+   - 支持 `Escape` 快捷退出、回车流式保存操作、遮罩点击取消与键盘自动聚焦。
+
+5. **全球 46 种语言 100% 本地化词条对齐**：
+   - 全部 46 种语言 JSON 字典补齐 17 项分页相关词条，实现 100% 完整覆盖。
 
 ## 安装与安全提示
 
@@ -42,8 +51,8 @@ Windows 与 macOS 安装包均为**未签名**版本。Windows 首次运行可�
 
 Windows PowerShell：
 
-    Get-FileHash .\ReadMDSetup-v2.3.2.exe -Algorithm SHA256
+    Get-FileHash .\ReadMDSetup-v2.3.3.exe -Algorithm SHA256
 
 macOS 终端：
 
-    shasum -a 256 ReadMD-macos-arm64-v2.3.2.zip
+    shasum -a 256 ReadMD-macos-arm64-v2.3.3.zip

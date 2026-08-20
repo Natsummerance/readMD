@@ -62,6 +62,7 @@
 
 ## ✨ 核心特性
 
+- 📖 **超长文档智能语义分页**：面对 >10,000 行超长文档自动激活智能分页，纯 SVG 极简矢量控制栏，大纲 (TOC) 与全文搜索 (Ctrl+F) 跨页联动，视口公式按需排版，杜绝假死。
 - ⚡ **极速秒开**：安装版采用 onedir 目录结构，冷启动 ≤1.5s；关闭窗口常驻托盘，双击 `.md` 瞬时唤起（<0.3s）。
 - 💻 **全操作系统原生覆盖**：Windows (Win 7 ~ 11)、macOS (Apple Silicon / Intel)、Linux (Ubuntu / Debian / Arch / Fedora)、国产信创 (银河麒麟 KylinOS / 统信 UOS / 深度 Deepin / openEuler) 与纯血鸿蒙 (HarmonyOS NEXT / OpenHarmony)。
 - 🌍 **全球 46 语种 i18n 体系**：自适应操作系统语言初始化，支持 LTR 与 RTL 双向排版（阿拉伯语 / 希伯来语 / 维吾尔语），100% 纯正母语化覆盖。

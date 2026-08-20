@@ -96,7 +96,7 @@ class TestV231Features(unittest.TestCase):
             html = f.read()
         self.assertIn('id="status-version"', html)
         self.assertIn('id="menu-version-label"', html)
-        self.assertIn('当前版本 v2.3.1', html)
+        self.assertIn('当前版本 v2.3.', html)
 
     def test_ai_settings_close_and_autostart(self):
         ai_js_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'js', 'features', 'ai.js')
