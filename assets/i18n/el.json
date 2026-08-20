@@ -904,5 +904,22 @@
   "menu.lang": "Γλώσσα",
   "menu.langSub": "Γλώσσα διεπαφής",
   "toast.customConnNameExists": "Το προσαρμοσμένο όνομα σύνδεσης υπάρχει ήδη",
-  "toast.connSettingsSaved": "Οι ρυθμίσεις σύνδεσης αποθηκεύτηκαν"
+  "toast.connSettingsSaved": "Οι ρυθμίσεις σύνδεσης αποθηκεύτηκαν",
+  "pagination.ariaLabel": "Πλοήγηση σελίδων εγγράφου",
+  "pagination.chapter": "Κεφάλαιο",
+  "pagination.continuousBadge": "Συνεχές",
+  "pagination.firstPage": "Πρώτη σελίδα (Alt+Home)",
+  "pagination.lastPage": "Τελευταία σελίδα (Alt+End)",
+  "pagination.next": "Επόμενο",
+  "pagination.nextPage": "Επόμενη σελίδα (Alt+→)",
+  "pagination.pageInfo": "Σελίδα {current} από {total}",
+  "pagination.pagedBadge": "Σελιδοποίηση",
+  "pagination.prev": "Προηγούμενο",
+  "pagination.prevPage": "Προηγούμενη σελίδα (Alt+←)",
+  "pagination.selectPage": "Επιλογή σελίδας",
+  "pagination.switchToContinuous": "Συνεχής λειτουργία",
+  "pagination.switchToContinuousToast": "Μετάβαση σε λειτουργία συνεχούς ανάγνωσης",
+  "pagination.switchToPaged": "Λειτουργία σελιδοποίησης",
+  "pagination.switchToPagedToast": "Μετάβαση σε έξυπνη λειτουργία ανάγνωσης ανά σελίδα",
+  "pagination.toggleTip": "Εναλλαγή λειτουργίας ανάγνωσης (Σελιδοποίηση / Συνεχής)"
 }

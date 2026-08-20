@@ -904,5 +904,22 @@
   "menu.lang": "idioma",
   "menu.langSub": "idioma de la interfaz",
   "toast.customConnNameExists": "El nombre de conexión personalizada ya existe",
-  "toast.connSettingsSaved": "Ajustes de conexión guardados"
+  "toast.connSettingsSaved": "Ajustes de conexión guardados",
+  "pagination.ariaLabel": "Navegación de páginas",
+  "pagination.chapter": "Capítulo",
+  "pagination.continuousBadge": "Continuo",
+  "pagination.firstPage": "Primera página (Alt+Home)",
+  "pagination.lastPage": "Última página (Alt+End)",
+  "pagination.next": "Siguiente",
+  "pagination.nextPage": "Página siguiente (Alt+→)",
+  "pagination.pageInfo": "Página {current} de {total}",
+  "pagination.pagedBadge": "Paginado",
+  "pagination.prev": "Anterior",
+  "pagination.prevPage": "Página anterior (Alt+←)",
+  "pagination.selectPage": "Seleccionar página",
+  "pagination.switchToContinuous": "Modo continuo",
+  "pagination.switchToContinuousToast": "Cambiado al modo de lectura continua",
+  "pagination.switchToPaged": "Modo paginado",
+  "pagination.switchToPagedToast": "Cambiado al modo de lectura paginada inteligente",
+  "pagination.toggleTip": "Alternar modo de lectura (Paginado / Continuo)"
 }

@@ -904,5 +904,22 @@
   "menu.lang": "Ndinga",
   "menu.langSub": "Ndinga ya program",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "Mukanda me bumbana mbote"
+  "toast.connSettingsSaved": "Mukanda me bumbana mbote",
+  "pagination.ariaLabel": "Kutambula na balukasa ya mukanda",
+  "pagination.chapter": "Kapu",
+  "pagination.continuousBadge": "Kaka mutindu yina",
+  "pagination.firstPage": "Lukasa ya ntete (Alt+Home)",
+  "pagination.lastPage": "Lukasa ya nsuka (Alt+End)",
+  "pagination.next": "Na ntwala",
+  "pagination.nextPage": "Lukasa ya ke landa (Alt+→)",
+  "pagination.pageInfo": "Lukasa {current} na kati ya {total}",
+  "pagination.pagedBadge": "Mutindu ya balukasa",
+  "pagination.prev": "Na nima",
+  "pagination.prevPage": "Lukasa ya me luta (Alt+←)",
+  "pagination.selectPage": "Pona lukasa",
+  "pagination.switchToContinuous": "Mutindu ya kulanda kaka",
+  "pagination.switchToContinuousToast": "Me soba na mutindu ya kutanga ya kulanda",
+  "pagination.switchToPaged": "Mutindu ya balukasa",
+  "pagination.switchToPagedToast": "Me soba na mutindu ya mayele ya balukasa",
+  "pagination.toggleTip": "Soba mutindu ya kutanga (Balukasa / Kulanda kaka)"
 }

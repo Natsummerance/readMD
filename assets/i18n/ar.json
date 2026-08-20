@@ -904,5 +904,22 @@
   "menu.lang": "اللغة",
   "menu.langSub": "لغة الواجهة",
   "toast.customConnNameExists": "اسم الاتصال المخصص موجود بالفعل",
-  "toast.connSettingsSaved": "تم حفظ إعدادات الاتصال"
+  "toast.connSettingsSaved": "تم حفظ إعدادات الاتصال",
+  "pagination.ariaLabel": "التنقل بين الصفحات",
+  "pagination.chapter": "فصل",
+  "pagination.continuousBadge": "مستمر",
+  "pagination.firstPage": "الصفحة الأولى (Alt+Home)",
+  "pagination.lastPage": "الصفحة الأخيرة (Alt+End)",
+  "pagination.next": "التالي",
+  "pagination.nextPage": "الصفحة التالية (Alt+→)",
+  "pagination.pageInfo": "صفحة {current} من {total}",
+  "pagination.pagedBadge": "وضع الصفحات",
+  "pagination.prev": "السابق",
+  "pagination.prevPage": "الصفحة السابقة (Alt+←)",
+  "pagination.selectPage": "اختر الصفحة",
+  "pagination.switchToContinuous": "الوضع المستمر",
+  "pagination.switchToContinuousToast": "تم التبديل إلى وضع القراءة المستمرة",
+  "pagination.switchToPaged": "وضع الصفحات",
+  "pagination.switchToPagedToast": "تم التبديل إلى وضع القراءة المقسمة إلى صفحات",
+  "pagination.toggleTip": "تبديل وضع القراءة (صفحات / مستمر)"
 }

@@ -904,5 +904,22 @@
   "menu.lang": "언어",
   "menu.langSub": "인터페이스 언어",
   "toast.customConnNameExists": "사용자 지정 연결 이름이 이미 존재합니다",
-  "toast.connSettingsSaved": "연결 설정이 저장되었습니다"
+  "toast.connSettingsSaved": "연결 설정이 저장되었습니다",
+  "pagination.ariaLabel": "문서 페이지 탐색",
+  "pagination.chapter": "장",
+  "pagination.continuousBadge": "연속 스크롤",
+  "pagination.firstPage": "첫 페이지 (Alt+Home)",
+  "pagination.lastPage": "마지막 페이지 (Alt+End)",
+  "pagination.next": "다음",
+  "pagination.nextPage": "다음 페이지 (Alt+→)",
+  "pagination.pageInfo": "{current} / {total} 페이지",
+  "pagination.pagedBadge": "페이지 모드",
+  "pagination.prev": "이전",
+  "pagination.prevPage": "이전 페이지 (Alt+←)",
+  "pagination.selectPage": "페이지 선택",
+  "pagination.switchToContinuous": "연속 모드",
+  "pagination.switchToContinuousToast": "연속 스크롤 읽기 모드로 전환되었습니다",
+  "pagination.switchToPaged": "페이지 분할 모드",
+  "pagination.switchToPagedToast": "스마트 페이지 분할 모드로 전환되었습니다",
+  "pagination.toggleTip": "읽기 모드 전환 (페이지 분할 / 연속 스크롤)"
 }

@@ -904,5 +904,22 @@
   "menu.lang": "भाषा",
   "menu.langSub": "इंटरफ़ेस भाषा",
   "toast.customConnNameExists": "कस्टम कनेक्शन नाम पहले से मौजूद है",
-  "toast.connSettingsSaved": "कनेक्शन सेटिंग्स सहेजी गईं"
+  "toast.connSettingsSaved": "कनेक्शन सेटिंग्स सहेजी गईं",
+  "pagination.ariaLabel": "दस्तावेज़ पृष्ठ नेविगेशन",
+  "pagination.chapter": "अध्याय",
+  "pagination.continuousBadge": "निरंतर",
+  "pagination.firstPage": "पहला पृष्ठ (Alt+Home)",
+  "pagination.lastPage": "अंतिम पृष्ठ (Alt+End)",
+  "pagination.next": "अगला",
+  "pagination.nextPage": "अगला पृष्ठ (Alt+→)",
+  "pagination.pageInfo": "पृष्ठ {current} / {total}",
+  "pagination.pagedBadge": "पृष्ठ मोड",
+  "pagination.prev": "पिछला",
+  "pagination.prevPage": "पिछला पृष्ठ (Alt+←)",
+  "pagination.selectPage": "पृष्ठ चुनें",
+  "pagination.switchToContinuous": "निरंतर मोड",
+  "pagination.switchToContinuousToast": "निरंतर पढ़ने के मोड पर स्विच किया गया",
+  "pagination.switchToPaged": "पृष्ठ विभाजन मोड",
+  "pagination.switchToPagedToast": "स्मार्ट पृष्ठ विभाजन पढ़ने के मोड पर स्विच किया गया",
+  "pagination.toggleTip": "पढ़ने का मोड बदलें (पृष्ठ विभाजन / निरंतर)"
 }

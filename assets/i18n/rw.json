@@ -904,5 +904,22 @@
   "menu.lang": "ururimi",
   "menu.langSub": "Imvugo",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "Inyandiko yabitswe neza"
+  "toast.connSettingsSaved": "Inyandiko yabitswe neza",
+  "pagination.ariaLabel": "Kugenzura amapaji y'inyandiko",
+  "pagination.chapter": "Igice",
+  "pagination.continuousBadge": "Gikomeza",
+  "pagination.firstPage": "Ipaji ya mbere (Alt+Home)",
+  "pagination.lastPage": "Ipaji ya nyuma (Alt+End)",
+  "pagination.next": "Ibikurikira",
+  "pagination.nextPage": "Ipaji ikurikira (Alt+→)",
+  "pagination.pageInfo": "Ipaji ya {current} kuri {total}",
+  "pagination.pagedBadge": "Uburyo bw'amapaji",
+  "pagination.prev": "Ibyabanjirije",
+  "pagination.prevPage": "Ipaji yabanjirije (Alt+←)",
+  "pagination.selectPage": "Hitamo ipaji",
+  "pagination.switchToContinuous": "Uburyo bukomeza",
+  "pagination.switchToContinuousToast": "Bwahinduwe mu buryo bwo gusoma bikomeza",
+  "pagination.switchToPaged": "Uburyo bw'amapaji",
+  "pagination.switchToPagedToast": "Bwahinduwe mu buryo bw'amapaji bwikora",
+  "pagination.toggleTip": "Hindura uburyo bwo gusoma (Amapaji / Gikomeza)"
 }

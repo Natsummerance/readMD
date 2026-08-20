@@ -904,5 +904,22 @@
   "menu.lang": "ภาษา",
   "menu.langSub": "ภาษาอินเทอร์เฟซ",
   "toast.customConnNameExists": "ชื่อการเชื่อมต่อที่กำหนดเองมีอยู่แล้ว",
-  "toast.connSettingsSaved": "บันทึกการตั้งค่าการเชื่อมต่อแล้ว"
+  "toast.connSettingsSaved": "บันทึกการตั้งค่าการเชื่อมต่อแล้ว",
+  "pagination.ariaLabel": "การนำทางหน้าเอกสาร",
+  "pagination.chapter": "บท",
+  "pagination.continuousBadge": "ต่อเนื่อง",
+  "pagination.firstPage": "หน้าแรก (Alt+Home)",
+  "pagination.lastPage": "หน้าสุดท้าย (Alt+End)",
+  "pagination.next": "ถัดไป",
+  "pagination.nextPage": "หน้าถัดไป (Alt+→)",
+  "pagination.pageInfo": "หน้า {current} จาก {total}",
+  "pagination.pagedBadge": "แบ่งหน้า",
+  "pagination.prev": "ก่อนหน้า",
+  "pagination.prevPage": "หน้าก่อนหน้า (Alt+←)",
+  "pagination.selectPage": "เลือกหน้า",
+  "pagination.switchToContinuous": "โหมดต่อเนื่อง",
+  "pagination.switchToContinuousToast": "เปลี่ยนเป็นโหมดการอ่านแบบต่อเนื่องแล้ว",
+  "pagination.switchToPaged": "โหมดแบ่งหน้า",
+  "pagination.switchToPagedToast": "เปลี่ยนเป็นโหมดการอ่านแบบแบ่งหน้าอัจฉริยะแล้ว",
+  "pagination.toggleTip": "สลับโหมดการอ่าน (แบ่งหน้า / ต่อเนื่อง)"
 }

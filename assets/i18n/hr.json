@@ -904,5 +904,22 @@
   "menu.lang": "Jezik",
   "menu.langSub": "Jezik sučelja",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "Dokument je uspješno spremljen"
+  "toast.connSettingsSaved": "Dokument je uspješno spremljen",
+  "pagination.ariaLabel": "Navigacija stranicama dokumenta",
+  "pagination.chapter": "Poglavlje",
+  "pagination.continuousBadge": "Kontinuirano",
+  "pagination.firstPage": "Prva stranica (Alt+Home)",
+  "pagination.lastPage": "Zadnja stranica (Alt+End)",
+  "pagination.next": "Sljedeće",
+  "pagination.nextPage": "Sljedeća stranica (Alt+→)",
+  "pagination.pageInfo": "Stranica {current} od {total}",
+  "pagination.pagedBadge": "Paginirani način",
+  "pagination.prev": "Prethodno",
+  "pagination.prevPage": "Prethodna stranica (Alt+←)",
+  "pagination.selectPage": "Odaberi stranicu",
+  "pagination.switchToContinuous": "Kontinuirani način",
+  "pagination.switchToContinuousToast": "Prebačeno na kontinuirani način čitanja",
+  "pagination.switchToPaged": "Paginirani način",
+  "pagination.switchToPagedToast": "Prebačeno na pametni paginirani način čitanja",
+  "pagination.toggleTip": "Promijeni način čitanja (Paginirano / Kontinuirano)"
 }

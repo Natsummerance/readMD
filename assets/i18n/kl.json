@@ -904,5 +904,22 @@
   "menu.lang": "oqaatsit",
   "menu.langSub": "oqaatsit atorlugit",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "Dokumenti iluatsilluartumik toqqoqqavoq"
+  "toast.connSettingsSaved": "Dokumenti iluatsilluartumik toqqoqqavoq",
+  "pagination.ariaLabel": "Allagaq quppernerit aqqutigalugit",
+  "pagination.chapter": "Immikkoortoq",
+  "pagination.continuousBadge": "Ingerlaavartoq",
+  "pagination.firstPage": "Qupperneq siulleq (Alt+Home)",
+  "pagination.lastPage": "Qupperneq kingulleq (Alt+End)",
+  "pagination.next": "Tullia",
+  "pagination.nextPage": "Qupperneq tullia (Alt+→)",
+  "pagination.pageInfo": "Qupperneq {current} / {total}",
+  "pagination.pagedBadge": "Quppernerit",
+  "pagination.prev": "Siulia",
+  "pagination.prevPage": "Qupperneq siulia (Alt+←)",
+  "pagination.selectPage": "Qupperneq toqqaruk",
+  "pagination.switchToContinuous": "Ingerlaavartumik atuarneq",
+  "pagination.switchToContinuousToast": "Ingerlaavartumik atuarneq toqqarneqarpoq",
+  "pagination.switchToPaged": "Quppernernik atuarneq",
+  "pagination.switchToPagedToast": "Silaqassutsikkut quppernernik atuarneq toqqarneqarpoq",
+  "pagination.toggleTip": "Atuarnermik allanngortitsineq (Quppernerit / Ingerlaavartoq)"
 }

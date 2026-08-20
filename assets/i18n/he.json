@@ -904,5 +904,22 @@
   "menu.lang": "שָׂפָה",
   "menu.langSub": "שפת ממשק",
   "toast.customConnNameExists": "שם החיבור המותאם אישית כבר קיים",
-  "toast.connSettingsSaved": "הגדרות החיבור נשמרו"
+  "toast.connSettingsSaved": "הגדרות החיבור נשמרו",
+  "pagination.ariaLabel": "ניווט עמודים",
+  "pagination.chapter": "פרק",
+  "pagination.continuousBadge": "רציף",
+  "pagination.firstPage": "עמוד ראשון (Alt+Home)",
+  "pagination.lastPage": "עמוד אחרון (Alt+End)",
+  "pagination.next": "הבא",
+  "pagination.nextPage": "העמוד הבא (Alt+→)",
+  "pagination.pageInfo": "עמוד {current} מתוך {total}",
+  "pagination.pagedBadge": "מצב עמודים",
+  "pagination.prev": "הקודם",
+  "pagination.prevPage": "העמוד הקודם (Alt+←)",
+  "pagination.selectPage": "בחר עמוד",
+  "pagination.switchToContinuous": "מצב רציף",
+  "pagination.switchToContinuousToast": "הועבר למצב קריאה רציפה",
+  "pagination.switchToPaged": "מצב עמודים",
+  "pagination.switchToPagedToast": "הועבר למצב קריאה מחולקת לעמודים חכמה",
+  "pagination.toggleTip": "החלף מצב קריאה (עמודים / רציף)"
 }

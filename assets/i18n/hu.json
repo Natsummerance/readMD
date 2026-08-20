@@ -904,5 +904,22 @@
   "menu.lang": "Nyelv",
   "menu.langSub": "Felület nyelve",
   "toast.customConnNameExists": "Az egyéni kapcsolat neve már létezik",
-  "toast.connSettingsSaved": "Kapcsolati beállítások elmentve"
+  "toast.connSettingsSaved": "Kapcsolati beállítások elmentve",
+  "pagination.ariaLabel": "Dokumentum oldalszámozás",
+  "pagination.chapter": "Fejezet",
+  "pagination.continuousBadge": "Folyamatos",
+  "pagination.firstPage": "Első oldal (Alt+Home)",
+  "pagination.lastPage": "Utolsó oldal (Alt+End)",
+  "pagination.next": "Következő",
+  "pagination.nextPage": "Következő oldal (Alt+→)",
+  "pagination.pageInfo": "{current} / {total} oldal",
+  "pagination.pagedBadge": "Oldalankénti mód",
+  "pagination.prev": "Előző",
+  "pagination.prevPage": "Előző oldal (Alt+←)",
+  "pagination.selectPage": "Oldal kiválasztása",
+  "pagination.switchToContinuous": "Folyamatos mód",
+  "pagination.switchToContinuousToast": "Átváltva folyamatos olvasási módra",
+  "pagination.switchToPaged": "Oldalankénti mód",
+  "pagination.switchToPagedToast": "Átváltva intelligens oldalankénti olvasási módra",
+  "pagination.toggleTip": "Olvasási mód váltása (Oldalankénti / Folyamatos)"
 }

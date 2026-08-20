@@ -904,5 +904,22 @@
   "menu.lang": "Lingvo",
   "menu.langSub": "Fasada lingvo",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "Dokumento konservita sukcese"
+  "toast.connSettingsSaved": "Dokumento konservita sukcese",
+  "pagination.ariaLabel": "Dokumenta paĝa navigado",
+  "pagination.chapter": "Ĉapitro",
+  "pagination.continuousBadge": "Kontinua",
+  "pagination.firstPage": "Unua paĝo (Alt+Home)",
+  "pagination.lastPage": "Lasta paĝo (Alt+End)",
+  "pagination.next": "Sekva",
+  "pagination.nextPage": "Sekva paĝo (Alt+→)",
+  "pagination.pageInfo": "Paĝo {current} el {total}",
+  "pagination.pagedBadge": "Paĝigita",
+  "pagination.prev": "Antaŭa",
+  "pagination.prevPage": "Antaŭa paĝo (Alt+←)",
+  "pagination.selectPage": "Elekti paĝon",
+  "pagination.switchToContinuous": "Kontinua reĝimo",
+  "pagination.switchToContinuousToast": "Ŝanĝita al kontinua legoreĝimo",
+  "pagination.switchToPaged": "Paĝigita reĝimo",
+  "pagination.switchToPagedToast": "Ŝanĝita al inteligenta paĝigita legoreĝimo",
+  "pagination.toggleTip": "Ŝanĝi legoreĝimon (Paĝigita / Kontinua)"
 }

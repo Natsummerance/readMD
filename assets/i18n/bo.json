@@ -904,5 +904,22 @@
   "menu.lang": "སྐད་རིགས",
   "menu.langSub": "མཐུད་ཁའི་སྐད་ཡིག",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "ཡིག་ཆ་བདེ་བླག་ངང་ཉར་ཚགས་བྱས།"
+  "toast.connSettingsSaved": "ཡིག་ཆ་བདེ་བླག་ངང་ཉར་ཚགས་བྱས།",
+  "pagination.ariaLabel": "ཡིག་ཆ་ཤོག་གྲངས་ཕྱོགས་སྟོན།",
+  "pagination.chapter": "ལེའུ།",
+  "pagination.continuousBadge": "རྒྱུན་མཐུད།",
+  "pagination.firstPage": "ཤོག་ལྷེ་དང་པོ། (Alt+Home)",
+  "pagination.lastPage": "ཤོག་ལྷེ་མཐའ་མ། (Alt+End)",
+  "pagination.next": "རྗེས་མ།",
+  "pagination.nextPage": "ཤོག་ལྷེ་རྗེས་མ། (Alt+→)",
+  "pagination.pageInfo": "ཤོག་ལྷེ་ {current} / {total}",
+  "pagination.pagedBadge": "ཤོག་དབྱེའི་དཔེ་རྣམ།",
+  "pagination.prev": "གོང་མ།",
+  "pagination.prevPage": "ཤོག་ལྷེ་གོང་མ། (Alt+←)",
+  "pagination.selectPage": "ཤོག་གྲངས་འདེམས་པ།",
+  "pagination.switchToContinuous": "རྒྱུན་མཐུད་དཔེ་རྣམ།",
+  "pagination.switchToContinuousToast": "རྒྱུན་མཐུད་ཀློག་འདོན་དཔེ་རྣམ་ལ་བརྗེས་ཟིན།",
+  "pagination.switchToPaged": "ཤོག་དབྱེ་དཔེ་རྣམ།",
+  "pagination.switchToPagedToast": "རིག་ནུས་ཤོག་དབྱེ་ཀློག་འདོན་དཔེ་རྣམ་ལ་བརྗེས་ཟིན།",
+  "pagination.toggleTip": "ཀློག་འདོན་དཔེ་རྣམ་བརྗེ་བ། (ཤོག་དབྱེ། / རྒྱུན་མཐུད།)"
 }

@@ -904,5 +904,22 @@
   "toast.win7Blocked": "Windows 7 ondersteunt het laden van deze module niet (converters en afhankelijke omgeving)",
   "toast.zenEntered": "Zen-modus geopend (druk op F11 of Esc om af te sluiten)",
   "toast.customConnNameExists": "Aangepaste verbindingsnaam bestaat al",
-  "toast.connSettingsSaved": "Verbindingsinstellingen opgeslagen"
+  "toast.connSettingsSaved": "Verbindingsinstellingen opgeslagen",
+  "pagination.ariaLabel": "Document paginanavigatie",
+  "pagination.chapter": "Hoofdstuk",
+  "pagination.continuousBadge": "Doorlopend",
+  "pagination.firstPage": "Eerste pagina (Alt+Home)",
+  "pagination.lastPage": "Laatste pagina (Alt+End)",
+  "pagination.next": "Volgende",
+  "pagination.nextPage": "Volgende pagina (Alt+→)",
+  "pagination.pageInfo": "Pagina {current} van {total}",
+  "pagination.pagedBadge": "Paginamodus",
+  "pagination.prev": "Vorige",
+  "pagination.prevPage": "Vorige pagina (Alt+←)",
+  "pagination.selectPage": "Selecteer pagina",
+  "pagination.switchToContinuous": "Doorlopende modus",
+  "pagination.switchToContinuousToast": "Overgeschakeld naar doorlopende leesmodus",
+  "pagination.switchToPaged": "Paginamodus",
+  "pagination.switchToPagedToast": "Overgeschakeld naar slimme paginamodus",
+  "pagination.toggleTip": "Leesmodus wisselen (Paginering / Doorlopend)"
 }

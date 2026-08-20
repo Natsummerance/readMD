@@ -904,5 +904,22 @@
   "menu.lang": "Мова",
   "menu.langSub": "Мова інтерфейсу",
   "toast.customConnNameExists": "Користувацьке ім'я з'єднання вже існує",
-  "toast.connSettingsSaved": "Налаштування з'єднання збережено"
+  "toast.connSettingsSaved": "Налаштування з'єднання збережено",
+  "pagination.ariaLabel": "Посторінкова навігація",
+  "pagination.chapter": "Розділ",
+  "pagination.continuousBadge": "Безперервний",
+  "pagination.firstPage": "Перша сторінка (Alt+Home)",
+  "pagination.lastPage": "Остання сторінка (Alt+End)",
+  "pagination.next": "Далі",
+  "pagination.nextPage": "Наступна сторінка (Alt+→)",
+  "pagination.pageInfo": "Сторінка {current} з {total}",
+  "pagination.pagedBadge": "Посторінковий",
+  "pagination.prev": "Назад",
+  "pagination.prevPage": "Попередня сторінка (Alt+←)",
+  "pagination.selectPage": "Вибрати сторінку",
+  "pagination.switchToContinuous": "Безперервний режим",
+  "pagination.switchToContinuousToast": "Переключено в режим безперервного читання",
+  "pagination.switchToPaged": "Посторінковий режим",
+  "pagination.switchToPagedToast": "Переключено в режим розумного посторінкового читання",
+  "pagination.toggleTip": "Перемкнути режим читання (Посторінковий / Безперервний)"
 }

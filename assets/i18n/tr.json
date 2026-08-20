@@ -904,5 +904,22 @@
   "menu.lang": "Dil",
   "menu.langSub": "Arayüz Dili",
   "toast.customConnNameExists": "Özel bağlantı adı zaten mevcut",
-  "toast.connSettingsSaved": "Bağlantı ayarları kaydedildi"
+  "toast.connSettingsSaved": "Bağlantı ayarları kaydedildi",
+  "pagination.ariaLabel": "Belge sayfa gezintisi",
+  "pagination.chapter": "Bölüm",
+  "pagination.continuousBadge": "Sürekli",
+  "pagination.firstPage": "İlk sayfa (Alt+Home)",
+  "pagination.lastPage": "Son sayfa (Alt+End)",
+  "pagination.next": "İleri",
+  "pagination.nextPage": "Sonraki sayfa (Alt+→)",
+  "pagination.pageInfo": "Sayfa {current} / {total}",
+  "pagination.pagedBadge": "Sayfalı mod",
+  "pagination.prev": "Geri",
+  "pagination.prevPage": "Önceki sayfa (Alt+←)",
+  "pagination.selectPage": "Sayfa seç",
+  "pagination.switchToContinuous": "Sürekli mod",
+  "pagination.switchToContinuousToast": "Sürekli okuma moduna geçildi",
+  "pagination.switchToPaged": "Sayfalı mod",
+  "pagination.switchToPagedToast": "Akıllı sayfalı okuma moduna geçildi",
+  "pagination.toggleTip": "Okuma modunu değiştir (Sayfalı / Sürekli)"
 }

@@ -904,5 +904,22 @@
   "menu.lang": "sprog",
   "menu.langSub": "grænsefladesprog",
   "toast.customConnNameExists": "Brugerdefineret forbindelsesnavn findes allerede",
-  "toast.connSettingsSaved": "Forbindelsesindstillinger gemt"
+  "toast.connSettingsSaved": "Forbindelsesindstillinger gemt",
+  "pagination.ariaLabel": "Dokument sidenavigation",
+  "pagination.chapter": "Kapitel",
+  "pagination.continuousBadge": "Fortløbende",
+  "pagination.firstPage": "Første side (Alt+Home)",
+  "pagination.lastPage": "Sidste side (Alt+End)",
+  "pagination.next": "Næste",
+  "pagination.nextPage": "Næste side (Alt+→)",
+  "pagination.pageInfo": "Side {current} af {total}",
+  "pagination.pagedBadge": "Sidetilstand",
+  "pagination.prev": "Forrige",
+  "pagination.prevPage": "Forrige side (Alt+←)",
+  "pagination.selectPage": "Vælg side",
+  "pagination.switchToContinuous": "Fortløbende tilstand",
+  "pagination.switchToContinuousToast": "Skiftet til fortløbende læsetilstand",
+  "pagination.switchToPaged": "Sideopdelt tilstand",
+  "pagination.switchToPagedToast": "Skiftet til intelligent sideopdelt læsetilstand",
+  "pagination.toggleTip": "Skift læsetilstand (Sideopdelt / Fortløbende)"
 }

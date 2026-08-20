@@ -904,5 +904,22 @@
   "menu.lang": "lingwa",
   "menu.langSub": "lingwa tal-interface",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "Dokument salvat b'suċċess"
+  "toast.connSettingsSaved": "Dokument salvat b'suċċess",
+  "pagination.ariaLabel": "Navigazzjoni tal-paġni tad-dokument",
+  "pagination.chapter": "Kapitlu",
+  "pagination.continuousBadge": "Kontinwu",
+  "pagination.firstPage": "L-ewwel paġna (Alt+Home)",
+  "pagination.lastPage": "L-aħħar paġna (Alt+End)",
+  "pagination.next": "Li jmiss",
+  "pagination.nextPage": "Il-paġna li jmiss (Alt+→)",
+  "pagination.pageInfo": "Paġna {current} minn {total}",
+  "pagination.pagedBadge": "Mod tal-paġni",
+  "pagination.prev": "Preċedenti",
+  "pagination.prevPage": "Il-paġna preċedenti (Alt+←)",
+  "pagination.selectPage": "Agħżel paġna",
+  "pagination.switchToContinuous": "Mod kontinwu",
+  "pagination.switchToContinuousToast": "Inbidel għall-mod ta' qari kontinwu",
+  "pagination.switchToPaged": "Mod bil-paġni",
+  "pagination.switchToPagedToast": "Inbidel għall-mod intelliġenti ta' qari bil-paġni",
+  "pagination.toggleTip": "Aqleb il-mod tal-qari (Bil-paġni / Kontinwu)"
 }

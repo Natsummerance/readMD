@@ -904,5 +904,22 @@
   "menu.lang": "язык",
   "menu.langSub": "язык интерфейса",
   "toast.customConnNameExists": "Имя подключения уже существует",
-  "toast.connSettingsSaved": "Настройки подключения сохранены"
+  "toast.connSettingsSaved": "Настройки подключения сохранены",
+  "pagination.ariaLabel": "Постраничная навигация",
+  "pagination.chapter": "Глава",
+  "pagination.continuousBadge": "Непрерывный",
+  "pagination.firstPage": "Первая страница (Alt+Home)",
+  "pagination.lastPage": "Последняя страница (Alt+End)",
+  "pagination.next": "Вперед",
+  "pagination.nextPage": "Следующая страница (Alt+→)",
+  "pagination.pageInfo": "Страница {current} из {total}",
+  "pagination.pagedBadge": "Постраничный",
+  "pagination.prev": "Назад",
+  "pagination.prevPage": "Предыдущая страница (Alt+←)",
+  "pagination.selectPage": "Выбрать страницу",
+  "pagination.switchToContinuous": "Непрерывный режим",
+  "pagination.switchToContinuousToast": "Переключено в режим непрерывного чтения",
+  "pagination.switchToPaged": "Постраничный режим",
+  "pagination.switchToPagedToast": "Переключено в режим умного постраничного чтения",
+  "pagination.toggleTip": "Переключить режим чтения (Постраничный / Непрерывный)"
 }

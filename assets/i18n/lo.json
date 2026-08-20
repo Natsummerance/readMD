@@ -904,5 +904,22 @@
   "menu.lang": "ພາສາ",
   "menu.langSub": "ພາສາການໂຕ້ຕອບ",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "ບັນທຶກເອກະສານສຳເລັດແລ້ວ"
+  "toast.connSettingsSaved": "ບັນທຶກເອກະສານສຳເລັດແລ້ວ",
+  "pagination.ariaLabel": "ການນຳທາງໜ້າເອກະສານ",
+  "pagination.chapter": "ບົດ",
+  "pagination.continuousBadge": "ຕໍ່ເນື່ອງ",
+  "pagination.firstPage": "ໜ້າທຳອິດ (Alt+Home)",
+  "pagination.lastPage": "ໜ້າສຸດທ້າຍ (Alt+End)",
+  "pagination.next": "ຕໍ່ໄປ",
+  "pagination.nextPage": "ໜ້າຕໍ່ໄປ (Alt+→)",
+  "pagination.pageInfo": "ໜ້າ {current} ຈາກ {total}",
+  "pagination.pagedBadge": "ຮູບແບບແບ່ງໜ້າ",
+  "pagination.prev": "ກ່ອນໜ້າ",
+  "pagination.prevPage": "ໜ້າກ່ອນໜ້າ (Alt+←)",
+  "pagination.selectPage": "ເລືອກໜ້າ",
+  "pagination.switchToContinuous": "ຮູບແບບຕໍ່ເນື່ອງ",
+  "pagination.switchToContinuousToast": "ປ່ຽນເປັນຮູບແບບການອ່ານແບບຕໍ່ເນື່ອງແລ້ວ",
+  "pagination.switchToPaged": "ຮູບແບບແບ່ງໜ້າ",
+  "pagination.switchToPagedToast": "ປ່ຽນເປັນຮູບແບບການອ່ານແບ່ງໜ້າອັດສະລິຍະແລ້ວ",
+  "pagination.toggleTip": "ປ່ຽນຮູບແບບການອ່ານ (ແບ່ງໜ້າ / ຕໍ່ເນື່ອງ)"
 }

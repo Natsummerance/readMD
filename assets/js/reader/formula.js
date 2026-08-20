@@ -82,17 +82,78 @@ function restoreMath(html, saved) {
   return html.replace(/\x01M(\d+)\x01/g, (m, i) => saved[+i] || m);
 }
 
+let mathObserver = null;
+
 function renderMath(body) {
+  if (!body) return;
   const html = body.innerHTML;
   if (!/\$\$|\\\(|\\\[|\$[^$\n]+\$|\\begin\{/.test(html)) return;
-  if (window.MathJax) {
-    try {
+
+  function doTypeset() {
+    if (!window.MathJax || !MathJax.typesetPromise) return;
+
+    if (mathObserver) {
+      mathObserver.disconnect();
+      mathObserver = null;
+    }
+
+    // 检测 DOM 中包含公式的段落/块级元素数量
+    const hasMathText = el => {
+      const txt = el.textContent || '';
+      return txt.includes('$') || txt.includes('\\(') || txt.includes('\\[') || txt.includes('\\begin');
+    };
+
+    const mathBlocks = [];
+    const directChildren = body.querySelectorAll('p, div, li, td, th, blockquote, .academic-callout');
+    directChildren.forEach(el => {
+      if (hasMathText(el) && !el.closest('pre, code, script, style')) {
+        mathBlocks.push(el);
+      }
+    });
+
+    // 如果公式块数量适中（<=60），直接全量极速排版
+    if (mathBlocks.length <= 60 || !window.IntersectionObserver) {
       MathJax.typesetPromise([body]).catch(err => {
-        console.warn('MathJax typeset catch:', err);
+        console.debug('MathJax typeset catch:', err);
       });
-    } catch (e) { /* ignore */ }
+      return;
+    }
+
+    // 超长文档（>60 个公式块）：视口按需懒渲染，彻底杜绝主线程卡死
+    const scrollContainer = document.getElementById('content') || null;
+    mathObserver = new IntersectionObserver((entries, obs) => {
+      const visibleBatch = [];
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          visibleBatch.push(entry.target);
+          obs.unobserve(entry.target);
+        }
+      });
+      if (visibleBatch.length > 0) {
+        MathJax.typesetPromise(visibleBatch).catch(() => {});
+      }
+    }, {
+      root: scrollContainer,
+      rootMargin: '350px 0px 350px 0px',
+      threshold: 0.01,
+    });
+
+    // 先立即渲染视口前 15 个块，确保即时开屏无延迟
+    const immediateCount = Math.min(15, mathBlocks.length);
+    const initialBatch = mathBlocks.slice(0, immediateCount);
+    MathJax.typesetPromise(initialBatch).catch(() => {});
+
+    // 其余块挂载到 Observer
+    for (let i = immediateCount; i < mathBlocks.length; i++) {
+      mathObserver.observe(mathBlocks[i]);
+    }
+  }
+
+  if (window.MathJax) {
+    try { doTypeset(); } catch (e) { /* ignore */ }
     return;
   }
+
   window.MathJax = {
     tex: {
       inlineMath: [['$', '$'], ['\\(', '\\)']],
@@ -111,9 +172,7 @@ function renderMath(body) {
   const s = document.createElement('script');
   s.src = '/assets/vendor/mathjax/tex-svg.js';
   s.onload = () => {
-    try {
-      MathJax.typesetPromise([body]).catch(() => {});
-    } catch (e) { /* ignore */ }
+    try { doTypeset(); } catch (e) { /* ignore */ }
   };
   document.head.appendChild(s);
 }

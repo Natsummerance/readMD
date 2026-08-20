@@ -904,5 +904,22 @@
   "web.wait5Min": "قاڭقىش كۆزنىكىدە دەلىللەش ياكى كىرىشنى تاماملاڭ (ئەڭ كۆپ بولغاندا 5 مىنۇت كۈتۈلىدۇ)…",
   "web.webviewUnsupported": "ھازىرقى سىستېما مۇھىتىدا ھەرىكەتچان ئۆز-ئارا تەسىرچان كۆزنەكنى قوزغىتىش قوللانمايدۇ",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "ھۆججەت مۇۋەپپەقىيەتلىك ساقلاندى"
+  "toast.connSettingsSaved": "ھۆججەت مۇۋەپپەقىيەتلىك ساقلاندى",
+  "pagination.ariaLabel": "ھۆججەت بەت يۆنىلىشى",
+  "pagination.chapter": "باب",
+  "pagination.continuousBadge": "ئۈزۈلمەس",
+  "pagination.firstPage": "بىرىنچى بەت (Alt+Home)",
+  "pagination.lastPage": "ئاخىرقى بەت (Alt+End)",
+  "pagination.next": "كېيىنكى",
+  "pagination.nextPage": "كېيىنكى بەت (Alt+→)",
+  "pagination.pageInfo": "{current} / {total} بەت",
+  "pagination.pagedBadge": "بەت ھالىتى",
+  "pagination.prev": "ئالدىنقى",
+  "pagination.prevPage": "ئالدىنقى بەت (Alt+←)",
+  "pagination.selectPage": "بەت تاللاش",
+  "pagination.switchToContinuous": "ئۈزۈلمەس ھالەت",
+  "pagination.switchToContinuousToast": "ئۈزۈلمەس ئوقۇش ھالىتىگە ئالمىشىشتى",
+  "pagination.switchToPaged": "بەتلىك ھالەت",
+  "pagination.switchToPagedToast": "ئەقلىي بەتلىك ئوقۇش ھالىتىگە ئالمىشىشتى",
+  "pagination.toggleTip": "ئوقۇش ھالىتىنى ئالماشتۇرۇش (بەتلىك / ئۈزۈلمەس)"
 }

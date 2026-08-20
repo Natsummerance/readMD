@@ -904,5 +904,22 @@
   "menu.lang": "ဘာသာစကား",
   "menu.langSub": "ကြားခံဘာသာစကား",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "စာရွက်စာတမ်းကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။"
+  "toast.connSettingsSaved": "စာရွက်စာတမ်းကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။",
+  "pagination.ariaLabel": "စာမျက်နှာ လမ်းညွှန်",
+  "pagination.chapter": "အခန်း",
+  "pagination.continuousBadge": "ဆက်တိုက်",
+  "pagination.firstPage": "ပထမဆုံး စာမျက်နှာ (Alt+Home)",
+  "pagination.lastPage": "နောက်ဆုံး စာမျက်နှာ (Alt+End)",
+  "pagination.next": "ရှေ့သို့",
+  "pagination.nextPage": "နောက် စာမျက်နှာ (Alt+→)",
+  "pagination.pageInfo": "စာမျက်နှာ {current} / {total}",
+  "pagination.pagedBadge": "စာမျက်နှာခွဲ မုဒ်",
+  "pagination.prev": "နောက်သို့",
+  "pagination.prevPage": "ရှေ့ စာမျက်နှာ (Alt+←)",
+  "pagination.selectPage": "စာမျက်နှာ ရွေးချယ်ပါ",
+  "pagination.switchToContinuous": "ဆက်တိုက်မုဒ်",
+  "pagination.switchToContinuousToast": "ဆက်တိုက်ဖတ်ရှုခြင်းမုဒ်သို့ ပြောင်းလဲပြီးပါပြီ",
+  "pagination.switchToPaged": "စာမျက်နှာခွဲမုဒ်",
+  "pagination.switchToPagedToast": "စမတ် စာမျက်နှာခွဲ ဖတ်ရှုခြင်းမုဒ်သို့ ပြောင်းလဲပြီးပါပြီ",
+  "pagination.toggleTip": "ဖတ်ရှုခြင်းမုဒ် ပြောင်းလဲရန် (စာမျက်နှာခွဲ / ဆက်တိုက်)"
 }

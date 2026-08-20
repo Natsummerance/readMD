@@ -904,5 +904,22 @@
   "menu.lang": "Хэл",
   "menu.langSub": "Интерфэйсийн хэл",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "Баримт амжилттай хадгалагдлаа"
+  "toast.connSettingsSaved": "Баримт амжилттай хадгалагдлаа",
+  "pagination.ariaLabel": "Баримтын хуудасны навигаци",
+  "pagination.chapter": "Бүлэг",
+  "pagination.continuousBadge": "Үргэлжилсэн",
+  "pagination.firstPage": "Эхний хуудас (Alt+Home)",
+  "pagination.lastPage": "Сүүлчийн хуудас (Alt+End)",
+  "pagination.next": "Дараах",
+  "pagination.nextPage": "Дараагийн хуудас (Alt+→)",
+  "pagination.pageInfo": "{current} / {total} дугаар хуудас",
+  "pagination.pagedBadge": "Хуудсаар",
+  "pagination.prev": "Өмнөх",
+  "pagination.prevPage": "Өмнөх хуудас (Alt+←)",
+  "pagination.selectPage": "Хуудас сонгох",
+  "pagination.switchToContinuous": "Үргэлжилсэн горим",
+  "pagination.switchToContinuousToast": "Үргэлжилсэн гүйлгэж унших горимд шилжлээ",
+  "pagination.switchToPaged": "Хуудсаар унших горим",
+  "pagination.switchToPagedToast": "Ухаалаг хуудсаар унших горимд шилжлээ",
+  "pagination.toggleTip": "Унших горим солих (Хуудсаар / Үргэлжилсэн)"
 }

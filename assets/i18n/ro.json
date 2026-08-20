@@ -904,5 +904,22 @@
   "menu.lang": "limbă",
   "menu.langSub": "limbajul interfeței",
   "toast.customConnNameExists": "Numele conexiunii personalizate există deja",
-  "toast.connSettingsSaved": "Setările de conexiune au fost salvate"
+  "toast.connSettingsSaved": "Setările de conexiune au fost salvate",
+  "pagination.ariaLabel": "Navigare pagini document",
+  "pagination.chapter": "Capitol",
+  "pagination.continuousBadge": "Continuu",
+  "pagination.firstPage": "Prima pagină (Alt+Home)",
+  "pagination.lastPage": "Ultima pagină (Alt+End)",
+  "pagination.next": "Următor",
+  "pagination.nextPage": "Pagina următoare (Alt+→)",
+  "pagination.pageInfo": "Pagina {current} din {total}",
+  "pagination.pagedBadge": "Paginat",
+  "pagination.prev": "Anterior",
+  "pagination.prevPage": "Pagina anterioară (Alt+←)",
+  "pagination.selectPage": "Selectează pagina",
+  "pagination.switchToContinuous": "Mod continuu",
+  "pagination.switchToContinuousToast": "Comutat la modul de lectură continuă",
+  "pagination.switchToPaged": "Mod paginat",
+  "pagination.switchToPagedToast": "Comutat la modul inteligent de lectură pe pagini",
+  "pagination.toggleTip": "Comută modul de lectură (Paginat / Continuu)"
 }

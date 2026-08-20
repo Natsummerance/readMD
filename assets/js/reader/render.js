@@ -220,6 +220,8 @@ function setFixes(fixes, stats) {
 
 const INCREMENTAL_THRESHOLD = 300 * 1024; // 300KB 以上走增量渲染
 const INCREMENTAL_LINES = 6000;
+const PAGINATION_THRESHOLD_LINES = 8000;  // 8000 行以上超长文档自动激活智能分页
+const PAGINATION_THRESHOLD_BYTES = 500 * 1024; // 500KB 以上超长文档自动激活智能分页
 
 let currentDocCitations = {};
 
@@ -261,9 +263,340 @@ function transformAcademicCallouts(src) {
   });
 }
 
+/* ---------------- 智能语义分章分页切分算法 ---------------- */
+
+function splitMdIntoPages(md) {
+  const lines = String(md || '').split('\n');
+  const totalLines = lines.length;
+  if (totalLines <= 2000) {
+    let t = '';
+    for (const l of lines) {
+      const m = l.trim().match(/^#{1,3}\s+(.+)$/);
+      if (m) { t = m[1].replace(/[*_`#]/g, '').trim(); break; }
+    }
+    return [{
+      pageIndex: 0,
+      title: t || '第 1 部分',
+      startLine: 1,
+      endLine: totalLines,
+      content: md,
+    }];
+  }
+
+  const pages = [];
+  let currentLines = [];
+  let currentStart = 1;
+  let inFence = false;
+  let fenceMarker = '';
+  let inMath = false;
+  let inTable = false;
+  let pageChapterTitle = '';
+
+  const TARGET_PAGE_LINES = 1800; // 目标每页行数
+  const MIN_PAGE_LINES = 600;     // 触发标题分章的最小行数阈值
+  const HARD_MAX_PAGE_LINES = 2600; // 强制分切最大行数
+
+  for (let i = 0; i < totalLines; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // 1. 代码块围栏跟踪 (``` 或 ~~~)
+    if (!inFence && (/^```/.test(trimmed) || /^~~~/.test(trimmed))) {
+      inFence = true;
+      fenceMarker = trimmed.slice(0, 3);
+    } else if (inFence && trimmed.startsWith(fenceMarker)) {
+      inFence = false;
+      fenceMarker = '';
+    }
+
+    // 2. 多行公式环境跟踪
+    if (!inFence) {
+      if (!inMath && (/^\$\$$/.test(trimmed) || /^\\begin\{(align\*?|aligned|equation\*?|cases|gather\*?|matrix|pmatrix|bmatrix)\}/.test(trimmed))) {
+        inMath = true;
+      } else if (inMath && (/^\$\$$/.test(trimmed) || /^\\end\{(align\*?|aligned|equation\*?|cases|gather\*?|matrix|pmatrix|bmatrix)\}/.test(trimmed))) {
+        inMath = false;
+      }
+    }
+
+    // 3. 表格行跟踪
+    inTable = !inFence && !inMath && trimmed.startsWith('|') && trimmed.endsWith('|');
+
+    // 记录页面主标题（第一遇到的 # / ## 标题）
+    if (!pageChapterTitle && !inFence && !inMath && /^#{1,3}\s+(.+)$/.test(trimmed)) {
+      const m = trimmed.match(/^#{1,3}\s+(.+)$/);
+      if (m) pageChapterTitle = m[1].replace(/[*_`#]/g, '').trim();
+    }
+
+    const curLen = currentLines.length;
+    const canBreak = !inFence && !inMath && !inTable;
+
+    let shouldBreak = false;
+
+    if (canBreak && curLen >= MIN_PAGE_LINES) {
+      // 优先条件 1：遇上 1 级或 2 级标题 (# / ##)
+      if (/^#{1,2}\s+/.test(trimmed) && curLen >= MIN_PAGE_LINES) {
+        shouldBreak = true;
+      }
+      // 条件 2：行数达到目标且当前为空行
+      else if (curLen >= TARGET_PAGE_LINES && trimmed === '') {
+        shouldBreak = true;
+      }
+      // 条件 3：超过硬上限，在任意空行或 3/4 级标题处分切
+      else if (curLen >= HARD_MAX_PAGE_LINES && (trimmed === '' || /^#{1,4}\s+/.test(trimmed))) {
+        shouldBreak = true;
+      }
+    }
+
+    if (shouldBreak && currentLines.length > 0) {
+      const pageText = currentLines.join('\n');
+      pages.push({
+        pageIndex: pages.length,
+        title: pageChapterTitle || `第 ${pages.length + 1} 部分`,
+        startLine: currentStart,
+        endLine: currentStart + currentLines.length - 1,
+        content: pageText,
+      });
+      currentLines = [];
+      currentStart = i + 1;
+      pageChapterTitle = '';
+    }
+
+    currentLines.push(line);
+  }
+
+  if (currentLines.length > 0) {
+    const pageText = currentLines.join('\n');
+    pages.push({
+      pageIndex: pages.length,
+      title: pageChapterTitle || `第 ${pages.length + 1} 部分`,
+      startLine: currentStart,
+      endLine: currentStart + currentLines.length - 1,
+      content: pageText,
+    });
+  }
+
+  return pages;
+}
+
+function showPaginationBar(show) {
+  const bar = $('pagination-bar');
+  if (bar) bar.classList.toggle('hidden', !show);
+  const stBadge = $('status-pagination');
+  if (stBadge) stBadge.classList.toggle('hidden', !show);
+}
+
+function updatePaginationBar() {
+  const p = state.pagination;
+  if (!p || !p.enabled || !p.pages || !p.pages.length) {
+    showPaginationBar(false);
+    return;
+  }
+  showPaginationBar(true);
+
+  const cur = p.currentPage;
+  const total = p.totalPages;
+  const curPage = p.pages[cur] || {};
+
+  const chLabel = $('pg-chapter-label');
+  if (chLabel) chLabel.textContent = curPage.title || '';
+
+  const totalLbl = $('pg-total-label');
+  if (totalLbl) totalLbl.textContent = `/ ${total}`;
+
+  const btnFirst = $('pg-first-btn');
+  if (btnFirst) btnFirst.disabled = (cur === 0 || p.mode === 'continuous');
+
+  const btnPrev = $('pg-prev-btn');
+  if (btnPrev) btnPrev.disabled = (cur === 0 || p.mode === 'continuous');
+
+  const btnNext = $('pg-next-btn');
+  if (btnNext) btnNext.disabled = (cur >= total - 1 || p.mode === 'continuous');
+
+  const btnLast = $('pg-last-btn');
+  if (btnLast) btnLast.disabled = (cur >= total - 1 || p.mode === 'continuous');
+
+  const sel = $('pg-page-select');
+  if (sel) {
+    sel.disabled = (p.mode === 'continuous');
+    if (sel.options.length !== total) {
+      sel.innerHTML = '';
+      p.pages.forEach((pg, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        const num = idx + 1;
+        const shortTitle = pg.title ? (pg.title.length > 22 ? pg.title.slice(0, 22) + '…' : pg.title) : `${num}`;
+        opt.textContent = `${num}. ${shortTitle}`;
+        sel.appendChild(opt);
+      });
+    }
+    sel.value = cur;
+  }
+
+  const iconContinuous = $('pg-mode-icon-continuous');
+  const iconPaged = $('pg-mode-icon-paged');
+  if (iconContinuous && iconPaged) {
+    if (p.mode === 'paged') {
+      iconContinuous.classList.remove('hidden');
+      iconPaged.classList.add('hidden');
+    } else {
+      iconContinuous.classList.add('hidden');
+      iconPaged.classList.remove('hidden');
+    }
+  }
+
+  const stBadge = $('status-pagination');
+  if (stBadge) {
+    stBadge.textContent = p.mode === 'paged' ? `${cur + 1} / ${total}` : '全卷';
+  }
+}
+
+function togglePaginationMode() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const p = state.pagination;
+  if (!p || !p.enabled) return;
+
+  if (p.mode === 'paged') {
+    p.mode = 'continuous';
+    showToast(_t('pagination.switchToContinuousToast') || '已切换至全卷连续阅读模式', 1800);
+    renderContentIncremental(p.rawContent, 0);
+  } else {
+    p.mode = 'paged';
+    showToast(_t('pagination.switchToPagedToast') || '已切换至智能分页阅读模式', 1800);
+    renderPage(0, null, false);
+  }
+  updatePaginationBar();
+}
+
+function renderPage(pageIndex, targetHeadingId, preserveScroll) {
+  if (!state.pagination.pages || !state.pagination.pages.length) return;
+  pageIndex = Math.max(0, Math.min(pageIndex, state.pagination.pages.length - 1));
+  state.pagination.currentPage = pageIndex;
+  const page = state.pagination.pages[pageIndex];
+
+  const el = $('content');
+  if (!el) return;
+
+  const transformed = transformAcademicCallouts(page.content);
+  const prot = protectMath(transformed);
+  const html = marked.parse(prot.src, { gfm: true, breaks: false });
+  const finalHtml = restoreMath(html, prot.saved);
+  el.innerHTML = '<article class="markdown-body">' + finalHtml + '</article>';
+
+  postProcess();
+  updatePaginationBar();
+  updateStatus();
+
+  if (targetHeadingId) {
+    requestAnimationFrame(() => {
+      let targetEl = document.getElementById(targetHeadingId);
+      if (!targetEl) {
+        try {
+          const dec = decodeURIComponent(targetHeadingId);
+          targetEl = document.getElementById(dec) || el.querySelector('[name="' + CSS.escape(dec) + '"]');
+        } catch (e) {}
+      }
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        targetEl.classList.remove('heading-target-highlight');
+        void targetEl.offsetWidth;
+        targetEl.classList.add('heading-target-highlight');
+        setTimeout(() => targetEl.classList.remove('heading-target-highlight'), 1500);
+      } else {
+        el.scrollTop = 0;
+      }
+    });
+  } else if (!preserveScroll) {
+    el.scrollTop = 0;
+  }
+}
+
+let paginationEventsBound = false;
+function initPaginationEvents() {
+  if (paginationEventsBound) return;
+  paginationEventsBound = true;
+
+  const btnFirst = $('pg-first-btn');
+  if (btnFirst) btnFirst.addEventListener('click', () => { if (state.pagination.enabled && state.pagination.mode === 'paged') renderPage(0); });
+
+  const btnPrev = $('pg-prev-btn');
+  if (btnPrev) btnPrev.addEventListener('click', () => { if (state.pagination.enabled && state.pagination.mode === 'paged') renderPage(state.pagination.currentPage - 1); });
+
+  const btnNext = $('pg-next-btn');
+  if (btnNext) btnNext.addEventListener('click', () => { if (state.pagination.enabled && state.pagination.mode === 'paged') renderPage(state.pagination.currentPage + 1); });
+
+  const btnLast = $('pg-last-btn');
+  if (btnLast) btnLast.addEventListener('click', () => { if (state.pagination.enabled && state.pagination.mode === 'paged') renderPage(state.pagination.totalPages - 1); });
+
+  const sel = $('pg-page-select');
+  if (sel) sel.addEventListener('change', e => {
+    if (state.pagination.enabled && state.pagination.mode === 'paged') {
+      const idx = parseInt(e.target.value, 10);
+      if (!isNaN(idx)) renderPage(idx);
+    }
+  });
+
+  const toggleBtn = $('pg-mode-toggle');
+  if (toggleBtn) toggleBtn.addEventListener('click', togglePaginationMode);
+
+  const stBadge = $('status-pagination');
+  if (stBadge) {
+    stBadge.addEventListener('click', togglePaginationMode);
+    stBadge.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); togglePaginationMode(); } });
+  }
+
+  // 快捷键支持 (Alt + ArrowLeft/Right/Home/End)
+  window.addEventListener('keydown', e => {
+    if (state.editing || !state.pagination.enabled || state.pagination.mode !== 'paged') return;
+    if (e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        renderPage(state.pagination.currentPage - 1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        renderPage(state.pagination.currentPage + 1);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        renderPage(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        renderPage(state.pagination.totalPages - 1);
+      }
+    }
+  });
+}
+window.initPaginationEvents = initPaginationEvents;
+window.splitMdIntoPages = splitMdIntoPages;
+window.renderPage = renderPage;
+window.togglePaginationMode = togglePaginationMode;
+
 function renderContent(content, name) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const saved = state.scrollPos[normalizePath(name || state.file || '')] || 0;
-  const big = content.length > INCREMENTAL_THRESHOLD || content.split('\n').length > INCREMENTAL_LINES;
+  const linesCount = (content || '').split('\n').length;
+  const isUltraLong = linesCount > PAGINATION_THRESHOLD_LINES || (content || '').length > PAGINATION_THRESHOLD_BYTES;
+
+  if (isUltraLong) {
+    state.pagination.enabled = true;
+    state.pagination.rawContent = content;
+    state.pagination.pages = splitMdIntoPages(content);
+    state.pagination.totalPages = state.pagination.pages.length;
+    if (state.pagination.mode === 'paged') {
+      renderPage(0, null, false);
+      showPaginationBar(true);
+      return;
+    } else {
+      renderContentIncremental(content, saved);
+      showPaginationBar(true);
+      return;
+    }
+  } else {
+    state.pagination.enabled = false;
+    state.pagination.pages = [];
+    state.pagination.totalPages = 0;
+    showPaginationBar(false);
+  }
+
+  const big = content.length > INCREMENTAL_THRESHOLD || linesCount > INCREMENTAL_LINES;
   if (big) {
     renderContentIncremental(content, saved);
     return;
@@ -356,6 +689,7 @@ async function renderContentIncremental(content, savedTop) {
   prog.remove();
   if (savedTop) el.scrollTop = savedTop;
   postProcess();
+  updatePaginationBar();
 }
 
 function normalizeHeadingText(text) {

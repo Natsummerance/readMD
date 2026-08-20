@@ -198,6 +198,39 @@
       </div>
 
     </main>
+    <!-- 超长文档智能翻页控制栏（纯 SVG 图标交互） -->
+    <div id="pagination-bar" class="pagination-bar hidden" role="navigation" aria-label="文档分页导航" data-i18n-aria="pagination.ariaLabel">
+      <div class="pg-left">
+        <span class="pg-mode-badge" id="pg-mode-badge" title="分页阅读模式">
+          <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        </span>
+        <span class="pg-chapter-label" id="pg-chapter-label"></span>
+      </div>
+      <div class="pg-center">
+        <button id="pg-first-btn" class="tb-btn icon pg-icon-btn" title="首页 (Alt+Home)" aria-label="首页" data-i18n-title="pagination.firstPage" data-i18n-aria="pagination.firstPage">
+          <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+        </button>
+        <button id="pg-prev-btn" class="tb-btn icon pg-icon-btn" title="上一页 (Alt+←)" aria-label="上一页" data-i18n-title="pagination.prevPage" data-i18n-aria="pagination.prevPage">
+          <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <div class="pg-page-select-wrap">
+          <select id="pg-page-select" class="pg-select" aria-label="选择页码" data-i18n-aria="pagination.selectPage"></select>
+          <span id="pg-total-label" class="pg-total-label">/ 1</span>
+        </div>
+        <button id="pg-next-btn" class="tb-btn icon pg-icon-btn" title="下一页 (Alt+→)" aria-label="下一页" data-i18n-title="pagination.nextPage" data-i18n-aria="pagination.nextPage">
+          <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+        </button>
+        <button id="pg-last-btn" class="tb-btn icon pg-icon-btn" title="末页 (Alt+End)" aria-label="末页" data-i18n-title="pagination.lastPage" data-i18n-aria="pagination.lastPage">
+          <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+      <div class="pg-right">
+        <button id="pg-mode-toggle" class="tb-btn icon pg-toggle-btn" title="切换阅读模式（分页阅读 / 全卷连续）" aria-label="切换阅读模式" data-i18n-title="pagination.toggleTip" data-i18n-aria="pagination.toggleTip">
+          <svg id="pg-mode-icon-continuous" class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><path d="M12 3v18" stroke-dasharray="2 2"/></svg>
+          <svg id="pg-mode-icon-paged" class="tb-ic hidden" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+        </button>
+      </div>
+    </div>
 
     <textarea id="edit-area" class="hidden" spellcheck="false"></textarea>
     <div id="edit-wrap" class="hidden"><div id="edit-cm"></div></div>
@@ -785,6 +818,7 @@
 <footer id="statusbar">
   <div class="statusbar-left-group">
     <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.1</span>
+    <span id="status-pagination" class="status-pagination hidden" role="button" tabindex="0" title="点击切换阅读模式"></span>
     <span id="status-left"></span>
   </div>
   <span id="status-right"></span>

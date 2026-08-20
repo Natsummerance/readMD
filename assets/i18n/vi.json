@@ -904,5 +904,22 @@
   "menu.lang": "Ngôn ngữ",
   "menu.langSub": "Ngôn ngữ giao diện",
   "toast.customConnNameExists": "Tên kết nối tùy chỉnh đã tồn tại",
-  "toast.connSettingsSaved": "Đã lưu cài đặt kết nối"
+  "toast.connSettingsSaved": "Đã lưu cài đặt kết nối",
+  "pagination.ariaLabel": "Điều hướng trang tài liệu",
+  "pagination.chapter": "Chương",
+  "pagination.continuousBadge": "Liên tục",
+  "pagination.firstPage": "Trang đầu (Alt+Home)",
+  "pagination.lastPage": "Trang cuối (Alt+End)",
+  "pagination.next": "Tiếp",
+  "pagination.nextPage": "Trang sau (Alt+→)",
+  "pagination.pageInfo": "Trang {current} / {total}",
+  "pagination.pagedBadge": "Phân trang",
+  "pagination.prev": "Trước",
+  "pagination.prevPage": "Trang trước (Alt+←)",
+  "pagination.selectPage": "Chọn trang",
+  "pagination.switchToContinuous": "Chế độ liên tục",
+  "pagination.switchToContinuousToast": "Đã chuyển sang chế độ đọc cuộn liên tục",
+  "pagination.switchToPaged": "Chế độ phân trang",
+  "pagination.switchToPagedToast": "Đã chuyển sang chế độ đọc phân trang thông minh",
+  "pagination.toggleTip": "Chuyển đổi chế độ đọc (Phân trang / Liên tục)"
 }

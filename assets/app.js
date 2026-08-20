@@ -322,6 +322,9 @@ function bindEvents() {
   $('btn-a').addEventListener('click', () => zoom(-10));
   $('btn-A').addEventListener('click', () => zoom(10));
 
+  /* --- 11.5. 超长文档智能翻页控制器事件 [联动: reader/render.js] --- */
+  if (typeof initPaginationEvents === 'function') initPaginationEvents();
+
   /* --- 12. 专业导出工作台与排版微缩预览 (Export Studio) [联动: features/export.js] --- */
   $('btn-print').addEventListener('click', openExportModal);
   $('export-close').addEventListener('click', closeExportModal);

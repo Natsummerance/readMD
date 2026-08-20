@@ -904,5 +904,22 @@
   "menu.lang": "teanga",
   "menu.langSub": "teanga comhéadain",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "D'éirigh le sábháil an doiciméad"
+  "toast.connSettingsSaved": "D'éirigh le sábháil an doiciméad",
+  "pagination.ariaLabel": "Nascleanúint leathanach cáipéise",
+  "pagination.chapter": "Caibidil",
+  "pagination.continuousBadge": "Leanúnach",
+  "pagination.firstPage": "An chéad leathanach (Alt+Home)",
+  "pagination.lastPage": "An leathanach deireanach (Alt+End)",
+  "pagination.next": "Ar aghaidh",
+  "pagination.nextPage": "An chéad leathanach eile (Alt+→)",
+  "pagination.pageInfo": "Leathanach {current} as {total}",
+  "pagination.pagedBadge": "Mód leathanaigh",
+  "pagination.prev": "Siar",
+  "pagination.prevPage": "Leathanach roimhe seo (Alt+←)",
+  "pagination.selectPage": "Roghnaigh leathanach",
+  "pagination.switchToContinuous": "Mód leanúnach",
+  "pagination.switchToContinuousToast": "Athraithe go mód léitheoireachta leanúnaí",
+  "pagination.switchToPaged": "Mód leathanaigh",
+  "pagination.switchToPagedToast": "Athraithe go mód cliste leathanaigh",
+  "pagination.toggleTip": "Athraigh mód léitheoireachta (Leathanaigh / Leanúnach)"
 }

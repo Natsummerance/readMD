@@ -904,5 +904,22 @@
   "web.wait5Min": "Completa la verifica o il login nella finestra popup (attesa massima: 5 min)...",
   "web.webviewUnsupported": "L'ambiente di sistema corrente non supporta finestre interattive dinamiche",
   "toast.customConnNameExists": "Nome connessione personalizzata già esistente",
-  "toast.connSettingsSaved": "Impostazioni di connessione salvate"
+  "toast.connSettingsSaved": "Impostazioni di connessione salvate",
+  "pagination.ariaLabel": "Navigazione pagine",
+  "pagination.chapter": "Capitolo",
+  "pagination.continuousBadge": "Continuo",
+  "pagination.firstPage": "Prima pagina (Alt+Home)",
+  "pagination.lastPage": "Ultima pagina (Alt+End)",
+  "pagination.next": "Avanti",
+  "pagination.nextPage": "Pagina successiva (Alt+→)",
+  "pagination.pageInfo": "Pagina {current} di {total}",
+  "pagination.pagedBadge": "Paginato",
+  "pagination.prev": "Indietro",
+  "pagination.prevPage": "Pagina precedente (Alt+←)",
+  "pagination.selectPage": "Seleziona pagina",
+  "pagination.switchToContinuous": "Modalità continua",
+  "pagination.switchToContinuousToast": "Passato alla modalità di lettura continua",
+  "pagination.switchToPaged": "Modalità impaginata",
+  "pagination.switchToPagedToast": "Passato alla modalità di lettura impaginata intelligente",
+  "pagination.toggleTip": "Cambia modalità di lettura (Impaginata / Continua)"
 }

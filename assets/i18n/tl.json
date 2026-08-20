@@ -904,5 +904,22 @@
   "menu.lang": "Wika",
   "menu.langSub": "Wika ng Interface",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "Matagumpay na na-save ang dokumento"
+  "toast.connSettingsSaved": "Matagumpay na na-save ang dokumento",
+  "pagination.ariaLabel": "Pag-navigate sa pahina ng dokumento",
+  "pagination.chapter": "Kabanata",
+  "pagination.continuousBadge": "Tuluy-tuloy",
+  "pagination.firstPage": "Unang pahina (Alt+Home)",
+  "pagination.lastPage": "Huling pahina (Alt+End)",
+  "pagination.next": "Susunod",
+  "pagination.nextPage": "Susunod na pahina (Alt+→)",
+  "pagination.pageInfo": "Pahina {current} ng {total}",
+  "pagination.pagedBadge": "Naka-pahina",
+  "pagination.prev": "Nakaraan",
+  "pagination.prevPage": "Nakaraang pahina (Alt+←)",
+  "pagination.selectPage": "Pumili ng pahina",
+  "pagination.switchToContinuous": "Tuluy-tuloy na mode",
+  "pagination.switchToContinuousToast": "Lumipat sa tuluy-tuloy na mode ng pagbabasa",
+  "pagination.switchToPaged": "Naka-paged na mode",
+  "pagination.switchToPagedToast": "Lumipat sa matalinong paged na pagbabasa",
+  "pagination.toggleTip": "Palitan ang mode ng pagbabasa (Pahina / Tuluy-tuloy)"
 }

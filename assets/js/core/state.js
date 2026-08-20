@@ -75,6 +75,15 @@ const state = {
   export: {
     fmt: 'pdf', defaults: null, presets: {}, custom: {}, options: null, last: null, ready: false,
   },
+  pagination: {
+    enabled: false,       // 是否为超长文档并激活分页逻辑
+    mode: 'paged',        // 'paged' | 'continuous'
+    pages: [],            // [{ index, title, startLine, endLine, content, headingIds }]
+    currentPage: 0,       // 当前页码 (0-indexed)
+    totalPages: 0,
+    allHeadings: [],      // 全文大纲目录项 [{ id, text, level, pageIndex }]
+    rawContent: '',       // 原始全文内容备份
+  },
 };
 window.state = state;
 

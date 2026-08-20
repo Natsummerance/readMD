@@ -904,5 +904,22 @@
   "menu.lang": "Bahasa",
   "menu.langSub": "Bahasa Antarmuka",
   "toast.customConnNameExists": "Nama koneksi khusus sudah ada",
-  "toast.connSettingsSaved": "Pengaturan koneksi disimpan"
+  "toast.connSettingsSaved": "Pengaturan koneksi disimpan",
+  "pagination.ariaLabel": "Navigasi halaman dokumen",
+  "pagination.chapter": "Bab",
+  "pagination.continuousBadge": "Berkelanjutan",
+  "pagination.firstPage": "Halaman pertama (Alt+Home)",
+  "pagination.lastPage": "Halaman terakhir (Alt+End)",
+  "pagination.next": "Berikutnya",
+  "pagination.nextPage": "Halaman berikutnya (Alt+→)",
+  "pagination.pageInfo": "Halaman {current} dari {total}",
+  "pagination.pagedBadge": "Per Halaman",
+  "pagination.prev": "Sebelumnya",
+  "pagination.prevPage": "Halaman sebelumnya (Alt+←)",
+  "pagination.selectPage": "Pilih halaman",
+  "pagination.switchToContinuous": "Mode berkelanjutan",
+  "pagination.switchToContinuousToast": "Beralih ke mode membaca gulir berkelanjutan",
+  "pagination.switchToPaged": "Mode berhalaman",
+  "pagination.switchToPagedToast": "Beralih ke mode membaca berhalaman cerdas",
+  "pagination.toggleTip": "Ganti mode membaca (Berhalaman / Berkelanjutan)"
 }

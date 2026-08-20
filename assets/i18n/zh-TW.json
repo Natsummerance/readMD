@@ -904,5 +904,22 @@
   "menu.lang": "語言",
   "menu.langSub": "界面語言",
   "toast.customConnNameExists": "自訂連線名稱已存在",
-  "toast.connSettingsSaved": "連線設定已儲存"
+  "toast.connSettingsSaved": "連線設定已儲存",
+  "pagination.ariaLabel": "文件分頁導覽",
+  "pagination.chapter": "章節",
+  "pagination.continuousBadge": "全卷連續",
+  "pagination.firstPage": "首頁 (Alt+Home)",
+  "pagination.lastPage": "末頁 (Alt+End)",
+  "pagination.next": "下一頁",
+  "pagination.nextPage": "下一頁 (Alt+→)",
+  "pagination.pageInfo": "第 {current} / {total} 頁",
+  "pagination.pagedBadge": "分頁模式",
+  "pagination.prev": "上一頁",
+  "pagination.prevPage": "上一頁 (Alt+←)",
+  "pagination.selectPage": "選擇頁碼",
+  "pagination.switchToContinuous": "全卷模式",
+  "pagination.switchToContinuousToast": "已切換至全卷連續閱讀模式",
+  "pagination.switchToPaged": "分頁模式",
+  "pagination.switchToPagedToast": "已切換至智慧分頁閱讀模式",
+  "pagination.toggleTip": "切換閱讀模式（分頁閱讀 / 全卷連續）"
 }

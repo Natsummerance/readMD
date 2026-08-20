@@ -904,5 +904,22 @@
   "menu.lang": "Jezik",
   "menu.langSub": "Jezik vmesnika",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "Dokument je uspešno shranjen"
+  "toast.connSettingsSaved": "Dokument je uspešno shranjen",
+  "pagination.ariaLabel": "Navigacija po straneh dokumenta",
+  "pagination.chapter": "Poglavje",
+  "pagination.continuousBadge": "Zvezno",
+  "pagination.firstPage": "Prva stran (Alt+Home)",
+  "pagination.lastPage": "Zadnja stran (Alt+End)",
+  "pagination.next": "Naprej",
+  "pagination.nextPage": "Naslednja stran (Alt+→)",
+  "pagination.pageInfo": "Stran {current} od {total}",
+  "pagination.pagedBadge": "Stranski način",
+  "pagination.prev": "Nazaj",
+  "pagination.prevPage": "Prejšnja stran (Alt+←)",
+  "pagination.selectPage": "Izberi stran",
+  "pagination.switchToContinuous": "Zvezni način",
+  "pagination.switchToContinuousToast": "Preklopljeno na zvezni način branja",
+  "pagination.switchToPaged": "Stranski način",
+  "pagination.switchToPagedToast": "Preklopljeno na pametni stranski način branja",
+  "pagination.toggleTip": "Preklopi način branja (Strani / Zvezno)"
 }

@@ -904,5 +904,22 @@
   "menu.lang": "kieli",
   "menu.langSub": "käyttöliittymän kieli",
   "toast.customConnNameExists": "Mukautettu yhteysnimi on jo olemassa",
-  "toast.connSettingsSaved": "Yhteysasetukset tallennettu"
+  "toast.connSettingsSaved": "Yhteysasetukset tallennettu",
+  "pagination.ariaLabel": "Asiakirjan sivunavigointi",
+  "pagination.chapter": "Luku",
+  "pagination.continuousBadge": "Jatkuva",
+  "pagination.firstPage": "Ensimmäinen sivu (Alt+Home)",
+  "pagination.lastPage": "Viimeinen sivu (Alt+End)",
+  "pagination.next": "Seuraava",
+  "pagination.nextPage": "Seuraava sivu (Alt+→)",
+  "pagination.pageInfo": "Sivu {current} / {total}",
+  "pagination.pagedBadge": "Sivutila",
+  "pagination.prev": "Edellinen",
+  "pagination.prevPage": "Edellinen sivu (Alt+←)",
+  "pagination.selectPage": "Valitse sivu",
+  "pagination.switchToContinuous": "Jatkuva tila",
+  "pagination.switchToContinuousToast": "Vaihdettu jatkuvaan lukutilaan",
+  "pagination.switchToPaged": "Sivutettu tila",
+  "pagination.switchToPagedToast": "Vaihdettu älykkääseen sivutettuun lukutilaan",
+  "pagination.toggleTip": "Vaihda lukutilaa (Sivutettu / Jatkuva)"
 }

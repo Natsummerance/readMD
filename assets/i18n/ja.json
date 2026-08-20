@@ -904,5 +904,22 @@
   "menu.lang": "言語",
   "menu.langSub": "インターフェース言語",
   "toast.customConnNameExists": "カスタム接続名は既に存在します",
-  "toast.connSettingsSaved": "接続設定を保存しました"
+  "toast.connSettingsSaved": "接続設定を保存しました",
+  "pagination.ariaLabel": "ドキュメントページネーション",
+  "pagination.chapter": "章",
+  "pagination.continuousBadge": "連続スクロール",
+  "pagination.firstPage": "最初のページ (Alt+Home)",
+  "pagination.lastPage": "最後のページ (Alt+End)",
+  "pagination.next": "次へ",
+  "pagination.nextPage": "次のページ (Alt+→)",
+  "pagination.pageInfo": "{current} / {total} ページ",
+  "pagination.pagedBadge": "ページモード",
+  "pagination.prev": "前へ",
+  "pagination.prevPage": "前のページ (Alt+←)",
+  "pagination.selectPage": "ページ選択",
+  "pagination.switchToContinuous": "連続表示",
+  "pagination.switchToContinuousToast": "連続スクロール閲覧モードに切り替えました",
+  "pagination.switchToPaged": "ページ分割表示",
+  "pagination.switchToPagedToast": "スマートページ分割閲覧モードに切り替えました",
+  "pagination.toggleTip": "閲覧モードの切り替え（ページ分割 / 連続スクロール）"
 }

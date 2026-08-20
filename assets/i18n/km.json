@@ -904,5 +904,22 @@
   "menu.lang": "ភាសា",
   "menu.langSub": "ភាសាចំណុចប្រទាក់",
   "toast.customConnNameExists": "自定义连接名称已存在",
-  "toast.connSettingsSaved": "ឯកសារត្រូវបានរក្សាទុកដោយជោគជ័យ"
+  "toast.connSettingsSaved": "ឯកសារត្រូវបានរក្សាទុកដោយជោគជ័យ",
+  "pagination.ariaLabel": "ការរុករកទំព័រឯកសារ",
+  "pagination.chapter": "ជំពូក",
+  "pagination.continuousBadge": "បន្តបន្ទាប់",
+  "pagination.firstPage": "ទំព័រដំបូង (Alt+Home)",
+  "pagination.lastPage": "ទំព័រចុងក្រោយ (Alt+End)",
+  "pagination.next": "បន្ទាប់",
+  "pagination.nextPage": "ទំព័របន្ទាប់ (Alt+→)",
+  "pagination.pageInfo": "ទំព័រ {current} នៃ {total}",
+  "pagination.pagedBadge": "របៀបបែងចែកទំព័រ",
+  "pagination.prev": "មុន",
+  "pagination.prevPage": "ទំព័រមុន (Alt+←)",
+  "pagination.selectPage": "ជ្រើសរើសទំព័រ",
+  "pagination.switchToContinuous": "របៀបបន្តបន្ទាប់",
+  "pagination.switchToContinuousToast": "បានប្តូរទៅរបៀបអានបន្តបន្ទាប់",
+  "pagination.switchToPaged": "របៀបបែងចែកទំព័រ",
+  "pagination.switchToPagedToast": "បានប្តូរទៅរបៀបអានបែងចែកទំព័រឆ្លាតវៃ",
+  "pagination.toggleTip": "ប្តូររបៀបអាន (បែងចែកទំព័រ / បន្តបន្ទាប់)"
 }

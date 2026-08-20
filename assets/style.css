@@ -3053,3 +3053,170 @@ body.zen-mode .zen-exit-btn {
   opacity: 0.9;
 }
 
+/* ============================================================
+   超长文档智能翻页控制器样式 (Pagination Bar)
+   ============================================================ */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 16px;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, .04);
+  flex-shrink: 0;
+  z-index: 20;
+  min-height: 42px;
+  user-select: none;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.pg-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pg-mode-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
+.pg-chapter-label {
+  font-size: 12px;
+  color: var(--fg2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+.pg-center {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pg-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pg-nav-btn:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pg-nav-btn:disabled, .pg-center button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.pg-page-select-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+}
+
+.pg-select {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg);
+  background: transparent;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.pg-select option {
+  background: var(--bg2);
+  color: var(--fg);
+}
+
+.pg-total-label {
+  font-size: 12px;
+  color: var(--fg3);
+  white-space: nowrap;
+}
+
+.pg-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  flex: 1;
+}
+
+.pg-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--fg2);
+  padding: 3px 8px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pg-toggle-btn:hover {
+  background: var(--bg);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* 状态栏分页指示小角标 */
+.status-pagination {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 6px;
+  transition: opacity 0.15s ease;
+}
+
+.status-pagination:hover {
+  opacity: 0.85;
+  text-decoration: underline;
+}
+
+/* 响应式适配 */
+@media (max-width: 720px) {
+  .pg-chapter-label { display: none; }
+  .pg-btn-text { display: none; }
+  .pagination-bar { padding: 4px 8px; }
+}
+
+

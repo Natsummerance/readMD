@@ -904,5 +904,22 @@
   "menu.lang": "språk",
   "menu.langSub": "gränssnittsspråk",
   "toast.customConnNameExists": "Anpassat anslutningsnamn finns redan",
-  "toast.connSettingsSaved": "Anslutningsinställningar sparade"
+  "toast.connSettingsSaved": "Anslutningsinställningar sparade",
+  "pagination.ariaLabel": "Dokumentsidnavigering",
+  "pagination.chapter": "Kapitel",
+  "pagination.continuousBadge": "Kontinuerlig",
+  "pagination.firstPage": "Första sidan (Alt+Home)",
+  "pagination.lastPage": "Sista sidan (Alt+End)",
+  "pagination.next": "Nästa",
+  "pagination.nextPage": "Nästa sida (Alt+→)",
+  "pagination.pageInfo": "Sida {current} av {total}",
+  "pagination.pagedBadge": "Sidläge",
+  "pagination.prev": "Föregående",
+  "pagination.prevPage": "Föregående sida (Alt+←)",
+  "pagination.selectPage": "Välj sida",
+  "pagination.switchToContinuous": "Kontinuerligt läge",
+  "pagination.switchToContinuousToast": "Växlade till kontinuerligt läsläge",
+  "pagination.switchToPaged": "Siduppdelat läge",
+  "pagination.switchToPagedToast": "Växlade till smart siduppdelat läsläge",
+  "pagination.toggleTip": "Växla läsläge (Siduppdelat / Kontinuerligt)"
 }
