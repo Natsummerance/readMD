@@ -26,33 +26,33 @@
 <br>
 
 <p align="center">
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.5.exe">
-    <img src="https://img.shields.io/badge/⬇️_Windows_安装包-v2.3.5-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 安装包">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.6.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_安装包-v2.3.6-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 安装包">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.5.exe">
-    <img src="https://img.shields.io/badge/⬇️_Windows_便携版-v2.3.5-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 便携版">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.6.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_便携版-v2.3.6-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 便携版">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.5.zip">
-    <img src="https://img.shields.io/badge/⬇️_macOS_(M芯片)-v2.3.5-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.6.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(M芯片)-v2.3.6-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.5.zip">
-    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel)-v2.3.5-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.6.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel)-v2.3.6-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel">
   </a>
   <br>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.5.AppImage">
-    <img src="https://img.shields.io/badge/⬇️_Linux_AppImage-v2.3.5-ea580c?style=for-the-badge&logo=linux&logoColor=white" alt="Linux AppImage">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.6.AppImage">
+    <img src="https://img.shields.io/badge/⬇️_Linux_AppImage-v2.3.6-ea580c?style=for-the-badge&logo=linux&logoColor=white" alt="Linux AppImage">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.5_amd64.deb">
-    <img src="https://img.shields.io/badge/⬇️_信创·统信UOS·麒麟_Deb-v2.3.5-b91c1c?style=for-the-badge&logo=debian&logoColor=white" alt="Deb 安装包">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.6_amd64.deb">
+    <img src="https://img.shields.io/badge/⬇️_信创·统信UOS·麒麟_Deb-v2.3.6-b91c1c?style=for-the-badge&logo=debian&logoColor=white" alt="Deb 安装包">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.5.hap">
-    <img src="https://img.shields.io/badge/📱_鸿蒙_HarmonyOS_HAP-v2.3.5-059669?style=for-the-badge&logo=huawei&logoColor=white" alt="HarmonyOS HAP">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.6.hap">
+    <img src="https://img.shields.io/badge/📱_鸿蒙_HarmonyOS_HAP-v2.3.6-059669?style=for-the-badge&logo=huawei&logoColor=white" alt="HarmonyOS HAP">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.5.vsix">
-    <img src="https://img.shields.io/badge/🧩_VSCode_插件-v2.3.5-6366f1?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VSCode VSIX">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.6.vsix">
+    <img src="https://img.shields.io/badge/🧩_VSCode_插件-v2.3.6-6366f1?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VSCode VSIX">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.5.zip">
-    <img src="https://img.shields.io/badge/🤖_MCP_Server-v2.3.5-0d9488?style=for-the-badge&logo=fastapi&logoColor=white" alt="MCP Server">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.6.zip">
+    <img src="https://img.shields.io/badge/🤖_MCP_Server-v2.3.6-0d9488?style=for-the-badge&logo=fastapi&logoColor=white" alt="MCP Server">
   </a>
 </p>
 

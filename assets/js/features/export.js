@@ -22,6 +22,54 @@ function getExportPresetNames() {
 function getExportSections() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   return [
+    /* --- EPUB 电子书专属参数 --- */
+    { title: _t('export.secEpubMeta') || '电子书元数据', fmts: ['epub'], fields: [
+      { k: 'epub.title', label: _t('export.epubTitle') || '书籍标题（留空自动使用文件名）', type: 'text', full: true },
+      { k: 'epub.author', label: _t('export.epubAuthor') || '书籍作者 / 译者', type: 'text' },
+      { k: 'epub.publisher', label: _t('export.epubPublisher') || '出版方 / 制作方', type: 'text' },
+      { k: 'epub.isbn', label: _t('export.epubIsbn') || '标准 ISBN 书号', type: 'text' },
+      { k: 'epub.language', label: _t('export.epubLanguage') || '主要语言', type: 'select', opts: [
+        ['zh-CN', '简体中文 (zh-CN)'], ['en', 'English (en)'], ['ja', '日本語 (ja)'], ['zh-TW', '繁體中文 (zh-TW)'], ['fr', 'Français (fr)'], ['de', 'Deutsch (de)'], ['es', 'Español (es)']
+      ]},
+      { k: 'epub.splitLevel', label: _t('export.epubSplitLevel') || '章节拆分策略', type: 'select', opts: [
+        ['h1', _t('export.epubSplitH1') || '按一级标题 (H1) 智能切分多章节'],
+        ['h2', _t('export.epubSplitH2') || '按一/二级标题 (H1+H2) 切分章节'],
+        ['none', _t('export.epubSplitNone') || '单章节长文档 (不切分)']
+      ], full: true },
+    ]},
+    { title: _t('export.secEpubStyle') || '电子书阅读版式', fmts: ['epub'], fields: [
+      { k: 'epub.fontSize', label: _t('export.bodySize') || '基准字号 pt', type: 'number', min: 8, max: 24 },
+      { k: 'epub.lineHeight', label: _t('export.lineHeight') || '行高倍数', type: 'number', min: 1.2, max: 2.5, step: 0.1 },
+      { k: 'epub.marginV', label: _t('export.epubMarginV') || '垂直页边距 %', type: 'number', min: 0, max: 20 },
+      { k: 'epub.marginH', label: _t('export.epubMarginH') || '水平页边距 %', type: 'number', min: 0, max: 20 },
+    ]},
+
+    /* --- LaTeX 学术源码专属参数 --- */
+    { title: _t('export.secLatexDoc') || 'LaTeX 学术编译与宏包', fmts: ['tex'], fields: [
+      { k: 'tex.docClass', label: _t('export.latexDocClass') || 'LaTeX 文档类', type: 'select', opts: [
+        ['ctexart', 'ctexart (中文学术论文 / 推荐)'],
+        ['article', 'article (英文学术标准论文)'],
+        ['ctexrep', 'ctexrep (中文学位报告 / 长篇)'],
+        ['report', 'report (英文研究报告 / Tech Report)'],
+        ['book', 'book (学术专著 / 书籍)'],
+        ['beamer', 'beamer (学术讲报幻灯片)']
+      ], full: true },
+      { k: 'tex.fontSize', label: _t('export.latexFontSize') || '排版字号', type: 'select', opts: [
+        ['10pt', '10pt'], ['11pt', '11pt (期刊标准)'], ['12pt', '12pt (大字舒适)']
+      ]},
+      { k: 'tex.paperSize', label: _t('export.pageSize') || '纸张规格', type: 'select', opts: [
+        ['a4paper', 'A4 纸张 (210×297mm)'], ['letterpaper', 'US Letter 纸张']
+      ]},
+      { k: 'tex.margin', label: _t('export.latexMargin') || '页面边距 (Geometry)', type: 'select', opts: [
+        ['2.5cm', '2.5 cm (国标标准)'], ['1in', '1 inch (1 英寸 IEEE)'], ['2cm', '2.0 cm (紧凑排版)'], ['3cm', '3.0 cm (宽松批注)']
+      ]},
+      { k: 'tex.bibEngine', label: _t('export.latexBibEngine') || '参考文献引擎', type: 'select', opts: [
+        ['biblatex', 'BibLaTeX (现代学术 / 推荐)'], ['natbib', 'Natbib (传统期刊通用)'], ['bibtex', '基础 BibTeX']
+      ]},
+      { k: 'tex.useCtex', label: _t('export.latexUseCtex') || '启用 CJK 中文宏包 (UTF-8 原生支持)', type: 'checkbox' },
+    ]},
+
+    /* --- PDF / DOCX 页面与版式 --- */
     { title: _t('export.secPage') || '页面设置', fmts: ['pdf', 'docx'], fields: [
       { k: 'page.size', label: _t('export.pageSize') || '纸张', type: 'select', opts: EXPORT_PAGES },
       { k: 'page.orientation', label: _t('export.pageOrientation') || '方向', type: 'select', opts: [['portrait', _t('export.portrait') || '纵向'], ['landscape', _t('export.landscape') || '横向']] },
@@ -536,23 +584,32 @@ function updateExportLivePreview() {
   }
 }
 
-function expFieldApplicable(f, fmt) {
-  return (f.fmts || ['pdf', 'docx', 'html']).indexOf(fmt) >= 0;
+function expFieldApplicable(f, secFmts, fmt) {
+  const fmts = f.fmts || secFmts || ['pdf', 'docx', 'html'];
+  return fmts.indexOf(fmt) >= 0;
 }
 
 function renderExportSections() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const fmt = state.export.fmt;
+  const fmt = state.export.fmt || 'pdf';
   const host = $('export-opts');
   host.textContent = '';
   const sections = getExportSections();
+  let renderedCount = 0;
+
   sections.forEach(sec => {
+    const secFmts = sec.fmts || ['pdf', 'docx', 'html'];
+    if (secFmts.indexOf(fmt) < 0) return;
     const fields = sec.fields || [];
-    const applicable = sec.headingRows ? (sec.fmts.indexOf(fmt) >= 0)
-      : fields.some(f => expFieldApplicable(f, fmt));
+    const applicable = sec.headingRows ? (secFmts.indexOf(fmt) >= 0)
+      : fields.some(f => expFieldApplicable(f, secFmts, fmt));
     if (!applicable) return;
+
     const wrap = document.createElement('div');
     wrap.className = 'exp-sec'; // 默认折叠，点击标题展开
+    if (renderedCount === 0) wrap.classList.add('open'); // 首个选项区默认展开
+    renderedCount++;
+
     const head = document.createElement('button');
     head.type = 'button';
     head.className = 'exp-sec-head';
@@ -573,7 +630,7 @@ function renderExportSections() {
       }
     } else {
       fields.forEach(f => {
-        if (!expFieldApplicable(f, fmt)) return;
+        if (!expFieldApplicable(f, secFmts, fmt)) return;
         body.appendChild(expFieldEl(f));
       });
     }

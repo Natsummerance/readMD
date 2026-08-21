@@ -486,7 +486,15 @@ function closeDocImportModal() {
 
 function insertDocImportFromModal() {
   const path = ($('doc-import-path') && $('doc-import-path').value.trim()) || 'chapter1.md';
-  const importMd = `\n@import "${path}"\n`;
+  const mode = ($('doc-import-mode') && $('doc-import-mode').value) || 'markdown';
+  const lines = ($('doc-import-lines') && $('doc-import-lines').value.trim()) || '';
+
+  const opts = [];
+  if (mode !== 'markdown') opts.push(`mode="${mode}"`);
+  if (lines) opts.push(`lines="${lines}"`);
+
+  const optStr = opts.length ? ` {${opts.join(' ')}}` : '';
+  const importMd = `\n@import "${path}"${optStr}\n`;
   closeDocImportModal();
 
   if (cmView) {
@@ -496,17 +504,58 @@ function insertDocImportFromModal() {
   }
 }
 
-function insertFrontmatterTemplate() {
-  const frontmatter = `---\ntitle: "文档标题"\nauthor: "作者姓名"\npresentation:\n  theme: "black"\n  transition: "slide"\ncustom_css: |\n  /* 全文自定义样式 */\n---\n\n`;
+function openFrontmatterModal() {
+  if (!state.editing) return;
+  closeMdPopups();
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const modal = $('frontmatter-modal');
+  if (!modal) return;
+  
+  if ($('fm-input-title')) {
+    const defTitle = (state.mode === 'file' && state.file) ? state.file.split(/[\\/]/).pop().replace(/\.[^.]+$/, '') : (_t('editor.docTitleDefault') || '文档标题');
+    $('fm-input-title').value = defTitle;
+  }
+  modal.classList.remove('hidden');
+  setTimeout(() => { if ($('fm-input-title')) $('fm-input-title').focus(); }, 50);
+}
+
+function closeFrontmatterModal() {
+  const modal = $('frontmatter-modal');
+  if (modal) modal.classList.add('hidden');
+  if (cmView) cmView.focus();
+}
+
+function insertFrontmatterFromModal() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const title = ($('fm-input-title') && $('fm-input-title').value.trim()) || (_t('editor.docTitleDefault') || '文档标题');
+  const author = ($('fm-input-author') && $('fm-input-author').value.trim()) || 'ReadMD User';
+  const theme = ($('fm-select-theme') && $('fm-select-theme').value) || 'black';
+  const transition = ($('fm-select-transition') && $('fm-select-transition').value) || 'slide';
+
+  const frontmatter = `---\ntitle: "${title}"\nauthor: "${author}"\npresentation:\n  theme: "${theme}"\n  transition: "${transition}"\n---\n\n`;
+  closeFrontmatterModal();
+
   if (cmView) {
     const currentDoc = cmView.state.doc.toString();
     if (currentDoc.startsWith('---')) {
-      showToast('当前文档已存在 Frontmatter 头部');
-      return;
+      const secondDivider = currentDoc.indexOf('\n---', 3);
+      if (secondDivider !== -1) {
+        const endOfFm = currentDoc.indexOf('\n', secondDivider + 4);
+        const replaceLen = (endOfFm !== -1 ? endOfFm + 1 : secondDivider + 4);
+        cmView.dispatch({ changes: { from: 0, to: replaceLen, insert: frontmatter }, selection: { anchor: frontmatter.length } });
+        cmView.focus();
+        showToast(_t('toast.frontmatterUpdated') || '已更新文档 Frontmatter 元数据');
+        return;
+      }
     }
     cmView.dispatch({ changes: { from: 0, to: 0, insert: frontmatter }, selection: { anchor: frontmatter.length } });
     cmView.focus();
+    showToast(_t('toast.frontmatterInserted') || '已插入 Frontmatter 元数据');
   }
+}
+
+function insertFrontmatterTemplate() {
+  openFrontmatterModal();
 }
 
 const FORMULAS = [

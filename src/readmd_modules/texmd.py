@@ -1202,13 +1202,94 @@ def _convert_inline_md_to_latex(text: str) -> str:
     return text
 
 
-def md_to_latex(md_content: str, title: str = 'Academic Document', author: str = '', standalone: bool = True) -> str:
+def build_latex_template(options: Optional[Dict] = None) -> str:
+    """根据导出选项构建可定制的 LaTeX 模板。"""
+    opts = options or {}
+    tex_opts = opts.get('tex') or opts.get('latex') or {}
+    
+    doc_class = tex_opts.get('docClass') or 'article'
+    font_size = tex_opts.get('fontSize') or '11pt'
+    paper_size = tex_opts.get('paperSize') or 'a4paper'
+    use_ctex = tex_opts.get('useCtex', False) if not tex_opts else tex_opts.get('useCtex', True)
+    margin = tex_opts.get('margin') or '2.5cm'
+    bib_engine = tex_opts.get('bibEngine') or 'biblatex'
+
+    ctex_pkg = r"\usepackage{ctex}" if (use_ctex and not doc_class.startswith('ctex')) else ""
+    bib_pkg = r"\usepackage[backend=biber,style=numeric]{biblatex}" if bib_engine == 'biblatex' else (r"\usepackage{natbib}" if bib_engine == 'natbib' else "")
+
+    return f"""\\documentclass[{font_size},{paper_size}]{{{doc_class}}}
+
+% --- 核心数学与学术宏包 ---
+\\usepackage[utf8]{{inputenc}}
+\\usepackage[margin={margin}]{{geometry}}
+\\usepackage{{amsmath,amssymb,amsfonts,amsthm,mathtools}}
+\\usepackage{{booktabs}}
+\\usepackage{{tabularx}}
+\\usepackage{{multirow}}
+\\usepackage{{graphicx}}
+\\usepackage{{hyperref}}
+\\usepackage{{listings}}
+\\usepackage{{xcolor}}
+\\usepackage{{tcolorbox}}
+\\usepackage{{microtype}}
+{ctex_pkg}
+{bib_pkg}
+
+% --- 超链接与主题色彩 ---
+\\hypersetup{{
+    colorlinks=true,
+    linkcolor=blue!70!black,
+    citecolor=blue!70!black,
+    urlcolor=blue!70!black
+}}
+
+% --- 代码块样式 ---
+\\lstset{{
+    basicstyle=\\ttfamily\\small,
+    breaklines=true,
+    frame=single,
+    backgroundcolor=\\color{{gray!8}},
+    keywordstyle=\\color{{blue!80!black}},
+    commentstyle=\\color{{green!50!black}},
+    stringstyle=\\color{{red!70!black}},
+    showstringspaces=false
+}}
+
+% --- 引用块与提示框 ---
+\\tcolorboxenvironment{{quote}}{{
+    colback=gray!5,
+    colframe=gray!40,
+    arc=2mm,
+    left=3mm,
+    right=3mm,
+    top=2mm,
+    bottom=2mm
+}}
+
+\\title{{__TITLE__}}
+\\author{{__AUTHOR__}}
+\\date{{__DATE__}}
+
+\\begin{{document}}
+\\maketitle
+
+__CONTENT__
+
+\\end{{document}}
+"""
+
+
+def md_to_latex(md_content: str, title: str = 'Academic Document', author: str = '',
+                standalone: bool = True, options: Optional[Dict] = None) -> str:
     """将 Markdown 转换为高质量、可直接编译的 LaTeX 源码。"""
     lines = md_content.splitlines()
     latex_lines: List[str] = []
 
-    doc_title = title
-    doc_author = author
+    opts = options or {}
+    tex_opts = opts.get('tex') or opts.get('latex') or {}
+
+    doc_title = tex_opts.get('title') or opts.get('meta', {}).get('title') or title
+    doc_author = tex_opts.get('author') or opts.get('meta', {}).get('author') or author
     doc_date = r'\today'
     content_start_idx = 0
 
@@ -1394,7 +1475,8 @@ def md_to_latex(md_content: str, title: str = 'Academic Document', author: str =
     content_latex = '\n'.join(latex_lines)
 
     if standalone:
-        return (LATEX_ARTICLE_TEMPLATE
+        tpl = build_latex_template(options)
+        return (tpl
                 .replace('__TITLE__', doc_title)
                 .replace('__AUTHOR__', doc_author)
                 .replace('__DATE__', doc_date)

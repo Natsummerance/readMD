@@ -71,7 +71,7 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_BUILD_VERSION')
-           or _bundle_version() or '2.3.5')
+           or _bundle_version() or '2.3.6')
 
 
 
@@ -2607,6 +2607,7 @@ class Api(object):
         fmt = (fmt or '').lower()
         ext_map = {'pdf': 'PDF 文档 (*.pdf)',
                    'docx': 'Word 文档 (*.docx)',
+                   'epub': 'EPUB 电子书 (*.epub)',
                    'html': 'HTML 网页 (*.html)',
                    'tex': 'LaTeX 文档 (*.tex)'}
 

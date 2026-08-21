@@ -1483,21 +1483,26 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
 .export-head { display: flex; align-items: center; justify-content: space-between; }
 .export-body { display: flex; gap: 14px; min-height: 0; flex: 1; }
 .export-side { flex: 0 0 190px; display: flex; flex-direction: column; gap: 10px; }
-.exp-fmts { display: flex; gap: 6px; }
-.exp-fmt {
+.exp-fmts-grouped { display: flex; flex-direction: column; gap: 8px; }
+.exp-fmt-group { display: flex; flex-direction: column; gap: 4px; }
+.exp-fmt-group-title { font-size: 11px; font-weight: 600; color: var(--fg3); }
+.exp-fmt-btn-row { display: flex; gap: 4px; }
+.exp-fmt-btn-row .exp-fmt, .exp-fmts .exp-fmt {
   flex: 1;
-  padding: 8px 0;
+  padding: 7px 0;
   border: 1px solid var(--border);
   background: var(--bg);
   color: var(--fg2);
   border-radius: var(--radius-s);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
+  text-align: center;
+  transition: all .15s ease;
 }
-.exp-fmt:hover { border-color: var(--accent); color: var(--fg); }
-.exp-fmt.active { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.exp-fmt-btn-row .exp-fmt:hover, .exp-fmts .exp-fmt:hover { border-color: var(--accent); color: var(--fg); }
+.exp-fmt-btn-row .exp-fmt.active, .exp-fmts .exp-fmt.active { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
 .exp-print {
   padding: 8px 10px;
   border: 1px dashed var(--border);
@@ -1507,6 +1512,10 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
   font-size: 12.5px;
   cursor: pointer;
   font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 .exp-print:hover { color: var(--fg); border-color: var(--accent); }
 .exp-preset-row { display: flex; flex-direction: column; gap: 4px; }

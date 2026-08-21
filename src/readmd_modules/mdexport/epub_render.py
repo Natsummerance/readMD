@@ -147,15 +147,76 @@ def _simple_md_to_html(md_text: str) -> str:
     return "\n".join(html_out)
 
 
-def split_into_chapters(markdown_content: str) -> List[Tuple[str, str]]:
-    """按一级或二级标题切分多章节。"""
+def build_epub_css(options: Optional[Dict] = None) -> str:
+    """根据导出选项构建定制化 EPUB 样式表。"""
+    opts = options or {}
+    epub_opts = opts.get('epub') or {}
+    font_size = epub_opts.get('fontSize') or opts.get('typography', {}).get('size') or 11
+    line_height = epub_opts.get('lineHeight') or opts.get('typography', {}).get('lineHeight') or 1.8
+    margin_v = epub_opts.get('marginV') or 5
+    margin_h = epub_opts.get('marginH') or 8
+    font_family = epub_opts.get('fontFamily') or '-apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", serif'
+
+    return f"""@charset "utf-8";
+body {{
+    font-family: {font_family};
+    font-size: {font_size}pt;
+    margin: {margin_v}% {margin_h}%;
+    line-height: {line_height};
+    color: #1a1a1a;
+}}
+h1, h2, h3, h4, h5, h6 {{
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-weight: 600;
+    line-height: 1.4;
+    color: #0f172a;
+    page-break-after: avoid;
+}}
+h1 {{ font-size: 1.8em; margin-top: 1.5em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3em; }}
+h2 {{ font-size: 1.4em; margin-top: 1.3em; }}
+p {{ margin: 0.8em 0; text-align: justify; }}
+pre, code {{
+    font-family: "Courier New", Courier, monospace;
+    background-color: #f1f5f9;
+    font-size: 0.9em;
+}}
+pre {{
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+}}
+blockquote {{
+    margin: 1em 0;
+    padding-left: 1em;
+    border-left: 4px solid #3b82f6;
+    color: #475569;
+}}
+table {{
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.2em 0;
+}}
+th, td {{
+    border: 1px solid #cbd5e1;
+    padding: 8px 10px;
+    text-align: left;
+}}
+th {{ background-color: #f8fafc; }}
+"""
+
+
+def split_into_chapters(markdown_content: str, split_level: str = 'h1') -> List[Tuple[str, str]]:
+    """按指定标题级别切分多章节（h1 或 h2）。"""
     lines = markdown_content.splitlines()
     chapters: List[Tuple[str, List[str]]] = []
     curr_title = "序言"
     curr_lines = []
+    
+    match_prefixes = ('# ',) if split_level == 'h1' else ('# ', '## ')
 
     for line in lines:
-        if line.startswith('# ') or line.startswith('## '):
+        if any(line.startswith(p) for p in match_prefixes):
             if curr_lines:
                 chapters.append((curr_title, "\n".join(curr_lines)))
                 curr_lines = []
@@ -173,8 +234,20 @@ def split_into_chapters(markdown_content: str) -> List[Tuple[str, str]]:
 def export_epub(markdown_content: str, output_path: str,
                 title: str = "ReadMD 电子书",
                 author: str = "ReadMD Author",
-                language: str = "zh-CN") -> str:
+                language: str = "zh-CN",
+                options: Optional[Dict] = None) -> str:
     """将 Markdown 编译打包为标准 EPUB 3 电子书文件。"""
+    opts = options or {}
+    epub_opts = opts.get('epub') or {}
+    
+    # 提取覆盖元数据
+    book_title = epub_opts.get('title') or opts.get('meta', {}).get('title') or title or "ReadMD 电子书"
+    book_author = epub_opts.get('author') or opts.get('meta', {}).get('author') or author or "ReadMD Author"
+    book_lang = epub_opts.get('language') or language or "zh-CN"
+    book_publisher = epub_opts.get('publisher') or "ReadMD"
+    book_isbn = epub_opts.get('isbn') or ""
+    split_level = epub_opts.get('splitLevel') or 'h1'
+
     out_dir = os.path.dirname(os.path.abspath(output_path))
     if out_dir:
         os.makedirs(out_dir, exist_ok=True)
@@ -182,9 +255,11 @@ def export_epub(markdown_content: str, output_path: str,
     book_uuid = str(uuid.uuid4())
     mod_time = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    raw_chapters = split_into_chapters(markdown_content)
+    raw_chapters = split_into_chapters(markdown_content, split_level=split_level)
     if not raw_chapters:
-        raw_chapters = [(title, markdown_content)]
+        raw_chapters = [(book_title, markdown_content)]
+
+    custom_css = build_epub_css(opts)
 
     # 准备各章节 XHTML
     chapter_files = []
@@ -194,7 +269,7 @@ def export_epub(markdown_content: str, output_path: str,
         chap_body = _simple_md_to_html(chap_md)
         chap_xhtml = f"""<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="{language}" lang="{language}">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="{book_lang}" lang="{book_lang}">
 <head>
     <meta charset="utf-8"/>
     <title>{html.escape(chap_title)}</title>
@@ -213,7 +288,7 @@ def export_epub(markdown_content: str, output_path: str,
     ])
     nav_xhtml = f"""<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="{language}" lang="{language}">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="{book_lang}" lang="{book_lang}">
 <head>
     <meta charset="utf-8"/>
     <title>目录</title>
@@ -245,7 +320,7 @@ def export_epub(markdown_content: str, output_path: str,
         <meta name="dtb:totalPageCount" content="0"/>
         <meta name="dtb:maxPageNumber" content="0"/>
     </head>
-    <docTitle><text>{html.escape(title)}</text></docTitle>
+    <docTitle><text>{html.escape(book_title)}</text></docTitle>
     <navMap>
 {ncx_points}
     </navMap>
@@ -264,13 +339,18 @@ def export_epub(markdown_content: str, output_path: str,
     for cid, _, _, _ in chapter_files:
         spine_items.append(f'<itemref idref="{cid}"/>')
 
+    publisher_tag = f'<dc:publisher>{html.escape(book_publisher)}</dc:publisher>' if book_publisher else ''
+    isbn_tag = f'<dc:identifier id="ISBN">{html.escape(book_isbn)}</dc:identifier>' if book_isbn else ''
+
     content_opf = f"""<?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="3.0">
     <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
         <dc:identifier id="BookId">urn:uuid:{book_uuid}</dc:identifier>
-        <dc:title>{html.escape(title)}</dc:title>
-        <dc:creator>{html.escape(author)}</dc:creator>
-        <dc:language>{language}</dc:language>
+        {isbn_tag}
+        <dc:title>{html.escape(book_title)}</dc:title>
+        <dc:creator>{html.escape(book_author)}</dc:creator>
+        {publisher_tag}
+        <dc:language>{book_lang}</dc:language>
         <meta property="dcterms:modified">{mod_time}</meta>
     </metadata>
     <manifest>
@@ -299,12 +379,22 @@ def export_epub(markdown_content: str, output_path: str,
         zf.writestr('OEBPS/content.opf', content_opf)
         zf.writestr('OEBPS/nav.xhtml', nav_xhtml)
         zf.writestr('OEBPS/toc.ncx', toc_ncx)
-        zf.writestr('OEBPS/style.css', EPUB_CSS)
+        zf.writestr('OEBPS/style.css', custom_css)
 
         for _, fn, _, xhtml_content in chapter_files:
             zf.writestr(f'OEBPS/{fn}', xhtml_content)
 
     return output_path
+
+
+def render_epub(markdown_content: str, output_path: str,
+                style: Optional[Dict] = None, source_name: str = '',
+                warns: Optional[List[str]] = None) -> str:
+    """ReadMD mdexport 统一接口规范。"""
+    title = (style.get('epub', {}).get('title') if isinstance(style, dict) else None) or source_name or "ReadMD Document"
+    author = (style.get('epub', {}).get('author') if isinstance(style, dict) else None) or ""
+    return export_epub(markdown_content, output_path, title=title, author=author, options=style)
+
 
 # 兼容别名
 build_epub = export_epub

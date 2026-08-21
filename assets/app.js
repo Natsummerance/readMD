@@ -524,9 +524,52 @@ function bindEvents() {
     else if (upgradeUrl) openExternal(upgradeUrl);
   });
 
-  /* --- 17.1 编辑器增强：禅模式与表格设计器 [联动: editor/editor.js] --- */
+  /* --- 17.1 编辑器增强：禅模式与全功能插入向导 [联动: editor/editor.js] --- */
   if ($('btn-zen-mode')) $('btn-zen-mode').addEventListener('click', () => toggleZenMode());
   if ($('btn-insert-table')) $('btn-insert-table').addEventListener('click', () => openTableModal());
+  if ($('btn-insert-code-chunk')) $('btn-insert-code-chunk').addEventListener('click', () => openCodeChunkModal());
+  if ($('btn-insert-diagram')) $('btn-insert-diagram').addEventListener('click', () => openDiagramModal());
+  if ($('btn-insert-doc-import')) $('btn-insert-doc-import').addEventListener('click', () => openDocImportModal());
+  if ($('btn-insert-frontmatter')) $('btn-insert-frontmatter').addEventListener('click', () => openFrontmatterModal());
+
+  // 交互式代码块弹窗事件
+  if ($('code-chunk-modal-close')) $('code-chunk-modal-close').addEventListener('click', closeCodeChunkModal);
+  if ($('code-chunk-cancel')) $('code-chunk-cancel').addEventListener('click', closeCodeChunkModal);
+  if ($('code-chunk-insert')) $('code-chunk-insert').addEventListener('click', insertCodeChunkFromModal);
+  if ($('code-chunk-modal')) $('code-chunk-modal').addEventListener('click', e => { if (e.target === $('code-chunk-modal')) closeCodeChunkModal(); });
+  if ($('code-chunk-lang')) {
+    $('code-chunk-lang').addEventListener('change', () => {
+      if ($('code-chunk-code') && (typeof CODE_CHUNK_SAMPLES !== 'undefined')) {
+        $('code-chunk-code').value = CODE_CHUNK_SAMPLES[$('code-chunk-lang').value] || CODE_CHUNK_SAMPLES.python;
+      }
+    });
+  }
+
+  // 科学图表弹窗事件
+  if ($('diagram-modal-close')) $('diagram-modal-close').addEventListener('click', closeDiagramModal);
+  if ($('diagram-cancel')) $('diagram-cancel').addEventListener('click', closeDiagramModal);
+  if ($('diagram-insert')) $('diagram-insert').addEventListener('click', insertDiagramFromModal);
+  if ($('diagram-modal')) $('diagram-modal').addEventListener('click', e => { if (e.target === $('diagram-modal')) closeDiagramModal(); });
+  if ($('diagram-type')) {
+    $('diagram-type').addEventListener('change', () => {
+      if ($('diagram-code') && (typeof DIAGRAM_SAMPLES !== 'undefined')) {
+        $('diagram-code').value = DIAGRAM_SAMPLES[$('diagram-type').value] || DIAGRAM_SAMPLES.plantuml;
+      }
+    });
+  }
+
+  // 子文档引用弹窗事件
+  if ($('doc-import-modal-close')) $('doc-import-modal-close').addEventListener('click', closeDocImportModal);
+  if ($('doc-import-cancel')) $('doc-import-cancel').addEventListener('click', closeDocImportModal);
+  if ($('doc-import-insert')) $('doc-import-insert').addEventListener('click', insertDocImportFromModal);
+  if ($('doc-import-modal')) $('doc-import-modal').addEventListener('click', e => { if (e.target === $('doc-import-modal')) closeDocImportModal(); });
+
+  // 样式元数据 (Frontmatter) 弹窗事件
+  if ($('frontmatter-modal-close')) $('frontmatter-modal-close').addEventListener('click', closeFrontmatterModal);
+  if ($('fm-modal-cancel')) $('fm-modal-cancel').addEventListener('click', closeFrontmatterModal);
+  if ($('fm-modal-insert')) $('fm-modal-insert').addEventListener('click', insertFrontmatterFromModal);
+  if ($('frontmatter-modal')) $('frontmatter-modal').addEventListener('click', e => { if (e.target === $('frontmatter-modal')) closeFrontmatterModal(); });
+
   if ($('lang-modal')) $('lang-modal').addEventListener('click', e => { if (e.target === $('lang-modal')) if (window.i18n) window.i18n.closeModal(); });
   if ($('table-modal')) $('table-modal').addEventListener('click', e => { if (e.target === $('table-modal')) closeTableModal(); });
   window.addEventListener('readmd:language-changed', e => {
@@ -553,13 +596,29 @@ function bindEvents() {
     
     // 模态弹窗 ESC 优先拦截与层级关闭
     if (e.key === 'Escape') {
-      const modal = ['ai-history-modal', 'ai-settings-modal', 'export-preview-modal', 'lang-modal', 'table-modal'].find(id => $(id) && !$(id).classList.contains('hidden'));
-      if (modal) {
+      const allModalIds = [
+        'code-chunk-modal', 'diagram-modal', 'doc-import-modal', 'frontmatter-modal',
+        'table-modal', 'export-preview-modal', 'export-modal', 'convert-modal',
+        'update-modal', 'style-custom-modal', 'lang-modal', 'ai-history-modal',
+        'ai-settings-modal', 'formula-modal', 'presentation-modal'
+      ];
+      const activeModal = allModalIds.find(id => $(id) && !$(id).classList.contains('hidden'));
+      if (activeModal) {
         e.preventDefault();
-        closeAiModal(modal);
-        if (modal === 'export-preview-modal') $(modal).classList.add('hidden');
-        if (modal === 'lang-modal' && window.i18n) window.i18n.closeModal();
-        if (modal === 'table-modal') closeTableModal();
+        e.stopPropagation();
+        if (activeModal === 'code-chunk-modal') closeCodeChunkModal();
+        else if (activeModal === 'diagram-modal') closeDiagramModal();
+        else if (activeModal === 'doc-import-modal') closeDocImportModal();
+        else if (activeModal === 'frontmatter-modal') closeFrontmatterModal();
+        else if (activeModal === 'table-modal') closeTableModal();
+        else if (activeModal === 'export-preview-modal') $(activeModal).classList.add('hidden');
+        else if (activeModal === 'export-modal') closeExportModal();
+        else if (activeModal === 'convert-modal') $('convert-modal').classList.add('hidden');
+        else if (activeModal === 'update-modal') $('update-modal').classList.add('hidden');
+        else if (activeModal === 'style-custom-modal') closeStyleModal();
+        else if (activeModal === 'lang-modal' && window.i18n) window.i18n.closeModal();
+        else if (activeModal.startsWith('ai-')) closeAiModal(activeModal);
+        else $(activeModal).classList.add('hidden');
         return;
       }
       if (document.body.classList.contains('zen-mode')) {

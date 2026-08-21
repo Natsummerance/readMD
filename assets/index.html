@@ -104,10 +104,10 @@
         <button data-md="image" data-i18n="editor.image">图片</button>
         <button id="btn-insert-table" data-md="table" data-i18n="editor.table">表格</button>
         <button data-md="link" data-i18n="editor.link">链接</button>
-        <button id="btn-insert-code-chunk" data-md="codechunk" data-i18n="editor.codeChunk">交互代码块 ⚡</button>
-        <button id="btn-insert-diagram" data-md="diagram" data-i18n="editor.diagram">科学图表 📊</button>
-        <button id="btn-insert-doc-import" data-md="docimport" data-i18n="editor.docImport">文档引用 🔗</button>
-        <button id="btn-insert-frontmatter" data-md="frontmatter" data-i18n="editor.frontmatter">样式元数据 ⚙</button>
+        <button id="btn-insert-code-chunk" data-md="codechunk" data-i18n="editor.codeChunk">交互代码块</button>
+        <button id="btn-insert-diagram" data-md="diagram" data-i18n="editor.diagram">科学图表</button>
+        <button id="btn-insert-doc-import" data-md="docimport" data-i18n="editor.docImport">文档引用</button>
+        <button id="btn-insert-frontmatter" data-md="frontmatter" data-i18n="editor.frontmatter">样式元数据 (Frontmatter)</button>
       </div></div>
     <button id="formula-open" class="md-tool-btn md-group" title="公式选择器" data-i18n="editor.formula" data-i18n-title="dialog.formulaTitle">∑ 公式</button>
     <button id="md-command-open" class="md-tool-btn" title="命令面板 (Ctrl/Cmd+Shift+P)" data-i18n-title="editor.command" data-i18n-aria="editor.command">⌘</button>
@@ -625,14 +625,28 @@
     </div>
     <div class="export-body">
       <div class="export-side">
-        <div class="exp-fmts" role="tablist" aria-label="导出格式" data-i18n-aria="export.formatsAria">
-          <button class="exp-fmt active" data-fmt="pdf" role="tab" aria-selected="true">PDF</button>
-          <button class="exp-fmt" data-fmt="docx" role="tab" aria-selected="false">DOCX</button>
-          <button class="exp-fmt" data-fmt="html" role="tab" aria-selected="false">HTML</button>
-          <button class="exp-fmt" data-fmt="tex" role="tab" aria-selected="false">LaTeX</button>
+        <div class="exp-fmts-grouped" role="tablist" aria-label="导出格式" data-i18n-aria="export.formatsAria">
+          <div class="exp-fmt-group">
+            <span class="exp-fmt-group-title" data-i18n="export.groupPublish">排版出版</span>
+            <div class="exp-fmt-btn-row">
+              <button class="exp-fmt active" data-fmt="pdf" role="tab" aria-selected="true" data-i18n="export.fmtPdf">PDF</button>
+              <button class="exp-fmt" data-fmt="docx" role="tab" aria-selected="false" data-i18n="export.fmtDocx">DOCX</button>
+              <button class="exp-fmt" data-fmt="epub" role="tab" aria-selected="false" data-i18n="export.fmtEpub">EPUB</button>
+            </div>
+          </div>
+          <div class="exp-fmt-group">
+            <span class="exp-fmt-group-title" data-i18n="export.groupWebCode">源码与网页</span>
+            <div class="exp-fmt-btn-row">
+              <button class="exp-fmt" data-fmt="html" role="tab" aria-selected="false" data-i18n="export.fmtHtml">HTML</button>
+              <button class="exp-fmt" data-fmt="tex" role="tab" aria-selected="false" data-i18n="export.fmtTex">LaTeX</button>
+            </div>
+          </div>
         </div>
 
-        <button id="export-print" class="exp-print" title="使用浏览器打印对话框（可另存为 PDF）" data-i18n-title="export.printTitle" data-i18n="export.printDoc">&#128424; 打印当前文档</button>
+        <button id="export-print" class="exp-print" title="使用浏览器打印对话框（可另存为 PDF）" data-i18n-title="export.printTitle">
+          <svg class="tb-ic" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          <span data-i18n="export.printDoc">打印当前文档</span>
+        </button>
         <div class="exp-preset-row">
           <label for="exp-preset" data-i18n="export.stylePreset">样式预设</label>
           <select id="exp-preset"></select>
@@ -658,7 +672,9 @@
               <div id="export-preview-mini-content" class="export-preview-mini-content"></div>
             </div>
             <div class="export-preview-overlay">
-              <span class="export-preview-hint" data-i18n="export.zoomPreview">🔍 点击放大预览</span>
+              <span class="export-preview-hint">
+                <svg class="tb-ic" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span data-i18n="export.zoomPreview">点击放大预览</span>
+              </span>
             </div>
           </div>
         </div>
@@ -942,7 +958,7 @@
 
 <!-- 子文档引用模态框 -->
 <div id="doc-import-modal" class="modal hidden" role="dialog" aria-modal="true">
-  <div class="modal-dialog" style="max-width: 440px;">
+  <div class="modal-dialog" style="max-width: 480px;">
     <div class="modal-header">
       <h3 data-i18n="editor.docImportModalTitle">插入子文档引用 (@import)</h3>
       <button id="doc-import-modal-close" class="modal-close">✕</button>
@@ -953,9 +969,76 @@
         <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.docImportPath">子文档相对路径：</label>
         <input id="doc-import-path" type="text" class="modal-input" placeholder="chapter1.md 或 ./subdocs/appendix.md" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
       </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+        <div class="modal-form-group">
+          <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.docImportMode">引用模式：</label>
+          <select id="doc-import-mode" class="modal-select" style="width:100%;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+            <option value="markdown" data-i18n="editor.docImportModeMd">Markdown (递归解析渲染)</option>
+            <option value="code" data-i18n="editor.docImportModeCode">Code (作为高亮代码块嵌入)</option>
+            <option value="html" data-i18n="editor.docImportModeHtml">HTML (原样 HTML 包含)</option>
+          </select>
+        </div>
+        <div class="modal-form-group">
+          <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.docImportLines">行号切片 (可选)：</label>
+          <input id="doc-import-lines" type="text" class="modal-input" placeholder="例如: 10-50" style="width:100%;box-sizing:border-box;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+        </div>
+      </div>
       <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
         <button id="doc-import-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
         <button id="doc-import-insert" class="tb-btn accent" data-i18n="editor.insert">插入引用</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 文档样式元数据模态框 (Frontmatter) -->
+<div id="frontmatter-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-dialog" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3 data-i18n="editor.frontmatterModalTitle">配置文档元数据与演说主题 (Frontmatter)</h3>
+      <button id="frontmatter-modal-close" class="modal-close">✕</button>
+    </div>
+    <div style="padding: 16px;">
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.frontmatterModalDesc">在文档顶部插入标准 YAML Frontmatter，用于配置文档标题、作者、Reveal.js 演示主题及全局样式。</p>
+      <div class="modal-form-group">
+        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTitle">文档标题：</label>
+        <input id="fm-input-title" type="text" class="modal-input" placeholder="我的演说 / 报告文档" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      </div>
+      <div class="modal-form-group" style="margin-top: 10px;">
+        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterAuthor">作者 / 演讲者：</label>
+        <input id="fm-input-author" type="text" class="modal-input" placeholder="ReadMD User" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+        <div class="modal-form-group">
+          <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTheme">Reveal.js 演示主题：</label>
+          <select id="fm-select-theme" class="modal-select" style="width:100%;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+            <option value="black">Black (现代深色 / 默认)</option>
+            <option value="white">White (明亮纯白)</option>
+            <option value="league">League (几何现代灰)</option>
+            <option value="beige">Beige (复古暖米色)</option>
+            <option value="night">Night (暗夜高对比)</option>
+            <option value="serif">Serif (优雅衬线文学)</option>
+            <option value="simple">Simple (极简清爽)</option>
+            <option value="solarized">Solarized (程序员经典太阳色)</option>
+            <option value="blood">Blood (深红暗黑风格)</option>
+            <option value="moon">Moon (蓝调月夜)</option>
+          </select>
+        </div>
+        <div class="modal-form-group">
+          <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTransition">幻灯片切页动效：</label>
+          <select id="fm-select-transition" class="modal-select" style="width:100%;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+            <option value="slide">Slide (平滑滑动 / 默认)</option>
+            <option value="fade">Fade (淡入淡出)</option>
+            <option value="convex">Convex (凸面翻转)</option>
+            <option value="concave">Concave (凹面翻转)</option>
+            <option value="zoom">Zoom (缩放进出)</option>
+            <option value="none">None (无动画)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+        <button id="fm-modal-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
+        <button id="fm-modal-insert" class="tb-btn accent" data-i18n="editor.insert">插入 Frontmatter</button>
       </div>
     </div>
   </div>
