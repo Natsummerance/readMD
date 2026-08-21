@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "showcase" / "scripts"))
 
 build_story = importlib.import_module("build_story")
+audit_copy = importlib.import_module("audit_copy")
 validate_package = importlib.import_module("validate_package")
 watch_and_publish = importlib.import_module("watch_and_publish")
 write_copy = importlib.import_module("write_copy")
@@ -341,6 +342,89 @@ class ValidatePackageTest(unittest.TestCase):
         self.assertTrue(any("design audit" in error.lower() for error in errors), errors)
 
 
+class BenchmarkRubricTest(unittest.TestCase):
+    def test_rubric_has_balanced_weights_and_hard_gates(self) -> None:
+        rubric = json.loads((ROOT / "showcase/content/benchmark-rubric.json").read_text(encoding="utf-8"))
+        weights = rubric["dimensions"]
+        self.assertEqual(sum(item["weight"] for item in weights.values()), 100)
+        self.assertGreaterEqual(rubric["pass"]["total"], 88)
+        self.assertEqual(set(rubric["pass"]["minimum_dimension"]), set(weights))
+        for name, dimension in weights.items():
+            self.assertTrue(dimension["criteria"], name)
+
+    def test_pattern_library_uses_reviewed_open_sources(self) -> None:
+        data = json.loads((ROOT / "showcase/content/pattern-library.json").read_text(encoding="utf-8"))
+        sources = {item["id"]: item for item in data["sources"]}
+        self.assertIn("xhs-visual-director", sources)
+        self.assertEqual(sources["xhs-visual-director"]["license"], "MIT")
+        self.assertGreaterEqual(len(data["patterns"]), 8)
+        serialized = json.dumps(data, ensure_ascii=False).lower()
+        for dangerous in ("curl | sh", "rm -rf", "eval(requests", "api_key="):
+            self.assertNotIn(dangerous, serialized)
+        for pattern in data["patterns"]:
+            self.assertIn(pattern["source_id"], sources)
+            self.assertTrue(pattern["mechanism"])
+            self.assertTrue(pattern["application"])
+
+
+class AuditCopyTest(unittest.TestCase):
+    def make_audit_inputs(self, body: str) -> tuple[dict, dict, dict]:
+        story = {
+            "release": "v9.9.9-beta.1",
+            "version_state": "prerelease",
+            "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+            "primary_shot": "presentation.reveal",
+            "selected_shots": ["overview.reader", "presentation.reveal"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        metadata = {
+            "title": "不用重做PPT，Markdown直接放映",
+            "title_formula_id": "#36",
+            "body": body,
+            "topics": ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"],
+            "version_state": "prerelease",
+        }
+        composition = {
+            "overflow_errors": [],
+            "design_audit": {"contrast_errors": [], "small_text": [], "images_failed": []},
+            "cards": [
+                {"file": "cover.jpg", "role": "cover", "ui_min_ratio": 0, "ui_area_ratio": 0.3},
+                {"file": "hero.jpg", "role": "pure_ui_hero", "ui_min_ratio": 0.7, "ui_area_ratio": 0.8},
+                {"file": "feature.jpg", "role": "annotated_ui", "ui_min_ratio": 0.55, "ui_area_ratio": 0.6},
+                {"file": "summary.jpg", "role": "summary", "ui_min_ratio": 0.3, "ui_area_ratio": 0.4},
+            ],
+        }
+        return story, metadata, composition
+
+    def good_body(self) -> str:
+        return (
+            "文档写完了，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。\n\n"
+            "先说清楚：这是 ReadMD v9.9.9-beta.1 预览版，文件仍在你自己的电脑里。\n\n"
+            "放映界面能换主题、调字号、切开场和转场；AST 保护分片尽量保住代码块、表格和公式。\n\n"
+            "下面的画面来自当前版本真实运行状态，不是概念图。改稿时回到同屏预览，讲稿不会跑偏。\n\n"
+            "如果你要写课程讲义、组会报告或论文汇报，它会省掉重做演示稿这一步。\n\n"
+            "GitHub 搜 Natsummerance/readMD，你会先拿哪一份 Markdown 试放映？\n\n"
+            "渲染阶段只处理显示结果，不会替你改写原始 Markdown 文件。所有演示都来自同一个本地工作流，不需要先把文档上传到别处。对长文档来说，稳定的目录和搜索比炫技功能更重要。转换结果会开成新标签页，方便先检查再保存。界面支持跟随系统语言，中文和英文术语都保持统一。目录和全文搜索跨页联动，长文档不会因为一次渲染丢掉入口。暗色主题只影响显示，源文件内容不变。公式和图表在阅读页直接渲染，减少截图拼接。本地优先意味着草稿、笔记和讲稿都留在自己的设备里。"
+        )
+
+    def test_good_package_passes_alignment_gate(self) -> None:
+        story, metadata, composition = self.make_audit_inputs(self.good_body())
+        report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
+        self.assertTrue(report["ok"], json.dumps(report, ensure_ascii=False, indent=2))
+        self.assertGreaterEqual(report["total_score"], 88)
+        self.assertEqual(report["scores"]["compliance"], 5)
+
+    def test_repeated_ai_fingerprint_fails_hard_gate(self) -> None:
+        body = self.good_body() + "\n\n对应画面不是概念图。对应画面不是概念图。"
+        story, metadata, composition = self.make_audit_inputs(body)
+        report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("repeated" in item.lower() or "重复" in item for item in report["hard_failures"]))
+
+
 class WatcherTest(unittest.TestCase):
     def make_package_zip(self, root: Path) -> Path:
         package = root / "package"
@@ -349,6 +433,7 @@ class WatcherTest(unittest.TestCase):
         Image.new("RGB", (10, 10)).save(image)
         (package / "story.json").write_text(json.dumps({"release": "v1.2.3"}), encoding="utf-8")
         (package / "qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
+        (package / "copy-review.json").write_text(json.dumps({"ok": True, "total_score": 92}), encoding="utf-8")
         (package / "title.txt").write_text("标题", encoding="utf-8")
         (package / "body.txt").write_text("正文", encoding="utf-8")
         metadata = {

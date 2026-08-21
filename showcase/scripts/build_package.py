@@ -8,6 +8,7 @@ import json
 import subprocess
 from pathlib import Path
 
+from audit_copy import audit_package
 from build_story import build_story
 from validate_package import validate_package
 from write_copy import generate_copy
@@ -44,6 +45,9 @@ def build_package(
 def compose_and_validate(package_dir: Path, repo_root: Path) -> list[str]:
     compose_script = repo_root / "showcase" / "scripts" / "compose_cards.js"
     subprocess.run(["node", str(compose_script), str(package_dir)], cwd=repo_root, check=True)
+    copy_report = audit_package(package_dir)
+    if not copy_report["ok"]:
+        return [f"semantic alignment gate failed: {json.dumps(copy_report, ensure_ascii=False)}"]
     return validate_package(package_dir, repo_root=repo_root)
 
 

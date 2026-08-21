@@ -116,6 +116,9 @@ def process_package(zip_path: Path, work_root: Path, state_path: Path, publisher
         qa = json.loads((package_dir / "qa.json").read_text(encoding="utf-8"))
         if qa.get("ok") is not True:
             raise ValueError("package qa.json is not green")
+        copy_review = json.loads((package_dir / "copy-review.json").read_text(encoding="utf-8"))
+        if copy_review.get("ok") is not True:
+            raise ValueError("package copy-review.json is not green")
         localize_image_paths(package_dir)
         release, title = package_identity(package_dir)
         previous = [item for item in state["packages"].values() if item.get("release") == release and item.get("status") == "published"]

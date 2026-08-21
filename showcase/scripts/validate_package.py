@@ -94,6 +94,15 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
     except Exception as exc:
         return [f"package JSON unreadable: {exc}"]
 
+    copy_review_path = package_dir / "copy-review.json"
+    if copy_review_path.exists():
+        try:
+            copy_review = _load_json(copy_review_path)
+            if copy_review.get("ok") is not True:
+                errors.append("semantic alignment gate failed: " + "; ".join(map(str, copy_review.get("hard_failures", []))))
+        except Exception as exc:
+            errors.append(f"copy-review.json unreadable: {exc}")
+
     if story.get("schema_version") != 1 or capture.get("schema_version") != 1:
         errors.append("story/capture schema_version must be 1")
     release = story.get("release")

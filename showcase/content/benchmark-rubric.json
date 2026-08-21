@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "name": "ReadMD Xiaohongshu viral-mechanism rubric",
+  "dimensions": {
+    "title": {
+      "weight": 15,
+      "criteria": [
+        "title is at most 20 characters including punctuation",
+        "formula id is explicit and traceable",
+        "at least two tension signals: contrast, number, curiosity, outcome, identity, or time"
+      ]
+    },
+    "hook": {
+      "weight": 15,
+      "criteria": [
+        "first paragraph names a concrete task or pain",
+        "uses an active decision or removal verb",
+        "names the product mechanism without requiring prior context"
+      ]
+    },
+    "focus": {
+      "weight": 20,
+      "criteria": [
+        "one primary release feature leads the story",
+        "the second captured card is the complete product interface",
+        "at most two supporting workflows appear in the body"
+      ]
+    },
+    "evidence": {
+      "weight": 15,
+      "criteria": [
+        "every claim has source evidence",
+        "authentic screenshot statement appears once",
+        "release or diff evidence is retained"
+      ]
+    },
+    "voice": {
+      "weight": 15,
+      "criteria": [
+        "no exact sentence repeated",
+        "no generic AI launch vocabulary",
+        "prerelease state disclosed exactly once"
+      ]
+    },
+    "visual": {
+      "weight": 15,
+      "criteria": [
+        "all cards are 1080x1440 with one accent system",
+        "UI area meets the role minimum",
+        "DOM contrast and overflow audits are clean"
+      ]
+    },
+    "compliance": {
+      "weight": 5,
+      "criteria": [
+        "five clean topics",
+        "no external links or banned redirect language in body",
+        "prerelease is never described as a formal release"
+      ]
+    }
+  },
+  "pass": {
+    "total": 88,
+    "minimum_dimension": {
+      "title": 75,
+      "hook": 75,
+      "focus": 75,
+      "evidence": 75,
+      "voice": 75,
+      "visual": 75,
+      "compliance": 75
+    }
+  },
+  "hard_gates": [
+    "every visual claim has at least one source",
+    "no release asset filename appears as a user-facing fix",
+    "no exact sentence of eight or more characters repeats",
+    "prerelease body discloses preview or update-line status",
+    "formal-release wording is forbidden for prereleases",
+    "composition design audit has no contrast, small-text, or image failures"
+  ]
+}
