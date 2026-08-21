@@ -56,8 +56,10 @@ export async function findPythonPath(): Promise<string> {
       path.join(localApp, 'Programs', 'Python', 'Python311', 'python.exe'),
       path.join(localApp, 'Programs', 'Python', 'Python312', 'python.exe'),
       path.join(localApp, 'Programs', 'Python', 'Python310', 'python.exe'),
-      'C:\\Python311\\python.exe',
-      'C:\\Python312\\python.exe',
+      path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Python311', 'python.exe'),
+      path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Python312', 'python.exe'),
+      path.join(process.env.SystemDrive || 'C:', 'Python311', 'python.exe'),
+      path.join(process.env.SystemDrive || 'C:', 'Python312', 'python.exe'),
     ];
     for (const p of winCandidates) {
       if (fs.existsSync(p)) return p;

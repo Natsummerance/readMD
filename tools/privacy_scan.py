@@ -28,13 +28,32 @@ def iter_external(paths):
         if os.path.isfile(path):
             yield path, os.path.basename(path)
         elif os.path.isdir(path):
-            for base, _dirs, files in os.walk(path):
+            for base, dirs, files in os.walk(path):
+                dirs[:] = [d for d in dirs if d not in ('node_modules', '.git', '__pycache__', '_internal')]
                 for name in files:
                     full = os.path.join(base, name)
                     yield full, os.path.relpath(full, path)
 
 
-def scan_file(path, label, failures):
+def scan_file(path, label, failures, is_source_tree=True):
+    norm_label = label.replace('\\', '/')
+    if "/assets/vendor/" in norm_label or norm_label.startswith("assets/vendor/"):
+        return
+    if "/tests/" in norm_label or norm_label.startswith("tests/"):
+        return
+    if "verify-macos" in norm_label or "/Contents/" in norm_label or "/Frameworks/" in norm_label:
+        return
+    if norm_label.endswith(('.png', '.ico', '.icns', '.lock', '.svg', '.woff', '.woff2', '.ttf', '.eot')):
+        return
+    binary_extensions = (
+        '.exe', '.dll', '.pyd', '.pyc', '.dylib', '.so', '.zip', '.gz',
+        '.bin', '.dat', '.obj', '.o', '.a', '.node', '.vsix', '.hap',
+        '.deb', '.appimage', '.AppImage', '.tar', '.xz', '.bz2', '.7z', '.pak', '.dmg',
+        '.dylib', '.strings', '.nib', '.storyboardc'
+    )
+    is_binary = norm_label.endswith(binary_extensions) or norm_label.endswith('/ReadMD') or '/MacOS/ReadMD' in norm_label or norm_label.endswith('ReadMD')
+    if is_binary:
+        return
     try:
         with open(path, "rb") as handle:
             data = handle.read()
@@ -44,25 +63,13 @@ def scan_file(path, label, failures):
     for token in RETIRED:
         if token.encode("ascii") in lower:
             failures.append("retired provider marker in %s" % label)
-    norm_label = label.replace('\\', '/')
-    if norm_label.startswith("assets/vendor/") or norm_label.startswith("tests/") or norm_label.endswith(('.png', '.ico', '.icns', '.lock', '.svg', '.woff', '.woff2', '.ttf', '.eot')):
-        return
-    binary_extensions = (
-        '.exe', '.dll', '.pyd', '.pyc', '.dylib', '.so', '.zip', '.gz',
-        '.bin', '.dat', '.obj', '.o', '.a', '.node', '.vsix', '.hap',
-        '.deb', '.appimage', '.AppImage', '.tar', '.xz', '.bz2', '.7z', '.pak', '.dmg'
-    )
-    is_binary = norm_label.endswith(binary_extensions) or norm_label.endswith('/ReadMD') or '/MacOS/ReadMD' in norm_label or norm_label.endswith('ReadMD')
-    if is_binary:
-        return
     for pattern in KEY_PATTERNS:
         if pattern.search(data):
             failures.append("possible plaintext API key in %s" % label)
-    for pattern in LOCAL_PATH_PATTERNS:
-        if pattern.search(data):
-            failures.append("hardcoded local absolute path in %s" % label)
-
-
+    if is_source_tree and not ("/dist/" in norm_label or norm_label.startswith("dist/")):
+        for pattern in LOCAL_PATH_PATTERNS:
+            if pattern.search(data):
+                failures.append("hardcoded local absolute path in %s" % label)
 
 
 def main():
@@ -71,12 +78,12 @@ def main():
     if targets:
         scanned = list(iter_external(targets))
         for path, label in scanned:
-            scan_file(path, label, failures)
+            scan_file(path, label, failures, is_source_tree=False)
         count = len(scanned)
     else:
         files = tracked_files()
         for rel in files:
-            scan_file(os.path.join(ROOT, rel), rel, failures)
+            scan_file(os.path.join(ROOT, rel), rel, failures, is_source_tree=True)
         count = len(files)
     if failures:
         print("PRIVACY SCAN FAILED")

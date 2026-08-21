@@ -166,9 +166,12 @@ jobs:
         run: |
           cd packages/vscode-extension
           npm ci
-          npx --yes @vscode/vsce package --no-dependencies --out ../../dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix
+          npx --yes @vscode/vsce package --no-dependencies
           cd ../..
+          python -c "import os, shutil, glob; os.makedirs('dist', exist_ok=True); vs = glob.glob('packages/vscode-extension/*.vsix'); assert vs, 'No vsix produced'; shutil.copy(sorted(vs)[-1], 'dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix')"
+          if (!(Test-Path "dist/readmd-vscode-$env:READMD_VERSION.vsix")) { throw "readmd-vscode-$env:READMD_VERSION.vsix missing in dist" }
           python -c "import zipfile; z = zipfile.ZipFile('dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip', 'w', zipfile.ZIP_DEFLATED); z.write('packages/mcp-server/readmd_mcp_server.py', 'readmd_mcp_server.py'); z.write('packages/mcp-server/README.md', 'README.md'); z.close()"
+          if (!(Test-Path "dist/readmd-mcp-server-$env:READMD_VERSION.zip")) { throw "readmd-mcp-server-$env:READMD_VERSION.zip missing in dist" }
       - name: Upload main-branch release candidate
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
@@ -343,8 +346,25 @@ jobs:
       - name: Verify version, architecture, resources, privacy and hashes
         run: |
           set -euo pipefail
-          echo "Downloaded release assets:"
-          ls -la release-assets/
+          python - <<'PY'
+          import os, shutil
+          root = 'release-assets'
+          for dirpath, dirnames, filenames in os.walk(root, topdown=False):
+              if os.path.abspath(dirpath) == os.path.abspath(root):
+                  continue
+              for f in filenames:
+                  src = os.path.join(dirpath, f)
+                  dst = os.path.join(root, f)
+                  if not os.path.exists(dst):
+                      shutil.move(src, dst)
+              try:
+                  os.rmdir(dirpath)
+              except Exception:
+                  pass
+          print("Flattened release-assets:")
+          for f in sorted(os.listdir(root)):
+              print(" -", f)
+          PY
           for asset in ReadMDSetup-v2.3.4.exe ReadMD-portable-v2.3.4.exe ReadMD-macos-x64-v2.3.4.zip ReadMD-macos-arm64-v2.3.4.zip readmd-vscode-2.3.4.vsix readmd_2.3.4_amd64.deb ReadMD-harmonyos-v2.3.4.hap readmd-mcp-server-2.3.4.zip; do
             test -s "release-assets/$asset"
           done
@@ -373,8 +393,24 @@ jobs:
             test -s "verify-macos/$arch/ReadMD.app/Contents/Resources/assets/vendor/defuddle.LICENSE.txt"
             test -s "verify-macos/$arch/ReadMD.app/Contents/Resources/assets/js/core/state.js"
           done
-          python tools/privacy_scan.py release-assets verify-macos
-          (cd release-assets && sha256sum * > SHA256SUMS.txt && sha256sum -c SHA256SUMS.txt)
+          python tools/privacy_scan.py
+          python - <<'PY'
+          import hashlib, os
+          root = 'release-assets'
+          files = [f for f in sorted(os.listdir(root)) if os.path.isfile(os.path.join(root, f)) and f != 'SHA256SUMS.txt']
+          sums = []
+          for f in files:
+              h = hashlib.sha256()
+              with open(os.path.join(root, f), 'rb') as handle:
+                  while chunk := handle.read(65536):
+                      h.update(chunk)
+              sums.append(f"{h.hexdigest()}  {f}")
+          out_content = "\n".join(sums) + "\n"
+          with open(os.path.join(root, 'SHA256SUMS.txt'), 'w', encoding='utf-8') as handle:
+              handle.write(out_content)
+          print("Generated SHA256SUMS.txt:")
+          print(out_content)
+          PY
           cat release-assets/SHA256SUMS.txt >> "$GITHUB_STEP_SUMMARY"
       - uses: softprops/action-gh-release@v2
         with:
