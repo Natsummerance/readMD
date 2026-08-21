@@ -43,6 +43,42 @@ def _card_name(index: int, shot: dict[str, Any] | None, role: str) -> str:
     return f"xhs-{index:02d}-{stem}.jpg"
 
 
+USER_VALUES = {
+    "overview.reader": "打开文档就能看到完整排版、目录和公式渲染",
+    "overview.editor": "讲稿和源文件在同一处修改，预览不会跑偏",
+    "presentation.reveal": "写完的 Markdown 能直接上台放映，代码、表格和公式不会被切片",
+    "editor.diagram-picker": "科研图表从语法记忆变成面板选择",
+    "academic.latex-bib": "学术公式和定理盒子保持论文级排版",
+    "editor.code-chunk": "文档里的代码可以直接运行并保留输出",
+    "convert.home": "资料进入本地工作台后，转换和阅读不散落在多个工具里",
+    "sharing.export": "同一份文档可以继续发到手机上查看",
+}
+
+
+def _extract_core_fixes(notes: str) -> list[str]:
+    """Read user-visible fix titles, never the release download inventory."""
+    section_match = re.search(
+        r"^##[^\n]*(?:核心修复|重要更新|更新内容)[^\n]*\n(.*?)(?=^##\s|\Z)",
+        notes,
+        flags=re.M | re.S,
+    )
+    section = section_match.group(1) if section_match else notes
+    excluded = (
+        ".exe", ".zip", ".dmg", ".appimage", ".deb", ".hap", ".vsix",
+        "sha256", "测试", "覆盖率", "i18n", "语言字典", "release assets",
+    )
+    fixes: list[str] = []
+    headings = [line for line in section.splitlines() if re.match(r"^###\s+", line)]
+    for line in section.splitlines():
+        pattern = r"^###\s+(.+)$" if headings else r"^\s*(?:[-*]|\d+[.)])\s+(.+)$"
+        match = re.match(pattern, line)
+        clean = re.sub(r"^\d+\.\s*", "", match.group(1)).strip() if match else ""
+        if len(clean) < 8 or any(term in clean.lower() for term in excluded):
+            continue
+        fixes.append(clean)
+    return fixes
+
+
 def build_story(
     *,
     release: str,
@@ -61,38 +97,34 @@ def build_story(
         if relevance > 0:
             scored.append((score, relevance, shot_id))
 
-    relevant_ids = [shot_id for _, _, shot_id in sorted(scored, reverse=True)[:3]]
-    mandatory = ["overview.reader", "overview.editor", "convert.home"]
-    selected = list(dict.fromkeys(relevant_ids + mandatory))
-    selected.sort(key=lambda item: (item != "overview.reader", item != "overview.editor", item == "convert.home"))
+    ranked_relevant = [shot_id for _, _, shot_id in sorted(scored, reverse=True)]
+    fixed_order = ["overview.reader", "overview.editor", "convert.home"]
+    relevant_features = [shot_id for shot_id in ranked_relevant if shot_id not in fixed_order]
+    if any(shots[item]["category"] == "Presentation" for item in relevant_features):
+        relevant_features.sort(key=lambda item: shots[item]["category"] != "Presentation")
+    relevant_features = relevant_features[:3]
+    primary_shot = relevant_features[0] if relevant_features else "overview.reader"
+    selected = list(dict.fromkeys(["overview.reader"] + relevant_features + fixed_order[1:]))
 
     claims: list[dict[str, Any]] = []
     for shot_id in selected:
         shot = shots[shot_id]
-        sources = list(dict.fromkeys(shot.get("evidence", []) + (["release/release_notes.md"] if shot_id in relevant_ids else [])))
+        sources = list(dict.fromkeys(shot.get("evidence", []) + (["release/release_notes.md"] if shot_id in relevant_features else [])))
         claims.append(
             {
                 "id": shot_id.replace(".", "-"),
-                "user_value": shot["description"],
+                "user_value": USER_VALUES.get(shot_id, shot["description"]),
                 "shot_ids": [shot_id],
                 "sources": sources,
                 "kind": "visual",
             }
         )
 
-    mapped_terms = {term.lower() for shot_id in selected for term in shots[shot_id].get("keywords", [])}
-    invisible_fixes: list[str] = []
-    for line in notes.splitlines():
-        match = re.match(r"^\s*(?:[-*]|\d+[.)])\s+(.+)$", line)
-        clean = match.group(1).strip() if match else ""
-        if not clean or len(clean) < 8:
-            continue
-        if not any(term in clean.lower() for term in mapped_terms):
-            invisible_fixes.append(clean)
-    for fix in invisible_fixes[:2]:
+    invisible_fixes = _extract_core_fixes(notes)
+    for index, fix in enumerate(invisible_fixes[:2], 1):
         claims.append(
             {
-                "id": _slug(fix)[:48],
+                "id": f"invisible-{index}",
                 "user_value": fix,
                 "shot_ids": [],
                 "sources": ["release/release_notes.md"],
@@ -129,7 +161,7 @@ def build_story(
                 "role": shot["role"],
                 "shot_id": shot_id,
                 "title": shot["name"],
-                "caption": shot["description"],
+                "caption": USER_VALUES.get(shot_id, shot["description"]),
                 "ui_min_ratio": 0.70 if shot["role"] == "pure_ui_hero" else 0.55,
             }
         )
@@ -151,6 +183,7 @@ def build_story(
         "previous_release": previous_release,
         "version_state": "prerelease" if is_prerelease(release) else "release",
         "angle": angle,
+        "primary_shot": primary_shot,
         "selected_shots": selected,
         "shots": [shots[shot_id] for shot_id in selected],
         "claims": claims,

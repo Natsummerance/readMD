@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -131,9 +132,55 @@ class BuildStoryTest(unittest.TestCase):
         invisible = [claim for claim in story["claims"] if claim["kind"] == "invisible"]
         self.assertTrue(invisible)
         self.assertTrue(all(claim["id"] for claim in invisible))
+        self.assertTrue(all(not re.match(r"^\\d+\\.\\s+", claim["user_value"]) for claim in invisible))
+
+    def test_release_story_filters_assets_and_prioritizes_primary_feature(self) -> None:
+        notes = """
+## 全平台发布资产
+
+- Windows 安装版：`ReadMDSetup-v9.9.9.exe`
+- 校验清单：`SHA256SUMS.txt`
+
+## 本次版本核心修复与优化
+
+### 1. 检查更新提示占位符裸露修复
+
+### 2. 演讲演示深度优化与自定义支持
+
+### 3. 全球语言与自动化测试覆盖率公告
+"""
+        story = build_story.build_story(
+            release="v9.9.9",
+            previous_release="v9.9.8",
+            notes=notes,
+            shot_library_path=ROOT / "showcase" / "shot_library.json",
+        )
+        claim_text = json.dumps(story["claims"], ensure_ascii=False)
+        self.assertNotIn(".exe", claim_text)
+        self.assertNotIn("SHA256SUMS", claim_text)
+        self.assertNotIn("自动化测试覆盖率", claim_text)
+        self.assertEqual(story["selected_shots"][0], "overview.reader")
+        self.assertEqual(story["selected_shots"][1], "presentation.reveal")
+        self.assertEqual(story["primary_shot"], "presentation.reveal")
 
 
 class WriteCopyTest(unittest.TestCase):
+    def test_title_candidates_cover_five_traceable_formulas(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = write_story(Path(tmp))
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v2.3.7-beta.2",
+            )
+        candidates = result["title_candidates"]
+        self.assertGreaterEqual(len(candidates), 5)
+        self.assertLessEqual(len({item["formula_id"] for item in candidates}), len(candidates))
+        for item in candidates:
+            self.assertLessEqual(len(item["text"]), 20)
+            self.assertRegex(item["formula_id"], r"^#\d+$")
+        self.assertLessEqual(len(result["title"]), 20)
+
     def test_generates_compliant_prerelease_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
@@ -154,6 +201,11 @@ class WriteCopyTest(unittest.TestCase):
         self.assertNotRegex(result["body"], r"https?://|www\.|公众号|微信|二维码")
         self.assertIn("Natsummerance/readMD", result["body"])
         self.assertIn("source_urls", result)
+        self.assertNotIn("对应画面不是概念图", result["body"])
+        self.assertNotIn(".exe", result["body"])
+        self.assertNotIn("ReadMDSetup", result["body"])
+        self.assertEqual(result["body"].count("预览版"), 1)
+        self.assertIn("Markdown 直接放映", result["body"])
 
     def test_release_copy_uses_formal_wording(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

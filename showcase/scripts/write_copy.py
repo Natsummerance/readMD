@@ -28,11 +28,13 @@ def _clean(value: str) -> str:
 def _title_candidates(story: dict[str, Any]) -> list[dict[str, str]]:
     visual_count = sum(1 for claim in story["claims"] if claim.get("shot_ids"))
     number = max(3, min(visual_count, 8))
-    state = "预览版" if story["version_state"] != "release" else "更新"
     return [
-        {"formula_id": "#26", "text": f"ReadMD{state}：{number}个文档工作台升级"},
+        {"formula_id": "#36", "text": "不用重做PPT，Markdown直接放映"},
+        {"formula_id": "#9", "text": "Markdown写完，居然能直接上台"},
+        {"formula_id": "#22", "text": "给要上台讲文档的人做的MD工具"},
+        {"formula_id": "#61", "text": "别再把Markdown只当笔记了"},
         {"formula_id": "#12", "text": f"看完这{number}张，你会重新看Markdown"},
-        {"formula_id": "#22", "text": "为被Markdown格式折磨的人做的工具"},
+        {"formula_id": "#26", "text": f"ReadMD更新：{number}个文档工作台升级"},
     ]
 
 
@@ -46,13 +48,31 @@ def generate_copy(story: dict[str, Any], *, repository: str, previous_release: s
     visual_claims = [claim for claim in story["claims"] if claim.get("shot_ids")]
     invisible_claims = [claim for claim in story["claims"] if not claim.get("shot_ids")]
 
-    paragraphs = [
-        "每次有人问我软件长什么样，我都觉得一张文字海报说明不了什么。这次直接让程序自己运行、进入真实界面，再把实际画面放进笔记里。",
-        f"先说清楚：这是 ReadMD {release} {state_text}。它是一个免费开源的本地 Markdown 阅读器、编辑器和转换工具，文件保留在你自己的电脑里。",
-        f"这一版的重点很直接：{story['angle']}。",
-    ]
-    for index, claim in enumerate(visual_claims, 1):
-        paragraphs.append(f"{index}️⃣ {_clean(claim['user_value'])}。对应画面不是概念图，而是当前版本真实运行后的状态。")
+    opening = "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。"
+    disclosure = f"先说清楚：这是 ReadMD {release} {state_text}，文件仍然保留在你自己的电脑里。"
+    evidence = "下面的画面来自当前版本真实运行状态，不是概念图。"
+    primary_paragraphs = {
+        "presentation.reveal": "放映界面可以直接换主题、调字号、切开场和转场；AST 保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。",
+        "overview.editor": "编辑器和实时预览在同一屏里，先改内容再确认排版，不用在几个窗口之间来回追版本。",
+        "editor.diagram-picker": "图表从面板里选，渲染结果留在文档里；适合论文、报告和需要长期维护的技术笔记。",
+        "convert.home": "打开、转换、AI 和网页抓取都从一个本地入口开始，资料不会被拆到一串临时工具里。",
+    }
+    primary_id = story.get("primary_shot", "overview.reader")
+    primary_text = primary_paragraphs.get(primary_id, _clean(next((item["user_value"] for item in visual_claims if primary_id.replace("-", ".") in item["shot_ids"]), story["angle"])))
+    supporting = [claim for claim in visual_claims if primary_id not in claim["shot_ids"]]
+    support_bits = {
+        "overview.editor": "改稿时回到同屏预览",
+        "overview.reader": "阅读端保持目录和公式排版",
+        "convert.home": "资料仍从一个本地入口进来",
+        "academic.latex-bib": "学术排版不另起一套工具",
+        "editor.code-chunk": "代码示例可以就地验证",
+    }
+    support_text = "、".join(support_bits[item["shot_ids"][0]] for item in supporting[:2] if item["shot_ids"] and item["shot_ids"][0] in support_bits)
+
+    paragraphs = [opening, disclosure, f"这一版的核心就一件事：{story['angle']}。", primary_text]
+    if support_text:
+        paragraphs.append(f"它没有脱离原来的工作流：{support_text}。")
+    paragraphs.append(evidence)
 
     if invisible_claims:
         fixes = "；".join(_clean(claim["user_value"]) for claim in invisible_claims[:2])
@@ -60,9 +80,9 @@ def generate_copy(story: dict[str, Any], *, repository: str, previous_release: s
 
     paragraphs.extend(
         [
-            "如果你只是偶尔看笔记，它会是一个双击就能用的阅读器；如果你要写论文、整理代码片段、转换 Word 或 PDF，或者想把文档投到手机上继续看，它的价值会更明显。",
+            "如果你常写课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。",
             f"安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 {repository}，进仓库后点 Releases 就能找到对应平台。",
-            "你最想让下一个版本优先打磨哪一块？是阅读排版、编辑体验、学术写作、格式转换，还是移动端共享？评论区告诉我，我会把这批反馈排进后面的开发计划。",
+            "你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。",
         ]
     )
     body = "\n\n".join(paragraphs)
@@ -73,17 +93,17 @@ def generate_copy(story: dict[str, Any], *, repository: str, previous_release: s
         "对长文档来说，稳定的目录和搜索比炫技功能更重要。",
         "转换结果会开成新标签页，方便先检查再保存。",
         "界面支持跟随系统语言，中文和英文术语都保持统一。",
+        "目录和全文搜索跨页联动，长文档不会因为一次渲染丢掉入口。",
+        "暗色主题只影响显示，源文件内容不变。",
+        "公式和图表在阅读页直接渲染，减少截图拼接。",
+        "本地优先意味着草稿、笔记和讲稿都留在自己的设备里。",
     ]
-    trimmings = [
-        "它不抢画面，但会让日常使用更稳。",
-        "或者想把文档投到手机上继续看，它的价值会更明显。",
-        "我会把这批反馈排进后面的开发计划。",
-        "文件保留在你自己的电脑里。",
-    ]
-    while len(body) > 900 and trimmings:
-        candidate = trimmings.pop(0)
-        body = body.replace(candidate + "。", "", 1).replace(candidate, "", 1)
-        body = "\n\n".join(part.strip() for part in body.split("\n\n") if part.strip())
+    while len(body) > 900:
+        parts = body.split("\n\n")
+        if len(parts) <= 4:
+            break
+        parts.pop(-3)
+        body = "\n\n".join(parts)
     pad_index = 0
     while len(body) < 600 and pad_index < len(padding):
         body += "\n\n" + padding[pad_index]
