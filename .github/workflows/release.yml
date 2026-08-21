@@ -7,6 +7,8 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -19,6 +21,7 @@ env:
 jobs:
   windows-test:
     name: Test · Windows x64
+    if: github.event_name != 'release'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,6 +59,7 @@ jobs:
 
   macos-test:
     name: Test · macOS ${{ matrix.arch }}
+    if: github.event_name != 'release'
     strategy:
       fail-fast: false
       matrix:
@@ -98,6 +102,7 @@ jobs:
 
   linux-test:
     name: Test · Linux x64 (Ubuntu)
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -121,7 +126,7 @@ jobs:
 
   windows-package:
     name: Package · Windows x64
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name != 'release' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [windows-test, linux-test]
     runs-on: windows-latest
     steps:
@@ -200,7 +205,7 @@ jobs:
 
   macos-package:
     name: Package · macOS ${{ matrix.arch }}
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name != 'release' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [macos-test, linux-test]
     strategy:
       fail-fast: false
@@ -265,7 +270,7 @@ jobs:
 
   linux-package:
     name: Package · Linux & HarmonyOS
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name != 'release' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [linux-test]
     runs-on: ubuntu-latest
     steps:
@@ -328,7 +333,7 @@ jobs:
 
   release:
     name: Publish ReadMD Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name != 'release' && startsWith(github.ref, 'refs/tags/v')
     needs: [windows-package, macos-package, linux-package]
     runs-on: ubuntu-latest
     permissions:
@@ -420,5 +425,90 @@ jobs:
           files: release-assets/*
           prerelease: true
           fail_on_unmatched_files: true
+
+  product-showcase:
+    name: Build authentic product showcase package
+    if: github.event_name == 'release' && !github.event.release.draft
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    env:
+      CURRENT_RELEASE: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.release.tag_name }}
+          fetch-tags: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install showcase dependencies
+        run: |
+          python -m pip install --disable-pip-version-check pillow numpy
+          npm ci
+        working-directory: ui-tests
+      - name: Install Chromium
+        run: npx playwright install chromium
+        working-directory: ui-tests
+      - name: Resolve release evidence
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $current = $env:CURRENT_RELEASE
+          $headers = @{ Authorization = "Bearer $env:GITHUB_TOKEN"; Accept = 'application/vnd.github+json' }
+          $api = "$($env:GITHUB_API_URL)/repos/${{ github.repository }}/releases/tags/$current"
+          $release = Invoke-RestMethod -Uri $api -Headers $headers
+          if ([string]::IsNullOrWhiteSpace($release.body)) {
+            Copy-Item 'release/release_notes.md' 'showcase/release-notes.md'
+          } else {
+            Set-Content -Path 'showcase/release-notes.md' -Value $release.body -Encoding UTF8
+          }
+          $tags = @(git tag --sort=-creatordate)
+          $previous = @($tags | Where-Object { $_ -ne $current })[0]
+          if (-not $previous) { throw "No previous tag found for $current" }
+          git diff --binary "$previous..$current" > 'showcase/release.diff'
+          "PREVIOUS_RELEASE=$previous" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Prepare story and copy
+        run: >
+          python showcase/scripts/build_package.py
+          --release "$env:CURRENT_RELEASE"
+          --previous-release "$env:PREVIOUS_RELEASE"
+          --notes showcase/release-notes.md
+          --diff showcase/release.diff
+          --output showcase/output/package
+          --skip-compose
+      - name: Capture authentic UI shots
+        working-directory: showcase
+        env:
+          SHOWCASE_RELEASE: ${{ github.event.release.tag_name }}
+          SHOWCASE_OUTPUT_DIR: output/package/raw
+        run: npm run capture
+      - name: Compose Xiaohongshu cards
+        run: node showcase/scripts/compose_cards.js showcase/output/package
+      - name: Run hard QA gate
+        run: python showcase/scripts/validate_package.py showcase/output/package
+      - name: Package QA-green content
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $qa = Get-Content 'showcase/output/package/qa.json' -Raw | ConvertFrom-Json
+          if (-not $qa.ok) { throw 'Showcase QA failed'; }
+          $files = @(
+            'story.json', 'title.txt', 'body.txt', 'topics.txt', 'metadata.json',
+            'composition.json', 'qa.json'
+          ) | ForEach-Object { "showcase/output/package/$_" }
+          Compress-Archive -Path ($files + 'showcase/output/package/raw/*') -DestinationPath 'showcase/content-package.zip' -Force
+      - name: Upload content package
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-showcase-${{ github.event.release.tag_name }}
+          path: |
+            showcase/content-package.zip
+            showcase/output/package/qa.json
+          if-no-files-found: error
 
 

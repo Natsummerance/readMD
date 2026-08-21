@@ -1,79 +1,114 @@
-# ReadMD: Next-Generation Academic & Engineering Markdown
+# ReadMD 研究笔记：本地 Markdown 工作台
 
-> **作者**: ReadMD Research Group &middot; **版本**: v2.3.4 &middot; **状态**: Published
+> **项目**: ReadMD · **版本**: v2.3.7 · **模式**: 纯本地离线 · **许可**: MIT
 
 [TOC]
 
 ---
 
-## 1. LaTeX PRO 学术论文与数学公式
+## 1 一句话看懂 ReadMD
 
-系统原生支持复杂的数学公式与多行环境，支持实时双向渲染：
+双击即读的本地 Markdown 阅读器与编辑器：渲染前自动修正常见语法错误，**只影响显示，绝不改写原文件**；冷启动 ≤1.5s，托盘唤起 <0.3s，覆盖 Windows / macOS / Linux / 信创 / 鸿蒙。
 
-$$
-\begin{aligned}
-\mathcal{L}_{\text{total}}(\theta) &= \mathbb{E}_{(x, y) \sim \mathcal{D}} \left[ -\sum_{i=1}^{K} y_i \log \hat{y}_i \right] + \lambda \|\theta\|_2^2 \\
-\mathbf{H}^{(l+1)} &= \sigma \left( \tilde{\mathbf{D}}^{-\frac{1}{2}} \tilde{\mathbf{A}} \tilde{\mathbf{D}}^{-\frac{1}{2}} \mathbf{H}^{(l)} \mathbf{W}^{(l)} \right)
-\end{aligned}
-$$
-
-::: theorem 高斯-马尔可夫定理 (Gauss-Markov Theorem)
-在所有线性无偏估计量中，普通最小二乘估计量 (OLS) 具有最小的方差，即 OLS 估计量是最佳线性无偏估计量 (BLUE)。
-:::
-
-::: proof 证明
-设 $\hat{\beta}$ 为 OLS 估计量，$\tilde{\beta} = \mathbf{C} \mathbf{Y}$ 为任意其他线性无偏估计量。通过协方差矩阵的正定性分析即可证得 $\text{Var}(\tilde{\beta}) - \text{Var}(\hat{\beta}) \ge 0$。
+::: definition 设计原则
+纯本地优先：文件不出电脑，离线可用；渲染管线全部发生在内存，原文件零修改。
 :::
 
 ---
 
-## 2. 全景科学与专业图表渲染
+## 2 LaTeX PRO 学术排版
 
-### 2.1 硬件时序波形 (WaveDrom)
+多行公式环境原生渲染，无需任何配置：
+
+$$
+\begin{aligned}
+\mathcal{L}(\theta) &= \mathbb{E}_{(x,y)\sim\mathcal{D}}\left[-\sum_{i=1}^{K} y_i \log \hat{y}_i\right] + \lambda\|\theta\|_2^2 \\
+\mathbf{H}^{(l+1)} &= \sigma\!\left(\tilde{\mathbf{D}}^{-\frac{1}{2}}\tilde{\mathbf{A}}\tilde{\mathbf{D}}^{-\frac{1}{2}}\mathbf{H}^{(l)}\mathbf{W}^{(l)}\right)
+\end{aligned}
+$$
+
+::: theorem 高斯–马尔可夫定理
+在所有线性无偏估计量中，普通最小二乘估计量（OLS）方差最小，是最佳线性无偏估计量（BLUE）。
+:::
+
+::: proof 证明思路
+设 $\hat{\beta}$ 为 OLS 估计量，$\tilde{\beta}=\mathbf{CY}$ 为任意其他线性无偏估计量。由协方差矩阵的正定性可得 $\mathrm{Var}(\tilde{\beta})-\mathrm{Var}(\hat{\beta})\ge 0$，当且仅当 $\mathbf{C}$ 为仿射变换时取等号。
+:::
+
+---
+
+## 3 科学图表直接写进文档
+
+硬件时序波形（WaveDrom）：
 
 ```wavedrom
-{ signal: [
-  { name: "clk",  wave: "p......" },
-  { name: "bus",  wave: "x.==.=x", data: ["head", "body", "tail", "data"] },
-  { name: "wire", wave: "0.1..0." }
-]}
+{
+  signal: [
+    { name: "CLK",  wave: "p......" },
+    { name: "Data", wave: "x.345x.", data: ["head", "body", "tail"] },
+    { name: "Req",  wave: "0.1..0." },
+    { name: "Ack",  wave: "0..1.0." }
+  ]
+}
 ```
 
-### 2.2 拓扑状态机 (Graphviz)
+模块状态机（Graphviz）：
 
 ```dot
 digraph StateMachine {
     rankdir=LR;
     node [shape=circle, fontname="sans-serif"];
-    Idle -> Running [label="start"];
-    Running -> Paused [label="pause"];
-    Paused -> Running [label="resume"];
-    Running -> Done [label="finish"];
+    Idle -> Reading [label="打开 .md"];
+    Reading -> Editing [label="Ctrl+E"];
+    Editing -> Reading [label="Esc"];
+    Reading -> Presenting [label="演说模式"];
 }
 ```
 
 ---
 
-## 3. 多语言 Code Chunk 即地执行
+## 4 代码块就地运行
 
-```python
+```python cmd=true
 import numpy as np
-import matplotlib.pyplot as plt
 
-# 模拟阻尼振荡曲线
+# 阻尼振荡采样
 t = np.linspace(0, 10, 500)
 y = np.exp(-0.4 * t) * np.cos(2 * np.pi * t)
-
-print(f"峰值阻尼点: t={t[np.argmax(y)]:.2f}, y={np.max(y):.2f}")
+print(f"峰值: t={t[np.argmax(y)]:.2f}, y={np.max(y):.2f}")
 ```
 
 ---
 
-## 4. 实验数据与性能基准对照
+## 5 实测体验数据（来自项目 README）
 
-| 测试项目 / 模块 | 传统工具耗时 | ReadMD v2.3.4 (纯本地) | 提升幅度 | 状态 |
-| :--- | :--- | :--- | :--- | :--- |
-| **冷启动加载** | 3,200 ms | **1,450 ms** | ⚡ +120% | `PASS` |
-| **50篇学术论文解析** | 1,840 ms | **14.8 ms / 篇** | 🚀 +124x | `100% 闭环` |
-| **775套真题无损转换** | 4,200 ms | **37.2 ms / 篇** | 🎯 零误差 | `PASS` |
-| **超长万行智能分页** | 界面假死卡顿 | **纯 SVG 瞬时翻页** | 🔒 语法保护 | `PASS` |
+| 体验项 | ReadMD 实测 | 说明 |
+| :--- | :--- | :--- |
+| 冷启动 | ≤ 1.5 s | onedir 目录部署，免解压 |
+| 二次唤起 | < 0.3 s | 托盘常驻 + 单实例通信 |
+| 界面语言 | 46 种 | 自适应系统语言，支持 RTL |
+| 超长文档 | > 10,000 行 | 智能语义分页，杜绝假死 |
+| 自动化测试 | 340 项单元 + 25 项 E2E | 全部通过 |
+
+---
+
+## 6 演说模式：同一份文档直接上台
+
+下面的分页标记会被演说模式识别为独立幻灯片：
+
+<!-- slide -->
+
+## 三年，从一个阅读器到一个工作台
+
+- 阅读：秒开、分页、全文搜索
+- 编辑：CodeMirror 6 补全 + 实时预览
+- 转换：Word / PDF / Excel / HTML / LaTeX 一键转 MD
+
+<!-- slide -->
+
+## 这就是第 2 页
+
+演说悬浮工具栏：11 款主题、6 种转场、字号三档、总览视图（O 键）、一键全屏（F11）。
+
+<!-- note -->
+这一页演示悬浮工具栏与转场效果。

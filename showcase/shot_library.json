@@ -1,85 +1,115 @@
 {
+  "schema_version": 1,
+  "capture_defaults": {
+    "viewport": { "width": 1280, "height": 800 },
+    "scale": 2,
+    "locale": "zh-CN",
+    "theme": "dark"
+  },
   "shots": {
     "overview.reader": {
       "id": "overview.reader",
-      "name": "软件完整主界面 (Hero Shot)",
+      "name": "软件完整主界面",
       "level": "A",
       "category": "Hero",
+      "role": "pure_ui_hero",
       "visuality": 0.98,
-      "description": "ReadMD 完整视窗，展示顶部 Toolbar、侧边大纲目录、精美 LaTeX/定理/表格渲染正文",
-      "output": "overview-reader.png"
+      "description": "ReadMD 完整视窗：暗色主题、目录大纲、LaTeX 定理与图表混排真实渲染",
+      "output": "overview-reader.png",
+      "keywords": ["阅读", "渲染", "目录", "大纲", "界面", "Markdown", "主题"],
+      "assertions": ["#content h1", "#toc-list a:first-child", "#content mjx-container"],
+      "evidence": ["README.md", "showcase/fixtures/readmd-showcase.md"]
     },
     "overview.editor": {
       "id": "overview.editor",
-      "name": "沉浸编辑器与实时预览",
+      "name": "分栏实时编辑预览",
       "level": "A",
       "category": "Editor",
+      "role": "annotated_ui",
       "visuality": 0.92,
-      "description": "分栏实时编辑与渲染模式，展示顶部快捷格式栏与精准行内高亮",
-      "output": "overview-editor.png"
-    },
-    "editor.diagram-picker": {
-      "id": "editor.diagram-picker",
-      "name": "科学图表选择器 (Diagram Picker)",
-      "level": "B",
-      "category": "Science",
-      "visuality": 0.96,
-      "description": "展示 WaveDrom、Graphviz、PlantUML、Vega、TikZ 等科学图表可视化插入面板",
-      "output": "diagram-picker.png"
-    },
-    "editor.code-chunk": {
-      "id": "editor.code-chunk",
-      "name": "多语言代码块即地执行",
-      "level": "B",
-      "category": "Code",
-      "visuality": 0.94,
-      "description": "展示 Python、JS、R、Rust 代码块就地执行与 Matplotlib 图表自动捕获",
-      "output": "code-chunk.png"
-    },
-    "editor.table-designer": {
-      "id": "editor.table-designer",
-      "name": "10x10 可视化表格设计器",
-      "level": "B",
-      "category": "Editor",
-      "visuality": 0.91,
-      "description": "展示鼠标滑选网格快速生成工整 Markdown 管道表格",
-      "output": "table-designer.png"
-    },
-    "academic.latex-bib": {
-      "id": "academic.latex-bib",
-      "name": "LaTeX PRO 学术论文与 BibTeX 悬浮卡",
-      "level": "B",
-      "category": "Academic",
-      "visuality": 0.95,
-      "description": "展示多行数学公式、定理证明 Callout 盒子与参考文献悬浮卡片",
-      "output": "academic-latex.png"
+      "description": "CodeMirror 6 编辑器与实时预览左右分栏，顶部格式工具栏",
+      "output": "overview-editor.png",
+      "keywords": ["编辑", "编辑器", "预览", "CodeMirror", "写作"],
+      "assertions": ["#edit-bar"],
+      "evidence": ["assets/js/editor/editor.js", "ui-tests/readmd-ui.spec.js"]
     },
     "presentation.reveal": {
       "id": "presentation.reveal",
-      "name": "Reveal.js 专业幻灯片演讲模式",
+      "name": "Reveal.js 演说模式放映",
       "level": "B",
       "category": "Presentation",
-      "visuality": 0.93,
-      "description": "展示 Markdown 原生转换为现代 PPT 演示模式的视觉效果",
-      "output": "presentation-reveal.png"
+      "role": "annotated_ui",
+      "visuality": 0.96,
+      "description": "Markdown 直接变幻灯片：悬浮工具栏 + 放映画面",
+      "output": "presentation-reveal.png",
+      "keywords": ["演说", "演示", "幻灯片", "reveal", "presentation", "ppt"],
+      "assertions": ["#presentation-modal", "#presentation-toolbar"],
+      "evidence": ["release/release_notes.md", "assets/js/reader/render.js"]
     },
-    "modal.dirty-tab": {
-      "id": "modal.dirty-tab",
-      "name": "毛玻璃未保存安全确认弹窗",
+    "editor.diagram-picker": {
+      "id": "editor.diagram-picker",
+      "name": "科学图表选择器",
       "level": "B",
-      "category": "UI",
-      "visuality": 0.88,
-      "description": "展示 16px 圆角、琥珀柔光警示、毛玻璃遮罩的桌面级质感弹窗",
-      "output": "modal-dirty-tab.png"
+      "category": "Science",
+      "role": "annotated_ui",
+      "visuality": 0.94,
+      "description": "PlantUML / Graphviz / WaveDrom / Vega / TikZ 可视化插入面板",
+      "output": "diagram-picker.png",
+      "keywords": ["图表", "diagram", "plantuml", "graphviz", "vega", "tikz", "wavedrom"],
+      "assertions": ["#diagram-modal", "#diagram-type"],
+      "evidence": ["assets/js/editor/editor.js"]
+    },
+    "academic.latex-bib": {
+      "id": "academic.latex-bib",
+      "name": "LaTeX PRO 学术排版",
+      "level": "B",
+      "category": "Academic",
+      "role": "annotated_ui",
+      "visuality": 0.93,
+      "description": "多行数学公式 + theorem/proof 学术 Callout 盒子真实渲染",
+      "output": "academic-latex.png",
+      "keywords": ["latex", "公式", "学术", "定理", "bibtex", "引用"],
+      "assertions": ["#content mjx-container[display='true']"],
+      "evidence": ["README.md", "showcase/fixtures/readmd-showcase.md"]
+    },
+    "editor.code-chunk": {
+      "id": "editor.code-chunk",
+      "name": "可执行代码块卡片",
+      "level": "B",
+      "category": "Code",
+      "role": "annotated_ui",
+      "visuality": 0.90,
+      "description": "Code Chunk 就地运行：运行按钮、状态徽标与输出区",
+      "output": "code-chunk.png",
+      "keywords": ["代码", "code chunk", "执行", "python", "javascript"],
+      "assertions": ["#content .code-chunk-card", "#content .code-chunk-run-btn"],
+      "evidence": ["assets/js/reader/render.js", "showcase/fixtures/readmd-showcase.md"]
     },
     "convert.home": {
       "id": "convert.home",
-      "name": "万物转 MD 现代界面",
+      "name": "欢迎页六模块入口",
       "level": "B",
       "category": "Workflow",
-      "visuality": 0.89,
-      "description": "展示 Word/PDF/Excel/LaTeX 全格式拖拽与网页抓取双动作卡片",
-      "output": "convert-home.png"
+      "role": "annotated_ui",
+      "visuality": 0.86,
+      "description": "打开 / 文件夹 / AI / 万物转 MD / 网页转 MD / 扫描 OCR 六大入口",
+      "output": "convert-home.png",
+      "keywords": ["转换", "转化", "欢迎页", "ocr", "网页转", "word", "pdf"],
+      "assertions": ["#welcome", "#w-open", "#w-folder", "#w-ai", "#w-convert", "#w-web", "#w-ocr"],
+      "evidence": ["assets/index.html"]
+    },
+    "sharing.export": {
+      "id": "sharing.export",
+      "name": "移动端共享面板",
+      "level": "B",
+      "category": "Sharing",
+      "role": "annotated_ui",
+      "visuality": 0.84,
+      "description": "局域网移动端共享面板：二维码入口、随机令牌与启停控制",
+      "output": "sharing-export.png",
+      "keywords": ["共享", "分享", "二维码", "移动端", "导出", "局域网"],
+      "assertions": ["#share-modal", "#share-start:not([disabled])", "#share-stop[disabled]"],
+      "evidence": ["assets/js/features/share.js", "assets/index.html"]
     }
   }
 }

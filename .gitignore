@@ -15,7 +15,13 @@ tools/cm-bundle/node_modules/
 ui-tests/node_modules/
 ui-tests/test-results/
 ui-tests/playwright-report/
+showcase/raw/
 showcase/test-results/
+showcase/output/
+showcase/downloads/
+showcase/publish-work/
+showcase/publish-state.json
+showcase/content-package.zip
 .venv-win7/
 installer/webview2_runtime/
 release_body_win7_beta.md

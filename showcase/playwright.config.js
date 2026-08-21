@@ -1,4 +1,7 @@
 const { defineConfig } = require('../ui-tests/node_modules/@playwright/test');
+const { loadCaptureConfig } = require('./capture.config.cjs');
+
+const config = loadCaptureConfig();
 
 module.exports = defineConfig({
   testDir: '.',
@@ -7,10 +10,10 @@ module.exports = defineConfig({
   workers: 1,
   use: {
     baseURL: 'http://127.0.0.1:28473',
-    viewport: { width: 1280, height: 800 },
-    deviceScaleFactor: 2,
+    viewport: config.viewport,
+    deviceScaleFactor: config.scale,
     trace: 'off',
-    locale: 'zh-CN',
+    locale: config.locale,
   },
   webServer: {
     command: 'python ../tools/ui_server.py',
