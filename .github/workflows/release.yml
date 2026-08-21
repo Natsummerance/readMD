@@ -327,7 +327,7 @@ jobs:
           overwrite: true
 
   release:
-    name: Publish ReadMD v${{ env.READMD_VERSION }}
+    name: Publish ReadMD Release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [windows-package, macos-package, linux-package]
     runs-on: ubuntu-latest
