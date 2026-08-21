@@ -757,6 +757,80 @@ test('v2.3.7 custom styles and html head injection modal', async ({ page }) => {
   await expect(modal).toBeHidden();
 });
 
+test('v2.3.7 btn-home visibility state with tabs and welcome mode', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('#statusbar');
+
+  // 1. 欢迎页初始状态下，右下角返回主页按钮必须处于隐藏状态 (hidden)
+  const homeBtn = page.locator('#btn-home');
+  await expect(homeBtn).toHaveClass(/hidden/);
+
+  // 2. 加载文档后，返回主页按钮应显示
+  await page.evaluate(() => {
+    state.mode = 'file';
+    state.file = 'test.md';
+    state.original = '# Document Content';
+    state.tabs = [{ id: 't1', name: 'test.md', original: '# Document Content' }];
+    state.activeTabId = 't1';
+    renderTabsBar();
+    updateStatus();
+  });
+  await expect(homeBtn).not.toHaveClass(/hidden/);
+
+  // 3. 点击返回主页后，返回主页按钮必须重新进入隐藏状态 (hidden)
+  await homeBtn.click();
+  await expect(homeBtn).toHaveClass(/hidden/);
+});
+
+test('v2.3.7 presentation mode floating toolbar, themes, font zoom & escape', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('#statusbar');
+
+  // 准备文档内容
+  await page.evaluate(() => {
+    state.mode = 'file';
+    state.file = 'presentation.md';
+    state.original = '# Slide 1\nHello World\n<!-- slide -->\n# Slide 2\nContent 2';
+    state.tabs = [{ id: 'p1', name: 'presentation.md', original: state.original }];
+    state.activeTabId = 'p1';
+    renderTabsBar();
+    updateStatus();
+  });
+
+  // 触发演示模式
+  await page.evaluate(() => window.launchPresentationMode());
+
+  const modal = page.locator('#presentation-modal');
+  await expect(modal).toBeVisible();
+
+  // 检查悬浮工具栏与控件
+  const toolbar = page.locator('#presentation-toolbar');
+  await expect(toolbar).toBeVisible();
+
+  const themeSelect = page.locator('#presentation-theme-select');
+  await expect(themeSelect).toBeVisible();
+  await themeSelect.selectOption('league');
+
+  const transSelect = page.locator('#presentation-transition-select');
+  await expect(transSelect).toBeVisible();
+  await transSelect.selectOption('fade');
+
+  // 字号调节
+  const fontDec = page.locator('#presentation-font-dec');
+  await fontDec.click();
+  await expect(fontDec).toHaveClass(/active/);
+
+  const fontInc = page.locator('#presentation-font-inc');
+  await fontInc.click();
+  await expect(fontInc).toHaveClass(/active/);
+
+  // 点击关闭按钮退出演示
+  const closeBtn = page.locator('#presentation-close-btn');
+  await closeBtn.click();
+  await expect(modal).toHaveClass(/hidden/);
+});
+
+
 
 
 

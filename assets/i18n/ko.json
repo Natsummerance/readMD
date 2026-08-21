@@ -1004,5 +1004,16 @@
   "dialog.stylePresetFont": "고정폭 코드 글꼴",
   "dialog.stylePresetPrint": "인쇄 페이지 나누기",
   "toast.stylePresetAdded": "템플릿이 추가되었습니다",
-  "toast.zenExited": "선 모드가 종료되었습니다"
+  "toast.zenExited": "선 모드가 종료되었습니다",
+  "presentation.noDoc": "No document content available for presentation",
+  "presentation.themeTitle": "Presentation Theme",
+  "presentation.transitionTitle": "Transition Effect",
+  "presentation.fontDec": "Smaller Font (20px)",
+  "presentation.fontNorm": "Standard Font (24px)",
+  "presentation.fontInc": "Larger Font (28px)",
+  "presentation.overviewTitle": "Slide Overview (Key O)",
+  "presentation.fullscreenTitle": "Fullscreen (F11)",
+  "presentation.closeTitle": "Exit Presentation (Esc)",
+  "toast.generatingPresentation": "Generating presentation...",
+  "toast.presentationFail": "Failed to generate presentation: "
 }

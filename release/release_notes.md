@@ -1,41 +1,40 @@
-# ReadMD v2.3.7-beta.2 (修复与体验精细化发布)
+# ReadMD v2.3.7-beta.3 (演说模式重构与体验精细化发布)
 
 ReadMD 是免费、开源的本地 Markdown 智能阅读、编辑与全格式转换排版套件；纯本地离线可用、秒级极速渲染，绝不改写原文件。
 
 ## 📦 全平台发布资产 (Release Assets)
 
-- 🪟 Windows 安装版：`ReadMDSetup-v2.3.7-beta.2.exe`
-- 💼 Windows 便携版：`ReadMD-portable-v2.3.7-beta.2.exe`
-- 🍏 Apple Silicon Mac：`ReadMD-macos-arm64-v2.3.7-beta.2.zip`
-- 💻 Intel Mac：`ReadMD-macos-x64-v2.3.7-beta.2.zip`
-- 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.7-beta.2.AppImage`
-- 🇨🇳 Linux / 国产信创 Deb 安装包 (UOS / 银河麒麟 / Deepin / Ubuntu / Debian)：`readmd_2.3.7-beta.2_amd64.deb`
-- 📱 HarmonyOS NEXT 纯血鸿蒙安装包：`ReadMD-harmonyos-v2.3.7-beta.2.hap`
-- 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.7-beta.2.vsix`
-- 🤖 FastMCP Server 独立包：`readmd-mcp-server-2.3.7-beta.2.zip`
+- 🪟 Windows 安装版：`ReadMDSetup-v2.3.7-beta.3.exe`
+- 💼 Windows 便携版：`ReadMD-portable-v2.3.7-beta.3.exe`
+- 🍏 Apple Silicon Mac：`ReadMD-macos-arm64-v2.3.7-beta.3.zip`
+- 💻 Intel Mac：`ReadMD-macos-x64-v2.3.7-beta.3.zip`
+- 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage`
+- 🇨🇳 Linux / 国产信创 Deb 安装包 (UOS / 银河麒麟 / Deepin / Ubuntu / Debian)：`readmd_2.3.7-beta.3_amd64.deb`
+- 📱 HarmonyOS NEXT 纯血鸿蒙安装包：`ReadMD-harmonyos-v2.3.7-beta.3.hap`
+- 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.7-beta.3.vsix`
+- 🤖 FastMCP Server 独立包：`readmd-mcp-server-2.3.7-beta.3.zip`
 - 🔐 校验清单：`SHA256SUMS.txt`
 
 ---
 
-## 🌟 本次版本核心修复与优化 (v2.3.7-beta.2)
+## 🌟 本次版本核心修复与优化 (v2.3.7-beta.3)
 
-### 1. 禅模式（Zen Mode）关闭交互重构（仿 Windows 自动隐藏任务栏）
-- **彻底告别视觉干扰**：彻底移除了右下角/右上角突兀的实体浮动退出按钮（`.zen-exit-btn`），呈现 100% 极简纯净的沉浸式全屏文档阅读与编辑空间；
-- **智能顶部感应滑出**：在窗口顶部注入悬停感应区 `#zen-hover-trigger`。当鼠标移至屏幕最顶端（`clientY <= 10px`）或悬停顶栏时，顶栏平滑滑出（含退出禅模式按钮、文档标题、字号缩放、主题切换）；鼠标移开（`clientY > 54px`）自动平滑滑回隐藏；
-- **全局快捷键随时退出**：支持全局 `Esc` 和 `F11` 键随时一键退出禅模式，并带有精准的 Toast 引导提示与输入焦点自动恢复。
+### 1. 检查更新提示 `{version}` 占位符裸露修复
+- **精准版本号替换**：彻底修复 `updater.js` 与 46 种语言 i18n 字典的占位符参数映射，检查更新弹出 Toast 统一准确显示当前版本（如 `当前已是最新版本 (v2.3.7-beta.3)`），绝无裸露字段名。
 
-### 2. 样式定制（Custom Styles Modal）前端风格与功能重构
-- **设计系统标准化**：移除底层技术黑话（如 `style.less / head.html`），全面重构为标准系统弹窗规范（`.modal-dialog`, `.style-modal-dialog`, `.style-modal-desc`, `.form-group`）；
-- **常用排版模板快捷按钮栏**（`.style-presets-bar`）：
-  - **首行缩进**：一键注入中文段落首行缩进 2 字符 CSS；
-  - **精美表格**：一键注入现代圆角、斑马纹与高亮表头 CSS；
-  - **等宽代码字体**：一键注入 Fira Code / Cascadia Code / Consolas 优先字体 CSS；
-  - **打印分页优化**：一键注入 `@media print` 避免标题/表格跨页截断 CSS；
-- **代码编辑体验增强**：代码输入框支持 `Tab` 键缩进插入 2 个空格以及 `Ctrl+Enter` / `Cmd+Enter` 快捷保存并即时生效。
+### 2. 返回主页后右下角「返回主页」按钮状态联动修复
+- **状态感知联动**：修复多标签页状态栏 `renderTabsBar()` 在欢迎主页时的按钮显示逻辑，无论当前是否存在后台标签，只要处于欢迎主页（`state.mode === 'welcome'`），右下角返回主页按钮严格隐藏。
 
-### 3. 全球 46 国语言 i18n 与前端自动化测试 100% 覆盖
-- **46 种语言 100% 同步**：新增的排版模板、禅模式提示文案均已同步至所有 46 国语言 JSON 字典文件（`assets/i18n/*.json`），实现 1,008 词条全量对齐（0 缺失）；
-- **端到端测试全覆盖**：23 项 Playwright UI 端到端测试与 339 项单元/压力测试 100% 通过。
+### 3. 演讲演示（Reveal.js）深度优化与自定义支持 (对齐 MPE 规范)
+- **排版与舒适演说字号重构**：将默认过大的 Reveal.js 字体调整为精致舒适尺寸（基准字号 24px，标题 1.5~1.8em，行高 1.65），杜绝因字号过大导致的多段落溢出与截断；
+- **智能防溢出滚动**：单页幻灯片容器增加优雅平滑滚动（`overflow-y: auto`），长文章与大表格内容 100% 完整展示；
+- **代码块与表格保护分片**：采用 AST 占位保护分片算法，智能自愈切片时严格保证围栏代码块（```）、数学公式块（$$）与表格不被腰斩截断；
+- **MPE 语法全量对齐**：完整支持 `<!-- slide -->` / `---`（横向）、`<!-- subslide -->` / `--`（垂直下钻）、`<!-- note -->`（演讲者备注）以及 YAML Frontmatter `presentation:` 配置；
+- **演说悬浮控制栏（Floating Quick Toolbar）**：在放映界面右上角提供精致毛玻璃悬浮工具栏，支持即时切换 11 款专业主题（Black, White, League, Night, Serif, Simple 等）、6 种转场特效（Slide, Fade, Zoom 等）、字号缩放（`A-` 20px / `A` 24px / `A+` 28px）、总览视图（`O` 键）与一键全屏（`F11`）。
+
+### 4. 全球 46 国语言 i18n 与前端自动化测试 100% 覆盖
+- **46 种语言 100% 对齐**：所有新增演示控制栏词条全量同步至 46 种语言 JSON 字典文件（1,017 词条，0 缺失）；
+- **端到端测试全覆盖**：全量 25 项 Playwright UI 端到端测试与 340 项单元/压力测试 100% 通过。
 
 ---
 

@@ -3572,7 +3572,7 @@ body.zen-mode .markdown-body {
   padding: 40px 24px 100px;
 }
 
-/* ---------- 演示文稿全屏模态框 (Presentation Modal) ---------- */
+/* ---------- 演示文稿全屏模态框与悬浮定制工具栏 (Presentation Toolbar) ---------- */
 #presentation-modal {
   position: fixed;
   top: 0;
@@ -3586,7 +3586,7 @@ body.zen-mode .markdown-body {
 }
 
 #presentation-modal.hidden {
-  display: none;
+  display: none !important;
 }
 
 .presentation-iframe {
@@ -3596,26 +3596,105 @@ body.zen-mode .markdown-body {
   border: none;
 }
 
-.presentation-close-btn {
+.presentation-toolbar {
   position: absolute;
   top: 14px;
-  right: 14px;
-  background: rgba(255, 255, 255, 0.2);
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(18, 18, 22, 0.76);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 24px;
+  padding: 5px 12px;
+  z-index: 10001;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  opacity: 0.88;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.presentation-toolbar:hover {
+  opacity: 1;
+  transform: translateY(1px);
+}
+
+.presentation-tool-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+}
+
+.presentation-select {
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 12px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.presentation-select:hover,
+.presentation-select:focus {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.presentation-select option {
+  background: #1e1e24;
+  color: #fff;
+}
+
+.presentation-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  padding: 3px 9px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.presentation-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.55);
+  transform: translateY(-1px);
+}
+
+.presentation-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.presentation-close-btn {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fff;
+  border: 1px solid rgba(239, 68, 68, 0.45);
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  z-index: 10001;
-  transition: all 0.2s ease;
+  margin-left: 4px;
+  transition: all 0.15s ease;
 }
 
 .presentation-close-btn:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(239, 68, 68, 0.9);
+  border-color: #ef4444;
   transform: scale(1.1);
 }
 

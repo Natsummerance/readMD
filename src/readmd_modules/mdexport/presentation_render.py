@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
 """ReadMD 沉浸式 Reveal.js 演说模式与幻灯片编译导出器。
 
-支持语法：
-- `<!-- slide -->` 或 `---`：横向下一页幻灯片；
-- `<!-- subslide -->` 或 `--`：垂直下钻幻灯片；
+对齐 Markdown Preview Enhanced (MPE) 完整语法规范：
+- `<!-- slide [attrs] -->` 或 `---`：横向下一页幻灯片；
+- `<!-- subslide [attrs] -->` 或 `--`：垂直下钻幻灯片；
 - `<!-- note ... -->` 或 `note:`：演讲者备注（按 'S' 键唤起独立演讲者计时与备注窗口）；
-- 智能自愈：对于长篇 Markdown 文档，自动按 H1/H2/H3 层级和篇幅长度智能分片，杜绝页面截断。
+- 智能保护分片：长篇 Markdown 文档按 H1/H2 层级分片时，严格保护围栏代码块、公式块与表格不被截断；
 - Front-matter 配置：
   ---
   presentation:
     theme: league
     transition: slide
     slideNumber: true
+    width: 1080
+    height: 720
   ---
 """
 
@@ -20,11 +22,11 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 SLIDE_SPLIT_REGEX = re.compile(
-    r'(?:^[ \t]*<!--\s*slide\s*-->[ \t]*$|^[ \t]*---[ \t]*$)',
+    r'(?:^[ \t]*<!--\s*slide(?:\s+[\s\S]*?)?-->[ \t]*$|^[ \t]*---[ \t]*$)',
     re.MULTILINE | re.IGNORECASE
 )
 SUBSLIDE_SPLIT_REGEX = re.compile(
-    r'(?:^[ \t]*<!--\s*subslide\s*-->[ \t]*$|^[ \t]*--[ \t]*$)',
+    r'(?:^[ \t]*<!--\s*subslide(?:\s+[\s\S]*?)?-->[ \t]*$|^[ \t]*--[ \t]*$)',
     re.MULTILINE | re.IGNORECASE
 )
 NOTE_SPLIT_REGEX = re.compile(
@@ -47,43 +49,81 @@ def parse_frontmatter(content: str) -> Tuple[Dict[str, Any], str]:
                     k, v = line.split(':', 1)
                     k = k.strip().lower()
                     v = v.strip().strip('"\'')
-                    if k in ('theme', 'transition', 'title', 'author', 'slidenumber'):
+                    if k in ('theme', 'transition', 'title', 'author', 'slidenumber', 'width', 'height'):
                         meta[k] = v
     return meta, body
 
 
-def _auto_split_long_chunk(chunk: str, max_chars: int = 900) -> List[str]:
-    """若单张幻灯片内容过长，自动按 H3 标题或段落智能分片，避免单页超屏。"""
+def _protect_blocks(text: str) -> Tuple[str, Dict[str, str]]:
+    """将代码块、数学块、表格抽取占位符，防止切片算法将其腰斩截断。"""
+    blocks: Dict[str, str] = {}
+    counter = 0
+
+    def code_repl(m: re.Match) -> str:
+        nonlocal counter
+        key = f"__READMD_CODE_BLOCK_{counter}__"
+        blocks[key] = m.group(0)
+        counter += 1
+        return key
+
+    # 1. 保护围栏代码块 ```...```
+    text = re.sub(r'```[\s\S]*?```', code_repl, text)
+
+    # 2. 保护数学公式块 $$...$$
+    def math_repl(m: re.Match) -> str:
+        nonlocal counter
+        key = f"__READMD_MATH_BLOCK_{counter}__"
+        blocks[key] = m.group(0)
+        counter += 1
+        return key
+
+    text = re.sub(r'\$\$[\s\S]*?\$\$', math_repl, text)
+
+    return text, blocks
+
+
+def _restore_blocks(text: str, blocks: Dict[str, str]) -> str:
+    """还原被保护的代码块与数学公式块。"""
+    for k, v in blocks.items():
+        text = text.replace(k, v)
+    return text
+
+
+def _auto_split_long_chunk(chunk: str, max_chars: int = 800) -> List[str]:
+    """若单张幻灯片内容过长，在保护代码块完整性的前提下，按 H3 标题或段落智能分片。"""
     chunk = chunk.strip()
     if len(chunk) <= max_chars:
         return [chunk] if chunk else []
-    
+
+    protected_chunk, block_map = _protect_blocks(chunk)
+
     # 尝试按 H3 标题分片
-    h3_splits = [c.strip() for c in re.split(r'(?=^#{3}\s)', chunk, flags=re.MULTILINE) if c.strip()]
+    h3_splits = [c.strip() for c in re.split(r'(?=^#{3}\s)', protected_chunk, flags=re.MULTILINE) if c.strip()]
     if len(h3_splits) > 1:
         res = []
         for s in h3_splits:
-            res.extend(_auto_split_long_chunk(s, max_chars))
+            restored = _restore_blocks(s, block_map)
+            res.extend(_auto_split_long_chunk(restored, max_chars))
         return res
-    
+
     # 尝试按双换行分段聚合
-    paragraphs = [p.strip() for p in re.split(r'\n{2,}', chunk) if p.strip()]
+    paragraphs = [p.strip() for p in re.split(r'\n{2,}', protected_chunk) if p.strip()]
     if len(paragraphs) <= 1:
-        return [chunk]
-    
+        return [_restore_blocks(protected_chunk, block_map)]
+
     slides = []
     current_acc = []
     current_len = 0
     for p in paragraphs:
         if current_len + len(p) > max_chars and current_acc:
-            slides.append('\n\n'.join(current_acc))
+            slides.append(_restore_blocks('\n\n'.join(current_acc), block_map))
             current_acc = [p]
             current_len = len(p)
         else:
             current_acc.append(p)
             current_len += len(p)
     if current_acc:
-        slides.append('\n\n'.join(current_acc))
+        slides.append(_restore_blocks('\n\n'.join(current_acc), block_map))
     return slides
 
 
@@ -91,16 +131,16 @@ def split_slides_structure(content: str) -> List[List[Dict[str, str]]]:
     """将 Markdown 切片为二维矩阵 [Horizontal_Slide [Vertical_SubSlide {content, note}]]."""
     _, body = parse_frontmatter(content)
     
-    # 判断是否存在显式 slide 分割符
-    has_explicit_slide = bool(re.search(r'^[ \t]*<!--\s*slide\s*-->', body, re.MULTILINE | re.IGNORECASE))
+    # 检查是否存在显式 slide 分割符
+    has_explicit_slide = bool(re.search(r'^[ \t]*<!--\s*slide(?:\s+[\s\S]*?)?-->', body, re.MULTILINE | re.IGNORECASE))
     
     if has_explicit_slide:
-        raw_horizontal = re.split(r'^[ \t]*<!--\s*slide\s*-->[ \t]*$', body, flags=re.MULTILINE | re.IGNORECASE)
+        raw_horizontal = re.split(r'^[ \t]*<!--\s*slide(?:\s+[\s\S]*?)?-->[ \t]*$', body, flags=re.MULTILINE | re.IGNORECASE)
     elif re.search(r'^[ \t]*---[ \t]*$', body, re.MULTILINE):
         # 显式 --- 分割符
         raw_horizontal = re.split(r'^[ \t]*---[ \t]*$', body, flags=re.MULTILINE)
     else:
-        # 智能自愈分片：按 H1/H2/H3 分片
+        # 智能自愈分片：按 H1/H2/H3 标题智能分片
         heading_splits = [c.strip() for c in re.split(r'(?=^#{1,3}\s)', body, flags=re.MULTILINE) if c.strip()]
         if len(heading_splits) > 1:
             raw_horizontal = heading_splits
@@ -114,13 +154,13 @@ def split_slides_structure(content: str) -> List[List[Dict[str, str]]]:
         if not h_chunk:
             continue
         
-        # 检查是否包含子幻灯片
-        if re.search(r'^[ \t]*<!--\s*subslide\s*-->', h_chunk, re.MULTILINE | re.IGNORECASE):
-            raw_vertical = re.split(r'^[ \t]*<!--\s*subslide\s*-->[ \t]*$', h_chunk, flags=re.MULTILINE | re.IGNORECASE)
+        # 检查是否包含垂直子幻灯片
+        if re.search(r'^[ \t]*<!--\s*subslide(?:\s+[\s\S]*?)?-->', h_chunk, re.MULTILINE | re.IGNORECASE):
+            raw_vertical = re.split(r'^[ \t]*<!--\s*subslide(?:\s+[\s\S]*?)?-->[ \t]*$', h_chunk, flags=re.MULTILINE | re.IGNORECASE)
         elif not has_explicit_slide and re.search(r'^[ \t]*--[ \t]*$', h_chunk, re.MULTILINE):
             raw_vertical = re.split(r'^[ \t]*--[ \t]*$', h_chunk, flags=re.MULTILINE)
         else:
-            # 针对单页超长文本进行智能自适应分片
+            # 针对单页超长文本进行智能自适应分片（保护代码块完整性）
             raw_vertical = _auto_split_long_chunk(h_chunk)
             if not raw_vertical:
                 raw_vertical = [h_chunk]
@@ -159,7 +199,7 @@ def _escape_template_md(md: str) -> str:
 
 def render_presentation_html(content: str, title: str = "ReadMD Presentation",
                              theme: str = "black", transition: str = "slide") -> str:
-    """将 Markdown 编译为完整的单文件 Reveal.js HTML 演说稿。"""
+    """将 Markdown 编译为完整的单文件 Reveal.js HTML 演说稿（精致舒适排版、防截断滚动与双向事件控制）。"""
     meta, _ = parse_frontmatter(content)
     theme = meta.get('theme', theme)
     if theme.endswith('.css'):
@@ -168,7 +208,6 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
     title = meta.get('title', title)
     
     slides_matrix = split_slides_structure(content)
-    
     sections_html = []
     
     for h_idx, v_slides in enumerate(slides_matrix):
@@ -198,13 +237,105 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/monokai.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <style>
-    .reveal pre {{ box-shadow: 0 5px 15px rgba(0,0,0,0.15); width: 100%; }}
-    .reveal pre code {{ max-height: 520px; font-size: 0.85em; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; }}
-    .reveal table {{ font-size: 0.75em; margin: 12px auto; border-collapse: collapse; }}
-    .reveal table th, .reveal table td {{ padding: 6px 12px; border: 1px solid rgba(128,128,128,0.3); }}
-    .reveal h1, .reveal h2, .reveal h3, .reveal h4 {{ text-transform: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
-    .reveal blockquote {{ border-left: 4px solid #4a9eff; padding: 6px 16px; background: rgba(128,128,128,0.08); font-style: normal; }}
-    .reveal .slides section {{ height: 100%; }}
+    :root {{
+      --reveal-base-font-size: 24px;
+    }}
+    .reveal {{
+      font-size: var(--reveal-base-font-size);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    }}
+    .reveal .slides section {{
+      height: 100%;
+      max-height: 100%;
+      overflow-y: auto !important;
+      padding: 24px 36px;
+      box-sizing: border-box;
+      text-align: left;
+    }}
+    .reveal .slides section::-webkit-scrollbar {{
+      width: 6px;
+    }}
+    .reveal .slides section::-webkit-scrollbar-thumb {{
+      background: rgba(128, 128, 128, 0.4);
+      border-radius: 3px;
+    }}
+    .reveal h1 {{
+      font-size: 1.8em;
+      margin-bottom: 0.45em;
+      font-weight: 700;
+      line-height: 1.25;
+      text-transform: none;
+    }}
+    .reveal h2 {{
+      font-size: 1.4em;
+      margin-bottom: 0.35em;
+      font-weight: 600;
+      line-height: 1.3;
+      text-transform: none;
+    }}
+    .reveal h3 {{
+      font-size: 1.15em;
+      margin-bottom: 0.3em;
+      font-weight: 600;
+      text-transform: none;
+    }}
+    .reveal h4, .reveal h5, .reveal h6 {{
+      font-size: 1.0em;
+      margin-bottom: 0.25em;
+      text-transform: none;
+    }}
+    .reveal p, .reveal li {{
+      font-size: 0.95em;
+      line-height: 1.65;
+      margin-bottom: 0.6em;
+      text-align: left;
+    }}
+    .reveal ul, .reveal ol {{
+      text-align: left;
+      display: block;
+      margin: 0 0 1em 1.4em;
+    }}
+    .reveal pre {{
+      box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+      width: 100%;
+      border-radius: 8px;
+      margin: 14px 0;
+      background: #1e1e1e;
+    }}
+    .reveal pre code {{
+      max-height: 480px;
+      font-size: 0.78em;
+      line-height: 1.45;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: "Cascadia Code", "Fira Code", Consolas, "SF Mono", monospace;
+    }}
+    .reveal table {{
+      font-size: 0.78em;
+      margin: 16px auto;
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 900px;
+    }}
+    .reveal table th {{
+      background: rgba(128, 128, 128, 0.2);
+      font-weight: 600;
+    }}
+    .reveal table th, .reveal table td {{
+      padding: 8px 14px;
+      border: 1px solid rgba(128, 128, 128, 0.3);
+      text-align: left;
+    }}
+    .reveal blockquote {{
+      border-left: 4px solid #3b82f6;
+      padding: 8px 18px;
+      background: rgba(59, 130, 246, 0.08);
+      font-style: normal;
+      border-radius: 0 6px 6px 0;
+      text-align: left;
+      width: 95%;
+      margin: 12px 0;
+    }}
   </style>
 </head>
 <body>
@@ -219,20 +350,48 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
   <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/notes/notes.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/math/math.js"></script>
   <script>
-    Reveal.initialize({{
+    window.deck = new Reveal({{
+      width: 1080,
+      height: 720,
+      margin: 0.06,
+      minScale: 0.2,
+      maxScale: 2.0,
       controls: true,
       progress: true,
-      center: true,
+      center: false,
       hash: true,
       transition: '{transition}',
       slideNumber: 'c/t',
-      minScale: 0.2,
-      maxScale: 2.0,
       plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealMath.KaTeX ]
+    }});
+    deck.initialize();
+
+    // 监听来自父窗口的实时定制消息 (Theme, Transition, Font Scale, Navigation)
+    window.addEventListener('message', function(event) {{
+      if (!event.data || typeof event.data !== 'object') return;
+      const data = event.data;
+      if (data.type === 'set-theme' && data.theme) {{
+        const themeLink = document.getElementById('theme');
+        if (themeLink) {{
+          themeLink.href = 'https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/' + data.theme + '.css';
+        }}
+      }} else if (data.type === 'set-transition' && data.transition) {{
+        if (window.deck && typeof window.deck.configure === 'function') {{
+          window.deck.configure({{ transition: data.transition }});
+        }}
+      }} else if (data.type === 'set-font-size' && data.size) {{
+        document.documentElement.style.setProperty('--reveal-base-font-size', data.size + 'px');
+      }} else if (data.type === 'toggle-overview') {{
+        if (window.deck && typeof window.deck.toggleOverview === 'function') {{
+          window.deck.toggleOverview();
+        }}
+      }}
     }});
   </script>
 </body>
 </html>"""
 
+
 # 兼容别名
 generate_presentation_html = render_presentation_html
+

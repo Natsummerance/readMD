@@ -1004,5 +1004,16 @@
   "dialog.stylePresetFont": "等寬程式碼字型",
   "dialog.stylePresetPrint": "列印分頁最佳化",
   "toast.stylePresetAdded": "已新增排版範本",
-  "toast.zenExited": "已退出禪模式"
+  "toast.zenExited": "已退出禪模式",
+  "presentation.noDoc": "当前没有可演示的文档内容",
+  "presentation.themeTitle": "演说主题",
+  "presentation.transitionTitle": "转场特效",
+  "presentation.fontDec": "缩小字号 (20px)",
+  "presentation.fontNorm": "标准字号 (24px)",
+  "presentation.fontInc": "放大字号 (28px)",
+  "presentation.overviewTitle": "总览视图 (快捷键 O)",
+  "presentation.fullscreenTitle": "全屏放映 (F11)",
+  "presentation.closeTitle": "退出演示 (Esc)",
+  "toast.generatingPresentation": "正在生成演示文稿...",
+  "toast.presentationFail": "演示文稿生成失败："
 }

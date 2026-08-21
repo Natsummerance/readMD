@@ -48,7 +48,13 @@ function renderTabsBar() {
     return;
   }
 
-  if (btnHome) btnHome.classList.remove('hidden');
+  if (btnHome) {
+    if (state.mode === 'welcome') {
+      btnHome.classList.add('hidden');
+    } else {
+      btnHome.classList.remove('hidden');
+    }
+  }
 
   const createTabEl = (tab) => {
     const el = document.createElement('div');

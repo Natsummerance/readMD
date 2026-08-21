@@ -1269,8 +1269,9 @@ window.toggleZenMode = toggleZenMode;
 
 async function launchPresentationMode() {
   const content = state.original || (cmView ? cmView.state.doc.toString() : '');
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!content) {
-    showToast('当前没有可演示的文档内容');
+    showToast(_t('presentation.noDoc') || '当前没有可演示的文档内容');
     return;
   }
   let modal = document.getElementById('presentation-modal');
@@ -1279,17 +1280,108 @@ async function launchPresentationMode() {
     modal.id = 'presentation-modal';
     modal.className = 'hidden';
     modal.innerHTML = `
-      <button class="presentation-close-btn" title="退出演示 (Esc)">✕</button>
+      <div class="presentation-toolbar" id="presentation-toolbar">
+        <div class="presentation-tool-item">
+          <select id="presentation-theme-select" class="presentation-select" title="演说主题" data-i18n-title="presentation.themeTitle">
+            <option value="black">深黑 (Black)</option>
+            <option value="white">亮白 (White)</option>
+            <option value="league">英雄联盟 (League)</option>
+            <option value="beige">米黄 (Beige)</option>
+            <option value="night">暗夜 (Night)</option>
+            <option value="serif">衬线典雅 (Serif)</option>
+            <option value="simple">极简现代 (Simple)</option>
+            <option value="solarized">日光色调 (Solarized)</option>
+            <option value="blood">暗红 (Blood)</option>
+            <option value="moon">月光 (Moon)</option>
+            <option value="sky">天蓝 (Sky)</option>
+          </select>
+        </div>
+        <div class="presentation-tool-item">
+          <select id="presentation-transition-select" class="presentation-select" title="转场特效" data-i18n-title="presentation.transitionTitle">
+            <option value="slide">平移 (Slide)</option>
+            <option value="fade">渐变 (Fade)</option>
+            <option value="zoom">缩放 (Zoom)</option>
+            <option value="convex">凸面 (Convex)</option>
+            <option value="concave">凹面 (Concave)</option>
+            <option value="none">无动画 (None)</option>
+          </select>
+        </div>
+        <div class="presentation-tool-item">
+          <button type="button" class="presentation-btn" id="presentation-font-dec" title="缩小字号 (20px)" data-i18n-title="presentation.fontDec">A-</button>
+          <button type="button" class="presentation-btn active" id="presentation-font-norm" title="标准字号 (24px)" data-i18n-title="presentation.fontNorm">A</button>
+          <button type="button" class="presentation-btn" id="presentation-font-inc" title="放大字号 (28px)" data-i18n-title="presentation.fontInc">A+</button>
+        </div>
+        <button type="button" class="presentation-btn" id="presentation-overview-btn" title="总览视图 (快捷键 O)" data-i18n-title="presentation.overviewTitle">总览</button>
+        <button type="button" class="presentation-btn" id="presentation-fullscreen-btn" title="全屏放映 (F11)" data-i18n-title="presentation.fullscreenTitle">全屏</button>
+        <button type="button" class="presentation-close-btn" id="presentation-close-btn" title="退出演示 (Esc)" data-i18n-title="presentation.closeTitle">✕</button>
+      </div>
       <iframe class="presentation-iframe" src="about:blank"></iframe>
     `;
     document.body.appendChild(modal);
-    modal.querySelector('.presentation-close-btn').addEventListener('click', () => {
+
+    const postToIframe = (data) => {
+      const iframe = modal.querySelector('.presentation-iframe');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage(data, '*');
+      }
+    };
+
+    const themeSelect = $('presentation-theme-select');
+    if (themeSelect) {
+      themeSelect.addEventListener('change', () => {
+        postToIframe({ type: 'set-theme', theme: themeSelect.value });
+      });
+    }
+
+    const transSelect = $('presentation-transition-select');
+    if (transSelect) {
+      transSelect.addEventListener('change', () => {
+        postToIframe({ type: 'set-transition', transition: transSelect.value });
+      });
+    }
+
+    const setFontSize = (size, activeBtnId) => {
+      postToIframe({ type: 'set-font-size', size: size });
+      ['presentation-font-dec', 'presentation-font-norm', 'presentation-font-inc'].forEach(id => {
+        if ($(id)) $(id).classList.toggle('active', id === activeBtnId);
+      });
+    };
+
+    if ($('presentation-font-dec')) $('presentation-font-dec').addEventListener('click', () => setFontSize(20, 'presentation-font-dec'));
+    if ($('presentation-font-norm')) $('presentation-font-norm').addEventListener('click', () => setFontSize(24, 'presentation-font-norm'));
+    if ($('presentation-font-inc')) $('presentation-font-inc').addEventListener('click', () => setFontSize(28, 'presentation-font-inc'));
+
+    if ($('presentation-overview-btn')) {
+      $('presentation-overview-btn').addEventListener('click', () => {
+        postToIframe({ type: 'toggle-overview' });
+      });
+    }
+
+    if ($('presentation-fullscreen-btn')) {
+      $('presentation-fullscreen-btn').addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          if (modal.requestFullscreen) modal.requestFullscreen();
+        } else {
+          if (document.exitFullscreen) document.exitFullscreen();
+        }
+      });
+    }
+
+    const closePresentation = () => {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
       modal.classList.add('hidden');
-      modal.querySelector('.presentation-iframe').src = 'about:blank';
-    });
+      const iframe = modal.querySelector('.presentation-iframe');
+      if (iframe) iframe.src = 'about:blank';
+    };
+
+    if ($('presentation-close-btn')) {
+      $('presentation-close-btn').addEventListener('click', closePresentation);
+    }
   }
 
-  showToast('正在生成演示文稿...', 1000);
+  showToast(_t('toast.generatingPresentation') || '正在生成演示文稿...', 1000);
   try {
     let res;
     if (hasPy && py.export_presentation) {
@@ -1307,10 +1399,10 @@ async function launchPresentationMode() {
       const iframe = modal.querySelector('.presentation-iframe');
       iframe.srcdoc = res.html;
     } else {
-      showToast('演示文稿生成失败：' + ((res && res.error) || '未知错误'));
+      showToast((_t('toast.presentationFail') || '演示文稿生成失败：') + ((res && res.error) || '未知错误'));
     }
   } catch (e) {
-    showToast('演示文稿生成失败：' + e.message);
+    showToast((_t('toast.presentationFail') || '演示文稿生成失败：') + e.message);
   }
 }
 window.launchPresentationMode = launchPresentationMode;

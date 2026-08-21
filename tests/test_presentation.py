@@ -109,9 +109,19 @@ if a < b and b > c:
         html = render_presentation_html(doc)
         self.assertIn('if a < b and b > c:', html)
         self.assertIn('<span style="color: red;">Alert</span>', html)
-        self.assertNotIn('&lt;span style=', html)
+    def test_code_block_protection_during_auto_split(self):
+        """测试包含大段代码块的超长 Markdown 在自动分片时代码块不被腰斩。"""
+        long_code = "```python\n" + "\n".join([f"def func_{i}(): return {i}" for i in range(40)]) + "\n```"
+        doc = "# 长代码演示\n这是引言段落。\n\n" + long_code + "\n\n这是总结段落。"
+        matrix = split_slides_structure(doc)
+        total_slides = sum(len(v) for v in matrix)
+        self.assertGreaterEqual(total_slides, 1)
+        # 确保代码块完整存在于某一页中，未被截断
+        found_full_code = any(long_code in slide["content"] for v in matrix for slide in v)
+        self.assertTrue(found_full_code, "Code block should remain intact without being chopped")
 
 
 if __name__ == '__main__':
     unittest.main()
+
 

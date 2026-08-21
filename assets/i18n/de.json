@@ -1004,5 +1004,16 @@
   "dialog.stylePresetFont": "Code-Schriftart",
   "dialog.stylePresetPrint": "Druck-Seitenumbruch",
   "toast.stylePresetAdded": "Vorlage hinzugefügt",
-  "toast.zenExited": "Zen-Modus beendet"
+  "toast.zenExited": "Zen-Modus beendet",
+  "presentation.noDoc": "No document content available for presentation",
+  "presentation.themeTitle": "Presentation Theme",
+  "presentation.transitionTitle": "Transition Effect",
+  "presentation.fontDec": "Smaller Font (20px)",
+  "presentation.fontNorm": "Standard Font (24px)",
+  "presentation.fontInc": "Larger Font (28px)",
+  "presentation.overviewTitle": "Slide Overview (Key O)",
+  "presentation.fullscreenTitle": "Fullscreen (F11)",
+  "presentation.closeTitle": "Exit Presentation (Esc)",
+  "toast.generatingPresentation": "Generating presentation...",
+  "toast.presentationFail": "Failed to generate presentation: "
 }

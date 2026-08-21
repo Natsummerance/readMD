@@ -40,7 +40,8 @@ async function checkUpdate(silent = true) {
         showToast(_t('update.foundNew', { ver: res.latest_version }) || ('发现新版本 ' + res.latest_version), 5000);
       }
     } else {
-      if (!silent) showToast(_t('update.latest', { ver: res.current_version || '2.3.1' }) || ('当前已是最新版本 (v' + (res.current_version || '2.3.1') + ')'));
+      const curVer = res.current_version || (typeof VERSION !== 'undefined' ? VERSION : '2.3.7');
+      if (!silent) showToast(_t('update.latest', { ver: curVer, version: curVer }) || ('当前已是最新版本 (v' + curVer + ')'));
     }
   } catch (e) {
     if (!silent) showToast(_t('update.checkFail') + '：' + e.message);

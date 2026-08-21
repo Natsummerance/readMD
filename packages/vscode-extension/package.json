@@ -2,7 +2,7 @@
   "name": "readmd-vscode",
   "displayName": "ReadMD —— 高性能 Markdown 智能预览与自愈修复",
   "description": "轻量级本地 Markdown 智能阅读与编辑扩展：实时双向同步预览、格式自愈修复、全格式文档互转、排版级 PDF/Word/EPUB 导出、LaTeX/TikZ 科学绘图、多语言 Code Chunk、Reveal.js 演说模式、@import 模块化、[TOC]目录生成与 MCP 智能体协同。",
-  "version": "2.3.7-beta.2",
+  "version": "2.3.7-beta.3",
   "publisher": "Natsummerance",
   "icon": "icon.png",
   "license": "MIT",
