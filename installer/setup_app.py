@@ -70,7 +70,7 @@ def _bundle_version():
 
 APP_VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
                or os.environ.get('READMD_BUILD_VERSION')
-               or _bundle_version() or '2.3.5')
+               or _bundle_version() or '2.3.6')
 
 
 

@@ -1,23 +1,23 @@
-# ReadMD v2.3.5
+# ReadMD v2.3.6
 
 ReadMD 是免费的本地 Markdown 智能阅读与排版套件；纯本地、秒级极速渲染、离线可用，绝不改写原文件。
 
 ## 📦 全平台发布资产 (Release Assets)
 
-- 🪟 Windows 安装版：`ReadMDSetup-v2.3.5.exe`
-- 💼 Windows 便携版：`ReadMD-portable-v2.3.5.exe`
-- 🍏 Apple Silicon Mac：`ReadMD-macos-arm64-v2.3.5.zip`
-- 💻 Intel Mac：`ReadMD-macos-x64-v2.3.5.zip`
-- 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.5.AppImage`
-- 🇨🇳 Linux / 国产信创 Deb 安装包 (UOS / 银河麒麟 / Deepin / Ubuntu / Debian)：`readmd_2.3.5_amd64.deb`
-- 📱 HarmonyOS NEXT 纯血鸿蒙安装包：`ReadMD-harmonyos-v2.3.5.hap`
-- 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.5.vsix`
-- 🤖 FastMCP Server 独立包：`readmd-mcp-server-2.3.5.zip`
+- 🪟 Windows 安装版：`ReadMDSetup-v2.3.6.exe`
+- 💼 Windows 便携版：`ReadMD-portable-v2.3.6.exe`
+- 🍏 Apple Silicon Mac：`ReadMD-macos-arm64-v2.3.6.zip`
+- 💻 Intel Mac：`ReadMD-macos-x64-v2.3.6.zip`
+- 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.6.AppImage`
+- 🇨🇳 Linux / 国产信创 Deb 安装包 (UOS / 银河麒麟 / Deepin / Ubuntu / Debian)：`readmd_2.3.6_amd64.deb`
+- 📱 HarmonyOS NEXT 纯血鸿蒙安装包：`ReadMD-harmonyos-v2.3.6.hap`
+- 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.6.vsix`
+- 🤖 FastMCP Server 独立包：`readmd-mcp-server-2.3.6.zip`
 - 🔐 校验清单：`SHA256SUMS.txt`
 
 ---
 
-## 🌟 本次版本核心更新 (v2.3.5)
+## 🌟 本次版本核心更新 (v2.3.6)
 
 ### 1. 渲染引擎与自愈算法底层加固
 - **Marked AST 内联委托修复**：修复 `parseMarkdownWithSourceMap` 中标题和段落加粗 (`**...**`)、斜体和链接的行内解析委托；
