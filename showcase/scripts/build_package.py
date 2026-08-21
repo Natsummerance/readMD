@@ -10,6 +10,7 @@ from pathlib import Path
 
 from audit_copy import audit_package
 from build_story import build_story
+from export_wechat import export_package
 from validate_package import validate_package
 from write_copy import generate_copy
 
@@ -48,6 +49,9 @@ def compose_and_validate(package_dir: Path, repo_root: Path) -> list[str]:
     copy_report = audit_package(package_dir)
     if not copy_report["ok"]:
         return [f"semantic alignment gate failed: {json.dumps(copy_report, ensure_ascii=False)}"]
+    wechat_report = export_package(package_dir)
+    if not wechat_report["ok"]:
+        return [f"WeChat adapter gate failed: {json.dumps(wechat_report['errors'], ensure_ascii=False)}"]
     return validate_package(package_dir, repo_root=repo_root)
 
 

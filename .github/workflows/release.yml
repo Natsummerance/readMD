@@ -175,7 +175,7 @@ jobs:
           cd ../..
           python -c "import os, shutil, glob; os.makedirs('dist', exist_ok=True); vs = glob.glob('packages/vscode-extension/*.vsix'); assert vs, 'No vsix produced'; shutil.copy(sorted(vs)[-1], 'dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix')"
           if (!(Test-Path "dist/readmd-vscode-$env:READMD_VERSION.vsix")) { throw "readmd-vscode-$env:READMD_VERSION.vsix missing in dist" }
-          python -c "import zipfile; z = zipfile.ZipFile('dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip', 'w', zipfile.ZIP_DEFLATED); z.write('packages/mcp-server/readmd_mcp_server.py', 'readmd_mcp_server.py'); z.write('packages/mcp-server/README.md', 'README.md'); z.close()"
+          python -c "import glob, os, zipfile; z = zipfile.ZipFile('dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip', 'w', zipfile.ZIP_DEFLATED); paths = ['packages/mcp-server/readmd_mcp_server.py', 'packages/mcp-server/README.md', 'config/requirements-common.txt'] + sorted(glob.glob('src/**/*.py', recursive=True)) + [path for path in sorted(glob.glob('assets/**/*', recursive=True)) if os.path.isfile(path)]; [z.write(path, path) for path in paths]; z.close()"
           if (!(Test-Path "dist/readmd-mcp-server-$env:READMD_VERSION.zip")) { throw "readmd-mcp-server-$env:READMD_VERSION.zip missing in dist" }
       - name: Upload main-branch release candidate
         if: github.ref == 'refs/heads/main'
@@ -269,7 +269,7 @@ jobs:
           overwrite: true
 
   linux-package:
-    name: Package · Linux & HarmonyOS
+    name: Package · Linux
     if: github.event_name != 'release' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [linux-test]
     runs-on: ubuntu-latest
@@ -296,7 +296,7 @@ jobs:
             zip \
             file || true
           python -m pip install --disable-pip-version-check -r config/requirements-linux.txt pyinstaller
-      - name: Build Linux onedir, AppImage, Deb, and HarmonyOS HAP
+      - name: Build Linux onedir, AppImage, and Deb
         run: |
           bash scripts/linux/build_linux.sh
       - name: Smoke test Linux binary
@@ -305,7 +305,6 @@ jobs:
       - name: Verify build outputs
         run: |
           ls -la dist/
-          test -s "dist/ReadMD-harmonyos-v${{ env.READMD_VERSION }}.hap"
           test -s "dist/readmd_${{ env.READMD_VERSION }}_amd64.deb"
       - name: Upload main-branch release candidate
         if: github.ref == 'refs/heads/main'
@@ -315,7 +314,6 @@ jobs:
           path: |
             dist/ReadMD-linux-x86_64-v${{ env.READMD_VERSION }}.AppImage
             dist/readmd_${{ env.READMD_VERSION }}_amd64.deb
-            dist/ReadMD-harmonyos-v${{ env.READMD_VERSION }}.hap
           if-no-files-found: ignore
           overwrite: true
           retention-days: 7
@@ -327,7 +325,6 @@ jobs:
           path: |
             dist/ReadMD-linux-x86_64-v${{ env.READMD_VERSION }}.AppImage
             dist/readmd_${{ env.READMD_VERSION }}_amd64.deb
-            dist/ReadMD-harmonyos-v${{ env.READMD_VERSION }}.hap
           if-no-files-found: ignore
           overwrite: true
 
@@ -371,7 +368,7 @@ jobs:
               print(" -", f)
           PY
           V="${{ env.READMD_VERSION }}"
-          for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "ReadMD-harmonyos-v${V}.hap" "readmd-mcp-server-${V}.zip"; do
+          for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "readmd-mcp-server-${V}.zip"; do
             test -s "release-assets/$asset"
           done
           python tools/sync_version.py --check
@@ -499,7 +496,7 @@ jobs:
           if (-not $qa.ok) { throw 'Showcase QA failed'; }
           $files = @(
             'story.json', 'title.txt', 'body.txt', 'topics.txt', 'metadata.json',
-            'composition.json', 'qa.json'
+            'composition.json', 'qa.json', 'wechat/readmd-wechat.html', 'wechat/wechat-qa.json'
           ) | ForEach-Object { "showcase/output/package/$_" }
           Compress-Archive -Path ($files + 'showcase/output/package/raw/*') -DestinationPath 'showcase/content-package.zip' -Force
       - name: Upload content package

@@ -103,6 +103,15 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
         except Exception as exc:
             errors.append(f"copy-review.json unreadable: {exc}")
 
+    wechat_qa_path = package_dir / "wechat" / "wechat-qa.json"
+    if wechat_qa_path.exists():
+        try:
+            wechat_qa = _load_json(wechat_qa_path)
+            if wechat_qa.get("ok") is not True:
+                errors.append("WeChat adapter gate failed: " + "; ".join(map(str, wechat_qa.get("errors", []))))
+        except Exception as exc:
+            errors.append(f"wechat-qa.json unreadable: {exc}")
+
     if story.get("schema_version") != 1 or capture.get("schema_version") != 1:
         errors.append("story/capture schema_version must be 1")
     release = story.get("release")

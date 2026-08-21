@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / "showcase" / "scripts"))
 
 build_story = importlib.import_module("build_story")
 audit_copy = importlib.import_module("audit_copy")
+export_wechat = importlib.import_module("export_wechat")
 validate_package = importlib.import_module("validate_package")
 watch_and_publish = importlib.import_module("watch_and_publish")
 write_copy = importlib.import_module("write_copy")
@@ -423,6 +424,50 @@ class AuditCopyTest(unittest.TestCase):
         report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
         self.assertFalse(report["ok"])
         self.assertTrue(any("repeated" in item.lower() or "重复" in item for item in report["hard_failures"]))
+
+
+class ExportWechatTest(unittest.TestCase):
+    def test_exports_paste_safe_inline_html(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            metadata = {
+                "title": "不用重做PPT，Markdown直接放映",
+                "body": (
+                    "文档已经写完，讲的时候还要复制进 PPT。\n\n"
+                    "这次把这一步**砍掉**：Markdown 直接放映，代码块用 `cmd=true` 标记。"
+                    "\n\n放映界面能换主题、调字号、切开场和转场；AST 保护分片尽量保住代码块、表格和公式。"
+                    "\n\n如果你要写课程讲义、组会报告或论文汇报，它会省掉重做演示稿这一步。"
+                    "\n\nGitHub 搜 Natsummerance/readMD，你会先拿哪一份 Markdown 试放映？"
+                ),
+                "topics": ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"],
+            }
+            (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            story = {"release": "v1.2.3", "angle": "Markdown 直接放映"}
+            report = export_wechat.export_package(package, story=story)
+            output = package / "wechat" / "readmd-wechat.html"
+            html = output.read_text(encoding="utf-8")
+
+        self.assertTrue(report["ok"], report)
+        self.assertTrue(html)
+        for forbidden in ("<style", "<script", "class=", "id=", ":hover", ":before", ":after", "<img", "<table", "http://", "https://"):
+            self.assertNotIn(forbidden, html.lower())
+        self.assertIn("<h1 style=", html)
+        self.assertIn("<strong style=", html)
+        self.assertIn("<code style=", html)
+        self.assertGreaterEqual(html.count("<p style="), 4)
+        for paragraph in re.findall(r"<p style=\"([^\"]+)\"", html):
+            self.assertIn("font-size", paragraph)
+            self.assertIn("line-height", paragraph)
+            self.assertIn("color", paragraph)
+        self.assertIn("#GitHub #开源项目 #程序员 #效率工具 #Markdown", html)
+        self.assertNotIn("PPT。<", html)
+
+    def test_rejects_wechat_html_missing_inline_styles(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "broken.html"
+            path.write_text('<!doctype html><html><body><p>缺行内样式</p></body></html>', encoding="utf-8")
+            errors = export_wechat.validate_wechat_html(path)
+        self.assertTrue(any("paragraph inline style" in error for error in errors))
 
 
 class WatcherTest(unittest.TestCase):
