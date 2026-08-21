@@ -214,6 +214,8 @@ def write_startup_probe(path='', timed_out=False):
     safe_print(encoded)
     if path:
         directory = os.path.dirname(os.path.abspath(path))
+        if directory:
+            os.makedirs(directory, exist_ok=True)
         tmp = os.path.join(directory, '.%s.%s.tmp' %
                            (os.path.basename(path), os.getpid()))
         try:
