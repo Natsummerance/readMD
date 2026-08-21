@@ -85,7 +85,7 @@ def _env_or_bundle_version():
     return _bundle_version()
 
 
-VERSION = (_env_or_bundle_version() or '2.3.7-beta.1')
+VERSION = (_env_or_bundle_version() or '2.3.7-beta.2')
 
 
 

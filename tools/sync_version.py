@@ -97,7 +97,7 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
     readmd_path = os.path.join(ROOT, 'readmd.py')
     with open(readmd_path, 'r', encoding='utf-8') as f:
         src = f.read()
-    new_src = re.sub(r"(or _bundle_version\(\) or ')[^']+'\)", f"\\g<1>{target_ver}')", src)
+    new_src = re.sub(r"(_env_or_bundle_version\(\)\s*or\s*')[^']+'\)", f"\\g<1>{target_ver}')", src)
     if new_src != src:
         diffs.append((readmd_path, src, new_src))
 
@@ -105,7 +105,7 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
     setup_path = os.path.join(ROOT, 'installer', 'setup_app.py')
     with open(setup_path, 'r', encoding='utf-8') as f:
         src = f.read()
-    new_src = re.sub(r"(or _bundle_version\(\) or ')[^']+'\)", f"\\g<1>{target_ver}')", src)
+    new_src = re.sub(r"(_env_or_bundle_version\(\)\s*or\s*')[^']+'\)", f"\\g<1>{target_ver}')", src)
     if new_src != src:
         diffs.append((setup_path, src, new_src))
 
