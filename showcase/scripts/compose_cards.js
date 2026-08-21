@@ -36,6 +36,45 @@ async function main() {
         return errors;
       });
       if (overflowErrors.length) throw new Error(`${card.file}: ${overflowErrors.join('; ')}`);
+      const designAudit = await page.evaluate(() => {
+        const luminance = (rgb) => {
+          const [r, g, b] = rgb.map((value) => {
+            const channel = value / 255;
+            return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        };
+        const parseColor = (value) => (value.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
+        const contrast = (front, back) => {
+          const a = luminance(parseColor(front));
+          const b = luminance(parseColor(back));
+          return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        };
+        const backgroundOf = (element) => {
+          let current = element;
+          while (current instanceof Element) {
+            const background = getComputedStyle(current).backgroundColor;
+            if (!/rgba\(\s*0,\s*0,\s*0,\s*0\s*\)/.test(background)) return background;
+            current = current.parentElement;
+          }
+          return 'rgb(242,244,246)';
+        };
+        const contrastErrors = [];
+        const smallText = [];
+        for (const element of document.querySelectorAll('h1,h2,p,li,strong,span')) {
+          if (!element.innerText.trim() || element.children.length > 0) continue;
+          const style = getComputedStyle(element);
+          const fontSize = Number.parseFloat(style.fontSize);
+          const ratio = contrast(style.color, backgroundOf(element));
+          const largeText = fontSize >= 24 || (fontSize >= 19 && Number.parseInt(style.fontWeight, 10) >= 700);
+          if (ratio < (largeText ? 3 : 4.5)) contrastErrors.push(`${element.innerText.slice(0, 20)}:${ratio.toFixed(2)}`);
+          if (fontSize < 22) smallText.push(`${element.innerText.slice(0, 20)}:${fontSize}px`);
+        }
+        const imagesFailed = [...document.images].filter((image) => !image.complete || image.naturalWidth === 0).map((image) => image.alt);
+        return { contrast_errors: contrastErrors, small_text: smallText, images_failed: imagesFailed };
+      });
+      const auditErrors = [...designAudit.contrast_errors, ...designAudit.small_text, ...designAudit.images_failed];
+      if (auditErrors.length) throw new Error(`${card.file} design audit: ${auditErrors.join('; ')}`);
       const screenshotBox = await page.evaluate(() => {
         const image = document.querySelector('img');
         if (!image) return null;
@@ -59,7 +98,7 @@ async function main() {
     }
     fs.writeFileSync(
       path.join(packageDir, 'composition.json'),
-      JSON.stringify({ schema_version: 1, overflow_errors: [], cards: report }, null, 2),
+      JSON.stringify({ schema_version: 1, overflow_errors: [], design_audit: { contrast_errors: [], small_text: [], images_failed: [] }, cards: report }, null, 2),
     );
     const metadataPath = path.join(packageDir, 'metadata.json');
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));

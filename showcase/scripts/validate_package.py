@@ -151,6 +151,10 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
         errors.append("card filenames must be unique semantic xhs-NN-slug.jpg values")
     if composition.get("overflow_errors"):
         errors.append("composition DOM overflow errors: " + "; ".join(map(str, composition["overflow_errors"])))
+    design_audit = composition.get("design_audit", {})
+    for key in ("contrast_errors", "small_text", "images_failed"):
+        if design_audit.get(key):
+            errors.append(f"composition design audit {key}: " + "; ".join(map(str, design_audit[key])))
 
     title = str(metadata.get("title", "")).strip()
     body = str(metadata.get("body", "")).strip()

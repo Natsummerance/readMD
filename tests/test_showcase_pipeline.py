@@ -229,6 +229,7 @@ class ValidatePackageTest(unittest.TestCase):
             (pkg / "raw").mkdir()
             (pkg / "images").mkdir()
             story = write_story(pkg / "raw")
+            story["selected_shots"] = ["overview.reader", "overview.editor"]
             story["shots"][0]["file"] = "raw/overview-reader.png"
             editor_png = pkg / "raw" / "overview-editor.png"
             editor_png.write_bytes(b"editor")
@@ -290,6 +291,54 @@ class ValidatePackageTest(unittest.TestCase):
             errors = validate_package.validate_package(pkg)
         self.assertTrue(any("SHA-256" in error for error in errors), errors)
         self.assertTrue(any("evidence" in error for error in errors))
+
+    def test_rejects_failed_design_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp)
+            (pkg / "raw").mkdir()
+            (pkg / "images").mkdir()
+            story = write_story(pkg / "raw")
+            story["selected_shots"] = ["overview.reader", "overview.editor"]
+            story["card_plan"] = [
+                {"index": 1, "file": "xhs-01-cover.jpg", "role": "cover", "shot_id": None, "ui_min_ratio": 0.0},
+                {"index": 2, "file": "xhs-02-overview.jpg", "role": "pure_ui_hero", "shot_id": "overview.reader", "ui_min_ratio": 0.7, "ui_area_ratio": 0.72},
+                {"index": 3, "file": "xhs-03-editor.jpg", "role": "annotated_ui", "shot_id": "overview.editor", "ui_min_ratio": 0.55, "ui_area_ratio": 0.58},
+                {"index": 4, "file": "xhs-04-summary.jpg", "role": "summary", "shot_id": None, "ui_min_ratio": 0.3},
+            ]
+            story["shots"][0]["file"] = "raw/overview-reader.png"
+            story["shots"][1]["file"] = "raw/overview-editor.png"
+            (pkg / "raw" / "overview-reader.png").write_bytes(b"reader")
+            (pkg / "raw" / "overview-editor.png").write_bytes(b"editor")
+            story["shots"][0]["sha256"] = hashlib.sha256((pkg / "raw/overview-reader.png").read_bytes()).hexdigest()
+            story["shots"][1]["sha256"] = hashlib.sha256((pkg / "raw/overview-editor.png").read_bytes()).hexdigest()
+            good = story["shots"][0]["sha256"]
+            (pkg / "raw" / "capture.json").write_text(
+                json.dumps({"schema_version": 1, "shots": [
+                    {"shot_id": "overview.reader", "file": "raw/overview-reader.png", "sha256": hashlib.sha256((pkg / "raw/overview-reader.png").read_bytes()).hexdigest()},
+                    {"shot_id": "overview.editor", "file": "raw/overview-editor.png", "sha256": hashlib.sha256((pkg / "raw/overview-editor.png").read_bytes()).hexdigest()},
+                ]}),
+                encoding="utf-8",
+            )
+            (pkg / "story.json").write_text(json.dumps(story, ensure_ascii=False), encoding="utf-8")
+            for index, card in enumerate(story["card_plan"]):
+                write_image(pkg / "images" / card["file"], (14 + index * 11, 22, 48))
+            metadata = {
+                "title": "标题",
+                "body": "预览版。" + ("这是一段用于结构验证的正文。" * 46),
+                "topics": ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"],
+                "images": [str(pkg / "images" / card["file"]) for card in story["card_plan"]],
+                "source_urls": ["https://example.com/release"],
+                "version_state": "prerelease",
+            }
+            (pkg / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            composition = {
+                "overflow_errors": [],
+                "design_audit": {"contrast_errors": ["muted text"], "small_text": [], "images_failed": []},
+                "cards": [{"file": card["file"], "ui_min_ratio": card["ui_min_ratio"], "ui_area_ratio": card.get("ui_area_ratio", 0.4)} for card in story["card_plan"]],
+            }
+            (pkg / "composition.json").write_text(json.dumps(composition, ensure_ascii=False), encoding="utf-8")
+            errors = validate_package.validate_package(pkg)
+        self.assertTrue(any("design audit" in error.lower() for error in errors), errors)
 
 
 class WatcherTest(unittest.TestCase):
