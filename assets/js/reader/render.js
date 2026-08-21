@@ -1405,7 +1405,11 @@ function openPath(p) {
 async function renderVirtual(source, name, dir, content, fixes, extras) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   exitEdit();
-  const title = name || ((_t('tabs.untitled') || '未命名') + '.md');
+  let cleanName = (name || '').trim();
+  if (cleanName && !/\.md$/i.test(cleanName)) {
+    cleanName = cleanName.replace(/\.[^./\\]+$/, '') + '.md';
+  }
+  const title = cleanName || ((_t('tabs.untitled') || '未命名') + '.md');
   const newTab = {
     id: 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
     mode: 'virtual',

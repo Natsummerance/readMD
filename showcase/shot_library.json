@@ -1,0 +1,85 @@
+{
+  "shots": {
+    "overview.reader": {
+      "id": "overview.reader",
+      "name": "软件完整主界面 (Hero Shot)",
+      "level": "A",
+      "category": "Hero",
+      "visuality": 0.98,
+      "description": "ReadMD 完整视窗，展示顶部 Toolbar、侧边大纲目录、精美 LaTeX/定理/表格渲染正文",
+      "output": "overview-reader.png"
+    },
+    "overview.editor": {
+      "id": "overview.editor",
+      "name": "沉浸编辑器与实时预览",
+      "level": "A",
+      "category": "Editor",
+      "visuality": 0.92,
+      "description": "分栏实时编辑与渲染模式，展示顶部快捷格式栏与精准行内高亮",
+      "output": "overview-editor.png"
+    },
+    "editor.diagram-picker": {
+      "id": "editor.diagram-picker",
+      "name": "科学图表选择器 (Diagram Picker)",
+      "level": "B",
+      "category": "Science",
+      "visuality": 0.96,
+      "description": "展示 WaveDrom、Graphviz、PlantUML、Vega、TikZ 等科学图表可视化插入面板",
+      "output": "diagram-picker.png"
+    },
+    "editor.code-chunk": {
+      "id": "editor.code-chunk",
+      "name": "多语言代码块即地执行",
+      "level": "B",
+      "category": "Code",
+      "visuality": 0.94,
+      "description": "展示 Python、JS、R、Rust 代码块就地执行与 Matplotlib 图表自动捕获",
+      "output": "code-chunk.png"
+    },
+    "editor.table-designer": {
+      "id": "editor.table-designer",
+      "name": "10x10 可视化表格设计器",
+      "level": "B",
+      "category": "Editor",
+      "visuality": 0.91,
+      "description": "展示鼠标滑选网格快速生成工整 Markdown 管道表格",
+      "output": "table-designer.png"
+    },
+    "academic.latex-bib": {
+      "id": "academic.latex-bib",
+      "name": "LaTeX PRO 学术论文与 BibTeX 悬浮卡",
+      "level": "B",
+      "category": "Academic",
+      "visuality": 0.95,
+      "description": "展示多行数学公式、定理证明 Callout 盒子与参考文献悬浮卡片",
+      "output": "academic-latex.png"
+    },
+    "presentation.reveal": {
+      "id": "presentation.reveal",
+      "name": "Reveal.js 专业幻灯片演讲模式",
+      "level": "B",
+      "category": "Presentation",
+      "visuality": 0.93,
+      "description": "展示 Markdown 原生转换为现代 PPT 演示模式的视觉效果",
+      "output": "presentation-reveal.png"
+    },
+    "modal.dirty-tab": {
+      "id": "modal.dirty-tab",
+      "name": "毛玻璃未保存安全确认弹窗",
+      "level": "B",
+      "category": "UI",
+      "visuality": 0.88,
+      "description": "展示 16px 圆角、琥珀柔光警示、毛玻璃遮罩的桌面级质感弹窗",
+      "output": "modal-dirty-tab.png"
+    },
+    "convert.home": {
+      "id": "convert.home",
+      "name": "万物转 MD 现代界面",
+      "level": "B",
+      "category": "Workflow",
+      "visuality": 0.89,
+      "description": "展示 Word/PDF/Excel/LaTeX 全格式拖拽与网页抓取双动作卡片",
+      "output": "convert-home.png"
+    }
+  }
+}

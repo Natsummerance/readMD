@@ -67,11 +67,25 @@ def _bundle_version():
                     return v
     except Exception:
         pass
-    return None
+def _env_or_bundle_version():
+    v = os.environ.get('READMD_VERSION') or os.environ.get('READMD_BUILD_VERSION')
+    if v:
+        return v.strip()
+    try:
+        env_p = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+        if os.path.isfile(env_p):
+            with open(env_p, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.startswith('READMD_VERSION='):
+                        val = line.split('=', 1)[1].strip().strip('\'"')
+                        if val:
+                            return val
+    except Exception:
+        pass
+    return _bundle_version()
 
 
-VERSION = (os.environ.get('READMD_BUILD_VERSION')
-           or _bundle_version() or '2.3.6')
+VERSION = (_env_or_bundle_version() or '2.3.7-beta.1')
 
 
 
@@ -706,7 +720,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/save':
             self._do_save()
         elif path == '/api/upload':
-            self._do_upload(qs.get('ext', [''])[0])
+            self._do_upload(qs.get('ext', [''])[0], qs.get('name', [''])[0] or qs.get('filename', [''])[0])
         elif path == '/api/ai/config':
             self._api_ai_config()
         elif path == '/api/ai/models':
@@ -1535,7 +1549,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(500, {'ok': False, 'error': str(exc)})
 
 
-    def _do_upload(self, ext):
+    def _do_upload(self, ext, name=''):
         """浏览器兜底模式：接收文件字节写入临时目录，返回可转换的路径。"""
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
@@ -1545,9 +1559,16 @@ class Handler(BaseHTTPRequestHandler):
                 return
             upload_dir = os.path.join(DATA_DIR, 'uploads')
             os.makedirs(upload_dir, exist_ok=True)
-            import uuid
-            name = uuid.uuid4().hex + (ext if ext and ext.startswith('.') else ('.' + ext if ext else '.bin'))
-            target = os.path.join(upload_dir, name)
+            if name:
+                import re
+                safe_name = re.sub(r'[\\/*?:"<>|]', '_', name).strip()
+                if not safe_name:
+                    safe_name = 'document' + (ext if ext.startswith('.') else ('.' + ext if ext else '.bin'))
+                target = os.path.join(upload_dir, safe_name)
+            else:
+                import uuid
+                safe_name = uuid.uuid4().hex + (ext if ext and ext.startswith('.') else ('.' + ext if ext else '.bin'))
+                target = os.path.join(upload_dir, safe_name)
             with open(target, 'wb') as f:
                 f.write(data)
             self._send_json(200, {'path': target})

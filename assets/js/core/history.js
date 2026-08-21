@@ -127,10 +127,15 @@ function updateStatus() {
   $('btn-saveas').disabled = !canSaveas;
 
   const isWelcome = state.mode === 'welcome';
+  const hasDoc = (state.mode === 'file' || state.mode === 'virtual') && !!state.original;
   if ($('btn-print')) $('btn-print').disabled = isWelcome;
   if ($('btn-a')) $('btn-a').disabled = isWelcome;
   if ($('btn-A')) $('btn-A').disabled = isWelcome;
   if ($('btn-search')) $('btn-search').disabled = isWelcome;
+  if ($('btn-presentation-menu')) $('btn-presentation-menu').disabled = !hasDoc;
+  if ($('btn-run-all-chunks')) $('btn-run-all-chunks').disabled = !hasDoc;
+  if ($('btn-share')) $('btn-share').disabled = !hasDoc;
+  if ($('btn-fix')) $('btn-fix').disabled = !hasDoc;
 
   const btnHome = $('btn-home');
   if (btnHome) {

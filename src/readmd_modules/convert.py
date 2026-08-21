@@ -10,6 +10,8 @@ v2.1.1 质量升级：
 """
 
 import os
+import re
+from collections import Counter
 
 _engine = None
 
@@ -602,6 +604,38 @@ def docx2md(path):
 
 # ---------------------------------------------------------------- pdf 专用
 
+_MONO_FONTS = {'courier', 'consolas', 'monaco', 'menlo', 'firacode', 'sourcecodepro', 'mono', 'monospace', 'cascadia', 'fira'}
+_BULLET_PREFIX_RE = re.compile(r'^[ \t]*[\u2022\u25cf\u25aa\u25cb\u25c6\u25c7\u25b6\u25c0\u2023\u2043\u25e6\u00b7\ufffd\x95\-*+]\s*')
+_ORDERED_PREFIX_RE = re.compile(r'^[ \t]*(?:\d+[\.\)]|\(\d+\)|\[\d+\])\s*')
+
+
+def _is_mono_font(font_name: str) -> bool:
+    if not font_name:
+        return False
+    fn = font_name.lower().replace('-', '').replace('_', '').replace(' ', '')
+    return any(m in fn for m in _MONO_FONTS)
+
+
+def _is_cjk(ch: str) -> bool:
+    if not ch:
+        return False
+    cp = ord(ch)
+    return 0x4e00 <= cp <= 0x9fff or 0x3400 <= cp <= 0x4dbf or 0x3000 <= cp <= 0x303f or 0xff00 <= cp <= 0xffef
+
+
+def _join_lines(l1: str, l2: str) -> str:
+    """智能断行重组（区分中英文与连字符）。"""
+    if not l1:
+        return l2
+    if not l2:
+        return l1
+    if l1.endswith('-') and len(l1) > 1 and l1[-2].isalnum() and l2[0].isalnum():
+        return l1[:-1] + l2
+    if _is_cjk(l1[-1]) or _is_cjk(l2[0]):
+        return l1 + l2
+    return l1 + ' ' + l2
+
+
 def _data_to_md(data):
     """表格二维数组 → 管道表。"""
     if not data:
@@ -631,7 +665,7 @@ def _looks_like_formula(line):
     return sig / max(len(s), 1) >= 0.45
 
 
-def _page_to_md(page):
+def _page_to_md(page, default_body_size: float = 11.0):
     try:
         import fitz
     except Exception:  # noqa: BLE001
@@ -671,8 +705,27 @@ def _page_to_md(page):
         if md:
             items.append((t.bbox[1], seq, 'table', md))
             seq += 1
+
+    extracted_lines = []
     try:
         d = page.get_text('dict')
+        # 统计本页 font size 众数
+        sizes = []
+        for block in d.get('blocks', []):
+            if block.get('type') != 0:
+                continue
+            for line in block.get('lines', []):
+                for sp in line.get('spans', []):
+                    sz = sp.get('size', 0)
+                    t = (sp.get('text') or '').strip()
+                    if sz > 4 and t:
+                        sizes.append(round(sz, 1))
+        body_size = default_body_size
+        if sizes:
+            from collections import Counter
+            c = Counter(sizes)
+            body_size = c.most_common(1)[0][0]
+
         for block in d.get('blocks', []):
             if block.get('type') != 0:
                 continue
@@ -680,26 +733,104 @@ def _page_to_md(page):
                 bbox = fitz.Rect(line['bbox'])
                 if in_table(bbox):
                     continue
-                text = ''.join((sp.get('text') or '') for sp in line.get('spans', []))
-                text = text.rstrip()
-                if not text.strip():
+                spans = line.get('spans', [])
+                if not spans:
                     continue
-                items.append((bbox.y0, seq, 'text', text))
+                line_text = ''.join((sp.get('text') or '') for sp in spans).rstrip()
+                if not line_text.strip():
+                    continue
+                
+                max_size = max(sp.get('size', body_size) for sp in spans)
+                is_bold = any(bool(sp.get('flags', 0) & 2) or 'bold' in (sp.get('font') or '').lower() for sp in spans)
+                is_mono = any(_is_mono_font(sp.get('font') or '') for sp in spans)
+                
+                extracted_lines.append({
+                    'y0': bbox.y0,
+                    'seq': seq,
+                    'text': line_text,
+                    'size': max_size,
+                    'bold': is_bold,
+                    'mono': is_mono,
+                    'body_size': body_size
+                })
                 seq += 1
     except Exception:  # noqa: BLE001
         pass
+
+    idx = 0
+    while idx < len(extracted_lines):
+        cur = extracted_lines[idx]
+        txt = cur['text'].strip()
+        
+        # 1. 代码块判断（等宽字体）
+        if cur['mono']:
+            code_lines = [cur['text']]
+            j = idx + 1
+            while j < len(extracted_lines) and extracted_lines[j]['mono']:
+                code_lines.append(extracted_lines[j]['text'])
+                j += 1
+            code_content = '\n'.join(code_lines)
+            items.append((cur['y0'], cur['seq'], 'code', '```\n' + code_content + '\n```'))
+            idx = j
+            continue
+
+        # 2. 标题判断
+        bs = cur['body_size']
+        sz = cur['size']
+        is_bold = cur['bold']
+        is_short = len(txt) <= 80 and not txt.endswith(('。', '.', '；', ';', '，', ','))
+        
+        if sz >= 1.45 * bs and is_short:
+            items.append((cur['y0'], cur['seq'], 'heading', '# ' + txt))
+            idx += 1
+            continue
+        elif sz >= 1.25 * bs and is_short:
+            items.append((cur['y0'], cur['seq'], 'heading', '## ' + txt))
+            idx += 1
+            continue
+        elif (sz >= 1.12 * bs or (is_bold and sz >= bs)) and is_short:
+            items.append((cur['y0'], cur['seq'], 'heading', '### ' + txt))
+            idx += 1
+            continue
+        
+        # 3. 列表判断
+        if _BULLET_PREFIX_RE.match(txt):
+            clean_item = _BULLET_PREFIX_RE.sub('', txt).strip()
+            items.append((cur['y0'], cur['seq'], 'list', '- ' + clean_item))
+            idx += 1
+            continue
+        elif _ORDERED_PREFIX_RE.match(txt):
+            items.append((cur['y0'], cur['seq'], 'list', txt))
+            idx += 1
+            continue
+        
+        # 4. 公式判断
+        if _looks_like_formula(txt):
+            items.append((cur['y0'], cur['seq'], 'formula', '$' + txt + '$'))
+            idx += 1
+            continue
+
+        # 5. 普通正文段落拼接
+        para_text = cur['text']
+        j = idx + 1
+        while j < len(extracted_lines):
+            nxt = extracted_lines[j]
+            nxt_txt = nxt['text'].strip()
+            if nxt['mono'] or nxt['size'] >= 1.12 * bs or _BULLET_PREFIX_RE.match(nxt_txt) or _ORDERED_PREFIX_RE.match(nxt_txt) or _looks_like_formula(nxt_txt):
+                break
+            if abs(nxt['y0'] - extracted_lines[j-1]['y0']) > (nxt['size'] * 2.2):
+                break
+            para_text = _join_lines(para_text, nxt['text'])
+            j += 1
+        
+        items.append((cur['y0'], cur['seq'], 'text', para_text.strip()))
+        idx = j
+
     items.sort(key=lambda it: (round(it[0], 1), it[1]))
     out = []
     for _y0, _seq, kind, payload in items:
-        if kind == 'table':
-            out.append(payload)
-            out.append('')
-        else:
-            if _looks_like_formula(payload):
-                out.append('$' + payload.strip() + '$')
-            else:
-                out.append(payload)
-            out.append('')
+        out.append(payload)
+        out.append('')
     return '\n'.join(out).strip()
 
 
@@ -708,8 +839,28 @@ def pdf2md(path):
     doc = fitz.open(path)
     parts = []
     try:
+        all_sizes = []
         for page in doc:
-            p = _page_to_md(page)
+            try:
+                d = page.get_text('dict')
+                for block in d.get('blocks', []):
+                    if block.get('type') != 0:
+                        continue
+                    for line in block.get('lines', []):
+                        for sp in line.get('spans', []):
+                            sz = sp.get('size', 0)
+                            t = (sp.get('text') or '').strip()
+                            if sz > 4 and t:
+                                all_sizes.append(round(sz, 1))
+            except Exception:
+                pass
+        global_body_size = 11.0
+        if all_sizes:
+            from collections import Counter
+            global_body_size = Counter(all_sizes).most_common(1)[0][0]
+
+        for page in doc:
+            p = _page_to_md(page, default_body_size=global_body_size)
             if p.strip():
                 parts.append(p)
     finally:

@@ -101,17 +101,26 @@ function bindEvents() {
   });
   $('convert-modal').addEventListener('click', e => { if (e.target === $('convert-modal')) closeConvertModal(); });
 
-  /* --- 4. 离线 OCR / 网页抓取 / 剪贴板新建 / 演示 / 样式定制 [联动: convert.js, ocr.js, web.js, clipboard.js, render.js] --- */
+  /* --- 4. 离线 OCR / 网页抓取 / 剪贴板新建 / 演示 / 样式定制 / 禅模式 [联动: convert.js, ocr.js, web.js, clipboard.js, render.js] --- */
   $('btn-ocr').addEventListener('click', () => chooseFile('ocr')); // 触发离线 OCR 识别
   $('btn-web').addEventListener('click', openWebDialog);           // 打开网页抓取弹窗
   if ($('btn-clipboard-new')) $('btn-clipboard-new').addEventListener('click', createFromClipboard); // 智能自适应全类型剪贴板新建
   if ($('btn-presentation-menu')) $('btn-presentation-menu').addEventListener('click', () => { closeMoreMenu(); launchPresentationMode(); });
   if ($('btn-run-all-chunks')) $('btn-run-all-chunks').addEventListener('click', () => { closeMoreMenu(); if (window.runAllCodeChunks) runAllCodeChunks(); });
   if ($('btn-style-custom')) $('btn-style-custom').addEventListener('click', () => { closeMoreMenu(); openStyleModal(); });
+  if ($('btn-zen')) $('btn-zen').addEventListener('click', () => toggleZenMode()); // 顶栏常驻禅模式按钮
   if ($('btn-zen-menu')) $('btn-zen-menu').addEventListener('click', () => { closeMoreMenu(); toggleZenMode(); });
-  if ($('btn-zen-mode')) $('btn-zen-mode').addEventListener('click', () => { toggleZenMode(); });
 
-  // 全局快捷键与无障碍键盘导航 (Esc 统一关闭顶层弹窗 / F5 演说放映)
+  // 更多菜单手风琴分组折叠切换
+  document.querySelectorAll('.more-group-header').forEach(hdr => {
+    hdr.addEventListener('click', e => {
+      e.stopPropagation();
+      const grp = hdr.closest('.more-group');
+      if (grp) grp.classList.toggle('open');
+    });
+  });
+
+  // 全局快捷键与无障碍键盘导航 (Esc 统一关闭顶层弹窗 / F5 演说放映 / F11 禅模式)
   window.addEventListener('keydown', e => {
     if (e.key === 'F5' && !e.ctrlKey && !e.metaKey) {
       e.preventDefault();
@@ -122,7 +131,6 @@ function bindEvents() {
         ['diagram-modal', closeDiagramModal],
         ['doc-import-modal', closeDocImportModal],
         ['style-custom-modal', closeStyleModal],
-        ['md-command-modal', closeMdCommandPalette],
         ['convert-modal', closeConvertModal],
         ['export-modal', closeExportModal],
         ['img-modal', closeImgModal],
@@ -267,18 +275,6 @@ function bindEvents() {
   document.querySelectorAll('#md-tool [data-menu]').forEach(b => b.addEventListener('click', e => {
     e.stopPropagation(); const menu = $(b.dataset.menu); const wasHidden = menu.classList.contains('hidden'); closeMdPopups(); if (wasHidden) menu.classList.remove('hidden');
   }));
-  // Markdown 命令面板
-  $('md-command-open').addEventListener('click', openMdCommandPalette);
-  $('md-command-search').addEventListener('input', () => { mdCommandIndex = 0; renderMdCommands(); });
-  $('md-command-search').addEventListener('keydown', e => {
-    const items = [...$('md-command-list').querySelectorAll('.command-item')];
-    if (e.key === 'ArrowDown') { e.preventDefault(); mdCommandIndex = Math.min(items.length - 1, mdCommandIndex + 1); renderMdCommands(); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); mdCommandIndex = Math.max(0, mdCommandIndex - 1); renderMdCommands(); }
-    else if (e.key === 'Enter' && items[mdCommandIndex]) { e.preventDefault(); items[mdCommandIndex].click(); }
-    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeMdCommandPalette(); }
-  });
-  $('md-command-modal').addEventListener('click', e => { if (e.target === $('md-command-modal')) closeMdCommandPalette(); });
-  
   // LaTeX 公式选择器模态框 [联动: reader/formula.js]
   $('formula-open').addEventListener('click', () => openFormulaModal('inline'));
   $('formula-close').addEventListener('click', closeFormulaModal);
@@ -667,23 +663,23 @@ function bindEvents() {
     else if (mod && e.key === 'ArrowRight') { e.preventDefault(); historyForward(); } // Alt/Ctrl+Right: 历史前进
     else if (e.key === 'Escape') {
       // 级联清理所有开启的浮层
-      if (!$('md-command-modal').classList.contains('hidden')) { closeMdCommandPalette(); return; }
-      if (!$('formula-modal').classList.contains('hidden')) { closeFormulaModal(); return; }
-      if (!$('img-modal').classList.contains('hidden')) { closeImgModal(); return; }
-      if (!$('history-modal').classList.contains('hidden')) { $('history-modal').classList.add('hidden'); return; }
+      if ($('style-custom-modal') && !$('style-custom-modal').classList.contains('hidden')) { closeStyleModal(); return; }
+      if ($('formula-modal') && !$('formula-modal').classList.contains('hidden')) { closeFormulaModal(); return; }
+      if ($('img-modal') && !$('img-modal').classList.contains('hidden')) { closeImgModal(); return; }
+      if ($('history-modal') && !$('history-modal').classList.contains('hidden')) { $('history-modal').classList.add('hidden'); return; }
       if ($('export-preview-modal') && !$('export-preview-modal').classList.contains('hidden')) { $('export-preview-modal').classList.add('hidden'); return; }
       if ($('tab-context-menu') && !$('tab-context-menu').classList.contains('hidden')) { $('tab-context-menu').classList.add('hidden'); return; }
       if (moreMenu && moreMenu.classList.contains('open')) { moreMenu.classList.remove('open'); }
       closeSearch();
-      $('fix-modal').classList.add('hidden');
-      closeWebDialog();
-      $('ai-panel').classList.add('hidden');
-      $('share-modal').classList.add('hidden');
-      $('tpl-modal').classList.add('hidden');
-      $('convert-modal').classList.add('hidden');
-      if ($('lang-modal')) if (window.i18n) window.i18n.closeModal();
+      if ($('fix-modal')) $('fix-modal').classList.add('hidden');
+      if (typeof closeWebDialog === 'function') closeWebDialog();
+      if ($('ai-panel')) $('ai-panel').classList.add('hidden');
+      if ($('share-modal')) $('share-modal').classList.add('hidden');
+      if ($('tpl-modal')) $('tpl-modal').classList.add('hidden');
+      if ($('convert-modal')) $('convert-modal').classList.add('hidden');
+      if ($('lang-modal') && window.i18n) window.i18n.closeModal();
       if ($('table-modal')) closeTableModal();
-      closeMdCommandPalette(); closeFormulaModal(); closeMdPopups();
+      closeFormulaModal(); closeMdPopups();
       stopConvertPoll();
       if (document.body.classList.contains('zen-mode')) toggleZenMode(false);
       if (state.editing) exitEdit();

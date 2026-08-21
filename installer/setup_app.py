@@ -65,12 +65,27 @@ def _bundle_version():
                     return v
     except Exception:
         pass
-    return None
+def _env_or_bundle_version():
+    v = (os.environ.get('READMD_VERSION_OVERRIDE')
+         or os.environ.get('READMD_VERSION')
+         or os.environ.get('READMD_BUILD_VERSION'))
+    if v:
+        return v.strip()
+    try:
+        env_p = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env')
+        if os.path.isfile(env_p):
+            with open(env_p, 'r', encoding='utf-8') as f:
+                for line in f:
+                    if line.startswith('READMD_VERSION='):
+                        val = line.split('=', 1)[1].strip().strip('\'"')
+                        if val:
+                            return val
+    except Exception:
+        pass
+    return _bundle_version()
 
 
-APP_VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-               or os.environ.get('READMD_BUILD_VERSION')
-               or _bundle_version() or '2.3.6')
+APP_VERSION = (_env_or_bundle_version() or '2.3.7-beta.1')
 
 
 

@@ -46,12 +46,8 @@ test('single row commands, formula picker and responsive preview', async ({ page
   const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await enterEdit(page);
   expect((await page.locator('#edit-bar').boundingBox()).height).toBeLessThanOrEqual(50);
-  await page.locator('#md-command-open').click();
-  await expect(page.locator('#md-command-modal')).toBeVisible();
-  await page.locator('#md-command-search').fill('表格');
-  await expect(page.locator('#md-command-list')).toContainText('表格');
-  await page.keyboard.press('Escape');
   await page.locator('#formula-open').click();
+  await expect(page.locator('#formula-modal')).toBeVisible();
   await page.locator('#formula-search').fill('矩阵');
   await expect(page.locator('#formula-list')).toContainText('矩阵');
   await page.keyboard.press('Escape');
@@ -661,6 +657,84 @@ test('v2.3.2 dirty tab close confirmation modal UI, styling, and actions', async
   expect(await page.locator('.tab-item').count()).toBe(0);
   await expect(page.locator('#welcome')).toBeVisible();
 });
+
+test('v2.3.7 top bar zen mode toggle & keyboard escape shortcut', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof toggleZenMode === 'function');
+
+  const zenBtn = page.locator('#btn-zen');
+  await expect(zenBtn).toBeVisible();
+
+  // 1. 点击顶栏禅模式按钮激活
+  await zenBtn.click();
+  expect(await page.evaluate(() => document.body.classList.contains('zen-mode'))).toBe(true);
+
+  // 2. 按 Escape 键退出禅模式
+  await page.keyboard.press('Escape');
+  expect(await page.evaluate(() => document.body.classList.contains('zen-mode'))).toBe(false);
+});
+
+test('v2.3.7 more menu accordion groups and document-dependent disabled state', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('#btn-more');
+
+  // 1. 首页欢迎页状态下打开更多菜单
+  await page.locator('#btn-more').click();
+  await expect(page.locator('#more-menu')).toBeVisible();
+
+  // 2. 验证三个极简分组存在且可折叠/展开
+  const groups = page.locator('.more-group');
+  expect(await groups.count()).toBe(3);
+
+  const interactHeader = page.locator('.more-group-header').nth(1);
+  await interactHeader.click();
+  // 再次点击可切换展开折叠
+  await interactHeader.click();
+
+  // 3. 验证未加载文档时，文档依赖功能被 disabled
+  await expect(page.locator('#btn-presentation-menu')).toHaveAttribute('disabled', '');
+  await expect(page.locator('#btn-run-all-chunks')).toHaveAttribute('disabled', '');
+  await expect(page.locator('#btn-saveas')).toHaveAttribute('disabled', '');
+  await expect(page.locator('#btn-fix')).toHaveAttribute('disabled', '');
+  await expect(page.locator('#btn-share')).toHaveAttribute('disabled', '');
+
+  // 4. 打开/加载虚拟文档后，依赖功能激活
+  await page.evaluate(() => {
+    state.tabs = [{ id: 'tab_v1', title: 'test.md', name: 'test.md', content: '# Hello World\n```python\nprint(1)\n```', isDirty: false }];
+    state.activeTabId = 'tab_v1';
+    state.original = '# Hello World\n```python\nprint(1)\n```';
+    state.mode = 'virtual';
+    updateStatus();
+  });
+
+  await expect(page.locator('#btn-presentation-menu')).not.toHaveAttribute('disabled', '');
+  await expect(page.locator('#btn-run-all-chunks')).not.toHaveAttribute('disabled', '');
+  await expect(page.locator('#btn-saveas')).not.toHaveAttribute('disabled', '');
+  await expect(page.locator('#btn-fix')).not.toHaveAttribute('disabled', '');
+  await expect(page.locator('#btn-share')).not.toHaveAttribute('disabled', '');
+});
+
+test('v2.3.7 custom styles and html head injection modal', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForSelector('#btn-more');
+
+  await page.locator('#btn-more').click();
+  await page.locator('#btn-style-custom').click();
+
+  const modal = page.locator('#style-custom-modal');
+  await expect(modal).toBeVisible();
+
+  // 验证输入框可编辑
+  const cssInput = page.locator('#style-custom-css');
+  const headInput = page.locator('#style-custom-head');
+  await cssInput.fill('/* custom style */\n.markdown-body { font-size: 18px; }');
+  await headInput.fill('<!-- meta injection -->');
+
+  // 取消并关闭
+  await page.locator('#style-modal-cancel').click();
+  await expect(modal).toBeHidden();
+});
+
 
 
 

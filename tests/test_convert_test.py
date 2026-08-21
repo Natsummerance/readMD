@@ -142,6 +142,36 @@ class TestPdf(unittest.TestCase):
             self.assertIn('H2', text)
             self.assertIn('Text after table line', text)
 
+    def test_pdf2md_headings_and_code(self):
+        import fitz
+        with tempfile.TemporaryDirectory() as td:
+            p = os.path.join(td, 'doc.pdf')
+            doc = fitz.open()
+            page = doc.new_page()
+            # Title (large)
+            page.insert_text((72, 50), 'Document Big Title', fontsize=20)
+            # Section Header (medium)
+            page.insert_text((72, 80), 'Section Subtitle', fontsize=14)
+            # Body text (normal)
+            page.insert_text((72, 110), 'This is the first line of regular text,', fontsize=10)
+            page.insert_text((72, 125), 'and it continues into the second line of the paragraph.', fontsize=10)
+            # Bullet list
+            page.insert_text((72, 155), '• First bullet point item', fontsize=10)
+            page.insert_text((72, 170), '• Second bullet point item', fontsize=10)
+            # Monospace code block
+            page.insert_text((72, 200), 'def calculate_total():', fontname='courier', fontsize=9.5)
+            page.insert_text((72, 215), '    return 42', fontname='courier', fontsize=9.5)
+            doc.save(p)
+            doc.close()
+
+            text, engine, err = CV.convert_verbose(p)
+            self.assertEqual(engine, 'pdf', err)
+            self.assertIn('# Document Big Title', text)
+            self.assertIn('## Section Subtitle', text)
+            self.assertIn('- First bullet point item', text)
+            self.assertIn('```', text)
+            self.assertIn('def calculate_total():', text)
+
 
 class TestMdcheck(unittest.TestCase):
     def test_fence_close(self):

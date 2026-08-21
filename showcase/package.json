@@ -1,0 +1,12 @@
+{
+  "name": "readmd-showcase-studio",
+  "private": true,
+  "version": "1.0.0",
+  "description": "ReadMD Automated Product Showcase & Visual Storytelling Studio",
+  "devDependencies": {
+    "@playwright/test": "1.54.0"
+  },
+  "scripts": {
+    "shot": "playwright test showcase.spec.js"
+  }
+}

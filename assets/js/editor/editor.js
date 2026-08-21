@@ -64,12 +64,6 @@ function createEditor(doc) {
     ],
   });
   cmView = new CM.EditorView({ state: st, parent: $('edit-cm') });
-  cmView.dom.addEventListener('keydown', e => {
-    if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
-    const pos = cmView.state.selection.main.head;
-    const line = cmView.state.doc.lineAt(pos);
-    if (!cmView.state.sliceDoc(line.from, pos).trim()) { e.preventDefault(); openMdCommandPalette(); }
-  });
   cmView.dom.addEventListener('mouseup', () => setTimeout(updateCmSelectionToolbar, 10));
   cmView.dom.addEventListener('keyup', () => setTimeout(updateCmSelectionToolbar, 10));
   cmView.dom.addEventListener('paste', handleSmartExcelPaste);
@@ -314,71 +308,9 @@ function cmInsertSyntax(kind) {
 }
 
 
-function getMdCommands() {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  return [
-    [_t('editor.bold') || '加粗', 'bold', '**' + (_t('editor.text') || '文本') + '**'],
-    [_t('editor.italic') || '斜体', 'italic', '*' + (_t('editor.text') || '文本') + '*'],
-    [_t('editor.strikethrough') || '删除线', 'strike', '~~' + (_t('editor.text') || '文本') + '~~'],
-    [_t('editor.h2') || '二级标题', 'h2', '## ' + (_t('editor.h2') || '标题')],
-    [_t('editor.quote') || '引用', 'quote', '> ' + (_t('editor.quote') || '引用')],
-    [_t('editor.ul') || '无序列表', 'list', '- ' + (_t('editor.text') || '项目')],
-    [_t('editor.ol') || '有序列表', 'ordered', '1. ' + (_t('editor.text') || '项目')],
-    [_t('editor.taskList') || '任务列表', 'task', '- [ ] ' + (_t('editor.taskList') || '任务')],
-    [_t('editor.link') || '链接', 'link', '[' + (_t('editor.text') || '文本') + '](url)'],
-    [_t('editor.image') || '图片', 'image', _t('img.title') || '本地图片或 URL'],
-    [_t('editor.codeInline') || '行内代码', 'code', '`' + (_t('editor.codeInline') || '代码') + '`'],
-    [_t('editor.codeBlock') || '代码块', 'codeblock', '```'],
-    [_t('editor.table') || '表格', 'table', '| ' + (_t('editor.table') || '列1') + ' | ' + (_t('editor.table') || '列2') + ' |'],
-    [_t('editor.codeChunk') || '交互代码块 ⚡', 'codechunk', '```python {cmd=true}'],
-    [_t('editor.diagram') || '科学工程图表 📊', 'diagram', '```plantuml / tikz / vega'],
-    [_t('editor.docImport') || '子文档引用 🔗', 'docimport', '@import "chap.md"'],
-    [_t('editor.frontmatter') || '样式元数据 ⚙', 'frontmatter', '--- title / custom_css ---'],
-    [_t('editor.hr') || '分隔线', 'hr', '---'],
-    [_t('formula.inline') || '行内公式', 'math', '$x^2$'],
-    [_t('formula.block') || '块级公式', 'mathblock', '$$…$$'],
-  ];
-}
-let mdCommandIndex = 0;
-
 function closeMdPopups() {
   document.querySelectorAll('.md-menu, .pv-menu').forEach(el => el.classList.add('hidden'));
   const trigger = $('pv-trigger'); if (trigger) trigger.setAttribute('aria-expanded', 'false');
-}
-
-function openMdCommandPalette() {
-  if (!state.editing) return;
-  closeMdPopups();
-  $('md-command-modal').classList.remove('hidden');
-  $('md-command-search').value = '';
-  mdCommandIndex = 0; renderMdCommands();
-  setTimeout(() => $('md-command-search').focus(), 0);
-}
-
-function closeMdCommandPalette() { $('md-command-modal').classList.add('hidden'); if (cmView) cmView.focus(); }
-
-function renderMdCommands() {
-  const q = $('md-command-search').value.trim().toLowerCase();
-  const commands = getMdCommands();
-  const rows = commands.filter(c => !q || (c[0] + ' ' + c[2]).toLowerCase().includes(q));
-  mdCommandIndex = Math.max(0, Math.min(mdCommandIndex, rows.length - 1));
-  const list = $('md-command-list'); list.innerHTML = '';
-  rows.forEach((c, i) => {
-    const b = document.createElement('button'); b.className = 'command-item' + (i === mdCommandIndex ? ' active' : '');
-    b.innerHTML = '<span></span><small></small>'; b.querySelector('span').textContent = c[0]; b.querySelector('small').textContent = c[2];
-    b.addEventListener('click', () => runMdCommand(c[1])); list.appendChild(b);
-  });
-}
-
-function runMdCommand(kind) {
-  closeMdCommandPalette();
-  if (kind === 'image') openImgModal();
-  else if (kind === 'math' || kind === 'mathblock') openFormulaModal(kind === 'mathblock' ? 'block' : 'inline');
-  else if (kind === 'codechunk') openCodeChunkModal();
-  else if (kind === 'diagram') openDiagramModal();
-  else if (kind === 'docimport') openDocImportModal();
-  else if (kind === 'frontmatter') insertFrontmatterTemplate();
-  else cmInsertSyntax(kind);
 }
 
 /* ============================================================

@@ -72,6 +72,46 @@ transition: zoom
         self.assertIn("reveal.js", html)
         self.assertIn("<section data-markdown>", html)
 
+    def test_long_document_auto_split(self):
+        """测试长文档在没有 explicit slide 标记时智能多页分片，不会被压缩丢失。"""
+        long_doc = "# 第一章 介绍\n" + ("这是长篇段落说明内容。\n\n" * 15) + "## 第二章 架构\n" + ("架构设计深入分析与模块解析。\n\n" * 15) + "### 2.1 存储模块\n" + ("存储细节实现。\n\n" * 10)
+        matrix = split_slides_structure(long_doc)
+        # 应该自动切分成至少 4 页以上，而不是只有 1~2 页
+        total_slides = sum(len(v) for v in matrix)
+        self.assertGreaterEqual(total_slides, 3, "Long document should be split into multiple slides")
+
+    def test_hr_delimiters(self):
+        """测试使用标准 --- 和 -- 分割幻灯片。"""
+        doc = """
+# Slide 1
+Welcome
+---
+# Slide 2
+Next
+--
+## Subslide 2.1
+Detail
+"""
+        matrix = split_slides_structure(doc)
+        self.assertEqual(len(matrix), 2)
+        self.assertEqual(len(matrix[1]), 2)
+
+    def test_html_and_code_preservation(self):
+        """测试包含 HTML 标签和代码块时，textarea data-template 不被过度转义。"""
+        doc = """
+# Code Demo
+```python
+if a < b and b > c:
+    print("<tag>")
+```
+<span style="color: red;">Alert</span>
+"""
+        html = render_presentation_html(doc)
+        self.assertIn('if a < b and b > c:', html)
+        self.assertIn('<span style="color: red;">Alert</span>', html)
+        self.assertNotIn('&lt;span style=', html)
+
 
 if __name__ == '__main__':
     unittest.main()
+

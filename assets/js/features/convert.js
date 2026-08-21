@@ -217,9 +217,11 @@ function chooseFile(mode) {
 
 async function uploadFile(file) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const ext = '.' + (file.name.split('.').pop() || 'bin');
+  const fileName = file.name || 'document.bin';
+  const ext = '.' + (fileName.split('.').pop() || 'bin');
   try {
-    const r = await apiFetch('/api/upload?ext=' + encodeURIComponent(ext), { method: 'POST', body: file });
+    const qs = '?ext=' + encodeURIComponent(ext) + '&name=' + encodeURIComponent(fileName);
+    const r = await apiFetch('/api/upload' + qs, { method: 'POST', body: file });
     const d = await r.json();
     return d.path || null;
   } catch (e) { showToast(_t('toast.uploadFailed') || '上传失败'); return null; }
