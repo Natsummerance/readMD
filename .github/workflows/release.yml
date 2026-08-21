@@ -369,8 +369,7 @@ jobs:
           for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "ReadMD-harmonyos-v${V}.hap" "readmd-mcp-server-${V}.zip"; do
             test -s "release-assets/$asset"
           done
-          grep -F "or _bundle_version() or '${V}'" readmd.py
-          grep -F "or _bundle_version() or '${V}'" installer/setup_app.py
+          python tools/sync_version.py --check
           python -c "import readmd; assert readmd.VERSION == '${V}'"
           test -s assets/vendor/defuddle.bundle.js
           test -s assets/vendor/defuddle.LICENSE.txt
