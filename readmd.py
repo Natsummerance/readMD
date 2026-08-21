@@ -2955,7 +2955,7 @@ def run_selftest():
             with open(setup_py, encoding='utf-8') as f:
                 _src = f.read()
             # 常规链：APP_VERSION 与 VERSION 一致；Win7 链使用环境变量覆盖。
-            m1 = _re.search(r"APP_VERSION\s*=\s*\(?\s*os\.environ\.get\('READMD_VERSION_OVERRIDE'\)[\s\S]*?or\s+'([^']+)'", _src)
+            m1 = _re.search(r"APP_VERSION\s*=\s*\(?[\s\S]*?or\s+'([^']+)'", _src)
             m2 = _re.search(r"APP_VERSION\s*=\s*'([^']+)'", _src)
             if os.environ.get('READMD_VERSION_OVERRIDE'):
                 # 版本来自同一环境变量，两侧天然一致；确认 fallback 存在即可

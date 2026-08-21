@@ -85,7 +85,10 @@ def _env_or_bundle_version():
     return _bundle_version()
 
 
-APP_VERSION = (_env_or_bundle_version() or '2.3.7-beta.1')
+APP_VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
+               or os.environ.get('READMD_VERSION')
+               or os.environ.get('READMD_BUILD_VERSION')
+               or _env_or_bundle_version() or '2.3.7-beta.1')
 
 
 
