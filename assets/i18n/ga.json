@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Cuir isteach URL an leathanaigh ghréasáin (m.sh. https://example.com/post)...",
   "web.wait25Sec": "Críochnaigh an fíorú nó logáil isteach sa fhuinneog aníos (fan 25 soicind)…",
   "web.wait5Min": "Críochnaigh an fíorú nó logáil isteach sa fhuinneog aníos (fan suas le 5 nóiméad)…",
-  "web.webviewUnsupported": "Ní thacaíonn timpeallacht an chórais reatha le fuinneoga dinimiciúla idirghníomhacha a mhúscailt."
+  "web.webviewUnsupported": "Ní thacaíonn timpeallacht an chórais reatha le fuinneoga dinimiciúla idirghníomhacha a mhúscailt.",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "དྲ་ཚིགས་དྲ་ཚིགས་ཀྱི་ཁ་བྱང་བླུགས། (དཔེར་ན། https://example.com/post)...",
   "web.wait25Sec": "སྐུ་མཁྱེན། བདེན་དཔང་མཇུག་སྒྲིལ་རོགས། ཡང་ན་འཕྱུར་ཡོང་བའི་སྒེའུ་ཁུང་ནང་འཛུལ་རོགས། (སྐར་ཆ་༢༥སྒུག་རོགས།)",
   "web.wait5Min": "སྐུ་མཁྱེན། བདེན་དཔང་མཇུག་སྒྲིལ་རོགས། ཡང་ན་འཕྱུར་འཕྱུར་སྒེའུ་ཁུང་ནང་འཛུལ་རོགས། (སྐར་མ་༥བར་སྒུག་རོགས།)",
-  "web.webviewUnsupported": "ད་ལྟའི་མ་ལག་གི་ཁོར་ཡུག་གིས་སྒུལ་ཤུགས་ལྡན་པའི་འབྲེལ་འདྲིས་སྒེའུ་ཁུངས་འབྱུང་བར་རྒྱབ་སྐྱོར་བྱེད་ཀྱི་མེད།"
+  "web.webviewUnsupported": "ད་ལྟའི་མ་ལག་གི་ཁོར་ཡུག་གིས་སྒུལ་ཤུགས་ལྡན་པའི་འབྲེལ་འདྲིས་སྒེའུ་ཁུངས་འབྱུང་བར་རྒྱབ་སྐྱོར་བྱེད་ཀྱི་མེད།",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

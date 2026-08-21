@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "ป้อน URL ของหน้าเว็บ (เช่น https://example.com/post)...",
   "web.wait25Sec": "โปรดดำเนินการตรวจสอบหรือเข้าสู่ระบบในหน้าต่างป๊อปอัป (รอ 25 วินาที)…",
   "web.wait5Min": "โปรดดำเนินการตรวจสอบหรือเข้าสู่ระบบในหน้าต่างป๊อปอัป (รอสูงสุด 5 นาที)…",
-  "web.webviewUnsupported": "สภาพแวดล้อมระบบปัจจุบันไม่รองรับการเปิดหน้าต่างโต้ตอบแบบไดนามิก"
+  "web.webviewUnsupported": "สภาพแวดล้อมระบบปัจจุบันไม่รองรับการเปิดหน้าต่างโต้ตอบแบบไดนามิก",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

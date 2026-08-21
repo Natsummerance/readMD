@@ -342,15 +342,26 @@ def _process_tables(lines, fixes, stats):
 
 # ---------------------------------------------------------------- 加粗/强调修复
 
+_PUNCT_CHARS = set('([{\'"-\u2013\u2014:;,!?/\\|~`@#$%^&*+=<>~（）【】《》“”‘’，。、；：？！…—·「」『』')
+
+
+def _is_punct_or_space(ch):
+    if not ch or ch.isspace():
+        return True
+    if ch in _PUNCT_CHARS:
+        return True
+    import unicodedata
+    cat = unicodedata.category(ch)
+    return cat.startswith(('P', 'S', 'Z'))
+
+
 def _classify(s, p, d, allow_intraword):
     before = s[p - 1] if p > 0 else ''
     after = s[p + len(d)] if p + len(d) < len(s) else ''
-    prev_space = before == '' or before.isspace()
-    next_space = after == '' or after.isspace()
-    prev_punct = before in '([{\'"-\u2013\u2014:;,!?'
-    next_punct = after in '.,;:!?)]}\'"'
-    is_open = prev_space or prev_punct
-    is_close = next_space or next_punct
+    prev_boundary = _is_punct_or_space(before)
+    next_boundary = _is_punct_or_space(after)
+    is_open = prev_boundary and not (after and after.isspace())
+    is_close = next_boundary and not (before and before.isspace())
     if is_open and not is_close:
         return 'open'
     if is_close and not is_open:

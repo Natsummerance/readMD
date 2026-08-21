@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Adja meg a weboldal URL-címét (pl. https://example.com/cikk)...",
   "web.wait25Sec": "Kérjük, végezze el az ellenőrzést vagy jelentkezzen be a felugró ablakban (várakozás: 25 mp)…",
   "web.wait5Min": "Kérjük, végezze el az ellenőrzést vagy jelentkezzen be a felugró ablakban (legfeljebb 5 perc várakozás)…",
-  "web.webviewUnsupported": "A jelenlegi rendszerkörnyezet nem támogatja a dinamikus interaktív ablakot"
+  "web.webviewUnsupported": "A jelenlegi rendszerkörnyezet nem támogatja a dinamikus interaktív ablakot",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

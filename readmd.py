@@ -71,7 +71,7 @@ def _bundle_version():
 
 
 VERSION = (os.environ.get('READMD_BUILD_VERSION')
-           or _bundle_version() or '2.3.4')
+           or _bundle_version() or '2.3.5')
 
 
 

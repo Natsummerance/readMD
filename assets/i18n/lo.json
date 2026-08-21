@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "ໃສ່ URL ຂອງໜ້າເວັບ (ເຊັ່ນ: https://example.com/post)...",
   "web.wait25Sec": "ກະລຸນາເຮັດການຢັ້ງຢືນ ຫຼືເຂົ້າສູ່ລະບົບໃນໜ້າຈໍປັອບອັບ (ລໍຖ້າ 25 ວິນາທີ)...",
   "web.wait5Min": "ກະລຸນາເຮັດການຢືນຢັນ ຫຼືເຂົ້າສູ່ລະບົບໃນໜ້າຈໍປັອບອັບ (ລໍຖ້າສູງສຸດ 5 ນາທີ)...",
-  "web.webviewUnsupported": "ສະພາບແວດລ້ອມຂອງລະບົບປະຈຸບັນບໍ່ຮອງຮັບການກະຕຸ້ນປ່ອງຢ້ຽມແບບໂຕ້ຕອບແບບເຄື່ອນໄຫວ."
+  "web.webviewUnsupported": "ສະພາບແວດລ້ອມຂອງລະບົບປະຈຸບັນບໍ່ຮອງຮັບການກະຕຸ້ນປ່ອງຢ້ຽມແບບໂຕ້ຕອບແບບເຄື່ອນໄຫວ.",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

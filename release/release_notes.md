@@ -1,23 +1,45 @@
-# ReadMD v2.3.4
+# ReadMD v2.3.5
 
 ReadMD 是免费的本地 Markdown 智能阅读与排版套件；纯本地、秒级极速渲染、离线可用，绝不改写原文件。
 
 ## 📦 全平台发布资产 (Release Assets)
 
-- 🪟 Windows 安装版：`ReadMDSetup-v2.3.4.exe`
-- 💼 Windows 便携版：`ReadMD-portable-v2.3.4.exe`
-- 🍏 Apple Silicon Mac：`ReadMD-macos-arm64-v2.3.4.zip`
-- 💻 Intel Mac：`ReadMD-macos-x64-v2.3.4.zip`
-- 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.4.AppImage`
-- 🇨🇳 Linux / 国产信创 Deb 安装包 (UOS / 银河麒麟 / Deepin / Ubuntu / Debian)：`readmd_2.3.4_amd64.deb`
-- 📱 HarmonyOS NEXT 纯血鸿蒙安装包：`ReadMD-harmonyos-v2.3.4.hap`
-- 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.4.vsix`
-- 🤖 FastMCP Server 独立包：`readmd-mcp-server-2.3.4.zip`
+- 🪟 Windows 安装版：`ReadMDSetup-v2.3.5.exe`
+- 💼 Windows 便携版：`ReadMD-portable-v2.3.5.exe`
+- 🍏 Apple Silicon Mac：`ReadMD-macos-arm64-v2.3.5.zip`
+- 💻 Intel Mac：`ReadMD-macos-x64-v2.3.5.zip`
+- 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.5.AppImage`
+- 🇨🇳 Linux / 国产信创 Deb 安装包 (UOS / 银河麒麟 / Deepin / Ubuntu / Debian)：`readmd_2.3.5_amd64.deb`
+- 📱 HarmonyOS NEXT 纯血鸿蒙安装包：`ReadMD-harmonyos-v2.3.5.hap`
+- 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.5.vsix`
+- 🤖 FastMCP Server 独立包：`readmd-mcp-server-2.3.5.zip`
 - 🔐 校验清单：`SHA256SUMS.txt`
 
 ---
 
-## 🌟 本次版本核心更新 (v2.3.4)
+## 🌟 本次版本核心更新 (v2.3.5)
+
+### 1. 渲染引擎与自愈算法底层加固
+- **Marked AST 内联委托修复**：修复 `parseMarkdownWithSourceMap` 中标题和段落加粗 (`**...**`)、斜体和链接的行内解析委托；
+- **表格渲染容错**：修复多列复杂表格 `[object Object]` 异常，严格保留标准 `<thead>` 与 `<tbody>` HTML 结构；
+- **CJK 标点与括号智能边界适配**：扩展分类器支持全角括号 `（）`、书名号 `《》`、方括号 `【】` 及中文引号两端的加粗标记智能识别与平衡，杜绝粘连丢失；
+- **全球 46 种语言国际化字典 100% 补全**：所有新增功能词条全部补全，实现 0 缺失键。
+
+### 2. 竞品级功能可视化 UI 交互入口全面落地
+- **交互式代码块配置弹窗 (Interactive Code Chunk Modal)**：提供语言快速选择 (Python / JS / Bash / R / PHP / Go / Ruby)、Matplotlib 绘图开关与代码折叠选项，一键插入；
+- **科学与工程图表选择器 (Diagrams Modal)**：内置 PlantUML、TikZ / PGFPlots、WaveDrom、Vega-Lite、Graphviz DOT、D2、BitField 标准预设模版，支持即时选择插入；
+- **子文档引用插入助手 (@import Modal)**：图形化输入相对路径，轻松实现模块化拼装；
+- **文档样式与 Frontmatter 元数据模板**：一键注入标题、Reveal.js 演说主题与全局 CSS 样式；
+- **编辑器 `/` 命令面板与插入菜单全覆盖**：所有高级组件均已深度整合至编辑器插入菜单与 `/` 快捷指令中。
+
+### 3. 阅读器与演说体验深度提升
+- **批量运行所有代码块 (Run All Code Chunks)**：在更多菜单中提供一键执行文档中全部代码块的能力，顺次捕获控制台输出与生成图表；
+- **F5 一键全屏演说放映**：支持 `F5` 快捷键极速启动 Reveal.js 全屏放映演说模式；
+- **禅模式 (F11)** 与 **自定义样式 (CSS/Head)** 快捷入口体验升级。
+
+### 4. VSCode 扩展与 MCP 智能体生态全功能对齐
+- **VSCode 新增命令与 Snippets**：注册 `readmd.insertCodeChunk`、`readmd.insertDiagram`、`readmd.insertDocImport`、`readmd.insertFrontmatter` 交互命令，并提供完整 Markdown 代码片段与侧边栏工具箱直达入口；
+- **MCP Server 全面升级**：无缝支持代码块就地沙箱执行、科学图表渲染与子文档展平，与 Claude Desktop / Cursor / Antigravity 深度协同。
 
 ### 1. `@import` 工程化模块化编译体系
 - **子 Markdown 嵌套**：支持 `@import "chapter.md"` 递归嵌入与展平，内置 8 层嵌套深度限制与环形循环引用拦截；

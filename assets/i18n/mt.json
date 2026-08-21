@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Daħħal il-URL tal-paġna web (eż. https://example.com/post)...",
   "web.wait25Sec": "Jekk jogħġbok imla l-verifika jew illoginja fit-tieqa pop-up (stenna 25 sekonda)...",
   "web.wait5Min": "Jekk jogħġbok imla l-verifika jew illoginja fit-tieqa pop-up (stenna sa 5 minuti)...",
-  "web.webviewUnsupported": "L-ambjent tas-sistema attwali ma jappoġġjax l-evokazzjoni ta' twieqi interattivi dinamiċi."
+  "web.webviewUnsupported": "L-ambjent tas-sistema attwali ma jappoġġjax l-evokazzjoni ta' twieqi interattivi dinamiċi.",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

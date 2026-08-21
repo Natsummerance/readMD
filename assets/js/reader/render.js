@@ -593,99 +593,111 @@ window.processDocImports = processDocImports;
 
 function parseMarkdownWithSourceMap(content, options = {}) {
   const breaks = !!(state && state.breakOnSingleNewline);
-  const renderer = new marked.Renderer();
+  try {
+    const renderer = new marked.Renderer();
 
-  // 1. 分词并记录顶级 AST 节点的源码起始行号
-  const tokens = marked.lexer(content, { gfm: true, breaks: breaks });
-  let lineCursor = 1;
-  tokens.forEach(tok => {
-    tok.sourceLine = lineCursor;
-    if (tok.raw) {
-      lineCursor += tok.raw.split('\n').length - 1;
-    }
-  });
+    // 1. 分词并记录顶级 AST 节点的源码起始行号
+    const tokens = marked.lexer(content, { gfm: true, breaks: breaks });
+    let lineCursor = 1;
+    tokens.forEach(tok => {
+      tok.sourceLine = lineCursor;
+      if (tok.raw) {
+        lineCursor += tok.raw.split('\n').length - 1;
+      }
+    });
 
-  // 2. 自定义渲染器注入 data-source-line 属性
-  renderer.heading = function(token) {
-    const text = typeof token === 'object' ? token.text : arguments[0];
-    const level = typeof token === 'object' ? token.depth : arguments[1];
-    const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
-    return `<h${level}${lineAttr}>${text}</h${level}>\n`;
-  };
+    // 2. 自定义渲染器注入 data-source-line 属性并正确解析 inline/nested 元素
+    renderer.heading = function(token) {
+      const text = (token && token.tokens && this.parser) ? this.parser.parseInline(token.tokens) : (token ? (token.text || '') : (arguments[0] || ''));
+      const level = (token && token.depth) ? token.depth : (arguments[1] || 1);
+      const lineAttr = (token && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
+      return `<h${level}${lineAttr}>${text}</h${level}>\n`;
+    };
 
-  renderer.paragraph = function(token) {
-    const text = typeof token === 'object' ? token.text : arguments[0];
-    const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
-    return `<p${lineAttr}>${text}</p>\n`;
-  };
+    renderer.paragraph = function(token) {
+      const text = (token && token.tokens && this.parser) ? this.parser.parseInline(token.tokens) : (token ? (token.text || '') : (arguments[0] || ''));
+      const lineAttr = (token && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
+      return `<p${lineAttr}>${text}</p>\n`;
+    };
 
-  renderer.blockquote = function(token) {
-    const quote = typeof token === 'object' ? token.text : arguments[0];
-    const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
-    return `<blockquote${lineAttr}>\n${quote}</blockquote>\n`;
-  };
+    renderer.blockquote = function(token) {
+      const body = (token && token.tokens && this.parser) ? this.parser.parse(token.tokens) : (token ? (token.text || '') : (arguments[0] || ''));
+      const lineAttr = (token && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
+      return `<blockquote${lineAttr}>\n${body}</blockquote>\n`;
+    };
 
-  renderer.table = function(token) {
-    const header = typeof token === 'object' ? token.header : arguments[0];
-    const body = typeof token === 'object' ? token.body : arguments[1];
-    const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
-    return `<table${lineAttr}>\n<thead>\n${header}</thead>\n<tbody>\n${body}</tbody>\n</table>\n`;
-  };
+    renderer.table = function(token) {
+      const html = marked.Renderer.prototype.table.call(this, token);
+      const lineAttr = (token && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
+      if (lineAttr && html && html.startsWith('<table')) {
+        return '<table' + lineAttr + html.slice(6);
+      }
+      return html;
+    };
 
-  renderer.code = function(token) {
-    const code = typeof token === 'object' ? token.text : arguments[0];
-    const infostring = typeof token === 'object' ? token.lang : arguments[1];
-    const escaped = typeof token === 'object' ? token.escaped : arguments[2];
-    const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
-    const info = (infostring || '').trim();
-    const parts = info.split(/\s+/);
-    const lang = parts[0] || '';
-    const hasCmd = info.includes('cmd=true') || info.includes('cmd=True') || info.includes('{cmd}');
+    renderer.code = function(token) {
+      const code = typeof token === 'object' ? token.text : arguments[0];
+      const infostring = typeof token === 'object' ? token.lang : arguments[1];
+      const escaped = typeof token === 'object' ? token.escaped : arguments[2];
+      const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
+      const info = (infostring || '').trim();
+      const parts = info.split(/\s+/);
+      const lang = parts[0] || '';
+      const hasCmd = info.includes('cmd=true') || info.includes('cmd=True') || info.includes('{cmd}');
 
-    // 1. Interactive Code Chunk
-    if (hasCmd) {
-      const encodedCode = encodeURIComponent(code);
-      const isMatplotlib = info.includes('matplotlib=true') || info.includes('matplotlib=True');
-      const isHidden = info.includes('hide=true') || info.includes('hide=True');
-      return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
-        <div class="code-chunk-header">
-          <span class="code-chunk-badge">${lang.toUpperCase()}</span>
-          <span class="code-chunk-status">就绪</span>
-          <span class="code-chunk-timer"></span>
-          <div class="code-chunk-actions">
-            <button class="code-chunk-run-btn" title="运行代码 (Shift+Enter)">▶ 运行</button>
+      // 1. Interactive Code Chunk
+      if (hasCmd) {
+        const encodedCode = encodeURIComponent(code);
+        const isMatplotlib = info.includes('matplotlib=true') || info.includes('matplotlib=True');
+        const isHidden = info.includes('hide=true') || info.includes('hide=True');
+        return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
+          <div class="code-chunk-header">
+            <span class="code-chunk-badge">${lang.toUpperCase()}</span>
+            <span class="code-chunk-status">就绪</span>
+            <span class="code-chunk-timer"></span>
+            <div class="code-chunk-actions">
+              <button class="code-chunk-run-btn" title="运行代码 (Shift+Enter)">▶ 运行</button>
+            </div>
           </div>
-        </div>
-        <div class="code-chunk-src ${isHidden ? 'hidden' : ''}">
-          <pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>
-        </div>
-        <div class="code-chunk-output hidden">
-          <div class="code-chunk-output-header">执行输出</div>
-          <pre class="code-chunk-stdout"></pre>
-          <div class="code-chunk-plot"></div>
-        </div>
-      </div>\n`;
-    }
+          <div class="code-chunk-src ${isHidden ? 'hidden' : ''}">
+            <pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>
+          </div>
+          <div class="code-chunk-output hidden">
+            <div class="code-chunk-output-header">
+              <span>执行输出</span>
+              <div class="code-chunk-out-actions">
+                <button class="code-chunk-copy-btn" title="复制输出文本">📋 复制</button>
+                <button class="code-chunk-clear-btn" title="清空输出">✕ 清空</button>
+              </div>
+            </div>
+            <pre class="code-chunk-stdout"></pre>
+            <div class="code-chunk-plot"></div>
+          </div>
+        </div>\n`;
+      }
 
-    // 2. Specialized Diagrams
-    const diagramLangs = ['tikz', 'plantuml', 'puml', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'd2', 'ditaa'];
-    if (diagramLangs.includes(lang.toLowerCase())) {
-      const encodedCode = encodeURIComponent(code);
-      return `<div class="diagram-card" ${lineAttr} data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
-        <div class="diagram-header">
-          <span class="diagram-badge">${lang.toUpperCase()} 图表</span>
-          <button class="diagram-reload-btn" title="重新渲染">⟳ 刷新</button>
-        </div>
-        <div class="diagram-preview"><div class="diagram-loading">正在加载图表...</div></div>
-        <details class="diagram-src-wrap"><summary>查看代码</summary><pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre></details>
-      </div>\n`;
-    }
+      // 2. Specialized Diagrams
+      const diagramLangs = ['tikz', 'plantuml', 'puml', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'd2', 'ditaa'];
+      if (diagramLangs.includes(lang.toLowerCase())) {
+        const encodedCode = encodeURIComponent(code);
+        return `<div class="diagram-card" ${lineAttr} data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
+          <div class="diagram-header">
+            <span class="diagram-badge">${lang.toUpperCase()} 图表</span>
+            <button class="diagram-reload-btn" title="重新渲染">⟳ 刷新</button>
+          </div>
+          <div class="diagram-preview"><div class="diagram-loading">正在加载图表...</div></div>
+          <details class="diagram-src-wrap"><summary>查看代码</summary><pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre></details>
+        </div>\n`;
+      }
 
-    // 3. Standard Code Block
-    return `<pre ${lineAttr}><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>\n`;
-  };
+      // 3. Standard Code Block
+      return `<pre ${lineAttr}><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>\n`;
+    };
 
-  return marked.parser(tokens, { renderer: renderer, gfm: true, breaks: breaks });
+    return marked.parser(tokens, { renderer: renderer, gfm: true, breaks: breaks });
+  } catch (e) {
+    return marked.parse(content, { gfm: true, breaks: breaks });
+  }
 }
 window.parseMarkdownWithSourceMap = parseMarkdownWithSourceMap;
 
@@ -1121,9 +1133,51 @@ function renderAllCodeChunks(container) {
     };
 
     if (btn) btn.addEventListener('click', run);
+
+    // 绑定输出区复制与清空交互
+    const copyBtn = card.querySelector('.code-chunk-copy-btn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', () => {
+        const text = (stdoutEl ? stdoutEl.textContent : '') || '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text);
+          showToast('已复制输出内容到剪贴板', 1200);
+        }
+      });
+    }
+
+    const clearBtn = card.querySelector('.code-chunk-clear-btn');
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        outWrap.classList.add('hidden');
+        if (stdoutEl) stdoutEl.textContent = '';
+        if (plotEl) plotEl.innerHTML = '';
+        statusEl.className = 'code-chunk-status';
+        statusEl.textContent = '就绪';
+        if (timerEl) timerEl.textContent = '';
+        showToast('已清空执行结果', 1000);
+      });
+    }
   });
 }
 window.renderAllCodeChunks = renderAllCodeChunks;
+
+async function runAllCodeChunks() {
+  const cards = document.querySelectorAll('.code-chunk-card');
+  if (!cards.length) {
+    showToast('当前文档中没有可运行的代码块');
+    return;
+  }
+  showToast(`开始批量运行 ${cards.length} 个代码块...`, 1500);
+  for (const card of cards) {
+    const btn = card.querySelector('.code-chunk-run-btn');
+    if (btn) {
+      btn.click();
+      await new Promise(r => setTimeout(r, 150));
+    }
+  }
+}
+window.runAllCodeChunks = runAllCodeChunks;
 
 function renderAllDiagrams(container) {
   const cards = (container || document).querySelectorAll('.diagram-card');
@@ -1136,7 +1190,7 @@ function renderAllDiagrams(container) {
     const reloadBtn = card.querySelector('.diagram-reload-btn');
 
     const render = async () => {
-      previewEl.innerHTML = '<div class="diagram-loading">正在渲染 ' + engine.toUpperCase() + ' 图表...</div>';
+      previewEl.innerHTML = '<div class="diagram-loading">⏳ 正在渲染 ' + engine.toUpperCase() + ' 矢量图表...</div>';
       try {
         if (engine === 'mermaid' && window.mermaid) {
           const id = 'mermaid-' + Math.random().toString(36).slice(2);
@@ -1176,14 +1230,14 @@ function renderAllDiagrams(container) {
               const svgText = await kr.text();
               previewEl.innerHTML = svgText;
             } else {
-              previewEl.innerHTML = `<pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre>`;
+              previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ 离线或远程渲染不可达，已降级显示源码：</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
             }
           }
         } else {
-          previewEl.innerHTML = `<p class="ai-err">图表渲染错误: ${(res && res.error) || '未知'}</p>`;
+          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ 图表渲染错误：${(res && res.error) || '未知'}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
         }
       } catch (err) {
-        previewEl.innerHTML = `<pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre>`;
+        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ 渲染异常（${err.message || String(err)}），显示源码：</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
       }
     };
 

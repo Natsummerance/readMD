@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Enter URL (e.g. https://example.com/post)...",
   "web.wait25Sec": "Please complete verification in the popup window (waiting 25s)...",
   "web.wait5Min": "Please complete verification in the popup window (up to 5 minutes)...",
-  "web.webviewUnsupported": "Dynamic interactive window is not supported on this environment"
+  "web.webviewUnsupported": "Dynamic interactive window is not supported on this environment",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "menu.runAllChunksSub": "Execute all code chunks in document",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunkLang": "Language:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkCode": "Code:",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImportPath": "Relative Path:"
 }

@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "أدخل عنوان URL لصفحة الويب (مثل https://example.com/post)...",
   "web.wait25Sec": "يرجى إكمال التحقق أو تسجيل الدخول في النافذة المنبثقة (انتظار 25 ثانية)…",
   "web.wait5Min": "يرجى إكمال التحقق أو تسجيل الدخول في النافذة المنبثقة (انتظار حتى 5 دقائق)…",
-  "web.webviewUnsupported": "بيئة النظام الحالية لا تدعم فتح النوافذ التفاعلية الديناميكية."
+  "web.webviewUnsupported": "بيئة النظام الحالية لا تدعم فتح النوافذ التفاعلية الديناميكية.",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

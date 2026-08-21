@@ -63,7 +63,8 @@
       <button id="btn-web" class="more-item"><span data-i18n="menu.web">网页</span><em data-i18n="menu.webSub">网页转 MD</em></button>
       <button id="btn-ocr" class="more-item"><span data-i18n="menu.ocr">OCR</span><em data-i18n="menu.ocrSub">扫描转 MD</em></button>
       <button id="btn-clipboard-new" class="more-item"><span data-i18n="menu.clipboard">剪贴板</span><em data-i18n="menu.clipboardSub">从剪贴板新建</em></button>
-      <button id="btn-presentation-menu" class="more-item"><span data-i18n="menu.presentation">演讲演示</span><em data-i18n="menu.presentationSub">Reveal.js 全屏放映</em></button>
+      <button id="btn-presentation-menu" class="more-item"><span data-i18n="menu.presentation">演讲演示</span><em data-i18n="menu.presentationSub">Reveal.js 全屏放映 (F5)</em></button>
+      <button id="btn-run-all-chunks" class="more-item"><span data-i18n="menu.runAllChunks">运行全部代码块</span><em data-i18n="menu.runAllChunksSub">执行文档中所有 Code Chunks</em></button>
       <button id="btn-style-custom" class="more-item"><span data-i18n="menu.customStyle">样式定制</span><em data-i18n="menu.customStyleSub">CSS / Head 注入</em></button>
       <button id="btn-zen-menu" class="more-item"><span data-i18n="menu.zenMode">禅模式</span><em data-i18n="menu.zenModeSub">专注全屏写作 (F11)</em></button>
       <button id="btn-saveas" class="more-item" disabled><span data-i18n="menu.saveAs">另存为</span><em data-i18n="menu.saveAsSub">.md 文件</em></button>
@@ -72,7 +73,7 @@
       <button id="btn-fix" class="more-item"><span data-i18n="menu.fix">修复详情</span><em data-i18n="menu.fixSub">本次自动修正</em></button>
       <button id="btn-lang" class="more-item"><span data-i18n="menu.lang">语言</span><em id="lang-current-label">简体中文</em></button>
       <button id="btn-autostart" class="more-item"><span data-i18n="menu.autoStart">开机自启</span><em id="autostart-status-label" data-i18n="app.disabled">未开启</em></button>
-      <button id="btn-check-update" class="more-item"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.4</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
+      <button id="btn-check-update" class="more-item"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.5</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
     </div>
 
 
@@ -99,7 +100,15 @@
     <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-structure-menu" data-i18n="editor.structure">结构⌄</button>
       <div id="md-structure-menu" class="md-menu hidden"><button data-md="h2" data-i18n="editor.h2">标题</button><button data-md="quote" data-i18n="editor.quote">引用</button><button data-md="list" data-i18n="editor.ul">无序列表</button><button data-md="ordered" data-i18n="editor.ol">有序列表</button><button data-md="task" data-i18n="editor.taskList">任务列表</button><button data-md="codeblock" data-i18n="editor.codeBlock">代码块</button><button data-md="hr" data-i18n="editor.hr">分隔线</button></div></div>
     <div class="md-menu-wrap"><button class="md-tool-btn md-group" data-menu="md-insert-menu" data-i18n="editor.insert">插入⌄</button>
-      <div id="md-insert-menu" class="md-menu hidden"><button data-md="image" data-i18n="editor.image">图片</button><button id="btn-insert-table" data-md="table" data-i18n="editor.table">表格</button><button data-md="link" data-i18n="editor.link">链接</button></div></div>
+      <div id="md-insert-menu" class="md-menu hidden">
+        <button data-md="image" data-i18n="editor.image">图片</button>
+        <button id="btn-insert-table" data-md="table" data-i18n="editor.table">表格</button>
+        <button data-md="link" data-i18n="editor.link">链接</button>
+        <button id="btn-insert-code-chunk" data-md="codechunk" data-i18n="editor.codeChunk">交互代码块 ⚡</button>
+        <button id="btn-insert-diagram" data-md="diagram" data-i18n="editor.diagram">科学图表 📊</button>
+        <button id="btn-insert-doc-import" data-md="docimport" data-i18n="editor.docImport">文档引用 🔗</button>
+        <button id="btn-insert-frontmatter" data-md="frontmatter" data-i18n="editor.frontmatter">样式元数据 ⚙</button>
+      </div></div>
     <button id="formula-open" class="md-tool-btn md-group" title="公式选择器" data-i18n="editor.formula" data-i18n-title="dialog.formulaTitle">∑ 公式</button>
     <button id="md-command-open" class="md-tool-btn" title="命令面板 (Ctrl/Cmd+Shift+P)" data-i18n-title="editor.command" data-i18n-aria="editor.command">⌘</button>
     <button id="btn-zen-mode" class="md-tool-btn" title="禅模式 / 专注模式 (F11)" data-i18n="editor.zenMode" data-i18n-title="editor.zenMode">禅模式</button>
@@ -820,7 +829,7 @@
 
 <footer id="statusbar">
   <div class="statusbar-left-group">
-    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.4</span>
+    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.5</span>
     <span id="status-pagination" class="status-pagination hidden" role="button" tabindex="0" title="点击切换阅读模式"></span>
     <span id="status-left"></span>
   </div>
@@ -853,6 +862,101 @@
     <div class="style-modal-footer">
       <button id="style-modal-cancel" class="tb-btn">取消</button>
       <button id="style-modal-save" class="tb-btn accent">保存并即时生效</button>
+    </div>
+  </div>
+</div>
+
+<!-- 交互式代码块配置模态框 -->
+<div id="code-chunk-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-dialog" style="max-width: 480px;">
+    <div class="modal-header">
+      <h3 data-i18n="editor.codeChunkModalTitle">插入交互式代码块 (Interactive Code Chunk)</h3>
+      <button id="code-chunk-modal-close" class="modal-close">✕</button>
+    </div>
+    <div style="padding: 16px;">
+      <div class="modal-form-group">
+        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkLang">编程语言：</label>
+        <select id="code-chunk-lang" class="modal-select" style="width:100%;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+          <option value="python">Python (Pyodide / 本地运行)</option>
+          <option value="javascript">JavaScript (Node / Web)</option>
+          <option value="bash">Bash / Shell</option>
+          <option value="r">R (科学计算)</option>
+          <option value="php">PHP</option>
+          <option value="go">Go</option>
+          <option value="ruby">Ruby</option>
+        </select>
+      </div>
+      <div style="margin: 12px 0; display: flex; flex-direction: column; gap: 8px;">
+        <label class="modal-checkbox-label" style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input id="code-chunk-opt-plot" type="checkbox" checked>
+          <span data-i18n="editor.codeChunkPlot">支持图形输出 (Matplotlib / Plot)</span>
+        </label>
+        <label class="modal-checkbox-label" style="font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input id="code-chunk-opt-hide" type="checkbox">
+          <span data-i18n="editor.codeChunkHide">默认折叠隐藏代码源码 (Hide Source)</span>
+        </label>
+      </div>
+      <div class="modal-form-group">
+        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkCode">代码内容：</label>
+        <textarea id="code-chunk-code" class="modal-textarea" style="width:100%;height:100px;font-family:var(--font-mono);font-size:12px;box-sizing:border-box;padding:8px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);" placeholder="import matplotlib.pyplot as plt\nimport numpy as np\nx = np.linspace(0, 10, 100)\nplt.plot(x, np.sin(x))\nplt.show()"></textarea>
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+        <button id="code-chunk-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
+        <button id="code-chunk-insert" class="tb-btn accent" data-i18n="editor.insert">插入代码块</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 科学与工程图表选择模态框 -->
+<div id="diagram-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-dialog" style="max-width: 520px;">
+    <div class="modal-header">
+      <h3 data-i18n="editor.diagramModalTitle">插入科学与工程图表 (Diagrams)</h3>
+      <button id="diagram-modal-close" class="modal-close">✕</button>
+    </div>
+    <div style="padding: 16px;">
+      <div class="modal-form-group">
+        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramType">图表类型：</label>
+        <select id="diagram-type" class="modal-select" style="width:100%;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+          <option value="plantuml">PlantUML (时序图 / 架构图 / UML)</option>
+          <option value="tikz">TikZ / PGFPlots (LaTeX 矢量几何与函数图)</option>
+          <option value="wavedrom">WaveDrom (数字电路波形图)</option>
+          <option value="vega-lite">Vega-Lite (统计数据可视化与图表)</option>
+          <option value="graphviz">Graphviz / DOT (有向图与网络拓扑)</option>
+          <option value="d2">D2 (现代声明式架构图)</option>
+          <option value="bitfield">BitField (硬件寄存器与协议字段图)</option>
+        </select>
+      </div>
+      <div class="modal-form-group" style="margin-top: 12px;">
+        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramTemplate">图表代码模版：</label>
+        <textarea id="diagram-code" class="modal-textarea" style="width:100%;height:120px;font-family:var(--font-mono);font-size:12px;box-sizing:border-box;padding:8px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);"></textarea>
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+        <button id="diagram-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
+        <button id="diagram-insert" class="tb-btn accent" data-i18n="editor.insert">插入图表</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 子文档引用模态框 -->
+<div id="doc-import-modal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-dialog" style="max-width: 440px;">
+    <div class="modal-header">
+      <h3 data-i18n="editor.docImportModalTitle">插入子文档引用 (@import)</h3>
+      <button id="doc-import-modal-close" class="modal-close">✕</button>
+    </div>
+    <div style="padding: 16px;">
+      <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.docImportDesc">引用外部 Markdown 文件、源码或图表，渲染时将自动无缝嵌入当前文档。</p>
+      <div class="modal-form-group">
+        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.docImportPath">子文档相对路径：</label>
+        <input id="doc-import-path" type="text" class="modal-input" placeholder="chapter1.md 或 ./subdocs/appendix.md" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+      </div>
+      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+        <button id="doc-import-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
+        <button id="doc-import-insert" class="tb-btn accent" data-i18n="editor.insert">插入引用</button>
+      </div>
     </div>
   </div>
 </div>

@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Веб хуудасны URL оруулна уу (жишээ нь: https://example.com/post)...",
   "web.wait25Sec": "Нээгдсэн цонхонд баталгаажуулалт эсвэл нэвтрэлтийг хийнэ үү (25 секунд хүлээнэ)…",
   "web.wait5Min": "Нээгдсэн цонхонд баталгаажуулалт эсвэл нэвтрэлтийг хийнэ үү (5 минут хүртэл хүлээнэ)…",
-  "web.webviewUnsupported": "Одоогийн системийн орчинд динамик интерактив цонх нээхийг дэмжихгүй байна"
+  "web.webviewUnsupported": "Одоогийн системийн орчинд динамик интерактив цонх нээхийг дэмжихгүй байна",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

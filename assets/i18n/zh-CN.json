@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "输入网页 URL (如 https://example.com/post)...",
   "web.wait25Sec": "请在弹出的窗口中完成验证或登录（等待 25 秒）…",
   "web.wait5Min": "请在弹出的窗口中完成验证或登录（最多等待 5 分钟）…",
-  "web.webviewUnsupported": "当前系统环境不支持唤起动态交互窗口"
+  "web.webviewUnsupported": "当前系统环境不支持唤起动态交互窗口",
+  "menu.runAllChunks": "运行全部代码块",
+  "menu.runAllChunksSub": "执行文档中所有 Code Chunks",
+  "editor.codeChunk": "交互代码块 ⚡",
+  "editor.diagram": "科学工程图表 📊",
+  "editor.docImport": "子文档引用 🔗",
+  "editor.frontmatter": "样式元数据 ⚙",
+  "editor.codeChunkModalTitle": "插入交互式代码块 (Interactive Code Chunk)",
+  "editor.codeChunkLang": "编程语言：",
+  "editor.codeChunkPlot": "支持图形输出 (Matplotlib / Plot)",
+  "editor.codeChunkHide": "默认折叠隐藏代码源码 (Hide Source)",
+  "editor.codeChunkCode": "代码内容：",
+  "editor.diagramModalTitle": "插入科学与工程图表 (Diagrams)",
+  "editor.diagramType": "图表类型：",
+  "editor.diagramTemplate": "图表代码模版：",
+  "editor.docImportModalTitle": "插入子文档引用 (@import)",
+  "editor.docImportDesc": "引用外部 Markdown 文件、源码或图表，渲染时将自动无缝嵌入当前文档。",
+  "editor.docImportPath": "子文档相对路径："
 }

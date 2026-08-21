@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Ingrese la URL de la página web (por ejemplo, https://example.com/post)...",
   "web.wait25Sec": "Complete la verificación o inicie sesión en la ventana emergente (espere 25 segundos)...",
   "web.wait5Min": "Complete la verificación o inicie sesión en la ventana emergente (espere hasta 5 minutos)...",
-  "web.webviewUnsupported": "El entorno actual del sistema no admite la evocación de ventanas interactivas dinámicas."
+  "web.webviewUnsupported": "El entorno actual del sistema no admite la evocación de ventanas interactivas dinámicas.",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

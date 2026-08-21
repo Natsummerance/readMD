@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Ilagay ang URL ng webpage (hal. https://example.com/post)...",
   "web.wait25Sec": "Mangyaring kumpletuhin ang pag-verify o pag-log in sa pop-up window (naghihintay ng 25 segundo)…",
   "web.wait5Min": "Mangyaring kumpletuhin ang pag-verify o pag-log in sa pop-up window (hanggang 5 minuto)…",
-  "web.webviewUnsupported": "Hindi sinusuportahan ng kasalukuyang environment ang pagbukas ng dynamic interactive window"
+  "web.webviewUnsupported": "Hindi sinusuportahan ng kasalukuyang environment ang pagbukas ng dynamic interactive window",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

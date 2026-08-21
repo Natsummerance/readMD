@@ -3326,11 +3326,54 @@ body.zen-mode .zen-exit-btn {
 }
 
 .code-chunk-output-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: 11px;
   font-weight: 600;
   color: var(--fg3);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.code-chunk-out-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.code-chunk-copy-btn, .code-chunk-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--fg2);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.code-chunk-copy-btn:hover, .code-chunk-clear-btn:hover {
+  background: var(--bg3);
+  color: var(--fg);
+  border-color: var(--accent);
+}
+
+.diagram-fallback-wrap {
+  padding: 12px;
+  background: var(--bg);
+  border-radius: var(--radius-s);
+}
+
+.diagram-fallback-hint {
+  font-size: 12px;
+  color: #f59e0b;
+  font-weight: 500;
   margin-bottom: 6px;
 }
 

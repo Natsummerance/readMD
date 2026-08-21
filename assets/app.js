@@ -106,15 +106,87 @@ function bindEvents() {
   $('btn-web').addEventListener('click', openWebDialog);           // 打开网页抓取弹窗
   if ($('btn-clipboard-new')) $('btn-clipboard-new').addEventListener('click', createFromClipboard); // 智能自适应全类型剪贴板新建
   if ($('btn-presentation-menu')) $('btn-presentation-menu').addEventListener('click', () => { closeMoreMenu(); launchPresentationMode(); });
+  if ($('btn-run-all-chunks')) $('btn-run-all-chunks').addEventListener('click', () => { closeMoreMenu(); if (window.runAllCodeChunks) runAllCodeChunks(); });
   if ($('btn-style-custom')) $('btn-style-custom').addEventListener('click', () => { closeMoreMenu(); openStyleModal(); });
   if ($('btn-zen-menu')) $('btn-zen-menu').addEventListener('click', () => { closeMoreMenu(); toggleZenMode(); });
   if ($('btn-zen-mode')) $('btn-zen-mode').addEventListener('click', () => { toggleZenMode(); });
+
+  // 全局快捷键与无障碍键盘导航 (Esc 统一关闭顶层弹窗 / F5 演说放映)
+  window.addEventListener('keydown', e => {
+    if (e.key === 'F5' && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      if (window.launchPresentationMode) launchPresentationMode();
+    } else if (e.key === 'Escape') {
+      const openModals = [
+        ['code-chunk-modal', closeCodeChunkModal],
+        ['diagram-modal', closeDiagramModal],
+        ['doc-import-modal', closeDocImportModal],
+        ['style-custom-modal', closeStyleModal],
+        ['md-command-modal', closeMdCommandPalette],
+        ['convert-modal', closeConvertModal],
+        ['export-modal', closeExportModal],
+        ['img-modal', closeImgModal],
+        ['formula-modal', closeFormulaModal],
+        ['url-modal', typeof closeWebDialog === 'function' ? closeWebDialog : () => $('url-modal').classList.add('hidden')],
+        ['share-modal', typeof closeShareDialog === 'function' ? closeShareDialog : () => $('share-modal').classList.add('hidden')],
+        ['history-modal', () => $('history-modal').classList.add('hidden')],
+        ['fix-modal', () => $('fix-modal').classList.add('hidden')],
+        ['tpl-modal', () => $('tpl-modal').classList.add('hidden')],
+        ['presentation-modal', () => {
+          const pm = $('presentation-modal');
+          if (pm && !pm.classList.contains('hidden')) {
+            pm.classList.add('hidden');
+            const ifr = pm.querySelector('.presentation-iframe');
+            if (ifr) ifr.src = 'about:blank';
+          }
+        }]
+      ];
+      for (const [id, closeFn] of openModals) {
+        const el = $(id);
+        if (el && !el.classList.contains('hidden')) {
+          e.preventDefault();
+          if (typeof closeFn === 'function') closeFn();
+          break;
+        }
+      }
+    }
+  });
 
   // 自定义样式模态框
   if ($('style-modal-close')) $('style-modal-close').addEventListener('click', closeStyleModal);
   if ($('style-modal-cancel')) $('style-modal-cancel').addEventListener('click', closeStyleModal);
   if ($('style-modal-save')) $('style-modal-save').addEventListener('click', saveStyleModal);
   if ($('style-custom-modal')) $('style-custom-modal').addEventListener('click', e => { if (e.target === $('style-custom-modal')) closeStyleModal(); });
+
+  // 交互式代码块模态框事件
+  if ($('code-chunk-modal-close')) $('code-chunk-modal-close').addEventListener('click', closeCodeChunkModal);
+  if ($('code-chunk-cancel')) $('code-chunk-cancel').addEventListener('click', closeCodeChunkModal);
+  if ($('code-chunk-insert')) $('code-chunk-insert').addEventListener('click', insertCodeChunkFromModal);
+  if ($('code-chunk-lang')) $('code-chunk-lang').addEventListener('change', e => {
+    const codeArea = $('code-chunk-code');
+    if (codeArea && typeof CODE_CHUNK_SAMPLES !== 'undefined') {
+      codeArea.value = CODE_CHUNK_SAMPLES[e.target.value] || CODE_CHUNK_SAMPLES.python;
+    }
+  });
+  if ($('code-chunk-modal')) $('code-chunk-modal').addEventListener('click', e => { if (e.target === $('code-chunk-modal')) closeCodeChunkModal(); });
+
+  // 科学工程图表模态框事件
+  if ($('diagram-modal-close')) $('diagram-modal-close').addEventListener('click', closeDiagramModal);
+  if ($('diagram-cancel')) $('diagram-cancel').addEventListener('click', closeDiagramModal);
+  if ($('diagram-insert')) $('diagram-insert').addEventListener('click', insertDiagramFromModal);
+  if ($('diagram-type')) $('diagram-type').addEventListener('change', e => {
+    const codeArea = $('diagram-code');
+    if (codeArea && typeof DIAGRAM_SAMPLES !== 'undefined') {
+      codeArea.value = DIAGRAM_SAMPLES[e.target.value] || DIAGRAM_SAMPLES.plantuml;
+    }
+  });
+  if ($('diagram-modal')) $('diagram-modal').addEventListener('click', e => { if (e.target === $('diagram-modal')) closeDiagramModal(); });
+
+  // 子文档引用模态框事件
+  if ($('doc-import-modal-close')) $('doc-import-modal-close').addEventListener('click', closeDocImportModal);
+  if ($('doc-import-cancel')) $('doc-import-cancel').addEventListener('click', closeDocImportModal);
+  if ($('doc-import-insert')) $('doc-import-insert').addEventListener('click', insertDocImportFromModal);
+  if ($('doc-import-modal')) $('doc-import-modal').addEventListener('click', e => { if (e.target === $('doc-import-modal')) closeDocImportModal(); });
 
   // Toast 提示点击（用于升级跳转等场景）
   $('toast').addEventListener('click', () => {

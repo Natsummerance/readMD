@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "ওয়েব URL লিখুন (যেমন https://example.com/post)...",
   "web.wait25Sec": "পপআপ উইন্ডোতে ভেরিফিকেশন সম্পন্ন করুন (২৫ সেকেন্ড অপেক্ষা করা হচ্ছে)…",
   "web.wait5Min": "পপআপ উইন্ডোতে ভেরিফিকেশন সম্পন্ন করুন (সর্বোচ্চ ৫ মিনিট)…",
-  "web.webviewUnsupported": "বর্তমান পরিবেশে ডাইনামিক ইন্টারেক্টিভ উইন্ডো সমর্থিত নয়"
+  "web.webviewUnsupported": "বর্তমান পরিবেশে ডাইনামিক ইন্টারেক্টিভ উইন্ডো সমর্থিত নয়",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

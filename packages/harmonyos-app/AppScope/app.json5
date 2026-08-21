@@ -2,8 +2,8 @@
   "app": {
     "bundleName": "io.github.natsummerance.readmd",
     "vendor": "Natsummerance",
-    "versionCode": 20304,
-    "versionName": "2.3.4",
+    "versionCode": 20305,
+    "versionName": "2.3.5",
     "icon": "$media:app_icon",
     "label": "$string:app_name"
   }

@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Nhập URL trang web (ví dụ: https://example.com/post)...",
   "web.wait25Sec": "Vui lòng hoàn tất xác minh hoặc đăng nhập trong cửa sổ bật lên (đang chờ 25 giây)…",
   "web.wait5Min": "Vui lòng hoàn tất xác minh hoặc đăng nhập trong cửa sổ bật lên (chờ tối đa 5 phút)…",
-  "web.webviewUnsupported": "Môi trường hệ thống hiện tại không hỗ trợ mở cửa sổ tương tác động"
+  "web.webviewUnsupported": "Môi trường hệ thống hiện tại không hỗ trợ mở cửa sổ tương tác động",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

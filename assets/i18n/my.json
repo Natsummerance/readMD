@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "ဝဘ်စာမျက်နှာ URL ကိုထည့်ပါ (ဥပမာ https://example.com/post)...",
   "web.wait25Sec": "ကျေးဇူးပြု၍ အတည်ပြုခြင်းကို အပြီးသတ်ပါ သို့မဟုတ် ပေါ်လာသောဝင်းဒိုးတွင် အကောင့်ဝင်ပါ (25 စက္ကန့်စောင့်ပါ)...",
   "web.wait5Min": "ကျေးဇူးပြု၍ အတည်ပြုခြင်းကို အပြီးသတ်ပါ သို့မဟုတ် ပေါ်လာသောဝင်းဒိုးတွင် အကောင့်ဝင်ပါ (5 မိနစ်အထိစောင့်ပါ)...",
-  "web.webviewUnsupported": "လက်ရှိစနစ်ပတ်ဝန်းကျင်သည် တက်ကြွသောအပြန်အလှန်အကျိုးသက်ရောက်သောဝင်းဒိုးများကို လှုံ့ဆော်ပေးခြင်းကို မပံ့ပိုးပါ။"
+  "web.webviewUnsupported": "လက်ရှိစနစ်ပတ်ဝန်းကျင်သည် တက်ကြွသောအပြန်အလှန်အကျိုးသက်ရောက်သောဝင်းဒိုးများကို လှုံ့ဆော်ပေးခြင်းကို မပံ့ပိုးပါ။",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

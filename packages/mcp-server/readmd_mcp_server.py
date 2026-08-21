@@ -544,7 +544,7 @@ def run_stdio_server():
                         "protocolVersion": "2024-11-05",
                         "serverInfo": {
                             "name": "readmd-mcp-server",
-                            "version": "2.3.4"
+                            "version": "2.3.5"
                         },
                         "capabilities": {
                             "tools": {}

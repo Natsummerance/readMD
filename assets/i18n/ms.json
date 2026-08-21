@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Masukkan URL halaman web (cth https://example.com/post)...",
   "web.wait25Sec": "Sila lengkapkan pengesahan atau log masuk dalam tetingkap timbul (tunggu 25 saat)…",
   "web.wait5Min": "Sila lengkapkan pengesahan atau log masuk dalam tetingkap timbul (tunggu sehingga 5 minit)…",
-  "web.webviewUnsupported": "Persekitaran sistem semasa tidak menyokong membangkitkan tetingkap interaktif dinamik."
+  "web.webviewUnsupported": "Persekitaran sistem semasa tidak menyokong membangkitkan tetingkap interaktif dinamik.",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

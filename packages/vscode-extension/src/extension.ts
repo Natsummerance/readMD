@@ -175,14 +175,98 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.showInformationMessage('ReadMD: 已插入 [TOC] 自动目录标签');
   });
 
+  async function getOrCreateEditor(): Promise<vscode.TextEditor | undefined> {
+    let editor = vscode.window.activeTextEditor;
+    if (!editor) {
+      const doc = await vscode.workspace.openTextDocument({
+        content: '# 新建文档\n\n',
+        language: 'markdown',
+      });
+      editor = await vscode.window.showTextDocument(doc);
+    }
+    return editor;
+  }
+
   // 8. 命令：插入分页符
   const insertSlideDisposable = vscode.commands.registerCommand('readmd.insertSlide', async () => {
-    const editor = vscode.window.activeTextEditor;
+    const editor = await getOrCreateEditor();
     if (!editor) return;
 
     editor.edit(editBuilder => {
       editBuilder.insert(editor.selection.active, '\n<!-- slide -->\n\n');
     });
+  });
+
+  // 8.1 命令：插入交互式代码块
+  const insertCodeChunkDisposable = vscode.commands.registerCommand('readmd.insertCodeChunk', async () => {
+    const editor = await getOrCreateEditor();
+    if (!editor) return;
+
+    const langPick = await vscode.window.showQuickPick([
+      { label: 'python', description: 'Python (支持 Matplotlib 绘图与科学计算)', code: 'import matplotlib.pyplot as plt\nimport numpy as np\n\nx = np.linspace(0, 10, 100)\nplt.plot(x, np.sin(x), label="sin(x)")\nplt.legend()\nplt.show()', plot: true },
+      { label: 'javascript', description: 'JavaScript (Node.js 执行环境)', code: 'const data = [10, 20, 30, 40];\nconsole.log("Sum:", data.reduce((a, b) => a + b, 0));', plot: false },
+      { label: 'bash', description: 'Bash / Shell 脚本', code: '#!/usr/bin/env bash\necho "Hello ReadMD Code Chunk!"', plot: false },
+      { label: 'r', description: 'R 语言科学统计与绘图', code: 'x <- seq(0, 10, by=0.1)\nplot(x, sin(x), type="l", col="blue")', plot: false },
+      { label: 'go', description: 'Go 语言源码', code: 'package main\nimport "fmt"\nfunc main() {\n    fmt.Println("Hello ReadMD Go!")\n}', plot: false },
+    ], { placeHolder: '请选择交互式代码块的编程语言' });
+
+    if (!langPick) return;
+    const flags = ['cmd=true'];
+    if (langPick.plot) flags.push('matplotlib=true');
+    const snippet = new vscode.SnippetString(`\`\`\`${langPick.label} {${flags.join(' ')}}\n\${1:${langPick.code}}\n\`\`\`\n$0`);
+    editor.insertSnippet(snippet);
+  });
+
+  // 8.2 命令：插入科学与工程图表
+  const insertDiagramDisposable = vscode.commands.registerCommand('readmd.insertDiagram', async () => {
+    const editor = await getOrCreateEditor();
+    if (!editor) return;
+
+    const diagramPick = await vscode.window.showQuickPick([
+      { label: 'plantuml', description: 'PlantUML (时序图 / 架构图 / 类图)', template: '@startuml\nautonumber\nClient -> Server: 发送请求\nServer --> Client: 返回响应 200 OK\n@enduml' },
+      { label: 'tikz', description: 'TikZ / PGFPlots (LaTeX 矢量几何与函数图)', template: '\\begin{tikzpicture}\n\\draw[thick,->] (0,0) -- (4,0) node[anchor=north west] {x};\n\\draw[thick,->] (0,0) -- (0,3) node[anchor=south east] {y};\n\\draw[red,domain=0:3.5] plot (\\x,{0.2*\\x*\\x}) node[right] {$f(x)=\\frac{1}{5}x^2$};\n\\end{tikzpicture}' },
+      { label: 'wavedrom', description: 'WaveDrom (数字电路时序波形图)', template: '{\n  signal: [\n    { name: "CLK",  wave: "p......" },\n    { name: "Data", wave: "x.345x.", data: ["head", "body", "tail"] },\n    { name: "Req",  wave: "0.1..0." },\n    { name: "Ack",  wave: "0..1.0." }\n  ]\n}' },
+      { label: 'vega-lite', description: 'Vega-Lite (统计数据可视化图表)', template: '{\n  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",\n  "mark": "bar",\n  "data": { "values": [{"a": "A", "b": 28}, {"a": "B", "b": 55}] },\n  "encoding": { "x": {"field": "a", "type": "nominal"}, "y": {"field": "b", "type": "quantitative"} }\n}' },
+      { label: 'graphviz', description: 'Graphviz DOT (网络拓扑与流程图)', template: 'digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded];\n  Start -> Process -> End;\n}' },
+      { label: 'd2', description: 'D2 (现代声明式架构图)', template: 'Client -> Gateway: Request\nGateway -> Service: Process\nService -> Database: Query' },
+      { label: 'bitfield', description: 'BitField (硬件寄存器与协议字段图)', template: '{\n  reg: [\n    {bits: 8, name: "IPO", type: 8},\n    {bits: 8, name: "Payload"},\n    {bits: 16, name: "CRC32", type: 2}\n  ]\n}' },
+    ], { placeHolder: '请选择科学工程图表类型' });
+
+    if (!diagramPick) return;
+    const snippet = new vscode.SnippetString(`\`\`\`${diagramPick.label}\n\${1:${diagramPick.template}}\n\`\`\`\n$0`);
+    editor.insertSnippet(snippet);
+  });
+
+  // 8.3 命令：插入子文档引用
+  const insertDocImportDisposable = vscode.commands.registerCommand('readmd.insertDocImport', async () => {
+    const editor = await getOrCreateEditor();
+    if (!editor) return;
+
+    const input = await vscode.window.showInputBox({
+      prompt: '请输入被引用的相对 Markdown 文件路径 (例如 chapter1.md 或 ./sub/details.md)',
+      value: 'chapter1.md'
+    });
+    if (!input) return;
+    const snippet = new vscode.SnippetString(`@import "\${1:${input}}"\n$0`);
+    editor.insertSnippet(snippet);
+  });
+
+  // 8.4 命令：插入 Frontmatter 样式与演示元数据
+  const insertFrontmatterDisposable = vscode.commands.registerCommand('readmd.insertFrontmatter', async () => {
+    const editor = await getOrCreateEditor();
+    if (!editor) return;
+
+    const doc = editor.document;
+    if (doc.getText().startsWith('---')) {
+      vscode.window.showWarningMessage('当前文档已包含 Frontmatter 头部');
+      return;
+    }
+    const docTitle = doc.fileName ? path.basename(doc.fileName, path.extname(doc.fileName)) : '文档标题';
+    const frontmatter = `---\ntitle: "${docTitle}"\nauthor: "Author"\npresentation:\n  theme: "black"\n  transition: "slide"\ncustom_css: |\n  /* 全文自定义样式 */\n---\n\n`;
+    editor.edit(editBuilder => {
+      editBuilder.insert(new vscode.Position(0, 0), frontmatter);
+    });
+    vscode.window.showInformationMessage('ReadMD: 已在文档顶部插入 Frontmatter 样式与演示元数据');
   });
 
   // 9. 命令：展平 @import 引用
@@ -512,6 +596,10 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     previewDisposable,
     fixDisposable,
+    insertCodeChunkDisposable,
+    insertDiagramDisposable,
+    insertDocImportDisposable,
+    insertFrontmatterDisposable,
     presentationDisposable,
     exportPresentationDisposable,
     insertTocDisposable,
@@ -529,6 +617,7 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 function getPresentationWebviewHtml(markdown: string, title: string): string {
+  const safeMarkdown = (markdown || '').replace(/<\/textarea>/gi, '&lt;/textarea&gt;');
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -543,7 +632,7 @@ function getPresentationWebviewHtml(markdown: string, title: string): string {
     <div class="slides">
       <section data-markdown>
         <textarea data-template>
-${markdown}
+${safeMarkdown}
         </textarea>
       </section>
     </div>

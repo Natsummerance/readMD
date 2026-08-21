@@ -302,6 +302,10 @@ function cmInsertSyntax(kind) {
     case 'codeblock': insert = '```\n' + (selected || codePlaceholder) + '\n```'; cursor = sel.from + 4 + (selected || codePlaceholder).length; break;
     case 'table': insert = '| Col 1 | Col 2 |\n|---|---|\n| ' + (selected || textPlaceholder) + ' |  |'; cursor = sel.from + insert.length; break;
     case 'hr': insert = '\n---\n'; cursor = sel.from + insert.length; break;
+    case 'codechunk': openCodeChunkModal(); return;
+    case 'diagram': openDiagramModal(); return;
+    case 'docimport': openDocImportModal(); return;
+    case 'frontmatter': insertFrontmatterTemplate(); return;
     default: return;
   }
   if (insert === null) return;
@@ -326,6 +330,10 @@ function getMdCommands() {
     [_t('editor.codeInline') || '行内代码', 'code', '`' + (_t('editor.codeInline') || '代码') + '`'],
     [_t('editor.codeBlock') || '代码块', 'codeblock', '```'],
     [_t('editor.table') || '表格', 'table', '| ' + (_t('editor.table') || '列1') + ' | ' + (_t('editor.table') || '列2') + ' |'],
+    [_t('editor.codeChunk') || '交互代码块 ⚡', 'codechunk', '```python {cmd=true}'],
+    [_t('editor.diagram') || '科学工程图表 📊', 'diagram', '```plantuml / tikz / vega'],
+    [_t('editor.docImport') || '子文档引用 🔗', 'docimport', '@import "chap.md"'],
+    [_t('editor.frontmatter') || '样式元数据 ⚙', 'frontmatter', '--- title / custom_css ---'],
     [_t('editor.hr') || '分隔线', 'hr', '---'],
     [_t('formula.inline') || '行内公式', 'math', '$x^2$'],
     [_t('formula.block') || '块级公式', 'mathblock', '$$…$$'],
@@ -362,7 +370,144 @@ function renderMdCommands() {
   });
 }
 
-function runMdCommand(kind) { closeMdCommandPalette(); if (kind === 'image') openImgModal(); else if (kind === 'math' || kind === 'mathblock') openFormulaModal(kind === 'mathblock' ? 'block' : 'inline'); else cmInsertSyntax(kind); }
+function runMdCommand(kind) {
+  closeMdCommandPalette();
+  if (kind === 'image') openImgModal();
+  else if (kind === 'math' || kind === 'mathblock') openFormulaModal(kind === 'mathblock' ? 'block' : 'inline');
+  else if (kind === 'codechunk') openCodeChunkModal();
+  else if (kind === 'diagram') openDiagramModal();
+  else if (kind === 'docimport') openDocImportModal();
+  else if (kind === 'frontmatter') insertFrontmatterTemplate();
+  else cmInsertSyntax(kind);
+}
+
+/* ============================================================
+   Editor Studio PRO: Code Chunk / Diagram / Doc Import Modals
+   ============================================================ */
+
+const CODE_CHUNK_SAMPLES = {
+  python: 'import matplotlib.pyplot as plt\nimport numpy as np\n\nx = np.linspace(0, 10, 100)\nplt.figure(figsize=(6, 3))\nplt.plot(x, np.sin(x), label="sin(x)", color="#3b6ef5")\nplt.legend()\nplt.grid(True)\nplt.show()',
+  javascript: 'const data = [10, 25, 38, 45, 62];\nconsole.log("平均值:", data.reduce((a, b) => a + b, 0) / data.length);',
+  bash: '#!/usr/bin/env bash\necho "当前目录内容:"\nls -la',
+  r: 'x <- seq(0, 10, by=0.1)\ny <- sin(x)\nplot(x, y, type="l", col="blue", main="Sine Wave")',
+  php: '<?php\n$items = ["ReadMD", "Markdown", "Viewer"];\necho "项目: " . implode(" - ", $items);',
+  go: 'package main\nimport "fmt"\nfunc main() {\n    fmt.Println("Hello ReadMD Interactive Go!")\n}',
+  ruby: 'puts (1..5).map { |n| n ** 2 }.join(", ")'
+};
+
+function openCodeChunkModal() {
+  if (!state.editing) return;
+  closeMdPopups();
+  const langSel = $('code-chunk-lang');
+  const codeArea = $('code-chunk-code');
+  if (langSel && codeArea && !codeArea.value.trim()) {
+    codeArea.value = CODE_CHUNK_SAMPLES[langSel.value] || CODE_CHUNK_SAMPLES.python;
+  }
+  $('code-chunk-modal').classList.remove('hidden');
+  setTimeout(() => { if (langSel) langSel.focus(); }, 50);
+}
+
+function closeCodeChunkModal() {
+  $('code-chunk-modal').classList.add('hidden');
+  if (cmView) cmView.focus();
+}
+
+function insertCodeChunkFromModal() {
+  const lang = ($('code-chunk-lang') && $('code-chunk-lang').value) || 'python';
+  const isPlot = $('code-chunk-opt-plot') ? $('code-chunk-opt-plot').checked : true;
+  const isHide = $('code-chunk-opt-hide') ? $('code-chunk-opt-hide').checked : false;
+  const code = ($('code-chunk-code') && $('code-chunk-code').value) || '';
+
+  const flags = ['cmd=true'];
+  if (isPlot && lang === 'python') flags.push('matplotlib=true');
+  if (isHide) flags.push('hide=true');
+
+  const chunkMd = `\n\`\`\`${lang} {${flags.join(' ')}}\n${code.trim()}\n\`\`\`\n`;
+  closeCodeChunkModal();
+
+  if (cmView) {
+    const sel = cmView.state.selection.main;
+    cmView.dispatch({ changes: { from: sel.from, to: sel.to, insert: chunkMd }, selection: { anchor: sel.from + chunkMd.length } });
+    cmView.focus();
+  }
+}
+
+const DIAGRAM_SAMPLES = {
+  plantuml: '@startuml\nautonumber\nClient -> Server: 发送数据请求 (GET /api/status)\nServer -> Database: 查询记录\nDatabase --> Server: 返回数据集\nServer --> Client: 响应 200 OK\n@enduml',
+  tikz: '\\begin{tikzpicture}\n\\draw[thick,->] (0,0) -- (4,0) node[anchor=north west] {x};\n\\draw[thick,->] (0,0) -- (0,3) node[anchor=south east] {y};\n\\draw[red,domain=0:3.5] plot (\\x,{0.2*\\x*\\x}) node[right] {$f(x)=\\frac{1}{5}x^2$};\n\\end{tikzpicture}',
+  wavedrom: '{\n  signal: [\n    { name: "CLK",  wave: "p......" },\n    { name: "Data", wave: "x.345x.", data: ["head", "body", "tail"] },\n    { name: "Req",  wave: "0.1..0." },\n    { name: "Ack",  wave: "0..1.0." }\n  ]\n}',
+  'vega-lite': '{\n  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",\n  "description": "柱状统计图",\n  "data": {\n    "values": [\n      {"类别": "A", "数值": 28}, {"类别": "B", "数值": 55},\n      {"类别": "C", "数值": 43}, {"类别": "D", "数值": 91}\n    ]\n  },\n  "mark": "bar",\n  "encoding": {\n    "x": {"field": "类别", "type": "nominal", "axis": {"labelAngle": 0}},\n    "y": {"field": "数值", "type": "quantitative"}\n  }\n}',
+  graphviz: 'digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded];\n  Start -> Process -> Decision;\n  Decision -> Success [label="是"];\n  Decision -> Failure [label="否"];\n}',
+  d2: 'ReadMD -> Parser: Markdown AST\nParser -> Renderer: HTML + Math\nRenderer -> Webview: DOM 呈现',
+  bitfield: '{\n  reg: [\n    {bits: 8, name: "IPO", type: 8},\n    {bits: 8, name: "Payload"},\n    {bits: 16, name: "CRC32", type: 2}\n  ]\n}'
+};
+
+function openDiagramModal() {
+  if (!state.editing) return;
+  closeMdPopups();
+  const typeSel = $('diagram-type');
+  const codeArea = $('diagram-code');
+  if (typeSel && codeArea) {
+    codeArea.value = DIAGRAM_SAMPLES[typeSel.value] || DIAGRAM_SAMPLES.plantuml;
+  }
+  $('diagram-modal').classList.remove('hidden');
+  setTimeout(() => { if (typeSel) typeSel.focus(); }, 50);
+}
+
+function closeDiagramModal() {
+  $('diagram-modal').classList.add('hidden');
+  if (cmView) cmView.focus();
+}
+
+function insertDiagramFromModal() {
+  const type = ($('diagram-type') && $('diagram-type').value) || 'plantuml';
+  const code = ($('diagram-code') && $('diagram-code').value) || '';
+  const diagramMd = `\n\`\`\`${type}\n${code.trim()}\n\`\`\`\n`;
+  closeDiagramModal();
+
+  if (cmView) {
+    const sel = cmView.state.selection.main;
+    cmView.dispatch({ changes: { from: sel.from, to: sel.to, insert: diagramMd }, selection: { anchor: sel.from + diagramMd.length } });
+    cmView.focus();
+  }
+}
+
+function openDocImportModal() {
+  if (!state.editing) return;
+  closeMdPopups();
+  $('doc-import-modal').classList.remove('hidden');
+  if ($('doc-import-path')) $('doc-import-path').focus();
+}
+
+function closeDocImportModal() {
+  $('doc-import-modal').classList.add('hidden');
+  if (cmView) cmView.focus();
+}
+
+function insertDocImportFromModal() {
+  const path = ($('doc-import-path') && $('doc-import-path').value.trim()) || 'chapter1.md';
+  const importMd = `\n@import "${path}"\n`;
+  closeDocImportModal();
+
+  if (cmView) {
+    const sel = cmView.state.selection.main;
+    cmView.dispatch({ changes: { from: sel.from, to: sel.to, insert: importMd }, selection: { anchor: sel.from + importMd.length } });
+    cmView.focus();
+  }
+}
+
+function insertFrontmatterTemplate() {
+  const frontmatter = `---\ntitle: "文档标题"\nauthor: "作者姓名"\npresentation:\n  theme: "black"\n  transition: "slide"\ncustom_css: |\n  /* 全文自定义样式 */\n---\n\n`;
+  if (cmView) {
+    const currentDoc = cmView.state.doc.toString();
+    if (currentDoc.startsWith('---')) {
+      showToast('当前文档已存在 Frontmatter 头部');
+      return;
+    }
+    cmView.dispatch({ changes: { from: 0, to: 0, insert: frontmatter }, selection: { anchor: frontmatter.length } });
+    cmView.focus();
+  }
+}
 
 const FORMULAS = [
   ['常用','平方根','sqrt root','\\sqrt{x}'], ['常用','分式','fraction frac','\\frac{a}{b}'], ['常用','幂与下标','power subscript','x^{n}_{i}'], ['常用','二次公式','quadratic','x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}'],

@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Web ページの URL (例: https://example.com/post) を入力します。",
   "web.wait25Sec": "ポップアップ ウィンドウで認証またはログインを完了してください (25 秒待ちます)。",
   "web.wait5Min": "ポップアップ ウィンドウで認証またはログインを完了してください (最大 5 分間お待ちください)。",
-  "web.webviewUnsupported": "現在のシステム環境は、動的な対話型ウィンドウの呼び出しをサポートしていません。"
+  "web.webviewUnsupported": "現在のシステム環境は、動的な対話型ウィンドウの呼び出しをサポートしていません。",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

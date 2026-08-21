@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Introduceți adresa URL a paginii web (de ex. https://example.com/post)...",
   "web.wait25Sec": "Vă rugăm să finalizați verificarea sau să vă conectați în fereastra pop-up (așteptați 25 de secunde)...",
   "web.wait5Min": "Vă rugăm să finalizați verificarea sau să vă conectați în fereastra pop-up (așteptați până la 5 minute)...",
-  "web.webviewUnsupported": "Mediul de sistem actual nu acceptă evocarea ferestrelor interactive dinamice."
+  "web.webviewUnsupported": "Mediul de sistem actual nu acceptă evocarea ferestrelor interactive dinamice.",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

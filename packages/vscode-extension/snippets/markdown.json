@@ -1,0 +1,168 @@
+{
+  "ReadMD: Interactive Python Code Chunk": {
+    "prefix": [
+      "codechunk",
+      "pychunk",
+      "chunk"
+    ],
+    "body": [
+      "```python {cmd=true matplotlib=true}",
+      "import matplotlib.pyplot as plt",
+      "import numpy as np",
+      "",
+      "x = np.linspace(0, 10, 100)",
+      "plt.plot(x, np.sin(x), label=\"sin(x)\")",
+      "plt.legend()",
+      "plt.show()",
+      "```"
+    ],
+    "description": "插入 ReadMD 交互式 Python 代码块 (带 Matplotlib 图表输出)"
+  },
+  "ReadMD: PlantUML Sequence Diagram": {
+    "prefix": [
+      "plantuml",
+      "puml"
+    ],
+    "body": [
+      "```plantuml",
+      "@startuml",
+      "autonumber",
+      "${1:Client} -> ${2:Server}: ${3:Request (POST /api/data)}",
+      "${2:Server} -> ${4:Database}: ${5:Query}",
+      "${4:Database} --> ${2:Server}: ${6:Result}",
+      "${2:Server} --> ${1:Client}: ${7:Response 200 OK}",
+      "@enduml",
+      "```"
+    ],
+    "description": "插入 PlantUML 时序图 / 架构图"
+  },
+  "ReadMD: TikZ Vector Geometry": {
+    "prefix": [
+      "tikz",
+      "pgfplots"
+    ],
+    "body": [
+      "```tikz",
+      "\\begin{tikzpicture}",
+      "\\draw[thick,->] (0,0) -- (4,0) node[anchor=north west] {x};",
+      "\\draw[thick,->] (0,0) -- (0,3) node[anchor=south east] {y};",
+      "\\draw[red,domain=0:3.5] plot (\\x,{0.2*\\x*\\x}) node[right] {$f(x)=\\frac{1}{5}x^2$};",
+      "\\end{tikzpicture}",
+      "```"
+    ],
+    "description": "插入 TikZ / PGFPlots 矢量几何图"
+  },
+  "ReadMD: WaveDrom Timing Diagram": {
+    "prefix": [
+      "wavedrom",
+      "wave"
+    ],
+    "body": [
+      "```wavedrom",
+      "{ signal: [",
+      "  { name: \"CLK\",  wave: \"p......\" },",
+      "  { name: \"Data\", wave: \"x.345x.\", data: [\"head\", \"body\", \"tail\"] },",
+      "  { name: \"Req\",  wave: \"0.1..0.\" },",
+      "  { name: \"Ack\",  wave: \"0..1.0.\" }",
+      "]}",
+      "```"
+    ],
+    "description": "插入 WaveDrom 数字时序波形图"
+  },
+  "ReadMD: Vega-Lite Chart": {
+    "prefix": [
+      "vega",
+      "vegalite"
+    ],
+    "body": [
+      "```vega-lite",
+      "{",
+      "  \"$schema\": \"https://vega.github.io/schema/vega-lite/v5.json\",",
+      "  \"description\": \"${1:统计图表}\",",
+      "  \"data\": {",
+      "    \"values\": [",
+      "      {\"类别\": \"A\", \"数值\": 28}, {\"类别\": \"B\", \"数值\": 55},",
+      "      {\"类别\": \"C\", \"数值\": 43}, {\"类别\": \"D\", \"数值\": 91}",
+      "    ]",
+      "  },",
+      "  \"mark\": \"bar\",",
+      "  \"encoding\": {",
+      "    \"x\": {\"field\": \"类别\", \"type\": \"nominal\"},",
+      "    \"y\": {\"field\": \"数值\", \"type\": \"quantitative\"}",
+      "  }",
+      "}",
+      "```"
+    ],
+    "description": "插入 Vega-Lite 数据可视化图表"
+  },
+  "ReadMD: Graphviz DOT": {
+    "prefix": [
+      "graphviz",
+      "dot"
+    ],
+    "body": [
+      "```graphviz",
+      "digraph G {",
+      "  rankdir=LR;",
+      "  node [shape=box, style=rounded];",
+      "  ${1:Start} -> ${2:Process} -> ${3:Decision};",
+      "  ${3:Decision} -> ${4:Success} [label=\"是\"];",
+      "  ${3:Decision} -> ${5:Failure} [label=\"否\"];",
+      "}",
+      "```"
+    ],
+    "description": "插入 Graphviz DOT 有向图与流程图"
+  },
+  "ReadMD: D2 Diagram": {
+    "prefix": [
+      "d2"
+    ],
+    "body": [
+      "```d2",
+      "${1:Client} -> ${2:API Gateway}: ${3:Request}",
+      "${2:API Gateway} -> ${4:Service}: ${5:Process}",
+      "${4:Service} -> ${6:Database}: ${7:Persist}",
+      "```"
+    ],
+    "description": "插入 D2 现代架构图"
+  },
+  "ReadMD: Subdocument Import": {
+    "prefix": [
+      "@import",
+      "importmd"
+    ],
+    "body": [
+      "@import \"${1:chapter1.md}\""
+    ],
+    "description": "插入 ReadMD 模块化子文档引用"
+  },
+  "ReadMD: Slide Break": {
+    "prefix": [
+      "slide",
+      "reveal"
+    ],
+    "body": [
+      "<!-- slide -->"
+    ],
+    "description": "插入 Reveal.js 幻灯片分页符"
+  },
+  "ReadMD: Document Frontmatter": {
+    "prefix": [
+      "frontmatter",
+      "meta"
+    ],
+    "body": [
+      "---",
+      "title: \"${1:文档标题}\"",
+      "author: \"${2:作者姓名}\"",
+      "presentation:",
+      "  theme: \"black\"",
+      "  transition: \"slide\"",
+      "custom_css: |",
+      "  /* 自定义样式 */",
+      "---",
+      ""
+    ],
+    "description": "插入 ReadMD 文档样式与演示元数据"
+  }
+}

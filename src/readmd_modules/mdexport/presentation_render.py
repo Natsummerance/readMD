@@ -46,7 +46,16 @@ def parse_frontmatter(content: str) -> Tuple[Dict[str, Any], str]:
 def split_slides_structure(content: str) -> List[List[Dict[str, str]]]:
     """将 Markdown 切片为二维矩阵 [Horizontal_Slide [Vertical_SubSlide {content, note}]]."""
     _, body = parse_frontmatter(content)
-    raw_horizontal = SLIDE_SPLIT_REGEX.split(body)
+    
+    # 智能自愈分片：若文档未显式包含 <!-- slide --> 标记，则智能按 H1/H2 标题分片
+    if not SLIDE_SPLIT_REGEX.search(body):
+        heading_splits = [c.strip() for c in re.split(r'(?=^#{1,2}\s)', body, flags=re.MULTILINE) if c.strip()]
+        if len(heading_splits) > 1:
+            raw_horizontal = heading_splits
+        else:
+            raw_horizontal = [body]
+    else:
+        raw_horizontal = SLIDE_SPLIT_REGEX.split(body)
     
     slides_matrix: List[List[Dict[str, str]]] = []
     

@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "បញ្ចូល URL គេហទំព័រ (ឧ. https://example.com/post)...",
   "web.wait25Sec": "សូមបំពេញការផ្ទៀងផ្ទាត់ ឬចូលនៅក្នុងបង្អួចដែលលេចឡើង (រង់ចាំ 25 វិនាទី)…",
   "web.wait5Min": "សូមបំពេញការផ្ទៀងផ្ទាត់ ឬចូលនៅក្នុងបង្អួចដែលលេចឡើង (រង់ចាំរហូតដល់ 5 នាទី)…",
-  "web.webviewUnsupported": "បរិយាកាសប្រព័ន្ធបច្ចុប្បន្នមិនគាំទ្រការបង្កើតបង្អួចអន្តរកម្មថាមវន្តទេ។"
+  "web.webviewUnsupported": "បរិយាកាសប្រព័ន្ធបច្ចុប្បន្នមិនគាំទ្រការបង្កើតបង្អួចអន្តរកម្មថាមវន្តទេ។",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

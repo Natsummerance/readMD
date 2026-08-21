@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Vnesite URL spletne strani (npr. https://example.com/post)...",
   "web.wait25Sec": "Dokončajte preverjanje ali se prijavite v pojavnem oknu (počakajte 25 sekund)…",
   "web.wait5Min": "Dokončajte preverjanje ali se prijavite v pojavnem oknu (počakajte do 5 minut)…",
-  "web.webviewUnsupported": "Trenutno sistemsko okolje ne podpira dinamičnih interaktivnih oken"
+  "web.webviewUnsupported": "Trenutno sistemsko okolje ne podpira dinamičnih interaktivnih oken",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

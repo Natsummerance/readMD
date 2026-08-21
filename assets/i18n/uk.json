@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Введіть URL сторінки (наприклад: https://example.com/post)...",
   "web.wait25Sec": "Будь ласка, пройдіть перевірку або авторизуйтесь у вікні (очікування 25 с)…",
   "web.wait5Min": "Будь ласка, пройдіть перевірку або авторизуйтесь у вікні (очікування до 5 хв)…",
-  "web.webviewUnsupported": "Поточне системне середовище не підтримує динамічні інтерактивні вікна"
+  "web.webviewUnsupported": "Поточне системне середовище не підтримує динамічні інтерактивні вікна",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

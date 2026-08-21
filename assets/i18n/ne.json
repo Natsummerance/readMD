@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "URL प्रविष्ट गर्नुहोस् (उदा. https://example.com/post)...",
   "web.wait25Sec": "कृपया पपअप सञ्झ्यालमा प्रमाणीकरण पूरा गर्नुहोस् (२५ सेकेन्ड पर्खिँदै)...",
   "web.wait5Min": "कृपया पपअप सञ्झ्यालमा प्रमाणीकरण पूरा गर्नुहोस् (५ मिनेटसम्म)...",
-  "web.webviewUnsupported": "यस वातावरणमा गतिशील अन्तर्क्रियात्मक सञ्झ्याल समर्थित छैन"
+  "web.webviewUnsupported": "यस वातावरणमा गतिशील अन्तर्क्रियात्मक सञ्झ्याल समर्थित छैन",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

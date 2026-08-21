@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "웹페이지 URL(예: https://example.com/post)을 입력하세요...",
   "web.wait25Sec": "팝업창에서 인증을 완료하시거나 로그인을 해주세요. (25초 대기)…",
   "web.wait5Min": "팝업창에서 인증을 완료하시거나 로그인을 해주세요. (최대 5분 정도 기다리세요.)…",
-  "web.webviewUnsupported": "현재 시스템 환경은 동적 대화형 창 호출을 지원하지 않습니다."
+  "web.webviewUnsupported": "현재 시스템 환경은 동적 대화형 창 호출을 지원하지 않습니다.",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

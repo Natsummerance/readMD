@@ -927,5 +927,22 @@
   "web.urlPlaceholder": "Ange webbsidans URL (t.ex. https://example.com/post)...",
   "web.wait25Sec": "Vänligen slutför verifieringen eller logga in i popup-fönstret (vänta 25 sekunder)...",
   "web.wait5Min": "Vänligen slutför verifieringen eller logga in i popup-fönstret (vänta upp till 5 minuter)...",
-  "web.webviewUnsupported": "Den nuvarande systemmiljön stöder inte framkallande av dynamiska interaktiva fönster."
+  "web.webviewUnsupported": "Den nuvarande systemmiljön stöder inte framkallande av dynamiska interaktiva fönster.",
+  "editor.codeChunkHide": "Fold/Hide Source Code by Default",
+  "editor.codeChunkModalTitle": "Insert Interactive Code Chunk",
+  "editor.codeChunk": "Code Chunk ⚡",
+  "editor.diagramModalTitle": "Insert Scientific & Engineering Diagrams",
+  "menu.runAllChunks": "Run All Code Chunks",
+  "editor.frontmatter": "Style Frontmatter ⚙",
+  "editor.diagram": "Diagrams 📊",
+  "editor.docImportDesc": "Embed external Markdown files, source code, or diagrams seamlessly.",
+  "editor.docImport": "Subdocument Import 🔗",
+  "editor.codeChunkLang": "Language:",
+  "editor.docImportPath": "Relative Path:",
+  "editor.codeChunkPlot": "Support Plot Output (Matplotlib)",
+  "editor.diagramType": "Diagram Type:",
+  "editor.diagramTemplate": "Template:",
+  "editor.docImportModalTitle": "Insert Subdocument (@import)",
+  "editor.codeChunkCode": "Code:",
+  "menu.runAllChunksSub": "Execute all code chunks in document"
 }

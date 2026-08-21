@@ -64,10 +64,26 @@ export class ReadMDToolboxProvider implements vscode.TreeDataProvider<ToolboxIte
           }, 'file-code'),
         ]),
         new ToolboxItem('⚡ 交互式代码与学术工具', vscode.TreeItemCollapsibleState.Collapsed, 'group_interactive', [
+          new ToolboxItem('插入交互式代码块 (Python/JS/Bash/R)...', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
+            command: 'readmd.insertCodeChunk',
+            title: '插入交互代码块',
+          }, 'play'),
+          new ToolboxItem('插入科学工程图表 (PlantUML/TikZ/Vega/D2)...', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
+            command: 'readmd.insertDiagram',
+            title: '插入科学工程图表',
+          }, 'graph'),
+          new ToolboxItem('插入 @import 子文档引用...', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
+            command: 'readmd.insertDocImport',
+            title: '插入子文档引用',
+          }, 'references'),
+          new ToolboxItem('插入样式与演示元数据 (Frontmatter)...', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
+            command: 'readmd.insertFrontmatter',
+            title: '插入样式元数据',
+          }, 'gear'),
           new ToolboxItem('安全运行光标所在 Python 代码块 (Code Chunk)', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
             command: 'readmd.runCodeChunk',
             title: '运行代码块',
-          }, 'play'),
+          }, 'play-circle'),
           new ToolboxItem('扫描并解析当前工作区 BibTeX 参考文献...', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
             command: 'readmd.parseBibtex',
             title: '解析 BibTeX 参考文献',

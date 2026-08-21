@@ -2,7 +2,7 @@
   "name": "readmd-vscode",
   "displayName": "ReadMD —— 高性能 Markdown 智能预览与自愈修复",
   "description": "轻量级本地 Markdown 智能阅读与编辑扩展：实时双向同步预览、格式自愈修复、全格式文档互转、排版级 PDF/Word/EPUB 导出、LaTeX/TikZ 科学绘图、多语言 Code Chunk、Reveal.js 演说模式、@import 模块化、[TOC]目录生成与 MCP 智能体协同。",
-  "version": "2.3.4",
+  "version": "2.3.5",
   "publisher": "Natsummerance",
   "icon": "icon.png",
   "license": "MIT",
@@ -45,6 +45,10 @@
     "onCommand:readmd.exportPresentation",
     "onCommand:readmd.insertToc",
     "onCommand:readmd.insertSlide",
+    "onCommand:readmd.insertCodeChunk",
+    "onCommand:readmd.insertDiagram",
+    "onCommand:readmd.insertDocImport",
+    "onCommand:readmd.insertFrontmatter",
     "onCommand:readmd.processImports",
     "onCommand:readmd.runCodeChunk",
     "onCommand:readmd.exportDocument",
@@ -53,6 +57,12 @@
     "onCommand:readmd.setupMcpServer"
   ],
   "contributes": {
+    "snippets": [
+      {
+        "language": "markdown",
+        "path": "./snippets/markdown.json"
+      }
+    ],
     "commands": [
       {
         "command": "readmd.preview",
@@ -63,6 +73,26 @@
         "command": "readmd.fixCurrentDocument",
         "title": "ReadMD: 智能诊断并自愈修复格式错误 (Auto-Fix Markdown Formatting)",
         "icon": "$(wrench)"
+      },
+      {
+        "command": "readmd.insertCodeChunk",
+        "title": "ReadMD: 插入交互式代码块 (Insert Interactive Code Chunk)",
+        "icon": "$(play)"
+      },
+      {
+        "command": "readmd.insertDiagram",
+        "title": "ReadMD: 插入科学与工程图表 (Insert Diagram: PlantUML/TikZ/Vega)",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "readmd.insertDocImport",
+        "title": "ReadMD: 插入子文档引用 (Insert @import Module)",
+        "icon": "$(references)"
+      },
+      {
+        "command": "readmd.insertFrontmatter",
+        "title": "ReadMD: 插入文档样式与演示元数据 (Insert Frontmatter & Style)",
+        "icon": "$(gear)"
       },
       {
         "command": "readmd.openPresentation",
