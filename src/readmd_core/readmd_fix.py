@@ -358,6 +358,11 @@ def _is_punct_or_space(ch):
 def _classify(s, p, d, allow_intraword):
     before = s[p - 1] if p > 0 else ''
     after = s[p + len(d)] if p + len(d) < len(s) else ''
+    
+    # 孤立符号（两边都是空格或行首尾空白，如 '2 * 3'），不能作为强调标记，作为 stray 予以转义
+    if (not before or before.isspace()) and (not after or after.isspace()):
+        return 'close'
+
     prev_boundary = _is_punct_or_space(before)
     next_boundary = _is_punct_or_space(after)
     is_open = prev_boundary and not (after and after.isspace())
