@@ -854,12 +854,11 @@
 </div>
 
 
-<!-- 禅模式退出浮动按钮 -->
-<button id="zen-exit-btn" class="zen-exit-btn" onclick="toggleZenMode(false)" data-i18n="editor.zenExit">退出禅模式 (F11 / Esc)</button>
+<div id="zen-hover-trigger" class="zen-hover-trigger"></div>
 
 <footer id="statusbar">
   <div class="statusbar-left-group">
-    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.6</span>
+    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.7-beta.2</span>
     <span id="status-pagination" class="status-pagination hidden" role="button" tabindex="0" title="点击切换阅读模式"></span>
     <span id="status-left"></span>
   </div>
@@ -877,20 +876,31 @@
 </footer>
 
 <div id="style-custom-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="style-modal-title">
-  <div class="modal-dialog" style="max-width: 660px;">
+  <div class="modal-dialog style-modal-dialog">
     <div class="modal-header">
-      <h3 id="style-modal-title" data-i18n="dialog.styleCustomTitle">自定义样式与 HTML Head (style.less / head.html)</h3>
+      <div>
+        <h3 id="style-modal-title" data-i18n="dialog.styleCustomTitle">自定义排版样式与外部资源</h3>
+      </div>
       <button id="style-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
-    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
-      <p class="modal-desc" data-i18n="dialog.styleCustomDesc" style="margin:0;font-size:13px;color:var(--fg2);">注入自定义 CSS 规则与 HTML Head 标签，即时应用于全文渲染与导出排版。</p>
-      <div class="form-group">
-        <label for="style-custom-css" style="display:block;font-weight:600;font-size:13px;margin-bottom:6px;" data-i18n="dialog.styleCustomCssLabel">自定义 CSS 样式 (应用于阅读与导出):</label>
-        <textarea id="style-custom-css" style="width:100%;height:130px;font-family:var(--font-mono);font-size:12.5px;padding:8px 10px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg2);color:var(--fg);box-sizing:border-box;" placeholder="/* 例如：\n.markdown-body { font-size: 16px; }\n*/" data-i18n-placeholder="dialog.styleCustomCssPlaceholder"></textarea>
+    <div class="modal-body" style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;">
+      <p class="style-modal-desc" data-i18n="dialog.styleCustomDesc">注入自定义 CSS 规则与 HTML Head 标签，即时应用于阅读、编辑与导出排版。</p>
+      
+      <div class="style-presets-bar">
+        <span class="style-presets-label" data-i18n="dialog.stylePresets">常用排版模板:</span>
+        <button type="button" class="btn-preset" id="btn-preset-indent" data-i18n="dialog.stylePresetIndent">首行缩进</button>
+        <button type="button" class="btn-preset" id="btn-preset-table" data-i18n="dialog.stylePresetTable">精美表格</button>
+        <button type="button" class="btn-preset" id="btn-preset-font" data-i18n="dialog.stylePresetFont">等宽代码字体</button>
+        <button type="button" class="btn-preset" id="btn-preset-print" data-i18n="dialog.stylePresetPrint">打印分页优化</button>
       </div>
-      <div class="form-group">
-        <label for="style-custom-head" style="display:block;font-weight:600;font-size:13px;margin-bottom:6px;" data-i18n="dialog.styleCustomHeadLabel">自定义 HTML Head 注入 (引入字体、脚本或样式表):</label>
-        <textarea id="style-custom-head" style="width:100%;height:100px;font-family:var(--font-mono);font-size:12.5px;padding:8px 10px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--bg2);color:var(--fg);box-sizing:border-box;" placeholder="&lt;!-- 例如：\n&lt;link rel='stylesheet' href='https://fonts.googleapis.com/...'&gt;\n--&gt;" data-i18n-placeholder="dialog.styleCustomHeadPlaceholder"></textarea>
+
+      <div class="form-group" style="display:flex;flex-direction:column;gap:6px;">
+        <label for="style-custom-css" style="font-weight:600;font-size:13px;" data-i18n="dialog.styleCustomCssLabel">自定义 CSS 样式 (应用于阅读、编辑与导出):</label>
+        <textarea id="style-custom-css" class="style-code-editor" placeholder="/* 例如：\n.markdown-body p { text-indent: 2em; }\n*/" data-i18n-placeholder="dialog.styleCustomCssPlaceholder"></textarea>
+      </div>
+      <div class="form-group" style="display:flex;flex-direction:column;gap:6px;">
+        <label for="style-custom-head" style="font-weight:600;font-size:13px;" data-i18n="dialog.styleCustomHeadLabel">自定义 HTML Head 注入 (引入外部字体、脚本或样式表):</label>
+        <textarea id="style-custom-head" class="style-code-editor" style="min-height:90px;" placeholder="&lt;!-- 例如：\n&lt;link rel='stylesheet' href='https://fonts.googleapis.com/...'&gt;\n--&gt;" data-i18n-placeholder="dialog.styleCustomHeadPlaceholder"></textarea>
       </div>
     </div>
     <div class="modal-footer">

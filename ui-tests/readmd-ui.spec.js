@@ -600,7 +600,8 @@ test('v2.3.0 Zen Mode and Table Designer', async ({ page }) => {
   // Toggle Zen Mode
   await page.evaluate(() => toggleZenMode(true));
   await expect(page.locator('body')).toHaveClass(/zen-mode/);
-  await expect(page.locator('#zen-exit-btn')).toBeVisible();
+  await expect(page.locator('#zen-hover-trigger')).toBeVisible();
+  await expect(page.locator('#zen-exit-btn')).toBeHidden();
 
   await page.evaluate(() => toggleZenMode(false));
   await expect(page.locator('body')).not.toHaveClass(/zen-mode/);
@@ -669,7 +670,21 @@ test('v2.3.7 top bar zen mode toggle & keyboard escape shortcut', async ({ page 
   await zenBtn.click();
   expect(await page.evaluate(() => document.body.classList.contains('zen-mode'))).toBe(true);
 
-  // 2. 按 Escape 键退出禅模式
+  // 2. 验证右侧悬浮退出按钮已被彻底移除/隐藏，顶部悬停感应区存在
+  await expect(page.locator('#zen-exit-btn')).toBeHidden();
+  await expect(page.locator('#zen-hover-trigger')).toBeVisible();
+
+  // 3. 鼠标移至顶部 (clientY <= 10)，验证顶栏滑出 (添加 zen-toolbar-revealed 类)
+  await page.mouse.move(200, 5);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => document.getElementById('toolbar').classList.contains('zen-toolbar-revealed'))).toBe(true);
+
+  // 4. 鼠标向下移开 (clientY > 54)，验证顶栏滑回隐藏
+  await page.mouse.move(200, 150);
+  await page.waitForTimeout(100);
+  expect(await page.evaluate(() => document.getElementById('toolbar').classList.contains('zen-toolbar-revealed'))).toBe(false);
+
+  // 5. 按 Escape 键退出禅模式
   await page.keyboard.press('Escape');
   expect(await page.evaluate(() => document.body.classList.contains('zen-mode'))).toBe(false);
 });
@@ -724,10 +739,17 @@ test('v2.3.7 custom styles and html head injection modal', async ({ page }) => {
   const modal = page.locator('#style-custom-modal');
   await expect(modal).toBeVisible();
 
-  // 验证输入框可编辑
+  // 验证预设模板按钮可点击并插入代码
+  const indentBtn = page.locator('#btn-preset-indent');
+  await expect(indentBtn).toBeVisible();
+  await indentBtn.click();
+
   const cssInput = page.locator('#style-custom-css');
+  const cssVal = await cssInput.inputValue();
+  expect(cssVal).toContain('text-indent');
+
+  // 验证输入框可编辑
   const headInput = page.locator('#style-custom-head');
-  await cssInput.fill('/* custom style */\n.markdown-body { font-size: 18px; }');
   await headInput.fill('<!-- meta injection -->');
 
   // 取消并关闭

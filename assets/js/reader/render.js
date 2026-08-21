@@ -1247,19 +1247,23 @@ function renderAllDiagrams(container) {
 }
 window.renderAllDiagrams = renderAllDiagrams;
 
-function toggleZenMode() {
-  document.body.classList.toggle('zen-mode');
-  const isZen = document.body.classList.contains('zen-mode');
-  let exitBtn = document.getElementById('zen-exit-btn');
-  if (isZen && !exitBtn) {
-    exitBtn = document.createElement('button');
-    exitBtn.id = 'zen-exit-btn';
-    exitBtn.className = 'zen-exit-btn';
-    exitBtn.innerHTML = '<span>⤢</span> <span>退出禅模式 (F11 / Esc)</span>';
-    exitBtn.addEventListener('click', toggleZenMode);
-    document.body.appendChild(exitBtn);
+function toggleZenMode(force) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (typeof force === 'boolean') {
+    document.body.classList.toggle('zen-mode', force);
+  } else {
+    document.body.classList.toggle('zen-mode');
   }
-  showToast(isZen ? '已进入禅模式（按 F11 或 Esc 退出）' : '已退出禅模式', 1500);
+  const isZen = document.body.classList.contains('zen-mode');
+  const toolbar = document.getElementById('toolbar');
+  if (toolbar) toolbar.classList.remove('zen-toolbar-revealed');
+  
+  if (isZen) {
+    showToast(_t('toast.zenEntered') || '已进入禅模式（鼠标移至顶部可唤出工具栏，按 Esc 退出）', 2200);
+    if (window.cmView) window.cmView.focus();
+  } else {
+    showToast(_t('toast.zenExited') || '已退出禅模式', 1200);
+  }
 }
 window.toggleZenMode = toggleZenMode;
 

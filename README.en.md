@@ -17,7 +17,7 @@
 Double-click any `.md` file to read immediately. ReadMD automatically fixes common Markdown syntax errors (tables, bold, math formulas, headers) before rendering—**modifying visual display only, never altering the original file**. Built-in AI assistant, universal format converter, native OCR, web-to-Markdown, LaTeX PRO academic suite, Zen Mode, and local network mobile sharing.
 
 ![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20HarmonyOS-0078d6)
-![version](https://img.shields.io/badge/version-v2.3.7-beta.1-3b6ef5)
+![version](https://img.shields.io/badge/version-v2.3.7-beta.2-3b6ef5)
 ![webview2](https://img.shields.io/badge/runtime-WebView2%20%7C%20WebKit%20%7C%20ArkWeb-4fc08d)
 ![repo size](https://img.shields.io/github/repo-size/Natsummerance/readMD)
 ![i18n](https://img.shields.io/badge/i18n-46%20Languages-orange)
@@ -26,32 +26,32 @@ Double-click any `.md` file to read immediately. ReadMD automatically fixes comm
 <br>
 
 <p align="center">
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.1.exe">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.2.exe">
     <img src="https://img.shields.io/badge/⬇️_Windows_Setup-v2.3.7-beta.1-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Setup">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.1.exe">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.2.exe">
     <img src="https://img.shields.io/badge/⬇️_Windows_Portable-v2.3.7-beta.1-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows Portable">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.1.zip">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.2.zip">
     <img src="https://img.shields.io/badge/⬇️_macOS_(Apple_Silicon)-v2.3.7-beta.1-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.1.zip">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.2.zip">
     <img src="https://img.shields.io/badge/⬇️_macOS_(Intel)-v2.3.7-beta.1-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel">
   </a>
   <br>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.1.AppImage">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.2.AppImage">
     <img src="https://img.shields.io/badge/⬇️_Linux_AppImage-v2.3.7-beta.1-ea580c?style=for-the-badge&logo=linux&logoColor=white" alt="Linux AppImage">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.1_amd64.deb">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.2_amd64.deb">
     <img src="https://img.shields.io/badge/⬇️_Debian_Ubuntu_UOS_Deb-v2.3.7-beta.1-b91c1c?style=for-the-badge&logo=debian&logoColor=white" alt="Deb Package">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.1.hap">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.2.hap">
     <img src="https://img.shields.io/badge/📱_HarmonyOS_HAP-v2.3.7-beta.1-059669?style=for-the-badge&logo=huawei&logoColor=white" alt="HarmonyOS HAP">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-v2.3.7-beta.1.vsix">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-v2.3.7-beta.2.vsix">
     <img src="https://img.shields.io/badge/🧩_VSCode_VSIX-v2.3.7-beta.1-6366f1?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VSCode VSIX">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.1.zip">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.2.zip">
     <img src="https://img.shields.io/badge/🤖_MCP_Server-v2.3.7-beta.1-0d9488?style=for-the-badge&logo=fastapi&logoColor=white" alt="MCP Server">
   </a>
 </p>
@@ -79,15 +79,15 @@ Double-click any `.md` file to read immediately. ReadMD automatically fixes comm
 
 | OS / Platform | Architecture / Format | Direct Download Link (GitHub Release) | Description |
 | :--- | :--- | :--- | :--- |
-| 🪟 **Windows** | x64 (Installer) | [⬇️ **ReadMDSetup-v2.3.7-beta.1.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.1.exe) | Setup wizard with automatic `.md` file associations |
-| 💼 **Windows** | x64 (Portable) | [⬇️ **ReadMD-portable-v2.3.7-beta.1.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.1.exe) | Standalone single executable, no installation needed |
-| 🍏 **macOS** | Apple Silicon (M-Series) | [⬇️ **ReadMD-macos-arm64-v2.3.7-beta.1.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.1.zip) | Native build for Apple Silicon Macs with Vision OCR |
-| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.1.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.1.zip) | Native build for Intel Macs with Vision OCR |
-| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.1.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.1.AppImage) | Portable Linux AppImage for Ubuntu, Debian, Fedora, Arch |
-| 🇨🇳 **Domestic OS / Linux** | UOS / Kylin / Deepin / Debian / Ubuntu | [⬇️ **readmd_2.3.7-beta.1_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.1_amd64.deb) | Native Deb package with desktop entry & MIME association |
-| 📱 **HarmonyOS NEXT** | OpenHarmony (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.7-beta.1.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.1.hap) | HarmonyOS native application package (.hap) |
-| 🧩 **VSCode Extension** | Universal VSIX | [⬇️ **readmd-v2.3.7-beta.1.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-v2.3.7-beta.1.vsix) | Offline VSIX extension with sync preview & auto-repair |
-| 🤖 **MCP Server** | FastMCP stdio Package | [⬇️ **readmd-mcp-server-2.3.7-beta.1.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.1.zip) | Standalone FastMCP server for Claude Desktop / Cursor |
+| 🪟 **Windows** | x64 (Installer) | [⬇️ **ReadMDSetup-v2.3.7-beta.2.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.2.exe) | Setup wizard with automatic `.md` file associations |
+| 💼 **Windows** | x64 (Portable) | [⬇️ **ReadMD-portable-v2.3.7-beta.2.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.2.exe) | Standalone single executable, no installation needed |
+| 🍏 **macOS** | Apple Silicon (M-Series) | [⬇️ **ReadMD-macos-arm64-v2.3.7-beta.2.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.2.zip) | Native build for Apple Silicon Macs with Vision OCR |
+| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.2.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.2.zip) | Native build for Intel Macs with Vision OCR |
+| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.2.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.2.AppImage) | Portable Linux AppImage for Ubuntu, Debian, Fedora, Arch |
+| 🇨🇳 **Domestic OS / Linux** | UOS / Kylin / Deepin / Debian / Ubuntu | [⬇️ **readmd_2.3.7-beta.2_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.2_amd64.deb) | Native Deb package with desktop entry & MIME association |
+| 📱 **HarmonyOS NEXT** | OpenHarmony (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.7-beta.2.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.2.hap) | HarmonyOS native application package (.hap) |
+| 🧩 **VSCode Extension** | Universal VSIX | [⬇️ **readmd-v2.3.7-beta.2.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-v2.3.7-beta.2.vsix) | Offline VSIX extension with sync preview & auto-repair |
+| 🤖 **MCP Server** | FastMCP stdio Package | [⬇️ **readmd-mcp-server-2.3.7-beta.2.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.2.zip) | Standalone FastMCP server for Claude Desktop / Cursor |
 | 🔐 **SHA-256 Hashes** | Checksum List | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | Complete SHA-256 integrity verification list |
 
 ---
@@ -95,14 +95,14 @@ Double-click any `.md` file to read immediately. ReadMD automatically fixes comm
 ## 💻 Multi-System & Native OS Integration
 
 ### 1. Linux & Chinese Domestic OS (KylinOS / UOS / Deepin / openEuler)
-- **Direct Installation**: Download [`readmd_2.3.7-beta.1_amd64.deb`](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.1_amd64.deb) to install directly, or run [`ReadMD-linux-x86_64-v2.3.7-beta.1.AppImage`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.1.AppImage).
+- **Direct Installation**: Download [`readmd_2.3.7-beta.2_amd64.deb`](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.2_amd64.deb) to install directly, or run [`ReadMD-linux-x86_64-v2.3.7-beta.2.AppImage`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.2.AppImage).
 - **Environment Detection**: `src/readmd_modules/linux_native.py` detects OS distributions and dynamically adapts Wayland / X11 display backends.
 - **Desktop Themes**: Probes DDE, UKUI, GNOME, and KDE dark mode settings via `gsettings`.
 - **Desktop Entry**: Includes FreeDesktop launcher and MIME XML declaration.
 - **Linglong Format**: Declarative `packages/linglong/linglong.yaml` for UOS AppStore distribution.
 
 ### 2. HarmonyOS NEXT (Pure Harmony) & OpenHarmony
-- **HAP Package**: Download [`ReadMD-harmonyos-v2.3.7-beta.1.hap`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.1.hap) or compile from source in DevEco Studio NEXT (`packages/harmonyos-app/`).
+- **HAP Package**: Download [`ReadMD-harmonyos-v2.3.7-beta.2.hap`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.2.hap) or compile from source in DevEco Studio NEXT (`packages/harmonyos-app/`).
 - **ArkUI + ArkWeb**: Reuses ReadMD offline rendering engine inside ArkWeb containers.
 - **ReadMDBridge (`ReadMDBridge.ets`)**:
   - Clipboard integration (`@ohos.pasteboard`);

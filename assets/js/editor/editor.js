@@ -566,9 +566,13 @@ function toggleZenMode(enable) {
     isZenMode = !isZenMode;
   }
   document.body.classList.toggle('zen-mode', isZenMode);
+  const toolbar = document.getElementById('toolbar');
+  if (toolbar) toolbar.classList.remove('zen-toolbar-revealed');
   if (isZenMode) {
-    showToast(_t('toast.zenEntered') || '已进入禅模式 (按 F11 或 Esc 退出)', 2000);
+    showToast(_t('toast.zenEntered') || '已进入禅模式（鼠标移至顶部可唤出工具栏，按 Esc 退出）', 2200);
     if (cmView) cmView.focus();
+  } else {
+    showToast(_t('toast.zenExited') || '已退出禅模式', 1200);
   }
 }
 

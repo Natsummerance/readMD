@@ -160,12 +160,6 @@ function bindEvents() {
     }
   });
 
-  // 自定义样式模态框
-  if ($('style-modal-close')) $('style-modal-close').addEventListener('click', closeStyleModal);
-  if ($('style-modal-cancel')) $('style-modal-cancel').addEventListener('click', closeStyleModal);
-  if ($('style-modal-save')) $('style-modal-save').addEventListener('click', saveStyleModal);
-  if ($('style-custom-modal')) $('style-custom-modal').addEventListener('click', e => { if (e.target === $('style-custom-modal')) closeStyleModal(); });
-
   // 交互式代码块模态框事件
   if ($('code-chunk-modal-close')) $('code-chunk-modal-close').addEventListener('click', closeCodeChunkModal);
   if ($('code-chunk-cancel')) $('code-chunk-cancel').addEventListener('click', closeCodeChunkModal);
@@ -565,6 +559,66 @@ function bindEvents() {
   if ($('fm-modal-cancel')) $('fm-modal-cancel').addEventListener('click', closeFrontmatterModal);
   if ($('fm-modal-insert')) $('fm-modal-insert').addEventListener('click', insertFrontmatterFromModal);
   if ($('frontmatter-modal')) $('frontmatter-modal').addEventListener('click', e => { if (e.target === $('frontmatter-modal')) closeFrontmatterModal(); });
+
+  // 样式定制弹窗事件与预设模板
+  if ($('style-modal-close')) $('style-modal-close').addEventListener('click', closeStyleModal);
+  if ($('style-modal-cancel')) $('style-modal-cancel').addEventListener('click', closeStyleModal);
+  if ($('style-modal-save')) $('style-modal-save').addEventListener('click', saveStyleModal);
+  if ($('style-custom-modal')) $('style-custom-modal').addEventListener('click', e => { if (e.target === $('style-custom-modal')) closeStyleModal(); });
+
+  const STYLE_PRESETS = {
+    indent: '/* 中文段落首行缩进 2 字符 */\n.markdown-body p {\n  text-indent: 2em;\n  margin-bottom: 0.8em;\n}\n\n',
+    table: '/* 现代化精美表格与圆角 */\n.markdown-body table {\n  border-collapse: separate;\n  border-spacing: 0;\n  border-radius: 8px;\n  overflow: hidden;\n  border: 1px solid var(--border);\n}\n.markdown-body th {\n  background: var(--bg2);\n  font-weight: 600;\n}\n.markdown-body tr:nth-child(even) {\n  background: rgba(127, 127, 127, 0.05);\n}\n\n',
+    font: '/* 优化代码块与等宽字体 */\n.markdown-body code, .markdown-body pre {\n  font-family: "Fira Code", "Cascadia Code", Consolas, Monaco, monospace !important;\n  font-size: 13.5px;\n}\n\n',
+    print: '/* 打印与 PDF 导出分页规则 */\n@media print {\n  h1, h2, h3 { page-break-after: avoid; }\n  pre, blockquote, table { page-break-inside: avoid; }\n}\n\n'
+  };
+
+  function insertStylePreset(type) {
+    const textarea = $('style-custom-css');
+    if (!textarea) return;
+    const snippet = STYLE_PRESETS[type] || '';
+    if (!snippet) return;
+    if (textarea.value && !textarea.value.endsWith('\n')) textarea.value += '\n';
+    textarea.value += snippet;
+    textarea.focus();
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    showToast(_t('toast.stylePresetAdded') || '已添加排版模板', 1000);
+  }
+
+  if ($('btn-preset-indent')) $('btn-preset-indent').addEventListener('click', () => insertStylePreset('indent'));
+  if ($('btn-preset-table')) $('btn-preset-table').addEventListener('click', () => insertStylePreset('table'));
+  if ($('btn-preset-font')) $('btn-preset-font').addEventListener('click', () => insertStylePreset('font'));
+  if ($('btn-preset-print')) $('btn-preset-print').addEventListener('click', () => insertStylePreset('print'));
+
+  // 样式代码编辑框 Tab 缩进与快捷保存
+  ['style-custom-css', 'style-custom-head'].forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const start = el.selectionStart;
+        const end = el.selectionEnd;
+        el.value = el.value.substring(0, start) + '  ' + el.value.substring(end);
+        el.selectionStart = el.selectionEnd = start + 2;
+      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        saveStyleModal();
+      }
+    });
+  });
+
+  // 禅模式顶部工具栏动态悬停唤出 (仿 Windows 隐藏任务栏逻辑)
+  window.addEventListener('mousemove', e => {
+    if (!document.body.classList.contains('zen-mode')) return;
+    const toolbar = $('toolbar');
+    if (!toolbar) return;
+    if (e.clientY <= 10) {
+      toolbar.classList.add('zen-toolbar-revealed');
+    } else if (e.clientY > 54) {
+      toolbar.classList.remove('zen-toolbar-revealed');
+    }
+  });
 
   if ($('lang-modal')) $('lang-modal').addEventListener('click', e => { if (e.target === $('lang-modal')) if (window.i18n) window.i18n.closeModal(); });
   if ($('table-modal')) $('table-modal').addEventListener('click', e => { if (e.target === $('table-modal')) closeTableModal(); });
