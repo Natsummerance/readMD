@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 
 from audit_copy import audit_package
+from content_memory import load_records
 from build_story import build_story
 from export_wechat import export_package
 from validate_package import validate_package
@@ -24,6 +25,7 @@ def build_package(
     package_dir: Path,
     repo_root: Path,
     repository: str = "Natsummerance/readMD",
+    memory_path: Path | None = None,
 ) -> tuple[dict, dict]:
     package_dir.mkdir(parents=True, exist_ok=True)
     (package_dir / "images").mkdir(exist_ok=True)
@@ -35,7 +37,13 @@ def build_package(
         shot_library_path=repo_root / "showcase" / "shot_library.json",
     )
     (package_dir / "story.json").write_text(json.dumps(story, ensure_ascii=False, indent=2), encoding="utf-8")
-    metadata = generate_copy(story, repository=repository, previous_release=previous_release)
+    history = load_records(memory_path) if memory_path else []
+    metadata = generate_copy(
+        story,
+        repository=repository,
+        previous_release=previous_release,
+        history=history,
+    )
     (package_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
     (package_dir / "title.txt").write_text(metadata["title"], encoding="utf-8")
     (package_dir / "body.txt").write_text(metadata["body"], encoding="utf-8")
@@ -63,6 +71,7 @@ def main() -> int:
     parser.add_argument("--diff", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repository", default="Natsummerance/readMD")
+    parser.add_argument("--memory", type=Path, default=Path(__file__).parents[1] / "content" / "publication-ledger.jsonl")
     parser.add_argument("--skip-compose", action="store_true", help="Prepare text/story only; used before capture")
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[2]
@@ -74,6 +83,7 @@ def main() -> int:
         package_dir=args.output,
         repo_root=repo_root,
         repository=args.repository,
+        memory_path=args.memory,
     )
     errors: list[str] = []
     if not args.skip_compose:

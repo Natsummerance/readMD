@@ -8,6 +8,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from content_memory import load_records, summarize
+
 
 BANNED_REPLACEMENTS = {
     "二维码": "扫码",
@@ -38,9 +40,60 @@ def _title_candidates(story: dict[str, Any]) -> list[dict[str, str]]:
     ]
 
 
-def generate_copy(story: dict[str, Any], *, repository: str, previous_release: str) -> dict[str, Any]:
+def _select_title(candidates: list[dict[str, str]], history: list[dict[str, Any]] | None) -> tuple[dict[str, str], dict[str, Any]]:
+    if not history:
+        chosen = candidates[0]
+        return chosen, {
+            "strategy": "formula order without publication history",
+            "scores": {item["formula_id"]: 0 for item in candidates},
+            "avoided_formulas": [],
+            "sample_size": 0,
+        }
+
+    summary = summarize(history)
+    stats = summary["formula_stats"]
+    max_score = max((item["score"] for item in stats.values()), default=0.0)
+    recent = set(summary["recent_formulas"])
+    scored: list[tuple[float, dict[str, str]]] = []
+    avoided: list[str] = []
+    for index, candidate in enumerate(candidates):
+        formula = candidate["formula_id"]
+        stat = stats.get(formula)
+        score = 10 - index
+        reason_bits = []
+        if stat:
+            score += (stat["score"] / max_score) * 20 if max_score else 0
+            reason_bits.append("historical performance")
+        else:
+            score += 3
+            reason_bits.append("unexplored")
+        if formula in recent:
+            score -= 12
+            avoided.append(formula)
+            reason_bits.append("recent fatigue penalty")
+        scored.append((score, candidate))
+        candidate.setdefault("_reason", "+".join(reason_bits))
+    chosen = max(scored, key=lambda item: item[0])[1]
+    return chosen, {
+        "strategy": "historical winner with recent-fatigue penalty",
+        "scores": {candidate["formula_id"]: round(value, 3) for value, candidate in scored},
+        "reasons": {candidate["formula_id"]: candidate.pop("_reason", "") for candidate in candidates},
+        "avoided_formulas": sorted(set(avoided)),
+        "sample_size": len(history),
+    }
+
+
+def generate_copy(
+    story: dict[str, Any],
+    *,
+    repository: str,
+    previous_release: str,
+    history: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     candidates = _title_candidates(story)
-    chosen_title = next((item for item in candidates if len(item["text"]) <= 20), candidates[0])
+    selected_title, title_selection = _select_title([dict(item) for item in candidates], history)
+    valid_candidates = [item for item in candidates if len(item["text"]) <= 20]
+    chosen_title = selected_title if len(selected_title["text"]) <= 20 else next(iter(valid_candidates), candidates[0])
     chosen_title["text"] = _clean(chosen_title["text"])
     release = story["release"]
     prerelease = story["version_state"] != "release"
@@ -113,6 +166,7 @@ def generate_copy(story: dict[str, Any], *, repository: str, previous_release: s
         "title": chosen_title["text"],
         "title_formula_id": chosen_title["formula_id"],
         "title_candidates": candidates,
+        "title_selection": title_selection,
         "body": body,
         "topics": TOPICS,
         "version_state": story["version_state"],
@@ -128,10 +182,12 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--story", type=Path, required=True)
     parser.add_argument("--repository", default="Natsummerance/readMD")
+    parser.add_argument("--history", type=Path, default=Path(__file__).parents[1] / "content" / "publication-ledger.jsonl")
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     story = json.loads(args.story.read_text(encoding="utf-8"))
-    result = generate_copy(story, repository=args.repository, previous_release=story["previous_release"])
+    history = content_memory.load_records(args.history)
+    result = generate_copy(story, repository=args.repository, previous_release=story["previous_release"], history=history)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "metadata.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     (args.output_dir / "title.txt").write_text(result["title"], encoding="utf-8")

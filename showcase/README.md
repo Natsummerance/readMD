@@ -36,3 +36,14 @@ python showcase/scripts/watch_and_publish.py
 watcher 会把 CI 产出的 `content-package.zip` 解到 `showcase/publish-work/`，重写图片路径后调用 `xhs-publish`。状态保存在 `showcase/publish-state.json`；同一 release 只会发布一次，失败最多自动重试两次。
 
 WeChat 文件只做人工复制/粘贴发布，watcher 不会自动操作公众号。
+
+## 发布反馈资产
+
+发布后把真实数据写进 JSON 文件，再追加到 `showcase/content/publication-ledger.jsonl`：
+
+```powershell
+python showcase/scripts/content_memory.py record --record feedback.json
+python showcase/scripts/content_memory.py summary
+```
+
+记录字段包括 release、标题、公式 ID、钩子类型、曝光、赞、藏、评、转发、关注和一句复盘。下一次构建会读取这份资产：优先选择验证过的公式，并对最近连续使用过的公式降权。

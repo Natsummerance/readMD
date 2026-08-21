@@ -20,6 +20,7 @@ sys.path.insert(0, str(ROOT / "showcase" / "scripts"))
 
 build_story = importlib.import_module("build_story")
 audit_copy = importlib.import_module("audit_copy")
+content_memory = importlib.import_module("content_memory")
 export_wechat = importlib.import_module("export_wechat")
 validate_package = importlib.import_module("validate_package")
 watch_and_publish = importlib.import_module("watch_and_publish")
@@ -468,6 +469,70 @@ class ExportWechatTest(unittest.TestCase):
             path.write_text('<!doctype html><html><body><p>缺行内样式</p></body></html>', encoding="utf-8")
             errors = export_wechat.validate_wechat_html(path)
         self.assertTrue(any("paragraph inline style" in error for error in errors))
+
+
+class ContentMemoryTest(unittest.TestCase):
+    def record(self, formula: str = "#61", release: str = "v1.0.0", title: str = "别再把Markdown只当笔记了") -> dict:
+        return {
+            "release": release,
+            "title": title,
+            "title_formula_id": formula,
+            "hook_type": "stop-misuse",
+            "published_at": "2026-08-22T10:00:00Z",
+            "impressions": 1000,
+            "likes": 40,
+            "collects": 60,
+            "comments": 30,
+            "shares": 10,
+            "follows": 5,
+            "lessons": "Outcome hook drew presentation questions.",
+        }
+
+    def test_append_load_and_deduplicate_publication_assets(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            first = self.record()
+            content_memory.append_record(store, first)
+            with self.assertRaises(ValueError):
+                content_memory.append_record(store, self.record())
+            second = self.record(formula="#36", release="v1.0.1", title="不用重做PPT，Markdown直接放映")
+            content_memory.append_record(store, second)
+            records = content_memory.load_records(store)
+        self.assertEqual([item["release"] for item in records], ["v1.0.0", "v1.0.1"])
+
+    def test_summary_ranks_verified_formula_performance(self) -> None:
+        records = [
+            self.record(release="v1.0.0", formula="#61"),
+            {**self.record(release="v1.0.1", formula="#36"), "impressions": 2000, "likes": 120, "collects": 180, "comments": 50, "shares": 20},
+        ]
+        summary = content_memory.summarize(records)
+        self.assertEqual(summary["record_count"], 2)
+        self.assertEqual(summary["recommended_formula"], "#36")
+        self.assertGreater(summary["formula_stats"]["#36"]["score"], summary["formula_stats"]["#61"]["score"])
+
+    def test_copy_selection_uses_history_and_avoids_fatigue(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = {
+                "release": "v1.1.0",
+                "version_state": "prerelease",
+                "angle": "ReadMD 让同一份 Markdown 直接放映",
+                "primary_shot": "presentation.reveal",
+                "claims": [{"id": "reveal", "shot_ids": ["presentation.reveal"], "user_value": "放映"}],
+            }
+            history = [
+                {**self.record(release="v1.0.9", formula="#36"), "likes": 2, "collects": 2, "comments": 2, "shares": 0},
+                {**self.record(release="v1.0.8", formula="#36", title="ReadMD更新：4个文档工作台升级"), "impressions": 800, "likes": 3, "collects": 3, "comments": 1, "shares": 1},
+                {**self.record(release="v1.0.7", formula="#61"), "likes": 120, "collects": 180, "comments": 50, "shares": 25},
+            ]
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v1.0.9",
+                history=history,
+            )
+        self.assertEqual(result["title_formula_id"], "#61")
+        self.assertIn("#36", result["title_selection"]["avoided_formulas"])
+        self.assertIn("historical", result["title_selection"]["strategy"])
 
 
 class WatcherTest(unittest.TestCase):
