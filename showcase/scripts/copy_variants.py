@@ -13,76 +13,7 @@ from typing import Any
 
 from audit_copy import audit_copy
 from content_memory import load_learning_records, partition_records, summarize
-
-
-HOOK_FRAMES = {
-    "outcome-led": [
-        (
-            "core",
-            "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。",
-            "你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。",
-        ),
-        (
-            "workflow",
-            "Markdown 写完只是前半段；这次不用再把它搬进 PPT，放映和修改在同一条工作流里。",
-            "你会先用课程讲义、组会报告还是技术分享来试？评论区说说场景。",
-        ),
-        (
-            "decision",
-            "定稿后还要把 Markdown 复制成 PPT，这一步最磨人；现在不用复制，MD 可以直接上台。",
-            "哪一份 Markdown 最适合先试？代码、表格还是公式？评论区告诉我。",
-        ),
-        (
-            "source",
-            "写完的 Markdown 不用复制到别的工具；ReadMD 把阅读、修改和放映接成一条路。",
-            "你会拿哪类内容先跑一遍完整流程？讲义、论文还是技术笔记？",
-        ),
-    ],
-    "identity-led": [
-        (
-            "core",
-            "如果你要把笔记变成课程讲义、组会报告或论文汇报，就知道重做 PPT 有多烦。ReadMD 把这一步砍掉：Markdown 直接放映。",
-            "你下一份要上台的 Markdown 是讲义、组会报告还是论文？评论区说说场景。",
-        ),
-        (
-            "workflow",
-            "如果你常写论文或组会报告，就不用再把 Markdown 复制进 PPT；同一份文件可以直接讲。",
-            "你的下一场分享是课程、组会还是论文答辩？评论区对号入座。",
-        ),
-        (
-            "decision",
-            "要上台讲自己文档的人，最怕格式在复制时走样；MD 这次能直接保留工作流。",
-            "你会讲哪一份材料？课程讲义、组会报告还是论文教程？",
-        ),
-        (
-            "source",
-            "给要把笔记变成正式汇报的人：不用重建 PPT，Markdown 就是演示入口。",
-            "你会先讲哪一类文件？论文、组会记录还是课程讲义？",
-        ),
-    ],
-    "mechanism-curiosity": [
-        (
-            "core",
-            "很多人把 Markdown 写完就停在笔记里；其实同一份文件可以直接上台放映。ReadMD 让写作和演示留在同一条路径。",
-            "你想先试哪类内容：代码、表格还是公式？评论区告诉我，我会优先打磨这条路径。",
-        ),
-        (
-            "workflow",
-            "写完的 Markdown 为什么能直接放映？因为写作、预览和演示被接成同一条路径。",
-            "你想先验证哪一段链路：代码、表格还是公式？评论区选一个。",
-        ),
-        (
-            "decision",
-            "它不用把 Markdown 另存为幻灯片；写完后的阅读、修改和放映共用同一个源文件。",
-            "你最想保住哪种排版？代码块、表格还是公式？评论区补充场景。",
-        ),
-        (
-            "source",
-            "从写作到上台只有一条路径；Markdown 不用导出成 PPT，显示状态由同一份源文件驱动。",
-            "你会先用哪个机制试一遍：公式渲染、表格分片还是代码运行？",
-        ),
-    ],
-}
+from copy_profiles import frames_for_story
 
 TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12")
 ENDPOINT_COOLDOWN_RELEASES = 8
@@ -146,12 +77,9 @@ def projected_composition(story: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _replace_paragraphs(body: str, opening: str, closing: str) -> str:
+def _replace_paragraphs(body: str, opening: str, closing: str, known_closings: set[str]) -> str:
     paragraphs = [item.strip() for item in body.split("\n\n") if item.strip()]
     paragraphs[0] = opening
-    # A shorter source document may have padded trailing facts after the base CTA.
-    # Remove every known strategy CTA before adding this variant's closing question.
-    known_closings = {frame[2] for frames in HOOK_FRAMES.values() for frame in frames}
     paragraphs[1:] = [item for item in paragraphs[1:] if item not in known_closings]
     paragraphs.append(closing)
     return "\n\n".join(paragraphs)
@@ -159,12 +87,14 @@ def _replace_paragraphs(body: str, opening: str, closing: str) -> str:
 
 def build_variants(*, story: dict[str, Any], base_metadata: dict[str, Any]) -> list[dict[str, Any]]:
     variants: list[dict[str, Any]] = []
+    hook_frames = frames_for_story(story)
+    known_closings = {frame[2] for frames in hook_frames.values() for frame in frames}
     candidate_map = {item["formula_id"]: item for item in base_metadata.get("title_candidates", [])}
     title_options = [candidate_map[formula_id] for formula_id in TITLE_FORMULAS]
     if len(title_options) != len(TITLE_FORMULAS):
         missing = sorted(set(TITLE_FORMULAS) - set(candidate_map))
         raise ValueError(f"title experiment formulas missing: {missing}")
-    for hook_type, frames in HOOK_FRAMES.items():
+    for hook_type, frames in hook_frames.items():
         for frame_id, opening, closing in frames:
             for title_option in title_options:
                 variant = copy.deepcopy(base_metadata)
@@ -177,7 +107,9 @@ def build_variants(*, story: dict[str, Any], base_metadata: dict[str, Any]) -> l
                 variant["title"] = title_option["text"]
                 if len(variant["title"]) > 20:
                     raise ValueError(f"variant title exceeds 20 characters: {variant['title']}")
-                variant["body"] = _replace_paragraphs(variant["body"], opening, closing)
+                variant["body"] = _replace_paragraphs(
+                    variant["body"], opening, closing, known_closings
+                )
                 report = audit_copy(
                     story=story,
                     metadata=variant,
@@ -249,14 +181,25 @@ def choose_variant(
     used_closings = {str(record["closing"]) for record in recent_fingerprints if record.get("closing")}
 
     def remaining_frame_count(hook_type: str) -> int:
+        frames = {
+            (
+                variant.get("copy_frame"),
+                _normalize_for_originality(text_fingerprints(variant["body"])["opening"]),
+                _normalize_for_originality(text_fingerprints(variant["body"])["closing"]),
+            )
+            for variant in variants
+            if variant["strategy"] == hook_type
+        }
         return sum(
             1
-            for _, opening, closing in HOOK_FRAMES[hook_type]
-            if _normalize_for_originality(opening) not in used_openings
-            and _normalize_for_originality(closing) not in used_closings
+            for _, opening, closing in frames
+            if opening not in used_openings and closing not in used_closings
         )
 
-    frame_inventory = {hook_type: remaining_frame_count(hook_type) for hook_type in HOOK_FRAMES}
+    frame_inventory = {
+        hook_type: remaining_frame_count(hook_type)
+        for hook_type in {variant["strategy"] for variant in variants}
+    }
     max_frame_inventory = max(frame_inventory.values(), default=0)
 
     ranked: list[dict[str, Any]] = []

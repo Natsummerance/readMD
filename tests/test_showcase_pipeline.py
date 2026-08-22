@@ -194,6 +194,7 @@ class WriteCopyTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
             story = write_story(out)
+            story["primary_shot"] = "presentation.reveal"
             result = write_copy.generate_copy(
                 story,
                 repository="Natsummerance/readMD",
@@ -301,6 +302,57 @@ class WriteCopyTest(unittest.TestCase):
             )
         self.assertIn("课程讲义、组会报告、技术分享或论文汇报", result["body"])
         self.assertNotIn("代码教程、技术笔记或示例文档", result["body"])
+
+    def test_copy_follows_selected_mechanism_instead_of_presentation(self) -> None:
+        story = {
+            "release": "v1.2.0",
+            "previous_release": "v1.1.0",
+            "version_state": "prerelease",
+            "primary_shot": "editor.diagram-picker",
+            "angle": "ReadMD 把科研图表放进同一条 Markdown 工作流",
+            "selected_shots": ["overview.reader", "editor.diagram-picker"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "diagram", "user_value": "科研图表从面板选择", "shot_ids": ["editor.diagram-picker"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        result = write_copy.generate_copy(
+            story,
+            repository="Natsummerance/readMD",
+            previous_release="v1.1.0",
+        )
+        self.assertEqual(result["primary_shot"], "editor.diagram-picker")
+        self.assertIn("图表", result["title"])
+        first_paragraph = result["body"].split("\n\n", 1)[0]
+        self.assertIn("图表", first_paragraph)
+        self.assertIn("不用", first_paragraph)
+        self.assertNotIn("复制进 PPT", first_paragraph)
+        self.assertIn("手写一遍就报废的图表语法", result["body"])
+        self.assertIn("论文里的哪类内容画图", result["body"])
+
+    def test_variant_pool_follows_selected_mechanism(self) -> None:
+        story = {
+            "release": "v1.2.0",
+            "previous_release": "v1.1.0",
+            "version_state": "prerelease",
+            "primary_shot": "editor.diagram-picker",
+            "angle": "ReadMD 把科研图表放进同一条 Markdown 工作流",
+            "selected_shots": ["overview.reader", "editor.diagram-picker"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "diagram", "user_value": "科研图表从面板选择", "shot_ids": ["editor.diagram-picker"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        base = write_copy.generate_copy(
+            story,
+            repository="Natsummerance/readMD",
+            previous_release="v1.1.0",
+        )
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        self.assertEqual(len(variants), 60)
+        self.assertTrue(all(item["_report"]["ok"] for item in variants))
+        self.assertTrue(all("图表" in item["body"].split("\n\n", 1)[0] for item in variants))
+        self.assertTrue(all("复制进 PPT" not in item["body"].split("\n\n", 1)[0] for item in variants))
 
 
 class ValidatePackageTest(unittest.TestCase):
@@ -1011,9 +1063,9 @@ class CopyVariantsTest(unittest.TestCase):
                 "body_trigrams": sorted(copy_variants.text_trigrams(chosen["body"])),
             })
 
-        self.assertGreater(reused_endpoints, 0)
-        self.assertEqual(len(used_openings), 12)
-        self.assertEqual(len(used_closings), 12)
+        self.assertEqual(reused_endpoints, 0)
+        self.assertGreaterEqual(len(used_openings), 24)
+        self.assertGreaterEqual(len(used_closings), 24)
 
 
 class PerformanceReportTest(unittest.TestCase):

@@ -11,10 +11,16 @@ from typing import Any
 from style_audit import AI_CLICHES, GENERIC_ADJECTIVES
 
 
-TASK_TERMS = ("写完", "复制", "PPT", "格式", "折磨", "讲")
+TASK_TERMS = (
+    "写完", "复制", "PPT", "格式", "折磨", "讲",
+    "长文档", "目录", "图表", "代码", "资料", "分享", "导出",
+)
 REMOVAL_TERMS = ("砍掉", "不用", "别再", "直接", "省掉")
 SCENARIO_TERMS = ("课程", "讲义", "组会", "技术分享", "论文", "汇报")
-CONCRETE_ANSWER_TERMS = ("Markdown", "MD", "PPT", "代码", "表格", "公式", "讲义", "组会", "论文")
+CONCRETE_ANSWER_TERMS = (
+    "Markdown", "MD", "PPT", "代码", "表格", "公式", "讲义", "组会", "论文",
+    "图表", "资料", "文档", "报告",
+)
 
 
 def _load(path: Path) -> dict[str, Any]:

@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from content_memory import load_learning_records, partition_records, summarize
+from copy_profiles import profile_for_story
 
 
 BANNED_REPLACEMENTS = {
@@ -28,15 +29,12 @@ def _clean(value: str) -> str:
 
 
 def _title_candidates(story: dict[str, Any]) -> list[dict[str, str]]:
+    profile = profile_for_story(story)
     visual_count = sum(1 for claim in story["claims"] if claim.get("shot_ids"))
     number = max(3, min(visual_count, 8))
     return [
-        {"formula_id": "#36", "text": "不用重做PPT，Markdown直接放映"},
-        {"formula_id": "#9", "text": "Markdown写完，居然能直接上台"},
-        {"formula_id": "#22", "text": "给要上台讲文档的人做的MD工具"},
-        {"formula_id": "#61", "text": "别再把Markdown只当笔记了"},
-        {"formula_id": "#12", "text": f"看完这{number}张，你会重新看Markdown"},
-        {"formula_id": "#26", "text": f"ReadMD更新：{number}个文档工作台升级"},
+        {"formula_id": formula_id, "text": text.replace("{number}", str(number))}
+        for formula_id, text in profile["titles"].items()
     ]
 
 
@@ -141,6 +139,7 @@ def generate_copy(
     valid_candidates = [item for item in candidates if len(item["text"]) <= 20]
     chosen_title = selected_title if len(selected_title["text"]) <= 20 else next(iter(valid_candidates), candidates[0])
     chosen_title["text"] = _clean(chosen_title["text"])
+    profile = profile_for_story(story)
     focus = _comment_focus(history)
     release = story["release"]
     prerelease = story["version_state"] != "release"
@@ -148,17 +147,15 @@ def generate_copy(
     visual_claims = [claim for claim in story["claims"] if claim.get("shot_ids")]
     invisible_claims = [claim for claim in story["claims"] if not claim.get("shot_ids")]
 
-    opening = "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。"
+    opening = profile["opening"]
     disclosure = f"先说清楚：这是 ReadMD {release} {state_text}，文件仍然保留在你自己的电脑里。"
     evidence = "下面的画面来自当前版本真实运行状态，不是概念图。"
-    primary_paragraphs = {
-        "presentation.reveal": "放映界面可以直接换主题、调字号、切开场和转场；AST 保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。",
-        "overview.editor": "编辑器和实时预览在同一屏里，先改内容再确认排版，不用在几个窗口之间来回追版本。",
-        "editor.diagram-picker": "图表从面板里选，渲染结果留在文档里；适合论文、报告和需要长期维护的技术笔记。",
-        "convert.home": "打开、转换、AI 和网页抓取都从一个本地入口开始，资料不会被拆到一串临时工具里。",
-    }
     primary_id = story.get("primary_shot", "overview.reader")
-    primary_text = primary_paragraphs.get(primary_id, _clean(next((item["user_value"] for item in visual_claims if primary_id.replace("-", ".") in item["shot_ids"]), story["angle"])))
+    primary_text = profile.get(
+        "primary_paragraph",
+        _clean(next((item["user_value"] for item in visual_claims if primary_id.replace("-", ".") in item["shot_ids"]), story["angle"])),
+    )
+    primary_text = f"{primary_text}它省掉的是{profile['saved_step']}。"
     supporting = [claim for claim in visual_claims if primary_id not in claim["shot_ids"]]
     support_bits = {
         "overview.editor": "改稿时回到同屏预览",
@@ -180,9 +177,9 @@ def generate_copy(
 
     paragraphs.extend(
         [
-            f"如果你常处理{COMMENT_SCENARIOS[focus]}，它会省掉“重新做一遍演示稿”这一步。",
+            f"如果你常处理{COMMENT_SCENARIOS[focus]}，它会省掉“{profile['saved_step']}”这一步。",
             f"安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 {repository}，进仓库后点 Releases 就能找到对应平台。",
-            "你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。",
+            profile["cta"],
         ]
     )
     body = "\n\n".join(paragraphs)
@@ -211,6 +208,7 @@ def generate_copy(
 
     return {
         "title": chosen_title["text"],
+        "primary_shot": primary_id,
         "title_formula_id": chosen_title["formula_id"],
         "title_candidates": candidates,
         "title_selection": title_selection,

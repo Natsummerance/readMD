@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from style_audit import audit_style
+from copy_profiles import profile_for_story
 
 
 BANNED = ("公众号", "微信", "闲鱼", "咸鱼", "转卖", "出票", "转让", "售票", "二维码", "淘口令", "淘宝")
@@ -30,24 +31,29 @@ def _repeated_sentence(text: str) -> list[str]:
 
 def _score_title(metadata: dict[str, Any]) -> tuple[int, list[str]]:
     title = str(metadata.get("title", ""))
+    formula_id = str(metadata.get("title_formula_id", ""))
     score = 0.0
     if len(title) <= 20:
         score += 4
-    if re.fullmatch(r"#\d+", str(metadata.get("title_formula_id", ""))):
+    if re.fullmatch(r"#\d+", formula_id):
         score += 4
+    # Formula families carry a psychological trigger even when the surface wording
+    # relies on identity (#22), curiosity (#9), or number anchoring (#12).
+    formula_signal = formula_id in {"#9", "#12", "#22", "#26", "#36", "#61"}
     tensions = sum(term in title.lower() for term in ("不用", "别再", "居然", "直接", "看完", "重新", "上台", "ppt", "md", "markdown"))
-    score += 7 if tensions >= 2 else (3 if tensions == 1 else 0)
+    score += 7 if tensions >= 2 else (4 if tensions == 1 or formula_signal else 0)
     return round(score), []
 
 
-def _score_hook(body: str) -> tuple[int, list[str]]:
+def _score_hook(body: str, story: dict[str, Any]) -> tuple[int, list[str]]:
     first = body.split("\n\n", 1)[0]
+    contract = profile_for_story(story)["hook_contract"]
     score = 0.0
-    if any(term in first for term in ("写完", "复制", "PPT", "格式", "折磨")):
+    if any(term in first for term in contract["task"]):
         score += 5
-    if any(term in first for term in ("砍掉", "不用", "别再", "直接")):
+    if any(term in first for term in contract["removal"]):
         score += 5
-    if "Markdown" in first or "MD" in first:
+    if any(term.lower() in first.lower() for term in contract["mechanism"]):
         score += 5
     return round(score), []
 
@@ -126,7 +132,7 @@ def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: 
     style_report = audit_style(str(metadata.get("body", "")), audience="程序员")
     scores = {
         "title": _score_title(metadata)[0],
-        "hook": _score_hook(str(metadata.get("body", "")))[0],
+        "hook": _score_hook(str(metadata.get("body", "")), story)[0],
         "focus": _score_focus(story, str(metadata.get("body", "")))[0],
         "evidence": _score_evidence(story, str(metadata.get("body", "")))[0],
         "voice": _score_voice(story, metadata, str(metadata.get("body", "")))[0],
