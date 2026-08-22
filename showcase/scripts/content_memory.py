@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +50,35 @@ def append_record(path: Path, record: dict[str, Any]) -> dict[str, Any]:
     return clean
 
 
+def upsert_record(path: Path, record: dict[str, Any]) -> dict[str, Any]:
+    records = load_records(path)
+    existing = next((item for item in records if item.get("release") == record.get("release")), None)
+    if not existing:
+        return append_record(path, record)
+    clean_patch = {key: value for key, value in record.items() if value is not None}
+    merged = {**existing, **clean_patch, "release": record["release"]}
+    _validate_record(merged)
+    return update_record(path, record["release"], clean_patch)
+
+
+def update_record(path: Path, release: str, patch: dict[str, Any]) -> dict[str, Any]:
+    records = load_records(path)
+    index = next((index for index, item in enumerate(records) if item.get("release") == release), None)
+    if index is None:
+        raise ValueError(f"release not found in ledger: {release}")
+    clean_patch = {key: value for key, value in patch.items() if value is not None}
+    merged = {**records[index], **clean_patch, "release": release, "updated_at": datetime.now(timezone.utc).isoformat()}
+    _validate_record(merged)
+    records[index] = merged
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.parent.mkdir(parents=True, exist_ok=True)
+    with temporary.open("w", encoding="utf-8") as handle:
+        for record in records:
+            handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+    temporary.replace(path)
+    return merged
+
+
 def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
     formulas: dict[str, dict[str, Any]] = {}
     for record in records:
@@ -89,12 +119,19 @@ def main() -> int:
     record_parser = commands.add_parser("record")
     record_parser.add_argument("--ledger", type=Path, default=Path(__file__).parents[1] / "content" / "publication-ledger.jsonl")
     record_parser.add_argument("--record", type=Path, required=True, help="JSON file containing one publication result")
+    update_parser = commands.add_parser("update")
+    update_parser.add_argument("--ledger", type=Path, default=Path(__file__).parents[1] / "content" / "publication-ledger.jsonl")
+    update_parser.add_argument("--release", required=True)
+    update_parser.add_argument("--record", type=Path, required=True, help="JSON file containing metric fields to merge")
     summary_parser = commands.add_parser("summary")
     summary_parser.add_argument("--ledger", type=Path, default=Path(__file__).parents[1] / "content" / "publication-ledger.jsonl")
     args = parser.parse_args()
     if args.command == "record":
         record = json.loads(args.record.read_text(encoding="utf-8"))
         print(json.dumps(append_record(args.ledger, record), ensure_ascii=False, indent=2))
+    elif args.command == "update":
+        patch = json.loads(args.record.read_text(encoding="utf-8"))
+        print(json.dumps(update_record(args.ledger, args.release, patch), ensure_ascii=False, indent=2))
     else:
         print(json.dumps(summarize(load_records(args.ledger)), ensure_ascii=False, indent=2))
     return 0

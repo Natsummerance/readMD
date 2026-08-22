@@ -11,9 +11,11 @@ import subprocess
 import sys
 import time
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from content_memory import upsert_record
 
 DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
 STATE_VERSION = 1
@@ -99,7 +101,47 @@ def query_status(publisher: Path, title: str) -> dict[str, Any]:
     return {}
 
 
-def process_package(zip_path: Path, work_root: Path, state_path: Path, publisher: Path, max_attempts: int, draft: bool) -> bool:
+def seed_feedback_ledger(
+    ledger_path: Path,
+    package_dir: Path,
+    *,
+    release: str,
+    title: str,
+    publisher_result: dict[str, Any],
+    audit_status: str | None,
+) -> dict[str, Any]:
+    metadata = json.loads((package_dir / "metadata.json").read_text(encoding="utf-8"))
+    record = {
+        "release": release,
+        "title": title,
+        "title_formula_id": str(metadata.get("title_formula_id", "unknown")),
+        "hook_type": str(metadata.get("hook_type", metadata.get("strategy", "unknown"))),
+        "published_at": datetime.now(timezone.utc).isoformat(),
+        "impressions": 0,
+        "likes": 0,
+        "collects": 0,
+        "comments": 0,
+        "shares": 0,
+        "follows": 0,
+        "metrics_status": "pending",
+        "note_id": publisher_result.get("noteId"),
+        "publisher_target_id": publisher_result.get("targetId"),
+        "published_url": publisher_result.get("url"),
+        "audit_status": audit_status,
+        "lessons": "Published automatically; awaiting platform metrics and manual review.",
+    }
+    return upsert_record(ledger_path, record)
+
+
+def process_package(
+    zip_path: Path,
+    work_root: Path,
+    state_path: Path,
+    publisher: Path,
+    max_attempts: int,
+    draft: bool,
+    ledger_path: Path | None = None,
+) -> bool:
     state = load_state(state_path)
     token = hashlib.sha256(zip_path.read_bytes()).hexdigest()[:16]
     record = state["packages"].setdefault(token, {"zip": str(zip_path), "attempts": 0, "status": "pending"})
@@ -148,6 +190,22 @@ def process_package(zip_path: Path, work_root: Path, state_path: Path, publisher
                 status = query_status(publisher, title)
                 record["audit_status"] = status.get("status")
                 record["status_result"] = status
+                if ledger_path:
+                    try:
+                        feedback = seed_feedback_ledger(
+                            ledger_path,
+                            package_dir,
+                            release=release,
+                            title=title,
+                            publisher_result=result,
+                            audit_status=record["audit_status"],
+                        )
+                        record["ledger_status"] = "seeded"
+                        record["ledger_release"] = feedback["release"]
+                    except Exception as ledger_error:
+                        # Publishing already happened; retain the failure for repair instead of losing it.
+                        record["ledger_status"] = "seed_failed"
+                        record["ledger_error"] = str(ledger_error)
             record["result"] = result
             print(json.dumps({"ok": True, "token": token, "status": record["status"], "release": release, "title": title}, ensure_ascii=False))
             return True
@@ -171,6 +229,7 @@ def main() -> int:
     parser.add_argument("--work-dir", type=Path, default=Path("showcase/publish-work"))
     parser.add_argument("--state", type=Path, default=Path("showcase/publish-state.json"))
     parser.add_argument("--publisher", type=Path, default=DEFAULT_PUBLISHER)
+    parser.add_argument("--ledger", type=Path, default=Path(__file__).parents[1] / "content" / "publication-ledger.jsonl")
     parser.add_argument("--max-attempts", type=int, choices={1, 2, 3}, default=3)
     parser.add_argument("--interval", type=float, default=30.0)
     parser.add_argument("--once", action="store_true")
@@ -181,7 +240,15 @@ def main() -> int:
     while True:
         zips = sorted(args.watch_dir.glob("*.zip"), key=lambda path: path.stat().st_mtime)
         for zip_path in zips:
-            process_package(zip_path, args.work_dir, args.state, args.publisher, args.max_attempts, args.draft)
+            process_package(
+                zip_path,
+                args.work_dir,
+                args.state,
+                args.publisher,
+                args.max_attempts,
+                args.draft,
+                ledger_path=args.ledger,
+            )
         if args.once:
             return 0
         time.sleep(max(5.0, args.interval))

@@ -604,6 +604,37 @@ class ContentMemoryTest(unittest.TestCase):
         self.assertIn("#36", result["title_selection"]["avoided_formulas"])
         self.assertIn("historical", result["title_selection"]["strategy"])
 
+    def test_update_record_merges_real_metrics_without_duplicating(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            content_memory.append_record(store, self.record(release="v1.0.0"))
+            updated = content_memory.update_record(store, "v1.0.0", {
+                "impressions": 2400,
+                "likes": 130,
+                "collects": 190,
+                "comments": 45,
+                "shares": 22,
+                "follows": 18,
+                "lessons": "Identity opening drew thesis questions.",
+                "metrics_status": "complete",
+            })
+            records = content_memory.load_records(store)
+        self.assertEqual(updated["impressions"], 2400)
+        self.assertEqual(updated["release"], "v1.0.0")
+        self.assertEqual(updated["title_formula_id"], "#61")
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["metrics_status"], "complete")
+
+    def test_update_record_rejects_invalid_metrics_and_preserves_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            content_memory.append_record(store, self.record(release="v1.0.0"))
+            before = store.read_text(encoding="utf-8")
+            with self.assertRaises(ValueError):
+                content_memory.update_record(store, "v1.0.0", {"likes": -1})
+            after = store.read_text(encoding="utf-8")
+        self.assertEqual(after, before)
+
 
 class WatcherTest(unittest.TestCase):
     def make_package_zip(self, root: Path) -> Path:
@@ -619,6 +650,9 @@ class WatcherTest(unittest.TestCase):
         (package / "body.txt").write_text("正文", encoding="utf-8")
         metadata = {
             "title": "标题",
+            "strategy": "outcome-led",
+            "hook_type": "outcome-led",
+            "title_formula_id": "#36",
             "topics": ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"],
             "images": ["Z:/remote/package/images/xhs-01-cover.jpg"],
         }
@@ -683,7 +717,8 @@ class WatcherTest(unittest.TestCase):
             watch_and_publish.subprocess.run = fake_run
             try:
                 published = watch_and_publish.process_package(
-                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
+                    ledger_path=root / "publication-ledger.jsonl",
                 )
             finally:
                 watch_and_publish.subprocess.run = original_run
@@ -696,6 +731,16 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(record["note_id"], "note-1")
             self.assertEqual(record["published_url"], "https://example.com/note")
             self.assertEqual(record["audit_status"], "审核中")
+            records = content_memory.load_records(root / "publication-ledger.jsonl")
+            self.assertEqual(len(records), 1)
+            feedback = records[0]
+            self.assertEqual(feedback["release"], "v1.2.3")
+            self.assertEqual(feedback["title_formula_id"], "#36")
+            self.assertEqual(feedback["hook_type"], "outcome-led")
+            self.assertEqual(feedback["note_id"], "note-1")
+            self.assertEqual(feedback["published_url"], "https://example.com/note")
+            self.assertEqual(feedback["metrics_status"], "pending")
+            self.assertEqual(feedback["impressions"], 0)
 
 
 if __name__ == "__main__":

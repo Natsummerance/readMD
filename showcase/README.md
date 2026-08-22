@@ -39,10 +39,10 @@ WeChat 文件只做人工复制/粘贴发布，watcher 不会自动操作公众�
 
 ## 发布反馈资产
 
-发布后把真实数据写进 JSON 文件，再追加到 `showcase/content/publication-ledger.jsonl`：
+真实发布后 watcher 会自动在 `showcase/content/publication-ledger.jsonl` 建立零指标待补录记录。拿到平台数据后，把可补录字段写进 JSON 文件并按 release 更新：
 
 ```powershell
-python showcase/scripts/content_memory.py record --record feedback.json
+python showcase/scripts/content_memory.py update --release "v2.3.7-beta.3" --record feedback.json
 python showcase/scripts/content_memory.py summary
 ```
 
