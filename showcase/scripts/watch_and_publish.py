@@ -103,6 +103,11 @@ def query_status(publisher: Path, title: str) -> dict[str, Any]:
     return {}
 
 
+def _status_confirms_note(status: dict[str, Any]) -> bool:
+    """A found note is authoritative even when its audit tab is still unknown."""
+    return bool(status.get("noteId") or status.get("status") in {"审核中", "已发布"})
+
+
 def seed_feedback_ledger(
     ledger_path: Path,
     package_dir: Path,
@@ -272,6 +277,47 @@ def process_package(
             return True
         record["status"] = "retrying" if record["attempts"] < max_attempts else "failed"
         record["error"] = (completed.stderr or completed.stdout or "unknown publisher error").strip()
+        if not draft:
+            try:
+                recovery_status = query_status(publisher, title)
+                record["failure_status_result"] = recovery_status
+                if _status_confirms_note(recovery_status):
+                    # The click may have succeeded before a timeout/output failure.
+                    # Never retry a note the platform has already accepted.
+                    record["status"] = "published"
+                    record["reconciled"] = True
+                    record["note_id"] = recovery_status.get("noteId")
+                    record["audit_status"] = recovery_status.get("status")
+                    record["status_result"] = recovery_status
+                    record["result"] = {
+                        "published": True,
+                        "reconciled": True,
+                        "noteId": record["note_id"],
+                        "url": recovery_status.get("url"),
+                    }
+                    if ledger_path:
+                        feedback = seed_feedback_ledger(
+                            ledger_path,
+                            package_dir,
+                            release=release,
+                            title=title,
+                            publisher_result=record["result"],
+                            audit_status=record["audit_status"],
+                        )
+                        record["ledger_status"] = "seeded"
+                        record["ledger_release"] = feedback["release"]
+                    print(json.dumps({
+                        "ok": True,
+                        "token": token,
+                        "status": "published",
+                        "reconciled": True,
+                        "release": release,
+                        "title": title,
+                    }, ensure_ascii=False))
+                    return True
+            except Exception as reconcile_error:
+                record["reconcile_error"] = str(reconcile_error)
+        record["status"] = "retrying" if record["attempts"] < max_attempts else "failed"
         print(json.dumps({"ok": False, "token": token, "status": record["status"], "error": record["error"]}, ensure_ascii=False), file=sys.stderr)
         return False
     except Exception as exc:

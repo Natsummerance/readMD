@@ -2646,6 +2646,74 @@ class WatcherTest(unittest.TestCase):
         self.assertEqual(record["status"], "retrying")
         self.assertIn("wechat-qa.json is not green", record["error"])
 
+    def test_reconciles_accepted_note_after_publisher_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                if command[2] == "publish":
+                    return SimpleNamespace(returncode=1, stdout="", stderr="publisher output timeout")
+                if command[2] == "status":
+                    payload = {"status": "审核中", "noteId": "recovered-note"}
+                    return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+                raise AssertionError(f"unexpected publisher command: {command}")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
+                    ledger_path=root / "publication-ledger.jsonl",
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            feedback_records = content_memory.load_records(root / "publication-ledger.jsonl")
+        self.assertTrue(published)
+        self.assertEqual([call[2] for call in calls], ["publish", "status"])
+        self.assertEqual(record["status"], "published")
+        self.assertTrue(record["reconciled"])
+        self.assertEqual(record["note_id"], "recovered-note")
+        self.assertEqual(record["audit_status"], "审核中")
+        self.assertEqual(len(feedback_records), 1)
+        self.assertEqual(feedback_records[0]["note_id"], "recovered-note")
+
+    def test_unknown_status_failure_is_not_treated_as_published(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                if command[2] == "publish":
+                    return SimpleNamespace(returncode=1, stdout="", stderr="publisher output timeout")
+                if command[2] == "status":
+                    payload = {"status": "未知", "noteId": None}
+                    return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+                raise AssertionError(f"unexpected publisher command: {command}")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                    ledger_path=root / "publication-ledger.jsonl",
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+        self.assertFalse(published)
+        self.assertEqual([call[2] for call in calls], ["publish", "status"])
+        self.assertEqual(record["status"], "failed")
+        self.assertFalse(record.get("reconciled", False))
+        self.assertFalse((root / "publication-ledger.jsonl").exists())
+
     def test_rejects_tampered_release_evidence_before_publish(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
