@@ -636,11 +636,12 @@ class CopyVariantsTest(unittest.TestCase):
         }
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
         variants = copy_variants.build_variants(story=story, base_metadata=base)
-        self.assertEqual(len(variants), 15)
+        self.assertEqual(len(variants), 60)
         self.assertEqual(len({item["strategy"] for item in variants}), 3)
-        self.assertEqual(len({item["variant_id"] for item in variants}), 15)
+        self.assertEqual(len({item["variant_id"] for item in variants}), 60)
+        self.assertEqual({item["copy_frame"] for item in variants}, {"core", "workflow", "decision", "source"})
         self.assertEqual(len({item["title"] for item in variants}), 5)
-        self.assertEqual(len({item["body"] for item in variants}), 3)
+        self.assertEqual(len({item["body"] for item in variants}), 12)
         for hook_type in ("outcome-led", "identity-led", "mechanism-curiosity"):
             formulas = {item["title_formula_id"] for item in variants if item["hook_type"] == hook_type}
             self.assertEqual(formulas, {"#36", "#9", "#22", "#61", "#12"})
@@ -745,7 +746,7 @@ class CopyVariantsTest(unittest.TestCase):
             "body_sha256": hashlib.sha256(reused["body"].encode("utf-8")).hexdigest(),
         }]
         chosen, report = copy_variants.choose_variant(variants, history)
-        self.assertNotEqual(chosen["strategy"], "outcome-led")
+        self.assertNotEqual(chosen["variant_id"], "outcome-led__36")
         outcome_report = next(item for item in report["ranked"] if item["variant_id"] == "outcome-led__36")
         self.assertFalse(outcome_report["ok"])
         self.assertTrue(any("body hash" in failure for failure in next(
@@ -763,7 +764,7 @@ class CopyVariantsTest(unittest.TestCase):
             **fingerprints,
         }]
         chosen, report = copy_variants.choose_variant(variants, history)
-        self.assertNotEqual(chosen["strategy"], "outcome-led")
+        self.assertNotEqual(chosen["variant_id"], "outcome-led__36")
         outcome_report = next(item for item in report["ranked"] if item["variant_id"] == "outcome-led__36")
         self.assertFalse(outcome_report["ok"])
         self.assertTrue(any("opening" in failure for failure in outcome_report["hard_failures"]))
@@ -781,10 +782,43 @@ class CopyVariantsTest(unittest.TestCase):
         }]
         chosen, report = copy_variants.choose_variant(variants, history)
         outcome_report = next(item for item in report["ranked"] if item["variant_id"] == "outcome-led__36")
-        self.assertNotEqual(chosen["strategy"], "outcome-led")
+        self.assertNotEqual(chosen["variant_id"], "outcome-led__36")
         self.assertFalse(outcome_report["ok"])
         self.assertGreaterEqual(outcome_report["max_body_similarity"], 0.85)
         self.assertTrue(any("near-duplicate body" in failure for failure in outcome_report["hard_failures"]))
+
+    def test_copy_frame_pool_survives_twelve_releases(self) -> None:
+        history: list[dict] = []
+        used_openings: set[str] = set()
+        used_closings: set[str] = set()
+
+        for index in range(12):
+            story = self.variant_story()
+            story["release"] = f"v1.{index + 1}.0"
+            base = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release=f"v1.{index}.0",
+            )
+            variants = copy_variants.build_variants(story=story, base_metadata=base)
+            chosen, report = copy_variants.choose_variant(variants, history)
+            fingerprints = copy_variants.text_fingerprints(chosen["body"])
+            used_openings.add(fingerprints["opening"])
+            used_closings.add(fingerprints["closing"])
+            history.append({
+                **self.history_record(
+                    story["release"],
+                    chosen["hook_type"],
+                    chosen["title_formula_id"],
+                ),
+                "variant_id": chosen["variant_id"],
+                **fingerprints,
+                "body_trigrams": sorted(copy_variants.text_trigrams(chosen["body"])),
+            })
+            self.assertTrue(report["ok"], report["ranked"])
+
+        self.assertEqual(len(used_openings), 12)
+        self.assertEqual(len(used_closings), 12)
 
 
 class PerformanceReportTest(unittest.TestCase):

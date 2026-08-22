@@ -19,7 +19,7 @@ node showcase/scripts/compose_cards.js showcase/output/package
 python showcase/scripts/build_package.py --output showcase/output/package --finalize
 ```
 
-完整构建会先生成 3 种钩子 × 5 个标题公式共 15 个实验组合；每个组合都有稳定 `variant_id`，语义评分、置信门控后的钩子/标题表现、近期疲劳和跨发布原创性共同决定最终稿。任一维度不足 2 次发布或 1000 次曝光时只做探索，不给历史加分。每个变体都会计算整稿哈希、开头指纹、结尾指纹和三元组相似度；命中历史正文、开头或结尾，或与历史稿相似度 ≥85% 的变体直接淘汰。选择证据写入 `variants.json`。随后生成 `wechat/readmd-wechat.html`。该 HTML 只用行内样式，不包含脚本、外链、class、id 或图片；`wechat/wechat-qa.json` 也必须为 `{"ok":true}` 才允许进入发布队列。
+完整构建会先生成 12 种叙事框架 × 5 个标题公式共 60 个实验组合；每个组合都有稳定 `variant_id` 和 `copy_frame`，语义评分、置信门控后的钩子/标题表现、近期疲劳和跨发布原创性共同决定最终稿。任一维度不足 2 次发布或 1000 次曝光时只做探索，不给历史加分。选择器还会跟踪各钩子剩余未用框架，避免某个高分钩子提前耗尽素材。每个变体都会计算整稿哈希、开头指纹、结尾指纹和三元组相似度；命中历史正文、开头或结尾，或与历史稿相似度 ≥85% 的变体直接淘汰。选择证据写入 `variants.json`。随后生成 `wechat/readmd-wechat.html`。该 HTML 只用行内样式，不包含脚本、外链、class、id 或图片；`wechat/wechat-qa.json` 也必须为 `{"ok":true}` 才允许进入发布队列。
 
 构建还会把 `pattern-library.json` 里的 10 条热门机制变成机器检查，结果写入 `pattern-audit.json`；封面钩子、痛点移除、第二张完整主界面、单一主功能、具体场景提问、UI 区域契约和 DOM 设计审计任一失败都会阻止发布。随后生成 `review-dashboard.html`，把 QA 门禁、语义评分、变体排序、反馈账本和最终文案汇总成一个自包含审查面板。`build_package.py --finalize` 会最后聚合所有门禁；任一面板失败都会把 `qa.json` 置红。
 

@@ -15,19 +15,73 @@ from audit_copy import audit_copy
 from content_memory import load_learning_records, partition_records, summarize
 
 
-HOOKS = {
-    "outcome-led": (
-        "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。",
-        "你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。",
-    ),
-    "identity-led": (
-        "如果你要把笔记变成课程讲义、组会报告或论文汇报，就知道重做 PPT 有多烦。ReadMD 把这一步砍掉：Markdown 直接放映。",
-        "你下一份要上台的 Markdown 是讲义、组会报告还是论文？评论区说说场景。",
-    ),
-    "mechanism-curiosity": (
-        "很多人把 Markdown 写完就停在笔记里；其实同一份文件可以直接上台放映。ReadMD 让写作和演示留在同一条路径。",
-        "你想先试哪类内容：代码、表格还是公式？评论区告诉我，我会优先打磨这条路径。",
-    ),
+HOOK_FRAMES = {
+    "outcome-led": [
+        (
+            "core",
+            "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。",
+            "你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。",
+        ),
+        (
+            "workflow",
+            "Markdown 写完只是前半段；这次不用再把它搬进 PPT，放映和修改在同一条工作流里。",
+            "你会先用课程讲义、组会报告还是技术分享来试？评论区说说场景。",
+        ),
+        (
+            "decision",
+            "定稿后还要把 Markdown 复制成 PPT，这一步最磨人；现在不用复制，MD 可以直接上台。",
+            "哪一份 Markdown 最适合先试？代码、表格还是公式？评论区告诉我。",
+        ),
+        (
+            "source",
+            "写完的 Markdown 不用复制到别的工具；ReadMD 把阅读、修改和放映接成一条路。",
+            "你会拿哪类内容先跑一遍完整流程？讲义、论文还是技术笔记？",
+        ),
+    ],
+    "identity-led": [
+        (
+            "core",
+            "如果你要把笔记变成课程讲义、组会报告或论文汇报，就知道重做 PPT 有多烦。ReadMD 把这一步砍掉：Markdown 直接放映。",
+            "你下一份要上台的 Markdown 是讲义、组会报告还是论文？评论区说说场景。",
+        ),
+        (
+            "workflow",
+            "如果你常写论文或组会报告，就不用再把 Markdown 复制进 PPT；同一份文件可以直接讲。",
+            "你的下一场分享是课程、组会还是论文答辩？评论区对号入座。",
+        ),
+        (
+            "decision",
+            "要上台讲自己文档的人，最怕格式在复制时走样；MD 这次能直接保留工作流。",
+            "你会讲哪一份材料？课程讲义、组会报告还是论文教程？",
+        ),
+        (
+            "source",
+            "给要把笔记变成正式汇报的人：不用重建 PPT，Markdown 就是演示入口。",
+            "你会先讲哪一类文件？论文、组会记录还是课程讲义？",
+        ),
+    ],
+    "mechanism-curiosity": [
+        (
+            "core",
+            "很多人把 Markdown 写完就停在笔记里；其实同一份文件可以直接上台放映。ReadMD 让写作和演示留在同一条路径。",
+            "你想先试哪类内容：代码、表格还是公式？评论区告诉我，我会优先打磨这条路径。",
+        ),
+        (
+            "workflow",
+            "写完的 Markdown 为什么能直接放映？因为写作、预览和演示被接成同一条路径。",
+            "你想先验证哪一段链路：代码、表格还是公式？评论区选一个。",
+        ),
+        (
+            "decision",
+            "它不用把 Markdown 另存为幻灯片；写完后的阅读、修改和放映共用同一个源文件。",
+            "你最想保住哪种排版？代码块、表格还是公式？评论区补充场景。",
+        ),
+        (
+            "source",
+            "从写作到上台只有一条路径；Markdown 不用导出成 PPT，显示状态由同一份源文件驱动。",
+            "你会先用哪个机制试一遍：公式渲染、表格分片还是代码运行？",
+        ),
+    ],
 }
 
 TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12")
@@ -96,7 +150,7 @@ def _replace_paragraphs(body: str, opening: str, closing: str) -> str:
     paragraphs[0] = opening
     # A shorter source document may have padded trailing facts after the base CTA.
     # Remove every known strategy CTA before adding this variant's closing question.
-    known_closings = {closing for _, closing in HOOKS.values()}
+    known_closings = {frame[2] for frames in HOOK_FRAMES.values() for frame in frames}
     paragraphs[1:] = [item for item in paragraphs[1:] if item not in known_closings]
     paragraphs.append(closing)
     return "\n\n".join(paragraphs)
@@ -109,24 +163,27 @@ def build_variants(*, story: dict[str, Any], base_metadata: dict[str, Any]) -> l
     if len(title_options) != len(TITLE_FORMULAS):
         missing = sorted(set(TITLE_FORMULAS) - set(candidate_map))
         raise ValueError(f"title experiment formulas missing: {missing}")
-    for hook_type, (opening, closing) in HOOKS.items():
-        for title_option in title_options:
-            variant = copy.deepcopy(base_metadata)
-            variant["variant_id"] = f"{hook_type}__{title_option['formula_id'].lstrip('#')}"
-            variant["strategy"] = hook_type
-            variant["hook_type"] = hook_type
-            variant["title_formula_id"] = title_option["formula_id"]
-            variant["title"] = title_option["text"]
-            if len(variant["title"]) > 20:
-                raise ValueError(f"variant title exceeds 20 characters: {variant['title']}")
-            variant["body"] = _replace_paragraphs(variant["body"], opening, closing)
-            report = audit_copy(
-                story=story,
-                metadata=variant,
-                composition=projected_composition(story),
-            )
-            variant["_report"] = report
-            variants.append(variant)
+    for hook_type, frames in HOOK_FRAMES.items():
+        for frame_id, opening, closing in frames:
+            for title_option in title_options:
+                variant = copy.deepcopy(base_metadata)
+                base_variant_id = f"{hook_type}__{title_option['formula_id'].lstrip('#')}"
+                variant["variant_id"] = base_variant_id if frame_id == "core" else f"{base_variant_id}__{frame_id}"
+                variant["copy_frame"] = frame_id
+                variant["strategy"] = hook_type
+                variant["hook_type"] = hook_type
+                variant["title_formula_id"] = title_option["formula_id"]
+                variant["title"] = title_option["text"]
+                if len(variant["title"]) > 20:
+                    raise ValueError(f"variant title exceeds 20 characters: {variant['title']}")
+                variant["body"] = _replace_paragraphs(variant["body"], opening, closing)
+                report = audit_copy(
+                    story=story,
+                    metadata=variant,
+                    composition=projected_composition(story),
+                )
+                variant["_report"] = report
+                variants.append(variant)
     return variants
 
 
@@ -168,6 +225,12 @@ def choose_variant(
 
     hook_stats = dimension_stats("hook_type")
     formula_stats = dimension_stats("title_formula_id")
+    hook_usage = {
+        str(record.get("hook_type", "")): sum(
+            1 for item in records if str(item.get("hook_type", "")) == str(record.get("hook_type", ""))
+        )
+        for record in records
+    }
     max_hook_score = max((item["score"] for item in hook_stats.values()), default=0.0)
     max_formula_score = max((item["score"] for item in formula_stats.values()), default=0.0)
 
@@ -176,6 +239,19 @@ def choose_variant(
         for record in records
         if record.get("body_sha256") or record.get("opening") or record.get("closing") or record.get("body_trigrams")
     ]
+    used_openings = {str(record["opening"]) for record in records if record.get("opening")}
+    used_closings = {str(record["closing"]) for record in records if record.get("closing")}
+
+    def remaining_frame_count(hook_type: str) -> int:
+        return sum(
+            1
+            for _, opening, closing in HOOK_FRAMES[hook_type]
+            if _normalize_for_originality(opening) not in used_openings
+            and _normalize_for_originality(closing) not in used_closings
+        )
+
+    frame_inventory = {hook_type: remaining_frame_count(hook_type) for hook_type in HOOK_FRAMES}
+    max_frame_inventory = max(frame_inventory.values(), default=0)
 
     ranked: list[dict[str, Any]] = []
     max_body_similarity = 0.0
@@ -211,6 +287,7 @@ def choose_variant(
             report["hard_failures"] = sorted(set(report.get("hard_failures", []) + originality_failures))
             report["ok"] = False
         hook_type = variant["hook_type"]
+        available_frames = frame_inventory[hook_type]
         if hook_type in recent_hooks:
             adjustment -= 6
             reasons.append("recent hook fatigue penalty")
@@ -227,12 +304,23 @@ def choose_variant(
             bonus = formula_stat["score"] / max_formula_score * 8
             adjustment += bonus
             reasons.append("historical title performance bonus")
+        hook_deficit = max(hook_usage.values(), default=0) - hook_usage.get(hook_type, 0)
+        coverage_bonus = hook_deficit * 8
+        if coverage_bonus:
+            adjustment += coverage_bonus
+            reasons.append("underexplored dimension coverage bonus")
+        inventory_deficit = max_frame_inventory - available_frames
+        if inventory_deficit:
+            adjustment -= inventory_deficit * 35
+            reasons.append(f"scarce copy-frame inventory penalty ({available_frames} remaining)")
         ranked.append({
             "variant_id": variant["variant_id"],
             "strategy": variant["strategy"],
             "title": variant["title"],
             "title_formula_id": variant["title_formula_id"],
             "hook_type": hook_type,
+            "copy_frame": variant["copy_frame"],
+            "remaining_copy_frames": available_frames,
             "semantic_score": report["total_score"],
             "history_adjustment": round(adjustment, 3),
             "adjusted_score": round(report["total_score"] + adjustment, 3),
@@ -246,7 +334,7 @@ def choose_variant(
 
     eligible = [item for item in ranked if item["ok"]]
     if not eligible:
-        raise ValueError("no copy variant passes semantic QA")
+        raise ValueError("no copy variant passes semantic and originality QA; refresh the copy frame pool")
     winner_summary = max(eligible, key=lambda item: item["adjusted_score"])
     winner = next(variant for variant in variants if variant["variant_id"] == winner_summary["variant_id"])
     return winner, {
@@ -256,9 +344,11 @@ def choose_variant(
         "ok": True,
         "originality_gate": "pass",
         "selection_rule": (
-            "semantic score plus confidence-gated historical hook/title performance minus recent fatigue; "
-            "insufficient evidence creates no performance bonus"
+            "semantic score plus confidence-gated historical hook/title performance, underexplored "
+            "dimension coverage, renewable frame inventory, and minus recent fatigue; insufficient "
+            "evidence creates no performance bonus"
         ),
+        "copy_frame_inventory": frame_inventory,
         "hook_stats": hook_stats,
         "formula_stats": formula_stats,
         "ranked": [item for item in ranked if "_report" not in item],
