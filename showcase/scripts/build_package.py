@@ -13,6 +13,7 @@ from content_memory import load_learning_records, load_records
 from build_story import build_story
 from copy_variants import select_variant
 from export_wechat import export_package
+import pattern_audit
 import performance_report
 import review_dashboard
 from validate_package import validate_package
@@ -82,6 +83,10 @@ def compose_and_validate(package_dir: Path, repo_root: Path) -> list[str]:
             errors.append(f"WeChat adapter gate failed: {json.dumps(wechat_report['errors'], ensure_ascii=False)}")
 
     if composed:
+        try:
+            pattern_audit.audit_package(package_dir)
+        except Exception as exc:
+            errors.append(f"hot-post pattern gate crashed: {exc}")
         errors.extend(validate_package(package_dir, repo_root=repo_root))
         try:
             dashboard_report = review_dashboard.generate_package(package_dir)

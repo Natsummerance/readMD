@@ -24,6 +24,7 @@ content_memory = importlib.import_module("content_memory")
 copy_variants = importlib.import_module("copy_variants")
 export_wechat = importlib.import_module("export_wechat")
 performance_report = importlib.import_module("performance_report")
+pattern_audit = importlib.import_module("pattern_audit")
 review_dashboard = importlib.import_module("review_dashboard")
 style_audit = importlib.import_module("style_audit")
 build_package_module = importlib.import_module("build_package")
@@ -276,6 +277,7 @@ class ValidatePackageTest(unittest.TestCase):
                 ],
             }
             (pkg / "composition.json").write_text(json.dumps(composition, ensure_ascii=False), encoding="utf-8")
+            (pkg / "pattern-audit.json").write_text(json.dumps({"ok": True, "errors": []}), encoding="utf-8")
             errors = validate_package.validate_package(pkg)
         self.assertEqual(errors, [])
 
@@ -452,6 +454,91 @@ class AuditCopyTest(unittest.TestCase):
         self.assertIn("style", report)
         self.assertLess(report["style"]["score"], 75)
         self.assertTrue(any("style" in item.lower() for item in report["hard_failures"]))
+
+
+class PatternAuditTest(unittest.TestCase):
+    def make_inputs(self) -> tuple[dict, dict, dict]:
+        story = {
+            "schema_version": 1,
+            "version_state": "prerelease",
+            "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+            "primary_shot": "presentation.reveal",
+            "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
+            "card_plan": [
+                {"index": 1, "file": "cover.jpg", "role": "cover", "shot_id": None, "ui_min_ratio": 0},
+                {"index": 2, "file": "hero.jpg", "role": "pure_ui_hero", "shot_id": "overview.reader", "ui_min_ratio": 0.7},
+                {"index": 3, "file": "reveal.jpg", "role": "annotated_ui", "shot_id": "presentation.reveal", "ui_min_ratio": 0.55},
+                {"index": 4, "file": "editor.jpg", "role": "annotated_ui", "shot_id": "overview.editor", "ui_min_ratio": 0.55},
+                {"index": 5, "file": "summary.jpg", "role": "summary", "shot_id": None, "ui_min_ratio": 0.3},
+            ],
+        }
+        metadata = {
+            "title": "不用重做PPT，Markdown直接放映",
+            "title_formula_id": "#36",
+            "body": (
+                "文档写完了，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。\n\n"
+                "先说清楚：这是 ReadMD 预览版，文件仍在你自己的电脑里。\n\n"
+                "如果你常写课程讲义、组会报告、技术分享或论文汇报，它会省掉重新做演示稿这一步。\n\n"
+                "你会先拿哪一份 Markdown 试放映？"
+            ),
+        }
+
+        def card(file: str, role: str, area: float, minimum: float) -> dict:
+            return {
+                "file": file,
+                "role": role,
+                "ui_area_ratio": area,
+                "ui_min_ratio": minimum,
+                "screenshot_box": {"x": 24, "y": 24, "width": 900, "height": 900},
+            }
+
+        composition = {
+            "overflow_errors": [],
+            "design_audit": {"contrast_errors": [], "small_text": [], "images_failed": []},
+            "cards": [
+                card("cover.jpg", "cover", 0.35, 0),
+                card("hero.jpg", "pure_ui_hero", 0.82, 0.7),
+                card("reveal.jpg", "annotated_ui", 0.62, 0.55),
+                card("editor.jpg", "annotated_ui", 0.60, 0.55),
+                card("summary.jpg", "summary", 0.45, 0.3),
+            ],
+        }
+        return story, metadata, composition
+
+    def write_package(self, package: Path, story: dict, metadata: dict, composition: dict) -> None:
+        package.mkdir(parents=True, exist_ok=True)
+        for name, data in (
+            ("story.json", story),
+            ("metadata.json", metadata),
+            ("composition.json", composition),
+        ):
+            (package / name).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+
+    def test_good_package_passes_every_reviewed_pattern(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            story, metadata, composition = self.make_inputs()
+            self.write_package(package, story, metadata, composition)
+            report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
+        self.assertTrue(report["ok"], report["errors"])
+        self.assertEqual(len(report["patterns"]), 10)
+        self.assertTrue(all(item["ok"] for item in report["patterns"]))
+
+    def test_broken_hero_and_generic_voice_fail_hard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            story, metadata, composition = self.make_inputs()
+            story["card_plan"][1] = {**story["card_plan"][1], "role": "annotated_ui", "shot_id": "presentation.reveal"}
+            metadata["body"] = "产品强大高效安全智能先进。" + metadata["body"]
+            self.write_package(package, story, metadata, composition)
+            report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
+            errors = validate_package.validate_package(package)
+        self.assertFalse(report["ok"])
+        product = next(item for item in report["patterns"] if item["id"] == "product-first-proof")
+        outcome = next(item for item in report["patterns"] if item["id"] == "outcome-not-adjective")
+        self.assertFalse(product["ok"])
+        self.assertFalse(outcome["ok"])
+        self.assertTrue(any("hot-post pattern gate failed" in error for error in errors), errors)
 
 
 class ExportWechatTest(unittest.TestCase):
@@ -733,6 +820,52 @@ class BuildPipelineTest(unittest.TestCase):
         self.assertFalse(report["ok"])
         self.assertTrue(any("review dashboard" in error for error in report["errors"]))
 
+    def test_pattern_audit_precedes_hard_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            calls: list[str] = []
+            original_run = build_package_module.subprocess.run
+            original_audit = build_package_module.audit_package
+            original_export = build_package_module.export_package
+            original_pattern = build_package_module.pattern_audit.audit_package
+            original_validate = build_package_module.validate_package
+            original_dashboard = build_package_module.review_dashboard.generate_package
+            build_package_module.subprocess.run = lambda *args, **kwargs: SimpleNamespace(returncode=0)
+            build_package_module.audit_package = lambda package_dir: {"ok": True, "total_score": 100}
+            build_package_module.export_package = lambda package_dir: {"ok": True, "errors": []}
+
+            def run_pattern(package_dir: Path) -> dict:
+                calls.append("pattern")
+                report = {"schema_version": 1, "ok": True, "passed_count": 10, "total_count": 10, "errors": []}
+                (package_dir / "pattern-audit.json").write_text(json.dumps(report), encoding="utf-8")
+                return report
+
+            def run_validate(package_dir: Path, repo_root=None) -> list[str]:
+                calls.append("validate")
+                return []
+
+            def run_dashboard(package_dir: Path) -> dict:
+                calls.append("dashboard")
+                return {"ok": True, "errors": []}
+
+            build_package_module.pattern_audit.audit_package = run_pattern
+            build_package_module.validate_package = run_validate
+            build_package_module.review_dashboard.generate_package = run_dashboard
+            try:
+                errors = build_package_module.compose_and_validate(package, ROOT)
+            finally:
+                build_package_module.subprocess.run = original_run
+                build_package_module.audit_package = original_audit
+                build_package_module.export_package = original_export
+                build_package_module.pattern_audit.audit_package = original_pattern
+                build_package_module.validate_package = original_validate
+                build_package_module.review_dashboard.generate_package = original_dashboard
+
+            report = json.loads((package / "qa.json").read_text(encoding="utf-8"))
+        self.assertEqual(errors, [])
+        self.assertEqual(calls, ["pattern", "validate", "dashboard"])
+        self.assertTrue(report["ok"])
+
     def test_early_failure_still_writes_red_aggregate_qa(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             package = Path(tmp)
@@ -919,6 +1052,12 @@ class ReviewDashboardTest(unittest.TestCase):
                 ],
             },
             "wechat_qa": {"ok": True, "errors": []},
+            "pattern_audit": {
+                "ok": True,
+                "passed_count": 10,
+                "total_count": 10,
+                "errors": [],
+            },
             "performance": {
                 "learning_count": 2,
                 "pending_count": 1,
@@ -934,6 +1073,8 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("100 / 100", html)
         self.assertIn("Style resonance", html)
         self.assertIn("96 / 100", html)
+        self.assertIn("Hot-post patterns", html)
+        self.assertIn("10 / 10", html)
         self.assertIn("Pending metrics", html)
         for forbidden in ("<script", "class=", "id=", "<img", "<table", "http://", "https://"):
             self.assertNotIn(forbidden.lower(), html.lower())
@@ -941,15 +1082,17 @@ class ReviewDashboardTest(unittest.TestCase):
     def test_marks_failed_gate_without_script_or_external_asset(self) -> None:
         inputs = self.sample_inputs()
         inputs["qa"] = {"ok": False, "errors": ["blank band exceeds 120px"]}
+        inputs["pattern_audit"] = {"ok": False, "passed_count": 8, "total_count": 10, "errors": ["card two must be the pure overview.reader hero"]}
         html = review_dashboard.build_dashboard(inputs)
         self.assertIn("NEEDS FIX", html)
         self.assertIn("blank band exceeds 120px", html)
+        self.assertIn("card two must be the pure overview.reader hero", html)
         for forbidden in ("<script", "class=", "id=", "<img", "http://"):
             self.assertNotIn(forbidden.lower(), html.lower())
 
 
 class WatcherTest(unittest.TestCase):
-    def make_package_zip(self, root: Path) -> Path:
+    def make_package_zip(self, root: Path, *, pattern_ok: bool = True) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
         image = package / "images" / "xhs-01-cover.jpg"
@@ -963,6 +1106,12 @@ class WatcherTest(unittest.TestCase):
             "ranked": [{"strategy": "outcome-led", "ok": True, "originality_failures": []}],
         }), encoding="utf-8")
         (package / "dashboard-qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
+        (package / "pattern-audit.json").write_text(json.dumps({
+            "ok": pattern_ok,
+            "passed_count": 10 if pattern_ok else 8,
+            "total_count": 10,
+            "errors": [] if pattern_ok else ["card two must be the pure overview.reader hero"],
+        }), encoding="utf-8")
         (package / "title.txt").write_text("标题", encoding="utf-8")
         (package / "body.txt").write_text("这篇正文足够长，可以形成稳定的三元组指纹。", encoding="utf-8")
         metadata = {
@@ -1058,10 +1207,32 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(feedback["published_url"], "https://example.com/note")
             self.assertEqual(feedback["metrics_status"], "pending")
             self.assertEqual(feedback["impressions"], 0)
-            self.assertIn("body_sha256", feedback)
-            self.assertIn("opening", feedback)
-            self.assertIn("closing", feedback)
-            self.assertTrue(feedback["body_trigrams"])
+        self.assertIn("body_sha256", feedback)
+        self.assertIn("opening", feedback)
+        self.assertIn("closing", feedback)
+        self.assertTrue(feedback["body_trigrams"])
+
+    def test_rejects_failed_hot_post_pattern_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, pattern_ok=False)
+
+            def forbidden_publish(*args, **kwargs):
+                raise AssertionError("publisher must not run for a failed pattern gate")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = forbidden_publish
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, True,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+        self.assertFalse(published)
+        self.assertEqual(record["status"], "retrying")
+        self.assertIn("pattern-audit.json is not green", record["error"])
 
 
 if __name__ == "__main__":

@@ -86,13 +86,28 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
     repo_root = (repo_root or Path(__file__).resolve().parents[2]).resolve()
     errors: list[str] = []
 
+    pattern_audit_path = package_dir / "pattern-audit.json"
+    if not pattern_audit_path.exists():
+        errors.append("pattern-audit.json is missing")
+    else:
+        try:
+            pattern_audit = _load_json(pattern_audit_path)
+            if pattern_audit.get("ok") is not True:
+                errors.append(
+                    "hot-post pattern gate failed: "
+                    + "; ".join(map(str, pattern_audit.get("errors", [])))
+                )
+        except Exception as exc:
+            errors.append(f"pattern-audit.json unreadable: {exc}")
+
     try:
         story = _load_json(package_dir / "story.json")
         capture = _load_json(package_dir / "raw" / "capture.json")
         metadata = _load_json(package_dir / "metadata.json")
         composition = _load_json(package_dir / "composition.json")
     except Exception as exc:
-        return [f"package JSON unreadable: {exc}"]
+        errors.append(f"package JSON unreadable: {exc}")
+        return errors
 
     copy_review_path = package_dir / "copy-review.json"
     if copy_review_path.exists():

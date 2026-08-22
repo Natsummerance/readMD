@@ -55,6 +55,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
     copy_review = inputs.get("copy_review", {})
     variants = inputs.get("variants", {})
     wechat_qa = inputs.get("wechat_qa", {})
+    pattern_audit = inputs.get("pattern_audit", {})
     performance = inputs.get("performance", {})
 
     gates = [
@@ -62,6 +63,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
         ("Semantic alignment", bool(copy_review.get("ok")), copy_review.get("hard_failures", [])),
         ("Variant selection", bool(variants.get("ok")), []),
         ("WeChat adapter", bool(wechat_qa.get("ok")), wechat_qa.get("errors", [])),
+        ("Hot-post patterns", bool(pattern_audit.get("ok")), pattern_audit.get("errors", [])),
     ]
     all_pass = all(passed for _, passed, _ in gates)
     overall = "PASS" if all_pass else "NEEDS FIX"
@@ -104,6 +106,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
     else:
         style_inner = '<p style="margin:0;font-size:23px;color:#5b6875">Style audit not available</p>'
     performance_metrics = "".join([
+        _metric("Pattern checks", f'{pattern_audit.get("passed_count", 0)} / {pattern_audit.get("total_count", 0)}'),
         _metric("Learning releases", performance.get("learning_count", 0)),
         _metric("Pending metrics", performance.get("pending_count", 0)),
         _metric("Recommended formula", performance.get("recommended_formula", "insufficient data")),
@@ -151,6 +154,7 @@ def collect_inputs(package_dir: Path) -> dict[str, Any]:
         "copy_review": _read_json(package_dir / "copy-review.json"),
         "variants": _read_json(package_dir / "variants.json"),
         "wechat_qa": _read_json(package_dir / "wechat" / "wechat-qa.json"),
+        "pattern_audit": _read_json(package_dir / "pattern-audit.json"),
         "performance": _read_json(package_dir / "performance-report.json"),
     }
 

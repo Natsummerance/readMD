@@ -175,6 +175,9 @@ def process_package(
         dashboard = json.loads((package_dir / "dashboard-qa.json").read_text(encoding="utf-8"))
         if dashboard.get("ok") is not True:
             raise ValueError("package dashboard-qa.json is not green")
+        pattern_audit = json.loads((package_dir / "pattern-audit.json").read_text(encoding="utf-8"))
+        if pattern_audit.get("ok") is not True:
+            raise ValueError("package pattern-audit.json is not green")
         localize_image_paths(package_dir)
         release, title = package_identity(package_dir)
         previous = [item for item in state["packages"].values() if item.get("release") == release and item.get("status") == "published"]
