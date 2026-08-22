@@ -1128,7 +1128,7 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
   for (const theme of ['light', 'dark', 'sepia']) {
   const css = await (await page.request.get('/assets/style.css')).text();
   const requiredTokens = {
-    light: ['--fg3:#666f7c', '--accent:#2f5fe8', '--accent-fg:#ffffff'],
+    light: ['--fg3:#5d6672', '--accent:#2f5fe8', '--accent-fg:#ffffff'],
     dark: ['--fg3:#868fa0', '--accent-fg:#081226'],
     sepia: ['--fg3:#6d614e', '--accent:#8a571b'],
   }[theme];
