@@ -137,6 +137,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
         _metric("Learning releases", performance.get("learning_count", 0)),
         _metric("Pending metrics", performance.get("pending_count", 0)),
         _metric("Recommended formula", performance.get("recommended_formula", "insufficient data")),
+        _metric("Recommended frame", performance.get("recommended_copy_frame") or "insufficient evidence"),
         _metric("Recommended comment focus", performance.get("comment_focus", {}).get("recommended_theme") or "insufficient evidence"),
     ])
 

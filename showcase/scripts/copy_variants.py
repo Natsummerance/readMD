@@ -226,6 +226,7 @@ def choose_variant(
 
     hook_stats = dimension_stats("hook_type")
     formula_stats = dimension_stats("title_formula_id")
+    frame_stats = dimension_stats("copy_frame")
     hook_usage = {
         str(record.get("hook_type", "")): sum(
             1 for item in records if str(item.get("hook_type", "")) == str(record.get("hook_type", ""))
@@ -234,6 +235,7 @@ def choose_variant(
     }
     max_hook_score = max((item["score"] for item in hook_stats.values()), default=0.0)
     max_formula_score = max((item["score"] for item in formula_stats.values()), default=0.0)
+    max_frame_score = max((item["score"] for item in frame_stats.values()), default=0.0)
 
     prior_fingerprints = [
         {key: record.get(key) for key in ("release", "body_sha256", "opening", "closing", "body_trigrams")}
@@ -308,6 +310,11 @@ def choose_variant(
             bonus = formula_stat["score"] / max_formula_score * 8
             adjustment += bonus
             reasons.append("historical title performance bonus")
+        frame_stat = frame_stats.get(variant["copy_frame"])
+        if frame_stat and frame_stat["confidence_ok"] and max_frame_score:
+            bonus = frame_stat["score"] / max_frame_score * 10
+            adjustment += bonus
+            reasons.append("historical frame performance bonus")
         hook_deficit = max(hook_usage.values(), default=0) - hook_usage.get(hook_type, 0)
         coverage_bonus = hook_deficit * 8
         if coverage_bonus:
@@ -351,9 +358,11 @@ def choose_variant(
         "originality_gate": "pass",
         "selection_rule": (
             "semantic score plus confidence-gated historical hook/title performance, underexplored "
-            f"dimension coverage, renewable frame inventory with a {ENDPOINT_COOLDOWN_RELEASES}-release "
-            "endpoint cooldown, and minus recent fatigue; insufficient evidence creates no performance bonus"
+            f"historical frame performance, underexplored dimension coverage, renewable frame inventory "
+            f"with a {ENDPOINT_COOLDOWN_RELEASES}-release endpoint cooldown, and minus recent fatigue; "
+            "insufficient evidence creates no performance bonus"
         ),
+        "frame_stats": frame_stats,
         "endpoint_cooldown_releases": ENDPOINT_COOLDOWN_RELEASES,
         "copy_frame_inventory": frame_inventory,
         "hook_stats": hook_stats,

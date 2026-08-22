@@ -769,11 +769,11 @@ class CopyVariantsTest(unittest.TestCase):
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
         variants = copy_variants.build_variants(story=story, base_metadata=base)
         history = [
-            {**self.history_record("v1.0.0", "identity-led", "#22"), "impressions": 2000, "likes": 180, "collects": 260, "comments": 70, "shares": 50},
-            self.history_record("v1.0.1", "identity-led", "#61"),
-            self.history_record("v1.0.2", "outcome-led", "#22"),
-            self.history_record("v1.0.1", "mechanism-curiosity", "#9"),
-            self.history_record("v1.0.2", "outcome-led", "#36"),
+            {**self.history_record("v1.0.0", "identity-led", "#22"), "impressions": 2000, "likes": 180, "collects": 260, "comments": 70, "shares": 50, "copy_frame": "core"},
+            {**self.history_record("v1.0.1", "identity-led", "#61"), "copy_frame": "workflow"},
+            {**self.history_record("v1.0.2", "outcome-led", "#22"), "copy_frame": "decision"},
+            {**self.history_record("v1.0.1", "mechanism-curiosity", "#9"), "copy_frame": "workflow"},
+            {**self.history_record("v1.0.2", "outcome-led", "#36"), "impressions": 1000, "copy_frame": "core"},
         ]
         chosen, report = copy_variants.choose_variant(variants, history)
         self.assertEqual(chosen["strategy"], "identity-led")
@@ -781,6 +781,10 @@ class CopyVariantsTest(unittest.TestCase):
         self.assertEqual(chosen["copy_frame"], "core")
         self.assertEqual(report["chosen_variant_id"], "identity-led__22")
         self.assertEqual(report["chosen_copy_frame"], "core")
+        self.assertTrue(report["frame_stats"]["core"]["confidence_ok"])
+        self.assertTrue(any("historical frame performance bonus" in reason for reason in next(
+            item for item in report["ranked"] if item["variant_id"] == "identity-led__22"
+        )["reasons"]))
         self.assertTrue(report["hook_stats"]["identity-led"]["confidence_ok"])
         self.assertTrue(report["formula_stats"]["#22"]["confidence_ok"])
         self.assertTrue(report["ok"])
@@ -1036,6 +1040,24 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertEqual(data["formula_stats"]["#36"]["confidence"], "low")
         self.assertIsNone(data["recommended_formula"])
         self.assertIsNone(data["recommended_hook_type"])
+        self.assertIsNone(data["recommended_copy_frame"])
+
+    def test_aggregates_confident_copy_frame_performance(self) -> None:
+        records = [
+            {**self.complete("v1", "#36", "outcome-led", 1000, 40, 60), "copy_frame": "core"},
+            {**self.complete("v2", "#22", "identity-led", 2000, 130, 180), "copy_frame": "workflow"},
+            {**self.complete("v3", "#9", "mechanism-curiosity", 1000, 40, 60), "copy_frame": "core"},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            result = performance_report.generate_report(records, Path(tmp))
+            markdown = (Path(tmp) / "performance-report.md").read_text(encoding="utf-8")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["frame_stats"]["core"]["publications"], 2)
+        self.assertEqual(result["frame_stats"]["core"]["confidence"], "medium")
+        self.assertEqual(result["frame_stats"]["workflow"]["confidence"], "low")
+        self.assertEqual(result["recommended_copy_frame"], "core")
+        self.assertIn("## Copy frames", markdown)
+        self.assertIn("| core | 2 | 2000 |", markdown)
 
     def test_aggregates_comment_focus_across_releases(self) -> None:
         def insights(theme: str, mentions: int, weighted_score: int) -> dict:
@@ -1542,6 +1564,7 @@ class ReviewDashboardTest(unittest.TestCase):
                 "pending_count": 1,
                 "recommended_formula": "#22",
                 "recommended_hook_type": "identity-task",
+                "recommended_copy_frame": "workflow",
             },
         }
 
@@ -1555,6 +1578,8 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("96 / 100", html)
         self.assertIn("Hot-post patterns", html)
         self.assertIn("10 / 10", html)
+        self.assertIn("Recommended frame", html)
+        self.assertIn("workflow", html)
         self.assertIn("Pending metrics", html)
         for forbidden in ("<script", "class=", "id=", "<img", "<table", "http://", "https://"):
             self.assertNotIn(forbidden.lower(), html.lower())

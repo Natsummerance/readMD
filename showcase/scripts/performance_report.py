@@ -111,9 +111,11 @@ def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str
     learning, pending = partition_records(records)
     formula_stats = _stats(learning, "title_formula_id")
     hook_stats = _stats(learning, "hook_type")
+    frame_stats = _stats(learning, "copy_frame")
     comment_focus = _comment_focus(learning)
     recommended_formula = _recommended(formula_stats)
     recommended_hook_type = _recommended(hook_stats)
+    recommended_copy_frame = _recommended(frame_stats)
     total_impressions = sum(int(record.get("impressions", 0)) for record in learning)
     total_engagement = sum(_engagement(record) for record in learning)
     data = {
@@ -125,8 +127,10 @@ def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str
         "total_weighted_engagement": total_engagement,
         "formula_stats": formula_stats,
         "hook_stats": hook_stats,
+        "frame_stats": frame_stats,
         "recommended_formula": recommended_formula,
         "recommended_hook_type": recommended_hook_type,
+        "recommended_copy_frame": recommended_copy_frame,
         "comment_focus": comment_focus,
         "pending_releases": [
             {"release": item.get("release"), "title": item.get("title"), "title_formula_id": item.get("title_formula_id")}
@@ -151,6 +155,9 @@ def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str
     lines.extend(["", "## Hook types", "", "| Hook | Publications | Impressions | Weighted engagement | Score | Confidence |", "| --- | ---: | ---: | ---: | ---: | --- |"])
     for hook, stats in hook_stats.items():
         lines.append(f"| {hook} | {stats['publications']} | {stats['impressions']} | {stats['weighted_engagement']} | {stats['score']} | {stats['confidence']} |")
+    lines.extend(["", "## Copy frames", "", "| Frame | Publications | Impressions | Weighted engagement | Score | Confidence |", "| --- | ---: | ---: | ---: | ---: | --- |"])
+    for frame, stats in frame_stats.items():
+        lines.append(f"| {frame} | {stats['publications']} | {stats['impressions']} | {stats['weighted_engagement']} | {stats['score']} | {stats['confidence']} |")
     lines.extend([
         "",
         "## Comment focus",
@@ -166,6 +173,7 @@ def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str
         "",
         f"- Preferred title formula: `{recommended_formula or 'insufficient evidence'}`",
         f"- Preferred hook type: `{recommended_hook_type or 'insufficient evidence'}`",
+        f"- Preferred copy frame: `{recommended_copy_frame or 'insufficient evidence'}`",
         f"- Preferred comment focus: `{comment_focus.get('recommended_theme') or 'insufficient evidence'}`",
         "- Pending metrics remain excluded from learning until they are marked complete.",
         "",
