@@ -128,6 +128,7 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
             errors.append(f"wechat-qa.json unreadable: {exc}")
 
     variants_path = package_dir / "variants.json"
+    variant_report: dict[str, Any] = {}
     if variants_path.exists():
         try:
             variants = _load_json(variants_path)
@@ -135,7 +136,18 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
                 errors.append("variant selection report is incomplete")
             else:
                 chosen_strategy = variants.get("chosen_strategy")
-                chosen_ranked = next((item for item in variants.get("ranked", []) if item.get("strategy") == chosen_strategy), None)
+                ranked_items = variants.get("ranked", [])
+                chosen_ranked = None
+                has_variant_ids = bool(ranked_items) and all(item.get("variant_id") for item in ranked_items)
+                if has_variant_ids and not variants.get("chosen_variant_id"):
+                    errors.append("variant selection missing chosen_variant_id")
+                elif has_variant_ids:
+                    chosen_ranked = next(
+                        (item for item in ranked_items if item.get("variant_id") == variants["chosen_variant_id"]),
+                        None,
+                    )
+                else:
+                    chosen_ranked = next((item for item in ranked_items if item.get("strategy") == chosen_strategy), None)
                 if not chosen_ranked:
                     errors.append("variant selection missing chosen ranking")
                 elif chosen_ranked.get("ok") is not True or chosen_ranked.get("originality_failures"):
@@ -233,6 +245,12 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
         images = []
     if metadata.get("version_state") != version_state:
         errors.append("metadata.version_state differs from story")
+    if (
+        variant_report.get("chosen_variant_id")
+        and metadata.get("variant_id")
+        and metadata["variant_id"] != variant_report["chosen_variant_id"]
+    ):
+        errors.append("metadata.variant_id differs from selected variant")
     if not metadata.get("source_urls"):
         errors.append("metadata.source_urls is empty")
     if version_state == "prerelease":

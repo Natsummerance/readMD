@@ -232,6 +232,25 @@ class WriteCopyTest(unittest.TestCase):
 class ValidatePackageTest(unittest.TestCase):
     maxDiff = None
 
+    def test_rejects_chosen_variant_id_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp)
+            for name in ("story.json", "metadata.json", "composition.json"):
+                (pkg / name).write_text("{}", encoding="utf-8")
+            (pkg / "raw").mkdir()
+            (pkg / "raw" / "capture.json").write_text("{}", encoding="utf-8")
+            (pkg / "variants.json").write_text(json.dumps({
+                "ok": True,
+                "chosen_strategy": "identity-led",
+                "chosen_variant_id": "identity-led__22",
+                "ranked": [
+                    {"strategy": "identity-led", "variant_id": "identity-led__36", "ok": True},
+                    {"strategy": "identity-led", "variant_id": "identity-led__22", "ok": False, "originality_failures": ["body hash matches v1"]},
+                ],
+            }), encoding="utf-8")
+            errors = validate_package.validate_package(pkg)
+        self.assertTrue(any("variant originality gate failed" in error for error in errors), errors)
+
     def test_accepts_complete_four_image_package(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pkg = Path(tmp)
@@ -617,10 +636,14 @@ class CopyVariantsTest(unittest.TestCase):
         }
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
         variants = copy_variants.build_variants(story=story, base_metadata=base)
-        self.assertEqual(len(variants), 3)
+        self.assertEqual(len(variants), 15)
         self.assertEqual(len({item["strategy"] for item in variants}), 3)
-        self.assertEqual(len({item["title"] for item in variants}), 3)
+        self.assertEqual(len({item["variant_id"] for item in variants}), 15)
+        self.assertEqual(len({item["title"] for item in variants}), 5)
         self.assertEqual(len({item["body"] for item in variants}), 3)
+        for hook_type in ("outcome-led", "identity-led", "mechanism-curiosity"):
+            formulas = {item["title_formula_id"] for item in variants if item["hook_type"] == hook_type}
+            self.assertEqual(formulas, {"#36", "#9", "#22", "#61", "#12"})
         for variant in variants:
             report = audit_copy.audit_copy(
                 story=story,
@@ -645,13 +668,36 @@ class CopyVariantsTest(unittest.TestCase):
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
         variants = copy_variants.build_variants(story=story, base_metadata=base)
         history = [
-            {**self.history_record("v1.0.0", "identity-led", "#22"), "impressions": 2000, "likes": 100, "collects": 160, "comments": 40, "shares": 20},
+            {**self.history_record("v1.0.0", "identity-led", "#22"), "impressions": 2000, "likes": 180, "collects": 260, "comments": 70, "shares": 50},
+            self.history_record("v1.0.1", "identity-led", "#61"),
+            self.history_record("v1.0.2", "outcome-led", "#22"),
             self.history_record("v1.0.1", "mechanism-curiosity", "#9"),
             self.history_record("v1.0.2", "outcome-led", "#36"),
         ]
         chosen, report = copy_variants.choose_variant(variants, history)
         self.assertEqual(chosen["strategy"], "identity-led")
+        self.assertEqual(chosen["variant_id"], "identity-led__22")
+        self.assertEqual(report["chosen_variant_id"], "identity-led__22")
+        self.assertTrue(report["hook_stats"]["identity-led"]["confidence_ok"])
+        self.assertTrue(report["formula_stats"]["#22"]["confidence_ok"])
         self.assertTrue(report["ok"])
+
+    def test_low_confidence_history_cannot_lock_selection(self) -> None:
+        story = self.variant_story()
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        history = [{
+            **self.history_record("v1.0.0", "identity-led", "#22"),
+            "likes": 500,
+            "collects": 900,
+            "comments": 300,
+            "shares": 200,
+        }]
+        chosen, report = copy_variants.choose_variant(variants, history)
+        self.assertFalse(report["hook_stats"]["identity-led"]["confidence_ok"])
+        self.assertFalse(report["formula_stats"]["#22"]["confidence_ok"])
+        self.assertEqual(chosen["variant_id"], "outcome-led__36")
+        self.assertIn("insufficient evidence", report["selection_rule"])
 
     def test_selection_ignores_pending_hook_history(self) -> None:
         story = {
@@ -693,23 +739,24 @@ class CopyVariantsTest(unittest.TestCase):
         story = self.variant_story()
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
         variants = copy_variants.build_variants(story=story, base_metadata=base)
-        reused = next(variant for variant in variants if variant["strategy"] == "outcome-led")
+        reused = next(item for item in variants if item["variant_id"] == "outcome-led__36")
         history = [{
             **self.history_record("v1.0.0", "identity-led", "#22"),
             "body_sha256": hashlib.sha256(reused["body"].encode("utf-8")).hexdigest(),
         }]
         chosen, report = copy_variants.choose_variant(variants, history)
-        self.assertEqual(chosen["strategy"], "identity-led")
-        self.assertFalse(next(item for item in report["ranked"] if item["strategy"] == "outcome-led")["ok"])
+        self.assertNotEqual(chosen["strategy"], "outcome-led")
+        outcome_report = next(item for item in report["ranked"] if item["variant_id"] == "outcome-led__36")
+        self.assertFalse(outcome_report["ok"])
         self.assertTrue(any("body hash" in failure for failure in next(
-            item for item in report["ranked"] if item["strategy"] == "outcome-led"
+            item for item in report["ranked"] if item["variant_id"] == "outcome-led__36"
         )["hard_failures"]))
 
     def test_originality_gate_rejects_reused_opening_and_closing(self) -> None:
         story = self.variant_story()
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
         variants = copy_variants.build_variants(story=story, base_metadata=base)
-        outcome = next(variant for variant in variants if variant["strategy"] == "outcome-led")
+        outcome = next(item for item in variants if item["variant_id"] == "outcome-led__36")
         fingerprints = copy_variants.text_fingerprints(outcome["body"])
         history = [{
             **self.history_record("v1.0.0", "identity-led", "#22"),
@@ -717,7 +764,7 @@ class CopyVariantsTest(unittest.TestCase):
         }]
         chosen, report = copy_variants.choose_variant(variants, history)
         self.assertNotEqual(chosen["strategy"], "outcome-led")
-        outcome_report = next(item for item in report["ranked"] if item["strategy"] == "outcome-led")
+        outcome_report = next(item for item in report["ranked"] if item["variant_id"] == "outcome-led__36")
         self.assertFalse(outcome_report["ok"])
         self.assertTrue(any("opening" in failure for failure in outcome_report["hard_failures"]))
         self.assertTrue(any("closing" in failure for failure in outcome_report["hard_failures"]))
@@ -726,14 +773,14 @@ class CopyVariantsTest(unittest.TestCase):
         story = self.variant_story()
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
         variants = copy_variants.build_variants(story=story, base_metadata=base)
-        outcome = next(variant for variant in variants if variant["strategy"] == "outcome-led")
+        outcome = next(item for item in variants if item["variant_id"] == "outcome-led__36")
         lightly_edited = outcome["body"].replace("讲的时候还要复制进 PPT", "讲的时候还得复制到 PPT")
         history = [{
             **self.history_record("v1.0.0", "identity-led", "#22"),
             "body_trigrams": list(copy_variants.text_trigrams(lightly_edited)),
         }]
         chosen, report = copy_variants.choose_variant(variants, history)
-        outcome_report = next(item for item in report["ranked"] if item["strategy"] == "outcome-led")
+        outcome_report = next(item for item in report["ranked"] if item["variant_id"] == "outcome-led__36")
         self.assertNotEqual(chosen["strategy"], "outcome-led")
         self.assertFalse(outcome_report["ok"])
         self.assertGreaterEqual(outcome_report["max_body_similarity"], 0.85)
@@ -1046,9 +1093,10 @@ class ReviewDashboardTest(unittest.TestCase):
             "variants": {
                 "ok": True,
                 "chosen_strategy": "outcome-led",
+                "chosen_variant_id": "outcome-led__36",
                 "ranked": [
-                    {"strategy": "outcome-led", "adjusted_score": 100, "semantic_score": 100},
-                    {"strategy": "identity-led", "adjusted_score": 96, "semantic_score": 100},
+                    {"strategy": "outcome-led", "variant_id": "outcome-led__36", "title": "#36 标题", "adjusted_score": 100, "semantic_score": 100},
+                    {"strategy": "identity-led", "variant_id": "identity-led__22", "title": "#22 标题", "adjusted_score": 96, "semantic_score": 100},
                 ],
             },
             "wechat_qa": {"ok": True, "errors": []},
@@ -1070,6 +1118,7 @@ class ReviewDashboardTest(unittest.TestCase):
         html = review_dashboard.build_dashboard(self.sample_inputs())
         self.assertIn("不用重做PPT，Markdown直接放映", html)
         self.assertIn("outcome-led", html)
+        self.assertIn("outcome-led__36", html)
         self.assertIn("100 / 100", html)
         self.assertIn("Style resonance", html)
         self.assertIn("96 / 100", html)
@@ -1092,7 +1141,7 @@ class ReviewDashboardTest(unittest.TestCase):
 
 
 class WatcherTest(unittest.TestCase):
-    def make_package_zip(self, root: Path, *, pattern_ok: bool = True) -> Path:
+    def make_package_zip(self, root: Path, *, pattern_ok: bool = True, variant_match: bool = True) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
         image = package / "images" / "xhs-01-cover.jpg"
@@ -1103,7 +1152,13 @@ class WatcherTest(unittest.TestCase):
         (package / "variants.json").write_text(json.dumps({
             "ok": True,
             "chosen_strategy": "outcome-led",
-            "ranked": [{"strategy": "outcome-led", "ok": True, "originality_failures": []}],
+            "chosen_variant_id": "identity-led__22" if not variant_match else "outcome-led__36",
+            "ranked": [{
+                "strategy": "outcome-led",
+                "variant_id": "outcome-led__36",
+                "ok": True,
+                "originality_failures": [],
+            }],
         }), encoding="utf-8")
         (package / "dashboard-qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "pattern-audit.json").write_text(json.dumps({
@@ -1116,6 +1171,7 @@ class WatcherTest(unittest.TestCase):
         (package / "body.txt").write_text("这篇正文足够长，可以形成稳定的三元组指纹。", encoding="utf-8")
         metadata = {
             "title": "标题",
+            "variant_id": "outcome-led__36",
             "strategy": "outcome-led",
             "hook_type": "outcome-led",
             "title_formula_id": "#36",
@@ -1193,6 +1249,7 @@ class WatcherTest(unittest.TestCase):
             self.assertTrue(published)
             self.assertEqual([call[2] for call in calls], ["publish", "status"])
             self.assertEqual(record["release"], "v1.2.3")
+            self.assertEqual(record["variant_id"], "outcome-led__36")
             self.assertEqual(record["title"], "标题")
             self.assertEqual(record["note_id"], "note-1")
             self.assertEqual(record["published_url"], "https://example.com/note")
@@ -1201,6 +1258,7 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(len(records), 1)
             feedback = records[0]
             self.assertEqual(feedback["release"], "v1.2.3")
+            self.assertEqual(feedback["variant_id"], "outcome-led__36")
             self.assertEqual(feedback["title_formula_id"], "#36")
             self.assertEqual(feedback["hook_type"], "outcome-led")
             self.assertEqual(feedback["note_id"], "note-1")
@@ -1233,6 +1291,28 @@ class WatcherTest(unittest.TestCase):
         self.assertFalse(published)
         self.assertEqual(record["status"], "retrying")
         self.assertIn("pattern-audit.json is not green", record["error"])
+
+    def test_rejects_variant_id_mismatch_before_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, variant_match=False)
+
+            def forbidden_publish(*args, **kwargs):
+                raise AssertionError("publisher must not run when selected variants disagree")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = forbidden_publish
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, True,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+        self.assertFalse(published)
+        self.assertEqual(record["status"], "retrying")
+        self.assertIn("selected variant_id mismatch", record["error"])
 
 
 if __name__ == "__main__":

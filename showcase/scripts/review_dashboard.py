@@ -77,11 +77,13 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
     )
 
     ranked = variants.get("ranked", [])
+    chosen_variant_id = variants.get("chosen_variant_id")
+    chosen_strategy = variants.get("chosen_strategy")
     variant_html = "".join(
-        f'<div style="border-left:5px solid {"#d6482c" if item.get("strategy") == variants.get("chosen_strategy") else "#d8dee6"};'
+        f'<div style="border-left:5px solid {"#d6482c" if item.get("variant_id") == chosen_variant_id or (not chosen_variant_id and item.get("strategy") == chosen_strategy) else "#d8dee6"};'
         f'padding:16px 20px;margin-bottom:14px;background:#f2f4f6;border-radius:12px">'
         f'<p style="margin:0;font-size:26px;font-weight:800;color:#182029">{_escaped(item.get("title"))}</p>'
-        f'<p style="margin:8px 0 0;font-size:22px;color:#5b6875">{_escaped(item.get("strategy"))} · '
+        f'<p style="margin:8px 0 0;font-size:22px;color:#5b6875">{_escaped(item.get("strategy"))} · {_escaped(item.get("variant_id", ""))} · '
         f'{_escaped(item.get("semantic_score"))} / {_escaped(item.get("adjusted_score"))}</p></div>'
         for item in ranked
     )

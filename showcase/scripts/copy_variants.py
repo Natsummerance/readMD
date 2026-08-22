@@ -15,32 +15,22 @@ from audit_copy import audit_copy
 from content_memory import load_learning_records, partition_records, summarize
 
 
-OPENINGS = {
+HOOKS = {
     "outcome-led": (
-        "#36",
-        "outcome-led",
         "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。",
         "你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。",
     ),
     "identity-led": (
-        "#22",
-        "identity-led",
         "如果你要把笔记变成课程讲义、组会报告或论文汇报，就知道重做 PPT 有多烦。ReadMD 把这一步砍掉：Markdown 直接放映。",
         "你下一份要上台的 Markdown 是讲义、组会报告还是论文？评论区说说场景。",
     ),
     "mechanism-curiosity": (
-        "#9",
-        "mechanism-curiosity",
         "很多人把 Markdown 写完就停在笔记里；其实同一份文件可以直接上台放映。ReadMD 让写作和演示留在同一条路径。",
         "你想先试哪类内容：代码、表格还是公式？评论区告诉我，我会优先打磨这条路径。",
     ),
 }
 
-TITLES = {
-    "outcome-led": "不用重做PPT，Markdown直接放映",
-    "identity-led": "给要上台讲文档的人做的MD直接放映工具",
-    "mechanism-curiosity": "Markdown写完，居然能直接上台",
-}
+TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12")
 
 
 def _normalize_for_originality(value: str) -> str:
@@ -106,7 +96,7 @@ def _replace_paragraphs(body: str, opening: str, closing: str) -> str:
     paragraphs[0] = opening
     # A shorter source document may have padded trailing facts after the base CTA.
     # Remove every known strategy CTA before adding this variant's closing question.
-    known_closings = {closing for _, _, _, closing in OPENINGS.values()}
+    known_closings = {closing for _, closing in HOOKS.values()}
     paragraphs[1:] = [item for item in paragraphs[1:] if item not in known_closings]
     paragraphs.append(closing)
     return "\n\n".join(paragraphs)
@@ -114,23 +104,29 @@ def _replace_paragraphs(body: str, opening: str, closing: str) -> str:
 
 def build_variants(*, story: dict[str, Any], base_metadata: dict[str, Any]) -> list[dict[str, Any]]:
     variants: list[dict[str, Any]] = []
-    candidates = {item["formula_id"]: item["text"] for item in base_metadata.get("title_candidates", [])}
-    for strategy, (formula_id, hook_type, opening, closing) in OPENINGS.items():
-        variant = copy.deepcopy(base_metadata)
-        variant["strategy"] = strategy
-        variant["hook_type"] = hook_type
-        variant["title_formula_id"] = formula_id
-        variant["title"] = TITLES.get(strategy, candidates.get(formula_id, variant["title"]))
-        if len(variant["title"]) > 20:
-            raise ValueError(f"variant title exceeds 20 characters: {variant['title']}")
-        variant["body"] = _replace_paragraphs(variant["body"], opening, closing)
-        report = audit_copy(
-            story=story,
-            metadata=variant,
-            composition=projected_composition(story),
-        )
-        variant["_report"] = report
-        variants.append(variant)
+    candidate_map = {item["formula_id"]: item for item in base_metadata.get("title_candidates", [])}
+    title_options = [candidate_map[formula_id] for formula_id in TITLE_FORMULAS]
+    if len(title_options) != len(TITLE_FORMULAS):
+        missing = sorted(set(TITLE_FORMULAS) - set(candidate_map))
+        raise ValueError(f"title experiment formulas missing: {missing}")
+    for hook_type, (opening, closing) in HOOKS.items():
+        for title_option in title_options:
+            variant = copy.deepcopy(base_metadata)
+            variant["variant_id"] = f"{hook_type}__{title_option['formula_id'].lstrip('#')}"
+            variant["strategy"] = hook_type
+            variant["hook_type"] = hook_type
+            variant["title_formula_id"] = title_option["formula_id"]
+            variant["title"] = title_option["text"]
+            if len(variant["title"]) > 20:
+                raise ValueError(f"variant title exceeds 20 characters: {variant['title']}")
+            variant["body"] = _replace_paragraphs(variant["body"], opening, closing)
+            report = audit_copy(
+                story=story,
+                metadata=variant,
+                composition=projected_composition(story),
+            )
+            variant["_report"] = report
+            variants.append(variant)
     return variants
 
 
@@ -143,20 +139,37 @@ def choose_variant(
     summary = summarize(records)
     recent_hooks = set(summary.get("recent_hook_types", []))
     recent_formulas = set(summary.get("recent_formulas", []))
-    hook_stats: dict[str, dict[str, Any]] = {}
-    for record in records:
-        hook_type = str(record.get("hook_type", ""))
-        stats = hook_stats.setdefault(hook_type, {"impressions": 0, "weighted_engagement": 0})
-        impressions = int(record.get("impressions", 0))
-        engagement = (
-            int(record.get("likes", 0))
+
+    def dimension_stats(key: str) -> dict[str, dict[str, Any]]:
+        output: dict[str, dict[str, Any]] = {}
+        for record in records:
+            name = str(record.get(key, ""))
+            stats = output.setdefault(name, {
+                "publications": 0,
+                "impressions": 0,
+                "weighted_engagement": 0,
+                "score": 0.0,
+                "confidence_ok": False,
+            })
+            impressions = int(record.get("impressions", 0))
+            engagement = (
+                int(record.get("likes", 0))
             + int(record.get("collects", 0)) * 2
             + int(record.get("comments", 0)) * 3
-            + int(record.get("shares", 0)) * 4
-        )
-        stats["impressions"] += impressions
-        stats["weighted_engagement"] += engagement
-    max_score = max((item["weighted_engagement"] / max(item["impressions"], 1) for item in hook_stats.values()), default=0.0)
+                + int(record.get("shares", 0)) * 4
+            )
+            stats["publications"] += 1
+            stats["impressions"] += impressions
+            stats["weighted_engagement"] += engagement
+        for stats in output.values():
+            stats["score"] = round(stats["weighted_engagement"] / max(stats["impressions"], 1), 6)
+            stats["confidence_ok"] = stats["publications"] >= 2 and stats["impressions"] >= 1000
+        return output
+
+    hook_stats = dimension_stats("hook_type")
+    formula_stats = dimension_stats("title_formula_id")
+    max_hook_score = max((item["score"] for item in hook_stats.values()), default=0.0)
+    max_formula_score = max((item["score"] for item in formula_stats.values()), default=0.0)
 
     prior_fingerprints = [
         {key: record.get(key) for key in ("release", "body_sha256", "opening", "closing", "body_trigrams")}
@@ -205,11 +218,17 @@ def choose_variant(
             adjustment -= 4
             reasons.append("recent formula fatigue penalty")
         stat = hook_stats.get(hook_type)
-        if stat and max_score:
-            bonus = (stat["weighted_engagement"] / max(stat["impressions"], 1)) / max_score * 15
+        if stat and stat["confidence_ok"] and max_hook_score:
+            bonus = stat["score"] / max_hook_score * 12
             adjustment += bonus
             reasons.append("historical hook performance bonus")
+        formula_stat = formula_stats.get(variant["title_formula_id"])
+        if formula_stat and formula_stat["confidence_ok"] and max_formula_score:
+            bonus = formula_stat["score"] / max_formula_score * 8
+            adjustment += bonus
+            reasons.append("historical title performance bonus")
         ranked.append({
+            "variant_id": variant["variant_id"],
             "strategy": variant["strategy"],
             "title": variant["title"],
             "title_formula_id": variant["title_formula_id"],
@@ -229,13 +248,19 @@ def choose_variant(
     if not eligible:
         raise ValueError("no copy variant passes semantic QA")
     winner_summary = max(eligible, key=lambda item: item["adjusted_score"])
-    winner = next(variant for variant in variants if variant["strategy"] == winner_summary["strategy"])
+    winner = next(variant for variant in variants if variant["variant_id"] == winner_summary["variant_id"])
     return winner, {
         "schema_version": 1,
         "chosen_strategy": winner_summary["strategy"],
+        "chosen_variant_id": winner_summary["variant_id"],
         "ok": True,
         "originality_gate": "pass",
-        "selection_rule": "semantic score plus historical hook performance minus recent fatigue",
+        "selection_rule": (
+            "semantic score plus confidence-gated historical hook/title performance minus recent fatigue; "
+            "insufficient evidence creates no performance bonus"
+        ),
+        "hook_stats": hook_stats,
+        "formula_stats": formula_stats,
         "ranked": [item for item in ranked if "_report" not in item],
     }
 

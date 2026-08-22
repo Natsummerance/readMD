@@ -35,7 +35,7 @@ def _score_title(metadata: dict[str, Any]) -> tuple[int, list[str]]:
         score += 4
     if re.fullmatch(r"#\d+", str(metadata.get("title_formula_id", ""))):
         score += 4
-    tensions = sum(term in title.lower() for term in ("不用", "别再", "居然", "直接", "ppt", "md", "markdown"))
+    tensions = sum(term in title.lower() for term in ("不用", "别再", "居然", "直接", "看完", "重新", "上台", "ppt", "md", "markdown"))
     score += 7 if tensions >= 2 else (3 if tensions == 1 else 0)
     return round(score), []
 

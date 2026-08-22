@@ -117,6 +117,7 @@ def seed_feedback_ledger(
     record = {
         "release": release,
         "title": title,
+        "variant_id": str(metadata.get("variant_id", "unknown")),
         "title_formula_id": str(metadata.get("title_formula_id", "unknown")),
         "hook_type": str(metadata.get("hook_type", metadata.get("strategy", "unknown"))),
         "published_at": datetime.now(timezone.utc).isoformat(),
@@ -169,7 +170,20 @@ def process_package(
         variants = json.loads((package_dir / "variants.json").read_text(encoding="utf-8"))
         if variants.get("ok") is not True:
             raise ValueError("package variants.json is not green")
-        chosen_ranked = next((item for item in variants.get("ranked", []) if item.get("strategy") == variants.get("chosen_strategy")), None)
+        metadata = json.loads((package_dir / "metadata.json").read_text(encoding="utf-8"))
+        selected_variant_id = metadata.get("variant_id")
+        reported_variant_id = variants.get("chosen_variant_id")
+        if selected_variant_id or reported_variant_id:
+            if not selected_variant_id or not reported_variant_id or selected_variant_id != reported_variant_id:
+                raise ValueError(
+                    f"selected variant_id mismatch: metadata={selected_variant_id}, report={reported_variant_id}"
+                )
+            chosen_ranked = next(
+                (item for item in variants.get("ranked", []) if item.get("variant_id") == reported_variant_id),
+                None,
+            )
+        else:
+            chosen_ranked = next((item for item in variants.get("ranked", []) if item.get("strategy") == variants.get("chosen_strategy")), None)
         if not chosen_ranked or chosen_ranked.get("ok") is not True or chosen_ranked.get("originality_failures"):
             raise ValueError("package variant originality gate is not green")
         dashboard = json.loads((package_dir / "dashboard-qa.json").read_text(encoding="utf-8"))
@@ -194,6 +208,7 @@ def process_package(
                 continue
         record["attempts"] += 1
         record["release"] = release
+        record["variant_id"] = selected_variant_id
         record["title"] = title
         if completed.returncode == 0:
             record["status"] = "drafted" if draft else "published"
