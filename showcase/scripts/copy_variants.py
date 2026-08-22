@@ -47,6 +47,22 @@ def _normalize_for_originality(value: str) -> str:
     return re.sub(r"\s+", "", value).casefold()
 
 
+def text_trigrams(body: str) -> set[str]:
+    normalized = _normalize_for_originality(body)
+    return {
+        hashlib.sha256(normalized[index:index + 3].encode("utf-8")).hexdigest()[:12]
+        for index in range(max(0, len(normalized) - 2))
+    }
+
+
+def jaccard_similarity(left: set[str], right: set[str]) -> float:
+    if not left and not right:
+        return 1.0
+    if not left or not right:
+        return 0.0
+    return len(left & right) / len(left | right)
+
+
 def text_fingerprints(body: str) -> dict[str, str]:
     paragraphs = [item.strip() for item in body.split("\n\n") if item.strip()]
     return {
@@ -143,15 +159,20 @@ def choose_variant(
     max_score = max((item["weighted_engagement"] / max(item["impressions"], 1) for item in hook_stats.values()), default=0.0)
 
     prior_fingerprints = [
-        {key: record.get(key) for key in ("release", "body_sha256", "opening", "closing")}
+        {key: record.get(key) for key in ("release", "body_sha256", "opening", "closing", "body_trigrams")}
         for record in records
-        if record.get("body_sha256") or record.get("opening") or record.get("closing")
+        if record.get("body_sha256") or record.get("opening") or record.get("closing") or record.get("body_trigrams")
     ]
 
     ranked: list[dict[str, Any]] = []
+    max_body_similarity = 0.0
+    similarity_source = ""
     for variant in variants:
+        adjustment = 0.0
+        reasons = []
         report = dict(variant.pop("_report"))
         fingerprints = text_fingerprints(variant["body"])
+        variant_trigrams = text_trigrams(variant["body"])
         originality_failures = []
         for prior in prior_fingerprints:
             release_name = prior.get("release") or "previous release"
@@ -161,11 +182,21 @@ def choose_variant(
                 originality_failures.append(f"opening matches {release_name}")
             if fingerprints["closing"] and prior.get("closing") == fingerprints["closing"]:
                 originality_failures.append(f"closing matches {release_name}")
+            prior_trigrams = set(prior.get("body_trigrams") or [])
+            similarity = jaccard_similarity(variant_trigrams, prior_trigrams)
+            if similarity > max_body_similarity:
+                max_body_similarity = similarity
+                similarity_source = release_name
+            if similarity >= 0.85:
+                originality_failures.append(
+                    f"near-duplicate body ({similarity:.2f}) matches {release_name}"
+                )
+            elif similarity >= 0.70:
+                adjustment -= 12
+                reasons.append(f"near-duplicate penalty against {release_name} ({similarity:.2f})")
         if originality_failures:
             report["hard_failures"] = sorted(set(report.get("hard_failures", []) + originality_failures))
             report["ok"] = False
-        adjustment = 0.0
-        reasons = []
         hook_type = variant["hook_type"]
         if hook_type in recent_hooks:
             adjustment -= 6
@@ -189,6 +220,8 @@ def choose_variant(
             "ok": report["ok"],
             "hard_failures": report["hard_failures"],
             "originality_failures": originality_failures,
+            "max_body_similarity": round(max_body_similarity, 3),
+            "max_similarity_source": similarity_source,
             "reasons": reasons,
         })
 

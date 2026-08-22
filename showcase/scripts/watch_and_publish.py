@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from content_memory import upsert_record
-from copy_variants import text_fingerprints
+from copy_variants import text_fingerprints, text_trigrams
 
 DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
 STATE_VERSION = 1
@@ -132,6 +132,7 @@ def seed_feedback_ledger(
         "published_url": publisher_result.get("url"),
         "audit_status": audit_status,
         **text_fingerprints(body),
+        "body_trigrams": sorted(text_trigrams(body)),
         "lessons": "Published automatically; awaiting platform metrics and manual review.",
     }
     return upsert_record(ledger_path, record)

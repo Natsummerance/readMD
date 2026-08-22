@@ -634,6 +634,23 @@ class CopyVariantsTest(unittest.TestCase):
         self.assertTrue(any("opening" in failure for failure in outcome_report["hard_failures"]))
         self.assertTrue(any("closing" in failure for failure in outcome_report["hard_failures"]))
 
+    def test_originality_gate_rejects_near_duplicate_template(self) -> None:
+        story = self.variant_story()
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        outcome = next(variant for variant in variants if variant["strategy"] == "outcome-led")
+        lightly_edited = outcome["body"].replace("讲的时候还要复制进 PPT", "讲的时候还得复制到 PPT")
+        history = [{
+            **self.history_record("v1.0.0", "identity-led", "#22"),
+            "body_trigrams": list(copy_variants.text_trigrams(lightly_edited)),
+        }]
+        chosen, report = copy_variants.choose_variant(variants, history)
+        outcome_report = next(item for item in report["ranked"] if item["strategy"] == "outcome-led")
+        self.assertNotEqual(chosen["strategy"], "outcome-led")
+        self.assertFalse(outcome_report["ok"])
+        self.assertGreaterEqual(outcome_report["max_body_similarity"], 0.85)
+        self.assertTrue(any("near-duplicate body" in failure for failure in outcome_report["hard_failures"]))
+
 
 class PerformanceReportTest(unittest.TestCase):
     def complete(self, release: str, formula: str, hook_type: str, impressions: int, likes: int, collects: int) -> dict:
@@ -872,7 +889,7 @@ class WatcherTest(unittest.TestCase):
         }), encoding="utf-8")
         (package / "dashboard-qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "title.txt").write_text("标题", encoding="utf-8")
-        (package / "body.txt").write_text("正文", encoding="utf-8")
+        (package / "body.txt").write_text("这篇正文足够长，可以形成稳定的三元组指纹。", encoding="utf-8")
         metadata = {
             "title": "标题",
             "strategy": "outcome-led",
@@ -969,6 +986,7 @@ class WatcherTest(unittest.TestCase):
             self.assertIn("body_sha256", feedback)
             self.assertIn("opening", feedback)
             self.assertIn("closing", feedback)
+            self.assertTrue(feedback["body_trigrams"])
 
 
 if __name__ == "__main__":
