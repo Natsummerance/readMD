@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -24,6 +26,24 @@ IMMUTABLE_FIELDS = (
     "published_url",
 )
 METRIC_SOURCES = {"xiaohongshu-web", "manual"}
+COMMENT_THEME_TERMS = {
+    "presentation": ("放映", "上台", "演示", "ppt", "幻灯"),
+    "academic": ("论文", "组会", "课程", "讲义", "学术", "答辩"),
+    "code": ("代码", "编程", "脚本", "code"),
+    "table": ("表格",),
+    "formula": ("公式", "latex", "mathjax"),
+    "diagram": ("图表", "流程图", "mermaid", "图形"),
+    "conversion": ("转换", "导入", "网页", "word", "pdf"),
+    "export-share": ("导出", "分享", "发布", "html"),
+    "local-privacy": ("本地", "离线", "隐私", "不上传"),
+    "stability-performance": ("卡顿", "崩溃", "性能", "速度", "稳定", "错误"),
+}
+COMMENT_INTENT_TERMS = {
+    "request": ("希望", "能不能", "可以", "建议", "增加", "想要", "需要", "支持"),
+    "question": ("吗", "怎么", "如何", "是否", "会不会", "?", "？"),
+    "praise": ("好用", "不错", "厉害", "方便", "喜欢", "终于", "强大"),
+    "concern": ("问题", "错误", "崩溃", "卡顿", "慢", "丢失", "担心", "兼容"),
+}
 
 
 def _validate_record(record: dict[str, Any]) -> None:
@@ -178,6 +198,115 @@ def import_metric_snapshot(
     return update_record(path, release, patch)
 
 
+def _normalize_comment(value: str) -> str:
+    return re.sub(r"\s+", "", str(value)).casefold()
+
+
+def _comment_hash(value: str) -> str:
+    return hashlib.sha256(_normalize_comment(value).encode("utf-8")).hexdigest()[:16]
+
+
+def _comment_themes(text: str) -> list[str]:
+    lowered = _normalize_comment(text)
+    return [name for name, terms in COMMENT_THEME_TERMS.items() if any(term.lower() in lowered for term in terms)] or ["general"]
+
+
+def _comment_intents(text: str) -> list[str]:
+    lowered = _normalize_comment(text)
+    return [name for name, terms in COMMENT_INTENT_TERMS.items() if any(term.lower() in lowered for term in terms)] or ["observation"]
+
+
+def import_comment_snapshot(
+    path: Path,
+    release: str,
+    snapshot: dict[str, Any],
+    *,
+    source: str,
+    captured_at: str,
+) -> dict[str, Any]:
+    """Convert public comments into anonymized resonance themes without storing raw text."""
+    if source not in METRIC_SOURCES:
+        raise ValueError(f"comment source must be one of: {', '.join(sorted(METRIC_SOURCES))}")
+    captured = _parse_timestamp(captured_at, "captured_at")
+    records = load_records(path)
+    existing = next((record for record in records if record.get("release") == release), None)
+    if existing is None:
+        raise ValueError(f"release not found in ledger: {release}")
+
+    conflicts = [
+        key
+        for key in IMMUTABLE_FIELDS
+        if key != "release"
+        and key in snapshot
+        and existing.get(key) not in (None, "")
+        and existing.get(key) != snapshot[key]
+    ]
+    if conflicts:
+        raise ValueError("snapshot conflicts with immutable publication fields: " + ", ".join(conflicts))
+
+    comments = snapshot.get("comments")
+    if not isinstance(comments, list):
+        raise ValueError("snapshot.comments must be a list")
+
+    unique_comments: dict[str, tuple[str, int]] = {}
+    for item in comments:
+        if not isinstance(item, dict):
+            raise ValueError("each comment must be an object")
+        text = str(item.get("text", "")).strip()
+        if not text or len(text) > 500:
+            raise ValueError("comment text must contain 1-500 characters")
+        likes = item.get("likes", 0)
+        if not isinstance(likes, int) or isinstance(likes, bool) or likes < 0:
+            raise ValueError("comment likes must be a non-negative integer")
+        digest = _comment_hash(text)
+        previous_likes = unique_comments.get(digest, (text, -1))[1]
+        if likes > previous_likes:
+            unique_comments[digest] = (text, likes)
+
+    theme_stats: dict[str, dict[str, Any]] = {}
+    for text, likes in unique_comments.values():
+        weight = likes + 1
+        intents = _comment_intents(text)
+        for theme in _comment_themes(text):
+            stats = theme_stats.setdefault(theme, {"mentions": 0, "weighted_score": 0, "intents": {}})
+            stats["mentions"] += 1
+            stats["weighted_score"] += weight
+            for intent in intents:
+                stats["intents"][intent] = stats["intents"].get(intent, 0) + 1
+
+    themes = [
+        {
+            "theme": theme,
+            "mentions": stats["mentions"],
+            "weighted_score": stats["weighted_score"],
+            "intents": sorted(stats["intents"]),
+        }
+        for theme, stats in sorted(
+            theme_stats.items(),
+            key=lambda item: (-item[1]["weighted_score"], -item[1]["mentions"], item[0]),
+        )
+    ]
+    insights = {
+        "schema_version": 1,
+        "imported_count": len(comments),
+        "unique_count": len(unique_comments),
+        "themes": themes,
+        "top_theme": themes[0]["theme"] if themes else None,
+        "evidence_hashes": sorted(unique_comments),
+    }
+
+    previous_captured = existing.get("comments_captured_at")
+    if previous_captured and captured <= _parse_timestamp(previous_captured, "comments_captured_at"):
+        raise ValueError("comment snapshot is not newer than the ledger snapshot")
+
+    patch = {
+        "comment_insights": insights,
+        "comments_source": source,
+        "comments_captured_at": captured.isoformat(),
+    }
+    return update_record(path, release, patch)
+
+
 def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
     formulas: dict[str, dict[str, Any]] = {}
     for record in records:
@@ -228,6 +357,12 @@ def main() -> int:
     metrics_parser.add_argument("--record", type=Path, required=True, help="JSON file containing platform metric counts")
     metrics_parser.add_argument("--source", choices=sorted(METRIC_SOURCES), required=True)
     metrics_parser.add_argument("--captured-at", required=True)
+    comments_parser = commands.add_parser("comments")
+    comments_parser.add_argument("--ledger", type=Path, default=Path(__file__).parents[1] / "content" / "publication-ledger.jsonl")
+    comments_parser.add_argument("--release", required=True)
+    comments_parser.add_argument("--record", type=Path, required=True, help="JSON file containing a public comment snapshot")
+    comments_parser.add_argument("--source", choices=sorted(METRIC_SOURCES), required=True)
+    comments_parser.add_argument("--captured-at", required=True)
     summary_parser = commands.add_parser("summary")
     summary_parser.add_argument("--ledger", type=Path, default=Path(__file__).parents[1] / "content" / "publication-ledger.jsonl")
     args = parser.parse_args()
@@ -240,6 +375,16 @@ def main() -> int:
     elif args.command == "metrics":
         snapshot = json.loads(args.record.read_text(encoding="utf-8"))
         updated = import_metric_snapshot(
+            args.ledger,
+            args.release,
+            snapshot,
+            source=args.source,
+            captured_at=args.captured_at,
+        )
+        print(json.dumps(updated, ensure_ascii=False, indent=2))
+    elif args.command == "comments":
+        snapshot = json.loads(args.record.read_text(encoding="utf-8"))
+        updated = import_comment_snapshot(
             args.ledger,
             args.release,
             snapshot,

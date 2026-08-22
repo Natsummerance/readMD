@@ -228,6 +228,54 @@ class WriteCopyTest(unittest.TestCase):
         self.assertNotRegex(result["body"], "预览版|更新线")
         self.assertIn("正式版", result["body"])
 
+    def test_comment_focus_shapes_reader_scenario(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = write_story(Path(tmp))
+            story["release"] = "v9.0.0"
+            history = [
+                {
+                    "release": "v8.0.0",
+                    "title": "v8",
+                    "title_formula_id": "#36",
+                    "hook_type": "outcome-led",
+                    "published_at": "2026-08-20T10:00:00Z",
+                    "metrics_status": "complete",
+                    "comment_insights": {
+                        "schema_version": 1,
+                        "unique_count": 2,
+                        "themes": [
+                            {"theme": "code", "mentions": 2, "weighted_score": 5},
+                            {"theme": "presentation", "mentions": 1, "weighted_score": 2},
+                        ],
+                        "top_theme": "code",
+                    },
+                },
+                {
+                    "release": "v8.1.0",
+                    "title": "v8.1",
+                    "title_formula_id": "#22",
+                    "hook_type": "identity-led",
+                    "published_at": "2026-08-21T10:00:00Z",
+                    "metrics_status": "complete",
+                    "comment_insights": {
+                        "schema_version": 1,
+                        "unique_count": 3,
+                        "themes": [
+                            {"theme": "code", "mentions": 3, "weighted_score": 7},
+                            {"theme": "table", "mentions": 1, "weighted_score": 2},
+                        ],
+                        "top_theme": "code",
+                    },
+                },
+            ]
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v8.1.0",
+                history=history,
+            )
+        self.assertIn("代码教程、技术笔记或示例文档", result["body"])
+
 
 class ValidatePackageTest(unittest.TestCase):
     maxDiff = None
@@ -872,6 +920,30 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertIsNone(data["recommended_formula"])
         self.assertIsNone(data["recommended_hook_type"])
 
+    def test_aggregates_comment_focus_across_releases(self) -> None:
+        def insights(theme: str, mentions: int, weighted_score: int) -> dict:
+            return {
+                "schema_version": 1,
+                "unique_count": mentions,
+                "themes": [{"theme": theme, "mentions": mentions, "weighted_score": weighted_score}],
+                "top_theme": theme,
+            }
+
+        records = [
+            {**self.complete("v1", "academic", "academic-led", 1000, 40, 60), "comment_insights": insights("academic", 2, 4)},
+            {**self.complete("v2", "outcome", "outcome-led", 2000, 120, 180), "comment_insights": insights("outcome", 3, 5)},
+            {**self.complete("v4", "academic", "identity-led", 1000, 20, 30), "comment_insights": insights("academic", 1, 5)},
+            {**self.complete("v3", "mechanism", "mechanism-curiosity", 500, 5, 5), "comment_insights": insights("presentation", 1, 1), "metrics_status": "pending"},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            data = performance_report.generate_report(records, Path(tmp))
+        focus = data["comment_focus"]["themes"]["academic"]
+        self.assertEqual(focus["release_count"], 2)
+        self.assertEqual(focus["mentions"], 3)
+        self.assertEqual(focus["weighted_score"], 9)
+        self.assertEqual(data["comment_focus"]["recommended_theme"], "academic")
+        self.assertEqual(data["comment_focus"]["confidence"], "medium")
+
 
 class BuildPipelineTest(unittest.TestCase):
     def test_workflow_aggregates_qa_before_packaging(self) -> None:
@@ -1238,6 +1310,72 @@ class ContentMemoryTest(unittest.TestCase):
                     "v1.0.0",
                     {"impressions": 10, **{field: 1 for field in ("likes", "collects", "comments", "shares", "follows")}},
                     source="manual",
+                    captured_at="2026-08-23T10:00:00+08:00",
+                )
+            after = store.read_text(encoding="utf-8")
+        self.assertEqual(after, before)
+
+    def test_comment_snapshot_imports_anonymized_resonance_themes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            self.seed_pending(store)
+            updated = content_memory.import_comment_snapshot(
+                store,
+                "v1.0.0",
+                {"comments": [
+                    {
+                        "id": "author-secret",
+                        "author": "公开昵称",
+                        "text": "希望能直接放映论文公式，很好用",
+                        "likes": 4,
+                    },
+                    {"text": "表格导出会不会丢失格式？", "likes": 2},
+                ]},
+                source="xiaohongshu-web",
+                captured_at="2026-08-24T10:00:00+08:00",
+            )
+            serialized = store.read_text(encoding="utf-8")
+        insights = updated["comment_insights"]
+        themes = {item["theme"]: item for item in insights["themes"]}
+        self.assertEqual(insights["imported_count"], 2)
+        self.assertEqual(insights["unique_count"], 2)
+        self.assertEqual(themes["presentation"]["mentions"], 1)
+        self.assertEqual(themes["presentation"]["weighted_score"], 5)
+        self.assertIn("request", themes["presentation"]["intents"])
+        self.assertIn("praise", themes["presentation"]["intents"])
+        self.assertIn("question", themes["table"]["intents"])
+        self.assertEqual(len(insights["evidence_hashes"]), 2)
+        self.assertTrue(all(re.fullmatch(r"[0-9a-f]{16}", item) for item in insights["evidence_hashes"]))
+        self.assertNotIn("希望能直接放映论文公式", serialized)
+        self.assertNotIn("表格导出会不会丢失格式", serialized)
+        self.assertNotIn("author-secret", serialized)
+
+    def test_comment_snapshot_rejects_invalid_and_stale_data(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            self.seed_pending(store)
+            with self.assertRaises(ValueError):
+                content_memory.import_comment_snapshot(
+                    store,
+                    "v1.0.0",
+                    {"comments": [{"text": "很好用", "likes": -1}]},
+                    source="manual",
+                    captured_at="2026-08-24T10:00:00+08:00",
+                )
+            content_memory.import_comment_snapshot(
+                store,
+                "v1.0.0",
+                {"comments": [{"text": "很好用"}]},
+                source="manual",
+                captured_at="2026-08-24T10:00:00+08:00",
+            )
+            before = store.read_text(encoding="utf-8")
+            with self.assertRaises(ValueError):
+                content_memory.import_comment_snapshot(
+                    store,
+                    "v1.0.0",
+                    {"comments": [{"text": "更新后更好用"}]},
+                    source="xiaohongshu-web",
                     captured_at="2026-08-23T10:00:00+08:00",
                 )
             after = store.read_text(encoding="utf-8")

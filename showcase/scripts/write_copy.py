@@ -83,6 +83,41 @@ def _select_title(candidates: list[dict[str, str]], history: list[dict[str, Any]
     }
 
 
+COMMENT_SCENARIOS = {
+    "general": "课程讲义、组会报告、技术分享或论文汇报",
+    "presentation": "课堂讲授、技术分享或会议演示",
+    "academic": "课程讲义、组会报告或论文汇报",
+    "code": "代码教程、技术笔记或示例文档",
+    "table": "数据表格、对比报告或项目清单",
+    "formula": "公式讲义、论文推导或学术笔记",
+    "diagram": "流程图、架构图或图表笔记",
+    "conversion": "网页剪藏、Word 资料或 PDF 内容",
+    "export-share": "发布稿、分享页或 HTML 输出",
+    "local-privacy": "本地草稿、私人笔记或未上传资料",
+    "stability-performance": "长文、大文档或复杂项目",
+}
+
+
+def _comment_focus(history: list[dict[str, Any]]) -> str:
+    themes: dict[str, dict[str, Any]] = {}
+    for record in history:
+        insights = record.get("comment_insights")
+        if not isinstance(insights, dict):
+            continue
+        for item in insights.get("themes", []):
+            if not isinstance(item, dict):
+                continue
+            theme = str(item.get("theme", "general"))
+            stats = themes.setdefault(theme, {"mentions": 0, "weighted_score": 0})
+            stats["mentions"] += int(item.get("mentions", 0))
+            stats["weighted_score"] += int(item.get("weighted_score", 0))
+    ranked = sorted(
+        themes.items(),
+        key=lambda item: (-item[1]["weighted_score"], -item[1]["mentions"], item[0]),
+    )
+    return next((theme for theme, _stats in ranked), "general")
+
+
 def generate_copy(
     story: dict[str, Any],
     *,
@@ -96,6 +131,7 @@ def generate_copy(
     valid_candidates = [item for item in candidates if len(item["text"]) <= 20]
     chosen_title = selected_title if len(selected_title["text"]) <= 20 else next(iter(valid_candidates), candidates[0])
     chosen_title["text"] = _clean(chosen_title["text"])
+    focus = _comment_focus(history)
     release = story["release"]
     prerelease = story["version_state"] != "release"
     state_text = "预览版" if prerelease else "正式版"
@@ -134,7 +170,7 @@ def generate_copy(
 
     paragraphs.extend(
         [
-            "如果你常写课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。",
+            f"如果你常处理{COMMENT_SCENARIOS[focus]}，它会省掉“重新做一遍演示稿”这一步。",
             f"安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 {repository}，进仓库后点 Releases 就能找到对应平台。",
             "你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。",
         ]

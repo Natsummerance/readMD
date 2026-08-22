@@ -47,10 +47,11 @@ WeChat 文件只做人工复制/粘贴发布，watcher 不会自动操作公众�
 
 ```powershell
 python showcase/scripts/content_memory.py metrics --release "v2.3.7-beta.3" --record feedback.json --source xiaohongshu-web --captured-at "2026-08-23T10:00:00+08:00"
+python showcase/scripts/content_memory.py comments --release "v2.3.7-beta.3" --record comments.json --source xiaohongshu-web --captured-at "2026-08-23T10:00:00+08:00"
 python showcase/scripts/content_memory.py summary
 python showcase/scripts/performance_report.py --output-dir showcase/reports/performance
 ```
 
-指标导入会保留发布时的公式、钩子和 `variant_id`，拒绝身份冲突和旧快照回滚；六个平台计数齐全会置为 `complete`，缺项保持 `pending`。绩效报告会分开列出 `complete` 与 `pending` 记录；`pending` 只作为待补录清单，不参与公式和钩子学习，低置信维度也不会给出推荐。
+指标导入会保留发布时的公式、钩子和 `variant_id`，拒绝身份冲突和旧快照回滚；六个平台计数齐全会置为 `complete`，缺项保持 `pending`。评论导入只保存主题、意图、点赞权重和匿名内容哈希，不保存原文、作者昵称或账号 ID；旧评论快照会被拒绝。绩效报告会跨发布聚合出有置信门槛的评论焦点，并把它写入下一版文案的读者场景。报告会分开列出 `complete` 与 `pending` 记录；`pending` 只作为待补录清单，不参与公式和钩子学习，低置信维度也不会给出推荐。
 
 记录字段包括 release、标题、公式 ID、钩子类型、曝光、赞、藏、评、转发、关注和一句复盘。下一次构建会读取这份资产：优先选择验证过的公式，并对最近连续使用过的公式降权。

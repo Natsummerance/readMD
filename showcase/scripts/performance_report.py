@@ -50,10 +50,68 @@ def _recommended(stats: dict[str, dict[str, Any]]) -> str | None:
     return next((name for name, item in stats.items() if item["confidence"] != "low"), None)
 
 
+def _comment_focus(records: list[dict[str, Any]]) -> dict[str, Any]:
+    aggregated: dict[str, dict[str, Any]] = {}
+    comment_releases: set[str] = set()
+    for record in records:
+        insights = record.get("comment_insights")
+        if not isinstance(insights, dict):
+            continue
+        release = str(record.get("release", ""))
+        comment_releases.add(release)
+        for item in insights.get("themes", []):
+            if not isinstance(item, dict):
+                continue
+            theme = str(item.get("theme", "general"))
+            stats = aggregated.setdefault(theme, {
+                "releases": set(),
+                "mentions": 0,
+                "weighted_score": 0,
+                "confidence": "low",
+            })
+            stats["releases"].add(release)
+            stats["mentions"] += int(item.get("mentions", 0))
+            stats["weighted_score"] += int(item.get("weighted_score", 0))
+
+    themes: dict[str, dict[str, Any]] = {}
+    for theme, stats in aggregated.items():
+        release_count = len(stats["releases"])
+        confidence = "low"
+        if release_count >= 3 and stats["weighted_score"] >= 8:
+            confidence = "high"
+        elif release_count >= 2 and stats["weighted_score"] >= 3:
+            confidence = "medium"
+        themes[theme] = {
+            "release_count": release_count,
+            "mentions": stats["mentions"],
+            "weighted_score": stats["weighted_score"],
+            "confidence": confidence,
+        }
+
+    ordered = sorted(
+        themes.items(),
+        key=lambda item: (
+            item[1]["confidence"] == "low",
+            -item[1]["weighted_score"],
+            -item[1]["mentions"],
+            item[0],
+        ),
+    )
+    recommended = next((theme for theme, stats in ordered if stats["confidence"] != "low"), None)
+    return {
+        "schema_version": 1,
+        "comment_release_count": len(comment_releases),
+        "themes": themes,
+        "recommended_theme": recommended,
+        "confidence": next((stats["confidence"] for theme, stats in ordered if theme == recommended), "low"),
+    }
+
+
 def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str, Any]:
     learning, pending = partition_records(records)
     formula_stats = _stats(learning, "title_formula_id")
     hook_stats = _stats(learning, "hook_type")
+    comment_focus = _comment_focus(learning)
     recommended_formula = _recommended(formula_stats)
     recommended_hook_type = _recommended(hook_stats)
     total_impressions = sum(int(record.get("impressions", 0)) for record in learning)
@@ -69,6 +127,7 @@ def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str
         "hook_stats": hook_stats,
         "recommended_formula": recommended_formula,
         "recommended_hook_type": recommended_hook_type,
+        "comment_focus": comment_focus,
         "pending_releases": [
             {"release": item.get("release"), "title": item.get("title"), "title_formula_id": item.get("title_formula_id")}
             for item in pending
@@ -94,10 +153,20 @@ def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str
         lines.append(f"| {hook} | {stats['publications']} | {stats['impressions']} | {stats['weighted_engagement']} | {stats['score']} | {stats['confidence']} |")
     lines.extend([
         "",
+        "## Comment focus",
+        "",
+        "| Theme | Releases | Mentions | Weighted score | Confidence |",
+        "| --- | ---: | ---: | ---: | --- |",
+    ])
+    for theme, stats in sorted(comment_focus["themes"].items(), key=lambda item: (-item[1]["weighted_score"], item[0])):
+        lines.append(f"| {theme} | {stats['release_count']} | {stats['mentions']} | {stats['weighted_score']} | {stats['confidence']} |")
+    lines.extend([
+        "",
         "## Next selection",
         "",
         f"- Preferred title formula: `{recommended_formula or 'insufficient evidence'}`",
         f"- Preferred hook type: `{recommended_hook_type or 'insufficient evidence'}`",
+        f"- Preferred comment focus: `{comment_focus.get('recommended_theme') or 'insufficient evidence'}`",
         "- Pending metrics remain excluded from learning until they are marked complete.",
         "",
     ])
