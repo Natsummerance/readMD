@@ -238,6 +238,21 @@ class BuildStoryTest(unittest.TestCase):
         self.assertNotEqual(story["angle"], "ReadMD 正在从 Markdown 阅读器变成完整本地文档工作台")
         self.assertEqual(story["summary_hook"]["title"], "分享可控")
 
+    def test_dense_evidence_outranks_presentation_category_bias(self) -> None:
+        notes = (
+            "- Diagram Picker 支持 PlantUML、Graphviz 和 Vega 科研图表\n"
+            "- Reveal.js 演示\n"
+        )
+        story = build_story.build_story(
+            release="v9.9.9",
+            previous_release="v9.9.8",
+            notes=notes,
+            shot_library_path=ROOT / "showcase" / "shot_library.json",
+        )
+        self.assertIn("presentation.reveal", story["selected_shots"])
+        self.assertEqual(story["primary_shot"], "editor.diagram-picker")
+        self.assertEqual(story["angle"], "ReadMD 把科研图表放进同一条 Markdown 工作流")
+
 
 class WriteCopyTest(unittest.TestCase):
     def test_mechanism_cover_hooks_are_short_unique_and_traceable(self) -> None:

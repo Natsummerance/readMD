@@ -101,8 +101,6 @@ def build_story(
     ranked_relevant = [shot_id for _, _, shot_id in sorted(scored, reverse=True)]
     fixed_order = ["overview.reader", "overview.editor", "convert.home"]
     relevant_features = [shot_id for shot_id in ranked_relevant if shot_id not in fixed_order]
-    if any(shots[item]["category"] == "Presentation" for item in relevant_features):
-        relevant_features.sort(key=lambda item: shots[item]["category"] != "Presentation")
     relevant_features = relevant_features[:3]
     primary_shot = relevant_features[0] if relevant_features else "overview.editor"
     mechanism_profile = profile_for_story({"primary_shot": primary_shot})
