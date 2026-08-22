@@ -8,10 +8,10 @@
   --bg3: #eef0f4;
   --fg: #1c1f26;
   --fg2: #5c6470;
-  --fg3: #8a919e;
+  --fg3: #666f7c;
   --border: rgba(17, 24, 39, .09);
   --border2: rgba(17, 24, 39, .18);
-  --accent: #3b6ef5;
+  --accent: #2f5fe8;
   --accent-soft: #e7eefc;
   --accent-fg: #ffffff;
   --code-bg: #f1f2f6;
@@ -40,12 +40,12 @@ body[data-theme="dark"] {
   --bg3: #23272f;
   --fg: #e7e9ee;
   --fg2: #9aa3b2;
-  --fg3: #6b7484;
+  --fg3: #868fa0;
   --border: rgba(255, 255, 255, .09);
   --border2: rgba(255, 255, 255, .17);
   --accent: #6d9bff;
   --accent-soft: rgba(109, 155, 255, .14);
-  --accent-fg: #ffffff;
+  --accent-fg: #081226;
   --code-bg: #20242c;
   --code-border: rgba(255, 255, 255, .07);
   --quote-bg: rgba(109, 155, 255, .08);
@@ -63,10 +63,10 @@ body[data-theme="sepia"] {
   --bg3: #ece2cd;
   --fg: #43392a;
   --fg2: #7d7160;
-  --fg3: #a2957f;
+  --fg3: #6d614e;
   --border: rgba(90, 70, 40, .14);
   --border2: rgba(90, 70, 40, .24);
-  --accent: #a9722f;
+  --accent: #8a571b;
   --accent-soft: rgba(169, 114, 47, .12);
   --accent-fg: #ffffff;
   --code-bg: #efe5d0;
@@ -2238,6 +2238,11 @@ body[data-theme="dark"] .conn-status { color: var(--fg3); }
 
 /* ---------- 导出预览微缩纸张与折叠项 ---------- */
 .export-preview-card {
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   margin-top: 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-m);

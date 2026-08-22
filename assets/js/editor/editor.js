@@ -58,6 +58,7 @@ function createEditor(doc) {
         if (u.docChanged) {
           schedulePreview();
           updateDocStatistics();
+          if (typeof updateUnloadGuard === 'function') updateUnloadGuard();
         }
         if (u.selectionSet || u.docChanged) updateCmSelectionToolbar();
       }),

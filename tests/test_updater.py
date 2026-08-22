@@ -106,6 +106,43 @@ class TestUpdaterModule(unittest.TestCase):
             self.assertTrue(res.get('has_update'))
             self.assertEqual(res.get('latest_version'), 'v2.4.0')
 
+    def test_resolve_expected_sha_parses_checksum_manifest(self):
+        """The matching SHA256SUMS row is used as the download integrity hash."""
+        manifest = (
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef  ReadMD-portable-v1.exe\n'
+            '*0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef  ReadMDSetup-v1.exe\n'
+        )
+        with patch('src.readmd_modules.updater._fetch_text', return_value=manifest):
+            actual = updater.resolve_expected_sha(
+                'http://example.com/SHA256SUMS.txt', 'ReadMDSetup-v1.exe'
+            )
+        self.assertEqual(actual, '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')
+
+    def test_check_update_embeds_expected_sha(self):
+        """Update checks expose the matched binary's expected SHA-256."""
+        mock_release = {
+            'tag_name': 'v2.4.0',
+            'html_url': 'https://example.com/release',
+            'assets': [
+                {'name': 'ReadMDSetup-v2.4.0.exe', 'browser_download_url': 'http://example.com/setup.exe', 'size': 123456},
+                {'name': 'SHA256SUMS.txt', 'browser_download_url': 'http://example.com/SHA256SUMS.txt', 'size': 500},
+            ],
+        }
+        manifest = (
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef  ReadMDSetup-v2.4.0.exe\n'
+            'other  ReadMDPortable.zip\n'
+        )
+
+        def fake_fetch(url, timeout=5):
+            if url == 'http://example.com/SHA256SUMS.txt':
+                return manifest
+            return mock_release
+
+        with patch('src.readmd_modules.updater._fetch_release_json', side_effect=fake_fetch), \
+             patch('src.readmd_modules.updater._fetch_text', return_value=manifest):
+            res = updater.check_update(current_version='2.3.3')
+        self.assertEqual(res['asset']['expected_sha'], '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')
+
     def test_check_update_already_latest(self):
         """测试已是最新版。"""
         mock_release = {

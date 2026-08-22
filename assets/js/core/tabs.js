@@ -60,6 +60,9 @@ function renderTabsBar() {
     const el = document.createElement('div');
     el.className = 'tab-item' + (tab.id === state.activeTabId ? ' active' : '');
     el.dataset.tabId = tab.id;
+    el.setAttribute('role', 'tab');
+    el.setAttribute('aria-selected', tab.id === state.activeTabId ? 'true' : 'false');
+    el.tabIndex = tab.id === state.activeTabId ? 0 : -1;
     el.draggable = true;
     el.title = tab.path || tab.title || tab.name;
 
@@ -87,6 +90,11 @@ function renderTabsBar() {
     el.appendChild(closeBtn);
 
     el.addEventListener('click', () => switchTab(tab.id));
+    el.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      switchTab(tab.id);
+    });
 
     el.addEventListener('dblclick', e => {
       e.stopPropagation();
@@ -290,14 +298,27 @@ function openTabContextMenu(e, tabId) {
   menu.classList.remove('hidden');
 }
 
-function switchTab(tabId) {
+async function switchTab(tabId) {
   if (state.activeTabId === tabId) return;
   const prevTab = getActiveTab();
   if (prevTab) {
     if (state.editing) {
       prevTab.content = getEditContent();
       prevTab.fixed = prevTab.content;
-      prevTab.isDirty = true;
+      if (hasUnsavedEditorChanges()) {
+        prevTab.isDirty = true;
+        const action = await promptDirtyClose(prevTab.title || prevTab.name || 'document');
+        if (action === 'cancel') return;
+        if (action === 'save') {
+          await saveEdit();
+          if (state.editing) return;
+        } else {
+          exitEdit();
+        }
+      }
+      else {
+        exitEdit();
+      }
     }
     prevTab.scrollPos = $('content').scrollTop || 0;
   }

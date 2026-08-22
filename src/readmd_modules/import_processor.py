@@ -23,6 +23,7 @@ import csv
 import io
 import os
 import re
+from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 IMPORT_PATTERN = re.compile(
@@ -31,6 +32,17 @@ IMPORT_PATTERN = re.compile(
 )
 
 MAX_IMPORT_DEPTH = 8
+
+
+def _is_inside_root(root: str, target: str) -> bool:
+    """Return True only when target resolves inside root, including symlink targets."""
+    root_path = Path(root).resolve(strict=False)
+    target_path = Path(target).resolve(strict=False)
+    try:
+        target_path.relative_to(root_path)
+        return True
+    except ValueError:
+        return False
 
 
 def parse_attributes(attr_str: Optional[str]) -> Dict[str, any]:
@@ -148,6 +160,10 @@ class ImportProcessor:
                 target_path = os.path.abspath(raw_path)
             else:
                 target_path = os.path.abspath(os.path.join(curr_dir, raw_path))
+
+            # Enforce the documented document-root boundary after resolving links.
+            if not _is_inside_root(self.base_dir, target_path):
+                return f"\n> **[ReadMD 错误]**: 导入文件越权路径，已拒绝 `@import \"{raw_path}\"`\n"
 
             # 循环引用防御
             if target_path in visited:

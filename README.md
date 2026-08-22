@@ -16,7 +16,7 @@
 
 双击 `.md` 即读，渲染前自动修正常见语法错误（表格 / 加粗 / 公式 / 标题），**只影响显示，绝不改写原文件**；集成 AI 助手、万物转 MD、扫描 OCR、网页转 MD、LaTeX PRO 学术增强、Zen 禅模式与局域网移动端共享。
 
-![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Kylin%20%7C%20UOS%20%7C%20HarmonyOS-0078d6)
+![platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Kylin%20%7C%20UOS-0078d6)
 ![version](https://img.shields.io/github/v/release/Natsummerance/readMD?color=3b6ef5)
 ![webview2](https://img.shields.io/badge/runtime-WebView2%20%7C%20WebKit%20%7C%20ArkWeb-4fc08d)
 ![repo size](https://img.shields.io/github/repo-size/Natsummerance/readMD)
@@ -26,33 +26,30 @@
 <br>
 
 <p align="center">
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.3.exe">
-    <img src="https://img.shields.io/badge/⬇️_Windows_安装包-v2.3.7-beta.1-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 安装包">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-2.3.7-beta.3.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_安装包-v2.3.7-beta.3-2563eb?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 安装包">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.3.exe">
-    <img src="https://img.shields.io/badge/⬇️_Windows_便携版-v2.3.7-beta.1-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 便携版">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-2.3.7-beta.3.exe">
+    <img src="https://img.shields.io/badge/⬇️_Windows_便携版-v2.3.7-beta.3-0284c7?style=for-the-badge&logo=windows&logoColor=white" alt="Windows 便携版">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.3.zip">
-    <img src="https://img.shields.io/badge/⬇️_macOS_(M芯片)-v2.3.7-beta.1-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-2.3.7-beta.3.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(M芯片)-v2.3.7-beta.3-111827?style=for-the-badge&logo=apple&logoColor=white" alt="macOS ARM64">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.3.zip">
-    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel)-v2.3.7-beta.1-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-2.3.7-beta.3.zip">
+    <img src="https://img.shields.io/badge/⬇️_macOS_(Intel)-v2.3.7-beta.3-4b5563?style=for-the-badge&logo=apple&logoColor=white" alt="macOS Intel">
   </a>
   <br>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage">
-    <img src="https://img.shields.io/badge/⬇️_Linux_AppImage-v2.3.7-beta.1-ea580c?style=for-the-badge&logo=linux&logoColor=white" alt="Linux AppImage">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-2.3.7-beta.3.AppImage">
+    <img src="https://img.shields.io/badge/⬇️_Linux_AppImage-v2.3.7-beta.3-ea580c?style=for-the-badge&logo=linux&logoColor=white" alt="Linux AppImage">
   </a>
   <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_amd64.deb">
-    <img src="https://img.shields.io/badge/⬇️_信创·统信UOS·麒麟_Deb-v2.3.7-beta.1-b91c1c?style=for-the-badge&logo=debian&logoColor=white" alt="Deb 安装包">
+    <img src="https://img.shields.io/badge/⬇️_信创·统信UOS·麒麟_Deb-v2.3.7-beta.3-b91c1c?style=for-the-badge&logo=debian&logoColor=white" alt="Deb 安装包">
   </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.3.hap">
-    <img src="https://img.shields.io/badge/📱_鸿蒙_HarmonyOS_HAP-v2.3.7-beta.1-059669?style=for-the-badge&logo=huawei&logoColor=white" alt="HarmonyOS HAP">
-  </a>
-  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-v2.3.7-beta.3.vsix">
-    <img src="https://img.shields.io/badge/🧩_VSCode_插件-v2.3.7-beta.1-6366f1?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VSCode VSIX">
+  <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.3.vsix">
+    <img src="https://img.shields.io/badge/🧩_VSCode_插件-v2.3.7-beta.3-6366f1?style=for-the-badge&logo=visualstudiocode&logoColor=white" alt="VSCode VSIX">
   </a>
   <a href="https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.3.zip">
-    <img src="https://img.shields.io/badge/🤖_MCP_Server-v2.3.7-beta.1-0d9488?style=for-the-badge&logo=fastapi&logoColor=white" alt="MCP Server">
+    <img src="https://img.shields.io/badge/🤖_MCP_Server-v2.3.7-beta.3-0d9488?style=for-the-badge&logo=fastapi&logoColor=white" alt="MCP Server">
   </a>
 </p>
 
@@ -64,7 +61,7 @@
 
 - 📖 **超长文档智能语义分页**：面对 >10,000 行超长文档自动激活智能分页，纯 SVG 极简矢量控制栏，大纲 (TOC) 与全文搜索 (Ctrl+F) 跨页联动，视口公式按需排版，杜绝假死。
 - ⚡ **极速秒开**：安装版采用 onedir 目录结构，冷启动 ≤1.5s；关闭窗口常驻托盘，双击 `.md` 瞬时唤起（<0.3s）。
-- 💻 **全操作系统原生覆盖**：Windows (Win 7 ~ 11)、macOS (Apple Silicon / Intel)、Linux (Ubuntu / Debian / Arch / Fedora)、国产信创 (银河麒麟 KylinOS / 统信 UOS / 深度 Deepin / openEuler) 与纯血鸿蒙 (HarmonyOS NEXT / OpenHarmony)。
+- 💻 **全操作系统原生覆盖**：Windows (Win 7 ~ 11)、macOS (Apple Silicon / Intel)、Linux (Ubuntu / Debian / Arch / Fedora) 与国产信创 (银河麒麟 KylinOS / 统信 UOS / 深度 Deepin / openEuler)；鸿蒙端提供 ArkTS 源码工程。
 - 🌍 **全球 46 语种 i18n 体系**：自适应操作系统语言初始化，支持 LTR 与 RTL 双向排版（阿拉伯语 / 希伯来语 / 维吾尔语），100% 纯正母语化覆盖。
 - 📐 **LaTeX PRO 学术增强**：零配置自动扫描同目录 `.bib` 参考文献库生成悬浮引用卡片；内置 Theorem、Lemma、Proof (带 Q.E.D. ■ 徽标)、Definition 等学术 Callout 盒子。
 - 🧘 **Editor Studio PRO 沉浸编辑**：Zen 禅模式（F11 / Esc 全屏专注）、10×10 可视化表格网格设计器、Excel / CSV 智能粘贴转 Markdown、实时字数与阅读时长看板。
@@ -79,15 +76,14 @@
 
 | 操作系统 / 平台 | 架构 / 格式 | 直接下载链接 (GitHub Release) | 说明 |
 | :--- | :--- | :--- | :--- |
-| 🪟 **Windows** | x64 (安装版) | [⬇️ **ReadMDSetup-v2.3.7-beta.3.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.3.exe) | 动画安装向导，自动关联 `.md` 文件为默认打开方式 |
-| 💼 **Windows** | x64 (绿色便携版) | [⬇️ **ReadMD-portable-v2.3.7-beta.3.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.3.exe) | 单文件绿色版，免安装解压即用 |
-| 🍏 **macOS** | Apple Silicon (M系列) | [⬇️ **ReadMD-macos-arm64-v2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.3.zip) | M1 / M2 / M3 / M4 原生构建（含 Vision 离线 OCR） |
-| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.3.zip) | Intel 芯片 Mac 原生构建（含 Vision 离线 OCR） |
-| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage) | 通用 Linux 免安装 AppImage，赋予执行权限后直接运行 |
+| 🪟 **Windows** | x64 (安装版) | [⬇️ **ReadMDSetup-2.3.7-beta.3.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-2.3.7-beta.3.exe) | 动画安装向导，自动关联 `.md` 文件为默认打开方式 |
+| 💼 **Windows** | x64 (绿色便携版) | [⬇️ **ReadMD-portable-2.3.7-beta.3.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-2.3.7-beta.3.exe) | 单文件绿色版，免安装解压即用 |
+| 🍏 **macOS** | Apple Silicon (M系列) | [⬇️ **ReadMD-macos-arm64-2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-2.3.7-beta.3.zip) | M1 / M2 / M3 / M4 原生构建（含 Vision 离线 OCR） |
+| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-2.3.7-beta.3.zip) | Intel 芯片 Mac 原生构建（含 Vision 离线 OCR） |
+| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-2.3.7-beta.3.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-2.3.7-beta.3.AppImage) | 通用 Linux 免安装 AppImage，赋予执行权限后直接运行 |
 | 🇨🇳 **国产信创系统** | 统信 UOS / 银河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.7-beta.3_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_amd64.deb) | Deb 原生安装包，集成应用菜单图标、MIME 关联与 UKUI/DDE 主题适配 |
-| 📱 **HarmonyOS NEXT** | 纯血鸿蒙 / OpenHarmony (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.7-beta.3.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.3.hap) | 鸿蒙原生应用安装包，ArkTS + ArkUI + ArkWeb 架构 |
-| 🧩 **VSCode 插件** | 通用 VSIX 扩展包 | [⬇️ **readmd-v2.3.7-beta.3.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-v2.3.7-beta.3.vsix) | VSCode 离线安装包，支持双向同步预览与格式自愈 |
-| 🤖 **MCP Server** | FastMCP stdio 独立包 | [⬇️ **readmd-mcp-server-2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.3.zip) | 独立 FastMCP 服务端，供 Claude Desktop / Cursor 一键接入 |
+| 🧩 **VSCode 插件** | 通用 VSIX 扩展包 | [⬇️ **readmd-vscode-2.3.7-beta.3.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.3.vsix) | VSCode 离线安装包，支持双向同步预览与格式自愈 |
+| 🤖 **MCP Server** | FastMCP stdio 源码包 | [⬇️ **readmd-mcp-server-2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.3.zip) | 独立 FastMCP 服务端，供 Claude Desktop / Cursor 一键接入 |
 | 🔐 **SHA-256 校验** | 完整性清单 | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | 全量资产 SHA-256 哈希校验清单 |
 
 ---
@@ -95,14 +91,14 @@
 ## 💻 多系统与信创国产 / 鸿蒙深度适配
 
 ### 1. Linux 与国产操作系统适配（统信 UOS / 银河麒麟 / 深度 / openEuler）
-- **直接安装使用**：下载 [`readmd_2.3.7-beta.3_amd64.deb`](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_amd64.deb) 双击安装，或直接运行 [`ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage)。
+- **直接安装使用**：下载 [`readmd_2.3.7-beta.3_amd64.deb`](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_amd64.deb) 双击安装，或直接运行 [`ReadMD-linux-x86_64-2.3.7-beta.3.AppImage`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-2.3.7-beta.3.AppImage)。
 - **系统与环境识别**：`src/readmd_modules/linux_native.py` 自动识别系统发行版，自适应配置 Wayland / X11 显示后端。
 - **桌面与深色模式**：自动侦测 DDE（统信/Deepin）、UKUI（银河麒麟）与 GNOME/KDE 的外观主题，实时同步深色/浅色配色。
 - **桌面集成与关联**：内置 FreeDesktop 桌面入口与 MIME 类型声明，支持双击 `.md` 默认打开。
 - **玲珑分发格式**：提供 `packages/linglong/linglong.yaml`，适配统信应用商店分发。
 
 ### 2. HarmonyOS NEXT (纯血鸿蒙) 与 OpenHarmony 原生应用
-- **应用包安装**：直接下载 [`ReadMD-harmonyos-v2.3.7-beta.3.hap`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.3.hap) 或使用 DevEco Studio NEXT 打开 `packages/harmonyos-app/` 编译。
+- **源码构建**：使用 DevEco Studio NEXT 打开 `packages/harmonyos-app/` 自行编译；当前不发布未经签名打包链验证的 `.hap`。
 - **ArkUI + ArkWeb 架构**：通过 ArkWeb 容器完整复用 ReadMD 离线渲染核心（Marked + KaTeX + 46 语种 i18n + LaTeX PRO）。
 - **系统能力桥接 (`ReadMDBridge.ets`)**：
   - 系统剪贴板交互 (`@ohos.pasteboard`)；
@@ -119,10 +115,10 @@
 ## 🧩 VSCode 扩展与 MCP Server 生态
 
 ### 1. VSCode 插件安装与使用
-- **界面安装**：下载 [`readmd-v2.3.7-beta.3.vsix`](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-v2.3.7-beta.3.vsix) -> 在 VSCode 扩展面板选择 `... -> 从 VSIX 安装...`。
+- **界面安装**：下载 [`readmd-vscode-2.3.7-beta.3.vsix`](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.3.vsix) -> 在 VSCode 扩展面板选择 `... -> 从 VSIX 安装...`。
 - **命令行安装**：
   ```bash
-  code --install-extension readmd-v2.3.7-beta.3.vsix
+  code --install-extension readmd-vscode-2.3.7-beta.3.vsix
   ```
 - **核心功能**：打开 Markdown 文件点击右上角书本图标开启同步预览；右键菜单支持一键自动修复语法错误与转换为 LaTeX 源码。
 
@@ -228,14 +224,14 @@ readmd/
 
 ---
 
-## 📝 更新日志 (v2.3.7-beta.1)
+## 📝 更新日志 (v2.3.7-beta.3)
 
 - 🌍 **46 语种全量母语化与机翻清洗**：深入审核 42 个非中英文语言字典，消除波兰语混淆、西部之塔、农作物裁剪等全部系统性翻译错误，实现 100% 完整覆盖。
 - 🐧 **Linux 全架构与信创国产系统支持**：新增 `linux_native.py` 原生模块，适配银河麒麟 KylinOS V10 SP2、统信 UOS 20、深度 Deepin、openEuler；提供 FreeDesktop 桌面集成与玲珑容器声明。
 - 📱 **HarmonyOS NEXT 鸿蒙原生应用分包**：基于 ArkTS + ArkUI + ArkWeb 构建，系统级桥接剪贴板、文件选择器与原生 OCR。
 - 📐 **LaTeX PRO 学术论文套件**：零配置 `.bib` 参考文献浮动卡片、学术 Callout 盒子与 LaTeX 导出。
 - 🧘 **Editor Studio PRO 体验重塑**：Zen 禅模式全屏专注、10×10 表格设计器、Excel 智能转换。
-- 🔌 **VSCode 插件与 MCP Server 生态完善**：升级至 v2.3.7-beta.1，提供稳定的多端 AI 写作协作流。
+- 🔌 **VSCode 插件与 MCP Server 生态完善**：升级至 v2.3.7-beta.3，提供稳定的多端 AI 写作协作流。
 
 ---
 

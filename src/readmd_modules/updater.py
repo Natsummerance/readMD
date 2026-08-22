@@ -171,6 +171,34 @@ def _fetch_release_json(url, timeout=5):
     return None
 
 
+def _fetch_text(url, timeout=5):
+    req = urllib.request.Request(url)
+    req.add_header('User-Agent', 'ReadMD-Updater')
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        if resp.status == 200:
+            return resp.read().decode('utf-8', errors='replace')
+    return None
+
+
+def resolve_expected_sha(sha_url, asset_name, timeout=5):
+    """Resolve one binary's digest from a standard SHA256SUMS manifest."""
+    if not sha_url or not asset_name:
+        return None
+    try:
+        text = _fetch_text(sha_url, timeout=timeout) or ''
+    except Exception as exc:
+        logging.warning('Unable to read SHA256SUMS manifest: %s', exc)
+        return None
+
+    wanted = os.path.basename(asset_name).casefold()
+    for line in text.splitlines():
+        match = re.match(r'^\s*\*?([A-Fa-f0-9]{64})\s+\*?(.+?)\s*$', line)
+        if match and os.path.basename(match.group(2)).casefold() == wanted:
+            return match.group(1).lower()
+    logging.warning('SHA256SUMS has no entry for %s', asset_name)
+    return None
+
+
 def check_update(current_version, timeout=4):
     """请求 GitHub API 获取最新 Release 信息（支持国内加速镜像自动降级），并返回更新详情。"""
     data = None
@@ -198,6 +226,11 @@ def check_update(current_version, timeout=4):
         flavor = detect_app_flavor()
         assets = data.get('assets', [])
         best_asset, sha_asset = match_release_asset(assets, flavor)
+        expected_sha = resolve_expected_sha(
+            sha_asset.get('browser_download_url') if sha_asset else None,
+            best_asset.get('name') if best_asset else None,
+            timeout=timeout,
+        )
 
         return {
             'ok': True,
@@ -213,6 +246,7 @@ def check_update(current_version, timeout=4):
                 'name': best_asset.get('name'),
                 'size': best_asset.get('size', 0),
                 'download_url': best_asset.get('browser_download_url'),
+                'expected_sha': expected_sha,
             } if best_asset else None,
             'sha_url': sha_asset.get('browser_download_url') if sha_asset else None,
         }
@@ -414,4 +448,3 @@ del "%~f0"
     except Exception as e:
         logging.exception('Apply update failed: %s', e)
         return False, str(e)
-

@@ -5,6 +5,7 @@ import os
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
@@ -86,6 +87,42 @@ class TestImportProcessor(unittest.TestCase):
 
             result = process_markdown_imports(content, base_dir=tmpdir, current_file=file_a)
             self.assertIn("循环引用", result)
+
+    def test_import_paths_must_stay_inside_document_root(self):
+        """Absolute paths, traversal, and symlinks may not escape @import root."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir) / "document"
+            outside = Path(tmpdir) / "outside.md"
+            root.mkdir()
+            outside.write_text("# Outside secret\n", encoding="utf-8")
+            (root / "inside.md").write_text("# Inside\n", encoding="utf-8")
+            (root / "nested").mkdir()
+            (root / "nested" / "inside.md").write_text("# Inside\n", encoding="utf-8")
+
+            processor = ImportProcessor(base_dir=str(root))
+            absolute = processor.process(f'@import "{outside.as_posix()}"')
+            traversal = processor.process('@import "../outside.md"')
+            nested = processor.process('@import "nested/inside.md"')
+            self.assertIn("越权路径", absolute)
+            self.assertIn("越权路径", traversal)
+            self.assertNotIn("Outside secret", absolute + traversal)
+            self.assertIn("Inside", nested)
+
+    def test_import_symlink_escape_is_rejected(self):
+        """Symlinked imports are resolved before the document-root check."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir) / "document"
+            outside = Path(tmpdir) / "outside.md"
+            link = root / "link.md"
+            root.mkdir()
+            outside.write_text("# Symlink secret\n", encoding="utf-8")
+            try:
+                os.symlink(outside, link, target_is_directory=False)
+            except (NotImplementedError, OSError):
+                self.skipTest("symlinks unavailable")
+            result = process_markdown_imports('@import "link.md"', base_dir=str(root))
+            self.assertIn("越权路径", result)
+            self.assertNotIn("Symlink secret", result)
 
     def test_import_csv_and_diagrams(self):
         """测试导入外部 CSV 与 PUML 图表。"""

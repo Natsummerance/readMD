@@ -153,7 +153,7 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
         # 替换 badge
         new_src = re.sub(r'badge/version-v[0-9a-zA-Z.-]+-3b6ef5', f'badge/version-v{target_ver}-3b6ef5', src)
         # 替换下载资产后缀
-        new_src = re.sub(r'(-v)[0-9a-zA-Z.-]+(\.(?:exe|zip|AppImage|deb|hap|vsix))', f'\\g<1>{target_ver}\\g<2>', new_src)
+        new_src = re.sub(r'(?P<prefix>-)v(?P<version>\d[0-9a-zA-Z.-]*)(?P<suffix>\.(?:exe|zip|AppImage|deb|hap|vsix)\b)', f'\\g<prefix>v{target_ver}\\g<suffix>', new_src)
         new_src = re.sub(r'(_)[0-9a-zA-Z.-]+(_amd64\.deb)', f'\\g<1>{target_ver}\\g<2>', new_src)
         new_src = re.sub(r'(vscode-)[0-9a-zA-Z.-]+(\.vsix)', f'\\g<1>{target_ver}\\g<2>', new_src)
         new_src = re.sub(r'(server-)[0-9a-zA-Z.-]+(\.zip)', f'\\g<1>{target_ver}\\g<2>', new_src)

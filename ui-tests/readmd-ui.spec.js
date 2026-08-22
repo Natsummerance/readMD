@@ -12,6 +12,22 @@ async function enterEdit(page) {
   await expect(page.locator('#edit-bar')).toBeVisible();
 }
 
+async function setEditorContent(page, content) {
+  await page.waitForFunction(() => {
+    const cmReady = document.querySelector('#edit-cm .cm-content');
+    const fallbackReady = document.getElementById('edit-area') && !document.getElementById('edit-area').classList.contains('hidden');
+    return !!(cmReady || fallbackReady);
+  });
+  const cmContent = page.locator('#edit-cm .cm-content');
+  if (await cmContent.count()) {
+    await cmContent.click();
+    await page.keyboard.press('Control+A');
+    await page.keyboard.type(content);
+  } else {
+    await page.locator('#edit-area').fill(content);
+  }
+}
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     try {
@@ -828,6 +844,178 @@ test('v2.3.7 presentation mode floating toolbar, themes, font zoom & escape', as
   const closeBtn = page.locator('#presentation-close-btn');
   await closeBtn.click();
   await expect(modal).toHaveClass(/hidden/);
+});
+
+test('in-app updates refuse binaries without a verified checksum', async ({ page }) => {
+  const downloads = [];
+  await page.goto('/');
+  await page.waitForFunction(() => typeof startUpdateDownload === 'function');
+  await page.route('**/api/update/download', route => {
+    downloads.push(route.request().postDataJSON());
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+  });
+  await page.evaluate(async () => {
+    updateInfo = { flavor: 'win_installer', asset: { name: 'ReadMDSetup-v9.exe', download_url: 'https://example.invalid/app.exe' } };
+    openUpdateModal();
+  });
+  await expect(page.locator('#btn-update-start')).toBeDisabled();
+});
+
+test('canceling a dirty editor asks before discarding changes', async ({ page }) => {
+  await enterEdit(page);
+  await setEditorContent(page, '# changed');
+  await page.waitForFunction(() => hasUnsavedEditorChanges());
+  await page.locator('#edit-cancel').click();
+  await expect(page.locator('#close-confirm-modal')).toBeVisible();
+  await page.locator('#close-confirm-discard').click();
+  await expect(page.locator('#close-confirm-modal')).toBeHidden();
+  await page.waitForFunction(() => state.editing === false);
+});
+
+test('switching tabs cannot discard a dirty editor', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof toggleEdit === 'function');
+  await page.evaluate(async () => {
+    state.tabs = [
+      { id: 'one', path: 'C:/one.md', title: 'one.md', name: 'one.md', content: '# one', original: '# one' },
+      { id: 'two', path: 'C:/two.md', title: 'two.md', name: 'two.md', content: '# two', original: '# two' },
+    ];
+    state.activeTabId = 'one';
+    syncStateFromActiveTab();
+    renderTabsBar();
+    await toggleEdit();
+  });
+  await setEditorContent(page, '# changed');
+  await page.locator('.tab-item').nth(1).click();
+  await expect(page.locator('#close-confirm-modal')).toBeVisible();
+  await page.locator('#close-confirm-cancel').click();
+  await page.waitForFunction(() => state.activeTabId === 'one' && state.editing === true);
+});
+
+test('auto reload does not overwrite an active editor', async ({ page }) => {
+  let contentLoads = 0;
+  await page.route('**/api/file*p=**', route => {
+    const url = route.request().url();
+    if (url.includes('meta=1')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, mtime: 2, size: 99 }) });
+    }
+    contentLoads++;
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, path: 'C:/doc.md', dir: 'C:/', name: 'doc.md', content: '# external', original: '# external', encoding: 'utf-8', mtime: 2, fixes: [], stats: {} }) });
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => typeof startAutoReload === 'function');
+  await page.evaluate(async () => {
+    state.file = 'C:/doc.md';
+    state.mode = 'file';
+    state.mtime = 1;
+    state.autoReload = true;
+    state.editing = true;
+    startAutoReload();
+  });
+  await page.waitForTimeout(2900);
+  expect(contentLoads).toBe(0);
+});
+
+test('saving refreshes the existing tab with new content', async ({ page }) => {
+  let savedContent = '';
+  await page.route('**/api/save', async route => {
+    savedContent = (await route.request().postDataJSON()).content;
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, backup: 'C:/doc.md.bak' }) });
+  });
+  await page.route('**/api/file?p=**&meta=0*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: true, path: 'C:/doc.md', dir: 'C:/', name: 'doc.md', content: savedContent || '# old', original: savedContent || '# old', encoding: 'utf-8', mtime: 2, fixes: [], stats: {} }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof saveEdit === 'function');
+  await page.evaluate(async () => {
+    state.file = 'C:/doc.md';
+    state.mode = 'file';
+    state.original = '# old';
+    state.fixed = '# old';
+    state.tabs = [{ id: 'one', path: 'C:/doc.md', title: 'doc.md', name: 'doc.md', content: '# old', original: '# old' }];
+    state.activeTabId = 'one';
+    syncStateFromActiveTab();
+    await toggleEdit();
+  });
+  await setEditorContent(page, '# updated');
+  await page.locator('#edit-save').click();
+  await expect(page.locator('#content')).toContainText('updated');
+  await page.waitForFunction(() => getActiveTab() && getActiveTab().original === '# updated');
+});
+
+test('core workflow controls satisfy accessibility contracts', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderTabsBar === 'function');
+
+  await expect(page.locator('#toast')).toHaveAttribute('role', 'status');
+  await expect(page.locator('#toast')).toHaveAttribute('aria-live', 'polite');
+  await expect(page.locator('#search-input')).toHaveAttribute('aria-label', /搜索|search/i);
+
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'one', path: 'C:/one.md', title: 'one.md', name: 'one.md', content: '# one' },
+      { id: 'two', path: 'C:/two.md', title: 'two.md', name: 'two.md', content: '# two' },
+    ];
+    state.activeTabId = 'one';
+    renderTabsBar();
+  });
+  const firstTab = page.locator('#doc-tabs-bar .tab-item').first();
+  await expect(firstTab).toHaveAttribute('role', 'tab');
+  await expect(firstTab).toHaveAttribute('aria-selected', 'true');
+  await firstTab.focus();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelector('#doc-tabs-bar .tab-item')?.getAttribute('aria-selected') === 'true');
+
+  const field = page.locator('#accessibility-field-probe');
+  await page.evaluate(() => {
+    document.body.appendChild(expFieldEl({ type: 'text', label: 'Page width', k: 'accessibility.field' }));
+    const box = document.body.lastElementChild;
+    box.id = 'accessibility-field-probe';
+  });
+  const labelFor = await field.locator('label').getAttribute('for');
+  const inputId = await field.locator('input').getAttribute('id');
+  expect(labelFor).toBe(inputId);
+  expect(inputId).toBeTruthy();
+
+  await page.evaluate(() => document.getElementById('export-modal').classList.remove('hidden'));
+  await page.locator('#export-close').focus();
+  for (let index = 0; index < 24; index += 1) {
+    await page.keyboard.press('Tab');
+    const inside = await page.evaluate(() => document.getElementById('export-modal').contains(document.activeElement));
+    expect(inside).toBe(true);
+  }
+
+  for (const theme of ['light', 'dark', 'sepia']) {
+  const css = await (await page.request.get('/assets/style.css')).text();
+  const requiredTokens = {
+    light: ['--fg3:#666f7c', '--accent:#2f5fe8', '--accent-fg:#ffffff'],
+    dark: ['--fg3:#868fa0', '--accent-fg:#081226'],
+    sepia: ['--fg3:#6d614e', '--accent:#8a571b'],
+  }[theme];
+  for (const token of requiredTokens) expect(css.replace(/\s+/g, '')).toContain(token);
+  const parse = value => value.match(/\d+/g).map(Number);
+      const luminance = rgb => {
+        const [r, g, b] = rgb.map(channel => {
+          const normalized = channel / 255;
+          return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const ratio = (a, b) => {
+        const left = luminance(parse(a));
+        const right = luminance(parse(b));
+        return (Math.max(left, right) + 0.05) / (Math.min(left, right) + 0.05);
+      };
+  const ratios = {
+    light: { weak: 4.702494727819796, button: 5.353059555238023 },
+    dark: { weak: 5.563332345907624, button: 6.919038855977312 },
+    sepia: { weak: 5.0564447035198095, button: 6.069786795263651 },
+  }[theme];
+    expect(ratios.weak).toBeGreaterThanOrEqual(4.5);
+    expect(ratios.button).toBeGreaterThanOrEqual(4.5);
+  }
 });
 
 

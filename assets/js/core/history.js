@@ -202,7 +202,7 @@ let autoReloadTimer = null;
 function startAutoReload() {
   stopAutoReload();
   autoReloadTimer = setInterval(async () => {
-    if (!state.file || !state.autoReload || state.mode !== 'file') return;
+    if (!state.file || !state.autoReload || state.mode !== 'file' || state.editing) return;
     try {
       const r = await apiFetch('/api/file?p=' + encodeURIComponent(state.file) + '&meta=1');
       if (!r.ok) return;

@@ -9,6 +9,32 @@ let pvTimer = null;
 let pvLast = '';
 let pvEditorEl = null;
 
+function hasUnsavedEditorChanges() {
+  if (!state.editing) return false;
+  return getEditContent() !== (state.original || '');
+}
+
+function syncSavedTab(path, content) {
+  const tab = typeof findTabByPath === 'function' ? findTabByPath(path) : null;
+  if (!tab) return;
+  tab.content = content;
+  tab.original = content;
+  tab.fixed = content;
+  tab.fixes = [];
+  tab.isDirty = false;
+}
+
+function renderSavedDocument(content) {
+  state.original = content;
+  state.fixed = content;
+  state.fixes = [];
+  state.stats = {};
+  if (typeof setFixes === 'function') setFixes([], {});
+  if (typeof renderContent === 'function') {
+    renderContent(content, state.sourceName || (state.file ? state.file.split(/[\\/]/).pop() : 'document'));
+  }
+}
+
 function getEditContent() {
   return cmView ? cmView.state.doc.toString() : ($('edit-area') && $('edit-area').value || '');
 }
@@ -247,7 +273,11 @@ function applyPvUi() {
 
 async function toggleEdit() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (state.editing) { exitEdit(); return; }
+  if (state.editing) {
+    if (!await confirmExitEdit()) return;
+    applyPvUi();
+    return;
+  }
   if (state.original === undefined || state.original === '') { showToast(_t('toast.noEditableContent') || '没有可编辑的内容'); return; }
   $('edit-bar').classList.remove('hidden');
   $('content').classList.add('hidden');
@@ -272,6 +302,21 @@ async function toggleEdit() {
     $('edit-area').focus();
   }
   applyPvUi();
+}
+
+async function confirmExitEdit() {
+  if (!hasUnsavedEditorChanges()) {
+    exitEdit();
+    return true;
+  }
+  const action = await promptDirtyClose(state.sourceName || state.file || 'document');
+  if (action === 'cancel') return false;
+  if (action === 'save') {
+    await saveEdit();
+    return !state.editing;
+  }
+  exitEdit();
+  return true;
 }
 
 function exitEdit() {
@@ -301,6 +346,7 @@ function exitEdit() {
   $('content').classList.remove('hidden');
   state.editing = false;
   setEditBtn(_t('toolbar.edit') || '编辑');
+  if (typeof updateUnloadGuard === 'function') updateUnloadGuard();
 }
 
 async function saveEdit() {
@@ -345,6 +391,8 @@ async function saveEdit() {
       ok = await r.json();
     }
     if (ok && ok.ok !== false) {
+      syncSavedTab(state.file, content);
+      renderSavedDocument(content);
       showToast(ok.backup ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）')) : (_t('toast.savedSuccess') || '已保存'));
       exitEdit();
       await loadFile(state.file);

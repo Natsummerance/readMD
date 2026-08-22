@@ -277,7 +277,8 @@ function bindEvents() {
   
   // 编辑保存与退出
   $('edit-save').addEventListener('click', saveEdit);
-  $('edit-cancel').addEventListener('click', exitEdit);
+  $('edit-area').addEventListener('input', updateUnloadGuard);
+  $('edit-cancel').addEventListener('click', confirmExitEdit);
 
   // 编辑撤销与重做 [联动: editor/editor.js]
   if ($('edit-undo')) $('edit-undo').addEventListener('click', cmUndo);
@@ -647,6 +648,7 @@ function bindEvents() {
     // 模态弹窗 ESC 优先拦截与层级关闭
     if (e.key === 'Escape') {
       const allModalIds = [
+        'close-confirm-modal',
         'code-chunk-modal', 'diagram-modal', 'doc-import-modal', 'frontmatter-modal',
         'table-modal', 'export-preview-modal', 'export-modal', 'convert-modal',
         'update-modal', 'style-custom-modal', 'lang-modal', 'ai-history-modal',
@@ -656,6 +658,7 @@ function bindEvents() {
       if (activeModal) {
         e.preventDefault();
         e.stopPropagation();
+        if (activeModal === 'close-confirm-modal') return;
         if (activeModal === 'code-chunk-modal') closeCodeChunkModal();
         else if (activeModal === 'diagram-modal') closeDiagramModal();
         else if (activeModal === 'doc-import-modal') closeDocImportModal();
@@ -736,12 +739,75 @@ function bindEvents() {
       closeFormulaModal(); closeMdPopups();
       stopConvertPoll();
       if (document.body.classList.contains('zen-mode')) toggleZenMode(false);
-      if (state.editing) exitEdit();
+      if (state.editing) confirmExitEdit();
     }
   });
 
 
   document.addEventListener('click', closeMdPopups);
+  setupModalAccessibility();
+}
+
+function getModalRoots() {
+  return [
+    'close-confirm-modal', 'code-chunk-modal', 'diagram-modal', 'doc-import-modal',
+    'frontmatter-modal', 'table-modal', 'export-preview-modal', 'export-modal',
+    'convert-modal', 'update-modal', 'style-custom-modal', 'lang-modal',
+    'ai-history-modal', 'ai-settings-modal', 'formula-modal', 'presentation-modal',
+    'img-modal', 'history-modal', 'share-modal', 'tpl-modal'
+  ].map(id => $(id)).filter(Boolean);
+}
+
+function isVisibleModal(modal) {
+  return modal && !modal.classList.contains('hidden');
+}
+
+function getModalFocusable(modal) {
+  return Array.from(modal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+    .filter(el => !el.closest('.hidden'));
+}
+
+function setupModalAccessibility() {
+  let lastFocusedOutside = null;
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Tab') return;
+    const modal = getModalRoots().find(isVisibleModal);
+    if (!modal) return;
+    const focusable = getModalFocusable(modal);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!modal.contains(event.target)) {
+      event.preventDefault();
+      first.focus();
+      return;
+    }
+    if (event.shiftKey && event.target === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && event.target === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }, true);
+
+  const observer = new MutationObserver(mutations => {
+    for (const mutation of mutations) {
+      const modal = mutation.target;
+      const visible = !modal.classList.contains('hidden');
+      if (visible && !modal.contains(document.activeElement)) {
+        if (!lastFocusedOutside || modal.contains(lastFocusedOutside)) {
+          lastFocusedOutside = document.activeElement;
+        }
+        const focusable = getModalFocusable(modal);
+        if (focusable.length) focusable[0].focus();
+      } else if (!visible && lastFocusedOutside && modal.contains(document.activeElement)) {
+        if (lastFocusedOutside.isConnected) lastFocusedOutside.focus();
+        lastFocusedOutside = null;
+      }
+    }
+  });
+  getModalRoots().forEach(modal => observer.observe(modal, { attributes: true, attributeFilter: ['class'] }));
 }
 
 /* ----------------------------------------------------------------------------------------------
@@ -898,4 +964,12 @@ window.addEventListener('beforeunload', () => {
     state.scrollPos[normalizePath(state.file)] = $('content').scrollTop;
   }
 });
+function updateUnloadGuard() {
+  const dirty = typeof hasUnsavedEditorChanges === 'function' && hasUnsavedEditorChanges();
+  window.onbeforeunload = dirty ? event => {
+    event.preventDefault();
+    event.returnValue = '';
+    return '';
+  } : null;
+}
 

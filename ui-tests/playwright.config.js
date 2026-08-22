@@ -14,7 +14,7 @@ module.exports = defineConfig({
   webServer: {
     command: 'python ../tools/ui_server.py',
     port: 28473,
-    reuseExistingServer: true,
+    reuseExistingServer: process.env.READMD_REUSE_UI_SERVER === '1',
     cwd: __dirname
   }
 });

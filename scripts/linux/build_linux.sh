@@ -97,10 +97,4 @@ EOF
 
 dpkg-deb --build "${DEB_DIR}" "dist/readmd_${VERSION}_${DEB_ARCH}.deb" || echo "dpkg-deb not available, skipping deb package"
 
-# 5. 构建 HarmonyOS NEXT 原生 HAP 包 (遵循 OpenHarmony 规范归档)
-if [ -d "packages/harmonyos-app" ]; then
-  mkdir -p dist
-  (cd packages/harmonyos-app && zip -r -q "../../dist/ReadMD-harmonyos-v${VERSION}.hap" .)
-fi
-
 echo "=== Linux and multi-platform packaging completed ==="

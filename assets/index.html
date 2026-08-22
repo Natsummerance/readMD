@@ -100,7 +100,7 @@
 
 
 <div id="search-bar" class="hidden">
-  <input id="search-input" type="text" placeholder="在文档中搜索..." data-i18n-placeholder="search.placeholder">
+  <input id="search-input" type="text" placeholder="在文档中搜索..." aria-label="在文档中搜索" data-i18n-placeholder="search.placeholder" data-i18n-aria="search.placeholder">
   <span id="search-count" class="search-count"></span>
   <button id="search-prev" class="tb-btn" title="上一个 (Shift+Enter)" data-i18n-title="search.prev" data-i18n-aria="search.prev">&#8593;</button>
   <button id="search-next" class="tb-btn" title="下一个 (Enter)" data-i18n-title="search.next" data-i18n-aria="search.next">&#8595;</button>
@@ -676,7 +676,7 @@
             <button id="exp-save-cancel" class="tb-btn" data-i18n="editor.cancel">取消</button>
           </div>
         </div>
-        <div id="export-preview-card" class="export-preview-card" title="点击打开全屏排版预览" data-i18n-title="export.previewCardTitle">
+        <button id="export-preview-card" type="button" class="export-preview-card" aria-label="打开全屏排版预览" data-i18n-aria="export.previewCardTitle" title="点击打开全屏排版预览" data-i18n-title="export.previewCardTitle">
           <div class="export-preview-header">
             <span class="export-preview-title" data-i18n="export.preview">排版预览</span>
             <span id="export-preview-badge" class="export-preview-badge" data-i18n="export.previewBadgePdf">PDF · 默认</span>
@@ -691,7 +691,7 @@
               </span>
             </div>
           </div>
-        </div>
+        </button>
       </div>
       <div class="export-opts" id="export-opts" role="tabpanel"></div>
     </div>
@@ -791,7 +791,7 @@
   </div>
 </div>
 
-<div id="toast" class="hidden"></div>
+<div id="toast" class="hidden" role="status" aria-live="polite"></div>
 
 <div id="progress"></div>
 <div id="busy" class="hidden"><span data-i18n="app.processing">处理中…</span></div>

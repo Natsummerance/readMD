@@ -10,9 +10,8 @@ ReadMD 是免费、开源的本地 Markdown 智能阅读、编辑与全格式转
 - 💻 Intel Mac：`ReadMD-macos-x64-v2.3.7-beta.3.zip`
 - 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage`
 - 🇨🇳 Linux / 国产信创 Deb 安装包 (UOS / 银河麒麟 / Deepin / Ubuntu / Debian)：`readmd_2.3.7-beta.3_amd64.deb`
-- 📱 HarmonyOS NEXT 纯血鸿蒙安装包：`ReadMD-harmonyos-v2.3.7-beta.3.hap`
 - 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.7-beta.3.vsix`
-- 🤖 FastMCP Server 独立包：`readmd-mcp-server-2.3.7-beta.3.zip`
+- 🤖 FastMCP Server 源码包：`readmd-mcp-server-2.3.7-beta.3.zip`
 - 🔐 校验清单：`SHA256SUMS.txt`
 
 ---
@@ -41,7 +40,7 @@ ReadMD 是免费、开源的本地 Markdown 智能阅读、编辑与全格式转
 ## 🔒 隐私与安全
 
 - **纯本地运算**：Markdown 自愈、图表解析、Code Chunk 执行、EPUB 打包均在本地沙箱完成；
-- **安全沙箱**：@import 包含越权路径防御与死循环防护，Code Chunk 具备进程隔离与超时自动终止；
+- **安全沙箱**：`@import` 包含越权路径防御与死循环防护，Code Chunk 具备进程隔离与超时自动终止；
 - **零凭证泄露**：全仓经过严苛自动化隐私扫描，无任何硬编码密钥或外部未经授权的网络回传。
 
 ---
@@ -52,11 +51,10 @@ ReadMD 是免费、开源的本地 Markdown 智能阅读、编辑与全格式转
 
 Windows PowerShell：
 ```powershell
-Get-FileHash .\ReadMDSetup-v2.3.7-beta.1.exe -Algorithm SHA256
+Get-FileHash .\ReadMDSetup-v2.3.7-beta.3.exe -Algorithm SHA256
 ```
 
 macOS / Linux 终端：
 ```bash
-shasum -a 256 ReadMD-macos-arm64-v2.3.7-beta.1.zip
+shasum -a 256 ReadMD-macos-arm64-v2.3.7-beta.3.zip
 ```
-
