@@ -112,6 +112,15 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
         except Exception as exc:
             errors.append(f"wechat-qa.json unreadable: {exc}")
 
+    variants_path = package_dir / "variants.json"
+    if variants_path.exists():
+        try:
+            variants = _load_json(variants_path)
+            if variants.get("ok") is not True or not variants.get("chosen_strategy"):
+                errors.append("variant selection report is incomplete")
+        except Exception as exc:
+            errors.append(f"variants.json unreadable: {exc}")
+
     if story.get("schema_version") != 1 or capture.get("schema_version") != 1:
         errors.append("story/capture schema_version must be 1")
     release = story.get("release")

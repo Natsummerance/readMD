@@ -11,6 +11,7 @@ from pathlib import Path
 from audit_copy import audit_package
 from content_memory import load_records
 from build_story import build_story
+from copy_variants import select_variant
 from export_wechat import export_package
 from validate_package import validate_package
 from write_copy import generate_copy
@@ -44,6 +45,12 @@ def build_package(
         previous_release=previous_release,
         history=history,
     )
+    metadata, variant_selection = select_variant(
+        story=story,
+        base_metadata=metadata,
+        history=history,
+    )
+    (package_dir / "variants.json").write_text(json.dumps(variant_selection, ensure_ascii=False, indent=2), encoding="utf-8")
     (package_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
     (package_dir / "title.txt").write_text(metadata["title"], encoding="utf-8")
     (package_dir / "body.txt").write_text(metadata["body"], encoding="utf-8")

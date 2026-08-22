@@ -21,6 +21,7 @@ sys.path.insert(0, str(ROOT / "showcase" / "scripts"))
 build_story = importlib.import_module("build_story")
 audit_copy = importlib.import_module("audit_copy")
 content_memory = importlib.import_module("content_memory")
+copy_variants = importlib.import_module("copy_variants")
 export_wechat = importlib.import_module("export_wechat")
 validate_package = importlib.import_module("validate_package")
 watch_and_publish = importlib.import_module("watch_and_publish")
@@ -471,6 +472,75 @@ class ExportWechatTest(unittest.TestCase):
         self.assertTrue(any("paragraph inline style" in error for error in errors))
 
 
+class CopyVariantsTest(unittest.TestCase):
+    def history_record(self, release: str, hook_type: str, formula: str) -> dict:
+        return {
+            "release": release,
+            "title": "test",
+            "title_formula_id": formula,
+            "hook_type": hook_type,
+            "published_at": "2026-08-22T00:00:00Z",
+            "impressions": 1000,
+            "likes": 20,
+            "collects": 80,
+            "comments": 30,
+            "shares": 10,
+            "follows": 4,
+            "lessons": "verified",
+        }
+
+    def test_builds_three_distinct_evidence_backed_variants(self) -> None:
+        story = {
+            "release": "v1.1.0",
+            "previous_release": "v1.0.0",
+            "version_state": "prerelease",
+            "primary_shot": "presentation.reveal",
+            "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+            "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        self.assertEqual(len(variants), 3)
+        self.assertEqual(len({item["strategy"] for item in variants}), 3)
+        self.assertEqual(len({item["title"] for item in variants}), 3)
+        self.assertEqual(len({item["body"] for item in variants}), 3)
+        for variant in variants:
+            report = audit_copy.audit_copy(
+                story=story,
+                metadata=variant,
+                composition=copy_variants.projected_composition(story),
+            )
+            self.assertTrue(report["ok"], report)
+
+    def test_selection_prefers_verified_identity_and_penalizes_recent_outcome(self) -> None:
+        story = {
+            "release": "v1.1.0",
+            "previous_release": "v1.0.0",
+            "version_state": "prerelease",
+            "primary_shot": "presentation.reveal",
+            "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+            "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        history = [
+            {**self.history_record("v1.0.0", "identity-led", "#22"), "impressions": 2000, "likes": 100, "collects": 160, "comments": 40, "shares": 20},
+            self.history_record("v1.0.1", "mechanism-curiosity", "#9"),
+            self.history_record("v1.0.2", "outcome-led", "#36"),
+        ]
+        chosen, report = copy_variants.choose_variant(variants, history)
+        self.assertEqual(chosen["strategy"], "identity-led")
+        self.assertTrue(report["ok"])
+
+
 class ContentMemoryTest(unittest.TestCase):
     def record(self, formula: str = "#61", release: str = "v1.0.0", title: str = "别再把Markdown只当笔记了") -> dict:
         return {
@@ -544,6 +614,7 @@ class WatcherTest(unittest.TestCase):
         (package / "story.json").write_text(json.dumps({"release": "v1.2.3"}), encoding="utf-8")
         (package / "qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "copy-review.json").write_text(json.dumps({"ok": True, "total_score": 92}), encoding="utf-8")
+        (package / "variants.json").write_text(json.dumps({"ok": True, "chosen_strategy": "outcome-led"}), encoding="utf-8")
         (package / "title.txt").write_text("标题", encoding="utf-8")
         (package / "body.txt").write_text("正文", encoding="utf-8")
         metadata = {

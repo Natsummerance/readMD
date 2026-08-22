@@ -19,9 +19,9 @@ node showcase/scripts/compose_cards.js showcase/output/package
 python showcase/scripts/validate_package.py showcase/output/package
 ```
 
-完整构建会在语义 QA 通过后生成 `wechat/readmd-wechat.html`。该 HTML 只用行内样式，不包含脚本、外链、class、id 或图片；`wechat/wechat-qa.json` 也必须为 `{"ok":true}` 才允许进入发布队列。
+完整构建会先生成结果导向、身份代入、机制好奇三种完整稿件；语义评分和历史钩子表现共同决定最终稿，选择证据写入 `variants.json`。随后生成 `wechat/readmd-wechat.html`。该 HTML 只用行内样式，不包含脚本、外链、class、id 或图片；`wechat/wechat-qa.json` 也必须为 `{"ok":true}` 才允许进入发布队列。
 
-`qa.json` 和 `copy-review.json` 必须同时通过才允许进入小红书发布队列。`--draft` 可让 watcher 只填充小红书表单，不点击发布：
+`qa.json`、`copy-review.json` 和 `variants.json` 必须同时通过才允许进入小红书发布队列。`--draft` 可让 watcher 只填充小红书表单，不点击发布：
 
 ```powershell
 python showcase/scripts/watch_and_publish.py --once --draft

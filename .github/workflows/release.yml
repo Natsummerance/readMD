@@ -496,7 +496,7 @@ jobs:
           if (-not $qa.ok) { throw 'Showcase QA failed'; }
           $files = @(
             'story.json', 'title.txt', 'body.txt', 'topics.txt', 'metadata.json',
-            'composition.json', 'qa.json', 'wechat/readmd-wechat.html', 'wechat/wechat-qa.json'
+            'composition.json', 'variants.json', 'qa.json', 'wechat/readmd-wechat.html', 'wechat/wechat-qa.json'
           ) | ForEach-Object { "showcase/output/package/$_" }
           Compress-Archive -Path ($files + 'showcase/output/package/raw/*') -DestinationPath 'showcase/content-package.zip' -Force
       - name: Upload content package
