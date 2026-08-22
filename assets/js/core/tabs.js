@@ -83,6 +83,8 @@ function renderTabsBar() {
     closeBtn.className = 'tab-close';
     closeBtn.innerHTML = '&times;';
     closeBtn.title = _t('tabs.closeTab') || '关闭标签';
+    closeBtn.tabIndex = -1;
+    closeBtn.setAttribute('aria-hidden', 'true');
     closeBtn.addEventListener('click', e => {
       e.stopPropagation();
       closeTab(tab.id);
@@ -96,9 +98,15 @@ function renderTabsBar() {
         moveTabFocus(tab.id, e.key);
         return;
       }
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      switchTab(tab.id);
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        switchTab(tab.id);
+        return;
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        closeTab(tab.id);
+      }
     });
 
     el.addEventListener('dblclick', e => {
