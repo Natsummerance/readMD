@@ -491,17 +491,10 @@ jobs:
       - name: Run hard QA gate
         run: python showcase/scripts/validate_package.py showcase/output/package
       - name: Package QA-green content
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $qa = Get-Content 'showcase/output/package/qa.json' -Raw | ConvertFrom-Json
-          if (-not $qa.ok) { throw 'Showcase QA failed'; }
-          $files = @(
-            'story.json', 'title.txt', 'body.txt', 'topics.txt', 'metadata.json',
-            'composition.json', 'variants.json', 'qa.json', 'performance-report.json', 'performance-report.md',
-            'review-dashboard.html', 'dashboard-qa.json', 'wechat/readmd-wechat.html', 'wechat/wechat-qa.json'
-          ) | ForEach-Object { "showcase/output/package/$_" }
-          Compress-Archive -Path ($files + 'showcase/output/package/raw/*') -DestinationPath 'showcase/content-package.zip' -Force
+        run: >-
+          python showcase/scripts/package_content.py
+          --package showcase/output/package
+          --output showcase/content-package.zip
       - name: Upload content package
         uses: actions/upload-artifact@v4
         with:

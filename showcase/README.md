@@ -40,6 +40,8 @@ python showcase/scripts/build_package.py --output showcase/output/package --fina
 python showcase/scripts/watch_and_publish.py --once --draft
 ```
 
+CI 使用 `package_content.py` 打包，压缩包内保留 `images/`、`raw/`、微信适配层和全部审计报告的相对路径；缺失合成图、真实截图或复核报告时会直接失败。
+
 真实全自动发布使用已登录 Edge 和 CDP proxy：
 
 ```powershell

@@ -26,6 +26,7 @@ copy_profiles = importlib.import_module("copy_profiles")
 export_wechat = importlib.import_module("export_wechat")
 performance_report = importlib.import_module("performance_report")
 pattern_audit = importlib.import_module("pattern_audit")
+package_content = importlib.import_module("package_content")
 review_dashboard = importlib.import_module("review_dashboard")
 style_audit = importlib.import_module("style_audit")
 build_package_module = importlib.import_module("build_package")
@@ -1424,6 +1425,72 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertEqual(data["comment_focus"]["confidence"], "medium")
 
 
+class PackageContentTest(unittest.TestCase):
+    def make_package(self, root: Path) -> Path:
+        package = root / "package"
+        (package / "images").mkdir(parents=True)
+        (package / "raw").mkdir()
+        (package / "wechat").mkdir()
+        Image.new("RGB", (10, 10)).save(package / "images" / "xhs-01-cover.jpg")
+        Image.new("RGB", (20, 10)).save(package / "raw" / "overview-reader.png")
+        (package / "raw" / "capture.json").write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
+        for name in (
+            "story.json",
+            "title.txt",
+            "body.txt",
+            "topics.txt",
+            "metadata.json",
+            "composition.json",
+            "variants.json",
+            "qa.json",
+            "copy-review.json",
+            "pattern-audit.json",
+            "dashboard-qa.json",
+            "performance-report.json",
+            "review-dashboard.html",
+            "wechat/readmd-wechat.html",
+            "wechat/wechat-qa.json",
+        ):
+            path = package / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            value = {"ok": True} if name.endswith(".json") else f"{name}\n"
+            path.write_text(json.dumps(value, ensure_ascii=False) if isinstance(value, dict) else value, encoding="utf-8")
+        return package
+
+    def test_packages_complete_relative_contract_for_watcher(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = self.make_package(Path(tmp))
+            output = Path(tmp) / "content-package.zip"
+            report = package_content.package_content(package, output)
+            with zipfile.ZipFile(output) as archive:
+                names = set(archive.namelist())
+
+        required = {
+            "story.json", "metadata.json", "copy-review.json", "pattern-audit.json",
+            "dashboard-qa.json", "review-dashboard.html", "wechat/wechat-qa.json",
+            "raw/capture.json", "raw/overview-reader.png", "images/xhs-01-cover.jpg",
+        }
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["file_count"], len(names))
+        self.assertTrue(required <= names)
+        self.assertTrue(all("\\" not in name and not Path(name).is_absolute() for name in names))
+        self.assertRegex(report["sha256"], r"^[0-9a-f]{64}$")
+
+    def test_rejects_red_or_incomplete_package(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = self.make_package(Path(tmp))
+            package.joinpath("pattern-audit.json").unlink()
+            with self.assertRaisesRegex(ValueError, "required package files are missing"):
+                package_content.package_content(package, Path(tmp) / "incomplete.zip")
+
+    def test_rejects_red_qa_before_archiving(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = self.make_package(Path(tmp))
+            (package / "qa.json").write_text(json.dumps({"ok": False, "errors": ["broken"]}), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "refusing to package red QA"):
+                package_content.package_content(package, Path(tmp) / "red.zip")
+
+
 class BuildPipelineTest(unittest.TestCase):
     def test_workflow_aggregates_qa_before_packaging(self) -> None:
         workflow = Path(ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
@@ -1435,6 +1502,8 @@ class BuildPipelineTest(unittest.TestCase):
         self.assertLess(compose_index, finalize_index)
         self.assertLess(finalize_index, package_index)
         self.assertIn("--finalize", showcase)
+        self.assertIn("python showcase/scripts/package_content.py", showcase)
+        self.assertNotIn("Compress-Archive", showcase)
 
     def test_build_package_applies_selected_cover_variant(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
