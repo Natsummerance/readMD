@@ -91,6 +91,11 @@ function renderTabsBar() {
 
     el.addEventListener('click', () => switchTab(tab.id));
     el.addEventListener('keydown', e => {
+      if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) {
+        e.preventDefault();
+        moveTabFocus(tab.id, e.key);
+        return;
+      }
       if (e.key !== 'Enter' && e.key !== ' ') return;
       e.preventDefault();
       switchTab(tab.id);
@@ -185,6 +190,22 @@ function renderTabsBar() {
       if (bar && bar.parentElement) bar.parentElement.classList.remove('hidden');
     }
   }
+}
+
+function moveTabFocus(activeTabId, key) {
+  const index = state.tabs.findIndex(tab => tab.id === activeTabId);
+  if (index < 0) return;
+  const last = state.tabs.length - 1;
+  let target = index;
+  if (key === 'ArrowRight') target = index === last ? 0 : index + 1;
+  else if (key === 'ArrowLeft') target = index === 0 ? last : index - 1;
+  else if (key === 'Home') target = 0;
+  else if (key === 'End') target = last;
+  if (target === index) return;
+  switchTab(state.tabs[target].id).then(() => {
+    const next = document.querySelector(`[data-tab-id="${CSS.escape(state.tabs[target].id)}"]`);
+    if (next) next.focus();
+  });
 }
 
 function startTabInlineRename(tab, titleSpan, tabEl) {

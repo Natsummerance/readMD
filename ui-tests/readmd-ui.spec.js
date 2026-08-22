@@ -1018,6 +1018,48 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
   }
 });
 
+test('tabs, status regions, and stacked dialogs meet keyboard contracts', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderTabsBar === 'function');
+
+  await expect(page.locator('#search-count')).toHaveAttribute('role', 'status');
+  await expect(page.locator('#search-count')).toHaveAttribute('aria-live', 'polite');
+
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'one', path: 'C:/one.md', title: 'one.md', name: 'one.md', content: '# one' },
+      { id: 'two', path: 'C:/two.md', title: 'two.md', name: 'two.md', content: '# two' },
+      { id: 'three', path: 'C:/three.md', title: 'three.md', name: 'three.md', content: '# three' },
+    ];
+    state.activeTabId = 'one';
+    renderTabsBar();
+  });
+  await page.locator('#doc-tabs-bar .tab-item').first().focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#doc-tabs-bar .tab-item').nth(1)).toBeFocused();
+  await expect(page.locator('#doc-tabs-bar .tab-item').nth(1)).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('End');
+  await expect(page.locator('#doc-tabs-bar .tab-item').nth(2)).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(page.locator('#doc-tabs-bar .tab-item').first()).toBeFocused();
+
+  await page.evaluate(() => {
+    document.getElementById('export-modal').classList.remove('hidden');
+    document.getElementById('tpl-modal').classList.remove('hidden');
+  });
+  const templateModal = page.locator('#tpl-modal');
+  await expect(templateModal).toHaveAttribute('role', 'dialog');
+  await expect(templateModal).toHaveAttribute('aria-modal', 'true');
+  await expect(templateModal).toHaveAttribute('aria-labelledby', 'tpl-title');
+  for (let index = 0; index < 12; index += 1) {
+    await page.keyboard.press('Tab');
+    const insideTopDialog = await page.evaluate(() =>
+      document.getElementById('tpl-modal').contains(document.activeElement)
+    );
+    expect(insideTopDialog).toBe(true);
+  }
+});
+
 
 
 

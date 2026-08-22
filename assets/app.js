@@ -763,15 +763,16 @@ function isVisibleModal(modal) {
 }
 
 function getModalFocusable(modal) {
-  return Array.from(modal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+  return Array.from(modal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
     .filter(el => !el.closest('.hidden'));
 }
 
 function setupModalAccessibility() {
   let lastFocusedOutside = null;
+  const openModalStack = [];
   document.addEventListener('keydown', event => {
     if (event.key !== 'Tab') return;
-    const modal = getModalRoots().find(isVisibleModal);
+    const modal = [...openModalStack].reverse().find(isVisibleModal);
     if (!modal) return;
     const focusable = getModalFocusable(modal);
     if (!focusable.length) return;
@@ -795,15 +796,20 @@ function setupModalAccessibility() {
     for (const mutation of mutations) {
       const modal = mutation.target;
       const visible = !modal.classList.contains('hidden');
+      const stackIndex = openModalStack.indexOf(modal);
       if (visible && !modal.contains(document.activeElement)) {
+        if (stackIndex < 0) openModalStack.push(modal);
         if (!lastFocusedOutside || modal.contains(lastFocusedOutside)) {
           lastFocusedOutside = document.activeElement;
         }
         const focusable = getModalFocusable(modal);
         if (focusable.length) focusable[0].focus();
-      } else if (!visible && lastFocusedOutside && modal.contains(document.activeElement)) {
+      } else if (!visible) {
+        if (stackIndex >= 0) openModalStack.splice(stackIndex, 1);
+        if (lastFocusedOutside && modal.contains(document.activeElement)) {
         if (lastFocusedOutside.isConnected) lastFocusedOutside.focus();
         lastFocusedOutside = null;
+        }
       }
     }
   });

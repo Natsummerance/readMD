@@ -101,7 +101,7 @@
 
 <div id="search-bar" class="hidden">
   <input id="search-input" type="text" placeholder="在文档中搜索..." aria-label="在文档中搜索" data-i18n-placeholder="search.placeholder" data-i18n-aria="search.placeholder">
-  <span id="search-count" class="search-count"></span>
+  <span id="search-count" class="search-count" role="status" aria-live="polite"></span>
   <button id="search-prev" class="tb-btn" title="上一个 (Shift+Enter)" data-i18n-title="search.prev" data-i18n-aria="search.prev">&#8593;</button>
   <button id="search-next" class="tb-btn" title="下一个 (Enter)" data-i18n-title="search.next" data-i18n-aria="search.next">&#8595;</button>
   <button id="search-close" class="tb-btn" title="关闭 (Esc)" data-i18n-title="search.close" data-i18n-aria="search.close">&#10005;</button>
@@ -472,9 +472,9 @@
 <div id="formula-modal" class="hidden" role="dialog" aria-modal="true" aria-label="公式选择器" data-i18n-aria="formula.title"><div class="formula-box"><div class="export-head"><h3 data-i18n="formula.title">公式选择器</h3><button id="formula-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">×</button></div><div class="formula-top"><input id="formula-search" type="search" placeholder="搜索名称或 TeX…" data-i18n-placeholder="formula.searchPlaceholder"><select id="formula-mode"><option value="inline" data-i18n="formula.inline">行内公式</option><option value="block" data-i18n="formula.block">块级公式</option></select></div><div id="formula-cats" class="formula-cats"></div><div id="formula-list" class="formula-list"></div><div id="formula-preview" class="formula-preview" data-i18n="formula.previewPrompt">选择公式模板查看预览</div></div></div>
 
 <!-- Prompt 模板管理弹窗 -->
-<div id="tpl-modal" class="hidden">
+<div id="tpl-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="tpl-title">
   <div id="tpl-box">
-    <h3 data-i18n="tpl.title">&#128221; Prompt 模板管理</h3>
+    <h3 id="tpl-title" data-i18n="tpl.title">&#128221; Prompt 模板管理</h3>
     <div class="tpl-layout">
       <ul id="tpl-list" class="tpl-list"></ul>
       <div class="tpl-form">
