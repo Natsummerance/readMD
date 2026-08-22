@@ -28,6 +28,7 @@ performance_report = importlib.import_module("performance_report")
 pattern_audit = importlib.import_module("pattern_audit")
 package_content = importlib.import_module("package_content")
 review_dashboard = importlib.import_module("review_dashboard")
+resolve_previous_release = importlib.import_module("resolve_previous_release")
 style_audit = importlib.import_module("style_audit")
 build_package_module = importlib.import_module("build_package")
 validate_package = importlib.import_module("validate_package")
@@ -1557,6 +1558,36 @@ class BuildPipelineTest(unittest.TestCase):
         self.assertIn("--finalize", showcase)
         self.assertIn("python showcase/scripts/package_content.py", showcase)
         self.assertNotIn("Compress-Archive", showcase)
+
+    def test_release_evidence_resolves_highest_previous_semantic_version(self) -> None:
+        self.assertEqual(
+            resolve_previous_release.select_previous(
+                "v2.3.7-beta.3",
+                ["v2.3.8", "v2.3.7-beta.2", "v2.3.6", "not-a-version"],
+            ),
+            "v2.3.7-beta.2",
+        )
+
+    def test_release_resolver_ignores_future_and_equal_versions(self) -> None:
+        self.assertEqual(
+            resolve_previous_release.select_previous(
+                "v2.4.0",
+                ["v2.5.0", "v2.4.0+build.1", "v2.3.10", "v2.3.9-beta.1"],
+            ),
+            "v2.3.10",
+        )
+
+    def test_release_resolver_rejects_invalid_current_version(self) -> None:
+        with self.assertRaisesRegex(ValueError, "current release is not semantic version"):
+            resolve_previous_release.select_previous("release-abc", ["v1.0.0"])
+
+    def test_release_workflow_uses_merged_semantic_tag_selection(self) -> None:
+        workflow = Path(ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        showcase_start = workflow.index("product-showcase:")
+        showcase = workflow[showcase_start:]
+        self.assertIn("git tag --list --merged HEAD --sort=-creatordate", showcase)
+        self.assertIn("resolve_previous_release.py --current $current @tags", showcase)
+        self.assertNotIn("$previous = @($tags | Where-Object", showcase)
 
     def test_build_package_applies_selected_cover_variant(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

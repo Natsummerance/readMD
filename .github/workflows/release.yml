@@ -464,8 +464,8 @@ jobs:
           } else {
             Set-Content -Path 'showcase/release-notes.md' -Value $release.body -Encoding UTF8
           }
-          $tags = @(git tag --sort=-creatordate)
-          $previous = @($tags | Where-Object { $_ -ne $current })[0]
+          $tags = @(git tag --list --merged HEAD --sort=-creatordate)
+          $previous = & python showcase/scripts/resolve_previous_release.py --current $current @tags
           if (-not $previous) { throw "No previous tag found for $current" }
           git diff --binary "$previous..$current" > 'showcase/release.diff'
           "PREVIOUS_RELEASE=$previous" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
