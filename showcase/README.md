@@ -43,14 +43,14 @@ WeChat 文件只做人工复制/粘贴发布，watcher 不会自动操作公众�
 
 ## 发布反馈资产
 
-真实发布后 watcher 会自动在 `showcase/content/publication-ledger.jsonl` 建立零指标待补录记录。拿到平台数据后，把可补录字段写进 JSON 文件并按 release 更新：
+真实发布后 watcher 会自动在 `showcase/content/publication-ledger.jsonl` 建立零指标待补录记录。拿到平台数据后，把平台计数写进 JSON 文件，并用带来源和抓取时间的 `metrics` 命令回填：
 
 ```powershell
-python showcase/scripts/content_memory.py update --release "v2.3.7-beta.3" --record feedback.json
+python showcase/scripts/content_memory.py metrics --release "v2.3.7-beta.3" --record feedback.json --source xiaohongshu-web --captured-at "2026-08-23T10:00:00+08:00"
 python showcase/scripts/content_memory.py summary
 python showcase/scripts/performance_report.py --output-dir showcase/reports/performance
 ```
 
-绩效报告会分开列出 `complete` 与 `pending` 记录；`pending` 只作为待补录清单，不参与公式和钩子学习。
+指标导入会保留发布时的公式、钩子和 `variant_id`，拒绝身份冲突和旧快照回滚；六个平台计数齐全会置为 `complete`，缺项保持 `pending`。绩效报告会分开列出 `complete` 与 `pending` 记录；`pending` 只作为待补录清单，不参与公式和钩子学习，低置信维度也不会给出推荐。
 
 记录字段包括 release、标题、公式 ID、钩子类型、曝光、赞、藏、评、转发、关注和一句复盘。下一次构建会读取这份资产：优先选择验证过的公式，并对最近连续使用过的公式降权。

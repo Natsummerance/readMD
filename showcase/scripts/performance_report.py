@@ -46,12 +46,16 @@ def _stats(records: list[dict[str, Any]], key: str) -> dict[str, dict[str, Any]]
     return dict(sorted(output.items(), key=lambda item: item[1]["score"], reverse=True))
 
 
+def _recommended(stats: dict[str, dict[str, Any]]) -> str | None:
+    return next((name for name, item in stats.items() if item["confidence"] != "low"), None)
+
+
 def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str, Any]:
     learning, pending = partition_records(records)
     formula_stats = _stats(learning, "title_formula_id")
     hook_stats = _stats(learning, "hook_type")
-    recommended_formula = next(iter(formula_stats), None)
-    recommended_hook_type = next(iter(hook_stats), None)
+    recommended_formula = _recommended(formula_stats)
+    recommended_hook_type = _recommended(hook_stats)
     total_impressions = sum(int(record.get("impressions", 0)) for record in learning)
     total_engagement = sum(_engagement(record) for record in learning)
     data = {
@@ -92,8 +96,8 @@ def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str
         "",
         "## Next selection",
         "",
-        f"- Preferred title formula: `{recommended_formula or 'insufficient data'}`",
-        f"- Preferred hook type: `{recommended_hook_type or 'insufficient data'}`",
+        f"- Preferred title formula: `{recommended_formula or 'insufficient evidence'}`",
+        f"- Preferred hook type: `{recommended_hook_type or 'insufficient evidence'}`",
         "- Pending metrics remain excluded from learning until they are marked complete.",
         "",
     ])

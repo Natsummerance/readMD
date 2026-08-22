@@ -808,6 +808,7 @@ class PerformanceReportTest(unittest.TestCase):
         records = [
             self.complete("v1", "#36", "outcome-led", 1000, 40, 60),
             self.complete("v2", "#22", "identity-led", 2000, 120, 180),
+            self.complete("v4", "#22", "identity-led", 1000, 20, 30),
             {**self.complete("v3", "#9", "mechanism-curiosity", 500, 5, 5), "metrics_status": "pending"},
         ]
         with tempfile.TemporaryDirectory() as tmp:
@@ -816,13 +817,26 @@ class PerformanceReportTest(unittest.TestCase):
             markdown = (output / "performance-report.md").read_text(encoding="utf-8")
             data = json.loads((output / "performance-report.json").read_text(encoding="utf-8"))
         self.assertTrue(result["ok"])
-        self.assertEqual(data["learning_count"], 2)
+        self.assertEqual(data["learning_count"], 3)
         self.assertEqual(data["pending_count"], 1)
         self.assertNotIn("#9", data["formula_stats"])
         self.assertEqual(data["recommended_formula"], "#22")
         self.assertEqual(data["recommended_hook_type"], "identity-led")
         self.assertIn("Pending metrics", markdown)
         self.assertIn("#22", markdown)
+
+    def test_low_confidence_dimensions_are_not_recommended(self) -> None:
+        records = [{
+            **self.complete("v1", "#36", "outcome-led", 1000, 400, 600),
+            "comments": 100,
+            "shares": 100,
+            "follows": 100,
+        }]
+        with tempfile.TemporaryDirectory() as tmp:
+            data = performance_report.generate_report(records, Path(tmp))
+        self.assertEqual(data["formula_stats"]["#36"]["confidence"], "low")
+        self.assertIsNone(data["recommended_formula"])
+        self.assertIsNone(data["recommended_hook_type"])
 
 
 class BuildPipelineTest(unittest.TestCase):
@@ -1071,6 +1085,83 @@ class ContentMemoryTest(unittest.TestCase):
             before = store.read_text(encoding="utf-8")
             with self.assertRaises(ValueError):
                 content_memory.update_record(store, "v1.0.0", {"likes": -1})
+            after = store.read_text(encoding="utf-8")
+        self.assertEqual(after, before)
+
+    def seed_pending(self, store: Path) -> None:
+        content_memory.append_record(store, {
+            **self.record(release="v1.0.0"),
+            "variant_id": "identity-led__61",
+            "note_id": "note-1",
+            "metrics_status": "pending",
+        })
+
+    def test_partial_metric_snapshot_keeps_provenance_and_pending_state(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            self.seed_pending(store)
+            updated = content_memory.import_metric_snapshot(
+                store,
+                "v1.0.0",
+                {"impressions": 1200, "likes": 30},
+                source="xiaohongshu-web",
+                captured_at="2026-08-23T10:00:00+08:00",
+            )
+            records = content_memory.load_records(store)
+        self.assertEqual(updated["impressions"], 1200)
+        self.assertEqual(updated["metrics_status"], "pending")
+        self.assertEqual(updated["metrics_source"], "xiaohongshu-web")
+        self.assertEqual(records[0]["title_formula_id"], "#61")
+        self.assertEqual(records[0]["variant_id"], "identity-led__61")
+
+    def test_complete_metric_snapshot_requires_all_platform_counts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            self.seed_pending(store)
+            updated = content_memory.import_metric_snapshot(
+                store,
+                "v1.0.0",
+                {
+                    "impressions": 2400,
+                    "likes": 130,
+                    "collects": 190,
+                    "comments": 45,
+                    "shares": 22,
+                    "follows": 18,
+                },
+                source="xiaohongshu-web",
+                captured_at="2026-08-23T10:00:00+08:00",
+            )
+        self.assertEqual(updated["metrics_status"], "complete")
+
+    def test_metric_import_rejects_identity_conflicts_and_stale_snapshots(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            self.seed_pending(store)
+            with self.assertRaises(ValueError):
+                content_memory.import_metric_snapshot(
+                    store,
+                    "v1.0.0",
+                    {"impressions": 100, "title_formula_id": "#36"},
+                    source="xiaohongshu-web",
+                    captured_at="2026-08-23T10:00:00+08:00",
+                )
+            content_memory.import_metric_snapshot(
+                store,
+                "v1.0.0",
+                {"impressions": 2000, **{field: 10 for field in ("likes", "collects", "comments", "shares", "follows")}},
+                source="xiaohongshu-web",
+                captured_at="2026-08-24T10:00:00+08:00",
+            )
+            before = store.read_text(encoding="utf-8")
+            with self.assertRaises(ValueError):
+                content_memory.import_metric_snapshot(
+                    store,
+                    "v1.0.0",
+                    {"impressions": 10, **{field: 1 for field in ("likes", "collects", "comments", "shares", "follows")}},
+                    source="manual",
+                    captured_at="2026-08-23T10:00:00+08:00",
+                )
             after = store.read_text(encoding="utf-8")
         self.assertEqual(after, before)
 
