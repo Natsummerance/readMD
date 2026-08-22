@@ -97,6 +97,78 @@ def _comment_resonance_html(comment_focus: dict[str, Any]) -> str:
     )
 
 
+def _contract_field(label: str, value: Any, emphasis: bool = False) -> str:
+    value_style = (
+        "margin:6px 0 0;font-size:25px;line-height:1.35;font-weight:800;color:#182029"
+        if emphasis
+        else "margin:6px 0 0;font-size:22px;line-height:1.45;color:#182029"
+    )
+    return (
+        '<div style="min-width:260px;flex:1;background:#ffffff;border:1px solid #d8dee6;'
+        'border-radius:14px;padding:20px">'
+        f'<p style="margin:0;font-size:19px;letter-spacing:.04em;color:#5b6875">{_escaped(label)}</p>'
+        f'<p style="{value_style}">{_escaped(value)}</p></div>'
+    )
+
+
+def _proof_chip(value: Any) -> str:
+    return (
+        '<span style="display:inline-block;margin:0 8px 8px 0;padding:9px 14px;'
+        'background:#f2f4f6;border-top:3px solid #d6482c;border-radius:10px;'
+        f'font-size:21px;font-weight:700;color:#182029">{_escaped(value)}</span>'
+    )
+
+
+def _mechanism_contract_html(story: dict[str, Any]) -> str:
+    if not isinstance(story, dict) or not story:
+        return (
+            '<p style="margin:0;font-size:23px;color:#c1121f">'
+            'Mechanism contract is unavailable because story.json is missing.</p>'
+        )
+
+    primary = str(story.get("primary_shot", "")).strip()
+    angle = str(story.get("angle", "")).strip()
+    cover = story.get("cover_hook", {}) if isinstance(story.get("cover_hook"), dict) else {}
+    summary = story.get("summary_hook", {}) if isinstance(story.get("summary_hook"), dict) else {}
+    proof_points = summary.get("proof_points", [])
+    proof_points = proof_points if isinstance(proof_points, list) else []
+    feature_cards = [
+        item for item in story.get("card_plan", [])
+        if isinstance(item, dict) and item.get("role") in {"pure_ui_hero", "annotated_ui"}
+    ]
+
+    overview = "".join([
+        _contract_field("Primary mechanism", primary or "Missing", emphasis=True),
+        _contract_field("Cover formula", cover.get("formula_id") or "Missing", emphasis=True),
+        _contract_field("Summary headline", summary.get("title") or "Missing", emphasis=True),
+    ])
+    proof_html = "".join(_proof_chip(point) for point in proof_points) or (
+        '<span style="font-size:22px;color:#c1121f">Missing proof points</span>'
+    )
+    feature_items = "".join(
+        '<li style="margin:0 0 12px;list-style:none;background:#f2f4f6;border-radius:12px;'
+        'padding:16px 18px;font-size:22px;line-height:1.45;color:#182029">'
+        f'<strong style="display:block;font-size:19px;color:#5b6875">{_escaped(item.get("shot_id"))}</strong>'
+        f'{_escaped(item.get("caption"))}</li>'
+        for item in feature_cards
+    ) or '<li style="margin:0;list-style:none;font-size:22px;color:#c1121f">Missing feature captions</li>'
+    cover_value = cover.get("caption") or "Missing"
+    if cover.get("title"):
+        cover_value = f"{cover.get('title')}：{cover_value}"
+
+    return (
+        f'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">{overview}</div>'
+        f'{_contract_field("Core narrative", angle or "Missing")}'
+        '<div style="margin-top:18px">'
+        f'{_contract_field("Cover hook", cover_value)}'
+        '</div>'
+        f'<p style="margin:22px 0 10px;font-size:22px;font-weight:800;color:#182029">Summary proof points</p>'
+        f'<div>{proof_html}</div>'
+        f'<p style="margin:24px 0 10px;font-size:22px;font-weight:800;color:#182029">Card reader values</p>'
+        f'<ul style="margin:0;padding:0">{feature_items}</ul>'
+    )
+
+
 def build_dashboard(inputs: dict[str, Any]) -> str:
     release = inputs.get("release", "")
     title = inputs.get("title", "")
@@ -108,6 +180,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
     wechat_qa = inputs.get("wechat_qa", {})
     pattern_audit = inputs.get("pattern_audit", {})
     performance = inputs.get("performance", {})
+    story = inputs.get("story", {})
 
     gates = [
         ("Package QA", bool(qa.get("ok")), qa.get("errors", [])),
@@ -148,7 +221,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
         f'<p style="margin:0;font-size:26px;font-weight:800;color:#182029">{_escaped(item.get("title"))}</p>'
         f'<p style="margin:8px 0 0;font-size:22px;color:#5b6875">{_escaped(item.get("strategy"))} · {_escaped(item.get("copy_frame", ""))} · {_escaped(item.get("variant_id", ""))}</p>'
         f'<p style="margin:6px 0 0;font-size:21px;color:#5b6875">{_escaped(item.get("remaining_copy_frames", ""))} renewable frames remaining</p>'
-        f'{_escaped(item.get("semantic_score"))} / {_escaped(item.get("adjusted_score"))}</p></div>'
+        f'<p style="margin:6px 0 0;font-size:23px;font-weight:800;color:#182029">{_escaped(item.get("semantic_score"))} / {_escaped(item.get("adjusted_score"))}</p></div>'
         for item in displayed_variants
     )
 
@@ -196,6 +269,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
     </div>
   </header>
   {_section("Release gates", gate_html)}
+  {_section("Mechanism contract", _mechanism_contract_html(story))}
   {_section("Semantic dimensions", f'<div style="display:flex;gap:14px;flex-wrap:wrap">{score_items}</div>')}
   {_section("Style resonance", style_inner)}
   {_section("Comment resonance", comment_resonance_html)}
@@ -219,7 +293,9 @@ def validate_dashboard(html: str) -> list[str]:
 
 def collect_inputs(package_dir: Path) -> dict[str, Any]:
     metadata = _read_json(package_dir / "metadata.json")
+    story = _read_json(package_dir / "story.json")
     return {
+        "story": story,
         "release": metadata.get("release", ""),
         "title": metadata.get("title", ""),
         "strategy": metadata.get("strategy", metadata.get("hook_type", "unknown")),

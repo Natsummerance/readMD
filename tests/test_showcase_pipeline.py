@@ -1937,6 +1937,25 @@ class ReviewDashboardTest(unittest.TestCase):
             "release": "v1.2.3",
             "title": "不用重做PPT，Markdown直接放映",
             "strategy": "outcome-led",
+            "story": {
+                "release": "v1.2.3",
+                "primary_shot": "presentation.reveal",
+                "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+                "cover_hook": {
+                    "formula_id": "#36",
+                    "title": "写完就能讲",
+                    "caption": "Markdown 直接放映，不用重做 PPT。",
+                },
+                "summary_hook": {
+                    "title": "一条放映路",
+                    "caption": "写作、修改和上台共用一份文件。",
+                    "proof_points": ["同一份 MD", "真实排版", "直接放映"],
+                },
+                "card_plan": [
+                    {"index": 2, "role": "pure_ui_hero", "shot_id": "overview.reader", "caption": "打开文档就能看到完整排版"},
+                    {"index": 3, "role": "annotated_ui", "shot_id": "presentation.reveal", "caption": "写完的 Markdown 能直接上台放映"},
+                ],
+            },
             "body": "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。",
             "qa": {"ok": True, "errors": []},
             "copy_review": {
@@ -1998,6 +2017,13 @@ class ReviewDashboardTest(unittest.TestCase):
     def test_builds_paste_ready_review_dashboard(self) -> None:
         html = review_dashboard.build_dashboard(self.sample_inputs())
         self.assertIn("不用重做PPT，Markdown直接放映", html)
+        self.assertIn("Mechanism contract", html)
+        self.assertIn("presentation.reveal", html)
+        self.assertIn("ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映", html)
+        self.assertIn("写完就能讲", html)
+        self.assertIn("一条放映路", html)
+        self.assertIn("同一份 MD", html)
+        self.assertIn("打开文档就能看到完整排版", html)
         self.assertIn("outcome-led", html)
         self.assertIn("outcome-led__36", html)
         self.assertIn("100 / 100", html)
@@ -2025,6 +2051,21 @@ class ReviewDashboardTest(unittest.TestCase):
         }
         html = review_dashboard.build_dashboard(inputs)
         self.assertIn("No confident comment evidence yet", html)
+
+    def test_mechanism_contract_has_explicit_missing_state(self) -> None:
+        inputs = self.sample_inputs()
+        del inputs["story"]
+        html = review_dashboard.build_dashboard(inputs)
+        self.assertIn("Mechanism contract is unavailable", html)
+
+    def test_collect_inputs_loads_story_contract(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            story = {"release": "v1.2.3", "primary_shot": "presentation.reveal"}
+            (package / "story.json").write_text(json.dumps(story), encoding="utf-8")
+            (package / "metadata.json").write_text("{}", encoding="utf-8")
+            inputs = review_dashboard.collect_inputs(package)
+        self.assertEqual(inputs["story"]["primary_shot"], "presentation.reveal")
 
     def test_curates_top_experiments_instead_of_dumping_sixty_cards(self) -> None:
         inputs = self.sample_inputs()
