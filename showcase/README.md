@@ -25,7 +25,7 @@ python showcase/scripts/build_package.py --output showcase/output/package --fina
 
 语义 QA 现在包含 AI 指纹与共鸣审计：检查空泛形容词、AI 腔、句长节奏、具体产物、读者痛点和行动问题；未通过会写入 `copy-review.json.style` 并阻止发布。
 
-`qa.json`、`copy-review.json`、`variants.json`、`pattern-audit.json` 和 `dashboard-qa.json` 必须同时通过才允许进入小红书发布队列。`--draft` 可让 watcher 只填充小红书表单，不点击发布：
+`qa.json`、`copy-review.json`、`variants.json`、`pattern-audit.json` 和 `dashboard-qa.json` 必须同时通过才允许进入小红书发布队列。新包还必须让 `metadata.copy_frame`、选择报告和选中排名三方一致；watcher 发布前会重复这项检查。`--draft` 可让 watcher 只填充小红书表单，不点击发布：
 
 ```powershell
 python showcase/scripts/watch_and_publish.py --once --draft

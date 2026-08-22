@@ -129,9 +129,11 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
 
     variants_path = package_dir / "variants.json"
     variant_report: dict[str, Any] = {}
+    chosen_ranked_frame: str | None = None
     if variants_path.exists():
         try:
             variants = _load_json(variants_path)
+            variant_report = variants
             if variants.get("ok") is not True or not variants.get("chosen_strategy"):
                 errors.append("variant selection report is incomplete")
             else:
@@ -150,8 +152,13 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
                     chosen_ranked = next((item for item in ranked_items if item.get("strategy") == chosen_strategy), None)
                 if not chosen_ranked:
                     errors.append("variant selection missing chosen ranking")
-                elif chosen_ranked.get("ok") is not True or chosen_ranked.get("originality_failures"):
-                    errors.append("variant originality gate failed: " + "; ".join(map(str, chosen_ranked.get("hard_failures", []))))
+                else:
+                    chosen_ranked_frame = str(chosen_ranked.get("copy_frame") or "")
+                    if chosen_ranked.get("ok") is not True or chosen_ranked.get("originality_failures"):
+                        errors.append(
+                            "variant originality gate failed: "
+                            + "; ".join(map(str, chosen_ranked.get("hard_failures", [])))
+                        )
         except Exception as exc:
             errors.append(f"variants.json unreadable: {exc}")
 
@@ -251,6 +258,23 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
         and metadata["variant_id"] != variant_report["chosen_variant_id"]
     ):
         errors.append("metadata.variant_id differs from selected variant")
+    copy_frames = {
+        "metadata": str(metadata.get("copy_frame") or ""),
+        "selection": str(variant_report.get("chosen_copy_frame") or ""),
+        "ranking": chosen_ranked_frame,
+    }
+    frames_present = [source for source, value in copy_frames.items() if value]
+    if frames_present:
+        if len(frames_present) != len(copy_frames):
+            missing = ", ".join(sorted(set(copy_frames) - set(frames_present)))
+            errors.append(f"selected copy_frame is incomplete; missing {missing}")
+        elif len({copy_frames[source] for source in frames_present}) != 1:
+            errors.append(
+                "selected copy_frame mismatch: "
+                + f"metadata={copy_frames['metadata'] or '<missing>'}, "
+                + f"selection={copy_frames['selection'] or '<missing>'}, "
+                + f"ranking={copy_frames['ranking'] or '<missing>'}"
+            )
     if not metadata.get("source_urls"):
         errors.append("metadata.source_urls is empty")
     if version_state == "prerelease":

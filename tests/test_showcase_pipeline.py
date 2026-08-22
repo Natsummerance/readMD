@@ -325,6 +325,32 @@ class ValidatePackageTest(unittest.TestCase):
             errors = validate_package.validate_package(pkg)
         self.assertTrue(any("variant originality gate failed" in error for error in errors), errors)
 
+    def test_rejects_chosen_copy_frame_mismatch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp)
+            for name in ("story.json", "composition.json"):
+                (pkg / name).write_text("{}", encoding="utf-8")
+            (pkg / "raw").mkdir()
+            (pkg / "raw" / "capture.json").write_text("{}", encoding="utf-8")
+            (pkg / "metadata.json").write_text(json.dumps({
+                "variant_id": "outcome-led__36",
+                "copy_frame": "workflow",
+            }), encoding="utf-8")
+            (pkg / "variants.json").write_text(json.dumps({
+                "ok": True,
+                "chosen_strategy": "outcome-led",
+                "chosen_variant_id": "outcome-led__36",
+                "chosen_copy_frame": "core",
+                "ranked": [{
+                    "strategy": "outcome-led",
+                    "variant_id": "outcome-led__36",
+                    "copy_frame": "core",
+                    "ok": True,
+                }],
+            }), encoding="utf-8")
+            errors = validate_package.validate_package(pkg)
+        self.assertTrue(any("selected copy_frame mismatch" in error for error in errors), errors)
+
     def test_accepts_complete_four_image_package(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pkg = Path(tmp)
@@ -752,7 +778,9 @@ class CopyVariantsTest(unittest.TestCase):
         chosen, report = copy_variants.choose_variant(variants, history)
         self.assertEqual(chosen["strategy"], "identity-led")
         self.assertEqual(chosen["variant_id"], "identity-led__22")
+        self.assertEqual(chosen["copy_frame"], "core")
         self.assertEqual(report["chosen_variant_id"], "identity-led__22")
+        self.assertEqual(report["chosen_copy_frame"], "core")
         self.assertTrue(report["hook_stats"]["identity-led"]["confidence_ok"])
         self.assertTrue(report["formula_stats"]["#22"]["confidence_ok"])
         self.assertTrue(report["ok"])
@@ -1518,7 +1546,14 @@ class ReviewDashboardTest(unittest.TestCase):
 
 
 class WatcherTest(unittest.TestCase):
-    def make_package_zip(self, root: Path, *, pattern_ok: bool = True, variant_match: bool = True) -> Path:
+    def make_package_zip(
+        self,
+        root: Path,
+        *,
+        pattern_ok: bool = True,
+        variant_match: bool = True,
+        frame_match: bool = True,
+    ) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
         image = package / "images" / "xhs-01-cover.jpg"
@@ -1530,9 +1565,11 @@ class WatcherTest(unittest.TestCase):
             "ok": True,
             "chosen_strategy": "outcome-led",
             "chosen_variant_id": "identity-led__22" if not variant_match else "outcome-led__36",
+            "chosen_copy_frame": "workflow" if not frame_match else "core",
             "ranked": [{
                 "strategy": "outcome-led",
                 "variant_id": "outcome-led__36",
+                "copy_frame": "workflow" if not frame_match else "core",
                 "ok": True,
                 "originality_failures": [],
             }],
@@ -1692,6 +1729,28 @@ class WatcherTest(unittest.TestCase):
         self.assertFalse(published)
         self.assertEqual(record["status"], "retrying")
         self.assertIn("selected variant_id mismatch", record["error"])
+
+    def test_rejects_copy_frame_mismatch_before_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, frame_match=False)
+
+            def forbidden_publish(*args, **kwargs):
+                raise AssertionError("publisher must not run when selected frames disagree")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = forbidden_publish
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, True,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+        self.assertFalse(published)
+        self.assertEqual(record["status"], "retrying")
+        self.assertIn("selected copy_frame mismatch", record["error"])
 
 
 if __name__ == "__main__":

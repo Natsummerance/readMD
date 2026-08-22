@@ -187,6 +187,24 @@ def process_package(
             chosen_ranked = next((item for item in variants.get("ranked", []) if item.get("strategy") == variants.get("chosen_strategy")), None)
         if not chosen_ranked or chosen_ranked.get("ok") is not True or chosen_ranked.get("originality_failures"):
             raise ValueError("package variant originality gate is not green")
+        copy_frames = {
+            "metadata": str(metadata.get("copy_frame") or ""),
+            "selection": str(variants.get("chosen_copy_frame") or ""),
+            "ranking": str(chosen_ranked.get("copy_frame") or ""),
+        }
+        frames_present = [source for source, value in copy_frames.items() if value]
+        if frames_present:
+            if len(frames_present) != len(copy_frames):
+                raise ValueError(
+                    "selected copy_frame is incomplete: "
+                    + ", ".join(f"{source}={copy_frames[source] or '<missing>'}" for source in frames_present)
+                )
+            if len({copy_frames[source] for source in frames_present}) != 1:
+                raise ValueError(
+                    "selected copy_frame mismatch: "
+                    f"metadata={copy_frames['metadata']}, report={copy_frames['selection']}, "
+                    f"ranking={copy_frames['ranking']}"
+                )
         dashboard = json.loads((package_dir / "dashboard-qa.json").read_text(encoding="utf-8"))
         if dashboard.get("ok") is not True:
             raise ValueError("package dashboard-qa.json is not green")
