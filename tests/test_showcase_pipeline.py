@@ -1667,13 +1667,23 @@ class ContentMemoryTest(unittest.TestCase):
         records = [
             self.record(release="v1.0.0", formula="#61"),
             {**self.record(release="v1.0.1", formula="#36"), "impressions": 2000, "likes": 120, "collects": 180, "comments": 50, "shares": 20},
+            self.record(release="v1.0.2", formula="#36"),
         ]
         summary = content_memory.summarize(records)
-        self.assertEqual(summary["record_count"], 2)
+        self.assertEqual(summary["record_count"], 3)
         self.assertEqual(summary["recommended_formula"], "#36")
         self.assertEqual(summary["formula_stats"]["#36"]["confidence"], "medium")
         self.assertEqual(summary["formula_stats"]["#61"]["confidence"], "low")
         self.assertGreater(summary["formula_stats"]["#36"]["score"], summary["formula_stats"]["#61"]["score"])
+
+    def test_two_release_formula_reaches_medium_confidence(self) -> None:
+        records = [
+            self.record(release="v1.0.0", formula="#36"),
+            self.record(release="v1.0.1", formula="#36"),
+        ]
+        summary = content_memory.summarize(records)
+        self.assertEqual(summary["recommended_formula"], "#36")
+        self.assertEqual(summary["formula_stats"]["#36"]["confidence"], "medium")
 
     def test_low_confidence_formula_is_not_recommended(self) -> None:
         records = [
@@ -1682,7 +1692,7 @@ class ContentMemoryTest(unittest.TestCase):
         ]
         summary = content_memory.summarize(records)
         self.assertIsNone(summary["recommended_formula"])
-        self.assertEqual(summary["formula_stats"]["#9"]["score"], 3.125)
+        self.assertEqual(summary["formula_stats"]["#9"]["score"], 2.0375)
         self.assertEqual(summary["formula_stats"]["#9"]["confidence"], "low")
 
     def test_pending_feedback_is_partitioned_out_of_learning(self) -> None:
@@ -1718,8 +1728,10 @@ class ContentMemoryTest(unittest.TestCase):
                 previous_release="v1.0.9",
                 history=history,
             )
-        self.assertEqual(result["title_formula_id"], "#61")
+        self.assertEqual(result["title_formula_id"], "#9")
         self.assertIn("#36", result["title_selection"]["avoided_formulas"])
+        self.assertIn("historical performance", result["title_selection"]["reasons"]["#36"])
+        self.assertIn("recent fatigue penalty", result["title_selection"]["reasons"]["#36"])
 
     def test_low_confidence_title_history_cannot_win_selection(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1748,10 +1760,10 @@ class ContentMemoryTest(unittest.TestCase):
                 previous_release="v1.0.9",
                 history=history,
             )
-        self.assertEqual(result["title_formula_id"], "#9")
-        self.assertEqual(
-            result["title_selection"]["reasons"]["#22"],
+        self.assertEqual(result["title_formula_id"], "#36")
+        self.assertIn(
             "low-confidence evidence held as exploration",
+            result["title_selection"]["reasons"]["#22"],
         )
         self.assertIn("historical", result["title_selection"]["strategy"])
 
@@ -1774,7 +1786,7 @@ class ContentMemoryTest(unittest.TestCase):
                 previous_release="v1.0.9",
                 history=history,
             )
-        self.assertEqual(result["title_formula_id"], "#61")
+        self.assertEqual(result["title_formula_id"], "#36")
         self.assertNotIn("#36", result["title_selection"]["avoided_formulas"])
 
     def test_update_record_merges_real_metrics_without_duplicating(self) -> None:
