@@ -174,6 +174,13 @@ PROFILES: dict[str, dict[str, Any]] = {
             "title": "同屏改稿",
             "caption": "改完立刻看到排版，不用切窗口。",
         },
+        "cover_variants": {
+            "#36": {"formula_id": "#36", "title": "同屏改稿", "caption": "改完立刻看到排版，不用切窗口。"},
+            "#9": {"formula_id": "#9", "title": "改完就能看", "caption": "源稿和预览同步出现，不用猜排版。"},
+            "#22": {"formula_id": "#22", "title": "反复改稿的人", "caption": "为讲义和笔记保留同屏工作流。"},
+            "#61": {"formula_id": "#61", "title": "别再切窗口", "caption": "Markdown 源稿和预览留在同一屏。"},
+            "#12": {"formula_id": "#12", "title": "换个改稿法", "caption": "同一份 Markdown 可以边写边看。"},
+        },
         "summary": {
             "title": "改稿不切窗",
             "caption": "源稿和预览留在同一屏。",
@@ -212,6 +219,13 @@ PROFILES: dict[str, dict[str, Any]] = {
             "formula_id": "#36",
             "title": "写完就能讲",
             "caption": "Markdown 直接放映，不用重做 PPT。",
+        },
+        "cover_variants": {
+            "#36": {"formula_id": "#36", "title": "写完就能讲", "caption": "Markdown 直接放映，不用重做 PPT。"},
+            "#9": {"formula_id": "#9", "title": "为何直接讲", "caption": "同一份 Markdown 从写作走到上台。"},
+            "#22": {"formula_id": "#22", "title": "上台讲文档的人", "caption": "课程、组会和论文汇报都适用。"},
+            "#61": {"formula_id": "#61", "title": "别重做PPT", "caption": "讲稿定稿后直接进入放映。"},
+            "#12": {"formula_id": "#12", "title": "换个讲法", "caption": "写作、修改和放映共用一份文件。"},
         },
         "summary": {
             "title": "一条放映路",
@@ -253,6 +267,13 @@ PROFILES: dict[str, dict[str, Any]] = {
             "title": "图表直接选",
             "caption": "科研图从面板进入 Markdown，不背语法。",
         },
+        "cover_variants": {
+            "#36": {"formula_id": "#36", "title": "图表直接选", "caption": "科研图从面板进入 Markdown，不背语法。"},
+            "#9": {"formula_id": "#9", "title": "图表怎么选", "caption": "科研图从面板进入 Markdown 文档。"},
+            "#22": {"formula_id": "#22", "title": "论文画图的人", "caption": "流程、架构和时序图可以长期维护。"},
+            "#61": {"formula_id": "#61", "title": "别背图语法", "caption": "从面板选择结构，渲染留在文档里。"},
+            "#12": {"formula_id": "#12", "title": "换种画图法", "caption": "科研图表和文稿留在同一条路径。"},
+        },
         "summary": {
             "title": "图随文稿走",
             "caption": "科研图表留在可维护的 Markdown 里。",
@@ -291,6 +312,13 @@ PROFILES: dict[str, dict[str, Any]] = {
             "formula_id": "#36",
             "title": "公式不走样",
             "caption": "LaTeX 和引用留在同一条工作流。",
+        },
+        "cover_variants": {
+            "#36": {"formula_id": "#36", "title": "公式不走样", "caption": "LaTeX 和引用留在同一条工作流。"},
+            "#9": {"formula_id": "#9", "title": "公式为何稳", "caption": "LaTeX 和引用由同一条工作流驱动。"},
+            "#22": {"formula_id": "#22", "title": "写论文的人", "caption": "推导、定理和参考文献不离开笔记。"},
+            "#61": {"formula_id": "#61", "title": "别重复调格式", "caption": "公式排版在 Markdown 里一次到位。"},
+            "#12": {"formula_id": "#12", "title": "换种排版法", "caption": "学术笔记保持论文级排版。"},
         },
         "summary": {
             "title": "论文级排版",
@@ -331,6 +359,13 @@ PROFILES: dict[str, dict[str, Any]] = {
             "title": "代码就地跑",
             "caption": "教程里的示例能运行，读者能复现。",
         },
+        "cover_variants": {
+            "#36": {"formula_id": "#36", "title": "代码就地跑", "caption": "教程里的示例能运行，读者能复现。"},
+            "#9": {"formula_id": "#9", "title": "代码为何能跑", "caption": "运行按钮、状态和输出都在文档里。"},
+            "#22": {"formula_id": "#22", "title": "写技术教程的人", "caption": "读者可以跟着示例直接复现。"},
+            "#61": {"formula_id": "#61", "title": "别只贴代码", "caption": "让示例就地运行并保留输出。"},
+            "#12": {"formula_id": "#12", "title": "换个教程法", "caption": "说明、代码和结果不会脱节。"},
+        },
         "summary": {
             "title": "能跑的教程",
             "caption": "代码、结果和说明留在同一段。",
@@ -369,6 +404,13 @@ PROFILES: dict[str, dict[str, Any]] = {
             "formula_id": "#36",
             "title": "资料进工作台",
             "caption": "网页、PDF 和 Word 收进同一个入口。",
+        },
+        "cover_variants": {
+            "#36": {"formula_id": "#36", "title": "资料进工作台", "caption": "网页、PDF 和 Word 收进同一个入口。"},
+            "#9": {"formula_id": "#9", "title": "资料去哪了", "caption": "网页、PDF 和 Word 进入同一个入口。"},
+            "#22": {"formula_id": "#22", "title": "整理资料的人", "caption": "剪藏和文档转成可检索的 Markdown。"},
+            "#61": {"formula_id": "#61", "title": "别散存资料", "caption": "转换和阅读收进本地工作台。"},
+            "#12": {"formula_id": "#12", "title": "换个整理法", "caption": "零散资料接进同一条工作流。"},
         },
         "summary": {
             "title": "资料一处收",
@@ -409,6 +451,13 @@ PROFILES: dict[str, dict[str, Any]] = {
             "title": "文档到手机",
             "caption": "本地文档生成共享入口，不用再导出副本。",
         },
+        "cover_variants": {
+            "#36": {"formula_id": "#36", "title": "文档到手机", "caption": "本地文档生成共享入口，不用再导出副本。"},
+            "#9": {"formula_id": "#9", "title": "怎么发到手机", "caption": "当前文档生成共享入口，不用导出副本。"},
+            "#22": {"formula_id": "#22", "title": "要分享文档的人", "caption": "讲义和报告可以直接到手机。"},
+            "#61": {"formula_id": "#61", "title": "别多存副本", "caption": "分享入口始终指向当前文档。"},
+            "#12": {"formula_id": "#12", "title": "换个分享法", "caption": "令牌和启停控制保持可控。"},
+        },
         "summary": {
             "title": "分享可控",
             "caption": "当前文档可以发给手机，也能停止。",
@@ -426,6 +475,15 @@ PROFILES: dict[str, dict[str, Any]] = {
 
 def profile_for_story(story: dict[str, Any]) -> dict[str, Any]:
     return PROFILES.get(str(story.get("primary_shot", "overview.editor")), PROFILES["overview.editor"])
+
+
+def cover_for_title(profile: dict[str, Any], title_formula_id: str) -> dict[str, Any]:
+    """Return the feed hook that matches the selected title's psychological trigger."""
+    variants = profile.get("cover_variants", {})
+    variant = variants.get(str(title_formula_id))
+    if not isinstance(variant, dict):
+        raise ValueError(f"missing cover variant for {title_formula_id}")
+    return dict(variant)
 
 
 def frames_for_story(story: dict[str, Any]) -> dict[str, list[tuple[str, str, str]]]:

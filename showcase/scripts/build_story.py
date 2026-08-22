@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from copy_profiles import profile_for_story
+from copy_profiles import cover_for_title, profile_for_story
 
 def is_prerelease(release: str) -> bool:
     return bool(re.search(r"(?:beta|alpha|rc|preview|pre)", release, re.I))
@@ -194,6 +194,21 @@ def build_story(
         "card_plan": card_plan,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+def apply_selected_cover(story: dict[str, Any], metadata: dict[str, Any]) -> dict[str, Any]:
+    """Sync the first-image trigger with the winning title formula."""
+    profile = profile_for_story(story)
+    formula_id = str(metadata.get("title_formula_id", ""))
+    cover_hook = cover_for_title(profile, formula_id)
+    story["cover_hook"] = cover_hook
+    story["cover_variant_formula_id"] = formula_id
+    if story.get("card_plan"):
+        story["card_plan"][0].update({
+            "title": cover_hook["title"],
+            "caption": cover_hook["caption"],
+        })
+    return story
 
 
 def main() -> int:

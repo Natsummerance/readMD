@@ -74,7 +74,8 @@ def audit_patterns(
     plan = story.get("card_plan", [])
     lower_body = body.lower()
     mechanism_profile = profile_for_story(story)
-    expected_cover = mechanism_profile.get("cover", {})
+    cover_formula_id = str(story.get("cover_hook", {}).get("formula_id", ""))
+    expected_cover = mechanism_profile.get("cover_variants", {}).get(cover_formula_id, {})
     expected_summary = mechanism_profile.get("summary", {})
     expected_angle = mechanism_profile.get("narrative_angle", "")
     cover_hook = story.get("cover_hook", {})
@@ -89,7 +90,12 @@ def audit_patterns(
         name = plan[index].get("file") if index < len(plan) else ""
         return next((item for item in cards if item.get("file") == name), {})
 
-    cover_hook_ok = all(cover_hook.get(key) == expected_cover.get(key) for key in ("formula_id", "title", "caption"))
+    title_formula_id = str(metadata.get("title_formula_id", ""))
+    trigger_synced = bool(cover_formula_id) and cover_formula_id == title_formula_id
+    cover_hook_ok = trigger_synced and all(
+        cover_hook.get(key) == expected_cover.get(key)
+        for key in ("formula_id", "title", "caption")
+    )
     cover_ok = (
         len(title) <= 20
         and bool(cards)

@@ -264,6 +264,35 @@ class WriteCopyTest(unittest.TestCase):
                 self.assertTrue(2 <= len(hook["title"]) <= 8)
                 self.assertTrue(8 <= len(hook["caption"]) <= 32)
 
+    def test_mechanism_cover_variants_track_all_title_formulas(self) -> None:
+        expected_formulas = {"#36", "#9", "#22", "#61", "#12"}
+        for primary_shot, profile in copy_profiles.PROFILES.items():
+            with self.subTest(primary_shot=primary_shot):
+                variants = profile["cover_variants"]
+                self.assertEqual(set(variants), expected_formulas)
+                self.assertEqual(set(variants), set(profile["titles"]))
+                self.assertEqual(len({item["title"] for item in variants.values()}), 5)
+                for formula_id, hook in variants.items():
+                    self.assertEqual(hook["formula_id"], formula_id)
+                    self.assertTrue(2 <= len(hook["title"]) <= 8)
+                    self.assertTrue(8 <= len(hook["caption"]) <= 32)
+
+    def test_apply_selected_cover_syncs_feed_trigger_with_title(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = write_story(Path(tmp))
+            story["primary_shot"] = "presentation.reveal"
+            metadata = {
+                "title_formula_id": "#22",
+                "variant_id": "identity-led__22",
+                "strategy": "identity-led",
+                "hook_type": "identity-led",
+            }
+            updated = build_story.apply_selected_cover(story, metadata)
+        self.assertEqual(updated["cover_hook"]["formula_id"], "#22")
+        self.assertEqual(updated["cover_hook"]["title"], "上台讲文档的人")
+        self.assertEqual(updated["cover_variant_formula_id"], "#22")
+        self.assertEqual(updated["card_plan"][0]["title"], "上台讲文档的人")
+
     def test_title_candidates_cover_five_traceable_formulas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             story = write_story(Path(tmp))
@@ -829,12 +858,26 @@ class PatternAuditTest(unittest.TestCase):
             story, metadata, composition = self.make_inputs()
             story["cover_hook"]["title"] = "本地文档台"
             story["cover_hook"]["caption"] = "一个本地文档工作台。"
+            metadata["title_formula_id"] = "#36"
             self.write_package(package, story, metadata, composition)
             report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
         self.assertFalse(report["ok"])
         cover = next(item for item in report["patterns"] if item["id"] == "one-hook-cover")
         self.assertFalse(cover["ok"])
         self.assertIn("release mechanism", cover["failures"][0])
+
+    def test_cover_trigger_must_match_title_formula(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            story, metadata, composition = self.make_inputs()
+            profile = copy_profiles.PROFILES[story["primary_shot"]]
+            story["cover_hook"] = dict(profile["cover_variants"]["#22"])
+            metadata["title_formula_id"] = "#36"
+            self.write_package(package, story, metadata, composition)
+            report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
+        self.assertFalse(report["ok"])
+        cover = next(item for item in report["patterns"] if item["id"] == "one-hook-cover")
+        self.assertFalse(cover["ok"])
 
     def test_feature_caption_must_match_evidence_backed_reader_value(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1392,6 +1435,52 @@ class BuildPipelineTest(unittest.TestCase):
         self.assertLess(compose_index, finalize_index)
         self.assertLess(finalize_index, package_index)
         self.assertIn("--finalize", showcase)
+
+    def test_build_package_applies_selected_cover_variant(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            notes = Path(tmp) / "notes.md"
+            package = Path(tmp) / "package"
+            notes.write_text("- Reveal.js 演说模式放映\n", encoding="utf-8")
+            selected_metadata = {
+                "title": "给要上台讲文档的人做的MD工具",
+                "body": "这是用于验证封面联动的正文。",
+                "title_formula_id": "#22",
+                "variant_id": "identity-led__22",
+                "strategy": "identity-led",
+                "hook_type": "identity-led",
+                "copy_frame": "core",
+                "topics": ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"],
+            }
+            selection = {
+                "ok": True,
+                "chosen_strategy": "identity-led",
+                "chosen_variant_id": "identity-led__22",
+                "chosen_copy_frame": "core",
+                "ranked": [],
+            }
+            original_select = build_package_module.select_variant
+            original_report = build_package_module.performance_report.generate_report
+            build_package_module.select_variant = lambda **kwargs: (selected_metadata, selection)
+            build_package_module.performance_report.generate_report = lambda records, output_dir: {"ok": True}
+            try:
+                story, metadata = build_package_module.build_package(
+                    release="v1.2.3",
+                    previous_release="v1.2.2",
+                    notes_text=notes.read_text(encoding="utf-8"),
+                    diff_text="",
+                    package_dir=package,
+                    repo_root=ROOT,
+                    memory_path=None,
+                )
+            finally:
+                build_package_module.select_variant = original_select
+                build_package_module.performance_report.generate_report = original_report
+
+            persisted = json.loads((package / "story.json").read_text(encoding="utf-8"))
+        self.assertEqual(metadata["title_formula_id"], "#22")
+        self.assertEqual(story["cover_hook"]["formula_id"], "#22")
+        self.assertEqual(persisted["cover_hook"]["title"], "上台讲文档的人")
+        self.assertEqual(persisted["card_plan"][0]["title"], "上台讲文档的人")
 
     def test_dashboard_failure_turns_aggregate_qa_red(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

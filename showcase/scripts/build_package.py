@@ -10,7 +10,7 @@ from pathlib import Path
 
 from audit_copy import audit_package
 from content_memory import load_learning_records, load_records
-from build_story import build_story
+from build_story import apply_selected_cover, build_story
 from copy_variants import select_variant
 from export_wechat import export_package
 import pattern_audit
@@ -53,7 +53,9 @@ def build_package(
         base_metadata=metadata,
         history=history,
     )
+    story = apply_selected_cover(story, metadata)
     (package_dir / "variants.json").write_text(json.dumps(variant_selection, ensure_ascii=False, indent=2), encoding="utf-8")
+    (package_dir / "story.json").write_text(json.dumps(story, ensure_ascii=False, indent=2), encoding="utf-8")
     (package_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
     publication_records = load_records(memory_path) if memory_path else []
     performance_report.generate_report(publication_records, package_dir)
