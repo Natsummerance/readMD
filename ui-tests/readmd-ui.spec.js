@@ -1060,6 +1060,18 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
   await expect(page.locator('#status-version')).toHaveText(`v${buildVersion}`);
   await expect(page.locator('#menu-version-label')).toHaveText(`当前版本 v${buildVersion}`);
 
+  for (const id of [
+    'ai-settings-modal', 'ai-history-modal', 'history-modal', 'img-modal', 'formula-modal',
+    'tpl-modal', 'share-modal', 'close-confirm-modal', 'export-modal', 'export-preview-modal',
+    'convert-modal', 'update-modal', 'lang-modal', 'table-modal', 'style-custom-modal',
+    'code-chunk-modal', 'diagram-modal', 'doc-import-modal', 'frontmatter-modal',
+  ]) {
+    const modal = page.locator(`#${id}`);
+    await expect(modal).toHaveAttribute('role', 'dialog');
+    await expect(modal).toHaveAttribute('aria-modal', 'true');
+    expect(await modal.evaluate(el => !!(el.getAttribute('aria-label') || el.getAttribute('aria-labelledby')))).toBe(true);
+  }
+
   await expect(page.locator('#toast')).toHaveAttribute('role', 'status');
   await expect(page.locator('#toast')).toHaveAttribute('aria-live', 'polite');
   await expect(page.locator('#search-input')).toHaveAttribute('aria-label', /搜索|search/i);

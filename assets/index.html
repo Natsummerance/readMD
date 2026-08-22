@@ -505,9 +505,9 @@
 </div>
 
 <!-- 移动端共享弹窗 -->
-<div id="share-modal" class="hidden">
+<div id="share-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="share-title">
   <div id="share-box">
-    <h3 data-i18n="share.title">&#128241; 移动端共享</h3>
+    <h3 id="share-title" data-i18n="share.title">&#128241; 移动端共享</h3>
     <p class="fix-note" data-i18n="share.desc">启动后手机连同一 Wi-Fi，扫描二维码即可在手机浏览器阅读当前文档（也支持转 MD / OCR / 网页 / AI）。局域网访问需携带本次随机令牌，关闭共享即失效。</p>
     <div id="share-qr"></div>
     <p id="share-url" class="share-url"></p>
@@ -727,10 +727,10 @@
 </div>
 
 <!-- 批量转换弹窗 -->
-<div id="convert-modal" class="hidden">
+<div id="convert-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="convert-title">
   <div id="convert-box">
     <div class="export-head">
-      <h3 data-i18n="convert.title">转 Markdown</h3>
+      <h3 id="convert-title" data-i18n="convert.title">转 Markdown</h3>
       <button id="convert-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">&#10005;</button>
     </div>
     <div class="convert-body">
@@ -826,11 +826,11 @@
 </div>
 
 <!-- 语言选择对话框 -->
-<div id="lang-modal" class="modal hidden">
+<div id="lang-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lang-title">
   <div class="modal-dialog lang-modal-dialog">
     <div class="modal-header">
-      <h3 data-i18n="lang.title">选择界面语言 (Language)</h3>
-      <button class="modal-close" onclick="i18n.closeModal()">✕</button>
+      <h3 id="lang-title" data-i18n="lang.title">选择界面语言 (Language)</h3>
+      <button class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close" onclick="i18n.closeModal()">✕</button>
     </div>
     <div class="lang-search-wrap">
       <input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." data-i18n-placeholder="lang.search" oninput="i18n.renderLanguageGrid(this.value)">
@@ -840,11 +840,11 @@
 </div>
 
 <!-- 插入表格设计器对话框 -->
-<div id="table-modal" class="modal hidden">
+<div id="table-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="table-title">
   <div class="modal-dialog" style="max-width: 320px;">
     <div class="modal-header">
-      <h3 data-i18n="editor.table">插入表格</h3>
-      <button class="modal-close" onclick="closeTableModal()">✕</button>
+      <h3 id="table-title" data-i18n="editor.table">插入表格</h3>
+      <button class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close" onclick="closeTableModal()">✕</button>
     </div>
     <div style="padding: 12px 16px; text-align: center;">
       <div id="table-grid-picker" class="table-grid-picker"></div>
@@ -911,11 +911,11 @@
 </div>
 
 <!-- 交互式代码块配置模态框 -->
-<div id="code-chunk-modal" class="modal hidden" role="dialog" aria-modal="true">
+<div id="code-chunk-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="code-chunk-title">
   <div class="modal-dialog" style="max-width: 480px;">
     <div class="modal-header">
-      <h3 data-i18n="editor.codeChunkModalTitle">插入交互式代码块 (Interactive Code Chunk)</h3>
-      <button id="code-chunk-modal-close" class="modal-close">✕</button>
+      <h3 id="code-chunk-title" data-i18n="editor.codeChunkModalTitle">插入交互式代码块 (Interactive Code Chunk)</h3>
+      <button id="code-chunk-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 16px;">
       <div class="modal-form-group">
@@ -953,11 +953,11 @@
 </div>
 
 <!-- 科学与工程图表选择模态框 -->
-<div id="diagram-modal" class="modal hidden" role="dialog" aria-modal="true">
+<div id="diagram-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="diagram-title">
   <div class="modal-dialog" style="max-width: 520px;">
     <div class="modal-header">
-      <h3 data-i18n="editor.diagramModalTitle">插入科学与工程图表 (Diagrams)</h3>
-      <button id="diagram-modal-close" class="modal-close">✕</button>
+      <h3 id="diagram-title" data-i18n="editor.diagramModalTitle">插入科学与工程图表 (Diagrams)</h3>
+      <button id="diagram-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 16px;">
       <div class="modal-form-group">
@@ -985,11 +985,11 @@
 </div>
 
 <!-- 子文档引用模态框 -->
-<div id="doc-import-modal" class="modal hidden" role="dialog" aria-modal="true">
+<div id="doc-import-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="doc-import-title">
   <div class="modal-dialog" style="max-width: 480px;">
     <div class="modal-header">
-      <h3 data-i18n="editor.docImportModalTitle">插入子文档引用 (@import)</h3>
-      <button id="doc-import-modal-close" class="modal-close">✕</button>
+      <h3 id="doc-import-title" data-i18n="editor.docImportModalTitle">插入子文档引用 (@import)</h3>
+      <button id="doc-import-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 16px;">
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.docImportDesc">引用外部 Markdown 文件、源码或图表，渲染时将自动无缝嵌入当前文档。</p>
@@ -1020,11 +1020,11 @@
 </div>
 
 <!-- 文档样式元数据模态框 (Frontmatter) -->
-<div id="frontmatter-modal" class="modal hidden" role="dialog" aria-modal="true">
+<div id="frontmatter-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="frontmatter-title">
   <div class="modal-dialog" style="max-width: 500px;">
     <div class="modal-header">
-      <h3 data-i18n="editor.frontmatterModalTitle">配置文档元数据与演说主题 (Frontmatter)</h3>
-      <button id="frontmatter-modal-close" class="modal-close">✕</button>
+      <h3 id="frontmatter-title" data-i18n="editor.frontmatterModalTitle">配置文档元数据与演说主题 (Frontmatter)</h3>
+      <button id="frontmatter-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 16px;">
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.frontmatterModalDesc">在文档顶部插入标准 YAML Frontmatter，用于配置文档标题、作者、Reveal.js 演示主题及全局样式。</p>
