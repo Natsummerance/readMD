@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from style_audit import AI_CLICHES, GENERIC_ADJECTIVES
+from copy_profiles import profile_for_story
 
 
 TASK_TERMS = (
@@ -72,12 +73,22 @@ def audit_patterns(
     cards = composition.get("cards", [])
     plan = story.get("card_plan", [])
     lower_body = body.lower()
+    expected_cover = profile_for_story(story).get("cover", {})
+    cover_hook = story.get("cover_hook", {})
 
     def card_for(index: int) -> dict[str, Any]:
         name = plan[index].get("file") if index < len(plan) else ""
         return next((item for item in cards if item.get("file") == name), {})
 
-    cover_ok = len(title) <= 20 and bool(cards) and _box_ratio(cards[0]) >= 0.15
+    cover_hook_ok = all(cover_hook.get(key) == expected_cover.get(key) for key in ("formula_id", "title", "caption"))
+    cover_ok = (
+        len(title) <= 20
+        and bool(cards)
+        and _box_ratio(cards[0]) >= 0.15
+        and cover_hook_ok
+        and 2 <= len(str(cover_hook.get("title", ""))) <= 8
+        and 8 <= len(str(cover_hook.get("caption", ""))) <= 32
+    )
     pain_ok = any(term in first for term in TASK_TERMS) and any(term in first for term in REMOVAL_TERMS)
     product_plan = plan[1] if len(plan) > 1 else {}
     product_card = card_for(1)
@@ -117,8 +128,12 @@ def audit_patterns(
         "one-hook-cover": _result(
             "one-hook-cover",
             cover_ok,
-            [f"title length {len(title)}", f"cover UI region {_box_ratio(cards[0]) if cards else 0:.2%}"],
-            ["cover must have a concise title and at least a 15% authentic UI region"],
+            [
+                f"title length {len(title)}",
+                f"cover hook {cover_hook.get('title', '')}",
+                f"cover UI region {_box_ratio(cards[0]) if cards else 0:.2%}",
+            ],
+            ["cover hook must match the release mechanism, stay concise, and keep at least a 15% authentic UI region"],
         ),
         "pain-to-removal": _result(
             "pain-to-removal",

@@ -168,6 +168,11 @@ PROFILES: dict[str, dict[str, Any]] = {
         "opening": "改一段就要切窗口核对格式。这次把这一步砍掉：Markdown 源稿和实时预览在同一屏。",
         "primary_paragraph": "编辑器和实时预览在同一屏里，先改内容再确认排版，不用在几个窗口之间来回追版本。",
         "saved_step": "在几个窗口之间追版本",
+        "cover": {
+            "formula_id": "#36",
+            "title": "同屏改稿",
+            "caption": "改完立刻看到排版，不用切窗口。",
+        },
         "cta": "你会先用哪份 Markdown 同屏修改？课程讲义、技术笔记还是项目说明？",
         "hook_contract": {
             "task": ["改", "窗口", "格式"],
@@ -196,6 +201,11 @@ PROFILES: dict[str, dict[str, Any]] = {
         "opening": "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。",
         "primary_paragraph": "放映界面可以直接换主题、调字号、切开场和转场；AST 保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。",
         "saved_step": "重新做一遍演示稿",
+        "cover": {
+            "formula_id": "#36",
+            "title": "写完就能讲",
+            "caption": "Markdown 直接放映，不用重做 PPT。",
+        },
         "cta": "你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。",
         "hook_contract": {
             "task": ["写完", "复制", "PPT", "讲"],
@@ -225,6 +235,11 @@ PROFILES: dict[str, dict[str, Any]] = {
         "opening": "画科研图表还要回忆语法，改一次就很折磨。这次不用硬记：Markdown 面板选择结构，结果留在文档里。",
         "primary_paragraph": "图表从面板里选，渲染结果留在文档里；适合论文、报告和需要长期维护的技术笔记。",
         "saved_step": "手写一遍就报废的图表语法",
+        "cover": {
+            "formula_id": "#36",
+            "title": "图表直接选",
+            "caption": "科研图从面板进入 Markdown，不背语法。",
+        },
         "cta": "你会先给论文里的哪类内容画图？流程、架构还是时序？评论区说说场景。",
         "hook_contract": {
             "task": ["图表", "语法", "画"],
@@ -253,6 +268,11 @@ PROFILES: dict[str, dict[str, Any]] = {
         "opening": "公式和文献格式总在交稿前折磨人。这次不用另起工具：LaTeX 和引用留在 Markdown 里。",
         "primary_paragraph": "公式、定理盒子和参考文献沿用同一套排版；写作时不用在笔记、LaTeX 和最终稿之间反复搬运。",
         "saved_step": "在另一个工具里重调公式格式",
+        "cover": {
+            "formula_id": "#36",
+            "title": "公式不走样",
+            "caption": "LaTeX 和引用留在同一条工作流。",
+        },
         "cta": "你下一份要处理的是课程讲义还是论文？评论区说说公式场景。",
         "hook_contract": {
             "task": ["公式", "文献", "交稿"],
@@ -281,6 +301,11 @@ PROFILES: dict[str, dict[str, Any]] = {
         "opening": "教程写到代码，还要切出去验证一遍。这次不用切换：代码块直接在 Markdown 里运行。",
         "primary_paragraph": "代码块保留运行按钮、状态和输出；读者看到的不是死代码，而是能跟着复现的步骤。",
         "saved_step": "另开终端重复验证示例",
+        "cover": {
+            "formula_id": "#36",
+            "title": "代码就地跑",
+            "caption": "教程里的示例能运行，读者能复现。",
+        },
         "cta": "你会先验证哪段代码？配置脚本、算法示例还是数据处理？评论区挑一个。",
         "hook_contract": {
             "task": ["教程", "代码", "验证"],
@@ -309,6 +334,11 @@ PROFILES: dict[str, dict[str, Any]] = {
         "opening": "网页、Word 和 PDF 分散在不同窗口，资料格式很难归拢。这次不用搬运：它们进入同一条 Markdown 工作流。",
         "primary_paragraph": "打开、转换、AI 和网页抓取都从一个本地入口开始，资料不会被拆到一串临时工具里。",
         "saved_step": "在不同工具之间搬运资料",
+        "cover": {
+            "formula_id": "#36",
+            "title": "资料进工作台",
+            "caption": "网页、PDF 和 Word 收进同一个入口。",
+        },
         "cta": "你会先把网页、PDF 还是 Word 收进来？评论区说说整理场景。",
         "hook_contract": {
             "task": ["网页", "Word", "PDF", "资料"],
@@ -337,6 +367,11 @@ PROFILES: dict[str, dict[str, Any]] = {
         "opening": "想把 Markdown 发给别人，还要先导出一份副本，版本很快对不上。这次不用多存：当前文档直接生成共享入口。",
         "primary_paragraph": "局域网共享面板提供扫码入口、随机令牌和启停控制；手机打开的是当前文档，不需要对方装软件。",
         "saved_step": "为了分享再导出一份副本",
+        "cover": {
+            "formula_id": "#36",
+            "title": "文档到手机",
+            "caption": "本地文档生成共享入口，不用再导出副本。",
+        },
         "cta": "你会先分享哪份 Markdown？讲义、报告还是长笔记？",
         "hook_contract": {
             "task": ["分享", "导出", "版本"],

@@ -19,14 +19,27 @@ function loadDesignSystem(designPath = DEFAULT_DESIGN_PATH) {
   return design;
 }
 
+function coverHook(story) {
+  const hook = story.cover_hook;
+  if (!hook || typeof hook !== 'object') throw new Error('story.cover_hook is missing');
+  if (!/^\#\d+$/.test(hook.formula_id || '')) throw new Error('Cover hook formula id is missing');
+  const title = String(hook.title || '').trim();
+  const caption = String(hook.caption || '').trim();
+  if (title.length < 2 || title.length > 8) throw new Error(`Cover hook title must contain 2-8 characters: ${title}`);
+  if (caption.length < 8 || caption.length > 32) throw new Error(`Cover hook caption must contain 8-32 characters: ${caption}`);
+  if (title === '本地文档台') throw new Error('Cover hook falls back to the generic local-workbench label');
+  return { ...hook, title, caption };
+}
+
 function planCards(story) {
+  const hook = coverHook(story);
   const cards = [{
     index: 1,
     file: 'xhs-01-cover.jpg',
     role: 'cover',
     shotId: story.selected_shots[0],
-    title: story.primary_shot === 'presentation.reveal' ? '写完就能讲' : '本地文档台',
-    caption: story.angle,
+    title: hook.title,
+    caption: hook.caption,
     uiMinRatio: 0,
   }];
   for (const shot of story.shots) {

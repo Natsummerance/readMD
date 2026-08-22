@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from copy_profiles import profile_for_story
 
 def is_prerelease(release: str) -> bool:
     return bool(re.search(r"(?:beta|alpha|rc|preview|pre)", release, re.I))
@@ -104,6 +105,7 @@ def build_story(
         relevant_features.sort(key=lambda item: shots[item]["category"] != "Presentation")
     relevant_features = relevant_features[:3]
     primary_shot = relevant_features[0] if relevant_features else "overview.editor"
+    cover_hook = dict(profile_for_story({"primary_shot": primary_shot})["cover"])
     selected = list(dict.fromkeys(["overview.reader"] + relevant_features + fixed_order[1:]))
 
     claims: list[dict[str, Any]] = []
@@ -146,8 +148,8 @@ def build_story(
             "file": _card_name(1, None, "cover"),
             "role": "cover",
             "shot_id": None,
-            "title": angle,
-            "caption": "",
+            "title": cover_hook["title"],
+            "caption": cover_hook["caption"],
             "ui_min_ratio": 0.0,
         }
     ]
@@ -184,6 +186,7 @@ def build_story(
         "version_state": "prerelease" if is_prerelease(release) else "release",
         "angle": angle,
         "primary_shot": primary_shot,
+        "cover_hook": cover_hook,
         "selected_shots": selected,
         "shots": [shots[shot_id] for shot_id in selected],
         "claims": claims,

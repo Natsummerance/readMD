@@ -20,6 +20,7 @@ test('cover carries a real UI strip and rejects the generic feature grid', () =>
     release: 'v1.2.3',
     angle: 'ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映',
     primary_shot: 'presentation.reveal',
+    cover_hook: { formula_id: '#36', title: '写完就能讲', caption: 'Markdown 直接放映，不用重做 PPT。' },
     selected_shots: ['overview.reader', 'presentation.reveal'],
     shots: [
       { id: 'overview.reader', name: '软件完整主界面', role: 'pure_ui_hero' },
@@ -31,6 +32,8 @@ test('cover carries a real UI strip and rejects the generic feature grid', () =>
   const html = buildCardHtml(cards[0], 'data:image/png;base64,real', { design: loadDesignSystem() });
   assert.match(html, /class="proof-strip"/);
   assert.doesNotMatch(html, /class="grid"/);
+  assert.match(html, /写完就能讲/);
+  assert.match(html, /Markdown 直接放映，不用重做 PPT。/);
 });
 
 test('summary keeps three outcomes and feature cards stay image-led', () => {

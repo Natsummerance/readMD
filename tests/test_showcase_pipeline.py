@@ -125,6 +125,11 @@ class BuildStoryTest(unittest.TestCase):
         self.assertIn("overview.editor", story["selected_shots"])
         self.assertIn("convert.home", story["selected_shots"])
         self.assertLessEqual(len(story["selected_shots"]), 6)
+        self.assertEqual(story["cover_hook"], {
+            "formula_id": "#36",
+            "title": "写完就能讲",
+            "caption": "Markdown 直接放映，不用重做 PPT。",
+        })
         for claim in story["claims"]:
             self.assertTrue(claim["sources"])
             self.assertTrue(claim["user_value"])
@@ -143,6 +148,9 @@ class BuildStoryTest(unittest.TestCase):
         self.assertTrue(invisible)
         self.assertTrue(all(claim["id"] for claim in invisible))
         self.assertTrue(all(not re.match(r"^\\d+\\.\\s+", claim["user_value"]) for claim in invisible))
+
+        self.assertEqual(story["primary_shot"], "overview.editor")
+        self.assertEqual(story["cover_hook"]["title"], "同屏改稿")
 
     def test_release_story_filters_assets_and_prioritizes_primary_feature(self) -> None:
         notes = """
@@ -175,6 +183,15 @@ class BuildStoryTest(unittest.TestCase):
 
 
 class WriteCopyTest(unittest.TestCase):
+    def test_mechanism_cover_hooks_are_short_unique_and_traceable(self) -> None:
+        hooks = {key: value["cover"] for key, value in copy_profiles.PROFILES.items()}
+        self.assertEqual(len(hooks), len({item["title"] for item in hooks.values()}))
+        for primary_shot, hook in hooks.items():
+            with self.subTest(primary_shot=primary_shot):
+                self.assertRegex(hook["formula_id"], r"^#\d+$")
+                self.assertTrue(2 <= len(hook["title"]) <= 8)
+                self.assertTrue(8 <= len(hook["caption"]) <= 32)
+
     def test_title_candidates_cover_five_traceable_formulas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             story = write_story(Path(tmp))
@@ -583,6 +600,7 @@ class AuditCopyTest(unittest.TestCase):
             "version_state": "prerelease",
             "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
             "primary_shot": "presentation.reveal",
+            "cover_hook": {"formula_id": "#36", "title": "写完就能讲", "caption": "Markdown 直接放映，不用重做 PPT。"},
             "selected_shots": ["overview.reader", "presentation.reveal"],
             "claims": [
                 {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
@@ -663,6 +681,7 @@ class PatternAuditTest(unittest.TestCase):
             "version_state": "prerelease",
             "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
             "primary_shot": "presentation.reveal",
+            "cover_hook": {"formula_id": "#36", "title": "写完就能讲", "caption": "Markdown 直接放映，不用重做 PPT。"},
             "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
             "card_plan": [
                 {"index": 1, "file": "cover.jpg", "role": "cover", "shot_id": None, "ui_min_ratio": 0},
@@ -723,6 +742,19 @@ class PatternAuditTest(unittest.TestCase):
         self.assertTrue(report["ok"], report["errors"])
         self.assertEqual(len(report["patterns"]), 10)
         self.assertTrue(all(item["ok"] for item in report["patterns"]))
+
+    def test_cover_hook_must_match_release_mechanism(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            story, metadata, composition = self.make_inputs()
+            story["cover_hook"]["title"] = "本地文档台"
+            story["cover_hook"]["caption"] = "一个本地文档工作台。"
+            self.write_package(package, story, metadata, composition)
+            report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
+        self.assertFalse(report["ok"])
+        cover = next(item for item in report["patterns"] if item["id"] == "one-hook-cover")
+        self.assertFalse(cover["ok"])
+        self.assertIn("release mechanism", cover["failures"][0])
 
     def test_broken_hero_and_generic_voice_fail_hard(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
