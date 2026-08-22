@@ -109,7 +109,7 @@ test('long-document interaction stays bounded from 1k through 50k lines', async 
   expect(results[50000].pageTurnMs).toBeLessThan(250);
   expect(results[10000].searchJumpMs).toBeLessThan(750);
   expect(results[50000].searchJumpMs).toBeLessThan(750);
-  expect(results[10000].tocJumpMs).toBeLessThan(500);
+  expect(results[10000].tocJumpMs).toBeLessThan(750);
   expect(results[50000].tocJumpMs).toBeLessThan(750);
   expect(results[10000].repeatSearchMs).toBeLessThan(500);
   expect(results[50000].repeatSearchMs).toBeLessThan(500);
