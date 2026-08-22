@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from content_memory import upsert_record
+from content_memory import load_records, upsert_record
 from copy_variants import text_fingerprints, text_trigrams
 
 DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
@@ -216,6 +216,11 @@ def process_package(
         previous = [item for item in state["packages"].values() if item.get("release") == release and item.get("status") == "published"]
         if previous:
             raise ValueError(f"release already published: {release}")
+        if ledger_path and any(
+            record.get("release") == release
+            for record in load_records(ledger_path)
+        ):
+            raise ValueError(f"release already exists in publication ledger: {release}")
         command = publish_command(publisher, package_dir, draft=draft)
         completed = subprocess.run(command, text=True, capture_output=True, encoding="utf-8", timeout=600)
         result: dict[str, Any] = {}

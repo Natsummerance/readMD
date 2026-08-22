@@ -37,7 +37,7 @@ python showcase/scripts/watch_and_publish.py --once --draft
 python showcase/scripts/watch_and_publish.py
 ```
 
-watcher 会把 CI 产出的 `content-package.zip` 解到 `showcase/publish-work/`，重写图片路径后调用 `xhs-publish`。状态保存在 `showcase/publish-state.json`；同一 release 只会发布一次，失败最多自动重试两次。
+watcher 会把 CI 产出的 `content-package.zip` 解到 `showcase/publish-work/`，重写图片路径后调用 `xhs-publish`。状态保存在 `showcase/publish-state.json`；同一 release 只会发布一次。watcher 会同时检查发布状态和反馈账本，因此即使状态文件丢失，也不会重复发布已记录的 release。失败最多自动重试两次。
 
 WeChat 文件只做人工复制/粘贴发布，watcher 不会自动操作公众号。
 

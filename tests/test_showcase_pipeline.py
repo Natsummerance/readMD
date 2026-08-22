@@ -1966,6 +1966,44 @@ class WatcherTest(unittest.TestCase):
         self.assertEqual(record["status"], "retrying")
         self.assertIn("selected variant_id mismatch", record["error"])
 
+    def test_rejects_release_already_present_in_publication_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            ledger = root / "publication-ledger.jsonl"
+            content_memory.append_record(ledger, {
+                "release": "v1.2.3",
+                "title": "旧标题",
+                "title_formula_id": "#36",
+                "hook_type": "outcome-led",
+                "published_at": "2026-08-20T10:00:00Z",
+                "impressions": 100,
+                "likes": 10,
+                "collects": 10,
+                "comments": 10,
+                "shares": 10,
+                "follows": 1,
+                "metrics_status": "pending",
+            })
+
+            def forbidden_publish(*args, **kwargs):
+                raise AssertionError("publisher must not run when the ledger already contains the release")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = forbidden_publish
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, True,
+                    ledger_path=ledger,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+        self.assertFalse(published)
+        self.assertEqual(record["status"], "retrying")
+        self.assertIn("release already exists in publication ledger", record["error"])
+
     def test_rejects_copy_frame_mismatch_before_publish(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

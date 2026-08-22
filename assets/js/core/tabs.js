@@ -357,9 +357,11 @@ async function activateTabForSave(tabId) {
   if (state.activeTabId !== tabId) {
     const previousTab = getActiveTab();
     if (previousTab && state.editing) {
-      previousTab.content = getEditContent();
-      previousTab.fixed = previousTab.content;
-      previousTab.isDirty = true;
+      if (hasUnsavedEditorChanges()) {
+        previousTab.content = getEditContent();
+        previousTab.fixed = previousTab.content;
+        previousTab.isDirty = true;
+      }
     }
     exitEdit();
     state.activeTabId = tabId;

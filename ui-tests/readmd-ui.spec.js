@@ -948,6 +948,36 @@ test('saving a dirty background tab writes that tab, not the active editor', asy
   }))).toEqual({ oneDirty: true, oneDraft: '# one changed' });
 });
 
+test('saving a dirty background tab does not mark a clean active tab dirty', async ({ page }) => {
+  const saves = [];
+  await page.route('**/api/save', async route => {
+    saves.push(await route.request().postDataJSON());
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"mtime":3}' });
+  });
+  await page.route('**/api/file?p=**&meta=0*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: true, path: 'C:/two.md', dir: 'C:/', name: 'two.md', content: '# two changed', original: '# two changed', encoding: 'utf-8', mtime: 3, fixes: [], stats: {} }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof closeTab === 'function');
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'one', path: 'C:/one.md', title: 'one.md', name: 'one.md', content: '# one', original: '# one' },
+      { id: 'two', path: 'C:/two.md', title: 'two.md', name: 'two.md', content: '# two changed', original: '# two', isDirty: true },
+    ];
+    state.activeTabId = 'one';
+    syncStateFromActiveTab();
+    renderTabsBar();
+  });
+  await page.evaluate(() => { void closeTab('two'); });
+  await expect(page.locator('#close-confirm-modal')).toBeVisible();
+  await page.locator('#close-confirm-save').click();
+  await expect.poll(() => saves).toEqual([expect.objectContaining({ path: 'C:/two.md', content: '# two changed' })]);
+  await page.waitForFunction(() => state.tabs.length === 1 && state.tabs[0].id === 'one');
+  expect(await page.evaluate(() => Boolean(getActiveTab().isDirty))).toBe(false);
+});
+
 test('auto reload does not overwrite an active editor', async ({ page }) => {
   let contentLoads = 0;
   await page.route('**/api/file*p=**', route => {
