@@ -59,12 +59,13 @@ def _select_title(candidates: list[dict[str, str]], history: list[dict[str, Any]
         stat = stats.get(formula)
         score = 10 - index
         reason_bits = []
-        if stat:
+        confidence_ok = bool(stat and stat.get("confidence") != "low")
+        if stat and confidence_ok:
             score += (stat["score"] / max_score) * 20 if max_score else 0
             reason_bits.append("historical performance")
         else:
             score += 3
-            reason_bits.append("unexplored")
+            reason_bits.append("low-confidence evidence held as exploration" if stat else "unexplored")
         if formula in recent:
             score -= 12
             avoided.append(formula)
@@ -73,7 +74,7 @@ def _select_title(candidates: list[dict[str, str]], history: list[dict[str, Any]
         candidate.setdefault("_reason", "+".join(reason_bits))
     chosen = max(scored, key=lambda item: item[0])[1]
     return chosen, {
-        "strategy": "historical winner with recent-fatigue penalty",
+        "strategy": "confidence-gated historical winner with recent-fatigue penalty",
         "scores": {candidate["formula_id"]: round(value, 3) for value, candidate in scored},
         "reasons": {candidate["formula_id"]: candidate.pop("_reason", "") for candidate in candidates},
         "avoided_formulas": sorted(set(avoided)),

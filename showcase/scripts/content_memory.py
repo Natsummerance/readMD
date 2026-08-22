@@ -384,7 +384,18 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
         stats["weighted_engagement"] += engagement
     for stats in formulas.values():
         stats["score"] = round(stats["weighted_engagement"] / max(stats["impressions"], 1), 6)
-    ranked = sorted(formulas.items(), key=lambda item: (item[1]["score"], item[1]["weighted_engagement"]), reverse=True)
+    for stats in formulas.values():
+        if stats["publications"] >= 3 and stats["impressions"] >= 3000:
+            stats["confidence"] = "high"
+        elif stats["publications"] >= 2 and stats["impressions"] >= 1000:
+            stats["confidence"] = "medium"
+        else:
+            stats["confidence"] = "low"
+    ranked = sorted(
+        ((formula, stats) for formula, stats in formulas.items() if stats["confidence"] != "low"),
+        key=lambda item: (item[1]["score"], item[1]["weighted_engagement"]),
+        reverse=True,
+    )
     recommended = ranked[0][0] if ranked else None
     return {
         "schema_version": 1,

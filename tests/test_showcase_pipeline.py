@@ -1671,7 +1671,19 @@ class ContentMemoryTest(unittest.TestCase):
         summary = content_memory.summarize(records)
         self.assertEqual(summary["record_count"], 2)
         self.assertEqual(summary["recommended_formula"], "#36")
+        self.assertEqual(summary["formula_stats"]["#36"]["confidence"], "medium")
+        self.assertEqual(summary["formula_stats"]["#61"]["confidence"], "low")
         self.assertGreater(summary["formula_stats"]["#36"]["score"], summary["formula_stats"]["#61"]["score"])
+
+    def test_low_confidence_formula_is_not_recommended(self) -> None:
+        records = [
+            self.record(release="v1.0.0", formula="#22"),
+            {**self.record(release="v1.0.1", formula="#9"), "impressions": 800, "likes": 500, "collects": 500},
+        ]
+        summary = content_memory.summarize(records)
+        self.assertIsNone(summary["recommended_formula"])
+        self.assertEqual(summary["formula_stats"]["#9"]["score"], 3.125)
+        self.assertEqual(summary["formula_stats"]["#9"]["confidence"], "low")
 
     def test_pending_feedback_is_partitioned_out_of_learning(self) -> None:
         complete = self.record(release="v1.0.0", formula="#61")
@@ -1708,6 +1720,39 @@ class ContentMemoryTest(unittest.TestCase):
             )
         self.assertEqual(result["title_formula_id"], "#61")
         self.assertIn("#36", result["title_selection"]["avoided_formulas"])
+
+    def test_low_confidence_title_history_cannot_win_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = {
+                "release": "v1.1.0",
+                "version_state": "prerelease",
+                "angle": "ReadMD 让同一份 Markdown 直接放映",
+                "primary_shot": "presentation.reveal",
+                "claims": [{"id": "reveal", "shot_ids": ["presentation.reveal"], "user_value": "放映"}],
+            }
+            history = [{
+                "release": "v1.0.9",
+                "title": "给反复改稿的人做的MD工具",
+                "title_formula_id": "#22",
+                "hook_type": "identity-led",
+                "published_at": "2026-08-22T10:00:00Z",
+                "impressions": 900,
+                "likes": 500,
+                "collects": 500,
+                "comments": 100,
+                "shares": 50,
+            }]
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v1.0.9",
+                history=history,
+            )
+        self.assertEqual(result["title_formula_id"], "#9")
+        self.assertEqual(
+            result["title_selection"]["reasons"]["#22"],
+            "low-confidence evidence held as exploration",
+        )
         self.assertIn("historical", result["title_selection"]["strategy"])
 
     def test_copy_selection_ignores_pending_zero_metric_history(self) -> None:
