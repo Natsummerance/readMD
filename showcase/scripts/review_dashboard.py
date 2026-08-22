@@ -88,6 +88,21 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
         _metric(name.replace("_", " ").title(), value)
         for name, value in copy_review.get("scores", {}).items()
     )
+    style = copy_review.get("style", {})
+    if style:
+        score_items += _metric("Style resonance", f'{style.get("score", 0)} / 100')
+        style_findings = style.get("findings", [])
+        finding_html = "".join(
+            f'<li style="margin-bottom:8px;font-size:23px;line-height:1.4;color:#5b6875">'
+            f'{_escaped(item.get("severity"))}: {_escaped(item.get("message"))}</li>'
+            for item in style_findings[-6:]
+        )
+        style_inner = (
+            f'<p style="margin:0 0 14px;font-size:24px;color:#182029">Style resonance {_escaped(style.get("score", 0))} / 100</p>'
+            + (f'<ul style="margin:0;padding-left:24px">{finding_html}</ul>' if finding_html else '<p style="margin:0;font-size:23px;color:#157347">No style findings</p>')
+        )
+    else:
+        style_inner = '<p style="margin:0;font-size:23px;color:#5b6875">Style audit not available</p>'
     performance_metrics = "".join([
         _metric("Learning releases", performance.get("learning_count", 0)),
         _metric("Pending metrics", performance.get("pending_count", 0)),
@@ -111,6 +126,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
   </header>
   {_section("Release gates", gate_html)}
   {_section("Semantic dimensions", f'<div style="display:flex;gap:14px;flex-wrap:wrap">{score_items}</div>')}
+  {_section("Style resonance", style_inner)}
   {_section("Variant ranking", variant_html)}
   {_section("Feedback loop", f'<div style="display:flex;gap:14px;flex-wrap:wrap">{performance_metrics}</div><p style="margin-top:16px;font-size:24px;color:#5b6875">Pending metrics: {_escaped(performance.get("pending_count", 0))}</p>')}
   {_section("Final copy", f'<p style="white-space:pre-wrap;margin:0;font-size:26px;line-height:1.55;color:#182029">{_escaped(body)}</p>')}

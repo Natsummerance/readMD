@@ -23,6 +23,8 @@ python showcase/scripts/validate_package.py showcase/output/package
 
 构建还会生成 `review-dashboard.html`，把 QA 门禁、语义评分、变体排序、反馈账本和最终文案汇总成一个自包含审查面板；`dashboard-qa.json` 必须为绿。
 
+语义 QA 现在包含 AI 指纹与共鸣审计：检查空泛形容词、AI 腔、句长节奏、具体产物、读者痛点和行动问题；未通过会写入 `copy-review.json.style` 并阻止发布。
+
 `qa.json`、`copy-review.json`、`variants.json` 和 `dashboard-qa.json` 必须同时通过才允许进入小红书发布队列。`--draft` 可让 watcher 只填充小红书表单，不点击发布：
 
 ```powershell

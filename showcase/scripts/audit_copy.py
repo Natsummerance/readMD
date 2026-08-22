@@ -9,6 +9,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from style_audit import audit_style
+
 
 BANNED = ("公众号", "微信", "闲鱼", "咸鱼", "转卖", "出票", "转让", "售票", "二维码", "淘口令", "淘宝")
 CLICHES = ("重磅升级", "效率起飞", "颠覆想象", "革命性", "无缝体验", "next-gen", "revolutionary")
@@ -121,6 +123,7 @@ def _score_compliance(metadata: dict[str, Any]) -> tuple[int, list[str]]:
 
 
 def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: dict[str, Any]) -> dict[str, Any]:
+    style_report = audit_style(str(metadata.get("body", "")), audience="程序员")
     scores = {
         "title": _score_title(metadata)[0],
         "hook": _score_hook(str(metadata.get("body", "")))[0],
@@ -150,6 +153,8 @@ def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: 
     for key in ("contrast_errors", "small_text", "images_failed"):
         if composition.get("design_audit", {}).get(key):
             hard_failures.append(f"design audit {key} failed")
+    if not style_report["ok"]:
+        hard_failures.extend(f"style gate: {item}" for item in style_report["hard_failures"])
 
     total = sum(scores.values())
     minimum_ok = all(value / weight >= 0.75 for value, weight in zip(scores.values(), (15, 15, 20, 15, 15, 15, 5)))
@@ -161,6 +166,7 @@ def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: 
         "scores": scores,
         "minimum_dimension_pass": minimum_ok,
         "hard_failures": sorted(hard_failures),
+        "style": style_report,
     }
 
 

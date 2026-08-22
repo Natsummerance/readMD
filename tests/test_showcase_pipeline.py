@@ -25,6 +25,7 @@ copy_variants = importlib.import_module("copy_variants")
 export_wechat = importlib.import_module("export_wechat")
 performance_report = importlib.import_module("performance_report")
 review_dashboard = importlib.import_module("review_dashboard")
+style_audit = importlib.import_module("style_audit")
 validate_package = importlib.import_module("validate_package")
 watch_and_publish = importlib.import_module("watch_and_publish")
 write_copy = importlib.import_module("write_copy")
@@ -429,6 +430,28 @@ class AuditCopyTest(unittest.TestCase):
         self.assertFalse(report["ok"])
         self.assertTrue(any("repeated" in item.lower() or "重复" in item for item in report["hard_failures"]))
 
+    def test_style_audit_passes_concrete_developer_voice(self) -> None:
+        report = style_audit.audit_style(self.good_body(), audience="程序员")
+        self.assertGreaterEqual(report["score"], 85, json.dumps(report, ensure_ascii=False, indent=2))
+        self.assertEqual(report["hard_failures"], [])
+
+    def test_style_audit_flags_uniform_generic_copy(self) -> None:
+        body = "这款工具非常强大。这款工具非常高效。这款工具非常安全。快来关注点赞。"
+        report = style_audit.audit_style(body, audience="程序员")
+        self.assertLess(report["score"], 75)
+        self.assertTrue(any(item["id"] == "uniform-rhythm" for item in report["findings"]))
+        self.assertTrue(any(item["id"] == "generic-adjective" for item in report["findings"]))
+        self.assertTrue(any(item["id"] == "generic-cta" for item in report["findings"]))
+
+    def test_semantic_qa_integrates_style_hard_gate(self) -> None:
+        body = "这款工具非常强大。这款工具非常高效。这款工具非常安全。快来关注点赞。\n\n先说清楚：这是 ReadMD v9.9.9-beta.1 预览版。"
+        story, metadata, composition = self.make_audit_inputs(body)
+        report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
+        self.assertFalse(report["ok"])
+        self.assertIn("style", report)
+        self.assertLess(report["style"]["score"], 75)
+        self.assertTrue(any("style" in item.lower() for item in report["hard_failures"]))
+
 
 class ExportWechatTest(unittest.TestCase):
     def test_exports_paste_safe_inline_html(self) -> None:
@@ -793,6 +816,7 @@ class ReviewDashboardTest(unittest.TestCase):
                 "total_score": 100,
                 "scores": {"title": 15, "hook": 15, "focus": 20},
                 "hard_failures": [],
+                "style": {"score": 96, "findings": []},
             },
             "variants": {
                 "ok": True,
@@ -816,6 +840,8 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("不用重做PPT，Markdown直接放映", html)
         self.assertIn("outcome-led", html)
         self.assertIn("100 / 100", html)
+        self.assertIn("Style resonance", html)
+        self.assertIn("96 / 100", html)
         self.assertIn("Pending metrics", html)
         for forbidden in ("<script", "class=", "id=", "<img", "<table", "http://", "https://"):
             self.assertNotIn(forbidden.lower(), html.lower())
