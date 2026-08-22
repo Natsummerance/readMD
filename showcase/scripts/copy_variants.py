@@ -85,6 +85,7 @@ HOOK_FRAMES = {
 }
 
 TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12")
+ENDPOINT_COOLDOWN_RELEASES = 8
 
 
 def _normalize_for_originality(value: str) -> str:
@@ -239,8 +240,9 @@ def choose_variant(
         for record in records
         if record.get("body_sha256") or record.get("opening") or record.get("closing") or record.get("body_trigrams")
     ]
-    used_openings = {str(record["opening"]) for record in records if record.get("opening")}
-    used_closings = {str(record["closing"]) for record in records if record.get("closing")}
+    recent_fingerprints = prior_fingerprints[-ENDPOINT_COOLDOWN_RELEASES:]
+    used_openings = {str(record["opening"]) for record in recent_fingerprints if record.get("opening")}
+    used_closings = {str(record["closing"]) for record in recent_fingerprints if record.get("closing")}
 
     def remaining_frame_count(hook_type: str) -> int:
         return sum(
@@ -267,10 +269,6 @@ def choose_variant(
             release_name = prior.get("release") or "previous release"
             if fingerprints["body_sha256"] and prior.get("body_sha256") == fingerprints["body_sha256"]:
                 originality_failures.append(f"body hash matches {release_name}")
-            if fingerprints["opening"] and prior.get("opening") == fingerprints["opening"]:
-                originality_failures.append(f"opening matches {release_name}")
-            if fingerprints["closing"] and prior.get("closing") == fingerprints["closing"]:
-                originality_failures.append(f"closing matches {release_name}")
             prior_trigrams = set(prior.get("body_trigrams") or [])
             similarity = jaccard_similarity(variant_trigrams, prior_trigrams)
             if similarity > max_body_similarity:
@@ -283,6 +281,12 @@ def choose_variant(
             elif similarity >= 0.70:
                 adjustment -= 12
                 reasons.append(f"near-duplicate penalty against {release_name} ({similarity:.2f})")
+        for prior in recent_fingerprints:
+            release_name = prior.get("release") or "previous release"
+            if fingerprints["opening"] and prior.get("opening") == fingerprints["opening"]:
+                originality_failures.append(f"opening matches {release_name}")
+            if fingerprints["closing"] and prior.get("closing") == fingerprints["closing"]:
+                originality_failures.append(f"closing matches {release_name}")
         if originality_failures:
             report["hard_failures"] = sorted(set(report.get("hard_failures", []) + originality_failures))
             report["ok"] = False
@@ -347,9 +351,10 @@ def choose_variant(
         "originality_gate": "pass",
         "selection_rule": (
             "semantic score plus confidence-gated historical hook/title performance, underexplored "
-            "dimension coverage, renewable frame inventory, and minus recent fatigue; insufficient "
-            "evidence creates no performance bonus"
+            f"dimension coverage, renewable frame inventory with a {ENDPOINT_COOLDOWN_RELEASES}-release "
+            "endpoint cooldown, and minus recent fatigue; insufficient evidence creates no performance bonus"
         ),
+        "endpoint_cooldown_releases": ENDPOINT_COOLDOWN_RELEASES,
         "copy_frame_inventory": frame_inventory,
         "hook_stats": hook_stats,
         "formula_stats": formula_stats,

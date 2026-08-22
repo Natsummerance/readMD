@@ -922,6 +922,69 @@ class CopyVariantsTest(unittest.TestCase):
         self.assertEqual(len(used_openings), 12)
         self.assertEqual(len(used_closings), 12)
 
+    def test_copy_frame_pool_rotates_after_endpoint_cooldown(self) -> None:
+        primaries = (
+            ("presentation.reveal", "放映器支持主题、字号和转场控制"),
+            ("overview.editor", "编辑器和实时预览保持同屏同步"),
+            ("editor.diagram-picker", "图表选择器能插入可维护的科学图形"),
+            ("convert.home", "本地入口能收拢转换、AI 和网页资料"),
+        )
+        history: list[dict] = []
+        seen_body_hashes: set[str] = set()
+        used_openings: set[str] = set()
+        used_closings: set[str] = set()
+        reused_endpoints = 0
+
+        for index in range(24):
+            primary_id, primary_value = primaries[index % len(primaries)]
+            support_id, support_value = primaries[(index + 1) % len(primaries)]
+            if support_id == "overview.reader":
+                support_id, support_value = primaries[2]
+            story = self.variant_story()
+            story["release"] = f"v4.{index + 1}.0"
+            story["previous_release"] = f"v4.{index}.0"
+            story["primary_shot"] = primary_id
+            story["angle"] = f"ReadMD 把{primary_value}放进同一条本地工作台"
+            story["selected_shots"] = ["overview.reader", primary_id, support_id]
+            story["claims"] = [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": primary_id.replace(".", "-"), "user_value": primary_value, "shot_ids": [primary_id], "sources": ["release/release_notes.md"]},
+                {"id": "invisible", "user_value": f"第 {index + 1} 条稳定性修复保持本地文件不变", "shot_ids": [], "sources": ["release/release_notes.md"]},
+            ]
+            base = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release=f"v4.{index}.0",
+            )
+            variants = copy_variants.build_variants(story=story, base_metadata=base)
+            chosen, report = copy_variants.choose_variant(variants, history)
+            self.assertTrue(report["ok"], report["ranked"])
+            self.assertEqual(report["endpoint_cooldown_releases"], 8)
+
+            fingerprints = copy_variants.text_fingerprints(chosen["body"])
+            body_hash = fingerprints["body_sha256"]
+            self.assertNotIn(body_hash, seen_body_hashes)
+            seen_body_hashes.add(body_hash)
+            if fingerprints["opening"] in used_openings or fingerprints["closing"] in used_closings:
+                reused_endpoints += 1
+            used_openings.add(fingerprints["opening"])
+            used_closings.add(fingerprints["closing"])
+            history.append({
+                **self.history_record(
+                    story["release"],
+                    chosen["hook_type"],
+                    chosen["title_formula_id"],
+                ),
+                "variant_id": chosen["variant_id"],
+                "copy_frame": chosen["copy_frame"],
+                **fingerprints,
+                "body_trigrams": sorted(copy_variants.text_trigrams(chosen["body"])),
+            })
+
+        self.assertGreater(reused_endpoints, 0)
+        self.assertEqual(len(used_openings), 12)
+        self.assertEqual(len(used_closings), 12)
+
 
 class PerformanceReportTest(unittest.TestCase):
     def complete(self, release: str, formula: str, hook_type: str, impressions: int, likes: int, collects: int) -> dict:
