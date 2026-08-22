@@ -23,6 +23,7 @@ python showcase/scripts/build_package.py --output showcase/output/package --fina
 
 标题、痛点开场、机制解释和提问都来自 `scripts/copy_profiles.py` 的机制档案；Release Intelligence 选出的 `primary_shot` 决定这轮叙事。完整主界面固定作为第二张真实证据图，不会冒充兜底主功能。
 封面也读取同一份机制档案：短标题只保留一个可扫读的结果钩子，说明句解释它解决的具体任务；合成器和热门机制审计都会拒绝泛化的「本地文档台」兜底。
+功能卡说明不再使用 shot 库里的实现描述，而是强制读取 `card_plan` 中与 claim 对应的读者收益；文案长度和 UI 区域一起进入热门机制审计。
 
 构建还会把 `pattern-library.json` 里的 10 条热门机制变成机器检查，结果写入 `pattern-audit.json`；封面钩子、痛点移除、第二张完整主界面、单一主功能、具体场景提问、UI 区域契约和 DOM 设计审计任一失败都会阻止发布。随后生成 `review-dashboard.html`，把 QA 门禁、语义评分、选中稿加前四名挑战者、框架库存、反馈账本和最终文案汇总成一个自包含审查面板；60 个候选不会全部堆到页面上。`build_package.py --finalize` 会先写入本轮预检 QA，再生成面板并最后聚合所有门禁；任一面板失败都会把 `qa.json` 置红。
 

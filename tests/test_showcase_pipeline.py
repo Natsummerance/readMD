@@ -95,6 +95,12 @@ def write_image(path: Path, background: tuple[int, int, int] = (14, 22, 48)) -> 
 
 
 class BuildStoryTest(unittest.TestCase):
+    def test_reader_values_are_card_length_contracts(self) -> None:
+        for shot_id, value in build_story.USER_VALUES.items():
+            with self.subTest(shot_id=shot_id):
+                self.assertTrue(8 <= len(value) <= 42)
+                self.assertNotIn("CodeMirror", value)
+
     def test_release_notes_select_stable_hero_and_relevant_shots(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
@@ -130,6 +136,15 @@ class BuildStoryTest(unittest.TestCase):
             "title": "写完就能讲",
             "caption": "Markdown 直接放映，不用重做 PPT。",
         })
+        plan_by_shot = {item["shot_id"]: item for item in story["card_plan"] if item["shot_id"]}
+        claim_by_shot = {
+            shot_id: claim["user_value"]
+            for claim in story["claims"]
+            for shot_id in claim["shot_ids"]
+        }
+        for shot_id, plan_item in plan_by_shot.items():
+            if plan_item["role"] in {"pure_ui_hero", "annotated_ui"} and shot_id in claim_by_shot:
+                self.assertEqual(plan_item["caption"], claim_by_shot[shot_id])
         for claim in story["claims"]:
             self.assertTrue(claim["sources"])
             self.assertTrue(claim["user_value"])
@@ -683,11 +698,16 @@ class PatternAuditTest(unittest.TestCase):
             "primary_shot": "presentation.reveal",
             "cover_hook": {"formula_id": "#36", "title": "写完就能讲", "caption": "Markdown 直接放映，不用重做 PPT。"},
             "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
+            "claims": [
+                {"id": "reader", "user_value": "打开文档就能看到完整排版、目录和公式渲染", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "写完的 Markdown 能直接上台放映，代码、表格和公式不会被切片", "shot_ids": ["presentation.reveal"], "sources": ["release/release_notes.md"]},
+                {"id": "editor", "user_value": "讲稿和源文件在同一处修改，预览不会跑偏", "shot_ids": ["overview.editor"], "sources": ["README.md"]},
+            ],
             "card_plan": [
                 {"index": 1, "file": "cover.jpg", "role": "cover", "shot_id": None, "ui_min_ratio": 0},
-                {"index": 2, "file": "hero.jpg", "role": "pure_ui_hero", "shot_id": "overview.reader", "ui_min_ratio": 0.7},
-                {"index": 3, "file": "reveal.jpg", "role": "annotated_ui", "shot_id": "presentation.reveal", "ui_min_ratio": 0.55},
-                {"index": 4, "file": "editor.jpg", "role": "annotated_ui", "shot_id": "overview.editor", "ui_min_ratio": 0.55},
+                {"index": 2, "file": "hero.jpg", "role": "pure_ui_hero", "shot_id": "overview.reader", "caption": "打开文档就能看到完整排版、目录和公式渲染", "ui_min_ratio": 0.7},
+                {"index": 3, "file": "reveal.jpg", "role": "annotated_ui", "shot_id": "presentation.reveal", "caption": "写完的 Markdown 能直接上台放映，代码、表格和公式不会被切片", "ui_min_ratio": 0.55},
+                {"index": 4, "file": "editor.jpg", "role": "annotated_ui", "shot_id": "overview.editor", "caption": "讲稿和源文件在同一处修改，预览不会跑偏", "ui_min_ratio": 0.55},
                 {"index": 5, "file": "summary.jpg", "role": "summary", "shot_id": None, "ui_min_ratio": 0.3},
             ],
         }
@@ -701,7 +721,6 @@ class PatternAuditTest(unittest.TestCase):
                 "你会先拿哪一份 Markdown 试放映？"
             ),
         }
-
         def card(file: str, role: str, area: float, minimum: float) -> dict:
             return {
                 "file": file,
@@ -755,6 +774,17 @@ class PatternAuditTest(unittest.TestCase):
         cover = next(item for item in report["patterns"] if item["id"] == "one-hook-cover")
         self.assertFalse(cover["ok"])
         self.assertIn("release mechanism", cover["failures"][0])
+
+    def test_feature_caption_must_match_evidence_backed_reader_value(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            story, metadata, composition = self.make_inputs()
+            story["card_plan"][2]["caption"] = "CodeMirror 6 编辑器与实时预览左右分栏"
+            self.write_package(package, story, metadata, composition)
+            report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
+        self.assertFalse(report["ok"])
+        collectible = next(item for item in report["patterns"] if item["id"] == "collectible-clarity")
+        self.assertFalse(collectible["ok"])
 
     def test_broken_hero_and_generic_voice_fail_hard(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -75,6 +75,11 @@ def audit_patterns(
     lower_body = body.lower()
     expected_cover = profile_for_story(story).get("cover", {})
     cover_hook = story.get("cover_hook", {})
+    reader_values = {
+        shot_id: str(claim.get("user_value", ""))
+        for claim in story.get("claims", [])
+        for shot_id in claim.get("shot_ids", [])
+    }
 
     def card_for(index: int) -> dict[str, Any]:
         name = plan[index].get("file") if index < len(plan) else ""
@@ -113,6 +118,11 @@ def audit_patterns(
     collectible_ok = bool(feature_cards) and all(
         bool(card.get("screenshot_box")) and _area_ok(card)
         for _, card in feature_cards
+    )
+    collectible_ok = collectible_ok and all(
+        bool(plan_item.get("caption"))
+        and plan_item.get("caption") == reader_values.get(plan_item.get("shot_id"))
+        for plan_item, _ in feature_cards
     )
     question_ok = ("？" in last or "?" in last) and any(
         term.lower() in last.lower() for term in CONCRETE_ANSWER_TERMS
@@ -168,8 +178,8 @@ def audit_patterns(
         "collectible-clarity": _result(
             "collectible-clarity",
             collectible_ok,
-            ["every feature card has one authentic UI region"],
-            ["each feature card needs its UI area contract and screenshot region"],
+            ["every feature card has one authentic UI region and its evidence-backed reader value"],
+            ["each feature card needs a screenshot region, UI area contract, and matching claim-derived caption"],
         ),
         "specific-question": _result(
             "specific-question",

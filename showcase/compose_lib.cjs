@@ -31,8 +31,33 @@ function coverHook(story) {
   return { ...hook, title, caption };
 }
 
+function plannedFeatureCard(story, shot) {
+  const plan = (story.card_plan || []).find((item) => item.shot_id === shot.id);
+  if (!plan) throw new Error(`card_plan is missing a reader-value entry for ${shot.id}`);
+  const file = String(plan.file || '');
+  if (!/^xhs-\d{2}-[a-z0-9-]+\.jpg$/.test(file)) throw new Error(`Invalid semantic card filename: ${file}`);
+  const title = String(plan.title || '').trim();
+  const caption = String(plan.caption || '').trim();
+  if (!['pure_ui_hero', 'annotated_ui'].includes(plan.role)) throw new Error(`${shot.id} has an invalid feature card role: ${plan.role}`);
+  if (title.length < 2 || title.length > 24) throw new Error(`${shot.id} card title must contain 2-24 characters`);
+  if (caption.length < 8 || caption.length > 42) throw new Error(`${shot.id} card caption must be a concise reader benefit`);
+  const uiMinRatio = Number(plan.ui_min_ratio);
+  if (!Number.isFinite(uiMinRatio) || uiMinRatio < 0 || uiMinRatio > 1) throw new Error(`${shot.id} has an invalid UI area contract`);
+  return {
+    file,
+    role: plan.role,
+    shotId: shot.id,
+    title,
+    caption,
+    uiMinRatio,
+  };
+}
+
 function planCards(story) {
   const hook = coverHook(story);
+  const plans = story.card_plan || [];
+  const summaryPlan = plans.find((item) => item.role === 'summary');
+  if (!summaryPlan) throw new Error('card_plan is missing the summary card');
   const cards = [{
     index: 1,
     file: 'xhs-01-cover.jpg',
@@ -44,24 +69,20 @@ function planCards(story) {
   }];
   for (const shot of story.shots) {
     const index = cards.length + 1;
-    cards.push({
-      index,
-      file: `xhs-${String(index).padStart(2, '0')}-${slug(shot.id.replace('.', '-'))}.jpg`,
-      role: shot.role || (shot.id === 'overview.reader' ? 'pure_ui_hero' : 'annotated_ui'),
-      shotId: shot.id,
-      title: shot.name,
-      caption: shot.description,
-      uiMinRatio: (shot.role || (shot.id === 'overview.reader' ? 'pure_ui_hero' : 'annotated_ui')) === 'pure_ui_hero' ? 0.7 : 0.55,
-    });
+    const feature = plannedFeatureCard(story, shot);
+    cards.push({ index, ...feature });
   }
+  const summaryTitle = String(summaryPlan.title || '').trim();
+  const summaryCaption = String(summaryPlan.caption || '').trim();
+  if (summaryTitle.length < 2 || summaryCaption.length < 8) throw new Error('Summary card needs concise reusable copy');
   cards.push({
     index: cards.length + 1,
-    file: `xhs-${String(cards.length + 1).padStart(2, '0')}-summary.jpg`,
+    file: summaryPlan.file,
     role: 'summary',
-    shotId: story.selected_shots[0],
-    title: '本地 Markdown 工作台',
-    caption: '阅读、编辑、转换、学术排版与共享在同一处完成。',
-    uiMinRatio: 0.30,
+    shotId: summaryPlan.shot_id || story.selected_shots[0],
+    title: summaryTitle,
+    caption: summaryCaption,
+    uiMinRatio: Number(summaryPlan.ui_min_ratio),
   });
   if (cards.length < 4 || cards.length > 9) throw new Error(`Card count must be between 4 and 9, got ${cards.length}`);
   if (cards[1].role !== 'pure_ui_hero' || cards[1].shotId !== 'overview.reader') throw new Error('Card 2 must be the complete overview.reader hero');
