@@ -101,6 +101,14 @@ class BuildStoryTest(unittest.TestCase):
                 self.assertTrue(8 <= len(value) <= 42)
                 self.assertNotIn("CodeMirror", value)
 
+    def test_every_mechanism_has_a_distinct_core_narrative(self) -> None:
+        angles = {key: value["narrative_angle"] for key, value in copy_profiles.PROFILES.items()}
+        self.assertEqual(len(angles), len(set(angles.values())))
+        for primary_shot, angle in angles.items():
+            with self.subTest(primary_shot=primary_shot):
+                self.assertTrue(angle.startswith("ReadMD "))
+                self.assertLessEqual(len(angle), 40)
+
     def test_release_notes_select_stable_hero_and_relevant_shots(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
@@ -136,6 +144,11 @@ class BuildStoryTest(unittest.TestCase):
             "title": "写完就能讲",
             "caption": "Markdown 直接放映，不用重做 PPT。",
         })
+        self.assertEqual(story["narrative_angle"], story["angle"])
+        self.assertEqual(
+            story["angle"],
+            "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+        )
         plan_by_shot = {item["shot_id"]: item for item in story["card_plan"] if item["shot_id"]}
         claim_by_shot = {
             shot_id: claim["user_value"]
@@ -195,6 +208,18 @@ class BuildStoryTest(unittest.TestCase):
         self.assertEqual(story["selected_shots"][0], "overview.reader")
         self.assertEqual(story["selected_shots"][1], "presentation.reveal")
         self.assertEqual(story["primary_shot"], "presentation.reveal")
+
+    def test_sharing_release_uses_sharing_narrative_not_generic_workbench(self) -> None:
+        notes = "- 共享面板支持移动端分享和访问控制\n"
+        story = build_story.build_story(
+            release="v9.9.9",
+            previous_release="v9.9.8",
+            notes=notes,
+            shot_library_path=ROOT / "showcase" / "shot_library.json",
+        )
+        self.assertEqual(story["primary_shot"], "sharing.export")
+        self.assertEqual(story["angle"], "ReadMD 让本地文档直接生成可控制的共享入口")
+        self.assertNotEqual(story["angle"], "ReadMD 正在从 Markdown 阅读器变成完整本地文档工作台")
 
 
 class WriteCopyTest(unittest.TestCase):
@@ -716,6 +741,7 @@ class PatternAuditTest(unittest.TestCase):
             "title_formula_id": "#36",
             "body": (
                 "文档写完了，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。\n\n"
+                "这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。\n\n"
                 "先说清楚：这是 ReadMD 预览版，文件仍在你自己的电脑里。\n\n"
                 "如果你常写课程讲义、组会报告、技术分享或论文汇报，它会省掉重新做演示稿这一步。\n\n"
                 "你会先拿哪一份 Markdown 试放映？"
@@ -785,6 +811,17 @@ class PatternAuditTest(unittest.TestCase):
         self.assertFalse(report["ok"])
         collectible = next(item for item in report["patterns"] if item["id"] == "collectible-clarity")
         self.assertFalse(collectible["ok"])
+
+    def test_core_narrative_must_come_from_mechanism_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            story, metadata, composition = self.make_inputs()
+            story["angle"] = "ReadMD 正在从 Markdown 阅读器变成完整本地文档工作台"
+            self.write_package(package, story, metadata, composition)
+            report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
+        self.assertFalse(report["ok"])
+        focus = next(item for item in report["patterns"] if item["id"] == "single-primary-feature")
+        self.assertFalse(focus["ok"])
 
     def test_broken_hero_and_generic_voice_fail_hard(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

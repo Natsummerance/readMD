@@ -105,7 +105,8 @@ def build_story(
         relevant_features.sort(key=lambda item: shots[item]["category"] != "Presentation")
     relevant_features = relevant_features[:3]
     primary_shot = relevant_features[0] if relevant_features else "overview.editor"
-    cover_hook = dict(profile_for_story({"primary_shot": primary_shot})["cover"])
+    mechanism_profile = profile_for_story({"primary_shot": primary_shot})
+    cover_hook = dict(mechanism_profile["cover"])
     selected = list(dict.fromkeys(["overview.reader"] + relevant_features + fixed_order[1:]))
 
     claims: list[dict[str, Any]] = []
@@ -134,13 +135,7 @@ def build_story(
             }
         )
 
-    categories = {shots[shot_id]["category"] for shot_id in selected}
-    if "Presentation" in categories:
-        angle = "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映"
-    elif "Science" in categories:
-        angle = "ReadMD 把学术写作需要的公式和科学图表放进同一个本地工作台"
-    else:
-        angle = "ReadMD 正在从 Markdown 阅读器变成完整本地文档工作台"
+    angle = mechanism_profile["narrative_angle"]
 
     card_plan: list[dict[str, Any]] = [
         {
@@ -187,6 +182,7 @@ def build_story(
         "angle": angle,
         "primary_shot": primary_shot,
         "cover_hook": cover_hook,
+        "narrative_angle": angle,
         "selected_shots": selected,
         "shots": [shots[shot_id] for shot_id in selected],
         "claims": claims,

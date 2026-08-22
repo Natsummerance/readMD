@@ -73,7 +73,9 @@ def audit_patterns(
     cards = composition.get("cards", [])
     plan = story.get("card_plan", [])
     lower_body = body.lower()
-    expected_cover = profile_for_story(story).get("cover", {})
+    mechanism_profile = profile_for_story(story)
+    expected_cover = mechanism_profile.get("cover", {})
+    expected_angle = mechanism_profile.get("narrative_angle", "")
     cover_hook = story.get("cover_hook", {})
     reader_values = {
         shot_id: str(claim.get("user_value", ""))
@@ -104,7 +106,12 @@ def audit_patterns(
         and bool(product_card.get("screenshot_box"))
     )
     selected = story.get("selected_shots", [])
-    focus_ok = len(selected) > 1 and selected[1] == story.get("primary_shot")
+    mechanism_angle_ok = (
+        story.get("angle") == expected_angle
+        and bool(expected_angle)
+        and expected_angle in body
+    )
+    focus_ok = len(selected) > 1 and selected[1] == story.get("primary_shot") and mechanism_angle_ok
     generic_hits = [term for term in GENERIC_ADJECTIVES if term in body]
     cliche_hits = [term for term in AI_CLICHES if term.lower() in lower_body]
     outcome_ok = len(generic_hits) < 3 and not cliche_hits
@@ -160,8 +167,11 @@ def audit_patterns(
         "single-primary-feature": _result(
             "single-primary-feature",
             focus_ok,
-            [f"primary shot {story.get('primary_shot')} leads card three"],
-            ["selected shots must place the declared primary shot immediately after the hero"],
+            [
+                f"primary shot {story.get('primary_shot')} leads card three",
+                f"core narrative {story.get('angle', '')}",
+            ],
+            ["selected shots must place the declared primary shot after the hero, and the core sentence must use its mechanism profile angle"],
         ),
         "outcome-not-adjective": _result(
             "outcome-not-adjective",

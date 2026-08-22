@@ -149,6 +149,7 @@ def _generated_frames(profile: dict[str, Any]) -> dict[str, list[tuple[str, str,
 PROFILES: dict[str, dict[str, Any]] = {
     "overview.editor": {
         "artifact": "Markdown 稿件",
+        "narrative_angle": "ReadMD 让写作和预览留在同一条工作流",
         "task_hook": "同屏改稿窗口",
         "short_action": "在同屏编辑器里改稿",
         "pain": "改一段 Markdown 就要切窗口核对格式，思路反复被打断",
@@ -182,6 +183,7 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "presentation.reveal": {
         "artifact": "Markdown 演示稿",
+        "narrative_angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
         "task_hook": "上台放映的演示稿",
         "short_action": "直接放映",
         "pain": "文档已经写完，讲的时候还要复制进 PPT",
@@ -216,6 +218,7 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "editor.diagram-picker": {
         "artifact": "科研图表",
+        "narrative_angle": "ReadMD 把科研图表放进同一条 Markdown 工作流",
         "task_hook": "科研图表语法",
         "short_action": "从面板选图",
         "pain": "画科研图表还要回忆语法，改一次就很折磨",
@@ -249,6 +252,7 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "academic.latex-bib": {
         "artifact": "学术排版",
+        "narrative_angle": "ReadMD 让公式、定理和引用共用一条学术排版路径",
         "task_hook": "公式和文献格式",
         "short_action": "在文档里排公式",
         "pain": "公式和文献格式总在交稿前折磨人",
@@ -282,6 +286,7 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "editor.code-chunk": {
         "artifact": "文档代码块",
+        "narrative_angle": "ReadMD 让文档里的代码就地运行并保留输出",
         "task_hook": "可运行代码块",
         "short_action": "就地运行代码",
         "pain": "教程写到代码就要切出去验证，上下文很容易断",
@@ -315,6 +320,7 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "convert.home": {
         "artifact": "零散资料",
+        "narrative_angle": "ReadMD 把网页、PDF 和 Word 收进同一条本地工作流",
         "task_hook": "网页、PDF 和 Word 资料",
         "short_action": "收进本地工作台",
         "pain": "网页、Word 和 PDF 分散在不同窗口，资料格式很难归拢",
@@ -348,6 +354,7 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "sharing.export": {
         "artifact": "本地文档",
+        "narrative_angle": "ReadMD 让本地文档直接生成可控制的共享入口",
         "task_hook": "分享或导出的本地文档",
         "short_action": "生成共享入口",
         "pain": "想把 Markdown 发给别人，还要先导出副本，版本很快对不上",
