@@ -91,6 +91,13 @@ function doSearch(q, jumpToIdx) {
 
   if (isPaged && globalSearchState.matches.length > 0) {
     const curMatch = globalSearchState.matches[globalSearchState.globalIndex];
+    if (curMatch && curMatch.pageIndex !== state.pagination.currentPage) {
+      renderPage(curMatch.pageIndex);
+      requestAnimationFrame(() => {
+        doSearch(globalSearchState.query, globalSearchState.globalIndex);
+      });
+      return;
+    }
     if (curMatch && curMatch.pageIndex === state.pagination.currentPage) {
       jumpToLocalMark(curMatch.matchIdxInPage);
     }

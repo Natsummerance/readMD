@@ -128,7 +128,15 @@ function updateStatus() {
 
   const isWelcome = state.mode === 'welcome';
   const hasDoc = (state.mode === 'file' || state.mode === 'virtual') && !!state.original;
-  if ($('btn-print')) $('btn-print').disabled = isWelcome || !hasPy;
+  if ($('btn-print')) {
+    const browserOnly = !hasPy;
+    $('btn-print').disabled = isWelcome || browserOnly;
+    const exportHint = browserOnly
+      ? '导出需使用桌面版；浏览器模式可另存或打印'
+      : '导出文档 (Ctrl+P)';
+    $('btn-print').title = exportHint;
+    $('btn-print').setAttribute('aria-label', exportHint);
+  }
   if ($('btn-a')) $('btn-a').disabled = isWelcome;
   if ($('btn-A')) $('btn-A').disabled = isWelcome;
   if ($('btn-search')) $('btn-search').disabled = isWelcome;

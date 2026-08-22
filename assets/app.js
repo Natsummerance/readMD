@@ -402,7 +402,12 @@ function bindEvents() {
   });
 
   $('search-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') { e.preventDefault(); jumpToMark(e.shiftKey ? -1 : 1); }
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(searchDebounce);
+      if (globalSearchState.query !== e.target.value) doSearch(e.target.value);
+      jumpToMark(e.shiftKey ? -1 : 1);
+    }
   });
   $('btn-theme').addEventListener('click', toggleTheme);
   $('btn-a').addEventListener('click', () => zoom(-10));
