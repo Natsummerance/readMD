@@ -2345,6 +2345,9 @@ class WatcherTest(unittest.TestCase):
         (package / "images").mkdir(parents=True)
         image = package / "images" / "xhs-01-cover.jpg"
         Image.new("RGB", (10, 10)).save(image)
+        (package / "raw").mkdir()
+        Image.new("RGB", (20, 10)).save(package / "raw" / "overview-reader.png")
+        (package / "raw" / "capture.json").write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
         (package / "story.json").write_text(json.dumps({"release": "v1.2.3"}), encoding="utf-8")
         (package / "qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "copy-review.json").write_text(json.dumps({"ok": True, "total_score": 92}), encoding="utf-8")
@@ -2361,6 +2364,8 @@ class WatcherTest(unittest.TestCase):
                 "originality_failures": [],
             }],
         }), encoding="utf-8")
+        (package / "performance-report.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
+        (package / "performance-report.md").write_text("# Performance\n", encoding="utf-8")
         (package / "dashboard-qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "pattern-audit.json").write_text(json.dumps({
             "ok": pattern_ok,
@@ -2375,6 +2380,10 @@ class WatcherTest(unittest.TestCase):
         }), encoding="utf-8")
         (package / "title.txt").write_text("标题", encoding="utf-8")
         (package / "body.txt").write_text("这篇正文足够长，可以形成稳定的三元组指纹。", encoding="utf-8")
+        (package / "topics.txt").write_text("GitHub\n开源项目\n程序员\n效率工具\nMarkdown", encoding="utf-8")
+        (package / "composition.json").write_text(json.dumps({"schema_version": 1, "cards": []}), encoding="utf-8")
+        (package / "review-dashboard.html").write_text("<!doctype html><main>preflight</main>", encoding="utf-8")
+        (package / "wechat" / "readmd-wechat.html").write_text("<p style=\"font-size:16px;line-height:1.75;color:#111\">article</p>", encoding="utf-8")
         metadata = {
             "title": "标题",
             "variant_id": "outcome-led__36",
@@ -2387,11 +2396,8 @@ class WatcherTest(unittest.TestCase):
         }
         (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
         zip_path = root / "package.zip"
-        with zipfile.ZipFile(zip_path, "w") as archive:
-            for file in package.rglob("*"):
-                if file.is_file():
-                    archive.write(file, file.relative_to(package).as_posix())
-        return zip_path
+        report = package_content.package_content(package, zip_path)
+        return Path(report["output"])
 
     def test_rejects_zip_traversal_and_symlinks(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2473,6 +2479,17 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(feedback["published_url"], "https://example.com/note")
             self.assertEqual(feedback["metrics_status"], "pending")
             self.assertEqual(feedback["impressions"], 0)
+            token = next(
+                key for key, value in state["packages"].items()
+                if value.get("release") == "v1.2.3"
+            )
+            work_package = root / "work" / token
+            self.assertTrue((work_package / "raw" / "capture.json").is_file())
+            localized_image = Path(json.loads(
+                (work_package / "metadata.json").read_text(encoding="utf-8")
+            )["images"][0])
+            self.assertTrue(localized_image.is_file())
+            self.assertEqual(localized_image.parent, work_package / "images")
         self.assertIn("body_sha256", feedback)
         self.assertIn("opening", feedback)
         self.assertIn("closing", feedback)
