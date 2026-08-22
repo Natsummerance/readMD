@@ -1429,7 +1429,7 @@ class ContentMemoryTest(unittest.TestCase):
             updated = content_memory.import_metric_snapshot(
                 store,
                 "v1.0.0",
-                {"impressions": 1200, "likes": 30},
+                {"impressions": 1200, "likes": 60},
                 source="xiaohongshu-web",
                 captured_at="2026-08-23T10:00:00+08:00",
             )
@@ -1437,6 +1437,7 @@ class ContentMemoryTest(unittest.TestCase):
         self.assertEqual(updated["impressions"], 1200)
         self.assertEqual(updated["metrics_status"], "pending")
         self.assertEqual(updated["metrics_source"], "xiaohongshu-web")
+        self.assertEqual(updated["likes"], 60)
         self.assertEqual(records[0]["title_formula_id"], "#61")
         self.assertEqual(records[0]["variant_id"], "identity-led__61")
 
@@ -1460,6 +1461,67 @@ class ContentMemoryTest(unittest.TestCase):
             )
         self.assertEqual(updated["metrics_status"], "complete")
 
+    def test_newer_partial_snapshot_preserves_complete_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            self.seed_pending(store)
+            content_memory.import_metric_snapshot(
+                store,
+                "v1.0.0",
+                {
+                    "impressions": 2400,
+                    "likes": 130,
+                    "collects": 190,
+                    "comments": 45,
+                    "shares": 22,
+                    "follows": 18,
+                },
+                source="xiaohongshu-web",
+                captured_at="2026-08-23T10:00:00+08:00",
+            )
+            updated = content_memory.import_metric_snapshot(
+                store,
+                "v1.0.0",
+                {"likes": 140},
+                source="xiaohongshu-web",
+                captured_at="2026-08-24T10:00:00+08:00",
+            )
+        self.assertEqual(updated["metrics_status"], "complete")
+        self.assertEqual(updated["impressions"], 2400)
+        self.assertEqual(updated["likes"], 140)
+        self.assertEqual(updated["collects"], 190)
+
+    def test_metric_snapshot_rejects_counter_regression(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            self.seed_pending(store)
+            baseline = {
+                "impressions": 2400,
+                "likes": 130,
+                "collects": 190,
+                "comments": 45,
+                "shares": 22,
+                "follows": 18,
+            }
+            content_memory.import_metric_snapshot(
+                store,
+                "v1.0.0",
+                baseline,
+                source="xiaohongshu-web",
+                captured_at="2026-08-23T10:00:00+08:00",
+            )
+            before = store.read_text(encoding="utf-8")
+            with self.assertRaises(ValueError):
+                content_memory.import_metric_snapshot(
+                    store,
+                    "v1.0.0",
+                    {**baseline, "impressions": 2000, "likes": 100},
+                    source="xiaohongshu-web",
+                    captured_at="2026-08-24T10:00:00+08:00",
+                )
+            after = store.read_text(encoding="utf-8")
+        self.assertEqual(after, before)
+
     def test_metric_import_rejects_identity_conflicts_and_stale_snapshots(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = Path(tmp) / "ledger.jsonl"
@@ -1475,7 +1537,14 @@ class ContentMemoryTest(unittest.TestCase):
             content_memory.import_metric_snapshot(
                 store,
                 "v1.0.0",
-                {"impressions": 2000, **{field: 10 for field in ("likes", "collects", "comments", "shares", "follows")}},
+                {
+                    "impressions": 2000,
+                    "likes": 60,
+                    "collects": 80,
+                    "comments": 40,
+                    "shares": 20,
+                    "follows": 10,
+                },
                 source="xiaohongshu-web",
                 captured_at="2026-08-24T10:00:00+08:00",
             )

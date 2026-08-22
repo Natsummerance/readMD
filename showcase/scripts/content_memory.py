@@ -187,12 +187,29 @@ def import_metric_snapshot(
     if previous_captured and captured <= _parse_timestamp(previous_captured, "metrics_captured_at"):
         raise ValueError("metric snapshot is not newer than the ledger snapshot")
 
-    complete = all(key in metrics for key in METRIC_FIELDS)
+    regressions = []
+    observed_fields = set(existing.get("metrics_observed") or [])
+    observed_fields.update(metrics)
+    merged_metrics: dict[str, int] = {}
+    for key in METRIC_FIELDS:
+        previous_value = int(existing.get(key, 0))
+        value = int(metrics.get(key, previous_value))
+        if value < previous_value:
+            regressions.append(f"{key} decreased from {previous_value} to {value}")
+        merged_metrics[key] = value
+    if regressions:
+        raise ValueError("metric counters cannot decrease: " + "; ".join(regressions))
+
+    if existing.get("metrics_status") == "complete":
+        complete = True
+    else:
+        complete = all(key in observed_fields for key in METRIC_FIELDS)
     patch: dict[str, Any] = {
         **metrics,
         "metrics_status": "complete" if complete else "pending",
         "metrics_source": source,
         "metrics_captured_at": captured.isoformat(),
+        "metrics_observed": sorted(observed_fields),
     }
     if "audit_status" in snapshot and str(snapshot["audit_status"]).strip():
         patch["audit_status"] = str(snapshot["audit_status"]).strip()
