@@ -24,7 +24,9 @@ def _engagement(record: dict[str, Any]) -> int:
 def _stats(records: list[dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
     output: dict[str, dict[str, Any]] = {}
     for record in records:
-        name = str(record.get(key, "unknown"))
+        name = str(record.get(key, ""))
+        if not name.strip():
+            continue
         stats = output.setdefault(name, {
             "publications": 0,
             "impressions": 0,

@@ -202,6 +202,8 @@ def choose_variant(
         output: dict[str, dict[str, Any]] = {}
         for record in records:
             name = str(record.get(key, ""))
+            if not name.strip():
+                continue
             stats = output.setdefault(name, {
                 "publications": 0,
                 "impressions": 0,

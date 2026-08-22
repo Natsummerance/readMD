@@ -789,6 +789,32 @@ class CopyVariantsTest(unittest.TestCase):
         self.assertTrue(report["formula_stats"]["#22"]["confidence_ok"])
         self.assertTrue(report["ok"])
 
+    def test_legacy_missing_copy_frame_is_not_frame_evidence(self) -> None:
+        story = {
+            "release": "v1.1.0",
+            "previous_release": "v1.0.0",
+            "version_state": "prerelease",
+            "primary_shot": "presentation.reveal",
+            "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+            "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        history = [
+            {**self.history_record("v1.0.0", "identity-led", "#22"), "impressions": 5000, "likes": 500, "collects": 500, "comments": 100, "shares": 100},
+            {**self.history_record("v1.0.1", "outcome-led", "#36"), "impressions": 5000, "likes": 500, "collects": 500, "comments": 100, "shares": 100},
+            {**self.history_record("v1.0.2", "identity-led", "#22"), "impressions": 1000, "copy_frame": "workflow"},
+            {**self.history_record("v1.0.3", "outcome-led", "#36"), "impressions": 1000, "copy_frame": "workflow"},
+        ]
+        chosen, report = copy_variants.choose_variant(variants, history)
+        self.assertEqual(set(report["frame_stats"]), {"workflow"})
+        self.assertTrue(report["frame_stats"]["workflow"]["confidence_ok"])
+        self.assertEqual(chosen["copy_frame"], "workflow")
+
     def test_low_confidence_history_cannot_lock_selection(self) -> None:
         story = self.variant_story()
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
@@ -1040,6 +1066,16 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertEqual(data["formula_stats"]["#36"]["confidence"], "low")
         self.assertIsNone(data["recommended_formula"])
         self.assertIsNone(data["recommended_hook_type"])
+        self.assertIsNone(data["recommended_copy_frame"])
+
+    def test_legacy_records_without_copy_frame_are_excluded(self) -> None:
+        records = [
+            {**self.complete("v1", "#36", "outcome-led", 2000, 200, 300), "comments": 100, "shares": 100},
+            {**self.complete("v2", "#22", "identity-led", 2000, 200, 300), "comments": 100, "shares": 100},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            data = performance_report.generate_report(records, Path(tmp))
+        self.assertEqual(data["frame_stats"], {})
         self.assertIsNone(data["recommended_copy_frame"])
 
     def test_aggregates_confident_copy_frame_performance(self) -> None:
