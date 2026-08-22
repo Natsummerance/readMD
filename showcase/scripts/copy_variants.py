@@ -341,6 +341,7 @@ def choose_variant(
         "schema_version": 1,
         "chosen_strategy": winner_summary["strategy"],
         "chosen_variant_id": winner_summary["variant_id"],
+        "candidate_count": len(variants),
         "ok": True,
         "originality_gate": "pass",
         "selection_rule": (

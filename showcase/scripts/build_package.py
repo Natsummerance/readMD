@@ -88,6 +88,9 @@ def compose_and_validate(package_dir: Path, repo_root: Path) -> list[str]:
         except Exception as exc:
             errors.append(f"hot-post pattern gate crashed: {exc}")
         errors.extend(validate_package(package_dir, repo_root=repo_root))
+        # The preflight panel must describe this run's gates, not a stale prior package.
+        provisional_qa = {"ok": not errors, "errors": errors}
+        (package_dir / "qa.json").write_text(json.dumps(provisional_qa, ensure_ascii=False, indent=2), encoding="utf-8")
         try:
             dashboard_report = review_dashboard.generate_package(package_dir)
             if not dashboard_report.get("ok"):

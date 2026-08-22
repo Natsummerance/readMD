@@ -961,6 +961,50 @@ class BuildPipelineTest(unittest.TestCase):
         self.assertEqual(calls, ["pattern", "validate", "dashboard"])
         self.assertTrue(report["ok"])
 
+    def test_dashboard_reads_provisional_qa_before_final_aggregate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            observed: dict[str, dict] = {}
+            original_run = build_package_module.subprocess.run
+            original_audit = build_package_module.audit_package
+            original_export = build_package_module.export_package
+            original_pattern = build_package_module.pattern_audit.audit_package
+            original_validate = build_package_module.validate_package
+            original_dashboard = build_package_module.review_dashboard.generate_package
+            build_package_module.subprocess.run = lambda *args, **kwargs: SimpleNamespace(returncode=0)
+            build_package_module.audit_package = lambda package_dir: {"ok": True, "total_score": 100}
+            build_package_module.export_package = lambda package_dir: {"ok": True, "errors": []}
+
+            def run_pattern(package_dir: Path) -> dict:
+                report = {"schema_version": 1, "ok": True, "passed_count": 10, "total_count": 10, "errors": []}
+                (package_dir / "pattern-audit.json").write_text(json.dumps(report), encoding="utf-8")
+                return report
+
+            def run_dashboard(package_dir: Path) -> dict:
+                observed["qa"] = json.loads((package_dir / "qa.json").read_text(encoding="utf-8"))
+                (package_dir / "review-dashboard.html").write_text("preflight", encoding="utf-8")
+                report = {"ok": True, "errors": []}
+                (package_dir / "dashboard-qa.json").write_text(json.dumps(report), encoding="utf-8")
+                return report
+
+            build_package_module.pattern_audit.audit_package = run_pattern
+            build_package_module.validate_package = lambda package_dir, repo_root=None: []
+            build_package_module.review_dashboard.generate_package = run_dashboard
+            try:
+                errors = build_package_module.compose_and_validate(package, ROOT)
+            finally:
+                build_package_module.subprocess.run = original_run
+                build_package_module.audit_package = original_audit
+                build_package_module.export_package = original_export
+                build_package_module.pattern_audit.audit_package = original_pattern
+                build_package_module.validate_package = original_validate
+                build_package_module.review_dashboard.generate_package = original_dashboard
+
+            final_qa = json.loads((package / "qa.json").read_text(encoding="utf-8"))
+        self.assertEqual(errors, [])
+        self.assertTrue(observed["qa"]["ok"])
+        self.assertTrue(final_qa["ok"])
+
     def test_early_failure_still_writes_red_aggregate_qa(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             package = Path(tmp)
@@ -1219,6 +1263,12 @@ class ReviewDashboardTest(unittest.TestCase):
                 "ok": True,
                 "chosen_strategy": "outcome-led",
                 "chosen_variant_id": "outcome-led__36",
+                "candidate_count": 60,
+                "copy_frame_inventory": {
+                    "outcome-led": 4,
+                    "identity-led": 4,
+                    "mechanism-curiosity": 4,
+                },
                 "ranked": [
                     {"strategy": "outcome-led", "variant_id": "outcome-led__36", "title": "#36 标题", "adjusted_score": 100, "semantic_score": 100},
                     {"strategy": "identity-led", "variant_id": "identity-led__22", "title": "#22 标题", "adjusted_score": 96, "semantic_score": 100},
@@ -1250,6 +1300,43 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("Hot-post patterns", html)
         self.assertIn("10 / 10", html)
         self.assertIn("Pending metrics", html)
+        for forbidden in ("<script", "class=", "id=", "<img", "<table", "http://", "https://"):
+            self.assertNotIn(forbidden.lower(), html.lower())
+
+    def test_curates_top_experiments_instead_of_dumping_sixty_cards(self) -> None:
+        inputs = self.sample_inputs()
+        ranked = [{
+            "strategy": f"strategy-{index}",
+            "variant_id": f"challenge-{index:02d}",
+            "copy_frame": "workflow",
+            "remaining_copy_frames": 4,
+            "title": f"#12 挑战 {index}",
+            "semantic_score": 100,
+            "adjusted_score": 109 - index,
+            "ok": True,
+        } for index in range(1, 11)]
+        ranked.append({
+            "strategy": "outcome-led",
+            "variant_id": "outcome-led__36",
+            "copy_frame": "core",
+            "remaining_copy_frames": 4,
+            "title": "#36 标题",
+            "semantic_score": 100,
+            "adjusted_score": 80,
+            "ok": True,
+        })
+        inputs["variants"]["ranked"] = ranked
+        html = review_dashboard.build_dashboard(inputs)
+        self.assertIn("Top experiments", html)
+        self.assertIn("Showing 5 of 60 candidates", html)
+        self.assertIn("Copy-frame inventory", html)
+        self.assertIn("4 / hook", html)
+        self.assertIn("outcome-led__36", html)
+        self.assertIn("challenge-01", html)
+        self.assertIn("challenge-04", html)
+        self.assertNotIn("challenge-05", html)
+        self.assertEqual(html.count('border:2px solid #d6482c'), 1)
+        self.assertEqual(html.count('border:1px solid #d8dee6;padding:18px 20px'), 4)
         for forbidden in ("<script", "class=", "id=", "<img", "<table", "http://", "https://"):
             self.assertNotIn(forbidden.lower(), html.lower())
 

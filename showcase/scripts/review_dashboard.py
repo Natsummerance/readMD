@@ -46,6 +46,18 @@ def _metric(label: str, value: Any) -> str:
     )
 
 
+def _top_variants(ranked: list[dict[str, Any]], chosen_variant_id: Any, limit: int = 5) -> list[dict[str, Any]]:
+    ordered = sorted(
+        ranked,
+        key=lambda item: (bool(item.get("ok")), float(item.get("adjusted_score", 0))),
+        reverse=True,
+    )
+    chosen = next((item for item in ordered if item.get("variant_id") == chosen_variant_id), None)
+    selected = [chosen] if chosen else []
+    selected.extend(item for item in ordered if item.get("variant_id") != chosen_variant_id)
+    return selected[:limit]
+
+
 def build_dashboard(inputs: dict[str, Any]) -> str:
     release = inputs.get("release", "")
     title = inputs.get("title", "")
@@ -79,13 +91,26 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
     ranked = variants.get("ranked", [])
     chosen_variant_id = variants.get("chosen_variant_id")
     chosen_strategy = variants.get("chosen_strategy")
+    displayed_variants = _top_variants(ranked, chosen_variant_id)
+    candidate_count = int(variants.get("candidate_count", len(ranked)))
+    frame_inventory = [
+        int(value)
+        for value in variants.get("copy_frame_inventory", {}).values()
+        if str(value).strip()
+    ]
+    minimum_frame_inventory = min(frame_inventory) if frame_inventory else 0
+    experiment_summary = "".join([
+        _metric("Experiment candidates", candidate_count),
+        _metric("Copy-frame inventory", f"{minimum_frame_inventory} / hook"),
+    ])
     variant_html = "".join(
-        f'<div style="border-left:5px solid {"#d6482c" if item.get("variant_id") == chosen_variant_id or (not chosen_variant_id and item.get("strategy") == chosen_strategy) else "#d8dee6"};'
-        f'padding:16px 20px;margin-bottom:14px;background:#f2f4f6;border-radius:12px">'
+        f'<div style="border:{"2px solid #d6482c" if item.get("variant_id") == chosen_variant_id or (not chosen_variant_id and item.get("strategy") == chosen_strategy) else "1px solid #d8dee6"};'
+        f'padding:18px 20px;margin-bottom:14px;background:{"#ffffff" if item.get("variant_id") == chosen_variant_id else "#f2f4f6"};border-radius:12px">'
         f'<p style="margin:0;font-size:26px;font-weight:800;color:#182029">{_escaped(item.get("title"))}</p>'
-        f'<p style="margin:8px 0 0;font-size:22px;color:#5b6875">{_escaped(item.get("strategy"))} · {_escaped(item.get("variant_id", ""))} · '
+        f'<p style="margin:8px 0 0;font-size:22px;color:#5b6875">{_escaped(item.get("strategy"))} · {_escaped(item.get("copy_frame", ""))} · {_escaped(item.get("variant_id", ""))}</p>'
+        f'<p style="margin:6px 0 0;font-size:21px;color:#5b6875">{_escaped(item.get("remaining_copy_frames", ""))} renewable frames remaining</p>'
         f'{_escaped(item.get("semantic_score"))} / {_escaped(item.get("adjusted_score"))}</p></div>'
-        for item in ranked
+        for item in displayed_variants
     )
 
     score_items = "".join(
@@ -132,7 +157,12 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
   {_section("Release gates", gate_html)}
   {_section("Semantic dimensions", f'<div style="display:flex;gap:14px;flex-wrap:wrap">{score_items}</div>')}
   {_section("Style resonance", style_inner)}
-  {_section("Variant ranking", variant_html)}
+  {_section(
+      "Top experiments",
+      f'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">{experiment_summary}</div>'
+      f'<p style="margin:0 0 16px;font-size:23px;color:#5b6875">Showing {len(displayed_variants)} of {candidate_count} candidates · selected pinned</p>'
+      f'{variant_html}'
+  )}
   {_section("Feedback loop", f'<div style="display:flex;gap:14px;flex-wrap:wrap">{performance_metrics}</div><p style="margin-top:16px;font-size:24px;color:#5b6875">Pending metrics: {_escaped(performance.get("pending_count", 0))}</p>')}
   {_section("Final copy", f'<p style="white-space:pre-wrap;margin:0;font-size:26px;line-height:1.55;color:#182029">{_escaped(body)}</p>')}
 </main>
