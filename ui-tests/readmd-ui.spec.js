@@ -863,10 +863,17 @@ test('in-app updates refuse binaries without a verified checksum', async ({ page
 
 test('canceling a dirty editor asks before discarding changes', async ({ page }) => {
   await enterEdit(page);
+  await page.evaluate(() => {
+    state.tabs = [{ id: 'one', title: 'one.md', name: 'one.md', content: state.original, original: state.original }];
+    state.activeTabId = 'one';
+    renderTabsBar();
+  });
   await setEditorContent(page, '# changed');
   await page.waitForFunction(() => hasUnsavedEditorChanges());
+  await expect(page.locator('#doc-tabs-bar .tab-item').first().locator('.tab-dirty')).toBeVisible();
   await page.locator('#edit-cancel').click();
   await expect(page.locator('#close-confirm-modal')).toBeVisible();
+  await expect(page.locator('#close-confirm-cancel')).toBeFocused();
   await page.locator('#close-confirm-discard').click();
   await expect(page.locator('#close-confirm-modal')).toBeHidden();
   await page.waitForFunction(() => state.editing === false);
@@ -890,6 +897,54 @@ test('switching tabs cannot discard a dirty editor', async ({ page }) => {
   await expect(page.locator('#close-confirm-modal')).toBeVisible();
   await page.locator('#close-confirm-cancel').click();
   await page.waitForFunction(() => state.activeTabId === 'one' && state.editing === true);
+});
+
+test('saving a dirty background tab writes that tab, not the active editor', async ({ page }) => {
+  const saves = [];
+  await page.route('**/api/save', async route => {
+    const payload = await route.request().postDataJSON();
+    saves.push(payload);
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, mtime: 3 }) });
+  });
+  await page.route('**/api/file?p=**&meta=0*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      ok: true, path: 'C:/two.md', dir: 'C:/', name: 'two.md',
+      content: '# two saved', original: '# two saved', encoding: 'utf-8', mtime: 3, fixes: [], stats: {},
+    }),
+  }));
+  await page.route('**/api/file?p=**&meta=1*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: true, path: 'C:/two.md', dir: 'C:/', name: 'two.md', mtime: 3, size: 13 }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof toggleEdit === 'function');
+  await page.evaluate(async () => {
+    state.tabs = [
+      { id: 'one', path: 'C:/one.md', title: 'one.md', name: 'one.md', content: '# one', original: '# one' },
+      { id: 'two', path: 'C:/two.md', title: 'two.md', name: 'two.md', content: '# two changed', original: '# two', isDirty: true },
+    ];
+    state.activeTabId = 'one';
+    syncStateFromActiveTab();
+    renderTabsBar();
+    await toggleEdit();
+  });
+  const activeEditor = page.locator('#edit-cm .cm-content');
+  await activeEditor.click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.type('# one changed');
+  await page.waitForFunction(() => hasUnsavedEditorChanges());
+  await page.evaluate(() => { void closeTab('two'); });
+  await expect(page.locator('#close-confirm-modal')).toBeVisible();
+  await page.locator('#close-confirm-save').click();
+  await expect.poll(() => saves).toEqual([expect.objectContaining({ path: 'C:/two.md', content: '# two changed' })]);
+  await page.waitForFunction(() => state.tabs.length === 1 && state.tabs[0].id === 'one');
+  expect(await page.evaluate(() => ({
+    oneDirty: state.tabs.find(tab => tab.id === 'one').isDirty,
+    oneDraft: state.tabs.find(tab => tab.id === 'one').content,
+  }))).toEqual({ oneDirty: true, oneDraft: '# one changed' });
 });
 
 test('auto reload does not overwrite an active editor', async ({ page }) => {
@@ -952,6 +1007,20 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
   await expect(page.locator('#toast')).toHaveAttribute('role', 'status');
   await expect(page.locator('#toast')).toHaveAttribute('aria-live', 'polite');
   await expect(page.locator('#search-input')).toHaveAttribute('aria-label', /搜索|search/i);
+  await expect(page.locator('#btn-print')).toBeDisabled();
+  await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'false');
+  await page.locator('#btn-more').click();
+  await expect(page.locator('#more-menu')).toHaveClass(/open/);
+  await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'true');
+
+  const firstGroupHeader = page.locator('.more-group-header').first();
+  await expect(firstGroupHeader).toHaveAttribute('aria-expanded', 'true');
+  await firstGroupHeader.click();
+  await expect(firstGroupHeader).toHaveAttribute('aria-expanded', 'false');
+  await firstGroupHeader.click();
+  await expect(firstGroupHeader).toHaveAttribute('aria-expanded', 'true');
+  await page.locator('#btn-more').click();
+  await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'false');
 
   await page.evaluate(() => {
     state.tabs = [
@@ -1042,6 +1111,15 @@ test('tabs, status regions, and stacked dialogs meet keyboard contracts', async 
   await expect(page.locator('#doc-tabs-bar .tab-item').nth(2)).toBeFocused();
   await page.keyboard.press('Home');
   await expect(page.locator('#doc-tabs-bar .tab-item').first()).toBeFocused();
+
+  await page.setViewportSize({ width: 600, height: 600 });
+  await page.evaluate(() => renderTabsBar());
+  await page.locator('#doc-tabs-secondary-bar .tab-item').first().focus();
+  await page.keyboard.press('End');
+  await expect(page.locator('#doc-tabs-secondary-bar .tab-item').last()).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(page.locator('#doc-tabs-secondary-bar .tab-item').first()).toBeFocused();
+  await page.setViewportSize({ width: 720, height: 600 });
 
   await page.evaluate(() => {
     document.getElementById('export-modal').classList.remove('hidden');

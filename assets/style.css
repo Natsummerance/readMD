@@ -326,6 +326,22 @@ button { font-family: inherit; }
 #toc-list a.lv1 { font-weight: 600; color: var(--fg); }
 #toc-list a.lv2 { padding-left: 22px; }
 #toc-list a.lv3 { padding-left: 36px; }
+.toc-page-group {
+  margin: 0 0 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--bg);
+}
+.toc-page-group > summary {
+  padding: 6px 8px;
+  color: var(--fg2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+.toc-page-group[open] > summary { color: var(--accent); border-bottom: 1px solid var(--border); }
+.toc-group-body { padding: 2px 0 4px; }
 
 #file-list .file-item {
   display: block;
@@ -1463,6 +1479,7 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
 /* ---------- 动画偏好 ---------- */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
+  html { scroll-behavior: auto !important; }
 }
 
 /* ---------- 打印 ---------- */

@@ -107,7 +107,7 @@ async function loadFile(path) {
   if (!path) return;
   const existingTab = findTabByPath(path);
   if (existingTab) {
-    switchTab(existingTab.id);
+    await switchTab(existingTab.id);
     return;
   }
   setProgress(8);

@@ -65,6 +65,8 @@
 function closeMoreMenu() {
   const menu = $('more-menu');
   if (menu) menu.classList.remove('open');
+  const button = $('btn-more');
+  if (button) button.setAttribute('aria-expanded', 'false');
 }
 
 function bindEvents() {
@@ -82,6 +84,7 @@ function bindEvents() {
     moreBtn.addEventListener('click', e => {
       e.stopPropagation();
       moreMenu.classList.toggle('open');
+      moreBtn.setAttribute('aria-expanded', moreMenu.classList.contains('open') ? 'true' : 'false');
     });
     document.addEventListener('click', e => {
       if (moreMenu.classList.contains('open') && !moreMenu.contains(e.target) && e.target !== moreBtn) {
@@ -116,7 +119,10 @@ function bindEvents() {
     hdr.addEventListener('click', e => {
       e.stopPropagation();
       const grp = hdr.closest('.more-group');
-      if (grp) grp.classList.toggle('open');
+      if (grp) {
+        grp.classList.toggle('open');
+        hdr.setAttribute('aria-expanded', grp.classList.contains('open') ? 'true' : 'false');
+      }
     });
   });
 
@@ -277,7 +283,10 @@ function bindEvents() {
   
   // 编辑保存与退出
   $('edit-save').addEventListener('click', saveEdit);
-  $('edit-area').addEventListener('input', updateUnloadGuard);
+  $('edit-area').addEventListener('input', () => {
+    updateUnloadGuard();
+    if (typeof syncActiveTabDirty === 'function') syncActiveTabDirty();
+  });
   $('edit-cancel').addEventListener('click', confirmExitEdit);
 
   // 编辑撤销与重做 [联动: editor/editor.js]

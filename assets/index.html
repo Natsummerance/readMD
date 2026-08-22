@@ -58,12 +58,12 @@
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
       <span class="tb-label" data-i18n="app.ai">AI</span>
     </button>
-    <button id="btn-more" class="tb-btn icon" title="更多功能" aria-label="更多功能" data-i18n-title="toolbar.more" data-i18n-aria="toolbar.more" aria-haspopup="true">
+    <button id="btn-more" class="tb-btn icon" title="更多功能" aria-label="更多功能" data-i18n-title="toolbar.more" data-i18n-aria="toolbar.more" aria-haspopup="true" aria-expanded="false">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
     </button>
     <div id="more-menu" class="more-menu">
       <div class="more-group open">
-        <button class="more-group-header" type="button"><span data-i18n="menu.grpImport">导入</span><span class="more-group-arrow">›</span></button>
+        <button class="more-group-header" type="button" aria-expanded="true"><span data-i18n="menu.grpImport">导入</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
           <button id="btn-convert" class="more-item"><span data-i18n="menu.convert">万物转换</span><em data-i18n="menu.convertSub">格式转 MD</em></button>
           <button id="btn-web" class="more-item"><span data-i18n="menu.web">网页提取</span><em data-i18n="menu.webSub">网页转 MD</em></button>
@@ -72,7 +72,7 @@
         </div>
       </div>
       <div class="more-group open">
-        <button class="more-group-header" type="button"><span data-i18n="menu.grpInteract">互动</span><span class="more-group-arrow">›</span></button>
+        <button class="more-group-header" type="button" aria-expanded="true"><span data-i18n="menu.grpInteract">互动</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
           <button id="btn-presentation-menu" class="more-item" disabled><span data-i18n="menu.presentation">演讲演示</span><em data-i18n="menu.presentationSub">Reveal.js (F5)</em></button>
           <button id="btn-run-all-chunks" class="more-item" disabled><span data-i18n="menu.runCode">运行代码</span><em data-i18n="menu.runCodeSub">执行代码块</em></button>
@@ -83,7 +83,7 @@
         </div>
       </div>
       <div class="more-group">
-        <button class="more-group-header" type="button"><span data-i18n="menu.grpSettings">设置</span><span class="more-group-arrow">›</span></button>
+        <button class="more-group-header" type="button" aria-expanded="false"><span data-i18n="menu.grpSettings">设置</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
           <button id="btn-lang" class="more-item"><span data-i18n="menu.lang">界面语言</span><em id="lang-current-label">简体中文</em></button>
           <button id="btn-assoc" class="more-item"><span data-i18n="menu.assoc">设为默认</span><em data-i18n="menu.assocSub">.md 打开方式</em></button>

@@ -59,6 +59,7 @@ function createEditor(doc) {
           schedulePreview();
           updateDocStatistics();
           if (typeof updateUnloadGuard === 'function') updateUnloadGuard();
+          if (typeof syncActiveTabDirty === 'function') syncActiveTabDirty();
         }
         if (u.selectionSet || u.docChanged) updateCmSelectionToolbar();
       }),

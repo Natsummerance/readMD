@@ -128,7 +128,7 @@ function updateStatus() {
 
   const isWelcome = state.mode === 'welcome';
   const hasDoc = (state.mode === 'file' || state.mode === 'virtual') && !!state.original;
-  if ($('btn-print')) $('btn-print').disabled = isWelcome;
+  if ($('btn-print')) $('btn-print').disabled = isWelcome || !hasPy;
   if ($('btn-a')) $('btn-a').disabled = isWelcome;
   if ($('btn-A')) $('btn-A').disabled = isWelcome;
   if ($('btn-search')) $('btn-search').disabled = isWelcome;

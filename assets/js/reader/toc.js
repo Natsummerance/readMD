@@ -55,10 +55,16 @@ function buildToc() {
       return;
     }
 
-    globalHeadings.forEach((h, i) => {
+    const headingGroups = new Map();
+    globalHeadings.forEach(h => {
+      if (!headingGroups.has(h.pageIndex)) headingGroups.set(h.pageIndex, []);
+      headingGroups.get(h.pageIndex).push(h);
+    });
+
+    const appendTocHeading = (container, h) => {
       const a = document.createElement('a');
       a.href = '#' + h.id;
-      a.textContent = h.text || ((_t('toc.sectionDefault') || '章节') + ' ' + (i + 1));
+      a.textContent = h.text || ((_t('toc.sectionDefault') || '章节'));
       a.className = 'lv' + h.level;
       if (h.pageIndex === state.pagination.currentPage) a.classList.add('toc-cur-page');
       a.setAttribute('data-page-idx', h.pageIndex);
@@ -79,7 +85,32 @@ function buildToc() {
           renderPage(h.pageIndex, h.id);
         }
       });
-      list.appendChild(a);
+
+      container.appendChild(a);
+    };
+
+    const fillTocGroup = (container, headings) => {
+      if (container.childElementCount) return;
+      headings.forEach(h => appendTocHeading(container, h));
+    };
+
+    headingGroups.forEach((headings, pageIndex) => {
+      const group = document.createElement('details');
+      group.className = 'toc-page-group';
+      group.dataset.pageIdx = String(pageIndex);
+      const summary = document.createElement('summary');
+      summary.textContent = `P.${pageIndex + 1} · ${headings.length}`;
+      const container = document.createElement('div');
+      container.className = 'toc-group-body';
+      group.addEventListener('toggle', () => {
+        if (group.open) fillTocGroup(container, headings);
+      });
+      if (pageIndex === state.pagination.currentPage) {
+        group.open = true;
+        fillTocGroup(container, headings);
+      }
+      group.append(summary, container);
+      list.appendChild(group);
     });
     return;
   }

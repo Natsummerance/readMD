@@ -202,9 +202,13 @@ function moveTabFocus(activeTabId, key) {
   else if (key === 'Home') target = 0;
   else if (key === 'End') target = last;
   if (target === index) return;
-  switchTab(state.tabs[target].id).then(() => {
-    const next = document.querySelector(`[data-tab-id="${CSS.escape(state.tabs[target].id)}"]`);
-    if (next) next.focus();
+  const targetId = state.tabs[target].id;
+  switchTab(targetId).then(() => {
+    requestAnimationFrame(() => {
+      const matches = Array.from(document.querySelectorAll(`[data-tab-id="${CSS.escape(targetId)}"]`));
+      const next = matches.find(item => item.offsetParent !== null) || matches[0];
+      if (next && document.activeElement !== next) next.focus({ preventScroll: true });
+    });
   });
 }
 
@@ -319,6 +323,59 @@ function openTabContextMenu(e, tabId) {
   menu.classList.remove('hidden');
 }
 
+function renderActiveTab({ restoreScroll = false } = {}) {
+  const nextTab = getActiveTab();
+  if (!nextTab) return;
+  setFixes(nextTab.fixes || [], nextTab.stats || {});
+  renderContent(nextTab.content, nextTab.title || nextTab.name);
+  document.title = (nextTab.title || nextTab.name) + ' - ReadMD';
+  setFileTitle(nextTab.title || nextTab.name, !nextTab.isVirtual && hasPy, nextTab.path);
+  if (restoreScroll && nextTab.scrollPos) {
+    requestAnimationFrame(() => { $('content').scrollTop = nextTab.scrollPos; });
+  }
+  updateStatus();
+  renderTabsBar();
+  afterRender();
+}
+
+function syncActiveTabDirty() {
+  if (!state.editing) return;
+  const tab = getActiveTab();
+  if (!tab) return;
+  const dirty = hasUnsavedEditorChanges();
+  if (dirty) {
+    tab.content = getEditContent();
+    tab.fixed = tab.content;
+  }
+  if (tab.isDirty !== dirty) {
+    tab.isDirty = dirty;
+    renderTabsBar();
+  }
+}
+
+async function activateTabForSave(tabId) {
+  if (state.activeTabId !== tabId) {
+    const previousTab = getActiveTab();
+    if (previousTab && state.editing) {
+      previousTab.content = getEditContent();
+      previousTab.fixed = previousTab.content;
+      previousTab.isDirty = true;
+    }
+    exitEdit();
+    state.activeTabId = tabId;
+    syncStateFromActiveTab();
+    renderActiveTab();
+  }
+  if (!state.editing) await toggleEdit();
+  const nextTab = getActiveTab();
+  const draft = nextTab ? nextTab.content : '';
+  if (typeof cmView !== 'undefined' && cmView) {
+    cmView.dispatch({ changes: { from: 0, to: cmView.state.doc.length, insert: draft } });
+  } else if ($('edit-area')) {
+    $('edit-area').value = draft;
+  }
+}
+
 async function switchTab(tabId) {
   if (state.activeTabId === tabId) return;
   const prevTab = getActiveTab();
@@ -346,18 +403,7 @@ async function switchTab(tabId) {
   exitEdit();
   state.activeTabId = tabId;
   syncStateFromActiveTab();
-  const nextTab = getActiveTab();
-  if (!nextTab) return;
-  setFixes(nextTab.fixes || [], nextTab.stats || {});
-  renderContent(nextTab.content, nextTab.title || nextTab.name);
-  document.title = (nextTab.title || nextTab.name) + ' - ReadMD';
-  setFileTitle(nextTab.title || nextTab.name, !nextTab.isVirtual && hasPy, nextTab.path);
-  if (nextTab.scrollPos) {
-    requestAnimationFrame(() => { $('content').scrollTop = nextTab.scrollPos; });
-  }
-  updateStatus();
-  renderTabsBar();
-  afterRender();
+  renderActiveTab({ restoreScroll: true });
 }
 
 function promptDirtyClose(tabName) {
@@ -411,8 +457,8 @@ function promptDirtyClose(tabName) {
     document.addEventListener('keydown', onKeyDown);
 
     // 聚焦主要行动按钮
-    const saveBtn = $('close-confirm-save');
-    if (saveBtn) setTimeout(() => saveBtn.focus(), 30);
+    const cancelBtn = $('close-confirm-cancel');
+    if (cancelBtn) setTimeout(() => cancelBtn.focus(), 30);
   });
 }
 
@@ -424,7 +470,7 @@ async function closeTab(tabId, force = false) {
     const action = await promptDirtyClose(tab.title || tab.name);
     if (action === 'cancel') return;
     if (action === 'save') {
-      if (state.activeTabId !== tabId) switchTab(tabId);
+      await activateTabForSave(tabId);
       await saveEdit();
     }
   }
@@ -451,7 +497,7 @@ async function closeOtherTabs(keepTabId) {
         const action = await promptDirtyClose(t.title || t.name);
         if (action === 'cancel') return;
         if (action === 'save') {
-          switchTab(t.id);
+          await activateTabForSave(t.id);
           await saveEdit();
         }
       }
@@ -469,7 +515,7 @@ async function closeAllTabs() {
       const action = await promptDirtyClose(t.title || t.name);
       if (action === 'cancel') return;
       if (action === 'save') {
-        switchTab(t.id);
+        await activateTabForSave(t.id);
         await saveEdit();
       }
     }
