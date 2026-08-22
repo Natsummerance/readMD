@@ -891,7 +891,15 @@ class ExportWechatTest(unittest.TestCase):
                 "topics": ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"],
             }
             (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
-            story = {"release": "v1.2.3", "angle": "Markdown 直接放映"}
+            story = {
+                "release": "v1.2.3",
+                "angle": "Markdown 直接放映",
+                "summary_hook": {
+                    "title": "一条放映路",
+                    "caption": "写作、修改和上台共用一份文件。",
+                    "proof_points": ["同一份 MD", "真实排版", "直接放映"],
+                },
+            }
             report = export_wechat.export_package(package, story=story)
             output = package / "wechat" / "readmd-wechat.html"
             html = output.read_text(encoding="utf-8")
@@ -904,10 +912,17 @@ class ExportWechatTest(unittest.TestCase):
         self.assertIn("<strong style=", html)
         self.assertIn("<code style=", html)
         self.assertGreaterEqual(html.count("<p style="), 4)
+        self.assertIn("本轮可保存的三点", html)
+        self.assertIn('<ul style="margin:0;padding:0;list-style:none">', html)
+        self.assertEqual(html.count("<li style="), 3)
         for paragraph in re.findall(r"<p style=\"([^\"]+)\"", html):
             self.assertIn("font-size", paragraph)
             self.assertIn("line-height", paragraph)
             self.assertIn("color", paragraph)
+        for item in re.findall(r"<li style=\"([^\"]+)\"", html):
+            self.assertIn("font-size", item)
+            self.assertIn("line-height", item)
+            self.assertIn("color", item)
         self.assertIn("#GitHub #开源项目 #程序员 #效率工具 #Markdown", html)
         self.assertNotIn("PPT。<", html)
 
@@ -917,6 +932,16 @@ class ExportWechatTest(unittest.TestCase):
             path.write_text('<!doctype html><html><body><p>缺行内样式</p></body></html>', encoding="utf-8")
             errors = export_wechat.validate_wechat_html(path)
         self.assertTrue(any("paragraph inline style" in error for error in errors))
+
+    def test_rejects_wechat_list_item_missing_inline_styles(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "broken.html"
+            path.write_text(
+                '<!doctype html><html><body><ul style="margin:0"><li>缺行内样式</li></ul></body></html>',
+                encoding="utf-8",
+            )
+            errors = export_wechat.validate_wechat_html(path)
+        self.assertTrue(any("list item inline style" in error for error in errors))
 
 
 class CopyVariantsTest(unittest.TestCase):
@@ -2041,6 +2066,7 @@ class WatcherTest(unittest.TestCase):
         root: Path,
         *,
         pattern_ok: bool = True,
+        wechat_ok: bool = True,
         variant_match: bool = True,
         frame_match: bool = True,
     ) -> Path:
@@ -2070,6 +2096,11 @@ class WatcherTest(unittest.TestCase):
             "passed_count": 10 if pattern_ok else 8,
             "total_count": 10,
             "errors": [] if pattern_ok else ["card two must be the pure overview.reader hero"],
+        }), encoding="utf-8")
+        (package / "wechat").mkdir()
+        (package / "wechat" / "wechat-qa.json").write_text(json.dumps({
+            "ok": wechat_ok,
+            "errors": [] if wechat_ok else ["paragraph inline style incomplete"],
         }), encoding="utf-8")
         (package / "title.txt").write_text("标题", encoding="utf-8")
         (package / "body.txt").write_text("这篇正文足够长，可以形成稳定的三元组指纹。", encoding="utf-8")
@@ -2197,6 +2228,28 @@ class WatcherTest(unittest.TestCase):
         self.assertFalse(published)
         self.assertEqual(record["status"], "retrying")
         self.assertIn("pattern-audit.json is not green", record["error"])
+
+    def test_rejects_failed_wechat_adapter_gate(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, wechat_ok=False)
+
+            def forbidden_publish(*args, **kwargs):
+                raise AssertionError("publisher must not run for a failed WeChat adapter gate")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = forbidden_publish
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, True,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+        self.assertFalse(published)
+        self.assertEqual(record["status"], "retrying")
+        self.assertIn("wechat-qa.json is not green", record["error"])
 
     def test_rejects_variant_id_mismatch_before_publish(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

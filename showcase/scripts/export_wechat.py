@@ -38,6 +38,19 @@ FOOTER_STYLE = (
     "font-size:13px;line-height:1.7;color:#5b6875;"
     "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"
 )
+SECTION_LABEL_STYLE = (
+    "margin:28px 0 12px;padding-top:14px;border-top:3px solid #d6482c;"
+    "font-size:17px;line-height:1.5;font-weight:700;color:#182029;"
+    "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"
+)
+LIST_STYLE = (
+    "margin:0;padding:0;list-style:none"
+)
+ITEM_STYLE = (
+    "margin:0 0 10px;padding:13px 16px;background-color:#f2f4f6;"
+    "border-top:3px solid #d6482c;font-size:16px;line-height:1.75;color:#182029;"
+    "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"
+)
 
 
 def _inline(value: str) -> str:
@@ -58,8 +71,19 @@ def render_html(metadata: dict[str, Any], story: dict[str, Any]) -> str:
         rendered_blocks.append(f'  <p style="{PARAGRAPH_STYLE}">{_inline(block)}</p>')
 
     topic_text = " ".join(f"#{str(topic).strip()}" for topic in topics if str(topic).strip())
-    angle = str(story.get("angle", "")).strip()
-    subtitle = f'  <p style="{PARAGRAPH_STYLE};font-weight:700;color:#111111">{_inline(angle)}</p>\n' if angle else ""
+    summary_hook = story.get("summary_hook", {})
+    proof_points = summary_hook.get("proof_points", []) if isinstance(summary_hook, dict) else []
+    proof_points = [str(point).strip() for point in proof_points if str(point).strip()] if isinstance(proof_points, list) else []
+    summary_block = ""
+    if len(proof_points) == 3:
+        items = "".join(
+            f'<li style="{ITEM_STYLE}">{_inline(f"{index:02d} · {point}")}</li>'
+            for index, point in enumerate(proof_points, 1)
+        )
+        summary_block = (
+            f'  <p style="{SECTION_LABEL_STYLE}">本轮可保存的三点</p>\n'
+            f'  <ul style="{LIST_STYLE}">{items}</ul>\n'
+        )
     topic_block = f'  <p style="{TOPIC_STYLE}">{html.escape(topic_text, quote=False)}</p>\n' if topic_text else ""
     footer = '  <p style="' + FOOTER_STYLE + '">GitHub 搜索 Natsummerance/readMD</p>\n'
 
@@ -69,9 +93,9 @@ def render_html(metadata: dict[str, Any], story: dict[str, Any]) -> str:
         f"<title>{html.escape(title, quote=True)}</title>\n</head>\n"
         f'<body style="{BODY_STYLE}">\n'
         f'  <h1 style="{HEADING_STYLE}">{_inline(title)}</h1>\n'
-        f"{subtitle}"
         + "\n".join(rendered_blocks)
         + ("\n" if rendered_blocks else "")
+        + summary_block
         + topic_block
         + footer
         + "</body>\n</html>\n"
@@ -99,6 +123,11 @@ def validate_wechat_html(path: Path) -> list[str]:
             style_value = style.group(1).lower() if style else ""
             if not all(key in style_value for key in ("font-size", "line-height", "color")):
                 errors.append("paragraph inline style incomplete")
+        if tag == "li":
+            style = re.search(r'style="([^"]+)"', attrs, re.I)
+            style_value = style.group(1).lower() if style else ""
+            if not all(key in style_value for key in ("font-size", "line-height", "color")):
+                errors.append("list item inline style incomplete")
 
     text = re.sub(r"<[^>]+>", "", content).strip()
     if len(text) < 100:

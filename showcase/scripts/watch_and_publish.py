@@ -211,6 +211,12 @@ def process_package(
         pattern_audit = json.loads((package_dir / "pattern-audit.json").read_text(encoding="utf-8"))
         if pattern_audit.get("ok") is not True:
             raise ValueError("package pattern-audit.json is not green")
+        wechat_qa_path = package_dir / "wechat" / "wechat-qa.json"
+        if not wechat_qa_path.exists():
+            raise ValueError("package wechat-qa.json is missing")
+        wechat_qa = json.loads(wechat_qa_path.read_text(encoding="utf-8"))
+        if wechat_qa.get("ok") is not True:
+            raise ValueError("package wechat-qa.json is not green")
         localize_image_paths(package_dir)
         release, title = package_identity(package_dir)
         previous = [item for item in state["packages"].values() if item.get("release") == release and item.get("status") == "published"]
