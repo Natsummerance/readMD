@@ -26,7 +26,7 @@ test('cover carries a real UI strip and rejects the generic feature grid', () =>
       { index: 1, file: 'xhs-01-cover.jpg', role: 'cover', shot_id: null },
       { index: 2, file: 'xhs-02-overview-reader.jpg', role: 'pure_ui_hero', shot_id: 'overview.reader', title: '软件完整主界面', caption: '打开文档就能看到完整排版、目录和公式渲染', ui_min_ratio: 0.7 },
       { index: 3, file: 'xhs-03-presentation-reveal.jpg', role: 'annotated_ui', shot_id: 'presentation.reveal', title: 'Reveal.js 演说模式放映', caption: '写完的 Markdown 能直接上台放映', ui_min_ratio: 0.55 },
-      { index: 4, file: 'xhs-04-summary.jpg', role: 'summary', shot_id: null, title: '本地 Markdown 工作台', caption: '写作、修改和放映留在同一条路径里。', ui_min_ratio: 0.3 },
+      { index: 4, file: 'xhs-04-summary.jpg', role: 'summary', shot_id: null, title: '一条放映路', caption: '写作、修改和上台共用一份文件。', proof_points: ['同一份 MD', '真实排版', '直接放映'], ui_min_ratio: 0.3 },
     ],
     shots: [
       { id: 'overview.reader', name: '软件完整主界面', role: 'pure_ui_hero' },
@@ -44,8 +44,16 @@ test('cover carries a real UI strip and rejects the generic feature grid', () =>
 
 test('summary keeps three outcomes and feature cards stay image-led', () => {
   const design = loadDesignSystem();
-  const summary = buildCardHtml({ role: 'summary', title: '总结', caption: '', shotId: 'overview.reader' }, 'data:image/png;base64,real', { design });
+  const summary = buildCardHtml({
+    role: 'summary',
+    title: '一条放映路',
+    caption: '写作、修改和上台共用一份文件。',
+    proof_points: ['同一份 MD', '真实排版', '直接放映'],
+    shotId: 'overview.reader',
+  }, 'data:image/png;base64,real', { design });
   assert.equal([...summary.matchAll(/<li/g)].length, 3);
+  assert.match(summary, /一条放映路/);
+  assert.match(summary, /直接放映/);
   const feature = buildCardHtml({ role: 'annotated_ui', title: '放映', caption: '一句话', shotId: 'overview.reader' }, 'data:image/png;base64,real', { design });
   assert.equal([...feature.matchAll(/<img\b/g)].length, 1);
   assert.doesNotMatch(feature, /class="annotation"/);

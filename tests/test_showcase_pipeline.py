@@ -109,6 +109,16 @@ class BuildStoryTest(unittest.TestCase):
                 self.assertTrue(angle.startswith("ReadMD "))
                 self.assertLessEqual(len(angle), 40)
 
+    def test_mechanism_summary_hooks_are_scannable_and_distinct(self) -> None:
+        hooks = {key: value["summary"] for key, value in copy_profiles.PROFILES.items()}
+        self.assertEqual(len(hooks), len({item["title"] for item in hooks.values()}))
+        for primary_shot, hook in hooks.items():
+            with self.subTest(primary_shot=primary_shot):
+                self.assertTrue(2 <= len(hook["title"]) <= 10)
+                self.assertTrue(8 <= len(hook["caption"]) <= 32)
+                self.assertEqual(len(hook["proof_points"]), 3)
+                self.assertTrue(all(1 <= len(point) <= 10 for point in hook["proof_points"]))
+
     def test_release_notes_select_stable_hero_and_relevant_shots(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
@@ -149,6 +159,11 @@ class BuildStoryTest(unittest.TestCase):
             story["angle"],
             "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
         )
+        self.assertEqual(story["summary_hook"], {
+            "title": "一条放映路",
+            "caption": "写作、修改和上台共用一份文件。",
+            "proof_points": ["同一份 MD", "真实排版", "直接放映"],
+        })
         plan_by_shot = {item["shot_id"]: item for item in story["card_plan"] if item["shot_id"]}
         claim_by_shot = {
             shot_id: claim["user_value"]
@@ -179,6 +194,7 @@ class BuildStoryTest(unittest.TestCase):
 
         self.assertEqual(story["primary_shot"], "overview.editor")
         self.assertEqual(story["cover_hook"]["title"], "同屏改稿")
+        self.assertEqual(story["summary_hook"]["title"], "改稿不切窗")
 
     def test_release_story_filters_assets_and_prioritizes_primary_feature(self) -> None:
         notes = """
@@ -220,6 +236,7 @@ class BuildStoryTest(unittest.TestCase):
         self.assertEqual(story["primary_shot"], "sharing.export")
         self.assertEqual(story["angle"], "ReadMD 让本地文档直接生成可控制的共享入口")
         self.assertNotEqual(story["angle"], "ReadMD 正在从 Markdown 阅读器变成完整本地文档工作台")
+        self.assertEqual(story["summary_hook"]["title"], "分享可控")
 
 
 class WriteCopyTest(unittest.TestCase):
@@ -641,6 +658,7 @@ class AuditCopyTest(unittest.TestCase):
             "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
             "primary_shot": "presentation.reveal",
             "cover_hook": {"formula_id": "#36", "title": "写完就能讲", "caption": "Markdown 直接放映，不用重做 PPT。"},
+            "summary_hook": {"title": "一条放映路", "caption": "写作、修改和上台共用一份文件。", "proof_points": ["同一份 MD", "真实排版", "直接放映"]},
             "selected_shots": ["overview.reader", "presentation.reveal"],
             "claims": [
                 {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
@@ -722,6 +740,7 @@ class PatternAuditTest(unittest.TestCase):
             "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
             "primary_shot": "presentation.reveal",
             "cover_hook": {"formula_id": "#36", "title": "写完就能讲", "caption": "Markdown 直接放映，不用重做 PPT。"},
+            "summary_hook": {"title": "一条放映路", "caption": "写作、修改和上台共用一份文件。", "proof_points": ["同一份 MD", "真实排版", "直接放映"]},
             "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
             "claims": [
                 {"id": "reader", "user_value": "打开文档就能看到完整排版、目录和公式渲染", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
@@ -733,7 +752,7 @@ class PatternAuditTest(unittest.TestCase):
                 {"index": 2, "file": "hero.jpg", "role": "pure_ui_hero", "shot_id": "overview.reader", "caption": "打开文档就能看到完整排版、目录和公式渲染", "ui_min_ratio": 0.7},
                 {"index": 3, "file": "reveal.jpg", "role": "annotated_ui", "shot_id": "presentation.reveal", "caption": "写完的 Markdown 能直接上台放映，代码、表格和公式不会被切片", "ui_min_ratio": 0.55},
                 {"index": 4, "file": "editor.jpg", "role": "annotated_ui", "shot_id": "overview.editor", "caption": "讲稿和源文件在同一处修改，预览不会跑偏", "ui_min_ratio": 0.55},
-                {"index": 5, "file": "summary.jpg", "role": "summary", "shot_id": None, "ui_min_ratio": 0.3},
+                {"index": 5, "file": "summary.jpg", "role": "summary", "shot_id": None, "title": "一条放映路", "caption": "写作、修改和上台共用一份文件。", "proof_points": ["同一份 MD", "真实排版", "直接放映"], "ui_min_ratio": 0.3},
             ],
         }
         metadata = {
@@ -747,6 +766,7 @@ class PatternAuditTest(unittest.TestCase):
                 "你会先拿哪一份 Markdown 试放映？"
             ),
         }
+
         def card(file: str, role: str, area: float, minimum: float) -> dict:
             return {
                 "file": file,
@@ -822,6 +842,21 @@ class PatternAuditTest(unittest.TestCase):
         self.assertFalse(report["ok"])
         focus = next(item for item in report["patterns"] if item["id"] == "single-primary-feature")
         self.assertFalse(focus["ok"])
+
+    def test_summary_hook_must_match_release_mechanism(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            story, metadata, composition = self.make_inputs()
+            story["summary_hook"] = {
+                "title": "本地 Markdown 工作台",
+                "caption": "阅读、编辑、转换、学术排版与共享在同一处完成。",
+                "proof_points": ["阅读与编辑", "转换与学术排版", "演示与移动共享"],
+            }
+            self.write_package(package, story, metadata, composition)
+            report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
+        self.assertFalse(report["ok"])
+        series = next(item for item in report["patterns"] if item["id"] == "consistent-series-lock")
+        self.assertFalse(series["ok"])
 
     def test_broken_hero_and_generic_voice_fail_hard(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

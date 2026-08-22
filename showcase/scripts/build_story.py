@@ -107,6 +107,10 @@ def build_story(
     primary_shot = relevant_features[0] if relevant_features else "overview.editor"
     mechanism_profile = profile_for_story({"primary_shot": primary_shot})
     cover_hook = dict(mechanism_profile["cover"])
+    summary_hook = {
+        **mechanism_profile["summary"],
+        "proof_points": list(mechanism_profile["summary"]["proof_points"]),
+    }
     selected = list(dict.fromkeys(["overview.reader"] + relevant_features + fixed_order[1:]))
 
     claims: list[dict[str, Any]] = []
@@ -168,8 +172,9 @@ def build_story(
             "file": _card_name(len(card_plan) + 1, None, "summary"),
             "role": "summary",
             "shot_id": selected[0],
-            "title": "本地 Markdown 工作台",
-            "caption": "阅读、编辑、转换、学术排版与共享在同一处完成。",
+            "title": summary_hook["title"],
+            "caption": summary_hook["caption"],
+            "proof_points": summary_hook["proof_points"],
             "ui_min_ratio": 0.30,
         }
     )
@@ -182,6 +187,7 @@ def build_story(
         "angle": angle,
         "primary_shot": primary_shot,
         "cover_hook": cover_hook,
+        "summary_hook": summary_hook,
         "narrative_angle": angle,
         "selected_shots": selected,
         "shots": [shots[shot_id] for shot_id in selected],

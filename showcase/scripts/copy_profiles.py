@@ -174,6 +174,11 @@ PROFILES: dict[str, dict[str, Any]] = {
             "title": "同屏改稿",
             "caption": "改完立刻看到排版，不用切窗口。",
         },
+        "summary": {
+            "title": "改稿不切窗",
+            "caption": "源稿和预览留在同一屏。",
+            "proof_points": ["同屏预览", "本地源文件", "少一次切换"],
+        },
         "cta": "你会先用哪份 Markdown 同屏修改？课程讲义、技术笔记还是项目说明？",
         "hook_contract": {
             "task": ["改", "窗口", "格式"],
@@ -207,6 +212,11 @@ PROFILES: dict[str, dict[str, Any]] = {
             "formula_id": "#36",
             "title": "写完就能讲",
             "caption": "Markdown 直接放映，不用重做 PPT。",
+        },
+        "summary": {
+            "title": "一条放映路",
+            "caption": "写作、修改和上台共用一份文件。",
+            "proof_points": ["同一份 MD", "真实排版", "直接放映"],
         },
         "cta": "你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。",
         "hook_contract": {
@@ -243,6 +253,11 @@ PROFILES: dict[str, dict[str, Any]] = {
             "title": "图表直接选",
             "caption": "科研图从面板进入 Markdown，不背语法。",
         },
+        "summary": {
+            "title": "图随文稿走",
+            "caption": "科研图表留在可维护的 Markdown 里。",
+            "proof_points": ["面板选图", "源码可改", "渲染留档"],
+        },
         "cta": "你会先给论文里的哪类内容画图？流程、架构还是时序？评论区说说场景。",
         "hook_contract": {
             "task": ["图表", "语法", "画"],
@@ -276,6 +291,11 @@ PROFILES: dict[str, dict[str, Any]] = {
             "formula_id": "#36",
             "title": "公式不走样",
             "caption": "LaTeX 和引用留在同一条工作流。",
+        },
+        "summary": {
+            "title": "论文级排版",
+            "caption": "公式、定理和引用在同一处维护。",
+            "proof_points": ["LaTeX", "定理盒子", "文献引用"],
         },
         "cta": "你下一份要处理的是课程讲义还是论文？评论区说说公式场景。",
         "hook_contract": {
@@ -311,6 +331,11 @@ PROFILES: dict[str, dict[str, Any]] = {
             "title": "代码就地跑",
             "caption": "教程里的示例能运行，读者能复现。",
         },
+        "summary": {
+            "title": "能跑的教程",
+            "caption": "代码、结果和说明留在同一段。",
+            "proof_points": ["就地运行", "保留输出", "读者复现"],
+        },
         "cta": "你会先验证哪段代码？配置脚本、算法示例还是数据处理？评论区挑一个。",
         "hook_contract": {
             "task": ["教程", "代码", "验证"],
@@ -345,6 +370,11 @@ PROFILES: dict[str, dict[str, Any]] = {
             "title": "资料进工作台",
             "caption": "网页、PDF 和 Word 收进同一个入口。",
         },
+        "summary": {
+            "title": "资料一处收",
+            "caption": "网页和文档进入同一条本地流程。",
+            "proof_points": ["网页/PDF", "Word 文档", "本地工作台"],
+        },
         "cta": "你会先把网页、PDF 还是 Word 收进来？评论区说说整理场景。",
         "hook_contract": {
             "task": ["网页", "Word", "PDF", "资料"],
@@ -378,6 +408,11 @@ PROFILES: dict[str, dict[str, Any]] = {
             "formula_id": "#36",
             "title": "文档到手机",
             "caption": "本地文档生成共享入口，不用再导出副本。",
+        },
+        "summary": {
+            "title": "分享可控",
+            "caption": "当前文档可以发给手机，也能停止。",
+            "proof_points": ["扫码入口", "随机令牌", "随时停用"],
         },
         "cta": "你会先分享哪份 Markdown？讲义、报告还是长笔记？",
         "hook_contract": {

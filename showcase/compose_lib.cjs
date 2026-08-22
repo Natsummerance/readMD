@@ -53,6 +53,17 @@ function plannedFeatureCard(story, shot) {
   };
 }
 
+function summaryProofPoints(summaryPlan) {
+  const points = Array.isArray(summaryPlan.proof_points) ? summaryPlan.proof_points : [];
+  if (points.length !== 3 || points.some((point) => !String(point || '').trim())) {
+    throw new Error('Summary card must show exactly three non-empty proof points');
+  }
+  if (points.some((point) => String(point).trim().length > 10)) {
+    throw new Error('Summary proof points must stay scannable on a three-column card');
+  }
+  return points.map((point) => String(point).trim());
+}
+
 function planCards(story) {
   const hook = coverHook(story);
   const plans = story.card_plan || [];
@@ -74,7 +85,9 @@ function planCards(story) {
   }
   const summaryTitle = String(summaryPlan.title || '').trim();
   const summaryCaption = String(summaryPlan.caption || '').trim();
-  if (summaryTitle.length < 2 || summaryCaption.length < 8) throw new Error('Summary card needs concise reusable copy');
+  if (summaryTitle.length < 2 || summaryTitle.length > 10) throw new Error('Summary title must contain 2-10 characters');
+  if (summaryCaption.length < 8 || summaryCaption.length > 32) throw new Error('Summary caption must contain 8-32 characters');
+  const proofPoints = summaryProofPoints(summaryPlan);
   cards.push({
     index: cards.length + 1,
     file: summaryPlan.file,
@@ -82,6 +95,7 @@ function planCards(story) {
     shotId: summaryPlan.shot_id || story.selected_shots[0],
     title: summaryTitle,
     caption: summaryCaption,
+    proof_points: proofPoints,
     uiMinRatio: Number(summaryPlan.ui_min_ratio),
   });
   if (cards.length < 4 || cards.length > 9) throw new Error(`Card count must be between 4 and 9, got ${cards.length}`);
@@ -124,7 +138,7 @@ function buildCardHtml(card, source, context = {}) {
       <main class="summary">
         <header class="feature-head"><h2>${title}</h2><p>${caption}</p></header>
         <img src="${source}" alt="ReadMD 真实界面"/>
-        <ul><li>阅读与编辑</li><li>转换与学术排版</li><li>演示与移动共享</li></ul>
+        <ul>${(card.proof_points || []).map((point) => `<li>${escapeHtml(point)}</li>`).join('')}</ul>
         <footer class="proof-foot"><span>ReadMD ${release}</span><strong>GitHub 搜 Natsummerance/readMD</strong></footer>
       </main>`;
   } else if (card.role === 'pure_ui_hero') {
@@ -168,7 +182,7 @@ function buildCardHtml(card, source, context = {}) {
   .hero img{height:auto;flex:1}
   .hero-proof{padding:0}
   .summary ul{list-style:none;display:flex;gap:18px}
-  .summary li{flex:1;background:${design.palette.surface};border:1px solid ${design.palette.line};border-left:4px solid ${design.palette.accent};border-radius:${design.layout.radius}px;padding:20px 22px;font-size:25px;line-height:1.3;color:${design.palette.ink}}
+  .summary li{flex:1;background:${design.palette.surface};border-top:3px solid ${design.palette.accent};border-radius:${design.layout.radius}px;padding:20px 22px;font-size:25px;line-height:1.3;color:${design.palette.ink}}
 </style>${body}`;
 }
 

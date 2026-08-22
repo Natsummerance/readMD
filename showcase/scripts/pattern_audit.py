@@ -75,8 +75,10 @@ def audit_patterns(
     lower_body = body.lower()
     mechanism_profile = profile_for_story(story)
     expected_cover = mechanism_profile.get("cover", {})
+    expected_summary = mechanism_profile.get("summary", {})
     expected_angle = mechanism_profile.get("narrative_angle", "")
     cover_hook = story.get("cover_hook", {})
+    summary_hook = story.get("summary_hook", {})
     reader_values = {
         shot_id: str(claim.get("user_value", ""))
         for claim in story.get("claims", [])
@@ -138,7 +140,14 @@ def audit_patterns(
     clean_design = not composition.get("overflow_errors") and all(
         not design.get(key) for key in ("contrast_errors", "small_text", "images_failed")
     )
-    series_ok = clean_design and 4 <= len(cards) <= 9
+    summary_keys = ("title", "caption", "proof_points")
+    summary_hook_ok = all(summary_hook.get(key) == expected_summary.get(key) for key in summary_keys)
+    summary_plan = next((item for item in plan if item.get("role") == "summary"), {})
+    summary_contract_ok = summary_hook_ok and all(
+        summary_plan.get(key) == summary_hook.get(key)
+        for key in summary_keys
+    )
+    series_ok = clean_design and 4 <= len(cards) <= 9 and summary_contract_ok
     anti_ppt_ok = clean_design and all(_area_ok(card) for card in cards)
 
     checks = {
@@ -200,8 +209,11 @@ def audit_patterns(
         "consistent-series-lock": _result(
             "consistent-series-lock",
             series_ok,
-            ["DOM overflow and contrast audits are clean"],
-            ["the package needs four to nine cards and clean shared design audits"],
+            [
+                "DOM overflow and contrast audits are clean",
+                f"summary hook {summary_hook.get('title', '')}",
+            ],
+            ["the package needs four to nine cards, clean design audits, and a mechanism-aligned summary contract"],
         ),
         "anti-ppt-layout": _result(
             "anti-ppt-layout",
