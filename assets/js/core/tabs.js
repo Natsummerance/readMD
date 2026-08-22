@@ -62,6 +62,7 @@ function renderTabsBar() {
     el.dataset.tabId = tab.id;
     el.setAttribute('role', 'tab');
     el.setAttribute('aria-selected', tab.id === state.activeTabId ? 'true' : 'false');
+    el.setAttribute('aria-keyshortcuts', 'Delete Backspace');
     el.tabIndex = tab.id === state.activeTabId ? 0 : -1;
     el.draggable = true;
     el.title = tab.path || tab.title || tab.name;
@@ -71,6 +72,8 @@ function renderTabsBar() {
       const dot = document.createElement('span');
       dot.className = 'tab-dirty';
       dot.title = _t('tabs.dirty') || '未保存';
+      dot.setAttribute('aria-hidden', 'true');
+      el.setAttribute('aria-description', _t('tabs.dirty') || '未保存');
       el.appendChild(dot);
     }
 
@@ -200,6 +203,14 @@ function renderTabsBar() {
   }
 }
 
+function focusVisibleTab(tabId) {
+  requestAnimationFrame(() => {
+    const matches = Array.from(document.querySelectorAll(`[data-tab-id="${CSS.escape(tabId)}"]`));
+    const next = matches.find(item => item.offsetParent !== null) || matches[0];
+    if (next && document.activeElement !== next) next.focus({ preventScroll: true });
+  });
+}
+
 function moveTabFocus(activeTabId, key) {
   const index = state.tabs.findIndex(tab => tab.id === activeTabId);
   if (index < 0) return;
@@ -211,13 +222,7 @@ function moveTabFocus(activeTabId, key) {
   else if (key === 'End') target = last;
   if (target === index) return;
   const targetId = state.tabs[target].id;
-  switchTab(targetId).then(() => {
-    requestAnimationFrame(() => {
-      const matches = Array.from(document.querySelectorAll(`[data-tab-id="${CSS.escape(targetId)}"]`));
-      const next = matches.find(item => item.offsetParent !== null) || matches[0];
-      if (next && document.activeElement !== next) next.focus({ preventScroll: true });
-    });
-  });
+  switchTab(targetId).then(() => focusVisibleTab(targetId));
 }
 
 function startTabInlineRename(tab, titleSpan, tabEl) {
@@ -485,17 +490,23 @@ async function closeTab(tabId, force = false) {
     }
   }
   const idx = state.tabs.findIndex(t => t.id === tabId);
+  const focusedTabId = document.activeElement instanceof Element ? document.activeElement.dataset.tabId : null;
   state.tabs.splice(idx, 1);
   if (state.activeTabId === tabId) {
     if (state.tabs.length > 0) {
       const nextIdx = Math.min(idx, state.tabs.length - 1);
-      switchTab(state.tabs[nextIdx].id);
+      const nextTabId = state.tabs[nextIdx].id;
+      switchTab(nextTabId).then(() => focusVisibleTab(nextTabId));
     } else {
       state.activeTabId = null;
       goHome();
     }
   }
   renderTabsBar();
+  if (focusedTabId === tabId) {
+    const fallbackTab = state.tabs[Math.min(idx, state.tabs.length - 1)];
+    focusVisibleTab(fallbackTab ? fallbackTab.id : state.activeTabId);
+  }
 }
 
 async function closeOtherTabs(keepTabId) {

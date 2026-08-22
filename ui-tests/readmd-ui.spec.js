@@ -871,6 +871,7 @@ test('canceling a dirty editor asks before discarding changes', async ({ page })
   await setEditorContent(page, '# changed');
   await page.waitForFunction(() => hasUnsavedEditorChanges());
   await expect(page.locator('#doc-tabs-bar .tab-item').first().locator('.tab-dirty')).toBeVisible();
+  await expect(page.locator('#doc-tabs-bar .tab-item').first()).toHaveAttribute('aria-description', /未保存|unsaved/i);
   await page.locator('#edit-cancel').click();
   await expect(page.locator('#close-confirm-modal')).toBeVisible();
   await expect(page.locator('#close-confirm-cancel')).toBeFocused();
@@ -976,6 +977,27 @@ test('saving a dirty background tab does not mark a clean active tab dirty', asy
   await expect.poll(() => saves).toEqual([expect.objectContaining({ path: 'C:/two.md', content: '# two changed' })]);
   await page.waitForFunction(() => state.tabs.length === 1 && state.tabs[0].id === 'one');
   expect(await page.evaluate(() => Boolean(getActiveTab().isDirty))).toBe(false);
+});
+
+test('keyboard delete closes a tab and restores visible tab focus', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderTabsBar === 'function');
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'one', title: 'one.md', name: 'one.md', content: '# one' },
+      { id: 'two', title: 'two.md', name: 'two.md', content: '# two' },
+      { id: 'three', title: 'three.md', name: 'three.md', content: '# three' },
+    ];
+    state.activeTabId = 'one';
+    renderTabsBar();
+  });
+  const activeTab = page.locator('#doc-tabs-bar .tab-item').nth(1);
+  await activeTab.focus();
+  await expect(activeTab.locator('.tab-close')).toHaveAttribute('tabindex', '-1');
+  await expect(activeTab).toHaveAttribute('aria-keyshortcuts', 'Delete Backspace');
+  await page.keyboard.press('Delete');
+  await page.waitForFunction(() => state.tabs.length === 2 && state.activeTabId === 'one');
+  await expect(page.locator('#doc-tabs-bar [data-tab-id="three"]')).toBeFocused();
 });
 
 test('auto reload does not overwrite an active editor', async ({ page }) => {
