@@ -1053,6 +1053,18 @@ test('saving refreshes the existing tab with new content', async ({ page }) => {
   await page.waitForFunction(() => getActiveTab() && getActiveTab().original === '# updated');
 });
 
+test('search highlights a term spanning adjacent inline elements', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderVirtual === 'function');
+  await page.evaluate(async () => {
+    await renderVirtual('clipboard', 'inline.md', '', 'Before read<span>me</span> after', []);
+  });
+  await page.locator('#btn-search').click();
+  await page.locator('#search-input').fill('readme');
+  await expect(page.locator('#search-count')).toHaveText('1/1');
+  await expect(page.locator('#content mark.hl')).toHaveText('readme');
+});
+
 test('core workflow controls satisfy accessibility contracts', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => typeof renderTabsBar === 'function');

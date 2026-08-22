@@ -39,6 +39,7 @@ function renderTabsBar() {
   const dropdown = $('doc-tabs-dropdown');
   const overflowWrap = $('doc-tabs-overflow-wrap');
   const btnHome = $('btn-home');
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
 
   if (state.tabs.length === 0) {
     if (bar) bar.innerHTML = '';
@@ -66,7 +67,6 @@ function renderTabsBar() {
     el.tabIndex = tab.id === state.activeTabId ? 0 : -1;
     el.draggable = true;
 
-    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     el.title = `${tab.path || tab.title || tab.name} (${_t('tabs.closeTab')}: Delete)`;
     if (tab.isDirty) {
       const dot = document.createElement('span');

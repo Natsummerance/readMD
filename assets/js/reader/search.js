@@ -35,6 +35,55 @@ function pageSearchText(page) {
   return page.searchText;
 }
 
+function highlightTextMatches(body, query) {
+  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+    acceptNode: node => {
+      const parent = node.parentNode;
+      if (!parent || parent.nodeName === 'SCRIPT' || parent.nodeName === 'STYLE') return NodeFilter.FILTER_REJECT;
+      if (parent.nodeName === 'MARK' && parent.classList.contains('hl')) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  const nodes = [];
+  let node;
+  while ((node = walker.nextNode())) nodes.push(node);
+  const segments = nodes.map(textNode => textNode.textContent);
+  const haystack = segments.join('').toLowerCase();
+  const needle = query.toLowerCase();
+  if (!needle) return;
+
+  const positionAt = offset => {
+    for (let index = 0; index < nodes.length; index += 1) {
+      const length = segments[index].length;
+      if (offset <= length) return { node: nodes[index], start: offset };
+      offset -= length;
+    }
+    return null;
+  };
+
+  const ranges = [];
+  let position = haystack.indexOf(needle);
+  while (position !== -1) {
+    const start = positionAt(position);
+    const end = positionAt(position + needle.length);
+    if (!start || !end) break;
+    const range = document.createRange();
+    range.setStart(start.node, start.start);
+    range.setEnd(end.node, end.start);
+    ranges.push(range);
+    position = haystack.indexOf(needle, position + needle.length);
+  }
+
+  for (let index = ranges.length - 1; index >= 0; index -= 1) {
+    const range = ranges[index];
+    const mark = document.createElement('mark');
+    mark.className = 'hl';
+    mark.appendChild(range.extractContents());
+    range.insertNode(mark);
+    state.currentMarks.unshift(mark);
+  }
+}
+
 function doSearch(q, jumpToIdx) {
   clearMarks();
   state.lastQuery = q;
@@ -68,35 +117,7 @@ function doSearch(q, jumpToIdx) {
   // 2. 在当前页 DOM 中生成实际的高亮 mark 标签
   const body = document.querySelector('#content .markdown-body');
   if (!body) return;
-  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
-    acceptNode: n => {
-      const p = n.parentNode;
-      if (!p || p.tagName === 'SCRIPT' || p.tagName === 'STYLE') return NodeFilter.FILTER_REJECT;
-      if (p.tagName === 'MARK' && p.classList.contains('hl')) return NodeFilter.FILTER_REJECT;
-      return n.textContent.toLowerCase().includes(q.toLowerCase()) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-    },
-  });
-  const nodes = [];
-  let node;
-  while ((node = walker.nextNode())) nodes.push(node);
-  nodes.forEach(n => {
-    const text = n.textContent;
-    const lower = text.toLowerCase();
-    const ql = q.toLowerCase();
-    const frag = document.createDocumentFragment();
-    let i = 0, idx;
-    while ((idx = lower.indexOf(ql, i)) !== -1) {
-      if (idx > i) frag.appendChild(document.createTextNode(text.slice(i, idx)));
-      const mark = document.createElement('mark');
-      mark.className = 'hl';
-      mark.textContent = text.slice(idx, idx + q.length);
-      frag.appendChild(mark);
-      state.currentMarks.push(mark);
-      i = idx + q.length;
-    }
-    if (i < text.length) frag.appendChild(document.createTextNode(text.slice(i)));
-    n.parentNode.replaceChild(frag, n);
-  });
+  highlightTextMatches(body, q);
 
   updateSearchCount();
 
