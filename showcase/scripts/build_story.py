@@ -87,6 +87,7 @@ def build_story(
     notes: str,
     diff: str = "",
     shot_library_path: Path,
+    notes_source: str = "release/release_notes.md",
 ) -> dict[str, Any]:
     shots = load_shot_library(Path(shot_library_path))
     evidence_text = "\n".join((notes, diff))
@@ -114,7 +115,7 @@ def build_story(
     claims: list[dict[str, Any]] = []
     for shot_id in selected:
         shot = shots[shot_id]
-        sources = list(dict.fromkeys(shot.get("evidence", []) + (["release/release_notes.md"] if shot_id in relevant_features else [])))
+        sources = list(dict.fromkeys(shot.get("evidence", []) + ([notes_source] if shot_id in relevant_features else [])))
         claims.append(
             {
                 "id": shot_id.replace(".", "-"),
@@ -132,7 +133,7 @@ def build_story(
                 "id": f"invisible-{index}",
                 "user_value": fix,
                 "shot_ids": [],
-                "sources": ["release/release_notes.md"],
+                "sources": [notes_source],
                 "kind": "invisible",
             }
         )

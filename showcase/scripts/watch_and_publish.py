@@ -17,6 +17,7 @@ from typing import Any
 
 from content_memory import load_records, upsert_record
 from copy_variants import text_fingerprints, text_trigrams
+from package_content import validate_release_evidence
 
 DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
 STATE_VERSION = 1
@@ -217,6 +218,7 @@ def process_package(
         wechat_qa = json.loads(wechat_qa_path.read_text(encoding="utf-8"))
         if wechat_qa.get("ok") is not True:
             raise ValueError("package wechat-qa.json is not green")
+        validate_release_evidence(package_dir)
         localize_image_paths(package_dir)
         release, title = package_identity(package_dir)
         previous = [item for item in state["packages"].values() if item.get("release") == release and item.get("status") == "published"]

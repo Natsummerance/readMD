@@ -25,10 +25,61 @@ REQUIRED_FILES = (
     "dashboard-qa.json",
     "performance-report.json",
     "review-dashboard.html",
+    "evidence/release-notes.md",
+    "evidence/release.diff",
+    "evidence/evidence-manifest.json",
     "raw/capture.json",
     "wechat/readmd-wechat.html",
     "wechat/wechat-qa.json",
 )
+EVIDENCE_ARTIFACTS = ("release-notes.md", "release.diff")
+
+
+def _sha256(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def validate_release_evidence(package_dir: Path) -> None:
+    """Verify that packaged claims point to immutable release snapshots."""
+    package_dir = package_dir.resolve()
+    manifest_path = package_dir / "evidence" / "evidence-manifest.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise ValueError(f"evidence manifest unreadable: {exc}") from exc
+
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, dict) or set(artifacts) != set(EVIDENCE_ARTIFACTS):
+        expected = ", ".join(EVIDENCE_ARTIFACTS)
+        raise ValueError(f"evidence manifest must contain exactly: {expected}")
+
+    for filename, artifact in artifacts.items():
+        if not isinstance(artifact, dict) or artifact.get("path") != f"evidence/{filename}":
+            raise ValueError(f"evidence path mismatch: {filename}")
+        path = package_dir / "evidence" / filename
+        if not path.is_file():
+            raise ValueError(f"evidence snapshot missing: {filename}")
+        payload = path.read_bytes()
+        if len(payload) != int(artifact.get("bytes", -1)):
+            raise ValueError(f"evidence byte count mismatch: {filename}")
+        if _sha256(payload) != artifact.get("sha256"):
+            raise ValueError(f"evidence sha256 mismatch: {filename}")
+
+    story = json.loads((package_dir / "story.json").read_text(encoding="utf-8"))
+    referenced = [
+        source
+        for claim in story.get("claims", [])
+        for source in claim.get("sources", [])
+        if str(source).startswith("evidence/")
+    ]
+    evidence_root = (package_dir / "evidence").resolve()
+    missing = []
+    for source in referenced:
+        resolved = (package_dir / source).resolve()
+        if not resolved.is_relative_to(evidence_root) or not resolved.is_file():
+            missing.append(source)
+    if missing:
+        raise ValueError("packaged evidence references are missing: " + ", ".join(sorted(missing)))
 
 
 def _relative_files(package_dir: Path) -> list[Path]:
@@ -50,6 +101,7 @@ def package_content(package_dir: Path, output: Path) -> dict[str, object]:
     qa = json.loads((package_dir / "qa.json").read_text(encoding="utf-8"))
     if qa.get("ok") is not True:
         raise ValueError("refusing to package red QA: " + "; ".join(map(str, qa.get("errors", []))))
+    validate_release_evidence(package_dir)
 
     images = list((package_dir / "images").glob("*.jpg"))
     raw_shots = list((package_dir / "raw").glob("*.png"))

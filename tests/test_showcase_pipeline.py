@@ -254,6 +254,20 @@ class BuildStoryTest(unittest.TestCase):
         self.assertEqual(story["primary_shot"], "editor.diagram-picker")
         self.assertEqual(story["angle"], "ReadMD 把科研图表放进同一条 Markdown 工作流")
 
+    def test_claims_can_target_packaged_release_snapshot(self) -> None:
+        notes = "- Reveal.js 演示\n"
+        story = build_story.build_story(
+            release="v9.9.9",
+            previous_release="v9.9.8",
+            notes=notes,
+            shot_library_path=ROOT / "showcase" / "shot_library.json",
+            notes_source="evidence/release-notes.md",
+        )
+        reveal_claim = next(item for item in story["claims"] if item["id"] == "presentation-reveal")
+        invisible_claim = story["claims"][-1]
+        self.assertIn("evidence/release-notes.md", reveal_claim["sources"])
+        self.assertEqual(invisible_claim["sources"], ["evidence/release-notes.md"])
+
 
 class WriteCopyTest(unittest.TestCase):
     def test_mechanism_cover_hooks_are_short_unique_and_traceable(self) -> None:
@@ -1448,6 +1462,9 @@ class PackageContentTest(unittest.TestCase):
             "dashboard-qa.json",
             "performance-report.json",
             "review-dashboard.html",
+            "evidence/release-notes.md",
+            "evidence/release.diff",
+            "evidence/evidence-manifest.json",
             "wechat/readmd-wechat.html",
             "wechat/wechat-qa.json",
         ):
@@ -1455,6 +1472,18 @@ class PackageContentTest(unittest.TestCase):
             path.parent.mkdir(parents=True, exist_ok=True)
             value = {"ok": True} if name.endswith(".json") else f"{name}\n"
             path.write_text(json.dumps(value, ensure_ascii=False) if isinstance(value, dict) else value, encoding="utf-8")
+        manifest = {"schema_version": 1, "artifacts": {}}
+        for filename in ("release-notes.md", "release.diff"):
+            payload = (package / "evidence" / filename).read_bytes()
+            manifest["artifacts"][filename] = {
+                "path": f"evidence/{filename}",
+                "bytes": len(payload),
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            }
+        (package / "evidence" / "evidence-manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
         return package
 
     def test_packages_complete_relative_contract_for_watcher(self) -> None:
@@ -1467,6 +1496,7 @@ class PackageContentTest(unittest.TestCase):
 
         required = {
             "story.json", "metadata.json", "copy-review.json", "pattern-audit.json",
+            "evidence/release-notes.md", "evidence/release.diff", "evidence/evidence-manifest.json",
             "dashboard-qa.json", "review-dashboard.html", "wechat/wechat-qa.json",
             "raw/capture.json", "raw/overview-reader.png", "images/xhs-01-cover.jpg",
         }
@@ -1489,6 +1519,29 @@ class PackageContentTest(unittest.TestCase):
             (package / "qa.json").write_text(json.dumps({"ok": False, "errors": ["broken"]}), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "refusing to package red QA"):
                 package_content.package_content(package, Path(tmp) / "red.zip")
+
+    def test_rejects_tampered_release_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = self.make_package(Path(tmp))
+            evidence_path = package / "evidence" / "release.diff"
+            evidence_path.write_bytes(b"x" * evidence_path.stat().st_size)
+            with self.assertRaisesRegex(ValueError, "evidence sha256 mismatch: release.diff"):
+                package_content.package_content(package, Path(tmp) / "tampered.zip")
+
+    def test_rejects_missing_claim_evidence_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = self.make_package(Path(tmp))
+            story = json.loads((package / "story.json").read_text(encoding="utf-8"))
+            story["claims"] = [{
+                "id": "broken",
+                "user_value": "无法追溯的修复",
+                "shot_ids": [],
+                "sources": ["evidence/missing.md"],
+                "kind": "invisible",
+            }]
+            (package / "story.json").write_text(json.dumps(story, ensure_ascii=False), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "packaged evidence references are missing"):
+                package_content.package_content(package, Path(tmp) / "missing-evidence.zip")
 
 
 class BuildPipelineTest(unittest.TestCase):
@@ -1546,10 +1599,18 @@ class BuildPipelineTest(unittest.TestCase):
                 build_package_module.performance_report.generate_report = original_report
 
             persisted = json.loads((package / "story.json").read_text(encoding="utf-8"))
-        self.assertEqual(metadata["title_formula_id"], "#22")
-        self.assertEqual(story["cover_hook"]["formula_id"], "#22")
-        self.assertEqual(persisted["cover_hook"]["title"], "上台讲文档的人")
-        self.assertEqual(persisted["card_plan"][0]["title"], "上台讲文档的人")
+            self.assertEqual(metadata["title_formula_id"], "#22")
+            self.assertEqual(story["cover_hook"]["formula_id"], "#22")
+            self.assertEqual(persisted["cover_hook"]["title"], "上台讲文档的人")
+            self.assertEqual(persisted["card_plan"][0]["title"], "上台讲文档的人")
+            self.assertTrue((package / "evidence" / "release-notes.md").is_file())
+            self.assertTrue((package / "evidence" / "release.diff").is_file())
+            manifest = json.loads((package / "evidence" / "evidence-manifest.json").read_text(encoding="utf-8"))
+            notes_artifact = manifest["artifacts"]["release-notes.md"]
+            self.assertEqual(notes_artifact["path"], "evidence/release-notes.md")
+            self.assertEqual(notes_artifact["bytes"], len(notes.read_text(encoding="utf-8").encode("utf-8")))
+            reveal_claim = next(item for item in persisted["claims"] if item["id"] == "presentation-reveal")
+            self.assertEqual(reveal_claim["sources"][-1], "evidence/release-notes.md")
 
     def test_dashboard_failure_turns_aggregate_qa_red(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2383,6 +2444,21 @@ class WatcherTest(unittest.TestCase):
         (package / "topics.txt").write_text("GitHub\n开源项目\n程序员\n效率工具\nMarkdown", encoding="utf-8")
         (package / "composition.json").write_text(json.dumps({"schema_version": 1, "cards": []}), encoding="utf-8")
         (package / "review-dashboard.html").write_text("<!doctype html><main>preflight</main>", encoding="utf-8")
+        (package / "evidence").mkdir()
+        (package / "evidence" / "release-notes.md").write_text("# Release\n", encoding="utf-8")
+        (package / "evidence" / "release.diff").write_text("diff --git a/a b/a\n", encoding="utf-8")
+        evidence_manifest = {"schema_version": 1, "artifacts": {}}
+        for filename in ("release-notes.md", "release.diff"):
+            payload = (package / "evidence" / filename).read_bytes()
+            evidence_manifest["artifacts"][filename] = {
+                "path": f"evidence/{filename}",
+                "bytes": len(payload),
+                "sha256": hashlib.sha256(payload).hexdigest(),
+            }
+        (package / "evidence" / "evidence-manifest.json").write_text(
+            json.dumps(evidence_manifest, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
         (package / "wechat" / "readmd-wechat.html").write_text("<p style=\"font-size:16px;line-height:1.75;color:#111\">article</p>", encoding="utf-8")
         metadata = {
             "title": "标题",
@@ -2538,6 +2614,36 @@ class WatcherTest(unittest.TestCase):
         self.assertFalse(published)
         self.assertEqual(record["status"], "retrying")
         self.assertIn("wechat-qa.json is not green", record["error"])
+
+    def test_rejects_tampered_release_evidence_before_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            extracted = root / "extracted"
+            watch_and_publish.safe_extract(zip_path, extracted)
+            evidence_path = extracted / "evidence" / "release.diff"
+            evidence_path.write_bytes(b"x" * evidence_path.stat().st_size)
+            tampered_zip = root / "tampered.zip"
+            with zipfile.ZipFile(tampered_zip, "w") as archive:
+                for file in extracted.rglob("*"):
+                    if file.is_file():
+                        archive.write(file, file.relative_to(extracted).as_posix())
+
+            def forbidden_publish(*args, **kwargs):
+                raise AssertionError("publisher must not run for tampered release evidence")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = forbidden_publish
+            try:
+                published = watch_and_publish.process_package(
+                    tampered_zip, root / "work", root / "state.json", Path("publisher.py"), 3, True,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+        self.assertFalse(published)
+        self.assertIn("evidence sha256 mismatch: release.diff", record["error"])
 
     def test_rejects_variant_id_mismatch_before_publish(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

@@ -4,9 +4,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from audit_copy import audit_package
 from content_memory import load_learning_records, load_records
@@ -18,6 +20,27 @@ import performance_report
 import review_dashboard
 from validate_package import validate_package
 from write_copy import generate_copy
+
+
+def _write_release_evidence(package_dir: Path, notes_text: str, diff_text: str) -> dict[str, Any]:
+    """Snapshot the exact release evidence used by this build."""
+    evidence_dir = package_dir / "evidence"
+    evidence_dir.mkdir(parents=True, exist_ok=True)
+    manifest: dict[str, Any] = {"schema_version": 1, "artifacts": {}}
+    for filename, text in (("release-notes.md", notes_text), ("release.diff", diff_text)):
+        relative = f"evidence/{filename}"
+        payload = text.encode("utf-8")
+        (package_dir / relative).write_bytes(payload)
+        manifest["artifacts"][filename] = {
+            "path": relative,
+            "bytes": len(payload),
+            "sha256": hashlib.sha256(payload).hexdigest(),
+        }
+    (evidence_dir / "evidence-manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return manifest
 
 
 def build_package(
@@ -33,13 +56,16 @@ def build_package(
 ) -> tuple[dict, dict]:
     package_dir.mkdir(parents=True, exist_ok=True)
     (package_dir / "images").mkdir(exist_ok=True)
+    evidence_manifest = _write_release_evidence(package_dir, notes_text, diff_text)
     story = build_story(
         release=release,
         previous_release=previous_release,
         notes=notes_text,
         diff=diff_text,
         shot_library_path=repo_root / "showcase" / "shot_library.json",
+        notes_source="evidence/release-notes.md",
     )
+    story["evidence_manifest"] = evidence_manifest
     (package_dir / "story.json").write_text(json.dumps(story, ensure_ascii=False, indent=2), encoding="utf-8")
     history = load_learning_records(memory_path) if memory_path else []
     metadata = generate_copy(
