@@ -48,6 +48,7 @@ from src.readmd_core import (
     read_text,
     readmd_fix,
 )
+from src.readmd_core.file_writer import save_text_atomic
 import src.readmd_modules as RM
 from src.readmd_modules.validators import validate_file_path, validate_command
 
@@ -1588,21 +1589,15 @@ class Handler(BaseHTTPRequestHandler):
         path = body.get('path') or ''
         content = body.get('content') or ''
         enc = body.get('encoding') or 'utf-8'
+        expected_mtime = body.get('expected_mtime')
         if not path:
             self._send_json(400, {'error': '缺少文件路径'})
             return
-        try:
-            import shutil
-            bak = None
-            if os.path.isfile(path) and not os.path.exists(path + '.bak'):
-                shutil.copy2(path, path + '.bak')
-                bak = path + '.bak'
-            with open(path, 'w', encoding=enc, newline='') as f:
-                f.write(content)
-            self._send_json(200, {'ok': True, 'path': path, 'backup': bak})
-        except Exception as e:
-            logging.exception('save failed: %s', path)
-            self._send_json(500, {'error': '保存失败：%s' % e})
+        result = save_text_atomic(path, content, enc, expected_mtime=expected_mtime)
+        self._send_json(
+            200 if result.get('ok') else (409 if result.get('conflict') else 500),
+            result,
+        )
 
     def _send_raw(self, p):
         if not os.path.isfile(p):
@@ -2566,20 +2561,14 @@ class Api(object):
         return {'ok': True, 'path': new_path, 'name': os.path.basename(new_path),
                 'old_path': old_path, 'warnings': warnings}
 
-    def save_file(self, path, content, encoding):
+    def save_file(self, path, content, encoding, expected_mtime=None):
         """编辑保存：写回文件，首次保存自动生成 .bak 备份。"""
-        try:
-            import shutil
-            bak = None
-            if os.path.isfile(path) and not os.path.exists(path + '.bak'):
-                shutil.copy2(path, path + '.bak')
-                bak = path + '.bak'
-            with open(path, 'w', encoding=encoding or 'utf-8', newline='') as f:
-                f.write(content)
-            return {'ok': True, 'backup': bak}
-        except Exception as e:
-            logging.exception('save_file failed')
-            return {'ok': False, 'error': str(e)}
+        result = save_text_atomic(
+            validate_file_path(path), content, encoding, expected_mtime=expected_mtime
+        )
+        if not result.get('ok'):
+            logging.warning('save_file rejected: %s', result.get('error'))
+        return result
 
     def save_as(self, content, suggested, assets=None):
         """把转换 / 网页 / OCR 结果另存为 .md 文件。"""

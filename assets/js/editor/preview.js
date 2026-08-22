@@ -24,6 +24,14 @@ function syncSavedTab(path, content) {
   tab.isDirty = false;
 }
 
+function applySavedMtime(result) {
+  if (result && typeof result.mtime === 'number') {
+    state.mtime = result.mtime;
+    const tab = typeof getActiveTab === 'function' ? getActiveTab() : null;
+    if (tab) tab.mtime = result.mtime;
+  }
+}
+
 function renderSavedDocument(content) {
   state.original = content;
   state.fixed = content;
@@ -382,22 +390,30 @@ async function saveEdit() {
   try {
     let ok;
     if (hasPy) {
-      ok = await py.save_file(state.file, content, state.encoding || 'utf-8');
+      ok = await py.save_file(state.file, content, state.encoding || 'utf-8', state.mtime || null);
     } else {
       const r = await apiFetch('/api/save', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: state.file, content, encoding: state.encoding || 'utf-8' }),
+        body: JSON.stringify({
+          path: state.file,
+          content,
+          encoding: state.encoding || 'utf-8',
+          expected_mtime: state.mtime || null,
+        }),
       });
       ok = await r.json();
     }
     if (ok && ok.ok !== false) {
       syncSavedTab(state.file, content);
+      applySavedMtime(ok);
       renderSavedDocument(content);
       showToast(ok.backup ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）')) : (_t('toast.savedSuccess') || '已保存'));
       exitEdit();
       await loadFile(state.file);
     } else {
-      showToast((_t('toast.saveFailed') || '保存失败：') + ((ok && ok.error) || (_t('toast.unknownError') || '未知错误')));
+      showToast(ok && ok.conflict
+        ? (_t('toast.saveConflict') || '文件已被其他程序修改，请重新打开后合并修改')
+        : (_t('toast.saveFailed') || '保存失败：') + ((ok && ok.error) || (_t('toast.unknownError') || '未知错误')));
     }
   } catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); }
   finally { busy(false); }
