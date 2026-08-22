@@ -103,7 +103,7 @@ def build_story(
     if any(shots[item]["category"] == "Presentation" for item in relevant_features):
         relevant_features.sort(key=lambda item: shots[item]["category"] != "Presentation")
     relevant_features = relevant_features[:3]
-    primary_shot = relevant_features[0] if relevant_features else "overview.reader"
+    primary_shot = relevant_features[0] if relevant_features else "overview.editor"
     selected = list(dict.fromkeys(["overview.reader"] + relevant_features + fixed_order[1:]))
 
     claims: list[dict[str, Any]] = []

@@ -150,12 +150,11 @@ def generate_copy(
     opening = profile["opening"]
     disclosure = f"先说清楚：这是 ReadMD {release} {state_text}，文件仍然保留在你自己的电脑里。"
     evidence = "下面的画面来自当前版本真实运行状态，不是概念图。"
-    primary_id = story.get("primary_shot", "overview.reader")
+    primary_id = story.get("primary_shot", "overview.editor")
     primary_text = profile.get(
         "primary_paragraph",
         _clean(next((item["user_value"] for item in visual_claims if primary_id.replace("-", ".") in item["shot_ids"]), story["angle"])),
     )
-    primary_text = f"{primary_text}它省掉的是{profile['saved_step']}。"
     supporting = [claim for claim in visual_claims if primary_id not in claim["shot_ids"]]
     support_bits = {
         "overview.editor": "改稿时回到同屏预览",

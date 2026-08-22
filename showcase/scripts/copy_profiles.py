@@ -79,22 +79,23 @@ PRESENTATION_FRAMES = {
 def _generated_frames(profile: dict[str, Any]) -> dict[str, list[tuple[str, str, str]]]:
     artifact = profile["artifact"]
     action = profile["short_action"]
+    task_hook = profile["task_hook"]
     return {
         "outcome-led": [
             ("core", f"{profile['opening']} Markdown 保持为主文件。", profile["cta"]),
             (
                 "workflow",
-                f"{artifact}不只是插入结果；不用把它搬去别的工具，{profile['workflow']}。",
+                f"处理{task_hook}时，不用把它搬去别的工具：继续{action}，{profile['workflow']}。",
                 f"你会先用{profile['options']}中的哪一类来试？评论区说说场景。",
             ),
             (
                 "decision",
-                f"{profile['decision_pain']}，这一步最磨人；现在不用绕路，Markdown 可以直接{action}。",
+                f"处理{task_hook}时，{profile['decision_pain']}，这一步最磨人；现在不用绕路，Markdown 可以直接{action}。",
                 f"哪份材料最适合先用来{action}？{profile['options']}都可以，评论区告诉我。",
             ),
             (
                 "source",
-                f"{artifact}不用脱离源文件；ReadMD 把阅读、修改和{action}接成一条 Markdown 路。",
+                f"{artifact}不用脱离源文件；ReadMD 把处理{task_hook}、阅读、修改和{action}接成一条 Markdown 路。",
                 f"你会先用哪类内容跑一遍完整流程？{profile['scenarios']}都可以。",
             ),
         ],
@@ -106,34 +107,34 @@ def _generated_frames(profile: dict[str, Any]) -> dict[str, list[tuple[str, str,
             ),
             (
                 "workflow",
-                f"如果你常处理{profile['scenarios']}，就不用再把{artifact}搬出 Markdown；同一份文件能继续维护。",
-                "你的下一场使用是课程、组会还是个人项目？评论区对号入座。",
+                f"如果你常处理{task_hook}，就不用把它搬出 Markdown；继续{action}时，同一份文件能继续维护。",
+                f"你下一场要处理{artifact}的场景是课程、组会还是个人项目？评论区对号入座。",
             ),
             (
                 "decision",
-                f"要{profile['audience_task']}的人，最怕{profile['decision_pain']}；ReadMD 这次让 Markdown 能直接{action}。",
+                f"要{profile['audience_task']}的人，最怕处理{task_hook}时{profile['decision_pain']}；ReadMD 这次让 Markdown 能直接{action}。",
                 f"你会先处理哪份材料？课程、报告还是{profile['options']}？",
             ),
             (
                 "source",
-                f"给要{profile['audience_task']}的人：不用换工具，Markdown 就是{artifact}的工作入口。",
+                f"给要处理{profile['task_hook']}的人：不用换工具，Markdown 就是工作入口。",
                 f"你会先放进哪一类文件？{profile['scenarios']}都可以。",
             ),
         ],
         "mechanism-curiosity": [
             (
                 "core",
-                f"很多人把{artifact}停在旧流程里；其实它能留在 Markdown 里，直接{action}。ReadMD 让内容和结果走同一条路径。",
+                f"很多人把{task_hook}停在旧流程里；其实它能留在 Markdown 里，直接{action}。ReadMD 让内容和结果走同一条路径。",
                 f"你想先试哪类{artifact}：{profile['options']}？评论区告诉我，我会优先打磨这条路径。",
             ),
             (
                 "workflow",
-                f"{artifact}为什么能稳定更新？因为它不用离开当前文档；{profile['workflow']}。",
+                f"{task_hook}为什么能稳定更新？因为它不用离开当前文档；{profile['workflow']}。",
                 f"你想先验证哪段链路：{profile['options']}？评论区选一个。",
             ),
             (
                 "decision",
-                f"它不用一次性截图；{artifact}的 Markdown 状态由源文件驱动。{profile['proof']}。",
+                f"它不用一次性截图；{task_hook}的 Markdown 状态由源文件驱动。{profile['proof']}。",
                 "你最想保住哪种状态：源文件、渲染结果还是可更新结构？评论区补充场景。",
             ),
             (
@@ -146,35 +147,9 @@ def _generated_frames(profile: dict[str, Any]) -> dict[str, list[tuple[str, str,
 
 
 PROFILES: dict[str, dict[str, Any]] = {
-    "overview.reader": {
-        "artifact": "Markdown 长文档",
-        "short_action": "从完整阅读页进入内容",
-        "pain": "长 Markdown 一翻就散，目录和上下文很难接住",
-        "decision_pain": "读到一半就丢掉章节位置",
-        "workflow": "大纲、正文、公式和搜索留在同一条阅读路径里",
-        "options": "论文、手册、长笔记",
-        "proof": "目录、正文和公式渲染共用同一份源文件",
-        "audience_task": "读完一篇结构复杂的长文档",
-        "scenarios": "论文、产品手册、长笔记",
-        "titles": {
-            "#36": "不用切工具，Markdown完整阅读",
-            "#9": "Markdown长文，也能完整读下去",
-            "#22": "给常读长文档的人做的MD工具",
-            "#61": "别再让长文档丢掉目录",
-            "#12": "看完这{number}张，你会重新看Markdown",
-        },
-        "opening": "长文档一翻就散，目录和上下文很难接住。这次不用放弃 Markdown：完整排版和目录留在同一屏。",
-        "primary_paragraph": "阅读界面同时保留目录、正文和公式渲染；长文档能从大纲进入，也能沿着上下文继续读下去。",
-        "saved_step": "在临时工具里拼凑阅读流程",
-        "cta": "你会先用哪份 Markdown 试完整阅读？论文、手册还是长笔记？评论区说说场景。",
-        "hook_contract": {
-            "task": ["长文档", "目录", "上下文"],
-            "removal": ["不用", "砍掉", "直接", "放弃"],
-            "mechanism": ["Markdown", "阅读"],
-        },
-    },
     "overview.editor": {
         "artifact": "Markdown 稿件",
+        "task_hook": "同屏改稿窗口",
         "short_action": "在同屏编辑器里改稿",
         "pain": "改一段 Markdown 就要切窗口核对格式，思路反复被打断",
         "decision_pain": "源稿改动后预览跟不上",
@@ -202,6 +177,7 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "presentation.reveal": {
         "artifact": "Markdown 演示稿",
+        "task_hook": "上台放映的演示稿",
         "short_action": "直接放映",
         "pain": "文档已经写完，讲的时候还要复制进 PPT",
         "decision_pain": "定稿后还要把 Markdown 复制成 PPT",
@@ -230,6 +206,7 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "editor.diagram-picker": {
         "artifact": "科研图表",
+        "task_hook": "科研图表语法",
         "short_action": "从面板选图",
         "pain": "画科研图表还要回忆语法，改一次就很折磨",
         "decision_pain": "图表语法一改就废",
@@ -257,6 +234,7 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "academic.latex-bib": {
         "artifact": "学术排版",
+        "task_hook": "公式和文献格式",
         "short_action": "在文档里排公式",
         "pain": "公式和文献格式总在交稿前折磨人",
         "decision_pain": "公式换个工具就走样",
@@ -284,6 +262,7 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "editor.code-chunk": {
         "artifact": "文档代码块",
+        "task_hook": "可运行代码块",
         "short_action": "就地运行代码",
         "pain": "教程写到代码就要切出去验证，上下文很容易断",
         "decision_pain": "示例代码和文档说明脱节",
@@ -302,7 +281,7 @@ PROFILES: dict[str, dict[str, Any]] = {
         "opening": "教程写到代码，还要切出去验证一遍。这次不用切换：代码块直接在 Markdown 里运行。",
         "primary_paragraph": "代码块保留运行按钮、状态和输出；读者看到的不是死代码，而是能跟着复现的步骤。",
         "saved_step": "另开终端重复验证示例",
-        "cta": "你想先验证哪段代码？配置脚本、算法示例还是数据处理？",
+        "cta": "你会先验证哪段代码？配置脚本、算法示例还是数据处理？评论区挑一个。",
         "hook_contract": {
             "task": ["教程", "代码", "验证"],
             "removal": ["不用", "直接", "就地"],
@@ -311,6 +290,7 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "convert.home": {
         "artifact": "零散资料",
+        "task_hook": "网页、PDF 和 Word 资料",
         "short_action": "收进本地工作台",
         "pain": "网页、Word 和 PDF 分散在不同窗口，资料格式很难归拢",
         "decision_pain": "资料转换后找不到来源",
@@ -338,12 +318,13 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "sharing.export": {
         "artifact": "本地文档",
+        "task_hook": "分享或导出的本地文档",
         "short_action": "生成共享入口",
         "pain": "想把 Markdown 发给别人，还要先导出副本，版本很快对不上",
         "decision_pain": "分享出去的文件已经过期",
         "workflow": "共享入口、访问令牌和当前文档留在同一条本地工作流里",
         "options": "讲义、报告、长笔记",
-        "proof": "二维码入口、随机令牌和启停控制都指向当前文档",
+        "proof": "扫码入口、随机令牌和启停控制都指向当前文档",
         "audience_task": "把正在维护的 Markdown 发给别人看",
         "scenarios": "讲义、报告、长笔记",
         "titles": {
@@ -354,7 +335,7 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#12": "看完这{number}张，你会重新看文档分享",
         },
         "opening": "想把 Markdown 发给别人，还要先导出一份副本，版本很快对不上。这次不用多存：当前文档直接生成共享入口。",
-        "primary_paragraph": "局域网共享面板提供二维码入口、随机令牌和启停控制；手机打开的是当前文档，不需要对方装软件。",
+        "primary_paragraph": "局域网共享面板提供扫码入口、随机令牌和启停控制；手机打开的是当前文档，不需要对方装软件。",
         "saved_step": "为了分享再导出一份副本",
         "cta": "你会先分享哪份 Markdown？讲义、报告还是长笔记？",
         "hook_contract": {
@@ -367,7 +348,7 @@ PROFILES: dict[str, dict[str, Any]] = {
 
 
 def profile_for_story(story: dict[str, Any]) -> dict[str, Any]:
-    return PROFILES.get(str(story.get("primary_shot", "overview.reader")), PROFILES["overview.reader"])
+    return PROFILES.get(str(story.get("primary_shot", "overview.editor")), PROFILES["overview.editor"])
 
 
 def frames_for_story(story: dict[str, Any]) -> dict[str, list[tuple[str, str, str]]]:

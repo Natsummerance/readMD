@@ -22,6 +22,7 @@ build_story = importlib.import_module("build_story")
 audit_copy = importlib.import_module("audit_copy")
 content_memory = importlib.import_module("content_memory")
 copy_variants = importlib.import_module("copy_variants")
+copy_profiles = importlib.import_module("copy_profiles")
 export_wechat = importlib.import_module("export_wechat")
 performance_report = importlib.import_module("performance_report")
 pattern_audit = importlib.import_module("pattern_audit")
@@ -353,6 +354,34 @@ class WriteCopyTest(unittest.TestCase):
         self.assertTrue(all(item["_report"]["ok"] for item in variants))
         self.assertTrue(all("图表" in item["body"].split("\n\n", 1)[0] for item in variants))
         self.assertTrue(all("复制进 PPT" not in item["body"].split("\n\n", 1)[0] for item in variants))
+
+    def test_every_release_mechanism_has_a_qa_green_variant_pool(self) -> None:
+        for primary_shot in copy_profiles.PROFILES:
+            with self.subTest(primary_shot=primary_shot):
+                story = {
+                    "release": "v1.0.0",
+                    "previous_release": "v0.9.0",
+                    "version_state": "prerelease",
+                    "primary_shot": primary_shot,
+                    "angle": f"ReadMD 把 {primary_shot} 放进同一条本地工作流",
+                    "selected_shots": ["overview.reader", primary_shot],
+                    "claims": [
+                        {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                        {"id": primary_shot.replace(".", "-"), "user_value": "选中机制", "shot_ids": [primary_shot], "sources": ["release/release_notes.md"]},
+                    ],
+                }
+                base = write_copy.generate_copy(
+                    story,
+                    repository="Natsummerance/readMD",
+                    previous_release="v0.9.0",
+                )
+                self.assertEqual(base["primary_shot"], primary_shot)
+                self.assertTrue(600 <= len(base["body"]) <= 900)
+                self.assertTrue(all(len(item["text"]) <= 20 for item in base["title_candidates"]))
+                variants = copy_variants.build_variants(story=story, base_metadata=base)
+                self.assertEqual(len(variants), 60)
+                failed = [item["variant_id"] for item in variants if not item["_report"]["ok"]]
+                self.assertEqual(failed, [])
 
 
 class ValidatePackageTest(unittest.TestCase):
@@ -1004,7 +1033,7 @@ class CopyVariantsTest(unittest.TestCase):
         self.assertEqual(len(used_openings), 12)
         self.assertEqual(len(used_closings), 12)
 
-    def test_copy_frame_pool_rotates_after_endpoint_cooldown(self) -> None:
+    def test_cross_mechanism_pool_avoids_premature_endpoint_reuse(self) -> None:
         primaries = (
             ("presentation.reveal", "放映器支持主题、字号和转场控制"),
             ("overview.editor", "编辑器和实时预览保持同屏同步"),
@@ -1015,7 +1044,9 @@ class CopyVariantsTest(unittest.TestCase):
         seen_body_hashes: set[str] = set()
         used_openings: set[str] = set()
         used_closings: set[str] = set()
-        reused_endpoints = 0
+        recent_openings: list[str] = []
+        recent_closings: list[str] = []
+        premature_reuse = 0
 
         for index in range(24):
             primary_id, primary_value = primaries[index % len(primaries)]
@@ -1047,10 +1078,14 @@ class CopyVariantsTest(unittest.TestCase):
             body_hash = fingerprints["body_sha256"]
             self.assertNotIn(body_hash, seen_body_hashes)
             seen_body_hashes.add(body_hash)
-            if fingerprints["opening"] in used_openings or fingerprints["closing"] in used_closings:
-                reused_endpoints += 1
+            if fingerprints["opening"] in recent_openings[-8:] or fingerprints["closing"] in recent_closings[-8:]:
+                premature_reuse += 1
             used_openings.add(fingerprints["opening"])
             used_closings.add(fingerprints["closing"])
+            recent_openings.append(fingerprints["opening"])
+            recent_closings.append(fingerprints["closing"])
+            del recent_openings[:-8]
+            del recent_closings[:-8]
             history.append({
                 **self.history_record(
                     story["release"],
@@ -1063,7 +1098,7 @@ class CopyVariantsTest(unittest.TestCase):
                 "body_trigrams": sorted(copy_variants.text_trigrams(chosen["body"])),
             })
 
-        self.assertEqual(reused_endpoints, 0)
+        self.assertEqual(premature_reuse, 0)
         self.assertGreaterEqual(len(used_openings), 24)
         self.assertGreaterEqual(len(used_closings), 24)
 
