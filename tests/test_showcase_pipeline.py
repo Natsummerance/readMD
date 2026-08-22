@@ -1595,6 +1595,49 @@ class ContentMemoryTest(unittest.TestCase):
         self.assertNotIn("表格导出会不会丢失格式", serialized)
         self.assertNotIn("author-secret", serialized)
 
+    def test_comment_snapshots_accumulate_anonymized_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            self.seed_pending(store)
+            presentation_text = "希望能直接放映论文公式，很好用"
+            table_text = "表格导出会不会丢失格式？"
+            code_text = "代码块在长文里能保持可运行吗？"
+            content_memory.import_comment_snapshot(
+                store,
+                "v1.0.0",
+                {"comments": [
+                    {"text": presentation_text, "likes": 4},
+                    {"text": table_text, "likes": 2},
+                ]},
+                source="xiaohongshu-web",
+                captured_at="2026-08-24T10:00:00+08:00",
+            )
+            updated = content_memory.import_comment_snapshot(
+                store,
+                "v1.0.0",
+                {"comments": [
+                    {"text": presentation_text, "likes": 9},
+                    {"text": code_text, "likes": 2},
+                ]},
+                source="xiaohongshu-web",
+                captured_at="2026-08-25T10:00:00+08:00",
+            )
+        insights = updated["comment_insights"]
+        themes = {item["theme"]: item for item in insights["themes"]}
+        presentation_hash = content_memory._comment_hash(presentation_text)
+        self.assertEqual(insights["schema_version"], 2)
+        self.assertEqual(insights["imported_count"], 2)
+        self.assertEqual(insights["new_count"], 1)
+        self.assertEqual(insights["unique_count"], 3)
+        self.assertEqual(len(insights["evidence_hashes"]), 3)
+        self.assertEqual(insights["evidence_weights"][presentation_hash], 10)
+        self.assertEqual(themes["presentation"]["mentions"], 1)
+        self.assertEqual(themes["presentation"]["weighted_score"], 10)
+        self.assertEqual(themes["table"]["mentions"], 1)
+        self.assertEqual(themes["table"]["weighted_score"], 3)
+        self.assertEqual(themes["code"]["mentions"], 1)
+        self.assertEqual(themes["code"]["weighted_score"], 3)
+
     def test_comment_snapshot_rejects_invalid_and_stale_data(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = Path(tmp) / "ledger.jsonl"

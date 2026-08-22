@@ -281,15 +281,46 @@ def import_comment_snapshot(
         if likes > previous_likes:
             unique_comments[digest] = (text, likes)
 
+    prior_insights = existing.get("comment_insights") if isinstance(existing.get("comment_insights"), dict) else {}
+    observations: dict[str, dict[str, Any]] = {}
+    for digest, observation in (prior_insights.get("observations") or {}).items():
+        if not isinstance(observation, dict):
+            continue
+        try:
+            weight = int(observation.get("weight", 0))
+        except (TypeError, ValueError):
+            weight = 0
+        observations[str(digest)] = {
+            "weight": max(0, weight),
+            "themes": [str(item) for item in observation.get("themes", [])],
+            "intents": [str(item) for item in observation.get("intents", [])],
+        }
+    for digest in prior_insights.get("evidence_hashes", []):
+        observations.setdefault(str(digest), {"weight": 0, "themes": [], "intents": []})
+
     theme_stats: dict[str, dict[str, Any]] = {}
+    new_count = 0
     for text, likes in unique_comments.values():
         weight = likes + 1
         intents = _comment_intents(text)
-        for theme in _comment_themes(text):
+        digest = _comment_hash(text)
+        themes_for_comment = _comment_themes(text)
+        if digest not in observations:
+            new_count += 1
+        observations[digest] = {
+            "weight": weight,
+            "themes": themes_for_comment,
+            "intents": intents,
+        }
+
+    for observation in observations.values():
+        if not observation["themes"]:
+            continue
+        for theme in observation["themes"]:
             stats = theme_stats.setdefault(theme, {"mentions": 0, "weighted_score": 0, "intents": {}})
             stats["mentions"] += 1
-            stats["weighted_score"] += weight
-            for intent in intents:
+            stats["weighted_score"] += int(observation["weight"])
+            for intent in observation["intents"]:
                 stats["intents"][intent] = stats["intents"].get(intent, 0) + 1
 
     themes = [
@@ -305,12 +336,18 @@ def import_comment_snapshot(
         )
     ]
     insights = {
-        "schema_version": 1,
+        "schema_version": 2,
         "imported_count": len(comments),
-        "unique_count": len(unique_comments),
+        "new_count": new_count,
+        "unique_count": len(observations),
         "themes": themes,
         "top_theme": themes[0]["theme"] if themes else None,
-        "evidence_hashes": sorted(unique_comments),
+        "evidence_hashes": sorted(observations),
+        "evidence_weights": {
+            digest: observation["weight"]
+            for digest, observation in sorted(observations.items())
+        },
+        "observations": observations,
     }
 
     previous_captured = existing.get("comments_captured_at")
