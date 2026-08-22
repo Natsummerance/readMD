@@ -33,9 +33,12 @@ function doSearch(q, jumpToIdx) {
   const isPaged = state.pagination && state.pagination.enabled && state.pagination.mode === 'paged' && state.pagination.pages && state.pagination.pages.length;
   if (isPaged) {
     const ql = q.toLowerCase();
+    if (!Array.isArray(state.pagination.searchText) || state.pagination.searchText.length !== state.pagination.pages.length) {
+      state.pagination.searchText = state.pagination.pages.map(page => page.content.toLowerCase());
+    }
     const allMatches = [];
     state.pagination.pages.forEach((pg, pIdx) => {
-      const text = pg.content.toLowerCase();
+      const text = state.pagination.searchText[pIdx];
       let pos = 0;
       let countInPage = 0;
       while ((pos = text.indexOf(ql, pos)) !== -1) {

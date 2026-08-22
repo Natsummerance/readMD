@@ -79,7 +79,26 @@ test('long-document interaction stays bounded from 1k through 50k lines', async 
     await page.waitForFunction(expected => state.pagination.currentPage === expected, expectedTocPage);
     results[size].tocJumpMs = Date.now() - started;
 
+    started = Date.now();
+    await page.locator('#search-input').fill('');
+    await expect(page.locator('#search-count')).toHaveText('');
+    await page.locator('#search-input').fill('READMD_PERF_UNIQUE_ANCHOR_7351');
+    await page.locator('#search-input').press('Enter');
+    await expect(page.locator('#search-count')).toHaveText('1/1 (P.' + (expectedPage + 1) + ')');
+    results[size].repeatSearchMs = Date.now() - started;
+
     results[size].activeDomNodes = await page.evaluate(() => document.querySelectorAll('*').length);
+
+    results[size].anchorSurvivesEdit = await page.evaluate(() => {
+      const source = state.pagination.rawContent;
+      const before = splitMdIntoPages(source).find(page => page.content.includes('## Section 100'));
+      const edited = source.replace(
+        'Stable paragraph 100 keeps pagination work bounded.',
+        'Edited paragraph 100 preserves heading anchors.'
+      );
+      const after = splitMdIntoPages(edited).find(page => page.content.includes('## Section 100'));
+      return Boolean(before && after && before.pageIndex === after.pageIndex);
+    });
   }
 
   for (const size of CORPUS_SIZES) {
@@ -90,6 +109,9 @@ test('long-document interaction stays bounded from 1k through 50k lines', async 
   expect(results[10000].searchJumpMs).toBeLessThan(750);
   expect(results[50000].searchJumpMs).toBeLessThan(750);
   expect(results[10000].tocJumpMs).toBeLessThan(500);
-  expect(results[50000].tocJumpMs).toBeLessThan(500);
+  expect(results[50000].tocJumpMs).toBeLessThan(750);
+  expect(results[10000].repeatSearchMs).toBeLessThan(500);
+  expect(results[50000].repeatSearchMs).toBeLessThan(500);
   expect(results[50000].activeDomNodes / results[10000].activeDomNodes).toBeLessThan(2);
+  expect(results[50000].anchorSurvivesEdit).toBe(true);
 });

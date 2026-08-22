@@ -718,6 +718,7 @@ async function renderContent(content, name) {
   if (isUltraLong) {
     state.pagination.enabled = true;
     state.pagination.rawContent = content;
+    state.pagination.searchText = null;
     state.pagination.pages = splitMdIntoPages(content);
     state.pagination.totalPages = state.pagination.pages.length;
     if (state.pagination.mode === 'paged') {
