@@ -276,6 +276,32 @@ class WriteCopyTest(unittest.TestCase):
             )
         self.assertIn("代码教程、技术笔记或示例文档", result["body"])
 
+    def test_low_confidence_comment_focus_keeps_default_scenario(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = write_story(Path(tmp))
+            history = [{
+                "release": "v8.0.0",
+                "title": "v8",
+                "title_formula_id": "#36",
+                "hook_type": "outcome-led",
+                "published_at": "2026-08-20T10:00:00Z",
+                "metrics_status": "complete",
+                "comment_insights": {
+                    "schema_version": 1,
+                    "unique_count": 2,
+                    "themes": [{"theme": "code", "mentions": 2, "weighted_score": 7}],
+                    "top_theme": "code",
+                },
+            }]
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v8.0.0",
+                history=history,
+            )
+        self.assertIn("课程讲义、组会报告、技术分享或论文汇报", result["body"])
+        self.assertNotIn("代码教程、技术笔记或示例文档", result["body"])
+
 
 class ValidatePackageTest(unittest.TestCase):
     maxDiff = None
@@ -1242,6 +1268,7 @@ class ContentMemoryTest(unittest.TestCase):
         content_memory.append_record(store, {
             **self.record(release="v1.0.0"),
             "variant_id": "identity-led__61",
+            "copy_frame": "core",
             "note_id": "note-1",
             "metrics_status": "pending",
         })
@@ -1292,7 +1319,7 @@ class ContentMemoryTest(unittest.TestCase):
                 content_memory.import_metric_snapshot(
                     store,
                     "v1.0.0",
-                    {"impressions": 100, "title_formula_id": "#36"},
+                    {"impressions": 100, "copy_frame": "workflow"},
                     source="xiaohongshu-web",
                     captured_at="2026-08-23T10:00:00+08:00",
                 )
@@ -1522,6 +1549,7 @@ class WatcherTest(unittest.TestCase):
         metadata = {
             "title": "标题",
             "variant_id": "outcome-led__36",
+            "copy_frame": "core",
             "strategy": "outcome-led",
             "hook_type": "outcome-led",
             "title_formula_id": "#36",
@@ -1609,6 +1637,7 @@ class WatcherTest(unittest.TestCase):
             feedback = records[0]
             self.assertEqual(feedback["release"], "v1.2.3")
             self.assertEqual(feedback["variant_id"], "outcome-led__36")
+            self.assertEqual(feedback["copy_frame"], "core")
             self.assertEqual(feedback["title_formula_id"], "#36")
             self.assertEqual(feedback["hook_type"], "outcome-led")
             self.assertEqual(feedback["note_id"], "note-1")

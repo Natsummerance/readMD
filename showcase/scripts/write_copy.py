@@ -100,22 +100,32 @@ COMMENT_SCENARIOS = {
 
 def _comment_focus(history: list[dict[str, Any]]) -> str:
     themes: dict[str, dict[str, Any]] = {}
+    focus_releases: dict[str, set[str]] = {}
     for record in history:
         insights = record.get("comment_insights")
         if not isinstance(insights, dict):
             continue
+        release = str(record.get("release", ""))
         for item in insights.get("themes", []):
             if not isinstance(item, dict):
                 continue
             theme = str(item.get("theme", "general"))
             stats = themes.setdefault(theme, {"mentions": 0, "weighted_score": 0})
+            focus_releases.setdefault(theme, set()).add(release)
             stats["mentions"] += int(item.get("mentions", 0))
             stats["weighted_score"] += int(item.get("weighted_score", 0))
     ranked = sorted(
         themes.items(),
         key=lambda item: (-item[1]["weighted_score"], -item[1]["mentions"], item[0]),
     )
-    return next((theme for theme, _stats in ranked), "general")
+    return next(
+        (
+            theme
+            for theme, stats in ranked
+            if len(focus_releases[theme]) >= 2 and stats["weighted_score"] >= 3
+        ),
+        "general",
+    )
 
 
 def generate_copy(

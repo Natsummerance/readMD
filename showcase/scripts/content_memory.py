@@ -21,6 +21,7 @@ IMMUTABLE_FIELDS = (
     "hook_type",
     "published_at",
     "variant_id",
+    "copy_frame",
     "note_id",
     "publisher_target_id",
     "published_url",

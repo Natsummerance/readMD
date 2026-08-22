@@ -118,6 +118,7 @@ def seed_feedback_ledger(
         "release": release,
         "title": title,
         "variant_id": str(metadata.get("variant_id", "unknown")),
+        "copy_frame": str(metadata.get("copy_frame", "unknown")),
         "title_formula_id": str(metadata.get("title_formula_id", "unknown")),
         "hook_type": str(metadata.get("hook_type", metadata.get("strategy", "unknown"))),
         "published_at": datetime.now(timezone.utc).isoformat(),
