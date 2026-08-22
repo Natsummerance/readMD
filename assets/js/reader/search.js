@@ -24,6 +24,17 @@ function clearMarks() {
   updateSearchCount();
 }
 
+function pageSearchText(page) {
+  if (typeof page.searchText === 'string') return page.searchText;
+  const transformed = transformAcademicCallouts(page.content);
+  const prot = protectMath(transformed);
+  const html = marked.parse(prot.src, { gfm: true, breaks: false });
+  const probe = document.createElement('div');
+  probe.innerHTML = restoreMath(html, prot.saved);
+  page.searchText = (probe.textContent || '').toLowerCase();
+  return page.searchText;
+}
+
 function doSearch(q, jumpToIdx) {
   clearMarks();
   state.lastQuery = q;
@@ -34,7 +45,7 @@ function doSearch(q, jumpToIdx) {
   if (isPaged) {
     const ql = q.toLowerCase();
     if (!Array.isArray(state.pagination.searchText) || state.pagination.searchText.length !== state.pagination.pages.length) {
-      state.pagination.searchText = state.pagination.pages.map(page => page.content.toLowerCase());
+      state.pagination.searchText = state.pagination.pages.map(pageSearchText);
     }
     const allMatches = [];
     state.pagination.pages.forEach((pg, pIdx) => {

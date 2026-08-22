@@ -112,6 +112,7 @@ function buildToc() {
       group.append(summary, container);
       list.appendChild(group);
     });
+    if (typeof updateActiveTocHeading === 'function') updateActiveTocHeading();
     return;
   }
 
@@ -143,4 +144,25 @@ function buildToc() {
     });
     list.appendChild(a);
   });
+}
+
+function updateActiveTocHeading() {
+  const p = state.pagination;
+  if (!p || !p.enabled || p.mode !== 'paged' || !p.pages?.length) return;
+  const content = $('content');
+  const list = $('toc-list');
+  if (!content || !list) return;
+  const headings = Array.from(content.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3'));
+  const focusedHeading = content.contains(document.activeElement) && document.activeElement?.id ? document.activeElement : null;
+  const visibleTop = content.scrollTop + 72;
+  let active = focusedHeading || headings[0];
+  if (!focusedHeading) {
+    headings.forEach(heading => {
+      if (heading.offsetTop <= visibleTop) active = heading;
+    });
+  }
+  list.querySelectorAll('.toc-heading-active').forEach(link => link.classList.remove('toc-heading-active'));
+  if (!active?.id) return;
+  const link = list.querySelector(`[data-heading-id="${CSS.escape(active.id)}"]`);
+  if (link) link.classList.add('toc-heading-active');
 }

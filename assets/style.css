@@ -326,6 +326,11 @@ button { font-family: inherit; }
 #toc-list a.lv1 { font-weight: 600; color: var(--fg); }
 #toc-list a.lv2 { padding-left: 22px; }
 #toc-list a.lv3 { padding-left: 36px; }
+.toc-heading-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
 .toc-page-group {
   margin: 0 0 4px;
   border: 1px solid var(--border);

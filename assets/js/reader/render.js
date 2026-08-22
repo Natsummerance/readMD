@@ -499,6 +499,10 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
         targetEl.tabIndex = -1;
         targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         targetEl.focus({ preventScroll: true });
+        document.querySelectorAll('#toc-list .toc-heading-active')
+          .forEach(link => link.classList.remove('toc-heading-active'));
+        const activeTocLink = document.querySelector(`#toc-list [data-heading-id="${CSS.escape(targetEl.id)}"]`);
+        if (activeTocLink) activeTocLink.classList.add('toc-heading-active');
         targetEl.classList.remove('heading-target-highlight');
         void targetEl.offsetWidth;
         targetEl.classList.add('heading-target-highlight');
@@ -516,6 +520,18 @@ let paginationEventsBound = false;
 function initPaginationEvents() {
   if (paginationEventsBound) return;
   paginationEventsBound = true;
+
+  const content = $('content');
+  if (content) {
+    let tocScrollFrame = 0;
+    content.addEventListener('scroll', () => {
+      if (tocScrollFrame) return;
+      tocScrollFrame = requestAnimationFrame(() => {
+        tocScrollFrame = 0;
+        updateActiveTocHeading();
+      });
+    });
+  }
 
   const btnFirst = $('pg-first-btn');
   if (btnFirst) btnFirst.addEventListener('click', () => { if (state.pagination.enabled && state.pagination.mode === 'paged') renderPage(0); });
