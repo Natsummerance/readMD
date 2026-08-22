@@ -62,11 +62,15 @@
 /* ----------------------------------------------------------------------------------------------
    顶层 UI 事件集中绑定与调度器
    ---------------------------------------------------------------------------------------------- */
-function closeMoreMenu() {
+function closeMoreMenu(restoreFocus = false) {
   const menu = $('more-menu');
+  const wasOpen = menu && menu.classList.contains('open');
   if (menu) menu.classList.remove('open');
   const button = $('btn-more');
   if (button) button.setAttribute('aria-expanded', 'false');
+  if (restoreFocus && wasOpen && button && document.activeElement !== button && !button.contains(document.activeElement)) {
+    button.focus({ preventScroll: true });
+  }
 }
 
 function bindEvents() {
@@ -388,7 +392,7 @@ function bindEvents() {
 
   /* --- 11. 全文搜索、主题外观与字号缩放 [联动: reader/search.js, core/settings.js] --- */
   $('btn-search').addEventListener('click', toggleSearch);
-  $('search-close').addEventListener('click', closeSearch);
+  $('search-close').addEventListener('click', () => closeSearch({ restoreFocus: true }));
   $('search-next').addEventListener('click', () => jumpToMark(1));
   $('search-prev').addEventListener('click', () => jumpToMark(-1));
   let searchDebounce = null;
@@ -735,8 +739,8 @@ function bindEvents() {
       if ($('history-modal') && !$('history-modal').classList.contains('hidden')) { $('history-modal').classList.add('hidden'); return; }
       if ($('export-preview-modal') && !$('export-preview-modal').classList.contains('hidden')) { $('export-preview-modal').classList.add('hidden'); return; }
       if ($('tab-context-menu') && !$('tab-context-menu').classList.contains('hidden')) { $('tab-context-menu').classList.add('hidden'); return; }
-      if (moreMenu && moreMenu.classList.contains('open')) { moreMenu.classList.remove('open'); }
-      closeSearch();
+      closeMoreMenu(true);
+      closeSearch({ restoreFocus: true });
       if ($('fix-modal')) $('fix-modal').classList.add('hidden');
       if (typeof closeWebDialog === 'function') closeWebDialog();
       if ($('ai-panel')) $('ai-panel').classList.add('hidden');
@@ -848,6 +852,7 @@ async function init() {
   await loadSettings();
   // 2.1 启动 i18n 国际化引擎并自动侦测系统语言
   if (window.i18n) await window.i18n.init();
+  syncBuildVersionLabels();
   // 3. 缓存欢迎界面骨架 HTML，以便随时通过 goHome() 复原
 
   if ($('content')) state.welcomeHtml = $('content').innerHTML;

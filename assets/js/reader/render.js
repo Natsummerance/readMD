@@ -496,7 +496,9 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
         } catch (e) {}
       }
       if (targetEl) {
+        targetEl.tabIndex = -1;
         targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        targetEl.focus({ preventScroll: true });
         targetEl.classList.remove('heading-target-highlight');
         void targetEl.offsetWidth;
         targetEl.classList.add('heading-target-highlight');

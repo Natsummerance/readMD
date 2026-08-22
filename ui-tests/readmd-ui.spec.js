@@ -877,6 +877,7 @@ test('canceling a dirty editor asks before discarding changes', async ({ page })
   await page.locator('#close-confirm-discard').click();
   await expect(page.locator('#close-confirm-modal')).toBeHidden();
   await page.waitForFunction(() => state.editing === false);
+  await expect(page.locator('#doc-tabs-bar .tab-dirty')).toHaveCount(0);
 });
 
 test('switching tabs cannot discard a dirty editor', async ({ page }) => {
@@ -1003,6 +1004,9 @@ test('saving refreshes the existing tab with new content', async ({ page }) => {
 test('core workflow controls satisfy accessibility contracts', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => typeof renderTabsBar === 'function');
+  const buildVersion = '2.3.7-beta.3';
+  await expect(page.locator('#status-version')).toHaveText(`v${buildVersion}`);
+  await expect(page.locator('#menu-version-label')).toHaveText(`当前版本 v${buildVersion}`);
 
   await expect(page.locator('#toast')).toHaveAttribute('role', 'status');
   await expect(page.locator('#toast')).toHaveAttribute('aria-live', 'polite');
@@ -1019,8 +1023,9 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
   await expect(firstGroupHeader).toHaveAttribute('aria-expanded', 'false');
   await firstGroupHeader.click();
   await expect(firstGroupHeader).toHaveAttribute('aria-expanded', 'true');
-  await page.locator('#btn-more').click();
+  await page.keyboard.press('Escape');
   await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#btn-more')).toBeFocused();
 
   await page.evaluate(() => {
     state.tabs = [
@@ -1120,6 +1125,17 @@ test('tabs, status regions, and stacked dialogs meet keyboard contracts', async 
   await page.keyboard.press('Home');
   await expect(page.locator('#doc-tabs-secondary-bar .tab-item').first()).toBeFocused();
   await page.setViewportSize({ width: 720, height: 600 });
+
+  await page.evaluate(() => {
+    state.original = '# search target';
+    state.fixed = state.original;
+    state.mode = 'virtual';
+  });
+  await page.locator('#btn-search').click();
+  await page.locator('#search-input').fill('target');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#search-bar')).toBeHidden();
+  await expect(page.locator('#btn-search')).toBeFocused();
 
   await page.evaluate(() => {
     document.getElementById('export-modal').classList.remove('hidden');

@@ -157,8 +157,25 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
         new_src = re.sub(r'(_)[0-9a-zA-Z.-]+(_amd64\.deb)', f'\\g<1>{target_ver}\\g<2>', new_src)
         new_src = re.sub(r'(vscode-)[0-9a-zA-Z.-]+(\.vsix)', f'\\g<1>{target_ver}\\g<2>', new_src)
         new_src = re.sub(r'(server-)[0-9a-zA-Z.-]+(\.zip)', f'\\g<1>{target_ver}\\g<2>', new_src)
-        if new_src != src:
-            diffs.append((rpath, src, new_src))
+    if new_src != src:
+        diffs.append((rpath, src, new_src))
+
+    # 9. Shared frontend/runtime version labels
+    core_config = os.path.join(ROOT, 'src', 'readmd_core', 'config.py')
+    with open(core_config, 'r', encoding='utf-8') as f:
+        src = f.read()
+    new_src = re.sub(r"VERSION\s*=\s*'[^']+'", f"VERSION = '{target_ver}'", src)
+    if new_src != src:
+        diffs.append((core_config, src, new_src))
+
+    index_path = os.path.join(ROOT, 'assets', 'index.html')
+    with open(index_path, 'r', encoding='utf-8') as f:
+        src = f.read()
+    new_src = re.sub(r'<html([^>]*\bdata-version=")[^"]+"', rf'<html\g<1>{target_ver}"', src)
+    new_src = re.sub(r'(<span id="status-version"[^>]*>)v[^<]+(</span>)', rf'\g<1>v{target_ver}\g<2>', new_src)
+    new_src = re.sub(r'(id="menu-version-label">)当前版本 v[^<]+(</em>)', rf'\g<1>当前版本 v{target_ver}\g<2>', new_src)
+    if new_src != src:
+        diffs.append((index_path, src, new_src))
 
     if check_only:
         if diffs:

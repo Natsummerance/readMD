@@ -77,6 +77,7 @@ test('long-document interaction stays bounded from 1k through 50k lines', async 
     await page.locator(`#toc-list details[data-page-idx="${expectedTocPage}"] > summary`).click();
     await page.locator(`#toc-list [data-heading-id="section-${tocSection}"]`).click();
     await page.waitForFunction(expected => state.pagination.currentPage === expected, expectedTocPage);
+    await expect(page.locator(`#content [id="section-${tocSection}"]`)).toBeFocused();
     results[size].tocJumpMs = Date.now() - started;
 
     started = Date.now();

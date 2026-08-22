@@ -252,6 +252,13 @@ function saveLastFile(path) {
   }
 }
 
+function syncBuildVersionLabels() {
+  const version = document.documentElement.dataset.version;
+  if (!version) return;
+  if ($('status-version')) $('status-version').textContent = 'v' + version;
+  if ($('menu-version-label')) $('menu-version-label').textContent = '当前版本 v' + version;
+}
+
 function afterRender() {
   startModules();
 }

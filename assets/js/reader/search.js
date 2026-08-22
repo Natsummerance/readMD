@@ -167,7 +167,8 @@ function toggleSearch() {
   }
 }
 
-function closeSearch() {
+function closeSearch({ restoreFocus = false } = {}) {
   $('search-bar').classList.add('hidden');
   clearMarks();
+  if (restoreFocus && $('btn-search')) $('btn-search').focus({ preventScroll: true });
 }

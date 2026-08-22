@@ -323,6 +323,13 @@ async function confirmExitEdit() {
     await saveEdit();
     return !state.editing;
   }
+  const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
+  if (activeTab) {
+    activeTab.content = state.original;
+    activeTab.fixed = state.original;
+    activeTab.isDirty = false;
+    if (typeof renderTabsBar === 'function') renderTabsBar();
+  }
   exitEdit();
   return true;
 }
