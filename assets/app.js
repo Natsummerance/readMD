@@ -440,10 +440,32 @@ function bindEvents() {
       if (e.target === $('export-preview-modal')) $('export-preview-modal').classList.add('hidden');
     });
   }
-  document.querySelectorAll('.exp-fmt').forEach(btn => btn.addEventListener('click', () => {
-    document.querySelectorAll('.exp-fmt').forEach(b => { b.classList.toggle('active', b === btn); b.setAttribute('aria-selected', b === btn ? 'true' : 'false'); });
+  const exportFormatTabs = Array.from(document.querySelectorAll('.exp-fmt'));
+  const activateExportFormat = btn => {
+    exportFormatTabs.forEach(b => { b.classList.toggle('active', b === btn); b.setAttribute('aria-selected', b === btn ? 'true' : 'false'); });
+    $('export-opts').setAttribute('aria-labelledby', btn.id);
     state.export.fmt = btn.dataset.fmt;
     renderExportSections();
+  };
+  exportFormatTabs.forEach(btn => btn.addEventListener('click', () => activateExportFormat(btn)));
+  const moveExportTabFocus = (current, offset) => {
+    const target = exportFormatTabs[(current + offset + exportFormatTabs.length) % exportFormatTabs.length];
+    target.focus();
+    activateExportFormat(target);
+  };
+  exportFormatTabs.forEach((btn, index) => btn.addEventListener('keydown', e => {
+    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
+    e.preventDefault();
+    const next = e.key === 'ArrowRight' ? index + 1
+      : e.key === 'ArrowLeft' ? index - 1
+      : e.key === 'Home' ? 0
+      : exportFormatTabs.length - 1;
+    const target = exportFormatTabs[(next + exportFormatTabs.length) % exportFormatTabs.length];
+    target.focus();
+    activateExportFormat(target);
+    requestAnimationFrame(() => {
+      if (document.activeElement !== target) target.focus({ preventScroll: true });
+    });
   }));
   $('export-print').addEventListener('click', () => window.print());
   $('export-run').addEventListener('click', runExport);

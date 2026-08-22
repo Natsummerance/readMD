@@ -617,9 +617,9 @@
   </div>
 </div>
 
-<div id="fix-modal" class="hidden">
+<div id="fix-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="fix-title">
   <div id="fix-box">
-    <h3 data-i18n="dialog.fixTitle">本次自动修正详情 <span id="fix-count"></span></h3>
+    <h3 id="fix-title" data-i18n="dialog.fixTitle">本次自动修正详情 <span id="fix-count"></span></h3>
     <ul id="fix-list"></ul>
     <div class="fix-actions">
       <button id="fix-save" class="tb-btn" data-i18n="app.saveAs">另存为修正后文件</button>
@@ -643,16 +643,16 @@
           <div class="exp-fmt-group">
             <span class="exp-fmt-group-title" data-i18n="export.groupPublish">排版出版</span>
             <div class="exp-fmt-btn-row">
-              <button class="exp-fmt active" data-fmt="pdf" role="tab" aria-selected="true" data-i18n="export.fmtPdf">PDF</button>
-              <button class="exp-fmt" data-fmt="docx" role="tab" aria-selected="false" data-i18n="export.fmtDocx">DOCX</button>
-              <button class="exp-fmt" data-fmt="epub" role="tab" aria-selected="false" data-i18n="export.fmtEpub">EPUB</button>
+              <button id="export-tab-pdf" class="exp-fmt active" data-fmt="pdf" role="tab" aria-selected="true" aria-controls="export-opts" data-i18n="export.fmtPdf">PDF</button>
+              <button id="export-tab-docx" class="exp-fmt" data-fmt="docx" role="tab" aria-selected="false" aria-controls="export-opts" data-i18n="export.fmtDocx">DOCX</button>
+              <button id="export-tab-epub" class="exp-fmt" data-fmt="epub" role="tab" aria-selected="false" aria-controls="export-opts" data-i18n="export.fmtEpub">EPUB</button>
             </div>
           </div>
           <div class="exp-fmt-group">
             <span class="exp-fmt-group-title" data-i18n="export.groupWebCode">源码与网页</span>
             <div class="exp-fmt-btn-row">
-              <button class="exp-fmt" data-fmt="html" role="tab" aria-selected="false" data-i18n="export.fmtHtml">HTML</button>
-              <button class="exp-fmt" data-fmt="tex" role="tab" aria-selected="false" data-i18n="export.fmtTex">LaTeX</button>
+              <button id="export-tab-html" class="exp-fmt" data-fmt="html" role="tab" aria-selected="false" aria-controls="export-opts" data-i18n="export.fmtHtml">HTML</button>
+              <button id="export-tab-tex" class="exp-fmt" data-fmt="tex" role="tab" aria-selected="false" aria-controls="export-opts" data-i18n="export.fmtTex">LaTeX</button>
             </div>
           </div>
         </div>
@@ -670,7 +670,7 @@
           <button id="exp-reset" class="tb-btn" data-i18n="export.restoreDefaults">恢复默认</button>
         </div>
         <div id="exp-save-name" class="exp-save-name hidden">
-          <input id="exp-save-input" type="text" placeholder="预设名称" data-i18n-placeholder="export.presetName" maxlength="20" autocomplete="off">
+          <input id="exp-save-input" type="text" placeholder="预设名称" aria-label="预设名称" data-i18n-placeholder="export.presetName" data-i18n-aria="export.presetName" maxlength="20" autocomplete="off">
           <div class="exp-save-btns">
             <button id="exp-save-ok" class="tb-btn accent" data-i18n="editor.save">保存</button>
             <button id="exp-save-cancel" class="tb-btn" data-i18n="editor.cancel">取消</button>
@@ -693,7 +693,7 @@
           </div>
         </button>
       </div>
-      <div class="export-opts" id="export-opts" role="tabpanel"></div>
+      <div class="export-opts" id="export-opts" role="tabpanel" aria-labelledby="export-tab-pdf" tabindex="0"></div>
     </div>
     <div class="export-foot">
       <span id="export-result" class="export-result"></span>

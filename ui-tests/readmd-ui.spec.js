@@ -1103,6 +1103,19 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
   await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('#btn-more')).toBeFocused();
 
+  await page.evaluate(() => document.getElementById('export-modal').classList.remove('hidden'));
+  const pdfTab = page.locator('#export-tab-pdf');
+  const docxTab = page.locator('#export-tab-docx');
+  await pdfTab.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(docxTab).toBeFocused();
+  await expect(docxTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#export-opts')).toHaveAttribute('aria-labelledby', 'export-tab-docx');
+  await page.keyboard.press('Home');
+  await expect(pdfTab).toBeFocused();
+  await expect(pdfTab).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Escape');
+
   await page.evaluate(() => {
     state.tabs = [
       { id: 'one', path: 'C:/one.md', title: 'one.md', name: 'one.md', content: '# one' },
