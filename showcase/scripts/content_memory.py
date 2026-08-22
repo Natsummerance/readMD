@@ -79,6 +79,7 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
         "formula_stats": formulas,
         "recommended_formula": recommended,
         "recent_formulas": [item.get("title_formula_id") for item in records[-2:]],
+        "recent_hook_types": [item.get("hook_type") for item in records[-2:]],
     }
 
 
