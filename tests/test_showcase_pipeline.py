@@ -564,6 +564,53 @@ class CopyVariantsTest(unittest.TestCase):
         self.assertEqual(chosen["strategy"], "outcome-led")
         self.assertEqual(report["ranked"][0]["history_adjustment"] + report["ranked"][1]["history_adjustment"], 0)
 
+    def variant_story(self) -> dict:
+        return {
+            "release": "v1.1.0",
+            "previous_release": "v1.0.0",
+            "version_state": "prerelease",
+            "primary_shot": "presentation.reveal",
+            "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+            "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+
+    def test_originality_gate_rejects_exact_body_collision(self) -> None:
+        story = self.variant_story()
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        reused = next(variant for variant in variants if variant["strategy"] == "outcome-led")
+        history = [{
+            **self.history_record("v1.0.0", "identity-led", "#22"),
+            "body_sha256": hashlib.sha256(reused["body"].encode("utf-8")).hexdigest(),
+        }]
+        chosen, report = copy_variants.choose_variant(variants, history)
+        self.assertEqual(chosen["strategy"], "identity-led")
+        self.assertFalse(next(item for item in report["ranked"] if item["strategy"] == "outcome-led")["ok"])
+        self.assertTrue(any("body hash" in failure for failure in next(
+            item for item in report["ranked"] if item["strategy"] == "outcome-led"
+        )["hard_failures"]))
+
+    def test_originality_gate_rejects_reused_opening_and_closing(self) -> None:
+        story = self.variant_story()
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        outcome = next(variant for variant in variants if variant["strategy"] == "outcome-led")
+        fingerprints = copy_variants.text_fingerprints(outcome["body"])
+        history = [{
+            **self.history_record("v1.0.0", "identity-led", "#22"),
+            **fingerprints,
+        }]
+        chosen, report = copy_variants.choose_variant(variants, history)
+        self.assertNotEqual(chosen["strategy"], "outcome-led")
+        outcome_report = next(item for item in report["ranked"] if item["strategy"] == "outcome-led")
+        self.assertFalse(outcome_report["ok"])
+        self.assertTrue(any("opening" in failure for failure in outcome_report["hard_failures"]))
+        self.assertTrue(any("closing" in failure for failure in outcome_report["hard_failures"]))
+
 
 class PerformanceReportTest(unittest.TestCase):
     def complete(self, release: str, formula: str, hook_type: str, impressions: int, likes: int, collects: int) -> dict:
@@ -792,7 +839,11 @@ class WatcherTest(unittest.TestCase):
         (package / "story.json").write_text(json.dumps({"release": "v1.2.3"}), encoding="utf-8")
         (package / "qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "copy-review.json").write_text(json.dumps({"ok": True, "total_score": 92}), encoding="utf-8")
-        (package / "variants.json").write_text(json.dumps({"ok": True, "chosen_strategy": "outcome-led"}), encoding="utf-8")
+        (package / "variants.json").write_text(json.dumps({
+            "ok": True,
+            "chosen_strategy": "outcome-led",
+            "ranked": [{"strategy": "outcome-led", "ok": True, "originality_failures": []}],
+        }), encoding="utf-8")
         (package / "dashboard-qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "title.txt").write_text("标题", encoding="utf-8")
         (package / "body.txt").write_text("正文", encoding="utf-8")
@@ -889,6 +940,9 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(feedback["published_url"], "https://example.com/note")
             self.assertEqual(feedback["metrics_status"], "pending")
             self.assertEqual(feedback["impressions"], 0)
+            self.assertIn("body_sha256", feedback)
+            self.assertIn("opening", feedback)
+            self.assertIn("closing", feedback)
 
 
 if __name__ == "__main__":

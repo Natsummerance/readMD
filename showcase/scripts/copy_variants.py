@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import argparse
 import copy
+import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -39,6 +41,19 @@ TITLES = {
     "identity-led": "给要上台讲文档的人做的MD直接放映工具",
     "mechanism-curiosity": "Markdown写完，居然能直接上台",
 }
+
+
+def _normalize_for_originality(value: str) -> str:
+    return re.sub(r"\s+", "", value).casefold()
+
+
+def text_fingerprints(body: str) -> dict[str, str]:
+    paragraphs = [item.strip() for item in body.split("\n\n") if item.strip()]
+    return {
+        "body_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+        "opening": _normalize_for_originality(paragraphs[0] if paragraphs else ""),
+        "closing": _normalize_for_originality(paragraphs[-1] if paragraphs else ""),
+    }
 
 
 def projected_composition(story: dict[str, Any]) -> dict[str, Any]:
@@ -127,9 +142,28 @@ def choose_variant(
         stats["weighted_engagement"] += engagement
     max_score = max((item["weighted_engagement"] / max(item["impressions"], 1) for item in hook_stats.values()), default=0.0)
 
+    prior_fingerprints = [
+        {key: record.get(key) for key in ("release", "body_sha256", "opening", "closing")}
+        for record in records
+        if record.get("body_sha256") or record.get("opening") or record.get("closing")
+    ]
+
     ranked: list[dict[str, Any]] = []
     for variant in variants:
-        report = variant.pop("_report")
+        report = dict(variant.pop("_report"))
+        fingerprints = text_fingerprints(variant["body"])
+        originality_failures = []
+        for prior in prior_fingerprints:
+            release_name = prior.get("release") or "previous release"
+            if fingerprints["body_sha256"] and prior.get("body_sha256") == fingerprints["body_sha256"]:
+                originality_failures.append(f"body hash matches {release_name}")
+            if fingerprints["opening"] and prior.get("opening") == fingerprints["opening"]:
+                originality_failures.append(f"opening matches {release_name}")
+            if fingerprints["closing"] and prior.get("closing") == fingerprints["closing"]:
+                originality_failures.append(f"closing matches {release_name}")
+        if originality_failures:
+            report["hard_failures"] = sorted(set(report.get("hard_failures", []) + originality_failures))
+            report["ok"] = False
         adjustment = 0.0
         reasons = []
         hook_type = variant["hook_type"]
@@ -154,6 +188,7 @@ def choose_variant(
             "adjusted_score": round(report["total_score"] + adjustment, 3),
             "ok": report["ok"],
             "hard_failures": report["hard_failures"],
+            "originality_failures": originality_failures,
             "reasons": reasons,
         })
 
@@ -166,6 +201,7 @@ def choose_variant(
         "schema_version": 1,
         "chosen_strategy": winner_summary["strategy"],
         "ok": True,
+        "originality_gate": "pass",
         "selection_rule": "semantic score plus historical hook performance minus recent fatigue",
         "ranked": [item for item in ranked if "_report" not in item],
     }

@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from content_memory import upsert_record
+from copy_variants import text_fingerprints
 
 DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
 STATE_VERSION = 1
@@ -111,6 +112,8 @@ def seed_feedback_ledger(
     audit_status: str | None,
 ) -> dict[str, Any]:
     metadata = json.loads((package_dir / "metadata.json").read_text(encoding="utf-8"))
+    body_path = package_dir / "body.txt"
+    body = body_path.read_text(encoding="utf-8").strip() if body_path.exists() else ""
     record = {
         "release": release,
         "title": title,
@@ -128,6 +131,7 @@ def seed_feedback_ledger(
         "publisher_target_id": publisher_result.get("targetId"),
         "published_url": publisher_result.get("url"),
         "audit_status": audit_status,
+        **text_fingerprints(body),
         "lessons": "Published automatically; awaiting platform metrics and manual review.",
     }
     return upsert_record(ledger_path, record)
@@ -164,6 +168,9 @@ def process_package(
         variants = json.loads((package_dir / "variants.json").read_text(encoding="utf-8"))
         if variants.get("ok") is not True:
             raise ValueError("package variants.json is not green")
+        chosen_ranked = next((item for item in variants.get("ranked", []) if item.get("strategy") == variants.get("chosen_strategy")), None)
+        if not chosen_ranked or chosen_ranked.get("ok") is not True or chosen_ranked.get("originality_failures"):
+            raise ValueError("package variant originality gate is not green")
         dashboard = json.loads((package_dir / "dashboard-qa.json").read_text(encoding="utf-8"))
         if dashboard.get("ok") is not True:
             raise ValueError("package dashboard-qa.json is not green")

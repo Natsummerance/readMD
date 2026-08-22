@@ -118,6 +118,13 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
             variants = _load_json(variants_path)
             if variants.get("ok") is not True or not variants.get("chosen_strategy"):
                 errors.append("variant selection report is incomplete")
+            else:
+                chosen_strategy = variants.get("chosen_strategy")
+                chosen_ranked = next((item for item in variants.get("ranked", []) if item.get("strategy") == chosen_strategy), None)
+                if not chosen_ranked:
+                    errors.append("variant selection missing chosen ranking")
+                elif chosen_ranked.get("ok") is not True or chosen_ranked.get("originality_failures"):
+                    errors.append("variant originality gate failed: " + "; ".join(map(str, chosen_ranked.get("hard_failures", []))))
         except Exception as exc:
             errors.append(f"variants.json unreadable: {exc}")
 

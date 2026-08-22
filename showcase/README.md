@@ -19,7 +19,7 @@ node showcase/scripts/compose_cards.js showcase/output/package
 python showcase/scripts/validate_package.py showcase/output/package
 ```
 
-完整构建会先生成结果导向、身份代入、机制好奇三种完整稿件；语义评分和历史钩子表现共同决定最终稿，选择证据写入 `variants.json`。随后生成 `wechat/readmd-wechat.html`。该 HTML 只用行内样式，不包含脚本、外链、class、id 或图片；`wechat/wechat-qa.json` 也必须为 `{"ok":true}` 才允许进入发布队列。
+完整构建会先生成结果导向、身份代入、机制好奇三种完整稿件；语义评分、历史钩子表现和跨发布原创性共同决定最终稿。每个变体都会计算整稿哈希、开头指纹和结尾指纹；命中历史正文、开头或结尾的变体直接淘汰。选择证据写入 `variants.json`。随后生成 `wechat/readmd-wechat.html`。该 HTML 只用行内样式，不包含脚本、外链、class、id 或图片；`wechat/wechat-qa.json` 也必须为 `{"ok":true}` 才允许进入发布队列。
 
 构建还会生成 `review-dashboard.html`，把 QA 门禁、语义评分、变体排序、反馈账本和最终文案汇总成一个自包含审查面板；`dashboard-qa.json` 必须为绿。
 
