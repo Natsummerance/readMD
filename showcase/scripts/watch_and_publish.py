@@ -164,6 +164,9 @@ def process_package(
         variants = json.loads((package_dir / "variants.json").read_text(encoding="utf-8"))
         if variants.get("ok") is not True:
             raise ValueError("package variants.json is not green")
+        dashboard = json.loads((package_dir / "dashboard-qa.json").read_text(encoding="utf-8"))
+        if dashboard.get("ok") is not True:
+            raise ValueError("package dashboard-qa.json is not green")
         localize_image_paths(package_dir)
         release, title = package_identity(package_dir)
         previous = [item for item in state["packages"].values() if item.get("release") == release and item.get("status") == "published"]

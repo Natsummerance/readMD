@@ -24,6 +24,7 @@ content_memory = importlib.import_module("content_memory")
 copy_variants = importlib.import_module("copy_variants")
 export_wechat = importlib.import_module("export_wechat")
 performance_report = importlib.import_module("performance_report")
+review_dashboard = importlib.import_module("review_dashboard")
 validate_package = importlib.import_module("validate_package")
 watch_and_publish = importlib.import_module("watch_and_publish")
 write_copy = importlib.import_module("write_copy")
@@ -732,6 +733,56 @@ class ContentMemoryTest(unittest.TestCase):
         self.assertEqual(after, before)
 
 
+class ReviewDashboardTest(unittest.TestCase):
+    def sample_inputs(self) -> dict:
+        return {
+            "release": "v1.2.3",
+            "title": "不用重做PPT，Markdown直接放映",
+            "strategy": "outcome-led",
+            "body": "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。",
+            "qa": {"ok": True, "errors": []},
+            "copy_review": {
+                "ok": True,
+                "total_score": 100,
+                "scores": {"title": 15, "hook": 15, "focus": 20},
+                "hard_failures": [],
+            },
+            "variants": {
+                "ok": True,
+                "chosen_strategy": "outcome-led",
+                "ranked": [
+                    {"strategy": "outcome-led", "adjusted_score": 100, "semantic_score": 100},
+                    {"strategy": "identity-led", "adjusted_score": 96, "semantic_score": 100},
+                ],
+            },
+            "wechat_qa": {"ok": True, "errors": []},
+            "performance": {
+                "learning_count": 2,
+                "pending_count": 1,
+                "recommended_formula": "#22",
+                "recommended_hook_type": "identity-task",
+            },
+        }
+
+    def test_builds_paste_ready_review_dashboard(self) -> None:
+        html = review_dashboard.build_dashboard(self.sample_inputs())
+        self.assertIn("不用重做PPT，Markdown直接放映", html)
+        self.assertIn("outcome-led", html)
+        self.assertIn("100 / 100", html)
+        self.assertIn("Pending metrics", html)
+        for forbidden in ("<script", "class=", "id=", "<img", "<table", "http://", "https://"):
+            self.assertNotIn(forbidden.lower(), html.lower())
+
+    def test_marks_failed_gate_without_script_or_external_asset(self) -> None:
+        inputs = self.sample_inputs()
+        inputs["qa"] = {"ok": False, "errors": ["blank band exceeds 120px"]}
+        html = review_dashboard.build_dashboard(inputs)
+        self.assertIn("NEEDS FIX", html)
+        self.assertIn("blank band exceeds 120px", html)
+        for forbidden in ("<script", "class=", "id=", "<img", "http://"):
+            self.assertNotIn(forbidden.lower(), html.lower())
+
+
 class WatcherTest(unittest.TestCase):
     def make_package_zip(self, root: Path) -> Path:
         package = root / "package"
@@ -742,6 +793,7 @@ class WatcherTest(unittest.TestCase):
         (package / "qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "copy-review.json").write_text(json.dumps({"ok": True, "total_score": 92}), encoding="utf-8")
         (package / "variants.json").write_text(json.dumps({"ok": True, "chosen_strategy": "outcome-led"}), encoding="utf-8")
+        (package / "dashboard-qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "title.txt").write_text("标题", encoding="utf-8")
         (package / "body.txt").write_text("正文", encoding="utf-8")
         metadata = {

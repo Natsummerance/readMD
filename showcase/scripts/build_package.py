@@ -9,10 +9,12 @@ import subprocess
 from pathlib import Path
 
 from audit_copy import audit_package
-from content_memory import load_records
+from content_memory import load_learning_records, load_records
 from build_story import build_story
 from copy_variants import select_variant
 from export_wechat import export_package
+import performance_report
+import review_dashboard
 from validate_package import validate_package
 from write_copy import generate_copy
 
@@ -38,7 +40,7 @@ def build_package(
         shot_library_path=repo_root / "showcase" / "shot_library.json",
     )
     (package_dir / "story.json").write_text(json.dumps(story, ensure_ascii=False, indent=2), encoding="utf-8")
-    history = load_records(memory_path) if memory_path else []
+    history = load_learning_records(memory_path) if memory_path else []
     metadata = generate_copy(
         story,
         repository=repository,
@@ -52,6 +54,8 @@ def build_package(
     )
     (package_dir / "variants.json").write_text(json.dumps(variant_selection, ensure_ascii=False, indent=2), encoding="utf-8")
     (package_dir / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
+    publication_records = load_records(memory_path) if memory_path else []
+    performance_report.generate_report(publication_records, package_dir)
     (package_dir / "title.txt").write_text(metadata["title"], encoding="utf-8")
     (package_dir / "body.txt").write_text(metadata["body"], encoding="utf-8")
     (package_dir / "topics.txt").write_text("\n".join(metadata["topics"]), encoding="utf-8")
@@ -67,7 +71,13 @@ def compose_and_validate(package_dir: Path, repo_root: Path) -> list[str]:
     wechat_report = export_package(package_dir)
     if not wechat_report["ok"]:
         return [f"WeChat adapter gate failed: {json.dumps(wechat_report['errors'], ensure_ascii=False)}"]
-    return validate_package(package_dir, repo_root=repo_root)
+    errors = validate_package(package_dir, repo_root=repo_root)
+    qa_report = {"ok": not errors, "errors": errors}
+    (package_dir / "qa.json").write_text(json.dumps(qa_report, ensure_ascii=False, indent=2), encoding="utf-8")
+    dashboard_report = review_dashboard.generate_package(package_dir)
+    if not dashboard_report.get("ok"):
+        errors.append(f"review dashboard gate failed: {json.dumps(dashboard_report.get('errors', []), ensure_ascii=False)}")
+    return errors
 
 
 def main() -> int:
@@ -95,8 +105,7 @@ def main() -> int:
     errors: list[str] = []
     if not args.skip_compose:
         errors = compose_and_validate(args.output, repo_root)
-        report = {"ok": not errors, "errors": errors}
-        (args.output / "qa.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+        report = json.loads((args.output / "qa.json").read_text(encoding="utf-8"))
         print(json.dumps(report, ensure_ascii=False))
         if errors:
             return 1
