@@ -1713,6 +1713,24 @@ class ReviewDashboardTest(unittest.TestCase):
                 "recommended_formula": "#22",
                 "recommended_hook_type": "identity-task",
                 "recommended_copy_frame": "workflow",
+                "comment_focus": {
+                    "recommended_theme": "code",
+                    "confidence": "medium",
+                    "themes": {
+                        "code": {
+                            "release_count": 2,
+                            "mentions": 5,
+                            "weighted_score": 18,
+                            "confidence": "medium",
+                        },
+                        "presentation": {
+                            "release_count": 1,
+                            "mentions": 2,
+                            "weighted_score": 4,
+                            "confidence": "low",
+                        },
+                    },
+                },
             },
         }
 
@@ -1728,9 +1746,24 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("10 / 10", html)
         self.assertIn("Recommended frame", html)
         self.assertIn("workflow", html)
+        self.assertIn("Comment resonance", html)
+        self.assertIn("code", html)
+        self.assertIn("5 mentions", html)
+        self.assertIn("weighted 18", html)
+        self.assertIn("medium confidence", html)
         self.assertIn("Pending metrics", html)
         for forbidden in ("<script", "class=", "id=", "<img", "<table", "http://", "https://"):
             self.assertNotIn(forbidden.lower(), html.lower())
+
+    def test_comment_resonance_requires_confident_evidence(self) -> None:
+        inputs = self.sample_inputs()
+        inputs["performance"]["comment_focus"] = {
+            "recommended_theme": None,
+            "confidence": "low",
+            "themes": {},
+        }
+        html = review_dashboard.build_dashboard(inputs)
+        self.assertIn("No confident comment evidence yet", html)
 
     def test_curates_top_experiments_instead_of_dumping_sixty_cards(self) -> None:
         inputs = self.sample_inputs()

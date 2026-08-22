@@ -58,6 +58,45 @@ def _top_variants(ranked: list[dict[str, Any]], chosen_variant_id: Any, limit: i
     return selected[:limit]
 
 
+def _comment_resonance_html(comment_focus: dict[str, Any]) -> str:
+    themes = [
+        {"theme": str(theme), **stats}
+        for theme, stats in comment_focus.get("themes", {}).items()
+        if isinstance(stats, dict)
+    ]
+    confident = [
+        item for item in themes
+        if item.get("confidence") in ("medium", "high")
+    ]
+    confident.sort(key=lambda item: (
+        item.get("confidence") != "high",
+        -int(item.get("weighted_score", 0)),
+        -int(item.get("mentions", 0)),
+        item["theme"],
+    ))
+
+    if not confident:
+        return '<p style="margin:0;font-size:23px;color:#5b6875">No confident comment evidence yet</p>'
+
+    items = "".join(
+        f'<div style="flex:1;min-width:240px;background:#f2f4f6;border-radius:14px;padding:20px">'
+        f'<p style="margin:0;font-size:26px;font-weight:800;color:#182029">{_escaped(item["theme"])}</p>'
+        f'<p style="margin:8px 0 0;font-size:22px;color:#5b6875">'
+        f'{_escaped(int(item.get("mentions", 0)))} mentions · '
+        f'weighted {_escaped(int(item.get("weighted_score", 0)))} · '
+        f'{_escaped(item.get("confidence"))} confidence</p>'
+        f'<p style="margin:6px 0 0;font-size:20px;color:#5b6875">'
+        f'{_escaped(int(item.get("release_count", 0)))} releases · anonymized</p></div>'
+        for item in confident[:3]
+    )
+    return (
+        '<div style="display:flex;gap:14px;flex-wrap:wrap">'
+        f'{items}</div>'
+        '<p style="margin:14px 0 0;font-size:21px;color:#5b6875">'
+        'Only medium/high-confidence anonymized comment themes are shown.</p>'
+    )
+
+
 def build_dashboard(inputs: dict[str, Any]) -> str:
     release = inputs.get("release", "")
     title = inputs.get("title", "")
@@ -138,8 +177,8 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
         _metric("Pending metrics", performance.get("pending_count", 0)),
         _metric("Recommended formula", performance.get("recommended_formula", "insufficient data")),
         _metric("Recommended frame", performance.get("recommended_copy_frame") or "insufficient evidence"),
-        _metric("Recommended comment focus", performance.get("comment_focus", {}).get("recommended_theme") or "insufficient evidence"),
     ])
+    comment_resonance_html = _comment_resonance_html(performance.get("comment_focus", {}))
 
     return f'''<!doctype html>
 <html lang="zh-CN">
@@ -159,6 +198,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
   {_section("Release gates", gate_html)}
   {_section("Semantic dimensions", f'<div style="display:flex;gap:14px;flex-wrap:wrap">{score_items}</div>')}
   {_section("Style resonance", style_inner)}
+  {_section("Comment resonance", comment_resonance_html)}
   {_section(
       "Top experiments",
       f'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">{experiment_summary}</div>'
