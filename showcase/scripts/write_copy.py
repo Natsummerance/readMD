@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from content_memory import load_records, summarize
+from content_memory import load_learning_records, partition_records, summarize
 
 
 BANNED_REPLACEMENTS = {
@@ -90,6 +90,7 @@ def generate_copy(
     previous_release: str,
     history: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
+    history, _pending_history = partition_records(history or [])
     candidates = _title_candidates(story)
     selected_title, title_selection = _select_title([dict(item) for item in candidates], history)
     valid_candidates = [item for item in candidates if len(item["text"]) <= 20]
@@ -186,7 +187,7 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     story = json.loads(args.story.read_text(encoding="utf-8"))
-    history = content_memory.load_records(args.history)
+    history = load_learning_records(args.history)
     result = generate_copy(story, repository=args.repository, previous_release=story["previous_release"], history=history)
     args.output_dir.mkdir(parents=True, exist_ok=True)
     (args.output_dir / "metadata.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")

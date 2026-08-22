@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from audit_copy import audit_copy
-from content_memory import load_records, summarize
+from content_memory import load_learning_records, partition_records, summarize
 
 
 OPENINGS = {
@@ -108,6 +108,7 @@ def choose_variant(
     history: list[dict[str, Any]] | None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     records = history or []
+    records, _pending_records = partition_records(records)
     summary = summarize(records)
     recent_hooks = set(summary.get("recent_hook_types", []))
     recent_formulas = set(summary.get("recent_formulas", []))
@@ -192,7 +193,7 @@ def main() -> int:
     args = parser.parse_args()
     metadata = json.loads((args.package / "metadata.json").read_text(encoding="utf-8"))
     story = json.loads(args.story.read_text(encoding="utf-8"))
-    history = load_records(args.history) if args.history else []
+    history = load_learning_records(args.history) if args.history else []
     chosen, selection = select_variant(story=story, base_metadata=metadata, history=history)
     (args.package / "metadata.json").write_text(json.dumps(chosen, ensure_ascii=False, indent=2), encoding="utf-8")
     (args.package / "variants.json").write_text(json.dumps(selection, ensure_ascii=False, indent=2), encoding="utf-8")

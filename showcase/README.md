@@ -44,6 +44,9 @@ WeChat 文件只做人工复制/粘贴发布，watcher 不会自动操作公众�
 ```powershell
 python showcase/scripts/content_memory.py update --release "v2.3.7-beta.3" --record feedback.json
 python showcase/scripts/content_memory.py summary
+python showcase/scripts/performance_report.py --output-dir showcase/reports/performance
 ```
+
+绩效报告会分开列出 `complete` 与 `pending` 记录；`pending` 只作为待补录清单，不参与公式和钩子学习。
 
 记录字段包括 release、标题、公式 ID、钩子类型、曝光、赞、藏、评、转发、关注和一句复盘。下一次构建会读取这份资产：优先选择验证过的公式，并对最近连续使用过的公式降权。

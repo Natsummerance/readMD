@@ -23,6 +23,7 @@ audit_copy = importlib.import_module("audit_copy")
 content_memory = importlib.import_module("content_memory")
 copy_variants = importlib.import_module("copy_variants")
 export_wechat = importlib.import_module("export_wechat")
+performance_report = importlib.import_module("performance_report")
 validate_package = importlib.import_module("validate_package")
 watch_and_publish = importlib.import_module("watch_and_publish")
 write_copy = importlib.import_module("write_copy")
@@ -540,6 +541,66 @@ class CopyVariantsTest(unittest.TestCase):
         self.assertEqual(chosen["strategy"], "identity-led")
         self.assertTrue(report["ok"])
 
+    def test_selection_ignores_pending_hook_history(self) -> None:
+        story = {
+            "release": "v1.1.0",
+            "previous_release": "v1.0.0",
+            "version_state": "prerelease",
+            "primary_shot": "presentation.reveal",
+            "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+            "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        history = [
+            {**self.history_record("v1.0.1", "identity-led", "#22"), "metrics_status": "pending"},
+        ]
+        chosen, report = copy_variants.choose_variant(variants, history)
+        self.assertEqual(chosen["strategy"], "outcome-led")
+        self.assertEqual(report["ranked"][0]["history_adjustment"] + report["ranked"][1]["history_adjustment"], 0)
+
+
+class PerformanceReportTest(unittest.TestCase):
+    def complete(self, release: str, formula: str, hook_type: str, impressions: int, likes: int, collects: int) -> dict:
+        return {
+            "release": release,
+            "title": release,
+            "title_formula_id": formula,
+            "hook_type": hook_type,
+            "published_at": "2026-08-22T00:00:00Z",
+            "impressions": impressions,
+            "likes": likes,
+            "collects": collects,
+            "comments": 10,
+            "shares": 5,
+            "follows": 2,
+            "metrics_status": "complete",
+        }
+
+    def test_generates_markdown_and_json_without_pending_learning(self) -> None:
+        records = [
+            self.complete("v1", "#36", "outcome-led", 1000, 40, 60),
+            self.complete("v2", "#22", "identity-led", 2000, 120, 180),
+            {**self.complete("v3", "#9", "mechanism-curiosity", 500, 5, 5), "metrics_status": "pending"},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp)
+            result = performance_report.generate_report(records, output)
+            markdown = (output / "performance-report.md").read_text(encoding="utf-8")
+            data = json.loads((output / "performance-report.json").read_text(encoding="utf-8"))
+        self.assertTrue(result["ok"])
+        self.assertEqual(data["learning_count"], 2)
+        self.assertEqual(data["pending_count"], 1)
+        self.assertNotIn("#9", data["formula_stats"])
+        self.assertEqual(data["recommended_formula"], "#22")
+        self.assertEqual(data["recommended_hook_type"], "identity-led")
+        self.assertIn("Pending metrics", markdown)
+        self.assertIn("#22", markdown)
+
 
 class ContentMemoryTest(unittest.TestCase):
     def record(self, formula: str = "#61", release: str = "v1.0.0", title: str = "别再把Markdown只当笔记了") -> dict:
@@ -580,6 +641,19 @@ class ContentMemoryTest(unittest.TestCase):
         self.assertEqual(summary["recommended_formula"], "#36")
         self.assertGreater(summary["formula_stats"]["#36"]["score"], summary["formula_stats"]["#61"]["score"])
 
+    def test_pending_feedback_is_partitioned_out_of_learning(self) -> None:
+        complete = self.record(release="v1.0.0", formula="#61")
+        pending = {
+            **self.record(release="v1.0.1", formula="#36"),
+            "metrics_status": "pending",
+        }
+        learning, waiting = content_memory.partition_records([complete, pending])
+        self.assertEqual([item["release"] for item in learning], ["v1.0.0"])
+        self.assertEqual([item["release"] for item in waiting], ["v1.0.1"])
+        summary = content_memory.summarize(learning)
+        self.assertEqual(summary["record_count"], 1)
+        self.assertNotIn("#36", summary["formula_stats"])
+
     def test_copy_selection_uses_history_and_avoids_fatigue(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             story = {
@@ -603,6 +677,28 @@ class ContentMemoryTest(unittest.TestCase):
         self.assertEqual(result["title_formula_id"], "#61")
         self.assertIn("#36", result["title_selection"]["avoided_formulas"])
         self.assertIn("historical", result["title_selection"]["strategy"])
+
+    def test_copy_selection_ignores_pending_zero_metric_history(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = {
+                "release": "v1.1.0",
+                "version_state": "prerelease",
+                "angle": "ReadMD 让同一份 Markdown 直接放映",
+                "primary_shot": "presentation.reveal",
+                "claims": [{"id": "reveal", "shot_ids": ["presentation.reveal"], "user_value": "放映"}],
+            }
+            history = [
+                {**self.record(release="v1.0.9", formula="#61"), "impressions": 2400, "likes": 130, "collects": 190, "comments": 45, "shares": 22},
+                {**self.record(release="v1.0.8", formula="#36"), "metrics_status": "pending"},
+            ]
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v1.0.9",
+                history=history,
+            )
+        self.assertEqual(result["title_formula_id"], "#61")
+        self.assertNotIn("#36", result["title_selection"]["avoided_formulas"])
 
     def test_update_record_merges_real_metrics_without_duplicating(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

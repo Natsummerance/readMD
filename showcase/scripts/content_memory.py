@@ -38,6 +38,20 @@ def load_records(path: Path) -> list[dict[str, Any]]:
     return records
 
 
+def is_pending_record(record: dict[str, Any]) -> bool:
+    return record.get("metrics_status") == "pending"
+
+
+def partition_records(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    learning = [record for record in records if not is_pending_record(record)]
+    pending = [record for record in records if is_pending_record(record)]
+    return learning, pending
+
+
+def load_learning_records(path: Path) -> list[dict[str, Any]]:
+    return partition_records(load_records(path))[0]
+
+
 def append_record(path: Path, record: dict[str, Any]) -> dict[str, Any]:
     clean = dict(record)
     _validate_record(clean)
