@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR recognition failed",
   "toast.ocrFailPrefix": "OCR failed: ",
   "toast.ocrNoText": "No text detected",
+  "toast.opened": "Opened: {name}",
+  "toast.openedPages": "Opened: {name} - {count} pages",
   "toast.openFailed": "Cannot open: ",
   "toast.openFolderBrowserNotice": "In browser mode, please use \"Open File\"",
   "toast.presetNameConflict": "Name conflicts with built-in presets",

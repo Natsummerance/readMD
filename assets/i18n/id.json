@@ -828,6 +828,8 @@
   "toast.ocrFail": "Pengenalan OCR gagal",
   "toast.ocrFailPrefix": "OCR gagal: ",
   "toast.ocrNoText": "Tidak ada teks yang terdeteksi",
+  "toast.opened": "Dibuka: {name}",
+  "toast.openedPages": "Dibuka: {name} - {count} halaman",
   "toast.openFailed": "Tidak dapat membuka: ",
   "toast.openFolderBrowserNotice": "Dalam mode peramban, silakan gunakan \"Buka Berkas\"",
   "toast.presetNameConflict": "Nama bertentangan dengan preset bawaan",

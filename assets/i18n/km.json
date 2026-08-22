@@ -828,6 +828,8 @@
   "toast.ocrFail": "ការទទួលស្គាល់ OCR បានបរាជ័យ",
   "toast.ocrFailPrefix": "OCR បរាជ័យ៖",
   "toast.ocrNoText": "អត្ថបទមិនត្រូវបានទទួលស្គាល់ទេ។",
+  "toast.opened": "បានបើក៖ {name}",
+  "toast.openedPages": "បានបើក៖ {name} - {count} ទំព័រ",
   "toast.openFailed": "មិនអាចបើក៖",
   "toast.openFolderBrowserNotice": "សូមប្រើ \"បើកឯកសារ\" នៅក្នុងរបៀបកម្មវិធីរុករក",
   "toast.presetNameConflict": "ឈ្មោះ​ផ្ទុយ​នឹង​ការ​កំណត់​ជាមុន​ដែល​មាន​ស្រាប់",

@@ -828,6 +828,8 @@
   "toast.ocrFail": "Kumenyekanisha OCR byarananiranye",
   "toast.ocrFailPrefix": "OCR yananiwe:",
   "toast.ocrNoText": "Inyandiko ntiyemewe",
+  "toast.opened": "Yafunguwe: {name}",
+  "toast.openedPages": "Yafunguwe: {name} - {count} amapaji",
   "toast.openFailed": "Ntibishobora gufungura:",
   "toast.openFolderBrowserNotice": "Nyamuneka koresha \"Fungura File\" muburyo bwa mushakisha",
   "toast.presetNameConflict": "Vuga amazina avuguruzanya",

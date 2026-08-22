@@ -828,6 +828,8 @@
   "toast.ocrFail": "Pengecaman OCR gagal",
   "toast.ocrFailPrefix": "OCR gagal:",
   "toast.ocrNoText": "Teks tidak dikenali",
+  "toast.opened": "Dibuka: {name}",
+  "toast.openedPages": "Dibuka: {name} - {count} halaman",
   "toast.openFailed": "Tidak dapat membuka:",
   "toast.openFolderBrowserNotice": "Sila gunakan \"Buka Fail\" dalam mod penyemak imbas",
   "toast.presetNameConflict": "Nama bercanggah dengan pratetap terbina dalam",

@@ -828,6 +828,8 @@
   "toast.ocrFail": "فشل التعرف الضوئي على الحروف (OCR)",
   "toast.ocrFailPrefix": "فشل التعرف الضوئي OCR: ",
   "toast.ocrNoText": "لم يتم العثور على أي نصوص في الصورة",
+  "toast.opened": "تم الفتح: {name}",
+  "toast.openedPages": "تم الفتح: {name} - {count} صفحات",
   "toast.openFailed": "تعذر الفتح: ",
   "toast.openFolderBrowserNotice": "في وضع المتصفح، يرجى استخدام \"فتح ملف\"",
   "toast.presetNameConflict": "يتعارض الاسم مع أحد الأنماط المدمجة",

@@ -146,6 +146,11 @@ async function loadFile(path) {
     await loadDocCitations(d.path);
     setFixes(d.fixes || [], d.stats || {});
     renderContent(d.content, d.name);
+    if (state.pagination.enabled && state.pagination.totalPages > 1) {
+      showToast(_t('toast.openedPages', { name: d.name, count: state.pagination.totalPages }), 4000);
+    } else {
+      showToast(_t('toast.opened', { name: d.name }), 4000);
+    }
 
     document.title = d.name + ' - ReadMD';
     setFileTitle(d.name, hasPy, d.path);
@@ -504,9 +509,14 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
         const activeTocLink = document.querySelector(`#toc-list [data-heading-id="${CSS.escape(targetEl.id)}"]`);
         if (activeTocLink) activeTocLink.classList.add('toc-heading-active');
         targetEl.classList.remove('heading-target-highlight');
+        targetEl.classList.remove('search-arrival');
         void targetEl.offsetWidth;
         targetEl.classList.add('heading-target-highlight');
-        setTimeout(() => targetEl.classList.remove('heading-target-highlight'), 1500);
+        targetEl.classList.add('search-arrival');
+        setTimeout(() => {
+          targetEl.classList.remove('heading-target-highlight');
+          targetEl.classList.remove('search-arrival');
+        }, 1500);
       } else {
         el.scrollTop = 0;
       }

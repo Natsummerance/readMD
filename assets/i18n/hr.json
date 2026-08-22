@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR prepoznavanje nije uspjelo",
   "toast.ocrFailPrefix": "OCR nije uspio: ",
   "toast.ocrNoText": "Tekst nije prepoznat",
+  "toast.opened": "Otvoreno: {name}",
+  "toast.openedPages": "Otvoreno: {name} - {count} stranica",
   "toast.openFailed": "Otvaranje nije uspjelo: ",
   "toast.openFolderBrowserNotice": "U načinu preglednika koristite \"Otvori datoteku\"",
   "toast.presetNameConflict": "Naziv je u sukobu s ugrađenim predloškom",

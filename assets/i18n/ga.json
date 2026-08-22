@@ -828,6 +828,8 @@
   "toast.ocrFail": "Theip ar aitheantas OCR",
   "toast.ocrFailPrefix": "Theip ar OCR:",
   "toast.ocrNoText": "Téacs gan aithint",
+  "toast.opened": "Oscailte: {name}",
+  "toast.openedPages": "Oscailte: {name} - {count} leathanach",
   "toast.openFailed": "Ní féidir a oscailt:",
   "toast.openFolderBrowserNotice": "Úsáid \"Comhad Oscailte\" i mód an bhrabhsálaí",
   "toast.presetNameConflict": "Ainmnigh coinbhleachtaí le réamhshocrú ionsuite",

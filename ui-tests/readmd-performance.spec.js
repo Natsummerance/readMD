@@ -24,6 +24,7 @@ async function openCorpus(page, size) {
   const started = Date.now();
   await page.goto(`/?file=${encodeURIComponent(file)}`);
   await page.waitForFunction(expected => state.file === expected && state.original.length > 0, file);
+  await expect(page.locator('#toast')).toContainText(/已打开/);
   await expect(page.locator('#content .markdown-body h1')).toContainText('Long document performance');
   if (size > 8000) {
     await page.waitForFunction(() => state.pagination.enabled && state.pagination.totalPages > 1);
@@ -79,6 +80,7 @@ test('long-document interaction stays bounded from 1k through 50k lines', async 
     await page.waitForFunction(expected => state.pagination.currentPage === expected, expectedTocPage);
     await expect(page.locator(`#content [id="section-${tocSection}"]`)).toBeFocused();
     await expect(page.locator(`#toc-list [data-heading-id="section-${tocSection}"]`)).toHaveClass(/toc-heading-active/);
+    await expect(page.locator(`#content [id="section-${tocSection}"]`)).toHaveClass(/search-arrival/);
     results[size].tocJumpMs = Date.now() - started;
 
     started = Date.now();

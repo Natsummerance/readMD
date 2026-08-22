@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR-herkenning mislukt",
   "toast.ocrFailPrefix": "OCR mislukt: ",
   "toast.ocrNoText": "Geen tekst herkend",
+  "toast.opened": "Geopend: {name}",
+  "toast.openedPages": "Geopend: {name} - {count} pagina's",
   "toast.openFailed": "Kan niet openen: ",
   "toast.openFolderBrowserNotice": "Gebruik in browsermodus 'Bestand openen'",
   "toast.presetNameConflict": "Naam conflicteert met een ingebouwde voorinstelling",

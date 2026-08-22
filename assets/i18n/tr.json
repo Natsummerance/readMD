@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR tanıma başarısız oldu",
   "toast.ocrFailPrefix": "OCR başarısız oldu: ",
   "toast.ocrNoText": "Görselde metin algılanamadı",
+  "toast.opened": "Açıldı: {name}",
+  "toast.openedPages": "Açıldı: {name} - {count} sayfa",
   "toast.openFailed": "Açılamıyor: ",
   "toast.openFolderBrowserNotice": "Tarayıcı modunda klasör açılamaz, lütfen \"Dosya Aç\"ı kullanın",
   "toast.presetNameConflict": "Bu ad yerleşik bir hazır ayarla çakışıyor",

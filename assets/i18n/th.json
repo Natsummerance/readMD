@@ -828,6 +828,8 @@
   "toast.ocrFail": "การรู้จำ OCR ล้มเหลว",
   "toast.ocrFailPrefix": "OCR ล้มเหลว: ",
   "toast.ocrNoText": "ไม่พบข้อความ",
+  "toast.opened": "เปิดแล้ว: {name}",
+  "toast.openedPages": "เปิดแล้ว: {name} - {count} หน้า",
   "toast.openFailed": "ไม่สามารถเปิดได้: ",
   "toast.openFolderBrowserNotice": "ในโหมดเบราว์เซอร์ โปรดใช้ \"เปิดไฟล์\"",
   "toast.presetNameConflict": "ชื่อขัดแย้งกับพรีเซ็ตในตัว",

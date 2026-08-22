@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR শনাক্তকরণ ব্যর্থ হয়েছে",
   "toast.ocrFailPrefix": "OCR ব্যর্থ: ",
   "toast.ocrNoText": "কোনো টেক্সট শনাক্ত করা যায়নি",
+  "toast.opened": "খোলা হয়েছে: {name}",
+  "toast.openedPages": "খোলা হয়েছে: {name} - {count} পৃষ্ঠা",
   "toast.openFailed": "খুলতে ব্যর্থ: ",
   "toast.openFolderBrowserNotice": "ব্রাউজার মোডে অনুগ্রহ করে \"ফাইল খুলুন\" ব্যবহার করুন",
   "toast.presetNameConflict": "নামটি বিল্ট-ইন প্রিসেটের সাথে মিলে যাচ্ছে",

@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR-igenkänning misslyckades",
   "toast.ocrFailPrefix": "OCR misslyckades:",
   "toast.ocrNoText": "Texten känns inte igen",
+  "toast.opened": "Öppnad: {name}",
+  "toast.openedPages": "Öppnad: {name} - {count} sidor",
   "toast.openFailed": "Kan inte öppna:",
   "toast.openFolderBrowserNotice": "Använd \"Öppna fil\" i webbläsarläge",
   "toast.presetNameConflict": "Namnkonflikt med inbyggd förinställning",

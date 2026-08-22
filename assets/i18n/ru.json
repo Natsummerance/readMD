@@ -828,6 +828,8 @@
   "toast.ocrFail": "Распознавание OCR не удалось",
   "toast.ocrFailPrefix": "OCR не удалось:",
   "toast.ocrNoText": "Текст не распознан",
+  "toast.opened": "Открыто: {name}",
+  "toast.openedPages": "Открыто: {name} - {count} стр.",
   "toast.openFailed": "Невозможно открыть:",
   "toast.openFolderBrowserNotice": "Пожалуйста, используйте «Открыть файл» в режиме браузера.",
   "toast.presetNameConflict": "Имя конфликтует со встроенным пресетом.",

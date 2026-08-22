@@ -828,6 +828,8 @@
   "toast.ocrFail": "Nhận dạng OCR thất bại",
   "toast.ocrFailPrefix": "OCR thất bại: ",
   "toast.ocrNoText": "Không nhận dạng được văn bản nào",
+  "toast.opened": "Đã mở: {name}",
+  "toast.openedPages": "Đã mở: {name} - {count} trang",
   "toast.openFailed": "Không thể mở: ",
   "toast.openFolderBrowserNotice": "Trong chế độ trình duyệt, vui lòng sử dụng \"Mở tệp\"",
   "toast.presetNameConflict": "Tên bị xung đột với cài đặt sẵn tích hợp",

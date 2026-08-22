@@ -828,6 +828,8 @@
   "toast.ocrFail": "Ir-rikonoxximent OCR falla",
   "toast.ocrFailPrefix": "OCR falla:",
   "toast.ocrNoText": "Test mhux rikonoxxut",
+  "toast.opened": "Miftuħ: {name}",
+  "toast.openedPages": "Miftuħ: {name} - {count} paġni",
   "toast.openFailed": "Ma tistax tiftaħ:",
   "toast.openFolderBrowserNotice": "Jekk jogħġbok uża \"Open File\" fil-modalità tal-browser",
   "toast.presetNameConflict": "L-isem jikkonfliġġa mal-issettjar minn qabel integrat",

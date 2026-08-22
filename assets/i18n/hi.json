@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR पहचान विफल रही",
   "toast.ocrFailPrefix": "ओसीआर विफल:",
   "toast.ocrNoText": "पाठ पहचाना नहीं गया",
+  "toast.opened": "खोला गया: {name}",
+  "toast.openedPages": "खोला गया: {name} - {count} पृष्ठ",
   "toast.openFailed": "खोलने में असमर्थ:",
   "toast.openFolderBrowserNotice": "कृपया ब्राउज़र मोड में \"फ़ाइल खोलें\" का उपयोग करें",
   "toast.presetNameConflict": "अंतर्निहित प्रीसेट के साथ नाम का टकराव",

@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR-imik tunniussineq iluatsinngilaq",
   "toast.ocrFailPrefix": "OCR kukkuneqarpoq:",
   "toast.ocrNoText": "Tekst tunniunneqanngilaq",
+  "toast.opened": "Makkutinngilaq: {name}",
+  "toast.openedPages": "Makkutinngilaq: {name} - {count} assigiinngitsut",
   "toast.openFailed": "Ammassinnaanngilaq:",
   "toast.openFolderBrowserNotice": "Browserimi \"Open File\" atoruk",
   "toast.presetNameConflict": "Aqqit ikkussuunneqarsimasumik preset-imik akerleriissuteqarput",

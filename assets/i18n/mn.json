@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR танилт амжилтгүй боллоо",
   "toast.ocrFailPrefix": "OCR алдаа: ",
   "toast.ocrNoText": "Текст илэрсэнгүй",
+  "toast.opened": "Нээгдсэн: {name}",
+  "toast.openedPages": "Нээгдсэн: {name} - {count} хуудас",
   "toast.openFailed": "Нээх боломжгүй: ",
   "toast.openFolderBrowserNotice": "Хөтөч горимд 'Файл нээх' товчийг ашиглана уу",
   "toast.presetNameConflict": "Нэр нь системийн үндсэн загварын нэртэй давхардаж байна",

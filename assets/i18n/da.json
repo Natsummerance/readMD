@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR-genkendelse mislykkedes",
   "toast.ocrFailPrefix": "OCR mislykkedes:",
   "toast.ocrNoText": "Teksten genkendes ikke",
+  "toast.opened": "Åbnet: {name}",
+  "toast.openedPages": "Åbnet: {name} - {count} sider",
   "toast.openFailed": "Kan ikke åbne:",
   "toast.openFolderBrowserNotice": "Brug venligst \"Åbn fil\" i browsertilstand",
   "toast.presetNameConflict": "Navnekonflikter med indbygget forudindstilling",

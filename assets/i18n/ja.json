@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR認識に失敗しました",
   "toast.ocrFailPrefix": "OCR が失敗しました:",
   "toast.ocrNoText": "テキストが認識されない",
+  "toast.opened": "開きました：{name}",
+  "toast.openedPages": "開きました：{name} - {count} ページ",
   "toast.openFailed": "開けません:",
   "toast.openFolderBrowserNotice": "ブラウザモードで「ファイルを開く」を使用してください。",
   "toast.presetNameConflict": "名前が組み込みプリセットと競合します",

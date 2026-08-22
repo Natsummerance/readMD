@@ -2638,6 +2638,13 @@ body[data-theme="dark"] .conn-status { color: var(--fg3); }
 .heading-target-highlight {
   animation: heading-target-flash 1.2s ease-out;
 }
+@keyframes search-arrival {
+  0% { opacity: .35; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.search-arrival {
+  animation: search-arrival .32s cubic-bezier(.16, 1, .3, 1);
+}
 
 /* ---------------- 编辑器选中文本快捷浮动栏 ---------------- */
 .cm-selection-toolbar {

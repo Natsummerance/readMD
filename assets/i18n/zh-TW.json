@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR 识別失敗",
   "toast.ocrFailPrefix": "OCR 失敗：",
   "toast.ocrNoText": "未识別出文字",
+  "toast.opened": "已開啟：{name}",
+  "toast.openedPages": "已開啟：{name} · {count} 頁",
   "toast.openFailed": "无法打开：",
   "toast.openFolderBrowserNotice": "浏览器模式下请使用“打开檔案”",
   "toast.presetNameConflict": "名称與內置预设沖突",

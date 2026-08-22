@@ -828,6 +828,8 @@
   "toast.ocrFail": "Die OCR-Erkennung ist fehlgeschlagen",
   "toast.ocrFailPrefix": "OCR fehlgeschlagen:",
   "toast.ocrNoText": "Text nicht erkannt",
+  "toast.opened": "Geöffnet: {name}",
+  "toast.openedPages": "Geöffnet: {name} - {count} Seiten",
   "toast.openFailed": "Kann nicht geöffnet werden:",
   "toast.openFolderBrowserNotice": "Bitte verwenden Sie „Datei öffnen“ im Browsermodus",
   "toast.presetNameConflict": "Namenskonflikte mit integrierter Voreinstellung",

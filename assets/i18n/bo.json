@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCRངོས་འཛིན་བྱེད་མ་ཐུབ།",
   "toast.ocrFailPrefix": "OCRའཐུས་ཤོར་བྱུང་།",
   "toast.ocrNoText": "ཡི་གེ་ངོས་འཛིན་མ་བྱུང་།",
+  "toast.opened": "ཁ་ཕྱེ་ཟིན།: {name}",
+  "toast.openedPages": "ཁ་ཕྱེ་ཟིན།: {name} - {count} ཤོག་ངོས།",
   "toast.openFailed": "ཁ་ཕྱེ་མི་ཐུབ།",
   "toast.openFolderBrowserNotice": "དཀར་ཆག་ཐབས་ལམ་ནང་\"ཡིག་ཆ་ཁ་ཕྱེ་\"བེད་སྤྱོད་གཏོང་རོགས།",
   "toast.presetNameConflict": "ནང་འཇུག་སྔོན་སྒྲིག་དང་མིང་འགལ་བ།",

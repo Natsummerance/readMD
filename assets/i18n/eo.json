@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR-rekono malsukcesis",
   "toast.ocrFailPrefix": "OCR malsukcesis: ",
   "toast.ocrNoText": "Neniu teksto detektita",
+  "toast.opened": "Malfermita: {name}",
+  "toast.openedPages": "Malfermita: {name} - {count} paĝoj",
   "toast.openFailed": "Ne eblas malfermi: ",
   "toast.openFolderBrowserNotice": "En foliumila reĝimo, bonvolu uzi \"Malfermi dosieron\"",
   "toast.presetNameConflict": "Nomo konfliktas kun enkonstruitaj antaŭagordoj",

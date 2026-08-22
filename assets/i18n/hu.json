@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR felismerés sikertelen",
   "toast.ocrFailPrefix": "OCR hiba: ",
   "toast.ocrNoText": "Nem található felismerhető szöveg",
+  "toast.opened": "Megnyitva: {name}",
+  "toast.openedPages": "Megnyitva: {name} - {count} oldal",
   "toast.openFailed": "Nem sikerült megnyitni: ",
   "toast.openFolderBrowserNotice": "Böngésző módban használja a „Fájl megnyitása” lehetőséget",
   "toast.presetNameConflict": "A név ütközik egy beépített sablon nevével",

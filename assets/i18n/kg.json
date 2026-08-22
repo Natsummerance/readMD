@@ -828,6 +828,8 @@
   "toast.ocrFail": "Kuzaba ya OCR me nunga ve",
   "toast.ocrFailPrefix": "OCR me nunga ve: ",
   "toast.ocrNoText": "Ata masonama mosi ve me monana",
+  "toast.opened": "Kukangula: {name}",
+  "toast.openedPages": "Kukangula: {name} - {count} mapuya",
   "toast.openFailed": "Kukangula me nunga ve: ",
   "toast.openFolderBrowserNotice": "Na mode ya navigateur, pardo sadila \"Kangula fishe\"",
   "toast.presetNameConflict": "Zina ke wakana ti mbandu ya luyantiku",

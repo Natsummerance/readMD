@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR-tunnistus epäonnistui",
   "toast.ocrFailPrefix": "OCR epäonnistui:",
   "toast.ocrNoText": "Tekstiä ei tunnistettu",
+  "toast.opened": "Avattu: {name}",
+  "toast.openedPages": "Avattu: {name} - {count} sivua",
   "toast.openFailed": "Ei voi avata:",
   "toast.openFolderBrowserNotice": "Käytä \"Avaa tiedosto\" selaintilassa",
   "toast.presetNameConflict": "Nimi on ristiriidassa sisäänrakennetun esiasetuksen kanssa",

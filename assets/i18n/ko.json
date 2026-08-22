@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR 인식 실패",
   "toast.ocrFailPrefix": "OCR 실패:",
   "toast.ocrNoText": "텍스트가 인식되지 않음",
+  "toast.opened": "열렸습니다: {name}",
+  "toast.openedPages": "열렸습니다: {name} - {count}페이지",
   "toast.openFailed": "열 수 없음:",
   "toast.openFolderBrowserNotice": "브라우저 모드에서 \"파일 열기\"를 사용해 주세요",
   "toast.presetNameConflict": "내장된 사전 설정과 이름이 충돌합니다.",

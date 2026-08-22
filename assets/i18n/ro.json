@@ -828,6 +828,8 @@
   "toast.ocrFail": "Recunoașterea OCR a eșuat",
   "toast.ocrFailPrefix": "OCR eșuat:",
   "toast.ocrNoText": "Textul nu a fost recunoscut",
+  "toast.opened": "Deschis: {name}",
+  "toast.openedPages": "Deschis: {name} - {count} pagini",
   "toast.openFailed": "Nu se poate deschide:",
   "toast.openFolderBrowserNotice": "Vă rugăm să utilizați „Open File” în modul browser",
   "toast.presetNameConflict": "Numele intră în conflict cu presetarea încorporată",

@@ -828,6 +828,8 @@
   "toast.ocrFail": "זיהוי OCR נכשל",
   "toast.ocrFailPrefix": "OCR נכשל:",
   "toast.ocrNoText": "טקסט לא מזוהה",
+  "toast.opened": "נפתח: {name}",
+  "toast.openedPages": "נפתח: {name} - {count} עמודים",
   "toast.openFailed": "לא מצליח לפתוח:",
   "toast.openFolderBrowserNotice": "אנא השתמש ב\"פתח קובץ\" במצב דפדפן",
   "toast.presetNameConflict": "שמות מתנגשים עם הגדרה מובנית מראש",

@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR पहिचान असफल भयो",
   "toast.ocrFailPrefix": "OCR असफल भयो: ",
   "toast.ocrNoText": "कुनै पाठ फेला परेन",
+  "toast.opened": "खोलियो: {name}",
+  "toast.openedPages": "खोलियो: {name} - {count} पृष्ठ",
   "toast.openFailed": "खोल्न सकिँदैन: ",
   "toast.openFolderBrowserNotice": "ब्राउजर मोडमा, कृपया \"फाइल खोल्नुहोस्\" प्रयोग गर्नुहोस्",
   "toast.presetNameConflict": "नाम निर्मित प्रिसेटहरूसँग बाझिन्छ",

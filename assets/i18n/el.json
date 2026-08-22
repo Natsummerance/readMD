@@ -828,6 +828,8 @@
   "toast.ocrFail": "Η αναγνώριση OCR απέτυχε",
   "toast.ocrFailPrefix": "Το OCR απέτυχε: ",
   "toast.ocrNoText": "Δεν αναγνωρίστηκε κείμενο στην εικόνα",
+  "toast.opened": "Άνοιγμα: {name}",
+  "toast.openedPages": "Άνοιγμα: {name} - {count} σελίδες",
   "toast.openFailed": "Δεν είναι δυνατό το άνοιγμα: ",
   "toast.openFolderBrowserNotice": "Σε λειτουργία προγράμματος περιήγησης παρακαλούμε χρησιμοποιήστε το \"Άνοιγμα αρχείου\"",
   "toast.presetNameConflict": "Το όνομα συγκρούεται με ενσωματωμένη προεπιλογή",

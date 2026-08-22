@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR အသိအမှတ်ပြုမှု မအောင်မြင်ပါ။",
   "toast.ocrFailPrefix": "OCR မအောင်မြင်ပါ",
   "toast.ocrNoText": "စာသားကို အသိအမှတ်မပြုပါ။",
+  "toast.opened": "ဖွင့်ပြီးပါပြီ: {name}",
+  "toast.openedPages": "ဖွင့်ပြီးပါပြီ: {name} - {count} မျက်နှာ",
   "toast.openFailed": "ဖွင့်၍မရပါ",
   "toast.openFolderBrowserNotice": "ဘရောက်ဆာမုဒ်တွင် \"Open File\" ကိုသုံးပါ။",
   "toast.presetNameConflict": "အမည်သည် တပ်ဆင်ထားသည့် ကြိုတင်သတ်မှတ်မှုနှင့် ကွဲလွဲနေသည်။",

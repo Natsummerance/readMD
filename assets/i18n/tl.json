@@ -828,6 +828,8 @@
   "toast.ocrFail": "Nabigo ang OCR recognition",
   "toast.ocrFailPrefix": "Nabigo ang OCR: ",
   "toast.ocrNoText": "Walang nakilalang teksto",
+  "toast.opened": "Nabuksan: {name}",
+  "toast.openedPages": "Nabuksan: {name} - {count} pahina",
   "toast.openFailed": "Hindi mabuksan: ",
   "toast.openFolderBrowserNotice": "Sa browser mode, mangyaring gamitin ang \"Buksan ang File\"",
   "toast.presetNameConflict": "Sumasalungat ang pangalan sa built-in preset",

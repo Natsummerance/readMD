@@ -828,6 +828,8 @@
   "toast.ocrFail": "OCR تونۇش مەغلۇپ بولدى",
   "toast.ocrFailPrefix": "OCR مەغلۇپ بولدى: ",
   "toast.ocrNoText": "تېكىست تونۇلمىدى",
+  "toast.opened": "ئېچىلدى: {name}",
+  "toast.openedPages": "ئېچىلدى: {name} - {count} بەت",
   "toast.openFailed": "ئېچىش مەغلۇپ بولدى: ",
   "toast.openFolderBrowserNotice": "توركۆرگۈچ ھالىتىدە «ھۆججەت ئېچىش» نى ئىشلىتىڭ",
   "toast.presetNameConflict": "نامى ئىچكى ئالدىن تەڭشەك بىلەن توقۇنۇشۇپ قالدى",

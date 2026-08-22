@@ -828,6 +828,8 @@
   "toast.ocrFail": "ການຮັບຮູ້ OCR ລົ້ມເຫລວ",
   "toast.ocrFailPrefix": "OCR ລົ້ມເຫລວ:",
   "toast.ocrNoText": "ຂໍ້ຄວາມບໍ່ຮັບຮູ້",
+  "toast.opened": "ເປີດແລ້ວ: {name}",
+  "toast.openedPages": "ເປີດແລ້ວ: {name} - {count} ໜ້າ",
   "toast.openFailed": "ບໍ່ສາມາດເປີດໄດ້:",
   "toast.openFolderBrowserNotice": "ກະລຸນາໃຊ້ \"Open File\" ໃນໂຫມດຕົວທ່ອງເວັບ",
   "toast.presetNameConflict": "ຊື່ຂັດກັບທີ່ຕັ້ງໄວ້ລ່ວງໜ້າໃນຕົວ",
