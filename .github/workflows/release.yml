@@ -486,6 +486,8 @@ jobs:
         run: npm run capture
       - name: Compose Xiaohongshu cards
         run: node showcase/scripts/compose_cards.js showcase/output/package
+      - name: Generate preflight dashboard and aggregate QA
+        run: python showcase/scripts/build_package.py --output showcase/output/package --finalize
       - name: Run hard QA gate
         run: python showcase/scripts/validate_package.py showcase/output/package
       - name: Package QA-green content

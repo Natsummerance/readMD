@@ -64,34 +64,63 @@ def build_package(
 
 def compose_and_validate(package_dir: Path, repo_root: Path) -> list[str]:
     compose_script = repo_root / "showcase" / "scripts" / "compose_cards.js"
-    subprocess.run(["node", str(compose_script), str(package_dir)], cwd=repo_root, check=True)
+    package_dir.mkdir(parents=True, exist_ok=True)
+    errors: list[str] = []
+    composed = True
+    try:
+        subprocess.run(["node", str(compose_script), str(package_dir)], cwd=repo_root, check=True)
+    except subprocess.CalledProcessError as exc:
+        errors.append(f"card composition failed with exit code {exc.returncode}")
+        composed = False
+
     copy_report = audit_package(package_dir)
     if not copy_report["ok"]:
-        return [f"semantic alignment gate failed: {json.dumps(copy_report, ensure_ascii=False)}"]
-    wechat_report = export_package(package_dir)
-    if not wechat_report["ok"]:
-        return [f"WeChat adapter gate failed: {json.dumps(wechat_report['errors'], ensure_ascii=False)}"]
-    errors = validate_package(package_dir, repo_root=repo_root)
+        errors.append(f"semantic alignment gate failed: {json.dumps(copy_report, ensure_ascii=False)}")
+    else:
+        wechat_report = export_package(package_dir)
+        if not wechat_report["ok"]:
+            errors.append(f"WeChat adapter gate failed: {json.dumps(wechat_report['errors'], ensure_ascii=False)}")
+
+    if composed:
+        errors.extend(validate_package(package_dir, repo_root=repo_root))
+        try:
+            dashboard_report = review_dashboard.generate_package(package_dir)
+            if not dashboard_report.get("ok"):
+                errors.append(
+                    "review dashboard gate failed: "
+                    f"{json.dumps(dashboard_report.get('errors', []), ensure_ascii=False)}"
+                )
+        except Exception as exc:
+            errors.append(f"review dashboard gate crashed: {exc}")
+
     qa_report = {"ok": not errors, "errors": errors}
     (package_dir / "qa.json").write_text(json.dumps(qa_report, ensure_ascii=False, indent=2), encoding="utf-8")
-    dashboard_report = review_dashboard.generate_package(package_dir)
-    if not dashboard_report.get("ok"):
-        errors.append(f"review dashboard gate failed: {json.dumps(dashboard_report.get('errors', []), ensure_ascii=False)}")
     return errors
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--release", required=True)
-    parser.add_argument("--previous-release", required=True)
-    parser.add_argument("--notes", type=Path, required=True)
+    parser.add_argument("--release")
+    parser.add_argument("--previous-release")
+    parser.add_argument("--notes", type=Path)
     parser.add_argument("--diff", type=Path)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repository", default="Natsummerance/readMD")
     parser.add_argument("--memory", type=Path, default=Path(__file__).parents[1] / "content" / "publication-ledger.jsonl")
     parser.add_argument("--skip-compose", action="store_true", help="Prepare text/story only; used before capture")
+    parser.add_argument("--finalize", action="store_true", help="Compose and aggregate QA for an already prepared package")
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[2]
+    if args.finalize:
+        errors = compose_and_validate(args.output, repo_root)
+        report = json.loads((args.output / "qa.json").read_text(encoding="utf-8"))
+        print(json.dumps(report, ensure_ascii=False))
+        if errors:
+            return 1
+        print(args.output)
+        return 0
+    if not args.release or not args.previous_release or not args.notes:
+        parser.error("--release, --previous-release and --notes are required unless --finalize is used")
     story, _ = build_package(
         release=args.release,
         previous_release=args.previous_release,

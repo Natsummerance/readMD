@@ -26,6 +26,7 @@ export_wechat = importlib.import_module("export_wechat")
 performance_report = importlib.import_module("performance_report")
 review_dashboard = importlib.import_module("review_dashboard")
 style_audit = importlib.import_module("style_audit")
+build_package_module = importlib.import_module("build_package")
 validate_package = importlib.import_module("validate_package")
 watch_and_publish = importlib.import_module("watch_and_publish")
 write_copy = importlib.import_module("write_copy")
@@ -688,6 +689,80 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertEqual(data["recommended_hook_type"], "identity-led")
         self.assertIn("Pending metrics", markdown)
         self.assertIn("#22", markdown)
+
+
+class BuildPipelineTest(unittest.TestCase):
+    def test_workflow_aggregates_qa_before_packaging(self) -> None:
+        workflow = Path(ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+        showcase_start = workflow.index("product-showcase:")
+        showcase = workflow[showcase_start:]
+        compose_index = showcase.index("- name: Compose Xiaohongshu cards")
+        finalize_index = showcase.index("- name: Generate preflight dashboard and aggregate QA")
+        package_index = showcase.index("- name: Package QA-green content")
+        self.assertLess(compose_index, finalize_index)
+        self.assertLess(finalize_index, package_index)
+        self.assertIn("--finalize", showcase)
+
+    def test_dashboard_failure_turns_aggregate_qa_red(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            package.mkdir(exist_ok=True)
+            original_run = build_package_module.subprocess.run
+            original_audit = build_package_module.audit_package
+            original_export = build_package_module.export_package
+            original_validate = build_package_module.validate_package
+            original_dashboard = build_package_module.review_dashboard.generate_package
+            build_package_module.subprocess.run = lambda *args, **kwargs: SimpleNamespace(returncode=0)
+            build_package_module.audit_package = lambda package_dir: {"ok": True, "total_score": 100}
+            build_package_module.export_package = lambda package_dir: {"ok": True, "errors": []}
+            build_package_module.validate_package = lambda package_dir, repo_root=None: []
+            build_package_module.review_dashboard.generate_package = lambda package_dir: {
+                "ok": False,
+                "errors": ["dashboard contains a script tag"],
+            }
+            try:
+                errors = build_package_module.compose_and_validate(package, ROOT)
+            finally:
+                build_package_module.subprocess.run = original_run
+                build_package_module.audit_package = original_audit
+                build_package_module.export_package = original_export
+                build_package_module.validate_package = original_validate
+                build_package_module.review_dashboard.generate_package = original_dashboard
+
+            report = json.loads((package / "qa.json").read_text(encoding="utf-8"))
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("review dashboard" in error for error in report["errors"]))
+
+    def test_early_failure_still_writes_red_aggregate_qa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            original_run = build_package_module.subprocess.run
+            original_audit = build_package_module.audit_package
+            original_export = build_package_module.export_package
+            original_dashboard = build_package_module.review_dashboard.generate_package
+            build_package_module.subprocess.run = lambda *args, **kwargs: SimpleNamespace(returncode=0)
+            build_package_module.audit_package = lambda package_dir: {
+                "ok": False,
+                "errors": ["claim lacks evidence"],
+            }
+
+            def fail_unexpected(package_dir: object) -> dict[str, object]:
+                raise AssertionError("later gates should not run after semantic failure")
+
+            build_package_module.export_package = fail_unexpected
+            build_package_module.review_dashboard.generate_package = fail_unexpected
+            try:
+                errors = build_package_module.compose_and_validate(package, ROOT)
+            finally:
+                build_package_module.subprocess.run = original_run
+                build_package_module.audit_package = original_audit
+                build_package_module.export_package = original_export
+                build_package_module.review_dashboard.generate_package = original_dashboard
+
+            report = json.loads((package / "qa.json").read_text(encoding="utf-8"))
+        self.assertFalse(report["ok"])
+        self.assertEqual(errors, report["errors"])
+        self.assertTrue(any("semantic alignment gate" in error for error in report["errors"]))
 
 
 class ContentMemoryTest(unittest.TestCase):
