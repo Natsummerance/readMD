@@ -632,6 +632,7 @@
   "ocr.title": "ছবি / স্ক্যান OCR থেকে Markdown",
   "pagination.ariaLabel": "নথি পৃষ্ঠা নেভিগেশন",
   "pagination.chapter": "অধ্যায়",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "ধারাবাহিক",
   "pagination.firstPage": "প্রথম পৃষ্ঠা (Alt+Home)",
   "pagination.lastPage": "শেষ পৃষ্ঠা (Alt+End)",

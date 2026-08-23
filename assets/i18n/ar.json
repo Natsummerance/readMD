@@ -632,6 +632,7 @@
   "ocr.title": "تحويل الصور / المستندات الممسوحة ضوئيًا عبر OCR إلى Markdown",
   "pagination.ariaLabel": "التنقل بين الصفحات",
   "pagination.chapter": "فصل",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "مستمر",
   "pagination.firstPage": "الصفحة الأولى (Alt+Home)",
   "pagination.lastPage": "الصفحة الأخيرة (Alt+End)",

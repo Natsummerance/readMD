@@ -632,6 +632,7 @@
   "ocr.title": "Bild-/Scan-OCR zu Markdown",
   "pagination.ariaLabel": "Seitennavigation",
   "pagination.chapter": "Kapitel",
+  "pagination.continuousWarning": "Der fortlaufende Modus rendert {count} Seiten gleichzeitig und kann langsam werden. Fortfahren?",
   "pagination.continuousBadge": "Fortlaufend",
   "pagination.firstPage": "Erste Seite (Alt+Home)",
   "pagination.lastPage": "Letzte Seite (Alt+End)",

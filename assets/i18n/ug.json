@@ -632,6 +632,7 @@
   "ocr.title": "رەسىم / سىكانىرلانما ھۆججەتنى OCR ئارقىلىق Markdown غا ئايلاندۇرۇش",
   "pagination.ariaLabel": "ھۆججەت بەت يۆنىلىشى",
   "pagination.chapter": "باب",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "ئۈزۈلمەس",
   "pagination.firstPage": "بىرىنچى بەت (Alt+Home)",
   "pagination.lastPage": "ئاخىرقى بەت (Alt+End)",

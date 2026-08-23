@@ -632,6 +632,7 @@
   "ocr.title": "Ishusho / gusikana OCR kuri Markdown",
   "pagination.ariaLabel": "Kugenzura amapaji y'inyandiko",
   "pagination.chapter": "Igice",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Gikomeza",
   "pagination.firstPage": "Ipaji ya mbere (Alt+Home)",
   "pagination.lastPage": "Ipaji ya nyuma (Alt+End)",

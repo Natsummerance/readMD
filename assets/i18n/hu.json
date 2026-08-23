@@ -632,6 +632,7 @@
   "ocr.title": "Kép / szkennelt fájl OCR konvertálása Markdownba",
   "pagination.ariaLabel": "Dokumentum oldalszámozás",
   "pagination.chapter": "Fejezet",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Folyamatos",
   "pagination.firstPage": "Első oldal (Alt+Home)",
   "pagination.lastPage": "Utolsó oldal (Alt+End)",

@@ -632,6 +632,7 @@
   "ocr.title": "Imagen/escaneo OCR a Markdown",
   "pagination.ariaLabel": "Navegación de páginas",
   "pagination.chapter": "Capítulo",
+  "pagination.continuousWarning": "El modo continuo renderizará {count} páginas a la vez y puede ralentizarse. ¿Continuar?",
   "pagination.continuousBadge": "Continuo",
   "pagination.firstPage": "Primera página (Alt+Home)",
   "pagination.lastPage": "Última página (Alt+End)",

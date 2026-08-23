@@ -632,6 +632,7 @@
   "ocr.title": "OCR εικόνας / σάρωσης σε Markdown",
   "pagination.ariaLabel": "Πλοήγηση σελίδων εγγράφου",
   "pagination.chapter": "Κεφάλαιο",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Συνεχές",
   "pagination.firstPage": "Πρώτη σελίδα (Alt+Home)",
   "pagination.lastPage": "Τελευταία σελίδα (Alt+End)",

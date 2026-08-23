@@ -632,6 +632,7 @@
   "ocr.title": "OCR รูปภาพ / เอกสารสแกน เป็น Markdown",
   "pagination.ariaLabel": "การนำทางหน้าเอกสาร",
   "pagination.chapter": "บท",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "ต่อเนื่อง",
   "pagination.firstPage": "หน้าแรก (Alt+Home)",
   "pagination.lastPage": "หน้าสุดท้าย (Alt+End)",

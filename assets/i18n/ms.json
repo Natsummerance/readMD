@@ -632,6 +632,7 @@
   "ocr.title": "Imej/imbas OCR ke Markdown",
   "pagination.ariaLabel": "Navigasi halaman dokumen",
   "pagination.chapter": "Bab",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Berterusan",
   "pagination.firstPage": "Halaman pertama (Alt+Home)",
   "pagination.lastPage": "Halaman terakhir (Alt+End)",

@@ -632,6 +632,7 @@
   "ocr.title": "이미지/OCR을 마크다운으로 스캔",
   "pagination.ariaLabel": "문서 페이지 탐색",
   "pagination.chapter": "장",
+  "pagination.continuousWarning": "연속 모드는 {count}페이지를 한 번에 렌더링하여 느려질 수 있습니다. 계속할까요?",
   "pagination.continuousBadge": "연속 스크롤",
   "pagination.firstPage": "첫 페이지 (Alt+Home)",
   "pagination.lastPage": "마지막 페이지 (Alt+End)",

@@ -227,6 +227,7 @@
     </main>
     <!-- 超长文档智能翻页控制栏（纯 SVG 图标交互） -->
     <div id="pagination-bar" class="pagination-bar hidden" role="navigation" aria-label="文档分页导航" data-i18n-aria="pagination.ariaLabel">
+      <div id="pagination-live" role="status" aria-live="polite" class="visually-hidden"></div>
       <div class="pg-left">
         <span class="pg-mode-badge" id="pg-mode-badge" title="分页阅读模式">
           <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -878,7 +879,7 @@
 <footer id="statusbar">
   <div class="statusbar-left-group">
     <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.7-beta.3</span>
-    <span id="status-pagination" class="status-pagination hidden" role="button" tabindex="0" title="点击切换阅读模式"></span>
+    <button id="status-pagination" type="button" class="status-pagination hidden" title="点击切换阅读模式"></button>
     <span id="status-left"></span>
   </div>
   <span id="status-right"></span>

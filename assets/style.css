@@ -100,6 +100,18 @@ button { font-family: inherit; }
 
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
 /* ---------- 工具栏 ---------- */
 #toolbar {
   display: flex;
@@ -3291,6 +3303,7 @@ body.zen-mode #edit-area {
 
 /* 状态栏分页指示小角标 */
 .status-pagination {
+  font-family: inherit;
   font-size: 11px;
   padding: 1px 6px;
   border-radius: 4px;

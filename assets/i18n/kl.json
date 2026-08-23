@@ -632,6 +632,7 @@
   "ocr.title": "Assilisaq/scan OCR-imik Markdown-imut",
   "pagination.ariaLabel": "Allagaq quppernerit aqqutigalugit",
   "pagination.chapter": "Immikkoortoq",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Ingerlaavartoq",
   "pagination.firstPage": "Qupperneq siulleq (Alt+Home)",
   "pagination.lastPage": "Qupperneq kingulleq (Alt+End)",

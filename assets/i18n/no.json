@@ -632,6 +632,7 @@
   "ocr.title": "Bilde/skann OCR til Markdown",
   "pagination.ariaLabel": "Dokumentsidenavigasjon",
   "pagination.chapter": "Kapittel",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Kontinuerlig",
   "pagination.firstPage": "Første side (Alt+Home)",
   "pagination.lastPage": "Siste side (Alt+End)",

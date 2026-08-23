@@ -632,6 +632,7 @@
   "ocr.title": "Imagine/scanare OCR la Markdown",
   "pagination.ariaLabel": "Navigare pagini document",
   "pagination.chapter": "Capitol",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Continuu",
   "pagination.firstPage": "Prima pagină (Alt+Home)",
   "pagination.lastPage": "Ultima pagină (Alt+End)",

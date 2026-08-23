@@ -632,6 +632,7 @@
   "ocr.title": "Bilda / skana OCR al Markdown",
   "pagination.ariaLabel": "Dokumenta paĝa navigado",
   "pagination.chapter": "Ĉapitro",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Kontinua",
   "pagination.firstPage": "Unua paĝo (Alt+Home)",
   "pagination.lastPage": "Lasta paĝo (Alt+End)",

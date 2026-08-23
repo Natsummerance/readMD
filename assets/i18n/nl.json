@@ -632,6 +632,7 @@
   "ocr.title": "Afbeelding / scan OCR naar Markdown",
   "pagination.ariaLabel": "Document paginanavigatie",
   "pagination.chapter": "Hoofdstuk",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Doorlopend",
   "pagination.firstPage": "Eerste pagina (Alt+Home)",
   "pagination.lastPage": "Laatste pagina (Alt+End)",

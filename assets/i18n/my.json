@@ -632,6 +632,7 @@
   "ocr.title": "Markdown သို့ ပုံ/OCR စကင်န်ဖတ်ပါ။",
   "pagination.ariaLabel": "စာမျက်နှာ လမ်းညွှန်",
   "pagination.chapter": "အခန်း",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "ဆက်တိုက်",
   "pagination.firstPage": "ပထမဆုံး စာမျက်နှာ (Alt+Home)",
   "pagination.lastPage": "နောက်ဆုံး စာမျက်နှာ (Alt+End)",

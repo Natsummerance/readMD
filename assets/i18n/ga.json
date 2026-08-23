@@ -632,6 +632,7 @@
   "ocr.title": "Íomhá / scanadh OCR chuig Markdown",
   "pagination.ariaLabel": "Nascleanúint leathanach cáipéise",
   "pagination.chapter": "Caibidil",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Leanúnach",
   "pagination.firstPage": "An chéad leathanach (Alt+Home)",
   "pagination.lastPage": "An leathanach deireanach (Alt+End)",

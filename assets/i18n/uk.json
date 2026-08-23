@@ -632,6 +632,7 @@
   "ocr.title": "OCR зображень / сканів у Markdown",
   "pagination.ariaLabel": "Посторінкова навігація",
   "pagination.chapter": "Розділ",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Безперервний",
   "pagination.firstPage": "Перша сторінка (Alt+Home)",
   "pagination.lastPage": "Остання сторінка (Alt+End)",

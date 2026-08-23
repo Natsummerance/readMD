@@ -632,6 +632,7 @@
   "ocr.title": "Зураг / скан файлыг OCR-аар Markdown болгох",
   "pagination.ariaLabel": "Баримтын хуудасны навигаци",
   "pagination.chapter": "Бүлэг",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Үргэлжилсэн",
   "pagination.firstPage": "Эхний хуудас (Alt+Home)",
   "pagination.lastPage": "Сүүлчийн хуудас (Alt+End)",

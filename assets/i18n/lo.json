@@ -632,6 +632,7 @@
   "ocr.title": "ຮູບພາບ/ສະແກນ OCR ເພື່ອ Markdown",
   "pagination.ariaLabel": "ການນຳທາງໜ້າເອກະສານ",
   "pagination.chapter": "ບົດ",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "ຕໍ່ເນື່ອງ",
   "pagination.firstPage": "ໜ້າທຳອິດ (Alt+Home)",
   "pagination.lastPage": "ໜ້າສຸດທ້າຍ (Alt+End)",

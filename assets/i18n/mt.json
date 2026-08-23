@@ -632,6 +632,7 @@
   "ocr.title": "Immaġini/skennja OCR għal Markdown",
   "pagination.ariaLabel": "Navigazzjoni tal-paġni tad-dokument",
   "pagination.chapter": "Kapitlu",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Kontinwu",
   "pagination.firstPage": "L-ewwel paġna (Alt+Home)",
   "pagination.lastPage": "L-aħħar paġna (Alt+End)",

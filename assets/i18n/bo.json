@@ -632,6 +632,7 @@
   "ocr.title": "པར་རིས/པར་བཤུས་OCRནས་མརཀ་ཌའོན་བར།",
   "pagination.ariaLabel": "ཡིག་ཆ་ཤོག་གྲངས་ཕྱོགས་སྟོན།",
   "pagination.chapter": "ལེའུ།",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "རྒྱུན་མཐུད།",
   "pagination.firstPage": "ཤོག་ལྷེ་དང་པོ། (Alt+Home)",
   "pagination.lastPage": "ཤོག་ལྷེ་མཐའ་མ། (Alt+End)",

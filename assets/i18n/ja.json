@@ -632,6 +632,7 @@
   "ocr.title": "画像/スキャン OCR からマークダウンへ",
   "pagination.ariaLabel": "ドキュメントページネーション",
   "pagination.chapter": "章",
+  "pagination.continuousWarning": "連続モードは{count}ページを一度に描画し、遅くなる可能性があります。続行しますか？",
   "pagination.continuousBadge": "連続スクロール",
   "pagination.firstPage": "最初のページ (Alt+Home)",
   "pagination.lastPage": "最後のページ (Alt+End)",

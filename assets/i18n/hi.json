@@ -632,6 +632,7 @@
   "ocr.title": "मार्कडाउन के लिए छवि/स्कैन ओसीआर",
   "pagination.ariaLabel": "दस्तावेज़ पृष्ठ नेविगेशन",
   "pagination.chapter": "अध्याय",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "निरंतर",
   "pagination.firstPage": "पहला पृष्ठ (Alt+Home)",
   "pagination.lastPage": "अंतिम पृष्ठ (Alt+End)",

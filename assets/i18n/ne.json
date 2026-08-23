@@ -632,6 +632,7 @@
   "ocr.title": "छवि / स्क्यान OCR बाट Markdown",
   "pagination.ariaLabel": "कागजात पृष्ठ नेभिगेसन",
   "pagination.chapter": "अध्याय",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "निरन्तर",
   "pagination.firstPage": "पहिलो पृष्ठ (Alt+Home)",
   "pagination.lastPage": "अन्तिम पृष्ठ (Alt+End)",

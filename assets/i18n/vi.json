@@ -632,6 +632,7 @@
   "ocr.title": "OCR hình ảnh / bản quét sang Markdown",
   "pagination.ariaLabel": "Điều hướng trang tài liệu",
   "pagination.chapter": "Chương",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Liên tục",
   "pagination.firstPage": "Trang đầu (Alt+Home)",
   "pagination.lastPage": "Trang cuối (Alt+End)",

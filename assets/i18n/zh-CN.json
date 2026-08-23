@@ -632,6 +632,7 @@
   "ocr.title": "图片 / 扫描件 OCR 转 Markdown",
   "pagination.ariaLabel": "文档分页导航",
   "pagination.chapter": "章节",
+  "pagination.continuousWarning": "连续模式将一次渲染 {count} 页，可能造成卡顿。是否继续？",
   "pagination.continuousBadge": "全卷连续",
   "pagination.firstPage": "首页 (Alt+Home)",
   "pagination.lastPage": "末页 (Alt+End)",

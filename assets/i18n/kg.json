@@ -632,6 +632,7 @@
   "ocr.title": "Kifwanisu / scan OCR na Markdown",
   "pagination.ariaLabel": "Kutambula na balukasa ya mukanda",
   "pagination.chapter": "Kapu",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Kaka mutindu yina",
   "pagination.firstPage": "Lukasa ya ntete (Alt+Home)",
   "pagination.lastPage": "Lukasa ya nsuka (Alt+End)",

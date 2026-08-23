@@ -632,6 +632,7 @@
   "ocr.title": "תמונה/סרוק OCR ל-Markdown",
   "pagination.ariaLabel": "ניווט עמודים",
   "pagination.chapter": "פרק",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "רציף",
   "pagination.firstPage": "עמוד ראשון (Alt+Home)",
   "pagination.lastPage": "עמוד אחרון (Alt+End)",

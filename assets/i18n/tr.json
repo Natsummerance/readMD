@@ -632,6 +632,7 @@
   "ocr.title": "Görsel / Belge OCR ile Markdown'a Dönüştürme",
   "pagination.ariaLabel": "Belge sayfa gezintisi",
   "pagination.chapter": "Bölüm",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Sürekli",
   "pagination.firstPage": "İlk sayfa (Alt+Home)",
   "pagination.lastPage": "Son sayfa (Alt+End)",

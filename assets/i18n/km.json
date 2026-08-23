@@ -632,6 +632,7 @@
   "ocr.title": "រូបភាព/ស្កេន OCR ទៅ Markdown",
   "pagination.ariaLabel": "ការរុករកទំព័រឯកសារ",
   "pagination.chapter": "ជំពូក",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "បន្តបន្ទាប់",
   "pagination.firstPage": "ទំព័រដំបូង (Alt+Home)",
   "pagination.lastPage": "ទំព័រចុងក្រោយ (Alt+End)",

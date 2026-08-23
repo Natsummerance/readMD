@@ -632,6 +632,7 @@
   "ocr.title": "OCR ng Larawan / Scan patungong Markdown",
   "pagination.ariaLabel": "Pag-navigate sa pahina ng dokumento",
   "pagination.chapter": "Kabanata",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Tuluy-tuloy",
   "pagination.firstPage": "Unang pahina (Alt+Home)",
   "pagination.lastPage": "Huling pahina (Alt+End)",

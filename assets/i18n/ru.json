@@ -632,6 +632,7 @@
   "ocr.title": "Изображение/сканирование OCR в Markdown",
   "pagination.ariaLabel": "Постраничная навигация",
   "pagination.chapter": "Глава",
+  "pagination.continuousWarning": "Непрерывный режим отрисует {count} страниц сразу и может замедлиться. Продолжить?",
   "pagination.continuousBadge": "Непрерывный",
   "pagination.firstPage": "Первая страница (Alt+Home)",
   "pagination.lastPage": "Последняя страница (Alt+End)",

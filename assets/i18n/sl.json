@@ -632,6 +632,7 @@
   "ocr.title": "OCR slik / skenov v Markdown",
   "pagination.ariaLabel": "Navigacija po straneh dokumenta",
   "pagination.chapter": "Poglavje",
+  "pagination.continuousWarning": "Continuous mode will render {count} pages at once and may slow down. Continue?",
   "pagination.continuousBadge": "Zvezno",
   "pagination.firstPage": "Prva stran (Alt+Home)",
   "pagination.lastPage": "Zadnja stran (Alt+End)",

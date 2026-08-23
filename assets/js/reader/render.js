@@ -495,6 +495,13 @@ function updatePaginationBar() {
       ? (_t('pagination.pagedBadge') || '分页模式')
       : (_t('pagination.continuousBadge') || '全卷连续');
   }
+
+  const live = $('pagination-live');
+  if (live) {
+    live.textContent = p.mode === 'paged'
+      ? (_t('pagination.pageInfo', { current: cur + 1, total }) + (curPage.title ? ` · ${curPage.title}` : ''))
+      : (_t('pagination.continuousBadge') || '全卷连续');
+  }
 }
 
 function togglePaginationMode() {
@@ -504,6 +511,9 @@ function togglePaginationMode() {
   const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
 
   if (p.mode === 'paged') {
+    if (p.pages.length > 20 && !window.confirm(_t('pagination.continuousWarning', { count: p.pages.length }) || `连续模式将一次渲染 ${p.pages.length} 页，可能造成卡顿。是否继续？`)) {
+      return;
+    }
     p.mode = 'continuous';
     if (activeTab) {
       activeTab.readerMode = 'continuous';
