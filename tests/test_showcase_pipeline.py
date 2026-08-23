@@ -384,6 +384,35 @@ class WriteCopyTest(unittest.TestCase):
             self.assertRegex(item["formula_id"], r"^#\d+$")
         self.assertLessEqual(len(result["title"]), 20)
 
+    def test_numeric_title_anchors_match_planned_card_count(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = write_story(Path(tmp))
+            story["selected_shots"] = ["overview.reader", "overview.editor", "presentation.reveal"]
+            story["card_plan"] = [{"file": f"card-{index}.jpg"} for index in range(1, 6)]
+            # Deliberately differs from the planned five-card carousel.
+            for index in range(2):
+                story["claims"].append({
+                    "id": f"extra-{index}",
+                    "user_value": f"更新 {index}",
+                    "shot_ids": ["overview.editor"],
+                    "sources": ["release/release-notes.md"],
+                })
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v2.3.7-beta.2",
+            )
+
+        numeric_titles = [
+            item["text"]
+            for item in result["title_candidates"]
+            if item["formula_id"] in {"#12", "#26"}
+        ]
+        self.assertEqual(len(numeric_titles), 2)
+        for title in numeric_titles:
+            with self.subTest(title=title):
+                self.assertRegex(title, r"5张")
+
     def test_generates_compliant_prerelease_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
@@ -827,6 +856,13 @@ class AuditCopyTest(unittest.TestCase):
         report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
         self.assertFalse(report["ok"])
         self.assertTrue(any("repeated" in item.lower() or "重复" in item for item in report["hard_failures"]))
+
+    def test_title_carousel_count_must_match_composed_cards(self) -> None:
+        story, metadata, composition = self.make_audit_inputs(self.good_body())
+        metadata["title"] = "看完这3张，重新看Markdown"
+        report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("title carousel count" in item.lower() for item in report["hard_failures"]))
 
     def test_style_audit_passes_concrete_developer_voice(self) -> None:
         report = style_audit.audit_style(self.good_body(), audience="程序员")

@@ -28,10 +28,19 @@ def _clean(value: str) -> str:
     return value.replace("\n", " ").strip()
 
 
+def _planned_card_count(story: dict[str, Any]) -> int:
+    """Use the publishable carousel size, not the number of textual claims."""
+    card_plan = story.get("card_plan")
+    if isinstance(card_plan, list) and card_plan:
+        return max(4, min(len(card_plan), 9))
+    selected = story.get("selected_shots")
+    fallback = len(selected) + 2 if isinstance(selected, list) else 4
+    return max(4, min(fallback, 9))
+
+
 def _title_candidates(story: dict[str, Any]) -> list[dict[str, str]]:
     profile = profile_for_story(story)
-    visual_count = sum(1 for claim in story["claims"] if claim.get("shot_ids"))
-    number = max(3, min(visual_count, 8))
+    number = _planned_card_count(story)
     return [
         {"formula_id": formula_id, "text": text.replace("{number}", str(number))}
         for formula_id, text in profile["titles"].items()

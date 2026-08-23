@@ -142,8 +142,12 @@ def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: 
     hard_failures: list[str] = []
     body = str(metadata.get("body", ""))
     title = str(metadata.get("title", ""))
+    cards = composition.get("cards", [])
     if len(title) > 20 or not metadata.get("title_formula_id"):
         hard_failures.append("title contract failed")
+    declared_counts = [int(match.group(1)) for match in re.finditer(r"(\d+)\s*张", title)]
+    if any(count != len(cards) for count in declared_counts):
+        hard_failures.append("title carousel count does not match composed cards")
     repeated = _repeated_sentence(body)
     if repeated:
         hard_failures.append("repeated sentences: " + "; ".join(repeated))
