@@ -1,4 +1,6 @@
 const { test, expect } = require('@playwright/test');
+const fs = require('fs/promises');
+const os = require('os');
 const path = require('path');
 const { pathToFileURL } = require('url');
 
@@ -1171,6 +1173,33 @@ test('saving refreshes the existing tab with new content', async ({ page }) => {
   await page.locator('#edit-save').click();
   await expect(page.locator('#content')).toContainText('updated');
   await page.waitForFunction(() => getActiveTab() && getActiveTab().original === '# updated');
+});
+
+test('browser mode opens, edits, and saves a local document end to end', async ({ page }) => {
+  let corpusDir;
+  try {
+    corpusDir = await fs.mkdtemp(path.join(os.tmpdir(), 'readmd-e2e-'));
+    const documentPath = path.join(corpusDir, 'browser-save.md');
+    await fs.writeFile(documentPath, '# Live document\n\nOriginal body', 'utf8');
+
+    await page.goto(`/?file=${encodeURIComponent(documentPath)}`, { waitUntil: 'domcontentloaded' });
+    await page.waitForFunction(expected => (
+      state.file === expected && state.mode === 'file' && state.original.includes('Original body')
+    ), documentPath);
+    await expect(page.locator('#toast')).toContainText(/已打开/);
+    await expect(page.locator('#content .markdown-body h1')).toHaveText('Live document');
+
+    await page.locator('#btn-edit').click();
+    await expect(page.locator('#edit-bar')).toBeVisible();
+    await setEditorContent(page, '# Saved live\n\nAuthorized browser write');
+    await page.locator('#edit-save').click();
+
+    await expect(page.locator('#toast')).toContainText(/已保存/);
+    await page.waitForFunction(() => state.editing === false && state.original.includes('Saved live'));
+    await expect(await fs.readFile(documentPath, 'utf8')).toContain('Authorized browser write');
+  } finally {
+    if (corpusDir) await fs.rm(corpusDir, { recursive: true, force: true });
+  }
 });
 
 test('save conflicts offer save-as, reload, and cancel recovery', async ({ page }) => {
