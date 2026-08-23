@@ -169,6 +169,71 @@ def _mechanism_contract_html(story: dict[str, Any]) -> str:
     )
 
 
+def _topic_experiment_html(topic_experiment: dict[str, Any], performance: dict[str, Any]) -> str:
+    if not isinstance(topic_experiment, dict) or not topic_experiment:
+        return (
+            '<p style="margin:0;font-size:23px;color:#c1121f">'
+            'Topic experiment is unavailable because metadata fields are missing.</p>'
+        )
+
+    topics = topic_experiment.get("topics", [])
+    topics = topics if isinstance(topics, list) else []
+    topic_chips = "".join(_proof_chip(topic) for topic in topics) or (
+        '<span style="font-size:22px;color:#c1121f">Missing search terms</span>'
+    )
+    selection = topic_experiment.get("topic_set_selection", {})
+    selection = selection if isinstance(selection, dict) else {}
+    topic_set_stats = performance.get("topic_set_stats", {})
+    selected_id = str(topic_experiment.get("topic_set_id", ""))
+    selected_stat = topic_set_stats.get(selected_id, {}) if isinstance(topic_set_stats, dict) else {}
+    recommended_set_id = performance.get("recommended_topic_set")
+    recommended_set = topic_set_stats.get(recommended_set_id, {}) if isinstance(topic_set_stats, dict) else {}
+    recommended_confidence = str(recommended_set.get("confidence", "low"))
+    if recommended_confidence in {"medium", "high"}:
+        recommendation = (
+            f'{recommended_set_id} · {recommended_set.get("label", "unknown")} · '
+            f'search {_escaped(performance.get("recommended_topic") or "insufficient evidence")} · '
+            f'{recommended_confidence} confidence'
+        )
+        recommendation_color = "#157347"
+    else:
+        recommendation = "No confident topic-set evidence yet"
+        recommendation_color = "#5b6875"
+
+    overview = "".join([
+        _contract_field("Selected label", topic_experiment.get("topic_set_label") or "Missing", emphasis=True),
+        _contract_field("Topic-set ID", topic_experiment.get("topic_set_id") or "Missing", emphasis=True),
+        _contract_field(
+            "Recommended topic set",
+            f"{recommended_set_id} · {recommended_set.get('label', 'unknown')}"
+            if recommended_set_id else "Insufficient evidence",
+        ),
+        _contract_field(
+            "Recommended search term",
+            performance.get("recommended_topic") or "Insufficient evidence",
+        ),
+        _contract_field("History samples", selection.get("sample_size", 0)),
+    ])
+    avoided = selection.get("avoided_topic_sets", [])
+    avoided = avoided if isinstance(avoided, list) else []
+    avoided_text = ", ".join(str(item) for item in avoided) or "None"
+
+    return (
+        f'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">{overview}</div>'
+        f'<p style="margin:0 0 10px;font-size:22px;font-weight:800;color:#182029">Published search terms</p>'
+        f'<div>{topic_chips}</div>'
+        f'<div style="margin-top:18px">'
+        f'{_contract_field("Selection rule", selection.get("strategy") or "Missing")}'
+        f'{_contract_field("Recent-fatigue avoids", avoided_text)}'
+        '</div>'
+        '<div style="margin-top:18px;background:#f2f4f6;border-left:4px solid #d6482c;'
+        'border-radius:12px;padding:20px">'
+        f'<p style="margin:0;font-size:19px;letter-spacing:.04em;color:#5b6875">Next-release evidence</p>'
+        f'<p style="margin:8px 0 0;font-size:24px;line-height:1.4;font-weight:800;'
+        f'color:{recommendation_color}">{recommendation}</p></div>'
+    )
+
+
 def build_dashboard(inputs: dict[str, Any]) -> str:
     release = inputs.get("release", "")
     title = inputs.get("title", "")
@@ -181,6 +246,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
     pattern_audit = inputs.get("pattern_audit", {})
     performance = inputs.get("performance", {})
     story = inputs.get("story", {})
+    topic_experiment = inputs.get("topic_experiment", {})
 
     gates = [
         ("Package QA", bool(qa.get("ok")), qa.get("errors", [])),
@@ -270,6 +336,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
   </header>
   {_section("Release gates", gate_html)}
   {_section("Mechanism contract", _mechanism_contract_html(story))}
+  {_section("Topic experiment", _topic_experiment_html(topic_experiment, performance))}
   {_section("Semantic dimensions", f'<div style="display:flex;gap:14px;flex-wrap:wrap">{score_items}</div>')}
   {_section("Style resonance", style_inner)}
   {_section("Comment resonance", comment_resonance_html)}
@@ -306,6 +373,13 @@ def collect_inputs(package_dir: Path) -> dict[str, Any]:
         "wechat_qa": _read_json(package_dir / "wechat" / "wechat-qa.json"),
         "pattern_audit": _read_json(package_dir / "pattern-audit.json"),
         "performance": _read_json(package_dir / "performance-report.json"),
+        "topic_experiment": {
+            "primary_shot": metadata.get("primary_shot", ""),
+            "topics": metadata.get("topics", []),
+            "topic_set_id": metadata.get("topic_set_id", ""),
+            "topic_set_label": metadata.get("topic_set_label", ""),
+            "topic_set_selection": metadata.get("topic_set_selection", {}),
+        },
     }
 
 

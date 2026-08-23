@@ -2666,6 +2666,16 @@ class ReviewDashboardTest(unittest.TestCase):
                 "recommended_formula": "#22",
                 "recommended_hook_type": "identity-task",
                 "recommended_copy_frame": "workflow",
+                "recommended_topic_set": "academic-talk",
+                "recommended_topic": "组会报告",
+                "topic_set_stats": {
+                    "academic-talk": {
+                        "label": "academic-talk",
+                        "publications": 2,
+                        "impressions": 2400,
+                        "confidence": "medium",
+                    },
+                },
                 "comment_focus": {
                     "recommended_theme": "code",
                     "confidence": "medium",
@@ -2683,6 +2693,17 @@ class ReviewDashboardTest(unittest.TestCase):
                             "confidence": "low",
                         },
                     },
+                },
+            },
+            "topic_experiment": {
+                "primary_shot": "presentation.reveal",
+                "topics": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
+                "topic_set_id": "7dd35d0592b9",
+                "topic_set_label": "talk-core",
+                "topic_set_selection": {
+                    "strategy": "confidence-gated historical performance with fatigue and coverage balancing",
+                    "sample_size": 4,
+                    "avoided_topic_sets": [],
                 },
             },
         }
@@ -2706,6 +2727,18 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("10 / 10", html)
         self.assertIn("Recommended frame", html)
         self.assertIn("workflow", html)
+        self.assertIn("Topic experiment", html)
+        self.assertIn("talk-core", html)
+        self.assertIn("7dd35d0592b9", html)
+        self.assertIn("PPT", html)
+        self.assertIn("演讲", html)
+        self.assertIn("程序员", html)
+        self.assertIn("效率工具", html)
+        self.assertIn("confidence-gated historical performance", html)
+        self.assertIn("Recommended topic set", html)
+        self.assertIn("academic-talk", html)
+        self.assertIn("Recommended search term", html)
+        self.assertIn("组会报告", html)
         self.assertIn("Comment resonance", html)
         self.assertIn("code", html)
         self.assertIn("5 mentions", html)
