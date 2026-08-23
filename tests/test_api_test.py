@@ -194,7 +194,7 @@ class TestRequestBoundary(unittest.TestCase):
     def test_api_rejects_rebound_host(self):
         request = urllib.request.Request(
             'http://127.0.0.1:%d/api/ping' % self.port,
-            headers={'Host': 'attacker.invalid'})
+            headers={'Host': 'attacker.invalid', 'Connection': 'close'})
         with self.assertRaises(urllib.error.HTTPError) as raised:
             urllib.request.urlopen(request, timeout=3)
         self.assertEqual(raised.exception.code, 403)
@@ -208,6 +208,7 @@ class TestRequestBoundary(unittest.TestCase):
                 'Content-Type': 'application/json',
                 'Host': '127.0.0.1:%d' % self.port,
                 'Origin': 'https://attacker.invalid',
+                'Connection': 'close',
             })
         with self.assertRaises(urllib.error.HTTPError) as raised:
             urllib.request.urlopen(request, timeout=3)
