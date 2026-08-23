@@ -418,12 +418,51 @@ async function saveEdit() {
       exitEdit();
       await loadFile(state.file);
     } else {
-      showToast(ok && ok.conflict
-        ? (_t('toast.saveConflict') || '文件已被其他程序修改，请重新打开后合并修改')
-        : (_t('toast.saveFailed') || '保存失败：') + ((ok && ok.error) || (_t('toast.unknownError') || '未知错误')));
+      if (ok && ok.conflict) {
+        const action = await promptSaveConflict();
+        if (action === 'save-as') await saveAs();
+        if (action === 'reload') {
+          exitEdit();
+          await loadFile(state.file, { force: true });
+        }
+      } else {
+        showToast((_t('toast.saveFailed') || '保存失败：') + ((ok && ok.error) || (_t('toast.unknownError') || '未知错误')));
+      }
     }
   } catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); }
   finally { busy(false); }
+}
+
+function promptSaveConflict() {
+  return new Promise(resolve => {
+    const modal = $('save-conflict-modal');
+    if (!modal) {
+      resolve('cancel');
+      return;
+    }
+    modal.classList.remove('hidden');
+    const cancel = $('save-conflict-cancel');
+    setTimeout(() => cancel?.focus(), 20);
+
+    const finish = action => {
+      modal.classList.add('hidden');
+      $('save-conflict-save-as').onclick = null;
+      $('save-conflict-reload').onclick = null;
+      $('save-conflict-cancel').onclick = null;
+      modal.removeEventListener('click', onBackdrop);
+      document.removeEventListener('keydown', onKey);
+      resolve(action);
+    };
+    const onBackdrop = event => { if (event.target === modal) finish('cancel'); };
+    const onKey = event => {
+      if (event.key === 'Escape') { event.preventDefault(); finish('cancel'); }
+    };
+    $('save-conflict-save-as').onclick = () => finish('save-as');
+    $('save-conflict-reload').onclick = () => finish('reload');
+    cancel.onclick = () => finish('cancel');
+    modal.addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onKey);
+  });
 }
 
 async function saveAs() {

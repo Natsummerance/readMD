@@ -144,6 +144,7 @@ function bindEvents() {
         ['convert-modal', closeConvertModal],
         ['export-modal', closeExportModal],
         ['img-modal', closeImgModal],
+        ['save-conflict-modal', () => $('save-conflict-modal').classList.add('hidden')],
         ['formula-modal', closeFormulaModal],
         ['url-modal', typeof closeWebDialog === 'function' ? closeWebDialog : () => $('url-modal').classList.add('hidden')],
         ['share-modal', typeof closeShareDialog === 'function' ? closeShareDialog : () => $('share-modal').classList.add('hidden')],
@@ -405,7 +406,10 @@ function bindEvents() {
     if (e.key === 'Enter') {
       e.preventDefault();
       clearTimeout(searchDebounce);
-      if (globalSearchState.query !== e.target.value) doSearch(e.target.value);
+      if (globalSearchState.query !== e.target.value) {
+        doSearch(e.target.value);
+        return;
+      }
       if (enterAdvancePending) {
         enterAdvancePending = false;
         consumeInitialSearchJump();
@@ -799,7 +803,8 @@ function getModalRoots() {
     'frontmatter-modal', 'table-modal', 'export-preview-modal', 'export-modal',
     'convert-modal', 'update-modal', 'style-custom-modal', 'lang-modal',
     'ai-history-modal', 'ai-settings-modal', 'formula-modal', 'presentation-modal',
-    'img-modal', 'history-modal', 'share-modal', 'tpl-modal', 'url-modal'
+    'img-modal', 'history-modal', 'share-modal', 'tpl-modal', 'url-modal',
+    'save-conflict-modal'
   ].map(id => $(id)).filter(Boolean);
 }
 

@@ -1171,6 +1171,41 @@ test('saving refreshes the existing tab with new content', async ({ page }) => {
   await page.waitForFunction(() => getActiveTab() && getActiveTab().original === '# updated');
 });
 
+test('save conflicts offer save-as, reload, and cancel recovery', async ({ page }) => {
+  await page.route('**/api/save', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: false, conflict: true, error: 'mtime changed' }),
+  }));
+  await page.route('**/api/file?p=**', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      ok: true, path: 'C:/doc.md', dir: 'C:/', name: 'doc.md',
+      content: '# external update', original: '# external update',
+      encoding: 'utf-8', mtime: 9, fixes: [], stats: {},
+    }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof saveEdit === 'function');
+  await page.evaluate(async () => {
+    state.file = 'C:/doc.md';
+    state.mode = 'file';
+    state.original = '# saved';
+    state.fixed = '# draft';
+    state.tabs = [{ id: 'one', path: 'C:/doc.md', title: 'doc.md', name: 'doc.md', content: '# draft', original: '# saved' }];
+    state.activeTabId = 'one';
+    syncStateFromActiveTab();
+    await toggleEdit();
+  });
+  await setEditorContent(page, '# external update');
+  await page.locator('#edit-save').click();
+  await expect(page.locator('#save-conflict-modal')).toBeVisible();
+  await expect(page.locator('#save-conflict-cancel')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#save-conflict-modal')).toBeHidden();
+});
+
 test('search highlights a term spanning adjacent inline elements', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => typeof renderVirtual === 'function');

@@ -154,7 +154,7 @@ async function loadFile(path, { force = false } = {}) {
       if (wasActive) {
         await loadDocCitations(d.path);
         setFixes(d.fixes || [], d.stats || {});
-        renderContent(d.content, d.name);
+        await renderContent(d.content, d.name);
         if (state.pagination.enabled && state.pagination.mode === 'paged' && previousPage > 0) {
           renderPage(previousPage, null, true);
         }
@@ -177,7 +177,7 @@ async function loadFile(path, { force = false } = {}) {
       syncStateFromActiveTab();
       await loadDocCitations(d.path);
       setFixes(d.fixes || [], d.stats || {});
-      renderContent(d.content, d.name);
+      await renderContent(d.content, d.name);
       if (state.pagination.enabled && state.pagination.totalPages > 1) {
         showToast(_t('toast.openedPages', { name: d.name, count: state.pagination.totalPages }), 4000);
       } else {
@@ -668,6 +668,7 @@ async function processDocImports(mdText, filePath) {
 window.processDocImports = processDocImports;
 
 function parseMarkdownWithSourceMap(content, options = {}) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const breaks = !!(state && state.breakOnSingleNewline);
   try {
     const renderer = new marked.Renderer();
@@ -729,10 +730,10 @@ function parseMarkdownWithSourceMap(content, options = {}) {
         return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
           <div class="code-chunk-header">
             <span class="code-chunk-badge">${lang.toUpperCase()}</span>
-            <span class="code-chunk-status">就绪</span>
+            <span class="code-chunk-status">${_t('status.ready') || 'Ready'}</span>
             <span class="code-chunk-timer"></span>
             <div class="code-chunk-actions">
-              <button class="code-chunk-run-btn" title="运行代码 (Shift+Enter)">▶ 运行</button>
+              <button class="code-chunk-run-btn" title="${_t('menu.runCode')} (Shift+Enter)" aria-label="${_t('menu.runCode')}">▶ ${_t('menu.runCode')}</button>
             </div>
           </div>
           <div class="code-chunk-src ${isHidden ? 'hidden' : ''}">
@@ -740,10 +741,10 @@ function parseMarkdownWithSourceMap(content, options = {}) {
           </div>
           <div class="code-chunk-output hidden">
             <div class="code-chunk-output-header">
-              <span>执行输出</span>
+              <span>${_t('reader.executionOutput')}</span>
               <div class="code-chunk-out-actions">
-                <button class="code-chunk-copy-btn" title="复制输出文本">📋 复制</button>
-                <button class="code-chunk-clear-btn" title="清空输出">✕ 清空</button>
+                <button class="code-chunk-copy-btn" title="${_t('reader.copyOutput')}" aria-label="${_t('reader.copyOutput')}">📋 ${_t('reader.copyOutput')}</button>
+                <button class="code-chunk-clear-btn" title="${_t('reader.clearOutput')}" aria-label="${_t('reader.clearOutput')}">✕ ${_t('reader.clearOutput')}</button>
               </div>
             </div>
             <pre class="code-chunk-stdout"></pre>
@@ -758,11 +759,11 @@ function parseMarkdownWithSourceMap(content, options = {}) {
         const encodedCode = encodeURIComponent(code);
         return `<div class="diagram-card" ${lineAttr} data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
           <div class="diagram-header">
-            <span class="diagram-badge">${lang.toUpperCase()} 图表</span>
-            <button class="diagram-reload-btn" title="重新渲染">⟳ 刷新</button>
+            <span class="diagram-badge">${_t('reader.diagramBadge', { lang: lang.toUpperCase() })}</span>
+            <button class="diagram-reload-btn" title="${_t('reader.refresh')}" aria-label="${_t('reader.refresh')}">⟳ ${_t('reader.refresh')}</button>
           </div>
-          <div class="diagram-preview"><div class="diagram-loading">正在加载图表...</div></div>
-          <details class="diagram-src-wrap"><summary>查看代码</summary><pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre></details>
+          <div class="diagram-preview"><div class="diagram-loading">${_t('reader.diagramLoading')}</div></div>
+          <details class="diagram-src-wrap"><summary>${_t('reader.viewCode')}</summary><pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre></details>
         </div>\n`;
       }
 
@@ -1136,6 +1137,7 @@ function postProcess(container) {
 }
 
 function renderAllCodeChunks(container) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const cards = (container || document).querySelectorAll('.code-chunk-card');
   cards.forEach(card => {
     if (card._bound) return;
@@ -1152,9 +1154,9 @@ function renderAllCodeChunks(container) {
 
     const run = async () => {
       statusEl.className = 'code-chunk-status running';
-      statusEl.textContent = '运行中...';
+      statusEl.textContent = _t('reader.codeRunning');
       btn.disabled = true;
-      btn.textContent = '⏳ 执行中';
+        btn.textContent = '⏳ ' + _t('reader.codeRunning');
       const t0 = Date.now();
       const interval = setInterval(() => {
         timerEl.textContent = ((Date.now() - t0) / 1000).toFixed(1) + 's';
@@ -1178,10 +1180,10 @@ function renderAllCodeChunks(container) {
 
         if (res && res.ok) {
           statusEl.className = 'code-chunk-status success';
-          statusEl.textContent = '执行成功';
+          statusEl.textContent = _t('ai.statusComplete');
           outWrap.classList.remove('hidden');
           stdoutEl.textContent = (res.stdout || '') + (res.stderr ? ('\n' + res.stderr) : '');
-          if (!stdoutEl.textContent.trim()) stdoutEl.textContent = '(无控制台输出)';
+          if (!stdoutEl.textContent.trim()) stdoutEl.textContent = _t('reader.noConsoleOutput');
           plotEl.innerHTML = '';
           if (res.images && res.images.length > 0) {
             res.images.forEach(imgSrc => {
@@ -1193,19 +1195,19 @@ function renderAllCodeChunks(container) {
           }
         } else {
           statusEl.className = 'code-chunk-status error';
-          statusEl.textContent = '执行失败';
+          statusEl.textContent = _t('convert.statusFailed');
           outWrap.classList.remove('hidden');
-          stdoutEl.textContent = (res && res.error) || (res && res.stderr) || '未知执行错误';
+          stdoutEl.textContent = (res && res.error) || (res && res.stderr) || _t('toast.unknownError');
         }
       } catch (err) {
         clearInterval(interval);
         statusEl.className = 'code-chunk-status error';
-        statusEl.textContent = '调用失败';
+        statusEl.textContent = _t('reader.callFailed');
         outWrap.classList.remove('hidden');
         stdoutEl.textContent = err.message || String(err);
       } finally {
         btn.disabled = false;
-        btn.textContent = '▶ 重新运行';
+        btn.textContent = '▶ ' + _t('reader.runAgain');
       }
     };
 
@@ -1218,7 +1220,7 @@ function renderAllCodeChunks(container) {
         const text = (stdoutEl ? stdoutEl.textContent : '') || '';
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(text);
-          showToast('已复制输出内容到剪贴板', 1200);
+          showToast(_t('toast.outputCopied'), 1200);
         }
       });
     }
@@ -1230,9 +1232,9 @@ function renderAllCodeChunks(container) {
         if (stdoutEl) stdoutEl.textContent = '';
         if (plotEl) plotEl.innerHTML = '';
         statusEl.className = 'code-chunk-status';
-        statusEl.textContent = '就绪';
+        statusEl.textContent = _t('status.ready');
         if (timerEl) timerEl.textContent = '';
-        showToast('已清空执行结果', 1000);
+        showToast(_t('toast.outputCleared'), 1000);
       });
     }
   });
@@ -1242,10 +1244,11 @@ window.renderAllCodeChunks = renderAllCodeChunks;
 async function runAllCodeChunks() {
   const cards = document.querySelectorAll('.code-chunk-card');
   if (!cards.length) {
-    showToast('当前文档中没有可运行的代码块');
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    showToast(_t('toast.noRunnableChunks'));
     return;
   }
-  showToast(`开始批量运行 ${cards.length} 个代码块...`, 1500);
+  showToast(_t('toast.batchRunStarted', { count: cards.length }), 1500);
   for (const card of cards) {
     const btn = card.querySelector('.code-chunk-run-btn');
     if (btn) {
@@ -1257,6 +1260,7 @@ async function runAllCodeChunks() {
 window.runAllCodeChunks = runAllCodeChunks;
 
 function renderAllDiagrams(container) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const cards = (container || document).querySelectorAll('.diagram-card');
   cards.forEach(async card => {
     if (card._rendered) return;
@@ -1267,7 +1271,7 @@ function renderAllDiagrams(container) {
     const reloadBtn = card.querySelector('.diagram-reload-btn');
 
     const render = async () => {
-      previewEl.innerHTML = '<div class="diagram-loading">⏳ 正在渲染 ' + engine.toUpperCase() + ' 矢量图表...</div>';
+      previewEl.innerHTML = `<div class="diagram-loading">⏳ ${_t('reader.renderingDiagram', { engine: engine.toUpperCase() })}</div>`;
       try {
         if (engine === 'mermaid' && window.mermaid) {
           const id = 'mermaid-' + Math.random().toString(36).slice(2);
@@ -1307,14 +1311,14 @@ function renderAllDiagrams(container) {
               const svgText = await kr.text();
               previewEl.innerHTML = svgText;
             } else {
-              previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ 离线或远程渲染不可达，已降级显示源码：</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+              previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ ${_t('reader.renderFailed', { error: _t('toast.unknownNetworkErr') })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
             }
           }
         } else {
-          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ 图表渲染错误：${(res && res.error) || '未知'}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ ${_t('reader.diagramError', { error: (res && res.error) || _t('toast.unknownError') })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
         }
       } catch (err) {
-        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ 渲染异常（${err.message || String(err)}），显示源码：</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ ${_t('reader.renderFailed', { error: err.message || String(err) })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
       }
     };
 

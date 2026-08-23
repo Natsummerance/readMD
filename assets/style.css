@@ -886,7 +886,8 @@ mark.hl.cur { background: var(--hl-cur); }
 }
 
 /* ---------- 未保存关闭确认弹窗 (Close Tab Dirty Confirmation Modal) ---------- */
-#close-confirm-modal {
+#close-confirm-modal,
+#save-conflict-modal {
   position: fixed;
   inset: 0;
   background: color-mix(in srgb, var(--overlay, rgba(15, 23, 42, 0.45)) 75%, transparent);
@@ -900,7 +901,8 @@ mark.hl.cur { background: var(--hl-cur); }
   visibility: visible;
   transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s ease;
 }
-#close-confirm-modal.hidden {
+#close-confirm-modal.hidden,
+#save-conflict-modal.hidden {
   display: none;
   opacity: 0;
   visibility: hidden;

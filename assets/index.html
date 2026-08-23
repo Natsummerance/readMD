@@ -303,7 +303,7 @@
       <div id="ai-output" aria-live="polite"></div>
     </div>
     <div class="ai-composer">
-      <textarea id="ai-prompt" rows="3" placeholder="向 AI 提问，或选择上方快捷指令... (Enter 发送, Shift+Enter 换行)" data-i18n-placeholder="ai.promptPlaceholder" autocomplete="off"></textarea>
+      <textarea id="ai-prompt" rows="3" placeholder="向 AI 提问，或选择上方快捷指令... (Enter 发送, Shift+Enter 换行)" aria-label="向 AI 提问" data-i18n-placeholder="ai.promptPlaceholder" data-i18n-aria="ai.promptPlaceholder" autocomplete="off"></textarea>
       <div class="ai-composer-actions">
 
         <label class="ai-sel"><input id="ai-selection" type="checkbox"> <span data-i18n="editor.text">仅处理选中文字</span></label>
@@ -436,7 +436,7 @@
     <div class="export-head"><h3 data-i18n="img.title">&#128444; 图片编辑器</h3><button id="img-close-x" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">&#10005;</button></div>
     <div class="img-source">
       <button id="img-file" class="tb-btn accent" data-i18n="img.selectLocal">&#128194; 选择本地图片…</button>
-      <input id="img-url-input" type="text" placeholder="或粘贴图片 URL 直接插入" data-i18n-placeholder="img.urlPlaceholder" autocomplete="off">
+      <input id="img-url-input" type="text" placeholder="或粘贴图片 URL 直接插入" aria-label="图片 URL" data-i18n-placeholder="img.urlPlaceholder" data-i18n-aria="img.urlPlaceholder" autocomplete="off">
       <button id="img-url-load" class="tb-btn" data-i18n="img.insertUrl">插入 URL</button>
     </div>
     <div class="img-workspace">
@@ -479,7 +479,7 @@
       <ul id="tpl-list" class="tpl-list"></ul>
       <div class="tpl-form">
         <input id="tpl-id" type="hidden">
-        <input id="tpl-name" type="text" placeholder="模板名称（如：总结要点 / 生成周报）" data-i18n-placeholder="tpl.namePlaceholder">
+        <input id="tpl-name" type="text" placeholder="模板名称（如：总结要点 / 生成周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
         <select id="tpl-action">
           <option value="quick_read" data-i18n="tpl.actionQuickRead">动作：快速阅读</option>
           <option value="polish" data-i18n="tpl.actionPolish">动作：润色</option>
@@ -490,8 +490,8 @@
           <option value="ask" data-i18n="tpl.actionAsk">动作：提问</option>
           <option value="custom" data-i18n="tpl.actionCustom">自定义动作</option>
         </select>
-        <textarea id="tpl-system" rows="4" placeholder="系统提示词：角色设定与任务说明" data-i18n-placeholder="tpl.systemPlaceholder"></textarea>
-        <textarea id="tpl-user" rows="3" placeholder="用户消息模板（可选）：可用 {doc} 代表文档内容、{prompt} 代表补充要求；留空则自动拼接文档" data-i18n-placeholder="tpl.userPlaceholder"></textarea>
+        <textarea id="tpl-system" rows="4" placeholder="系统提示词：角色设定与任务说明" aria-label="系统提示词" data-i18n-placeholder="tpl.systemPlaceholder" data-i18n-aria="tpl.systemPlaceholder"></textarea>
+        <textarea id="tpl-user" rows="3" placeholder="用户消息模板（可选）：可用 {doc} 代表文档内容、{prompt} 代表补充要求；留空则自动拼接文档" aria-label="用户消息模板" data-i18n-placeholder="tpl.userPlaceholder" data-i18n-aria="tpl.userPlaceholder"></textarea>
       </div>
     </div>
     <div class="url-actions">
@@ -534,7 +534,7 @@
     </div>
     
     <div class="url-input-wrap">
-      <input id="url-input" type="url" inputmode="url" placeholder="输入网页 URL (如 https://example.com/post)..." data-i18n-placeholder="web.urlPlaceholder" autocomplete="url">
+      <input id="url-input" type="url" inputmode="url" placeholder="输入网页 URL (如 https://example.com/post)..." aria-label="网页 URL" data-i18n-placeholder="web.urlPlaceholder" data-i18n-aria="web.urlPlaceholder" autocomplete="url">
       <button id="url-paste-btn" class="tb-btn icon" title="从剪贴板粘贴" aria-label="粘贴网址" data-i18n-title="web.pasteTitle" data-i18n-aria="web.pasteAria">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
       </button>
@@ -609,6 +609,25 @@
       <button id="close-confirm-save" class="tb-btn accent" data-i18n="dialog.save">保存修改</button>
       <button id="close-confirm-discard" class="tb-btn danger" data-i18n="dialog.dontSave">不保存</button>
       <button id="close-confirm-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<div id="save-conflict-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="save-conflict-title">
+  <div id="close-confirm-box">
+    <div class="close-confirm-head">
+      <div class="close-confirm-icon-wrap">
+        <svg class="close-confirm-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <h3 id="save-conflict-title" data-i18n="dialog.unsavedTitle">是否保存对文档的修改？</h3>
+        <p id="save-conflict-desc" data-i18n="toast.saveConflict">文件已被其他程序修改，请重新打开后合并修改</p>
+      </div>
+    </div>
+    <div class="close-confirm-actions">
+      <button id="save-conflict-save-as" class="tb-btn accent" data-i18n="toolbar.saveAs">另存为</button>
+      <button id="save-conflict-reload" class="tb-btn danger" data-i18n="toolbar.reload">重新加载</button>
+      <button id="save-conflict-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
     </div>
   </div>
 </div>
@@ -833,7 +852,7 @@
       <button class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close" onclick="i18n.closeModal()">✕</button>
     </div>
     <div class="lang-search-wrap">
-      <input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." data-i18n-placeholder="lang.search" oninput="i18n.renderLanguageGrid(this.value)">
+<input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." aria-label="搜索语言" data-i18n-placeholder="lang.search" data-i18n-aria="lang.search" oninput="i18n.renderLanguageGrid(this.value)">
     </div>
     <div id="lang-grid" class="lang-grid-container"></div>
   </div>
@@ -919,7 +938,7 @@
     </div>
     <div style="padding: 16px;">
       <div class="modal-form-group">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkLang">编程语言：</label>
+        <label for="code-chunk-lang" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkLang">编程语言：</label>
         <select id="code-chunk-lang" class="modal-select" style="width:100%;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
           <option value="python">Python (Pyodide / 本地运行)</option>
           <option value="javascript">JavaScript (Node / Web)</option>
@@ -941,7 +960,7 @@
         </label>
       </div>
       <div class="modal-form-group">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkCode">代码内容：</label>
+        <label for="code-chunk-code" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkCode">代码内容：</label>
         <textarea id="code-chunk-code" class="modal-textarea" style="width:100%;height:100px;font-family:var(--font-mono);font-size:12px;box-sizing:border-box;padding:8px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);" placeholder="import matplotlib.pyplot as plt\nimport numpy as np\nx = np.linspace(0, 10, 100)\nplt.plot(x, np.sin(x))\nplt.show()"></textarea>
       </div>
       <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
@@ -961,7 +980,7 @@
     </div>
     <div style="padding: 16px;">
       <div class="modal-form-group">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramType">图表类型：</label>
+        <label for="diagram-type" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramType">图表类型：</label>
         <select id="diagram-type" class="modal-select" style="width:100%;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
           <option value="plantuml">PlantUML (时序图 / 架构图 / UML)</option>
           <option value="tikz">TikZ / PGFPlots (LaTeX 矢量几何与函数图)</option>
@@ -973,7 +992,7 @@
         </select>
       </div>
       <div class="modal-form-group" style="margin-top: 12px;">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramTemplate">图表代码模版：</label>
+        <label for="diagram-code" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramTemplate">图表代码模版：</label>
         <textarea id="diagram-code" class="modal-textarea" style="width:100%;height:120px;font-family:var(--font-mono);font-size:12px;box-sizing:border-box;padding:8px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);"></textarea>
       </div>
       <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
@@ -994,12 +1013,12 @@
     <div style="padding: 16px;">
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.docImportDesc">引用外部 Markdown 文件、源码或图表，渲染时将自动无缝嵌入当前文档。</p>
       <div class="modal-form-group">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.docImportPath">子文档相对路径：</label>
+        <label for="doc-import-path" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.docImportPath">子文档相对路径：</label>
         <input id="doc-import-path" type="text" class="modal-input" placeholder="chapter1.md 或 ./subdocs/appendix.md" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
         <div class="modal-form-group">
-          <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.docImportMode">引用模式：</label>
+        <label for="doc-import-mode" style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.docImportMode">引用模式：</label>
           <select id="doc-import-mode" class="modal-select" style="width:100%;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
             <option value="markdown" data-i18n="editor.docImportModeMd">Markdown (递归解析渲染)</option>
             <option value="code" data-i18n="editor.docImportModeCode">Code (作为高亮代码块嵌入)</option>
@@ -1007,7 +1026,7 @@
           </select>
         </div>
         <div class="modal-form-group">
-          <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.docImportLines">行号切片 (可选)：</label>
+        <label for="doc-import-lines" style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.docImportLines">行号切片 (可选)：</label>
           <input id="doc-import-lines" type="text" class="modal-input" placeholder="例如: 10-50" style="width:100%;box-sizing:border-box;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
         </div>
       </div>
@@ -1029,16 +1048,16 @@
     <div style="padding: 16px;">
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.frontmatterModalDesc">在文档顶部插入标准 YAML Frontmatter，用于配置文档标题、作者、Reveal.js 演示主题及全局样式。</p>
       <div class="modal-form-group">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTitle">文档标题：</label>
+        <label for="fm-input-title" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTitle">文档标题：</label>
         <input id="fm-input-title" type="text" class="modal-input" placeholder="我的演说 / 报告文档" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
       </div>
       <div class="modal-form-group" style="margin-top: 10px;">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterAuthor">作者 / 演讲者：</label>
+        <label for="fm-input-author" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterAuthor">作者 / 演讲者：</label>
         <input id="fm-input-author" type="text" class="modal-input" placeholder="ReadMD User" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
         <div class="modal-form-group">
-          <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTheme">Reveal.js 演示主题：</label>
+          <label for="fm-select-theme" style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTheme">Reveal.js 演示主题：</label>
           <select id="fm-select-theme" class="modal-select" style="width:100%;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
             <option value="black">Black (现代深色 / 默认)</option>
             <option value="white">White (明亮纯白)</option>
@@ -1053,7 +1072,7 @@
           </select>
         </div>
         <div class="modal-form-group">
-          <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTransition">幻灯片切页动效：</label>
+          <label for="fm-select-transition" style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTransition">幻灯片切页动效：</label>
           <select id="fm-select-transition" class="modal-select" style="width:100%;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
             <option value="slide">Slide (平滑滑动 / 默认)</option>
             <option value="fade">Fade (淡入淡出)</option>
