@@ -841,6 +841,32 @@ class AuditCopyTest(unittest.TestCase):
         self.assertTrue(any(item["id"] == "generic-adjective" for item in report["findings"]))
         self.assertTrue(any(item["id"] == "generic-cta" for item in report["findings"]))
 
+    def test_style_audit_flags_structural_ai_fingerprints(self) -> None:
+        cases = [
+            ("fixed-connectors", "然而第一点。然而第二点。然而第三点。"),
+            ("reversal-density", "不是文件，而是工作流。不是界面，而是路径。不是截图，而是证据。"),
+            ("depth-overfit", "本质上这是工具。归根结底这是方法。"),
+            ("blessing-close", "具体画面都在上面。你值得更稳的文档流。"),
+        ]
+        for finding_id, body in cases:
+            with self.subTest(finding_id=finding_id):
+                report = style_audit.audit_style(body)
+                self.assertTrue(any(item["id"] == finding_id for item in report["findings"]))
+                failed_ids = {
+                    item["id"]
+                    for item in report["findings"]
+                    if item["severity"] == "fail"
+                }
+                self.assertIn(finding_id, failed_ids)
+
+    def test_style_audit_records_structural_fingerprint_metrics(self) -> None:
+        report = style_audit.audit_style("然而有一点。这不是文件，而是工作流。本质上它保留本地文件。")
+        metrics = report["metrics"]
+        self.assertEqual(metrics["fixed_connector_count"], 1)
+        self.assertEqual(metrics["reversal_count"], 1)
+        self.assertEqual(metrics["depth_term_count"], 1)
+        self.assertFalse(metrics["blessing_close"])
+
     def test_semantic_qa_integrates_style_hard_gate(self) -> None:
         body = "这款工具非常强大。这款工具非常高效。这款工具非常安全。快来关注点赞。\n\n先说清楚：这是 ReadMD v9.9.9-beta.1 预览版。"
         story, metadata, composition = self.make_audit_inputs(body)

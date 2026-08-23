@@ -33,7 +33,7 @@ python showcase/scripts/build_package.py --output showcase/output/package --fina
 
 构建还会把 `pattern-library.json` 里的 10 条热门机制变成机器检查，结果写入 `pattern-audit.json`；封面钩子、痛点移除、第二张完整主界面、单一主功能、具体场景提问、UI 区域契约和 DOM 设计审计任一失败都会阻止发布。随后生成 `review-dashboard.html`，把 QA 门禁、语义评分、选中稿加前四名挑战者、框架库存、反馈账本和最终文案汇总成一个自包含审查面板；72 个候选不会全部堆到页面上。`build_package.py --finalize` 会先写入本轮预检 QA，再生成面板并最后聚合所有门禁；任一面板失败都会把 `qa.json` 置红。
 
-语义 QA 现在包含 AI 指纹与共鸣审计：检查空泛形容词、AI 腔、句长节奏、具体产物、读者痛点和行动问题；未通过会写入 `copy-review.json.style` 并阻止发布。
+语义 QA 现在包含 AI 指纹与共鸣审计：检查空泛形容词、AI 腔、句长节奏、固定连接词堆叠、“不是 X 而是 Y”高密度、升维套话过拟合、祝福式收尾、具体产物、读者痛点和行动问题；未通过会写入 `copy-review.json.style` 并阻止发布。
 
 `qa.json`、`copy-review.json`、`variants.json`、`pattern-audit.json` 和 `dashboard-qa.json` 必须同时通过才允许进入小红书发布队列。新包还必须让 `metadata.copy_frame`、选择报告和选中排名三方一致；watcher 发布前会重复这项检查。`--draft` 可让 watcher 只填充小红书表单，不点击发布：
 
