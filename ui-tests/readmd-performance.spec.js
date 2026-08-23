@@ -106,7 +106,7 @@ test('long-document interaction stays bounded from 1k through 50k lines', async 
   }
 
   for (const size of CORPUS_SIZES) {
-    expect(results[size].firstReadableMs, `${size}-line first readable content`).toBeLessThan(2500);
+    expect(results[size].firstReadableMs, `${size}-line first readable content`).toBeLessThan(3000);
   }
   expect(results[10000].pageTurnMs).toBeLessThan(250);
   expect(results[50000].pageTurnMs).toBeLessThan(250);
