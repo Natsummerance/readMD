@@ -10,7 +10,12 @@ from pathlib import Path
 from typing import Any
 
 from content_memory import load_learning_records, partition_records, summarize
-from copy_profiles import MECHANISM_TOPIC_SETS, SUPPORT_PHRASES, profile_for_story
+from copy_profiles import (
+    MECHANISM_TOPIC_SETS,
+    SUPPORT_PHRASES,
+    profile_for_story,
+    title_candidate_errors,
+)
 
 
 BANNED_REPLACEMENTS = {
@@ -47,10 +52,14 @@ def _planned_card_count(story: dict[str, Any]) -> int:
 def _title_candidates(story: dict[str, Any]) -> list[dict[str, str]]:
     profile = profile_for_story(story)
     number = _planned_card_count(story)
-    return [
+    candidates = [
         {"formula_id": formula_id, "text": text.replace("{number}", str(number))}
         for formula_id, text in profile["titles"].items()
     ]
+    errors = title_candidate_errors(candidates)
+    if errors:
+        raise ValueError("; ".join(errors))
+    return candidates
 
 
 def _select_title(candidates: list[dict[str, str]], history: list[dict[str, Any]] | None) -> tuple[dict[str, str], dict[str, Any]]:

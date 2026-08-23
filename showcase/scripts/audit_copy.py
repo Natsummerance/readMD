@@ -10,7 +10,12 @@ from pathlib import Path
 from typing import Any
 
 from style_audit import audit_style
-from copy_profiles import MECHANISM_TOPIC_MARKERS, profile_for_story
+from copy_profiles import (
+    MECHANISM_TOPIC_MARKERS,
+    EXPERIMENT_TITLE_FORMULAS,
+    profile_for_story,
+    title_formula_errors,
+)
 
 
 BANNED = ("公众号", "微信", "闲鱼", "咸鱼", "转卖", "出票", "转让", "售票", "二维码", "淘口令", "淘宝")
@@ -33,16 +38,17 @@ def _score_title(metadata: dict[str, Any]) -> tuple[int, list[str]]:
     title = str(metadata.get("title", ""))
     formula_id = str(metadata.get("title_formula_id", ""))
     score = 0.0
+    failures = title_formula_errors(title, formula_id)
     if len(title) <= 20:
         score += 4
-    if re.fullmatch(r"#\d+", formula_id):
+    if re.fullmatch(r"#\d+", formula_id) and formula_id in EXPERIMENT_TITLE_FORMULAS:
         score += 4
     # Formula families carry a psychological trigger even when the surface wording
     # relies on identity (#22), curiosity (#9), or number anchoring (#12).
     formula_signal = formula_id in {"#9", "#12", "#22", "#26", "#36", "#61"}
     tensions = sum(term in title.lower() for term in ("不用", "别再", "居然", "直接", "看完", "重新", "上台", "ppt", "md", "markdown"))
     score += 7 if tensions >= 2 else (4 if tensions == 1 or formula_signal else 0)
-    return round(score), []
+    return round(score), failures
 
 
 def _score_hook(body: str, story: dict[str, Any]) -> tuple[int, list[str]]:
@@ -130,8 +136,9 @@ def _score_compliance(metadata: dict[str, Any]) -> tuple[int, list[str]]:
 
 def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: dict[str, Any]) -> dict[str, Any]:
     style_report = audit_style(str(metadata.get("body", "")), audience="程序员")
+    title_report = _score_title(metadata)
     scores = {
-        "title": _score_title(metadata)[0],
+        "title": title_report[0],
         "hook": _score_hook(str(metadata.get("body", "")), story)[0],
         "focus": _score_focus(story, str(metadata.get("body", "")))[0],
         "evidence": _score_evidence(story, str(metadata.get("body", "")))[0],
@@ -140,6 +147,7 @@ def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: 
         "compliance": _score_compliance(metadata)[0],
     }
     hard_failures: list[str] = []
+    hard_failures.extend(title_report[1])
     body = str(metadata.get("body", ""))
     title = str(metadata.get("title", ""))
     cards = composition.get("cards", [])

@@ -3,6 +3,7 @@
 """Evidence-aligned copy contracts for each selectable release mechanism."""
 from __future__ import annotations
 
+import re
 from typing import Any
 
 
@@ -207,6 +208,93 @@ MECHANISM_TOPIC_MARKERS: dict[str, set[str]] = {
 }
 
 
+# Each experiment keeps the psychological trigger of its source Xiaohongshu
+# formula. A formula id alone is attribution, not evidence that the title still
+# uses that mechanism.
+TITLE_FORMULA_CONTRACTS: dict[str, dict[str, Any]] = {
+    "#36": {
+        "family": "outcome-promise",
+        "removal_any": ("不用", "没有", "无需"),
+        "result_any": ("直接", "能", "可以", "进", "收", "改", "看", "放映", "分享", "排版"),
+    },
+    "#9": {
+        "family": "curiosity-gap",
+        "surprise_any": ("居然", "为何", "怎么", "为什么", "意想不到"),
+    },
+    "#22": {
+        "family": "identity-fit",
+        "prefix": "给",
+        "suffix": "的人",
+    },
+    "#61": {
+        "family": "action-interruption",
+        "action_any": ("别再", "别把", "别让", "停止"),
+    },
+    "#12": {
+        "family": "perspective-shift",
+        "carousel": re.compile(r"看完这\d+张"),
+        "shift_any": ("重新", "不再相同", "换个"),
+    },
+    "#26": {
+        "family": "number-anchor",
+        "carousel": re.compile(r"\d+张图"),
+        "anchor": "看懂",
+    },
+}
+
+EXPERIMENT_TITLE_FORMULAS = tuple(TITLE_FORMULA_CONTRACTS)
+
+
+def title_formula_errors(title: str, formula_id: str) -> list[str]:
+    """Return structural mismatches between a title and its declared formula."""
+    value = str(title).strip()
+    contract = TITLE_FORMULA_CONTRACTS.get(str(formula_id).strip())
+    if contract is None:
+        return [f"unknown title formula: {formula_id}"]
+
+    errors: list[str] = []
+    if any(key in contract for key in ("removal_any", "result_any")):
+        if not any(term in value for term in contract.get("removal_any", ())):
+            errors.append(f"title formula {formula_id} is missing a removal condition")
+        if not any(term in value for term in contract.get("result_any", ())):
+            errors.append(f"title formula {formula_id} is missing an outcome")
+    if "surprise_any" in contract and not any(term in value for term in contract["surprise_any"]):
+        errors.append(f"title formula {formula_id} is missing a curiosity signal")
+    if "prefix" in contract and not value.startswith(contract["prefix"]):
+        errors.append(f"title formula {formula_id} is missing identity targeting")
+    if "suffix" in contract and contract["suffix"] not in value:
+        errors.append(f"title formula {formula_id} is missing the target reader")
+    if "action_any" in contract and not any(term in value for term in contract["action_any"]):
+        errors.append(f"title formula {formula_id} is missing an action interruption")
+    if "carousel" in contract and not contract["carousel"].search(value):
+        errors.append(f"title formula {formula_id} is missing its carousel anchor")
+    if "shift_any" in contract and not any(term in value for term in contract["shift_any"]):
+        errors.append(f"title formula {formula_id} is missing a perspective shift")
+    if "anchor" in contract and contract["anchor"] not in value:
+        errors.append(f"title formula {formula_id} is missing the comprehension anchor")
+    return errors
+
+
+def title_candidate_errors(candidates: list[dict[str, Any]]) -> list[str]:
+    """Validate the experiment pool before publication history can rank it."""
+    errors: list[str] = []
+    formulas = [str(item.get("formula_id", "")).strip() for item in candidates]
+    expected = set(EXPERIMENT_TITLE_FORMULAS)
+    if len(formulas) != len(expected) or set(formulas) != expected:
+        errors.append("title candidate formulas do not match the approved experiment set")
+
+    families = {
+        TITLE_FORMULA_CONTRACTS[formula]["family"]
+        for formula in formulas
+        if formula in TITLE_FORMULA_CONTRACTS
+    }
+    if len(families) < 3:
+        errors.append("title candidates must cover at least 3 trigger families")
+    for item in candidates:
+        errors.extend(title_formula_errors(str(item.get("text", "")), str(item.get("formula_id", ""))))
+    return errors
+
+
 PROFILES: dict[str, dict[str, Any]] = {
     "overview.editor": {
         "artifact": "Markdown 稿件",
@@ -231,7 +319,7 @@ PROFILES: dict[str, dict[str, Any]] = {
         "scenarios": "课程讲义、技术笔记、项目说明",
         "titles": {
             "#36": "不用切窗口，Markdown同屏改",
-            "#9": "Markdown改完，立刻看到排版",
+            "#9": "Markdown改完，居然立刻出排版",
             "#22": "给反复改稿的人做的MD工具",
             "#61": "别再把写作和预览拆开",
             "#12": "看完这{number}张，你会重新看MD编辑",

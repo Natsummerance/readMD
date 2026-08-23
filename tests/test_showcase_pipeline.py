@@ -375,13 +375,19 @@ class WriteCopyTest(unittest.TestCase):
                 previous_release="v2.3.7-beta.2",
             )
         candidates = result["title_candidates"]
+        errors = copy_profiles.title_candidate_errors(candidates)
         self.assertEqual(
             {item["formula_id"] for item in candidates},
             set(copy_variants.TITLE_FORMULAS),
         )
+        self.assertEqual(errors, [])
+        self.assertGreaterEqual(len({
+            copy_profiles.TITLE_FORMULA_CONTRACTS[item["formula_id"]]["family"]
+            for item in candidates
+        }), 3)
         for item in candidates:
             self.assertLessEqual(len(item["text"]), 20)
-            self.assertRegex(item["formula_id"], r"^#\d+$")
+            self.assertEqual(copy_profiles.title_formula_errors(item["text"], item["formula_id"]), [])
         self.assertLessEqual(len(result["title"]), 20)
 
     def test_numeric_title_anchors_match_planned_card_count(self) -> None:
@@ -1075,6 +1081,14 @@ class AuditCopyTest(unittest.TestCase):
         report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
         self.assertFalse(report["ok"])
         self.assertTrue(any("title carousel count" in item.lower() for item in report["hard_failures"]))
+
+    def test_audit_rejects_title_formula_label_without_formula_structure(self) -> None:
+        story, metadata, composition = self.make_audit_inputs(self.good_body())
+        metadata["title"] = "ReadMD更新：文档变工作台"
+        report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
+        self.assertFalse(report["ok"])
+        self.assertIn("title formula #36 is missing a removal condition", report["hard_failures"])
+        self.assertIn("title formula #36 is missing an outcome", report["hard_failures"])
 
     def test_style_audit_passes_concrete_developer_voice(self) -> None:
         report = style_audit.audit_style(self.good_body(), audience="程序员")
