@@ -6,9 +6,12 @@ sys.path.insert(0, ROOT)
 
 import readmd
 import json
+import threading
 import tempfile
 import time
 import unittest
+import urllib.error
+import urllib.request
 from unittest import mock
 
 
@@ -96,6 +99,124 @@ class TestRenameFile(unittest.TestCase):
                 result = readmd.Api().rename_file(old, 'title')
             self.assertTrue(result.get('ok'), result)
             self.assertEqual(result['path'], new)
+
+
+class TestSaveAuthorization(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.td = tempfile.TemporaryDirectory()
+        cls.document = os.path.join(cls.td.name, 'document.md')
+        cls.unopened = os.path.join(cls.td.name, 'unopened.md')
+        for path in (cls.document, cls.unopened):
+            with open(path, 'w', encoding='utf-8') as handle:
+                handle.write('# original')
+        cls.server = readmd.ReadMDHTTPServer(('127.0.0.1', 0), readmd.Handler)
+        cls.port = cls.server.server_port
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join(timeout=2)
+        cls.td.cleanup()
+
+    def _save(self, path, token=None):
+        headers = {'Content-Type': 'application/json'}
+        if token is not None:
+            headers['X-ReadMD-App-Token'] = token
+        request = urllib.request.Request(
+            'http://127.0.0.1:%d/api/save' % self.port,
+            data=json.dumps({'path': path, 'content': '# saved'}).encode('utf-8'),
+            method='POST', headers=headers)
+        try:
+            with urllib.request.urlopen(request, timeout=3) as response:
+                return response.status, json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            try:
+                return error.code, json.loads(error.read())
+            except json.JSONDecodeError:
+                return error.code, {'error': 'forbidden'}
+
+    def _open_document(self):
+        url = 'http://127.0.0.1:%d/api/file?p=%s' % (
+            self.port, urllib.request.quote(self.document))
+        with urllib.request.urlopen(url, timeout=3) as response:
+            self.assertEqual(response.status, 200)
+
+    def test_save_requires_server_instance_app_token(self):
+        with open(self.document, 'w', encoding='utf-8') as handle:
+            handle.write('# original')
+        for token in (None, 'wrong'):
+            status, result = self._save(self.document, token)
+            self.assertEqual(status, 403)
+            self.assertEqual(result, {'error': 'forbidden'})
+            with open(self.document, encoding='utf-8') as handle:
+                self.assertEqual(handle.read(), '# original')
+
+    def test_authorized_document_can_save_but_unopened_path_is_rejected(self):
+        self._open_document()
+        status, result = self._save(self.document, self.server.app_token)
+        self.assertEqual(status, 200)
+        self.assertTrue(result.get('ok'), result)
+        with open(self.document, encoding='utf-8') as handle:
+            self.assertEqual(handle.read(), '# saved')
+
+        status, result = self._save(self.unopened, self.server.app_token)
+        self.assertEqual(status, 403)
+        self.assertEqual(result, {'error': '文件未被授权保存'})
+        with open(self.unopened, encoding='utf-8') as handle:
+            self.assertEqual(handle.read(), '# original')
+
+    def test_index_injects_instance_token_for_frontend(self):
+        with urllib.request.urlopen(
+                'http://127.0.0.1:%d/' % self.port, timeout=3) as response:
+            body = response.read()
+        self.assertIn(('content="%s"' % self.server.app_token).encode('ascii'), body)
+        self.assertNotIn(b'content=""', body)
+
+
+class TestRequestBoundary(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.server = readmd.ReadMDHTTPServer(('127.0.0.1', 0), readmd.Handler)
+        cls.port = cls.server.server_port
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join(timeout=2)
+
+    def test_api_rejects_rebound_host(self):
+        request = urllib.request.Request(
+            'http://127.0.0.1:%d/api/ping' % self.port,
+            headers={'Host': 'attacker.invalid'})
+        with self.assertRaises(urllib.error.HTTPError) as raised:
+            urllib.request.urlopen(request, timeout=3)
+        self.assertEqual(raised.exception.code, 403)
+        self.assertEqual(raised.exception.read(), b'forbidden')
+
+    def test_post_rejects_cross_origin_request(self):
+        request = urllib.request.Request(
+            'http://127.0.0.1:%d/api/modules/load' % self.port,
+            data=json.dumps({'name': 'convert'}).encode('utf-8'), method='POST',
+            headers={
+                'Content-Type': 'application/json',
+                'Host': '127.0.0.1:%d' % self.port,
+                'Origin': 'https://attacker.invalid',
+            })
+        with self.assertRaises(urllib.error.HTTPError) as raised:
+            urllib.request.urlopen(request, timeout=3)
+        self.assertEqual(raised.exception.code, 403)
+
+    def test_main_responses_do_not_enable_cross_origin_reads(self):
+        with urllib.request.urlopen(
+                'http://127.0.0.1:%d/' % self.port, timeout=3) as response:
+            self.assertIsNone(response.headers.get('Access-Control-Allow-Origin'))
 
 
 class TestPrivateWebAuthorization(unittest.TestCase):
