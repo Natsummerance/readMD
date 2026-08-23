@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from content_memory import load_learning_records, partition_records, summarize
-from copy_profiles import profile_for_story
+from copy_profiles import SUPPORT_PHRASES, profile_for_story
 
 
 BANNED_REPLACEMENTS = {
@@ -156,15 +156,16 @@ def generate_copy(
         "primary_paragraph",
         _clean(next((item["user_value"] for item in visual_claims if primary_id.replace("-", ".") in item["shot_ids"]), story["angle"])),
     )
-    supporting = [claim for claim in visual_claims if primary_id not in claim["shot_ids"]]
-    support_bits = {
-        "overview.editor": "改稿时回到同屏预览",
-        "overview.reader": "阅读端保持目录和公式排版",
-        "convert.home": "资料仍从一个本地入口进来",
-        "academic.latex-bib": "学术排版不另起一套工具",
-        "editor.code-chunk": "代码示例可以就地验证",
-    }
-    support_text = "、".join(support_bits[item["shot_ids"][0]] for item in supporting[:2] if item["shot_ids"] and item["shot_ids"][0] in support_bits)
+    supporting_ids = [
+        item["shot_ids"][0]
+        for item in visual_claims
+        if item.get("shot_ids") and primary_id not in item["shot_ids"]
+    ]
+    support_text = "、".join(
+        SUPPORT_PHRASES[shot_id]
+        for shot_id in list(dict.fromkeys(supporting_ids))[:2]
+        if shot_id in SUPPORT_PHRASES
+    )
 
     paragraphs = [opening, disclosure, f"这一版的核心就一件事：{story['angle']}。", primary_text]
     if support_text:

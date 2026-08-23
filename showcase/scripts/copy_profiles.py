@@ -146,6 +146,18 @@ def _generated_frames(profile: dict[str, Any]) -> dict[str, list[tuple[str, str,
     }
 
 
+SUPPORT_PHRASES: dict[str, str] = {
+    "overview.reader": "阅读端保持目录和公式排版",
+    "overview.editor": "改稿时回到同屏预览",
+    "presentation.reveal": "放映端直接承接讲稿",
+    "editor.diagram-picker": "科研图表留在文档里",
+    "academic.latex-bib": "学术排版不另起一套工具",
+    "editor.code-chunk": "代码示例可以就地验证",
+    "convert.home": "资料仍从一个本地入口进来",
+    "sharing.export": "手机端可直接查看当前文档",
+}
+
+
 PROFILES: dict[str, dict[str, Any]] = {
     "overview.editor": {
         "artifact": "Markdown 稿件",

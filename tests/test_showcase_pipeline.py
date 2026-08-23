@@ -271,6 +271,34 @@ class BuildStoryTest(unittest.TestCase):
 
 
 class WriteCopyTest(unittest.TestCase):
+    def test_support_phrases_cover_every_authentic_shot(self) -> None:
+        self.assertEqual(set(copy_profiles.SUPPORT_PHRASES), set(build_story.USER_VALUES))
+        for shot_id, phrase in copy_profiles.SUPPORT_PHRASES.items():
+            with self.subTest(shot_id=shot_id):
+                self.assertTrue(6 <= len(phrase) <= 24)
+
+    def test_supporting_diagram_workflow_is_not_silently_dropped(self) -> None:
+        story = {
+            "release": "v1.2.0",
+            "version_state": "prerelease",
+            "angle": "ReadMD 把科研图表放进同一条 Markdown 工作流",
+            "primary_shot": "overview.editor",
+            "selected_shots": ["overview.reader", "editor.diagram-picker"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "diagram", "user_value": "科研图表从面板选择", "shot_ids": ["editor.diagram-picker"], "sources": ["README.md"]},
+                {"id": "code", "user_value": "代码可以运行", "shot_ids": ["editor.code-chunk"], "sources": ["README.md"]},
+            ],
+        }
+        result = write_copy.generate_copy(
+            story,
+            repository="Natsummerance/readMD",
+            previous_release="v1.1.0",
+        )
+        self.assertIn("阅读端保持目录和公式排版", result["body"])
+        self.assertIn("科研图表留在文档里", result["body"])
+        self.assertNotIn("代码示例可以就地验证", result["body"])
+
     def test_mechanism_cover_hooks_are_short_unique_and_traceable(self) -> None:
         hooks = {key: value["cover"] for key, value in copy_profiles.PROFILES.items()}
         self.assertEqual(len(hooks), len({item["title"] for item in hooks.values()}))
