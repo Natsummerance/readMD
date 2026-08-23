@@ -88,6 +88,14 @@ test('image editor exposes professional lightweight controls', async ({ page }) 
   });
   await page.waitForFunction(() => imgState.img && imgState.rawW === 800);
   await expect(page.locator('.crop-handle')).toHaveCount(8);
+  await expect(page.locator('.crop-se')).toHaveAttribute('aria-label', /右下|bottom right/i);
+  const handleSize = await page.locator('.crop-se').evaluate(el => Math.min(el.offsetWidth, el.offsetHeight));
+  expect(handleSize).toBeGreaterThanOrEqual(24);
+  await page.locator('.crop-se').focus();
+  await page.keyboard.press('Alt+ArrowLeft');
+  const cropWidthBefore = await page.evaluate(() => imgState.crop.w);
+  await page.keyboard.press('Alt+ArrowRight');
+  await page.waitForFunction(previous => imgState.crop.w > previous, cropWidthBefore);
   await page.locator('#img-angle-number').fill('37.5'); await page.locator('#img-angle-number').press('Enter');
   await page.locator('#img-flip-x').click();
   await page.locator('#img-out-w').fill('640'); await page.locator('#img-out-w').press('Enter');
@@ -111,6 +119,19 @@ test('export scroll, history and AI narrow layout remain usable', async ({ page 
   expect((await page.locator('#ai-panel').boundingBox()).width).toBeLessThanOrEqual(685);
   await expect(page.locator('#ai-model-summary')).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('select controls expose their localized selected action', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof openExportModal === 'function');
+  await page.evaluate(() => {
+    document.getElementById('formula-modal').classList.remove('hidden');
+    document.getElementById('tpl-modal').classList.remove('hidden');
+  });
+  await expect(page.locator('#formula-mode')).toHaveAttribute('aria-label', /行内公式|Inline Formula/);
+  await page.locator('#formula-mode').selectOption('block');
+  await expect(page.locator('#formula-mode')).toHaveAttribute('aria-label', /块级公式|Block Formula/);
+  await expect(page.locator('#tpl-action')).toHaveAttribute('aria-label', /动作：快速阅读|Action: Quick Read/);
 });
 
 test('AI keeps configured keys usable, autosaves, and supports incognito history', async ({ page }) => {

@@ -1353,7 +1353,7 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
 .img-crop.active { display: block; }
 .crop-handle {
   position: absolute;
-  width: 14px; height: 14px; padding: 0;
+  width: 24px; height: 24px; padding: 0;
   transform: translate(-50%, -50%);
   background: #3b6ef5;
   border: 2px solid #fff;
@@ -1699,7 +1699,7 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
 .export-spacer { flex: 1; }
 .export-result { font-size: 12px; color: var(--fg2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 55%; }
 .export-result.ok { color: var(--accent); }
-.export-result.err { color: #d64545; }
+.export-result.err { color: var(--danger); }
 
 @media (max-width: 760px) {
   .export-body { flex-direction: column; }
@@ -1954,9 +1954,9 @@ body[data-theme="dark"] .conn-status { color: var(--fg3); }
 .convert-item.ok { color: var(--fg); }
 .convert-item.ok .convert-state { color: var(--accent); }
 .convert-item.skipped { color: var(--fg2); }
-.convert-item.skipped .convert-state { color: #b07d1f; }
+.convert-item.skipped .convert-state { color: var(--warning); }
 .convert-item.error { color: var(--fg); }
-.convert-item.error .convert-state { color: #d64545; }
+.convert-item.error .convert-state { color: var(--danger); }
 .convert-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .convert-state { flex: 0 0 auto; font-size: 11.5px; }
 .convert-foot { display: flex; align-items: center; gap: 8px; }

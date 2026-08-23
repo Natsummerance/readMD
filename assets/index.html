@@ -471,7 +471,7 @@
   </div>
 </div>
 
-<div id="formula-modal" class="hidden" role="dialog" aria-modal="true" aria-label="公式选择器" data-i18n-aria="formula.title"><div class="formula-box"><div class="export-head"><h3 data-i18n="formula.title">公式选择器</h3><button id="formula-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">×</button></div><div class="formula-top"><input id="formula-search" type="search" placeholder="搜索名称或 TeX…" data-i18n-placeholder="formula.searchPlaceholder"><select id="formula-mode"><option value="inline" data-i18n="formula.inline">行内公式</option><option value="block" data-i18n="formula.block">块级公式</option></select></div><div id="formula-cats" class="formula-cats"></div><div id="formula-list" class="formula-list"></div><div id="formula-preview" class="formula-preview" data-i18n="formula.previewPrompt">选择公式模板查看预览</div></div></div>
+<div id="formula-modal" class="hidden" role="dialog" aria-modal="true" aria-label="公式选择器" data-i18n-aria="formula.title"><div class="formula-box"><div class="export-head"><h3 data-i18n="formula.title">公式选择器</h3><button id="formula-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">×</button></div><div class="formula-top"><input id="formula-search" type="search" placeholder="搜索名称或 TeX…" aria-label="搜索名称或 TeX" data-i18n-placeholder="formula.searchPlaceholder" data-i18n-aria="formula.searchPlaceholder"><select id="formula-mode" aria-label="行内公式"><option value="inline" data-i18n="formula.inline">行内公式</option><option value="block" data-i18n="formula.block">块级公式</option></select></div><div id="formula-cats" class="formula-cats"></div><div id="formula-list" class="formula-list"></div><div id="formula-preview" class="formula-preview" data-i18n="formula.previewPrompt">选择公式模板查看预览</div></div></div>
 
 <!-- Prompt 模板管理弹窗 -->
 <div id="tpl-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="tpl-title">
@@ -482,7 +482,7 @@
       <div class="tpl-form">
         <input id="tpl-id" type="hidden">
         <input id="tpl-name" type="text" placeholder="模板名称（如：总结要点 / 生成周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
-        <select id="tpl-action">
+        <select id="tpl-action" aria-label="动作：快速阅读">
           <option value="quick_read" data-i18n="tpl.actionQuickRead">动作：快速阅读</option>
           <option value="polish" data-i18n="tpl.actionPolish">动作：润色</option>
           <option value="modify" data-i18n="tpl.actionModify">动作：修改</option>

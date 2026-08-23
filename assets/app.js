@@ -360,11 +360,40 @@ function bindEvents() {
     if(!e.key.startsWith('Arrow')||!imgState.img)return;
     e.preventDefault();pushImgHistory();
     const n=e.shiftKey?10:1;
+    if (imgState.spaceDown) {
+      if(e.key==='ArrowLeft')imgState.panX-=n;if(e.key==='ArrowRight')imgState.panX+=n;
+      if(e.key==='ArrowUp')imgState.panY-=n;if(e.key==='ArrowDown')imgState.panY+=n;
+      drawImg();
+      return;
+    }
+    if (e.altKey) {
+      const handle = imgState.keyboardHandle || 'se';
+      const dx=e.key==='ArrowLeft'?-n:e.key==='ArrowRight'?n:0;
+      const dy=e.key==='ArrowUp'?-n:e.key==='ArrowDown'?n:0;
+      resizeCropWithKeyboard(handle,dx,dy);
+      return;
+    }
     if(e.key==='ArrowLeft')imgState.crop.x-=n;if(e.key==='ArrowRight')imgState.crop.x+=n;if(e.key==='ArrowUp')imgState.crop.y-=n;if(e.key==='ArrowDown')imgState.crop.y+=n;
     clampCrop();updateCropUI();updateImgInfo();
   });
   stage.addEventListener('keyup', e => { if(e.key===' ')imgState.spaceDown=false; });
   stage.addEventListener('blur', () => { imgState.spaceDown=false; });
+  imgState.keyboardHandle = 'se';
+  document.querySelectorAll('.crop-handle').forEach(handle => {
+    const setHandle = () => { imgState.keyboardHandle = handle.dataset.handle; };
+    handle.addEventListener('focus', setHandle);
+    handle.addEventListener('pointerdown', setHandle);
+  });
+  const syncSelectAccessibleName = el => {
+    const selected = el.selectedOptions && el.selectedOptions[0];
+    if (selected) el.setAttribute('aria-label', selected.textContent.trim());
+  };
+  ['formula-mode', 'tpl-action', 'img-ratio'].forEach(id => {
+    const select = $(id);
+    if (!select) return;
+    syncSelectAccessibleName(select);
+    select.addEventListener('change', () => syncSelectAccessibleName(select));
+  });
 
   /* --- 9. 文件另存、重命名与历史记录 [联动: reader/render.js, core/history.js, core/tabs.js] --- */
   $('btn-saveas').addEventListener('click', saveAs);
