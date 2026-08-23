@@ -2706,11 +2706,11 @@ class WatcherTest(unittest.TestCase):
 
             def fake_run(command, **kwargs):
                 calls.append(command)
-                payload = (
-                    {"published": True, "noteId": "note-1", "url": "https://example.com/note"}
-                    if command[2] == "publish"
-                    else {"status": "审核中"}
-                )
+                if command[2] == "publish":
+                    payload = {"published": True, "noteId": "note-1", "url": "https://example.com/note"}
+                else:
+                    prior_status_calls = sum(1 for item in calls if item[2] == "status")
+                    payload = {} if prior_status_calls == 1 else {"status": "审核中"}
                 return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
 
             original_run = watch_and_publish.subprocess.run
@@ -2725,7 +2725,7 @@ class WatcherTest(unittest.TestCase):
             state = json.loads((root / "state.json").read_text(encoding="utf-8"))
             record = next(iter(state["packages"].values()))
             self.assertTrue(published)
-            self.assertEqual([call[2] for call in calls], ["publish", "status"])
+            self.assertEqual([call[2] for call in calls], ["status", "publish", "status"])
             self.assertEqual(record["release"], "v1.2.3")
             self.assertEqual(record["variant_id"], "outcome-led__36")
             self.assertEqual(record["title"], "标题")
@@ -2772,6 +2772,9 @@ class WatcherTest(unittest.TestCase):
                     payload = {"published": True, "noteId": "note-status-failure", "url": "https://example.com/note"}
                     return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
                 if command[2] == "status":
+                    prior_status_calls = sum(1 for item in calls if item[2] == "status")
+                    if prior_status_calls == 1:
+                        return SimpleNamespace(returncode=0, stdout=json.dumps({}), stderr="")
                     raise RuntimeError("status query unavailable")
                 raise AssertionError(f"unexpected publisher command: {command}")
 
@@ -2794,13 +2797,55 @@ class WatcherTest(unittest.TestCase):
             records = content_memory.load_records(root / "publication-ledger.jsonl")
             self.assertTrue(published)
             self.assertFalse(second_published)
-            self.assertEqual([call[2] for call in calls], ["publish", "status"])
+            self.assertEqual([call[2] for call in calls], ["status", "publish", "status"])
             self.assertEqual(record["status"], "published")
             self.assertEqual(record["note_id"], "note-status-failure")
             self.assertEqual(record["audit_status"], "unknown")
             self.assertIn("status query unavailable", record["status_query_error"])
             self.assertEqual(len(records), 1)
             self.assertEqual(records[0]["note_id"], "note-status-failure")
+
+    def test_preflight_platform_status_blocks_republish_without_local_memory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                if command[2] == "publish":
+                    raise AssertionError("publisher must not click an already accepted note")
+                if command[2] == "status":
+                    payload = {"status": "审核中", "noteId": "already-accepted"}
+                    return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+                raise AssertionError(f"unexpected publisher command: {command}")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                first = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
+                    ledger_path=root / "publication-ledger.jsonl",
+                )
+                second = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
+                    ledger_path=root / "publication-ledger.jsonl",
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            records = content_memory.load_records(root / "publication-ledger.jsonl")
+            self.assertFalse(first)
+            self.assertFalse(second)
+            self.assertEqual([call[2] for call in calls], ["status"])
+            self.assertEqual(record["status"], "published")
+            self.assertTrue(record["reconciled"])
+            self.assertTrue(record["preflight_reconciled"])
+            self.assertEqual(record["note_id"], "already-accepted")
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["note_id"], "already-accepted")
 
     def test_rejects_publisher_inputs_diverging_from_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2881,7 +2926,12 @@ class WatcherTest(unittest.TestCase):
                 if command[2] == "publish":
                     return SimpleNamespace(returncode=1, stdout="", stderr="publisher output timeout")
                 if command[2] == "status":
-                    payload = {"status": "审核中", "noteId": "recovered-note"}
+                    prior_status_calls = sum(1 for item in calls if item[2] == "status")
+                    payload = (
+                        {}
+                        if prior_status_calls == 1
+                        else {"status": "审核中", "noteId": "recovered-note"}
+                    )
                     return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
                 raise AssertionError(f"unexpected publisher command: {command}")
 
@@ -2898,7 +2948,7 @@ class WatcherTest(unittest.TestCase):
             record = next(iter(state["packages"].values()))
             feedback_records = content_memory.load_records(root / "publication-ledger.jsonl")
         self.assertTrue(published)
-        self.assertEqual([call[2] for call in calls], ["publish", "status"])
+        self.assertEqual([call[2] for call in calls], ["status", "publish", "status"])
         self.assertEqual(record["status"], "published")
         self.assertTrue(record["reconciled"])
         self.assertEqual(record["note_id"], "recovered-note")
@@ -2917,7 +2967,12 @@ class WatcherTest(unittest.TestCase):
                 if command[2] == "publish":
                     return SimpleNamespace(returncode=1, stdout="", stderr="publisher output timeout")
                 if command[2] == "status":
-                    payload = {"status": "未知", "noteId": None}
+                    prior_status_calls = sum(1 for item in calls if item[2] == "status")
+                    payload = (
+                        {}
+                        if prior_status_calls == 1
+                        else {"status": "未知", "noteId": None}
+                    )
                     return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
                 raise AssertionError(f"unexpected publisher command: {command}")
 
@@ -2933,7 +2988,7 @@ class WatcherTest(unittest.TestCase):
             state = json.loads((root / "state.json").read_text(encoding="utf-8"))
             record = next(iter(state["packages"].values()))
         self.assertFalse(published)
-        self.assertEqual([call[2] for call in calls], ["publish", "status"])
+        self.assertEqual([call[2] for call in calls], ["status", "publish", "status"])
         self.assertEqual(record["status"], "failed")
         self.assertFalse(record.get("reconciled", False))
         self.assertFalse((root / "publication-ledger.jsonl").exists())

@@ -238,6 +238,53 @@ def process_package(
             for record in load_records(ledger_path)
         ):
             raise ValueError(f"release already exists in publication ledger: {release}")
+        record["release"] = release
+        record["variant_id"] = selected_variant_id
+        record["title"] = title
+        if not draft:
+            try:
+                platform_status = query_status(publisher, title)
+            except Exception as exc:
+                raise ValueError(f"preflight platform status check failed: {exc}")
+            record["preflight_status_result"] = platform_status
+            if _status_confirms_note(platform_status):
+                record["status"] = "published"
+                record["reconciled"] = True
+                record["preflight_reconciled"] = True
+                record["note_id"] = platform_status.get("noteId")
+                record["audit_status"] = platform_status.get("status")
+                record["result"] = {
+                    "published": True,
+                    "reconciled": True,
+                    "preflight": True,
+                    "noteId": record["note_id"],
+                    "url": platform_status.get("url"),
+                }
+                if ledger_path:
+                    try:
+                        feedback = seed_feedback_ledger(
+                            ledger_path,
+                            package_dir,
+                            release=release,
+                            title=title,
+                            publisher_result=record["result"],
+                            audit_status=record["audit_status"],
+                        )
+                        record["ledger_status"] = "seeded"
+                        record["ledger_release"] = feedback["release"]
+                    except Exception as ledger_error:
+                        # The platform has the note; retain the ledger failure without clicking again.
+                        record["ledger_status"] = "seed_failed"
+                        record["ledger_error"] = str(ledger_error)
+                print(json.dumps({
+                    "ok": True,
+                    "token": token,
+                    "status": "published",
+                    "action": "preflight-deduplicated",
+                    "release": release,
+                    "title": title,
+                }, ensure_ascii=False))
+                return False
         command = publish_command(publisher, package_dir, draft=draft)
         completed = subprocess.run(command, text=True, capture_output=True, encoding="utf-8", timeout=600)
         result: dict[str, Any] = {}
