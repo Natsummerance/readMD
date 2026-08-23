@@ -20,7 +20,7 @@ from audit_copy import audit_copy
 from copy_variants import text_fingerprints, text_trigrams
 from pattern_audit import audit_patterns
 from package_content import validate_release_evidence
-from validate_package import publisher_input_errors
+from validate_package import publisher_asset_errors, publisher_input_errors
 
 DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
 STATE_VERSION = 1
@@ -327,6 +327,9 @@ def process_package(
             raise ValueError("package wechat-qa.json is not green")
         validate_release_evidence(package_dir)
         localize_image_paths(package_dir)
+        asset_errors = publisher_asset_errors(package_dir)
+        if asset_errors:
+            raise ValueError("publisher asset contract failed: " + "; ".join(asset_errors))
         release, title = package_identity(package_dir)
         previous = [item for item in state["packages"].values() if item.get("release") == release and item.get("status") == "published"]
         if previous:

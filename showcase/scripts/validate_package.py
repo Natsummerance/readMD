@@ -171,6 +171,99 @@ def publisher_input_errors(package_dir: Path) -> list[str]:
     return errors
 
 
+def publisher_asset_errors(package_dir: Path) -> list[str]:
+    """Recheck the immutable image evidence chain immediately before publishing."""
+    package_dir = package_dir.resolve()
+    try:
+        story = _load_json(package_dir / "story.json")
+        metadata = _load_json(package_dir / "metadata.json")
+        capture = _load_json(package_dir / "raw" / "capture.json")
+    except Exception as exc:
+        return [f"publisher asset manifest unreadable: {exc}"]
+
+    errors: list[str] = []
+    images_dir = (package_dir / "images").resolve()
+    raw_dir = (package_dir / "raw").resolve()
+    plan = story.get("card_plan", [])
+    expected_names = [str(item.get("file", "")) for item in plan]
+    image_names = [Path(str(item)).name for item in metadata.get("images", [])]
+
+    if not 4 <= len(image_names) <= 9 or len(image_names) != len(set(image_names)):
+        errors.append("publisher asset images must contain 4-9 unique paths")
+    if image_names != expected_names:
+        errors.append("publisher asset image order differs from story.card_plan")
+
+    image_hashes: set[str] = set()
+    for name in dict.fromkeys(image_names):
+        if not IMAGE_RE.fullmatch(name):
+            errors.append(f"publisher asset has an unsafe image name: {name}")
+            continue
+        path = images_dir / name
+        if not path.resolve().is_relative_to(images_dir) or not path.is_file():
+            errors.append(f"publisher asset image missing: images/{name}")
+            continue
+        try:
+            with Image.open(path) as image:
+                if image.format != "JPEG" or image.size != (1080, 1440):
+                    errors.append(
+                        f"publisher asset image must be 1080x1440 JPEG: {name}"
+                        f" ({image.size}, {image.format})"
+                    )
+        except Exception as exc:
+            errors.append(f"publisher asset image unreadable: {name}: {exc}")
+            continue
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        if digest in image_hashes:
+            errors.append(f"publisher asset image hash is duplicated: {name}")
+        image_hashes.add(digest)
+
+    selected = story.get("selected_shots", [])
+    capture_items = capture.get("shots", [])
+    capture_by_id = {str(item.get("shot_id")): item for item in capture_items}
+    if str(capture.get("release")) != str(story.get("release")):
+        errors.append("capture release differs from story release")
+    if not selected or selected[0] != "overview.reader":
+        errors.append("publisher assets must begin with overview.reader")
+    if set(selected) != set(capture_by_id) or len(selected) != len(capture_items):
+        errors.append("capture shots differ from story.selected_shots")
+
+    raw_hashes: set[str] = set()
+    story_shot_by_id = {str(item.get("id")): item for item in story.get("shots", [])}
+    for shot_id in dict.fromkeys(selected):
+        entry = capture_by_id.get(shot_id, {})
+        relative = Path(str(entry.get("file", "")))
+        path = package_dir / relative
+        if not path.resolve().is_relative_to(raw_dir) or not path.is_file():
+            errors.append(f"captured PNG missing: {shot_id}")
+            continue
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        if digest != str(entry.get("sha256", "")):
+            errors.append(f"SHA-256 mismatch in capture.json: {shot_id}")
+        story_hash = str(story_shot_by_id.get(shot_id, {}).get("sha256", ""))
+        if story_hash and digest != story_hash:
+            errors.append(f"SHA-256 mismatch in story.json: {shot_id}")
+        try:
+            with Image.open(path) as image:
+                if image.format != "PNG":
+                    errors.append(f"captured evidence is not PNG: {shot_id}")
+        except Exception as exc:
+            errors.append(f"captured evidence unreadable: {shot_id}: {exc}")
+            continue
+        if digest in raw_hashes:
+            errors.append(f"captured evidence hash is duplicated: {shot_id}")
+        raw_hashes.add(digest)
+
+    plan_shot_ids = {
+        str(item.get("shot_id"))
+        for item in plan
+        if item.get("shot_id") not in {None, ""}
+    }
+    unknown_plan_shots = plan_shot_ids - set(selected)
+    if unknown_plan_shots:
+        errors.append(f"card plan references uncaptured shots: {sorted(unknown_plan_shots)}")
+    return errors
+
+
 def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> list[str]:
     package_dir = package_dir.resolve()
     repo_root = (repo_root or Path(__file__).resolve().parents[2]).resolve()

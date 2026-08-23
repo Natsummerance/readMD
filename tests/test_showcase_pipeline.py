@@ -2945,14 +2945,11 @@ class WatcherTest(unittest.TestCase):
         publisher_match: bool = True,
         topic_match: bool = True,
         tamper_semantics: bool = False,
+        tamper_assets: bool = False,
     ) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
-        image = package / "images" / "xhs-01-cover.jpg"
-        Image.new("RGB", (10, 10)).save(image)
         (package / "raw").mkdir()
-        Image.new("RGB", (20, 10)).save(package / "raw" / "overview-reader.png")
-        (package / "raw" / "capture.json").write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
         notes = (
             "# ReadMD v1.2.3\n\n"
             "## Highlights\n\n"
@@ -2979,6 +2976,32 @@ class WatcherTest(unittest.TestCase):
         )
         story = build_story.apply_selected_cover(story, metadata)
         composition = copy_variants.projected_composition(story)
+        for index, card in enumerate(story["card_plan"]):
+            path = package / "images" / card["file"]
+            Image.new("RGB", (1080, 1440), (18 + index * 29, 72 + index * 17, 120 + index * 11)).save(
+                path, "JPEG", quality=92,
+            )
+
+        capture_shots = []
+        for index, shot_id in enumerate(story["selected_shots"]):
+            filename = f"{shot_id.replace('.', '-')}.png"
+            path = package / "raw" / filename
+            Image.new("RGB", (960, 1280), (24 + index * 37, 88 + index * 13, 150 - index * 19)).save(path, "PNG")
+            capture_shots.append({
+                "shot_id": shot_id,
+                "file": f"raw/{filename}",
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            })
+        (package / "raw" / "capture.json").write_text(json.dumps({
+            "schema_version": 1,
+            "release": story["release"],
+            "shots": capture_shots,
+        }), encoding="utf-8")
+        if tamper_assets:
+            Image.new("RGB", (960, 1280), "#123456").save(
+                package / "raw" / capture_shots[0]["file"].removeprefix("raw/"), "PNG",
+            )
+
         canvas_area = 1080 * 1440
         for card in composition["cards"]:
             if card["role"] == "cover":
@@ -3065,7 +3088,7 @@ class WatcherTest(unittest.TestCase):
             encoding="utf-8",
         )
         (package / "wechat" / "readmd-wechat.html").write_text("<p style=\"font-size:16px;line-height:1.75;color:#111\">article</p>", encoding="utf-8")
-        metadata["images"] = ["Z:/remote/package/images/xhs-01-cover.jpg"]
+        metadata["images"] = [f"Z:/remote/package/images/{card['file']}" for card in story["card_plan"]]
         if not topic_match:
             metadata["topic_set_id"] = "tampered-topic-set"
         (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
@@ -3243,6 +3266,33 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(record["status"], "failed")
             self.assertIn("recomputed publication gates failed", record["error"])
             self.assertIn("title formula #36 is missing a removal condition", record["error"])
+
+    def test_asset_contract_blocks_tampered_authentic_capture(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, tamper_assets=True)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not click tampered UI evidence")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("publisher asset contract failed", record["error"])
+            self.assertIn("SHA-256 mismatch in capture.json: overview.reader", record["error"])
 
     def test_successful_publish_survives_status_query_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
