@@ -1,0 +1,51 @@
+name: Feature request
+description: Suggest a focused improvement to reading, editing, conversion, OCR or integrations.
+labels: ["enhancement", "triage"]
+assignees: ["Natsummerance"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What task is difficult today? Avoid proposing a UI solution before explaining the need.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the smallest change that would solve the use case.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: List existing modes, exports, extensions or workarounds you already tried.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      multiple: true
+      options:
+        - Reading and pagination
+        - Editing and syntax repair
+        - Format conversion
+        - OCR
+        - Academic / LaTeX
+        - AI assistant
+        - MCP Server
+        - VS Code extension
+        - Localization
+        - Packaging and platforms
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: This proposal aligns with local-first use and does not require uploading confidential documents.
+          required: true
+
