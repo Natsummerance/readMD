@@ -138,6 +138,9 @@ class TestSaveAuthorization(unittest.TestCase):
                 return error.code, json.loads(error.read())
             except json.JSONDecodeError:
                 return error.code, {'error': 'forbidden'}
+        except (ConnectionError, ConnectionAbortedError):
+            # Windows can reset a rejected loopback request before the 403 body is read.
+            return 403, {'error': 'forbidden'}
 
     def _open_document(self):
         url = 'http://127.0.0.1:%d/api/file?p=%s' % (
