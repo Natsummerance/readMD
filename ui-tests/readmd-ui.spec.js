@@ -1204,6 +1204,27 @@ test('save conflicts offer save-as, reload, and cancel recovery', async ({ page 
   await expect(page.locator('#save-conflict-cancel')).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(page.locator('#save-conflict-modal')).toBeHidden();
+
+  const closing = page.evaluate(() => closeTab('one'));
+  await expect(page.locator('#close-confirm-modal')).toBeVisible();
+  await page.locator('#close-confirm-save').click();
+  await expect(page.locator('#save-conflict-modal')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await closing;
+  await expect(page.locator('#save-conflict-modal')).toBeHidden();
+  await page.waitForFunction(() => state.tabs.length === 1 && state.activeTabId === 'one' && state.editing);
+
+  await page.evaluate(() => {
+    window.__conflictSavedContent = '';
+    URL.createObjectURL = blob => {
+      blob.text().then(text => { window.__conflictSavedContent = text; });
+      return 'blob:readmd-test';
+    };
+  });
+  await page.locator('#edit-save').click();
+  await expect(page.locator('#save-conflict-modal')).toBeVisible();
+  await page.locator('#save-conflict-save-as').click();
+  await page.waitForFunction(() => window.__conflictSavedContent === '# external update');
 });
 
 test('search highlights a term spanning adjacent inline elements', async ({ page }) => {
@@ -1216,6 +1237,25 @@ test('search highlights a term spanning adjacent inline elements', async ({ page
   await page.locator('#search-input').fill('readme');
   await expect(page.locator('#search-count')).toHaveText('1/1');
   await expect(page.locator('#content mark.hl')).toHaveText('readme');
+});
+
+test('rendered Markdown cannot inject active content or privileged URLs', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderVirtual === 'function');
+  await page.evaluate(async () => {
+    await renderVirtual('clipboard', 'security.md', '', [
+      '<img src="x" onerror="window.__readmdpwned = true">',
+      '<script>window.__readmdpwned = true;</script>',
+      '<iframe src="https://example.test"></iframe>',
+      '<a href="javascript:window.__readmdpwned = true">bad link</a>',
+      '<a href="#safe">safe link</a>',
+    ].join('\n'), []);
+  });
+  expect(await page.evaluate(() => window.__readmdpwned)).toBeUndefined();
+  await expect(page.locator('#content script, #content iframe')).toHaveCount(0);
+  await expect(page.locator('#content img[onerror]')).toHaveCount(0);
+  await expect(page.locator('#content a[href^="javascript:"]')).toHaveCount(0);
+  await expect(page.locator('#content a[href="#safe"]')).toHaveCount(1);
 });
 
 test('core workflow controls satisfy accessibility contracts', async ({ page }) => {

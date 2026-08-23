@@ -144,7 +144,6 @@ function bindEvents() {
         ['convert-modal', closeConvertModal],
         ['export-modal', closeExportModal],
         ['img-modal', closeImgModal],
-        ['save-conflict-modal', () => $('save-conflict-modal').classList.add('hidden')],
         ['formula-modal', closeFormulaModal],
         ['url-modal', typeof closeWebDialog === 'function' ? closeWebDialog : () => $('url-modal').classList.add('hidden')],
         ['share-modal', typeof closeShareDialog === 'function' ? closeShareDialog : () => $('share-modal').classList.add('hidden')],

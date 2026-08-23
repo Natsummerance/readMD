@@ -8,6 +8,7 @@ module.exports = defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:28473',
     viewport: { width: 720, height: 600 },
+    bypassCSP: true,
     trace: 'retain-on-failure',
     locale: 'zh-CN',
   },

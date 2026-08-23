@@ -4,6 +4,11 @@
    ============================================================ */
 
 const $ = id => document.getElementById(id);
+
+function preferredScrollBehavior() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+}
+
 let py = (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
 let hasPy = !!py;
 const moduleLoadRequests = Object.create(null);

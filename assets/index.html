@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#3b6ef5">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; connect-src 'self' http: https:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <title>ReadMD</title>
 <link rel="stylesheet" href="/assets/style.css">
-<script>window.LAN_TOKEN=null;</script>
 </head>
 <body>
 <header id="toolbar">
@@ -813,7 +813,7 @@
 <div id="toast" class="hidden" role="status" aria-live="polite"></div>
 
 <div id="progress"></div>
-<div id="busy" class="hidden"><span data-i18n="app.processing">处理中…</span></div>
+<div id="busy" class="hidden" role="status" aria-live="polite"><span data-i18n="app.processing">处理中…</span></div>
 <button id="top-btn" class="hidden" title="回到顶部" data-i18n-title="toolbar.backToTop">&#8593;</button>
 <input id="file-input" type="file" class="hidden">
 <input id="img-file-input" type="file" accept="image/*" class="hidden">

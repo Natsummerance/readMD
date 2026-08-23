@@ -517,7 +517,7 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
   const prot = protectMath(transformed);
   const html = marked.parse(prot.src, { gfm: true, breaks: false });
   const finalHtml = restoreMath(html, prot.saved);
-  el.innerHTML = '<article class="markdown-body">' + finalHtml + '</article>';
+  el.innerHTML = '<article class="markdown-body">' + sanitizeRenderedHtml(finalHtml) + '</article>';
 
   if (state.pagination.allHeadings?.length) {
     const pageOutline = state.pagination.allHeadings.filter(heading => heading.pageIndex === pageIndex);
@@ -548,7 +548,7 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
       }
       if (targetEl) {
         targetEl.tabIndex = -1;
-        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        targetEl.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
         targetEl.focus({ preventScroll: true });
         document.querySelectorAll('#toc-list .toc-heading-active')
           .forEach(link => link.classList.remove('toc-heading-active'));
@@ -730,7 +730,7 @@ function parseMarkdownWithSourceMap(content, options = {}) {
         return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
           <div class="code-chunk-header">
             <span class="code-chunk-badge">${lang.toUpperCase()}</span>
-            <span class="code-chunk-status">${_t('status.ready') || 'Ready'}</span>
+            <span class="code-chunk-status" role="status" aria-live="polite">${_t('status.ready') || 'Ready'}</span>
             <span class="code-chunk-timer"></span>
             <div class="code-chunk-actions">
               <button class="code-chunk-run-btn" title="${_t('menu.runCode')} (Shift+Enter)" aria-label="${_t('menu.runCode')}">▶ ${_t('menu.runCode')}</button>
@@ -778,6 +778,85 @@ function parseMarkdownWithSourceMap(content, options = {}) {
 }
 window.parseMarkdownWithSourceMap = parseMarkdownWithSourceMap;
 
+const MARKDOWN_ALLOWED_TAGS = new Set([
+  'a', 'abbr', 'article', 'b', 'blockquote', 'br', 'caption', 'cite', 'code',
+  'dd', 'del', 'details', 'div', 'dl', 'dt', 'em', 'figcaption', 'figure',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'input', 'ins',
+  'kbd', 'li', 'mark', 'ol', 'p', 'pre', 'q', 's', 'section', 'span',
+  'strike', 'strong', 'sub', 'summary', 'sup', 'table', 'tbody', 'td',
+  'tfoot', 'th', 'thead', 'time', 'tr', 'u', 'ul',
+]);
+const MARKDOWN_REMOVED_TAGS = new Set([
+  'base', 'embed', 'form', 'frame', 'frameset', 'iframe', 'link', 'meta',
+  'noscript', 'object', 'script', 'style', 'template', 'title',
+]);
+
+function safeResourceUrl(value) {
+  if (!value) return false;
+  const trimmed = String(value).trim();
+  if (trimmed.startsWith('#')) return true;
+  if (/^(data|blob|javascript|vbscript):/i.test(trimmed)) return /^data:image\//i.test(trimmed);
+  try {
+    return ['http:', 'https:', 'mailto:', 'file:'].includes(new URL(trimmed, window.location.href).protocol);
+  } catch (_) {
+    return false;
+  }
+}
+
+function sanitizeRenderedHtml(html) {
+  const template = document.createElement('template');
+  template.innerHTML = String(html || '');
+  Array.from(template.content.querySelectorAll('*')).forEach(node => {
+    const tag = node.tagName.toLowerCase();
+    if (MARKDOWN_REMOVED_TAGS.has(tag)) {
+      node.remove();
+      return;
+    }
+    if (!MARKDOWN_ALLOWED_TAGS.has(tag)) {
+      node.replaceWith(...node.childNodes);
+      return;
+    }
+
+    Array.from(node.attributes).forEach(attribute => {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value;
+      if (name.startsWith('data-') || name === 'class' || name.startsWith('aria-') ||
+          ['title', 'lang', 'dir', 'role', 'alt', 'width', 'height', 'loading',
+           'colspan', 'rowspan', 'datetime', 'cite'].includes(name)) return;
+      if (name === 'id') {
+        if (!/^[A-Za-z][A-Za-z0-9_:.-]*$/.test(value)) node.removeAttribute(attribute.name);
+        return;
+      }
+      if ((tag === 'a' && name === 'href') || ((tag === 'img' || tag === 'source') && name === 'src')) {
+        if (!safeResourceUrl(value)) node.removeAttribute(attribute.name);
+        return;
+      }
+      if (name === 'srcset') {
+        const urls = value.split(',').map(item => item.trim().split(/\s+/)[0]).filter(Boolean);
+        if (!urls.length || !urls.every(safeResourceUrl)) node.removeAttribute(attribute.name);
+        return;
+      }
+      if (tag === 'input' && ['type', 'checked', 'disabled'].includes(name)) {
+        if (name === 'type' && value.toLowerCase() !== 'checkbox') node.removeAttribute(attribute.name);
+        return;
+      }
+      if ((tag === 'ol' && ['start', 'type'].includes(name)) ||
+          (tag === 'details' && name === 'open') || (tag === 'a' && name === 'target')) return;
+      node.removeAttribute(attribute.name);
+    });
+
+    if (tag === 'a') {
+      const href = node.getAttribute('href');
+      if (!href) node.removeAttribute('target');
+      else if (/^https?:/i.test(href)) node.setAttribute('rel', 'noopener noreferrer');
+    }
+    if (tag === 'input' && !node.hasAttribute('disabled')) node.setAttribute('disabled', '');
+  });
+
+  return template.innerHTML;
+}
+window.sanitizeRenderedHtml = sanitizeRenderedHtml;
+
 async function renderContent(content, name) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const saved = state.scrollPos[normalizePath(name || state.file || '')] || 0;
@@ -823,7 +902,7 @@ async function renderContent(content, name) {
   const prot = protectMath(transformed);
   const html = parseMarkdownWithSourceMap(prot.src);
   const finalHtml = restoreMath(html, prot.saved);
-  $('content').innerHTML = '<article class="markdown-body">' + finalHtml + '</article>';
+  $('content').innerHTML = '<article class="markdown-body">' + sanitizeRenderedHtml(finalHtml) + '</article>';
   postProcess();
   if (saved) requestAnimationFrame(() => { $('content').scrollTop = saved; });
 }
@@ -879,7 +958,7 @@ async function renderContentIncremental(content, savedTop) {
   const total = blocks.length;
   if (total <= 1) {
     const prot = protectMath(content);
-    body.innerHTML = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
+    body.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
     postProcess();
     if (savedTop) el.scrollTop = savedTop;
     return;
@@ -894,7 +973,7 @@ async function renderContentIncremental(content, savedTop) {
     for (let k = i; k < end; k++) {
       const div = document.createElement('div');
       const prot = protectMath(blocks[k]);
-      div.innerHTML = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
+      div.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
       frag.appendChild(div);
     }
     body.appendChild(frag);
@@ -1189,7 +1268,7 @@ function renderAllCodeChunks(container) {
             res.images.forEach(imgSrc => {
               const img = document.createElement('img');
               img.src = imgSrc;
-              img.alt = 'Plot Output';
+              img.alt = `${lang} plot output`;
               plotEl.appendChild(img);
             });
           }
@@ -1517,7 +1596,7 @@ function fixLinks(body) {
           el = findMatchingHeading(targetId, a.textContent, allHeadings);
         }
         if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
           el.classList.remove('heading-target-highlight');
           void el.offsetWidth;
           el.classList.add('heading-target-highlight');

@@ -105,6 +105,7 @@ function renderTabsBar() {
           renderTabsBar();
           focusVisibleTab(tab.id);
         }
+        e.stopPropagation();
         return;
       }
       if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) {
@@ -514,7 +515,8 @@ async function closeTab(tabId, force = false) {
     if (action === 'cancel') return;
     if (action === 'save') {
       await activateTabForSave(tabId);
-      await saveEdit();
+      const saved = await saveEdit();
+      if (!saved || (getActiveTab()?.id === tabId && state.editing)) return;
     }
   }
   const idx = state.tabs.findIndex(t => t.id === tabId);
@@ -545,9 +547,10 @@ async function closeOtherTabs(keepTabId) {
       if (t.isDirty) {
         const action = await promptDirtyClose(t.title || t.name);
         if (action === 'cancel') return;
-        if (action === 'save') {
-          await activateTabForSave(t.id);
-          await saveEdit();
+      if (action === 'save') {
+        await activateTabForSave(t.id);
+        const saved = await saveEdit();
+        if (!saved || state.tabs.some(item => item.id === t.id && item.isDirty)) return;
         }
       }
     }
@@ -565,7 +568,8 @@ async function closeAllTabs() {
       if (action === 'cancel') return;
       if (action === 'save') {
         await activateTabForSave(t.id);
-        await saveEdit();
+        const saved = await saveEdit();
+        if (!saved || (getActiveTab()?.isDirty || state.editing)) return;
       }
     }
   }

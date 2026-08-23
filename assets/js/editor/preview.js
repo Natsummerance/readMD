@@ -32,14 +32,21 @@ function applySavedMtime(result) {
   }
 }
 
-function renderSavedDocument(content) {
+async function renderSavedDocument(content) {
   state.original = content;
   state.fixed = content;
   state.fixes = [];
   state.stats = {};
   if (typeof setFixes === 'function') setFixes([], {});
   if (typeof renderContent === 'function') {
-    renderContent(content, state.sourceName || (state.file ? state.file.split(/[\\/]/).pop() : 'document'));
+    const contentEl = document.getElementById('content');
+    const page = state.pagination?.enabled && state.pagination.mode === 'paged' ? state.pagination.currentPage : 0;
+    const scroll = contentEl?.scrollTop || 0;
+    await renderContent(content, state.sourceName || (state.file ? state.file.split(/[\\/]/).pop() : 'document'));
+    if (page > 0) await renderPage(page, null, true);
+    requestAnimationFrame(() => {
+      if (contentEl) contentEl.scrollTop = scroll;
+    });
   }
 }
 
@@ -141,7 +148,7 @@ async function renderPreview() {
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     html = '<p class="ai-err">' + (_t('editor.previewRenderFail') || '预览渲染失败') + '</p>';
   }
-  pane.innerHTML = html;
+  pane.innerHTML = window.sanitizeRenderedHtml ? window.sanitizeRenderedHtml(html) : html;
   fixLinks(pane);
   fixImages(pane);
   renderMath(pane);
@@ -366,7 +373,7 @@ function exitEdit() {
 
 async function saveEdit() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!state.editing) return;
+  if (!state.editing) return false;
   const content = cmView ? cmView.state.doc.toString() : $('edit-area').value;
   if (!state.file) {
     // 虚拟文档（转换 / OCR / 网页）：另存为 .md 后切换为文件模式
@@ -376,22 +383,22 @@ async function saveEdit() {
     if (hasPy) {
       busy(true);
       try { out = await py.save_as(content, suggested, state.webAssets || []); }
-      catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); busy(false); return; }
+      catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); busy(false); return false; }
       busy(false);
-      if (!out) { showToast(_t('toast.saveCancelled') || '已取消保存'); return; }
+      if (!out) { showToast(_t('toast.saveCancelled') || '已取消保存'); return false; }
       showToast((_t('toast.savedPrefix') || '已保存：') + out);
       exitEdit();
       await loadFile(out);
-    } else {
-      const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = suggested;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-      showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
+      return Boolean(out);
     }
-    return;
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = suggested;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
+    return true;
   }
   busy(true);
   try {
@@ -413,24 +420,42 @@ async function saveEdit() {
     if (ok && ok.ok !== false) {
       syncSavedTab(state.file, content);
       applySavedMtime(ok);
-      renderSavedDocument(content);
+      await renderSavedDocument(content);
       showToast(ok.backup ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）')) : (_t('toast.savedSuccess') || '已保存'));
       exitEdit();
       await loadFile(state.file);
+      return true;
     } else {
       if (ok && ok.conflict) {
         const action = await promptSaveConflict();
-        if (action === 'save-as') await saveAs();
+        if (action === 'save-as') {
+          const activeTab = getActiveTab();
+          if (activeTab) {
+            activeTab.content = content;
+            activeTab.fixed = content;
+          }
+          state.fixed = content;
+          const saved = await saveAs(content);
+          if (!saved) return false;
+          exitEdit();
+          await loadFile(state.file, { force: true });
+          return true;
+        }
         if (action === 'reload') {
           exitEdit();
           await loadFile(state.file, { force: true });
+          return true;
         }
       } else {
         showToast((_t('toast.saveFailed') || '保存失败：') + ((ok && ok.error) || (_t('toast.unknownError') || '未知错误')));
       }
+      return false;
     }
-  } catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); }
-  finally { busy(false); }
+    return false;
+  } catch (e) {
+    showToast((_t('toast.saveFailed') || '保存失败：') + e.message);
+    return false;
+  } finally { busy(false); }
 }
 
 function promptSaveConflict() {
@@ -465,9 +490,9 @@ function promptSaveConflict() {
   });
 }
 
-async function saveAs() {
+async function saveAs(contentOverride = null) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const content = state.fixed || state.original || '';
+  const content = contentOverride ?? state.fixed ?? state.original ?? '';
   const name = (state.sourceName || state.file || 'document').replace(/[\\/]/g, '_');
   const suggested = name.replace(/\.[^.]+$/, '') + '.md';
   if (hasPy) {
@@ -482,7 +507,12 @@ async function saveAs() {
         activeTab.isDirty = false;
         activeTab.name = String(out).split(/[\\/]/).pop();
         activeTab.title = activeTab.name;
+        activeTab.content = content;
+        activeTab.original = content;
+        activeTab.fixed = content;
         state.file = out;
+        state.original = content;
+        state.fixed = content;
         state.dir = activeTab.dir;
         state.mode = 'file';
         renderTabsBar();
@@ -491,6 +521,7 @@ async function saveAs() {
         addRecent(out);
       }
       showToast((_t('toast.savedPrefix') || '已保存：') + out);
+      return true;
     }
   } else {
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
@@ -500,6 +531,8 @@ async function saveAs() {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
     showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
+    return true;
   }
+  return false;
 }
 

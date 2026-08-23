@@ -41,7 +41,7 @@ function buildToc() {
           globalHeadings.push({
             id: slug,
             text: rawText,
-            level: Math.min(level, 3),
+            level,
             pageIndex: pageIdx,
             sourceLine: lineIndex + 1,
           });
@@ -76,7 +76,9 @@ function buildToc() {
         if (h.pageIndex === state.pagination.currentPage) {
           const el = document.getElementById(h.id);
           if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            el.tabIndex = -1;
+            el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
+            el.focus({ preventScroll: true });
             el.classList.remove('heading-target-highlight');
             void el.offsetWidth;
             el.classList.add('heading-target-highlight');
@@ -129,14 +131,14 @@ function buildToc() {
     const a = document.createElement('a');
     a.href = '#' + h.id;
     a.textContent = h.textContent.trim() || ((_t('toc.sectionDefault') || '章节') + ' ' + (i + 1));
-    const lv = Math.min(+h.tagName[1], 3);
+    const lv = +h.tagName[1];
 
     a.className = 'lv' + lv;
     a.addEventListener('click', e => {
       e.preventDefault();
       const el = document.getElementById(h.id);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
         el.classList.remove('heading-target-highlight');
         void el.offsetWidth;
         el.classList.add('heading-target-highlight');
@@ -153,7 +155,7 @@ function updateActiveTocHeading() {
   const content = $('content');
   const list = $('toc-list');
   if (!content || !list) return;
-  const headings = Array.from(content.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3'));
+  const headings = Array.from(content.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6'));
   const focusedHeading = content.contains(document.activeElement) && document.activeElement?.id ? document.activeElement : null;
   const visibleTop = content.scrollTop + 72;
   let active = focusedHeading || headings[0];
