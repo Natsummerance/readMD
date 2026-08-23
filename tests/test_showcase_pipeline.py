@@ -2805,6 +2805,150 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(len(records), 1)
             self.assertEqual(records[0]["note_id"], "note-status-failure")
 
+    def test_repairs_failed_feedback_ledger_without_republishing(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                if command[2] == "publish":
+                    payload = {"published": True, "noteId": "note-ledger-repair", "url": "https://example.com/note"}
+                    return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+                if command[2] == "status":
+                    published_already = any(call[2] == "publish" for call in calls)
+                    payload = {"status": "审核中"} if published_already else {}
+                    return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+                raise AssertionError(f"unexpected publisher command: {command}")
+
+            original_run = watch_and_publish.subprocess.run
+            original_seed = watch_and_publish.seed_feedback_ledger
+            watch_and_publish.subprocess.run = fake_run
+            seed_calls = []
+
+            def failing_then_real_seed(*args, **kwargs):
+                seed_calls.append(kwargs)
+                if len(seed_calls) == 1:
+                    raise OSError("ledger unavailable")
+                return original_seed(*args, **kwargs)
+
+            watch_and_publish.seed_feedback_ledger = failing_then_real_seed
+            try:
+                first = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
+                    ledger_path=root / "publication-ledger.jsonl",
+                )
+                second = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
+                    ledger_path=root / "publication-ledger.jsonl",
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+                watch_and_publish.seed_feedback_ledger = original_seed
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            records = content_memory.load_records(root / "publication-ledger.jsonl")
+            self.assertTrue(first)
+            self.assertFalse(second)
+            self.assertEqual([call[2] for call in calls], ["status", "publish", "status"])
+            self.assertEqual(len(seed_calls), 2)
+            self.assertEqual(record["ledger_status"], "seeded")
+            self.assertNotIn("ledger_error", record)
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["note_id"], "note-ledger-repair")
+
+    def test_ledger_repair_preserves_existing_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            ledger = root / "publication-ledger.jsonl"
+            content_memory.append_record(ledger, {
+                "release": "v1.2.3",
+                "title": "标题",
+                "title_formula_id": "#36",
+                "hook_type": "outcome-led",
+                "published_at": "2026-08-20T10:00:00Z",
+                "impressions": 120,
+                "likes": 12,
+                "collects": 9,
+                "comments": 3,
+                "shares": 2,
+                "follows": 1,
+                "metrics_status": "pending",
+            })
+            record = {
+                "release": "v1.2.3",
+                "title": "标题",
+                "status": "published",
+                "ledger_status": "seed_failed",
+                "ledger_error": "ledger unavailable",
+                "ledger_repair_error": "repair unavailable",
+                "result": {"published": True, "noteId": "existing-note"},
+            }
+            watch_and_publish.repair_failed_feedback_ledger(
+                record,
+                zip_path,
+                root / "package",
+                ledger,
+            )
+
+            records = content_memory.load_records(ledger)
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["impressions"], 120)
+            self.assertEqual(records[0]["likes"], 12)
+            self.assertEqual(record["ledger_status"], "seeded")
+            self.assertNotIn("ledger_error", record)
+            self.assertNotIn("ledger_repair_error", record)
+
+    def test_failed_ledger_repair_keeps_published_guard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                if command[2] == "publish":
+                    payload = {"published": True, "noteId": "note-repair-failure", "url": "https://example.com/note"}
+                    return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+                if command[2] == "status":
+                    published_already = any(call[2] == "publish" for call in calls)
+                    payload = {"status": "审核中"} if published_already else {}
+                    return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+                raise AssertionError(f"unexpected publisher command: {command}")
+
+            original_run = watch_and_publish.subprocess.run
+            original_seed = watch_and_publish.seed_feedback_ledger
+            watch_and_publish.subprocess.run = fake_run
+
+            def failing_seed(*args, **kwargs):
+                raise OSError("ledger still unavailable")
+
+            watch_and_publish.seed_feedback_ledger = failing_seed
+            try:
+                first = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
+                    ledger_path=root / "publication-ledger.jsonl",
+                )
+                second = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
+                    ledger_path=root / "publication-ledger.jsonl",
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+                watch_and_publish.seed_feedback_ledger = original_seed
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertTrue(first)
+            self.assertFalse(second)
+            self.assertEqual([call[2] for call in calls], ["status", "publish", "status"])
+            self.assertEqual(record["status"], "published")
+            self.assertEqual(record["ledger_status"], "seed_failed")
+            self.assertIn("ledger still unavailable", record["ledger_repair_error"])
+
     def test_preflight_platform_status_blocks_republish_without_local_memory(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

@@ -147,6 +147,47 @@ def seed_feedback_ledger(
     return upsert_record(ledger_path, record)
 
 
+def repair_failed_feedback_ledger(
+    record: dict[str, Any],
+    zip_path: Path,
+    package_dir: Path,
+    ledger_path: Path,
+) -> None:
+    """Restore feedback identity after a successful publish whose ledger write failed."""
+    if not (package_dir / "metadata.json").is_file():
+        safe_extract(zip_path, package_dir)
+    release = record.get("release")
+    title = record.get("title")
+    if not release or not title:
+        raise ValueError("published record is missing release/title identity")
+
+    if any(item.get("release") == release for item in load_records(ledger_path)):
+        # Never replay zero counters over metrics that may have been imported already.
+        record["ledger_status"] = "seeded"
+        record.pop("ledger_error", None)
+        record.pop("ledger_repair_error", None)
+        return
+
+    result = record.get("result") or {
+        "published": True,
+        "noteId": record.get("note_id"),
+        "targetId": record.get("publisher_target_id"),
+        "url": record.get("published_url"),
+    }
+    feedback = seed_feedback_ledger(
+        ledger_path,
+        package_dir,
+        release=release,
+        title=title,
+        publisher_result=result,
+        audit_status=record.get("audit_status"),
+    )
+    record["ledger_status"] = "seeded"
+    record["ledger_release"] = feedback["release"]
+    record.pop("ledger_error", None)
+    record.pop("ledger_repair_error", None)
+
+
 def process_package(
     zip_path: Path,
     work_root: Path,
@@ -160,7 +201,13 @@ def process_package(
     token = hashlib.sha256(zip_path.read_bytes()).hexdigest()[:16]
     record = state["packages"].setdefault(token, {"zip": str(zip_path), "attempts": 0, "status": "pending"})
     if record["status"] in {"published", "drafted"}:
-        return False
+        needs_repair = (
+            record["status"] == "published"
+            and ledger_path is not None
+            and record.get("ledger_status") == "seed_failed"
+        )
+        if not needs_repair:
+            return False
     if record["attempts"] >= max_attempts:
         record["status"] = "abandoned"
         state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -169,6 +216,14 @@ def process_package(
     package_dir = work_root / token
     try:
         safe_extract(zip_path, package_dir)
+        if record["status"] == "published":
+            try:
+                repair_failed_feedback_ledger(record, zip_path, package_dir, ledger_path)
+            except Exception as repair_error:
+                # The platform already accepted this note; never demote it to a retry.
+                record["ledger_status"] = "seed_failed"
+                record["ledger_repair_error"] = str(repair_error)
+            return False
         qa = json.loads((package_dir / "qa.json").read_text(encoding="utf-8"))
         if qa.get("ok") is not True:
             raise ValueError("package qa.json is not green")
