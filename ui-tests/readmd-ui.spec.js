@@ -1325,6 +1325,18 @@ test('browser-copy provenance survives reload and clears on native save-as', asy
   }))).toMatchObject({ browserCopy: false, sourceName: 'final.md', path: 'C:/saved/final.md', title: 'final.md' });
 });
 
+test('upload failures surface the server recovery detail', async ({ page }) => {
+  await page.route('**/api/upload**', route => route.fulfill({
+    status: 400,
+    contentType: 'application/json',
+    body: JSON.stringify({ error: 'storage is full' }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof uploadFile === 'function');
+  await page.evaluate(() => uploadFile(new File(['body'], 'document.md', { type: 'text/markdown' })));
+  await expect(page.locator('#toast')).toContainText(/上传失败：storage is full|Upload failed: storage is full/i);
+});
+
 test('save conflicts offer save-as, reload, and cancel recovery', async ({ page }) => {
   await page.route('**/api/save', route => route.fulfill({
     status: 200,
