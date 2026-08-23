@@ -221,17 +221,22 @@ let autoReloadTimer = null;
 function startAutoReload() {
   stopAutoReload();
   autoReloadTimer = setInterval(async () => {
-    if (!state.file || !state.autoReload || state.mode !== 'file' || state.editing) return;
+    if (!state.autoReload || state.editing) return;
     try {
-      const r = await apiFetch('/api/file?p=' + encodeURIComponent(state.file) + '&meta=1');
-      if (!r.ok) return;
-      const d = await r.json();
-      if (d.mtime !== state.mtime) {
-        const tab = findTabByPath(state.file);
-        if (tab?.isDirty) return;
-        const sc = $('content').scrollTop;
-        await loadFile(state.file, { force: true });
-        if (sc) $('content').scrollTop = sc;
+      for (const tab of [...state.tabs]) {
+        if (tab.mode !== 'file' || !tab.path || tab.isDirty || tab.externalChanged) continue;
+        const r = await apiFetch('/api/file?p=' + encodeURIComponent(tab.path) + '&meta=1');
+        if (!r.ok) continue;
+        const d = await r.json();
+        if (d.mtime === tab.mtime) continue;
+        if (tab.id === state.activeTabId) {
+          const sc = $('content')?.scrollTop || 0;
+          await loadFile(tab.path, { force: true });
+          if (sc) $('content').scrollTop = sc;
+        } else {
+          tab.externalChanged = true;
+          renderTabsBar();
+        }
       }
     } catch (e) { /* ignore */ }
   }, 2500);

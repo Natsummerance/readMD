@@ -86,10 +86,20 @@ function renderTabsBar() {
     el.title = `${tab.path || tab.title || tab.name} (${_t('tabs.closeTab')}: Delete)`;
     if (tab.isDirty) {
       const dot = document.createElement('span');
-      dot.className = 'tab-dirty';
-      dot.title = _t('tabs.dirty') || '未保存';
+      const reason = tab.externalChanged
+        ? (_t('toast.saveConflict') || '文件已被外部修改')
+        : (_t('tabs.dirty') || '未保存');
+      dot.className = tab.externalChanged ? 'tab-dirty tab-external-changed' : 'tab-dirty';
+      dot.title = reason;
       dot.setAttribute('aria-hidden', 'true');
-      el.setAttribute('aria-description', _t('tabs.dirty') || '未保存');
+      el.setAttribute('aria-description', reason);
+      el.appendChild(dot);
+    } else if (tab.externalChanged) {
+      const dot = document.createElement('span');
+      dot.className = 'tab-dirty tab-external-changed';
+      dot.title = _t('toast.saveConflict') || '文件已被外部修改';
+      dot.setAttribute('aria-hidden', 'true');
+      el.setAttribute('aria-description', dot.title);
       el.appendChild(dot);
     }
 
@@ -469,6 +479,11 @@ async function switchTab(tabId) {
   state.activeTabId = tabId;
   syncStateFromActiveTab();
   const nextTabState = getActiveTab();
+  if (nextTabState?.externalChanged && nextTabState.path && !nextTabState.isDirty) {
+    nextTabState.externalChanged = false;
+    await loadFile(nextTabState.path, { force: true });
+    return;
+  }
   const preferredPage = Number(nextTabState?.readerPage || 0);
   const rendered = renderActiveTab({ restoreScroll: true });
   Promise.resolve(rendered).then(() => {

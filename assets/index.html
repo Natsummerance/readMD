@@ -455,10 +455,10 @@
 
       <aside class="img-inspector">
         <div class="img-section"><strong data-i18n="img.transform">变换</strong><div class="img-btn-row"><button id="img-rot-l" class="tb-btn">↶ 90°</button><button id="img-rot-r" class="tb-btn">↷ 90°</button><button id="img-flip-x" class="tb-btn" data-i18n="img.flipH">水平翻转</button><button id="img-flip-y" class="tb-btn" data-i18n="img.flipV">垂直翻转</button></div>
-          <label class="img-ctl"><span data-i18n="img.angle">角度</span> <input id="img-angle" type="range" min="-180" max="180" step="0.1" value="0"><input id="img-angle-number" class="img-number" type="number" min="-180" max="180" step="0.1" value="0">°</label></div>
+          <label class="img-ctl"><span data-i18n="img.angle">角度</span> <input id="img-angle" type="range" min="-180" max="180" step="0.1" value="0"><input id="img-angle-number" class="img-number" type="number" min="-180" max="180" step="0.1" value="0" aria-label="角度" data-i18n-aria="img.angle">°</label></div>
         <div class="img-section"><strong data-i18n="img.view">查看</strong><label class="img-ctl"><span data-i18n="img.zoom">画布缩放</span> <input id="img-view-zoom" type="range" min="25" max="400" value="100"><span id="img-view-zoom-val">100%</span></label><p class="img-help" data-i18n="img.help">滚轮缩放 · 空格拖拽平移 · +/- 缩放</p></div>
         <div class="img-section"><strong data-i18n="img.cropAndOutput">裁剪与输出</strong><select id="img-ratio" title="裁剪比例" data-i18n-title="img.ratio"><option value="free" data-i18n="img.ratioFree">自由比例</option><option value="1:1" data-i18n="img.ratio1_1">1:1 方形</option><option value="4:3" data-i18n="img.ratio4_3">4:3</option><option value="3:2" data-i18n="img.ratio3_2">3:2</option><option value="16:9" data-i18n="img.ratio16_9">16:9</option><option value="orig" data-i18n="img.ratioOrig">原图比例</option></select>
-          <div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" title="锁定宽高比" data-i18n-title="img.lockRatio">🔗</button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
+<div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" aria-label="锁定宽高比" title="锁定宽高比" data-i18n-title="img.lockRatio">🔗</button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
         <div class="img-btn-row"><button id="img-undo" class="tb-btn" data-i18n="editor.undo" disabled>撤销</button><button id="img-redo" class="tb-btn" data-i18n="editor.redo" disabled>重做</button><button id="img-reset" class="tb-btn" data-i18n="img.reset">重置</button></div>
       </aside>
     </div>
@@ -478,7 +478,7 @@
   <div id="tpl-box">
     <h3 id="tpl-title" data-i18n="tpl.title">&#128221; Prompt 模板管理</h3>
     <div class="tpl-layout">
-      <ul id="tpl-list" class="tpl-list"></ul>
+      <ul id="tpl-list" class="tpl-list" role="listbox" aria-label="Prompt 模板" data-i18n-aria="tpl.title"></ul>
       <div class="tpl-form">
         <input id="tpl-id" type="hidden">
         <input id="tpl-name" type="text" placeholder="模板名称（如：总结要点 / 生成周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
@@ -630,6 +630,24 @@
       <button id="save-conflict-save-as" class="tb-btn accent" data-i18n="toolbar.saveAs">另存为</button>
       <button id="save-conflict-reload" class="tb-btn danger" data-i18n="toolbar.reload">重新加载</button>
       <button id="save-conflict-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<div id="continuous-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="continuous-title">
+  <div class="close-confirm-box">
+    <div class="close-confirm-head">
+      <div class="close-confirm-icon-wrap">
+        <svg class="close-confirm-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18"/><path d="M5 10l7-7 7 7"/></svg>
+      </div>
+      <div>
+        <h3 id="continuous-title" data-i18n="pagination.continuousBadge">全卷连续</h3>
+        <p id="continuous-desc"></p>
+      </div>
+    </div>
+    <div class="close-confirm-actions">
+      <button id="continuous-confirm" class="tb-btn danger" data-i18n="pagination.continuousBadge">全卷连续</button>
+      <button id="continuous-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
     </div>
   </div>
 </div>

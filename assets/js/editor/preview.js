@@ -433,7 +433,12 @@ async function saveEdit() {
       syncSavedTab(state.file, content);
       applySavedMtime(ok);
       await renderSavedDocument(content);
-      showToast(ok.backup ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）')) : (_t('toast.savedSuccess') || '已保存'));
+      const savedTarget = state.browserCopy
+        ? `${state.sourceName || state.file} (${_t('app.browserCopy') || 'browser copy'})`
+        : (state.file || state.sourceName || 'document');
+      showToast(ok.backup
+        ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）'))
+        : ((_t('toast.savedPrefix') || '已保存：') + savedTarget));
       exitEdit();
       return true;
     } else {
@@ -463,6 +468,9 @@ async function saveEdit() {
           exitEdit();
           await loadFile(state.file, { force: true });
           return true;
+        }
+        if (action === 'cancel') {
+          showToast(_t('toast.reloadBlockedDirty') || '未保存修改已保留，未重新加载外部更改');
         }
       } else {
         showToast((_t('toast.saveFailed') || '保存失败：') + ((ok && ok.error) || (_t('toast.unknownError') || '未知错误')));

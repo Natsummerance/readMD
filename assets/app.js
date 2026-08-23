@@ -1,4 +1,9 @@
 'use strict';
+
+function syncSelectAccessibleName(el) {
+  const selected = el.selectedOptions && el.selectedOptions[0];
+  if (selected) el.setAttribute('aria-label', selected.textContent.trim());
+}
 /* ==============================================================================================
    ReadMD v2 - Application Integration Bus & Bootstrap (主集成总线与生命周期调度器)
    ==============================================================================================
@@ -384,10 +389,6 @@ function bindEvents() {
     handle.addEventListener('focus', setHandle);
     handle.addEventListener('pointerdown', setHandle);
   });
-  const syncSelectAccessibleName = el => {
-    const selected = el.selectedOptions && el.selectedOptions[0];
-    if (selected) el.setAttribute('aria-label', selected.textContent.trim());
-  };
   ['formula-mode', 'tpl-action', 'img-ratio'].forEach(id => {
     const select = $(id);
     if (!select) return;
@@ -711,6 +712,10 @@ function bindEvents() {
     }
     updateStatus();
     updateDocStatistics();
+    ['formula-mode', 'tpl-action', 'img-ratio'].forEach(id => {
+      const select = $(id);
+      if (select) syncSelectAccessibleName(select);
+    });
   });
 
   /* --- 18. 多标签页、全局拖拽与窗口响应 [联动: core/tabs.js, core/dragdrop.js] --- */
@@ -835,7 +840,7 @@ function getModalRoots() {
     'convert-modal', 'update-modal', 'style-custom-modal', 'lang-modal',
     'ai-history-modal', 'ai-settings-modal', 'formula-modal', 'presentation-modal',
     'img-modal', 'history-modal', 'share-modal', 'tpl-modal', 'url-modal',
-    'save-conflict-modal', 'fix-modal'
+    'save-conflict-modal', 'fix-modal', 'continuous-modal'
   ].map(id => $(id)).filter(Boolean);
 }
 

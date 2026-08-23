@@ -132,6 +132,37 @@ test('select controls expose their localized selected action', async ({ page }) 
   await page.locator('#formula-mode').selectOption('block');
   await expect(page.locator('#formula-mode')).toHaveAttribute('aria-label', /块级公式|Block Formula/);
   await expect(page.locator('#tpl-action')).toHaveAttribute('aria-label', /动作：快速阅读|Action: Quick Read/);
+  await page.evaluate(() => {
+    state.ai.templates = [
+      { id: 'tpl-a', name: 'Keyboard template', action: 'quick_read' },
+      { id: 'tpl-b', name: 'Second template', action: 'polish' },
+    ];
+    renderTplList();
+  });
+  const firstTemplate = page.locator('#tpl-list li').first();
+  await firstTemplate.focus();
+  await page.keyboard.press('Enter');
+  await expect(firstTemplate).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#tpl-name')).toHaveValue('Keyboard template');
+});
+
+test('continuous mode uses a managed confirmation dialog', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof togglePaginationMode === 'function');
+  await page.evaluate(() => {
+    Object.assign(state.pagination, {
+      enabled: true,
+      mode: 'paged',
+      pages: Array.from({ length: 30 }, (_, index) => ({ index })),
+      rawContent: '# Continuous target',
+    });
+    togglePaginationMode();
+  });
+  const modal = page.locator('#continuous-modal');
+  await expect(modal).toBeVisible();
+  await expect(page.locator('#continuous-confirm')).toBeFocused();
+  await page.locator('#continuous-confirm').click();
+  await page.waitForFunction(() => state.pagination.mode === 'continuous');
 });
 
 test('AI keeps configured keys usable, autosaves, and supports incognito history', async ({ page }) => {

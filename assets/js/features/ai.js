@@ -120,15 +120,27 @@ function renderTplList() {
     const li = document.createElement('li');
     li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
     li.dataset.id = t.id;
+    li.setAttribute('role', 'option');
+    li.tabIndex = 0;
+    li.setAttribute('aria-selected', 'false');
     li.title = (_t('ai.actionPrefix') || '动作：') + (t.action || 'custom') + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '含用户消息模板')) : '');
     li.addEventListener('click', () => selectTpl(t.id));
+    li.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      selectTpl(t.id);
+    });
     list.appendChild(li);
   });
 }
 
 function selectTpl(id) {
   const t = (state.ai.templates || []).find(x => x.id === id) || null;
-  document.querySelectorAll('#tpl-list li').forEach(li => li.classList.toggle('active', li.dataset.id === id));
+  document.querySelectorAll('#tpl-list li').forEach(li => {
+    const selected = li.dataset.id === id;
+    li.classList.toggle('active', selected);
+    li.setAttribute('aria-selected', selected ? 'true' : 'false');
+  });
   $('tpl-id').value = t ? t.id : '';
   $('tpl-name').value = t ? t.name : '';
   $('tpl-action').value = (t && t.action) || 'custom';

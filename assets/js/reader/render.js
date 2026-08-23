@@ -507,14 +507,36 @@ function updatePaginationBar() {
   }
 }
 
-function togglePaginationMode() {
+function confirmContinuousMode(pageCount) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  return new Promise(resolve => {
+    const modal = $('continuous-modal');
+    if (!modal) {
+      resolve(window.confirm(_t('pagination.continuousWarning', { count: pageCount }) || `连续模式将一次渲染 ${pageCount} 页，可能造成卡顿。是否继续？`));
+      return;
+    }
+    modal.classList.remove('hidden');
+    $('continuous-desc').textContent = _t('pagination.continuousWarning', { count: pageCount });
+    const finish = accepted => {
+      modal.classList.add('hidden');
+      $('continuous-confirm').onclick = null;
+      $('continuous-cancel').onclick = null;
+      resolve(accepted);
+    };
+    setTimeout(() => $('continuous-confirm')?.focus(), 20);
+    $('continuous-confirm').onclick = () => finish(true);
+    $('continuous-cancel').onclick = () => finish(false);
+  });
+}
+
+async function togglePaginationMode() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const p = state.pagination;
   if (!p || !p.enabled) return;
   const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
 
   if (p.mode === 'paged') {
-    if (p.pages.length > 20 && !window.confirm(_t('pagination.continuousWarning', { count: p.pages.length }) || `连续模式将一次渲染 ${p.pages.length} 页，可能造成卡顿。是否继续？`)) {
+    if (p.pages.length > 20 && !(await confirmContinuousMode(p.pages.length))) {
       return;
     }
     p.mode = 'continuous';
