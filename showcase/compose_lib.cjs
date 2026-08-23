@@ -144,8 +144,10 @@ function imageSrc(packageDir, capture, card) {
 }
 
 function drawnImageBox(image, canvas = { width: 1080, height: 1440 }) {
-  const bounds = image.getBoundingClientRect();
-  const fit = String(image.style?.objectFit || getComputedStyle(image).objectFit);
+  const bounds = typeof image.getBoundingClientRect === 'function'
+    ? image.getBoundingClientRect()
+    : image.bounds;
+  const fit = String(image.objectFit || image.style?.objectFit || '');
   if (fit !== 'contain' || !image.naturalWidth || !image.naturalHeight) {
     return {
       x: Math.max(0, bounds.x),
@@ -158,7 +160,7 @@ function drawnImageBox(image, canvas = { width: 1080, height: 1440 }) {
   const scale = Math.min(bounds.width / image.naturalWidth, bounds.height / image.naturalHeight);
   const width = image.naturalWidth * scale;
   const height = image.naturalHeight * scale;
-  const position = String(image.style?.objectPosition || getComputedStyle(image).objectPosition || '50% 50%')
+  const position = String(image.objectPosition || image.style?.objectPosition || '50% 50%')
     .split(/\s+/)
     .map((value) => Number.parseFloat(value) || 0);
   const [horizontal, vertical] = [position[0] ?? 50, position[1] ?? horizontal];

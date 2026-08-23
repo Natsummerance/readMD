@@ -18,7 +18,6 @@ async function main() {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1080, height: 1440 }, deviceScaleFactor: 1 });
-    await page.evaluate(`window.drawnImageBox = ${drawnImageBox.toString()};`);
     const report = [];
     for (const card of cards) {
       const html = buildCardHtml(card, imageSrc(packageDir, capture, card), { release: story.release });
@@ -79,8 +78,17 @@ async function main() {
       const screenshotBox = await page.evaluate(() => {
         const image = document.querySelector('img');
         if (!image) return null;
-        return drawnImageBox(image);
+        const bounds = image.getBoundingClientRect();
+        const style = getComputedStyle(image);
+        return {
+          bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+          naturalWidth: image.naturalWidth,
+          naturalHeight: image.naturalHeight,
+          objectFit: style.objectFit,
+          objectPosition: style.objectPosition,
+        };
       });
+      const measuredBox = screenshotBox ? drawnImageBox(screenshotBox) : null;
       const feedReadiness = card.role === 'cover' ? await page.evaluate(() => {
         const title = document.querySelector('.cover h1');
         const caption = document.querySelector('.cover p');
@@ -109,8 +117,8 @@ async function main() {
         file: card.file,
         role: card.role,
         ui_min_ratio: card.uiMinRatio,
-        ui_area_ratio: screenshotBox ? (screenshotBox.width * screenshotBox.height) / (1080 * 1440) : 0,
-        screenshot_box: screenshotBox,
+        ui_area_ratio: measuredBox ? (measuredBox.width * measuredBox.height) / (1080 * 1440) : 0,
+        screenshot_box: measuredBox,
         feed_readiness: feedReadiness,
       });
       fs.unlinkSync(htmlPath);
