@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 import zipfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -2213,9 +2214,9 @@ class BuildPipelineTest(unittest.TestCase):
             def fail_audit(package_dir):
                 raise AssertionError("semantic gate requires a completed composition")
 
-            build_package_module.subprocess.run = fail_run
-            build_package_module.audit_package = fail_audit
             try:
+                build_package_module.subprocess.run = fail_run
+                build_package_module.audit_package = fail_audit
                 errors = build_package_module.compose_and_validate(package, ROOT)
             finally:
                 build_package_module.subprocess.run = original_run
@@ -2225,6 +2226,23 @@ class BuildPipelineTest(unittest.TestCase):
         self.assertFalse(report["ok"])
         self.assertEqual(errors, report["errors"])
         self.assertEqual(errors, ["card composition failed with exit code 1"])
+
+
+    def test_missing_node_still_writes_red_aggregate_qa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            with unittest.mock.patch.object(
+                build_package_module.subprocess,
+                "run",
+                side_effect=FileNotFoundError("node executable unavailable"),
+            ):
+                errors = build_package_module.compose_and_validate(package, ROOT)
+
+            report = json.loads((package / "qa.json").read_text(encoding="utf-8"))
+        self.assertFalse(report["ok"])
+        self.assertEqual(errors, report["errors"])
+        self.assertEqual(errors, ["card composition failed to start: node executable unavailable"])
+
 
 class ContentMemoryTest(unittest.TestCase):
     def record(self, formula: str = "#61", release: str = "v1.0.0", title: str = "别再把Markdown只当笔记了") -> dict:
@@ -2926,6 +2944,7 @@ class WatcherTest(unittest.TestCase):
         frame_match: bool = True,
         publisher_match: bool = True,
         topic_match: bool = True,
+        tamper_semantics: bool = False,
     ) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
@@ -2934,25 +2953,83 @@ class WatcherTest(unittest.TestCase):
         (package / "raw").mkdir()
         Image.new("RGB", (20, 10)).save(package / "raw" / "overview-reader.png")
         (package / "raw" / "capture.json").write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
-        (package / "story.json").write_text(json.dumps({
-            "release": "v1.2.3",
-            "primary_shot": "presentation.reveal",
-        }), encoding="utf-8")
+        notes = (
+            "# ReadMD v1.2.3\n\n"
+            "## Highlights\n\n"
+            "- Markdown 写完以后可以直接进入 Reveal.js 放映模式。\n"
+            "- 课程讲义、组会报告和技术分享都能沿用同一份源文件。\n"
+        )
+        story = build_story.build_story(
+            release="v1.2.3",
+            previous_release="v1.2.2",
+            notes=notes,
+            diff="diff --git a/a b/a\n",
+            shot_library_path=ROOT / "showcase" / "shot_library.json",
+            notes_source="evidence/release-notes.md",
+        )
+        metadata = write_copy.generate_copy(
+            story,
+            repository="Natsummerance/readMD",
+            previous_release="v1.2.2",
+        )
+        metadata, variant_selection = copy_variants.select_variant(
+            story=story,
+            base_metadata=metadata,
+            history=None,
+        )
+        story = build_story.apply_selected_cover(story, metadata)
+        composition = copy_variants.projected_composition(story)
+        canvas_area = 1080 * 1440
+        for card in composition["cards"]:
+            if card["role"] == "cover":
+                card["feed_readiness"] = {
+                    "title_font_size": 84,
+                    "title_width_ratio": 0.36,
+                    "title_height_ratio": 0.07,
+                    "caption_font_size": 31,
+                }
+                card["screenshot_box"] = {"x": 70, "y": 640, "width": 940, "height": 580}
+                continue
+            ratio = float(card.get("ui_area_ratio", 0))
+            width = 940
+            height = round(ratio * canvas_area / width)
+            card["screenshot_box"] = {
+                "x": 70,
+                "y": 180,
+                "width": width,
+                "height": height,
+            }
+        semantic_report = audit_copy.audit_copy(
+            story=story,
+            metadata=metadata,
+            composition=composition,
+        )
+        if not semantic_report["ok"]:
+            raise AssertionError(json.dumps(semantic_report, ensure_ascii=False, indent=2))
+        pattern_report = pattern_audit.audit_patterns(
+            story=story,
+            metadata=metadata,
+            composition=composition,
+            library_path=ROOT / "showcase" / "content" / "pattern-library.json",
+        )
+        if not pattern_report["ok"]:
+            raise AssertionError(json.dumps(pattern_report, ensure_ascii=False, indent=2))
+        if tamper_semantics:
+            metadata["title"] = "ReadMD更新：文档变工作台"
+            (package / "title.txt").write_text(metadata["title"], encoding="utf-8")
+
+        (package / "story.json").write_text(json.dumps(story, ensure_ascii=False), encoding="utf-8")
         (package / "qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "copy-review.json").write_text(json.dumps({"ok": True, "total_score": 92}), encoding="utf-8")
-        (package / "variants.json").write_text(json.dumps({
-            "ok": True,
-            "chosen_strategy": "outcome-led",
-            "chosen_variant_id": "identity-led__22" if not variant_match else "outcome-led__36",
-            "chosen_copy_frame": "workflow" if not frame_match else "core",
-            "ranked": [{
-                "strategy": "outcome-led",
-                "variant_id": "outcome-led__36",
-                "copy_frame": "workflow" if not frame_match else "core",
-                "ok": True,
-                "originality_failures": [],
-            }],
-        }), encoding="utf-8")
+        if variant_match and frame_match:
+            persisted_variants = variant_selection
+        else:
+            persisted_variants = dict(variant_selection)
+            persisted_variants["chosen_variant_id"] = (
+                "identity-led__22" if not variant_match else "outcome-led__36"
+            )
+            persisted_variants["chosen_copy_frame"] = "workflow" if not frame_match else "core"
+        (package / "variants.json").write_text(json.dumps(persisted_variants, ensure_ascii=False), encoding="utf-8")
         (package / "performance-report.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "performance-report.md").write_text("# Performance\n", encoding="utf-8")
         (package / "dashboard-qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
@@ -2967,10 +3044,10 @@ class WatcherTest(unittest.TestCase):
             "ok": wechat_ok,
             "errors": [] if wechat_ok else ["paragraph inline style incomplete"],
         }), encoding="utf-8")
-        (package / "title.txt").write_text("标题", encoding="utf-8")
-        (package / "body.txt").write_text("这篇正文足够长，可以形成稳定的三元组指纹。", encoding="utf-8")
-        (package / "topics.txt").write_text("Markdown\nPPT\n演讲\n程序员\n效率工具", encoding="utf-8")
-        (package / "composition.json").write_text(json.dumps({"schema_version": 1, "cards": []}), encoding="utf-8")
+        (package / "title.txt").write_text(metadata["title"], encoding="utf-8")
+        (package / "body.txt").write_text(metadata["body"], encoding="utf-8")
+        (package / "topics.txt").write_text("\n".join(metadata["topics"]), encoding="utf-8")
+        (package / "composition.json").write_text(json.dumps(composition, ensure_ascii=False), encoding="utf-8")
         (package / "review-dashboard.html").write_text("<!doctype html><main>preflight</main>", encoding="utf-8")
         (package / "evidence").mkdir()
         (package / "evidence" / "release-notes.md").write_text("# Release\n", encoding="utf-8")
@@ -2988,20 +3065,7 @@ class WatcherTest(unittest.TestCase):
             encoding="utf-8",
         )
         (package / "wechat" / "readmd-wechat.html").write_text("<p style=\"font-size:16px;line-height:1.75;color:#111\">article</p>", encoding="utf-8")
-        metadata = {
-            "title": "标题",
-            "body": "这篇正文足够长，可以形成稳定的三元组指纹。",
-            "variant_id": "outcome-led__36",
-            "copy_frame": "core",
-            "strategy": "outcome-led",
-            "hook_type": "outcome-led",
-            "title_formula_id": "#36",
-            "primary_shot": "presentation.reveal",
-            "topics": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
-            "topic_set_id": write_copy.topic_set_id(["Markdown", "PPT", "演讲", "程序员", "效率工具"]),
-            "topic_set_label": "talk-core",
-            "images": ["Z:/remote/package/images/xhs-01-cover.jpg"],
-        }
+        metadata["images"] = ["Z:/remote/package/images/xhs-01-cover.jpg"]
         if not topic_match:
             metadata["topic_set_id"] = "tampered-topic-set"
         (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
@@ -3080,6 +3144,9 @@ class WatcherTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             zip_path = self.make_package_zip(root)
+            expected_title = json.loads(
+                (root / "package" / "metadata.json").read_text(encoding="utf-8")
+            )["title"]
             calls = []
 
             def fake_run(command, **kwargs):
@@ -3106,7 +3173,7 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual([call[2] for call in calls], ["status", "publish", "status"])
             self.assertEqual(record["release"], "v1.2.3")
             self.assertEqual(record["variant_id"], "outcome-led__36")
-            self.assertEqual(record["title"], "标题")
+            self.assertEqual(record["title"], expected_title)
             self.assertEqual(record["note_id"], "note-1")
             self.assertEqual(record["published_url"], "https://example.com/note")
             self.assertEqual(record["audit_status"], "审核中")
@@ -3147,6 +3214,35 @@ class WatcherTest(unittest.TestCase):
             self.assertIn("opening", feedback)
             self.assertIn("closing", feedback)
             self.assertTrue(feedback["body_trigrams"])
+
+    def test_recomputed_semantic_gate_blocks_forged_green_review(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, tamper_semantics=True)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                if command[2] == "publish":
+                    raise AssertionError("publisher must not trust a forged green review")
+                return SimpleNamespace(returncode=0, stdout=json.dumps({}), stderr="")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("recomputed publication gates failed", record["error"])
+            self.assertIn("title formula #36 is missing a removal condition", record["error"])
 
     def test_successful_publish_survives_status_query_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

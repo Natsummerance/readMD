@@ -16,12 +16,15 @@ from pathlib import Path
 from typing import Any
 
 from content_memory import load_records, upsert_record
+from audit_copy import audit_copy
 from copy_variants import text_fingerprints, text_trigrams
+from pattern_audit import audit_patterns
 from package_content import validate_release_evidence
 from validate_package import publisher_input_errors
 
 DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
 STATE_VERSION = 1
+SHOWCASE_ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_state(path: Path) -> dict[str, Any]:
@@ -192,6 +195,39 @@ def repair_failed_feedback_ledger(
     record.pop("ledger_repair_error", None)
 
 
+def recomputed_gate_errors(package_dir: Path) -> list[str]:
+    """Recompute semantic and mechanism gates; persisted green labels are not trust roots."""
+    load = lambda name: json.loads((package_dir / name).read_text(encoding="utf-8"))
+    errors: list[str] = []
+    try:
+        story = load("story.json")
+        metadata = load("metadata.json")
+        composition = load("composition.json")
+    except Exception as exc:
+        return [f"recomputed gate inputs unreadable: {exc}"]
+
+    try:
+        semantic = audit_copy(story=story, metadata=metadata, composition=composition)
+        if semantic.get("ok") is not True:
+            errors.extend(f"semantic gate: {item}" for item in semantic.get("hard_failures", []))
+            errors.append(f"semantic score {semantic.get('total_score')} is below the publication contract")
+    except Exception as exc:
+        errors.append(f"semantic gate crashed: {exc}")
+
+    try:
+        pattern = audit_patterns(
+            story=story,
+            metadata=metadata,
+            composition=composition,
+            library_path=SHOWCASE_ROOT / "content" / "pattern-library.json",
+        )
+        if pattern.get("ok") is not True:
+            errors.extend(f"hot-post gate: {item}" for item in pattern.get("errors", []))
+    except Exception as exc:
+        errors.append(f"hot-post gate crashed: {exc}")
+    return errors
+
+
 def process_package(
     zip_path: Path,
     work_root: Path,
@@ -274,6 +310,9 @@ def process_package(
         input_errors = publisher_input_errors(package_dir)
         if input_errors:
             raise ValueError("publisher input contract failed: " + "; ".join(input_errors))
+        gate_errors = recomputed_gate_errors(package_dir)
+        if gate_errors:
+            raise ValueError("recomputed publication gates failed: " + "; ".join(gate_errors))
         dashboard = json.loads((package_dir / "dashboard-qa.json").read_text(encoding="utf-8"))
         if dashboard.get("ok") is not True:
             raise ValueError("package dashboard-qa.json is not green")

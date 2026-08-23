@@ -101,6 +101,9 @@ def compose_and_validate(package_dir: Path, repo_root: Path) -> list[str]:
     except subprocess.CalledProcessError as exc:
         errors.append(f"card composition failed with exit code {exc.returncode}")
         composed = False
+    except OSError as exc:
+        errors.append(f"card composition failed to start: {exc}")
+        composed = False
 
     if not composed:
         (package_dir / "qa.json").write_text(
