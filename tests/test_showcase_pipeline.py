@@ -446,6 +446,23 @@ class WriteCopyTest(unittest.TestCase):
                 self.assertEqual(len(topics), len(set(topics)))
                 self.assertTrue(all(not topic.startswith("#") for topic in topics))
 
+    def test_topic_set_identity_is_stable_and_content_bound(self) -> None:
+        story = {
+            "release": "v1.0.0",
+            "version_state": "prerelease",
+            "primary_shot": "presentation.reveal",
+            "angle": "ReadMD 让同一份 Markdown 直接放映",
+            "selected_shots": ["overview.reader", "presentation.reveal"],
+            "claims": [{"id": "primary", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["README.md"]}],
+        }
+        first = write_copy.generate_copy(story, repository="x", previous_release="v0.9.0")
+        second = write_copy.generate_copy(story, repository="x", previous_release="v0.9.0")
+        expected_id = hashlib.sha256("\n".join(first["topics"]).encode("utf-8")).hexdigest()[:12]
+
+        self.assertTrue(first["topic_set_id"])
+        self.assertEqual(first["topic_set_id"], second["topic_set_id"])
+        self.assertEqual(first["topic_set_id"], expected_id)
+
     def test_generates_compliant_prerelease_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
@@ -717,6 +734,7 @@ class ValidatePackageTest(unittest.TestCase):
                 "title": "ReadMD更新：文档变工作台",
                 "body": "预览版。" + "这是一个用于验证包结构的最短正文。" * 40,
                 "topics": ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"],
+                "topic_set_id": write_copy.topic_set_id(["GitHub", "开源项目", "程序员", "效率工具", "Markdown"]),
                 "images": [str(pkg / "images" / name) for name in names],
                 "source_urls": ["https://github.com/Natsummerance/readMD/releases"],
                 "version_state": "prerelease",
@@ -737,7 +755,11 @@ class ValidatePackageTest(unittest.TestCase):
             (pkg / "composition.json").write_text(json.dumps(composition, ensure_ascii=False), encoding="utf-8")
             (pkg / "pattern-audit.json").write_text(json.dumps({"ok": True, "errors": []}), encoding="utf-8")
             errors = validate_package.validate_package(pkg)
-        self.assertEqual(errors, [])
+            self.assertEqual(errors, [])
+            metadata["topic_set_id"] = "tampered-topic-set"
+            (pkg / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            mismatched = validate_package.validate_package(pkg)
+        self.assertTrue(any("topic_set_id does not match topics" in error for error in mismatched), mismatched)
 
     def test_rejects_missing_evidence_and_bad_hash(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1609,6 +1631,32 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertIn("## Copy frames", markdown)
         self.assertIn("| core | 2 | 2000 |", markdown)
 
+    def test_aggregates_topic_sets_and_search_terms(self) -> None:
+        records = [
+            {
+                **self.complete("v1", "#36", "outcome-led", 1000, 40, 60),
+                "primary_shot": "presentation.reveal",
+                "topics": ["Markdown", "PPT"],
+                "topic_set_id": "ppt-set",
+            },
+            {
+                **self.complete("v2", "#22", "identity-led", 2000, 120, 180),
+                "primary_shot": "presentation.reveal",
+                "topics": ["Markdown", "PPT"],
+                "topic_set_id": "ppt-set",
+            },
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            result = performance_report.generate_report(records, Path(tmp))
+            markdown = (Path(tmp) / "performance-report.md").read_text(encoding="utf-8")
+
+        self.assertEqual(result["topic_set_stats"]["ppt-set"]["publications"], 2)
+        self.assertEqual(result["topic_stats"]["PPT"]["weighted_engagement"], 740)
+        self.assertEqual(result["recommended_topic_set"], "ppt-set")
+        self.assertEqual(result["recommended_topic"], "Markdown")
+        self.assertIn("## Topic sets", markdown)
+        self.assertIn("## Topic search terms", markdown)
+
     def test_aggregates_comment_focus_across_releases(self) -> None:
         def insights(theme: str, mentions: int, weighted_score: int) -> dict:
             return {
@@ -2322,6 +2370,34 @@ class ContentMemoryTest(unittest.TestCase):
             after = store.read_text(encoding="utf-8")
         self.assertEqual(after, before)
 
+    def test_metric_import_preserves_topic_attribution_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            content_memory.append_record(store, {
+                **self.record(release="v1.0.0"),
+                "primary_shot": "presentation.reveal",
+                "topic_set_id": "7dd35d0592b9",
+                "topics": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
+                "metrics_status": "pending",
+            })
+            before = store.read_text(encoding="utf-8")
+            for conflict in (
+                {"primary_shot": "overview.editor"},
+                {"topic_set_id": "tampered"},
+                {"topics": ["Markdown", "LaTeX"]},
+            ):
+                with self.subTest(conflict=conflict):
+                    with self.assertRaises(ValueError):
+                        content_memory.import_metric_snapshot(
+                            store,
+                            "v1.0.0",
+                            {"impressions": 100, **conflict},
+                            source="xiaohongshu-web",
+                            captured_at="2026-08-23T10:00:00+08:00",
+                        )
+            after = store.read_text(encoding="utf-8")
+        self.assertEqual(after, before)
+
     def test_comment_snapshot_imports_anonymized_resonance_themes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = Path(tmp) / "ledger.jsonl"
@@ -2667,7 +2743,7 @@ class WatcherTest(unittest.TestCase):
         }), encoding="utf-8")
         (package / "title.txt").write_text("标题", encoding="utf-8")
         (package / "body.txt").write_text("这篇正文足够长，可以形成稳定的三元组指纹。", encoding="utf-8")
-        (package / "topics.txt").write_text("GitHub\n开源项目\n程序员\n效率工具\nMarkdown", encoding="utf-8")
+        (package / "topics.txt").write_text("Markdown\nPPT\n演讲\n程序员\n效率工具", encoding="utf-8")
         (package / "composition.json").write_text(json.dumps({"schema_version": 1, "cards": []}), encoding="utf-8")
         (package / "review-dashboard.html").write_text("<!doctype html><main>preflight</main>", encoding="utf-8")
         (package / "evidence").mkdir()
@@ -2694,7 +2770,9 @@ class WatcherTest(unittest.TestCase):
             "strategy": "outcome-led",
             "hook_type": "outcome-led",
             "title_formula_id": "#36",
-            "topics": ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"],
+            "primary_shot": "presentation.reveal",
+            "topics": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
+            "topic_set_id": write_copy.topic_set_id(["Markdown", "PPT", "演讲", "程序员", "效率工具"]),
             "images": ["Z:/remote/package/images/xhs-01-cover.jpg"],
         }
         (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
@@ -2780,6 +2858,15 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(feedback["copy_frame"], "core")
             self.assertEqual(feedback["title_formula_id"], "#36")
             self.assertEqual(feedback["hook_type"], "outcome-led")
+            self.assertEqual(feedback["primary_shot"], "presentation.reveal")
+            self.assertEqual(
+                feedback["topic_set_id"],
+                write_copy.topic_set_id(["Markdown", "PPT", "演讲", "程序员", "效率工具"]),
+            )
+            self.assertEqual(
+                feedback["topics"],
+                ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
+            )
             self.assertEqual(feedback["note_id"], "note-1")
             self.assertEqual(feedback["published_url"], "https://example.com/note")
             self.assertEqual(feedback["metrics_status"], "pending")

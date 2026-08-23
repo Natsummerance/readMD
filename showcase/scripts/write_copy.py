@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,14 @@ BANNED_REPLACEMENTS = {
     "微信": "聊天工具",
     "闲鱼": "二手平台",
 }
+
+
+def topic_set_id(topics: list[str]) -> str:
+    """Return a stable identity for the exact search-term combination."""
+    clean_topics = [str(item).strip() for item in topics if str(item).strip()]
+    payload = "\n".join(clean_topics)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+
 
 def _clean(value: str) -> str:
     for old, new in BANNED_REPLACEMENTS.items():
@@ -223,6 +232,10 @@ def generate_copy(
         body += "\n\n" + padding[pad_index]
         pad_index += 1
 
+    topics = MECHANISM_TOPICS.get(
+        primary_id,
+        ["Markdown", "效率工具", "程序员", "开源项目", "GitHub"],
+    )
     return {
         "title": chosen_title["text"],
         "primary_shot": primary_id,
@@ -230,10 +243,8 @@ def generate_copy(
         "title_candidates": candidates,
         "title_selection": title_selection,
         "body": body,
-        "topics": MECHANISM_TOPICS.get(
-            primary_id,
-            ["Markdown", "效率工具", "程序员", "开源项目", "GitHub"],
-        ),
+        "topics": topics,
+        "topic_set_id": topic_set_id(topics),
         "version_state": story["version_state"],
         "claim_ids": [claim["id"] for claim in story["claims"]],
         "source_urls": [

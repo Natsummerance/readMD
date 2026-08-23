@@ -18,6 +18,12 @@ BANNED = ("公众号", "微信", "闲鱼", "咸鱼", "转卖", "出票", "转让
 IMAGE_RE = re.compile(r"^xhs-(0[1-9])-[a-z0-9-]+\.jpg$")
 
 
+def topic_set_id(topics: list[Any]) -> str:
+    clean_topics = [str(item).strip() for item in topics if str(item).strip()]
+    payload = "\n".join(clean_topics)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+
+
 def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -294,6 +300,9 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
         errors.append("banned words: " + ", ".join(banned))
     if not isinstance(topics, list) or len(topics) != 5 or any(not str(topic).strip() or topic.startswith("#") for topic in topics):
         errors.append("topics must be five non-empty values without #")
+    expected_topic_set_id = topic_set_id(topics if isinstance(topics, list) else [])
+    if metadata.get("topic_set_id") != expected_topic_set_id:
+        errors.append("topic_set_id does not match topics")
     if not isinstance(images, list) or not 4 <= len(images) <= 9:
         errors.append("metadata.images must contain 4-9 paths")
         images = []
