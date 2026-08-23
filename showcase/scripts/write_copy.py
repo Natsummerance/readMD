@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from content_memory import load_learning_records, partition_records, summarize
-from copy_profiles import SUPPORT_PHRASES, profile_for_story
+from copy_profiles import MECHANISM_TOPICS, SUPPORT_PHRASES, profile_for_story
 
 
 BANNED_REPLACEMENTS = {
@@ -18,9 +18,6 @@ BANNED_REPLACEMENTS = {
     "微信": "聊天工具",
     "闲鱼": "二手平台",
 }
-
-TOPICS = ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"]
-
 
 def _clean(value: str) -> str:
     for old, new in BANNED_REPLACEMENTS.items():
@@ -233,7 +230,10 @@ def generate_copy(
         "title_candidates": candidates,
         "title_selection": title_selection,
         "body": body,
-        "topics": TOPICS,
+        "topics": MECHANISM_TOPICS.get(
+            primary_id,
+            ["Markdown", "效率工具", "程序员", "开源项目", "GitHub"],
+        ),
         "version_state": story["version_state"],
         "claim_ids": [claim["id"] for claim in story["claims"]],
         "source_urls": [

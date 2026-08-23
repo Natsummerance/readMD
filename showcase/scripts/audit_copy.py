@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from style_audit import audit_style
-from copy_profiles import profile_for_story
+from copy_profiles import MECHANISM_TOPIC_MARKERS, profile_for_story
 
 
 BANNED = ("公众号", "微信", "闲鱼", "咸鱼", "转卖", "出票", "转让", "售票", "二维码", "淘口令", "淘宝")
@@ -145,6 +145,10 @@ def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: 
     cards = composition.get("cards", [])
     if len(title) > 20 or not metadata.get("title_formula_id"):
         hard_failures.append("title contract failed")
+    topic_markers = MECHANISM_TOPIC_MARKERS.get(str(story.get("primary_shot", "")), set())
+    topics = [str(item) for item in metadata.get("topics", [])]
+    if topic_markers and not any(marker in topics for marker in topic_markers):
+        hard_failures.append("topics missing mechanism marker")
     declared_counts = [int(match.group(1)) for match in re.finditer(r"(\d+)\s*张", title)]
     if any(count != len(cards) for count in declared_counts):
         hard_failures.append("title carousel count does not match composed cards")

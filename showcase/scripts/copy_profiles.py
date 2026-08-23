@@ -158,6 +158,28 @@ SUPPORT_PHRASES: dict[str, str] = {
 }
 
 
+MECHANISM_TOPICS: dict[str, list[str]] = {
+    "overview.editor": ["Markdown", "效率工具", "程序员", "写作", "笔记软件"],
+    "presentation.reveal": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
+    "editor.diagram-picker": ["Markdown", "流程图", "科研绘图", "论文", "研究生"],
+    "academic.latex-bib": ["LaTeX", "论文写作", "研究生", "学术排版", "Markdown"],
+    "editor.code-chunk": ["编程", "Markdown", "程序员", "技术教程", "代码运行"],
+    "convert.home": ["PDF", "资料整理", "Markdown", "效率工具", "Word"],
+    "sharing.export": ["文档分享", "Markdown", "效率工具", "开源项目", "程序员"],
+}
+
+
+MECHANISM_TOPIC_MARKERS: dict[str, set[str]] = {
+    "overview.editor": {"写作", "笔记软件"},
+    "presentation.reveal": {"PPT", "演讲"},
+    "editor.diagram-picker": {"流程图", "科研绘图", "论文", "研究生"},
+    "academic.latex-bib": {"LaTeX", "论文写作", "研究生", "学术排版"},
+    "editor.code-chunk": {"编程", "技术教程", "代码运行"},
+    "convert.home": {"PDF", "资料整理", "Word"},
+    "sharing.export": {"文档分享", "开源项目"},
+}
+
+
 PROFILES: dict[str, dict[str, Any]] = {
     "overview.editor": {
         "artifact": "Markdown 稿件",

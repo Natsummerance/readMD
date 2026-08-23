@@ -413,6 +413,39 @@ class WriteCopyTest(unittest.TestCase):
             with self.subTest(title=title):
                 self.assertRegex(title, r"5张")
 
+    def test_topics_follow_release_mechanism_search_intent(self) -> None:
+        expected = {
+            "overview.editor": ["Markdown", "效率工具", "程序员", "写作", "笔记软件"],
+            "presentation.reveal": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
+            "editor.diagram-picker": ["Markdown", "流程图", "科研绘图", "论文", "研究生"],
+            "academic.latex-bib": ["LaTeX", "论文写作", "研究生", "学术排版", "Markdown"],
+            "editor.code-chunk": ["编程", "Markdown", "程序员", "技术教程", "代码运行"],
+            "convert.home": ["PDF", "资料整理", "Markdown", "效率工具", "Word"],
+            "sharing.export": ["文档分享", "Markdown", "效率工具", "开源项目", "程序员"],
+        }
+        for primary_shot, topics in expected.items():
+            with self.subTest(primary_shot=primary_shot):
+                self.assertEqual(copy_profiles.MECHANISM_TOPICS[primary_shot], topics)
+
+        for primary_shot, topics in expected.items():
+            with self.subTest(primary_shot=primary_shot):
+                story = {
+                    "release": "v1.0.0",
+                    "version_state": "prerelease",
+                    "primary_shot": primary_shot,
+                    "angle": f"ReadMD 把{primary_shot}放进同一条工作流",
+                    "selected_shots": ["overview.reader", primary_shot],
+                    "claims": [{"id": "primary", "user_value": "机制画面", "shot_ids": [primary_shot], "sources": ["README.md"]}],
+                }
+                result = write_copy.generate_copy(
+                    story,
+                    repository="Natsummerance/readMD",
+                    previous_release="v0.9.0",
+                )
+                self.assertEqual(result["topics"], topics)
+                self.assertEqual(len(topics), len(set(topics)))
+                self.assertTrue(all(not topic.startswith("#") for topic in topics))
+
     def test_generates_compliant_prerelease_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp)
@@ -820,7 +853,7 @@ class AuditCopyTest(unittest.TestCase):
             "title": "不用重做PPT，Markdown直接放映",
             "title_formula_id": "#36",
             "body": body,
-            "topics": ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"],
+            "topics": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
             "version_state": "prerelease",
         }
         composition = {
@@ -852,6 +885,13 @@ class AuditCopyTest(unittest.TestCase):
         self.assertTrue(report["ok"], json.dumps(report, ensure_ascii=False, indent=2))
         self.assertGreaterEqual(report["total_score"], 88)
         self.assertEqual(report["scores"]["compliance"], 5)
+
+    def test_audit_rejects_generic_topics_for_mechanism(self) -> None:
+        story, metadata, composition = self.make_audit_inputs(self.good_body())
+        metadata["topics"] = ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"]
+        report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
+        self.assertFalse(report["ok"])
+        self.assertIn("topics missing mechanism marker", report["hard_failures"])
 
     def test_repeated_ai_fingerprint_fails_hard_gate(self) -> None:
         body = self.good_body() + "\n\n对应画面不是概念图。对应画面不是概念图。"
