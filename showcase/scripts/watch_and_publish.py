@@ -257,9 +257,14 @@ def process_package(
             record["publisher_target_id"] = result.get("targetId")
             record["published_url"] = result.get("url")
             if not draft:
-                status = query_status(publisher, title)
-                record["audit_status"] = status.get("status")
-                record["status_result"] = status
+                try:
+                    status = query_status(publisher, title)
+                    record["audit_status"] = status.get("status")
+                    record["status_result"] = status
+                except Exception as status_error:
+                    # A zero publisher exit already committed the note; status is supplementary evidence.
+                    record["audit_status"] = "unknown"
+                    record["status_query_error"] = str(status_error)
                 if ledger_path:
                     try:
                         feedback = seed_feedback_ledger(
@@ -268,7 +273,7 @@ def process_package(
                             release=release,
                             title=title,
                             publisher_result=result,
-                            audit_status=record["audit_status"],
+                            audit_status=record.get("audit_status"),
                         )
                         record["ledger_status"] = "seeded"
                         record["ledger_release"] = feedback["release"]

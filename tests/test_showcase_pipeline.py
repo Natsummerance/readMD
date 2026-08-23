@@ -2760,6 +2760,48 @@ class WatcherTest(unittest.TestCase):
             self.assertIn("closing", feedback)
             self.assertTrue(feedback["body_trigrams"])
 
+    def test_successful_publish_survives_status_query_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                if command[2] == "publish":
+                    payload = {"published": True, "noteId": "note-status-failure", "url": "https://example.com/note"}
+                    return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+                if command[2] == "status":
+                    raise RuntimeError("status query unavailable")
+                raise AssertionError(f"unexpected publisher command: {command}")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
+                    ledger_path=root / "publication-ledger.jsonl",
+                )
+                second_published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
+                    ledger_path=root / "publication-ledger.jsonl",
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            records = content_memory.load_records(root / "publication-ledger.jsonl")
+            self.assertTrue(published)
+            self.assertFalse(second_published)
+            self.assertEqual([call[2] for call in calls], ["publish", "status"])
+            self.assertEqual(record["status"], "published")
+            self.assertEqual(record["note_id"], "note-status-failure")
+            self.assertEqual(record["audit_status"], "unknown")
+            self.assertIn("status query unavailable", record["status_query_error"])
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["note_id"], "note-status-failure")
+
     def test_rejects_publisher_inputs_diverging_from_metadata(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
