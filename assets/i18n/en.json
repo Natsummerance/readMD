@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Failed to read folder",
   "toast.renameBlockedEdit": "Cannot rename in edit mode. Please save or exit edit first.",
   "toast.renameFailed": "Rename failed: ",
+  "toast.reloadBlockedDirty": "Unsaved changes kept; external changes were not loaded",
   "toast.renamedTo": "Renamed to: {name}",
   "toast.saveCancelled": "Save cancelled",
   "toast.saveFailed": "Save failed: {error}",

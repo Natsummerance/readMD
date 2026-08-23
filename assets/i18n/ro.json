@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Nu s-a putut citi dosarul",
   "toast.renameBlockedEdit": "Redenumirea nu este permisă în modul de editare, salvați sau părăsiți mai întâi editarea.",
   "toast.renameFailed": "Redenumirea a eșuat:",
+  "toast.reloadBlockedDirty": "Modificările nesalvate au fost păstrate; modificările externe nu au fost încărcate",
   "toast.renamedTo": "Redenumit în: {name}",
   "toast.saveCancelled": "Salvare anulată",
   "toast.saveFailed": "Salvare a eșuat: {error}",

@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Branje mape ni uspelo",
   "toast.renameBlockedEdit": "V načinu urejanja preimenovanje ni mogoče. Najprej shranite ali zapustite urejanje.",
   "toast.renameFailed": "Preimenovanje ni uspelo: ",
+  "toast.reloadBlockedDirty": "Neshranjene spremembe so ostale; zunanje spremembe niso bile naložene",
   "toast.renamedTo": "Preimenovano v: {name}",
   "toast.saveCancelled": "Shranjevanje je preklicano",
   "toast.saveFailed": "Shranjevanje ni uspelo: {error}",

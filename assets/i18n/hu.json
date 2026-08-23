@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Mappa beolvasása sikertelen",
   "toast.renameBlockedEdit": "Szerkesztési módban nem lehet átnevezni; kérjük, előbb mentse el vagy lépjen ki a szerkesztésből",
   "toast.renameFailed": "Átnevezés sikertelen: ",
+  "toast.reloadBlockedDirty": "A mentetlen módosítások megmaradtak; a külső módosítások nem töltődtek be",
   "toast.renamedTo": "Átnevezve a következőre: {name}",
   "toast.saveCancelled": "Mentés megszakítva",
   "toast.saveFailed": "Mentés sikertelen: {error}",

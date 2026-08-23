@@ -63,7 +63,7 @@ function renderTabsBar() {
     el.dataset.tabId = tab.id;
     el.setAttribute('role', 'tab');
     el.setAttribute('aria-selected', tab.id === state.activeTabId ? 'true' : 'false');
-    el.setAttribute('aria-keyshortcuts', 'Delete Backspace');
+    el.setAttribute('aria-keyshortcuts', 'Alt+Left Arrow Alt+Right Arrow Delete Backspace');
     el.tabIndex = tab.id === state.activeTabId ? 0 : -1;
     el.draggable = true;
 
@@ -96,6 +96,17 @@ function renderTabsBar() {
 
     el.addEventListener('click', () => switchTab(tab.id));
     el.addEventListener('keydown', e => {
+      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        const index = state.tabs.findIndex(item => item.id === tab.id);
+        const targetIndex = e.key === 'ArrowLeft' ? index - 1 : index + 1;
+        if (targetIndex >= 0 && targetIndex < state.tabs.length) {
+          reorderTabs(tab.id, state.tabs[targetIndex].id, e.key === 'ArrowRight');
+          renderTabsBar();
+          focusVisibleTab(tab.id);
+        }
+        return;
+      }
       if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) {
         e.preventDefault();
         moveTabFocus(tab.id, e.key);
@@ -109,6 +120,11 @@ function renderTabsBar() {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         closeTab(tab.id);
+      }
+      if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+        e.preventDefault();
+        const rect = el.getBoundingClientRect();
+        openTabContextMenu({ clientX: rect.left + 12, clientY: rect.bottom + 4 }, tab.id);
       }
     });
 
@@ -334,6 +350,17 @@ function openTabContextMenu(e, tabId) {
   menu.style.left = Math.min(window.innerWidth - 180, e.clientX) + 'px';
   menu.style.top = Math.min(window.innerHeight - 200, e.clientY) + 'px';
   menu.classList.remove('hidden');
+  menu.dataset.returnFocus = tabId;
+  setTimeout(() => menu.querySelector('button:not([disabled])')?.focus(), 20);
+}
+
+function closeTabContextMenu({ restoreFocus = false } = {}) {
+  const menu = $('tab-context-menu');
+  if (!menu || menu.classList.contains('hidden')) return;
+  menu.classList.add('hidden');
+  if (!restoreFocus) return;
+  const tabId = menu.dataset.returnFocus;
+  if (tabId) focusVisibleTab(tabId);
 }
 
 function renderActiveTab({ restoreScroll = false } = {}) {
@@ -396,8 +423,6 @@ async function switchTab(tabId) {
   const prevTab = getActiveTab();
   if (prevTab) {
     if (state.editing) {
-      prevTab.content = getEditContent();
-      prevTab.fixed = prevTab.content;
       if (hasUnsavedEditorChanges()) {
         prevTab.isDirty = true;
         const action = await promptDirtyClose(prevTab.title || prevTab.name || 'document');
@@ -407,6 +432,9 @@ async function switchTab(tabId) {
           if (state.editing) return;
         } else {
           exitEdit();
+          prevTab.content = prevTab.original;
+          prevTab.fixed = prevTab.original;
+          prevTab.isDirty = false;
         }
       }
       else {

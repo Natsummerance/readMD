@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Gagal membaca folder",
   "toast.renameBlockedEdit": "Tidak dapat mengganti nama dalam mode edit. Harap simpan atau keluar dari mode edit terlebih dahulu.",
   "toast.renameFailed": "Gagal mengganti nama: ",
+  "toast.reloadBlockedDirty": "Perubahan yang belum disimpan dipertahankan; perubahan eksternal tidak dimuat",
   "toast.renamedTo": "Berhasil diganti nama menjadi: {name}",
   "toast.saveCancelled": "Penyimpanan dibatalkan",
   "toast.saveFailed": "Gagal menyimpan: {error}",

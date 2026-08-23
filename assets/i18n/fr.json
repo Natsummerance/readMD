@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Échec de la lecture du dossier",
   "toast.renameBlockedEdit": "Renommer n'est pas autorisé en mode édition, veuillez d'abord enregistrer ou quitter l'édition.",
   "toast.renameFailed": "Échec du changement de nom :",
+  "toast.reloadBlockedDirty": "Modifications non enregistrées conservées ; changements externes non chargés",
   "toast.renamedTo": "Renommé en : {name}",
   "toast.saveCancelled": "Sauvegarde annulée",
   "toast.saveFailed": "Échec de l'enregistrement : {error}",

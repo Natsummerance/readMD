@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Det gick inte att läsa mappen",
   "toast.renameBlockedEdit": "Det är inte tillåtet att byta namn i redigeringsläge, spara eller avsluta redigeringen först.",
   "toast.renameFailed": "Det gick inte att byta namn:",
+  "toast.reloadBlockedDirty": "Osparade ändringar behölls; externa ändringar lästes inte in",
   "toast.renamedTo": "Bytt namn till: {name}",
   "toast.saveCancelled": "Spara avbröts",
   "toast.saveFailed": "Det gick inte att spara: {error}",

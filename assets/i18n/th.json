@@ -837,6 +837,7 @@
   "toast.readFolderFail": "อ่านโฟลเดอร์ล้มเหลว",
   "toast.renameBlockedEdit": "ไม่สามารถเปลี่ยนชื่อในโหมดแก้ไขได้ โปรดบันทึกหรือออกจากโหมดแก้ไขก่อน",
   "toast.renameFailed": "เปลี่ยนชื่อล้มเหลว: ",
+  "toast.reloadBlockedDirty": "เก็บการเปลี่ยนแปลงที่ยังไม่บันทึก และไม่โหลดการเปลี่ยนแปลงภายนอก",
   "toast.renamedTo": "เปลี่ยนชื่อเป็น: {name}",
   "toast.saveCancelled": "ยกเลิกการบันทึกแล้ว",
   "toast.saveFailed": "บันทึกล้มเหลว: {error}",

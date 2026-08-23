@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Theip ar léamh an fhillteáin",
   "toast.renameBlockedEdit": "Ní cheadaítear athainmniú sa mhodh eagarthóireachta, sábháil nó scoir den eagarthóireacht ar dtús.",
   "toast.renameFailed": "Theip ar an athainmniú:",
+  "toast.reloadBlockedDirty": "Coinneadh leis na hathruithe gan sábháil; níor lódáladh athruithe seachtracha",
   "toast.renamedTo": "Athainmnithe go: {name}",
   "toast.saveCancelled": "Sábháil cealaithe",
   "toast.saveFailed": "Theip ar shábháil: {error}",

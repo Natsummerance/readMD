@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Nabigong basahin ang folder",
   "toast.renameBlockedEdit": "Hindi maaaring magpalit ng pangalan habang nag-e-edit. Mangyaring i-save o lumabas muna sa pag-edit.",
   "toast.renameFailed": "Nabigo ang pagpapalit ng pangalan: ",
+  "toast.reloadBlockedDirty": "Pinanatili ang mga hindi na-save na pagbabago; hindi load ang external",
   "toast.renamedTo": "Napalitan ang pangalan bilang: {name}",
   "toast.saveCancelled": "Kinansela ang pag-save",
   "toast.saveFailed": "Nabigo ang pag-save: {error}",

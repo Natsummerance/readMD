@@ -837,6 +837,7 @@
   "toast.readFolderFail": "قىسقۇچنى ئوقۇش مەغلۇپ بولدى",
   "toast.renameBlockedEdit": "تەھرىرلەش ھالىتىدە نامىنى ئۆزگەرتكىلى بولمايدۇ، ئالدى بىلەن ساقلاڭ ياكى تەھرىرلەشتىن چېكىنىڭ",
   "toast.renameFailed": "نامىنى ئۆزگەرتىش مەغلۇپ بولدى: ",
+  "toast.reloadBlockedDirty": "ساقلانمىغان ئۆزگەرتىشلەر ساقلاندى، تاشقى ئۆزگەرتىشلەر ئېلىنمىدى",
   "toast.renamedTo": "ئۆزگەرتىلگەن نامى: {name}",
   "toast.saveCancelled": "ساقلاش بىكار قىلىندى",
   "toast.saveFailed": "ساقلاش مەغلۇپ بولدى: {error}",

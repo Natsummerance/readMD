@@ -370,7 +370,7 @@ function bindEvents() {
   $('btn-saveas').addEventListener('click', saveAs);
   $('file-title').addEventListener('click', openFileRename); // 标题栏就地重命名
   $('btn-recent').addEventListener('click', openHistoryModal);
-  $('btn-reload').addEventListener('click', () => { if (state.file && state.mode === 'file') loadFile(state.file); });
+  $('btn-reload').addEventListener('click', () => { if (state.file && state.mode === 'file') loadFile(state.file, { force: true }); });
   $('recent-clear').addEventListener('click', clearRecent);
   $('history-clear').addEventListener('click', clearRecent);
   $('history-close').addEventListener('click', () => $('history-modal').classList.add('hidden'));
@@ -406,7 +406,12 @@ function bindEvents() {
       e.preventDefault();
       clearTimeout(searchDebounce);
       if (globalSearchState.query !== e.target.value) doSearch(e.target.value);
-      jumpToMark(e.shiftKey ? -1 : 1);
+      if (enterAdvancePending) {
+        enterAdvancePending = false;
+        consumeInitialSearchJump();
+      } else {
+        jumpToMark(e.shiftKey ? -1 : 1);
+      }
     }
   });
   $('btn-theme').addEventListener('click', toggleTheme);
@@ -765,7 +770,7 @@ function bindEvents() {
       if ($('img-modal') && !$('img-modal').classList.contains('hidden')) { closeImgModal(); return; }
       if ($('history-modal') && !$('history-modal').classList.contains('hidden')) { $('history-modal').classList.add('hidden'); return; }
       if ($('export-preview-modal') && !$('export-preview-modal').classList.contains('hidden')) { $('export-preview-modal').classList.add('hidden'); return; }
-      if ($('tab-context-menu') && !$('tab-context-menu').classList.contains('hidden')) { $('tab-context-menu').classList.add('hidden'); return; }
+      if ($('tab-context-menu') && !$('tab-context-menu').classList.contains('hidden')) { closeTabContextMenu({ restoreFocus: true }); return; }
       closeMoreMenu(true);
       closeSearch({ restoreFocus: true });
       if ($('fix-modal')) $('fix-modal').classList.add('hidden');
@@ -794,7 +799,7 @@ function getModalRoots() {
     'frontmatter-modal', 'table-modal', 'export-preview-modal', 'export-modal',
     'convert-modal', 'update-modal', 'style-custom-modal', 'lang-modal',
     'ai-history-modal', 'ai-settings-modal', 'formula-modal', 'presentation-modal',
-    'img-modal', 'history-modal', 'share-modal', 'tpl-modal'
+    'img-modal', 'history-modal', 'share-modal', 'tpl-modal', 'url-modal'
   ].map(id => $(id)).filter(Boolean);
 }
 
@@ -837,13 +842,15 @@ function setupModalAccessibility() {
       const modal = mutation.target;
       const visible = !modal.classList.contains('hidden');
       const stackIndex = openModalStack.indexOf(modal);
-      if (visible && !modal.contains(document.activeElement)) {
+      if (visible) {
         if (stackIndex < 0) openModalStack.push(modal);
         if (!lastFocusedOutside || modal.contains(lastFocusedOutside)) {
           lastFocusedOutside = document.activeElement;
         }
-        const focusable = getModalFocusable(modal);
-        if (focusable.length) focusable[0].focus();
+        if (!modal.contains(document.activeElement)) {
+          const focusable = getModalFocusable(modal);
+          if (focusable.length) focusable[0].focus();
+        }
       } else if (!visible) {
         if (stackIndex >= 0) openModalStack.splice(stackIndex, 1);
         if (lastFocusedOutside && modal.contains(document.activeElement)) {

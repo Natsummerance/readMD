@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Malsukcesis legi dosierujon",
   "toast.renameBlockedEdit": "Ne eblas alinomi en redakta reĝimo. Konservu aŭ eliru unue.",
   "toast.renameFailed": "Alinomo malsukcesis: ",
+  "toast.reloadBlockedDirty": "Konservitaj ne konservitaj ŝanĝoj; eksteraj ŝanĝoj ne estis ŝargitaj",
   "toast.renamedTo": "Alinomita al: {name}",
   "toast.saveCancelled": "Konservado nuligita",
   "toast.saveFailed": "Konservado malsukcesis: {error}",

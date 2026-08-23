@@ -837,6 +837,7 @@
   "toast.readFolderFail": "폴더를 읽지 못했습니다.",
   "toast.renameBlockedEdit": "편집 모드에서는 이름을 바꿀 수 없습니다. 먼저 편집을 저장하거나 종료하세요.",
   "toast.renameFailed": "이름 바꾸기 실패:",
+  "toast.reloadBlockedDirty": "저장하지 않은 변경을 유지하고 외부 변경을 불러오지 않았습니다",
   "toast.renamedTo": "이름이 {name}로 변경되었습니다.",
   "toast.saveCancelled": "저장이 취소되었습니다.",
   "toast.saveFailed": "저장 실패: {error}",

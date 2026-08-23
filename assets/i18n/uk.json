@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Не вдалося прочитати папку",
   "toast.renameBlockedEdit": "У режимі редагування перейменування заблоковано, спочатку збережіть або вийдіть із редагування",
   "toast.renameFailed": "Помилка перейменування: ",
+  "toast.reloadBlockedDirty": "Незбережені зміни збережено; зовнішні зміни не завантажено",
   "toast.renamedTo": "Перейменовано на: {name}",
   "toast.saveCancelled": "Збереження скасовано",
   "toast.saveFailed": "Помилка збереження: {error}",

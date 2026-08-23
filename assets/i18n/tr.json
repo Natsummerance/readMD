@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Klasör okunamadı",
   "toast.renameBlockedEdit": "Düzenleme modundayken yeniden adlandırılamaz. Lütfen önce kaydedin veya düzenlemeden çıkın.",
   "toast.renameFailed": "Yeniden adlandırma başarısız oldu: ",
+  "toast.reloadBlockedDirty": "Kaydedilmemiş değişiklikler korundu; dış değişiklikler yüklenmedi",
   "toast.renamedTo": "Yeniden adlandırıldı: {name}",
   "toast.saveCancelled": "Kaydetme iptal edildi",
   "toast.saveFailed": "Kaydetme başarısız oldu: {error}",

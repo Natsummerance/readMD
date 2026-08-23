@@ -173,12 +173,12 @@
 
 <div id="layout">
   <aside id="side" class="hidden">
-    <div id="side-tabs">
-      <button id="tab-toc" class="side-tab active" data-i18n="sidebar.toc">目录</button>
-      <button id="tab-files" class="side-tab" data-i18n="sidebar.files">文件</button>
+    <div id="side-tabs" role="tablist" aria-label="文件" data-i18n-aria="sidebar.files">
+      <button id="tab-toc" class="side-tab active" role="tab" aria-selected="true" aria-controls="toc-list" data-i18n="sidebar.toc">目录</button>
+      <button id="tab-files" class="side-tab" role="tab" aria-selected="false" aria-controls="file-list" tabindex="-1" data-i18n="sidebar.files">文件</button>
     </div>
-    <nav id="toc-list" class="side-body"></nav>
-    <div id="file-list" class="side-body hidden"></div>
+    <nav id="toc-list" class="side-body" role="tabpanel" aria-labelledby="tab-toc"></nav>
+    <div id="file-list" class="side-body hidden" role="tabpanel" aria-labelledby="tab-files"></div>
   </aside>
 
   <div id="main-col">

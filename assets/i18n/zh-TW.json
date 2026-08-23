@@ -837,6 +837,7 @@
   "toast.readFolderFail": "读取資料夾失敗",
   "toast.renameBlockedEdit": "编辑模式下不可重新命名，请先儲存或退出编辑",
   "toast.renameFailed": "重新命名失敗：",
+  "toast.reloadBlockedDirty": "未儲存修改已保留，未重新載入外部變更",
   "toast.renamedTo": "已重新命名為：{name}",
   "toast.saveCancelled": "已取消儲存",
   "toast.saveFailed": "儲存失敗：{error}",

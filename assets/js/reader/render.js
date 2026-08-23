@@ -102,12 +102,16 @@ function openFileRename() {
 }
 
 
-async function loadFile(path) {
+async function loadFile(path, { force = false } = {}) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!path) return;
   const existingTab = findTabByPath(path);
-  if (existingTab) {
+  if (existingTab && !force) {
     await switchTab(existingTab.id);
+    return;
+  }
+  if (existingTab && (existingTab.isDirty || (state.activeTabId === existingTab.id && state.editing))) {
+    showToast(_t('toast.reloadBlockedDirty') || '未保存修改已保留，未重新加载外部更改');
     return;
   }
   setProgress(8);
@@ -119,8 +123,7 @@ async function loadFile(path) {
       return;
     }
     const d = await r.json();
-    const newTab = {
-      id: 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    const fileFields = {
       mode: 'file',
       source: 'file',
       path: d.path,
@@ -136,43 +139,72 @@ async function loadFile(path) {
       mtime: d.mtime,
       encoding: d.encoding,
       webAssets: [],
-      isDirty: false,
-      scrollPos: 0,
-      isVirtual: false,
     };
-    state.tabs.push(newTab);
-    state.activeTabId = newTab.id;
-    syncStateFromActiveTab();
-    await loadDocCitations(d.path);
-    setFixes(d.fixes || [], d.stats || {});
-    renderContent(d.content, d.name);
-    if (state.pagination.enabled && state.pagination.totalPages > 1) {
-      showToast(_t('toast.openedPages', { name: d.name, count: state.pagination.totalPages }), 4000);
+
+    if (existingTab) {
+      const wasActive = state.activeTabId === existingTab.id;
+      const previousPage = wasActive && state.pagination.enabled && state.pagination.mode === 'paged'
+        ? state.pagination.currentPage
+        : 0;
+      const previousScroll = wasActive ? ($('content')?.scrollTop || 0) : (existingTab.scrollPos || 0);
+      Object.assign(existingTab, fileFields, { isDirty: false });
+      if (wasActive) syncStateFromActiveTab();
+      if (!wasActive) existingTab.scrollPos = previousScroll;
+
+      if (wasActive) {
+        await loadDocCitations(d.path);
+        setFixes(d.fixes || [], d.stats || {});
+        renderContent(d.content, d.name);
+        if (state.pagination.enabled && state.pagination.mode === 'paged' && previousPage > 0) {
+          renderPage(previousPage, null, true);
+        }
+        requestAnimationFrame(() => {
+          $('content').scrollTop = previousScroll;
+        });
+        updateStatus();
+      }
+      showToast(_t('toolbar.reload') + ': ' + d.name);
     } else {
-      showToast(_t('toast.opened', { name: d.name }), 4000);
+      const newTab = {
+        id: 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        ...fileFields,
+        isDirty: false,
+        scrollPos: 0,
+        isVirtual: false,
+      };
+      state.tabs.push(newTab);
+      state.activeTabId = newTab.id;
+      syncStateFromActiveTab();
+      await loadDocCitations(d.path);
+      setFixes(d.fixes || [], d.stats || {});
+      renderContent(d.content, d.name);
+      if (state.pagination.enabled && state.pagination.totalPages > 1) {
+        showToast(_t('toast.openedPages', { name: d.name, count: state.pagination.totalPages }), 4000);
+      } else {
+        showToast(_t('toast.opened', { name: d.name }), 4000);
+      }
+      document.title = d.name + ' - ReadMD';
+      setFileTitle(d.name, hasPy, d.path);
+      addRecent(d.path);
+      pushHistory(d.path);
+      saveLastFile(d.path);
+      exitEdit();
+      clearAiOutput();
+      updateStatus();
+      setProgress(100);
+      if (d.structured) showToast(_t('toast.txtStructureRecognized') || '已智能识别 TXT 结构（标题 / 表格 / 列表 / 目录）');
+      afterRender();
+      return;
     }
 
-    document.title = d.name + ' - ReadMD';
-    setFileTitle(d.name, hasPy, d.path);
-    addRecent(d.path);
-    pushHistory(d.path);
-    saveLastFile(d.path);
-    updateStatus();
-    exitEdit();
-    clearAiOutput();
     renderTabsBar();
     setProgress(100);
-    if (d.structured) showToast(_t('toast.txtStructureRecognized') || '已智能识别 TXT 结构（标题 / 表格 / 列表 / 目录）');
-    afterRender();
   } catch (e) {
     console.error(e);
     showToast((_t('toast.loadFailed') || '加载失败：') + e.message);
     setProgress(0);
   }
 }
-
-
-
 /* ---------------- 外部唤起（单实例常驻：托盘 / 双击 .md） ---------------- */
 
 async function openExternalFile(path) {
@@ -487,6 +519,20 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
   const finalHtml = restoreMath(html, prot.saved);
   el.innerHTML = '<article class="markdown-body">' + finalHtml + '</article>';
 
+  if (state.pagination.allHeadings?.length) {
+    const pageOutline = state.pagination.allHeadings.filter(heading => heading.pageIndex === pageIndex);
+    const pageHeadings = el.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6');
+    const outlineByLine = new Map(pageOutline.map(heading => [String(heading.sourceLine), heading]));
+    let outlineCursor = 0;
+    pageHeadings.forEach(heading => {
+      const outline = outlineByLine.get(heading.dataset.sourceLine) || pageOutline[outlineCursor];
+      if (outline) {
+        heading.id = outline.id;
+        outlineCursor += 1;
+      }
+    });
+  }
+
   postProcess();
   updatePaginationBar();
   updateStatus();
@@ -507,6 +553,8 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
         document.querySelectorAll('#toc-list .toc-heading-active')
           .forEach(link => link.classList.remove('toc-heading-active'));
         const activeTocLink = document.querySelector(`#toc-list [data-heading-id="${CSS.escape(targetEl.id)}"]`);
+        const targetGroup = document.querySelector(`#toc-list details[data-page-idx="${pageIndex}"]`);
+        if (targetGroup && !targetGroup.open) targetGroup.open = true;
         if (activeTocLink) activeTocLink.classList.add('toc-heading-active');
         targetEl.classList.remove('heading-target-highlight');
         targetEl.classList.remove('search-arrival');

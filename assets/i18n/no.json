@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Kunne ikke lese mappen",
   "toast.renameBlockedEdit": "Gi nytt navn er ikke tillatt i redigeringsmodus, vennligst lagre eller avslutt redigering først.",
   "toast.renameFailed": "Endre navn mislyktes:",
+  "toast.reloadBlockedDirty": "Ulagrede endringer beholdt; eksterne endringer ble ikke lastet",
   "toast.renamedTo": "Omdøpt til: {name}",
   "toast.saveCancelled": "Lagring avbrutt",
   "toast.saveFailed": "Lagring mislyktes: {error}",

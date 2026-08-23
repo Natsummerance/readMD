@@ -837,6 +837,7 @@
   "toast.readFolderFail": "فشلت قراءة المجلد",
   "toast.renameBlockedEdit": "لا يمكن إعادة التسمية أثناء وضع التحرير، يرجى الحفظ أو الخروج من التحرير أولاً",
   "toast.renameFailed": "فشلت إعادة التسمية:",
+  "toast.reloadBlockedDirty": "تم الاحتفاظ بالتغييرات غير المحفوظة ولم يتم تحميل التغييرات الخارجية",
   "toast.renamedTo": "تمت إعادة تسميته إلى: {name}",
   "toast.saveCancelled": "تم إلغاء الحفظ",
   "toast.saveFailed": "فشل الحفظ: {error}",

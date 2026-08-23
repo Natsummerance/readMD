@@ -216,8 +216,10 @@ function startAutoReload() {
       if (!r.ok) return;
       const d = await r.json();
       if (d.mtime !== state.mtime) {
+        const tab = findTabByPath(state.file);
+        if (tab?.isDirty) return;
         const sc = $('content').scrollTop;
-        await loadFile(state.file);
+        await loadFile(state.file, { force: true });
         if (sc) $('content').scrollTop = sc;
       }
     } catch (e) { /* ignore */ }

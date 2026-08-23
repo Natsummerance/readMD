@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Impossibile leggere la cartella",
   "toast.renameBlockedEdit": "Impossibile rinominare in modalità modifica. Salva o esci prima dalla modifica.",
   "toast.renameFailed": "Rinomina non riuscita: ",
+  "toast.reloadBlockedDirty": "Modifiche non salvate mantenute; modifiche esterne non caricate",
   "toast.renamedTo": "Rinominato in: {name}",
   "toast.saveCancelled": "Salvataggio annullato",
   "toast.saveFailed": "Salvataggio non riuscito: {error}",

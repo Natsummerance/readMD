@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Đọc thư mục thất bại",
   "toast.renameBlockedEdit": "Không thể đổi tên trong chế độ chỉnh sửa, vui lòng lưu hoặc thoát chỉnh sửa trước",
   "toast.renameFailed": "Đổi tên thất bại: ",
+  "toast.reloadBlockedDirty": "Đã giữ thay đổi chưa lưu và không tải thay đổi bên ngoài",
   "toast.renamedTo": "Đã đổi tên thành: {name}",
   "toast.saveCancelled": "Đã hủy lưu",
   "toast.saveFailed": "Lưu thất bại: {error}",

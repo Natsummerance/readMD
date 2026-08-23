@@ -837,6 +837,7 @@
   "toast.readFolderFail": "फ़ोल्डर पढ़ने में विफल",
   "toast.renameBlockedEdit": "संपादन मोड में नाम बदलने की अनुमति नहीं है, कृपया पहले संपादन सहेजें या बाहर निकलें।",
   "toast.renameFailed": "नाम बदलें विफल:",
+  "toast.reloadBlockedDirty": "असहेजे परिवर्तन रखे गए; बाहरी परिवर्तन लोड नहीं हुए",
   "toast.renamedTo": "इसका नाम बदला गया: {name}",
   "toast.saveCancelled": "सहेजें रद्द कर दिया गया",
   "toast.saveFailed": "सहेजना विफल: {error}",

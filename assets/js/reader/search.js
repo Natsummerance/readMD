@@ -10,6 +10,7 @@ let globalSearchState = {
   matches: [],       // [{ pageIndex, matchIdxInPage }]
   globalIndex: 0,
 };
+let enterAdvancePending = false;
 
 function clearMarks() {
   state.currentMarks.forEach(m => {
@@ -87,7 +88,11 @@ function highlightTextMatches(body, query) {
 function doSearch(q, jumpToIdx) {
   clearMarks();
   state.lastQuery = q;
-  if (!q) { updateSearchCount(); return; }
+  if (!q) {
+    enterAdvancePending = false;
+    updateSearchCount();
+    return;
+  }
 
   // 1. 分页模式下：在内存中预先对所有页进行关键词索引
   const isPaged = state.pagination && state.pagination.enabled && state.pagination.mode === 'paged' && state.pagination.pages && state.pagination.pages.length;
@@ -120,6 +125,7 @@ function doSearch(q, jumpToIdx) {
   highlightTextMatches(body, q);
 
   updateSearchCount();
+  enterAdvancePending = true;
 
   if (isPaged && globalSearchState.matches.length > 0) {
     const curMatch = globalSearchState.matches[globalSearchState.globalIndex];
@@ -210,4 +216,14 @@ function closeSearch({ restoreFocus = false } = {}) {
   $('search-bar').classList.add('hidden');
   clearMarks();
   if (restoreFocus && $('btn-search')) $('btn-search').focus({ preventScroll: true });
+}
+
+function consumeInitialSearchJump() {
+  const isPaged = state.pagination?.enabled && state.pagination.mode === 'paged' && globalSearchState.matches.length > 0;
+  if (isPaged) {
+    const match = globalSearchState.matches[globalSearchState.globalIndex];
+    if (match && match.pageIndex === state.pagination.currentPage) jumpToLocalMark(match.matchIdxInPage);
+  } else if (state.currentMarks.length) {
+    jumpToLocalMark(0);
+  }
 }

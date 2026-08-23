@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Хавтсыг уншиж чадсангүй",
   "toast.renameBlockedEdit": "Засварлах горимд нэр өөрчлөх боломжгүй. Эхлээд хадгалах эсвэл засварлалтаас гарна уу",
   "toast.renameFailed": "Нэр өөрчлөхөд алдаа гарлаа: ",
+  "toast.reloadBlockedDirty": "Хадгалаагүй өөрчлөлтийг хадгалж, гадаад өөрчлөлт ачаалсангүй",
   "toast.renamedTo": "Нэрийг өөрчиллөө: {name}",
   "toast.saveCancelled": "Хадгалалтыг цуцаллаа",
   "toast.saveFailed": "Хадгалахад алдаа гарлаа: {error}",

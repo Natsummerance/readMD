@@ -837,6 +837,7 @@
   "toast.readFolderFail": "קריאת התיקייה נכשלה",
   "toast.renameBlockedEdit": "שינוי שם אינו מותר במצב עריכה, אנא שמור או צא מהעריכה תחילה.",
   "toast.renameFailed": "שינוי השם נכשל:",
+  "toast.reloadBlockedDirty": "שינויים שלא נשמרו נשמרו; שינויים חיצוניים לא נטענו",
   "toast.renamedTo": "השם שונה ל: {name}",
   "toast.saveCancelled": "השמירה בוטלה",
   "toast.saveFailed": "השמירה נכשלה: {error}",

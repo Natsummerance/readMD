@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Falha ao ler a pasta",
   "toast.renameBlockedEdit": "Renomear não é permitido no modo de edição. Salve ou saia da edição primeiro.",
   "toast.renameFailed": "Falha ao renomear:",
+  "toast.reloadBlockedDirty": "Alterações não salvas mantidas; alterações externas não carregadas",
   "toast.renamedTo": "Renomeado para: {name}",
   "toast.saveCancelled": "Salvar cancelado",
   "toast.saveFailed": "Falha ao salvar: {error}",

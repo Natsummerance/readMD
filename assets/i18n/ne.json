@@ -837,6 +837,7 @@
   "toast.readFolderFail": "फोल्डर पढ्न असफल भयो",
   "toast.renameBlockedEdit": "सम्पादन मोडमा पुन: नामाकरण गर्न सकिँदैन। कृपया पहिले बचत गर्नुहोस् वा सम्पादनबाट बाहिर निस्कनुहोस्।",
   "toast.renameFailed": "पुन: नामाकरण असफल भयो: ",
+  "toast.reloadBlockedDirty": "सहेजिएको परिवर्तन राखियो; बाह्य परिवर्तन लोड गरिएन",
   "toast.renamedTo": "नयाँ नाम दिइयो: {name}",
   "toast.saveCancelled": "बचत रद्द गरियो",
   "toast.saveFailed": "बचत असफल भयो: {error}",

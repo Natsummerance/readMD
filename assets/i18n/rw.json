@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Kunanirwa gusoma ububiko",
   "toast.renameBlockedEdit": "Guhindura izina ntabwo byemewe muburyo bwo guhindura, nyamuneka ubike cyangwa usohoke mbere.",
   "toast.renameFailed": "Guhindura izina byarananiranye:",
+  "toast.reloadBlockedDirty": "Ibyahinduwe bitabitswe biracyari; impinduka zyo hanze ntizishyizweho",
   "toast.renamedTo": "Yahinduwe kuri: {name}",
   "toast.saveCancelled": "Kubika byahagaritswe",
   "toast.saveFailed": "Kubika byananiranye: {error}",

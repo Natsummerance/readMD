@@ -837,6 +837,7 @@
   "toast.readFolderFail": "ລົ້ມເຫລວໃນການອ່ານໂຟນເດີ",
   "toast.renameBlockedEdit": "ການປ່ຽນຊື່ແມ່ນບໍ່ອະນຸຍາດໃຫ້ຢູ່ໃນຮູບແບບການແກ້ໄຂ, ກະລຸນາບັນທຶກ ຫຼືອອກຈາກການແກ້ໄຂກ່ອນ.",
   "toast.renameFailed": "ປ່ຽນຊື່ບໍ່ສຳເລັດ:",
+  "toast.reloadBlockedDirty": "ເກັບການປ່ຽນແປງທີ່ຍັງບໍ່ບັນທຶກ ແລະ ບໍ່ໂຫຼດການປ່ຽນແປງພາຍນອກ",
   "toast.renamedTo": "ປ່ຽນຊື່ເປັນ: {name}",
   "toast.saveCancelled": "ບັນທຶກຖືກຍົກເລີກ",
   "toast.saveFailed": "ບັນທຶກລົ້ມເຫລວ: {error}",

@@ -837,6 +837,7 @@
   "toast.readFolderFail": "ফোল্ডার রিড করতে ব্যর্থ হয়েছে",
   "toast.renameBlockedEdit": "এডিট মোডে রিনেম করা যাবে না। অনুগ্রহ করে আগে সংরক্ষণ করুন অথবা এডিট মোড থেকে বের হন।",
   "toast.renameFailed": "রিনেম ব্যর্থ হয়েছে: ",
+  "toast.reloadBlockedDirty": "অসংরক্ষিত পরিবর্তন রাখা হয়েছে; বাহ্যিক পরিবর্তন লোড হয়নি",
   "toast.renamedTo": "নতুন নাম দেওয়া হয়েছে: {name}",
   "toast.saveCancelled": "সংরক্ষণ বাতিল করা হয়েছে",
   "toast.saveFailed": "সংরক্ষণ ব্যর্থ হয়েছে: {error}",

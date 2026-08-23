@@ -837,6 +837,7 @@
   "toast.readFolderFail": "No se pudo leer la carpeta",
   "toast.renameBlockedEdit": "No se permite cambiar el nombre en el modo de edición. Guarde o salga de la edición primero.",
   "toast.renameFailed": "Error al cambiar el nombre:",
+  "toast.reloadBlockedDirty": "Cambios sin guardar conservados; no se cargaron cambios externos",
   "toast.renamedTo": "Renombrado a: {name}",
   "toast.saveCancelled": "Guardar cancelado",
   "toast.saveFailed": "Error al guardar: {error}",

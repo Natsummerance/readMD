@@ -379,6 +379,11 @@ button { font-family: inherit; }
 }
 .tree-node { user-select: none; }
 .tree-row {
+  width: 100%;
+  background: none;
+  border: none;
+  font: inherit;
+  text-align: left;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -391,6 +396,7 @@ button { font-family: inherit; }
   white-space: nowrap;
 }
 .tree-row:hover { background: var(--bg3); color: var(--fg); }
+.tree-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .tree-row.active { color: var(--accent); font-weight: 600; background: var(--accent-soft); }
 .tree-toggle {
   width: 14px;

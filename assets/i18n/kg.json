@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Kutanga kaye me nunga ve",
   "toast.renameBlockedEdit": "Lenda soba zina ve na mode ya kusoba. Pardo bumba to basika ntete na mode ya kusoba.",
   "toast.renameFailed": "Kusoba zina me nunga ve: ",
+  "toast.reloadBlockedDirty": "Kikesa mosi ve ku tambikila; kikesa ya kuta ku tambikila",
   "toast.renamedTo": "Zina me sobama na: {name}",
   "toast.saveCancelled": "Kubumba me katulama",
   "toast.saveFailed": "Kubumba me nunga ve: {error}",

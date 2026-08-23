@@ -19,7 +19,7 @@ function buildToc() {
     state.pagination.pages.forEach((pg, pageIdx) => {
       const lines = pg.content.split('\n');
       let inFence = false;
-      lines.forEach(line => {
+      lines.forEach((line, lineIndex) => {
         const trimmed = line.trim();
         if (/^```/.test(trimmed)) { inFence = !inFence; return; }
         if (inFence) return;
@@ -43,6 +43,7 @@ function buildToc() {
             text: rawText,
             level: Math.min(level, 3),
             pageIndex: pageIdx,
+            sourceLine: lineIndex + 1,
           });
         }
       });

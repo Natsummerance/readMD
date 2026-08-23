@@ -994,7 +994,7 @@ test('keyboard delete closes a tab and restores visible tab focus', async ({ pag
   const activeTab = page.locator('#doc-tabs-bar .tab-item').nth(1);
   await activeTab.focus();
   await expect(activeTab.locator('.tab-close')).toHaveAttribute('tabindex', '-1');
-  await expect(activeTab).toHaveAttribute('aria-keyshortcuts', 'Delete Backspace');
+  await expect(activeTab).toHaveAttribute('aria-keyshortcuts', 'Alt+Left Arrow Alt+Right Arrow Delete Backspace');
   await page.keyboard.press('Delete');
   await page.waitForFunction(() => state.tabs.length === 2 && state.activeTabId === 'one');
   await expect(page.locator('#doc-tabs-bar [data-tab-id="three"]')).toBeFocused();
@@ -1022,6 +1022,124 @@ test('auto reload does not overwrite an active editor', async ({ page }) => {
   });
   await page.waitForTimeout(2900);
   expect(contentLoads).toBe(0);
+});
+
+test('forced reload updates a clean tab while preserving its page', async ({ page }) => {
+  let revision = 1;
+  const documentFor = version => [
+    ...Array.from({ length: 12 }, (_, section) => [
+      `# external v${version} section ${section}`,
+      ...Array.from({ length: 700 }, (_, index) => `line ${section}-${index}`),
+    ]).flat(),
+  ].join('\n');
+  await page.route('**/api/file?p=**', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      ok: true, path: 'C:/doc.md', dir: 'C:/', name: 'doc.md',
+      content: documentFor(revision), original: documentFor(revision),
+      encoding: 'utf-8', mtime: revision, fixes: [], stats: {},
+    }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof loadFile === 'function');
+  await page.evaluate(() => loadFile('C:/doc.md'));
+  await page.waitForFunction(() => state.pagination.enabled && state.pagination.totalPages > 1);
+  await page.evaluate(() => renderPage(2));
+  await expect(page.locator('#content')).toContainText('external v1');
+
+  revision = 2;
+  await page.evaluate(() => loadFile('C:/doc.md', { force: true }));
+  await expect(page.locator('#toast')).toContainText(/Reload|重新加载/);
+  await page.waitForFunction(() => state.mtime === 2 && state.fixed.includes('external v2'));
+  await page.waitForFunction(() => state.pagination.currentPage === 2);
+  await expect(page.locator('#content')).toContainText('external v2');
+});
+
+test('forced reload refuses to overwrite an unsaved draft', async ({ page }) => {
+  let fileRequests = 0;
+  await page.route('**/api/file?p=**', route => {
+    fileRequests += 1;
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => typeof loadFile === 'function');
+  await page.evaluate(() => {
+    const tab = {
+      id: 'one', mode: 'file', source: 'file', path: 'C:/draft.md', dir: 'C:/',
+      name: 'draft.md', title: 'draft.md', content: '# draft', original: '# saved',
+      fixed: '# draft', isDirty: true,
+    };
+    state.tabs = [tab];
+    state.activeTabId = tab.id;
+    syncStateFromActiveTab();
+    state.fixed = '# draft';
+  });
+  await page.evaluate(() => loadFile('C:/draft.md', { force: true }));
+  await expect(page.locator('#toast')).toContainText('未保存修改已保留');
+  expect(fileRequests).toBe(0);
+  await page.waitForFunction(() => state.fixed === '# draft' && state.original === '# saved');
+});
+
+test('global TOC identities resolve duplicate headings across pages', async ({ page }) => {
+  const content = [
+    '# Unique start',
+    ...Array.from({ length: 3200 }, (_, index) => `alpha ${index}`),
+    '# Same',
+    ...Array.from({ length: 3200 }, (_, index) => `beta ${index}`),
+    '# Same',
+    ...Array.from({ length: 3200 }, (_, index) => `gamma ${index}`),
+  ].join('\n');
+  await page.route('**/api/file?p=**', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      ok: true, path: 'C:/duplicate.md', dir: 'C:/', name: 'duplicate.md',
+      content, original: content, encoding: 'utf-8', mtime: 1, fixes: [], stats: {},
+    }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof loadFile === 'function');
+  await page.evaluate(() => loadFile('C:/duplicate.md'));
+  await page.waitForFunction(() => state.pagination.allHeadings?.length === 3);
+  await page.evaluate(() => document.querySelectorAll('#toc-list details:not([open])').forEach(group => { group.open = true; }));
+  await page.evaluate(() => showSide('toc'));
+  await page.locator('#toc-list [data-heading-id="same-2"]').click();
+  await expect(page.locator('#content [id="same-2"]')).toBeFocused();
+  await expect(page.locator('#content [id="same-2"]')).toHaveClass(/search-arrival/);
+  await expect(page.locator('#toc-list [data-heading-id="same-2"]')).toHaveClass(/toc-heading-active/);
+});
+
+test('folder tree exposes semantic keyboard navigation and selection', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderFolderList === 'function');
+  await page.evaluate(() => {
+    state.folder = '/readmd-fixture';
+    state.folderFiles = ['/readmd-fixture/sub/readme.md', '/readmd-fixture/zeta.md'];
+    state.file = '/readmd-fixture/zeta.md';
+    showSide('files');
+  });
+  const tree = page.locator('#file-list [role="tree"]');
+  await expect(tree).toBeVisible();
+  await expect(tree.locator('[role="treeitem"]')).toHaveCount(3);
+  await page.locator('#file-list .tree-row').first().focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#file-list .tree-row').nth(1)).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('#file-list [aria-current="true"]')).toBeFocused();
+  await expect(page.locator('#tab-files')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#tab-toc')).toHaveAttribute('aria-selected', 'false');
+});
+
+test('url dialog participates in managed modal focus containment', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof openWebDialog === 'function');
+  await page.evaluate(() => openWebDialog());
+  await expect(page.locator('#url-modal')).toBeVisible();
+  await expect(page.locator('#url-input')).toBeFocused();
+  await page.locator('#btn-theme').focus();
+  await page.keyboard.press('Tab');
+  expect(await page.evaluate(() => document.getElementById('url-modal').contains(document.activeElement))).toBe(true);
 });
 
 test('saving refreshes the existing tab with new content', async ({ page }) => {

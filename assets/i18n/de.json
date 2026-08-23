@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Ordner konnte nicht gelesen werden",
   "toast.renameBlockedEdit": "Das Umbenennen ist im Bearbeitungsmodus nicht zulässig. Bitte speichern oder beenden Sie die Bearbeitung zuerst.",
   "toast.renameFailed": "Umbenennen fehlgeschlagen:",
+  "toast.reloadBlockedDirty": "Ungespeicherte Änderungen behalten; externe Änderungen nicht geladen",
   "toast.renamedTo": "Umbenannt in: {name}",
   "toast.saveCancelled": "Speichern abgebrochen",
   "toast.saveFailed": "Speichern fehlgeschlagen: {error}",

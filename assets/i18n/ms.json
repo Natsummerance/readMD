@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Gagal membaca folder",
   "toast.renameBlockedEdit": "Penamaan semula tidak dibenarkan dalam mod edit, sila simpan atau keluar dari pengeditan dahulu.",
   "toast.renameFailed": "Nama semula gagal:",
+  "toast.reloadBlockedDirty": "Perubahan tidak disimpan dikekalkan; perubahan luar tidak dimuatkan",
   "toast.renamedTo": "Dinamakan semula kepada: {name}",
   "toast.saveCancelled": "Simpanan dibatalkan",
   "toast.saveFailed": "Simpan gagal: {error}",

@@ -168,7 +168,7 @@ function bindTabContextMenuEvents() {
       const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
       const tabId = menu.dataset.tabId;
       const action = btn.dataset.action;
-      menu.classList.add('hidden');
+      closeTabContextMenu();
       if (!tabId) return;
       const tab = state.tabs.find(t => t.id === tabId);
       if (!tab) return;
@@ -195,7 +195,7 @@ function bindTabContextMenuEvents() {
 
   document.addEventListener('click', e => {
     if (!menu.contains(e.target)) {
-      menu.classList.add('hidden');
+      closeTabContextMenu();
     }
   });
 }

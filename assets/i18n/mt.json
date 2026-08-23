@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Naqset milli taqra l-folder",
   "toast.renameBlockedEdit": "Tismija mill-ġdid mhix permessa fil-modalità tal-editjar, jekk jogħġbok issejvja jew oħroġ mill-editjar l-ewwel.",
   "toast.renameFailed": "L-isem mill-ġdid falla:",
+  "toast.reloadBlockedDirty": "It-tibdil mhux salvaż baqgħu; tibdil estern ma tqabbilx",
   "toast.renamedTo": "Ismu mill-ġdid għal: {name}",
   "toast.saveCancelled": "Ħlief ikkanċellat",
   "toast.saveFailed": "Is-salvataġġ fallut: {error}",

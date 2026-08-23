@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Mappen kunne ikke læses",
   "toast.renameBlockedEdit": "Omdøbning er ikke tilladt i redigeringstilstand. Gem eller afslut redigeringen først.",
   "toast.renameFailed": "Omdøb mislykkedes:",
+  "toast.reloadBlockedDirty": "Ugemte ændringer bevaret; eksterne ændringer blev ikke indlæst",
   "toast.renamedTo": "Omdøbt til: {name}",
   "toast.saveCancelled": "Gem annulleret",
   "toast.saveFailed": "Gem mislykkedes: {error}",

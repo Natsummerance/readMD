@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Map lezen mislukt",
   "toast.renameBlockedEdit": "Hernoemen is niet mogelijk in bewerkingsmodus; sla eerst op of verlaat de bewerkingsmodus",
   "toast.renameFailed": "Hernoemen mislukt: ",
+  "toast.reloadBlockedDirty": "Niet-opgeslagen wijzigingen behouden; externe wijzigingen niet geladen",
   "toast.renamedTo": "Hernoemd naar: {name}",
   "toast.saveCancelled": "Opslaan geannuleerd",
   "toast.saveFailed": "Opslaan mislukt: {error}",

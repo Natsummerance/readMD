@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Kansion lukeminen epäonnistui",
   "toast.renameBlockedEdit": "Uudelleennimeäminen ei ole sallittu muokkaustilassa. Tallenna tai lopeta muokkaus ensin.",
   "toast.renameFailed": "Uudelleennimeäminen epäonnistui:",
+  "toast.reloadBlockedDirty": "Tallentamattomat muutokset säilytetään; ulkoisia muutoksia ei ladattu",
   "toast.renamedTo": "Nimetty uudelleen: {name}",
   "toast.saveCancelled": "Tallennus peruutettu",
   "toast.saveFailed": "Tallennus epäonnistui: {error}",

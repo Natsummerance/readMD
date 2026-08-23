@@ -837,6 +837,7 @@
   "toast.readFolderFail": "སྣོད་ཀློག་མ་ཐུབ།",
   "toast.renameBlockedEdit": "རྩོམ་སྒྲིག་ཐབས་ལམ་ནང་མིང་བསྒྱུར་མི་ཆོག སྔོན་ལ་ཉར་ཚགས་བྱེད་པའམ་རྩོམ་སྒྲིག་ལས་ཕྱིར་ཐོན་རོགས།",
   "toast.renameFailed": "མིང་བསྒྱུར་མ་ཐུབ།",
+  "toast.reloadBlockedDirty": "མ་ཉར་བའི་བཟོ་བཅོས་ཉར་ཡོད་ལ་ཕྱིའི་བཟོ་བཅོས་བཀླགས་མིན།",
   "toast.renamedTo": "མིང་བསྒྱུར།: {name}",
   "toast.saveCancelled": "ཉར་ཚགས་མེད་པར་བཟོས།",
   "toast.saveFailed": "ཉར་ཚགས་བྱེད་མ་ཐུབ། {error}",

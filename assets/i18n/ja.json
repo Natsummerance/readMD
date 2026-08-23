@@ -837,6 +837,7 @@
   "toast.readFolderFail": "フォルダーの読み取りに失敗しました",
   "toast.renameBlockedEdit": "編集モードでは名前の変更は許可されていません。まず保存するか編集を終了してください。",
   "toast.renameFailed": "名前の変更に失敗しました:",
+  "toast.reloadBlockedDirty": "未保存の変更を保持し、外部変更は読み込みませんでした",
   "toast.renamedTo": "名前変更: {name}",
   "toast.saveCancelled": "保存がキャンセルされました",
   "toast.saveFailed": "保存に失敗しました: {error}",

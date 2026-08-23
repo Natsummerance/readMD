@@ -837,6 +837,7 @@
   "toast.readFolderFail": "Mappe atuarsinnaanngilaq",
   "toast.renameBlockedEdit": "Aqqinik allanngortitsineq allanngortitsinermi akuerineqanngilaq, qinnuigissavakkit allanngortitsineq siullermik annaakkit imaluunniit anigit.",
   "toast.renameFailed": "Aqqinik allanngortitsineq iluatsinngilaq:",
+  "toast.reloadBlockedDirty": "Ippassaat allannguitsitsineq ajortut; annertusarnut allanngortsineq apeqqutsigisaannaraminngitsumik",
   "toast.renamedTo": "Aqqa allanngortinneqarpoq: {name}",
   "toast.saveCancelled": "Save unitsinneqarpoq",
   "toast.saveFailed": "Annaasaqarneq iluatsinngilaq: {error}",
