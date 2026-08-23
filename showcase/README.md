@@ -51,6 +51,7 @@ python showcase/scripts/watch_and_publish.py
 ```
 
 watcher 会把 CI 产出的 `content-package.zip` 解到 `showcase/publish-work/`，重写图片路径后调用 `xhs-publish`。入队前会复核结构 QA、语义评分、变体原创性、热门机制、评审面板和微信适配层。状态保存在 `showcase/publish-state.json`；同一 release 只会发布一次。watcher 会同时检查发布状态和反馈账本，因此即使状态文件丢失，也不会重复发布已记录的 release。失败最多自动重试两次。
+发布器还会独立复核 `title.txt`、`body.txt`、`topics.txt` 和本地图片清单必须与 `metadata.json` 完全一致；任何输入漂移都会在点击前失败，避免平台内容和实验归因错位。
 如果发布器在点击后超时或返回非零，watcher 会先按标题查询平台笔记；只要平台已接受该笔记，就记录为已发布并写入反馈账本，不会再次点击。
 
 WeChat 文件只做人工复制/粘贴发布，watcher 不会自动操作公众号。

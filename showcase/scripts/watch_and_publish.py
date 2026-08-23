@@ -18,6 +18,7 @@ from typing import Any
 from content_memory import load_records, upsert_record
 from copy_variants import text_fingerprints, text_trigrams
 from package_content import validate_release_evidence
+from validate_package import publisher_input_errors
 
 DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
 STATE_VERSION = 1
@@ -211,6 +212,9 @@ def process_package(
                     f"metadata={copy_frames['metadata']}, report={copy_frames['selection']}, "
                     f"ranking={copy_frames['ranking']}"
                 )
+        input_errors = publisher_input_errors(package_dir)
+        if input_errors:
+            raise ValueError("publisher input contract failed: " + "; ".join(input_errors))
         dashboard = json.loads((package_dir / "dashboard-qa.json").read_text(encoding="utf-8"))
         if dashboard.get("ok") is not True:
             raise ValueError("package dashboard-qa.json is not green")

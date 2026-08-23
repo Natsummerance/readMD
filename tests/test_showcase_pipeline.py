@@ -689,6 +689,9 @@ class ValidatePackageTest(unittest.TestCase):
                 "version_state": "prerelease",
             }
             (pkg / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            (pkg / "title.txt").write_text(metadata["title"], encoding="utf-8")
+            (pkg / "body.txt").write_text(metadata["body"], encoding="utf-8")
+            (pkg / "topics.txt").write_text("\n".join(metadata["topics"]), encoding="utf-8")
             composition = {
                 "overflow_errors": [],
                 "cards": [
@@ -2583,6 +2586,7 @@ class WatcherTest(unittest.TestCase):
         wechat_ok: bool = True,
         variant_match: bool = True,
         frame_match: bool = True,
+        publisher_match: bool = True,
     ) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
@@ -2644,6 +2648,7 @@ class WatcherTest(unittest.TestCase):
         (package / "wechat" / "readmd-wechat.html").write_text("<p style=\"font-size:16px;line-height:1.75;color:#111\">article</p>", encoding="utf-8")
         metadata = {
             "title": "标题",
+            "body": "这篇正文足够长，可以形成稳定的三元组指纹。",
             "variant_id": "outcome-led__36",
             "copy_frame": "core",
             "strategy": "outcome-led",
@@ -2653,6 +2658,8 @@ class WatcherTest(unittest.TestCase):
             "images": ["Z:/remote/package/images/xhs-01-cover.jpg"],
         }
         (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+        if not publisher_match:
+            (package / "body.txt").write_text("这篇正文和元数据不一致，不能进入发布器。", encoding="utf-8")
         zip_path = root / "package.zip"
         report = package_content.package_content(package, zip_path)
         return Path(report["output"])
@@ -2748,10 +2755,34 @@ class WatcherTest(unittest.TestCase):
             )["images"][0])
             self.assertTrue(localized_image.is_file())
             self.assertEqual(localized_image.parent, work_package / "images")
-        self.assertIn("body_sha256", feedback)
-        self.assertIn("opening", feedback)
-        self.assertIn("closing", feedback)
-        self.assertTrue(feedback["body_trigrams"])
+            self.assertIn("body_sha256", feedback)
+            self.assertIn("opening", feedback)
+            self.assertIn("closing", feedback)
+            self.assertTrue(feedback["body_trigrams"])
+
+    def test_rejects_publisher_inputs_diverging_from_metadata(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, publisher_match=False)
+
+            def forbidden_publish(*args, **kwargs):
+                raise AssertionError("publisher must not run when input contract fails")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = forbidden_publish
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertIn("publisher input contract failed", record["error"])
+            self.assertIn("body.txt", record["error"])
+            self.assertEqual(record["status"], "failed")
 
     def test_rejects_failed_hot_post_pattern_gate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

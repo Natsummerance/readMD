@@ -81,6 +81,53 @@ def _image_metrics(path: Path, screenshot_box: dict[str, float] | None = None) -
         }
 
 
+def publisher_input_errors(package_dir: Path) -> list[str]:
+    """Keep the exact strings handed to Xiaohongshu identical to experiment metadata."""
+    package_dir = package_dir.resolve()
+    try:
+        metadata = _load_json(package_dir / "metadata.json")
+    except Exception as exc:
+        return [f"publisher input metadata unreadable: {exc}"]
+
+    errors: list[str] = []
+
+    def text(name: str) -> str | None:
+        path = package_dir / name
+        if not path.is_file():
+            errors.append(f"publisher input missing: {name}")
+            return None
+        try:
+            return path.read_text(encoding="utf-8").strip()
+        except Exception as exc:
+            errors.append(f"publisher input unreadable: {name}: {exc}")
+            return None
+
+    title = text("title.txt")
+    if title is not None and title != str(metadata.get("title", "")).strip():
+        errors.append("title.txt differs from metadata.title")
+
+    body = text("body.txt")
+    if body is not None and body != str(metadata.get("body", "")).strip():
+        errors.append("body.txt differs from metadata.body")
+
+    topics_text = text("topics.txt")
+    expected_topics = [str(item).strip() for item in metadata.get("topics", [])]
+    if topics_text is not None:
+        actual_topics = [line.strip() for line in topics_text.splitlines() if line.strip()]
+        if actual_topics != expected_topics:
+            errors.append("topics.txt differs from metadata.topics")
+
+    image_names = [Path(str(item)).name for item in metadata.get("images", [])]
+    if len(image_names) != len(set(image_names)):
+        errors.append("publisher input image names are not unique")
+    for name in image_names:
+        image_path = package_dir / "images" / name
+        if not image_path.is_file():
+            errors.append(f"publisher input image missing: images/{name}")
+
+    return errors
+
+
 def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> list[str]:
     package_dir = package_dir.resolve()
     repo_root = (repo_root or Path(__file__).resolve().parents[2]).resolve()
@@ -275,6 +322,7 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
                 + f"selection={copy_frames['selection'] or '<missing>'}, "
                 + f"ranking={copy_frames['ranking'] or '<missing>'}"
             )
+    errors.extend(publisher_input_errors(package_dir))
     if not metadata.get("source_urls"):
         errors.append("metadata.source_urls is empty")
     if version_state == "prerelease":
