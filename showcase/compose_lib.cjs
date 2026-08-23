@@ -143,6 +143,35 @@ function imageSrc(packageDir, capture, card) {
   return `data:image/png;base64,${fs.readFileSync(source).toString('base64')}`;
 }
 
+function drawnImageBox(image, canvas = { width: 1080, height: 1440 }) {
+  const bounds = image.getBoundingClientRect();
+  const fit = String(image.style?.objectFit || getComputedStyle(image).objectFit);
+  if (fit !== 'contain' || !image.naturalWidth || !image.naturalHeight) {
+    return {
+      x: Math.max(0, bounds.x),
+      y: Math.max(0, bounds.y),
+      width: Math.min(canvas.width, bounds.width),
+      height: Math.min(canvas.height, bounds.height),
+    };
+  }
+
+  const scale = Math.min(bounds.width / image.naturalWidth, bounds.height / image.naturalHeight);
+  const width = image.naturalWidth * scale;
+  const height = image.naturalHeight * scale;
+  const position = String(image.style?.objectPosition || getComputedStyle(image).objectPosition || '50% 50%')
+    .split(/\s+/)
+    .map((value) => Number.parseFloat(value) || 0);
+  const [horizontal, vertical] = [position[0] ?? 50, position[1] ?? horizontal];
+  const x = bounds.x + (bounds.width - width) * (horizontal / 100);
+  const y = bounds.y + (bounds.height - height) * (vertical / 100);
+  return {
+    x: Math.max(0, x),
+    y: Math.max(0, y),
+    width: Math.min(canvas.width, width),
+    height: Math.min(canvas.height, height),
+  };
+}
+
 function buildCardHtml(card, source, context = {}) {
   const design = context.design || loadDesignSystem();
   const release = escapeHtml(context.release || '');
@@ -203,11 +232,11 @@ function buildCardHtml(card, source, context = {}) {
   .proof-foot{display:flex;justify-content:space-between;align-items:center;gap:20px;padding-top:20px;border-top:1px solid ${design.palette.line}}
   .proof-foot span{font-size:24px}
   .hero{padding:24px;gap:20px}
-  .hero img{height:auto;flex:1}
+  .hero img{height:auto;flex:1;object-fit:contain}
   .hero-proof{padding:0}
   .summary ul{list-style:none;display:flex;gap:18px}
   .summary li{flex:1;background:${design.palette.surface};border-top:3px solid ${design.palette.accent};border-radius:${design.layout.radius}px;padding:20px 22px;font-size:25px;line-height:1.3;color:${design.palette.ink}}
 </style>${body}`;
 }
 
-module.exports = { buildCardHtml, coverFeedReadiness, imageSrc, loadDesignSystem, planCards, slug };
+module.exports = { buildCardHtml, coverFeedReadiness, drawnImageBox, imageSrc, loadDesignSystem, planCards, slug };

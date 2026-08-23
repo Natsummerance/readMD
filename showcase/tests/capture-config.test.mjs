@@ -10,7 +10,7 @@ test('capture config uses safe defaults and accepts environment overrides', () =
   assert.equal(config.release, 'v2.3.7-beta.3');
   assert.equal(config.locale, 'zh-CN');
   assert.equal(config.theme, 'dark');
-  assert.deepEqual(config.viewport, { width: 1280, height: 800 });
+  assert.deepEqual(config.viewport, { width: 960, height: 1280 });
   assert.equal(config.scale, 2);
   assert.equal(config.outputDir, 'raw');
 

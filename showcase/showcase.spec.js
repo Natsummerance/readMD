@@ -40,10 +40,8 @@ async function openDemo(page) {
     return renderVirtual('virtual', 'ReadMD 研究笔记.md', '', content);
   }, DEMO_MD);
   await expect(page.locator('#content h1')).toBeVisible();
-  await page.waitForFunction(() => {
-    const content = document.querySelector('#content');
-    return Boolean(content && content.textContent.includes('高斯') && content.querySelector('mjx-container'));
-  });
+  await expect(page.locator('#content')).toContainText('高斯');
+  await expect(page.locator('#content mjx-container').first()).toBeVisible();
   await page.waitForTimeout(900);
 }
 

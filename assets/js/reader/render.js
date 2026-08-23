@@ -823,7 +823,7 @@ const MARKDOWN_ALLOWED_TAGS = new Set([
   'a', 'abbr', 'article', 'b', 'blockquote', 'br', 'caption', 'cite', 'code',
   'dd', 'del', 'details', 'div', 'dl', 'dt', 'em', 'figcaption', 'figure',
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'input', 'ins',
-  'kbd', 'li', 'mark', 'ol', 'p', 'pre', 'q', 's', 'section', 'span',
+  'button', 'kbd', 'li', 'mark', 'ol', 'p', 'pre', 'q', 's', 'section', 'span',
   'strike', 'strong', 'sub', 'summary', 'sup', 'table', 'tbody', 'td',
   'tfoot', 'th', 'thead', 'time', 'tr', 'u', 'ul',
 ]);
@@ -831,6 +831,19 @@ const MARKDOWN_REMOVED_TAGS = new Set([
   'base', 'embed', 'form', 'frame', 'frameset', 'iframe', 'link', 'meta',
   'noscript', 'object', 'script', 'style', 'template', 'title',
 ]);
+const RENDER_BUTTON_CLASSES = new Set([
+  'code-chunk-run-btn',
+  'code-chunk-copy-btn',
+  'code-chunk-clear-btn',
+  'diagram-reload-btn',
+]);
+
+function isSanctionedRenderButton(node) {
+  const classes = Array.from(node.classList);
+  return Boolean(node.closest('.code-chunk-card, .diagram-card'))
+    && classes.length > 0
+    && classes.every(className => RENDER_BUTTON_CLASSES.has(className));
+}
 
 function safeResourceUrl(value) {
   if (!value) return false;
@@ -856,6 +869,9 @@ function sanitizeRenderedHtml(html) {
     if (!MARKDOWN_ALLOWED_TAGS.has(tag)) {
       node.replaceWith(...node.childNodes);
       return;
+    }
+    if (tag === 'button') {
+      if (!isSanctionedRenderButton(node)) node.replaceWith(...node.childNodes);
     }
     if (tag === 'img') {
       const source = node.getAttribute('src') || '';
@@ -907,6 +923,9 @@ function sanitizeRenderedHtml(html) {
       else if (node.classList.contains('remote-image-link')) node.setAttribute('rel', 'noopener noreferrer');
     }
     if (tag === 'input' && !node.hasAttribute('disabled')) node.setAttribute('disabled', '');
+    if (tag === 'button') {
+      if (isSanctionedRenderButton(node)) node.setAttribute('type', 'button');
+    }
   });
 
   return template.innerHTML;

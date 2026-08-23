@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('../../ui-tests/node_modules/@playwright/test');
-const { buildCardHtml, coverFeedReadiness, imageSrc, planCards } = require('../compose_lib.cjs');
+const { buildCardHtml, coverFeedReadiness, drawnImageBox, imageSrc, planCards } = require('../compose_lib.cjs');
 
 async function main() {
   const packageDir = path.resolve(process.argv[2] || 'output/package');
@@ -18,6 +18,7 @@ async function main() {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1080, height: 1440 }, deviceScaleFactor: 1 });
+    await page.evaluate(`window.drawnImageBox = ${drawnImageBox.toString()};`);
     const report = [];
     for (const card of cards) {
       const html = buildCardHtml(card, imageSrc(packageDir, capture, card), { release: story.release });
@@ -78,8 +79,7 @@ async function main() {
       const screenshotBox = await page.evaluate(() => {
         const image = document.querySelector('img');
         if (!image) return null;
-        const box = image.getBoundingClientRect();
-        return { x: Math.max(0, box.x), y: Math.max(0, box.y), width: box.width, height: box.height };
+        return drawnImageBox(image);
       });
       const feedReadiness = card.role === 'cover' ? await page.evaluate(() => {
         const title = document.querySelector('.cover h1');

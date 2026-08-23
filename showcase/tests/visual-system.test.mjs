@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { loadDesignSystem, buildCardHtml, coverFeedReadiness, planCards } = require('../compose_lib.cjs');
+const { loadDesignSystem, buildCardHtml, coverFeedReadiness, drawnImageBox, planCards } = require('../compose_lib.cjs');
 
 test('design system locks one evidence-paper accent and readable type scale', () => {
   const design = loadDesignSystem();
@@ -78,6 +78,26 @@ test('summary keeps three outcomes and feature cards stay image-led', () => {
   const feature = buildCardHtml({ role: 'annotated_ui', title: '放映', caption: '一句话', shotId: 'overview.reader' }, 'data:image/png;base64,real', { design });
   assert.equal([...feature.matchAll(/<img\b/g)].length, 1);
   assert.doesNotMatch(feature, /class="annotation"/);
+});
+
+test('card two measures the complete contained screenshot instead of its cropping frame', () => {
+  const image = {
+    naturalWidth: 960,
+    naturalHeight: 1280,
+    style: { objectFit: 'contain', objectPosition: '50% 50%' },
+    getBoundingClientRect: () => ({ x: 24, y: 164, width: 1032, height: 1252 }),
+  };
+  const box = drawnImageBox(image);
+  assert.equal(box.width, 939);
+  assert.equal(box.height, 1252);
+  assert.equal(Math.round((box.width * box.height) / (1080 * 1440) * 1000) / 1000 >= 0.7, true);
+
+  const html = buildCardHtml(
+    { role: 'pure_ui_hero', title: '软件完整主界面', shotId: 'overview.reader' },
+    'data:image/png;base64,real',
+    { design: loadDesignSystem() },
+  );
+  assert.match(html, /\.hero img\{[^}]*object-fit:contain/);
 });
 
 test('feature cards use the plan reader value instead of technical descriptions', () => {
