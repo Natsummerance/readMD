@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Tallennus peruutettu",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Tallennus epäonnistui: {error}",
+  "toast.saveDenied": "Tallennus estettiin. Avaa asiakirja uudelleen ja tallenna se sitten uudelleen",
   "toast.saved": "Asiakirjan tallennus onnistui",
   "toast.savedPrefix": "Tallennettu:",
   "toast.savedSuccess": "tallennettu",

@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Đã hủy lưu",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Lưu thất bại: {error}",
+  "toast.saveDenied": "Đã chặn việc lưu. Hãy mở lại tài liệu rồi lưu lại",
   "toast.saved": "Lưu tài liệu thành công",
   "toast.savedPrefix": "Đã lưu: ",
   "toast.savedSuccess": "Đã lưu thành công",

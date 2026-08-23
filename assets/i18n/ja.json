@@ -861,6 +861,7 @@
   "toast.saveCancelled": "保存がキャンセルされました",
   "toast.saveConflict": "ファイルが外部で変更されました。ローカル下書きは保持されています",
   "toast.saveFailed": "保存に失敗しました: {error}",
+  "toast.saveDenied": "保存がブロックされました。文書を開き直してから、もう一度保存してください",
   "toast.saved": "ドキュメントは正常に保存されました",
   "toast.savedPrefix": "保存済み:",
   "toast.savedSuccess": "保存されました",

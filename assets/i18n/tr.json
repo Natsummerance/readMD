@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Kaydetme iptal edildi",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Kaydetme başarısız oldu: {error}",
+  "toast.saveDenied": "Kaydetme engellendi. Belgeyi yeniden açın ve ardından yeniden kaydedin",
   "toast.saved": "Belge başarıyla kaydedildi",
   "toast.savedPrefix": "Kaydedildi: ",
   "toast.savedSuccess": "Başarıyla kaydedildi",

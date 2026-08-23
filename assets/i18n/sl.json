@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Shranjevanje je preklicano",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Shranjevanje ni uspelo: {error}",
+  "toast.saveDenied": "Shranjevanje je blokirano. Znova odpri dokument in ga znova shrani",
   "toast.saved": "Dokument je uspešno shranjen",
   "toast.savedPrefix": "Shranjeno v: ",
   "toast.savedSuccess": "Uspešno shranjeno",

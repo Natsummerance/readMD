@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Хадгалалтыг цуцаллаа",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Хадгалахад алдаа гарлаа: {error}",
+  "toast.saveDenied": "Хадгалахыг зөвшөөрсөнгүй. Баримтыг дахин нээгээд дахин хадгална уу",
   "toast.saved": "Баримт амжилттай хадгалагдлаа",
   "toast.savedPrefix": "Хадгалсан байршил: ",
   "toast.savedSuccess": "Амжилттай хадгаллаа",

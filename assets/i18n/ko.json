@@ -861,6 +861,7 @@
   "toast.saveCancelled": "저장이 취소되었습니다.",
   "toast.saveConflict": "파일이 외부에서 변경되었습니다. 로컬 초안은 보존됩니다",
   "toast.saveFailed": "저장 실패: {error}",
+  "toast.saveDenied": "저장이 차단되었습니다. 문서를 다시 연 후 저장하세요",
   "toast.saved": "문서가 성공적으로 저장되었습니다.",
   "toast.savedPrefix": "저장됨:",
   "toast.savedSuccess": "저장됨",

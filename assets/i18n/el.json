@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Η αποθήκευση ακυρώθηκε",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Η αποθήκευση απέτυχε: {error}",
+  "toast.saveDenied": "Η αποθήκευση μπλοκαρίστηκε. Ξανανοίξτε το έγγραφο και αποθηκεύστε ξανά",
   "toast.saved": "Το έγγραφο αποθηκεύτηκε με επιτυχία",
   "toast.savedPrefix": "Αποθηκεύτηκε σε: ",
   "toast.savedSuccess": "Αποθηκεύτηκε με επιτυχία",

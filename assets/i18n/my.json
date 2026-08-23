@@ -861,6 +861,7 @@
   "toast.saveCancelled": "သိမ်းဆည်းခြင်းကို ပယ်ဖျက်လိုက်ပါပြီ။",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "သိမ်းဆည်းခြင်း မအောင်မြင်ပါ- {error}",
+  "toast.saveDenied": "သိမ်းဆည်းခြင်းကို ပိတ်ပင်ခံရသည်။ စာတမ်းကို ပြန်ဖွင့်ပြီး ထပ်မံသိမ်းဆည်းပါ။",
   "toast.saved": "စာရွက်စာတမ်းကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ။",
   "toast.savedPrefix": "သိမ်းဆည်းထားသည်-",
   "toast.savedSuccess": "သိမ်းဆည်းခဲ့သည်။",

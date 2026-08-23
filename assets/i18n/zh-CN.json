@@ -861,6 +861,7 @@
   "toast.saveCancelled": "已取消保存",
   "toast.saveConflict": "文件已被其他程序修改，本地草稿已保留",
   "toast.saveFailed": "保存失败：{error}",
+  "toast.saveDenied": "保存被拒绝：请重新打开文档后再保存",
   "toast.saved": "文档保存成功",
   "toast.savedPrefix": "已保存：",
   "toast.savedSuccess": "已保存",

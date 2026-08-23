@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Simpanan dibatalkan",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Simpan gagal: {error}",
+  "toast.saveDenied": "Penyimpanan disekat. Buka semula dokumen, kemudian simpan sekali lagi",
   "toast.saved": "Dokumen berjaya disimpan",
   "toast.savedPrefix": "Disimpan:",
   "toast.savedSuccess": "disimpan",

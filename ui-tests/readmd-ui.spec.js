@@ -1336,7 +1336,7 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
     'ai-settings-modal', 'ai-history-modal', 'history-modal', 'img-modal', 'formula-modal',
     'tpl-modal', 'share-modal', 'close-confirm-modal', 'export-modal', 'export-preview-modal',
     'convert-modal', 'update-modal', 'lang-modal', 'table-modal', 'style-custom-modal',
-    'code-chunk-modal', 'diagram-modal', 'doc-import-modal', 'frontmatter-modal',
+    'code-chunk-modal', 'diagram-modal', 'doc-import-modal', 'frontmatter-modal', 'fix-modal',
   ]) {
     const modal = page.locator(`#${id}`);
     await expect(modal).toHaveAttribute('role', 'dialog');
@@ -1346,6 +1346,7 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
 
   await expect(page.locator('#toast')).toHaveAttribute('role', 'status');
   await expect(page.locator('#toast')).toHaveAttribute('aria-live', 'polite');
+  await expect(page.locator('#content')).toHaveAttribute('role', 'tabpanel');
   await expect(page.locator('#search-input')).toHaveAttribute('aria-label', /搜索|search/i);
   await expect(page.locator('#btn-print')).toBeDisabled();
   await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'false');

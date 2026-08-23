@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Salvare anulată",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Salvare a eșuat: {error}",
+  "toast.saveDenied": "Salvarea a fost blocată. Redeschideți documentul, apoi salvați-l din nou",
   "toast.saved": "Documentul a fost salvat cu succes",
   "toast.savedPrefix": "Salvat:",
   "toast.savedSuccess": "salvat",

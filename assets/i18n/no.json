@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Lagring avbrutt",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Lagring mislyktes: {error}",
+  "toast.saveDenied": "Lagring ble blokkert. Åpne dokumentet på nytt og lagre det deretter på nytt",
   "toast.saved": "Dokumentet ble lagret",
   "toast.savedPrefix": "Lagret:",
   "toast.savedSuccess": "lagret",

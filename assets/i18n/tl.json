@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Kinansela ang pag-save",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Nabigo ang pag-save: {error}",
+  "toast.saveDenied": "Na-block ang pag-save. Muling buksan ang dokumento pagkatapos ay i-save muli",
   "toast.saved": "Matagumpay na na-save ang dokumento",
   "toast.savedPrefix": "Nai-save sa: ",
   "toast.savedSuccess": "Na-save nang matagumpay",

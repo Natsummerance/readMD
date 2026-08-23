@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Konservado nuligita",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Konservado malsukcesis: {error}",
+  "toast.saveDenied": "Konservado estis blokita. Malfermu la dokumenton denove kaj konservu denove",
   "toast.saved": "Dokumento konservita sukcese",
   "toast.savedPrefix": "Konservita al: ",
   "toast.savedSuccess": "Konservita sukcese",

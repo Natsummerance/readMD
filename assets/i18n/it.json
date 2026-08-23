@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Salvataggio annullato",
   "toast.saveConflict": "File modificato esternamente; la bozza locale è conservata",
   "toast.saveFailed": "Salvataggio non riuscito: {error}",
+  "toast.saveDenied": "Il salvataggio è stato bloccato. Riapri il documento e salvalo di nuovo",
   "toast.saved": "Documento salvato con successo",
   "toast.savedPrefix": "Salvato in: ",
   "toast.savedSuccess": "Salvato",

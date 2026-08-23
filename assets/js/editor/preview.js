@@ -423,6 +423,10 @@ async function saveEdit() {
           expected_mtime: state.mtime || null,
         }),
       });
+      if (r.status === 403) {
+        showToast(_t('toast.saveDenied') || '保存被拒绝：请重新打开文档后再保存');
+        return false;
+      }
       ok = await r.json();
     }
     if (ok && ok.ok !== false) {

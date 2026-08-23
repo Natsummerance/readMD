@@ -861,6 +861,7 @@
   "toast.saveCancelled": "ការរក្សាទុកត្រូវបានលុបចោល",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "ការរក្សាទុកបានបរាជ័យ៖ {error}",
+  "toast.saveDenied": "ការរក្សាទុកត្រូវបានទប់ស្កាត់។ បើកឯកសារឡើងវិញ បន្ទាប់មករក្សាទុកម្តងទៀត",
   "toast.saved": "ឯកសារត្រូវបានរក្សាទុកដោយជោគជ័យ",
   "toast.savedPrefix": "រក្សាទុក៖",
   "toast.savedSuccess": "បានរក្សាទុក",

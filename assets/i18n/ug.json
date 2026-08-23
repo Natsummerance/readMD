@@ -861,6 +861,7 @@
   "toast.saveCancelled": "ساقلاش بىكار قىلىندى",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "ساقلاش مەغلۇپ بولدى: {error}",
+  "toast.saveDenied": "ساقلاش چەكلەندى. ھۆججەتنى قايتا ئېچىپ، يەنە بىر قېتىم ساقلاڭ",
   "toast.saved": "ھۆججەت مۇۋەپپەقىيەتلىك ساقلاندى",
   "toast.savedPrefix": "ساقلاندى: ",
   "toast.savedSuccess": "ساقلاندى",

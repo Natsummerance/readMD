@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Kubumba me katulama",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Kubumba me nunga ve: {error}",
+  "toast.saveDenied": "Kubumba kufwanishwa. Fula dokumento nkia, nsonda ubumbeshe nkia",
   "toast.saved": "Mukanda me bumbana mbote",
   "toast.savedPrefix": "Me bumba na: ",
   "toast.savedSuccess": "Me bumbana mbote",

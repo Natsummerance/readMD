@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Save cancelled",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Save failed: {error}",
+  "toast.saveDenied": "Save blocked. Reopen this document, then save again",
   "toast.saved": "Document saved successfully",
   "toast.savedPrefix": "Saved to: ",
   "toast.savedSuccess": "Saved successfully",

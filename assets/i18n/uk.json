@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Збереження скасовано",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Помилка збереження: {error}",
+  "toast.saveDenied": "Збереження заблоковано. Наново відкрийте документ і збережіть його ще раз",
   "toast.saved": "Документ успішно збережено",
   "toast.savedPrefix": "Збережено: ",
   "toast.savedSuccess": "Збережено",

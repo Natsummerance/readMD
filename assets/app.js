@@ -806,7 +806,7 @@ function getModalRoots() {
     'convert-modal', 'update-modal', 'style-custom-modal', 'lang-modal',
     'ai-history-modal', 'ai-settings-modal', 'formula-modal', 'presentation-modal',
     'img-modal', 'history-modal', 'share-modal', 'tpl-modal', 'url-modal',
-    'save-conflict-modal'
+    'save-conflict-modal', 'fix-modal'
   ].map(id => $(id)).filter(Boolean);
 }
 

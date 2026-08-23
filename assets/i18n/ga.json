@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Sábháil cealaithe",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Theip ar shábháil: {error}",
+  "toast.saveDenied": "Cuireadh bac ar shábháil. Oscail an cháipéis arís agus sábháil arís í",
   "toast.saved": "D'éirigh le sábháil an doiciméad",
   "toast.savedPrefix": "Sábháilte:",
   "toast.savedSuccess": "shábháil",

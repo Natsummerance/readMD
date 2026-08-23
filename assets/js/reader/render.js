@@ -1655,6 +1655,8 @@ function fixLinks(body) {
           el = findMatchingHeading(targetId, a.textContent, allHeadings);
         }
         if (el) {
+          el.tabIndex = -1;
+          el.focus({ preventScroll: true });
           el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
           el.classList.remove('heading-target-highlight');
           void el.offsetWidth;

@@ -861,6 +861,7 @@
   "toast.saveCancelled": "सहेजें रद्द कर दिया गया",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "सहेजना विफल: {error}",
+  "toast.saveDenied": "सहेजना रोक दिया गया। दस्तावेज़ फिर से खोलें, फिर उसे दोबारा सहेजें",
   "toast.saved": "दस्तावेज़ सफलतापूर्वक सहेजा गया",
   "toast.savedPrefix": "सहेजा गया:",
   "toast.savedSuccess": "बचाया",

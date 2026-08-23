@@ -861,6 +861,7 @@
   "toast.saveCancelled": "تم إلغاء الحفظ",
   "toast.saveConflict": "تم تغيير الملف خارجياً؛ مسودتك المحلية محفوظة",
   "toast.saveFailed": "فشل الحفظ: {error}",
+  "toast.saveDenied": "تم منع الحفظ. أعد فتح المستند ثم احفظه مرة أخرى",
   "toast.saved": "تم حفظ المستند بنجاح",
   "toast.savedPrefix": "تم الحفظ في: ",
   "toast.savedSuccess": "تم الحفظ",
