@@ -54,6 +54,7 @@ function createEditor(doc) {
       CM.closeBrackets(),
       CM.keymap.of([CM.indentWithTab, ...CM.closeBracketsKeymap, ...CM.defaultKeymap, ...CM.historyKeymap, ...CM.completionKeymap]),
       CM.EditorView.lineWrapping,
+      CM.EditorView.contentAttributes.of({ 'aria-label': 'Markdown editor' }),
       CM.EditorView.updateListener.of(u => {
         if (u.docChanged) {
           schedulePreview();

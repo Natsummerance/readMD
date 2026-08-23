@@ -437,6 +437,9 @@ async function saveEdit() {
         const action = await promptSaveConflict();
         if (action === 'save-as') {
           const activeTab = getActiveTab();
+          const suggested = (state.sourceName || state.file || 'document')
+            .replace(/[\\/]/g, '_')
+            .replace(/\.[^.]+$/, '') + '.md';
           if (activeTab) {
             activeTab.content = content;
             activeTab.fixed = content;

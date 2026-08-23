@@ -1452,7 +1452,7 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 22px;
+  height: 24px;
   padding: 0 9px;
   border-radius: var(--radius-s);
   border: 1px solid var(--border);
@@ -2915,7 +2915,8 @@ html[dir="rtl"] .academic-callout {
   padding: 2px 6px;
   border-radius: 4px;
   background: var(--accent);
-  color: #fff;
+  color: #07101f;
+  font-weight: 700;
 }
 .academic-theorem { border-left-color: #3b82f6; }
 .academic-theorem .academic-callout-tag { background: #3b82f6; }
@@ -3364,12 +3365,18 @@ body.zen-mode #edit-area {
 }
 
 .code-chunk-status.success {
-  color: #10b981;
+  color: #047857;
 }
 
 .code-chunk-status.error {
-  color: #ef4444;
+  color: #b91c1c;
 }
+
+body[data-theme="dark"] .code-chunk-status.success,
+[data-theme="dark"] .code-chunk-status.success { color: #34d399; }
+
+body[data-theme="dark"] .code-chunk-status.error,
+[data-theme="dark"] .code-chunk-status.error { color: #f87171; }
 
 .code-chunk-timer {
   font-size: 11px;

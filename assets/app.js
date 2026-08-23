@@ -761,7 +761,7 @@ function bindEvents() {
     }
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleSide('toc'); } // Ctrl+Shift+F: 目录大纲
     else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); toggleTheme(); } // Ctrl+D: 主题切换
-    else if (mod && e.key.toLowerCase() === 'r') { e.preventDefault(); if (state.file && state.mode === 'file') loadFile(state.file); } // Ctrl+R: 重载文件
+    else if (mod && e.key.toLowerCase() === 'r') { e.preventDefault(); if (state.file && state.mode === 'file') loadFile(state.file, { force: true }); } // Ctrl+R: 强制重载文件
     else if (mod && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); openExportModal(); } // Ctrl+P: 导出面板
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); toggleAiPanel(); } // Ctrl+Shift+A: AI面板
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'p' && state.editing) { e.preventDefault(); openMdCommandPalette(); } // Ctrl+Shift+P: 命令面板

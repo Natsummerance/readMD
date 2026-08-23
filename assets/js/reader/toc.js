@@ -149,7 +149,9 @@ function buildToc() {
       e.preventDefault();
       const el = document.getElementById(h.id);
       if (el) {
+        el.tabIndex = -1;
         el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
+        el.focus({ preventScroll: true });
         el.classList.remove('heading-target-highlight');
         void el.offsetWidth;
         el.classList.add('heading-target-highlight');
