@@ -60,7 +60,7 @@ Double-click any `.md` file to read immediately. ReadMD automatically fixes comm
 ## ✨ Key Features
 
 - 📖 **Smart Semantic Pagination**: Automatically splits >10,000 line ultra-long documents into smooth pages with pure SVG icon navigation, cross-page TOC and Ctrl+F search, plus viewport math lazy loading to eliminate browser freezing.
-- ⚡ **Instant Launch**: Directory deployment (`onedir`) provides cold start in ≤ 1.5s; system tray minimize allows instant wake-up in < 0.3s.
+- ⚡ **Fast Launch Architecture**: Directory deployment (`onedir`) avoids single-file extraction; tray minimize and single-instance local IPC wake the existing reader quickly without a fixed timing claim across every disk and security configuration.
 - **Complete Platform Coverage**: Windows (Win 7 ~ 11), macOS (Apple Silicon / Intel), Linux (Ubuntu, Debian, Fedora, Arch), and Domestic OS (KylinOS, UOS, Deepin, openEuler); HarmonyOS is available as an ArkTS source project.
 - 🌍 **Global 46 Languages**: Automatic OS language detection, LTR and RTL support (Arabic, Hebrew, Uyghur), with 100% verified native localization.
 - 📐 **LaTeX PRO Academic Suite**: Zero-configuration `.bib` bibliography hover cards, academic callout boxes (Theorem, Lemma, Proof with Q.E.D. ■, Definition), and export to LaTeX.

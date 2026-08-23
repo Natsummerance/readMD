@@ -484,6 +484,9 @@ function promptSaveConflict() {
       return;
     }
     modal.classList.remove('hidden');
+    const reload = $('save-conflict-reload');
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    reload.textContent = `${_t('toolbar.reload') || 'Reload'} (${_t('dialog.dontSave') || 'Do not save'})`;
     const cancel = $('save-conflict-cancel');
     setTimeout(() => cancel?.focus(), 20);
 

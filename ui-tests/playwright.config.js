@@ -17,5 +17,9 @@ module.exports = defineConfig({
     port: 28473,
     reuseExistingServer: process.env.READMD_REUSE_UI_SERVER === '1',
     cwd: __dirname
-  }
+  },
+  projects: [
+    { name: 'desktop', use: { viewport: { width: 1440, height: 900 } } },
+    { name: 'mobile', use: { viewport: { width: 390, height: 844 }, hasTouch: true } },
+  ],
 });

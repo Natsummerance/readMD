@@ -50,7 +50,7 @@ from src.readmd_core import (
 )
 from src.readmd_core.file_writer import save_text_atomic
 import src.readmd_modules as RM
-from src.readmd_modules.validators import validate_file_path, validate_command
+from src.readmd_modules.validators import validate_file_path, validate_command, paths_within
 
 APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 
@@ -620,6 +620,7 @@ SAVE_EXTENSIONS = frozenset(('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt
 
 class ReadMDHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
+    request_queue_size = 128
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -713,7 +714,7 @@ class Handler(BaseHTTPRequestHandler):
                 rel = path.lstrip('/')
             fp = os.path.normpath(os.path.join(APP_DIR, 'assets', rel))
             base = os.path.normpath(os.path.join(APP_DIR, 'assets'))
-            if not fp.startswith(base):
+            if not paths_within(fp, base):
                 self._send(403, 'text/plain; charset=utf-8', b'forbidden')
                 return
 

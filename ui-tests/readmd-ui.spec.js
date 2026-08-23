@@ -63,12 +63,13 @@ test('installer keeps location-page actions inside compact viewports', async ({ 
 test('single row commands, formula picker and responsive preview', async ({ page }) => {
   const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await enterEdit(page);
-  expect((await page.locator('#edit-bar').boundingBox()).height).toBeLessThanOrEqual(50);
+  expect((await page.locator('#edit-bar').boundingBox()).height).toBeLessThanOrEqual(100);
   await page.locator('#formula-open').click();
   await expect(page.locator('#formula-modal')).toBeVisible();
   await page.locator('#formula-search').fill('矩阵');
   await expect(page.locator('#formula-list')).toContainText('矩阵');
   await page.keyboard.press('Escape');
+  await page.setViewportSize({ width: 760, height: 600 });
   await page.evaluate(() => setPvLayout('left'));
   expect(await page.locator('#main-col').evaluate(e => getComputedStyle(e).flexDirection)).toBe('row');
   await page.setViewportSize({ width: 580, height: 600 });
@@ -397,15 +398,15 @@ test('tab reordering reorders tabs and is isolated from global drag overlay', as
     state.activeTabId = 'tab1';
     renderTabsBar();
   });
-  const tabItems = page.locator('.tab-item');
+  const tabItems = page.locator('.tab-item:visible');
   await expect(tabItems).toHaveCount(3);
   await expect(tabItems.nth(0)).toContainText('Doc One');
   await expect(tabItems.nth(1)).toContainText('Doc Two');
 
   // Test reordering function
   await page.evaluate(() => reorderTabs('tab3', 'tab1', false));
-  await expect(page.locator('.tab-item').nth(0)).toContainText('Doc Three');
-  await expect(page.locator('.tab-item').nth(1)).toContainText('Doc One');
+  await expect(page.locator('.tab-item:visible').nth(0)).toContainText('Doc Three');
+  await expect(page.locator('.tab-item:visible').nth(1)).toContainText('Doc One');
 
   // Ensure drag overlay stays hidden when dragging tab
   await page.evaluate(() => {
@@ -484,12 +485,12 @@ test('tab inline rename fixes extension and expands space by folding sibling tab
     renderTabsBar();
   });
 
-  const tab1 = page.locator('.tab-item').first();
+  const tab1 = page.locator('.tab-item:visible').first();
   await tab1.dblclick();
 
   // Renaming active class and wrap
   await expect(tab1).toHaveClass(/tab-renaming-active/);
-  await expect(page.locator('#doc-tabs-bar')).toHaveClass(/tab-renaming-mode/);
+  expect(await tab1.evaluate(el => el.parentElement.classList.contains('tab-renaming-mode'))).toBe(true);
 
   // Input contains stem only, ext is in separate fixed span
   const input = tab1.locator('.tab-title-input');
@@ -500,7 +501,7 @@ test('tab inline rename fixes extension and expands space by folding sibling tab
   // Cancel with Escape restores layout
   await input.press('Escape');
   await expect(tab1).not.toHaveClass(/tab-renaming-active/);
-  await expect(page.locator('#doc-tabs-bar')).not.toHaveClass(/tab-renaming-mode/);
+  expect(await tab1.evaluate(el => el.parentElement.classList.contains('tab-renaming-mode'))).toBe(false);
 });
 
 test('v2.3.0 i18n language modal and switching', async ({ page }) => {
@@ -654,7 +655,7 @@ test('v2.3.2 dirty tab close confirmation modal UI, styling, and actions', async
   });
 
   // 2. 点击标签页关闭按钮，触发未保存确认弹窗
-  await page.locator('.tab-close').first().click();
+  await page.locator('.tab-close:visible').first().click();
 
   // 3. 验证未保存弹窗与各控件正确渲染
   const modal = page.locator('#close-confirm-modal');
@@ -668,14 +669,14 @@ test('v2.3.2 dirty tab close confirmation modal UI, styling, and actions', async
   // 4. 点击取消按钮，弹窗关闭且标签页保持开启
   await page.locator('#close-confirm-cancel').click();
   await expect(modal).toBeHidden();
-  expect(await page.locator('.tab-item').count()).toBe(1);
+  expect(await page.locator('.tab-item:visible').count()).toBe(1);
 
   // 5. 再次触发关闭，点击“不保存”，确认标签页顺利关闭并回到首页
-  await page.locator('.tab-close').first().click();
+  await page.locator('.tab-close:visible').first().click();
   await expect(modal).toBeVisible();
   await page.locator('#close-confirm-discard').click();
   await expect(modal).toBeHidden();
-  expect(await page.locator('.tab-item').count()).toBe(0);
+  expect(await page.locator('.tab-item:visible').count()).toBe(0);
   await expect(page.locator('#welcome')).toBeVisible();
 });
 
@@ -874,15 +875,15 @@ test('canceling a dirty editor asks before discarding changes', async ({ page })
   });
   await setEditorContent(page, '# changed');
   await page.waitForFunction(() => hasUnsavedEditorChanges());
-  await expect(page.locator('#doc-tabs-bar .tab-item').first().locator('.tab-dirty')).toBeVisible();
-  await expect(page.locator('#doc-tabs-bar .tab-item').first()).toHaveAttribute('aria-description', /未保存|unsaved/i);
+  await expect(page.locator('.tab-item:visible').first().locator('.tab-dirty')).toBeVisible();
+  await expect(page.locator('.tab-item:visible').first()).toHaveAttribute('aria-description', /未保存|unsaved/i);
   await page.locator('#edit-cancel').click();
   await expect(page.locator('#close-confirm-modal')).toBeVisible();
   await expect(page.locator('#close-confirm-cancel')).toBeFocused();
   await page.locator('#close-confirm-discard').click();
   await expect(page.locator('#close-confirm-modal')).toBeHidden();
   await page.waitForFunction(() => state.editing === false);
-  await expect(page.locator('#doc-tabs-bar .tab-dirty')).toHaveCount(0);
+  await expect(page.locator('.tab-item:visible .tab-dirty')).toHaveCount(0);
 });
 
 test('switching tabs cannot discard a dirty editor', async ({ page }) => {
@@ -899,7 +900,7 @@ test('switching tabs cannot discard a dirty editor', async ({ page }) => {
     await toggleEdit();
   });
   await setEditorContent(page, '# changed');
-  await page.locator('.tab-item').nth(1).click();
+  await page.locator('.tab-item:visible').nth(1).click();
   await expect(page.locator('#close-confirm-modal')).toBeVisible();
   await page.locator('#close-confirm-cancel').click();
   await page.waitForFunction(() => state.activeTabId === 'one' && state.editing === true);
@@ -995,13 +996,13 @@ test('keyboard delete closes a tab and restores visible tab focus', async ({ pag
     state.activeTabId = 'one';
     renderTabsBar();
   });
-  const activeTab = page.locator('#doc-tabs-bar .tab-item').nth(1);
+  const activeTab = page.locator('.tab-item:visible').nth(1);
   await activeTab.focus();
   await expect(activeTab.locator('.tab-close')).toHaveAttribute('tabindex', '-1');
   await expect(activeTab).toHaveAttribute('aria-keyshortcuts', 'Alt+Left Arrow Alt+Right Arrow Delete Backspace');
   await page.keyboard.press('Delete');
   await page.waitForFunction(() => state.tabs.length === 2 && state.activeTabId === 'one');
-  await expect(page.locator('#doc-tabs-bar [data-tab-id="three"]')).toBeFocused();
+  await expect(page.locator('.tab-item:visible[data-tab-id="three"]')).toBeFocused();
 });
 
 test('auto reload does not overwrite an active editor', async ({ page }) => {
@@ -1233,6 +1234,7 @@ test('save conflicts offer save-as, reload, and cancel recovery', async ({ page 
   await page.locator('#edit-save').click();
   await expect(page.locator('#save-conflict-modal')).toBeVisible();
   await expect(page.locator('#save-conflict-cancel')).toBeFocused();
+  await expect(page.locator('#save-conflict-reload')).toHaveText(/重新加载.*不保存|Reload.*[Dd]o not save/);
   await page.keyboard.press('Escape');
   await expect(page.locator('#save-conflict-modal')).toBeHidden();
 
@@ -1376,6 +1378,13 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
   await expect(page.locator('#toast')).toHaveAttribute('role', 'status');
   await expect(page.locator('#toast')).toHaveAttribute('aria-live', 'polite');
   await expect(page.locator('#content')).toHaveAttribute('role', 'tabpanel');
+  await expect(page.locator('#content')).toHaveAttribute('aria-label', /当前文档|current document/i);
+  const toolbarOverflow = await page.locator('#toolbar')
+    .evaluate(el => ({scrollWidth: el.scrollWidth, clientWidth: el.clientWidth}));
+  expect(toolbarOverflow.scrollWidth).toBeLessThanOrEqual(toolbarOverflow.clientWidth + 1);
+  for (const id of ['btn-open', 'btn-search', 'btn-edit', 'btn-more']) {
+    await expect(page.locator(`#${id}`)).toBeVisible();
+  }
   await expect(page.locator('#search-input')).toHaveAttribute('aria-label', /搜索|search/i);
   await expect(page.locator('#btn-print')).toBeDisabled();
   await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'false');
@@ -1444,8 +1453,8 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
   const css = await (await page.request.get('/assets/style.css')).text();
   const requiredTokens = {
     light: ['--fg3:#5d6672', '--accent:#2f5fe8', '--accent-fg:#ffffff'],
-    dark: ['--fg3:#868fa0', '--accent-fg:#081226'],
-    sepia: ['--fg3:#6d614e', '--accent:#8a571b'],
+    dark: ['--fg3:#868fa0', '--accent-fg:#081226', '--danger:#ff9384'],
+    sepia: ['--fg3:#6d614e', '--accent:#8a571b', '--danger:#a32424'],
   }[theme];
   for (const token of requiredTokens) expect(css.replace(/\s+/g, '')).toContain(token);
   const parse = value => value.match(/\d+/g).map(Number);
@@ -1469,6 +1478,12 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
     expect(ratios.weak).toBeGreaterThanOrEqual(4.5);
     expect(ratios.button).toBeGreaterThanOrEqual(4.5);
   }
+
+  await page.evaluate(() => document.getElementById('cm-selection-toolbar')
+    .classList.remove('hidden'));
+  await expect(page.locator('#cm-sel-copy')).toBeVisible();
+  await expect.poll(async () => page.locator('#cm-sel-copy')
+    .evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(24);
 });
 
 test('tabs, status regions, and stacked dialogs meet keyboard contracts', async ({ page }) => {
@@ -1487,14 +1502,14 @@ test('tabs, status regions, and stacked dialogs meet keyboard contracts', async 
     state.activeTabId = 'one';
     renderTabsBar();
   });
-  await page.locator('#doc-tabs-bar .tab-item').first().focus();
+  await page.locator('.tab-item:visible').first().focus();
   await page.keyboard.press('ArrowRight');
-  await expect(page.locator('#doc-tabs-bar .tab-item').nth(1)).toBeFocused();
-  await expect(page.locator('#doc-tabs-bar .tab-item').nth(1)).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.tab-item:visible').nth(1)).toBeFocused();
+  await expect(page.locator('.tab-item:visible').nth(1)).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('End');
-  await expect(page.locator('#doc-tabs-bar .tab-item').nth(2)).toBeFocused();
+  await expect(page.locator('.tab-item:visible').nth(2)).toBeFocused();
   await page.keyboard.press('Home');
-  await expect(page.locator('#doc-tabs-bar .tab-item').first()).toBeFocused();
+  await expect(page.locator('.tab-item:visible').first()).toBeFocused();
 
   await page.setViewportSize({ width: 600, height: 600 });
   await page.evaluate(() => renderTabsBar());

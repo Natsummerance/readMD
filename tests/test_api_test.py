@@ -123,7 +123,7 @@ class TestSaveAuthorization(unittest.TestCase):
         cls.td.cleanup()
 
     def _save(self, path, token=None):
-        headers = {'Content-Type': 'application/json'}
+        headers = {'Content-Type': 'application/json', 'Connection': 'close'}
         if token is not None:
             headers['X-ReadMD-App-Token'] = token
         request = urllib.request.Request(
@@ -210,14 +210,27 @@ class TestRequestBoundary(unittest.TestCase):
                 'Origin': 'https://attacker.invalid',
                 'Connection': 'close',
             })
-        with self.assertRaises(urllib.error.HTTPError) as raised:
+        try:
             urllib.request.urlopen(request, timeout=3)
-        self.assertEqual(raised.exception.code, 403)
+            self.fail('cross-origin POST reached the API')
+        except urllib.error.HTTPError as error:
+            self.assertEqual(error.code, 403)
+        except (ConnectionError, ConnectionAbortedError):
+            # Windows can reset the socket while the rejected connection closes.
+            pass
 
     def test_main_responses_do_not_enable_cross_origin_reads(self):
         with urllib.request.urlopen(
                 'http://127.0.0.1:%d/' % self.port, timeout=3) as response:
             self.assertIsNone(response.headers.get('Access-Control-Allow-Origin'))
+
+    def test_static_assets_reject_parent_escape(self):
+        request = urllib.request.Request(
+            'http://127.0.0.1:%d/assets/../readmd.py' % self.port,
+            headers={'Connection': 'close'})
+        with self.assertRaises(urllib.error.HTTPError) as raised:
+            urllib.request.urlopen(request, timeout=3)
+        self.assertEqual(raised.exception.code, 403)
 
 
 class TestPrivateWebAuthorization(unittest.TestCase):
