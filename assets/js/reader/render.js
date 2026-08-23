@@ -102,7 +102,7 @@ function openFileRename() {
 }
 
 
-async function loadFile(path, { force = false } = {}) {
+async function loadFile(path, { force = false, browserCopy = false } = {}) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!path) return;
   const existingTab = findTabByPath(path);
@@ -127,6 +127,7 @@ async function loadFile(path, { force = false } = {}) {
     const fileFields = {
       mode: 'file',
       source: 'file',
+      browserCopy,
       path: d.path,
       dir: d.dir,
       name: d.name,
@@ -134,6 +135,7 @@ async function loadFile(path, { force = false } = {}) {
       content: d.content,
       original: d.original,
       fixed: d.content,
+      title: browserCopy ? `${d.name} (${_t('app.browserCopy') || 'browser copy'})` : d.name,
       fixes: d.fixes || [],
       stats: d.stats || {},
       size: d.size,
@@ -184,8 +186,9 @@ async function loadFile(path, { force = false } = {}) {
       } else {
         showToast(_t('toast.opened', { name: d.name }), 4000);
       }
-      document.title = d.name + ' - ReadMD';
-      setFileTitle(d.name, hasPy, d.path);
+      const displayTitle = browserCopy ? `${d.name} (${_t('app.browserCopy') || 'browser copy'})` : d.name;
+      document.title = displayTitle + ' - ReadMD';
+      setFileTitle(displayTitle, hasPy, d.path);
       addRecent(d.path);
       pushHistory(d.path);
       saveLastFile(d.path);
@@ -1854,7 +1857,7 @@ function loadFileDialog() {
     const f = input.files && input.files[0];
     if (!f) return;
     const p = await uploadFile(f);
-    if (p && MD_RE.test(p)) loadFile(p);
+    if (p && MD_RE.test(p)) loadFile(p, { browserCopy: true });
     else if (p) convertOrOcr(p, 'convert');
   };
   input.click();

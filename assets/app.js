@@ -820,7 +820,7 @@ function getModalFocusable(modal) {
 }
 
 function setupModalAccessibility() {
-  let lastFocusedOutside = null;
+  const modalOpeners = new Map();
   const openModalStack = [];
   document.addEventListener('keydown', event => {
     if (event.key !== 'Tab') return;
@@ -851,8 +851,9 @@ function setupModalAccessibility() {
       const stackIndex = openModalStack.indexOf(modal);
       if (visible) {
         if (stackIndex < 0) openModalStack.push(modal);
-        if (!lastFocusedOutside || modal.contains(lastFocusedOutside)) {
-          lastFocusedOutside = document.activeElement;
+        if (!modalOpeners.has(modal)) {
+          const opener = document.activeElement;
+          modalOpeners.set(modal, modal.contains(opener) ? null : opener);
         }
         if (!modal.contains(document.activeElement)) {
           const focusable = getModalFocusable(modal);
@@ -860,10 +861,11 @@ function setupModalAccessibility() {
         }
       } else if (!visible) {
         if (stackIndex >= 0) openModalStack.splice(stackIndex, 1);
-        if (lastFocusedOutside && modal.contains(document.activeElement)) {
-        if (lastFocusedOutside.isConnected) lastFocusedOutside.focus();
-        lastFocusedOutside = null;
+        if (modal.contains(document.activeElement)) {
+          const opener = modalOpeners.get(modal);
+          if (opener && opener.isConnected) opener.focus({ preventScroll: true });
         }
+        modalOpeners.delete(modal);
       }
     }
   });

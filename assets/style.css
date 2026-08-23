@@ -15,6 +15,7 @@
   --accent-soft: #e7eefc;
   --accent-fg: #ffffff;
   --danger: #b3261e;
+  --warning: #8a5a00;
   --code-bg: #f1f2f6;
   --code-border: rgba(17, 24, 39, .08);
   --quote-bg: #f3f6fe;
@@ -48,6 +49,7 @@ body[data-theme="dark"] {
   --accent-soft: rgba(109, 155, 255, .14);
   --accent-fg: #081226;
   --danger: #ff9384;
+  --warning: #ffb86b;
   --code-bg: #20242c;
   --code-border: rgba(255, 255, 255, .07);
   --quote-bg: rgba(109, 155, 255, .08);
@@ -72,6 +74,7 @@ body[data-theme="sepia"] {
   --accent-soft: rgba(169, 114, 47, .12);
   --accent-fg: #ffffff;
   --danger: #a32424;
+  --warning: #7a4a10;
   --code-bg: #efe5d0;
   --code-border: rgba(90, 70, 40, .12);
   --quote-bg: #f3ead6;
@@ -1199,10 +1202,9 @@ body.ai-resizing { cursor: ew-resize; user-select: none; }
 #ai-output { height: 100%; overflow: auto; padding: 12px 14px; }
 .ai-out-head { font-size: 12px; color: var(--fg3); padding-bottom: 6px; border-bottom: 1px dashed var(--border); margin-bottom: 8px; }
 .ai-out-body { font-size: 13.5px; line-height: 1.65; }
-.ai-err { color: #d33; font-size: 13px; }
+.ai-err { color: var(--danger); font-size: 13px; }
 .ai-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 #ai-status { font-size: 12px; color: var(--accent); flex: 1; }
-body[data-theme="dark"] .ai-err { color: #ff7a7a; }
 .ai-row .tb-btn { flex: 0 0 auto; padding: 6px 8px; font-size: 12px; }
 #ai-template, #ai-session { flex: 1.15; }
 #ai-clear-ctx { flex: 0 0 auto; padding: 6px 8px; font-size: 12px; }
@@ -2942,22 +2944,17 @@ html[dir="rtl"] .academic-callout {
   padding: 2px 6px;
   border-radius: 4px;
   background: var(--accent);
-  color: #07101f;
+  color: var(--accent-fg);
   font-weight: 700;
 }
 .academic-theorem { border-left-color: #3b82f6; }
-.academic-theorem .academic-callout-tag { background: #3b82f6; }
 .academic-lemma { border-left-color: #06b6d4; }
-.academic-lemma .academic-callout-tag { background: #06b6d4; }
 .academic-definition { border-left-color: #10b981; }
-.academic-definition .academic-callout-tag { background: #10b981; }
 .academic-corollary { border-left-color: #8b5cf6; }
-.academic-corollary .academic-callout-tag { background: #8b5cf6; }
 .academic-proof {
   border-left-color: #6b7280;
   background: rgba(107, 114, 128, 0.06);
 }
-.academic-proof .academic-callout-tag { background: #6b7280; }
 .proof-qed {
   float: right;
   font-size: 14px;
@@ -3502,7 +3499,7 @@ body[data-theme="dark"] .code-chunk-status.error,
 
 .diagram-fallback-hint {
   font-size: 12px;
-  color: #f59e0b;
+  color: var(--warning);
   font-weight: 500;
   margin-bottom: 6px;
 }

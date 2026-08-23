@@ -20,6 +20,7 @@ function syncStateFromActiveTab() {
   if (!tab) return;
   state.mode = tab.mode || 'file';
   state.source = tab.source || 'file';
+  state.browserCopy = tab.browserCopy || false;
   state.sourceName = tab.title || tab.name || '';
   state.file = tab.path;
   state.dir = tab.dir || '';

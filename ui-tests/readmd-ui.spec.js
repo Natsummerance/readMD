@@ -1183,11 +1183,25 @@ test('browser mode opens, edits, and saves a local document end to end', async (
     const documentPath = path.join(corpusDir, 'browser-save.md');
     await fs.writeFile(documentPath, '# Live document\n\nOriginal body', 'utf8');
 
-    await page.goto(`/?file=${encodeURIComponent(documentPath)}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForFunction(expected => (
-      state.file === expected && state.mode === 'file' && state.original.includes('Original body')
-    ), documentPath);
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    const chooserPromise = page.waitForEvent('filechooser');
+    await page.evaluate(() => loadFileDialog());
+    const chooser = await chooserPromise;
+    await chooser.setFiles(documentPath);
+    await page.waitForTimeout(2000);
+    const uploadState = await page.evaluate(() => ({
+      mode: state.mode,
+      file: state.file,
+      browserCopy: state.browserCopy,
+      original: state.original,
+      toast: document.getElementById('toast')?.textContent,
+    }));
+    expect(uploadState).toMatchObject({ mode: 'file', browserCopy: true });
+    await page.waitForFunction(() => (
+      state.mode === 'file' && state.browserCopy === true && state.original.includes('Original body')
+    ));
     await expect(page.locator('#toast')).toContainText(/已打开/);
+    await expect(page.locator('#file-title')).toContainText(/browser copy|浏览器副本/);
     await expect(page.locator('#content .markdown-body h1')).toHaveText('Live document');
 
     await page.locator('#btn-edit').click();
@@ -1197,7 +1211,9 @@ test('browser mode opens, edits, and saves a local document end to end', async (
 
     await expect(page.locator('#toast')).toContainText(/已保存/);
     await page.waitForFunction(() => state.editing === false && state.original.includes('Saved live'));
-    await expect(await fs.readFile(documentPath, 'utf8')).toContain('Authorized browser write');
+    const importedPath = await page.evaluate(() => state.file);
+    await expect(await fs.readFile(importedPath, 'utf8')).toContain('Authorized browser write');
+    await expect(await fs.readFile(documentPath, 'utf8')).toContain('Original body');
   } finally {
     if (corpusDir) await fs.rm(corpusDir, { recursive: true, force: true });
   }

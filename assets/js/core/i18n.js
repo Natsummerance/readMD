@@ -73,6 +73,10 @@ window.i18n = {
     'menu.lang': '语言'
   },
 
+  browserDefaults: {
+    'app.browserCopy': 'browser copy',
+  },
+
   /** 初始化多语言模块（毫秒级极速初始化，零阻塞启动） */
   async init() {
     // 首选语言决策：1. LocalStorage 缓存 2. 系统侦测
@@ -198,6 +202,9 @@ window.i18n = {
     }
     if ((str === undefined || str === null || str === '') && this.zhDefaults && this.zhDefaults[key]) {
       str = this.zhDefaults[key];
+    }
+    if ((str === undefined || str === null || str === '') && this.browserDefaults && this.browserDefaults[key]) {
+      str = this.browserDefaults[key];
     }
     if (str === undefined || str === null || str === '') {
       str = key;
