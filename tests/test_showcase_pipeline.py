@@ -818,6 +818,7 @@ class ValidatePackageTest(unittest.TestCase):
             metadata = {
                 "title": "ReadMD更新：文档变工作台",
                 "body": "预览版。" + "这是一个用于验证包结构的最短正文。" * 40,
+                "primary_shot": "overview.editor",
                 "topics": ["Markdown", "效率工具", "程序员", "写作", "笔记软件"],
                 "topic_set_id": write_copy.topic_set_id(["Markdown", "效率工具", "程序员", "写作", "笔记软件"]),
                 "topic_set_label": "writing-core",
@@ -852,7 +853,60 @@ class ValidatePackageTest(unittest.TestCase):
             metadata["topic_set_id"] = "tampered-topic-set"
             (pkg / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
             mismatched = validate_package.validate_package(pkg)
-        self.assertTrue(any("topic_set_id does not match topics" in error for error in mismatched), mismatched)
+        self.assertTrue(
+            any("topic_set_id does not match approved topic set" in error for error in mismatched),
+            mismatched,
+        )
+
+    def test_publisher_inputs_recheck_approved_topic_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp)
+            (pkg / "images").mkdir()
+            (pkg / "images" / "xhs-01-cover.jpg").write_bytes(b"jpg")
+            topics = ["Markdown", "PPT", "演讲", "程序员", "效率工具"]
+            story = {"release": "v1.2.3", "primary_shot": "presentation.reveal"}
+            metadata = {
+                "title": "标题",
+                "body": "正文",
+                "primary_shot": "presentation.reveal",
+                "topics": topics,
+                "topic_set_id": write_copy.topic_set_id(topics),
+                "topic_set_label": "talk-core",
+                "images": [str(pkg / "images" / "xhs-01-cover.jpg")],
+            }
+            (pkg / "story.json").write_text(json.dumps(story), encoding="utf-8")
+            (pkg / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+            (pkg / "title.txt").write_text(metadata["title"], encoding="utf-8")
+            (pkg / "body.txt").write_text(metadata["body"], encoding="utf-8")
+            (pkg / "topics.txt").write_text("\n".join(topics), encoding="utf-8")
+            self.assertEqual(validate_package.publisher_input_errors(pkg), [])
+
+            conflicts = [
+                (
+                    "mechanism",
+                    {**story, "primary_shot": "overview.editor"},
+                    metadata,
+                    {},
+                ),
+                (
+                    "topics",
+                    story,
+                    {**metadata, "topics": ["Markdown", "LaTeX", "研究生", "学术排版", "论文写作"]},
+                    {},
+                ),
+                ("id", story, {**metadata, "topic_set_id": "tampered-id"}, {}),
+                ("label", story, {**metadata, "topic_set_label": "wrong-label"}, {}),
+            ]
+            for name, next_story, next_metadata, _ in conflicts:
+                with self.subTest(name=name):
+                    (pkg / "story.json").write_text(json.dumps(next_story), encoding="utf-8")
+                    (pkg / "metadata.json").write_text(json.dumps(next_metadata), encoding="utf-8")
+                    errors = validate_package.publisher_input_errors(pkg)
+                    self.assertTrue(errors, errors)
+                    self.assertTrue(
+                        any("approved" in error.lower() or "differs from story" in error.lower() for error in errors),
+                        errors,
+                    )
 
     def test_rejects_missing_evidence_and_bad_hash(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2832,6 +2886,7 @@ class WatcherTest(unittest.TestCase):
         variant_match: bool = True,
         frame_match: bool = True,
         publisher_match: bool = True,
+        topic_match: bool = True,
     ) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
@@ -2840,7 +2895,10 @@ class WatcherTest(unittest.TestCase):
         (package / "raw").mkdir()
         Image.new("RGB", (20, 10)).save(package / "raw" / "overview-reader.png")
         (package / "raw" / "capture.json").write_text(json.dumps({"schema_version": 1}), encoding="utf-8")
-        (package / "story.json").write_text(json.dumps({"release": "v1.2.3"}), encoding="utf-8")
+        (package / "story.json").write_text(json.dumps({
+            "release": "v1.2.3",
+            "primary_shot": "presentation.reveal",
+        }), encoding="utf-8")
         (package / "qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "copy-review.json").write_text(json.dumps({"ok": True, "total_score": 92}), encoding="utf-8")
         (package / "variants.json").write_text(json.dumps({
@@ -2905,6 +2963,8 @@ class WatcherTest(unittest.TestCase):
             "topic_set_label": "talk-core",
             "images": ["Z:/remote/package/images/xhs-01-cover.jpg"],
         }
+        if not topic_match:
+            metadata["topic_set_id"] = "tampered-topic-set"
         (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
         if not publisher_match:
             (package / "body.txt").write_text("这篇正文和元数据不一致，不能进入发布器。", encoding="utf-8")
@@ -2945,6 +3005,37 @@ class WatcherTest(unittest.TestCase):
         self.assertEqual(loaded["images"], [expected_image])
         self.assertIn("--no-publish", command)
         self.assertEqual(command.count("--image"), 0)
+
+    def test_rejects_topic_identity_mismatch_despite_green_reports(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, topic_match=False)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                if command[2] == "publish":
+                    raise AssertionError("publisher must not click a mismatched topic set")
+                if command[2] == "status":
+                    return SimpleNamespace(returncode=0, stdout=json.dumps({}), stderr="")
+                raise AssertionError(f"unexpected publisher command: {command}")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("publisher input contract failed", record["error"])
+            self.assertIn("topic_set_id does not match approved topic set", record["error"])
 
     def test_full_publish_records_status_evidence(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

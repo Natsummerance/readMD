@@ -30,6 +30,35 @@ def _load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _topic_identity_errors(story: dict[str, Any] | None, metadata: dict[str, Any]) -> list[str]:
+    """Recheck mechanism-bound topic identity independently of generated QA reports."""
+    story_primary = str(story.get("primary_shot", "")).strip() if isinstance(story, dict) else ""
+    metadata_primary = str(metadata.get("primary_shot", "")).strip()
+    if metadata_primary != story_primary:
+        return ["metadata.primary_shot differs from story.primary_shot"]
+
+    topics = metadata.get("topics", [])
+    normalized_topics = [str(item).strip() for item in topics] if isinstance(topics, list) else []
+    expected_topic_set_id = topic_set_id(normalized_topics)
+    approved_sets = MECHANISM_TOPIC_SETS.get(story_primary, [])
+    approved_topic_set = next(
+        (
+            item
+            for item in approved_sets
+            if [str(topic).strip() for topic in item["topics"]] == normalized_topics
+        ),
+        None,
+    )
+    errors: list[str] = []
+    if metadata.get("topic_set_id") != expected_topic_set_id:
+        errors.append("topic_set_id does not match approved topic set")
+    if approved_topic_set is None:
+        errors.append("topics are not an approved experiment set for the release mechanism")
+    elif metadata.get("topic_set_label") != approved_topic_set["label"]:
+        errors.append("topic_set_label does not match approved topics")
+    return errors
+
+
 def _resolve_evidence(path_value: str, package_dir: Path, repo_root: Path) -> Path | None:
     for base in (repo_root, package_dir):
         candidate = (base / path_value).resolve()
@@ -98,6 +127,12 @@ def publisher_input_errors(package_dir: Path) -> list[str]:
         return [f"publisher input metadata unreadable: {exc}"]
 
     errors: list[str] = []
+    try:
+        story = _load_json(package_dir / "story.json")
+    except Exception as exc:
+        errors.append(f"publisher input story unreadable: {exc}")
+    else:
+        errors.extend(_topic_identity_errors(story, metadata))
 
     def text(name: str) -> str | None:
         path = package_dir / name
@@ -302,24 +337,6 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
         errors.append("banned words: " + ", ".join(banned))
     if not isinstance(topics, list) or len(topics) != 5 or any(not str(topic).strip() or topic.startswith("#") for topic in topics):
         errors.append("topics must be five non-empty values without #")
-    expected_topic_set_id = topic_set_id(topics if isinstance(topics, list) else [])
-    if metadata.get("topic_set_id") != expected_topic_set_id:
-        errors.append("topic_set_id does not match topics")
-    normalized_topics = [str(item).strip() for item in topics] if isinstance(topics, list) else []
-    approved_sets = MECHANISM_TOPIC_SETS.get(str(story.get("primary_shot", "")), [])
-    approved_topic_set = next(
-        (
-            item
-            for item in approved_sets
-            if [str(topic).strip() for topic in item["topics"]] == normalized_topics
-            and expected_topic_set_id == topic_set_id(item["topics"])
-        ),
-        None,
-    )
-    if approved_topic_set is None:
-        errors.append("topics are not an approved experiment set for the release mechanism")
-    elif metadata.get("topic_set_label") != approved_topic_set["label"]:
-        errors.append("topic_set_label does not match approved topics")
     if not isinstance(images, list) or not 4 <= len(images) <= 9:
         errors.append("metadata.images must contain 4-9 paths")
         images = []
