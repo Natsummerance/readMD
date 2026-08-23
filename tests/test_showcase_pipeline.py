@@ -961,7 +961,17 @@ class PatternAuditTest(unittest.TestCase):
             "overflow_errors": [],
             "design_audit": {"contrast_errors": [], "small_text": [], "images_failed": []},
             "cards": [
-                card("cover.jpg", "cover", 0.35, 0),
+                {
+                    **card("cover.jpg", "cover", 0.35, 0),
+                    "feed_readiness": {
+                        "ok": True,
+                        "title_font_size": 84,
+                        "title_width_ratio": 0.36,
+                        "title_height_ratio": 0.07,
+                        "caption_font_size": 31,
+                        "failures": [],
+                    },
+                },
                 card("hero.jpg", "pure_ui_hero", 0.82, 0.7),
                 card("reveal.jpg", "annotated_ui", 0.62, 0.55),
                 card("editor.jpg", "annotated_ui", 0.60, 0.55),
@@ -986,8 +996,28 @@ class PatternAuditTest(unittest.TestCase):
             self.write_package(package, story, metadata, composition)
             report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
         self.assertTrue(report["ok"], report["errors"])
-        self.assertEqual(len(report["patterns"]), 10)
+        self.assertEqual(len(report["patterns"]), 11)
         self.assertTrue(all(item["ok"] for item in report["patterns"]))
+
+    def test_cover_type_must_survive_feed_thumbnail_scale(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            story, metadata, composition = self.make_inputs()
+            composition["cards"][0]["feed_readiness"] = {
+                "ok": True,
+                "title_font_size": 48,
+                "title_width_ratio": 0.08,
+                "title_height_ratio": 0.03,
+                "caption_font_size": 22,
+                "failures": [],
+            }
+            self.write_package(package, story, metadata, composition)
+            report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
+
+        self.assertFalse(report["ok"])
+        cover = next(item for item in report["patterns"] if item["id"] == "thumbnail-first-cover")
+        self.assertFalse(cover["ok"])
+        self.assertIn("display type", cover["failures"][0])
 
     def test_cover_hook_must_match_release_mechanism(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

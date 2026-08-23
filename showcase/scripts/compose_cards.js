@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('../../ui-tests/node_modules/@playwright/test');
-const { buildCardHtml, imageSrc, planCards } = require('../compose_lib.cjs');
+const { buildCardHtml, coverFeedReadiness, imageSrc, planCards } = require('../compose_lib.cjs');
 
 async function main() {
   const packageDir = path.resolve(process.argv[2] || 'output/package');
@@ -81,6 +81,24 @@ async function main() {
         const box = image.getBoundingClientRect();
         return { x: Math.max(0, box.x), y: Math.max(0, box.y), width: box.width, height: box.height };
       });
+      const feedReadiness = card.role === 'cover' ? await page.evaluate(() => {
+        const title = document.querySelector('.cover h1');
+        const caption = document.querySelector('.cover p');
+        if (!(title instanceof HTMLElement) || !(caption instanceof HTMLElement)) return {};
+        const range = document.createRange();
+        range.selectNodeContents(title);
+        const rects = [...range.getClientRects()].filter((rect) => rect.width > 0);
+        const titleBox = title.getBoundingClientRect();
+        return {
+          title_font_size: Number.parseFloat(getComputedStyle(title).fontSize),
+          title_width_ratio: (rects.length ? Math.max(...rects.map((rect) => rect.width)) : titleBox.width) / 1080,
+          title_height_ratio: titleBox.height / 1440,
+          caption_font_size: Number.parseFloat(getComputedStyle(caption).fontSize),
+        };
+      }) : null;
+      if (feedReadiness && !coverFeedReadiness(feedReadiness).ok) {
+        throw new Error(`${card.file} feed readiness: ${coverFeedReadiness(feedReadiness).failures.join('; ')}`);
+      }
       await page.screenshot({
         path: path.join(outputDir, card.file),
         type: 'jpeg',
@@ -93,6 +111,7 @@ async function main() {
         ui_min_ratio: card.uiMinRatio,
         ui_area_ratio: screenshotBox ? (screenshotBox.width * screenshotBox.height) / (1080 * 1440) : 0,
         screenshot_box: screenshotBox,
+        feed_readiness: feedReadiness,
       });
       fs.unlinkSync(htmlPath);
     }

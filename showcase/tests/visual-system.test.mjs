@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { loadDesignSystem, buildCardHtml, planCards } = require('../compose_lib.cjs');
+const { loadDesignSystem, buildCardHtml, coverFeedReadiness, planCards } = require('../compose_lib.cjs');
 
 test('design system locks one evidence-paper accent and readable type scale', () => {
   const design = loadDesignSystem();
@@ -40,6 +40,27 @@ test('cover carries a real UI strip and rejects the generic feature grid', () =>
   assert.doesNotMatch(html, /class="grid"/);
   assert.match(html, /写完就能讲/);
   assert.match(html, /Markdown 直接放映，不用重做 PPT。/);
+});
+
+test('cover type is assessed against feed thumbnail scale', () => {
+  const ready = coverFeedReadiness({
+    title_font_size: 84,
+    title_width_ratio: 0.36,
+    title_height_ratio: 0.07,
+    caption_font_size: 31,
+  });
+  assert.equal(ready.ok, true);
+  assert.deepEqual(ready.failures, []);
+
+  const unreadable = coverFeedReadiness({
+    title_font_size: 48,
+    title_width_ratio: 0.08,
+    title_height_ratio: 0.03,
+    caption_font_size: 22,
+  });
+  assert.equal(unreadable.ok, false);
+  assert.ok(unreadable.failures.some(item => item.includes('display type')));
+  assert.ok(unreadable.failures.some(item => item.includes('caption')));
 });
 
 test('summary keeps three outcomes and feature cards stay image-led', () => {

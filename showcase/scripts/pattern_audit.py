@@ -80,6 +80,14 @@ def audit_patterns(
     expected_angle = mechanism_profile.get("narrative_angle", "")
     cover_hook = story.get("cover_hook", {})
     summary_hook = story.get("summary_hook", {})
+    feed = cards[0].get("feed_readiness", {}) if cards else {}
+    thumbnail_ok = (
+        isinstance(feed, dict)
+        and float(feed.get("title_font_size", 0)) >= 72
+        and float(feed.get("caption_font_size", 0)) >= 30
+        and float(feed.get("title_width_ratio", 0)) >= 0.16
+        and 0.04 <= float(feed.get("title_height_ratio", 0)) <= 0.18
+    )
     reader_values = {
         shot_id: str(claim.get("user_value", ""))
         for claim in story.get("claims", [])
@@ -166,6 +174,16 @@ def audit_patterns(
                 f"cover UI region {_box_ratio(cards[0]) if cards else 0:.2%}",
             ],
             ["cover hook must match the release mechanism, stay concise, and keep at least a 15% authentic UI region"],
+        ),
+        "thumbnail-first-cover": _result(
+            "thumbnail-first-cover",
+            thumbnail_ok,
+            [
+                f"display type {float(feed.get('title_font_size', 0)):.0f}px",
+                f"title block {float(feed.get('title_width_ratio', 0)):.0%} wide, {float(feed.get('title_height_ratio', 0)):.0%} tall",
+                f"caption {float(feed.get('caption_font_size', 0)):.0f}px",
+            ],
+            ["the first card needs measured display type that survives Xiaohongshu feed-thumbnail scale"],
         ),
         "pain-to-removal": _result(
             "pain-to-removal",

@@ -31,6 +31,30 @@ function coverHook(story) {
   return { ...hook, title, caption };
 }
 
+function coverFeedReadiness(metrics, canvas = { width: 1080, height: 1440 }) {
+  const titleFontSize = Number(metrics.title_font_size);
+  const titleWidthRatio = Number(metrics.title_width_ratio);
+  const titleHeightRatio = Number(metrics.title_height_ratio);
+  const captionFontSize = Number(metrics.caption_font_size);
+  const failures = [];
+
+  if (!(titleFontSize >= 72)) failures.push(`display type must be at least 72px, got ${titleFontSize}px`);
+  if (!(captionFontSize >= 30)) failures.push(`cover caption must be at least 30px, got ${captionFontSize}px`);
+  if (!(titleWidthRatio >= 0.16)) failures.push(`display type is too narrow for the feed (${titleWidthRatio})`);
+  if (!(titleHeightRatio >= 0.04 && titleHeightRatio <= 0.18)) failures.push(`display block occupies ${titleHeightRatio} of card height`);
+
+  return {
+    title_font_size: titleFontSize,
+    title_width_ratio: titleWidthRatio,
+    title_height_ratio: titleHeightRatio,
+    caption_font_size: captionFontSize,
+    canvas_width: Number(canvas.width),
+    canvas_height: Number(canvas.height),
+    ok: failures.length === 0,
+    failures,
+  };
+}
+
 function plannedFeatureCard(story, shot) {
   const plan = (story.card_plan || []).find((item) => item.shot_id === shot.id);
   if (!plan) throw new Error(`card_plan is missing a reader-value entry for ${shot.id}`);
@@ -186,4 +210,4 @@ function buildCardHtml(card, source, context = {}) {
 </style>${body}`;
 }
 
-module.exports = { buildCardHtml, imageSrc, loadDesignSystem, planCards, slug };
+module.exports = { buildCardHtml, coverFeedReadiness, imageSrc, loadDesignSystem, planCards, slug };

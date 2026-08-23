@@ -18,6 +18,14 @@
       "reviewed_at": "2026-08-22"
     },
     {
+      "id": "local-design-foundations",
+      "name": "Apple Design and Frontend Design type hierarchy",
+      "type": "local-skills",
+      "license": "local-private",
+      "url": "Z:/Natsumer/.codex/skills/apple-design/SKILL.md; Z:/Natsumer/.codex/skills/frontend-design/SKILL.md",
+      "reviewed_at": "2026-08-23"
+    },
+    {
       "id": "local-product-rule",
       "name": "ReadMD authentic product showcase rule",
       "type": "local-project",
@@ -56,6 +64,12 @@
       "source_id": "xhs-visual-director",
       "mechanism": "A cover carries one dominant hook so a cold reader can decide during the feed pause.",
       "application": "Keep the cover headline short, put the mechanism in the subtitle, and use one authentic UI strip instead of a feature inventory."
+    },
+    {
+      "id": "thumbnail-first-cover",
+      "source_id": "local-design-foundations",
+      "mechanism": "Hierarchy comes from measured size, weight, and leading together; a feed decision happens before the full-resolution card is seen.",
+      "application": "Render the cover hook at display scale, verify its real text block occupies enough of the 1080x1440 canvas, and keep supporting copy readable without opening the image."
     },
     {
       "id": "pain-to-removal",
