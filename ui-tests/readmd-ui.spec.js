@@ -512,6 +512,8 @@ test('v2.3.0 i18n language modal and switching', async ({ page }) => {
   // Search filter
   await page.locator('#lang-search-input').fill('English');
   await expect(page.locator('#lang-grid')).toContainText('English');
+  await page.locator('#lang-search-input').press('ArrowDown');
+  await expect(page.locator('#lang-grid [role="option"]').first()).toBeFocused();
 
   // Switch language
   await page.evaluate(() => i18n.setLanguage('en'));
@@ -1225,6 +1227,36 @@ test('save conflicts offer save-as, reload, and cancel recovery', async ({ page 
   await expect(page.locator('#save-conflict-modal')).toBeVisible();
   await page.locator('#save-conflict-save-as').click();
   await page.waitForFunction(() => window.__conflictSavedContent === '# external update');
+  await expect(page.locator('#edit-bar')).toBeVisible();
+  await page.waitForFunction(() => state.editing && getActiveTab()?.isDirty);
+});
+
+test('tab switches preserve paged reading positions', async ({ page }) => {
+  const longDocument = [
+    '# first',
+    ...Array.from({ length: 12 }, (_, section) => [
+      `## section ${section}`,
+      ...Array.from({ length: 700 }, (_, index) => `section ${section} line ${index}`),
+    ]).flat(),
+  ].join('\n');
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderTabsBar === 'function');
+  await page.evaluate(async document => {
+    state.tabs = [
+      { id: 'long', path: '/long.md', title: 'long.md', name: 'long.md', content: document, original: document },
+      { id: 'short', path: '/short.md', title: 'short.md', name: 'short.md', content: '# short', original: '# short' },
+    ];
+    state.activeTabId = 'long';
+    syncStateFromActiveTab();
+    renderTabsBar();
+    await renderContent(document, 'long.md');
+  }, longDocument);
+  await page.waitForFunction(() => state.pagination.enabled && state.pagination.totalPages > 1);
+  await page.evaluate(() => renderPage(3));
+  await page.evaluate(() => switchTab('short'));
+  await expect(page.locator('#content')).toContainText('short');
+  await page.evaluate(() => switchTab('long'));
+  await page.waitForFunction(() => state.pagination.currentPage === 3);
 });
 
 test('search highlights a term spanning adjacent inline elements', async ({ page }) => {
@@ -1237,6 +1269,7 @@ test('search highlights a term spanning adjacent inline elements', async ({ page
   await page.locator('#search-input').fill('readme');
   await expect(page.locator('#search-count')).toHaveText('1/1');
   await expect(page.locator('#content mark.hl')).toHaveText('readme');
+  await page.keyboard.press('Enter');
   await expect(page.locator('#content mark.hl')).toBeFocused();
   await page.keyboard.press('Control+F');
   await expect(page.locator('#btn-search')).toBeFocused();
@@ -1278,12 +1311,16 @@ test('rendered Markdown cannot inject active content or privileged URLs', async 
       '<script>window.__readmdpwned = true;</script>',
       '<iframe src="https://example.test"></iframe>',
       '<a href="javascript:window.__readmdpwned = true">bad link</a>',
+      '',
+      '![remote](https://example.test/remote.png)',
       '<a href="#safe">safe link</a>',
     ].join('\n'), []);
   });
   expect(await page.evaluate(() => window.__readmdpwned)).toBeUndefined();
   await expect(page.locator('#content script, #content iframe')).toHaveCount(0);
   await expect(page.locator('#content img[onerror]')).toHaveCount(0);
+  await expect(page.locator('#content img[src^="https://"]')).toHaveCount(0);
+  await expect(page.locator('#content a[href="https://example.test/remote.png"]')).toHaveCount(1);
   await expect(page.locator('#content a[href^="javascript:"]')).toHaveCount(0);
   await expect(page.locator('#content a[href="#safe"]')).toHaveCount(1);
 });

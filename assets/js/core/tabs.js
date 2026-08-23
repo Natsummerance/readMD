@@ -31,6 +31,20 @@ function syncStateFromActiveTab() {
   state.fixes = tab.fixes || [];
   state.stats = tab.stats || {};
   state.webAssets = tab.webAssets || [];
+  if (tab.readerMode) state.pagination.mode = tab.readerMode;
+}
+
+function captureReaderState(tab) {
+  if (!tab) return;
+  const pagination = state.pagination || {};
+  tab.scrollPos = $('content')?.scrollTop || 0;
+  tab.readerMode = pagination.enabled ? pagination.mode : 'paged';
+  tab.readerPage = pagination.enabled && pagination.mode === 'paged'
+    ? pagination.currentPage
+    : 0;
+  tab.continuousScroll = pagination.enabled && pagination.mode === 'continuous'
+    ? ($('content')?.scrollTop || 0)
+    : (tab.scrollPos || 0);
 }
 
 function renderTabsBar() {
@@ -195,6 +209,9 @@ function renderTabsBar() {
       item.setAttribute('role', 'menuitem');
       item.tabIndex = -1;
       item.className = 'doc-tabs-dropdown-item' + (tab.id === state.activeTabId ? ' active' : '');
+      item.type = 'button';
+      item.setAttribute('role', 'menuitem');
+      item.tabIndex = -1;
       item.innerHTML = '<span>' + (tab.title || tab.name) + (tab.isDirty ? ' &bull;' : '') + '</span><small>' + (tab.path || (tab.isVirtual ? (_t('tabs.virtual') || '虚拟') : '')) + '</small>';
       item.addEventListener('click', () => {
         switchTab(tab.id);
@@ -367,11 +384,11 @@ function closeTabContextMenu({ restoreFocus = false } = {}) {
   if (tabId) focusVisibleTab(tabId);
 }
 
-function renderActiveTab({ restoreScroll = false } = {}) {
+async function renderActiveTab({ restoreScroll = false } = {}) {
   const nextTab = getActiveTab();
   if (!nextTab) return;
   setFixes(nextTab.fixes || [], nextTab.stats || {});
-  renderContent(nextTab.content, nextTab.title || nextTab.name);
+  await renderContent(nextTab.content, nextTab.title || nextTab.name);
   document.title = (nextTab.title || nextTab.name) + ' - ReadMD';
   setFileTitle(nextTab.title || nextTab.name, !nextTab.isVirtual && hasPy, nextTab.path);
   if (restoreScroll && nextTab.scrollPos) {
@@ -445,12 +462,21 @@ async function switchTab(tabId) {
         exitEdit();
       }
     }
-    prevTab.scrollPos = $('content').scrollTop || 0;
+    captureReaderState(prevTab);
   }
   exitEdit();
   state.activeTabId = tabId;
   syncStateFromActiveTab();
-  renderActiveTab({ restoreScroll: true });
+  const nextTabState = getActiveTab();
+  const preferredPage = Number(nextTabState?.readerPage || 0);
+  const rendered = renderActiveTab({ restoreScroll: true });
+  Promise.resolve(rendered).then(() => {
+    if (state.pagination.enabled && state.pagination.mode === 'paged' && preferredPage >= 0) {
+      renderPage(preferredPage, null, true);
+    } else if (state.pagination.enabled && state.pagination.mode === 'continuous' && nextTabState.continuousScroll) {
+      requestAnimationFrame(() => { $('content').scrollTop = nextTabState.continuousScroll; });
+    }
+  });
 }
 
 function promptDirtyClose(tabName) {

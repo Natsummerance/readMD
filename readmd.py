@@ -2599,8 +2599,10 @@ class Api(object):
                     relative = asset_name + '/' + os.path.basename(name)
                     content = content.replace(source.replace('\\', '/'), relative)
                     content = content.replace(source, relative)
-            with open(target, 'w', encoding='utf-8', newline='') as f:
-                f.write(content)
+            result = save_text_atomic(target, content, 'utf-8')
+            if not result.get('ok'):
+                logging.warning('save_as rejected: %s', result.get('error'))
+                return None
             return target
         except Exception as e:
             logging.exception('save_as failed')

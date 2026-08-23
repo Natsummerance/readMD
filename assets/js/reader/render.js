@@ -501,13 +501,22 @@ function togglePaginationMode() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const p = state.pagination;
   if (!p || !p.enabled) return;
+  const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
 
   if (p.mode === 'paged') {
     p.mode = 'continuous';
+    if (activeTab) {
+      activeTab.readerMode = 'continuous';
+      activeTab.continuousScroll = $('content')?.scrollTop || 0;
+    }
     showToast(_t('pagination.switchToContinuousToast') || '已切换至全卷连续阅读模式', 1800);
     renderContentIncremental(p.rawContent, 0);
   } else {
     p.mode = 'paged';
+    if (activeTab) {
+      activeTab.readerMode = 'paged';
+      activeTab.readerPage = 0;
+    }
     showToast(_t('pagination.switchToPagedToast') || '已切换至智能分页阅读模式', 1800);
     renderPage(0, null, false);
   }
@@ -518,6 +527,11 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
   if (!state.pagination.pages || !state.pagination.pages.length) return;
   pageIndex = Math.max(0, Math.min(pageIndex, state.pagination.pages.length - 1));
   state.pagination.currentPage = pageIndex;
+  const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
+  if (activeTab) {
+    activeTab.readerMode = 'paged';
+    activeTab.readerPage = pageIndex;
+  }
   const page = state.pagination.pages[pageIndex];
 
   const el = $('content');
@@ -597,6 +611,13 @@ function initPaginationEvents() {
       tocScrollFrame = requestAnimationFrame(() => {
         tocScrollFrame = 0;
         updateActiveTocHeading();
+        const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
+        if (activeTab) {
+          activeTab.scrollPos = content.scrollTop || 0;
+          if (state.pagination.enabled && state.pagination.mode === 'continuous') {
+            activeTab.continuousScroll = content.scrollTop || 0;
+          }
+        }
       });
     });
   }
@@ -826,6 +847,20 @@ function sanitizeRenderedHtml(html) {
       node.replaceWith(...node.childNodes);
       return;
     }
+    if (tag === 'img') {
+      const source = node.getAttribute('src') || '';
+      if (/^https?:/i.test(source)) {
+        const link = document.createElement('a');
+        link.href = source;
+        link.rel = 'noopener noreferrer';
+        link.target = '_blank';
+        link.className = 'remote-image-link';
+        link.textContent = node.getAttribute('alt')
+          || `[${new URL(source).hostname}]`;
+        node.replaceWith(link);
+        return;
+      }
+    }
 
     Array.from(node.attributes).forEach(attribute => {
       const name = attribute.name.toLowerCase();
@@ -859,6 +894,7 @@ function sanitizeRenderedHtml(html) {
       const href = node.getAttribute('href');
       if (!href) node.removeAttribute('target');
       else if (/^https?:/i.test(href)) node.setAttribute('rel', 'noopener noreferrer');
+      else if (node.classList.contains('remote-image-link')) node.setAttribute('rel', 'noopener noreferrer');
     }
     if (tag === 'input' && !node.hasAttribute('disabled')) node.setAttribute('disabled', '');
   });
@@ -975,6 +1011,9 @@ async function renderContentIncremental(content, savedTop) {
   }
   const prog = document.createElement('div');
   prog.id = 'render-progress';
+  prog.setAttribute('role', 'status');
+  prog.setAttribute('aria-live', 'polite');
+  prog.setAttribute('aria-atomic', 'true');
   el.appendChild(prog);
   const CHUNK = 8;
   for (let i = 0; i < total; i += CHUNK) {

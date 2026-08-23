@@ -85,7 +85,7 @@ function highlightTextMatches(body, query) {
   }
 }
 
-function doSearch(q, jumpToIdx) {
+function doSearch(q, jumpToIdx, { jump = true } = {}) {
   clearMarks();
   state.lastQuery = q;
   if (!q) {
@@ -120,6 +120,9 @@ function doSearch(q, jumpToIdx) {
   }
 
   // 2. 在当前页 DOM 中生成实际的高亮 mark 标签
+  if (!isPaged) {
+    globalSearchState = { query: q, matches: [], globalIndex: 0 };
+  }
   const body = document.querySelector('#content .markdown-body');
   if (!body) return;
   highlightTextMatches(body, q);
@@ -129,19 +132,38 @@ function doSearch(q, jumpToIdx) {
 
   if (isPaged && globalSearchState.matches.length > 0) {
     const curMatch = globalSearchState.matches[globalSearchState.globalIndex];
+    if (!jump) return;
     if (curMatch && curMatch.pageIndex !== state.pagination.currentPage) {
       renderPage(curMatch.pageIndex);
       requestAnimationFrame(() => {
-        doSearch(globalSearchState.query, globalSearchState.globalIndex);
+        doSearch(globalSearchState.query, globalSearchState.globalIndex, { jump });
       });
       return;
     }
     if (curMatch && curMatch.pageIndex === state.pagination.currentPage) {
       jumpToLocalMark(curMatch.matchIdxInPage);
     }
-  } else if (state.currentMarks.length > 0) {
+  } else if (jump && state.currentMarks.length > 0) {
     jumpToLocalMark(0);
   }
+}
+
+function focusCurrentSearchMatch() {
+  const isPaged = state.pagination?.enabled && state.pagination.mode === 'paged' && globalSearchState.matches.length > 0;
+  if (isPaged) {
+    const match = globalSearchState.matches[globalSearchState.globalIndex];
+    if (!match) return;
+    if (match.pageIndex !== state.pagination.currentPage) {
+      renderPage(match.pageIndex);
+      requestAnimationFrame(() => {
+        doSearch(globalSearchState.query, globalSearchState.globalIndex);
+      });
+      return;
+    }
+    jumpToLocalMark(match.matchIdxInPage);
+    return;
+  }
+  jumpToLocalMark(0);
 }
 
 function jumpToLocalMark(idx) {
@@ -153,6 +175,7 @@ function jumpToLocalMark(idx) {
     m.tabIndex = -1;
     m.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
     m.focus({ preventScroll: true });
+    setTimeout(() => m.focus({ preventScroll: true }), 0);
   }
 }
 
@@ -187,6 +210,7 @@ function jumpToMark(dir) {
     m.tabIndex = -1;
     m.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
     m.focus({ preventScroll: true });
+    setTimeout(() => m.focus({ preventScroll: true }), 0);
   }
   updateSearchCount();
 }
@@ -227,11 +251,5 @@ function closeSearch({ restoreFocus = false } = {}) {
 }
 
 function consumeInitialSearchJump() {
-  const isPaged = state.pagination?.enabled && state.pagination.mode === 'paged' && globalSearchState.matches.length > 0;
-  if (isPaged) {
-    const match = globalSearchState.matches[globalSearchState.globalIndex];
-    if (match && match.pageIndex === state.pagination.currentPage) jumpToLocalMark(match.matchIdxInPage);
-  } else if (state.currentMarks.length) {
-    jumpToLocalMark(0);
-  }
+  focusCurrentSearchMatch();
 }

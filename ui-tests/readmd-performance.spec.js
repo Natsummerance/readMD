@@ -22,7 +22,7 @@ function corpusDocument(lineCount) {
 async function openCorpus(page, size) {
   const file = path.join(corpusDir, `readmd-${size}.md`);
   const started = Date.now();
-  await page.goto(`/?file=${encodeURIComponent(file)}`);
+  await page.goto(`/?file=${encodeURIComponent(file)}`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(expected => state.file === expected && state.original.length > 0, file);
   await expect(page.locator('#toast')).toContainText(/已打开/);
   await expect(page.locator('#content .markdown-body h1')).toContainText('Long document performance');

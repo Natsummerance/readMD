@@ -396,9 +396,10 @@ function bindEvents() {
   $('search-next').addEventListener('click', () => jumpToMark(1));
   $('search-prev').addEventListener('click', () => jumpToMark(-1));
   let searchDebounce = null;
+  let initialSearchFocused = false;
   $('search-input').addEventListener('input', e => {
     clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(() => doSearch(e.target.value), 40);
+    searchDebounce = setTimeout(() => doSearch(e.target.value, undefined, { jump: false }), 40);
   });
 
   $('search-input').addEventListener('keydown', e => {
@@ -406,12 +407,14 @@ function bindEvents() {
       e.preventDefault();
       clearTimeout(searchDebounce);
       if (globalSearchState.query !== e.target.value) {
-        doSearch(e.target.value);
+        initialSearchFocused = false;
+        doSearch(e.target.value, undefined, { jump: false });
         return;
       }
-      if (enterAdvancePending) {
-        enterAdvancePending = false;
+      if (!initialSearchFocused) {
+        initialSearchFocused = true;
         consumeInitialSearchJump();
+        return;
       } else {
         jumpToMark(e.shiftKey ? -1 : 1);
       }

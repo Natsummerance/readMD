@@ -138,23 +138,50 @@ function bindTabOverflowEvents() {
 
   let isPinned = false;
 
+  const setOverflowMenu = visible => {
+    isPinned = visible;
+    dropdown.classList.toggle('hidden', !visible);
+    overflowBtn.setAttribute('aria-expanded', visible ? 'true' : 'false');
+    if (visible) setTimeout(() => dropdown.querySelector('[role="menuitem"]')?.focus(), 20);
+  };
+
   overflowWrap.addEventListener('mouseenter', () => {
-    if (!isPinned) dropdown.classList.remove('hidden');
+    if (!isPinned) setOverflowMenu(true);
   });
   overflowWrap.addEventListener('mouseleave', () => {
-    if (!isPinned) dropdown.classList.add('hidden');
+    if (!isPinned) setOverflowMenu(false);
   });
 
   overflowBtn.addEventListener('click', e => {
     e.stopPropagation();
-    isPinned = !isPinned;
-    dropdown.classList.toggle('hidden', !isPinned);
+    setOverflowMenu(!isPinned);
+  });
+
+  overflowBtn.addEventListener('keydown', event => {
+    if (event.key !== 'ArrowDown' && event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    setOverflowMenu(true);
   });
 
   document.addEventListener('click', e => {
     if (!overflowWrap.contains(e.target)) {
-      isPinned = false;
-      dropdown.classList.add('hidden');
+      setOverflowMenu(false);
+    }
+  });
+
+  dropdown.addEventListener('keydown', event => {
+    const items = Array.from(dropdown.querySelectorAll('[role="menuitem"]'));
+    const index = items.indexOf(document.activeElement);
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus();
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      (event.key === 'Home' ? items[0] : items[items.length - 1])?.focus();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setOverflowMenu(false);
+      overflowBtn.focus();
     }
   });
 }

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#3b6ef5">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http: https:; connect-src 'self' http: https:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: https:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
 <title>ReadMD</title>
 <link rel="stylesheet" href="/assets/style.css">
 </head>
@@ -31,7 +31,7 @@
     <div id="doc-tabs-container" class="doc-tabs-container">
       <div id="doc-tabs-bar" class="doc-tabs-bar" role="tablist" aria-label="已打开文档" data-i18n-aria="tabs.openDocs"></div>
       <div id="doc-tabs-overflow-wrap" class="doc-tabs-overflow-wrap hidden">
-        <button id="doc-tabs-overflow-btn" class="doc-tabs-overflow-btn" title="查看被折叠的标签页" data-i18n-title="tabs.overflowTooltip" aria-haspopup="true">⌄</button>
+        <button id="doc-tabs-overflow-btn" class="doc-tabs-overflow-btn" title="查看被折叠的标签页" data-i18n-title="tabs.overflowTooltip" aria-haspopup="menu" aria-expanded="false">⌄</button>
         <div id="doc-tabs-dropdown" class="doc-tabs-dropdown hidden" role="menu"></div>
       </div>
     </div>
@@ -261,7 +261,7 @@
 
     <textarea id="edit-area" class="hidden" spellcheck="false"></textarea>
     <div id="edit-wrap" class="hidden"><div id="edit-cm"></div></div>
-    <div id="pv-splitter" class="hidden" role="separator" tabindex="0" aria-label="调整编辑与预览比例" data-i18n-aria="editor.pvSplitterAria"></div>
+    <div id="pv-splitter" class="hidden" role="separator" tabindex="0" aria-label="调整编辑与预览比例" aria-orientation="vertical" aria-valuemin="25" aria-valuemax="70" aria-valuenow="50" aria-valuetext="50%" data-i18n-aria="editor.pvSplitterAria"></div>
     <div id="preview-wrap" class="hidden"><div id="preview-pane" class="markdown-body"></div></div>
   </div>
 </div>
@@ -852,9 +852,9 @@
       <button class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close" onclick="i18n.closeModal()">✕</button>
     </div>
     <div class="lang-search-wrap">
-<input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." aria-label="搜索语言" data-i18n-placeholder="lang.search" data-i18n-aria="lang.search" oninput="i18n.renderLanguageGrid(this.value)">
+<input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." aria-label="搜索语言" aria-controls="lang-grid" data-i18n-placeholder="lang.search" data-i18n-aria="lang.search" oninput="i18n.renderLanguageGrid(this.value)">
     </div>
-    <div id="lang-grid" class="lang-grid-container"></div>
+    <div id="lang-grid" class="lang-grid-container" role="listbox" aria-label="语言 / Language"></div>
   </div>
 </div>
 

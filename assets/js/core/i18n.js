@@ -276,9 +276,13 @@ window.i18n = {
         continue;
       }
 
-      const item = document.createElement('div');
+      const item = document.createElement('button');
+      item.type = 'button';
       const isActive = code === this.currentLang;
       item.className = 'lang-item' + (isActive ? ' active' : '');
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      item.tabIndex = isActive ? 0 : -1;
       item.innerHTML = `
         <div class="lang-item-content">
           <div class="lang-item-native">${native}</div>
@@ -295,6 +299,26 @@ window.i18n = {
       });
       grid.appendChild(item);
     }
+
+    grid.onkeydown = event => {
+      const items = Array.from(grid.querySelectorAll('[role="option"]'));
+      const index = items.indexOf(document.activeElement);
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const next = event.key === 'ArrowDown'
+          ? items[(index + 1) % items.length]
+          : items[(index - 1 + items.length) % items.length];
+        next?.focus();
+      } else if (event.key === 'Home' || event.key === 'End') {
+        event.preventDefault();
+        (event.key === 'Home' ? items[0] : items[items.length - 1])?.focus();
+      }
+    };
   }
 };
 
+document.addEventListener('keydown', event => {
+  if (event.target?.id !== 'lang-search-input' || event.key !== 'ArrowDown') return;
+  event.preventDefault();
+  document.querySelector('#lang-grid [role="option"]')?.focus();
+});

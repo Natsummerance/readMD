@@ -92,6 +92,14 @@ function applyPvSplit() {
   const horizontal = state.pvLayout === 'left' || state.pvLayout === 'right';
   const pct = horizontal ? state.pvSplitX : state.pvSplitY;
   pw.style.flexBasis = pct + '%';
+  const splitter = $('pv-splitter');
+  if (splitter) {
+    splitter.setAttribute('aria-valuemin', '25');
+    splitter.setAttribute('aria-valuemax', '70');
+    splitter.setAttribute('aria-valuenow', String(Math.round(pct)));
+    splitter.setAttribute('aria-valuetext', `${Math.round(pct)}%`);
+    splitter.setAttribute('aria-orientation', horizontal ? 'vertical' : 'horizontal');
+  }
 }
 
 function bindPvSplitter() {
@@ -435,6 +443,10 @@ async function saveEdit() {
           }
           state.fixed = content;
           const saved = await saveAs(content);
+          if (!hasPy && saved) {
+            showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
+            return false;
+          }
           if (!saved) return false;
           exitEdit();
           await loadFile(state.file, { force: true });
