@@ -6,6 +6,7 @@ import hashlib
 import importlib
 import json
 import re
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -2200,6 +2201,30 @@ class BuildPipelineTest(unittest.TestCase):
         self.assertEqual(errors, report["errors"])
         self.assertTrue(any("semantic alignment gate" in error for error in report["errors"]))
 
+    def test_composition_failure_still_writes_red_aggregate_qa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            original_run = build_package_module.subprocess.run
+            original_audit = build_package_module.audit_package
+
+            def fail_run(*args, **kwargs):
+                raise subprocess.CalledProcessError(1, ["node"])
+
+            def fail_audit(package_dir):
+                raise AssertionError("semantic gate requires a completed composition")
+
+            build_package_module.subprocess.run = fail_run
+            build_package_module.audit_package = fail_audit
+            try:
+                errors = build_package_module.compose_and_validate(package, ROOT)
+            finally:
+                build_package_module.subprocess.run = original_run
+                build_package_module.audit_package = original_audit
+
+            report = json.loads((package / "qa.json").read_text(encoding="utf-8"))
+        self.assertFalse(report["ok"])
+        self.assertEqual(errors, report["errors"])
+        self.assertEqual(errors, ["card composition failed with exit code 1"])
 
 class ContentMemoryTest(unittest.TestCase):
     def record(self, formula: str = "#61", release: str = "v1.0.0", title: str = "别再把Markdown只当笔记了") -> dict:

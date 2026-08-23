@@ -102,6 +102,13 @@ def compose_and_validate(package_dir: Path, repo_root: Path) -> list[str]:
         errors.append(f"card composition failed with exit code {exc.returncode}")
         composed = False
 
+    if not composed:
+        (package_dir / "qa.json").write_text(
+            json.dumps({"ok": False, "errors": errors}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return errors
+
     copy_report = audit_package(package_dir)
     if not copy_report["ok"]:
         errors.append(f"semantic alignment gate failed: {json.dumps(copy_report, ensure_ascii=False)}")
