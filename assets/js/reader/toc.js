@@ -17,12 +17,23 @@ function buildToc() {
     const globalHeadings = [];
 
     state.pagination.pages.forEach((pg, pageIdx) => {
-      const lines = pg.content.split('\n');
-      let inFence = false;
-      lines.forEach((line, lineIndex) => {
-        const trimmed = line.trim();
-        if (/^```/.test(trimmed)) { inFence = !inFence; return; }
-        if (inFence) return;
+    const lines = pg.content.split('\n');
+    let inFence = false;
+    let fenceMarker = '';
+    lines.forEach((line, lineIndex) => {
+      const trimmed = line.trim();
+      if (/^(```|~~~)/.test(trimmed)) {
+        const marker = trimmed.slice(0, 3);
+        if (!inFence) {
+          inFence = true;
+          fenceMarker = marker;
+        } else if (trimmed.startsWith(fenceMarker)) {
+          inFence = false;
+          fenceMarker = '';
+        }
+        return;
+      }
+      if (inFence) return;
 
         const m = trimmed.match(/^(#{1,6})\s+(.+)$/);
         if (m) {

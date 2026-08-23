@@ -163,6 +163,21 @@ function bindTabContextMenuEvents() {
   const menu = $('tab-context-menu');
   if (!menu) return;
 
+  menu.addEventListener('keydown', event => {
+    const items = Array.from(menu.querySelectorAll('[role="menuitem"]'));
+    const index = items.indexOf(document.activeElement);
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const next = event.key === 'ArrowDown'
+        ? items[(index + 1) % items.length]
+        : items[(index - 1 + items.length) % items.length];
+      next?.focus();
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      (event.key === 'Home' ? items[0] : items[items.length - 1])?.focus();
+    }
+  });
+
   menu.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;

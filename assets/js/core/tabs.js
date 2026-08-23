@@ -63,6 +63,7 @@ function renderTabsBar() {
     el.dataset.tabId = tab.id;
     el.setAttribute('role', 'tab');
     el.setAttribute('aria-selected', tab.id === state.activeTabId ? 'true' : 'false');
+    el.setAttribute('aria-controls', 'content');
     el.setAttribute('aria-keyshortcuts', 'Alt+Left Arrow Alt+Right Arrow Delete Backspace');
     el.tabIndex = tab.id === state.activeTabId ? 0 : -1;
     el.draggable = true;
@@ -191,6 +192,8 @@ function renderTabsBar() {
     dropdown.innerHTML = '';
     state.tabs.forEach(tab => {
       const item = document.createElement('button');
+      item.setAttribute('role', 'menuitem');
+      item.tabIndex = -1;
       item.className = 'doc-tabs-dropdown-item' + (tab.id === state.activeTabId ? ' active' : '');
       item.innerHTML = '<span>' + (tab.title || tab.name) + (tab.isDirty ? ' &bull;' : '') + '</span><small>' + (tab.path || (tab.isVirtual ? (_t('tabs.virtual') || '虚拟') : '')) + '</small>';
       item.addEventListener('click', () => {

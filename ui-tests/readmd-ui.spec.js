@@ -1408,6 +1408,17 @@ test('tabs, status regions, and stacked dialogs meet keyboard contracts', async 
   await expect(page.locator('#doc-tabs-secondary-bar .tab-item').first()).toBeFocused();
   await page.setViewportSize({ width: 720, height: 600 });
 
+  await expect(page.locator('#doc-tabs-bar .tab-item').first()).toHaveAttribute('aria-controls', 'content');
+  await expect(page.locator('#pg-mode-toggle')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#doc-tabs-bar .tab-item').first().focus();
+  await page.keyboard.press('Shift+F10');
+  await expect(page.locator('#tab-context-menu')).toBeVisible();
+  await expect(page.locator('#tab-context-menu [role="menuitem"]').first()).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('#tab-context-menu [role="menuitem"]').nth(1)).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#doc-tabs-bar .tab-item').first()).toBeFocused();
+
   await page.evaluate(() => {
     state.original = '# search target';
     state.fixed = state.original;

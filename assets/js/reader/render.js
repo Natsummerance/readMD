@@ -480,6 +480,7 @@ function updatePaginationBar() {
       iconPaged.classList.remove('hidden');
     }
   }
+  $('pg-mode-toggle')?.setAttribute('aria-pressed', p.mode === 'paged' ? 'true' : 'false');
 
   const stBadge = $('status-pagination');
   if (stBadge) {
