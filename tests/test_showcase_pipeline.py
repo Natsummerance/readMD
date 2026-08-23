@@ -337,13 +337,14 @@ class WriteCopyTest(unittest.TestCase):
                 self.assertTrue(8 <= len(hook["caption"]) <= 32)
 
     def test_mechanism_cover_variants_track_all_title_formulas(self) -> None:
-        expected_formulas = {"#36", "#9", "#22", "#61", "#12"}
+        expected_formulas = set(copy_variants.TITLE_FORMULAS)
+        self.assertEqual(expected_formulas, {"#36", "#9", "#22", "#26", "#61", "#12"})
         for primary_shot, profile in copy_profiles.PROFILES.items():
             with self.subTest(primary_shot=primary_shot):
                 variants = profile["cover_variants"]
                 self.assertEqual(set(variants), expected_formulas)
                 self.assertEqual(set(variants), set(profile["titles"]))
-                self.assertEqual(len({item["title"] for item in variants.values()}), 5)
+                self.assertEqual(len({item["title"] for item in variants.values()}), 6)
                 for formula_id, hook in variants.items():
                     self.assertEqual(hook["formula_id"], formula_id)
                     self.assertTrue(2 <= len(hook["title"]) <= 8)
@@ -365,7 +366,7 @@ class WriteCopyTest(unittest.TestCase):
         self.assertEqual(updated["cover_variant_formula_id"], "#22")
         self.assertEqual(updated["card_plan"][0]["title"], "上台讲文档的人")
 
-    def test_title_candidates_cover_five_traceable_formulas(self) -> None:
+    def test_title_candidates_cover_all_traceable_experiment_formulas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             story = write_story(Path(tmp))
             result = write_copy.generate_copy(
@@ -374,8 +375,10 @@ class WriteCopyTest(unittest.TestCase):
                 previous_release="v2.3.7-beta.2",
             )
         candidates = result["title_candidates"]
-        self.assertGreaterEqual(len(candidates), 5)
-        self.assertLessEqual(len({item["formula_id"] for item in candidates}), len(candidates))
+        self.assertEqual(
+            {item["formula_id"] for item in candidates},
+            set(copy_variants.TITLE_FORMULAS),
+        )
         for item in candidates:
             self.assertLessEqual(len(item["text"]), 20)
             self.assertRegex(item["formula_id"], r"^#\d+$")
@@ -540,7 +543,7 @@ class WriteCopyTest(unittest.TestCase):
             previous_release="v1.1.0",
         )
         variants = copy_variants.build_variants(story=story, base_metadata=base)
-        self.assertEqual(len(variants), 60)
+        self.assertEqual(len(variants), 72)
         self.assertTrue(all(item["_report"]["ok"] for item in variants))
         self.assertTrue(all("图表" in item["body"].split("\n\n", 1)[0] for item in variants))
         self.assertTrue(all("复制进 PPT" not in item["body"].split("\n\n", 1)[0] for item in variants))
@@ -569,7 +572,7 @@ class WriteCopyTest(unittest.TestCase):
                 self.assertTrue(600 <= len(base["body"]) <= 900)
                 self.assertTrue(all(len(item["text"]) <= 20 for item in base["title_candidates"]))
                 variants = copy_variants.build_variants(story=story, base_metadata=base)
-                self.assertEqual(len(variants), 60)
+                self.assertEqual(len(variants), 72)
                 failed = [item["variant_id"] for item in variants if not item["_report"]["ok"]]
                 self.assertEqual(failed, [])
 
@@ -1106,15 +1109,15 @@ class CopyVariantsTest(unittest.TestCase):
         }
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
         variants = copy_variants.build_variants(story=story, base_metadata=base)
-        self.assertEqual(len(variants), 60)
+        self.assertEqual(len(variants), 72)
         self.assertEqual(len({item["strategy"] for item in variants}), 3)
-        self.assertEqual(len({item["variant_id"] for item in variants}), 60)
+        self.assertEqual(len({item["variant_id"] for item in variants}), 72)
         self.assertEqual({item["copy_frame"] for item in variants}, {"core", "workflow", "decision", "source"})
-        self.assertEqual(len({item["title"] for item in variants}), 5)
+        self.assertEqual(len({item["title"] for item in variants}), 6)
         self.assertEqual(len({item["body"] for item in variants}), 12)
         for hook_type in ("outcome-led", "identity-led", "mechanism-curiosity"):
             formulas = {item["title_formula_id"] for item in variants if item["hook_type"] == hook_type}
-            self.assertEqual(formulas, {"#36", "#9", "#22", "#61", "#12"})
+            self.assertEqual(formulas, set(copy_variants.TITLE_FORMULAS))
         for variant in variants:
             report = audit_copy.audit_copy(
                 story=story,

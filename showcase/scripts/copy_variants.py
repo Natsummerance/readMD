@@ -15,7 +15,7 @@ from audit_copy import audit_copy
 from content_memory import load_learning_records, partition_records, summarize
 from copy_profiles import frames_for_story
 
-TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12")
+TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12", "#26")
 ENDPOINT_COOLDOWN_RELEASES = 8
 
 
