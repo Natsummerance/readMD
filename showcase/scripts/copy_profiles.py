@@ -158,14 +158,41 @@ SUPPORT_PHRASES: dict[str, str] = {
 }
 
 
+MECHANISM_TOPIC_SETS: dict[str, list[dict[str, Any]]] = {
+    "overview.editor": [
+        {"label": "writing-core", "topics": ["Markdown", "效率工具", "程序员", "写作", "笔记软件"]},
+        {"label": "research-writing", "topics": ["Markdown", "课程讲义", "论文写作", "研究生", "写作"]},
+    ],
+    "presentation.reveal": [
+        {"label": "talk-core", "topics": ["Markdown", "PPT", "演讲", "程序员", "效率工具"]},
+        {"label": "academic-talk", "topics": ["Markdown", "PPT", "课程讲义", "组会报告", "演讲"]},
+    ],
+    "editor.diagram-picker": [
+        {"label": "diagram-core", "topics": ["Markdown", "流程图", "科研绘图", "论文", "研究生"]},
+        {"label": "engineering-diagram", "topics": ["Markdown", "Mermaid", "架构图", "技术方案", "科研绘图"]},
+    ],
+    "academic.latex-bib": [
+        {"label": "latex-core", "topics": ["LaTeX", "论文写作", "研究生", "学术排版", "Markdown"]},
+        {"label": "reference-flow", "topics": ["LaTeX", "参考文献", "Zotero", "学术排版", "论文写作"]},
+    ],
+    "editor.code-chunk": [
+        {"label": "code-core", "topics": ["编程", "Markdown", "程序员", "技术教程", "代码运行"]},
+        {"label": "language-examples", "topics": ["Python", "JavaScript", "代码运行", "开发者教程", "Markdown"]},
+    ],
+    "convert.home": [
+        {"label": "convert-core", "topics": ["PDF", "资料整理", "Markdown", "效率工具", "Word"]},
+        {"label": "capture-ocr", "topics": ["网页剪藏", "OCR", "资料整理", "Markdown", "效率工具"]},
+    ],
+    "sharing.export": [
+        {"label": "share-core", "topics": ["文档分享", "Markdown", "效率工具", "开源项目", "程序员"]},
+        {"label": "lan-share", "topics": ["局域网分享", "手机查看", "文档分享", "Markdown", "效率工具"]},
+    ],
+}
+
+
 MECHANISM_TOPICS: dict[str, list[str]] = {
-    "overview.editor": ["Markdown", "效率工具", "程序员", "写作", "笔记软件"],
-    "presentation.reveal": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
-    "editor.diagram-picker": ["Markdown", "流程图", "科研绘图", "论文", "研究生"],
-    "academic.latex-bib": ["LaTeX", "论文写作", "研究生", "学术排版", "Markdown"],
-    "editor.code-chunk": ["编程", "Markdown", "程序员", "技术教程", "代码运行"],
-    "convert.home": ["PDF", "资料整理", "Markdown", "效率工具", "Word"],
-    "sharing.export": ["文档分享", "Markdown", "效率工具", "开源项目", "程序员"],
+    primary_shot: topic_sets[0]["topics"]
+    for primary_shot, topic_sets in MECHANISM_TOPIC_SETS.items()
 }
 
 

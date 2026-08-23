@@ -13,6 +13,8 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
+from copy_profiles import MECHANISM_TOPIC_SETS
+
 
 BANNED = ("公众号", "微信", "闲鱼", "咸鱼", "转卖", "出票", "转让", "售票", "二维码", "淘口令", "淘宝")
 IMAGE_RE = re.compile(r"^xhs-(0[1-9])-[a-z0-9-]+\.jpg$")
@@ -303,6 +305,21 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
     expected_topic_set_id = topic_set_id(topics if isinstance(topics, list) else [])
     if metadata.get("topic_set_id") != expected_topic_set_id:
         errors.append("topic_set_id does not match topics")
+    normalized_topics = [str(item).strip() for item in topics] if isinstance(topics, list) else []
+    approved_sets = MECHANISM_TOPIC_SETS.get(str(story.get("primary_shot", "")), [])
+    approved_topic_set = next(
+        (
+            item
+            for item in approved_sets
+            if [str(topic).strip() for topic in item["topics"]] == normalized_topics
+            and expected_topic_set_id == topic_set_id(item["topics"])
+        ),
+        None,
+    )
+    if approved_topic_set is None:
+        errors.append("topics are not an approved experiment set for the release mechanism")
+    elif metadata.get("topic_set_label") != approved_topic_set["label"]:
+        errors.append("topic_set_label does not match approved topics")
     if not isinstance(images, list) or not 4 <= len(images) <= 9:
         errors.append("metadata.images must contain 4-9 paths")
         images = []

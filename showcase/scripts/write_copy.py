@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from content_memory import load_learning_records, partition_records, summarize
-from copy_profiles import MECHANISM_TOPICS, SUPPORT_PHRASES, profile_for_story
+from copy_profiles import MECHANISM_TOPIC_SETS, SUPPORT_PHRASES, profile_for_story
 
 
 BANNED_REPLACEMENTS = {
@@ -142,6 +142,102 @@ def _comment_focus(history: list[dict[str, Any]]) -> str:
     )
 
 
+def _select_topic_set(primary_id: str, history: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Choose a mechanism-approved search set with confidence-gated evidence."""
+    raw_sets = MECHANISM_TOPIC_SETS.get(primary_id)
+    if not raw_sets:
+        raw_sets = [{"label": "core", "topics": ["Markdown", "效率工具", "程序员", "开源项目", "GitHub"]}]
+    candidates = [
+        {**item, "topic_set_id": topic_set_id(item["topics"])}
+        for item in raw_sets
+    ]
+    if not history:
+        chosen = candidates[0]
+        return chosen, {
+            "strategy": "default topic set without publication history",
+            "chosen_topic_set_id": chosen["topic_set_id"],
+            "chosen_label": chosen["label"],
+            "scores": {item["topic_set_id"]: 0 for item in candidates},
+            "reasons": {},
+            "avoided_topic_sets": [],
+            "sample_size": 0,
+        }
+
+    stats: dict[str, dict[str, Any]] = {}
+    usage: dict[str, int] = {}
+    for record in history:
+        set_id = str(record.get("topic_set_id", ""))
+        if not set_id:
+            continue
+        usage[set_id] = usage.get(set_id, 0) + 1
+        stat = stats.setdefault(set_id, {
+            "publications": 0,
+            "impressions": 0,
+            "weighted_engagement": 0,
+            "score": 0.0,
+            "confidence_ok": False,
+        })
+        impressions = int(record.get("impressions", 0))
+        engagement = (
+            int(record.get("likes", 0))
+            + int(record.get("collects", 0)) * 2
+            + int(record.get("comments", 0)) * 3
+            + int(record.get("shares", 0)) * 4
+        )
+        stat["publications"] += 1
+        stat["impressions"] += impressions
+        stat["weighted_engagement"] += engagement
+    for stat in stats.values():
+        stat["score"] = round(stat["weighted_engagement"] / max(stat["impressions"], 1), 6)
+        stat["confidence_ok"] = stat["publications"] >= 2 and stat["impressions"] >= 1000
+
+    recent_ids = {str(item.get("topic_set_id", "")) for item in history[-2:]}
+    max_score = max((item["score"] for item in stats.values()), default=0.0)
+    max_usage = max(usage.values(), default=0)
+    scored: list[tuple[float, dict[str, Any]]] = []
+    for index, candidate in enumerate(candidates):
+        set_id = candidate["topic_set_id"]
+        stat = stats.get(set_id)
+        score = float(10 - index)
+        reasons: list[str] = []
+        if stat and stat["confidence_ok"]:
+            score += (stat["score"] / max_score) * 20 if max_score else 0
+            reasons.append("historical performance")
+        else:
+            score += 3
+            reasons.append(
+                "low-confidence evidence held as exploration"
+                if stat
+                else "unexplored"
+            )
+        if set_id in recent_ids:
+            score -= 12
+            reasons.append("recent topic-set fatigue penalty")
+        coverage_bonus = (max_usage - usage.get(set_id, 0)) * 8
+        if coverage_bonus:
+            score += coverage_bonus
+            reasons.append("underused topic set")
+        scored.append((round(score, 3), candidate))
+        candidate["_reason"] = "+".join(reasons)
+
+    chosen = max(scored, key=lambda item: item[0])[1]
+    return chosen, {
+        "strategy": "confidence-gated historical performance with fatigue and coverage balancing",
+        "chosen_topic_set_id": chosen["topic_set_id"],
+        "chosen_label": chosen["label"],
+        "scores": {
+            item["topic_set_id"]: round(value, 3)
+            for value, item in scored
+        },
+        "reasons": {
+            item["topic_set_id"]: item.pop("_reason", "")
+            for item in candidates
+        },
+        "avoided_topic_sets": sorted(recent_ids),
+        "sample_size": len(history),
+    }
+
+
 def generate_copy(
     story: dict[str, Any],
     *,
@@ -152,6 +248,7 @@ def generate_copy(
     history, _pending_history = partition_records(history or [])
     candidates = _title_candidates(story)
     selected_title, title_selection = _select_title([dict(item) for item in candidates], history)
+    selected_topic_set, topic_set_selection = _select_topic_set(primary_id=story.get("primary_shot", "overview.editor"), history=history)
     valid_candidates = [item for item in candidates if len(item["text"]) <= 20]
     chosen_title = selected_title if len(selected_title["text"]) <= 20 else next(iter(valid_candidates), candidates[0])
     chosen_title["text"] = _clean(chosen_title["text"])
@@ -232,10 +329,7 @@ def generate_copy(
         body += "\n\n" + padding[pad_index]
         pad_index += 1
 
-    topics = MECHANISM_TOPICS.get(
-        primary_id,
-        ["Markdown", "效率工具", "程序员", "开源项目", "GitHub"],
-    )
+    topics = selected_topic_set["topics"]
     return {
         "title": chosen_title["text"],
         "primary_shot": primary_id,
@@ -245,6 +339,8 @@ def generate_copy(
         "body": body,
         "topics": topics,
         "topic_set_id": topic_set_id(topics),
+        "topic_set_label": selected_topic_set["label"],
+        "topic_set_selection": topic_set_selection,
         "version_state": story["version_state"],
         "claim_ids": [claim["id"] for claim in story["claims"]],
         "source_urls": [

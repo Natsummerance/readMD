@@ -147,6 +147,14 @@ def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str
     frame_stats = _stats(learning, "copy_frame")
     topic_set_stats = _stats(learning, "topic_set_id")
     topic_stats = _list_stats(learning, "topics")
+    topic_labels = {
+        str(record.get("topic_set_id", "")): str(record.get("topic_set_label", "unknown"))
+        for record in learning
+        if str(record.get("topic_set_id", "")).strip()
+        and str(record.get("topic_set_label", "")).strip()
+    }
+    for topic_set_id, stats in topic_set_stats.items():
+        stats["label"] = topic_labels.get(topic_set_id, "unknown")
     comment_focus = _comment_focus(learning)
     recommended_formula = _recommended(formula_stats)
     recommended_hook_type = _recommended(hook_stats)
@@ -201,7 +209,7 @@ def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str
         lines.append(f"| {frame} | {stats['publications']} | {stats['impressions']} | {stats['weighted_engagement']} | {stats['score']} | {stats['confidence']} |")
     lines.extend(["", "## Topic sets", "", "| Topic set | Publications | Impressions | Weighted engagement | Score | Confidence |", "| --- | ---: | ---: | ---: | ---: | --- |"])
     for topic_set, stats in topic_set_stats.items():
-        lines.append(f"| {topic_set} | {stats['publications']} | {stats['impressions']} | {stats['weighted_engagement']} | {stats['score']} | {stats['confidence']} |")
+        lines.append(f"| {topic_set} · {stats['label']} | {stats['publications']} | {stats['impressions']} | {stats['weighted_engagement']} | {stats['score']} | {stats['confidence']} |")
     lines.extend(["", "## Topic search terms", "", "| Topic | Publications | Impressions | Weighted engagement | Score | Confidence |", "| --- | ---: | ---: | ---: | ---: | --- |"])
     for topic, stats in topic_stats.items():
         lines.append(f"| {topic} | {stats['publications']} | {stats['impressions']} | {stats['weighted_engagement']} | {stats['score']} | {stats['confidence']} |")

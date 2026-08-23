@@ -130,6 +130,7 @@ def seed_feedback_ledger(
         "hook_type": str(metadata.get("hook_type", metadata.get("strategy", "unknown"))),
         "primary_shot": str(metadata.get("primary_shot", "unknown")),
         "topic_set_id": str(metadata.get("topic_set_id", "unknown")),
+        "topic_set_label": str(metadata.get("topic_set_label", "unknown")),
         "topics": [str(item) for item in metadata.get("topics", [])],
         "published_at": datetime.now(timezone.utc).isoformat(),
         "impressions": 0,

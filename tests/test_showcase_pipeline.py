@@ -446,6 +446,90 @@ class WriteCopyTest(unittest.TestCase):
                 self.assertEqual(len(topics), len(set(topics)))
                 self.assertTrue(all(not topic.startswith("#") for topic in topics))
 
+    def test_mechanism_topic_sets_form_valid_experiment_pool(self) -> None:
+        for primary_shot, topic_sets in copy_profiles.MECHANISM_TOPIC_SETS.items():
+            with self.subTest(primary_shot=primary_shot):
+                self.assertGreaterEqual(len(topic_sets), 2)
+                self.assertEqual(
+                    copy_profiles.MECHANISM_TOPICS[primary_shot],
+                    topic_sets[0]["topics"],
+                )
+                self.assertEqual(len({item["label"] for item in topic_sets}), len(topic_sets))
+                self.assertEqual(
+                    len({write_copy.topic_set_id(item["topics"]) for item in topic_sets}),
+                    len(topic_sets),
+                )
+                markers = copy_profiles.MECHANISM_TOPIC_MARKERS[primary_shot]
+                for item in topic_sets:
+                    topics = item["topics"]
+                    self.assertEqual(len(topics), 5)
+                    self.assertEqual(len(topics), len(set(topics)))
+                    self.assertTrue(all(topic and not topic.startswith("#") for topic in topics))
+                    self.assertTrue(markers.intersection(topics))
+
+    def test_topic_set_selection_uses_confident_history(self) -> None:
+        primary_shot = "presentation.reveal"
+        candidates = copy_profiles.MECHANISM_TOPIC_SETS[primary_shot]
+        default_set, alternate_set = candidates
+        default_id = write_copy.topic_set_id(default_set["topics"])
+        alternate_id = write_copy.topic_set_id(alternate_set["topics"])
+
+        def history_record(release: str, topic_set_id: str, label: str, impressions: int, likes: int) -> dict:
+            return {
+                "release": release,
+                "primary_shot": primary_shot,
+                "topic_set_id": topic_set_id,
+                "topic_set_label": label,
+                "topics": default_set["topics"] if topic_set_id == default_id else alternate_set["topics"],
+                "impressions": impressions,
+                "likes": likes,
+                "collects": 0,
+                "comments": 0,
+                "shares": 0,
+                "follows": 0,
+                "metrics_status": "complete",
+            }
+
+        story = {
+            "release": "v2.0.0",
+            "version_state": "prerelease",
+            "primary_shot": primary_shot,
+            "angle": "ReadMD 让同一份 Markdown 直接放映",
+            "selected_shots": ["overview.reader", primary_shot],
+            "claims": [{"id": "primary", "user_value": "直接放映", "shot_ids": [primary_shot], "sources": ["README.md"]}],
+        }
+        without_history = write_copy.generate_copy(story, repository="x", previous_release="v1.0.0")
+        confident_history = [
+            history_record("v1.0.0", default_id, default_set["label"], 1000, 1),
+            history_record("v1.0.1", default_id, default_set["label"], 1000, 1),
+            history_record("v1.1.0", alternate_id, alternate_set["label"], 2000, 120),
+            history_record("v1.1.1", alternate_id, alternate_set["label"], 2000, 120),
+        ]
+        winner = write_copy.generate_copy(
+            story,
+            repository="x",
+            previous_release="v1.1.1",
+            history=confident_history,
+        )
+        fatigued_history = confident_history + [
+            history_record("v1.2.0", alternate_id, alternate_set["label"], 1000, 80),
+            history_record("v1.2.1", alternate_id, alternate_set["label"], 1000, 80),
+        ]
+        rotated = write_copy.generate_copy(
+            story,
+            repository="x",
+            previous_release="v1.2.1",
+            history=fatigued_history,
+        )
+
+        self.assertEqual(without_history["topic_set_label"], default_set["label"])
+        self.assertEqual(winner["topic_set_label"], alternate_set["label"])
+        self.assertEqual(winner["topic_set_selection"]["chosen_topic_set_id"], alternate_id)
+        self.assertIn("historical performance", winner["topic_set_selection"]["reasons"][alternate_id])
+        self.assertEqual(rotated["topic_set_label"], default_set["label"])
+        self.assertIn("underused topic set", rotated["topic_set_selection"]["reasons"][default_id])
+        self.assertIn("recent topic-set fatigue penalty", rotated["topic_set_selection"]["reasons"][alternate_id])
+
     def test_topic_set_identity_is_stable_and_content_bound(self) -> None:
         story = {
             "release": "v1.0.0",
@@ -711,6 +795,7 @@ class ValidatePackageTest(unittest.TestCase):
             (pkg / "images").mkdir()
             story = write_story(pkg / "raw")
             story["selected_shots"] = ["overview.reader", "overview.editor"]
+            story["primary_shot"] = "overview.editor"
             story["shots"][0]["file"] = "raw/overview-reader.png"
             editor_png = pkg / "raw" / "overview-editor.png"
             editor_png.write_bytes(b"editor")
@@ -733,8 +818,9 @@ class ValidatePackageTest(unittest.TestCase):
             metadata = {
                 "title": "ReadMD更新：文档变工作台",
                 "body": "预览版。" + "这是一个用于验证包结构的最短正文。" * 40,
-                "topics": ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"],
-                "topic_set_id": write_copy.topic_set_id(["GitHub", "开源项目", "程序员", "效率工具", "Markdown"]),
+                "topics": ["Markdown", "效率工具", "程序员", "写作", "笔记软件"],
+                "topic_set_id": write_copy.topic_set_id(["Markdown", "效率工具", "程序员", "写作", "笔记软件"]),
+                "topic_set_label": "writing-core",
                 "images": [str(pkg / "images" / name) for name in names],
                 "source_urls": ["https://github.com/Natsummerance/readMD/releases"],
                 "version_state": "prerelease",
@@ -756,6 +842,13 @@ class ValidatePackageTest(unittest.TestCase):
             (pkg / "pattern-audit.json").write_text(json.dumps({"ok": True, "errors": []}), encoding="utf-8")
             errors = validate_package.validate_package(pkg)
             self.assertEqual(errors, [])
+            metadata["topic_set_label"] = "not-an-approved-label"
+            (pkg / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            mismatched_labels = validate_package.validate_package(pkg)
+            self.assertTrue(
+                any("topic_set_label does not match approved topics" in error for error in mismatched_labels),
+                mismatched_labels,
+            )
             metadata["topic_set_id"] = "tampered-topic-set"
             (pkg / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
             mismatched = validate_package.validate_package(pkg)
@@ -1638,6 +1731,7 @@ class PerformanceReportTest(unittest.TestCase):
                 "primary_shot": "presentation.reveal",
                 "topics": ["Markdown", "PPT"],
                 "topic_set_id": "ppt-set",
+                "topic_set_label": "talk-core",
             },
             {
                 **self.complete("v2", "#22", "identity-led", 2000, 120, 180),
@@ -1651,10 +1745,12 @@ class PerformanceReportTest(unittest.TestCase):
             markdown = (Path(tmp) / "performance-report.md").read_text(encoding="utf-8")
 
         self.assertEqual(result["topic_set_stats"]["ppt-set"]["publications"], 2)
+        self.assertEqual(result["topic_set_stats"]["ppt-set"]["label"], "talk-core")
         self.assertEqual(result["topic_stats"]["PPT"]["weighted_engagement"], 740)
         self.assertEqual(result["recommended_topic_set"], "ppt-set")
         self.assertEqual(result["recommended_topic"], "Markdown")
         self.assertIn("## Topic sets", markdown)
+        self.assertIn("talk-core", markdown)
         self.assertIn("## Topic search terms", markdown)
 
     def test_aggregates_comment_focus_across_releases(self) -> None:
@@ -2773,6 +2869,7 @@ class WatcherTest(unittest.TestCase):
             "primary_shot": "presentation.reveal",
             "topics": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
             "topic_set_id": write_copy.topic_set_id(["Markdown", "PPT", "演讲", "程序员", "效率工具"]),
+            "topic_set_label": "talk-core",
             "images": ["Z:/remote/package/images/xhs-01-cover.jpg"],
         }
         (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
@@ -2863,6 +2960,7 @@ class WatcherTest(unittest.TestCase):
                 feedback["topic_set_id"],
                 write_copy.topic_set_id(["Markdown", "PPT", "演讲", "程序员", "效率工具"]),
             )
+            self.assertEqual(feedback["topic_set_label"], "talk-core")
             self.assertEqual(
                 feedback["topics"],
                 ["Markdown", "PPT", "演讲", "程序员", "效率工具"],

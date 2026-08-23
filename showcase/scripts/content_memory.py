@@ -24,6 +24,7 @@ IMMUTABLE_FIELDS = (
     "copy_frame",
     "primary_shot",
     "topic_set_id",
+    "topic_set_label",
     "topics",
     "note_id",
     "publisher_target_id",
