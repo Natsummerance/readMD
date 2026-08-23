@@ -16,7 +16,7 @@
   ReadMD is a local-first Markdown reader and editor for desktop. Double-click to read, navigate oversized documents without freezing, repair display-only syntax issues, convert Office/PDF/web files, extract image text offline, and connect AI agents through MCP.
 
   [![platform](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20KylinOS%20%7C%20UOS-blue)](#direct-downloads-platforms-matrix-release-assets)
-  [![i18n](https://img.shields.io/badge/languages-46-orange)](#global-46-language-native-localization)
+  [![i18n](https://img.shields.io/badge/languages-46-orange)](docs/i18n-language-reference.md)
   [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
   [![release](https://img.shields.io/github/v/release/Natsummerance/readMD)](https://github.com/Natsummerance/readMD/releases/latest)
 </div>
