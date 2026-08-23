@@ -161,6 +161,15 @@ SUPPORT_PHRASES: dict[str, str] = {
 PROFILES: dict[str, dict[str, Any]] = {
     "overview.editor": {
         "artifact": "Markdown 稿件",
+        "support_priorities": [
+            "overview.reader",
+            "editor.diagram-picker",
+            "academic.latex-bib",
+            "editor.code-chunk",
+            "convert.home",
+            "sharing.export",
+            "presentation.reveal",
+        ],
         "narrative_angle": "ReadMD 让写作和预览留在同一条工作流",
         "task_hook": "同屏改稿窗口",
         "short_action": "在同屏编辑器里改稿",
@@ -207,6 +216,15 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "presentation.reveal": {
         "artifact": "Markdown 演示稿",
+        "support_priorities": [
+            "editor.code-chunk",
+            "editor.diagram-picker",
+            "overview.editor",
+            "academic.latex-bib",
+            "convert.home",
+            "sharing.export",
+            "overview.reader",
+        ],
         "narrative_angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
         "task_hook": "上台放映的演示稿",
         "short_action": "直接放映",
@@ -254,6 +272,15 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "editor.diagram-picker": {
         "artifact": "科研图表",
+        "support_priorities": [
+            "academic.latex-bib",
+            "editor.code-chunk",
+            "overview.editor",
+            "overview.reader",
+            "presentation.reveal",
+            "convert.home",
+            "sharing.export",
+        ],
         "narrative_angle": "ReadMD 把科研图表放进同一条 Markdown 工作流",
         "task_hook": "科研图表语法",
         "short_action": "从面板选图",
@@ -300,6 +327,15 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "academic.latex-bib": {
         "artifact": "学术排版",
+        "support_priorities": [
+            "editor.diagram-picker",
+            "overview.editor",
+            "presentation.reveal",
+            "overview.reader",
+            "editor.code-chunk",
+            "convert.home",
+            "sharing.export",
+        ],
         "narrative_angle": "ReadMD 让公式、定理和引用共用一条学术排版路径",
         "task_hook": "公式和文献格式",
         "short_action": "在文档里排公式",
@@ -346,6 +382,15 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "editor.code-chunk": {
         "artifact": "文档代码块",
+        "support_priorities": [
+            "overview.editor",
+            "editor.diagram-picker",
+            "presentation.reveal",
+            "overview.reader",
+            "convert.home",
+            "sharing.export",
+            "academic.latex-bib",
+        ],
         "narrative_angle": "ReadMD 让文档里的代码就地运行并保留输出",
         "task_hook": "可运行代码块",
         "short_action": "就地运行代码",
@@ -392,6 +437,15 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "convert.home": {
         "artifact": "零散资料",
+        "support_priorities": [
+            "overview.editor",
+            "overview.reader",
+            "academic.latex-bib",
+            "editor.code-chunk",
+            "editor.diagram-picker",
+            "sharing.export",
+            "presentation.reveal",
+        ],
         "narrative_angle": "ReadMD 把网页、PDF 和 Word 收进同一条本地工作流",
         "task_hook": "网页、PDF 和 Word 资料",
         "short_action": "收进本地工作台",
@@ -438,6 +492,15 @@ PROFILES: dict[str, dict[str, Any]] = {
     },
     "sharing.export": {
         "artifact": "本地文档",
+        "support_priorities": [
+            "overview.editor",
+            "overview.reader",
+            "presentation.reveal",
+            "convert.home",
+            "academic.latex-bib",
+            "editor.code-chunk",
+            "editor.diagram-picker",
+        ],
         "narrative_angle": "ReadMD 让本地文档直接生成可控制的共享入口",
         "task_hook": "分享或导出的本地文档",
         "short_action": "生成共享入口",

@@ -161,9 +161,19 @@ def generate_copy(
         for item in visual_claims
         if item.get("shot_ids") and primary_id not in item["shot_ids"]
     ]
+    unique_supporting_ids = list(dict.fromkeys(supporting_ids))
+    support_priorities = profile.get("support_priorities", {})
+    supporting_ids = sorted(
+        unique_supporting_ids,
+        key=lambda shot_id: (
+            support_priorities.index(shot_id)
+            if shot_id in support_priorities
+            else len(support_priorities)
+        ),
+    )
     support_text = "、".join(
         SUPPORT_PHRASES[shot_id]
-        for shot_id in list(dict.fromkeys(supporting_ids))[:2]
+        for shot_id in supporting_ids[:2]
         if shot_id in SUPPORT_PHRASES
     )
 
