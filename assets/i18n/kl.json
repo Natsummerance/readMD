@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Save unitsinneqarpoq",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Annaasaqarneq iluatsinngilaq: {error}",
+  "app.browserCopy": "Browser copy",
   "toast.saveDenied": "Annaasaqarneq imminut aalajangiivoq. Allattoqassuseq isikkinnut allattoqarpoq",
   "toast.saved": "Dokumenti iluatsilluartumik toqqoqqavoq",
   "toast.savedPrefix": "Annaaneqarpoq:",

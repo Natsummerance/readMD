@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Sauvegarde annulée",
   "toast.saveConflict": "Fichier modifié en externe ; votre brouillon local est conservé",
   "toast.saveFailed": "Échec de l'enregistrement : {error}",
+  "app.browserCopy": "Copie navigateur",
   "toast.saveDenied": "L'enregistrement a été bloqué. Rouvrez le document, puis enregistrez-le à nouveau",
   "toast.saved": "Document enregistré avec succès",
   "toast.savedPrefix": "Enregistré :",

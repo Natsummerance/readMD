@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Spremanje je otkazano",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Spremanje nije uspjelo: {error}",
+  "app.browserCopy": "Kopija preglednika",
   "toast.saveDenied": "Spremanje je blokirano. Ponovno otvorite dokument i zatim ga ponovno spremite",
   "toast.saved": "Dokument je uspješno spremljen",
   "toast.savedPrefix": "Spremljeno u: ",

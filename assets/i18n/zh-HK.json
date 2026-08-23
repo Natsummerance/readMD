@@ -861,6 +861,7 @@
   "toast.saveCancelled": "已取消儲存",
   "toast.saveConflict": "檔案已被其他程式修改，本地草稿已保留",
   "toast.saveFailed": "儲存失敗：{error}",
+  "app.browserCopy": "瀏覽器副本",
   "toast.saveDenied": "儲存被拒絕：請重新開啟文件後再儲存",
   "toast.saved": "文档儲存成功",
   "toast.savedPrefix": "已儲存：",

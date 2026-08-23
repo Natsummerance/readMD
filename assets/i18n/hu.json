@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Mentés megszakítva",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Mentés sikertelen: {error}",
+  "app.browserCopy": "Böngészőmásolat",
   "toast.saveDenied": "A mentés le lett tiltva. Nyissa meg újra a dokumentumot, majd mentse újra",
   "toast.saved": "Dokumentum sikeresen mentve",
   "toast.savedPrefix": "Mentve ide: ",

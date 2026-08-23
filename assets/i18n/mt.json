@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Ħlief ikkanċellat",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Is-salvataġġ fallut: {error}",
+  "app.browserCopy": "Kopja tal-browser",
   "toast.saveDenied": "Is-salvataġġ ġie mblokkat. Iftaħ id-dokument mill-ġdid u salva mill-ġdid",
   "toast.saved": "Dokument salvat b'suċċess",
   "toast.savedPrefix": "Salvat:",

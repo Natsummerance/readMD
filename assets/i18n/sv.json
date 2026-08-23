@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Spara avbröts",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Det gick inte att spara: {error}",
+  "app.browserCopy": "Webbläsarkopia",
   "toast.saveDenied": "Spara blockerades. Öppna dokumentet igen och spara det sedan igen",
   "toast.saved": "Dokumentet har sparats",
   "toast.savedPrefix": "Sparad:",

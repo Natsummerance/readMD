@@ -861,6 +861,7 @@
   "toast.saveCancelled": "ยกเลิกการบันทึกแล้ว",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "บันทึกล้มเหลว: {error}",
+  "app.browserCopy": "สำเนาจากเบราว์เซอร์",
   "toast.saveDenied": "การบันทึกถูกปฏิเสธ โปรดเปิดเอกสารอีกครั้งแล้วบันทึกใหม่",
   "toast.saved": "บันทึกเอกสารสำเร็จ",
   "toast.savedPrefix": "บันทึกแล้ว: ",

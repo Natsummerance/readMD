@@ -861,6 +861,7 @@
   "toast.saveCancelled": "बचत रद्द गरियो",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "बचत असफल भयो: {error}",
+  "app.browserCopy": "ब्राउजर प्रतिलिपि",
   "toast.saveDenied": "सुरक्षित गर्ने कार्य रोकियो। कागजात फेरि खोल्नुहोस्, अनि फेरि सुरक्षित गर्नुहोस्।",
   "toast.saved": "कागजात सफलतापूर्वक बचत गरियो",
   "toast.savedPrefix": "बचत गरियो: ",

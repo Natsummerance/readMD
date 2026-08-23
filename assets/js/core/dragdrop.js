@@ -84,7 +84,7 @@ function bindGlobalDragAndDrop() {
       if (mdFiles.length > 0) {
         for (const f of mdFiles) {
           const path = f.path ? f.path : await uploadFile(f);
-          if (path) await loadFile(path);
+          if (path) await loadFile(path, { browserCopy: !f.path });
         }
       }
       if (otherFiles.length > 0) {

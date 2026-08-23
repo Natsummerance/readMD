@@ -861,6 +861,7 @@
   "toast.saveCancelled": "ບັນທຶກຖືກຍົກເລີກ",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "ບັນທຶກລົ້ມເຫລວ: {error}",
+  "app.browserCopy": "ສຳເນົາຈາກບຣາວເຊີ",
   "toast.saveDenied": "ການບັນທຶກຖືກປິດກັ້ນ. ເປີດເອກະສານຄືນ ແລ້ວບັນທຶກຄືນໃໝ່",
   "toast.saved": "ບັນທຶກເອກະສານສຳເລັດແລ້ວ",
   "toast.savedPrefix": "ບັນທຶກແລ້ວ:",

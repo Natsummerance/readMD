@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Speichern abgebrochen",
   "toast.saveConflict": "Datei extern geändert; Ihr lokaler Entwurf bleibt erhalten",
   "toast.saveFailed": "Speichern fehlgeschlagen: {error}",
+  "app.browserCopy": "Browserkopie",
   "toast.saveDenied": "Speichern wurde blockiert. Öffnen Sie das Dokument erneut und speichern Sie dann erneut",
   "toast.saved": "Dokument erfolgreich gespeichert",
   "toast.savedPrefix": "Gespeichert:",

@@ -522,8 +522,13 @@ function promptSaveConflict() {
 async function saveAs(contentOverride = null) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const content = contentOverride ?? state.fixed ?? state.original ?? '';
-  const name = (state.sourceName || state.file || 'document').replace(/[\\/]/g, '_');
-  const suggested = name.replace(/\.[^.]+$/, '') + '.md';
+  const sourceName = getActiveTab()?.name
+    || String(state.file || '').split(/[\\/]/).pop()
+    || state.sourceName
+    || 'document';
+  const name = String(sourceName).replace(/[\\/]/g, '_');
+  const extension = name.match(/\.[^.]+$/)?.[0] || '.md';
+  const suggested = name.replace(/\.[^.]+$/, '') + extension;
   if (hasPy) {
     const out = await py.save_as(content, suggested, state.webAssets || []);
     if (out) {
@@ -534,6 +539,7 @@ async function saveAs(contentOverride = null) {
         activeTab.mode = 'file';
         activeTab.isVirtual = false;
         activeTab.isDirty = false;
+        activeTab.browserCopy = false;
         activeTab.name = String(out).split(/[\\/]/).pop();
         activeTab.title = activeTab.name;
         activeTab.content = content;
@@ -544,6 +550,8 @@ async function saveAs(contentOverride = null) {
         state.fixed = content;
         state.dir = activeTab.dir;
         state.mode = 'file';
+        state.browserCopy = false;
+        state.sourceName = activeTab.name;
         renderTabsBar();
         document.title = activeTab.name + ' - ReadMD';
         setFileTitle(activeTab.name, true, out);

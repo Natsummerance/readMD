@@ -1992,7 +1992,7 @@ class Api(object):
         try:
             files = self._window.create_file_dialog(
                 webview.OPEN_DIALOG,
-                file_types=('Markdown 文件 (*.md;*.markdown;*.mdown;*.mkd;*.txt)',))
+                file_types=('Markdown 文件 (*.md;*.markdown;*.mdown;*.mkd;*.mdx;*.txt)',))
             return files[0] if files else None
         except Exception as e:
             logging.exception('choose_file failed')

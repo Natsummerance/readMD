@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Gem annulleret",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Gem mislykkedes: {error}",
+  "app.browserCopy": "Browserkopi",
   "toast.saveDenied": "Gemning blev blokeret. Åbn dokumentet igen, og gem derefter igen",
   "toast.saved": "Dokumentet blev gemt",
   "toast.savedPrefix": "Gemt:",

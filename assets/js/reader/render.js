@@ -102,7 +102,7 @@ function openFileRename() {
 }
 
 
-async function loadFile(path, { force = false, browserCopy = false } = {}) {
+async function loadFile(path, { force = false, browserCopy = null } = {}) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!path) return;
   const existingTab = findTabByPath(path);
@@ -124,18 +124,20 @@ async function loadFile(path, { force = false, browserCopy = false } = {}) {
       return;
     }
     const d = await r.json();
+    const isBrowserCopy = force && browserCopy === null
+      ? existingTab.browserCopy === true
+      : browserCopy === true;
     const fileFields = {
       mode: 'file',
       source: 'file',
-      browserCopy,
+      browserCopy: isBrowserCopy,
       path: d.path,
       dir: d.dir,
       name: d.name,
-      title: d.name,
       content: d.content,
       original: d.original,
       fixed: d.content,
-      title: browserCopy ? `${d.name} (${_t('app.browserCopy') || 'browser copy'})` : d.name,
+      title: isBrowserCopy ? `${d.name} (${_t('app.browserCopy') || 'browser copy'})` : d.name,
       fixes: d.fixes || [],
       stats: d.stats || {},
       size: d.size,
@@ -186,7 +188,7 @@ async function loadFile(path, { force = false, browserCopy = false } = {}) {
       } else {
         showToast(_t('toast.opened', { name: d.name }), 4000);
       }
-      const displayTitle = browserCopy ? `${d.name} (${_t('app.browserCopy') || 'browser copy'})` : d.name;
+      const displayTitle = isBrowserCopy ? `${d.name} (${_t('app.browserCopy') || 'browser copy'})` : d.name;
       document.title = displayTitle + ' - ReadMD';
       setFileTitle(displayTitle, hasPy, d.path);
       addRecent(d.path);

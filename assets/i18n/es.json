@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Guardar cancelado",
   "toast.saveConflict": "El archivo cambió externamente; tu borrador local se conserva",
   "toast.saveFailed": "Error al guardar: {error}",
+  "app.browserCopy": "Copia del navegador",
   "toast.saveDenied": "Se bloqueó el guardado. Vuelve a abrir el documento y guárdalo de nuevo",
   "toast.saved": "Documento guardado exitosamente",
   "toast.savedPrefix": "Guardado:",

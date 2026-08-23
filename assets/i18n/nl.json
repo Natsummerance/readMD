@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Opslaan geannuleerd",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Opslaan mislukt: {error}",
+  "app.browserCopy": "Browserkopie",
   "toast.saveDenied": "Opslaan is geblokkeerd. Open het document opnieuw en sla het daarna opnieuw op",
   "toast.saved": "Document succesvol opgeslagen",
   "toast.savedPrefix": "Opgeslagen in: ",

@@ -861,6 +861,7 @@
   "toast.saveCancelled": "ཉར་ཚགས་མེད་པར་བཟོས།",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "ཉར་ཚགས་བྱེད་མ་ཐུབ། {error}",
+  "app.browserCopy": "དྲ་བའི་བཟོ་བཅོས་འདྲ་བཤུས།",
   "toast.saveDenied": "ཉར་ཚགས་བཀག་སྡོམ་བྱས། ཡིག་ཆ་སླར་ཕྱེས་ནས་ཡང་བསྐྱར་ཉར་ཚགས་གནང་།",
   "toast.saved": "ཡིག་ཆ་བདེ་བླག་ངང་ཉར་ཚགས་བྱས།",
   "toast.savedPrefix": "ཉར་ཚགས་བྱས།",

@@ -1271,6 +1271,60 @@ test('browser mode opens, edits, and saves a local document end to end', async (
   }
 });
 
+test('browser-copy provenance survives reload and clears on native save-as', async ({ page }) => {
+  const saveCalls = [];
+  await page.addInitScript(() => {
+    window.pywebview = {
+      api: {
+        async save_as(content, suggested, assets) {
+          window.__readmdSaveAsCalls.push([content, suggested, assets]);
+          return 'C:/saved/final.md';
+        },
+      },
+    };
+    window.__readmdSaveAsCalls = [];
+  });
+  await page.route('**/api/file?p=**', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      ok: true, path: 'C:/doc.md', dir: 'C:/', name: 'doc.md',
+      content: '# external', original: '# external',
+      encoding: 'utf-8', mtime: 2, fixes: [], stats: {},
+    }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof loadFile === 'function' && typeof saveAs === 'function');
+  await page.evaluate(() => {
+    const tab = {
+      id: 'copy', mode: 'file', source: 'file', browserCopy: true,
+      path: 'C:/doc.md', dir: 'C:/', name: 'doc.md',
+      title: 'doc.md (browser copy)', content: '# draft', original: '# draft', fixed: '# draft',
+    };
+    state.tabs = [tab];
+    state.activeTabId = tab.id;
+    syncStateFromActiveTab();
+  });
+
+  await page.evaluate(() => loadFile('C:/doc.md', { force: true }));
+  await page.waitForFunction(() => state.fixed.includes('# external'));
+  const reloaded = await page.evaluate(() => ({
+    browserCopy: state.browserCopy,
+    title: getActiveTab().title,
+  }));
+  expect(reloaded.browserCopy).toBe(true);
+  expect(reloaded.title).toMatch(/doc\.md \((browser copy|浏览器副本)\)/);
+
+  await page.evaluate(() => saveAs('# persisted'));
+  expect(await page.evaluate(() => window.__readmdSaveAsCalls)).toEqual([['# persisted', 'doc.md', []]]);
+  expect(await page.evaluate(() => ({
+    browserCopy: state.browserCopy,
+    sourceName: state.sourceName,
+    path: state.file,
+    title: getActiveTab().title,
+  }))).toMatchObject({ browserCopy: false, sourceName: 'final.md', path: 'C:/saved/final.md', title: 'final.md' });
+});
+
 test('save conflicts offer save-as, reload, and cancel recovery', async ({ page }) => {
   await page.route('**/api/save', route => route.fulfill({
     status: 200,

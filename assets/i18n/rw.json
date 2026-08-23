@@ -861,6 +861,7 @@
   "toast.saveCancelled": "Kubika byahagaritswe",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "Kubika byananiranye: {error}",
+  "app.browserCopy": "Kopi ya mucukumbuzi",
   "toast.saveDenied": "Kubika kwabuzejwe. Fungura inyandiko ubundi, ubike ubundi",
   "toast.saved": "Inyandiko yabitswe neza",
   "toast.savedPrefix": "Yakijijwe:",

@@ -861,6 +861,7 @@
   "toast.saveCancelled": "সংরক্ষণ বাতিল করা হয়েছে",
   "toast.saveConflict": "File changed externally; your local draft is preserved",
   "toast.saveFailed": "সংরক্ষণ ব্যর্থ হয়েছে: {error}",
+  "app.browserCopy": "ব্রাউজার কপি",
   "toast.saveDenied": "সংরক্ষণ বন্ধ করা হয়েছে। নথিটি আবার খুলুন, তারপর আবার সংরক্ষণ করুন",
   "toast.saved": "ডকুমেন্ট সফলভাবে সংরক্ষণ করা হয়েছে",
   "toast.savedPrefix": "সংরক্ষিত: ",

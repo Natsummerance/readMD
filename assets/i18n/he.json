@@ -861,6 +861,7 @@
   "toast.saveCancelled": "השמירה בוטלה",
   "toast.saveConflict": "הקובץ השתנה בחוץ; הטיוטה המקומית נשמרה",
   "toast.saveFailed": "השמירה נכשלה: {error}",
+  "app.browserCopy": "עותק דפדפן",
   "toast.saveDenied": "השמירה נחסמה. פתחו את המסמך שוב ולאחר מכן שמרו שוב",
   "toast.saved": "המסמך נשמר בהצלחה",
   "toast.savedPrefix": "נשמר:",
