@@ -3229,9 +3229,15 @@ body.zen-mode #edit-area {
   color: var(--fg);
   background: transparent;
   border: none;
-  outline: none;
   cursor: pointer;
   padding: 2px 0;
+}
+.pg-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.pg-page-select-wrap:focus-within {
+  border-color: var(--accent);
 }
 
 .pg-select option {
@@ -3279,8 +3285,9 @@ body.zen-mode #edit-area {
   padding: 1px 6px;
   border-radius: 4px;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--fg);
   font-weight: 600;
+  border: 1px solid var(--border2);
   cursor: pointer;
   margin-right: 6px;
   transition: opacity 0.15s ease;

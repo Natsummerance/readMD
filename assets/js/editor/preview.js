@@ -423,7 +423,6 @@ async function saveEdit() {
       await renderSavedDocument(content);
       showToast(ok.backup ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）')) : (_t('toast.savedSuccess') || '已保存'));
       exitEdit();
-      await loadFile(state.file);
       return true;
     } else {
       if (ok && ok.conflict) {

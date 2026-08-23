@@ -145,6 +145,8 @@ function renderTreeNodes(container, childrenObj, depth) {
 
       const childrenContainer = document.createElement('div');
       childrenContainer.className = 'tree-children';
+      childrenContainer.setAttribute('role', 'group');
+      childrenContainer.setAttribute('aria-label', item.name);
       renderTreeNodes(childrenContainer, item.children, depth + 1);
       nodeEl.appendChild(childrenContainer);
       row.setAttribute('aria-expanded', 'true');

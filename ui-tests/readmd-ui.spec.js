@@ -1237,6 +1237,36 @@ test('search highlights a term spanning adjacent inline elements', async ({ page
   await page.locator('#search-input').fill('readme');
   await expect(page.locator('#search-count')).toHaveText('1/1');
   await expect(page.locator('#content mark.hl')).toHaveText('readme');
+  await expect(page.locator('#content mark.hl')).toBeFocused();
+  await page.keyboard.press('Control+F');
+  await expect(page.locator('#btn-search')).toBeFocused();
+});
+
+test('home resets pagination state and failed opens clear progress', async ({ page }) => {
+  await page.route('**/api/file?p=missing.md', route => route.fulfill({
+    status: 404,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: false, error: 'missing' }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof goHome === 'function');
+  await page.evaluate(() => {
+    Object.assign(state.pagination, {
+      enabled: true, mode: 'paged', rawContent: '# stale', pages: [{ pageIndex: 0, title: 'stale', content: '# stale' }],
+      allHeadings: [], totalPages: 1, currentPage: 0,
+    });
+    showPaginationBar(true);
+    updatePaginationBar();
+    setProgress(50);
+  });
+  await expect(page.locator('#pagination-bar')).toBeVisible();
+  await page.evaluate(() => goHome());
+  await expect(page.locator('#pagination-bar')).toBeHidden();
+  await page.waitForFunction(() => !state.pagination.enabled && state.pagination.pages.length === 0);
+
+  await page.evaluate(() => loadFile('missing.md'));
+  await expect(page.locator('#toast')).toContainText(/无法打开/);
+  await page.waitForFunction(() => document.getElementById('progress').style.width === '0%');
 });
 
 test('rendered Markdown cannot inject active content or privileged URLs', async ({ page }) => {

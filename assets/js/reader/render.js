@@ -120,6 +120,7 @@ async function loadFile(path, { force = false } = {}) {
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
       showToast((_t('toast.openFailed') || '无法打开：') + (d.error || r.status));
+      setProgress(0);
       return;
     }
     const d = await r.json();
@@ -455,7 +456,9 @@ function updatePaginationBar() {
   const sel = $('pg-page-select');
   if (sel) {
     sel.disabled = (p.mode === 'continuous');
-    if (sel.options.length !== total) {
+    const pageSignature = p.pages.map(page => `${page.pageIndex}:${page.title || ''}`).join('|');
+    if (sel.options.length !== total || sel.dataset.pageSignature !== pageSignature) {
+      sel.dataset.pageSignature = pageSignature;
       sel.innerHTML = '';
       p.pages.forEach((pg, idx) => {
         const opt = document.createElement('option');
@@ -482,9 +485,15 @@ function updatePaginationBar() {
   }
   $('pg-mode-toggle')?.setAttribute('aria-pressed', p.mode === 'paged' ? 'true' : 'false');
 
+  const _t = (k, params) => window.i18n ? window.i18n.t(k, params) : k;
   const stBadge = $('status-pagination');
   if (stBadge) {
-    stBadge.textContent = p.mode === 'paged' ? `${cur + 1} / ${total}` : '全卷';
+    stBadge.textContent = p.mode === 'paged'
+      ? `${cur + 1} / ${total}`
+      : (_t('pagination.continuousBadge') || '全卷');
+    stBadge.title = p.mode === 'paged'
+      ? (_t('pagination.pagedBadge') || '分页模式')
+      : (_t('pagination.continuousBadge') || '全卷连续');
   }
 }
 

@@ -27,6 +27,14 @@ def save_text_atomic(path, content, encoding="utf-8", expected_mtime=None):
     try:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         old_stat = os.stat(path) if os.path.isfile(path) else None
+        if expected_mtime is not None and not old_stat:
+            return {
+                "ok": False,
+                "conflict": True,
+                "error": "预期文件已不存在，未重新创建",
+                "current_mtime": None,
+            }
+
         if expected_mtime is not None and old_stat and not _same_mtime(
             old_stat.st_mtime, expected_mtime
         ):

@@ -57,6 +57,14 @@ class SaveTextAtomicTest(unittest.TestCase):
         self.assertTrue(result["conflict"])
         self.assertEqual(target.read_text(encoding="utf-8"), "external")
 
+    def test_missing_expected_file_is_conflict(self):
+        target = self.root / "gone.md"
+        result = save_text_atomic(target, "recreated", "utf-8", expected_mtime=1.0)
+        self.assertFalse(result["ok"])
+        self.assertTrue(result["conflict"])
+        self.assertIsNone(result["current_mtime"])
+        self.assertFalse(target.exists())
+
     def test_failed_replace_leaves_original_and_no_temporary_files(self):
         target = self.root / "note.md"
         target.write_text("original", encoding="utf-8")

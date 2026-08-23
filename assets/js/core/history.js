@@ -164,6 +164,16 @@ function goHome() {
   state.editing = false;
   state.activeTabId = null;
   state.headings = [];
+  Object.assign(state.pagination, {
+    enabled: false,
+    mode: 'paged',
+    rawContent: null,
+    searchText: null,
+    pages: [],
+    allHeadings: [],
+    totalPages: 0,
+    currentPage: 0,
+  });
   document.title = 'ReadMD';
   setFileTitle('', false);
 
@@ -187,6 +197,7 @@ function goHome() {
   document.querySelectorAll('#toolbar .tool-btn').forEach(b => b.classList.remove('active'));
   closeSearch();
   closeMdPopups();
+  showPaginationBar(false);
   updateStatus();
   renderTabsBar();
 }
