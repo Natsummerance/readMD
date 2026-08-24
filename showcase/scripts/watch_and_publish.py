@@ -17,7 +17,7 @@ from typing import Any
 
 from content_memory import load_records, upsert_record
 from audit_copy import audit_copy
-from copy_variants import text_fingerprints, text_trigrams
+from copy_variants import jaccard_similarity, text_fingerprints, text_trigrams
 from pattern_audit import audit_patterns
 from package_content import validate_release_evidence
 from validate_package import (
@@ -30,6 +30,7 @@ from validate_package import (
 DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
 STATE_VERSION = 1
 SHOWCASE_ROOT = Path(__file__).resolve().parents[1]
+ORIGINALITY_ENDPOINT_COOLDOWN_RELEASES = 8
 
 
 def load_state(path: Path) -> dict[str, Any]:
@@ -243,6 +244,43 @@ def recomputed_gate_errors(package_dir: Path) -> list[str]:
     return errors
 
 
+def publisher_originality_errors(package_dir: Path, ledger_path: Path | None) -> list[str]:
+    """Recheck the winning copy against the real publication ledger."""
+    if ledger_path is None or not ledger_path.exists():
+        return []
+    try:
+        metadata = json.loads((package_dir / "metadata.json").read_text(encoding="utf-8"))
+        records = load_records(ledger_path)
+    except Exception as exc:
+        return [f"publisher originality inputs unreadable: {exc}"]
+
+    body = str(metadata.get("body", ""))
+    fingerprints = text_fingerprints(body)
+    trigrams = text_trigrams(body)
+    release = str(metadata.get("release", ""))
+    priors = [record for record in records if str(record.get("release", "")) != release]
+    errors: list[str] = []
+
+    for prior in priors:
+        release_name = str(prior.get("release") or "previous release")
+        prior_trigrams = set(prior.get("body_trigrams") or [])
+        similarity = jaccard_similarity(trigrams, prior_trigrams)
+        if fingerprints["body_sha256"] and prior.get("body_sha256") == fingerprints["body_sha256"]:
+            errors.append(f"body hash matches {release_name}")
+        if similarity >= 0.85:
+            errors.append(
+                f"near-duplicate body ({similarity:.2f}) matches {release_name}"
+            )
+
+    for prior in priors[-ORIGINALITY_ENDPOINT_COOLDOWN_RELEASES:]:
+        release_name = str(prior.get("release") or "previous release")
+        if fingerprints["opening"] and prior.get("opening") == fingerprints["opening"]:
+            errors.append(f"opening matches {release_name}")
+        if fingerprints["closing"] and prior.get("closing") == fingerprints["closing"]:
+            errors.append(f"closing matches {release_name}")
+    return sorted(set(errors))
+
+
 def process_package(
     zip_path: Path,
     work_root: Path,
@@ -331,6 +369,9 @@ def process_package(
         gate_errors = recomputed_gate_errors(package_dir)
         if gate_errors:
             raise ValueError("recomputed publication gates failed: " + "; ".join(gate_errors))
+        originality_errors = publisher_originality_errors(package_dir, ledger_path)
+        if originality_errors:
+            raise ValueError("publisher originality contract failed: " + "; ".join(originality_errors))
         dashboard = json.loads((package_dir / "dashboard-qa.json").read_text(encoding="utf-8"))
         if dashboard.get("ok") is not True:
             raise ValueError("package dashboard-qa.json is not green")

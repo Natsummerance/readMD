@@ -4104,6 +4104,51 @@ class WatcherTest(unittest.TestCase):
                 record["error"],
             )
 
+    def test_watcher_rechecks_originality_against_publication_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            metadata = json.loads(
+                (root / "package" / "metadata.json").read_text(encoding="utf-8")
+            )
+            fingerprints = watch_and_publish.text_fingerprints(metadata["body"])
+            ledger = root / "publication-ledger.jsonl"
+            prior = {
+                "release": "v1.0.0",
+                "title": "旧稿",
+                "body_sha256": fingerprints["body_sha256"],
+                "opening": fingerprints["opening"],
+                "closing": fingerprints["closing"],
+                "body_trigrams": sorted(watch_and_publish.text_trigrams(metadata["body"])),
+            }
+            ledger.write_text(json.dumps(prior, ensure_ascii=False) + "\n", encoding="utf-8")
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not click a near-duplicate body")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                    ledger_path=ledger,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("publisher originality contract failed", record["error"])
+            self.assertIn("body hash matches v1.0.0", record["error"])
+            self.assertIn("near-duplicate body (1.00) matches v1.0.0", record["error"])
+            self.assertIn("opening matches v1.0.0", record["error"])
+            self.assertIn("closing matches v1.0.0", record["error"])
+
     def test_watcher_blocks_copy_that_ignores_concern_intent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
