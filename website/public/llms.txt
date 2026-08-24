@@ -3,9 +3,13 @@
 
 ## Docs
 - [ReadMD homepage](https://app.syminu.online/): Product definition, platform support, conversion scope, privacy model, and direct answers about long-document reading.
+- [Workflow answers](https://app.syminu.online/workflows/): Task-level guidance for 8,000-line documents, DOCX/PDF/HTML/LaTeX conversion, offline OCR, and direct Markdown presentation.
 - [Simplified Chinese homepage](https://app.syminu.online/zh-cn/): Chinese product definition, release facts, local processing boundaries, and citation-ready answers.
+- [Simplified Chinese workflow answers](https://app.syminu.online/zh-cn/workflows/): Chinese guidance for long documents, office conversion, offline OCR, and presentation.
 - [Traditional Chinese homepage](https://app.syminu.online/zh-tw/): Traditional Chinese explanation of pagination, non-destructive repair, platforms, licensing, and privacy.
+- [Traditional Chinese workflow answers](https://app.syminu.online/zh-tw/workflows/): Traditional Chinese guidance for long documents, conversion, offline OCR, and presentation.
 - [Japanese homepage](https://app.syminu.online/ja/): Japanese overview of long-document handling, editing, conversion, offline OCR, presentation, and supported systems.
+- [Japanese workflow answers](https://app.syminu.online/ja/workflows/): Japanese guidance for long documents, conversion, offline OCR, and presentation.
 
 ## AI Text
 - [English index](https://app.syminu.online/llms.txt): Compact English entry point to canonical pages, source code, key facts, and the full corpus.

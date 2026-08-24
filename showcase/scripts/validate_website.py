@@ -22,6 +22,13 @@ LANGUAGES = {
     "ja": {"path": PUBLIC / "ja" / "index.html", "canonical": "https://app.syminu.online/ja/", "full": PUBLIC / "ja" / "llms-full.txt"},
 }
 
+INTENT_PAGES = {
+    "en": {"path": PUBLIC / "workflows" / "index.html", "canonical": "https://app.syminu.online/workflows/"},
+    "zh-CN": {"path": PUBLIC / "zh-cn" / "workflows" / "index.html", "canonical": "https://app.syminu.online/zh-cn/workflows/"},
+    "zh-TW": {"path": PUBLIC / "zh-tw" / "workflows" / "index.html", "canonical": "https://app.syminu.online/zh-tw/workflows/"},
+    "ja": {"path": PUBLIC / "ja" / "workflows" / "index.html", "canonical": "https://app.syminu.online/ja/workflows/"},
+}
+
 AI_CRAWLERS = ("GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot")
 
 
@@ -167,6 +174,7 @@ def validate_robots_and_sitemap() -> list[str]:
         errors.append("robots.txt omits canonical sitemap")
     sitemap = (PUBLIC / "sitemap.xml").read_text(encoding="utf-8")
     expected = {item["canonical"] for item in LANGUAGES.values()}
+    expected.update(item["canonical"] for item in INTENT_PAGES.values())
     actual = set(re.findall(r"<loc>(.*?)</loc>", sitemap))
     if actual != expected:
         errors.append(f"sitemap mismatch: missing={expected - actual}, extra={actual - expected}")
@@ -268,6 +276,11 @@ def main() -> int:
             errors.append(f"missing {language} index")
             continue
         errors.extend(audit_page(contract["path"], contract["canonical"]))
+    for language, contract in INTENT_PAGES.items():
+        if not contract["path"].is_file():
+            errors.append(f"missing {language} workflow page")
+            continue
+        errors.extend(audit_page(contract["path"], contract["canonical"]))
     if not (PUBLIC / "llms.txt").is_file():
         errors.append("missing public/llms.txt")
     else:
@@ -282,7 +295,12 @@ def main() -> int:
     if errors:
         print(json.dumps({"ok": False, "errors": errors}, ensure_ascii=False))
         return 1
-    print(json.dumps({"ok": True, "languages": list(LANGUAGES), "review_rounds": 3}, ensure_ascii=False))
+    print(json.dumps({
+        "ok": True,
+        "languages": list(LANGUAGES),
+        "intent_pages": list(INTENT_PAGES),
+        "review_rounds": 3,
+    }, ensure_ascii=False))
     return 0
 
 

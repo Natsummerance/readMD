@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReadMD 工作流 | 超长文档、格式转换、离线 OCR 与放映</title>
+  <meta name="description" content="了解 ReadMD 如何处理约 8,000 行或 500 KB 的长文档，转换 Word、PDF、网页和 LaTeX，离线提取扫描文字，并在 Windows、macOS、Linux、UOS 和麒麟上放映同一份 Markdown。">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ReadMD">
+  <meta property="og:title" content="ReadMD 工作流 | 超长文档、格式转换、离线 OCR 与放映">
+  <meta property="og:description" content="面向超长阅读、格式转换、离线 OCR 和同一份 Markdown 放映的直接答案。">
+  <meta property="og:url" content="https://app.syminu.online/zh-cn/workflows/">
+  <meta property="og:image" content="https://app.syminu.online/media/overview-reader.webp">
+  <meta property="og:image:type" content="image/webp">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="ReadMD 阅读界面展示排版后的 Markdown 文档和目录。">
+  <meta property="og:locale" content="zh_CN">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ReadMD 工作流 | 超长文档、格式转换、离线 OCR 与放映">
+  <meta name="twitter:description" content="超长阅读、格式转换、离线 OCR 和 Markdown 放映的直接答案。">
+  <meta name="twitter:image" content="https://app.syminu.online/media/overview-reader.webp">
+  <meta name="twitter:image:alt" content="ReadMD 阅读界面展示排版后的 Markdown 文档和目录。">
+  <link rel="canonical" href="https://app.syminu.online/zh-cn/workflows/">
+  <link rel="alternate" hreflang="en" href="https://app.syminu.online/workflows/">
+  <link rel="alternate" hreflang="zh-CN" href="https://app.syminu.online/zh-cn/workflows/">
+  <link rel="alternate" hreflang="zh-TW" href="https://app.syminu.online/zh-tw/workflows/">
+  <link rel="alternate" hreflang="ja" href="https://app.syminu.online/ja/workflows/">
+  <link rel="alternate" hreflang="x-default" href="https://app.syminu.online/workflows/">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://app.syminu.online/zh-cn/workflows/#webpage",
+        "url": "https://app.syminu.online/zh-cn/workflows/",
+        "name": "ReadMD 工作流 | 超长文档、格式转换、离线 OCR 与放映",
+        "dateModified": "2026-08-25",
+        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#workflow-answers p"]}
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://app.syminu.online/zh-cn/workflows/#software",
+        "name": "ReadMD",
+        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+        "applicationCategory": "UtilitiesApplication",
+        "softwareVersion": "2.3.7-beta.3",
+        "dateModified": "2026-08-25",
+        "isAccessibleForFree": true,
+        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+        "author": {"@type": "Organization", "name": "ReadMD"}
+      }
+    ]
+  }
+  </script>
+</head>
+<body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/zh-cn/">ReadMD</a><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/latest">下载</a></div>
+  </header>
+  <main class="mx-auto max-w-5xl px-5 py-16">
+    <h1 class="display-title">真实 Markdown 工作流怎么处理。</h1>
+    <p class="section-copy mt-6">以下是选择本地 Markdown 工具前最常见的问题：超长文件、既有办公文档、扫描页、学术引用，以及不重做幻灯片。</p>
+    <section id="workflow-answers" class="mt-12 space-y-12">
+      <article class="answer-card"><h2 class="text-xl font-semibold">超过 8,000 行的 Markdown 怎么读？</h2><p>把文件放进 ReadMD。接近 8,000 行或 500 KB 时会启用语义分页，界面不必等待所有段落一次渲染；目录、全文搜索、公式和页面控件仍然联动。</p></article>
+      <article class="answer-card"><h2 class="text-xl font-semibold">DOCX、PDF、HTML 或 LaTeX 能转 Markdown 吗？</h2><p>可以。转换工作流支持 Word、PowerPoint、Excel、PDF、HTML 和 LaTeX 导入，保留标题、列表、表格、引言、公式和图片引用等结构。复杂专有版式转换后仍应复核。</p></article>
+      <article class="answer-card"><h2 class="text-xl font-semibold">扫描件能不上传就提取文字吗？</h2><p>在受支持的平台可以。ReadMD 调用操作系统原生 OCR 在本地识别，之后在 Markdown 中修正标题和表格。这条本地路径不需要云账号。</p></article>
+      <article class="answer-card"><h2 class="text-xl font-semibold">能不重做幻灯片直接讲吗？</h2><p>可以。继续用 Markdown 写作，准备好后打开基于 Reveal 的放映模式；代码、数学、图表和表格保留上下文，临时修改也回到同一份文件。</p></article>
+      <article class="answer-card"><h2 class="text-xl font-semibold">哪些系统可以运行？</h2><p>提供 Windows 7 到 11、Apple Silicon 和 Intel macOS、Linux AppImage/Deb 包，以及统信 UOS 和银河麒麟版本；VSCode 插件与 FastMCP Server 可连接编辑器和兼容 AI 工具。</p></article>
+    </section>
+    <div class="mt-14 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">获取 ReadMD</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 点 Star</a></div>
+  </main>
+  <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD。MIT 许可证。</p><nav class="flex flex-wrap gap-5"><a href="/zh-cn/llms.txt">llms.txt</a><a href="/zh-cn/llms-full.txt">AI 完整文本</a><a href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 点 Star</a></nav></div></footer>
+</body>
+</html>
