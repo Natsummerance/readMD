@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import base64
 import hashlib
+import datetime
 import json
 import re
 import sys
@@ -14,6 +15,7 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[2]
 SITE = ROOT / "website"
 PUBLIC = SITE / "public"
+SITE_TIMEZONE = datetime.timezone(datetime.timedelta(hours=8), name="Asia/Shanghai")
 
 LANGUAGES = {
     "en": {"path": PUBLIC / "index.html", "canonical": "https://app.syminu.online/", "full": PUBLIC / "llms-full.txt"},
@@ -200,12 +202,39 @@ def validate_robots_and_sitemap() -> list[str]:
     if "Sitemap: https://app.syminu.online/sitemap.xml" not in robots:
         errors.append("robots.txt omits canonical sitemap")
     sitemap = (PUBLIC / "sitemap.xml").read_text(encoding="utf-8")
+    if 'xmlns:xhtml="http://www.w3.org/1999/xhtml"' not in sitemap:
+        errors.append("sitemap omits XHTML hreflang namespace")
     expected = {item["canonical"] for item in LANGUAGES.values()}
     expected.update(item["canonical"] for item in INTENT_PAGES.values())
     expected.update(item["canonical"] for item in DOWNLOAD_PAGES.values())
     actual = set(re.findall(r"<loc>(.*?)</loc>", sitemap))
     if actual != expected:
         errors.append(f"sitemap mismatch: missing={expected - actual}, extra={actual - expected}")
+    entries = re.findall(r"<url>(.*?)</url>", sitemap, re.S)
+    if len(entries) != len(expected):
+        errors.append(f"sitemap must contain {len(expected)} URLs")
+    for entry in entries:
+        url_match = re.search(r"<loc>(.*?)</loc>", entry)
+        if not url_match:
+            errors.append("sitemap entry lacks loc")
+            continue
+        url = url_match.group(1)
+        alternates = dict(re.findall(r'<xhtml:link[^>]+hreflang="([^"]+)"[^>]+href="([^"]+)"', entry))
+        section = "/workflows/" if "/workflows/" in url else ("/download/" if "/download/" in url else "/")
+        language_bases = {
+            "en": "https://app.syminu.online",
+            "zh-CN": "https://app.syminu.online/zh-cn",
+            "zh-TW": "https://app.syminu.online/zh-tw",
+            "ja": "https://app.syminu.online/ja",
+        }
+        language_bases["x-default"] = language_bases["en"]
+        for lang, base in language_bases.items():
+            expected_href = base + section
+            if alternates.get(lang) != expected_href:
+                errors.append(f"sitemap {url} has bad hreflang {lang}: {alternates.get(lang)}")
+        current_date = datetime.datetime.now(SITE_TIMEZONE).date().isoformat()
+        if not re.search(rf"<lastmod>{current_date}</lastmod>", entry):
+            errors.append(f"sitemap {url} lacks current lastmod")
     return errors
 
 

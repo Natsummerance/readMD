@@ -36,8 +36,9 @@ The brief requested a literal Apple clone. That part was not implemented because
 - Release build validator: green after final rebuild.
 - Product showcase pipeline: 144 tests green before the website package.
 - Desktop UI suite: 55 tests green before the website package.
-- Browser smoke test: four language pages, one H1 per page, stylesheet loaded, zero broken images, zero script errors.
+- Browser smoke test: twelve localized home, workflow, and download pages, one H1 per page, stylesheet loaded, zero broken images, zero script errors.
 - Structured data: four localized WebPage plus SoftwareApplication graphs with speakable selectors pass the website validator.
+- Sitemap review: all twelve canonical URLs expose complete hreflang sets and current freshness dates; the dedicated three-round approval is recorded in `sitemap_hreflang_approval.json`.
 - WeChat export QA: green.
 - Three approval rounds and final decision meeting: approved at or above 9.7.
 - Cloudflare live deployment: pending external token permission; no false claim of publication is made.
