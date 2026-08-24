@@ -610,7 +610,7 @@ class WriteCopyTest(unittest.TestCase):
                         "schema_version": 1,
                         "unique_count": 2,
                         "themes": [
-                            {"theme": "code", "mentions": 2, "weighted_score": 5},
+                            {"theme": "code", "mentions": 2, "weighted_score": 5, "intents": ["request", "question"]},
                             {"theme": "presentation", "mentions": 1, "weighted_score": 2},
                         ],
                         "top_theme": "code",
@@ -627,7 +627,7 @@ class WriteCopyTest(unittest.TestCase):
                         "schema_version": 1,
                         "unique_count": 3,
                         "themes": [
-                            {"theme": "code", "mentions": 3, "weighted_score": 7},
+                            {"theme": "code", "mentions": 3, "weighted_score": 7, "intents": ["request"]},
                             {"theme": "table", "mentions": 1, "weighted_score": 2},
                         ],
                         "top_theme": "code",
@@ -641,6 +641,68 @@ class WriteCopyTest(unittest.TestCase):
                 history=history,
             )
         self.assertIn("代码教程、技术笔记或示例文档", result["body"])
+        directive = result["resonance_directive"]
+        self.assertTrue(directive["applied"])
+        self.assertEqual(directive["evidence"]["focus"], "code")
+        self.assertEqual(directive["evidence"]["confidence"], "medium")
+        self.assertEqual(directive["evidence"]["top_intents"], ["request", "question"])
+        self.assertEqual(
+            set(directive["decisions"]),
+            {"keep", "strengthen", "compress", "delete"},
+        )
+
+    def test_comment_focus_reorders_supporting_feature(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = write_story(Path(tmp))
+            story["selected_shots"].extend(["editor.diagram-picker", "editor.code-chunk"])
+            story["claims"].extend([
+                {
+                    "id": "diagram",
+                    "user_value": "科研图表从面板选择",
+                    "shot_ids": ["editor.diagram-picker"],
+                    "sources": ["release/release_notes.md"],
+                },
+                {
+                    "id": "code",
+                    "user_value": "代码块就地运行",
+                    "shot_ids": ["editor.code-chunk"],
+                    "sources": ["release/release_notes.md"],
+                },
+            ])
+            history = [
+                {
+                    "release": f"v8.{version}.0",
+                    "title": f"v8.{version}",
+                    "title_formula_id": "#36",
+                    "hook_type": "outcome-led",
+                    "published_at": f"2026-08-{20 + version}T10:00:00Z",
+                    "metrics_status": "complete",
+                    "comment_insights": {
+                        "schema_version": 1,
+                        "unique_count": 1,
+                        "themes": [{
+                            "theme": "code",
+                            "mentions": 2,
+                            "weighted_score": 5,
+                            "intents": ["request"],
+                        }],
+                        "top_theme": "code",
+                    },
+                }
+                for version in range(2)
+            ]
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v8.1.0",
+                history=history,
+            )
+        self.assertLess(
+            result["body"].index("代码示例可以就地验证"),
+            result["body"].index("阅读端保持目录和公式排版"),
+        )
+        self.assertNotIn("科研图表留在文档里", result["body"])
+        self.assertTrue(result["resonance_directive"]["applied"])
 
     def test_low_confidence_comment_focus_keeps_default_scenario(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -667,6 +729,7 @@ class WriteCopyTest(unittest.TestCase):
             )
         self.assertIn("课程讲义、组会报告、技术分享或论文汇报", result["body"])
         self.assertNotIn("代码教程、技术笔记或示例文档", result["body"])
+        self.assertFalse(result["resonance_directive"]["applied"])
 
     def test_copy_follows_selected_mechanism_instead_of_presentation(self) -> None:
         story = {
@@ -1824,18 +1887,26 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertIn("## Topic search terms", markdown)
 
     def test_aggregates_comment_focus_across_releases(self) -> None:
-        def insights(theme: str, mentions: int, weighted_score: int) -> dict:
+        def insights(
+            theme: str,
+            mentions: int,
+            weighted_score: int,
+            intents: list[str] | None = None,
+        ) -> dict:
+            theme_stats = {"theme": theme, "mentions": mentions, "weighted_score": weighted_score}
+            if intents is not None:
+                theme_stats["intents"] = intents
             return {
                 "schema_version": 1,
                 "unique_count": mentions,
-                "themes": [{"theme": theme, "mentions": mentions, "weighted_score": weighted_score}],
+                "themes": [theme_stats],
                 "top_theme": theme,
             }
 
         records = [
-            {**self.complete("v1", "academic", "academic-led", 1000, 40, 60), "comment_insights": insights("academic", 2, 4)},
+            {**self.complete("v1", "academic", "academic-led", 1000, 40, 60), "comment_insights": insights("academic", 2, 4, ["request"])},
             {**self.complete("v2", "outcome", "outcome-led", 2000, 120, 180), "comment_insights": insights("outcome", 3, 5)},
-            {**self.complete("v4", "academic", "identity-led", 1000, 20, 30), "comment_insights": insights("academic", 1, 5)},
+            {**self.complete("v4", "academic", "identity-led", 1000, 20, 30), "comment_insights": insights("academic", 1, 5, ["request", "question"])},
             {**self.complete("v3", "mechanism", "mechanism-curiosity", 500, 5, 5), "comment_insights": insights("presentation", 1, 1), "metrics_status": "pending"},
         ]
         with tempfile.TemporaryDirectory() as tmp:
@@ -1844,6 +1915,7 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertEqual(focus["release_count"], 2)
         self.assertEqual(focus["mentions"], 3)
         self.assertEqual(focus["weighted_score"], 9)
+        self.assertEqual(focus["top_intents"], ["request", "question"])
         self.assertEqual(data["comment_focus"]["recommended_theme"], "academic")
         self.assertEqual(data["comment_focus"]["confidence"], "medium")
 
@@ -2605,6 +2677,30 @@ class ContentMemoryTest(unittest.TestCase):
             after = store.read_text(encoding="utf-8")
         self.assertEqual(after, before)
 
+    def test_resonance_directive_is_immutable_publication_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = Path(tmp) / "ledger.jsonl"
+            directive = {
+                "schema_version": 1,
+                "applied": True,
+                "evidence": {"focus": "code", "confidence": "medium"},
+                "decisions": {"keep": "same core", "strengthen": "code first"},
+            }
+            self.seed_pending(store)
+            content_memory.update_record(store, "v1.0.0", {"resonance_directive": directive})
+            before = store.read_text(encoding="utf-8")
+            with self.assertRaises(ValueError):
+                content_memory.import_metric_snapshot(
+                    store,
+                    "v1.0.0",
+                    {"impressions": 100, "resonance_directive": {**directive, "applied": False}},
+                    source="xiaohongshu-web",
+                    captured_at="2026-08-23T10:00:00+08:00",
+                )
+            after = store.read_text(encoding="utf-8")
+
+        self.assertEqual(after, before)
+
     def test_comment_snapshot_imports_anonymized_resonance_themes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = Path(tmp) / "ledger.jsonl"
@@ -2795,6 +2891,7 @@ class ReviewDashboardTest(unittest.TestCase):
                             "release_count": 2,
                             "mentions": 5,
                             "weighted_score": 18,
+                            "top_intents": ["request", "question"],
                             "confidence": "medium",
                         },
                         "presentation": {
@@ -2855,6 +2952,7 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("5 mentions", html)
         self.assertIn("weighted 18", html)
         self.assertIn("medium confidence", html)
+        self.assertIn("request, question", html)
         self.assertIn("Pending metrics", html)
         for forbidden in ("<script", "class=", "id=", "<img", "<table", "http://", "https://"):
             self.assertNotIn(forbidden.lower(), html.lower())

@@ -121,7 +121,21 @@ COMMENT_SCENARIOS = {
 }
 
 
-def _comment_focus(history: list[dict[str, Any]]) -> str:
+COMMENT_SHOT_FOCUS = {
+    "presentation": "presentation.reveal",
+    "academic": "academic.latex-bib",
+    "code": "editor.code-chunk",
+    "table": "overview.editor",
+    "formula": "academic.latex-bib",
+    "diagram": "editor.diagram-picker",
+    "conversion": "convert.home",
+    "export-share": "sharing.export",
+    "local-privacy": "overview.reader",
+    "stability-performance": "overview.editor",
+}
+
+
+def _resonance_focus(history: list[dict[str, Any]]) -> dict[str, Any]:
     themes: dict[str, dict[str, Any]] = {}
     focus_releases: dict[str, set[str]] = {}
     for record in history:
@@ -133,22 +147,88 @@ def _comment_focus(history: list[dict[str, Any]]) -> str:
             if not isinstance(item, dict):
                 continue
             theme = str(item.get("theme", "general"))
-            stats = themes.setdefault(theme, {"mentions": 0, "weighted_score": 0})
+            stats = themes.setdefault(theme, {"mentions": 0, "weighted_score": 0, "intents": {}})
             focus_releases.setdefault(theme, set()).add(release)
             stats["mentions"] += int(item.get("mentions", 0))
             stats["weighted_score"] += int(item.get("weighted_score", 0))
+            for intent in item.get("intents", []):
+                stats["intents"][str(intent)] = stats["intents"].get(str(intent), 0) + 1
     ranked = sorted(
         themes.items(),
-        key=lambda item: (-item[1]["weighted_score"], -item[1]["mentions"], item[0]),
+        key=lambda item: (
+            -item[1]["weighted_score"],
+            -item[1]["mentions"],
+            -sum(item[1]["intents"].values()),
+            item[0],
+        ),
     )
-    return next(
+    chosen = next(
         (
-            theme
+            (theme, stats)
             for theme, stats in ranked
             if len(focus_releases[theme]) >= 2 and stats["weighted_score"] >= 3
         ),
-        "general",
+        None,
     )
+    if not chosen:
+        return {
+            "schema_version": 1,
+            "focus": "general",
+            "release_count": 0,
+            "mentions": 0,
+            "weighted_score": 0,
+            "confidence": "low",
+            "top_intents": [],
+        }
+
+    theme, stats = chosen
+    release_count = len(focus_releases[theme])
+    confidence = "medium" if release_count >= 2 else "low"
+    if release_count >= 3 and stats["weighted_score"] >= 8:
+        confidence = "high"
+    return {
+        "schema_version": 1,
+        "focus": theme,
+        "release_count": release_count,
+        "mentions": int(stats["mentions"]),
+        "weighted_score": int(stats["weighted_score"]),
+        "confidence": confidence,
+        "top_intents": sorted(
+            stats["intents"],
+            key=lambda intent: (-stats["intents"][intent], intent),
+        ),
+    }
+
+
+def _resonance_directive(
+    resonance: dict[str, Any],
+    *,
+    story: dict[str, Any],
+    profile: dict[str, Any],
+) -> dict[str, Any]:
+    applied = resonance["confidence"] != "low" and resonance["focus"] != "general"
+    scenario = COMMENT_SCENARIOS[resonance["focus"]]
+    focus_shot = COMMENT_SHOT_FOCUS.get(resonance["focus"])
+    strengthen = (
+        f"优先展示“{SUPPORT_PHRASES[focus_shot]}”，读者场景固定为{scenario}。"
+        if applied and focus_shot
+        else f"保持当前核心机制，读者场景维持{scenario}。"
+    )
+    return {
+        "schema_version": 1,
+        "applied": applied,
+        "evidence": {
+            key: value
+            for key, value in resonance.items()
+            if key != "schema_version"
+        },
+        "decisions": {
+            "keep": str(story.get("angle") or profile.get("narrative_angle", "")),
+            "strengthen": strengthen,
+            "compress": "辅助能力最多保留两条，并且必须服务同一核心机制。",
+            "delete": "不加入与评论焦点无关的新卖点。",
+        },
+    }
 
 
 def _select_topic_set(primary_id: str, history: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -262,7 +342,13 @@ def generate_copy(
     chosen_title = selected_title if len(selected_title["text"]) <= 20 else next(iter(valid_candidates), candidates[0])
     chosen_title["text"] = _clean(chosen_title["text"])
     profile = profile_for_story(story)
-    focus = _comment_focus(history)
+    resonance = _resonance_focus(history)
+    resonance_directive = _resonance_directive(
+        resonance,
+        story=story,
+        profile=profile,
+    )
+    focus = resonance["focus"]
     release = story["release"]
     prerelease = story["version_state"] != "release"
     state_text = "预览版" if prerelease else "正式版"
@@ -283,15 +369,39 @@ def generate_copy(
         if item.get("shot_ids") and primary_id not in item["shot_ids"]
     ]
     unique_supporting_ids = list(dict.fromkeys(supporting_ids))
-    support_priorities = profile.get("support_priorities", {})
-    supporting_ids = sorted(
-        unique_supporting_ids,
-        key=lambda shot_id: (
-            support_priorities.index(shot_id)
-            if shot_id in support_priorities
-            else len(support_priorities)
-        ),
+    focused_support_id = COMMENT_SHOT_FOCUS.get(focus)
+    prioritized_supporting_ids = (
+        [focused_support_id]
+        if resonance_directive["applied"] and focused_support_id in unique_supporting_ids
+        else []
     )
+    ordered_supporting_ids = prioritized_supporting_ids + [
+        shot_id
+        for shot_id in unique_supporting_ids
+        if shot_id not in prioritized_supporting_ids
+    ]
+    support_priorities = profile.get("support_priorities", {})
+    if prioritized_supporting_ids:
+        supporting_ids = [
+            *prioritized_supporting_ids,
+            *sorted(
+                ordered_supporting_ids[1:],
+                key=lambda shot_id: (
+                    support_priorities.index(shot_id)
+                    if shot_id in support_priorities
+                    else len(support_priorities)
+                ),
+            ),
+        ]
+    else:
+        supporting_ids = sorted(
+            ordered_supporting_ids,
+            key=lambda shot_id: (
+                support_priorities.index(shot_id)
+                if shot_id in support_priorities
+                else len(support_priorities)
+            ),
+        )
     support_text = "、".join(
         SUPPORT_PHRASES[shot_id]
         for shot_id in supporting_ids[:2]
@@ -350,6 +460,7 @@ def generate_copy(
         "topic_set_id": topic_set_id(topics),
         "topic_set_label": selected_topic_set["label"],
         "topic_set_selection": topic_set_selection,
+        "resonance_directive": resonance_directive,
         "version_state": story["version_state"],
         "claim_ids": [claim["id"] for claim in story["claims"]],
         "source_urls": [

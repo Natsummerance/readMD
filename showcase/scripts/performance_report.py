@@ -100,11 +100,14 @@ def _comment_focus(records: list[dict[str, Any]]) -> dict[str, Any]:
                 "releases": set(),
                 "mentions": 0,
                 "weighted_score": 0,
+                "intents": {},
                 "confidence": "low",
             })
             stats["releases"].add(release)
             stats["mentions"] += int(item.get("mentions", 0))
             stats["weighted_score"] += int(item.get("weighted_score", 0))
+            for intent in item.get("intents", []):
+                stats["intents"][str(intent)] = stats["intents"].get(str(intent), 0) + 1
 
     themes: dict[str, dict[str, Any]] = {}
     for theme, stats in aggregated.items():
@@ -118,6 +121,10 @@ def _comment_focus(records: list[dict[str, Any]]) -> dict[str, Any]:
             "release_count": release_count,
             "mentions": stats["mentions"],
             "weighted_score": stats["weighted_score"],
+            "top_intents": sorted(
+                stats["intents"],
+                key=lambda intent: (-stats["intents"][intent], intent),
+            ),
             "confidence": confidence,
         }
 
@@ -217,11 +224,12 @@ def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str
         "",
         "## Comment focus",
         "",
-        "| Theme | Releases | Mentions | Weighted score | Confidence |",
-        "| --- | ---: | ---: | ---: | --- |",
+        "| Theme | Releases | Mentions | Weighted score | Top intents | Confidence |",
+        "| --- | ---: | ---: | ---: | --- | --- |",
     ])
     for theme, stats in sorted(comment_focus["themes"].items(), key=lambda item: (-item[1]["weighted_score"], item[0])):
-        lines.append(f"| {theme} | {stats['release_count']} | {stats['mentions']} | {stats['weighted_score']} | {stats['confidence']} |")
+        intents = ", ".join(stats["top_intents"]) or "none"
+        lines.append(f"| {theme} | {stats['release_count']} | {stats['mentions']} | {stats['weighted_score']} | {intents} | {stats['confidence']} |")
     lines.extend([
         "",
         "## Next selection",

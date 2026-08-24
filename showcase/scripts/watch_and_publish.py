@@ -135,6 +135,7 @@ def seed_feedback_ledger(
         "topic_set_id": str(metadata.get("topic_set_id", "unknown")),
         "topic_set_label": str(metadata.get("topic_set_label", "unknown")),
         "topics": [str(item) for item in metadata.get("topics", [])],
+        "resonance_directive": metadata.get("resonance_directive"),
         "published_at": datetime.now(timezone.utc).isoformat(),
         "impressions": 0,
         "likes": 0,

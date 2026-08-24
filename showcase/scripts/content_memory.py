@@ -26,6 +26,7 @@ IMMUTABLE_FIELDS = (
     "topic_set_id",
     "topic_set_label",
     "topics",
+    "resonance_directive",
     "note_id",
     "publisher_target_id",
     "published_url",

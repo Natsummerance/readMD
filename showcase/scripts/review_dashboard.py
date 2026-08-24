@@ -86,7 +86,8 @@ def _comment_resonance_html(comment_focus: dict[str, Any]) -> str:
         f'weighted {_escaped(int(item.get("weighted_score", 0)))} · '
         f'{_escaped(item.get("confidence"))} confidence</p>'
         f'<p style="margin:6px 0 0;font-size:20px;color:#5b6875">'
-        f'{_escaped(int(item.get("release_count", 0)))} releases · anonymized</p></div>'
+        f'{_escaped(int(item.get("release_count", 0)))} releases · '
+        f'{_escaped(", ".join(item.get("top_intents") or []) or "general")} · anonymized</p></div>'
         for item in confident[:3]
     )
     return (
