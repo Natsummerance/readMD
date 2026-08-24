@@ -118,6 +118,63 @@ def _image_metrics(path: Path, screenshot_box: dict[str, float] | None = None) -
         }
 
 
+def resonance_directive_errors(directive: Any) -> list[str]:
+    """Validate the auditable keep/strengthen/compress/delete decision record."""
+    if not isinstance(directive, dict):
+        return ["resonance directive must be an object"]
+
+    errors: list[str] = []
+    if directive.get("schema_version") != 1:
+        errors.append("resonance directive schema_version must be 1")
+    if not isinstance(directive.get("applied"), bool):
+        errors.append("resonance directive applied must be boolean")
+
+    evidence = directive.get("evidence")
+    if not isinstance(evidence, dict):
+        errors.append("resonance directive evidence must be an object")
+    else:
+        if not str(evidence.get("focus", "")).strip():
+            errors.append("resonance directive evidence.focus is empty")
+        if str(evidence.get("confidence", "")) not in {"low", "medium", "high"}:
+            errors.append("resonance directive evidence.confidence is invalid")
+        for key in ("release_count", "mentions", "weighted_score"):
+            value = evidence.get(key)
+            if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                errors.append(f"resonance directive evidence.{key} must be a non-negative integer")
+        intents = evidence.get("top_intents")
+        if not isinstance(intents, list) or any(not str(item).strip() for item in intents):
+            errors.append("resonance directive evidence.top_intents must be a list of labels")
+
+    applied = directive.get("applied")
+    focus = str(evidence.get("focus", "")) if isinstance(evidence, dict) else ""
+    confidence = str(evidence.get("confidence", "")) if isinstance(evidence, dict) else ""
+    expected_applied = focus != "general" and confidence in {"medium", "high"}
+    if isinstance(applied, bool) and applied != expected_applied:
+        errors.append("resonance directive applied differs from evidence confidence")
+
+    decisions = directive.get("decisions")
+    required_decisions = {"keep", "strengthen", "compress", "delete"}
+    if not isinstance(decisions, dict):
+        errors.append("resonance directive decisions must be an object")
+    else:
+        missing = sorted(required_decisions - set(decisions))
+        if missing:
+            errors.append("resonance directive missing decisions: " + ", ".join(missing))
+        if any(not str(decisions.get(key, "")).strip() for key in required_decisions & set(decisions)):
+            errors.append("resonance directive decisions contain empty values")
+
+    return errors
+
+
+def publisher_directive_errors(package_dir: Path) -> list[str]:
+    """Load and validate the resonance directive that produced this package."""
+    try:
+        metadata = _load_json(package_dir / "metadata.json")
+    except Exception as exc:
+        return [f"publisher directive metadata unreadable: {exc}"]
+    return resonance_directive_errors(metadata.get("resonance_directive"))
+
+
 def publisher_input_errors(package_dir: Path) -> list[str]:
     """Keep the exact strings handed to Xiaohongshu identical to experiment metadata."""
     package_dir = package_dir.resolve()

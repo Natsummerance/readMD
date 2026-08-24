@@ -2817,6 +2817,24 @@ class ReviewDashboardTest(unittest.TestCase):
             "release": "v1.2.3",
             "title": "不用重做PPT，Markdown直接放映",
             "strategy": "outcome-led",
+            "resonance_directive": {
+                "schema_version": 1,
+                "applied": True,
+                "evidence": {
+                    "focus": "code",
+                    "confidence": "medium",
+                    "release_count": 2,
+                    "mentions": 5,
+                    "weighted_score": 18,
+                    "top_intents": ["request", "question"],
+                },
+                "decisions": {
+                    "keep": "同一份 Markdown 从写作走到放映。",
+                    "strengthen": "优先展示代码示例可以就地验证。",
+                    "compress": "辅助能力最多保留两条。",
+                    "delete": "不加入与代码焦点无关的新卖点。",
+                },
+            },
             "story": {
                 "release": "v1.2.3",
                 "primary_shot": "presentation.reveal",
@@ -2953,6 +2971,11 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("weighted 18", html)
         self.assertIn("medium confidence", html)
         self.assertIn("request, question", html)
+        self.assertIn("Next-draft directive", html)
+        self.assertIn("Applied to this draft", html)
+        self.assertIn("Anonymized intents", html)
+        self.assertIn("Next-draft decisions", html)
+        self.assertIn("优先展示代码示例可以就地验证。", html)
         self.assertIn("Pending metrics", html)
         for forbidden in ("<script", "class=", "id=", "<img", "<table", "http://", "https://"):
             self.assertNotIn(forbidden.lower(), html.lower())
@@ -2966,6 +2989,12 @@ class ReviewDashboardTest(unittest.TestCase):
         }
         html = review_dashboard.build_dashboard(inputs)
         self.assertIn("No confident comment evidence yet", html)
+
+    def test_resonance_directive_has_explicit_missing_state(self) -> None:
+        inputs = self.sample_inputs()
+        del inputs["resonance_directive"]
+        html = review_dashboard.build_dashboard(inputs)
+        self.assertIn("Resonance directive is unavailable", html)
 
     def test_mechanism_contract_has_explicit_missing_state(self) -> None:
         inputs = self.sample_inputs()
@@ -3044,6 +3073,7 @@ class WatcherTest(unittest.TestCase):
         topic_match: bool = True,
         tamper_semantics: bool = False,
         tamper_assets: bool = False,
+        tamper_directive: bool = False,
     ) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
@@ -3190,6 +3220,21 @@ class WatcherTest(unittest.TestCase):
         if not topic_match:
             metadata["topic_set_id"] = "tampered-topic-set"
         (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+        if tamper_directive:
+            metadata["resonance_directive"] = {
+                "schema_version": 1,
+                "applied": False,
+                "evidence": {
+                    "focus": "general",
+                    "confidence": "low",
+                    "release_count": 0,
+                    "mentions": 0,
+                    "weighted_score": 0,
+                    "top_intents": [],
+                },
+                "decisions": {},
+            }
+            (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
         if not publisher_match:
             (package / "body.txt").write_text("这篇正文和元数据不一致，不能进入发布器。", encoding="utf-8")
         zip_path = root / "package.zip"
@@ -3391,6 +3436,33 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(record["status"], "failed")
             self.assertIn("publisher asset contract failed", record["error"])
             self.assertIn("SHA-256 mismatch in capture.json: overview.reader", record["error"])
+
+    def test_directive_contract_blocks_tampered_next_draft(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, tamper_directive=True)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not click a package without auditable edit decisions")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("publisher directive contract failed", record["error"])
+            self.assertIn("resonance directive missing decisions: compress, delete, keep, strengthen", record["error"])
 
     def test_successful_publish_survives_status_query_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

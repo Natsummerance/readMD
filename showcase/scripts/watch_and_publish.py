@@ -20,7 +20,7 @@ from audit_copy import audit_copy
 from copy_variants import text_fingerprints, text_trigrams
 from pattern_audit import audit_patterns
 from package_content import validate_release_evidence
-from validate_package import publisher_asset_errors, publisher_input_errors
+from validate_package import publisher_asset_errors, publisher_directive_errors, publisher_input_errors
 
 DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
 STATE_VERSION = 1
@@ -311,6 +311,9 @@ def process_package(
         input_errors = publisher_input_errors(package_dir)
         if input_errors:
             raise ValueError("publisher input contract failed: " + "; ".join(input_errors))
+        directive_errors = publisher_directive_errors(package_dir)
+        if directive_errors:
+            raise ValueError("publisher directive contract failed: " + "; ".join(directive_errors))
         gate_errors = recomputed_gate_errors(package_dir)
         if gate_errors:
             raise ValueError("recomputed publication gates failed: " + "; ".join(gate_errors))

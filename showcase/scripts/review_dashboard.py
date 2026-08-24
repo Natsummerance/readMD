@@ -98,6 +98,65 @@ def _comment_resonance_html(comment_focus: dict[str, Any]) -> str:
     )
 
 
+def _resonance_directive_html(directive: Any) -> str:
+    if not isinstance(directive, dict) or directive.get("schema_version") != 1:
+        return (
+            '<p style="margin:0;font-size:23px;color:#c1121f">'
+            'Resonance directive is unavailable or uses an unsupported schema.</p>'
+        )
+
+    evidence = directive.get("evidence", {})
+    decisions = directive.get("decisions", {})
+    if not isinstance(evidence, dict) or not isinstance(decisions, dict):
+        return (
+            '<p style="margin:0;font-size:23px;color:#c1121f">'
+            'Resonance directive evidence or decisions are malformed.</p>'
+        )
+
+    applied = bool(directive.get("applied"))
+    status_color = "#157347" if applied else "#5b6875"
+    status_label = "Applied" if applied else "Default"
+    intents = [str(item) for item in evidence.get("top_intents", [])]
+    intent_chips = "".join(
+        f'<span style="display:inline-block;margin:0 8px 8px 0;padding:8px 13px;'
+        f'background:#eef1f4;border-radius:999px;font-size:20px;color:#182029">{_escaped(item)}</span>'
+        for item in intents
+    ) or '<span style="font-size:20px;color:#5b6875">General audience</span>'
+
+    decision_labels = (
+        ("keep", "Keep"),
+        ("strengthen", "Strengthen"),
+        ("compress", "Compress"),
+        ("delete", "Delete"),
+    )
+    decision_items = "".join(
+        '<li style="margin:0 0 14px;list-style:none;background:#ffffff;'
+        'border-left:4px solid #d6482c;border-radius:10px;padding:16px 18px">'
+        f'<strong style="display:block;font-size:19px;color:#5b6875">{_escaped(label)}</strong>'
+        f'<span style="font-size:22px;line-height:1.45;color:#182029">{_escaped(decisions.get(key))}</span></li>'
+        for key, label in decision_labels
+    )
+
+    overview = "".join([
+        _metric("Focus", evidence.get("focus") or "Missing"),
+        _metric("Confidence", evidence.get("confidence") or "Missing"),
+        _metric("Releases", evidence.get("release_count", 0)),
+        _metric("Weighted score", evidence.get("weighted_score", 0)),
+    ])
+    return (
+        f'<div style="display:flex;align-items:center;gap:16px;margin-bottom:18px">'
+        f'<span style="display:inline-block;padding:8px 14px;border-radius:999px;background:{status_color};'
+        f'color:#ffffff;font-size:22px;font-weight:700">{_escaped(status_label)}</span>'
+        f'<span style="font-size:23px;color:#5b6875">'
+        f'{"Applied to this draft" if applied else "Default structure held until evidence matures"}</span></div>'
+        f'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">{overview}</div>'
+        f'<p style="margin:0 0 10px;font-size:22px;font-weight:800;color:#182029">Anonymized intents</p>'
+        f'<div>{intent_chips}</div>'
+        f'<p style="margin:22px 0 10px;font-size:22px;font-weight:800;color:#182029">Next-draft decisions</p>'
+        f'<ul style="margin:0;padding:0">{decision_items}</ul>'
+    )
+
+
 def _contract_field(label: str, value: Any, emphasis: bool = False) -> str:
     value_style = (
         "margin:6px 0 0;font-size:25px;line-height:1.35;font-weight:800;color:#182029"
@@ -248,6 +307,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
     performance = inputs.get("performance", {})
     story = inputs.get("story", {})
     topic_experiment = inputs.get("topic_experiment", {})
+    resonance_directive = inputs.get("resonance_directive", {})
 
     gates = [
         ("Package QA", bool(qa.get("ok")), qa.get("errors", [])),
@@ -341,6 +401,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
   {_section("Semantic dimensions", f'<div style="display:flex;gap:14px;flex-wrap:wrap">{score_items}</div>')}
   {_section("Style resonance", style_inner)}
   {_section("Comment resonance", comment_resonance_html)}
+  {_section("Next-draft directive", _resonance_directive_html(resonance_directive))}
   {_section(
       "Top experiments",
       f'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">{experiment_summary}</div>'
@@ -367,6 +428,7 @@ def collect_inputs(package_dir: Path) -> dict[str, Any]:
         "release": metadata.get("release", ""),
         "title": metadata.get("title", ""),
         "strategy": metadata.get("strategy", metadata.get("hook_type", "unknown")),
+        "resonance_directive": metadata.get("resonance_directive", {}),
         "body": (package_dir / "body.txt").read_text(encoding="utf-8").strip() if (package_dir / "body.txt").exists() else "",
         "qa": _read_json(package_dir / "qa.json"),
         "copy_review": _read_json(package_dir / "copy-review.json"),
