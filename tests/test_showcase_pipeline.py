@@ -114,6 +114,15 @@ class BuildStoryTest(unittest.TestCase):
                 self.assertTrue(angle.startswith("ReadMD "))
                 self.assertLessEqual(len(angle), 40)
 
+    def test_every_mechanism_has_a_distinct_collectible_decision_rule(self) -> None:
+        rules = {key: value["decision_rule"] for key, value in copy_profiles.PROFILES.items()}
+        self.assertEqual(len(rules), len(set(rules.values())))
+        for primary_shot, rule in rules.items():
+            with self.subTest(primary_shot=primary_shot):
+                self.assertIn("判断标准：", rule)
+                self.assertTrue(rule.endswith("。"))
+                self.assertNotIn("。。", rule)
+
     def test_mechanism_summary_hooks_are_scannable_and_distinct(self) -> None:
         hooks = {key: value["summary"] for key, value in copy_profiles.PROFILES.items()}
         self.assertEqual(len(hooks), len({item["title"] for item in hooks.values()}))
@@ -751,6 +760,28 @@ class WriteCopyTest(unittest.TestCase):
         self.assertLess(
             result["body"].index("渲染阶段只处理显示结果"),
             result["body"].index(expected_cta),
+        )
+
+    def test_collectible_decision_rule_survives_length_fitting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            story = build_story.build_story(
+                release="v9.9.9",
+                previous_release="v9.9.8",
+                notes="- Reveal.js 演示\n",
+                shot_library_path=ROOT / "showcase" / "shot_library.json",
+            )
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v9.9.8",
+            )
+
+        self.assertIn(story["decision_rule"], result["body"])
+        self.assertIn(f"收藏这条{story['decision_rule']}", result["body"])
+        self.assertLess(
+            result["body"].index(story["decision_rule"]),
+            result["body"].rindex("你会先拿哪一份 Markdown"),
         )
 
     def test_invisible_fixes_do_not_duplicate_terminal_punctuation(self) -> None:
@@ -1855,6 +1886,15 @@ class AuditCopyTest(unittest.TestCase):
 
         self.assertFalse(report["ok"])
         self.assertIn("implementation jargon leaked into copy: CodeMirror, AST", report["hard_failures"])
+
+    def test_audit_rejects_trimmed_decision_rule(self) -> None:
+        rule = "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。"
+        story, metadata, composition = self.make_audit_inputs(self.good_body())
+        story["decision_rule"] = rule
+        report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
+
+        self.assertFalse(report["ok"])
+        self.assertIn("save-worthy decision rule missing from copy", report["hard_failures"])
 
     def test_style_audit_passes_concrete_developer_voice(self) -> None:
         report = style_audit.audit_style(self.good_body(), audience="程序员")

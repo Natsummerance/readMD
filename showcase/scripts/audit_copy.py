@@ -178,6 +178,9 @@ def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: 
             hard_failures.append("prerelease uses formal-release wording")
     if any(not claim.get("sources") for claim in story.get("claims", [])):
         hard_failures.append("claim missing evidence")
+    decision_rule = str(story.get("decision_rule", ""))
+    if decision_rule and decision_rule not in body:
+        hard_failures.append("save-worthy decision rule missing from copy")
     for key in ("contrast_errors", "small_text", "images_failed"):
         if composition.get("design_audit", {}).get(key):
             hard_failures.append(f"design audit {key} failed")

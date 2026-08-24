@@ -473,6 +473,8 @@ def generate_copy(
         fixes = "；".join(_clean(claim["user_value"]).rstrip("。．.!！?？") for claim in invisible_claims[:2])
         paragraphs.append(f"还有一些不适合单独拍图的底层修复也在这版里，比如{fixes}。它们不抢画面，但会让日常使用更稳。")
 
+    paragraphs.append(f"收藏这条{profile['decision_rule']}")
+
     paragraphs.extend(
         [
             f"如果你常处理{COMMENT_SCENARIOS[reader_focus]}，它会省掉“{profile['saved_step']}”这一步。",

@@ -203,6 +203,7 @@ def build_story(
         "version_state": "prerelease" if is_prerelease(release) else "release",
         "angle": angle,
         "primary_shot": primary_shot,
+        "decision_rule": mechanism_profile["decision_rule"],
         "cover_hook": cover_hook,
         "summary_hook": summary_hook,
         "narrative_angle": angle,
