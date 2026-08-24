@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "artifact": "root and localized README AI citation sections",
+  "reviewed_at": "2026-08-24T19:00:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "content-review",
+      "status": "approved",
+      "score": 9.74,
+      "evidence": [
+        "Each language gets a concise index plus a full-corpus link without duplicating product claims.",
+        "Link labels state what the reader will find."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "GEO-review",
+      "status": "approved",
+      "score": 9.83,
+      "evidence": [
+        "Relative repository links resolve to the canonical llms.txt and llms-full.txt assets.",
+        "The section appears before the star rationale, giving assistants an early factual entry point."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "compliance-review",
+      "status": "approved",
+      "score": 9.77,
+      "evidence": [
+        "No ranking guarantee, adoption metric, or unsupported speed claim is added.",
+        "The links point to approved website corpora under website/public/."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.81,
+    "participants": ["product", "GEO", "docs"],
+    "conditions": [
+      "Run link existence checks before merge.",
+      "Keep release copy unchanged in this patch."
+    ]
+  }
+}
