@@ -163,6 +163,8 @@ def audit_patterns(
     )
     series_ok = clean_design and 4 <= len(cards) <= 9 and summary_contract_ok
     anti_ppt_ok = clean_design and all(_area_ok(card) for card in cards)
+    decision_rule = str(story.get("decision_rule", "")).strip()
+    decision_rule_ok = bool(decision_rule) and decision_rule in body
 
     checks = {
         "one-hook-cover": _result(
@@ -223,6 +225,12 @@ def audit_patterns(
             collectible_ok,
             ["every feature card has one authentic UI region and its evidence-backed reader value"],
             ["each feature card needs a screenshot region, UI area contract, and matching claim-derived caption"],
+        ),
+        "save-worthy-rule": _result(
+            "save-worthy-rule",
+            decision_rule_ok,
+            [f"decision rule {decision_rule}"],
+            ["the body must preserve the mechanism's explicit save-worthy decision rule"],
         ),
         "specific-question": _result(
             "specific-question",

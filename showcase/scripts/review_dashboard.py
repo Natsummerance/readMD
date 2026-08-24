@@ -236,6 +236,7 @@ def _mechanism_contract_html(story: dict[str, Any]) -> str:
 
     primary = str(story.get("primary_shot", "")).strip()
     angle = str(story.get("angle", "")).strip()
+    decision_rule = str(story.get("decision_rule", "")).strip()
     cover = story.get("cover_hook", {}) if isinstance(story.get("cover_hook"), dict) else {}
     summary = story.get("summary_hook", {}) if isinstance(story.get("summary_hook"), dict) else {}
     proof_points = summary.get("proof_points", [])
@@ -267,6 +268,7 @@ def _mechanism_contract_html(story: dict[str, Any]) -> str:
     return (
         f'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">{overview}</div>'
         f'{_contract_field("Core narrative", angle or "Missing")}'
+        f'{_contract_field("Save-worthy rule", decision_rule or "Missing", emphasis=bool(decision_rule))}'
         '<div style="margin-top:18px">'
         f'{_contract_field("Cover hook", cover_value)}'
         '</div>'

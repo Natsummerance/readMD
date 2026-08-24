@@ -336,6 +336,8 @@ class WriteCopyTest(unittest.TestCase):
             "version_state": "prerelease",
             "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
             "primary_shot": "presentation.reveal",
+            "decision_rule": "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
+            "decision_rule": "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
             "selected_shots": [
                 "overview.reader",
                 "presentation.reveal",
@@ -2119,6 +2121,7 @@ class PatternAuditTest(unittest.TestCase):
             "version_state": "prerelease",
             "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
             "primary_shot": "presentation.reveal",
+            "decision_rule": "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
             "cover_hook": {"formula_id": "#36", "title": "写完就能讲", "caption": "Markdown 直接放映，不用重做 PPT。"},
             "summary_hook": {"title": "一条放映路", "caption": "写作、修改和上台共用一份文件。", "proof_points": ["同一份 MD", "真实排版", "直接放映"]},
             "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
@@ -2142,6 +2145,7 @@ class PatternAuditTest(unittest.TestCase):
                 "文档写完了，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。\n\n"
                 "这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。\n\n"
                 "先说清楚：这是 ReadMD 预览版，文件仍在你自己的电脑里。\n\n"
+                "收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。\n\n"
                 "如果你常写课程讲义、组会报告、技术分享或论文汇报，它会省掉重新做演示稿这一步。\n\n"
                 "你会先拿哪一份 Markdown 试放映？"
             ),
@@ -2195,8 +2199,20 @@ class PatternAuditTest(unittest.TestCase):
             self.write_package(package, story, metadata, composition)
             report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
         self.assertTrue(report["ok"], report["errors"])
-        self.assertEqual(len(report["patterns"]), 11)
+        self.assertEqual(len(report["patterns"]), 12)
         self.assertTrue(all(item["ok"] for item in report["patterns"]))
+
+    def test_save_rule_must_survive_in_body(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            story, metadata, composition = self.make_inputs()
+            story["decision_rule"] = "判断标准：被裁掉的规则。"
+            self.write_package(package, story, metadata, composition)
+            report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
+
+        rule = next(item for item in report["patterns"] if item["id"] == "save-worthy-rule")
+        self.assertFalse(report["ok"])
+        self.assertFalse(rule["ok"])
 
     def test_cover_type_must_survive_feed_thumbnail_scale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -4024,6 +4040,7 @@ class ReviewDashboardTest(unittest.TestCase):
                 "release": "v1.2.3",
                 "primary_shot": "presentation.reveal",
                 "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+                "decision_rule": "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
                 "cover_hook": {
                     "formula_id": "#36",
                     "title": "写完就能讲",
@@ -4163,6 +4180,8 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("Mechanism contract", html)
         self.assertIn("presentation.reveal", html)
         self.assertIn("ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映", html)
+        self.assertIn("Save-worthy rule", html)
+        self.assertIn("源文件是 Markdown、现场要放映", html)
         self.assertIn("写完就能讲", html)
         self.assertIn("一条放映路", html)
         self.assertIn("同一份 MD", html)

@@ -108,6 +108,12 @@
       "application": "Give each feature card one title, one benefit sentence, and one authentic UI region."
     },
     {
+      "id": "save-worthy-rule",
+      "source_id": "post-editor",
+      "mechanism": "A reusable decision criterion gives readers a reason to save the post beyond visual inspiration.",
+      "application": "State the mechanism-specific conditions under which this workflow is the right choice."
+    },
+    {
       "id": "specific-question",
       "source_id": "local-xhs-title",
       "mechanism": "A scoped comment prompt produces usable feedback better than a broad call for support.",
