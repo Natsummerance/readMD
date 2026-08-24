@@ -776,6 +776,52 @@ class WriteCopyTest(unittest.TestCase):
         self.assertIn("课程讲义、组会报告、技术分享或论文汇报", result["body"])
         self.assertNotIn("代码教程、技术笔记或示例文档", result["body"])
 
+    def test_concern_intent_adds_local_source_reassurance(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = write_story(Path(tmp))
+            story["claims"].append({
+                "id": "editor",
+                "user_value": "编辑和预览保持同步",
+                "shot_ids": ["overview.editor"],
+                "sources": ["release/release_notes.md"],
+            })
+            history = [
+                {
+                    "release": f"v8.{version}.0",
+                    "title": f"v8.{version}",
+                    "title_formula_id": "#36",
+                    "hook_type": "outcome-led",
+                    "published_at": f"2026-08-{20 + version}T10:00:00Z",
+                    "metrics_status": "complete",
+                    "comment_insights": {
+                        "schema_version": 1,
+                        "unique_count": 2,
+                        "themes": [{
+                            "theme": "table",
+                            "mentions": 3,
+                            "weighted_score": 5,
+                            "intents": ["concern"],
+                        }],
+                        "top_theme": "table",
+                    },
+                }
+                for version in range(2)
+            ]
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v8.1.0",
+                history=history,
+            )
+        directive = result["resonance_directive"]
+        self.assertTrue(directive["applied"])
+        self.assertTrue(directive["support_available"])
+        self.assertIn("数据表格、对比报告或项目清单", result["body"])
+        self.assertIn(
+            "源文件仍留在本地，放映、导出和分享只处理显示结果，不会替你改写原稿。",
+            result["body"],
+        )
+
     def test_copy_follows_selected_mechanism_instead_of_presentation(self) -> None:
         story = {
             "release": "v1.2.0",
@@ -1127,6 +1173,45 @@ class ValidatePackageTest(unittest.TestCase):
                         any("approved" in error.lower() or "differs from story" in error.lower() for error in errors),
                         errors,
                     )
+
+    def test_publisher_directive_requires_concern_response(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp)
+            directive = {
+                "schema_version": 1,
+                "applied": True,
+                "support_available": True,
+                "evidence": {
+                    "focus": "table",
+                    "confidence": "medium",
+                    "release_count": 2,
+                    "mentions": 4,
+                    "weighted_score": 6,
+                    "top_intents": ["concern"],
+                },
+                "decisions": {"keep": "k", "strengthen": "s", "compress": "c", "delete": "d"},
+            }
+            metadata = {"resonance_directive": directive}
+            story = {
+                "primary_shot": "overview.editor",
+                "selected_shots": ["overview.reader", "overview.editor"],
+            }
+            body = "如果你常处理数据表格、对比报告或项目清单，它会省掉切换工具这一步。"
+            (pkg / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            (pkg / "story.json").write_text(json.dumps(story, ensure_ascii=False), encoding="utf-8")
+            (pkg / "body.txt").write_text(body, encoding="utf-8")
+
+            errors = validate_package.publisher_directive_errors(pkg)
+            self.assertEqual(
+                errors,
+                ["publisher body omits resonance concern response"],
+            )
+
+            (pkg / "body.txt").write_text(
+                body + "\n\n" + copy_profiles.RESONANCE_CONCERN_RESPONSE,
+                encoding="utf-8",
+            )
+            self.assertEqual(validate_package.publisher_directive_errors(pkg), [])
 
     def test_rejects_missing_evidence_and_bad_hash(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -3276,6 +3361,7 @@ class WatcherTest(unittest.TestCase):
         tamper_assets: bool = False,
         tamper_directive: bool = False,
         tamper_directive_execution: bool = False,
+        tamper_concern_response: bool = False,
         tamper_variant_ranking: bool = False,
     ) -> Path:
         package = root / "package"
@@ -3479,6 +3565,32 @@ class WatcherTest(unittest.TestCase):
             metadata["body"] = metadata["body"].replace(
                 "课程讲义、组会报告、技术分享或论文汇报",
                 "论文推导或学术笔记",
+            ) + "\n\n学术排版不另起一套工具。"
+            (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            (package / "body.txt").write_text(metadata["body"], encoding="utf-8")
+        if tamper_concern_response:
+            metadata["resonance_directive"] = {
+                "schema_version": 1,
+                "applied": True,
+                "support_available": True,
+                "evidence": {
+                    "focus": "academic",
+                    "confidence": "medium",
+                    "release_count": 2,
+                    "mentions": 4,
+                    "weighted_score": 8,
+                    "top_intents": ["concern"],
+                },
+                "decisions": {
+                    "keep": story["angle"],
+                    "strengthen": "优先展示学术排版不另起一套工具。",
+                    "compress": "辅助能力最多保留两条。",
+                    "delete": "不加入与学术焦点无关的新卖点。",
+                },
+            }
+            metadata["body"] = metadata["body"].replace(
+                "课程讲义、组会报告、技术分享或论文汇报",
+                "课程讲义、组会报告或论文汇报",
             ) + "\n\n学术排版不另起一套工具。"
             (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
             (package / "body.txt").write_text(metadata["body"], encoding="utf-8")
@@ -3768,6 +3880,33 @@ class WatcherTest(unittest.TestCase):
                 "selected variant is not the highest scoring eligible variant",
                 record["error"],
             )
+
+    def test_watcher_blocks_copy_that_ignores_concern_intent(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, tamper_concern_response=True)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not ignore a confident comment concern")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("publisher directive contract failed", record["error"])
+            self.assertIn("publisher body omits resonance concern response", record["error"])
 
     def test_successful_publish_survives_status_query_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

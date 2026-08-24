@@ -196,6 +196,11 @@ RESONANCE_INTENT_FRAME_WEIGHTS: dict[str, dict[str, int]] = {
 }
 
 
+RESONANCE_CONCERN_RESPONSE = (
+    "常见顾虑先说清：源文件仍留在本地，放映、导出和分享只处理显示结果，不会替你改写原稿。"
+)
+
+
 def resonance_frame_adjustment(
     directive: dict[str, Any] | None,
     *,

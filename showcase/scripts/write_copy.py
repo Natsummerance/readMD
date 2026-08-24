@@ -14,6 +14,7 @@ from copy_profiles import (
     COMMENT_SCENARIOS,
     COMMENT_SHOT_FOCUS,
     MECHANISM_TOPIC_SETS,
+    RESONANCE_CONCERN_RESPONSE,
     SUPPORT_PHRASES,
     profile_for_story,
     title_candidate_errors,
@@ -396,6 +397,10 @@ def generate_copy(
         paragraphs.append(f"它没有脱离原来的工作流：{support_text}。")
     paragraphs.append(evidence)
 
+    concern_intents = set(resonance_directive.get("evidence", {}).get("top_intents", []))
+    if resonance_directive.get("applied") is True and "concern" in concern_intents:
+        paragraphs.append(RESONANCE_CONCERN_RESPONSE)
+
     if invisible_claims:
         fixes = "；".join(_clean(claim["user_value"]) for claim in invisible_claims[:2])
         paragraphs.append(f"还有一些不适合单独拍图的底层修复也在这版里，比如{fixes}。它们不抢画面，但会让日常使用更稳。")
@@ -426,12 +431,16 @@ def generate_copy(
             break
         focused_phrase = SUPPORT_PHRASES.get(COMMENT_SHOT_FOCUS.get(reader_focus, ""))
         scenario = COMMENT_SCENARIOS[reader_focus]
+        protected = (
+            focused_phrase,
+            scenario,
+            "下面的画面来自当前版本真实运行状态",
+            RESONANCE_CONCERN_RESPONSE,
+        )
         removable = [
             index
             for index in range(3, len(parts) - 2)
-            if focused_phrase not in parts[index]
-            and scenario not in parts[index]
-            and "下面的画面来自当前版本真实运行状态" not in parts[index]
+            if not any(term in parts[index] for term in protected)
         ]
         if not removable:
             break

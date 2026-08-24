@@ -17,6 +17,7 @@ from copy_profiles import (
     COMMENT_SCENARIOS,
     COMMENT_SHOT_FOCUS,
     MECHANISM_TOPIC_SETS,
+    RESONANCE_CONCERN_RESPONSE,
     resonance_frame_adjustment,
     SUPPORT_PHRASES,
 )
@@ -194,6 +195,9 @@ def publisher_directive_errors(package_dir: Path) -> list[str]:
     scenario = COMMENT_SCENARIOS.get(reader_focus)
     if scenario and scenario not in body:
         errors.append(f"publisher body omits resonance scenario: {reader_focus}")
+    concern_intents = set(directive.get("evidence", {}).get("top_intents", []))
+    if applied and "concern" in concern_intents and RESONANCE_CONCERN_RESPONSE not in body:
+        errors.append("publisher body omits resonance concern response")
 
     if not applied:
         return errors
