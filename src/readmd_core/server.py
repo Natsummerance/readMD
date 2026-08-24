@@ -37,6 +37,7 @@ def find_available_port(start_port: int = 26891, max_tries: int = 50, host: str 
 class ReadMDHTTPHandler(BaseHTTPRequestHandler):
     """ReadMD 本地与局域网 HTTP 请求调度器。"""
 
+    protocol_version = 'HTTP/1.1'
     server_version = 'ReadMD-Server/2.3'
     LAN_TOKEN: Optional[str] = None
     APP_DIR: str = ''
@@ -91,6 +92,7 @@ class ReadMDHTTPHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self) -> None:
         """CORS 预检响应。"""
         self.send_response(204)
+        self.send_header('Content-Length', '0')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, X-ReadMD-Token')

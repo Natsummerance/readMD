@@ -617,6 +617,50 @@ def read_text(path):
 
 SAVE_EXTENSIONS = frozenset(('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt'))
 
+STARTUP_SCRIPTS = (
+    'vendor/marked.min.js',
+    'vendor/qrcode.min.js',
+    'js/core/state.js',
+    'js/core/i18n.js',
+    'js/core/dialog.js',
+    'js/core/settings.js',
+    'js/core/modules.js',
+    'js/core/tabs.js',
+    'js/core/history.js',
+    'js/core/dragdrop.js',
+    'js/reader/formula.js',
+    'js/reader/fixes.js',
+    'js/reader/toc.js',
+    'js/reader/search.js',
+    'js/reader/folder.js',
+    'js/reader/render.js',
+    'js/editor/preview.js',
+    'js/editor/image.js',
+    'js/editor/editor.js',
+    'js/features/ai.js',
+    'js/features/share.js',
+    'js/features/convert.js',
+    'js/features/ocr.js',
+    'js/features/web.js',
+    'js/features/clipboard.js',
+    'js/features/export.js',
+    'js/features/updater.js',
+    'app.js',
+)
+_startup_bundle_cache = {'body': None}
+
+
+def build_startup_bundle():
+    """Combine the ordered classic scripts into one cold-start request."""
+    if _startup_bundle_cache['body'] is None:
+        chunks = []
+        for relative_path in STARTUP_SCRIPTS:
+            script_path = os.path.join(APP_DIR, 'assets', *relative_path.split('/'))
+            with open(script_path, 'rb') as handle:
+                chunks.append(handle.read())
+        _startup_bundle_cache['body'] = b'\n;\n'.join(chunks)
+    return _startup_bundle_cache['body']
+
 
 class ReadMDHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
@@ -629,6 +673,7 @@ class ReadMDHTTPServer(ThreadingHTTPServer):
 
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = 'HTTP/1.1'
     server_version = 'ReadMD/' + VERSION
     LAN_TOKEN = None
 
@@ -707,6 +752,13 @@ class Handler(BaseHTTPRequestHandler):
         qs = parse_qs(u.query)
         if path in ('/', '/index.html'):
             self._send_index()
+        elif path == '/assets/readmd.boot.js':
+            self._send(
+                200,
+                'application/javascript; charset=utf-8',
+                build_startup_bundle(),
+                cache_control='public, max-age=31536000, immutable',
+            )
         elif path.startswith('/assets/') or path.startswith('/i18n/'):
             if path.startswith('/assets/'):
                 rel = path[len('/assets/'):]
