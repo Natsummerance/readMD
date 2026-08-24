@@ -982,6 +982,43 @@ test('in-app updates refuse binaries without a verified checksum', async ({ page
   await expect(page.locator('#btn-update-start')).toBeDisabled();
 });
 
+test('update failures reset controls and downloads block accidental closure', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.pywebview = { api: {
+      start_download_update: async () => ({ ok: false, error: 'disk full' }),
+      get_download_status: async () => ({ status: 'idle' }),
+    } };
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => typeof startUpdateDownload === 'function');
+  await page.evaluate(() => {
+    updateInfo = {
+      flavor: 'win_installer',
+      asset: {
+        name: 'ReadMDSetup-v9.exe',
+        download_url: 'https://example.invalid/app.exe',
+        expected_sha: 'a'.repeat(64),
+      },
+    };
+    openUpdateModal();
+    startUpdateDownload();
+  });
+
+  await expect(page.locator('#toast')).toContainText(/disk full|启动下载失败/);
+  await expect(page.locator('#update-progress-wrap')).toBeHidden();
+  await expect(page.locator('#btn-update-cancel')).toBeHidden();
+  await expect(page.locator('#btn-update-start')).toBeEnabled();
+
+  await page.evaluate(() => {
+    isUpdating = true;
+    closeUpdateModal();
+  });
+  await expect(page.locator('#update-modal')).toBeVisible();
+  await expect(page.locator('#toast')).toContainText(/更新正在下载|update is downloading/i);
+  await page.evaluate(() => { isUpdating = false; closeUpdateModal(); });
+  await expect(page.locator('#update-modal')).toBeHidden();
+});
+
 test('canceling a dirty editor asks before discarding changes', async ({ page }) => {
   await enterEdit(page);
   await page.evaluate(() => {
@@ -1431,10 +1468,12 @@ test('save conflicts offer save-as, reload, and cancel recovery', async ({ page 
   await setEditorContent(page, '# external update');
   await page.locator('#edit-save').click();
   await expect(page.locator('#save-conflict-modal')).toBeVisible();
+  await expect(page.locator('#save-conflict-modal')).toHaveAttribute('aria-describedby', 'save-conflict-desc');
   await expect(page.locator('#save-conflict-cancel')).toBeFocused();
   await expect(page.locator('#save-conflict-reload')).toHaveText(/重新加载.*不保存|Reload.*[Dd]o not save/);
   await page.keyboard.press('Escape');
   await expect(page.locator('#save-conflict-modal')).toBeHidden();
+  await expect(page.locator('#edit-save')).toBeFocused();
 
   const closing = page.evaluate(() => closeTab('one'));
   await expect(page.locator('#close-confirm-modal')).toBeVisible();
@@ -1809,6 +1848,10 @@ test('unsupported actions and destructive choices give managed feedback', async 
 
   await expect(page.locator('#btn-folder')).toBeDisabled();
   await expect(page.locator('#btn-folder')).toHaveAttribute('aria-description', /浏览器模式|browser mode/i);
+  for (const id of ['btn-edit', 'btn-saveas', 'btn-fix']) {
+    await expect(page.locator(`#${id}`)).toBeDisabled();
+    await expect(page.locator(`#${id}`)).toHaveAttribute('aria-description', /打开文档|Open a document/);
+  }
   await page.evaluate(() => toggleSearch());
   await expect(page.locator('#toast')).toContainText(/请先打开文档|Open a document/);
   await expect(page.locator('#save-conflict-desc')).toHaveAttribute('data-i18n', 'dialog.saveConflictDesc');
@@ -1841,20 +1884,34 @@ test('unsupported actions and destructive choices give managed feedback', async 
     state.ai.templates = [{ id: 'unsafe-template', name: 'Delete me' }];
     state.ai.templateId = 'unsafe-template';
     document.getElementById('tpl-id').value = 'unsafe-template';
-    window.__deleteResult = deleteCurrentTpl();
+    window.__deleteValue = null;
+    window.__deleteSettled = false;
+    window.__deleteResult = deleteCurrentTpl().then(value => {
+      window.__deleteValue = value;
+      window.__deleteSettled = true;
+      return value;
+    });
   });
   const dialog = page.locator('#confirm-modal');
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAttribute('role', 'dialog');
   await expect(dialog).toHaveAttribute('aria-modal', 'true');
   await expect(page.locator('#confirm-cancel')).toBeFocused();
-  await page.keyboard.press('Escape');
+  await expect(page.locator('#confirm-message')).toContainText('Delete me');
+  await page.locator('#confirm-cancel').click();
   await expect(dialog).toBeHidden();
+  await expect.poll(() => page.evaluate(() => [window.__deleteSettled, window.__deleteValue])).toEqual([true, false]);
   expect(deleted).toBe(false);
 
   await page.evaluate(() => {
     document.getElementById('tpl-id').value = 'unsafe-template';
-    window.__deleteResult = deleteCurrentTpl();
+    window.__deleteValue = null;
+    window.__deleteSettled = false;
+    window.__deleteResult = deleteCurrentTpl().then(value => {
+      window.__deleteValue = value;
+      window.__deleteSettled = true;
+      return value;
+    });
   });
   await expect(dialog).toBeVisible();
   await page.route('**/api/ai/prompts', async route => {
@@ -1863,6 +1920,7 @@ test('unsupported actions and destructive choices give managed feedback', async 
   });
   await page.locator('#confirm-action').click();
   await expect.poll(() => deleted).toBe(true);
+  await expect.poll(() => page.evaluate(() => [window.__deleteSettled, window.__deleteValue])).toEqual([true, true]);
 });
 
 

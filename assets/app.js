@@ -754,7 +754,9 @@ function bindEvents() {
         else if (activeModal === 'export-preview-modal') $(activeModal).classList.add('hidden');
         else if (activeModal === 'export-modal') closeExportModal();
         else if (activeModal === 'convert-modal') $('convert-modal').classList.add('hidden');
-        else if (activeModal === 'update-modal') $('update-modal').classList.add('hidden');
+        else if (activeModal === 'update-modal') {
+          if (!isUpdateDownloading()) $('update-modal').classList.add('hidden');
+        }
         else if (activeModal === 'style-custom-modal') closeStyleModal();
         else if (activeModal === 'lang-modal' && window.i18n) window.i18n.closeModal();
         else if (activeModal.startsWith('ai-')) closeAiModal(activeModal);

@@ -288,8 +288,16 @@ function startTabInlineRename(tab, titleSpan, tabEl) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const wrap = document.createElement('div');
   wrap.className = 'tab-rename-wrap';
-  wrap.innerHTML = '<input type="text" class="tab-title-input" spellcheck="false" autocomplete="off" aria-label="' + (_t('tabs.rename') || '重命名文件') + '"><span class="tab-rename-ext">' + ext + '</span>';
-  const input = wrap.querySelector('.tab-title-input');
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'tab-title-input';
+  input.spellcheck = false;
+  input.autocomplete = 'off';
+  input.setAttribute('aria-label', _t('tabs.rename') || '重命名文件');
+  const extension = document.createElement('span');
+  extension.className = 'tab-rename-ext';
+  extension.textContent = ext;
+  wrap.append(input, extension);
   input.value = stem;
   tabEl.insertBefore(wrap, titleSpan);
   input.focus();
