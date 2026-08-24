@@ -19,7 +19,7 @@ from copy_profiles import (
     resonance_title_adjustment,
 )
 
-TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12", "#26")
+TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12", "#26", "#17", "#56")
 ENDPOINT_COOLDOWN_RELEASES = 8
 
 

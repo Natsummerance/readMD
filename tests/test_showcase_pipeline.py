@@ -371,13 +371,16 @@ class WriteCopyTest(unittest.TestCase):
 
     def test_mechanism_cover_variants_track_all_title_formulas(self) -> None:
         expected_formulas = set(copy_variants.TITLE_FORMULAS)
-        self.assertEqual(expected_formulas, {"#36", "#9", "#22", "#26", "#61", "#12"})
+        self.assertEqual(
+            expected_formulas,
+            {"#36", "#9", "#22", "#26", "#61", "#12", "#17", "#56"},
+        )
         for primary_shot, profile in copy_profiles.PROFILES.items():
             with self.subTest(primary_shot=primary_shot):
                 variants = profile["cover_variants"]
                 self.assertEqual(set(variants), expected_formulas)
                 self.assertEqual(set(variants), set(profile["titles"]))
-                self.assertEqual(len({item["title"] for item in variants.values()}), 6)
+                self.assertEqual(len({item["title"] for item in variants.values()}), 8)
                 for formula_id, hook in variants.items():
                     self.assertEqual(hook["formula_id"], formula_id)
                     self.assertTrue(2 <= len(hook["title"]) <= 8)
@@ -1141,7 +1144,7 @@ class WriteCopyTest(unittest.TestCase):
             previous_release="v1.1.0",
         )
         variants = copy_variants.build_variants(story=story, base_metadata=base)
-        self.assertEqual(len(variants), 72)
+        self.assertEqual(len(variants), 96)
         self.assertTrue(all(item["_report"]["ok"] for item in variants))
         self.assertTrue(all("图表" in item["body"].split("\n\n", 1)[0] for item in variants))
         self.assertTrue(all("复制进 PPT" not in item["body"].split("\n\n", 1)[0] for item in variants))
@@ -1170,7 +1173,7 @@ class WriteCopyTest(unittest.TestCase):
                 self.assertTrue(600 <= len(base["body"]) <= 900)
                 self.assertTrue(all(len(item["text"]) <= 20 for item in base["title_candidates"]))
                 variants = copy_variants.build_variants(story=story, base_metadata=base)
-                self.assertEqual(len(variants), 72)
+                self.assertEqual(len(variants), 96)
                 failed = [item["variant_id"] for item in variants if not item["_report"]["ok"]]
                 self.assertEqual(failed, [])
 
@@ -2456,11 +2459,11 @@ class CopyVariantsTest(unittest.TestCase):
         }
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
         variants = copy_variants.build_variants(story=story, base_metadata=base)
-        self.assertEqual(len(variants), 72)
+        self.assertEqual(len(variants), 96)
         self.assertEqual(len({item["strategy"] for item in variants}), 3)
-        self.assertEqual(len({item["variant_id"] for item in variants}), 72)
+        self.assertEqual(len({item["variant_id"] for item in variants}), 96)
         self.assertEqual({item["copy_frame"] for item in variants}, {"core", "workflow", "decision", "source"})
-        self.assertEqual(len({item["title"] for item in variants}), 6)
+        self.assertEqual(len({item["title"] for item in variants}), 8)
         self.assertEqual(len({item["body"] for item in variants}), 12)
         for hook_type in ("outcome-led", "identity-led", "mechanism-curiosity"):
             formulas = {item["title_formula_id"] for item in variants if item["hook_type"] == hook_type}
@@ -4109,7 +4112,7 @@ class ReviewDashboardTest(unittest.TestCase):
                 "ok": True,
                 "chosen_strategy": "outcome-led",
                 "chosen_variant_id": "outcome-led__36",
-                "candidate_count": 60,
+                "candidate_count": 96,
                 "portfolio_max_body_similarity": 0.12,
                 "portfolio_max_similarity_source": "v1.0.0",
                 "copy_frame_inventory": {
@@ -4335,7 +4338,7 @@ class ReviewDashboardTest(unittest.TestCase):
         inputs["variants"]["ranked"] = ranked
         html = review_dashboard.build_dashboard(inputs)
         self.assertIn("Top experiments", html)
-        self.assertIn("Showing 5 of 60 candidates", html)
+        self.assertIn("Showing 5 of 96 candidates", html)
         self.assertIn("Copy-frame inventory", html)
         self.assertIn("4 / hook", html)
         self.assertIn("outcome-led__36", html)

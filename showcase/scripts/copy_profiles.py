@@ -197,9 +197,9 @@ RESONANCE_INTENT_FRAME_WEIGHTS: dict[str, dict[str, int]] = {
 
 
 RESONANCE_INTENT_TITLE_WEIGHTS: dict[str, dict[str, int]] = {
-    "request": {"#36": 8, "#61": 4},
-    "question": {"#9": 8, "#12": 4},
-    "concern": {"#61": 6, "#36": 3},
+    "request": {"#36": 8, "#61": 4, "#56": 2},
+    "question": {"#9": 8, "#12": 4, "#56": 4},
+    "concern": {"#61": 6, "#36": 3, "#17": 5},
     "praise": {"#22": 6},
 }
 
@@ -410,6 +410,20 @@ TITLE_FORMULA_CONTRACTS: dict[str, dict[str, Any]] = {
         "carousel": re.compile(r"\d+张图"),
         "anchor": "看懂",
     },
+    "#17": {
+        "family": "loss-aversion",
+        "source_template": "警告！[数字] 件事正让你的 [努力] 白费",
+        "adaptation": "把努力换成具体工作流，不制造焦虑。",
+        "warning_any": ("警告", "别让"),
+        "loss_any": ("白费", "浪费", "失效", "过期", "返工"),
+    },
+    "#56": {
+        "family": "scenario-condition",
+        "source_template": "如果你 [抗拒] [抗拒] [抗拒]，如何解决 [问题]",
+        "adaptation": "把抗拒状态换成读者真实处境，方案绑定机制。",
+        "condition_any": ("如果", "要是"),
+        "solution_any": ("如何", "怎么", "能"),
+    },
 }
 
 EXPERIMENT_TITLE_FORMULAS = tuple(TITLE_FORMULA_CONTRACTS)
@@ -528,6 +542,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": "别再把写作和预览拆开",
             "#12": "看完这{number}张，你会重新看MD编辑",
             "#26": "{number}张图，看懂同屏改稿",
+            "#17": "警告！3个改稿习惯在浪费你",
+            "#56": "如果你总切窗口，如何同屏改稿",
         },
         "opening": "改一段就要切窗口核对格式。这次把这一步砍掉：Markdown 源稿和实时预览在同一屏。",
         "primary_paragraph": "编辑器和实时预览在同一屏里，先改内容再确认排版，不用在几个窗口之间来回追版本。",
@@ -545,6 +561,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": {"formula_id": "#61", "title": "别再切窗口", "caption": "Markdown 源稿和预览留在同一屏。"},
             "#12": {"formula_id": "#12", "title": "换个改稿法", "caption": "同一份 Markdown 可以边写边看。"},
             "#26": {"formula_id": "#26", "title": "截图看改稿", "caption": "真实画面拆解同屏改稿流程。"},
+            "#17": {"formula_id": "#17", "title": "改稿别白费", "caption": "这些习惯让同屏预览更稳。"},
+            "#56": {"formula_id": "#56", "title": "条件改稿法", "caption": "如果你总切窗口，就留在同一屏。"},
         },
         "summary": {
             "title": "改稿不切窗",
@@ -586,6 +604,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": "别再把Markdown只当笔记了",
             "#12": "看完这{number}张，你会重新看Markdown",
             "#26": "{number}张图，看懂MD直接放映",
+            "#17": "警告！别让PPT准备工作白费",
+            "#56": "如果你有Markdown讲义，如何放映",
         },
         "opening": "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。",
         "primary_paragraph": "放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。",
@@ -603,6 +623,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": {"formula_id": "#61", "title": "别重做PPT", "caption": "讲稿定稿后直接进入放映。"},
             "#12": {"formula_id": "#12", "title": "换个讲法", "caption": "写作、修改和放映共用一份文件。"},
             "#26": {"formula_id": "#26", "title": "截图看放映", "caption": "真实画面拆解放映完整路径。"},
+            "#17": {"formula_id": "#17", "title": "别让PPT白费", "caption": "准备工作白费时，直接放映。"},
+            "#56": {"formula_id": "#56", "title": "讲义直接讲", "caption": "如果你有 Markdown，直接放映。"},
         },
         "summary": {
             "title": "一条放映路",
@@ -645,6 +667,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": "别再手写一版就废的图表语法",
             "#12": "看完这{number}张，你会重新看科研图",
             "#26": "{number}张图，看懂科研图表选图",
+            "#17": "警告！别让科研图表语法白费",
+            "#56": "如果你要画论文图，如何面板选图",
         },
         "opening": "画科研图表还要回忆语法，改一次就很折磨。这次不用硬记：Markdown 面板选择结构，结果留在文档里。",
         "primary_paragraph": "图表从面板里选，渲染结果留在文档里；适合论文、报告和需要长期维护的技术笔记。",
@@ -662,6 +686,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": {"formula_id": "#61", "title": "别背图语法", "caption": "从面板选择结构，渲染留在文档里。"},
             "#12": {"formula_id": "#12", "title": "换种画图法", "caption": "科研图表和文稿留在同一条路径。"},
             "#26": {"formula_id": "#26", "title": "截图看选图", "caption": "真实画面拆解科研图表入口。"},
+            "#17": {"formula_id": "#17", "title": "图表防报废", "caption": "这些习惯让科研图更可维护。"},
+            "#56": {"formula_id": "#56", "title": "论文画图条件", "caption": "如果你要画论文图，就从面板选图。"},
         },
         "summary": {
             "title": "图随文稿走",
@@ -703,6 +729,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": "别再为公式格式重复返工",
             "#12": "看完这{number}张，你会重新看学术排版",
             "#26": "{number}张图，看懂论文级排版",
+            "#17": "警告！别让LaTeX排版返工",
+            "#56": "如果你写论文推导，如何留在MD",
         },
         "opening": "公式和文献格式总在交稿前折磨人。这次不用另起工具：LaTeX 和引用留在 Markdown 里。",
         "primary_paragraph": "公式、定理盒子和参考文献沿用同一套排版；写作时不用在笔记、LaTeX 和最终稿之间反复搬运。",
@@ -720,6 +748,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": {"formula_id": "#61", "title": "别重复调格式", "caption": "公式排版在 Markdown 里一次到位。"},
             "#12": {"formula_id": "#12", "title": "换种排版法", "caption": "学术笔记保持论文级排版。"},
             "#26": {"formula_id": "#26", "title": "截图看排版", "caption": "真实画面拆解学术排版路径。"},
+            "#17": {"formula_id": "#17", "title": "公式防返工", "caption": "LaTeX 和引用一次排到位。"},
+            "#56": {"formula_id": "#56", "title": "推导条件", "caption": "如果你写论文推导，就留在 MD。"},
         },
         "summary": {
             "title": "论文级排版",
@@ -761,6 +791,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": "别再让示例代码停在文档里",
             "#12": "看完这{number}张，你会重新看代码块",
             "#26": "{number}张图，看懂代码就地跑",
+            "#17": "警告！别让教程代码示例失效",
+            "#56": "如果你写技术教程，如何就地运行",
         },
         "opening": "教程写到代码，还要切出去验证一遍。这次不用切换：代码块直接在 Markdown 里运行。",
         "primary_paragraph": "代码块保留运行按钮、状态和输出；读者看到的不是死代码，而是能跟着复现的步骤。",
@@ -778,6 +810,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": {"formula_id": "#61", "title": "别只贴代码", "caption": "让示例就地运行并保留输出。"},
             "#12": {"formula_id": "#12", "title": "换个教程法", "caption": "说明、代码和结果不会脱节。"},
             "#26": {"formula_id": "#26", "title": "截图看运行", "caption": "真实画面拆解就地运行过程。"},
+            "#17": {"formula_id": "#17", "title": "代码防失效", "caption": "教程示例就地运行并保留输出。"},
+            "#56": {"formula_id": "#56", "title": "教程复现条件", "caption": "如果你写技术教程，就地运行验证。"},
         },
         "summary": {
             "title": "能跑的教程",
@@ -819,6 +853,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": "别再让资料散落在临时工具里",
             "#12": "看完这{number}张，你会重新看资料整理",
             "#26": "{number}张图，看懂资料一处收",
+            "#17": "警告！别让零散资料整理白费",
+            "#56": "如果你有网页和PDF，如何收进MD",
         },
         "opening": "网页、Word 和 PDF 分散在不同窗口，资料格式很难归拢。这次不用搬运：它们进入同一条 Markdown 工作流。",
         "primary_paragraph": "打开、转换、AI 和网页抓取都从一个本地入口开始，资料不会被拆到一串临时工具里。",
@@ -836,6 +872,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": {"formula_id": "#61", "title": "别散存资料", "caption": "转换和阅读收进本地工作台。"},
             "#12": {"formula_id": "#12", "title": "换个整理法", "caption": "零散资料接进同一条工作流。"},
             "#26": {"formula_id": "#26", "title": "截图看归拢", "caption": "真实画面拆解资料收拢入口。"},
+            "#17": {"formula_id": "#17", "title": "资料防散落", "caption": "网页、PDF 和 Word 收进一处。"},
+            "#56": {"formula_id": "#56", "title": "旧资料条件", "caption": "如果你有网页或 PDF，收进 Markdown。"},
         },
         "summary": {
             "title": "资料一处收",
@@ -877,6 +915,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": "别再为了分享多存一份副本",
             "#12": "看完这{number}张，你会重新看文档分享",
             "#26": "{number}张图，看懂文档直接分享",
+            "#17": "警告！别让分享副本版本过期",
+            "#56": "如果要分享当前文档，如何到手机",
         },
         "opening": "想把 Markdown 发给别人，还要先导出一份副本，版本很快对不上。这次不用多存：当前文档直接生成共享入口。",
         "primary_paragraph": "局域网共享面板提供扫码入口、随机令牌和启停控制；手机打开的是当前文档，不需要对方装软件。",
@@ -894,6 +934,8 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#61": {"formula_id": "#61", "title": "别多存副本", "caption": "分享入口始终指向当前文档。"},
             "#12": {"formula_id": "#12", "title": "换个分享法", "caption": "令牌和启停控制保持可控。"},
             "#26": {"formula_id": "#26", "title": "截图看分享", "caption": "真实画面拆解可控分享流程。"},
+            "#17": {"formula_id": "#17", "title": "分享防过期", "caption": "可控入口始终指向当前文档。"},
+            "#56": {"formula_id": "#56", "title": "直发手机条件", "caption": "如果要分享当前文档，直发手机。"},
         },
         "summary": {
             "title": "分享可控",
