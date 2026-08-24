@@ -233,7 +233,9 @@ def generate_report(
     }
     for topic_set_id, stats in topic_set_stats.items():
         stats["label"] = topic_labels.get(topic_set_id, "unknown")
-    comment_focus = _comment_focus(learning)
+    # Comment evidence has its own source/timestamp confidence contract and can
+    # guide the next draft even while platform counters remain pending.
+    comment_focus = _comment_focus(records)
     recommended_formula = _recommended(formula_stats)
     recommended_hook_type = _recommended(hook_stats)
     recommended_copy_frame = _recommended(frame_stats)

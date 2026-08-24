@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from audit_copy import audit_package
-from content_memory import load_learning_records, load_records
+from content_memory import load_records
 from build_story import apply_selected_cover, build_story
 from copy_variants import select_variant
 from export_wechat import export_package
@@ -67,7 +67,7 @@ def build_package(
     )
     story["evidence_manifest"] = evidence_manifest
     (package_dir / "story.json").write_text(json.dumps(story, ensure_ascii=False, indent=2), encoding="utf-8")
-    history = load_learning_records(memory_path) if memory_path else []
+    history = load_records(memory_path) if memory_path else []
     metadata = generate_copy(
         story,
         repository=repository,

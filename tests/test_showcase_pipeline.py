@@ -827,6 +827,58 @@ class WriteCopyTest(unittest.TestCase):
         self.assertNotIn("科研图表留在文档里", result["body"])
         self.assertTrue(result["resonance_directive"]["applied"])
 
+    def test_pending_metrics_do_not_block_comment_resonance(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = write_story(Path(tmp))
+            story["selected_shots"].append("academic.latex-bib")
+            story["claims"].append({
+                "id": "academic",
+                "user_value": "学术公式和参考文献留在同一份文档",
+                "shot_ids": ["academic.latex-bib"],
+                "sources": ["release/release-notes.md"],
+            })
+            history = [
+                {
+                    "release": f"v8.{version}.0",
+                    "title": f"v8.{version}",
+                    "title_formula_id": "#36",
+                    "hook_type": "outcome-led",
+                    "published_at": f"2026-08-{20 + version}T10:00:00Z",
+                    "impressions": 0,
+                    "likes": 0,
+                    "collects": 0,
+                    "comments": 0,
+                    "shares": 0,
+                    "follows": 0,
+                    "metrics_status": "pending",
+                    "comment_insights": {
+                        "schema_version": 1,
+                        "unique_count": 2,
+                        "themes": [{
+                            "theme": "academic",
+                            "mentions": 2,
+                            "weighted_score": 5,
+                            "intents": ["request"],
+                        }],
+                        "top_theme": "academic",
+                    },
+                }
+                for version in range(2)
+            ]
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v8.1.0",
+                history=history,
+            )
+
+        directive = result["resonance_directive"]
+        self.assertTrue(directive["applied"])
+        self.assertEqual(directive["evidence"]["focus"], "academic")
+        self.assertEqual(directive["evidence"]["confidence"], "medium")
+        self.assertIn("课程讲义、组会报告或论文汇报", result["body"])
+        self.assertIn("学术排版不另起一套工具", result["body"])
+
     def test_low_confidence_comment_focus_keeps_default_scenario(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             story = write_story(Path(tmp))
@@ -2717,6 +2769,8 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertEqual(focus["top_intents"], ["request", "question"])
         self.assertEqual(data["comment_focus"]["recommended_theme"], "academic")
         self.assertEqual(data["comment_focus"]["confidence"], "medium")
+        self.assertEqual(data["comment_focus"]["comment_release_count"], 4)
+        self.assertIn("presentation", data["comment_focus"]["themes"])
 
 
 class PackageContentTest(unittest.TestCase):

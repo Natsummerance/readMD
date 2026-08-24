@@ -183,6 +183,15 @@ def _resonance_focus(history: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _comment_history(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Comment evidence is independent of metric completeness."""
+    return [
+        record
+        for record in records
+        if isinstance(record.get("comment_insights"), dict)
+    ]
+
+
 def _resonance_directive(
     resonance: dict[str, Any],
     *,
@@ -346,7 +355,8 @@ def generate_copy(
     previous_release: str,
     history: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    history, _pending_history = partition_records(history or [])
+    all_history = history or []
+    history, pending_history = partition_records(all_history)
     candidates = _title_candidates(story)
     selected_title, title_selection = _select_title([dict(item) for item in candidates], history)
     profile = profile_for_story(story)
@@ -359,7 +369,7 @@ def generate_copy(
     ]
     unique_supporting_ids = list(dict.fromkeys(supporting_ids))
     available_shot_ids = {primary_id, *unique_supporting_ids}
-    resonance = _resonance_focus(history)
+    resonance = _resonance_focus(_comment_history([*history, *pending_history]))
     resonance_directive = _resonance_directive(
         resonance,
         story=story,
