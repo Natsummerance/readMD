@@ -17,6 +17,7 @@ from copy_profiles import (
     COMMENT_SCENARIOS,
     COMMENT_SHOT_FOCUS,
     MECHANISM_TOPIC_SETS,
+    resonance_frame_adjustment,
     SUPPORT_PHRASES,
 )
 
@@ -442,6 +443,23 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
                             "variant originality gate failed: "
                             + "; ".join(map(str, chosen_ranked.get("hard_failures", [])))
                         )
+                    directive = metadata.get("resonance_directive")
+                    expected_bonus, expected_reasons = resonance_frame_adjustment(
+                        directive if isinstance(directive, dict) else None,
+                        copy_frame=chosen_ranked_frame,
+                    )
+                    reported_bonus = float(chosen_ranked.get("resonance_frame_bonus", 0))
+                    if abs(reported_bonus - expected_bonus) > 0.001:
+                        errors.append(
+                            "variant resonance frame bonus differs from directive: "
+                            f"report={reported_bonus}, expected={expected_bonus}"
+                        )
+                    if expected_reasons and not all(reason in chosen_ranked.get("reasons", []) for reason in expected_reasons):
+                        errors.append("variant selection omits comment-intent alignment reason")
+                    if expected_bonus:
+                        focus = str(directive.get("evidence", {}).get("focus", "general"))
+                        if variants.get("resonance_focus") != focus:
+                            errors.append("variant resonance focus differs from directive")
         except Exception as exc:
             errors.append(f"variants.json unreadable: {exc}")
 

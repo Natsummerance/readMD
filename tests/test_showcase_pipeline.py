@@ -904,6 +904,47 @@ class ValidatePackageTest(unittest.TestCase):
             errors = validate_package.validate_package(pkg)
         self.assertTrue(any("selected copy_frame mismatch" in error for error in errors), errors)
 
+    def test_rejects_report_without_comment_intent_alignment(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp)
+            for name in ("story.json", "composition.json"):
+                (pkg / name).write_text("{}", encoding="utf-8")
+            (pkg / "raw").mkdir()
+            (pkg / "raw" / "capture.json").write_text("{}", encoding="utf-8")
+            (pkg / "metadata.json").write_text(json.dumps({
+                "resonance_directive": {
+                    "schema_version": 1,
+                    "applied": True,
+                    "support_available": True,
+                    "evidence": {
+                        "focus": "presentation",
+                        "confidence": "medium",
+                        "release_count": 2,
+                        "mentions": 4,
+                        "weighted_score": 6,
+                        "top_intents": ["request"],
+                    },
+                    "decisions": {"keep": "k", "strengthen": "s", "compress": "c", "delete": "d"},
+                },
+            }), encoding="utf-8")
+            (pkg / "variants.json").write_text(json.dumps({
+                "ok": True,
+                "chosen_strategy": "outcome-led",
+                "chosen_variant_id": "outcome-led__36__workflow",
+                "ranked": [{
+                    "strategy": "outcome-led",
+                    "variant_id": "outcome-led__36__workflow",
+                    "copy_frame": "workflow",
+                    "ok": True,
+                    "resonance_frame_bonus": 0,
+                    "reasons": [],
+                }],
+            }), encoding="utf-8")
+            errors = validate_package.validate_package(pkg)
+        self.assertTrue(any("resonance frame bonus differs" in error for error in errors), errors)
+        self.assertTrue(any("omits comment-intent alignment reason" in error for error in errors), errors)
+        self.assertTrue(any("resonance focus differs" in error for error in errors), errors)
+
     def test_accepts_complete_four_image_package(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pkg = Path(tmp)
@@ -1654,6 +1695,57 @@ class CopyVariantsTest(unittest.TestCase):
         chosen, report = copy_variants.choose_variant(variants, history)
         self.assertEqual(chosen["strategy"], "outcome-led")
         self.assertEqual(report["ranked"][0]["history_adjustment"] + report["ranked"][1]["history_adjustment"], 0)
+
+    def test_confident_comment_intent_prefers_matching_frame(self) -> None:
+        story = self.variant_story()
+        neutral_history = [
+            self.history_record("v1.0.0", "identity-led", "#22"),
+            self.history_record("v1.0.1", "outcome-led", "#36"),
+        ]
+        focused_history = [
+            {
+                **record,
+                "comment_insights": {
+                    "schema_version": 2,
+                    "unique_count": 2,
+                    "themes": [{
+                        "theme": "presentation",
+                        "mentions": 3,
+                        "weighted_score": 4,
+                        "intents": ["request"],
+                    }],
+                    "top_theme": "presentation",
+                },
+            }
+            for record in neutral_history
+        ]
+
+        neutral_base = write_copy.generate_copy(
+            story, repository="Natsummerance/readMD", previous_release="v1.0.0",
+            history=neutral_history,
+        )
+        _, neutral_report = copy_variants.select_variant(
+            story=story, base_metadata=neutral_base, history=neutral_history,
+        )
+        self.assertFalse(neutral_base["resonance_directive"]["applied"])
+        self.assertEqual(neutral_report["chosen_copy_frame"], "core")
+
+        focused_base = write_copy.generate_copy(
+            story, repository="Natsummerance/readMD", previous_release="v1.0.0",
+            history=focused_history,
+        )
+        _, focused_report = copy_variants.select_variant(
+            story=story, base_metadata=focused_base, history=focused_history,
+        )
+        self.assertTrue(focused_base["resonance_directive"]["applied"])
+        self.assertEqual(focused_report["chosen_copy_frame"], "workflow")
+        winner = next(
+            item for item in focused_report["ranked"]
+            if item["variant_id"] == focused_report["chosen_variant_id"]
+        )
+        self.assertEqual(winner["resonance_frame_bonus"], 8)
+        self.assertIn("comment request intent prefers the workflow narrative", winner["reasons"])
+        self.assertEqual(focused_report["resonance_focus"], "presentation")
 
     def variant_story(self) -> dict:
         return {

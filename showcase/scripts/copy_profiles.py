@@ -188,6 +188,40 @@ COMMENT_SHOT_FOCUS: dict[str, str] = {
 }
 
 
+RESONANCE_INTENT_FRAME_WEIGHTS: dict[str, dict[str, int]] = {
+    "request": {"workflow": 8},
+    "question": {"decision": 7, "workflow": 2},
+    "concern": {"source": 8},
+    "praise": {"core": 4},
+}
+
+
+def resonance_frame_adjustment(
+    directive: dict[str, Any] | None,
+    *,
+    copy_frame: str,
+) -> tuple[float, list[str]]:
+    """Return the evidence-gated narrative preference for one comment intent."""
+    if not isinstance(directive, dict) or directive.get("applied") is not True:
+        return 0.0, []
+    evidence = directive.get("evidence")
+    if not isinstance(evidence, dict) or evidence.get("confidence") not in {"medium", "high"}:
+        return 0.0, []
+    intents = evidence.get("top_intents")
+    if not isinstance(intents, list):
+        return 0.0, []
+
+    reasons: list[str] = []
+    adjustment = 0.0
+    for raw_intent in intents:
+        intent = str(raw_intent).strip()
+        weight = int(RESONANCE_INTENT_FRAME_WEIGHTS.get(intent, {}).get(copy_frame, 0))
+        if weight:
+            adjustment += weight
+            reasons.append(f"comment {intent} intent prefers the {copy_frame} narrative")
+    return min(adjustment, 12.0), reasons
+
+
 MECHANISM_TOPIC_SETS: dict[str, list[dict[str, Any]]] = {
     "overview.editor": [
         {"label": "writing-core", "topics": ["Markdown", "效率工具", "程序员", "写作", "笔记软件"]},

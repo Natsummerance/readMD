@@ -13,7 +13,7 @@ from typing import Any
 
 from audit_copy import audit_copy
 from content_memory import load_learning_records, partition_records, summarize
-from copy_profiles import frames_for_story
+from copy_profiles import frames_for_story, resonance_frame_adjustment
 
 TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12", "#26")
 ENDPOINT_COOLDOWN_RELEASES = 8
@@ -129,6 +129,17 @@ def choose_variant(
     summary = summarize(records)
     recent_hooks = set(summary.get("recent_hook_types", []))
     recent_formulas = set(summary.get("recent_formulas", []))
+    resonance_directive_payloads = {
+        json.dumps(item.get("resonance_directive"), ensure_ascii=False, sort_keys=True)
+        for item in variants
+        if isinstance(item.get("resonance_directive"), dict)
+    }
+    if len(resonance_directive_payloads) > 1:
+        raise ValueError("variants contain conflicting resonance directives")
+    resonance_directive = (
+        json.loads(next(iter(resonance_directive_payloads)))
+        if resonance_directive_payloads else None
+    )
 
     def dimension_stats(key: str) -> dict[str, dict[str, Any]]:
         output: dict[str, dict[str, Any]] = {}
@@ -269,6 +280,12 @@ def choose_variant(
         if inventory_deficit:
             adjustment -= inventory_deficit * 35
             reasons.append(f"scarce copy-frame inventory penalty ({available_frames} remaining)")
+        resonance_bonus, resonance_reasons = resonance_frame_adjustment(
+            resonance_directive,
+            copy_frame=variant["copy_frame"],
+        )
+        history_adjustment = round(adjustment, 3)
+        reasons.extend(resonance_reasons)
         ranked.append({
             "variant_id": variant["variant_id"],
             "strategy": variant["strategy"],
@@ -278,8 +295,9 @@ def choose_variant(
             "copy_frame": variant["copy_frame"],
             "remaining_copy_frames": available_frames,
             "semantic_score": report["total_score"],
-            "history_adjustment": round(adjustment, 3),
-            "adjusted_score": round(report["total_score"] + adjustment, 3),
+            "history_adjustment": history_adjustment,
+            "resonance_frame_bonus": round(resonance_bonus, 3),
+            "adjusted_score": round(report["total_score"] + history_adjustment + resonance_bonus, 3),
             "ok": report["ok"],
             "hard_failures": report["hard_failures"],
             "originality_failures": originality_failures,
@@ -304,8 +322,13 @@ def choose_variant(
         "selection_rule": (
             "semantic score plus confidence-gated historical hook/title performance, underexplored "
             f"historical frame performance, underexplored dimension coverage, renewable frame inventory "
-            f"with a {ENDPOINT_COOLDOWN_RELEASES}-release endpoint cooldown, and minus recent fatigue; "
+            f"with a {ENDPOINT_COOLDOWN_RELEASES}-release endpoint cooldown, evidence-gated comment-intent "
+            "frame alignment, and minus recent fatigue; "
             "insufficient evidence creates no performance bonus"
+        ),
+        "resonance_focus": (
+            str(resonance_directive.get("evidence", {}).get("focus", "general"))
+            if isinstance(resonance_directive, dict) else "general"
         ),
         "frame_stats": frame_stats,
         "endpoint_cooldown_releases": ENDPOINT_COOLDOWN_RELEASES,
