@@ -20,6 +20,7 @@ from audit_copy import audit_copy
 from copy_variants import jaccard_similarity, text_fingerprints, text_trigrams
 from pattern_audit import audit_patterns
 from package_content import validate_release_evidence
+from review_dashboard import build_dashboard, collect_inputs, validate_dashboard
 from validate_package import (
     publisher_asset_errors,
     publisher_directive_errors,
@@ -241,6 +242,31 @@ def recomputed_gate_errors(package_dir: Path) -> list[str]:
             errors.extend(f"variant selection gate: {item}" for item in integrity_errors)
         except Exception as exc:
             errors.append(f"variant selection gate crashed: {exc}")
+
+    dashboard_path = package_dir / "review-dashboard.html"
+    if dashboard_path.exists():
+        try:
+            inputs = collect_inputs(package_dir)
+            expected_dashboard = build_dashboard(inputs)
+            actual_dashboard = dashboard_path.read_text(encoding="utf-8")
+            if actual_dashboard != expected_dashboard:
+                errors.append("review dashboard is stale or does not match package data")
+            dashboard_errors = validate_dashboard(expected_dashboard)
+            if dashboard_errors:
+                errors.append("review dashboard uses forbidden artifacts: " + "; ".join(dashboard_errors))
+        except Exception as exc:
+            errors.append(f"review dashboard gate crashed: {exc}")
+
+    try:
+        dashboard_report = load("dashboard-qa.json")
+        expected_dashboard_ok = not any(error.startswith("review dashboard") for error in errors)
+        if dashboard_report.get("ok") is not expected_dashboard_ok:
+            errors.append("dashboard QA verdict differs from recomputed dashboard")
+        expected_overall = "PASS" if inputs.get("qa", {}).get("ok") is True else "NEEDS FIX"
+        if dashboard_report.get("overall_status") != expected_overall:
+            errors.append("dashboard overall status differs from package QA")
+    except Exception as exc:
+        errors.append(f"dashboard QA gate crashed: {exc}")
     return errors
 
 

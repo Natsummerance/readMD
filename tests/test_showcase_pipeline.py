@@ -3621,6 +3621,7 @@ class WatcherTest(unittest.TestCase):
         tamper_directive_execution: bool = False,
         tamper_concern_response: bool = False,
         tamper_variant_ranking: bool = False,
+        tamper_dashboard: bool = False,
     ) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
@@ -3746,7 +3747,6 @@ class WatcherTest(unittest.TestCase):
         (package / "variants.json").write_text(json.dumps(persisted_variants, ensure_ascii=False), encoding="utf-8")
         (package / "performance-report.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "performance-report.md").write_text("# Performance\n", encoding="utf-8")
-        (package / "dashboard-qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "pattern-audit.json").write_text(json.dumps({
             "ok": pattern_ok,
             "passed_count": 10 if pattern_ok else 8,
@@ -3762,7 +3762,6 @@ class WatcherTest(unittest.TestCase):
         (package / "body.txt").write_text(metadata["body"], encoding="utf-8")
         (package / "topics.txt").write_text("\n".join(metadata["topics"]), encoding="utf-8")
         (package / "composition.json").write_text(json.dumps(composition, ensure_ascii=False), encoding="utf-8")
-        (package / "review-dashboard.html").write_text("<!doctype html><main>preflight</main>", encoding="utf-8")
         (package / "evidence").mkdir()
         (package / "evidence" / "release-notes.md").write_text("# Release\n", encoding="utf-8")
         (package / "evidence" / "release.diff").write_text("diff --git a/a b/a\n", encoding="utf-8")
@@ -3783,6 +3782,11 @@ class WatcherTest(unittest.TestCase):
         if not topic_match:
             metadata["topic_set_id"] = "tampered-topic-set"
         (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+        review_dashboard.generate_package(package)
+        if tamper_dashboard:
+            (package / "review-dashboard.html").write_text(
+                "<!doctype html><main>stale dashboard</main>", encoding="utf-8",
+            )
         if tamper_directive:
             metadata["resonance_directive"] = {
                 "schema_version": 1,
@@ -4138,6 +4142,33 @@ class WatcherTest(unittest.TestCase):
                 "selected variant is not the highest scoring eligible variant",
                 record["error"],
             )
+
+    def test_watcher_recomputes_review_dashboard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, tamper_dashboard=True)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not trust a stale review dashboard")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("recomputed publication gates failed", record["error"])
+            self.assertIn("review dashboard is stale or does not match package data", record["error"])
 
     def test_watcher_rechecks_originality_against_publication_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
