@@ -729,6 +729,10 @@
   "tabs.closeAll": "Tutup semua tab",
   "tabs.closeOthers": "Tutup tab lain",
   "tabs.closeTab": "tutup tab",
+
+  "tabs.moveLeft": "Alih ke kiri",
+
+  "tabs.moveRight": "Alih ke kanan",
   "tabs.copyPath": "Salin laluan fail",
   "tabs.dirty": "tidak disimpan",
   "tabs.dirtyConfirmMsg": "Dokumen \"{name}\" mengandungi perubahan yang belum disimpan. Simpan sebelum tutup?",

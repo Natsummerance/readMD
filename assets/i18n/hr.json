@@ -729,6 +729,10 @@
   "tabs.closeAll": "Zatvori sve kartice",
   "tabs.closeOthers": "Zatvori ostale kartice",
   "tabs.closeTab": "Zatvori karticu",
+
+  "tabs.moveLeft": "Pomjeri lijevo",
+
+  "tabs.moveRight": "Pomjeri desno",
   "tabs.copyPath": "Kopiraj putanju datoteke",
   "tabs.dirty": "Nespremljeno",
   "tabs.dirtyConfirmMsg": "Dokument \"{name}\" sadrži nespremljene promjene. Spremiti prije zatvaranja?",

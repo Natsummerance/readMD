@@ -729,6 +729,10 @@
   "tabs.closeAll": "ປິດແຖບທັງໝົດ",
   "tabs.closeOthers": "ປິດແຖບອື່ນ",
   "tabs.closeTab": "ປິດແຖບ",
+
+  "tabs.moveLeft": "ຍ້າຍໄປຊ້າຍ",
+
+  "tabs.moveRight": "ຍ້າຍໄປຂວາ",
   "tabs.copyPath": "ສຳເນົາເສັ້ນທາງໄຟລ໌",
   "tabs.dirty": "ບໍ່ໄດ້ບັນທຶກໄວ້",
   "tabs.dirtyConfirmMsg": "ເອກະສານ \"{name}\" ປະກອບດ້ວຍການປ່ຽນແປງທີ່ບໍ່ໄດ້ບັນທຶກໄວ້. ບັນທຶກກ່ອນປິດບໍ?",

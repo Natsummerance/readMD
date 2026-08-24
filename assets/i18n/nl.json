@@ -729,6 +729,10 @@
   "tabs.closeAll": "Alle tabbladen sluiten",
   "tabs.closeOthers": "Andere tabbladen sluiten",
   "tabs.closeTab": "Tabblad sluiten",
+
+  "tabs.moveLeft": "Naar links verplaatsen",
+
+  "tabs.moveRight": "Naar rechts verplaatsen",
   "tabs.copyPath": "Bestandspad kopiëren",
   "tabs.dirty": "Niet opgeslagen",
   "tabs.dirtyConfirmMsg": "Document \"{name}\" bevat niet-opgeslagen wijzigingen. Wilt u deze opslaan voor het sluiten?",

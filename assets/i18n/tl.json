@@ -729,6 +729,10 @@
   "tabs.closeAll": "Isara ang Lahat ng Tab",
   "tabs.closeOthers": "Isara ang Ibang Tab",
   "tabs.closeTab": "Isara ang Tab",
+
+  "tabs.moveLeft": "Ilipat sa kaliwa",
+
+  "tabs.moveRight": "Ilipat sa kanan",
   "tabs.copyPath": "Kopyahin ang File Path",
   "tabs.dirty": "Hindi Na-save",
   "tabs.dirtyConfirmMsg": "Ang dokumentong \"{name}\" ay naglalaman ng mga hindi na-save na pagbabago. Nais mo bang i-save bago isara?",

@@ -729,6 +729,10 @@
   "tabs.closeAll": "Lukk alle faner",
   "tabs.closeOthers": "Lukk andre faner",
   "tabs.closeTab": "lukk fanen",
+
+  "tabs.moveLeft": "Flytt til venstre",
+
+  "tabs.moveRight": "Flytt til høyre",
   "tabs.copyPath": "Kopier filbanen",
   "tabs.dirty": "ikke lagret",
   "tabs.dirtyConfirmMsg": "Dokumentet \"{name}\" inneholder ulagrede endringer. Lagre før stenging?",

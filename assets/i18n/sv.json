@@ -729,6 +729,10 @@
   "tabs.closeAll": "Stäng alla flikar",
   "tabs.closeOthers": "Stäng andra flikar",
   "tabs.closeTab": "stäng fliken",
+
+  "tabs.moveLeft": "Flytta åt vänster",
+
+  "tabs.moveRight": "Flytta åt höger",
   "tabs.copyPath": "Kopiera filsökväg",
   "tabs.dirty": "inte sparat",
   "tabs.dirtyConfirmMsg": "Dokumentet \"{name}\" innehåller osparade ändringar. Spara innan du stänger?",

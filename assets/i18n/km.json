@@ -729,6 +729,10 @@
   "tabs.closeAll": "បិទផ្ទាំងទាំងអស់។",
   "tabs.closeOthers": "បិទផ្ទាំងផ្សេងទៀត។",
   "tabs.closeTab": "បិទផ្ទាំង",
+
+  "tabs.moveLeft": "ផ្លាស់ទីទៅឆ្វេង",
+
+  "tabs.moveRight": "ផ្លាស់ទីទៅស្តាំ",
   "tabs.copyPath": "ចម្លងផ្លូវឯកសារ",
   "tabs.dirty": "មិនបានរក្សាទុក",
   "tabs.dirtyConfirmMsg": "ឯកសារ \"{name}\" មានការផ្លាស់ប្តូរដែលមិនបានរក្សាទុក។ រក្សាទុកមុនពេលបិទ?",

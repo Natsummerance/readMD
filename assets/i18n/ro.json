@@ -729,6 +729,10 @@
   "tabs.closeAll": "Închideți toate filele",
   "tabs.closeOthers": "Închideți celelalte file",
   "tabs.closeTab": "închide fila",
+
+  "tabs.moveLeft": "Mutare la stânga",
+
+  "tabs.moveRight": "Mutare la dreapta",
   "tabs.copyPath": "Copiați calea fișierului",
   "tabs.dirty": "nu salvat",
   "tabs.dirtyConfirmMsg": "Documentul „{name}” conține modificări nesalvate. Salvați înainte de a închide?",

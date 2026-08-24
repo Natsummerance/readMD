@@ -729,6 +729,10 @@
   "tabs.closeAll": "Feche todas as guias",
   "tabs.closeOthers": "Fechar outras guias",
   "tabs.closeTab": "fechar guia",
+
+  "tabs.moveLeft": "Mover para a esquerda",
+
+  "tabs.moveRight": "Mover para a direita",
   "tabs.copyPath": "Copiar caminho do arquivo",
   "tabs.dirty": "não salvo",
   "tabs.dirtyConfirmMsg": "O documento \"{name}\" contém alterações não salvas. Salvar antes de fechar?",

@@ -729,6 +729,10 @@
   "tabs.closeAll": "Tüm Sekmeleri Kapat",
   "tabs.closeOthers": "Diğer Sekmeleri Kapat",
   "tabs.closeTab": "Sekmeyi Kapat",
+
+  "tabs.moveLeft": "Sola taşı",
+
+  "tabs.moveRight": "Sağa taşı",
   "tabs.copyPath": "Dosya Yolunu Kopyala",
   "tabs.dirty": "Kaydedilmedi",
   "tabs.dirtyConfirmMsg": "\"{name}\" belgesinde kaydedilmemiş değişiklikler var. Kapatmadan önce kaydedilsin mi?",

@@ -729,6 +729,10 @@
   "tabs.closeAll": "すべてのタブを閉じます",
   "tabs.closeOthers": "他のタブを閉じる",
   "tabs.closeTab": "タブを閉じる",
+
+  "tabs.moveLeft": "左へ移動",
+
+  "tabs.moveRight": "右へ移動",
   "tabs.copyPath": "ファイルパスをコピーする",
   "tabs.dirty": "保存されていません",
   "tabs.dirtyConfirmMsg": "ドキュメント「{name}」には未保存の変更が含まれています。閉じる前に保存しますか?",

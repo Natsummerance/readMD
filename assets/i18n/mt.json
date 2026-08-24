@@ -729,6 +729,10 @@
   "tabs.closeAll": "Agħlaq it-tabs kollha",
   "tabs.closeOthers": "Agħlaq tabs oħra",
   "tabs.closeTab": "qrib tab",
+
+  "tabs.moveLeft": "Ċaqlaq lejn ix-xellug",
+
+  "tabs.moveRight": "Ċaqlaq lejn il-lemin",
   "tabs.copyPath": "Ikkopja l-mogħdija tal-fajl",
   "tabs.dirty": "mhux salvati",
   "tabs.dirtyConfirmMsg": "Id-dokument \"{name}\" fih bidliet mhux salvati. Ħlief qabel ma tagħlaq?",

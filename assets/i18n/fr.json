@@ -729,6 +729,8 @@
   "tabs.closeAll": "Fermez tous les onglets",
   "tabs.closeOthers": "Fermer les autres onglets",
   "tabs.closeTab": "fermer l'onglet",
+  "tabs.moveLeft": "Déplacer à gauche",
+  "tabs.moveRight": "Déplacer à droite",
   "tabs.copyPath": "Copier le chemin du fichier",
   "tabs.dirty": "non enregistré",
   "tabs.dirtyConfirmMsg": "Le document \"{name}\" contient des modifications non enregistrées. Enregistrer avant de fermer ?",

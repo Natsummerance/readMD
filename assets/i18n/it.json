@@ -729,6 +729,10 @@
   "tabs.closeAll": "Chiudi tutte le schede",
   "tabs.closeOthers": "Chiudi le altre schede",
   "tabs.closeTab": "Chiudi scheda",
+
+  "tabs.moveLeft": "Sposta a sinistra",
+
+  "tabs.moveRight": "Sposta a destra",
   "tabs.copyPath": "Copia percorso file",
   "tabs.dirty": "Non salvato",
   "tabs.dirtyConfirmMsg": "Il documento «{name}» contiene modifiche non salvate. Salvare prima di chiudere?",

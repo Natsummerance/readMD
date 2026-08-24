@@ -729,6 +729,10 @@
   "tabs.closeAll": "Schließen Sie alle Tabs",
   "tabs.closeOthers": "Andere Tabs schließen",
   "tabs.closeTab": "Tab schließen",
+
+  "tabs.moveLeft": "Nach links verschieben",
+
+  "tabs.moveRight": "Nach rechts verschieben",
   "tabs.copyPath": "Dateipfad kopieren",
   "tabs.dirty": "nicht gespeichert",
   "tabs.dirtyConfirmMsg": "Das Dokument „{name}“ enthält nicht gespeicherte Änderungen. Vor dem Schließen speichern?",

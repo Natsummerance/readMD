@@ -729,6 +729,10 @@
   "tabs.closeAll": "بارلىق بەتكۈچلەرنى تاقاش",
   "tabs.closeOthers": "باشقا بەتكۈچلەرنى تاقاش",
   "tabs.closeTab": "بەتكۈچنى تاقاش",
+
+  "tabs.moveLeft": "سولغا يۆتكەش",
+
+  "tabs.moveRight": "ئوڭغا يۆتكەش",
   "tabs.copyPath": "ھۆججەت يولىنى كۆچۈرۈش",
   "tabs.dirty": "ساقلانمىغان",
   "tabs.dirtyConfirmMsg": "«{name}» ھۆججىتىدە ساقلانمىغان ئۆزگەرتىشلەر بار. تاقاشتىن بۇرۇن ساقلامسىز؟",

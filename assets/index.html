@@ -270,7 +270,7 @@
 
 <!-- AI 助手面板 -->
 <div id="ai-panel" class="hidden">
-  <div id="ai-resize-handle" title="拖动调整 AI 面板宽度" data-i18n-title="ai.resizeHandle" aria-hidden="true"></div>
+  <div id="ai-resize-handle" role="separator" tabindex="0" aria-orientation="vertical" aria-label="调整 AI 面板宽度" data-i18n-aria="ai.resizeHandle" aria-valuemin="360" aria-valuemax="1200" aria-valuenow="432" title="拖动或用左右方向键调整 AI 面板宽度" data-i18n-title="ai.resizeHandle"></div>
   <div class="ai-head">
     <span class="ai-head-title">
       <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3.5"/></svg>
@@ -840,6 +840,9 @@
 
 <!-- 标签右键菜单 -->
 <div id="tab-context-menu" class="tab-context-menu hidden" role="menu">
+  <button role="menuitem" tabindex="-1" data-action="move-left" data-i18n="tabs.moveLeft">左移</button>
+  <button role="menuitem" tabindex="-1" data-action="move-right" data-i18n="tabs.moveRight">右移</button>
+  <div class="tab-context-sep" role="separator" aria-orientation="horizontal"></div>
   <button role="menuitem" tabindex="-1" data-action="close" data-i18n="tabs.closeTab">关闭标签</button>
   <button role="menuitem" tabindex="-1" data-action="close-others" data-i18n="tabs.closeOthers">关闭其他标签</button>
   <button role="menuitem" tabindex="-1" data-action="close-all" data-i18n="tabs.closeAll">关闭所有标签</button>

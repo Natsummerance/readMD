@@ -729,6 +729,10 @@
   "tabs.closeAll": "إغلاق جميع علامات التبويب",
   "tabs.closeOthers": "إغلاق علامات التبويب الأخرى",
   "tabs.closeTab": "إغلاق علامة التبويب",
+
+  "tabs.moveLeft": "نقل إلى اليسار",
+
+  "tabs.moveRight": "نقل إلى اليمين",
   "tabs.copyPath": "نسخ مسار الملف",
   "tabs.dirty": "غير محفوظ",
   "tabs.dirtyConfirmMsg": "يتضمن المستند \"{name}\" تعديلات غير محفوظة. هل تريد الحفظ قبل الإغلاق؟",

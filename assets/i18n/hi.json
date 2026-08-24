@@ -729,6 +729,10 @@
   "tabs.closeAll": "सभी टैब को बंद करें",
   "tabs.closeOthers": "अन्य टैब बंद करें",
   "tabs.closeTab": "टैब बंद करें",
+
+  "tabs.moveLeft": "बाईं ओर ले जाएँ",
+
+  "tabs.moveRight": "दाईं ओर ले जाएँ",
   "tabs.copyPath": "फ़ाइल पथ कॉपी करें",
   "tabs.dirty": "सहेजा नहीं गया",
   "tabs.dirtyConfirmMsg": "दस्तावेज़ \"{name}\" में सहेजे न गए परिवर्तन शामिल हैं। बंद करने से पहले सहेजें?",

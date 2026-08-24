@@ -978,6 +978,26 @@ function bindAiResize() {
   const handle = $('ai-resize-handle');
   if (!handle) return;
   let startX = 0, startWidth = 0;
+  const maxWidth = () => Math.max(360, Math.floor(window.innerWidth * 0.94));
+  const syncResizeState = () => {
+    handle.setAttribute('aria-valuemax', String(maxWidth()));
+    handle.setAttribute('aria-valuenow', String(state.aiPanelWidth));
+  };
+  const setPanelWidth = width => {
+    state.aiPanelWidth = Math.max(360, Math.min(maxWidth(), Math.round(width)));
+    document.body.style.setProperty('--ai-panel-width', state.aiPanelWidth + 'px');
+    syncResizeState();
+  };
+  handle.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const step = e.shiftKey ? 32 : 16;
+    setPanelWidth(state.aiPanelWidth + (e.key === 'ArrowLeft' ? step : -step));
+  });
+  handle.addEventListener('keyup', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') saveSettings();
+  });
+  window.addEventListener('resize', syncResizeState);
   handle.addEventListener('pointerdown', e => {
     startX = e.clientX; startWidth = state.aiPanelWidth;
     handle.setPointerCapture(e.pointerId);
@@ -985,9 +1005,7 @@ function bindAiResize() {
   });
   handle.addEventListener('pointermove', e => {
     if (!handle.hasPointerCapture(e.pointerId)) return;
-    const max = Math.max(360, Math.floor(window.innerWidth * 0.94));
-    state.aiPanelWidth = Math.max(360, Math.min(max, startWidth + startX - e.clientX));
-    document.body.style.setProperty('--ai-panel-width', state.aiPanelWidth + 'px');
+    setPanelWidth(startWidth + startX - e.clientX);
   });
   const finish = e => {
     if (!handle.hasPointerCapture(e.pointerId)) return;
@@ -997,6 +1015,7 @@ function bindAiResize() {
   };
   handle.addEventListener('pointerup', finish);
   handle.addEventListener('pointercancel', finish);
+  syncResizeState();
 }
 
 

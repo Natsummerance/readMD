@@ -729,6 +729,10 @@
   "tabs.closeAll": "ปิดแท็บทั้งหมด",
   "tabs.closeOthers": "ปิดแท็บอื่น",
   "tabs.closeTab": "ปิดแท็บ",
+
+  "tabs.moveLeft": "ย้ายไปทางซ้าย",
+
+  "tabs.moveRight": "ย้ายไปทางขวา",
   "tabs.copyPath": "คัดลอกเส้นทางไฟล์",
   "tabs.dirty": "ยังไม่ได้บันทึก",
   "tabs.dirtyConfirmMsg": "เอกสาร \"{name}\" มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก บันทึกก่อนปิดหรือไม่?",

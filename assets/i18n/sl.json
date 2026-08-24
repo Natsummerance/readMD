@@ -729,6 +729,10 @@
   "tabs.closeAll": "Zapri vse zavihke",
   "tabs.closeOthers": "Zapri druge zavihke",
   "tabs.closeTab": "Zapri zavihek",
+
+  "tabs.moveLeft": "Premakni levo",
+
+  "tabs.moveRight": "Premakni desno",
   "tabs.copyPath": "Kopiraj pot datoteke",
   "tabs.dirty": "Neshranjeno",
   "tabs.dirtyConfirmMsg": "Dokument \"{name}\" vsebuje neshranjene spremembe. Ali ga želite shraniti pred zapiranjem?",

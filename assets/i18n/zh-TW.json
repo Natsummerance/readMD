@@ -729,6 +729,10 @@
   "tabs.closeAll": "關閉所有标签",
   "tabs.closeOthers": "關閉其他标签",
   "tabs.closeTab": "關閉标签",
+
+  "tabs.moveLeft": "向左移動",
+
+  "tabs.moveRight": "向右移動",
   "tabs.copyPath": "複製檔案路径",
   "tabs.dirty": "未儲存",
   "tabs.dirtyConfirmMsg": "文档 \"{name}\" 包含未儲存的修改。是否在關閉前儲存？",

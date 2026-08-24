@@ -729,6 +729,10 @@
   "tabs.closeAll": "Luk alle faner",
   "tabs.closeOthers": "Luk andre faner",
   "tabs.closeTab": "luk fanen",
+
+  "tabs.moveLeft": "Flyt til venstre",
+
+  "tabs.moveRight": "Flyt til højre",
   "tabs.copyPath": "Kopier filstien",
   "tabs.dirty": "ikke gemt",
   "tabs.dirtyConfirmMsg": "Dokumentet \"{name}\" indeholder ikke-gemte ændringer. Gem før lukning?",

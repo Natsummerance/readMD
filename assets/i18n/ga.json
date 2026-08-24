@@ -729,6 +729,10 @@
   "tabs.closeAll": "Dún gach cluaisín",
   "tabs.closeOthers": "Dún cluaisíní eile",
   "tabs.closeTab": "cluaisín a dhúnadh",
+
+  "tabs.moveLeft": "Bog ar chlé",
+
+  "tabs.moveRight": "Bog ar dheis",
   "tabs.copyPath": "Cóipeáil cosán comhaid",
   "tabs.dirty": "ní shábháil",
   "tabs.dirtyConfirmMsg": "Tá athruithe gan sábháil sa doiciméad \"{name}\". Sábháil roimh dhúnadh?",

@@ -729,6 +729,10 @@
   "tabs.closeAll": "Összes lap bezárása",
   "tabs.closeOthers": "Többi lap bezárása",
   "tabs.closeTab": "Lap bezárása",
+
+  "tabs.moveLeft": "Balra mozgatás",
+
+  "tabs.moveRight": "Jobbra mozgatás",
   "tabs.copyPath": "Fájl elérési útjának másolása",
   "tabs.dirty": "Nem mentett",
   "tabs.dirtyConfirmMsg": "A(z) „{name}” dokumentum nem mentett módosításokat tartalmaz. Menti a bezárás előtt?",

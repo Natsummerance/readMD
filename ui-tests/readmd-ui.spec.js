@@ -146,6 +146,65 @@ test('select controls expose their localized selected action', async ({ page }) 
   await expect(page.locator('#tpl-name')).toHaveValue('Keyboard template');
 });
 
+test('dragging alternatives and control targets satisfy accessibility contracts', async ({ page }) => {
+  await page.goto('/');
+  await page.setViewportSize({ width: 1100, height: 760 });
+  await page.waitForFunction(() => typeof bindAiResize === 'function' && typeof openTabContextMenu === 'function');
+
+  await page.evaluate(() => document.getElementById('ai-panel').classList.remove('hidden'));
+  const handle = page.locator('#ai-resize-handle');
+  await expect(handle).toHaveAttribute('role', 'separator');
+  await expect(handle).toHaveAttribute('tabindex', '0');
+  const widthBefore = await page.evaluate(() => state.aiPanelWidth);
+  await handle.focus();
+  await page.keyboard.press('ArrowLeft');
+  await page.waitForFunction(previous => state.aiPanelWidth > previous, widthBefore);
+  const widthAfter = await page.evaluate(() => ({
+    panel: state.aiPanelWidth,
+    reported: Number(document.getElementById('ai-resize-handle').getAttribute('aria-valuenow')),
+  }));
+  expect(widthAfter.reported).toBe(widthAfter.panel);
+
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'one', mode: 'file', title: 'one.md', name: 'one.md', content: '# one' },
+      { id: 'two', mode: 'file', title: 'two.md', name: 'two.md', content: '# two' },
+      { id: 'three', mode: 'file', title: 'three.md', name: 'three.md', content: '# three' },
+    ];
+    state.activeTabId = 'two';
+    renderTabsBar();
+    openTabContextMenu({ clientX: 40, clientY: 40 }, 'two');
+  });
+  await expect(page.locator('[data-action="move-left"]')).toBeEnabled();
+  await expect(page.locator('[data-action="move-right"]')).toBeEnabled();
+  await page.locator('[data-action="move-left"]').click();
+  await page.waitForFunction(() => state.tabs.map(tab => tab.id).join(',') === 'two,one,three');
+  await expect(page.locator('.tab-item[data-tab-id="two"]')).toBeFocused();
+
+  await page.evaluate(() => {
+    const markdownBody = document.createElement('div');
+    markdownBody.className = 'markdown-body';
+    markdownBody.innerHTML = '<ul><li><input type="checkbox"> target</li></ul>';
+    document.getElementById('content').replaceChildren(markdownBody);
+    document.getElementById('ai-incognito').closest('.hidden')?.classList.remove('hidden');
+  });
+  for (const selector of ['.markdown-body input[type="checkbox"]', '#ai-incognito']) {
+    const minimum = await page.locator(selector).evaluate(el => Math.min(
+      el.getBoundingClientRect().width,
+      el.getBoundingClientRect().height,
+    ));
+    expect(minimum).toBeGreaterThanOrEqual(24);
+  }
+
+  await page.evaluate(() => {
+    toggleZenMode(true);
+    document.getElementById('btn-open').focus();
+  });
+  await expect(page.locator('#toolbar')).toBeVisible();
+  await expect.poll(async () => page.locator('#toolbar')
+    .evaluate(el => getComputedStyle(el).transform)).not.toBe('matrix(1, 0, 0, 1, 0, -44)');
+});
+
 test('continuous mode uses a managed confirmation dialog', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => typeof togglePaginationMode === 'function');
@@ -1659,9 +1718,9 @@ test('tabs, status regions, and stacked dialogs meet keyboard contracts', async 
   await page.locator('#doc-tabs-bar .tab-item').first().focus();
   await page.keyboard.press('Shift+F10');
   await expect(page.locator('#tab-context-menu')).toBeVisible();
-  await expect(page.locator('#tab-context-menu [role="menuitem"]').first()).toBeFocused();
+  await expect(page.locator('#tab-context-menu [role="menuitem"]:not([disabled])').first()).toBeFocused();
   await page.keyboard.press('ArrowDown');
-  await expect(page.locator('#tab-context-menu [role="menuitem"]').nth(1)).toBeFocused();
+  await expect(page.locator('#tab-context-menu [role="menuitem"]:not([disabled])').nth(1)).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(page.locator('#doc-tabs-bar .tab-item').first()).toBeFocused();
 

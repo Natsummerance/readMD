@@ -729,6 +729,10 @@
   "tabs.closeAll": "Cerrar todas las pestañas",
   "tabs.closeOthers": "Cerrar otras pestañas",
   "tabs.closeTab": "cerrar pestaña",
+
+  "tabs.moveLeft": "Mover a la izquierda",
+
+  "tabs.moveRight": "Mover a la derecha",
   "tabs.copyPath": "Copiar ruta del archivo",
   "tabs.dirty": "no salvo",
   "tabs.dirtyConfirmMsg": "El documento \"{name}\" contiene cambios no guardados. ¿Guardar antes de cerrar?",

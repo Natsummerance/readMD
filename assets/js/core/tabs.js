@@ -379,6 +379,9 @@ function openTabContextMenu(e, tabId) {
   const menu = $('tab-context-menu');
   if (!menu) return;
   menu.dataset.tabId = tabId;
+  const tabIndex = state.tabs.findIndex(tab => tab.id === tabId);
+  menu.querySelector('[data-action="move-left"]').disabled = tabIndex <= 0;
+  menu.querySelector('[data-action="move-right"]').disabled = tabIndex < 0 || tabIndex >= state.tabs.length - 1;
   menu.style.left = Math.min(window.innerWidth - 180, e.clientX) + 'px';
   menu.style.top = Math.min(window.innerHeight - 200, e.clientY) + 'px';
   menu.classList.remove('hidden');

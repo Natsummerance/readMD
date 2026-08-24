@@ -729,6 +729,10 @@
   "tabs.closeAll": "Kanga ba-onglets yonso",
   "tabs.closeOthers": "Kanga ba-onglets ya nkaka",
   "tabs.closeTab": "Kanga onglet",
+
+  "tabs.moveLeft": "Kanga na mbanza",
+
+  "tabs.moveRight": "Kanga na ndinga",
   "tabs.copyPath": "Kopia nzila ya fishe",
   "tabs.dirty": "Me bumbana ve",
   "tabs.dirtyConfirmMsg": "Mukanda \"{name}\" kele ti bansoba yina me bumbana ve. Bumba na ntwala ya kukanga?",

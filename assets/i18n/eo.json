@@ -729,6 +729,10 @@
   "tabs.closeAll": "Fermi ĉiujn langetojn",
   "tabs.closeOthers": "Fermi aliajn langetojn",
   "tabs.closeTab": "Fermi langeton",
+
+  "tabs.moveLeft": "Movi maldekstren",
+
+  "tabs.moveRight": "Movi dekstren",
   "tabs.copyPath": "Kopii dosiervojon",
   "tabs.dirty": "Nekonservita",
   "tabs.dirtyConfirmMsg": "La dokumento \"{name}\" enhavas nekonservitajn ŝanĝojn. Ĉu konservi antaŭ ol fermi?",

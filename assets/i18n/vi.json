@@ -729,6 +729,10 @@
   "tabs.closeAll": "Đóng tất cả các tab",
   "tabs.closeOthers": "Đóng các tab khác",
   "tabs.closeTab": "Đóng tab",
+
+  "tabs.moveLeft": "Chuyển sang trái",
+
+  "tabs.moveRight": "Chuyển sang phải",
   "tabs.copyPath": "Sao chép đường dẫn tệp",
   "tabs.dirty": "Chưa lưu",
   "tabs.dirtyConfirmMsg": "Tài liệu \"{name}\" có thay đổi chưa được lưu. Bạn có muốn lưu trước khi đóng không?",

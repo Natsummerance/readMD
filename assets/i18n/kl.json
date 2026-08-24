@@ -729,6 +729,10 @@
   "tabs.closeAll": "Tab-it tamarmik matukkit",
   "tabs.closeOthers": "Tab-it allat matukkit",
   "tabs.closeTab": "qanimut tab",
+
+  "tabs.moveLeft": "Akinnermut aqqussaarpoq",
+
+  "tabs.moveRight": "Kujammut aqqussaarpoq",
   "tabs.copyPath": "Kopierlugu filip aqqutaa",
   "tabs.dirty": "annaanneqanngilaq",
   "tabs.dirtyConfirmMsg": "Dokumenti \"{name}\" allanngortitsinernik allanneqarsimanngitsunik imaqarpoq. Matuneq sioqqullugu annaasaqarpit?",

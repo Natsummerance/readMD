@@ -729,6 +729,10 @@
   "tabs.closeAll": "סגור את כל הכרטיסיות",
   "tabs.closeOthers": "סגור כרטיסיות אחרות",
   "tabs.closeTab": "סגור כרטיסייה",
+
+  "tabs.moveLeft": "העבר שמאלה",
+
+  "tabs.moveRight": "העבר ימינה",
   "tabs.copyPath": "העתק את נתיב הקובץ",
   "tabs.dirty": "לא נשמר",
   "tabs.dirtyConfirmMsg": "המסמך \"{name}\" מכיל שינויים שלא נשמרו. לשמור לפני סגירה?",

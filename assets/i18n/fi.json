@@ -729,6 +729,10 @@
   "tabs.closeAll": "Sulje kaikki välilehdet",
   "tabs.closeOthers": "Sulje muut välilehdet",
   "tabs.closeTab": "sulje välilehti",
+
+  "tabs.moveLeft": "Siirrä vasemmalle",
+
+  "tabs.moveRight": "Siirrä oikealle",
   "tabs.copyPath": "Kopioi tiedostopolku",
   "tabs.dirty": "ei tallennettu",
   "tabs.dirtyConfirmMsg": "Asiakirja \"{name}\" sisältää tallentamattomia muutoksia. Tallennetaanko ennen sulkemista?",

@@ -729,6 +729,10 @@
   "tabs.closeAll": "Бүх цонхыг хаах",
   "tabs.closeOthers": "Бусад цонхыг хаах",
   "tabs.closeTab": "Цонх хаах",
+
+  "tabs.moveLeft": "Зүүн тийш зөөх",
+
+  "tabs.moveRight": "Баруун тийш зөөх",
   "tabs.copyPath": "Файлын замыг хуулах",
   "tabs.dirty": "Хадгалаагүй",
   "tabs.dirtyConfirmMsg": "Баримт \"{name}\"-д хадгалаагүй өөрчлөлт байна. Хаахын өмнө хадгалах уу?",

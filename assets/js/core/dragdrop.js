@@ -191,7 +191,7 @@ function bindTabContextMenuEvents() {
   if (!menu) return;
 
   menu.addEventListener('keydown', event => {
-    const items = Array.from(menu.querySelectorAll('[role="menuitem"]'));
+    const items = Array.from(menu.querySelectorAll('[role="menuitem"]:not([disabled])'));
     const index = items.indexOf(document.activeElement);
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
@@ -221,6 +221,13 @@ function bindTabContextMenuEvents() {
         closeOtherTabs(tabId);
       } else if (action === 'close-all') {
         closeAllTabs();
+      } else if (action === 'move-left' || action === 'move-right') {
+        const index = state.tabs.findIndex(item => item.id === tabId);
+        const targetIndex = action === 'move-left' ? index - 1 : index + 1;
+        if (targetIndex >= 0 && targetIndex < state.tabs.length) {
+          reorderTabs(tabId, state.tabs[targetIndex].id, action === 'move-right');
+          focusVisibleTab(tabId);
+        }
       } else if (action === 'rename') {
         const bar = $('doc-tabs-bar');
         const tabEl = bar ? bar.querySelector(`[data-tab-id="${tabId}"]`) : null;

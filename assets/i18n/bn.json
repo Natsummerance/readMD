@@ -729,6 +729,10 @@
   "tabs.closeAll": "সব ট্যাব বন্ধ করুন",
   "tabs.closeOthers": "অন্যান্য ট্যাব বন্ধ করুন",
   "tabs.closeTab": "ট্যাব বন্ধ করুন",
+
+  "tabs.moveLeft": "বামে সরান",
+
+  "tabs.moveRight": "ডানে সরান",
   "tabs.copyPath": "ফাইল পাথ কপি করুন",
   "tabs.dirty": "অসংরক্ষিত",
   "tabs.dirtyConfirmMsg": "\"{name}\" ডকুমেন্টে অসংরক্ষিত পরিবর্তন রয়েছে। বন্ধ করার আগে কি সংরক্ষণ করবেন?",

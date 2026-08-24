@@ -729,6 +729,10 @@
   "tabs.closeAll": "Funga ibisobanuro byose",
   "tabs.closeOthers": "Funga izindi tab",
   "tabs.closeTab": "funga tab",
+
+  "tabs.moveLeft": "Simbuka ibumoso",
+
+  "tabs.moveRight": "Simbuka iburyo",
   "tabs.copyPath": "Gukoporora inzira",
   "tabs.dirty": "ntabwo yakijijwe",
   "tabs.dirtyConfirmMsg": "Inyandiko \"{name}\" ikubiyemo impinduka zidakijijwe. Uzigame mbere yo gufunga?",

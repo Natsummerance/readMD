@@ -729,6 +729,10 @@
   "tabs.closeAll": "Close All Tabs",
   "tabs.closeOthers": "Close Other Tabs",
   "tabs.closeTab": "Close Tab",
+
+  "tabs.moveLeft": "Move Left",
+
+  "tabs.moveRight": "Move Right",
   "tabs.copyPath": "Copy File Path",
   "tabs.dirty": "Unsaved",
   "tabs.dirtyConfirmMsg": "Document \"{name}\" contains unsaved changes. Save before closing?",
