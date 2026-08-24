@@ -15,6 +15,7 @@ from copy_profiles import (
     EXPERIMENT_TITLE_FORMULAS,
     profile_for_story,
     title_formula_errors,
+    title_semantic_errors,
 )
 
 
@@ -34,7 +35,7 @@ def _repeated_sentence(text: str) -> list[str]:
     return [sentence for sentence, count in counts.items() if count > 1]
 
 
-def _score_title(metadata: dict[str, Any]) -> tuple[int, list[str]]:
+def _score_title(metadata: dict[str, Any], story: dict[str, Any]) -> tuple[int, list[str]]:
     title = str(metadata.get("title", ""))
     formula_id = str(metadata.get("title_formula_id", ""))
     score = 0.0
@@ -48,6 +49,7 @@ def _score_title(metadata: dict[str, Any]) -> tuple[int, list[str]]:
     formula_signal = formula_id in {"#9", "#12", "#22", "#26", "#36", "#61"}
     tensions = sum(term in title.lower() for term in ("不用", "别再", "居然", "直接", "看完", "重新", "上台", "ppt", "md", "markdown"))
     score += 7 if tensions >= 2 else (4 if tensions == 1 or formula_signal else 0)
+    failures.extend(title_semantic_errors(title, str(story.get("primary_shot", ""))))
     return round(score), failures
 
 
@@ -136,7 +138,7 @@ def _score_compliance(metadata: dict[str, Any]) -> tuple[int, list[str]]:
 
 def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: dict[str, Any]) -> dict[str, Any]:
     style_report = audit_style(str(metadata.get("body", "")), audience="程序员")
-    title_report = _score_title(metadata)
+    title_report = _score_title(metadata, story)
     scores = {
         "title": title_report[0],
         "hook": _score_hook(str(metadata.get("body", "")), story)[0],
