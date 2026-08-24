@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "artifact": "GitHub Discussions announcement for v2.3.7-beta.3",
+  "target_category": "Announcements",
+  "reviewed_at": "2026-08-24T19:30:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "announcement-copy-review",
+      "status": "approved",
+      "score": 9.76,
+      "evidence": [
+        "Opening states one local-file workflow instead of a feature dump.",
+        "The beta identity is explicit; no formal-release or adoption claim is made."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "GEO-and-evidence-review",
+      "status": "approved",
+      "score": 9.84,
+      "evidence": [
+        "Includes verified raw llms.txt and llms-full.txt URLs.",
+        "Repeats only evidence-backed thresholds and workflows: semantic pagination near 8,000 lines / 500 KB and display-only repair."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "community-compliance-review",
+      "status": "approved",
+      "score": 9.78,
+      "evidence": [
+        "The call to action asks for platform, document size, and workflow rather than reciprocal stars.",
+        "Download link targets the existing GitHub release; all claims remain traceable."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.82,
+    "participants": ["product", "content", "GEO", "community"],
+    "conditions": [
+      "Publish only in Announcements.",
+      "Verify both raw corpus URLs immediately before mutation.",
+      "Record the actual discussion URL and number."
+    ]
+  }
+}
