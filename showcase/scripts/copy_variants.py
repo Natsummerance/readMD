@@ -218,11 +218,13 @@ def choose_variant(
     max_frame_inventory = max(frame_inventory.values(), default=0)
 
     ranked: list[dict[str, Any]] = []
-    max_body_similarity = 0.0
-    similarity_source = ""
+    portfolio_max_body_similarity = 0.0
+    portfolio_similarity_source = ""
     for variant in variants:
         adjustment = 0.0
         reasons = []
+        variant_max_body_similarity = 0.0
+        variant_similarity_source = ""
         report = dict(variant.pop("_report"))
         fingerprints = text_fingerprints(variant["body"])
         variant_trigrams = text_trigrams(variant["body"])
@@ -233,9 +235,12 @@ def choose_variant(
                 originality_failures.append(f"body hash matches {release_name}")
             prior_trigrams = set(prior.get("body_trigrams") or [])
             similarity = jaccard_similarity(variant_trigrams, prior_trigrams)
-            if similarity > max_body_similarity:
-                max_body_similarity = similarity
-                similarity_source = release_name
+            if similarity > variant_max_body_similarity:
+                variant_max_body_similarity = similarity
+                variant_similarity_source = release_name
+            if similarity > portfolio_max_body_similarity:
+                portfolio_max_body_similarity = similarity
+                portfolio_similarity_source = release_name
             if similarity >= 0.85:
                 originality_failures.append(
                     f"near-duplicate body ({similarity:.2f}) matches {release_name}"
@@ -314,8 +319,8 @@ def choose_variant(
             "ok": report["ok"],
             "hard_failures": report["hard_failures"],
             "originality_failures": originality_failures,
-            "max_body_similarity": round(max_body_similarity, 3),
-            "max_similarity_source": similarity_source,
+            "max_body_similarity": round(variant_max_body_similarity, 3),
+            "max_similarity_source": variant_similarity_source,
             "reasons": reasons,
         })
 
@@ -343,6 +348,8 @@ def choose_variant(
             str(resonance_directive.get("evidence", {}).get("focus", "general"))
             if isinstance(resonance_directive, dict) else "general"
         ),
+        "portfolio_max_body_similarity": round(portfolio_max_body_similarity, 3),
+        "portfolio_max_similarity_source": portfolio_similarity_source,
         "frame_stats": frame_stats,
         "endpoint_cooldown_releases": ENDPOINT_COOLDOWN_RELEASES,
         "copy_frame_inventory": frame_inventory,

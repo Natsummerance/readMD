@@ -2125,6 +2125,30 @@ class CopyVariantsTest(unittest.TestCase):
             item for item in report["ranked"] if item["variant_id"] == "outcome-led__36"
         )["hard_failures"]))
 
+    def test_similarity_report_is_scoped_to_each_variant(self) -> None:
+        story = self.variant_story()
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        contaminated = variants[0]
+        clean = next(item for item in variants if item["body"] != contaminated["body"])
+        history = [{
+            **self.history_record("v1.0.0", "identity-led", "#22"),
+            "body_sha256": hashlib.sha256(contaminated["body"].encode("utf-8")).hexdigest(),
+            "body_trigrams": sorted(copy_variants.text_trigrams(contaminated["body"])),
+        }]
+
+        _, report = copy_variants.choose_variant(variants, history)
+        ranked = {item["variant_id"]: item for item in report["ranked"]}
+        contaminated_report = ranked[contaminated["variant_id"]]
+        clean_report = ranked[clean["variant_id"]]
+
+        self.assertEqual(contaminated_report["max_body_similarity"], 1.0)
+        self.assertEqual(contaminated_report["max_similarity_source"], "v1.0.0")
+        self.assertLess(clean_report["max_body_similarity"], 0.85)
+        self.assertEqual(clean_report["max_similarity_source"], "v1.0.0")
+        self.assertEqual(report["portfolio_max_body_similarity"], 1.0)
+        self.assertEqual(report["portfolio_max_similarity_source"], "v1.0.0")
+
     def test_originality_gate_rejects_reused_opening_and_closing(self) -> None:
         story = self.variant_story()
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
