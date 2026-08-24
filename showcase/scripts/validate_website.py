@@ -29,6 +29,13 @@ INTENT_PAGES = {
     "ja": {"path": PUBLIC / "ja" / "workflows" / "index.html", "canonical": "https://app.syminu.online/ja/workflows/"},
 }
 
+DOWNLOAD_PAGES = {
+    "en": {"path": PUBLIC / "download" / "index.html", "canonical": "https://app.syminu.online/download/"},
+    "zh-CN": {"path": PUBLIC / "zh-cn" / "download" / "index.html", "canonical": "https://app.syminu.online/zh-cn/download/"},
+    "zh-TW": {"path": PUBLIC / "zh-tw" / "download" / "index.html", "canonical": "https://app.syminu.online/zh-tw/download/"},
+    "ja": {"path": PUBLIC / "ja" / "download" / "index.html", "canonical": "https://app.syminu.online/ja/download/"},
+}
+
 AI_CRAWLERS = ("GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot")
 
 
@@ -175,6 +182,7 @@ def validate_robots_and_sitemap() -> list[str]:
     sitemap = (PUBLIC / "sitemap.xml").read_text(encoding="utf-8")
     expected = {item["canonical"] for item in LANGUAGES.values()}
     expected.update(item["canonical"] for item in INTENT_PAGES.values())
+    expected.update(item["canonical"] for item in DOWNLOAD_PAGES.values())
     actual = set(re.findall(r"<loc>(.*?)</loc>", sitemap))
     if actual != expected:
         errors.append(f"sitemap mismatch: missing={expected - actual}, extra={actual - expected}")
@@ -281,6 +289,11 @@ def main() -> int:
             errors.append(f"missing {language} workflow page")
             continue
         errors.extend(audit_page(contract["path"], contract["canonical"]))
+    for language, contract in DOWNLOAD_PAGES.items():
+        if not contract["path"].is_file():
+            errors.append(f"missing {language} download page")
+            continue
+        errors.extend(audit_page(contract["path"], contract["canonical"]))
     if not (PUBLIC / "llms.txt").is_file():
         errors.append("missing public/llms.txt")
     else:
@@ -299,6 +312,7 @@ def main() -> int:
         "ok": True,
         "languages": list(LANGUAGES),
         "intent_pages": list(INTENT_PAGES),
+        "download_pages": list(DOWNLOAD_PAGES),
         "review_rounds": 3,
     }, ensure_ascii=False))
     return 0

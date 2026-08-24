@@ -4,6 +4,7 @@
 ## Docs
 - [简体中文主页](https://app.syminu.online/zh-cn/): 产品定义、平台支持、隐私边界和可直接引用的答案。
 - [工作流答案](https://app.syminu.online/zh-cn/workflows/): 长文档分页、办公格式转换、离线 OCR 和直接放映的任务级回答。
+- [下载页](https://app.syminu.online/zh-cn/download/): Windows、macOS、Linux、国产系统、编辑器和 MCP 包的下载路径。
 - [完整中文语料](https://app.syminu.online/zh-cn/llms-full.txt): 覆盖长文档分页、非破坏修正、格式转换、离线工作流和版本事实。
 - [英文总索引](https://app.syminu.online/llms.txt): 跨语言入口、英文全文语料和权威事实。
 
