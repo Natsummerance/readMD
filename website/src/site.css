@@ -1,0 +1,123 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #111114;
+  --color-muted: #585962;
+  --color-line: #d9dae0;
+  --color-surface: #f5f5f7;
+  --color-action: #0a72e8;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: white;
+}
+
+.nav-shell {
+  backdrop-filter: saturate(180%) blur(20px);
+  background: rgb(255 255 255 / 82%);
+}
+
+.hero-title {
+  font-size: clamp(2.65rem, 7vw, 6.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+}
+
+.display-title {
+  font-size: clamp(2rem, 4.3vw, 3.75rem);
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+}
+
+.section-copy {
+  max-width: 68ch;
+  font-size: clamp(1rem, 1.15vw, 1.18rem);
+  line-height: 1.65;
+  color: var(--color-muted);
+}
+
+.answer-card {
+  border-top: 1px solid var(--color-line);
+  padding-top: 1.35rem;
+}
+
+.answer-card h3 {
+  font-size: 1.08rem;
+  line-height: 1.45;
+}
+
+.answer-card p {
+  margin-top: 0.65rem;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+
+.product-frame {
+  overflow: hidden;
+  background: linear-gradient(145deg, #edf2fa, #ffffff 48%, #f2f1ee);
+  box-shadow: 0 24px 80px rgb(17 17 20 / 12%);
+}
+
+.product-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.link-action {
+  color: var(--color-action);
+}
+
+.link-action:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.button-primary,
+.button-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 1.35rem;
+  border-radius: 999px;
+  font-weight: 600;
+  transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.button-primary {
+  background: var(--color-action);
+  color: white;
+}
+
+.button-secondary {
+  border: 1px solid #9ca0aa;
+  color: var(--color-ink);
+}
+
+.button-primary:hover,
+.button-secondary:hover {
+  opacity: 0.9;
+}
+
+.button-primary:active,
+.button-secondary:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-action);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -27,6 +27,11 @@ installer/webview2_runtime/
 release_body_win7_beta.md
 
 .token-optimizer/
+sandbox/vendor/
+website/node_modules/
+website/dist/
+graphify-out/
+test-results/
 
 
 IDEA.md

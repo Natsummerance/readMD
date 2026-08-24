@@ -1,0 +1,15 @@
+{
+  "name": "readmd-official-site",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "clean": "node tools/clean.mjs",
+    "build:css": "tailwindcss -i ./src/site.css -o ./dist/assets/site.css --minify",
+    "build": "npm run clean && npm run build:css && node tools/copy-static.mjs",
+    "verify": "python ../showcase/scripts/validate_website.py"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.13",
+    "tailwindcss": "^4.1.13"
+  }
+}

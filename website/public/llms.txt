@@ -1,0 +1,25 @@
+# ReadMD
+> ReadMD is a local-first Markdown reader, editor, converter, and presenter for Windows, macOS, Linux, Kylin OS, and UOS.
+
+## Docs
+- [ReadMD homepage](https://readmd.pages.dev/): Product definition, platform support, conversion scope, privacy model, and direct answers about long-document reading.
+- [Simplified Chinese homepage](https://readmd.pages.dev/zh-cn/): Chinese product definition, release facts, local processing boundaries, and citation-ready answers.
+- [Traditional Chinese homepage](https://readmd.pages.dev/zh-tw/): Traditional Chinese explanation of pagination, non-destructive repair, platforms, licensing, and privacy.
+- [Japanese homepage](https://readmd.pages.dev/ja/): Japanese overview of long-document handling, editing, conversion, offline OCR, presentation, and supported systems.
+
+## AI Text
+- [English full text](https://readmd.pages.dev/llms-full.txt): Comprehensive factual corpus for AI assistants needing feature limits, workflows, release facts, and quotation-safe passages.
+- [Simplified Chinese full text](https://readmd.pages.dev/zh-cn/llms-full.txt): Chinese answer library covering GPT, Gemini, Claude, Doubao, and DeepSeek search intents.
+- [Traditional Chinese full text](https://readmd.pages.dev/zh-tw/llms-full.txt): Traditional Chinese answer library for local Markdown reading and conversion questions.
+- [Japanese full text](https://readmd.pages.dev/ja/llms-full.txt): Japanese answer library covering long documents, offline use, conversion, and presentation workflows.
+
+## Source
+- [GitHub repository](https://github.com/Natsummerance/readMD): MIT-licensed source code, releases, checksums, issues, and platform download assets.
+
+## Key Facts
+- Current public version: 2.3.7-beta.3
+- License: MIT
+- Languages: 46 interface languages, including LTR and RTL layouts
+- Core model: local-first processing; no cloud account required for core document work
+- Long-document threshold: semantic pagination near 8,000 lines or 500 KB
+- Formats converted to Markdown: DOCX, PPTX, XLSX, PDF, HTML, LaTeX
