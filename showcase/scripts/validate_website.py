@@ -79,20 +79,35 @@ def audit_page(path: Path, canonical: str) -> list[str]:
     if len(robots_directives) != 1 or robots_directives[0].get("content") != "index,follow,max-image-preview:large":
         errors.append(f"{path}: missing canonical index,follow,max-image-preview:large directive")
     og = {item.get("property"): item.get("content") for item in audit.metas if str(item.get("property", "")).startswith("og:")}
-    for required in ("og:title", "og:description", "og:url", "og:image"):
+    for required in (
+        "og:title",
+        "og:description",
+        "og:url",
+        "og:image",
+        "og:image:type",
+        "og:image:alt",
+    ):
         if len(og.get(required, "")) < 8:
             errors.append(f"{path}: missing complete {required}")
+    if og.get("og:image:width") != "1440" or og.get("og:image:height") != "900":
+        errors.append(f"{path}: Open Graph image must declare 1440x900")
     if og.get("og:url") != canonical:
         errors.append(f"{path}: og:url differs from canonical")
     twitter = {item.get("name"): item.get("content") for item in audit.metas if str(item.get("name", "")).startswith("twitter:")}
-    for required in ("twitter:card", "twitter:title", "twitter:description", "twitter:image"):
+    for required in (
+        "twitter:card",
+        "twitter:title",
+        "twitter:description",
+        "twitter:image",
+        "twitter:image:alt",
+    ):
         if len(twitter.get(required, "")) < 8:
             errors.append(f"{path}: missing complete {required}")
     canonicals = [item for item in audit.links if item.get("rel") == "canonical"]
     if len(canonicals) != 1 or canonicals[0].get("href") != canonical:
         errors.append(f"{path}: canonical must be exactly {canonical}")
     hreflang = {item.get("hreflang") for item in audit.links if item.get("rel") == "alternate" and item.get("hreflang")}
-    if hreflang != {"en", "zh-CN", "zh-TW", "ja"}:
+    if hreflang != {"en", "zh-CN", "zh-TW", "ja", "x-default"}:
         errors.append(f"{path}: incomplete hreflang set: {sorted(item for item in hreflang if item)}")
     h1_values = [text for tag, text in audit.headings if tag == "h1" and text]
     if len(h1_values) != 1:
