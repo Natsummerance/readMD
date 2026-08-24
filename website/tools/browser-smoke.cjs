@@ -56,6 +56,8 @@ const aiFiles = [
         brokenImages: [...document.images].filter(image => !image.complete || image.naturalWidth === 0).length,
         pictureCount: document.querySelectorAll('picture').length,
         webpImages: [...document.querySelectorAll('picture img')].filter(image => image.currentSrc.endsWith('.webp')).length,
+        heroPreloaded: [...document.querySelectorAll('link[rel="preload"]')].some(link => link.href.endsWith('/media/overview-reader.webp')),
+        shareLinks: document.querySelectorAll('#share a[href*="twitter.com"], #share a[href*="t.me"], #share a[href*="linkedin.com"]').length,
       }))),
     });
   }
@@ -73,6 +75,7 @@ const aiFiles = [
 
   const failures = [];
   for (const item of pages) {
+    const isHomepage = item.route === '/';
     if (!item.title.includes('ReadMD')) failures.push(`${item.route}: missing ReadMD title`);
     if (item.h1Count !== 1) failures.push(`${item.route}: expected one h1`);
     if (item.canonical !== item.ogUrl) failures.push(`${item.route}: canonical and og:url differ`);
@@ -80,6 +83,10 @@ const aiFiles = [
     if (!item.stylesheetLoaded) failures.push(`${item.route}: production stylesheet did not load`);
     if (item.brokenImages) failures.push(`${item.route}: ${item.brokenImages} broken images`);
     if (item.pictureCount !== item.webpImages) failures.push(`${item.route}: expected every picture to select WebP`);
+    if (isHomepage) {
+      if (!item.heroPreloaded) failures.push(`${item.route}: hero WebP is not preloaded`);
+      if (item.shareLinks < 3) failures.push(`${item.route}: share links are incomplete`);
+    }
   }
   if (process.env.CHECK_HTTP_HEADERS === '1') {
     if (!security.csp.includes("script-src 'self'")) failures.push('missing script CSP');

@@ -264,6 +264,20 @@ def validate_security_headers() -> list[str]:
     return errors
 
 
+def validate_growth_homepages() -> list[str]:
+    errors: list[str] = []
+    for language, contract in LANGUAGES.items():
+        content = contract["path"].read_text(encoding="utf-8")
+        if 'rel="preload" as="image" href="/media/overview-reader.webp"' not in content:
+            errors.append(f"{language}: hero WebP preload is missing")
+        if 'id="share"' not in content:
+            errors.append(f"{language}: share section is missing")
+        for growth_signal in ("twitter.com/intent/tweet", "t.me/share/url", "linkedin.com/sharing/share-offsite"):
+            if growth_signal not in content:
+                errors.append(f"{language}: share network missing: {growth_signal}")
+    return errors
+
+
 def validate_release_build() -> list[str]:
     errors: list[str] = []
     dist = SITE / "dist"
@@ -303,6 +317,7 @@ def main() -> int:
     errors.extend(validate_approval())
     errors.extend(validate_rights())
     errors.extend(validate_security_headers())
+    errors.extend(validate_growth_homepages())
     if args.release:
         errors.extend(validate_release_build())
     if errors:
