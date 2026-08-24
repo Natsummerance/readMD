@@ -346,6 +346,24 @@ MECHANISM_TOPIC_MARKERS: dict[str, set[str]] = {
 }
 
 
+MECHANISM_TITLE_MARKERS: dict[str, set[str]] = {
+    "overview.editor": {"Markdown", "MD", "写作", "预览", "同屏", "改稿"},
+    "presentation.reveal": {"Markdown", "MD", "PPT", "放映", "上台", "讲文档"},
+    "editor.diagram-picker": {"科研图", "流程图", "架构图", "图表", "语法", "面板", "MD"},
+    "academic.latex-bib": {"公式", "LaTeX", "论文", "学术", "排版"},
+    "editor.code-chunk": {"代码", "示例", "教程", "文档", "Markdown"},
+    "convert.home": {"资料", "网页", "PDF", "Word", "工作台", "MD"},
+    "sharing.export": {"文档", "分享", "副本", "手机", "MD"},
+}
+
+TITLE_UNSUPPORTED_TERMS = (
+    "重磅升级", "效率起飞", "颠覆想象", "无缝体验", "重新定义", "赋能",
+    "革命性", "颠覆性", "next-gen", "revolutionary",
+    "强大", "高效", "极致", "丝滑", "智能", "先进", "一站式", "全方位",
+    "神器", "天花板", "完美", "最强", "全网第一", "100%", "吊打", "秒杀",
+)
+
+
 # Each experiment keeps the psychological trigger of its source Xiaohongshu
 # formula. A formula id alone is attribution, not evidence that the title still
 # uses that mechanism.
@@ -410,6 +428,21 @@ def title_formula_errors(title: str, formula_id: str) -> list[str]:
         errors.append(f"title formula {formula_id} is missing a perspective shift")
     if "anchor" in contract and contract["anchor"] not in value:
         errors.append(f"title formula {formula_id} is missing the comprehension anchor")
+    return errors
+
+
+def title_semantic_errors(title: str, primary_shot: str) -> list[str]:
+    """Reject formula-labeled titles that have no concrete product mechanism."""
+    value = str(title).strip()
+    errors: list[str] = []
+    markers = MECHANISM_TITLE_MARKERS.get(str(primary_shot).strip(), set())
+    lowered = value.casefold()
+    if not markers or not any(marker.casefold() in lowered for marker in markers):
+        errors.append("title lacks a concrete release mechanism")
+
+    unsupported = [term for term in TITLE_UNSUPPORTED_TERMS if term.casefold() in lowered]
+    if unsupported:
+        errors.append("title uses unsupported quality claims: " + ", ".join(unsupported))
     return errors
 
 

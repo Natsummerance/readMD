@@ -48,6 +48,11 @@
 2. Open a real large file and check outline, search and table rendering.
 3. Edit only when you are ready; rendering repairs do not silently write to your source.
 
+## AI assistant citations
+
+- [Concise product index](website/public/llms.txt): version, platforms, privacy boundary, and key facts.
+- [Full citation corpus](website/public/llms-full.txt): direct answers about long-document pagination, non-destructive repair, conversion, and frequent questions.
+
 ## Why star ReadMD?
 
 ReadMD solves the unglamorous problems in a long-lived document library: large files remain readable, imported material needs less cleanup, sensitive drafts stay local, and the original file retains final authority. If it saves you one cleanup session, please [star the repository](https://github.com/Natsummerance/readMD) so other writers can find it.

@@ -390,6 +390,10 @@ class WriteCopyTest(unittest.TestCase):
         for item in candidates:
             self.assertLessEqual(len(item["text"]), 20)
             self.assertEqual(copy_profiles.title_formula_errors(item["text"], item["formula_id"]), [])
+            self.assertEqual(
+                copy_profiles.title_semantic_errors(item["text"], result["primary_shot"]),
+                [],
+            )
         self.assertLessEqual(len(result["title"]), 20)
 
     def test_numeric_title_anchors_match_planned_card_count(self) -> None:
@@ -1554,6 +1558,23 @@ class AuditCopyTest(unittest.TestCase):
         self.assertFalse(report["ok"])
         self.assertIn("title formula #36 is missing a removal condition", report["hard_failures"])
         self.assertIn("title formula #36 is missing an outcome", report["hard_failures"])
+
+    def test_audit_rejects_title_without_concrete_mechanism(self) -> None:
+        story, metadata, composition = self.make_audit_inputs(self.good_body())
+        metadata["title"] = "不用乱猜，直接看方法"
+        report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
+        self.assertFalse(report["ok"])
+        self.assertIn("title lacks a concrete release mechanism", report["hard_failures"])
+
+    def test_audit_rejects_unsupported_quality_claim_in_title(self) -> None:
+        story, metadata, composition = self.make_audit_inputs(self.good_body())
+        metadata["title"] = "不用旧流程，Markdown强大直接看"
+        report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
+        self.assertFalse(report["ok"])
+        self.assertIn(
+            "title uses unsupported quality claims: 强大",
+            report["hard_failures"],
+        )
 
     def test_style_audit_passes_concrete_developer_voice(self) -> None:
         report = style_audit.audit_style(self.good_body(), audience="程序员")
