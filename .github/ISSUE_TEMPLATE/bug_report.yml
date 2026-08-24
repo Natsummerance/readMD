@@ -1,0 +1,81 @@
+name: Bug report
+description: Report a reproducible problem in the desktop app, converter, OCR flow or integrations.
+labels: ["bug", "triage"]
+assignees: ["Natsummerance"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking time to report this issue. Remove passwords, tokens, private file paths and confidential document contents before submitting.
+
+        If the problem is a feature idea, use **Feature request**. For questions, use Discussions.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened, and what makes it a bug?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Numbered steps using a minimal sample or safe synthetic content.
+      placeholder: |
+        1. Open ...
+        2. Click ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      multiple: true
+      options:
+        - Windows 7 / 8
+        - Windows 10 / 11
+        - macOS Apple Silicon
+        - macOS Intel
+        - Linux AppImage
+        - KylinOS / UOS / Deepin
+        - HarmonyOS / OpenHarmony
+        - VS Code extension
+        - MCP client integration
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ReadMD version
+      description: Example - v2.3.7-beta.3. If possible, test against the latest release.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs, screenshots or safe sample
+      description: Attach redacted screenshots, console output or a minimal sample. Do not upload confidential documents.
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I tested the latest available release or included the exact version.
+          required: true
+        - label: This report does not contain credentials, private paths or confidential document contents.
+          required: true
+
