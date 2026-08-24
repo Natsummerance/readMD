@@ -71,6 +71,8 @@ class KylinV10CompatibilityTest(unittest.TestCase):
 
         self.assertIn('kylin-v10-arm64-package:', workflow)
         self.assertIn('runs-on: ubuntu-24.04-arm', workflow)
+        self.assertIn('image: ubuntu:20.04', workflow)
+        self.assertIn('Python-3.11.16.tgz', workflow)
         self.assertIn('libwebkit2gtk-4.0-dev', workflow)
         self.assertIn('ReadMD-linux-aarch64-', workflow)
         self.assertIn('readmd_${{ env.READMD_VERSION }}_arm64.deb', workflow)
