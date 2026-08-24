@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "artifact": "showcase/output/package",
+  "artifact_type": "xiaohongshu_github_promotion",
+  "reviewed_at": "2026-08-24T17:00:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "copy-quality-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "copy-review.json total score is 100 with no hard failures.",
+        "Style audit reports zero generic adjectives, cliches, fixed connectors, or blessing closes.",
+        "Title uses formula #36 and remains within the platform's 20-character contract."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "pattern-and-evidence-review",
+      "status": "approved",
+      "score": 9.86,
+      "evidence": [
+        "pattern-audit.json passes all 11 reviewed patterns.",
+        "The narrative leads with presentation.reveal and keeps supporting claims tied to selected authentic shots.",
+        "metadata.json correctly labels v2.3.7-beta.3 as a prerelease instead of claiming a formal release."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-compliance-review",
+      "status": "approved",
+      "score": 9.79,
+      "evidence": [
+        "validate_package.py returns ok=true with no errors against the final package.",
+        "github-promo-post validate_artifacts.py accepts the title, body, five topics, ordered eight-image set, source URLs, version state, and absolute paths.",
+        "composition.json has no overflow, contrast, small-text, or failed-image findings; no image viewer was used in this final audit."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.83,
+    "participants": ["product", "content", "compliance"],
+    "conditions": [
+      "Publish only through xhs-publish without bypassing sensitive-word or platform checks.",
+      "Do not restart or close Edge unless the operator explicitly authorizes that side effect.",
+      "Record only the actual platform status returned after publication.",
+      "Do not claim star growth before GitHub reports it."
+    ]
+  }
+}
