@@ -7,6 +7,9 @@ const routes = ['/', '/zh-cn/', '/zh-tw/', '/ja/'];
 const aiFiles = [
   '/llms.txt',
   '/llms-full.txt',
+  '/zh-cn/llms.txt',
+  '/zh-tw/llms.txt',
+  '/ja/llms.txt',
   '/robots.txt',
   '/sitemap.xml',
   '/zh-cn/llms-full.txt',

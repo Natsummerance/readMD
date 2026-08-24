@@ -120,7 +120,7 @@ def audit_page(path: Path, canonical: str) -> list[str]:
     return errors
 
 
-def validate_llms(path: Path) -> list[str]:
+def validate_llms(path: Path, *, minimum_absolute_links: int = 5) -> list[str]:
     errors: list[str] = []
     lines = path.read_text(encoding="utf-8").splitlines()
     if not lines or not lines[0].startswith("# ReadMD"):
@@ -130,8 +130,8 @@ def validate_llms(path: Path) -> list[str]:
     if len(lines[1]) > 220:
         errors.append(f"{path}: description exceeds the compact llms.txt contract")
     absolute_links = re.findall(r"https://app\.syminu\.online(?:/[\w.-]+)*", path.read_text(encoding="utf-8"))
-    if len(absolute_links) < 5:
-        errors.append(f"{path}: fewer than five absolute canonical entries")
+    if len(absolute_links) < minimum_absolute_links:
+        errors.append(f"{path}: fewer than {minimum_absolute_links} absolute canonical entries")
     return errors
 
 
@@ -159,6 +159,14 @@ def validate_language_crosslinks() -> list[str]:
         relative_full = contract["full"].relative_to(PUBLIC).as_posix()
         if f'href="/{relative_full}"' not in html_text:
             errors.append(f"{language} index does not link its own llms-full corpus")
+        localized_index = contract["path"].parent / "llms.txt"
+        if not localized_index.is_file():
+            errors.append(f"{language} is missing llms.txt")
+        else:
+            localized_text = localized_index.read_text(encoding="utf-8")
+            errors.extend(validate_llms(localized_index, minimum_absolute_links=3))
+            if contract["canonical"] not in localized_text:
+                errors.append(f"{language} llms.txt omits its localized homepage")
         errors.extend(validate_llms(contract["full"]))
     return errors
 
