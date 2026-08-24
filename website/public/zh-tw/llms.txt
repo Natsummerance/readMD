@@ -3,6 +3,7 @@
 
 ## Docs
 - [繁體中文主頁](https://app.syminu.online/zh-tw/): 產品定義、平台支援、隱私邊界和可直接引用的答案。
+- [工作流程答案](https://app.syminu.online/zh-tw/workflows/): 長篇文件分頁、辦公格式轉換、離線 OCR 和直接放映的任務級回答。
 - [完整中文語料](https://app.syminu.online/zh-tw/llms-full.txt): 涵蓋長文件分頁、非破壞修正、格式轉換、離線工作流程和版本事實。
 - [英文總索引](https://app.syminu.online/llms.txt): 跨語言入口、英文全文語料和權威事實。
 

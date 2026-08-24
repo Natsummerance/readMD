@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "artifact": "localized workflow answer pages",
+  "reviewed_at": "2026-08-25T00:45:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "search-intent-review",
+      "status": "approved",
+      "score": 9.84,
+      "evidence": [
+        "Pages answer high-intent tasks: 8,000-line reading, DOCX/PDF/HTML/LaTeX conversion, offline OCR, and direct presentation.",
+        "Each question is followed by a direct, self-contained answer instead of a feature list."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "localization-review",
+      "status": "approved",
+      "score": 9.81,
+      "evidence": [
+        "English, Simplified Chinese, Traditional Chinese, and Japanese pages use matching canonical and hreflang contracts.",
+        "Terminology remains aligned with the approved homepages and llms-full corpora."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-compliance-review",
+      "status": "approved",
+      "score": 9.78,
+      "evidence": [
+        "No speed ranking, user count, star count, compatibility promise, or AI-citation guarantee appears.",
+        "Conversion caveats instruct users to review complex proprietary layouts after import."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.83,
+    "participants": ["product", "GEO", "localization", "compliance"],
+    "conditions": [
+      "Validator must audit all four workflow pages.",
+      "Sitemap must include exactly the four homepage and four workflow URLs.",
+      "Root and localized llms indexes must link the approved workflow answers."
+    ]
+  }
+}

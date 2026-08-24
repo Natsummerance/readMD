@@ -3,6 +3,7 @@
 
 ## Docs
 - [日本語ホームページ](https://app.syminu.online/ja/): 製品定義、対応環境、プライバシー境界、直接引用できる回答。
+- [ワークフロー回答](https://app.syminu.online/ja/workflows/): 長文の改ページ、オフィス形式変換、オフライン OCR、直接発表に関する実務的な回答。
 - [日本語全文コーパス](https://app.syminu.online/ja/llms-full.txt): 長文の改ページ、非破壊修復、変換、オフライン作業、リリース事実を説明します。
 - [英語インデックス](https://app.syminu.online/llms.txt): 多言語入口、英語コーパス、公式な製品情報。
 
