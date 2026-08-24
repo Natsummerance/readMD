@@ -1,19 +1,6 @@
 name: Website Cloudflare
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/website-cloudflare.yml"
-      - "showcase/reports/website_approval.json"
-      - "showcase/scripts/validate_website.py"
-      - "website/**"
-  pull_request:
-    paths:
-      - ".github/workflows/website-cloudflare.yml"
-      - "showcase/reports/website_approval.json"
-      - "showcase/scripts/validate_website.py"
-      - "website/**"
   workflow_dispatch:
 
 concurrency:

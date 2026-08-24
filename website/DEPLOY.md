@@ -39,7 +39,7 @@ Until one of those changes is made, do not claim that CSP, HSTS, or frame-protec
 
 ## Future direct Cloudflare hosting
 
-Cloudflare Workers remains available as a later hosting migration. The current token can identify the account, read zones, and edit DNS, but Cloudflare rejects Worker/Pages writes with authentication error `10000`. To enable that path, create a token with:
+Cloudflare Workers remains available as a later hosting migration. Its deployment workflow is manual-only until the token is upgraded. The current token can identify the account, read zones, and edit DNS, but Cloudflare rejects Worker/Pages writes with authentication error `10000`. To enable that path, create a token with:
 
 - Account > Workers Scripts > Edit
 - Account > Account Settings > Edit (only needed the first time a workers.dev subdomain is registered)
