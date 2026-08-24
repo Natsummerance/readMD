@@ -36,6 +36,21 @@ DOWNLOAD_PAGES = {
     "ja": {"path": PUBLIC / "ja" / "download" / "index.html", "canonical": "https://app.syminu.online/ja/download/"},
 }
 
+RELEASE_ASSETS = frozenset({
+    "ReadMDSetup-v2.3.7-beta.3.exe",
+    "ReadMD-portable-v2.3.7-beta.3.exe",
+    "ReadMD-macos-arm64-v2.3.7-beta.3.zip",
+    "ReadMD-macos-x64-v2.3.7-beta.3.zip",
+    "ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage",
+    "ReadMD-linux-aarch64-v2.3.7-beta.3.AppImage",
+    "readmd_2.3.7-beta.3_amd64.deb",
+    "readmd_2.3.7-beta.3_arm64.deb",
+    "readmd-vscode-2.3.7-beta.3.vsix",
+    "readmd-mcp-server-2.3.7-beta.3.zip",
+    "ReadMD-harmonyos-v2.3.7-beta.3.hap",
+    "SHA256SUMS.txt",
+})
+
 AI_CRAWLERS = ("GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot")
 
 
@@ -297,6 +312,26 @@ def validate_special_page_internal_links() -> list[str]:
     return errors
 
 
+def validate_release_asset_links() -> list[str]:
+    """Every download page must expose the exact canonical Release asset set."""
+    errors: list[str] = []
+    for language, contract in DOWNLOAD_PAGES.items():
+        content = contract["path"].read_text(encoding="utf-8")
+        linked = {
+            name
+            for _, name in re.findall(
+                r'href="(https://github\.com/Natsummerance/readMD/releases/latest/download/([^"]+))"',
+                content,
+            )
+        }
+        if linked != RELEASE_ASSETS:
+            errors.append(
+                f"{language} download assets mismatch: "
+                f"missing={sorted(RELEASE_ASSETS - linked)}, extra={sorted(linked - RELEASE_ASSETS)}"
+            )
+    return errors
+
+
 def validate_release_build() -> list[str]:
     errors: list[str] = []
     dist = SITE / "dist"
@@ -338,6 +373,7 @@ def main() -> int:
     errors.extend(validate_security_headers())
     errors.extend(validate_growth_homepages())
     errors.extend(validate_special_page_internal_links())
+    errors.extend(validate_release_asset_links())
     if args.release:
         errors.extend(validate_release_build())
     if errors:
