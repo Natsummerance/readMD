@@ -119,6 +119,8 @@ def audit_page(path: Path, canonical: str) -> list[str]:
             errors.append(f"{path}: eager hero image must declare fetchpriority=high")
     if "/assets/site.css" not in audit.stylesheets:
         errors.append(f"{path}: production stylesheet link is missing")
+    if "https://github.com/Natsummerance/readMD/stargazers" not in content:
+        errors.append(f"{path}: star call to action is missing")
     jsonld_match = re.search(r'(?s)<script type="application/ld\+json">(.*?)</script>', content)
     if not jsonld_match:
         errors.append(f"{path}: server-rendered JSON-LD is missing")

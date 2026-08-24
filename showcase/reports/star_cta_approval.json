@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "artifact": "localized GitHub star calls to action",
+  "reviewed_at": "2026-08-24T15:45:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "conversion-review",
+      "status": "approved",
+      "score": 9.72,
+      "evidence": [
+        "Each language has one clear star action without interrupting the primary download path.",
+        "The English closing CTA replaces generic source wording with the specific supported action."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "localization-review",
+      "status": "approved",
+      "score": 9.78,
+      "evidence": [
+        "Simplified Chinese, Traditional Chinese, and Japanese labels use natural repository-star terminology.",
+        "Links point directly to the GitHub stargazers page."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "compliance-review",
+      "status": "approved",
+      "score": 9.75,
+      "evidence": [
+        "No current count, incentive, misleading claim, or automated prompt is used.",
+        "The request is factual and tied to the public MIT repository."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.76,
+    "participants": ["product", "growth", "localization", "compliance"],
+    "conditions": [
+      "Validator must require the star action on every locale.",
+      "Live pages must return HTTP 200 after deployment.",
+      "Do not display a stale or invented star count."
+    ]
+  }
+}
