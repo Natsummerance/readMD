@@ -18,6 +18,8 @@ IMMUTABLE_FIELDS = (
     "release",
     "title",
     "title_formula_id",
+    "title_source_template",
+    "title_adaptation",
     "hook_type",
     "published_at",
     "variant_id",

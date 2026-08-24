@@ -13,6 +13,7 @@ from content_memory import load_learning_records, partition_records, summarize
 from copy_profiles import (
     COMMENT_SCENARIOS,
     COMMENT_SHOT_FOCUS,
+    TITLE_FORMULA_CONTRACTS,
     MECHANISM_TOPIC_SETS,
     RESONANCE_CONCERN_RESPONSE,
     SUPPORT_PHRASES,
@@ -53,11 +54,18 @@ def _planned_card_count(story: dict[str, Any]) -> int:
     return max(4, min(fallback, 9))
 
 
-def _title_candidates(story: dict[str, Any]) -> list[dict[str, str]]:
+def _title_candidates(story: dict[str, Any]) -> list[dict[str, Any]]:
     profile = profile_for_story(story)
     number = _planned_card_count(story)
     candidates = [
-        {"formula_id": formula_id, "text": text.replace("{number}", str(number))}
+        {
+            "formula_id": formula_id,
+            "text": text.replace("{number}", str(number)),
+            **{
+                field: TITLE_FORMULA_CONTRACTS[formula_id][field]
+                for field in ("source_template", "adaptation")
+            },
+        }
         for formula_id, text in profile["titles"].items()
     ]
     errors = title_candidate_errors(candidates)
@@ -66,7 +74,7 @@ def _title_candidates(story: dict[str, Any]) -> list[dict[str, str]]:
     return candidates
 
 
-def _select_title(candidates: list[dict[str, str]], history: list[dict[str, Any]] | None) -> tuple[dict[str, str], dict[str, Any]]:
+def _select_title(candidates: list[dict[str, Any]], history: list[dict[str, Any]] | None) -> tuple[dict[str, Any], dict[str, Any]]:
     if not history:
         chosen = candidates[0]
         return chosen, {
@@ -80,7 +88,7 @@ def _select_title(candidates: list[dict[str, str]], history: list[dict[str, Any]
     stats = summary["formula_stats"]
     max_score = max((item["score"] for item in stats.values()), default=0.0)
     recent = set(summary["recent_formulas"])
-    scored: list[tuple[float, dict[str, str]]] = []
+    scored: list[tuple[float, dict[str, Any]]] = []
     avoided: list[str] = []
     for index, candidate in enumerate(candidates):
         formula = candidate["formula_id"]

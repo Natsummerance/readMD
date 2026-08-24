@@ -198,6 +198,8 @@ def seed_feedback_ledger(
         "variant_id": str(metadata.get("variant_id", "unknown")),
         "copy_frame": str(metadata.get("copy_frame", "unknown")),
         "title_formula_id": str(metadata.get("title_formula_id", "unknown")),
+        "title_source_template": str(metadata.get("title_source_template", "unknown")),
+        "title_adaptation": str(metadata.get("title_adaptation", "unknown")),
         "hook_type": str(metadata.get("hook_type", metadata.get("strategy", "unknown"))),
         "primary_shot": str(metadata.get("primary_shot", "unknown")),
         "topic_set_id": str(metadata.get("topic_set_id", "unknown")),

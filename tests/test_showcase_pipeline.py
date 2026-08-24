@@ -390,12 +390,30 @@ class WriteCopyTest(unittest.TestCase):
         }), 3)
         for item in candidates:
             self.assertLessEqual(len(item["text"]), 20)
+            self.assertEqual(
+                item["source_template"],
+                copy_profiles.TITLE_FORMULA_CONTRACTS[item["formula_id"]]["source_template"],
+            )
+            self.assertEqual(
+                item["adaptation"],
+                copy_profiles.TITLE_FORMULA_CONTRACTS[item["formula_id"]]["adaptation"],
+            )
+            self.assertEqual(copy_profiles.title_provenance_errors(item), [])
             self.assertEqual(copy_profiles.title_formula_errors(item["text"], item["formula_id"]), [])
             self.assertEqual(
                 copy_profiles.title_semantic_errors(item["text"], result["primary_shot"]),
                 [],
             )
         self.assertLessEqual(len(result["title"]), 20)
+
+        tampered = {
+            **candidates[0],
+            "source_template": "自由发挥，不用来源模板",
+            "adaptation": "也不解释改了哪里",
+        }
+        errors = copy_profiles.title_provenance_errors(tampered)
+        self.assertTrue(any("invalid source_template" in error for error in errors), errors)
+        self.assertTrue(any("invalid adaptation" in error for error in errors), errors)
 
     def test_numeric_title_anchors_match_planned_card_count(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1281,6 +1299,44 @@ class ValidatePackageTest(unittest.TestCase):
                         any("approved" in error.lower() or "differs from story" in error.lower() for error in errors),
                         errors,
                     )
+
+    def test_publisher_inputs_recheck_title_formula_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp)
+            (pkg / "images").mkdir()
+            image = pkg / "images" / "xhs-01-cover.jpg"
+            image.write_bytes(b"jpg")
+            story = {"release": "v1.2.3", "primary_shot": "presentation.reveal"}
+            contract = copy_profiles.TITLE_FORMULA_CONTRACTS["#36"]
+            metadata = {
+                "title": "不用重做PPT，Markdown直接放映",
+                "title_formula_id": "#36",
+                "title_source_template": contract["source_template"],
+                "title_adaptation": contract["adaptation"],
+                "primary_shot": "presentation.reveal",
+                "body": "正文",
+                "topics": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
+                "topic_set_id": write_copy.topic_set_id(["Markdown", "PPT", "演讲", "程序员", "效率工具"]),
+                "topic_set_label": "talk-core",
+                "images": [str(image)],
+            }
+            (pkg / "story.json").write_text(json.dumps(story), encoding="utf-8")
+            (pkg / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+            (pkg / "title.txt").write_text(metadata["title"], encoding="utf-8")
+            (pkg / "body.txt").write_text(metadata["body"], encoding="utf-8")
+            (pkg / "topics.txt").write_text("\n".join(metadata["topics"]), encoding="utf-8")
+            self.assertEqual(validate_package.publisher_input_errors(pkg), [])
+
+            tampered = {
+                **metadata,
+                "title_source_template": "自由发挥，不用来源模板",
+                "title_adaptation": "也不解释改了哪里",
+            }
+            (pkg / "metadata.json").write_text(json.dumps(tampered), encoding="utf-8")
+            errors = validate_package.publisher_input_errors(pkg)
+
+        self.assertTrue(any("title provenance source_template differs" in error for error in errors), errors)
+        self.assertTrue(any("title provenance adaptation differs" in error for error in errors), errors)
 
     def test_publisher_directive_requires_concern_response(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -3560,6 +3616,8 @@ class ReviewDashboardTest(unittest.TestCase):
                         "variant_id": "outcome-led__36",
                         "title": "#36 标题",
                         "title_formula_id": "#36",
+                        "title_source_template": "没有 [资源]，也能 [结果]",
+                        "title_adaptation": "把缺少的资源换成要移除的重复步骤。",
                         "adjusted_score": 114,
                         "semantic_score": 100,
                         "history_adjustment": -2,
@@ -3666,6 +3724,8 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("History -2 · Frame resonance +8 · Title intent +8", html)
         self.assertIn("Max similarity 12% · v1.0.0", html)
         self.assertIn("Title similarity 0%", html)
+        self.assertIn("Source 没有 [资源]，也能 [结果]", html)
+        self.assertIn("把缺少的资源换成要移除的重复步骤", html)
         self.assertIn("comment request intent prefers the #36 title", html)
         self.assertIn("Portfolio max similarity", html)
         self.assertIn("12%", html)
@@ -4155,6 +4215,14 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(feedback["variant_id"], "outcome-led__36")
             self.assertEqual(feedback["copy_frame"], "core")
             self.assertEqual(feedback["title_formula_id"], "#36")
+            self.assertEqual(
+                feedback["title_source_template"],
+                copy_profiles.TITLE_FORMULA_CONTRACTS["#36"]["source_template"],
+            )
+            self.assertEqual(
+                feedback["title_adaptation"],
+                copy_profiles.TITLE_FORMULA_CONTRACTS["#36"]["adaptation"],
+            )
             self.assertEqual(feedback["hook_type"], "outcome-led")
             self.assertEqual(feedback["primary_shot"], "presentation.reveal")
             self.assertEqual(

@@ -116,6 +116,8 @@ def build_variants(*, story: dict[str, Any], base_metadata: dict[str, Any]) -> l
                 variant["strategy"] = hook_type
                 variant["hook_type"] = hook_type
                 variant["title_formula_id"] = title_option["formula_id"]
+                variant["title_source_template"] = title_option["source_template"]
+                variant["title_adaptation"] = title_option["adaptation"]
                 variant["title"] = title_option["text"]
                 if len(variant["title"]) > 20:
                     raise ValueError(f"variant title exceeds 20 characters: {variant['title']}")
@@ -344,6 +346,8 @@ def choose_variant(
             "strategy": variant["strategy"],
             "title": variant["title"],
             "title_formula_id": variant["title_formula_id"],
+            "title_source_template": variant["title_source_template"],
+            "title_adaptation": variant["title_adaptation"],
             "hook_type": hook_type,
             "copy_frame": variant["copy_frame"],
             "remaining_copy_frames": available_frames,

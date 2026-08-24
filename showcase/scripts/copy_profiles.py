@@ -370,29 +370,41 @@ TITLE_UNSUPPORTED_TERMS = (
 TITLE_FORMULA_CONTRACTS: dict[str, dict[str, Any]] = {
     "#36": {
         "family": "outcome-promise",
+        "source_template": "没有 [资源]，也能 [结果]",
+        "adaptation": "把缺少的资源换成要移除的重复步骤，结果绑定产品机制。",
         "removal_any": ("不用", "没有", "无需"),
         "result_any": ("直接", "能", "可以", "进", "收", "改", "看", "放映", "分享", "排版"),
     },
     "#9": {
         "family": "curiosity-gap",
+        "source_template": "达到 [结果]，令人意想不到的秘密",
+        "adaptation": "用意外信号保留好奇缺口，不虚构秘密或数据。",
         "surprise_any": ("居然", "为何", "怎么", "为什么", "意想不到"),
     },
     "#22": {
         "family": "identity-fit",
+        "source_template": "为 [某种特质的人] 量身定制的 [方案]",
+        "adaptation": "把特质人群具体化，方案落到当前产品能力。",
         "prefix": "给",
         "suffix": "的人",
     },
     "#61": {
         "family": "action-interruption",
+        "source_template": "为什么你应该停止 [行动]",
+        "adaptation": "把停止对象换成被淘汰的旧流程，保持行动中断。",
         "action_any": ("别再", "别把", "别让", "停止"),
     },
     "#12": {
         "family": "perspective-shift",
+        "source_template": "看完这个，你的 [想法] 会不再相同",
+        "adaptation": "把想法换成目标读者对工作流的认知。",
         "carousel": re.compile(r"看完这\d+张"),
         "shift_any": ("重新", "不再相同", "换个"),
     },
     "#26": {
         "family": "number-anchor",
+        "source_template": "[数字] 个达成 [结果] 的小窍门",
+        "adaptation": "把小窍门换成可截图验证的机制拆解。",
         "carousel": re.compile(r"\d+张图"),
         "anchor": "看懂",
     },
@@ -446,6 +458,24 @@ def title_semantic_errors(title: str, primary_shot: str) -> list[str]:
     return errors
 
 
+def title_provenance_errors(candidate: dict[str, Any]) -> list[str]:
+    """Require an auditable source template and adaptation for every formula."""
+    formula_id = str(candidate.get("formula_id", "")).strip()
+    contract = TITLE_FORMULA_CONTRACTS.get(formula_id)
+    if contract is None:
+        return []
+    errors: list[str] = []
+    for field in ("source_template", "adaptation"):
+        expected = str(contract.get(field, ""))
+        actual = str(candidate.get(field, "")).strip()
+        if actual != expected:
+            errors.append(
+                f"title formula {formula_id} has invalid {field}: "
+                f"expected {expected}, got {actual or '<missing>'}"
+            )
+    return errors
+
+
 def title_candidate_errors(candidates: list[dict[str, Any]]) -> list[str]:
     """Validate the experiment pool before publication history can rank it."""
     errors: list[str] = []
@@ -463,6 +493,7 @@ def title_candidate_errors(candidates: list[dict[str, Any]]) -> list[str]:
         errors.append("title candidates must cover at least 3 trigger families")
     for item in candidates:
         errors.extend(title_formula_errors(str(item.get("text", "")), str(item.get("formula_id", ""))))
+        errors.extend(title_provenance_errors(item))
     return errors
 
 

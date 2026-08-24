@@ -85,6 +85,13 @@ def _variant_evidence_html(item: dict[str, Any]) -> str:
     comment_reasons = [reason for reason in reasons if reason.lower().startswith("comment ")]
     evidence_reasons = (comment_reasons + [reason for reason in reasons if reason not in comment_reasons])[:3]
     reason_text = " · ".join(evidence_reasons) or "No additional selection evidence"
+    source_template = str(item.get("title_source_template", "")).strip()
+    adaptation = str(item.get("title_adaptation", "")).strip()
+    provenance = (
+        f'<p style="margin:6px 0 0;font-size:20px;line-height:1.45;color:#5b6875">'
+        f'Source {_escaped(source_template)} · {_escaped(adaptation)}</p>'
+        if source_template and adaptation else ""
+    )
     return (
         f'<p style="margin:8px 0 0;font-size:20px;line-height:1.45;color:#5b6875">'
         f'History {_escaped(history)} · Frame resonance {_escaped(frame)} · '
@@ -93,6 +100,7 @@ def _variant_evidence_html(item: dict[str, Any]) -> str:
         f'Max similarity {_escaped(f"{similarity:.0%}")} · {_escaped(source)}</p>'
         f'<p style="margin:6px 0 0;font-size:20px;line-height:1.45;color:#5b6875">'
         f'Title similarity {_escaped(f"{title_similarity:.0%}")} · {_escaped(title_source)}</p>'
+        f'{provenance}'
         f'<p style="margin:8px 0 0;font-size:20px;line-height:1.5;color:#182029">'
         f'{_escaped(reason_text)}</p>'
     )

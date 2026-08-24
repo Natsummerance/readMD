@@ -17,6 +17,7 @@ from copy_profiles import (
     COMMENT_SCENARIOS,
     COMMENT_SHOT_FOCUS,
     MECHANISM_TOPIC_SETS,
+    TITLE_FORMULA_CONTRACTS,
     RESONANCE_CONCERN_RESPONSE,
     resonance_frame_adjustment,
     resonance_topic_adjustment,
@@ -140,6 +141,26 @@ def _topic_focus_selection_errors(story: dict[str, Any], metadata: dict[str, Any
     if selection.get("resonance_focus") != focus:
         errors.append("topic selection resonance focus differs from directive")
     return errors
+
+
+def title_provenance_errors(metadata: dict[str, Any]) -> list[str]:
+    """Recheck the selected title against its declared source formula."""
+    formula_id = str(metadata.get("title_formula_id", "")).strip()
+    contract = TITLE_FORMULA_CONTRACTS.get(formula_id)
+    if contract is None:
+        return []
+    errors: list[str] = []
+    for field in ("source_template", "adaptation"):
+        expected = str(contract.get(field, ""))
+        actual = str(metadata.get(f"title_{field}", "")).strip()
+        if actual != expected:
+            errors.append(
+                f"title provenance {field} differs from formula {formula_id}: "
+                f"expected {expected}, got {actual or '<missing>'}"
+            )
+    return errors
+
+
 def _image_metrics(path: Path, screenshot_box: dict[str, float] | None = None) -> dict[str, Any]:
     with Image.open(path) as image:
         rgb = image.convert("RGB")
@@ -422,6 +443,7 @@ def publisher_input_errors(package_dir: Path) -> list[str]:
     else:
         errors.extend(_topic_identity_errors(story, metadata))
         errors.extend(_topic_focus_selection_errors(story, metadata))
+        errors.extend(title_provenance_errors(metadata))
 
     def text(name: str) -> str | None:
         path = package_dir / name
