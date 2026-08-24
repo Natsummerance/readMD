@@ -709,6 +709,31 @@ class WriteCopyTest(unittest.TestCase):
         self.assertNotRegex(result["body"], "预览版|更新线")
         self.assertIn("正式版", result["body"])
 
+    def test_comment_prompt_is_always_the_final_paragraph(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            story = build_story.build_story(
+                release="v9.9.9",
+                previous_release="v9.9.8",
+                notes="- Reveal.js 演示\n",
+                shot_library_path=ROOT / "showcase" / "shot_library.json",
+            )
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v9.9.8",
+            )
+            paragraphs = result["body"].split("\n\n")
+            expected_cta = copy_profiles.profile_for_story(story)["cta"]
+
+        self.assertGreaterEqual(len(paragraphs), 2)
+        self.assertEqual(paragraphs[-1], expected_cta)
+        self.assertNotIn(expected_cta, paragraphs[:-1])
+        self.assertLess(
+            result["body"].index("渲染阶段只处理显示结果"),
+            result["body"].index(expected_cta),
+        )
+
     def test_comment_focus_shapes_reader_scenario(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             story = write_story(Path(tmp))

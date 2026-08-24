@@ -477,10 +477,12 @@ def generate_copy(
         [
             f"如果你常处理{COMMENT_SCENARIOS[reader_focus]}，它会省掉“{profile['saved_step']}”这一步。",
             f"安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 {repository}，进仓库后点 Releases 就能找到对应平台。",
-            profile["cta"],
         ]
     )
-    body = "\n\n".join(paragraphs)
+    cta = profile["cta"]
+
+    def assembled(parts: list[str]) -> str:
+        return "\n\n".join([*parts, cta])
 
     padding = [
         "渲染阶段只处理显示结果，不会替你改写原始 Markdown 文件。",
@@ -493,9 +495,8 @@ def generate_copy(
         "公式和图表在阅读页直接渲染，减少截图拼接。",
         "本地优先意味着草稿、笔记和讲稿都留在自己的设备里。",
     ]
-    while len(body) > 900:
-        parts = body.split("\n\n")
-        if len(parts) <= 4:
+    while len(assembled(paragraphs)) > 900:
+        if len(paragraphs) <= 4:
             break
         focused_phrase = SUPPORT_PHRASES.get(COMMENT_SHOT_FOCUS.get(reader_focus, ""))
         scenario = COMMENT_SCENARIOS[reader_focus]
@@ -507,17 +508,19 @@ def generate_copy(
         )
         removable = [
             index
-            for index in range(3, len(parts) - 2)
-            if not any(term in parts[index] for term in protected)
+            for index in range(3, len(paragraphs) - 1)
+            if not any(term in paragraphs[index] for term in protected)
         ]
         if not removable:
             break
-        parts.pop(max(removable))
-        body = "\n\n".join(parts)
+        paragraphs.pop(max(removable))
     pad_index = 0
-    while len(body) < 600 and pad_index < len(padding):
-        body += "\n\n" + padding[pad_index]
+    while len(assembled(paragraphs)) < 600 and pad_index < len(padding):
+        # Keep practical context before the scenario, download note, and CTA so
+        # the comment prompt remains the post's final reader action.
+        paragraphs.insert(max(3, len(paragraphs) - 2), padding[pad_index])
         pad_index += 1
+    body = assembled(paragraphs)
 
     topics = selected_topic_set["topics"]
     return {
