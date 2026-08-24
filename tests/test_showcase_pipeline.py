@@ -4000,6 +4000,158 @@ class WatcherTest(unittest.TestCase):
             self.assertIn("closing", feedback)
             self.assertTrue(feedback["body_trigrams"])
 
+    def test_terminal_packages_leave_live_watch_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            watch_dir = root / "watch"
+            watch_dir.mkdir()
+            live_zip = watch_dir / "package.zip"
+            live_zip.write_bytes(zip_path.read_bytes())
+
+            def fake_run(command, **kwargs):
+                if command[2] == "publish":
+                    payload = {"published": True, "noteId": "note-archive", "url": "https://example.com/note"}
+                    return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+                if command[2] == "status":
+                    prior_status_calls = sum(1 for item in calls if item[2] == "status")
+                    payload = {"status": "审核中"} if prior_status_calls else {}
+                    return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+                raise AssertionError(f"unexpected publisher command: {command}")
+
+            calls = []
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    live_zip,
+                    root / "work",
+                    root / "state.json",
+                    Path("publisher.py"),
+                    3,
+                    False,
+                )
+                archived = watch_and_publish.archive_terminal_package(live_zip, root / "state.json")
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            token = watch_and_publish.package_token(zip_path)
+            expected_archive = watch_dir / "processed" / f"{token}-{live_zip.name}"
+            self.assertTrue(published)
+            self.assertTrue(archived)
+            self.assertFalse(live_zip.exists())
+            self.assertEqual(list(watch_dir.glob("*.zip")), [])
+            self.assertTrue(expected_archive.is_file())
+            self.assertEqual(Path(record["zip"]), expected_archive)
+
+    def test_failed_package_is_retained_without_repeated_extraction(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, tamper_semantics=True)
+            watch_dir = root / "watch"
+            watch_dir.mkdir()
+            live_zip = watch_dir / "package.zip"
+            live_zip.write_bytes(zip_path.read_bytes())
+
+            def forbidden_publisher(*args, **kwargs):
+                raise AssertionError("publisher must not run for a failed package")
+
+            original_run = watch_and_publish.subprocess.run
+            original_extract = watch_and_publish.safe_extract
+            extract_calls = unittest.mock.Mock(side_effect=AssertionError("failed package must not be extracted again"))
+            watch_and_publish.subprocess.run = forbidden_publisher
+            try:
+                first = watch_and_publish.process_package(
+                    live_zip,
+                    root / "work",
+                    root / "state.json",
+                    Path("publisher.py"),
+                    1,
+                    False,
+                )
+                archived = watch_and_publish.archive_terminal_package(live_zip, root / "state.json")
+                token = watch_and_publish.package_token(zip_path)
+                archived_path = watch_dir / "failed" / f"{token}-{live_zip.name}"
+                watch_and_publish.safe_extract = extract_calls
+                second = watch_and_publish.process_package(
+                    archived_path,
+                    root / "work",
+                    root / "state.json",
+                    Path("publisher.py"),
+                    1,
+                    False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+                watch_and_publish.safe_extract = original_extract
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(first)
+            self.assertTrue(archived)
+            self.assertFalse(second)
+            self.assertFalse(live_zip.exists())
+            self.assertEqual(record["attempts"], 1)
+            self.assertEqual(record["status"], "abandoned")
+            extract_calls.assert_not_called()
+
+    def test_retrying_package_stays_in_watch_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, tamper_dashboard=True)
+            watch_dir = root / "watch"
+            watch_dir.mkdir()
+            live_zip = watch_dir / "package.zip"
+            live_zip.write_bytes(zip_path.read_bytes())
+            published = watch_and_publish.process_package(
+                live_zip,
+                root / "work",
+                root / "state.json",
+                Path("publisher.py"),
+                3,
+                False,
+            )
+            archived = watch_and_publish.archive_terminal_package(live_zip, root / "state.json")
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertFalse(archived)
+            self.assertTrue(live_zip.is_file())
+            self.assertEqual(record["status"], "retrying")
+
+    def test_reconcile_repairs_state_path_for_archived_package(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            watch_dir = root / "watch"
+            watch_dir.mkdir()
+            live_zip = watch_dir / "package.zip"
+            live_zip.write_bytes(zip_path.read_bytes())
+            watch_and_publish.process_package(
+                live_zip,
+                root / "work",
+                root / "state.json",
+                Path("publisher.py"),
+                1,
+                True,
+            )
+            watch_and_publish.archive_terminal_package(live_zip, root / "state.json")
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            stale_path = root / "missing.zip"
+            record["zip"] = str(stale_path)
+            (root / "state.json").write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+
+            watch_and_publish.reconcile_archived_packages(watch_dir, root / "state.json")
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(stale_path.exists())
+            self.assertTrue(Path(record["zip"]).is_file())
+
     def test_recomputed_semantic_gate_blocks_forged_green_review(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -4321,10 +4473,13 @@ class WatcherTest(unittest.TestCase):
                     zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
                     ledger_path=root / "publication-ledger.jsonl",
                 )
+                repair_deferred = watch_and_publish.archive_terminal_package(zip_path, root / "state.json")
+                repair_preserved = zip_path.is_file()
                 second = watch_and_publish.process_package(
                     zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
                     ledger_path=root / "publication-ledger.jsonl",
                 )
+                repair_archived = watch_and_publish.archive_terminal_package(zip_path, root / "state.json")
             finally:
                 watch_and_publish.subprocess.run = original_run
                 watch_and_publish.seed_feedback_ledger = original_seed
@@ -4334,6 +4489,10 @@ class WatcherTest(unittest.TestCase):
             records = content_memory.load_records(root / "publication-ledger.jsonl")
             self.assertTrue(first)
             self.assertFalse(second)
+            self.assertFalse(repair_deferred)
+            self.assertTrue(repair_preserved)
+            self.assertTrue(repair_archived)
+            self.assertFalse(zip_path.exists())
             self.assertEqual([call[2] for call in calls], ["status", "publish", "status"])
             self.assertEqual(len(seed_calls), 2)
             self.assertEqual(record["ledger_status"], "seeded")

@@ -32,6 +32,8 @@ DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publ
 STATE_VERSION = 1
 SHOWCASE_ROOT = Path(__file__).resolve().parents[1]
 ORIGINALITY_ENDPOINT_COOLDOWN_RELEASES = 8
+SUCCESS_STATUSES = {"published", "drafted"}
+FAILURE_STATUSES = {"failed", "abandoned"}
 
 
 def load_state(path: Path) -> dict[str, Any]:
@@ -59,6 +61,60 @@ def safe_extract(zip_path: Path, destination: Path) -> None:
             target.parent.mkdir(parents=True, exist_ok=True)
             with archive.open(member) as source, target.open("wb") as output:
                 shutil.copyfileobj(source, output)
+
+
+def package_token(zip_path: Path) -> str:
+    return hashlib.sha256(zip_path.read_bytes()).hexdigest()[:16]
+
+
+def archive_terminal_package(zip_path: Path, state_path: Path) -> bool:
+    """Move a completed package out of the live watch directory.
+
+    Failed packages are retained in a sibling directory so their zip and QA
+    evidence remain available without forcing the watcher to rescan them.
+    """
+    state = load_state(state_path)
+    token = package_token(zip_path)
+    record = state["packages"].get(token)
+    status = str(record.get("status", "")) if record else ""
+    if status == "published" and record.get("ledger_status") == "seed_failed":
+        # Leave the package live so the watcher can finish feedback-ledger repair.
+        return False
+    if status in SUCCESS_STATUSES:
+        outcome = "processed"
+    elif status in FAILURE_STATUSES:
+        outcome = "failed"
+    else:
+        return False
+
+    archive_dir = zip_path.parent / outcome
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    target = archive_dir / f"{token}-{zip_path.name}"
+    record["zip"] = str(target)
+    record["archived_at"] = datetime.now(timezone.utc).isoformat()
+    # Commit the destination first. If interrupted before the move, the next
+    # scan sees a terminal status and retries this idempotent operation.
+    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    zip_path.replace(target)
+    return True
+
+
+def reconcile_archived_packages(watch_dir: Path, state_path: Path) -> None:
+    """Repair paths if the process stopped between archiving and state save."""
+    state = load_state(state_path)
+    changed = False
+    for outcome in ("processed", "failed"):
+        archive_dir = watch_dir / outcome
+        if not archive_dir.exists():
+            continue
+        for archive_path in archive_dir.glob("*.zip"):
+            token = package_token(archive_path)
+            record = state["packages"].get(token)
+            if record and Path(str(record.get("zip", ""))) != archive_path:
+                record["zip"] = str(archive_path)
+                changed = True
+    if changed:
+        state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def package_identity(package_dir: Path) -> tuple[str, str]:
@@ -317,7 +373,7 @@ def process_package(
     ledger_path: Path | None = None,
 ) -> bool:
     state = load_state(state_path)
-    token = hashlib.sha256(zip_path.read_bytes()).hexdigest()[:16]
+    token = package_token(zip_path)
     record = state["packages"].setdefault(token, {"zip": str(zip_path), "attempts": 0, "status": "pending"})
     if record["status"] in {"published", "drafted"}:
         needs_repair = (
@@ -586,18 +642,28 @@ def main() -> int:
     args = parser.parse_args()
     args.watch_dir.mkdir(parents=True, exist_ok=True)
     args.work_dir.mkdir(parents=True, exist_ok=True)
+    reconcile_archived_packages(args.watch_dir, args.state)
     while True:
         zips = sorted(args.watch_dir.glob("*.zip"), key=lambda path: path.stat().st_mtime)
         for zip_path in zips:
-            process_package(
-                zip_path,
-                args.work_dir,
-                args.state,
-                args.publisher,
-                args.max_attempts,
-                args.draft,
-                ledger_path=args.ledger,
-            )
+            try:
+                process_package(
+                    zip_path,
+                    args.work_dir,
+                    args.state,
+                    args.publisher,
+                    args.max_attempts,
+                    args.draft,
+                    ledger_path=args.ledger,
+                )
+                archive_terminal_package(zip_path, args.state)
+            except Exception as exc:
+                # A malformed or transiently locked package must not stop other releases.
+                print(json.dumps({
+                    "ok": False,
+                    "zip": str(zip_path),
+                    "error": str(exc),
+                }, ensure_ascii=False), file=sys.stderr)
         if args.once:
             return 0
         time.sleep(max(5.0, args.interval))
