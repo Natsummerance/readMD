@@ -341,7 +341,7 @@ jobs:
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
           apt-get install -y --no-install-recommends \
-            ca-certificates git wget build-essential \
+            ca-certificates git wget build-essential pkg-config \
             libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
             libsqlite3-dev libffi-dev liblzma-dev
       - uses: actions/checkout@v4
@@ -351,7 +351,10 @@ jobs:
           wget -q https://www.python.org/ftp/python/3.11.16/Python-3.11.16.tgz
           tar -xzf Python-3.11.16.tgz
           cd Python-3.11.16
-          ./configure --prefix="$RUNNER_TEMP/python3.11" --with-ensurepip=install
+          ./configure --enable-shared \
+            --prefix="$RUNNER_TEMP/python3.11" \
+            LDFLAGS="-Wl,-rpath,$RUNNER_TEMP/python3.11/lib" \
+            --with-ensurepip=install
           make -j"$(nproc)"
           make install
           cd ..
