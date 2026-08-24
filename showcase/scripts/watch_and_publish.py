@@ -30,6 +30,7 @@ from validate_package import (
     publisher_asset_errors,
     publisher_directive_errors,
     publisher_input_errors,
+    publisher_learning_snapshot_errors,
     publisher_resonance_source_errors,
     variant_selection_integrity_errors,
 )
@@ -429,6 +430,9 @@ def process_package(
         variants = json.loads((package_dir / "variants.json").read_text(encoding="utf-8"))
         if variants.get("ok") is not True:
             raise ValueError("package variants.json is not green")
+        learning_errors = publisher_learning_snapshot_errors(package_dir, ledger_path)
+        if learning_errors:
+            raise ValueError("publisher learning evidence contract failed: " + "; ".join(learning_errors))
         metadata = json.loads((package_dir / "metadata.json").read_text(encoding="utf-8"))
         selected_variant_id = metadata.get("variant_id")
         reported_variant_id = variants.get("chosen_variant_id")

@@ -34,6 +34,17 @@ IMMUTABLE_FIELDS = (
     "published_url",
 )
 METRIC_SOURCES = {"xiaohongshu-web", "manual"}
+
+
+def learning_fingerprint(records: list[dict[str, Any]]) -> str:
+    """Hash the exact ordered evidence used by copy selection and reporting."""
+    canonical = json.dumps(
+        records,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 COMMENT_THEME_TERMS = {
     "presentation": ("放映", "上台", "演示", "ppt", "幻灯"),
     "academic": ("论文", "组会", "课程", "讲义", "学术", "答辩"),

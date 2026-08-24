@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from audit_copy import audit_package
-from content_memory import load_records
+from content_memory import learning_fingerprint, load_records
 from build_story import apply_selected_cover, build_story
 from copy_variants import select_variant
 from export_wechat import export_package
@@ -79,6 +79,11 @@ def build_package(
         base_metadata=metadata,
         history=history,
     )
+    variant_selection["learning_snapshot"] = {
+        "schema_version": 1,
+        "record_count": len(history),
+        "sha256": learning_fingerprint(history),
+    }
     story = apply_selected_cover(story, metadata)
     (package_dir / "variants.json").write_text(json.dumps(variant_selection, ensure_ascii=False, indent=2), encoding="utf-8")
     (package_dir / "story.json").write_text(json.dumps(story, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -91,10 +96,34 @@ def build_package(
     return story, metadata
 
 
-def compose_and_validate(package_dir: Path, repo_root: Path) -> list[str]:
+def compose_and_validate(
+    package_dir: Path,
+    repo_root: Path,
+    *,
+    memory_path: Path | None = None,
+) -> list[str]:
     compose_script = repo_root / "showcase" / "scripts" / "compose_cards.js"
     package_dir.mkdir(parents=True, exist_ok=True)
     errors: list[str] = []
+    if memory_path is not None:
+        current_records = load_records(memory_path)
+        performance_report.generate_report(current_records, package_dir)
+        try:
+            snapshot = json.loads(
+                (package_dir / "variants.json").read_text(encoding="utf-8")
+            ).get("learning_snapshot")
+        except Exception as exc:
+            errors.append(f"learning snapshot unreadable: {exc}")
+        else:
+            expected = {
+                "schema_version": 1,
+                "record_count": len(current_records),
+                "sha256": learning_fingerprint(current_records),
+            }
+            if snapshot != expected:
+                errors.append(
+                    "learning evidence changed after copy selection; rebuild the story and copy"
+                )
     composed = True
     try:
         subprocess.run(["node", str(compose_script), str(package_dir)], cwd=repo_root, check=True)
@@ -158,7 +187,7 @@ def main() -> int:
     args = parser.parse_args()
     repo_root = Path(__file__).resolve().parents[2]
     if args.finalize:
-        errors = compose_and_validate(args.output, repo_root)
+        errors = compose_and_validate(args.output, repo_root, memory_path=args.memory)
         report = json.loads((args.output / "qa.json").read_text(encoding="utf-8"))
         print(json.dumps(report, ensure_ascii=False))
         if errors:
@@ -179,7 +208,7 @@ def main() -> int:
     )
     errors: list[str] = []
     if not args.skip_compose:
-        errors = compose_and_validate(args.output, repo_root)
+        errors = compose_and_validate(args.output, repo_root, memory_path=args.memory)
         report = json.loads((args.output / "qa.json").read_text(encoding="utf-8"))
         print(json.dumps(report, ensure_ascii=False))
         if errors:

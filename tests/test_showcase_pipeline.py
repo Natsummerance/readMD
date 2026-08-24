@@ -3112,6 +3112,71 @@ class BuildPipelineTest(unittest.TestCase):
         self.assertEqual(calls, ["pattern", "validate", "dashboard"])
         self.assertTrue(report["ok"])
 
+    def test_finalize_refreshes_report_and_rejects_stale_learning_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            package = root / "package"
+            ledger = root / "ledger.jsonl"
+            record = {
+                "release": "v1.0.0",
+                "title": "旧标题",
+                "title_formula_id": "#36",
+                "hook_type": "outcome-led",
+                "published_at": "2026-08-20T00:00:00Z",
+                "impressions": 1000,
+                "likes": 40,
+                "collects": 60,
+                "comments": 30,
+                "shares": 10,
+                "follows": 5,
+                "metrics_status": "complete",
+            }
+            ledger.write_text(json.dumps(record, ensure_ascii=False) + "\n", encoding="utf-8")
+            package.mkdir()
+            (package / "variants.json").write_text(json.dumps({
+                "ok": True,
+                "learning_snapshot": {
+                    "schema_version": 1,
+                    "record_count": 0,
+                    "sha256": content_memory.learning_fingerprint([]),
+                },
+            }), encoding="utf-8")
+            original_run = build_package_module.subprocess.run
+            original_audit = build_package_module.audit_package
+            original_export = build_package_module.export_package
+            original_pattern = build_package_module.pattern_audit.audit_package
+            original_validate = build_package_module.validate_package
+            original_dashboard = build_package_module.review_dashboard.generate_package
+            build_package_module.subprocess.run = lambda *args, **kwargs: SimpleNamespace(returncode=0)
+            build_package_module.audit_package = lambda package_dir: {"ok": True, "total_score": 100}
+            build_package_module.export_package = lambda package_dir: {"ok": True, "errors": []}
+
+            def run_pattern(package_dir: Path) -> dict:
+                report = {"schema_version": 1, "ok": True, "passed_count": 10, "total_count": 10, "errors": []}
+                (package_dir / "pattern-audit.json").write_text(json.dumps(report), encoding="utf-8")
+                return report
+
+            build_package_module.pattern_audit.audit_package = run_pattern
+            build_package_module.validate_package = lambda package_dir, repo_root=None: []
+            build_package_module.review_dashboard.generate_package = lambda package_dir: {"ok": True, "errors": []}
+            try:
+                errors = build_package_module.compose_and_validate(
+                    package,
+                    ROOT,
+                    memory_path=ledger,
+                )
+            finally:
+                build_package_module.subprocess.run = original_run
+                build_package_module.audit_package = original_audit
+                build_package_module.export_package = original_export
+                build_package_module.pattern_audit.audit_package = original_pattern
+                build_package_module.validate_package = original_validate
+                build_package_module.review_dashboard.generate_package = original_dashboard
+
+            performance = json.loads((package / "performance-report.json").read_text(encoding="utf-8"))
+        self.assertEqual(performance["learning_count"], 1)
+        self.assertIn("learning evidence changed after copy selection", " ".join(errors))
+
     def test_dashboard_reads_provisional_qa_before_final_aggregate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             package = Path(tmp)
@@ -3257,6 +3322,21 @@ class ContentMemoryTest(unittest.TestCase):
             content_memory.append_record(store, second)
             records = content_memory.load_records(store)
         self.assertEqual([item["release"] for item in records], ["v1.0.0", "v1.0.1"])
+
+    def test_learning_fingerprint_is_order_sensitive_and_stable(self) -> None:
+        first = self.record()
+        second = self.record(release="v1.0.1", formula="#36", title="不用重做PPT，Markdown直接放映")
+        ordered = [first, second]
+        reordered = [second, first]
+
+        self.assertEqual(
+            content_memory.learning_fingerprint(ordered),
+            content_memory.learning_fingerprint([dict(first), dict(second)]),
+        )
+        self.assertNotEqual(
+            content_memory.learning_fingerprint(ordered),
+            content_memory.learning_fingerprint(reordered),
+        )
 
     def test_summary_ranks_verified_formula_performance(self) -> None:
         records = [
@@ -4839,6 +4919,51 @@ class WatcherTest(unittest.TestCase):
             self.assertIn("publisher originality contract failed", record["error"])
             self.assertIn("title hash matches v1.0.0", record["error"])
             self.assertIn("near-duplicate title (1.00) matches v1.0.0", record["error"])
+
+    def test_watcher_rechecks_learning_snapshot_against_publication_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            package = root / "package"
+            package.mkdir()
+            ledger = root / "publication-ledger.jsonl"
+            (package / "variants.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
+            self.assertEqual(
+                validate_package.publisher_learning_snapshot_errors(package, ledger),
+                [],
+            )
+
+            current_snapshot = {
+                "schema_version": 1,
+                "record_count": 0,
+                "sha256": content_memory.learning_fingerprint([]),
+            }
+            (package / "variants.json").write_text(json.dumps({
+                "learning_snapshot": current_snapshot,
+            }), encoding="utf-8")
+            self.assertEqual(
+                validate_package.publisher_learning_snapshot_errors(package, ledger),
+                [],
+            )
+            ledger.write_text(json.dumps({
+                "release": "v1.0.0",
+                "title": "新证据",
+                "title_formula_id": "#36",
+                "hook_type": "outcome-led",
+                "published_at": "2026-08-21T00:00:00Z",
+                "impressions": 1000,
+                "likes": 40,
+                "collects": 60,
+                "comments": 30,
+                "shares": 10,
+                "follows": 5,
+                "metrics_status": "complete",
+            }, ensure_ascii=False) + "\n", encoding="utf-8")
+            errors = validate_package.publisher_learning_snapshot_errors(package, ledger)
+
+        self.assertEqual(
+            errors,
+            ["learning snapshot differs from publication-ledger recomputation"],
+        )
 
     def test_watcher_blocks_copy_that_ignores_concern_intent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

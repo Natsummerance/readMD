@@ -13,7 +13,7 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
-from content_memory import load_records
+from content_memory import learning_fingerprint, load_records
 from copy_profiles import (
     COMMENT_SCENARIOS,
     COMMENT_SHOT_FOCUS,
@@ -183,6 +183,33 @@ def publisher_resonance_source_errors(package_dir: Path, ledger_path: Path | Non
     ):
         return [
             "resonance directive differs from publication-ledger recomputation"
+        ]
+    return []
+
+
+def publisher_learning_snapshot_errors(package_dir: Path, ledger_path: Path | None) -> list[str]:
+    """Reject copy selected from a different feedback evidence snapshot."""
+    if ledger_path is None:
+        return []
+    try:
+        variants = _load_json(package_dir / "variants.json")
+    except Exception as exc:
+        return [f"learning snapshot variants unreadable: {exc}"]
+
+    # Legacy packages predate explicit learning provenance and remain compatible.
+    snapshot = variants.get("learning_snapshot") if isinstance(variants, dict) else None
+    if not isinstance(snapshot, dict):
+        return []
+
+    records = load_records(ledger_path)
+    expected = {
+        "schema_version": 1,
+        "record_count": len(records),
+        "sha256": learning_fingerprint(records),
+    }
+    if snapshot != expected:
+        return [
+            "learning snapshot differs from publication-ledger recomputation"
         ]
     return []
 
