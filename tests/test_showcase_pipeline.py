@@ -5012,49 +5012,50 @@ class WatcherTest(unittest.TestCase):
             self.assertIn("title hash matches v1.0.0", record["error"])
             self.assertIn("near-duplicate title (1.00) matches v1.0.0", record["error"])
 
-    def test_watcher_rechecks_learning_snapshot_against_publication_ledger(self) -> None:
+    def test_watcher_reselects_only_on_material_learning_change(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             package = root / "package"
-            package.mkdir()
+            zip_path = self.make_package_zip(root)
+            variants = json.loads((package / "variants.json").read_text(encoding="utf-8"))
+            metadata = json.loads((package / "metadata.json").read_text(encoding="utf-8"))
             ledger = root / "publication-ledger.jsonl"
-            (package / "variants.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
+
+            # A pending record changes the local fingerprint but is excluded from
+            # metric learning, so it must not force a needless rebuild/reselection.
+            pending_record = {
+                "release": "v1.0.0",
+                "title": "pending evidence",
+                "title_formula_id": "#61",
+                "hook_type": "outcome-led",
+                "published_at": "2026-08-20T00:00:00Z",
+                "impressions": 0,
+                "likes": 0,
+                "collects": 0,
+                "comments": 0,
+                "shares": 0,
+                "follows": 0,
+                "metrics_status": "pending",
+            }
+            ledger.write_text(json.dumps(pending_record, ensure_ascii=False) + "\n", encoding="utf-8")
             self.assertEqual(
-                validate_package.publisher_learning_snapshot_errors(package, ledger),
+                validate_package.publisher_learning_materiality_errors(package, ledger),
                 [],
             )
 
-            current_snapshot = {
-                "schema_version": 1,
-                "record_count": 0,
-                "sha256": content_memory.learning_fingerprint([]),
-            }
-            (package / "variants.json").write_text(json.dumps({
-                "learning_snapshot": current_snapshot,
-            }), encoding="utf-8")
-            self.assertEqual(
-                validate_package.publisher_learning_snapshot_errors(package, ledger),
-                [],
-            )
-            ledger.write_text(json.dumps({
-                "release": "v1.0.0",
-                "title": "新证据",
-                "title_formula_id": "#36",
-                "hook_type": "outcome-led",
-                "published_at": "2026-08-21T00:00:00Z",
-                "impressions": 1000,
-                "likes": 40,
-                "collects": 60,
-                "comments": 30,
-                "shares": 10,
-                "follows": 5,
-                "metrics_status": "complete",
-            }, ensure_ascii=False) + "\n", encoding="utf-8")
-            errors = validate_package.publisher_learning_snapshot_errors(package, ledger)
+            with unittest.mock.patch.object(
+                validate_package,
+                "choose_variant",
+                return_value=({"variant_id": "identity-led__22"}, {"ok": True}),
+            ):
+                errors = validate_package.publisher_learning_materiality_errors(package, ledger)
 
         self.assertEqual(
             errors,
-            ["learning snapshot differs from publication-ledger recomputation"],
+            [(
+                "current publication evidence selects a different variant: "
+                f"package={metadata['variant_id']}, current=identity-led__22"
+            )],
         )
 
     def test_watcher_rejects_tampered_composed_card(self) -> None:

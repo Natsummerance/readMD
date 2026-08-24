@@ -14,6 +14,7 @@ import numpy as np
 from PIL import Image
 
 from content_memory import learning_fingerprint, load_records
+from audit_copy import audit_copy
 from copy_profiles import (
     COMMENT_SCENARIOS,
     COMMENT_SHOT_FOCUS,
@@ -25,6 +26,7 @@ from copy_profiles import (
     resonance_title_adjustment,
     SUPPORT_PHRASES,
 )
+from copy_variants import choose_variant, projected_composition
 from write_copy import build_resonance_directive
 
 
@@ -210,6 +212,48 @@ def publisher_learning_snapshot_errors(package_dir: Path, ledger_path: Path | No
     if snapshot != expected:
         return [
             "learning snapshot differs from publication-ledger recomputation"
+        ]
+    return []
+
+
+def publisher_learning_materiality_errors(package_dir: Path, ledger_path: Path | None) -> list[str]:
+    """Reject a draft only when current evidence would materially reselect it."""
+    if ledger_path is None:
+        return []
+    try:
+        variants = _load_json(package_dir / "variants.json")
+        metadata = _load_json(package_dir / "metadata.json")
+        story = _load_json(package_dir / "story.json")
+    except Exception as exc:
+        return [f"learning materiality inputs unreadable: {exc}"]
+
+    # Legacy packages without the persisted candidate pool remain compatible.
+    candidates = variants.get("variants") if isinstance(variants, dict) else None
+    if not isinstance(candidates, list) or not candidates:
+        return []
+
+    try:
+        composition = projected_composition(story)
+        for candidate in candidates:
+            candidate.setdefault("_report", audit_copy(
+                story=story,
+                metadata=candidate,
+                composition=composition,
+            ))
+        recomputed_variant, recomputed_report = choose_variant(
+            candidates,
+            load_records(ledger_path),
+        )
+    except Exception as exc:
+        return [f"current publication evidence rejects every candidate: {exc}"]
+
+    selected = str(metadata.get("variant_id") or variants.get("chosen_variant_id") or "")
+    if not selected:
+        return ["package omits the selected variant id"]
+    if recomputed_variant.get("variant_id") != selected:
+        return [
+            "current publication evidence selects a different variant: "
+            f"package={selected}, current={recomputed_variant.get('variant_id')}"
         ]
     return []
 
