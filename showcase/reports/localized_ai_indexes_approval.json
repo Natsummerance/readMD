@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "artifact": "localized llms.txt indexes",
+  "reviewed_at": "2026-08-24T14:15:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "ai-citation-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "Each locale has a compact H1, one-sentence description, absolute URLs, key facts, and repository link.",
+        "The indexes point to localized homepages and full corpora without duplicating every passage."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "localization-review",
+      "status": "approved",
+      "score": 9.86,
+      "evidence": [
+        "Simplified Chinese, Traditional Chinese, and Japanese wording matches each localized homepage.",
+        "Version, license, pagination threshold, privacy model, and conversion formats remain consistent."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-compliance-review",
+      "status": "approved",
+      "score": 9.79,
+      "evidence": [
+        "No ranking guarantee, user count, speed claim, or unsupported compatibility claim was added.",
+        "All facts trace to the approved website corpus and public repository."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.84,
+    "participants": ["product", "GEO", "localization", "compliance"],
+    "conditions": [
+      "validate_website.py must enforce all localized indexes.",
+      "Live routes must return HTTP 200 after deployment.",
+      "Footer links must point to their own locale indexes."
+    ]
+  }
+}

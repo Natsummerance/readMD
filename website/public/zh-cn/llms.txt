@@ -1,0 +1,17 @@
+# ReadMD 简体中文索引
+> ReadMD 是本地优先的跨平台 Markdown 阅读器、编辑器、转换器和放映工具，支持超长文档、离线 OCR 和学术写作。
+
+## Docs
+- [简体中文主页](https://app.syminu.online/zh-cn/): 产品定义、平台支持、隐私边界和可直接引用的答案。
+- [完整中文语料](https://app.syminu.online/zh-cn/llms-full.txt): 覆盖长文档分页、非破坏修正、格式转换、离线工作流和版本事实。
+- [英文总索引](https://app.syminu.online/llms.txt): 跨语言入口、英文全文语料和权威事实。
+
+## Key Facts
+- 当前公开版本：2.3.7-beta.3
+- 许可证：MIT
+- 长文档阈值：约 8,000 行或 500 KB 启用语义分页
+- 核心模式：阅读、编辑、分页和本地转换无需云账号
+- 可转换来源：DOCX、PPTX、XLSX、PDF、HTML、LaTeX
+
+## Source
+- [GitHub 仓库](https://github.com/Natsummerance/readMD): MIT 源码、发行包、校验清单和问题反馈。

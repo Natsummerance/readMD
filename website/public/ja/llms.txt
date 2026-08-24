@@ -1,0 +1,17 @@
+# ReadMD 日本語インデックス
+> ReadMD はローカル処理を優先するクロスプラットフォームの Markdown リーダー、エディター、変換ツール、発表ツールです。
+
+## Docs
+- [日本語ホームページ](https://app.syminu.online/ja/): 製品定義、対応環境、プライバシー境界、直接引用できる回答。
+- [日本語全文コーパス](https://app.syminu.online/ja/llms-full.txt): 長文の改ページ、非破壊修復、変換、オフライン作業、リリース事実を説明します。
+- [英語インデックス](https://app.syminu.online/llms.txt): 多言語入口、英語コーパス、公式な製品情報。
+
+## Key Facts
+- 公開バージョン: 2.3.7-beta.3
+- ライセンス: MIT
+- 長文の閾値: 約 8,000 行または 500 KB で意味単位の改ページ
+- 基本モデル: 読書、編集、改ページ、ローカル変換にクラウドアカウントは不要
+- 変換元: DOCX、PPTX、XLSX、PDF、HTML、LaTeX
+
+## Source
+- [GitHub リポジトリ](https://github.com/Natsummerance/readMD): MIT ソースコード、リリースファイル、チェックサム、Issue。
