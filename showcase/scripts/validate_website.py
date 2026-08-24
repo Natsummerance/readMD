@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import argparse
+import base64
+import hashlib
 import json
 import re
 import sys
@@ -65,8 +67,9 @@ class PageAudit(HTMLParser):
 
 def audit_page(path: Path, canonical: str) -> list[str]:
     errors: list[str] = []
+    content = path.read_text(encoding="utf-8")
     audit = PageAudit()
-    audit.feed(path.read_text(encoding="utf-8"))
+    audit.feed(content)
     if len(audit.title) < 15 or "ReadMD" not in audit.title:
         errors.append(f"{path}: missing descriptive ReadMD title")
     descriptions = [item for item in audit.metas if item.get("name") == "description"]
@@ -101,6 +104,19 @@ def audit_page(path: Path, canonical: str) -> list[str]:
             errors.append(f"{path}: eager hero image must declare fetchpriority=high")
     if "/assets/site.css" not in audit.stylesheets:
         errors.append(f"{path}: production stylesheet link is missing")
+    jsonld_match = re.search(r'(?s)<script type="application/ld\+json">(.*?)</script>', content)
+    if not jsonld_match:
+        errors.append(f"{path}: server-rendered JSON-LD is missing")
+    else:
+        try:
+            graph = json.loads(jsonld_match.group(1)).get("@graph", [])
+            types = {item.get("@type") for item in graph if isinstance(item, dict)}
+            if not {"WebPage", "SoftwareApplication"} <= types:
+                errors.append(f"{path}: JSON-LD lacks WebPage and SoftwareApplication")
+            if not any(isinstance(item, dict) and "speakable" in item for item in graph):
+                errors.append(f"{path}: JSON-LD lacks speakable definition")
+        except (TypeError, ValueError, json.JSONDecodeError) as exc:
+            errors.append(f"{path}: invalid JSON-LD: {exc}")
     return errors
 
 
@@ -193,6 +209,13 @@ def validate_security_headers() -> list[str]:
             errors.append(f"_headers omits security header: {header}")
     if "script-src 'self'" not in headers:
         errors.append("_headers CSP does not constrain scripts to self")
+    root = (PUBLIC / "index.html").read_text(encoding="utf-8")
+    match = re.search(r'(?s)<script type="application/ld\+json">(.*?)</script>', root)
+    if match:
+        digest = hashlib.sha256(match.group(1).encode("utf-8")).digest()
+        expected_hash = "sha256-" + base64.b64encode(digest).decode("ascii")
+        if expected_hash not in headers:
+            errors.append(f"_headers CSP omits current JSON-LD hash: {expected_hash}")
     return errors
 
 

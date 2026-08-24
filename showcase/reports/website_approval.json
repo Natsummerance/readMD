@@ -25,7 +25,8 @@
         "Four language indexes link their own llms-full.txt corpus.",
         "Question headings lead to self-contained answers; robots.txt permits major search and AI crawlers.",
         "All quantitative claims trace to README product behavior; download safety defers to checksums.",
-        "Security headers constrain scripts, styles, images, framing, referrers, and browser permissions."
+        "Security headers constrain scripts, styles, images, framing, referrers, and browser permissions.",
+        "Every language page carries localized WebPage, SoftwareApplication, dateModified, and speakable structured data."
       ]
     },
     {
