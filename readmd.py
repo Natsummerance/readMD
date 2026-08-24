@@ -49,8 +49,9 @@ from src.readmd_core import (
     readmd_fix,
 )
 from src.readmd_core.file_writer import save_text_atomic
+from src.readmd_core.static_assets import resolve_asset
 import src.readmd_modules as RM
-from src.readmd_modules.validators import validate_file_path, validate_command, paths_within
+from src.readmd_modules.validators import validate_file_path, validate_command
 
 APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 
@@ -617,50 +618,6 @@ def read_text(path):
 
 SAVE_EXTENSIONS = frozenset(('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt'))
 
-STARTUP_SCRIPTS = (
-    'vendor/marked.min.js',
-    'vendor/qrcode.min.js',
-    'js/core/state.js',
-    'js/core/i18n.js',
-    'js/core/dialog.js',
-    'js/core/settings.js',
-    'js/core/modules.js',
-    'js/core/tabs.js',
-    'js/core/history.js',
-    'js/core/dragdrop.js',
-    'js/reader/formula.js',
-    'js/reader/fixes.js',
-    'js/reader/toc.js',
-    'js/reader/search.js',
-    'js/reader/folder.js',
-    'js/reader/render.js',
-    'js/editor/preview.js',
-    'js/editor/image.js',
-    'js/editor/editor.js',
-    'js/features/ai.js',
-    'js/features/share.js',
-    'js/features/convert.js',
-    'js/features/ocr.js',
-    'js/features/web.js',
-    'js/features/clipboard.js',
-    'js/features/export.js',
-    'js/features/updater.js',
-    'app.js',
-)
-_startup_bundle_cache = {'body': None}
-
-
-def build_startup_bundle():
-    """Combine the ordered classic scripts into one cold-start request."""
-    if _startup_bundle_cache['body'] is None:
-        chunks = []
-        for relative_path in STARTUP_SCRIPTS:
-            script_path = os.path.join(APP_DIR, 'assets', *relative_path.split('/'))
-            with open(script_path, 'rb') as handle:
-                chunks.append(handle.read())
-        _startup_bundle_cache['body'] = b'\n;\n'.join(chunks)
-    return _startup_bundle_cache['body']
-
 
 class ReadMDHTTPServer(ThreadingHTTPServer):
     daemon_threads = True
@@ -720,7 +677,7 @@ class Handler(BaseHTTPRequestHandler):
             return False
         if not self.LAN_TOKEN:
             return True
-        if u.path in ('/', '/index.html') or u.path.startswith('/assets/'):
+        if u.path in ('/', '/index.html') or u.path.startswith('/assets/') or u.path.startswith('/i18n/'):
             return True
         qs = parse_qs(u.query)
         if qs.get('t', [''])[0] == self.LAN_TOKEN:
@@ -750,34 +707,24 @@ class Handler(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         path = u.path
         qs = parse_qs(u.query)
-        if path in ('/', '/index.html'):
-            self._send_index()
-        elif path == '/assets/readmd.boot.js':
-            self._send(
-                200,
-                'application/javascript; charset=utf-8',
-                build_startup_bundle(),
-                cache_control='public, max-age=31536000, immutable',
-            )
-        elif path.startswith('/assets/') or path.startswith('/i18n/'):
-            if path.startswith('/assets/'):
-                rel = path[len('/assets/'):]
-            else:
-                rel = path.lstrip('/')
-            fp = os.path.normpath(os.path.join(APP_DIR, 'assets', rel))
-            base = os.path.normpath(os.path.join(APP_DIR, 'assets'))
-            if not paths_within(fp, base):
+        asset = resolve_asset(APP_DIR, path, qs)
+        if asset is not None:
+            if asset.forbidden:
                 self._send(403, 'text/plain; charset=utf-8', b'forbidden')
                 return
+            if asset.body is not None:
+                self._send(
+                    200,
+                    asset.mime,
+                    asset.body,
+                    cache_control='public, max-age=31536000, immutable',
+                )
+                return
+            self._send_file(asset.path, asset.mime, immutable=asset.immutable)
+            return
 
-            mime = mimetypes.guess_type(fp)[0] or 'application/octet-stream'
-            if mime.startswith('text/') or mime in ('application/javascript', 'application/json'):
-                mime += '; charset=utf-8'
-            is_cached = rel.startswith('vendor/') or rel.startswith('i18n/')
-            self._send_file(fp, mime, immutable=bool(
-                is_cached or
-                parse_qs(u.query).get('v') or parse_qs(u.query).get('version') or
-                parse_qs(u.query).get('hash')))
+        if path in ('/', '/index.html'):
+            self._send_index()
 
         elif path == '/api/file':
             p = unquote(qs.get('p', [''])[0])

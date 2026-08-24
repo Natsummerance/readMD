@@ -10,7 +10,6 @@
 
 import json
 import logging
-import mimetypes
 import os
 import socket
 import threading
@@ -18,6 +17,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Callable, Dict, Optional, Tuple
 from urllib.parse import parse_qs, urlparse
 
+from src.readmd_core.static_assets import resolve_asset
 
 def is_port_in_use(port: int, host: str = '127.0.0.1') -> bool:
     """探测指定 TCP 端口是否被占用。"""
@@ -130,31 +130,22 @@ class ReadMDHTTPHandler(BaseHTTPRequestHandler):
         qs = parse_qs(u.query)
         app_dir = self.APP_DIR or os.getcwd()
 
-        # 1. 首页路由
+        # 1. Static assets use the shared path, MIME, and cache policy.
+        asset = resolve_asset(app_dir, path, qs)
+        if asset is not None:
+            if asset.forbidden:
+                self._send(403, 'text/plain; charset=utf-8', b'forbidden')
+                return
+            if asset.body is not None:
+                self._send(200, asset.mime, asset.body, immutable=asset.immutable)
+                return
+            self._send_file(asset.path, asset.mime, immutable=asset.immutable)
+            return
+
+        # 2. 首页路由
         if path in ('/', '/index.html'):
             idx_path = os.path.join(app_dir, 'assets', 'index.html')
             self._send_file(idx_path, 'text/html; charset=utf-8')
-            return
-
-        # 2. 静态资源路由 (assets/ & i18n/)
-        if path.startswith('/assets/') or path.startswith('/i18n/'):
-            if path.startswith('/assets/'):
-                rel = path[len('/assets/'):]
-            else:
-                rel = path.lstrip('/')
-            fp = os.path.normpath(os.path.join(app_dir, 'assets', rel))
-            base = os.path.normpath(os.path.join(app_dir, 'assets'))
-            # 严格防止路径遍历
-            if not fp.startswith(base):
-                self._send(403, 'text/plain; charset=utf-8', b'forbidden')
-                return
-
-            mime = mimetypes.guess_type(fp)[0] or 'application/octet-stream'
-            if mime.startswith('text/') or mime in ('application/javascript', 'application/json'):
-                mime += '; charset=utf-8'
-            is_cached = rel.startswith('vendor/') or rel.startswith('i18n/')
-            immutable = bool(is_cached or qs.get('v') or qs.get('version') or qs.get('hash'))
-            self._send_file(fp, mime, immutable=immutable)
             return
 
         # 3. 转发至外部注册的 API Router 调度器
