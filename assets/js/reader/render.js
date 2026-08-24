@@ -167,7 +167,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
       if (!wasActive) existingTab.scrollPos = previousScroll;
 
       if (wasActive) {
-        await loadDocCitations(d.path);
+        await prepareDocCitations(d.path, d.content);
         setFixes(d.fixes || [], d.stats || {});
         await renderContent(d.content, d.name);
         if (state.pagination.enabled && state.pagination.mode === 'paged' && previousPage > 0) {
@@ -190,7 +190,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
       state.tabs.push(newTab);
       state.activeTabId = newTab.id;
       syncStateFromActiveTab();
-      await loadDocCitations(d.path);
+      await prepareDocCitations(d.path, d.content);
       setFixes(d.fixes || [], d.stats || {});
       await renderContent(d.content, d.name);
       if (state.pagination.enabled && state.pagination.totalPages > 1) {
@@ -277,6 +277,18 @@ const PAGINATION_THRESHOLD_LINES = 8000;  // 8000 行以上超长文档自动激
 const PAGINATION_THRESHOLD_BYTES = 500 * 1024; // 500KB 以上超长文档自动激活智能分页
 
 let currentDocCitations = {};
+
+function documentMayCite(content) {
+  return /(?:^|\s)\[@[^\]\s]+|(?:^|\s)@[A-Za-z0-9_:-]+/.test(String(content || ''));
+}
+
+async function prepareDocCitations(filePath, content) {
+  if (!documentMayCite(content)) {
+    currentDocCitations = {};
+    return;
+  }
+  await loadDocCitations(filePath);
+}
 
 async function loadDocCitations(filePath) {
   currentDocCitations = {};
@@ -635,7 +647,7 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
         setTimeout(() => {
           targetEl.classList.remove('heading-target-highlight');
           targetEl.classList.remove('search-arrival');
-        }, 1500);
+        }, 2400);
       } else {
         el.scrollTop = 0;
       }

@@ -5,6 +5,15 @@
 
 /* ---------------- 目录 ---------------- */
 
+let tocCache = { source: null, pageCount: 0 };
+
+function refreshCurrentTocPage(list) {
+  const currentPage = state.pagination.currentPage;
+  list.querySelectorAll('.toc-cur-page').forEach(link => link.classList.remove('toc-cur-page'));
+  list.querySelectorAll(`[data-page-idx="${CSS.escape(String(currentPage))}"]`)
+    .forEach(link => link.classList.add('toc-cur-page'));
+}
+
 function buildToc() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const list = $('toc-list');
@@ -13,6 +22,16 @@ function buildToc() {
 
   // 1. 分页模式下：从全文所有分页提取全局完整大纲
   if (state.pagination && state.pagination.enabled && state.pagination.mode === 'paged' && state.pagination.pages && state.pagination.pages.length) {
+    if (
+      tocCache.source === state.pagination.rawContent &&
+      tocCache.pageCount === state.pagination.pages.length &&
+      list.childElementCount
+    ) {
+      refreshCurrentTocPage(list);
+      if (typeof updateActiveTocHeading === 'function') updateActiveTocHeading();
+      return;
+    }
+
     const seen = {};
     const globalHeadings = [];
 
@@ -126,11 +145,13 @@ function buildToc() {
       group.append(summary, container);
       list.appendChild(group);
     });
+    tocCache = { source: state.pagination.rawContent, pageCount: state.pagination.pages.length };
     if (typeof updateActiveTocHeading === 'function') updateActiveTocHeading();
     return;
   }
 
   // 2. 连续/常规模式下：从当前 DOM 提取大纲
+  tocCache = { source: null, pageCount: 0 };
   const headings = document.querySelectorAll('#content h1, #content h2, #content h3, #content h4, #content h5, #content h6');
   if (!headings.length) {
     list.innerHTML = `<div class="side-empty">${_t('sidebar.emptyToc') || '（当前文档暂无标题大纲）'}</div>`;

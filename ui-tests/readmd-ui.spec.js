@@ -31,6 +31,11 @@ async function setEditorContent(page, content) {
 }
 
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/update/check', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: false }),
+  }));
   await page.addInitScript(() => {
     try {
       localStorage.setItem('readmd_language', 'zh-CN');
@@ -1489,7 +1494,7 @@ test('search highlights a term spanning adjacent inline elements', async ({ page
   await page.evaluate(async () => {
     await renderVirtual('clipboard', 'inline.md', '', 'Before read<span>me</span> after', []);
   });
-  await page.evaluate(() => toggleSearch());
+  await page.locator('#btn-search').click();
   await page.locator('#search-input').fill('readme');
   await expect(page.locator('#search-count')).toHaveText('1/1');
   await expect(page.locator('#content mark.hl')).toHaveText('readme');

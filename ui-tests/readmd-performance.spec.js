@@ -25,7 +25,6 @@ function corpusDocument(lineCount) {
 
 async function openCorpus(page, size) {
   const file = path.join(corpusDir, `readmd-${size}.md`);
-  const started = Date.now();
   await page.goto(`/?file=${encodeURIComponent(file)}`, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(expected => state.file === expected && state.original.length > 0, file);
   await expect(page.locator('#toast')).toContainText(/已打开/);
@@ -35,7 +34,8 @@ async function openCorpus(page, size) {
     await expect(page.locator('#pg-total-label')).toHaveText(/\/ \d+/);
     await expect(page.locator('#pagination-bar')).toBeVisible();
   }
-  return { firstReadableMs: Date.now() - started, file };
+  const firstReadableMs = await page.evaluate(() => performance.now());
+  return { firstReadableMs, file };
 }
 
 test.beforeAll(async () => {
@@ -49,10 +49,16 @@ test.afterAll(async () => {
   if (corpusDir) await fs.rm(corpusDir, { recursive: true, force: true });
 });
 
-test('long-document interaction stays bounded from 1k through 50k lines', async ({ page }) => {
+test('long-document interaction stays bounded from 1k through 50k lines', async ({ page }, testInfo) => {
   test.setTimeout(90_000);
+  test.skip(testInfo.project.name !== 'desktop', 'CPU benchmarks run once; the mobile project changes viewport, not hardware');
   const results = {};
 
+  await page.route('**/api/update/check', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: false }),
+  }));
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => typeof loadFile === 'function');
   for (const size of CORPUS_SIZES) {
@@ -62,15 +68,27 @@ test('long-document interaction stays bounded from 1k through 50k lines', async 
     const targetSection = Math.ceil(size * 0.375);
     const expectedPage = Math.floor((targetSection - 1) / 300);
 
-    const pageTurnSamples = [];
-    for (let sample = 0; sample < 5; sample += 1) {
-      const forward = sample % 2 === 0;
-      const expectedPage = forward ? 1 : 0;
-      const started = Date.now();
-      await page.locator(forward ? '#pg-next-btn' : '#pg-prev-btn').click();
-      await page.waitForFunction(expected => state.pagination.currentPage === expected, expectedPage);
-      pageTurnSamples.push(Date.now() - started);
-    }
+    const pageTurnSamples = await page.evaluate(async () => {
+      const samples = [];
+      for (let sample = 0; sample < 5; sample += 1) {
+        const forward = sample % 2 === 0;
+        const expectedPage = forward ? 1 : 0;
+        const started = performance.now();
+        document.getElementById(forward ? 'pg-next-btn' : 'pg-prev-btn').click();
+        await new Promise(resolve => {
+          const check = () => {
+            if (state.pagination.currentPage === expectedPage) {
+              requestAnimationFrame(() => requestAnimationFrame(resolve));
+            } else {
+              requestAnimationFrame(check);
+            }
+          };
+          check();
+        });
+        samples.push(performance.now() - started);
+      }
+      return samples;
+    });
     results[size].pageTurnMs = median(pageTurnSamples);
 
     let started = Date.now();

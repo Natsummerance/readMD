@@ -5,12 +5,14 @@ function confirmAction({ title, message = '', confirmText, cancelText, danger = 
   if (!modal) return Promise.resolve(false);
 
   return new Promise(resolve => {
+    const opener = document.activeElement;
     const confirmButton = $('confirm-action');
     const cancelButton = $('confirm-cancel');
     const finish = value => {
       modal.removeEventListener('keydown', onKeyDown);
       modal.removeEventListener('click', onClick);
       modal.classList.add('hidden');
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true });
       resolve(value);
     };
     const onKeyDown = event => {

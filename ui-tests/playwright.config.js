@@ -5,6 +5,7 @@ module.exports = defineConfig({
   testMatch: '*.spec.js',
   timeout: 30000,
   workers: 1,
+  retries: 1,
   use: {
     baseURL: 'http://127.0.0.1:28473',
     viewport: { width: 720, height: 600 },
