@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "artifact": "IndexNow deployment notification workflow",
+  "reviewed_at": "2026-08-25T05:00:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "seo-infrastructure-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "Uses the vendor-neutral IndexNow endpoint rather than a single proprietary submission path.",
+        "Reads canonical production sitemap URLs directly, so notifications cannot diverge from deployed pages."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "security-review",
+      "status": "approved",
+      "score": 9.78,
+      "evidence": [
+        "The key is a non-secret ownership token stored at the required public location.",
+        "No credentials, private data, unpublished pages, or third-party tracking scripts are introduced."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-compliance-review",
+      "status": "approved",
+      "score": 9.76,
+      "evidence": [
+        "Only approved homepage, workflow, and download URLs are eligible for notification.",
+        "The command records actual HTTP status and does not claim indexing placement."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_execution_after_publication",
+    "score": 9.79,
+    "participants": ["SEO", "infrastructure", "compliance"],
+    "conditions": [
+      "Key file must be live on the production origin before submission.",
+      "Run only after GitHub Pages reports success.",
+      "Record only the real IndexNow HTTP response."
+    ]
+  }
+}
