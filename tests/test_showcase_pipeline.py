@@ -2916,18 +2916,51 @@ class PackageContentTest(unittest.TestCase):
             report = package_content.package_content(package, output)
             with zipfile.ZipFile(output) as archive:
                 names = set(archive.namelist())
+            verified = package_content.verify_package_manifest(output)
 
-        required = {
-            "story.json", "metadata.json", "copy-review.json", "pattern-audit.json",
-            "evidence/release-notes.md", "evidence/release.diff", "evidence/evidence-manifest.json",
-            "dashboard-qa.json", "review-dashboard.html", "wechat/wechat-qa.json",
-            "raw/capture.json", "raw/overview-reader.png", "images/xhs-01-cover.jpg",
-        }
-        self.assertTrue(report["ok"])
-        self.assertEqual(report["file_count"], len(names))
-        self.assertTrue(required <= names)
-        self.assertTrue(all("\\" not in name and not Path(name).is_absolute() for name in names))
-        self.assertRegex(report["sha256"], r"^[0-9a-f]{64}$")
+            required = {
+                "story.json", "metadata.json", "copy-review.json", "pattern-audit.json",
+                "evidence/release-notes.md", "evidence/release.diff", "evidence/evidence-manifest.json",
+                "dashboard-qa.json", "review-dashboard.html", "wechat/wechat-qa.json",
+                "raw/capture.json", "raw/overview-reader.png", "images/xhs-01-cover.jpg",
+            }
+            self.assertTrue(report["ok"])
+            self.assertEqual(report["file_count"], len(names))
+            self.assertTrue(required <= names)
+            self.assertTrue(all("\\" not in name and not Path(name).is_absolute() for name in names))
+            self.assertRegex(report["sha256"], r"^[0-9a-f]{64}$")
+            self.assertTrue(Path(report["manifest"]).is_file())
+            self.assertRegex(report["manifest_sha256"], r"^[0-9a-f]{64}$")
+            self.assertEqual(verified["archive_sha256"], report["sha256"])
+            self.assertEqual(verified["file_count"], report["file_count"])
+            self.assertEqual(set(verified["files"]), names)
+
+    def test_rejects_corrupt_or_changed_transport_package(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = self.make_package(Path(tmp))
+            output = Path(tmp) / "content-package.zip"
+            package_content.package_content(package, output)
+            corrupted = output.read_bytes() + b"truncated-simulation"
+            output.write_bytes(corrupted)
+            with self.assertRaisesRegex(ValueError, "package archive SHA-256 mismatch"):
+                package_content.verify_package_manifest(output)
+
+            output.write_bytes(corrupted[:-len(b"truncated-simulation")])
+            changed = Path(tmp) / "changed.zip"
+            with zipfile.ZipFile(output) as source, zipfile.ZipFile(changed, "w") as target:
+                for info in source.infolist():
+                    payload = source.read(info.filename)
+                    if info.filename == "title.txt":
+                        payload = bytes([payload[0] ^ 1]) + payload[1:]
+                    target.writestr(info, payload)
+            manifest_path = Path(str(output) + ".manifest.json")
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["archive_sha256"] = hashlib.sha256(changed.read_bytes()).hexdigest()
+            Path(str(changed) + ".manifest.json").write_text(
+                json.dumps(manifest, ensure_ascii=False), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "package SHA-256 mismatch: title.txt"):
+                package_content.verify_package_manifest(changed)
 
     def test_rejects_red_or_incomplete_package(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2979,6 +3012,7 @@ class BuildPipelineTest(unittest.TestCase):
         self.assertLess(finalize_index, package_index)
         self.assertIn("--finalize", showcase)
         self.assertIn("python showcase/scripts/package_content.py", showcase)
+        self.assertIn("content-package.zip.manifest.json", showcase)
         self.assertNotIn("Compress-Archive", showcase)
 
     def test_release_evidence_resolves_highest_previous_semantic_version(self) -> None:
@@ -5038,6 +5072,43 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(record["status"], "failed")
             self.assertIn("publisher asset contract failed", record["error"])
             self.assertIn("SHA-256 mismatch in composition.json", record["error"])
+
+    def test_watcher_verifies_transport_manifest_before_extraction(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original_zip = self.make_package_zip(root)
+            tampered_zip = root / "transport.zip"
+            manifest_path = Path(str(original_zip) + ".manifest.json")
+            Path(str(tampered_zip) + ".manifest.json").write_bytes(
+                manifest_path.read_bytes()
+            )
+            with zipfile.ZipFile(original_zip) as source, zipfile.ZipFile(tampered_zip, "w") as target:
+                for info in source.infolist():
+                    payload = source.read(info.filename)
+                    if info.filename == "title.txt":
+                        payload = bytes([payload[0] ^ 1]) + payload[1:]
+                    target.writestr(info, payload)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["archive_sha256"] = hashlib.sha256(tampered_zip.read_bytes()).hexdigest()
+            Path(str(tampered_zip) + ".manifest.json").write_text(
+                json.dumps(manifest, ensure_ascii=False), encoding="utf-8"
+            )
+
+            published = watch_and_publish.process_package(
+                tampered_zip,
+                root / "work",
+                root / "state.json",
+                Path("publisher.py"),
+                1,
+                False,
+            )
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("package SHA-256 mismatch: title.txt", record["error"])
+            self.assertFalse((root / "work").exists())
 
     def test_watcher_blocks_copy_that_ignores_concern_intent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

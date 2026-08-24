@@ -501,6 +501,7 @@ jobs:
           name: product-showcase-${{ github.event.release.tag_name }}
           path: |
             showcase/content-package.zip
+            showcase/content-package.zip.manifest.json
             showcase/output/package/qa.json
           if-no-files-found: error
 

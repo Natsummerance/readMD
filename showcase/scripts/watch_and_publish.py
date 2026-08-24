@@ -24,7 +24,7 @@ from copy_variants import (
     title_fingerprints,
 )
 from pattern_audit import audit_patterns
-from package_content import validate_release_evidence
+from package_content import validate_release_evidence, verify_package_manifest
 from review_dashboard import build_dashboard, collect_inputs, validate_dashboard
 from validate_package import (
     publisher_asset_errors,
@@ -394,6 +394,16 @@ def process_package(
     draft: bool,
     ledger_path: Path | None = None,
 ) -> bool:
+    try:
+        verify_package_manifest(zip_path)
+    except Exception as exc:
+        record = {"attempts": 1, "status": "failed", "error": str(exc)}
+        state = load_state(state_path)
+        token = package_token(zip_path)
+        state["packages"][token] = record
+        state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(json.dumps({"ok": False, "token": token, "status": "failed", "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return False
     state = load_state(state_path)
     token = package_token(zip_path)
     record = state["packages"].setdefault(token, {"zip": str(zip_path), "attempts": 0, "status": "pending"})

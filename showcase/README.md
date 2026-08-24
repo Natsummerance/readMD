@@ -51,6 +51,7 @@ python showcase/scripts/watch_and_publish.py --once --draft
 
 CI 使用 `package_content.py` 打包，压缩包内保留 `images/`、`raw/`、微信适配层和全部审计报告的相对路径；同时携带当次 Release notes 和 diff 快照及 SHA-256 清单。缺失合成图、真实截图、复核报告或证据哈希不匹配时会直接失败。
 合成器会把每张 1080×1440 成品卡的 SHA-256 写入 `composition.json`；构建 QA 和 watcher 都会重算这张清单，防止真实截图在合成后被替换或篡改。
+CI 还会生成 `content-package.zip.manifest.json` 传输清单，逐个记录包内文件的字节和哈希；watcher 在解包前核对压缩包与全部成员，任何损坏、缺失或多出的文件都会停止发布。
 
 真实全自动发布使用已登录 Edge 和 CDP proxy：
 
