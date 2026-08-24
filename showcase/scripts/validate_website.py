@@ -278,6 +278,25 @@ def validate_growth_homepages() -> list[str]:
     return errors
 
 
+def validate_special_page_internal_links() -> list[str]:
+    errors: list[str] = []
+    for language in LANGUAGES:
+        workflow = INTENT_PAGES[language]
+        download = DOWNLOAD_PAGES[language]
+        for source, target_contract in (
+            ("workflow", workflow),
+            ("download", download),
+        ):
+            content = target_contract["path"].read_text(encoding="utf-8")
+            target = download["canonical"] if source == "workflow" else workflow["canonical"]
+            target_path = urlparse(target).path
+            if f'href="{target_path}"' not in content:
+                errors.append(f"{language} {source} page omits its sibling internal link")
+            if '"@type":"BreadcrumbList"' not in content:
+                errors.append(f"{language} {source} page omits BreadcrumbList structured data")
+    return errors
+
+
 def validate_release_build() -> list[str]:
     errors: list[str] = []
     dist = SITE / "dist"
@@ -318,6 +337,7 @@ def main() -> int:
     errors.extend(validate_rights())
     errors.extend(validate_security_headers())
     errors.extend(validate_growth_homepages())
+    errors.extend(validate_special_page_internal_links())
     if args.release:
         errors.extend(validate_release_build())
     if errors:

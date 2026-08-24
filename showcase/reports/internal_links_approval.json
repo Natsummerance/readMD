@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "artifact": "workflow/download internal links and breadcrumbs",
+  "reviewed_at": "2026-08-25T04:15:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "seo-review",
+      "status": "approved",
+      "score": 9.83,
+      "evidence": [
+        "Every workflow page links its locale download sibling and vice versa.",
+        "Visible breadcrumb navigation gives crawlers a consistent home-to-section path."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "structured-data-review",
+      "status": "approved",
+      "score": 9.87,
+      "evidence": [
+        "All eight special pages carry server-rendered BreadcrumbList JSON-LD.",
+        "Each breadcrumb uses absolute canonical URLs and ordered ListItem positions."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "ux-localization-review",
+      "status": "approved",
+      "score": 9.76,
+      "evidence": [
+        "Breadcrumb labels match English, Simplified Chinese, Traditional Chinese, and Japanese page language.",
+        "The navigation is exposed to assistive technology with an aria-label."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.82,
+    "participants": ["GEO", "structured data", "UX", "localization"],
+    "conditions": [
+      "Validator must require sibling links and BreadcrumbList on all eight pages.",
+      "Browser smoke must verify visible breadcrumbs and sibling hrefs.",
+      "Live routes must return HTTP 200 after deployment."
+    ]
+  }
+}

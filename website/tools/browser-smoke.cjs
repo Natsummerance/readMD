@@ -58,6 +58,8 @@ const aiFiles = [
         webpImages: [...document.querySelectorAll('picture img')].filter(image => image.currentSrc.endsWith('.webp')).length,
         heroPreloaded: [...document.querySelectorAll('link[rel="preload"]')].some(link => link.href.endsWith('/media/overview-reader.webp')),
         shareLinks: document.querySelectorAll('#share a[href*="twitter.com"], #share a[href*="t.me"], #share a[href*="linkedin.com"]').length,
+        breadcrumb: !!document.querySelector('nav[aria-label="Breadcrumb"]'),
+        breadcrumbPaths: [...document.querySelectorAll('nav[aria-label="Breadcrumb"] a')].map(link => new URL(link.href).pathname),
       }))),
     });
   }
@@ -86,6 +88,13 @@ const aiFiles = [
     if (isHomepage) {
       if (!item.heroPreloaded) failures.push(`${item.route}: hero WebP is not preloaded`);
       if (item.shareLinks < 3) failures.push(`${item.route}: share links are incomplete`);
+    }
+    if (item.route.includes('/download/') || item.route.includes('/workflows/')) {
+      const expectedRelated = item.route.includes('/download/')
+        ? item.route.replace('/download/', '/workflows/')
+        : item.route.replace('/workflows/', '/download/');
+      if (!item.breadcrumb) failures.push(`${item.route}: breadcrumb is missing`);
+      if (!item.breadcrumbPaths?.includes(expectedRelated)) failures.push(`${item.route}: sibling internal link is missing`);
     }
   }
   if (process.env.CHECK_HTTP_HEADERS === '1') {
