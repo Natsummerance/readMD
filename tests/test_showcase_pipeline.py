@@ -1119,32 +1119,43 @@ class ValidatePackageTest(unittest.TestCase):
                     {
                         "strategy": "outcome-led",
                         "variant_id": "outcome-led__36__workflow",
+                        "title_formula_id": "#36",
                         "copy_frame": "workflow",
                         "ok": True,
                         "semantic_score": 100,
                         "history_adjustment": 0,
                         "resonance_frame_bonus": 8,
-                        "adjusted_score": 108,
-                        "reasons": ["comment request intent prefers the workflow narrative"],
+                        "resonance_title_bonus": 8,
+                        "adjusted_score": 116,
+                        "reasons": [
+                            "comment request intent prefers the workflow narrative",
+                            "comment request intent prefers the #36 title",
+                        ],
                     },
                     {
                         "strategy": "mechanism-curiosity",
                         "variant_id": "mechanism-curiosity__9__source",
+                        "title_formula_id": "#9",
                         "copy_frame": "source",
                         "ok": True,
                         "semantic_score": 120,
                         "history_adjustment": 0,
                         "resonance_frame_bonus": 0,
+                        "resonance_title_bonus": 0,
                         "adjusted_score": 120,
                         "reasons": [],
                     },
                 ],
             }), encoding="utf-8")
             errors = validate_package.validate_package(pkg)
-        self.assertTrue(
-            any("selected variant is not the highest scoring eligible variant" in error for error in errors),
-            errors,
-        )
+            self.assertTrue(
+                any("selected variant is not the highest scoring eligible variant" in error for error in errors),
+                errors,
+            )
+            self.assertFalse(
+                any("resonance title bonus differs" in error for error in errors),
+                errors,
+            )
 
     def test_accepts_complete_four_image_package(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2042,13 +2053,25 @@ class CopyVariantsTest(unittest.TestCase):
         )
         self.assertTrue(focused_base["resonance_directive"]["applied"])
         self.assertEqual(focused_report["chosen_copy_frame"], "workflow")
+        chosen_variant = next(
+            item for item in focused_report["variants"]
+            if item["variant_id"] == focused_report["chosen_variant_id"]
+        )
+        self.assertEqual(chosen_variant["title_formula_id"], "#36")
         winner = next(
             item for item in focused_report["ranked"]
             if item["variant_id"] == focused_report["chosen_variant_id"]
         )
         self.assertEqual(winner["resonance_frame_bonus"], 8)
+        self.assertEqual(winner["resonance_title_bonus"], 8)
         self.assertIn("comment request intent prefers the workflow narrative", winner["reasons"])
+        self.assertIn("comment request intent prefers the #36 title", winner["reasons"])
         self.assertEqual(focused_report["resonance_focus"], "presentation")
+        same_frame_alternate = next(
+            item for item in focused_report["ranked"]
+            if item["copy_frame"] == "workflow" and item["title_formula_id"] == "#61"
+        )
+        self.assertGreater(winner["adjusted_score"], same_frame_alternate["adjusted_score"])
 
     def variant_story(self) -> dict:
         return {

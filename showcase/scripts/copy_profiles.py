@@ -196,6 +196,14 @@ RESONANCE_INTENT_FRAME_WEIGHTS: dict[str, dict[str, int]] = {
 }
 
 
+RESONANCE_INTENT_TITLE_WEIGHTS: dict[str, dict[str, int]] = {
+    "request": {"#36": 8, "#61": 4},
+    "question": {"#9": 8, "#12": 4},
+    "concern": {"#61": 6, "#36": 3},
+    "praise": {"#22": 6},
+}
+
+
 RESONANCE_CONCERN_RESPONSE = (
     "常见顾虑先说清：源文件仍留在本地，放映、导出和分享只处理显示结果，不会替你改写原稿。"
 )
@@ -258,6 +266,35 @@ def resonance_topic_adjustment(
     if not preferred_terms or not any(term in normalized_topics for term in preferred_terms):
         return 0.0, None
     return 11.0, f"comment {focus} focus matches topic search terms"
+
+
+def resonance_title_adjustment(
+    directive: dict[str, Any] | None,
+    *,
+    title_formula_id: str,
+) -> tuple[float, list[str]]:
+    """Return the evidence-gated title-formula preference for comment intents."""
+    if not isinstance(directive, dict) or directive.get("applied") is not True:
+        return 0.0, []
+    evidence = directive.get("evidence")
+    if not isinstance(evidence, dict) or evidence.get("confidence") not in {"medium", "high"}:
+        return 0.0, []
+    if directive.get("support_available") is not True:
+        return 0.0, []
+
+    intents = evidence.get("top_intents")
+    if not isinstance(intents, list):
+        return 0.0, []
+
+    reasons: list[str] = []
+    adjustment = 0.0
+    for raw_intent in intents:
+        intent = str(raw_intent).strip()
+        weight = int(RESONANCE_INTENT_TITLE_WEIGHTS.get(intent, {}).get(title_formula_id, 0))
+        if weight:
+            adjustment += weight
+            reasons.append(f"comment {intent} intent prefers the {title_formula_id} title")
+    return min(adjustment, 8.0), reasons
 
 
 MECHANISM_TOPIC_SETS: dict[str, list[dict[str, Any]]] = {

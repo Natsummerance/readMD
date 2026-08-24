@@ -20,6 +20,7 @@ from copy_profiles import (
     RESONANCE_CONCERN_RESPONSE,
     resonance_frame_adjustment,
     resonance_topic_adjustment,
+    resonance_title_adjustment,
     SUPPORT_PHRASES,
 )
 
@@ -341,6 +342,7 @@ def variant_selection_integrity_errors(
             semantic_score = float(item["semantic_score"])
             history_adjustment = float(item["history_adjustment"])
             reported_bonus = float(item.get("resonance_frame_bonus", 0))
+            reported_title_bonus = float(item.get("resonance_title_bonus", 0))
             adjusted_score = float(item["adjusted_score"])
         except (KeyError, TypeError, ValueError):
             errors.append(f"variant ranking score contract is incomplete: {item.get('variant_id', 'legacy')}")
@@ -358,7 +360,25 @@ def variant_selection_integrity_errors(
             )
         if expected_reasons and not all(reason in item.get("reasons", []) for reason in expected_reasons):
             errors.append("variant selection omits comment-intent alignment reason")
-        projected_total = semantic_score + history_adjustment + reported_bonus
+        expected_title_bonus, expected_title_reasons = resonance_title_adjustment(
+            directive,
+            title_formula_id=str(item.get("title_formula_id") or ""),
+        )
+        if abs(reported_title_bonus - expected_title_bonus) > 0.001:
+            errors.append(
+                "variant resonance title bonus differs from directive: "
+                f"report={reported_title_bonus}, expected={expected_title_bonus}"
+            )
+        if expected_title_reasons and not all(
+            reason in item.get("reasons", []) for reason in expected_title_reasons
+        ):
+            errors.append("variant selection omits comment-intent title reason")
+        projected_total = (
+            semantic_score
+            + history_adjustment
+            + reported_bonus
+            + reported_title_bonus
+        )
         if abs(adjusted_score - projected_total) > 0.001:
             errors.append(
                 "variant adjusted score is inconsistent: "

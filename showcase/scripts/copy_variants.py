@@ -13,7 +13,11 @@ from typing import Any
 
 from audit_copy import audit_copy
 from content_memory import load_learning_records, partition_records, summarize
-from copy_profiles import frames_for_story, resonance_frame_adjustment
+from copy_profiles import (
+    frames_for_story,
+    resonance_frame_adjustment,
+    resonance_title_adjustment,
+)
 
 TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12", "#26")
 ENDPOINT_COOLDOWN_RELEASES = 8
@@ -285,7 +289,12 @@ def choose_variant(
             copy_frame=variant["copy_frame"],
         )
         history_adjustment = round(adjustment, 3)
+        title_bonus, title_reasons = resonance_title_adjustment(
+            resonance_directive,
+            title_formula_id=variant["title_formula_id"],
+        )
         reasons.extend(resonance_reasons)
+        reasons.extend(title_reasons)
         ranked.append({
             "variant_id": variant["variant_id"],
             "strategy": variant["strategy"],
@@ -297,7 +306,11 @@ def choose_variant(
             "semantic_score": report["total_score"],
             "history_adjustment": history_adjustment,
             "resonance_frame_bonus": round(resonance_bonus, 3),
-            "adjusted_score": round(report["total_score"] + history_adjustment + resonance_bonus, 3),
+            "resonance_title_bonus": round(title_bonus, 3),
+            "adjusted_score": round(
+                report["total_score"] + history_adjustment + resonance_bonus + title_bonus,
+                3,
+            ),
             "ok": report["ok"],
             "hard_failures": report["hard_failures"],
             "originality_failures": originality_failures,
@@ -323,7 +336,7 @@ def choose_variant(
             "semantic score plus confidence-gated historical hook/title performance, underexplored "
             f"historical frame performance, underexplored dimension coverage, renewable frame inventory "
             f"with a {ENDPOINT_COOLDOWN_RELEASES}-release endpoint cooldown, evidence-gated comment-intent "
-            "frame alignment, and minus recent fatigue; "
+            "frame/title alignment, and minus recent fatigue; "
             "insufficient evidence creates no performance bonus"
         ),
         "resonance_focus": (
