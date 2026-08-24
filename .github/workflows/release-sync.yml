@@ -1,0 +1,110 @@
+name: Sync main release candidates
+
+on:
+  workflow_run:
+    workflows: ["Test, package and release ReadMD"]
+    types: [completed]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: release-sync-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: false
+
+jobs:
+  update-beta-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: rc-*
+          path: release-assets
+          merge-multiple: true
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify and hash release candidates
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="v$(tr -d '\n' < VERSION)"
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+
+          root = Path("release-assets")
+          required = {
+              "ReadMDSetup-v2.3.7-beta.3.exe",
+              "ReadMD-portable-v2.3.7-beta.3.exe",
+              "readmd-vscode-2.3.7-beta.3.vsix",
+              "readmd-mcp-server-2.3.7-beta.3.zip",
+              "ReadMD-macos-x64-v2.3.7-beta.3.zip",
+              "ReadMD-macos-arm64-v2.3.7-beta.3.zip",
+              "ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage",
+              "readmd_2.3.7-beta.3_amd64.deb",
+              "ReadMD-linux-aarch64-v2.3.7-beta.3.AppImage",
+              "readmd_2.3.7-beta.3_arm64.deb",
+          }
+          files = {path.name: path for path in root.iterdir() if path.is_file()}
+          if set(files) != required:
+              raise SystemExit(f"asset mismatch: missing={sorted(required-set(files))}, extra={sorted(set(files)-required)}")
+          for path in files.values():
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              (root / f"{digest}.sha256").write_text(f"{digest}  {path.name}\n", encoding="utf-8")
+          PY
+          find release-assets -name '*.sha256' -delete
+          (
+            cd release-assets
+            find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' -print0 |
+              sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+          )
+          gh release view "$tag" >/dev/null
+
+      - name: Update existing prerelease assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="v$(tr -d '\n' < VERSION)"
+          gh release edit "$tag" --notes-file release/release_notes.md
+          find release-assets -maxdepth 1 -type f -print0 |
+            xargs -0 gh release upload "$tag" --clobber
+          python - <<'PY'
+          import json
+          import os
+          import subprocess
+          from pathlib import Path
+
+          expected = {path.name for path in Path("release-assets").iterdir() if path.is_file()}
+          payload = json.loads(subprocess.check_output([
+              "gh", "api", f"repos/{os.environ['GH_REPO']}/releases/tags/{tag}"
+          ]))
+          for asset in payload.get("assets", []):
+              if asset["name"] not in expected:
+                  subprocess.run([
+                      "gh", "api", "--method", "DELETE", asset["url"]
+                  ], check=True)
+          PY
+
+      - name: Summarize sync
+        run: |
+          {
+            echo "### Release candidates synced"
+            echo "- Commit: \`${{ github.event.workflow_run.head_sha }}\`"
+            echo "- Assets: $(find release-assets -maxdepth 1 -type f | wc -l)"
+          } >> "$GITHUB_STEP_SUMMARY"
