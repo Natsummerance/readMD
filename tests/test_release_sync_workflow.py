@@ -42,7 +42,8 @@ class ReleaseSyncWorkflowTest(unittest.TestCase):
         self.assertEqual(download["with"]["run-id"], "${{ github.event.workflow_run.id }}")
         self.assertTrue(download["with"]["merge-multiple"])
         self.assertIn("SHA256SUMS.txt", raw := self.raw)
-        self.assertIn("find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt'", raw)
+        self.assertIn('files=(release-assets/*)', raw)
+        self.assertIn('sha256sum "${files[@]}"', raw)
 
 
 if __name__ == "__main__":

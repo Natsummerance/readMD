@@ -67,11 +67,9 @@ jobs:
               (root / f"{digest}.sha256").write_text(f"{digest}  {path.name}\n", encoding="utf-8")
           PY
           find release-assets -name '*.sha256' -delete
-          (
-            cd release-assets
-            find . -maxdepth 1 -type f ! -name 'SHA256SUMS.txt' -print0 |
-              sort -z | xargs -0 sha256sum > SHA256SUMS.txt
-          )
+          rm -f release-assets/SHA256SUMS.txt
+          files=(release-assets/*)
+          sha256sum "${files[@]}" > release-assets/SHA256SUMS.txt
           gh release view "$tag" >/dev/null
 
       - name: Update existing prerelease assets
