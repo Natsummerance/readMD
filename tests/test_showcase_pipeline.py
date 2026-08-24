@@ -1714,6 +1714,71 @@ console.log(JSON.stringify({ adjacent, textOverlap, screenshotOcclusion }));
         self.assertEqual(len(result["screenshotOcclusion"]), 1)
         self.assertIn("UI capture overlaps caption", result["screenshotOcclusion"][0])
 
+    def test_layout_gate_rejects_off_canvas_and_clipped_text(self) -> None:
+        script = r"""
+const { clippedTextFailures, offCanvasFailures } = require(process.argv[1]);
+const inside = offCanvasFailures([
+  { kind: "text", label: "inside", x: 10, y: 10, width: 100, height: 30 },
+]);
+const outside = offCanvasFailures([
+  { kind: "text", label: "left", x: -5, y: 10, width: 100, height: 30 },
+  { kind: "text", label: "bottom", x: 10, y: 1430, width: 100, height: 30 },
+]);
+const fitted = clippedTextFailures([
+  {
+    label: "fitted",
+    scroll_width: 900,
+    client_width: 900,
+    scroll_height: 120,
+    client_height: 140,
+    clips_horizontal: true,
+    clips_vertical: true,
+  },
+]);
+const clipped = clippedTextFailures([
+  {
+    label: "caption",
+    scroll_width: 940,
+    client_width: 900,
+    scroll_height: 150,
+    client_height: 120,
+    clips_horizontal: true,
+    clips_vertical: true,
+  },
+]);
+const visibleOverflow = clippedTextFailures([
+  {
+    label: "display type",
+    scroll_width: 900,
+    client_width: 900,
+    scroll_height: 150,
+    client_height: 120,
+    clips_horizontal: false,
+    clips_vertical: false,
+  },
+]);
+console.log(JSON.stringify({ inside, outside, fitted, clipped, visibleOverflow }));
+"""
+        completed = subprocess.run(
+            ["node", "-e", script, str(ROOT / "showcase" / "compose_lib.cjs")],
+            check=True,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+        )
+        result = json.loads(completed.stdout)
+        self.assertEqual(result["inside"], [])
+        self.assertEqual(result["outside"], [
+            "off-canvas left: left",
+            "off-canvas bottom: bottom",
+        ])
+        self.assertEqual(result["fitted"], [])
+        self.assertEqual(result["clipped"], [
+            "horizontal text clipping: caption",
+            "vertical text clipping: caption",
+        ])
+        self.assertEqual(result["visibleOverflow"], [])
+
     def test_wide_hero_keeps_complete_view_and_fills_portrait_canvas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             source = Path(tmp) / "wide.png"

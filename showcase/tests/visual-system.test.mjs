@@ -80,7 +80,7 @@ test('summary keeps three outcomes and feature cards stay image-led', () => {
   assert.doesNotMatch(feature, /class="annotation"/);
 });
 
-test('card two measures the complete contained screenshot instead of its cropping frame', () => {
+test('card two preserves the complete view and fills the portrait canvas', () => {
   const image = {
     naturalWidth: 960,
     naturalHeight: 1280,
@@ -97,7 +97,9 @@ test('card two measures the complete contained screenshot instead of its croppin
     'data:image/png;base64,real',
     { design: loadDesignSystem() },
   );
-  assert.match(html, /\.hero img\{[^}]*object-fit:contain/);
+  assert.match(html, /\.hero-overview\{[^}]*object-fit:contain/);
+  assert.match(html, /\.hero-detail\{[^}]*object-fit:cover/);
+  assert.equal([...html.matchAll(/<img\b/g)].length, 2);
 });
 
 test('feature cards use the plan reader value instead of technical descriptions', () => {

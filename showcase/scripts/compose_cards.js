@@ -9,7 +9,9 @@ const {
   coverFeedReadiness,
   drawnImageBox,
   imageSrc,
+  clippedTextFailures,
   layoutCollisionFailures,
+  offCanvasFailures,
   planCards,
 } = require('../compose_lib.cjs');
 
@@ -32,16 +34,25 @@ async function main() {
       fs.writeFileSync(htmlPath, html, 'utf8');
       await page.goto(`file://${htmlPath.replace(/\\/g, '/')}`);
       await page.waitForLoadState('networkidle');
-      const overflowErrors = await page.evaluate(() => {
+      const overflowAudit = await page.evaluate(() => {
         const errors = [];
         if (document.documentElement.scrollWidth > window.innerWidth) errors.push('horizontal page overflow');
         if (document.documentElement.scrollHeight > window.innerHeight) errors.push('vertical page overflow');
-        for (const element of document.querySelectorAll('*')) {
-          if (!(element instanceof HTMLElement) || !element.innerText.trim()) continue;
-          if (element.scrollWidth > element.clientWidth + 1) errors.push(`text overflow: ${element.innerText.slice(0, 24)}`);
-        }
-        return errors;
+        const text_metrics = [...document.querySelectorAll('h1,h2,p,li,strong,span')]
+          .filter((element) => element.innerText.trim())
+          .map((element) => ({
+            label: element.innerText.trim().replace(/\s+/g, ' ').slice(0, 24),
+            clips_horizontal: ['hidden', 'clip', 'auto', 'scroll'].includes(getComputedStyle(element).overflowX),
+            clips_vertical: ['hidden', 'clip', 'auto', 'scroll'].includes(getComputedStyle(element).overflowY),
+            scroll_width: element.scrollWidth,
+            client_width: element.clientWidth,
+            scroll_height: element.scrollHeight,
+            client_height: element.clientHeight,
+          }));
+        return { errors, text_metrics };
       });
+      const clippingErrors = clippedTextFailures(overflowAudit.text_metrics);
+      const overflowErrors = [...overflowAudit.errors, ...clippingErrors];
       if (overflowErrors.length) throw new Error(`${card.file}: ${overflowErrors.join('; ')}`);
       const designAudit = await page.evaluate(() => {
         const luminance = (rgb) => {
@@ -110,7 +121,9 @@ async function main() {
         return [...textBoxes, ...screenshotBoxes];
       });
       const collisionErrors = layoutCollisionFailures(layoutBoxes);
-      if (collisionErrors.length) throw new Error(`${card.file} ${collisionErrors.join('; ')}`);
+      const boundaryErrors = offCanvasFailures(layoutBoxes);
+      const geometryErrors = [...collisionErrors, ...boundaryErrors];
+      if (geometryErrors.length) throw new Error(`${card.file} ${geometryErrors.join('; ')}`);
       const screenshotBoxes = await page.evaluate(() => {
         const images = [...document.images];
         if (!images.length) return null;

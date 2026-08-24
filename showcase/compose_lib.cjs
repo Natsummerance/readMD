@@ -91,6 +91,48 @@ function layoutCollisionFailures(boxes) {
   return [...new Set(failures)];
 }
 
+
+function offCanvasFailures(boxes, canvas = { width: 1080, height: 1440 }) {
+  return (boxes || []).flatMap((box, index) => {
+    const left = Number(box.x);
+    const top = Number(box.y);
+    const right = left + Number(box.width);
+    const bottom = top + Number(box.height);
+    if (![left, top, Number(box.width), Number(box.height)].every(Number.isFinite)) {
+      return [`invalid layout bounds: element-${index + 1}`];
+    }
+
+    const failures = [];
+    const label = String(box.label || `element-${index + 1}`);
+    if (left < -1) failures.push(`off-canvas left: ${label}`);
+    if (top < -1) failures.push(`off-canvas top: ${label}`);
+    if (right > Number(canvas.width) + 1) failures.push(`off-canvas right: ${label}`);
+    if (bottom > Number(canvas.height) + 1) failures.push(`off-canvas bottom: ${label}`);
+    return failures;
+  });
+}
+
+
+function clippedTextFailures(metrics) {
+  return (metrics || []).flatMap((item) => {
+    const label = String(item.label || "text");
+    const failures = [];
+    if (
+      item.clips_horizontal
+      && Number(item.scroll_width) > Number(item.client_width) + 1
+    ) {
+      failures.push(`horizontal text clipping: ${label}`);
+    }
+    if (
+      item.clips_vertical
+      && Number(item.scroll_height) > Number(item.client_height) + 1
+    ) {
+      failures.push(`vertical text clipping: ${label}`);
+    }
+    return failures;
+  });
+}
+
 function plannedFeatureCard(story, shot) {
   const plan = (story.card_plan || []).find((item) => item.shot_id === shot.id);
   if (!plan) throw new Error(`card_plan is missing a reader-value entry for ${shot.id}`);
@@ -288,7 +330,9 @@ module.exports = {
   drawnImageBox,
   imageSrc,
   layoutCollisionFailures,
+  clippedTextFailures,
   loadDesignSystem,
+  offCanvasFailures,
   planCards,
   slug,
 };
