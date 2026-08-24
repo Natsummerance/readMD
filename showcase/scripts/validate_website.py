@@ -47,7 +47,6 @@ RELEASE_ASSETS = frozenset({
     "readmd_2.3.7-beta.3_arm64.deb",
     "readmd-vscode-2.3.7-beta.3.vsix",
     "readmd-mcp-server-2.3.7-beta.3.zip",
-    "ReadMD-harmonyos-v2.3.7-beta.3.hap",
     "SHA256SUMS.txt",
 })
 

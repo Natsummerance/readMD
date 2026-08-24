@@ -14,9 +14,14 @@ class ReleasePackagingContractTest(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
         linux_build = (ROOT / "scripts/linux/build_linux.sh").read_text(encoding="utf-8")
         notes = (ROOT / "release/release_notes.md").read_text(encoding="utf-8")
+        readmes = "\n".join(
+            (ROOT / name).read_text(encoding="utf-8")
+            for name in ("README.md", "README.en.md", "README.ja.md", "README.zh-TW.md")
+        )
         self.assertNotIn("ReadMD-harmonyos", workflow)
         self.assertNotIn(".hap", linux_build)
         self.assertNotIn(".hap", notes)
+        self.assertNotIn("releases/latest/download/ReadMD-harmonyos", readmes)
 
     def test_mcp_zip_contains_runtime_source_and_requirements(self) -> None:
         workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")

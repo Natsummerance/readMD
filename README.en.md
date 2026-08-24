@@ -70,7 +70,7 @@ ReadMD solves the unglamorous problems in a long-lived document library: large f
 | 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage) | Portable Linux AppImage for Ubuntu, Debian, Fedora, Arch |
 | 🇨🇳 **Domestic OS / Linux** | UOS / Kylin / Deepin / Debian / Ubuntu | [⬇️ **readmd_2.3.7-beta.3_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_amd64.deb) | Native Deb package with desktop entry & MIME association |
 | 🖥️ **Kylin V10 / Phytium** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7-beta.3_arm64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_arm64.deb) | Native build for D2000/E2000 boards with UKUI/X11 software-render fallback |
-| 📱 **HarmonyOS NEXT** | OpenHarmony (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.7-beta.3.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.3.hap) | HarmonyOS native application package (.hap) |
+| 📱 **HarmonyOS NEXT** | Source project (DevEco build) | [🧩 **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb source project; no prebuilt HAP is provided |
 | 🧩 **VSCode Extension** | Universal VSIX | [⬇️ **readmd-vscode-2.3.7-beta.3.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.3.vsix) | Offline VSIX extension with sync preview & auto-repair |
 | 🤖 **MCP Server** | FastMCP stdio Package | [⬇️ **readmd-mcp-server-2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.3.zip) | Standalone FastMCP server for Claude Desktop / Cursor |
 | 🔐 **SHA-256 Hashes** | Checksum List | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | Complete SHA-256 integrity verification list |
@@ -87,7 +87,7 @@ ReadMD solves the unglamorous problems in a long-lived document library: large f
 - **Linglong Format**: Declarative `packages/linglong/linglong.yaml` for UOS AppStore distribution.
 
 ### 2. HarmonyOS NEXT (Pure Harmony) & OpenHarmony
-- **HAP Package**: Download [`ReadMD-harmonyos-v2.3.7-beta.3.hap`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.3.hap) or compile from source in DevEco Studio NEXT (`packages/harmonyos-app/`).
+- **Source Build**: Open [`packages/harmonyos-app/`](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) in DevEco Studio NEXT and compile it; no prebuilt HAP is provided.
 - **ArkUI + ArkWeb**: Reuses ReadMD offline rendering engine inside ArkWeb containers.
 - **ReadMDBridge (`ReadMDBridge.ets`)**:
   - Clipboard integration (`@ohos.pasteboard`);

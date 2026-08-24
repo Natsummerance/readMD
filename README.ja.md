@@ -70,7 +70,7 @@ ReadMD は、長期間保管する資料で起こりやすい問題に取り組�
 | 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.3.zip) | Intel Mac 向けネイティブビルド (Vision OCR 内蔵) |
 | 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage) | インストール不要の Linux AppImage パッケージ |
 | 🇨🇳 **Linux / 国産 OS** | Debian / Ubuntu / UOS / 麒麟 | [⬇️ **readmd_2.3.7-beta.3_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_amd64.deb) | Deb ネイティブインストールパッケージ |
-| 📱 **HarmonyOS** | HarmonyOS NEXT (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.7-beta.3.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.3.hap) | 鴻蒙ネイティブアプリパッケージ (.hap) |
+| 📱 **HarmonyOS** | ソースプロジェクト (DevEco ビルド) | [🧩 **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb のソースプロジェクト。ビルド済み HAP は未提供 |
 | 🧩 **VSCode 拡張** | VSIX パッケージ | [⬇️ **readmd-vscode-2.3.7-beta.3.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.3.vsix) | オフラインインストール用 VSIX 拡張機能 |
 | 🤖 **MCP Server** | FastMCP stdio パッケージ | [⬇️ **readmd-mcp-server-2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.3.zip) | Claude Desktop / Cursor 連携用 FastMCP パッケージ |
 | 🔐 **チェックサム** | SHA-256 リスト | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | 配布ファイルの整合性検証用チェックサム |

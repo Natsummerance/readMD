@@ -71,7 +71,7 @@ ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，�
 | 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage) | 通用 Linux 免安装 AppImage，赋予执行权限后直接运行 |
 | 🇨🇳 **国产信创系统** | 统信 UOS / 银河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.7-beta.3_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_amd64.deb) | Deb 原生安装包，集成应用菜单图标、MIME 关联与 UKUI/DDE 主题适配 |
 | 🖥️ **麒麟 V10 / 飞腾** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7-beta.3_arm64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_arm64.deb) | 飞腾 D2000/E2000 原生构建，内置 UKUI/X11 与软件渲染安全回退 |
-| 📱 **HarmonyOS NEXT** | 纯血鸿蒙 / OpenHarmony (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.7-beta.3.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.3.hap) | 鸿蒙原生应用安装包，ArkTS + ArkUI + ArkWeb 架构 |
+| 📱 **HarmonyOS NEXT** | 源码工程 (DevEco 构建) | [🧩 **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb 源码工程；当前不提供预编译 HAP |
 | 🧩 **VSCode 插件** | 通用 VSIX 扩展包 | [⬇️ **readmd-vscode-2.3.7-beta.3.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.3.vsix) | VSCode 离线安装包，支持双向同步预览与格式自愈 |
 | 🤖 **MCP Server** | FastMCP stdio 独立包 | [⬇️ **readmd-mcp-server-2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.3.zip) | 独立 FastMCP 服务端，供 Claude Desktop / Cursor 一键接入 |
 | 🔐 **SHA-256 校验** | 完整性清单 | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | 全量资产 SHA-256 哈希校验清单 |
@@ -89,7 +89,7 @@ ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，�
 - **玲珑分发格式**：提供 `packages/linglong/linglong.yaml`，适配统信应用商店分发。
 
 ### 2. HarmonyOS NEXT (纯血鸿蒙) 与 OpenHarmony 原生应用
-- **应用包安装**：直接下载 [`ReadMD-harmonyos-v2.3.7-beta.3.hap`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.3.hap) 或使用 DevEco Studio NEXT 打开 `packages/harmonyos-app/` 编译。
+- **源码构建**：使用 DevEco Studio NEXT 打开 [`packages/harmonyos-app/`](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) 编译；当前不提供预编译 HAP。
 - **ArkUI + ArkWeb 架构**：通过 ArkWeb 容器完整复用 ReadMD 离线渲染核心（Marked + KaTeX + 46 语种 i18n + LaTeX PRO）。
 - **系统能力桥接 (`ReadMDBridge.ets`)**：
   - 系统剪贴板交互 (`@ohos.pasteboard`)；

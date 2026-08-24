@@ -11,6 +11,7 @@ ReadMD 是免费、开源的本地 Markdown 智能阅读、编辑与全格式转
 - 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage`
 - 🇨🇳 Linux / 国产信创 Deb 安装包 (UOS / 银河麒麟 / Deepin / Ubuntu / Debian)：`readmd_2.3.7-beta.3_amd64.deb`
 - 🖥️ 麒麟 V10 / 飞腾 ARM64：`ReadMD-linux-aarch64-v2.3.7-beta.3.AppImage` 与 `readmd_2.3.7-beta.3_arm64.deb`
+- 📱 HarmonyOS NEXT / OpenHarmony：ArkTS 源码工程（DevEco Studio 构建）；当前不提供预编译 HAP
 - 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.7-beta.3.vsix`
 - 🤖 FastMCP Server 源码包：`readmd-mcp-server-2.3.7-beta.3.zip`
 - 🔐 校验清单：`SHA256SUMS.txt`
