@@ -219,6 +219,104 @@ def publisher_directive_errors(package_dir: Path) -> list[str]:
     return errors
 
 
+def variant_selection_integrity_errors(
+    metadata: dict[str, Any],
+    variants: dict[str, Any],
+) -> tuple[list[str], str | None]:
+    """Recheck ranking arithmetic, comment alignment, and winner selection."""
+    errors: list[str] = []
+    chosen_ranked_frame: str | None = None
+    if variants.get("ok") is not True or not variants.get("chosen_strategy"):
+        errors.append("variant selection report is incomplete")
+        return errors, chosen_ranked_frame
+
+    chosen_strategy = variants.get("chosen_strategy")
+    ranked_items = variants.get("ranked", [])
+    chosen_ranked = None
+    has_variant_ids = bool(ranked_items) and all(item.get("variant_id") for item in ranked_items)
+    if has_variant_ids and not variants.get("chosen_variant_id"):
+        errors.append("variant selection missing chosen_variant_id")
+        return errors, chosen_ranked_frame
+    if has_variant_ids:
+        chosen_ranked = next(
+            (item for item in ranked_items if item.get("variant_id") == variants["chosen_variant_id"]),
+            None,
+        )
+    else:
+        chosen_ranked = next((item for item in ranked_items if item.get("strategy") == chosen_strategy), None)
+    if not chosen_ranked:
+        errors.append("variant selection missing chosen ranking")
+        return errors, chosen_ranked_frame
+
+    chosen_ranked_frame = str(chosen_ranked.get("copy_frame") or "")
+    if chosen_ranked.get("ok") is not True or chosen_ranked.get("originality_failures"):
+        errors.append(
+            "variant originality gate failed: "
+            + "; ".join(map(str, chosen_ranked.get("hard_failures", [])))
+        )
+
+    directive = metadata.get("resonance_directive")
+    directive = directive if isinstance(directive, dict) else None
+    scored_items: list[tuple[float, dict[str, Any]]] = []
+    scores_complete = True
+    # Legacy fixed-six reports predate score arithmetic and resonance attribution;
+    # retain their simpler chosen-item gate.
+    modern_ranking = any(
+        "adjusted_score" in item or "resonance_frame_bonus" in item
+        for item in ranked_items
+    )
+    for item in ranked_items:
+        if not modern_ranking:
+            break
+        try:
+            semantic_score = float(item["semantic_score"])
+            history_adjustment = float(item["history_adjustment"])
+            reported_bonus = float(item.get("resonance_frame_bonus", 0))
+            adjusted_score = float(item["adjusted_score"])
+        except (KeyError, TypeError, ValueError):
+            errors.append(f"variant ranking score contract is incomplete: {item.get('variant_id', 'legacy')}")
+            scores_complete = False
+            continue
+
+        expected_bonus, expected_reasons = resonance_frame_adjustment(
+            directive,
+            copy_frame=str(item.get("copy_frame") or ""),
+        )
+        if abs(reported_bonus - expected_bonus) > 0.001:
+            errors.append(
+                "variant resonance frame bonus differs from directive: "
+                f"report={reported_bonus}, expected={expected_bonus}"
+            )
+        if expected_reasons and not all(reason in item.get("reasons", []) for reason in expected_reasons):
+            errors.append("variant selection omits comment-intent alignment reason")
+        projected_total = semantic_score + history_adjustment + reported_bonus
+        if abs(adjusted_score - projected_total) > 0.001:
+            errors.append(
+                "variant adjusted score is inconsistent: "
+                f"variant_id={item.get('variant_id', 'legacy')}, "
+                f"report={adjusted_score}, expected={projected_total}"
+            )
+        if item.get("ok") is True and not item.get("originality_failures"):
+            scored_items.append((adjusted_score, item))
+
+    if scores_complete and chosen_ranked.get("ok") is True and scored_items:
+        best_score = max(score for score, _ in scored_items)
+        try:
+            chosen_score = float(chosen_ranked["adjusted_score"])
+        except (KeyError, TypeError, ValueError):
+            chosen_score = float("-inf")
+        if chosen_score + 0.001 < best_score:
+            errors.append(
+                "selected variant is not the highest scoring eligible variant: "
+                f"selected={chosen_score}, best={best_score}"
+            )
+
+    focus = str((directive or {}).get("evidence", {}).get("focus", ""))
+    if focus and variants.get("resonance_focus") != focus:
+        errors.append("variant resonance focus differs from directive")
+    return errors, chosen_ranked_frame
+
+
 def publisher_input_errors(package_dir: Path) -> list[str]:
     """Keep the exact strings handed to Xiaohongshu identical to experiment metadata."""
     package_dir = package_dir.resolve()
@@ -418,48 +516,8 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
         try:
             variants = _load_json(variants_path)
             variant_report = variants
-            if variants.get("ok") is not True or not variants.get("chosen_strategy"):
-                errors.append("variant selection report is incomplete")
-            else:
-                chosen_strategy = variants.get("chosen_strategy")
-                ranked_items = variants.get("ranked", [])
-                chosen_ranked = None
-                has_variant_ids = bool(ranked_items) and all(item.get("variant_id") for item in ranked_items)
-                if has_variant_ids and not variants.get("chosen_variant_id"):
-                    errors.append("variant selection missing chosen_variant_id")
-                elif has_variant_ids:
-                    chosen_ranked = next(
-                        (item for item in ranked_items if item.get("variant_id") == variants["chosen_variant_id"]),
-                        None,
-                    )
-                else:
-                    chosen_ranked = next((item for item in ranked_items if item.get("strategy") == chosen_strategy), None)
-                if not chosen_ranked:
-                    errors.append("variant selection missing chosen ranking")
-                else:
-                    chosen_ranked_frame = str(chosen_ranked.get("copy_frame") or "")
-                    if chosen_ranked.get("ok") is not True or chosen_ranked.get("originality_failures"):
-                        errors.append(
-                            "variant originality gate failed: "
-                            + "; ".join(map(str, chosen_ranked.get("hard_failures", [])))
-                        )
-                    directive = metadata.get("resonance_directive")
-                    expected_bonus, expected_reasons = resonance_frame_adjustment(
-                        directive if isinstance(directive, dict) else None,
-                        copy_frame=chosen_ranked_frame,
-                    )
-                    reported_bonus = float(chosen_ranked.get("resonance_frame_bonus", 0))
-                    if abs(reported_bonus - expected_bonus) > 0.001:
-                        errors.append(
-                            "variant resonance frame bonus differs from directive: "
-                            f"report={reported_bonus}, expected={expected_bonus}"
-                        )
-                    if expected_reasons and not all(reason in chosen_ranked.get("reasons", []) for reason in expected_reasons):
-                        errors.append("variant selection omits comment-intent alignment reason")
-                    if expected_bonus:
-                        focus = str(directive.get("evidence", {}).get("focus", "general"))
-                        if variants.get("resonance_focus") != focus:
-                            errors.append("variant resonance focus differs from directive")
+            integrity_errors, chosen_ranked_frame = variant_selection_integrity_errors(metadata, variants)
+            errors.extend(integrity_errors)
         except Exception as exc:
             errors.append(f"variants.json unreadable: {exc}")
 

@@ -233,7 +233,11 @@ function updateSearchCount() {
 }
 
 function toggleSearch() {
-  if (state.mode === 'welcome' || (!state.file && !state.original)) return;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (state.mode === 'welcome' || (!state.file && !state.original)) {
+    showToast(_t('toast.searchNeedsDocument') || '请先打开文档，再按 Ctrl+F 搜索');
+    return;
+  }
   const bar = $('search-bar');
   if (bar.classList.contains('hidden')) {
     bar.classList.remove('hidden');

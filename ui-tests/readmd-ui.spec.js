@@ -1489,7 +1489,7 @@ test('search highlights a term spanning adjacent inline elements', async ({ page
   await page.evaluate(async () => {
     await renderVirtual('clipboard', 'inline.md', '', 'Before read<span>me</span> after', []);
   });
-  await page.locator('#btn-search').click();
+  await page.evaluate(() => toggleSearch());
   await page.locator('#search-input').fill('readme');
   await expect(page.locator('#search-count')).toHaveText('1/1');
   await expect(page.locator('#content mark.hl')).toHaveText('readme');
@@ -1750,6 +1750,114 @@ test('tabs, status regions, and stacked dialogs meet keyboard contracts', async 
     );
     expect(insideTopDialog).toBe(true);
   }
+});
+
+test('rename and BibTeX metadata cannot inject markup', async ({ page }) => {
+  const errors = []; page.on('pageerror', e => errors.push(String(e)));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderVirtual === 'function');
+
+  const hostileName = 'old"><img src=x onerror="window.__renamed=1">';
+  await page.evaluate(name => {
+    state.mode = 'file';
+    state.editing = false;
+    state.file = `/tmp/${name}.md`;
+    setFileTitle(`${name}.md`, true, state.file);
+  }, hostileName);
+  await page.locator('#file-title').click();
+  await expect(page.locator('#file-rename-input')).toBeVisible();
+  await expect(page.locator('#file-rename-input')).toHaveValue(hostileName);
+  await expect(page.locator('#file-rename-wrap img')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__renamed)).toBeUndefined();
+
+  await page.locator('#file-rename-input').press('Escape');
+  await page.evaluate(async () => {
+    currentDocCitations = {
+      key: {
+        short_cite: '"><img src=x onerror="window.__bibtexpwned=1">',
+        title: '"><img src=x onerror="window.__bibtexpwned=1">',
+        author: '<script>window.__bibtexpwned = true;</script>',
+        year: '2026',
+        journal: '</div><img src=x onerror="window.__bibtexpwned=1">',
+        doi: '10.1000/not<svg/onload=alert(1)>',
+        full_reference: 'Unsafe <img src=x onerror="window.__bibtexpwned=1"> reference',
+      },
+    };
+    await renderVirtual('clipboard', 'bib.md', '', 'See [@key].', []);
+    processBibCitations(document.querySelector('#content .markdown-body'));
+  });
+
+  await expect(page.locator('.bib-cite-badge')).toHaveAttribute('data-citekey', 'key');
+  await expect(page.locator('#content script, #content img[onerror]')).toHaveCount(0);
+  await expect(page.locator('.academic-references li')).toContainText('Unsafe');
+  await page.locator('.bib-cite-badge').dispatchEvent('mouseenter');
+  await expect(page.locator('.bib-hover-card')).toBeVisible();
+  await expect(page.locator('.bib-hover-card a')).toHaveCount(0);
+  await expect(page.locator('.bib-hover-card script, .bib-hover-card img[onerror]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__bibtexpwned)).toBeUndefined();
+  expect(errors).toEqual([]);
+});
+
+test('unsupported actions and destructive choices give managed feedback', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof deleteCurrentTpl === 'function');
+
+  await expect(page.locator('#btn-folder')).toBeDisabled();
+  await expect(page.locator('#btn-folder')).toHaveAttribute('aria-description', /浏览器模式|browser mode/i);
+  await page.evaluate(() => toggleSearch());
+  await expect(page.locator('#toast')).toContainText(/请先打开文档|Open a document/);
+  await expect(page.locator('#save-conflict-desc')).toHaveAttribute('data-i18n', 'dialog.saveConflictDesc');
+  await expect(page.locator('#update-progress-wrap')).toHaveAttribute('aria-live', 'polite');
+  await expect(page.locator('#update-progress-bar')).toHaveAttribute('role', 'progressbar');
+
+  await page.evaluate(() => {
+    const select = document.createElement('select');
+    select.className = 'presentation-select';
+    select.id = 'focus-check-select';
+    select.append(new Option('Focus target', 'target'));
+    document.body.prepend(select);
+  });
+  await page.evaluate(() => document.activeElement?.blur());
+  await page.keyboard.press('Tab');
+  const focusOutline = await page.evaluate(() => {
+    const style = getComputedStyle(document.getElementById('focus-check-select'));
+    const outline = style.outlineStyle;
+    document.getElementById('focus-check-select').remove();
+    return outline;
+  });
+  expect(['solid', 'auto']).toContain(focusOutline);
+
+  let deleted = false;
+  await page.route('**/api/ai/prompts', async route => {
+    deleted = true;
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, templates: [] }) });
+  });
+  await page.evaluate(() => {
+    state.ai.templates = [{ id: 'unsafe-template', name: 'Delete me' }];
+    state.ai.templateId = 'unsafe-template';
+    document.getElementById('tpl-id').value = 'unsafe-template';
+    window.__deleteResult = deleteCurrentTpl();
+  });
+  const dialog = page.locator('#confirm-modal');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute('role', 'dialog');
+  await expect(dialog).toHaveAttribute('aria-modal', 'true');
+  await expect(page.locator('#confirm-cancel')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  expect(deleted).toBe(false);
+
+  await page.evaluate(() => {
+    document.getElementById('tpl-id').value = 'unsafe-template';
+    window.__deleteResult = deleteCurrentTpl();
+  });
+  await expect(dialog).toBeVisible();
+  await page.route('**/api/ai/prompts', async route => {
+    deleted = true;
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, templates: [] }) });
+  });
+  await page.locator('#confirm-action').click();
+  await expect.poll(() => deleted).toBe(true);
 });
 
 

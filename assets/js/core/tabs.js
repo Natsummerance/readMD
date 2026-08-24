@@ -509,8 +509,7 @@ function promptDirtyClose(tabName) {
   return new Promise(resolve => {
     const modal = $('close-confirm-modal');
     if (!modal) {
-      const ok = confirm((_t('dialog.unsavedMsg', { name: tabName })) || `文档「${tabName}」有未保存的修改，确定要关闭吗？`);
-      resolve(ok ? 'discard' : 'cancel');
+      resolve('cancel');
       return;
     }
     const titleEl = $('close-confirm-title');

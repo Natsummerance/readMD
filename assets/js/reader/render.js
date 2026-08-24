@@ -60,10 +60,20 @@ function openFileRename() {
   const wrap = document.createElement('div');
   wrap.id = 'file-rename-wrap';
   wrap.className = 'file-rename-wrap';
-  wrap.innerHTML = '<input id="file-rename-input" class="file-rename-input" value="' + stem.replace(/"/g, '&quot;') + '" spellcheck="false" autocomplete="off" aria-label="' + (_t('tabs.rename') || '文件名称') + '"><span id="file-rename-ext" class="file-rename-ext">' + ext + '</span>';
+  const input = document.createElement('input');
+  input.id = 'file-rename-input';
+  input.className = 'file-rename-input';
+  input.value = stem;
+  input.spellcheck = false;
+  input.autocomplete = 'off';
+  input.setAttribute('aria-label', _t('tabs.rename') || '文件名称');
+  const extension = document.createElement('span');
+  extension.id = 'file-rename-ext';
+  extension.className = 'file-rename-ext';
+  extension.textContent = ext;
+  wrap.append(input, extension);
   title.parentNode.insertBefore(wrap, title.nextSibling);
 
-  const input = wrap.querySelector('#file-rename-input');
   input.focus();
   input.select();
 
@@ -1190,22 +1200,28 @@ function processBibCitations(body) {
     const parent = n.parentNode;
     if (!parent) continue;
     const text = n.nodeValue;
-    const replaced = text.replace(/\[@([a-zA-Z0-9_\-:]+)\]|@([a-zA-Z0-9_\-:]+)/g, (match, k1, k2) => {
-      const citeKey = k1 || k2;
+    const citationPattern = /\[@([a-zA-Z0-9_\-:]+)\]|@([a-zA-Z0-9_\-:]+)/g;
+    let cursor = 0;
+    let replaced = false;
+    let match;
+    while ((match = citationPattern.exec(text))) {
+      const citeKey = match[1] || match[2];
       const entry = currentDocCitations[citeKey];
-      if (!entry) return match;
+      if (!entry) continue;
       usedKeys.add(citeKey);
       const label = entry.short_cite || `[${citeKey}]`;
-      return `<span class="bib-cite-badge" data-citekey="${citeKey}">${label}</span>`;
-    });
-    if (replaced !== text) {
-      const temp = document.createElement('span');
-      temp.innerHTML = replaced;
-      while (temp.firstChild) {
-        parent.insertBefore(temp.firstChild, n);
-      }
-      parent.removeChild(n);
+      if (match.index > cursor) parent.insertBefore(document.createTextNode(text.slice(cursor, match.index)), n);
+      const badge = document.createElement('span');
+      badge.className = 'bib-cite-badge';
+      badge.dataset.citekey = citeKey;
+      badge.textContent = label;
+      parent.insertBefore(badge, n);
+      cursor = citationPattern.lastIndex;
+      replaced = true;
     }
+    if (!replaced) continue;
+    if (cursor < text.length) parent.insertBefore(document.createTextNode(text.slice(cursor)), n);
+    parent.removeChild(n);
   }
 
   body.querySelectorAll('.bib-cite-badge').forEach(badge => {
@@ -1217,15 +1233,17 @@ function processBibCitations(body) {
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     const refSection = document.createElement('section');
     refSection.className = 'academic-references';
-    refSection.innerHTML = '<h3>' + (_t('reader.referencesHeading') || 'References / 参考文献') + '</h3><ol></ol>';
-    const ol = refSection.querySelector('ol');
+    const heading = document.createElement('h3');
+    heading.textContent = _t('reader.referencesHeading') || 'References / 参考文献';
+    const ol = document.createElement('ol');
+    refSection.append(heading, ol);
 
     for (const key of usedKeys) {
       const entry = currentDocCitations[key];
       const li = document.createElement('li');
-      li.id = 'ref-' + key;
+      li.id = 'ref-' + encodeURIComponent(key);
       if (entry && entry.full_reference) {
-        li.innerHTML = marked.parseInline(entry.full_reference);
+        li.textContent = entry.full_reference;
       } else {
         li.textContent = key;
       }
@@ -1253,15 +1271,33 @@ function showBibHoverCard(e, key) {
   bibCardEl = document.createElement('div');
   bibCardEl.className = 'bib-hover-card';
   bibCardEl.dataset.key = key;
-  bibCardEl.innerHTML = `
-    <div class="bib-card-title">${entry.title || key}</div>
-    <div class="bib-card-author">${entry.author || ''} ${entry.year ? `(${entry.year})` : ''}</div>
-    <div class="bib-card-journal">${entry.journal || entry.booktitle || ''}</div>
-    <div class="bib-card-actions">
-      ${entry.doi ? `<a class="bib-card-btn" href="https://doi.org/${entry.doi}" target="_blank">DOI</a>` : ''}
-      <button class="bib-card-btn" id="bib-copy-btn">${_t('reader.copyBibtex') || '复制 BibTeX'}</button>
-    </div>
-  `;
+  const cardTitle = document.createElement('div');
+  cardTitle.className = 'bib-card-title';
+  cardTitle.textContent = entry.title || key;
+  const cardAuthor = document.createElement('div');
+  cardAuthor.className = 'bib-card-author';
+  cardAuthor.textContent = `${entry.author || ''} ${entry.year ? `(${entry.year})` : ''}`.trim();
+  const cardJournal = document.createElement('div');
+  cardJournal.className = 'bib-card-journal';
+  cardJournal.textContent = entry.journal || entry.booktitle || '';
+  const cardActions = document.createElement('div');
+  cardActions.className = 'bib-card-actions';
+  if (/^10\.\d{4,9}\/[^\s<>"']+$/.test(entry.doi || '')) {
+    const doiLink = document.createElement('a');
+    doiLink.className = 'bib-card-btn';
+    doiLink.href = `https://doi.org/${encodeURIComponent(entry.doi)}`;
+    doiLink.target = '_blank';
+    doiLink.rel = 'noopener noreferrer';
+    doiLink.textContent = 'DOI';
+    cardActions.appendChild(doiLink);
+  }
+  const copyButton = document.createElement('button');
+  copyButton.className = 'bib-card-btn';
+  copyButton.id = 'bib-copy-btn';
+  copyButton.type = 'button';
+  copyButton.textContent = _t('reader.copyBibtex') || '复制 BibTeX';
+  cardActions.appendChild(copyButton);
+  bibCardEl.append(cardTitle, cardAuthor, cardJournal, cardActions);
   document.body.appendChild(bibCardEl);
 
   bibCardEl.addEventListener('mouseenter', () => {

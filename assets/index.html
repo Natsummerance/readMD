@@ -623,13 +623,31 @@
       </div>
       <div>
         <h3 id="save-conflict-title" data-i18n="toast.saveConflict">文件已被其他程序修改，请重新打开后合并修改</h3>
-        <p id="save-conflict-desc" data-i18n="toast.saveConflict">文件已被其他程序修改，请重新打开后合并修改</p>
+        <p id="save-conflict-desc" data-i18n="dialog.saveConflictDesc">当前修改仍保留在编辑器中。另存为新文件可保留它们，重新加载会放弃本地修改。</p>
       </div>
     </div>
     <div class="close-confirm-actions">
       <button id="save-conflict-save-as" class="tb-btn accent" data-i18n="toolbar.saveAs">另存为</button>
       <button id="save-conflict-reload" class="tb-btn danger" data-i18n="toolbar.reload">重新加载</button>
       <button id="save-conflict-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<div id="confirm-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+  <div class="close-confirm-box">
+    <div class="close-confirm-head">
+      <div class="close-confirm-icon-wrap">
+        <svg class="close-confirm-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <h3 id="confirm-title"></h3>
+        <p id="confirm-message"></p>
+      </div>
+    </div>
+    <div class="close-confirm-actions">
+      <button id="confirm-cancel" class="tb-btn">取消</button>
+      <button id="confirm-action" class="tb-btn danger">确认</button>
     </div>
   </div>
 </div>
@@ -808,8 +826,8 @@
           <span class="update-asset-name" id="update-asset-name">—</span>
           <span class="update-asset-size" id="update-asset-size">—</span>
         </div>
-        <div id="update-progress-wrap" class="update-progress-wrap hidden">
-          <div class="update-progress-bar"><div id="update-progress-fill" class="update-progress-fill"></div></div>
+        <div id="update-progress-wrap" class="update-progress-wrap hidden" role="status" aria-live="polite">
+          <div id="update-progress-bar" class="update-progress-bar" role="progressbar" aria-labelledby="update-progress-text" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="update-progress-fill" class="update-progress-fill"></div></div>
           <div class="update-progress-meta">
             <span id="update-progress-text" data-i18n="update.prepDownload">正在下载… 0%</span>
             <span id="update-progress-speed">0 MB/s</span>
@@ -1122,6 +1140,7 @@
 <!-- Core Infrastructure -->
 <script src="/assets/js/core/state.js"></script>
 <script src="/assets/js/core/i18n.js"></script>
+<script src="/assets/js/core/dialog.js"></script>
 <script src="/assets/js/core/settings.js"></script>
 <script src="/assets/js/core/modules.js"></script>
 <script src="/assets/js/core/tabs.js"></script>

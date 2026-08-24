@@ -147,6 +147,7 @@ async function startUpdateDownload() {
 
       if (st.status === 'downloading') {
         const pct = st.percent || 0;
+        $('update-progress-bar').setAttribute('aria-valuenow', String(pct));
         $('update-progress-fill').style.width = pct + '%';
         const speedMb = ((st.speed_bps || 0) / (1024 * 1024)).toFixed(1);
         const curMb = ((st.downloaded_bytes || 0) / (1024 * 1024)).toFixed(1);
@@ -155,6 +156,7 @@ async function startUpdateDownload() {
         $('update-progress-text').textContent = `${dlLabel} ${pct}% (${curMb}MB / ${totMb}MB)`;
         $('update-progress-speed').textContent = `${speedMb} MB/s`;
       } else if (st.status === 'verifying') {
+        $('update-progress-bar').setAttribute('aria-valuenow', '100');
         $('update-progress-fill').style.width = '100%';
         $('update-progress-text').textContent = _t('update.verifying') || '正在校验文件完整性 (SHA256)…';
       } else if (st.status === 'ready') {

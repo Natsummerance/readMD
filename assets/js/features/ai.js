@@ -180,7 +180,13 @@ async function deleteCurrentTpl() {
   if (!id) return;
   const cur = (state.ai.templates || []).find(x => x.id === id);
   const msg = cur && cur.builtin ? (_t('toast.tplResetConfirm') || '将重置为默认模板，确定吗？') : (_t('toast.tplDelConfirm') || '确定删除此模板吗？');
-  if (!confirm(msg)) return;
+  if (!(await confirmAction({
+    title: _t('dialog.destructiveTitle') || '请确认',
+    message: msg,
+    confirmText: _t('dialog.confirm') || '确认',
+    cancelText: _t('dialog.cancel') || '取消',
+    danger: true,
+  }))) return;
   try {
     const r = await apiFetch('/api/ai/prompts', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

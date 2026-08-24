@@ -3745,13 +3745,12 @@ body.zen-mode .markdown-body {
   border-radius: 12px;
   padding: 3px 8px;
   font-size: 11.5px;
-  outline: none;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .presentation-select:hover,
-.presentation-select:focus {
+.presentation-select:focus-visible {
   background: rgba(255, 255, 255, 0.22);
   border-color: rgba(255, 255, 255, 0.45);
 }

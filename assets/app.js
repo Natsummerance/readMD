@@ -85,6 +85,7 @@ function bindEvents() {
   if ($('btn-home')) $('btn-home').addEventListener('click', goHome); // 回到主页并深度清理状态 (history.js)
   $('btn-open').addEventListener('click', () => { loadFileDialog(); }); // 打开本地文件 (reader/render.js)
   $('btn-folder').addEventListener('click', openFolder); // 打开工作区文件夹 (reader/folder.js)
+  syncDesktopControls();
 
   /* --- 2. 更多功能下拉菜单交互 (More Dropdown Menu) --- */
   const moreBtn = $('btn-more');
@@ -734,6 +735,7 @@ function bindEvents() {
     if (e.key === 'Escape') {
       const allModalIds = [
         'close-confirm-modal',
+        'confirm-modal',
         'code-chunk-modal', 'diagram-modal', 'doc-import-modal', 'frontmatter-modal',
         'table-modal', 'export-preview-modal', 'export-modal', 'convert-modal',
         'update-modal', 'style-custom-modal', 'lang-modal', 'ai-history-modal',
@@ -743,7 +745,7 @@ function bindEvents() {
       if (activeModal) {
         e.preventDefault();
         e.stopPropagation();
-        if (activeModal === 'close-confirm-modal') return;
+        if (activeModal === 'close-confirm-modal' || activeModal === 'confirm-modal') return;
         if (activeModal === 'code-chunk-modal') closeCodeChunkModal();
         else if (activeModal === 'diagram-modal') closeDiagramModal();
         else if (activeModal === 'doc-import-modal') closeDocImportModal();
@@ -771,7 +773,7 @@ function bindEvents() {
     else if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); $('btn-open').click(); } // Ctrl+O: 打开文件
     else if (mod && e.key.toLowerCase() === 'f') { // Ctrl+F: 全文搜索
       e.preventDefault();
-      if (state.mode !== 'welcome' && (state.file || state.original)) toggleSearch();
+      toggleSearch();
     }
     else if (mod && e.key.toLowerCase() === 'u') { e.preventDefault(); openWebDialog(); } // Ctrl+U: 网页抓取
     else if (mod && e.key.toLowerCase() === 'e') { e.preventDefault(); if (!$('btn-edit').disabled) toggleEdit(); } // Ctrl+E: 编辑模式
@@ -840,7 +842,7 @@ function getModalRoots() {
     'convert-modal', 'update-modal', 'style-custom-modal', 'lang-modal',
     'ai-history-modal', 'ai-settings-modal', 'formula-modal', 'presentation-modal',
     'img-modal', 'history-modal', 'share-modal', 'tpl-modal', 'url-modal',
-    'save-conflict-modal', 'fix-modal', 'continuous-modal'
+    'save-conflict-modal', 'fix-modal', 'continuous-modal', 'confirm-modal'
   ].map(id => $(id)).filter(Boolean);
 }
 
@@ -906,6 +908,19 @@ function setupModalAccessibility() {
   getModalRoots().forEach(modal => observer.observe(modal, { attributes: true, attributeFilter: ['class'] }));
 }
 
+function syncDesktopControls() {
+  const folderButton = $('btn-folder');
+  if (!folderButton) return;
+  folderButton.disabled = !hasPy;
+  if (!hasPy) {
+    const notice = window.i18n ? window.i18n.t('toast.openFolderBrowserNotice') : '';
+    folderButton.title = notice || '浏览器模式下请使用“打开文件”';
+    folderButton.setAttribute('aria-description', notice || '浏览器模式下请使用“打开文件”');
+  } else {
+    folderButton.removeAttribute('aria-description');
+  }
+}
+
 /* ----------------------------------------------------------------------------------------------
    初始文件智能分流器 (Smart Initial File Dispatcher)
    ---------------------------------------------------------------------------------------------- */
@@ -930,6 +945,7 @@ async function init() {
   // 2.1 启动 i18n 国际化引擎并自动侦测系统语言
   if (window.i18n) await window.i18n.init();
   syncBuildVersionLabels();
+  syncDesktopControls();
   // 3. 缓存欢迎界面骨架 HTML，以便随时通过 goHome() 复原
 
   if ($('content')) state.welcomeHtml = $('content').innerHTML;
@@ -1051,6 +1067,7 @@ window.addEventListener('pywebviewready', async () => {
   if (upgraded) {
     await loadSettings();
     refreshRecent();
+    syncDesktopControls();
     finishInit();
   }
 });

@@ -20,7 +20,12 @@ from audit_copy import audit_copy
 from copy_variants import text_fingerprints, text_trigrams
 from pattern_audit import audit_patterns
 from package_content import validate_release_evidence
-from validate_package import publisher_asset_errors, publisher_directive_errors, publisher_input_errors
+from validate_package import (
+    publisher_asset_errors,
+    publisher_directive_errors,
+    publisher_input_errors,
+    variant_selection_integrity_errors,
+)
 
 DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
 STATE_VERSION = 1
@@ -226,6 +231,15 @@ def recomputed_gate_errors(package_dir: Path) -> list[str]:
             errors.extend(f"hot-post gate: {item}" for item in pattern.get("errors", []))
     except Exception as exc:
         errors.append(f"hot-post gate crashed: {exc}")
+
+    variants_path = package_dir / "variants.json"
+    if variants_path.exists():
+        try:
+            variants = load("variants.json")
+            integrity_errors, _ = variant_selection_integrity_errors(metadata, variants)
+            errors.extend(f"variant selection gate: {item}" for item in integrity_errors)
+        except Exception as exc:
+            errors.append(f"variant selection gate crashed: {exc}")
     return errors
 
 

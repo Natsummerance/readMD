@@ -936,7 +936,10 @@ class ValidatePackageTest(unittest.TestCase):
                     "variant_id": "outcome-led__36__workflow",
                     "copy_frame": "workflow",
                     "ok": True,
+                    "semantic_score": 100,
+                    "history_adjustment": 0,
                     "resonance_frame_bonus": 0,
+                    "adjusted_score": 100,
                     "reasons": [],
                 }],
             }), encoding="utf-8")
@@ -944,6 +947,66 @@ class ValidatePackageTest(unittest.TestCase):
         self.assertTrue(any("resonance frame bonus differs" in error for error in errors), errors)
         self.assertTrue(any("omits comment-intent alignment reason" in error for error in errors), errors)
         self.assertTrue(any("resonance focus differs" in error for error in errors), errors)
+
+    def test_rejects_selected_variant_that_is_not_the_best_eligible_score(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp)
+            for name in ("story.json", "composition.json"):
+                (pkg / name).write_text("{}", encoding="utf-8")
+            (pkg / "raw").mkdir()
+            (pkg / "raw" / "capture.json").write_text("{}", encoding="utf-8")
+            directive = {
+                "schema_version": 1,
+                "applied": True,
+                "support_available": True,
+                "evidence": {
+                    "focus": "presentation",
+                    "confidence": "medium",
+                    "release_count": 2,
+                    "mentions": 4,
+                    "weighted_score": 6,
+                    "top_intents": ["request"],
+                },
+                "decisions": {"keep": "k", "strengthen": "s", "compress": "c", "delete": "d"},
+            }
+            (pkg / "metadata.json").write_text(json.dumps({
+                "resonance_directive": directive,
+            }), encoding="utf-8")
+            (pkg / "variants.json").write_text(json.dumps({
+                "ok": True,
+                "chosen_strategy": "outcome-led",
+                "chosen_variant_id": "outcome-led__36__workflow",
+                "resonance_focus": "presentation",
+                "ranked": [
+                    {
+                        "strategy": "outcome-led",
+                        "variant_id": "outcome-led__36__workflow",
+                        "copy_frame": "workflow",
+                        "ok": True,
+                        "semantic_score": 100,
+                        "history_adjustment": 0,
+                        "resonance_frame_bonus": 8,
+                        "adjusted_score": 108,
+                        "reasons": ["comment request intent prefers the workflow narrative"],
+                    },
+                    {
+                        "strategy": "mechanism-curiosity",
+                        "variant_id": "mechanism-curiosity__9__source",
+                        "copy_frame": "source",
+                        "ok": True,
+                        "semantic_score": 120,
+                        "history_adjustment": 0,
+                        "resonance_frame_bonus": 0,
+                        "adjusted_score": 120,
+                        "reasons": [],
+                    },
+                ],
+            }), encoding="utf-8")
+            errors = validate_package.validate_package(pkg)
+        self.assertTrue(
+            any("selected variant is not the highest scoring eligible variant" in error for error in errors),
+            errors,
+        )
 
     def test_accepts_complete_four_image_package(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
