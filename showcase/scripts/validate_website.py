@@ -53,6 +53,8 @@ RELEASE_ASSETS = frozenset({
 })
 
 AI_CRAWLERS = ("GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot")
+FAQ_QUESTION_COUNTS = {item["canonical"]: 6 for item in LANGUAGES.values()}
+FAQ_QUESTION_COUNTS.update({item["canonical"]: 5 for item in INTENT_PAGES.values()})
 
 
 class PageAudit(HTMLParser):
@@ -174,6 +176,23 @@ def audit_page(path: Path, canonical: str) -> list[str]:
                 errors.append(f"{path}: JSON-LD lacks speakable definition")
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             errors.append(f"{path}: invalid JSON-LD: {exc}")
+    expected_questions = FAQ_QUESTION_COUNTS.get(canonical)
+    if expected_questions:
+        faq_pages = []
+        for block in re.findall(r'(?s)<script type="application/ld\+json">(.*?)</script>', content):
+            try:
+                payload = json.loads(block)
+            except (TypeError, ValueError, json.JSONDecodeError) as exc:
+                errors.append(f"{path}: invalid JSON-LD: {exc}")
+                continue
+            if isinstance(payload, dict) and payload.get("@type") == "FAQPage":
+                faq_pages.append(payload)
+        if len(faq_pages) != 1:
+            errors.append(f"{path}: expected exactly one visible FAQPage schema")
+        elif len(faq_pages[0].get("mainEntity", [])) != expected_questions:
+            errors.append(f"{path}: FAQPage must expose {expected_questions} visible questions")
+        elif faq_pages[0].get("@id") != f"{canonical}#faq":
+            errors.append(f"{path}: FAQPage identifier differs from canonical URL")
     return errors
 
 

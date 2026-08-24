@@ -38,6 +38,7 @@ The brief requested a literal Apple clone. That part was not implemented because
 - Desktop UI suite: 55 tests green before the website package.
 - Browser smoke test: twelve localized home, workflow, and download pages, one H1 per page, stylesheet loaded, zero broken images, zero script errors.
 - Structured data: four localized WebPage plus SoftwareApplication graphs with speakable selectors pass the website validator.
+- AI answer schema: four localized homepages and four workflow pages expose visible FAQPage entities; the dedicated three-round approval is recorded in `faq_schema_approval.json`.
 - Sitemap review: all twelve canonical URLs expose complete hreflang sets and current freshness dates; the dedicated three-round approval is recorded in `sitemap_hreflang_approval.json`.
 - WeChat export QA: green.
 - Three approval rounds and final decision meeting: approved at or above 9.7.
