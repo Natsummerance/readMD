@@ -99,6 +99,7 @@ test('card two preserves the complete view and fills the portrait canvas', () =>
   );
   assert.match(html, /\.hero-overview\{[^}]*object-fit:contain/);
   assert.match(html, /\.hero-detail\{[^}]*object-fit:cover/);
+  assert.match(html, /\.hero-detail\{[^}]*object-position:50% 100%/);
   assert.equal([...html.matchAll(/<img\b/g)].length, 2);
 });
 

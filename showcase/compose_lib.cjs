@@ -317,7 +317,7 @@ function buildCardHtml(card, source, context = {}) {
   .hero{padding:24px;gap:20px}
   .hero-evidence{min-height:0;flex:1 1 0;display:flex;flex-direction:column;gap:14px}
   .hero-overview{width:100%;max-height:58%;object-fit:contain}
-  .hero-detail{min-height:0;flex:1 1 0;object-fit:cover;object-position:top}
+  .hero-detail{min-height:0;flex:1 1 0;object-fit:cover;object-position:50% 100%}
   .hero-proof{padding:0}
   .summary ul{list-style:none;display:flex;gap:18px}
   .summary li{flex:1;background:${design.palette.surface};border-top:3px solid ${design.palette.accent};border-radius:${design.layout.radius}px;padding:20px 22px;font-size:25px;line-height:1.3;color:${design.palette.ink}}
