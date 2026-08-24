@@ -25,6 +25,7 @@ class ReleaseSyncWorkflowTest(unittest.TestCase):
     def test_updates_existing_release_without_creating_one(self):
         raw = self.raw
         self.assertIn("gh release view", raw)
+        self.assertIn("export tag", raw)
         self.assertIn("gh release upload \"$tag\" --clobber", raw)
         self.assertNotIn("gh release create", raw)
         self.assertIn("gh release edit \"$tag\" --notes-file release/release_notes.md", raw)
