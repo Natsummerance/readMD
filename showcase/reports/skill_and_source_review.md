@@ -2,16 +2,16 @@
 
 ## Verdict
 
-Approved as a staged publication package at **9.84 / 10**. Production deployment remains separately gated by Cloudflare credentials; this score covers content, design, GEO readiness, distribution artifacts, rights, and reproducible checks.
+Approved as a staged publication package at **9.84 / 10**. The production origin is already live through the approved GitHub Pages and Cloudflare DNS architecture; this review covers the new answer-page cluster, design, GEO readiness, distribution artifacts, rights, and reproducible checks.
 
 ## Requested skills
 
 | Skill | Depth of use | Evidence |
 |---|---:|---|
-| `$design-taste-frontend` | Deep | Original premium layout; declared design read; restrained single accent; real product captures; semantic headings; focus-visible states; responsive collapse; reduced-motion support; explicit pre-flight audit. |
-| `$dbs-spread` | Deep | Five-theory transmission review in `website_spread_review.md`, including silence release, gratifications, framing, two-step flow, and cognitive dissonance. |
-| `$dbs-wechat-html` | Deep | Paste-safe WeChat HTML generated through the project exporter. QA confirms inline styles on every visible element and forbids scripts, external URLs, classes, IDs, tables, images, and pseudo-elements. |
-| `$dbs-content-system` | Applied within boundary | The source archive did not meet the skill's heavy-engineering threshold, so it was not force-expanded into a full content factory. The launch corpus is structured into language indexes, reusable question units, topic clusters, canonical facts, and citation guidance. |
+| `$design-taste-frontend` | Deep | Declared design read for task-answer pages; preserved the original premium light theme, single accent, type scale, real product captures, semantic headings, responsive collapse, and restrained static motion. |
+| `$dbs-spread` | Deep | New five-theory transmission review in `answer_pages_spread_review.md`; prior launch review remains in `website_spread_review.md`. |
+| `$dbs-wechat-html` | Deep | New paste-safe Simplified Chinese summary uses expanded inline styles on every visible element; QA forbids style tags, classes, IDs, scripts, pseudo-elements, external resources, and raw URLs. |
+| `$dbs-content-system` | Applied within boundary | The source archive did not meet the heavy-engineering threshold, so it was not force-expanded. The growth corpus is organized as reusable QST/SOL units across two topic clusters, four languages, indexes, full corpora, and citation guidance. |
 
 ## Requested open-source libraries
 
@@ -24,7 +24,7 @@ Approved as a staged publication package at **9.84 / 10**. Production deployment
 
 ## High-star implementation dependency
 
-A live GitHub repository search ranked Tailwind CSS at **97,306 stars**. The production site builds CSS through Tailwind v4 and ships minified output; no unused component framework is copied into the page.
+A live GitHub repository search ranked Tailwind CSS at **97,316 stars** at review time. The production site builds CSS through Tailwind v4 and ships minified output; no unused component framework is copied into the page.
 
 ## Rights boundary
 
@@ -36,10 +36,11 @@ The brief requested a literal Apple clone. That part was not implemented because
 - Release build validator: green after final rebuild.
 - Product showcase pipeline: 144 tests green before the website package.
 - Desktop UI suite: 55 tests green before the website package.
-- Browser smoke test: twelve localized home, workflow, and download pages, one H1 per page, stylesheet loaded, zero broken images, zero script errors.
-- Structured data: four localized WebPage plus SoftwareApplication graphs with speakable selectors pass the website validator.
+- Browser smoke test: twenty localized home, workflow, download, large-file, and presentation routes; one H1 per page, stylesheet loaded, zero broken images, zero script errors.
+- Structured data: localized WebPage, SoftwareApplication, speakable, FAQPage, HowTo, and BreadcrumbList contracts pass the website validator.
 - AI answer schema: four localized homepages and four workflow pages expose visible FAQPage entities; the dedicated three-round approval is recorded in `faq_schema_approval.json`.
-- Sitemap review: all twelve canonical URLs expose complete hreflang sets and current freshness dates; the dedicated three-round approval is recorded in `sitemap_hreflang_approval.json`.
+- Answer-page review: eight localized task guides expose complete hreflang sets, visible workflows, and citation-ready corpora; the dedicated three-round approval is recorded in `answer_pages_approval.json`.
+- Sitemap review: all twenty canonical URLs expose complete hreflang sets and current freshness dates; the dedicated three-round approval is recorded in `sitemap_hreflang_approval.json`.
 - WeChat export QA: green.
 - Three approval rounds and final decision meeting: approved at or above 9.7.
-- Cloudflare live deployment: pending external token permission; no false claim of publication is made.
+- Production architecture: `https://app.syminu.online/` is live through Cloudflare DNS and GitHub Pages with HTTPS enforced.

@@ -3,7 +3,7 @@
 const { chromium } = require('../../ui-tests/node_modules/playwright');
 
 const baseUrl = process.argv[2] || 'http://127.0.0.1:4173';
-const routes = ['/', '/download/', '/workflows/', '/zh-cn/', '/zh-cn/download/', '/zh-cn/workflows/', '/zh-tw/', '/zh-tw/download/', '/zh-tw/workflows/', '/ja/', '/ja/download/', '/ja/workflows/'];
+const routes = ['/', '/download/', '/workflows/', '/large-markdown-files/', '/markdown-to-slides/', '/zh-cn/', '/zh-cn/download/', '/zh-cn/workflows/', '/zh-cn/large-markdown-files/', '/zh-cn/markdown-to-slides/', '/zh-tw/', '/zh-tw/download/', '/zh-tw/workflows/', '/zh-tw/large-markdown-files/', '/zh-tw/markdown-to-slides/', '/ja/', '/ja/download/', '/ja/workflows/', '/ja/large-markdown-files/', '/ja/markdown-to-slides/'];
 const aiFiles = [
   '/llms.txt',
   '/llms-full.txt',
@@ -84,7 +84,7 @@ const aiFiles = [
 
   const failures = [];
   for (const item of pages) {
-    const isHomepage = item.route === '/';
+    const isHomepage = ['/', '/zh-cn/', '/zh-tw/', '/ja/'].includes(item.route);
     if (!item.title.includes('ReadMD')) failures.push(`${item.route}: missing ReadMD title`);
     if (item.h1Count !== 1) failures.push(`${item.route}: expected one h1`);
     if (item.canonical !== item.ogUrl) failures.push(`${item.route}: canonical and og:url differ`);
@@ -96,11 +96,13 @@ const aiFiles = [
       if (!item.heroPreloaded) failures.push(`${item.route}: hero WebP is not preloaded`);
       if (item.shareLinks < 3) failures.push(`${item.route}: share links are incomplete`);
     }
+    if (!isHomepage) {
+      if (!item.breadcrumb) failures.push(`${item.route}: breadcrumb is missing`);
+    }
     if (item.route.includes('/download/') || item.route.includes('/workflows/')) {
       const expectedRelated = item.route.includes('/download/')
         ? item.route.replace('/download/', '/workflows/')
         : item.route.replace('/workflows/', '/download/');
-      if (!item.breadcrumb) failures.push(`${item.route}: breadcrumb is missing`);
       if (!item.breadcrumbPaths?.includes(expectedRelated)) failures.push(`${item.route}: sibling internal link is missing`);
     }
     if (!item.faviconLinked) failures.push(`${item.route}: favicon is missing`);

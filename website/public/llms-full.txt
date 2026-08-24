@@ -125,6 +125,18 @@ Yes. ReadMD presents Markdown directly with Reveal-based mode. The same headings
 
 No. Built-in AI features require explicit configuration and action. Reading, editing, pagination, local conversion, and OCR do not depend on a cloud account. If a user invokes an external model, the relevant prompt or selected content is handled according to that configured provider.
 
+## Task Guide: Large Markdown Files
+
+Dedicated answer: https://app.syminu.online/large-markdown-files/
+
+Open the file locally. Near 8,000 lines or 500 KB, ReadMD activates semantic pagination while keeping outline, full-text search, formulas, and page controls connected. Display-only syntax recovery can make malformed tables or emphasis readable without rewriting source bytes; an explicit edit and save is required before a change reaches the file.
+
+## Task Guide: Markdown To Slides
+
+Dedicated answer: https://app.syminu.online/markdown-to-slides/
+
+Keep one Markdown document as the canonical source for writing, review, and presentation. Reveal-based presentation mode uses headings as transitions while code, mathematical notation, diagrams, and tables retain their context. A late rehearsal edit returns to the same source rather than a copied slide deck.
+
 ## Release Facts
 
 - Product name: ReadMD
