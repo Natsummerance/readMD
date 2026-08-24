@@ -123,6 +123,18 @@ def match_release_asset(assets, flavor=None):
                     break
                 elif not selected and 'macos' in name:
                     selected = a
+        elif flavor == 'linux':
+            is_arm = bool(machine.startswith('arm') or machine in ('aarch64', 'arm64'))
+            deb_token = 'arm64' if is_arm else 'amd64'
+            appimage_token = 'aarch64' if is_arm else 'x86_64'
+            if name.endswith(f'_{deb_token}.deb'):
+                selected = a
+                break
+            elif f'-{appimage_token}-' in name and name.endswith('.appimage'):
+                selected = a
+                break
+            elif not selected and name.endswith('.deb'):
+                selected = a
 
     # 如果没匹配到精准架构，选取最接近的 exe 或 zip
     if not selected and assets:
@@ -132,6 +144,9 @@ def match_release_asset(assets, flavor=None):
                 selected = a
                 break
             elif sys.platform == 'darwin' and name.endswith('.zip'):
+                selected = a
+                break
+            elif sys.platform.startswith('linux') and name.endswith(('.deb', '.AppImage')):
                 selected = a
                 break
 

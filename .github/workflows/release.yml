@@ -328,10 +328,78 @@ jobs:
           if-no-files-found: ignore
           overwrite: true
 
+  kylin-v10-arm64-package:
+    name: Package · Kylin V10 ARM64
+    if: github.event_name != 'release' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    needs: [linux-test]
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ubuntu:20.04
+    steps:
+      - name: Install bootstrap dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates git gnupg software-properties-common
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: config/requirements-linux.txt
+      - name: Install Kylin-compatible system dependencies
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            libgtk-3-0 \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            gir1.2-gtk-3.0 \
+            gir1.2-webkit2-4.0 \
+            python3-gi \
+            python3-gi-cairo \
+            tesseract-ocr \
+            zip \
+            file
+      - name: Install Python build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --disable-pip-version-check -r config/requirements-linux.txt pyinstaller
+      - name: Build Kylin-compatible ARM64 bundle
+        run: bash scripts/linux/build_linux.sh
+      - name: Smoke test and verify ARM64 binary
+        run: |
+          ./dist/ReadMD/ReadMD --selftest
+          test "$(uname -m)" = "aarch64"
+          file dist/ReadMD/ReadMD | grep -E 'aarch64|ARM aarch64'
+          test -s "dist/readmd_${{ env.READMD_VERSION }}_arm64.deb"
+      - name: Upload main-branch Kylin candidate
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc-linux-arm64-${{ github.sha }}
+          path: |
+            dist/ReadMD-linux-aarch64-v${{ env.READMD_VERSION }}.AppImage
+            dist/readmd_${{ env.READMD_VERSION }}_arm64.deb
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 7
+      - name: Upload tagged Kylin assets
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux-arm64
+          path: |
+            dist/ReadMD-linux-aarch64-v${{ env.READMD_VERSION }}.AppImage
+            dist/readmd_${{ env.READMD_VERSION }}_arm64.deb
+          if-no-files-found: error
+          overwrite: true
+
   release:
     name: Publish ReadMD Release
     if: github.event_name != 'release' && startsWith(github.ref, 'refs/tags/v')
-    needs: [windows-package, macos-package, linux-package]
+    needs: [windows-package, macos-package, linux-package, kylin-v10-arm64-package]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -368,7 +436,7 @@ jobs:
               print(" -", f)
           PY
           V="${{ env.READMD_VERSION }}"
-          for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "readmd-mcp-server-${V}.zip"; do
+          for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "ReadMD-linux-x86_64-v${V}.AppImage" "ReadMD-linux-aarch64-v${V}.AppImage" "readmd_${V}_arm64.deb" "readmd-mcp-server-${V}.zip"; do
             test -s "release-assets/$asset"
           done
           python tools/sync_version.py --check

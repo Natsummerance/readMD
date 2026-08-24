@@ -10,6 +10,7 @@ ReadMD 是免费、开源的本地 Markdown 智能阅读、编辑与全格式转
 - 💻 Intel Mac：`ReadMD-macos-x64-v2.3.7-beta.3.zip`
 - 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage`
 - 🇨🇳 Linux / 国产信创 Deb 安装包 (UOS / 银河麒麟 / Deepin / Ubuntu / Debian)：`readmd_2.3.7-beta.3_amd64.deb`
+- 🖥️ 麒麟 V10 / 飞腾 ARM64：`ReadMD-linux-aarch64-v2.3.7-beta.3.AppImage` 与 `readmd_2.3.7-beta.3_arm64.deb`
 - 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.7-beta.3.vsix`
 - 🤖 FastMCP Server 源码包：`readmd-mcp-server-2.3.7-beta.3.zip`
 - 🔐 校验清单：`SHA256SUMS.txt`
@@ -34,6 +35,11 @@ ReadMD 是免费、开源的本地 Markdown 智能阅读、编辑与全格式转
 ### 4. 全球 46 国语言 i18n 与前端自动化测试 100% 覆盖
 - **46 种语言 100% 对齐**：所有新增演示控制栏词条全量同步至 46 种语言 JSON 字典文件（1,017 词条，0 缺失）；
 - **端到端测试全覆盖**：全量 25 项 Playwright UI 端到端测试与 340 项单元/压力测试 100% 通过。
+
+### 5. 麒麟 V10 / 飞腾 ARM64 原生支持
+- 新增 `aarch64` Deb 与 AppImage 构建，覆盖银河麒麟 V10、UKUI/X11 以及飞腾 D2000/E2000 等国产 ARM 设备；
+- 启动时自动识别旧版 GPU 栈，切换到软件渲染安全回退，避免 WebKitGTK 白屏或崩溃；
+- 检查更新按 CPU 架构精准选择 AMD64 或 ARM64 安装包。
 
 ---
 

@@ -3283,6 +3283,13 @@ def main():
         parser.error('--startup-probe 不能与 --browser 同时使用')
     if args.startup_probe_timeout <= 0:
         parser.error('--startup-probe-timeout 必须大于 0')
+
+    if IS_LINUX:
+        try:
+            from src.readmd_modules import linux_native
+            linux_native.setup_linux_env()
+        except Exception:
+            logging.exception('Linux compatibility setup failed')
     if args.startup_probe:
         _T0 = time.time()
         with _BOOT_LOCK:
@@ -3434,12 +3441,6 @@ def main():
         pass
 
     setup_win7_webview2_env()
-    if IS_LINUX:
-        try:
-            from src.readmd_modules import linux_native
-            linux_native.setup_linux_env()
-        except Exception:
-            pass
 
     try:
         if IS_MAC:
