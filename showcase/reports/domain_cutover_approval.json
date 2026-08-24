@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "artifact": "Production domain cutover to app.syminu.online",
+  "reviewed_at": "2026-08-24T20:00:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "dns-safety-review",
+      "status": "approved",
+      "score": 9.84,
+      "evidence": [
+        "readmd.syminu.online already points to custom-domains.chatgpt.site and must not be overwritten.",
+        "www.syminu.online already points to Vercel and must not be overwritten.",
+        "app.syminu.online has zero existing records and provides a conflict-free production name."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "canonical-consistency-review",
+      "status": "approved",
+      "score": 9.86,
+      "evidence": [
+        "All HTML canonical, hreflang, Open Graph, Twitter, llms.txt, llms-full.txt, robots.txt, sitemap, schema IDs, templates, and validator contracts use app.syminu.online.",
+        "A repository search finds no remaining readmd.syminu.online reference in published website surfaces."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "deployment-compliance-review",
+      "status": "approved",
+      "score": 9.79,
+      "evidence": [
+        "GitHub Pages workflow builds the Tailwind production bundle before upload.",
+        "Release validation enforces approvals, GEO files, security headers, structured data, and dist completeness.",
+        "The workflow grants only contents read, Pages write, and OpenID Connect token permissions."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.83,
+    "participants": ["product", "infrastructure", "GEO", "compliance"],
+    "conditions": [
+      "Create app.syminu.online as a DNS-only CNAME to Natsummerance.github.io.",
+      "Enable GitHub Pages with workflow build type before merging main.",
+      "Do not modify existing readmd or www DNS records.",
+      "Verify HTTP 200, canonical URL, stylesheet, images, AI files, and certificate before declaring launch."
+    ]
+  }
+}

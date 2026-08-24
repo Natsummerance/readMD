@@ -1,47 +1,51 @@
-# Cloudflare Deployment
+# Production Deployment
 
 ## Production target
 
-- Canonical site: `https://readmd.syminu.online/`
-- Worker name: `readmd-site`
-- Hosting: Cloudflare Workers static assets on the free plan
-- Domain strategy: add a free `readmd` subdomain to the existing active Cloudflare zone `syminu.online`. No new domain purchase and no change to the existing apex site are required.
+- Canonical site: `https://app.syminu.online/`
+- Hosting: GitHub Pages on the free plan
+- Domain strategy: Cloudflare manages a dedicated subdomain of the existing active `syminu.online` zone. No new domain purchase is required.
 
-## One-command release check and deploy
+## Active release path
+
+Merging an approved website change into `main` runs `.github/workflows/website-github-pages.yml`. The workflow rebuilds `website/dist`, runs `validate_website.py --release`, uploads the artifact, and deploys GitHub Pages. The custom domain is declared by `website/public/CNAME`.
+
+The required DNS-only record is:
+
+```text
+app.syminu.online. CNAME Natsummerance.github.io.
+```
+
+Do not use the existing `readmd.syminu.online` or `www.syminu.online` records; both already point to other services. After GitHub issues a certificate, HTTPS enforcement can be enabled through the Pages API.
+
+## Local release check
 
 Run from `website/`:
 
 ```powershell
-npm run deploy
+npm run verify:release
 ```
 
-The command performs this sequence:
+This builds `dist/` and runs the GEO, approval, rights, security-header, structured-data, and release-build checks.
 
-1. Clean and rebuild `dist/`.
-2. Run the GEO, approval, rights, security-header, and release-build validator.
-3. Deploy the verified assets with Wrangler using `wrangler.worker.jsonc`.
+## Future direct Cloudflare hosting
 
-## Required API-token permissions
-
-The current `CLOUDFLARE_API_TOKEN` can identify the account and read zones, but Cloudflare rejects writes with authentication error `10000`. To deploy without opening the dashboard session each time, create a token with:
+Cloudflare Workers remains available as a later hosting migration. The current token can identify the account, read zones, and edit DNS, but Cloudflare rejects Worker/Pages writes with authentication error `10000`. To enable that path, create a token with:
 
 - Account > Workers Scripts > Edit
 - Account > Account Settings > Edit (only needed the first time a workers.dev subdomain is registered)
 - Zone > Workers Routes > Edit for `syminu.online`
 - Zone > DNS > Edit for `syminu.online` (needed when Cloudflare creates the custom-domain record)
 
-For the alternative Pages path instead of Workers, use:
-
-- Account > Cloudflare Pages > Edit
-
 Then run:
 
 ```powershell
-npx wrangler pages project create readmd --production-branch=main
-npx wrangler pages deploy dist --project-name=readmd --branch=main
+npx wrangler deploy --config wrangler.worker.jsonc
 ```
 
-## Current blocker
+Afterward, change the `app.syminu.online` CNAME target from `Natsummerance.github.io` to the Cloudflare custom-domain target and re-run the site validator.
+
+## Historical Cloudflare blocker
 
 Cloudflare rejected four write operations with the current token:
 

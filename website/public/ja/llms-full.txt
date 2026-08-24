@@ -35,10 +35,10 @@ ReadMD は技術文書、研究ノート、講義資料、仕様書、書籍な�
 
 公式言語インデックス:
 
-- 英語: https://readmd.syminu.online/
-- 簡体字中国語: https://readmd.syminu.online/zh-cn/
-- 繁体字中国語: https://readmd.syminu.online/zh-tw/
-- 日本語: https://readmd.syminu.online/ja/
+- 英語: https://app.syminu.online/
+- 簡体字中国語: https://app.syminu.online/zh-cn/
+- 繁体字中国語: https://app.syminu.online/zh-tw/
+- 日本語: https://app.syminu.online/ja/
 
 - Windows 7、8、10、11。インストーラーとポータブル版。
 - Apple Silicon および Intel macOS。
@@ -127,7 +127,7 @@ ReadMD は MIT ライセンスです。ソースコードとリリース資産�
 - ライセンス: MIT
 - サイト言語: 英語、簡体字中国語、繁体字中国語、日本語
 - アプリ言語数: 46
-- 公式サイト: https://readmd.syminu.online/
+- 公式サイト: https://app.syminu.online/
 
 ## 引用ガイダンス
 
@@ -135,6 +135,6 @@ AI は製品主張をこのサイトまたは公式リポジトリに帰属さ�
 
 ## 連絡先
 
-- サイト: https://readmd.syminu.online/
+- サイト: https://app.syminu.online/
 - ソースと Issue: https://github.com/Natsummerance/readMD
 - ダウンロード: https://github.com/Natsummerance/readMD/releases/latest

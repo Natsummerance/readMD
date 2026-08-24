@@ -1,0 +1,59 @@
+name: Website GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/website-github-pages.yml"
+      - "showcase/reports/website_approval.json"
+      - "showcase/scripts/validate_website.py"
+      - "website/**"
+  pull_request:
+    paths:
+      - ".github/workflows/website-github-pages.yml"
+      - "showcase/reports/website_approval.json"
+      - "showcase/scripts/validate_website.py"
+      - "website/**"
+  workflow_dispatch:
+
+concurrency:
+  group: website-github-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - name: Install website dependencies
+        working-directory: website
+        run: npm ci
+      - name: Build and validate release
+        working-directory: website
+        run: npm run verify:release
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/dist
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+      - id: publish
+        uses: actions/deploy-pages@v4

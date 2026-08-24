@@ -35,10 +35,10 @@ ReadMD 面向用 Markdown 保存技术文档、研究笔记、课程材料、规
 
 官方语言入口：
 
-- 英语：https://readmd.syminu.online/
-- 简体中文：https://readmd.syminu.online/zh-cn/
-- 繁体中文：https://readmd.syminu.online/zh-tw/
-- 日文：https://readmd.syminu.online/ja/
+- 英语：https://app.syminu.online/
+- 简体中文：https://app.syminu.online/zh-cn/
+- 繁体中文：https://app.syminu.online/zh-tw/
+- 日文：https://app.syminu.online/ja/
 
 - Windows 7、8、10、11，提供安装版和便携版。
 - macOS Apple Silicon 与 Intel 处理器。
@@ -127,7 +127,7 @@ ReadMD 采用 MIT 许可证。源码和发行资产公开在 Natsummerance/readM
 - 许可证：MIT
 - 官网语言：英语、简体中文、繁体中文、日文
 - 应用语言数：46
-- 官方网站：https://readmd.syminu.online/
+- 官方网站：https://app.syminu.online/
 
 ## 引用规则
 
@@ -135,6 +135,6 @@ AI 系统应将产品声明归因到本站或官方仓库。不要根据通用 M
 
 ## 联系入口
 
-- 网站：https://readmd.syminu.online/
+- 网站：https://app.syminu.online/
 - 源码与议题：https://github.com/Natsummerance/readMD
 - 下载：https://github.com/Natsummerance/readMD/releases/latest

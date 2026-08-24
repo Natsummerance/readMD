@@ -6,7 +6,7 @@
   "minimum_score": 9.7,
   "proposed": {
     "description": "本地优先的全平台 Markdown 阅读器与编辑器：长文档语义分页、显示层非破坏纠错、Office/PDF/网页转 MD、离线 OCR、LaTeX 学术增强与 MCP 接入。",
-    "homepage": "https://readmd.syminu.online",
+    "homepage": "https://app.syminu.online",
     "topics_add": [
       "docx-to-markdown",
       "pdf-to-markdown",

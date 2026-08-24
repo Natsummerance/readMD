@@ -1,5 +1,5 @@
 name: Documentation feedback
-description: Report unclear, missing or outdated documentation on GitHub or readmd.syminu.online.
+description: Report unclear, missing or outdated documentation on GitHub or app.syminu.online.
 labels: ["documentation", "triage"]
 assignees: ["Natsummerance"]
 body:
