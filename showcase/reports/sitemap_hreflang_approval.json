@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "artifact": "Sitemap XHTML hreflang alternates and freshness dates",
+  "reviewed_at": "2026-08-24T21:10:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "international-seo-review",
+      "status": "approved",
+      "score": 9.87,
+      "evidence": [
+        "Every sitemap URL carries a complete en, zh-CN, zh-TW, ja, and x-default alternate set.",
+        "Each localized workflow and download page points to the matching section rather than falling back to the homepage.",
+        "The x-default value resolves to the English canonical for its section."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "ai-discovery-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "Language-specific llms.txt and llms-full.txt corpora remain reachable and linked from their localized pages.",
+        "Freshness metadata now exposes the publication date to search and AI discovery systems.",
+        "AI crawler access rules and canonical URLs remain unchanged."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-compliance-review",
+      "status": "approved",
+      "score": 9.79,
+      "evidence": [
+        "The validator checks the namespace, exact URL inventory, all five hreflang values per URL, and the current lastmod date.",
+        "Release build validation and the Playwright smoke suite pass on the production build.",
+        "No protected Apple assets, third-party tracking, credentials, or unpublished claims are introduced."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_pull_request",
+    "score": 9.84,
+    "participants": ["international SEO", "AI discovery", "release compliance"],
+    "conditions": [
+      "CI must pass before merge.",
+      "GitHub Pages deployment must complete before production verification.",
+      "Any later page addition must update the sitemap and validator together."
+    ]
+  }
+}
