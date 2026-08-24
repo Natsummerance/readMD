@@ -6,6 +6,6 @@
   "author": "Natsummerance",
   "license": "MIT",
   "scripts": {
-    "build": "hvigorw assembleHap"
+    "sync:web": "node scripts/sync-web-assets.mjs"
   }
 }

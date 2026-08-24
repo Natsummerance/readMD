@@ -14,7 +14,9 @@
 
 ## 编译与打包
 
-1. 使用 **DevEco Studio NEXT** 打开本目录；
-2. 在项目根目录执行 `npm install`；
+1. 在本目录执行 `npm install`，再执行 `npm run sync:web` 打包离线 Web 资源；
+2. 使用 **DevEco Studio NEXT** 打开本目录；
 3. 选择 `entry` 模块并点击 **Build -> Build Hap(s) / APP(s) -> Build Hap(s)**；
 4. 生成产物位于 `entry/build/default/outputs/default/entry-default-unsigned.hap`。
+
+当前工程提供可构建的 ArkUI/ArkWeb 外壳与资源同步脚本；完整桌面后端能力仍需继续接入原生文件、剪贴板和 OCR 桥接。
