@@ -38,6 +38,17 @@ DOWNLOAD_PAGES = {
     "ja": {"path": PUBLIC / "ja" / "download" / "index.html", "canonical": "https://app.syminu.online/ja/download/"},
 }
 
+ANSWER_PAGES = {
+    "en-large-files": {"path": PUBLIC / "large-markdown-files" / "index.html", "canonical": "https://app.syminu.online/large-markdown-files/"},
+    "zh-CN-large-files": {"path": PUBLIC / "zh-cn" / "large-markdown-files" / "index.html", "canonical": "https://app.syminu.online/zh-cn/large-markdown-files/"},
+    "zh-TW-large-files": {"path": PUBLIC / "zh-tw" / "large-markdown-files" / "index.html", "canonical": "https://app.syminu.online/zh-tw/large-markdown-files/"},
+    "ja-large-files": {"path": PUBLIC / "ja" / "large-markdown-files" / "index.html", "canonical": "https://app.syminu.online/ja/large-markdown-files/"},
+    "en-slides": {"path": PUBLIC / "markdown-to-slides" / "index.html", "canonical": "https://app.syminu.online/markdown-to-slides/"},
+    "zh-CN-slides": {"path": PUBLIC / "zh-cn" / "markdown-to-slides" / "index.html", "canonical": "https://app.syminu.online/zh-cn/markdown-to-slides/"},
+    "zh-TW-slides": {"path": PUBLIC / "zh-tw" / "markdown-to-slides" / "index.html", "canonical": "https://app.syminu.online/zh-tw/markdown-to-slides/"},
+    "ja-slides": {"path": PUBLIC / "ja" / "markdown-to-slides" / "index.html", "canonical": "https://app.syminu.online/ja/markdown-to-slides/"},
+}
+
 RELEASE_ASSETS = frozenset({
     "ReadMDSetup-v2.3.7-beta.3.exe",
     "ReadMD-portable-v2.3.7-beta.3.exe",
@@ -55,6 +66,7 @@ RELEASE_ASSETS = frozenset({
 AI_CRAWLERS = ("GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot")
 FAQ_QUESTION_COUNTS = {item["canonical"]: 6 for item in LANGUAGES.values()}
 FAQ_QUESTION_COUNTS.update({item["canonical"]: 5 for item in INTENT_PAGES.values()})
+FAQ_QUESTION_COUNTS.update({item["canonical"]: 4 for item in ANSWER_PAGES.values()})
 
 
 class PageAudit(HTMLParser):
@@ -226,6 +238,7 @@ def validate_robots_and_sitemap() -> list[str]:
     expected = {item["canonical"] for item in LANGUAGES.values()}
     expected.update(item["canonical"] for item in INTENT_PAGES.values())
     expected.update(item["canonical"] for item in DOWNLOAD_PAGES.values())
+    expected.update(item["canonical"] for item in ANSWER_PAGES.values())
     actual = set(re.findall(r"<loc>(.*?)</loc>", sitemap))
     if actual != expected:
         errors.append(f"sitemap mismatch: missing={expected - actual}, extra={actual - expected}")
@@ -239,7 +252,12 @@ def validate_robots_and_sitemap() -> list[str]:
             continue
         url = url_match.group(1)
         alternates = dict(re.findall(r'<xhtml:link[^>]+hreflang="([^"]+)"[^>]+href="([^"]+)"', entry))
-        section = "/workflows/" if "/workflows/" in url else ("/download/" if "/download/" in url else "/")
+        path = urlparse(url).path
+        for prefix in ("/zh-cn", "/zh-tw", "/ja"):
+            if path.startswith(prefix + "/"):
+                path = path[len(prefix):]
+                break
+        section = path
         language_bases = {
             "en": "https://app.syminu.online",
             "zh-CN": "https://app.syminu.online/zh-cn",
@@ -365,6 +383,29 @@ def validate_special_page_internal_links() -> list[str]:
     return errors
 
 
+def validate_answer_internal_links() -> list[str]:
+    errors: list[str] = []
+    topics = {
+        "large-markdown-files": [item for key, item in ANSWER_PAGES.items() if "large-files" in key],
+        "markdown-to-slides": [item for key, item in ANSWER_PAGES.items() if "slides" in key],
+    }
+    for language in LANGUAGES:
+        for slug, contracts in topics.items():
+            prefix = "" if language == "en" else f"/{language.lower()}"
+            target = f"https://app.syminu.online{prefix}/{slug}/"
+            target_path = urlparse(target).path
+            for surface in ("home", "workflow", "download"):
+                if surface == "home":
+                    source = LANGUAGES[language]["path"]
+                elif surface == "workflow":
+                    source = INTENT_PAGES[language]["path"]
+                else:
+                    source = DOWNLOAD_PAGES[language]["path"]
+                if f'href="{target_path}"' not in source.read_text(encoding="utf-8"):
+                    errors.append(f"{language} {surface} omits internal link to {target_path}")
+    return errors
+
+
 def validate_release_asset_links() -> list[str]:
     """Every download page must expose the exact canonical Release asset set."""
     errors: list[str] = []
@@ -432,6 +473,11 @@ def main() -> int:
             errors.append(f"missing {language} download page")
             continue
         errors.extend(audit_page(contract["path"], contract["canonical"]))
+    for topic, contract in ANSWER_PAGES.items():
+        if not contract["path"].is_file():
+            errors.append(f"missing {topic} answer page")
+            continue
+        errors.extend(audit_page(contract["path"], contract["canonical"]))
     if not (PUBLIC / "llms.txt").is_file():
         errors.append("missing public/llms.txt")
     else:
@@ -443,6 +489,7 @@ def main() -> int:
     errors.extend(validate_security_headers())
     errors.extend(validate_growth_homepages())
     errors.extend(validate_special_page_internal_links())
+    errors.extend(validate_answer_internal_links())
     errors.extend(validate_indexnow())
     errors.extend(validate_release_asset_links())
     if args.release:
@@ -455,6 +502,7 @@ def main() -> int:
         "languages": list(LANGUAGES),
         "intent_pages": list(INTENT_PAGES),
         "download_pages": list(DOWNLOAD_PAGES),
+        "answer_pages": list(ANSWER_PAGES),
         "review_rounds": 3,
     }, ensure_ascii=False))
     return 0

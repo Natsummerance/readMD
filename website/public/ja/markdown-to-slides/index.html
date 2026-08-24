@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PowerPoint を使わず Markdown 発表 | ReadMD スライド</title>
+  <meta name="description" content="ReadMD の Reveal ベース発表モードで Markdown をそのまま提示します。見出し、コード、数式、図、表は執筆、レビュー、修正、発表に使う同じソースファイルに残ります。">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ReadMD">
+  <meta property="og:title" content="PowerPoint を使わず Markdown 発表 | ReadMD スライド">
+  <meta property="og:description" content="一つの Markdown ソースから Reveal ベースの発表を作り、別スライドの再構築を避けます。">
+  <meta property="og:url" content="https://app.syminu.online/ja/markdown-to-slides/">
+  <meta property="og:image" content="https://app.syminu.online/media/overview-editor.webp">
+  <meta property="og:image:type" content="image/webp">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="ReadMD エディターには Markdown ソースとライブ プレビューが横並びで表示されます。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="PowerPoint を使わず Markdown 発表 | ReadMD スライド">
+  <meta name="twitter:description" content="Markdown のまま執筆し、同じ内容を直接発表できます。">
+  <meta name="twitter:image" content="https://app.syminu.online/media/overview-editor.webp">
+  <meta name="twitter:image:alt" content="ReadMD エディターには Markdown ソースとライブ プレビューが横並びで表示されます。">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://app.syminu.online/ja/markdown-to-slides/">
+  <link rel="alternate" hreflang="en" href="https://app.syminu.online/markdown-to-slides/">
+  <link rel="alternate" hreflang="zh-CN" href="https://app.syminu.online/zh-cn/markdown-to-slides/">
+  <link rel="alternate" hreflang="zh-TW" href="https://app.syminu.online/zh-tw/markdown-to-slides/">
+  <link rel="alternate" hreflang="ja" href="https://app.syminu.online/ja/markdown-to-slides/">
+  <link rel="alternate" hreflang="x-default" href="https://app.syminu.online/markdown-to-slides/">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://app.syminu.online/ja/markdown-to-slides/#webpage",
+        "url": "https://app.syminu.online/ja/markdown-to-slides/",
+        "name": "PowerPoint を使わず Markdown 発表 | ReadMD スライド",
+        "about": {"@id": "https://app.syminu.online/ja/markdown-to-slides/#software"},
+        "primaryImageOfPage": "https://app.syminu.online/media/overview-editor.webp",
+        "dateModified": "2026-08-25",
+        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#markdown-presentation-workflow p"]}
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://app.syminu.online/ja/markdown-to-slides/#software",
+        "name": "ReadMD",
+        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+        "applicationCategory": "UtilitiesApplication",
+        "softwareVersion": "2.3.7-beta.3",
+        "dateModified": "2026-08-25",
+        "isAccessibleForFree": true,
+        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+        "author": {"@type": "Organization", "name": "ReadMD"}
+      },
+      {
+        "@type": "HowTo",
+        "@id": "https://app.syminu.online/ja/markdown-to-slides/#howto",
+        "name": "スライドを作り直さず Markdown を発表する方法",
+        "step": [
+          {"@type": "HowToStep", "name": "一つのソースを整える", "text": "見出し、段落、リスト、数式、コード、図、表、文献を同じ文書に書きます。"},
+          {"@type": "HowToStep", "name": "発表モードを開く", "text": "同じ Markdown から ReadMD の Reveal ベース発表モードを始めます。"},
+          {"@type": "HowToStep", "name": "見出しを切り替えに使う", "text": "話の順に進みながら、コード、数式、図、表は文脈の中に保ちます。"},
+          {"@type": "HowToStep", "name": "リハーサル後に戻す", "text": "言い回しを直して Markdown を保存すれば、次の発表も同じ正となります。"}
+        ]
+      }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://app.syminu.online/ja/markdown-to-slides/#faq","mainEntity":[{"@type":"Question","name":"PowerPoint を使わず Markdown を発表できますか？","acceptedAnswer":{"@type":"Answer","text":"できます。ReadMD は Reveal ベースのモードで Markdown をそのまま発表するため、技術発表や講義資料に別スライドは必須ではありません。"}},{"@type":"Question","name":"発表時にどの Markdown 要素が残りますか？","acceptedAnswer":{"@type":"Answer","text":"見出しが切り替えになり、コード、数式、図、表、周囲の説明は文脈を保ちます。"}},{"@type":"Question","name":"リハーサル中に編集できますか？","acceptedAnswer":{"@type":"Answer","text":"できます。直前の編集も同じ Markdown ファイルに保存でき、次の発表で使えます。"}},{"@type":"Question","name":"すべての専用スライド製品を置き換えますか？","acceptedAnswer":{"@type":"Answer","text":"いいえ。Markdown を正として管理する人向けです。複雑な独自モーション設計には専用デザインツールが必要な場合があります。"}}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://app.syminu.online/ja/markdown-to-slides/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://app.syminu.online/ja/"},{"@type":"ListItem","position":2,"name":"Markdown 発表","item":"https://app.syminu.online/ja/markdown-to-slides/"}]}</script>
+</head>
+<body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/ja/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#markdown-presentation-workflow">ワークフロー</a><a href="/ja/workflows/">他の回答</a><a href="https://github.com/Natsummerance/readMD">ソース</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/latest">ダウンロード</a></div>
+  </header>
+  <main>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/ja/">ホーム</a> / <a class="link-action" href="/ja/workflows/">ワークフロー</a> / <span>Markdown 発表</span></nav>
+    <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
+      <h1 class="display-title">スライドを作り直さず Markdown を発表。</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">執筆、レビュー、履歴、本番を一つの権威あるファイルにまとめます。見出しが構造を作り、技術内容は書いた場所に留まります。</p>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="1440" height="900" alt="ReadMD エディターには Markdown ソースと整形結果が並んでいます。" loading="eager" fetchpriority="high"></picture></figure>
+    </section>
+    <section id="markdown-presentation-workflow" class="bg-[var(--color-surface)] py-16">
+      <div class="mx-auto max-w-5xl px-5">
+        <h2 class="text-2xl font-semibold tracking-tight">単一ソース発表ワークフロー</h2>
+        <ol class="mt-8 grid gap-6 md:grid-cols-2">
+          <li class="answer-card"><h3 class="text-lg font-semibold">まず一つ書く</h3><p>見出し、本文、リスト、数式、コード、図、表、参考文献を同じ Markdown 文書に準備します。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">Reveal 発表を開く</h3><p>発表モードはその文書から始まり、章を別スライドへコピーすることを求めません。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">技術内容を説明する</h3><p>見出しが切り替えになり、コード、数式、図、表はそれぞれの説明と接続されたままです。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">リハーサルで直す</h3><p>フローティング操作バーにはテーマ、文字サイズ、ナビゲーションがあります。修正は同じソースへ戻ります。</p></li>
+        </ol>
+      </div>
+    </section>
+    <section class="mx-auto max-w-5xl px-5 py-16">
+      <h2 class="text-2xl font-semibold tracking-tight">発表者の質問</h2>
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <article class="answer-card"><h3>PowerPoint を使わず Markdown を発表できますか？</h3><p>できます。ReadMD は Reveal ベースのモードで Markdown をそのまま発表するため、技術発表や講義資料に別スライドは必須ではありません。</p></article>
+        <article class="answer-card"><h3>発表時にどの Markdown 要素が残りますか？</h3><p>見出しが切り替えになり、コード、数式、図、表、周囲の説明は文脈を保ちます。</p></article>
+        <article class="answer-card"><h3>リハーサル中に編集できますか？</h3><p>できます。直前の編集も同じ Markdown ファイルに保存でき、次の発表で使えます。</p></article>
+        <article class="answer-card"><h3>すべての専用スライド製品を置き換えますか？</h3><p>いいえ。Markdown を正として管理する人向けです。複雑な独自モーション設計には専用デザインツールが必要な場合があります。</p></article>
+      </div>
+      <div class="mt-12 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">ReadMD を入手</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">GitHub で Star</a></div>
+    </section>
+  </main>
+  <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD. MIT License.</p><nav class="flex flex-wrap gap-5"><a href="/ja/llms.txt">llms.txt</a><a href="/ja/llms-full.txt">AI 用全文</a><a href="https://github.com/Natsummerance/readMD/stargazers">GitHub Star</a></nav></div></footer>
+</body>
+</html>

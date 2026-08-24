@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "artifact": "Localized large-file reading and Markdown presentation answer pages",
+  "reviewed_at": "2026-08-24T22:20:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "ai-discovery-review",
+      "status": "approved",
+      "score": 9.88,
+      "evidence": [
+        "Eight new URLs target two concrete AI and search intents: opening very long Markdown files and presenting Markdown without rebuilding slides.",
+        "Each page has one direct H1, a step-by-step HowTo, visible questions and answers, speakable selectors, canonical URL, hreflang set, and BreadcrumbList.",
+        "English, Simplified Chinese, Traditional Chinese, and Japanese llms indexes and full corpora cite both dedicated answers."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "design-and-ux-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "The pages preserve the existing light theme, single accent system, type scale, product frames, and restrained motion level.",
+        "Each hero uses a real ReadMD screenshot with WebP fallback, intrinsic dimensions, meaningful alt text, and high fetch priority for the eager image.",
+        "Desktop grids collapse to one column on mobile; every special route has breadcrumb navigation and no duplicate download CTA label."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-compliance-review",
+      "status": "approved",
+      "score": 9.78,
+      "evidence": [
+        "All thresholds, formats, platforms, privacy boundaries, and presentation claims trace to the existing README-backed corpus.",
+        "The pages explicitly qualify device-dependent pagination, post-conversion review, supported-platform OCR, and specialized slide tools that remain outside scope.",
+        "No Apple copy or protected trade dress, fake metrics, tracking scripts, credentials, or unpublished release claims are introduced."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_pull_request",
+    "score": 9.84,
+    "participants": ["AI discovery", "design and UX", "release compliance"],
+    "conditions": [
+      "Release build validation must pass before merge.",
+      "Browser smoke must pass all twenty localized routes.",
+      "CI must pass and GitHub Pages deployment must finish before live verification and IndexNow submission."
+    ]
+  }
+}
