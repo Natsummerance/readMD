@@ -3276,6 +3276,7 @@ class WatcherTest(unittest.TestCase):
         tamper_assets: bool = False,
         tamper_directive: bool = False,
         tamper_directive_execution: bool = False,
+        tamper_variant_ranking: bool = False,
     ) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
@@ -3382,6 +3383,22 @@ class WatcherTest(unittest.TestCase):
                 "identity-led__22" if not variant_match else "outcome-led__36"
             )
             persisted_variants["chosen_copy_frame"] = "workflow" if not frame_match else "core"
+        if tamper_variant_ranking:
+            persisted_variants = json.loads(json.dumps(persisted_variants, ensure_ascii=False))
+            chosen_id = persisted_variants["chosen_variant_id"]
+            chosen_ranked = next(
+                item for item in persisted_variants["ranked"]
+                if item.get("variant_id") == chosen_id
+            )
+            challenger = next(
+                item for item in persisted_variants["ranked"]
+                if item.get("variant_id") != chosen_id
+                and item.get("ok") is True
+                and not item.get("originality_failures")
+            )
+            score_gap = max(1.0, float(chosen_ranked["adjusted_score"]) - float(challenger["adjusted_score"]) + 1)
+            challenger["semantic_score"] = float(challenger["semantic_score"]) + score_gap
+            challenger["adjusted_score"] = float(challenger["adjusted_score"]) + score_gap
         (package / "variants.json").write_text(json.dumps(persisted_variants, ensure_ascii=False), encoding="utf-8")
         (package / "performance-report.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "performance-report.md").write_text("# Performance\n", encoding="utf-8")
@@ -3720,6 +3737,36 @@ class WatcherTest(unittest.TestCase):
             self.assertTrue(
                 "focused support is not the first supporting capability" in record["error"]
                 or "publisher body omits resonance scenario: academic" in record["error"]
+            )
+
+    def test_variant_ranking_gate_blocks_non_best_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, tamper_variant_ranking=True)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not click a non-best variant")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("recomputed publication gates failed", record["error"])
+            self.assertIn(
+                "selected variant is not the highest scoring eligible variant",
+                record["error"],
             )
 
     def test_successful_publish_survives_status_query_failure(self) -> None:
