@@ -2366,6 +2366,46 @@ class ExportWechatTest(unittest.TestCase):
         self.assertIn("#GitHub #开源项目 #程序员 #效率工具 #Markdown", html)
         self.assertNotIn("PPT。<", html)
 
+    def test_wechat_highlight_rule_and_keep_comment_prompt_last(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            decision_rule = "收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT"
+            comment_prompt = "你会先拿哪一份 Markdown 试放映？评论区说说场景"
+            metadata = {
+                "title": "不用重做PPT，Markdown直接放映",
+                "body": (
+                    "文档已经写完，讲的时候还要复制进 PPT。\n\n"
+                    f"{decision_rule}。\n\n"
+                    "同一份文件能保住代码、表格和公式。\n\n"
+                    f"GitHub 搜 Natsummerance/readMD，{comment_prompt}。"
+                ),
+                "topics": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
+            }
+            (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            story = {
+                "release": "v1.2.3",
+                "summary_hook": {
+                    "title": "一条放映路",
+                    "caption": "写作、修改和上台共用一份文件。",
+                    "proof_points": ["同一份 MD", "真实排版", "直接放映"],
+                },
+            }
+            report = export_wechat.export_package(package, story=story)
+            html = (package / "wechat" / "readmd-wechat.html").read_text(encoding="utf-8")
+
+        self.assertTrue(report["ok"], report)
+        rule_position = html.index(decision_rule)
+        summary_position = html.index("本轮可保存的三点")
+        prompt_position = html.index(comment_prompt)
+        topic_position = html.index("#Markdown")
+        self.assertLess(rule_position, summary_position)
+        self.assertLess(summary_position, prompt_position)
+        self.assertLess(prompt_position, topic_position)
+        self.assertIn('background-color:#fff4ef;border-left:4px solid #d6482c', html)
+        last_content_paragraph_start = html.rindex('<p style="', 0, prompt_position)
+        last_content_paragraph_end = html.index("</p>", last_content_paragraph_start)
+        self.assertIn(comment_prompt, html[last_content_paragraph_start:last_content_paragraph_end])
+
     def test_rejects_wechat_html_missing_inline_styles(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "broken.html"

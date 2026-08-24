@@ -51,6 +51,12 @@ ITEM_STYLE = (
     "border-top:3px solid #d6482c;font-size:16px;line-height:1.75;color:#182029;"
     "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"
 )
+CALLOUT_STYLE = (
+    "margin:24px 0;padding:17px 20px;background-color:#fff4ef;"
+    "border-left:4px solid #d6482c;border-radius:0 12px 12px 0;"
+    "font-size:16px;line-height:1.78;font-weight:600;color:#182029;"
+    "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif"
+)
 
 
 def _inline(value: str) -> str:
@@ -68,7 +74,10 @@ def render_html(metadata: dict[str, Any], story: dict[str, Any]) -> str:
     rendered_blocks = []
     for block in blocks:
         block = re.sub(r"。$", "", block)
-        rendered_blocks.append(f'  <p style="{PARAGRAPH_STYLE}">{_inline(block)}</p>')
+        if block.startswith("收藏这条判断标准："):
+            rendered_blocks.append(f'  <p style="{CALLOUT_STYLE}">{_inline(block)}</p>')
+        else:
+            rendered_blocks.append(f'  <p style="{PARAGRAPH_STYLE}">{_inline(block)}</p>')
 
     topic_text = " ".join(f"#{str(topic).strip()}" for topic in topics if str(topic).strip())
     summary_hook = story.get("summary_hook", {})
@@ -87,15 +96,25 @@ def render_html(metadata: dict[str, Any], story: dict[str, Any]) -> str:
     topic_block = f'  <p style="{TOPIC_STYLE}">{html.escape(topic_text, quote=False)}</p>\n' if topic_text else ""
     footer = '  <p style="' + FOOTER_STYLE + '">GitHub 搜索 Natsummerance/readMD</p>\n'
 
+    # The save summary can close the argument, but the scoped comment prompt
+    # remains the final reader action before platform hashtags and site footer.
+    cta_index = next(
+        (index for index in range(len(rendered_blocks) - 1, -1, -1) if "评论区" in rendered_blocks[index]),
+        len(rendered_blocks),
+    )
+    pre_cta_blocks = rendered_blocks[:cta_index]
+    cta_block = rendered_blocks[cta_index] if cta_index < len(rendered_blocks) else ""
+
     return (
         '<!doctype html>\n<html lang="zh-CN">\n<head>\n'
         '<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         f"<title>{html.escape(title, quote=True)}</title>\n</head>\n"
         f'<body style="{BODY_STYLE}">\n'
         f'  <h1 style="{HEADING_STYLE}">{_inline(title)}</h1>\n'
-        + "\n".join(rendered_blocks)
+        + "\n".join(pre_cta_blocks)
         + ("\n" if rendered_blocks else "")
         + summary_block
+        + ("\n" + cta_block if cta_block else "")
         + topic_block
         + footer
         + "</body>\n</html>\n"
