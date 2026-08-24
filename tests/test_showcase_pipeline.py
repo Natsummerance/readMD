@@ -201,6 +201,25 @@ class BuildStoryTest(unittest.TestCase):
         self.assertEqual(story["cover_hook"]["title"], "同屏改稿")
         self.assertEqual(story["summary_hook"]["title"], "改稿不切窗")
 
+    def test_invisible_implementation_fix_becomes_reader_value(self) -> None:
+        notes = """
+## 核心修复
+
+### 编辑器 CodeMirror 6 安全 + 实时预览重构
+### 网页转换打开新标签页，全程本地处理，避免误关闭或跳转丢失
+"""
+        story = build_story.build_story(
+            release="v9.9.9",
+            previous_release="v9.9.8",
+            notes=notes,
+            shot_library_path=ROOT / "showcase" / "shot_library.json",
+        )
+        invisible = [claim for claim in story["claims"] if claim["kind"] == "invisible"]
+
+        self.assertEqual(invisible[0]["user_value"], "编辑器更稳，改稿和预览不互相打断。")
+        self.assertIn("网页转换", invisible[1]["user_value"])
+        self.assertNotIn("CodeMirror", json.dumps(story["claims"], ensure_ascii=False))
+
     def test_release_story_filters_assets_and_prioritizes_primary_feature(self) -> None:
         notes = """
 ## 全平台发布资产
@@ -1739,7 +1758,7 @@ class AuditCopyTest(unittest.TestCase):
         return (
             "文档写完了，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。\n\n"
             "先说清楚：这是 ReadMD v9.9.9-beta.1 预览版，文件仍在你自己的电脑里。\n\n"
-            "放映界面能换主题、调字号、切开场和转场；AST 保护分片尽量保住代码块、表格和公式。\n\n"
+                "放映界面能换主题、调字号、切开场和转场；结构保护分片尽量保住代码块、表格和公式。\n\n"
             "下面的画面来自当前版本真实运行状态，不是概念图。改稿时回到同屏预览，讲稿不会跑偏。\n\n"
             "如果你要写课程讲义、组会报告或论文汇报，它会省掉重做演示稿这一步。\n\n"
             "GitHub 搜 Natsummerance/readMD，你会先拿哪一份 Markdown 试放映？\n\n"
@@ -1798,6 +1817,15 @@ class AuditCopyTest(unittest.TestCase):
             "title uses unsupported quality claims: 强大",
             report["hard_failures"],
         )
+
+    def test_audit_rejects_implementation_jargon_in_body(self) -> None:
+        story, metadata, composition = self.make_audit_inputs(
+            self.good_body() + "\n\nCodeMirror 6 的 AST 已重构。"
+        )
+        report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
+
+        self.assertFalse(report["ok"])
+        self.assertIn("implementation jargon leaked into copy: CodeMirror, AST", report["hard_failures"])
 
     def test_style_audit_passes_concrete_developer_voice(self) -> None:
         report = style_audit.audit_style(self.good_body(), audience="程序员")
@@ -2205,7 +2233,7 @@ class ExportWechatTest(unittest.TestCase):
                 "body": (
                     "文档已经写完，讲的时候还要复制进 PPT。\n\n"
                     "这次把这一步**砍掉**：Markdown 直接放映，代码块用 `cmd=true` 标记。"
-                    "\n\n放映界面能换主题、调字号、切开场和转场；AST 保护分片尽量保住代码块、表格和公式。"
+                    "\n\n放映界面能换主题、调字号、切开场和转场；结构保护分片尽量保住代码块、表格和公式。"
                     "\n\n如果你要写课程讲义、组会报告或论文汇报，它会省掉重做演示稿这一步。"
                     "\n\nGitHub 搜 Natsummerance/readMD，你会先拿哪一份 Markdown 试放映？"
                 ),

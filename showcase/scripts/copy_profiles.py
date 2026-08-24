@@ -363,6 +363,8 @@ TITLE_UNSUPPORTED_TERMS = (
     "神器", "天花板", "完美", "最强", "全网第一", "100%", "吊打", "秒杀",
 )
 
+IMPLEMENTATION_JARGON = ("CodeMirror", "AST", "DOM")
+
 
 # Each experiment keeps the psychological trigger of its source Xiaohongshu
 # formula. A formula id alone is attribution, not evidence that the title still
@@ -585,7 +587,7 @@ PROFILES: dict[str, dict[str, Any]] = {
             "#26": "{number}张图，看懂MD直接放映",
         },
         "opening": "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。",
-        "primary_paragraph": "放映界面可以直接换主题、调字号、切开场和转场；AST 保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。",
+        "primary_paragraph": "放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。",
         "saved_step": "重新做一遍演示稿",
         "cover": {
             "formula_id": "#36",

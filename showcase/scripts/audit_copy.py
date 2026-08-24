@@ -11,6 +11,7 @@ from typing import Any
 
 from style_audit import audit_style
 from copy_profiles import (
+    IMPLEMENTATION_JARGON,
     MECHANISM_TOPIC_MARKERS,
     EXPERIMENT_TITLE_FORMULAS,
     profile_for_story,
@@ -167,6 +168,9 @@ def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: 
         hard_failures.append("repeated sentences: " + "; ".join(repeated))
     if re.search(r"\.(exe|zip|deb|hap|vsix|appimage)\b", body, re.I):
         hard_failures.append("release asset filename leaked into copy")
+    jargon = [term for term in IMPLEMENTATION_JARGON if term.lower() in body.lower()]
+    if jargon:
+        hard_failures.append("implementation jargon leaked into copy: " + ", ".join(jargon))
     if story.get("version_state") == "prerelease":
         if "预览版" not in body and "更新线" not in body:
             hard_failures.append("prerelease disclosure missing")
