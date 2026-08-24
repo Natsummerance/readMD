@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "artifact": "showcase/distribution/release-v2.3.7-beta.3.md",
+  "target": "GitHub Release v2.3.7-beta.3",
+  "reviewed_at": "2026-08-24T18:00:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "release-copy-review",
+      "status": "approved",
+      "score": 9.78,
+      "evidence": [
+        "Opening states reader/editor scope, long-document pagination, display-only repair, conversion, OCR, presentation, and MCP without unsupported speed claims.",
+        "Prerelease remains labeled beta; no formal-release or adoption claim is introduced."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "ai-citation-review",
+      "status": "approved",
+      "score": 9.86,
+      "evidence": [
+        "Adds verified raw GitHub URLs for llms.txt and llms-full.txt.",
+        "Names concrete answer topics: 8,000 lines / 500 KB pagination, non-destructive rendering, platform packages, local workflows, and MIT license.",
+        "Uses absolute URLs and separates quick indexing from the full corpus."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "security-and-compliance-review",
+      "status": "approved",
+      "score": 9.81,
+      "evidence": [
+        "Checksum examples now target v2.3.7-beta.3 and direct users to SHA256SUMS.txt.",
+        "Privacy wording distinguishes local-by-default workflows from explicit network actions.",
+        "All listed asset filenames match the existing published release assets."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.84,
+    "participants": ["product", "content", "GEO", "compliance"],
+    "conditions": [
+      "Do not change tag, asset set, or prerelease identity during this copy update.",
+      "Verify both raw corpus URLs return HTTP 200 immediately before publish.",
+      "Record only the actual API update result."
+    ]
+  }
+}
