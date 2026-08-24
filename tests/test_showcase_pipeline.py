@@ -1390,6 +1390,66 @@ class ValidatePackageTest(unittest.TestCase):
         self.assertTrue(any("title provenance source_template differs" in error for error in errors), errors)
         self.assertTrue(any("title provenance adaptation differs" in error for error in errors), errors)
 
+    def test_publisher_recomputes_resonance_from_publication_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            story = {
+                "release": "v1.2.3",
+                "primary_shot": "presentation.reveal",
+                "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+                "selected_shots": ["overview.reader", "presentation.reveal"],
+                "claims": [
+                    {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                    {"id": "reveal", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["README.md"]},
+                ],
+            }
+            records = [
+                {
+                    "release": f"v1.0.{version}",
+                    "metrics_status": "pending",
+                    "comment_insights": {
+                        "schema_version": 1,
+                        "unique_count": 2,
+                        "themes": [{
+                            "theme": "presentation",
+                            "mentions": 2,
+                            "weighted_score": 5,
+                            "intents": ["request"],
+                        }],
+                        "top_theme": "presentation",
+                    },
+                }
+                for version in range(2)
+            ]
+            ledger = root / "publication-ledger.jsonl"
+            ledger.write_text(
+                "".join(json.dumps(record, ensure_ascii=False) + "\n" for record in records),
+                encoding="utf-8",
+            )
+            metadata = {
+                "resonance_directive": write_copy.build_resonance_directive(story, records),
+            }
+            (root / "story.json").write_text(json.dumps(story, ensure_ascii=False), encoding="utf-8")
+            (root / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            self.assertEqual(
+                validate_package.publisher_resonance_source_errors(root, ledger),
+                [],
+            )
+
+            tampered = write_copy.build_resonance_directive(story, [])
+            (root / "metadata.json").write_text(json.dumps({
+                "resonance_directive": tampered,
+            }, ensure_ascii=False), encoding="utf-8")
+            errors = validate_package.publisher_resonance_source_errors(root, ledger)
+            (root / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            missing_ledger_errors = validate_package.publisher_resonance_source_errors(
+                root,
+                root / "missing-publication-ledger.jsonl",
+            )
+
+        self.assertEqual(errors, ["resonance directive differs from publication-ledger recomputation"])
+        self.assertEqual(missing_ledger_errors, errors)
+
     def test_publisher_directive_requires_concern_response(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pkg = Path(tmp)

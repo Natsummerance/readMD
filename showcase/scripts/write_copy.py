@@ -230,6 +230,35 @@ def _resonance_directive(
     }
 
 
+def available_shot_ids(story: dict[str, Any]) -> set[str]:
+    primary_id = str(story.get("primary_shot", "overview.editor"))
+    supporting_ids = [
+        shot_id
+        for claim in story.get("claims", [])
+        for shot_id in (claim.get("shot_ids") or [])
+        if shot_id != primary_id
+    ]
+    return {primary_id, *supporting_ids}
+
+
+def build_resonance_directive(
+    story: dict[str, Any],
+    history: list[dict[str, Any]] | None,
+) -> dict[str, Any]:
+    """Derive the directive from publication evidence without package claims."""
+    all_history = history or []
+    learning_history, pending_history = partition_records(all_history)
+    resonance = _resonance_focus(
+        _comment_history([*learning_history, *pending_history])
+    )
+    return _resonance_directive(
+        resonance,
+        story=story,
+        profile=profile_for_story(story),
+        available_shot_ids=available_shot_ids(story),
+    )
+
+
 def _select_topic_set(
     primary_id: str,
     history: list[dict[str, Any]],
@@ -369,13 +398,8 @@ def generate_copy(
     ]
     unique_supporting_ids = list(dict.fromkeys(supporting_ids))
     available_shot_ids = {primary_id, *unique_supporting_ids}
-    resonance = _resonance_focus(_comment_history([*history, *pending_history]))
-    resonance_directive = _resonance_directive(
-        resonance,
-        story=story,
-        profile=profile,
-        available_shot_ids=available_shot_ids,
-    )
+    resonance_directive = build_resonance_directive(story, all_history)
+    resonance = resonance_directive["evidence"]
     selected_topic_set, topic_set_selection = _select_topic_set(
         primary_id=primary_id,
         history=history,

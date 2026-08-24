@@ -30,6 +30,7 @@ from validate_package import (
     publisher_asset_errors,
     publisher_directive_errors,
     publisher_input_errors,
+    publisher_resonance_source_errors,
     variant_selection_integrity_errors,
 )
 
@@ -465,6 +466,9 @@ def process_package(
         input_errors = publisher_input_errors(package_dir)
         if input_errors:
             raise ValueError("publisher input contract failed: " + "; ".join(input_errors))
+        resonance_source_errors = publisher_resonance_source_errors(package_dir, ledger_path)
+        if resonance_source_errors:
+            raise ValueError("publisher resonance evidence contract failed: " + "; ".join(resonance_source_errors))
         directive_errors = publisher_directive_errors(package_dir)
         if directive_errors:
             raise ValueError("publisher directive contract failed: " + "; ".join(directive_errors))

@@ -13,6 +13,7 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
+from content_memory import load_records
 from copy_profiles import (
     COMMENT_SCENARIOS,
     COMMENT_SHOT_FOCUS,
@@ -24,6 +25,7 @@ from copy_profiles import (
     resonance_title_adjustment,
     SUPPORT_PHRASES,
 )
+from write_copy import build_resonance_directive
 
 
 BANNED = ("公众号", "微信", "闲鱼", "咸鱼", "转卖", "出票", "转让", "售票", "二维码", "淘口令", "淘宝")
@@ -159,6 +161,30 @@ def title_provenance_errors(metadata: dict[str, Any]) -> list[str]:
                 f"expected {expected}, got {actual or '<missing>'}"
             )
     return errors
+
+
+def publisher_resonance_source_errors(package_dir: Path, ledger_path: Path | None) -> list[str]:
+    """Recompute comment resonance from the local evidence ledger."""
+    if ledger_path is None:
+        return []
+    try:
+        metadata = _load_json(package_dir / "metadata.json")
+        story = _load_json(package_dir / "story.json")
+        records = load_records(ledger_path)
+        expected = build_resonance_directive(story, records)
+    except Exception as exc:
+        return [f"recomputed resonance directive unreadable: {exc}"]
+
+    actual = metadata.get("resonance_directive")
+    if not isinstance(actual, dict):
+        return ["package omits the recomputed resonance directive"]
+    if json.dumps(actual, ensure_ascii=False, sort_keys=True) != json.dumps(
+        expected, ensure_ascii=False, sort_keys=True
+    ):
+        return [
+            "resonance directive differs from publication-ledger recomputation"
+        ]
+    return []
 
 
 def _image_metrics(path: Path, screenshot_box: dict[str, float] | None = None) -> dict[str, Any]:
