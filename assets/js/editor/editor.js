@@ -34,6 +34,7 @@ function createEditor(doc) {
   destroyEditor();
   if (!window.ReadMDCodeMirror) return false;
   const CM = window.ReadMDCodeMirror;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const dark = document.body.dataset.theme === 'dark';
   cmThemeCompartment = new CM.Compartment();
   const st = CM.EditorState.create({
@@ -54,10 +55,13 @@ function createEditor(doc) {
       CM.closeBrackets(),
       CM.keymap.of([CM.indentWithTab, ...CM.closeBracketsKeymap, ...CM.defaultKeymap, ...CM.historyKeymap, ...CM.completionKeymap]),
       CM.EditorView.lineWrapping,
+      CM.EditorView.contentAttributes.of({ 'aria-label': _t('toolbar.edit') || 'Markdown editor' }),
       CM.EditorView.updateListener.of(u => {
         if (u.docChanged) {
           schedulePreview();
           updateDocStatistics();
+          if (typeof updateUnloadGuard === 'function') updateUnloadGuard();
+          if (typeof syncActiveTabDirty === 'function') syncActiveTabDirty();
         }
         if (u.selectionSet || u.docChanged) updateCmSelectionToolbar();
       }),

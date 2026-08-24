@@ -84,7 +84,7 @@ function bindGlobalDragAndDrop() {
       if (mdFiles.length > 0) {
         for (const f of mdFiles) {
           const path = f.path ? f.path : await uploadFile(f);
-          if (path) await loadFile(path);
+          if (path) await loadFile(path, { browserCopy: !f.path });
         }
       }
       if (otherFiles.length > 0) {
@@ -138,23 +138,50 @@ function bindTabOverflowEvents() {
 
   let isPinned = false;
 
+  const setOverflowMenu = visible => {
+    isPinned = visible;
+    dropdown.classList.toggle('hidden', !visible);
+    overflowBtn.setAttribute('aria-expanded', visible ? 'true' : 'false');
+    if (visible) setTimeout(() => dropdown.querySelector('[role="menuitem"]')?.focus(), 20);
+  };
+
   overflowWrap.addEventListener('mouseenter', () => {
-    if (!isPinned) dropdown.classList.remove('hidden');
+    if (!isPinned) setOverflowMenu(true);
   });
   overflowWrap.addEventListener('mouseleave', () => {
-    if (!isPinned) dropdown.classList.add('hidden');
+    if (!isPinned) setOverflowMenu(false);
   });
 
   overflowBtn.addEventListener('click', e => {
     e.stopPropagation();
-    isPinned = !isPinned;
-    dropdown.classList.toggle('hidden', !isPinned);
+    setOverflowMenu(!isPinned);
+  });
+
+  overflowBtn.addEventListener('keydown', event => {
+    if (event.key !== 'ArrowDown' && event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    setOverflowMenu(true);
   });
 
   document.addEventListener('click', e => {
     if (!overflowWrap.contains(e.target)) {
-      isPinned = false;
-      dropdown.classList.add('hidden');
+      setOverflowMenu(false);
+    }
+  });
+
+  dropdown.addEventListener('keydown', event => {
+    const items = Array.from(dropdown.querySelectorAll('[role="menuitem"]'));
+    const index = items.indexOf(document.activeElement);
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      items[(index + (event.key === 'ArrowDown' ? 1 : items.length - 1)) % items.length]?.focus();
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      (event.key === 'Home' ? items[0] : items[items.length - 1])?.focus();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setOverflowMenu(false);
+      overflowBtn.focus();
     }
   });
 }
@@ -163,12 +190,27 @@ function bindTabContextMenuEvents() {
   const menu = $('tab-context-menu');
   if (!menu) return;
 
+  menu.addEventListener('keydown', event => {
+    const items = Array.from(menu.querySelectorAll('[role="menuitem"]:not([disabled])'));
+    const index = items.indexOf(document.activeElement);
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const next = event.key === 'ArrowDown'
+        ? items[(index + 1) % items.length]
+        : items[(index - 1 + items.length) % items.length];
+      next?.focus();
+    } else if (event.key === 'Home' || event.key === 'End') {
+      event.preventDefault();
+      (event.key === 'Home' ? items[0] : items[items.length - 1])?.focus();
+    }
+  });
+
   menu.querySelectorAll('button[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
       const tabId = menu.dataset.tabId;
       const action = btn.dataset.action;
-      menu.classList.add('hidden');
+      closeTabContextMenu();
       if (!tabId) return;
       const tab = state.tabs.find(t => t.id === tabId);
       if (!tab) return;
@@ -179,6 +221,13 @@ function bindTabContextMenuEvents() {
         closeOtherTabs(tabId);
       } else if (action === 'close-all') {
         closeAllTabs();
+      } else if (action === 'move-left' || action === 'move-right') {
+        const index = state.tabs.findIndex(item => item.id === tabId);
+        const targetIndex = action === 'move-left' ? index - 1 : index + 1;
+        if (targetIndex >= 0 && targetIndex < state.tabs.length) {
+          reorderTabs(tabId, state.tabs[targetIndex].id, action === 'move-right');
+          focusVisibleTab(tabId);
+        }
       } else if (action === 'rename') {
         const bar = $('doc-tabs-bar');
         const tabEl = bar ? bar.querySelector(`[data-tab-id="${tabId}"]`) : null;
@@ -195,7 +244,7 @@ function bindTabContextMenuEvents() {
 
   document.addEventListener('click', e => {
     if (!menu.contains(e.target)) {
-      menu.classList.add('hidden');
+      closeTabContextMenu();
     }
   });
 }

@@ -213,6 +213,38 @@ function applyRatio() {
   updateImgInfo();
 }
 
+function resizeCropWithKeyboard(handle, dx, dy) {
+  if (!imgState.img) return;
+  pushImgHistory();
+  const r = imgRect();
+  const c = imgState.crop;
+  let l = c.x, t = c.y, rr = c.x + c.w, bb = c.y + c.h;
+  if (handle.includes('w')) l += dx;
+  if (handle.includes('e')) rr += dx;
+  if (handle.includes('n')) t += dy;
+  if (handle.includes('s')) bb += dy;
+  l = Math.max(r.x, Math.min(l, rr - 24));
+  rr = Math.min(r.x + r.w, Math.max(rr, l + 24));
+  t = Math.max(r.y, Math.min(t, bb - 24));
+  bb = Math.min(r.y + r.h, Math.max(bb, t + 24));
+  const rv = ratioValue();
+  let w = rr - l, h = bb - t;
+  if (rv > 0) {
+    if (handle === 'n' || handle === 's') { w = h * rv; l = (l + rr - w) / 2; rr = l + w; }
+    else { h = w / rv; t = (t + bb - h) / 2; bb = t + h; }
+    if (l < r.x) { l = r.x; rr = l + w; }
+    if (rr > r.x + r.w) { rr = r.x + r.w; l = rr - w; }
+    if (t < r.y) { t = r.y; bb = t + h; }
+    if (bb > r.y + r.h) { bb = r.y + r.h; t = bb - h; }
+  }
+  imgState.crop = { x: l, y: t, w: rr - l, h: bb - t };
+  imgState.outW = 0;
+  imgState.outH = 0;
+  clampCrop();
+  updateCropUI();
+  updateImgInfo();
+}
+
 function stagePointer(e) {
   if (!imgState.img) return;
   const stage = $('img-stage');

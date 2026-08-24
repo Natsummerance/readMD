@@ -20,6 +20,7 @@ function syncStateFromActiveTab() {
   if (!tab) return;
   state.mode = tab.mode || 'file';
   state.source = tab.source || 'file';
+  state.browserCopy = tab.browserCopy || false;
   state.sourceName = tab.title || tab.name || '';
   state.file = tab.path;
   state.dir = tab.dir || '';
@@ -31,6 +32,20 @@ function syncStateFromActiveTab() {
   state.fixes = tab.fixes || [];
   state.stats = tab.stats || {};
   state.webAssets = tab.webAssets || [];
+  if (tab.readerMode) state.pagination.mode = tab.readerMode;
+}
+
+function captureReaderState(tab) {
+  if (!tab) return;
+  const pagination = state.pagination || {};
+  tab.scrollPos = $('content')?.scrollTop || 0;
+  tab.readerMode = pagination.enabled ? pagination.mode : 'paged';
+  tab.readerPage = pagination.enabled && pagination.mode === 'paged'
+    ? pagination.currentPage
+    : 0;
+  tab.continuousScroll = pagination.enabled && pagination.mode === 'continuous'
+    ? ($('content')?.scrollTop || 0)
+    : (tab.scrollPos || 0);
 }
 
 function renderTabsBar() {
@@ -39,6 +54,7 @@ function renderTabsBar() {
   const dropdown = $('doc-tabs-dropdown');
   const overflowWrap = $('doc-tabs-overflow-wrap');
   const btnHome = $('btn-home');
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
 
   if (state.tabs.length === 0) {
     if (bar) bar.innerHTML = '';
@@ -60,14 +76,30 @@ function renderTabsBar() {
     const el = document.createElement('div');
     el.className = 'tab-item' + (tab.id === state.activeTabId ? ' active' : '');
     el.dataset.tabId = tab.id;
+    el.setAttribute('role', 'tab');
+    el.setAttribute('aria-selected', tab.id === state.activeTabId ? 'true' : 'false');
+    el.setAttribute('aria-controls', 'content');
+    el.setAttribute('aria-keyshortcuts', 'Alt+Left Arrow Alt+Right Arrow Delete Backspace');
+    el.tabIndex = tab.id === state.activeTabId ? 0 : -1;
     el.draggable = true;
-    el.title = tab.path || tab.title || tab.name;
 
-    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    el.title = `${tab.path || tab.title || tab.name} (${_t('tabs.closeTab')}: Delete)`;
     if (tab.isDirty) {
       const dot = document.createElement('span');
-      dot.className = 'tab-dirty';
-      dot.title = _t('tabs.dirty') || '未保存';
+      const reason = tab.externalChanged
+        ? (_t('toast.saveConflict') || '文件已被外部修改')
+        : (_t('tabs.dirty') || '未保存');
+      dot.className = tab.externalChanged ? 'tab-dirty tab-external-changed' : 'tab-dirty';
+      dot.title = reason;
+      dot.setAttribute('aria-hidden', 'true');
+      el.setAttribute('aria-description', reason);
+      el.appendChild(dot);
+    } else if (tab.externalChanged) {
+      const dot = document.createElement('span');
+      dot.className = 'tab-dirty tab-external-changed';
+      dot.title = _t('toast.saveConflict') || '文件已被外部修改';
+      dot.setAttribute('aria-hidden', 'true');
+      el.setAttribute('aria-description', dot.title);
       el.appendChild(dot);
     }
 
@@ -80,6 +112,8 @@ function renderTabsBar() {
     closeBtn.className = 'tab-close';
     closeBtn.innerHTML = '&times;';
     closeBtn.title = _t('tabs.closeTab') || '关闭标签';
+    closeBtn.tabIndex = -1;
+    closeBtn.setAttribute('aria-hidden', 'true');
     closeBtn.addEventListener('click', e => {
       e.stopPropagation();
       closeTab(tab.id);
@@ -87,6 +121,39 @@ function renderTabsBar() {
     el.appendChild(closeBtn);
 
     el.addEventListener('click', () => switchTab(tab.id));
+    el.addEventListener('keydown', e => {
+      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        const index = state.tabs.findIndex(item => item.id === tab.id);
+        const targetIndex = e.key === 'ArrowLeft' ? index - 1 : index + 1;
+        if (targetIndex >= 0 && targetIndex < state.tabs.length) {
+          reorderTabs(tab.id, state.tabs[targetIndex].id, e.key === 'ArrowRight');
+          renderTabsBar();
+          focusVisibleTab(tab.id);
+        }
+        e.stopPropagation();
+        return;
+      }
+      if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) {
+        e.preventDefault();
+        moveTabFocus(tab.id, e.key);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        switchTab(tab.id);
+        return;
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        closeTab(tab.id);
+      }
+      if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+        e.preventDefault();
+        const rect = el.getBoundingClientRect();
+        openTabContextMenu({ clientX: rect.left + 12, clientY: rect.bottom + 4 }, tab.id);
+      }
+    });
 
     el.addEventListener('dblclick', e => {
       e.stopPropagation();
@@ -150,7 +217,12 @@ function renderTabsBar() {
     dropdown.innerHTML = '';
     state.tabs.forEach(tab => {
       const item = document.createElement('button');
+      item.setAttribute('role', 'menuitem');
+      item.tabIndex = -1;
       item.className = 'doc-tabs-dropdown-item' + (tab.id === state.activeTabId ? ' active' : '');
+      item.type = 'button';
+      item.setAttribute('role', 'menuitem');
+      item.tabIndex = -1;
       item.innerHTML = '<span>' + (tab.title || tab.name) + (tab.isDirty ? ' &bull;' : '') + '</span><small>' + (tab.path || (tab.isVirtual ? (_t('tabs.virtual') || '虚拟') : '')) + '</small>';
       item.addEventListener('click', () => {
         switchTab(tab.id);
@@ -177,6 +249,28 @@ function renderTabsBar() {
       if (bar && bar.parentElement) bar.parentElement.classList.remove('hidden');
     }
   }
+}
+
+function focusVisibleTab(tabId) {
+  requestAnimationFrame(() => {
+    const matches = Array.from(document.querySelectorAll(`[data-tab-id="${CSS.escape(tabId)}"]`));
+    const next = matches.find(item => item.offsetParent !== null) || matches[0];
+    if (next && document.activeElement !== next) next.focus({ preventScroll: true });
+  });
+}
+
+function moveTabFocus(activeTabId, key) {
+  const index = state.tabs.findIndex(tab => tab.id === activeTabId);
+  if (index < 0) return;
+  const last = state.tabs.length - 1;
+  let target = index;
+  if (key === 'ArrowRight') target = index === last ? 0 : index + 1;
+  else if (key === 'ArrowLeft') target = index === 0 ? last : index - 1;
+  else if (key === 'Home') target = 0;
+  else if (key === 'End') target = last;
+  if (target === index) return;
+  const targetId = state.tabs[target].id;
+  switchTab(targetId).then(() => focusVisibleTab(targetId));
 }
 
 function startTabInlineRename(tab, titleSpan, tabEl) {
@@ -285,37 +379,123 @@ function openTabContextMenu(e, tabId) {
   const menu = $('tab-context-menu');
   if (!menu) return;
   menu.dataset.tabId = tabId;
+  const tabIndex = state.tabs.findIndex(tab => tab.id === tabId);
+  menu.querySelector('[data-action="move-left"]').disabled = tabIndex <= 0;
+  menu.querySelector('[data-action="move-right"]').disabled = tabIndex < 0 || tabIndex >= state.tabs.length - 1;
   menu.style.left = Math.min(window.innerWidth - 180, e.clientX) + 'px';
   menu.style.top = Math.min(window.innerHeight - 200, e.clientY) + 'px';
   menu.classList.remove('hidden');
+  menu.dataset.returnFocus = tabId;
+  setTimeout(() => menu.querySelector('button:not([disabled])')?.focus(), 20);
 }
 
-function switchTab(tabId) {
-  if (state.activeTabId === tabId) return;
-  const prevTab = getActiveTab();
-  if (prevTab) {
-    if (state.editing) {
-      prevTab.content = getEditContent();
-      prevTab.fixed = prevTab.content;
-      prevTab.isDirty = true;
-    }
-    prevTab.scrollPos = $('content').scrollTop || 0;
-  }
-  exitEdit();
-  state.activeTabId = tabId;
-  syncStateFromActiveTab();
+function closeTabContextMenu({ restoreFocus = false } = {}) {
+  const menu = $('tab-context-menu');
+  if (!menu || menu.classList.contains('hidden')) return;
+  menu.classList.add('hidden');
+  if (!restoreFocus) return;
+  const tabId = menu.dataset.returnFocus;
+  if (tabId) focusVisibleTab(tabId);
+}
+
+async function renderActiveTab({ restoreScroll = false } = {}) {
   const nextTab = getActiveTab();
   if (!nextTab) return;
   setFixes(nextTab.fixes || [], nextTab.stats || {});
-  renderContent(nextTab.content, nextTab.title || nextTab.name);
+  await renderContent(nextTab.content, nextTab.title || nextTab.name);
   document.title = (nextTab.title || nextTab.name) + ' - ReadMD';
   setFileTitle(nextTab.title || nextTab.name, !nextTab.isVirtual && hasPy, nextTab.path);
-  if (nextTab.scrollPos) {
+  if (restoreScroll && nextTab.scrollPos) {
     requestAnimationFrame(() => { $('content').scrollTop = nextTab.scrollPos; });
   }
   updateStatus();
   renderTabsBar();
   afterRender();
+}
+
+function syncActiveTabDirty() {
+  if (!state.editing) return;
+  const tab = getActiveTab();
+  if (!tab) return;
+  const dirty = hasUnsavedEditorChanges();
+  if (dirty) {
+    tab.content = getEditContent();
+    tab.fixed = tab.content;
+  }
+  if (tab.isDirty !== dirty) {
+    tab.isDirty = dirty;
+    renderTabsBar();
+  }
+}
+
+async function activateTabForSave(tabId) {
+  if (state.activeTabId !== tabId) {
+    const previousTab = getActiveTab();
+    if (previousTab && state.editing) {
+      if (hasUnsavedEditorChanges()) {
+        previousTab.content = getEditContent();
+        previousTab.fixed = previousTab.content;
+        previousTab.isDirty = true;
+      }
+    }
+    exitEdit();
+    state.activeTabId = tabId;
+    syncStateFromActiveTab();
+    renderActiveTab();
+  }
+  if (!state.editing) await toggleEdit();
+  const nextTab = getActiveTab();
+  const draft = nextTab ? nextTab.content : '';
+  if (typeof cmView !== 'undefined' && cmView) {
+    cmView.dispatch({ changes: { from: 0, to: cmView.state.doc.length, insert: draft } });
+  } else if ($('edit-area')) {
+    $('edit-area').value = draft;
+  }
+}
+
+async function switchTab(tabId) {
+  if (state.activeTabId === tabId) return;
+  const prevTab = getActiveTab();
+  if (prevTab) {
+    if (state.editing) {
+      if (hasUnsavedEditorChanges()) {
+        prevTab.isDirty = true;
+        const action = await promptDirtyClose(prevTab.title || prevTab.name || 'document');
+        if (action === 'cancel') return;
+        if (action === 'save') {
+          await saveEdit();
+          if (state.editing) return;
+        } else {
+          exitEdit();
+          prevTab.content = prevTab.original;
+          prevTab.fixed = prevTab.original;
+          prevTab.isDirty = false;
+        }
+      }
+      else {
+        exitEdit();
+      }
+    }
+    captureReaderState(prevTab);
+  }
+  exitEdit();
+  state.activeTabId = tabId;
+  syncStateFromActiveTab();
+  const nextTabState = getActiveTab();
+  if (nextTabState?.externalChanged && nextTabState.path && !nextTabState.isDirty) {
+    nextTabState.externalChanged = false;
+    await loadFile(nextTabState.path, { force: true });
+    return;
+  }
+  const preferredPage = Number(nextTabState?.readerPage || 0);
+  const rendered = renderActiveTab({ restoreScroll: true });
+  Promise.resolve(rendered).then(() => {
+    if (state.pagination.enabled && state.pagination.mode === 'paged' && preferredPage >= 0) {
+      renderPage(preferredPage, null, true);
+    } else if (state.pagination.enabled && state.pagination.mode === 'continuous' && nextTabState.continuousScroll) {
+      requestAnimationFrame(() => { $('content').scrollTop = nextTabState.continuousScroll; });
+    }
+  });
 }
 
 function promptDirtyClose(tabName) {
@@ -329,8 +509,7 @@ function promptDirtyClose(tabName) {
   return new Promise(resolve => {
     const modal = $('close-confirm-modal');
     if (!modal) {
-      const ok = confirm((_t('dialog.unsavedMsg', { name: tabName })) || `文档「${tabName}」有未保存的修改，确定要关闭吗？`);
-      resolve(ok ? 'discard' : 'cancel');
+      resolve('cancel');
       return;
     }
     const titleEl = $('close-confirm-title');
@@ -369,8 +548,8 @@ function promptDirtyClose(tabName) {
     document.addEventListener('keydown', onKeyDown);
 
     // 聚焦主要行动按钮
-    const saveBtn = $('close-confirm-save');
-    if (saveBtn) setTimeout(() => saveBtn.focus(), 30);
+    const cancelBtn = $('close-confirm-cancel');
+    if (cancelBtn) setTimeout(() => cancelBtn.focus(), 30);
   });
 }
 
@@ -382,22 +561,29 @@ async function closeTab(tabId, force = false) {
     const action = await promptDirtyClose(tab.title || tab.name);
     if (action === 'cancel') return;
     if (action === 'save') {
-      if (state.activeTabId !== tabId) switchTab(tabId);
-      await saveEdit();
+      await activateTabForSave(tabId);
+      const saved = await saveEdit();
+      if (!saved || (getActiveTab()?.id === tabId && state.editing)) return;
     }
   }
   const idx = state.tabs.findIndex(t => t.id === tabId);
+  const focusedTabId = document.activeElement instanceof Element ? document.activeElement.dataset.tabId : null;
   state.tabs.splice(idx, 1);
   if (state.activeTabId === tabId) {
     if (state.tabs.length > 0) {
       const nextIdx = Math.min(idx, state.tabs.length - 1);
-      switchTab(state.tabs[nextIdx].id);
+      const nextTabId = state.tabs[nextIdx].id;
+      switchTab(nextTabId).then(() => focusVisibleTab(nextTabId));
     } else {
       state.activeTabId = null;
       goHome();
     }
   }
   renderTabsBar();
+  if (focusedTabId === tabId) {
+    const fallbackTab = state.tabs[Math.min(idx, state.tabs.length - 1)];
+    focusVisibleTab(fallbackTab ? fallbackTab.id : state.activeTabId);
+  }
 }
 
 async function closeOtherTabs(keepTabId) {
@@ -408,9 +594,10 @@ async function closeOtherTabs(keepTabId) {
       if (t.isDirty) {
         const action = await promptDirtyClose(t.title || t.name);
         if (action === 'cancel') return;
-        if (action === 'save') {
-          switchTab(t.id);
-          await saveEdit();
+      if (action === 'save') {
+        await activateTabForSave(t.id);
+        const saved = await saveEdit();
+        if (!saved || state.tabs.some(item => item.id === t.id && item.isDirty)) return;
         }
       }
     }
@@ -427,8 +614,9 @@ async function closeAllTabs() {
       const action = await promptDirtyClose(t.title || t.name);
       if (action === 'cancel') return;
       if (action === 'save') {
-        switchTab(t.id);
-        await saveEdit();
+        await activateTabForSave(t.id);
+        const saved = await saveEdit();
+        if (!saved || (getActiveTab()?.isDirty || state.editing)) return;
       }
     }
   }

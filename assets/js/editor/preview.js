@@ -9,6 +9,47 @@ let pvTimer = null;
 let pvLast = '';
 let pvEditorEl = null;
 
+function hasUnsavedEditorChanges() {
+  if (!state.editing) return false;
+  return getEditContent() !== (state.original || '');
+}
+
+function syncSavedTab(path, content) {
+  const tab = typeof findTabByPath === 'function' ? findTabByPath(path) : null;
+  if (!tab) return;
+  tab.content = content;
+  tab.original = content;
+  tab.fixed = content;
+  tab.fixes = [];
+  tab.isDirty = false;
+}
+
+function applySavedMtime(result) {
+  if (result && typeof result.mtime === 'number') {
+    state.mtime = result.mtime;
+    const tab = typeof getActiveTab === 'function' ? getActiveTab() : null;
+    if (tab) tab.mtime = result.mtime;
+  }
+}
+
+async function renderSavedDocument(content) {
+  state.original = content;
+  state.fixed = content;
+  state.fixes = [];
+  state.stats = {};
+  if (typeof setFixes === 'function') setFixes([], {});
+  if (typeof renderContent === 'function') {
+    const contentEl = document.getElementById('content');
+    const page = state.pagination?.enabled && state.pagination.mode === 'paged' ? state.pagination.currentPage : 0;
+    const scroll = contentEl?.scrollTop || 0;
+    await renderContent(content, state.sourceName || (state.file ? state.file.split(/[\\/]/).pop() : 'document'));
+    if (page > 0) await renderPage(page, null, true);
+    requestAnimationFrame(() => {
+      if (contentEl) contentEl.scrollTop = scroll;
+    });
+  }
+}
+
 function getEditContent() {
   return cmView ? cmView.state.doc.toString() : ($('edit-area') && $('edit-area').value || '');
 }
@@ -51,6 +92,14 @@ function applyPvSplit() {
   const horizontal = state.pvLayout === 'left' || state.pvLayout === 'right';
   const pct = horizontal ? state.pvSplitX : state.pvSplitY;
   pw.style.flexBasis = pct + '%';
+  const splitter = $('pv-splitter');
+  if (splitter) {
+    splitter.setAttribute('aria-valuemin', '25');
+    splitter.setAttribute('aria-valuemax', '70');
+    splitter.setAttribute('aria-valuenow', String(Math.round(pct)));
+    splitter.setAttribute('aria-valuetext', `${Math.round(pct)}%`);
+    splitter.setAttribute('aria-orientation', horizontal ? 'vertical' : 'horizontal');
+  }
 }
 
 function bindPvSplitter() {
@@ -107,7 +156,7 @@ async function renderPreview() {
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     html = '<p class="ai-err">' + (_t('editor.previewRenderFail') || '预览渲染失败') + '</p>';
   }
-  pane.innerHTML = html;
+  pane.innerHTML = window.sanitizeRenderedHtml ? window.sanitizeRenderedHtml(html) : html;
   fixLinks(pane);
   fixImages(pane);
   renderMath(pane);
@@ -247,7 +296,11 @@ function applyPvUi() {
 
 async function toggleEdit() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (state.editing) { exitEdit(); return; }
+  if (state.editing) {
+    if (!await confirmExitEdit()) return;
+    applyPvUi();
+    return;
+  }
   if (state.original === undefined || state.original === '') { showToast(_t('toast.noEditableContent') || '没有可编辑的内容'); return; }
   $('edit-bar').classList.remove('hidden');
   $('content').classList.add('hidden');
@@ -272,6 +325,28 @@ async function toggleEdit() {
     $('edit-area').focus();
   }
   applyPvUi();
+}
+
+async function confirmExitEdit() {
+  if (!hasUnsavedEditorChanges()) {
+    exitEdit();
+    return true;
+  }
+  const action = await promptDirtyClose(state.sourceName || state.file || 'document');
+  if (action === 'cancel') return false;
+  if (action === 'save') {
+    await saveEdit();
+    return !state.editing;
+  }
+  const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
+  if (activeTab) {
+    activeTab.content = state.original;
+    activeTab.fixed = state.original;
+    activeTab.isDirty = false;
+    if (typeof renderTabsBar === 'function') renderTabsBar();
+  }
+  exitEdit();
+  return true;
 }
 
 function exitEdit() {
@@ -301,11 +376,12 @@ function exitEdit() {
   $('content').classList.remove('hidden');
   state.editing = false;
   setEditBtn(_t('toolbar.edit') || '编辑');
+  if (typeof updateUnloadGuard === 'function') updateUnloadGuard();
 }
 
 async function saveEdit() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!state.editing) return;
+  if (!state.editing) return false;
   const content = cmView ? cmView.state.doc.toString() : $('edit-area').value;
   if (!state.file) {
     // 虚拟文档（转换 / OCR / 网页）：另存为 .md 后切换为文件模式
@@ -315,51 +391,144 @@ async function saveEdit() {
     if (hasPy) {
       busy(true);
       try { out = await py.save_as(content, suggested, state.webAssets || []); }
-      catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); busy(false); return; }
+      catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); busy(false); return false; }
       busy(false);
-      if (!out) { showToast(_t('toast.saveCancelled') || '已取消保存'); return; }
+      if (!out) { showToast(_t('toast.saveCancelled') || '已取消保存'); return false; }
       showToast((_t('toast.savedPrefix') || '已保存：') + out);
       exitEdit();
       await loadFile(out);
-    } else {
-      const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = suggested;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-      showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
+      return Boolean(out);
     }
-    return;
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = suggested;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+    showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
+    return true;
   }
   busy(true);
   try {
     let ok;
     if (hasPy) {
-      ok = await py.save_file(state.file, content, state.encoding || 'utf-8');
+      ok = await py.save_file(state.file, content, state.encoding || 'utf-8', state.mtime || null);
     } else {
       const r = await apiFetch('/api/save', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: state.file, content, encoding: state.encoding || 'utf-8' }),
+        body: JSON.stringify({
+          path: state.file,
+          content,
+          encoding: state.encoding || 'utf-8',
+          expected_mtime: state.mtime || null,
+        }),
       });
+      if (r.status === 403) {
+        showToast(_t('toast.saveDenied') || '保存被拒绝：请重新打开文档后再保存');
+        return false;
+      }
       ok = await r.json();
     }
     if (ok && ok.ok !== false) {
-      showToast(ok.backup ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）')) : (_t('toast.savedSuccess') || '已保存'));
+      syncSavedTab(state.file, content);
+      applySavedMtime(ok);
+      await renderSavedDocument(content);
+      const savedTarget = state.browserCopy
+        ? `${state.sourceName || state.file} (${_t('app.browserCopy') || 'browser copy'})`
+        : (state.file || state.sourceName || 'document');
+      showToast(ok.backup
+        ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）'))
+        : ((_t('toast.savedPrefix') || '已保存：') + savedTarget));
       exitEdit();
-      await loadFile(state.file);
+      return true;
     } else {
-      showToast((_t('toast.saveFailed') || '保存失败：') + ((ok && ok.error) || (_t('toast.unknownError') || '未知错误')));
+      if (ok && ok.conflict) {
+        const action = await promptSaveConflict();
+        if (action === 'save-as') {
+          const activeTab = getActiveTab();
+          const suggested = (state.sourceName || state.file || 'document')
+            .replace(/[\\/]/g, '_')
+            .replace(/\.[^.]+$/, '') + '.md';
+          if (activeTab) {
+            activeTab.content = content;
+            activeTab.fixed = content;
+          }
+          state.fixed = content;
+          const saved = await saveAs(content);
+          if (!hasPy && saved) {
+            showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
+            return false;
+          }
+          if (!saved) return false;
+          exitEdit();
+          await loadFile(state.file, { force: true });
+          return true;
+        }
+        if (action === 'reload') {
+          exitEdit();
+          await loadFile(state.file, { force: true });
+          return true;
+        }
+        if (action === 'cancel') {
+          showToast(_t('toast.reloadBlockedDirty') || '未保存修改已保留，未重新加载外部更改');
+        }
+      } else {
+        showToast((_t('toast.saveFailed') || '保存失败：') + ((ok && ok.error) || (_t('toast.unknownError') || '未知错误')));
+      }
+      return false;
     }
-  } catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); }
-  finally { busy(false); }
+    return false;
+  } catch (e) {
+    showToast((_t('toast.saveFailed') || '保存失败：') + e.message);
+    return false;
+  } finally { busy(false); }
 }
 
-async function saveAs() {
+function promptSaveConflict() {
+  return new Promise(resolve => {
+    const modal = $('save-conflict-modal');
+    if (!modal) {
+      resolve('cancel');
+      return;
+    }
+    modal.classList.remove('hidden');
+    const reload = $('save-conflict-reload');
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    reload.textContent = `${_t('toolbar.reload') || 'Reload'} (${_t('dialog.dontSave') || 'Do not save'})`;
+    const cancel = $('save-conflict-cancel');
+    setTimeout(() => cancel?.focus(), 20);
+
+    const finish = action => {
+      modal.classList.add('hidden');
+      $('save-conflict-save-as').onclick = null;
+      $('save-conflict-reload').onclick = null;
+      $('save-conflict-cancel').onclick = null;
+      modal.removeEventListener('click', onBackdrop);
+      document.removeEventListener('keydown', onKey);
+      resolve(action);
+    };
+    const onBackdrop = event => { if (event.target === modal) finish('cancel'); };
+    const onKey = event => {
+      if (event.key === 'Escape') { event.preventDefault(); finish('cancel'); }
+    };
+    $('save-conflict-save-as').onclick = () => finish('save-as');
+    $('save-conflict-reload').onclick = () => finish('reload');
+    cancel.onclick = () => finish('cancel');
+    modal.addEventListener('click', onBackdrop);
+    document.addEventListener('keydown', onKey);
+  });
+}
+
+async function saveAs(contentOverride = null) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const content = state.fixed || state.original || '';
-  const name = (state.sourceName || state.file || 'document').replace(/[\\/]/g, '_');
-  const suggested = name.replace(/\.[^.]+$/, '') + '.md';
+  const content = contentOverride ?? state.fixed ?? state.original ?? '';
+  const sourceName = getActiveTab()?.name
+    || String(state.file || '').split(/[\\/]/).pop()
+    || state.sourceName
+    || 'document';
+  const name = String(sourceName).replace(/[\\/]/g, '_');
+  const extension = name.match(/\.[^.]+$/)?.[0] || '.md';
+  const suggested = name.replace(/\.[^.]+$/, '') + extension;
   if (hasPy) {
     const out = await py.save_as(content, suggested, state.webAssets || []);
     if (out) {
@@ -370,17 +539,26 @@ async function saveAs() {
         activeTab.mode = 'file';
         activeTab.isVirtual = false;
         activeTab.isDirty = false;
+        activeTab.browserCopy = false;
         activeTab.name = String(out).split(/[\\/]/).pop();
         activeTab.title = activeTab.name;
+        activeTab.content = content;
+        activeTab.original = content;
+        activeTab.fixed = content;
         state.file = out;
+        state.original = content;
+        state.fixed = content;
         state.dir = activeTab.dir;
         state.mode = 'file';
+        state.browserCopy = false;
+        state.sourceName = activeTab.name;
         renderTabsBar();
         document.title = activeTab.name + ' - ReadMD';
         setFileTitle(activeTab.name, true, out);
         addRecent(out);
       }
       showToast((_t('toast.savedPrefix') || '已保存：') + out);
+      return true;
     }
   } else {
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
@@ -390,6 +568,8 @@ async function saveAs() {
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
     showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
+    return true;
   }
+  return false;
 }
 

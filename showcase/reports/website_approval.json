@@ -1,0 +1,56 @@
+{
+  "artifact": "website",
+  "version": "1.0.0",
+  "reviewed_at": "2026-08-24T16:30:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "design-review",
+      "status": "approved",
+      "score": 9.78,
+      "evidence": [
+        "Original premium layout uses one accent, consistent radii, real product captures, visible focus states, and reduced-motion fallback.",
+        "Navigation remains a single desktop row below 80px; body copy stays within readable measure on mobile.",
+        "Open Graph, Twitter cards, canonical URLs, hreflang alternates, and max-image-preview directives pass automated checks."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "geo-content-review",
+      "status": "approved",
+      "score": 9.86,
+      "evidence": [
+        "Four language indexes link their own llms-full.txt corpus.",
+        "Question headings lead to self-contained answers; robots.txt permits major search and AI crawlers.",
+        "All quantitative claims trace to README product behavior; download safety defers to checksums.",
+        "Security headers constrain scripts, styles, images, framing, referrers, and browser permissions.",
+        "Every language page carries localized WebPage, SoftwareApplication, dateModified, and speakable structured data."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-and-rights-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "No Apple copy, logo, screenshot, source file, or protected trade dress is copied.",
+        "MIT license, repository, prerelease status, and checksum guidance are stated explicitly.",
+        "Cloudflare deployment artifacts remain isolated under website/ and vendor research is ignored.",
+        "WeChat paste-safe export passes its dedicated QA report."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_staged_publication",
+    "score": 9.88,
+    "participants": ["product", "design", "GEO", "release"],
+    "conditions": [
+      "npm build must be green before upload.",
+      "validate_website.py must be green.",
+      "Deployment must use Cloudflare free hosting and verify https://readmd.syminu.online/ returns 200 for all language indexes.",
+      "A write-capable scoped Cloudflare token is required because the current token cannot create Pages or upload Worker assets."
+    ]
+  }
+}

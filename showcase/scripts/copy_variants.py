@@ -1,0 +1,386 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Build and rank complete Xiaohongshu copy variants from one fact core."""
+from __future__ import annotations
+
+import argparse
+import copy
+import hashlib
+import json
+import re
+from pathlib import Path
+from typing import Any
+
+from audit_copy import audit_copy
+from content_memory import load_learning_records, partition_records, summarize
+from copy_profiles import (
+    frames_for_story,
+    resonance_frame_adjustment,
+    resonance_title_adjustment,
+)
+
+TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12", "#26")
+ENDPOINT_COOLDOWN_RELEASES = 8
+
+
+def _normalize_for_originality(value: str) -> str:
+    return re.sub(r"\s+", "", value).casefold()
+
+
+def text_trigrams(body: str) -> set[str]:
+    normalized = _normalize_for_originality(body)
+    return {
+        hashlib.sha256(normalized[index:index + 3].encode("utf-8")).hexdigest()[:12]
+        for index in range(max(0, len(normalized) - 2))
+    }
+
+
+def jaccard_similarity(left: set[str], right: set[str]) -> float:
+    if not left and not right:
+        return 1.0
+    if not left or not right:
+        return 0.0
+    return len(left & right) / len(left | right)
+
+
+def text_fingerprints(body: str) -> dict[str, str]:
+    paragraphs = [item.strip() for item in body.split("\n\n") if item.strip()]
+    return {
+        "body_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
+        "opening": _normalize_for_originality(paragraphs[0] if paragraphs else ""),
+        "closing": _normalize_for_originality(paragraphs[-1] if paragraphs else ""),
+    }
+
+
+def projected_composition(story: dict[str, Any]) -> dict[str, Any]:
+    cards: list[dict[str, Any]] = [{
+        "file": "xhs-01-cover.jpg",
+        "role": "cover",
+        "ui_min_ratio": 0,
+        "ui_area_ratio": 0.35,
+    }]
+    for shot_id in story.get("selected_shots", []):
+        role = "pure_ui_hero" if shot_id == "overview.reader" else "annotated_ui"
+        minimum = 0.7 if role == "pure_ui_hero" else 0.55
+        cards.append({
+            "file": f"xhs-{len(cards) + 1:02d}-{shot_id.replace('.', '-')}.jpg",
+            "role": role,
+            "ui_min_ratio": minimum,
+            "ui_area_ratio": minimum + 0.03,
+        })
+    cards.append({
+        "file": f"xhs-{len(cards) + 1:02d}-summary.jpg",
+        "role": "summary",
+        "ui_min_ratio": 0.3,
+        "ui_area_ratio": 0.34,
+    })
+    return {
+        "overflow_errors": [],
+        "design_audit": {"contrast_errors": [], "small_text": [], "images_failed": []},
+        "cards": cards,
+    }
+
+
+def _replace_paragraphs(body: str, opening: str, closing: str, known_closings: set[str]) -> str:
+    paragraphs = [item.strip() for item in body.split("\n\n") if item.strip()]
+    paragraphs[0] = opening
+    paragraphs[1:] = [item for item in paragraphs[1:] if item not in known_closings]
+    paragraphs.append(closing)
+    return "\n\n".join(paragraphs)
+
+
+def build_variants(*, story: dict[str, Any], base_metadata: dict[str, Any]) -> list[dict[str, Any]]:
+    variants: list[dict[str, Any]] = []
+    hook_frames = frames_for_story(story)
+    known_closings = {frame[2] for frames in hook_frames.values() for frame in frames}
+    candidate_map = {item["formula_id"]: item for item in base_metadata.get("title_candidates", [])}
+    title_options = [candidate_map[formula_id] for formula_id in TITLE_FORMULAS]
+    if len(title_options) != len(TITLE_FORMULAS):
+        missing = sorted(set(TITLE_FORMULAS) - set(candidate_map))
+        raise ValueError(f"title experiment formulas missing: {missing}")
+    for hook_type, frames in hook_frames.items():
+        for frame_id, opening, closing in frames:
+            for title_option in title_options:
+                variant = copy.deepcopy(base_metadata)
+                base_variant_id = f"{hook_type}__{title_option['formula_id'].lstrip('#')}"
+                variant["variant_id"] = base_variant_id if frame_id == "core" else f"{base_variant_id}__{frame_id}"
+                variant["copy_frame"] = frame_id
+                variant["strategy"] = hook_type
+                variant["hook_type"] = hook_type
+                variant["title_formula_id"] = title_option["formula_id"]
+                variant["title"] = title_option["text"]
+                if len(variant["title"]) > 20:
+                    raise ValueError(f"variant title exceeds 20 characters: {variant['title']}")
+                variant["body"] = _replace_paragraphs(
+                    variant["body"], opening, closing, known_closings
+                )
+                report = audit_copy(
+                    story=story,
+                    metadata=variant,
+                    composition=projected_composition(story),
+                )
+                variant["_report"] = report
+                variants.append(variant)
+    return variants
+
+
+def choose_variant(
+    variants: list[dict[str, Any]],
+    history: list[dict[str, Any]] | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    records = history or []
+    records, _pending_records = partition_records(records)
+    summary = summarize(records)
+    recent_hooks = set(summary.get("recent_hook_types", []))
+    recent_formulas = set(summary.get("recent_formulas", []))
+    resonance_directive_payloads = {
+        json.dumps(item.get("resonance_directive"), ensure_ascii=False, sort_keys=True)
+        for item in variants
+        if isinstance(item.get("resonance_directive"), dict)
+    }
+    if len(resonance_directive_payloads) > 1:
+        raise ValueError("variants contain conflicting resonance directives")
+    resonance_directive = (
+        json.loads(next(iter(resonance_directive_payloads)))
+        if resonance_directive_payloads else None
+    )
+
+    def dimension_stats(key: str) -> dict[str, dict[str, Any]]:
+        output: dict[str, dict[str, Any]] = {}
+        for record in records:
+            name = str(record.get(key, ""))
+            if not name.strip():
+                continue
+            stats = output.setdefault(name, {
+                "publications": 0,
+                "impressions": 0,
+                "weighted_engagement": 0,
+                "score": 0.0,
+                "confidence_ok": False,
+            })
+            impressions = int(record.get("impressions", 0))
+            engagement = (
+                int(record.get("likes", 0))
+            + int(record.get("collects", 0)) * 2
+            + int(record.get("comments", 0)) * 3
+                + int(record.get("shares", 0)) * 4
+            )
+            stats["publications"] += 1
+            stats["impressions"] += impressions
+            stats["weighted_engagement"] += engagement
+        for stats in output.values():
+            stats["score"] = round(stats["weighted_engagement"] / max(stats["impressions"], 1), 6)
+            stats["confidence_ok"] = stats["publications"] >= 2 and stats["impressions"] >= 1000
+        return output
+
+    hook_stats = dimension_stats("hook_type")
+    formula_stats = dimension_stats("title_formula_id")
+    frame_stats = dimension_stats("copy_frame")
+    hook_usage = {
+        str(record.get("hook_type", "")): sum(
+            1 for item in records if str(item.get("hook_type", "")) == str(record.get("hook_type", ""))
+        )
+        for record in records
+    }
+    max_hook_score = max((item["score"] for item in hook_stats.values()), default=0.0)
+    max_formula_score = max((item["score"] for item in formula_stats.values()), default=0.0)
+    max_frame_score = max((item["score"] for item in frame_stats.values()), default=0.0)
+
+    prior_fingerprints = [
+        {key: record.get(key) for key in ("release", "body_sha256", "opening", "closing", "body_trigrams")}
+        for record in records
+        if record.get("body_sha256") or record.get("opening") or record.get("closing") or record.get("body_trigrams")
+    ]
+    recent_fingerprints = prior_fingerprints[-ENDPOINT_COOLDOWN_RELEASES:]
+    used_openings = {str(record["opening"]) for record in recent_fingerprints if record.get("opening")}
+    used_closings = {str(record["closing"]) for record in recent_fingerprints if record.get("closing")}
+
+    def remaining_frame_count(hook_type: str) -> int:
+        frames = {
+            (
+                variant.get("copy_frame"),
+                _normalize_for_originality(text_fingerprints(variant["body"])["opening"]),
+                _normalize_for_originality(text_fingerprints(variant["body"])["closing"]),
+            )
+            for variant in variants
+            if variant["strategy"] == hook_type
+        }
+        return sum(
+            1
+            for _, opening, closing in frames
+            if opening not in used_openings and closing not in used_closings
+        )
+
+    frame_inventory = {
+        hook_type: remaining_frame_count(hook_type)
+        for hook_type in {variant["strategy"] for variant in variants}
+    }
+    max_frame_inventory = max(frame_inventory.values(), default=0)
+
+    ranked: list[dict[str, Any]] = []
+    max_body_similarity = 0.0
+    similarity_source = ""
+    for variant in variants:
+        adjustment = 0.0
+        reasons = []
+        report = dict(variant.pop("_report"))
+        fingerprints = text_fingerprints(variant["body"])
+        variant_trigrams = text_trigrams(variant["body"])
+        originality_failures = []
+        for prior in prior_fingerprints:
+            release_name = prior.get("release") or "previous release"
+            if fingerprints["body_sha256"] and prior.get("body_sha256") == fingerprints["body_sha256"]:
+                originality_failures.append(f"body hash matches {release_name}")
+            prior_trigrams = set(prior.get("body_trigrams") or [])
+            similarity = jaccard_similarity(variant_trigrams, prior_trigrams)
+            if similarity > max_body_similarity:
+                max_body_similarity = similarity
+                similarity_source = release_name
+            if similarity >= 0.85:
+                originality_failures.append(
+                    f"near-duplicate body ({similarity:.2f}) matches {release_name}"
+                )
+            elif similarity >= 0.70:
+                adjustment -= 12
+                reasons.append(f"near-duplicate penalty against {release_name} ({similarity:.2f})")
+        for prior in recent_fingerprints:
+            release_name = prior.get("release") or "previous release"
+            if fingerprints["opening"] and prior.get("opening") == fingerprints["opening"]:
+                originality_failures.append(f"opening matches {release_name}")
+            if fingerprints["closing"] and prior.get("closing") == fingerprints["closing"]:
+                originality_failures.append(f"closing matches {release_name}")
+        if originality_failures:
+            report["hard_failures"] = sorted(set(report.get("hard_failures", []) + originality_failures))
+            report["ok"] = False
+        hook_type = variant["hook_type"]
+        available_frames = frame_inventory[hook_type]
+        if hook_type in recent_hooks:
+            adjustment -= 6
+            reasons.append("recent hook fatigue penalty")
+        if variant["title_formula_id"] in recent_formulas:
+            adjustment -= 4
+            reasons.append("recent formula fatigue penalty")
+        stat = hook_stats.get(hook_type)
+        if stat and stat["confidence_ok"] and max_hook_score:
+            bonus = stat["score"] / max_hook_score * 12
+            adjustment += bonus
+            reasons.append("historical hook performance bonus")
+        formula_stat = formula_stats.get(variant["title_formula_id"])
+        if formula_stat and formula_stat["confidence_ok"] and max_formula_score:
+            bonus = formula_stat["score"] / max_formula_score * 8
+            adjustment += bonus
+            reasons.append("historical title performance bonus")
+        frame_stat = frame_stats.get(variant["copy_frame"])
+        if frame_stat and frame_stat["confidence_ok"] and max_frame_score:
+            bonus = frame_stat["score"] / max_frame_score * 10
+            adjustment += bonus
+            reasons.append("historical frame performance bonus")
+        hook_deficit = max(hook_usage.values(), default=0) - hook_usage.get(hook_type, 0)
+        coverage_bonus = hook_deficit * 8
+        if coverage_bonus:
+            adjustment += coverage_bonus
+            reasons.append("underexplored dimension coverage bonus")
+        inventory_deficit = max_frame_inventory - available_frames
+        if inventory_deficit:
+            adjustment -= inventory_deficit * 35
+            reasons.append(f"scarce copy-frame inventory penalty ({available_frames} remaining)")
+        resonance_bonus, resonance_reasons = resonance_frame_adjustment(
+            resonance_directive,
+            copy_frame=variant["copy_frame"],
+        )
+        history_adjustment = round(adjustment, 3)
+        title_bonus, title_reasons = resonance_title_adjustment(
+            resonance_directive,
+            title_formula_id=variant["title_formula_id"],
+        )
+        reasons.extend(resonance_reasons)
+        reasons.extend(title_reasons)
+        ranked.append({
+            "variant_id": variant["variant_id"],
+            "strategy": variant["strategy"],
+            "title": variant["title"],
+            "title_formula_id": variant["title_formula_id"],
+            "hook_type": hook_type,
+            "copy_frame": variant["copy_frame"],
+            "remaining_copy_frames": available_frames,
+            "semantic_score": report["total_score"],
+            "history_adjustment": history_adjustment,
+            "resonance_frame_bonus": round(resonance_bonus, 3),
+            "resonance_title_bonus": round(title_bonus, 3),
+            "adjusted_score": round(
+                report["total_score"] + history_adjustment + resonance_bonus + title_bonus,
+                3,
+            ),
+            "ok": report["ok"],
+            "hard_failures": report["hard_failures"],
+            "originality_failures": originality_failures,
+            "max_body_similarity": round(max_body_similarity, 3),
+            "max_similarity_source": similarity_source,
+            "reasons": reasons,
+        })
+
+    eligible = [item for item in ranked if item["ok"]]
+    if not eligible:
+        raise ValueError("no copy variant passes semantic and originality QA; refresh the copy frame pool")
+    winner_summary = max(eligible, key=lambda item: item["adjusted_score"])
+    winner = next(variant for variant in variants if variant["variant_id"] == winner_summary["variant_id"])
+    return winner, {
+        "schema_version": 1,
+        "chosen_strategy": winner_summary["strategy"],
+        "chosen_variant_id": winner_summary["variant_id"],
+        "chosen_copy_frame": winner_summary["copy_frame"],
+        "candidate_count": len(variants),
+        "ok": True,
+        "originality_gate": "pass",
+        "selection_rule": (
+            "semantic score plus confidence-gated historical hook/title performance, underexplored "
+            f"historical frame performance, underexplored dimension coverage, renewable frame inventory "
+            f"with a {ENDPOINT_COOLDOWN_RELEASES}-release endpoint cooldown, evidence-gated comment-intent "
+            "frame/title alignment, and minus recent fatigue; "
+            "insufficient evidence creates no performance bonus"
+        ),
+        "resonance_focus": (
+            str(resonance_directive.get("evidence", {}).get("focus", "general"))
+            if isinstance(resonance_directive, dict) else "general"
+        ),
+        "frame_stats": frame_stats,
+        "endpoint_cooldown_releases": ENDPOINT_COOLDOWN_RELEASES,
+        "copy_frame_inventory": frame_inventory,
+        "hook_stats": hook_stats,
+        "formula_stats": formula_stats,
+        "ranked": [item for item in ranked if "_report" not in item],
+    }
+
+
+def select_variant(
+    *,
+    story: dict[str, Any],
+    base_metadata: dict[str, Any],
+    history: list[dict[str, Any]] | None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    variants = build_variants(story=story, base_metadata=base_metadata)
+    chosen, selection = choose_variant(variants, history)
+    for variant in variants:
+        variant.pop("_report", None)
+    selection["variants"] = variants
+    return chosen, selection
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--package", type=Path, required=True)
+    parser.add_argument("--story", type=Path, required=True)
+    parser.add_argument("--history", type=Path)
+    args = parser.parse_args()
+    metadata = json.loads((args.package / "metadata.json").read_text(encoding="utf-8"))
+    story = json.loads(args.story.read_text(encoding="utf-8"))
+    history = load_learning_records(args.history) if args.history else []
+    chosen, selection = select_variant(story=story, base_metadata=metadata, history=history)
+    (args.package / "metadata.json").write_text(json.dumps(chosen, ensure_ascii=False, indent=2), encoding="utf-8")
+    (args.package / "variants.json").write_text(json.dumps(selection, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(json.dumps({"chosen_strategy": chosen["strategy"], "selection": selection}, ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

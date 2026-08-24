@@ -120,15 +120,27 @@ function renderTplList() {
     const li = document.createElement('li');
     li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
     li.dataset.id = t.id;
+    li.setAttribute('role', 'option');
+    li.tabIndex = 0;
+    li.setAttribute('aria-selected', 'false');
     li.title = (_t('ai.actionPrefix') || '动作：') + (t.action || 'custom') + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '含用户消息模板')) : '');
     li.addEventListener('click', () => selectTpl(t.id));
+    li.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      selectTpl(t.id);
+    });
     list.appendChild(li);
   });
 }
 
 function selectTpl(id) {
   const t = (state.ai.templates || []).find(x => x.id === id) || null;
-  document.querySelectorAll('#tpl-list li').forEach(li => li.classList.toggle('active', li.dataset.id === id));
+  document.querySelectorAll('#tpl-list li').forEach(li => {
+    const selected = li.dataset.id === id;
+    li.classList.toggle('active', selected);
+    li.setAttribute('aria-selected', selected ? 'true' : 'false');
+  });
   $('tpl-id').value = t ? t.id : '';
   $('tpl-name').value = t ? t.name : '';
   $('tpl-action').value = (t && t.action) || 'custom';
@@ -168,7 +180,13 @@ async function deleteCurrentTpl() {
   if (!id) return;
   const cur = (state.ai.templates || []).find(x => x.id === id);
   const msg = cur && cur.builtin ? (_t('toast.tplResetConfirm') || '将重置为默认模板，确定吗？') : (_t('toast.tplDelConfirm') || '确定删除此模板吗？');
-  if (!confirm(msg)) return;
+  if (!(await confirmAction({
+    title: _t('dialog.destructiveTitle') || '请确认',
+    message: msg,
+    confirmText: _t('dialog.confirm') || '确认',
+    cancelText: _t('dialog.cancel') || '取消',
+    danger: true,
+  }))) return;
   try {
     const r = await apiFetch('/api/ai/prompts', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -966,6 +984,26 @@ function bindAiResize() {
   const handle = $('ai-resize-handle');
   if (!handle) return;
   let startX = 0, startWidth = 0;
+  const maxWidth = () => Math.max(360, Math.floor(window.innerWidth * 0.94));
+  const syncResizeState = () => {
+    handle.setAttribute('aria-valuemax', String(maxWidth()));
+    handle.setAttribute('aria-valuenow', String(state.aiPanelWidth));
+  };
+  const setPanelWidth = width => {
+    state.aiPanelWidth = Math.max(360, Math.min(maxWidth(), Math.round(width)));
+    document.body.style.setProperty('--ai-panel-width', state.aiPanelWidth + 'px');
+    syncResizeState();
+  };
+  handle.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const step = e.shiftKey ? 32 : 16;
+    setPanelWidth(state.aiPanelWidth + (e.key === 'ArrowLeft' ? step : -step));
+  });
+  handle.addEventListener('keyup', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') saveSettings();
+  });
+  window.addEventListener('resize', syncResizeState);
   handle.addEventListener('pointerdown', e => {
     startX = e.clientX; startWidth = state.aiPanelWidth;
     handle.setPointerCapture(e.pointerId);
@@ -973,9 +1011,7 @@ function bindAiResize() {
   });
   handle.addEventListener('pointermove', e => {
     if (!handle.hasPointerCapture(e.pointerId)) return;
-    const max = Math.max(360, Math.floor(window.innerWidth * 0.94));
-    state.aiPanelWidth = Math.max(360, Math.min(max, startWidth + startX - e.clientX));
-    document.body.style.setProperty('--ai-panel-width', state.aiPanelWidth + 'px');
+    setPanelWidth(startWidth + startX - e.clientX);
   });
   const finish = e => {
     if (!handle.hasPointerCapture(e.pointerId)) return;
@@ -985,6 +1021,7 @@ function bindAiResize() {
   };
   handle.addEventListener('pointerup', finish);
   handle.addEventListener('pointercancel', finish);
+  syncResizeState();
 }
 
 

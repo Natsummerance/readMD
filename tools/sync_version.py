@@ -153,12 +153,29 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
         # 替换 badge
         new_src = re.sub(r'badge/version-v[0-9a-zA-Z.-]+-3b6ef5', f'badge/version-v{target_ver}-3b6ef5', src)
         # 替换下载资产后缀
-        new_src = re.sub(r'(-v)[0-9a-zA-Z.-]+(\.(?:exe|zip|AppImage|deb|hap|vsix))', f'\\g<1>{target_ver}\\g<2>', new_src)
+        new_src = re.sub(r'(?P<prefix>-)v(?P<version>\d[0-9a-zA-Z.-]*)(?P<suffix>\.(?:exe|zip|AppImage|deb|hap|vsix)\b)', f'\\g<prefix>v{target_ver}\\g<suffix>', new_src)
         new_src = re.sub(r'(_)[0-9a-zA-Z.-]+(_amd64\.deb)', f'\\g<1>{target_ver}\\g<2>', new_src)
         new_src = re.sub(r'(vscode-)[0-9a-zA-Z.-]+(\.vsix)', f'\\g<1>{target_ver}\\g<2>', new_src)
         new_src = re.sub(r'(server-)[0-9a-zA-Z.-]+(\.zip)', f'\\g<1>{target_ver}\\g<2>', new_src)
-        if new_src != src:
-            diffs.append((rpath, src, new_src))
+    if new_src != src:
+        diffs.append((rpath, src, new_src))
+
+    # 9. Shared frontend/runtime version labels
+    core_config = os.path.join(ROOT, 'src', 'readmd_core', 'config.py')
+    with open(core_config, 'r', encoding='utf-8') as f:
+        src = f.read()
+    new_src = re.sub(r"VERSION\s*=\s*'[^']+'", f"VERSION = '{target_ver}'", src)
+    if new_src != src:
+        diffs.append((core_config, src, new_src))
+
+    index_path = os.path.join(ROOT, 'assets', 'index.html')
+    with open(index_path, 'r', encoding='utf-8') as f:
+        src = f.read()
+    new_src = re.sub(r'<html([^>]*\bdata-version=")[^"]+"', rf'<html\g<1>{target_ver}"', src)
+    new_src = re.sub(r'(<span id="status-version"[^>]*>)v[^<]+(</span>)', rf'\g<1>v{target_ver}\g<2>', new_src)
+    new_src = re.sub(r'(id="menu-version-label">)当前版本 v[^<]+(</em>)', rf'\g<1>当前版本 v{target_ver}\g<2>', new_src)
+    if new_src != src:
+        diffs.append((index_path, src, new_src))
 
     if check_only:
         if diffs:

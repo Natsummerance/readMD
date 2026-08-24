@@ -44,6 +44,18 @@ class TestValidatorsExpanded(unittest.TestCase):
             with self.assertRaises(ValidationError):
                 validate_file_path(outside_file, allowed_dirs=[allowed_subdir])
 
+    def test_validate_file_path_rejects_prefix_only_sibling(self):
+        """测试 allowed 前缀不能授权 allowed-secret 等同级目录。"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            allowed_subdir = os.path.join(tmpdir, "allowed")
+            prefix_sibling = os.path.join(tmpdir, "allowed-secret.md")
+            os.makedirs(allowed_subdir, exist_ok=True)
+            with open(prefix_sibling, "w", encoding="utf-8") as handle:
+                handle.write("# sibling")
+
+            with self.assertRaises(ValidationError):
+                validate_file_path(prefix_sibling, allowed_dirs=[allowed_subdir])
+
     def test_validate_command_empty_and_types(self):
         """测试空命令或非列表/字符串参数报错。"""
         with self.assertRaises(ValidationError):

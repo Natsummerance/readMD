@@ -1,118 +1,173 @@
+/**
+ * ReadMD authentic product capture layer.
+ * Every image must show a UI state asserted immediately before capture.
+ */
 const { test, expect } = require('../ui-tests/node_modules/@playwright/test');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { loadCaptureConfig, loadShotLibrary } = require('./capture.config.cjs');
 
-const RAW_DIR = path.resolve(__dirname, 'raw');
-if (!fs.existsSync(RAW_DIR)) {
-  fs.mkdirSync(RAW_DIR, { recursive: true });
+const config = loadCaptureConfig();
+const library = loadShotLibrary();
+const RAW_DIR = path.resolve(__dirname, config.outputDir);
+if (!RAW_DIR.startsWith(path.resolve(__dirname))) throw new Error('SHOWCASE_OUTPUT_DIR must remain inside showcase/');
+fs.mkdirSync(RAW_DIR, { recursive: true });
+for (const entry of fs.readdirSync(RAW_DIR)) {
+  if (/\.png$/i.test(entry) || entry === 'capture.json' || entry.endsWith('.metadata.json')) fs.unlinkSync(path.join(RAW_DIR, entry));
 }
 
-const DEMO_MD = fs.readFileSync(path.resolve(__dirname, 'fixtures/readmd-showcase.md'), 'utf-8');
+const DEMO_MD = fs.readFileSync(path.join(__dirname, 'fixtures/readmd-showcase.md'), 'utf-8');
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
+  await page.addInitScript(({ locale, theme }) => {
     try {
-      localStorage.setItem('readmd_language', 'zh-CN');
-      localStorage.setItem('readmd_theme', 'dark');
-    } catch (e) {}
-  });
+      localStorage.setItem('readmd_language', locale);
+      localStorage.setItem('readmd-settings', JSON.stringify({ theme }));
+    } catch (error) {}
+  }, { locale: config.locale, theme: config.theme });
   await page.goto('/');
-  await page.waitForFunction(() => typeof renderVirtual === 'function' || typeof renderMarkdown === 'function' || typeof state !== 'undefined');
+  await page.waitForFunction(() => typeof renderVirtual === 'function');
 });
 
-async function openDemoInReader(page) {
+async function openDemo(page) {
   await page.evaluate((content) => {
-    if (typeof renderVirtual === 'function') {
-      renderVirtual(content, 'ReadMD_Research_v2.3.4.md');
-    } else if (typeof renderMarkdown === 'function') {
-      state.original = content;
-      state.fixed = content;
-      state.mode = 'view';
-      renderMarkdown(content);
+    // tabs.js currently reads the i18n helper without declaring its local fallback.
+    // Install the same semantic fallback before invoking the real renderer.
+    if (typeof window._t !== 'function') {
+      window._t = (key, params) => (window.i18n ? window.i18n.t(key, params) : key);
     }
+    return renderVirtual('virtual', 'ReadMD 研究笔记.md', '', content);
   }, DEMO_MD);
-  await page.waitForTimeout(600);
+  await expect(page.locator('#content h1')).toBeVisible();
+  await expect(page.locator('#content')).toContainText('高斯');
+  await expect(page.locator('#content mjx-container').first()).toBeVisible();
+  await page.waitForTimeout(900);
 }
 
-test('01 Shot: overview.reader (Hero Shot)', async ({ page }) => {
-  await openDemoInReader(page);
-  // 确保大纲目录展开
+async function shoot(page, shotId) {
+  const shot = library.shots[shotId];
+  await page.screenshot({ path: path.join(RAW_DIR, shot.output), type: 'png' });
+  const bytes = fs.readFileSync(path.join(RAW_DIR, shot.output));
+  const record = {
+    shot_id: shotId,
+    file: `raw/${shot.output}`,
+    feature: shot.name,
+    description: shot.description,
+    release: config.release,
+    authentic: true,
+    role: shot.role,
+    visuality: shot.visuality,
+    capture: {
+      viewport: `${config.viewport.width}x${config.viewport.height}`,
+      scale: config.scale,
+      locale: config.locale,
+      theme: config.theme,
+    },
+    bytes: bytes.length,
+    sha256: crypto.createHash('sha256').update(bytes).digest('hex'),
+    evidence: shot.evidence,
+  };
+  // Playwright may isolate spec modules by test; durable sidecars allow the final aggregate gate.
+  fs.writeFileSync(path.join(RAW_DIR, `${shot.output}.metadata.json`), JSON.stringify(record, null, 2));
+}
+
+async function assertVisible(page, selectors) {
+  for (const selector of selectors) await expect(page.locator(selector).first()).toBeVisible();
+}
+
+test('overview.reader captures the complete reading interface', async ({ page }) => {
+  await openDemo(page);
+  await page.evaluate(() => toggleSide('toc'));
+  await assertVisible(page, library.shots['overview.reader'].assertions);
+  await page.waitForTimeout(350);
+  await shoot(page, 'overview.reader');
+});
+
+test('overview.editor captures split editor preview', async ({ page }) => {
+  await openDemo(page);
+  await page.evaluate(async () => {
+    await toggleEdit();
+    setPvLayout('left');
+  });
+  await assertVisible(page, library.shots['overview.editor'].assertions);
+  await page.waitForTimeout(350);
+  await shoot(page, 'overview.editor');
+});
+
+test('presentation.reveal captures the real presentation iframe', async ({ page }) => {
+  await openDemo(page);
+  await page.evaluate(() => launchPresentationMode());
+  await assertVisible(page, library.shots['presentation.reveal'].assertions);
+  const frame = page.frameLocator('.presentation-iframe');
+  await frame.locator('.reveal').first().waitFor({ state: 'visible', timeout: 15000 });
+  await page.waitForTimeout(1200);
+  await shoot(page, 'presentation.reveal');
+});
+
+test('editor.diagram-picker captures the diagram modal', async ({ page }) => {
+  await openDemo(page);
+  await page.evaluate(async () => {
+    await toggleEdit();
+    openDiagramModal();
+  });
+  await assertVisible(page, library.shots['editor.diagram-picker'].assertions);
+  await page.waitForTimeout(350);
+  await shoot(page, 'editor.diagram-picker');
+});
+
+test('academic.latex-bib captures rendered formulas', async ({ page }) => {
+  await openDemo(page);
   await page.evaluate(() => {
-    const outline = document.getElementById('outline-panel');
-    if (outline && outline.classList.contains('hidden') && typeof toggleOutline === 'function') {
-      toggleOutline();
-    }
+    document.querySelector('#content .katex-display')?.scrollIntoView({ behavior: 'instant', block: 'center' });
   });
-  await page.waitForTimeout(400);
-  const outPath = path.join(RAW_DIR, 'overview-reader.png');
-  await page.screenshot({ path: outPath });
-  expect(fs.existsSync(outPath)).toBeTruthy();
+  await assertVisible(page, library.shots['academic.latex-bib'].assertions);
+  await page.waitForTimeout(350);
+  await shoot(page, 'academic.latex-bib');
 });
 
-test('02 Shot: overview.editor', async ({ page }) => {
-  await openDemoInReader(page);
-  await page.evaluate(async () => {
-    if (typeof toggleEdit === 'function') await toggleEdit();
-    if (typeof setPvLayout === 'function') setPvLayout('split');
+test('editor.code-chunk captures runnable code card', async ({ page }) => {
+  await openDemo(page);
+  await page.evaluate(() => {
+    document.querySelector('#content .code-chunk-card')?.scrollIntoView({ behavior: 'instant', block: 'center' });
   });
-  await page.waitForTimeout(500);
-  const outPath = path.join(RAW_DIR, 'overview-editor.png');
-  await page.screenshot({ path: outPath });
-  expect(fs.existsSync(outPath)).toBeTruthy();
+  await assertVisible(page, library.shots['editor.code-chunk'].assertions);
+  await page.waitForTimeout(350);
+  await shoot(page, 'editor.code-chunk');
 });
 
-test('03 Shot: editor.diagram-picker', async ({ page }) => {
-  await openDemoInReader(page);
-  await page.evaluate(async () => {
-    if (typeof toggleEdit === 'function') await toggleEdit();
-  });
-  await page.waitForTimeout(300);
-  const diagramBtn = page.locator('#diagram-open, button[title*="图表"], button[data-action="diagram"], button:has-text("图表")');
-  if (await diagramBtn.count() > 0 && await diagramBtn.first().isVisible()) {
-    await diagramBtn.first().click();
-    await page.waitForTimeout(300);
+test('convert.home captures the welcome workflow entries', async ({ page }) => {
+  await assertVisible(page, library.shots['convert.home'].assertions);
+  await page.waitForTimeout(350);
+  await shoot(page, 'convert.home');
+});
+
+test('sharing.export captures the mobile sharing panel', async ({ page }) => {
+  await page.evaluate(() => openShareModal());
+  await assertVisible(page, library.shots['sharing.export'].assertions);
+  await page.waitForTimeout(350);
+  await shoot(page, 'sharing.export');
+});
+
+test.afterAll(async () => {
+  const expectedIds = Object.keys(library.shots);
+  const records = fs.readdirSync(RAW_DIR)
+    .filter((entry) => entry.endsWith('.metadata.json'))
+    .map((entry) => JSON.parse(fs.readFileSync(path.join(RAW_DIR, entry), 'utf8')));
+  const order = new Map(expectedIds.map((id, index) => [id, index]));
+  records.sort((left, right) => order.get(left.shot_id) - order.get(right.shot_id));
+  const actualIds = records.map((shot) => shot.shot_id);
+  if (actualIds.length !== expectedIds.length) throw new Error(`Expected ${expectedIds.length} shots, got ${actualIds.length}`);
+  const seenFiles = new Set();
+  const seenHashes = new Map();
+  for (const shot of records) {
+    if (seenHashes.has(shot.sha256)) throw new Error(`Duplicate screenshot: ${shot.shot_id} equals ${seenHashes.get(shot.sha256)}`);
+    seenHashes.set(shot.sha256, shot.shot_id);
+    if (seenFiles.has(shot.file)) throw new Error(`Duplicate output path: ${shot.file}`);
+    seenFiles.add(shot.file);
   }
-  const outPath = path.join(RAW_DIR, 'diagram-picker.png');
-  await page.screenshot({ path: outPath });
-  expect(fs.existsSync(outPath)).toBeTruthy();
-});
-
-test('04 Shot: academic.latex-bib', async ({ page }) => {
-  await openDemoInReader(page);
-  await page.evaluate(() => {
-    const mathEl = document.querySelector('.katex-display, .katex, .theorem, blockquote');
-    if (mathEl) mathEl.scrollIntoView({ behavior: 'instant', block: 'center' });
-  });
-  await page.waitForTimeout(400);
-  const outPath = path.join(RAW_DIR, 'academic-latex.png');
-  await page.screenshot({ path: outPath });
-  expect(fs.existsSync(outPath)).toBeTruthy();
-});
-
-test('05 Shot: editor.code-chunk', async ({ page }) => {
-  await openDemoInReader(page);
-  await page.evaluate(() => {
-    const codeBlock = document.querySelector('pre, .code-chunk-wrap, code');
-    if (codeBlock) codeBlock.scrollIntoView({ behavior: 'instant', block: 'center' });
-  });
-  await page.waitForTimeout(400);
-  const outPath = path.join(RAW_DIR, 'code-chunk.png');
-  await page.screenshot({ path: outPath });
-  expect(fs.existsSync(outPath)).toBeTruthy();
-});
-
-test('06 Shot: modal.dirty-tab', async ({ page }) => {
-  await page.evaluate(() => {
-    state.isDirty = true;
-    if (typeof promptDirtyClose === 'function') {
-      promptDirtyClose(null, () => {}, () => {});
-    } else {
-      const modal = document.getElementById('dirty-modal');
-      if (modal) modal.classList.remove('hidden');
-    }
-  });
-  await page.waitForTimeout(400);
-  const outPath = path.join(RAW_DIR, 'modal-dirty-tab.png');
-  await page.screenshot({ path: outPath });
-  expect(fs.existsSync(outPath)).toBeTruthy();
+  fs.writeFileSync(
+    path.join(RAW_DIR, 'capture.json'),
+    JSON.stringify({ schema_version: 1, release: config.release, captured_at: new Date().toISOString(), config, shots: records }, null, 2),
+  );
 });

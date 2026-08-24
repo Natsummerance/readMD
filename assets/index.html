@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-version="2.3.7-beta.3">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#3b6ef5">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: https:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta name="readmd-app-token" content="">
 <title>ReadMD</title>
 <link rel="stylesheet" href="/assets/style.css">
-<script>window.LAN_TOKEN=null;</script>
 </head>
 <body>
 <header id="toolbar">
@@ -31,7 +32,7 @@
     <div id="doc-tabs-container" class="doc-tabs-container">
       <div id="doc-tabs-bar" class="doc-tabs-bar" role="tablist" aria-label="已打开文档" data-i18n-aria="tabs.openDocs"></div>
       <div id="doc-tabs-overflow-wrap" class="doc-tabs-overflow-wrap hidden">
-        <button id="doc-tabs-overflow-btn" class="doc-tabs-overflow-btn" title="查看被折叠的标签页" data-i18n-title="tabs.overflowTooltip" aria-haspopup="true">⌄</button>
+        <button id="doc-tabs-overflow-btn" class="doc-tabs-overflow-btn" title="查看被折叠的标签页" data-i18n-title="tabs.overflowTooltip" aria-haspopup="menu" aria-expanded="false">⌄</button>
         <div id="doc-tabs-dropdown" class="doc-tabs-dropdown hidden" role="menu"></div>
       </div>
     </div>
@@ -58,12 +59,12 @@
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
       <span class="tb-label" data-i18n="app.ai">AI</span>
     </button>
-    <button id="btn-more" class="tb-btn icon" title="更多功能" aria-label="更多功能" data-i18n-title="toolbar.more" data-i18n-aria="toolbar.more" aria-haspopup="true">
+    <button id="btn-more" class="tb-btn icon" title="更多功能" aria-label="更多功能" data-i18n-title="toolbar.more" data-i18n-aria="toolbar.more" aria-haspopup="true" aria-expanded="false">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
     </button>
     <div id="more-menu" class="more-menu">
       <div class="more-group open">
-        <button class="more-group-header" type="button"><span data-i18n="menu.grpImport">导入</span><span class="more-group-arrow">›</span></button>
+        <button class="more-group-header" type="button" aria-expanded="true"><span data-i18n="menu.grpImport">导入</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
           <button id="btn-convert" class="more-item"><span data-i18n="menu.convert">万物转换</span><em data-i18n="menu.convertSub">格式转 MD</em></button>
           <button id="btn-web" class="more-item"><span data-i18n="menu.web">网页提取</span><em data-i18n="menu.webSub">网页转 MD</em></button>
@@ -72,7 +73,7 @@
         </div>
       </div>
       <div class="more-group open">
-        <button class="more-group-header" type="button"><span data-i18n="menu.grpInteract">互动</span><span class="more-group-arrow">›</span></button>
+        <button class="more-group-header" type="button" aria-expanded="true"><span data-i18n="menu.grpInteract">互动</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
           <button id="btn-presentation-menu" class="more-item" disabled><span data-i18n="menu.presentation">演讲演示</span><em data-i18n="menu.presentationSub">Reveal.js (F5)</em></button>
           <button id="btn-run-all-chunks" class="more-item" disabled><span data-i18n="menu.runCode">运行代码</span><em data-i18n="menu.runCodeSub">执行代码块</em></button>
@@ -83,12 +84,12 @@
         </div>
       </div>
       <div class="more-group">
-        <button class="more-group-header" type="button"><span data-i18n="menu.grpSettings">设置</span><span class="more-group-arrow">›</span></button>
+        <button class="more-group-header" type="button" aria-expanded="false"><span data-i18n="menu.grpSettings">设置</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
           <button id="btn-lang" class="more-item"><span data-i18n="menu.lang">界面语言</span><em id="lang-current-label">简体中文</em></button>
           <button id="btn-assoc" class="more-item"><span data-i18n="menu.assoc">设为默认</span><em data-i18n="menu.assocSub">.md 打开方式</em></button>
           <button id="btn-autostart" class="more-item"><span data-i18n="menu.autoStart">开机自启</span><em id="autostart-status-label" data-i18n="app.disabled">未开启</em></button>
-          <button id="btn-check-update" class="more-item"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.6</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
+          <button id="btn-check-update" class="more-item"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.7-beta.3</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
         </div>
       </div>
     </div>
@@ -100,8 +101,8 @@
 
 
 <div id="search-bar" class="hidden">
-  <input id="search-input" type="text" placeholder="在文档中搜索..." data-i18n-placeholder="search.placeholder">
-  <span id="search-count" class="search-count"></span>
+  <input id="search-input" type="text" placeholder="在文档中搜索..." aria-label="在文档中搜索" data-i18n-placeholder="search.placeholder" data-i18n-aria="search.placeholder">
+  <span id="search-count" class="search-count" role="status" aria-live="polite"></span>
   <button id="search-prev" class="tb-btn" title="上一个 (Shift+Enter)" data-i18n-title="search.prev" data-i18n-aria="search.prev">&#8593;</button>
   <button id="search-next" class="tb-btn" title="下一个 (Enter)" data-i18n-title="search.next" data-i18n-aria="search.next">&#8595;</button>
   <button id="search-close" class="tb-btn" title="关闭 (Esc)" data-i18n-title="search.close" data-i18n-aria="search.close">&#10005;</button>
@@ -173,16 +174,16 @@
 
 <div id="layout">
   <aside id="side" class="hidden">
-    <div id="side-tabs">
-      <button id="tab-toc" class="side-tab active" data-i18n="sidebar.toc">目录</button>
-      <button id="tab-files" class="side-tab" data-i18n="sidebar.files">文件</button>
+    <div id="side-tabs" role="tablist" aria-label="文件" data-i18n-aria="sidebar.files">
+      <button id="tab-toc" class="side-tab active" role="tab" aria-selected="true" aria-controls="toc-list" data-i18n="sidebar.toc">目录</button>
+      <button id="tab-files" class="side-tab" role="tab" aria-selected="false" aria-controls="file-list" tabindex="-1" data-i18n="sidebar.files">文件</button>
     </div>
-    <nav id="toc-list" class="side-body"></nav>
-    <div id="file-list" class="side-body hidden"></div>
+    <nav id="toc-list" class="side-body" role="tabpanel" aria-labelledby="tab-toc"></nav>
+    <div id="file-list" class="side-body hidden" role="tabpanel" aria-labelledby="tab-files"></div>
   </aside>
 
   <div id="main-col">
-    <main id="content">
+    <main id="content" role="tabpanel" aria-label="当前文档" data-i18n-aria="reader.currentDoc">
       <div id="welcome">
         <div class="welcome-inner">
           <div class="logo">Read<span>MD</span></div>
@@ -227,6 +228,7 @@
     </main>
     <!-- 超长文档智能翻页控制栏（纯 SVG 图标交互） -->
     <div id="pagination-bar" class="pagination-bar hidden" role="navigation" aria-label="文档分页导航" data-i18n-aria="pagination.ariaLabel">
+      <div id="pagination-live" role="status" aria-live="polite" class="visually-hidden"></div>
       <div class="pg-left">
         <span class="pg-mode-badge" id="pg-mode-badge" title="分页阅读模式">
           <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
@@ -252,23 +254,23 @@
         </button>
       </div>
       <div class="pg-right">
-        <button id="pg-mode-toggle" class="tb-btn icon pg-toggle-btn" title="切换阅读模式（分页阅读 / 全卷连续）" aria-label="切换阅读模式" data-i18n-title="pagination.toggleTip" data-i18n-aria="pagination.toggleTip">
+        <button id="pg-mode-toggle" class="tb-btn icon pg-toggle-btn" title="切换阅读模式（分页阅读 / 全卷连续）" aria-label="切换阅读模式" aria-pressed="true" data-i18n-title="pagination.toggleTip" data-i18n-aria="pagination.toggleTip">
           <svg id="pg-mode-icon-continuous" class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/><path d="M12 3v18" stroke-dasharray="2 2"/></svg>
           <svg id="pg-mode-icon-paged" class="tb-ic hidden" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
         </button>
       </div>
     </div>
 
-    <textarea id="edit-area" class="hidden" spellcheck="false"></textarea>
+    <textarea id="edit-area" class="hidden" spellcheck="false" aria-label="Markdown 编辑器" data-i18n-aria="toolbar.edit"></textarea>
     <div id="edit-wrap" class="hidden"><div id="edit-cm"></div></div>
-    <div id="pv-splitter" class="hidden" role="separator" tabindex="0" aria-label="调整编辑与预览比例" data-i18n-aria="editor.pvSplitterAria"></div>
+    <div id="pv-splitter" class="hidden" role="separator" tabindex="0" aria-label="调整编辑与预览比例" aria-orientation="vertical" aria-valuemin="25" aria-valuemax="70" aria-valuenow="50" aria-valuetext="50%" data-i18n-aria="editor.pvSplitterAria"></div>
     <div id="preview-wrap" class="hidden"><div id="preview-pane" class="markdown-body"></div></div>
   </div>
 </div>
 
 <!-- AI 助手面板 -->
 <div id="ai-panel" class="hidden">
-  <div id="ai-resize-handle" title="拖动调整 AI 面板宽度" data-i18n-title="ai.resizeHandle" aria-hidden="true"></div>
+  <div id="ai-resize-handle" role="separator" tabindex="0" aria-orientation="vertical" aria-label="调整 AI 面板宽度" data-i18n-aria="ai.resizeHandle" aria-valuemin="360" aria-valuemax="1200" aria-valuenow="432" title="拖动或用左右方向键调整 AI 面板宽度" data-i18n-title="ai.resizeHandle"></div>
   <div class="ai-head">
     <span class="ai-head-title">
       <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3.5"/></svg>
@@ -303,7 +305,7 @@
       <div id="ai-output" aria-live="polite"></div>
     </div>
     <div class="ai-composer">
-      <textarea id="ai-prompt" rows="3" placeholder="向 AI 提问，或选择上方快捷指令... (Enter 发送, Shift+Enter 换行)" data-i18n-placeholder="ai.promptPlaceholder" autocomplete="off"></textarea>
+      <textarea id="ai-prompt" rows="3" placeholder="向 AI 提问，或选择上方快捷指令... (Enter 发送, Shift+Enter 换行)" aria-label="向 AI 提问" data-i18n-placeholder="ai.promptPlaceholder" data-i18n-aria="ai.promptPlaceholder" autocomplete="off"></textarea>
       <div class="ai-composer-actions">
 
         <label class="ai-sel"><input id="ai-selection" type="checkbox"> <span data-i18n="editor.text">仅处理选中文字</span></label>
@@ -436,7 +438,7 @@
     <div class="export-head"><h3 data-i18n="img.title">&#128444; 图片编辑器</h3><button id="img-close-x" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">&#10005;</button></div>
     <div class="img-source">
       <button id="img-file" class="tb-btn accent" data-i18n="img.selectLocal">&#128194; 选择本地图片…</button>
-      <input id="img-url-input" type="text" placeholder="或粘贴图片 URL 直接插入" data-i18n-placeholder="img.urlPlaceholder" autocomplete="off">
+      <input id="img-url-input" type="text" placeholder="或粘贴图片 URL 直接插入" aria-label="图片 URL" data-i18n-placeholder="img.urlPlaceholder" data-i18n-aria="img.urlPlaceholder" autocomplete="off">
       <button id="img-url-load" class="tb-btn" data-i18n="img.insertUrl">插入 URL</button>
     </div>
     <div class="img-workspace">
@@ -453,10 +455,10 @@
 
       <aside class="img-inspector">
         <div class="img-section"><strong data-i18n="img.transform">变换</strong><div class="img-btn-row"><button id="img-rot-l" class="tb-btn">↶ 90°</button><button id="img-rot-r" class="tb-btn">↷ 90°</button><button id="img-flip-x" class="tb-btn" data-i18n="img.flipH">水平翻转</button><button id="img-flip-y" class="tb-btn" data-i18n="img.flipV">垂直翻转</button></div>
-          <label class="img-ctl"><span data-i18n="img.angle">角度</span> <input id="img-angle" type="range" min="-180" max="180" step="0.1" value="0"><input id="img-angle-number" class="img-number" type="number" min="-180" max="180" step="0.1" value="0">°</label></div>
+          <label class="img-ctl"><span data-i18n="img.angle">角度</span> <input id="img-angle" type="range" min="-180" max="180" step="0.1" value="0"><input id="img-angle-number" class="img-number" type="number" min="-180" max="180" step="0.1" value="0" aria-label="角度" data-i18n-aria="img.angle">°</label></div>
         <div class="img-section"><strong data-i18n="img.view">查看</strong><label class="img-ctl"><span data-i18n="img.zoom">画布缩放</span> <input id="img-view-zoom" type="range" min="25" max="400" value="100"><span id="img-view-zoom-val">100%</span></label><p class="img-help" data-i18n="img.help">滚轮缩放 · 空格拖拽平移 · +/- 缩放</p></div>
         <div class="img-section"><strong data-i18n="img.cropAndOutput">裁剪与输出</strong><select id="img-ratio" title="裁剪比例" data-i18n-title="img.ratio"><option value="free" data-i18n="img.ratioFree">自由比例</option><option value="1:1" data-i18n="img.ratio1_1">1:1 方形</option><option value="4:3" data-i18n="img.ratio4_3">4:3</option><option value="3:2" data-i18n="img.ratio3_2">3:2</option><option value="16:9" data-i18n="img.ratio16_9">16:9</option><option value="orig" data-i18n="img.ratioOrig">原图比例</option></select>
-          <div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" title="锁定宽高比" data-i18n-title="img.lockRatio">🔗</button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
+<div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" aria-label="锁定宽高比" title="锁定宽高比" data-i18n-title="img.lockRatio">🔗</button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
         <div class="img-btn-row"><button id="img-undo" class="tb-btn" data-i18n="editor.undo" disabled>撤销</button><button id="img-redo" class="tb-btn" data-i18n="editor.redo" disabled>重做</button><button id="img-reset" class="tb-btn" data-i18n="img.reset">重置</button></div>
       </aside>
     </div>
@@ -469,18 +471,18 @@
   </div>
 </div>
 
-<div id="formula-modal" class="hidden" role="dialog" aria-modal="true" aria-label="公式选择器" data-i18n-aria="formula.title"><div class="formula-box"><div class="export-head"><h3 data-i18n="formula.title">公式选择器</h3><button id="formula-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">×</button></div><div class="formula-top"><input id="formula-search" type="search" placeholder="搜索名称或 TeX…" data-i18n-placeholder="formula.searchPlaceholder"><select id="formula-mode"><option value="inline" data-i18n="formula.inline">行内公式</option><option value="block" data-i18n="formula.block">块级公式</option></select></div><div id="formula-cats" class="formula-cats"></div><div id="formula-list" class="formula-list"></div><div id="formula-preview" class="formula-preview" data-i18n="formula.previewPrompt">选择公式模板查看预览</div></div></div>
+<div id="formula-modal" class="hidden" role="dialog" aria-modal="true" aria-label="公式选择器" data-i18n-aria="formula.title"><div class="formula-box"><div class="export-head"><h3 data-i18n="formula.title">公式选择器</h3><button id="formula-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">×</button></div><div class="formula-top"><input id="formula-search" type="search" placeholder="搜索名称或 TeX…" aria-label="搜索名称或 TeX" data-i18n-placeholder="formula.searchPlaceholder" data-i18n-aria="formula.searchPlaceholder"><select id="formula-mode" aria-label="行内公式"><option value="inline" data-i18n="formula.inline">行内公式</option><option value="block" data-i18n="formula.block">块级公式</option></select></div><div id="formula-cats" class="formula-cats"></div><div id="formula-list" class="formula-list"></div><div id="formula-preview" class="formula-preview" data-i18n="formula.previewPrompt">选择公式模板查看预览</div></div></div>
 
 <!-- Prompt 模板管理弹窗 -->
-<div id="tpl-modal" class="hidden">
+<div id="tpl-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="tpl-title">
   <div id="tpl-box">
-    <h3 data-i18n="tpl.title">&#128221; Prompt 模板管理</h3>
+    <h3 id="tpl-title" data-i18n="tpl.title">&#128221; Prompt 模板管理</h3>
     <div class="tpl-layout">
-      <ul id="tpl-list" class="tpl-list"></ul>
+      <ul id="tpl-list" class="tpl-list" role="listbox" aria-label="Prompt 模板" data-i18n-aria="tpl.title"></ul>
       <div class="tpl-form">
         <input id="tpl-id" type="hidden">
-        <input id="tpl-name" type="text" placeholder="模板名称（如：总结要点 / 生成周报）" data-i18n-placeholder="tpl.namePlaceholder">
-        <select id="tpl-action">
+        <input id="tpl-name" type="text" placeholder="模板名称（如：总结要点 / 生成周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
+        <select id="tpl-action" aria-label="动作：快速阅读">
           <option value="quick_read" data-i18n="tpl.actionQuickRead">动作：快速阅读</option>
           <option value="polish" data-i18n="tpl.actionPolish">动作：润色</option>
           <option value="modify" data-i18n="tpl.actionModify">动作：修改</option>
@@ -490,8 +492,8 @@
           <option value="ask" data-i18n="tpl.actionAsk">动作：提问</option>
           <option value="custom" data-i18n="tpl.actionCustom">自定义动作</option>
         </select>
-        <textarea id="tpl-system" rows="4" placeholder="系统提示词：角色设定与任务说明" data-i18n-placeholder="tpl.systemPlaceholder"></textarea>
-        <textarea id="tpl-user" rows="3" placeholder="用户消息模板（可选）：可用 {doc} 代表文档内容、{prompt} 代表补充要求；留空则自动拼接文档" data-i18n-placeholder="tpl.userPlaceholder"></textarea>
+        <textarea id="tpl-system" rows="4" placeholder="系统提示词：角色设定与任务说明" aria-label="系统提示词" data-i18n-placeholder="tpl.systemPlaceholder" data-i18n-aria="tpl.systemPlaceholder"></textarea>
+        <textarea id="tpl-user" rows="3" placeholder="用户消息模板（可选）：可用 {doc} 代表文档内容、{prompt} 代表补充要求；留空则自动拼接文档" aria-label="用户消息模板" data-i18n-placeholder="tpl.userPlaceholder" data-i18n-aria="tpl.userPlaceholder"></textarea>
       </div>
     </div>
     <div class="url-actions">
@@ -505,9 +507,9 @@
 </div>
 
 <!-- 移动端共享弹窗 -->
-<div id="share-modal" class="hidden">
+<div id="share-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="share-title">
   <div id="share-box">
-    <h3 data-i18n="share.title">&#128241; 移动端共享</h3>
+    <h3 id="share-title" data-i18n="share.title">&#128241; 移动端共享</h3>
     <p class="fix-note" data-i18n="share.desc">启动后手机连同一 Wi-Fi，扫描二维码即可在手机浏览器阅读当前文档（也支持转 MD / OCR / 网页 / AI）。局域网访问需携带本次随机令牌，关闭共享即失效。</p>
     <div id="share-qr"></div>
     <p id="share-url" class="share-url"></p>
@@ -534,7 +536,7 @@
     </div>
     
     <div class="url-input-wrap">
-      <input id="url-input" type="url" inputmode="url" placeholder="输入网页 URL (如 https://example.com/post)..." data-i18n-placeholder="web.urlPlaceholder" autocomplete="url">
+      <input id="url-input" type="url" inputmode="url" placeholder="输入网页 URL (如 https://example.com/post)..." aria-label="网页 URL" data-i18n-placeholder="web.urlPlaceholder" data-i18n-aria="web.urlPlaceholder" autocomplete="url">
       <button id="url-paste-btn" class="tb-btn icon" title="从剪贴板粘贴" aria-label="粘贴网址" data-i18n-title="web.pasteTitle" data-i18n-aria="web.pasteAria">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
       </button>
@@ -613,13 +615,68 @@
   </div>
 </div>
 
+<div id="save-conflict-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="save-conflict-title">
+  <div id="save-conflict-box" class="close-confirm-box">
+    <div class="close-confirm-head">
+      <div class="close-confirm-icon-wrap">
+        <svg class="close-confirm-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <h3 id="save-conflict-title" data-i18n="toast.saveConflict">文件已被其他程序修改，请重新打开后合并修改</h3>
+        <p id="save-conflict-desc" data-i18n="dialog.saveConflictDesc">当前修改仍保留在编辑器中。另存为新文件可保留它们，重新加载会放弃本地修改。</p>
+      </div>
+    </div>
+    <div class="close-confirm-actions">
+      <button id="save-conflict-save-as" class="tb-btn accent" data-i18n="toolbar.saveAs">另存为</button>
+      <button id="save-conflict-reload" class="tb-btn danger" data-i18n="toolbar.reload">重新加载</button>
+      <button id="save-conflict-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
+    </div>
+  </div>
+</div>
+
+<div id="confirm-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+  <div class="close-confirm-box">
+    <div class="close-confirm-head">
+      <div class="close-confirm-icon-wrap">
+        <svg class="close-confirm-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <h3 id="confirm-title"></h3>
+        <p id="confirm-message"></p>
+      </div>
+    </div>
+    <div class="close-confirm-actions">
+      <button id="confirm-cancel" class="tb-btn">取消</button>
+      <button id="confirm-action" class="tb-btn danger">确认</button>
+    </div>
+  </div>
+</div>
+
+<div id="continuous-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="continuous-title">
+  <div class="close-confirm-box">
+    <div class="close-confirm-head">
+      <div class="close-confirm-icon-wrap">
+        <svg class="close-confirm-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18"/><path d="M5 10l7-7 7 7"/></svg>
+      </div>
+      <div>
+        <h3 id="continuous-title" data-i18n="pagination.continuousBadge">全卷连续</h3>
+        <p id="continuous-desc"></p>
+      </div>
+    </div>
+    <div class="close-confirm-actions">
+      <button id="continuous-confirm" class="tb-btn danger" data-i18n="pagination.continuousBadge">全卷连续</button>
+      <button id="continuous-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
+    </div>
+  </div>
+</div>
+
 
   </div>
 </div>
 
-<div id="fix-modal" class="hidden">
+<div id="fix-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="fix-title">
   <div id="fix-box">
-    <h3 data-i18n="dialog.fixTitle">本次自动修正详情 <span id="fix-count"></span></h3>
+    <h3 id="fix-title" data-i18n="dialog.fixTitle">本次自动修正详情 <span id="fix-count"></span></h3>
     <ul id="fix-list"></ul>
     <div class="fix-actions">
       <button id="fix-save" class="tb-btn" data-i18n="app.saveAs">另存为修正后文件</button>
@@ -643,16 +700,16 @@
           <div class="exp-fmt-group">
             <span class="exp-fmt-group-title" data-i18n="export.groupPublish">排版出版</span>
             <div class="exp-fmt-btn-row">
-              <button class="exp-fmt active" data-fmt="pdf" role="tab" aria-selected="true" data-i18n="export.fmtPdf">PDF</button>
-              <button class="exp-fmt" data-fmt="docx" role="tab" aria-selected="false" data-i18n="export.fmtDocx">DOCX</button>
-              <button class="exp-fmt" data-fmt="epub" role="tab" aria-selected="false" data-i18n="export.fmtEpub">EPUB</button>
+              <button id="export-tab-pdf" class="exp-fmt active" data-fmt="pdf" role="tab" aria-selected="true" aria-controls="export-opts" data-i18n="export.fmtPdf">PDF</button>
+              <button id="export-tab-docx" class="exp-fmt" data-fmt="docx" role="tab" aria-selected="false" aria-controls="export-opts" data-i18n="export.fmtDocx">DOCX</button>
+              <button id="export-tab-epub" class="exp-fmt" data-fmt="epub" role="tab" aria-selected="false" aria-controls="export-opts" data-i18n="export.fmtEpub">EPUB</button>
             </div>
           </div>
           <div class="exp-fmt-group">
             <span class="exp-fmt-group-title" data-i18n="export.groupWebCode">源码与网页</span>
             <div class="exp-fmt-btn-row">
-              <button class="exp-fmt" data-fmt="html" role="tab" aria-selected="false" data-i18n="export.fmtHtml">HTML</button>
-              <button class="exp-fmt" data-fmt="tex" role="tab" aria-selected="false" data-i18n="export.fmtTex">LaTeX</button>
+              <button id="export-tab-html" class="exp-fmt" data-fmt="html" role="tab" aria-selected="false" aria-controls="export-opts" data-i18n="export.fmtHtml">HTML</button>
+              <button id="export-tab-tex" class="exp-fmt" data-fmt="tex" role="tab" aria-selected="false" aria-controls="export-opts" data-i18n="export.fmtTex">LaTeX</button>
             </div>
           </div>
         </div>
@@ -670,13 +727,13 @@
           <button id="exp-reset" class="tb-btn" data-i18n="export.restoreDefaults">恢复默认</button>
         </div>
         <div id="exp-save-name" class="exp-save-name hidden">
-          <input id="exp-save-input" type="text" placeholder="预设名称" data-i18n-placeholder="export.presetName" maxlength="20" autocomplete="off">
+          <input id="exp-save-input" type="text" placeholder="预设名称" aria-label="预设名称" data-i18n-placeholder="export.presetName" data-i18n-aria="export.presetName" maxlength="20" autocomplete="off">
           <div class="exp-save-btns">
             <button id="exp-save-ok" class="tb-btn accent" data-i18n="editor.save">保存</button>
             <button id="exp-save-cancel" class="tb-btn" data-i18n="editor.cancel">取消</button>
           </div>
         </div>
-        <div id="export-preview-card" class="export-preview-card" title="点击打开全屏排版预览" data-i18n-title="export.previewCardTitle">
+        <button id="export-preview-card" type="button" class="export-preview-card" aria-label="打开全屏排版预览" data-i18n-aria="export.previewCardTitle" title="点击打开全屏排版预览" data-i18n-title="export.previewCardTitle">
           <div class="export-preview-header">
             <span class="export-preview-title" data-i18n="export.preview">排版预览</span>
             <span id="export-preview-badge" class="export-preview-badge" data-i18n="export.previewBadgePdf">PDF · 默认</span>
@@ -691,9 +748,9 @@
               </span>
             </div>
           </div>
-        </div>
+        </button>
       </div>
-      <div class="export-opts" id="export-opts" role="tabpanel"></div>
+      <div class="export-opts" id="export-opts" role="tabpanel" aria-labelledby="export-tab-pdf" tabindex="0"></div>
     </div>
     <div class="export-foot">
       <span id="export-result" class="export-result"></span>
@@ -727,10 +784,10 @@
 </div>
 
 <!-- 批量转换弹窗 -->
-<div id="convert-modal" class="hidden">
+<div id="convert-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="convert-title">
   <div id="convert-box">
     <div class="export-head">
-      <h3 data-i18n="convert.title">转 Markdown</h3>
+      <h3 id="convert-title" data-i18n="convert.title">转 Markdown</h3>
       <button id="convert-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">&#10005;</button>
     </div>
     <div class="convert-body">
@@ -769,8 +826,8 @@
           <span class="update-asset-name" id="update-asset-name">—</span>
           <span class="update-asset-size" id="update-asset-size">—</span>
         </div>
-        <div id="update-progress-wrap" class="update-progress-wrap hidden">
-          <div class="update-progress-bar"><div id="update-progress-fill" class="update-progress-fill"></div></div>
+        <div id="update-progress-wrap" class="update-progress-wrap hidden" role="status" aria-live="polite">
+          <div id="update-progress-bar" class="update-progress-bar" role="progressbar" aria-labelledby="update-progress-text" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="update-progress-fill" class="update-progress-fill"></div></div>
           <div class="update-progress-meta">
             <span id="update-progress-text" data-i18n="update.prepDownload">正在下载… 0%</span>
             <span id="update-progress-speed">0 MB/s</span>
@@ -791,22 +848,25 @@
   </div>
 </div>
 
-<div id="toast" class="hidden"></div>
+<div id="toast" class="hidden" role="status" aria-live="polite"></div>
 
 <div id="progress"></div>
-<div id="busy" class="hidden"><span data-i18n="app.processing">处理中…</span></div>
+<div id="busy" class="hidden" role="status" aria-live="polite"><span data-i18n="app.processing">处理中…</span></div>
 <button id="top-btn" class="hidden" title="回到顶部" data-i18n-title="toolbar.backToTop">&#8593;</button>
 <input id="file-input" type="file" class="hidden">
 <input id="img-file-input" type="file" accept="image/*" class="hidden">
 
 <!-- 标签右键菜单 -->
 <div id="tab-context-menu" class="tab-context-menu hidden" role="menu">
-  <button data-action="close" data-i18n="tabs.closeTab">关闭标签</button>
-  <button data-action="close-others" data-i18n="tabs.closeOthers">关闭其他标签</button>
-  <button data-action="close-all" data-i18n="tabs.closeAll">关闭所有标签</button>
-  <div class="tab-context-sep"></div>
-  <button data-action="rename" data-i18n="tabs.rename">重命名 (F2 / 双击)</button>
-  <button data-action="copy-path" data-i18n="tabs.copyPath">复制文件路径</button>
+  <button role="menuitem" tabindex="-1" data-action="move-left" data-i18n="tabs.moveLeft">左移</button>
+  <button role="menuitem" tabindex="-1" data-action="move-right" data-i18n="tabs.moveRight">右移</button>
+  <div class="tab-context-sep" role="separator" aria-orientation="horizontal"></div>
+  <button role="menuitem" tabindex="-1" data-action="close" data-i18n="tabs.closeTab">关闭标签</button>
+  <button role="menuitem" tabindex="-1" data-action="close-others" data-i18n="tabs.closeOthers">关闭其他标签</button>
+  <button role="menuitem" tabindex="-1" data-action="close-all" data-i18n="tabs.closeAll">关闭所有标签</button>
+  <div class="tab-context-sep" role="separator" aria-orientation="horizontal"></div>
+  <button role="menuitem" tabindex="-1" data-action="rename" data-i18n="tabs.rename">重命名 (F2 / 双击)</button>
+  <button role="menuitem" tabindex="-1" data-action="copy-path" data-i18n="tabs.copyPath">复制文件路径</button>
 </div>
 
 <!-- 全局拖拽遮罩 -->
@@ -826,25 +886,25 @@
 </div>
 
 <!-- 语言选择对话框 -->
-<div id="lang-modal" class="modal hidden">
+<div id="lang-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lang-title">
   <div class="modal-dialog lang-modal-dialog">
     <div class="modal-header">
-      <h3 data-i18n="lang.title">选择界面语言 (Language)</h3>
-      <button class="modal-close" onclick="i18n.closeModal()">✕</button>
+      <h3 id="lang-title" data-i18n="lang.title">选择界面语言 (Language)</h3>
+      <button class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close" onclick="i18n.closeModal()">✕</button>
     </div>
     <div class="lang-search-wrap">
-      <input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." data-i18n-placeholder="lang.search" oninput="i18n.renderLanguageGrid(this.value)">
+<input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." aria-label="搜索语言" aria-controls="lang-grid" data-i18n-placeholder="lang.search" data-i18n-aria="lang.search" oninput="i18n.renderLanguageGrid(this.value)">
     </div>
-    <div id="lang-grid" class="lang-grid-container"></div>
+    <div id="lang-grid" class="lang-grid-container" role="listbox" aria-label="语言 / Language"></div>
   </div>
 </div>
 
 <!-- 插入表格设计器对话框 -->
-<div id="table-modal" class="modal hidden">
+<div id="table-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="table-title">
   <div class="modal-dialog" style="max-width: 320px;">
     <div class="modal-header">
-      <h3 data-i18n="editor.table">插入表格</h3>
-      <button class="modal-close" onclick="closeTableModal()">✕</button>
+      <h3 id="table-title" data-i18n="editor.table">插入表格</h3>
+      <button class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close" onclick="closeTableModal()">✕</button>
     </div>
     <div style="padding: 12px 16px; text-align: center;">
       <div id="table-grid-picker" class="table-grid-picker"></div>
@@ -858,8 +918,8 @@
 
 <footer id="statusbar">
   <div class="statusbar-left-group">
-    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.7-beta.2</span>
-    <span id="status-pagination" class="status-pagination hidden" role="button" tabindex="0" title="点击切换阅读模式"></span>
+    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.7-beta.3</span>
+    <button id="status-pagination" type="button" class="status-pagination hidden" title="点击切换阅读模式"></button>
     <span id="status-left"></span>
   </div>
   <span id="status-right"></span>
@@ -911,15 +971,15 @@
 </div>
 
 <!-- 交互式代码块配置模态框 -->
-<div id="code-chunk-modal" class="modal hidden" role="dialog" aria-modal="true">
+<div id="code-chunk-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="code-chunk-title">
   <div class="modal-dialog" style="max-width: 480px;">
     <div class="modal-header">
-      <h3 data-i18n="editor.codeChunkModalTitle">插入交互式代码块 (Interactive Code Chunk)</h3>
-      <button id="code-chunk-modal-close" class="modal-close">✕</button>
+      <h3 id="code-chunk-title" data-i18n="editor.codeChunkModalTitle">插入交互式代码块 (Interactive Code Chunk)</h3>
+      <button id="code-chunk-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 16px;">
       <div class="modal-form-group">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkLang">编程语言：</label>
+        <label for="code-chunk-lang" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkLang">编程语言：</label>
         <select id="code-chunk-lang" class="modal-select" style="width:100%;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
           <option value="python">Python (Pyodide / 本地运行)</option>
           <option value="javascript">JavaScript (Node / Web)</option>
@@ -941,7 +1001,7 @@
         </label>
       </div>
       <div class="modal-form-group">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkCode">代码内容：</label>
+        <label for="code-chunk-code" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkCode">代码内容：</label>
         <textarea id="code-chunk-code" class="modal-textarea" style="width:100%;height:100px;font-family:var(--font-mono);font-size:12px;box-sizing:border-box;padding:8px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);" placeholder="import matplotlib.pyplot as plt\nimport numpy as np\nx = np.linspace(0, 10, 100)\nplt.plot(x, np.sin(x))\nplt.show()"></textarea>
       </div>
       <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
@@ -953,15 +1013,15 @@
 </div>
 
 <!-- 科学与工程图表选择模态框 -->
-<div id="diagram-modal" class="modal hidden" role="dialog" aria-modal="true">
+<div id="diagram-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="diagram-title">
   <div class="modal-dialog" style="max-width: 520px;">
     <div class="modal-header">
-      <h3 data-i18n="editor.diagramModalTitle">插入科学与工程图表 (Diagrams)</h3>
-      <button id="diagram-modal-close" class="modal-close">✕</button>
+      <h3 id="diagram-title" data-i18n="editor.diagramModalTitle">插入科学与工程图表 (Diagrams)</h3>
+      <button id="diagram-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 16px;">
       <div class="modal-form-group">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramType">图表类型：</label>
+        <label for="diagram-type" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramType">图表类型：</label>
         <select id="diagram-type" class="modal-select" style="width:100%;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
           <option value="plantuml">PlantUML (时序图 / 架构图 / UML)</option>
           <option value="tikz">TikZ / PGFPlots (LaTeX 矢量几何与函数图)</option>
@@ -973,7 +1033,7 @@
         </select>
       </div>
       <div class="modal-form-group" style="margin-top: 12px;">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramTemplate">图表代码模版：</label>
+        <label for="diagram-code" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramTemplate">图表代码模版：</label>
         <textarea id="diagram-code" class="modal-textarea" style="width:100%;height:120px;font-family:var(--font-mono);font-size:12px;box-sizing:border-box;padding:8px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);"></textarea>
       </div>
       <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
@@ -985,21 +1045,21 @@
 </div>
 
 <!-- 子文档引用模态框 -->
-<div id="doc-import-modal" class="modal hidden" role="dialog" aria-modal="true">
+<div id="doc-import-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="doc-import-title">
   <div class="modal-dialog" style="max-width: 480px;">
     <div class="modal-header">
-      <h3 data-i18n="editor.docImportModalTitle">插入子文档引用 (@import)</h3>
-      <button id="doc-import-modal-close" class="modal-close">✕</button>
+      <h3 id="doc-import-title" data-i18n="editor.docImportModalTitle">插入子文档引用 (@import)</h3>
+      <button id="doc-import-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 16px;">
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.docImportDesc">引用外部 Markdown 文件、源码或图表，渲染时将自动无缝嵌入当前文档。</p>
       <div class="modal-form-group">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.docImportPath">子文档相对路径：</label>
+        <label for="doc-import-path" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.docImportPath">子文档相对路径：</label>
         <input id="doc-import-path" type="text" class="modal-input" placeholder="chapter1.md 或 ./subdocs/appendix.md" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
         <div class="modal-form-group">
-          <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.docImportMode">引用模式：</label>
+        <label for="doc-import-mode" style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.docImportMode">引用模式：</label>
           <select id="doc-import-mode" class="modal-select" style="width:100%;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
             <option value="markdown" data-i18n="editor.docImportModeMd">Markdown (递归解析渲染)</option>
             <option value="code" data-i18n="editor.docImportModeCode">Code (作为高亮代码块嵌入)</option>
@@ -1007,7 +1067,7 @@
           </select>
         </div>
         <div class="modal-form-group">
-          <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.docImportLines">行号切片 (可选)：</label>
+        <label for="doc-import-lines" style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.docImportLines">行号切片 (可选)：</label>
           <input id="doc-import-lines" type="text" class="modal-input" placeholder="例如: 10-50" style="width:100%;box-sizing:border-box;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
         </div>
       </div>
@@ -1020,25 +1080,25 @@
 </div>
 
 <!-- 文档样式元数据模态框 (Frontmatter) -->
-<div id="frontmatter-modal" class="modal hidden" role="dialog" aria-modal="true">
+<div id="frontmatter-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="frontmatter-title">
   <div class="modal-dialog" style="max-width: 500px;">
     <div class="modal-header">
-      <h3 data-i18n="editor.frontmatterModalTitle">配置文档元数据与演说主题 (Frontmatter)</h3>
-      <button id="frontmatter-modal-close" class="modal-close">✕</button>
+      <h3 id="frontmatter-title" data-i18n="editor.frontmatterModalTitle">配置文档元数据与演说主题 (Frontmatter)</h3>
+      <button id="frontmatter-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 16px;">
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.frontmatterModalDesc">在文档顶部插入标准 YAML Frontmatter，用于配置文档标题、作者、Reveal.js 演示主题及全局样式。</p>
       <div class="modal-form-group">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTitle">文档标题：</label>
+        <label for="fm-input-title" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTitle">文档标题：</label>
         <input id="fm-input-title" type="text" class="modal-input" placeholder="我的演说 / 报告文档" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
       </div>
       <div class="modal-form-group" style="margin-top: 10px;">
-        <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterAuthor">作者 / 演讲者：</label>
+        <label for="fm-input-author" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterAuthor">作者 / 演讲者：</label>
         <input id="fm-input-author" type="text" class="modal-input" placeholder="ReadMD User" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
         <div class="modal-form-group">
-          <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTheme">Reveal.js 演示主题：</label>
+          <label for="fm-select-theme" style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTheme">Reveal.js 演示主题：</label>
           <select id="fm-select-theme" class="modal-select" style="width:100%;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
             <option value="black">Black (现代深色 / 默认)</option>
             <option value="white">White (明亮纯白)</option>
@@ -1053,7 +1113,7 @@
           </select>
         </div>
         <div class="modal-form-group">
-          <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTransition">幻灯片切页动效：</label>
+          <label for="fm-select-transition" style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTransition">幻灯片切页动效：</label>
           <select id="fm-select-transition" class="modal-select" style="width:100%;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
             <option value="slide">Slide (平滑滑动 / 默认)</option>
             <option value="fade">Fade (淡入淡出)</option>
@@ -1080,6 +1140,7 @@
 <!-- Core Infrastructure -->
 <script src="/assets/js/core/state.js"></script>
 <script src="/assets/js/core/i18n.js"></script>
+<script src="/assets/js/core/dialog.js"></script>
 <script src="/assets/js/core/settings.js"></script>
 <script src="/assets/js/core/modules.js"></script>
 <script src="/assets/js/core/tabs.js"></script>

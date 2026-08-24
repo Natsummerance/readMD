@@ -128,7 +128,15 @@ function updateStatus() {
 
   const isWelcome = state.mode === 'welcome';
   const hasDoc = (state.mode === 'file' || state.mode === 'virtual') && !!state.original;
-  if ($('btn-print')) $('btn-print').disabled = isWelcome;
+  if ($('btn-print')) {
+    const browserOnly = !hasPy;
+    $('btn-print').disabled = isWelcome || browserOnly;
+    const exportHint = browserOnly
+      ? '导出需使用桌面版；浏览器模式可另存或打印'
+      : '导出文档 (Ctrl+P)';
+    $('btn-print').title = exportHint;
+    $('btn-print').setAttribute('aria-label', exportHint);
+  }
   if ($('btn-a')) $('btn-a').disabled = isWelcome;
   if ($('btn-A')) $('btn-A').disabled = isWelcome;
   if ($('btn-search')) $('btn-search').disabled = isWelcome;
@@ -156,6 +164,16 @@ function goHome() {
   state.editing = false;
   state.activeTabId = null;
   state.headings = [];
+  Object.assign(state.pagination, {
+    enabled: false,
+    mode: 'paged',
+    rawContent: null,
+    searchText: null,
+    pages: [],
+    allHeadings: [],
+    totalPages: 0,
+    currentPage: 0,
+  });
   document.title = 'ReadMD';
   setFileTitle('', false);
 
@@ -179,6 +197,7 @@ function goHome() {
   document.querySelectorAll('#toolbar .tool-btn').forEach(b => b.classList.remove('active'));
   closeSearch();
   closeMdPopups();
+  showPaginationBar(false);
   updateStatus();
   renderTabsBar();
 }
@@ -202,15 +221,22 @@ let autoReloadTimer = null;
 function startAutoReload() {
   stopAutoReload();
   autoReloadTimer = setInterval(async () => {
-    if (!state.file || !state.autoReload || state.mode !== 'file') return;
+    if (!state.autoReload || state.editing) return;
     try {
-      const r = await apiFetch('/api/file?p=' + encodeURIComponent(state.file) + '&meta=1');
-      if (!r.ok) return;
-      const d = await r.json();
-      if (d.mtime !== state.mtime) {
-        const sc = $('content').scrollTop;
-        await loadFile(state.file);
-        if (sc) $('content').scrollTop = sc;
+      for (const tab of [...state.tabs]) {
+        if (tab.mode !== 'file' || !tab.path || tab.isDirty || tab.externalChanged) continue;
+        const r = await apiFetch('/api/file?p=' + encodeURIComponent(tab.path) + '&meta=1');
+        if (!r.ok) continue;
+        const d = await r.json();
+        if (d.mtime === tab.mtime) continue;
+        if (tab.id === state.activeTabId) {
+          const sc = $('content')?.scrollTop || 0;
+          await loadFile(tab.path, { force: true });
+          if (sc) $('content').scrollTop = sc;
+        } else {
+          tab.externalChanged = true;
+          renderTabsBar();
+        }
       }
     } catch (e) { /* ignore */ }
   }, 2500);
@@ -250,6 +276,13 @@ function saveLastFile(path) {
   if (hasPy) {
     try { py.save_settings({ last: path }); } catch (e) { /* ignore */ }
   }
+}
+
+function syncBuildVersionLabels() {
+  const version = document.documentElement.dataset.version;
+  if (!version) return;
+  if ($('status-version')) $('status-version').textContent = 'v' + version;
+  if ($('menu-version-label')) $('menu-version-label').textContent = '当前版本 v' + version;
 }
 
 function afterRender() {

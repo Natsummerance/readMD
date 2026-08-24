@@ -10,6 +10,7 @@ let globalSearchState = {
   matches: [],       // [{ pageIndex, matchIdxInPage }]
   globalIndex: 0,
 };
+let enterAdvancePending = false;
 
 function clearMarks() {
   state.currentMarks.forEach(m => {
@@ -24,18 +25,85 @@ function clearMarks() {
   updateSearchCount();
 }
 
-function doSearch(q, jumpToIdx) {
+function pageSearchText(page) {
+  if (typeof page.searchText === 'string') return page.searchText;
+  const transformed = transformAcademicCallouts(page.content);
+  const prot = protectMath(transformed);
+  const html = marked.parse(prot.src, { gfm: true, breaks: false });
+  const probe = document.createElement('div');
+  probe.innerHTML = restoreMath(html, prot.saved);
+  page.searchText = (probe.textContent || '').toLowerCase();
+  return page.searchText;
+}
+
+function highlightTextMatches(body, query) {
+  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
+    acceptNode: node => {
+      const parent = node.parentNode;
+      if (!parent || parent.nodeName === 'SCRIPT' || parent.nodeName === 'STYLE') return NodeFilter.FILTER_REJECT;
+      if (parent.nodeName === 'MARK' && parent.classList.contains('hl')) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  const nodes = [];
+  let node;
+  while ((node = walker.nextNode())) nodes.push(node);
+  const segments = nodes.map(textNode => textNode.textContent);
+  const haystack = segments.join('').toLowerCase();
+  const needle = query.toLowerCase();
+  if (!needle) return;
+
+  const positionAt = offset => {
+    for (let index = 0; index < nodes.length; index += 1) {
+      const length = segments[index].length;
+      if (offset <= length) return { node: nodes[index], start: offset };
+      offset -= length;
+    }
+    return null;
+  };
+
+  const ranges = [];
+  let position = haystack.indexOf(needle);
+  while (position !== -1) {
+    const start = positionAt(position);
+    const end = positionAt(position + needle.length);
+    if (!start || !end) break;
+    const range = document.createRange();
+    range.setStart(start.node, start.start);
+    range.setEnd(end.node, end.start);
+    ranges.push(range);
+    position = haystack.indexOf(needle, position + needle.length);
+  }
+
+  for (let index = ranges.length - 1; index >= 0; index -= 1) {
+    const range = ranges[index];
+    const mark = document.createElement('mark');
+    mark.className = 'hl';
+    mark.appendChild(range.extractContents());
+    range.insertNode(mark);
+    state.currentMarks.unshift(mark);
+  }
+}
+
+function doSearch(q, jumpToIdx, { jump = true } = {}) {
   clearMarks();
   state.lastQuery = q;
-  if (!q) { updateSearchCount(); return; }
+  if (!q) {
+    enterAdvancePending = false;
+    updateSearchCount();
+    return;
+  }
 
   // 1. 分页模式下：在内存中预先对所有页进行关键词索引
   const isPaged = state.pagination && state.pagination.enabled && state.pagination.mode === 'paged' && state.pagination.pages && state.pagination.pages.length;
   if (isPaged) {
     const ql = q.toLowerCase();
+    if (!Array.isArray(state.pagination.searchText) || state.pagination.searchText.length !== state.pagination.pages.length) {
+      state.pagination.searchText = state.pagination.pages.map(pageSearchText);
+    }
     const allMatches = [];
     state.pagination.pages.forEach((pg, pIdx) => {
-      const text = pg.content.toLowerCase();
+      const text = state.pagination.searchText[pIdx];
       let pos = 0;
       let countInPage = 0;
       while ((pos = text.indexOf(ql, pos)) !== -1) {
@@ -52,48 +120,50 @@ function doSearch(q, jumpToIdx) {
   }
 
   // 2. 在当前页 DOM 中生成实际的高亮 mark 标签
+  if (!isPaged) {
+    globalSearchState = { query: q, matches: [], globalIndex: 0 };
+  }
   const body = document.querySelector('#content .markdown-body');
   if (!body) return;
-  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT, {
-    acceptNode: n => {
-      const p = n.parentNode;
-      if (!p || p.tagName === 'SCRIPT' || p.tagName === 'STYLE') return NodeFilter.FILTER_REJECT;
-      if (p.tagName === 'MARK' && p.classList.contains('hl')) return NodeFilter.FILTER_REJECT;
-      return n.textContent.toLowerCase().includes(q.toLowerCase()) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
-    },
-  });
-  const nodes = [];
-  let node;
-  while ((node = walker.nextNode())) nodes.push(node);
-  nodes.forEach(n => {
-    const text = n.textContent;
-    const lower = text.toLowerCase();
-    const ql = q.toLowerCase();
-    const frag = document.createDocumentFragment();
-    let i = 0, idx;
-    while ((idx = lower.indexOf(ql, i)) !== -1) {
-      if (idx > i) frag.appendChild(document.createTextNode(text.slice(i, idx)));
-      const mark = document.createElement('mark');
-      mark.className = 'hl';
-      mark.textContent = text.slice(idx, idx + q.length);
-      frag.appendChild(mark);
-      state.currentMarks.push(mark);
-      i = idx + q.length;
-    }
-    if (i < text.length) frag.appendChild(document.createTextNode(text.slice(i)));
-    n.parentNode.replaceChild(frag, n);
-  });
+  highlightTextMatches(body, q);
 
   updateSearchCount();
+  enterAdvancePending = true;
 
   if (isPaged && globalSearchState.matches.length > 0) {
     const curMatch = globalSearchState.matches[globalSearchState.globalIndex];
+    if (!jump) return;
+    if (curMatch && curMatch.pageIndex !== state.pagination.currentPage) {
+      renderPage(curMatch.pageIndex);
+      requestAnimationFrame(() => {
+        doSearch(globalSearchState.query, globalSearchState.globalIndex, { jump });
+      });
+      return;
+    }
     if (curMatch && curMatch.pageIndex === state.pagination.currentPage) {
       jumpToLocalMark(curMatch.matchIdxInPage);
     }
-  } else if (state.currentMarks.length > 0) {
+  } else if (jump && state.currentMarks.length > 0) {
     jumpToLocalMark(0);
   }
+}
+
+function focusCurrentSearchMatch() {
+  const isPaged = state.pagination?.enabled && state.pagination.mode === 'paged' && globalSearchState.matches.length > 0;
+  if (isPaged) {
+    const match = globalSearchState.matches[globalSearchState.globalIndex];
+    if (!match) return;
+    if (match.pageIndex !== state.pagination.currentPage) {
+      renderPage(match.pageIndex);
+      requestAnimationFrame(() => {
+        doSearch(globalSearchState.query, globalSearchState.globalIndex);
+      });
+      return;
+    }
+    jumpToLocalMark(match.matchIdxInPage);
+    return;
+  }
+  jumpToLocalMark(0);
 }
 
 function jumpToLocalMark(idx) {
@@ -101,7 +171,12 @@ function jumpToLocalMark(idx) {
   state.searchIndex = Math.max(0, Math.min(idx, state.currentMarks.length - 1));
   state.currentMarks.forEach((m, i) => m.classList.toggle('cur', i === state.searchIndex));
   const m = state.currentMarks[state.searchIndex];
-  if (m) m.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (m) {
+    m.tabIndex = -1;
+    m.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
+    m.focus({ preventScroll: true });
+    setTimeout(() => m.focus({ preventScroll: true }), 0);
+  }
 }
 
 function jumpToMark(dir) {
@@ -131,7 +206,12 @@ function jumpToMark(dir) {
   state.searchIndex = (state.searchIndex + dir + state.currentMarks.length) % state.currentMarks.length;
   state.currentMarks.forEach((m, i) => m.classList.toggle('cur', i === state.searchIndex));
   const m = state.currentMarks[state.searchIndex];
-  if (m) m.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  if (m) {
+    m.tabIndex = -1;
+    m.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
+    m.focus({ preventScroll: true });
+    setTimeout(() => m.focus({ preventScroll: true }), 0);
+  }
   updateSearchCount();
 }
 
@@ -153,18 +233,27 @@ function updateSearchCount() {
 }
 
 function toggleSearch() {
-  if (state.mode === 'welcome' || (!state.file && !state.original)) return;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (state.mode === 'welcome' || (!state.file && !state.original)) {
+    showToast(_t('toast.searchNeedsDocument') || '请先打开文档，再按 Ctrl+F 搜索');
+    return;
+  }
   const bar = $('search-bar');
   if (bar.classList.contains('hidden')) {
     bar.classList.remove('hidden');
     $('search-input').focus();
     $('search-input').select();
   } else {
-    closeSearch();
+    closeSearch({ restoreFocus: true });
   }
 }
 
-function closeSearch() {
+function closeSearch({ restoreFocus = false } = {}) {
   $('search-bar').classList.add('hidden');
   clearMarks();
+  if (restoreFocus && $('btn-search')) $('btn-search').focus({ preventScroll: true });
+}
+
+function consumeInitialSearchJump() {
+  focusCurrentSearchMatch();
 }

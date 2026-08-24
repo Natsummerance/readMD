@@ -32,17 +32,18 @@ def validate_file_path(
     if re.search(r'[;&|`$]', path):
         raise ValidationError('路径包含危险字符')
 
-    abs_path = os.path.abspath(os.path.normpath(path))
+    abs_path = os.path.realpath(os.path.normpath(path))
 
     if allowed_dirs:
-        abs_allowed = [os.path.abspath(d) for d in allowed_dirs]
-        if not any(abs_path.startswith(d) for d in abs_allowed):
+        abs_allowed = [os.path.realpath(d) for d in allowed_dirs]
+        if not any(paths_within(abs_path, allowed) for allowed in abs_allowed):
             raise ValidationError(f'路径不在允许的目录范围内: {abs_path}')
     else:
         # 非法高危系统路径检查 (POSIX)
         if os.name != 'nt':
             system_dirs = ['/etc', '/proc', '/sys', '/dev']
-            if any(abs_path.startswith(d) for d in system_dirs):
+            if any(paths_within(abs_path, system_dir) or abs_path == os.path.realpath(system_dir)
+                   for system_dir in system_dirs):
                 raise ValidationError('不允许访问系统受保护目录')
 
     if allowed_extensions:
@@ -53,6 +54,16 @@ def validate_file_path(
             raise ValidationError(f'不支持的文件类型: {ext}')
 
     return abs_path
+
+
+def paths_within(path, root):
+    """Return whether path equals or descends from root without prefix tricks."""
+    path = os.path.normcase(os.path.realpath(path))
+    root = os.path.normcase(os.path.realpath(root))
+    try:
+        return os.path.commonpath((path, root)) == root
+    except (OSError, ValueError):
+        return False
 
 
 def validate_command(cmd: Union[str, List[str]]) -> List[str]:

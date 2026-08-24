@@ -48,8 +48,9 @@ from src.readmd_core import (
     read_text,
     readmd_fix,
 )
+from src.readmd_core.file_writer import save_text_atomic
 import src.readmd_modules as RM
-from src.readmd_modules.validators import validate_file_path, validate_command
+from src.readmd_modules.validators import validate_file_path, validate_command, paths_within
 
 APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 
@@ -614,6 +615,19 @@ def read_text(path):
 
 # ---------------------------------------------------------------- HTTP 服务
 
+SAVE_EXTENSIONS = frozenset(('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt'))
+
+
+class ReadMDHTTPServer(ThreadingHTTPServer):
+    daemon_threads = True
+    request_queue_size = 128
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.app_token = secrets.token_urlsafe(24)
+        self.authorized_save_paths = set()
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = 'ReadMD/' + VERSION
     LAN_TOKEN = None
@@ -635,9 +649,16 @@ class Handler(BaseHTTPRequestHandler):
                 pass
 
     def do_POST(self):
-        if not self._lan_authorized():
+        if not self._lan_authorized() or not self._post_origin_authorized():
             self._send(403, 'text/plain; charset=utf-8', b'forbidden')
             return
+        u = urlparse(self.path)
+        if u.path == '/api/save':
+            supplied_token = self.headers.get('X-ReadMD-App-Token', '')
+            if (not self.server.app_token or not supplied_token or
+                    not secrets.compare_digest(supplied_token, self.server.app_token)):
+                self._send(403, 'text/plain; charset=utf-8', b'forbidden')
+                return
         try:
             self._route()
         except Exception as e:
@@ -649,15 +670,36 @@ class Handler(BaseHTTPRequestHandler):
 
     def _lan_authorized(self):
         """局域网模式下，除页面与静态资源外，所有 API 都要求携带 token。"""
+        u = urlparse(self.path)
+        if u.path.startswith('/api/') and not self._local_host_authorized():
+            return False
         if not self.LAN_TOKEN:
             return True
-        u = urlparse(self.path)
         if u.path in ('/', '/index.html') or u.path.startswith('/assets/'):
             return True
         qs = parse_qs(u.query)
         if qs.get('t', [''])[0] == self.LAN_TOKEN:
             return True
         return self.headers.get('X-ReadMD-Token', '') == self.LAN_TOKEN
+
+    def _local_host_authorized(self):
+        if self.LAN_TOKEN:
+            return True
+        parsed = urlparse('//' + (self.headers.get('Host') or ''))
+        hostname = (parsed.hostname or '').lower()
+        return (hostname in ('127.0.0.1', 'localhost', '::1')
+                and (parsed.port is None or parsed.port == self.server.server_port))
+
+    def _post_origin_authorized(self):
+        if not self._local_host_authorized():
+            return False
+        origin = self.headers.get('Origin')
+        if origin:
+            parsed = urlparse(origin)
+            host = urlparse('//' + (self.headers.get('Host') or ''))
+            return ((parsed.hostname or '').lower() == (host.hostname or '').lower()
+                    and parsed.port == host.port)
+        return self.headers.get('Sec-Fetch-Site', 'none') in ('none', 'same-origin')
 
     def _route(self):
         u = urlparse(self.path)
@@ -672,7 +714,7 @@ class Handler(BaseHTTPRequestHandler):
                 rel = path.lstrip('/')
             fp = os.path.normpath(os.path.join(APP_DIR, 'assets', rel))
             base = os.path.normpath(os.path.join(APP_DIR, 'assets'))
-            if not fp.startswith(base):
+            if not paths_within(fp, base):
                 self._send(403, 'text/plain; charset=utf-8', b'forbidden')
                 return
 
@@ -796,7 +838,6 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control', cache_control)
-        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(body)
 
@@ -852,7 +893,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.LAN_TOKEN:
             data = data.replace(b'window.LAN_TOKEN=null;',
                                 ('window.LAN_TOKEN="%s";' % self.LAN_TOKEN).encode('utf-8'))
-        self._send(200, 'text/html; charset=utf-8', data)
+        app_token = self.server.app_token
+        if app_token:
+            data = data.replace(b'<meta name="readmd-app-token" content="">',
+                                ('<meta name="readmd-app-token" content="%s">' % app_token).encode('utf-8'))
+        self._send(200, 'text/html; charset=utf-8', data, 'no-store')
 
     def _sse(self, obj):
         try:
@@ -1096,7 +1141,6 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
             self.send_header('Cache-Control', 'no-cache')
             self.send_header('Connection', 'close')
-            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             if isinstance(gen, str):
                 self._sse({'d': gen})
@@ -1217,6 +1261,7 @@ class Handler(BaseHTTPRequestHandler):
         if not os.path.isfile(p):
             self._send_json(404, {'error': '文件不存在'})
             return
+        self.server.authorized_save_paths.add(os.path.realpath(p))
         try:
             st = os.stat(p)
         except OSError:
@@ -1588,21 +1633,20 @@ class Handler(BaseHTTPRequestHandler):
         path = body.get('path') or ''
         content = body.get('content') or ''
         enc = body.get('encoding') or 'utf-8'
+        expected_mtime = body.get('expected_mtime')
         if not path:
             self._send_json(400, {'error': '缺少文件路径'})
             return
-        try:
-            import shutil
-            bak = None
-            if os.path.isfile(path) and not os.path.exists(path + '.bak'):
-                shutil.copy2(path, path + '.bak')
-                bak = path + '.bak'
-            with open(path, 'w', encoding=enc, newline='') as f:
-                f.write(content)
-            self._send_json(200, {'ok': True, 'path': path, 'backup': bak})
-        except Exception as e:
-            logging.exception('save failed: %s', path)
-            self._send_json(500, {'error': '保存失败：%s' % e})
+        safe_path = os.path.realpath(os.path.normpath(path))
+        if (safe_path not in self.server.authorized_save_paths
+                or os.path.splitext(safe_path)[1].lower() not in SAVE_EXTENSIONS):
+            self._send_json(403, {'error': '文件未被授权保存'})
+            return
+        result = save_text_atomic(safe_path, content, enc, expected_mtime=expected_mtime)
+        self._send_json(
+            200 if result.get('ok') else (409 if result.get('conflict') else 500),
+            result,
+        )
 
     def _send_raw(self, p):
         if not os.path.isfile(p):
@@ -1619,7 +1663,6 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', mime)
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control', 'no-cache')
-        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(body)
 
@@ -1682,10 +1725,9 @@ def start_lan_server():
         LAN_TOKEN = token
 
     try:
-        srv = ThreadingHTTPServer(('0.0.0.0', 0), LanHandler)
+        srv = ReadMDHTTPServer(('0.0.0.0', 0), LanHandler)
     except OSError as e:
         return {'ok': False, 'error': '无法监听局域网：%s' % e}
-    srv.daemon_threads = True
     threading.Thread(target=srv.serve_forever, daemon=True, name='readmd-lan').start()
     LAN['server'] = srv
     LAN['token'] = token
@@ -1722,13 +1764,12 @@ def start_server(port=0):
     if not port:
         port = CONTROL_PORT
     try:
-        server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+        server = ReadMDHTTPServer(('127.0.0.1', port), Handler)
     except OSError:
         try:
-            server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+            server = ReadMDHTTPServer(('127.0.0.1', 0), Handler)
         except OSError:
             raise
-    server.daemon_threads = True
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
     return server
@@ -1951,7 +1992,7 @@ class Api(object):
         try:
             files = self._window.create_file_dialog(
                 webview.OPEN_DIALOG,
-                file_types=('Markdown 文件 (*.md;*.markdown;*.mdown;*.mkd;*.txt)',))
+                file_types=('Markdown 文件 (*.md;*.markdown;*.mdown;*.mkd;*.mdx;*.txt)',))
             return files[0] if files else None
         except Exception as e:
             logging.exception('choose_file failed')
@@ -2566,20 +2607,14 @@ class Api(object):
         return {'ok': True, 'path': new_path, 'name': os.path.basename(new_path),
                 'old_path': old_path, 'warnings': warnings}
 
-    def save_file(self, path, content, encoding):
+    def save_file(self, path, content, encoding, expected_mtime=None):
         """编辑保存：写回文件，首次保存自动生成 .bak 备份。"""
-        try:
-            import shutil
-            bak = None
-            if os.path.isfile(path) and not os.path.exists(path + '.bak'):
-                shutil.copy2(path, path + '.bak')
-                bak = path + '.bak'
-            with open(path, 'w', encoding=encoding or 'utf-8', newline='') as f:
-                f.write(content)
-            return {'ok': True, 'backup': bak}
-        except Exception as e:
-            logging.exception('save_file failed')
-            return {'ok': False, 'error': str(e)}
+        result = save_text_atomic(
+            validate_file_path(path), content, encoding, expected_mtime=expected_mtime
+        )
+        if not result.get('ok'):
+            logging.warning('save_file rejected: %s', result.get('error'))
+        return result
 
     def save_as(self, content, suggested, assets=None):
         """把转换 / 网页 / OCR 结果另存为 .md 文件。"""
@@ -2610,8 +2645,10 @@ class Api(object):
                     relative = asset_name + '/' + os.path.basename(name)
                     content = content.replace(source.replace('\\', '/'), relative)
                     content = content.replace(source, relative)
-            with open(target, 'w', encoding='utf-8', newline='') as f:
-                f.write(content)
+            result = save_text_atomic(target, content, 'utf-8')
+            if not result.get('ok'):
+                logging.warning('save_as rejected: %s', result.get('error'))
+                return None
             return target
         except Exception as e:
             logging.exception('save_as failed')
@@ -3004,8 +3041,7 @@ def run_selftest():
     try:
         import urllib.request as _urlreq
         old_inst = _read_instance()
-        srv = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
-        srv.daemon_threads = True
+        srv = ReadMDHTTPServer(('127.0.0.1', 0), Handler)
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         p = srv.server_port
         tok = 'selftest-%s' % os.urandom(4).hex()
@@ -3091,8 +3127,7 @@ def run_selftest():
         from src.readmd_modules import convert as _CV
         txt, eng, err = _CV.convert_verbose(_dp)
         assert eng == 'docx' and err is None and '# Selftest' in txt, (eng, err)
-        srv3 = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
-        srv3.daemon_threads = True
+        srv3 = ReadMDHTTPServer(('127.0.0.1', 0), Handler)
         threading.Thread(target=srv3.serve_forever, daemon=True).start()
         p3 = srv3.server_port
         req = _uq.Request('http://127.0.0.1:%d/api/convert/batch' % p3,

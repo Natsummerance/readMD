@@ -71,8 +71,11 @@ function openUpdateModal() {
     const mb = updateInfo.asset.size ? (updateInfo.asset.size / (1024 * 1024)).toFixed(1) + ' MB' : '';
 
     $('update-asset-size').textContent = mb;
-    $('btn-update-start').disabled = false;
-    $('btn-update-start').textContent = _t('update.installNow') || '立即下载并更新';
+    const verifiable = !!updateInfo.asset.expected_sha;
+    $('btn-update-start').disabled = !verifiable;
+    $('btn-update-start').textContent = verifiable
+      ? (_t('update.installNow') || '立即下载并更新')
+      : (_t('update.unverifiedPackage') || '无法验证更新包');
   } else {
     $('update-asset-name').textContent = _t('update.noAsset') || '未找到匹配当前系统的二进制资产';
     $('update-asset-size').textContent = '';
@@ -91,6 +94,10 @@ async function startUpdateDownload() {
   if (!updateInfo || !updateInfo.asset || isUpdating) return;
   const asset = updateInfo.asset;
   const useMirror = $('update-use-mirror') && $('update-use-mirror').checked;
+  if (!asset.expected_sha) {
+    showToast(_t('update.unverifiedPackage') || '无法验证更新包');
+    return;
+  }
 
   $('btn-update-start').disabled = true;
   $('btn-update-cancel').classList.remove('hidden');
@@ -103,7 +110,7 @@ async function startUpdateDownload() {
   try {
     let started = false;
     if (hasPy && py.start_download_update) {
-      const res = await py.start_download_update(asset.download_url, asset.name, null, useMirror);
+      const res = await py.start_download_update(asset.download_url, asset.name, asset.expected_sha, useMirror);
       started = res && res.ok;
     } else {
       const resp = await fetch('/api/update/download', {
@@ -112,6 +119,7 @@ async function startUpdateDownload() {
         body: JSON.stringify({
           download_url: asset.download_url,
           target_filename: asset.name,
+          expected_sha: asset.expected_sha,
           use_mirror: useMirror,
         }),
       });
@@ -139,6 +147,7 @@ async function startUpdateDownload() {
 
       if (st.status === 'downloading') {
         const pct = st.percent || 0;
+        $('update-progress-bar').setAttribute('aria-valuenow', String(pct));
         $('update-progress-fill').style.width = pct + '%';
         const speedMb = ((st.speed_bps || 0) / (1024 * 1024)).toFixed(1);
         const curMb = ((st.downloaded_bytes || 0) / (1024 * 1024)).toFixed(1);
@@ -147,6 +156,7 @@ async function startUpdateDownload() {
         $('update-progress-text').textContent = `${dlLabel} ${pct}% (${curMb}MB / ${totMb}MB)`;
         $('update-progress-speed').textContent = `${speedMb} MB/s`;
       } else if (st.status === 'verifying') {
+        $('update-progress-bar').setAttribute('aria-valuenow', '100');
         $('update-progress-fill').style.width = '100%';
         $('update-progress-text').textContent = _t('update.verifying') || '正在校验文件完整性 (SHA256)…';
       } else if (st.status === 'ready') {
