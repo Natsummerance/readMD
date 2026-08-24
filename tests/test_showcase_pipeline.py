@@ -753,6 +753,35 @@ class WriteCopyTest(unittest.TestCase):
             result["body"].index(expected_cta),
         )
 
+    def test_invisible_fixes_do_not_duplicate_terminal_punctuation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = write_story(Path(tmp))
+            story["claims"].extend([
+                {
+                    "id": "invisible-1",
+                    "user_value": "编辑器更稳，改稿和预览不互相打断。",
+                    "shot_ids": [],
+                    "sources": ["release/release-notes.md"],
+                },
+                {
+                    "id": "invisible-2",
+                    "user_value": "阅读更快。",
+                    "shot_ids": [],
+                    "sources": ["release/release-notes.md"],
+                },
+            ])
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v2.3.7-beta.2",
+            )
+
+        self.assertNotRegex(result["body"], r"[。．.!！?？][。．.!！?？]")
+        self.assertIn(
+            "比如编辑器更稳，改稿和预览不互相打断；阅读更快。它们不抢画面",
+            result["body"],
+        )
+
     def test_comment_focus_shapes_reader_scenario(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             story = write_story(Path(tmp))
@@ -1865,6 +1894,12 @@ class AuditCopyTest(unittest.TestCase):
         self.assertEqual(metrics["reversal_count"], 1)
         self.assertEqual(metrics["depth_term_count"], 1)
         self.assertFalse(metrics["blessing_close"])
+
+    def test_style_audit_flags_duplicated_terminal_punctuation(self) -> None:
+        report = style_audit.audit_style("编辑器更稳，改稿和预览不互相打断。。渲染只处理显示结果。")
+        self.assertFalse(report["ok"])
+        self.assertEqual(report["metrics"]["duplicate_terminal_punctuation_count"], 1)
+        self.assertIn("Duplicated sentence punctuation appears 1 times.", report["hard_failures"])
 
     def test_semantic_qa_integrates_style_hard_gate(self) -> None:
         body = "这款工具非常强大。这款工具非常高效。这款工具非常安全。快来关注点赞。\n\n先说清楚：这是 ReadMD v9.9.9-beta.1 预览版。"

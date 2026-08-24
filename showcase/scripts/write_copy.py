@@ -470,7 +470,7 @@ def generate_copy(
         paragraphs.append(RESONANCE_CONCERN_RESPONSE)
 
     if invisible_claims:
-        fixes = "；".join(_clean(claim["user_value"]) for claim in invisible_claims[:2])
+        fixes = "；".join(_clean(claim["user_value"]).rstrip("。．.!！?？") for claim in invisible_claims[:2])
         paragraphs.append(f"还有一些不适合单独拍图的底层修复也在这版里，比如{fixes}。它们不抢画面，但会让日常使用更稳。")
 
     paragraphs.extend(
