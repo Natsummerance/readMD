@@ -6,7 +6,9 @@
     "clean": "node tools/clean.mjs",
     "build:css": "tailwindcss -i ./src/site.css -o ./dist/assets/site.css --minify",
     "build": "npm run clean && npm run build:css && node tools/copy-static.mjs",
-    "verify": "python ../showcase/scripts/validate_website.py"
+    "verify": "python ../showcase/scripts/validate_website.py",
+    "verify:release": "npm run build && python ../showcase/scripts/validate_website.py --release",
+    "deploy": "npm run verify:release && npx wrangler deploy --config wrangler.worker.jsonc"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.13",

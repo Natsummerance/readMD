@@ -14,10 +14,10 @@ SITE = ROOT / "website"
 PUBLIC = SITE / "public"
 
 LANGUAGES = {
-    "en": {"path": PUBLIC / "index.html", "canonical": "https://readmd.pages.dev/", "full": PUBLIC / "llms-full.txt"},
-    "zh-CN": {"path": PUBLIC / "zh-cn" / "index.html", "canonical": "https://readmd.pages.dev/zh-cn/", "full": PUBLIC / "zh-cn" / "llms-full.txt"},
-    "zh-TW": {"path": PUBLIC / "zh-tw" / "index.html", "canonical": "https://readmd.pages.dev/zh-tw/", "full": PUBLIC / "zh-tw" / "llms-full.txt"},
-    "ja": {"path": PUBLIC / "ja" / "index.html", "canonical": "https://readmd.pages.dev/ja/", "full": PUBLIC / "ja" / "llms-full.txt"},
+    "en": {"path": PUBLIC / "index.html", "canonical": "https://readmd.syminu.online/", "full": PUBLIC / "llms-full.txt"},
+    "zh-CN": {"path": PUBLIC / "zh-cn" / "index.html", "canonical": "https://readmd.syminu.online/zh-cn/", "full": PUBLIC / "zh-cn" / "llms-full.txt"},
+    "zh-TW": {"path": PUBLIC / "zh-tw" / "index.html", "canonical": "https://readmd.syminu.online/zh-tw/", "full": PUBLIC / "zh-tw" / "llms-full.txt"},
+    "ja": {"path": PUBLIC / "ja" / "index.html", "canonical": "https://readmd.syminu.online/ja/", "full": PUBLIC / "ja" / "llms-full.txt"},
 }
 
 AI_CRAWLERS = ("GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot")
@@ -72,6 +72,19 @@ def audit_page(path: Path, canonical: str) -> list[str]:
     descriptions = [item for item in audit.metas if item.get("name") == "description"]
     if len(descriptions) != 1 or len(descriptions[0].get("content", "")) < 80:
         errors.append(f"{path}: missing unique meta description of at least 80 characters")
+    robots_directives = [item for item in audit.metas if item.get("name") == "robots"]
+    if len(robots_directives) != 1 or robots_directives[0].get("content") != "index,follow,max-image-preview:large":
+        errors.append(f"{path}: missing canonical index,follow,max-image-preview:large directive")
+    og = {item.get("property"): item.get("content") for item in audit.metas if str(item.get("property", "")).startswith("og:")}
+    for required in ("og:title", "og:description", "og:url", "og:image"):
+        if len(og.get(required, "")) < 8:
+            errors.append(f"{path}: missing complete {required}")
+    if og.get("og:url") != canonical:
+        errors.append(f"{path}: og:url differs from canonical")
+    twitter = {item.get("name"): item.get("content") for item in audit.metas if str(item.get("name", "")).startswith("twitter:")}
+    for required in ("twitter:card", "twitter:title", "twitter:description", "twitter:image"):
+        if len(twitter.get(required, "")) < 8:
+            errors.append(f"{path}: missing complete {required}")
     canonicals = [item for item in audit.links if item.get("rel") == "canonical"]
     if len(canonicals) != 1 or canonicals[0].get("href") != canonical:
         errors.append(f"{path}: canonical must be exactly {canonical}")
@@ -100,7 +113,7 @@ def validate_llms(path: Path) -> list[str]:
         errors.append(f"{path}: second line must be a blockquote description")
     if len(lines[1]) > 220:
         errors.append(f"{path}: description exceeds the compact llms.txt contract")
-    absolute_links = re.findall(r"https://readmd\.pages\.dev(?:/[\w.-]+)*", path.read_text(encoding="utf-8"))
+    absolute_links = re.findall(r"https://readmd\.syminu\.online(?:/[\w.-]+)*", path.read_text(encoding="utf-8"))
     if len(absolute_links) < 5:
         errors.append(f"{path}: fewer than five absolute canonical entries")
     return errors
@@ -113,7 +126,7 @@ def validate_robots_and_sitemap() -> list[str]:
         pattern = f"User-agent: {crawler}\nAllow: /"
         if pattern not in robots:
             errors.append(f"robots.txt does not explicitly allow {crawler}")
-    if "Sitemap: https://readmd.pages.dev/sitemap.xml" not in robots:
+    if "Sitemap: https://readmd.syminu.online/sitemap.xml" not in robots:
         errors.append("robots.txt omits canonical sitemap")
     sitemap = (PUBLIC / "sitemap.xml").read_text(encoding="utf-8")
     expected = {item["canonical"] for item in LANGUAGES.values()}
@@ -164,6 +177,25 @@ def validate_rights() -> list[str]:
     return errors
 
 
+def validate_security_headers() -> list[str]:
+    errors: list[str] = []
+    headers = (PUBLIC / "_headers").read_text(encoding="utf-8")
+    required = (
+        "Content-Security-Policy:",
+        "Strict-Transport-Security:",
+        "X-Content-Type-Options: nosniff",
+        "X-Frame-Options: DENY",
+        "Referrer-Policy:",
+        "Permissions-Policy:",
+    )
+    for header in required:
+        if header not in headers:
+            errors.append(f"_headers omits security header: {header}")
+    if "script-src 'self'" not in headers:
+        errors.append("_headers CSP does not constrain scripts to self")
+    return errors
+
+
 def validate_release_build() -> list[str]:
     errors: list[str] = []
     dist = SITE / "dist"
@@ -192,6 +224,7 @@ def main() -> int:
     errors.extend(validate_robots_and_sitemap())
     errors.extend(validate_approval())
     errors.extend(validate_rights())
+    errors.extend(validate_security_headers())
     if args.release:
         errors.extend(validate_release_build())
     if errors:
