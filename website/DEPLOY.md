@@ -4,19 +4,19 @@
 
 - Canonical site: `https://app.syminu.online/`
 - Hosting: GitHub Pages on the free plan
-- Domain strategy: Cloudflare manages a dedicated subdomain of the existing active `syminu.online` zone. No new domain purchase is required.
+- Domain strategy: Cloudflare is authoritative for a dedicated subdomain of the existing active `syminu.online` zone and proxies it to GitHub Pages. No new domain purchase is required.
 
 ## Active release path
 
 Merging an approved website change into `main` runs `.github/workflows/website-github-pages.yml`. The workflow rebuilds `website/dist`, runs `validate_website.py --release`, uploads the artifact, and deploys GitHub Pages. The custom domain is declared by `website/public/CNAME`.
 
-The required DNS-only record is:
+The active proxied record is:
 
 ```text
-app.syminu.online. CNAME Natsummerance.github.io.
+app.syminu.online. CNAME Natsummerance.github.io. ; proxied
 ```
 
-Do not use the existing `readmd.syminu.online` or `www.syminu.online` records; both already point to other services. After GitHub issues a certificate, HTTPS enforcement can be enabled through the Pages API.
+Do not use the existing `readmd.syminu.online` or `www.syminu.online` records; both already point to other services. GitHub Pages has issued a certificate, and HTTPS enforcement is enabled in the Pages configuration.
 
 ## Local release check
 
@@ -27,6 +27,15 @@ npm run verify:release
 ```
 
 This builds `dist/` and runs the GEO, approval, rights, security-header, structured-data, and release-build checks.
+
+## Live security headers
+
+GitHub Pages does not process the `website/public/_headers` file, so those headers are not emitted by the current origin. Cloudflare now proxies the hostname, but applying the policy at the edge requires either:
+
+- Zone > Transform Rules > Edit permission, followed by an HTTP response header transform scoped to `http.host eq "app.syminu.online"`; or
+- migrating the origin to Cloudflare Workers/Pages, where `_headers` can be honored directly.
+
+Until one of those changes is made, do not claim that CSP, HSTS, or frame-protection headers are live. The file remains the canonical security policy for the future Cloudflare-native hosting migration.
 
 ## Future direct Cloudflare hosting
 

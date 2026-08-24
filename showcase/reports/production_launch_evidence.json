@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "launched": true,
+  "checked_at": "2026-08-24T12:38:26Z",
+  "production_url": "https://app.syminu.online/",
+  "cloudflare": {
+    "zone_id": "286e3131d3e8407f56eb3241f7d9926e",
+    "zone_name": "syminu.online",
+    "dns_record_id": "51e8101cee0fe9add483a3ba70c610cd",
+    "record_name": "app.syminu.online",
+    "record_target": "natsummerance.github.io",
+    "proxied": true,
+    "ssl_mode": "strict"
+  },
+  "github_pages": {
+    "custom_domain": "app.syminu.online",
+    "build_type": "workflow",
+    "https_enforced": true,
+    "launch_workflow_run_id": 32716950764,
+    "launch_workflow_conclusion": "success",
+    "source_commit": "68a85d8c0968568a264cf553d9af82f3d836fe9d"
+  },
+  "live_checks": {
+    "http_to_https": {
+      "request": "http://app.syminu.online/?cachebust=1787569000",
+      "status": 301,
+      "location": "https://app.syminu.online/?cachebust=1787569000"
+    },
+    "https_homepage": {
+      "status": 200,
+      "tls_verify_result": 0,
+      "server": "cloudflare"
+    },
+    "routes_status_200": [
+      "/",
+      "/zh-cn/",
+      "/zh-tw/",
+      "/ja/",
+      "/llms.txt",
+      "/llms-full.txt",
+      "/robots.txt",
+      "/sitemap.xml",
+      "/zh-cn/llms-full.txt",
+      "/zh-tw/llms-full.txt",
+      "/ja/llms-full.txt"
+    ],
+    "browser_smoke": "passed for all four language pages; one H1 each; stylesheet loaded; zero broken images"
+  },
+  "repository_metadata": {
+    "homepage": "https://app.syminu.online",
+    "star_baseline_at_check": 19,
+    "star_goal": 1000
+  },
+  "limitations": [
+    "GitHub Pages does not process website/public/_headers.",
+    "A scoped Cloudflare Transform Rules write attempt returned HTTP 403, so edge security headers are not yet live.",
+    "The _headers file remains the canonical policy for a future Cloudflare Workers or Pages migration."
+  ],
+  "approval_references": [
+    "showcase/reports/domain_cutover_approval.json",
+    "showcase/reports/website_approval.json",
+    "showcase/reports/skill_and_source_review.md"
+  ]
+}
