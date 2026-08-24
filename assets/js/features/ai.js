@@ -179,14 +179,19 @@ async function deleteCurrentTpl() {
   const id = $('tpl-id').value;
   if (!id) return;
   const cur = (state.ai.templates || []).find(x => x.id === id);
-  const msg = cur && cur.builtin ? (_t('toast.tplResetConfirm') || '将重置为默认模板，确定吗？') : (_t('toast.tplDelConfirm') || '确定删除此模板吗？');
+  const templateName = cur?.name || (_t('ai.untitledTemplate') || '未命名模板');
+  const msg = cur && cur.builtin
+    ? (_t('toast.tplResetConfirm', { name: templateName }) || '将重置为默认模板，确定吗？')
+    : (_t('toast.tplDelConfirm', { name: templateName }) || '确定删除此模板吗？');
   if (!(await confirmAction({
     title: _t('dialog.destructiveTitle') || '请确认',
     message: msg,
     confirmText: _t('dialog.confirm') || '确认',
     cancelText: _t('dialog.cancel') || '取消',
     danger: true,
-  }))) return;
+  }))) {
+    return false;
+  }
   try {
     const r = await apiFetch('/api/ai/prompts', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -198,8 +203,9 @@ async function deleteCurrentTpl() {
     fillAiTemplates();
     renderTplList();
     selectTpl(null);
-    showToast(_t('toast.tplDeleted') || '模板已删除');
+    showToast(_t('toast.tplDeleted', { name: templateName }) || '模板已删除');
   } catch (e) { showToast((_t('toast.deleteFailed') || '删除失败：') + e.message); }
+  return true;
 }
 
 /* ---------------- 对话历史管理 ---------------- */

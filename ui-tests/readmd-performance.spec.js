@@ -98,16 +98,35 @@ test('long-document interaction stays bounded from 1k through 50k lines', async 
     await page.locator('#search-input').press('Enter');
     await expect(page.locator('#search-count')).toHaveText('1/1 (P.' + (expectedPage + 1) + ')');
     await page.waitForFunction(expected => state.pagination.currentPage === expected, expectedPage);
+    await expect(page.locator(`#toc-list details[data-page-idx="${expectedPage}"]`)).toHaveAttribute('open', '');
     results[size].searchJumpMs = Date.now() - started;
 
     const tocSection = Math.max(1, targetSection - 300);
     const expectedTocPage = Math.floor((tocSection - 1) / 300);
-    started = Date.now();
     await page.locator('#btn-toc').click();
     await expect(page.locator('#toc-list')).toBeVisible();
-    await page.locator(`#toc-list details[data-page-idx="${expectedTocPage}"] > summary`).click();
-    await page.locator(`#toc-list [data-heading-id="section-${tocSection}"]`).click();
-    await page.waitForFunction(expected => state.pagination.currentPage === expected, expectedTocPage);
+    results[size].tocJumpMs = await page.evaluate(async ({ pageIndex, headingId }) => {
+      const group = document.querySelector(`#toc-list details[data-page-idx="${pageIndex}"]`);
+      const startedAt = performance.now();
+      group.querySelector('summary').click();
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      group.querySelector(`[data-heading-id="${headingId}"]`).click();
+      await new Promise(resolve => {
+        const check = () => {
+          const heading = document.getElementById(headingId);
+          if (state.pagination.currentPage === pageIndex &&
+              document.activeElement === heading &&
+              heading.classList.contains('search-arrival')) {
+            requestAnimationFrame(resolve);
+          } else {
+            requestAnimationFrame(check);
+          }
+        };
+        check();
+      });
+      return performance.now() - startedAt;
+    }, { pageIndex: expectedTocPage, headingId: `section-${tocSection}` });
+    await expect(page.locator(`#toc-list details[data-page-idx="${expectedTocPage}"]`)).toHaveAttribute('open', '');
     await expect(page.locator(`#content [id="section-${tocSection}"]`)).toBeFocused();
     await expect(page.locator(`#toc-list [data-heading-id="section-${tocSection}"]`)).toHaveClass(/toc-heading-active/);
     await expect(page.locator(`#content [id="section-${tocSection}"]`)).toHaveClass(/search-arrival/);

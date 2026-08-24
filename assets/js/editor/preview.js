@@ -491,6 +491,10 @@ function promptSaveConflict() {
       resolve('cancel');
       return;
     }
+    let opener = document.activeElement;
+    if (!(opener instanceof HTMLElement) || !opener.isConnected || opener === document.body) {
+      opener = $('edit-save');
+    }
     modal.classList.remove('hidden');
     const reload = $('save-conflict-reload');
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
@@ -506,6 +510,9 @@ function promptSaveConflict() {
       modal.removeEventListener('click', onBackdrop);
       document.removeEventListener('keydown', onKey);
       resolve(action);
+      setTimeout(() => {
+        if (opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true });
+      }, 60);
     };
     const onBackdrop = event => { if (event.target === modal) finish('cancel'); };
     const onKey = event => {

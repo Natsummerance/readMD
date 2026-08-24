@@ -793,6 +793,11 @@ mark.hl.cur { background: var(--hl-cur); }
   background: var(--bg);
   overflow: hidden;
 }
+
+.url-stepper:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
 .stepper-btn {
   width: 28px;
   height: 28px;
@@ -916,6 +921,7 @@ mark.hl.cur { background: var(--hl-cur); }
 
 /* ---------- 未保存关闭确认弹窗 (Close Tab Dirty Confirmation Modal) ---------- */
 #close-confirm-modal,
+#confirm-modal,
 #save-conflict-modal {
   position: fixed;
   inset: 0;
@@ -931,6 +937,7 @@ mark.hl.cur { background: var(--hl-cur); }
   transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.18s ease;
 }
 #close-confirm-modal.hidden,
+#confirm-modal.hidden,
 #save-conflict-modal.hidden {
   display: none;
   opacity: 0;
@@ -2090,9 +2097,12 @@ body[data-theme="dark"] .conn-status { color: var(--fg3); }
   font: inherit;
   font-size: 11.5px;
   padding: 0 4px;
-  height: 20px;
+  height: 24px;
   width: 100%;
   outline: none;
+}
+.tab-title-input:focus-visible {
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .tab-dirty {
   width: 6px;
@@ -2776,8 +2786,8 @@ body[data-theme="dark"] .conn-status { color: var(--fg3); }
 .tab-rename-wrap .tab-title-input {
   flex: 1 1 auto;
   min-width: 60px;
-  height: 20px;
-  padding: 0 4px;
+  height: 24px;
+  padding: 2px 4px;
   border: 1px solid var(--accent);
   border-radius: 3px;
   background: var(--bg);

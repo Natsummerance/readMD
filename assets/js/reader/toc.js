@@ -9,29 +9,32 @@ let tocCache = { source: null, pageCount: 0 };
 
 function refreshCurrentTocPage(list) {
   const currentPage = state.pagination.currentPage;
+  const currentGroup = list.querySelector(`details.toc-page-group[data-page-idx="${CSS.escape(String(currentPage))}"]`);
   list.querySelectorAll('.toc-cur-page').forEach(link => link.classList.remove('toc-cur-page'));
-  list.querySelectorAll(`[data-page-idx="${CSS.escape(String(currentPage))}"]`)
-    .forEach(link => link.classList.add('toc-cur-page'));
+  list.querySelectorAll('.toc-page-group').forEach(group => {
+    group.open = group === currentGroup;
+  });
+  currentGroup?.querySelector('a')?.classList.add('toc-cur-page');
 }
 
 function buildToc() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const list = $('toc-list');
   if (!list) return;
-  list.innerHTML = '';
 
   // 1. 分页模式下：从全文所有分页提取全局完整大纲
   if (state.pagination && state.pagination.enabled && state.pagination.mode === 'paged' && state.pagination.pages && state.pagination.pages.length) {
-    if (
+    const canReuseOutline =
       tocCache.source === state.pagination.rawContent &&
       tocCache.pageCount === state.pagination.pages.length &&
-      list.childElementCount
-    ) {
+      list.childElementCount;
+    if (canReuseOutline) {
       refreshCurrentTocPage(list);
       if (typeof updateActiveTocHeading === 'function') updateActiveTocHeading();
       return;
     }
 
+    list.innerHTML = '';
     const seen = {};
     const globalHeadings = [];
 
@@ -101,10 +104,26 @@ function buildToc() {
       a.setAttribute('data-page-idx', h.pageIndex);
       a.setAttribute('data-heading-id', h.id);
 
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        if (h.pageIndex === state.pagination.currentPage) {
-          const el = document.getElementById(h.id);
+      container.appendChild(a);
+    };
+
+    const fillTocGroup = (container, headings) => {
+      if (container.childElementCount) return;
+      const fragment = document.createDocumentFragment();
+      headings.forEach(h => appendTocHeading(fragment, h));
+      container.appendChild(fragment);
+    };
+
+    if (!list.dataset.delegationBound) {
+      list.dataset.delegationBound = 'true';
+      list.addEventListener('click', event => {
+        const link = event.target.closest('[data-heading-id]');
+        if (!link) return;
+        event.preventDefault();
+        const pageIndex = Number(link.dataset.pageIdx);
+        const headingId = link.dataset.headingId;
+        if (pageIndex === state.pagination.currentPage) {
+          const el = document.getElementById(headingId);
           if (el) {
             el.tabIndex = -1;
             el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
@@ -115,17 +134,10 @@ function buildToc() {
             setTimeout(() => el.classList.remove('heading-target-highlight'), 1500);
           }
         } else {
-          renderPage(h.pageIndex, h.id);
+          renderPage(pageIndex, headingId);
         }
       });
-
-      container.appendChild(a);
-    };
-
-    const fillTocGroup = (container, headings) => {
-      if (container.childElementCount) return;
-      headings.forEach(h => appendTocHeading(container, h));
-    };
+    }
 
     headingGroups.forEach((headings, pageIndex) => {
       const group = document.createElement('details');
@@ -152,6 +164,7 @@ function buildToc() {
 
   // 2. 连续/常规模式下：从当前 DOM 提取大纲
   tocCache = { source: null, pageCount: 0 };
+  list.innerHTML = '';
   const headings = document.querySelectorAll('#content h1, #content h2, #content h3, #content h4, #content h5, #content h6');
   if (!headings.length) {
     list.innerHTML = `<div class="side-empty">${_t('sidebar.emptyToc') || '（当前文档暂无标题大纲）'}</div>`;

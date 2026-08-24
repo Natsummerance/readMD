@@ -85,7 +85,16 @@ function openUpdateModal() {
 }
 
 
+function isUpdateDownloading() {
+  return isUpdating === true;
+}
+
 function closeUpdateModal() {
+  if (isUpdating) {
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    showToast(_t('update.closeBlockedDownloading') || '更新正在下载，请先取消下载或等待完成');
+    return;
+  }
   $('update-modal').classList.add('hidden');
 }
 
@@ -109,9 +118,10 @@ async function startUpdateDownload() {
 
   try {
     let started = false;
+    let startResult = null;
     if (hasPy && py.start_download_update) {
-      const res = await py.start_download_update(asset.download_url, asset.name, asset.expected_sha, useMirror);
-      started = res && res.ok;
+      startResult = await py.start_download_update(asset.download_url, asset.name, asset.expected_sha, useMirror);
+      started = startResult && startResult.ok;
     } else {
       const resp = await fetch('/api/update/download', {
         method: 'POST',
@@ -123,13 +133,16 @@ async function startUpdateDownload() {
           use_mirror: useMirror,
         }),
       });
-      const res = await resp.json();
-      started = res && res.ok;
+      startResult = await resp.json();
+      started = startResult && startResult.ok;
     }
 
     if (!started) {
-      showToast(_t('toast.updateStartFail') || '启动下载失败');
+      const reason = (startResult && startResult.error) || (_t('toast.unknownNetworkErr') || '未知网络错误');
+      showToast((_t('toast.updateStartFail') || '启动下载失败') + '：' + reason);
       isUpdating = false;
+      $('update-progress-wrap').classList.add('hidden');
+      $('btn-update-cancel').classList.add('hidden');
       $('btn-update-start').disabled = false;
       return;
     }
@@ -198,6 +211,8 @@ async function startUpdateDownload() {
   } catch (e) {
     showToast((_t('toast.downloadError') || '下载出错：') + e.message);
     isUpdating = false;
+    $('update-progress-wrap').classList.add('hidden');
+    $('btn-update-cancel').classList.add('hidden');
     $('btn-update-start').disabled = false;
   }
 }

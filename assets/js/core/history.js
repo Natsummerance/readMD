@@ -96,6 +96,23 @@ function historyForward() {
   }
 }
 
+function setUnavailableReason(element, reason) {
+  if (!element) return;
+  if (element.disabled) {
+    if (!element.dataset.actionTitle) element.dataset.actionTitle = element.title || '';
+    if (reason) {
+      element.title = reason;
+      element.setAttribute('aria-description', reason);
+    }
+    return;
+  }
+  element.removeAttribute('aria-description');
+  if (element.dataset.actionTitle) {
+    element.title = element.dataset.actionTitle;
+    delete element.dataset.actionTitle;
+  }
+}
+
 function updateStatus() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const srcLabels = {
@@ -119,15 +136,16 @@ function updateStatus() {
   if (state.size) parts.push((state.size / 1024).toFixed(1) + ' KB');
   if (state.encoding) parts.push(state.encoding);
   $('status-right').textContent = parts.join(' · ');
-  const canEdit = (state.mode === 'file' || state.mode === 'virtual') && !!state.original && !state.editing;
-  const canReload = state.mode === 'file';
-  const canSaveas = state.mode === 'virtual' || state.fixed !== '';
-  $('btn-edit').disabled = !canEdit && !state.editing;
-  $('btn-reload').disabled = !canReload;
-  $('btn-saveas').disabled = !canSaveas;
-
   const isWelcome = state.mode === 'welcome';
   const hasDoc = (state.mode === 'file' || state.mode === 'virtual') && !!state.original;
+  const canEdit = hasDoc && !state.editing;
+  const canReload = state.mode === 'file';
+  const canSaveas = hasDoc && (state.mode === 'virtual' || state.fixed !== '');
+  $('btn-edit').disabled = !canEdit && !state.editing;
+  setUnavailableReason($('btn-edit'), _t('toast.openDocumentToUse'));
+  $('btn-reload').disabled = !canReload;
+  $('btn-saveas').disabled = !canSaveas;
+  setUnavailableReason($('btn-saveas'), _t('toast.openDocumentToUse'));
   if ($('btn-print')) {
     const browserOnly = !hasPy;
     $('btn-print').disabled = isWelcome || browserOnly;
@@ -140,10 +158,12 @@ function updateStatus() {
   if ($('btn-a')) $('btn-a').disabled = isWelcome;
   if ($('btn-A')) $('btn-A').disabled = isWelcome;
   if ($('btn-search')) $('btn-search').disabled = isWelcome;
+  setUnavailableReason($('btn-search'), _t('toast.searchNeedsDocument'));
   if ($('btn-presentation-menu')) $('btn-presentation-menu').disabled = !hasDoc;
   if ($('btn-run-all-chunks')) $('btn-run-all-chunks').disabled = !hasDoc;
   if ($('btn-share')) $('btn-share').disabled = !hasDoc;
   if ($('btn-fix')) $('btn-fix').disabled = !hasDoc;
+  setUnavailableReason($('btn-fix'), _t('toast.openDocumentToUse'));
 
   const btnHome = $('btn-home');
   if (btnHome) {
