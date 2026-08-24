@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "launched": true,
-  "checked_at": "2026-08-24T12:38:26Z",
+  "checked_at": "2026-08-24T12:55:00Z",
   "production_url": "https://app.syminu.online/",
   "cloudflare": {
     "zone_id": "286e3131d3e8407f56eb3241f7d9926e",
@@ -9,7 +9,7 @@
     "dns_record_id": "51e8101cee0fe9add483a3ba70c610cd",
     "record_name": "app.syminu.online",
     "record_target": "natsummerance.github.io",
-    "proxied": true,
+    "proxied": false,
     "ssl_mode": "strict"
   },
   "github_pages": {
@@ -54,6 +54,7 @@
   "limitations": [
     "GitHub Pages does not process website/public/_headers.",
     "A scoped Cloudflare Transform Rules write attempt returned HTTP 403, so edge security headers are not yet live.",
+    "A Cloudflare proxy test injected a managed AI-crawl restriction that conflicted with the approved open-reference policy; the app record was returned to DNS-only.",
     "The _headers file remains the canonical policy for a future Cloudflare Workers or Pages migration."
   ],
   "approval_references": [
