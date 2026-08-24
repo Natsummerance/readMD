@@ -9,7 +9,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from content_memory import load_records, partition_records
+from content_memory import METRIC_FIELDS, load_records, partition_records
+
+FEEDBACK_DUE_DAYS = 3
+FEEDBACK_OVERDUE_DAYS = 7
 
 
 def _engagement(record: dict[str, Any]) -> int:
@@ -147,8 +150,76 @@ def _comment_focus(records: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str, Any]:
+def _parse_timestamp(value: Any) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed.tzinfo else None
+
+
+def _feedback_debts(records: list[dict[str, Any]], as_of: datetime) -> dict[str, Any]:
+    """Name the old notes still missing the evidence needed for hot-post learning."""
+    debts: list[dict[str, Any]] = []
+    tracked = 0
+    for record in records:
+        published = _parse_timestamp(record.get("published_at"))
+        if published is None:
+            continue
+        tracked += 1
+        age_days = max(0.0, (as_of - published).total_seconds() / 86400)
+        missing: list[str] = []
+        if record.get("metrics_status") != "complete":
+            observed = set(record.get("metrics_observed") or [])
+            missing.extend(
+                f"metric:{field}"
+                for field in METRIC_FIELDS
+                if field not in observed
+            )
+        has_comment_evidence = bool(
+            record.get("comments_captured_at")
+            or isinstance(record.get("comment_insights"), dict)
+        )
+        if not has_comment_evidence:
+            missing.append("comments")
+        if not missing:
+            continue
+        status = "current"
+        if age_days >= FEEDBACK_OVERDUE_DAYS:
+            status = "overdue"
+        elif age_days >= FEEDBACK_DUE_DAYS:
+            status = "due"
+        if status == "current":
+            continue
+        debts.append({
+            "release": str(record.get("release", "")),
+            "title": str(record.get("title", "")),
+            "published_at": published.isoformat(),
+            "age_days": round(age_days, 1),
+            "missing": missing,
+            "status": status,
+        })
+
+    return {
+        "schema_version": 1,
+        "due_days": FEEDBACK_DUE_DAYS,
+        "overdue_days": FEEDBACK_OVERDUE_DAYS,
+        "tracked_releases": tracked,
+        "debts": sorted(debts, key=lambda item: (-item["age_days"], item["release"])),
+        "due_count": sum(item["status"] == "due" for item in debts),
+        "overdue_count": sum(item["status"] == "overdue" for item in debts),
+    }
+
+
+def generate_report(
+    records: list[dict[str, Any]],
+    output_dir: Path,
+    *,
+    as_of: datetime | None = None,
+) -> dict[str, Any]:
     learning, pending = partition_records(records)
+    review_time = as_of or datetime.now(timezone.utc)
+    feedback_sla = _feedback_debts(records, review_time)
     formula_stats = _stats(learning, "title_formula_id")
     hook_stats = _stats(learning, "hook_type")
     frame_stats = _stats(learning, "copy_frame")
@@ -188,6 +259,7 @@ def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str
         "recommended_topic_set": recommended_topic_set,
         "recommended_topic": recommended_topic,
         "comment_focus": comment_focus,
+        "feedback_sla": feedback_sla,
         "pending_releases": [
             {"release": item.get("release"), "title": item.get("title"), "title_formula_id": item.get("title_formula_id")}
             for item in pending
@@ -230,6 +302,23 @@ def generate_report(records: list[dict[str, Any]], output_dir: Path) -> dict[str
     for theme, stats in sorted(comment_focus["themes"].items(), key=lambda item: (-item[1]["weighted_score"], item[0])):
         intents = ", ".join(stats["top_intents"]) or "none"
         lines.append(f"| {theme} | {stats['release_count']} | {stats['mentions']} | {stats['weighted_score']} | {intents} | {stats['confidence']} |")
+    lines.extend([
+        "",
+        "## Feedback follow-up",
+        "",
+        f"Metrics are due after {FEEDBACK_DUE_DAYS} days; overdue after {FEEDBACK_OVERDUE_DAYS} days.",
+        "",
+        "| Release | Age (days) | Missing evidence | Status |",
+        "| --- | ---: | --- | --- |",
+    ])
+    if feedback_sla["debts"]:
+        for debt in feedback_sla["debts"]:
+            lines.append(
+                f"| {debt['release']} | {debt['age_days']} | "
+                f"{', '.join(debt['missing'])} | {debt['status']} |"
+            )
+    else:
+        lines.append("| — | — | No due or overdue evidence | current |")
     lines.extend([
         "",
         "## Next selection",

@@ -349,6 +349,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
     wechat_qa = inputs.get("wechat_qa", {})
     pattern_audit = inputs.get("pattern_audit", {})
     performance = inputs.get("performance", {})
+    feedback_sla = performance.get("feedback_sla", {})
     story = inputs.get("story", {})
     topic_experiment = inputs.get("topic_experiment", {})
     resonance_directive = inputs.get("resonance_directive", {})
@@ -426,6 +427,8 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
         _metric("Pattern checks", f'{pattern_audit.get("passed_count", 0)} / {pattern_audit.get("total_count", 0)}'),
         _metric("Learning releases", performance.get("learning_count", 0)),
         _metric("Pending metrics", performance.get("pending_count", 0)),
+        _metric("Feedback due", feedback_sla.get("due_count", 0)),
+        _metric("Feedback overdue", feedback_sla.get("overdue_count", 0)),
         _metric("Recommended formula", performance.get("recommended_formula", "insufficient data")),
         _metric("Recommended frame", performance.get("recommended_copy_frame") or "insufficient evidence"),
     ])
@@ -459,7 +462,17 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
       f'<p style="margin:0 0 16px;font-size:23px;color:#5b6875">Showing {len(displayed_variants)} of {candidate_count} candidates · selected pinned</p>'
       f'{variant_html}'
   )}
-  {_section("Feedback loop", f'<div style="display:flex;gap:14px;flex-wrap:wrap">{performance_metrics}</div><p style="margin-top:16px;font-size:24px;color:#5b6875">Pending metrics: {_escaped(performance.get("pending_count", 0))}</p>')}
+  {_section(
+      "Feedback loop",
+      f'<div style="display:flex;gap:14px;flex-wrap:wrap">{performance_metrics}</div>'
+      f'<p style="margin-top:16px;font-size:24px;color:#5b6875">Pending metrics: {_escaped(performance.get("pending_count", 0))}</p>'
+      + "".join(
+          f'<p style="margin:8px 0 0;font-size:23px;line-height:1.35;color:{ "#c1121f" if item.get("status") == "overdue" else "#8a6d00" }">'
+          f'{_escaped(item.get("release"))} · {_escaped(item.get("age_days"))} days · '
+          f'missing {_escaped(", ".join(item.get("missing", [])))}</p>'
+          for item in feedback_sla.get("debts", [])[-4:]
+      )
+  )}
   {_section("Final copy", f'<p style="white-space:pre-wrap;margin:0;font-size:26px;line-height:1.55;color:#182029">{_escaped(body)}</p>')}
 </main>
 </body>

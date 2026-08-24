@@ -12,6 +12,7 @@ import tempfile
 import unittest
 import unittest.mock
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -2434,6 +2435,52 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertIsNone(data["recommended_hook_type"])
         self.assertIsNone(data["recommended_copy_frame"])
 
+    def test_feedback_sla_names_missing_metrics_and_comments(self) -> None:
+        records = [
+            {
+                **self.complete("v-old-pending", "#36", "outcome-led", 0, 0, 0),
+                "metrics_status": "pending",
+                "metrics_observed": ["impressions"],
+                "published_at": "2026-08-20T00:00:00Z",
+            },
+            {
+                **self.complete("v-complete-no-comments", "#22", "identity-led", 1000, 40, 60),
+                "published_at": "2026-08-21T00:00:00Z",
+            },
+            {
+                **self.complete("v-due", "#9", "mechanism-curiosity", 1000, 40, 60),
+                "metrics_status": "pending",
+                "metrics_observed": [],
+                "published_at": "2026-08-26T00:00:00Z",
+            },
+            {
+                **self.complete("v-fresh", "#12", "perspective-shift", 1000, 40, 60),
+                "metrics_status": "pending",
+                "metrics_observed": [],
+                "comments_captured_at": "2026-08-29T00:00:00Z",
+                "published_at": "2026-08-28T00:00:00Z",
+            },
+        ]
+        as_of = datetime(2026, 8, 30, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp)
+            data = performance_report.generate_report(records, output, as_of=as_of)
+            markdown = (output / "performance-report.md").read_text(encoding="utf-8")
+
+        sla = data["feedback_sla"]
+        self.assertEqual(sla["due_count"], 1)
+        self.assertEqual(sla["overdue_count"], 2)
+        old_pending = next(item for item in sla["debts"] if item["release"] == "v-old-pending")
+        self.assertEqual(old_pending["status"], "overdue")
+        self.assertIn("metric:collects", old_pending["missing"])
+        self.assertIn("comments", old_pending["missing"])
+        no_comments = next(item for item in sla["debts"] if item["release"] == "v-complete-no-comments")
+        self.assertEqual(no_comments["missing"], ["comments"])
+        self.assertNotIn("v-fresh", markdown)
+        self.assertIn("Feedback follow-up", markdown)
+        self.assertIn("v-old-pending", markdown)
+        self.assertIn("overdue", markdown)
+
     def test_legacy_records_without_copy_frame_are_excluded(self) -> None:
         records = [
             {**self.complete("v1", "#36", "outcome-led", 2000, 200, 300), "comments": 100, "shares": 100},
@@ -3512,6 +3559,18 @@ class ReviewDashboardTest(unittest.TestCase):
             "performance": {
                 "learning_count": 2,
                 "pending_count": 1,
+                "feedback_sla": {
+                    "due_count": 1,
+                    "overdue_count": 1,
+                    "debts": [
+                        {
+                            "release": "v0.9.0",
+                            "age_days": 8.5,
+                            "missing": ["metric:collects", "comments"],
+                            "status": "overdue",
+                        }
+                    ],
+                },
                 "recommended_formula": "#22",
                 "recommended_hook_type": "identity-task",
                 "recommended_copy_frame": "workflow",
@@ -3587,6 +3646,9 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("Hot-post patterns", html)
         self.assertIn("10 / 10", html)
         self.assertIn("Recommended frame", html)
+        self.assertIn("Feedback overdue", html)
+        self.assertIn("v0.9.0", html)
+        self.assertIn("missing metric:collects, comments", html)
         self.assertIn("workflow", html)
         self.assertIn("Topic experiment", html)
         self.assertIn("talk-core", html)
