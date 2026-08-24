@@ -3377,13 +3377,32 @@ class ReviewDashboardTest(unittest.TestCase):
                 "chosen_strategy": "outcome-led",
                 "chosen_variant_id": "outcome-led__36",
                 "candidate_count": 60,
+                "portfolio_max_body_similarity": 0.12,
+                "portfolio_max_similarity_source": "v1.0.0",
                 "copy_frame_inventory": {
                     "outcome-led": 4,
                     "identity-led": 4,
                     "mechanism-curiosity": 4,
                 },
                 "ranked": [
-                    {"strategy": "outcome-led", "variant_id": "outcome-led__36", "title": "#36 标题", "adjusted_score": 100, "semantic_score": 100},
+                    {
+                        "strategy": "outcome-led",
+                        "variant_id": "outcome-led__36",
+                        "title": "#36 标题",
+                        "title_formula_id": "#36",
+                        "adjusted_score": 114,
+                        "semantic_score": 100,
+                        "history_adjustment": -2,
+                        "resonance_frame_bonus": 8,
+                        "resonance_title_bonus": 8,
+                        "max_body_similarity": 0.12,
+                        "max_similarity_source": "v1.0.0",
+                        "reasons": [
+                            "recent hook fatigue penalty",
+                            "comment request intent prefers the workflow narrative",
+                            "comment request intent prefers the #36 title",
+                        ],
+                    },
                     {"strategy": "identity-led", "variant_id": "identity-led__22", "title": "#22 标题", "adjusted_score": 96, "semantic_score": 100},
                 ],
             },
@@ -3439,6 +3458,11 @@ class ReviewDashboardTest(unittest.TestCase):
                     "strategy": "confidence-gated historical performance with fatigue and coverage balancing",
                     "sample_size": 4,
                     "avoided_topic_sets": [],
+                    "resonance_focus": "presentation",
+                    "resonance_topic_bonuses": {"7dd35d0592b9": 11},
+                    "reasons": {
+                        "7dd35d0592b9": "comment presentation focus matches topic search terms",
+                    },
                 },
             },
         }
@@ -3455,7 +3479,13 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("打开文档就能看到完整排版", html)
         self.assertIn("outcome-led", html)
         self.assertIn("outcome-led__36", html)
-        self.assertIn("100 / 100", html)
+        self.assertIn("#36", html)
+        self.assertIn("100 semantic · 114 adjusted", html)
+        self.assertIn("History -2 · Frame resonance +8 · Title intent +8", html)
+        self.assertIn("Max similarity 12% · v1.0.0", html)
+        self.assertIn("comment request intent prefers the #36 title", html)
+        self.assertIn("Portfolio max similarity", html)
+        self.assertIn("12%", html)
         self.assertIn("Style resonance", html)
         self.assertIn("96 / 100", html)
         self.assertIn("Hot-post patterns", html)
@@ -3470,6 +3500,11 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("程序员", html)
         self.assertIn("效率工具", html)
         self.assertIn("confidence-gated historical performance", html)
+        self.assertIn("Comment focus", html)
+        self.assertIn("presentation", html)
+        self.assertIn("Focus topic tilt", html)
+        self.assertIn("+11", html)
+        self.assertIn("comment presentation focus matches topic search terms", html)
         self.assertIn("Recommended topic set", html)
         self.assertIn("academic-talk", html)
         self.assertIn("Recommended search term", html)

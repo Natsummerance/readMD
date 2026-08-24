@@ -46,6 +46,17 @@ def _metric(label: str, value: Any) -> str:
     )
 
 
+def _number(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _signed_number(value: Any) -> str:
+    return f"{_number(value):+.0f}"
+
+
 def _top_variants(ranked: list[dict[str, Any]], chosen_variant_id: Any, limit: int = 5) -> list[dict[str, Any]]:
     ordered = sorted(
         ranked,
@@ -56,6 +67,31 @@ def _top_variants(ranked: list[dict[str, Any]], chosen_variant_id: Any, limit: i
     selected = [chosen] if chosen else []
     selected.extend(item for item in ordered if item.get("variant_id") != chosen_variant_id)
     return selected[:limit]
+
+
+def _variant_evidence_html(item: dict[str, Any]) -> str:
+    history = _signed_number(item.get("history_adjustment"))
+    frame = _signed_number(item.get("resonance_frame_bonus"))
+    title = _signed_number(item.get("resonance_title_bonus"))
+    similarity = min(max(_number(item.get("max_body_similarity")), 0), 1)
+    source = str(item.get("max_similarity_source") or "no publication history").strip()
+    reasons = [
+        str(reason).strip()
+        for reason in item.get("reasons", [])
+        if str(reason).strip()
+    ]
+    comment_reasons = [reason for reason in reasons if reason.lower().startswith("comment ")]
+    evidence_reasons = (comment_reasons + [reason for reason in reasons if reason not in comment_reasons])[:3]
+    reason_text = " · ".join(evidence_reasons) or "No additional selection evidence"
+    return (
+        f'<p style="margin:8px 0 0;font-size:20px;line-height:1.45;color:#5b6875">'
+        f'History {_escaped(history)} · Frame resonance {_escaped(frame)} · '
+        f'Title intent {_escaped(title)}</p>'
+        f'<p style="margin:6px 0 0;font-size:20px;line-height:1.45;color:#5b6875">'
+        f'Max similarity {_escaped(f"{similarity:.0%}")} · {_escaped(source)}</p>'
+        f'<p style="margin:8px 0 0;font-size:20px;line-height:1.5;color:#182029">'
+        f'{_escaped(reason_text)}</p>'
+    )
 
 
 def _comment_resonance_html(comment_focus: dict[str, Any]) -> str:
@@ -246,6 +282,11 @@ def _topic_experiment_html(topic_experiment: dict[str, Any], performance: dict[s
     topic_set_stats = performance.get("topic_set_stats", {})
     selected_id = str(topic_experiment.get("topic_set_id", ""))
     selected_stat = topic_set_stats.get(selected_id, {}) if isinstance(topic_set_stats, dict) else {}
+    bonuses = selection.get("resonance_topic_bonuses")
+    bonuses = bonuses if isinstance(bonuses, dict) else {}
+    focus_bonus = _number(bonuses.get(selected_id))
+    focus = str(selection.get("resonance_focus") or "general")
+    focus_reason = str(selection.get("reasons", {}).get(selected_id) or "No focused search-term match")
     recommended_set_id = performance.get("recommended_topic_set")
     recommended_set = topic_set_stats.get(recommended_set_id, {}) if isinstance(topic_set_stats, dict) else {}
     recommended_confidence = str(recommended_set.get("confidence", "low"))
@@ -273,6 +314,8 @@ def _topic_experiment_html(topic_experiment: dict[str, Any], performance: dict[s
             performance.get("recommended_topic") or "Insufficient evidence",
         ),
         _contract_field("History samples", selection.get("sample_size", 0)),
+        _contract_field("Comment focus", focus),
+        _contract_field("Focus topic tilt", f"{focus_bonus:+.0f}"),
     ])
     avoided = selection.get("avoided_topic_sets", [])
     avoided = avoided if isinstance(avoided, list) else []
@@ -285,6 +328,7 @@ def _topic_experiment_html(topic_experiment: dict[str, Any], performance: dict[s
         f'<div style="margin-top:18px">'
         f'{_contract_field("Selection rule", selection.get("strategy") or "Missing")}'
         f'{_contract_field("Recent-fatigue avoids", avoided_text)}'
+        f'{_contract_field("Focus alignment", focus_reason)}'
         '</div>'
         '<div style="margin-top:18px;background:#f2f4f6;border-left:4px solid #d6482c;'
         'border-radius:12px;padding:20px">'
@@ -341,14 +385,21 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
     experiment_summary = "".join([
         _metric("Experiment candidates", candidate_count),
         _metric("Copy-frame inventory", f"{minimum_frame_inventory} / hook"),
+        _metric(
+            "Portfolio max similarity",
+            f"{min(max(_number(variants.get('portfolio_max_body_similarity')), 0), 1):.0%}",
+        ),
     ])
     variant_html = "".join(
         f'<div style="border:{"2px solid #d6482c" if item.get("variant_id") == chosen_variant_id or (not chosen_variant_id and item.get("strategy") == chosen_strategy) else "1px solid #d8dee6"};'
         f'padding:18px 20px;margin-bottom:14px;background:{"#ffffff" if item.get("variant_id") == chosen_variant_id else "#f2f4f6"};border-radius:12px">'
         f'<p style="margin:0;font-size:26px;font-weight:800;color:#182029">{_escaped(item.get("title"))}</p>'
-        f'<p style="margin:8px 0 0;font-size:22px;color:#5b6875">{_escaped(item.get("strategy"))} · {_escaped(item.get("copy_frame", ""))} · {_escaped(item.get("variant_id", ""))}</p>'
+        f'<p style="margin:8px 0 0;font-size:22px;color:#5b6875">{_escaped(item.get("strategy"))} · {_escaped(item.get("title_formula_id", ""))} · {_escaped(item.get("copy_frame", ""))}</p>'
+        f'<p style="margin:4px 0 0;font-size:19px;color:#8a949e">{_escaped(item.get("variant_id", ""))}</p>'
         f'<p style="margin:6px 0 0;font-size:21px;color:#5b6875">{_escaped(item.get("remaining_copy_frames", ""))} renewable frames remaining</p>'
-        f'<p style="margin:6px 0 0;font-size:23px;font-weight:800;color:#182029">{_escaped(item.get("semantic_score"))} / {_escaped(item.get("adjusted_score"))}</p></div>'
+        f'<p style="margin:6px 0 0;font-size:23px;font-weight:800;color:#182029">'
+        f'{_escaped(item.get("semantic_score"))} semantic · {_escaped(item.get("adjusted_score"))} adjusted</p>'
+        f'{_variant_evidence_html(item)}</div>'
         for item in displayed_variants
     )
 
