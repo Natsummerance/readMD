@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "artifact": "localized sharing sections and hero preload",
+  "reviewed_at": "2026-08-25T03:30:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "growth-review",
+      "status": "approved",
+      "score": 9.78,
+      "evidence": [
+        "Each language has navigation-only share actions for relevant public networks.",
+        "The English page adds X, Reddit, LinkedIn, Telegram, and Weibo without external scripts."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "performance-review",
+      "status": "approved",
+      "score": 9.84,
+      "evidence": [
+        "Every localized homepage preloads the selected high-priority hero WebP.",
+        "Browser smoke confirms the preload exists and no images break."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "privacy-compliance-review",
+      "status": "approved",
+      "score": 9.76,
+      "evidence": [
+        "Share buttons are plain navigational links rather than third-party tracking scripts.",
+        "No automated posting, incentive, or misleading growth claim is used."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.8,
+    "participants": ["growth", "performance", "localization", "compliance"],
+    "conditions": [
+      "Validator must require hero preload and localized share sections.",
+      "Browser smoke must verify at least three share links per locale.",
+      "Live pages must return HTTP 200 after deployment."
+    ]
+  }
+}
