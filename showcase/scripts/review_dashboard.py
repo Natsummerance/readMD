@@ -75,6 +75,8 @@ def _variant_evidence_html(item: dict[str, Any]) -> str:
     title = _signed_number(item.get("resonance_title_bonus"))
     similarity = min(max(_number(item.get("max_body_similarity")), 0), 1)
     source = str(item.get("max_similarity_source") or "no publication history").strip()
+    title_similarity = min(max(_number(item.get("max_title_similarity")), 0), 1)
+    title_source = str(item.get("max_title_similarity_source") or "no publication history").strip()
     reasons = [
         str(reason).strip()
         for reason in item.get("reasons", [])
@@ -89,6 +91,8 @@ def _variant_evidence_html(item: dict[str, Any]) -> str:
         f'Title intent {_escaped(title)}</p>'
         f'<p style="margin:6px 0 0;font-size:20px;line-height:1.45;color:#5b6875">'
         f'Max similarity {_escaped(f"{similarity:.0%}")} · {_escaped(source)}</p>'
+        f'<p style="margin:6px 0 0;font-size:20px;line-height:1.45;color:#5b6875">'
+        f'Title similarity {_escaped(f"{title_similarity:.0%}")} · {_escaped(title_source)}</p>'
         f'<p style="margin:8px 0 0;font-size:20px;line-height:1.5;color:#182029">'
         f'{_escaped(reason_text)}</p>'
     )

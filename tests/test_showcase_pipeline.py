@@ -2263,6 +2263,33 @@ class CopyVariantsTest(unittest.TestCase):
         self.assertTrue(any("opening" in failure for failure in outcome_report["hard_failures"]))
         self.assertTrue(any("closing" in failure for failure in outcome_report["hard_failures"]))
 
+    def test_title_originality_gate_rejects_exact_prior_title(self) -> None:
+        story = self.variant_story()
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        reused_title = next(
+            item["text"]
+            for item in base["title_candidates"]
+            if item["formula_id"] == "#36"
+        )
+        history = [{
+            **self.history_record("v1.0.0", "outcome-led", "#36"),
+            "title": reused_title,
+            **copy_variants.title_fingerprints(reused_title),
+        }]
+
+        chosen, report = copy_variants.choose_variant(variants, history)
+
+        rejected = next(item for item in report["ranked"] if item["title_formula_id"] == "#36")
+        self.assertNotEqual(chosen["title_formula_id"], "#36")
+        self.assertFalse(rejected["ok"])
+        self.assertEqual(rejected["max_title_similarity"], 1)
+        self.assertEqual(rejected["max_title_similarity_source"], "v1.0.0")
+        self.assertIn("title hash matches v1.0.0", rejected["originality_failures"])
+        self.assertIn("near-duplicate title (1.00) matches v1.0.0", rejected["originality_failures"])
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["portfolio_max_title_similarity"], 1)
+
     def test_originality_gate_rejects_near_duplicate_template(self) -> None:
         story = self.variant_story()
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
@@ -3638,6 +3665,7 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("100 semantic · 114 adjusted", html)
         self.assertIn("History -2 · Frame resonance +8 · Title intent +8", html)
         self.assertIn("Max similarity 12% · v1.0.0", html)
+        self.assertIn("Title similarity 0%", html)
         self.assertIn("comment request intent prefers the #36 title", html)
         self.assertIn("Portfolio max similarity", html)
         self.assertIn("12%", html)
@@ -4154,6 +4182,8 @@ class WatcherTest(unittest.TestCase):
             self.assertTrue(localized_image.is_file())
             self.assertEqual(localized_image.parent, work_package / "images")
             self.assertIn("body_sha256", feedback)
+            self.assertIn("title_sha256", feedback)
+            self.assertTrue(feedback["title_trigrams"])
             self.assertIn("opening", feedback)
             self.assertIn("closing", feedback)
             self.assertTrue(feedback["body_trigrams"])
@@ -4524,6 +4554,44 @@ class WatcherTest(unittest.TestCase):
             self.assertIn("near-duplicate body (1.00) matches v1.0.0", record["error"])
             self.assertIn("opening matches v1.0.0", record["error"])
             self.assertIn("closing matches v1.0.0", record["error"])
+
+    def test_watcher_rechecks_title_originality_against_publication_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            metadata = json.loads(
+                (root / "package" / "metadata.json").read_text(encoding="utf-8")
+            )
+            ledger = root / "publication-ledger.jsonl"
+            ledger.write_text(json.dumps({
+                "release": "v1.0.0",
+                "title": metadata["title"],
+                **watch_and_publish.title_fingerprints(metadata["title"]),
+            }, ensure_ascii=False) + "\n", encoding="utf-8")
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not click a near-duplicate title")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                    ledger_path=ledger,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("publisher originality contract failed", record["error"])
+            self.assertIn("title hash matches v1.0.0", record["error"])
+            self.assertIn("near-duplicate title (1.00) matches v1.0.0", record["error"])
 
     def test_watcher_blocks_copy_that_ignores_concern_intent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

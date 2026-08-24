@@ -17,7 +17,12 @@ from typing import Any
 
 from content_memory import load_records, upsert_record
 from audit_copy import audit_copy
-from copy_variants import jaccard_similarity, text_fingerprints, text_trigrams
+from copy_variants import (
+    jaccard_similarity,
+    text_fingerprints,
+    text_trigrams,
+    title_fingerprints,
+)
 from pattern_audit import audit_patterns
 from package_content import validate_release_evidence
 from review_dashboard import build_dashboard, collect_inputs, validate_dashboard
@@ -211,6 +216,7 @@ def seed_feedback_ledger(
         "publisher_target_id": publisher_result.get("targetId"),
         "published_url": publisher_result.get("url"),
         "audit_status": audit_status,
+        **title_fingerprints(title),
         **text_fingerprints(body),
         "body_trigrams": sorted(text_trigrams(body)),
         "lessons": "Published automatically; awaiting platform metrics and manual review.",
@@ -339,6 +345,9 @@ def publisher_originality_errors(package_dir: Path, ledger_path: Path | None) ->
     body = str(metadata.get("body", ""))
     fingerprints = text_fingerprints(body)
     trigrams = text_trigrams(body)
+    title = str(metadata.get("title", ""))
+    title_prints = title_fingerprints(title)
+    title_trigrams = set(title_prints["title_trigrams"])
     release = str(metadata.get("release", ""))
     priors = [record for record in records if str(record.get("release", "")) != release]
     errors: list[str] = []
@@ -352,6 +361,15 @@ def publisher_originality_errors(package_dir: Path, ledger_path: Path | None) ->
         if similarity >= 0.85:
             errors.append(
                 f"near-duplicate body ({similarity:.2f}) matches {release_name}"
+            )
+
+        prior_title_trigrams = set(prior.get("title_trigrams") or []) or set(text_trigrams(str(prior.get("title", ""))))
+        title_similarity = jaccard_similarity(title_trigrams, prior_title_trigrams)
+        if title_prints["title_sha256"] and prior.get("title_sha256") == title_prints["title_sha256"]:
+            errors.append(f"title hash matches {release_name}")
+        if title_similarity >= 0.85:
+            errors.append(
+                f"near-duplicate title ({title_similarity:.2f}) matches {release_name}"
             )
 
     for prior in priors[-ORIGINALITY_ENDPOINT_COOLDOWN_RELEASES:]:

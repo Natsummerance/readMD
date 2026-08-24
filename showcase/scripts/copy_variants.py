@@ -52,6 +52,14 @@ def text_fingerprints(body: str) -> dict[str, str]:
     }
 
 
+def title_fingerprints(title: str) -> dict[str, Any]:
+    normalized = _normalize_for_originality(title)
+    return {
+        "title_sha256": hashlib.sha256(normalized.encode("utf-8")).hexdigest(),
+        "title_trigrams": sorted(text_trigrams(title)),
+    }
+
+
 def projected_composition(story: dict[str, Any]) -> dict[str, Any]:
     cards: list[dict[str, Any]] = [{
         "file": "xhs-01-cover.jpg",
@@ -187,9 +195,15 @@ def choose_variant(
     max_frame_score = max((item["score"] for item in frame_stats.values()), default=0.0)
 
     prior_fingerprints = [
-        {key: record.get(key) for key in ("release", "body_sha256", "opening", "closing", "body_trigrams")}
+        {key: record.get(key) for key in (
+            "release", "title", "title_sha256", "title_trigrams",
+            "body_sha256", "opening", "closing", "body_trigrams",
+        )}
         for record in records
-        if record.get("body_sha256") or record.get("opening") or record.get("closing") or record.get("body_trigrams")
+        if any(record.get(key) for key in (
+            "title", "title_sha256", "title_trigrams", "body_sha256",
+            "opening", "closing", "body_trigrams",
+        ))
     ]
     recent_fingerprints = prior_fingerprints[-ENDPOINT_COOLDOWN_RELEASES:]
     used_openings = {str(record["opening"]) for record in recent_fingerprints if record.get("opening")}
@@ -220,11 +234,17 @@ def choose_variant(
     ranked: list[dict[str, Any]] = []
     portfolio_max_body_similarity = 0.0
     portfolio_similarity_source = ""
+    portfolio_max_title_similarity = 0.0
+    portfolio_title_similarity_source = ""
     for variant in variants:
         adjustment = 0.0
         reasons = []
         variant_max_body_similarity = 0.0
         variant_similarity_source = ""
+        title_prints = title_fingerprints(variant["title"])
+        variant_title_trigrams = set(title_prints["title_trigrams"])
+        variant_max_title_similarity = 0.0
+        variant_title_similarity_source = ""
         report = dict(variant.pop("_report"))
         fingerprints = text_fingerprints(variant["body"])
         variant_trigrams = text_trigrams(variant["body"])
@@ -248,6 +268,25 @@ def choose_variant(
             elif similarity >= 0.70:
                 adjustment -= 12
                 reasons.append(f"near-duplicate penalty against {release_name} ({similarity:.2f})")
+
+            prior_title = str(prior.get("title", ""))
+            if title_prints["title_sha256"] and prior.get("title_sha256") == title_prints["title_sha256"]:
+                originality_failures.append(f"title hash matches {release_name}")
+            prior_title_trigrams = set(prior.get("title_trigrams") or []) or set(text_trigrams(prior_title))
+            title_similarity = jaccard_similarity(variant_title_trigrams, prior_title_trigrams)
+            if title_similarity > variant_max_title_similarity:
+                variant_max_title_similarity = title_similarity
+                variant_title_similarity_source = release_name
+            if title_similarity > portfolio_max_title_similarity:
+                portfolio_max_title_similarity = title_similarity
+                portfolio_title_similarity_source = release_name
+            if title_similarity >= 0.85:
+                originality_failures.append(
+                    f"near-duplicate title ({title_similarity:.2f}) matches {release_name}"
+                )
+            elif title_similarity >= 0.70:
+                adjustment -= 6
+                reasons.append(f"near-duplicate title penalty against {release_name} ({title_similarity:.2f})")
         for prior in recent_fingerprints:
             release_name = prior.get("release") or "previous release"
             if fingerprints["opening"] and prior.get("opening") == fingerprints["opening"]:
@@ -321,6 +360,8 @@ def choose_variant(
             "originality_failures": originality_failures,
             "max_body_similarity": round(variant_max_body_similarity, 3),
             "max_similarity_source": variant_similarity_source,
+            "max_title_similarity": round(variant_max_title_similarity, 3),
+            "max_title_similarity_source": variant_title_similarity_source,
             "reasons": reasons,
         })
 
@@ -341,7 +382,7 @@ def choose_variant(
             "semantic score plus confidence-gated historical hook/title performance, underexplored "
             f"historical frame performance, underexplored dimension coverage, renewable frame inventory "
             f"with a {ENDPOINT_COOLDOWN_RELEASES}-release endpoint cooldown, evidence-gated comment-intent "
-            "frame/title alignment, and minus recent fatigue; "
+            "frame/title alignment, title/body originality gates, and minus recent fatigue; "
             "insufficient evidence creates no performance bonus"
         ),
         "resonance_focus": (
@@ -350,6 +391,8 @@ def choose_variant(
         ),
         "portfolio_max_body_similarity": round(portfolio_max_body_similarity, 3),
         "portfolio_max_similarity_source": portfolio_similarity_source,
+        "portfolio_max_title_similarity": round(portfolio_max_title_similarity, 3),
+        "portfolio_max_title_similarity_source": portfolio_title_similarity_source,
         "frame_stats": frame_stats,
         "endpoint_cooldown_releases": ENDPOINT_COOLDOWN_RELEASES,
         "copy_frame_inventory": frame_inventory,
