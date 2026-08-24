@@ -131,6 +131,12 @@ ReadMD 采用 MIT 许可证。源码和发行资产公开在 Natsummerance/readM
 
 让一份 Markdown 文档成为写作、评审和放映的共同权威来源。基于 Reveal 的放映模式把标题用作过渡，代码、数学记号、图表和表格保留上下文。彩排中的修改回到同一份源文件，而不是复制的演示文稿。
 
+## 任务指南：文档转 Markdown
+
+专题回答：https://app.syminu.online/zh-cn/convert-to-markdown/
+
+把 DOCX、PPTX、XLSX、PDF、HTML 或 LaTeX 来源保存在本地，并加入 ReadMD 转换器；单文件、批量文件和受支持的文件夹都可以处理，批量工作支持拖拽。本地转换不需要把来源上传到网页表单。转换后应复核标题、列表、表格、引言、公式、图片引用和扫描识别结果，因为专有版式不一定有一一对应的 Markdown 表达。
+
 ## 版本事实
 
 - 产品名称：ReadMD

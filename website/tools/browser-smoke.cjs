@@ -3,7 +3,7 @@
 const { chromium } = require('../../ui-tests/node_modules/playwright');
 
 const baseUrl = process.argv[2] || 'http://127.0.0.1:4173';
-const routes = ['/', '/download/', '/workflows/', '/large-markdown-files/', '/markdown-to-slides/', '/zh-cn/', '/zh-cn/download/', '/zh-cn/workflows/', '/zh-cn/large-markdown-files/', '/zh-cn/markdown-to-slides/', '/zh-tw/', '/zh-tw/download/', '/zh-tw/workflows/', '/zh-tw/large-markdown-files/', '/zh-tw/markdown-to-slides/', '/ja/', '/ja/download/', '/ja/workflows/', '/ja/large-markdown-files/', '/ja/markdown-to-slides/'];
+const routes = ['/', '/download/', '/workflows/', '/large-markdown-files/', '/markdown-to-slides/', '/convert-to-markdown/', '/zh-cn/', '/zh-cn/download/', '/zh-cn/workflows/', '/zh-cn/large-markdown-files/', '/zh-cn/markdown-to-slides/', '/zh-cn/convert-to-markdown/', '/zh-tw/', '/zh-tw/download/', '/zh-tw/workflows/', '/zh-tw/large-markdown-files/', '/zh-tw/markdown-to-slides/', '/zh-tw/convert-to-markdown/', '/ja/', '/ja/download/', '/ja/workflows/', '/ja/large-markdown-files/', '/ja/markdown-to-slides/', '/ja/convert-to-markdown/'];
 const aiFiles = [
   '/llms.txt',
   '/llms-full.txt',

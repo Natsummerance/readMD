@@ -131,6 +131,12 @@ ReadMD採用MIT授權。原始碼和發行資產公開於 Natsummerance/readMD �
 
 讓一份 Markdown 文件成為寫作、審閱和放映的共同權威來源。基於 Reveal 的放映模式把標題用作過渡，程式碼、數學記號、圖表和表格保留上下文。排練中的修改回到同一份原始檔，而不是複製的簡報。
 
+## 任務指南：文件轉 Markdown
+
+專題回答：https://app.syminu.online/zh-tw/convert-to-markdown/
+
+把 DOCX、PPTX、XLSX、PDF、HTML 或 LaTeX 來源保存在本機，並加入 ReadMD 轉換器；單一檔案、批次檔案和受支援的資料夾都可處理，批次工作支援拖放。本機轉換不需要將來源上傳到網頁表單。轉換後應複核標題、列表、表格、引言、公式、圖片參照和掃描識別結果，因為專有版式不一定有一對一的 Markdown 表達。
+
 ## 版本事實
 
 - 產品名稱：ReadMD
