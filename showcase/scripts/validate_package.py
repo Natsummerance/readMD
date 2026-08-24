@@ -214,6 +214,41 @@ def publisher_learning_snapshot_errors(package_dir: Path, ledger_path: Path | No
     return []
 
 
+def composed_card_hash_errors(package_dir: Path) -> list[str]:
+    """Bind every schema-2 composition card to its exact rendered JPEG."""
+    package_dir = package_dir.resolve()
+    try:
+        composition = _load_json(package_dir / "composition.json")
+    except Exception as exc:
+        return [f"composition card manifest unreadable: {exc}"]
+
+    # Schema 1 packages predate per-card rendering hashes and remain compatible.
+    if composition.get("schema_version") != 2:
+        return []
+
+    errors: list[str] = []
+    cards = composition.get("cards", [])
+    if not isinstance(cards, list):
+        return ["composition card manifest must be a list"]
+    for card in cards:
+        name = str(card.get("file", ""))
+        expected = str(card.get("sha256", ""))
+        if not IMAGE_RE.fullmatch(name):
+            errors.append(f"composition card has an unsafe image name: {name}")
+            continue
+        if not re.fullmatch(r"[0-9a-f]{64}", expected):
+            errors.append(f"composition card hash is missing or invalid: {name}")
+            continue
+        path = package_dir / "images" / name
+        if not path.resolve().is_relative_to(package_dir / "images") or not path.is_file():
+            errors.append(f"composed card image missing: {name}")
+            continue
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual != expected:
+            errors.append(f"SHA-256 mismatch in composition.json: {name}")
+    return errors
+
+
 def _image_metrics(path: Path, screenshot_box: dict[str, float] | None = None) -> dict[str, Any]:
     with Image.open(path) as image:
         rgb = image.convert("RGB")
@@ -546,6 +581,7 @@ def publisher_asset_errors(package_dir: Path) -> list[str]:
         return [f"publisher asset manifest unreadable: {exc}"]
 
     errors: list[str] = []
+    errors.extend(composed_card_hash_errors(package_dir))
     images_dir = (package_dir / "images").resolve()
     raw_dir = (package_dir / "raw").resolve()
     plan = story.get("card_plan", [])
@@ -756,6 +792,7 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
     for key in ("contrast_errors", "small_text", "images_failed"):
         if design_audit.get(key):
             errors.append(f"composition design audit {key}: " + "; ".join(map(str, design_audit[key])))
+    errors.extend(composed_card_hash_errors(package_dir))
 
     title = str(metadata.get("title", "")).strip()
     body = str(metadata.get("body", "")).strip()

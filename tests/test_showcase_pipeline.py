@@ -1450,6 +1450,35 @@ class ValidatePackageTest(unittest.TestCase):
         self.assertEqual(errors, ["resonance directive differs from publication-ledger recomputation"])
         self.assertEqual(missing_ledger_errors, errors)
 
+    def test_composed_card_hashes_are_rechecked_before_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "images").mkdir()
+            image = root / "images" / "xhs-01-cover.jpg"
+            payload = b"composed-card-bytes"
+            image.write_bytes(payload)
+            digest = hashlib.sha256(payload).hexdigest()
+
+            legacy = {"schema_version": 1, "cards": [{"file": "xhs-01-cover.jpg"}]}
+            (root / "composition.json").write_text(json.dumps(legacy), encoding="utf-8")
+            self.assertEqual(validate_package.composed_card_hash_errors(root), [])
+
+            current = {
+                "schema_version": 2,
+                "cards": [{"file": "xhs-01-cover.jpg", "sha256": digest}],
+            }
+            (root / "composition.json").write_text(json.dumps(current), encoding="utf-8")
+            self.assertEqual(validate_package.composed_card_hash_errors(root), [])
+
+            current["cards"][0]["sha256"] = "0" * 64
+            (root / "composition.json").write_text(json.dumps(current), encoding="utf-8")
+            mismatched = validate_package.composed_card_hash_errors(root)
+
+        self.assertEqual(
+            mismatched,
+            ["SHA-256 mismatch in composition.json: xhs-01-cover.jpg"],
+        )
+
     def test_publisher_directive_requires_concern_response(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pkg = Path(tmp)
@@ -4184,7 +4213,11 @@ class WatcherTest(unittest.TestCase):
             )
 
         canvas_area = 1080 * 1440
+        composition["schema_version"] = 2
         for card in composition["cards"]:
+            card["sha256"] = hashlib.sha256(
+                (package / "images" / card["file"]).read_bytes()
+            ).hexdigest()
             if card["role"] == "cover":
                 card["feed_readiness"] = {
                     "title_font_size": 84,
@@ -4964,6 +4997,47 @@ class WatcherTest(unittest.TestCase):
             errors,
             ["learning snapshot differs from publication-ledger recomputation"],
         )
+
+    def test_watcher_rejects_tampered_composed_card(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original_zip = self.make_package_zip(root)
+            tampered_zip = root / "tampered.zip"
+            with zipfile.ZipFile(original_zip) as source, zipfile.ZipFile(tampered_zip, "w") as target:
+                for info in source.infolist():
+                    payload = source.read(info.filename)
+                    if info.filename == "composition.json":
+                        composition = json.loads(payload)
+                        composition["cards"][0]["sha256"] = "0" * 64
+                        payload = json.dumps(composition, ensure_ascii=False).encode("utf-8")
+                    target.writestr(info, payload)
+            calls = []
+
+            def forbidden_publish(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not click a replaced card")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = forbidden_publish
+            try:
+                published = watch_and_publish.process_package(
+                    tampered_zip,
+                    root / "work",
+                    root / "state.json",
+                    Path("publisher.py"),
+                    1,
+                    False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("publisher asset contract failed", record["error"])
+            self.assertIn("SHA-256 mismatch in composition.json", record["error"])
 
     def test_watcher_blocks_copy_that_ignores_concern_intent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

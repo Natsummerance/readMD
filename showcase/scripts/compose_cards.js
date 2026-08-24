@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { createHash } = require('crypto');
 const { chromium } = require('../../ui-tests/node_modules/@playwright/test');
 const {
   buildCardHtml,
@@ -170,9 +171,11 @@ async function main() {
         quality: 92,
         clip: { x: 0, y: 0, width: 1080, height: 1440 },
       });
+      const composed = path.join(outputDir, card.file);
       report.push({
         file: card.file,
         role: card.role,
+        sha256: createHash('sha256').update(fs.readFileSync(composed)).digest('hex'),
         ui_min_ratio: card.uiMinRatio,
         ui_area_ratio: measuredBox ? (measuredBox.width * measuredBox.height) / (1080 * 1440) : 0,
         screenshot_box: measuredBox,
@@ -182,7 +185,7 @@ async function main() {
     }
     fs.writeFileSync(
       path.join(packageDir, 'composition.json'),
-      JSON.stringify({ schema_version: 1, overflow_errors: [], design_audit: { contrast_errors: [], small_text: [], images_failed: [] }, cards: report }, null, 2),
+      JSON.stringify({ schema_version: 2, overflow_errors: [], design_audit: { contrast_errors: [], small_text: [], images_failed: [] }, cards: report }, null, 2),
     );
     const metadataPath = path.join(packageDir, 'metadata.json');
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
