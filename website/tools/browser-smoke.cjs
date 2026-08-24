@@ -60,11 +60,18 @@ const aiFiles = [
         shareLinks: document.querySelectorAll('#share a[href*="twitter.com"], #share a[href*="t.me"], #share a[href*="linkedin.com"]').length,
         breadcrumb: !!document.querySelector('nav[aria-label="Breadcrumb"]'),
         breadcrumbPaths: [...document.querySelectorAll('nav[aria-label="Breadcrumb"] a')].map(link => new URL(link.href).pathname),
+        faviconLinked: !!document.querySelector('link[rel="icon"][href="/assets/icon-256.png"]'),
+        manifestLinked: !!document.querySelector('link[rel="manifest"][href="/site.webmanifest"]'),
+        releaseFeedLinked: !!document.querySelector('link[type="application/atom+xml"][href$="releases.atom"]'),
       }))),
     });
   }
 
   for (const file of aiFiles) {
+    const response = await page.request.get(baseUrl + file);
+    if (!response.ok()) errors.push(`${file} returned HTTP ${response.status()}`);
+  }
+  for (const file of ['/assets/icon-256.png', '/site.webmanifest']) {
     const response = await page.request.get(baseUrl + file);
     if (!response.ok()) errors.push(`${file} returned HTTP ${response.status()}`);
   }
@@ -96,6 +103,9 @@ const aiFiles = [
       if (!item.breadcrumb) failures.push(`${item.route}: breadcrumb is missing`);
       if (!item.breadcrumbPaths?.includes(expectedRelated)) failures.push(`${item.route}: sibling internal link is missing`);
     }
+    if (!item.faviconLinked) failures.push(`${item.route}: favicon is missing`);
+    if (!item.manifestLinked) failures.push(`${item.route}: web manifest is missing`);
+    if (!item.releaseFeedLinked) failures.push(`${item.route}: release feed link is missing`);
   }
   if (process.env.CHECK_HTTP_HEADERS === '1') {
     if (!security.csp.includes("script-src 'self'")) failures.push('missing script CSP');

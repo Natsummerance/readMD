@@ -148,6 +148,12 @@ def audit_page(path: Path, canonical: str) -> list[str]:
             errors.append(f"{path}: eager hero image must declare fetchpriority=high")
     if "/assets/site.css" not in audit.stylesheets:
         errors.append(f"{path}: production stylesheet link is missing")
+    link_rels = {item.get("rel") for item in audit.links}
+    for required_rel in ("icon", "apple-touch-icon", "manifest"):
+        if required_rel not in link_rels:
+            errors.append(f"{path}: missing {required_rel} link")
+    if not any(item.get("type") == "application/atom+xml" and item.get("href", "").endswith("releases.atom") for item in audit.links):
+        errors.append(f"{path}: release Atom feed link is missing")
     if content.count("<picture>") != len(audit.images):
         errors.append(f"{path}: every product image must have a WebP picture fallback")
     if ".webp" not in content:
@@ -342,6 +348,23 @@ def validate_release_build() -> list[str]:
     return errors
 
 
+def validate_indexnow() -> list[str]:
+    errors: list[str] = []
+    key_files = list(PUBLIC.glob("[0-9a-f]" * 32 + ".txt"))
+    if len(key_files) != 1:
+        return ["IndexNow requires exactly one 32-character hexadecimal key file"]
+    key_file = key_files[0]
+    key = key_file.stem
+    content = key_file.read_text(encoding="utf-8").strip()
+    if content != key or len(key) != 32 or not re.fullmatch(r"[0-9a-f]{32}", key):
+        errors.append("IndexNow key filename and contents do not match")
+    if not (SITE / "tools" / "indexnow-submit.mjs").is_file():
+        errors.append("IndexNow submission script is missing")
+    if '"indexnow"' not in (SITE / "package.json").read_text(encoding="utf-8"):
+        errors.append("package.json omits the IndexNow command")
+    return errors
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate the staged ReadMD website.")
     parser.add_argument("--release", action="store_true", help="also require a completed dist build")
@@ -373,6 +396,7 @@ def main() -> int:
     errors.extend(validate_security_headers())
     errors.extend(validate_growth_homepages())
     errors.extend(validate_special_page_internal_links())
+    errors.extend(validate_indexnow())
     errors.extend(validate_release_asset_links())
     if args.release:
         errors.extend(validate_release_build())

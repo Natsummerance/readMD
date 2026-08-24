@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "artifact": "favicon, web manifest, and release feed discovery",
+  "reviewed_at": "2026-08-25T06:00:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "brand-review",
+      "status": "approved",
+      "score": 9.81,
+      "evidence": [
+        "All twelve public pages reference the approved ReadMD 256px icon and web manifest.",
+        "Apple touch-icon support is included without introducing third-party assets."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "distribution-review",
+      "status": "approved",
+      "score": 9.83,
+      "evidence": [
+        "Every page links the canonical GitHub Releases Atom feed.",
+        "Update discovery uses the repository source of truth rather than duplicating release data."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "performance-compliance-review",
+      "status": "approved",
+      "score": 9.76,
+      "evidence": [
+        "The favicon is a single existing 19KB PNG asset with no new JavaScript or external stylesheet.",
+        "The validator requires brand and feed discovery on every audited page."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.8,
+    "participants": ["brand", "distribution", "performance", "compliance"],
+    "conditions": [
+      "Validator must require favicon, Apple touch icon, manifest, and release feed links on every page.",
+      "Browser smoke must confirm the icon, manifest, and feed return HTTP 200.",
+      "Live deployment must complete successfully."
+    ]
+  }
+}
