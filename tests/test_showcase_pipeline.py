@@ -1625,6 +1625,102 @@ class AuditCopyTest(unittest.TestCase):
         self.assertTrue(any("style" in item.lower() for item in report["hard_failures"]))
 
 
+class CompositionLayoutAuditTest(unittest.TestCase):
+    def test_layout_collision_gate_rejects_text_and_screenshot_overlap(self) -> None:
+        script = r"""
+const { layoutCollisionFailures } = require(process.argv[1]);
+const adjacent = layoutCollisionFailures([
+  { kind: "text", label: "first", x: 0, y: 0, width: 100, height: 30 },
+  { kind: "text", label: "second", x: 0, y: 31, width: 100, height: 30 },
+]);
+const textOverlap = layoutCollisionFailures([
+  { kind: "text", label: "first", x: 0, y: 0, width: 100, height: 30 },
+  { kind: "text", label: "second", x: 20, y: 10, width: 100, height: 30 },
+]);
+const screenshotOcclusion = layoutCollisionFailures([
+  { kind: "screenshot", label: "UI capture", x: 0, y: 0, width: 900, height: 500 },
+  { kind: "text", label: "caption", x: 890, y: 250, width: 80, height: 30 },
+]);
+console.log(JSON.stringify({ adjacent, textOverlap, screenshotOcclusion }));
+"""
+        completed = subprocess.run(
+            ["node", "-e", script, str(ROOT / "showcase" / "compose_lib.cjs")],
+            check=True,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+        )
+        result = json.loads(completed.stdout)
+        self.assertEqual(result["adjacent"], [])
+        self.assertEqual(len(result["textOverlap"]), 1)
+        self.assertIn("first overlaps second", result["textOverlap"][0])
+        self.assertEqual(len(result["screenshotOcclusion"]), 1)
+        self.assertIn("UI capture overlaps caption", result["screenshotOcclusion"][0])
+
+    def test_wide_hero_keeps_complete_view_and_fills_portrait_canvas(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "wide.png"
+            Image.new("RGB", (160, 100), "#10203a").save(source)
+            data_uri = "data:image/png;base64," + __import__("base64").b64encode(
+                source.read_bytes()
+            ).decode("ascii")
+            playwright = (ROOT / "ui-tests" / "node_modules" / "@playwright" / "test").with_suffix("")
+            script = r"""
+const { chromium } = require(process.argv[1]);
+const { buildCardHtml, drawnImageBox } = require(process.argv[2]);
+(async () => {
+  const html = buildCardHtml({
+    index: 2,
+    role: "pure_ui_hero",
+    title: "完整主界面",
+    caption: "真实运行画面",
+    shotId: "overview.reader",
+    uiMinRatio: 0.7,
+  }, process.argv[3], { release: "test" });
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: 1080, height: 1440 } });
+    await page.setContent(html);
+    const measurements = await page.evaluate(() => [...document.images].map((image) => {
+      const bounds = image.getBoundingClientRect();
+      const style = getComputedStyle(image);
+      return {
+        className: image.className,
+        bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+        objectFit: style.objectFit,
+        objectPosition: style.objectPosition,
+      };
+    }));
+    console.log(JSON.stringify(measurements.map((box) => drawnImageBox(box))));
+  } finally {
+    await browser.close();
+  }
+})();
+"""
+            completed = subprocess.run(
+                ["node", "-e", script, playwright.as_posix(), (ROOT / "showcase" / "compose_lib.cjs").as_posix(), data_uri],
+                check=True,
+                text=True,
+                capture_output=True,
+                encoding="utf-8",
+            )
+        boxes = json.loads(completed.stdout)
+
+        self.assertEqual(len(boxes), 2)
+        overview = next(box for box in boxes if abs((box["width"] / box["height"]) - 1.6) < 0.01)
+        detail = next(box for box in boxes if abs((box["width"] / box["height"]) - 1.6) >= 0.01)
+        self.assertGreaterEqual(overview["width"] / 1080 * overview["height"] / 1440, 0.38)
+        self.assertGreaterEqual(detail["width"] * detail["height"] / (1080 * 1440), 0.35)
+        self.assertGreaterEqual(
+            max(overview["x"] + overview["width"], detail["x"] + detail["width"])
+            - min(overview["x"], detail["x"]),
+            1000,
+        )
+        self.assertLessEqual(abs(detail["y"] - (overview["y"] + overview["height"])), 20)
+
+
 class PatternAuditTest(unittest.TestCase):
     def make_inputs(self) -> tuple[dict, dict, dict]:
         story = {

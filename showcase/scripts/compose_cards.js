@@ -4,7 +4,14 @@
 const fs = require('fs');
 const path = require('path');
 const { chromium } = require('../../ui-tests/node_modules/@playwright/test');
-const { buildCardHtml, coverFeedReadiness, drawnImageBox, imageSrc, planCards } = require('../compose_lib.cjs');
+const {
+  buildCardHtml,
+  coverFeedReadiness,
+  drawnImageBox,
+  imageSrc,
+  layoutCollisionFailures,
+  planCards,
+} = require('../compose_lib.cjs');
 
 async function main() {
   const packageDir = path.resolve(process.argv[2] || 'output/package');
@@ -75,20 +82,57 @@ async function main() {
       });
       const auditErrors = [...designAudit.contrast_errors, ...designAudit.small_text, ...designAudit.images_failed];
       if (auditErrors.length) throw new Error(`${card.file} design audit: ${auditErrors.join('; ')}`);
-      const screenshotBox = await page.evaluate(() => {
-        const image = document.querySelector('img');
-        if (!image) return null;
-        const bounds = image.getBoundingClientRect();
-        const style = getComputedStyle(image);
-        return {
-          bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
-          naturalWidth: image.naturalWidth,
-          naturalHeight: image.naturalHeight,
-          objectFit: style.objectFit,
-          objectPosition: style.objectPosition,
-        };
+      const layoutBoxes = await page.evaluate(() => {
+        const textBoxes = [...document.querySelectorAll('h1,h2,p,li,strong,span')]
+          .filter((element) => element.innerText.trim() && element.children.length === 0)
+          .map((element) => {
+            const bounds = element.getBoundingClientRect();
+            return {
+              kind: 'text',
+              label: element.innerText.trim().replace(/\s+/g, ' ').slice(0, 24),
+              x: bounds.x,
+              y: bounds.y,
+              width: bounds.width,
+              height: bounds.height,
+            };
+          });
+        const screenshotBoxes = [...document.images].map((image) => {
+          const bounds = image.getBoundingClientRect();
+          return {
+            kind: 'screenshot',
+            label: image.alt || 'authentic UI capture',
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.width,
+            height: bounds.height,
+          };
+        });
+        return [...textBoxes, ...screenshotBoxes];
       });
-      const measuredBox = screenshotBox ? drawnImageBox(screenshotBox) : null;
+      const collisionErrors = layoutCollisionFailures(layoutBoxes);
+      if (collisionErrors.length) throw new Error(`${card.file} ${collisionErrors.join('; ')}`);
+      const screenshotBoxes = await page.evaluate(() => {
+        const images = [...document.images];
+        if (!images.length) return null;
+        return images.map((image) => {
+          const bounds = image.getBoundingClientRect();
+          const style = getComputedStyle(image);
+          return {
+            bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+            naturalWidth: image.naturalWidth,
+            naturalHeight: image.naturalHeight,
+            objectFit: style.objectFit,
+            objectPosition: style.objectPosition,
+          };
+        });
+      });
+      const measuredBoxes = (screenshotBoxes || []).map((box) => drawnImageBox(box));
+      const measuredBox = measuredBoxes.length ? {
+        x: Math.min(...measuredBoxes.map((box) => box.x)),
+        y: Math.min(...measuredBoxes.map((box) => box.y)),
+        width: Math.max(...measuredBoxes.map((box) => box.x + box.width)) - Math.min(...measuredBoxes.map((box) => box.x)),
+        height: Math.max(...measuredBoxes.map((box) => box.y + box.height)) - Math.min(...measuredBoxes.map((box) => box.y)),
+      } : null;
       const feedReadiness = card.role === 'cover' ? await page.evaluate(() => {
         const title = document.querySelector('.cover h1');
         const caption = document.querySelector('.cover p');

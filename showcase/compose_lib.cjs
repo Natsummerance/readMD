@@ -55,6 +55,42 @@ function coverFeedReadiness(metrics, canvas = { width: 1080, height: 1440 }) {
   };
 }
 
+function layoutCollisionFailures(boxes) {
+  const visible = (boxes || [])
+    .map((box, index) => ({
+      kind: String(box.kind || 'text'),
+      label: String(box.label || `element-${index + 1}`),
+      x: Number(box.x),
+      y: Number(box.y),
+      width: Number(box.width),
+      height: Number(box.height),
+    }))
+    .filter((box) => [
+      box.x,
+      box.y,
+      box.width,
+      box.height,
+    ].every((value) => Number.isFinite(value)) && box.width > 0 && box.height > 0);
+
+  const failures = [];
+  for (let left = 0; left < visible.length; left += 1) {
+    for (let right = left + 1; right < visible.length; right += 1) {
+      const first = visible[left];
+      const second = visible[right];
+      const overlapWidth = Math.min(first.x + first.width, second.x + second.width) - Math.max(first.x, second.x);
+      const overlapHeight = Math.min(first.y + first.height, second.y + second.height) - Math.max(first.y, second.y);
+      if (overlapWidth <= 2 || overlapHeight <= 2) continue;
+
+      const involvesScreenshot = first.kind === 'screenshot' || second.kind === 'screenshot';
+      // Adjacent text boxes can share a sub-pixel edge; meaningful collisions need
+      // enough area in both dimensions to be visible at feed scale.
+      if (!involvesScreenshot && (overlapWidth <= 8 || overlapHeight <= 8)) continue;
+      failures.push(`layout collision: ${first.label} overlaps ${second.label}`);
+    }
+  }
+  return [...new Set(failures)];
+}
+
 function plannedFeatureCard(story, shot) {
   const plan = (story.card_plan || []).find((item) => item.shot_id === shot.id);
   if (!plan) throw new Error(`card_plan is missing a reader-value entry for ${shot.id}`);
@@ -199,7 +235,10 @@ function buildCardHtml(card, source, context = {}) {
   } else if (card.role === 'pure_ui_hero') {
     body = `
       <main class="hero">
-        <img src="${source}" alt="${title}"/>
+        <div class="hero-evidence">
+          <img class="hero-overview" src="${source}" alt="${title}"/>
+          <img class="hero-detail" src="${source}" alt="${title}"/>
+        </div>
         <footer class="proof-foot hero-proof"><strong>${title}</strong><span>真实运行画面</span></footer>
       </main>`;
   } else {
@@ -234,11 +273,22 @@ function buildCardHtml(card, source, context = {}) {
   .proof-foot{display:flex;justify-content:space-between;align-items:center;gap:20px;padding-top:20px;border-top:1px solid ${design.palette.line}}
   .proof-foot span{font-size:24px}
   .hero{padding:24px;gap:20px}
-  .hero img{height:auto;flex:1;object-fit:contain}
+  .hero-evidence{min-height:0;flex:1 1 0;display:flex;flex-direction:column;gap:14px}
+  .hero-overview{width:100%;max-height:58%;object-fit:contain}
+  .hero-detail{min-height:0;flex:1 1 0;object-fit:cover;object-position:top}
   .hero-proof{padding:0}
   .summary ul{list-style:none;display:flex;gap:18px}
   .summary li{flex:1;background:${design.palette.surface};border-top:3px solid ${design.palette.accent};border-radius:${design.layout.radius}px;padding:20px 22px;font-size:25px;line-height:1.3;color:${design.palette.ink}}
 </style>${body}`;
 }
 
-module.exports = { buildCardHtml, coverFeedReadiness, drawnImageBox, imageSrc, loadDesignSystem, planCards, slug };
+module.exports = {
+  buildCardHtml,
+  coverFeedReadiness,
+  drawnImageBox,
+  imageSrc,
+  layoutCollisionFailures,
+  loadDesignSystem,
+  planCards,
+  slug,
+};
