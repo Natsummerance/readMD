@@ -16,6 +16,7 @@ from copy_profiles import (
     MECHANISM_TOPIC_SETS,
     RESONANCE_CONCERN_RESPONSE,
     SUPPORT_PHRASES,
+    resonance_topic_adjustment,
     profile_for_story,
     title_candidate_errors,
 )
@@ -212,7 +213,12 @@ def _resonance_directive(
     }
 
 
-def _select_topic_set(primary_id: str, history: list[dict[str, Any]]) -> tuple[dict[str, Any], dict[str, Any]]:
+def _select_topic_set(
+    primary_id: str,
+    history: list[dict[str, Any]],
+    *,
+    resonance_directive: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """Choose a mechanism-approved search set with confidence-gated evidence."""
     raw_sets = MECHANISM_TOPIC_SETS.get(primary_id)
     if not raw_sets:
@@ -287,6 +293,13 @@ def _select_topic_set(primary_id: str, history: list[dict[str, Any]]) -> tuple[d
         if coverage_bonus:
             score += coverage_bonus
             reasons.append("underused topic set")
+        focus_bonus, focus_reason = resonance_topic_adjustment(
+            resonance_directive,
+            topics=candidate["topics"],
+        )
+        if focus_bonus:
+            score += focus_bonus
+            reasons.append(focus_reason)
         scored.append((round(score, 3), candidate))
         candidate["_reason"] = "+".join(reasons)
 
@@ -305,6 +318,16 @@ def _select_topic_set(primary_id: str, history: list[dict[str, Any]]) -> tuple[d
         },
         "avoided_topic_sets": sorted(recent_ids),
         "sample_size": len(history),
+        "resonance_focus": str(
+            (resonance_directive or {}).get("evidence", {}).get("focus", "general")
+        ),
+        "resonance_topic_bonuses": {
+            item["topic_set_id"]: resonance_topic_adjustment(
+                resonance_directive,
+                topics=item["topics"],
+            )[0]
+            for item in candidates
+        },
     }
 
 
@@ -318,12 +341,7 @@ def generate_copy(
     history, _pending_history = partition_records(history or [])
     candidates = _title_candidates(story)
     selected_title, title_selection = _select_title([dict(item) for item in candidates], history)
-    selected_topic_set, topic_set_selection = _select_topic_set(primary_id=story.get("primary_shot", "overview.editor"), history=history)
-    valid_candidates = [item for item in candidates if len(item["text"]) <= 20]
-    chosen_title = selected_title if len(selected_title["text"]) <= 20 else next(iter(valid_candidates), candidates[0])
-    chosen_title["text"] = _clean(chosen_title["text"])
     profile = profile_for_story(story)
-    resonance = _resonance_focus(history)
     primary_id = story.get("primary_shot", "overview.editor")
     visual_claims = [claim for claim in story["claims"] if claim.get("shot_ids")]
     supporting_ids = [
@@ -333,12 +351,21 @@ def generate_copy(
     ]
     unique_supporting_ids = list(dict.fromkeys(supporting_ids))
     available_shot_ids = {primary_id, *unique_supporting_ids}
+    resonance = _resonance_focus(history)
     resonance_directive = _resonance_directive(
         resonance,
         story=story,
         profile=profile,
         available_shot_ids=available_shot_ids,
     )
+    selected_topic_set, topic_set_selection = _select_topic_set(
+        primary_id=primary_id,
+        history=history,
+        resonance_directive=resonance_directive,
+    )
+    valid_candidates = [item for item in candidates if len(item["text"]) <= 20]
+    chosen_title = selected_title if len(selected_title["text"]) <= 20 else next(iter(valid_candidates), candidates[0])
+    chosen_title["text"] = _clean(chosen_title["text"])
     reader_focus = resonance["focus"] if resonance_directive["applied"] else "general"
     release = story["release"]
     prerelease = story["version_state"] != "release"
@@ -348,7 +375,6 @@ def generate_copy(
     opening = profile["opening"]
     disclosure = f"先说清楚：这是 ReadMD {release} {state_text}，文件仍然保留在你自己的电脑里。"
     evidence = "下面的画面来自当前版本真实运行状态，不是概念图。"
-    primary_id = story.get("primary_shot", "overview.editor")
     primary_text = profile.get(
         "primary_paragraph",
         _clean(next((item["user_value"] for item in visual_claims if primary_id.replace("-", ".") in item["shot_ids"]), story["angle"])),

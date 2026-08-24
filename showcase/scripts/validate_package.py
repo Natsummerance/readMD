@@ -19,6 +19,7 @@ from copy_profiles import (
     MECHANISM_TOPIC_SETS,
     RESONANCE_CONCERN_RESPONSE,
     resonance_frame_adjustment,
+    resonance_topic_adjustment,
     SUPPORT_PHRASES,
 )
 
@@ -74,6 +75,70 @@ def _resolve_evidence(path_value: str, package_dir: Path, repo_root: Path) -> Pa
     return None
 
 
+def _topic_focus_selection_errors(story: dict[str, Any], metadata: dict[str, Any]) -> list[str]:
+    """Recheck that the persisted topic experiment executed the comment directive."""
+    selection = metadata.get("topic_set_selection")
+    if not isinstance(selection, dict) or "resonance_topic_bonuses" not in selection:
+        return []
+
+    primary = str(story.get("primary_shot", ""))
+    normalized_topics = [str(item).strip() for item in metadata.get("topics", [])]
+    candidates = MECHANISM_TOPIC_SETS.get(primary, [])
+    candidate = next((item for item in candidates if [str(topic).strip() for topic in item["topics"]] == normalized_topics), None)
+    if candidate is None:
+        return []
+
+    errors: list[str] = []
+    directive = metadata.get("resonance_directive")
+    directive = directive if isinstance(directive, dict) else None
+    bonuses = selection.get("resonance_topic_bonuses")
+    scores = selection.get("scores")
+    if not isinstance(bonuses, dict) or not isinstance(scores, dict):
+        errors.append("topic selection experiment report is incomplete")
+        return errors
+
+    scores_complete = True
+    scored_items: list[tuple[float, str]] = []
+    for item in candidates:
+        set_id = topic_set_id(item["topics"])
+        expected_bonus, expected_reason = resonance_topic_adjustment(
+            directive,
+            topics=item["topics"],
+        )
+        try:
+            reported_bonus = float(bonuses[set_id])
+            reported_score = float(scores[set_id])
+        except (KeyError, TypeError, ValueError):
+            errors.append(f"topic selection experiment report is incomplete: {set_id}")
+            scores_complete = False
+            continue
+        if abs(reported_bonus - expected_bonus) > 0.001:
+            errors.append(
+                "topic selection resonance bonus differs from directive: "
+                f"report={reported_bonus}, expected={expected_bonus}"
+            )
+        reason = str(selection.get("reasons", {}).get(set_id, ""))
+        if expected_reason and expected_reason not in reason:
+            errors.append("topic selection omits comment-focus alignment reason")
+        scored_items.append((reported_score, set_id))
+
+    set_id = str(metadata.get("topic_set_id", ""))
+    if scores_complete and scored_items:
+        best_score = max(score for score, _ in scored_items)
+        try:
+            selected_score = float(scores[set_id])
+        except (KeyError, TypeError, ValueError):
+            selected_score = float("-inf")
+        if selected_score + 0.001 < best_score:
+            errors.append(
+                "selected topic set is not the highest scoring eligible candidate: "
+                f"selected={selected_score}, best={best_score}"
+            )
+
+    focus = str((directive or {}).get("evidence", {}).get("focus", "general"))
+    if selection.get("resonance_focus") != focus:
+        errors.append("topic selection resonance focus differs from directive")
+    return errors
 def _image_metrics(path: Path, screenshot_box: dict[str, float] | None = None) -> dict[str, Any]:
     with Image.open(path) as image:
         rgb = image.convert("RGB")
@@ -336,6 +401,7 @@ def publisher_input_errors(package_dir: Path) -> list[str]:
         errors.append(f"publisher input story unreadable: {exc}")
     else:
         errors.extend(_topic_identity_errors(story, metadata))
+        errors.extend(_topic_focus_selection_errors(story, metadata))
 
     def text(name: str) -> str | None:
         path = package_dir / name

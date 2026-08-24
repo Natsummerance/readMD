@@ -201,6 +201,17 @@ RESONANCE_CONCERN_RESPONSE = (
 )
 
 
+RESONANCE_TOPIC_TERMS: dict[str, tuple[str, ...]] = {
+    "presentation": ("PPT", "演讲", "课程讲义", "组会报告"),
+    "academic": ("论文写作", "课程讲义", "研究生", "学术排版"),
+    "code": ("编程", "技术教程", "代码运行", "Python", "JavaScript"),
+    "formula": ("LaTeX", "论文写作", "研究生", "学术排版"),
+    "diagram": ("流程图", "科研绘图", "Mermaid", "架构图"),
+    "conversion": ("PDF", "Word", "网页剪藏", "OCR", "资料整理"),
+    "export-share": ("文档分享", "局域网分享", "手机查看"),
+}
+
+
 def resonance_frame_adjustment(
     directive: dict[str, Any] | None,
     *,
@@ -225,6 +236,28 @@ def resonance_frame_adjustment(
             adjustment += weight
             reasons.append(f"comment {intent} intent prefers the {copy_frame} narrative")
     return min(adjustment, 12.0), reasons
+
+
+def resonance_topic_adjustment(
+    directive: dict[str, Any] | None,
+    *,
+    topics: list[str],
+) -> tuple[float, str | None]:
+    """Return a bounded preference for search terms matching the comment focus."""
+    if not isinstance(directive, dict) or directive.get("applied") is not True:
+        return 0.0, None
+    evidence = directive.get("evidence")
+    if not isinstance(evidence, dict) or evidence.get("confidence") not in {"medium", "high"}:
+        return 0.0, None
+    if directive.get("support_available") is not True:
+        return 0.0, None
+
+    focus = str(evidence.get("focus", "")).strip()
+    preferred_terms = RESONANCE_TOPIC_TERMS.get(focus, ())
+    normalized_topics = {str(item).strip() for item in topics}
+    if not preferred_terms or not any(term in normalized_topics for term in preferred_terms):
+        return 0.0, None
+    return 11.0, f"comment {focus} focus matches topic search terms"
 
 
 MECHANISM_TOPIC_SETS: dict[str, list[dict[str, Any]]] = {

@@ -538,6 +538,98 @@ class WriteCopyTest(unittest.TestCase):
         self.assertIn("underused topic set", rotated["topic_set_selection"]["reasons"][default_id])
         self.assertIn("recent topic-set fatigue penalty", rotated["topic_set_selection"]["reasons"][alternate_id])
 
+    def test_confident_academic_focus_tilts_mechanism_topic_set(self) -> None:
+        primary_shot = "presentation.reveal"
+        default_set, alternate_set = copy_profiles.MECHANISM_TOPIC_SETS[primary_shot]
+        story = {
+            "release": "v2.1.0",
+            "previous_release": "v2.0.0",
+            "version_state": "prerelease",
+            "primary_shot": primary_shot,
+            "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+            "selected_shots": ["overview.reader", primary_shot, "academic.latex-bib"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "直接放映", "shot_ids": [primary_shot], "sources": ["release/release_notes.md"]},
+                {"id": "academic", "user_value": "论文排版保持稳定", "shot_ids": ["academic.latex-bib"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        history = [
+            {
+                "release": f"v2.0.{version}",
+                "metrics_status": "complete",
+                "comment_insights": {
+                    "schema_version": 2,
+                    "unique_count": 2,
+                    "themes": [{
+                        "theme": "academic",
+                        "mentions": 3,
+                        "weighted_score": 4,
+                        "intents": ["request"],
+                    }],
+                    "top_theme": "academic",
+                },
+            }
+            for version in range(2)
+        ]
+
+        result = write_copy.generate_copy(
+            story,
+            repository="Natsummerance/readMD",
+            previous_release="v2.0.1",
+            history=history,
+        )
+
+        selection = result["topic_set_selection"]
+        alternate_id = write_copy.topic_set_id(alternate_set["topics"])
+        self.assertEqual(result["topic_set_label"], alternate_set["label"])
+        self.assertEqual(selection["chosen_topic_set_id"], alternate_id)
+        self.assertEqual(selection["resonance_focus"], "academic")
+        self.assertEqual(selection["resonance_topic_bonuses"][alternate_id], 11)
+        self.assertIn(
+            "comment academic focus matches topic search terms",
+            selection["reasons"][alternate_id],
+        )
+
+    def test_low_confidence_comment_focus_does_not_tilt_topic_set(self) -> None:
+        primary_shot = "presentation.reveal"
+        default_set, _alternate_set = copy_profiles.MECHANISM_TOPIC_SETS[primary_shot]
+        story = {
+            "release": "v2.1.1",
+            "previous_release": "v2.1.0",
+            "version_state": "prerelease",
+            "primary_shot": primary_shot,
+            "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+            "selected_shots": ["overview.reader", primary_shot],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "直接放映", "shot_ids": [primary_shot], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        history = [{
+            "release": "v2.1.0",
+            "metrics_status": "complete",
+            "comment_insights": {
+                "schema_version": 2,
+                "unique_count": 1,
+                "themes": [{
+                    "theme": "academic",
+                    "mentions": 3,
+                    "weighted_score": 4,
+                    "intents": ["request"],
+                }],
+                "top_theme": "academic",
+            },
+        }]
+        result = write_copy.generate_copy(
+            story,
+            repository="Natsummerance/readMD",
+            previous_release="v2.1.0",
+            history=history,
+        )
+        self.assertEqual(result["topic_set_label"], default_set["label"])
+        self.assertFalse(result["resonance_directive"]["applied"])
+
     def test_topic_set_identity_is_stable_and_content_bound(self) -> None:
         story = {
             "release": "v1.0.0",
@@ -1212,6 +1304,69 @@ class ValidatePackageTest(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertEqual(validate_package.publisher_directive_errors(pkg), [])
+
+    def test_publisher_input_rechecks_comment_topic_alignment(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp)
+            primary = "presentation.reveal"
+            default, academic = copy_profiles.MECHANISM_TOPIC_SETS[primary]
+            set_id = write_copy.topic_set_id(academic["topics"])
+            default_id = write_copy.topic_set_id(default["topics"])
+            directive = {
+                "schema_version": 1,
+                "applied": True,
+                "support_available": True,
+                "evidence": {
+                    "focus": "academic",
+                    "confidence": "medium",
+                    "release_count": 2,
+                    "mentions": 4,
+                    "weighted_score": 6,
+                    "top_intents": ["request"],
+                },
+                "decisions": {"keep": "k", "strengthen": "s", "compress": "c", "delete": "d"},
+            }
+            metadata = {
+                "primary_shot": primary,
+                "topics": academic["topics"],
+                "topic_set_id": set_id,
+                "topic_set_label": academic["label"],
+                "resonance_directive": directive,
+                "topic_set_selection": {
+                    "resonance_focus": "general",
+                    "resonance_topic_bonuses": {default_id: 0, set_id: 0},
+                    "scores": {default_id: 20, set_id: 10},
+                    "reasons": {default_id: "", set_id: ""},
+                },
+            }
+            story = {
+                "primary_shot": primary,
+                "selected_shots": ["overview.reader", primary],
+            }
+            (pkg / "story.json").write_text(json.dumps(story, ensure_ascii=False), encoding="utf-8")
+            (pkg / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+
+            errors = validate_package.publisher_input_errors(pkg)
+            self.assertTrue(any("topic selection resonance bonus differs" in error for error in errors), errors)
+            self.assertTrue(any("omits comment-focus alignment reason" in error for error in errors), errors)
+            self.assertTrue(any("topic selection resonance focus differs" in error for error in errors), errors)
+            self.assertTrue(
+                any("selected topic set is not the highest scoring eligible candidate" in error for error in errors),
+                errors,
+            )
+
+            metadata["topic_set_selection"] = {
+                "resonance_focus": "academic",
+                "resonance_topic_bonuses": {default_id: 0, set_id: 11},
+                "scores": {default_id: 13, set_id: 14},
+                "reasons": {
+                    default_id: "",
+                    set_id: "comment academic focus matches topic search terms",
+                },
+            }
+            (pkg / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            remaining = validate_package.publisher_input_errors(pkg)
+            self.assertFalse(any("topic selection" in error for error in remaining), remaining)
 
     def test_rejects_missing_evidence_and_bad_hash(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
