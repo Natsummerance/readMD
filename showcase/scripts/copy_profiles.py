@@ -159,6 +159,35 @@ SUPPORT_PHRASES: dict[str, str] = {
 }
 
 
+COMMENT_SCENARIOS: dict[str, str] = {
+    "general": "课程讲义、组会报告、技术分享或论文汇报",
+    "presentation": "课堂讲授、技术分享或会议演示",
+    "academic": "课程讲义、组会报告或论文汇报",
+    "code": "代码教程、技术笔记或示例文档",
+    "table": "数据表格、对比报告或项目清单",
+    "formula": "公式讲义、论文推导或学术笔记",
+    "diagram": "流程图、架构图或图表笔记",
+    "conversion": "网页剪藏、Word 资料或 PDF 内容",
+    "export-share": "发布稿、分享页或 HTML 输出",
+    "local-privacy": "本地草稿、私人笔记或未上传资料",
+    "stability-performance": "长文、大文档或复杂项目",
+}
+
+
+COMMENT_SHOT_FOCUS: dict[str, str] = {
+    "presentation": "presentation.reveal",
+    "academic": "academic.latex-bib",
+    "code": "editor.code-chunk",
+    "table": "overview.editor",
+    "formula": "academic.latex-bib",
+    "diagram": "editor.diagram-picker",
+    "conversion": "convert.home",
+    "export-share": "sharing.export",
+    "local-privacy": "overview.reader",
+    "stability-performance": "overview.editor",
+}
+
+
 MECHANISM_TOPIC_SETS: dict[str, list[dict[str, Any]]] = {
     "overview.editor": [
         {"label": "writing-core", "topics": ["Markdown", "效率工具", "程序员", "写作", "笔记软件"]},

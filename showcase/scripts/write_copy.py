@@ -11,6 +11,8 @@ from typing import Any
 
 from content_memory import load_learning_records, partition_records, summarize
 from copy_profiles import (
+    COMMENT_SCENARIOS,
+    COMMENT_SHOT_FOCUS,
     MECHANISM_TOPIC_SETS,
     SUPPORT_PHRASES,
     profile_for_story,
@@ -106,35 +108,6 @@ def _select_title(candidates: list[dict[str, str]], history: list[dict[str, Any]
     }
 
 
-COMMENT_SCENARIOS = {
-    "general": "课程讲义、组会报告、技术分享或论文汇报",
-    "presentation": "课堂讲授、技术分享或会议演示",
-    "academic": "课程讲义、组会报告或论文汇报",
-    "code": "代码教程、技术笔记或示例文档",
-    "table": "数据表格、对比报告或项目清单",
-    "formula": "公式讲义、论文推导或学术笔记",
-    "diagram": "流程图、架构图或图表笔记",
-    "conversion": "网页剪藏、Word 资料或 PDF 内容",
-    "export-share": "发布稿、分享页或 HTML 输出",
-    "local-privacy": "本地草稿、私人笔记或未上传资料",
-    "stability-performance": "长文、大文档或复杂项目",
-}
-
-
-COMMENT_SHOT_FOCUS = {
-    "presentation": "presentation.reveal",
-    "academic": "academic.latex-bib",
-    "code": "editor.code-chunk",
-    "table": "overview.editor",
-    "formula": "academic.latex-bib",
-    "diagram": "editor.diagram-picker",
-    "conversion": "convert.home",
-    "export-share": "sharing.export",
-    "local-privacy": "overview.reader",
-    "stability-performance": "overview.editor",
-}
-
-
 def _resonance_focus(history: list[dict[str, Any]]) -> dict[str, Any]:
     themes: dict[str, dict[str, Any]] = {}
     focus_releases: dict[str, set[str]] = {}
@@ -205,18 +178,25 @@ def _resonance_directive(
     *,
     story: dict[str, Any],
     profile: dict[str, Any],
+    available_shot_ids: set[str],
 ) -> dict[str, Any]:
-    applied = resonance["confidence"] != "low" and resonance["focus"] != "general"
-    scenario = COMMENT_SCENARIOS[resonance["focus"]]
     focus_shot = COMMENT_SHOT_FOCUS.get(resonance["focus"])
+    support_available = bool(focus_shot and focus_shot in available_shot_ids)
+    applied = (
+        resonance["confidence"] != "low"
+        and resonance["focus"] != "general"
+        and support_available
+    )
+    scenario = COMMENT_SCENARIOS[resonance["focus"]]
     strengthen = (
         f"优先展示“{SUPPORT_PHRASES[focus_shot]}”，读者场景固定为{scenario}。"
-        if applied and focus_shot
+        if applied and focus_shot in available_shot_ids and focus_shot in SUPPORT_PHRASES
         else f"保持当前核心机制，读者场景维持{scenario}。"
     )
     return {
         "schema_version": 1,
         "applied": applied,
+        "support_available": support_available,
         "evidence": {
             key: value
             for key, value in resonance.items()
@@ -343,16 +323,25 @@ def generate_copy(
     chosen_title["text"] = _clean(chosen_title["text"])
     profile = profile_for_story(story)
     resonance = _resonance_focus(history)
+    primary_id = story.get("primary_shot", "overview.editor")
+    visual_claims = [claim for claim in story["claims"] if claim.get("shot_ids")]
+    supporting_ids = [
+        item["shot_ids"][0]
+        for item in visual_claims
+        if item.get("shot_ids") and primary_id not in item["shot_ids"]
+    ]
+    unique_supporting_ids = list(dict.fromkeys(supporting_ids))
+    available_shot_ids = {primary_id, *unique_supporting_ids}
     resonance_directive = _resonance_directive(
         resonance,
         story=story,
         profile=profile,
+        available_shot_ids=available_shot_ids,
     )
-    focus = resonance["focus"]
+    reader_focus = resonance["focus"] if resonance_directive["applied"] else "general"
     release = story["release"]
     prerelease = story["version_state"] != "release"
     state_text = "预览版" if prerelease else "正式版"
-    visual_claims = [claim for claim in story["claims"] if claim.get("shot_ids")]
     invisible_claims = [claim for claim in story["claims"] if not claim.get("shot_ids")]
 
     opening = profile["opening"]
@@ -363,13 +352,7 @@ def generate_copy(
         "primary_paragraph",
         _clean(next((item["user_value"] for item in visual_claims if primary_id.replace("-", ".") in item["shot_ids"]), story["angle"])),
     )
-    supporting_ids = [
-        item["shot_ids"][0]
-        for item in visual_claims
-        if item.get("shot_ids") and primary_id not in item["shot_ids"]
-    ]
-    unique_supporting_ids = list(dict.fromkeys(supporting_ids))
-    focused_support_id = COMMENT_SHOT_FOCUS.get(focus)
+    focused_support_id = COMMENT_SHOT_FOCUS.get(reader_focus)
     prioritized_supporting_ids = (
         [focused_support_id]
         if resonance_directive["applied"] and focused_support_id in unique_supporting_ids
@@ -419,7 +402,7 @@ def generate_copy(
 
     paragraphs.extend(
         [
-            f"如果你常处理{COMMENT_SCENARIOS[focus]}，它会省掉“{profile['saved_step']}”这一步。",
+            f"如果你常处理{COMMENT_SCENARIOS[reader_focus]}，它会省掉“{profile['saved_step']}”这一步。",
             f"安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 {repository}，进仓库后点 Releases 就能找到对应平台。",
             profile["cta"],
         ]
@@ -441,7 +424,18 @@ def generate_copy(
         parts = body.split("\n\n")
         if len(parts) <= 4:
             break
-        parts.pop(-3)
+        focused_phrase = SUPPORT_PHRASES.get(COMMENT_SHOT_FOCUS.get(reader_focus, ""))
+        scenario = COMMENT_SCENARIOS[reader_focus]
+        removable = [
+            index
+            for index in range(3, len(parts) - 2)
+            if focused_phrase not in parts[index]
+            and scenario not in parts[index]
+            and "下面的画面来自当前版本真实运行状态" not in parts[index]
+        ]
+        if not removable:
+            break
+        parts.pop(max(removable))
         body = "\n\n".join(parts)
     pad_index = 0
     while len(body) < 600 and pad_index < len(padding):

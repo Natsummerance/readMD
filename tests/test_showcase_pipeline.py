@@ -598,6 +598,13 @@ class WriteCopyTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             story = write_story(Path(tmp))
             story["release"] = "v9.0.0"
+            story["selected_shots"].append("editor.code-chunk")
+            story["claims"].append({
+                "id": "code",
+                "user_value": "代码块就地运行",
+                "shot_ids": ["editor.code-chunk"],
+                "sources": ["release/release_notes.md"],
+            })
             history = [
                 {
                     "release": "v8.0.0",
@@ -643,6 +650,7 @@ class WriteCopyTest(unittest.TestCase):
         self.assertIn("代码教程、技术笔记或示例文档", result["body"])
         directive = result["resonance_directive"]
         self.assertTrue(directive["applied"])
+        self.assertTrue(directive["support_available"])
         self.assertEqual(directive["evidence"]["focus"], "code")
         self.assertEqual(directive["evidence"]["confidence"], "medium")
         self.assertEqual(directive["evidence"]["top_intents"], ["request", "question"])
@@ -730,6 +738,43 @@ class WriteCopyTest(unittest.TestCase):
         self.assertIn("课程讲义、组会报告、技术分享或论文汇报", result["body"])
         self.assertNotIn("代码教程、技术笔记或示例文档", result["body"])
         self.assertFalse(result["resonance_directive"]["applied"])
+
+    def test_focus_without_authentic_shot_falls_back_to_general(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = write_story(Path(tmp))
+            history = [
+                {
+                    "release": f"v8.{version}.0",
+                    "title": f"v8.{version}",
+                    "title_formula_id": "#36",
+                    "hook_type": "outcome-led",
+                    "published_at": f"2026-08-{20 + version}T10:00:00Z",
+                    "metrics_status": "complete",
+                    "comment_insights": {
+                        "schema_version": 1,
+                        "unique_count": 2,
+                        "themes": [{
+                            "theme": "code",
+                            "mentions": 3,
+                            "weighted_score": 8,
+                            "intents": ["request"],
+                        }],
+                        "top_theme": "code",
+                    },
+                }
+                for version in range(2)
+            ]
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v8.1.0",
+                history=history,
+            )
+        directive = result["resonance_directive"]
+        self.assertFalse(directive["applied"])
+        self.assertFalse(directive["support_available"])
+        self.assertIn("课程讲义、组会报告、技术分享或论文汇报", result["body"])
+        self.assertNotIn("代码教程、技术笔记或示例文档", result["body"])
 
     def test_copy_follows_selected_mechanism_instead_of_presentation(self) -> None:
         story = {
@@ -2820,6 +2865,7 @@ class ReviewDashboardTest(unittest.TestCase):
             "resonance_directive": {
                 "schema_version": 1,
                 "applied": True,
+                "support_available": True,
                 "evidence": {
                     "focus": "code",
                     "confidence": "medium",
@@ -3074,6 +3120,7 @@ class WatcherTest(unittest.TestCase):
         tamper_semantics: bool = False,
         tamper_assets: bool = False,
         tamper_directive: bool = False,
+        tamper_directive_execution: bool = False,
     ) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
@@ -3237,6 +3284,32 @@ class WatcherTest(unittest.TestCase):
             (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
         if not publisher_match:
             (package / "body.txt").write_text("这篇正文和元数据不一致，不能进入发布器。", encoding="utf-8")
+        if tamper_directive_execution:
+            metadata["resonance_directive"] = {
+                "schema_version": 1,
+                "applied": True,
+                "support_available": True,
+                "evidence": {
+                    "focus": "academic",
+                    "confidence": "medium",
+                    "release_count": 2,
+                    "mentions": 4,
+                    "weighted_score": 8,
+                    "top_intents": ["request"],
+                },
+                "decisions": {
+                    "keep": story["angle"],
+                    "strengthen": "优先展示学术排版不另起一套工具。",
+                    "compress": "辅助能力最多保留两条。",
+                    "delete": "不加入与学术焦点无关的新卖点。",
+                },
+            }
+            metadata["body"] = metadata["body"].replace(
+                "课程讲义、组会报告、技术分享或论文汇报",
+                "论文推导或学术笔记",
+            ) + "\n\n学术排版不另起一套工具。"
+            (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            (package / "body.txt").write_text(metadata["body"], encoding="utf-8")
         zip_path = root / "package.zip"
         report = package_content.package_content(package, zip_path)
         return Path(report["output"])
@@ -3463,6 +3536,36 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(record["status"], "failed")
             self.assertIn("publisher directive contract failed", record["error"])
             self.assertIn("resonance directive missing decisions: compress, delete, keep, strengthen", record["error"])
+
+    def test_directive_execution_blocks_forged_support_order(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, tamper_directive_execution=True)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not click a forged resonance narrative")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("publisher directive contract failed", record["error"])
+            self.assertTrue(
+                "focused support is not the first supporting capability" in record["error"]
+                or "publisher body omits resonance scenario: academic" in record["error"]
+            )
 
     def test_successful_publish_survives_status_query_failure(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

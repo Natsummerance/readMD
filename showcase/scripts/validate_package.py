@@ -13,7 +13,12 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
-from copy_profiles import MECHANISM_TOPIC_SETS
+from copy_profiles import (
+    COMMENT_SCENARIOS,
+    COMMENT_SHOT_FOCUS,
+    MECHANISM_TOPIC_SETS,
+    SUPPORT_PHRASES,
+)
 
 
 BANNED = ("公众号", "微信", "闲鱼", "咸鱼", "转卖", "出票", "转让", "售票", "二维码", "淘口令", "淘宝")
@@ -128,6 +133,8 @@ def resonance_directive_errors(directive: Any) -> list[str]:
         errors.append("resonance directive schema_version must be 1")
     if not isinstance(directive.get("applied"), bool):
         errors.append("resonance directive applied must be boolean")
+    if not isinstance(directive.get("support_available"), bool):
+        errors.append("resonance directive support_available must be boolean")
 
     evidence = directive.get("evidence")
     if not isinstance(evidence, dict):
@@ -148,7 +155,8 @@ def resonance_directive_errors(directive: Any) -> list[str]:
     applied = directive.get("applied")
     focus = str(evidence.get("focus", "")) if isinstance(evidence, dict) else ""
     confidence = str(evidence.get("confidence", "")) if isinstance(evidence, dict) else ""
-    expected_applied = focus != "general" and confidence in {"medium", "high"}
+    support_available = directive.get("support_available")
+    expected_applied = focus != "general" and confidence in {"medium", "high"} and support_available is True
     if isinstance(applied, bool) and applied != expected_applied:
         errors.append("resonance directive applied differs from evidence confidence")
 
@@ -167,12 +175,47 @@ def resonance_directive_errors(directive: Any) -> list[str]:
 
 
 def publisher_directive_errors(package_dir: Path) -> list[str]:
-    """Load and validate the resonance directive that produced this package."""
+    """Validate both the directive record and its execution in publisher copy."""
     try:
         metadata = _load_json(package_dir / "metadata.json")
+        story = _load_json(package_dir / "story.json")
+        body = (package_dir / "body.txt").read_text(encoding="utf-8").strip()
     except Exception as exc:
         return [f"publisher directive metadata unreadable: {exc}"]
-    return resonance_directive_errors(metadata.get("resonance_directive"))
+    directive = metadata.get("resonance_directive")
+    errors = resonance_directive_errors(directive)
+    if not isinstance(directive, dict) or not isinstance(story, dict):
+        return errors
+
+    applied = directive.get("applied") is True
+    focus = str(directive.get("evidence", {}).get("focus", "general"))
+    reader_focus = focus if applied else "general"
+    scenario = COMMENT_SCENARIOS.get(reader_focus)
+    if scenario and scenario not in body:
+        errors.append(f"publisher body omits resonance scenario: {reader_focus}")
+
+    if not applied:
+        return errors
+
+    focus_shot = COMMENT_SHOT_FOCUS.get(focus)
+    selected_shots = set(story.get("selected_shots", []))
+    if focus_shot not in selected_shots:
+        errors.append(f"resonance focus shot is missing from authentic captures: {focus_shot}")
+        return errors
+
+    if focus_shot != story.get("primary_shot"):
+        focused_phrase = SUPPORT_PHRASES[focus_shot]
+        if focused_phrase not in body:
+            errors.append(f"publisher body omits focused support: {focused_phrase}")
+        else:
+            recognized_positions = [
+                body.index(phrase)
+                for phrase in SUPPORT_PHRASES.values()
+                if phrase in body
+            ]
+            if recognized_positions and min(recognized_positions) != body.index(focused_phrase):
+                errors.append("focused support is not the first supporting capability")
+    return errors
 
 
 def publisher_input_errors(package_dir: Path) -> list[str]:
