@@ -148,6 +148,12 @@ def audit_page(path: Path, canonical: str) -> list[str]:
             errors.append(f"{path}: eager hero image must declare fetchpriority=high")
     if "/assets/site.css" not in audit.stylesheets:
         errors.append(f"{path}: production stylesheet link is missing")
+    link_rels = {item.get("rel") for item in audit.links}
+    for required_rel in ("icon", "apple-touch-icon", "manifest"):
+        if required_rel not in link_rels:
+            errors.append(f"{path}: missing {required_rel} link")
+    if not any(item.get("type") == "application/atom+xml" and item.get("href", "").endswith("releases.atom") for item in audit.links):
+        errors.append(f"{path}: release Atom feed link is missing")
     if content.count("<picture>") != len(audit.images):
         errors.append(f"{path}: every product image must have a WebP picture fallback")
     if ".webp" not in content:
