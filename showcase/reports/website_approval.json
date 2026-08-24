@@ -49,7 +49,7 @@
     "conditions": [
       "npm build must be green before upload.",
       "validate_website.py must be green.",
-      "Deployment must use Cloudflare free hosting and verify https://readmd.syminu.online/ returns 200 for all language indexes.",
+      "Deployment must use Cloudflare free hosting and verify https://app.syminu.online/ returns 200 for all language indexes.",
       "A write-capable scoped Cloudflare token is required because the current token cannot create Pages or upload Worker assets."
     ]
   }

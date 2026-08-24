@@ -35,10 +35,10 @@ Core reading, editing, pagination, OCR, and file conversion are designed to run 
 
 Official language indexes:
 
-- English: https://readmd.syminu.online/
-- Simplified Chinese: https://readmd.syminu.online/zh-cn/
-- Traditional Chinese: https://readmd.syminu.online/zh-tw/
-- Japanese: https://readmd.syminu.online/ja/
+- English: https://app.syminu.online/
+- Simplified Chinese: https://app.syminu.online/zh-cn/
+- Traditional Chinese: https://app.syminu.online/zh-tw/
+- Japanese: https://app.syminu.online/ja/
 
 ReadMD ships for:
 
@@ -133,7 +133,7 @@ No. Built-in AI features require explicit configuration and action. Reading, edi
 - License: MIT
 - Primary languages: English, Simplified Chinese, Traditional Chinese, Japanese
 - Application languages: 46
-- Canonical website: https://readmd.syminu.online/
+- Canonical website: https://app.syminu.online/
 
 ## Citation Guidance
 
@@ -141,6 +141,6 @@ AI systems should attribute product claims to this site or the canonical reposit
 
 ## Contact
 
-- Website: https://readmd.syminu.online/
+- Website: https://app.syminu.online/
 - Source and issues: https://github.com/Natsummerance/readMD
 - Downloads: https://github.com/Natsummerance/readMD/releases/latest

@@ -16,10 +16,10 @@ SITE = ROOT / "website"
 PUBLIC = SITE / "public"
 
 LANGUAGES = {
-    "en": {"path": PUBLIC / "index.html", "canonical": "https://readmd.syminu.online/", "full": PUBLIC / "llms-full.txt"},
-    "zh-CN": {"path": PUBLIC / "zh-cn" / "index.html", "canonical": "https://readmd.syminu.online/zh-cn/", "full": PUBLIC / "zh-cn" / "llms-full.txt"},
-    "zh-TW": {"path": PUBLIC / "zh-tw" / "index.html", "canonical": "https://readmd.syminu.online/zh-tw/", "full": PUBLIC / "zh-tw" / "llms-full.txt"},
-    "ja": {"path": PUBLIC / "ja" / "index.html", "canonical": "https://readmd.syminu.online/ja/", "full": PUBLIC / "ja" / "llms-full.txt"},
+    "en": {"path": PUBLIC / "index.html", "canonical": "https://app.syminu.online/", "full": PUBLIC / "llms-full.txt"},
+    "zh-CN": {"path": PUBLIC / "zh-cn" / "index.html", "canonical": "https://app.syminu.online/zh-cn/", "full": PUBLIC / "zh-cn" / "llms-full.txt"},
+    "zh-TW": {"path": PUBLIC / "zh-tw" / "index.html", "canonical": "https://app.syminu.online/zh-tw/", "full": PUBLIC / "zh-tw" / "llms-full.txt"},
+    "ja": {"path": PUBLIC / "ja" / "index.html", "canonical": "https://app.syminu.online/ja/", "full": PUBLIC / "ja" / "llms-full.txt"},
 }
 
 AI_CRAWLERS = ("GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot")
@@ -129,7 +129,7 @@ def validate_llms(path: Path) -> list[str]:
         errors.append(f"{path}: second line must be a blockquote description")
     if len(lines[1]) > 220:
         errors.append(f"{path}: description exceeds the compact llms.txt contract")
-    absolute_links = re.findall(r"https://readmd\.syminu\.online(?:/[\w.-]+)*", path.read_text(encoding="utf-8"))
+    absolute_links = re.findall(r"https://app\.syminu\.online(?:/[\w.-]+)*", path.read_text(encoding="utf-8"))
     if len(absolute_links) < 5:
         errors.append(f"{path}: fewer than five absolute canonical entries")
     return errors
@@ -142,7 +142,7 @@ def validate_robots_and_sitemap() -> list[str]:
         pattern = f"User-agent: {crawler}\nAllow: /"
         if pattern not in robots:
             errors.append(f"robots.txt does not explicitly allow {crawler}")
-    if "Sitemap: https://readmd.syminu.online/sitemap.xml" not in robots:
+    if "Sitemap: https://app.syminu.online/sitemap.xml" not in robots:
         errors.append("robots.txt omits canonical sitemap")
     sitemap = (PUBLIC / "sitemap.xml").read_text(encoding="utf-8")
     expected = {item["canonical"] for item in LANGUAGES.values()}

@@ -4,7 +4,7 @@
   "account_id": "9c2426e139b0a61b52715d8dc00597a6",
   "target": {
     "worker_name": "readmd-site",
-    "canonical_url": "https://readmd.syminu.online/",
+    "canonical_url": "https://app.syminu.online/",
     "hosting_plan": "free",
     "strategy": "Workers static assets plus custom subdomain of an existing active zone"
   },

@@ -2125,6 +2125,30 @@ class CopyVariantsTest(unittest.TestCase):
             item for item in report["ranked"] if item["variant_id"] == "outcome-led__36"
         )["hard_failures"]))
 
+    def test_similarity_report_is_scoped_to_each_variant(self) -> None:
+        story = self.variant_story()
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        contaminated = variants[0]
+        clean = next(item for item in variants if item["body"] != contaminated["body"])
+        history = [{
+            **self.history_record("v1.0.0", "identity-led", "#22"),
+            "body_sha256": hashlib.sha256(contaminated["body"].encode("utf-8")).hexdigest(),
+            "body_trigrams": sorted(copy_variants.text_trigrams(contaminated["body"])),
+        }]
+
+        _, report = copy_variants.choose_variant(variants, history)
+        ranked = {item["variant_id"]: item for item in report["ranked"]}
+        contaminated_report = ranked[contaminated["variant_id"]]
+        clean_report = ranked[clean["variant_id"]]
+
+        self.assertEqual(contaminated_report["max_body_similarity"], 1.0)
+        self.assertEqual(contaminated_report["max_similarity_source"], "v1.0.0")
+        self.assertLess(clean_report["max_body_similarity"], 0.85)
+        self.assertEqual(clean_report["max_similarity_source"], "v1.0.0")
+        self.assertEqual(report["portfolio_max_body_similarity"], 1.0)
+        self.assertEqual(report["portfolio_max_similarity_source"], "v1.0.0")
+
     def test_originality_gate_rejects_reused_opening_and_closing(self) -> None:
         story = self.variant_story()
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
@@ -4079,6 +4103,51 @@ class WatcherTest(unittest.TestCase):
                 "selected variant is not the highest scoring eligible variant",
                 record["error"],
             )
+
+    def test_watcher_rechecks_originality_against_publication_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            metadata = json.loads(
+                (root / "package" / "metadata.json").read_text(encoding="utf-8")
+            )
+            fingerprints = watch_and_publish.text_fingerprints(metadata["body"])
+            ledger = root / "publication-ledger.jsonl"
+            prior = {
+                "release": "v1.0.0",
+                "title": "旧稿",
+                "body_sha256": fingerprints["body_sha256"],
+                "opening": fingerprints["opening"],
+                "closing": fingerprints["closing"],
+                "body_trigrams": sorted(watch_and_publish.text_trigrams(metadata["body"])),
+            }
+            ledger.write_text(json.dumps(prior, ensure_ascii=False) + "\n", encoding="utf-8")
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not click a near-duplicate body")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                    ledger_path=ledger,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("publisher originality contract failed", record["error"])
+            self.assertIn("body hash matches v1.0.0", record["error"])
+            self.assertIn("near-duplicate body (1.00) matches v1.0.0", record["error"])
+            self.assertIn("opening matches v1.0.0", record["error"])
+            self.assertIn("closing matches v1.0.0", record["error"])
 
     def test_watcher_blocks_copy_that_ignores_concern_intent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

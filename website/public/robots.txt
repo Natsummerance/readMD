@@ -22,4 +22,4 @@ Allow: /
 User-agent: Bingbot
 Allow: /
 
-Sitemap: https://readmd.syminu.online/sitemap.xml
+Sitemap: https://app.syminu.online/sitemap.xml
