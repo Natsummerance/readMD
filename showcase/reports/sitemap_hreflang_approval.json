@@ -33,7 +33,7 @@
       "status": "approved",
       "score": 9.79,
       "evidence": [
-        "The validator checks the namespace, exact URL inventory, all five hreflang values per URL, and the current lastmod date.",
+        "The validator checks the namespace, exact URL inventory, all five hreflang values per URL, and the Asia/Shanghai publication date.",
         "Release build validation and the Playwright smoke suite pass on the production build.",
         "No protected Apple assets, third-party tracking, credentials, or unpublished claims are introduced."
       ]

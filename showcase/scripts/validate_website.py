@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[2]
 SITE = ROOT / "website"
 PUBLIC = SITE / "public"
+SITE_TIMEZONE = datetime.timezone(datetime.timedelta(hours=8), name="Asia/Shanghai")
 
 LANGUAGES = {
     "en": {"path": PUBLIC / "index.html", "canonical": "https://app.syminu.online/", "full": PUBLIC / "llms-full.txt"},
@@ -232,7 +233,8 @@ def validate_robots_and_sitemap() -> list[str]:
             expected_href = base + section
             if alternates.get(lang) != expected_href:
                 errors.append(f"sitemap {url} has bad hreflang {lang}: {alternates.get(lang)}")
-        if not re.search(rf"<lastmod>{datetime.date.today().isoformat()}</lastmod>", entry):
+        current_date = datetime.datetime.now(SITE_TIMEZONE).date().isoformat()
+        if not re.search(rf"<lastmod>{current_date}</lastmod>", entry):
             errors.append(f"sitemap {url} lacks current lastmod")
     return errors
 
