@@ -3,7 +3,7 @@
 const { chromium } = require('../../ui-tests/node_modules/playwright');
 
 const baseUrl = process.argv[2] || 'http://127.0.0.1:4173';
-const routes = ['/', '/workflows/', '/zh-cn/', '/zh-cn/workflows/', '/zh-tw/', '/zh-tw/workflows/', '/ja/', '/ja/workflows/'];
+const routes = ['/', '/download/', '/workflows/', '/zh-cn/', '/zh-cn/download/', '/zh-cn/workflows/', '/zh-tw/', '/zh-tw/download/', '/zh-tw/workflows/', '/ja/', '/ja/download/', '/ja/workflows/'];
 const aiFiles = [
   '/llms.txt',
   '/llms-full.txt',
