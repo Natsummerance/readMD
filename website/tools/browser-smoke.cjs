@@ -54,6 +54,8 @@ const aiFiles = [
         robots: document.querySelector('meta[name="robots"]')?.content || '',
         stylesheetLoaded: [...document.styleSheets].some(sheet => (sheet.href || '').includes('/assets/site.css')),
         brokenImages: [...document.images].filter(image => !image.complete || image.naturalWidth === 0).length,
+        pictureCount: document.querySelectorAll('picture').length,
+        webpImages: [...document.querySelectorAll('picture img')].filter(image => image.currentSrc.endsWith('.webp')).length,
       }))),
     });
   }
@@ -77,6 +79,7 @@ const aiFiles = [
     if (item.robots !== 'index,follow,max-image-preview:large') failures.push(`${item.route}: bad robots directive`);
     if (!item.stylesheetLoaded) failures.push(`${item.route}: production stylesheet did not load`);
     if (item.brokenImages) failures.push(`${item.route}: ${item.brokenImages} broken images`);
+    if (item.pictureCount !== item.webpImages) failures.push(`${item.route}: expected every picture to select WebP`);
   }
   if (process.env.CHECK_HTTP_HEADERS === '1') {
     if (!security.csp.includes("script-src 'self'")) failures.push('missing script CSP');

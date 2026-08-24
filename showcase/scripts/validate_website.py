@@ -119,6 +119,10 @@ def audit_page(path: Path, canonical: str) -> list[str]:
             errors.append(f"{path}: eager hero image must declare fetchpriority=high")
     if "/assets/site.css" not in audit.stylesheets:
         errors.append(f"{path}: production stylesheet link is missing")
+    if content.count("<picture>") != len(audit.images):
+        errors.append(f"{path}: every product image must have a WebP picture fallback")
+    if ".webp" not in content:
+        errors.append(f"{path}: optimized WebP source is missing")
     if "https://github.com/Natsummerance/readMD/stargazers" not in content:
         errors.append(f"{path}: star call to action is missing")
     jsonld_match = re.search(r'(?s)<script type="application/ld\+json">(.*?)</script>', content)

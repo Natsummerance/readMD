@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "artifact": "website media optimization",
+  "reviewed_at": "2026-08-25T00:00:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "performance-review",
+      "status": "approved",
+      "score": 9.86,
+      "evidence": [
+        "overview-reader decreased from 446527 to 168042 bytes.",
+        "overview-editor decreased from 670344 to 286030 bytes.",
+        "convert-home decreased from 118212 to 50620 bytes."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "compatibility-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "Each image uses a picture element with typed WebP source and an unchanged PNG fallback.",
+        "Existing width, height, alt, loading, and fetchpriority contracts remain intact."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-compliance-review",
+      "status": "approved",
+      "score": 9.79,
+      "evidence": [
+        "No product claim, metric, or compatibility statement changed.",
+        "The screenshots remain the approved authentic captures rather than marketing replacements."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.83,
+    "participants": ["product", "performance", "compliance"],
+    "conditions": [
+      "Website validator must enforce one picture element per product image.",
+      "Release build must copy all three WebP assets.",
+      "Browser smoke must load all images without broken rendering."
+    ]
+  }
+}
