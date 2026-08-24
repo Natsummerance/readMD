@@ -6,6 +6,10 @@ const path = require('path');
 const CORPUS_SIZES = [1000, 10000, 50000];
 let corpusDir;
 
+function median(values) {
+  return [...values].sort((left, right) => left - right)[Math.floor(values.length / 2)];
+}
+
 function corpusDocument(lineCount) {
   const targetSection = Math.max(1, Math.floor((((lineCount - 1) / 2) * 0.75)));
   const lines = ['# Long document performance'];
@@ -49,6 +53,8 @@ test('long-document interaction stays bounded from 1k through 50k lines', async 
   test.setTimeout(90_000);
   const results = {};
 
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(() => typeof loadFile === 'function');
   for (const size of CORPUS_SIZES) {
     results[size] = await openCorpus(page, size);
     if (size === 1000) continue;
@@ -56,12 +62,18 @@ test('long-document interaction stays bounded from 1k through 50k lines', async 
     const targetSection = Math.ceil(size * 0.375);
     const expectedPage = Math.floor((targetSection - 1) / 300);
 
-    let started = Date.now();
-    await page.locator('#pg-next-btn').click();
-    await page.waitForFunction(() => state.pagination.currentPage === 1);
-    results[size].pageTurnMs = Date.now() - started;
+    const pageTurnSamples = [];
+    for (let sample = 0; sample < 5; sample += 1) {
+      const forward = sample % 2 === 0;
+      const expectedPage = forward ? 1 : 0;
+      const started = Date.now();
+      await page.locator(forward ? '#pg-next-btn' : '#pg-prev-btn').click();
+      await page.waitForFunction(expected => state.pagination.currentPage === expected, expectedPage);
+      pageTurnSamples.push(Date.now() - started);
+    }
+    results[size].pageTurnMs = median(pageTurnSamples);
 
-    started = Date.now();
+    let started = Date.now();
     await page.locator('#btn-search').click();
     await expect(page.locator('#search-input')).toBeVisible();
     await page.locator('#search-input').fill('READMD_PERF_UNIQUE_ANCHOR_7351');
