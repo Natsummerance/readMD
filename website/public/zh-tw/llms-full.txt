@@ -143,6 +143,12 @@ ReadMD採用MIT授權。原始碼和發行資產公開於 Natsummerance/readMD �
 
 在受支援的裝置上，ReadMD 在本機執行 OCR。Windows 使用 WinRT 辨識，macOS 使用 Apple Vision 離線辨識；剪貼簿工作流程可擷取貼上截圖中的文字。保持掃描件在本機，辨識後修正閱讀順序、標題、表格、圖註、人名和數字，再儲存 Markdown。辨識品質受掃描清晰度、語言、字體和版式複雜度影響。
 
+## 任務指南：學術寫作中的 BibTeX 引用
+
+專題回答：https://app.syminu.online/zh-tw/bibtex-citations/
+
+把 `.bib` 檔案和 Markdown 文件放在同一目錄，ReadMD 就能掃描相鄰文獻庫。使用 `[@vaswani2017attention]` 或 `@author2024` 這類內嵌引用鍵；匹配項目會渲染成引用徽章。可用時懸浮詳細資訊能顯示標題、作者、年份、期刊會議和 DOI，被引用項目也會彙整到文末參考文獻區。這個工作流程是文獻管理器的補充而不是替代；提交前仍要檢查項目、目標格式規則和最終參考文獻。
+
 ## 版本事實
 
 - 產品名稱：ReadMD

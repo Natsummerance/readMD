@@ -55,6 +55,10 @@ ANSWER_PAGES = {
     "zh-CN-ocr": {"path": PUBLIC / "zh-cn" / "scan-to-markdown" / "index.html", "canonical": "https://app.syminu.online/zh-cn/scan-to-markdown/"},
     "zh-TW-ocr": {"path": PUBLIC / "zh-tw" / "scan-to-markdown" / "index.html", "canonical": "https://app.syminu.online/zh-tw/scan-to-markdown/"},
     "ja-ocr": {"path": PUBLIC / "ja" / "scan-to-markdown" / "index.html", "canonical": "https://app.syminu.online/ja/scan-to-markdown/"},
+    "en-bibtex": {"path": PUBLIC / "bibtex-citations" / "index.html", "canonical": "https://app.syminu.online/bibtex-citations/"},
+    "zh-CN-bibtex": {"path": PUBLIC / "zh-cn" / "bibtex-citations" / "index.html", "canonical": "https://app.syminu.online/zh-cn/bibtex-citations/"},
+    "zh-TW-bibtex": {"path": PUBLIC / "zh-tw" / "bibtex-citations" / "index.html", "canonical": "https://app.syminu.online/zh-tw/bibtex-citations/"},
+    "ja-bibtex": {"path": PUBLIC / "ja" / "bibtex-citations" / "index.html", "canonical": "https://app.syminu.online/ja/bibtex-citations/"},
 }
 
 RELEASE_ASSETS = frozenset({
@@ -398,6 +402,7 @@ def validate_answer_internal_links() -> list[str]:
         "markdown-to-slides": [item for key, item in ANSWER_PAGES.items() if "slides" in key],
         "convert-to-markdown": [item for key, item in ANSWER_PAGES.items() if "conversion" in key],
         "scan-to-markdown": [item for key, item in ANSWER_PAGES.items() if "ocr" in key],
+        "bibtex-citations": [item for key, item in ANSWER_PAGES.items() if "bibtex" in key],
     }
     for language in LANGUAGES:
         for slug, contracts in topics.items():
