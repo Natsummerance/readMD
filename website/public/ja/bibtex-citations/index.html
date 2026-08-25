@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BibTeX 文献を管理 | ReadMD 学術執筆</title>
+  <meta name="description" content="BibTeX ファイルを Markdown と同じ場所に置き、inline 引用キーで執筆を続けます。引用 badge で題名、著者、年、DOI を確認し、提出前に文末の参考文献と指定書式を点検できます。">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ReadMD">
+  <meta property="og:title" content="BibTeX 文献を管理 | ReadMD 学術執筆">
+  <meta property="og:description" content="BibTeX 引用キー、文献カード、参考文献まとめのためのローカル執筆 workflow。">
+  <meta property="og:url" content="https://app.syminu.online/ja/bibtex-citations/">
+  <meta property="og:image" content="https://app.syminu.online/media/overview-editor.webp">
+  <meta property="og:image:type" content="image/webp">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="Markdown ソースと整形結果を並べる ReadMD エディター。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="BibTeX 文献を管理 | ReadMD 学術執筆">
+  <meta name="twitter:description" content="BibTeX キーで執筆し、文献情報を確認し、生成された参考文献を点検します。">
+  <meta name="twitter:image" content="https://app.syminu.online/media/overview-editor.webp">
+  <meta name="twitter:image:alt" content="Markdown ソースと整形結果を並べる ReadMD エディター。">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://app.syminu.online/ja/bibtex-citations/">
+  <link rel="alternate" hreflang="en" href="https://app.syminu.online/bibtex-citations/">
+  <link rel="alternate" hreflang="zh-CN" href="https://app.syminu.online/zh-cn/bibtex-citations/">
+  <link rel="alternate" hreflang="zh-TW" href="https://app.syminu.online/zh-tw/bibtex-citations/">
+  <link rel="alternate" hreflang="ja" href="https://app.syminu.online/ja/bibtex-citations/">
+  <link rel="alternate" hreflang="x-default" href="https://app.syminu.online/bibtex-citations/">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://app.syminu.online/ja/bibtex-citations/#webpage",
+        "url": "https://app.syminu.online/ja/bibtex-citations/",
+        "name": "BibTeX 文献を管理 | ReadMD 学術執筆",
+        "about": {"@id": "https://app.syminu.online/ja/bibtex-citations/#software"},
+        "primaryImageOfPage": "https://app.syminu.online/media/overview-editor.webp",
+        "dateModified": "2026-08-25",
+        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#citation-workflow p"]}
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://app.syminu.online/ja/bibtex-citations/#software",
+        "name": "ReadMD",
+        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+        "applicationCategory": "UtilitiesApplication",
+        "softwareVersion": "2.3.7-beta.3",
+        "dateModified": "2026-08-25",
+        "isAccessibleForFree": true,
+        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+        "featureList": "BibTeX 書誌データの走査、インライン引用バッジ、ホバー情報、コピーできる BibTeX、参考文献まとめ",
+        "author": {"@type": "Organization", "name": "ReadMD"}
+      },
+      {
+        "@type": "HowTo",
+        "@id": "https://app.syminu.online/ja/bibtex-citations/#howto",
+        "name": "Markdown で BibTeX 引用を管理する方法",
+        "step": [
+          {"@type": "HowToStep", "name": "書誌データを置く", "text": "`.bib` ファイルを Markdown 文書と同じ directory に置きます。"},
+          {"@type": "HowToStep", "name": "引用キーを書く", "text": "`[@vaswani2017attention]` や `@author2024` のような inline 形式で執筆します。"},
+          {"@type": "HowToStep", "name": "引用カードを確認する", "text": "利用できる題名、著者、年、掲載先、DOI を badge で確認します。"},
+          {"@type": "HowToStep", "name": "参考文献を点検する", "text": "提出前に文末にまとまった参考文献を確認します。"}
+        ]
+      }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://app.syminu.online/ja/bibtex-citations/#faq","mainEntity":[{"@type":"Question","name":"どの引用 syntax に対応しますか？","acceptedAnswer":{"@type":"Answer","text":"ReadMD は `[@vaswani2017attention]` や `@author2024` のような inline 形式に対応し、一致する項目があれば引用 badge として表示します。"}},{"@type":"Question","name":"BibTeX ファイルはどこに置きますか？","acceptedAnswer":{"@type":"Answer","text":"`.bib` ファイルを Markdown 文書と同じ directory に置くと、近くの書誌データを読み取れます。"}},{"@type":"Question","name":"引用カードには何を表示できますか？","acceptedAnswer":{"@type":"Answer","text":"項目があれば、hover card に論文題名、著者、年、掲載先、DOI link を出し、BibTeX 項目をコピーできます。"}},{"@type":"Question","name":"文献管理アプリの代わりになりますか？","acceptedAnswer":{"@type":"Answer","text":"なりません。既存の BibTeX library を執筆 workflow につなぐ機能です。提出前に項目、指定書式、最終参考文献を確認してください。"}}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://app.syminu.online/ja/bibtex-citations/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://app.syminu.online/ja/"},{"@type":"ListItem","position":2,"name":"BibTeX 引用","item":"https://app.syminu.online/ja/bibtex-citations/"}]}</script>
+</head>
+<body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/ja/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#citation-workflow">ワークフロー</a><a href="/ja/workflows/">他の回答</a><a href="https://github.com/Natsummerance/readMD">ソース</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/latest">ダウンロード</a></div>
+  </header>
+  <main>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/ja/">ホーム</a> / <a class="link-action" href="/ja/workflows/">ワークフロー</a> / <span>BibTeX 引用</span></nav>
+    <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
+      <h1 class="display-title">引用を原稿につながったまま保ちます。</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">BibTeX ファイルを Markdown の横に置き、inline キーで引用し、必要なときに文献情報を確認して、同じ文書内で参考文献を点検できます。</p>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="1440" height="900" alt="Markdown ソースと整形結果を並べる ReadMD エディター。" loading="eager" fetchpriority="high"></picture></figure>
+    </section>
+    <section id="citation-workflow" class="bg-[var(--color-surface)] py-16">
+      <div class="mx-auto max-w-5xl px-5">
+        <h2 class="text-2xl font-semibold tracking-tight">ローカル引用 workflow</h2>
+        <ol class="mt-8 grid gap-6 md:grid-cols-2">
+          <li class="answer-card"><h3 class="text-lg font-semibold">書誌データを隣に置く</h3><p>`.bib` ファイルを Markdown と同じ folder に保存すると、ReadMD が自動的に読み取ります。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">引用キーを書く</h3><p>`[@vaswani2017attention]` や `@author2024` の形式で執筆します。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">カードを確認</h3><p>引用 badge を hover し、利用できる題名、著者、年、掲載先、DOI を確認します。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">参考文献を点検</h3><p>文末の参考文献を確認し、修正や再利用が必要な BibTeX 項目をコピーします。</p></li>
+        </ol>
+      </div>
+    </section>
+    <section class="mx-auto max-w-5xl px-5 py-16">
+      <h2 class="text-2xl font-semibold tracking-tight">学術引用の質問</h2>
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <article class="answer-card"><h3>どの引用 syntax に対応しますか？</h3><p>ReadMD は `[@vaswani2017attention]` や `@author2024` のような inline 形式に対応し、一致する項目があれば引用 badge として表示します。</p></article>
+        <article class="answer-card"><h3>BibTeX ファイルはどこに置きますか？</h3><p>`.bib` ファイルを Markdown 文書と同じ directory に置くと、近くの書誌データを読み取れます。</p></article>
+        <article class="answer-card"><h3>引用カードには何を表示できますか？</h3><p>項目があれば、hover card に論文題名、著者、年、掲載先、DOI link を出し、BibTeX 項目をコピーできます。</p></article>
+        <article class="answer-card"><h3>文献管理アプリの代わりになりますか？</h3><p>なりません。既存の BibTeX library を執筆 workflow につなぐ機能です。提出前に項目、指定書式、最終参考文献を確認してください。</p></article>
+      </div>
+      <div class="mt-10 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/ja/large-markdown-files/">巨大な Markdown を開く</a><a class="link-action" href="/ja/markdown-to-slides/">PowerPoint を使わず発表</a><a class="link-action" href="/ja/convert-to-markdown/">文書を Markdown へ変換</a><a class="link-action" href="/ja/scan-to-markdown/">スキャン文字を抽出</a></div>
+      <div class="mt-8 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">ReadMD を入手</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">GitHub で Star</a></div>
+    </section>
+  </main>
+  <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD. MIT License.</p><nav class="flex flex-wrap gap-5"><a href="/ja/llms.txt">llms.txt</a><a href="/ja/llms-full.txt">AI 用全文</a><a href="https://github.com/Natsummerance/readMD/stargazers">GitHub Star</a></nav></div></footer>
+</body>
+</html>

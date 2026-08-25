@@ -149,6 +149,12 @@ Dedicated answer: https://app.syminu.online/scan-to-markdown/
 
 On supported devices, ReadMD performs OCR locally. Windows uses WinRT recognition and macOS uses Apple Vision offline recognition; a clipboard workflow can extract text from a pasted screenshot. Keep the scan local, run recognition, then correct reading order, headings, tables, captions, names, and numbers before saving Markdown. Recognition quality depends on scan clarity, language, fonts, and layout complexity.
 
+## Task Guide: BibTeX Citations In Academic Writing
+
+Dedicated answer: https://app.syminu.online/bibtex-citations/
+
+Place a `.bib` file in the same directory as the Markdown document so ReadMD can scan the neighboring bibliography. Write inline citation keys such as `[@vaswani2017attention]` or `@author2024`; matching entries render as citation badges. Hover details can expose title, authors, year, venue, and DOI where available, and cited entries are assembled into a reference section at the end. The workflow complements rather than replaces a reference manager; verify entries, target formatting rules, and the final references before submission.
+
 ## Release Facts
 
 - Product name: ReadMD

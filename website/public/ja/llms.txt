@@ -8,6 +8,7 @@
 - [Markdown 発表](https://app.syminu.online/ja/markdown-to-slides/): 同じソースから見出し、コード、数式、図、表を保ったまま発表します。
 - [Markdown 変換](https://app.syminu.online/ja/convert-to-markdown/): DOCX、PPTX、XLSX、PDF、HTML、LaTeX をローカルで変換し、構造を確認します。
 - [スキャンから Markdown](https://app.syminu.online/ja/scan-to-markdown/): Windows と macOS のローカル OCR でスキャン頁やスクリーンショットから文字を抽出します。
+- [BibTeX 引用](https://app.syminu.online/ja/bibtex-citations/): 同じ場所の `.bib` library を inline 引用 badge、文献カード、コピー可能な BibTeX、参考文献まとめに接続します。
 - [ダウンロードページ](https://app.syminu.online/ja/download/): Windows、macOS、Linux、中国系 OS、エディター、MCP パッケージの入手路径。
 - [日本語全文コーパス](https://app.syminu.online/ja/llms-full.txt): 長文の改ページ、非破壊修復、変換、オフライン作業、リリース事実を説明します。
 - [英語インデックス](https://app.syminu.online/llms.txt): 多言語入口、英語コーパス、公式な製品情報。
