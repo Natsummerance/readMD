@@ -34,12 +34,12 @@
 
 ## 直接ダウンロード
 
-[Windows インストーラー](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.3.exe) ·
-[Windows ポータブル版](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.3.exe) ·
-[macOS Apple Silicon](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.3.zip) ·
-[macOS Intel](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.3.zip) ·
-[Linux AppImage](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage) ·
-[UOS / 麒麟 Deb](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_amd64.deb) ·
+[Windows インストーラー](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.4.exe) ·
+[Windows ポータブル版](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.4.exe) ·
+[macOS Apple Silicon](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.4.zip) ·
+[macOS Intel](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.4.zip) ·
+[Linux AppImage](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage) ·
+[UOS / 麒麟 Deb](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_amd64.deb) ·
 [SHA-256](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt)
 
 ## 3 ステップで開始
@@ -64,15 +64,15 @@ ReadMD は、長期間保管する資料で起こりやすい問題に取り組�
 
 | プラットフォーム | アーキテクチャ / 形式 | 直接ダウンロードリンク (GitHub Release) | 概要 |
 | :--- | :--- | :--- | :--- |
-| 🪟 **Windows** | x64 (インストーラー) | [⬇️ **ReadMDSetup-v2.3.7-beta.3.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.3.exe) | `.md` 関連付けを自動登録するセットアップ版 |
-| 💼 **Windows** | x64 (ポータブル版) | [⬇️ **ReadMD-portable-v2.3.7-beta.3.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.3.exe) | インストール不要の単一実行ファイル |
-| 🍏 **macOS** | Apple Silicon (M1〜M4) | [⬇️ **ReadMD-macos-arm64-v2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.3.zip) | Apple Silicon Mac 向けネイティブビルド (Vision OCR 内蔵) |
-| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.3.zip) | Intel Mac 向けネイティブビルド (Vision OCR 内蔵) |
-| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage) | インストール不要の Linux AppImage パッケージ |
-| 🇨🇳 **Linux / 国産 OS** | Debian / Ubuntu / UOS / 麒麟 | [⬇️ **readmd_2.3.7-beta.3_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_amd64.deb) | Deb ネイティブインストールパッケージ |
-| 📱 **HarmonyOS** | HarmonyOS NEXT (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.7-beta.3.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.3.hap) | 鴻蒙ネイティブアプリパッケージ (.hap) |
-| 🧩 **VSCode 拡張** | VSIX パッケージ | [⬇️ **readmd-vscode-2.3.7-beta.3.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.3.vsix) | オフラインインストール用 VSIX 拡張機能 |
-| 🤖 **MCP Server** | FastMCP stdio パッケージ | [⬇️ **readmd-mcp-server-2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.3.zip) | Claude Desktop / Cursor 連携用 FastMCP パッケージ |
+| 🪟 **Windows** | x64 (インストーラー) | [⬇️ **ReadMDSetup-v2.3.7-beta.4.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.4.exe) | `.md` 関連付けを自動登録するセットアップ版 |
+| 💼 **Windows** | x64 (ポータブル版) | [⬇️ **ReadMD-portable-v2.3.7-beta.4.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.4.exe) | インストール不要の単一実行ファイル |
+| 🍏 **macOS** | Apple Silicon (M1〜M4) | [⬇️ **ReadMD-macos-arm64-v2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.4.zip) | Apple Silicon Mac 向けネイティブビルド (Vision OCR 内蔵) |
+| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.4.zip) | Intel Mac 向けネイティブビルド (Vision OCR 内蔵) |
+| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage) | インストール不要の Linux AppImage パッケージ |
+| 🇨🇳 **Linux / 国産 OS** | Debian / Ubuntu / UOS / 麒麟 | [⬇️ **readmd_2.3.7-beta.4_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_amd64.deb) | Deb ネイティブインストールパッケージ |
+| 📱 **HarmonyOS** | HarmonyOS NEXT (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.7-beta.4.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.4.hap) | 鴻蒙ネイティブアプリパッケージ (.hap) |
+| 🧩 **VSCode 拡張** | VSIX パッケージ | [⬇️ **readmd-vscode-2.3.7-beta.4.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.4.vsix) | オフラインインストール用 VSIX 拡張機能 |
+| 🤖 **MCP Server** | FastMCP stdio パッケージ | [⬇️ **readmd-mcp-server-2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.4.zip) | Claude Desktop / Cursor 連携用 FastMCP パッケージ |
 | 🔐 **チェックサム** | SHA-256 リスト | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | 配布ファイルの整合性検証用チェックサム |
 
 ---

@@ -1596,7 +1596,7 @@ test('rendered Markdown cannot inject active content or privileged URLs', async 
 test('core workflow controls satisfy accessibility contracts', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => typeof renderTabsBar === 'function');
-  const buildVersion = '2.3.7-beta.3';
+  const buildVersion = '2.3.7-beta.4';
   await expect(page.locator('#status-version')).toHaveText(`v${buildVersion}`);
   await expect(page.locator('#menu-version-label')).toHaveText(`当前版本 v${buildVersion}`);
 

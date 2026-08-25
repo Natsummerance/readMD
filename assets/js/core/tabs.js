@@ -5,6 +5,8 @@
 
 /* ---------------- 多标签页系统 (Multi-Tab Management) ---------------- */
 
+let tabRenderEpoch = 0;
+
 function getActiveTab() {
   return state.tabs.find(t => t.id === state.activeTabId) || null;
 }
@@ -238,6 +240,20 @@ function renderTabsBar() {
     overflowWrap.classList.toggle('hidden', !isOverflow);
   }
 
+  const revealActiveTab = (container) => {
+    const active = container?.querySelector('.tab-item.active');
+    if (!active) return;
+    const left = active.offsetLeft;
+    const right = left + active.offsetWidth;
+    if (left < container.scrollLeft + 8) {
+      container.scrollLeft = Math.max(0, left - 8);
+    } else if (right > container.scrollLeft + container.clientWidth - 8) {
+      container.scrollLeft = right - container.clientWidth + 8;
+    }
+  };
+  revealActiveTab(bar);
+  revealActiveTab(secBar);
+
   if (secBar) {
     if (window.innerWidth < 650 && state.tabs.length > 0) {
       secBar.innerHTML = '';
@@ -409,8 +425,10 @@ function closeTabContextMenu({ restoreFocus = false } = {}) {
 async function renderActiveTab({ restoreScroll = false } = {}) {
   const nextTab = getActiveTab();
   if (!nextTab) return;
+  const renderEpoch = ++tabRenderEpoch;
   setFixes(nextTab.fixes || [], nextTab.stats || {});
   await renderContent(nextTab.content, nextTab.title || nextTab.name);
+  if (renderEpoch !== tabRenderEpoch) return;
   document.title = (nextTab.title || nextTab.name) + ' - ReadMD';
   setFileTitle(nextTab.title || nextTab.name, !nextTab.isVirtual && hasPy, nextTab.path);
   if (restoreScroll && nextTab.scrollPos) {
@@ -489,6 +507,7 @@ async function switchTab(tabId) {
   exitEdit();
   state.activeTabId = tabId;
   syncStateFromActiveTab();
+  renderTabsBar();
   const nextTabState = getActiveTab();
   if (nextTabState?.externalChanged && nextTabState.path && !nextTabState.isDirty) {
     nextTabState.externalChanged = false;

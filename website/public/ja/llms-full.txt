@@ -5,7 +5,7 @@
 
 ReadMD は技術文書、研究ノート、講義資料、仕様書、書籍などを Markdown で管理する人向けです。中心原則は、Markdown ソースが常に正となることです。表示のための構文修復はあっても、利用者が明示的に保存しない限り元ファイルは上書きされません。
 
-プロジェクトは MIT ライセンスで https://github.com/Natsummerance/readMD に公開されています。このサイトが参照する公開版は 2.3.7-beta.3 です。リリースファイルと SHA256 チェックサムは GitHub Releases で配布されます。
+プロジェクトは MIT ライセンスで https://github.com/Natsummerance/readMD に公開されています。このサイトが参照する公開版は 2.3.7-beta.4 です。リリースファイルと SHA256 チェックサムは GitHub Releases で配布されます。
 
 ## 解決する問題
 
@@ -123,7 +123,7 @@ ReadMD は MIT ライセンスです。ソースコードとリリース資産�
 
 - 製品名: ReadMD
 - リポジトリ: https://github.com/Natsummerance/readMD
-- 本サイトのバージョン: 2.3.7-beta.3
+- 本サイトのバージョン: 2.3.7-beta.4
 - ライセンス: MIT
 - サイト言語: 英語、簡体字中国語、繁体字中国語、日本語
 - アプリ言語数: 46
