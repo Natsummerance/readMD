@@ -26,6 +26,7 @@ build_story = importlib.import_module("build_story")
 audit_copy = importlib.import_module("audit_copy")
 content_memory = importlib.import_module("content_memory")
 import_feedback_workbook = importlib.import_module("import_feedback_workbook")
+import_comment_capture = importlib.import_module("import_comment_capture")
 copy_variants = importlib.import_module("copy_variants")
 copy_profiles = importlib.import_module("copy_profiles")
 export_wechat = importlib.import_module("export_wechat")
@@ -3723,6 +3724,69 @@ class ContentMemoryTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "missing columns"):
                 import_feedback_workbook.read_creator_workbook(workbook)
+
+    def test_comment_capture_anonymizes_public_page_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ledger = root / "publication-ledger.jsonl"
+            capture = root / "note_detail.json"
+            content_memory.append_record(ledger, self.record())
+            top_text = "放映功能太好用了，组会可以直接讲。"
+            reply_text = "希望支持更多代码高亮主题。"
+            capture.write_text(json.dumps({
+                "success": True,
+                "note_id": "note-1",
+                "title": self.record()["title"],
+                "comments": [{
+                    "id": "comment-1",
+                    "content": top_text,
+                    "like_count": 7,
+                    "user": {"user_id": "author-1", "nickname": "visible-name"},
+                    "sub_comments": [{"id": "reply-1", "content": reply_text, "like_count": "2"}],
+                }],
+            }, ensure_ascii=False), encoding="utf-8")
+
+            result = import_comment_capture.import_capture(
+                ledger,
+                capture,
+                release="v1.0.0",
+                captured_at="2026-08-25T10:00:00+08:00",
+            )
+            records = content_memory.load_records(ledger)
+            persisted = ledger.read_text(encoding="utf-8")
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["imported_count"], 2)
+        self.assertEqual(result["unique_count"], 2)
+        insights = records[0]["comment_insights"]
+        self.assertEqual(insights["evidence_hashes"][0], content_memory._comment_hash(top_text))
+        self.assertIn("presentation", insights["observations"][content_memory._comment_hash(top_text)]["themes"])
+        self.assertNotIn("visible-name", json.dumps(result, ensure_ascii=False))
+        self.assertNotIn(top_text, persisted)
+        self.assertNotIn(reply_text, persisted)
+        self.assertNotIn("author-1", persisted)
+
+    def test_comment_capture_rejects_identity_conflict_without_import(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ledger = root / "publication-ledger.jsonl"
+            capture = root / "capture.json"
+            content_memory.append_record(ledger, {**self.record(), "note_id": "ledger-note"})
+            capture.write_text(json.dumps({
+                "note_id": "different-note",
+                "comments": [{"content": "放映很好"}],
+            }, ensure_ascii=False), encoding="utf-8")
+            before = ledger.read_text(encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "note ID conflicts"):
+                import_comment_capture.import_capture(
+                    ledger,
+                    capture,
+                    release="v1.0.0",
+                    captured_at="2026-08-25T10:00:00+08:00",
+                )
+
+            self.assertEqual(ledger.read_text(encoding="utf-8"), before)
 
     def test_two_release_formula_reaches_medium_confidence(self) -> None:
         records = [
