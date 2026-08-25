@@ -30,6 +30,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Sync Pages custom domain
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          expected="$(tr -d '\r\n' < website/public/CNAME)"
+          current="$(gh api "repos/${{ github.repository }}/pages" --jq '.cname // empty')"
+          if [ "$current" != "$expected" ]; then
+            printf '{"cname":"%s"}' "$expected" |
+              gh api --method PATCH "repos/${{ github.repository }}/pages" --input - >/dev/null
+          fi
+          actual="$(gh api "repos/${{ github.repository }}/pages" --jq '.cname // empty')"
+          test "$actual" = "$expected"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -54,6 +66,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
-      - id: publish
         uses: actions/deploy-pages@v4
