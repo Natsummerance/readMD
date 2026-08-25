@@ -10,7 +10,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: release-sync-${{ github.event.workflow_run.head_sha }}
+  group: release-sync
   cancel-in-progress: false
 
 jobs:
@@ -27,6 +27,17 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
 
+      - name: Skip stale candidates
+        env:
+          EXPECTED_COMMIT: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          current="$(git ls-remote origin refs/heads/main | cut -f1)"
+          if [ "$EXPECTED_COMMIT" != "$current" ]; then
+            echo "A newer main commit is available; skipping $EXPECTED_COMMIT"
+            exit 0
+          fi
+
       - uses: actions/download-artifact@v4
         with:
           pattern: rc-*
@@ -35,74 +46,19 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify and hash release candidates
+      - name: Stage and switch existing prerelease assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
           tag="v$(tr -d '\n' < VERSION)"
-          python - <<'PY'
-          import hashlib
-          from pathlib import Path
-
-          root = Path("release-assets")
-          required = {
-              "ReadMDSetup-v2.3.7-beta.3.exe",
-              "ReadMD-portable-v2.3.7-beta.3.exe",
-              "readmd-vscode-2.3.7-beta.3.vsix",
-              "readmd-mcp-server-2.3.7-beta.3.zip",
-              "ReadMD-macos-x64-v2.3.7-beta.3.zip",
-              "ReadMD-macos-arm64-v2.3.7-beta.3.zip",
-              "ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage",
-              "readmd_2.3.7-beta.3_amd64.deb",
-              "ReadMD-linux-aarch64-v2.3.7-beta.3.AppImage",
-              "readmd_2.3.7-beta.3_arm64.deb",
-          }
-          files = {path.name: path for path in root.iterdir() if path.is_file()}
-          if set(files) != required:
-              raise SystemExit(f"asset mismatch: missing={sorted(required-set(files))}, extra={sorted(set(files)-required)}")
-          for path in files.values():
-              digest = hashlib.sha256(path.read_bytes()).hexdigest()
-              (root / f"{digest}.sha256").write_text(f"{digest}  {path.name}\n", encoding="utf-8")
-          PY
-          find release-assets -name '*.sha256' -delete
-          rm -f release-assets/SHA256SUMS.txt
-          (
-            cd release-assets
-            files=(*)
-            sha256sum "${files[@]}" > SHA256SUMS.txt
-          )
-          gh release view "$tag" >/dev/null
-
-      - name: Update existing prerelease assets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          set -euo pipefail
-          tag="v$(tr -d '\n' < VERSION)"
-          export tag
+          python tools/release_asset_sync.py \
+            --assets-dir release-assets \
+            --tag "v$(tr -d '\n' < VERSION)" \
+            --commit "${{ github.event.workflow_run.head_sha }}" \
+            --repo "$GH_REPO"
           gh release edit "$tag" --notes-file release/release_notes.md
-          find release-assets -maxdepth 1 -type f -print0 |
-            xargs -0 gh release upload "$tag" --clobber
-          python - <<'PY'
-          import json
-          import os
-          import subprocess
-          from pathlib import Path
-
-          expected = {path.name for path in Path("release-assets").iterdir() if path.is_file()}
-          version = Path("VERSION").read_text(encoding="utf-8").strip()
-          payload = json.loads(subprocess.check_output([
-              "gh", "api", f"repos/{os.environ['GH_REPO']}/releases/tags/v{version}"
-          ]))
-          for asset in payload.get("assets", []):
-              if asset["name"] not in expected:
-                  subprocess.run([
-                      "gh", "api", "--method", "DELETE", asset["url"]
-                  ], check=True)
-          PY
 
       - name: Summarize sync
         run: |

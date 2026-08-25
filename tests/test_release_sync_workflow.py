@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Main-branch builds must refresh beta assets without creating releases."""
+"""Workflow contract for staged main-branch release synchronization."""
 
 import unittest
 import yaml
@@ -17,36 +17,25 @@ class ReleaseSyncWorkflowTest(unittest.TestCase):
 
     def test_only_follows_successful_same_repo_main_builds(self):
         trigger = self.workflow[True]["workflow_run"]
-        self.assertEqual(trigger["workflows"], ["Test, package and release ReadMD"])
         job_if = self.workflow["jobs"]["update-beta-release"]["if"]
-        for condition in ("success", "head_branch == 'main'", "head_repository.full_name == github.repository"):
+        self.assertEqual(trigger["workflows"], ["Test, package and release ReadMD"])
+        for condition in (
+            "success",
+            "head_branch == 'main'",
+            "head_repository.full_name == github.repository",
+        ):
             self.assertIn(condition, job_if)
 
-    def test_updates_existing_release_without_creating_one(self):
+    def test_serializes_all_release_syncs(self):
+        concurrency = self.workflow["concurrency"]
+        self.assertEqual(concurrency["group"], "release-sync")
+        self.assertFalse(concurrency["cancel-in-progress"])
+
+    def test_uses_staged_sync_script_without_creating_release(self):
         raw = self.raw
-        self.assertIn("gh release view", raw)
-        self.assertIn("export tag", raw)
-        self.assertIn("gh release upload \"$tag\" --clobber", raw)
-        self.assertNotIn("gh release create", raw)
+        self.assertIn("python tools/release_asset_sync.py", raw)
+        self.assertIn("--assets-dir release-assets", raw)
+        self.assertIn('--commit "${{ github.event.workflow_run.head_sha }}"', raw)
         self.assertIn("gh release edit \"$tag\" --notes-file release/release_notes.md", raw)
-        self.assertIn("releases/tags/v{version}", raw)
-        self.assertIn("--method\", \"DELETE\"", raw.replace("['", '["'))
-
-    def test_downloads_exact_build_and_rebuilds_checksums(self):
-        steps = self.workflow["jobs"]["update-beta-release"]["steps"]
-        download = next(
-            step for step in steps
-            if step.get("uses") == "actions/download-artifact@v4"
-        )
-        self.assertEqual(download["with"]["pattern"], "rc-*")
-        self.assertEqual(download["with"]["run-id"], "${{ github.event.workflow_run.id }}")
-        self.assertTrue(download["with"]["merge-multiple"])
-        self.assertIn("SHA256SUMS.txt", raw := self.raw)
-        self.assertIn('files=(*)', raw)
-        self.assertIn('sha256sum "${files[@]}"', raw)
-        self.assertIn("cd release-assets", raw)
-        self.assertIn('Path("VERSION").read_text(encoding="utf-8").strip()', raw)
-
-
-if __name__ == "__main__":
-    unittest.main()
+        self.assertNotIn("gh release create", raw)
+        self.assertNotIn("gh release upload", raw)
