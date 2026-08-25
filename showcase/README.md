@@ -64,6 +64,12 @@ CI 还会生成 `content-package.zip.manifest.json` 传输清单，逐个记录�
 python showcase/scripts/watch_and_publish.py
 ```
 
+多个历史修复包在进入发布队列前，还必须作为一批校验。批次校验会复核 ZIP/manifest 哈希、绿色报告、语义图与原始证据链、版本/标题唯一性和跨包正文相似度，并生成免脚本的人工审查页：
+
+```powershell
+python showcase/scripts/validate_repair_batch.py
+```
+
 补录历史 Release 时，可用 `SHOWCASE_SHOT_OVERLAY` 只放宽某个版本尚不存在的 UI 断言（例如旧版放映窗口没有悬浮工具栏），镜头 ID、输出文件和证据契约保持不变。已确认 Edge CDP 就绪后，追加 `--reuse-edge` 可让同一批发布复用会话，避免每篇都重启浏览器。
 
 watcher 会把 CI 产出的 `content-package.zip` 解到 `showcase/publish-work/`，重写图片路径后调用 `xhs-publish`。入队前会复核结构 QA、语义评分、变体原创性、热门机制、评审面板和微信适配层。状态保存在 `showcase/publish-state.json`；同一 release 只会发布一次。watcher 会同时检查发布状态和反馈账本，因此即使状态文件丢失，也不会重复发布已记录的 release。失败最多自动重试两次。

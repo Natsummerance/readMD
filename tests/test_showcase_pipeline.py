@@ -40,6 +40,7 @@ style_audit = importlib.import_module("style_audit")
 build_package_module = importlib.import_module("build_package")
 validate_package = importlib.import_module("validate_package")
 watch_and_publish = importlib.import_module("watch_and_publish")
+validate_repair_batch = importlib.import_module("validate_repair_batch")
 write_copy = importlib.import_module("write_copy")
 
 
@@ -6167,6 +6168,136 @@ class WatcherTest(unittest.TestCase):
         self.assertFalse(published)
         self.assertEqual(record["status"], "retrying")
         self.assertIn("selected copy_frame mismatch", record["error"])
+
+
+class RepairBatchTest(unittest.TestCase):
+    @staticmethod
+    def make_repair_zip(root: Path, release: str, title: str, body: str) -> Path:
+        topics = ["Markdown", "PPT", "演讲", "程序员", "效率工具"]
+        raw_name = "raw/overview-reader.png"
+        image_names = ["xhs-01-cover.jpg", "xhs-02-overview.jpg", "xhs-03-detail.jpg", "xhs-04-summary.jpg"]
+        image_name = image_names[1]
+        (root / "images").mkdir(parents=True, exist_ok=True)
+        (root / "raw").mkdir(parents=True, exist_ok=True)
+        images = {name: root / "images" / name for name in image_names}
+        raw = root / raw_name
+        for path in images.values():
+            Image.effect_noise((1080, 1440), 20).convert("RGB").save(path, "JPEG", quality=90)
+        Image.effect_noise((960, 720), 22).convert("RGB").save(raw, "PNG")
+        files = {
+            "story.json": json.dumps({
+                "release": release,
+                "version_state": "prerelease",
+                "selected_shots": ["overview.reader"],
+                "card_plan": [
+                    {"file": "xhs-01-cover.jpg", "role": "cover", "shot_id": None},
+                    {"file": image_name, "role": "pure_ui_hero", "shot_id": "overview.reader"},
+                    {"file": image_names[2], "role": "annotated_ui", "shot_id": None},
+                    {"file": image_names[3], "role": "summary", "shot_id": None},
+                ],
+            }, ensure_ascii=False),
+            "metadata.json": json.dumps({
+                "version_state": "prerelease",
+                "title": title,
+                "body": body,
+                "topics": topics,
+                "images": image_names,
+            }, ensure_ascii=False),
+            "title.txt": title,
+            "body.txt": body,
+            "topics.txt": "\n".join(topics),
+            "qa.json": json.dumps({"ok": True}),
+            "copy-review.json": json.dumps({"ok": True}),
+            "pattern-audit.json": json.dumps({"ok": True}),
+            "dashboard-qa.json": json.dumps({"ok": True}),
+            "composition.json": json.dumps({"cards": ([{
+                "file": image_name,
+                "sha256": hashlib.sha256(images[image_name].read_bytes()).hexdigest(),
+            }] + [{
+                "file": name,
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            } for name, path in images.items() if name != image_name])}),
+            "raw/capture.json": json.dumps({
+                "release": release,
+                "shots": [{
+                    "shot_id": "overview.reader",
+                    "file": raw_name,
+                    "sha256": hashlib.sha256(raw.read_bytes()).hexdigest(),
+                    "capture": {"viewport": "960x720", "scale": 1},
+                }],
+            }),
+            **{f"images/{name}": path.read_bytes() for name, path in images.items()},
+            raw_name: raw.read_bytes(),
+            "wechat/wechat-qa.json": json.dumps({"ok": True}),
+        }
+        zip_path = root / f"{release}.zip"
+        with zipfile.ZipFile(zip_path, "w") as archive:
+            for name, payload in files.items():
+                data = payload.encode("utf-8") if isinstance(payload, str) else payload
+                archive.writestr(name, data)
+        manifest = {
+            "schema_version": 1,
+            "archive_sha256": hashlib.sha256(zip_path.read_bytes()).hexdigest(),
+            "files": {
+                name: {
+                    "bytes": len(data),
+                    "sha256": hashlib.sha256(data).hexdigest(),
+                }
+                for name, payload in files.items()
+                for data in [payload.encode("utf-8") if isinstance(payload, str) else payload]
+            },
+        }
+        manifest_path = Path(str(zip_path) + ".manifest.json")
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        return zip_path
+
+    def test_validates_distinct_paused_repair_batch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = self.make_repair_zip(root, "v1.0.0", "第一篇标题", "第一篇正文，包含具体工作流和提问。" * 3)
+            second = self.make_repair_zip(root, "v1.0.1", "第二篇标题", "第二篇正文，聚焦学术排版和现场放映。" * 3)
+            batch = root / "batch.json"
+            batch.write_text(json.dumps({
+                "schema_version": 1,
+                "status": "paused_for_operator_review",
+                "packages": [
+                    {"release": "v1.0.0", "title": "第一篇标题", "package": str(first.relative_to(root)),
+                     "package_sha256": hashlib.sha256(first.read_bytes()).hexdigest(),
+                     "manifest_sha256": hashlib.sha256(Path(str(first) + ".manifest.json").read_bytes()).hexdigest()},
+                    {"release": "v1.0.1", "title": "第二篇标题", "package": str(second.relative_to(root)),
+                     "package_sha256": hashlib.sha256(second.read_bytes()).hexdigest(),
+                     "manifest_sha256": hashlib.sha256(Path(str(second) + ".manifest.json").read_bytes()).hexdigest()},
+                ],
+            }, ensure_ascii=False), encoding="utf-8")
+
+            report = validate_repair_batch.validate_batch(batch, root=root)
+
+        self.assertTrue(report["ok"], report["errors"])
+
+    def test_rejects_cross_package_duplicate_body(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            body = "同一份正文重复用于两个发布包。" * 8
+            first = self.make_repair_zip(root, "v1.0.0", "第一篇标题", body)
+            second = self.make_repair_zip(root, "v1.0.1", "第二篇标题", body)
+            batch = root / "batch.json"
+            batch.write_text(json.dumps({
+                "schema_version": 1,
+                "status": "paused_for_operator_review",
+                "packages": [
+                    {"release": "v1.0.0", "title": "第一篇标题", "package": str(first.relative_to(root)),
+                     "package_sha256": hashlib.sha256(first.read_bytes()).hexdigest(),
+                     "manifest_sha256": hashlib.sha256(Path(str(first) + ".manifest.json").read_bytes()).hexdigest()},
+                    {"release": "v1.0.1", "title": "第二篇标题", "package": str(second.relative_to(root)),
+                     "package_sha256": hashlib.sha256(second.read_bytes()).hexdigest(),
+                     "manifest_sha256": hashlib.sha256(Path(str(second) + ".manifest.json").read_bytes()).hexdigest()},
+                ],
+            }, ensure_ascii=False), encoding="utf-8")
+
+            report = validate_repair_batch.validate_batch(batch, root=root)
+
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("body similarity" in error for error in report["errors"]))
 
 
 if __name__ == "__main__":

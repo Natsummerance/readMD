@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "ok": true,
+  "batch": "T:\\Programming\\Project\\codex\\creator\\readmd\\showcase\\reports\\v2.3.7-beta-repair-packages.json",
+  "status": "paused_for_operator_review",
+  "package_count": 3,
+  "packages": [
+    {
+      "release": "v2.3.7-beta.1",
+      "errors": [],
+      "warnings": [],
+      "title": "不用重做PPT，Markdown直接放映",
+      "topics": [
+        "Markdown",
+        "PPT",
+        "演讲",
+        "程序员",
+        "效率工具"
+      ],
+      "semantic_image_count": 8,
+      "raw_shot_count": 8,
+      "body": "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。\n\n先说清楚：这是 ReadMD v2.3.7-beta.1 预览版，文件仍然保留在你自己的电脑里。\n\n这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。\n\n放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。\n\n它没有脱离原来的工作流：科研图表留在文档里、改稿时回到同屏预览。\n\n下面的画面来自当前版本真实运行状态，不是概念图。\n\n还有一些不适合单独拍图的底层修复也在这版里，比如顶栏交互升级与禅模式 (Zen Mode) 全局常驻；侧边「更多」菜单重构与文档状态动态联动。它们不抢画面，但会让日常使用更稳。\n\n收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。\n\n渲染阶段只处理显示结果，不会替你改写原始 Markdown 文件。\n\n如果你常处理课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。\n\n安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 Natsummerance/readMD，进仓库后点 Releases 就能找到对应平台。\n\n你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。"
+    },
+    {
+      "release": "v2.3.7-beta.2",
+      "errors": [],
+      "warnings": [],
+      "title": "Markdown写完，居然能直接上台",
+      "topics": [
+        "Markdown",
+        "PPT",
+        "演讲",
+        "程序员",
+        "效率工具"
+      ],
+      "semantic_image_count": 8,
+      "raw_shot_count": 8,
+      "body": "如果你要把笔记变成课程讲义、组会报告或论文汇报，就知道重做 PPT 有多烦。ReadMD 把这一步砍掉：Markdown 直接放映。\n\n先说清楚：这是 ReadMD v2.3.7-beta.2 预览版，文件仍然保留在你自己的电脑里。\n\n这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。\n\n放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。\n\n它没有脱离原来的工作流：代码示例可以就地验证、科研图表留在文档里。\n\n下面的画面来自当前版本真实运行状态，不是概念图。\n\n还有一些不适合单独拍图的底层修复也在这版里，比如禅模式（Zen Mode）关闭交互重构（仿 Windows 自动隐藏任务栏）；样式定制（Custom Styles Modal）前端风格与功能重构。它们不抢画面，但会让日常使用更稳。\n\n收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。\n\n如果你常处理课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。\n\n安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 Natsummerance/readMD，进仓库后点 Releases 就能找到对应平台。\n\n你下一份要上台的 Markdown 是讲义、组会报告还是论文？评论区说说场景。"
+    },
+    {
+      "release": "v2.3.7-beta.3",
+      "errors": [],
+      "warnings": [],
+      "title": "给要上台讲文档的人做的MD工具",
+      "topics": [
+        "Markdown",
+        "PPT",
+        "演讲",
+        "程序员",
+        "效率工具"
+      ],
+      "semantic_image_count": 8,
+      "raw_shot_count": 8,
+      "body": "很多人把 Markdown 写完就停在笔记里；其实同一份文件可以直接上台放映。ReadMD 让写作和演示留在同一条路径。\n\n先说清楚：这是 ReadMD v2.3.7-beta.3 预览版，文件仍然保留在你自己的电脑里。\n\n这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。\n\n放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。\n\n它没有脱离原来的工作流：代码示例可以就地验证、改稿时回到同屏预览。\n\n下面的画面来自当前版本真实运行状态，不是概念图。\n\n还有一些不适合单独拍图的底层修复也在这版里，比如演讲演示完全本地离线渲染；禅模式一次进入，真正沉浸。它们不抢画面，但会让日常使用更稳。\n\n收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。\n\n渲染阶段只处理显示结果，不会替你改写原始 Markdown 文件。\n\n所有演示都来自同一个本地工作流，不需要先把文档上传到别处。\n\n如果你常处理课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。\n\n安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 Natsummerance/readMD，进仓库后点 Releases 就能找到对应平台。\n\n你想先试哪类内容：代码、表格还是公式？评论区告诉我，我会优先打磨这条路径。"
+    }
+  ],
+  "checks": {
+    "transport_hashes_and_manifests": true,
+    "green_package_reports": true,
+    "ordered_semantic_images": true,
+    "authentic_raw_evidence": true,
+    "unique_releases_and_titles": true,
+    "cross_package_body_originality": true
+  },
+  "errors": []
+}
