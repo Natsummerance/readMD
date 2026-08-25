@@ -1,13 +1,14 @@
 {
   "name": "readmd-site",
   "compatibility_date": "2026-08-01",
+  "main": "./worker.js",
+  "vars": {
+    "UPSTREAM_ORIGIN": "https://app.syminu.online"
+  },
   "routes": [
     {
       "pattern": "readmd.asia/*",
       "zone_name": "readmd.asia"
     }
-  ],
-  "assets": {
-    "directory": "./dist"
-  }
+  ]
 }
