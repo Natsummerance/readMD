@@ -47,6 +47,10 @@ ANSWER_PAGES = {
     "zh-CN-slides": {"path": PUBLIC / "zh-cn" / "markdown-to-slides" / "index.html", "canonical": "https://app.syminu.online/zh-cn/markdown-to-slides/"},
     "zh-TW-slides": {"path": PUBLIC / "zh-tw" / "markdown-to-slides" / "index.html", "canonical": "https://app.syminu.online/zh-tw/markdown-to-slides/"},
     "ja-slides": {"path": PUBLIC / "ja" / "markdown-to-slides" / "index.html", "canonical": "https://app.syminu.online/ja/markdown-to-slides/"},
+    "en-conversion": {"path": PUBLIC / "convert-to-markdown" / "index.html", "canonical": "https://app.syminu.online/convert-to-markdown/"},
+    "zh-CN-conversion": {"path": PUBLIC / "zh-cn" / "convert-to-markdown" / "index.html", "canonical": "https://app.syminu.online/zh-cn/convert-to-markdown/"},
+    "zh-TW-conversion": {"path": PUBLIC / "zh-tw" / "convert-to-markdown" / "index.html", "canonical": "https://app.syminu.online/zh-tw/convert-to-markdown/"},
+    "ja-conversion": {"path": PUBLIC / "ja" / "convert-to-markdown" / "index.html", "canonical": "https://app.syminu.online/ja/convert-to-markdown/"},
 }
 
 RELEASE_ASSETS = frozenset({
@@ -388,6 +392,7 @@ def validate_answer_internal_links() -> list[str]:
     topics = {
         "large-markdown-files": [item for key, item in ANSWER_PAGES.items() if "large-files" in key],
         "markdown-to-slides": [item for key, item in ANSWER_PAGES.items() if "slides" in key],
+        "convert-to-markdown": [item for key, item in ANSWER_PAGES.items() if "conversion" in key],
     }
     for language in LANGUAGES:
         for slug, contracts in topics.items():
