@@ -189,6 +189,12 @@ async function loadExportPresets() {
 
 function openExportModal() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const editorContent = typeof getEditContent === 'function' ? getEditContent() : '';
+  const exportContent = (state.editing ? editorContent : '') || state.original || state.fixed || '';
+  if (state.mode === 'welcome' || !exportContent) {
+    showToast(_t('toast.openDocumentToUse') || '请先打开文档后再使用此操作');
+    return;
+  }
   if (!bindPy()) { showToast(_t('toast.exportBrowserNotice') || '浏览器模式请使用桌面版导出'); return; }
   if (!state.export.ready) {
     loadExportPresets().then(ok => {

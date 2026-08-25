@@ -170,13 +170,7 @@ function jumpToLocalMark(idx) {
   if (!state.currentMarks.length) return;
   state.searchIndex = Math.max(0, Math.min(idx, state.currentMarks.length - 1));
   state.currentMarks.forEach((m, i) => m.classList.toggle('cur', i === state.searchIndex));
-  const m = state.currentMarks[state.searchIndex];
-  if (m) {
-    m.tabIndex = -1;
-    m.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
-    m.focus({ preventScroll: true });
-    setTimeout(() => m.focus({ preventScroll: true }), 0);
-  }
+  revealSearchMark(state.currentMarks[state.searchIndex]);
 }
 
 function jumpToMark(dir) {
@@ -205,14 +199,13 @@ function jumpToMark(dir) {
   if (!state.currentMarks.length) return;
   state.searchIndex = (state.searchIndex + dir + state.currentMarks.length) % state.currentMarks.length;
   state.currentMarks.forEach((m, i) => m.classList.toggle('cur', i === state.searchIndex));
-  const m = state.currentMarks[state.searchIndex];
-  if (m) {
-    m.tabIndex = -1;
-    m.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
-    m.focus({ preventScroll: true });
-    setTimeout(() => m.focus({ preventScroll: true }), 0);
-  }
+  revealSearchMark(state.currentMarks[state.searchIndex]);
   updateSearchCount();
+}
+
+function revealSearchMark(mark) {
+  if (!mark) return;
+  mark.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'center' });
 }
 
 function updateSearchCount() {

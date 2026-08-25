@@ -1211,20 +1211,50 @@ class Handler(BaseHTTPRequestHandler):
             fmt = 'png'
         try:
             import base64 as _b64
+            from io import BytesIO
+
+            from PIL import Image
+
             raw = _b64.b64decode(data_b64)
             if not raw:
                 self._send_json(400, {'error': '图片数据为空'})
                 return
+            if len(raw) > 25 * 1024 * 1024:
+                self._send_json(413, {'error': '图片超过 25 MB 限制'})
+                return
+
+            try:
+                image = Image.open(BytesIO(raw))
+                actual_format = (image.format or '').lower()
+                image.verify()
+            except Exception:
+                self._send_json(400, {'error': '无效图片数据'})
+                return
+            expected_format = 'jpeg' if fmt == 'jpg' else fmt
+            if actual_format != expected_format:
+                self._send_json(400, {'error': '图片内容与格式不一致'})
+                return
+
             img_dir = os.path.join(dir_path, 'images')
             os.makedirs(img_dir, exist_ok=True)
-            if not name or not re.match(r'^[A-Za-z0-9_\-]+', name):
+            safe_name = os.path.basename(name.replace('\\', '/'))
+            if ('..' in safe_name or '..' in name
+                    or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,180}', safe_name)):
                 name = 'img_%d_%s' % (int(time.time() * 1000), os.urandom(3).hex())
-            if not name.lower().endswith('.' + fmt):
-                name += '.' + fmt
-            target = os.path.join(img_dir, name)
+            else:
+                name = safe_name.rsplit('.', 1)[0]
+            filename = '%s.%s' % (name, fmt)
+            img_dir = os.path.realpath(img_dir)
+            target = os.path.realpath(os.path.join(img_dir, filename))
+            if not paths_within(target, img_dir):
+                self._send_json(403, {'error': '图片路径不受信任'})
+                return
+            if not name or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,180}', name):
+                self._send_json(400, {'error': '图片文件名无效'})
+                return
             with open(target, 'wb') as f:
                 f.write(raw)
-            rel = os.path.join('images', name).replace('\\', '/')
+            rel = os.path.join('images', os.path.basename(filename)).replace('\\', '/')
             self._send_json(200, {'ok': True, 'path': target, 'rel': rel})
         except Exception as e:
             logging.exception('image save failed')
