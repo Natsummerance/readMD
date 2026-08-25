@@ -119,7 +119,7 @@ test('presentation.reveal captures the real presentation iframe', async ({ page 
   await frame.locator('.reveal').first().waitFor({ state: 'visible', timeout: 15000 });
   await page.waitForTimeout(3000);
   const presentationFrame = page.frames().find((candidate) => candidate !== page.mainFrame() && candidate.url() === 'about:srcdoc');
-  await expect.poll(() => presentationFrame.evaluate(() => Boolean(window.deck)), { timeout: 15000 }).toBe(true);
+  await expect.poll(() => presentationFrame.evaluate(() => Boolean(window.deck || window.Reveal)), { timeout: 15000 }).toBe(true);
   await page.waitForTimeout(1200);
   const outputPath = path.join(RAW_DIR, library.shots['presentation.reveal'].output);
   await presentationFrame.locator('.reveal').screenshot({
