@@ -22,6 +22,7 @@ showcase/downloads/
 showcase/publish-work/
 showcase/publish-state.json
 showcase/content-package.zip
+showcase/content-package.zip.manifest.json
 .venv-win7/
 installer/webview2_runtime/
 release_body_win7_beta.md
