@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>掃描件擷取文字 | ReadMD 離線 OCR</title>
+  <meta name="description" content="在 Windows 或 macOS 本機把掃描頁和截圖轉成可編輯 Markdown。ReadMD 呼叫 WinRT 或 Apple Vision 離線辨識，不需要上傳原始圖像。">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ReadMD">
+  <meta property="og:title" content="掃描件擷取文字 | ReadMD 離線 OCR">
+  <meta property="og:description" content="面向 Windows 和 macOS 掃描頁、截圖的本機 OCR 工作流程。">
+  <meta property="og:url" content="https://app.syminu.online/zh-tw/scan-to-markdown/">
+  <meta property="og:image" content="https://app.syminu.online/media/convert-home.webp">
+  <meta property="og:image:type" content="image/webp">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="ReadMD 轉換介面用於準備要轉為 Markdown 的掃描來源。">
+  <meta property="og:locale" content="zh_TW">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="掃描件擷取文字 | ReadMD 離線 OCR">
+  <meta name="twitter:description" content="使用 Windows 或 macOS 原生能力本機辨識，儲存前先複核 Markdown。">
+  <meta name="twitter:image" content="https://app.syminu.online/media/convert-home.webp">
+  <meta name="twitter:image:alt" content="ReadMD 轉換介面用於準備要轉為 Markdown 的掃描來源。">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://app.syminu.online/zh-tw/scan-to-markdown/">
+  <link rel="alternate" hreflang="en" href="https://app.syminu.online/scan-to-markdown/">
+  <link rel="alternate" hreflang="zh-CN" href="https://app.syminu.online/zh-cn/scan-to-markdown/">
+  <link rel="alternate" hreflang="zh-TW" href="https://app.syminu.online/zh-tw/scan-to-markdown/">
+  <link rel="alternate" hreflang="ja" href="https://app.syminu.online/ja/scan-to-markdown/">
+  <link rel="alternate" hreflang="x-default" href="https://app.syminu.online/scan-to-markdown/">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": "https://app.syminu.online/zh-tw/scan-to-markdown/#webpage",
+        "url": "https://app.syminu.online/zh-tw/scan-to-markdown/",
+        "name": "掃描件擷取文字 | ReadMD 離線 OCR",
+        "about": {"@id": "https://app.syminu.online/zh-tw/scan-to-markdown/#software"},
+        "primaryImageOfPage": "https://app.syminu.online/media/convert-home.webp",
+        "dateModified": "2026-08-25",
+        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#scan-workflow p"]}
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://app.syminu.online/zh-tw/scan-to-markdown/#software",
+        "name": "ReadMD",
+        "operatingSystem": "Windows, macOS",
+        "applicationCategory": "UtilitiesApplication",
+        "softwareVersion": "2.3.7-beta.3",
+        "dateModified": "2026-08-25",
+        "isAccessibleForFree": true,
+        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+        "featureList": "Windows WinRT 本機 OCR，macOS Apple Vision 離線辨識，截圖擷取，Markdown 複核與編輯",
+        "author": {"@type": "Organization", "name": "ReadMD"}
+      },
+      {
+        "@type": "HowTo",
+        "@id": "https://app.syminu.online/zh-tw/scan-to-markdown/#howto",
+        "name": "如何從掃描件擷取文字並整理為 Markdown",
+        "step": [
+          {"@type": "HowToStep", "name": "準備掃描件", "text": "把掃描頁或截圖保存在本機裝置。"},
+          {"@type": "HowToStep", "name": "加入來源", "text": "在 ReadMD 加入掃描件，或透過支援的剪貼簿工作流程貼上截圖。"},
+          {"@type": "HowToStep", "name": "本機辨識", "text": "Windows 使用 WinRT OCR；macOS 使用 Apple Vision 離線辨識。"},
+          {"@type": "HowToStep", "name": "複核並儲存", "text": "修正閱讀順序、標題、表格、數字和人名後再儲存 Markdown。"}
+        ]
+      }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://app.syminu.online/zh-tw/scan-to-markdown/#faq","mainEntity":[{"@type":"Question","name":"哪些平台支援離線 OCR？","acceptedAnswer":{"@type":"Answer","text":"ReadMD 在 Windows 上透過 WinRT、在 macOS 上透過 Apple Vision 支援本機離線辨識。實際可用性取決於作業系統和裝置能力。"}},{"@type":"Question","name":"能從截圖擷取文字嗎？","acceptedAnswer":{"@type":"Answer","text":"在受支援的平台可以。ReadMD 提供剪貼簿工作流程，可擷取貼上截圖中的文字，不需要傳送到網頁服務。"}},{"@type":"Question","name":"OCR 能完美保留表格和版式嗎？","acceptedAnswer":{"@type":"Answer","text":"不能。辨識品質受掃描清晰度、語言、字體和版式複雜度影響。擷取後應複核標題、表格、數字、人名和閱讀順序。"}},{"@type":"Question","name":"辨識時會把掃描頁上傳嗎？","acceptedAnswer":{"@type":"Answer","text":"不會。經過限定的 Windows 和 macOS OCR 路徑設計為本機執行，不需要雲端帳號。"}}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://app.syminu.online/zh-tw/scan-to-markdown/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://app.syminu.online/zh-tw/"},{"@type":"ListItem","position":2,"name":"掃描件轉 Markdown","item":"https://app.syminu.online/zh-tw/scan-to-markdown/"}]}</script>
+</head>
+<body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/zh-tw/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#scan-workflow">工作流程</a><a href="/zh-tw/workflows/">更多答案</a><a href="https://github.com/Natsummerance/readMD">原始碼</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/latest">下載</a></div>
+  </header>
+  <main>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-tw/">首頁</a> / <a class="link-action" href="/zh-tw/workflows/">工作流程</a> / <span>掃描件轉 Markdown</span></nav>
+    <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
+      <h1 class="display-title">把掃描件文字擷取成可編輯 Markdown。</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">在 Windows 和 macOS 上，ReadMD 呼叫作業系統原生辨識引擎。掃描來源留在裝置本機，辨識結果可以先複核再儲存。</p>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="1440" height="900" alt="ReadMD 轉換工作區用於將掃描來源整理為 Markdown。" loading="eager" fetchpriority="high"></picture></figure>
+    </section>
+    <section id="scan-workflow" class="bg-[var(--color-surface)] py-16">
+      <div class="mx-auto max-w-5xl px-5">
+        <h2 class="text-2xl font-semibold tracking-tight">本機 OCR 工作流程</h2>
+        <ol class="mt-8 grid gap-6 md:grid-cols-2">
+          <li class="answer-card"><h3 class="text-lg font-semibold">準備掃描件</h3><p>使用保存在本機的清晰圖片或 PDF 頁面。頁面端正、文字清楚時通常更容易獲得乾淨結果。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">加入或貼上來源</h3><p>在 ReadMD 加入掃描件，或使用剪貼簿工作流程擷取貼上截圖中的文字。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">本機辨識</h3><p>Windows 使用 WinRT OCR，macOS 使用 Apple Vision 離線辨識。這些路徑不需要雲端帳號。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">複核並儲存 Markdown</h3><p>修正閱讀順序、標題、表格、圖註、人名和數字後，再儲存或繼續編輯 Markdown。</p></li>
+        </ol>
+      </div>
+    </section>
+    <section class="mx-auto max-w-5xl px-5 py-16">
+      <h2 class="text-2xl font-semibold tracking-tight">OCR 常見問題</h2>
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <article class="answer-card"><h3>哪些平台支援離線 OCR？</h3><p>ReadMD 在 Windows 上透過 WinRT、在 macOS 上透過 Apple Vision 支援本機離線辨識。實際可用性取決於作業系統和裝置能力。</p></article>
+        <article class="answer-card"><h3>能從截圖擷取文字嗎？</h3><p>在受支援的平台可以。ReadMD 提供剪貼簿工作流程，可擷取貼上截圖中的文字，不需要傳送到網頁服務。</p></article>
+        <article class="answer-card"><h3>OCR 能完美保留表格和版式嗎？</h3><p>不能。辨識品質受掃描清晰度、語言、字體和版式複雜度影響。擷取後應複核標題、表格、數字、人名和閱讀順序。</p></article>
+        <article class="answer-card"><h3>辨識時會把掃描頁上傳嗎？</h3><p>不會。經過限定的 Windows 和 macOS OCR 路徑設計為本機執行，不需要雲端帳號。</p></article>
+      </div>
+      <div class="mt-10 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-tw/large-markdown-files/">開啟超大 Markdown 檔案</a><a class="link-action" href="/zh-tw/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-tw/convert-to-markdown/">文件轉 Markdown</a></div>
+      <div class="mt-8 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">取得 ReadMD</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 給 Star</a></div>
+    </section>
+  </main>
+  <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD。MIT 授權。</p><nav class="flex flex-wrap gap-5"><a href="/zh-tw/llms.txt">llms.txt</a><a href="/zh-tw/llms-full.txt">AI 完整文字</a><a href="https://github.com/Natsummerance/readMD/stargazers">GitHub Star</a></nav></div></footer>
+</body>
+</html>

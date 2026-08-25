@@ -51,6 +51,10 @@ ANSWER_PAGES = {
     "zh-CN-conversion": {"path": PUBLIC / "zh-cn" / "convert-to-markdown" / "index.html", "canonical": "https://app.syminu.online/zh-cn/convert-to-markdown/"},
     "zh-TW-conversion": {"path": PUBLIC / "zh-tw" / "convert-to-markdown" / "index.html", "canonical": "https://app.syminu.online/zh-tw/convert-to-markdown/"},
     "ja-conversion": {"path": PUBLIC / "ja" / "convert-to-markdown" / "index.html", "canonical": "https://app.syminu.online/ja/convert-to-markdown/"},
+    "en-ocr": {"path": PUBLIC / "scan-to-markdown" / "index.html", "canonical": "https://app.syminu.online/scan-to-markdown/"},
+    "zh-CN-ocr": {"path": PUBLIC / "zh-cn" / "scan-to-markdown" / "index.html", "canonical": "https://app.syminu.online/zh-cn/scan-to-markdown/"},
+    "zh-TW-ocr": {"path": PUBLIC / "zh-tw" / "scan-to-markdown" / "index.html", "canonical": "https://app.syminu.online/zh-tw/scan-to-markdown/"},
+    "ja-ocr": {"path": PUBLIC / "ja" / "scan-to-markdown" / "index.html", "canonical": "https://app.syminu.online/ja/scan-to-markdown/"},
 }
 
 RELEASE_ASSETS = frozenset({
@@ -393,6 +397,7 @@ def validate_answer_internal_links() -> list[str]:
         "large-markdown-files": [item for key, item in ANSWER_PAGES.items() if "large-files" in key],
         "markdown-to-slides": [item for key, item in ANSWER_PAGES.items() if "slides" in key],
         "convert-to-markdown": [item for key, item in ANSWER_PAGES.items() if "conversion" in key],
+        "scan-to-markdown": [item for key, item in ANSWER_PAGES.items() if "ocr" in key],
     }
     for language in LANGUAGES:
         for slug, contracts in topics.items():
