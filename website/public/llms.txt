@@ -6,6 +6,7 @@
 - [Workflow answers](https://app.syminu.online/workflows/): Task-level guidance for 8,000-line documents, DOCX/PDF/HTML/LaTeX conversion, offline OCR, and direct Markdown presentation.
 - [Large Markdown files](https://app.syminu.online/large-markdown-files/): Local semantic pagination, search, outline navigation, and non-destructive display repair for very long documents.
 - [Markdown to slides](https://app.syminu.online/markdown-to-slides/): Present one Markdown source with headings, code, math, diagrams, and tables intact.
+- [Convert to Markdown](https://app.syminu.online/convert-to-markdown/): Local DOCX, PPTX, XLSX, PDF, HTML, and LaTeX conversion with structure review and qualified offline guidance.
 - [Download page](https://app.syminu.online/download/): Current Windows, macOS, Linux, UOS/Kylin, HarmonyOS, VS Code, and MCP Server packages with checksum guidance.
 - [Simplified Chinese homepage](https://app.syminu.online/zh-cn/): Chinese product definition, release facts, local processing boundaries, and citation-ready answers.
 - [Simplified Chinese download page](https://app.syminu.online/zh-cn/download/): Chinese package paths and checksum workflow.

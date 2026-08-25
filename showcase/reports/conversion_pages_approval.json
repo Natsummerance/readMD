@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "artifact": "Localized document-to-Markdown conversion answer pages",
+  "reviewed_at": "2026-08-24T23:20:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "ai-discovery-review",
+      "status": "approved",
+      "score": 9.87,
+      "evidence": [
+        "Four new URLs target the high-intent task of converting DOCX, PPTX, XLSX, PDF, HTML, and LaTeX material into Markdown.",
+        "Each localized page has a direct H1, HowTo steps, four visible questions and answers, speakable selectors, canonical URL, hreflang set, and BreadcrumbList.",
+        "Root and localized llms indexes plus full corpora cite the dedicated conversion workflow with absolute URLs."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "design-and-ux-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "The pages preserve the established light theme, single accent, type hierarchy, product-frame treatment, responsive collapse, and restrained static motion level.",
+        "Each hero uses the real converter capture with WebP fallback, intrinsic dimensions, meaningful alt text, and high fetch priority.",
+        "Homepages, workflow answers, download pages, breadcrumbs, and the new conversion pages form a closed internal-link loop without duplicate download CTA labels."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-compliance-review",
+      "status": "approved",
+      "score": 9.79,
+      "evidence": [
+        "Format, local-processing, OCR-platform, structure-preservation, and review-after-conversion claims trace to the README-backed corpus.",
+        "The pages explicitly qualify optional web extraction, supported platforms for offline work, and the absence of one-to-one fidelity for proprietary layouts.",
+        "No Apple copy or trade dress, fake performance metrics, tracking scripts, credentials, or unpublished release claims are introduced."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_pull_request",
+    "score": 9.84,
+    "participants": ["AI discovery", "design and UX", "release compliance"],
+    "conditions": [
+      "Release build validation must pass before merge.",
+      "Browser smoke must pass all twenty-four localized routes.",
+      "CI must pass and GitHub Pages deployment must finish before live verification and IndexNow submission."
+    ]
+  }
+}
