@@ -746,7 +746,7 @@ async function runExport() {
       }
     } else if (fmt === 'presentation') {
       if (hasPy && py.export_presentation) {
-        r = await py.export_presentation(content, options.theme || 'black', options.transition || 'slide');
+        r = await py.export_presentation(content, options.theme || 'black', options.transition || 'slide', true);
       } else {
         const resp = await apiFetch('/api/export/presentation', {
           method: 'POST',

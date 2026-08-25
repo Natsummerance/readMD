@@ -18,8 +18,14 @@
 """
 
 import json
+import os
 import re
+import sys
 from typing import Any, Dict, List, Optional, Tuple
+
+_REVEAL_THEMES = ('black', 'white', 'league', 'beige', 'night', 'serif',
+                  'simple', 'solarized', 'blood', 'moon', 'sky')
+_REVEAL_TRANSITIONS = ('slide', 'fade', 'zoom', 'convex', 'concave', 'none')
 
 SLIDE_SPLIT_REGEX = re.compile(
     r'(?:^[ \t]*<!--\s*slide(?:\s+[\s\S]*?)?-->[ \t]*$|^[ \t]*---[ \t]*$)',
@@ -197,19 +203,77 @@ def _escape_template_md(md: str) -> str:
     return md.replace('</textarea>', '&lt;/textarea&gt;')
 
 
+# 本地 vendor 资源（相对应用根；srcdoc iframe 继承父页面 base URL 与 CSP 'self'）
+_REVEAL_BASE = 'assets/vendor/reveal/dist'
+_KATEX_BASE = 'assets/vendor/katex/dist'
+_REVEAL_STYLESHEETS = ('reveal.css', 'plugin/highlight/monokai.css')
+_REVEAL_SCRIPTS = ('reveal.js', 'plugin/markdown/markdown.js',
+                   'plugin/highlight/highlight.js', 'plugin/notes/notes.js',
+                   'plugin/math/math.js')
+
+
+def _read_vendor(rel_path: str) -> str:
+    """读取 assets/vendor 下的离线资源；打包与源码运行均已覆盖。
+
+    注意：不使用 mdexport.APP_DIR（其解析少上一层、指向 src/，
+    为既有行为，此处独立计算应用根避免牵连其他导出模块）。
+    """
+    if getattr(sys, 'frozen', False):
+        root = sys._MEIPASS
+    else:
+        # presentation_render.py -> mdexport -> readmd_modules -> src -> 应用根
+        root = os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__)))))
+    full = os.path.join(root, 'assets', 'vendor', *rel_path.split('/'))
+    with open(full, 'r', encoding='utf-8') as handle:
+        return handle.read()
+
+
+def _css_tag(rel_path: str, standalone: bool, link_id: str = '') -> str:
+    if standalone:
+        return '<style>\n' + _read_vendor(os.path.join('reveal', 'dist', *rel_path.split('/'))) + '\n</style>'
+    id_attr = ' id="%s"' % link_id if link_id else ''
+    return '<link rel="stylesheet" href="%s/%s"%s>' % (_REVEAL_BASE, rel_path, id_attr)
+
+
+def _script_tag(rel_path: str, standalone: bool) -> str:
+    if standalone:
+        return '<script>\n' + _read_vendor(os.path.join('reveal', 'dist', *rel_path.split('/'))) + '\n</script>'
+    return '<script src="%s/%s"></script>' % (_REVEAL_BASE, rel_path)
+
+
+def _katex_tags(standalone: bool) -> str:
+    """KaTeX 资源：应用内由 RevealMath.KaTeX 按 local 路径注入；导出单文件直接内联。"""
+    if not standalone:
+        return ''
+    katex_css = _read_vendor('katex/dist/katex.min.css')
+    katex_js = _read_vendor('katex/dist/katex.min.js')
+    auto_render = _read_vendor('katex/dist/contrib/auto-render.min.js')
+    return ('<style>\n' + katex_css + '\n</style>\n'
+            '<script>\n' + katex_js + '\n</script>\n'
+            '<script>\n' + auto_render + '\n</script>')
+
+
 def render_presentation_html(content: str, title: str = "ReadMD Presentation",
-                             theme: str = "black", transition: str = "slide") -> str:
-    """将 Markdown 编译为完整的单文件 Reveal.js HTML 演说稿（精致舒适排版、防截断滚动与双向事件控制）。"""
+                             theme: str = "black", transition: str = "slide",
+                             standalone: bool = False) -> str:
+    """将 Markdown 编译为 Reveal.js 演说稿。
+
+    standalone=False（应用内预览）：引用本地 vendor 资源（同源，符合 CSP，完全离线）。
+    standalone=True（导出 .html 单文件）：全部资源内联，任何机器离线可开。
+    """
     meta, _ = parse_frontmatter(content)
     theme = meta.get('theme', theme)
     if theme.endswith('.css'):
         theme = theme[:-4]
     transition = meta.get('transition', transition)
     title = meta.get('title', title)
-    
+    if theme not in _REVEAL_THEMES:
+        theme = 'black'
+
     slides_matrix = split_slides_structure(content)
     sections_html = []
-    
+
     for h_idx, v_slides in enumerate(slides_matrix):
         if len(v_slides) == 1:
             slide = v_slides[0]
@@ -226,16 +290,37 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
 
     slides_body = "\n".join(sections_html)
 
+    head_css = '\n'.join([
+        _css_tag('reveal.css', standalone),
+        _css_tag('theme/%s.css' % theme, standalone, link_id='theme'),
+        _css_tag('plugin/highlight/monokai.css', standalone),
+        _katex_tags(standalone),
+    ])
+    body_scripts = '\n'.join(_script_tag(p, standalone) for p in _REVEAL_SCRIPTS)
+
+    # 启动配置：JSON <script> 不被执行，不受 CSP 限制；boot 代码本体走同源加载
+    boot_rel = 'reveal/dist/readmd-boot.js'
+    boot_js = _read_vendor(os.path.join('reveal', 'dist', 'readmd-boot.js'))
+    reveal_config = {
+        'transition': transition if transition in _REVEAL_TRANSITIONS else 'slide',
+        'themeBase': _REVEAL_BASE + '/theme/',
+        # KaTeX 插件会自行追加 /dist/...，这里给到包根
+        'katexLocal': 'assets/vendor/katex',
+        'standalone': bool(standalone),
+    }
+    config_json = json.dumps(reveal_config, ensure_ascii=False).replace('</', '<\\/')
+    if standalone:
+        boot_tag = '<script>\n' + boot_js + '\n</script>'
+    else:
+        boot_tag = '<script src="%s/readmd-boot.js"></script>' % _REVEAL_BASE
+
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>{title}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/{theme}.css" id="theme">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/monokai.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+{head_css}
   <style>
     :root {{
       --reveal-base-font-size: 24px;
@@ -344,50 +429,9 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
 {slides_body}
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/markdown/markdown.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/highlight.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/notes/notes.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/math/math.js"></script>
-  <script>
-    window.deck = new Reveal({{
-      width: 1080,
-      height: 720,
-      margin: 0.06,
-      minScale: 0.2,
-      maxScale: 2.0,
-      controls: true,
-      progress: true,
-      center: false,
-      hash: true,
-      transition: '{transition}',
-      slideNumber: 'c/t',
-      plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealMath.KaTeX ]
-    }});
-    deck.initialize();
-
-    // 监听来自父窗口的实时定制消息 (Theme, Transition, Font Scale, Navigation)
-    window.addEventListener('message', function(event) {{
-      if (!event.data || typeof event.data !== 'object') return;
-      const data = event.data;
-      if (data.type === 'set-theme' && data.theme) {{
-        const themeLink = document.getElementById('theme');
-        if (themeLink) {{
-          themeLink.href = 'https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/' + data.theme + '.css';
-        }}
-      }} else if (data.type === 'set-transition' && data.transition) {{
-        if (window.deck && typeof window.deck.configure === 'function') {{
-          window.deck.configure({{ transition: data.transition }});
-        }}
-      }} else if (data.type === 'set-font-size' && data.size) {{
-        document.documentElement.style.setProperty('--reveal-base-font-size', data.size + 'px');
-      }} else if (data.type === 'toggle-overview') {{
-        if (window.deck && typeof window.deck.toggleOverview === 'function') {{
-          window.deck.toggleOverview();
-        }}
-      }}
-    }});
-  </script>
+{body_scripts}
+  <script type="application/json" id="readmd-reveal-config">{config_json}</script>
+{boot_tag}
 </body>
 </html>"""
 

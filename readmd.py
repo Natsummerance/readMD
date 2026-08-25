@@ -2306,10 +2306,35 @@ class Api(object):
         except Exception as e:
             return {'ok': False, 'error': str(e)}
 
-    def export_presentation(self, content, theme='black', transition='slide'):
-        """生成 Reveal.js 演示文稿 HTML。"""
+    def export_presentation(self, content, theme='black', transition='slide', save=False):
+        """生成 Reveal.js 演示文稿 HTML。
+
+        save=False（默认）：返回 html 供应用内预览 iframe 使用（行为与旧版一致）。
+        save=True：弹出保存对话框，写入自包含单文件 HTML，返回 {ok, path}。
+        """
         try:
             from src.readmd_modules.mdexport import presentation_render
+            if save:
+                import webview
+                if self._window is None:
+                    return {'ok': False, 'error': '窗口未就绪'}
+                try:
+                    target = self._window.create_file_dialog(
+                        webview.SAVE_DIALOG, save_filename='presentation.html',
+                        file_types=('HTML 网页 (*.html)',))
+                except Exception as e:
+                    return {'ok': False, 'error': '保存对话框失败：%s' % e}
+                if not target:
+                    return {'ok': False, 'canceled': True}
+                try:
+                    target = normalize_dialog_path(target, '.html')
+                except ValueError as e:
+                    return {'ok': False, 'error': str(e)}
+                html_out = presentation_render.generate_presentation_html(
+                    content, theme=theme, transition=transition, standalone=True)
+                with open(target, 'w', encoding='utf-8') as handle:
+                    handle.write(html_out)
+                return {'ok': True, 'path': target}
             html_out = presentation_render.generate_presentation_html(content, theme=theme, transition=transition)
             return {'ok': True, 'html': html_out}
         except Exception as e:

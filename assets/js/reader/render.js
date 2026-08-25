@@ -209,6 +209,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
       updateStatus();
       setProgress(100);
       if (d.structured) showToast(_t('toast.txtStructureRecognized') || '已智能识别 TXT 结构（标题 / 表格 / 列表 / 目录）');
+      renderTabsBar();
       afterRender();
       return;
     }
@@ -1581,7 +1582,7 @@ function toggleZenMode(force) {
 window.toggleZenMode = toggleZenMode;
 
 async function launchPresentationMode() {
-  const content = state.original || (cmView ? cmView.state.doc.toString() : '');
+  const content = rewritePresentationAssets(state.original || (cmView ? cmView.state.doc.toString() : ''));
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!content) {
     showToast(_t('presentation.noDoc') || '当前没有可演示的文档内容');
@@ -1728,6 +1729,18 @@ function resolvePath(baseDir, rel) {
   } catch (e) {
     return rel;
   }
+}
+
+/* 演示模式专用：把相对路径图片改写为 /raw 本地端点，避免 srcdoc 内相对路径失效 */
+function rewritePresentationAssets(md) {
+  if (!md || !state.dir) return md;
+  const isRel = u => u && !/^(https?:|data:|blob:|file:|\/\/|\/)/i.test(u);
+  const toRaw = u => '/raw?p=' + encodeURIComponent(resolvePath(state.dir, u));
+  let out = md.replace(/(!\[[^\]]*\]\()([^)\s]+)([^)]*\))/g,
+    (m, pre, src, post) => isRel(src) ? pre + toRaw(src) + post : m);
+  out = out.replace(/(<img\b[^>]*\bsrc=["'])([^"']+)(["'])/gi,
+    (m, pre, src, post) => isRel(src) ? pre + toRaw(src) + post : m);
+  return out;
 }
 
 function fixLinks(body) {
