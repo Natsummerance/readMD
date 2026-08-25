@@ -439,7 +439,8 @@ function bindEvents() {
       clearTimeout(searchDebounce);
       if (globalSearchState.query !== e.target.value) {
         initialSearchFocused = false;
-        doSearch(e.target.value, undefined, { jump: false });
+        // Enter must win against the input debounce and immediately reveal the result.
+        doSearch(e.target.value, undefined, { jump: true });
         return;
       }
       if (!initialSearchFocused) {

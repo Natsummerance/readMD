@@ -1543,6 +1543,49 @@ test('search highlights a term spanning adjacent inline elements', async ({ page
   await expect(page.locator('#btn-search')).toBeFocused();
 });
 
+test('enter immediately jumps even when the search debounce has not fired', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderContent === 'function');
+  await page.evaluate(async () => {
+    const lines = ['# Search race'];
+    for (let section = 0; section < 4200; section += 1) {
+      lines.push(`## Section ${section}`, 'stable paragraph keeps pagination active.');
+    }
+    lines.push('## Unique target', 'READMD_SEARCH_RACE_MARKER');
+    const content = lines.join('\n');
+    state.mode = 'file';
+    state.file = '/search-race.md';
+    state.dir = '';
+    state.original = content;
+    state.fixed = content;
+    await renderContent(content, 'search-race.md');
+    updateStatus();
+  });
+  await page.waitForFunction(() => state.pagination.enabled && state.pagination.totalPages > 1);
+  await page.evaluate(() => renderPage(0));
+
+  await page.locator('#btn-search').click();
+  await expect(page.locator('#search-input')).toBeVisible();
+  await page.evaluate(() => {
+    const input = document.getElementById('search-input');
+    input.value = 'READMD_SEARCH_RACE_MARKER';
+    // Dispatch both events synchronously so the 40ms debounce cannot win.
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keydown', {
+      key: 'Enter',
+      bubbles: true,
+      cancelable: true,
+    }));
+  });
+
+  await expect(page.locator('#search-count')).toHaveText(/1\/1 \(P\.\d+\)/);
+  await page.waitForFunction(() => (
+    state.pagination.currentPage === state.pagination.totalPages - 1
+  ));
+  await expect(page.locator('#content mark.cur')).toHaveText('READMD_SEARCH_RACE_MARKER');
+  await expect(page.locator('#content mark.cur')).toBeFocused();
+});
+
 test('home resets pagination state and failed opens clear progress', async ({ page }) => {
   await page.route('**/api/file?p=missing.md', route => route.fulfill({
     status: 404,
