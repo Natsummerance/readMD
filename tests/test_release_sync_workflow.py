@@ -29,7 +29,7 @@ class ReleaseSyncWorkflowTest(unittest.TestCase):
         self.assertIn("gh release upload \"$tag\" --clobber", raw)
         self.assertNotIn("gh release create", raw)
         self.assertIn("gh release edit \"$tag\" --notes-file release/release_notes.md", raw)
-        self.assertIn("releases/tags/{tag}", raw)
+        self.assertIn("releases/tags/v{version}", raw)
         self.assertIn("--method\", \"DELETE\"", raw.replace("['", '["'))
 
     def test_downloads_exact_build_and_rebuilds_checksums(self):
@@ -42,8 +42,10 @@ class ReleaseSyncWorkflowTest(unittest.TestCase):
         self.assertEqual(download["with"]["run-id"], "${{ github.event.workflow_run.id }}")
         self.assertTrue(download["with"]["merge-multiple"])
         self.assertIn("SHA256SUMS.txt", raw := self.raw)
-        self.assertIn('files=(release-assets/*)', raw)
+        self.assertIn('files=(*)', raw)
         self.assertIn('sha256sum "${files[@]}"', raw)
+        self.assertIn("cd release-assets", raw)
+        self.assertIn('Path("VERSION").read_text(encoding="utf-8").strip()', raw)
 
 
 if __name__ == "__main__":

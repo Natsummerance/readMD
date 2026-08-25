@@ -68,8 +68,11 @@ jobs:
           PY
           find release-assets -name '*.sha256' -delete
           rm -f release-assets/SHA256SUMS.txt
-          files=(release-assets/*)
-          sha256sum "${files[@]}" > release-assets/SHA256SUMS.txt
+          (
+            cd release-assets
+            files=(*)
+            sha256sum "${files[@]}" > SHA256SUMS.txt
+          )
           gh release view "$tag" >/dev/null
 
       - name: Update existing prerelease assets
@@ -90,8 +93,9 @@ jobs:
           from pathlib import Path
 
           expected = {path.name for path in Path("release-assets").iterdir() if path.is_file()}
+          version = Path("VERSION").read_text(encoding="utf-8").strip()
           payload = json.loads(subprocess.check_output([
-              "gh", "api", f"repos/{os.environ['GH_REPO']}/releases/tags/{tag}"
+              "gh", "api", f"repos/{os.environ['GH_REPO']}/releases/tags/v{version}"
           ]))
           for asset in payload.get("assets", []):
               if asset["name"] not in expected:
