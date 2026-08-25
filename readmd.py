@@ -50,6 +50,7 @@ from src.readmd_core import (
 )
 from src.readmd_core.file_writer import save_text_atomic
 from src.readmd_core.static_assets import resolve_asset
+from src.readmd_core.safe_open import safe_external_url, safe_file_target
 import src.readmd_modules as RM
 from src.readmd_modules.validators import validate_file_path, validate_command
 
@@ -2748,6 +2749,11 @@ class Api(object):
 
     def open_external(self, url):
         try:
+            url = safe_external_url(url)
+        except Exception as exc:
+            logging.warning('Blocked unsafe external URL: %s', exc)
+            return False
+        try:
             webbrowser.open(url)
             return True
         except Exception:
@@ -2755,6 +2761,11 @@ class Api(object):
 
     def open_path(self, path):
         """用系统默认程序打开文件（如图片、PDF 或外部文档）。"""
+        try:
+            path = safe_file_target(path)
+        except Exception as exc:
+            logging.warning('Blocked unsafe file open: %s', exc)
+            return False
         try:
             if IS_MAC:
                 subprocess.Popen(['open', path])
