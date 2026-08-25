@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "artifact": "Localized BibTeX citation answer pages",
+  "reviewed_at": "2026-08-25T02:20:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "ai-discovery-review",
+      "status": "approved",
+      "score": 9.88,
+      "evidence": [
+        "Four new URLs target concrete academic intents: neighboring BibTeX scanning, inline citation keys, source cards, and assembled references.",
+        "Each page exposes one direct H1, HowTo steps, four visible questions and answers, speakable selectors, canonical URL, hreflang set, and BreadcrumbList.",
+        "Root and localized llms indexes plus full corpora cite the qualified citation workflow with absolute URLs."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "design-and-ux-review",
+      "status": "approved",
+      "score": 9.83,
+      "evidence": [
+        "The pages preserve the established light theme, single accent system, type hierarchy, real editor capture treatment, responsive collapse, and restrained static motion level.",
+        "Each hero uses a relevant ReadMD writing capture with WebP fallback, intrinsic dimensions, meaningful alt text, and high fetch priority.",
+        "Homepages, workflow answers, download pages, sibling task guides, breadcrumbs, and the new BibTeX cluster form a closed internal-link loop without duplicate download CTA labels."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-compliance-review",
+      "status": "approved",
+      "score": 9.79,
+      "evidence": [
+        "Citation syntax, neighboring .bib scanning, hover metadata, copyable BibTeX, and assembled references trace to README-backed product facts.",
+        "The pages explicitly state that the workflow complements rather than replaces a reference manager and that target formatting rules still require human review.",
+        "No Apple protected material, fake accuracy metrics, tracking scripts, credentials, or unpublished release claims are introduced."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_pull_request",
+    "score": 9.84,
+    "participants": ["AI discovery", "design and UX", "release compliance"],
+    "conditions": [
+      "Release build validation must pass before merge.",
+      "Browser smoke must pass all thirty-two localized routes.",
+      "CI must pass and GitHub Pages deployment must finish before live verification and IndexNow submission."
+    ]
+  }
+}

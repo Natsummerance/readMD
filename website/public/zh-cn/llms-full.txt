@@ -143,6 +143,12 @@ ReadMD 采用 MIT 许可证。源码和发行资产公开在 Natsummerance/readM
 
 在受支持的设备上，ReadMD 在本地执行 OCR。Windows 使用 WinRT 识别，macOS 使用 Apple Vision 离线识别；剪贴板工作流可提取粘贴截图中的文字。保持扫描件在本地，识别后修正阅读顺序、标题、表格、图注、人名和数字，再保存 Markdown。识别质量受扫描清晰度、语言、字体和版式复杂度影响。
 
+## 任务指南：学术写作中的 BibTeX 引用
+
+专题回答：https://app.syminu.online/zh-cn/bibtex-citations/
+
+把 `.bib` 文件和 Markdown 文档放在同一目录，ReadMD 就能扫描相邻文献库。使用 `[@vaswani2017attention]` 或 `@author2024` 这类内联引用键；匹配条目会渲染成引用徽章。可用时悬浮详情能显示标题、作者、年份、期刊会议和 DOI，被引用条目也会汇总到文末参考文献区。这个工作流是文献管理器的补充而不是替代；提交前仍要检查条目、目标格式规则和最终参考文献。
+
 ## 版本事实
 
 - 产品名称：ReadMD

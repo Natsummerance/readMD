@@ -143,6 +143,12 @@ DOCX、PPTX、XLSX、PDF、HTML、LaTeX のソースをローカルに置き、R
 
 対応装置では ReadMD が OCR をローカルで実行します。Windows は WinRT 認識、macOS は Apple Vision のオフライン認識を使い、クリップボード workflow で貼り付けたスクリーンショットから文字を抽出できます。スキャンをローカルに残し、認識後に読書順、見出し、表、キャプション、固有名詞、数値を直してから Markdown を保存します。品質は鮮明さ、言語、書体、レイアウトの複雑さに依存します。
 
+## タスクガイド: 学術執筆の BibTeX 引用
+
+専用回答: https://app.syminu.online/ja/bibtex-citations/
+
+`.bib` ファイルを Markdown 文書と同じ directory に置くと、近くの書誌データを読み取れます。`[@vaswani2017attention]` や `@author2024` のような inline 引用キーを使うと、一致する項目が引用 badge になります。利用できる場合は hover 情報に題名、著者、年、掲載先、DOI を出せ、引用された項目は文末の参考文献にまとまります。この workflow は文献管理アプリを置き換えるものでなく、提出前に項目、指定書式、最終参考文献を確認してください。
+
 ## リリース事実
 
 - 製品名: ReadMD

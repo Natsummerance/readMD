@@ -8,6 +8,7 @@
 - [Markdown 转幻灯](https://app.syminu.online/zh-cn/markdown-to-slides/): 用同一份源文件直接放映标题、代码、公式、图表和表格。
 - [文档转 Markdown](https://app.syminu.online/zh-cn/convert-to-markdown/): 本地转换 DOCX、PPTX、XLSX、PDF、HTML 和 LaTeX，并复核生成结构。
 - [扫描件转 Markdown](https://app.syminu.online/zh-cn/scan-to-markdown/): 在 Windows 和 macOS 使用本机离线 OCR 提取扫描页或截图文字。
+- [BibTeX 引用](https://app.syminu.online/zh-cn/bibtex-citations/): 把同目录 `.bib` 文献库连接到内联引用徽章、来源卡片、可复制 BibTeX 和参考文献汇总。
 - [下载页](https://app.syminu.online/zh-cn/download/): Windows、macOS、Linux、国产系统、编辑器和 MCP 包的下载路径。
 - [完整中文语料](https://app.syminu.online/zh-cn/llms-full.txt): 覆盖长文档分页、非破坏修正、格式转换、离线工作流和版本事实。
 - [英文总索引](https://app.syminu.online/llms.txt): 跨语言入口、英文全文语料和权威事实。
