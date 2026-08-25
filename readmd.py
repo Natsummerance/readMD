@@ -88,7 +88,7 @@ def _env_or_bundle_version():
     return _bundle_version()
 
 
-VERSION = (_env_or_bundle_version() or '2.3.7-beta.3')
+VERSION = (_env_or_bundle_version() or '2.3.7-beta.4')
 
 
 
@@ -833,11 +833,13 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send(404, 'text/plain; charset=utf-8', b'not found')
 
-    def _send(self, code, ctype, body, cache_control='no-cache'):
+    def _send(self, code, ctype, body, cache_control='no-cache', x_frame_options=None):
         self.send_response(code)
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control', cache_control)
+        if x_frame_options:
+            self.send_header('X-Frame-Options', x_frame_options)
         self.end_headers()
         self.wfile.write(body)
 
@@ -897,7 +899,8 @@ class Handler(BaseHTTPRequestHandler):
         if app_token:
             data = data.replace(b'<meta name="readmd-app-token" content="">',
                                 ('<meta name="readmd-app-token" content="%s">' % app_token).encode('utf-8'))
-        self._send(200, 'text/html; charset=utf-8', data, 'no-store')
+        self._send(200, 'text/html; charset=utf-8', data, 'no-store',
+                   x_frame_options='DENY')
 
     def _sse(self, obj):
         try:

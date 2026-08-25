@@ -556,36 +556,11 @@ function renderFormulaPicker() {
 function previewFormula(tex) { const p = $('formula-preview'); p.textContent = '$$' + tex + '$$'; renderMath(p); }
 function insertFormula(tex) { const mode = $('formula-mode').value; closeFormulaModal(); if (!cmView) return; const sel = cmView.state.selection.main; const selected = cmView.state.sliceDoc(sel.from, sel.to); const body = selected || tex; const insert = mode === 'block' ? '\n$$\n' + body + '\n$$\n' : '$' + body + '$'; cmView.dispatch({changes:{from:sel.from,to:sel.to,insert},selection:{anchor:sel.from+insert.length}}); cmView.focus(); }
 
-/* ============================================================
-   Editor Studio PRO: Zen Mode (禅模式) & 表格设计器 & 统计
-   ============================================================ */
-
-let isZenMode = false;
-
-function toggleZenMode(enable) {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (typeof enable === 'boolean') {
-    isZenMode = enable;
-  } else {
-    isZenMode = !isZenMode;
-  }
-  document.body.classList.toggle('zen-mode', isZenMode);
-  const toolbar = document.getElementById('toolbar');
-  if (toolbar) toolbar.classList.remove('zen-toolbar-revealed');
-  if (isZenMode) {
-    showToast(_t('toast.zenEntered') || '已进入禅模式（鼠标移至顶部可唤出工具栏，按 Esc 退出）', 2200);
-    if (cmView) cmView.focus();
-  } else {
-    showToast(_t('toast.zenExited') || '已退出禅模式', 1200);
-  }
-}
-
-
 document.addEventListener('keydown', e => {
   if (e.key === 'F11' && state.editing) {
     e.preventDefault();
     toggleZenMode();
-  } else if (e.key === 'Escape' && isZenMode) {
+  } else if (e.key === 'Escape' && document.body.classList.contains('zen-mode')) {
     toggleZenMode(false);
   }
 });

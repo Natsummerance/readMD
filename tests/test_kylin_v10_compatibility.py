@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -53,16 +54,16 @@ class KylinV10CompatibilityTest(unittest.TestCase):
 
     def test_linux_updater_selects_machine_architecture(self):
         assets = [
-            {'name': f'readmd_2.3.7-beta.3_{arch}.deb'}
+            {'name': f'readmd_{VERSION}_{arch}.deb'}
             for arch in ('amd64', 'arm64')
         ]
         with patch('sys.platform', 'linux'), patch('platform.machine', return_value='aarch64'):
             asset, _ = updater.match_release_asset(assets, flavor='linux')
-            self.assertEqual(asset['name'], 'readmd_2.3.7-beta.3_arm64.deb')
+            self.assertEqual(asset['name'], f'readmd_{VERSION}_arm64.deb')
 
         with patch('sys.platform', 'linux'), patch('platform.machine', return_value='x86_64'):
             asset, _ = updater.match_release_asset(assets, flavor='linux')
-            self.assertEqual(asset['name'], 'readmd_2.3.7-beta.3_amd64.deb')
+            self.assertEqual(asset['name'], f'readmd_{VERSION}_amd64.deb')
 
     def test_release_publishes_kylin_assets_and_safe_fallback(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
@@ -79,8 +80,8 @@ class KylinV10CompatibilityTest(unittest.TestCase):
         self.assertIn('readmd_${{ env.READMD_VERSION }}_arm64.deb', workflow)
         self.assertIn('appimagetool-${APPIMAGE_TOOL_ARCH}.AppImage', build_script)
         self.assertIn('libwebkit2gtk-4.0-37 | libwebkit2gtk-4.1-0', build_script)
-        self.assertIn('ReadMD-linux-aarch64-v2.3.7-beta.3.AppImage', notes)
-        self.assertIn('readmd_2.3.7-beta.3_arm64.deb', notes)
+        self.assertIn(f'ReadMD-linux-aarch64-v{VERSION}.AppImage', notes)
+        self.assertIn(f'readmd_{VERSION}_arm64.deb', notes)
 
 
 if __name__ == '__main__':

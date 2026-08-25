@@ -34,13 +34,13 @@
 
 ## Direct downloads
 
-[Windows Setup](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.3.exe) ·
-[Windows Portable](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.3.exe) ·
-[macOS Apple Silicon](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.3.zip) ·
-[macOS Intel](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.3.zip) ·
-[Linux AppImage](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage) ·
-[Deb for UOS/Kylin](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_amd64.deb) ·
-[Kylin V10 ARM64](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_arm64.deb) ·
+[Windows Setup](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.4.exe) ·
+[Windows Portable](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.4.exe) ·
+[macOS Apple Silicon](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.4.zip) ·
+[macOS Intel](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.4.zip) ·
+[Linux AppImage](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage) ·
+[Deb for UOS/Kylin](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_amd64.deb) ·
+[Kylin V10 ARM64](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_arm64.deb) ·
 [SHA-256](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt)
 
 ## Start in three steps
@@ -63,16 +63,16 @@ ReadMD solves the unglamorous problems in a long-lived document library: large f
 
 | OS / Platform | Architecture / Format | Direct Download Link (GitHub Release) | Description |
 | :--- | :--- | :--- | :--- |
-| 🪟 **Windows** | x64 (Installer) | [⬇️ **ReadMDSetup-v2.3.7-beta.3.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.3.exe) | Setup wizard with automatic `.md` file associations |
-| 💼 **Windows** | x64 (Portable) | [⬇️ **ReadMD-portable-v2.3.7-beta.3.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.3.exe) | Standalone single executable, no installation needed |
-| 🍏 **macOS** | Apple Silicon (M-Series) | [⬇️ **ReadMD-macos-arm64-v2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.3.zip) | Native build for Apple Silicon Macs with Vision OCR |
-| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.3.zip) | Native build for Intel Macs with Vision OCR |
-| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage) | Portable Linux AppImage for Ubuntu, Debian, Fedora, Arch |
-| 🇨🇳 **Domestic OS / Linux** | UOS / Kylin / Deepin / Debian / Ubuntu | [⬇️ **readmd_2.3.7-beta.3_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_amd64.deb) | Native Deb package with desktop entry & MIME association |
-| 🖥️ **Kylin V10 / Phytium** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7-beta.3_arm64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_arm64.deb) | Native build for D2000/E2000 boards with UKUI/X11 software-render fallback |
+| 🪟 **Windows** | x64 (Installer) | [⬇️ **ReadMDSetup-v2.3.7-beta.4.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMDSetup-v2.3.7-beta.4.exe) | Setup wizard with automatic `.md` file associations |
+| 💼 **Windows** | x64 (Portable) | [⬇️ **ReadMD-portable-v2.3.7-beta.4.exe**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-portable-v2.3.7-beta.4.exe) | Standalone single executable, no installation needed |
+| 🍏 **macOS** | Apple Silicon (M-Series) | [⬇️ **ReadMD-macos-arm64-v2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-arm64-v2.3.7-beta.4.zip) | Native build for Apple Silicon Macs with Vision OCR |
+| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.4.zip) | Native build for Intel Macs with Vision OCR |
+| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage) | Portable Linux AppImage for Ubuntu, Debian, Fedora, Arch |
+| 🇨🇳 **Domestic OS / Linux** | UOS / Kylin / Deepin / Debian / Ubuntu | [⬇️ **readmd_2.3.7-beta.4_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_amd64.deb) | Native Deb package with desktop entry & MIME association |
+| 🖥️ **Kylin V10 / Phytium** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7-beta.4_arm64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_arm64.deb) | Native build for D2000/E2000 boards with UKUI/X11 software-render fallback |
 | 📱 **HarmonyOS NEXT** | Source project (DevEco build) | [🧩 **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb source project; no prebuilt HAP is provided |
-| 🧩 **VSCode Extension** | Universal VSIX | [⬇️ **readmd-vscode-2.3.7-beta.3.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.3.vsix) | Offline VSIX extension with sync preview & auto-repair |
-| 🤖 **MCP Server** | FastMCP stdio Package | [⬇️ **readmd-mcp-server-2.3.7-beta.3.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.3.zip) | Standalone FastMCP server for Claude Desktop / Cursor |
+| 🧩 **VSCode Extension** | Universal VSIX | [⬇️ **readmd-vscode-2.3.7-beta.4.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.4.vsix) | Offline VSIX extension with sync preview & auto-repair |
+| 🤖 **MCP Server** | FastMCP stdio Package | [⬇️ **readmd-mcp-server-2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.4.zip) | Standalone FastMCP server for Claude Desktop / Cursor |
 | 🔐 **SHA-256 Hashes** | Checksum List | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | Complete SHA-256 integrity verification list |
 
 ---
@@ -80,7 +80,7 @@ ReadMD solves the unglamorous problems in a long-lived document library: large f
 ## 💻 Multi-System & Native OS Integration
 
 ### 1. Linux & Chinese Domestic OS (KylinOS / UOS / Deepin / openEuler)
-- **Direct Installation**: Download [`readmd_2.3.7-beta.3_amd64.deb`](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.3_amd64.deb) to install directly, or run [`ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage).
+- **Direct Installation**: Download [`readmd_2.3.7-beta.4_amd64.deb`](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_amd64.deb) to install directly, or run [`ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage).
 - **Environment Detection**: `src/readmd_modules/linux_native.py` detects OS distributions and dynamically adapts Wayland / X11 display backends.
 - **Desktop Themes**: Probes DDE, UKUI, GNOME, and KDE dark mode settings via `gsettings`.
 - **Desktop Entry**: Includes FreeDesktop launcher and MIME XML declaration.

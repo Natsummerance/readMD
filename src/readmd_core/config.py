@@ -69,4 +69,4 @@ def get_system_language() -> str:
     return 'zh-CN'
 
 
-VERSION = '2.3.7-beta.3'
+VERSION = '2.3.7-beta.4'

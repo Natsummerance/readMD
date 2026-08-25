@@ -5,7 +5,7 @@
 
 ReadMD 面向用 Markdown 保存技术文档、研究笔记、课程材料、规范和书籍的人。它的核心原则是：Markdown 源文件始终是权威产物。阅读和渲染可以在显示层修复错误语法，但不会在用户明确保存前改写原文件。
 
-项目以 MIT 许可证发布于 https://github.com/Natsummerance/readMD 。本页引用的公开版本是 2.3.7-beta.3。发行包和 SHA256 校验清单通过 GitHub Releases 提供。
+项目以 MIT 许可证发布于 https://github.com/Natsummerance/readMD 。本页引用的公开版本是 2.3.7-beta.4。发行包和 SHA256 校验清单通过 GitHub Releases 提供。
 
 ## ReadMD 解决什么问题
 
@@ -153,7 +153,7 @@ ReadMD 采用 MIT 许可证。源码和发行资产公开在 Natsummerance/readM
 
 - 产品名称：ReadMD
 - 仓库：https://github.com/Natsummerance/readMD
-- 本站版本：2.3.7-beta.3
+- 本站版本：2.3.7-beta.4
 - 许可证：MIT
 - 官网语言：英语、简体中文、繁体中文、日文
 - 应用语言数：46

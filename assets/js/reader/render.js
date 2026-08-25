@@ -674,6 +674,8 @@ function initPaginationEvents() {
         const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
         if (activeTab) {
           activeTab.scrollPos = content.scrollTop || 0;
+          const scrollKey = normalizePath(activeTab.title || activeTab.name || activeTab.path || '');
+          if (scrollKey) state.scrollPos[scrollKey] = activeTab.scrollPos;
           if (state.pagination.enabled && state.pagination.mode === 'continuous') {
             activeTab.continuousScroll = content.scrollTop || 0;
           }
@@ -1563,19 +1565,33 @@ window.renderAllDiagrams = renderAllDiagrams;
 
 function toggleZenMode(force) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const toolbar = document.getElementById('toolbar');
+  const toolbarHeight = toolbar?.getBoundingClientRect().height || 0;
   if (typeof force === 'boolean') {
     document.body.classList.toggle('zen-mode', force);
   } else {
     document.body.classList.toggle('zen-mode');
   }
   const isZen = document.body.classList.contains('zen-mode');
-  const toolbar = document.getElementById('toolbar');
+  document.body.classList.toggle('zen-entering', isZen);
   if (toolbar) toolbar.classList.remove('zen-toolbar-revealed');
   
   if (isZen) {
-    showToast(_t('toast.zenEntered') || '已进入禅模式（鼠标移至顶部可唤出工具栏，按 Esc 退出）', 2200);
-    if (window.cmView) window.cmView.focus();
+    const reader = document.getElementById('content');
+    if (toolbar) {
+      document.body.style.setProperty('--zen-toolbar-height', `${toolbarHeight}px`);
+    }
+    if (reader && !state.editing) {
+      reader.tabIndex = -1;
+      reader.focus({ preventScroll: true });
+    } else if (window.cmView) {
+      window.cmView.focus();
+    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => document.body.classList.remove('zen-entering'));
+    });
   } else {
+    document.body.style.removeProperty('--zen-toolbar-height');
     showToast(_t('toast.zenExited') || '已退出禅模式', 1200);
   }
 }

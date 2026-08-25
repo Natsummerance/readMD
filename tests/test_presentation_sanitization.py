@@ -2,6 +2,7 @@
 """Presentation slides must not become an active-content bypass."""
 
 import unittest
+import re
 
 from src.readmd_modules.mdexport import presentation_render
 
@@ -45,6 +46,17 @@ class PresentationSanitizationTest(unittest.TestCase):
         self.assertNotIn('<script>window.__presentationXss', html)
         self.assertNotIn('onerror=', html)
         self.assertNotIn('javascript:', html)
+
+    def test_in_app_presentation_loads_only_same_origin_active_resources(self):
+        markdown = '# CSP\n\n$E=mc^2$\n<!-- slide -->\n## Second'
+        html = presentation_render.render_presentation_html(markdown)
+
+        # Meta policies cannot enforce frame-ancestors and only create console noise.
+        self.assertNotIn('frame-ancestors', html)
+        for source in re.findall(r'<script src="([^"]+)"', html):
+            self.assertTrue(source.startswith('assets/vendor/reveal/dist/'))
+        self.assertIn('assets/vendor/reveal/dist/readmd-boot.js', html)
+        self.assertNotIn('<script>window.__presentationXss', html)
 
 
 if __name__ == '__main__':

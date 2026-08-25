@@ -62,16 +62,16 @@ ANSWER_PAGES = {
 }
 
 RELEASE_ASSETS = frozenset({
-    "ReadMDSetup-v2.3.7-beta.3.exe",
-    "ReadMD-portable-v2.3.7-beta.3.exe",
-    "ReadMD-macos-arm64-v2.3.7-beta.3.zip",
-    "ReadMD-macos-x64-v2.3.7-beta.3.zip",
-    "ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage",
-    "ReadMD-linux-aarch64-v2.3.7-beta.3.AppImage",
-    "readmd_2.3.7-beta.3_amd64.deb",
-    "readmd_2.3.7-beta.3_arm64.deb",
-    "readmd-vscode-2.3.7-beta.3.vsix",
-    "readmd-mcp-server-2.3.7-beta.3.zip",
+    "ReadMDSetup-v2.3.7-beta.4.exe",
+    "ReadMD-portable-v2.3.7-beta.4.exe",
+    "ReadMD-macos-arm64-v2.3.7-beta.4.zip",
+    "ReadMD-macos-x64-v2.3.7-beta.4.zip",
+    "ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage",
+    "ReadMD-linux-aarch64-v2.3.7-beta.4.AppImage",
+    "readmd_2.3.7-beta.4_amd64.deb",
+    "readmd_2.3.7-beta.4_arm64.deb",
+    "readmd-vscode-2.3.7-beta.4.vsix",
+    "readmd-mcp-server-2.3.7-beta.4.zip",
     "SHA256SUMS.txt",
 })
 

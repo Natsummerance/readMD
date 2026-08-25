@@ -11,7 +11,7 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List
+from typing import Callable, Dict, Iterable, List, Optional
 
 
 CHECKSUM_NAME = "SHA256SUMS.txt"
@@ -88,8 +88,12 @@ def asset_from_json(payload):
     )
 
 
-def fetch_release(runner, tag, repo):
+def fetch_release(runner, tag, repo) -> Optional[dict]:
     completed = runner(["api", f"repos/{repo}/releases/tags/{tag}"])
+    if completed.returncode != 0 and "HTTP 404" in completed.stderr:
+        return None
+    if completed.returncode != 0:
+        raise RuntimeError(completed.stderr.strip() or "failed to fetch release")
     return json.loads(completed.stdout)
 
 
@@ -187,8 +191,14 @@ def main():
             **kwargs,
         )
         if completed.returncode != 0:
-            raise RuntimeError(completed.stderr.strip() or f"gh command failed: {command[0]}")
+            error = completed.stderr.strip() or f"gh command failed: {command[0]}"
+            completed.stderr = error
         return completed
+
+    release = fetch_release(gh_runner, args.tag, args.repo)
+    if release is None:
+        print(f"release {args.tag} does not exist yet; skipping asset sync")
+        return
 
     prepare_assets(args.assets_dir, version)
     prefix, staged = upload_staged_assets(

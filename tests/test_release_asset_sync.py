@@ -69,6 +69,8 @@ class FakeGh:
     def _json(payload):
         class Result:
             stdout = json.dumps(payload)
+            returncode = 0
+            stderr = ""
         return Result()
 
 
@@ -99,6 +101,27 @@ class ReleaseAssetSyncTest(unittest.TestCase):
         (self.root / "unexpected.txt").write_text("bad")
         with self.assertRaises(RuntimeError):
             sync.upload_staged_assets(FakeGh(), TAG, self.root, VERSION, COMMIT, "Natsummerance/readMD")
+
+    def test_missing_release_is_skipped_before_asset_preparation(self):
+        class MissingReleaseGh:
+            def __init__(self):
+                self.calls = []
+
+            def __call__(self, command, **kwargs):
+                self.calls.append(list(command))
+
+                class Result:
+                    stdout = ""
+                    stderr = "gh: Not Found (HTTP 404)"
+                    returncode = 1
+
+                return Result()
+
+        gh = MissingReleaseGh()
+        (self.root / "unexpected.txt").write_text("bad", encoding="utf-8")
+
+        self.assertIsNone(sync.fetch_release(gh, TAG, "Natsummerance/readMD"))
+        self.assertEqual(gh.calls, [["api", f"repos/Natsummerance/readMD/releases/tags/{TAG}"]])
 
     def test_stages_before_replacing_public_assets(self):
         gh = FakeGh()
