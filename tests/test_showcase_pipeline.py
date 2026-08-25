@@ -17,6 +17,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from PIL import Image
+from openpyxl import Workbook
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "showcase" / "scripts"))
@@ -24,6 +25,7 @@ sys.path.insert(0, str(ROOT / "showcase" / "scripts"))
 build_story = importlib.import_module("build_story")
 audit_copy = importlib.import_module("audit_copy")
 content_memory = importlib.import_module("content_memory")
+import_feedback_workbook = importlib.import_module("import_feedback_workbook")
 copy_variants = importlib.import_module("copy_variants")
 copy_profiles = importlib.import_module("copy_profiles")
 export_wechat = importlib.import_module("export_wechat")
@@ -3627,6 +3629,100 @@ class ContentMemoryTest(unittest.TestCase):
             content_memory.engagement_score(record),
             40 + 60 * 2 + 30 * 3 + 10 * 4 + 5 * 6,
         )
+
+    def write_creator_workbook(self, path: Path, rows: list[dict]) -> None:
+        columns = [
+            "首次发布时间", "笔记标题", "体裁", "笔记ID",
+            "曝光", "点赞", "收藏", "评论", "分享", "涨粉",
+        ]
+        book = Workbook()
+        sheet = book.active
+        sheet.append(["小红书创作者中心导出"])
+        sheet.append(columns)
+        for row in rows:
+            sheet.append([row.get(column) for column in columns])
+        book.save(path)
+
+    def test_creator_workbook_imports_all_six_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ledger = root / "publication-ledger.jsonl"
+            workbook = root / "creator.xlsx"
+            content_memory.append_record(ledger, self.record())
+            self.write_creator_workbook(workbook, [{
+                "首次发布时间": "2026年08月24日20时00分00秒",
+                "笔记标题": self.record()["title"],
+                "体裁": "图文",
+                "笔记ID": "note-1",
+                "曝光": 2400,
+                "点赞": 130,
+                "收藏": 190,
+                "评论": 45,
+                "分享": 22,
+                "涨粉": 18,
+            }])
+
+            result = import_feedback_workbook.import_workbook(
+                ledger,
+                workbook,
+                release="v1.0.0",
+                captured_at="2026-08-25T09:00:00+08:00",
+            )
+            records = content_memory.load_records(ledger)
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["metrics_status"], "complete")
+        self.assertEqual(result["metrics"]["impressions"], 2400)
+        self.assertEqual(result["metrics"]["follows"], 18)
+        self.assertEqual(records[0]["metrics_source"], "xiaohongshu-web")
+        self.assertEqual(records[0]["metrics_observed"], [
+            "collects", "comments", "follows", "impressions", "likes", "shares",
+        ])
+
+    def test_ambiguous_creator_rows_fail_without_touching_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ledger = root / "publication-ledger.jsonl"
+            workbook = root / "creator.xlsx"
+            base = {
+                "首次发布时间": "2026年08月24日20时00分00秒",
+                "笔记标题": self.record()["title"],
+                "体裁": "图文",
+                "曝光": 100,
+                "点赞": 10,
+                "收藏": 20,
+                "评论": 3,
+                "分享": 2,
+                "涨粉": 1,
+            }
+            self.write_creator_workbook(workbook, [base, {**base, "笔记ID": "note-2"}])
+            content_memory.append_record(ledger, self.record())
+            before = ledger.read_text(encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "2 creator workbook rows"):
+                import_feedback_workbook.import_workbook(
+                    ledger,
+                    workbook,
+                    release="v1.0.0",
+                    captured_at="2026-08-25T09:00:00+08:00",
+                )
+
+            self.assertEqual(ledger.read_text(encoding="utf-8"), before)
+
+    def test_creator_workbook_rejects_missing_metric_columns(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            workbook = root / "creator.xlsx"
+            columns = ["首次发布时间", "笔记标题", "体裁", "曝光"]
+            book = Workbook()
+            sheet = book.active
+            sheet.append(["export"])
+            sheet.append(columns)
+            sheet.append(["2026年08月24日20时00分00秒", "title", "图文", 1])
+            book.save(workbook)
+
+            with self.assertRaisesRegex(ValueError, "missing columns"):
+                import_feedback_workbook.read_creator_workbook(workbook)
 
     def test_two_release_formula_reaches_medium_confidence(self) -> None:
         records = [

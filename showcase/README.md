@@ -83,6 +83,15 @@ python showcase/scripts/content_memory.py summary
 python showcase/scripts/performance_report.py --output-dir showcase/reports/performance
 ```
 
+曝光和互动优先用创作者中心手动导出的「笔记列表明细表」XLSX 回填；导入器只读本地文件，不重启浏览器、不提交表单、不保存原始工作簿：
+
+```powershell
+python showcase/scripts/import_feedback_workbook.py `
+  --release "v2.3.7-beta.3" `
+  --workbook "笔记列表明细表.xlsx" `
+  --captured-at "2026-08-25T10:00:00+08:00"
+```
+
 指标导入会保留发布时的公式、钩子和 `variant_id`，拒绝身份冲突和旧快照回滚；六个平台计数齐全会置为 `complete`，缺项保持 `pending`，且计数不会随新快照回退。评论导入只保存主题、意图、点赞权重和匿名内容哈希，不保存原文、作者昵称或账号 ID；多次分页快照会按哈希累积，避免漏掉先前证据或重复计数。绩效报告会跨发布聚合出有置信门槛的评论焦点，并把它写入下一版文案的读者场景；评论证据有自己的来源和时间戳，不必等曝光指标补齐才生效。报告会分开列出 `complete` 与 `pending` 记录；`pending` 不参与公式和钩子学习，低置信维度也不会给出推荐。
 
 互动学习使用统一的六信号评分：点赞、收藏、评论、转发和关注分别按 1、2、3、4、6 加权；关注代表跨笔记的长期需求，权重最高。
