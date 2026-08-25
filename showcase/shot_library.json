@@ -16,6 +16,8 @@
       "visuality": 0.98,
       "description": "ReadMD 完整视窗：暗色主题、目录大纲、LaTeX 定理与图表混排真实渲染",
       "output": "overview-reader.png",
+      "fixture": "readmd-showcase.md",
+      "viewport": { "width": 960, "height": 1280 },
       "keywords": ["阅读", "渲染", "目录", "大纲", "界面", "Markdown", "主题"],
       "assertions": ["#content h1", "#toc-list a:first-child", "#content mjx-container"],
       "evidence": ["README.md", "showcase/fixtures/readmd-showcase.md"]
@@ -29,6 +31,8 @@
       "visuality": 0.92,
       "description": "CodeMirror 6 编辑器与实时预览左右分栏，顶部格式工具栏",
       "output": "overview-editor.png",
+      "fixture": "readmd-product-plan.md",
+      "viewport": { "width": 960, "height": 720 },
       "keywords": ["编辑", "编辑器", "预览", "CodeMirror", "写作"],
       "assertions": ["#edit-bar"],
       "evidence": ["assets/js/editor/editor.js", "ui-tests/readmd-ui.spec.js"]
@@ -42,6 +46,8 @@
       "visuality": 0.96,
       "description": "Markdown 直接变幻灯片：悬浮工具栏 + 放映画面",
       "output": "presentation-reveal.png",
+      "fixture": "readmd-talk.md",
+      "viewport": { "width": 1280, "height": 720 },
       "keywords": ["演说", "演示", "幻灯片", "reveal", "presentation", "ppt"],
       "assertions": ["#presentation-modal", "#presentation-toolbar"],
       "evidence": ["release/release_notes.md", "assets/js/reader/render.js"]
@@ -55,6 +61,8 @@
       "visuality": 0.94,
       "description": "PlantUML / Graphviz / WaveDrom / Vega / TikZ 可视化插入面板",
       "output": "diagram-picker.png",
+      "fixture": "readmd-science.md",
+      "viewport": { "width": 1024, "height": 768 },
       "keywords": ["图表", "diagram", "plantuml", "graphviz", "vega", "tikz", "wavedrom"],
       "assertions": ["#diagram-modal", "#diagram-type"],
       "evidence": ["assets/js/editor/editor.js"]
@@ -68,6 +76,8 @@
       "visuality": 0.93,
       "description": "多行数学公式 + theorem/proof 学术 Callout 盒子真实渲染",
       "output": "academic-latex.png",
+      "fixture": "readmd-paper.md",
+      "viewport": { "width": 960, "height": 720 },
       "keywords": ["latex", "公式", "学术", "定理", "bibtex", "引用"],
       "assertions": ["#content mjx-container[display='true']"],
       "evidence": ["README.md", "showcase/fixtures/readmd-showcase.md"]
@@ -81,6 +91,8 @@
       "visuality": 0.90,
       "description": "Code Chunk 就地运行：运行按钮、状态徽标与输出区",
       "output": "code-chunk.png",
+      "fixture": "readmd-lab.md",
+      "viewport": { "width": 960, "height": 720 },
       "keywords": ["代码", "code chunk", "执行", "python", "javascript"],
       "assertions": ["#content .code-chunk-card", "#content .code-chunk-run-btn"],
       "evidence": ["assets/js/reader/render.js", "showcase/fixtures/readmd-showcase.md"]
@@ -94,6 +106,7 @@
       "visuality": 0.86,
       "description": "打开 / 文件夹 / AI / 万物转 MD / 网页转 MD / 扫描 OCR 六大入口",
       "output": "convert-home.png",
+      "viewport": { "width": 1024, "height": 640 },
       "keywords": ["转换", "转化", "欢迎页", "ocr", "网页转", "word", "pdf"],
       "assertions": ["#welcome", "#w-open", "#w-folder", "#w-ai", "#w-convert", "#w-web", "#w-ocr"],
       "evidence": ["assets/index.html"]
@@ -107,6 +120,8 @@
       "visuality": 0.84,
       "description": "局域网移动端共享面板：二维码入口、随机令牌与启停控制",
       "output": "sharing-export.png",
+      "fixture": "readmd-team-guide.md",
+      "viewport": { "width": 1024, "height": 640 },
       "keywords": ["共享", "分享", "二维码", "移动端", "导出", "局域网"],
       "assertions": ["#share-modal", "#share-start:not([disabled])", "#share-stop[disabled]"],
       "evidence": ["assets/js/features/share.js", "assets/index.html"]

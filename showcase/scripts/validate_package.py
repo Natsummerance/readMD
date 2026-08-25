@@ -34,6 +34,71 @@ BANNED = ("公众号", "微信", "闲鱼", "咸鱼", "转卖", "出票", "转让
 IMAGE_RE = re.compile(r"^xhs-(0[1-9])-[a-z0-9-]+\.jpg$")
 
 
+def raw_capture_quality_errors(
+    package_dir: Path,
+    record: dict[str, Any],
+) -> list[str]:
+    """Reject blank, distorted, or wrong-ratio evidence immediately before publishing."""
+    shot_id = str(record.get("shot_id", "unknown"))
+    relative = Path(str(record.get("file", "")))
+    path = package_dir / relative
+    errors: list[str] = []
+    capture = record.get("capture") or {}
+    viewport = str(capture.get("viewport", ""))
+    scale = int(capture.get("scale", 0) or 0)
+    if not re.fullmatch(r"\d+x\d+", viewport) or scale < 1:
+        return [f"raw screenshot has incomplete capture metadata: {shot_id}"]
+    width_text, height_text = viewport.split("x")
+    expected_size = (int(width_text) * scale, int(height_text) * scale)
+
+    with Image.open(path) as image:
+        actual_size = image.size
+        sample = image.convert("RGB").copy()
+    if actual_size != expected_size:
+        errors.append(
+            f"raw screenshot ratio differs from capture metadata: {shot_id} "
+            f"({actual_size[0]}x{actual_size[1]}, expected {expected_size[0]}x{expected_size[1]})"
+        )
+
+    sample.thumbnail((720, 720))
+    pixels = np.asarray(sample, dtype=np.int16)
+    height, width, _ = pixels.shape
+    border = np.concatenate([
+        pixels[:8, :8].reshape(-1, 3),
+        pixels[:8, -8:].reshape(-1, 3),
+        pixels[-8:, :8].reshape(-1, 3),
+        pixels[-8:, -8:].reshape(-1, 3),
+    ])
+    background = np.median(border, axis=0)
+    active_mask = np.abs(pixels - background).sum(axis=2) > 36
+    active_ratio = float(active_mask.mean())
+    row_activity = active_mask.mean(axis=1)
+    blank_rows = row_activity <= 0.005
+    longest_blank = 0
+    current_start = None
+    for index, blank in enumerate([*blank_rows, True]):
+        if blank and current_start is None:
+            current_start = index
+        if (not blank or index == len(blank_rows)) and current_start is not None:
+            end = index + 1 if blank else index
+            longest_blank = max(longest_blank, end - current_start)
+            current_start = None
+    active_columns = np.flatnonzero(active_mask.mean(axis=0) > 0.01)
+    active_rows = np.flatnonzero(row_activity > 0.01)
+    if active_ratio < 0.01:
+        errors.append(f"raw screenshot is nearly blank: {shot_id} ({active_ratio:.1%} active)")
+    if longest_blank / max(height, 1) > 0.32:
+        errors.append(
+            f"raw screenshot has a long empty band: {shot_id} ({longest_blank / height:.1%})"
+        )
+    if len(active_columns) < width * 0.5 or len(active_rows) < height * 0.25:
+        errors.append(
+            f"raw screenshot content does not fill its frame: {shot_id} "
+            f"({len(active_columns)}x{len(active_rows)} of {width}x{height})"
+        )
+    return errors
+
+
 def topic_set_id(topics: list[Any]) -> str:
     clean_topics = [str(item).strip() for item in topics if str(item).strip()]
     payload = "\n".join(clean_topics)
@@ -697,6 +762,7 @@ def publisher_asset_errors(package_dir: Path) -> list[str]:
         if digest in raw_hashes:
             errors.append(f"captured evidence hash is duplicated: {shot_id}")
         raw_hashes.add(digest)
+        errors.extend(raw_capture_quality_errors(package_dir, entry))
 
     plan_shot_ids = {
         str(item.get("shot_id"))

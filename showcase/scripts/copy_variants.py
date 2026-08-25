@@ -138,9 +138,9 @@ def choose_variant(
     variants: list[dict[str, Any]],
     history: list[dict[str, Any]] | None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    records = history or []
-    records, _pending_records = partition_records(records)
-    summary = summarize(records)
+    published_records = history or []
+    learning_records, _pending_records = partition_records(published_records)
+    summary = summarize(learning_records)
     recent_hooks = set(summary.get("recent_hook_types", []))
     recent_formulas = set(summary.get("recent_formulas", []))
     resonance_directive_payloads = {
@@ -157,7 +157,7 @@ def choose_variant(
 
     def dimension_stats(key: str) -> dict[str, dict[str, Any]]:
         output: dict[str, dict[str, Any]] = {}
-        for record in records:
+        for record in learning_records:
             name = str(record.get(key, ""))
             if not name.strip():
                 continue
@@ -183,9 +183,9 @@ def choose_variant(
     frame_stats = dimension_stats("copy_frame")
     hook_usage = {
         str(record.get("hook_type", "")): sum(
-            1 for item in records if str(item.get("hook_type", "")) == str(record.get("hook_type", ""))
+            1 for item in learning_records if str(item.get("hook_type", "")) == str(record.get("hook_type", ""))
         )
-        for record in records
+        for record in learning_records
     }
     max_hook_score = max((item["score"] for item in hook_stats.values()), default=0.0)
     max_formula_score = max((item["score"] for item in formula_stats.values()), default=0.0)
@@ -196,7 +196,7 @@ def choose_variant(
             "release", "title", "title_sha256", "title_trigrams",
             "body_sha256", "opening", "closing", "body_trigrams",
         )}
-        for record in records
+        for record in published_records
         if any(record.get(key) for key in (
             "title", "title_sha256", "title_trigrams", "body_sha256",
             "opening", "closing", "body_trigrams",

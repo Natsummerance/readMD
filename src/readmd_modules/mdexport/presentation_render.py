@@ -232,10 +232,10 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>{title}</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/{theme}.css" id="theme">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/monokai.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <link rel="stylesheet" href="/assets/vendor/reveal/reveal.css">
+  <link rel="stylesheet" href="/assets/vendor/reveal/theme/{theme}.css" id="theme">
+  <link rel="stylesheet" href="/assets/vendor/reveal/plugin/highlight/monokai.css">
+  <link rel="stylesheet" href="/assets/vendor/katex/dist/katex.min.css">
   <style>
     :root {{
       --reveal-base-font-size: 24px;
@@ -248,6 +248,9 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
       height: 100%;
       max-height: 100%;
       overflow-y: auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
       padding: 24px 36px;
       box-sizing: border-box;
       text-align: left;
@@ -338,60 +341,22 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
     }}
   </style>
 </head>
-<body>
+<body data-transition="{transition}">
   <div class="reveal">
     <div class="slides">
 {slides_body}
     </div>
   </div>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/markdown/markdown.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/highlight/highlight.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/notes/notes.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/plugin/math/math.js"></script>
-  <script>
-    window.deck = new Reveal({{
-      width: 1080,
-      height: 720,
-      margin: 0.06,
-      minScale: 0.2,
-      maxScale: 2.0,
-      controls: true,
-      progress: true,
-      center: false,
-      hash: true,
-      transition: '{transition}',
-      slideNumber: 'c/t',
-      plugins: [ RevealMarkdown, RevealHighlight, RevealNotes, RevealMath.KaTeX ]
-    }});
-    deck.initialize();
-
-    // 监听来自父窗口的实时定制消息 (Theme, Transition, Font Scale, Navigation)
-    window.addEventListener('message', function(event) {{
-      if (!event.data || typeof event.data !== 'object') return;
-      const data = event.data;
-      if (data.type === 'set-theme' && data.theme) {{
-        const themeLink = document.getElementById('theme');
-        if (themeLink) {{
-          themeLink.href = 'https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/' + data.theme + '.css';
-        }}
-      }} else if (data.type === 'set-transition' && data.transition) {{
-        if (window.deck && typeof window.deck.configure === 'function') {{
-          window.deck.configure({{ transition: data.transition }});
-        }}
-      }} else if (data.type === 'set-font-size' && data.size) {{
-        document.documentElement.style.setProperty('--reveal-base-font-size', data.size + 'px');
-      }} else if (data.type === 'toggle-overview') {{
-        if (window.deck && typeof window.deck.toggleOverview === 'function') {{
-          window.deck.toggleOverview();
-        }}
-      }}
-    }});
-  </script>
+  <script src="/assets/vendor/reveal/reveal.min.js"></script>
+  <script src="/assets/vendor/reveal/plugin/markdown/markdown.js"></script>
+  <script src="/assets/vendor/reveal/plugin/highlight/highlight.js"></script>
+  <script src="/assets/vendor/reveal/plugin/notes/notes.js"></script>
+  <script src="/assets/vendor/katex/dist/katex.min.js"></script>
+  <script src="/assets/vendor/reveal/plugin/math/math.js"></script>
+  <script src="/assets/vendor/reveal/presentation-bootstrap.js"></script>
 </body>
 </html>"""
 
 
 # 兼容别名
 generate_presentation_html = render_presentation_html
-

@@ -181,9 +181,11 @@ def query_status(publisher: Path, title: str) -> dict[str, Any]:
         raise RuntimeError((completed.stderr or completed.stdout or "status query failed").strip())
     for line in reversed((completed.stdout or "").splitlines()):
         try:
-            return json.loads(line)
+            parsed = json.loads(line)
         except json.JSONDecodeError:
             continue
+        if isinstance(parsed, dict):
+            return parsed
     return {}
 
 
@@ -589,10 +591,12 @@ def process_package(
         result: dict[str, Any] = {}
         for line in reversed((completed.stdout or "").splitlines()):
             try:
-                result = json.loads(line)
-                break
+                parsed = json.loads(line)
             except json.JSONDecodeError:
                 continue
+            if isinstance(parsed, dict):
+                result = parsed
+                break
         record["attempts"] += 1
         record["release"] = release
         record["variant_id"] = selected_variant_id

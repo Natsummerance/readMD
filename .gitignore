@@ -21,6 +21,7 @@ showcase/output/
 showcase/downloads/
 showcase/publish-work/
 showcase/publish-state.json
+showcase/content/publication-ledger.jsonl
 showcase/content-package.zip
 showcase/content-package.zip.manifest.json
 .venv-win7/

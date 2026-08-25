@@ -2,6 +2,7 @@
 """Product showcase pipeline contract tests."""
 from __future__ import annotations
 
+import copy
 import hashlib
 import importlib
 import json
@@ -1216,6 +1217,56 @@ class WatcherEnvironmentTest(unittest.TestCase):
     def test_publisher_subprocess_forces_utf8_json(self) -> None:
         environment = watch_and_publish.publisher_environment()
         self.assertEqual(environment["PYTHONIOENCODING"], "utf-8")
+
+    def test_query_status_ignores_json_scalar_lines(self) -> None:
+        calls = []
+
+        def fake_run(command, **kwargs):
+            calls.append(command)
+            return SimpleNamespace(
+                returncode=0,
+                stdout='"target-id"\n{"status": "审核中", "noteId": "note-1"}\n',
+                stderr="",
+            )
+
+        original_run = watch_and_publish.subprocess.run
+        watch_and_publish.subprocess.run = fake_run
+        try:
+            result = watch_and_publish.query_status(Path("publisher.py"), "标题")
+        finally:
+            watch_and_publish.subprocess.run = original_run
+
+        self.assertEqual(result["noteId"], "note-1")
+
+
+class RawCaptureQualityTest(unittest.TestCase):
+    def quality_record(self) -> dict:
+        return {
+            "shot_id": "overview.reader",
+            "file": "raw/test.png",
+            "capture": {"viewport": "960x720", "scale": 2},
+        }
+
+    def test_accepts_varied_screenshot_with_matching_ratio(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            root.joinpath("raw").mkdir()
+            path = root / "raw" / "test.png"
+            Image.effect_noise((1920, 1440), 24).convert("RGB").save(path)
+            errors = validate_package.raw_capture_quality_errors(root, self.quality_record())
+
+        self.assertEqual(errors, [])
+
+    def test_rejects_wrong_ratio_and_blank_screenshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            root.joinpath("raw").mkdir()
+            path = root / "raw" / "test.png"
+            Image.new("RGB", (1280, 1440), "#182029").save(path)
+            errors = validate_package.raw_capture_quality_errors(root, self.quality_record())
+
+        self.assertTrue(any("ratio differs" in error for error in errors))
+        self.assertTrue(any("nearly blank" in error for error in errors))
 
     def test_rejects_chosen_variant_id_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2610,7 +2661,7 @@ class CopyVariantsTest(unittest.TestCase):
             report["formula_stats"]["#22"]["weighted_engagement"],
         )
 
-    def test_selection_ignores_pending_hook_history(self) -> None:
+    def test_pending_history_blocks_originality_but_not_engagement_learning(self) -> None:
         story = {
             "release": "v1.1.0",
             "previous_release": "v1.0.0",
@@ -2630,7 +2681,68 @@ class CopyVariantsTest(unittest.TestCase):
         ]
         chosen, report = copy_variants.choose_variant(variants, history)
         self.assertEqual(chosen["strategy"], "outcome-led")
-        self.assertEqual(report["ranked"][0]["history_adjustment"] + report["ranked"][1]["history_adjustment"], 0)
+        self.assertFalse(report["hook_stats"])
+
+    def test_pending_publication_still_blocks_exact_duplicate_body(self) -> None:
+        story = {
+            "release": "v1.1.0",
+            "previous_release": "v1.0.0",
+            "version_state": "prerelease",
+            "primary_shot": "presentation.reveal",
+            "angle": "ReadMD 让同一份 Markdown 直接放映",
+            "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        variants_for_history = copy.deepcopy(variants)
+        chosen_without_history, _ = copy_variants.choose_variant(variants, [])
+        fingerprints = copy_variants.text_fingerprints(chosen_without_history["body"])
+        history = [{
+            **self.history_record("v1.0.9", chosen_without_history["hook_type"], chosen_without_history["title_formula_id"]),
+            "metrics_status": "pending",
+            **fingerprints,
+            "body_trigrams": sorted(copy_variants.text_trigrams(chosen_without_history["body"])),
+        }]
+
+        copy_variants.choose_variant(variants_for_history, history)
+
+    def test_pending_exact_duplicate_is_rejected_in_ranking(self) -> None:
+        story = {
+            "release": "v1.1.0",
+            "previous_release": "v1.0.0",
+            "version_state": "prerelease",
+            "primary_shot": "presentation.reveal",
+            "angle": "ReadMD 让同一份 Markdown 直接放映",
+            "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        variants_for_history = copy.deepcopy(variants)
+        chosen_without_history, _ = copy_variants.choose_variant(variants, [])
+        fingerprints = copy_variants.text_fingerprints(chosen_without_history["body"])
+        history = [{
+            **self.history_record("v1.0.9", chosen_without_history["hook_type"], chosen_without_history["title_formula_id"]),
+            "metrics_status": "pending",
+            **fingerprints,
+            "body_trigrams": sorted(copy_variants.text_trigrams(chosen_without_history["body"])),
+        }]
+
+        _, report = copy_variants.choose_variant(variants_for_history, history)
+        duplicate_rank = next(
+            item for item in report["ranked"]
+            if item["variant_id"] == chosen_without_history["variant_id"]
+        )
+
+        self.assertFalse(duplicate_rank["ok"])
+        self.assertTrue(any("body hash matches" in item for item in duplicate_rank["originality_failures"]))
 
     def test_confident_comment_intent_prefers_matching_frame(self) -> None:
         story = self.variant_story()
@@ -4640,11 +4752,17 @@ class WatcherTest(unittest.TestCase):
         for index, shot_id in enumerate(story["selected_shots"]):
             filename = f"{shot_id.replace('.', '-')}.png"
             path = package / "raw" / filename
-            Image.new("RGB", (960, 1280), (24 + index * 37, 88 + index * 13, 150 - index * 19)).save(path, "PNG")
+            Image.effect_noise((960, 1280), 18 + index * 2).convert("RGB").save(path, "PNG")
             capture_shots.append({
                 "shot_id": shot_id,
                 "file": f"raw/{filename}",
                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                "capture": {
+                    "viewport": "960x1280",
+                    "scale": 1,
+                    "locale": "zh-CN",
+                    "theme": "dark",
+                },
             })
         (package / "raw" / "capture.json").write_text(json.dumps({
             "schema_version": 1,

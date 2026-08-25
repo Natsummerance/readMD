@@ -34,6 +34,11 @@ function loadShotLibrary(libraryPath = path.join(__dirname, 'shot_library.json')
     if (shot.id !== id) throw new Error(`Shot id mismatch: ${id}`);
     if (!Array.isArray(shot.assertions) || shot.assertions.length === 0) throw new Error(`${id} has no assertions`);
     if (!Array.isArray(shot.evidence) || shot.evidence.length === 0) throw new Error(`${id} has no evidence`);
+    if (shot.fixture !== undefined && !/^[\w.-]+\.md$/.test(shot.fixture)) throw new Error(`${id} has unsafe fixture`);
+    if (shot.viewport !== undefined) {
+      if (!Number.isInteger(shot.viewport.width) || shot.viewport.width < 640 || shot.viewport.width > 2560) throw new Error(`${id} has invalid viewport width`);
+      if (!Number.isInteger(shot.viewport.height) || shot.viewport.height < 480 || shot.viewport.height > 2560) throw new Error(`${id} has invalid viewport height`);
+    }
     if (!/^[\w.-]+\.png$/.test(shot.output)) throw new Error(`${id} has unsafe output name`);
   }
   if (!overlayPath) return library;
