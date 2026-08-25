@@ -55,6 +55,15 @@
     <lastmod>2026-08-25</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
   </url>
   <url>
+    <loc>https://app.syminu.online/scan-to-markdown/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://app.syminu.online/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://app.syminu.online/zh-cn/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://app.syminu.online/zh-tw/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://app.syminu.online/ja/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://app.syminu.online/scan-to-markdown/"/>
+    <lastmod>2026-08-25</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://app.syminu.online/zh-cn/</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://app.syminu.online/"/>
     <xhtml:link rel="alternate" hreflang="zh-CN" href="https://app.syminu.online/zh-cn/"/>
@@ -106,6 +115,15 @@
     <xhtml:link rel="alternate" hreflang="zh-TW" href="https://app.syminu.online/zh-tw/convert-to-markdown/"/>
     <xhtml:link rel="alternate" hreflang="ja" href="https://app.syminu.online/ja/convert-to-markdown/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://app.syminu.online/convert-to-markdown/"/>
+    <lastmod>2026-08-25</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://app.syminu.online/zh-cn/scan-to-markdown/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://app.syminu.online/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://app.syminu.online/zh-cn/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://app.syminu.online/zh-tw/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://app.syminu.online/ja/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://app.syminu.online/scan-to-markdown/"/>
     <lastmod>2026-08-25</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
   </url>
   <url>
@@ -163,6 +181,15 @@
     <lastmod>2026-08-25</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
   </url>
   <url>
+    <loc>https://app.syminu.online/zh-tw/scan-to-markdown/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://app.syminu.online/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://app.syminu.online/zh-cn/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://app.syminu.online/zh-tw/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://app.syminu.online/ja/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://app.syminu.online/scan-to-markdown/"/>
+    <lastmod>2026-08-25</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://app.syminu.online/ja/</loc>
     <xhtml:link rel="alternate" hreflang="en" href="https://app.syminu.online/"/>
     <xhtml:link rel="alternate" hreflang="zh-CN" href="https://app.syminu.online/zh-cn/"/>
@@ -214,6 +241,15 @@
     <xhtml:link rel="alternate" hreflang="zh-TW" href="https://app.syminu.online/zh-tw/convert-to-markdown/"/>
     <xhtml:link rel="alternate" hreflang="ja" href="https://app.syminu.online/ja/convert-to-markdown/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://app.syminu.online/convert-to-markdown/"/>
+    <lastmod>2026-08-25</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://app.syminu.online/ja/scan-to-markdown/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://app.syminu.online/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://app.syminu.online/zh-cn/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://app.syminu.online/zh-tw/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://app.syminu.online/ja/scan-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://app.syminu.online/scan-to-markdown/"/>
     <lastmod>2026-08-25</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
   </url>
 </urlset>

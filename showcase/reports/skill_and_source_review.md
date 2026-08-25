@@ -2,16 +2,16 @@
 
 ## Verdict
 
-Approved as a staged publication package at **9.84 / 10**. The production origin is live through the approved GitHub Pages and Cloudflare DNS architecture; this review covers the conversion-page expansion, design, GEO readiness, distribution artifacts, rights, and reproducible checks.
+Approved as a staged publication package at **9.83 / 10**. The production origin is live through the approved GitHub Pages and Cloudflare DNS architecture; this review covers the OCR-page expansion, design, GEO readiness, distribution artifacts, rights, and reproducible checks.
 
 ## Requested skills
 
 | Skill | Depth of use | Evidence |
 |---|---:|---|
 | `$design-taste-frontend` | Deep | Declared design read for task-answer pages; preserved the original premium light theme, single accent, type scale, real product captures, semantic headings, responsive collapse, and restrained static motion. |
-| `$dbs-spread` | Deep | Five-theory transmission review for the conversion cluster in `conversion_pages_spread_review.md`; prior reviews remain in `answer_pages_spread_review.md` and `website_spread_review.md`. |
-| `$dbs-wechat-html` | Deep | New paste-safe Simplified Chinese conversion summary uses the minimal style source with expanded inline styles on every visible element; QA forbids style tags, classes, IDs, scripts, pseudo-elements, external resources, and raw URLs. |
-| `$dbs-content-system` | Applied within boundary | The source archive did not meet the heavy-engineering threshold, so it was not force-expanded. The growth corpus is organized as reusable QST/SOL units across three topic clusters, four languages, indexes, full corpora, and citation guidance. |
+| `$dbs-spread` | Deep | Five-theory transmission review for the OCR cluster in `ocr_pages_spread_review.md`; prior reviews remain in `conversion_pages_spread_review.md`, `answer_pages_spread_review.md`, and `website_spread_review.md`. |
+| `$dbs-wechat-html` | Deep | New paste-safe Simplified Chinese OCR summary uses the minimal style source with expanded inline styles on every visible element; QA forbids style tags, classes, IDs, scripts, pseudo-elements, external resources, and raw URLs. |
+| `$dbs-content-system` | Applied within boundary | The source archive did not meet the heavy-engineering threshold, so it was not force-expanded. The growth corpus is organized as reusable QST/SOL units across four topic clusters, four languages, indexes, full corpora, and citation guidance. |
 
 ## Requested open-source libraries
 
@@ -36,12 +36,13 @@ The brief requested a literal Apple clone. That part was not implemented because
 - Release build validator: green after final rebuild.
 - Product showcase pipeline: 144 tests green before the website package.
 - Desktop UI suite: 55 tests green before the website package.
-- Browser smoke test: twenty-four localized home, workflow, download, large-file, presentation, and conversion routes; one H1 per page, stylesheet loaded, zero broken images, zero script errors.
+- Browser smoke test: twenty-eight localized home, workflow, download, large-file, presentation, conversion, and OCR routes; one H1 per page, stylesheet loaded, zero broken images, zero script errors.
 - Structured data: localized WebPage, SoftwareApplication, speakable, FAQPage, HowTo, and BreadcrumbList contracts pass the website validator.
 - AI answer schema: four localized homepages and four workflow pages expose visible FAQPage entities; the dedicated three-round approval is recorded in `faq_schema_approval.json`.
 - Answer-page review: eight localized task guides expose complete hreflang sets, visible workflows, and citation-ready corpora; the dedicated three-round approval is recorded in `answer_pages_approval.json`.
 - Conversion-page review: four localized task guides cover local document migration with qualified offline and fidelity boundaries; the dedicated three-round approval is recorded in `conversion_pages_approval.json`.
-- Sitemap review: all twenty-four canonical URLs expose complete hreflang sets and current freshness dates; the dedicated three-round approval is recorded in `sitemap_hreflang_approval.json`.
+- OCR-page review: four localized task guides cover Windows WinRT and macOS Apple Vision workflows with local processing and human-review boundaries; the dedicated three-round approval is recorded in `ocr_pages_approval.json`.
+- Sitemap review: all twenty-eight canonical URLs expose complete hreflang sets and current freshness dates; the dedicated three-round approval is recorded in `sitemap_hreflang_approval.json`.
 - WeChat export QA: green.
 - Three approval rounds and final decision meeting: approved at or above 9.7.
 - Production architecture: `https://app.syminu.online/` is live through Cloudflare DNS and GitHub Pages with HTTPS enforced.
