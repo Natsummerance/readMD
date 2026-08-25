@@ -25,7 +25,7 @@ function loadCaptureConfig(env = process.env) {
   };
 }
 
-function loadShotLibrary(libraryPath = path.join(__dirname, 'shot_library.json')) {
+function loadShotLibrary(libraryPath = path.join(__dirname, 'shot_library.json'), overlayPath = process.env.SHOWCASE_SHOT_OVERLAY) {
   const library = JSON.parse(fs.readFileSync(libraryPath, 'utf8'));
   if (library.schema_version !== 1) throw new Error('Unsupported shot library schema');
   const ids = Object.keys(library.shots);
@@ -35,6 +35,14 @@ function loadShotLibrary(libraryPath = path.join(__dirname, 'shot_library.json')
     if (!Array.isArray(shot.assertions) || shot.assertions.length === 0) throw new Error(`${id} has no assertions`);
     if (!Array.isArray(shot.evidence) || shot.evidence.length === 0) throw new Error(`${id} has no evidence`);
     if (!/^[\w.-]+\.png$/.test(shot.output)) throw new Error(`${id} has unsafe output name`);
+  }
+  if (!overlayPath) return library;
+  const overlay = JSON.parse(fs.readFileSync(overlayPath, 'utf8'));
+  if (overlay.schema_version !== 1) throw new Error('Shot overlay schema_version must be 1');
+  for (const [id, patch] of Object.entries(overlay.shots || {})) {
+    const shot = library.shots[id];
+    if (!shot) throw new Error(`Shot overlay references unknown shot: ${id}`);
+    library.shots[id] = { ...shot, ...patch, id, output: shot.output };
   }
   return library;
 }

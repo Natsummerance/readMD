@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createRequire } from 'node:module';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const require = createRequire(import.meta.url);
 const { loadCaptureConfig, loadShotLibrary } = require('../capture.config.cjs');
@@ -53,4 +56,20 @@ test('shot library defines the eight stable authentic shots', () => {
     assert.ok(Array.isArray(shot.assertions) && shot.assertions.length > 0);
     assert.ok(shot.visuality >= 0 && shot.visuality <= 1);
   }
+});
+
+test('shot overlay adjusts assertions without changing evidence identity', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'readmd-shot-overlay-'));
+  const overlayPath = join(root, 'overlay.json');
+  await writeFile(overlayPath, JSON.stringify({
+    schema_version: 1,
+    shots: {
+      'presentation.reveal': { assertions: ['#presentation-modal'], visuality: 0.9 },
+    },
+  }));
+  const library = loadShotLibrary(undefined, overlayPath);
+  assert.deepEqual(library.shots['presentation.reveal'].assertions, ['#presentation-modal']);
+  assert.equal(library.shots['presentation.reveal'].visuality, 0.9);
+  assert.equal(library.shots['presentation.reveal'].output, 'presentation-reveal.png');
+  assert.equal(library.shots['presentation.reveal'].evidence.length > 0, true);
 });

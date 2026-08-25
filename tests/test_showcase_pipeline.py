@@ -4836,11 +4836,17 @@ class WatcherTest(unittest.TestCase):
             (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
             watch_and_publish.localize_image_paths(package)
             command = watch_and_publish.publish_command(Path("publisher.py"), package, draft=True)
+            reused_command = watch_and_publish.publish_command(
+                Path("publisher.py"), package, draft=True, reuse_edge=True,
+            )
             loaded = json.loads((package / "metadata.json").read_text(encoding="utf-8"))
             expected_image = str(image.resolve())
         self.assertEqual(loaded["images"], [str(image.resolve())])
         self.assertEqual(loaded["images"], [expected_image])
         self.assertIn("--no-publish", command)
+        self.assertEqual(command.index("--bootstrap-edge"), command.index("--restart-edge") - 1)
+        self.assertIn("--bootstrap-edge", reused_command)
+        self.assertNotIn("--restart-edge", reused_command)
         self.assertEqual(command.count("--image"), 0)
 
     def test_rejects_topic_identity_mismatch_despite_green_reports(self) -> None:
