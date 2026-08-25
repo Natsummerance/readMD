@@ -147,6 +147,15 @@ def audit_page(path: Path, canonical: str) -> list[str]:
             errors.append(f"{path}: missing complete {required}")
     if og.get("og:image:width") != "1440" or og.get("og:image:height") != "900":
         errors.append(f"{path}: Open Graph image must declare 1440x900")
+    og_image = og.get("og:image", "")
+    if not og_image.endswith(".png"):
+        errors.append(f"{path}: Open Graph image must use the compatible PNG fallback")
+    if og.get("og:image:type") != "image/png":
+        errors.append(f"{path}: Open Graph image type must be image/png")
+    else:
+        image_path = PUBLIC / urlparse(og_image).path.lstrip("/")
+        if not image_path.is_file():
+            errors.append(f"{path}: Open Graph image is missing from media assets")
     if og.get("og:url") != canonical:
         errors.append(f"{path}: og:url differs from canonical")
     twitter = {item.get("name"): item.get("content") for item in audit.metas if str(item.get("name", "")).startswith("twitter:")}
@@ -159,6 +168,9 @@ def audit_page(path: Path, canonical: str) -> list[str]:
     ):
         if len(twitter.get(required, "")) < 8:
             errors.append(f"{path}: missing complete {required}")
+    twitter_image = twitter.get("twitter:image", "")
+    if twitter_image != og_image:
+        errors.append(f"{path}: Twitter image must match Open Graph image")
     canonicals = [item for item in audit.links if item.get("rel") == "canonical"]
     if len(canonicals) != 1 or canonicals[0].get("href") != canonical:
         errors.append(f"{path}: canonical must be exactly {canonical}")
@@ -183,7 +195,7 @@ def audit_page(path: Path, canonical: str) -> list[str]:
         errors.append(f"{path}: release Atom feed link is missing")
     if content.count("<picture>") != len(audit.images):
         errors.append(f"{path}: every product image must have a WebP picture fallback")
-    if ".webp" not in content:
+    if audit.images and ".webp" not in content:
         errors.append(f"{path}: optimized WebP source is missing")
     if "https://github.com/Natsummerance/readMD/stargazers" not in content:
         errors.append(f"{path}: star call to action is missing")
@@ -198,6 +210,16 @@ def audit_page(path: Path, canonical: str) -> list[str]:
                 errors.append(f"{path}: JSON-LD lacks WebPage and SoftwareApplication")
             if not any(isinstance(item, dict) and "speakable" in item for item in graph):
                 errors.append(f"{path}: JSON-LD lacks speakable definition")
+            primary_images = [
+                item.get("primaryImageOfPage", "")
+                for item in graph
+                if isinstance(item, dict) and item.get("primaryImageOfPage")
+            ]
+            for image_url in primary_images:
+                if not image_url.endswith(".png"):
+                    errors.append(f"{path}: structured primary image must use PNG fallback")
+                elif not (PUBLIC / urlparse(image_url).path.lstrip("/")).is_file():
+                    errors.append(f"{path}: structured primary image is missing from media assets")
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             errors.append(f"{path}: invalid JSON-LD: {exc}")
     expected_questions = FAQ_QUESTION_COUNTS.get(canonical)

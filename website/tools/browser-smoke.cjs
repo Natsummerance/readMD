@@ -51,6 +51,8 @@ const aiFiles = [
         h1Count: document.querySelectorAll('h1').length,
         canonical: document.querySelector('link[rel="canonical"]')?.href || '',
         ogUrl: document.querySelector('meta[property="og:url"]')?.content || '',
+        ogImage: document.querySelector('meta[property="og:image"]')?.content || '',
+        twitterImage: document.querySelector('meta[name="twitter:image"]')?.content || '',
         robots: document.querySelector('meta[name="robots"]')?.content || '',
         stylesheetLoaded: [...document.styleSheets].some(sheet => (sheet.href || '').includes('/assets/site.css')),
         brokenImages: [...document.images].filter(image => !image.complete || image.naturalWidth === 0).length,
@@ -75,6 +77,10 @@ const aiFiles = [
     const response = await page.request.get(baseUrl + file);
     if (!response.ok()) errors.push(`${file} returned HTTP ${response.status()}`);
   }
+  for (const imageUrl of [...new Set(pages.map(item => item.ogImage))]) {
+    const response = await page.request.head(imageUrl);
+    if (!response.ok()) errors.push(`${imageUrl} returned HTTP ${response.status()}`);
+  }
 
   const rootResponse = await page.request.get(baseUrl + '/');
   const security = {
@@ -88,6 +94,8 @@ const aiFiles = [
     if (!item.title.includes('ReadMD')) failures.push(`${item.route}: missing ReadMD title`);
     if (item.h1Count !== 1) failures.push(`${item.route}: expected one h1`);
     if (item.canonical !== item.ogUrl) failures.push(`${item.route}: canonical and og:url differ`);
+    if (!item.ogImage.endsWith('.png')) failures.push(`${item.route}: og:image must use compatible PNG fallback`);
+    if (item.ogImage !== item.twitterImage) failures.push(`${item.route}: twitter:image must match og:image`);
     if (item.robots !== 'index,follow,max-image-preview:large') failures.push(`${item.route}: bad robots directive`);
     if (!item.stylesheetLoaded) failures.push(`${item.route}: production stylesheet did not load`);
     if (item.brokenImages) failures.push(`${item.route}: ${item.brokenImages} broken images`);
