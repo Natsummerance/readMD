@@ -158,6 +158,79 @@ class TestUpdaterModule(unittest.TestCase):
             self.assertTrue(res.get('ok'))
             self.assertFalse(res.get('has_update'))
 
+    def test_update_source_is_pinned_to_official_release(self):
+        """Only checksummed official release assets may enter the updater."""
+        url = 'https://github.com/Natsummerance/readMD/releases/download/v2.4.0/ReadMD-portable-v2.4.0.exe'
+        digest = '0' * 64
+        validated, error = updater.validate_update_source(url, 'ReadMD-portable-v2.4.0.exe', digest)
+        self.assertEqual(validated, url)
+        self.assertEqual(error, '')
+
+        for download_url, filename, checksum in [
+            ('https://example.com/payload.exe', 'payload.exe', digest),
+            (url, '..\\ReadMD-portable-v2.4.0.exe', digest),
+            (url, 'ReadMD-portable-v2.4.0.exe', ''),
+        ]:
+            validated, error = updater.validate_update_source(download_url, filename, checksum)
+            self.assertIsNone(validated)
+            self.assertTrue(error)
+
+    def test_download_verifies_before_atomic_publish(self):
+        """The downloaded artifact stays hidden until its manifest digest passes."""
+        payload = b'ReadMD secure update'
+        import hashlib
+        digest = hashlib.sha256(payload).hexdigest()
+        url = 'https://github.com/Natsummerance/readMD/releases/download/v2.4.0/ReadMD-portable-v2.4.0.exe'
+
+        class FakeResponse:
+            headers = {'Content-Length': str(len(payload))}
+            chunks = [payload]
+            def read(self, size):
+                return self.chunks.pop(0) if self.chunks else b''
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+
+        original_state = dict(updater._download_state)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                with patch('tempfile.gettempdir', return_value=tmp), \
+                     patch('src.readmd_modules.updater.urllib.request.urlopen', return_value=FakeResponse()):
+                    updater.download_asset_thread(
+                        url, 'ReadMD-portable-v2.4.0.exe', digest,
+                    )
+                target = updater._download_state['target_file']
+                self.assertTrue(target.startswith(os.path.realpath(tmp)))
+                self.assertTrue(os.path.isfile(target))
+                self.assertEqual(updater._download_state['status'], 'ready')
+                self.assertFalse(any(name.endswith('.part') for name in os.listdir(tmp)))
+        finally:
+            updater._download_state.clear()
+            updater._download_state.update(original_state)
+
+    def test_apply_rejects_untrusted_path_before_launch(self):
+        """A caller cannot substitute a different local executable for the verified update."""
+        with tempfile.TemporaryDirectory() as tmp:
+            verified = os.path.join(tmp, 'ReadMD-portable-v2.4.0.exe')
+            forged = os.path.join(tmp, 'forged.exe')
+            open(verified, 'wb').close()
+            open(forged, 'wb').close()
+            original_state = dict(updater._download_state)
+            updater._download_state.update({
+                'running': False,
+                'status': 'ready',
+                'target_file': verified,
+                'expected_sha': '0' * 64,
+            })
+            try:
+                ok, message = updater.apply_update(forged)
+                self.assertFalse(ok)
+                self.assertIn('不受信任', message)
+            finally:
+                updater._download_state.clear()
+                updater._download_state.update(original_state)
+
 
 if __name__ == '__main__':
     unittest.main()

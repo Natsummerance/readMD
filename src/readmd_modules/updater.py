@@ -21,6 +21,8 @@ import tempfile
 import threading
 import time
 import urllib.request
+import urllib.parse
+import uuid
 
 GITHUB_REPO = 'Natsummerance/readMD'
 GITHUB_API_LATEST = f'https://api.github.com/repos/{GITHUB_REPO}/releases/latest'
@@ -44,6 +46,11 @@ _download_state = {
     'cancel_requested': False,
 }
 _download_lock = threading.Lock()
+
+_UPDATE_FILENAME_RE = re.compile(
+    r'^[A-Za-z0-9][A-Za-z0-9._()-]{0,180}\.(?:exe|zip|dmg|appimage)$',
+    re.IGNORECASE,
+)
 
 
 def parse_semver(ver_str):
@@ -287,15 +294,69 @@ def cancel_download():
     return False
 
 
+def validate_update_source(download_url, target_filename, expected_sha, use_mirror=False):
+    """Validate an update against the official release trust boundary."""
+    if not isinstance(download_url, str) or not isinstance(target_filename, str):
+        return None, '更新参数无效'
+    if not expected_sha or not re.fullmatch(r'[A-Fa-f0-9]{64}', str(expected_sha)):
+        return None, '缺少有效的 SHA256 校验值'
+
+    try:
+        parsed = urllib.parse.urlparse(download_url)
+    except Exception:
+        return None, '下载地址无效'
+    if parsed.scheme != 'https' or parsed.hostname != 'github.com':
+        return None, '仅允许官方 GitHub Release 下载地址'
+    if parsed.path != os.path.normpath(parsed.path).replace(os.sep, '/'):
+        return None, '下载地址路径无效'
+    if not parsed.path.startswith(f'/{GITHUB_REPO}/releases/download/'):
+        return None, '下载地址不在官方发布目录内'
+
+    url_name = os.path.basename(parsed.path)
+    if (not target_filename or os.path.basename(target_filename) != target_filename
+            or target_filename != url_name or '..' in target_filename
+            or not _UPDATE_FILENAME_RE.fullmatch(target_filename)):
+        return None, '更新文件名无效'
+
+    url = download_url
+    if use_mirror:
+        prefix = MIRROR_PREFIXES[0]
+        mirror = urllib.parse.urlparse(prefix + url)
+        if mirror.scheme != 'https' or mirror.hostname not in (
+                'ghfast.top', 'ghproxy.net', 'mirror.ghproxy.com'):
+            return None, '镜像地址无效'
+        url = prefix + url
+    return url, ''
+
+
+def _safe_update_target(filename):
+    temp_dir = os.path.realpath(tempfile.gettempdir())
+    save_path = os.path.realpath(os.path.join(temp_dir, filename))
+    if os.path.dirname(save_path) != temp_dir:
+        raise ValueError('更新目标路径无效')
+    return save_path
+
+
 def download_asset_thread(download_url, target_filename, expected_sha=None, use_mirror=False):
     """后台下载执行线程。"""
     global _download_state
-    url = download_url
-    if use_mirror:
-        url = MIRROR_PREFIXES[0] + download_url
+    url, error = validate_update_source(download_url, target_filename, expected_sha, use_mirror)
+    save_path = ''
+    download_path = ''
+    if error:
+        with _download_lock:
+            _download_state.update({'status': 'error', 'error': error, 'running': False})
+        return
 
-    temp_dir = tempfile.gettempdir()
-    save_path = os.path.join(temp_dir, target_filename)
+    try:
+        save_path = _safe_update_target(target_filename)
+        download_path = os.path.join(
+            os.path.dirname(save_path), f'.{os.path.basename(save_path)}.{uuid.uuid4().hex}.part'
+        )
+    except Exception as e:
+        with _download_lock:
+            _download_state.update({'status': 'error', 'error': str(e), 'running': False})
+        return
 
     with _download_lock:
         _download_state.update({
@@ -307,6 +368,7 @@ def download_asset_thread(download_url, target_filename, expected_sha=None, use_
             'status': 'downloading',
             'error': '',
             'target_file': save_path,
+            'expected_sha': str(expected_sha).lower(),
             'cancel_requested': False,
         })
 
@@ -324,7 +386,7 @@ def download_asset_thread(download_url, target_filename, expected_sha=None, use_
             last_time = start_time
             last_downloaded = 0
 
-            with open(save_path, 'wb') as f:
+            with open(download_path, 'wb') as f:
                 while True:
                     with _download_lock:
                         if _download_state['cancel_requested']:
@@ -347,10 +409,12 @@ def download_asset_thread(download_url, target_filename, expected_sha=None, use_
                             _download_state['percent'] = pct
                         last_time = now
                         last_downloaded = downloaded
+                f.flush()
+                os.fsync(f.fileno())
 
             if _download_state['cancel_requested']:
                 try:
-                    os.unlink(save_path)
+                    os.unlink(download_path)
                 except Exception:
                     pass
                 return
@@ -360,10 +424,11 @@ def download_asset_thread(download_url, target_filename, expected_sha=None, use_
             _download_state['status'] = 'verifying'
             _download_state['percent'] = 100
 
-        if expected_sha:
-            actual_sha = compute_file_sha256(save_path)
-            if actual_sha != expected_sha.lower():
-                raise ValueError(f'SHA256 校验失败：期望 {expected_sha}，实际 {actual_sha}')
+        actual_sha = compute_file_sha256(download_path)
+        if actual_sha != str(expected_sha).lower():
+            raise ValueError(f'SHA256 校验失败：期望 {expected_sha}，实际 {actual_sha}')
+
+        os.replace(download_path, save_path)
 
         with _download_lock:
             _download_state['status'] = 'ready'
@@ -375,10 +440,20 @@ def download_asset_thread(download_url, target_filename, expected_sha=None, use_
             _download_state['status'] = 'error'
             _download_state['error'] = str(e)
             _download_state['running'] = False
+            _download_state['target_file'] = ''
+            _download_state['expected_sha'] = ''
+        try:
+            if download_path:
+                os.unlink(download_path)
+        except Exception:
+            pass
 
 
 def start_download_update(download_url, target_filename, expected_sha=None, use_mirror=False):
     """启动下载线程。"""
+    _, error = validate_update_source(download_url, target_filename, expected_sha, use_mirror)
+    if error:
+        return False, error
     with _download_lock:
         if _download_state['running']:
             return False, '已有下载任务正在进行'
@@ -394,9 +469,28 @@ def start_download_update(download_url, target_filename, expected_sha=None, use_
 def apply_update(file_path=None, flavor=None):
     """执行本地更新并安全退出当前程序以释放文件锁。"""
     with _download_lock:
-        path = file_path or _download_state.get('target_file')
+        path = _download_state.get('target_file')
+        expected_sha = _download_state.get('expected_sha')
+        status = _download_state.get('status')
+    if file_path and os.path.realpath(file_path) != os.path.realpath(path or ''):
+        return False, '更新文件路径不受信任'
+    if status != 'ready' or not expected_sha:
+        return False, '更新文件尚未通过完整校验'
+    with _download_lock:
+        _download_state['running'] = True
+        _download_state['status'] = 'verifying'
     if not path or not os.path.isfile(path):
+        with _download_lock:
+            _download_state.update({'running': False, 'status': 'ready'})
         return False, '更新文件不存在或尚未下载完成'
+
+    if compute_file_sha256(path) != expected_sha:
+        with _download_lock:
+            _download_state.update({
+                'status': 'error', 'error': '执行前校验失败',
+                'running': False, 'target_file': '', 'expected_sha': '',
+            })
+        return False, '更新文件执行前校验失败'
 
     if flavor is None:
         flavor = detect_app_flavor()

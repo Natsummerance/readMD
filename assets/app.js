@@ -975,6 +975,8 @@ async function init() {
    就绪通知与后台任务引导 (Post-Initialization Finish)
    ---------------------------------------------------------------------------------------------- */
 function finishInit() {
+  performance.mark('readmd-app-ready');
+  window.__readmdAppReady = true;
   if (hasPy) {
     if (py.report_ready) { try { py.report_ready(); } catch (e) { /* ignore */ } }
     window.__trayOpenFile = loadFileDialog;

@@ -631,6 +631,14 @@ class ReadMDHTTPServer(ThreadingHTTPServer):
 class Handler(BaseHTTPRequestHandler):
     server_version = 'ReadMD/' + VERSION
     LAN_TOKEN = None
+    LAN_BLOCKED_PATHS = frozenset({
+        '/api/save', '/api/upload', '/api/image/save', '/api/code/run',
+        '/api/update/download', '/api/update/apply', '/api/import/process',
+        '/api/control/open', '/api/control/next',
+    })
+    LAN_SCOPED_PATHS = frozenset({
+        '/api/file', '/api/list', '/api/ocr', '/api/convert', '/raw',
+    })
 
     def log_message(self, fmt, *args):
         pass  # 静默访问日志
@@ -678,9 +686,28 @@ class Handler(BaseHTTPRequestHandler):
         if u.path in ('/', '/index.html') or u.path.startswith('/assets/'):
             return True
         qs = parse_qs(u.query)
-        if qs.get('t', [''])[0] == self.LAN_TOKEN:
+        supplied = qs.get('t', [''])[0] or self.headers.get('X-ReadMD-Token', '')
+        if not secrets.compare_digest(supplied, self.LAN_TOKEN):
+            return False
+        return self._lan_route_authorized(u.path)
+
+    def _lan_route_authorized(self, path):
+        """Restrict shared clients to the document scope and reader-only APIs."""
+        if path in self.LAN_BLOCKED_PATHS:
+            return False
+        if path not in self.LAN_SCOPED_PATHS:
             return True
-        return self.headers.get('X-ReadMD-Token', '') == self.LAN_TOKEN
+        root = getattr(self.server, 'shared_root', None)
+        if not root:
+            return False
+        requested = parse_qs(urlparse(self.path).query).get('p', [''])[0]
+        if not requested:
+            return False
+        try:
+            target = os.path.realpath(unquote(requested))
+        except Exception:
+            return False
+        return paths_within(target, root)
 
     def _local_host_authorized(self):
         if self.LAN_TOKEN:
@@ -778,7 +805,12 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/ai/history':
             self._api_ai_history()
         elif path == '/api/share/start':
-            self._send_json(200, start_lan_server())
+            try:
+                length = int(self.headers.get('Content-Length', 0) or 0)
+                body = json.loads(self.rfile.read(length).decode('utf-8')) if length else {}
+                self._send_json(200, start_lan_server(body.get('current_file')))
+            except Exception as e:
+                self._send_json(500, {'ok': False, 'error': str(e)})
         elif path == '/api/share/stop':
             self._send_json(200, stop_lan_server())
         elif path == '/api/share/status':
@@ -1667,7 +1699,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
-LAN = {'server': None, 'token': None}
+LAN = {'server': None, 'token': None, 'shared_file': None}
 
 
 def _is_private(ip):
@@ -1715,7 +1747,18 @@ def share_status():
             'url': 'http://%s:%d/' % (get_lan_ip(), srv.server_port)}
 
 
-def start_lan_server():
+def configure_lan_server(server, shared_file=None):
+    """Bind a share server to one document directory and remove the local control token."""
+    server.app_token = None
+    server.shared_file = ''
+    server.shared_root = ''
+    if shared_file and os.path.isfile(shared_file):
+        real_file = os.path.realpath(shared_file)
+        server.shared_file = real_file
+        server.shared_root = os.path.dirname(real_file)
+
+
+def start_lan_server(shared_file=None):
     """启动局域网共享服务器（带随机 token 鉴权），供手机等设备访问。"""
     if LAN['server'] is not None:
         return share_status()
@@ -1728,9 +1771,11 @@ def start_lan_server():
         srv = ReadMDHTTPServer(('0.0.0.0', 0), LanHandler)
     except OSError as e:
         return {'ok': False, 'error': '无法监听局域网：%s' % e}
+    configure_lan_server(srv, shared_file)
     threading.Thread(target=srv.serve_forever, daemon=True, name='readmd-lan').start()
     LAN['server'] = srv
     LAN['token'] = token
+    LAN['shared_file'] = srv.shared_file
     d = share_status()
     d['ok'] = True
     logging.info('LAN share started: %s', d.get('url'))
@@ -1751,6 +1796,7 @@ def stop_lan_server():
         pass
     LAN['server'] = None
     LAN['token'] = None
+    LAN['shared_file'] = None
     logging.info('LAN share stopped')
     return {'ok': True, 'running': False}
 
