@@ -1184,6 +1184,33 @@ class WriteCopyTest(unittest.TestCase):
 class ValidatePackageTest(unittest.TestCase):
     maxDiff = None
 
+    def test_publisher_assets_allow_reserved_shots_but_require_selected_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp)
+            (pkg / "raw").mkdir()
+            shot_png = pkg / "raw" / "overview-reader.png"
+            Image.new("RGB", (32, 20), "#101828").save(shot_png)
+            digest = hashlib.sha256(shot_png.read_bytes()).hexdigest()
+            story = {
+                "release": "v1.2.3",
+                "selected_shots": ["overview.reader"],
+                "card_plan": [],
+                "shots": [],
+            }
+            (pkg / "story.json").write_text(json.dumps(story), encoding="utf-8")
+            (pkg / "metadata.json").write_text("{}", encoding="utf-8")
+            (pkg / "raw" / "capture.json").write_text(json.dumps({
+                "release": "v1.2.3",
+                "shots": [
+                    {"shot_id": "overview.reader", "file": "raw/overview-reader.png", "sha256": digest},
+                    {"shot_id": "overview.editor", "file": "raw/reserved.png", "sha256": "reserved"},
+                ],
+            }), encoding="utf-8")
+
+            errors = validate_package.publisher_asset_errors(pkg)
+
+        self.assertNotIn("capture shots differ from story.selected_shots", errors)
+
     def test_rejects_chosen_variant_id_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pkg = Path(tmp)

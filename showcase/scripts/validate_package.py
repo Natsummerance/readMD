@@ -664,11 +664,12 @@ def publisher_asset_errors(package_dir: Path) -> list[str]:
     selected = story.get("selected_shots", [])
     capture_items = capture.get("shots", [])
     capture_by_id = {str(item.get("shot_id")): item for item in capture_items}
+    capture_ids = [str(item.get("shot_id")) for item in capture_items]
     if str(capture.get("release")) != str(story.get("release")):
         errors.append("capture release differs from story release")
     if not selected or selected[0] != "overview.reader":
         errors.append("publisher assets must begin with overview.reader")
-    if set(selected) != set(capture_by_id) or len(selected) != len(capture_items):
+    if len(capture_ids) != len(set(capture_ids)) or not set(selected).issubset(capture_by_id):
         errors.append("capture shots differ from story.selected_shots")
 
     raw_hashes: set[str] = set()
