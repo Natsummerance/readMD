@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "artifact": "Manual multi-channel growth execution kit",
+  "reviewed_at": "2026-08-25T03:20:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "growth-strategy-review",
+      "status": "approved",
+      "score": 9.86,
+      "evidence": [
+        "The kit maps five audience pains to five live localized workflow pages instead of promoting an undifferentiated feature list.",
+        "A seven-day sprint and thirty-day cadence prioritize replies, rule checks, and repeatable follow-up over broadcast volume.",
+        "Every channel has a purpose, draft, and completion signal; no automated third-party posting is proposed."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "community-safety-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "Reddit, Hacker News, V2EX, Zhihu, Xiaohongshu, and other channels require a rule check and platform-specific adaptation before use.",
+        "Developer affiliation, human review, checksum verification, and stop conditions are explicit.",
+        "No bots, paid stars, reciprocal-star schemes, misleading urgency, or private-data requests are included."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "claim-evidence-review",
+      "status": "approved",
+      "score": 9.79,
+      "evidence": [
+        "Pagination thresholds, display-only repair, conversion formats, qualified OCR paths, BibTeX behavior, presentation reuse, license, and platform boundaries match the approved corpus.",
+        "HarmonyOS is correctly described as an ArkTS source project with no prebuilt HAP.",
+        "The ledger records stars only as a weekly GitHub-reported signal and does not promise a count or date."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_internal_distribution_planning",
+    "score": 9.83,
+    "participants": ["growth", "community", "localization", "compliance"],
+    "conditions": [
+      "Do not publish any channel until its current rules have been checked.",
+      "Do not cross-post identical bodies or automate third-party communities.",
+      "Record actual links, replies, issues, downloads, and weekly star snapshots.",
+      "Pause a channel if reply debt, moderator objection, or broken release evidence appears."
+    ]
+  }
+}
