@@ -3,8 +3,8 @@
   "compatibility_date": "2026-08-01",
   "routes": [
     {
-      "pattern": "readmd.asia",
-      "custom_domain": true
+      "pattern": "readmd.asia/*",
+      "zone_name": "readmd.asia"
     }
   ],
   "assets": {

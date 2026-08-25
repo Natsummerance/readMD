@@ -55,5 +55,3 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
-      - id: publish
-        uses: actions/deploy-pages@v4
