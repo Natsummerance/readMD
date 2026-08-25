@@ -10,7 +10,7 @@ test('design system locks one evidence-paper accent and readable type scale', ()
   assert.equal(design.schema_version, 1);
   assert.equal(design.palette.accent, '#d6482c');
   assert.notEqual(design.palette.background, '#0e1630');
-  assert.ok(design.type.display.size >= 72);
+  assert.ok(design.type.display.size >= 96);
   assert.ok(design.type.body.size >= 24);
   assert.match(design.signature, /proof/i);
 });
@@ -44,7 +44,7 @@ test('cover carries a real UI strip and rejects the generic feature grid', () =>
 
 test('cover type is assessed against feed thumbnail scale', () => {
   const ready = coverFeedReadiness({
-    title_font_size: 84,
+    title_font_size: 96,
     title_width_ratio: 0.36,
     title_height_ratio: 0.07,
     caption_font_size: 31,

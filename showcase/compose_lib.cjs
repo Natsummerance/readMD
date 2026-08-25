@@ -14,7 +14,7 @@ function loadDesignSystem(designPath = DEFAULT_DESIGN_PATH) {
   const design = JSON.parse(fs.readFileSync(designPath, 'utf8'));
   if (design.schema_version !== 1) throw new Error('Unsupported design token schema');
   if (!/^#[0-9a-f]{6}$/i.test(design.palette.accent)) throw new Error('Design accent must be a hex color');
-  if (design.type.display.size < 72 || design.type.body.size < 24) throw new Error('Card type is too small for Xiaohongshu');
+  if (design.type.display.size < 96 || design.type.body.size < 24) throw new Error('Cover display type is too small for the Xiaohongshu feed');
   if (!/proof/i.test(design.signature)) throw new Error('Evidence-paper signature missing');
   return design;
 }
@@ -38,7 +38,7 @@ function coverFeedReadiness(metrics, canvas = { width: 1080, height: 1440 }) {
   const captionFontSize = Number(metrics.caption_font_size);
   const failures = [];
 
-  if (!(titleFontSize >= 72)) failures.push(`display type must be at least 72px, got ${titleFontSize}px`);
+  if (!(titleFontSize >= 96)) failures.push(`display type must be at least 96px, got ${titleFontSize}px`);
   if (!(captionFontSize >= 30)) failures.push(`cover caption must be at least 30px, got ${captionFontSize}px`);
   if (!(titleWidthRatio >= 0.16)) failures.push(`display type is too narrow for the feed (${titleWidthRatio})`);
   if (!(titleHeightRatio >= 0.04 && titleHeightRatio <= 0.18)) failures.push(`display block occupies ${titleHeightRatio} of card height`);

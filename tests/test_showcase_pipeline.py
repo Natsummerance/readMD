@@ -2174,7 +2174,7 @@ class PatternAuditTest(unittest.TestCase):
                     **card("cover.jpg", "cover", 0.35, 0),
                     "feed_readiness": {
                         "ok": True,
-                        "title_font_size": 84,
+                        "title_font_size": 96,
                         "title_width_ratio": 0.36,
                         "title_height_ratio": 0.07,
                         "caption_font_size": 31,
@@ -4631,7 +4631,7 @@ class WatcherTest(unittest.TestCase):
             ).hexdigest()
             if card["role"] == "cover":
                 card["feed_readiness"] = {
-                    "title_font_size": 84,
+                    "title_font_size": 96,
                     "title_width_ratio": 0.36,
                     "title_height_ratio": 0.07,
                     "caption_font_size": 31,

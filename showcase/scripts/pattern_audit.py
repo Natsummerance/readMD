@@ -83,10 +83,10 @@ def audit_patterns(
     feed = cards[0].get("feed_readiness", {}) if cards else {}
     thumbnail_ok = (
         isinstance(feed, dict)
-        and float(feed.get("title_font_size", 0)) >= 72
+        and float(feed.get("title_font_size", 0)) >= 96
         and float(feed.get("caption_font_size", 0)) >= 30
         and float(feed.get("title_width_ratio", 0)) >= 0.16
-        and 0.04 <= float(feed.get("title_height_ratio", 0)) <= 0.18
+        and 0.06 <= float(feed.get("title_height_ratio", 0)) <= 0.18
     )
     reader_values = {
         shot_id: str(claim.get("user_value", ""))
