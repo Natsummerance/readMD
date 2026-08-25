@@ -1211,6 +1211,12 @@ class ValidatePackageTest(unittest.TestCase):
 
         self.assertNotIn("capture shots differ from story.selected_shots", errors)
 
+
+class WatcherEnvironmentTest(unittest.TestCase):
+    def test_publisher_subprocess_forces_utf8_json(self) -> None:
+        environment = watch_and_publish.publisher_environment()
+        self.assertEqual(environment["PYTHONIOENCODING"], "utf-8")
+
     def test_rejects_chosen_variant_id_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pkg = Path(tmp)

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -41,6 +42,13 @@ SHOWCASE_ROOT = Path(__file__).resolve().parents[1]
 ORIGINALITY_ENDPOINT_COOLDOWN_RELEASES = 8
 SUCCESS_STATUSES = {"published", "drafted"}
 FAILURE_STATUSES = {"failed", "abandoned"}
+
+
+def publisher_environment() -> dict[str, str]:
+    """Keep publisher JSON valid even when Windows defaults to a legacy code page."""
+    environment = os.environ.copy()
+    environment["PYTHONIOENCODING"] = "utf-8"
+    return environment
 
 
 def load_state(path: Path) -> dict[str, Any]:
@@ -166,6 +174,7 @@ def query_status(publisher: Path, title: str) -> dict[str, Any]:
         text=True,
         capture_output=True,
         encoding="utf-8",
+        env=publisher_environment(),
         timeout=120,
     )
     if completed.returncode != 0:
@@ -569,7 +578,14 @@ def process_package(
                 }, ensure_ascii=False))
                 return False
         command = publish_command(publisher, package_dir, draft=draft, reuse_edge=reuse_edge)
-        completed = subprocess.run(command, text=True, capture_output=True, encoding="utf-8", timeout=600)
+        completed = subprocess.run(
+            command,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+            env=publisher_environment(),
+            timeout=600,
+        )
         result: dict[str, Any] = {}
         for line in reversed((completed.stdout or "").splitlines()):
             try:
