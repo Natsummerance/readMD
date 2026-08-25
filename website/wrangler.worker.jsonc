@@ -3,7 +3,7 @@
   "compatibility_date": "2026-08-01",
   "routes": [
     {
-      "pattern": "app.syminu.online",
+      "pattern": "readmd.asia",
       "custom_domain": true
     }
   ],

@@ -18,47 +18,47 @@ PUBLIC = SITE / "public"
 SITE_TIMEZONE = datetime.timezone(datetime.timedelta(hours=8), name="Asia/Shanghai")
 
 LANGUAGES = {
-    "en": {"path": PUBLIC / "index.html", "canonical": "https://app.syminu.online/", "full": PUBLIC / "llms-full.txt"},
-    "zh-CN": {"path": PUBLIC / "zh-cn" / "index.html", "canonical": "https://app.syminu.online/zh-cn/", "full": PUBLIC / "zh-cn" / "llms-full.txt"},
-    "zh-TW": {"path": PUBLIC / "zh-tw" / "index.html", "canonical": "https://app.syminu.online/zh-tw/", "full": PUBLIC / "zh-tw" / "llms-full.txt"},
-    "ja": {"path": PUBLIC / "ja" / "index.html", "canonical": "https://app.syminu.online/ja/", "full": PUBLIC / "ja" / "llms-full.txt"},
+    "en": {"path": PUBLIC / "index.html", "canonical": "https://readmd.asia/", "full": PUBLIC / "llms-full.txt"},
+    "zh-CN": {"path": PUBLIC / "zh-cn" / "index.html", "canonical": "https://readmd.asia/zh-cn/", "full": PUBLIC / "zh-cn" / "llms-full.txt"},
+    "zh-TW": {"path": PUBLIC / "zh-tw" / "index.html", "canonical": "https://readmd.asia/zh-tw/", "full": PUBLIC / "zh-tw" / "llms-full.txt"},
+    "ja": {"path": PUBLIC / "ja" / "index.html", "canonical": "https://readmd.asia/ja/", "full": PUBLIC / "ja" / "llms-full.txt"},
 }
 
 INTENT_PAGES = {
-    "en": {"path": PUBLIC / "workflows" / "index.html", "canonical": "https://app.syminu.online/workflows/"},
-    "zh-CN": {"path": PUBLIC / "zh-cn" / "workflows" / "index.html", "canonical": "https://app.syminu.online/zh-cn/workflows/"},
-    "zh-TW": {"path": PUBLIC / "zh-tw" / "workflows" / "index.html", "canonical": "https://app.syminu.online/zh-tw/workflows/"},
-    "ja": {"path": PUBLIC / "ja" / "workflows" / "index.html", "canonical": "https://app.syminu.online/ja/workflows/"},
+    "en": {"path": PUBLIC / "workflows" / "index.html", "canonical": "https://readmd.asia/workflows/"},
+    "zh-CN": {"path": PUBLIC / "zh-cn" / "workflows" / "index.html", "canonical": "https://readmd.asia/zh-cn/workflows/"},
+    "zh-TW": {"path": PUBLIC / "zh-tw" / "workflows" / "index.html", "canonical": "https://readmd.asia/zh-tw/workflows/"},
+    "ja": {"path": PUBLIC / "ja" / "workflows" / "index.html", "canonical": "https://readmd.asia/ja/workflows/"},
 }
 
 DOWNLOAD_PAGES = {
-    "en": {"path": PUBLIC / "download" / "index.html", "canonical": "https://app.syminu.online/download/"},
-    "zh-CN": {"path": PUBLIC / "zh-cn" / "download" / "index.html", "canonical": "https://app.syminu.online/zh-cn/download/"},
-    "zh-TW": {"path": PUBLIC / "zh-tw" / "download" / "index.html", "canonical": "https://app.syminu.online/zh-tw/download/"},
-    "ja": {"path": PUBLIC / "ja" / "download" / "index.html", "canonical": "https://app.syminu.online/ja/download/"},
+    "en": {"path": PUBLIC / "download" / "index.html", "canonical": "https://readmd.asia/download/"},
+    "zh-CN": {"path": PUBLIC / "zh-cn" / "download" / "index.html", "canonical": "https://readmd.asia/zh-cn/download/"},
+    "zh-TW": {"path": PUBLIC / "zh-tw" / "download" / "index.html", "canonical": "https://readmd.asia/zh-tw/download/"},
+    "ja": {"path": PUBLIC / "ja" / "download" / "index.html", "canonical": "https://readmd.asia/ja/download/"},
 }
 
 ANSWER_PAGES = {
-    "en-large-files": {"path": PUBLIC / "large-markdown-files" / "index.html", "canonical": "https://app.syminu.online/large-markdown-files/"},
-    "zh-CN-large-files": {"path": PUBLIC / "zh-cn" / "large-markdown-files" / "index.html", "canonical": "https://app.syminu.online/zh-cn/large-markdown-files/"},
-    "zh-TW-large-files": {"path": PUBLIC / "zh-tw" / "large-markdown-files" / "index.html", "canonical": "https://app.syminu.online/zh-tw/large-markdown-files/"},
-    "ja-large-files": {"path": PUBLIC / "ja" / "large-markdown-files" / "index.html", "canonical": "https://app.syminu.online/ja/large-markdown-files/"},
-    "en-slides": {"path": PUBLIC / "markdown-to-slides" / "index.html", "canonical": "https://app.syminu.online/markdown-to-slides/"},
-    "zh-CN-slides": {"path": PUBLIC / "zh-cn" / "markdown-to-slides" / "index.html", "canonical": "https://app.syminu.online/zh-cn/markdown-to-slides/"},
-    "zh-TW-slides": {"path": PUBLIC / "zh-tw" / "markdown-to-slides" / "index.html", "canonical": "https://app.syminu.online/zh-tw/markdown-to-slides/"},
-    "ja-slides": {"path": PUBLIC / "ja" / "markdown-to-slides" / "index.html", "canonical": "https://app.syminu.online/ja/markdown-to-slides/"},
-    "en-conversion": {"path": PUBLIC / "convert-to-markdown" / "index.html", "canonical": "https://app.syminu.online/convert-to-markdown/"},
-    "zh-CN-conversion": {"path": PUBLIC / "zh-cn" / "convert-to-markdown" / "index.html", "canonical": "https://app.syminu.online/zh-cn/convert-to-markdown/"},
-    "zh-TW-conversion": {"path": PUBLIC / "zh-tw" / "convert-to-markdown" / "index.html", "canonical": "https://app.syminu.online/zh-tw/convert-to-markdown/"},
-    "ja-conversion": {"path": PUBLIC / "ja" / "convert-to-markdown" / "index.html", "canonical": "https://app.syminu.online/ja/convert-to-markdown/"},
-    "en-ocr": {"path": PUBLIC / "scan-to-markdown" / "index.html", "canonical": "https://app.syminu.online/scan-to-markdown/"},
-    "zh-CN-ocr": {"path": PUBLIC / "zh-cn" / "scan-to-markdown" / "index.html", "canonical": "https://app.syminu.online/zh-cn/scan-to-markdown/"},
-    "zh-TW-ocr": {"path": PUBLIC / "zh-tw" / "scan-to-markdown" / "index.html", "canonical": "https://app.syminu.online/zh-tw/scan-to-markdown/"},
-    "ja-ocr": {"path": PUBLIC / "ja" / "scan-to-markdown" / "index.html", "canonical": "https://app.syminu.online/ja/scan-to-markdown/"},
-    "en-bibtex": {"path": PUBLIC / "bibtex-citations" / "index.html", "canonical": "https://app.syminu.online/bibtex-citations/"},
-    "zh-CN-bibtex": {"path": PUBLIC / "zh-cn" / "bibtex-citations" / "index.html", "canonical": "https://app.syminu.online/zh-cn/bibtex-citations/"},
-    "zh-TW-bibtex": {"path": PUBLIC / "zh-tw" / "bibtex-citations" / "index.html", "canonical": "https://app.syminu.online/zh-tw/bibtex-citations/"},
-    "ja-bibtex": {"path": PUBLIC / "ja" / "bibtex-citations" / "index.html", "canonical": "https://app.syminu.online/ja/bibtex-citations/"},
+    "en-large-files": {"path": PUBLIC / "large-markdown-files" / "index.html", "canonical": "https://readmd.asia/large-markdown-files/"},
+    "zh-CN-large-files": {"path": PUBLIC / "zh-cn" / "large-markdown-files" / "index.html", "canonical": "https://readmd.asia/zh-cn/large-markdown-files/"},
+    "zh-TW-large-files": {"path": PUBLIC / "zh-tw" / "large-markdown-files" / "index.html", "canonical": "https://readmd.asia/zh-tw/large-markdown-files/"},
+    "ja-large-files": {"path": PUBLIC / "ja" / "large-markdown-files" / "index.html", "canonical": "https://readmd.asia/ja/large-markdown-files/"},
+    "en-slides": {"path": PUBLIC / "markdown-to-slides" / "index.html", "canonical": "https://readmd.asia/markdown-to-slides/"},
+    "zh-CN-slides": {"path": PUBLIC / "zh-cn" / "markdown-to-slides" / "index.html", "canonical": "https://readmd.asia/zh-cn/markdown-to-slides/"},
+    "zh-TW-slides": {"path": PUBLIC / "zh-tw" / "markdown-to-slides" / "index.html", "canonical": "https://readmd.asia/zh-tw/markdown-to-slides/"},
+    "ja-slides": {"path": PUBLIC / "ja" / "markdown-to-slides" / "index.html", "canonical": "https://readmd.asia/ja/markdown-to-slides/"},
+    "en-conversion": {"path": PUBLIC / "convert-to-markdown" / "index.html", "canonical": "https://readmd.asia/convert-to-markdown/"},
+    "zh-CN-conversion": {"path": PUBLIC / "zh-cn" / "convert-to-markdown" / "index.html", "canonical": "https://readmd.asia/zh-cn/convert-to-markdown/"},
+    "zh-TW-conversion": {"path": PUBLIC / "zh-tw" / "convert-to-markdown" / "index.html", "canonical": "https://readmd.asia/zh-tw/convert-to-markdown/"},
+    "ja-conversion": {"path": PUBLIC / "ja" / "convert-to-markdown" / "index.html", "canonical": "https://readmd.asia/ja/convert-to-markdown/"},
+    "en-ocr": {"path": PUBLIC / "scan-to-markdown" / "index.html", "canonical": "https://readmd.asia/scan-to-markdown/"},
+    "zh-CN-ocr": {"path": PUBLIC / "zh-cn" / "scan-to-markdown" / "index.html", "canonical": "https://readmd.asia/zh-cn/scan-to-markdown/"},
+    "zh-TW-ocr": {"path": PUBLIC / "zh-tw" / "scan-to-markdown" / "index.html", "canonical": "https://readmd.asia/zh-tw/scan-to-markdown/"},
+    "ja-ocr": {"path": PUBLIC / "ja" / "scan-to-markdown" / "index.html", "canonical": "https://readmd.asia/ja/scan-to-markdown/"},
+    "en-bibtex": {"path": PUBLIC / "bibtex-citations" / "index.html", "canonical": "https://readmd.asia/bibtex-citations/"},
+    "zh-CN-bibtex": {"path": PUBLIC / "zh-cn" / "bibtex-citations" / "index.html", "canonical": "https://readmd.asia/zh-cn/bibtex-citations/"},
+    "zh-TW-bibtex": {"path": PUBLIC / "zh-tw" / "bibtex-citations" / "index.html", "canonical": "https://readmd.asia/zh-tw/bibtex-citations/"},
+    "ja-bibtex": {"path": PUBLIC / "ja" / "bibtex-citations" / "index.html", "canonical": "https://readmd.asia/ja/bibtex-citations/"},
 }
 
 RELEASE_ASSETS = frozenset({
@@ -147,6 +147,15 @@ def audit_page(path: Path, canonical: str) -> list[str]:
             errors.append(f"{path}: missing complete {required}")
     if og.get("og:image:width") != "1440" or og.get("og:image:height") != "900":
         errors.append(f"{path}: Open Graph image must declare 1440x900")
+    og_image = og.get("og:image", "")
+    if not og_image.endswith(".png"):
+        errors.append(f"{path}: Open Graph image must use the compatible PNG fallback")
+    if og.get("og:image:type") != "image/png":
+        errors.append(f"{path}: Open Graph image type must be image/png")
+    else:
+        image_path = PUBLIC / urlparse(og_image).path.lstrip("/")
+        if not image_path.is_file():
+            errors.append(f"{path}: Open Graph image is missing from media assets")
     if og.get("og:url") != canonical:
         errors.append(f"{path}: og:url differs from canonical")
     twitter = {item.get("name"): item.get("content") for item in audit.metas if str(item.get("name", "")).startswith("twitter:")}
@@ -159,6 +168,9 @@ def audit_page(path: Path, canonical: str) -> list[str]:
     ):
         if len(twitter.get(required, "")) < 8:
             errors.append(f"{path}: missing complete {required}")
+    twitter_image = twitter.get("twitter:image", "")
+    if twitter_image != og_image:
+        errors.append(f"{path}: Twitter image must match Open Graph image")
     canonicals = [item for item in audit.links if item.get("rel") == "canonical"]
     if len(canonicals) != 1 or canonicals[0].get("href") != canonical:
         errors.append(f"{path}: canonical must be exactly {canonical}")
@@ -183,7 +195,7 @@ def audit_page(path: Path, canonical: str) -> list[str]:
         errors.append(f"{path}: release Atom feed link is missing")
     if content.count("<picture>") != len(audit.images):
         errors.append(f"{path}: every product image must have a WebP picture fallback")
-    if ".webp" not in content:
+    if audit.images and ".webp" not in content:
         errors.append(f"{path}: optimized WebP source is missing")
     if "https://github.com/Natsummerance/readMD/stargazers" not in content:
         errors.append(f"{path}: star call to action is missing")
@@ -198,6 +210,16 @@ def audit_page(path: Path, canonical: str) -> list[str]:
                 errors.append(f"{path}: JSON-LD lacks WebPage and SoftwareApplication")
             if not any(isinstance(item, dict) and "speakable" in item for item in graph):
                 errors.append(f"{path}: JSON-LD lacks speakable definition")
+            primary_images = [
+                item.get("primaryImageOfPage", "")
+                for item in graph
+                if isinstance(item, dict) and item.get("primaryImageOfPage")
+            ]
+            for image_url in primary_images:
+                if not image_url.endswith(".png"):
+                    errors.append(f"{path}: structured primary image must use PNG fallback")
+                elif not (PUBLIC / urlparse(image_url).path.lstrip("/")).is_file():
+                    errors.append(f"{path}: structured primary image is missing from media assets")
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             errors.append(f"{path}: invalid JSON-LD: {exc}")
     expected_questions = FAQ_QUESTION_COUNTS.get(canonical)
@@ -229,7 +251,7 @@ def validate_llms(path: Path, *, minimum_absolute_links: int = 5) -> list[str]:
         errors.append(f"{path}: second line must be a blockquote description")
     if len(lines[1]) > 220:
         errors.append(f"{path}: description exceeds the compact llms.txt contract")
-    absolute_links = re.findall(r"https://app\.syminu\.online(?:/[\w.-]+)*", path.read_text(encoding="utf-8"))
+    absolute_links = re.findall(r"https://readmd\.asia(?:/[\w.-]+)*", path.read_text(encoding="utf-8"))
     if len(absolute_links) < minimum_absolute_links:
         errors.append(f"{path}: fewer than {minimum_absolute_links} absolute canonical entries")
     return errors
@@ -242,7 +264,7 @@ def validate_robots_and_sitemap() -> list[str]:
         pattern = f"User-agent: {crawler}\nAllow: /"
         if pattern not in robots:
             errors.append(f"robots.txt does not explicitly allow {crawler}")
-    if "Sitemap: https://app.syminu.online/sitemap.xml" not in robots:
+    if "Sitemap: https://readmd.asia/sitemap.xml" not in robots:
         errors.append("robots.txt omits canonical sitemap")
     sitemap = (PUBLIC / "sitemap.xml").read_text(encoding="utf-8")
     if 'xmlns:xhtml="http://www.w3.org/1999/xhtml"' not in sitemap:
@@ -271,10 +293,10 @@ def validate_robots_and_sitemap() -> list[str]:
                 break
         section = path
         language_bases = {
-            "en": "https://app.syminu.online",
-            "zh-CN": "https://app.syminu.online/zh-cn",
-            "zh-TW": "https://app.syminu.online/zh-tw",
-            "ja": "https://app.syminu.online/ja",
+            "en": "https://readmd.asia",
+            "zh-CN": "https://readmd.asia/zh-cn",
+            "zh-TW": "https://readmd.asia/zh-tw",
+            "ja": "https://readmd.asia/ja",
         }
         language_bases["x-default"] = language_bases["en"]
         for lang, base in language_bases.items():
@@ -407,7 +429,7 @@ def validate_answer_internal_links() -> list[str]:
     for language in LANGUAGES:
         for slug, contracts in topics.items():
             prefix = "" if language == "en" else f"/{language.lower()}"
-            target = f"https://app.syminu.online{prefix}/{slug}/"
+            target = f"https://readmd.asia{prefix}/{slug}/"
             target_path = urlparse(target).path
             for surface in ("home", "workflow", "download"):
                 if surface == "home":

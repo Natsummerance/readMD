@@ -43,4 +43,4 @@ Allow: /
 User-agent: Bingbot
 Allow: /
 
-Sitemap: https://app.syminu.online/sitemap.xml
+Sitemap: https://readmd.asia/sitemap.xml

@@ -35,10 +35,10 @@ ReadMD は技術文書、研究ノート、講義資料、仕様書、書籍な�
 
 公式言語インデックス:
 
-- 英語: https://app.syminu.online/
-- 簡体字中国語: https://app.syminu.online/zh-cn/
-- 繁体字中国語: https://app.syminu.online/zh-tw/
-- 日本語: https://app.syminu.online/ja/
+- 英語: https://readmd.asia/
+- 簡体字中国語: https://readmd.asia/zh-cn/
+- 繁体字中国語: https://readmd.asia/zh-tw/
+- 日本語: https://readmd.asia/ja/
 
 - Windows 7、8、10、11。インストーラーとポータブル版。
 - Apple Silicon および Intel macOS。
@@ -121,31 +121,31 @@ ReadMD は MIT ライセンスです。ソースコードとリリース資産�
 
 ## タスクガイド: 巨大な Markdown ファイル
 
-専用回答: https://app.syminu.online/ja/large-markdown-files/
+専用回答: https://readmd.asia/ja/large-markdown-files/
 
 まずローカルで開きます。約 8,000 行または 500 KB 近辺で ReadMD は意味的な改ページを使い、目次、全文検索、数式、ページ操作を保ちます。表示層の構文復元は壊れた表や強調を読めるままにできますが、ソースのバイト列は書き換えません。明示的な編集と保存が必要です。
 
 ## タスクガイド: Markdown 発表
 
-専用回答: https://app.syminu.online/ja/markdown-to-slides/
+専用回答: https://readmd.asia/ja/markdown-to-slides/
 
 一つの Markdown 文書を執筆、レビュー、発表の共通の正として扱います。Reveal ベースの発表モードは見出しを切り替えに使い、コード、数式、図、表は文脈を保ちます。リハーサルの修正もコピーしたスライドではなく同じソースへ戻ります。
 
 ## タスクガイド: 文書を Markdown へ変換
 
-専用回答: https://app.syminu.online/ja/convert-to-markdown/
+専用回答: https://readmd.asia/ja/convert-to-markdown/
 
 DOCX、PPTX、XLSX、PDF、HTML、LaTeX のソースをローカルに置き、ReadMD の変換機能に追加します。一つの文書、一括ファイル、対応フォルダーを扱え、一括作業ではドラッグ アンド ドロップを使えます。ローカル変換ではソースを Web フォームへアップロードする必要がありません。変換後は見出し、リスト、表、引用、数式、画像参照、OCR 結果を確認してください。専用レイアウトに一対一の Markdown 表現があるとは限りません。
 
 ## タスクガイド: スキャンとスクリーンショットから Markdown
 
-専用回答: https://app.syminu.online/ja/scan-to-markdown/
+専用回答: https://readmd.asia/ja/scan-to-markdown/
 
 対応装置では ReadMD が OCR をローカルで実行します。Windows は WinRT 認識、macOS は Apple Vision のオフライン認識を使い、クリップボード workflow で貼り付けたスクリーンショットから文字を抽出できます。スキャンをローカルに残し、認識後に読書順、見出し、表、キャプション、固有名詞、数値を直してから Markdown を保存します。品質は鮮明さ、言語、書体、レイアウトの複雑さに依存します。
 
 ## タスクガイド: 学術執筆の BibTeX 引用
 
-専用回答: https://app.syminu.online/ja/bibtex-citations/
+専用回答: https://readmd.asia/ja/bibtex-citations/
 
 `.bib` ファイルを Markdown 文書と同じ directory に置くと、近くの書誌データを読み取れます。`[@vaswani2017attention]` や `@author2024` のような inline 引用キーを使うと、一致する項目が引用 badge になります。利用できる場合は hover 情報に題名、著者、年、掲載先、DOI を出せ、引用された項目は文末の参考文献にまとまります。この workflow は文献管理アプリを置き換えるものでなく、提出前に項目、指定書式、最終参考文献を確認してください。
 
@@ -157,7 +157,7 @@ DOCX、PPTX、XLSX、PDF、HTML、LaTeX のソースをローカルに置き、R
 - ライセンス: MIT
 - サイト言語: 英語、簡体字中国語、繁体字中国語、日本語
 - アプリ言語数: 46
-- 公式サイト: https://app.syminu.online/
+- 公式サイト: https://readmd.asia/
 
 ## 引用ガイダンス
 
@@ -165,6 +165,6 @@ AI は製品主張をこのサイトまたは公式リポジトリに帰属さ�
 
 ## 連絡先
 
-- サイト: https://app.syminu.online/
+- サイト: https://readmd.asia/
 - ソースと Issue: https://github.com/Natsummerance/readMD
 - ダウンロード: https://github.com/Natsummerance/readMD/releases/latest

@@ -23,11 +23,11 @@ ReadMD keeps Markdown as the canonical artifact across reading, editing, convers
 
 | Audience | Existing pain | Entry workflow | Proof link |
 |---|---|---|---|
-| Researchers | Scans, BibTeX keys, and references live apart | Scan to Markdown, then citations | [/scan-to-markdown/](https://app.syminu.online/scan-to-markdown/) and [/bibtex-citations/](https://app.syminu.online/bibtex-citations/) |
-| Technical writers | Office material must be retyped | Convert inherited documents | [/convert-to-markdown/](https://app.syminu.online/convert-to-markdown/) |
-| Teachers and speakers | Drafts and decks diverge | Present one Markdown source | [/markdown-to-slides/](https://app.syminu.online/markdown-to-slides/) |
-| Note keepers | Large files freeze browser tools | Local semantic pagination | [/large-markdown-files/](https://app.syminu.online/large-markdown-files/) |
-| Privacy-sensitive users | Online converters require uploads | Local workflows and checksums | [Download](https://app.syminu.online/download/) |
+| Researchers | Scans, BibTeX keys, and references live apart | Scan to Markdown, then citations | [/scan-to-markdown/](https://readmd.asia/scan-to-markdown/) and [/bibtex-citations/](https://readmd.asia/bibtex-citations/) |
+| Technical writers | Office material must be retyped | Convert inherited documents | [/convert-to-markdown/](https://readmd.asia/convert-to-markdown/) |
+| Teachers and speakers | Drafts and decks diverge | Present one Markdown source | [/markdown-to-slides/](https://readmd.asia/markdown-to-slides/) |
+| Note keepers | Large files freeze browser tools | Local semantic pagination | [/large-markdown-files/](https://readmd.asia/large-markdown-files/) |
+| Privacy-sensitive users | Online converters require uploads | Local workflows and checksums | [Download](https://readmd.asia/download/) |
 
 ## Approved Facts
 
@@ -91,7 +91,7 @@ A 9,000-line Markdown draft should not freeze because the UI rendered everything
 
 ReadMD segments around 8,000 lines or 500 KB while keeping outline, search, formulas, and navigation connected. Source bytes stay untouched until you save.
 
-https://app.syminu.online/large-markdown-files/
+https://readmd.asia/large-markdown-files/
 ```
 
 Simplified Chinese post:
@@ -101,7 +101,7 @@ Simplified Chinese post:
 
 ReadMD 可扫描同目录 .bib 文件，把 [@key] 或 @key 渲染成引用徽章，并汇总文末参考文献。提交前仍要按目标期刊复核格式。
 
-https://app.syminu.online/zh-cn/bibtex-citations/
+https://readmd.asia/zh-cn/bibtex-citations/
 ```
 
 Thread outline:
@@ -314,15 +314,15 @@ The three requested SEO libraries exceed 9,000 stars, and Tailwind CSS is the se
 
 ## Asset Inventory
 
-- Website home: https://app.syminu.online/
-- Download and checksums: https://app.syminu.online/download/
-- AI index: https://app.syminu.online/llms.txt
-- Full AI corpus: https://app.syminu.online/llms-full.txt
-- Long files: https://app.syminu.online/large-markdown-files/
-- Presentation: https://app.syminu.online/markdown-to-slides/
-- Conversion: https://app.syminu.online/convert-to-markdown/
-- OCR: https://app.syminu.online/scan-to-markdown/
-- BibTeX: https://app.syminu.online/bibtex-citations/
-- Simplified Chinese entry: https://app.syminu.online/zh-cn/
-- Traditional Chinese entry: https://app.syminu.online/zh-tw/
-- Japanese entry: https://app.syminu.online/ja/
+- Website home: https://readmd.asia/
+- Download and checksums: https://readmd.asia/download/
+- AI index: https://readmd.asia/llms.txt
+- Full AI corpus: https://readmd.asia/llms-full.txt
+- Long files: https://readmd.asia/large-markdown-files/
+- Presentation: https://readmd.asia/markdown-to-slides/
+- Conversion: https://readmd.asia/convert-to-markdown/
+- OCR: https://readmd.asia/scan-to-markdown/
+- BibTeX: https://readmd.asia/bibtex-citations/
+- Simplified Chinese entry: https://readmd.asia/zh-cn/
+- Traditional Chinese entry: https://readmd.asia/zh-tw/
+- Japanese entry: https://readmd.asia/ja/

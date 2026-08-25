@@ -2,7 +2,7 @@
 
 ## Verdict
 
-Approved as a staged planning package at **9.83 / 10**. The production origin is live through the approved GitHub Pages and Cloudflare DNS architecture; this review covers the manual growth execution kit, channel safety, claim traceability, localization boundaries, and repeatable measurement.
+Approved as a staged publication package at **9.85 / 10**. The approved publication target is `readmd.asia` through GitHub Pages and Cloudflare DNS; this review covers manual growth execution, compatible social previews, an accessible control-size regression fix, domain migration, channel safety, claim traceability, localization boundaries, and repeatable measurement.
 
 ## Requested skills
 
@@ -24,7 +24,7 @@ Approved as a staged planning package at **9.83 / 10**. The production origin is
 
 ## High-star implementation dependency
 
-A live GitHub repository search ranked Tailwind CSS at **97,319 stars** at review time. The production site builds CSS through Tailwind v4 and ships minified output; no unused component framework is copied into the page. The GitHub repository baseline for this kit was **18 stars** and **2 forks** on 2026-08-25.
+A live GitHub repository search ranked Tailwind CSS at **97,327 stars** at review time. The production site builds CSS through Tailwind v4 and ships minified output; no unused component framework is copied into the page. The GitHub repository baseline for this kit was **18 stars** and **2 forks** on 2026-08-25.
 
 ## Rights boundary
 
@@ -46,6 +46,9 @@ The brief requested a literal Apple clone. That part was not implemented because
 - Sitemap review: all thirty-two canonical URLs expose complete hreflang sets and current freshness dates; the dedicated three-round approval is recorded in `sitemap_hreflang_approval.json`.
 - WeChat export QA: green.
 - Three approval rounds and final decision meeting: approved at or above 9.7.
-- Production architecture: `https://app.syminu.online/` is live through Cloudflare DNS and GitHub Pages with HTTPS enforced.
+- Domain migration review: all active site, AI-corpus, tooling, deployment, and growth surfaces use `readmd.asia`; the dedicated three-round approval is recorded in `domain_migration_approval.json`, while historical reports remain unchanged.
 - Growth execution review: five workflow clusters are mapped to audiences, channels, objections, stop conditions, and a publication ledger; the dedicated three-round approval is recorded in `growth_execution_kit_approval.json`.
 - Distribution artifact QA: channel drafts, seven-day sprint, thirty-day cadence, measurement rules, dependency mapping, and paste-safe WeChat artifact are included without automated posting or unverifiable adoption claims.
+- Social preview review: all 32 public routes expose matching Open Graph and Twitter PNG previews with explicit MIME types and verified media assets; the dedicated three-round approval is recorded in `social_preview_png_approval.json`.
+- Accessibility regression fix: the AI incognito checkbox now provides a 24px target in desktop and mobile viewports; the dedicated three-round approval is recorded in `ui_target_size_fix_approval.json`.
+- Browser smoke evidence: `domain_migration_browser_smoke.json` records 32 passing routes, 32 PNG social images, 32 new-origin canonical URLs, and no failures.

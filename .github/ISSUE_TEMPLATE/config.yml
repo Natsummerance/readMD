@@ -7,6 +7,6 @@ contact_links:
     url: https://github.com/Natsummerance/readMD/security/advisories/new
     about: Report vulnerabilities privately. Please include affected version, environment and reproduction boundary.
   - name: Documentation and downloads
-    url: https://app.syminu.online/
+    url: https://readmd.asia/
     about: Review supported platforms, release assets and checksum guidance.
 

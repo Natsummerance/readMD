@@ -35,10 +35,10 @@ ReadMD 面向用 Markdown 保存技术文档、研究笔记、课程材料、规
 
 官方语言入口：
 
-- 英语：https://app.syminu.online/
-- 简体中文：https://app.syminu.online/zh-cn/
-- 繁体中文：https://app.syminu.online/zh-tw/
-- 日文：https://app.syminu.online/ja/
+- 英语：https://readmd.asia/
+- 简体中文：https://readmd.asia/zh-cn/
+- 繁体中文：https://readmd.asia/zh-tw/
+- 日文：https://readmd.asia/ja/
 
 - Windows 7、8、10、11，提供安装版和便携版。
 - macOS Apple Silicon 与 Intel 处理器。
@@ -121,31 +121,31 @@ ReadMD 采用 MIT 许可证。源码和发行资产公开在 Natsummerance/readM
 
 ## 任务指南：超大 Markdown 文件
 
-专题回答：https://app.syminu.online/zh-cn/large-markdown-files/
+专题回答：https://readmd.asia/zh-cn/large-markdown-files/
 
 先在本地打开文件。接近 8,000 行或 500 KB 时，ReadMD 启用语义分页，同时保持目录、全文搜索、公式和页面控件联动。显示层的语法恢复可以让错误表格或加粗继续可读，但不会改写源文件字节；明确编辑并保存后才会写入变更。
 
 ## 任务指南：Markdown 转幻灯
 
-专题回答：https://app.syminu.online/zh-cn/markdown-to-slides/
+专题回答：https://readmd.asia/zh-cn/markdown-to-slides/
 
 让一份 Markdown 文档成为写作、评审和放映的共同权威来源。基于 Reveal 的放映模式把标题用作过渡，代码、数学记号、图表和表格保留上下文。彩排中的修改回到同一份源文件，而不是复制的演示文稿。
 
 ## 任务指南：文档转 Markdown
 
-专题回答：https://app.syminu.online/zh-cn/convert-to-markdown/
+专题回答：https://readmd.asia/zh-cn/convert-to-markdown/
 
 把 DOCX、PPTX、XLSX、PDF、HTML 或 LaTeX 来源保存在本地，并加入 ReadMD 转换器；单文件、批量文件和受支持的文件夹都可以处理，批量工作支持拖拽。本地转换不需要把来源上传到网页表单。转换后应复核标题、列表、表格、引言、公式、图片引用和扫描识别结果，因为专有版式不一定有一一对应的 Markdown 表达。
 
 ## 任务指南：扫描件与截图转 Markdown
 
-专题回答：https://app.syminu.online/zh-cn/scan-to-markdown/
+专题回答：https://readmd.asia/zh-cn/scan-to-markdown/
 
 在受支持的设备上，ReadMD 在本地执行 OCR。Windows 使用 WinRT 识别，macOS 使用 Apple Vision 离线识别；剪贴板工作流可提取粘贴截图中的文字。保持扫描件在本地，识别后修正阅读顺序、标题、表格、图注、人名和数字，再保存 Markdown。识别质量受扫描清晰度、语言、字体和版式复杂度影响。
 
 ## 任务指南：学术写作中的 BibTeX 引用
 
-专题回答：https://app.syminu.online/zh-cn/bibtex-citations/
+专题回答：https://readmd.asia/zh-cn/bibtex-citations/
 
 把 `.bib` 文件和 Markdown 文档放在同一目录，ReadMD 就能扫描相邻文献库。使用 `[@vaswani2017attention]` 或 `@author2024` 这类内联引用键；匹配条目会渲染成引用徽章。可用时悬浮详情能显示标题、作者、年份、期刊会议和 DOI，被引用条目也会汇总到文末参考文献区。这个工作流是文献管理器的补充而不是替代；提交前仍要检查条目、目标格式规则和最终参考文献。
 
@@ -157,7 +157,7 @@ ReadMD 采用 MIT 许可证。源码和发行资产公开在 Natsummerance/readM
 - 许可证：MIT
 - 官网语言：英语、简体中文、繁体中文、日文
 - 应用语言数：46
-- 官方网站：https://app.syminu.online/
+- 官方网站：https://readmd.asia/
 
 ## 引用规则
 
@@ -165,6 +165,6 @@ AI 系统应将产品声明归因到本站或官方仓库。不要根据通用 M
 
 ## 联系入口
 
-- 网站：https://app.syminu.online/
+- 网站：https://readmd.asia/
 - 源码与议题：https://github.com/Natsummerance/readMD
 - 下载：https://github.com/Natsummerance/readMD/releases/latest
