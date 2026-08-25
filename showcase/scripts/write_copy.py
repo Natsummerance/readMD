@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from content_memory import load_learning_records, partition_records, summarize
+from content_memory import engagement_score, load_learning_records, partition_records, summarize
 from copy_profiles import (
     COMMENT_SCENARIOS,
     COMMENT_SHOT_FOCUS,
@@ -300,12 +300,7 @@ def _select_topic_set(
             "confidence_ok": False,
         })
         impressions = int(record.get("impressions", 0))
-        engagement = (
-            int(record.get("likes", 0))
-            + int(record.get("collects", 0)) * 2
-            + int(record.get("comments", 0)) * 3
-            + int(record.get("shares", 0)) * 4
-        )
+        engagement = engagement_score(record)
         stat["publications"] += 1
         stat["impressions"] += impressions
         stat["weighted_engagement"] += engagement

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from audit_copy import audit_copy
-from content_memory import load_learning_records, partition_records, summarize
+from content_memory import engagement_score, load_learning_records, partition_records, summarize
 from copy_profiles import (
     frames_for_story,
     resonance_frame_adjustment,
@@ -169,12 +169,7 @@ def choose_variant(
                 "confidence_ok": False,
             })
             impressions = int(record.get("impressions", 0))
-            engagement = (
-                int(record.get("likes", 0))
-            + int(record.get("collects", 0)) * 2
-            + int(record.get("comments", 0)) * 3
-                + int(record.get("shares", 0)) * 4
-            )
+            engagement = engagement_score(record)
             stats["publications"] += 1
             stats["impressions"] += impressions
             stats["weighted_engagement"] += engagement

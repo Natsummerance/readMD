@@ -13,6 +13,13 @@ from typing import Any
 
 
 METRIC_FIELDS = ("impressions", "likes", "collects", "comments", "shares", "follows")
+ENGAGEMENT_WEIGHTS = {
+    "likes": 1,
+    "collects": 2,
+    "comments": 3,
+    "shares": 4,
+    "follows": 6,
+}
 REQUIRED_FIELDS = ("release", "title", "title_formula_id", "hook_type", "published_at")
 IMMUTABLE_FIELDS = (
     "release",
@@ -91,6 +98,14 @@ def load_records(path: Path) -> list[dict[str, Any]]:
 
 def is_pending_record(record: dict[str, Any]) -> bool:
     return record.get("metrics_status") == "pending"
+
+
+def engagement_score(record: dict[str, Any]) -> int:
+    """Weight all platform outcomes; follows are the strongest durable signal."""
+    return sum(
+        max(0, int(record.get(field, 0))) * weight
+        for field, weight in ENGAGEMENT_WEIGHTS.items()
+    )
 
 
 def partition_records(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -391,12 +406,7 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
             "score": 0.0,
         })
         impressions = int(record.get("impressions", 0))
-        engagement = (
-            int(record.get("likes", 0))
-            + int(record.get("collects", 0)) * 2
-            + int(record.get("comments", 0)) * 3
-            + int(record.get("shares", 0)) * 4
-        )
+        engagement = engagement_score(record)
         stats["publications"] += 1
         stats["impressions"] += impressions
         stats["weighted_engagement"] += engagement

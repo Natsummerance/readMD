@@ -2555,6 +2555,25 @@ class CopyVariantsTest(unittest.TestCase):
         self.assertEqual(chosen["variant_id"], "outcome-led__36")
         self.assertIn("insufficient evidence", report["selection_rule"])
 
+    def test_dimension_learning_includes_follows(self) -> None:
+        story = self.variant_story()
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        history = [
+            {**self.history_record("v1.0.0", "outcome-led", "#36"), "copy_frame": "core"},
+            {**self.history_record("v1.0.1", "identity-led", "#22"), "copy_frame": "core"},
+            {**self.history_record("v1.0.2", "outcome-led", "#36"), "copy_frame": "workflow", "follows": 40},
+            self.history_record("v1.0.3", "identity-led", "#22"),
+        ]
+        _, report = copy_variants.choose_variant(variants, history)
+
+        self.assertTrue(report["formula_stats"]["#36"]["confidence_ok"])
+        self.assertTrue(report["formula_stats"]["#22"]["confidence_ok"])
+        self.assertGreater(
+            report["formula_stats"]["#36"]["weighted_engagement"],
+            report["formula_stats"]["#22"]["weighted_engagement"],
+        )
+
     def test_selection_ignores_pending_hook_history(self) -> None:
         story = {
             "release": "v1.1.0",
@@ -3006,7 +3025,7 @@ class PerformanceReportTest(unittest.TestCase):
 
         self.assertEqual(result["topic_set_stats"]["ppt-set"]["publications"], 2)
         self.assertEqual(result["topic_set_stats"]["ppt-set"]["label"], "talk-core")
-        self.assertEqual(result["topic_stats"]["PPT"]["weighted_engagement"], 740)
+        self.assertEqual(result["topic_stats"]["PPT"]["weighted_engagement"], 764)
         self.assertEqual(result["recommended_topic_set"], "ppt-set")
         self.assertEqual(result["recommended_topic"], "Markdown")
         self.assertIn("## Topic sets", markdown)
@@ -3601,6 +3620,14 @@ class ContentMemoryTest(unittest.TestCase):
         self.assertEqual(summary["formula_stats"]["#61"]["confidence"], "low")
         self.assertGreater(summary["formula_stats"]["#36"]["score"], summary["formula_stats"]["#61"]["score"])
 
+    def test_engagement_score_weights_follows_as_durable_demand(self) -> None:
+        record = self.record()
+
+        self.assertEqual(
+            content_memory.engagement_score(record),
+            40 + 60 * 2 + 30 * 3 + 10 * 4 + 5 * 6,
+        )
+
     def test_two_release_formula_reaches_medium_confidence(self) -> None:
         records = [
             self.record(release="v1.0.0", formula="#36"),
@@ -3617,7 +3644,7 @@ class ContentMemoryTest(unittest.TestCase):
         ]
         summary = content_memory.summarize(records)
         self.assertIsNone(summary["recommended_formula"])
-        self.assertEqual(summary["formula_stats"]["#9"]["score"], 2.0375)
+        self.assertEqual(summary["formula_stats"]["#9"]["score"], 2.075)
         self.assertEqual(summary["formula_stats"]["#9"]["confidence"], "low")
 
     def test_pending_feedback_is_partitioned_out_of_learning(self) -> None:

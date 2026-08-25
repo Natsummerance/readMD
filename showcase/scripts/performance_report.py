@@ -9,19 +9,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from content_memory import METRIC_FIELDS, load_records, partition_records
+from content_memory import METRIC_FIELDS, engagement_score, load_records, partition_records
 
 FEEDBACK_DUE_DAYS = 3
 FEEDBACK_OVERDUE_DAYS = 7
 
 
 def _engagement(record: dict[str, Any]) -> int:
-    return (
-        int(record.get("likes", 0))
-        + int(record.get("collects", 0)) * 2
-        + int(record.get("comments", 0)) * 3
-        + int(record.get("shares", 0)) * 4
-    )
+    return engagement_score(record)
 
 
 def _stats(records: list[dict[str, Any]], key: str) -> dict[str, dict[str, Any]]:
