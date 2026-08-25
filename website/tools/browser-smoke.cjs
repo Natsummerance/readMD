@@ -78,7 +78,8 @@ const aiFiles = [
     if (!response.ok()) errors.push(`${file} returned HTTP ${response.status()}`);
   }
   for (const imageUrl of [...new Set(pages.map(item => item.ogImage))]) {
-    const response = await page.request.head(imageUrl);
+    const assetUrl = new URL(new URL(imageUrl).pathname, baseUrl);
+    const response = await page.request.head(assetUrl.href);
     if (!response.ok()) errors.push(`${imageUrl} returned HTTP ${response.status()}`);
   }
 

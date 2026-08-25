@@ -2,7 +2,7 @@
 
 ## Production target
 
-- Canonical site: `https://app.syminu.online/`
+- Canonical site: `https://readmd.asia/`
 - Hosting: GitHub Pages on the free plan
 - Domain strategy: Cloudflare is authoritative for a dedicated subdomain of the existing active `syminu.online` zone. No new domain purchase is required.
 
@@ -13,7 +13,7 @@ Merging an approved website change into `main` runs `.github/workflows/website-g
 The active DNS-only record is:
 
 ```text
-app.syminu.online. CNAME Natsummerance.github.io.
+readmd.asia. CNAME Natsummerance.github.io.
 ```
 
 Do not use the existing `readmd.syminu.online` or `www.syminu.online` records; both already point to other services. GitHub Pages has issued a certificate, and HTTPS enforcement is enabled in the Pages configuration.
@@ -32,7 +32,7 @@ This builds `dist/` and runs the GEO, approval, rights, security-header, structu
 
 GitHub Pages does not process the `website/public/_headers` file, so those headers are not emitted by the current DNS-only origin. Applying the policy at the Cloudflare edge requires either:
 
-- Zone > Transform Rules > Edit permission, followed by an HTTP response header transform scoped to `http.host eq "app.syminu.online"`; or
+- Zone > Transform Rules > Edit permission, followed by an HTTP response header transform scoped to `http.host eq "readmd.asia"`; or
 - migrating the origin to Cloudflare Workers/Pages, where `_headers` can be honored directly.
 
 Until one of those changes is made, do not claim that CSP, HSTS, or frame-protection headers are live. The file remains the canonical security policy for the future Cloudflare-native hosting migration.
@@ -52,7 +52,7 @@ Then run:
 npx wrangler deploy --config wrangler.worker.jsonc
 ```
 
-Afterward, change the `app.syminu.online` CNAME target from `Natsummerance.github.io` to the Cloudflare custom-domain target and re-run the site validator.
+Afterward, change the `readmd.asia` CNAME target from `Natsummerance.github.io` to the Cloudflare custom-domain target and re-run the site validator.
 
 ## Historical Cloudflare blocker
 

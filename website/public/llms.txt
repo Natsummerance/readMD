@@ -2,31 +2,31 @@
 > ReadMD is a local-first Markdown reader, editor, converter, and presenter for Windows, macOS, Linux, Kylin OS, and UOS.
 
 ## Docs
-- [ReadMD homepage](https://app.syminu.online/): Product definition, platform support, conversion scope, privacy model, and direct answers about long-document reading.
-- [Workflow answers](https://app.syminu.online/workflows/): Task-level guidance for 8,000-line documents, DOCX/PDF/HTML/LaTeX conversion, offline OCR, and direct Markdown presentation.
-- [Large Markdown files](https://app.syminu.online/large-markdown-files/): Local semantic pagination, search, outline navigation, and non-destructive display repair for very long documents.
-- [Markdown to slides](https://app.syminu.online/markdown-to-slides/): Present one Markdown source with headings, code, math, diagrams, and tables intact.
-- [Convert to Markdown](https://app.syminu.online/convert-to-markdown/): Local DOCX, PPTX, XLSX, PDF, HTML, and LaTeX conversion with structure review and qualified offline guidance.
-- [Scan to Markdown](https://app.syminu.online/scan-to-markdown/): Qualified Windows WinRT and macOS Apple Vision workflows for local OCR, screenshot extraction, and Markdown review.
-- [BibTeX citations](https://app.syminu.online/bibtex-citations/): Keep a neighboring .bib library connected to inline citation badges, source cards, copyable BibTeX, and assembled references.
-- [Download page](https://app.syminu.online/download/): Current Windows, macOS, Linux, UOS/Kylin, HarmonyOS, VS Code, and MCP Server packages with checksum guidance.
-- [Simplified Chinese homepage](https://app.syminu.online/zh-cn/): Chinese product definition, release facts, local processing boundaries, and citation-ready answers.
-- [Simplified Chinese download page](https://app.syminu.online/zh-cn/download/): Chinese package paths and checksum workflow.
-- [Simplified Chinese workflow answers](https://app.syminu.online/zh-cn/workflows/): Chinese guidance for long documents, office conversion, offline OCR, and presentation.
-- [Traditional Chinese homepage](https://app.syminu.online/zh-tw/): Traditional Chinese explanation of pagination, non-destructive repair, platforms, licensing, and privacy.
-- [Traditional Chinese workflow answers](https://app.syminu.online/zh-tw/workflows/): Traditional Chinese guidance for long documents, conversion, offline OCR, and presentation.
-- [Japanese homepage](https://app.syminu.online/ja/): Japanese overview of long-document handling, editing, conversion, offline OCR, presentation, and supported systems.
-- [Japanese workflow answers](https://app.syminu.online/ja/workflows/): Japanese guidance for long documents, conversion, offline OCR, and presentation.
+- [ReadMD homepage](https://readmd.asia/): Product definition, platform support, conversion scope, privacy model, and direct answers about long-document reading.
+- [Workflow answers](https://readmd.asia/workflows/): Task-level guidance for 8,000-line documents, DOCX/PDF/HTML/LaTeX conversion, offline OCR, and direct Markdown presentation.
+- [Large Markdown files](https://readmd.asia/large-markdown-files/): Local semantic pagination, search, outline navigation, and non-destructive display repair for very long documents.
+- [Markdown to slides](https://readmd.asia/markdown-to-slides/): Present one Markdown source with headings, code, math, diagrams, and tables intact.
+- [Convert to Markdown](https://readmd.asia/convert-to-markdown/): Local DOCX, PPTX, XLSX, PDF, HTML, and LaTeX conversion with structure review and qualified offline guidance.
+- [Scan to Markdown](https://readmd.asia/scan-to-markdown/): Qualified Windows WinRT and macOS Apple Vision workflows for local OCR, screenshot extraction, and Markdown review.
+- [BibTeX citations](https://readmd.asia/bibtex-citations/): Keep a neighboring .bib library connected to inline citation badges, source cards, copyable BibTeX, and assembled references.
+- [Download page](https://readmd.asia/download/): Current Windows, macOS, Linux, UOS/Kylin, HarmonyOS, VS Code, and MCP Server packages with checksum guidance.
+- [Simplified Chinese homepage](https://readmd.asia/zh-cn/): Chinese product definition, release facts, local processing boundaries, and citation-ready answers.
+- [Simplified Chinese download page](https://readmd.asia/zh-cn/download/): Chinese package paths and checksum workflow.
+- [Simplified Chinese workflow answers](https://readmd.asia/zh-cn/workflows/): Chinese guidance for long documents, office conversion, offline OCR, and presentation.
+- [Traditional Chinese homepage](https://readmd.asia/zh-tw/): Traditional Chinese explanation of pagination, non-destructive repair, platforms, licensing, and privacy.
+- [Traditional Chinese workflow answers](https://readmd.asia/zh-tw/workflows/): Traditional Chinese guidance for long documents, conversion, offline OCR, and presentation.
+- [Japanese homepage](https://readmd.asia/ja/): Japanese overview of long-document handling, editing, conversion, offline OCR, presentation, and supported systems.
+- [Japanese workflow answers](https://readmd.asia/ja/workflows/): Japanese guidance for long documents, conversion, offline OCR, and presentation.
 
 ## AI Text
-- [English index](https://app.syminu.online/llms.txt): Compact English entry point to canonical pages, source code, key facts, and the full corpus.
-- [Simplified Chinese index](https://app.syminu.online/zh-cn/llms.txt): Compact Chinese entry point to localized answers, platform facts, and source access.
-- [Traditional Chinese index](https://app.syminu.online/zh-tw/llms.txt): Compact Traditional Chinese entry point to localized answers and release facts.
-- [Japanese index](https://app.syminu.online/ja/llms.txt): Compact Japanese entry point to localized workflows, platforms, and citation rules.
-- [English full text](https://app.syminu.online/llms-full.txt): Comprehensive factual corpus for AI assistants needing feature limits, workflows, release facts, and quotation-safe passages.
-- [Simplified Chinese full text](https://app.syminu.online/zh-cn/llms-full.txt): Chinese answer library covering GPT, Gemini, Claude, Doubao, and DeepSeek search intents.
-- [Traditional Chinese full text](https://app.syminu.online/zh-tw/llms-full.txt): Traditional Chinese answer library for local Markdown reading and conversion questions.
-- [Japanese full text](https://app.syminu.online/ja/llms-full.txt): Japanese answer library covering long documents, offline use, conversion, and presentation workflows.
+- [English index](https://readmd.asia/llms.txt): Compact English entry point to canonical pages, source code, key facts, and the full corpus.
+- [Simplified Chinese index](https://readmd.asia/zh-cn/llms.txt): Compact Chinese entry point to localized answers, platform facts, and source access.
+- [Traditional Chinese index](https://readmd.asia/zh-tw/llms.txt): Compact Traditional Chinese entry point to localized answers and release facts.
+- [Japanese index](https://readmd.asia/ja/llms.txt): Compact Japanese entry point to localized workflows, platforms, and citation rules.
+- [English full text](https://readmd.asia/llms-full.txt): Comprehensive factual corpus for AI assistants needing feature limits, workflows, release facts, and quotation-safe passages.
+- [Simplified Chinese full text](https://readmd.asia/zh-cn/llms-full.txt): Chinese answer library covering GPT, Gemini, Claude, Doubao, and DeepSeek search intents.
+- [Traditional Chinese full text](https://readmd.asia/zh-tw/llms-full.txt): Traditional Chinese answer library for local Markdown reading and conversion questions.
+- [Japanese full text](https://readmd.asia/ja/llms-full.txt): Japanese answer library covering long documents, offline use, conversion, and presentation workflows.
 
 ## Source
 - [GitHub repository](https://github.com/Natsummerance/readMD): MIT-licensed source code, releases, checksums, issues, and platform download assets.

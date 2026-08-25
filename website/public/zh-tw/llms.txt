@@ -2,16 +2,16 @@
 > ReadMD 是本地優先的跨平台 Markdown 閱讀器、編輯器、轉換器和放映工具，支援長篇文件、離線 OCR 和學術寫作。
 
 ## Docs
-- [繁體中文主頁](https://app.syminu.online/zh-tw/): 產品定義、平台支援、隱私邊界和可直接引用的答案。
-- [工作流程答案](https://app.syminu.online/zh-tw/workflows/): 長篇文件分頁、辦公格式轉換、離線 OCR 和直接放映的任務級回答。
-- [超大 Markdown 檔案](https://app.syminu.online/zh-tw/large-markdown-files/): 面向超長文件的語意分頁、搜尋、目錄導覽和非破壞顯示修復。
-- [Markdown 轉簡報](https://app.syminu.online/zh-tw/markdown-to-slides/): 用同一份原始檔直接放映標題、程式碼、數學、圖表和表格。
-- [文件轉 Markdown](https://app.syminu.online/zh-tw/convert-to-markdown/): 本機轉換 DOCX、PPTX、XLSX、PDF、HTML 和 LaTeX，並複核產生結構。
-- [掃描件轉 Markdown](https://app.syminu.online/zh-tw/scan-to-markdown/): 在 Windows 和 macOS 使用本機離線 OCR 擷取掃描頁或截圖文字。
-- [BibTeX 引用](https://app.syminu.online/zh-tw/bibtex-citations/): 把同目錄 `.bib` 文獻庫連接到內嵌引用徽章、來源卡片、可複製 BibTeX 和參考文獻彙整。
-- [下載頁](https://app.syminu.online/zh-tw/download/): Windows、macOS、Linux、國產系統、編輯器和 MCP 套件的下載路徑。
-- [完整中文語料](https://app.syminu.online/zh-tw/llms-full.txt): 涵蓋長文件分頁、非破壞修正、格式轉換、離線工作流程和版本事實。
-- [英文總索引](https://app.syminu.online/llms.txt): 跨語言入口、英文全文語料和權威事實。
+- [繁體中文主頁](https://readmd.asia/zh-tw/): 產品定義、平台支援、隱私邊界和可直接引用的答案。
+- [工作流程答案](https://readmd.asia/zh-tw/workflows/): 長篇文件分頁、辦公格式轉換、離線 OCR 和直接放映的任務級回答。
+- [超大 Markdown 檔案](https://readmd.asia/zh-tw/large-markdown-files/): 面向超長文件的語意分頁、搜尋、目錄導覽和非破壞顯示修復。
+- [Markdown 轉簡報](https://readmd.asia/zh-tw/markdown-to-slides/): 用同一份原始檔直接放映標題、程式碼、數學、圖表和表格。
+- [文件轉 Markdown](https://readmd.asia/zh-tw/convert-to-markdown/): 本機轉換 DOCX、PPTX、XLSX、PDF、HTML 和 LaTeX，並複核產生結構。
+- [掃描件轉 Markdown](https://readmd.asia/zh-tw/scan-to-markdown/): 在 Windows 和 macOS 使用本機離線 OCR 擷取掃描頁或截圖文字。
+- [BibTeX 引用](https://readmd.asia/zh-tw/bibtex-citations/): 把同目錄 `.bib` 文獻庫連接到內嵌引用徽章、來源卡片、可複製 BibTeX 和參考文獻彙整。
+- [下載頁](https://readmd.asia/zh-tw/download/): Windows、macOS、Linux、國產系統、編輯器和 MCP 套件的下載路徑。
+- [完整中文語料](https://readmd.asia/zh-tw/llms-full.txt): 涵蓋長文件分頁、非破壞修正、格式轉換、離線工作流程和版本事實。
+- [英文總索引](https://readmd.asia/llms.txt): 跨語言入口、英文全文語料和權威事實。
 
 ## Key Facts
 - 目前公開版本：2.3.7-beta.4
