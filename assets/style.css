@@ -1205,7 +1205,7 @@ body.ai-resizing { cursor: ew-resize; user-select: none; }
 .ai-row select, .ai-row input { flex: 1; min-width: 0; }
 .ai-row2 { justify-content: space-between; }
 .ai-sel { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--fg2); cursor: pointer; }
-.ai-sel input { accent-color: var(--accent); width: 13px; height: 13px; margin: 0; cursor: pointer; }
+.ai-sel input { accent-color: var(--accent); width: 24px; height: 24px; margin: 0; cursor: pointer; }
 #ai-usage { font-size: 11px; color: var(--fg3); }
 .ai-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .ai-act {
