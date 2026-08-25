@@ -28,6 +28,7 @@ test('presentation renders offline with initialized Reveal assets', async ({ pag
 
   await page.goto('/');
   await page.waitForFunction(() => typeof launchPresentationMode === 'function');
+  await page.locator('#btn-zen').focus();
   await page.evaluate(async () => {
     state.original = [
       '# First slide',
@@ -47,6 +48,12 @@ test('presentation renders offline with initialized Reveal assets', async ({ pag
 
   const frame = page.frameLocator('.presentation-iframe');
   await expect(frame.locator('.reveal.ready')).toBeVisible();
+  const modal = page.locator('#presentation-modal');
+  await expect(modal).toHaveAttribute('role', 'dialog');
+  await expect(modal).toHaveAttribute('aria-modal', 'true');
+  await expect(modal).toHaveAttribute('aria-label', /演讲演示|Presentation/);
+  await expect(page.locator('.presentation-iframe')).toHaveAttribute('title', /演讲演示|Presentation/);
+  await expect(page.locator('#presentation-theme-select')).toBeFocused();
   await expect(frame.locator('.slides > section')).toHaveCount(2);
   await expect(frame.locator('.katex')).toBeVisible();
   await expect.poll(() => page.evaluate(() => {
@@ -67,6 +74,10 @@ test('presentation renders offline with initialized Reveal assets', async ({ pag
     expect(box.width).toBeGreaterThanOrEqual(22);
     expect(box.height).toBeGreaterThanOrEqual(20);
   }
+
+  await page.keyboard.press('Escape');
+  await expect(modal).toBeHidden();
+  await expect(page.locator('#btn-zen')).toBeFocused();
 });
 
 test('F11 enters immersive Zen once without layout jitter', async ({ page }) => {

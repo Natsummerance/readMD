@@ -541,12 +541,20 @@ function confirmContinuousMode(pageCount) {
     }
     modal.classList.remove('hidden');
     $('continuous-desc').textContent = _t('pagination.continuousWarning', { count: pageCount });
+    const onKeyDown = event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        finish(false);
+      }
+    };
     const finish = accepted => {
       modal.classList.add('hidden');
       $('continuous-confirm').onclick = null;
       $('continuous-cancel').onclick = null;
+      modal.removeEventListener('keydown', onKeyDown);
       resolve(accepted);
     };
+    modal.addEventListener('keydown', onKeyDown);
     setTimeout(() => $('continuous-confirm')?.focus(), 20);
     $('continuous-confirm').onclick = () => finish(true);
     $('continuous-cancel').onclick = () => finish(false);
@@ -1580,6 +1588,22 @@ function toggleZenMode(force) {
 }
 window.toggleZenMode = toggleZenMode;
 
+let presentationOpener = null;
+
+window.closePresentationMode = function closePresentationMode() {
+  const modal = document.getElementById('presentation-modal');
+  if (!modal || modal.classList.contains('hidden')) return false;
+  if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+  modal.classList.add('hidden');
+  const iframe = modal.querySelector('.presentation-iframe');
+  if (iframe) iframe.src = 'about:blank';
+  if (presentationOpener?.isConnected) presentationOpener.focus({ preventScroll: true });
+  presentationOpener = null;
+  return true;
+};
+
 async function launchPresentationMode() {
   const content = state.original || (cmView ? cmView.state.doc.toString() : '');
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
@@ -1587,11 +1611,15 @@ async function launchPresentationMode() {
     showToast(_t('presentation.noDoc') || '当前没有可演示的文档内容');
     return;
   }
+  if (!document.activeElement?.closest('#presentation-modal')) presentationOpener = document.activeElement;
   let modal = document.getElementById('presentation-modal');
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'presentation-modal';
     modal.className = 'hidden';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', _t('menu.presentation') || '演讲演示');
     modal.innerHTML = `
       <div class="presentation-toolbar" id="presentation-toolbar">
         <div class="presentation-tool-item">
@@ -1628,7 +1656,7 @@ async function launchPresentationMode() {
         <button type="button" class="presentation-btn" id="presentation-fullscreen-btn" title="全屏放映 (F11)" data-i18n-title="presentation.fullscreenTitle">全屏</button>
         <button type="button" class="presentation-close-btn" id="presentation-close-btn" title="退出演示 (Esc)" data-i18n-title="presentation.closeTitle">✕</button>
       </div>
-      <iframe class="presentation-iframe" src="about:blank"></iframe>
+      <iframe class="presentation-iframe" title="${_t('menu.presentation') || '演讲演示'}" src="about:blank"></iframe>
     `;
     document.body.appendChild(modal);
 
@@ -1681,12 +1709,7 @@ async function launchPresentationMode() {
     }
 
     const closePresentation = () => {
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      }
-      modal.classList.add('hidden');
-      const iframe = modal.querySelector('.presentation-iframe');
-      if (iframe) iframe.src = 'about:blank';
+      window.closePresentationMode();
     };
 
     if ($('presentation-close-btn')) {
@@ -1711,6 +1734,7 @@ async function launchPresentationMode() {
       modal.classList.remove('hidden');
       const iframe = modal.querySelector('.presentation-iframe');
       iframe.srcdoc = res.html;
+      $('presentation-theme-select')?.focus({ preventScroll: true });
     } else {
       showToast((_t('toast.presentationFail') || '演示文稿生成失败：') + ((res && res.error) || '未知错误'));
     }
