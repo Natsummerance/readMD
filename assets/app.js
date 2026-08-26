@@ -14,7 +14,7 @@
    【模块目录索引与职责映射表 (Architecture & Module Directory Index)】
    ==============================================================================================
    
-   📂 assets/js/core/ - 核心基础设施与全局状态
+    assets/js/core/ - 核心基础设施与全局状态
    ----------------------------------------------------------------------------------------------
      • state.js     : 全局状态单例 (window.state)、DOM选择器 ($)、网络请求 (apiFetch)、提示 (showToast/busy)、Python桥接 (bindPy)
      • settings.js  : 用户配置持久化 (loadSettings/saveSettings/applySettings)、主题切换 (toggleTheme)、全局缩放 (zoom)
@@ -23,7 +23,7 @@
      • history.js   : 最近打开文件、主页深度重置 (goHome)、欢迎页卡片交互 (bindWelcomeEvents)、自动重载 (startAutoReload)
      • dragdrop.js  : 全局文件与图片拖拽放置识别 (bindGlobalDragAndDrop)
    
-   📂 assets/js/reader/ - 文档解析、渲染与阅读增强引擎
+    assets/js/reader/ - 文档解析、渲染与阅读增强引擎
    ----------------------------------------------------------------------------------------------
      • render.js    : Markdown 核心解析、分块虚拟渲染 (renderMarkdown/renderVirtual/loadFile/loadFileDialog/saveAs)
      • formula.js   : LaTeX 数学公式保护/还原、公式自修复、公式选择器 (openFormulaModal/insertFormulaFromPicker)
@@ -32,13 +32,13 @@
      • search.js    : 正文全文关键词即时检索、多结果高亮与上下跳转 (toggleSearch/doSearch/jumpToMark/closeSearch)
      • folder.js    : 本地工作区文件夹侧边栏树形浏览与文件快速切换 (openFolder/showSide/toggleSide)
    
-   📂 assets/js/editor/ - Markdown 源码编辑器与图片工作台
+    assets/js/editor/ - Markdown 源码编辑器与图片工作台
    ----------------------------------------------------------------------------------------------
      • editor.js    : CodeMirror 6 编辑器实例、Markdown语法插入 (cmInsertSyntax)、命令面板 (openMdCommandPalette)、saveEdit/exitEdit
      • preview.js   : 四向分栏实时预览布局 (setPvLayout)、双向滚动同步 (pvSyncFromPreview)、分栏拖拽手柄 (bindPvSplitter)
      • image.js     : 轻量图片编辑器 (openImgModal/rotateImg/flipImg/applyRatio/undoImg/redoImg/exportAndInsertImg)
    
-   📂 assets/js/features/ - 高级业务扩展功能
+    assets/js/features/ - 高级业务扩展功能
    ----------------------------------------------------------------------------------------------
      • ai.js        : AI 侧边栏对话、多模型切换 (onAiProviderChange)、Prompt模板 (openTplModal)、流式推理 (runAi)、无痕会话
      • web.js       : 现代网页转 MD (openWebDialog/webToMd/cancelWebTask)、滚轮步进器、动态渲染与同站批量抓取
@@ -245,7 +245,7 @@ function bindEvents() {
       }
     });
   }
-  // 抓取模式双操作卡：⚡ 智能提取 与 🖥️ 完整渲染
+  // 抓取模式双操作卡：智能提取 与 完整渲染
   $('url-go').addEventListener('click', () => {
     const url = $('url-input').value.trim();
     const pages = parseInt($('url-pages') ? $('url-pages').value : '1', 10) || 1;

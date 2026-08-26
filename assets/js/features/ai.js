@@ -599,7 +599,7 @@ async function saveAiSelection(silent) {
     if (r.ok) {
       await loadAiConfig();
       const status = $('ai-conn-status');
-      if (status) status.textContent = (_t('status.saved') || '已保存') + '✓';
+      if (status) status.textContent = _t('status.saved') || '已保存';
       if (!silent) showToast(_t('toast.connSettingsSaved') || '连接设置已保存');
     } else {
       const d = await r.json().catch(() => ({}));
@@ -662,7 +662,7 @@ async function loadAiModels() {
       p.models = ids;
       fillAiModels(ids, $('ai-model').value);
       await saveAiSelection(true);
-      if (status) status.textContent = (_t('toast.fetchedModels', { count: ids.length }) || ('已获取 ' + ids.length + ' 个模型')) + '✓';
+      if (status) status.textContent = _t('toast.fetchedModels', { count: ids.length }) || ('已获取 ' + ids.length + ' 个模型');
       showToast(_t('toast.fetchedModels', { count: ids.length }) || ('已获取 ' + ids.length + ' 个模型'));
     } else {
       fillAiModels([], '');

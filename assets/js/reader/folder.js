@@ -1,4 +1,9 @@
 'use strict';
+
+const TREE_ICONS = {
+  dir: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16a1 1 0 0 0 1-1V8a1 1 0 0 0-1-1h-8L9 5H4a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1Z"/></svg>',
+  file: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/></svg>'
+};
 /* ============================================================
    ReadMD Reader - Folder Tree Browser
    ============================================================ */
@@ -35,7 +40,8 @@ function renderFolderList() {
   const folderName = state.folder.replace(/\\/g, '/').split('/').filter(Boolean).pop() || state.folder;
   const header = document.createElement('div');
   header.className = 'dir-header';
-  header.textContent = '📁 ' + folderName;
+  header.innerHTML = TREE_ICONS.dir + '<span></span>';
+  header.querySelector('span').textContent = folderName;
   header.title = state.folder;
   box.appendChild(header);
 
@@ -116,8 +122,8 @@ function renderTreeNodes(container, childrenObj, depth) {
       }
 
       const icon = document.createElement('span');
-      icon.textContent = '📁 ';
-      icon.style.fontSize = '12px';
+      icon.className = 'tree-icon';
+      icon.innerHTML = TREE_ICONS.dir;
 
       const nameEl = document.createElement('span');
       nameEl.className = 'tree-name';
@@ -146,8 +152,8 @@ function renderTreeNodes(container, childrenObj, depth) {
       toggle.classList.add('empty');
 
       const icon = document.createElement('span');
-      icon.textContent = '📄 ';
-      icon.style.fontSize = '12px';
+      icon.className = 'tree-icon';
+      icon.innerHTML = TREE_ICONS.file;
 
       const nameEl = document.createElement('span');
       nameEl.className = 'tree-name';

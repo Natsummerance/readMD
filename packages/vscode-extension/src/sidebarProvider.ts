@@ -15,7 +15,7 @@ export class ReadMDToolboxProvider implements vscode.TreeDataProvider<ToolboxIte
   getChildren(element?: ToolboxItem): Thenable<ToolboxItem[]> {
     if (!element) {
       return Promise.resolve([
-        new ToolboxItem('🪄 语法自愈与排版规范', vscode.TreeItemCollapsibleState.Expanded, 'group_fix', [
+        new ToolboxItem('语法自愈与排版规范', vscode.TreeItemCollapsibleState.Expanded, 'group_fix', [
           new ToolboxItem('一键自愈当前 Markdown 文档', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
             command: 'readmd.fixCurrentDocument',
             title: '一键自愈当前文档',
@@ -24,8 +24,8 @@ export class ReadMDToolboxProvider implements vscode.TreeDataProvider<ToolboxIte
             command: 'readmd.insertToc',
             title: '插入 TOC 目录',
           }, 'list-tree'),
-        ]),
-        new ToolboxItem('📽️ Reveal.js 演说与幻灯片', vscode.TreeItemCollapsibleState.Expanded, 'group_presentation', [
+        ], undefined, 'wrench'),
+        new ToolboxItem('Reveal.js 演说与幻灯片', vscode.TreeItemCollapsibleState.Expanded, 'group_presentation', [
           new ToolboxItem('开启全屏 Reveal.js 演说模式', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
             command: 'readmd.openPresentation',
             title: '开启全屏演说',
@@ -38,8 +38,8 @@ export class ReadMDToolboxProvider implements vscode.TreeDataProvider<ToolboxIte
             command: 'readmd.exportPresentation',
             title: '导出演说 HTML',
           }, 'file-media'),
-        ]),
-        new ToolboxItem('🔄 全格式文档转换与模块化', vscode.TreeItemCollapsibleState.Expanded, 'group_convert', [
+        ], undefined, 'screen-full'),
+        new ToolboxItem('全格式文档转换与模块化', vscode.TreeItemCollapsibleState.Expanded, 'group_convert', [
           new ToolboxItem('选择本地文档转为 Markdown (Word/PDF/PPT/Excel/TXT/TeX)...', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
             command: 'readmd.convertAnyFilePrompt',
             title: '转换本地文档',
@@ -52,8 +52,8 @@ export class ReadMDToolboxProvider implements vscode.TreeDataProvider<ToolboxIte
             command: 'readmd.processImports',
             title: '展平 @import 引用',
           }, 'references'),
-        ]),
-        new ToolboxItem('🖨️ 多格式高质量排版导出', vscode.TreeItemCollapsibleState.Expanded, 'group_export', [
+        ], undefined, 'references'),
+        new ToolboxItem('多格式高质量排版导出', vscode.TreeItemCollapsibleState.Expanded, 'group_export', [
           new ToolboxItem('导出为排版级 PDF / Word (.docx) / HTML / LaTeX...', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
             command: 'readmd.exportDocument',
             title: '导出文档',
@@ -62,8 +62,8 @@ export class ReadMDToolboxProvider implements vscode.TreeDataProvider<ToolboxIte
             command: 'readmd.convertToLatex',
             title: '转为学术 LaTeX',
           }, 'file-code'),
-        ]),
-        new ToolboxItem('⚡ 交互式代码与学术工具', vscode.TreeItemCollapsibleState.Collapsed, 'group_interactive', [
+        ], undefined, 'export'),
+        new ToolboxItem('交互式代码与学术工具', vscode.TreeItemCollapsibleState.Collapsed, 'group_interactive', [
           new ToolboxItem('插入交互式代码块 (Python/JS/Bash/R)...', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
             command: 'readmd.insertCodeChunk',
             title: '插入交互代码块',
@@ -88,13 +88,13 @@ export class ReadMDToolboxProvider implements vscode.TreeDataProvider<ToolboxIte
             command: 'readmd.parseBibtex',
             title: '解析 BibTeX 参考文献',
           }, 'references'),
-        ]),
-        new ToolboxItem('🤖 AI 与 MCP 智能体接入', vscode.TreeItemCollapsibleState.Expanded, 'group_mcp', [
+        ], undefined, 'code'),
+        new ToolboxItem('AI 与 MCP 智能体接入', vscode.TreeItemCollapsibleState.Expanded, 'group_mcp', [
           new ToolboxItem('一键生成工作区 MCP 配置 (Cursor/Claude/VSCode)', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
             command: 'readmd.setupMcpServer',
             title: '配置 MCP Server',
           }, 'hubot'),
-        ]),
+        ], undefined, 'hubot'),
       ]);
     }
 

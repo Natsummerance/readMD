@@ -106,7 +106,7 @@ function renderConvertProgress(d) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const rows = $('convert-list').querySelectorAll('.convert-item');
   const statusMap = {
-    ok: _t('convert.statusOk') || '✓ 成功',
+    ok: _t('convert.statusOk') || '成功',
     skipped: _t('convert.statusSkipped') || '跳过（已存在）',
     error: _t('convert.statusError') || '失败',
     canceled: _t('convert.statusCanceled') || '已取消',

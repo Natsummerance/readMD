@@ -600,7 +600,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
     lastPreflight = result;
     var note = $('preflight-note');
     if (!note) return;
-    note.textContent = (result.ok ? '✓ ' : '⚠ ') + (result.message || '无法检查安装目录');
+    note.textContent = result.message || '无法检查安装目录';
     note.classList.toggle('error', !result.ok);
     $('btn-start-install').disabled = !result.ok;
   }

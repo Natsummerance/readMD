@@ -65,9 +65,9 @@ class TestV231Features(unittest.TestCase):
         # Check that old emojis are removed
         self.assertNotIn('&#127760;', url_modal_html)
         self.assertNotIn('&#128203;', url_modal_html)
-        self.assertNotIn('📥', url_modal_html)
-        self.assertNotIn('⚡', url_modal_html)
-        self.assertNotIn('🖥️', url_modal_html)
+        self.assertNotIn('\U0001F4E5', url_modal_html)
+        self.assertNotIn('\u26A1', url_modal_html)
+        self.assertNotIn('\U0001F5A5\uFE0F', url_modal_html)
 
         # Check AI head
         ai_head_match = re.search(r'<div class="ai-head">[\s\S]*?</div>', html)
@@ -75,7 +75,7 @@ class TestV231Features(unittest.TestCase):
         self.assertNotIn('&#129302;', ai_head_match.group(0))
 
         # Check update badge
-        self.assertNotIn('✨', html)
+        self.assertNotIn('\u2728', html)
 
     def test_app_js_has_close_more_menu_defined(self):
         app_js_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'app.js')

@@ -210,7 +210,7 @@ $$f(x) = W_2 \sigma(W_1 x + b_1) + b_2$$
         self.assertIn(r'\end{document}', tex)
 
     def test_roundtrip_latex_md_latex(self):
-        """测试 LaTeX ➔ Markdown ➔ LaTeX 双向回环完整性。"""
+    """测试 LaTeX -> Markdown -> LaTeX 双向回环完整性。"""
         original_tex = r"""\documentclass{article}
 \title{Quantum Mechanics Note}
 \author{Alice}

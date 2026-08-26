@@ -74,9 +74,9 @@ class TestAIChatParser(unittest.TestCase):
         self.assertEqual(res['turns_count'], 2)
         md = res['markdown']
         self.assertIn('# 微信小游戏需求梳理', md)
-        self.assertIn('👤 用户 (User)', md)
+        self.assertIn('用户 (User)', md)
         self.assertIn('Anti Gravity 2去开发一个那种微信小城市的小游戏', md)
-        self.assertIn('♊ Gemini', md)
+        self.assertIn('Gemini', md)
         self.assertIn('已进入需求梳理流程', md)
         self.assertIn('这款小游戏的核心玩法与游戏类型是什么？', md)
         wiz_data = {
@@ -99,9 +99,9 @@ class TestAIChatParser(unittest.TestCase):
         self.assertEqual(res['platform'], 'gemini')
         self.assertEqual(res['turns_count'], 2)
         md = res['markdown']
-        self.assertIn('👤 用户 (User)', md)
+        self.assertIn('用户 (User)', md)
         self.assertIn('巴塞罗那最好的公园在哪里？', md)
-        self.assertIn('♊ Gemini', md)
+        self.assertIn('Gemini', md)
         self.assertIn('奎尔公园 (Park Güell)', md)
         self.assertIn('![Gemini Image](https://www.gstatic.com/lamda/images/p1.jpg)', md)
 
@@ -148,9 +148,9 @@ class TestAIChatParser(unittest.TestCase):
         self.assertEqual(res['turns_count'], 2)
         md = res['markdown']
         self.assertIn('# 量子纠缠科普', md)
-        self.assertIn('👤 用户 (User)', md)
+        self.assertIn('用户 (User)', md)
         self.assertIn('什么是量子纠缠？', md)
-        self.assertIn('🤖 ChatGPT', md)
+        self.assertIn('ChatGPT', md)
         self.assertIn('量子纠缠是量子力学中一种奇特的现象', md)
 
     def test_claude_share_json_parsing(self):
@@ -183,8 +183,8 @@ class TestAIChatParser(unittest.TestCase):
         self.assertEqual(res['turns_count'], 2)
         md = res['markdown']
         self.assertIn('# Rust 异步编程指南', md)
-        self.assertIn('👤 用户 (User)', md)
-        self.assertIn('🟣 Claude', md)
+        self.assertIn('用户 (User)', md)
+        self.assertIn('Claude', md)
 
     def test_web_extract_integration(self):
         html = '''<!DOCTYPE html>
@@ -240,12 +240,11 @@ class TestAIChatParser(unittest.TestCase):
         self.assertEqual(res['turns_count'], 2)
         md = res['markdown']
         self.assertIn('# 电影艺术探讨', md)
-        self.assertIn('👤 用户 (User)', md)
+        self.assertIn('用户 (User)', md)
         self.assertIn('《去年在马里昂巴德》的艺术特色是什么？', md)
-        self.assertIn('🤖 ChatGPT', md)
+        self.assertIn('ChatGPT', md)
         self.assertIn('该片是法国左岸派代表作', md)
 
 
 if __name__ == '__main__':
     unittest.main()
-

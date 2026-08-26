@@ -456,7 +456,7 @@
           <label class="img-ctl"><span data-i18n="img.angle">角度</span> <input id="img-angle" type="range" min="-180" max="180" step="0.1" value="0"><input id="img-angle-number" class="img-number" type="number" min="-180" max="180" step="0.1" value="0">°</label></div>
         <div class="img-section"><strong data-i18n="img.view">查看</strong><label class="img-ctl"><span data-i18n="img.zoom">画布缩放</span> <input id="img-view-zoom" type="range" min="25" max="400" value="100"><span id="img-view-zoom-val">100%</span></label><p class="img-help" data-i18n="img.help">滚轮缩放 · 空格拖拽平移 · +/- 缩放</p></div>
         <div class="img-section"><strong data-i18n="img.cropAndOutput">裁剪与输出</strong><select id="img-ratio" title="裁剪比例" data-i18n-title="img.ratio"><option value="free" data-i18n="img.ratioFree">自由比例</option><option value="1:1" data-i18n="img.ratio1_1">1:1 方形</option><option value="4:3" data-i18n="img.ratio4_3">4:3</option><option value="3:2" data-i18n="img.ratio3_2">3:2</option><option value="16:9" data-i18n="img.ratio16_9">16:9</option><option value="orig" data-i18n="img.ratioOrig">原图比例</option></select>
-          <div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" title="锁定宽高比" data-i18n-title="img.lockRatio">🔗</button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
+          <div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" title="锁定宽高比" data-i18n-title="img.lockRatio"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
         <div class="img-btn-row"><button id="img-undo" class="tb-btn" data-i18n="editor.undo" disabled>撤销</button><button id="img-redo" class="tb-btn" data-i18n="editor.redo" disabled>重做</button><button id="img-reset" class="tb-btn" data-i18n="img.reset">重置</button></div>
       </aside>
     </div>
@@ -830,7 +830,7 @@
   <div class="modal-dialog lang-modal-dialog">
     <div class="modal-header">
       <h3 data-i18n="lang.title">选择界面语言 (Language)</h3>
-      <button class="modal-close" onclick="i18n.closeModal()">✕</button>
+      <button class="modal-close" onclick="i18n.closeModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="lang-search-wrap">
       <input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." data-i18n-placeholder="lang.search" oninput="i18n.renderLanguageGrid(this.value)">
@@ -844,7 +844,7 @@
   <div class="modal-dialog" style="max-width: 320px;">
     <div class="modal-header">
       <h3 data-i18n="editor.table">插入表格</h3>
-      <button class="modal-close" onclick="closeTableModal()">✕</button>
+      <button class="modal-close" onclick="closeTableModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
     <div style="padding: 12px 16px; text-align: center;">
       <div id="table-grid-picker" class="table-grid-picker"></div>
@@ -881,7 +881,7 @@
       <div>
         <h3 id="style-modal-title" data-i18n="dialog.styleCustomTitle">自定义排版样式与外部资源</h3>
       </div>
-      <button id="style-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
+      <button id="style-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="modal-body" style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;">
       <p class="style-modal-desc" data-i18n="dialog.styleCustomDesc">注入自定义 CSS 规则与 HTML Head 标签，即时应用于阅读、编辑与导出排版。</p>
@@ -915,7 +915,7 @@
   <div class="modal-dialog" style="max-width: 480px;">
     <div class="modal-header">
       <h3 data-i18n="editor.codeChunkModalTitle">插入交互式代码块 (Interactive Code Chunk)</h3>
-      <button id="code-chunk-modal-close" class="modal-close">✕</button>
+      <button id="code-chunk-modal-close" class="modal-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
     <div style="padding: 16px;">
       <div class="modal-form-group">
@@ -957,7 +957,7 @@
   <div class="modal-dialog" style="max-width: 520px;">
     <div class="modal-header">
       <h3 data-i18n="editor.diagramModalTitle">插入科学与工程图表 (Diagrams)</h3>
-      <button id="diagram-modal-close" class="modal-close">✕</button>
+      <button id="diagram-modal-close" class="modal-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
     <div style="padding: 16px;">
       <div class="modal-form-group">
@@ -989,7 +989,7 @@
   <div class="modal-dialog" style="max-width: 480px;">
     <div class="modal-header">
       <h3 data-i18n="editor.docImportModalTitle">插入子文档引用 (@import)</h3>
-      <button id="doc-import-modal-close" class="modal-close">✕</button>
+      <button id="doc-import-modal-close" class="modal-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
     <div style="padding: 16px;">
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.docImportDesc">引用外部 Markdown 文件、源码或图表，渲染时将自动无缝嵌入当前文档。</p>
@@ -1024,7 +1024,7 @@
   <div class="modal-dialog" style="max-width: 500px;">
     <div class="modal-header">
       <h3 data-i18n="editor.frontmatterModalTitle">配置文档元数据与演说主题 (Frontmatter)</h3>
-      <button id="frontmatter-modal-close" class="modal-close">✕</button>
+      <button id="frontmatter-modal-close" class="modal-close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
     </div>
     <div style="padding: 16px;">
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.frontmatterModalDesc">在文档顶部插入标准 YAML Frontmatter，用于配置文档标题、作者、Reveal.js 演示主题及全局样式。</p>

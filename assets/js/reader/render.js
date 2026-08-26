@@ -666,8 +666,8 @@ function parseMarkdownWithSourceMap(content, options = {}) {
             <div class="code-chunk-output-header">
               <span>${_t('reader.executionOutput')}</span>
               <div class="code-chunk-out-actions">
-                <button class="code-chunk-copy-btn" title="${_t('reader.copyOutput')}">📋 ${_t('reader.copyOutput')}</button>
-                <button class="code-chunk-clear-btn" title="${_t('reader.clearOutput')}">✕ ${_t('reader.clearOutput')}</button>
+                <button class="code-chunk-copy-btn" title="${_t('reader.copyOutput')}">${_t('reader.copyOutput')}</button>
+                <button class="code-chunk-clear-btn" title="${_t('reader.clearOutput')}">${_t('reader.clearOutput')}</button>
               </div>
             </div>
             <pre class="code-chunk-stdout"></pre>
@@ -1233,14 +1233,14 @@ function renderAllDiagrams(container) {
               const svgText = await kr.text();
               previewEl.innerHTML = svgText;
             } else {
-              previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ ${_t('reader.renderFailed', { error: _t('toast.unknownNetworkErr') })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+              previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.renderFailed', { error: _t('toast.unknownNetworkErr') })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
             }
           }
         } else {
-          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ ${_t('reader.diagramError', { error: (res && res.error) || _t('toast.unknownError') })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.diagramError', { error: (res && res.error) || _t('toast.unknownError') })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
         }
       } catch (err) {
-        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ ${_t('reader.renderFailed', { error: err.message || String(err) })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.renderFailed', { error: err.message || String(err) })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
       }
     };
 
@@ -1316,7 +1316,7 @@ async function launchPresentationMode() {
         </div>
         <button type="button" class="presentation-btn" id="presentation-overview-btn" title="${_t('presentation.overviewTitle')}">${_t('presentation.overviewLabel')}</button>
         <button type="button" class="presentation-btn" id="presentation-fullscreen-btn" title="${_t('presentation.fullscreenTitle')}">${_t('presentation.fullscreenLabel')}</button>
-        <button type="button" class="presentation-close-btn" id="presentation-close-btn" title="退出演示 (Esc)" data-i18n-title="presentation.closeTitle">✕</button>
+        <button type="button" class="presentation-close-btn" id="presentation-close-btn" title="${_t('presentation.closeTitle')}" data-i18n-title="presentation.closeTitle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
       </div>
       <iframe class="presentation-iframe" src="about:blank"></iframe>
     `;

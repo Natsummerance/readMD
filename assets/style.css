@@ -346,6 +346,9 @@ button { font-family: inherit; }
 #file-list .dir-label { font-size: 12px; color: var(--fg3); padding: 8px 10px 4px; font-weight: 600; word-break: break-all; }
 
 #file-list .dir-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   font-size: 12px;
   font-weight: 600;
   color: var(--fg2);
@@ -355,6 +358,16 @@ button { font-family: inherit; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+#file-list .dir-header svg { flex: 0 0 auto; }
+.tree-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  color: var(--fg3);
+  flex: 0 0 auto;
 }
 .tree-node { user-select: none; }
 .tree-row {
@@ -644,6 +657,9 @@ mark.hl.cur { background: var(--hl-cur); }
   border-radius: var(--radius-s);
   transition: all 0.15s ease;
   line-height: 1;
+}
+.modal-close svg {
+  display: block;
 }
 .modal-close:hover {
   background: var(--bg3);
@@ -3697,6 +3713,7 @@ body.zen-mode .markdown-body {
   border-color: #ef4444;
   transform: scale(1.1);
 }
+.presentation-close-btn svg { display: block; }
 
 /* ---------- 自定义样式与 Head 模态框 (样式定制) ---------- */
 .style-modal-dialog {

@@ -25,61 +25,61 @@ from markdownify import markdownify as _md
 AI_PLATFORMS = {
     'gemini': {
         'name': 'Google Gemini',
-        'icon': '♊',
+        'icon': '',
         'role_assistant': 'Gemini',
         'hosts': ('share.gemini.google', 'gemini.google.com', 'bard.google.com')
     },
     'chatgpt': {
         'name': 'OpenAI ChatGPT',
-        'icon': '🤖',
+        'icon': '',
         'role_assistant': 'ChatGPT',
         'hosts': ('chatgpt.com', 'chat.openai.com')
     },
     'claude': {
         'name': 'Anthropic Claude',
-        'icon': '🟣',
+        'icon': '',
         'role_assistant': 'Claude',
         'hosts': ('claude.ai',)
     },
     'deepseek': {
         'name': 'DeepSeek',
-        'icon': '🐋',
+        'icon': '',
         'role_assistant': 'DeepSeek',
         'hosts': ('chat.deepseek.com', 'deepseek.com')
     },
     'kimi': {
         'name': 'Kimi AI',
-        'icon': '🌙',
+        'icon': '',
         'role_assistant': 'Kimi',
         'hosts': ('kimi.moonshot.cn', 'kimi.ai')
     },
     'perplexity': {
         'name': 'Perplexity AI',
-        'icon': '🔍',
+        'icon': '',
         'role_assistant': 'Perplexity',
         'hosts': ('perplexity.ai', 'www.perplexity.ai')
     },
     'doubao': {
         'name': '豆包 (Doubao)',
-        'icon': '🌱',
+        'icon': '',
         'role_assistant': '豆包',
         'hosts': ('doubao.com', 'www.doubao.com')
     },
     'tongyi': {
         'name': '通义千问 (Qwen)',
-        'icon': '🔮',
+        'icon': '',
         'role_assistant': '通义千问',
         'hosts': ('tongyi.aliyun.com', 'qianwen.aliyun.com')
     },
     'yiyan': {
         'name': '文心一言 (ERNIE)',
-        'icon': '✨',
+        'icon': '',
         'role_assistant': '文心一言',
         'hosts': ('yiyan.baidu.com',)
     },
     'chatglm': {
         'name': '智谱清言 (GLM)',
-        'icon': '💡',
+        'icon': '',
         'role_assistant': '智谱清言',
         'hosts': ('chatglm.cn',)
     }
@@ -517,7 +517,7 @@ def format_ai_chat_markdown(chat_data, url=''):
     plat_id, info = detect_ai_platform(url)
     plat_name = info['name'] if info else 'AI 对话'
     assistant_name = info['role_assistant'] if info else 'AI 助手'
-    assistant_icon = info['icon'] if info else '🤖'
+    assistant_icon = info['icon'] if info else ''
     
     title = chat_data.get('title') or f"{plat_name} 对话分享"
     turns = chat_data.get('turns', [])
@@ -525,7 +525,7 @@ def format_ai_chat_markdown(chat_data, url=''):
     lines = [
         f"# {title}",
         "",
-        f"> **平台**：{assistant_icon} {plat_name}  ",
+        f"> **平台**：{plat_name}  ",
         f"> **来源链接**：[{url}]({url})  " if url else "",
         f"> **对话轮数**：共 {len(turns)} 轮交互",
         "",
@@ -542,14 +542,14 @@ def format_ai_chat_markdown(chat_data, url=''):
             continue
             
         if role == 'user':
-            lines.append(f"### 👤 用户 (User)")
+            lines.append("### 用户 (User)")
             lines.append("")
             lines.append(text)
             lines.append("")
             lines.append("---")
             lines.append("")
         else:
-            lines.append(f"### {assistant_icon} {assistant_name}")
+            lines.append(f"### {assistant_name}".strip())
             lines.append("")
             lines.append(text)
             lines.append("")
