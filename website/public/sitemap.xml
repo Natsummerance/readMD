@@ -321,4 +321,37 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/pdf-to-markdown/"/>
     <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
   </url>
+<url>
+    <loc>https://readmd.asia/markdown-tables/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://readmd.asia/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/markdown-tables/"/>
+    <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+  </url><url>
+    <loc>https://readmd.asia/zh-cn/markdown-tables/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://readmd.asia/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/markdown-tables/"/>
+    <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url><url>
+    <loc>https://readmd.asia/zh-tw/markdown-tables/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://readmd.asia/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/markdown-tables/"/>
+    <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url><url>
+    <loc>https://readmd.asia/ja/markdown-tables/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://readmd.asia/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/markdown-tables/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/markdown-tables/"/>
+    <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url>
 </urlset>
