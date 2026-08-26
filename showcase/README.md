@@ -41,6 +41,8 @@ node showcase/scripts/compose_cards.js showcase/output/package `
 
 批量包先转成 PDF 给操作者确认；确认前不允许发布：
 
+确认 PDF 包含批次索引页、每个 ZIP 的分隔页、发布标题、海报页码和 SHA-256；海报本身不会被索引页覆盖。
+
 ```powershell
 python showcase/scripts/build_poster_review.py `
   --batch showcase/output/release-run/downloads/batch-pending.json `
