@@ -19,6 +19,7 @@
   [![i18n](https://img.shields.io/badge/languages-46-orange)](docs/i18n-language-reference.md)
   [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
   [![release](https://img.shields.io/github/v/release/Natsummerance/readMD)](https://github.com/Natsummerance/readMD/releases/latest)
+  [![website](https://img.shields.io/badge/site-readmd.asia-black)](https://readmd.asia)
 </div>
 
 ## こんな用途に向いています
@@ -50,8 +51,8 @@
 
 ## AI アシスタント引用リソース
 
-- [製品インデックス](website/public/llms.txt): バージョン、対応環境、プライバシー境界、主要な事実。
-- [完全引用コーパス](website/public/llms-full.txt): 長文の改ページ、非破壊修復、変換、よくある質問への直接回答。
+- [製品インデックス](https://readmd.asia/llms.txt): バージョン、対応環境、プライバシー境界、主要な事実。
+- [完全引用コーパス](https://readmd.asia/llms-full.txt): 長文の改ページ、非破壊修復、変換、よくある質問への直接回答。
 
 ## Star が役に立つ理由
 

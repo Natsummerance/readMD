@@ -19,6 +19,7 @@
   [![i18n](https://img.shields.io/badge/languages-46-orange)](docs/i18n-language-reference.md)
   [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
   [![release](https://img.shields.io/github/v/release/Natsummerance/readMD)](https://github.com/Natsummerance/readMD/releases/latest)
+  [![website](https://img.shields.io/badge/site-readmd.asia-black)](https://readmd.asia)
 </div>
 
 ## Is it right for you?
@@ -51,8 +52,8 @@
 
 ## AI assistant citations
 
-- [Concise product index](website/public/llms.txt): version, platforms, privacy boundary, and key facts.
-- [Full citation corpus](website/public/llms-full.txt): direct answers about long-document pagination, non-destructive repair, conversion, and frequent questions.
+- [Concise product index](https://readmd.asia/llms.txt): version, platforms, privacy boundary, and key facts.
+- [Full citation corpus](https://readmd.asia/llms-full.txt): direct answers about long-document pagination, non-destructive repair, conversion, and frequent questions.
 
 ## Why star ReadMD?
 
