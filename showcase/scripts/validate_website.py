@@ -78,6 +78,7 @@ RELEASE_ASSETS = frozenset({
     "readmd-mcp-server-2.3.7-beta.4.zip",
     "SHA256SUMS.txt",
 })
+RELEASE_TAG = "v2.3.7-beta.4"
 
 AI_CRAWLERS = ("GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot")
 FAQ_QUESTION_COUNTS = {item["canonical"]: 6 for item in LANGUAGES.values()}
@@ -455,7 +456,7 @@ def validate_release_asset_links() -> list[str]:
         linked = {
             name
             for _, name in re.findall(
-                r'href="(https://github\.com/Natsummerance/readMD/releases/latest/download/([^"]+))"',
+                rf'href="(https://github\.com/Natsummerance/readMD/releases/download/{re.escape(RELEASE_TAG)}/([^"]+))"',
                 content,
             )
         }

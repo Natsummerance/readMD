@@ -14,18 +14,16 @@ from unittest import mock
 class TestUpgradeCheck(unittest.TestCase):
 
     def test_parse_version(self):
-        self.assertEqual(readmd._parse_version('v2.2.6'), (2, 2, 6))
-        self.assertEqual(readmd._parse_version('2.10.0'), (2, 10, 0))
-        self.assertIsNone(readmd._parse_version('2.2.6-rc1'))
+        self.assertEqual(readmd._parse_version('v2.2.6'), ((2, 2, 6), 1, ()))
+        self.assertEqual(readmd._parse_version('2.10.0'), ((2, 10, 0), 1, ()))
+        self.assertEqual(readmd._parse_version('2.2.6-rc1'), ((2, 2, 6), 0, ((1, 'rc1'),)))
         self.assertIsNone(readmd._parse_version(''))
         self.assertIsNone(readmd._parse_version('latest'))
 
     def test_newer_release_wins(self):
         readmd._UPGRADE_CACHE['done'] = False
         readmd._UPGRADE_CACHE['result'] = None
-        with mock.patch.object(
-                readmd, '_parse_version',
-                side_effect=lambda v: (2, 2, 6) if v == 'v2.2.6' else (2, 2, 5)):
+        with mock.patch.object(readmd, 'VERSION', '2.2.5'):
             with mock.patch(
                     'urllib.request.urlopen',
                     return_value=mock.MagicMock(
@@ -42,9 +40,7 @@ class TestUpgradeCheck(unittest.TestCase):
     def test_same_version_is_silent(self):
         readmd._UPGRADE_CACHE['done'] = False
         readmd._UPGRADE_CACHE['result'] = None
-        with mock.patch.object(
-                readmd, '_parse_version',
-                side_effect=lambda v: (2, 2, 5)):
+        with mock.patch.object(readmd, 'VERSION', '2.2.6'):
             with mock.patch(
                     'urllib.request.urlopen',
                     return_value=mock.MagicMock(
