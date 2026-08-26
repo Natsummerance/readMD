@@ -9,15 +9,25 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
+:root {
+  color-scheme: light dark;
+}
+
 body {
   font-family: var(--font-sans);
   color: var(--color-ink);
   background: white;
+  overflow-x: clip;
 }
 
 .nav-shell {
+  transition: box-shadow 0.24s ease, background-color 0.24s ease;
   backdrop-filter: saturate(180%) blur(20px);
   background: rgb(255 255 255 / 82%);
+}
+
+.nav-shell.is-scrolled {
+  box-shadow: 0 10px 30px rgb(17 17 20 / 7%);
 }
 
 .hero-title {
@@ -39,6 +49,155 @@ body {
   color: var(--color-muted);
 }
 
+.text-muted {
+  color: var(--color-muted);
+}
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.particle-field {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  opacity: 0.58;
+}
+
+.journey {
+  position: relative;
+  height: 430vh;
+  background: white;
+}
+
+.journey-sticky {
+  position: sticky;
+  top: 0;
+  min-height: 100dvh;
+  display: grid;
+  align-items: center;
+  overflow: hidden;
+}
+
+.journey-grid {
+  width: min(1380px, 100%);
+  margin-inline: auto;
+  padding: clamp(2rem, 6vw, 5rem);
+  display: grid;
+  align-items: center;
+  gap: clamp(2rem, 4vw, 4rem);
+}
+
+.journey-kicker {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-action);
+}
+
+.journey-heading {
+  margin-top: 0.65rem;
+  font-size: clamp(2rem, 4vw, 3.35rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.journey-caption-stage {
+  position: relative;
+  min-height: 11rem;
+  margin-top: 1.7rem;
+}
+
+.journey-caption {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.42s ease, transform 0.42s ease;
+}
+
+.journey-caption.is-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.journey-caption strong {
+  display: block;
+  margin-bottom: 0.55rem;
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.journey-caption p {
+  max-width: 38ch;
+  color: var(--color-muted);
+  line-height: 1.68;
+}
+
+.journey-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  aspect-ratio: 16 / 9;
+  background: #101014;
+  box-shadow: 0 34px 100px rgb(17 17 20 / 20%);
+  transform: perspective(1300px) rotateX(0deg) scale(0.98);
+  will-change: transform;
+}
+
+.journey-stage video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.journey-film {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.journey-progress {
+  position: absolute;
+  right: 1.1rem;
+  bottom: 1.1rem;
+  left: 1.1rem;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 24%);
+}
+
+.journey-progress span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: white;
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.72s cubic-bezier(0.16, 1, 0.3, 1), transform 0.72s cubic-bezier(0.16, 1, 0.3, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.product-parallax {
+  will-change: transform;
+}
+
 .answer-card {
   border-top: 1px solid var(--color-line);
   padding-top: 1.35rem;
@@ -57,7 +216,11 @@ body {
 }
 
 .product-frame {
+  width: 100%;
+  max-width: 100%;
+  margin-inline: auto;
   overflow: hidden;
+  border-radius: 20px;
   background: linear-gradient(145deg, #edf2fa, #ffffff 48%, #f2f1ee);
   box-shadow: 0 24px 80px rgb(17 17 20 / 12%);
 }
@@ -114,10 +277,97 @@ body {
   outline-offset: 3px;
 }
 
+@media (min-width: 1024px) {
+  .journey-grid {
+    grid-template-columns: 0.72fr 1.28fr;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-ink: #f2f2f5;
+    --color-muted: #a8aab4;
+    --color-line: #33343c;
+    --color-surface: #17181d;
+    --color-action: #4c9dff;
+  }
+
+  body {
+    background: #0d0e11;
+  }
+
+  .nav-shell {
+    background: rgb(13 14 17 / 78%);
+  }
+
+  .particle-field {
+    opacity: 0.44;
+  }
+
+  .journey,
+  .detail-menu {
+    background: #0d0e11;
+  }
+
+  .detail-menu {
+    border-color: var(--color-line);
+  }
+
+  .product-frame {
+    background: linear-gradient(145deg, #191b21, #101116 48%, #15161b);
+    box-shadow: 0 24px 80px rgb(0 0 0 / 42%);
+  }
+
+  .button-secondary {
+    border-color: #666a76;
+    color: var(--color-ink);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  .particle-field,
+  .journey-progress {
+    display: none;
+  }
+
+  .journey {
+    height: auto;
+  }
+
+  .journey-sticky {
+    position: static;
+    min-height: 0;
+    padding-block: 5rem;
+  }
+
+  .journey-caption-stage {
+    min-height: 0;
+  }
+
+  .journey-caption {
+    position: static;
+    display: block;
+    opacity: 1;
+    transform: none;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .product-parallax {
+    transform: none !important;
+  }
+
+  .journey-stage {
+    transform: none;
   }
 }

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "artifact": "Landscape capture pipeline and cinematic scroll film",
+  "reviewed_at": "2026-08-26T04:00:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "design_read": "Task-answer and product-marketing surface for writers and researchers; preserve the existing light premium system while adding an Apple-like original scroll stage.",
+  "motion_dials": {
+    "variance": 4,
+    "motion_intensity": 6,
+    "visual_density": 3,
+    "reduced_motion": "particles, scroll scrub, parallax, and reveals collapse to static or native controls"
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "design-review",
+      "status": "approved",
+      "score": 9.89,
+      "evidence": [
+        "Capture defaults changed from a portrait 960x1280 viewport to the application's actual 1440x810 landscape workbench.",
+        "All eight approved screenshots are 2880x1620 at 16:9 with nonblank content, tonal range, UI edges, unique hashes, and optimized WebP derivatives.",
+        "The page keeps one light/dark token system, one accent, real product captures, semantic headings, and avoids copying Apple text, images, logo, page source, or trade dress."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "authentic-capture-review",
+      "status": "approved",
+      "score": 9.87,
+      "evidence": [
+        "Playwright drives the real ReadMD interface through reading, outline, editor, formula, code, table designer, presentation, and close actions while its supported context recorder captures video.",
+        "Recordly is used as a high-star composition reference for cursor polish, zoom storytelling, and styled framing; no Recordly code or binary is imported.",
+        "The finalized recording is 11.433 seconds at 1440x810 and is decoded into 57 WebP frames for deterministic scroll scrubbing."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "performance-release-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "Website release validation passes all 40 canonical routes, landscape media contracts, motion markers, and 57 film frames.",
+        "Browser smoke passes 40 of 40 routes; the canvas reports frames ready, advances beyond frame 45 under scroll, and has a nonblank center pixel.",
+        "Particle work is visibility-gated with capped DPR and particle count; scroll effects avoid main-thread scroll listeners and honor reduced-motion fallbacks."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_staged_publication",
+    "score": 9.86,
+    "participants": ["design", "authentic capture", "performance release"],
+    "conditions": [
+      "CI must pass before merge.",
+      "Clean-network production check must pass after deployment.",
+      "IndexNow must be resubmitted only after the production check passes."
+    ]
+  }
+}

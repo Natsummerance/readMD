@@ -366,6 +366,31 @@ def validate_rights() -> list[str]:
     return errors
 
 
+def validate_motion_experience() -> list[str]:
+    """The home page ships a performant, reduced-motion-safe product film."""
+    errors: list[str] = []
+    content = (PUBLIC / "index.html").read_text(encoding="utf-8")
+    for marker in ("particle-field", "data-journey", "/assets/site.js", "journey-film", 'data-frame-count="57"'):
+        if marker not in content:
+            errors.append(f"home page omits motion experience marker: {marker}")
+
+    script_path = PUBLIC / "assets" / "site.js"
+    if not script_path.is_file():
+        errors.append("assets/site.js is missing")
+    else:
+        script = script_path.read_text(encoding="utf-8")
+        uses_double_quote_scroll = 'addEventListener("scroll"' in script
+        uses_single_quote_scroll = "addEventListener('scroll'" in script
+        if uses_double_quote_scroll or uses_single_quote_scroll:
+            errors.append("site.js uses a main-thread scroll event listener")
+
+    frame_dir = PUBLIC / "media" / "journey-frames"
+    frame_count = len(list(frame_dir.glob("frame-*.webp"))) if frame_dir.is_dir() else 0
+    if frame_count != 57:
+        errors.append(f"scroll-driven film expects 57 frames, found {frame_count}")
+    return errors
+
+
 def validate_security_headers() -> list[str]:
     errors: list[str] = []
     headers = (PUBLIC / "_headers").read_text(encoding="utf-8")
@@ -531,6 +556,7 @@ def main() -> int:
     errors.extend(validate_robots_and_sitemap())
     errors.extend(validate_approval())
     errors.extend(validate_rights())
+    errors.extend(validate_motion_experience())
     errors.extend(validate_security_headers())
     errors.extend(validate_growth_homepages())
     errors.extend(validate_special_page_internal_links())

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "source_provider": "playwright-native-video",
+  "composition_reference": {
+    "repository": "webadderallorg/Recordly",
+    "stars": 22497,
+    "license": "AGPL-3.0",
+    "usage": "patterns only; no Recordly code imported"
+  },
+  "automation_provider": {
+    "repository": "microsoft/playwright",
+    "integration": "browser context recordVideo"
+  },
+  "encoder": "ffmpeg/libx264",
+  "source": "raw\\product-journey.webm",
+  "output": "..\\website\\public\\media\\readmd-product-journey.mp4",
+  "duration_seconds": 11.433333,
+  "bytes": 409090,
+  "stream": {
+    "codec_name": "h264",
+    "width": 1440,
+    "height": 810
+  },
+  "captured_at": "2026-08-26T03:35:55.813Z"
+}

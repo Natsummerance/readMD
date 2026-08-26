@@ -65,8 +65,45 @@ const aiFiles = [
         faviconLinked: !!document.querySelector('link[rel="icon"][href="/assets/icon-256.png"]'),
         manifestLinked: !!document.querySelector('link[rel="manifest"][href="/site.webmanifest"]'),
         releaseFeedLinked: !!document.querySelector('link[type="application/atom+xml"][href$="releases.atom"]'),
+        siteScriptLoaded: [...document.scripts].some(script => (script.src || '').endsWith('/assets/site.js')),
+        particleField: !!document.querySelector('.particle-field'),
+        journeyCanvas: !!document.querySelector('#journey-film'),
       }))),
     });
+  }
+
+  await page.goto(`${baseUrl}/#journey`, { waitUntil: 'load' });
+  const journey = await page.evaluate(() => Boolean(document.querySelector('[data-journey]')));
+  let motionEvidence = { scrolled: false, framesReady: false, frameIndex: 0, activeCaptions: 0, progress: 0, centerPixel: '' };
+  if (journey) {
+    await page.goto(`${baseUrl}/#journey`, { waitUntil: 'load' });
+    for (let step = 0; step <= 24; step += 1) {
+      await page.evaluate(ratio => {
+        const section = document.querySelector('[data-journey]');
+        const range = section.getBoundingClientRect().height - window.innerHeight;
+        window.scrollTo(0, section.offsetTop + range * ratio);
+      }, step / 24);
+      await page.waitForTimeout(45);
+    }
+    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(2000);
+    motionEvidence = await page.evaluate(() => {
+      const bar = document.querySelector('.journey-progress span');
+      const canvas = document.querySelector('#journey-film');
+      const context = canvas?.getContext('2d');
+      const pixel = context ? Array.from(context.getImageData(640, 360, 1, 1).data).join(',') : '';
+      const matrix = bar ? new DOMMatrixReadOnly(getComputedStyle(bar).transform) : null;
+      return {
+        scrolled: true,
+        framesReady: canvas?.dataset.framesReady === 'true',
+        frameIndex: Number(canvas?.dataset.frameIndex || -1),
+        centerPixel: pixel,
+        motionProgress: document.querySelector('[data-journey]')?.dataset.motionProgress,
+        activeCaptions: document.querySelectorAll('.journey-caption.is-active').length,
+        progress: matrix ? matrix.a : 0,
+      };
+    });
+    await page.goto(`${baseUrl}/`, { waitUntil: 'load' });
   }
 
   for (const file of aiFiles) {
@@ -117,6 +154,17 @@ const aiFiles = [
     if (!item.faviconLinked) failures.push(`${item.route}: favicon is missing`);
     if (!item.manifestLinked) failures.push(`${item.route}: web manifest is missing`);
     if (!item.releaseFeedLinked) failures.push(`${item.route}: release feed link is missing`);
+    if (item.route === '/') {
+      if (!item.siteScriptLoaded) failures.push(`${item.route}: motion stylesheet script did not load`);
+      if (!item.particleField) failures.push(`${item.route}: particle field is missing`);
+      if (!item.journeyCanvas) failures.push(`${item.route}: journey canvas is missing`);
+      if (!motionEvidence.scrolled) failures.push(`${item.route}: journey was not scroll-tested`);
+      if (!motionEvidence.framesReady) failures.push(`${item.route}: film frames are not ready`);
+      if (motionEvidence.frameIndex < 45) failures.push(`${item.route}: scroll drove only frame ${motionEvidence.frameIndex}`);
+      if (!motionEvidence.centerPixel || motionEvidence.centerPixel === '0,0,0,0') failures.push(`${item.route}: film canvas is blank`);
+      if (motionEvidence.activeCaptions !== 1) failures.push(`${item.route}: expected one active journey caption`);
+      if (motionEvidence.progress <= 0) failures.push(`${item.route}: journey progress did not advance`);
+    }
   }
   if (process.env.CHECK_HTTP_HEADERS === '1') {
     if (!security.csp.includes("script-src 'self'")) failures.push('missing script CSP');
