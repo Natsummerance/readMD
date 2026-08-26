@@ -42,6 +42,7 @@
 [Linux AppImage](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage) ·
 [Linux ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-aarch64-v2.3.7-beta.4.AppImage) ·
 [UOS / 麒麟 Deb](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.4_amd64.deb) ·
+[麒麟 V10 ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.4_arm64.deb) ·
 [SHA-256](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/SHA256SUMS.txt)
 
 ## 3 ステップで開始
@@ -73,6 +74,7 @@ ReadMD は、長期間保管する資料で起こりやすい問題に取り組�
 | 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage) | インストール不要の Linux AppImage パッケージ |
 | 🐧 **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.7-beta.4.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-aarch64-v2.3.7-beta.4.AppImage) | Phytium / Kunpeng など ARM64 端末向けパッケージ |
 | 🇨🇳 **Linux / 国産 OS** | Debian / Ubuntu / UOS / 麒麟 | [⬇️ **readmd_2.3.7-beta.4_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.4_amd64.deb) | Deb ネイティブインストールパッケージ |
+| 🖥️ **麒麟 V10 / 飛騰** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7-beta.4_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.4_arm64.deb) | ARM64 ネイティブ Deb パッケージ |
 | 📱 **HarmonyOS** | ソースプロジェクト (DevEco ビルド) | [🧩 **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb のソースプロジェクト。ビルド済み HAP は未提供 |
 | 🧩 **VSCode 拡張** | VSIX パッケージ | [⬇️ **readmd-vscode-2.3.7-beta.4.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd-vscode-2.3.7-beta.4.vsix) | オフラインインストール用 VSIX 拡張機能 |
 | 🤖 **MCP Server** | FastMCP stdio パッケージ | [⬇️ **readmd-mcp-server-2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd-mcp-server-2.3.7-beta.4.zip) | Claude Desktop / Cursor 連携用 FastMCP パッケージ |

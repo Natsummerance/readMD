@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VALIDATOR = ROOT / "showcase" / "scripts" / "validate_website.py"
+VALIDATOR = ROOT / "tools" / "validate_website_pinned.py"
 
 
 class WebsitePipelineTest(unittest.TestCase):

@@ -17,6 +17,12 @@ DOWNLOAD_PAGES = (
     "website/public/zh-cn/download/index.html",
     "website/public/zh-tw/download/index.html",
 )
+WEBSITE_DOWNLOAD_PAGES = (
+    "website/public/download/index.html",
+    "website/public/ja/download/index.html",
+    "website/public/zh-cn/download/index.html",
+    "website/public/zh-tw/download/index.html",
+)
 
 
 class ReleasePackagingContractTest(unittest.TestCase):
@@ -66,9 +72,21 @@ class ReleasePackagingContractTest(unittest.TestCase):
             self.assertNotIn("releases/latest/download/", text)
             for asset in asset_names:
                 self.assertNotIn(f"releases/latest/download/{asset}", text)
+                self.assertIn(asset, text)
             self.assertIn(
                 f"releases/download/v{VERSION}/ReadMD-linux-aarch64-v{VERSION}.AppImage",
                 text,
+            )
+
+        for name in WEBSITE_DOWNLOAD_PAGES:
+            compact = (ROOT / name).read_text(encoding="utf-8").replace(" ", "")
+            self.assertNotIn(
+                '"downloadUrl":"https://github.com/Natsummerance/readMD/releases/latest"',
+                compact,
+            )
+            self.assertIn(
+                f'"downloadUrl":"https://github.com/Natsummerance/readMD/releases/download/v{VERSION}/ReadMDSetup-v{VERSION}.exe"',
+                compact,
             )
 
 

@@ -42,6 +42,7 @@
 [Linux AppImage](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage) ·
 [Linux ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-aarch64-v2.3.7-beta.4.AppImage) ·
 [UOS / 麒麟 Deb](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.4_amd64.deb) ·
+[麒麟 V10 ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.4_arm64.deb) ·
 [SHA-256](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/SHA256SUMS.txt)
 
 ## 三步開始
@@ -72,6 +73,7 @@ ReadMD 處理長期資料庫裡的實際問題：大型文件能繼續閱讀，�
 | 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage) | Linux 通用免安裝 AppImage，賦予執行權限後即可開啟 |
 | 🐧 **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.7-beta.4.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-aarch64-v2.3.7-beta.4.AppImage) | 飛騰 / 鯤鵬等 ARM64 裝置免安裝執行 |
 | 🇨🇳 **國產信創系統** | 統信 UOS / 銀河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.7-beta.4_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.4_amd64.deb) | Deb 原生安裝套件，整合應用程式圖示、MIME 關聯與 UKUI/DDE 適配 |
+| 🖥️ **麒麟 V10 / 飛騰** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7-beta.4_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.4_arm64.deb) | ARM64 原生 Deb 安裝套件 |
 | 📱 **HarmonyOS NEXT** | 原始碼工程 (DevEco 建置) | [🧩 **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb 原始碼工程；目前未提供預建 HAP |
 | 🧩 **VSCode 擴充外掛** | 通用 VSIX 套件 | [⬇️ **readmd-vscode-2.3.7-beta.4.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd-vscode-2.3.7-beta.4.vsix) | VSCode 離線擴充安裝套件 |
 | 🤖 **MCP Server** | FastMCP stdio 套件 | [⬇️ **readmd-mcp-server-2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd-mcp-server-2.3.7-beta.4.zip) | FastMCP 獨立伺服端，支援 Claude Desktop / Cursor |
