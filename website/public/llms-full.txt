@@ -167,6 +167,12 @@ Dedicated answer: https://readmd.asia/bibtex-citations/
 
 Place a `.bib` file in the same directory as the Markdown document so ReadMD can scan the neighboring bibliography. Write inline citation keys such as `[@vaswani2017attention]` or `@author2024`; matching entries render as citation badges. Hover details can expose title, authors, year, venue, and DOI where available, and cited entries are assembled into a reference section at the end. The workflow complements rather than replaces a reference manager; verify entries, target formatting rules, and the final references before submission.
 
+## Task Guide: v2.3.7-beta.4 Release Notes
+
+Dedicated answer: https://readmd.asia/release-notes/
+
+Beta.4 hardens the Reveal presentation path and update integrity while improving staged startup loading, tab state feedback, touch targets, and search focus. Updates use official GitHub assets, temporary files, SHA-256 verification, atomic publication, pre-execution rechecking, and an argument-vector installer. The version remains a beta; keep backups and verify SHA256SUMS.txt.
+
 ## Release Facts
 
 - Product name: ReadMD

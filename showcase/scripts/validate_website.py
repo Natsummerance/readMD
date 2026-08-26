@@ -59,6 +59,10 @@ ANSWER_PAGES = {
     "zh-CN-tables": {"path": PUBLIC / "zh-cn" / "markdown-tables" / "index.html", "canonical": "https://readmd.asia/zh-cn/markdown-tables/"},
     "zh-TW-tables": {"path": PUBLIC / "zh-tw" / "markdown-tables" / "index.html", "canonical": "https://readmd.asia/zh-tw/markdown-tables/"},
     "ja-tables": {"path": PUBLIC / "ja" / "markdown-tables" / "index.html", "canonical": "https://readmd.asia/ja/markdown-tables/"},
+    "en-release-notes": {"path": PUBLIC / "release-notes" / "index.html", "canonical": "https://readmd.asia/release-notes/"},
+    "zh-CN-release-notes": {"path": PUBLIC / "zh-cn" / "release-notes" / "index.html", "canonical": "https://readmd.asia/zh-cn/release-notes/"},
+    "zh-TW-release-notes": {"path": PUBLIC / "zh-tw" / "release-notes" / "index.html", "canonical": "https://readmd.asia/zh-tw/release-notes/"},
+    "ja-release-notes": {"path": PUBLIC / "ja" / "release-notes" / "index.html", "canonical": "https://readmd.asia/ja/release-notes/"},
     "en-ocr": {"path": PUBLIC / "scan-to-markdown" / "index.html", "canonical": "https://readmd.asia/scan-to-markdown/"},
     "zh-CN-ocr": {"path": PUBLIC / "zh-cn" / "scan-to-markdown" / "index.html", "canonical": "https://readmd.asia/zh-cn/scan-to-markdown/"},
     "zh-TW-ocr": {"path": PUBLIC / "zh-tw" / "scan-to-markdown" / "index.html", "canonical": "https://readmd.asia/zh-tw/scan-to-markdown/"},
@@ -458,6 +462,7 @@ def validate_answer_internal_links() -> list[str]:
         "convert-to-markdown": [item for key, item in ANSWER_PAGES.items() if "conversion" in key],
         "scan-to-markdown": [item for key, item in ANSWER_PAGES.items() if "ocr" in key],
         "bibtex-citations": [item for key, item in ANSWER_PAGES.items() if "bibtex" in key],
+        "release-notes": [item for key, item in ANSWER_PAGES.items() if "release-notes" in key],
     }
     for language in LANGUAGES:
         for slug, contracts in topics.items():

@@ -37,17 +37,18 @@ The brief requested a literal Apple clone. That part was not implemented because
 - Release build validator: green after final rebuild.
 - Product showcase pipeline: 144 tests green before the website package.
 - Desktop UI suite: 55 tests green before the website package.
-- Browser smoke test: forty localized home, workflow, download, large-file, presentation, conversion, PDF, table, OCR, and BibTeX routes; one H1 per page, stylesheet loaded, zero broken images, zero script errors. The cinematic canvas becomes ready, scrolls past frame 45 of 57, and exposes a nonblank center pixel.
+- Browser smoke test: forty-four localized home, workflow, download, large-file, presentation, conversion, PDF, table, release-notes, OCR, and BibTeX routes; one H1 per page, stylesheet loaded, zero broken images, zero script errors. The cinematic canvas becomes ready, scrolls past frame 45 of 57, and exposes a nonblank center pixel.
 - Landscape capture review: eight authentic screenshots pass dimension, hash, tonal-range, edge-density, color-detail, and blank-content checks at 2880x1620; dedicated approval is recorded in `cinematic_experience_approval.json`.
 - Structured data: localized WebPage, SoftwareApplication, speakable, FAQPage, HowTo, and BreadcrumbList contracts pass the website validator.
 - AI answer schema: four localized homepages and four workflow pages expose visible FAQPage entities; the dedicated three-round approval is recorded in `faq_schema_approval.json`.
 - Answer-page review: eight localized task guides expose complete hreflang sets, visible workflows, and citation-ready corpora; the dedicated three-round approval is recorded in `answer_pages_approval.json`.
 - PDF intent review: four localized routes cover the dedicated PDF-to-Markdown question with qualified offline and OCR boundaries; the dedicated three-round approval is recorded in `pdf_answer_pages_approval.json`.
 - Table intent review: four localized routes cover table construction, Excel and CSV paste conversion, separator review, and source-preserving save boundaries; the dedicated three-round approval is recorded in `markdown_tables_approval.json`.
+- Release-note review: four localized routes cover beta.4 changes, security boundaries, platform assets, checksum verification, and qualified beta status; the dedicated three-round approval is recorded in `release_notes_approval.json`.
 - Conversion-page review: four localized task guides cover local document migration with qualified offline and fidelity boundaries; the dedicated three-round approval is recorded in `conversion_pages_approval.json`.
 - OCR-page review: four localized task guides cover Windows WinRT and macOS Apple Vision workflows with local processing and human-review boundaries; the dedicated three-round approval is recorded in `ocr_pages_approval.json`.
 - BibTeX-page review: four localized task guides cover neighboring `.bib` scanning, inline keys, citation cards, copyable entries, and assembled references; the dedicated three-round approval is recorded in `bibtex_pages_approval.json`.
-- Sitemap review: all forty canonical URLs expose complete hreflang sets and current freshness dates; the dedicated three-round approval is recorded in `sitemap_hreflang_approval.json`.
+- Sitemap review: all forty-four canonical URLs expose complete hreflang sets and current freshness dates; the dedicated three-round approval is recorded in `sitemap_hreflang_approval.json`.
 - WeChat export QA: green.
 - Three approval rounds and final decision meeting: approved at or above 9.7.
 - Domain migration review: all active site, AI-corpus, tooling, deployment, and growth surfaces use `readmd.asia`; the dedicated three-round approval is recorded in `domain_migration_approval.json`, while historical reports remain unchanged.
@@ -55,6 +56,6 @@ The brief requested a literal Apple clone. That part was not implemented because
 - Growth execution review: five workflow clusters are mapped to audiences, channels, objections, stop conditions, and a publication ledger; the dedicated three-round approval is recorded in `growth_execution_kit_approval.json`.
 - Beta.4 announcement review: the GitHub Discussions draft records the security, startup, tab, touch, download, checksum, local-first, and AI-corpus boundaries at 9.88 / 9.85 / 9.82 with final approval 9.86; published as [Discussion #46](https://github.com/Natsummerance/readMD/discussions/46); evidence is recorded in `discussion_v2_3_7_beta_4_approval.json`.
 - Distribution artifact QA: channel drafts, seven-day sprint, thirty-day cadence, measurement rules, dependency mapping, and paste-safe WeChat artifact are included without automated posting or unverifiable adoption claims.
-- Social preview review: all 40 public routes expose matching Open Graph and Twitter PNG previews with explicit MIME types and verified media assets; the dedicated three-round approval is recorded in `social_preview_png_approval.json`.
+- Social preview review: all 44 public routes expose matching Open Graph and Twitter PNG previews with explicit MIME types and verified media assets; the dedicated three-round approval is recorded in `social_preview_png_approval.json`.
 - Accessibility regression fix: the AI incognito checkbox now provides a 24px target in desktop and mobile viewports; the dedicated three-round approval is recorded in `ui_target_size_fix_approval.json`.
 - Browser smoke evidence: `domain_migration_browser_smoke.json` records 32 passing routes, 32 PNG social images, 32 new-origin canonical URLs, and no failures.

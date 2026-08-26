@@ -354,4 +354,37 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/markdown-tables/"/>
     <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
   </url>
+<url>
+    <loc>https://readmd.asia/release-notes/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://readmd.asia/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/release-notes/"/>
+    <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url><url>
+    <loc>https://readmd.asia/zh-cn/release-notes/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://readmd.asia/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/release-notes/"/>
+    <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url><url>
+    <loc>https://readmd.asia/zh-tw/release-notes/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://readmd.asia/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/release-notes/"/>
+    <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url><url>
+    <loc>https://readmd.asia/ja/release-notes/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://readmd.asia/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/release-notes/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/release-notes/"/>
+    <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url>
 </urlset>
