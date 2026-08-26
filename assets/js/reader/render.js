@@ -653,10 +653,10 @@ function parseMarkdownWithSourceMap(content, options = {}) {
         return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
           <div class="code-chunk-header">
             <span class="code-chunk-badge">${lang.toUpperCase()}</span>
-            <span class="code-chunk-status">就绪</span>
+            <span class="code-chunk-status">${_t('status.ready')}</span>
             <span class="code-chunk-timer"></span>
             <div class="code-chunk-actions">
-              <button class="code-chunk-run-btn" title="运行代码 (Shift+Enter)">▶ 运行</button>
+              <button class="code-chunk-run-btn" title="${_t('menu.runCode')} (Shift+Enter)">▶ ${_t('menu.runCode')}</button>
             </div>
           </div>
           <div class="code-chunk-src ${isHidden ? 'hidden' : ''}">
@@ -664,10 +664,10 @@ function parseMarkdownWithSourceMap(content, options = {}) {
           </div>
           <div class="code-chunk-output hidden">
             <div class="code-chunk-output-header">
-              <span>执行输出</span>
+              <span>${_t('reader.executionOutput')}</span>
               <div class="code-chunk-out-actions">
-                <button class="code-chunk-copy-btn" title="复制输出文本">📋 复制</button>
-                <button class="code-chunk-clear-btn" title="清空输出">✕ 清空</button>
+                <button class="code-chunk-copy-btn" title="${_t('reader.copyOutput')}">📋 ${_t('reader.copyOutput')}</button>
+                <button class="code-chunk-clear-btn" title="${_t('reader.clearOutput')}">✕ ${_t('reader.clearOutput')}</button>
               </div>
             </div>
             <pre class="code-chunk-stdout"></pre>
@@ -682,11 +682,11 @@ function parseMarkdownWithSourceMap(content, options = {}) {
         const encodedCode = encodeURIComponent(code);
         return `<div class="diagram-card" ${lineAttr} data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
           <div class="diagram-header">
-            <span class="diagram-badge">${lang.toUpperCase()} 图表</span>
-            <button class="diagram-reload-btn" title="重新渲染">⟳ 刷新</button>
+            <span class="diagram-badge">${_t('reader.diagramBadge', { lang: lang.toUpperCase() })}</span>
+            <button class="diagram-reload-btn" title="${_t('reader.refresh')}">⟳ ${_t('reader.refresh')}</button>
           </div>
-          <div class="diagram-preview"><div class="diagram-loading">正在加载图表...</div></div>
-          <details class="diagram-src-wrap"><summary>查看代码</summary><pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre></details>
+          <div class="diagram-preview"><div class="diagram-loading">${_t('reader.diagramLoading')}</div></div>
+          <details class="diagram-src-wrap"><summary>${_t('reader.viewCode')}</summary><pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre></details>
         </div>\n`;
       }
 
@@ -1059,6 +1059,7 @@ function postProcess(container) {
 }
 
 function renderAllCodeChunks(container) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const cards = (container || document).querySelectorAll('.code-chunk-card');
   cards.forEach(card => {
     if (card._bound) return;
@@ -1075,9 +1076,9 @@ function renderAllCodeChunks(container) {
 
     const run = async () => {
       statusEl.className = 'code-chunk-status running';
-      statusEl.textContent = '运行中...';
+      statusEl.textContent = _t('reader.codeRunning');
       btn.disabled = true;
-      btn.textContent = '⏳ 执行中';
+      btn.textContent = `⏳ ${_t('reader.codeRunning')}`;
       const t0 = Date.now();
       const interval = setInterval(() => {
         timerEl.textContent = ((Date.now() - t0) / 1000).toFixed(1) + 's';
@@ -1101,10 +1102,10 @@ function renderAllCodeChunks(container) {
 
         if (res && res.ok) {
           statusEl.className = 'code-chunk-status success';
-          statusEl.textContent = '执行成功';
+          statusEl.textContent = _t('convert.statusOk');
           outWrap.classList.remove('hidden');
           stdoutEl.textContent = (res.stdout || '') + (res.stderr ? ('\n' + res.stderr) : '');
-          if (!stdoutEl.textContent.trim()) stdoutEl.textContent = '(无控制台输出)';
+          if (!stdoutEl.textContent.trim()) stdoutEl.textContent = _t('reader.noConsoleOutput');
           plotEl.innerHTML = '';
           if (res.images && res.images.length > 0) {
             res.images.forEach(imgSrc => {
@@ -1116,19 +1117,19 @@ function renderAllCodeChunks(container) {
           }
         } else {
           statusEl.className = 'code-chunk-status error';
-          statusEl.textContent = '执行失败';
+          statusEl.textContent = _t('convert.statusFailed');
           outWrap.classList.remove('hidden');
-          stdoutEl.textContent = (res && res.error) || (res && res.stderr) || '未知执行错误';
+          stdoutEl.textContent = (res && res.error) || (res && res.stderr) || _t('toast.unknownError');
         }
       } catch (err) {
         clearInterval(interval);
         statusEl.className = 'code-chunk-status error';
-        statusEl.textContent = '调用失败';
+        statusEl.textContent = _t('reader.callFailed');
         outWrap.classList.remove('hidden');
         stdoutEl.textContent = err.message || String(err);
       } finally {
         btn.disabled = false;
-        btn.textContent = '▶ 重新运行';
+        btn.textContent = `▶ ${_t('reader.runAgain')}`;
       }
     };
 
@@ -1141,7 +1142,7 @@ function renderAllCodeChunks(container) {
         const text = (stdoutEl ? stdoutEl.textContent : '') || '';
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(text);
-          showToast('已复制输出内容到剪贴板', 1200);
+          showToast(_t('toast.outputCopied'), 1200);
         }
       });
     }
@@ -1153,9 +1154,9 @@ function renderAllCodeChunks(container) {
         if (stdoutEl) stdoutEl.textContent = '';
         if (plotEl) plotEl.innerHTML = '';
         statusEl.className = 'code-chunk-status';
-        statusEl.textContent = '就绪';
+        statusEl.textContent = _t('status.ready');
         if (timerEl) timerEl.textContent = '';
-        showToast('已清空执行结果', 1000);
+        showToast(_t('toast.outputCleared'), 1000);
       });
     }
   });
@@ -1163,12 +1164,13 @@ function renderAllCodeChunks(container) {
 window.renderAllCodeChunks = renderAllCodeChunks;
 
 async function runAllCodeChunks() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const cards = document.querySelectorAll('.code-chunk-card');
   if (!cards.length) {
-    showToast('当前文档中没有可运行的代码块');
+    showToast(_t('toast.noRunnableChunks'));
     return;
   }
-  showToast(`开始批量运行 ${cards.length} 个代码块...`, 1500);
+  showToast(_t('toast.batchRunStarted', { count: cards.length }), 1500);
   for (const card of cards) {
     const btn = card.querySelector('.code-chunk-run-btn');
     if (btn) {
@@ -1180,6 +1182,7 @@ async function runAllCodeChunks() {
 window.runAllCodeChunks = runAllCodeChunks;
 
 function renderAllDiagrams(container) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const cards = (container || document).querySelectorAll('.diagram-card');
   cards.forEach(async card => {
     if (card._rendered) return;
@@ -1190,7 +1193,7 @@ function renderAllDiagrams(container) {
     const reloadBtn = card.querySelector('.diagram-reload-btn');
 
     const render = async () => {
-      previewEl.innerHTML = '<div class="diagram-loading">⏳ 正在渲染 ' + engine.toUpperCase() + ' 矢量图表...</div>';
+      previewEl.innerHTML = `<div class="diagram-loading">⏳ ${_t('reader.renderingDiagram', { engine: engine.toUpperCase() })}</div>`;
       try {
         if (engine === 'mermaid' && window.mermaid) {
           const id = 'mermaid-' + Math.random().toString(36).slice(2);
@@ -1230,14 +1233,14 @@ function renderAllDiagrams(container) {
               const svgText = await kr.text();
               previewEl.innerHTML = svgText;
             } else {
-              previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ 离线或远程渲染不可达，已降级显示源码：</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+              previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ ${_t('reader.renderFailed', { error: _t('toast.unknownNetworkErr') })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
             }
           }
         } else {
-          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ 图表渲染错误：${(res && res.error) || '未知'}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ ${_t('reader.diagramError', { error: (res && res.error) || _t('toast.unknownError') })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
         }
       } catch (err) {
-        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ 渲染异常（${err.message || String(err)}），显示源码：</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">⚠️ ${_t('reader.renderFailed', { error: err.message || String(err) })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
       }
     };
 
@@ -1283,27 +1286,27 @@ async function launchPresentationMode() {
       <div class="presentation-toolbar" id="presentation-toolbar">
         <div class="presentation-tool-item">
           <select id="presentation-theme-select" class="presentation-select" title="演说主题" data-i18n-title="presentation.themeTitle">
-            <option value="black">深黑 (Black)</option>
-            <option value="white">亮白 (White)</option>
-            <option value="league">英雄联盟 (League)</option>
-            <option value="beige">米黄 (Beige)</option>
-            <option value="night">暗夜 (Night)</option>
-            <option value="serif">衬线典雅 (Serif)</option>
-            <option value="simple">极简现代 (Simple)</option>
-            <option value="solarized">日光色调 (Solarized)</option>
-            <option value="blood">暗红 (Blood)</option>
-            <option value="moon">月光 (Moon)</option>
-            <option value="sky">天蓝 (Sky)</option>
+            <option value="black">Black</option>
+            <option value="white">White</option>
+            <option value="league">League</option>
+            <option value="beige">Beige</option>
+            <option value="night">Night</option>
+            <option value="serif">Serif</option>
+            <option value="simple">Simple</option>
+            <option value="solarized">Solarized</option>
+            <option value="blood">Blood</option>
+            <option value="moon">Moon</option>
+            <option value="sky">Sky</option>
           </select>
         </div>
         <div class="presentation-tool-item">
           <select id="presentation-transition-select" class="presentation-select" title="转场特效" data-i18n-title="presentation.transitionTitle">
-            <option value="slide">平移 (Slide)</option>
-            <option value="fade">渐变 (Fade)</option>
-            <option value="zoom">缩放 (Zoom)</option>
-            <option value="convex">凸面 (Convex)</option>
-            <option value="concave">凹面 (Concave)</option>
-            <option value="none">无动画 (None)</option>
+            <option value="slide">${_t('presentation.transitionSlide')}</option>
+            <option value="fade">${_t('presentation.transitionFade')}</option>
+            <option value="zoom">${_t('presentation.transitionZoom')}</option>
+            <option value="convex">${_t('presentation.transitionConvex')}</option>
+            <option value="concave">${_t('presentation.transitionConcave')}</option>
+            <option value="none">${_t('presentation.transitionNone')}</option>
           </select>
         </div>
         <div class="presentation-tool-item">
@@ -1311,8 +1314,8 @@ async function launchPresentationMode() {
           <button type="button" class="presentation-btn active" id="presentation-font-norm" title="标准字号 (24px)" data-i18n-title="presentation.fontNorm">A</button>
           <button type="button" class="presentation-btn" id="presentation-font-inc" title="放大字号 (28px)" data-i18n-title="presentation.fontInc">A+</button>
         </div>
-        <button type="button" class="presentation-btn" id="presentation-overview-btn" title="总览视图 (快捷键 O)" data-i18n-title="presentation.overviewTitle">总览</button>
-        <button type="button" class="presentation-btn" id="presentation-fullscreen-btn" title="全屏放映 (F11)" data-i18n-title="presentation.fullscreenTitle">全屏</button>
+        <button type="button" class="presentation-btn" id="presentation-overview-btn" title="${_t('presentation.overviewTitle')}">${_t('presentation.overviewLabel')}</button>
+        <button type="button" class="presentation-btn" id="presentation-fullscreen-btn" title="${_t('presentation.fullscreenTitle')}">${_t('presentation.fullscreenLabel')}</button>
         <button type="button" class="presentation-close-btn" id="presentation-close-btn" title="退出演示 (Esc)" data-i18n-title="presentation.closeTitle">✕</button>
       </div>
       <iframe class="presentation-iframe" src="about:blank"></iframe>

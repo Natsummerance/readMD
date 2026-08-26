@@ -687,7 +687,7 @@
   "sidebar.searchFiles": "Cuardaigh comhaid i bhfillteán…",
   "sidebar.toc": "Imlíne Clár na nÁbhar",
   "status.clickToUpdate": "Cliceáil chun leagan nua a fheiceáil agus a nuashonrú",
-  "status.encoding": "CÓD: ZZP0ZZ",
+  "status.encoding": "Ionchódú: {encoding}",
   "status.fixes": "Ceartú",
   "status.lines": "{count} líne",
   "status.loading": "Á lódáil...",

@@ -68,6 +68,7 @@ function closeMoreMenu() {
 }
 
 function bindEvents() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
 
   /* --- 1. 欢迎页与全局导航 (Welcome & Navigation) [联动: history.js, render.js, folder.js] --- */
   bindWelcomeEvents(); // 绑定欢迎页各个功能入口卡片事件
@@ -228,19 +229,19 @@ function bindEvents() {
           const clip = await py.read_clipboard(true);
           if (clip && clip.text && /^https?:\/\//i.test(clip.text.trim())) {
             $('url-input').value = clip.text.trim();
-            showToast('已粘贴网址');
+            showToast(_t('toast.clipUrlPasted'));
             return;
           }
         }
         const text = await navigator.clipboard.readText();
         if (text && /^https?:\/\//i.test(text.trim())) {
           $('url-input').value = text.trim();
-          showToast('已粘贴网址');
+          showToast(_t('toast.clipUrlPasted'));
         } else {
-          showToast('剪贴板中未找到有效的 HTTP/HTTPS 网址');
+          showToast(_t('toast.clipNoValidHttpUrl'));
         }
       } catch (err) {
-        showToast('无法读取剪贴板，请手动粘贴');
+        showToast(_t('toast.clipReadManual'));
       }
     });
   }
@@ -370,9 +371,9 @@ function bindEvents() {
     const content = state.fixed || '';
     if (!content) return;
     if (state.mode === 'virtual' || !state.file) { await saveAs(); return; }
-    if (!hasPy) { showToast('浏览器模式请用“另存”'); return; }
+    if (!hasPy) { showToast(_t('toast.browserUseSaveAs')); return; }
     const out = await py.save_fixed(state.file, content);
-    showToast(out ? '已保存：' + out : '保存失败');
+    showToast(out ? (_t('toast.savedPrefix') + out) : _t('toast.saveFailedSimple'));
   });
   $('fix-modal').addEventListener('click', e => { if (e.target === $('fix-modal')) $('fix-modal').classList.add('hidden'); });
 
@@ -843,6 +844,7 @@ async function openStyleModal() {
 }
 
 async function saveStyleModal() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const css = $('style-custom-css') ? $('style-custom-css').value : '';
   const head = $('style-custom-head') ? $('style-custom-head').value : '';
   try {
@@ -858,7 +860,7 @@ async function saveStyleModal() {
       res = await r.json();
     }
     if (res && res.ok) {
-      showToast('自定义样式已保存并即时生效', 1500);
+      showToast(_t('toast.savedSuccess'), 1500);
       let dynStyle = $('readmd-user-custom-style');
       if (!dynStyle) {
         dynStyle = document.createElement('style');
@@ -868,10 +870,10 @@ async function saveStyleModal() {
       dynStyle.textContent = css;
       closeStyleModal();
     } else {
-      showToast('保存失败');
+      showToast(_t('toast.saveFailedSimple'));
     }
   } catch (e) {
-    showToast('保存失败：' + e.message);
+    showToast(_t('toast.saveFailed', { error: e.message }));
   }
 }
 
