@@ -16,6 +16,7 @@ test('update release notes are sanitized before insertion', async ({ page }) => 
         '**Safe release note**',
         '<script>window.__updaterXss = true;</script>',
         '<img src="missing.gif" onerror="window.__updaterXss = true">',
+        '<div class="diagram-card" data-diagram-engine="dot" data-diagram-code="graph%20A"><button class="diagram-reload-btn" type="button">Reload</button></div>',
         '<div id="update-notes-content" class="modal" role="dialog" aria-hidden="false" aria-live="assertive">Override</div>',
       ].join('\n'),
       asset: null,
@@ -28,6 +29,7 @@ test('update release notes are sanitized before insertion', async ({ page }) => 
   await expect(notes.locator('script')).toHaveCount(0);
   await expect(notes.locator('[onerror]')).toHaveCount(0);
   await expect(notes.locator('[role], [aria-hidden], [aria-live]')).toHaveCount(0);
+  await expect(notes.locator('.diagram-card, .diagram-reload-btn, [data-diagram-engine], [data-diagram-code]')).toHaveCount(0);
   await expect(notes.locator('.modal')).toHaveCount(0);
   expect(await page.evaluate(() => window.__updaterXss)).toBeFalsy();
 });

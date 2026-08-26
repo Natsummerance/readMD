@@ -115,6 +115,7 @@ function openFileRename() {
 async function loadFile(path, { force = false, browserCopy = null } = {}) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!path) return;
+  const loadEpoch = beginDocumentLoad();
   const existingTab = findTabByPath(path);
   if (existingTab && !force) {
     await switchTab(existingTab.id);
@@ -134,6 +135,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
       return;
     }
     const d = await r.json();
+    if (!isDocumentLoadCurrent(loadEpoch)) return;
     const isBrowserCopy = force && browserCopy === null
       ? existingTab.browserCopy === true
       : browserCopy === true;
@@ -157,6 +159,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
     };
 
     if (existingTab) {
+      if (!isDocumentLoadCurrent(loadEpoch)) return;
       const wasActive = state.activeTabId === existingTab.id;
       const previousPage = wasActive && state.pagination.enabled && state.pagination.mode === 'paged'
         ? state.pagination.currentPage
@@ -168,18 +171,22 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
 
       if (wasActive) {
         await prepareDocCitations(d.path, d.content);
+        if (!isDocumentLoadCurrent(loadEpoch)) return;
         setFixes(d.fixes || [], d.stats || {});
         await renderContent(d.content, d.name);
+        if (!isDocumentLoadCurrent(loadEpoch)) return;
         if (state.pagination.enabled && state.pagination.mode === 'paged' && previousPage > 0) {
           renderPage(previousPage, null, true);
         }
         requestAnimationFrame(() => {
-          $('content').scrollTop = previousScroll;
+          if (isDocumentLoadCurrent(loadEpoch)) $('content').scrollTop = previousScroll;
         });
         updateStatus();
       }
+      if (!isDocumentLoadCurrent(loadEpoch)) return;
       showToast(_t('toolbar.reload') + ': ' + d.name);
     } else {
+      if (!isDocumentLoadCurrent(loadEpoch)) return;
       const newTab = {
         id: 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         ...fileFields,
@@ -191,8 +198,10 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
       state.activeTabId = newTab.id;
       syncStateFromActiveTab();
       await prepareDocCitations(d.path, d.content);
+      if (!isDocumentLoadCurrent(loadEpoch)) return;
       setFixes(d.fixes || [], d.stats || {});
       await renderContent(d.content, d.name);
+      if (!isDocumentLoadCurrent(loadEpoch)) return;
       if (state.pagination.enabled && state.pagination.totalPages > 1) {
         showToast(_t('toast.openedPages', { name: d.name, count: state.pagination.totalPages }), 4000);
       } else {
@@ -567,11 +576,13 @@ async function togglePaginationMode() {
   const p = state.pagination;
   if (!p || !p.enabled) return;
   const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
+  const navigation = captureNavigationEpoch();
 
   if (p.mode === 'paged') {
     if (p.pages.length > 20 && !(await confirmContinuousMode(p.pages.length))) {
       return;
     }
+    if (!isNavigationCurrent(navigation)) return;
     p.mode = 'continuous';
     if (activeTab) {
       activeTab.readerMode = 'continuous';
@@ -905,6 +916,7 @@ const MARKDOWN_RESERVED_IDS = new Set([
 const MARKDOWN_RESERVED_CLASS_RE = /^(?:modal|modal-dialog|modal-header|modal-footer|drag-overlay|tab-item|tab-close|zen-mode|zen-entering|presentation-modal|presentation-iframe)$/;
 let readerRenderEpoch = 0;
 let readerRenderAborter = null;
+let documentLoadEpoch = 0;
 
 function beginReaderRender() {
   const epoch = ++readerRenderEpoch;
@@ -916,6 +928,27 @@ function beginReaderRender() {
 function isReaderRenderCurrent(render) {
   return Boolean(render && render.epoch === readerRenderEpoch && !render.signal.aborted);
 }
+
+function beginDocumentLoad() {
+  return ++documentLoadEpoch;
+}
+
+function invalidateDocumentLoads() {
+  documentLoadEpoch += 1;
+}
+
+function isDocumentLoadCurrent(loadEpoch) {
+  return loadEpoch === documentLoadEpoch;
+}
+
+function captureNavigationEpoch() {
+  return { document: documentLoadEpoch, render: readerRenderEpoch };
+}
+
+function isNavigationCurrent(epoch) {
+  return Boolean(epoch && epoch.document === documentLoadEpoch && epoch.render === readerRenderEpoch);
+}
+window.invalidateDocumentLoads = invalidateDocumentLoads;
 
 function isSanctionedRenderButton(node) {
   const classes = Array.from(node.classList);
@@ -936,11 +969,16 @@ function safeResourceUrl(value) {
   }
 }
 
-function sanitizeRenderedHtml(html) {
+function sanitizeRenderedHtml(html, { allowInteractive = true } = {}) {
   const template = document.createElement('template');
   template.innerHTML = String(html || '');
   Array.from(template.content.querySelectorAll('*')).forEach(node => {
     const tag = node.tagName.toLowerCase();
+    if (!allowInteractive && (tag === 'button' ||
+        node.classList.contains('code-chunk-card') || node.classList.contains('diagram-card'))) {
+      node.replaceWith(...node.childNodes);
+      return;
+    }
     if (MARKDOWN_REMOVED_TAGS.has(tag)) {
       node.remove();
       return;
@@ -1026,7 +1064,7 @@ window.sanitizeRenderedHtml = sanitizeRenderedHtml;
 function renderSafeMarkdown(source, { breaks = false } = {}) {
   const prot = protectMath(String(source || ''));
   const html = marked.parse(prot.src, { gfm: true, breaks });
-  return sanitizeRenderedHtml(restoreMath(html, prot.saved));
+  return sanitizeRenderedHtml(restoreMath(html, prot.saved), { allowInteractive: false });
 }
 window.renderSafeMarkdown = renderSafeMarkdown;
 
@@ -1063,6 +1101,7 @@ async function renderContent(content, name) {
     }
   } else {
     state.pagination.enabled = false;
+    state.pagination.rawContent = null;
     state.pagination.pages = [];
     state.pagination.totalPages = 0;
     showPaginationBar(false);
@@ -1635,6 +1674,7 @@ function toggleZenMode(force) {
   if (toolbar) toolbar.classList.remove('zen-toolbar-revealed');
   
   if (isZen) {
+    document.body.classList.add('zen-toolbar-suppressed');
     const reader = document.getElementById('content');
     if (toolbar) {
       document.body.style.setProperty('--zen-toolbar-height', `${toolbarHeight}px`);
@@ -1648,7 +1688,11 @@ function toggleZenMode(force) {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => document.body.classList.remove('zen-entering'));
     });
+    window.addEventListener('pointermove', event => {
+      if (event.clientY > 12) document.body.classList.remove('zen-toolbar-suppressed');
+    }, { once: true });
   } else {
+    document.body.classList.remove('zen-toolbar-suppressed');
     document.body.style.removeProperty('--zen-toolbar-height');
     showToast(_t('toast.zenExited') || '已退出禅模式', 1200);
   }

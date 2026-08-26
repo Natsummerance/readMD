@@ -497,6 +497,7 @@ async function activateTabForSave(tabId) {
 
 async function switchTab(tabId) {
   if (state.activeTabId === tabId) return;
+  window.invalidateDocumentLoads?.();
   const prevTab = getActiveTab();
   if (prevTab) {
     if (state.editing) {
@@ -532,8 +533,10 @@ async function switchTab(tabId) {
     return;
   }
   const preferredPage = Number(nextTabState?.readerPage || 0);
+  const switchedTabId = tabId;
   const rendered = renderActiveTab({ restoreScroll: true });
   Promise.resolve(rendered).then(() => {
+    if (state.activeTabId !== switchedTabId) return;
     if (state.pagination.enabled && state.pagination.mode === 'paged' && preferredPage >= 0) {
       renderPage(preferredPage, null, true);
     } else if (state.pagination.enabled && state.pagination.mode === 'continuous' && nextTabState.continuousScroll) {
