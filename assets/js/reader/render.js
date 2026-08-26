@@ -578,7 +578,7 @@ async function togglePaginationMode() {
       activeTab.continuousScroll = $('content')?.scrollTop || 0;
     }
     showToast(_t('pagination.switchToContinuousToast') || '已切换至全卷连续阅读模式', 1800);
-    renderContentIncremental(p.rawContent, 0);
+    await renderContentIncremental(p.rawContent, 0, beginReaderRender());
   } else {
     p.mode = 'paged';
     if (activeTab) {
@@ -586,6 +586,7 @@ async function togglePaginationMode() {
       activeTab.readerPage = 0;
     }
     showToast(_t('pagination.switchToPagedToast') || '已切换至智能分页阅读模式', 1800);
+    beginReaderRender();
     renderPage(0, null, false);
   }
   updatePaginationBar();
@@ -902,6 +903,19 @@ const MARKDOWN_RESERVED_IDS = new Set([
   'ai-output', 'update-notes-content', 'presentation-modal', 'share-modal',
 ]);
 const MARKDOWN_RESERVED_CLASS_RE = /^(?:modal|modal-dialog|modal-header|modal-footer|drag-overlay|tab-item|tab-close|zen-mode|zen-entering|presentation-modal|presentation-iframe)$/;
+let readerRenderEpoch = 0;
+let readerRenderAborter = null;
+
+function beginReaderRender() {
+  const epoch = ++readerRenderEpoch;
+  if (readerRenderAborter) readerRenderAborter.abort();
+  readerRenderAborter = new AbortController();
+  return { epoch, signal: readerRenderAborter.signal };
+}
+
+function isReaderRenderCurrent(render) {
+  return Boolean(render && render.epoch === readerRenderEpoch && !render.signal.aborted);
+}
 
 function isSanctionedRenderButton(node) {
   const classes = Array.from(node.classList);
@@ -1018,6 +1032,7 @@ window.renderSafeMarkdown = renderSafeMarkdown;
 
 async function renderContent(content, name) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const render = beginReaderRender();
   const saved = state.scrollPos[normalizePath(name || state.file || '')] || 0;
   
   // 预处理 @import
@@ -1026,6 +1041,7 @@ async function renderContent(content, name) {
       content = await processDocImports(content, state.file || name || '');
     } catch (e) {}
   }
+  if (!isReaderRenderCurrent(render)) return;
 
   const linesCount = (content || '').split('\n').length;
   const isUltraLong = linesCount > PAGINATION_THRESHOLD_LINES || (content || '').length > PAGINATION_THRESHOLD_BYTES;
@@ -1041,7 +1057,7 @@ async function renderContent(content, name) {
       showPaginationBar(true);
       return;
     } else {
-      renderContentIncremental(content, saved);
+      await renderContentIncremental(content, saved, render);
       showPaginationBar(true);
       return;
     }
@@ -1054,16 +1070,19 @@ async function renderContent(content, name) {
 
   const big = content.length > INCREMENTAL_THRESHOLD || linesCount > INCREMENTAL_LINES;
   if (big) {
-    renderContentIncremental(content, saved);
+    await renderContentIncremental(content, saved, render);
     return;
   }
   const transformed = transformAcademicCallouts(content);
   const prot = protectMath(transformed);
   const html = parseMarkdownWithSourceMap(prot.src);
   const finalHtml = restoreMath(html, prot.saved);
+  if (!isReaderRenderCurrent(render)) return;
   $('content').innerHTML = '<article class="markdown-body">' + sanitizeRenderedHtml(finalHtml) + '</article>';
   postProcess();
-  if (saved) requestAnimationFrame(() => { $('content').scrollTop = saved; });
+  if (saved) requestAnimationFrame(() => {
+    if (isReaderRenderCurrent(render)) $('content').scrollTop = saved;
+  });
 }
 
 
@@ -1109,43 +1128,50 @@ function splitMdBlocks(md) {
   return out;
 }
 
-async function renderContentIncremental(content, savedTop) {
+async function renderContentIncremental(content, savedTop, render = null) {
+  const task = render || beginReaderRender();
+  if (!isReaderRenderCurrent(task)) return;
   const el = $('content');
   el.innerHTML = '<article class="markdown-body"></article>';
   const body = el.querySelector('.markdown-body');
   const blocks = splitMdBlocks(content);
   const total = blocks.length;
-  if (total <= 1) {
-    const prot = protectMath(content);
-    body.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
-    postProcess();
-    if (savedTop) el.scrollTop = savedTop;
-    return;
-  }
-  const prog = document.createElement('div');
-  prog.id = 'render-progress';
-  prog.setAttribute('role', 'status');
-  prog.setAttribute('aria-live', 'polite');
-  prog.setAttribute('aria-atomic', 'true');
-  el.appendChild(prog);
-  const CHUNK = 8;
-  for (let i = 0; i < total; i += CHUNK) {
-    const frag = document.createDocumentFragment();
-    const end = Math.min(i + CHUNK, total);
-    for (let k = i; k < end; k++) {
-      const div = document.createElement('div');
-      const prot = protectMath(blocks[k]);
-      div.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
-      frag.appendChild(div);
+  let prog = null;
+  try {
+    if (total <= 1) {
+      const prot = protectMath(content);
+      body.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
+      postProcess();
+      if (savedTop) el.scrollTop = savedTop;
+      return;
     }
-    body.appendChild(frag);
-    const pct = Math.round((end / total) * 100);
-    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-    if (pct >= 100 || pct % 10 < 8) prog.textContent = (_t('reader.renderingProgress', { percent: Math.min(pct, 100) }) || ('渲染中… ' + Math.min(pct, 100) + '%'));
-    if (end < total) await new Promise(r => setTimeout(r, 0));
-
+    prog = document.createElement('div');
+    prog.id = 'render-progress';
+    prog.setAttribute('role', 'status');
+    prog.setAttribute('aria-live', 'polite');
+    prog.setAttribute('aria-atomic', 'true');
+    el.appendChild(prog);
+    const CHUNK = 8;
+    for (let i = 0; i < total; i += CHUNK) {
+      if (!isReaderRenderCurrent(task)) return;
+      const frag = document.createDocumentFragment();
+      const end = Math.min(i + CHUNK, total);
+      for (let k = i; k < end; k++) {
+        const div = document.createElement('div');
+        const prot = protectMath(blocks[k]);
+        div.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
+        frag.appendChild(div);
+      }
+      body.appendChild(frag);
+      const pct = Math.round((end / total) * 100);
+      const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+      if (pct >= 100 || pct % 20 === 0) prog.textContent = (_t('reader.renderingProgress', { percent: Math.min(pct, 100) }) || ('渲染中… ' + Math.min(pct, 100) + '%'));
+      if (end < total) await new Promise(r => setTimeout(r, 0));
+    }
+  } finally {
+    prog?.remove();
   }
-  prog.remove();
+  if (!isReaderRenderCurrent(task)) return;
   if (savedTop) el.scrollTop = savedTop;
   postProcess();
   updatePaginationBar();

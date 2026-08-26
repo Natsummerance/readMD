@@ -183,3 +183,45 @@ test('rapid tab switching stays aligned and reveals the active tab', async ({ pa
   expect(alignment.heights).toHaveLength(1);
   expect(alignment.selectedCount).toBe(1);
 });
+
+test('superseded incremental renders stop without stale content', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderContent === 'function');
+
+  const result = await page.evaluate(async () => {
+    const originalSplit = splitMdBlocks;
+    const started = performance.now();
+    try {
+      splitMdBlocks = () => Array.from(
+        { length: 80 },
+        (_, index) => `# Stale ${index}\n\n${'x'.repeat(1200)}`
+      );
+      void renderContent('x'.repeat(301 * 1024), 'long.md');
+      await renderContent('# Final short', 'short.md');
+
+      let frames = 0;
+      await new Promise(resolve => {
+        const tick = () => {
+          if (++frames === 20) resolve();
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+
+      return {
+        elapsed: performance.now() - started,
+        finalVisible: document.getElementById('content')?.textContent.includes('Final short'),
+        staleVisible: [...document.querySelectorAll('#content h1')]
+          .some(heading => heading.textContent.startsWith('Stale ')),
+        progressVisible: Boolean(document.getElementById('render-progress')),
+      };
+    } finally {
+      splitMdBlocks = originalSplit;
+    }
+  });
+
+  expect(result.finalVisible).toBe(true);
+  expect(result.staleVisible).toBe(false);
+  expect(result.progressVisible).toBe(false);
+  expect(result.elapsed).toBeLessThan(750);
+});
