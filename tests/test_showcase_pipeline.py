@@ -4916,6 +4916,8 @@ class WatcherTest(unittest.TestCase):
         tamper_concern_response: bool = False,
         tamper_variant_ranking: bool = False,
         tamper_dashboard: bool = False,
+        poster_style: str = "evidence-paper",
+        poster_style_mode: str = "fixed",
     ) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
@@ -4945,6 +4947,29 @@ class WatcherTest(unittest.TestCase):
             history=None,
         )
         story = build_story.apply_selected_cover(story, metadata)
+        story["poster_style"] = poster_style
+        metadata["poster_style"] = poster_style
+        variant_selection["poster_style_selection"] = {
+            "schema_version": 1,
+            "mode": poster_style_mode,
+            "selected": poster_style,
+            **({} if poster_style_mode != "exploration" else {
+                "usage": {
+                    "minimal-zine": 0,
+                    "morandi-cinematic": 0,
+                    "photo-abstract": 0,
+                    "photo-relic": 0,
+                },
+                "recommendation": {
+                    "schema_version": 1,
+                    "recommended": None,
+                    "confidence": "low",
+                    "learning_count": 0,
+                    "pending_count": 0,
+                    "stats": {},
+                },
+            }),
+        }
         composition = copy_variants.projected_composition(story)
         for index, card in enumerate(story["card_plan"]):
             path = package / "images" / card["file"]
@@ -4979,7 +5004,8 @@ class WatcherTest(unittest.TestCase):
             )
 
         canvas_area = 1080 * 1440
-        composition["schema_version"] = 2
+        composition["schema_version"] = 3
+        composition["poster_style"] = poster_style
         for card in composition["cards"]:
             card["sha256"] = hashlib.sha256(
                 (package / "images" / card["file"]).read_bytes()
@@ -5771,6 +5797,50 @@ class WatcherTest(unittest.TestCase):
                 f"package={metadata['variant_id']}, current=identity-led__22"
             )],
         )
+
+    def test_watcher_recomposes_auto_poster_style_for_local_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(
+                root,
+                poster_style="minimal-zine",
+                poster_style_mode="exploration",
+            )
+            token = watch_and_publish.package_token(zip_path)
+            package = root / "work" / token
+            watch_and_publish.safe_extract(zip_path, package)
+            ledger = root / "publication-ledger.jsonl"
+            ledger.write_text(json.dumps({
+                "release": "v1.0.0",
+                "title": "pending evidence",
+                "title_formula_id": "#61",
+                "hook_type": "outcome-led",
+                "published_at": "2026-08-20T00:00:00Z",
+                "impressions": 0,
+                "likes": 0,
+                "collects": 0,
+                "comments": 0,
+                "shares": 0,
+                "follows": 0,
+                "metrics_status": "pending",
+                "poster_style": "evidence-paper",
+            }, ensure_ascii=False) + "\n", encoding="utf-8")
+
+            reconciliation = watch_and_publish.reconcile_auto_poster_style(package, ledger)
+
+            story = json.loads((package / "story.json").read_text(encoding="utf-8"))
+            composition = json.loads((package / "composition.json").read_text(encoding="utf-8"))
+            variants = json.loads((package / "variants.json").read_text(encoding="utf-8"))
+
+            residual_errors = validate_package.publisher_poster_style_errors(package, ledger)
+        self.assertEqual(reconciliation["from"], "minimal-zine")
+        self.assertEqual(reconciliation["to"], "morandi-cinematic")
+        self.assertEqual(reconciliation["mode"], "exploration")
+        self.assertTrue(reconciliation["recomposed"])
+        self.assertEqual(story["poster_style"], "morandi-cinematic")
+        self.assertEqual(composition["poster_style"], "morandi-cinematic")
+        self.assertEqual(variants["poster_style_selection"]["selected"], "morandi-cinematic")
+        self.assertEqual(residual_errors, [])
 
     def test_watcher_rejects_tampered_composed_card(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

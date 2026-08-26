@@ -18,6 +18,7 @@ from typing import Any
 
 from content_memory import load_records, upsert_record
 from audit_copy import audit_copy
+from build_package import compose_and_validate
 from copy_variants import (
     jaccard_similarity,
     text_fingerprints,
@@ -26,6 +27,8 @@ from copy_variants import (
 )
 from pattern_audit import audit_patterns
 from package_content import validate_release_evidence, verify_package_manifest
+import performance_report
+from poster_style import resolve_poster_style
 from review_dashboard import build_dashboard, collect_inputs, validate_dashboard
 from validate_package import (
     publisher_asset_errors,
@@ -401,6 +404,67 @@ def publisher_originality_errors(package_dir: Path, ledger_path: Path | None) ->
     return sorted(set(errors))
 
 
+def reconcile_auto_poster_style(package_dir: Path, ledger_path: Path | None) -> dict[str, Any] | None:
+    """Re-render a CI exploration package with the operator's local evidence choice."""
+    if ledger_path is None:
+        return None
+
+    load = lambda name: json.loads((package_dir / name).read_text(encoding="utf-8"))
+    try:
+        story = load("story.json")
+        variants = load("variants.json")
+    except Exception as exc:
+        raise ValueError(f"poster style reconciliation inputs unreadable: {exc}") from exc
+
+    selection = variants.get("poster_style_selection") if isinstance(variants, dict) else None
+    if not isinstance(selection, dict) or selection.get("mode") == "fixed":
+        return None
+
+    precheck = publisher_poster_style_errors(package_dir, ledger_path)
+    if not precheck:
+        return None
+
+    recoverable = all(
+        "selects a different poster style" in error
+        or "changes the poster selection mode" in error
+        for error in precheck
+    )
+    if not recoverable:
+        raise ValueError("publisher poster style evidence contract failed: " + "; ".join(precheck))
+
+    previous = str(story.get("poster_style") or "evidence-paper")
+    selected, recomputed_selection = resolve_poster_style("auto", ledger_path)
+    story["poster_style"] = selected
+    variants["poster_style_selection"] = recomputed_selection
+    metadata = load("metadata.json")
+    metadata["poster_style"] = selected
+
+    (package_dir / "story.json").write_text(
+        json.dumps(story, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    (package_dir / "variants.json").write_text(
+        json.dumps(variants, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    (package_dir / "metadata.json").write_text(
+        json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    performance_report.generate_report(load_records(ledger_path), package_dir)
+
+    # The raw PNGs remain immutable; only the evidence wrapper is recomposed and
+    # then forced through every semantic, pixel, mechanism, and dashboard gate.
+    compose_and_validate(package_dir, SHOWCASE_ROOT.parent, memory_path=None)
+    residual = publisher_poster_style_errors(package_dir, ledger_path)
+    if residual:
+        raise ValueError("poster style reconciliation did not converge: " + "; ".join(residual))
+    return {
+        "schema_version": 1,
+        "from": previous,
+        "to": selected,
+        "mode": recomputed_selection.get("mode"),
+        "recomposed": True,
+    }
+
+
 def process_package(
     zip_path: Path,
     work_root: Path,
@@ -495,6 +559,9 @@ def process_package(
         input_errors = publisher_input_errors(package_dir)
         if input_errors:
             raise ValueError("publisher input contract failed: " + "; ".join(input_errors))
+        style_reconciliation = reconcile_auto_poster_style(package_dir, ledger_path)
+        if style_reconciliation:
+            record["poster_style_reconciliation"] = style_reconciliation
         resonance_source_errors = publisher_resonance_source_errors(package_dir, ledger_path)
         if resonance_source_errors:
             raise ValueError("publisher resonance evidence contract failed: " + "; ".join(resonance_source_errors))
