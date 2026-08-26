@@ -967,7 +967,10 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
     for key in ("contrast_errors", "small_text", "images_failed"):
         if design_audit.get(key):
             errors.append(f"composition design audit {key}: " + "; ".join(map(str, design_audit[key])))
-    errors.extend(composed_card_hash_errors(package_dir))
+    errors.extend(composed_card_hash_errors(
+        package_dir,
+        expected_poster_style=str(story.get("poster_style") or "evidence-paper"),
+    ))
 
     title = str(metadata.get("title", "")).strip()
     body = str(metadata.get("body", "")).strip()
