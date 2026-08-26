@@ -92,6 +92,7 @@ def build_package(
         base_metadata=metadata,
         history=history,
     )
+    metadata["poster_style"] = str(story.get("poster_style") or "evidence-paper")
     variant_selection["learning_snapshot"] = {
         "schema_version": 1,
         "record_count": len(history),

@@ -1667,6 +1667,22 @@ class RawCaptureQualityTest(unittest.TestCase):
             (root / "composition.json").write_text(json.dumps(current), encoding="utf-8")
             self.assertEqual(validate_package.composed_card_hash_errors(root), [])
 
+            current["schema_version"] = 3
+            current["poster_style"] = "minimal-zine"
+            (root / "composition.json").write_text(json.dumps(current), encoding="utf-8")
+            self.assertEqual(
+                validate_package.composed_card_hash_errors(root, expected_poster_style="minimal-zine"),
+                [],
+            )
+            self.assertEqual(
+                validate_package.composed_card_hash_errors(root, expected_poster_style="evidence-paper"),
+                [
+                    "composition poster_style differs from the selected story style: "
+                    "story=evidence-paper, composition=minimal-zine"
+                ],
+            )
+
+            current["poster_style"] = "evidence-paper"
             current["cards"][0]["sha256"] = "0" * 64
             (root / "composition.json").write_text(json.dumps(current), encoding="utf-8")
             mismatched = validate_package.composed_card_hash_errors(root)
@@ -3152,6 +3168,20 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertIn("## Copy frames", markdown)
         self.assertIn("| core | 2 | 2000 |", markdown)
 
+    def test_aggregates_confident_poster_style_performance(self) -> None:
+        records = [
+            {**self.complete("v1", "#36", "outcome-led", 1000, 40, 60), "copy_frame": "core", "poster_style": "evidence-paper"},
+            {**self.complete("v2", "#22", "identity-led", 2000, 130, 180), "copy_frame": "workflow", "poster_style": "minimal-zine"},
+            {**self.complete("v3", "#9", "mechanism-curiosity", 1000, 40, 60), "copy_frame": "core", "poster_style": "evidence-paper"},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            result = performance_report.generate_report(records, Path(tmp))
+            markdown = (Path(tmp) / "performance-report.md").read_text(encoding="utf-8")
+        self.assertEqual(result["poster_style_stats"]["evidence-paper"]["confidence"], "medium")
+        self.assertEqual(result["recommended_poster_style"], "evidence-paper")
+        self.assertIn("## Poster styles", markdown)
+        self.assertIn("| evidence-paper | 2 | 2000 |", markdown)
+
     def test_aggregates_topic_sets_and_search_terms(self) -> None:
         records = [
             {
@@ -3435,6 +3465,7 @@ class BuildPipelineTest(unittest.TestCase):
                     package_dir=package,
                     repo_root=ROOT,
                     memory_path=None,
+                    poster_style="photo-relic",
                 )
             finally:
                 build_package_module.select_variant = original_select
@@ -3447,6 +3478,8 @@ class BuildPipelineTest(unittest.TestCase):
             self.assertEqual(persisted["card_plan"][0]["title"], "上台讲文档的人")
             self.assertTrue((package / "evidence" / "release-notes.md").is_file())
             self.assertTrue((package / "evidence" / "release.diff").is_file())
+            self.assertEqual(story["poster_style"], "photo-relic")
+            self.assertEqual(metadata["poster_style"], "photo-relic")
             manifest = json.loads((package / "evidence" / "evidence-manifest.json").read_text(encoding="utf-8"))
             notes_artifact = manifest["artifacts"]["release-notes.md"]
             self.assertEqual(notes_artifact["path"], "evidence/release-notes.md")
@@ -5099,6 +5132,7 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(feedback["release"], "v1.2.3")
             self.assertEqual(feedback["variant_id"], "outcome-led__36")
             self.assertEqual(feedback["copy_frame"], "core")
+            self.assertEqual(feedback["poster_style"], "evidence-paper")
             self.assertEqual(feedback["title_formula_id"], "#36")
             self.assertEqual(
                 feedback["title_source_template"],

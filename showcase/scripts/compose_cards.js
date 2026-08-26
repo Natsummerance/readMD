@@ -212,6 +212,7 @@ async function main() {
     if (!previewMode) {
       const metadataPath = path.join(packageDir, 'metadata.json');
       const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+      metadata.poster_style = design.name;
       metadata.images = cards.map((card) => path.join(outputDir, card.file));
       fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
     }

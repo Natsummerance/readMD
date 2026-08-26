@@ -31,6 +31,7 @@ IMMUTABLE_FIELDS = (
     "published_at",
     "variant_id",
     "copy_frame",
+    "poster_style",
     "primary_shot",
     "topic_set_id",
     "topic_set_label",

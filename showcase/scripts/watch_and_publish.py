@@ -204,6 +204,8 @@ def seed_feedback_ledger(
     audit_status: str | None,
 ) -> dict[str, Any]:
     metadata = json.loads((package_dir / "metadata.json").read_text(encoding="utf-8"))
+    story = json.loads((package_dir / "story.json").read_text(encoding="utf-8"))
+    composition = json.loads((package_dir / "composition.json").read_text(encoding="utf-8"))
     body_path = package_dir / "body.txt"
     body = body_path.read_text(encoding="utf-8").strip() if body_path.exists() else ""
     record = {
@@ -211,6 +213,7 @@ def seed_feedback_ledger(
         "title": title,
         "variant_id": str(metadata.get("variant_id", "unknown")),
         "copy_frame": str(metadata.get("copy_frame", "unknown")),
+        "poster_style": str(composition.get("poster_style") or story.get("poster_style") or "evidence-paper"),
         "title_formula_id": str(metadata.get("title_formula_id", "unknown")),
         "title_source_template": str(metadata.get("title_source_template", "unknown")),
         "title_adaptation": str(metadata.get("title_adaptation", "unknown")),

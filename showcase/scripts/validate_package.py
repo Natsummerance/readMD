@@ -323,7 +323,7 @@ def publisher_learning_materiality_errors(package_dir: Path, ledger_path: Path |
     return []
 
 
-def composed_card_hash_errors(package_dir: Path) -> list[str]:
+def composed_card_hash_errors(package_dir: Path, *, expected_poster_style: str | None = None) -> list[str]:
     """Bind every schema-2 composition card to its exact rendered JPEG."""
     package_dir = package_dir.resolve()
     try:
@@ -332,10 +332,20 @@ def composed_card_hash_errors(package_dir: Path) -> list[str]:
         return [f"composition card manifest unreadable: {exc}"]
 
     # Schema 1 packages predate per-card rendering hashes and remain compatible.
-    if composition.get("schema_version") != 2:
+    if composition.get("schema_version") not in (2, 3):
         return []
 
     errors: list[str] = []
+    if composition.get("schema_version") == 3:
+        actual_style = str(composition.get("poster_style", "")).strip()
+        expected = str(expected_poster_style or "evidence-paper")
+        if not actual_style:
+            errors.append("composition poster_style is required in schema 3")
+        elif actual_style != expected:
+            errors.append(
+                "composition poster_style differs from the selected story style: "
+                f"story={expected}, composition={actual_style}"
+            )
     cards = composition.get("cards", [])
     if not isinstance(cards, list):
         return ["composition card manifest must be a list"]
@@ -690,7 +700,13 @@ def publisher_asset_errors(package_dir: Path) -> list[str]:
         return [f"publisher asset manifest unreadable: {exc}"]
 
     errors: list[str] = []
-    errors.extend(composed_card_hash_errors(package_dir))
+    selected_poster_style = str(story.get("poster_style") or "evidence-paper")
+    if metadata.get("poster_style") not in (None, "", selected_poster_style):
+        errors.append(
+            "metadata poster_style differs from the selected story style: "
+            f"story={selected_poster_style}, metadata={metadata.get('poster_style')}"
+        )
+    errors.extend(composed_card_hash_errors(package_dir, expected_poster_style=selected_poster_style))
     images_dir = (package_dir / "images").resolve()
     raw_dir = (package_dir / "raw").resolve()
     plan = story.get("card_plan", [])
