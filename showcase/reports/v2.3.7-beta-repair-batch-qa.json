@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "ok": true,
-  "batch": "T:\\Programming\\Project\\codex\\creator\\readmd\\showcase\\reports\\v2.3.7-beta-repair-packages.json",
+  "batch": "v2.3.7-beta-repair-packages.json",
   "status": "paused_for_operator_review",
   "package_count": 3,
   "packages": [

@@ -259,6 +259,10 @@ def _collect_review_details(package_dir: Path, entry: dict[str, Any], package_sh
 def validate_batch(batch_path: Path, *, root: Path | None = None) -> dict[str, Any]:
     batch_path = batch_path.resolve()
     root = (root or batch_path.parents[2]).resolve()
+    try:
+        batch_source = batch_path.relative_to(root).as_posix()
+    except ValueError:
+        batch_source = batch_path.name
     batch = json.loads(batch_path.read_text(encoding="utf-8"))
     if batch.get("schema_version") != 1:
         raise ValueError("repair batch schema_version must be 1")
@@ -332,7 +336,7 @@ def validate_batch(batch_path: Path, *, root: Path | None = None) -> dict[str, A
     return {
         "schema_version": 1,
         "ok": not all_errors,
-        "batch": str(batch_path),
+        "batch": batch_source,
         "status": batch.get("status"),
         "package_count": len(entries),
         "packages": package_results,
