@@ -1,6 +1,6 @@
 date,channel,language,workflow_cluster,title_or_hook,published_url,rule_check,status,substantive_replies,qualified_visits,release_downloads,issues_opened,stars_snapshot,follow_up_owner,next_action
 2026-08-25,GitHub Discussions,en,multi,Five workflow guides and one feedback question,https://github.com/Natsummerance/readMD/discussions/12#discussioncomment-18147161,passed,published,0,0,0,0,18,maintainer,Monitor for 48 hours and answer technical questions
-2026-08-26,GitHub Discussions,zh-en,beta4,Safer presenting lighter startup and local-first Markdown,,,approved_not_published,0,0,0,0,18,maintainer,Publish after merge then record discussion URL
+2026-08-26,GitHub Discussions,zh-en,beta4,Safer presenting lighter startup and local-first Markdown,https://github.com/Natsummerance/readMD/discussions/46,passed,published,0,0,0,0,18,maintainer,Monitor for 48 hours and answer technical questions
 2026-08-26,X or Mastodon,en,long-files,A 9000-line Markdown draft should not freeze,,,not_started,0,0,0,0,18,maintainer,Check community rules and publish
 2026-08-27,Reddit,en,research-multi,Long research notes citations and presentations,,,,not_started,0,0,0,0,18,maintainer,Complete rule check before posting
 2026-08-28,V2EX,zh-cn,multi,ReadMD 本地 Markdown 工作流,,,not_started,0,0,0,0,18,maintainer,Adapt body for V2EX

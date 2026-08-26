@@ -16,7 +16,11 @@
   "transmission_review": {
     "method": "dbs-spread five-theory decoder",
     "silence_spiral": "Users worry that a local tool will quietly upload documents or break their existing files.",
-    "uses_and_gratifications": ["information value", "control over local material", "social capital when sharing polished documents"],
+    "uses_and_gratifications": [
+      "information value",
+      "control over local material",
+      "social capital when sharing polished documents"
+    ],
     "framing": "Stand with people whose Markdown is the canonical artifact, not with a service that owns the workspace.",
     "two_step_flow": "First communicators are technical writers, researchers, students, and support engineers who exchange long source files.",
     "cognitive_consistency": "Confirm that local control matters while challenging users to verify checksums and review converted structure.",
@@ -60,12 +64,24 @@
   "final_decision_meeting": {
     "status": "approved_for_publication",
     "score": 9.86,
-    "participants": ["product", "technical accuracy", "transmission", "community compliance"],
+    "participants": [
+      "product",
+      "technical accuracy",
+      "transmission",
+      "community compliance"
+    ],
     "conditions": [
       "Publish only in the Announcements category.",
       "Verify the official site, both AI-corpus URLs, release API, and every download asset immediately before mutation.",
       "Record the actual discussion number and URL after publication.",
       "Monitor replies for 48 hours and answer technical questions before new distribution."
     ]
+  },
+  "publication": {
+    "status": "published",
+    "number": 46,
+    "url": "https://github.com/Natsummerance/readMD/discussions/46",
+    "category": "Announcements",
+    "published_at": "2026-08-26T06:32:37Z"
   }
 }
