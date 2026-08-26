@@ -288,4 +288,37 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/bibtex-citations/"/>
     <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
   </url>
+<url>
+    <loc>https://readmd.asia/pdf-to-markdown/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://readmd.asia/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/pdf-to-markdown/"/>
+    <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.8</priority>
+  </url><url>
+    <loc>https://readmd.asia/zh-cn/pdf-to-markdown/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://readmd.asia/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/pdf-to-markdown/"/>
+    <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url><url>
+    <loc>https://readmd.asia/zh-tw/pdf-to-markdown/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://readmd.asia/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/pdf-to-markdown/"/>
+    <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url><url>
+    <loc>https://readmd.asia/ja/pdf-to-markdown/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://readmd.asia/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/pdf-to-markdown/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://readmd.asia/pdf-to-markdown/"/>
+    <lastmod>2026-08-26</lastmod><changefreq>weekly</changefreq><priority>0.7</priority>
+  </url>
 </urlset>

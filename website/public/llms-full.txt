@@ -143,6 +143,12 @@ Dedicated answer: https://readmd.asia/convert-to-markdown/
 
 Keep DOCX, PPTX, XLSX, PDF, HTML, or LaTeX sources on the local device and add them to ReadMD's converter; single files, batches, and supported folders are accepted, with drag-and-drop for batch work. Local conversion does not require uploading the source to a web form. Review headings, lists, tables, quotations, math, image references, and scanned-text output afterward because proprietary layouts do not always have a one-to-one Markdown equivalent.
 
+
+## Task Guide: PDF To Markdown
+
+Dedicated answer: https://readmd.asia/pdf-to-markdown/
+
+Keep the PDF local and identify whether it is text-based or scanned. Add it to ReadMD's converter, generate Markdown, and review headings, lists, tables, reading order, formulas, captions, names, and numbers before saving. Scanned pages use qualified local OCR on supported platforms; OCR output is a draft for human review rather than a guaranteed perfect transcription.
 ## Task Guide: Scans And Screenshots To Markdown
 
 Dedicated answer: https://readmd.asia/scan-to-markdown/

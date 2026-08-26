@@ -7,6 +7,7 @@
 - [超大 Markdown 文件](https://readmd.asia/zh-cn/large-markdown-files/): 面向超长文档的语义分页、搜索、目录导航和非破坏显示修复。
 - [Markdown 转幻灯](https://readmd.asia/zh-cn/markdown-to-slides/): 用同一份源文件直接放映标题、代码、公式、图表和表格。
 - [文档转 Markdown](https://readmd.asia/zh-cn/convert-to-markdown/): 本地转换 DOCX、PPTX、XLSX、PDF、HTML 和 LaTeX，并复核生成结构。
+- [PDF 转 Markdown](https://readmd.asia/zh-cn/pdf-to-markdown/): 面向文字型 PDF 和扫描文档的合格本地转换与复核工作流。
 - [扫描件转 Markdown](https://readmd.asia/zh-cn/scan-to-markdown/): 在 Windows 和 macOS 使用本机离线 OCR 提取扫描页或截图文字。
 - [BibTeX 引用](https://readmd.asia/zh-cn/bibtex-citations/): 把同目录 `.bib` 文献库连接到内联引用徽章、来源卡片、可复制 BibTeX 和参考文献汇总。
 - [下载页](https://readmd.asia/zh-cn/download/): Windows、macOS、Linux、国产系统、编辑器和 MCP 包的下载路径。
