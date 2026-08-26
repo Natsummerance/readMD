@@ -6226,6 +6226,15 @@ class RepairBatchTest(unittest.TestCase):
                     "capture": {"viewport": "960x720", "scale": 1},
                 }],
             }),
+            "evidence/release-notes.md": f"# {release}\n",
+            "evidence/release.diff": "diff --git a/a b/a\n",
+            "evidence/evidence-manifest.json": json.dumps({
+                "schema_version": 1,
+                "artifacts": {
+                    "release-notes.md": {"path": "evidence/release-notes.md", "bytes": len(release) + 3, "sha256": hashlib.sha256(f"# {release}\n".encode()).hexdigest()},
+                    "release.diff": {"path": "evidence/release.diff", "bytes": 26, "sha256": hashlib.sha256(b"diff --git a/a b/a\n").hexdigest()},
+                },
+            }),
             **{f"images/{name}": path.read_bytes() for name, path in images.items()},
             raw_name: raw.read_bytes(),
             "wechat/wechat-qa.json": json.dumps({"ok": True}),
@@ -6273,6 +6282,14 @@ class RepairBatchTest(unittest.TestCase):
             report = validate_repair_batch.validate_batch(batch, root=root)
 
         self.assertTrue(report["ok"], report["errors"])
+        review_html = validate_repair_batch.render_html(report)
+        self.assertIn("第一篇正文，包含具体工作流和提问。", review_html)
+        self.assertIn("真实镜头", review_html)
+        self.assertIn("Evidence hashes", review_html)
+        self.assertNotIn("<script", review_html.lower())
+        self.assertNotIn("class=", review_html.lower())
+        self.assertNotIn("id=", review_html.lower())
+        self.assertNotIn("<img", review_html.lower())
 
     def test_rejects_cross_package_duplicate_body(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

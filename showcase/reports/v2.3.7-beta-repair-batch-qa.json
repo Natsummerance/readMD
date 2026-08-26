@@ -19,7 +19,276 @@
       ],
       "semantic_image_count": 8,
       "raw_shot_count": 8,
-      "body": "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。\n\n先说清楚：这是 ReadMD v2.3.7-beta.1 预览版，文件仍然保留在你自己的电脑里。\n\n这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。\n\n放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。\n\n它没有脱离原来的工作流：科研图表留在文档里、改稿时回到同屏预览。\n\n下面的画面来自当前版本真实运行状态，不是概念图。\n\n还有一些不适合单独拍图的底层修复也在这版里，比如顶栏交互升级与禅模式 (Zen Mode) 全局常驻；侧边「更多」菜单重构与文档状态动态联动。它们不抢画面，但会让日常使用更稳。\n\n收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。\n\n渲染阶段只处理显示结果，不会替你改写原始 Markdown 文件。\n\n如果你常处理课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。\n\n安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 Natsummerance/readMD，进仓库后点 Releases 就能找到对应平台。\n\n你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。"
+      "body": "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。\n\n先说清楚：这是 ReadMD v2.3.7-beta.1 预览版，文件仍然保留在你自己的电脑里。\n\n这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。\n\n放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。\n\n它没有脱离原来的工作流：科研图表留在文档里、改稿时回到同屏预览。\n\n下面的画面来自当前版本真实运行状态，不是概念图。\n\n还有一些不适合单独拍图的底层修复也在这版里，比如顶栏交互升级与禅模式 (Zen Mode) 全局常驻；侧边「更多」菜单重构与文档状态动态联动。它们不抢画面，但会让日常使用更稳。\n\n收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。\n\n渲染阶段只处理显示结果，不会替你改写原始 Markdown 文件。\n\n如果你常处理课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。\n\n安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 Natsummerance/readMD，进仓库后点 Releases 就能找到对应平台。\n\n你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。",
+      "review": {
+        "release": "v2.3.7-beta.1",
+        "version_state": "prerelease",
+        "package_sha256": "e4a50a251bba5fc2e32aa3b14f2bbe9d9f56dd9be281553e1eaee4f691b98030",
+        "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+        "decision_rule": "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
+        "title": "不用重做PPT，Markdown直接放映",
+        "title_formula_id": "#36",
+        "title_source_template": "没有 [资源]，也能 [结果]",
+        "title_adaptation": "把缺少的资源换成要移除的重复步骤，结果绑定产品机制。",
+        "variant_id": "outcome-led__36",
+        "hook_type": "outcome-led",
+        "copy_frame": "core",
+        "primary_shot": "presentation.reveal",
+        "topics": [
+          "Markdown",
+          "PPT",
+          "演讲",
+          "程序员",
+          "效率工具"
+        ],
+        "source_urls": [
+          "https://github.com/Natsummerance/readMD/releases/tag/v2.3.7-beta.1",
+          "https://github.com/Natsummerance/readMD/compare/v2.3.6...v2.3.7-beta.1"
+        ],
+        "body_paragraphs": [
+          "文档已经写完，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。",
+          "先说清楚：这是 ReadMD v2.3.7-beta.1 预览版，文件仍然保留在你自己的电脑里。",
+          "这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。",
+          "放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。",
+          "它没有脱离原来的工作流：科研图表留在文档里、改稿时回到同屏预览。",
+          "下面的画面来自当前版本真实运行状态，不是概念图。",
+          "还有一些不适合单独拍图的底层修复也在这版里，比如顶栏交互升级与禅模式 (Zen Mode) 全局常驻；侧边「更多」菜单重构与文档状态动态联动。它们不抢画面，但会让日常使用更稳。",
+          "收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
+          "渲染阶段只处理显示结果，不会替你改写原始 Markdown 文件。",
+          "如果你常处理课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。",
+          "安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 Natsummerance/readMD，进仓库后点 Releases 就能找到对应平台。",
+          "你会先拿哪一份 Markdown 试放映？评论区说说场景，我会把高频路径排进下一轮打磨。"
+        ],
+        "invisible_fixes": [
+          "顶栏交互升级与禅模式 (Zen Mode) 全局常驻",
+          "侧边「更多」菜单重构与文档状态动态联动"
+        ],
+        "claims": [
+          {
+            "user_value": "打开文档就能看到完整排版、目录和公式渲染",
+            "shot_ids": [
+              "overview.reader"
+            ],
+            "sources": [
+              "README.md",
+              "showcase/fixtures/readmd-showcase.md"
+            ]
+          },
+          {
+            "user_value": "写完的 Markdown 能直接上台放映，代码、表格和公式不会被切片",
+            "shot_ids": [
+              "presentation.reveal"
+            ],
+            "sources": [
+              "release/release_notes.md",
+              "assets/js/reader/render.js",
+              "evidence/release-notes.md"
+            ]
+          },
+          {
+            "user_value": "科研图表从语法记忆变成面板选择",
+            "shot_ids": [
+              "editor.diagram-picker"
+            ],
+            "sources": [
+              "assets/js/editor/editor.js",
+              "evidence/release-notes.md"
+            ]
+          },
+          {
+            "user_value": "学术公式和定理盒子保持论文级排版",
+            "shot_ids": [
+              "academic.latex-bib"
+            ],
+            "sources": [
+              "README.md",
+              "showcase/fixtures/readmd-showcase.md",
+              "evidence/release-notes.md"
+            ]
+          },
+          {
+            "user_value": "讲稿和源文件在同一处修改，预览不会跑偏",
+            "shot_ids": [
+              "overview.editor"
+            ],
+            "sources": [
+              "assets/js/editor/editor.js",
+              "ui-tests/readmd-ui.spec.js"
+            ]
+          },
+          {
+            "user_value": "资料进入本地工作台后，转换和阅读不散落在多个工具里",
+            "shot_ids": [
+              "convert.home"
+            ],
+            "sources": [
+              "assets/index.html"
+            ]
+          }
+        ],
+        "shots": [
+          {
+            "id": "overview.reader",
+            "name": "软件完整主界面",
+            "role": "pure_ui_hero",
+            "description": "ReadMD 完整视窗：暗色主题、目录大纲、LaTeX 定理与图表混排真实渲染",
+            "viewport": "960x1280",
+            "scale": 2,
+            "sha256": "a375a4e519b06036bc6c035db747943d8b9ee7195fc92df9328901a9bd06679e"
+          },
+          {
+            "id": "presentation.reveal",
+            "name": "Reveal.js 演说模式放映",
+            "role": "annotated_ui",
+            "description": "Markdown 直接变幻灯片：悬浮工具栏 + 放映画面",
+            "viewport": "1280x720",
+            "scale": 2,
+            "sha256": "31dbc91d98ee629b3e7cb7e70ad6a257bd9a7cef42961133f71801686d822791"
+          },
+          {
+            "id": "editor.diagram-picker",
+            "name": "科学图表选择器",
+            "role": "annotated_ui",
+            "description": "PlantUML / Graphviz / WaveDrom / Vega / TikZ 可视化插入面板",
+            "viewport": "1024x768",
+            "scale": 2,
+            "sha256": "8bf35671af1e1bcf2d4c02468327f624476cf576ccab2befaf7b5ebd52c4dac7"
+          },
+          {
+            "id": "academic.latex-bib",
+            "name": "LaTeX PRO 学术排版",
+            "role": "annotated_ui",
+            "description": "多行数学公式 + theorem/proof 学术 Callout 盒子真实渲染",
+            "viewport": "960x720",
+            "scale": 2,
+            "sha256": "b569a6c9eb6ec86fcfd565e7c779bf9fb5e39753b037d79dd4f9dad516bd81b7"
+          },
+          {
+            "id": "overview.editor",
+            "name": "分栏实时编辑预览",
+            "role": "annotated_ui",
+            "description": "CodeMirror 6 编辑器与实时预览左右分栏，顶部格式工具栏",
+            "viewport": "960x720",
+            "scale": 2,
+            "sha256": "c92a291e32146230b0ba9b220bc036dfd7fd8b70c882d3d3ae502a63e1ab53bd"
+          },
+          {
+            "id": "convert.home",
+            "name": "欢迎页六模块入口",
+            "role": "annotated_ui",
+            "description": "打开 / 文件夹 / AI / 万物转 MD / 网页转 MD / 扫描 OCR 六大入口",
+            "viewport": "1024x640",
+            "scale": 2,
+            "sha256": "bda8b44dba8b106a470f14f257d59a2fbbf75f9a7303b0e4ae1a685699e6bd2c"
+          }
+        ],
+        "cards": [
+          {
+            "file": "xhs-01-cover.jpg",
+            "role": "cover",
+            "title": "写完就能讲",
+            "caption": "Markdown 直接放映，不用重做 PPT。",
+            "ui_min_ratio": 0.0,
+            "ui_area_ratio": 0.44395061728395063,
+            "sha256": "bead993772b9224c3411afcc029c071d1112c64c3ec5d2424f2343fa7ba1bdd8"
+          },
+          {
+            "file": "xhs-02-overview-reader.jpg",
+            "role": "pure_ui_hero",
+            "title": "软件完整主界面",
+            "caption": "打开文档就能看到完整排版、目录和公式渲染",
+            "ui_min_ratio": 0.7,
+            "ui_area_ratio": 0.880570987654321,
+            "sha256": "df0554a47a3c4a8e63929d55d508d53bb2fa8654692e0e5a41a6074dcae39a27"
+          },
+          {
+            "file": "xhs-03-presentation-reveal.jpg",
+            "role": "annotated_ui",
+            "title": "Reveal.js 演说模式放映",
+            "caption": "写完的 Markdown 能直接上台放映，代码、表格和公式不会被切片",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "e24767c4b53989d5b96541f921cafc58a5a864c061763c35f4e81d8565cb4638"
+          },
+          {
+            "file": "xhs-04-editor-diagram-picker.jpg",
+            "role": "annotated_ui",
+            "title": "科学图表选择器",
+            "caption": "科研图表从语法记忆变成面板选择",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "8e51a92ed1395a4ddf41b106c5369597669a69a95940a47bf260f3964ac76d33"
+          },
+          {
+            "file": "xhs-05-academic-latex-bib.jpg",
+            "role": "annotated_ui",
+            "title": "LaTeX PRO 学术排版",
+            "caption": "学术公式和定理盒子保持论文级排版",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "5a9a131925af7dbc7781d85feab1c8bca550de9554db3ffa253f41409d85010e"
+          },
+          {
+            "file": "xhs-06-overview-editor.jpg",
+            "role": "annotated_ui",
+            "title": "分栏实时编辑预览",
+            "caption": "讲稿和源文件在同一处修改，预览不会跑偏",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "acf4f93577b4d2545427f91ccf3cb209cab4021b4250cb8bcafca9296ed39bc4"
+          },
+          {
+            "file": "xhs-07-convert-home.jpg",
+            "role": "annotated_ui",
+            "title": "欢迎页六模块入口",
+            "caption": "资料进入本地工作台后，转换和阅读不散落在多个工具里",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "2e8d44473c07d340306a7bb8cebee62e73684864c368dc3ff7294401c4c98c19"
+          },
+          {
+            "file": "xhs-08-summary.jpg",
+            "role": "summary",
+            "title": "一条放映路",
+            "caption": "写作、修改和上台共用一份文件。",
+            "ui_min_ratio": 0.3,
+            "ui_area_ratio": 0.5104835390946502,
+            "sha256": "b4673242aec78b085895e1a3a5391ad3daa803acab6740994faf597236960ff6"
+          }
+        ],
+        "semantic_image_count": 8,
+        "raw_shot_count": 8,
+        "qa": {
+          "ok": true,
+          "semantic_score": 100,
+          "style_metrics": {
+            "sentence_count": 16,
+            "length_coefficient_of_variation": 0.479,
+            "generic_adjective_count": 0,
+            "cliche_count": 0,
+            "fixed_connector_count": 0,
+            "reversal_count": 0,
+            "depth_term_count": 0,
+            "blessing_close": false,
+            "duplicate_terminal_punctuation_count": 0,
+            "emoji_count": 0,
+            "concrete_term_count": 10,
+            "resonance_term_count": 10
+          },
+          "hot_post_passed": 12,
+          "hot_post_total": 12
+        },
+        "evidence": {
+          "release-notes.md": {
+            "sha256": "95173cfbce173e2381927bab61f9832b0c2a61a7d9d7f1425acb491828e22b26",
+            "bytes": 4628
+          },
+          "release.diff": {
+            "sha256": "b98d2479b43dca38dba1caef876bab24f852d586e4b337afcc4b687d5d927419",
+            "bytes": 1937626
+          }
+        }
+      }
     },
     {
       "release": "v2.3.7-beta.2",
@@ -35,7 +304,275 @@
       ],
       "semantic_image_count": 8,
       "raw_shot_count": 8,
-      "body": "如果你要把笔记变成课程讲义、组会报告或论文汇报，就知道重做 PPT 有多烦。ReadMD 把这一步砍掉：Markdown 直接放映。\n\n先说清楚：这是 ReadMD v2.3.7-beta.2 预览版，文件仍然保留在你自己的电脑里。\n\n这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。\n\n放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。\n\n它没有脱离原来的工作流：代码示例可以就地验证、科研图表留在文档里。\n\n下面的画面来自当前版本真实运行状态，不是概念图。\n\n还有一些不适合单独拍图的底层修复也在这版里，比如禅模式（Zen Mode）关闭交互重构（仿 Windows 自动隐藏任务栏）；样式定制（Custom Styles Modal）前端风格与功能重构。它们不抢画面，但会让日常使用更稳。\n\n收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。\n\n如果你常处理课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。\n\n安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 Natsummerance/readMD，进仓库后点 Releases 就能找到对应平台。\n\n你下一份要上台的 Markdown 是讲义、组会报告还是论文？评论区说说场景。"
+      "body": "如果你要把笔记变成课程讲义、组会报告或论文汇报，就知道重做 PPT 有多烦。ReadMD 把这一步砍掉：Markdown 直接放映。\n\n先说清楚：这是 ReadMD v2.3.7-beta.2 预览版，文件仍然保留在你自己的电脑里。\n\n这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。\n\n放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。\n\n它没有脱离原来的工作流：代码示例可以就地验证、科研图表留在文档里。\n\n下面的画面来自当前版本真实运行状态，不是概念图。\n\n还有一些不适合单独拍图的底层修复也在这版里，比如禅模式（Zen Mode）关闭交互重构（仿 Windows 自动隐藏任务栏）；样式定制（Custom Styles Modal）前端风格与功能重构。它们不抢画面，但会让日常使用更稳。\n\n收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。\n\n如果你常处理课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。\n\n安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 Natsummerance/readMD，进仓库后点 Releases 就能找到对应平台。\n\n你下一份要上台的 Markdown 是讲义、组会报告还是论文？评论区说说场景。",
+      "review": {
+        "release": "v2.3.7-beta.2",
+        "version_state": "prerelease",
+        "package_sha256": "6b0d141fe2bc86fbd2bf84acce2f5528d6ea85bcf91c316149e001eb4076d3f9",
+        "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+        "decision_rule": "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
+        "title": "Markdown写完，居然能直接上台",
+        "title_formula_id": "#9",
+        "title_source_template": "达到 [结果]，令人意想不到的秘密",
+        "title_adaptation": "用意外信号保留好奇缺口，不虚构秘密或数据。",
+        "variant_id": "identity-led__9",
+        "hook_type": "identity-led",
+        "copy_frame": "core",
+        "primary_shot": "presentation.reveal",
+        "topics": [
+          "Markdown",
+          "PPT",
+          "演讲",
+          "程序员",
+          "效率工具"
+        ],
+        "source_urls": [
+          "https://github.com/Natsummerance/readMD/releases/tag/v2.3.7-beta.2",
+          "https://github.com/Natsummerance/readMD/compare/v2.3.7-beta.1...v2.3.7-beta.2"
+        ],
+        "body_paragraphs": [
+          "如果你要把笔记变成课程讲义、组会报告或论文汇报，就知道重做 PPT 有多烦。ReadMD 把这一步砍掉：Markdown 直接放映。",
+          "先说清楚：这是 ReadMD v2.3.7-beta.2 预览版，文件仍然保留在你自己的电脑里。",
+          "这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。",
+          "放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。",
+          "它没有脱离原来的工作流：代码示例可以就地验证、科研图表留在文档里。",
+          "下面的画面来自当前版本真实运行状态，不是概念图。",
+          "还有一些不适合单独拍图的底层修复也在这版里，比如禅模式（Zen Mode）关闭交互重构（仿 Windows 自动隐藏任务栏）；样式定制（Custom Styles Modal）前端风格与功能重构。它们不抢画面，但会让日常使用更稳。",
+          "收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
+          "如果你常处理课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。",
+          "安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 Natsummerance/readMD，进仓库后点 Releases 就能找到对应平台。",
+          "你下一份要上台的 Markdown 是讲义、组会报告还是论文？评论区说说场景。"
+        ],
+        "invisible_fixes": [
+          "禅模式（Zen Mode）关闭交互重构（仿 Windows 自动隐藏任务栏）",
+          "样式定制（Custom Styles Modal）前端风格与功能重构"
+        ],
+        "claims": [
+          {
+            "user_value": "打开文档就能看到完整排版、目录和公式渲染",
+            "shot_ids": [
+              "overview.reader"
+            ],
+            "sources": [
+              "README.md",
+              "showcase/fixtures/readmd-showcase.md"
+            ]
+          },
+          {
+            "user_value": "写完的 Markdown 能直接上台放映，代码、表格和公式不会被切片",
+            "shot_ids": [
+              "presentation.reveal"
+            ],
+            "sources": [
+              "release/release_notes.md",
+              "assets/js/reader/render.js",
+              "evidence/release-notes.md"
+            ]
+          },
+          {
+            "user_value": "科研图表从语法记忆变成面板选择",
+            "shot_ids": [
+              "editor.diagram-picker"
+            ],
+            "sources": [
+              "assets/js/editor/editor.js",
+              "evidence/release-notes.md"
+            ]
+          },
+          {
+            "user_value": "文档里的代码可以直接运行并保留输出",
+            "shot_ids": [
+              "editor.code-chunk"
+            ],
+            "sources": [
+              "assets/js/reader/render.js",
+              "showcase/fixtures/readmd-showcase.md",
+              "evidence/release-notes.md"
+            ]
+          },
+          {
+            "user_value": "讲稿和源文件在同一处修改，预览不会跑偏",
+            "shot_ids": [
+              "overview.editor"
+            ],
+            "sources": [
+              "assets/js/editor/editor.js",
+              "ui-tests/readmd-ui.spec.js"
+            ]
+          },
+          {
+            "user_value": "资料进入本地工作台后，转换和阅读不散落在多个工具里",
+            "shot_ids": [
+              "convert.home"
+            ],
+            "sources": [
+              "assets/index.html"
+            ]
+          }
+        ],
+        "shots": [
+          {
+            "id": "overview.reader",
+            "name": "软件完整主界面",
+            "role": "pure_ui_hero",
+            "description": "ReadMD 完整视窗：暗色主题、目录大纲、LaTeX 定理与图表混排真实渲染",
+            "viewport": "960x1280",
+            "scale": 2,
+            "sha256": "653761108466229a9066e5c479e13681ba4e03bd11497dea142e316b4ecc49f7"
+          },
+          {
+            "id": "presentation.reveal",
+            "name": "Reveal.js 演说模式放映",
+            "role": "annotated_ui",
+            "description": "Markdown 直接变幻灯片：悬浮工具栏 + 放映画面",
+            "viewport": "1280x720",
+            "scale": 2,
+            "sha256": "31dbc91d98ee629b3e7cb7e70ad6a257bd9a7cef42961133f71801686d822791"
+          },
+          {
+            "id": "editor.diagram-picker",
+            "name": "科学图表选择器",
+            "role": "annotated_ui",
+            "description": "PlantUML / Graphviz / WaveDrom / Vega / TikZ 可视化插入面板",
+            "viewport": "1024x768",
+            "scale": 2,
+            "sha256": "7b17982d24b9748d9de9fcb099a0447422cb0f83284e524b4fdf92b06c83a8a9"
+          },
+          {
+            "id": "editor.code-chunk",
+            "name": "可执行代码块卡片",
+            "role": "annotated_ui",
+            "description": "Code Chunk 就地运行：运行按钮、状态徽标与输出区",
+            "viewport": "960x720",
+            "scale": 2,
+            "sha256": "b93b2b52f804351177072a807c002e54fbd08401a35edc537c9116b4cea7da7d"
+          },
+          {
+            "id": "overview.editor",
+            "name": "分栏实时编辑预览",
+            "role": "annotated_ui",
+            "description": "CodeMirror 6 编辑器与实时预览左右分栏，顶部格式工具栏",
+            "viewport": "960x720",
+            "scale": 2,
+            "sha256": "9655a591a40a90dd1381645886c383f5f3dcddb15f57582e4967668714860227"
+          },
+          {
+            "id": "convert.home",
+            "name": "欢迎页六模块入口",
+            "role": "annotated_ui",
+            "description": "打开 / 文件夹 / AI / 万物转 MD / 网页转 MD / 扫描 OCR 六大入口",
+            "viewport": "1024x640",
+            "scale": 2,
+            "sha256": "f36cbcce3ee600072a19d654f5e1025934fe1b6ff96104098aba495b5528fd1f"
+          }
+        ],
+        "cards": [
+          {
+            "file": "xhs-01-cover.jpg",
+            "role": "cover",
+            "title": "为何直接讲",
+            "caption": "同一份 Markdown 从写作走到上台。",
+            "ui_min_ratio": 0.0,
+            "ui_area_ratio": 0.44395061728395063,
+            "sha256": "6e3a7a4f719a971e3416636de47e961b62201b3c8b76b3a24366ded48914671f"
+          },
+          {
+            "file": "xhs-02-overview-reader.jpg",
+            "role": "pure_ui_hero",
+            "title": "软件完整主界面",
+            "caption": "打开文档就能看到完整排版、目录和公式渲染",
+            "ui_min_ratio": 0.7,
+            "ui_area_ratio": 0.880570987654321,
+            "sha256": "43790e7ac140fd3ba7c74fe044ff5875daa9eaa50e3e94e4060ebd69cd590c9a"
+          },
+          {
+            "file": "xhs-03-presentation-reveal.jpg",
+            "role": "annotated_ui",
+            "title": "Reveal.js 演说模式放映",
+            "caption": "写完的 Markdown 能直接上台放映，代码、表格和公式不会被切片",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "686e2726870719c3ae45b1a406036121efbe40c408f90c883fe63e821072a767"
+          },
+          {
+            "file": "xhs-04-editor-diagram-picker.jpg",
+            "role": "annotated_ui",
+            "title": "科学图表选择器",
+            "caption": "科研图表从语法记忆变成面板选择",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "462ed6485b51e381c76a3118d706db2384197655364f413989a5b5c01662c50e"
+          },
+          {
+            "file": "xhs-05-editor-code-chunk.jpg",
+            "role": "annotated_ui",
+            "title": "可执行代码块卡片",
+            "caption": "文档里的代码可以直接运行并保留输出",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "18b9dc2ae42afdc6d682559c457711d6baef2c4bdc42588af9acbc4b66c15982"
+          },
+          {
+            "file": "xhs-06-overview-editor.jpg",
+            "role": "annotated_ui",
+            "title": "分栏实时编辑预览",
+            "caption": "讲稿和源文件在同一处修改，预览不会跑偏",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "11858d3f866c6dd7d28c588c20306f09a07ead1c00f211a3726ca5b4827ca9b7"
+          },
+          {
+            "file": "xhs-07-convert-home.jpg",
+            "role": "annotated_ui",
+            "title": "欢迎页六模块入口",
+            "caption": "资料进入本地工作台后，转换和阅读不散落在多个工具里",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "c1abcb428f6edf2db2b14d81203e8dfde56196127c887b2700e63e539a36a2a2"
+          },
+          {
+            "file": "xhs-08-summary.jpg",
+            "role": "summary",
+            "title": "一条放映路",
+            "caption": "写作、修改和上台共用一份文件。",
+            "ui_min_ratio": 0.3,
+            "ui_area_ratio": 0.5104835390946502,
+            "sha256": "2262e50e232de4e62816603b506254b561c30f49640bf0bd861f0ed82c49b416"
+          }
+        ],
+        "semantic_image_count": 8,
+        "raw_shot_count": 8,
+        "qa": {
+          "ok": true,
+          "semantic_score": 100,
+          "style_metrics": {
+            "sentence_count": 15,
+            "length_coefficient_of_variation": 0.565,
+            "generic_adjective_count": 0,
+            "cliche_count": 0,
+            "fixed_connector_count": 0,
+            "reversal_count": 0,
+            "depth_term_count": 0,
+            "blessing_close": false,
+            "duplicate_terminal_punctuation_count": 0,
+            "emoji_count": 0,
+            "concrete_term_count": 10,
+            "resonance_term_count": 8
+          },
+          "hot_post_passed": 12,
+          "hot_post_total": 12
+        },
+        "evidence": {
+          "release-notes.md": {
+            "sha256": "e0c2ee4b5493f5cde4c6478649d88e3c436e2bb226bb6f4f93e0d4796afeb42e",
+            "bytes": 3775
+          },
+          "release.diff": {
+            "sha256": "2f656a68f7982fd45017d023e89ebd32e716eee8804d0af87a77bc238309fc8b",
+            "bytes": 203811
+          }
+        }
+      }
     },
     {
       "release": "v2.3.7-beta.3",
@@ -51,7 +588,278 @@
       ],
       "semantic_image_count": 8,
       "raw_shot_count": 8,
-      "body": "很多人把 Markdown 写完就停在笔记里；其实同一份文件可以直接上台放映。ReadMD 让写作和演示留在同一条路径。\n\n先说清楚：这是 ReadMD v2.3.7-beta.3 预览版，文件仍然保留在你自己的电脑里。\n\n这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。\n\n放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。\n\n它没有脱离原来的工作流：代码示例可以就地验证、改稿时回到同屏预览。\n\n下面的画面来自当前版本真实运行状态，不是概念图。\n\n还有一些不适合单独拍图的底层修复也在这版里，比如演讲演示完全本地离线渲染；禅模式一次进入，真正沉浸。它们不抢画面，但会让日常使用更稳。\n\n收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。\n\n渲染阶段只处理显示结果，不会替你改写原始 Markdown 文件。\n\n所有演示都来自同一个本地工作流，不需要先把文档上传到别处。\n\n如果你常处理课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。\n\n安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 Natsummerance/readMD，进仓库后点 Releases 就能找到对应平台。\n\n你想先试哪类内容：代码、表格还是公式？评论区告诉我，我会优先打磨这条路径。"
+      "body": "很多人把 Markdown 写完就停在笔记里；其实同一份文件可以直接上台放映。ReadMD 让写作和演示留在同一条路径。\n\n先说清楚：这是 ReadMD v2.3.7-beta.3 预览版，文件仍然保留在你自己的电脑里。\n\n这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。\n\n放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。\n\n它没有脱离原来的工作流：代码示例可以就地验证、改稿时回到同屏预览。\n\n下面的画面来自当前版本真实运行状态，不是概念图。\n\n还有一些不适合单独拍图的底层修复也在这版里，比如演讲演示完全本地离线渲染；禅模式一次进入，真正沉浸。它们不抢画面，但会让日常使用更稳。\n\n收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。\n\n渲染阶段只处理显示结果，不会替你改写原始 Markdown 文件。\n\n所有演示都来自同一个本地工作流，不需要先把文档上传到别处。\n\n如果你常处理课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。\n\n安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 Natsummerance/readMD，进仓库后点 Releases 就能找到对应平台。\n\n你想先试哪类内容：代码、表格还是公式？评论区告诉我，我会优先打磨这条路径。",
+      "review": {
+        "release": "v2.3.7-beta.3",
+        "version_state": "prerelease",
+        "package_sha256": "e7c7ad3f56fd6370c80e1ef2ab96ddb298ede1260c7c18b48d09a9ecdffe45df",
+        "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+        "decision_rule": "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
+        "title": "给要上台讲文档的人做的MD工具",
+        "title_formula_id": "#22",
+        "title_source_template": "为 [某种特质的人] 量身定制的 [方案]",
+        "title_adaptation": "把特质人群具体化，方案落到当前产品能力。",
+        "variant_id": "mechanism-curiosity__22",
+        "hook_type": "mechanism-curiosity",
+        "copy_frame": "core",
+        "primary_shot": "presentation.reveal",
+        "topics": [
+          "Markdown",
+          "PPT",
+          "演讲",
+          "程序员",
+          "效率工具"
+        ],
+        "source_urls": [
+          "https://github.com/Natsummerance/readMD/releases/tag/v2.3.7-beta.3",
+          "https://github.com/Natsummerance/readMD/compare/v2.3.7-beta.2...v2.3.7-beta.3"
+        ],
+        "body_paragraphs": [
+          "很多人把 Markdown 写完就停在笔记里；其实同一份文件可以直接上台放映。ReadMD 让写作和演示留在同一条路径。",
+          "先说清楚：这是 ReadMD v2.3.7-beta.3 预览版，文件仍然保留在你自己的电脑里。",
+          "这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。",
+          "放映界面可以直接换主题、调字号、切开场和转场；结构保护分片会尽量保住代码块、表格和公式，不让长文档在幻灯片里被腰斩。",
+          "它没有脱离原来的工作流：代码示例可以就地验证、改稿时回到同屏预览。",
+          "下面的画面来自当前版本真实运行状态，不是概念图。",
+          "还有一些不适合单独拍图的底层修复也在这版里，比如演讲演示完全本地离线渲染；禅模式一次进入，真正沉浸。它们不抢画面，但会让日常使用更稳。",
+          "收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
+          "渲染阶段只处理显示结果，不会替你改写原始 Markdown 文件。",
+          "所有演示都来自同一个本地工作流，不需要先把文档上传到别处。",
+          "如果你常处理课程讲义、组会报告、技术分享或论文汇报，它会省掉“重新做一遍演示稿”这一步。",
+          "安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 Natsummerance/readMD，进仓库后点 Releases 就能找到对应平台。",
+          "你想先试哪类内容：代码、表格还是公式？评论区告诉我，我会优先打磨这条路径。"
+        ],
+        "invisible_fixes": [
+          "演讲演示完全本地离线渲染",
+          "禅模式一次进入，真正沉浸"
+        ],
+        "claims": [
+          {
+            "user_value": "打开文档就能看到完整排版、目录和公式渲染",
+            "shot_ids": [
+              "overview.reader"
+            ],
+            "sources": [
+              "README.md",
+              "showcase/fixtures/readmd-showcase.md"
+            ]
+          },
+          {
+            "user_value": "写完的 Markdown 能直接上台放映，代码、表格和公式不会被切片",
+            "shot_ids": [
+              "presentation.reveal"
+            ],
+            "sources": [
+              "release/release_notes.md",
+              "assets/js/reader/render.js",
+              "evidence/release-notes.md"
+            ]
+          },
+          {
+            "user_value": "学术公式和定理盒子保持论文级排版",
+            "shot_ids": [
+              "academic.latex-bib"
+            ],
+            "sources": [
+              "README.md",
+              "showcase/fixtures/readmd-showcase.md",
+              "evidence/release-notes.md"
+            ]
+          },
+          {
+            "user_value": "文档里的代码可以直接运行并保留输出",
+            "shot_ids": [
+              "editor.code-chunk"
+            ],
+            "sources": [
+              "assets/js/reader/render.js",
+              "showcase/fixtures/readmd-showcase.md",
+              "evidence/release-notes.md"
+            ]
+          },
+          {
+            "user_value": "讲稿和源文件在同一处修改，预览不会跑偏",
+            "shot_ids": [
+              "overview.editor"
+            ],
+            "sources": [
+              "assets/js/editor/editor.js",
+              "ui-tests/readmd-ui.spec.js"
+            ]
+          },
+          {
+            "user_value": "资料进入本地工作台后，转换和阅读不散落在多个工具里",
+            "shot_ids": [
+              "convert.home"
+            ],
+            "sources": [
+              "assets/index.html"
+            ]
+          }
+        ],
+        "shots": [
+          {
+            "id": "overview.reader",
+            "name": "软件完整主界面",
+            "role": "pure_ui_hero",
+            "description": "ReadMD 完整视窗：暗色主题、目录大纲、LaTeX 定理与图表混排真实渲染",
+            "viewport": "960x1280",
+            "scale": 2,
+            "sha256": "2d844a508f7913967ea2d863d747f2bf0b9ba3b1943aa9c75ea442588b9710b0"
+          },
+          {
+            "id": "presentation.reveal",
+            "name": "Reveal.js 演说模式放映",
+            "role": "annotated_ui",
+            "description": "Markdown 直接变幻灯片：悬浮工具栏 + 放映画面",
+            "viewport": "1280x720",
+            "scale": 2,
+            "sha256": "97ff365c342e4c827c90e512594a00622affd9d5695e475c887d2f6f590bd322"
+          },
+          {
+            "id": "academic.latex-bib",
+            "name": "LaTeX PRO 学术排版",
+            "role": "annotated_ui",
+            "description": "多行数学公式 + theorem/proof 学术 Callout 盒子真实渲染",
+            "viewport": "960x720",
+            "scale": 2,
+            "sha256": "d6f5c18d1e8f15923c84011664a3035af03916c34ccc1cba2340c2ed860e5ca4"
+          },
+          {
+            "id": "editor.code-chunk",
+            "name": "可执行代码块卡片",
+            "role": "annotated_ui",
+            "description": "Code Chunk 就地运行：运行按钮、状态徽标与输出区",
+            "viewport": "960x720",
+            "scale": 2,
+            "sha256": "0eef0be953f8f965b349e6fe6e717449bb90ef0c81ed9cda324b2ff751a54572"
+          },
+          {
+            "id": "overview.editor",
+            "name": "分栏实时编辑预览",
+            "role": "annotated_ui",
+            "description": "CodeMirror 6 编辑器与实时预览左右分栏，顶部格式工具栏",
+            "viewport": "960x720",
+            "scale": 2,
+            "sha256": "59247ace8453685f7f4bcdf99eefa8e644151d373bdac1737fd87eeec3b76a64"
+          },
+          {
+            "id": "convert.home",
+            "name": "欢迎页六模块入口",
+            "role": "annotated_ui",
+            "description": "打开 / 文件夹 / AI / 万物转 MD / 网页转 MD / 扫描 OCR 六大入口",
+            "viewport": "1024x640",
+            "scale": 2,
+            "sha256": "eedf849bf1da235da7175af53ff850ac5f80254c5ecd1bc3fedbb40cfe5ad354"
+          }
+        ],
+        "cards": [
+          {
+            "file": "xhs-01-cover.jpg",
+            "role": "cover",
+            "title": "上台讲文档的人",
+            "caption": "课程、组会和论文汇报都适用。",
+            "ui_min_ratio": 0.0,
+            "ui_area_ratio": 0.44395061728395063,
+            "sha256": "6207a440cbcaf57e313ff9edc381208e307dd3054f9c18cb5aae4f39fb5c6327"
+          },
+          {
+            "file": "xhs-02-overview-reader.jpg",
+            "role": "pure_ui_hero",
+            "title": "软件完整主界面",
+            "caption": "打开文档就能看到完整排版、目录和公式渲染",
+            "ui_min_ratio": 0.7,
+            "ui_area_ratio": 0.880570987654321,
+            "sha256": "6fc5231b22ecbd744dc20a244072f737c23029355151e3c040a62b743a096ea6"
+          },
+          {
+            "file": "xhs-03-presentation-reveal.jpg",
+            "role": "annotated_ui",
+            "title": "Reveal.js 演说模式放映",
+            "caption": "写完的 Markdown 能直接上台放映，代码、表格和公式不会被切片",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "fd13fd811cf6dbf0a59ccf2bb2f41143e8bbeaf6fabee82ba12f20e1a7fef522"
+          },
+          {
+            "file": "xhs-04-academic-latex-bib.jpg",
+            "role": "annotated_ui",
+            "title": "LaTeX PRO 学术排版",
+            "caption": "学术公式和定理盒子保持论文级排版",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "0deaa6a3e18215c8a289ddac7f26cca00896d7675be0f38ade1c551087a391fc"
+          },
+          {
+            "file": "xhs-05-editor-code-chunk.jpg",
+            "role": "annotated_ui",
+            "title": "可执行代码块卡片",
+            "caption": "文档里的代码可以直接运行并保留输出",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "b4c454605eb6b061385980a78336ff4cd9a64a9e75c2b66a4aa3b01b1afde216"
+          },
+          {
+            "file": "xhs-06-overview-editor.jpg",
+            "role": "annotated_ui",
+            "title": "分栏实时编辑预览",
+            "caption": "讲稿和源文件在同一处修改，预览不会跑偏",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "d1d591cd647130b3e6a01126c948575debbad199287efd67a5b328852ef2b8cb"
+          },
+          {
+            "file": "xhs-07-convert-home.jpg",
+            "role": "annotated_ui",
+            "title": "欢迎页六模块入口",
+            "caption": "资料进入本地工作台后，转换和阅读不散落在多个工具里",
+            "ui_min_ratio": 0.55,
+            "ui_area_ratio": 0.5811934156378601,
+            "sha256": "fda5112bef6bd4d37eb3723b985c471114319e2d1e6123e7088303443d6fdda0"
+          },
+          {
+            "file": "xhs-08-summary.jpg",
+            "role": "summary",
+            "title": "一条放映路",
+            "caption": "写作、修改和上台共用一份文件。",
+            "ui_min_ratio": 0.3,
+            "ui_area_ratio": 0.5104835390946502,
+            "sha256": "a979cc1df6eab48fed65cffa2ee3690b3554220e333ad3ee761e95b4ceaae9f0"
+          }
+        ],
+        "semantic_image_count": 8,
+        "raw_shot_count": 8,
+        "qa": {
+          "ok": true,
+          "semantic_score": 100,
+          "style_metrics": {
+            "sentence_count": 17,
+            "length_coefficient_of_variation": 0.427,
+            "generic_adjective_count": 0,
+            "cliche_count": 0,
+            "fixed_connector_count": 0,
+            "reversal_count": 0,
+            "depth_term_count": 0,
+            "blessing_close": false,
+            "duplicate_terminal_punctuation_count": 0,
+            "emoji_count": 0,
+            "concrete_term_count": 9,
+            "resonance_term_count": 9
+          },
+          "hot_post_passed": 12,
+          "hot_post_total": 12
+        },
+        "evidence": {
+          "release-notes.md": {
+            "sha256": "99c0920c3b8433e97501d3731faf25be00a91beaa0ce9fc5dba80624fc39fcba",
+            "bytes": 2966
+          },
+          "release.diff": {
+            "sha256": "f8f95a76e2f64b45fd6e94a0203dce522c8dad44ecb6304e0f5d7d73d5447309",
+            "bytes": 122733
+          }
+        }
+      }
     }
   ],
   "checks": {

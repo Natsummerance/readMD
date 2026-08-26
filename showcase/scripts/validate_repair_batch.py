@@ -9,12 +9,15 @@ import html
 import json
 import re
 import sys
+import tempfile
 import zipfile
 from pathlib import Path
 from typing import Any
 
 from copy_variants import jaccard_similarity, text_trigrams
 from package_content import verify_package_manifest
+import validate_package
+from watch_and_publish import safe_extract
 
 
 BODY_NEAR_DUPLICATE_LIMIT = 0.85
@@ -163,6 +166,96 @@ def _validate_archive(package_path: Path, entry: dict[str, Any]) -> dict[str, An
     }
 
 
+def _collect_review_details(package_dir: Path, entry: dict[str, Any], package_sha256: str) -> dict[str, Any]:
+    load_json = lambda name: json.loads((package_dir / name).read_text(encoding="utf-8"))
+    story = load_json("story.json")
+    metadata = load_json("metadata.json")
+    composition = load_json("composition.json")
+    capture = load_json("raw/capture.json")
+    copy_review = load_json("copy-review.json")
+    pattern_audit = load_json("pattern-audit.json")
+    evidence = load_json("evidence/evidence-manifest.json")
+    title = (package_dir / "title.txt").read_text(encoding="utf-8").strip()
+    body = "\n".join((package_dir / "body.txt").read_text(encoding="utf-8").splitlines()).strip()
+
+    story_shots = {str(item.get("id")): item for item in story.get("shots", [])}
+    capture_shots = {str(item.get("shot_id")): item for item in capture.get("shots", [])}
+    shots = []
+    for shot_id in story.get("selected_shots", []):
+        story_shot = story_shots.get(shot_id, {})
+        captured = capture_shots.get(shot_id, {})
+        shots.append({
+            "id": shot_id,
+            "name": story_shot.get("name"),
+            "role": story_shot.get("role") or captured.get("role"),
+            "description": story_shot.get("description"),
+            "viewport": captured.get("capture", {}).get("viewport"),
+            "scale": captured.get("capture", {}).get("scale"),
+            "sha256": captured.get("sha256"),
+        })
+
+    cards = []
+    composition_by_file = {str(item.get("file")): item for item in composition.get("cards", [])}
+    for card in story.get("card_plan", []):
+        filename = str(card.get("file", ""))
+        composed = composition_by_file.get(filename, {})
+        cards.append({
+            "file": filename,
+            "role": card.get("role"),
+            "title": card.get("title"),
+            "caption": card.get("caption"),
+            "ui_min_ratio": card.get("ui_min_ratio"),
+            "ui_area_ratio": composed.get("ui_area_ratio"),
+            "sha256": composed.get("sha256"),
+        })
+
+    return {
+        "release": story.get("release") or entry.get("release"),
+        "version_state": metadata.get("version_state"),
+        "package_sha256": package_sha256,
+        "angle": story.get("angle") or story.get("narrative_angle"),
+        "decision_rule": story.get("decision_rule"),
+        "title": title,
+        "title_formula_id": metadata.get("title_formula_id"),
+        "title_source_template": metadata.get("title_source_template"),
+        "title_adaptation": metadata.get("title_adaptation"),
+        "variant_id": metadata.get("variant_id"),
+        "hook_type": metadata.get("hook_type", metadata.get("strategy")),
+        "copy_frame": metadata.get("copy_frame"),
+        "primary_shot": metadata.get("primary_shot"),
+        "topics": [str(item) for item in metadata.get("topics", [])],
+        "source_urls": [str(item) for item in metadata.get("source_urls", [])],
+        "body_paragraphs": [item.strip() for item in body.split("\n\n") if item.strip()],
+        "invisible_fixes": story.get("invisible_fixes", []),
+        "claims": [
+            {
+                "user_value": item.get("user_value"),
+                "shot_ids": item.get("shot_ids", []),
+                "sources": item.get("sources", []),
+            }
+            for item in story.get("claims", []) if item.get("kind") == "visual"
+        ],
+        "shots": shots,
+        "cards": cards,
+        "semantic_image_count": len(metadata.get("images", [])),
+        "raw_shot_count": len(capture.get("shots", [])),
+        "qa": {
+            "ok": bool(copy_review.get("ok")),
+            "semantic_score": copy_review.get("total_score"),
+            "style_metrics": copy_review.get("style", {}).get("metrics", {}),
+            "hot_post_passed": pattern_audit.get("passed_count"),
+            "hot_post_total": pattern_audit.get("total_count"),
+        },
+        "evidence": {
+            name: {
+                "sha256": item.get("sha256"),
+                "bytes": item.get("bytes"),
+            }
+            for name, item in evidence.get("artifacts", {}).items()
+        },
+    }
+
+
 def validate_batch(batch_path: Path, *, root: Path | None = None) -> dict[str, Any]:
     batch_path = batch_path.resolve()
     root = (root or batch_path.parents[2]).resolve()
@@ -194,6 +287,15 @@ def validate_batch(batch_path: Path, *, root: Path | None = None) -> dict[str, A
             result.update(detail)
             result["errors"].extend(archive_errors)
             result["warnings"].extend(archive_warnings)
+            with tempfile.TemporaryDirectory() as extract_dir:
+                extracted = Path(extract_dir) / "package"
+                safe_extract(package_path, extracted)
+                result["errors"].extend(validate_package.publisher_asset_errors(extracted))
+                result["review"] = _collect_review_details(
+                    extracted,
+                    entry,
+                    str(entry.get("package_sha256", "")),
+                )
         except Exception as exc:
             result["errors"].append(str(exc))
 
@@ -267,8 +369,50 @@ def render_html(report: dict[str, Any]) -> str:
                   + "</ul>"
                   if package.get("errors") else "none"
               )
-              + "</td>"
+            + "</td>"
             "</tr>"
+        )
+
+    review_articles = []
+    for package in report.get("packages", []):
+        review = package.get("review") or {}
+        paragraphs = "".join(
+            f"<p style=\"margin:0 0 14px\">{esc(paragraph)}</p>"
+            for paragraph in review.get("body_paragraphs", [])
+        ) or "<p>正文缺失，禁止发布。</p>"
+        shots = "".join(
+            f"<li>{esc(item.get('name'))} · {esc(item.get('role'))} · "
+            f"{esc(item.get('viewport'))} @×{esc(item.get('scale'))} · "
+            f"<code>{esc(str(item.get('sha256', ''))[:12])}</code></li>"
+            for item in review.get("shots", [])
+        )
+        claims = "".join(
+            f"<li>{esc(item.get('user_value'))} — "
+            + ", ".join(f"<code>{esc(source)}</code>" for source in item.get("sources", []))
+            + "</li>"
+            for item in review.get("claims", [])
+        )
+        evidence = "".join(
+            f"<li><code>{esc(name)}</code> · {esc(str(item.get('sha256', ''))[:12])}</li>"
+            for name, item in review.get("evidence", {}).items()
+        )
+        qa = review.get("qa", {})
+        errors = "".join(f"<li>{esc(error)}</li>" for error in package.get("errors", [])) or "none"
+        review_articles.append(
+            f"<article style=\"background:#ffffff;border:1px solid #d8dee6;padding:26px;margin-top:24px\">"
+            f"<h2 style=\"margin:0 0 8px\">{esc(review.get('release'))} · {esc(review.get('title'))}</h2>"
+            f"<p style=\"color:#5b6875;margin:0 0 18px\">{esc(review.get('title_formula_id'))} · "
+            f"{esc(review.get('variant_id'))} · {esc(review.get('version_state'))}</p>"
+            f"<p><strong>{esc(review.get('angle'))}</strong></p>"
+            f"<p><strong>判断标准：</strong>{esc(review.get('decision_rule'))}</p>"
+            f"<div>{paragraphs}</div>"
+            f"<h3>可验证证据</h3><ul>{claims}</ul>"
+            f"<h3>真实镜头</h3><ul>{shots}</ul>"
+            f"<h3>Evidence hashes</h3><ul>{evidence}</ul>"
+            f"<h3>Quality</h3><p>Semantic {esc(qa.get('semantic_score'))} · Hot-post "
+            f"{esc(qa.get('hot_post_passed'))}/{esc(qa.get('hot_post_total'))}</p>"
+            f"<p><strong>Findings:</strong></p><ul>{errors}</ul>"
+            "</article>"
         )
     overall_color = "#157347" if report.get("ok") else "#c1121f"
     checks = "".join(
@@ -296,6 +440,7 @@ def render_html(report: dict[str, Any]) -> str:
 </section>
 <section style="background:#fbfcfd;border:1px solid #d8dee6;padding:24px;margin-bottom:32px"><h2 style="margin:0 0 14px;font-size:23px">Batch gates</h2><ul style="margin:0;padding-left:22px;line-height:1.7;font-size:17px">{checks}</ul></section>
 <section style="overflow-x:auto;border:1px solid #d8dee6;background:#ffffff"><table style="width:100%;border-collapse:collapse;min-width:900px;font-size:16px"><thead><tr style="background:#eef1f4;text-align:left"><th style="padding:14px">Release</th><th style="padding:14px">Title</th><th style="padding:14px">Topic 1</th><th style="padding:14px">Topic 2</th><th style="padding:14px">Topic 3</th><th style="padding:14px">Topic 4</th><th style="padding:14px">Topic 5</th><th style="padding:14px">Gate</th><th style="padding:14px">Findings</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section>
+<section><h2>Package review details</h2><p>以下正文、实验归因和证据哈希来自解包后的 QA-green 内容，供发布前人工复核。</p>{''.join(review_articles)}</section>
 <footer style="margin-top:34px;color:#5b6875;font-size:15px">Paused for operator review · no platform click is authorized by this page</footer>
 </main></body></html>"""
 
