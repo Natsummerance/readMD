@@ -233,8 +233,9 @@ function pvSyncFromPreview() {
 }
 
 function alignEditorAndPreview() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   pvSyncFromEditor();
-  showToast('已完成编辑器与预览视图精确行对齐', 1200);
+  showToast(_t('editor.previewAligned'), 1200);
 }
 window.alignEditorAndPreview = alignEditorAndPreview;
 

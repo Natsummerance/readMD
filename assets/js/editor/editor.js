@@ -11,13 +11,14 @@ let cmLoading = false;
 let cmThemeCompartment = null;
 
 function loadCodeMirror() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   return new Promise((resolve, reject) => {
     if (window.ReadMDCodeMirror) { cmReady = true; resolve(); return; }
     if (cmLoading) {
       const t0 = Date.now();
       const iv = setInterval(() => {
         if (window.ReadMDCodeMirror) { clearInterval(iv); cmReady = true; cmLoading = false; resolve(); }
-        else if (Date.now() - t0 > 15000) { clearInterval(iv); cmLoading = false; reject(new Error('编辑器组件加载超时')); }
+         else if (Date.now() - t0 > 15000) { clearInterval(iv); cmLoading = false; reject(new Error(_t('toast.editorLoadTimeout'))); }
       }, 100);
       return;
     }
@@ -25,7 +26,7 @@ function loadCodeMirror() {
     const s = document.createElement('script');
     s.src = '/assets/vendor/codemirror.bundle.js';
     s.onload = () => { cmReady = true; cmLoading = false; resolve(); };
-    s.onerror = () => { cmLoading = false; reject(new Error('编辑器组件加载失败，已退回基础编辑')); };
+   s.onerror = () => { cmLoading = false; reject(new Error(_t('toast.editorLoadFail'))); };
     document.head.appendChild(s);
   });
 }

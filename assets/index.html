@@ -228,7 +228,7 @@
     <!-- 超长文档智能翻页控制栏（纯 SVG 图标交互） -->
     <div id="pagination-bar" class="pagination-bar hidden" role="navigation" aria-label="文档分页导航" data-i18n-aria="pagination.ariaLabel">
       <div class="pg-left">
-        <span class="pg-mode-badge" id="pg-mode-badge" title="分页阅读模式">
+        <span class="pg-mode-badge" id="pg-mode-badge" title="分页阅读模式" data-i18n-title="pagination.pagedBadge">
           <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         </span>
         <span class="pg-chapter-label" id="pg-chapter-label"></span>
@@ -859,7 +859,7 @@
 <footer id="statusbar">
   <div class="statusbar-left-group">
     <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.7-beta.2</span>
-    <span id="status-pagination" class="status-pagination hidden" role="button" tabindex="0" title="点击切换阅读模式"></span>
+    <span id="status-pagination" class="status-pagination hidden" role="button" tabindex="0" title="点击切换阅读模式" data-i18n-title="pagination.toggleTip"></span>
     <span id="status-left"></span>
   </div>
   <span id="status-right"></span>
@@ -921,10 +921,10 @@
       <div class="modal-form-group">
         <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkLang">编程语言：</label>
         <select id="code-chunk-lang" class="modal-select" style="width:100%;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-          <option value="python">Python (Pyodide / 本地运行)</option>
+          <option value="python">Python</option>
           <option value="javascript">JavaScript (Node / Web)</option>
           <option value="bash">Bash / Shell</option>
-          <option value="r">R (科学计算)</option>
+          <option value="r">R</option>
           <option value="php">PHP</option>
           <option value="go">Go</option>
           <option value="ruby">Ruby</option>
@@ -963,13 +963,13 @@
       <div class="modal-form-group">
         <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramType">图表类型：</label>
         <select id="diagram-type" class="modal-select" style="width:100%;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-          <option value="plantuml">PlantUML (时序图 / 架构图 / UML)</option>
-          <option value="tikz">TikZ / PGFPlots (LaTeX 矢量几何与函数图)</option>
-          <option value="wavedrom">WaveDrom (数字电路波形图)</option>
-          <option value="vega-lite">Vega-Lite (统计数据可视化与图表)</option>
-          <option value="graphviz">Graphviz / DOT (有向图与网络拓扑)</option>
-          <option value="d2">D2 (现代声明式架构图)</option>
-          <option value="bitfield">BitField (硬件寄存器与协议字段图)</option>
+          <option value="plantuml">PlantUML</option>
+          <option value="tikz">TikZ / PGFPlots</option>
+          <option value="wavedrom">WaveDrom</option>
+          <option value="vega-lite">Vega-Lite</option>
+          <option value="graphviz">Graphviz / DOT</option>
+          <option value="d2">D2</option>
+          <option value="bitfield">BitField</option>
         </select>
       </div>
       <div class="modal-form-group" style="margin-top: 12px;">
@@ -995,7 +995,7 @@
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.docImportDesc">引用外部 Markdown 文件、源码或图表，渲染时将自动无缝嵌入当前文档。</p>
       <div class="modal-form-group">
         <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.docImportPath">子文档相对路径：</label>
-        <input id="doc-import-path" type="text" class="modal-input" placeholder="chapter1.md 或 ./subdocs/appendix.md" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+        <input id="doc-import-path" type="text" class="modal-input" placeholder="chapter1.md | ./subdocs/appendix.md" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
         <div class="modal-form-group">
@@ -1008,7 +1008,7 @@
         </div>
         <div class="modal-form-group">
           <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.docImportLines">行号切片 (可选)：</label>
-          <input id="doc-import-lines" type="text" class="modal-input" placeholder="例如: 10-50" style="width:100%;box-sizing:border-box;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+          <input id="doc-import-lines" type="text" class="modal-input" placeholder="10-50" style="width:100%;box-sizing:border-box;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
         </div>
       </div>
       <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
@@ -1030,7 +1030,7 @@
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.frontmatterModalDesc">在文档顶部插入标准 YAML Frontmatter，用于配置文档标题、作者、Reveal.js 演示主题及全局样式。</p>
       <div class="modal-form-group">
         <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTitle">文档标题：</label>
-        <input id="fm-input-title" type="text" class="modal-input" placeholder="我的演说 / 报告文档" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
+        <input id="fm-input-title" type="text" class="modal-input" placeholder="ReadMD" style="width:100%;box-sizing:border-box;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
       </div>
       <div class="modal-form-group" style="margin-top: 10px;">
         <label style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterAuthor">作者 / 演讲者：</label>
@@ -1040,27 +1040,27 @@
         <div class="modal-form-group">
           <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTheme">Reveal.js 演示主题：</label>
           <select id="fm-select-theme" class="modal-select" style="width:100%;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-            <option value="black">Black (现代深色 / 默认)</option>
-            <option value="white">White (明亮纯白)</option>
-            <option value="league">League (几何现代灰)</option>
-            <option value="beige">Beige (复古暖米色)</option>
-            <option value="night">Night (暗夜高对比)</option>
-            <option value="serif">Serif (优雅衬线文学)</option>
-            <option value="simple">Simple (极简清爽)</option>
-            <option value="solarized">Solarized (程序员经典太阳色)</option>
-            <option value="blood">Blood (深红暗黑风格)</option>
-            <option value="moon">Moon (蓝调月夜)</option>
+            <option value="black">Black</option>
+            <option value="white">White</option>
+            <option value="league">League</option>
+            <option value="beige">Beige</option>
+            <option value="night">Night</option>
+            <option value="serif">Serif</option>
+            <option value="simple">Simple</option>
+            <option value="solarized">Solarized</option>
+            <option value="blood">Blood</option>
+            <option value="moon">Moon</option>
           </select>
         </div>
         <div class="modal-form-group">
           <label style="font-weight:600;font-size:12.5px;display:block;margin-bottom:4px;" data-i18n="editor.frontmatterTransition">幻灯片切页动效：</label>
           <select id="fm-select-transition" class="modal-select" style="width:100%;padding:5px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text);">
-            <option value="slide">Slide (平滑滑动 / 默认)</option>
-            <option value="fade">Fade (淡入淡出)</option>
-            <option value="convex">Convex (凸面翻转)</option>
-            <option value="concave">Concave (凹面翻转)</option>
-            <option value="zoom">Zoom (缩放进出)</option>
-            <option value="none">None (无动画)</option>
+            <option value="slide" data-i18n="presentation.transitionSlide">Slide</option>
+            <option value="fade" data-i18n="presentation.transitionFade">Fade</option>
+            <option value="convex" data-i18n="presentation.transitionConvex">Convex</option>
+            <option value="concave" data-i18n="presentation.transitionConcave">Concave</option>
+            <option value="zoom" data-i18n="presentation.transitionZoom">Zoom</option>
+            <option value="none" data-i18n="presentation.transitionNone">None</option>
           </select>
         </div>
       </div>

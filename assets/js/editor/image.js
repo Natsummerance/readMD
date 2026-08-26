@@ -351,7 +351,7 @@ async function exportAndInsertImg() {
       body: JSON.stringify({ dir: state.dir, data: b64, format: 'png', name: 'img_' + Date.now() }),
     });
     const d = await resp.json();
-    if (!resp.ok || !d.ok) throw new Error(d.error || '保存失败');
+    if (!resp.ok || !d.ok) throw new Error(d.error || _t('toast.unknownError'));
     cmInsertImage(d.rel);
     closeImgModal();
     showToast(_t('toast.imgInsertedRel', { rel: d.rel }) || ('图片已插入（' + d.rel + '）'));
