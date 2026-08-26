@@ -67,14 +67,22 @@ python showcase/scripts/publish_approved_batch.py `
 发布前可先用无副作用预检复核同一批文件；它不会创建批准文件，也不会调用发布器：
 
 ```powershell
-python showcase/scripts/publish_approved_batch.py `
-  --batch showcase/output/release-run/downloads/batch-pending.json `
-  --approval-request showcase/output/release-run/downloads/poster-review-beta3-beta4.approval-request.json `
-  --root showcase/output/release-run/downloads `
-  --work-dir showcase/output/release-run/work `
-  --state showcase/output/release-run/publish-approved-state.json `
-  --ledger T:/Programming/Project/codex/creator/readmd/showcase/content/publication-ledger.jsonl `
+showcase/scripts/publish_approved_latest.ps1 `
   --validate-only
+```
+
+确认 PDF 后，直接运行 Windows 一键入口即可发布最新待确认批次；脚本会自动定位最新 `approval-request`、生成批准文件、跳过已发布 release，并按顺序提交剩余包：
+
+```powershell
+showcase/publish-approved.cmd
+```
+
+如需指定私有账本或代理：
+
+```powershell
+showcase/publish-approved.cmd `
+  -Ledger "T:/Programming/Project/codex/creator/readmd/showcase/content/publication-ledger.jsonl" `
+  -PublisherProxy "http://127.0.0.1:3456"
 ```
 
 完整构建会先生成 12 种叙事框架 × 8 个标题公式共 96 个实验组合；每个组合都有稳定 `variant_id` 和 `copy_frame`，语义评分、置信门控后的钩子/标题/叙事帧表现、近期疲劳和跨发布原创性共同决定最终稿。任一维度不足 2 次发布或 1000 次曝光时只做探索，不给历史加分。每个变体都会计算整稿哈希、开头指纹、结尾指纹和三元组相似度：整文哈希和 ≥85% 相似度对照全历史，开头/结尾只在最近 8 次发布内冷却，冷却期外的框架可随新事实安全轮换。标题哈希与三元组也会对照发布账本，防止同一机制连续换封面却重复旧标题。选择证据写入 `variants.json`。随后生成 `wechat/readmd-wechat.html`。该 HTML 只用行内样式，不包含脚本、外链、class、id 或图片；`wechat/wechat-qa.json` 也必须为 `{"ok":true}` 才允许进入发布队列。
