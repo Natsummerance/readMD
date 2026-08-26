@@ -17,7 +17,7 @@ for (const entry of fs.readdirSync(RAW_DIR)) {
   if (/\.png$/i.test(entry) || entry === 'capture.json' || entry.endsWith('.metadata.json')) fs.unlinkSync(path.join(RAW_DIR, entry));
 }
 
-const DEMO_MD = fs.readFileSync(path.join(__dirname, 'fixtures/readmd-showcase.md'), 'utf-8');
+const FIXTURE_DIR = path.join(__dirname, 'fixtures');
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(({ locale, theme }) => {
@@ -30,25 +30,32 @@ test.beforeEach(async ({ page }) => {
   await page.waitForFunction(() => typeof renderVirtual === 'function');
 });
 
-async function openDemo(page) {
-  await page.evaluate((content) => {
+function shotViewport(shotId) {
+  const shot = library.shots[shotId];
+  return shot.viewport || config.viewport;
+}
+
+async function prepareShot(page, shotId) {
+  await page.setViewportSize(shotViewport(shotId));
+}
+
+async function openDemo(page, shotId = 'overview.reader') {
+  const fixture = library.shots[shotId].fixture || 'readmd-showcase.md';
+  const content = fs.readFileSync(path.join(FIXTURE_DIR, fixture), 'utf-8');
+  await page.evaluate(({ content, name }) => {
     // tabs.js currently reads the i18n helper without declaring its local fallback.
     // Install the same semantic fallback before invoking the real renderer.
     if (typeof window._t !== 'function') {
       window._t = (key, params) => (window.i18n ? window.i18n.t(key, params) : key);
     }
-    return renderVirtual('virtual', 'ReadMD 研究笔记.md', '', content);
-  }, DEMO_MD);
+    return renderVirtual('virtual', name, '', content);
+  }, { content, name: fixture.replace(/\.md$/i, '') + '.md' });
   await expect(page.locator('#content h1')).toBeVisible();
-  await expect(page.locator('#content')).toContainText('高斯');
-  await expect(page.locator('#content mjx-container').first()).toBeVisible();
   await page.waitForTimeout(900);
 }
 
-async function shoot(page, shotId) {
+async function saveShot(shotId, outputPath, bytes) {
   const shot = library.shots[shotId];
-  await page.screenshot({ path: path.join(RAW_DIR, shot.output), type: 'png' });
-  const bytes = fs.readFileSync(path.join(RAW_DIR, shot.output));
   const record = {
     shot_id: shotId,
     file: `raw/${shot.output}`,
@@ -59,7 +66,7 @@ async function shoot(page, shotId) {
     role: shot.role,
     visuality: shot.visuality,
     capture: {
-      viewport: `${config.viewport.width}x${config.viewport.height}`,
+      viewport: `${shotViewport(shotId).width}x${shotViewport(shotId).height}`,
       scale: config.scale,
       locale: config.locale,
       theme: config.theme,
@@ -72,12 +79,19 @@ async function shoot(page, shotId) {
   fs.writeFileSync(path.join(RAW_DIR, `${shot.output}.metadata.json`), JSON.stringify(record, null, 2));
 }
 
+async function shoot(page, shotId) {
+  const outputPath = path.join(RAW_DIR, library.shots[shotId].output);
+  await page.screenshot({ path: outputPath, type: 'png' });
+  await saveShot(shotId, outputPath, fs.readFileSync(outputPath));
+}
+
 async function assertVisible(page, selectors) {
   for (const selector of selectors) await expect(page.locator(selector).first()).toBeVisible();
 }
 
 test('overview.reader captures the complete reading interface', async ({ page }) => {
-  await openDemo(page);
+  await prepareShot(page, 'overview.reader');
+  await openDemo(page, 'overview.reader');
   await page.evaluate(() => toggleSide('toc'));
   await assertVisible(page, library.shots['overview.reader'].assertions);
   await page.waitForTimeout(350);
@@ -85,7 +99,8 @@ test('overview.reader captures the complete reading interface', async ({ page })
 });
 
 test('overview.editor captures split editor preview', async ({ page }) => {
-  await openDemo(page);
+  await prepareShot(page, 'overview.editor');
+  await openDemo(page, 'overview.editor');
   await page.evaluate(async () => {
     await toggleEdit();
     setPvLayout('left');
@@ -96,17 +111,27 @@ test('overview.editor captures split editor preview', async ({ page }) => {
 });
 
 test('presentation.reveal captures the real presentation iframe', async ({ page }) => {
-  await openDemo(page);
+  await prepareShot(page, 'presentation.reveal');
+  await openDemo(page, 'presentation.reveal');
   await page.evaluate(() => launchPresentationMode());
   await assertVisible(page, library.shots['presentation.reveal'].assertions);
   const frame = page.frameLocator('.presentation-iframe');
   await frame.locator('.reveal').first().waitFor({ state: 'visible', timeout: 15000 });
+  await page.waitForTimeout(3000);
+  const presentationFrame = page.frames().find((candidate) => candidate !== page.mainFrame() && candidate.url() === 'about:srcdoc');
+  await expect.poll(() => presentationFrame.evaluate(() => Boolean(window.deck || window.Reveal)), { timeout: 15000 }).toBe(true);
   await page.waitForTimeout(1200);
-  await shoot(page, 'presentation.reveal');
+  const outputPath = path.join(RAW_DIR, library.shots['presentation.reveal'].output);
+  await presentationFrame.locator('.reveal').screenshot({
+    path: outputPath,
+    type: 'png',
+  });
+  await saveShot('presentation.reveal', outputPath, fs.readFileSync(outputPath));
 });
 
 test('editor.diagram-picker captures the diagram modal', async ({ page }) => {
-  await openDemo(page);
+  await prepareShot(page, 'editor.diagram-picker');
+  await openDemo(page, 'editor.diagram-picker');
   await page.evaluate(async () => {
     await toggleEdit();
     openDiagramModal();
@@ -117,7 +142,8 @@ test('editor.diagram-picker captures the diagram modal', async ({ page }) => {
 });
 
 test('academic.latex-bib captures rendered formulas', async ({ page }) => {
-  await openDemo(page);
+  await prepareShot(page, 'academic.latex-bib');
+  await openDemo(page, 'academic.latex-bib');
   await page.evaluate(() => {
     document.querySelector('#content .katex-display')?.scrollIntoView({ behavior: 'instant', block: 'center' });
   });
@@ -127,7 +153,8 @@ test('academic.latex-bib captures rendered formulas', async ({ page }) => {
 });
 
 test('editor.code-chunk captures runnable code card', async ({ page }) => {
-  await openDemo(page);
+  await prepareShot(page, 'editor.code-chunk');
+  await openDemo(page, 'editor.code-chunk');
   await page.evaluate(() => {
     document.querySelector('#content .code-chunk-card')?.scrollIntoView({ behavior: 'instant', block: 'center' });
   });
@@ -137,12 +164,14 @@ test('editor.code-chunk captures runnable code card', async ({ page }) => {
 });
 
 test('convert.home captures the welcome workflow entries', async ({ page }) => {
+  await prepareShot(page, 'convert.home');
   await assertVisible(page, library.shots['convert.home'].assertions);
   await page.waitForTimeout(350);
   await shoot(page, 'convert.home');
 });
 
 test('sharing.export captures the mobile sharing panel', async ({ page }) => {
+  await prepareShot(page, 'sharing.export');
   await page.evaluate(() => openShareModal());
   await assertVisible(page, library.shots['sharing.export'].assertions);
   await page.waitForTimeout(350);

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "status": "paused_for_operator_review",
+  "capture_contract": "authentic-ui",
+  "raw_shot_count": 8,
+  "semantic_image_count": 8,
+  "qa": {
+    "structural": "pass",
+    "publisher_evidence_chain": "pass",
+    "raw_pixel_quality": "pass"
+  },
+  "packages": [
+    {
+      "release": "v2.3.7-beta.1",
+      "title": "不用重做PPT，Markdown直接放映",
+      "package": "showcase/output/repaired/content-package-v2.3.7-beta.1-fixed.zip",
+      "package_sha256": "e4a50a251bba5fc2e32aa3b14f2bbe9d9f56dd9be281553e1eaee4f691b98030",
+      "manifest_sha256": "864c352db1ba838f3ca3734f3ab5334758766bfba85a31f63f92ab8e112c5bf1",
+      "selection_ledger": "empty because the earlier note is already published"
+    },
+    {
+      "release": "v2.3.7-beta.2",
+      "title": "Markdown写完，居然能直接上台",
+      "package": "showcase/output/repaired/content-package-v2.3.7-beta.2-fixed.zip",
+      "package_sha256": "6b0d141fe2bc86fbd2bf84acce2f5528d6ea85bcf91c316149e001eb4076d3f9",
+      "manifest_sha256": "1e92c13c0d54aacc4e922c04f059effbc878d857d856285d7f1ba2e4794dfc8f",
+      "selection_ledger": "real v2.3.7-beta.1 publication"
+    },
+    {
+      "release": "v2.3.7-beta.3",
+      "title": "给要上台讲文档的人做的MD工具",
+      "package": "showcase/output/repaired/content-package-v2.3.7-beta.3-fixed.zip",
+      "package_sha256": "e7c7ad3f56fd6370c80e1ef2ab96ddb298ede1260c7c18b48d09a9ecdffe45df",
+      "manifest_sha256": "c58b431a47a85517bcd46aa578b6ace56720a011bb9bc04a50d31d554dc7f65b",
+      "selection_ledger": "staged v2.3.7-beta.1 + v2.3.7-beta.2 sequence"
+    }
+  ]
+}

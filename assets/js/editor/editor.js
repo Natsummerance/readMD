@@ -556,14 +556,9 @@ function renderFormulaPicker() {
 function previewFormula(tex) { const p = $('formula-preview'); p.textContent = '$$' + tex + '$$'; renderMath(p); }
 function insertFormula(tex) { const mode = $('formula-mode').value; closeFormulaModal(); if (!cmView) return; const sel = cmView.state.selection.main; const selected = cmView.state.sliceDoc(sel.from, sel.to); const body = selected || tex; const insert = mode === 'block' ? '\n$$\n' + body + '\n$$\n' : '$' + body + '$'; cmView.dispatch({changes:{from:sel.from,to:sel.to,insert},selection:{anchor:sel.from+insert.length}}); cmView.focus(); }
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'F11' && state.editing) {
-    e.preventDefault();
-    toggleZenMode();
-  } else if (e.key === 'Escape' && document.body.classList.contains('zen-mode')) {
-    toggleZenMode(false);
-  }
-});
+/* ============================================================
+   Editor Studio PRO: 表格设计器 & 统计（Zen 由 reader/render.js 统一管理）
+   ============================================================ */
 
 /* 实时文档统计与阅读时长 */
 function updateDocStatistics() {

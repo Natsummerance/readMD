@@ -69,7 +69,7 @@ transition: zoom
         doc = "# Slide 1\n内容\n<!-- slide -->\n# Slide 2\n内容 2"
         html = render_presentation_html(doc, title="测试演说")
         self.assertIn("<title>测试演说</title>", html)
-        self.assertIn("reveal.js", html)
+        self.assertIn("assets/vendor/reveal/dist/readmd-boot.js", html)
         self.assertIn("<section data-markdown>", html)
 
     def test_long_document_auto_split(self):
@@ -123,5 +123,4 @@ if a < b and b > c:
 
 if __name__ == '__main__':
     unittest.main()
-
 

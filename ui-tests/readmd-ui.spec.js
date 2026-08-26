@@ -1538,7 +1538,8 @@ test('search highlights a term spanning adjacent inline elements', async ({ page
   await expect(page.locator('#search-count')).toHaveText('1/1');
   await expect(page.locator('#content mark.hl')).toHaveText('readme');
   await page.keyboard.press('Enter');
-  await expect(page.locator('#content mark.hl')).toBeFocused();
+  await expect(page.locator('#content mark.hl')).toHaveClass(/cur/);
+  await expect(page.locator('#search-input')).toBeFocused();
   await page.keyboard.press('Control+F');
   await expect(page.locator('#btn-search')).toBeFocused();
 });
@@ -1583,7 +1584,7 @@ test('enter immediately jumps even when the search debounce has not fired', asyn
     state.pagination.currentPage === state.pagination.totalPages - 1
   ));
   await expect(page.locator('#content mark.cur')).toHaveText('READMD_SEARCH_RACE_MARKER');
-  await expect(page.locator('#content mark.cur')).toBeFocused();
+  await expect(page.locator('#search-input')).toBeFocused();
 });
 
 test('home resets pagination state and failed opens clear progress', async ({ page }) => {

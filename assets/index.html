@@ -8,7 +8,6 @@
 <meta name="readmd-app-token" content="">
 <title>ReadMD</title>
 <link rel="stylesheet" href="/assets/style.css">
-<script defer src="/assets/readmd.boot.js?v=2.3.7-beta.3"></script>
 </head>
 <body>
 <header id="toolbar">
@@ -237,20 +236,20 @@
         <span class="pg-chapter-label" id="pg-chapter-label"></span>
       </div>
       <div class="pg-center">
-        <button id="pg-first-btn" class="tb-btn icon pg-icon-btn" title="首页 (Alt+Home)" aria-label="首页" data-i18n-title="pagination.firstPage" data-i18n-aria="pagination.firstPage">
+        <button id="pg-first-btn" class="tb-btn icon" title="首页 (Alt+Home)" aria-label="首页" data-i18n-title="pagination.firstPage" data-i18n-aria="pagination.firstPage">
           <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
         </button>
-        <button id="pg-prev-btn" class="tb-btn icon pg-icon-btn" title="上一页 (Alt+←)" aria-label="上一页" data-i18n-title="pagination.prevPage" data-i18n-aria="pagination.prevPage">
+        <button id="pg-prev-btn" class="tb-btn icon" title="上一页 (Alt+←)" aria-label="上一页" data-i18n-title="pagination.prevPage" data-i18n-aria="pagination.prevPage">
           <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19l-7-7 7-7"/></svg>
         </button>
         <div class="pg-page-select-wrap">
           <select id="pg-page-select" class="pg-select" aria-label="选择页码" data-i18n-aria="pagination.selectPage"></select>
           <span id="pg-total-label" class="pg-total-label">/ 1</span>
         </div>
-        <button id="pg-next-btn" class="tb-btn icon pg-icon-btn" title="下一页 (Alt+→)" aria-label="下一页" data-i18n-title="pagination.nextPage" data-i18n-aria="pagination.nextPage">
+        <button id="pg-next-btn" class="tb-btn icon" title="下一页 (Alt+→)" aria-label="下一页" data-i18n-title="pagination.nextPage" data-i18n-aria="pagination.nextPage">
           <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
         </button>
-        <button id="pg-last-btn" class="tb-btn icon pg-icon-btn" title="末页 (Alt+End)" aria-label="末页" data-i18n-title="pagination.lastPage" data-i18n-aria="pagination.lastPage">
+        <button id="pg-last-btn" class="tb-btn icon" title="末页 (Alt+End)" aria-label="末页" data-i18n-title="pagination.lastPage" data-i18n-aria="pagination.lastPage">
           <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
         </button>
       </div>
@@ -965,8 +964,8 @@
       </div>
     </div>
     <div class="modal-footer">
-      <button id="style-modal-cancel" class="btn btn-secondary" data-i18n="dialog.cancel">取消</button>
-      <button id="style-modal-save" class="btn btn-primary" data-i18n="dialog.styleCustomSave">保存并即时生效</button>
+      <button id="style-modal-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
+      <button id="style-modal-save" class="tb-btn accent" data-i18n="dialog.styleCustomSave">保存并即时生效</button>
     </div>
   </div>
 </div>
@@ -1005,7 +1004,7 @@
         <label for="code-chunk-code" data-i18n="editor.codeChunkCode">代码内容：</label>
         <textarea id="code-chunk-code" class="modal-textarea" placeholder="import matplotlib.pyplot as plt\nimport numpy as np\nx = np.linspace(0, 10, 100)\nplt.plot(x, np.sin(x))\nplt.show()"></textarea>
       </div>
-      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+      <div class="modal-footer">
         <button id="code-chunk-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
         <button id="code-chunk-insert" class="tb-btn accent" data-i18n="editor.insert">插入代码块</button>
       </div>
@@ -1037,7 +1036,7 @@
         <label for="diagram-code" data-i18n="editor.diagramTemplate">图表代码模版：</label>
         <textarea id="diagram-code" class="modal-textarea"></textarea>
       </div>
-      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+      <div class="modal-footer">
         <button id="diagram-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
         <button id="diagram-insert" class="tb-btn accent" data-i18n="editor.insert">插入图表</button>
       </div>
@@ -1072,7 +1071,7 @@
           <input id="doc-import-lines" type="text" class="modal-input" placeholder="例如: 10-50">
         </div>
       </div>
-      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+      <div class="modal-footer">
         <button id="doc-import-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
         <button id="doc-import-insert" class="tb-btn accent" data-i18n="editor.insert">插入引用</button>
       </div>
@@ -1125,7 +1124,7 @@
           </select>
         </div>
       </div>
-      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+      <div class="modal-footer">
         <button id="fm-modal-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
         <button id="fm-modal-insert" class="tb-btn accent" data-i18n="editor.insert">插入 Frontmatter</button>
       </div>
@@ -1133,9 +1132,6 @@
   </div>
 </div>
 
-
+<script defer src="/assets/readmd.boot.js?v=2.3.7-beta.4"></script>
 </body>
 </html>
-
-
-

@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from copy_profiles import cover_for_title, profile_for_story
+from copy_profiles import IMPLEMENTATION_JARGON, cover_for_title, profile_for_story
 
 def is_prerelease(release: str) -> bool:
     return bool(re.search(r"(?:beta|alpha|rc|preview|pre)", release, re.I))
@@ -80,6 +80,24 @@ def _extract_core_fixes(notes: str) -> list[str]:
     return fixes
 
 
+def _reader_friendly_fix(fix: str) -> str:
+    """Translate implementation headings into the reader's changed experience."""
+    lower = fix.lower()
+    if "codemirror" in lower or ("编辑器" in fix and "预览" in fix):
+        return "编辑器更稳，改稿和预览不互相打断。"
+    if "占位符" in fix or "裸露" in fix:
+        return "界面提示显示正常，不再出现未翻译的占位符。"
+    if any(term in lower for term in ("crash", "崩溃", "卡死", "死循环")):
+        return "长文档处理更稳定，日常使用不易被打断。"
+    if any(term in lower for term in ("性能", "卡顿", "耗时", "内存")):
+        return "打开和浏览长文档更顺畅。"
+    if "更新" in fix and ("提示" in fix or "检查" in fix):
+        return "更新提示更清晰，不会干扰正常写作。"
+    if any(term.lower() in lower for term in IMPLEMENTATION_JARGON):
+        return "底层体验修复，本地文档工作流更稳定。"
+    return fix
+
+
 def build_story(
     *,
     release: str,
@@ -126,12 +144,12 @@ def build_story(
             }
         )
 
-    invisible_fixes = _extract_core_fixes(notes)
+    invisible_fixes = [_reader_friendly_fix(fix) for fix in _extract_core_fixes(notes)]
     for index, fix in enumerate(invisible_fixes[:2], 1):
         claims.append(
             {
                 "id": f"invisible-{index}",
-                "user_value": fix,
+                "user_value": _reader_friendly_fix(fix),
                 "shot_ids": [],
                 "sources": [notes_source],
                 "kind": "invisible",
@@ -185,6 +203,7 @@ def build_story(
         "version_state": "prerelease" if is_prerelease(release) else "release",
         "angle": angle,
         "primary_shot": primary_shot,
+        "decision_rule": mechanism_profile["decision_rule"],
         "cover_hook": cover_hook,
         "summary_hook": summary_hook,
         "narrative_angle": angle,

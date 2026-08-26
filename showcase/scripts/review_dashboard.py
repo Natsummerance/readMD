@@ -75,6 +75,8 @@ def _variant_evidence_html(item: dict[str, Any]) -> str:
     title = _signed_number(item.get("resonance_title_bonus"))
     similarity = min(max(_number(item.get("max_body_similarity")), 0), 1)
     source = str(item.get("max_similarity_source") or "no publication history").strip()
+    title_similarity = min(max(_number(item.get("max_title_similarity")), 0), 1)
+    title_source = str(item.get("max_title_similarity_source") or "no publication history").strip()
     reasons = [
         str(reason).strip()
         for reason in item.get("reasons", [])
@@ -83,12 +85,22 @@ def _variant_evidence_html(item: dict[str, Any]) -> str:
     comment_reasons = [reason for reason in reasons if reason.lower().startswith("comment ")]
     evidence_reasons = (comment_reasons + [reason for reason in reasons if reason not in comment_reasons])[:3]
     reason_text = " · ".join(evidence_reasons) or "No additional selection evidence"
+    source_template = str(item.get("title_source_template", "")).strip()
+    adaptation = str(item.get("title_adaptation", "")).strip()
+    provenance = (
+        f'<p style="margin:6px 0 0;font-size:20px;line-height:1.45;color:#5b6875">'
+        f'Source {_escaped(source_template)} · {_escaped(adaptation)}</p>'
+        if source_template and adaptation else ""
+    )
     return (
         f'<p style="margin:8px 0 0;font-size:20px;line-height:1.45;color:#5b6875">'
         f'History {_escaped(history)} · Frame resonance {_escaped(frame)} · '
         f'Title intent {_escaped(title)}</p>'
         f'<p style="margin:6px 0 0;font-size:20px;line-height:1.45;color:#5b6875">'
         f'Max similarity {_escaped(f"{similarity:.0%}")} · {_escaped(source)}</p>'
+        f'<p style="margin:6px 0 0;font-size:20px;line-height:1.45;color:#5b6875">'
+        f'Title similarity {_escaped(f"{title_similarity:.0%}")} · {_escaped(title_source)}</p>'
+        f'{provenance}'
         f'<p style="margin:8px 0 0;font-size:20px;line-height:1.5;color:#182029">'
         f'{_escaped(reason_text)}</p>'
     )
@@ -224,6 +236,7 @@ def _mechanism_contract_html(story: dict[str, Any]) -> str:
 
     primary = str(story.get("primary_shot", "")).strip()
     angle = str(story.get("angle", "")).strip()
+    decision_rule = str(story.get("decision_rule", "")).strip()
     cover = story.get("cover_hook", {}) if isinstance(story.get("cover_hook"), dict) else {}
     summary = story.get("summary_hook", {}) if isinstance(story.get("summary_hook"), dict) else {}
     proof_points = summary.get("proof_points", [])
@@ -255,6 +268,7 @@ def _mechanism_contract_html(story: dict[str, Any]) -> str:
     return (
         f'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">{overview}</div>'
         f'{_contract_field("Core narrative", angle or "Missing")}'
+        f'{_contract_field("Save-worthy rule", decision_rule or "Missing", emphasis=bool(decision_rule))}'
         '<div style="margin-top:18px">'
         f'{_contract_field("Cover hook", cover_value)}'
         '</div>'
@@ -349,6 +363,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
     wechat_qa = inputs.get("wechat_qa", {})
     pattern_audit = inputs.get("pattern_audit", {})
     performance = inputs.get("performance", {})
+    feedback_sla = performance.get("feedback_sla", {})
     story = inputs.get("story", {})
     topic_experiment = inputs.get("topic_experiment", {})
     resonance_directive = inputs.get("resonance_directive", {})
@@ -426,6 +441,8 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
         _metric("Pattern checks", f'{pattern_audit.get("passed_count", 0)} / {pattern_audit.get("total_count", 0)}'),
         _metric("Learning releases", performance.get("learning_count", 0)),
         _metric("Pending metrics", performance.get("pending_count", 0)),
+        _metric("Feedback due", feedback_sla.get("due_count", 0)),
+        _metric("Feedback overdue", feedback_sla.get("overdue_count", 0)),
         _metric("Recommended formula", performance.get("recommended_formula", "insufficient data")),
         _metric("Recommended frame", performance.get("recommended_copy_frame") or "insufficient evidence"),
     ])
@@ -459,7 +476,17 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
       f'<p style="margin:0 0 16px;font-size:23px;color:#5b6875">Showing {len(displayed_variants)} of {candidate_count} candidates · selected pinned</p>'
       f'{variant_html}'
   )}
-  {_section("Feedback loop", f'<div style="display:flex;gap:14px;flex-wrap:wrap">{performance_metrics}</div><p style="margin-top:16px;font-size:24px;color:#5b6875">Pending metrics: {_escaped(performance.get("pending_count", 0))}</p>')}
+  {_section(
+      "Feedback loop",
+      f'<div style="display:flex;gap:14px;flex-wrap:wrap">{performance_metrics}</div>'
+      f'<p style="margin-top:16px;font-size:24px;color:#5b6875">Pending metrics: {_escaped(performance.get("pending_count", 0))}</p>'
+      + "".join(
+          f'<p style="margin:8px 0 0;font-size:23px;line-height:1.35;color:{ "#c1121f" if item.get("status") == "overdue" else "#8a6d00" }">'
+          f'{_escaped(item.get("release"))} · {_escaped(item.get("age_days"))} days · '
+          f'missing {_escaped(", ".join(item.get("missing", [])))}</p>'
+          for item in feedback_sla.get("debts", [])[-4:]
+      )
+  )}
   {_section("Final copy", f'<p style="white-space:pre-wrap;margin:0;font-size:26px;line-height:1.55;color:#182029">{_escaped(body)}</p>')}
 </main>
 </body>

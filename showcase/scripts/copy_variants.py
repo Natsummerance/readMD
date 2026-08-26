@@ -12,14 +12,14 @@ from pathlib import Path
 from typing import Any
 
 from audit_copy import audit_copy
-from content_memory import load_learning_records, partition_records, summarize
+from content_memory import engagement_score, load_learning_records, partition_records, summarize
 from copy_profiles import (
     frames_for_story,
     resonance_frame_adjustment,
     resonance_title_adjustment,
 )
 
-TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12", "#26")
+TITLE_FORMULAS = ("#36", "#9", "#22", "#61", "#12", "#26", "#17", "#56")
 ENDPOINT_COOLDOWN_RELEASES = 8
 
 
@@ -49,6 +49,14 @@ def text_fingerprints(body: str) -> dict[str, str]:
         "body_sha256": hashlib.sha256(body.encode("utf-8")).hexdigest(),
         "opening": _normalize_for_originality(paragraphs[0] if paragraphs else ""),
         "closing": _normalize_for_originality(paragraphs[-1] if paragraphs else ""),
+    }
+
+
+def title_fingerprints(title: str) -> dict[str, Any]:
+    normalized = _normalize_for_originality(title)
+    return {
+        "title_sha256": hashlib.sha256(normalized.encode("utf-8")).hexdigest(),
+        "title_trigrams": sorted(text_trigrams(title)),
     }
 
 
@@ -108,6 +116,8 @@ def build_variants(*, story: dict[str, Any], base_metadata: dict[str, Any]) -> l
                 variant["strategy"] = hook_type
                 variant["hook_type"] = hook_type
                 variant["title_formula_id"] = title_option["formula_id"]
+                variant["title_source_template"] = title_option["source_template"]
+                variant["title_adaptation"] = title_option["adaptation"]
                 variant["title"] = title_option["text"]
                 if len(variant["title"]) > 20:
                     raise ValueError(f"variant title exceeds 20 characters: {variant['title']}")
@@ -128,9 +138,9 @@ def choose_variant(
     variants: list[dict[str, Any]],
     history: list[dict[str, Any]] | None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
-    records = history or []
-    records, _pending_records = partition_records(records)
-    summary = summarize(records)
+    published_records = history or []
+    learning_records, _pending_records = partition_records(published_records)
+    summary = summarize(learning_records)
     recent_hooks = set(summary.get("recent_hook_types", []))
     recent_formulas = set(summary.get("recent_formulas", []))
     resonance_directive_payloads = {
@@ -147,7 +157,7 @@ def choose_variant(
 
     def dimension_stats(key: str) -> dict[str, dict[str, Any]]:
         output: dict[str, dict[str, Any]] = {}
-        for record in records:
+        for record in learning_records:
             name = str(record.get(key, ""))
             if not name.strip():
                 continue
@@ -159,12 +169,7 @@ def choose_variant(
                 "confidence_ok": False,
             })
             impressions = int(record.get("impressions", 0))
-            engagement = (
-                int(record.get("likes", 0))
-            + int(record.get("collects", 0)) * 2
-            + int(record.get("comments", 0)) * 3
-                + int(record.get("shares", 0)) * 4
-            )
+            engagement = engagement_score(record)
             stats["publications"] += 1
             stats["impressions"] += impressions
             stats["weighted_engagement"] += engagement
@@ -178,18 +183,24 @@ def choose_variant(
     frame_stats = dimension_stats("copy_frame")
     hook_usage = {
         str(record.get("hook_type", "")): sum(
-            1 for item in records if str(item.get("hook_type", "")) == str(record.get("hook_type", ""))
+            1 for item in learning_records if str(item.get("hook_type", "")) == str(record.get("hook_type", ""))
         )
-        for record in records
+        for record in learning_records
     }
     max_hook_score = max((item["score"] for item in hook_stats.values()), default=0.0)
     max_formula_score = max((item["score"] for item in formula_stats.values()), default=0.0)
     max_frame_score = max((item["score"] for item in frame_stats.values()), default=0.0)
 
     prior_fingerprints = [
-        {key: record.get(key) for key in ("release", "body_sha256", "opening", "closing", "body_trigrams")}
-        for record in records
-        if record.get("body_sha256") or record.get("opening") or record.get("closing") or record.get("body_trigrams")
+        {key: record.get(key) for key in (
+            "release", "title", "title_sha256", "title_trigrams",
+            "body_sha256", "opening", "closing", "body_trigrams",
+        )}
+        for record in published_records
+        if any(record.get(key) for key in (
+            "title", "title_sha256", "title_trigrams", "body_sha256",
+            "opening", "closing", "body_trigrams",
+        ))
     ]
     recent_fingerprints = prior_fingerprints[-ENDPOINT_COOLDOWN_RELEASES:]
     used_openings = {str(record["opening"]) for record in recent_fingerprints if record.get("opening")}
@@ -220,11 +231,17 @@ def choose_variant(
     ranked: list[dict[str, Any]] = []
     portfolio_max_body_similarity = 0.0
     portfolio_similarity_source = ""
+    portfolio_max_title_similarity = 0.0
+    portfolio_title_similarity_source = ""
     for variant in variants:
         adjustment = 0.0
         reasons = []
         variant_max_body_similarity = 0.0
         variant_similarity_source = ""
+        title_prints = title_fingerprints(variant["title"])
+        variant_title_trigrams = set(title_prints["title_trigrams"])
+        variant_max_title_similarity = 0.0
+        variant_title_similarity_source = ""
         report = dict(variant.pop("_report"))
         fingerprints = text_fingerprints(variant["body"])
         variant_trigrams = text_trigrams(variant["body"])
@@ -248,6 +265,25 @@ def choose_variant(
             elif similarity >= 0.70:
                 adjustment -= 12
                 reasons.append(f"near-duplicate penalty against {release_name} ({similarity:.2f})")
+
+            prior_title = str(prior.get("title", ""))
+            if title_prints["title_sha256"] and prior.get("title_sha256") == title_prints["title_sha256"]:
+                originality_failures.append(f"title hash matches {release_name}")
+            prior_title_trigrams = set(prior.get("title_trigrams") or []) or set(text_trigrams(prior_title))
+            title_similarity = jaccard_similarity(variant_title_trigrams, prior_title_trigrams)
+            if title_similarity > variant_max_title_similarity:
+                variant_max_title_similarity = title_similarity
+                variant_title_similarity_source = release_name
+            if title_similarity > portfolio_max_title_similarity:
+                portfolio_max_title_similarity = title_similarity
+                portfolio_title_similarity_source = release_name
+            if title_similarity >= 0.85:
+                originality_failures.append(
+                    f"near-duplicate title ({title_similarity:.2f}) matches {release_name}"
+                )
+            elif title_similarity >= 0.70:
+                adjustment -= 6
+                reasons.append(f"near-duplicate title penalty against {release_name} ({title_similarity:.2f})")
         for prior in recent_fingerprints:
             release_name = prior.get("release") or "previous release"
             if fingerprints["opening"] and prior.get("opening") == fingerprints["opening"]:
@@ -305,6 +341,8 @@ def choose_variant(
             "strategy": variant["strategy"],
             "title": variant["title"],
             "title_formula_id": variant["title_formula_id"],
+            "title_source_template": variant["title_source_template"],
+            "title_adaptation": variant["title_adaptation"],
             "hook_type": hook_type,
             "copy_frame": variant["copy_frame"],
             "remaining_copy_frames": available_frames,
@@ -321,6 +359,8 @@ def choose_variant(
             "originality_failures": originality_failures,
             "max_body_similarity": round(variant_max_body_similarity, 3),
             "max_similarity_source": variant_similarity_source,
+            "max_title_similarity": round(variant_max_title_similarity, 3),
+            "max_title_similarity_source": variant_title_similarity_source,
             "reasons": reasons,
         })
 
@@ -341,7 +381,7 @@ def choose_variant(
             "semantic score plus confidence-gated historical hook/title performance, underexplored "
             f"historical frame performance, underexplored dimension coverage, renewable frame inventory "
             f"with a {ENDPOINT_COOLDOWN_RELEASES}-release endpoint cooldown, evidence-gated comment-intent "
-            "frame/title alignment, and minus recent fatigue; "
+            "frame/title alignment, title/body originality gates, and minus recent fatigue; "
             "insufficient evidence creates no performance bonus"
         ),
         "resonance_focus": (
@@ -350,6 +390,8 @@ def choose_variant(
         ),
         "portfolio_max_body_similarity": round(portfolio_max_body_similarity, 3),
         "portfolio_max_similarity_source": portfolio_similarity_source,
+        "portfolio_max_title_similarity": round(portfolio_max_title_similarity, 3),
+        "portfolio_max_title_similarity_source": portfolio_title_similarity_source,
         "frame_stats": frame_stats,
         "endpoint_cooldown_releases": ENDPOINT_COOLDOWN_RELEASES,
         "copy_frame_inventory": frame_inventory,

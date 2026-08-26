@@ -518,6 +518,9 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
       height: 100%;
       max-height: 100%;
       overflow-y: auto !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
       padding: 24px 36px;
       box-sizing: border-box;
       text-align: left;
@@ -608,7 +611,7 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
     }}
   </style>
 </head>
-<body>
+<body data-transition="{transition}">
   <div class="reveal">
     <div class="slides">
 {slides_body}
@@ -623,4 +626,3 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
 
 # 兼容别名
 generate_presentation_html = render_presentation_html
-

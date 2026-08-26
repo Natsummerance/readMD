@@ -13,11 +13,20 @@ from typing import Any
 
 
 METRIC_FIELDS = ("impressions", "likes", "collects", "comments", "shares", "follows")
+ENGAGEMENT_WEIGHTS = {
+    "likes": 1,
+    "collects": 2,
+    "comments": 3,
+    "shares": 4,
+    "follows": 6,
+}
 REQUIRED_FIELDS = ("release", "title", "title_formula_id", "hook_type", "published_at")
 IMMUTABLE_FIELDS = (
     "release",
     "title",
     "title_formula_id",
+    "title_source_template",
+    "title_adaptation",
     "hook_type",
     "published_at",
     "variant_id",
@@ -32,6 +41,17 @@ IMMUTABLE_FIELDS = (
     "published_url",
 )
 METRIC_SOURCES = {"xiaohongshu-web", "manual"}
+
+
+def learning_fingerprint(records: list[dict[str, Any]]) -> str:
+    """Hash the exact ordered evidence used by copy selection and reporting."""
+    canonical = json.dumps(
+        records,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 COMMENT_THEME_TERMS = {
     "presentation": ("放映", "上台", "演示", "ppt", "幻灯"),
     "academic": ("论文", "组会", "课程", "讲义", "学术", "答辩"),
@@ -78,6 +98,14 @@ def load_records(path: Path) -> list[dict[str, Any]]:
 
 def is_pending_record(record: dict[str, Any]) -> bool:
     return record.get("metrics_status") == "pending"
+
+
+def engagement_score(record: dict[str, Any]) -> int:
+    """Weight all platform outcomes; follows are the strongest durable signal."""
+    return sum(
+        max(0, int(record.get(field, 0))) * weight
+        for field, weight in ENGAGEMENT_WEIGHTS.items()
+    )
 
 
 def partition_records(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -378,12 +406,7 @@ def summarize(records: list[dict[str, Any]]) -> dict[str, Any]:
             "score": 0.0,
         })
         impressions = int(record.get("impressions", 0))
-        engagement = (
-            int(record.get("likes", 0))
-            + int(record.get("collects", 0)) * 2
-            + int(record.get("comments", 0)) * 3
-            + int(record.get("shares", 0)) * 4
-        )
+        engagement = engagement_score(record)
         stats["publications"] += 1
         stats["impressions"] += impressions
         stats["weighted_engagement"] += engagement

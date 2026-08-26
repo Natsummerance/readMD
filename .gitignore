@@ -9,6 +9,7 @@ build/
 dist/
 !assets/vendor/reveal/dist/
 !assets/vendor/katex/dist/
+!assets/vendor/katex/dist/**
 *.spec
 !release/ReadMD-macOS.spec
 
@@ -23,7 +24,9 @@ showcase/output/
 showcase/downloads/
 showcase/publish-work/
 showcase/publish-state.json
+showcase/content/publication-ledger.jsonl
 showcase/content-package.zip
+showcase/content-package.zip.manifest.json
 .venv-win7/
 installer/webview2_runtime/
 release_body_win7_beta.md
@@ -34,6 +37,7 @@ website/node_modules/
 website/dist/
 graphify-out/
 test-results/
+.pytest-beta4*/
 
 
 IDEA.md

@@ -13,20 +13,90 @@ from typing import Any
 import numpy as np
 from PIL import Image
 
+from content_memory import learning_fingerprint, load_records
+from audit_copy import audit_copy
 from copy_profiles import (
     COMMENT_SCENARIOS,
     COMMENT_SHOT_FOCUS,
     MECHANISM_TOPIC_SETS,
+    TITLE_FORMULA_CONTRACTS,
     RESONANCE_CONCERN_RESPONSE,
     resonance_frame_adjustment,
     resonance_topic_adjustment,
     resonance_title_adjustment,
     SUPPORT_PHRASES,
 )
+from copy_variants import choose_variant, projected_composition
+from write_copy import build_resonance_directive
 
 
 BANNED = ("公众号", "微信", "闲鱼", "咸鱼", "转卖", "出票", "转让", "售票", "二维码", "淘口令", "淘宝")
 IMAGE_RE = re.compile(r"^xhs-(0[1-9])-[a-z0-9-]+\.jpg$")
+
+
+def raw_capture_quality_errors(
+    package_dir: Path,
+    record: dict[str, Any],
+) -> list[str]:
+    """Reject blank, distorted, or wrong-ratio evidence immediately before publishing."""
+    shot_id = str(record.get("shot_id", "unknown"))
+    relative = Path(str(record.get("file", "")))
+    path = package_dir / relative
+    errors: list[str] = []
+    capture = record.get("capture") or {}
+    viewport = str(capture.get("viewport", ""))
+    scale = int(capture.get("scale", 0) or 0)
+    if not re.fullmatch(r"\d+x\d+", viewport) or scale < 1:
+        return [f"raw screenshot has incomplete capture metadata: {shot_id}"]
+    width_text, height_text = viewport.split("x")
+    expected_size = (int(width_text) * scale, int(height_text) * scale)
+
+    with Image.open(path) as image:
+        actual_size = image.size
+        sample = image.convert("RGB").copy()
+    if actual_size != expected_size:
+        errors.append(
+            f"raw screenshot ratio differs from capture metadata: {shot_id} "
+            f"({actual_size[0]}x{actual_size[1]}, expected {expected_size[0]}x{expected_size[1]})"
+        )
+
+    sample.thumbnail((720, 720))
+    pixels = np.asarray(sample, dtype=np.int16)
+    height, width, _ = pixels.shape
+    border = np.concatenate([
+        pixels[:8, :8].reshape(-1, 3),
+        pixels[:8, -8:].reshape(-1, 3),
+        pixels[-8:, :8].reshape(-1, 3),
+        pixels[-8:, -8:].reshape(-1, 3),
+    ])
+    background = np.median(border, axis=0)
+    active_mask = np.abs(pixels - background).sum(axis=2) > 36
+    active_ratio = float(active_mask.mean())
+    row_activity = active_mask.mean(axis=1)
+    blank_rows = row_activity <= 0.005
+    longest_blank = 0
+    current_start = None
+    for index, blank in enumerate([*blank_rows, True]):
+        if blank and current_start is None:
+            current_start = index
+        if (not blank or index == len(blank_rows)) and current_start is not None:
+            end = index + 1 if blank else index
+            longest_blank = max(longest_blank, end - current_start)
+            current_start = None
+    active_columns = np.flatnonzero(active_mask.mean(axis=0) > 0.01)
+    active_rows = np.flatnonzero(row_activity > 0.01)
+    if active_ratio < 0.01:
+        errors.append(f"raw screenshot is nearly blank: {shot_id} ({active_ratio:.1%} active)")
+    if longest_blank / max(height, 1) > 0.32:
+        errors.append(
+            f"raw screenshot has a long empty band: {shot_id} ({longest_blank / height:.1%})"
+        )
+    if len(active_columns) < width * 0.5 or len(active_rows) < height * 0.25:
+        errors.append(
+            f"raw screenshot content does not fill its frame: {shot_id} "
+            f"({len(active_columns)}x{len(active_rows)} of {width}x{height})"
+        )
+    return errors
 
 
 def topic_set_id(topics: list[Any]) -> str:
@@ -140,6 +210,154 @@ def _topic_focus_selection_errors(story: dict[str, Any], metadata: dict[str, Any
     if selection.get("resonance_focus") != focus:
         errors.append("topic selection resonance focus differs from directive")
     return errors
+
+
+def title_provenance_errors(metadata: dict[str, Any]) -> list[str]:
+    """Recheck the selected title against its declared source formula."""
+    formula_id = str(metadata.get("title_formula_id", "")).strip()
+    contract = TITLE_FORMULA_CONTRACTS.get(formula_id)
+    if contract is None:
+        return []
+    errors: list[str] = []
+    for field in ("source_template", "adaptation"):
+        expected = str(contract.get(field, ""))
+        actual = str(metadata.get(f"title_{field}", "")).strip()
+        if actual != expected:
+            errors.append(
+                f"title provenance {field} differs from formula {formula_id}: "
+                f"expected {expected}, got {actual or '<missing>'}"
+            )
+    return errors
+
+
+def publisher_resonance_source_errors(package_dir: Path, ledger_path: Path | None) -> list[str]:
+    """Recompute comment resonance from the local evidence ledger."""
+    if ledger_path is None:
+        return []
+    try:
+        metadata = _load_json(package_dir / "metadata.json")
+        story = _load_json(package_dir / "story.json")
+        records = load_records(ledger_path)
+        expected = build_resonance_directive(story, records)
+    except Exception as exc:
+        return [f"recomputed resonance directive unreadable: {exc}"]
+
+    actual = metadata.get("resonance_directive")
+    if not isinstance(actual, dict):
+        return ["package omits the recomputed resonance directive"]
+    if json.dumps(actual, ensure_ascii=False, sort_keys=True) != json.dumps(
+        expected, ensure_ascii=False, sort_keys=True
+    ):
+        return [
+            "resonance directive differs from publication-ledger recomputation"
+        ]
+    return []
+
+
+def publisher_learning_snapshot_errors(package_dir: Path, ledger_path: Path | None) -> list[str]:
+    """Reject copy selected from a different feedback evidence snapshot."""
+    if ledger_path is None:
+        return []
+    try:
+        variants = _load_json(package_dir / "variants.json")
+    except Exception as exc:
+        return [f"learning snapshot variants unreadable: {exc}"]
+
+    # Legacy packages predate explicit learning provenance and remain compatible.
+    snapshot = variants.get("learning_snapshot") if isinstance(variants, dict) else None
+    if not isinstance(snapshot, dict):
+        return []
+
+    records = load_records(ledger_path)
+    expected = {
+        "schema_version": 1,
+        "record_count": len(records),
+        "sha256": learning_fingerprint(records),
+    }
+    if snapshot != expected:
+        return [
+            "learning snapshot differs from publication-ledger recomputation"
+        ]
+    return []
+
+
+def publisher_learning_materiality_errors(package_dir: Path, ledger_path: Path | None) -> list[str]:
+    """Reject a draft only when current evidence would materially reselect it."""
+    if ledger_path is None:
+        return []
+    try:
+        variants = _load_json(package_dir / "variants.json")
+        metadata = _load_json(package_dir / "metadata.json")
+        story = _load_json(package_dir / "story.json")
+    except Exception as exc:
+        return [f"learning materiality inputs unreadable: {exc}"]
+
+    # Legacy packages without the persisted candidate pool remain compatible.
+    candidates = variants.get("variants") if isinstance(variants, dict) else None
+    if not isinstance(candidates, list) or not candidates:
+        return []
+
+    try:
+        composition = projected_composition(story)
+        for candidate in candidates:
+            candidate.setdefault("_report", audit_copy(
+                story=story,
+                metadata=candidate,
+                composition=composition,
+            ))
+        recomputed_variant, recomputed_report = choose_variant(
+            candidates,
+            load_records(ledger_path),
+        )
+    except Exception as exc:
+        return [f"current publication evidence rejects every candidate: {exc}"]
+
+    selected = str(metadata.get("variant_id") or variants.get("chosen_variant_id") or "")
+    if not selected:
+        return ["package omits the selected variant id"]
+    if recomputed_variant.get("variant_id") != selected:
+        return [
+            "current publication evidence selects a different variant: "
+            f"package={selected}, current={recomputed_variant.get('variant_id')}"
+        ]
+    return []
+
+
+def composed_card_hash_errors(package_dir: Path) -> list[str]:
+    """Bind every schema-2 composition card to its exact rendered JPEG."""
+    package_dir = package_dir.resolve()
+    try:
+        composition = _load_json(package_dir / "composition.json")
+    except Exception as exc:
+        return [f"composition card manifest unreadable: {exc}"]
+
+    # Schema 1 packages predate per-card rendering hashes and remain compatible.
+    if composition.get("schema_version") != 2:
+        return []
+
+    errors: list[str] = []
+    cards = composition.get("cards", [])
+    if not isinstance(cards, list):
+        return ["composition card manifest must be a list"]
+    for card in cards:
+        name = str(card.get("file", ""))
+        expected = str(card.get("sha256", ""))
+        if not IMAGE_RE.fullmatch(name):
+            errors.append(f"composition card has an unsafe image name: {name}")
+            continue
+        if not re.fullmatch(r"[0-9a-f]{64}", expected):
+            errors.append(f"composition card hash is missing or invalid: {name}")
+            continue
+        path = package_dir / "images" / name
+        if not path.resolve().is_relative_to(package_dir / "images") or not path.is_file():
+            errors.append(f"composed card image missing: {name}")
+            continue
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual != expected:
+            errors.append(f"SHA-256 mismatch in composition.json: {name}")
+    return errors
+
+
 def _image_metrics(path: Path, screenshot_box: dict[str, float] | None = None) -> dict[str, Any]:
     with Image.open(path) as image:
         rgb = image.convert("RGB")
@@ -422,6 +640,7 @@ def publisher_input_errors(package_dir: Path) -> list[str]:
     else:
         errors.extend(_topic_identity_errors(story, metadata))
         errors.extend(_topic_focus_selection_errors(story, metadata))
+        errors.extend(title_provenance_errors(metadata))
 
     def text(name: str) -> str | None:
         path = package_dir / name
@@ -471,6 +690,7 @@ def publisher_asset_errors(package_dir: Path) -> list[str]:
         return [f"publisher asset manifest unreadable: {exc}"]
 
     errors: list[str] = []
+    errors.extend(composed_card_hash_errors(package_dir))
     images_dir = (package_dir / "images").resolve()
     raw_dir = (package_dir / "raw").resolve()
     plan = story.get("card_plan", [])
@@ -509,11 +729,12 @@ def publisher_asset_errors(package_dir: Path) -> list[str]:
     selected = story.get("selected_shots", [])
     capture_items = capture.get("shots", [])
     capture_by_id = {str(item.get("shot_id")): item for item in capture_items}
+    capture_ids = [str(item.get("shot_id")) for item in capture_items]
     if str(capture.get("release")) != str(story.get("release")):
         errors.append("capture release differs from story release")
     if not selected or selected[0] != "overview.reader":
         errors.append("publisher assets must begin with overview.reader")
-    if set(selected) != set(capture_by_id) or len(selected) != len(capture_items):
+    if len(capture_ids) != len(set(capture_ids)) or not set(selected).issubset(capture_by_id):
         errors.append("capture shots differ from story.selected_shots")
 
     raw_hashes: set[str] = set()
@@ -541,6 +762,7 @@ def publisher_asset_errors(package_dir: Path) -> list[str]:
         if digest in raw_hashes:
             errors.append(f"captured evidence hash is duplicated: {shot_id}")
         raw_hashes.add(digest)
+        errors.extend(raw_capture_quality_errors(package_dir, entry))
 
     plan_shot_ids = {
         str(item.get("shot_id"))
@@ -681,6 +903,7 @@ def validate_package(package_dir: Path, *, repo_root: Path | None = None) -> lis
     for key in ("contrast_errors", "small_text", "images_failed"):
         if design_audit.get(key):
             errors.append(f"composition design audit {key}: " + "; ".join(map(str, design_audit[key])))
+    errors.extend(composed_card_hash_errors(package_dir))
 
     title = str(metadata.get("title", "")).strip()
     body = str(metadata.get("body", "")).strip()

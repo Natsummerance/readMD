@@ -10,7 +10,7 @@ test('design system locks one evidence-paper accent and readable type scale', ()
   assert.equal(design.schema_version, 1);
   assert.equal(design.palette.accent, '#d6482c');
   assert.notEqual(design.palette.background, '#0e1630');
-  assert.ok(design.type.display.size >= 72);
+  assert.ok(design.type.display.size >= 96);
   assert.ok(design.type.body.size >= 24);
   assert.match(design.signature, /proof/i);
 });
@@ -44,7 +44,7 @@ test('cover carries a real UI strip and rejects the generic feature grid', () =>
 
 test('cover type is assessed against feed thumbnail scale', () => {
   const ready = coverFeedReadiness({
-    title_font_size: 84,
+    title_font_size: 96,
     title_width_ratio: 0.36,
     title_height_ratio: 0.07,
     caption_font_size: 31,
@@ -80,7 +80,7 @@ test('summary keeps three outcomes and feature cards stay image-led', () => {
   assert.doesNotMatch(feature, /class="annotation"/);
 });
 
-test('card two measures the complete contained screenshot instead of its cropping frame', () => {
+test('card two preserves the complete view and fills the portrait canvas', () => {
   const image = {
     naturalWidth: 960,
     naturalHeight: 1280,
@@ -97,7 +97,10 @@ test('card two measures the complete contained screenshot instead of its croppin
     'data:image/png;base64,real',
     { design: loadDesignSystem() },
   );
-  assert.match(html, /\.hero img\{[^}]*object-fit:contain/);
+  assert.match(html, /\.hero-overview\{[^}]*object-fit:contain/);
+  assert.match(html, /\.hero-detail\{[^}]*object-fit:cover/);
+  assert.match(html, /\.hero-detail\{[^}]*object-position:50% 100%/);
+  assert.equal([...html.matchAll(/<img\b/g)].length, 2);
 });
 
 test('feature cards use the plan reader value instead of technical descriptions', () => {

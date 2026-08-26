@@ -28,6 +28,8 @@ import time
 import threading
 import webbrowser
 import urllib.request
+from datetime import datetime, timezone
+from email.utils import formatdate, parsedate_to_datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
@@ -52,7 +54,7 @@ from src.readmd_core.file_writer import save_text_atomic
 from src.readmd_core.static_assets import resolve_asset
 from src.readmd_core.safe_open import safe_external_url, safe_file_target
 import src.readmd_modules as RM
-from src.readmd_modules.validators import validate_file_path, validate_command
+from src.readmd_modules.validators import validate_file_path, validate_command, paths_within
 
 APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 
@@ -634,6 +636,14 @@ class Handler(BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
     server_version = 'ReadMD/' + VERSION
     LAN_TOKEN = None
+    LAN_BLOCKED_PATHS = frozenset({
+        '/api/save', '/api/upload', '/api/image/save', '/api/code/run',
+        '/api/update/download', '/api/update/apply', '/api/import/process',
+        '/api/control/open', '/api/control/next',
+    })
+    LAN_SCOPED_PATHS = frozenset({
+        '/api/file', '/api/list', '/api/ocr', '/api/convert', '/raw',
+    })
 
     def log_message(self, fmt, *args):
         pass  # 静默访问日志
@@ -681,9 +691,28 @@ class Handler(BaseHTTPRequestHandler):
         if u.path in ('/', '/index.html') or u.path.startswith('/assets/') or u.path.startswith('/i18n/'):
             return True
         qs = parse_qs(u.query)
-        if qs.get('t', [''])[0] == self.LAN_TOKEN:
+        supplied = qs.get('t', [''])[0] or self.headers.get('X-ReadMD-Token', '')
+        if not secrets.compare_digest(supplied, self.LAN_TOKEN):
+            return False
+        return self._lan_route_authorized(u.path)
+
+    def _lan_route_authorized(self, path):
+        """Restrict shared clients to the document scope and reader-only APIs."""
+        if path in self.LAN_BLOCKED_PATHS:
+            return False
+        if path not in self.LAN_SCOPED_PATHS:
             return True
-        return self.headers.get('X-ReadMD-Token', '') == self.LAN_TOKEN
+        root = getattr(self.server, 'shared_root', None)
+        if not root:
+            return False
+        requested = parse_qs(urlparse(self.path).query).get('p', [''])[0]
+        if not requested:
+            return False
+        try:
+            target = os.path.realpath(unquote(requested))
+        except Exception:
+            return False
+        return paths_within(target, root)
 
     def _local_host_authorized(self):
         if self.LAN_TOKEN:
@@ -778,7 +807,12 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/ai/history':
             self._api_ai_history()
         elif path == '/api/share/start':
-            self._send_json(200, start_lan_server())
+            try:
+                length = int(self.headers.get('Content-Length', 0) or 0)
+                body = json.loads(self.rfile.read(length).decode('utf-8')) if length else {}
+                self._send_json(200, start_lan_server(body.get('current_file')))
+            except Exception as e:
+                self._send_json(500, {'ok': False, 'error': str(e)})
         elif path == '/api/share/stop':
             self._send_json(200, stop_lan_server())
         elif path == '/api/share/status':
@@ -1182,20 +1216,50 @@ class Handler(BaseHTTPRequestHandler):
             fmt = 'png'
         try:
             import base64 as _b64
+            from io import BytesIO
+
+            from PIL import Image
+
             raw = _b64.b64decode(data_b64)
             if not raw:
                 self._send_json(400, {'error': '图片数据为空'})
                 return
+            if len(raw) > 25 * 1024 * 1024:
+                self._send_json(413, {'error': '图片超过 25 MB 限制'})
+                return
+
+            try:
+                image = Image.open(BytesIO(raw))
+                actual_format = (image.format or '').lower()
+                image.verify()
+            except Exception:
+                self._send_json(400, {'error': '无效图片数据'})
+                return
+            expected_format = 'jpeg' if fmt == 'jpg' else fmt
+            if actual_format != expected_format:
+                self._send_json(400, {'error': '图片内容与格式不一致'})
+                return
+
             img_dir = os.path.join(dir_path, 'images')
             os.makedirs(img_dir, exist_ok=True)
-            if not name or not re.match(r'^[A-Za-z0-9_\-]+', name):
+            safe_name = os.path.basename(name.replace('\\', '/'))
+            if ('..' in safe_name or '..' in name
+                    or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,180}', safe_name)):
                 name = 'img_%d_%s' % (int(time.time() * 1000), os.urandom(3).hex())
-            if not name.lower().endswith('.' + fmt):
-                name += '.' + fmt
-            target = os.path.join(img_dir, name)
+            else:
+                name = safe_name.rsplit('.', 1)[0]
+            filename = '%s.%s' % (name, fmt)
+            img_dir = os.path.realpath(img_dir)
+            target = os.path.realpath(os.path.join(img_dir, filename))
+            if not paths_within(target, img_dir):
+                self._send_json(403, {'error': '图片路径不受信任'})
+                return
+            if not name or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,180}', name):
+                self._send_json(400, {'error': '图片文件名无效'})
+                return
             with open(target, 'wb') as f:
                 f.write(raw)
-            rel = os.path.join('images', name).replace('\\', '/')
+            rel = os.path.join('images', os.path.basename(filename)).replace('\\', '/')
             self._send_json(200, {'ok': True, 'path': target, 'rel': rel})
         except Exception as e:
             logging.exception('image save failed')
@@ -1256,9 +1320,39 @@ class Handler(BaseHTTPRequestHandler):
         if not os.path.isfile(fp):
             self._send(404, 'text/plain; charset=utf-8', b'not found')
             return
+        stat = os.stat(fp)
+        etag = '"%x-%x-%x"' % (stat.st_ino, stat.st_size, stat.st_mtime_ns)
+        cache_control = 'public, max-age=31536000, immutable' if immutable else 'no-cache'
+        if self._resource_not_modified(etag, stat):
+            self.send_response(304)
+            self.send_header('Cache-Control', cache_control)
+            self.send_header('ETag', etag)
+            self.end_headers()
+            return
         with open(fp, 'rb') as f:
-            self._send(200, ctype, f.read(),
-                       'public, max-age=31536000, immutable' if immutable else 'no-cache')
+            body = f.read()
+        self.send_response(200)
+        self.send_header('Content-Type', ctype)
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', cache_control)
+        self.send_header('ETag', etag)
+        self.send_header('Last-Modified', formatdate(stat.st_mtime, usegmt=True))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _resource_not_modified(self, etag, stat):
+        none_match = self.headers.get('If-None-Match')
+        if none_match is not None:
+            requested = {item.strip().removeprefix('W/') for item in none_match.split(',')}
+            return etag.removeprefix('W/') in requested or '*' in requested
+        modified_since = self.headers.get('If-Modified-Since')
+        if not modified_since:
+            return False
+        try:
+            requested_at = parsedate_to_datetime(modified_since).timestamp()
+            return int(requested_at) >= int(stat.st_mtime)
+        except (TypeError, ValueError, OverflowError):
+            return False
 
     def _api_file(self, p, meta_only):
         if not os.path.isfile(p):
@@ -1670,7 +1764,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
-LAN = {'server': None, 'token': None}
+LAN = {'server': None, 'token': None, 'shared_file': None}
 
 
 def _is_private(ip):
@@ -1718,7 +1812,18 @@ def share_status():
             'url': 'http://%s:%d/' % (get_lan_ip(), srv.server_port)}
 
 
-def start_lan_server():
+def configure_lan_server(server, shared_file=None):
+    """Bind a share server to one document directory and remove the local control token."""
+    server.app_token = None
+    server.shared_file = ''
+    server.shared_root = ''
+    if shared_file and os.path.isfile(shared_file):
+        real_file = os.path.realpath(shared_file)
+        server.shared_file = real_file
+        server.shared_root = os.path.dirname(real_file)
+
+
+def start_lan_server(shared_file=None):
     """启动局域网共享服务器（带随机 token 鉴权），供手机等设备访问。"""
     if LAN['server'] is not None:
         return share_status()
@@ -1731,9 +1836,11 @@ def start_lan_server():
         srv = ReadMDHTTPServer(('0.0.0.0', 0), LanHandler)
     except OSError as e:
         return {'ok': False, 'error': '无法监听局域网：%s' % e}
+    configure_lan_server(srv, shared_file)
     threading.Thread(target=srv.serve_forever, daemon=True, name='readmd-lan').start()
     LAN['server'] = srv
     LAN['token'] = token
+    LAN['shared_file'] = srv.shared_file
     d = share_status()
     d['ok'] = True
     logging.info('LAN share started: %s', d.get('url'))
@@ -1754,6 +1861,7 @@ def stop_lan_server():
         pass
     LAN['server'] = None
     LAN['token'] = None
+    LAN['shared_file'] = None
     logging.info('LAN share stopped')
     return {'ok': True, 'running': False}
 

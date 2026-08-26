@@ -53,7 +53,7 @@ class TestV235Features(unittest.TestCase):
         """测试 Reveal.js 演说模式渲染。"""
         slides_md = "# Slide 1\n\nContent 1\n\n<!-- slide -->\n\n# Slide 2\n\nContent 2"
         html = render_presentation_html(slides_md, title="Test Presentation")
-        self.assertIn("reveal.js", html)
+        self.assertIn("assets/vendor/reveal/dist/readmd-boot.js", html)
         self.assertIn("Slide 1", html)
         self.assertIn("Slide 2", html)
 

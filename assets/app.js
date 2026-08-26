@@ -156,14 +156,7 @@ function bindEvents() {
         ['history-modal', () => $('history-modal').classList.add('hidden')],
         ['fix-modal', () => $('fix-modal').classList.add('hidden')],
         ['tpl-modal', () => $('tpl-modal').classList.add('hidden')],
-        ['presentation-modal', () => {
-          const pm = $('presentation-modal');
-          if (pm && !pm.classList.contains('hidden')) {
-            pm.classList.add('hidden');
-            const ifr = pm.querySelector('.presentation-iframe');
-            if (ifr) ifr.src = 'about:blank';
-          }
-        }]
+        ['presentation-modal', () => window.closePresentationMode?.()],
       ];
       for (const [id, closeFn] of openModals) {
         const el = $(id);
@@ -761,6 +754,7 @@ function bindEvents() {
         else if (activeModal === 'style-custom-modal') closeStyleModal();
         else if (activeModal === 'lang-modal' && window.i18n) window.i18n.closeModal();
         else if (activeModal.startsWith('ai-')) closeAiModal(activeModal);
+        else if (activeModal === 'presentation-modal') window.closePresentationMode?.();
         else $(activeModal).classList.add('hidden');
         return;
       }
@@ -771,7 +765,8 @@ function bindEvents() {
       }
     }
     
-    if (e.key === 'F11' && state.editing) { e.preventDefault(); toggleZenMode(); }
+    const presentationVisible = $('presentation-modal') && !$('presentation-modal').classList.contains('hidden');
+    if (e.key === 'F11' && !presentationVisible) { e.preventDefault(); toggleZenMode(); }
     else if (e.key === 'F2') { e.preventDefault(); openFileRename(); } // F2: 文件重命名
     else if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); $('btn-open').click(); } // Ctrl+O: 打开文件
     else if (mod && e.key.toLowerCase() === 'f') { // Ctrl+F: 全文搜索
@@ -973,6 +968,8 @@ async function init() {
    就绪通知与后台任务引导 (Post-Initialization Finish)
    ---------------------------------------------------------------------------------------------- */
 function finishInit() {
+  performance.mark('readmd-app-ready');
+  window.__readmdAppReady = true;
   reportNativeReady();
   if (startupServicesStarted) return;
   startupServicesStarted = true;

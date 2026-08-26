@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -17,13 +18,21 @@ from typing import Any
 
 from content_memory import load_records, upsert_record
 from audit_copy import audit_copy
-from copy_variants import jaccard_similarity, text_fingerprints, text_trigrams
+from copy_variants import (
+    jaccard_similarity,
+    text_fingerprints,
+    text_trigrams,
+    title_fingerprints,
+)
 from pattern_audit import audit_patterns
-from package_content import validate_release_evidence
+from package_content import validate_release_evidence, verify_package_manifest
+from review_dashboard import build_dashboard, collect_inputs, validate_dashboard
 from validate_package import (
     publisher_asset_errors,
     publisher_directive_errors,
     publisher_input_errors,
+    publisher_learning_materiality_errors,
+    publisher_resonance_source_errors,
     variant_selection_integrity_errors,
 )
 
@@ -31,6 +40,15 @@ DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publ
 STATE_VERSION = 1
 SHOWCASE_ROOT = Path(__file__).resolve().parents[1]
 ORIGINALITY_ENDPOINT_COOLDOWN_RELEASES = 8
+SUCCESS_STATUSES = {"published", "drafted"}
+FAILURE_STATUSES = {"failed", "abandoned"}
+
+
+def publisher_environment() -> dict[str, str]:
+    """Keep publisher JSON valid even when Windows defaults to a legacy code page."""
+    environment = os.environ.copy()
+    environment["PYTHONIOENCODING"] = "utf-8"
+    return environment
 
 
 def load_state(path: Path) -> dict[str, Any]:
@@ -60,6 +78,60 @@ def safe_extract(zip_path: Path, destination: Path) -> None:
                 shutil.copyfileobj(source, output)
 
 
+def package_token(zip_path: Path) -> str:
+    return hashlib.sha256(zip_path.read_bytes()).hexdigest()[:16]
+
+
+def archive_terminal_package(zip_path: Path, state_path: Path) -> bool:
+    """Move a completed package out of the live watch directory.
+
+    Failed packages are retained in a sibling directory so their zip and QA
+    evidence remain available without forcing the watcher to rescan them.
+    """
+    state = load_state(state_path)
+    token = package_token(zip_path)
+    record = state["packages"].get(token)
+    status = str(record.get("status", "")) if record else ""
+    if status == "published" and record.get("ledger_status") == "seed_failed":
+        # Leave the package live so the watcher can finish feedback-ledger repair.
+        return False
+    if status in SUCCESS_STATUSES:
+        outcome = "processed"
+    elif status in FAILURE_STATUSES:
+        outcome = "failed"
+    else:
+        return False
+
+    archive_dir = zip_path.parent / outcome
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    target = archive_dir / f"{token}-{zip_path.name}"
+    record["zip"] = str(target)
+    record["archived_at"] = datetime.now(timezone.utc).isoformat()
+    # Commit the destination first. If interrupted before the move, the next
+    # scan sees a terminal status and retries this idempotent operation.
+    state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    zip_path.replace(target)
+    return True
+
+
+def reconcile_archived_packages(watch_dir: Path, state_path: Path) -> None:
+    """Repair paths if the process stopped between archiving and state save."""
+    state = load_state(state_path)
+    changed = False
+    for outcome in ("processed", "failed"):
+        archive_dir = watch_dir / outcome
+        if not archive_dir.exists():
+            continue
+        for archive_path in archive_dir.glob("*.zip"):
+            token = package_token(archive_path)
+            record = state["packages"].get(token)
+            if record and Path(str(record.get("zip", ""))) != archive_path:
+                record["zip"] = str(archive_path)
+                changed = True
+    if changed:
+        state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
 def package_identity(package_dir: Path) -> tuple[str, str]:
     story = json.loads((package_dir / "story.json").read_text(encoding="utf-8"))
     metadata = json.loads((package_dir / "metadata.json").read_text(encoding="utf-8"))
@@ -73,7 +145,7 @@ def localize_image_paths(package_dir: Path) -> None:
     metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def publish_command(publisher: Path, package_dir: Path, draft: bool) -> list[str]:
+def publish_command(publisher: Path, package_dir: Path, draft: bool, *, reuse_edge: bool = False) -> list[str]:
     metadata = json.loads((package_dir / "metadata.json").read_text(encoding="utf-8"))
     images = [Path(item) for item in metadata["images"]]
     command = [
@@ -81,11 +153,12 @@ def publish_command(publisher: Path, package_dir: Path, draft: bool) -> list[str
         str(publisher),
         "publish",
         "--bootstrap-edge",
-        "--restart-edge",
         "--title-file", str(package_dir / "title.txt"),
         "--body-file", str(package_dir / "body.txt"),
         "--cover", str(images[0]),
     ]
+    if not reuse_edge:
+        command.insert(4, "--restart-edge")
     for image in images[1:]:
         command.extend(("--image", str(image)))
     for topic in metadata["topics"]:
@@ -101,15 +174,18 @@ def query_status(publisher: Path, title: str) -> dict[str, Any]:
         text=True,
         capture_output=True,
         encoding="utf-8",
+        env=publisher_environment(),
         timeout=120,
     )
     if completed.returncode != 0:
         raise RuntimeError((completed.stderr or completed.stdout or "status query failed").strip())
     for line in reversed((completed.stdout or "").splitlines()):
         try:
-            return json.loads(line)
+            parsed = json.loads(line)
         except json.JSONDecodeError:
             continue
+        if isinstance(parsed, dict):
+            return parsed
     return {}
 
 
@@ -136,6 +212,8 @@ def seed_feedback_ledger(
         "variant_id": str(metadata.get("variant_id", "unknown")),
         "copy_frame": str(metadata.get("copy_frame", "unknown")),
         "title_formula_id": str(metadata.get("title_formula_id", "unknown")),
+        "title_source_template": str(metadata.get("title_source_template", "unknown")),
+        "title_adaptation": str(metadata.get("title_adaptation", "unknown")),
         "hook_type": str(metadata.get("hook_type", metadata.get("strategy", "unknown"))),
         "primary_shot": str(metadata.get("primary_shot", "unknown")),
         "topic_set_id": str(metadata.get("topic_set_id", "unknown")),
@@ -154,6 +232,7 @@ def seed_feedback_ledger(
         "publisher_target_id": publisher_result.get("targetId"),
         "published_url": publisher_result.get("url"),
         "audit_status": audit_status,
+        **title_fingerprints(title),
         **text_fingerprints(body),
         "body_trigrams": sorted(text_trigrams(body)),
         "lessons": "Published automatically; awaiting platform metrics and manual review.",
@@ -241,6 +320,31 @@ def recomputed_gate_errors(package_dir: Path) -> list[str]:
             errors.extend(f"variant selection gate: {item}" for item in integrity_errors)
         except Exception as exc:
             errors.append(f"variant selection gate crashed: {exc}")
+
+    dashboard_path = package_dir / "review-dashboard.html"
+    if dashboard_path.exists():
+        try:
+            inputs = collect_inputs(package_dir)
+            expected_dashboard = build_dashboard(inputs)
+            actual_dashboard = dashboard_path.read_text(encoding="utf-8")
+            if actual_dashboard != expected_dashboard:
+                errors.append("review dashboard is stale or does not match package data")
+            dashboard_errors = validate_dashboard(expected_dashboard)
+            if dashboard_errors:
+                errors.append("review dashboard uses forbidden artifacts: " + "; ".join(dashboard_errors))
+        except Exception as exc:
+            errors.append(f"review dashboard gate crashed: {exc}")
+
+    try:
+        dashboard_report = load("dashboard-qa.json")
+        expected_dashboard_ok = not any(error.startswith("review dashboard") for error in errors)
+        if dashboard_report.get("ok") is not expected_dashboard_ok:
+            errors.append("dashboard QA verdict differs from recomputed dashboard")
+        expected_overall = "PASS" if inputs.get("qa", {}).get("ok") is True else "NEEDS FIX"
+        if dashboard_report.get("overall_status") != expected_overall:
+            errors.append("dashboard overall status differs from package QA")
+    except Exception as exc:
+        errors.append(f"dashboard QA gate crashed: {exc}")
     return errors
 
 
@@ -257,6 +361,9 @@ def publisher_originality_errors(package_dir: Path, ledger_path: Path | None) ->
     body = str(metadata.get("body", ""))
     fingerprints = text_fingerprints(body)
     trigrams = text_trigrams(body)
+    title = str(metadata.get("title", ""))
+    title_prints = title_fingerprints(title)
+    title_trigrams = set(title_prints["title_trigrams"])
     release = str(metadata.get("release", ""))
     priors = [record for record in records if str(record.get("release", "")) != release]
     errors: list[str] = []
@@ -270,6 +377,15 @@ def publisher_originality_errors(package_dir: Path, ledger_path: Path | None) ->
         if similarity >= 0.85:
             errors.append(
                 f"near-duplicate body ({similarity:.2f}) matches {release_name}"
+            )
+
+        prior_title_trigrams = set(prior.get("title_trigrams") or []) or set(text_trigrams(str(prior.get("title", ""))))
+        title_similarity = jaccard_similarity(title_trigrams, prior_title_trigrams)
+        if title_prints["title_sha256"] and prior.get("title_sha256") == title_prints["title_sha256"]:
+            errors.append(f"title hash matches {release_name}")
+        if title_similarity >= 0.85:
+            errors.append(
+                f"near-duplicate title ({title_similarity:.2f}) matches {release_name}"
             )
 
     for prior in priors[-ORIGINALITY_ENDPOINT_COOLDOWN_RELEASES:]:
@@ -289,9 +405,21 @@ def process_package(
     max_attempts: int,
     draft: bool,
     ledger_path: Path | None = None,
+    *,
+    reuse_edge: bool = False,
 ) -> bool:
+    try:
+        verify_package_manifest(zip_path)
+    except Exception as exc:
+        record = {"attempts": 1, "status": "failed", "error": str(exc)}
+        state = load_state(state_path)
+        token = package_token(zip_path)
+        state["packages"][token] = record
+        state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(json.dumps({"ok": False, "token": token, "status": "failed", "error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        return False
     state = load_state(state_path)
-    token = hashlib.sha256(zip_path.read_bytes()).hexdigest()[:16]
+    token = package_token(zip_path)
     record = state["packages"].setdefault(token, {"zip": str(zip_path), "attempts": 0, "status": "pending"})
     if record["status"] in {"published", "drafted"}:
         needs_repair = (
@@ -363,6 +491,9 @@ def process_package(
         input_errors = publisher_input_errors(package_dir)
         if input_errors:
             raise ValueError("publisher input contract failed: " + "; ".join(input_errors))
+        resonance_source_errors = publisher_resonance_source_errors(package_dir, ledger_path)
+        if resonance_source_errors:
+            raise ValueError("publisher resonance evidence contract failed: " + "; ".join(resonance_source_errors))
         directive_errors = publisher_directive_errors(package_dir)
         if directive_errors:
             raise ValueError("publisher directive contract failed: " + "; ".join(directive_errors))
@@ -372,6 +503,9 @@ def process_package(
         originality_errors = publisher_originality_errors(package_dir, ledger_path)
         if originality_errors:
             raise ValueError("publisher originality contract failed: " + "; ".join(originality_errors))
+        learning_errors = publisher_learning_materiality_errors(package_dir, ledger_path)
+        if learning_errors:
+            raise ValueError("publisher learning evidence contract failed: " + "; ".join(learning_errors))
         dashboard = json.loads((package_dir / "dashboard-qa.json").read_text(encoding="utf-8"))
         if dashboard.get("ok") is not True:
             raise ValueError("package dashboard-qa.json is not green")
@@ -445,15 +579,24 @@ def process_package(
                     "title": title,
                 }, ensure_ascii=False))
                 return False
-        command = publish_command(publisher, package_dir, draft=draft)
-        completed = subprocess.run(command, text=True, capture_output=True, encoding="utf-8", timeout=600)
+        command = publish_command(publisher, package_dir, draft=draft, reuse_edge=reuse_edge)
+        completed = subprocess.run(
+            command,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+            env=publisher_environment(),
+            timeout=600,
+        )
         result: dict[str, Any] = {}
         for line in reversed((completed.stdout or "").splitlines()):
             try:
-                result = json.loads(line)
-                break
+                parsed = json.loads(line)
             except json.JSONDecodeError:
                 continue
+            if isinstance(parsed, dict):
+                result = parsed
+                break
         record["attempts"] += 1
         record["release"] = release
         record["variant_id"] = selected_variant_id
@@ -557,21 +700,33 @@ def main() -> int:
     parser.add_argument("--interval", type=float, default=30.0)
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--draft", action="store_true", help="fill the Xiaohongshu form without clicking publish")
+    parser.add_argument("--reuse-edge", action="store_true", help="require an already-ready Edge CDP session instead of restarting Edge")
     args = parser.parse_args()
     args.watch_dir.mkdir(parents=True, exist_ok=True)
     args.work_dir.mkdir(parents=True, exist_ok=True)
+    reconcile_archived_packages(args.watch_dir, args.state)
     while True:
         zips = sorted(args.watch_dir.glob("*.zip"), key=lambda path: path.stat().st_mtime)
         for zip_path in zips:
-            process_package(
-                zip_path,
-                args.work_dir,
-                args.state,
-                args.publisher,
-                args.max_attempts,
-                args.draft,
-                ledger_path=args.ledger,
-            )
+            try:
+                process_package(
+                    zip_path,
+                    args.work_dir,
+                    args.state,
+                    args.publisher,
+                    args.max_attempts,
+                    args.draft,
+                    ledger_path=args.ledger,
+                    reuse_edge=args.reuse_edge,
+                )
+                archive_terminal_package(zip_path, args.state)
+            except Exception as exc:
+                # A malformed or transiently locked package must not stop other releases.
+                print(json.dumps({
+                    "ok": False,
+                    "zip": str(zip_path),
+                    "error": str(exc),
+                }, ensure_ascii=False), file=sys.stderr)
         if args.once:
             return 0
         time.sleep(max(5.0, args.interval))

@@ -9,10 +9,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from content_memory import load_learning_records, partition_records, summarize
+from content_memory import engagement_score, load_learning_records, partition_records, summarize
 from copy_profiles import (
     COMMENT_SCENARIOS,
     COMMENT_SHOT_FOCUS,
+    TITLE_FORMULA_CONTRACTS,
     MECHANISM_TOPIC_SETS,
     RESONANCE_CONCERN_RESPONSE,
     SUPPORT_PHRASES,
@@ -53,11 +54,18 @@ def _planned_card_count(story: dict[str, Any]) -> int:
     return max(4, min(fallback, 9))
 
 
-def _title_candidates(story: dict[str, Any]) -> list[dict[str, str]]:
+def _title_candidates(story: dict[str, Any]) -> list[dict[str, Any]]:
     profile = profile_for_story(story)
     number = _planned_card_count(story)
     candidates = [
-        {"formula_id": formula_id, "text": text.replace("{number}", str(number))}
+        {
+            "formula_id": formula_id,
+            "text": text.replace("{number}", str(number)),
+            **{
+                field: TITLE_FORMULA_CONTRACTS[formula_id][field]
+                for field in ("source_template", "adaptation")
+            },
+        }
         for formula_id, text in profile["titles"].items()
     ]
     errors = title_candidate_errors(candidates)
@@ -66,7 +74,7 @@ def _title_candidates(story: dict[str, Any]) -> list[dict[str, str]]:
     return candidates
 
 
-def _select_title(candidates: list[dict[str, str]], history: list[dict[str, Any]] | None) -> tuple[dict[str, str], dict[str, Any]]:
+def _select_title(candidates: list[dict[str, Any]], history: list[dict[str, Any]] | None) -> tuple[dict[str, Any], dict[str, Any]]:
     if not history:
         chosen = candidates[0]
         return chosen, {
@@ -80,7 +88,7 @@ def _select_title(candidates: list[dict[str, str]], history: list[dict[str, Any]
     stats = summary["formula_stats"]
     max_score = max((item["score"] for item in stats.values()), default=0.0)
     recent = set(summary["recent_formulas"])
-    scored: list[tuple[float, dict[str, str]]] = []
+    scored: list[tuple[float, dict[str, Any]]] = []
     avoided: list[str] = []
     for index, candidate in enumerate(candidates):
         formula = candidate["formula_id"]
@@ -175,6 +183,15 @@ def _resonance_focus(history: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _comment_history(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Comment evidence is independent of metric completeness."""
+    return [
+        record
+        for record in records
+        if isinstance(record.get("comment_insights"), dict)
+    ]
+
+
 def _resonance_directive(
     resonance: dict[str, Any],
     *,
@@ -211,6 +228,35 @@ def _resonance_directive(
             "delete": "不加入与评论焦点无关的新卖点。",
         },
     }
+
+
+def available_shot_ids(story: dict[str, Any]) -> set[str]:
+    primary_id = str(story.get("primary_shot", "overview.editor"))
+    supporting_ids = [
+        shot_id
+        for claim in story.get("claims", [])
+        for shot_id in (claim.get("shot_ids") or [])
+        if shot_id != primary_id
+    ]
+    return {primary_id, *supporting_ids}
+
+
+def build_resonance_directive(
+    story: dict[str, Any],
+    history: list[dict[str, Any]] | None,
+) -> dict[str, Any]:
+    """Derive the directive from publication evidence without package claims."""
+    all_history = history or []
+    learning_history, pending_history = partition_records(all_history)
+    resonance = _resonance_focus(
+        _comment_history([*learning_history, *pending_history])
+    )
+    return _resonance_directive(
+        resonance,
+        story=story,
+        profile=profile_for_story(story),
+        available_shot_ids=available_shot_ids(story),
+    )
 
 
 def _select_topic_set(
@@ -254,12 +300,7 @@ def _select_topic_set(
             "confidence_ok": False,
         })
         impressions = int(record.get("impressions", 0))
-        engagement = (
-            int(record.get("likes", 0))
-            + int(record.get("collects", 0)) * 2
-            + int(record.get("comments", 0)) * 3
-            + int(record.get("shares", 0)) * 4
-        )
+        engagement = engagement_score(record)
         stat["publications"] += 1
         stat["impressions"] += impressions
         stat["weighted_engagement"] += engagement
@@ -338,7 +379,8 @@ def generate_copy(
     previous_release: str,
     history: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
-    history, _pending_history = partition_records(history or [])
+    all_history = history or []
+    history, pending_history = partition_records(all_history)
     candidates = _title_candidates(story)
     selected_title, title_selection = _select_title([dict(item) for item in candidates], history)
     profile = profile_for_story(story)
@@ -351,13 +393,8 @@ def generate_copy(
     ]
     unique_supporting_ids = list(dict.fromkeys(supporting_ids))
     available_shot_ids = {primary_id, *unique_supporting_ids}
-    resonance = _resonance_focus(history)
-    resonance_directive = _resonance_directive(
-        resonance,
-        story=story,
-        profile=profile,
-        available_shot_ids=available_shot_ids,
-    )
+    resonance_directive = build_resonance_directive(story, all_history)
+    resonance = resonance_directive["evidence"]
     selected_topic_set, topic_set_selection = _select_topic_set(
         primary_id=primary_id,
         history=history,
@@ -428,17 +465,21 @@ def generate_copy(
         paragraphs.append(RESONANCE_CONCERN_RESPONSE)
 
     if invisible_claims:
-        fixes = "；".join(_clean(claim["user_value"]) for claim in invisible_claims[:2])
+        fixes = "；".join(_clean(claim["user_value"]).rstrip("。．.!！?？") for claim in invisible_claims[:2])
         paragraphs.append(f"还有一些不适合单独拍图的底层修复也在这版里，比如{fixes}。它们不抢画面，但会让日常使用更稳。")
+
+    paragraphs.append(f"收藏这条{profile['decision_rule']}")
 
     paragraphs.extend(
         [
             f"如果你常处理{COMMENT_SCENARIOS[reader_focus]}，它会省掉“{profile['saved_step']}”这一步。",
             f"安装包在 GitHub Releases 页面。不想翻链接的话，可以直接 GitHub 搜 {repository}，进仓库后点 Releases 就能找到对应平台。",
-            profile["cta"],
         ]
     )
-    body = "\n\n".join(paragraphs)
+    cta = profile["cta"]
+
+    def assembled(parts: list[str]) -> str:
+        return "\n\n".join([*parts, cta])
 
     padding = [
         "渲染阶段只处理显示结果，不会替你改写原始 Markdown 文件。",
@@ -451,9 +492,8 @@ def generate_copy(
         "公式和图表在阅读页直接渲染，减少截图拼接。",
         "本地优先意味着草稿、笔记和讲稿都留在自己的设备里。",
     ]
-    while len(body) > 900:
-        parts = body.split("\n\n")
-        if len(parts) <= 4:
+    while len(assembled(paragraphs)) > 900:
+        if len(paragraphs) <= 4:
             break
         focused_phrase = SUPPORT_PHRASES.get(COMMENT_SHOT_FOCUS.get(reader_focus, ""))
         scenario = COMMENT_SCENARIOS[reader_focus]
@@ -465,17 +505,19 @@ def generate_copy(
         )
         removable = [
             index
-            for index in range(3, len(parts) - 2)
-            if not any(term in parts[index] for term in protected)
+            for index in range(3, len(paragraphs) - 1)
+            if not any(term in paragraphs[index] for term in protected)
         ]
         if not removable:
             break
-        parts.pop(max(removable))
-        body = "\n\n".join(parts)
+        paragraphs.pop(max(removable))
     pad_index = 0
-    while len(body) < 600 and pad_index < len(padding):
-        body += "\n\n" + padding[pad_index]
+    while len(assembled(paragraphs)) < 600 and pad_index < len(padding):
+        # Keep practical context before the scenario, download note, and CTA so
+        # the comment prompt remains the post's final reader action.
+        paragraphs.insert(max(3, len(paragraphs) - 2), padding[pad_index])
         pad_index += 1
+    body = assembled(paragraphs)
 
     topics = selected_topic_set["topics"]
     return {

@@ -3,8 +3,18 @@
 
 const fs = require('fs');
 const path = require('path');
+const { createHash } = require('crypto');
 const { chromium } = require('../../ui-tests/node_modules/@playwright/test');
-const { buildCardHtml, coverFeedReadiness, drawnImageBox, imageSrc, planCards } = require('../compose_lib.cjs');
+const {
+  buildCardHtml,
+  coverFeedReadiness,
+  drawnImageBox,
+  imageSrc,
+  clippedTextFailures,
+  layoutCollisionFailures,
+  offCanvasFailures,
+  planCards,
+} = require('../compose_lib.cjs');
 
 async function main() {
   const packageDir = path.resolve(process.argv[2] || 'output/package');
@@ -25,16 +35,25 @@ async function main() {
       fs.writeFileSync(htmlPath, html, 'utf8');
       await page.goto(`file://${htmlPath.replace(/\\/g, '/')}`);
       await page.waitForLoadState('networkidle');
-      const overflowErrors = await page.evaluate(() => {
+      const overflowAudit = await page.evaluate(() => {
         const errors = [];
         if (document.documentElement.scrollWidth > window.innerWidth) errors.push('horizontal page overflow');
         if (document.documentElement.scrollHeight > window.innerHeight) errors.push('vertical page overflow');
-        for (const element of document.querySelectorAll('*')) {
-          if (!(element instanceof HTMLElement) || !element.innerText.trim()) continue;
-          if (element.scrollWidth > element.clientWidth + 1) errors.push(`text overflow: ${element.innerText.slice(0, 24)}`);
-        }
-        return errors;
+        const text_metrics = [...document.querySelectorAll('h1,h2,p,li,strong,span')]
+          .filter((element) => element.innerText.trim())
+          .map((element) => ({
+            label: element.innerText.trim().replace(/\s+/g, ' ').slice(0, 24),
+            clips_horizontal: ['hidden', 'clip', 'auto', 'scroll'].includes(getComputedStyle(element).overflowX),
+            clips_vertical: ['hidden', 'clip', 'auto', 'scroll'].includes(getComputedStyle(element).overflowY),
+            scroll_width: element.scrollWidth,
+            client_width: element.clientWidth,
+            scroll_height: element.scrollHeight,
+            client_height: element.clientHeight,
+          }));
+        return { errors, text_metrics };
       });
+      const clippingErrors = clippedTextFailures(overflowAudit.text_metrics);
+      const overflowErrors = [...overflowAudit.errors, ...clippingErrors];
       if (overflowErrors.length) throw new Error(`${card.file}: ${overflowErrors.join('; ')}`);
       const designAudit = await page.evaluate(() => {
         const luminance = (rgb) => {
@@ -75,20 +94,59 @@ async function main() {
       });
       const auditErrors = [...designAudit.contrast_errors, ...designAudit.small_text, ...designAudit.images_failed];
       if (auditErrors.length) throw new Error(`${card.file} design audit: ${auditErrors.join('; ')}`);
-      const screenshotBox = await page.evaluate(() => {
-        const image = document.querySelector('img');
-        if (!image) return null;
-        const bounds = image.getBoundingClientRect();
-        const style = getComputedStyle(image);
-        return {
-          bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
-          naturalWidth: image.naturalWidth,
-          naturalHeight: image.naturalHeight,
-          objectFit: style.objectFit,
-          objectPosition: style.objectPosition,
-        };
+      const layoutBoxes = await page.evaluate(() => {
+        const textBoxes = [...document.querySelectorAll('h1,h2,p,li,strong,span')]
+          .filter((element) => element.innerText.trim() && element.children.length === 0)
+          .map((element) => {
+            const bounds = element.getBoundingClientRect();
+            return {
+              kind: 'text',
+              label: element.innerText.trim().replace(/\s+/g, ' ').slice(0, 24),
+              x: bounds.x,
+              y: bounds.y,
+              width: bounds.width,
+              height: bounds.height,
+            };
+          });
+        const screenshotBoxes = [...document.images].map((image) => {
+          const bounds = image.getBoundingClientRect();
+          return {
+            kind: 'screenshot',
+            label: image.alt || 'authentic UI capture',
+            x: bounds.x,
+            y: bounds.y,
+            width: bounds.width,
+            height: bounds.height,
+          };
+        });
+        return [...textBoxes, ...screenshotBoxes];
       });
-      const measuredBox = screenshotBox ? drawnImageBox(screenshotBox) : null;
+      const collisionErrors = layoutCollisionFailures(layoutBoxes);
+      const boundaryErrors = offCanvasFailures(layoutBoxes);
+      const geometryErrors = [...collisionErrors, ...boundaryErrors];
+      if (geometryErrors.length) throw new Error(`${card.file} ${geometryErrors.join('; ')}`);
+      const screenshotBoxes = await page.evaluate(() => {
+        const images = [...document.images];
+        if (!images.length) return null;
+        return images.map((image) => {
+          const bounds = image.getBoundingClientRect();
+          const style = getComputedStyle(image);
+          return {
+            bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+            naturalWidth: image.naturalWidth,
+            naturalHeight: image.naturalHeight,
+            objectFit: style.objectFit,
+            objectPosition: style.objectPosition,
+          };
+        });
+      });
+      const measuredBoxes = (screenshotBoxes || []).map((box) => drawnImageBox(box));
+      const measuredBox = measuredBoxes.length ? {
+        x: Math.min(...measuredBoxes.map((box) => box.x)),
+        y: Math.min(...measuredBoxes.map((box) => box.y)),
+        width: Math.max(...measuredBoxes.map((box) => box.x + box.width)) - Math.min(...measuredBoxes.map((box) => box.x)),
+        height: Math.max(...measuredBoxes.map((box) => box.y + box.height)) - Math.min(...measuredBoxes.map((box) => box.y)),
+      } : null;
       const feedReadiness = card.role === 'cover' ? await page.evaluate(() => {
         const title = document.querySelector('.cover h1');
         const caption = document.querySelector('.cover p');
@@ -113,9 +171,11 @@ async function main() {
         quality: 92,
         clip: { x: 0, y: 0, width: 1080, height: 1440 },
       });
+      const composed = path.join(outputDir, card.file);
       report.push({
         file: card.file,
         role: card.role,
+        sha256: createHash('sha256').update(fs.readFileSync(composed)).digest('hex'),
         ui_min_ratio: card.uiMinRatio,
         ui_area_ratio: measuredBox ? (measuredBox.width * measuredBox.height) / (1080 * 1440) : 0,
         screenshot_box: measuredBox,
@@ -125,7 +185,7 @@ async function main() {
     }
     fs.writeFileSync(
       path.join(packageDir, 'composition.json'),
-      JSON.stringify({ schema_version: 1, overflow_errors: [], design_audit: { contrast_errors: [], small_text: [], images_failed: [] }, cards: report }, null, 2),
+      JSON.stringify({ schema_version: 2, overflow_errors: [], design_audit: { contrast_errors: [], small_text: [], images_failed: [] }, cards: report }, null, 2),
     );
     const metadataPath = path.join(packageDir, 'metadata.json');
     const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));

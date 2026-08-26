@@ -11,6 +11,7 @@ from typing import Any
 
 from style_audit import audit_style
 from copy_profiles import (
+    IMPLEMENTATION_JARGON,
     MECHANISM_TOPIC_MARKERS,
     EXPERIMENT_TITLE_FORMULAS,
     profile_for_story,
@@ -46,7 +47,7 @@ def _score_title(metadata: dict[str, Any], story: dict[str, Any]) -> tuple[int, 
         score += 4
     # Formula families carry a psychological trigger even when the surface wording
     # relies on identity (#22), curiosity (#9), or number anchoring (#12).
-    formula_signal = formula_id in {"#9", "#12", "#22", "#26", "#36", "#61"}
+    formula_signal = formula_id in EXPERIMENT_TITLE_FORMULAS
     tensions = sum(term in title.lower() for term in ("不用", "别再", "居然", "直接", "看完", "重新", "上台", "ppt", "md", "markdown"))
     score += 7 if tensions >= 2 else (4 if tensions == 1 or formula_signal else 0)
     failures.extend(title_semantic_errors(title, str(story.get("primary_shot", ""))))
@@ -167,6 +168,9 @@ def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: 
         hard_failures.append("repeated sentences: " + "; ".join(repeated))
     if re.search(r"\.(exe|zip|deb|hap|vsix|appimage)\b", body, re.I):
         hard_failures.append("release asset filename leaked into copy")
+    jargon = [term for term in IMPLEMENTATION_JARGON if term.lower() in body.lower()]
+    if jargon:
+        hard_failures.append("implementation jargon leaked into copy: " + ", ".join(jargon))
     if story.get("version_state") == "prerelease":
         if "预览版" not in body and "更新线" not in body:
             hard_failures.append("prerelease disclosure missing")
@@ -174,6 +178,9 @@ def audit_copy(*, story: dict[str, Any], metadata: dict[str, Any], composition: 
             hard_failures.append("prerelease uses formal-release wording")
     if any(not claim.get("sources") for claim in story.get("claims", [])):
         hard_failures.append("claim missing evidence")
+    decision_rule = str(story.get("decision_rule", ""))
+    if decision_rule and decision_rule not in body:
+        hard_failures.append("save-worthy decision rule missing from copy")
     for key in ("contrast_errors", "small_text", "images_failed"):
         if composition.get("design_audit", {}).get(key):
             hard_failures.append(f"design audit {key} failed")

@@ -1,5 +1,4 @@
 const { defineConfig } = require('@playwright/test');
-
 const uiPort = Number(process.env.READMD_UI_PORT || 28473);
 
 module.exports = defineConfig({

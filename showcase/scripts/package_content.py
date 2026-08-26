@@ -33,6 +33,7 @@ REQUIRED_FILES = (
     "wechat/wechat-qa.json",
 )
 EVIDENCE_ARTIFACTS = ("release-notes.md", "release.diff")
+MANIFEST_SCHEMA_VERSION = 1
 
 
 def _sha256(payload: bytes) -> str:
@@ -89,6 +90,52 @@ def _relative_files(package_dir: Path) -> list[Path]:
     )
 
 
+def verify_package_manifest(zip_path: Path) -> dict[str, object] | None:
+    """Verify an adjacent transport manifest when the packaging step supplied one."""
+    zip_path = Path(zip_path)
+    manifest_path = Path(str(zip_path) + ".manifest.json")
+    if not manifest_path.is_file():
+        return None
+
+    try:
+        expected = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise ValueError(f"package manifest unreadable: {exc}") from exc
+
+    if expected.get("schema_version") != MANIFEST_SCHEMA_VERSION:
+        raise ValueError("package manifest schema_version is unsupported")
+    if not isinstance(expected.get("files"), dict):
+        raise ValueError("package manifest files must be an object")
+
+    actual_digest = _sha256(zip_path.read_bytes())
+    if actual_digest != expected.get("archive_sha256"):
+        raise ValueError("package archive SHA-256 mismatch")
+
+    with zipfile.ZipFile(zip_path) as archive:
+        members = archive.infolist()
+        actual_names = {member.filename for member in members}
+        expected_names = set(expected["files"])
+        missing = sorted(expected_names - actual_names)
+        extra = sorted(actual_names - expected_names)
+        if missing or extra:
+            details = []
+            if missing:
+                details.append(f"missing {missing}")
+            if extra:
+                details.append(f"extra {extra}")
+            raise ValueError("package manifest file set mismatch: " + "; ".join(details))
+        for member in members:
+            artifact = expected["files"].get(member.filename)
+            payload = archive.read(member)
+            if not isinstance(artifact, dict):
+                raise ValueError(f"package manifest entry missing: {member.filename}")
+            if len(payload) != int(artifact.get("bytes", -1)):
+                raise ValueError(f"package byte count mismatch: {member.filename}")
+            if _sha256(payload) != artifact.get("sha256"):
+                raise ValueError(f"package SHA-256 mismatch: {member.filename}")
+    return expected
+
+
 def package_content(package_dir: Path, output: Path) -> dict[str, object]:
     package_dir = package_dir.resolve()
     if not package_dir.is_dir():
@@ -118,6 +165,21 @@ def package_content(package_dir: Path, output: Path) -> dict[str, object]:
             archive.write(path, relative)
 
     digest = hashlib.sha256(output.read_bytes()).hexdigest()
+    manifest = {
+        "schema_version": MANIFEST_SCHEMA_VERSION,
+        "archive_sha256": digest,
+        "file_count": len(files),
+        "files": {
+            path.relative_to(package_dir).as_posix(): {
+                "bytes": path.stat().st_size,
+                "sha256": _sha256(path.read_bytes()),
+            }
+            for path in files
+        },
+    }
+    manifest_path = Path(str(output) + ".manifest.json")
+    manifest_payload = (json.dumps(manifest, ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
+    manifest_path.write_bytes(manifest_payload)
     return {
         "schema_version": 1,
         "ok": True,
@@ -126,6 +188,8 @@ def package_content(package_dir: Path, output: Path) -> dict[str, object]:
         "image_count": len(images),
         "raw_shot_count": len(raw_shots),
         "sha256": digest,
+        "manifest": str(manifest_path.resolve()),
+        "manifest_sha256": hashlib.sha256(manifest_payload).hexdigest(),
     }
 
 

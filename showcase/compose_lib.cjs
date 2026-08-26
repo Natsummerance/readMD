@@ -14,7 +14,7 @@ function loadDesignSystem(designPath = DEFAULT_DESIGN_PATH) {
   const design = JSON.parse(fs.readFileSync(designPath, 'utf8'));
   if (design.schema_version !== 1) throw new Error('Unsupported design token schema');
   if (!/^#[0-9a-f]{6}$/i.test(design.palette.accent)) throw new Error('Design accent must be a hex color');
-  if (design.type.display.size < 72 || design.type.body.size < 24) throw new Error('Card type is too small for Xiaohongshu');
+  if (design.type.display.size < 96 || design.type.body.size < 24) throw new Error('Cover display type is too small for the Xiaohongshu feed');
   if (!/proof/i.test(design.signature)) throw new Error('Evidence-paper signature missing');
   return design;
 }
@@ -38,7 +38,7 @@ function coverFeedReadiness(metrics, canvas = { width: 1080, height: 1440 }) {
   const captionFontSize = Number(metrics.caption_font_size);
   const failures = [];
 
-  if (!(titleFontSize >= 72)) failures.push(`display type must be at least 72px, got ${titleFontSize}px`);
+  if (!(titleFontSize >= 96)) failures.push(`display type must be at least 96px, got ${titleFontSize}px`);
   if (!(captionFontSize >= 30)) failures.push(`cover caption must be at least 30px, got ${captionFontSize}px`);
   if (!(titleWidthRatio >= 0.16)) failures.push(`display type is too narrow for the feed (${titleWidthRatio})`);
   if (!(titleHeightRatio >= 0.04 && titleHeightRatio <= 0.18)) failures.push(`display block occupies ${titleHeightRatio} of card height`);
@@ -53,6 +53,84 @@ function coverFeedReadiness(metrics, canvas = { width: 1080, height: 1440 }) {
     ok: failures.length === 0,
     failures,
   };
+}
+
+function layoutCollisionFailures(boxes) {
+  const visible = (boxes || [])
+    .map((box, index) => ({
+      kind: String(box.kind || 'text'),
+      label: String(box.label || `element-${index + 1}`),
+      x: Number(box.x),
+      y: Number(box.y),
+      width: Number(box.width),
+      height: Number(box.height),
+    }))
+    .filter((box) => [
+      box.x,
+      box.y,
+      box.width,
+      box.height,
+    ].every((value) => Number.isFinite(value)) && box.width > 0 && box.height > 0);
+
+  const failures = [];
+  for (let left = 0; left < visible.length; left += 1) {
+    for (let right = left + 1; right < visible.length; right += 1) {
+      const first = visible[left];
+      const second = visible[right];
+      const overlapWidth = Math.min(first.x + first.width, second.x + second.width) - Math.max(first.x, second.x);
+      const overlapHeight = Math.min(first.y + first.height, second.y + second.height) - Math.max(first.y, second.y);
+      if (overlapWidth <= 2 || overlapHeight <= 2) continue;
+
+      const involvesScreenshot = first.kind === 'screenshot' || second.kind === 'screenshot';
+      // Adjacent text boxes can share a sub-pixel edge; meaningful collisions need
+      // enough area in both dimensions to be visible at feed scale.
+      if (!involvesScreenshot && (overlapWidth <= 8 || overlapHeight <= 8)) continue;
+      failures.push(`layout collision: ${first.label} overlaps ${second.label}`);
+    }
+  }
+  return [...new Set(failures)];
+}
+
+
+function offCanvasFailures(boxes, canvas = { width: 1080, height: 1440 }) {
+  return (boxes || []).flatMap((box, index) => {
+    const left = Number(box.x);
+    const top = Number(box.y);
+    const right = left + Number(box.width);
+    const bottom = top + Number(box.height);
+    if (![left, top, Number(box.width), Number(box.height)].every(Number.isFinite)) {
+      return [`invalid layout bounds: element-${index + 1}`];
+    }
+
+    const failures = [];
+    const label = String(box.label || `element-${index + 1}`);
+    if (left < -1) failures.push(`off-canvas left: ${label}`);
+    if (top < -1) failures.push(`off-canvas top: ${label}`);
+    if (right > Number(canvas.width) + 1) failures.push(`off-canvas right: ${label}`);
+    if (bottom > Number(canvas.height) + 1) failures.push(`off-canvas bottom: ${label}`);
+    return failures;
+  });
+}
+
+
+function clippedTextFailures(metrics) {
+  return (metrics || []).flatMap((item) => {
+    const label = String(item.label || "text");
+    const failures = [];
+    if (
+      item.clips_horizontal
+      && Number(item.scroll_width) > Number(item.client_width) + 1
+    ) {
+      failures.push(`horizontal text clipping: ${label}`);
+    }
+    if (
+      item.clips_vertical
+      && Number(item.scroll_height) > Number(item.client_height) + 1
+    ) {
+      failures.push(`vertical text clipping: ${label}`);
+    }
+    return failures;
+  });
 }
 
 function plannedFeatureCard(story, shot) {
@@ -199,7 +277,10 @@ function buildCardHtml(card, source, context = {}) {
   } else if (card.role === 'pure_ui_hero') {
     body = `
       <main class="hero">
-        <img src="${source}" alt="${title}"/>
+        <div class="hero-evidence">
+          <img class="hero-overview" src="${source}" alt="${title}"/>
+          <img class="hero-detail" src="${source}" alt="${title}"/>
+        </div>
         <footer class="proof-foot hero-proof"><strong>${title}</strong><span>真实运行画面</span></footer>
       </main>`;
   } else {
@@ -234,11 +315,24 @@ function buildCardHtml(card, source, context = {}) {
   .proof-foot{display:flex;justify-content:space-between;align-items:center;gap:20px;padding-top:20px;border-top:1px solid ${design.palette.line}}
   .proof-foot span{font-size:24px}
   .hero{padding:24px;gap:20px}
-  .hero img{height:auto;flex:1;object-fit:contain}
+  .hero-evidence{min-height:0;flex:1 1 0;display:flex;flex-direction:column;gap:14px}
+  .hero-overview{width:100%;max-height:58%;object-fit:contain}
+  .hero-detail{min-height:0;flex:1 1 0;object-fit:cover;object-position:50% 100%}
   .hero-proof{padding:0}
   .summary ul{list-style:none;display:flex;gap:18px}
   .summary li{flex:1;background:${design.palette.surface};border-top:3px solid ${design.palette.accent};border-radius:${design.layout.radius}px;padding:20px 22px;font-size:25px;line-height:1.3;color:${design.palette.ink}}
 </style>${body}`;
 }
 
-module.exports = { buildCardHtml, coverFeedReadiness, drawnImageBox, imageSrc, loadDesignSystem, planCards, slug };
+module.exports = {
+  buildCardHtml,
+  coverFeedReadiness,
+  drawnImageBox,
+  imageSrc,
+  layoutCollisionFailures,
+  clippedTextFailures,
+  loadDesignSystem,
+  offCanvasFailures,
+  planCards,
+  slug,
+};

@@ -2,6 +2,7 @@
 """Product showcase pipeline contract tests."""
 from __future__ import annotations
 
+import copy
 import hashlib
 import importlib
 import json
@@ -12,10 +13,12 @@ import tempfile
 import unittest
 import unittest.mock
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
 from PIL import Image
+from openpyxl import Workbook
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "showcase" / "scripts"))
@@ -23,6 +26,8 @@ sys.path.insert(0, str(ROOT / "showcase" / "scripts"))
 build_story = importlib.import_module("build_story")
 audit_copy = importlib.import_module("audit_copy")
 content_memory = importlib.import_module("content_memory")
+import_feedback_workbook = importlib.import_module("import_feedback_workbook")
+import_comment_capture = importlib.import_module("import_comment_capture")
 copy_variants = importlib.import_module("copy_variants")
 copy_profiles = importlib.import_module("copy_profiles")
 export_wechat = importlib.import_module("export_wechat")
@@ -35,6 +40,7 @@ style_audit = importlib.import_module("style_audit")
 build_package_module = importlib.import_module("build_package")
 validate_package = importlib.import_module("validate_package")
 watch_and_publish = importlib.import_module("watch_and_publish")
+validate_repair_batch = importlib.import_module("validate_repair_batch")
 write_copy = importlib.import_module("write_copy")
 
 
@@ -112,6 +118,15 @@ class BuildStoryTest(unittest.TestCase):
             with self.subTest(primary_shot=primary_shot):
                 self.assertTrue(angle.startswith("ReadMD "))
                 self.assertLessEqual(len(angle), 40)
+
+    def test_every_mechanism_has_a_distinct_collectible_decision_rule(self) -> None:
+        rules = {key: value["decision_rule"] for key, value in copy_profiles.PROFILES.items()}
+        self.assertEqual(len(rules), len(set(rules.values())))
+        for primary_shot, rule in rules.items():
+            with self.subTest(primary_shot=primary_shot):
+                self.assertIn("判断标准：", rule)
+                self.assertTrue(rule.endswith("。"))
+                self.assertNotIn("。。", rule)
 
     def test_mechanism_summary_hooks_are_scannable_and_distinct(self) -> None:
         hooks = {key: value["summary"] for key, value in copy_profiles.PROFILES.items()}
@@ -199,6 +214,25 @@ class BuildStoryTest(unittest.TestCase):
         self.assertEqual(story["primary_shot"], "overview.editor")
         self.assertEqual(story["cover_hook"]["title"], "同屏改稿")
         self.assertEqual(story["summary_hook"]["title"], "改稿不切窗")
+
+    def test_invisible_implementation_fix_becomes_reader_value(self) -> None:
+        notes = """
+## 核心修复
+
+### 编辑器 CodeMirror 6 安全 + 实时预览重构
+### 网页转换打开新标签页，全程本地处理，避免误关闭或跳转丢失
+"""
+        story = build_story.build_story(
+            release="v9.9.9",
+            previous_release="v9.9.8",
+            notes=notes,
+            shot_library_path=ROOT / "showcase" / "shot_library.json",
+        )
+        invisible = [claim for claim in story["claims"] if claim["kind"] == "invisible"]
+
+        self.assertEqual(invisible[0]["user_value"], "编辑器更稳，改稿和预览不互相打断。")
+        self.assertIn("网页转换", invisible[1]["user_value"])
+        self.assertNotIn("CodeMirror", json.dumps(story["claims"], ensure_ascii=False))
 
     def test_release_story_filters_assets_and_prioritizes_primary_feature(self) -> None:
         notes = """
@@ -307,6 +341,8 @@ class WriteCopyTest(unittest.TestCase):
             "version_state": "prerelease",
             "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
             "primary_shot": "presentation.reveal",
+            "decision_rule": "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
+            "decision_rule": "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
             "selected_shots": [
                 "overview.reader",
                 "presentation.reveal",
@@ -340,13 +376,16 @@ class WriteCopyTest(unittest.TestCase):
 
     def test_mechanism_cover_variants_track_all_title_formulas(self) -> None:
         expected_formulas = set(copy_variants.TITLE_FORMULAS)
-        self.assertEqual(expected_formulas, {"#36", "#9", "#22", "#26", "#61", "#12"})
+        self.assertEqual(
+            expected_formulas,
+            {"#36", "#9", "#22", "#26", "#61", "#12", "#17", "#56"},
+        )
         for primary_shot, profile in copy_profiles.PROFILES.items():
             with self.subTest(primary_shot=primary_shot):
                 variants = profile["cover_variants"]
                 self.assertEqual(set(variants), expected_formulas)
                 self.assertEqual(set(variants), set(profile["titles"]))
-                self.assertEqual(len({item["title"] for item in variants.values()}), 6)
+                self.assertEqual(len({item["title"] for item in variants.values()}), 8)
                 for formula_id, hook in variants.items():
                     self.assertEqual(hook["formula_id"], formula_id)
                     self.assertTrue(2 <= len(hook["title"]) <= 8)
@@ -389,12 +428,30 @@ class WriteCopyTest(unittest.TestCase):
         }), 3)
         for item in candidates:
             self.assertLessEqual(len(item["text"]), 20)
+            self.assertEqual(
+                item["source_template"],
+                copy_profiles.TITLE_FORMULA_CONTRACTS[item["formula_id"]]["source_template"],
+            )
+            self.assertEqual(
+                item["adaptation"],
+                copy_profiles.TITLE_FORMULA_CONTRACTS[item["formula_id"]]["adaptation"],
+            )
+            self.assertEqual(copy_profiles.title_provenance_errors(item), [])
             self.assertEqual(copy_profiles.title_formula_errors(item["text"], item["formula_id"]), [])
             self.assertEqual(
                 copy_profiles.title_semantic_errors(item["text"], result["primary_shot"]),
                 [],
             )
         self.assertLessEqual(len(result["title"]), 20)
+
+        tampered = {
+            **candidates[0],
+            "source_template": "自由发挥，不用来源模板",
+            "adaptation": "也不解释改了哪里",
+        }
+        errors = copy_profiles.title_provenance_errors(tampered)
+        self.assertTrue(any("invalid source_template" in error for error in errors), errors)
+        self.assertTrue(any("invalid adaptation" in error for error in errors), errors)
 
     def test_numeric_title_anchors_match_planned_card_count(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -690,6 +747,82 @@ class WriteCopyTest(unittest.TestCase):
         self.assertNotRegex(result["body"], "预览版|更新线")
         self.assertIn("正式版", result["body"])
 
+    def test_comment_prompt_is_always_the_final_paragraph(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            story = build_story.build_story(
+                release="v9.9.9",
+                previous_release="v9.9.8",
+                notes="- Reveal.js 演示\n",
+                shot_library_path=ROOT / "showcase" / "shot_library.json",
+            )
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v9.9.8",
+            )
+            paragraphs = result["body"].split("\n\n")
+            expected_cta = copy_profiles.profile_for_story(story)["cta"]
+
+        self.assertGreaterEqual(len(paragraphs), 2)
+        self.assertEqual(paragraphs[-1], expected_cta)
+        self.assertNotIn(expected_cta, paragraphs[:-1])
+        self.assertLess(
+            result["body"].index("渲染阶段只处理显示结果"),
+            result["body"].index(expected_cta),
+        )
+
+    def test_collectible_decision_rule_survives_length_fitting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            story = build_story.build_story(
+                release="v9.9.9",
+                previous_release="v9.9.8",
+                notes="- Reveal.js 演示\n",
+                shot_library_path=ROOT / "showcase" / "shot_library.json",
+            )
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v9.9.8",
+            )
+
+        self.assertIn(story["decision_rule"], result["body"])
+        self.assertIn(f"收藏这条{story['decision_rule']}", result["body"])
+        self.assertLess(
+            result["body"].index(story["decision_rule"]),
+            result["body"].rindex("你会先拿哪一份 Markdown"),
+        )
+
+    def test_invisible_fixes_do_not_duplicate_terminal_punctuation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = write_story(Path(tmp))
+            story["claims"].extend([
+                {
+                    "id": "invisible-1",
+                    "user_value": "编辑器更稳，改稿和预览不互相打断。",
+                    "shot_ids": [],
+                    "sources": ["release/release-notes.md"],
+                },
+                {
+                    "id": "invisible-2",
+                    "user_value": "阅读更快。",
+                    "shot_ids": [],
+                    "sources": ["release/release-notes.md"],
+                },
+            ])
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v2.3.7-beta.2",
+            )
+
+        self.assertNotRegex(result["body"], r"[。．.!！?？][。．.!！?？]")
+        self.assertIn(
+            "比如编辑器更稳，改稿和预览不互相打断；阅读更快。它们不抢画面",
+            result["body"],
+        )
+
     def test_comment_focus_shapes_reader_scenario(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             story = write_story(Path(tmp))
@@ -807,6 +940,58 @@ class WriteCopyTest(unittest.TestCase):
         )
         self.assertNotIn("科研图表留在文档里", result["body"])
         self.assertTrue(result["resonance_directive"]["applied"])
+
+    def test_pending_metrics_do_not_block_comment_resonance(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            story = write_story(Path(tmp))
+            story["selected_shots"].append("academic.latex-bib")
+            story["claims"].append({
+                "id": "academic",
+                "user_value": "学术公式和参考文献留在同一份文档",
+                "shot_ids": ["academic.latex-bib"],
+                "sources": ["release/release-notes.md"],
+            })
+            history = [
+                {
+                    "release": f"v8.{version}.0",
+                    "title": f"v8.{version}",
+                    "title_formula_id": "#36",
+                    "hook_type": "outcome-led",
+                    "published_at": f"2026-08-{20 + version}T10:00:00Z",
+                    "impressions": 0,
+                    "likes": 0,
+                    "collects": 0,
+                    "comments": 0,
+                    "shares": 0,
+                    "follows": 0,
+                    "metrics_status": "pending",
+                    "comment_insights": {
+                        "schema_version": 1,
+                        "unique_count": 2,
+                        "themes": [{
+                            "theme": "academic",
+                            "mentions": 2,
+                            "weighted_score": 5,
+                            "intents": ["request"],
+                        }],
+                        "top_theme": "academic",
+                    },
+                }
+                for version in range(2)
+            ]
+            result = write_copy.generate_copy(
+                story,
+                repository="Natsummerance/readMD",
+                previous_release="v8.1.0",
+                history=history,
+            )
+
+        directive = result["resonance_directive"]
+        self.assertTrue(directive["applied"])
+        self.assertEqual(directive["evidence"]["focus"], "academic")
+        self.assertEqual(directive["evidence"]["confidence"], "medium")
+        self.assertIn("课程讲义、组会报告或论文汇报", result["body"])
+        self.assertIn("学术排版不另起一套工具", result["body"])
 
     def test_low_confidence_comment_focus_keeps_default_scenario(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -964,7 +1149,7 @@ class WriteCopyTest(unittest.TestCase):
             previous_release="v1.1.0",
         )
         variants = copy_variants.build_variants(story=story, base_metadata=base)
-        self.assertEqual(len(variants), 72)
+        self.assertEqual(len(variants), 96)
         self.assertTrue(all(item["_report"]["ok"] for item in variants))
         self.assertTrue(all("图表" in item["body"].split("\n\n", 1)[0] for item in variants))
         self.assertTrue(all("复制进 PPT" not in item["body"].split("\n\n", 1)[0] for item in variants))
@@ -993,13 +1178,96 @@ class WriteCopyTest(unittest.TestCase):
                 self.assertTrue(600 <= len(base["body"]) <= 900)
                 self.assertTrue(all(len(item["text"]) <= 20 for item in base["title_candidates"]))
                 variants = copy_variants.build_variants(story=story, base_metadata=base)
-                self.assertEqual(len(variants), 72)
+                self.assertEqual(len(variants), 96)
                 failed = [item["variant_id"] for item in variants if not item["_report"]["ok"]]
                 self.assertEqual(failed, [])
 
 
 class ValidatePackageTest(unittest.TestCase):
     maxDiff = None
+
+    def test_publisher_assets_allow_reserved_shots_but_require_selected_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp)
+            (pkg / "raw").mkdir()
+            shot_png = pkg / "raw" / "overview-reader.png"
+            Image.new("RGB", (32, 20), "#101828").save(shot_png)
+            digest = hashlib.sha256(shot_png.read_bytes()).hexdigest()
+            story = {
+                "release": "v1.2.3",
+                "selected_shots": ["overview.reader"],
+                "card_plan": [],
+                "shots": [],
+            }
+            (pkg / "story.json").write_text(json.dumps(story), encoding="utf-8")
+            (pkg / "metadata.json").write_text("{}", encoding="utf-8")
+            (pkg / "raw" / "capture.json").write_text(json.dumps({
+                "release": "v1.2.3",
+                "shots": [
+                    {"shot_id": "overview.reader", "file": "raw/overview-reader.png", "sha256": digest},
+                    {"shot_id": "overview.editor", "file": "raw/reserved.png", "sha256": "reserved"},
+                ],
+            }), encoding="utf-8")
+
+            errors = validate_package.publisher_asset_errors(pkg)
+
+        self.assertNotIn("capture shots differ from story.selected_shots", errors)
+
+
+class WatcherEnvironmentTest(unittest.TestCase):
+    def test_publisher_subprocess_forces_utf8_json(self) -> None:
+        environment = watch_and_publish.publisher_environment()
+        self.assertEqual(environment["PYTHONIOENCODING"], "utf-8")
+
+    def test_query_status_ignores_json_scalar_lines(self) -> None:
+        calls = []
+
+        def fake_run(command, **kwargs):
+            calls.append(command)
+            return SimpleNamespace(
+                returncode=0,
+                stdout='"target-id"\n{"status": "审核中", "noteId": "note-1"}\n',
+                stderr="",
+            )
+
+        original_run = watch_and_publish.subprocess.run
+        watch_and_publish.subprocess.run = fake_run
+        try:
+            result = watch_and_publish.query_status(Path("publisher.py"), "标题")
+        finally:
+            watch_and_publish.subprocess.run = original_run
+
+        self.assertEqual(result["noteId"], "note-1")
+
+
+class RawCaptureQualityTest(unittest.TestCase):
+    def quality_record(self) -> dict:
+        return {
+            "shot_id": "overview.reader",
+            "file": "raw/test.png",
+            "capture": {"viewport": "960x720", "scale": 2},
+        }
+
+    def test_accepts_varied_screenshot_with_matching_ratio(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            root.joinpath("raw").mkdir()
+            path = root / "raw" / "test.png"
+            Image.effect_noise((1920, 1440), 24).convert("RGB").save(path)
+            errors = validate_package.raw_capture_quality_errors(root, self.quality_record())
+
+        self.assertEqual(errors, [])
+
+    def test_rejects_wrong_ratio_and_blank_screenshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            root.joinpath("raw").mkdir()
+            path = root / "raw" / "test.png"
+            Image.new("RGB", (1280, 1440), "#182029").save(path)
+            errors = validate_package.raw_capture_quality_errors(root, self.quality_record())
+
+        self.assertTrue(any("ratio differs" in error for error in errors))
+        self.assertTrue(any("nearly blank" in error for error in errors))
 
     def test_rejects_chosen_variant_id_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1281,6 +1549,133 @@ class ValidatePackageTest(unittest.TestCase):
                         errors,
                     )
 
+    def test_publisher_inputs_recheck_title_formula_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pkg = Path(tmp)
+            (pkg / "images").mkdir()
+            image = pkg / "images" / "xhs-01-cover.jpg"
+            image.write_bytes(b"jpg")
+            story = {"release": "v1.2.3", "primary_shot": "presentation.reveal"}
+            contract = copy_profiles.TITLE_FORMULA_CONTRACTS["#36"]
+            metadata = {
+                "title": "不用重做PPT，Markdown直接放映",
+                "title_formula_id": "#36",
+                "title_source_template": contract["source_template"],
+                "title_adaptation": contract["adaptation"],
+                "primary_shot": "presentation.reveal",
+                "body": "正文",
+                "topics": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
+                "topic_set_id": write_copy.topic_set_id(["Markdown", "PPT", "演讲", "程序员", "效率工具"]),
+                "topic_set_label": "talk-core",
+                "images": [str(image)],
+            }
+            (pkg / "story.json").write_text(json.dumps(story), encoding="utf-8")
+            (pkg / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+            (pkg / "title.txt").write_text(metadata["title"], encoding="utf-8")
+            (pkg / "body.txt").write_text(metadata["body"], encoding="utf-8")
+            (pkg / "topics.txt").write_text("\n".join(metadata["topics"]), encoding="utf-8")
+            self.assertEqual(validate_package.publisher_input_errors(pkg), [])
+
+            tampered = {
+                **metadata,
+                "title_source_template": "自由发挥，不用来源模板",
+                "title_adaptation": "也不解释改了哪里",
+            }
+            (pkg / "metadata.json").write_text(json.dumps(tampered), encoding="utf-8")
+            errors = validate_package.publisher_input_errors(pkg)
+
+        self.assertTrue(any("title provenance source_template differs" in error for error in errors), errors)
+        self.assertTrue(any("title provenance adaptation differs" in error for error in errors), errors)
+
+    def test_publisher_recomputes_resonance_from_publication_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            story = {
+                "release": "v1.2.3",
+                "primary_shot": "presentation.reveal",
+                "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+                "selected_shots": ["overview.reader", "presentation.reveal"],
+                "claims": [
+                    {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                    {"id": "reveal", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["README.md"]},
+                ],
+            }
+            records = [
+                {
+                    "release": f"v1.0.{version}",
+                    "metrics_status": "pending",
+                    "comment_insights": {
+                        "schema_version": 1,
+                        "unique_count": 2,
+                        "themes": [{
+                            "theme": "presentation",
+                            "mentions": 2,
+                            "weighted_score": 5,
+                            "intents": ["request"],
+                        }],
+                        "top_theme": "presentation",
+                    },
+                }
+                for version in range(2)
+            ]
+            ledger = root / "publication-ledger.jsonl"
+            ledger.write_text(
+                "".join(json.dumps(record, ensure_ascii=False) + "\n" for record in records),
+                encoding="utf-8",
+            )
+            metadata = {
+                "resonance_directive": write_copy.build_resonance_directive(story, records),
+            }
+            (root / "story.json").write_text(json.dumps(story, ensure_ascii=False), encoding="utf-8")
+            (root / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            self.assertEqual(
+                validate_package.publisher_resonance_source_errors(root, ledger),
+                [],
+            )
+
+            tampered = write_copy.build_resonance_directive(story, [])
+            (root / "metadata.json").write_text(json.dumps({
+                "resonance_directive": tampered,
+            }, ensure_ascii=False), encoding="utf-8")
+            errors = validate_package.publisher_resonance_source_errors(root, ledger)
+            (root / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            missing_ledger_errors = validate_package.publisher_resonance_source_errors(
+                root,
+                root / "missing-publication-ledger.jsonl",
+            )
+
+        self.assertEqual(errors, ["resonance directive differs from publication-ledger recomputation"])
+        self.assertEqual(missing_ledger_errors, errors)
+
+    def test_composed_card_hashes_are_rechecked_before_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "images").mkdir()
+            image = root / "images" / "xhs-01-cover.jpg"
+            payload = b"composed-card-bytes"
+            image.write_bytes(payload)
+            digest = hashlib.sha256(payload).hexdigest()
+
+            legacy = {"schema_version": 1, "cards": [{"file": "xhs-01-cover.jpg"}]}
+            (root / "composition.json").write_text(json.dumps(legacy), encoding="utf-8")
+            self.assertEqual(validate_package.composed_card_hash_errors(root), [])
+
+            current = {
+                "schema_version": 2,
+                "cards": [{"file": "xhs-01-cover.jpg", "sha256": digest}],
+            }
+            (root / "composition.json").write_text(json.dumps(current), encoding="utf-8")
+            self.assertEqual(validate_package.composed_card_hash_errors(root), [])
+
+            current["cards"][0]["sha256"] = "0" * 64
+            (root / "composition.json").write_text(json.dumps(current), encoding="utf-8")
+            mismatched = validate_package.composed_card_hash_errors(root)
+
+        self.assertEqual(
+            mismatched,
+            ["SHA-256 mismatch in composition.json: xhs-01-cover.jpg"],
+        )
+
     def test_publisher_directive_requires_concern_response(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pkg = Path(tmp)
@@ -1516,7 +1911,7 @@ class AuditCopyTest(unittest.TestCase):
         return (
             "文档写完了，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。\n\n"
             "先说清楚：这是 ReadMD v9.9.9-beta.1 预览版，文件仍在你自己的电脑里。\n\n"
-            "放映界面能换主题、调字号、切开场和转场；AST 保护分片尽量保住代码块、表格和公式。\n\n"
+                "放映界面能换主题、调字号、切开场和转场；结构保护分片尽量保住代码块、表格和公式。\n\n"
             "下面的画面来自当前版本真实运行状态，不是概念图。改稿时回到同屏预览，讲稿不会跑偏。\n\n"
             "如果你要写课程讲义、组会报告或论文汇报，它会省掉重做演示稿这一步。\n\n"
             "GitHub 搜 Natsummerance/readMD，你会先拿哪一份 Markdown 试放映？\n\n"
@@ -1576,6 +1971,24 @@ class AuditCopyTest(unittest.TestCase):
             report["hard_failures"],
         )
 
+    def test_audit_rejects_implementation_jargon_in_body(self) -> None:
+        story, metadata, composition = self.make_audit_inputs(
+            self.good_body() + "\n\nCodeMirror 6 的 AST 已重构。"
+        )
+        report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
+
+        self.assertFalse(report["ok"])
+        self.assertIn("implementation jargon leaked into copy: CodeMirror, AST", report["hard_failures"])
+
+    def test_audit_rejects_trimmed_decision_rule(self) -> None:
+        rule = "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。"
+        story, metadata, composition = self.make_audit_inputs(self.good_body())
+        story["decision_rule"] = rule
+        report = audit_copy.audit_copy(story=story, metadata=metadata, composition=composition)
+
+        self.assertFalse(report["ok"])
+        self.assertIn("save-worthy decision rule missing from copy", report["hard_failures"])
+
     def test_style_audit_passes_concrete_developer_voice(self) -> None:
         report = style_audit.audit_style(self.good_body(), audience="程序员")
         self.assertGreaterEqual(report["score"], 85, json.dumps(report, ensure_ascii=False, indent=2))
@@ -1615,6 +2028,12 @@ class AuditCopyTest(unittest.TestCase):
         self.assertEqual(metrics["depth_term_count"], 1)
         self.assertFalse(metrics["blessing_close"])
 
+    def test_style_audit_flags_duplicated_terminal_punctuation(self) -> None:
+        report = style_audit.audit_style("编辑器更稳，改稿和预览不互相打断。。渲染只处理显示结果。")
+        self.assertFalse(report["ok"])
+        self.assertEqual(report["metrics"]["duplicate_terminal_punctuation_count"], 1)
+        self.assertIn("Duplicated sentence punctuation appears 1 times.", report["hard_failures"])
+
     def test_semantic_qa_integrates_style_hard_gate(self) -> None:
         body = "这款工具非常强大。这款工具非常高效。这款工具非常安全。快来关注点赞。\n\n先说清楚：这是 ReadMD v9.9.9-beta.1 预览版。"
         story, metadata, composition = self.make_audit_inputs(body)
@@ -1625,6 +2044,167 @@ class AuditCopyTest(unittest.TestCase):
         self.assertTrue(any("style" in item.lower() for item in report["hard_failures"]))
 
 
+class CompositionLayoutAuditTest(unittest.TestCase):
+    def test_layout_collision_gate_rejects_text_and_screenshot_overlap(self) -> None:
+        script = r"""
+const { layoutCollisionFailures } = require(process.argv[1]);
+const adjacent = layoutCollisionFailures([
+  { kind: "text", label: "first", x: 0, y: 0, width: 100, height: 30 },
+  { kind: "text", label: "second", x: 0, y: 31, width: 100, height: 30 },
+]);
+const textOverlap = layoutCollisionFailures([
+  { kind: "text", label: "first", x: 0, y: 0, width: 100, height: 30 },
+  { kind: "text", label: "second", x: 20, y: 10, width: 100, height: 30 },
+]);
+const screenshotOcclusion = layoutCollisionFailures([
+  { kind: "screenshot", label: "UI capture", x: 0, y: 0, width: 900, height: 500 },
+  { kind: "text", label: "caption", x: 890, y: 250, width: 80, height: 30 },
+]);
+console.log(JSON.stringify({ adjacent, textOverlap, screenshotOcclusion }));
+"""
+        completed = subprocess.run(
+            ["node", "-e", script, str(ROOT / "showcase" / "compose_lib.cjs")],
+            check=True,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+        )
+        result = json.loads(completed.stdout)
+        self.assertEqual(result["adjacent"], [])
+        self.assertEqual(len(result["textOverlap"]), 1)
+        self.assertIn("first overlaps second", result["textOverlap"][0])
+        self.assertEqual(len(result["screenshotOcclusion"]), 1)
+        self.assertIn("UI capture overlaps caption", result["screenshotOcclusion"][0])
+
+    def test_layout_gate_rejects_off_canvas_and_clipped_text(self) -> None:
+        script = r"""
+const { clippedTextFailures, offCanvasFailures } = require(process.argv[1]);
+const inside = offCanvasFailures([
+  { kind: "text", label: "inside", x: 10, y: 10, width: 100, height: 30 },
+]);
+const outside = offCanvasFailures([
+  { kind: "text", label: "left", x: -5, y: 10, width: 100, height: 30 },
+  { kind: "text", label: "bottom", x: 10, y: 1430, width: 100, height: 30 },
+]);
+const fitted = clippedTextFailures([
+  {
+    label: "fitted",
+    scroll_width: 900,
+    client_width: 900,
+    scroll_height: 120,
+    client_height: 140,
+    clips_horizontal: true,
+    clips_vertical: true,
+  },
+]);
+const clipped = clippedTextFailures([
+  {
+    label: "caption",
+    scroll_width: 940,
+    client_width: 900,
+    scroll_height: 150,
+    client_height: 120,
+    clips_horizontal: true,
+    clips_vertical: true,
+  },
+]);
+const visibleOverflow = clippedTextFailures([
+  {
+    label: "display type",
+    scroll_width: 900,
+    client_width: 900,
+    scroll_height: 150,
+    client_height: 120,
+    clips_horizontal: false,
+    clips_vertical: false,
+  },
+]);
+console.log(JSON.stringify({ inside, outside, fitted, clipped, visibleOverflow }));
+"""
+        completed = subprocess.run(
+            ["node", "-e", script, str(ROOT / "showcase" / "compose_lib.cjs")],
+            check=True,
+            text=True,
+            capture_output=True,
+            encoding="utf-8",
+        )
+        result = json.loads(completed.stdout)
+        self.assertEqual(result["inside"], [])
+        self.assertEqual(result["outside"], [
+            "off-canvas left: left",
+            "off-canvas bottom: bottom",
+        ])
+        self.assertEqual(result["fitted"], [])
+        self.assertEqual(result["clipped"], [
+            "horizontal text clipping: caption",
+            "vertical text clipping: caption",
+        ])
+        self.assertEqual(result["visibleOverflow"], [])
+
+    def test_wide_hero_keeps_complete_view_and_fills_portrait_canvas(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / "wide.png"
+            Image.new("RGB", (160, 100), "#10203a").save(source)
+            data_uri = "data:image/png;base64," + __import__("base64").b64encode(
+                source.read_bytes()
+            ).decode("ascii")
+            playwright = (ROOT / "ui-tests" / "node_modules" / "@playwright" / "test").with_suffix("")
+            script = r"""
+const { chromium } = require(process.argv[1]);
+const { buildCardHtml, drawnImageBox } = require(process.argv[2]);
+(async () => {
+  const html = buildCardHtml({
+    index: 2,
+    role: "pure_ui_hero",
+    title: "完整主界面",
+    caption: "真实运行画面",
+    shotId: "overview.reader",
+    uiMinRatio: 0.7,
+  }, process.argv[3], { release: "test" });
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: 1080, height: 1440 } });
+    await page.setContent(html);
+    const measurements = await page.evaluate(() => [...document.images].map((image) => {
+      const bounds = image.getBoundingClientRect();
+      const style = getComputedStyle(image);
+      return {
+        className: image.className,
+        bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+        naturalWidth: image.naturalWidth,
+        naturalHeight: image.naturalHeight,
+        objectFit: style.objectFit,
+        objectPosition: style.objectPosition,
+      };
+    }));
+    console.log(JSON.stringify(measurements.map((box) => drawnImageBox(box))));
+  } finally {
+    await browser.close();
+  }
+})();
+"""
+            completed = subprocess.run(
+                ["node", "-e", script, playwright.as_posix(), (ROOT / "showcase" / "compose_lib.cjs").as_posix(), data_uri],
+                check=True,
+                text=True,
+                capture_output=True,
+                encoding="utf-8",
+            )
+        boxes = json.loads(completed.stdout)
+
+        self.assertEqual(len(boxes), 2)
+        overview = next(box for box in boxes if abs((box["width"] / box["height"]) - 1.6) < 0.01)
+        detail = next(box for box in boxes if abs((box["width"] / box["height"]) - 1.6) >= 0.01)
+        self.assertGreaterEqual(overview["width"] / 1080 * overview["height"] / 1440, 0.38)
+        self.assertGreaterEqual(detail["width"] * detail["height"] / (1080 * 1440), 0.35)
+        self.assertGreaterEqual(
+            max(overview["x"] + overview["width"], detail["x"] + detail["width"])
+            - min(overview["x"], detail["x"]),
+            1000,
+        )
+        self.assertLessEqual(abs(detail["y"] - (overview["y"] + overview["height"])), 20)
+
+
 class PatternAuditTest(unittest.TestCase):
     def make_inputs(self) -> tuple[dict, dict, dict]:
         story = {
@@ -1632,6 +2212,7 @@ class PatternAuditTest(unittest.TestCase):
             "version_state": "prerelease",
             "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
             "primary_shot": "presentation.reveal",
+            "decision_rule": "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
             "cover_hook": {"formula_id": "#36", "title": "写完就能讲", "caption": "Markdown 直接放映，不用重做 PPT。"},
             "summary_hook": {"title": "一条放映路", "caption": "写作、修改和上台共用一份文件。", "proof_points": ["同一份 MD", "真实排版", "直接放映"]},
             "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
@@ -1655,6 +2236,7 @@ class PatternAuditTest(unittest.TestCase):
                 "文档写完了，讲的时候还要复制进 PPT。这次把这一步砍掉：Markdown 直接放映。\n\n"
                 "这一版的核心就一件事：ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映。\n\n"
                 "先说清楚：这是 ReadMD 预览版，文件仍在你自己的电脑里。\n\n"
+                "收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。\n\n"
                 "如果你常写课程讲义、组会报告、技术分享或论文汇报，它会省掉重新做演示稿这一步。\n\n"
                 "你会先拿哪一份 Markdown 试放映？"
             ),
@@ -1677,7 +2259,7 @@ class PatternAuditTest(unittest.TestCase):
                     **card("cover.jpg", "cover", 0.35, 0),
                     "feed_readiness": {
                         "ok": True,
-                        "title_font_size": 84,
+                        "title_font_size": 96,
                         "title_width_ratio": 0.36,
                         "title_height_ratio": 0.07,
                         "caption_font_size": 31,
@@ -1708,8 +2290,20 @@ class PatternAuditTest(unittest.TestCase):
             self.write_package(package, story, metadata, composition)
             report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
         self.assertTrue(report["ok"], report["errors"])
-        self.assertEqual(len(report["patterns"]), 11)
+        self.assertEqual(len(report["patterns"]), 12)
         self.assertTrue(all(item["ok"] for item in report["patterns"]))
+
+    def test_save_rule_must_survive_in_body(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            story, metadata, composition = self.make_inputs()
+            story["decision_rule"] = "判断标准：被裁掉的规则。"
+            self.write_package(package, story, metadata, composition)
+            report = pattern_audit.audit_package(package, library_path=ROOT / "showcase/content/pattern-library.json")
+
+        rule = next(item for item in report["patterns"] if item["id"] == "save-worthy-rule")
+        self.assertFalse(report["ok"])
+        self.assertFalse(rule["ok"])
 
     def test_cover_type_must_survive_feed_thumbnail_scale(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1821,7 +2415,7 @@ class ExportWechatTest(unittest.TestCase):
                 "body": (
                     "文档已经写完，讲的时候还要复制进 PPT。\n\n"
                     "这次把这一步**砍掉**：Markdown 直接放映，代码块用 `cmd=true` 标记。"
-                    "\n\n放映界面能换主题、调字号、切开场和转场；AST 保护分片尽量保住代码块、表格和公式。"
+                    "\n\n放映界面能换主题、调字号、切开场和转场；结构保护分片尽量保住代码块、表格和公式。"
                     "\n\n如果你要写课程讲义、组会报告或论文汇报，它会省掉重做演示稿这一步。"
                     "\n\nGitHub 搜 Natsummerance/readMD，你会先拿哪一份 Markdown 试放映？"
                 ),
@@ -1862,6 +2456,46 @@ class ExportWechatTest(unittest.TestCase):
             self.assertIn("color", item)
         self.assertIn("#GitHub #开源项目 #程序员 #效率工具 #Markdown", html)
         self.assertNotIn("PPT。<", html)
+
+    def test_wechat_highlight_rule_and_keep_comment_prompt_last(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = Path(tmp)
+            decision_rule = "收藏这条判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT"
+            comment_prompt = "你会先拿哪一份 Markdown 试放映？评论区说说场景"
+            metadata = {
+                "title": "不用重做PPT，Markdown直接放映",
+                "body": (
+                    "文档已经写完，讲的时候还要复制进 PPT。\n\n"
+                    f"{decision_rule}。\n\n"
+                    "同一份文件能保住代码、表格和公式。\n\n"
+                    f"GitHub 搜 Natsummerance/readMD，{comment_prompt}。"
+                ),
+                "topics": ["Markdown", "PPT", "演讲", "程序员", "效率工具"],
+            }
+            (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+            story = {
+                "release": "v1.2.3",
+                "summary_hook": {
+                    "title": "一条放映路",
+                    "caption": "写作、修改和上台共用一份文件。",
+                    "proof_points": ["同一份 MD", "真实排版", "直接放映"],
+                },
+            }
+            report = export_wechat.export_package(package, story=story)
+            html = (package / "wechat" / "readmd-wechat.html").read_text(encoding="utf-8")
+
+        self.assertTrue(report["ok"], report)
+        rule_position = html.index(decision_rule)
+        summary_position = html.index("本轮可保存的三点")
+        prompt_position = html.index(comment_prompt)
+        topic_position = html.index("#Markdown")
+        self.assertLess(rule_position, summary_position)
+        self.assertLess(summary_position, prompt_position)
+        self.assertLess(prompt_position, topic_position)
+        self.assertIn('background-color:#fff4ef;border-left:4px solid #d6482c', html)
+        last_content_paragraph_start = html.rindex('<p style="', 0, prompt_position)
+        last_content_paragraph_end = html.index("</p>", last_content_paragraph_start)
+        self.assertIn(comment_prompt, html[last_content_paragraph_start:last_content_paragraph_end])
 
     def test_rejects_wechat_html_missing_inline_styles(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1913,11 +2547,11 @@ class CopyVariantsTest(unittest.TestCase):
         }
         base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
         variants = copy_variants.build_variants(story=story, base_metadata=base)
-        self.assertEqual(len(variants), 72)
+        self.assertEqual(len(variants), 96)
         self.assertEqual(len({item["strategy"] for item in variants}), 3)
-        self.assertEqual(len({item["variant_id"] for item in variants}), 72)
+        self.assertEqual(len({item["variant_id"] for item in variants}), 96)
         self.assertEqual({item["copy_frame"] for item in variants}, {"core", "workflow", "decision", "source"})
-        self.assertEqual(len({item["title"] for item in variants}), 6)
+        self.assertEqual(len({item["title"] for item in variants}), 8)
         self.assertEqual(len({item["body"] for item in variants}), 12)
         for hook_type in ("outcome-led", "identity-led", "mechanism-curiosity"):
             formulas = {item["title_formula_id"] for item in variants if item["hook_type"] == hook_type}
@@ -2009,7 +2643,26 @@ class CopyVariantsTest(unittest.TestCase):
         self.assertEqual(chosen["variant_id"], "outcome-led__36")
         self.assertIn("insufficient evidence", report["selection_rule"])
 
-    def test_selection_ignores_pending_hook_history(self) -> None:
+    def test_dimension_learning_includes_follows(self) -> None:
+        story = self.variant_story()
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        history = [
+            {**self.history_record("v1.0.0", "outcome-led", "#36"), "copy_frame": "core"},
+            {**self.history_record("v1.0.1", "identity-led", "#22"), "copy_frame": "core"},
+            {**self.history_record("v1.0.2", "outcome-led", "#36"), "copy_frame": "workflow", "follows": 40},
+            self.history_record("v1.0.3", "identity-led", "#22"),
+        ]
+        _, report = copy_variants.choose_variant(variants, history)
+
+        self.assertTrue(report["formula_stats"]["#36"]["confidence_ok"])
+        self.assertTrue(report["formula_stats"]["#22"]["confidence_ok"])
+        self.assertGreater(
+            report["formula_stats"]["#36"]["weighted_engagement"],
+            report["formula_stats"]["#22"]["weighted_engagement"],
+        )
+
+    def test_pending_history_blocks_originality_but_not_engagement_learning(self) -> None:
         story = {
             "release": "v1.1.0",
             "previous_release": "v1.0.0",
@@ -2029,7 +2682,68 @@ class CopyVariantsTest(unittest.TestCase):
         ]
         chosen, report = copy_variants.choose_variant(variants, history)
         self.assertEqual(chosen["strategy"], "outcome-led")
-        self.assertEqual(report["ranked"][0]["history_adjustment"] + report["ranked"][1]["history_adjustment"], 0)
+        self.assertFalse(report["hook_stats"])
+
+    def test_pending_publication_still_blocks_exact_duplicate_body(self) -> None:
+        story = {
+            "release": "v1.1.0",
+            "previous_release": "v1.0.0",
+            "version_state": "prerelease",
+            "primary_shot": "presentation.reveal",
+            "angle": "ReadMD 让同一份 Markdown 直接放映",
+            "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        variants_for_history = copy.deepcopy(variants)
+        chosen_without_history, _ = copy_variants.choose_variant(variants, [])
+        fingerprints = copy_variants.text_fingerprints(chosen_without_history["body"])
+        history = [{
+            **self.history_record("v1.0.9", chosen_without_history["hook_type"], chosen_without_history["title_formula_id"]),
+            "metrics_status": "pending",
+            **fingerprints,
+            "body_trigrams": sorted(copy_variants.text_trigrams(chosen_without_history["body"])),
+        }]
+
+        copy_variants.choose_variant(variants_for_history, history)
+
+    def test_pending_exact_duplicate_is_rejected_in_ranking(self) -> None:
+        story = {
+            "release": "v1.1.0",
+            "previous_release": "v1.0.0",
+            "version_state": "prerelease",
+            "primary_shot": "presentation.reveal",
+            "angle": "ReadMD 让同一份 Markdown 直接放映",
+            "selected_shots": ["overview.reader", "presentation.reveal", "overview.editor"],
+            "claims": [
+                {"id": "reader", "user_value": "完整界面", "shot_ids": ["overview.reader"], "sources": ["README.md"]},
+                {"id": "reveal", "user_value": "直接放映", "shot_ids": ["presentation.reveal"], "sources": ["release/release_notes.md"]},
+            ],
+        }
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        variants_for_history = copy.deepcopy(variants)
+        chosen_without_history, _ = copy_variants.choose_variant(variants, [])
+        fingerprints = copy_variants.text_fingerprints(chosen_without_history["body"])
+        history = [{
+            **self.history_record("v1.0.9", chosen_without_history["hook_type"], chosen_without_history["title_formula_id"]),
+            "metrics_status": "pending",
+            **fingerprints,
+            "body_trigrams": sorted(copy_variants.text_trigrams(chosen_without_history["body"])),
+        }]
+
+        _, report = copy_variants.choose_variant(variants_for_history, history)
+        duplicate_rank = next(
+            item for item in report["ranked"]
+            if item["variant_id"] == chosen_without_history["variant_id"]
+        )
+
+        self.assertFalse(duplicate_rank["ok"])
+        self.assertTrue(any("body hash matches" in item for item in duplicate_rank["originality_failures"]))
 
     def test_confident_comment_intent_prefers_matching_frame(self) -> None:
         story = self.variant_story()
@@ -2165,6 +2879,33 @@ class CopyVariantsTest(unittest.TestCase):
         self.assertFalse(outcome_report["ok"])
         self.assertTrue(any("opening" in failure for failure in outcome_report["hard_failures"]))
         self.assertTrue(any("closing" in failure for failure in outcome_report["hard_failures"]))
+
+    def test_title_originality_gate_rejects_exact_prior_title(self) -> None:
+        story = self.variant_story()
+        base = write_copy.generate_copy(story, repository="Natsummerance/readMD", previous_release="v1.0.0")
+        variants = copy_variants.build_variants(story=story, base_metadata=base)
+        reused_title = next(
+            item["text"]
+            for item in base["title_candidates"]
+            if item["formula_id"] == "#36"
+        )
+        history = [{
+            **self.history_record("v1.0.0", "outcome-led", "#36"),
+            "title": reused_title,
+            **copy_variants.title_fingerprints(reused_title),
+        }]
+
+        chosen, report = copy_variants.choose_variant(variants, history)
+
+        rejected = next(item for item in report["ranked"] if item["title_formula_id"] == "#36")
+        self.assertNotEqual(chosen["title_formula_id"], "#36")
+        self.assertFalse(rejected["ok"])
+        self.assertEqual(rejected["max_title_similarity"], 1)
+        self.assertEqual(rejected["max_title_similarity_source"], "v1.0.0")
+        self.assertIn("title hash matches v1.0.0", rejected["originality_failures"])
+        self.assertIn("near-duplicate title (1.00) matches v1.0.0", rejected["originality_failures"])
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["portfolio_max_title_similarity"], 1)
 
     def test_originality_gate_rejects_near_duplicate_template(self) -> None:
         story = self.variant_story()
@@ -2338,6 +3079,52 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertIsNone(data["recommended_hook_type"])
         self.assertIsNone(data["recommended_copy_frame"])
 
+    def test_feedback_sla_names_missing_metrics_and_comments(self) -> None:
+        records = [
+            {
+                **self.complete("v-old-pending", "#36", "outcome-led", 0, 0, 0),
+                "metrics_status": "pending",
+                "metrics_observed": ["impressions"],
+                "published_at": "2026-08-20T00:00:00Z",
+            },
+            {
+                **self.complete("v-complete-no-comments", "#22", "identity-led", 1000, 40, 60),
+                "published_at": "2026-08-21T00:00:00Z",
+            },
+            {
+                **self.complete("v-due", "#9", "mechanism-curiosity", 1000, 40, 60),
+                "metrics_status": "pending",
+                "metrics_observed": [],
+                "published_at": "2026-08-26T00:00:00Z",
+            },
+            {
+                **self.complete("v-fresh", "#12", "perspective-shift", 1000, 40, 60),
+                "metrics_status": "pending",
+                "metrics_observed": [],
+                "comments_captured_at": "2026-08-29T00:00:00Z",
+                "published_at": "2026-08-28T00:00:00Z",
+            },
+        ]
+        as_of = datetime(2026, 8, 30, tzinfo=timezone.utc)
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp)
+            data = performance_report.generate_report(records, output, as_of=as_of)
+            markdown = (output / "performance-report.md").read_text(encoding="utf-8")
+
+        sla = data["feedback_sla"]
+        self.assertEqual(sla["due_count"], 1)
+        self.assertEqual(sla["overdue_count"], 2)
+        old_pending = next(item for item in sla["debts"] if item["release"] == "v-old-pending")
+        self.assertEqual(old_pending["status"], "overdue")
+        self.assertIn("metric:collects", old_pending["missing"])
+        self.assertIn("comments", old_pending["missing"])
+        no_comments = next(item for item in sla["debts"] if item["release"] == "v-complete-no-comments")
+        self.assertEqual(no_comments["missing"], ["comments"])
+        self.assertNotIn("v-fresh", markdown)
+        self.assertIn("Feedback follow-up", markdown)
+        self.assertIn("v-old-pending", markdown)
+        self.assertIn("overdue", markdown)
+
     def test_legacy_records_without_copy_frame_are_excluded(self) -> None:
         records = [
             {**self.complete("v1", "#36", "outcome-led", 2000, 200, 300), "comments": 100, "shares": 100},
@@ -2387,7 +3174,7 @@ class PerformanceReportTest(unittest.TestCase):
 
         self.assertEqual(result["topic_set_stats"]["ppt-set"]["publications"], 2)
         self.assertEqual(result["topic_set_stats"]["ppt-set"]["label"], "talk-core")
-        self.assertEqual(result["topic_stats"]["PPT"]["weighted_engagement"], 740)
+        self.assertEqual(result["topic_stats"]["PPT"]["weighted_engagement"], 764)
         self.assertEqual(result["recommended_topic_set"], "ppt-set")
         self.assertEqual(result["recommended_topic"], "Markdown")
         self.assertIn("## Topic sets", markdown)
@@ -2426,6 +3213,8 @@ class PerformanceReportTest(unittest.TestCase):
         self.assertEqual(focus["top_intents"], ["request", "question"])
         self.assertEqual(data["comment_focus"]["recommended_theme"], "academic")
         self.assertEqual(data["comment_focus"]["confidence"], "medium")
+        self.assertEqual(data["comment_focus"]["comment_release_count"], 4)
+        self.assertIn("presentation", data["comment_focus"]["themes"])
 
 
 class PackageContentTest(unittest.TestCase):
@@ -2482,18 +3271,51 @@ class PackageContentTest(unittest.TestCase):
             report = package_content.package_content(package, output)
             with zipfile.ZipFile(output) as archive:
                 names = set(archive.namelist())
+            verified = package_content.verify_package_manifest(output)
 
-        required = {
-            "story.json", "metadata.json", "copy-review.json", "pattern-audit.json",
-            "evidence/release-notes.md", "evidence/release.diff", "evidence/evidence-manifest.json",
-            "dashboard-qa.json", "review-dashboard.html", "wechat/wechat-qa.json",
-            "raw/capture.json", "raw/overview-reader.png", "images/xhs-01-cover.jpg",
-        }
-        self.assertTrue(report["ok"])
-        self.assertEqual(report["file_count"], len(names))
-        self.assertTrue(required <= names)
-        self.assertTrue(all("\\" not in name and not Path(name).is_absolute() for name in names))
-        self.assertRegex(report["sha256"], r"^[0-9a-f]{64}$")
+            required = {
+                "story.json", "metadata.json", "copy-review.json", "pattern-audit.json",
+                "evidence/release-notes.md", "evidence/release.diff", "evidence/evidence-manifest.json",
+                "dashboard-qa.json", "review-dashboard.html", "wechat/wechat-qa.json",
+                "raw/capture.json", "raw/overview-reader.png", "images/xhs-01-cover.jpg",
+            }
+            self.assertTrue(report["ok"])
+            self.assertEqual(report["file_count"], len(names))
+            self.assertTrue(required <= names)
+            self.assertTrue(all("\\" not in name and not Path(name).is_absolute() for name in names))
+            self.assertRegex(report["sha256"], r"^[0-9a-f]{64}$")
+            self.assertTrue(Path(report["manifest"]).is_file())
+            self.assertRegex(report["manifest_sha256"], r"^[0-9a-f]{64}$")
+            self.assertEqual(verified["archive_sha256"], report["sha256"])
+            self.assertEqual(verified["file_count"], report["file_count"])
+            self.assertEqual(set(verified["files"]), names)
+
+    def test_rejects_corrupt_or_changed_transport_package(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            package = self.make_package(Path(tmp))
+            output = Path(tmp) / "content-package.zip"
+            package_content.package_content(package, output)
+            corrupted = output.read_bytes() + b"truncated-simulation"
+            output.write_bytes(corrupted)
+            with self.assertRaisesRegex(ValueError, "package archive SHA-256 mismatch"):
+                package_content.verify_package_manifest(output)
+
+            output.write_bytes(corrupted[:-len(b"truncated-simulation")])
+            changed = Path(tmp) / "changed.zip"
+            with zipfile.ZipFile(output) as source, zipfile.ZipFile(changed, "w") as target:
+                for info in source.infolist():
+                    payload = source.read(info.filename)
+                    if info.filename == "title.txt":
+                        payload = bytes([payload[0] ^ 1]) + payload[1:]
+                    target.writestr(info, payload)
+            manifest_path = Path(str(output) + ".manifest.json")
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["archive_sha256"] = hashlib.sha256(changed.read_bytes()).hexdigest()
+            Path(str(changed) + ".manifest.json").write_text(
+                json.dumps(manifest, ensure_ascii=False), encoding="utf-8"
+            )
+            with self.assertRaisesRegex(ValueError, "package SHA-256 mismatch: title.txt"):
+                package_content.verify_package_manifest(changed)
 
     def test_rejects_red_or_incomplete_package(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2545,6 +3367,7 @@ class BuildPipelineTest(unittest.TestCase):
         self.assertLess(finalize_index, package_index)
         self.assertIn("--finalize", showcase)
         self.assertIn("python showcase/scripts/package_content.py", showcase)
+        self.assertIn("content-package.zip.manifest.json", showcase)
         self.assertNotIn("Compress-Archive", showcase)
 
     def test_release_evidence_resolves_highest_previous_semantic_version(self) -> None:
@@ -2707,6 +3530,71 @@ class BuildPipelineTest(unittest.TestCase):
         self.assertEqual(calls, ["pattern", "validate", "dashboard"])
         self.assertTrue(report["ok"])
 
+    def test_finalize_refreshes_report_and_rejects_stale_learning_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            package = root / "package"
+            ledger = root / "ledger.jsonl"
+            record = {
+                "release": "v1.0.0",
+                "title": "旧标题",
+                "title_formula_id": "#36",
+                "hook_type": "outcome-led",
+                "published_at": "2026-08-20T00:00:00Z",
+                "impressions": 1000,
+                "likes": 40,
+                "collects": 60,
+                "comments": 30,
+                "shares": 10,
+                "follows": 5,
+                "metrics_status": "complete",
+            }
+            ledger.write_text(json.dumps(record, ensure_ascii=False) + "\n", encoding="utf-8")
+            package.mkdir()
+            (package / "variants.json").write_text(json.dumps({
+                "ok": True,
+                "learning_snapshot": {
+                    "schema_version": 1,
+                    "record_count": 0,
+                    "sha256": content_memory.learning_fingerprint([]),
+                },
+            }), encoding="utf-8")
+            original_run = build_package_module.subprocess.run
+            original_audit = build_package_module.audit_package
+            original_export = build_package_module.export_package
+            original_pattern = build_package_module.pattern_audit.audit_package
+            original_validate = build_package_module.validate_package
+            original_dashboard = build_package_module.review_dashboard.generate_package
+            build_package_module.subprocess.run = lambda *args, **kwargs: SimpleNamespace(returncode=0)
+            build_package_module.audit_package = lambda package_dir: {"ok": True, "total_score": 100}
+            build_package_module.export_package = lambda package_dir: {"ok": True, "errors": []}
+
+            def run_pattern(package_dir: Path) -> dict:
+                report = {"schema_version": 1, "ok": True, "passed_count": 10, "total_count": 10, "errors": []}
+                (package_dir / "pattern-audit.json").write_text(json.dumps(report), encoding="utf-8")
+                return report
+
+            build_package_module.pattern_audit.audit_package = run_pattern
+            build_package_module.validate_package = lambda package_dir, repo_root=None: []
+            build_package_module.review_dashboard.generate_package = lambda package_dir: {"ok": True, "errors": []}
+            try:
+                errors = build_package_module.compose_and_validate(
+                    package,
+                    ROOT,
+                    memory_path=ledger,
+                )
+            finally:
+                build_package_module.subprocess.run = original_run
+                build_package_module.audit_package = original_audit
+                build_package_module.export_package = original_export
+                build_package_module.pattern_audit.audit_package = original_pattern
+                build_package_module.validate_package = original_validate
+                build_package_module.review_dashboard.generate_package = original_dashboard
+
+            performance = json.loads((package / "performance-report.json").read_text(encoding="utf-8"))
+        self.assertEqual(performance["learning_count"], 1)
+        self.assertIn("learning evidence changed after copy selection", " ".join(errors))
+
     def test_dashboard_reads_provisional_qa_before_final_aggregate(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             package = Path(tmp)
@@ -2853,6 +3741,21 @@ class ContentMemoryTest(unittest.TestCase):
             records = content_memory.load_records(store)
         self.assertEqual([item["release"] for item in records], ["v1.0.0", "v1.0.1"])
 
+    def test_learning_fingerprint_is_order_sensitive_and_stable(self) -> None:
+        first = self.record()
+        second = self.record(release="v1.0.1", formula="#36", title="不用重做PPT，Markdown直接放映")
+        ordered = [first, second]
+        reordered = [second, first]
+
+        self.assertEqual(
+            content_memory.learning_fingerprint(ordered),
+            content_memory.learning_fingerprint([dict(first), dict(second)]),
+        )
+        self.assertNotEqual(
+            content_memory.learning_fingerprint(ordered),
+            content_memory.learning_fingerprint(reordered),
+        )
+
     def test_summary_ranks_verified_formula_performance(self) -> None:
         records = [
             self.record(release="v1.0.0", formula="#61"),
@@ -2865,6 +3768,171 @@ class ContentMemoryTest(unittest.TestCase):
         self.assertEqual(summary["formula_stats"]["#36"]["confidence"], "medium")
         self.assertEqual(summary["formula_stats"]["#61"]["confidence"], "low")
         self.assertGreater(summary["formula_stats"]["#36"]["score"], summary["formula_stats"]["#61"]["score"])
+
+    def test_engagement_score_weights_follows_as_durable_demand(self) -> None:
+        record = self.record()
+
+        self.assertEqual(
+            content_memory.engagement_score(record),
+            40 + 60 * 2 + 30 * 3 + 10 * 4 + 5 * 6,
+        )
+
+    def write_creator_workbook(self, path: Path, rows: list[dict]) -> None:
+        columns = [
+            "首次发布时间", "笔记标题", "体裁", "笔记ID",
+            "曝光", "点赞", "收藏", "评论", "分享", "涨粉",
+        ]
+        book = Workbook()
+        sheet = book.active
+        sheet.append(["小红书创作者中心导出"])
+        sheet.append(columns)
+        for row in rows:
+            sheet.append([row.get(column) for column in columns])
+        book.save(path)
+
+    def test_creator_workbook_imports_all_six_metrics(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ledger = root / "publication-ledger.jsonl"
+            workbook = root / "creator.xlsx"
+            content_memory.append_record(ledger, self.record())
+            self.write_creator_workbook(workbook, [{
+                "首次发布时间": "2026年08月24日20时00分00秒",
+                "笔记标题": self.record()["title"],
+                "体裁": "图文",
+                "笔记ID": "note-1",
+                "曝光": 2400,
+                "点赞": 130,
+                "收藏": 190,
+                "评论": 45,
+                "分享": 22,
+                "涨粉": 18,
+            }])
+
+            result = import_feedback_workbook.import_workbook(
+                ledger,
+                workbook,
+                release="v1.0.0",
+                captured_at="2026-08-25T09:00:00+08:00",
+            )
+            records = content_memory.load_records(ledger)
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["metrics_status"], "complete")
+        self.assertEqual(result["metrics"]["impressions"], 2400)
+        self.assertEqual(result["metrics"]["follows"], 18)
+        self.assertEqual(records[0]["metrics_source"], "xiaohongshu-web")
+        self.assertEqual(records[0]["metrics_observed"], [
+            "collects", "comments", "follows", "impressions", "likes", "shares",
+        ])
+
+    def test_ambiguous_creator_rows_fail_without_touching_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ledger = root / "publication-ledger.jsonl"
+            workbook = root / "creator.xlsx"
+            base = {
+                "首次发布时间": "2026年08月24日20时00分00秒",
+                "笔记标题": self.record()["title"],
+                "体裁": "图文",
+                "曝光": 100,
+                "点赞": 10,
+                "收藏": 20,
+                "评论": 3,
+                "分享": 2,
+                "涨粉": 1,
+            }
+            self.write_creator_workbook(workbook, [base, {**base, "笔记ID": "note-2"}])
+            content_memory.append_record(ledger, self.record())
+            before = ledger.read_text(encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "2 creator workbook rows"):
+                import_feedback_workbook.import_workbook(
+                    ledger,
+                    workbook,
+                    release="v1.0.0",
+                    captured_at="2026-08-25T09:00:00+08:00",
+                )
+
+            self.assertEqual(ledger.read_text(encoding="utf-8"), before)
+
+    def test_creator_workbook_rejects_missing_metric_columns(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            workbook = root / "creator.xlsx"
+            columns = ["首次发布时间", "笔记标题", "体裁", "曝光"]
+            book = Workbook()
+            sheet = book.active
+            sheet.append(["export"])
+            sheet.append(columns)
+            sheet.append(["2026年08月24日20时00分00秒", "title", "图文", 1])
+            book.save(workbook)
+
+            with self.assertRaisesRegex(ValueError, "missing columns"):
+                import_feedback_workbook.read_creator_workbook(workbook)
+
+    def test_comment_capture_anonymizes_public_page_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ledger = root / "publication-ledger.jsonl"
+            capture = root / "note_detail.json"
+            content_memory.append_record(ledger, self.record())
+            top_text = "放映功能太好用了，组会可以直接讲。"
+            reply_text = "希望支持更多代码高亮主题。"
+            capture.write_text(json.dumps({
+                "success": True,
+                "note_id": "note-1",
+                "title": self.record()["title"],
+                "comments": [{
+                    "id": "comment-1",
+                    "content": top_text,
+                    "like_count": 7,
+                    "user": {"user_id": "author-1", "nickname": "visible-name"},
+                    "sub_comments": [{"id": "reply-1", "content": reply_text, "like_count": "2"}],
+                }],
+            }, ensure_ascii=False), encoding="utf-8")
+
+            result = import_comment_capture.import_capture(
+                ledger,
+                capture,
+                release="v1.0.0",
+                captured_at="2026-08-25T10:00:00+08:00",
+            )
+            records = content_memory.load_records(ledger)
+            persisted = ledger.read_text(encoding="utf-8")
+
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["imported_count"], 2)
+        self.assertEqual(result["unique_count"], 2)
+        insights = records[0]["comment_insights"]
+        self.assertEqual(insights["evidence_hashes"][0], content_memory._comment_hash(top_text))
+        self.assertIn("presentation", insights["observations"][content_memory._comment_hash(top_text)]["themes"])
+        self.assertNotIn("visible-name", json.dumps(result, ensure_ascii=False))
+        self.assertNotIn(top_text, persisted)
+        self.assertNotIn(reply_text, persisted)
+        self.assertNotIn("author-1", persisted)
+
+    def test_comment_capture_rejects_identity_conflict_without_import(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ledger = root / "publication-ledger.jsonl"
+            capture = root / "capture.json"
+            content_memory.append_record(ledger, {**self.record(), "note_id": "ledger-note"})
+            capture.write_text(json.dumps({
+                "note_id": "different-note",
+                "comments": [{"content": "放映很好"}],
+            }, ensure_ascii=False), encoding="utf-8")
+            before = ledger.read_text(encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "note ID conflicts"):
+                import_comment_capture.import_capture(
+                    ledger,
+                    capture,
+                    release="v1.0.0",
+                    captured_at="2026-08-25T10:00:00+08:00",
+                )
+
+            self.assertEqual(ledger.read_text(encoding="utf-8"), before)
 
     def test_two_release_formula_reaches_medium_confidence(self) -> None:
         records = [
@@ -2882,7 +3950,7 @@ class ContentMemoryTest(unittest.TestCase):
         ]
         summary = content_memory.summarize(records)
         self.assertIsNone(summary["recommended_formula"])
-        self.assertEqual(summary["formula_stats"]["#9"]["score"], 2.0375)
+        self.assertEqual(summary["formula_stats"]["#9"]["score"], 2.075)
         self.assertEqual(summary["formula_stats"]["#9"]["confidence"], "low")
 
     def test_pending_feedback_is_partitioned_out_of_learning(self) -> None:
@@ -3348,6 +4416,7 @@ class ReviewDashboardTest(unittest.TestCase):
                 "release": "v1.2.3",
                 "primary_shot": "presentation.reveal",
                 "angle": "ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映",
+                "decision_rule": "判断标准：源文件是 Markdown、现场要放映，就不用重做 PPT。",
                 "cover_hook": {
                     "formula_id": "#36",
                     "title": "写完就能讲",
@@ -3376,7 +4445,7 @@ class ReviewDashboardTest(unittest.TestCase):
                 "ok": True,
                 "chosen_strategy": "outcome-led",
                 "chosen_variant_id": "outcome-led__36",
-                "candidate_count": 60,
+                "candidate_count": 96,
                 "portfolio_max_body_similarity": 0.12,
                 "portfolio_max_similarity_source": "v1.0.0",
                 "copy_frame_inventory": {
@@ -3390,6 +4459,8 @@ class ReviewDashboardTest(unittest.TestCase):
                         "variant_id": "outcome-led__36",
                         "title": "#36 标题",
                         "title_formula_id": "#36",
+                        "title_source_template": "没有 [资源]，也能 [结果]",
+                        "title_adaptation": "把缺少的资源换成要移除的重复步骤。",
                         "adjusted_score": 114,
                         "semantic_score": 100,
                         "history_adjustment": -2,
@@ -3416,6 +4487,18 @@ class ReviewDashboardTest(unittest.TestCase):
             "performance": {
                 "learning_count": 2,
                 "pending_count": 1,
+                "feedback_sla": {
+                    "due_count": 1,
+                    "overdue_count": 1,
+                    "debts": [
+                        {
+                            "release": "v0.9.0",
+                            "age_days": 8.5,
+                            "missing": ["metric:collects", "comments"],
+                            "status": "overdue",
+                        }
+                    ],
+                },
                 "recommended_formula": "#22",
                 "recommended_hook_type": "identity-task",
                 "recommended_copy_frame": "workflow",
@@ -3473,6 +4556,8 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("Mechanism contract", html)
         self.assertIn("presentation.reveal", html)
         self.assertIn("ReadMD 让同一份 Markdown 从阅读、编辑直接走到上台放映", html)
+        self.assertIn("Save-worthy rule", html)
+        self.assertIn("源文件是 Markdown、现场要放映", html)
         self.assertIn("写完就能讲", html)
         self.assertIn("一条放映路", html)
         self.assertIn("同一份 MD", html)
@@ -3483,6 +4568,9 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("100 semantic · 114 adjusted", html)
         self.assertIn("History -2 · Frame resonance +8 · Title intent +8", html)
         self.assertIn("Max similarity 12% · v1.0.0", html)
+        self.assertIn("Title similarity 0%", html)
+        self.assertIn("Source 没有 [资源]，也能 [结果]", html)
+        self.assertIn("把缺少的资源换成要移除的重复步骤", html)
         self.assertIn("comment request intent prefers the #36 title", html)
         self.assertIn("Portfolio max similarity", html)
         self.assertIn("12%", html)
@@ -3491,6 +4579,9 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("Hot-post patterns", html)
         self.assertIn("10 / 10", html)
         self.assertIn("Recommended frame", html)
+        self.assertIn("Feedback overdue", html)
+        self.assertIn("v0.9.0", html)
+        self.assertIn("missing metric:collects, comments", html)
         self.assertIn("workflow", html)
         self.assertIn("Topic experiment", html)
         self.assertIn("talk-core", html)
@@ -3580,7 +4671,7 @@ class ReviewDashboardTest(unittest.TestCase):
         inputs["variants"]["ranked"] = ranked
         html = review_dashboard.build_dashboard(inputs)
         self.assertIn("Top experiments", html)
-        self.assertIn("Showing 5 of 60 candidates", html)
+        self.assertIn("Showing 5 of 96 candidates", html)
         self.assertIn("Copy-frame inventory", html)
         self.assertIn("4 / hook", html)
         self.assertIn("outcome-led__36", html)
@@ -3621,6 +4712,7 @@ class WatcherTest(unittest.TestCase):
         tamper_directive_execution: bool = False,
         tamper_concern_response: bool = False,
         tamper_variant_ranking: bool = False,
+        tamper_dashboard: bool = False,
     ) -> Path:
         package = root / "package"
         (package / "images").mkdir(parents=True)
@@ -3661,11 +4753,17 @@ class WatcherTest(unittest.TestCase):
         for index, shot_id in enumerate(story["selected_shots"]):
             filename = f"{shot_id.replace('.', '-')}.png"
             path = package / "raw" / filename
-            Image.new("RGB", (960, 1280), (24 + index * 37, 88 + index * 13, 150 - index * 19)).save(path, "PNG")
+            Image.effect_noise((960, 1280), 18 + index * 2).convert("RGB").save(path, "PNG")
             capture_shots.append({
                 "shot_id": shot_id,
                 "file": f"raw/{filename}",
                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                "capture": {
+                    "viewport": "960x1280",
+                    "scale": 1,
+                    "locale": "zh-CN",
+                    "theme": "dark",
+                },
             })
         (package / "raw" / "capture.json").write_text(json.dumps({
             "schema_version": 1,
@@ -3678,10 +4776,14 @@ class WatcherTest(unittest.TestCase):
             )
 
         canvas_area = 1080 * 1440
+        composition["schema_version"] = 2
         for card in composition["cards"]:
+            card["sha256"] = hashlib.sha256(
+                (package / "images" / card["file"]).read_bytes()
+            ).hexdigest()
             if card["role"] == "cover":
                 card["feed_readiness"] = {
-                    "title_font_size": 84,
+                    "title_font_size": 96,
                     "title_width_ratio": 0.36,
                     "title_height_ratio": 0.07,
                     "caption_font_size": 31,
@@ -3746,7 +4848,6 @@ class WatcherTest(unittest.TestCase):
         (package / "variants.json").write_text(json.dumps(persisted_variants, ensure_ascii=False), encoding="utf-8")
         (package / "performance-report.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "performance-report.md").write_text("# Performance\n", encoding="utf-8")
-        (package / "dashboard-qa.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
         (package / "pattern-audit.json").write_text(json.dumps({
             "ok": pattern_ok,
             "passed_count": 10 if pattern_ok else 8,
@@ -3762,7 +4863,6 @@ class WatcherTest(unittest.TestCase):
         (package / "body.txt").write_text(metadata["body"], encoding="utf-8")
         (package / "topics.txt").write_text("\n".join(metadata["topics"]), encoding="utf-8")
         (package / "composition.json").write_text(json.dumps(composition, ensure_ascii=False), encoding="utf-8")
-        (package / "review-dashboard.html").write_text("<!doctype html><main>preflight</main>", encoding="utf-8")
         (package / "evidence").mkdir()
         (package / "evidence" / "release-notes.md").write_text("# Release\n", encoding="utf-8")
         (package / "evidence" / "release.diff").write_text("diff --git a/a b/a\n", encoding="utf-8")
@@ -3783,6 +4883,11 @@ class WatcherTest(unittest.TestCase):
         if not topic_match:
             metadata["topic_set_id"] = "tampered-topic-set"
         (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
+        review_dashboard.generate_package(package)
+        if tamper_dashboard:
+            (package / "review-dashboard.html").write_text(
+                "<!doctype html><main>stale dashboard</main>", encoding="utf-8",
+            )
         if tamper_directive:
             metadata["resonance_directive"] = {
                 "schema_version": 1,
@@ -3883,11 +4988,17 @@ class WatcherTest(unittest.TestCase):
             (package / "metadata.json").write_text(json.dumps(metadata, ensure_ascii=False), encoding="utf-8")
             watch_and_publish.localize_image_paths(package)
             command = watch_and_publish.publish_command(Path("publisher.py"), package, draft=True)
+            reused_command = watch_and_publish.publish_command(
+                Path("publisher.py"), package, draft=True, reuse_edge=True,
+            )
             loaded = json.loads((package / "metadata.json").read_text(encoding="utf-8"))
             expected_image = str(image.resolve())
         self.assertEqual(loaded["images"], [str(image.resolve())])
         self.assertEqual(loaded["images"], [expected_image])
         self.assertIn("--no-publish", command)
+        self.assertEqual(command.index("--bootstrap-edge"), command.index("--restart-edge") - 1)
+        self.assertIn("--bootstrap-edge", reused_command)
+        self.assertNotIn("--restart-edge", reused_command)
         self.assertEqual(command.count("--image"), 0)
 
     def test_rejects_topic_identity_mismatch_despite_green_reports(self) -> None:
@@ -3965,6 +5076,14 @@ class WatcherTest(unittest.TestCase):
             self.assertEqual(feedback["variant_id"], "outcome-led__36")
             self.assertEqual(feedback["copy_frame"], "core")
             self.assertEqual(feedback["title_formula_id"], "#36")
+            self.assertEqual(
+                feedback["title_source_template"],
+                copy_profiles.TITLE_FORMULA_CONTRACTS["#36"]["source_template"],
+            )
+            self.assertEqual(
+                feedback["title_adaptation"],
+                copy_profiles.TITLE_FORMULA_CONTRACTS["#36"]["adaptation"],
+            )
             self.assertEqual(feedback["hook_type"], "outcome-led")
             self.assertEqual(feedback["primary_shot"], "presentation.reveal")
             self.assertEqual(
@@ -3992,9 +5111,163 @@ class WatcherTest(unittest.TestCase):
             self.assertTrue(localized_image.is_file())
             self.assertEqual(localized_image.parent, work_package / "images")
             self.assertIn("body_sha256", feedback)
+            self.assertIn("title_sha256", feedback)
+            self.assertTrue(feedback["title_trigrams"])
             self.assertIn("opening", feedback)
             self.assertIn("closing", feedback)
             self.assertTrue(feedback["body_trigrams"])
+
+    def test_terminal_packages_leave_live_watch_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            watch_dir = root / "watch"
+            watch_dir.mkdir()
+            live_zip = watch_dir / "package.zip"
+            live_zip.write_bytes(zip_path.read_bytes())
+
+            def fake_run(command, **kwargs):
+                if command[2] == "publish":
+                    payload = {"published": True, "noteId": "note-archive", "url": "https://example.com/note"}
+                    return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+                if command[2] == "status":
+                    prior_status_calls = sum(1 for item in calls if item[2] == "status")
+                    payload = {"status": "审核中"} if prior_status_calls else {}
+                    return SimpleNamespace(returncode=0, stdout=json.dumps(payload), stderr="")
+                raise AssertionError(f"unexpected publisher command: {command}")
+
+            calls = []
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    live_zip,
+                    root / "work",
+                    root / "state.json",
+                    Path("publisher.py"),
+                    3,
+                    False,
+                )
+                archived = watch_and_publish.archive_terminal_package(live_zip, root / "state.json")
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            token = watch_and_publish.package_token(zip_path)
+            expected_archive = watch_dir / "processed" / f"{token}-{live_zip.name}"
+            self.assertTrue(published)
+            self.assertTrue(archived)
+            self.assertFalse(live_zip.exists())
+            self.assertEqual(list(watch_dir.glob("*.zip")), [])
+            self.assertTrue(expected_archive.is_file())
+            self.assertEqual(Path(record["zip"]), expected_archive)
+
+    def test_failed_package_is_retained_without_repeated_extraction(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, tamper_semantics=True)
+            watch_dir = root / "watch"
+            watch_dir.mkdir()
+            live_zip = watch_dir / "package.zip"
+            live_zip.write_bytes(zip_path.read_bytes())
+
+            def forbidden_publisher(*args, **kwargs):
+                raise AssertionError("publisher must not run for a failed package")
+
+            original_run = watch_and_publish.subprocess.run
+            original_extract = watch_and_publish.safe_extract
+            extract_calls = unittest.mock.Mock(side_effect=AssertionError("failed package must not be extracted again"))
+            watch_and_publish.subprocess.run = forbidden_publisher
+            try:
+                first = watch_and_publish.process_package(
+                    live_zip,
+                    root / "work",
+                    root / "state.json",
+                    Path("publisher.py"),
+                    1,
+                    False,
+                )
+                archived = watch_and_publish.archive_terminal_package(live_zip, root / "state.json")
+                token = watch_and_publish.package_token(zip_path)
+                archived_path = watch_dir / "failed" / f"{token}-{live_zip.name}"
+                watch_and_publish.safe_extract = extract_calls
+                second = watch_and_publish.process_package(
+                    archived_path,
+                    root / "work",
+                    root / "state.json",
+                    Path("publisher.py"),
+                    1,
+                    False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+                watch_and_publish.safe_extract = original_extract
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(first)
+            self.assertTrue(archived)
+            self.assertFalse(second)
+            self.assertFalse(live_zip.exists())
+            self.assertEqual(record["attempts"], 1)
+            self.assertEqual(record["status"], "abandoned")
+            extract_calls.assert_not_called()
+
+    def test_retrying_package_stays_in_watch_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, tamper_dashboard=True)
+            watch_dir = root / "watch"
+            watch_dir.mkdir()
+            live_zip = watch_dir / "package.zip"
+            live_zip.write_bytes(zip_path.read_bytes())
+            published = watch_and_publish.process_package(
+                live_zip,
+                root / "work",
+                root / "state.json",
+                Path("publisher.py"),
+                3,
+                False,
+            )
+            archived = watch_and_publish.archive_terminal_package(live_zip, root / "state.json")
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertFalse(archived)
+            self.assertTrue(live_zip.is_file())
+            self.assertEqual(record["status"], "retrying")
+
+    def test_reconcile_repairs_state_path_for_archived_package(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            watch_dir = root / "watch"
+            watch_dir.mkdir()
+            live_zip = watch_dir / "package.zip"
+            live_zip.write_bytes(zip_path.read_bytes())
+            watch_and_publish.process_package(
+                live_zip,
+                root / "work",
+                root / "state.json",
+                Path("publisher.py"),
+                1,
+                True,
+            )
+            watch_and_publish.archive_terminal_package(live_zip, root / "state.json")
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            stale_path = root / "missing.zip"
+            record["zip"] = str(stale_path)
+            (root / "state.json").write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+
+            watch_and_publish.reconcile_archived_packages(watch_dir, root / "state.json")
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(stale_path.exists())
+            self.assertTrue(Path(record["zip"]).is_file())
 
     def test_recomputed_semantic_gate_blocks_forged_green_review(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -4139,6 +5412,33 @@ class WatcherTest(unittest.TestCase):
                 record["error"],
             )
 
+    def test_watcher_recomputes_review_dashboard(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root, tamper_dashboard=True)
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not trust a stale review dashboard")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("recomputed publication gates failed", record["error"])
+            self.assertIn("review dashboard is stale or does not match package data", record["error"])
+
     def test_watcher_rechecks_originality_against_publication_ledger(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -4183,6 +5483,168 @@ class WatcherTest(unittest.TestCase):
             self.assertIn("near-duplicate body (1.00) matches v1.0.0", record["error"])
             self.assertIn("opening matches v1.0.0", record["error"])
             self.assertIn("closing matches v1.0.0", record["error"])
+
+    def test_watcher_rechecks_title_originality_against_publication_ledger(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            zip_path = self.make_package_zip(root)
+            metadata = json.loads(
+                (root / "package" / "metadata.json").read_text(encoding="utf-8")
+            )
+            ledger = root / "publication-ledger.jsonl"
+            ledger.write_text(json.dumps({
+                "release": "v1.0.0",
+                "title": metadata["title"],
+                **watch_and_publish.title_fingerprints(metadata["title"]),
+            }, ensure_ascii=False) + "\n", encoding="utf-8")
+            calls = []
+
+            def fake_run(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not click a near-duplicate title")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = fake_run
+            try:
+                published = watch_and_publish.process_package(
+                    zip_path, root / "work", root / "state.json", Path("publisher.py"), 1, False,
+                    ledger_path=ledger,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("publisher originality contract failed", record["error"])
+            self.assertIn("title hash matches v1.0.0", record["error"])
+            self.assertIn("near-duplicate title (1.00) matches v1.0.0", record["error"])
+
+    def test_watcher_reselects_only_on_material_learning_change(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            package = root / "package"
+            zip_path = self.make_package_zip(root)
+            variants = json.loads((package / "variants.json").read_text(encoding="utf-8"))
+            metadata = json.loads((package / "metadata.json").read_text(encoding="utf-8"))
+            ledger = root / "publication-ledger.jsonl"
+
+            # A pending record changes the local fingerprint but is excluded from
+            # metric learning, so it must not force a needless rebuild/reselection.
+            pending_record = {
+                "release": "v1.0.0",
+                "title": "pending evidence",
+                "title_formula_id": "#61",
+                "hook_type": "outcome-led",
+                "published_at": "2026-08-20T00:00:00Z",
+                "impressions": 0,
+                "likes": 0,
+                "collects": 0,
+                "comments": 0,
+                "shares": 0,
+                "follows": 0,
+                "metrics_status": "pending",
+            }
+            ledger.write_text(json.dumps(pending_record, ensure_ascii=False) + "\n", encoding="utf-8")
+            self.assertEqual(
+                validate_package.publisher_learning_materiality_errors(package, ledger),
+                [],
+            )
+
+            with unittest.mock.patch.object(
+                validate_package,
+                "choose_variant",
+                return_value=({"variant_id": "identity-led__22"}, {"ok": True}),
+            ):
+                errors = validate_package.publisher_learning_materiality_errors(package, ledger)
+
+        self.assertEqual(
+            errors,
+            [(
+                "current publication evidence selects a different variant: "
+                f"package={metadata['variant_id']}, current=identity-led__22"
+            )],
+        )
+
+    def test_watcher_rejects_tampered_composed_card(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original_zip = self.make_package_zip(root)
+            tampered_zip = root / "tampered.zip"
+            with zipfile.ZipFile(original_zip) as source, zipfile.ZipFile(tampered_zip, "w") as target:
+                for info in source.infolist():
+                    payload = source.read(info.filename)
+                    if info.filename == "composition.json":
+                        composition = json.loads(payload)
+                        composition["cards"][0]["sha256"] = "0" * 64
+                        payload = json.dumps(composition, ensure_ascii=False).encode("utf-8")
+                    target.writestr(info, payload)
+            calls = []
+
+            def forbidden_publish(command, **kwargs):
+                calls.append(command)
+                raise AssertionError("publisher must not click a replaced card")
+
+            original_run = watch_and_publish.subprocess.run
+            watch_and_publish.subprocess.run = forbidden_publish
+            try:
+                published = watch_and_publish.process_package(
+                    tampered_zip,
+                    root / "work",
+                    root / "state.json",
+                    Path("publisher.py"),
+                    1,
+                    False,
+                )
+            finally:
+                watch_and_publish.subprocess.run = original_run
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(calls, [])
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("publisher asset contract failed", record["error"])
+            self.assertIn("SHA-256 mismatch in composition.json", record["error"])
+
+    def test_watcher_verifies_transport_manifest_before_extraction(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            original_zip = self.make_package_zip(root)
+            tampered_zip = root / "transport.zip"
+            manifest_path = Path(str(original_zip) + ".manifest.json")
+            Path(str(tampered_zip) + ".manifest.json").write_bytes(
+                manifest_path.read_bytes()
+            )
+            with zipfile.ZipFile(original_zip) as source, zipfile.ZipFile(tampered_zip, "w") as target:
+                for info in source.infolist():
+                    payload = source.read(info.filename)
+                    if info.filename == "title.txt":
+                        payload = bytes([payload[0] ^ 1]) + payload[1:]
+                    target.writestr(info, payload)
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["archive_sha256"] = hashlib.sha256(tampered_zip.read_bytes()).hexdigest()
+            Path(str(tampered_zip) + ".manifest.json").write_text(
+                json.dumps(manifest, ensure_ascii=False), encoding="utf-8"
+            )
+
+            published = watch_and_publish.process_package(
+                tampered_zip,
+                root / "work",
+                root / "state.json",
+                Path("publisher.py"),
+                1,
+                False,
+            )
+
+            state = json.loads((root / "state.json").read_text(encoding="utf-8"))
+            record = next(iter(state["packages"].values()))
+            self.assertFalse(published)
+            self.assertEqual(record["status"], "failed")
+            self.assertIn("package SHA-256 mismatch: title.txt", record["error"])
+            self.assertFalse((root / "work").exists())
 
     def test_watcher_blocks_copy_that_ignores_concern_intent(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -4290,10 +5752,13 @@ class WatcherTest(unittest.TestCase):
                     zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
                     ledger_path=root / "publication-ledger.jsonl",
                 )
+                repair_deferred = watch_and_publish.archive_terminal_package(zip_path, root / "state.json")
+                repair_preserved = zip_path.is_file()
                 second = watch_and_publish.process_package(
                     zip_path, root / "work", root / "state.json", Path("publisher.py"), 3, False,
                     ledger_path=root / "publication-ledger.jsonl",
                 )
+                repair_archived = watch_and_publish.archive_terminal_package(zip_path, root / "state.json")
             finally:
                 watch_and_publish.subprocess.run = original_run
                 watch_and_publish.seed_feedback_ledger = original_seed
@@ -4303,6 +5768,10 @@ class WatcherTest(unittest.TestCase):
             records = content_memory.load_records(root / "publication-ledger.jsonl")
             self.assertTrue(first)
             self.assertFalse(second)
+            self.assertFalse(repair_deferred)
+            self.assertTrue(repair_preserved)
+            self.assertTrue(repair_archived)
+            self.assertFalse(zip_path.exists())
             self.assertEqual([call[2] for call in calls], ["status", "publish", "status"])
             self.assertEqual(len(seed_calls), 2)
             self.assertEqual(record["ledger_status"], "seeded")
@@ -4699,6 +6168,153 @@ class WatcherTest(unittest.TestCase):
         self.assertFalse(published)
         self.assertEqual(record["status"], "retrying")
         self.assertIn("selected copy_frame mismatch", record["error"])
+
+
+class RepairBatchTest(unittest.TestCase):
+    @staticmethod
+    def make_repair_zip(root: Path, release: str, title: str, body: str) -> Path:
+        topics = ["Markdown", "PPT", "演讲", "程序员", "效率工具"]
+        raw_name = "raw/overview-reader.png"
+        image_names = ["xhs-01-cover.jpg", "xhs-02-overview.jpg", "xhs-03-detail.jpg", "xhs-04-summary.jpg"]
+        image_name = image_names[1]
+        (root / "images").mkdir(parents=True, exist_ok=True)
+        (root / "raw").mkdir(parents=True, exist_ok=True)
+        images = {name: root / "images" / name for name in image_names}
+        raw = root / raw_name
+        for path in images.values():
+            Image.effect_noise((1080, 1440), 20).convert("RGB").save(path, "JPEG", quality=90)
+        Image.effect_noise((960, 720), 22).convert("RGB").save(raw, "PNG")
+        files = {
+            "story.json": json.dumps({
+                "release": release,
+                "version_state": "prerelease",
+                "selected_shots": ["overview.reader"],
+                "card_plan": [
+                    {"file": "xhs-01-cover.jpg", "role": "cover", "shot_id": None},
+                    {"file": image_name, "role": "pure_ui_hero", "shot_id": "overview.reader"},
+                    {"file": image_names[2], "role": "annotated_ui", "shot_id": None},
+                    {"file": image_names[3], "role": "summary", "shot_id": None},
+                ],
+            }, ensure_ascii=False),
+            "metadata.json": json.dumps({
+                "version_state": "prerelease",
+                "title": title,
+                "body": body,
+                "topics": topics,
+                "images": image_names,
+            }, ensure_ascii=False),
+            "title.txt": title,
+            "body.txt": body,
+            "topics.txt": "\n".join(topics),
+            "qa.json": json.dumps({"ok": True}),
+            "copy-review.json": json.dumps({"ok": True}),
+            "pattern-audit.json": json.dumps({"ok": True}),
+            "dashboard-qa.json": json.dumps({"ok": True}),
+            "composition.json": json.dumps({"cards": ([{
+                "file": image_name,
+                "sha256": hashlib.sha256(images[image_name].read_bytes()).hexdigest(),
+            }] + [{
+                "file": name,
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            } for name, path in images.items() if name != image_name])}),
+            "raw/capture.json": json.dumps({
+                "release": release,
+                "shots": [{
+                    "shot_id": "overview.reader",
+                    "file": raw_name,
+                    "sha256": hashlib.sha256(raw.read_bytes()).hexdigest(),
+                    "capture": {"viewport": "960x720", "scale": 1},
+                }],
+            }),
+            "evidence/release-notes.md": f"# {release}\n",
+            "evidence/release.diff": "diff --git a/a b/a\n",
+            "evidence/evidence-manifest.json": json.dumps({
+                "schema_version": 1,
+                "artifacts": {
+                    "release-notes.md": {"path": "evidence/release-notes.md", "bytes": len(release) + 3, "sha256": hashlib.sha256(f"# {release}\n".encode()).hexdigest()},
+                    "release.diff": {"path": "evidence/release.diff", "bytes": 26, "sha256": hashlib.sha256(b"diff --git a/a b/a\n").hexdigest()},
+                },
+            }),
+            **{f"images/{name}": path.read_bytes() for name, path in images.items()},
+            raw_name: raw.read_bytes(),
+            "wechat/wechat-qa.json": json.dumps({"ok": True}),
+        }
+        zip_path = root / f"{release}.zip"
+        with zipfile.ZipFile(zip_path, "w") as archive:
+            for name, payload in files.items():
+                data = payload.encode("utf-8") if isinstance(payload, str) else payload
+                archive.writestr(name, data)
+        manifest = {
+            "schema_version": 1,
+            "archive_sha256": hashlib.sha256(zip_path.read_bytes()).hexdigest(),
+            "files": {
+                name: {
+                    "bytes": len(data),
+                    "sha256": hashlib.sha256(data).hexdigest(),
+                }
+                for name, payload in files.items()
+                for data in [payload.encode("utf-8") if isinstance(payload, str) else payload]
+            },
+        }
+        manifest_path = Path(str(zip_path) + ".manifest.json")
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        return zip_path
+
+    def test_validates_distinct_paused_repair_batch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = self.make_repair_zip(root, "v1.0.0", "第一篇标题", "第一篇正文，包含具体工作流和提问。" * 3)
+            second = self.make_repair_zip(root, "v1.0.1", "第二篇标题", "第二篇正文，聚焦学术排版和现场放映。" * 3)
+            batch = root / "batch.json"
+            batch.write_text(json.dumps({
+                "schema_version": 1,
+                "status": "paused_for_operator_review",
+                "packages": [
+                    {"release": "v1.0.0", "title": "第一篇标题", "package": str(first.relative_to(root)),
+                     "package_sha256": hashlib.sha256(first.read_bytes()).hexdigest(),
+                     "manifest_sha256": hashlib.sha256(Path(str(first) + ".manifest.json").read_bytes()).hexdigest()},
+                    {"release": "v1.0.1", "title": "第二篇标题", "package": str(second.relative_to(root)),
+                     "package_sha256": hashlib.sha256(second.read_bytes()).hexdigest(),
+                     "manifest_sha256": hashlib.sha256(Path(str(second) + ".manifest.json").read_bytes()).hexdigest()},
+                ],
+            }, ensure_ascii=False), encoding="utf-8")
+
+            report = validate_repair_batch.validate_batch(batch, root=root)
+
+        self.assertTrue(report["ok"], report["errors"])
+        review_html = validate_repair_batch.render_html(report)
+        self.assertIn("第一篇正文，包含具体工作流和提问。", review_html)
+        self.assertIn("真实镜头", review_html)
+        self.assertIn("Evidence hashes", review_html)
+        self.assertNotIn("<script", review_html.lower())
+        self.assertNotIn("class=", review_html.lower())
+        self.assertNotIn("id=", review_html.lower())
+        self.assertNotIn("<img", review_html.lower())
+
+    def test_rejects_cross_package_duplicate_body(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            body = "同一份正文重复用于两个发布包。" * 8
+            first = self.make_repair_zip(root, "v1.0.0", "第一篇标题", body)
+            second = self.make_repair_zip(root, "v1.0.1", "第二篇标题", body)
+            batch = root / "batch.json"
+            batch.write_text(json.dumps({
+                "schema_version": 1,
+                "status": "paused_for_operator_review",
+                "packages": [
+                    {"release": "v1.0.0", "title": "第一篇标题", "package": str(first.relative_to(root)),
+                     "package_sha256": hashlib.sha256(first.read_bytes()).hexdigest(),
+                     "manifest_sha256": hashlib.sha256(Path(str(first) + ".manifest.json").read_bytes()).hexdigest()},
+                    {"release": "v1.0.1", "title": "第二篇标题", "package": str(second.relative_to(root)),
+                     "package_sha256": hashlib.sha256(second.read_bytes()).hexdigest(),
+                     "manifest_sha256": hashlib.sha256(Path(str(second) + ".manifest.json").read_bytes()).hexdigest()},
+                ],
+            }, ensure_ascii=False), encoding="utf-8")
+
+            report = validate_repair_batch.validate_batch(batch, root=root)
+
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("body similarity" in error for error in report["errors"]))
 
 
 if __name__ == "__main__":

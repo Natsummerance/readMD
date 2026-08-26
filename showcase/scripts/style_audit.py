@@ -23,6 +23,7 @@ FIXED_CONNECTORS = (
 REVERSAL_PATTERN = re.compile(r"不是[^。！？\n]{1,32}，?(?:而是|是)")
 DEPTH_TERMS = ("本质上", "归根结底")
 BLESSING_TERMS = ("你值得", "祝你", "愿你")
+DUPLICATE_TERMINAL_PATTERN = re.compile(r"[。．.!！?？][。．.!！?？]+")
 CONCRETE_TERMS = (
     "Markdown", "MD", "PPT", "代码", "表格", "公式", "图表",
     "讲义", "组会", "论文", "PDF", "Word", "OCR", "Reveal",
@@ -137,6 +138,14 @@ def audit_style(body: str, audience: str = "程序员") -> dict[str, Any]:
             "The post closes with generic encouragement instead of a concrete action.",
         ))
 
+    duplicate_terminal_matches = DUPLICATE_TERMINAL_PATTERN.findall(text)
+    if duplicate_terminal_matches:
+        findings.append(_finding(
+            "duplicate-terminal-punctuation",
+            "fail",
+            f"Duplicated sentence punctuation appears {len(duplicate_terminal_matches)} times.",
+        ))
+
     # Punctuation is stripped by sentence extraction, so look for a concrete artifact
     # and an engagement prompt anywhere rather than relying on a preserved question mark.
     specific_cta = any(term.lower() in text.lower() for term in CONCRETE_TERMS)
@@ -171,6 +180,7 @@ def audit_style(body: str, audience: str = "程序员") -> dict[str, Any]:
             - (10 if len(reversal_matches) >= 3 else 5 if len(reversal_matches) == 2 else 0)
             - (8 if len(depth_hits) >= 2 else 3 if depth_hits else 0)
             - (6 if blessing_close else 0),
+            - (5 if duplicate_terminal_matches else 0),
         ),
         "specificity": max(0, 25 - (10 if len(concrete_hits) < 3 else 0)),
         "resonance": max(0, 25 - (15 if not resonance_hits else 0) - (5 if not specific_cta or not engagement_cta else 0)),
@@ -194,6 +204,7 @@ def audit_style(body: str, audience: str = "程序员") -> dict[str, Any]:
             "reversal_count": len(reversal_matches),
             "depth_term_count": len(depth_hits),
             "blessing_close": blessing_close,
+            "duplicate_terminal_punctuation_count": len(duplicate_terminal_matches),
             "emoji_count": emoji_count,
             "concrete_term_count": len(concrete_hits),
             "resonance_term_count": len(resonance_hits),
