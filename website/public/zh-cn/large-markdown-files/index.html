@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>打开超大 Markdown 文件 | ReadMD 本地阅读器</title>
   <meta name="description" content="在本地打开约 8,000 行或 500 KB 的超大 Markdown 文件。ReadMD 使用语义分页，保留目录、搜索、公式和页面控件，并且不把源文件上传到云端。">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="打开超大 Markdown 文件 | ReadMD 本地阅读器">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="ReadMD 阅读界面展示排版后的 Markdown 文档和目录。">
   <meta property="og:locale" content="zh_CN">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_TW">
+  <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="打开超大 Markdown 文件 | ReadMD 本地阅读器">
   <meta name="twitter:description" content="阅读长文档时不必一次渲染全部段落，也不必上传源文件。">
@@ -32,50 +36,154 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/large-markdown-files/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/large-markdown-files/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/large-markdown-files/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebPage",
-        "@id": "https://readmd.asia/zh-cn/large-markdown-files/#webpage",
-        "url": "https://readmd.asia/zh-cn/large-markdown-files/",
-        "name": "打开超大 Markdown 文件 | ReadMD 本地阅读器",
-        "about": {"@id": "https://readmd.asia/zh-cn/large-markdown-files/#software"},
-        "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
-        "dateModified": "2026-08-26",
-        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#large-file-workflow p"]}
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/zh-cn/large-markdown-files/#webpage",
+      "url": "https://readmd.asia/zh-cn/large-markdown-files/",
+      "name": "打开超大 Markdown 文件 | ReadMD 本地阅读器",
+      "about": {
+        "@id": "https://readmd.asia/zh-cn/large-markdown-files/#software"
       },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://readmd.asia/zh-cn/large-markdown-files/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-26",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "author": {"@type": "Organization", "name": "ReadMD"}
-      },
-      {
-        "@type": "HowTo",
-        "@id": "https://readmd.asia/zh-cn/large-markdown-files/#howto",
-        "name": "如何打开超长 Markdown 文件而不卡顿",
-        "step": [
-          {"@type": "HowToStep", "name": "打开本地文件", "text": "双击 Markdown 文件，或在 ReadMD 中选择打开。"},
-          {"@type": "HowToStep", "name": "等待语义分页", "text": "接近 8,000 行或 500 KB 时，ReadMD 分段显示视图并保留导航。"},
-          {"@type": "HowToStep", "name": "继续浏览全文", "text": "使用目录、全文搜索、公式和页面控件，不必等待所有段落渲染。"},
-          {"@type": "HowToStep", "name": "只修复显示层", "text": "检查视觉修复结果；只有明确编辑并保存时才写回来源文件。"}
+      "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#large-file-workflow p"
         ]
+      },
+      "inLanguage": "zh-CN",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/zh-cn/large-markdown-files/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
-    ]
-  }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/zh-cn/large-markdown-files/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/zh-cn/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-reader.png",
+      "featureList": "超长文档分页、本地格式转换、离线 OCR、Markdown 表格、PDF 导入、文献引用和放映模式。",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/zh-cn/large-markdown-files/#howto",
+      "name": "如何打开超长 Markdown 文件而不卡顿",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "打开本地文件",
+          "text": "双击 Markdown 文件，或在 ReadMD 中选择打开。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "等待语义分页",
+          "text": "接近 8,000 行或 500 KB 时，ReadMD 分段显示视图并保留导航。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "继续浏览全文",
+          "text": "使用目录、全文搜索、公式和页面控件，不必等待所有段落渲染。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "只修复显示层",
+          "text": "检查视觉修复结果；只有明确编辑并保存时才写回来源文件。"
+        }
+      ]
+    }
+  ]
+}
   </script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/zh-cn/large-markdown-files/#faq","mainEntity":[{"@type":"Question","name":"多大的 Markdown 文件算超大？","acceptedAnswer":{"@type":"Answer","text":"在 ReadMD 中，约 8,000 行或 500 KB 时语义分页开始变得相关。具体位置会随文档结构和设备资源变化。"}},{"@type":"Question","name":"分页会改变我的 Markdown 文件吗？","acceptedAnswer":{"@type":"Answer","text":"不会。分页只改变显示方式。除非你主动编辑并保存，原始字节保持不变。"}},{"@type":"Question","name":"长文档还能搜索和导航吗？","acceptedAnswer":{"@type":"Answer","text":"可以。视图分段时，目录、全文搜索、公式渲染和页面控件仍然联动。"}},{"@type":"Question","name":"阅读时会把文档上传吗？","acceptedAnswer":{"@type":"Answer","text":"不会。核心阅读、分页和显示修复设计为本地运行，不需要云账号。"}}]}</script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/zh-cn/large-markdown-files/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"首页","item":"https://readmd.asia/zh-cn/"},{"@type":"ListItem","position":2,"name":"超大 Markdown 文件","item":"https://readmd.asia/zh-cn/large-markdown-files/"}]}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/zh-cn/large-markdown-files/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "多大的 Markdown 文件算超大？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "在 ReadMD 中，约 8,000 行或 500 KB 时语义分页开始变得相关。具体位置会随文档结构和设备资源变化。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "分页会改变我的 Markdown 文件吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不会。分页只改变显示方式。除非你主动编辑并保存，原始字节保持不变。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "长文档还能搜索和导航吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可以。视图分段时，目录、全文搜索、公式渲染和页面控件仍然联动。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "阅读时会把文档上传吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不会。核心阅读、分页和显示修复设计为本地运行，不需要云账号。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/zh-cn/large-markdown-files/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首页",
+      "item": "https://readmd.asia/zh-cn/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "超大 Markdown 文件",
+      "item": "https://readmd.asia/zh-cn/large-markdown-files/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -86,7 +194,7 @@
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
       <h1 class="display-title">打开超长 Markdown，不让界面冻结。</h1>
       <p class="section-copy mt-6 max-w-[68ch]">ReadMD 只对显示层分段，源文件仍然是权威产物。你可以在目录、搜索、公式和页面控件保持联动的情况下继续阅读。</p>
-      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD 阅读界面展示排版后的 Markdown 和目录导航。" loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD 阅读界面展示排版后的 Markdown 和目录导航。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="large-file-workflow" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">

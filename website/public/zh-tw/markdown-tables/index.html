@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Markdown 表格 | ReadMD 表格設計器與 Excel 轉換</title>
   <meta name="description" content="使用 ReadMD 的表格設計器和 Excel、CSV 貼上轉換，在本機建立、修復與維護 Markdown 表格；保留標題列與欄位邊界，並在儲存前覆核合併儲存格、數字、日期、空值和對齊方式，避免把結構化資料繼續鎖在專有格式或散亂的貼上結果裡。">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="Markdown 表格 | ReadMD 表格設計器與 Excel 轉換">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="ReadMD 編輯器同時顯示結構化內容的 Markdown 原始碼和渲染結果。">
   <meta property="og:locale" content="zh_TW">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Markdown 表格 | ReadMD 表格設計器與 Excel 轉換">
   <meta name="twitter:description" content="把結構化資料整理成可覆核的 Markdown 表格，不把原始檔留在專有格式裡。">
@@ -32,6 +36,8 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/markdown-tables/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/markdown-tables/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/markdown-tables/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
@@ -56,6 +62,14 @@
           "h1",
           "#table-workflow p"
         ]
+      },
+      "inLanguage": "zh-TW",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/zh-tw/markdown-tables/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
     },
     {
@@ -72,6 +86,17 @@
       "author": {
         "@type": "Organization",
         "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/zh-tw/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-editor.png",
+      "featureList": "超長文件分頁、本機格式轉換、離線 OCR、Markdown 表格、PDF 匯入、文獻引用和放映模式。",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
       }
     },
     {
@@ -104,8 +129,64 @@
   ]
 }
   </script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/zh-tw/markdown-tables/#faq","mainEntity":[{"@type":"Question","name":"ReadMD 能建立 Markdown 表格嗎？","acceptedAnswer":{"@type":"Answer","text":"可以。ReadMD 提供視覺化表格設計器，可以在保持 Markdown 為權威格式的同時建立列和欄。"}},{"@type":"Question","name":"Excel 或 CSV 能變成 Markdown 表格嗎？","acceptedAnswer":{"@type":"Answer","text":"ReadMD 支援把 Excel 和 CSV 貼上轉換為 Markdown 表格。貼上後應覆核表頭、分隔符、換行和欄位順序。"}},{"@type":"Question","name":"編輯表格會自動改寫我的檔案嗎？","acceptedAnswer":{"@type":"Answer","text":"不會。顯示層修復保留在記憶體中；只有你明確編輯並儲存時，Markdown 變更才會寫入檔案。"}},{"@type":"Question","name":"複雜電子表格應該怎麼處理？","acceptedAnswer":{"@type":"Answer","text":"對 Markdown 沒有直接表示的合併儲存格應拆平或加註。發布前檢查數字格式、日期、腳注和空值狀態。"}}]}</script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/zh-tw/markdown-tables/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://readmd.asia/zh-tw/"},{"@type":"ListItem","position":2,"name":"Markdown 表格","item":"https://readmd.asia/zh-tw/markdown-tables/"}]}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/zh-tw/markdown-tables/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "ReadMD 能建立 Markdown 表格嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可以。ReadMD 提供視覺化表格設計器，可以在保持 Markdown 為權威格式的同時建立列和欄。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Excel 或 CSV 能變成 Markdown 表格嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD 支援把 Excel 和 CSV 貼上轉換為 Markdown 表格。貼上後應覆核表頭、分隔符、換行和欄位順序。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "編輯表格會自動改寫我的檔案嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不會。顯示層修復保留在記憶體中；只有你明確編輯並儲存時，Markdown 變更才會寫入檔案。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "複雜電子表格應該怎麼處理？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "對 Markdown 沒有直接表示的合併儲存格應拆平或加註。發布前檢查數字格式、日期、腳注和空值狀態。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/zh-tw/markdown-tables/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://readmd.asia/zh-tw/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Markdown 表格",
+      "item": "https://readmd.asia/zh-tw/markdown-tables/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -116,7 +197,7 @@
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
       <h1 class="display-title">把表格資料整理成乾淨的 Markdown。</h1>
       <p class="section-copy mt-6 max-w-[68ch]">ReadMD 讓表格在原始碼和預覽中都保持可讀。可以先建立欄位，再貼上表格內容，最後檢查標題列、數值和邊界情況，確認後才會寫入檔案。</p>
-      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="2880" height="1620" alt="ReadMD 編輯器同時顯示結構化內容的 Markdown 原始碼和渲染結果。" loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="2880" height="1620" alt="ReadMD 編輯器同時顯示結構化內容的 Markdown 原始碼和渲染結果。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="table-workflow" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">

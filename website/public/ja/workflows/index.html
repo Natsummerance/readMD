@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ReadMD ワークフロー | 長文、変換、オフライン OCR、発表</title>
   <meta name="description" content="ReadMD が約 8,000 行または 500 KB の長文、Word/PDF/Web/LaTeX の取り込み、スキャン文字のオフライン認識、Windows/macOS/Linux/UOS/Kylin での発表をどのように扱うかを説明します。">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="ReadMD ワークフロー | 長文、変換、オフライン OCR、発表">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="整形された Markdown 文書と目次を表示する ReadMD の読書画面。">
   <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="zh_TW">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="ReadMD ワークフロー | 長文、変換、オフライン OCR、発表">
   <meta name="twitter:description" content="長文の読書、形式変換、オフライン OCR、Markdown 発表への直接回答。">
@@ -32,37 +36,134 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/workflows/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/workflows/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/workflows/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebPage",
-        "@id": "https://readmd.asia/ja/workflows/#webpage",
-        "url": "https://readmd.asia/ja/workflows/",
-        "name": "ReadMD ワークフロー | 長文、変換、オフライン OCR、発表",
-        "dateModified": "2026-08-26",
-        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#workflow-answers p"]}
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/ja/workflows/#webpage",
+      "url": "https://readmd.asia/ja/workflows/",
+      "name": "ReadMD ワークフロー | 長文、変換、オフライン OCR、発表",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#workflow-answers p"
+        ]
       },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://readmd.asia/ja/workflows/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-26",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "author": {"@type": "Organization", "name": "ReadMD"}
+      "inLanguage": "ja",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/ja/workflows/"
+      },
+      "about": {
+        "@id": "https://readmd.asia/ja/#software"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
-    ]
-  }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/ja/workflows/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/ja/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-reader.png",
+      "featureList": "長文ドキュメントの改ページ、ローカル変換、オフライン OCR、Markdown 表、PDF 取り込み、引用、発表モード。",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    }
+  ]
+}
   </script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/ja/workflows/#faq","mainEntity":[{"@type":"Question","name":"8,000 行を超える Markdown はどう読みますか？","acceptedAnswer":{"@type":"Answer","text":"ファイルを ReadMD で開きます。約 8,000 行または 500 KB 近辺で意味的な改ページを使い、目次、全文検索、数式、ページ操作は連動したまま読み進められます。"}},{"@type":"Question","name":"DOCX、PDF、HTML、LaTeX を Markdown にできますか？","acceptedAnswer":{"@type":"Answer","text":"できます。変換ワークフローは Word、PowerPoint、Excel、PDF、HTML、LaTeX を取り込み、見出し、リスト、表、引用、数式、画像参照などの構造を保ちます。複雑な専用レイアウトは変換後に確認してください。"}},{"@type":"Question","name":"スキャン文字をアップロードせずに抽出できますか？","acceptedAnswer":{"@type":"Answer","text":"対応環境では可能です。ReadMD は OS のネイティブ OCR をローカルで呼び出し、認識した文字を Markdown で整えられます。この経路にクラウドアカウントは不要です。"}},{"@type":"Question","name":"スライドを作り直さずに発表できますか？","acceptedAnswer":{"@type":"Answer","text":"できます。Markdown のまま執筆し、準備できたら Reveal ベースの発表モードを開きます。コード、数式、図、表は文脈を保ち、直前修正も同じファイルに戻ります。"}},{"@type":"Question","name":"どこで動きますか？","acceptedAnswer":{"@type":"Answer","text":"Windows 7 から 11、Apple Silicon および Intel macOS、Linux 向け AppImage/Deb、UOS、Kylin OS があります。VSCode 拡張と FastMCP Server でエディターや互換 AI ツールにも接続できます。"}}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/ja/workflows/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://readmd.asia/ja/"},{"@type":"ListItem","position":2,"name":"ワークフロー","item":"https://readmd.asia/ja/workflows/"}]}</script></head>
+<script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/ja/workflows/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "8,000 行を超える Markdown はどう読みますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ファイルを ReadMD で開きます。約 8,000 行または 500 KB 近辺で意味的な改ページを使い、目次、全文検索、数式、ページ操作は連動したまま読み進められます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "DOCX、PDF、HTML、LaTeX を Markdown にできますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "できます。変換ワークフローは Word、PowerPoint、Excel、PDF、HTML、LaTeX を取り込み、見出し、リスト、表、引用、数式、画像参照などの構造を保ちます。複雑な専用レイアウトは変換後に確認してください。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "スキャン文字をアップロードせずに抽出できますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "対応環境では可能です。ReadMD は OS のネイティブ OCR をローカルで呼び出し、認識した文字を Markdown で整えられます。この経路にクラウドアカウントは不要です。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "スライドを作り直さずに発表できますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "できます。Markdown のまま執筆し、準備できたら Reveal ベースの発表モードを開きます。コード、数式、図、表は文脈を保ち、直前修正も同じファイルに戻ります。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "どこで動きますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Windows 7 から 11、Apple Silicon および Intel macOS、Linux 向け AppImage/Deb、UOS、Kylin OS があります。VSCode 拡張と FastMCP Server でエディターや互換 AI ツールにも接続できます。"
+      }
+    }
+  ]
+}</script>
+<script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/ja/workflows/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://readmd.asia/ja/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "ワークフロー",
+      "item": "https://readmd.asia/ja/workflows/"
+    }
+  ]
+}</script></head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
     <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/ja/">ReadMD</a><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/latest">ダウンロード</a></div>

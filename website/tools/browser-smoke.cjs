@@ -134,7 +134,7 @@ const aiFiles = [
     if (item.canonical !== item.ogUrl) failures.push(`${item.route}: canonical and og:url differ`);
     if (!item.ogImage.endsWith('.png')) failures.push(`${item.route}: og:image must use compatible PNG fallback`);
     if (item.ogImage !== item.twitterImage) failures.push(`${item.route}: twitter:image must match og:image`);
-    if (item.robots !== 'index,follow,max-image-preview:large') failures.push(`${item.route}: bad robots directive`);
+    if (item.robots !== 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1') failures.push(`${item.route}: bad robots directive`);
     if (!item.stylesheetLoaded) failures.push(`${item.route}: production stylesheet did not load`);
     if (item.brokenImages) failures.push(`${item.route}: ${item.brokenImages} broken images`);
     if (item.pictureCount !== item.webpImages) failures.push(`${item.route}: expected every picture to select WebP`);

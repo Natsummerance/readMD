@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ReadMD | ローカルで使う Markdown リーダー、エディター、変換、発表ツール</title>
   <meta name="description" content="ReadMD は Windows、macOS、Linux、Kylin OS、UOS 向けのローカル Markdown ワークスペースです。長文を高速に開き、表示だけを自動修復し、Office や PDF を変換し、Markdown をそのまま発表できます。">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="ReadMD | ローカルで使う Markdown リーダー、エディター、変換、発表ツール">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="ReadMD product interface with formatted Markdown and its outline.">
   <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="zh_TW">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="ReadMD | ローカルで使う Markdown リーダー、エディター、変換、発表ツール">
   <meta name="twitter:description" content="Windows、macOS、Linux、Kylin OS、UOS 向けローカル Markdown ワークスペース。">
@@ -32,48 +36,158 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <link rel="preload" as="image" href="/media/overview-reader.webp" fetchpriority="high">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": "https://readmd.asia/ja/#website",
-        "url": "https://readmd.asia/ja/",
-        "name": "ReadMD",
-        "inLanguage": "ja"
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://readmd.asia/ja/#website",
+      "url": "https://readmd.asia/ja/",
+      "name": "ReadMD",
+      "inLanguage": [
+        "en",
+        "zh-CN",
+        "zh-TW",
+        "ja"
+      ],
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       },
-      {
+      "copyrightYear": "2026",
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE"
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/ja/#webpage",
+      "url": "https://readmd.asia/ja/",
+      "name": "ReadMD | ローカルで使う Markdown リーダー、エディター、変換、発表ツール",
+      "isPartOf": {
+        "@id": "https://readmd.asia/ja/#website"
+      },
+      "about": {
+        "@id": "https://readmd.asia/ja/#software"
+      },
+      "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
+      "dateModified": "2026-08-24",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#capabilities p"
+        ]
+      },
+      "inLanguage": "ja",
+      "mainEntityOfPage": {
         "@type": "WebPage",
-        "@id": "https://readmd.asia/ja/#webpage",
-        "url": "https://readmd.asia/ja/",
-        "name": "ReadMD | ローカルで使う Markdown リーダー、エディター、変換、発表ツール",
-        "isPartOf": {"@id": "https://readmd.asia/ja/#website"},
-        "about": {"@id": "https://readmd.asia/ja/#software"},
-        "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
-        "dateModified": "2026-08-24",
-        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#capabilities p"]}
+        "@id": "https://readmd.asia/ja/"
       },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://readmd.asia/ja/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-24",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "featureList": "長文の改ページ、表示のみの非破壊修復、DOCX/PDF変換、オフラインOCR、LaTeX文献、発表モード、LAN共有",
-        "author": {"@type": "Organization", "name": "ReadMD"}
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
-    ]
-  }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/ja/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-24",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "featureList": "長文の改ページ、表示のみの非破壊修復、DOCX/PDF変換、オフラインOCR、LaTeX文献、発表モード、LAN共有",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/ja/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-reader.png",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    }
+  ]
+}
   </script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/ja/#faq","mainEntity":[{"@type":"Question","name":"長い Markdown をどう開けますか？","acceptedAnswer":{"@type":"Answer","text":"文書が約 8,000 行または 500 KB を超えると、ReadMD は意味的な改ページを使います。目次、全文検索、数式、ページ操作は連動したままのため、全ファイルを一度に描画しなくても読み進められます。"}},{"@type":"Question","name":"自動修復は元のファイルを変えますか？","acceptedAnswer":{"@type":"Answer","text":"変えません。構文復元はメモリ内の表示層だけに適用されます。表の区切り行の欠落や閉じていない記号は見た目として直り、明示的に保存するまで元の Markdown バイト列は保持されます。"}},{"@type":"Question","name":"スライド製品の代わりになりますか？","acceptedAnswer":{"@type":"Answer","text":"技術発表や講義資料ではなります。ReadMD の発表モードは執筆とレビューに使った同じ Markdown を使い、見出し、数式、図、コードを保持します。直前の編集でも別のスライドへコピーしません。"}},{"@type":"Question","name":"対応環境は？","acceptedAnswer":{"@type":"Answer","text":"Windows 7 から 11、Apple Silicon および Intel macOS、Linux 向け AppImage/Deb、UOS、Kylin OS に対応します。VSCode 拡張と MCP Server でエディターや AI ツールにも接続できます。"}},{"@type":"Question","name":"プライバシーは守られますか？","acceptedAnswer":{"@type":"Answer","text":"読書、編集、改ページ、OCR、変換のコア機能はローカル実行を前提に設計されています。文書にクラウド アカウントは不要です。Web 取得と共有は明示的な操作であり、LAN 共有は同じネットワーク内を想定します。"}},{"@type":"Question","name":"ライセンスは？","acceptedAnswer":{"@type":"Answer","text":"ReadMD は MIT ライセンスで公開されています。ソース コード、リリース ファイル、チェックサム、プラットフォーム資産は公開リポジトリ Natsummerance/readMD にあります。"}}]}</script>
+<script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/ja/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "長い Markdown をどう開けますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "文書が約 8,000 行または 500 KB を超えると、ReadMD は意味的な改ページを使います。目次、全文検索、数式、ページ操作は連動したままのため、全ファイルを一度に描画しなくても読み進められます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "自動修復は元のファイルを変えますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "変えません。構文復元はメモリ内の表示層だけに適用されます。表の区切り行の欠落や閉じていない記号は見た目として直り、明示的に保存するまで元の Markdown バイト列は保持されます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "スライド製品の代わりになりますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "技術発表や講義資料ではなります。ReadMD の発表モードは執筆とレビューに使った同じ Markdown を使い、見出し、数式、図、コードを保持します。直前の編集でも別のスライドへコピーしません。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "対応環境は？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Windows 7 から 11、Apple Silicon および Intel macOS、Linux 向け AppImage/Deb、UOS、Kylin OS に対応します。VSCode 拡張と MCP Server でエディターや AI ツールにも接続できます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "プライバシーは守られますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "読書、編集、改ページ、OCR、変換のコア機能はローカル実行を前提に設計されています。文書にクラウド アカウントは不要です。Web 取得と共有は明示的な操作であり、LAN 共有は同じネットワーク内を想定します。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "ライセンスは？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD は MIT ライセンスで公開されています。ソース コード、リリース ファイル、チェックサム、プラットフォーム資産は公開リポジトリ Natsummerance/readMD にあります。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/ja/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://readmd.asia/ja/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -88,7 +202,7 @@
       <h1 class="hero-title mx-auto max-w-4xl">ファイルは手元に。</h1>
       <p class="section-copy mx-auto mt-6">ReadMD は同じ Markdown を読書、編集、変換、発表までつなげます。8,000 行を超える長文は意味単位の改ページになり、表や数式の補正は表示層だけに適用され、元のファイルは書き換わりません。Windows、macOS、Linux、Kylin OS、UOS でオフライン動作します。</p>
       <div class="mt-8 flex flex-wrap justify-center gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">無料で入手</a><a class="button-secondary" href="#answers">回答を見る</a></div>
-      <figure class="product-frame mx-auto mt-14 max-w-5xl"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="整形された Markdown 文書と目次を表示する ReadMD の読書画面。" loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mx-auto mt-14 max-w-5xl"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="整形された Markdown 文書と目次を表示する ReadMD の読書画面。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="capabilities" class="bg-[var(--color-surface)] py-20">
       <div class="mx-auto grid max-w-6xl gap-10 px-5 lg:grid-cols-[0.9fr_1.1fr]">

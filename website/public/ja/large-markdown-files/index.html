@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>巨大な Markdown を開く | ReadMD ローカルリーダー</title>
   <meta name="description" content="約 8,000 行または 500 KB の長い Markdown 文書をローカルで開きます。ReadMD は意味的な改ページで目次、検索、数式、ページ操作を保ち、元ファイルをアップロードしません。">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="巨大な Markdown を開く | ReadMD ローカルリーダー">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="整形された Markdown 文書と目次を表示する ReadMD の読書画面。">
   <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="zh_TW">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="巨大な Markdown を開く | ReadMD ローカルリーダー">
   <meta name="twitter:description" content="全段落を一度に描画せず、元ファイルもアップロードせずに長文を読めます。">
@@ -32,50 +36,154 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/large-markdown-files/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/large-markdown-files/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/large-markdown-files/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebPage",
-        "@id": "https://readmd.asia/ja/large-markdown-files/#webpage",
-        "url": "https://readmd.asia/ja/large-markdown-files/",
-        "name": "巨大な Markdown を開く | ReadMD ローカルリーダー",
-        "about": {"@id": "https://readmd.asia/ja/large-markdown-files/#software"},
-        "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
-        "dateModified": "2026-08-26",
-        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#large-file-workflow p"]}
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/ja/large-markdown-files/#webpage",
+      "url": "https://readmd.asia/ja/large-markdown-files/",
+      "name": "巨大な Markdown を開く | ReadMD ローカルリーダー",
+      "about": {
+        "@id": "https://readmd.asia/ja/large-markdown-files/#software"
       },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://readmd.asia/ja/large-markdown-files/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-26",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "author": {"@type": "Organization", "name": "ReadMD"}
-      },
-      {
-        "@type": "HowTo",
-        "@id": "https://readmd.asia/ja/large-markdown-files/#howto",
-        "name": "巨大な Markdown を遅くせず開く方法",
-        "step": [
-          {"@type": "HowToStep", "name": "ローカル文書を開く", "text": "Markdown をダブルクリックするか、ReadMD から開きます。"},
-          {"@type": "HowToStep", "name": "意味的な改ページを待つ", "text": "約 8,000 行または 500 KB 近辺で表示を分割し、ナビゲーションを保ちます。"},
-          {"@type": "HowToStep", "name": "前後の文脈を保って移動する", "text": "目次、全文検索、数式、ページ操作を使います。全段落の描画を待ちません。"},
-          {"@type": "HowToStep", "name": "表示だけを修復する", "text": "見た目の修復を確認します。ソースへ書き戻すのは明示的な編集と保存時です。"}
+      "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#large-file-workflow p"
         ]
+      },
+      "inLanguage": "ja",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/ja/large-markdown-files/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
-    ]
-  }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/ja/large-markdown-files/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/ja/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-reader.png",
+      "featureList": "長文ドキュメントの改ページ、ローカル変換、オフライン OCR、Markdown 表、PDF 取り込み、引用、発表モード。",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/ja/large-markdown-files/#howto",
+      "name": "巨大な Markdown を遅くせず開く方法",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "ローカル文書を開く",
+          "text": "Markdown をダブルクリックするか、ReadMD から開きます。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "意味的な改ページを待つ",
+          "text": "約 8,000 行または 500 KB 近辺で表示を分割し、ナビゲーションを保ちます。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "前後の文脈を保って移動する",
+          "text": "目次、全文検索、数式、ページ操作を使います。全段落の描画を待ちません。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "表示だけを修復する",
+          "text": "見た目の修復を確認します。ソースへ書き戻すのは明示的な編集と保存時です。"
+        }
+      ]
+    }
+  ]
+}
   </script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/ja/large-markdown-files/#faq","mainEntity":[{"@type":"Question","name":"どのくらいの Markdown が長文ですか？","acceptedAnswer":{"@type":"Answer","text":"ReadMD では約 8,000 行または 500 KB 近辺で意味的な改ページが関係します。正確な位置は文書構造や装置環境により変わります。"}},{"@type":"Question","name":"改ページは元の Markdown を変えますか？","acceptedAnswer":{"@type":"Answer","text":"変えません。改ページは表示方法だけを変えます。利用者が明示的に編集して保存しない限り、元のバイト列は保持されます。"}},{"@type":"Question","name":"長文でも検索や移動できますか？","acceptedAnswer":{"@type":"Answer","text":"できます。表示が分割されても、目次、全文検索、数式描画、ページ操作は連動します。"}},{"@type":"Question","name":"読むときに文書はアップロードされますか？","acceptedAnswer":{"@type":"Answer","text":"されません。読書、改ページ、表示修復のコア機能はローカル実行を前提にし、クラウド アカウントを要求しません。"}}]}</script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/ja/large-markdown-files/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://readmd.asia/ja/"},{"@type":"ListItem","position":2,"name":"巨大な Markdown","item":"https://readmd.asia/ja/large-markdown-files/"}]}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/ja/large-markdown-files/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "どのくらいの Markdown が長文ですか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD では約 8,000 行または 500 KB 近辺で意味的な改ページが関係します。正確な位置は文書構造や装置環境により変わります。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "改ページは元の Markdown を変えますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "変えません。改ページは表示方法だけを変えます。利用者が明示的に編集して保存しない限り、元のバイト列は保持されます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "長文でも検索や移動できますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "できます。表示が分割されても、目次、全文検索、数式描画、ページ操作は連動します。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "読むときに文書はアップロードされますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "されません。読書、改ページ、表示修復のコア機能はローカル実行を前提にし、クラウド アカウントを要求しません。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/ja/large-markdown-files/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "ホーム",
+      "item": "https://readmd.asia/ja/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "巨大な Markdown",
+      "item": "https://readmd.asia/ja/large-markdown-files/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -86,7 +194,7 @@
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
       <h1 class="display-title">長い Markdown を固めずに開けます。</h1>
       <p class="section-copy mt-6 max-w-[68ch]">ReadMD は表示層だけを分割し、Markdown ソースを正として扱います。目次、検索、数式、ページ操作を保ったまま読み進められます。</p>
-      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD の読書画面には整形された Markdown と目次ナビゲーションがあります。" loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD の読書画面には整形された Markdown と目次ナビゲーションがあります。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="large-file-workflow" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">

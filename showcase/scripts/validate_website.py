@@ -10,6 +10,7 @@ import sys
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import urlparse
+import xml.etree.ElementTree as ET
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -144,8 +145,12 @@ def audit_page(path: Path, canonical: str) -> list[str]:
     if len(descriptions) != 1 or len(descriptions[0].get("content", "")) < 80:
         errors.append(f"{path}: missing unique meta description of at least 80 characters")
     robots_directives = [item for item in audit.metas if item.get("name") == "robots"]
-    if len(robots_directives) != 1 or robots_directives[0].get("content") != "index,follow,max-image-preview:large":
-        errors.append(f"{path}: missing canonical index,follow,max-image-preview:large directive")
+    expected_robots = "index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
+    if len(robots_directives) != 1 or robots_directives[0].get("content") != expected_robots:
+        errors.append(f"{path}: missing canonical {expected_robots} directive")
+    authors = [item for item in audit.metas if item.get("name") == "author"]
+    if len(authors) != 1 or authors[0].get("content") != "ReadMD":
+        errors.append(f"{path}: missing unique ReadMD author metadata")
     og = {item.get("property"): item.get("content") for item in audit.metas if str(item.get("property", "")).startswith("og:")}
     for required in (
         "og:title",
@@ -180,6 +185,13 @@ def audit_page(path: Path, canonical: str) -> list[str]:
     ):
         if len(twitter.get(required, "")) < 8:
             errors.append(f"{path}: missing complete {required}")
+    og_locales = {
+        item.get("content")
+        for item in audit.metas
+        if str(item.get("property", "")).startswith("og:locale")
+    }
+    if og_locales != {"en_US", "zh_CN", "zh_TW", "ja_JP"}:
+        errors.append(f"{path}: incomplete Open Graph locale signal: {sorted(item for item in og_locales if item)}")
     twitter_image = twitter.get("twitter:image", "")
     if twitter_image != og_image:
         errors.append(f"{path}: Twitter image must match Open Graph image")
@@ -200,11 +212,13 @@ def audit_page(path: Path, canonical: str) -> list[str]:
     if "/assets/site.css" not in audit.stylesheets:
         errors.append(f"{path}: production stylesheet link is missing")
     link_rels = {item.get("rel") for item in audit.links}
-    for required_rel in ("icon", "apple-touch-icon", "manifest"):
+    for required_rel in ("icon", "apple-touch-icon", "manifest", "license"):
         if required_rel not in link_rels:
             errors.append(f"{path}: missing {required_rel} link")
     if not any(item.get("type") == "application/atom+xml" and item.get("href", "").endswith("releases.atom") for item in audit.links):
         errors.append(f"{path}: release Atom feed link is missing")
+    if not any(item.get("type") == "application/atom+xml" and item.get("href") == "/feed.xml" for item in audit.links):
+        errors.append(f"{path}: full-site Atom feed link is missing")
     if content.count("<picture>") != len(audit.images):
         errors.append(f"{path}: every product image must have a WebP picture fallback")
     if audit.images and ".webp" not in content:
@@ -220,6 +234,39 @@ def audit_page(path: Path, canonical: str) -> list[str]:
             types = {item.get("@type") for item in graph if isinstance(item, dict)}
             if not {"WebPage", "SoftwareApplication"} <= types:
                 errors.append(f"{path}: JSON-LD lacks WebPage and SoftwareApplication")
+            webpage = next((item for item in graph if isinstance(item, dict) and item.get("@type") == "WebPage"), {})
+            application = next((item for item in graph if isinstance(item, dict) and item.get("@type") == "SoftwareApplication"), {})
+            language = "en" if "/zh-cn/" not in canonical and "/zh-tw/" not in canonical and "/ja/" not in canonical else (
+                "zh-CN" if "/zh-cn/" in canonical else "zh-TW" if "/zh-tw/" in canonical else "ja"
+            )
+            if webpage.get("inLanguage") != language:
+                errors.append(f"{path}: JSON-LD WebPage lacks correct inLanguage")
+            if webpage.get("mainEntityOfPage", {}).get("@id") != canonical:
+                errors.append(f"{path}: JSON-LD WebPage lacks mainEntityOfPage identity")
+            offers = application.get("offers", {})
+            if not isinstance(offers, dict) or offers.get("price") != "0" or offers.get("priceCurrency") != "USD":
+                errors.append(f"{path}: SoftwareApplication lacks free-offer structured data")
+            if application.get("releaseNotes") != f"https://readmd.asia{'' if language == 'en' else '/' + language.lower()}/release-notes/":
+                errors.append(f"{path}: SoftwareApplication lacks localized releaseNotes")
+            if not application.get("screenshot") or not application.get("featureList"):
+                errors.append(f"{path}: SoftwareApplication lacks screenshot/features")
+            home_canonicals = {
+                "https://readmd.asia/",
+                "https://readmd.asia/zh-cn/",
+                "https://readmd.asia/zh-tw/",
+                "https://readmd.asia/ja/",
+            }
+            if canonical not in home_canonicals:
+                all_json_blocks = [json.loads(block) for block in re.findall(r'(?s)<script type="application/ld\+json">(.*?)</script>', content)]
+                breadcrumbs = [
+                    payload.get("@type") == "BreadcrumbList"
+                    for payload in all_json_blocks
+                    if isinstance(payload, dict)
+                ]
+                if not any(breadcrumbs):
+                    errors.append(f"{path}: non-home page lacks BreadcrumbList")
+            if "/release-notes/" in canonical and not any(isinstance(item, dict) and item.get("@type") == "TechArticle" for item in graph):
+                errors.append(f"{path}: release-notes page lacks TechArticle entity")
             if not any(isinstance(item, dict) and "speakable" in item for item in graph):
                 errors.append(f"{path}: JSON-LD lacks speakable definition")
             primary_images = [
@@ -276,6 +323,10 @@ def validate_robots_and_sitemap() -> list[str]:
         pattern = f"User-agent: {crawler}\nAllow: /"
         if pattern not in robots:
             errors.append(f"robots.txt does not explicitly allow {crawler}")
+    if "Disallow: /*?" not in robots:
+        errors.append("robots.txt does not exclude parameter URLs from crawl budget")
+    if "Disallow: /*.json$" not in robots:
+        errors.append("robots.txt does not exclude raw JSON endpoints from crawl budget")
     if "Sitemap: https://readmd.asia/sitemap.xml" not in robots:
         errors.append("robots.txt omits canonical sitemap")
     sitemap = (PUBLIC / "sitemap.xml").read_text(encoding="utf-8")
@@ -449,7 +500,7 @@ def validate_special_page_internal_links() -> list[str]:
             target_path = urlparse(target).path
             if f'href="{target_path}"' not in content:
                 errors.append(f"{language} {source} page omits its sibling internal link")
-            if '"@type":"BreadcrumbList"' not in content:
+            if not re.search(r'"@type"\s*:\s*"BreadcrumbList"', content):
                 errors.append(f"{language} {source} page omits BreadcrumbList structured data")
     return errors
 
@@ -528,6 +579,71 @@ def validate_indexnow() -> list[str]:
     return errors
 
 
+def validate_feed() -> list[str]:
+    errors: list[str] = []
+    path = PUBLIC / "feed.xml"
+    if not path.is_file():
+        return ["full-site Atom feed is missing"]
+    try:
+        root = ET.parse(path).getroot()
+    except (ET.ParseError, OSError) as exc:
+        return [f"full-site Atom feed is invalid: {exc}"]
+    ns = {"atom": "http://www.w3.org/2005/Atom"}
+    feed_links = [child for child in root if child.tag.endswith("link")]
+    self_links = [child.get("href") for child in feed_links if child.get("rel") == "self"]
+    alternate_links = [child.get("href") for child in feed_links if child.get("rel") == "alternate" and child.get("href") != "https://readmd.asia/feed.xml"]
+    entries = root.findall("atom:entry", ns)
+    ids = {item.findtext("atom:id", default="", namespaces=ns) for item in entries}
+    sitemap = (PUBLIC / "sitemap.xml").read_text(encoding="utf-8")
+    canonical_ids = set(re.findall(r"<loc>(.*?)</loc>", sitemap))
+    if len(entries) != 44 or ids != canonical_ids:
+        errors.append(f"Atom feed must contain exactly 44 canonical entries, found {len(entries)}")
+    if self_links != ["https://readmd.asia/feed.xml"]:
+        errors.append("Atom feed lacks its canonical self link")
+    if alternate_links != ["https://readmd.asia/"]:
+        errors.append("Atom feed lacks the homepage alternate link")
+    if not root.findtext("atom:updated", default="", namespaces=ns):
+        errors.append("Atom feed lacks an updated timestamp")
+    for entry in entries:
+        entry_id = entry.findtext("atom:id", default="", namespaces=ns)
+        if not entry.findtext("atom:title", default="", namespaces=ns):
+            errors.append(f"Atom entry lacks title: {entry_id}")
+        if not entry.findtext("atom:summary", default="", namespaces=ns):
+            errors.append(f"Atom entry lacks summary: {entry_id}")
+    return errors
+
+
+def validate_security_txt() -> list[str]:
+    path = PUBLIC / ".well-known" / "security.txt"
+    if not path.is_file():
+        return ["security.txt is missing"]
+    text = path.read_text(encoding="utf-8")
+    required = (
+        "Contact: https://github.com/Natsummerance/readMD/security/advisories/new",
+        "Expires: 2027-08-26T00:00:00Z",
+        "Preferred-Languages: en, zh-CN, zh-TW, ja",
+        "Canonical: https://readmd.asia/.well-known/security.txt",
+    )
+    return [] if all(item in text for item in required) else ["security.txt omits required trust fields"]
+
+
+def validate_404() -> list[str]:
+    path = PUBLIC / "404.html"
+    if not path.is_file():
+        return ["localized-entry 404 page is missing"]
+    content = path.read_text(encoding="utf-8")
+    required = (
+        '<meta name="robots" content="noindex,nofollow">',
+        'href="/download/"',
+        'href="/workflows/"',
+        'href="/release-notes/"',
+        'href="/zh-cn/"',
+        'href="/zh-tw/"',
+        'href="/ja/"',
+    )
+    return [] if all(item in content for item in required) else ["404 page omits recovery entry points"]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate the staged ReadMD website.")
     parser.add_argument("--release", action="store_true", help="also require a completed dist build")
@@ -568,6 +684,9 @@ def main() -> int:
     errors.extend(validate_answer_internal_links())
     errors.extend(validate_indexnow())
     errors.extend(validate_release_asset_links())
+    errors.extend(validate_feed())
+    errors.extend(validate_security_txt())
+    errors.extend(validate_404())
     if args.release:
         errors.extend(validate_release_build())
     if errors:
@@ -580,6 +699,13 @@ def main() -> int:
         "download_pages": list(DOWNLOAD_PAGES),
         "answer_pages": list(ANSWER_PAGES),
         "review_rounds": 3,
+        "broad_seo": {
+            "canonical_pages": len(LANGUAGES) + len(INTENT_PAGES) + len(DOWNLOAD_PAGES) + len(ANSWER_PAGES),
+            "atom_feed": True,
+            "entity_graph": True,
+            "security_txt": True,
+            "quality_404": True,
+        },
     }, ensure_ascii=False))
     return 0
 

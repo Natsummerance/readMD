@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>開啟超大 Markdown 檔案 | ReadMD 本機閱讀器</title>
   <meta name="description" content="在本機開啟約 8,000 行或 500 KB 的超長 Markdown 檔案。ReadMD 使用語意分頁，保留目錄、搜尋、公式和頁面控制項，也不會將原始檔上傳到雲端。">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="開啟超大 Markdown 檔案 | ReadMD 本機閱讀器">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="ReadMD 閱讀介面顯示排版後的 Markdown 文件與目錄。">
   <meta property="og:locale" content="zh_TW">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="開啟超大 Markdown 檔案 | ReadMD 本機閱讀器">
   <meta name="twitter:description" content="閱讀長文件時不需一次渲染所有段落，也不用上傳原始檔。">
@@ -32,50 +36,154 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/large-markdown-files/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/large-markdown-files/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/large-markdown-files/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebPage",
-        "@id": "https://readmd.asia/zh-tw/large-markdown-files/#webpage",
-        "url": "https://readmd.asia/zh-tw/large-markdown-files/",
-        "name": "開啟超大 Markdown 檔案 | ReadMD 本機閱讀器",
-        "about": {"@id": "https://readmd.asia/zh-tw/large-markdown-files/#software"},
-        "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
-        "dateModified": "2026-08-26",
-        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#large-file-workflow p"]}
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/zh-tw/large-markdown-files/#webpage",
+      "url": "https://readmd.asia/zh-tw/large-markdown-files/",
+      "name": "開啟超大 Markdown 檔案 | ReadMD 本機閱讀器",
+      "about": {
+        "@id": "https://readmd.asia/zh-tw/large-markdown-files/#software"
       },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://readmd.asia/zh-tw/large-markdown-files/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-26",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "author": {"@type": "Organization", "name": "ReadMD"}
-      },
-      {
-        "@type": "HowTo",
-        "@id": "https://readmd.asia/zh-tw/large-markdown-files/#howto",
-        "name": "如何開啟超長 Markdown 檔案而不卡頓",
-        "step": [
-          {"@type": "HowToStep", "name": "開啟本機檔案", "text": "雙擊 Markdown 檔案，或在 ReadMD 中選擇開啟。"},
-          {"@type": "HowToStep", "name": "等待語意分頁", "text": "接近 8,000 行或 500 KB 時，ReadMD 分段顯示檢視並保留導覽。"},
-          {"@type": "HowToStep", "name": "繼續瀏覽全文", "text": "使用目錄、全文搜尋、公式和頁面控制項，不用等待所有段落渲染。"},
-          {"@type": "HowToStep", "name": "只修復顯示層", "text": "檢查視覺修復結果；只有明確編輯並儲存時才寫回來源檔案。"}
+      "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#large-file-workflow p"
         ]
+      },
+      "inLanguage": "zh-TW",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/zh-tw/large-markdown-files/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
-    ]
-  }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/zh-tw/large-markdown-files/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/zh-tw/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-reader.png",
+      "featureList": "超長文件分頁、本機格式轉換、離線 OCR、Markdown 表格、PDF 匯入、文獻引用和放映模式。",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/zh-tw/large-markdown-files/#howto",
+      "name": "如何開啟超長 Markdown 檔案而不卡頓",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "開啟本機檔案",
+          "text": "雙擊 Markdown 檔案，或在 ReadMD 中選擇開啟。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "等待語意分頁",
+          "text": "接近 8,000 行或 500 KB 時，ReadMD 分段顯示檢視並保留導覽。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "繼續瀏覽全文",
+          "text": "使用目錄、全文搜尋、公式和頁面控制項，不用等待所有段落渲染。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "只修復顯示層",
+          "text": "檢查視覺修復結果；只有明確編輯並儲存時才寫回來源檔案。"
+        }
+      ]
+    }
+  ]
+}
   </script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/zh-tw/large-markdown-files/#faq","mainEntity":[{"@type":"Question","name":"多大的 Markdown 檔案算超大？","acceptedAnswer":{"@type":"Answer","text":"在 ReadMD 中，約 8,000 行或 500 KB 時語意分頁開始變得相關。實際位置會隨文件結構和裝置資源變化。"}},{"@type":"Question","name":"分頁會改變我的 Markdown 檔案嗎？","acceptedAnswer":{"@type":"Answer","text":"不會。分頁只改變顯示方式。除非你主動編輯並儲存，原始位元組保持不變。"}},{"@type":"Question","name":"長文件還能搜尋和導覽嗎？","acceptedAnswer":{"@type":"Answer","text":"可以。檢視分段時，目錄、全文搜尋、公式渲染和頁面控制項仍然連動。"}},{"@type":"Question","name":"閱讀時會把文件上傳嗎？","acceptedAnswer":{"@type":"Answer","text":"不會。核心閱讀、分頁和顯示修復設計為本機執行，不需要雲端帳號。"}}]}</script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/zh-tw/large-markdown-files/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://readmd.asia/zh-tw/"},{"@type":"ListItem","position":2,"name":"超大 Markdown 檔案","item":"https://readmd.asia/zh-tw/large-markdown-files/"}]}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/zh-tw/large-markdown-files/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "多大的 Markdown 檔案算超大？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "在 ReadMD 中，約 8,000 行或 500 KB 時語意分頁開始變得相關。實際位置會隨文件結構和裝置資源變化。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "分頁會改變我的 Markdown 檔案嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不會。分頁只改變顯示方式。除非你主動編輯並儲存，原始位元組保持不變。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "長文件還能搜尋和導覽嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可以。檢視分段時，目錄、全文搜尋、公式渲染和頁面控制項仍然連動。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "閱讀時會把文件上傳嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不會。核心閱讀、分頁和顯示修復設計為本機執行，不需要雲端帳號。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/zh-tw/large-markdown-files/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://readmd.asia/zh-tw/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "超大 Markdown 檔案",
+      "item": "https://readmd.asia/zh-tw/large-markdown-files/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -86,7 +194,7 @@
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
       <h1 class="display-title">開啟超長 Markdown，不讓介面凍結。</h1>
       <p class="section-copy mt-6 max-w-[68ch]">ReadMD 只對顯示層分段，原始檔仍是權威產物。目錄、搜尋、公式和頁面控制項保持連動，你可以安心閱讀。</p>
-      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD 閱讀介面顯示排版後的 Markdown 和目錄導覽。" loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD 閱讀介面顯示排版後的 Markdown 和目錄導覽。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="large-file-workflow" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">

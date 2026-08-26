@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /*?
+Disallow: /*.json$
 
 User-agent: GPTBot
 Allow: /
@@ -44,3 +46,5 @@ User-agent: Bingbot
 Allow: /
 
 Sitemap: https://readmd.asia/sitemap.xml
+
+# Clean parameter handling protects crawl budget; canonical URLs contain no query strings.

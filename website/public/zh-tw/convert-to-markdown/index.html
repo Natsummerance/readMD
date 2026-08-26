@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>文件轉 Markdown | ReadMD 本機轉換器</title>
   <meta name="description" content="使用 ReadMD 在本機把 DOCX、PPTX、XLSX、PDF、HTML 和 LaTeX 轉為 Markdown，保留標題、列表、表格、公式和圖片參照，不需要將檔案上傳到網頁表單。">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="文件轉 Markdown | ReadMD 本機轉換器">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="ReadMD 轉換介面正在把文件轉為 Markdown。">
   <meta property="og:locale" content="zh_TW">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="文件轉 Markdown | ReadMD 本機轉換器">
   <meta name="twitter:description" content="把既有資料轉成可編輯 Markdown，並在同一工作區複核結構。">
@@ -32,50 +36,154 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/convert-to-markdown/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/convert-to-markdown/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/convert-to-markdown/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebPage",
-        "@id": "https://readmd.asia/zh-tw/convert-to-markdown/#webpage",
-        "url": "https://readmd.asia/zh-tw/convert-to-markdown/",
-        "name": "文件轉 Markdown | ReadMD 本機轉換器",
-        "about": {"@id": "https://readmd.asia/zh-tw/convert-to-markdown/#software"},
-        "primaryImageOfPage": "https://readmd.asia/media/convert-home.png",
-        "dateModified": "2026-08-26",
-        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#conversion-workflow p"]}
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/zh-tw/convert-to-markdown/#webpage",
+      "url": "https://readmd.asia/zh-tw/convert-to-markdown/",
+      "name": "文件轉 Markdown | ReadMD 本機轉換器",
+      "about": {
+        "@id": "https://readmd.asia/zh-tw/convert-to-markdown/#software"
       },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://readmd.asia/zh-tw/convert-to-markdown/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-26",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "author": {"@type": "Organization", "name": "ReadMD"}
-      },
-      {
-        "@type": "HowTo",
-        "@id": "https://readmd.asia/zh-tw/convert-to-markdown/#howto",
-        "name": "如何在本機把文件轉換成 Markdown",
-        "step": [
-          {"@type": "HowToStep", "name": "準備來源檔案", "text": "把 DOCX、PPTX、XLSX、PDF、HTML 或 LaTeX 檔案保存在本機裝置。"},
-          {"@type": "HowToStep", "name": "匯入檔案", "text": "向 ReadMD 轉換器新增單一檔案、多個檔案或支援的資料夾。"},
-          {"@type": "HowToStep", "name": "轉換為 Markdown", "text": "執行轉換器，並開啟產生的 Markdown 進行檢查。"},
-          {"@type": "HowToStep", "name": "複核結構", "text": "發布前檢查標題、列表、表格、公式、圖片和複雜專有版式。"}
+      "primaryImageOfPage": "https://readmd.asia/media/convert-home.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#conversion-workflow p"
         ]
+      },
+      "inLanguage": "zh-TW",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/zh-tw/convert-to-markdown/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
-    ]
-  }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/zh-tw/convert-to-markdown/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/zh-tw/release-notes/",
+      "screenshot": "https://readmd.asia/media/convert-home.png",
+      "featureList": "超長文件分頁、本機格式轉換、離線 OCR、Markdown 表格、PDF 匯入、文獻引用和放映模式。",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/zh-tw/convert-to-markdown/#howto",
+      "name": "如何在本機把文件轉換成 Markdown",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "準備來源檔案",
+          "text": "把 DOCX、PPTX、XLSX、PDF、HTML 或 LaTeX 檔案保存在本機裝置。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "匯入檔案",
+          "text": "向 ReadMD 轉換器新增單一檔案、多個檔案或支援的資料夾。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "轉換為 Markdown",
+          "text": "執行轉換器，並開啟產生的 Markdown 進行檢查。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "複核結構",
+          "text": "發布前檢查標題、列表、表格、公式、圖片和複雜專有版式。"
+        }
+      ]
+    }
+  ]
+}
   </script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/zh-tw/convert-to-markdown/#faq","mainEntity":[{"@type":"Question","name":"ReadMD 能把哪些格式轉為 Markdown？","acceptedAnswer":{"@type":"Answer","text":"ReadMD 可將 DOCX、PPTX、XLSX、PDF、HTML 和 LaTeX 來源轉換為 Markdown。網頁擷取屬於可選功能，只在使用者明確請求時連線。"}},{"@type":"Question","name":"DOCX 和 PDF 能離線轉換嗎？","acceptedAnswer":{"@type":"Answer","text":"在受支援的平台可以。本機檔案轉換不需要雲端帳號，也不需要將文件上傳到網頁表單。"}},{"@type":"Question","name":"會保留哪些文件結構？","acceptedAnswer":{"@type":"Answer","text":"轉換器盡量保留標題、列表、表格、引言、公式和圖片參照等有用的 Markdown 結構，並移除不必要的專有包裝。"}},{"@type":"Question","name":"轉換後的版式會和原來完全一樣嗎？","acceptedAnswer":{"@type":"Answer","text":"不會。專有版式不一定有一對一的 Markdown 表達。轉換後應複核標題、表格、公式和圖片，複雜設計尤其需要人工檢查。"}}]}</script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/zh-tw/convert-to-markdown/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://readmd.asia/zh-tw/"},{"@type":"ListItem","position":2,"name":"文件轉 Markdown","item":"https://readmd.asia/zh-tw/convert-to-markdown/"}]}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/zh-tw/convert-to-markdown/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "ReadMD 能把哪些格式轉為 Markdown？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD 可將 DOCX、PPTX、XLSX、PDF、HTML 和 LaTeX 來源轉換為 Markdown。網頁擷取屬於可選功能，只在使用者明確請求時連線。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "DOCX 和 PDF 能離線轉換嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "在受支援的平台可以。本機檔案轉換不需要雲端帳號，也不需要將文件上傳到網頁表單。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "會保留哪些文件結構？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "轉換器盡量保留標題、列表、表格、引言、公式和圖片參照等有用的 Markdown 結構，並移除不必要的專有包裝。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "轉換後的版式會和原來完全一樣嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不會。專有版式不一定有一對一的 Markdown 表達。轉換後應複核標題、表格、公式和圖片，複雜設計尤其需要人工檢查。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/zh-tw/convert-to-markdown/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://readmd.asia/zh-tw/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "文件轉 Markdown",
+      "item": "https://readmd.asia/zh-tw/convert-to-markdown/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -86,7 +194,7 @@
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
       <h1 class="display-title">把既有文件轉入 Markdown。</h1>
       <p class="section-copy mt-6 max-w-[68ch]">報告、簡報、試算表、論文、網頁和掃描頁可以在本機變成可編輯 Markdown，不必經過瀏覽器上傳。</p>
-      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="2880" height="1620" alt="ReadMD 轉換介面顯示準備轉為 Markdown 的來源檔案。" loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="2880" height="1620" alt="ReadMD 轉換介面顯示準備轉為 Markdown 的來源檔案。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="conversion-workflow" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">

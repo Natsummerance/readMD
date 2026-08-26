@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PDF 轉 Markdown | ReadMD 本機 PDF 轉換器</title>
   <meta name="description" content="在支援平臺上用 ReadMD 將 PDF 本機轉換為 Markdown，盡量保留標題、清單、表格、引言、公式和圖片引用，並在儲存前覆核掃描文字、閱讀順序、圖說和複雜版面，避免將來源檔案上傳到網頁表單。">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="PDF 轉 Markdown | ReadMD 本機 PDF 轉換器">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="ReadMD 轉換介面正在將 PDF 文件轉為 Markdown。">
   <meta property="og:locale" content="zh_TW">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="PDF 轉 Markdown | ReadMD 本機 PDF 轉換器">
   <meta name="twitter:description" content="把本機 PDF 資料轉成可覆核的 Markdown，不需要上傳到網頁表單。">
@@ -32,6 +36,8 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/pdf-to-markdown/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/pdf-to-markdown/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/pdf-to-markdown/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
@@ -56,6 +62,14 @@
           "h1",
           "#conversion-workflow p"
         ]
+      },
+      "inLanguage": "zh-TW",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/zh-tw/pdf-to-markdown/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
     },
     {
@@ -72,6 +86,17 @@
       "author": {
         "@type": "Organization",
         "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/zh-tw/release-notes/",
+      "screenshot": "https://readmd.asia/media/convert-home.png",
+      "featureList": "超長文件分頁、本機格式轉換、離線 OCR、Markdown 表格、PDF 匯入、文獻引用和放映模式。",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
       }
     },
     {
@@ -104,8 +129,64 @@
   ]
 }
   </script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/zh-tw/pdf-to-markdown/#faq","mainEntity":[{"@type":"Question","name":"ReadMD 能轉換哪些 PDF？","acceptedAnswer":{"@type":"Answer","text":"ReadMD 轉換器接受 PDF 來源。文字型文件通常更容易對應到 Markdown；掃描頁應在支援平臺使用合格的本機 OCR 工作流。"}},{"@type":"Question","name":"PDF 轉換會上傳我的檔案嗎？","acceptedAnswer":{"@type":"Answer","text":"不會。本機 PDF 轉換設計為不需要雲端帳號，也不經過瀏覽器上傳表單。"}},{"@type":"Question","name":"會保留哪些 Markdown 結構？","acceptedAnswer":{"@type":"Answer","text":"只要 PDF 提供可恢復的結構，轉換器盡量保留標題、清單、表格、引言、公式和圖片引用。"}},{"@type":"Question","name":"每個掃描 PDF 都能完美轉換嗎？","acceptedAnswer":{"@type":"Answer","text":"不能。OCR 品質受清晰度、語言、字體和版面複雜度影響。儲存前應覆核名稱、數字、表格、圖說和閱讀順序。"}}]}</script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/zh-tw/pdf-to-markdown/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"首頁","item":"https://readmd.asia/zh-tw/"},{"@type":"ListItem","position":2,"name":"PDF 轉 Markdown","item":"https://readmd.asia/zh-tw/pdf-to-markdown/"}]}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/zh-tw/pdf-to-markdown/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "ReadMD 能轉換哪些 PDF？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD 轉換器接受 PDF 來源。文字型文件通常更容易對應到 Markdown；掃描頁應在支援平臺使用合格的本機 OCR 工作流。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "PDF 轉換會上傳我的檔案嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不會。本機 PDF 轉換設計為不需要雲端帳號，也不經過瀏覽器上傳表單。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "會保留哪些 Markdown 結構？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "只要 PDF 提供可恢復的結構，轉換器盡量保留標題、清單、表格、引言、公式和圖片引用。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "每個掃描 PDF 都能完美轉換嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不能。OCR 品質受清晰度、語言、字體和版面複雜度影響。儲存前應覆核名稱、數字、表格、圖說和閱讀順序。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/zh-tw/pdf-to-markdown/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://readmd.asia/zh-tw/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "PDF 轉 Markdown",
+      "item": "https://readmd.asia/zh-tw/pdf-to-markdown/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -116,7 +197,7 @@
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
       <h1 class="display-title">把 PDF 變成可編輯 Markdown。</h1>
       <p class="section-copy mt-6 max-w-[68ch]">文字型報告、論文、手冊和掃描頁可以在本機進入 Markdown。來源檔保留在你的裝置上，可重複使用的結構繼續保留。</p>
-      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="2880" height="1620" alt="ReadMD 轉換介面正在將 PDF 文件轉為 Markdown。" loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="2880" height="1620" alt="ReadMD 轉換介面正在將 PDF 文件轉為 Markdown。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="conversion-workflow" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">

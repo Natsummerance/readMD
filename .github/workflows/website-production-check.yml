@@ -49,13 +49,24 @@ jobs:
             fi
           done
 
-          for path in robots.txt sitemap.xml llms.txt llms-full.txt zh-cn/llms.txt zh-tw/llms.txt ja/llms.txt; do
+          for path in robots.txt sitemap.xml feed.xml llms.txt llms-full.txt zh-cn/llms.txt zh-tw/llms.txt ja/llms.txt .well-known/security.txt; do
             code="$(curl --silent --show-error --max-time 30 --output /dev/null --write-out '%{http_code}' "${origin}/${path}")"
             if [ "$code" != "200" ]; then
               echo "::error::/${path} returned HTTP ${code}"
               failures=$((failures + 1))
             fi
           done
+
+          not_found="$(mktemp)"
+          not_found_code="$(curl --silent --show-error --max-time 30 --output "$not_found" --write-out '%{http_code}' "${origin}/definitely-not-a-readmd-page")"
+          if [ "$not_found_code" != "404" ]; then
+            echo "::error::404 handler returned HTTP ${not_found_code}, expected HTTP 404"
+            failures=$((failures + 1))
+          fi
+          if ! grep -q 'Official homepage' "$not_found" || ! grep -q '/release-notes/' "$not_found"; then
+            echo "::error::404 handler omits recovery entry points"
+            failures=$((failures + 1))
+          fi
 
           for image in media/overview-reader.png media/overview-editor.png media/convert-home.png; do
             response="$(curl --silent --show-error --max-time 30 --head "${origin}/${image}")"
@@ -73,4 +84,4 @@ jobs:
             echo "::error::Production check failed with ${failures} failures"
             exit 1
           fi
-          echo "Verified ${#routes[@]} routes, four language corpora families, robots, sitemap, and PNG social assets at ${origin}."
+          echo "Verified ${#routes[@]} routes, four language corpora families, Atom feed, security.txt, quality 404, robots, sitemap, and PNG social assets at ${origin}."
