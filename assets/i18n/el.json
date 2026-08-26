@@ -1013,6 +1013,7 @@
   "presentation.fontInc": "Larger Font (28px)",
   "presentation.overviewTitle": "Slide Overview (Key O)",
   "presentation.fullscreenTitle": "Fullscreen (F11)",
+  "presentation.overviewLabel": "Επισκόπηση",
   "presentation.fullscreenLabel": "Πλήρης οθόνη",
   "presentation.closeTitle": "Exit Presentation (Esc)",
   "presentation.transitionNone": "Καμία",
