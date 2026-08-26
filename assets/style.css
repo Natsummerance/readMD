@@ -3831,7 +3831,7 @@ body.zen-mode #toolbar {
   border-bottom: 1px solid var(--border);
 }
 
-body.zen-mode.zen-toolbar-suppressed #toolbar {
+body.zen-mode.zen-toolbar-suppressed #toolbar:not(:focus-within) {
   transform: translateY(-100%) !important;
 }
 
