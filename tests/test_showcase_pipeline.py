@@ -1963,6 +1963,21 @@ class AuditCopyTest(unittest.TestCase):
         self.assertGreaterEqual(report["total_score"], 88)
         self.assertEqual(report["scores"]["compliance"], 5)
 
+    def test_focus_score_uses_the_same_mechanism_rule_for_every_profile(self) -> None:
+        for primary_shot, profile in copy_profiles.PROFILES.items():
+            with self.subTest(primary_shot=primary_shot):
+                terms = profile["hook_contract"]["mechanism"]
+                story = {
+                    "primary_shot": primary_shot,
+                    "angle": "与当前机制无关的叙述",
+                    "selected_shots": ["overview.reader", primary_shot],
+                }
+                focused_body = f"这篇内容围绕{terms[0]}和{terms[1]}展开。"
+                self.assertEqual(audit_copy._score_focus(story, focused_body)[0], 20)
+                # The remaining 14 points measure carousel order and feature budget;
+                # the six-point delta isolates whether the declared mechanism is present.
+                self.assertEqual(audit_copy._score_focus(story, "这段正文没有当前机制。")[0], 14)
+
     def test_audit_rejects_generic_topics_for_mechanism(self) -> None:
         story, metadata, composition = self.make_audit_inputs(self.good_body())
         metadata["topics"] = ["GitHub", "开源项目", "程序员", "效率工具", "Markdown"]

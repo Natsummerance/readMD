@@ -67,18 +67,18 @@ def _score_hook(body: str, story: dict[str, Any]) -> tuple[int, list[str]]:
 
 
 def _score_focus(story: dict[str, Any], body: str) -> tuple[int, list[str]]:
+    profile = profile_for_story(story)
     selected = story.get("selected_shots", [])
     primary = story.get("primary_shot")
     features = [item for item in selected if item not in {"overview.reader", "overview.editor", "convert.home"}]
     score = 0.0
     if len(selected) > 1 and selected[1] == primary:
         score += 8
-    mechanism_visible = (
-        story.get("primary_shot") == "presentation.reveal"
-        and "放映" in body
-        and "Markdown" in body
-    )
-    if mechanism_visible or str(story.get("angle", ""))[:12] in body:
+    mechanism_terms = {str(term) for term in profile["hook_contract"]["mechanism"]}
+    mechanism_hits = sum(term.lower() in body.lower() for term in mechanism_terms)
+    declared_angle = str(story.get("angle") or profile.get("narrative_angle", ""))
+    mechanism_visible = mechanism_hits >= 2 or (declared_angle[:12] in body)
+    if mechanism_visible:
         score += 6
     score += 6 if len(features) <= 3 else 3
     return round(score), []
