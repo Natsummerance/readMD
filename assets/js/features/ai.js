@@ -6,8 +6,8 @@
 /* ---------------- AI 助手 ---------------- */
 
 const AI_ACTIONS = {
-  quick_read: '快速阅读', polish: '润色', modify: '修改',
-  expand: '扩充', continue: '续写', translate: '翻译', ask: '提问',
+  quick_read: 'tpl.actionQuickRead', polish: 'tpl.actionPolish', modify: 'tpl.actionModify',
+  expand: 'tpl.actionExpand', continue: 'tpl.actionContinue', translate: 'tpl.actionTranslate', ask: 'tpl.actionAsk',
 };
 
 const AI_SYSTEM = {
@@ -762,7 +762,7 @@ async function runAi(action) {
   uTag.className = 'ai-msg-tag';
   const userSeq = (state.ai.messages || []).filter(m => m.role === 'user').length + 1;
   const scopeText = isSelection ? (_t('ai.scopeSelection') || '（选中文字）') : (_t('ai.scopeFull') || '（全文）');
-  uTag.textContent = (_t('ai.meTag', { seq: userSeq }) || ('我 · 提问 ' + userSeq)) + ' · ' + (_t('ai.action_' + action) || AI_ACTIONS[action] || action) + scopeText + ' · ' + model;
+  uTag.textContent = (_t('ai.meTag', { seq: userSeq }) || ('我 · 提问 ' + userSeq)) + ' · ' + _t(AI_ACTIONS[action] || action) + scopeText + ' · ' + model;
   const uBody = document.createElement('div');
   uBody.className = 'ai-msg-body';
   uBody.textContent = userMsg.length > 2000 ? userMsg.slice(0, 2000) + '\n' + (_t('ai.omittedLong') || '…（已省略）') : userMsg;

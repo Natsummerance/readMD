@@ -47,24 +47,24 @@ function getExportSections() {
     /* --- LaTeX 学术源码专属参数 --- */
     { title: _t('export.secLatexDoc') || 'LaTeX 学术编译与宏包', fmts: ['tex'], fields: [
       { k: 'tex.docClass', label: _t('export.latexDocClass') || 'LaTeX 文档类', type: 'select', opts: [
-        ['ctexart', 'ctexart (中文学术论文 / 推荐)'],
-        ['article', 'article (英文学术标准论文)'],
-        ['ctexrep', 'ctexrep (中文学位报告 / 长篇)'],
-        ['report', 'report (英文研究报告 / Tech Report)'],
-        ['book', 'book (学术专著 / 书籍)'],
-        ['beamer', 'beamer (学术讲报幻灯片)']
+        ['ctexart', 'ctexart'],
+        ['article', 'article'],
+        ['ctexrep', 'ctexrep'],
+        ['report', 'report'],
+        ['book', 'book'],
+        ['beamer', 'beamer']
       ], full: true },
       { k: 'tex.fontSize', label: _t('export.latexFontSize') || '排版字号', type: 'select', opts: [
-        ['10pt', '10pt'], ['11pt', '11pt (期刊标准)'], ['12pt', '12pt (大字舒适)']
+        ['10pt', '10pt'], ['11pt', '11pt'], ['12pt', '12pt']
       ]},
       { k: 'tex.paperSize', label: _t('export.pageSize') || '纸张规格', type: 'select', opts: [
-        ['a4paper', 'A4 纸张 (210×297mm)'], ['letterpaper', 'US Letter 纸张']
+        ['a4paper', 'A4'], ['letterpaper', 'US Letter']
       ]},
       { k: 'tex.margin', label: _t('export.latexMargin') || '页面边距 (Geometry)', type: 'select', opts: [
-        ['2.5cm', '2.5 cm (国标标准)'], ['1in', '1 inch (1 英寸 IEEE)'], ['2cm', '2.0 cm (紧凑排版)'], ['3cm', '3.0 cm (宽松批注)']
+        ['2.5cm', '2.5 cm'], ['1in', '1 in'], ['2cm', '2.0 cm'], ['3cm', '3.0 cm']
       ]},
       { k: 'tex.bibEngine', label: _t('export.latexBibEngine') || '参考文献引擎', type: 'select', opts: [
-        ['biblatex', 'BibLaTeX (现代学术 / 推荐)'], ['natbib', 'Natbib (传统期刊通用)'], ['bibtex', '基础 BibTeX']
+        ['biblatex', 'BibLaTeX'], ['natbib', 'Natbib'], ['bibtex', 'BibTeX']
       ]},
       { k: 'tex.useCtex', label: _t('export.latexUseCtex') || '启用 CJK 中文宏包 (UTF-8 原生支持)', type: 'checkbox' },
     ]},
