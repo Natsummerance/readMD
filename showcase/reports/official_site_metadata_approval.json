@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "artifact": "Official site metadata and README AI-citation links",
+  "reviewed_at": "2026-08-26T01:00:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "seo-discovery-review",
+      "status": "approved",
+      "score": 9.89,
+      "evidence": [
+        "The GitHub repository homepage API value is https://readmd.asia.",
+        "All four localized README surfaces expose a direct official-site badge.",
+        "AI citation entries now use live absolute readmd.asia corpus URLs instead of repository source paths."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "growth-localization-review",
+      "status": "approved",
+      "score": 9.83,
+      "evidence": [
+        "Simplified Chinese, Traditional Chinese, English, and Japanese READMEs receive the same discoverability signal without changing product claims.",
+        "Existing release, platform, license, language, and download links remain unchanged."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-compliance-review",
+      "status": "approved",
+      "score": 9.78,
+      "evidence": [
+        "The linked llms.txt and llms-full.txt URLs are already covered by the green production route checker.",
+        "No private-domain reference or unverifiable adoption claim is introduced.",
+        "Historical approval evidence remains unchanged."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_staged_publication",
+    "score": 9.84,
+    "participants": ["SEO discovery", "growth localization", "release compliance"],
+    "conditions": [
+      "CI must pass before merge.",
+      "The production route checker must remain green for the linked crawler surfaces.",
+      "GitHub repository homepage must continue to resolve to https://readmd.asia after merge."
+    ]
+  }
+}

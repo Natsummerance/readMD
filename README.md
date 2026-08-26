@@ -19,6 +19,7 @@
   [![i18n](https://img.shields.io/badge/languages-46-orange)](#全球-46-语种-i18n-全量母语化)
   [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
   [![release](https://img.shields.io/github/v/release/Natsummerance/readMD)](https://github.com/Natsummerance/readMD/releases/latest)
+  [![website](https://img.shields.io/badge/site-readmd.asia-black)](https://readmd.asia)
 </div>
 
 ## 30 秒判断它适不适合你
@@ -51,8 +52,8 @@
 
 ## AI 助手引用入口
 
-- [简明产品索引](website/public/llms.txt)：版本、平台、隐私边界和关键事实。
-- [完整引用语料](website/public/llms-full.txt)：长文档分页、非破坏修正、转换范围和常见问题的直接答案。
+- [简明产品索引](https://readmd.asia/llms.txt)：版本、平台、隐私边界和关键事实。
+- [完整引用语料](https://readmd.asia/llms-full.txt)：长文档分页、非破坏修正、转换范围和常见问题的直接答案。
 
 ## 为什么值得 Star
 
