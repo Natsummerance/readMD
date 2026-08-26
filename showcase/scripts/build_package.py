@@ -16,65 +16,11 @@ from build_story import apply_selected_cover, build_story
 from copy_variants import select_variant
 from export_wechat import export_package
 import pattern_audit
+from poster_style import load_poster_styles, resolve_poster_style
 import performance_report
 import review_dashboard
 from validate_package import validate_package
 from write_copy import generate_copy
-
-
-def load_poster_styles() -> list[str]:
-    """Keep Python-side CLI validation aligned with the JavaScript token registry."""
-    design_dir = Path(__file__).resolve().parents[1] / "design"
-    styles = ["evidence-paper"]
-    styles.extend(path.stem for path in sorted((design_dir / "styles").glob("*.json")))
-    return list(dict.fromkeys(styles))
-
-
-def resolve_poster_style(
-    requested: str | None,
-    memory_path: Path | None,
-) -> tuple[str, dict[str, Any]]:
-    """Resolve explicit, learned, or balanced-exploration poster selection."""
-    styles = load_poster_styles()
-    if requested not in (None, "auto") and requested not in styles:
-        raise ValueError(f"unknown poster style: {requested}")
-    if requested != "auto":
-        selected = requested or "evidence-paper"
-        return selected, {
-            "schema_version": 1,
-            "mode": "fixed",
-            "selected": selected,
-        }
-
-    records = load_records(memory_path) if memory_path else []
-    recommendation = performance_report.recommend_poster_style(records)
-    if recommendation["recommended"]:
-        return str(recommendation["recommended"]), {
-            "schema_version": 1,
-            "mode": "learned",
-            "selected": recommendation["recommended"],
-            "recommendation": recommendation,
-        }
-
-    # Before any style reaches the publication-confidence threshold, collect
-    # comparable evidence by rotating experimental styles around the stable default.
-    candidates = styles[1:]
-    usage = {
-        style: sum(
-            1 for record in records if str(record.get("poster_style", "")) == style
-        )
-        for style in candidates
-    }
-    fewest = min(usage.values())
-    tied = [style for style in candidates if usage[style] == fewest]
-    selected = tied[len(records) % len(tied)]
-    return selected, {
-        "schema_version": 1,
-        "mode": "exploration",
-        "selected": selected,
-        "usage": usage,
-        "recommendation": recommendation,
-    }
 
 
 def _write_release_evidence(package_dir: Path, notes_text: str, diff_text: str) -> dict[str, Any]:

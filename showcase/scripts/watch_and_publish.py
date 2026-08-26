@@ -32,6 +32,7 @@ from validate_package import (
     publisher_directive_errors,
     publisher_input_errors,
     publisher_learning_materiality_errors,
+    publisher_poster_style_errors,
     publisher_resonance_source_errors,
     variant_selection_integrity_errors,
 )
@@ -509,6 +510,9 @@ def process_package(
         learning_errors = publisher_learning_materiality_errors(package_dir, ledger_path)
         if learning_errors:
             raise ValueError("publisher learning evidence contract failed: " + "; ".join(learning_errors))
+        poster_style_errors = publisher_poster_style_errors(package_dir, ledger_path)
+        if poster_style_errors:
+            raise ValueError("publisher poster style evidence contract failed: " + "; ".join(poster_style_errors))
         dashboard = json.loads((package_dir / "dashboard-qa.json").read_text(encoding="utf-8"))
         if dashboard.get("ok") is not True:
             raise ValueError("package dashboard-qa.json is not green")

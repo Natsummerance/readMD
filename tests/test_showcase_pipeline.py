@@ -3565,6 +3565,75 @@ class BuildPipelineTest(unittest.TestCase):
         self.assertEqual(selection["mode"], "learned")
         self.assertEqual(selection["recommendation"]["confidence"], "medium")
 
+    def test_publisher_recomputes_auto_poster_style_from_private_ledger(self) -> None:
+        def write_provenance(
+            package: Path,
+            *,
+            selected: str,
+            mode: str = "exploration",
+            schema_version: int = 3,
+        ) -> None:
+            (package / "story.json").write_text(
+                json.dumps({"poster_style": selected}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+            (package / "composition.json").write_text(
+                json.dumps({"schema_version": schema_version}),
+                encoding="utf-8",
+            )
+            provenance = None if schema_version < 3 else {
+                "schema_version": 1,
+                "mode": mode,
+                "selected": selected,
+            }
+            payload = {} if provenance is None else {"poster_style_selection": provenance}
+            (package / "variants.json").write_text(json.dumps(payload), encoding="utf-8")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            package = root / "package"
+            package.mkdir()
+            write_provenance(package, selected="minimal-zine")
+            variants = json.loads((package / "variants.json").read_text(encoding="utf-8"))
+            variants.pop("poster_style_selection")
+            (package / "variants.json").write_text(json.dumps(variants), encoding="utf-8")
+            self.assertEqual(
+                validate_package.publisher_poster_style_errors(package, None),
+                ["schema-3 package omits poster_style_selection"],
+            )
+
+            write_provenance(package, selected="minimal-zine")
+            ledger = root / "ledger.jsonl"
+            ledger.write_text(json.dumps({
+                "release": "v1.0.0",
+                "poster_style": "evidence-paper",
+                "metrics_status": "pending",
+            }), encoding="utf-8")
+            self.assertEqual(
+                validate_package.publisher_poster_style_errors(package, ledger),
+                [
+                    "current publication evidence selects a different poster style: "
+                    "package=minimal-zine, current=morandi-cinematic"
+                ],
+            )
+
+            matching_records = [
+                {
+                    "release": f"v1.0.{index}",
+                    "poster_style": "evidence-paper",
+                    "metrics_status": "pending",
+                }
+                for index in range(4)
+            ]
+            ledger.write_text(
+                "\n".join(json.dumps(record) for record in matching_records),
+                encoding="utf-8",
+            )
+            self.assertEqual(validate_package.publisher_poster_style_errors(package, ledger), [])
+
+            write_provenance(package, selected="photo-relic", mode="fixed")
+            self.assertEqual(validate_package.publisher_poster_style_errors(package, ledger), [])
+
     def test_dashboard_failure_turns_aggregate_qa_red(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             package = Path(tmp)
@@ -4564,6 +4633,22 @@ class ReviewDashboardTest(unittest.TestCase):
                     "identity-led": 4,
                     "mechanism-curiosity": 4,
                 },
+                "poster_style_selection": {
+                    "schema_version": 1,
+                    "mode": "learned",
+                    "selected": "evidence-paper",
+                    "recommendation": {
+                        "recommended": "evidence-paper",
+                        "confidence": "medium",
+                        "stats": {
+                            "evidence-paper": {
+                                "publications": 2,
+                                "impressions": 2400,
+                                "weighted_engagement": 214,
+                            }
+                        },
+                    },
+                },
                 "ranked": [
                     {
                         "strategy": "outcome-led",
@@ -4613,6 +4698,7 @@ class ReviewDashboardTest(unittest.TestCase):
                 "recommended_formula": "#22",
                 "recommended_hook_type": "identity-task",
                 "recommended_copy_frame": "workflow",
+                "recommended_poster_style": "evidence-paper",
                 "recommended_topic_set": "academic-talk",
                 "recommended_topic": "组会报告",
                 "topic_set_stats": {
@@ -4690,6 +4776,12 @@ class ReviewDashboardTest(unittest.TestCase):
         self.assertIn("Hot-post patterns", html)
         self.assertIn("10 / 10", html)
         self.assertIn("Recommended frame", html)
+        self.assertIn("Poster experiment", html)
+        self.assertIn("Selected style", html)
+        self.assertIn("evidence-paper", html)
+        self.assertIn("Selected by confident publication evidence", html)
+        self.assertIn("Current ledger recommendation", html)
+        self.assertIn("Recommended poster", html)
         self.assertIn("Feedback overdue", html)
         self.assertIn("v0.9.0", html)
         self.assertIn("missing metric:collects, comments", html)

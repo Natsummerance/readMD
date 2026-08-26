@@ -352,6 +352,62 @@ def _topic_experiment_html(topic_experiment: dict[str, Any], performance: dict[s
     )
 
 
+def _poster_style_html(style_selection: Any, performance: dict[str, Any]) -> str:
+    if not isinstance(style_selection, dict) or style_selection.get("schema_version") != 1:
+        return (
+            '<p style="margin:0;font-size:23px;color:#c1121f">'
+            'Poster-style selection provenance is unavailable or malformed.</p>'
+        )
+
+    recommendation = style_selection.get("recommendation", {})
+    recommendation = recommendation if isinstance(recommendation, dict) else {}
+    mode = str(style_selection.get("mode", "unknown"))
+    mode_labels = {
+        "fixed": "Operator fixed this style",
+        "learned": "Selected by confident publication evidence",
+        "exploration": "Balanced exploration before confidence",
+    }
+    overview = "".join([
+        _contract_field("Selected style", style_selection.get("selected") or "Missing", emphasis=True),
+        _contract_field("Selection mode", mode_labels.get(mode, mode), emphasis=True),
+        _contract_field(
+            "Recommended style",
+            recommendation.get("recommended") or "Insufficient evidence",
+        ),
+        _contract_field(
+            "Evidence confidence",
+            recommendation.get("confidence") or "low",
+        ),
+    ])
+
+    detail = ""
+    if mode == "exploration" and isinstance(style_selection.get("usage"), dict):
+        usage_items = "".join(_proof_chip(f"{style}: {count}") for style, count in sorted(style_selection["usage"].items()))
+        detail = f'<p style="margin:20px 0 10px;font-size:22px;font-weight:800;color:#182029">Experimental usage</p><div>{usage_items}</div>'
+    elif mode == "learned":
+        stats = recommendation.get("stats", {}).get(str(style_selection.get("selected")), {})
+        detail = (
+            '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:20px">'
+            + _metric("Publications", stats.get("publications", 0))
+            + _metric("Impressions", stats.get("impressions", 0))
+            + _metric("Weighted engagement", stats.get("weighted_engagement", 0))
+            + '</div>'
+        )
+
+    recommended = performance.get("recommended_poster_style")
+    footer = (
+        f'Current ledger recommendation: {_escaped(recommended)}'
+        if recommended else 'Current ledger recommendation: insufficient evidence'
+    )
+    return (
+        f'<div style="display:flex;gap:14px;flex-wrap:wrap">{overview}</div>{detail}'
+        f'<div style="margin-top:18px;background:#f2f4f6;border-left:4px solid #d6482c;'
+        'border-radius:12px;padding:20px">'
+        f'<p style="margin:0;font-size:19px;letter-spacing:.04em;color:#5b6875">Publication gate</p>'
+        f'<p style="margin:8px 0 0;font-size:23px;line-height:1.4;color:#182029">{footer}</p></div>'
+    )
+
+
 def build_dashboard(inputs: dict[str, Any]) -> str:
     release = inputs.get("release", "")
     title = inputs.get("title", "")
@@ -445,6 +501,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
         _metric("Feedback overdue", feedback_sla.get("overdue_count", 0)),
         _metric("Recommended formula", performance.get("recommended_formula", "insufficient data")),
         _metric("Recommended frame", performance.get("recommended_copy_frame") or "insufficient evidence"),
+        _metric("Recommended poster", performance.get("recommended_poster_style") or "insufficient evidence"),
     ])
     comment_resonance_html = _comment_resonance_html(performance.get("comment_focus", {}))
 
@@ -465,6 +522,7 @@ def build_dashboard(inputs: dict[str, Any]) -> str:
   </header>
   {_section("Release gates", gate_html)}
   {_section("Mechanism contract", _mechanism_contract_html(story))}
+  {_section("Poster experiment", _poster_style_html(variants.get("poster_style_selection"), performance))}
   {_section("Topic experiment", _topic_experiment_html(topic_experiment, performance))}
   {_section("Semantic dimensions", f'<div style="display:flex;gap:14px;flex-wrap:wrap">{score_items}</div>')}
   {_section("Style resonance", style_inner)}

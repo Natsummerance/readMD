@@ -35,7 +35,7 @@ node showcase/scripts/compose_cards.js showcase/output/package `
   --output-dir showcase/output/style-previews/minimal-zine
 ```
 
-正式包会把选中的 `poster_style` 写进 `story.json`、`metadata.json` 和 schema 3 的 `composition.json`，并把选择模式写入 `variants.json`；watcher 再把它作为不可变身份写入发布账本。绩效报告会按风格聚合曝光和加权互动。显式指定风格或省略参数时仍保持固定视觉，不会被动轮换。
+正式包会把选中的 `poster_style` 写进 `story.json`、`metadata.json` 和 schema 3 的 `composition.json`，并把选择模式写入 `variants.json`；watcher 再把它作为不可变身份写入发布账本。因为 CI 看不到私有账本，watcher 发布前会用本机账本复算 `auto` 选择；云端探索稿与本机证据结论不一致时会阻止发布。绩效报告会按风格聚合曝光和加权互动。显式指定风格或省略参数时仍保持固定视觉，不会被动轮换。
 
 完整构建会先生成 12 种叙事框架 × 8 个标题公式共 96 个实验组合；每个组合都有稳定 `variant_id` 和 `copy_frame`，语义评分、置信门控后的钩子/标题/叙事帧表现、近期疲劳和跨发布原创性共同决定最终稿。任一维度不足 2 次发布或 1000 次曝光时只做探索，不给历史加分。每个变体都会计算整稿哈希、开头指纹、结尾指纹和三元组相似度：整文哈希和 ≥85% 相似度对照全历史，开头/结尾只在最近 8 次发布内冷却，冷却期外的框架可随新事实安全轮换。标题哈希与三元组也会对照发布账本，防止同一机制连续换封面却重复旧标题。选择证据写入 `variants.json`。随后生成 `wechat/readmd-wechat.html`。该 HTML 只用行内样式，不包含脚本、外链、class、id 或图片；`wechat/wechat-qa.json` 也必须为 `{"ok":true}` 才允许进入发布队列。
 

@@ -27,6 +27,7 @@ from copy_profiles import (
     SUPPORT_PHRASES,
 )
 from copy_variants import choose_variant, projected_composition
+from poster_style import resolve_poster_style
 from write_copy import build_resonance_directive
 
 
@@ -319,6 +320,53 @@ def publisher_learning_materiality_errors(package_dir: Path, ledger_path: Path |
         return [
             "current publication evidence selects a different variant: "
             f"package={selected}, current={recomputed_variant.get('variant_id')}"
+        ]
+    return []
+
+
+def publisher_poster_style_errors(package_dir: Path, ledger_path: Path | None) -> list[str]:
+    """Recompute auto visual selection against the operator's private ledger."""
+    try:
+        story = _load_json(package_dir / "story.json")
+        variants = _load_json(package_dir / "variants.json")
+        composition = _load_json(package_dir / "composition.json")
+    except Exception as exc:
+        return [f"poster style provenance unreadable: {exc}"]
+
+    selection = variants.get("poster_style_selection") if isinstance(variants, dict) else None
+
+    # Schema-2 repair packages predate style provenance and remain publishable.
+    if not isinstance(selection, dict):
+        if composition.get("schema_version", 0) >= 3:
+            return ["schema-3 package omits poster_style_selection"]
+        return []
+
+    selected = str(story.get("poster_style") or "evidence-paper")
+    mode = str(selection.get("mode", ""))
+    packaged_choice = str(selection.get("selected", ""))
+    if mode not in {"fixed", "exploration", "learned"}:
+        return [f"poster_style_selection has an unsupported mode: {mode or '<missing>'}"]
+    if packaged_choice != selected:
+        return [
+            "poster_style_selection differs from the rendered story: "
+            f"story={selected}, selection={packaged_choice}"
+        ]
+    if mode == "fixed" or ledger_path is None:
+        return []
+
+    try:
+        recomputed, recomputed_selection = resolve_poster_style("auto", ledger_path)
+    except Exception as exc:
+        return [f"local poster style evidence is unreadable: {exc}"]
+    if recomputed != selected:
+        return [
+            "current publication evidence selects a different poster style: "
+            f"package={selected}, current={recomputed}"
+        ]
+    if recomputed_selection.get("mode") != mode:
+        return [
+            "current publication evidence changes the poster selection mode: "
+            f"package={mode}, current={recomputed_selection.get('mode')}"
         ]
     return []
 
