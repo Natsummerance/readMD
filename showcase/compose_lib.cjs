@@ -248,6 +248,18 @@ function escapeHtml(value) {
   })[char]);
 }
 
+function evidenceMinRatio(viewport, role) {
+  if (role === 'summary') return 0.28;
+  const width = Number(viewport?.width);
+  const height = Number(viewport?.height);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return 0.55;
+  const aspect = width / height;
+  if (aspect < 0.9) return 0.68;
+  if (aspect < 1.25) return 0.38;
+  if (aspect < 1.7) return 0.33;
+  return 0.26;
+}
+
 function imageSrc(packageDir, capture, card) {
   if (!card.shotId) return '';
   const entry = capture.shots.find((shot) => shot.shot_id === card.shotId);
@@ -295,122 +307,67 @@ function buildCardHtml(card, source, context = {}) {
   const release = escapeHtml(context.release || '');
   const title = escapeHtml(card.title);
   const caption = escapeHtml(card.caption);
-  let body;
-  if (card.role === 'cover') {
-    body = `
-      <main class="cover ${template}">
-        <header class="proof-strip"><span class="mark"></span><span>READMD ${release} · 真实运行画面</span></header>
-        <section class="cover-copy"><h1>${title}</h1><p>${caption}</p></section>
-        <img class="proof-image" src="${source}" alt="ReadMD 真实主界面"/>
-        <footer><strong>GitHub 搜索 Natsummerance/readMD</strong><span>本地优先 · 开源 · 不改原文件</span></footer>
+  const heading = card.role === 'cover' ? 'h1' : 'h2';
+  const proofPoints = Array.isArray(card.proof_points)
+    ? `<ul class="proof-points">${card.proof_points.map((point) => `<li>${escapeHtml(point)}</li>`).join('')}</ul>`
+    : '';
+  const copy = card.role === 'pure_ui_hero'
+    ? ''
+    : `<section class="copy"><${heading}>${title}</${heading}><p>${caption}</p></section>`;
+  const strip = card.role === 'pure_ui_hero'
+    ? ''
+    : `<header class="proof-strip"><span class="mark"></span><span>READMD ${release} · 真实运行画面</span></header>`;
+  const body = `
+      <main class="poster ${card.role} ${template}">
+        ${strip}
+        ${copy}
+        <section class="evidence"><img src="${source}" alt="ReadMD 真实运行界面"/></section>
+        ${proofPoints}
+        <footer class="proof-foot"><span>本地优先 · 开源 · 不改原文件</span><strong>GitHub 搜索 Natsummerance/readMD</strong></footer>
       </main>`;
-  } else if (card.role === 'summary') {
-    body = `
-      <main class="summary ${template}">
-        <header class="feature-head"><h2>${title}</h2><p>${caption}</p></header>
-        <img src="${source}" alt="ReadMD 真实界面"/>
-        <ul>${(card.proof_points || []).map((point) => `<li>${escapeHtml(point)}</li>`).join('')}</ul>
-        <footer class="proof-foot"><span>ReadMD ${release}</span><strong>GitHub 搜 Natsummerance/readMD</strong></footer>
-      </main>`;
-  } else if (card.role === 'pure_ui_hero') {
-    body = `
-      <main class="hero ${template}">
-        <div class="hero-evidence">
-          <img class="hero-overview" src="${source}" alt="${title}"/>
-          <img class="hero-detail" src="${source}" alt="${title}"/>
-        </div>
-        <footer class="proof-foot hero-proof"><strong>${title}</strong><span>真实运行画面</span></footer>
-      </main>`;
-  } else {
-    body = `
-      <main class="feature ${template}">
-        <header class="feature-head"><h2>${title}</h2><p>${caption}</p></header>
-        <img src="${source}" alt="${title}"/>
-        <footer class="proof-foot"><span>真实运行画面</span><span>ReadMD ${release}</span></footer>
-      </main>`;
-  }
   return `<!doctype html><meta charset="utf-8"><title>${title}</title>
 <style>
   *{box-sizing:border-box;margin:0}
   html,body{width:${design.layout.canvas[0]}px;height:${design.layout.canvas[1]}px;overflow:hidden;background:${design.palette.background};color:${design.palette.ink};font-family:${design.type.body.family}}
-  main{width:100%;height:100%;padding:${design.layout.padding[0]}px ${design.layout.padding[1]}px;display:flex;flex-direction:column;gap:${design.layout.gap}px;background:${design.palette.background}}
-  .proof-strip{display:flex;align-items:center;gap:16px;padding:18px 22px;border:1px solid ${design.palette.line};border-radius:${design.layout.radius}px;background:${design.palette.surface};font-family:${design.type.utility.family};font-size:${design.type.utility.size}px;font-weight:${design.type.utility.weight};color:${design.palette.ink};letter-spacing:.04em}
-  .proof-strip .mark{width:18px;height:18px;background:${design.palette.accent};border-radius:3px}
+  main.poster{width:100%;height:100%;padding:${design.layout.padding[0]}px ${design.layout.padding[1]}px;display:flex;flex-direction:column;gap:min(${design.layout.gap}px,3vh);background:${design.palette.background}}
+  .proof-strip{flex:none;display:flex;align-items:center;gap:14px;padding:14px 18px;border:1px solid ${design.palette.line};border-radius:${design.layout.radius}px;background:${design.palette.surface};font-family:${design.type.utility.family};font-size:${design.type.utility.size}px;font-weight:${design.type.utility.weight};color:${design.palette.ink};letter-spacing:.04em}
+  .proof-strip .mark{flex:none;width:16px;height:16px;background:${design.palette.accent};border-radius:3px}
   h1,h2{font-family:${design.type.display.family};color:${design.palette.ink};letter-spacing:0}
-  .cover{gap:30px}
-  .cover-copy{min-height:280px;display:flex;flex-direction:column;justify-content:center}
+  .copy{flex:none;display:flex;flex-direction:column;justify-content:center}
   .cover h1{font-size:${design.type.display.size}px;line-height:${design.type.display.line_height};font-weight:${design.type.display.weight};max-width:900px}
-  .cover p{margin-top:26px;font-size:31px;line-height:1.42;color:${design.palette.muted};max-width:900px}
-  .proof-image{flex:1;min-height:420px;width:100%;object-fit:cover;object-position:top;border:1px solid ${design.palette.screenshot_frame};border-radius:${design.layout.radius}px;background:${design.palette.surface}}
-  .cover footer{margin-top:auto;padding-top:26px;border-top:3px solid ${design.palette.accent};display:flex;justify-content:space-between;align-items:center;gap:24px}
-  .cover footer strong,.proof-foot strong{font-size:33px;color:${design.palette.ink}}
-  .cover footer span,.proof-foot span{font-size:24px;color:${design.palette.muted}}
-  .feature-head{min-height:210px;display:flex;flex-direction:column;justify-content:center}
-  h2{font-size:64px;line-height:1.2;font-weight:900}
-  header p,.summary p{margin-top:18px;font-size:29px;line-height:1.42;color:${design.palette.muted};max-width:900px}
-  img{flex:1;min-height:0;width:100%;object-fit:cover;border:1px solid ${design.palette.screenshot_frame};border-radius:${design.layout.radius}px;background:${design.palette.surface}}
-  .feature,.summary{gap:30px}
-  .proof-foot{display:flex;justify-content:space-between;align-items:center;gap:20px;padding-top:20px;border-top:1px solid ${design.palette.line}}
-  .proof-foot span{font-size:24px}
-  .hero{padding:24px;gap:20px}
-  .hero-evidence{min-height:0;flex:1 1 0;display:flex;flex-direction:column;gap:14px}
-  .hero-overview{width:100%;max-height:58%;object-fit:contain}
-  .hero-detail{min-height:0;flex:1 1 0;object-fit:cover;object-position:50% 100%}
-  .hero-proof{padding:0}
-  .summary ul{list-style:none;display:flex;gap:18px}
-  .summary li{flex:1;background:${design.palette.surface};border-top:3px solid ${design.palette.accent};border-radius:${design.layout.radius}px;padding:20px 22px;font-size:25px;line-height:1.3;color:${design.palette.ink}}
+  .cover .copy p{font-size:31px}
+  h2{font-size:min(58px,7vw);line-height:1.18;font-weight:900}
+  .copy p{margin-top:16px;font-size:max(26px,2.4vw);line-height:1.42;color:${design.palette.muted};max-width:920px}
+  .evidence{flex:1 1 0;min-height:0;overflow:hidden;background-color:${design.palette.surface};background-image:repeating-linear-gradient(to bottom,transparent 0 95px,color-mix(in srgb,${design.palette.accent} 42%,${design.palette.surface}) 95px 96px),repeating-linear-gradient(to right,transparent 0 95px,color-mix(in srgb,${design.palette.accent} 42%,${design.palette.surface}) 95px 96px);border:1px solid ${design.palette.screenshot_frame};border-radius:${design.layout.radius}px}
+  .evidence img{display:block;width:100%;height:100%;object-fit:contain}
+  .proof-foot{flex:none;display:flex;justify-content:space-between;align-items:center;gap:20px;padding-top:18px;border-top:2px solid ${design.palette.line}}
+  .proof-foot span{font-size:24px;color:${design.palette.muted}}
+  .proof-foot strong{font-size:31px;color:${design.palette.ink}}
+  .proof-points{flex:none;list-style:none;display:flex;gap:14px}
+  .proof-points li{flex:1;background:${design.palette.surface};border-top:3px solid ${design.palette.accent};border-radius:${design.layout.radius}px;padding:16px 18px;font-size:24px;line-height:1.3;color:${design.palette.ink}}
+  .pure_ui_hero{padding:min(${design.layout.padding[0]}px,44px) min(${design.layout.padding[1]}px,48px);gap:16px}
+  .pure_ui_hero .evidence{border-width:2px}
+  .pure_ui_hero .proof-foot{padding-top:0;border-top-width:0}
 </style>
 <style data-poster-template="${template}">
-  .minimal-zine .proof-strip{border-radius:0;border-left:5px solid ${design.palette.accent};border-color:${design.palette.line}}
+  .minimal-zine .proof-strip{border-left:5px solid ${design.palette.accent}}
   .minimal-zine h1,.minimal-zine h2{letter-spacing:-.01em}
-  .minimal-zine .proof-image,.minimal-zine img{border-width:2px;box-shadow:8px 8px 0 rgba(31,28,24,.08)}
-  .minimal-zine footer,.minimal-zine .proof-foot{border-top-width:1px}
-
-  .photo-relic.cover,.photo-relic.feature,.photo-relic.summary{display:grid}
-  .photo-relic.cover{grid-template-rows:auto minmax(0,1fr) auto auto}
-  .photo-relic.cover .proof-strip{grid-row:1}
-  .photo-relic.cover .proof-image{grid-row:2;height:100%}
-  .photo-relic.cover .cover-copy{grid-row:3;padding:30px 34px 32px;border-left:8px solid ${design.palette.accent};background:${design.palette.surface};min-height:250px}
-  .photo-relic.cover footer{grid-row:4;margin-top:0;padding-top:22px}
-  .photo-relic.feature{grid-template-rows:minmax(0,1fr) auto auto}
-  .photo-relic.summary{grid-template-rows:auto minmax(0,1fr) auto auto}
-  .photo-relic.feature img{grid-row:1;height:100%;border:3px solid ${design.palette.screenshot_frame};box-shadow:12px 12px 0 rgba(32,26,21,.10)}
-  .photo-relic.summary img{grid-row:2;height:100%;border:3px solid ${design.palette.screenshot_frame};box-shadow:12px 12px 0 rgba(32,26,21,.10)}
-  .photo-relic.feature-head{grid-row:2;padding:28px 34px;background:${design.palette.surface};border-left:8px solid ${design.palette.accent}}
-  .photo-relic.summary header{grid-row:1}
-  .photo-relic.summary ul{grid-row:3;display:block}
-  .photo-relic.summary li{margin-bottom:12px;border-top:0;border-left:4px solid ${design.palette.accent};border-radius:0}
-  .photo-relic.feature .proof-foot{grid-row:3;margin-top:2px}
-  .photo-relic.summary .proof-foot{grid-row:4;margin-top:2px}
+  .minimal-zine .evidence{border-width:2px;box-shadow:9px 9px 0 rgba(31,28,24,.07)}
 
   .morandi-cinematic{letter-spacing:.01em}
-  .morandi-cinematic .feature-head{min-height:180px}
-  .morandi-cinematic img{border:10px solid ${design.palette.screenshot_frame};box-shadow:0 20px 45px rgba(36,42,39,.16)}
-  .morandi-cinematic .hero-overview{object-fit:cover;max-height:54%}
+  .morandi-cinematic .evidence{border-width:8px;box-shadow:0 18px 38px rgba(36,42,39,.13)}
   .morandi-cinematic .proof-strip{border-radius:999px;border-width:0;background:${design.palette.screenshot_frame};color:${design.palette.background}}
   .morandi-cinematic .proof-strip .mark{border-radius:50%}
-  .morandi-cinematic footer,.morandi-cinematic .proof-foot{border-top:3px double ${design.palette.line}}
-  .morandi-cinematic .summary li{border-top-width:6px;background:rgba(239,238,234,.82)}
+  .morandi-cinematic .proof-foot{border-top:4px double ${design.palette.line}}
 
-  .photo-abstract.cover,.photo-abstract.feature,.photo-abstract.summary{display:grid;padding:0;gap:0}
-  .photo-abstract.cover{grid-template-rows:auto minmax(0,1fr) auto auto}
-  .photo-abstract .proof-strip{margin:26px 30px 0;border-width:0;background:transparent}
-  .photo-abstract.cover .proof-image{grid-row:2;margin-top:22px;height:100%;border-width:0;border-radius:0}
-  .photo-abstract.cover .cover-copy{grid-row:3;position:relative;padding:68px ${design.layout.padding[1]}px 34px;background:${design.palette.background}}
-  .photo-abstract.cover .cover-copy::before{content:"";position:absolute;left:${design.layout.padding[1]}px;top:26px;width:96px;height:12px;background:${design.palette.accent}}
-  .photo-abstract.cover .cover-copy::after{content:"";position:absolute;right:${design.layout.padding[1]}px;top:26px;width:44px;height:44px;border:7px solid ${design.palette.line};transform:rotate(18deg)}
-  .photo-abstract.cover footer{grid-row:4;margin-top:0;padding:24px ${design.layout.padding[1]}px 40px;border-top:1px solid ${design.palette.line};background:${design.palette.surface}}
-  .photo-abstract.feature{grid-template-rows:minmax(0,1fr) auto auto}
-  .photo-abstract.feature img{grid-row:1;height:100%;border:0;border-radius:0}
-  .photo-abstract.feature-head{grid-row:2;position:relative;padding:72px 34px 30px;background:${design.palette.background}}
-  .photo-abstract.feature-head::before{content:"";position:absolute;left:34px;top:28px;width:88px;height:11px;background:${design.palette.accent}}
-  .photo-abstract.feature-head::after{content:"";position:absolute;right:34px;top:28px;width:38px;height:38px;border:6px solid ${design.palette.line};border-radius:50%}
-  .photo-abstract.feature .proof-foot{grid-row:3;padding:22px ${design.layout.padding[1]}px 38px;border-top:0;background:${design.palette.surface}}
-  .photo-abstract.summary{grid-template-rows:auto minmax(0,1fr) auto auto}
-  .photo-abstract.summary header{padding:0 ${design.layout.padding[1]}px}
-  .photo-abstract.summary img{grid-row:2;height:100%;border:0;border-radius:0}
-  .photo-abstract.summary ul{grid-row:3;margin:34px ${design.layout.padding[1]}px 0}
-  .photo-abstract.summary .proof-foot{grid-row:4;padding:22px ${design.layout.padding[1]}px 38px;border-top:0;background:${design.palette.surface}}
+  .photo-relic .proof-strip{border-left:6px solid ${design.palette.accent}}
+  .photo-relic h1,.photo-relic h2{font-family:${design.type.display.family}}
+  .photo-relic .evidence{border-width:3px;box-shadow:11px 11px 0 rgba(32,26,21,.09)}
+  .photo-relic .proof-foot{border-top-color:${design.palette.accent}}
+
+  .photo-abstract .proof-strip{border-left:6px solid ${design.palette.accent};background:transparent}
+  .photo-abstract .copy{padding-left:20px;border-left:7px solid ${design.palette.line}}
+  .photo-abstract .evidence{border-width:2px}
 </style>${body}`;
 }
 
@@ -418,6 +375,7 @@ module.exports = {
   buildCardHtml,
   coverFeedReadiness,
   drawnImageBox,
+  evidenceMinRatio,
   imageSrc,
   layoutCollisionFailures,
   clippedTextFailures,

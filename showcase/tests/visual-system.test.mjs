@@ -97,10 +97,10 @@ test('card two preserves the complete view and fills the portrait canvas', () =>
     'data:image/png;base64,real',
     { design: loadDesignSystem() },
   );
-  assert.match(html, /\.hero-overview\{[^}]*object-fit:contain/);
-  assert.match(html, /\.hero-detail\{[^}]*object-fit:cover/);
-  assert.match(html, /\.hero-detail\{[^}]*object-position:50% 100%/);
-  assert.equal([...html.matchAll(/<img\b/g)].length, 2);
+  assert.match(html, /class="evidence"/);
+  assert.match(html, /width:100%;height:100%;object-fit:contain/);
+  assert.doesNotMatch(html, /object-fit:cover/);
+  assert.equal([...html.matchAll(/<img\b/g)].length, 1);
 });
 
 test('feature cards use the plan reader value instead of technical descriptions', () => {

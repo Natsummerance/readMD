@@ -2245,17 +2245,10 @@ const { buildCardHtml, drawnImageBox } = require(process.argv[2]);
             )
         boxes = json.loads(completed.stdout)
 
-        self.assertEqual(len(boxes), 2)
-        overview = next(box for box in boxes if abs((box["width"] / box["height"]) - 1.6) < 0.01)
-        detail = next(box for box in boxes if abs((box["width"] / box["height"]) - 1.6) >= 0.01)
-        self.assertGreaterEqual(overview["width"] / 1080 * overview["height"] / 1440, 0.38)
-        self.assertGreaterEqual(detail["width"] * detail["height"] / (1080 * 1440), 0.35)
-        self.assertGreaterEqual(
-            max(overview["x"] + overview["width"], detail["x"] + detail["width"])
-            - min(overview["x"], detail["x"]),
-            1000,
-        )
-        self.assertLessEqual(abs(detail["y"] - (overview["y"] + overview["height"])), 20)
+        self.assertEqual(len(boxes), 1)
+        complete = boxes[0]
+        self.assertAlmostEqual(complete["width"] / complete["height"], 1.6, places=2)
+        self.assertGreaterEqual(complete["width"] / 1080 * complete["height"] / 1440, 0.25)
 
 
 class PatternAuditTest(unittest.TestCase):

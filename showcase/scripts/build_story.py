@@ -44,6 +44,25 @@ def _card_name(index: int, shot: dict[str, Any] | None, role: str) -> str:
     return f"xhs-{index:02d}-{stem}.jpg"
 
 
+def evidence_min_ratio(shot: dict[str, Any]) -> float:
+    """Set a visible-pixel floor that does not force authentic UI cropping."""
+    if shot.get("role") == "summary":
+        return 0.28
+    viewport = shot.get("viewport") or {}
+    width = float(viewport.get("width", 0))
+    height = float(viewport.get("height", 0))
+    if width <= 0 or height <= 0:
+        return 0.55
+    aspect = width / height
+    if aspect < 0.9:
+        return 0.68
+    if aspect < 1.25:
+        return 0.38
+    if aspect < 1.7:
+        return 0.33
+    return 0.26
+
+
 USER_VALUES = {
     "overview.reader": "打开文档就能看到完整排版、目录和公式渲染",
     "overview.editor": "讲稿和源文件在同一处修改，预览不会跑偏",
@@ -180,7 +199,7 @@ def build_story(
                 "shot_id": shot_id,
                 "title": shot["name"],
                 "caption": USER_VALUES.get(shot_id, shot["description"]),
-                "ui_min_ratio": 0.70 if shot["role"] == "pure_ui_hero" else 0.55,
+                "ui_min_ratio": evidence_min_ratio(shot),
             }
         )
     card_plan.append(

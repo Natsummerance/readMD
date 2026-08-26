@@ -51,18 +51,20 @@ test('story can select a style while omitted stories remain evidence-paper', () 
 test('default markup stays stable and expansions declare distinct templates', () => {
   const source = 'data:image/png;base64,real';
   const fallback = buildCardHtml(featureCard, source, { design: loadDesignSystem() });
-  assert.match(fallback, /<main class="feature evidence-paper">/);
+  assert.match(fallback, /<main class="poster annotated_ui evidence-paper">/);
   assert.match(fallback, /data-poster-template="evidence-paper"/);
 
   const expectations = {
-    'minimal-zine': /class="feature minimal-zine"/,
-    'photo-relic': /grid-template-rows:minmax\(0,1fr\) auto auto/,
-    'morandi-cinematic': /border:10px solid #242a27/,
-    'photo-abstract': /class="feature photo-abstract"/,
+    'minimal-zine': /class="poster annotated_ui minimal-zine"/,
+    'photo-relic': /\.photo-relic \.evidence\{border-width:3px/,
+    'morandi-cinematic': /\.morandi-cinematic \.evidence\{border-width:8px/,
+    'photo-abstract': /class="poster annotated_ui photo-abstract"/,
   };
   for (const [style, pattern] of Object.entries(expectations)) {
     const html = buildCardHtml(featureCard, source, { design: loadDesignSystemForStyle(style) });
     assert.match(html, pattern, style);
     assert.match(html, /真实运行画面/, style);
+    assert.match(html, /object-fit:contain/, style);
+    assert.doesNotMatch(html, /object-fit:cover/, style);
   }
 });
