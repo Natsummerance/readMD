@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "artifact": "Localized v2.3.7-beta.4 release-notes answer pages",
+  "reviewed_at": "2026-08-26T06:15:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "content_system_application": {
+    "question_unit": "What changed in ReadMD v2.3.7-beta.4 and how should it be evaluated safely?",
+    "concept_units": [
+      "display-only repair",
+      "update integrity",
+      "beta boundary"
+    ],
+    "solution_unit": "Review presentation isolation, SHA-256 update flow, startup loading, tab state, touch targets, checksums, and platform packages before installation.",
+    "duplicate_decision": "Distinct from the GitHub Discussion: this is the localized canonical website answer for version-specific search intent."
+  },
+  "transmission_review": {
+    "method": "dbs-spread five-theory decoder",
+    "silence_spiral": "Users fear updates will silently rewrite files, weaken local boundaries, or break presenting.",
+    "uses_and_gratifications": [
+      "information value",
+      "control",
+      "confidence before testing a beta"
+    ],
+    "framing": "Stand beside users whose Markdown remains canonical and make safety checks part of installation.",
+    "two_step_flow": "First communicators are technical writers, academic users, maintainers, and support engineers testing platform packages.",
+    "cognitive_consistency": "Confirm local control while challenging users to verify checksums and review converted structure.",
+    "avoid": "No formal-release claim, no perfect-conversion promise, and no unsupported performance number."
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "seo-intent-review",
+      "status": "approved",
+      "score": 9.89,
+      "evidence": [
+        "Four localized pages target version-specific ReadMD beta.4 release-note intent without duplicating the generic homepage.",
+        "Each page has a unique canonical URL, hreflang set, title, description, FAQPage, HowTo, BreadcrumbList, speakable selector, and PNG social metadata.",
+        "Home, workflow, download, sitemap, llms.txt, and llms-full surfaces link all four canonical paths."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "release-accuracy-review",
+      "status": "approved",
+      "score": 9.86,
+      "evidence": [
+        "The pages distinguish beta from production readiness and instruct backup plus checksum verification.",
+        "Presentation isolation, update temporary-file and SHA-256 flow, atomic publication, pre-execution recheck, argument-vector installer, tab state, startup loading, and touch-target claims match the published Release API body.",
+        "Platform coverage includes Windows, Intel and Apple Silicon macOS, Linux x86_64, UOS, Kylin AMD64/ARM64, and the HarmonyOS source-project boundary."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-engineering-review",
+      "status": "approved",
+      "score": 9.81,
+      "evidence": [
+        "Website validator passes 44 canonical URLs including four localized release-notes answers and three recorded approval rounds.",
+        "Browser smoke and clean-network production checks are expanded to all forty-four localized route variants.",
+        "Release API confirms v2.3.7-beta.4 is published with eleven assets and the linked checksum manifest returns HTTP 200."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_staged_publication",
+    "score": 9.87,
+    "participants": [
+      "SEO intent",
+      "release accuracy",
+      "release engineering"
+    ],
+    "conditions": [
+      "CI must pass before merge.",
+      "Production check must verify all forty-four localized route variants.",
+      "IndexNow must be resubmitted after a successful production deployment."
+    ]
+  }
+}
