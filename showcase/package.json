@@ -5,6 +5,7 @@
   "scripts": {
     "test:config": "node --test tests/capture-config.test.mjs",
     "test:compose-lib": "node --test tests/compose-lib.test.mjs",
+    "test:poster-styles": "node --test tests/poster-styles.test.mjs",
     "capture": "node ../ui-tests/node_modules/@playwright/test/cli.js test"
   }
 }

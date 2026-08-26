@@ -3454,6 +3454,30 @@ class BuildPipelineTest(unittest.TestCase):
             reveal_claim = next(item for item in persisted["claims"] if item["id"] == "presentation-reveal")
             self.assertEqual(reveal_claim["sources"][-1], "evidence/release-notes.md")
 
+    def test_build_package_persists_and_validates_poster_style(self) -> None:
+        self.assertEqual(
+            build_package_module.load_poster_styles(),
+            [
+                "evidence-paper",
+                "minimal-zine",
+                "morandi-cinematic",
+                "photo-abstract",
+                "photo-relic",
+            ],
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaisesRegex(ValueError, "unknown poster style: fake-poster"):
+                build_package_module.build_package(
+                    release="v1.2.3",
+                    previous_release="v1.2.2",
+                    notes_text="- test\n",
+                    diff_text="",
+                    package_dir=Path(tmp) / "rejected",
+                    repo_root=ROOT,
+                    memory_path=None,
+                    poster_style="fake-poster",
+                )
+
     def test_dashboard_failure_turns_aggregate_qa_red(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             package = Path(tmp)

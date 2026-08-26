@@ -22,6 +22,14 @@ from validate_package import validate_package
 from write_copy import generate_copy
 
 
+def load_poster_styles() -> list[str]:
+    """Keep Python-side CLI validation aligned with the JavaScript token registry."""
+    design_dir = Path(__file__).resolve().parents[1] / "design"
+    styles = ["evidence-paper"]
+    styles.extend(path.stem for path in sorted((design_dir / "styles").glob("*.json")))
+    return list(dict.fromkeys(styles))
+
+
 def _write_release_evidence(package_dir: Path, notes_text: str, diff_text: str) -> dict[str, Any]:
     """Snapshot the exact release evidence used by this build."""
     evidence_dir = package_dir / "evidence"
@@ -53,7 +61,10 @@ def build_package(
     repo_root: Path,
     repository: str = "Natsummerance/readMD",
     memory_path: Path | None = None,
+    poster_style: str | None = None,
 ) -> tuple[dict, dict]:
+    if poster_style and poster_style not in load_poster_styles():
+        raise ValueError(f"unknown poster style: {poster_style}")
     package_dir.mkdir(parents=True, exist_ok=True)
     (package_dir / "images").mkdir(exist_ok=True)
     evidence_manifest = _write_release_evidence(package_dir, notes_text, diff_text)
@@ -66,6 +77,8 @@ def build_package(
         notes_source="evidence/release-notes.md",
     )
     story["evidence_manifest"] = evidence_manifest
+    if poster_style:
+        story["poster_style"] = poster_style
     (package_dir / "story.json").write_text(json.dumps(story, ensure_ascii=False, indent=2), encoding="utf-8")
     history = load_records(memory_path) if memory_path else []
     metadata = generate_copy(
@@ -182,6 +195,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repository", default="Natsummerance/readMD")
     parser.add_argument("--memory", type=Path, default=Path(__file__).parents[1] / "content" / "publication-ledger.jsonl")
+    parser.add_argument("--poster-style", help="Poster template: evidence-paper, minimal-zine, photo-relic, morandi-cinematic, or photo-abstract")
     parser.add_argument("--skip-compose", action="store_true", help="Prepare text/story only; used before capture")
     parser.add_argument("--finalize", action="store_true", help="Compose and aggregate QA for an already prepared package")
     args = parser.parse_args()
@@ -205,6 +219,7 @@ def main() -> int:
         repo_root=repo_root,
         repository=args.repository,
         memory_path=args.memory,
+        poster_style=args.poster_style,
     )
     errors: list[str] = []
     if not args.skip_compose:

@@ -20,6 +20,21 @@ node showcase/scripts/compose_cards.js showcase/output/package
 python showcase/scripts/build_package.py --output showcase/output/package --finalize
 ```
 
+海报视觉默认仍是 `evidence-paper`。要切换风格时，构建阶段写入 `story.poster_style`，合成阶段也可用参数覆盖：
+
+```powershell
+python showcase/scripts/build_package.py ... --poster-style photo-relic
+node showcase/scripts/compose_cards.js showcase/output/package --style photo-relic
+```
+
+当前风格库为 `evidence-paper`、`minimal-zine`、`morandi-cinematic`、`photo-abstract` 和 `photo-relic`。新风格只改变包装语言和版式，不替换真实截图；所有包仍必须通过同一套对比度、最小字号、碰撞、溢出和 UI 面积门禁。临时比较不同风格时，可把成品输出到独立目录，避免改写发布包的 `metadata.json` 和根级 `composition.json`：
+
+```powershell
+node showcase/scripts/compose_cards.js showcase/output/package `
+  --style minimal-zine `
+  --output-dir showcase/output/style-previews/minimal-zine
+```
+
 完整构建会先生成 12 种叙事框架 × 8 个标题公式共 96 个实验组合；每个组合都有稳定 `variant_id` 和 `copy_frame`，语义评分、置信门控后的钩子/标题/叙事帧表现、近期疲劳和跨发布原创性共同决定最终稿。任一维度不足 2 次发布或 1000 次曝光时只做探索，不给历史加分。每个变体都会计算整稿哈希、开头指纹、结尾指纹和三元组相似度：整文哈希和 ≥85% 相似度对照全历史，开头/结尾只在最近 8 次发布内冷却，冷却期外的框架可随新事实安全轮换。标题哈希与三元组也会对照发布账本，防止同一机制连续换封面却重复旧标题。选择证据写入 `variants.json`。随后生成 `wechat/readmd-wechat.html`。该 HTML 只用行内样式，不包含脚本、外链、class、id 或图片；`wechat/wechat-qa.json` 也必须为 `{"ok":true}` 才允许进入发布队列。
 
 标题反馈使用同一套置信门槛：同一公式不足 2 次发布或 1000 次曝光时，不会成为推荐公式，也不会给下一轮首选标题加分。

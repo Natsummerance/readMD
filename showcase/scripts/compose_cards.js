@@ -14,14 +14,27 @@ const {
   layoutCollisionFailures,
   offCanvasFailures,
   planCards,
+  resolveDesignSystem,
 } = require('../compose_lib.cjs');
 
 async function main() {
-  const packageDir = path.resolve(process.argv[2] || 'output/package');
+  const args = process.argv.slice(2);
+  const packageDir = path.resolve(args[0] || 'output/package');
+  let styleOverride;
+  let outputOverride;
+  for (let index = 1; index < args.length; index += 2) {
+    const option = args[index];
+    const value = args[index + 1];
+    if (option === '--style') styleOverride = value;
+    else if (option === '--output-dir') outputOverride = value;
+    else throw new Error(`Unknown compose option: ${option}`);
+  }
   const story = JSON.parse(fs.readFileSync(path.join(packageDir, 'story.json'), 'utf8'));
   const capture = JSON.parse(fs.readFileSync(path.join(packageDir, 'raw', 'capture.json'), 'utf8'));
+  const design = resolveDesignSystem(story, styleOverride);
   const cards = planCards(story);
-  const outputDir = path.join(packageDir, 'images');
+  const previewMode = Boolean(outputOverride);
+  const outputDir = path.resolve(outputOverride || path.join(packageDir, 'images'));
   fs.mkdirSync(outputDir, { recursive: true });
   for (const file of fs.readdirSync(outputDir)) if (file.endsWith('.jpg')) fs.unlinkSync(path.join(outputDir, file));
 
@@ -30,8 +43,11 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: 1080, height: 1440 }, deviceScaleFactor: 1 });
     const report = [];
     for (const card of cards) {
-      const html = buildCardHtml(card, imageSrc(packageDir, capture, card), { release: story.release });
-      const htmlPath = path.join(packageDir, `.compose-${card.index}.html`);
+      const html = buildCardHtml(card, imageSrc(packageDir, capture, card), {
+        release: story.release,
+        design,
+      });
+      const htmlPath = path.join(packageDir, `.compose-${process.pid}-${card.index}.html`);
       fs.writeFileSync(htmlPath, html, 'utf8');
       await page.goto(`file://${htmlPath.replace(/\\/g, '/')}`);
       await page.waitForLoadState('networkidle');
@@ -184,14 +200,22 @@ async function main() {
       fs.unlinkSync(htmlPath);
     }
     fs.writeFileSync(
-      path.join(packageDir, 'composition.json'),
-      JSON.stringify({ schema_version: 2, overflow_errors: [], design_audit: { contrast_errors: [], small_text: [], images_failed: [] }, cards: report }, null, 2),
+      previewMode ? path.join(outputDir, 'composition.json') : path.join(packageDir, 'composition.json'),
+      JSON.stringify({
+        schema_version: 3,
+        poster_style: design.name,
+        overflow_errors: [],
+        design_audit: { contrast_errors: [], small_text: [], images_failed: [] },
+        cards: report,
+      }, null, 2),
     );
-    const metadataPath = path.join(packageDir, 'metadata.json');
-    const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
-    metadata.images = cards.map((card) => path.join(outputDir, card.file));
-    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
-    console.log(`Composed ${cards.length} cards`);
+    if (!previewMode) {
+      const metadataPath = path.join(packageDir, 'metadata.json');
+      const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+      metadata.images = cards.map((card) => path.join(outputDir, card.file));
+      fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
+    }
+    console.log(`Composed ${cards.length} ${design.name} cards`);
   } finally {
     await browser.close();
   }

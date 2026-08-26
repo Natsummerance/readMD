@@ -5,6 +5,24 @@ const fs = require('fs');
 const path = require('path');
 
 const DEFAULT_DESIGN_PATH = path.join(__dirname, 'design', 'tokens.json');
+const STYLE_DIR = path.join(__dirname, 'design', 'styles');
+
+function templateName(design) {
+  return design.template || 'evidence-paper';
+}
+
+function listPosterStyles() {
+  const styles = ['evidence-paper'];
+  for (const file of fs.readdirSync(STYLE_DIR).sort()) {
+    if (file.endsWith('.json')) styles.push(file.replace(/\.json$/, ''));
+  }
+  return [...new Set(styles)];
+}
+
+function designPathForStyle(style) {
+  if (!style || style === 'evidence-paper') return DEFAULT_DESIGN_PATH;
+  return path.join(STYLE_DIR, `${style}.json`);
+}
 
 function slug(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'feature';
@@ -13,10 +31,29 @@ function slug(value) {
 function loadDesignSystem(designPath = DEFAULT_DESIGN_PATH) {
   const design = JSON.parse(fs.readFileSync(designPath, 'utf8'));
   if (design.schema_version !== 1) throw new Error('Unsupported design token schema');
-  if (!/^#[0-9a-f]{6}$/i.test(design.palette.accent)) throw new Error('Design accent must be a hex color');
+  const palette = design.palette || {};
+  const paletteKeys = ['background', 'surface', 'ink', 'muted', 'line', 'accent', 'screenshot_frame'];
+  if (paletteKeys.some((key) => !/^#[0-9a-f]{6}$/i.test(palette[key] || ''))) {
+    throw new Error(`Design palette must use six-digit hex colors: ${path.basename(String(designPath))}`);
+  }
   if (design.type.display.size < 96 || design.type.body.size < 24) throw new Error('Cover display type is too small for the Xiaohongshu feed');
+  if ((design.type.utility?.size ?? 0) < 22) throw new Error('Utility type is below the composition audit floor');
+  if (!Array.isArray(design.layout.canvas) || design.layout.canvas.join('x') !== '1080x1440') {
+    throw new Error('Poster canvas must be 1080x1440');
+  }
   if (!/proof/i.test(design.signature)) throw new Error('Evidence-paper signature missing');
   return design;
+}
+
+function loadDesignSystemForStyle(style = 'evidence-paper') {
+  if (!listPosterStyles().includes(style)) {
+    throw new Error(`Unknown poster style: ${style}. Available: ${listPosterStyles().join(', ')}`);
+  }
+  return loadDesignSystem(designPathForStyle(style));
+}
+
+function resolveDesignSystem(story = {}, overrideStyle) {
+  return loadDesignSystemForStyle(overrideStyle || story.poster_style || 'evidence-paper');
 }
 
 function coverHook(story) {
@@ -254,13 +291,14 @@ function drawnImageBox(image, canvas = { width: 1080, height: 1440 }) {
 
 function buildCardHtml(card, source, context = {}) {
   const design = context.design || loadDesignSystem();
+  const template = templateName(design);
   const release = escapeHtml(context.release || '');
   const title = escapeHtml(card.title);
   const caption = escapeHtml(card.caption);
   let body;
   if (card.role === 'cover') {
     body = `
-      <main class="cover">
+      <main class="cover ${template}">
         <header class="proof-strip"><span class="mark"></span><span>READMD ${release} · 真实运行画面</span></header>
         <section class="cover-copy"><h1>${title}</h1><p>${caption}</p></section>
         <img class="proof-image" src="${source}" alt="ReadMD 真实主界面"/>
@@ -268,7 +306,7 @@ function buildCardHtml(card, source, context = {}) {
       </main>`;
   } else if (card.role === 'summary') {
     body = `
-      <main class="summary">
+      <main class="summary ${template}">
         <header class="feature-head"><h2>${title}</h2><p>${caption}</p></header>
         <img src="${source}" alt="ReadMD 真实界面"/>
         <ul>${(card.proof_points || []).map((point) => `<li>${escapeHtml(point)}</li>`).join('')}</ul>
@@ -276,7 +314,7 @@ function buildCardHtml(card, source, context = {}) {
       </main>`;
   } else if (card.role === 'pure_ui_hero') {
     body = `
-      <main class="hero">
+      <main class="hero ${template}">
         <div class="hero-evidence">
           <img class="hero-overview" src="${source}" alt="${title}"/>
           <img class="hero-detail" src="${source}" alt="${title}"/>
@@ -285,7 +323,7 @@ function buildCardHtml(card, source, context = {}) {
       </main>`;
   } else {
     body = `
-      <main class="feature">
+      <main class="feature ${template}">
         <header class="feature-head"><h2>${title}</h2><p>${caption}</p></header>
         <img src="${source}" alt="${title}"/>
         <footer class="proof-foot"><span>真实运行画面</span><span>ReadMD ${release}</span></footer>
@@ -321,6 +359,58 @@ function buildCardHtml(card, source, context = {}) {
   .hero-proof{padding:0}
   .summary ul{list-style:none;display:flex;gap:18px}
   .summary li{flex:1;background:${design.palette.surface};border-top:3px solid ${design.palette.accent};border-radius:${design.layout.radius}px;padding:20px 22px;font-size:25px;line-height:1.3;color:${design.palette.ink}}
+</style>
+<style data-poster-template="${template}">
+  .minimal-zine .proof-strip{border-radius:0;border-left:5px solid ${design.palette.accent};border-color:${design.palette.line}}
+  .minimal-zine h1,.minimal-zine h2{letter-spacing:-.01em}
+  .minimal-zine .proof-image,.minimal-zine img{border-width:2px;box-shadow:8px 8px 0 rgba(31,28,24,.08)}
+  .minimal-zine footer,.minimal-zine .proof-foot{border-top-width:1px}
+
+  .photo-relic.cover,.photo-relic.feature,.photo-relic.summary{display:grid}
+  .photo-relic.cover{grid-template-rows:auto minmax(0,1fr) auto auto}
+  .photo-relic.cover .proof-strip{grid-row:1}
+  .photo-relic.cover .proof-image{grid-row:2;height:100%}
+  .photo-relic.cover .cover-copy{grid-row:3;padding:30px 34px 32px;border-left:8px solid ${design.palette.accent};background:${design.palette.surface};min-height:250px}
+  .photo-relic.cover footer{grid-row:4;margin-top:0;padding-top:22px}
+  .photo-relic.feature{grid-template-rows:minmax(0,1fr) auto auto}
+  .photo-relic.summary{grid-template-rows:auto minmax(0,1fr) auto auto}
+  .photo-relic.feature img{grid-row:1;height:100%;border:3px solid ${design.palette.screenshot_frame};box-shadow:12px 12px 0 rgba(32,26,21,.10)}
+  .photo-relic.summary img{grid-row:2;height:100%;border:3px solid ${design.palette.screenshot_frame};box-shadow:12px 12px 0 rgba(32,26,21,.10)}
+  .photo-relic.feature-head{grid-row:2;padding:28px 34px;background:${design.palette.surface};border-left:8px solid ${design.palette.accent}}
+  .photo-relic.summary header{grid-row:1}
+  .photo-relic.summary ul{grid-row:3;display:block}
+  .photo-relic.summary li{margin-bottom:12px;border-top:0;border-left:4px solid ${design.palette.accent};border-radius:0}
+  .photo-relic.feature .proof-foot{grid-row:3;margin-top:2px}
+  .photo-relic.summary .proof-foot{grid-row:4;margin-top:2px}
+
+  .morandi-cinematic{letter-spacing:.01em}
+  .morandi-cinematic .feature-head{min-height:180px}
+  .morandi-cinematic img{border:10px solid ${design.palette.screenshot_frame};box-shadow:0 20px 45px rgba(36,42,39,.16)}
+  .morandi-cinematic .hero-overview{object-fit:cover;max-height:54%}
+  .morandi-cinematic .proof-strip{border-radius:999px;border-width:0;background:${design.palette.screenshot_frame};color:${design.palette.background}}
+  .morandi-cinematic .proof-strip .mark{border-radius:50%}
+  .morandi-cinematic footer,.morandi-cinematic .proof-foot{border-top:3px double ${design.palette.line}}
+  .morandi-cinematic .summary li{border-top-width:6px;background:rgba(239,238,234,.82)}
+
+  .photo-abstract.cover,.photo-abstract.feature,.photo-abstract.summary{display:grid;padding:0;gap:0}
+  .photo-abstract.cover{grid-template-rows:auto minmax(0,1fr) auto auto}
+  .photo-abstract .proof-strip{margin:26px 30px 0;border-width:0;background:transparent}
+  .photo-abstract.cover .proof-image{grid-row:2;margin-top:22px;height:100%;border-width:0;border-radius:0}
+  .photo-abstract.cover .cover-copy{grid-row:3;position:relative;padding:68px ${design.layout.padding[1]}px 34px;background:${design.palette.background}}
+  .photo-abstract.cover .cover-copy::before{content:"";position:absolute;left:${design.layout.padding[1]}px;top:26px;width:96px;height:12px;background:${design.palette.accent}}
+  .photo-abstract.cover .cover-copy::after{content:"";position:absolute;right:${design.layout.padding[1]}px;top:26px;width:44px;height:44px;border:7px solid ${design.palette.line};transform:rotate(18deg)}
+  .photo-abstract.cover footer{grid-row:4;margin-top:0;padding:24px ${design.layout.padding[1]}px 40px;border-top:1px solid ${design.palette.line};background:${design.palette.surface}}
+  .photo-abstract.feature{grid-template-rows:minmax(0,1fr) auto auto}
+  .photo-abstract.feature img{grid-row:1;height:100%;border:0;border-radius:0}
+  .photo-abstract.feature-head{grid-row:2;position:relative;padding:72px 34px 30px;background:${design.palette.background}}
+  .photo-abstract.feature-head::before{content:"";position:absolute;left:34px;top:28px;width:88px;height:11px;background:${design.palette.accent}}
+  .photo-abstract.feature-head::after{content:"";position:absolute;right:34px;top:28px;width:38px;height:38px;border:6px solid ${design.palette.line};border-radius:50%}
+  .photo-abstract.feature .proof-foot{grid-row:3;padding:22px ${design.layout.padding[1]}px 38px;border-top:0;background:${design.palette.surface}}
+  .photo-abstract.summary{grid-template-rows:auto minmax(0,1fr) auto auto}
+  .photo-abstract.summary header{padding:0 ${design.layout.padding[1]}px}
+  .photo-abstract.summary img{grid-row:2;height:100%;border:0;border-radius:0}
+  .photo-abstract.summary ul{grid-row:3;margin:34px ${design.layout.padding[1]}px 0}
+  .photo-abstract.summary .proof-foot{grid-row:4;padding:22px ${design.layout.padding[1]}px 38px;border-top:0;background:${design.palette.surface}}
 </style>${body}`;
 }
 
@@ -331,8 +421,11 @@ module.exports = {
   imageSrc,
   layoutCollisionFailures,
   clippedTextFailures,
+  listPosterStyles,
   loadDesignSystem,
+  loadDesignSystemForStyle,
   offCanvasFailures,
   planCards,
+  resolveDesignSystem,
   slug,
 };
