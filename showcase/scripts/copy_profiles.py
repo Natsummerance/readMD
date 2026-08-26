@@ -428,6 +428,20 @@ TITLE_FORMULA_CONTRACTS: dict[str, dict[str, Any]] = {
 
 EXPERIMENT_TITLE_FORMULAS = tuple(TITLE_FORMULA_CONTRACTS)
 
+# Each approved formula carries two psychological signals by construction. The
+# concrete mechanism marker is scored separately so every release mechanism can
+# earn the same tension score, rather than presentation words receiving a bonus.
+TITLE_FORMULA_SIGNALS: dict[str, tuple[str, str]] = {
+    "#36": ("removal", "outcome"),
+    "#9": ("curiosity", "outcome"),
+    "#22": ("identity", "solution"),
+    "#61": ("action-interruption", "outcome"),
+    "#12": ("perspective-shift", "number"),
+    "#26": ("number", "comprehension"),
+    "#17": ("warning", "loss"),
+    "#56": ("condition", "solution"),
+}
+
 
 def title_formula_errors(title: str, formula_id: str) -> list[str]:
     """Return structural mismatches between a title and its declared formula."""
@@ -472,6 +486,39 @@ def title_semantic_errors(title: str, primary_shot: str) -> list[str]:
     if unsupported:
         errors.append("title uses unsupported quality claims: " + ", ".join(unsupported))
     return errors
+
+
+def title_tension_signals(title: str, formula_id: str, primary_shot: str) -> tuple[str, ...]:
+    """Return auditable trigger signals without favoring one product mechanism."""
+    value = str(title).strip()
+    lowered = value.casefold()
+    signals: list[str] = []
+    if not title_formula_errors(value, formula_id):
+        signals.extend(TITLE_FORMULA_SIGNALS.get(str(formula_id).strip(), ()))
+
+    markers = MECHANISM_TITLE_MARKERS.get(str(primary_shot).strip(), set())
+    if markers and any(marker.casefold() in lowered for marker in markers):
+        signals.append("mechanism-specific")
+
+    # These are diagnostics and fallbacks for unapproved candidates; approved
+    # formulas already declare their two structural signals above.
+    fallbacks = {
+        "removal": ("不用", "别再", "别把", "别让", "停止"),
+        "curiosity": ("居然", "为何", "怎么", "为什么", "意想不到"),
+        "number": (re.compile(r"\d"),),
+        "identity": ("给 ", "的人", "写给"),
+        "warning": ("警告", "别让"),
+        "loss": ("白费", "浪费", "失效", "过期", "返工"),
+        "condition": ("如果", "要是"),
+        "solution": ("如何", "怎么", "能"),
+    }
+    for signal, terms in fallbacks.items():
+        if any(
+            term.search(value) if isinstance(term, re.Pattern) else term in lowered
+            for term in terms
+        ):
+            signals.append(signal)
+    return tuple(dict.fromkeys(signals))
 
 
 def title_provenance_errors(candidate: dict[str, Any]) -> list[str]:

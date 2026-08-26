@@ -453,6 +453,28 @@ class WriteCopyTest(unittest.TestCase):
         self.assertTrue(any("invalid source_template" in error for error in errors), errors)
         self.assertTrue(any("invalid adaptation" in error for error in errors), errors)
 
+    def test_title_tension_scoring_is_mechanism_neutral(self) -> None:
+        scores: dict[str, list[int]] = {}
+        for primary_shot, profile in copy_profiles.PROFILES.items():
+            story = {"primary_shot": primary_shot}
+            scores[primary_shot] = []
+            for formula_id, raw_title in profile["titles"].items():
+                title = raw_title.replace("{number}", "7")
+                signals = copy_profiles.title_tension_signals(title, formula_id, primary_shot)
+                score, failures = audit_copy._score_title({
+                    "title": title,
+                    "title_formula_id": formula_id,
+                }, story)
+                self.assertEqual(failures, [], f"{primary_shot} {formula_id}: {title}")
+                self.assertGreaterEqual(len(signals), 2, f"{primary_shot} {formula_id}: {title}")
+                self.assertEqual(score, 15, f"{primary_shot} {formula_id}: {title}")
+                scores[primary_shot].append(score)
+
+        self.assertEqual(
+            {primary_shot: set(values) for primary_shot, values in scores.items()},
+            {primary_shot: {15} for primary_shot in copy_profiles.PROFILES},
+        )
+
     def test_numeric_title_anchors_match_planned_card_count(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             story = write_story(Path(tmp))

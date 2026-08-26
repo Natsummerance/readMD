@@ -17,6 +17,7 @@ from copy_profiles import (
     profile_for_story,
     title_formula_errors,
     title_semantic_errors,
+    title_tension_signals,
 )
 
 
@@ -45,11 +46,9 @@ def _score_title(metadata: dict[str, Any], story: dict[str, Any]) -> tuple[int, 
         score += 4
     if re.fullmatch(r"#\d+", formula_id) and formula_id in EXPERIMENT_TITLE_FORMULAS:
         score += 4
-    # Formula families carry a psychological trigger even when the surface wording
-    # relies on identity (#22), curiosity (#9), or number anchoring (#12).
-    formula_signal = formula_id in EXPERIMENT_TITLE_FORMULAS
-    tensions = sum(term in title.lower() for term in ("不用", "别再", "居然", "直接", "看完", "重新", "上台", "ppt", "md", "markdown"))
-    score += 7 if tensions >= 2 else (4 if tensions == 1 or formula_signal else 0)
+    # Structural formula signals plus mechanism specificity are mechanism-neutral.
+    tension_signals = title_tension_signals(title, formula_id, str(story.get("primary_shot", "")))
+    score += 7 if len(tension_signals) >= 2 else (4 if tension_signals else 0)
     failures.extend(title_semantic_errors(title, str(story.get("primary_shot", ""))))
     return round(score), failures
 
