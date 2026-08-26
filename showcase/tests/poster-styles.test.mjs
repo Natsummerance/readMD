@@ -18,6 +18,11 @@ const featureCard = {
   caption: '同一份 Markdown 可以直接放映',
 };
 
+const dualEvidenceCard = {
+  ...featureCard,
+  secondaryShotId: 'editor.code-chunk',
+};
+
 test('poster registry preserves evidence-paper and exposes four expansions', () => {
   assert.deepEqual(listPosterStyles(), [
     'evidence-paper',
@@ -67,4 +72,23 @@ test('default markup stays stable and expansions declare distinct templates', ()
     assert.match(html, /object-fit:contain/, style);
     assert.doesNotMatch(html, /object-fit:cover/, style);
   }
+});
+
+test('landscape feature cards pair two different authentic captures', () => {
+  const html = buildCardHtml(
+    dualEvidenceCard,
+    '',
+    {
+      design: loadDesignSystemForStyle('minimal-zine'),
+      sources: {
+        'presentation.reveal': 'data:image/png;base64,primary',
+        'editor.code-chunk': 'data:image/png;base64,secondary',
+      },
+    },
+  );
+  assert.equal([...html.matchAll(/<img\b/g)].length, 2);
+  assert.match(html, /主画面 · 真实运行/);
+  assert.match(html, /关联工作流 · 真实运行/);
+  assert.match(html, /src="data:image\/png;base64,primary"/);
+  assert.match(html, /src="data:image\/png;base64,secondary"/);
 });

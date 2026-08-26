@@ -9,7 +9,7 @@ const {
   buildCardHtml,
   coverFeedReadiness,
   drawnImageBox,
-  imageSrc,
+  sourceForShot,
   clippedTextFailures,
   layoutCollisionFailures,
   offCanvasFailures,
@@ -33,6 +33,14 @@ async function main() {
   const capture = JSON.parse(fs.readFileSync(path.join(packageDir, 'raw', 'capture.json'), 'utf8'));
   const design = resolveDesignSystem(story, styleOverride);
   const cards = planCards(story);
+  const sourceMap = new Map();
+  for (const card of cards) {
+    for (const shotId of [card.shotId, card.secondaryShotId]) {
+      if (shotId && !sourceMap.has(shotId)) {
+        sourceMap.set(shotId, sourceForShot(packageDir, capture, shotId));
+      }
+    }
+  }
   const previewMode = Boolean(outputOverride);
   const outputDir = path.resolve(outputOverride || path.join(packageDir, 'images'));
   fs.mkdirSync(outputDir, { recursive: true });
@@ -43,9 +51,10 @@ async function main() {
     const page = await browser.newPage({ viewport: { width: 1080, height: 1440 }, deviceScaleFactor: 1 });
     const report = [];
     for (const card of cards) {
-      const html = buildCardHtml(card, imageSrc(packageDir, capture, card), {
+      const html = buildCardHtml(card, '', {
         release: story.release,
         design,
+        sources: Object.fromEntries(sourceMap),
       });
       const htmlPath = path.join(packageDir, `.compose-${process.pid}-${card.index}.html`);
       fs.writeFileSync(htmlPath, html, 'utf8');
@@ -195,6 +204,7 @@ async function main() {
         ui_min_ratio: card.uiMinRatio,
         ui_area_ratio: measuredBox ? (measuredBox.width * measuredBox.height) / (1080 * 1440) : 0,
         screenshot_box: measuredBox,
+        secondary_shot_id: card.secondaryShotId || null,
         feed_readiness: feedReadiness,
       });
       fs.unlinkSync(htmlPath);

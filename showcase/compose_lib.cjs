@@ -170,7 +170,7 @@ function clippedTextFailures(metrics) {
   });
 }
 
-function plannedFeatureCard(story, shot) {
+function plannedFeatureCard(story, shot, position) {
   const plan = (story.card_plan || []).find((item) => item.shot_id === shot.id);
   if (!plan) throw new Error(`card_plan is missing a reader-value entry for ${shot.id}`);
   const file = String(plan.file || '');
@@ -186,6 +186,9 @@ function plannedFeatureCard(story, shot) {
     file,
     role: plan.role,
     shotId: shot.id,
+    secondaryShotId: plan.role === 'annotated_ui'
+      ? story.selected_shots.filter((id) => id !== 'overview.reader' && id !== shot.id).at(position % Math.max(1, story.selected_shots.filter((id) => id !== 'overview.reader' && id !== shot.id).length))
+      : undefined,
     title,
     caption,
     uiMinRatio,
@@ -219,7 +222,7 @@ function planCards(story) {
   }];
   for (const shot of story.shots) {
     const index = cards.length + 1;
-    const feature = plannedFeatureCard(story, shot);
+    const feature = plannedFeatureCard(story, shot, Math.max(0, story.selected_shots.indexOf(shot.id) - 1));
     cards.push({ index, ...feature });
   }
   const summaryTitle = String(summaryPlan.title || '').trim();
@@ -260,14 +263,18 @@ function evidenceMinRatio(viewport, role) {
   return 0.26;
 }
 
-function imageSrc(packageDir, capture, card) {
-  if (!card.shotId) return '';
-  const entry = capture.shots.find((shot) => shot.shot_id === card.shotId);
+function sourceForShot(packageDir, capture, shotId) {
+  if (!shotId) return '';
+  const entry = capture.shots.find((shot) => shot.shot_id === shotId);
   if (!entry) throw new Error(`Missing captured shot: ${card.shotId}`);
   const source = path.resolve(packageDir, entry.file);
   const actual = crypto.createHash('sha256').update(fs.readFileSync(source)).digest('hex');
   if (actual !== entry.sha256) throw new Error(`SHA-256 mismatch for ${card.shotId}`);
   return `data:image/png;base64,${fs.readFileSync(source).toString('base64')}`;
+}
+
+function imageSrc(packageDir, capture, card) {
+  return sourceForShot(packageDir, capture, card.shotId);
 }
 
 function drawnImageBox(image, canvas = { width: 1080, height: 1440 }) {
@@ -304,6 +311,9 @@ function drawnImageBox(image, canvas = { width: 1080, height: 1440 }) {
 function buildCardHtml(card, source, context = {}) {
   const design = context.design || loadDesignSystem();
   const template = templateName(design);
+  const sources = context.sources || { [card.shotId]: source };
+  const primarySource = sources[card.shotId] || source;
+  const secondarySource = card.secondaryShotId ? sources[card.secondaryShotId] : '';
   const release = escapeHtml(context.release || '');
   const title = escapeHtml(card.title);
   const caption = escapeHtml(card.caption);
@@ -317,11 +327,19 @@ function buildCardHtml(card, source, context = {}) {
   const strip = card.role === 'pure_ui_hero'
     ? ''
     : `<header class="proof-strip"><span class="mark"></span><span>READMD ${release} · 真实运行画面</span></header>`;
+  const evidence = secondarySource
+    ? `
+        <div class="evidence-label">主画面 · 真实运行</div>
+        <section class="evidence primary"><img src="${primarySource}" alt="${title}"/></section>
+        <div class="evidence-label">关联工作流 · 真实运行</div>
+        <section class="evidence secondary"><img src="${secondarySource}" alt="ReadMD 关联真实工作流"/></section>`
+    : `
+        <section class="evidence"><img src="${primarySource}" alt="ReadMD 真实运行界面"/></section>`;
   const body = `
       <main class="poster ${card.role} ${template}">
         ${strip}
         ${copy}
-        <section class="evidence"><img src="${source}" alt="ReadMD 真实运行界面"/></section>
+        ${evidence}
         ${proofPoints}
         <footer class="proof-foot"><span>本地优先 · 开源 · 不改原文件</span><strong>GitHub 搜索 Natsummerance/readMD</strong></footer>
       </main>`;
@@ -338,8 +356,12 @@ function buildCardHtml(card, source, context = {}) {
   .cover .copy p{font-size:31px}
   h2{font-size:min(58px,7vw);line-height:1.18;font-weight:900}
   .copy p{margin-top:16px;font-size:max(26px,2.4vw);line-height:1.42;color:${design.palette.muted};max-width:920px}
+  .evidence-group{flex:1 1 0;min-height:0;display:flex;flex-direction:column;gap:10px}
+  .evidence-label{flex:none;font-family:${design.type.utility.family};font-size:22px;font-weight:700;color:${design.palette.muted};letter-spacing:.04em}
   .evidence{flex:1 1 0;min-height:0;overflow:hidden;background-color:${design.palette.surface};background-image:repeating-linear-gradient(to bottom,transparent 0 95px,color-mix(in srgb,${design.palette.accent} 42%,${design.palette.surface}) 95px 96px),repeating-linear-gradient(to right,transparent 0 95px,color-mix(in srgb,${design.palette.accent} 42%,${design.palette.surface}) 95px 96px);border:1px solid ${design.palette.screenshot_frame};border-radius:${design.layout.radius}px}
   .evidence img{display:block;width:100%;height:100%;object-fit:contain}
+  .evidence.primary{flex:1.45}
+  .evidence.secondary{flex:1}
   .proof-foot{flex:none;display:flex;justify-content:space-between;align-items:center;gap:20px;padding-top:18px;border-top:2px solid ${design.palette.line}}
   .proof-foot span{font-size:24px;color:${design.palette.muted}}
   .proof-foot strong{font-size:31px;color:${design.palette.ink}}
@@ -386,4 +408,5 @@ module.exports = {
   planCards,
   resolveDesignSystem,
   slug,
+  sourceForShot,
 };
