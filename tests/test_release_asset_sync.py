@@ -7,10 +7,11 @@ import tempfile
 import unittest
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
 from tools import release_asset_sync as sync
 
 
-VERSION = "2.3.7-beta.3"
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
 TAG = f"v{VERSION}"
 COMMIT = "abc123def4567890abcdef1234567890abcdef12"
 PREFIX = sync.staging_prefix(COMMIT)
