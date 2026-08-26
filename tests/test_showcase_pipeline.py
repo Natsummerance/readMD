@@ -2346,6 +2346,93 @@ class PatternAuditTest(unittest.TestCase):
         self.assertEqual(len(report["patterns"]), 12)
         self.assertTrue(all(item["ok"] for item in report["patterns"]))
 
+    def test_pattern_gate_accepts_every_mechanism_without_domain_bias(self) -> None:
+        for primary_shot, profile in copy_profiles.PROFILES.items():
+            with self.subTest(primary_shot=primary_shot):
+                core_frame = copy_profiles.frames_for_story({"primary_shot": primary_shot})["outcome-led"][0]
+                story = {
+                    "schema_version": 1,
+                    "version_state": "prerelease",
+                    "angle": profile["narrative_angle"],
+                    "primary_shot": primary_shot,
+                    "decision_rule": profile["decision_rule"],
+                    "cover_hook": dict(profile["cover_variants"]["#36"]),
+                    "summary_hook": {
+                        **profile["summary"],
+                        "proof_points": list(profile["summary"]["proof_points"]),
+                    },
+                    "selected_shots": ["overview.reader", primary_shot],
+                    "claims": [
+                        {
+                            "id": "reader",
+                            "user_value": build_story.USER_VALUES["overview.reader"],
+                            "shot_ids": ["overview.reader"],
+                            "sources": ["README.md"],
+                        },
+                        {
+                            "id": "primary",
+                            "user_value": build_story.USER_VALUES[primary_shot],
+                            "shot_ids": [primary_shot],
+                            "sources": ["release/release-notes.md"],
+                        },
+                    ],
+                    "card_plan": [
+                        {"index": 1, "file": "cover.jpg", "role": "cover", "shot_id": None, "ui_min_ratio": 0},
+                        {"index": 2, "file": "hero.jpg", "role": "pure_ui_hero", "shot_id": "overview.reader", "caption": build_story.USER_VALUES["overview.reader"], "ui_min_ratio": 0.7},
+                        {"index": 3, "file": "feature.jpg", "role": "annotated_ui", "shot_id": primary_shot, "caption": build_story.USER_VALUES[primary_shot], "ui_min_ratio": 0.55},
+                        {"index": 4, "file": "summary.jpg", "role": "summary", "shot_id": None, **profile["summary"], "ui_min_ratio": 0.3},
+                    ],
+                }
+                metadata = {
+                    "title": profile["titles"]["#36"],
+                    "title_formula_id": "#36",
+                    "body": "\n\n".join([
+                        core_frame[1],
+                        f"这一版的核心就一件事：{profile['narrative_angle']}。",
+                        f"收藏这条{profile['decision_rule']}",
+                        f"如果你常处理{profile['scenarios']}，这条流程值得保存。",
+                        core_frame[2],
+                    ]),
+                }
+
+                def card(file: str, role: str) -> dict:
+                    return {
+                        "file": file,
+                        "role": role,
+                        "ui_area_ratio": 0.8,
+                        "ui_min_ratio": 0 if role == "cover" else 0.3,
+                        "screenshot_box": {"x": 24, "y": 24, "width": 900, "height": 900},
+                    }
+
+                composition = {
+                    "overflow_errors": [],
+                    "design_audit": {"contrast_errors": [], "small_text": [], "images_failed": []},
+                    "cards": [
+                        {
+                            **card("cover.jpg", "cover"),
+                            "feed_readiness": {
+                                "title_font_size": 102,
+                                "title_width_ratio": 0.36,
+                                "title_height_ratio": 0.08,
+                                "caption_font_size": 31,
+                            },
+                        },
+                        card("hero.jpg", "pure_ui_hero"),
+                        card("feature.jpg", "annotated_ui"),
+                        card("summary.jpg", "summary"),
+                    ],
+                }
+                report = pattern_audit.audit_patterns(
+                    story=story,
+                    metadata=metadata,
+                    composition=composition,
+                    library_path=ROOT / "showcase/content/pattern-library.json",
+                )
+                by_id = {item["id"]: item for item in report["patterns"]}
+                self.assertTrue(report["ok"], report["errors"])
+                for pattern_id in ("pain-to-removal", "reader-task-fit", "specific-question"):
+                    self.assertTrue(by_id[pattern_id]["ok"], by_id[pattern_id])
+
     def test_save_rule_must_survive_in_body(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             package = Path(tmp)

@@ -5,23 +5,29 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 from style_audit import AI_CLICHES, GENERIC_ADJECTIVES
-from copy_profiles import profile_for_story
+from copy_profiles import COMMENT_SCENARIOS, profile_for_story
 
 
-TASK_TERMS = (
-    "写完", "复制", "PPT", "格式", "折磨", "讲",
-    "长文档", "目录", "图表", "代码", "资料", "分享", "导出",
-)
-REMOVAL_TERMS = ("砍掉", "不用", "别再", "直接", "省掉")
-SCENARIO_TERMS = ("课程", "讲义", "组会", "技术分享", "论文", "汇报")
-CONCRETE_ANSWER_TERMS = (
-    "Markdown", "MD", "PPT", "代码", "表格", "公式", "讲义", "组会", "论文",
-    "图表", "资料", "文档", "报告",
-)
+GENERIC_REMOVAL_TERMS = ("砍掉", "不用", "别再", "直接", "省掉")
+
+
+def _phrases(*sources: Any) -> tuple[str, ...]:
+    """Split profile vocabulary without assuming one product domain."""
+    phrases: list[str] = []
+    for source in sources:
+        if isinstance(source, (list, tuple)):
+            phrases.extend(_phrases(*source))
+            continue
+        for part in re.split(r"[、，,；;]|或|还是|/", str(source or "")):
+            phrase = part.strip()
+            if phrase:
+                phrases.append(phrase)
+    return tuple(dict.fromkeys(phrases))
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -74,6 +80,25 @@ def audit_patterns(
     plan = story.get("card_plan", [])
     lower_body = body.lower()
     mechanism_profile = profile_for_story(story)
+    hook_contract = mechanism_profile["hook_contract"]
+    task_terms = _phrases(
+        hook_contract.get("task", []),
+        mechanism_profile.get("task_hook"),
+        mechanism_profile.get("artifact"),
+    )
+    removal_terms = (*GENERIC_REMOVAL_TERMS, *hook_contract.get("removal", []))
+    scenario_terms = _phrases(
+        *COMMENT_SCENARIOS.values(),
+        mechanism_profile.get("scenarios"),
+    )
+    answer_terms = _phrases(
+        hook_contract.get("mechanism", []),
+        hook_contract.get("task", []),
+        mechanism_profile.get("artifact"),
+        mechanism_profile.get("options"),
+        mechanism_profile.get("scenarios"),
+        *COMMENT_SCENARIOS.values(),
+    )
     cover_formula_id = str(story.get("cover_hook", {}).get("formula_id", ""))
     expected_cover = mechanism_profile.get("cover_variants", {}).get(cover_formula_id, {})
     expected_summary = mechanism_profile.get("summary", {})
@@ -112,7 +137,7 @@ def audit_patterns(
         and 2 <= len(str(cover_hook.get("title", ""))) <= 8
         and 8 <= len(str(cover_hook.get("caption", ""))) <= 32
     )
-    pain_ok = any(term in first for term in TASK_TERMS) and any(term in first for term in REMOVAL_TERMS)
+    pain_ok = any(term in first for term in task_terms) and any(term in first for term in removal_terms)
     product_plan = plan[1] if len(plan) > 1 else {}
     product_card = card_for(1)
     product_ok = (
@@ -131,7 +156,7 @@ def audit_patterns(
     generic_hits = [term for term in GENERIC_ADJECTIVES if term in body]
     cliche_hits = [term for term in AI_CLICHES if term.lower() in lower_body]
     outcome_ok = len(generic_hits) < 3 and not cliche_hits
-    scenario_hits = [term for term in SCENARIO_TERMS if term in body]
+    scenario_hits = [term for term in scenario_terms if term in body]
     audience_ok = len(scenario_hits) >= 3
     feature_cards = [
         (plan_item, card_for(index))
@@ -148,7 +173,7 @@ def audit_patterns(
         for plan_item, _ in feature_cards
     )
     question_ok = ("？" in last or "?" in last) and any(
-        term.lower() in last.lower() for term in CONCRETE_ANSWER_TERMS
+        term.lower() in last.lower() for term in answer_terms
     )
     design = composition.get("design_audit", {})
     clean_design = not composition.get("overflow_errors") and all(
