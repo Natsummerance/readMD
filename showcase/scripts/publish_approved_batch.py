@@ -8,6 +8,7 @@ import hashlib
 import json
 import shutil
 from pathlib import Path
+from datetime import datetime, timezone
 
 import validate_repair_batch
 from content_memory import load_records
@@ -18,10 +19,47 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def load_or_create_approval(args, root: Path, batch_path: Path) -> tuple[dict, Path]:
+    if args.approval:
+        approval_path = args.approval.resolve()
+        return json.loads(approval_path.read_text(encoding="utf-8")), approval_path
+
+    request_path = args.approval_request.resolve()
+    request = json.loads(request_path.read_text(encoding="utf-8"))
+    checks = {
+        "batch_sha256": sha256(batch_path),
+        "review_pdf_sha256": sha256(root / request["review_pdf"]),
+    }
+    for key, actual in checks.items():
+        if request.get(key) != actual:
+            raise ValueError(f"approval request {key} is stale: request={request.get(key)}, actual={actual}")
+    approval = {
+        "schema_version": 1,
+        "approved": True,
+        "approved_at": datetime.now(timezone.utc).isoformat(),
+        "reviewer": args.reviewer,
+        "batch": request["batch"],
+        **checks,
+        "review_pdf": request["review_pdf"],
+        "package_hashes": {
+            item["release"]: item["package_sha256"]
+            for item in request.get("packages", [])
+        },
+    }
+    approval_path = request_path.with_name(
+        request_path.name.replace(".approval-request.json", ".approved.json")
+    )
+    approval_path.write_text(json.dumps(approval, ensure_ascii=False, indent=2), encoding="utf-8")
+    return approval, approval_path
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--batch", type=Path, required=True)
-    parser.add_argument("--approval", type=Path, required=True)
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--approval", type=Path)
+    group.add_argument("--approval-request", type=Path)
+    parser.add_argument("--reviewer", default="Natsumer")
     parser.add_argument("--root", type=Path)
     parser.add_argument("--work-dir", type=Path, required=True)
     parser.add_argument("--state", type=Path, required=True)
@@ -33,7 +71,7 @@ def main() -> int:
 
     root = (args.root or args.batch.parent).resolve()
     batch_path = args.batch.resolve()
-    approval = json.loads(args.approval.resolve().read_text(encoding="utf-8"))
+    approval, _ = load_or_create_approval(args, root, batch_path)
     if approval.get("schema_version") != 1 or approval.get("approved") is not True:
         raise ValueError("poster approval is missing approved=true")
     pdf_name = approval.get("review_pdf")

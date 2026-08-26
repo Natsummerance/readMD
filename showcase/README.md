@@ -48,16 +48,12 @@ python showcase/scripts/build_poster_review.py `
   --output showcase/output/release-run/downloads/poster-review-beta3-beta4.pdf
 ```
 
-你确认 PDF 后，生成不可转移的批准文件，再执行一键发布：
+你确认 PDF 后，执行一条一键发布命令；脚本会生成批准文件并立即发布：
 
 ```powershell
-python showcase/scripts/approve_poster_review.py `
-  --request showcase/output/release-run/downloads/poster-review-beta3-beta4.approval-request.json `
-  --root showcase/output/release-run/downloads
-
 python showcase/scripts/publish_approved_batch.py `
   --batch showcase/output/release-run/downloads/batch-pending.json `
-  --approval showcase/output/release-run/downloads/poster-review-beta3-beta4.approved.json `
+  --approval-request showcase/output/release-run/downloads/poster-review-beta3-beta4.approval-request.json `
   --root showcase/output/release-run/downloads `
   --work-dir showcase/output/release-run/work `
   --state showcase/output/release-run/publish-approved-state.json `
