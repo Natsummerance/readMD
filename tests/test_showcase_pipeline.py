@@ -5344,6 +5344,10 @@ class WatcherTest(unittest.TestCase):
             reused_command = watch_and_publish.publish_command(
                 Path("publisher.py"), package, draft=True, reuse_edge=True,
             )
+            proxied_command = watch_and_publish.publish_command(
+                Path("publisher.py"), package, draft=True, reuse_edge=True,
+                publisher_proxy="http://127.0.0.1:9222",
+            )
             loaded = json.loads((package / "metadata.json").read_text(encoding="utf-8"))
             expected_image = str(image.resolve())
         self.assertEqual(loaded["images"], [str(image.resolve())])
@@ -5353,6 +5357,10 @@ class WatcherTest(unittest.TestCase):
         self.assertIn("--bootstrap-edge", reused_command)
         self.assertNotIn("--restart-edge", reused_command)
         self.assertEqual(command.count("--image"), 0)
+        self.assertEqual(
+            proxied_command[proxied_command.index("--proxy") + 1],
+            "http://127.0.0.1:9222",
+        )
 
     def test_rejects_topic_identity_mismatch_despite_green_reports(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

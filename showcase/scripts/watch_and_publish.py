@@ -149,7 +149,14 @@ def localize_image_paths(package_dir: Path) -> None:
     metadata_path.write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def publish_command(publisher: Path, package_dir: Path, draft: bool, *, reuse_edge: bool = False) -> list[str]:
+def publish_command(
+    publisher: Path,
+    package_dir: Path,
+    draft: bool,
+    *,
+    reuse_edge: bool = False,
+    publisher_proxy: str | None = None,
+) -> list[str]:
     metadata = json.loads((package_dir / "metadata.json").read_text(encoding="utf-8"))
     images = [Path(item) for item in metadata["images"]]
     command = [
@@ -163,6 +170,8 @@ def publish_command(publisher: Path, package_dir: Path, draft: bool, *, reuse_ed
     ]
     if not reuse_edge:
         command.insert(4, "--restart-edge")
+    if publisher_proxy:
+        command.extend(("--proxy", publisher_proxy))
     for image in images[1:]:
         command.extend(("--image", str(image)))
     for topic in metadata["topics"]:
@@ -172,9 +181,16 @@ def publish_command(publisher: Path, package_dir: Path, draft: bool, *, reuse_ed
     return command
 
 
-def query_status(publisher: Path, title: str) -> dict[str, Any]:
+def query_status(publisher: Path, title: str, *, publisher_proxy: str | None = None) -> dict[str, Any]:
     completed = subprocess.run(
-        [sys.executable, str(publisher), "status", "--note-title", title],
+        [
+            sys.executable,
+            str(publisher),
+            "status",
+            "--note-title",
+            title,
+            *(("--proxy", publisher_proxy) if publisher_proxy else ()),
+        ],
         text=True,
         capture_output=True,
         encoding="utf-8",
@@ -475,6 +491,7 @@ def process_package(
     ledger_path: Path | None = None,
     *,
     reuse_edge: bool = False,
+    publisher_proxy: str | None = None,
 ) -> bool:
     try:
         verify_package_manifest(zip_path)
@@ -611,7 +628,7 @@ def process_package(
         record["title"] = title
         if not draft:
             try:
-                platform_status = query_status(publisher, title)
+                platform_status = query_status(publisher, title, publisher_proxy=publisher_proxy)
             except Exception as exc:
                 raise ValueError(f"preflight platform status check failed: {exc}")
             record["preflight_status_result"] = platform_status
@@ -653,7 +670,13 @@ def process_package(
                     "title": title,
                 }, ensure_ascii=False))
                 return False
-        command = publish_command(publisher, package_dir, draft=draft, reuse_edge=reuse_edge)
+        command = publish_command(
+            publisher,
+            package_dir,
+            draft=draft,
+            reuse_edge=reuse_edge,
+            publisher_proxy=publisher_proxy,
+        )
         completed = subprocess.run(
             command,
             text=True,
@@ -682,7 +705,7 @@ def process_package(
             record["published_url"] = result.get("url")
             if not draft:
                 try:
-                    status = query_status(publisher, title)
+                    status = query_status(publisher, title, publisher_proxy=publisher_proxy)
                     record["audit_status"] = status.get("status")
                     record["status_result"] = status
                 except Exception as status_error:
@@ -775,6 +798,7 @@ def main() -> int:
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--draft", action="store_true", help="fill the Xiaohongshu form without clicking publish")
     parser.add_argument("--reuse-edge", action="store_true", help="require an already-ready Edge CDP session instead of restarting Edge")
+    parser.add_argument("--publisher-proxy", help="CDP endpoint passed to xhs-publish; defaults to its built-in 3456 proxy")
     args = parser.parse_args()
     args.watch_dir.mkdir(parents=True, exist_ok=True)
     args.work_dir.mkdir(parents=True, exist_ok=True)
@@ -792,6 +816,7 @@ def main() -> int:
                     args.draft,
                     ledger_path=args.ledger,
                     reuse_edge=args.reuse_edge,
+                    publisher_proxy=args.publisher_proxy,
                 )
                 archive_terminal_package(zip_path, args.state)
             except Exception as exc:
