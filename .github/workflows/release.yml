@@ -158,10 +158,11 @@ jobs:
           $installer = Start-Process -FilePath "dist/ReadMDSetup-v$env:READMD_VERSION.exe" -ArgumentList '--version' -RedirectStandardOutput $versionOutput -WindowStyle Hidden -Wait -PassThru
           $installerVersion = if (Test-Path $versionOutput) { (Get-Content $versionOutput -Raw).Trim() } else { '' }
           if ($installer.ExitCode -ne 0 -or $installerVersion -ne $env:READMD_VERSION) { throw 'installer version mismatch' }
-          $probeProcess = Start-Process -FilePath 'dist/ReadMD/ReadMD.exe' -ArgumentList @('--startup-probe', '--startup-probe-json', 'dist/startup-probe.json', '--startup-probe-timeout', '30') -WindowStyle Hidden -Wait -PassThru
-          if ($probeProcess.ExitCode -ne 0) { throw 'startup probe process failed' }
-          $probe = Get-Content dist/startup-probe.json -Raw | ConvertFrom-Json
-          if ($probe.version -ne $env:READMD_VERSION -or $probe.timed_out -or $null -eq $probe.milestones_ms.page_loaded) { throw 'startup probe failed' }
+          $startupGate = 'dist/startup-gate.json'
+          python tools/readmd_startup_probe.py --runs 5 --timeout 30 --executable "dist/ReadMD/ReadMD.exe" --output "$startupGate" --max-page-loaded-ms 2000 --max-window-overhead-ms 250
+          if ($LASTEXITCODE -ne 0) { throw 'startup performance gate failed' }
+          $probeGate = Get-Content "$startupGate" -Raw | ConvertFrom-Json
+          if (-not $probeGate.ok -or $probeGate.valid_runs -ne 5) { throw 'startup performance gate did not produce five valid runs' }
           if (!(Test-Path 'dist/ReadMD/_internal/assets/markdown-file.ico')) { throw 'Markdown association icon missing' }
           if (!(Test-Path 'dist/ReadMD/_internal/assets/vendor/defuddle.bundle.js')) { throw 'Defuddle bundle missing' }
           if (!(Test-Path 'dist/ReadMD/_internal/assets/vendor/defuddle.LICENSE.txt')) { throw 'Defuddle license missing' }
