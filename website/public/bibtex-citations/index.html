@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Manage BibTeX Citations | ReadMD Academic Writing</title>
   <meta name="description" content="Keep a BibTeX file beside your Markdown, cite with inline keys, inspect citation cards, and review an assembled reference section while writing academic or technical work locally.">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="Manage BibTeX Citations | ReadMD Academic Writing">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="ReadMD editor showing Markdown source beside its rendered preview.">
   <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="zh_TW">
+  <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Manage BibTeX Citations | ReadMD Academic Writing">
   <meta name="twitter:description" content="Write with BibTeX keys, check source details, and review the generated reference section.">
@@ -32,52 +36,157 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/bibtex-citations/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/bibtex-citations/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/bibtex-citations/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebPage",
-        "@id": "https://readmd.asia/bibtex-citations/#webpage",
-        "url": "https://readmd.asia/bibtex-citations/",
-        "name": "Manage BibTeX Citations | ReadMD Academic Writing",
-        "isPartOf": {"@id": "https://readmd.asia/#website"},
-        "about": {"@id": "https://readmd.asia/bibtex-citations/#software"},
-        "primaryImageOfPage": "https://readmd.asia/media/overview-editor.png",
-        "dateModified": "2026-08-26",
-        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#citation-workflow p"]}
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/bibtex-citations/#webpage",
+      "url": "https://readmd.asia/bibtex-citations/",
+      "name": "Manage BibTeX Citations | ReadMD Academic Writing",
+      "isPartOf": {
+        "@id": "https://readmd.asia/#website"
       },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://readmd.asia/bibtex-citations/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-26",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "featureList": "BibTeX bibliography scanning, inline citation badges, hover metadata, copyable BibTeX, assembled reference section",
-        "author": {"@type": "Organization", "name": "ReadMD"}
+      "about": {
+        "@id": "https://readmd.asia/bibtex-citations/#software"
       },
-      {
-        "@type": "HowTo",
-        "@id": "https://readmd.asia/bibtex-citations/#howto",
-        "name": "How to manage BibTeX citations in Markdown",
-        "step": [
-          {"@type": "HowToStep", "name": "Keep the bibliography nearby", "text": "Place your .bib file in the same directory as the Markdown document."},
-          {"@type": "HowToStep", "name": "Write citation keys", "text": "Use inline forms such as [@vaswani2017attention] or @author2024 while drafting."},
-          {"@type": "HowToStep", "name": "Check the citation card", "text": "Review the badge details, including title, author, year, venue, and DOI where available."},
-          {"@type": "HowToStep", "name": "Review the references", "text": "Check the assembled reference section at the end before submission."}
+      "primaryImageOfPage": "https://readmd.asia/media/overview-editor.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#citation-workflow p"
         ]
+      },
+      "inLanguage": "en",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/bibtex-citations/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
-    ]
-  }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/bibtex-citations/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "featureList": "BibTeX bibliography scanning, inline citation badges, hover metadata, copyable BibTeX, assembled reference section",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-editor.png",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/bibtex-citations/#howto",
+      "name": "How to manage BibTeX citations in Markdown",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "Keep the bibliography nearby",
+          "text": "Place your .bib file in the same directory as the Markdown document."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Write citation keys",
+          "text": "Use inline forms such as [@vaswani2017attention] or @author2024 while drafting."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Check the citation card",
+          "text": "Review the badge details, including title, author, year, venue, and DOI where available."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Review the references",
+          "text": "Check the assembled reference section at the end before submission."
+        }
+      ]
+    }
+  ]
+}
   </script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/bibtex-citations/#faq","mainEntity":[{"@type":"Question","name":"Which citation syntax does ReadMD recognize?","acceptedAnswer":{"@type":"Answer","text":"ReadMD recognizes inline forms such as [@vaswani2017attention] or @author2024 and renders them as citation badges when the matching entry is available."}},{"@type":"Question","name":"Where should the BibTeX file be placed?","acceptedAnswer":{"@type":"Answer","text":"Place the .bib file in the same directory as the Markdown document so ReadMD can scan the neighboring bibliography."}},{"@type":"Question","name":"What metadata can a citation card show?","acceptedAnswer":{"@type":"Answer","text":"Where available, a hover card can expose the paper title, authors, year, venue, and DOI link, and let you copy the BibTeX entry."}},{"@type":"Question","name":"Does this replace a reference manager?","acceptedAnswer":{"@type":"Answer","text":"No. It connects your existing BibTeX library to the writing workflow. Check entries, formatting requirements, and the final reference section before submission."}}]}</script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/bibtex-citations/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://readmd.asia/"},{"@type":"ListItem","position":2,"name":"BibTeX citations","item":"https://readmd.asia/bibtex-citations/"}]}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/bibtex-citations/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Which citation syntax does ReadMD recognize?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD recognizes inline forms such as [@vaswani2017attention] or @author2024 and renders them as citation badges when the matching entry is available."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Where should the BibTeX file be placed?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Place the .bib file in the same directory as the Markdown document so ReadMD can scan the neighboring bibliography."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What metadata can a citation card show?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Where available, a hover card can expose the paper title, authors, year, venue, and DOI link, and let you copy the BibTeX entry."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does this replace a reference manager?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. It connects your existing BibTeX library to the writing workflow. Check entries, formatting requirements, and the final reference section before submission."
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/bibtex-citations/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://readmd.asia/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "BibTeX citations",
+      "item": "https://readmd.asia/bibtex-citations/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -88,7 +197,7 @@
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
       <h1 class="display-title">Keep citations connected to your draft.</h1>
       <p class="section-copy mt-6 max-w-[68ch]">Put the BibTeX file beside your Markdown, write citation keys inline, inspect source details on demand, and review the assembled reference section without leaving the document.</p>
-      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="2880" height="1620" alt="ReadMD editor showing Markdown source beside rendered preview." loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="2880" height="1620" alt="ReadMD editor showing Markdown source beside rendered preview." loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="citation-workflow" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">

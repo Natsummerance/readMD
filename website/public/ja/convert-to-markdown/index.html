@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>文書を Markdown へ変換 | ReadMD ローカル変換</title>
   <meta name="description" content="ReadMD で DOCX、PPTX、XLSX、PDF、HTML、LaTeX をローカルで Markdown へ変換します。見出し、リスト、表、数式、画像参照を保ち、ファイルを Web フォームへアップロードしません。">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="文書を Markdown へ変換 | ReadMD ローカル変換">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="文書を Markdown へ変換する ReadMD の変換画面。">
   <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="zh_TW">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="文書を Markdown へ変換 | ReadMD ローカル変換">
   <meta name="twitter:description" content="既存資料を編集可能な Markdown に変換し、同じワークスペースで確認できます。">
@@ -32,50 +36,154 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/convert-to-markdown/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/convert-to-markdown/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/convert-to-markdown/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebPage",
-        "@id": "https://readmd.asia/ja/convert-to-markdown/#webpage",
-        "url": "https://readmd.asia/ja/convert-to-markdown/",
-        "name": "文書を Markdown へ変換 | ReadMD ローカル変換",
-        "about": {"@id": "https://readmd.asia/ja/convert-to-markdown/#software"},
-        "primaryImageOfPage": "https://readmd.asia/media/convert-home.png",
-        "dateModified": "2026-08-26",
-        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#conversion-workflow p"]}
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/ja/convert-to-markdown/#webpage",
+      "url": "https://readmd.asia/ja/convert-to-markdown/",
+      "name": "文書を Markdown へ変換 | ReadMD ローカル変換",
+      "about": {
+        "@id": "https://readmd.asia/ja/convert-to-markdown/#software"
       },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://readmd.asia/ja/convert-to-markdown/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-26",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "author": {"@type": "Organization", "name": "ReadMD"}
-      },
-      {
-        "@type": "HowTo",
-        "@id": "https://readmd.asia/ja/convert-to-markdown/#howto",
-        "name": "文書をローカルで Markdown に変換する方法",
-        "step": [
-          {"@type": "HowToStep", "name": "ソースを準備する", "text": "DOCX、PPTX、XLSX、PDF、HTML、LaTeX のファイルをローカルに置きます。"},
-          {"@type": "HowToStep", "name": "ファイルを読み込む", "text": "ReadMD の変換機能に一つの文書、複数ファイル、対応フォルダーを追加します。"},
-          {"@type": "HowToStep", "name": "Markdown へ変換する", "text": "変換を実行し、生成された Markdown を開いて確認します。"},
-          {"@type": "HowToStep", "name": "構造を確認する", "text": "公開前に見出し、リスト、表、数式、画像、複雑な専用レイアウトを確認します。"}
+      "primaryImageOfPage": "https://readmd.asia/media/convert-home.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#conversion-workflow p"
         ]
+      },
+      "inLanguage": "ja",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/ja/convert-to-markdown/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
-    ]
-  }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/ja/convert-to-markdown/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/ja/release-notes/",
+      "screenshot": "https://readmd.asia/media/convert-home.png",
+      "featureList": "長文ドキュメントの改ページ、ローカル変換、オフライン OCR、Markdown 表、PDF 取り込み、引用、発表モード。",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/ja/convert-to-markdown/#howto",
+      "name": "文書をローカルで Markdown に変換する方法",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "ソースを準備する",
+          "text": "DOCX、PPTX、XLSX、PDF、HTML、LaTeX のファイルをローカルに置きます。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "ファイルを読み込む",
+          "text": "ReadMD の変換機能に一つの文書、複数ファイル、対応フォルダーを追加します。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Markdown へ変換する",
+          "text": "変換を実行し、生成された Markdown を開いて確認します。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "構造を確認する",
+          "text": "公開前に見出し、リスト、表、数式、画像、複雑な専用レイアウトを確認します。"
+        }
+      ]
+    }
+  ]
+}
   </script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/ja/convert-to-markdown/#faq","mainEntity":[{"@type":"Question","name":"どの形式を Markdown に変換できますか？","acceptedAnswer":{"@type":"Answer","text":"ReadMD は DOCX、PPTX、XLSX、PDF、HTML、LaTeX を Markdown へ変換します。Web ページ取得は任意機能であり、利用者が要求したときだけ通信します。"}},{"@type":"Question","name":"DOCX や PDF はオフラインで変換できますか？","acceptedAnswer":{"@type":"Answer","text":"対応環境ではできます。ローカル ファイル変換にクラウド アカウントは不要で、Web フォームへのアップロードも必要ありません。"}},{"@type":"Question","name":"どの文書構造が保たれますか？","acceptedAnswer":{"@type":"Answer","text":"見出し、リスト、表、引用、数式、画像参照など有用な Markdown 構造を保ち、不要な専用ラッパーを取り除くことを目指します。"}},{"@type":"Question","name":"変換後のレイアウトは完全に同じになりますか？","acceptedAnswer":{"@type":"Answer","text":"なりません。専用レイアウトに一対一の Markdown 表現があるとは限りません。特に複雑な設計では、見出し、表、数式、画像を変換後に確認してください。"}}]}</script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/ja/convert-to-markdown/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://readmd.asia/ja/"},{"@type":"ListItem","position":2,"name":"Markdown 変換","item":"https://readmd.asia/ja/convert-to-markdown/"}]}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/ja/convert-to-markdown/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "どの形式を Markdown に変換できますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD は DOCX、PPTX、XLSX、PDF、HTML、LaTeX を Markdown へ変換します。Web ページ取得は任意機能であり、利用者が要求したときだけ通信します。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "DOCX や PDF はオフラインで変換できますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "対応環境ではできます。ローカル ファイル変換にクラウド アカウントは不要で、Web フォームへのアップロードも必要ありません。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "どの文書構造が保たれますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "見出し、リスト、表、引用、数式、画像参照など有用な Markdown 構造を保ち、不要な専用ラッパーを取り除くことを目指します。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "変換後のレイアウトは完全に同じになりますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "なりません。専用レイアウトに一対一の Markdown 表現があるとは限りません。特に複雑な設計では、見出し、表、数式、画像を変換後に確認してください。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/ja/convert-to-markdown/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "ホーム",
+      "item": "https://readmd.asia/ja/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Markdown 変換",
+      "item": "https://readmd.asia/ja/convert-to-markdown/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -86,7 +194,7 @@
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
       <h1 class="display-title">既存文書を Markdown へ移します。</h1>
       <p class="section-copy mt-6 max-w-[68ch]">報告書、スライド、表計算、論文、Web ページ、スキャン頁をブラウザー アップロードなしで編集可能な Markdown にできます。</p>
-      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="2880" height="1620" alt="Markdown へ変換するソース ファイルを準備する ReadMD の変換画面。" loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="2880" height="1620" alt="Markdown へ変換するソース ファイルを準備する ReadMD の変換画面。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="conversion-workflow" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">

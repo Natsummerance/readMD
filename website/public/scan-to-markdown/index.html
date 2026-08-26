@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Extract Text From Scans | ReadMD Offline OCR</title>
   <meta name="description" content="Turn scans and screenshots into editable Markdown with local OCR on Windows or macOS. ReadMD uses WinRT or Apple Vision offline recognition without uploading the source image.">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="Extract Text From Scans | ReadMD Offline OCR">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="ReadMD conversion interface used to prepare scanned sources for Markdown output.">
   <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="zh_TW">
+  <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Extract Text From Scans | ReadMD Offline OCR">
   <meta name="twitter:description" content="Use native Windows or macOS recognition locally, then review the Markdown before saving it.">
@@ -32,52 +36,157 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/scan-to-markdown/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/scan-to-markdown/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/scan-to-markdown/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebPage",
-        "@id": "https://readmd.asia/scan-to-markdown/#webpage",
-        "url": "https://readmd.asia/scan-to-markdown/",
-        "name": "Extract Text From Scans | ReadMD Offline OCR",
-        "isPartOf": {"@id": "https://readmd.asia/#website"},
-        "about": {"@id": "https://readmd.asia/scan-to-markdown/#software"},
-        "primaryImageOfPage": "https://readmd.asia/media/convert-home.png",
-        "dateModified": "2026-08-26",
-        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#scan-workflow p"]}
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/scan-to-markdown/#webpage",
+      "url": "https://readmd.asia/scan-to-markdown/",
+      "name": "Extract Text From Scans | ReadMD Offline OCR",
+      "isPartOf": {
+        "@id": "https://readmd.asia/#website"
       },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://readmd.asia/scan-to-markdown/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-26",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "featureList": "Native WinRT OCR on Windows, Apple Vision OCR on macOS, screenshot extraction, Markdown review and editing",
-        "author": {"@type": "Organization", "name": "ReadMD"}
+      "about": {
+        "@id": "https://readmd.asia/scan-to-markdown/#software"
       },
-      {
-        "@type": "HowTo",
-        "@id": "https://readmd.asia/scan-to-markdown/#howto",
-        "name": "How to extract text from a scan into Markdown",
-        "step": [
-          {"@type": "HowToStep", "name": "Prepare the scan", "text": "Keep the scanned page or screenshot on the local device."},
-          {"@type": "HowToStep", "name": "Add the source", "text": "Add the scan in ReadMD, or paste a screenshot through the supported clipboard workflow."},
-          {"@type": "HowToStep", "name": "Run local recognition", "text": "On Windows, ReadMD calls WinRT OCR; on macOS, it calls Apple Vision offline recognition."},
-          {"@type": "HowToStep", "name": "Review the Markdown", "text": "Correct headings, lists, tables, numbers, names, and reading order before saving the Markdown file."}
+      "primaryImageOfPage": "https://readmd.asia/media/convert-home.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#scan-workflow p"
         ]
+      },
+      "inLanguage": "en",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/scan-to-markdown/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
-    ]
-  }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/scan-to-markdown/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "featureList": "Native WinRT OCR on Windows, Apple Vision OCR on macOS, screenshot extraction, Markdown review and editing",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/release-notes/",
+      "screenshot": "https://readmd.asia/media/convert-home.png",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/scan-to-markdown/#howto",
+      "name": "How to extract text from a scan into Markdown",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "Prepare the scan",
+          "text": "Keep the scanned page or screenshot on the local device."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Add the source",
+          "text": "Add the scan in ReadMD, or paste a screenshot through the supported clipboard workflow."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Run local recognition",
+          "text": "On Windows, ReadMD calls WinRT OCR; on macOS, it calls Apple Vision offline recognition."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Review the Markdown",
+          "text": "Correct headings, lists, tables, numbers, names, and reading order before saving the Markdown file."
+        }
+      ]
+    }
+  ]
+}
   </script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/scan-to-markdown/#faq","mainEntity":[{"@type":"Question","name":"Which platforms support offline OCR?","acceptedAnswer":{"@type":"Answer","text":"ReadMD supports local offline OCR on Windows through WinRT and on macOS through Apple Vision. Availability follows the capabilities of the operating system and device."}},{"@type":"Question","name":"Can I extract text from a screenshot?","acceptedAnswer":{"@type":"Answer","text":"Yes on supported platforms. ReadMD includes a clipboard workflow for extracting text from a pasted screenshot without sending it to a web service."}},{"@type":"Question","name":"Will OCR perfectly preserve tables and layout?","acceptedAnswer":{"@type":"Answer","text":"No. Recognition quality depends on scan clarity, language, fonts, and layout complexity. Review headings, tables, numbers, names, and reading order after extraction."}},{"@type":"Question","name":"Is the scanned page uploaded for recognition?","acceptedAnswer":{"@type":"Answer","text":"No. The qualified Windows and macOS OCR paths are designed to run locally and do not require a cloud account."}}]}</script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/scan-to-markdown/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://readmd.asia/"},{"@type":"ListItem","position":2,"name":"Scan to Markdown","item":"https://readmd.asia/scan-to-markdown/"}]}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/scan-to-markdown/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Which platforms support offline OCR?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD supports local offline OCR on Windows through WinRT and on macOS through Apple Vision. Availability follows the capabilities of the operating system and device."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I extract text from a screenshot?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes on supported platforms. ReadMD includes a clipboard workflow for extracting text from a pasted screenshot without sending it to a web service."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Will OCR perfectly preserve tables and layout?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Recognition quality depends on scan clarity, language, fonts, and layout complexity. Review headings, tables, numbers, names, and reading order after extraction."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is the scanned page uploaded for recognition?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. The qualified Windows and macOS OCR paths are designed to run locally and do not require a cloud account."
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/scan-to-markdown/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://readmd.asia/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Scan to Markdown",
+      "item": "https://readmd.asia/scan-to-markdown/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -88,7 +197,7 @@
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
       <h1 class="display-title">Extract scan text into editable Markdown.</h1>
       <p class="section-copy mt-6 max-w-[68ch]">On Windows and macOS, ReadMD calls the operating system's native recognition engine locally. The scan stays on your device while you turn recognized text into a reviewable document.</p>
-      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="2880" height="1620" alt="ReadMD conversion workspace used to bring scanned sources into Markdown." loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="2880" height="1620" alt="ReadMD conversion workspace used to bring scanned sources into Markdown." loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="scan-workflow" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">

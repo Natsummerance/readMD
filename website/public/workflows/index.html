@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ReadMD Workflows | Long Markdown, Conversion, OCR, and Presenting</title>
   <meta name="description" content="Learn how ReadMD handles 8,000-line Markdown files, converts DOCX/PDF/HTML/LaTeX, extracts scanned text offline, presents one source file, and runs across Windows, macOS, Linux, UOS, and Kylin.">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="ReadMD Workflows | Long Markdown, Conversion, OCR, and Presenting">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="ReadMD reading interface with formatted Markdown and its outline.">
   <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="zh_TW">
+  <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="ReadMD Workflows | Long Markdown, Conversion, OCR, and Presenting">
   <meta name="twitter:description" content="Direct answers for long-document reading, conversion, offline OCR, and presentation.">
@@ -32,48 +36,155 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/workflows/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/workflows/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/workflows/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": "https://readmd.asia/workflows/#website",
-        "url": "https://readmd.asia/workflows/",
-        "name": "ReadMD",
-        "inLanguage": "en"
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://readmd.asia/workflows/#website",
+      "url": "https://readmd.asia/workflows/",
+      "name": "ReadMD",
+      "inLanguage": [
+        "en",
+        "zh-CN",
+        "zh-TW",
+        "ja"
+      ],
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       },
-      {
+      "copyrightYear": "2026",
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE"
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/workflows/#webpage",
+      "url": "https://readmd.asia/workflows/",
+      "name": "ReadMD Workflows | Long Markdown, Conversion, OCR, and Presenting",
+      "isPartOf": {
+        "@id": "https://readmd.asia/workflows/#website"
+      },
+      "about": {
+        "@id": "https://readmd.asia/workflows/#software"
+      },
+      "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#workflow-answers p"
+        ]
+      },
+      "inLanguage": "en",
+      "mainEntityOfPage": {
         "@type": "WebPage",
-        "@id": "https://readmd.asia/workflows/#webpage",
-        "url": "https://readmd.asia/workflows/",
-        "name": "ReadMD Workflows | Long Markdown, Conversion, OCR, and Presenting",
-        "isPartOf": {"@id": "https://readmd.asia/workflows/#website"},
-        "about": {"@id": "https://readmd.asia/workflows/#software"},
-        "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
-        "dateModified": "2026-08-26",
-        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#workflow-answers p"]}
+        "@id": "https://readmd.asia/workflows/"
       },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://readmd.asia/workflows/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-26",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "featureList": "Semantic pagination, DOCX/PDF/HTML/LaTeX conversion, offline OCR, Reveal-based presentation, VS Code extension, MCP server",
-        "author": {"@type": "Organization", "name": "ReadMD"}
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
-    ]
-  }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/workflows/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "featureList": "Semantic pagination, DOCX/PDF/HTML/LaTeX conversion, offline OCR, Reveal-based presentation, VS Code extension, MCP server",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-reader.png",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    }
+  ]
+}
   </script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/workflows/#faq","mainEntity":[{"@type":"Question","name":"How do I read a Markdown file longer than 8,000 lines?","acceptedAnswer":{"@type":"Answer","text":"Put the file in ReadMD. Near 8,000 lines or 500 KB, semantic pagination activates so the interface does not wait for every paragraph to render. The outline, full-text search, formulas, and page controls stay connected while you move between sections."}},{"@type":"Question","name":"Can I convert DOCX, PDF, HTML, or LaTeX into Markdown?","acceptedAnswer":{"@type":"Answer","text":"Yes. ReadMD imports Word, PowerPoint, Excel, PDF, HTML, and LaTeX into Markdown from the converter workflow. It preserves useful structure such as headings, lists, tables, quotations, math, and image references; review complex layouts after conversion because proprietary formatting is not always a one-to-one match."}},{"@type":"Question","name":"Can I extract text from scans without uploading them?","acceptedAnswer":{"@type":"Answer","text":"On supported platforms, ReadMD uses native operating-system OCR locally. Add scanned images or PDF pages in the conversion workflow, extract recognizable text offline, then correct headings and tables in Markdown. Documents do not need a cloud account for this local path."}},{"@type":"Question","name":"How do I present without rebuilding slides?","acceptedAnswer":{"@type":"Answer","text":"Keep writing in Markdown, then open Reveal-based presentation mode when the document is ready. Headings become transitions while code, math, diagrams, and tables remain in context, so a last-minute edit stays in the same file you will show."}},{"@type":"Question","name":"Where does ReadMD run?","acceptedAnswer":{"@type":"Answer","text":"ReadMD ships for Windows 7 through 11, Apple Silicon and Intel macOS, Linux AppImage and Debian packages, plus UOS and Kylin OS. A VS Code extension and FastMCP server connect the same workflows to editors and compatible AI tools."}}]}</script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/workflows/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://readmd.asia/"},{"@type":"ListItem","position":2,"name":"Workflows","item":"https://readmd.asia/workflows/"}]}</script></head>
+<script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/workflows/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How do I read a Markdown file longer than 8,000 lines?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Put the file in ReadMD. Near 8,000 lines or 500 KB, semantic pagination activates so the interface does not wait for every paragraph to render. The outline, full-text search, formulas, and page controls stay connected while you move between sections."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I convert DOCX, PDF, HTML, or LaTeX into Markdown?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. ReadMD imports Word, PowerPoint, Excel, PDF, HTML, and LaTeX into Markdown from the converter workflow. It preserves useful structure such as headings, lists, tables, quotations, math, and image references; review complex layouts after conversion because proprietary formatting is not always a one-to-one match."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I extract text from scans without uploading them?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "On supported platforms, ReadMD uses native operating-system OCR locally. Add scanned images or PDF pages in the conversion workflow, extract recognizable text offline, then correct headings and tables in Markdown. Documents do not need a cloud account for this local path."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How do I present without rebuilding slides?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Keep writing in Markdown, then open Reveal-based presentation mode when the document is ready. Headings become transitions while code, math, diagrams, and tables remain in context, so a last-minute edit stays in the same file you will show."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Where does ReadMD run?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD ships for Windows 7 through 11, Apple Silicon and Intel macOS, Linux AppImage and Debian packages, plus UOS and Kylin OS. A VS Code extension and FastMCP server connect the same workflows to editors and compatible AI tools."
+      }
+    }
+  ]
+}</script>
+<script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/workflows/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://readmd.asia/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Workflows",
+      "item": "https://readmd.asia/workflows/"
+    }
+  ]
+}</script></head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
     <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
@@ -86,7 +197,7 @@
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-16 md:pt-24">
       <h1 class="display-title">How ReadMD handles real Markdown work.</h1>
       <p class="section-copy mt-6">These workflow answers cover the questions people ask before choosing a local Markdown tool: very large files, inherited office documents, scanned pages, academic sources, and presenting without rebuilding slides.</p>
-      <figure class="product-frame mt-12"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="2880" height="1620" alt="ReadMD editor with Markdown source and live preview." loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mt-12"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="2880" height="1620" alt="ReadMD editor with Markdown source and live preview." loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="workflow-answers" class="bg-[var(--color-surface)] py-20">
       <div class="mx-auto max-w-5xl px-5">

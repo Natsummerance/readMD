@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>ReadMD product and workflow updates</title>
+  <subtitle>Citation-ready localized pages for reading, conversion, tables, PDF import, OCR, citations, presenting, and releases.</subtitle>
+  <id>https://readmd.asia/feed.xml</id>
+  <link rel="self" href="https://readmd.asia/feed.xml"/>
+  <link rel="alternate" href="https://readmd.asia/"/>
+  <updated>2026-08-26T00:00:00Z</updated>
+  <generator>ReadMD broad SEO layer</generator>
+  <entry>
+    <id>https://readmd.asia/zh-tw/workflows/</id>
+    <title>ReadMD 工作流程 | 長篇文件、格式轉換、離線 OCR 與放映</title>
+    <link rel="alternate" href="https://readmd.asia/zh-tw/workflows/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>了解 ReadMD 如何處理約 8,000 行或 500 KB 的長篇文件，轉換 Word、PDF、網頁和 LaTeX，離線擷取掃描文字，並在 Windows、macOS、Linux、UOS 和麒麟放映同一份 Markdown。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-tw/scan-to-markdown/</id>
+    <title>掃描件擷取文字 | ReadMD 離線 OCR</title>
+    <link rel="alternate" href="https://readmd.asia/zh-tw/scan-to-markdown/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>在 Windows 或 macOS 本機把掃描頁和截圖轉成可編輯 Markdown。ReadMD 呼叫 WinRT 或 Apple Vision 離線辨識，不需要上傳原始圖像。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-tw/release-notes/</id>
+    <title>ReadMD v2.3.7-beta.4 發布說明 | 安全放映與更新校驗</title>
+    <link rel="alternate" href="https://readmd.asia/zh-tw/release-notes/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>查看 ReadMD v2.3.7-beta.4 發布說明：Reveal 放映隔離、更新套件暫存檔與 SHA-256 校驗、啟動分階段載入、標籤狀態重新整理、更大觸控目標，以及 Windows、macOS、Linux、UOS 和麒麟安裝套件下載。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-tw/pdf-to-markdown/</id>
+    <title>PDF 轉 Markdown | ReadMD 本機 PDF 轉換器</title>
+    <link rel="alternate" href="https://readmd.asia/zh-tw/pdf-to-markdown/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>在支援平臺上用 ReadMD 將 PDF 本機轉換為 Markdown，盡量保留標題、清單、表格、引言、公式和圖片引用，並在儲存前覆核掃描文字、閱讀順序、圖說和複雜版面，避免將來源檔案上傳到網頁表單。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-tw/markdown-to-slides/</id>
+    <title>不用 PowerPoint 放映 Markdown | ReadMD 簡報</title>
+    <link rel="alternate" href="https://readmd.asia/zh-tw/markdown-to-slides/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>使用 ReadMD 基於 Reveal 的放映模式直接展示 Markdown，不需要先複製成另一套簡報。標題、程式碼、數學、圖表、表格和說明文字都保留在寫作、審閱、排練修改和現場報告所用的同一份權威原始檔裡。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-tw/markdown-tables/</id>
+    <title>Markdown 表格 | ReadMD 表格設計器與 Excel 轉換</title>
+    <link rel="alternate" href="https://readmd.asia/zh-tw/markdown-tables/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>使用 ReadMD 的表格設計器和 Excel、CSV 貼上轉換，在本機建立、修復與維護 Markdown 表格；保留標題列與欄位邊界，並在儲存前覆核合併儲存格、數字、日期、空值和對齊方式，避免把結構化資料繼續鎖在專有格式或散亂的貼上結果裡。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-tw/large-markdown-files/</id>
+    <title>開啟超大 Markdown 檔案 | ReadMD 本機閱讀器</title>
+    <link rel="alternate" href="https://readmd.asia/zh-tw/large-markdown-files/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>在本機開啟約 8,000 行或 500 KB 的超長 Markdown 檔案。ReadMD 使用語意分頁，保留目錄、搜尋、公式和頁面控制項，也不會將原始檔上傳到雲端。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-tw/download/</id>
+    <title>下載 ReadMD | Windows、macOS、Linux、UOS 和麒麟版本</title>
+    <link rel="alternate" href="https://readmd.asia/zh-tw/download/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>下載 ReadMD 的 Windows 安裝版或便攜版、Apple Silicon 和 Intel macOS、Linux AppImage 與 Deb、統信 UOS/麒麟、鴻蒙、VS Code 擴充套件和 MCP Server，並使用 SHA256SUMS.txt 校驗。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-tw/convert-to-markdown/</id>
+    <title>文件轉 Markdown | ReadMD 本機轉換器</title>
+    <link rel="alternate" href="https://readmd.asia/zh-tw/convert-to-markdown/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>使用 ReadMD 在本機把 DOCX、PPTX、XLSX、PDF、HTML 和 LaTeX 轉為 Markdown，保留標題、列表、表格、公式和圖片參照，不需要將檔案上傳到網頁表單。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-tw/bibtex-citations/</id>
+    <title>管理 BibTeX 引用 | ReadMD 學術寫作</title>
+    <link rel="alternate" href="https://readmd.asia/zh-tw/bibtex-citations/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>把 BibTeX 檔案放在 Markdown 同目錄，使用內嵌引用鍵繼續寫作；懸停引用徽章檢查標題、作者、年份和 DOI，複核文末彙整參考文獻後再提交論文或技術報告。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-cn/workflows/</id>
+    <title>ReadMD 工作流 | 超长文档、格式转换、离线 OCR 与放映</title>
+    <link rel="alternate" href="https://readmd.asia/zh-cn/workflows/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>了解 ReadMD 如何处理约 8,000 行或 500 KB 的长文档，转换 Word、PDF、网页和 LaTeX，离线提取扫描文字，并在 Windows、macOS、Linux、UOS 和麒麟上放映同一份 Markdown。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-cn/scan-to-markdown/</id>
+    <title>扫描件提取文字 | ReadMD 离线 OCR</title>
+    <link rel="alternate" href="https://readmd.asia/zh-cn/scan-to-markdown/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>在 Windows 或 macOS 本地把扫描页和截图转成可编辑 Markdown。ReadMD 调用 WinRT 或 Apple Vision 离线识别，不需要上传原始图像。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-cn/release-notes/</id>
+    <title>ReadMD v2.3.7-beta.4 发布说明 | 安全放映与更新校验</title>
+    <link rel="alternate" href="https://readmd.asia/zh-cn/release-notes/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>查看 ReadMD v2.3.7-beta.4 发布说明：Reveal 放映隔离、更新包临时文件与 SHA-256 校验、启动分阶段加载、标签状态刷新、更大触控目标，以及 Windows、macOS、Linux、UOS 和麒麟安装包下载。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-cn/pdf-to-markdown/</id>
+    <title>PDF 转 Markdown | ReadMD 本地 PDF 转换器</title>
+    <link rel="alternate" href="https://readmd.asia/zh-cn/pdf-to-markdown/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>在受支持平台上用 ReadMD 把 PDF 本地转换为 Markdown，尽量保留标题、列表、表格、引言、公式和图片引用，并在保存前复核扫描文本、阅读顺序、题注和复杂版式，避免把来源文件上传到网页表单。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-cn/markdown-to-slides/</id>
+    <title>不用 PowerPoint 放映 Markdown | ReadMD 幻灯</title>
+    <link rel="alternate" href="https://readmd.asia/zh-cn/markdown-to-slides/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>使用 ReadMD 基于 Reveal 的放映模式直接展示 Markdown，不需要先复制成另一套幻灯片。标题、代码、公式、图表、表格和说明文字都保留在写作、评审、彩排修改和现场放映所用的同一份权威源文件里。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-cn/markdown-tables/</id>
+    <title>Markdown 表格 | ReadMD 表格设计器与 Excel 转换</title>
+    <link rel="alternate" href="https://readmd.asia/zh-cn/markdown-tables/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>用 ReadMD 的表格设计器和 Excel、CSV 粘贴转换，在本地创建、修复和维护 Markdown 表格；保留标题行与字段边界，并在保存前复核合并单元格、数字、日期、空值和对齐方式，避免把结构化资料继续锁在专有格式或散乱的粘贴结果里。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-cn/large-markdown-files/</id>
+    <title>打开超大 Markdown 文件 | ReadMD 本地阅读器</title>
+    <link rel="alternate" href="https://readmd.asia/zh-cn/large-markdown-files/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>在本地打开约 8,000 行或 500 KB 的超大 Markdown 文件。ReadMD 使用语义分页，保留目录、搜索、公式和页面控件，并且不把源文件上传到云端。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-cn/download/</id>
+    <title>下载 ReadMD | Windows、macOS、Linux、UOS 和麒麟版本</title>
+    <link rel="alternate" href="https://readmd.asia/zh-cn/download/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>下载 ReadMD 的 Windows 安装版或便携版、Apple Silicon 和 Intel macOS、Linux AppImage 与 Deb、统信 UOS/麒麟、鸿蒙、VS Code 插件和 MCP Server，并使用 SHA256SUMS.txt 校验。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-cn/convert-to-markdown/</id>
+    <title>文档转 Markdown | ReadMD 本地转换器</title>
+    <link rel="alternate" href="https://readmd.asia/zh-cn/convert-to-markdown/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>用 ReadMD 在本地把 DOCX、PPTX、XLSX、PDF、HTML 和 LaTeX 转为 Markdown，保留标题、列表、表格、公式和图片引用，不需要把文件上传到网页表单。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-cn/bibtex-citations/</id>
+    <title>管理 BibTeX 引用 | ReadMD 学术写作</title>
+    <link rel="alternate" href="https://readmd.asia/zh-cn/bibtex-citations/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>把 BibTeX 文件放在 Markdown 同目录，使用内联引用键继续写作；悬停引用徽章检查标题、作者、年份和 DOI，复核文末汇总参考文献后再提交论文或技术报告。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/workflows/</id>
+    <title>ReadMD Workflows | Long Markdown, Conversion, OCR, and Presenting</title>
+    <link rel="alternate" href="https://readmd.asia/workflows/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>Learn how ReadMD handles 8,000-line Markdown files, converts DOCX/PDF/HTML/LaTeX, extracts scanned text offline, presents one source file, and runs across Windows, macOS, Linux, UOS, and Kylin.</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/scan-to-markdown/</id>
+    <title>Extract Text From Scans | ReadMD Offline OCR</title>
+    <link rel="alternate" href="https://readmd.asia/scan-to-markdown/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>Turn scans and screenshots into editable Markdown with local OCR on Windows or macOS. ReadMD uses WinRT or Apple Vision offline recognition without uploading the source image.</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/release-notes/</id>
+    <title>ReadMD v2.3.7-beta.4 Release Notes | Safe Presenting And Updates</title>
+    <link rel="alternate" href="https://readmd.asia/release-notes/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>ReadMD v2.3.7-beta.4 release notes covering safer Reveal presenting, update integrity checks, startup loading refinements, tab reliability, larger touch targets, Windows, macOS, Linux, UOS, and Kylin packages.</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/pdf-to-markdown/</id>
+    <title>PDF to Markdown | ReadMD Local PDF Converter</title>
+    <link rel="alternate" href="https://readmd.asia/pdf-to-markdown/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>Convert PDF files to Markdown locally with ReadMD on supported platforms. Preserve useful headings, lists, tables, quotations, formulas, and image references while reviewing scanned text and complex layouts before saving.</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/markdown-to-slides/</id>
+    <title>Present Markdown Without PowerPoint | ReadMD Slides</title>
+    <link rel="alternate" href="https://readmd.asia/markdown-to-slides/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>Present Markdown directly with ReadMD's Reveal-based mode. Keep headings, code, math, diagrams, and tables in the same source file you write, review, edit, and show.</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/markdown-tables/</id>
+    <title>Markdown Tables | ReadMD Table Editor And Excel Conversion</title>
+    <link rel="alternate" href="https://readmd.asia/markdown-tables/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>Create, repair, and maintain Markdown tables locally with ReadMD. Use the visual table designer, turn Excel or CSV pastes into Markdown rows, preserve header meaning, and review merged cells, numbers, blanks, and alignment before saving.</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/large-markdown-files/</id>
+    <title>Open Large Markdown Files | ReadMD Local Reader</title>
+    <link rel="alternate" href="https://readmd.asia/large-markdown-files/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>Open very large Markdown files locally with semantic pagination near 8,000 lines or 500 KB. ReadMD keeps outline, search, formulas, repair, and page controls connected without uploading the file.</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/ja/workflows/</id>
+    <title>ReadMD ワークフロー | 長文、変換、オフライン OCR、発表</title>
+    <link rel="alternate" href="https://readmd.asia/ja/workflows/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>ReadMD が約 8,000 行または 500 KB の長文、Word/PDF/Web/LaTeX の取り込み、スキャン文字のオフライン認識、Windows/macOS/Linux/UOS/Kylin での発表をどのように扱うかを説明します。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/ja/scan-to-markdown/</id>
+    <title>スキャン文字を抽出 | ReadMD オフライン OCR</title>
+    <link rel="alternate" href="https://readmd.asia/ja/scan-to-markdown/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>Windows や macOS のローカル OCR でスキャン頁やスクリーンショットを編集可能な Markdown にします。ReadMD は WinRT または Apple Vision を使い、元画像をアップロードしません。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/ja/release-notes/</id>
+    <title>ReadMD v2.3.7-beta.4 リリースノート | 安全な発表と更新検証</title>
+    <link rel="alternate" href="https://readmd.asia/ja/release-notes/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>ReadMD v2.3.7-beta.4 の変更点を確認できます。Reveal発表の分離、更新ファイルの一時保存とSHA-256検証、段階的な起動読み込み、タブ状態の即時更新、大きなタッチ操作領域、Windows、macOS、Linux、UOS、Kylin向けパッケージを説明します。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/ja/pdf-to-markdown/</id>
+    <title>PDF を Markdown に変換 | ReadMD ローカル変換</title>
+    <link rel="alternate" href="https://readmd.asia/ja/pdf-to-markdown/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>対応プラットフォームで ReadMD を使い、PDF をローカルで Markdown に変換します。見出し、リスト、表、引用、数式、画像参照をできる範囲で保ち、保存前にスキャン文字と複雑なレイアウトを確認できます。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/ja/markdown-to-slides/</id>
+    <title>PowerPoint を使わず Markdown 発表 | ReadMD スライド</title>
+    <link rel="alternate" href="https://readmd.asia/ja/markdown-to-slides/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>ReadMD の Reveal ベース発表モードで Markdown をそのまま提示します。見出し、コード、数式、図、表は執筆、レビュー、修正、発表に使う同じソースファイルに残ります。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/ja/markdown-tables/</id>
+    <title>Markdown 表 | ReadMD の表エディターと Excel 変換</title>
+    <link rel="alternate" href="https://readmd.asia/ja/markdown-tables/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>ReadMD のビジュアル表エディターと Excel、CSV の貼り付け変換を使い、ローカルで Markdown 表を作成、修正、保守します。見出し行と列の意味を保ち、保存前に結合セル、数値、日付、空値、整列を確認できます。構造化資料を専用形式や崩れた貼り付け結果に残さないための実務ワークフローです。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/ja/large-markdown-files/</id>
+    <title>巨大な Markdown を開く | ReadMD ローカルリーダー</title>
+    <link rel="alternate" href="https://readmd.asia/ja/large-markdown-files/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>約 8,000 行または 500 KB の長い Markdown 文書をローカルで開きます。ReadMD は意味的な改ページで目次、検索、数式、ページ操作を保ち、元ファイルをアップロードしません。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/ja/download/</id>
+    <title>ReadMD ダウンロード | Windows、macOS、Linux、UOS、Kylin</title>
+    <link rel="alternate" href="https://readmd.asia/ja/download/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>ReadMD の Windows インストーラー/ポータブル版、Apple Silicon および Intel macOS、Linux AppImage/Deb、UOS/Kylin、HarmonyOS、VS Code 拡張、MCP Server を入手し、SHA256SUMS.txt で検証できます。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/ja/convert-to-markdown/</id>
+    <title>文書を Markdown へ変換 | ReadMD ローカル変換</title>
+    <link rel="alternate" href="https://readmd.asia/ja/convert-to-markdown/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>ReadMD で DOCX、PPTX、XLSX、PDF、HTML、LaTeX をローカルで Markdown へ変換します。見出し、リスト、表、数式、画像参照を保ち、ファイルを Web フォームへアップロードしません。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/ja/bibtex-citations/</id>
+    <title>BibTeX 文献を管理 | ReadMD 学術執筆</title>
+    <link rel="alternate" href="https://readmd.asia/ja/bibtex-citations/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>BibTeX ファイルを Markdown と同じ場所に置き、inline 引用キーで執筆を続けます。引用 badge で題名、著者、年、DOI を確認し、提出前に文末の参考文献と指定書式を点検できます。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/download/</id>
+    <title>Download ReadMD | Windows, macOS, Linux, UOS, and Kylin Builds</title>
+    <link rel="alternate" href="https://readmd.asia/download/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>Download ReadMD for Windows installer or portable use, Apple Silicon and Intel macOS, Linux AppImage and Deb, UOS/Kylin, HarmonyOS, VS Code, and MCP Server. Verify every package with SHA256SUMS.txt.</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/convert-to-markdown/</id>
+    <title>Convert Documents to Markdown | ReadMD Local Converter</title>
+    <link rel="alternate" href="https://readmd.asia/convert-to-markdown/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>Convert DOCX, PPTX, XLSX, PDF, HTML, and LaTeX sources to Markdown locally with ReadMD. Preserve headings, lists, tables, formulas, citations, and image references without uploading files to a web form.</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/bibtex-citations/</id>
+    <title>Manage BibTeX Citations | ReadMD Academic Writing</title>
+    <link rel="alternate" href="https://readmd.asia/bibtex-citations/"/>
+    <updated>2026-08-26T00:00:00Z</updated>
+    <summary>Keep a BibTeX file beside your Markdown, cite with inline keys, inspect citation cards, and review an assembled reference section while writing academic or technical work locally.</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-tw/</id>
+    <title>ReadMD | 純本地 Markdown 閱讀、編輯、轉換與放映</title>
+    <link rel="alternate" href="https://readmd.asia/zh-tw/"/>
+    <updated>2026-08-24T00:00:00Z</updated>
+    <summary>ReadMD 是跨越 Windows、macOS、Linux、麒麟與統信 UOS 的本地 Markdown 工作台，可快速開啟長篇文件、在顯示層修正語法、轉換 Office 與 PDF，並直接放映 Markdown。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/zh-cn/</id>
+    <title>ReadMD | 纯本地 Markdown 阅读、编辑、转换与放映</title>
+    <link rel="alternate" href="https://readmd.asia/zh-cn/"/>
+    <updated>2026-08-24T00:00:00Z</updated>
+    <summary>ReadMD 是跨 Windows、macOS、Linux、麒麟和统信 UOS 的本地 Markdown 工作台，可秒开超长文档、渲染前自动修正显示问题、转换 Office 与 PDF，并直接用 Markdown 放映。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/ja/</id>
+    <title>ReadMD | ローカルで使う Markdown リーダー、エディター、変換、発表ツール</title>
+    <link rel="alternate" href="https://readmd.asia/ja/"/>
+    <updated>2026-08-24T00:00:00Z</updated>
+    <summary>ReadMD は Windows、macOS、Linux、Kylin OS、UOS 向けのローカル Markdown ワークスペースです。長文を高速に開き、表示だけを自動修復し、Office や PDF を変換し、Markdown をそのまま発表できます。</summary>
+  </entry>
+  <entry>
+    <id>https://readmd.asia/</id>
+    <title>ReadMD | Local Markdown Reader, Editor, Converter, and Presenter</title>
+    <link rel="alternate" href="https://readmd.asia/"/>
+    <updated>2026-08-24T00:00:00Z</updated>
+    <summary>ReadMD is a local-first Markdown workspace for Windows, macOS, Linux, and Chinese operating systems. It opens long documents instantly, repairs rendering without changing source files, converts Office and PDF files, and presents Markdown directly.</summary>
+  </entry>
+</feed>

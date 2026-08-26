@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PDF を Markdown に変換 | ReadMD ローカル変換</title>
   <meta name="description" content="対応プラットフォームで ReadMD を使い、PDF をローカルで Markdown に変換します。見出し、リスト、表、引用、数式、画像参照をできる範囲で保ち、保存前にスキャン文字と複雑なレイアウトを確認できます。">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="PDF を Markdown に変換 | ReadMD ローカル変換">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="PDF 文書を Markdown へ変換する ReadMD の画面。">
   <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="zh_TW">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="PDF を Markdown に変換 | ReadMD ローカル変換">
   <meta name="twitter:description" content="ローカルの PDF 資料を確認しやすい Markdown に変換します。フォームへのアップロードは不要です。">
@@ -32,6 +36,8 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/pdf-to-markdown/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/pdf-to-markdown/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/pdf-to-markdown/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
@@ -56,6 +62,14 @@
           "h1",
           "#conversion-workflow p"
         ]
+      },
+      "inLanguage": "ja",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/ja/pdf-to-markdown/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
     },
     {
@@ -72,6 +86,17 @@
       "author": {
         "@type": "Organization",
         "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/ja/release-notes/",
+      "screenshot": "https://readmd.asia/media/convert-home.png",
+      "featureList": "長文ドキュメントの改ページ、ローカル変換、オフライン OCR、Markdown 表、PDF 取り込み、引用、発表モード。",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
       }
     },
     {
@@ -104,8 +129,64 @@
   ]
 }
   </script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/ja/pdf-to-markdown/#faq","mainEntity":[{"@type":"Question","name":"どの PDF を変換できますか？","acceptedAnswer":{"@type":"Answer","text":"ReadMD の変換機能は PDF を受け付けます。テキスト型は Markdown へ対応しやすく、スキャン頁は対応環境でローカル OCR ワークフローを使います。"}},{"@type":"Question","name":"PDF のアップロードは発生しますか？","acceptedAnswer":{"@type":"Answer","text":"いいえ。ローカル PDF 変換はクラウドアカウントやブラウザフォームなしで動くように設計されています。"}},{"@type":"Question","name":"どの Markdown 構造が保たれますか？","acceptedAnswer":{"@type":"Answer","text":"PDF から復元できる場合、見出し、リスト、表、引用、数式、画像参照をできる範囲で保持します。"}},{"@type":"Question","name":"すべてのスキャン PDF が完璧になりますか？","acceptedAnswer":{"@type":"Answer","text":"なりません。OCR の品質は明瞭さ、言語、フォント、レイアウトに依存します。固有名詞、数値、表、キャプション、読み順を保存前に確認してください。"}}]}</script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/ja/pdf-to-markdown/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://readmd.asia/ja/"},{"@type":"ListItem","position":2,"name":"PDF から Markdown","item":"https://readmd.asia/ja/pdf-to-markdown/"}]}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/ja/pdf-to-markdown/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "どの PDF を変換できますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD の変換機能は PDF を受け付けます。テキスト型は Markdown へ対応しやすく、スキャン頁は対応環境でローカル OCR ワークフローを使います。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "PDF のアップロードは発生しますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "いいえ。ローカル PDF 変換はクラウドアカウントやブラウザフォームなしで動くように設計されています。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "どの Markdown 構造が保たれますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "PDF から復元できる場合、見出し、リスト、表、引用、数式、画像参照をできる範囲で保持します。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "すべてのスキャン PDF が完璧になりますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "なりません。OCR の品質は明瞭さ、言語、フォント、レイアウトに依存します。固有名詞、数値、表、キャプション、読み順を保存前に確認してください。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/ja/pdf-to-markdown/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "ホーム",
+      "item": "https://readmd.asia/ja/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "PDF から Markdown",
+      "item": "https://readmd.asia/ja/pdf-to-markdown/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -116,7 +197,7 @@
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
       <h1 class="display-title">PDF を編集可能な Markdown に。</h1>
       <p class="section-copy mt-6 max-w-[68ch]">テキスト型の報告書、論文、マニュアル、スキャン頁をローカルで Markdown に移行できます。元ファイルは端末に残り、再利用できる構造はできる範囲で保持されます。</p>
-      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="2880" height="1620" alt="PDF 文書を Markdown へ変換する ReadMD の画面。" loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="2880" height="1620" alt="PDF 文書を Markdown へ変換する ReadMD の画面。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="conversion-workflow" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">

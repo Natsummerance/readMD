@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Present Markdown Without PowerPoint | ReadMD Slides</title>
   <meta name="description" content="Present Markdown directly with ReadMD's Reveal-based mode. Keep headings, code, math, diagrams, and tables in the same source file you write, review, edit, and show.">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="Present Markdown Without PowerPoint | ReadMD Slides">
@@ -17,6 +18,9 @@
   <meta property="og:image:height" content="900">
   <meta property="og:image:alt" content="ReadMD editor showing Markdown source beside its live preview.">
   <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="zh_TW">
+  <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Present Markdown Without PowerPoint | ReadMD Slides">
   <meta name="twitter:description" content="Keep writing in Markdown, then present the same source with headings, math, code, diagrams, and tables intact.">
@@ -32,51 +36,157 @@
   <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/markdown-to-slides/">
   <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/markdown-to-slides/">
   <link rel="alternate" hreflang="x-default" href="https://readmd.asia/markdown-to-slides/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebPage",
-        "@id": "https://readmd.asia/markdown-to-slides/#webpage",
-        "url": "https://readmd.asia/markdown-to-slides/",
-        "name": "Present Markdown Without PowerPoint | ReadMD Slides",
-        "isPartOf": {"@id": "https://readmd.asia/#website"},
-        "about": {"@id": "https://readmd.asia/markdown-to-slides/#software"},
-        "primaryImageOfPage": "https://readmd.asia/media/overview-editor.png",
-        "dateModified": "2026-08-26",
-        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#markdown-presentation-workflow p"]}
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/markdown-to-slides/#webpage",
+      "url": "https://readmd.asia/markdown-to-slides/",
+      "name": "Present Markdown Without PowerPoint | ReadMD Slides",
+      "isPartOf": {
+        "@id": "https://readmd.asia/#website"
       },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://readmd.asia/markdown-to-slides/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-26",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "author": {"@type": "Organization", "name": "ReadMD"}
+      "about": {
+        "@id": "https://readmd.asia/markdown-to-slides/#software"
       },
-      {
-        "@type": "HowTo",
-        "@id": "https://readmd.asia/markdown-to-slides/#howto",
-        "name": "How to present Markdown without rebuilding slides",
-        "step": [
-          {"@type": "HowToStep", "name": "Finish one Markdown source", "text": "Write headings, paragraphs, lists, formulas, code, diagrams, tables, and citations in one document."},
-          {"@type": "HowToStep", "name": "Open presentation mode", "text": "Start ReadMD's Reveal-based presentation mode from the same document."},
-          {"@type": "HowToStep", "name": "Use headings as transitions", "text": "Move through the talk while code, math, diagrams, and tables remain in context."},
-          {"@type": "HowToStep", "name": "Edit and return to one file", "text": "Change wording during rehearsal, save the Markdown, and continue from the same canonical source."}
+      "primaryImageOfPage": "https://readmd.asia/media/overview-editor.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#markdown-presentation-workflow p"
         ]
+      },
+      "inLanguage": "en",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/markdown-to-slides/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
-    ]
-  }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/markdown-to-slides/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-editor.png",
+      "featureList": "Long-document pagination, local conversion, offline OCR, Markdown tables, PDF import, citations, and presentation mode.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/markdown-to-slides/#howto",
+      "name": "How to present Markdown without rebuilding slides",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "Finish one Markdown source",
+          "text": "Write headings, paragraphs, lists, formulas, code, diagrams, tables, and citations in one document."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Open presentation mode",
+          "text": "Start ReadMD's Reveal-based presentation mode from the same document."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Use headings as transitions",
+          "text": "Move through the talk while code, math, diagrams, and tables remain in context."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Edit and return to one file",
+          "text": "Change wording during rehearsal, save the Markdown, and continue from the same canonical source."
+        }
+      ]
+    }
+  ]
+}
   </script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/markdown-to-slides/#faq","mainEntity":[{"@type":"Question","name":"Can Markdown be presented without PowerPoint?","acceptedAnswer":{"@type":"Answer","text":"Yes. ReadMD presents Markdown directly with a Reveal-based mode, so a separate slide deck is not required for technical talks or course material."}},{"@type":"Question","name":"Which Markdown elements stay visible when presenting?","acceptedAnswer":{"@type":"Answer","text":"Headings become transitions while code, mathematical notation, diagrams, tables, and surrounding prose retain their context."}},{"@type":"Question","name":"Can I edit during rehearsal?","acceptedAnswer":{"@type":"Answer","text":"Yes. A late edit can be made in the same Markdown file, saved there, and used by the next presentation run."}},{"@type":"Question","name":"Does this replace every specialized slide tool?","acceptedAnswer":{"@type":"Answer","text":"No. It is for people whose source of truth already lives in Markdown. Complex bespoke motion design may still call for a dedicated design tool."}}]}</script>
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/markdown-to-slides/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://readmd.asia/"},{"@type":"ListItem","position":2,"name":"Markdown to slides","item":"https://readmd.asia/markdown-to-slides/"}]}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/markdown-to-slides/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Can Markdown be presented without PowerPoint?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. ReadMD presents Markdown directly with a Reveal-based mode, so a separate slide deck is not required for technical talks or course material."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which Markdown elements stay visible when presenting?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Headings become transitions while code, mathematical notation, diagrams, tables, and surrounding prose retain their context."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I edit during rehearsal?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. A late edit can be made in the same Markdown file, saved there, and used by the next presentation run."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does this replace every specialized slide tool?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. It is for people whose source of truth already lives in Markdown. Complex bespoke motion design may still call for a dedicated design tool."
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/markdown-to-slides/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://readmd.asia/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Markdown to slides",
+      "item": "https://readmd.asia/markdown-to-slides/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -87,7 +197,7 @@
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
       <h1 class="display-title">Present Markdown without rebuilding slides.</h1>
       <p class="section-copy mt-6 max-w-[68ch]">Keep one authoritative file for writing, review, repository history, and the talk itself. Headings become structure while technical content stays where you wrote it.</p>
-      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="2880" height="1620" alt="ReadMD editor with Markdown source on one side and rendered preview on the other." loading="eager" fetchpriority="high"></picture></figure>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="2880" height="1620" alt="ReadMD editor with Markdown source on one side and rendered preview on the other." loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="markdown-presentation-workflow" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">

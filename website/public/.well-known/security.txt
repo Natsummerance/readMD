@@ -1,0 +1,4 @@
+Contact: https://github.com/Natsummerance/readMD/security/advisories/new
+Expires: 2027-08-26T00:00:00Z
+Preferred-Languages: en, zh-CN, zh-TW, ja
+Canonical: https://readmd.asia/.well-known/security.txt
