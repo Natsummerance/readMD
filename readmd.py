@@ -28,6 +28,8 @@ import time
 import threading
 import webbrowser
 import urllib.request
+from datetime import datetime, timezone
+from email.utils import formatdate, parsedate_to_datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
@@ -1315,9 +1317,39 @@ class Handler(BaseHTTPRequestHandler):
         if not os.path.isfile(fp):
             self._send(404, 'text/plain; charset=utf-8', b'not found')
             return
+        stat = os.stat(fp)
+        etag = '"%x-%x-%x"' % (stat.st_ino, stat.st_size, stat.st_mtime_ns)
+        cache_control = 'public, max-age=31536000, immutable' if immutable else 'no-cache'
+        if self._resource_not_modified(etag, stat):
+            self.send_response(304)
+            self.send_header('Cache-Control', cache_control)
+            self.send_header('ETag', etag)
+            self.end_headers()
+            return
         with open(fp, 'rb') as f:
-            self._send(200, ctype, f.read(),
-                       'public, max-age=31536000, immutable' if immutable else 'no-cache')
+            body = f.read()
+        self.send_response(200)
+        self.send_header('Content-Type', ctype)
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', cache_control)
+        self.send_header('ETag', etag)
+        self.send_header('Last-Modified', formatdate(stat.st_mtime, usegmt=True))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _resource_not_modified(self, etag, stat):
+        none_match = self.headers.get('If-None-Match')
+        if none_match is not None:
+            requested = {item.strip().removeprefix('W/') for item in none_match.split(',')}
+            return etag.removeprefix('W/') in requested or '*' in requested
+        modified_since = self.headers.get('If-Modified-Since')
+        if not modified_since:
+            return False
+        try:
+            requested_at = parsedate_to_datetime(modified_since).timestamp()
+            return int(requested_at) >= int(stat.st_mtime)
+        except (TypeError, ValueError, OverflowError):
+            return False
 
     def _api_file(self, p, meta_only):
         if not os.path.isfile(p):

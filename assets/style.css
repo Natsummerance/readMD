@@ -1633,7 +1633,6 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
   #toast { max-width: 88vw; }
 }
 
-
 /* ---------- 导出面板 ---------- */
 #export-modal {
   position: fixed;
@@ -3978,4 +3977,61 @@ body.zen-mode .markdown-body {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(59, 110, 245, 0.15);
+}
+
+/* ---------- 触控目标：窄屏与粗指针输入 ---------- */
+@media (max-width: 900px), (pointer: coarse) {
+  :root { --touch-target: 44px; }
+  #toolbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: calc(var(--toolbar-h) + 4px);
+  }
+  .tb-group { flex-wrap: wrap; }
+  #toolbar .tb-btn,
+  #search-bar button,
+  #doc-tabs-overflow-btn,
+  .more-item {
+    height: var(--touch-target);
+    min-height: var(--touch-target);
+    min-width: var(--touch-target);
+  }
+  #toolbar .tb-btn:not(.icon) { padding-inline: 11px; }
+  #toolbar .tb-btn.icon { padding-inline: 10px; }
+  .doc-tabs-container {
+    align-items: stretch;
+    flex: 1 1 100%;
+    max-width: none;
+    height: auto;
+    min-height: var(--touch-target);
+  }
+  .doc-tabs-bar,
+  .doc-tabs-secondary-bar { padding-block: 2px; }
+  .tab-item {
+    height: var(--touch-target);
+    min-height: var(--touch-target);
+    padding-inline: 12px;
+  }
+  .tab-close { width: 28px; height: 28px; font-size: 14px; }
+}
+
+@media (max-width: 720px), (pointer: coarse) {
+  #search-input { min-height: var(--touch-target); }
+  .pg-nav-btn,
+  .pg-toggle-btn {
+    min-height: var(--touch-target);
+    min-width: var(--touch-target);
+    justify-content: center;
+  }
+  .presentation-select,
+  .presentation-btn {
+    min-height: 40px;
+    padding-inline: 11px;
+  }
+  .presentation-close-btn {
+    width: var(--touch-target);
+    height: var(--touch-target);
+    border-radius: 22px;
+    margin-left: 6px;
+  }
 }

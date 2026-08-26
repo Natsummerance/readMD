@@ -243,7 +243,9 @@ function renderTabsBar() {
   const revealActiveTab = (container) => {
     const active = container?.querySelector('.tab-item.active');
     if (!active) return;
-    const left = active.offsetLeft;
+    const containerRect = container.getBoundingClientRect();
+    const activeRect = active.getBoundingClientRect();
+    const left = activeRect.left - containerRect.left + container.scrollLeft;
     const right = left + active.offsetWidth;
     if (left < container.scrollLeft + 8) {
       container.scrollLeft = Math.max(0, left - 8);
@@ -652,4 +654,3 @@ async function closeAllTabs() {
   goHome();
   renderTabsBar();
 }
-
