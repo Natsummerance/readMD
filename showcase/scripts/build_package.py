@@ -30,6 +30,53 @@ def load_poster_styles() -> list[str]:
     return list(dict.fromkeys(styles))
 
 
+def resolve_poster_style(
+    requested: str | None,
+    memory_path: Path | None,
+) -> tuple[str, dict[str, Any]]:
+    """Resolve explicit, learned, or balanced-exploration poster selection."""
+    styles = load_poster_styles()
+    if requested not in (None, "auto") and requested not in styles:
+        raise ValueError(f"unknown poster style: {requested}")
+    if requested != "auto":
+        selected = requested or "evidence-paper"
+        return selected, {
+            "schema_version": 1,
+            "mode": "fixed",
+            "selected": selected,
+        }
+
+    records = load_records(memory_path) if memory_path else []
+    recommendation = performance_report.recommend_poster_style(records)
+    if recommendation["recommended"]:
+        return str(recommendation["recommended"]), {
+            "schema_version": 1,
+            "mode": "learned",
+            "selected": recommendation["recommended"],
+            "recommendation": recommendation,
+        }
+
+    # Before any style reaches the publication-confidence threshold, collect
+    # comparable evidence by rotating experimental styles around the stable default.
+    candidates = styles[1:]
+    usage = {
+        style: sum(
+            1 for record in records if str(record.get("poster_style", "")) == style
+        )
+        for style in candidates
+    }
+    fewest = min(usage.values())
+    tied = [style for style in candidates if usage[style] == fewest]
+    selected = tied[len(records) % len(tied)]
+    return selected, {
+        "schema_version": 1,
+        "mode": "exploration",
+        "selected": selected,
+        "usage": usage,
+        "recommendation": recommendation,
+    }
+
+
 def _write_release_evidence(package_dir: Path, notes_text: str, diff_text: str) -> dict[str, Any]:
     """Snapshot the exact release evidence used by this build."""
     evidence_dir = package_dir / "evidence"
@@ -63,8 +110,7 @@ def build_package(
     memory_path: Path | None = None,
     poster_style: str | None = None,
 ) -> tuple[dict, dict]:
-    if poster_style and poster_style not in load_poster_styles():
-        raise ValueError(f"unknown poster style: {poster_style}")
+    poster_style, style_selection = resolve_poster_style(poster_style, memory_path)
     package_dir.mkdir(parents=True, exist_ok=True)
     (package_dir / "images").mkdir(exist_ok=True)
     evidence_manifest = _write_release_evidence(package_dir, notes_text, diff_text)
@@ -77,8 +123,7 @@ def build_package(
         notes_source="evidence/release-notes.md",
     )
     story["evidence_manifest"] = evidence_manifest
-    if poster_style:
-        story["poster_style"] = poster_style
+    story["poster_style"] = poster_style
     (package_dir / "story.json").write_text(json.dumps(story, ensure_ascii=False, indent=2), encoding="utf-8")
     history = load_records(memory_path) if memory_path else []
     metadata = generate_copy(
@@ -93,6 +138,7 @@ def build_package(
         history=history,
     )
     metadata["poster_style"] = str(story.get("poster_style") or "evidence-paper")
+    variant_selection["poster_style_selection"] = style_selection
     variant_selection["learning_snapshot"] = {
         "schema_version": 1,
         "record_count": len(history),
@@ -196,7 +242,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--repository", default="Natsummerance/readMD")
     parser.add_argument("--memory", type=Path, default=Path(__file__).parents[1] / "content" / "publication-ledger.jsonl")
-    parser.add_argument("--poster-style", help="Poster template: evidence-paper, minimal-zine, photo-relic, morandi-cinematic, or photo-abstract")
+    parser.add_argument("--poster-style", help="Fixed style, or auto to learn from confident ledger evidence and explore before confidence exists")
     parser.add_argument("--skip-compose", action="store_true", help="Prepare text/story only; used before capture")
     parser.add_argument("--finalize", action="store_true", help="Compose and aggregate QA for an already prepared package")
     args = parser.parse_args()

@@ -81,6 +81,21 @@ def _recommended(stats: dict[str, dict[str, Any]]) -> str | None:
     return next((name for name, item in stats.items() if item["confidence"] != "low"), None)
 
 
+def recommend_poster_style(records: list[dict[str, Any]]) -> dict[str, Any]:
+    """Return a confidence-gated visual-style recommendation without side effects."""
+    learning, pending = partition_records(records)
+    stats = _stats(learning, "poster_style")
+    recommended = _recommended(stats)
+    return {
+        "schema_version": 1,
+        "recommended": recommended,
+        "confidence": stats.get(recommended, {}).get("confidence", "low") if recommended else "low",
+        "learning_count": len(learning),
+        "pending_count": len(pending),
+        "stats": stats,
+    }
+
+
 def _comment_focus(records: list[dict[str, Any]]) -> dict[str, Any]:
     aggregated: dict[str, dict[str, Any]] = {}
     comment_releases: set[str] = set()

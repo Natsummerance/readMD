@@ -478,6 +478,7 @@ jobs:
           --notes showcase/release-notes.md
           --diff showcase/release.diff
           --output showcase/output/package
+          --poster-style auto
           --skip-compose
       - name: Capture authentic UI shots
         working-directory: showcase

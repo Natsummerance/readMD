@@ -3511,6 +3511,60 @@ class BuildPipelineTest(unittest.TestCase):
                     poster_style="fake-poster",
                 )
 
+    def test_auto_poster_style_rotates_until_evidence_is_confident(self) -> None:
+        selected, selection = build_package_module.resolve_poster_style("auto", None)
+        self.assertEqual(selected, "minimal-zine")
+        self.assertEqual(selection["mode"], "exploration")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            ledger = Path(tmp) / "ledger.jsonl"
+            ledger.write_text(
+                json.dumps({
+                    "release": "v1.0.0",
+                    "poster_style": "evidence-paper",
+                    "metrics_status": "pending",
+                }),
+                encoding="utf-8",
+            )
+            selected, selection = build_package_module.resolve_poster_style("auto", ledger)
+            self.assertEqual(selected, "morandi-cinematic")
+            self.assertEqual(selection["mode"], "exploration")
+
+            records = [
+                {
+                    "release": f"v1.0.{index}",
+                    "poster_style": "evidence-paper",
+                    "impressions": 1200,
+                    "likes": 40 + index,
+                    "collects": 60,
+                    "comments": 10,
+                    "shares": 5,
+                    "follows": 2,
+                    "metrics_status": "complete",
+                }
+                for index in range(2)
+            ]
+            records.append({
+                "release": "v1.1.0",
+                "poster_style": "minimal-zine",
+                "impressions": 400,
+                "likes": 80,
+                "collects": 90,
+                "comments": 20,
+                "shares": 10,
+                "follows": 4,
+                "metrics_status": "complete",
+            })
+            ledger.write_text(
+                "\n".join(json.dumps(record, ensure_ascii=False) for record in records),
+                encoding="utf-8",
+            )
+            selected, selection = build_package_module.resolve_poster_style("auto", ledger)
+
+        self.assertEqual(selected, "evidence-paper")
+        self.assertEqual(selection["mode"], "learned")
+        self.assertEqual(selection["recommendation"]["confidence"], "medium")
+
     def test_dashboard_failure_turns_aggregate_qa_red(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             package = Path(tmp)
