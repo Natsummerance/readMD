@@ -330,8 +330,7 @@ function renderAiHistory() {
       tag.appendChild(aiAnswerCopyButton(m.content));
       const body = document.createElement('div');
       body.className = 'ai-msg-body';
-      const prot = protectMath(m.content);
-      body.innerHTML = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
+      body.innerHTML = renderSafeMarkdown(m.content);
       ab.appendChild(tag); ab.appendChild(body);
       out.appendChild(ab);
     }
@@ -813,9 +812,7 @@ async function runAi(action) {
   const render = () => {
     renderTimer = null;
     if (!state.ai.raw) return;
-    const prot = protectMath(state.ai.raw);
-    const html = marked.parse(prot.src, { gfm: true, breaks: false });
-    aiBody.innerHTML = restoreMath(html, prot.saved);
+    aiBody.innerHTML = renderSafeMarkdown(state.ai.raw);
     out.scrollTop = out.scrollHeight;
   };
   try {

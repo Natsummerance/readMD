@@ -897,6 +897,11 @@ const RENDER_BUTTON_CLASSES = new Set([
   'code-chunk-clear-btn',
   'diagram-reload-btn',
 ]);
+const MARKDOWN_RESERVED_IDS = new Set([
+  'content', 'toolbar', 'statusbar', 'doc-tabs-container', 'doc-tabs-bar',
+  'ai-output', 'update-notes-content', 'presentation-modal', 'share-modal',
+]);
+const MARKDOWN_RESERVED_CLASS_RE = /^(?:modal|modal-dialog|modal-header|modal-footer|drag-overlay|tab-item|tab-close|zen-mode|zen-entering|presentation-modal|presentation-iframe)$/;
 
 function isSanctionedRenderButton(node) {
   const classes = Array.from(node.classList);
@@ -951,8 +956,20 @@ function sanitizeRenderedHtml(html) {
     Array.from(node.attributes).forEach(attribute => {
       const name = attribute.name.toLowerCase();
       const value = attribute.value;
+      if (name === 'id' && MARKDOWN_RESERVED_IDS.has(value)) {
+        node.removeAttribute(attribute.name);
+        return;
+      }
+      if (name === 'class' && value.split(/\s+/).some(className => MARKDOWN_RESERVED_CLASS_RE.test(className))) {
+        node.removeAttribute(attribute.name);
+        return;
+      }
+      if (name === 'role' || name === 'aria-hidden' || name === 'aria-live') {
+        node.removeAttribute(attribute.name);
+        return;
+      }
       if (name.startsWith('data-') || name === 'class' || name.startsWith('aria-') ||
-          ['title', 'lang', 'dir', 'role', 'alt', 'width', 'height', 'loading',
+          ['title', 'lang', 'dir', 'alt', 'width', 'height', 'loading',
            'colspan', 'rowspan', 'datetime', 'cite'].includes(name)) return;
       if (name === 'id') {
         if (!/^[A-Za-z][A-Za-z0-9_:.-]*$/.test(value)) node.removeAttribute(attribute.name);
@@ -991,6 +1008,13 @@ function sanitizeRenderedHtml(html) {
   return template.innerHTML;
 }
 window.sanitizeRenderedHtml = sanitizeRenderedHtml;
+
+function renderSafeMarkdown(source, { breaks = false } = {}) {
+  const prot = protectMath(String(source || ''));
+  const html = marked.parse(prot.src, { gfm: true, breaks });
+  return sanitizeRenderedHtml(restoreMath(html, prot.saved));
+}
+window.renderSafeMarkdown = renderSafeMarkdown;
 
 async function renderContent(content, name) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
