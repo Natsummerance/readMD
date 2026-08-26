@@ -138,6 +138,12 @@ ReadMD採用MIT授權。原始碼和發行資產公開於 Natsummerance/readMD �
 把 DOCX、PPTX、XLSX、PDF、HTML 或 LaTeX 來源保存在本機，並加入 ReadMD 轉換器；單一檔案、批次檔案和受支援的資料夾都可處理，批次工作支援拖放。本機轉換不需要將來源上傳到網頁表單。轉換後應複核標題、列表、表格、引言、公式、圖片參照和掃描識別結果，因為專有版式不一定有一對一的 Markdown 表達。
 
 
+
+## 任務指南：Markdown 表格
+
+專題回答：https://readmd.asia/zh-tw/markdown-tables/
+
+先讓每個標題儲存格只有一個明確意義，然後直接輸入列、使用視覺化表格設計器，或把受支援的 Excel 和 CSV 內容貼上轉換為 Markdown 表格。儲存前覆核豎線、跳脫儲存格、對齊方式、合併儲存格的替代表示、數字格式、日期、註釋和空值。顯示層修復不會改寫檔案；只有明確編輯並儲存才會生效。
 ## 任務指南：PDF 轉 Markdown
 
 專題回答：https://readmd.asia/zh-tw/pdf-to-markdown/

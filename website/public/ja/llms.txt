@@ -7,6 +7,7 @@
 - [巨大な Markdown](https://readmd.asia/ja/large-markdown-files/): 長文向けの意味的な改ページ、検索、目次ナビゲーション、表示だけの非破壊修復。
 - [Markdown 発表](https://readmd.asia/ja/markdown-to-slides/): 同じソースから見出し、コード、数式、図、表を保ったまま発表します。
 - [Markdown 変換](https://readmd.asia/ja/convert-to-markdown/): DOCX、PPTX、XLSX、PDF、HTML、LaTeX をローカルで変換し、構造を確認します。
+- [Markdown 表](https://readmd.asia/ja/markdown-tables/): ビジュアルな表エディターと Excel、CSV の貼り付け変換を確認境界付きで説明します。
 - [PDF から Markdown](https://readmd.asia/ja/pdf-to-markdown/): テキスト型 PDF とスキャン文書のための条件付きローカル変換ワークフロー。
 - [スキャンから Markdown](https://readmd.asia/ja/scan-to-markdown/): Windows と macOS のローカル OCR でスキャン頁やスクリーンショットから文字を抽出します。
 - [BibTeX 引用](https://readmd.asia/ja/bibtex-citations/): 同じ場所の `.bib` library を inline 引用 badge、文献カード、コピー可能な BibTeX、参考文献まとめに接続します。

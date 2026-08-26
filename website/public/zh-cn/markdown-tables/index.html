@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Markdown 表格 | ReadMD 表格设计器与 Excel 转换</title>
+  <meta name="description" content="用 ReadMD 的表格设计器和 Excel、CSV 粘贴转换，在本地创建、修复和维护 Markdown 表格；保留标题行与字段边界，并在保存前复核合并单元格、数字、日期、空值和对齐方式，避免把结构化资料继续锁在专有格式或散乱的粘贴结果里。">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ReadMD">
+  <meta property="og:title" content="Markdown 表格 | ReadMD 表格设计器与 Excel 转换">
+  <meta property="og:description" content="面向草稿和电子表格内容的本地 Markdown 表格工作流。">
+  <meta property="og:url" content="https://readmd.asia/zh-cn/markdown-tables/">
+  <meta property="og:image" content="https://readmd.asia/media/overview-editor.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="ReadMD 编辑器同时显示结构化内容的 Markdown 源码和渲染结果。">
+  <meta property="og:locale" content="zh_CN">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Markdown 表格 | ReadMD 表格设计器与 Excel 转换">
+  <meta name="twitter:description" content="把结构化资料整理成可复核的 Markdown 表格，不把原文件留在专有格式里。">
+  <meta name="twitter:image" content="https://readmd.asia/media/overview-editor.png">
+  <meta name="twitter:image:alt" content="ReadMD 编辑器同时显示结构化内容的 Markdown 源码和渲染结果。">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://readmd.asia/zh-cn/markdown-tables/">
+  <link rel="alternate" hreflang="en" href="https://readmd.asia/markdown-tables/">
+  <link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/markdown-tables/">
+  <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/markdown-tables/">
+  <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/markdown-tables/">
+  <link rel="alternate" hreflang="x-default" href="https://readmd.asia/markdown-tables/">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/zh-cn/markdown-tables/#webpage",
+      "url": "https://readmd.asia/zh-cn/markdown-tables/",
+      "name": "Markdown 表格 | ReadMD 表格设计器与 Excel 转换",
+      "isPartOf": {
+        "@id": "https://readmd.asia/#website"
+      },
+      "about": {
+        "@id": "https://readmd.asia/zh-cn/markdown-tables/#software"
+      },
+      "primaryImageOfPage": "https://readmd.asia/media/overview-editor.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#table-workflow p"
+        ]
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/zh-cn/markdown-tables/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/zh-cn/markdown-tables/#howto",
+      "name": "如何在本地创建和维护 Markdown 表格",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "定义字段",
+          "text": "先写标题行，让每一列都有清晰且唯一的业务含义。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "输入或粘贴行",
+          "text": "直接添加内容，使用表格设计器，或把受支持的 Excel 和 CSV 内容粘贴转换为 Markdown。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "规范分隔符",
+          "text": "分享前检查竖线、转义单元格、空白字段和列对齐。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "复核语义边界",
+          "text": "为合并单元格、单位、数字、日期、注释和空值安排明确的 Markdown 表达。"
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/zh-cn/markdown-tables/#faq","mainEntity":[{"@type":"Question","name":"ReadMD 能创建 Markdown 表格吗？","acceptedAnswer":{"@type":"Answer","text":"可以。ReadMD 提供可视化表格设计器，可以在保持 Markdown 为权威格式的同时构建行和列。"}},{"@type":"Question","name":"Excel 或 CSV 能变成 Markdown 表格吗？","acceptedAnswer":{"@type":"Answer","text":"ReadMD 支持把 Excel 和 CSV 粘贴转换为 Markdown 表格。粘贴后应复核表头、分隔符、换行和字段顺序。"}},{"@type":"Question","name":"编辑表格会自动改写我的文件吗？","acceptedAnswer":{"@type":"Answer","text":"不会。显示层修复保留在内存中；只有你明确编辑并保存时，Markdown 变更才会写入文件。"}},{"@type":"Question","name":"复杂电子表格应该怎么处理？","acceptedAnswer":{"@type":"Answer","text":"对 Markdown 没有直接表达的合并单元格应拆平或加注。发布前检查数字格式、日期、脚注和空值状态。"}}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/zh-cn/markdown-tables/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"首页","item":"https://readmd.asia/zh-cn/"},{"@type":"ListItem","position":2,"name":"Markdown 表格","item":"https://readmd.asia/zh-cn/markdown-tables/"}]}</script>
+</head>
+<body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/zh-cn/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#table-workflow">工作流</a><a href="/zh-cn/workflows/">更多答案</a><a href="https://github.com/Natsummerance/readMD">源码</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/latest">下载</a></div>
+  </header>
+  <main>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-cn/">首页</a> / <a class="link-action" href="/zh-cn/workflows/">工作流</a> / <span>Markdown 表格</span></nav>
+    <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
+      <h1 class="display-title">把表格资料整理成干净的 Markdown。</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">ReadMD 让表格在源码和预览中都保持可读。可以先建立字段，再粘贴表格内容，最后检查标题行、数值和边界情况，确认后才会写入文件。</p>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="1440" height="900" alt="ReadMD 编辑器同时显示结构化内容的 Markdown 源码和渲染结果。" loading="eager" fetchpriority="high"></picture></figure>
+    </section>
+    <section id="table-workflow" class="bg-[var(--color-surface)] py-16">
+      <div class="mx-auto max-w-5xl px-5">
+        <h2 class="text-2xl font-semibold tracking-tight">本地 Markdown 表格工作流</h2>
+        <ol class="mt-8 grid gap-6 md:grid-cols-2">
+          <li class="answer-card"><h3 class="text-lg font-semibold">定义字段</h3><p>先写标题行，让每一列都有清晰且唯一的业务含义。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">输入或粘贴行</h3><p>直接添加内容，使用表格设计器，或把受支持的 Excel 和 CSV 内容粘贴转换为 Markdown。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">规范分隔符</h3><p>分享前检查竖线、转义单元格、空白字段和列对齐。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">复核语义边界</h3><p>为合并单元格、单位、数字、日期、注释和空值安排明确的 Markdown 表达。</p></li>
+          </ol>
+      </div>
+    </section>
+    <section class="mx-auto max-w-5xl px-5 py-16">
+      <h2 class="text-2xl font-semibold tracking-tight">Markdown 表格常见问题</h2>
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <article class="answer-card"><h3>ReadMD 能创建 Markdown 表格吗？</h3><p>可以。ReadMD 提供可视化表格设计器，可以在保持 Markdown 为权威格式的同时构建行和列。</p></article>
+        <article class="answer-card"><h3>Excel 或 CSV 能变成 Markdown 表格吗？</h3><p>ReadMD 支持把 Excel 和 CSV 粘贴转换为 Markdown 表格。粘贴后应复核表头、分隔符、换行和字段顺序。</p></article>
+        <article class="answer-card"><h3>编辑表格会自动改写我的文件吗？</h3><p>不会。显示层修复保留在内存中；只有你明确编辑并保存时，Markdown 变更才会写入文件。</p></article>
+        <article class="answer-card"><h3>复杂电子表格应该怎么处理？</h3><p>对 Markdown 没有直接表达的合并单元格应拆平或加注。发布前检查数字格式、日期、脚注和空值状态。</p></article>
+      </div>
+      <div class="mt-10 flex flex-wrap gap-5">
+        <a class="link-action" href="/convert-to-markdown/">文档转 Markdown</a>
+        <a class="link-action" href="/large-markdown-files/">打开超大 Markdown 文件</a>
+      </div>
+      <div class="mt-8 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">获取 ReadMD</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 点 Star</a></div>
+    </section>
+  </main>
+  <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD. MIT License.</p><nav class="flex flex-wrap gap-5"><a href="/zh-cn/llms.txt">llms.txt</a><a href="/zh-cn/llms-full.txt">AI 完整文本</a><a href="https://github.com/Natsummerance/readMD/stargazers">GitHub Stars</a></nav></div></footer>
+</body>
+</html>

@@ -23,11 +23,12 @@ jobs:
             /markdown-to-slides/
             /convert-to-markdown/
             /pdf-to-markdown/
+            /markdown-tables/
             /scan-to-markdown/
             /bibtex-citations/
           )
           for language in zh-cn zh-tw ja; do
-            for suffix in / /workflows/ /download/ /large-markdown-files/ /markdown-to-slides/ /convert-to-markdown/ /pdf-to-markdown/ /scan-to-markdown/ /bibtex-citations/; do
+            for suffix in / /workflows/ /download/ /large-markdown-files/ /markdown-to-slides/ /convert-to-markdown/ /pdf-to-markdown/ /markdown-tables/ /scan-to-markdown/ /bibtex-citations/; do
               routes+=("/${language}${suffix}")
             done
           done

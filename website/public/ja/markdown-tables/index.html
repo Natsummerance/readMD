@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Markdown 表 | ReadMD の表エディターと Excel 変換</title>
+  <meta name="description" content="ReadMD のビジュアル表エディターと Excel、CSV の貼り付け変換を使い、ローカルで Markdown 表を作成、修正、保守します。見出し行と列の意味を保ち、保存前に結合セル、数値、日付、空値、整列を確認できます。構造化資料を専用形式や崩れた貼り付け結果に残さないための実務ワークフローです。">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ReadMD">
+  <meta property="og:title" content="Markdown 表 | ReadMD の表エディターと Excel 変換">
+  <meta property="og:description" content="草稿やスプレッドシートの資料を Markdown 表へ整理するローカル作業手順です。">
+  <meta property="og:url" content="https://readmd.asia/ja/markdown-tables/">
+  <meta property="og:image" content="https://readmd.asia/media/overview-editor.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="構造化された文章の Markdown ソースと描画結果を並べる ReadMD エディター。">
+  <meta property="og:locale" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Markdown 表 | ReadMD の表エディターと Excel 変換">
+  <meta name="twitter:description" content="構造化資料を確認しやすい Markdown 表に整理し、元ファイルを専用形式に残しません。">
+  <meta name="twitter:image" content="https://readmd.asia/media/overview-editor.png">
+  <meta name="twitter:image:alt" content="構造化された文章の Markdown ソースと描画結果を並べる ReadMD エディター。">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://readmd.asia/ja/markdown-tables/">
+  <link rel="alternate" hreflang="en" href="https://readmd.asia/markdown-tables/">
+  <link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/markdown-tables/">
+  <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/markdown-tables/">
+  <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/markdown-tables/">
+  <link rel="alternate" hreflang="x-default" href="https://readmd.asia/markdown-tables/">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/ja/markdown-tables/#webpage",
+      "url": "https://readmd.asia/ja/markdown-tables/",
+      "name": "Markdown 表 | ReadMD の表エディターと Excel 変換",
+      "isPartOf": {
+        "@id": "https://readmd.asia/#website"
+      },
+      "about": {
+        "@id": "https://readmd.asia/ja/markdown-tables/#software"
+      },
+      "primaryImageOfPage": "https://readmd.asia/media/overview-editor.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#table-workflow p"
+        ]
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/ja/markdown-tables/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/ja/markdown-tables/#howto",
+      "name": "ローカルで Markdown 表を作成し保守する方法",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "列を定義する",
+          "text": "最初に見出し行を書き、各列の意味を一つに限定します。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "行を入力または貼り付け",
+          "text": "直接入力、ビジュアルな表エディター、対応する Excel や CSV からの貼り付け変換を使えます。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "区切りを整える",
+          "text": "共有前にパイプ文字、エスケープされたセル、空欄、列揃えを確認します。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "意味上の例外を確認",
+          "text": "結合セル、単位、数値、日付、注記、空値に明確な Markdown 表現を与えます。"
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","@id":"https://readmd.asia/ja/markdown-tables/#faq","mainEntity":[{"@type":"Question","name":"ReadMD で Markdown 表を作れますか？","acceptedAnswer":{"@type":"Answer","text":"はい。ReadMD にはビジュアルな表エディターがあり、Markdown を正として行列を作成できます。"}},{"@type":"Question","name":"Excel や CSV を Markdown 表にできますか？","acceptedAnswer":{"@type":"Answer","text":"ReadMD は Excel と CSV の貼り付けから Markdown 表への変換に対応します。貼り付け後に見出し、区切り、改行、列順を確認してください。"}},{"@type":"Question","name":"表の編集で自動的にファイルが変わりますか？","acceptedAnswer":{"@type":"Answer","text":"いいえ。表示だけの修復はメモリー内です。明示的に編集して保存したときだけ変更がファイルに書き込まれます。"}},{"@type":"Question","name":"複雑なスプレッドシートはどう扱いますか？","acceptedAnswer":{"@type":"Answer","text":"Markdown に直接対応しない結合セルは分割するか注記します。公開前に数値書式、日付、脚注、空欄を確認してください。"}}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","@id":"https://readmd.asia/ja/markdown-tables/#breadcrumbs","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://readmd.asia/ja/"},{"@type":"ListItem","position":2,"name":"Markdown 表","item":"https://readmd.asia/ja/markdown-tables/"}]}</script>
+</head>
+<body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/ja/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#table-workflow">ワークフロー</a><a href="/ja/workflows/">その他の回答</a><a href="https://github.com/Natsummerance/readMD">ソース</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/latest">ダウンロード</a></div>
+  </header>
+  <main>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/ja/">ホーム</a> / <a class="link-action" href="/ja/workflows/">ワークフロー</a> / <span>Markdown 表</span></nav>
+    <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
+      <h1 class="display-title">表データを整えた Markdown に整理します。</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">ReadMD はソースとプレビューの両方で表を読みやすく保ちます。列を決め、表を入力または貼り付け、見出し行や数値、例外値を確認してからファイルへ保存します。</p>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="1440" height="900" alt="構造化された文章の Markdown ソースと描画結果を並べる ReadMD エディター。" loading="eager" fetchpriority="high"></picture></figure>
+    </section>
+    <section id="table-workflow" class="bg-[var(--color-surface)] py-16">
+      <div class="mx-auto max-w-5xl px-5">
+        <h2 class="text-2xl font-semibold tracking-tight">ローカル Markdown 表ワークフロー</h2>
+        <ol class="mt-8 grid gap-6 md:grid-cols-2">
+          <li class="answer-card"><h3 class="text-lg font-semibold">列を定義する</h3><p>最初に見出し行を書き、各列の意味を一つに限定します。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">行を入力または貼り付け</h3><p>直接入力、ビジュアルな表エディター、対応する Excel や CSV からの貼り付け変換を使えます。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">区切りを整える</h3><p>共有前にパイプ文字、エスケープされたセル、空欄、列揃えを確認します。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">意味上の例外を確認</h3><p>結合セル、単位、数値、日付、注記、空値に明確な Markdown 表現を与えます。</p></li>
+          </ol>
+      </div>
+    </section>
+    <section class="mx-auto max-w-5xl px-5 py-16">
+      <h2 class="text-2xl font-semibold tracking-tight">Markdown 表のよくある質問</h2>
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <article class="answer-card"><h3>ReadMD で Markdown 表を作れますか？</h3><p>はい。ReadMD にはビジュアルな表エディターがあり、Markdown を正として行列を作成できます。</p></article>
+        <article class="answer-card"><h3>Excel や CSV を Markdown 表にできますか？</h3><p>ReadMD は Excel と CSV の貼り付けから Markdown 表への変換に対応します。貼り付け後に見出し、区切り、改行、列順を確認してください。</p></article>
+        <article class="answer-card"><h3>表の編集で自動的にファイルが変わりますか？</h3><p>いいえ。表示だけの修復はメモリー内です。明示的に編集して保存したときだけ変更がファイルに書き込まれます。</p></article>
+        <article class="answer-card"><h3>複雑なスプレッドシートはどう扱いますか？</h3><p>Markdown に直接対応しない結合セルは分割するか注記します。公開前に数値書式、日付、脚注、空欄を確認してください。</p></article>
+      </div>
+      <div class="mt-10 flex flex-wrap gap-5">
+        <a class="link-action" href="/convert-to-markdown/">Markdown 変換</a>
+        <a class="link-action" href="/large-markdown-files/">巨大な Markdown</a>
+      </div>
+      <div class="mt-8 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">ReadMD を入手</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">GitHub で Star</a></div>
+    </section>
+  </main>
+  <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD. MIT License.</p><nav class="flex flex-wrap gap-5"><a href="/ja/llms.txt">llms.txt</a><a href="/ja/llms-full.txt">AI 用全文</a><a href="https://github.com/Natsummerance/readMD/stargazers">GitHub Stars</a></nav></div></footer>
+</body>
+</html>
