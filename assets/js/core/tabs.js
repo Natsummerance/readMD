@@ -650,6 +650,7 @@ async function closeOtherTabs(keepTabId) {
     }
   }
   state.tabs = [keepTab];
+  window.invalidateDocumentLoads?.();
   state.activeTabId = keepTabId;
   syncStateFromActiveTab();
   renderTabsBar();

@@ -340,3 +340,51 @@ test('a completed stale tab switch cannot restore the abandoned document', async
   expect(result.progressVisible).toBe(false);
   expect(Math.abs(result.scroll - 48)).toBeLessThanOrEqual(2);
 });
+
+test('going home cancels a still-loading document', async ({ page }) => {
+  let releaseFile = () => {};
+  const fileRequest = new Promise(resolve => { releaseFile = resolve; });
+  await page.route('**/api/file?p=slow.md', async route => {
+    await fileRequest;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        path: 'slow.md',
+        dir: '',
+        name: 'slow.md',
+        content: '# Slow must not override Home',
+        original: '# Slow must not override Home',
+        fixed: '# Slow must not override Home',
+        fixes: [],
+        stats: {},
+        size: 32,
+        mtime: Date.now(),
+        encoding: 'utf-8',
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.waitForFunction(() => typeof loadFile === 'function' && typeof goHome === 'function');
+  void page.evaluate(() => loadFile('slow.md'));
+  await page.waitForTimeout(50);
+  await page.evaluate(() => goHome());
+  const welcomeText = await page.evaluate(() => document.getElementById('content').textContent);
+  releaseFile();
+  await page.waitForTimeout(100);
+
+  expect(welcomeText).not.toContain('Slow must not override Home');
+  expect(await page.evaluate(() => ({
+    mode: state.mode,
+    activeTabId: state.activeTabId,
+    title: document.title,
+    visible: document.getElementById('content').textContent,
+  }))).toEqual({
+    mode: 'welcome',
+    activeTabId: null,
+    title: 'ReadMD',
+    visible: welcomeText,
+  });
+});

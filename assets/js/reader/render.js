@@ -1989,6 +1989,7 @@ async function renderVirtual(source, name, dir, content, fixes, extras) {
     scrollPos: 0,
     isVirtual: true,
   };
+  window.invalidateDocumentLoads?.();
   state.tabs.push(newTab);
   state.activeTabId = newTab.id;
   syncStateFromActiveTab();
