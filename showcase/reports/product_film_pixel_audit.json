@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "source": "website/public/media/readmd-product-journey.mp4",
+  "duration_seconds": 12.566667,
+  "frames": [
+    {
+      "frame": "frame-0.5.png",
+      "sha256": "64296f0ca12cf8fdcf83c2b8510aef40febc396556d435c26f4515330edecbeb",
+      "width": 1440,
+      "height": 810,
+      "luminance_std": 15.48,
+      "edge_density": 1.097
+    },
+    {
+      "frame": "frame-12.2.png",
+      "sha256": "a33ab8369ce1e227489c9fbf59a92eaea95e9cdb8f40a3f6ead39d7da2deb202",
+      "width": 1440,
+      "height": 810,
+      "luminance_std": 36.11,
+      "edge_density": 6.226
+    },
+    {
+      "frame": "frame-3.2.png",
+      "sha256": "25a53c9de29658b6437e63cf768afb5f36bd18c5b0696afecb632fab1c8b0715",
+      "width": 1440,
+      "height": 810,
+      "luminance_std": 31.9,
+      "edge_density": 4.311
+    },
+    {
+      "frame": "frame-6.4.png",
+      "sha256": "b7a9c8016419ab5d5cf29205f9564f4e8e37c60afb8c71cb34214d00140c161b",
+      "width": 1440,
+      "height": 810,
+      "luminance_std": 35.98,
+      "edge_density": 6.265
+    },
+    {
+      "frame": "frame-9.8.png",
+      "sha256": "90744d3d44cb814db5b4c9a4fb86c6831ea9aa419574cc73c78b46b0b7c1c09b",
+      "width": 1440,
+      "height": 810,
+      "luminance_std": 28.27,
+      "edge_density": 1.334
+    }
+  ],
+  "unique_frame_hashes": 5,
+  "passed": true
+}

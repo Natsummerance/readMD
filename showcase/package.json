@@ -5,6 +5,11 @@
   "scripts": {
     "test:config": "node --test tests/capture-config.test.mjs",
     "test:compose-lib": "node --test tests/compose-lib.test.mjs",
-    "capture": "node ../ui-tests/node_modules/@playwright/test/cli.js test"
+    "capture": "node ../ui-tests/node_modules/@playwright/test/cli.js test",
+    "audit:capture": "python scripts/audit_capture_pixels.py",
+    "record": "node ../ui-tests/node_modules/@playwright/test/cli.js test --config=recording.config.js",
+    "finalize-film": "node scripts/finalize-product-video.cjs",
+    "film-frames": "python scripts/generate_film_frames.py website/public/media/readmd-product-journey.mp4",
+    "product-film": "npm run record && npm run finalize-film"
   }
 }

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "capture_defaults": {
-    "viewport": { "width": 960, "height": 1280 },
+    "viewport": { "width": 1440, "height": 810 },
     "scale": 2,
     "locale": "zh-CN",
     "theme": "dark"

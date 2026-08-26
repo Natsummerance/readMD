@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "synced": [
+    {
+      "source": "showcase\\raw\\overview-reader.png",
+      "png": "website\\public\\media\\overview-reader.png",
+      "bytes_png": 347745,
+      "webp": "website\\public\\media\\overview-reader.webp",
+      "bytes_webp": 128890,
+      "dimensions": [
+        2880,
+        1620
+      ]
+    },
+    {
+      "source": "showcase\\raw\\overview-editor.png",
+      "png": "website\\public\\media\\overview-editor.png",
+      "bytes_png": 464146,
+      "webp": "website\\public\\media\\overview-editor.webp",
+      "bytes_webp": 195404,
+      "dimensions": [
+        2880,
+        1620
+      ]
+    },
+    {
+      "source": "showcase\\raw\\convert-home.png",
+      "png": "website\\public\\media\\convert-home.png",
+      "bytes_png": 119199,
+      "webp": "website\\public\\media\\convert-home.webp",
+      "bytes_webp": 51280,
+      "dimensions": [
+        2880,
+        1620
+      ]
+    }
+  ]
+}

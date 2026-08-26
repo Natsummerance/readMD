@@ -8,7 +8,7 @@ Approved as a staged publication package at **9.85 / 10**. The approved publicat
 
 | Skill | Depth of use | Evidence |
 |---|---:|---|
-| `$design-taste-frontend` | Deep | Declared design read for task-answer pages; preserved the original premium light theme, single accent, type scale, real product captures, semantic headings, responsive collapse, and restrained static motion. |
+| `$design-taste-frontend` | Deep | Declared design read for task-answer pages and the cinematic home redesign; preserved the original premium token system, single accent, type scale, semantic headings, responsive collapse, dark-mode parity, and reduced-motion behavior. Added motivated reveal, particle, parallax, and scroll-film stages without copying Apple assets or trade dress. |
 | `$dbs-spread` | Deep | New five-theory transmission review for the Markdown-tables cluster in `markdown_tables_approval.json`; prior reviews remain for PDF, BibTeX, OCR, conversion, and launch clusters. |
 | `$dbs-wechat-html` | Deep | New paste-safe Simplified Chinese five-workflow summary uses the minimal style source with expanded inline styles on every visible element; QA forbids style tags, classes, IDs, scripts, pseudo-elements, external resources, and raw URLs. |
 | `$dbs-content-system` | Applied within boundary | Existing answer pages are recombined into audience segments, six workflow clusters, channel drafts, a seven-day sprint, and a reusable publication ledger rather than creating disconnected posts. The table cluster records its question, concept, solution, relationships, and duplicate decision. |
@@ -21,6 +21,7 @@ Approved as a staged publication package at **9.85 / 10**. The approved publicat
 | `AgriciDaniel/claude-seo` | Applied crawler access, passage citability, entity signals, SSR accessibility, authority, and platform-specific checks. |
 | `zubair-trabzada/geo-seo-claude` | Applied weighted GEO categories to select the table intent and generated compliant root plus localized `llms.txt` / `llms-full.txt` corpora with absolute URLs and citation rules. |
 | `AgriciDaniel/claude-blog` | Applied release discipline: lint/check gates, traceable claims, no unverifiable guarantees, checksum guidance, and clean separation between draft evidence and public content. |
+| `webadderallorg/Recordly` (22,497 stars) | Referenced for polished demo-video patterns: cursor emphasis, zoom storytelling, and styled framing. The implementation uses Playwright's supported recorder plus FFmpeg; no AGPL Recordly code is copied. |
 
 ## High-star implementation dependency
 
@@ -36,7 +37,8 @@ The brief requested a literal Apple clone. That part was not implemented because
 - Release build validator: green after final rebuild.
 - Product showcase pipeline: 144 tests green before the website package.
 - Desktop UI suite: 55 tests green before the website package.
-- Browser smoke test: forty localized home, workflow, download, large-file, presentation, conversion, PDF, table, OCR, and BibTeX routes; one H1 per page, stylesheet loaded, zero broken images, zero script errors.
+- Browser smoke test: forty localized home, workflow, download, large-file, presentation, conversion, PDF, table, OCR, and BibTeX routes; one H1 per page, stylesheet loaded, zero broken images, zero script errors. The cinematic canvas becomes ready, scrolls past frame 45 of 57, and exposes a nonblank center pixel.
+- Landscape capture review: eight authentic screenshots pass dimension, hash, tonal-range, edge-density, color-detail, and blank-content checks at 2880x1620; dedicated approval is recorded in `cinematic_experience_approval.json`.
 - Structured data: localized WebPage, SoftwareApplication, speakable, FAQPage, HowTo, and BreadcrumbList contracts pass the website validator.
 - AI answer schema: four localized homepages and four workflow pages expose visible FAQPage entities; the dedicated three-round approval is recorded in `faq_schema_approval.json`.
 - Answer-page review: eight localized task guides expose complete hreflang sets, visible workflows, and citation-ready corpora; the dedicated three-round approval is recorded in `answer_pages_approval.json`.
