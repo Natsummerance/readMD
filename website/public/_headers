@@ -1,5 +1,5 @@
 /*
-  Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self' 'sha256-oGAHT4+EqmYSFrI7sglYzeAaWSCbKbq5rG8a0edhSZA='; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self' 'sha256-JRiCB7wMTtac117KsJ6YOO4LeClDWGtpuSta3c+pz5g='; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=31536000; includeSubDomains
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
