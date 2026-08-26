@@ -24,8 +24,11 @@ import urllib.request
 import urllib.parse
 import uuid
 
+from src.readmd_core.versioning import compare_versions, parse_version
+
 GITHUB_REPO = 'Natsummerance/readMD'
 GITHUB_API_LATEST = f'https://api.github.com/repos/{GITHUB_REPO}/releases/latest'
+GITHUB_API_RELEASES = f'https://api.github.com/repos/{GITHUB_REPO}/releases?per_page=100'
 
 # 常用开源 GitHub 加速镜像前缀（仅在用户选择或网络重试时使用）
 MIRROR_PREFIXES = [
@@ -83,24 +86,20 @@ def _safe_update_target(filename):
 
 def parse_semver(ver_str):
     """解析版本字符串为三元组 (major, minor, patch)，例如 'v2.2.8' -> (2, 2, 8)。"""
-    if not ver_str:
-        return (0, 0, 0)
-    cleaned = str(ver_str).strip().lstrip('vV')
-    m = re.match(r'^(\d+)\.(\d+)\.(\d+)', cleaned)
-    if m:
-        return (int(m.group(1)), int(m.group(2)), int(m.group(3)))
-    digits = re.findall(r'\d+', cleaned)
-    if digits:
-        nums = [int(d) for d in digits[:3]]
-        while len(nums) < 3:
-            nums.append(0)
-        return tuple(nums)
-    return (0, 0, 0)
+    parsed = parse_version(ver_str)
+    return parsed[0] if parsed else (0, 0, 0)
 
 
 def is_newer_version(latest_ver, current_ver):
     """判断 latest_ver 是否严格大于 current_ver。"""
-    return parse_semver(latest_ver) > parse_semver(current_ver)
+    return compare_versions(latest_ver, current_ver) == 1
+
+
+def _release_check_urls(current_version):
+    """GitHub /latest excludes prereleases, so beta builds scan the release list."""
+    current = parse_version(current_version)
+    primary = GITHUB_API_RELEASES if current and current[1] == 0 else GITHUB_API_LATEST
+    return [primary] + [prefix + primary for prefix in MIRROR_PREFIXES]
 
 
 def detect_app_flavor():
@@ -252,15 +251,20 @@ def resolve_expected_sha(sha_url, asset_name, timeout=5):
 def check_update(current_version, timeout=4):
     """请求 GitHub API 获取最新 Release 信息（支持国内加速镜像自动降级），并返回更新详情。"""
     data = None
-    urls_to_try = [
-        GITHUB_API_LATEST,
-        'https://ghfast.top/' + GITHUB_API_LATEST,
-        'https://ghproxy.net/' + GITHUB_API_LATEST,
-    ]
+    urls_to_try = _release_check_urls(current_version)
     last_err = ''
     for url in urls_to_try:
         try:
-            data = _fetch_release_json(url, timeout=timeout)
+            payload = _fetch_release_json(url, timeout=timeout)
+            if isinstance(payload, list):
+                candidates = [item for item in payload if item.get('tag_name') and not item.get('draft')]
+                data = max(
+                    candidates,
+                    key=lambda item: parse_version(item.get('tag_name')) or ((0, 0, 0), ()),
+                    default=None,
+                )
+            else:
+                data = payload
             if data and data.get('tag_name'):
                 break
         except Exception as e:
