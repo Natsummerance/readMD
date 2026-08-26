@@ -67,6 +67,10 @@ const aiFiles = [
         releaseFeedLinked: !!document.querySelector('link[type="application/atom+xml"][href$="releases.atom"]'),
         siteScriptLoaded: [...document.scripts].some(script => (script.src || '').endsWith('/assets/site.js')),
         particleField: !!document.querySelector('.particle-field'),
+        capabilityCanvas: !!document.querySelector('.capability-canvas'),
+        capabilityProgress: document.querySelector('.capability-canvas')?.dataset.syncProgress || '',
+        capabilityTrack: getComputedStyle(document.querySelector('[data-capability-track]') || document.body).transform,
+        capabilityPanels: document.querySelectorAll('.capability-panel').length,
         journeyCanvas: !!document.querySelector('#journey-film'),
       }))),
     });
@@ -155,8 +159,12 @@ const aiFiles = [
     if (!item.manifestLinked) failures.push(`${item.route}: web manifest is missing`);
     if (!item.releaseFeedLinked) failures.push(`${item.route}: release feed link is missing`);
     if (item.route === '/') {
-      if (!item.siteScriptLoaded) failures.push(`${item.route}: motion stylesheet script did not load`);
-      if (!item.particleField) failures.push(`${item.route}: particle field is missing`);
+    if (!item.siteScriptLoaded) failures.push(`${item.route}: motion stylesheet script did not load`);
+    if (!item.particleField) failures.push(`${item.route}: particle field is missing`);
+    if (!item.capabilityCanvas) failures.push(`${item.route}: capability cinema canvas is missing`);
+    if (item.capabilityPanels !== 9) failures.push(`${item.route}: expected nine capability panels`);
+    if (Number(item.capabilityProgress || 0) < 0.85) failures.push(`${item.route}: capability cinema progress was ${item.capabilityProgress}`);
+    if (item.capabilityTrack === 'none') failures.push(`${item.route}: capability rail did not move`);
       if (!item.journeyCanvas) failures.push(`${item.route}: journey canvas is missing`);
       if (!motionEvidence.scrolled) failures.push(`${item.route}: journey was not scroll-tested`);
       if (!motionEvidence.framesReady) failures.push(`${item.route}: film frames are not ready`);

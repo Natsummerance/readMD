@@ -446,6 +446,32 @@ def validate_motion_experience() -> list[str]:
     return errors
 
 
+def validate_capability_cinema() -> list[str]:
+    """The all-features stage must be a continuous scroll film, not discrete slides."""
+    errors: list[str] = []
+    content = (PUBLIC / "index.html").read_text(encoding="utf-8")
+    for marker in (
+        'id="capability-cinema"',
+        "data-capability-cinema",
+        "capability-canvas",
+        "data-capability-track",
+        "/large-markdown-files/",
+        "/markdown-to-slides/",
+        "/release-notes/",
+    ):
+        if marker not in content:
+            errors.append(f"capability cinema omits {marker}")
+    panels = content.count('class="capability-panel"')
+    if panels != 9:
+        errors.append(f"capability cinema expects 9 feature panels, found {panels}")
+    script_path = PUBLIC / "assets" / "site.js"
+    script = script_path.read_text(encoding="utf-8") if script_path.is_file() else ""
+    for marker in ("startCapabilityCinema", "drawBlendedFrame", "drawSlices", "drawParticles"):
+        if marker not in script:
+            errors.append(f"capability cinema script omits {marker}")
+    return errors
+
+
 def validate_security_headers() -> list[str]:
     errors: list[str] = []
     headers = (PUBLIC / "_headers").read_text(encoding="utf-8")
@@ -678,6 +704,7 @@ def main() -> int:
     errors.extend(validate_approval())
     errors.extend(validate_rights())
     errors.extend(validate_motion_experience())
+    errors.extend(validate_capability_cinema())
     errors.extend(validate_security_headers())
     errors.extend(validate_growth_homepages())
     errors.extend(validate_special_page_internal_links())
@@ -703,8 +730,9 @@ def main() -> int:
             "canonical_pages": len(LANGUAGES) + len(INTENT_PAGES) + len(DOWNLOAD_PAGES) + len(ANSWER_PAGES),
             "atom_feed": True,
             "entity_graph": True,
-            "security_txt": True,
-            "quality_404": True,
+        "security_txt": True,
+        "quality_404": True,
+        "capability_cinema": True,
         },
     }, ensure_ascii=False))
     return 0
