@@ -1,5 +1,29 @@
 const { test, expect } = require('@playwright/test');
 
+test('QR code stays out of startup and loads once on demand', async ({ page }) => {
+  let qrcodeRequests = 0;
+  await page.route('**/assets/vendor/qrcode.min.js*', async route => {
+    qrcodeRequests += 1;
+    await route.continue();
+  });
+
+  await page.goto('/');
+  await page.waitForFunction(() => typeof loadQrLibrary === 'function');
+  expect(await page.evaluate(() => typeof qrcode)).toBe('undefined');
+
+  await page.evaluate(() => loadQrLibrary());
+  await page.waitForFunction(() => typeof qrcode === 'function');
+  const generated = await page.evaluate(() => {
+    const qr = qrcode(0, 'M');
+    qr.addData('readmd:lazy-qr');
+    qr.make();
+    return qr.getModuleCount();
+  });
+
+  expect(qrcodeRequests).toBe(1);
+  expect(generated).toBeGreaterThan(20);
+});
+
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/update/check', route => route.fulfill({
     status: 200,
