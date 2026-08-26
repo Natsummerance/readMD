@@ -137,6 +137,12 @@ ReadMD採用MIT授權。原始碼和發行資產公開於 Natsummerance/readMD �
 
 把 DOCX、PPTX、XLSX、PDF、HTML 或 LaTeX 來源保存在本機，並加入 ReadMD 轉換器；單一檔案、批次檔案和受支援的資料夾都可處理，批次工作支援拖放。本機轉換不需要將來源上傳到網頁表單。轉換後應複核標題、列表、表格、引言、公式、圖片參照和掃描識別結果，因為專有版式不一定有一對一的 Markdown 表達。
 
+
+## 任務指南：PDF 轉 Markdown
+
+專題回答：https://readmd.asia/zh-tw/pdf-to-markdown/
+
+把 PDF 保留在本機，並先判斷它是文字型還是掃描型。加入 ReadMD 轉換器產生 Markdown 後，覆核標題、清單、表格、閱讀順序、公式、圖說、人名和數字再儲存。掃描頁在支援平臺使用合格的本機 OCR；OCR 結果是供人工覆核的草稿，不是保證完全正確的轉寫。
 ## 任務指南：掃描件與截圖轉 Markdown
 
 專題回答：https://readmd.asia/zh-tw/scan-to-markdown/

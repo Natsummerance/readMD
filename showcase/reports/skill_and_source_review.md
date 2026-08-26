@@ -36,20 +36,21 @@ The brief requested a literal Apple clone. That part was not implemented because
 - Release build validator: green after final rebuild.
 - Product showcase pipeline: 144 tests green before the website package.
 - Desktop UI suite: 55 tests green before the website package.
-- Browser smoke test: thirty-two localized home, workflow, download, large-file, presentation, conversion, OCR, and BibTeX routes; one H1 per page, stylesheet loaded, zero broken images, zero script errors.
+- Browser smoke test: thirty-six localized home, workflow, download, large-file, presentation, conversion, PDF, OCR, and BibTeX routes; one H1 per page, stylesheet loaded, zero broken images, zero script errors.
 - Structured data: localized WebPage, SoftwareApplication, speakable, FAQPage, HowTo, and BreadcrumbList contracts pass the website validator.
 - AI answer schema: four localized homepages and four workflow pages expose visible FAQPage entities; the dedicated three-round approval is recorded in `faq_schema_approval.json`.
 - Answer-page review: eight localized task guides expose complete hreflang sets, visible workflows, and citation-ready corpora; the dedicated three-round approval is recorded in `answer_pages_approval.json`.
+- PDF intent review: twelve localized routes cover the dedicated PDF-to-Markdown question with qualified offline and OCR boundaries; the dedicated three-round approval is recorded in `pdf_answer_pages_approval.json`.
 - Conversion-page review: four localized task guides cover local document migration with qualified offline and fidelity boundaries; the dedicated three-round approval is recorded in `conversion_pages_approval.json`.
 - OCR-page review: four localized task guides cover Windows WinRT and macOS Apple Vision workflows with local processing and human-review boundaries; the dedicated three-round approval is recorded in `ocr_pages_approval.json`.
 - BibTeX-page review: four localized task guides cover neighboring `.bib` scanning, inline keys, citation cards, copyable entries, and assembled references; the dedicated three-round approval is recorded in `bibtex_pages_approval.json`.
-- Sitemap review: all thirty-two canonical URLs expose complete hreflang sets and current freshness dates; the dedicated three-round approval is recorded in `sitemap_hreflang_approval.json`.
+- Sitemap review: all thirty-six canonical URLs expose complete hreflang sets and current freshness dates; the dedicated three-round approval is recorded in `sitemap_hreflang_approval.json`.
 - WeChat export QA: green.
 - Three approval rounds and final decision meeting: approved at or above 9.7.
 - Domain migration review: all active site, AI-corpus, tooling, deployment, and growth surfaces use `readmd.asia`; the dedicated three-round approval is recorded in `domain_migration_approval.json`, while historical reports remain unchanged.
 - Repository discovery review: GitHub's homepage points to `readmd.asia` and four localized READMEs expose the official-site badge plus live AI-corpus links; the dedicated three-round approval is recorded in `official_site_metadata_approval.json`.
 - Growth execution review: five workflow clusters are mapped to audiences, channels, objections, stop conditions, and a publication ledger; the dedicated three-round approval is recorded in `growth_execution_kit_approval.json`.
 - Distribution artifact QA: channel drafts, seven-day sprint, thirty-day cadence, measurement rules, dependency mapping, and paste-safe WeChat artifact are included without automated posting or unverifiable adoption claims.
-- Social preview review: all 32 public routes expose matching Open Graph and Twitter PNG previews with explicit MIME types and verified media assets; the dedicated three-round approval is recorded in `social_preview_png_approval.json`.
+- Social preview review: all 36 public routes expose matching Open Graph and Twitter PNG previews with explicit MIME types and verified media assets; the dedicated three-round approval is recorded in `social_preview_png_approval.json`.
 - Accessibility regression fix: the AI incognito checkbox now provides a 24px target in desktop and mobile viewports; the dedicated three-round approval is recorded in `ui_target_size_fix_approval.json`.
 - Browser smoke evidence: `domain_migration_browser_smoke.json` records 32 passing routes, 32 PNG social images, 32 new-origin canonical URLs, and no failures.
