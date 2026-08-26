@@ -42,6 +42,7 @@ validate_package = importlib.import_module("validate_package")
 watch_and_publish = importlib.import_module("watch_and_publish")
 validate_repair_batch = importlib.import_module("validate_repair_batch")
 write_copy = importlib.import_module("write_copy")
+publish_approved_batch = importlib.import_module("publish_approved_batch")
 
 
 def write_story(root: Path) -> dict:
@@ -6567,6 +6568,97 @@ class WatcherTest(unittest.TestCase):
         self.assertFalse(published)
         self.assertEqual(record["status"], "retrying")
         self.assertIn("selected copy_frame mismatch", record["error"])
+
+
+class OneClickPublishTest(unittest.TestCase):
+    def make_review_artifacts(self, root: Path, *, package_hash: str) -> tuple[Path, Path]:
+        root.mkdir(parents=True, exist_ok=True)
+        pdf = root / "poster-review.pdf"
+        pdf.write_bytes(b"%PDF-1.7\nreview-bytes")
+        batch = root / "batch.json"
+        batch.write_text(json.dumps({
+            "schema_version": 1,
+            "status": "paused_for_operator_review",
+            "packages": [{
+                "release": "v1.2.3",
+                "package": "package.zip",
+                "package_sha256": package_hash,
+                "manifest_sha256": "b" * 64,
+            }],
+        }, ensure_ascii=False), encoding="utf-8")
+        request = root / "poster-review.approval-request.json"
+        request.write_text(json.dumps({
+            "schema_version": 1,
+            "status": "pending_operator_review",
+            "batch": batch.name,
+            "batch_sha256": hashlib.sha256(batch.read_bytes()).hexdigest(),
+            "review_pdf": pdf.name,
+            "review_pdf_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
+            "page_count": 1,
+            "poster_page_count": 1,
+            "packages": [{
+                "release": "v1.2.3",
+                "package_sha256": package_hash,
+            }],
+        }, ensure_ascii=False), encoding="utf-8")
+        return batch, request
+
+    def invoke_validate_only(self, root: Path, batch: Path, request: Path) -> int:
+        ledger = root / "ledger.jsonl"
+        ledger.write_text(json.dumps({
+            "release": "v1.0.0",
+            "metrics_status": "complete",
+        }) + "\n", encoding="utf-8")
+        argv = [
+            "publish_approved_batch.py",
+            "--batch", str(batch),
+            "--approval-request", str(request),
+            "--root", str(root),
+            "--work-dir", str(root / "work"),
+            "--state", str(root / "state.json"),
+            "--ledger", str(ledger),
+            "--validate-only",
+        ]
+        with unittest.mock.patch.object(sys, "argv", argv), \
+             unittest.mock.patch.object(
+                 publish_approved_batch.validate_repair_batch,
+                 "validate_batch",
+                 return_value={"ok": True, "errors": []},
+             ), \
+             unittest.mock.patch.object(
+                 publish_approved_batch,
+                 "load_records",
+                 return_value=[{"release": "v1.0.0"}],
+             ), \
+             unittest.mock.patch.object(
+                 publish_approved_batch,
+                 "process_package",
+                 side_effect=AssertionError("validate-only must not publish"),
+             ):
+            return publish_approved_batch.main()
+
+    def test_validate_only_checks_chain_without_approval_or_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            package_hash = "a" * 64
+            batch, request = self.make_review_artifacts(root, package_hash=package_hash)
+            result = self.invoke_validate_only(root, batch, request)
+
+        self.assertEqual(result, 0)
+        self.assertFalse((root / "poster-review.approved.json").exists())
+
+    def test_validate_only_rejects_changed_package_without_publish(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            batch, request = self.make_review_artifacts(root, package_hash="a" * 64)
+            stale_request = json.loads(request.read_text(encoding="utf-8"))
+            stale_request["packages"][0]["package_sha256"] = "c" * 64
+            request.write_text(json.dumps(stale_request, ensure_ascii=False), encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "approved package hash changed"):
+                self.invoke_validate_only(root, batch, request)
+
+        self.assertFalse((root / "poster-review.approved.json").exists())
 
 
 class RepairBatchTest(unittest.TestCase):

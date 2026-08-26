@@ -64,6 +64,19 @@ python showcase/scripts/publish_approved_batch.py `
 
 批准文件绑定 PDF、批次和每个 ZIP 的 SHA-256；任一文件改动、QA 变红或 release 已在账本中，一键脚本都会停止。已发布的 release 会自动跳过。
 
+发布前可先用无副作用预检复核同一批文件；它不会创建批准文件，也不会调用发布器：
+
+```powershell
+python showcase/scripts/publish_approved_batch.py `
+  --batch showcase/output/release-run/downloads/batch-pending.json `
+  --approval-request showcase/output/release-run/downloads/poster-review-beta3-beta4.approval-request.json `
+  --root showcase/output/release-run/downloads `
+  --work-dir showcase/output/release-run/work `
+  --state showcase/output/release-run/publish-approved-state.json `
+  --ledger T:/Programming/Project/codex/creator/readmd/showcase/content/publication-ledger.jsonl `
+  --validate-only
+```
+
 完整构建会先生成 12 种叙事框架 × 8 个标题公式共 96 个实验组合；每个组合都有稳定 `variant_id` 和 `copy_frame`，语义评分、置信门控后的钩子/标题/叙事帧表现、近期疲劳和跨发布原创性共同决定最终稿。任一维度不足 2 次发布或 1000 次曝光时只做探索，不给历史加分。每个变体都会计算整稿哈希、开头指纹、结尾指纹和三元组相似度：整文哈希和 ≥85% 相似度对照全历史，开头/结尾只在最近 8 次发布内冷却，冷却期外的框架可随新事实安全轮换。标题哈希与三元组也会对照发布账本，防止同一机制连续换封面却重复旧标题。选择证据写入 `variants.json`。随后生成 `wechat/readmd-wechat.html`。该 HTML 只用行内样式，不包含脚本、外链、class、id 或图片；`wechat/wechat-qa.json` 也必须为 `{"ok":true}` 才允许进入发布队列。
 
 标题张力评分使用公式结构信号加机制具体性，正文焦点评分读取同一份机制档案的 mechanism 词表；不再给“PPT”“上台”等单一场景词额外加分。这样科研图表、LaTeX、代码运行、资料整理和分享机制都能按同一把尺子参与爆帖实验。
