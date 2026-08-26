@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import importlib
+import io
 import json
 import re
 import subprocess
@@ -24,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "showcase" / "scripts"))
 
 build_story = importlib.import_module("build_story")
+build_poster_review = importlib.import_module("build_poster_review")
 audit_copy = importlib.import_module("audit_copy")
 content_memory = importlib.import_module("content_memory")
 import_feedback_workbook = importlib.import_module("import_feedback_workbook")
@@ -6568,6 +6570,107 @@ class WatcherTest(unittest.TestCase):
         self.assertFalse(published)
         self.assertEqual(record["status"], "retrying")
         self.assertIn("selected copy_frame mismatch", record["error"])
+
+
+class PosterReviewBuilderTest(unittest.TestCase):
+    def make_package(
+        self,
+        root: Path,
+        filename: str,
+        release: str,
+        title: str,
+        style: str,
+        color: tuple[int, int, int],
+    ) -> tuple[Path, str]:
+        package = root / filename
+        cards = []
+        image_payloads = []
+        for index in range(2):
+            card_name = f"xhs-{index + 1:02d}-card.jpg"
+            payload = io.BytesIO()
+            Image.new("RGB", (1080, 1440), (color[0] + index * 18, color[1], color[2])).save(
+                payload, "JPEG", quality=92,
+            )
+            data = payload.getvalue()
+            image_payloads.append((card_name, data))
+            cards.append({
+                "file": card_name,
+                "role": "cover" if index == 0 else "annotated_ui",
+                "sha256": hashlib.sha256(data).hexdigest(),
+            })
+        metadata = {
+            "title": title,
+            "images": [f"images/{name}" for name, _ in image_payloads],
+        }
+        story = {"release": release}
+        composition = {"poster_style": style, "cards": cards}
+        with zipfile.ZipFile(package, "w") as archive:
+            archive.writestr("metadata.json", json.dumps(metadata, ensure_ascii=False))
+            archive.writestr("story.json", json.dumps(story, ensure_ascii=False))
+            archive.writestr("composition.json", json.dumps(composition, ensure_ascii=False))
+            for name, data in image_payloads:
+                archive.writestr(f"images/{name}", data)
+        return package, hashlib.sha256(package.read_bytes()).hexdigest()
+
+    def test_builds_indexed_review_with_verified_package_identities(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first, first_hash = self.make_package(
+                root, "beta3.zip", "v2.3.7-beta.3", "第一篇标题", "morandi-cinematic", (30, 50, 45),
+            )
+            second, second_hash = self.make_package(
+                root, "beta4.zip", "v2.3.7-beta.4", "第二篇标题", "photo-relic", (90, 50, 30),
+            )
+            batch = root / "batch.json"
+            batch.write_text(json.dumps({"packages": [
+                {"release": "v2.3.7-beta.3", "package": first.name, "package_sha256": first_hash},
+                {"release": "v2.3.7-beta.4", "package": second.name, "package_sha256": second_hash},
+            ]}, ensure_ascii=False), encoding="utf-8")
+            output = root / "review.pdf"
+
+            request = build_poster_review.build_review(
+                batch_path=batch,
+                root=root,
+                output=output,
+            )
+
+            self.assertEqual(request["page_count"], 7)
+            self.assertEqual(request["poster_page_count"], 4)
+            self.assertEqual(
+                [(item["release"], item["first_poster_page"], item["last_poster_page"]) for item in request["packages"]],
+                [("v2.3.7-beta.3", 3, 4), ("v2.3.7-beta.4", 6, 7)],
+            )
+            self.assertEqual(request["packages"][0]["package_sha256"], first_hash)
+            self.assertEqual(request["packages"][1]["package_sha256"], second_hash)
+            self.assertTrue(output.read_bytes().startswith(b"%PDF"))
+            self.assertEqual(
+                hashlib.sha256(output.read_bytes()).hexdigest(),
+                request["review_pdf_sha256"],
+            )
+
+    def test_rejects_stale_package_before_rendering_review(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            package, actual_hash = self.make_package(
+                root, "beta3.zip", "v2.3.7-beta.3", "唯一标题", "minimal-zine", (40, 40, 60),
+            )
+            batch = root / "batch.json"
+            batch.write_text(json.dumps({"packages": [
+                {"release": "v2.3.7-beta.3", "package": package.name, "package_sha256": actual_hash},
+            ]}), encoding="utf-8")
+            stale = json.loads(batch.read_text(encoding="utf-8"))
+            stale["packages"][0]["package_sha256"] = "f" * 64
+            batch.write_text(json.dumps(stale), encoding="utf-8")
+            output = root / "review.pdf"
+
+            with self.assertRaisesRegex(ValueError, "package SHA-256 mismatch"):
+                build_poster_review.build_review(
+                    batch_path=batch,
+                    root=root,
+                    output=output,
+                )
+
+        self.assertFalse(Path(tmp).joinpath("review.pdf").exists())
 
 
 class OneClickPublishTest(unittest.TestCase):

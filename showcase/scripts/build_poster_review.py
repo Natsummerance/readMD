@@ -84,44 +84,74 @@ def _text_page(
     return page
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--batch", type=Path, required=True)
-    parser.add_argument("--root", type=Path)
-    parser.add_argument("--output", type=Path)
-    parser.add_argument("--dpi", type=int, default=150)
-    args = parser.parse_args()
+def _load_package_block(root: Path, entry: dict) -> dict:
+    package_path = (root / str(entry["package"])).resolve()
+    if not package_path.is_relative_to(root):
+        raise ValueError(f"package escapes root: {package_path}")
+    actual_sha256 = sha256(package_path)
+    claimed_sha256 = str(entry.get("package_sha256", "")).lower()
+    if actual_sha256 != claimed_sha256:
+        raise ValueError(
+            f"package SHA-256 mismatch: {package_path.name} "
+            f"claimed={claimed_sha256 or '<missing>'}, actual={actual_sha256}"
+        )
+    with zipfile.ZipFile(package_path) as archive:
+        metadata = json.loads(archive.read("metadata.json"))
+        story = json.loads(archive.read("story.json"))
+        composition = json.loads(archive.read("composition.json"))
+        if story.get("release") != entry.get("release"):
+            raise ValueError(
+                f"batch release mismatch: {package_path.name} "
+                f"entry={entry.get('release')}, story={story.get('release')}"
+            )
+        by_name = {item["file"]: item for item in composition["cards"]}
+        images = []
+        for name in metadata["images"]:
+            filename = Path(name).name
+            payload = archive.read(f"images/{filename}")
+            image = Image.open(io.BytesIO(payload)).convert("RGB")
+            if image.size != (1080, 1440):
+                raise ValueError(f"{package_path.name}/{filename} must be 1080x1440")
+            if filename not in by_name:
+                raise ValueError(f"composition card missing for {package_path.name}/{filename}")
+            images.append(image)
+    return {
+        "metadata": metadata,
+        "story": story,
+        "composition": composition,
+        "images": images,
+        "package_path": package_path,
+        "actual_sha256": actual_sha256,
+    }
 
-    batch_path = args.batch.resolve()
-    root = (args.root or batch_path.parent).resolve()
+
+def build_review(
+    *,
+    batch_path: Path,
+    root: Path,
+    output: Path,
+    dpi: int = 150,
+) -> dict:
+    batch_path = batch_path.resolve()
+    root = root.resolve()
     batch = json.loads(batch_path.read_text(encoding="utf-8"))
-    output = (args.output or batch_path.parent / "poster-review.pdf").resolve()
+    output = output.resolve()
     packages: list[dict] = []
     blocks: list[dict] = []
-
-    for entry in batch.get("packages", []):
-        package_path = (root / str(entry["package"])).resolve()
-        if not package_path.is_relative_to(root):
-            raise ValueError(f"package escapes root: {package_path}")
-        with zipfile.ZipFile(package_path) as archive:
-            metadata = json.loads(archive.read("metadata.json"))
-            story = json.loads(archive.read("story.json"))
-            composition = json.loads(archive.read("composition.json"))
-            by_name = {item["file"]: item for item in composition["cards"]}
-            images = []
-            for name in metadata["images"]:
-                filename = Path(name).name
-                payload = archive.read(f"images/{filename}")
-                image = Image.open(io.BytesIO(payload)).convert("RGB")
-                if image.size != (1080, 1440):
-                    raise ValueError(f"{package_path.name}/{filename} must be 1080x1440")
-                images.append(image)
-        blocks.append({
-            "metadata": metadata,
-            "story": story,
-            "composition": composition,
-            "images": images,
-        })
+    output.parent.mkdir(parents=True, exist_ok=True)
+    entries = batch.get("packages")
+    if not isinstance(entries, list) or not entries:
+        raise ValueError("review batch must contain a non-empty packages list")
+    blocks = [_load_package_block(root, entry) for entry in entries]
+    releases = [block["story"].get("release") for block in blocks]
+    titles = [block["metadata"].get("title") for block in blocks]
+    styles = [block["composition"].get("poster_style") for block in blocks]
+    if len(releases) != len(set(releases)):
+        raise ValueError(f"review batch has duplicate releases: {releases}")
+    if len(titles) != len(set(titles)):
+        raise ValueError(f"review batch has duplicate titles: {titles}")
+    if len(styles) != len(set(styles)):
+        raise ValueError(f"review batch has duplicate poster styles: {styles}")
 
     # Reserve the cover page, then alternate one divider before each poster set.
     cursor_page = 1
@@ -138,14 +168,14 @@ def main() -> int:
         composition = block["composition"]
         images = block["images"]
         by_name = {item["file"]: item for item in composition["cards"]}
-        package_path = (root / str(entry["package"])).resolve()
+        package_path = block["package_path"]
         packages.append({
             "release": story["release"],
             "title": metadata["title"],
             "poster_style": composition["poster_style"],
             "card_count": len(images),
             "package": package_path.name,
-            "package_sha256": entry["package_sha256"],
+            "package_sha256": block["actual_sha256"],
             "divider_page": block["divider_page"],
             "first_poster_page": block["first_poster_page"],
             "last_poster_page": block["last_poster_page"],
@@ -162,8 +192,8 @@ def main() -> int:
     if not any(block["images"] for block in blocks):
         raise ValueError("batch has no poster pages")
     package_path_by_release = {
-        str(entry["release"]): entry["package"]
-        for entry in batch.get("packages", [])
+        block["story"]["release"]: block["package_path"]
+        for block in blocks
     }
     cover_rows = []
     for index, block in enumerate(blocks, 1):
@@ -172,7 +202,7 @@ def main() -> int:
                 f"{block['story']['release']} · {block['composition']['poster_style']}\n"
                 f"{block['metadata']['title']}\n"
                 f"PDF 第 {block['first_poster_page']}-{block['last_poster_page']} 页 · "
-                f"SHA256 {sha256(root / package_path_by_release[block['story']['release']])[:16]}"
+                f"SHA256 {block['actual_sha256'][:16]}"
             )),
         ))
     cover = _text_page(
@@ -194,7 +224,7 @@ def main() -> int:
             rows=[
                 ("标题", metadata["title"]),
                 ("海报页", f"PDF 第 {block['first_poster_page']}-{block['last_poster_page']} 页"),
-                ("包哈希", sha256(root / package_path_by_release[story["release"]])),
+                ("包哈希", block["actual_sha256"]),
             ],
             note="以下截图均来自真实运行画面；请重点检查比例、完整性、裁切和留白。",
         )
@@ -205,7 +235,7 @@ def main() -> int:
         format="PDF",
         save_all=True,
         append_images=pages[1:],
-        resolution=args.dpi,
+        resolution=dpi,
         quality=95,
     )
     request = {
@@ -222,7 +252,31 @@ def main() -> int:
     }
     request_path = output.with_suffix(".approval-request.json")
     request_path.write_text(json.dumps(request, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({"ok": True, "pdf": str(output), "request": str(request_path), "pages": len(pages)}, ensure_ascii=False))
+    return request
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--batch", type=Path, required=True)
+    parser.add_argument("--root", type=Path)
+    parser.add_argument("--output", type=Path)
+    parser.add_argument("--dpi", type=int, default=150)
+    args = parser.parse_args()
+    root = args.root or args.batch.parent
+    output = args.output or root / "poster-review.pdf"
+    request = build_review(
+        batch_path=args.batch,
+        root=root,
+        output=output,
+        dpi=args.dpi,
+    )
+    resolved_output = output.resolve()
+    print(json.dumps({
+        "ok": True,
+        "pdf": str(resolved_output),
+        "request": str(resolved_output.with_suffix(".approval-request.json")),
+        "pages": request["page_count"],
+    }, ensure_ascii=False))
     return 0
 
 
