@@ -1106,5 +1106,11 @@
   "exportai.generating": "Tipográfiai paraméterek tervezése...",
   "exportai.applied": "AI tipográfiai előbeállítás alkalmazva",
   "convert.aiFixFormat": "AI automatikus javítás",
-  "convert.aiFixDesc": "Használjon AI-t a táblázatok, képletek és sortörések javításához"
+  "convert.aiFixDesc": "Használjon AI-t a táblázatok, képletek és sortörések javításához",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

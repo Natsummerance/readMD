@@ -1106,5 +1106,11 @@
   "exportai.generating": "Oblikovanje tipografskih parametrov...",
   "exportai.applied": "AI tipografska prednastavitev uveljavljena",
   "convert.aiFixFormat": "AI samodejno popravilo oblikovanja",
-  "convert.aiFixDesc": "Uporabite AI za popravilo poravnave tabel, formul in prelomov vrstic"
+  "convert.aiFixDesc": "Uporabite AI za popravilo poravnave tabel, formul in prelomov vrstic",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

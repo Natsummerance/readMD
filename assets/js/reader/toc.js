@@ -22,6 +22,12 @@ function buildToc() {
   const list = $('toc-list');
   if (!list) return;
 
+  if (state.mode === 'welcome' || (!state.file && !state.original && !state.fixed && (!state.tabs || !state.tabs.length))) {
+    list.innerHTML = `<div class="side-empty">${_t('sidebar.emptyToc') || '（当前文档暂无标题大纲）'}</div>`;
+    tocCache = { source: null, pageCount: 0 };
+    return;
+  }
+
   // 1. 分页模式下：从全文所有分页提取全局完整大纲
   if (state.pagination && state.pagination.enabled && state.pagination.mode === 'paged' && state.pagination.pages && state.pagination.pages.length) {
     const canReuseOutline =

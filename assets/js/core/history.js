@@ -198,8 +198,8 @@ function goHome() {
   document.title = 'ReadMD';
   setFileTitle('', false);
 
-  if ($('toc')) $('toc').innerHTML = '';
-  if ($('outline')) $('outline').innerHTML = '';
+  if ($('toc-list')) $('toc-list').innerHTML = `<div class="side-empty">${(window.i18n ? window.i18n.t('sidebar.emptyToc') : '') || '（当前文档暂无标题大纲）'}</div>`;
+  if (typeof tocCache !== 'undefined') tocCache = { source: null, pageCount: 0 };
 
   if (state.welcomeHtml) {
     $('content').innerHTML = state.welcomeHtml;

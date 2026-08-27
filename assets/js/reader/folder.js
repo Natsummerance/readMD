@@ -250,6 +250,7 @@ function showSide(tab) {
     if (state.folderFiles.length) renderFolderList();
     else listFolder(state.dir || '');
   } else {
+    buildToc();
     updateTreeTabIndex();
   }
 }

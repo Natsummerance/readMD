@@ -1106,5 +1106,11 @@
   "exportai.generating": "กำลังออกแบบพารามิเตอร์การจัดพิมพ์...",
   "exportai.applied": "ใช้พรีเซ็ตการจัดพิมพ์ของ AI แล้ว",
   "convert.aiFixFormat": "AI ซ่อมแซมการจัดรูปแบบ",
-  "convert.aiFixDesc": "ใช้ AI เพื่อแก้ไขการจัดตำแหน่งตาราง สูตร และการขึ้นบรรทัดใหม่"
+  "convert.aiFixDesc": "ใช้ AI เพื่อแก้ไขการจัดตำแหน่งตาราง สูตร และการขึ้นบรรทัดใหม่",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

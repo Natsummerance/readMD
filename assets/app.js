@@ -405,6 +405,7 @@ function bindEvents() {
   /* --- 10. 目录大纲与自动修正查看 [联动: reader/toc.js, reader/fixes.js] --- */
   $('btn-toc').addEventListener('click', () => toggleSide('toc'));
   $('btn-fix').addEventListener('click', showFixModal);
+  if ($('fix-ai-btn')) $('fix-ai-btn').addEventListener('click', () => { if (typeof handleAiDocumentFix === 'function') handleAiDocumentFix(); });
   $('fix-close').addEventListener('click', () => $('fix-modal').classList.add('hidden'));
   $('fix-save').addEventListener('click', async () => {
     const content = state.fixed || '';
@@ -773,7 +774,14 @@ function bindEvents() {
     }
     
     const presentationVisible = $('presentation-modal') && !$('presentation-modal').classList.contains('hidden');
-    if (e.key === 'F11' && !presentationVisible) { e.preventDefault(); toggleZenMode(); }
+    if (e.key === 'F11') {
+      e.preventDefault();
+      if (presentationVisible) {
+        window.togglePresentationFullscreen?.($('presentation-modal'));
+      } else {
+        toggleZenMode();
+      }
+    }
     else if (e.key === 'F2') { e.preventDefault(); openFileRename(); } // F2: 文件重命名
     else if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); $('btn-open').click(); } // Ctrl+O: 打开文件
     else if (mod && e.key.toLowerCase() === 'f') { // Ctrl+F: 全文搜索

@@ -1106,5 +1106,11 @@
   "exportai.generating": "Designing typography parameters...",
   "exportai.applied": "AI typography preset applied",
   "convert.aiFixFormat": "AI Fix Formatting",
-  "convert.aiFixDesc": "Use AI to deep-fix table alignments, formulas, and line wraps"
+  "convert.aiFixDesc": "Use AI to deep-fix table alignments, formulas, and line wraps",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

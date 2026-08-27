@@ -63,7 +63,7 @@ class ReadmdStartupPerformanceTest(unittest.TestCase):
         server = readmd.start_server(port=0)
         try:
             connection = http.client.HTTPConnection('127.0.0.1', server.server_port, timeout=5)
-            connection.request('GET', '/assets/readmd.boot.js?v=2.3.7-beta.3')
+            connection.request('GET', f'/assets/readmd.boot.js?v={getattr(readmd, "VERSION", "2.3.7")}')
             response = connection.getresponse()
             body = response.read().decode('utf-8')
             self.assertEqual(response.status, 200)

@@ -3564,6 +3564,14 @@ html[dir="rtl"] .academic-callout {
   border-left: none;
   border-right: 4px solid var(--accent);
 }
+html[dir="rtl"] #side {
+  border-right: none;
+  border-left: 1px solid var(--border);
+}
+html[dir="rtl"] #ai-panel {
+  border-left: none;
+  border-right: 1px solid var(--border);
+}
 
 /* ============================================================
    v2.3.0 LaTeX PRO 学术增强：定理 Callout 与 BibTeX 引用
@@ -4375,13 +4383,29 @@ body.zen-mode #content {
   padding: 5px 12px;
   z-index: 10001;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  opacity: 0.88;
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  opacity: 0.95;
+  transform: translateY(0);
+  transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.presentation-toolbar:hover {
+.presentation-toolbar:hover,
+.presentation-toolbar:focus-within {
   opacity: 1;
   transform: translateY(1px);
+}
+
+#presentation-modal.pres-zen-active .presentation-toolbar {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-16px);
+}
+
+#presentation-modal.pres-zen-active .presentation-toolbar.pres-toolbar-revealed,
+#presentation-modal.pres-zen-active .presentation-toolbar:hover,
+#presentation-modal.pres-zen-active .presentation-toolbar:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 .presentation-tool-item {

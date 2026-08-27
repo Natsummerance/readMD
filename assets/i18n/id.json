@@ -1106,5 +1106,11 @@
   "exportai.generating": "Merancang parameter tipografi...",
   "exportai.applied": "Preset tipografi AI diterapkan",
   "convert.aiFixFormat": "Perbaikan Format Otomatis AI",
-  "convert.aiFixDesc": "Gunakan AI untuk memperbaiki perataan tabel, rumus, dan jeda baris"
+  "convert.aiFixDesc": "Gunakan AI untuk memperbaiki perataan tabel, rumus, dan jeda baris",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

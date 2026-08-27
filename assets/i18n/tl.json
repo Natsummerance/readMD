@@ -1106,5 +1106,11 @@
   "exportai.generating": "Dinedisenyo ang mga parameter ng tipograpiya...",
   "exportai.applied": "Nailapat ang preset ng tipograpiya ng AI",
   "convert.aiFixFormat": "Awtomatikong Pag-aayos ng Format ng AI",
-  "convert.aiFixDesc": "Gamitin ang AI upang ayusin ang mga talahanayan at formula"
+  "convert.aiFixDesc": "Gamitin ang AI upang ayusin ang mga talahanayan at formula",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

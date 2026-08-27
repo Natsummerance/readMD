@@ -8,11 +8,17 @@ rem ============================================================
 setlocal
 cd /d "%~dp0..\.."
 title ReadMD Packager
-set "READMD_VERSION=2.3.4"
-
-
-
-set "READMD_VERSION_OVERRIDE=%READMD_VERSION%"
+rem ---- 读取全局版本号（优先使用环境变量；其次从 VERSION / .env 读取）----
+if "%READMD_VERSION%"=="" (
+    if exist "VERSION" set /p READMD_VERSION=<VERSION
+)
+if "%READMD_VERSION%"=="" (
+    for /f "usebackq tokens=1,* delims==" %%A in (".env") do (
+        if "%%A"=="READMD_VERSION" set "READMD_VERSION=2.3.7-beta.5"
+    )
+)
+if "%READMD_VERSION%"=="" set "READMD_VERSION=2.3.7-beta.5"
+set "READMD_VERSION_OVERRIDE=2.3.7-beta.5"
 
 
 echo [1/5] Checking Python for ReadMD v%READMD_VERSION% ...

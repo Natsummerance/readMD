@@ -1106,5 +1106,11 @@
   "exportai.generating": "Kieti kubongisa mitelema ya nsonokono...",
   "exportai.applied": "Mfundu ya nsonokono ya AI mesadilama",
   "convert.aiFixFormat": "Kubongisa Nidilu na AI",
-  "convert.aiFixDesc": "Sadila AI sambu na kubongisa batable, baformule mpe milongo"
+  "convert.aiFixDesc": "Sadila AI sambu na kubongisa batable, baformule mpe milongo",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

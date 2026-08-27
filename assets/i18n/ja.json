@@ -1106,5 +1106,11 @@
   "exportai.generating": "タイポグラフィパラメータを分析・設計中...",
   "exportai.applied": "AI 生成のタイポグラフィプリセットを適用しました",
   "convert.aiFixFormat": "AI 自動修復",
-  "convert.aiFixDesc": "AI を使用して表の整列、数式、改行を修復します"
+  "convert.aiFixDesc": "AI を使用して表の整列、数式、改行を修復します",
+  "fixes.aiFix": "AI ディープ修復",
+  "fixes.aiFixing": "AI によるフォーマット深層自己修復中...",
+  "fixes.aiFixed": "AI レイアウト修復が完了しました",
+  "fixes.aiFixFail": "AI 修復に失敗しました: ",
+  "fixes.noDocContent": "修復可能な文書内容がありません",
+  "presentation.exitFullscreenLabel": "全画面を解除"
 }

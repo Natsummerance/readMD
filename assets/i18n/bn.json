@@ -1106,5 +1106,11 @@
   "exportai.generating": "টাইপোগ্রাফি পরামিতি ডিজাইন করা হচ্ছে...",
   "exportai.applied": "AI টাইপোগ্রাফি প্রিসেট প্রয়োগ করা হয়েছে",
   "convert.aiFixFormat": "AI স্বয়ংক্রিয় বিন্যাস সংশোধন",
-  "convert.aiFixDesc": "সারণী প্রান্তিককরণ, সূত্র এবং লাইন বিরতি ঠিক করতে AI ব্যবহার করুন"
+  "convert.aiFixDesc": "সারণী প্রান্তিককরণ, সূত্র এবং লাইন বিরতি ঠিক করতে AI ব্যবহার করুন",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

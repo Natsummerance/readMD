@@ -11,7 +11,9 @@ dist/
 !assets/vendor/katex/dist/
 !assets/vendor/katex/dist/**
 *.spec
-!release/ReadMD-macOS.spec
+!release/*.spec
+.env
+*.env
 
 
 tools/cm-bundle/node_modules/

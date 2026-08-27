@@ -1106,5 +1106,11 @@
   "exportai.generating": "Paraiméadair chlóghrafaíochta á ndearadh...",
   "exportai.applied": "Réamhshocrú clóghrafaíochta AI curtha i bhfeidhm",
   "convert.aiFixFormat": "Uath-Dheisiú Formáidithe AI",
-  "convert.aiFixDesc": "Úsáid AI chun ailíniú táblaí, foirmlí agus briseadh línte a dheisiú"
+  "convert.aiFixDesc": "Úsáid AI chun ailíniú táblaí, foirmlí agus briseadh línte a dheisiú",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

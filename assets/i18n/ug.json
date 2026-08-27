@@ -1106,5 +1106,11 @@
   "exportai.generating": "بەت پۈتۈش پارامېتىرلىرى لايىھىلىنىۋاتىدۇ...",
   "exportai.applied": "سۈنئىي ئىدراك تەمىنلىگەن بەت پۈتۈش ئۇسلۇبى تەتبىقلاندى",
   "convert.aiFixFormat": "سۈنئىي ئىدراك پىچىم تۈزىتىش",
-  "convert.aiFixDesc": "سۈنئىي ئىدراك ئارقىلىق جەدۋەل، فورمۇلا ۋە قۇر ئۈزۈلۈشلىرىنى ئەسلىگە كەلتۈرۈش"
+  "convert.aiFixDesc": "سۈنئىي ئىدراك ئارقىلىق جەدۋەل، فورمۇلا ۋە قۇر ئۈزۈلۈشلىرىنى ئەسلىگە كەلتۈرۈش",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

@@ -640,6 +640,22 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
       width: 95%;
       margin: 12px 0;
     }}
+    /* 禅模式：右下角翻页按钮渐隐，但页码指示器 (.slide-number) 始终常驻显示 */
+    body.reveal-zen-controls-hidden .reveal .controls {{
+      opacity: 0 !important;
+      pointer-events: none !important;
+      transform: scale(0.92);
+      transition: opacity 0.35s ease, transform 0.35s ease !important;
+    }}
+    .reveal .controls {{
+      transition: opacity 0.35s ease, transform 0.35s ease !important;
+    }}
+    .reveal .slide-number {{
+      opacity: 0.85 !important;
+      pointer-events: auto !important;
+      display: block !important;
+      transition: opacity 0.25s ease !important;
+    }}
   </style>
 </head>
 <body data-transition="{transition}">

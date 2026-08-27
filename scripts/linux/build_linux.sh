@@ -2,7 +2,7 @@
 # ReadMD Linux & 信创全架构 (x86_64 / aarch64 / loongarch64 / mips64el / sw64 / armhf) 打包脚本
 set -euo pipefail
 
-VERSION="${READMD_BUILD_VERSION:-${READMD_VERSION:-$(python3 -c 'import readmd; print(readmd.VERSION)' 2>/dev/null || echo '2.3.4')}}"
+VERSION="${READMD_BUILD_VERSION:-${READMD_VERSION:-$(cat VERSION 2>/dev/null || python3 -c 'import readmd; print(readmd.VERSION)' 2>/dev/null || echo '2.3.7-beta.5')}"
 ARCH="$(uname -m)"
 DEB_ARCH="${READMD_DEB_ARCH:-}"
 if [ -z "${DEB_ARCH}" ]; then

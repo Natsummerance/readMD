@@ -1,25 +1,25 @@
 <p align="center">
-  <b>Languages / 多語言版本</b>:
-  <a href="README.md">简体中文</a> |
-  <b>繁體中文</b> |
-  <a href="README.en.md">English</a> |
-  <a href="README.ja.md">日本語</a>
+ <b>Languages / 多語言版本</b>:
+ <a href="README.md">简体中文</a> |
+ <b>繁體中文</b> |
+ <a href="README.en.md">English</a> |
+ <a href="README.ja.md">日本語</a>
 </p>
 
 <div align="center">
-  <img src="assets/icon-256.png" width="88" alt="ReadMD logo">
+ <img src="assets/icon-256.png" width="88" alt="ReadMD logo">
 
-  # ReadMD
+ # ReadMD
 
-  **超大 Markdown 檔案本機開啟，原始檔保持不動。**
+ **超大 Markdown 檔案本機開啟，原始檔保持不動。**
 
-  ReadMD 是本地優先的 Markdown 閱讀器與編輯器。連按兩下即可閱讀，超大文件也能維持目錄和搜尋；常見語法問題只在顯示層修復，並支援 Office / PDF / 網頁轉 Markdown、離線 OCR、LaTeX 學術增強與 MCP 整合。
+ ReadMD 是本地優先的 Markdown 閱讀器與編輯器。連按兩下即可閱讀，超大文件也能維持目錄和搜尋；常見語法問題只在顯示層修復，並支援 Office / PDF / 網頁轉 Markdown、離線 OCR、LaTeX 學術增強與 MCP 整合。
 
-  [![platform](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20KylinOS%20%7C%20UOS-blue)](#全平台直接下載矩陣-release-assets)
-  [![i18n](https://img.shields.io/badge/languages-46-orange)](docs/i18n-language-reference.md)
-  [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-  [![release](https://img.shields.io/github/v/release/Natsummerance/readMD)](https://github.com/Natsummerance/readMD/releases/latest)
-  [![website](https://img.shields.io/badge/site-readmd.asia-black)](https://readmd.asia)
+ [![platform](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20KylinOS%20%7C%20UOS-blue)](#全平台直接下載矩陣-release-assets)
+ [![i18n](https://img.shields.io/badge/languages-46-orange)](docs/i18n-language-reference.md)
+ [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+ [![release](https://img.shields.io/github/v/release/Natsummerance/readMD)](https://github.com/Natsummerance/readMD/releases/latest)
+ [![website](https://img.shields.io/badge/site-readmd.asia-black)](https://readmd.asia)
 </div>
 
 ## 30 秒判斷適不適合你
@@ -62,22 +62,22 @@ ReadMD 處理長期資料庫裡的實際問題：大型文件能繼續閱讀，�
 
 如果它幫你省下一次整理時間，請[給倉庫 Star](https://github.com/Natsummerance/readMD)，讓更多創作者找到這個工具。
 
-## 🚀 全平台直接下載矩陣 (Release Assets)
+## 全平台直接下載矩陣 (Release Assets)
 
 | 作業系統 / 平台 | 架構 / 格式 | 直接下載連結 (GitHub Release) | 說明 |
 | :--- | :--- | :--- | :--- |
-| 🪟 **Windows** | x64 (安裝版) | [⬇️ **ReadMDSetup-v2.3.7-beta.5.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe) | 具備安裝精靈，自動註冊 `.md` 檔案關聯 |
-| 💼 **Windows** | x64 (免安裝便攜版) | [⬇️ **ReadMD-portable-v2.3.7-beta.5.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe) | 單一執行檔，解壓縮即用，隨身攜帶 |
-| 🍏 **macOS** | Apple Silicon (M系列) | [⬇️ **ReadMD-macos-arm64-v2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip) | M1 / M2 / M3 / M4 原生建置（含 Vision 離線 OCR） |
-| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip) | Intel 處理器 Mac 原生建置（含 Vision 離線 OCR） |
-| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage) | Linux 通用免安裝 AppImage，賦予執行權限後即可開啟 |
-| 🐧 **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage) | 飛騰 / 鯤鵬等 ARM64 裝置免安裝執行 |
-| 🇨🇳 **國產信創系統** | 統信 UOS / 銀河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.7-beta.5_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb) | Deb 原生安裝套件，整合應用程式圖示、MIME 關聯與 UKUI/DDE 適配 |
-| 🖥️ **麒麟 V10 / 飛騰** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7-beta.5_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb) | ARM64 原生 Deb 安裝套件 |
-| 📱 **HarmonyOS NEXT** | 原始碼工程 (DevEco 建置) | [🧩 **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb 原始碼工程；目前未提供預建 HAP |
-| 🧩 **VSCode 擴充外掛** | 通用 VSIX 套件 | [⬇️ **readmd-vscode-2.3.7-beta.5.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix) | VSCode 離線擴充安裝套件 |
-| 🤖 **MCP Server** | FastMCP stdio 套件 | [⬇️ **readmd-mcp-server-2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip) | FastMCP 獨立伺服端，支援 Claude Desktop / Cursor |
-| 🔐 **SHA-256 驗證** | 雜湊清單 | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt) | 發行檔案 SHA-256 完整性雜湊清單 |
+| **Windows** | x64 (安裝版) | [⬇️ **ReadMDSetup-v2.3.7-beta.5.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe) | 具備安裝精靈，自動註冊 `.md` 檔案關聯 |
+| **Windows** | x64 (免安裝便攜版) | [⬇️ **ReadMD-portable-v2.3.7-beta.5.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe) | 單一執行檔，解壓縮即用，隨身攜帶 |
+| **macOS** | Apple Silicon (M系列) | [⬇️ **ReadMD-macos-arm64-v2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip) | M1 / M2 / M3 / M4 原生建置（含 Vision 離線 OCR） |
+| **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip) | Intel 處理器 Mac 原生建置（含 Vision 離線 OCR） |
+| **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage) | Linux 通用免安裝 AppImage，賦予執行權限後即可開啟 |
+| **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage) | 飛騰 / 鯤鵬等 ARM64 裝置免安裝執行 |
+| **國產信創系統** | 統信 UOS / 銀河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.7-beta.5_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb) | Deb 原生安裝套件，整合應用程式圖示、MIME 關聯與 UKUI/DDE 適配 |
+| ️ **麒麟 V10 / 飛騰** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7-beta.5_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb) | ARM64 原生 Deb 安裝套件 |
+| **HarmonyOS NEXT** | 原始碼工程 (DevEco 建置) | [ **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb 原始碼工程；目前未提供預建 HAP |
+| **VSCode 擴充外掛** | 通用 VSIX 套件 | [⬇️ **readmd-vscode-2.3.7-beta.5.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix) | VSCode 離線擴充安裝套件 |
+| **MCP Server** | FastMCP stdio 套件 | [⬇️ **readmd-mcp-server-2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip) | FastMCP 獨立伺服端，支援 Claude Desktop / Cursor |
+| **SHA-256 驗證** | 雜湊清單 | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt) | 發行檔案 SHA-256 完整性雜湊清單 |
 
 ---
 

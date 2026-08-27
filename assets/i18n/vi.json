@@ -1106,5 +1106,11 @@
   "exportai.generating": "Đang thiết kế tham số định dạng...",
   "exportai.applied": "Đã áp dụng mẫu định dạng AI",
   "convert.aiFixFormat": "Tự sửa định dạng bằng AI",
-  "convert.aiFixDesc": "Dùng AI để sửa căn lề bảng, công thức và ngắt dòng"
+  "convert.aiFixDesc": "Dùng AI để sửa căn lề bảng, công thức và ngắt dòng",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

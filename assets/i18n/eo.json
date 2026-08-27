@@ -1106,5 +1106,11 @@
   "exportai.generating": "Dezajnante tipografiajn parametrojn...",
   "exportai.applied": "AI tipografia antaŭagordo aplikita",
   "convert.aiFixFormat": "AI Aŭtomata Riparo",
-  "convert.aiFixDesc": "Uzu AI por ripari tabelojn, formulojn kaj linisaltojn"
+  "convert.aiFixDesc": "Uzu AI por ripari tabelojn, formulojn kaj linisaltojn",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

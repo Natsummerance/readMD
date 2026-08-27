@@ -1106,5 +1106,11 @@
   "exportai.generating": "Typografieparameter werden entworfen...",
   "exportai.applied": "KI-Typografie-Vorgabe angewendet",
   "convert.aiFixFormat": "KI-Formatierungsreparatur",
-  "convert.aiFixDesc": "Verwenden Sie KI, um Tabellenausrichtungen, Formeln und Zeilenumbrüche zu korrigieren"
+  "convert.aiFixDesc": "Verwenden Sie KI, um Tabellenausrichtungen, Formeln und Zeilenumbrüche zu korrigieren",
+  "fixes.aiFix": "KI-Tiefenreparatur",
+  "fixes.aiFixing": "KI-Tiefenreparatur des Layouts läuft...",
+  "fixes.aiFixed": "KI-Layout-Reparatur abgeschlossen",
+  "fixes.aiFixFail": "KI-Reparatur fehlgeschlagen: ",
+  "fixes.noDocContent": "Kein Dokumentinhalt zum Reparieren vorhanden",
+  "presentation.exitFullscreenLabel": "Vollbild beenden"
 }

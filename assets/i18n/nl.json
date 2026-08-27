@@ -1106,5 +1106,11 @@
   "exportai.generating": "Typografische parameters ontwerpen...",
   "exportai.applied": "AI-typografie-voorinstelling toegepast",
   "convert.aiFixFormat": "Automatisch AI-herstel",
-  "convert.aiFixDesc": "Gebruik AI voor het herstellen van tabeluitlijning, formules en regeleinden"
+  "convert.aiFixDesc": "Gebruik AI voor het herstellen van tabeluitlijning, formules en regeleinden",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

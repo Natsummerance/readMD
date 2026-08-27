@@ -2,7 +2,7 @@
 # ReadMD RPM 打包脚本 (适用于 openEuler / Fedora / RHEL / CentOS / Anolis / openSUSE)
 set -euo pipefail
 
-VERSION="${READMD_BUILD_VERSION:-${READMD_VERSION:-$(python3 -c 'import readmd; print(readmd.VERSION)' 2>/dev/null || echo '2.3.4')}}"
+VERSION="${READMD_BUILD_VERSION:-${READMD_VERSION:-$(cat VERSION 2>/dev/null || python3 -c 'import readmd; print(readmd.VERSION)' 2>/dev/null || echo '2.3.7-beta.5')}"
 ARCH="$(uname -m)"
 RPM_ARCH="${READMD_RPM_ARCH:-}"
 if [ -z "${RPM_ARCH}" ]; then

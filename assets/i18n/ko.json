@@ -1106,5 +1106,11 @@
   "exportai.generating": "조판 매개변수 분석 및 설계 중...",
   "exportai.applied": "AI 타이포그래피 프리셋이 적용되었습니다",
   "convert.aiFixFormat": "AI 서식 자동 치유",
-  "convert.aiFixDesc": "AI를 사용하여 표 정렬, 수식 및 줄바꿈 문제를 정밀 복원합니다"
+  "convert.aiFixDesc": "AI를 사용하여 표 정렬, 수식 및 줄바꿈 문제를 정밀 복원합니다",
+  "fixes.aiFix": "AI 정밀 복구",
+  "fixes.aiFixing": "AI 서식 정밀 자동 복구 진행 중...",
+  "fixes.aiFixed": "AI 조판 복구가 완료되었습니다",
+  "fixes.aiFixFail": "AI 복구 실패: ",
+  "fixes.noDocContent": "복구할 문서 내용이 없습니다",
+  "presentation.exitFullscreenLabel": "전체 화면 종료"
 }

@@ -1106,5 +1106,11 @@
   "exportai.generating": "Suunnitellaan typografiaparametreja...",
   "exportai.applied": "Tekoälyn typografia-asetus otettu käyttöön",
   "convert.aiFixFormat": "Tekoälyn automaattinen muotoilukorjaus",
-  "convert.aiFixDesc": "Käytä tekoälyä taulukoiden, kaavojen ja rivinvaihtojen korjaamiseen"
+  "convert.aiFixDesc": "Käytä tekoälyä taulukoiden, kaavojen ja rivinvaihtojen korjaamiseen",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

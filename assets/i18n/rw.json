@@ -1106,5 +1106,11 @@
   "exportai.generating": "Irimo gutegura ibipimo by'imyandikire...",
   "exportai.applied": "Imiterere yateguwe na AI yakoreshejwe",
   "convert.aiFixFormat": "Gukosora Imiterere na AI",
-  "convert.aiFixDesc": "Koresha AI mu gukosora imbonerahamwe, fformile no gukata imirongo"
+  "convert.aiFixDesc": "Koresha AI mu gukosora imbonerahamwe, fformile no gukata imirongo",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

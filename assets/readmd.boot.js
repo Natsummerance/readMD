@@ -1718,8 +1718,8 @@ function goHome() {
   document.title = 'ReadMD';
   setFileTitle('', false);
 
-  if ($('toc')) $('toc').innerHTML = '';
-  if ($('outline')) $('outline').innerHTML = '';
+  if ($('toc-list')) $('toc-list').innerHTML = `<div class="side-empty">${(window.i18n ? window.i18n.t('sidebar.emptyToc') : '') || '（当前文档暂无标题大纲）'}</div>`;
+  if (typeof tocCache !== 'undefined') tocCache = { source: null, pageCount: 0 };
 
   if (state.welcomeHtml) {
     $('content').innerHTML = state.welcomeHtml;
@@ -2303,6 +2303,89 @@ function showFixModal() {
   $('fix-modal').classList.remove('hidden');
 }
 
+async function handleAiDocumentFix() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const rawContent = state.editing && window.cmView ? window.cmView.state.doc.toString() : (state.fixed || state.original || '');
+  if (!rawContent || !rawContent.trim()) {
+    showToast(_t('fixes.noDocContent') || '当前没有可修复的文档内容');
+    return;
+  }
+
+  const fixModal = $('fix-modal');
+  if (fixModal) fixModal.classList.add('hidden');
+  showToast(_t('fixes.aiFixing') || '正在进行 AI 深度格式排版自愈...', 2500);
+
+  try {
+    const promptText = `请对以下 Markdown 文档进行全面的格式排版与渲染自愈精修。
+精细修复要求：
+1. 表格自愈：对齐所有列数、补齐缺失表头分隔线（|---|---|）、正确转义单元格内的游离竖线；
+2. 数学公式自愈：修复未闭合的 $ 与 $$ 公式，修复 LaTeX 矩阵与对齐环境，转义金额中的美元符号；
+3. 代码块自愈：补齐未闭合的代码块围栏（\`\`\`），自动识别并标注代码语言；
+4. 标题与列表规范：统一标题层级规范（确保 # 后面有空格）、修复嵌套列表缩进断层；
+5. 纯净输出：严格保持原文所有语义和内容，禁止删减文字，禁止添加任何解释说明或前导后置客套话，全篇禁止任何 Emoji，直接输出修复后的 Markdown 源码：
+
+${rawContent}`;
+
+    const resp = await apiFetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: 'system',
+            content: '你是 ReadMD 专业 Markdown 排版自愈与格式精修引擎。严格保持原文所有内容和语义，禁止删减，禁止输出客套话，直接输出修复后的纯 Markdown 源码。'
+          },
+          {
+            role: 'user',
+            content: promptText
+          }
+        ],
+        stream: false
+      })
+    });
+
+    const data = await resp.json();
+    if (!data || !data.ok || !data.content) {
+      showToast((_t('fixes.aiFixFail') || 'AI 修复失败：') + ((data && data.error) || '未返回有效内容'));
+      return;
+    }
+
+    let fixedMd = data.content.trim();
+    // 剥离可能存在的 markdown 代码块包裹
+    if (fixedMd.startsWith('```markdown') && fixedMd.endsWith('```')) {
+      fixedMd = fixedMd.slice(11, -3).trim();
+    } else if (fixedMd.startsWith('```md') && fixedMd.endsWith('```')) {
+      fixedMd = fixedMd.slice(5, -3).trim();
+    } else if (fixedMd.startsWith('```') && fixedMd.endsWith('```') && !rawContent.startsWith('```')) {
+      fixedMd = fixedMd.slice(3, -3).trim();
+    }
+
+    if (state.editing && window.cmView) {
+      window.cmView.dispatch({
+        changes: { from: 0, to: window.cmView.state.doc.length, insert: fixedMd }
+      });
+      state.isDirty = true;
+      if (typeof updateEditorPreview === 'function') updateEditorPreview();
+    } else {
+      state.fixed = fixedMd;
+      state.original = fixedMd;
+      render();
+    }
+
+    showToast(_t('fixes.aiFixed') || 'AI 深度排版修复完成', 1800);
+  } catch (err) {
+    showToast((_t('fixes.aiFixFail') || 'AI 修复失败：') + err.message);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const aiFixBtn = $('fix-ai-btn');
+  if (aiFixBtn) {
+    aiFixBtn.addEventListener('click', handleAiDocumentFix);
+  }
+});
+
+
 
 ;
 'use strict';
@@ -2328,6 +2411,12 @@ function buildToc() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const list = $('toc-list');
   if (!list) return;
+
+  if (state.mode === 'welcome' || (!state.file && !state.original && !state.fixed && (!state.tabs || !state.tabs.length))) {
+    list.innerHTML = `<div class="side-empty">${_t('sidebar.emptyToc') || '（当前文档暂无标题大纲）'}</div>`;
+    tocCache = { source: null, pageCount: 0 };
+    return;
+  }
 
   // 1. 分页模式下：从全文所有分页提取全局完整大纲
   if (state.pagination && state.pagination.enabled && state.pagination.mode === 'paged' && state.pagination.pages && state.pagination.pages.length) {
@@ -3040,6 +3129,7 @@ function showSide(tab) {
     if (state.folderFiles.length) renderFolderList();
     else listFolder(state.dir || '');
   } else {
+    buildToc();
     updateTreeTabIndex();
   }
 }
@@ -4639,7 +4729,7 @@ function renderAllCodeChunks(container) {
       statusEl.className = 'code-chunk-status running';
       statusEl.textContent = _t('reader.codeRunning');
       btn.disabled = true;
-      btn.textContent = `⏳ ${_t('reader.codeRunning')}`;
+      btn.textContent = _t('reader.codeRunning');
       const t0 = Date.now();
       const interval = setInterval(() => {
         timerEl.textContent = ((Date.now() - t0) / 1000).toFixed(1) + 's';
@@ -4754,7 +4844,7 @@ function renderAllDiagrams(container) {
     const reloadBtn = card.querySelector('.diagram-reload-btn');
 
     const render = async () => {
-      previewEl.innerHTML = `<div class="diagram-loading">⏳ ${_t('reader.renderingDiagram', { engine: engine.toUpperCase() })}</div>`;
+      previewEl.innerHTML = `<div class="diagram-loading">${_t('reader.renderingDiagram', { engine: engine.toUpperCase() })}</div>`;
       try {
         if (engine === 'mermaid' && window.mermaid) {
           const id = 'mermaid-' + Math.random().toString(36).slice(2);
@@ -4851,14 +4941,65 @@ function toggleZenMode(force) {
 window.toggleZenMode = toggleZenMode;
 
 let presentationOpener = null;
+let presZenInitTimer = null;
+let presToolbarHideTimer = null;
+let presControlsHideTimer = null;
+let presZenActive = false;
+
+async function togglePresentationFullscreen(modal) {
+  const doc = document;
+  const isFull = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+  const btn = $('presentation-fullscreen-btn');
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+
+  if (!isFull) {
+    const target = modal || doc.documentElement;
+    const req = target.requestFullscreen || target.webkitRequestFullscreen || target.mozRequestFullScreen || target.msRequestFullscreen || doc.documentElement.requestFullscreen || doc.documentElement.webkitRequestFullscreen;
+    if (req) {
+      try {
+        await req.call(target);
+      } catch (e) {
+        try {
+          if (doc.documentElement.requestFullscreen) await doc.documentElement.requestFullscreen();
+        } catch (err) {}
+      }
+    }
+    if (btn) {
+      btn.classList.add('active');
+      btn.textContent = _t('presentation.exitFullscreenLabel') || '退出全屏';
+    }
+  } else {
+    const exit = doc.exitFullscreen || doc.webkitExitFullscreen || doc.mozCancelFullScreen || doc.msExitFullscreen;
+    if (exit) {
+      try {
+        await exit.call(doc);
+      } catch (e) {}
+    }
+    if (btn) {
+      btn.classList.remove('active');
+      btn.textContent = _t('presentation.fullscreenLabel') || '全屏';
+    }
+  }
+}
+window.togglePresentationFullscreen = togglePresentationFullscreen;
 
 window.closePresentationMode = function closePresentationMode() {
   const modal = document.getElementById('presentation-modal');
   if (!modal || modal.classList.contains('hidden')) return false;
-  if (document.fullscreenElement && document.exitFullscreen) {
+
+  clearTimeout(presZenInitTimer);
+  clearTimeout(presToolbarHideTimer);
+  clearTimeout(presControlsHideTimer);
+  presZenActive = false;
+
+  if ((document.fullscreenElement || document.webkitFullscreenElement) && document.exitFullscreen) {
     document.exitFullscreen().catch(() => {});
   }
   modal.classList.add('hidden');
+  modal.classList.remove('pres-zen-active');
+  const toolbar = modal.querySelector('#presentation-toolbar');
+  if (toolbar) toolbar.classList.remove('pres-toolbar-revealed');
+
   const iframe = modal.querySelector('.presentation-iframe');
   if (iframe) iframe.src = 'about:blank';
   if (presentationOpener?.isConnected) presentationOpener.focus({ preventScroll: true });
@@ -4875,6 +5016,15 @@ async function launchPresentationMode() {
   }
   if (!document.activeElement?.closest('#presentation-modal')) presentationOpener = document.activeElement;
   let modal = document.getElementById('presentation-modal');
+
+  const postToIframe = (data) => {
+    const targetModal = document.getElementById('presentation-modal');
+    const iframe = targetModal?.querySelector('.presentation-iframe');
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage(data, '*');
+    }
+  };
+
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'presentation-modal';
@@ -4922,13 +5072,6 @@ async function launchPresentationMode() {
     `;
     document.body.appendChild(modal);
 
-    const postToIframe = (data) => {
-      const iframe = modal.querySelector('.presentation-iframe');
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage(data, '*');
-      }
-    };
-
     const themeSelect = $('presentation-theme-select');
     if (themeSelect) {
       themeSelect.addEventListener('change', () => {
@@ -4962,11 +5105,7 @@ async function launchPresentationMode() {
 
     if ($('presentation-fullscreen-btn')) {
       $('presentation-fullscreen-btn').addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-          if (modal.requestFullscreen) modal.requestFullscreen();
-        } else {
-          if (document.exitFullscreen) document.exitFullscreen();
-        }
+        togglePresentationFullscreen(modal);
       });
     }
 
@@ -4977,7 +5116,87 @@ async function launchPresentationMode() {
     if ($('presentation-close-btn')) {
       $('presentation-close-btn').addEventListener('click', closePresentation);
     }
+
+    // 监听全局全屏状态变化
+    ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
+      document.addEventListener(evt, () => {
+        const isFull = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+        const btn = $('presentation-fullscreen-btn');
+        if (btn) {
+          btn.classList.toggle('active', isFull);
+          btn.textContent = isFull ? (_t('presentation.exitFullscreenLabel') || '退出全屏') : (_t('presentation.fullscreenLabel') || '全屏');
+        }
+      });
+    });
+
+    // 监听来自 iframe 的消息（包含鼠标移动和全屏快捷键）
+    window.addEventListener('message', (event) => {
+      if (!event.data || typeof event.data !== 'object') return;
+      if (event.data.type === 'pres-toggle-fullscreen') {
+        togglePresentationFullscreen(modal);
+      } else if (event.data.type === 'pres-mousemove') {
+        handlePresPointerMove(event.data.clientX, event.data.clientY, event.data.innerWidth || window.innerWidth, event.data.innerHeight || window.innerHeight);
+      }
+    });
+
+    modal.addEventListener('mousemove', (e) => {
+      handlePresPointerMove(e.clientX, e.clientY, window.innerWidth, window.innerHeight);
+    });
   }
+
+  // 禅模式位置感应与渐隐逻辑
+  function handlePresPointerMove(x, y, w, h) {
+    if (!presZenActive) return;
+    const toolbar = modal.querySelector('#presentation-toolbar');
+
+    // 1. 顶部感应：鼠标移入上方（y <= 85）立即显现工具栏；移开后 3 秒渐渐消失
+    if (y <= 85) {
+      if (presToolbarHideTimer) {
+        clearTimeout(presToolbarHideTimer);
+        presToolbarHideTimer = null;
+      }
+      if (toolbar) toolbar.classList.add('pres-toolbar-revealed');
+    } else {
+      if (toolbar && toolbar.classList.contains('pres-toolbar-revealed') && !presToolbarHideTimer) {
+        presToolbarHideTimer = setTimeout(() => {
+          if (toolbar) toolbar.classList.remove('pres-toolbar-revealed');
+          presToolbarHideTimer = null;
+        }, 3000);
+      }
+    }
+
+    // 2. 右下角感应：鼠标移入右下角（x >= w - 220 且 y >= h - 140）显现翻页按钮；移开后 3 秒渐渐消失
+    const inBottomRight = (x >= (w || window.innerWidth) - 220) && (y >= (h || window.innerHeight) - 140);
+    if (inBottomRight) {
+      if (presControlsHideTimer) {
+        clearTimeout(presControlsHideTimer);
+        presControlsHideTimer = null;
+      }
+      postToIframe({ type: 'set-zen-controls', showControls: true });
+    } else {
+      if (!presControlsHideTimer) {
+        presControlsHideTimer = setTimeout(() => {
+          postToIframe({ type: 'set-zen-controls', showControls: false });
+          presControlsHideTimer = null;
+        }, 3000);
+      }
+    }
+  }
+
+  // 重置并初始化禅模式定时器（进入后保持 5 秒，之后自动收回工具栏与翻页按钮，常驻保留页码）
+  clearTimeout(presZenInitTimer);
+  clearTimeout(presToolbarHideTimer);
+  clearTimeout(presControlsHideTimer);
+  presZenActive = false;
+  modal.classList.remove('pres-zen-active');
+  const toolbar = modal.querySelector('#presentation-toolbar');
+  if (toolbar) toolbar.classList.remove('pres-toolbar-revealed');
+
+  presZenInitTimer = setTimeout(() => {
+    presZenActive = true;
+    modal.classList.add('pres-zen-active');
+    postToIframe({ type: 'set-zen-controls', showControls: false });
+  }, 5000);
 
   showToast(_t('toast.generatingPresentation') || '正在生成演示文稿...', 1000);
   try {
@@ -10401,7 +10620,7 @@ async function checkUpdate(silent = true) {
         showToast(_t('update.foundNew', { ver: res.latest_version }) || ('发现新版本 ' + res.latest_version), 5000);
       }
     } else {
-      const curVer = res.current_version || (typeof VERSION !== 'undefined' ? VERSION : '2.3.7');
+      const curVer = res.current_version || (typeof VERSION !== 'undefined' ? VERSION : '2.3.7-beta.5');
       if (!silent) showToast(_t('update.latest', { ver: curVer, version: curVer }) || ('当前已是最新版本 (v' + curVer + ')'));
     }
   } catch (e) {
@@ -10998,6 +11217,7 @@ function bindEvents() {
   /* --- 10. 目录大纲与自动修正查看 [联动: reader/toc.js, reader/fixes.js] --- */
   $('btn-toc').addEventListener('click', () => toggleSide('toc'));
   $('btn-fix').addEventListener('click', showFixModal);
+  if ($('fix-ai-btn')) $('fix-ai-btn').addEventListener('click', () => { if (typeof handleAiDocumentFix === 'function') handleAiDocumentFix(); });
   $('fix-close').addEventListener('click', () => $('fix-modal').classList.add('hidden'));
   $('fix-save').addEventListener('click', async () => {
     const content = state.fixed || '';
@@ -11366,7 +11586,14 @@ function bindEvents() {
     }
     
     const presentationVisible = $('presentation-modal') && !$('presentation-modal').classList.contains('hidden');
-    if (e.key === 'F11' && !presentationVisible) { e.preventDefault(); toggleZenMode(); }
+    if (e.key === 'F11') {
+      e.preventDefault();
+      if (presentationVisible) {
+        window.togglePresentationFullscreen?.($('presentation-modal'));
+      } else {
+        toggleZenMode();
+      }
+    }
     else if (e.key === 'F2') { e.preventDefault(); openFileRename(); } // F2: 文件重命名
     else if (mod && e.key.toLowerCase() === 'o') { e.preventDefault(); $('btn-open').click(); } // Ctrl+O: 打开文件
     else if (mod && e.key.toLowerCase() === 'f') { // Ctrl+F: 全文搜索
@@ -11692,4 +11919,3 @@ function updateUnloadGuard() {
 }
 
 
-;

@@ -1106,5 +1106,11 @@
   "exportai.generating": "מעצב פרמטרי טיפוגרפיה...",
   "exportai.applied": "סגנון הטיפוגרפיה של הבינה המלאכותית הוחל",
   "convert.aiFixFormat": "תיקון עיצוב אוטומטי",
-  "convert.aiFixDesc": "תיקון יישור טבלאות, נוסחאות ומעברי שורה באמצעות בינה מלאכותית"
+  "convert.aiFixDesc": "תיקון יישור טבלאות, נוסחאות ומעברי שורה באמצעות בינה מלאכותית",
+  "fixes.aiFix": "תיקון עמוק מבוסס AI",
+  "fixes.aiFixing": "תיקון עצמי עמוק של העיצוב באמצעות AI בעיצומו...",
+  "fixes.aiFixed": "תיקון עימוד ה-AI הושלם",
+  "fixes.aiFixFail": "תיקון ה-AI נכשל: ",
+  "fixes.noDocContent": "אין תוכן מסמך לתיקון",
+  "presentation.exitFullscreenLabel": "יציאה ממסך מלא"
 }

@@ -175,6 +175,52 @@ class TestUniversalOpenAndAiEcosystem(unittest.TestCase):
         self.assertIn(".export-page-footer", css)
         self.assertIn("--preview-canvas-bg", css)
 
+    def test_toc_cleared_on_home_and_close_all_tabs(self):
+        """Verify history.js goHome clears toc-list and toc.js has welcome state guard."""
+        history_js_path = os.path.join(ROOT_DIR, "assets", "js", "core", "history.js")
+        with open(history_js_path, "r", encoding="utf-8") as f:
+            history_js = f.read()
+        self.assertIn("$('toc-list')", history_js)
+        self.assertIn("tocCache = { source: null, pageCount: 0 }", history_js)
+
+        toc_js_path = os.path.join(ROOT_DIR, "assets", "js", "reader", "toc.js")
+        with open(toc_js_path, "r", encoding="utf-8") as f:
+            toc_js = f.read()
+        self.assertIn("state.mode === 'welcome'", toc_js)
+
+    def test_presentation_zen_mode_and_fullscreen(self):
+        """Verify presentation mode Zen mode, controls fade, and fullscreen toggle implementation."""
+        render_js_path = os.path.join(ROOT_DIR, "assets", "js", "reader", "render.js")
+        with open(render_js_path, "r", encoding="utf-8") as f:
+            render_js = f.read()
+        self.assertIn("togglePresentationFullscreen", render_js)
+        self.assertIn("presZenActive", render_js)
+        self.assertIn("handlePresPointerMove", render_js)
+        self.assertIn("set-zen-controls", render_js)
+
+        css_path = os.path.join(ROOT_DIR, "assets", "style.css")
+        with open(css_path, "r", encoding="utf-8") as f:
+            css = f.read()
+        self.assertIn(".pres-zen-active", css)
+        self.assertIn(".pres-toolbar-revealed", css)
+
+    def test_fix_modal_ai_button_and_format_fix_action(self):
+        """Verify fix modal has AI fix button and ai.py has format_fix prompt."""
+        html_path = os.path.join(ROOT_DIR, "assets", "index.html")
+        with open(html_path, "r", encoding="utf-8") as f:
+            html = f.read()
+        self.assertIn('id="fix-ai-btn"', html)
+
+        fixes_js_path = os.path.join(ROOT_DIR, "assets", "js", "reader", "fixes.js")
+        with open(fixes_js_path, "r", encoding="utf-8") as f:
+            fixes_js = f.read()
+        self.assertIn("handleAiDocumentFix", fixes_js)
+
+        ai_py_path = os.path.join(ROOT_DIR, "src", "readmd_modules", "ai.py")
+        with open(ai_py_path, "r", encoding="utf-8") as f:
+            ai_py = f.read()
+        self.assertIn('"format_fix":', ai_py)
+
 
 if __name__ == "__main__":
     unittest.main()

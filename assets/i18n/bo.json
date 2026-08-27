@@ -1106,5 +1106,11 @@
   "exportai.generating": "པར་གཞིའི་ཚད་གཞི་ཇུས་འགོད་བྱེད་བཞིན་པ...",
   "exportai.applied": "AI ཡིས་བསྐྲུན་པའི་པར་གཞིའི་ཉམས་འགྱུར་སྔོན་སྒྲིག་བཀོལ་ཟིན",
   "convert.aiFixFormat": "AI རྣམ་གཞག་རང་འགུལ་བཟོ་བཅོས",
-  "convert.aiFixDesc": "AI བཀོལ་ནས་རེའུ་མིག་དང་སྤྱི་འགྲོས་སྙོམས་སྒྲིག་བྱེད་པ"
+  "convert.aiFixDesc": "AI བཀོལ་ནས་རེའུ་མིག་དང་སྤྱི་འགྲོས་སྙོམས་སྒྲིག་བྱེད་པ",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

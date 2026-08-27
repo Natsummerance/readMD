@@ -1106,5 +1106,11 @@
   "exportai.generating": "Conception des paramètres typographiques...",
   "exportai.applied": "Présélection typographique IA appliquée",
   "convert.aiFixFormat": "Auto-réparation IA",
-  "convert.aiFixDesc": "Utiliser l'IA pour corriger l'alignement des tableaux, formules et retours à la ligne"
+  "convert.aiFixDesc": "Utiliser l'IA pour corriger l'alignement des tableaux, formules et retours à la ligne",
+  "fixes.aiFix": "Réparation IA approfondie",
+  "fixes.aiFixing": "Auto-réparation approfondie de la mise en page par IA en cours...",
+  "fixes.aiFixed": "Réparation de mise en page par IA terminée",
+  "fixes.aiFixFail": "Échec de la réparation IA : ",
+  "fixes.noDocContent": "Aucun contenu de document à réparer",
+  "presentation.exitFullscreenLabel": "Quitter le plein écran"
 }

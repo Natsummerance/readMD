@@ -1106,5 +1106,11 @@
   "exportai.generating": "Proiectare parametri tipografici...",
   "exportai.applied": "Stil tipografic AI aplicat",
   "convert.aiFixFormat": "Reparare automata AI",
-  "convert.aiFixDesc": "Folositi AI pentru a repara tabele, formule si linii"
+  "convert.aiFixDesc": "Folositi AI pentru a repara tabele, formule si linii",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

@@ -1106,5 +1106,11 @@
   "exportai.generating": "正在分析並設計排版參數...",
   "exportai.applied": "已應用 AI 生成的排版樣式預設",
   "convert.aiFixFormat": "AI 自愈排版",
-  "convert.aiFixDesc": "使用 AI 深度修復表格對齊、公式排版與斷行問題"
+  "convert.aiFixDesc": "使用 AI 深度修復表格對齊、公式排版與斷行問題",
+  "fixes.aiFix": "AI 深度修復",
+  "fixes.aiFixing": "正在進行 AI 深度格式排版自愈...",
+  "fixes.aiFixed": "AI 深度排版修復完成",
+  "fixes.aiFixFail": "AI 修復失敗：",
+  "fixes.noDocContent": "當前沒有可修復的檔案內容",
+  "presentation.exitFullscreenLabel": "結束全螢幕"
 }

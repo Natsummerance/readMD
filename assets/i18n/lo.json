@@ -128,7 +128,7 @@
   "ai.system_polish": "ທ່ານເປັນບັນນາທິການອາວຸໂສຂອງຈີນ. ໂປໂລຍເອກະສານ Markdown ທີ່ໃຫ້ໂດຍຜູ້ໃຊ້: ພິມຖືກຕ້ອງ, ປະໂຫຍກທີ່ບໍ່ຖືກຕ້ອງ, ແລະການສະແດງອອກທີ່ບໍ່ຊັດເຈນ, ຮັກສາໂຄງສ້າງຕົ້ນສະບັບແລະ tag Markdown ທັງຫມົດ, ແລະພຽງແຕ່ອອກເອກະສານທີ່ສົມບູນຫຼັງຈາກຂັດໂດຍບໍ່ມີການເພີ່ມຄໍາອະທິບາຍໃດໆ.",
   "ai.system_quick_read": "ທ່ານເປັນຜູ້ຊ່ວຍອ່ານເອກະສານຂອງ ReadMD. ອ່ານເອກະສານ Markdown ໃຫ້ໄວໂດຍຜູ້ໃຊ້, ແລະຜົນໄດ້ຮັບ: 1) ບົດສະຫຼຸບປະໂຫຍກຫນຶ່ງ; 2) ບັນຊີລາຍຊື່ຂອງຈຸດຫຼັກ; 3) ຕາຕະລາງເນື້ອໃນຂອງໂຄງສ້າງເອກະສານ; 4​) ລາຍ​ລະ​ອຽດ​ທີ່​ຫນ້າ​ສົນ​ໃຈ​ຫຼື​ຄໍາ​ຖາມ​. ໃຊ້ຮູບແບບ Markdown.",
   "ai.system_translate": "ທ່ານເປັນນັກແປມືອາຊີບ. ແປເອກະສານທີ່ໃຫ້ໂດຍຜູ້ໃຊ້ເປັນພາສາທີ່ລະບຸໄວ້, ຮັກສາໂຄງສ້າງ Markdown, ຕາຕະລາງແລະລະຫັດບລັອກ, ແລະພຽງແຕ່ອອກຄໍາແປ.",
-  "ai.system_translate_prompt": "ທ່ານເປັນນັກແປມືອາຊີບ. ແປຄຳອະທິບາຍກັບຄືນເປັນ ອັງກິດ (ສະຫະລັດ) ແປພາສາ \"{lang}\" ແປພາສາເອກະສານທີ່ໃຫ້ໂດຍຜູ້ໃຊ້ເປັນ \"{lang}\", ຮັກສາໂຄງສ້າງ Markdown, ຕາຕະລາງແລະລະຫັດ blocks, ແລະພຽງແຕ່ອອກຄໍາແປ.",
+  "ai.system_translate_prompt": "ທ່ານເປັນນັກແປມືອາຊີບ. ແປເອກະສານທີ່ໃຫ້ໂດຍຜູ້ໃຊ້ເປັນ \"{lang}\", ຮັກສາໂຄງສ້າງ Markdown, ຕາຕະລາງແລະລະຫັດ blocks, ແລະພຽງແຕ່ອອກຄໍາແປ.",
   "ai.temperature": "ອຸນຫະພູມ",
   "ai.templateManage": "ແມ່ແບບ",
   "ai.testConnection": "ການ​ເຊື່ອມ​ຕໍ່​ການ​ທົດ​ສອບ​",
@@ -1106,5 +1106,11 @@
   "exportai.generating": "ກຳລັງອອກແບບຕົວກຳນົດການຈັດພິມ...",
   "exportai.applied": "ນຳໃຊ້ຮູບແບບການຈັດພິມ AI ແລ້ວ",
   "convert.aiFixFormat": "AI ສ້ອມແປງຮູບແບບ",
-  "convert.aiFixDesc": "ໃຊ້ AI ເພື່ອແກ້ໄຂຕາຕະລາງ, ສູດ ແລະ ການຂຶ້ນແຖວໃໝ່"
+  "convert.aiFixDesc": "ໃຊ້ AI ເພື່ອແກ້ໄຂຕາຕະລາງ, ສູດ ແລະ ການຂຶ້ນແຖວໃໝ່",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

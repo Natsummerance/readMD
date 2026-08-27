@@ -1106,5 +1106,11 @@
   "exportai.generating": "Налаштування параметрів типографіки...",
   "exportai.applied": "Стиль оформлення від ІІ застосовано",
   "convert.aiFixFormat": "ІІ-відновлення розмітки",
-  "convert.aiFixDesc": "Використовуйте ІІ для виправлення таблиць, формул та розривів рядків"
+  "convert.aiFixDesc": "Використовуйте ІІ для виправлення таблиць, формул та розривів рядків",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }

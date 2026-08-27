@@ -46,6 +46,28 @@
     });
   }
 
+  /* 监听 iframe 内鼠标移动并同步给父窗口，用于实现禅模式顶部工具栏与右下角翻页按钮的接近感应 */
+  window.addEventListener('mousemove', function (e) {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'pres-mousemove',
+        clientX: e.clientX,
+        clientY: e.clientY,
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight
+      }, '*');
+    }
+  }, { passive: true });
+
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'F11') {
+      e.preventDefault();
+      if (window.parent && window.parent !== window) {
+        window.parent.postMessage({ type: 'pres-toggle-fullscreen' }, '*');
+      }
+    }
+  });
+
   window.addEventListener('message', function (event) {
     if (!event.data || typeof event.data !== 'object') return;
     var data = event.data;
@@ -68,6 +90,12 @@
     } else if (data.type === 'toggle-overview') {
       if (window.deck && typeof window.deck.toggleOverview === 'function') {
         window.deck.toggleOverview();
+      }
+    } else if (data.type === 'set-zen-controls') {
+      if (data.showControls) {
+        document.body.classList.remove('reveal-zen-controls-hidden');
+      } else {
+        document.body.classList.add('reveal-zen-controls-hidden');
       }
     }
   });

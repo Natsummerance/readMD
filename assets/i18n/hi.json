@@ -1106,5 +1106,11 @@
   "exportai.generating": "टाइपोग्राफी पैरामीटर डिज़ाइन किए जा रहे हैं...",
   "exportai.applied": "AI टाइपोग्राफी प्रीसेट लागू किया गया",
   "convert.aiFixFormat": "AI स्वचालित प्रारूप सुधार",
-  "convert.aiFixDesc": "तालिका संरेखण, सूत्र और पंक्ति विभाजन सुधारने के लिए AI का उपयोग करें"
+  "convert.aiFixDesc": "तालिका संरेखण, सूत्र और पंक्ति विभाजन सुधारने के लिए AI का उपयोग करें",
+  "fixes.aiFix": "AI Deep Fix",
+  "fixes.aiFixing": "AI deep formatting self-healing in progress...",
+  "fixes.aiFixed": "AI formatting fix completed",
+  "fixes.aiFixFail": "AI fix failed: ",
+  "fixes.noDocContent": "No document content available to fix",
+  "presentation.exitFullscreenLabel": "Exit Fullscreen"
 }
