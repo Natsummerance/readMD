@@ -119,9 +119,16 @@
 }</script></head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
-    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/">ReadMD</a><a class="button-primary text-sm" href="#download-paths">Downloads</a></div>
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
+      <a class="text-lg font-semibold tracking-tight" href="/">ReadMD</a>
+      <div class="flex items-center gap-4">
+        <a class="text-sm text-muted hover:text-foreground" href="/zh-cn/download/">中文</a>
+        <a class="button-primary text-sm" href="#download-paths">Downloads</a>
+      </div>
+    </div>
   </header>
-  <main class="mx-auto max-w-5xl px-5 py-16"><nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/">Home</a><span aria-hidden="true"> / </span><a class="link-action" href="/download/">Download</a><span aria-hidden="true"> / </span><a class="link-action" href="/workflows/">Workflows</a></nav>
+  <main class="mx-auto max-w-5xl px-5 py-16">
+    <nav class="pt-2 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/">Home</a><span aria-hidden="true"> / </span><span class="text-foreground font-medium">Download</span></nav>
     <div class="mt-4 text-center">
       <h1 class="display-title">Download ReadMD</h1>
       <p class="section-copy mx-auto mt-4 max-w-2xl">The current public prerelease is version <span class="latest-version-badge font-semibold text-[var(--color-action)]">v2.3.7-beta.5</span>. Select your platform below. Verify packages with SHA256SUMS.txt.</p>
@@ -159,11 +166,27 @@
       <article class="platform-card" data-platform="linux">
         <h2 class="text-xl font-semibold">Linux & 国产操作系统</h2>
         <p class="mt-2 text-sm text-muted">Ubuntu, Debian, Fedora, Arch, 统信 UOS, 银河麒麟 Kylin OS.</p>
-        <div class="mt-6 grid grid-cols-2 gap-2 text-xs">
-          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage">x86_64 AppImage</a>
-          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage">ARM64 AppImage</a>
-          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb">AMD64 Deb</a>
-          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb">ARM64 Deb</a>
+        <div class="mt-6 flex flex-col gap-2">
+          <div class="grid grid-cols-2 gap-2">
+            <a class="button-secondary text-xs !px-2 !py-2.5 text-center flex flex-col justify-center items-center gap-0.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage">
+              <span class="font-semibold text-foreground">x86_64</span>
+              <span class="text-[11px] text-muted">AppImage</span>
+            </a>
+            <a class="button-secondary text-xs !px-2 !py-2.5 text-center flex flex-col justify-center items-center gap-0.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage">
+              <span class="font-semibold text-foreground">ARM64</span>
+              <span class="text-[11px] text-muted">AppImage</span>
+            </a>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <a class="button-secondary text-xs !px-2 !py-2.5 text-center flex flex-col justify-center items-center gap-0.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb">
+              <span class="font-semibold text-foreground">AMD64 Deb</span>
+              <span class="text-[11px] text-muted">UOS / 麒麟</span>
+            </a>
+            <a class="button-secondary text-xs !px-2 !py-2.5 text-center flex flex-col justify-center items-center gap-0.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb">
+              <span class="font-semibold text-foreground">ARM64 Deb</span>
+              <span class="text-[11px] text-muted">UOS / 麒麟</span>
+            </a>
+          </div>
         </div>
       </article>
 
