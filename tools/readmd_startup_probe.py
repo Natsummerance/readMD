@@ -109,13 +109,13 @@ def main():
             result = subprocess.run(
                 ([sys.executable, app] if not args.executable else [args.executable]) + command_tail,
                 text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-            report.update({'run': index + 1, 'returncode': result.returncode})
+            report = {'run': index + 1, 'returncode': result.returncode}
             try:
                 with open(output, encoding='utf-8') as handle:
                     report.update(json.load(handle))
             except OSError:
                 report['error'] = report.get('error', 'probe did not produce JSON')
-            reports[-1] = report
+            reports.append(report)
     gate = evaluate_startup_reports(
         reports, args.max_page_loaded_ms, args.max_window_overhead_ms,
     )
