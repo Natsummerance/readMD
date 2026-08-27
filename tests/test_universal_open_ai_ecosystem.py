@@ -160,7 +160,7 @@ class TestUniversalOpenAndAiEcosystem(unittest.TestCase):
         with open(export_js_path, "r", encoding="utf-8") as f:
             export_js = f.read()
 
-        self.assertIn("function splitMdForExportPreview(", export_js)
+        self.assertIn("function paginateHtmlIntoExportSheets(", export_js)
         self.assertIn("export-preview-page-sheet", export_js)
         self.assertIn("export-page-header", export_js)
         self.assertIn("export-page-body", export_js)

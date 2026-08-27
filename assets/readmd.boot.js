@@ -9603,7 +9603,21 @@ function generateExportPreviewCss(opts, fmt) {
       line-height: ${ty.lineHeight || 1.6} !important;
       text-align: ${ty.align || 'left'} !important;
       padding: ${page.marginTop || 20}mm ${page.marginRight || 18}mm ${page.marginBottom || 20}mm ${page.marginLeft || 18}mm !important;
-      ${page.orientation === 'landscape' ? 'width: 270mm; min-height: 190mm;' : 'width: 190mm; min-height: 270mm;'}
+      ${page.orientation === 'landscape' ? 'width: 297mm; height: 210mm;' : 'width: 210mm; height: 297mm;'}
+      box-sizing: border-box !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: space-between !important;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
+      border-radius: 2px !important;
+      margin-bottom: 24px !important;
+    }
+    .export-page-body {
+      flex: 1 1 auto !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+      word-break: break-word !important;
     }
     #export-preview-full-page p, .export-preview-page-sheet p, .export-page-body p, #export-preview-full-page li, .export-page-body li, #export-preview-full-page span, .export-page-body span, #export-preview-full-page div, .export-page-body div {
       color: ${baseFg} !important;
@@ -9741,86 +9755,170 @@ function generateExportPreviewCss(opts, fmt) {
   `;
 }
 
-function splitMdForExportPreview(md, opts = {}) {
-  if (!md || typeof md !== 'string') return [''];
-  const lines = md.split(/\r?\n/);
-  const totalLines = lines.length;
-  
+/**
+ * 真实渲染 DOM 像素高度测量与智能切分引擎
+ * 保证导出预览与真实 PDF / Word A4 导出页面 100% 完全一致
+ */
+function paginateHtmlIntoExportSheets(fullHtml, opts = {}) {
   const page = opts.page || {};
   const isLandscape = page.orientation === 'landscape';
-  const targetLines = isLandscape ? 28 : 42;
-  const minLines = isLandscape ? 12 : 18;
+  
+  // A4 标准毫米规格与边距
+  const PAGE_WIDTH_MM = isLandscape ? 297 : 210;
+  const PAGE_HEIGHT_MM = isLandscape ? 210 : 297;
+  const marginTop = Number(page.marginTop) || 20;
+  const marginBottom = Number(page.marginBottom) || 20;
+  const marginLeft = Number(page.marginLeft) || 18;
+  const marginRight = Number(page.marginRight) || 18;
 
-  if (totalLines <= targetLines && md.length <= 2200) {
-    return [md];
-  }
+  // 转换为 px (1mm = 3.7795px at 96 DPI)
+  const MM_TO_PX = 3.779527559;
+  const contentWidthPx = Math.max(200, (PAGE_WIDTH_MM - marginLeft - marginRight) * MM_TO_PX);
+  // 可用正文高度（扣除上下边距和页眉页脚预留）
+  const usableBodyHeightPx = Math.max(200, (PAGE_HEIGHT_MM - marginTop - marginBottom - 18) * MM_TO_PX);
+
+  // 1. 创建离屏度量容器
+  const measureHost = document.createElement('div');
+  measureHost.id = 'export-preview-measure-host';
+  measureHost.style.cssText = `
+    position: absolute !important;
+    left: -9999px !important;
+    top: 0 !important;
+    visibility: hidden !important;
+    width: ${contentWidthPx}px !important;
+    box-sizing: border-box !important;
+    pointer-events: none !important;
+    word-break: break-word !important;
+  `;
+  measureHost.className = 'export-page-body';
+  measureHost.innerHTML = fullHtml;
+  document.body.appendChild(measureHost);
+  renderMath(measureHost);
 
   const pages = [];
-  let curLines = [];
-  let inFence = false;
-  let fenceMarker = '';
-  let inMath = false;
-  let inTable = false;
+  let currentPageElements = [];
+  let currentHeight = 0;
 
-  for (let i = 0; i < totalLines; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
-
-    // 1. 代码块围栏跟踪
-    if (!inFence && (/^```/.test(trimmed) || /^~~~/.test(trimmed))) {
-      inFence = true;
-      fenceMarker = trimmed.slice(0, 3);
-    } else if (inFence && trimmed.startsWith(fenceMarker)) {
-      inFence = false;
-      fenceMarker = '';
+  function pushCurrentPage() {
+    if (currentPageElements.length > 0) {
+      const container = document.createElement('div');
+      currentPageElements.forEach(el => container.appendChild(el));
+      pages.push(container.innerHTML);
+      currentPageElements = [];
+      currentHeight = 0;
     }
-
-    // 2. 公式块跟踪
-    if (!inFence) {
-      if (!inMath && (/^\$\$$/.test(trimmed) || /^\\begin\{(align\*?|aligned|equation\*?|cases|gather\*?|matrix|pmatrix|bmatrix)\}/.test(trimmed))) {
-        inMath = true;
-      } else if (inMath && (/^\$\$$/.test(trimmed) || /^\\end\{(align\*?|aligned|equation\*?|cases|gather\*?|matrix|pmatrix|bmatrix)\}/.test(trimmed))) {
-        inMath = false;
-      }
-    }
-
-    // 3. 表格行跟踪
-    inTable = !inFence && !inMath && trimmed.startsWith('|') && trimmed.endsWith('|');
-
-    const canBreak = !inFence && !inMath && !inTable;
-    let shouldBreak = false;
-
-    // 手动分页指令
-    if (trimmed === '<div style="page-break-after: always"></div>' || trimmed === '\\newpage' || trimmed === '<div style="page-break-before: always"></div>') {
-      shouldBreak = true;
-    } else if (canBreak && curLines.length >= minLines) {
-      // 遇到一级/二级标题 (# / ##)
-      if (/^#{1,2}\s+/.test(trimmed)) {
-        shouldBreak = true;
-      }
-      // 遇到空行且达到目标行数
-      else if (curLines.length >= targetLines && trimmed === '') {
-        shouldBreak = true;
-      }
-      // 超过硬上限行数且在任意段落空行或三四级标题分切
-      else if (curLines.length >= (targetLines * 1.5) && (trimmed === '' || /^#{1,4}\s+/.test(trimmed))) {
-        shouldBreak = true;
-      }
-    }
-
-    if (shouldBreak && curLines.length > 0) {
-      pages.push(curLines.join('\n'));
-      curLines = [];
-    }
-
-    curLines.push(line);
   }
 
-  if (curLines.length > 0) {
-    pages.push(curLines.join('\n'));
+  const childNodes = Array.from(measureHost.children);
+
+  if (childNodes.length === 0) {
+    document.body.removeChild(measureHost);
+    return [fullHtml || ''];
   }
 
-  return pages.length > 0 ? pages : [md];
+  for (let i = 0; i < childNodes.length; i++) {
+    const el = childNodes[i];
+    const rect = el.getBoundingClientRect();
+    const computed = window.getComputedStyle(el);
+    const mTop = parseFloat(computed.marginTop) || 0;
+    const mBottom = parseFloat(computed.marginBottom) || 0;
+    const blockHeight = (rect.height || el.offsetHeight || 20) + mTop + mBottom;
+
+    // 手动分页符
+    if (el.tagName === 'DIV' && el.style.pageBreakAfter === 'always') {
+      pushCurrentPage();
+      continue;
+    }
+
+    // 判断当前页是否放得下
+    if (currentHeight + blockHeight <= usableBodyHeightPx) {
+      currentPageElements.push(el.cloneNode(true));
+      currentHeight += blockHeight;
+    } else {
+      // 放不下了，如果当前页已有内容，先落页
+      if (currentPageElements.length > 0) {
+        pushCurrentPage();
+      }
+
+      // 如果单个元素高度本身就超过单页（例如超长段落、超长表格或超长代码块）
+      if (blockHeight > usableBodyHeightPx) {
+        if (el.tagName === 'TABLE') {
+          // 表格按行拆分
+          const rows = Array.from(el.querySelectorAll('tr'));
+          const thead = el.querySelector('thead');
+          let tablePart = document.createElement('table');
+          tablePart.className = el.className;
+          let tbody = document.createElement('tbody');
+          tablePart.appendChild(tbody);
+          if (thead) tablePart.appendChild(thead.cloneNode(true));
+
+          let subHeight = thead ? 36 : 0;
+          rows.forEach(tr => {
+            if (tr.parentElement && tr.parentElement.tagName === 'THEAD') return;
+            const rH = tr.offsetHeight || 28;
+            if (subHeight + rH > usableBodyHeightPx && tbody.children.length > 0) {
+              currentPageElements.push(tablePart);
+              pushCurrentPage();
+              tablePart = document.createElement('table');
+              tablePart.className = el.className;
+              if (thead) tablePart.appendChild(thead.cloneNode(true));
+              tbody = document.createElement('tbody');
+              tablePart.appendChild(tbody);
+              subHeight = thead ? 36 : 0;
+            }
+            tbody.appendChild(tr.cloneNode(true));
+            subHeight += rH;
+          });
+          if (tbody.children.length > 0) {
+            currentPageElements.push(tablePart);
+            currentHeight = subHeight;
+          }
+        } else if (el.tagName === 'P' || el.tagName === 'BLOCKQUOTE') {
+          // 长段落拆分
+          const text = el.innerText || el.textContent || '';
+          const sentences = text.split(/(?<=[。！？\.\!\?\n])/);
+          let pPart = document.createElement(el.tagName.toLowerCase());
+          pPart.className = el.className;
+          let subText = '';
+
+          sentences.forEach(s => {
+            pPart.textContent = subText + s;
+            measureHost.appendChild(pPart);
+            const pH = pPart.offsetHeight;
+            measureHost.removeChild(pPart);
+
+            if (currentHeight + pH > usableBodyHeightPx && subText.length > 0) {
+              pPart.textContent = subText;
+              currentPageElements.push(pPart.cloneNode(true));
+              pushCurrentPage();
+              pPart = document.createElement(el.tagName.toLowerCase());
+              pPart.className = el.className;
+              subText = s;
+            } else {
+              subText += s;
+            }
+          });
+          if (subText.length > 0) {
+            pPart.textContent = subText;
+            currentPageElements.push(pPart);
+            currentHeight = pPart.offsetHeight || 20;
+          }
+        } else {
+          // 其他不可拆分块（如 code block, img），直接整块放入新页
+          currentPageElements.push(el.cloneNode(true));
+          currentHeight = blockHeight;
+        }
+      } else {
+        currentPageElements.push(el.cloneNode(true));
+        currentHeight = blockHeight;
+      }
+    }
+  }
+
+  pushCurrentPage();
+  document.body.removeChild(measureHost);
+
+  return pages.length > 0 ? pages : [fullHtml];
 }
 
 function updateExportLivePreview() {
@@ -9835,9 +9933,22 @@ function updateExportLivePreview() {
   const content = currentExportContent();
   const docTitle = currentExportName();
 
+  // 注入或更新动态样式表
+  let styleEl = $('export-preview-dynamic-style');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'export-preview-dynamic-style';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = generateExportPreviewCss(opts, fmt);
+
   const isHtmlMode = fmt === 'html';
-  const pageList = isHtmlMode ? [content] : splitMdForExportPreview(content, opts);
-  const totalPages = pageList.length;
+  const fullProt = protectMath(content || '');
+  const fullParsedHtml = marked.parse(fullProt.src, { gfm: true, breaks: false });
+  const restoredFullHtml = restoreMath(fullParsedHtml, fullProt.saved);
+
+  const pageHtmlList = isHtmlMode ? [restoredFullHtml] : paginateHtmlIntoExportSheets(restoredFullHtml, opts);
+  const totalPages = pageHtmlList.length;
 
   const paperMeta = $('export-preview-paper-meta');
   if (paperMeta) {
@@ -9848,22 +9959,10 @@ function updateExportLivePreview() {
     paperMeta.textContent = `${sz} · ${ori} · ${pageText} · ${presetName}`;
   }
 
-  // 注入或更新动态样式表
-  let styleEl = $('export-preview-dynamic-style');
-  if (!styleEl) {
-    styleEl = document.createElement('style');
-    styleEl.id = 'export-preview-dynamic-style';
-    document.head.appendChild(styleEl);
-  }
-  styleEl.textContent = generateExportPreviewCss(opts, fmt);
-
   // Mini Preview 侧边栏预览
   const miniHost = $('export-preview-mini-content');
   if (miniHost) {
-    const miniContent = (pageList[0] || content || '').slice(0, 1500);
-    const prot = protectMath(miniContent);
-    const html = marked.parse(prot.src, { gfm: true, breaks: false });
-    miniHost.innerHTML = restoreMath(html, prot.saved);
+    miniHost.innerHTML = pageHtmlList[0] || restoredFullHtml;
     renderMath(miniHost);
   }
 
@@ -9876,7 +9975,7 @@ function updateExportLivePreview() {
       
       const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       
-      pageList.forEach((pageMarkdown, index) => {
+      pageHtmlList.forEach((pageHtml, index) => {
         const sheet = document.createElement('div');
         sheet.className = isHtmlMode ? 'export-preview-page-sheet export-preview-html-sheet' : 'export-preview-page-sheet';
         sheet.dataset.page = (index + 1).toString();
@@ -9890,9 +9989,7 @@ function updateExportLivePreview() {
         
         const bodyEl = document.createElement('div');
         bodyEl.className = 'export-page-body';
-        const pageProt = protectMath(pageMarkdown || '');
-        const pageHtml = marked.parse(pageProt.src, { gfm: true, breaks: false });
-        bodyEl.innerHTML = restoreMath(pageHtml, pageProt.saved);
+        bodyEl.innerHTML = pageHtml;
         sheet.appendChild(bodyEl);
         
         if (!isHtmlMode) {

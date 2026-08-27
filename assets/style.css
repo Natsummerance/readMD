@@ -3019,8 +3019,8 @@ body[data-theme="dark"] .conn-status { color: var(--fg3); }
   max-width: 100%;
 }
 .export-preview-page-sheet, .export-preview-full-page {
-  width: 190mm;
-  min-height: 270mm;
+  width: 210mm;
+  height: 297mm;
   max-width: 100%;
   background: #ffffff;
   color: #222222;
@@ -3035,11 +3035,15 @@ body[data-theme="dark"] .conn-status { color: var(--fg3); }
   flex-direction: column;
   justify-content: space-between;
   position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 .export-preview-html-sheet {
   width: 100%;
   max-width: 780px;
   min-height: 100%;
+  height: auto;
+  overflow: visible;
   padding: 32px 36px;
   border-radius: 4px;
 }
