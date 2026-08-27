@@ -1100,7 +1100,7 @@
   "editai.insert": "커서 위치에 삽입",
   "editai.discard": "취소 (Esc)",
   "editai.generating": "AI가 생성 중입니다...",
-  "exportai.title": "AI 타이포그래피 스타일 디자이너",
+  "exportai.title": "AI 조판",
   "exportai.placeholder": "예: 학술 논문 LaTeX 스타일 / 모란디 미니멀...",
   "exportai.generateBtn": "AI로 생성",
   "exportai.generating": "조판 매개변수 분석 및 설계 중...",

@@ -38,7 +38,7 @@
 
 | Key | zh-CN (简体中文) | en (English) | 用途说明 |
 | :--- | :--- | :--- | :--- |
-| `exportai.title` | AI 风格排版设计师 | AI Typography & Style Designer | 导出面板中的 AI 风格设计器标题 |
+| `exportai.title` | AI 排版 | AI Typography | 导出面板中的 AI 排版标题（右上侧） |
 | `exportai.placeholder` | 例如：学术顶会 LaTeX 论文排版 / 莫兰迪极简画册风格 / 商务黑金极简... | e.g. Academic LaTeX paper / Morandi minimal / Business dark gold... | 风格输入框占位符 |
 | `exportai.generateBtn` | AI 生成排版风格 | Generate Style with AI | 生成按钮 |
 | `exportai.generating` | 正在分析并设计排版参数... | Designing typography parameters... | 正在生成提示 |

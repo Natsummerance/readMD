@@ -1100,7 +1100,7 @@
   "editai.insert": "Вставити в позицію курсора",
   "editai.discard": "Скасувати (Esc)",
   "editai.generating": "ІІ генерує відповідь...",
-  "exportai.title": "ІІ-дизайнер типографіки та стилю",
+  "exportai.title": "AI Верстка",
   "exportai.placeholder": "напр. Наукова стаття LaTeX / Стиль Моранді...",
   "exportai.generateBtn": "Створити за допомогою ІІ",
   "exportai.generating": "Налаштування параметрів типографіки...",

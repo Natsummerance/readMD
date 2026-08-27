@@ -1100,7 +1100,7 @@
   "editai.insert": "Εισαγωγή στον δρομέα",
   "editai.discard": "Απόρριψη (Esc)",
   "editai.generating": "Το AI παράγει περιεχόμενο...",
-  "exportai.title": "Σχεδιαστής τυπογραφίας και στυλ AI",
+  "exportai.title": "Τυπογραφία AI",
   "exportai.placeholder": "π.χ. Ακαδημαϊκή εργασία LaTeX...",
   "exportai.generateBtn": "Δημιουργία με AI",
   "exportai.generating": "Σχεδιασμός παραμέτρων τυπογραφίας...",

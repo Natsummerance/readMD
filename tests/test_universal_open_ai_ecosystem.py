@@ -75,12 +75,20 @@ class TestUniversalOpenAndAiEcosystem(unittest.TestCase):
         with open(html_path, "r", encoding="utf-8") as f:
             html_content = f.read()
 
-        self.assertIn('id="btn-edit-ai-assistant"', html_content)
+        self.assertNotIn('id="btn-edit-ai-assistant"', html_content)
+        self.assertIn('id="btn-ai"', html_content)
         self.assertIn('id="cm-sel-ai"', html_content)
         self.assertIn('id="edit-ai-bar"', html_content)
+        self.assertIn('class="export-main-col"', html_content)
         self.assertIn('class="exp-ai-style-card"', html_content)
         self.assertIn('id="exp-ai-prompt"', html_content)
         self.assertIn('id="exp-ai-gen-btn"', html_content)
+
+        # Check exportai.title in zh-CN
+        zh_path = os.path.join(ROOT_DIR, "assets", "i18n", "zh-CN.json")
+        with open(zh_path, "r", encoding="utf-8") as f:
+            zh_data = json.load(f)
+        self.assertEqual(zh_data["exportai.title"], "AI 排版")
 
     def test_zero_emojis_in_new_i18n_keys(self):
         """Verify no emojis exist in the newly registered i18n keys across all languages."""
@@ -110,5 +118,43 @@ class TestUniversalOpenAndAiEcosystem(unittest.TestCase):
                 self.assertEqual(len(matches), 0, f"Found emoji in {fname} under key {k}: {matches}")
 
 
+    def test_top_ai_button_dispatch_code_structure(self):
+        """Verify handleTopAiButtonClick handles all three states in assets/js/features/ai.js."""
+        ai_js_path = os.path.join(ROOT_DIR, "assets", "js", "features", "ai.js")
+        with open(ai_js_path, "r", encoding="utf-8") as f:
+            ai_js = f.read()
+        
+        self.assertIn("function handleTopAiButtonClick()", ai_js)
+        self.assertIn("state.editing", ai_js)
+        self.assertIn("state.pvLayout", ai_js)
+        self.assertIn("openEditAiBar", ai_js)
+        self.assertIn("toggleAiPanel", ai_js)
+
+        app_js_path = os.path.join(ROOT_DIR, "assets", "app.js")
+        with open(app_js_path, "r", encoding="utf-8") as f:
+            app_js = f.read()
+        self.assertIn("handleTopAiButtonClick", app_js)
+
+    def test_export_ai_card_in_right_column(self):
+        """Verify exp-ai-style-card is positioned in the right column above export-opts."""
+        html_path = os.path.join(ROOT_DIR, "assets", "index.html")
+        with open(html_path, "r", encoding="utf-8") as f:
+            html = f.read()
+        
+        card_idx = html.find('class="exp-ai-style-card"')
+        opts_idx = html.find('id="export-opts"')
+        preview_card_idx = html.find('id="export-preview-card"')
+        main_col_idx = html.find('class="export-main-col"')
+
+        self.assertNotEqual(card_idx, -1)
+        self.assertNotEqual(opts_idx, -1)
+        self.assertNotEqual(main_col_idx, -1)
+        # card is inside export-main-col and before export-opts
+        self.assertTrue(main_col_idx < card_idx < opts_idx)
+        # preview card is on the left before export-main-col
+        self.assertTrue(preview_card_idx < main_col_idx)
+
+
 if __name__ == "__main__":
     unittest.main()
+

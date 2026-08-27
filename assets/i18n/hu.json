@@ -1100,7 +1100,7 @@
   "editai.insert": "Beszúrás a kurzorhoz",
   "editai.discard": "Elvetés (Esc)",
   "editai.generating": "AI generál...",
-  "exportai.title": "AI tipográfia és stílustervező",
+  "exportai.title": "AI tipográfia",
   "exportai.placeholder": "pl. Tudományos LaTeX cikk...",
   "exportai.generateBtn": "Létrehozás AI-val",
   "exportai.generating": "Tipográfiai paraméterek tervezése...",

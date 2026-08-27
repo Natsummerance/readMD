@@ -1100,7 +1100,7 @@
   "editai.insert": "הדבקה במיקום הסמן",
   "editai.discard": "ביטול (Esc)",
   "editai.generating": "בינה מלאכותית מייצרת תוכן...",
-  "exportai.title": "מעצב טיפוגרפיה וסגנון בינה מלאכותית",
+  "exportai.title": "עימוד בינה מלאכותית",
   "exportai.placeholder": "לדוגמה: מאמר אקדמי בסגנון LaTeX / מינימליזם מורנדי...",
   "exportai.generateBtn": "יצירה באמצעות בינה מלאכותית",
   "exportai.generating": "מעצב פרמטרי טיפוגרפיה...",

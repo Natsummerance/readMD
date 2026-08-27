@@ -1100,7 +1100,7 @@
   "editai.insert": "Inserir no cursor",
   "editai.discard": "Descartar (Esc)",
   "editai.generating": "A IA está gerando...",
-  "exportai.title": "Designer de tipografia e estilo IA",
+  "exportai.title": "Tipografia IA",
   "exportai.placeholder": "ex. Artigo acadêmico LaTeX / Minimalismo Morandi...",
   "exportai.generateBtn": "Gerar com IA",
   "exportai.generating": "Projetando parâmetros tipográficos...",

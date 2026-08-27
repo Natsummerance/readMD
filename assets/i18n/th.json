@@ -1100,7 +1100,7 @@
   "editai.insert": "แทรกที่เคอร์เซอร์",
   "editai.discard": "ยกเลิก (Esc)",
   "editai.generating": "AI กำลังสร้างเนื้อหา...",
-  "exportai.title": "ผู้ออกแบบการจัดพิมพ์และสไตล์ AI",
+  "exportai.title": "การจัดพิมพ์ด้วย AI",
   "exportai.placeholder": "เช่น เอกสารวิชาการ LaTeX / มินิมอล โมรันดี...",
   "exportai.generateBtn": "สร้างด้วย AI",
   "exportai.generating": "กำลังออกแบบพารามิเตอร์การจัดพิมพ์...",

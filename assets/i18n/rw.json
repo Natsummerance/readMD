@@ -1100,7 +1100,7 @@
   "editai.insert": "Shyiramo aho intego igeze",
   "editai.discard": "Kureka (Esc)",
   "editai.generating": "AI irimo gutunganya...",
-  "exportai.title": "Uwashushanyije Imyandikire n'Imiterere wa AI",
+  "exportai.title": "Imyandikire ya AI",
   "exportai.placeholder": "urug. Inyandiko y'Ubushakashatsi ya LaTeX / Imiterere ya Morandi...",
   "exportai.generateBtn": "Kora ukoresheje AI",
   "exportai.generating": "Irimo gutegura ibipimo by'imyandikire...",

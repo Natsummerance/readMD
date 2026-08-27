@@ -1100,7 +1100,7 @@
   "editai.insert": "İmleç Konumuna Ekle",
   "editai.discard": "Vazgeç (Esc)",
   "editai.generating": "Yapay zeka oluşturuyor...",
-  "exportai.title": "Yapay Zeka Tipografi ve Stil Tasarımcısı",
+  "exportai.title": "AI Tipografi",
   "exportai.placeholder": "ör. Akademik LaTeX Bildirisi / Morandi Minimalist...",
   "exportai.generateBtn": "Yapay Zeka ile Oluştur",
   "exportai.generating": "Tipografi parametreleri tasarlanıyor...",

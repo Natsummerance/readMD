@@ -1100,7 +1100,7 @@
   "editai.insert": "Am Cursor einfügen",
   "editai.discard": "Verwerfen (Esc)",
   "editai.generating": "KI generiert...",
-  "exportai.title": "KI-Typografie- und Stildesigner",
+  "exportai.title": "KI-Layout",
   "exportai.placeholder": "z. B. Akademisches LaTeX-Paper / Morandi-Minimalismus...",
   "exportai.generateBtn": "Mit KI generieren",
   "exportai.generating": "Typografieparameter werden entworfen...",

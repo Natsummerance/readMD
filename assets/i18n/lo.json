@@ -1100,7 +1100,7 @@
   "editai.insert": "ແຊກໃສ່ຕຳແໜ່ງເຄີເຊີ",
   "editai.discard": "ຍົກເລີກ (Esc)",
   "editai.generating": "AI ກຳລັງສ້າງ...",
-  "exportai.title": "ຜູ້ອອກແບບການຈັດພິມ ແລະ ຮູບແບບ AI",
+  "exportai.title": "ການຈັດໜ້າດ້ວຍ AI",
   "exportai.placeholder": "ຕົວຢ່າງ: ບົດຄວາມວິຊາການ LaTeX / ຮູບແບບ Morandi...",
   "exportai.generateBtn": "ສ້າງດ້ວຍ AI",
   "exportai.generating": "ກຳລັງອອກແບບຕົວກຳນົດການຈັດພິມ...",

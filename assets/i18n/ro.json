@@ -1100,7 +1100,7 @@
   "editai.insert": "Insereaza la cursor",
   "editai.discard": "Renunta (Esc)",
   "editai.generating": "AI genereaza...",
-  "exportai.title": "Designer tipografie si stil AI",
+  "exportai.title": "Tipografie AI",
   "exportai.placeholder": "ex. Lucrare academica LaTeX...",
   "exportai.generateBtn": "Genereaza cu AI",
   "exportai.generating": "Proiectare parametri tipografici...",

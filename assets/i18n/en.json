@@ -1100,7 +1100,7 @@
   "editai.insert": "Insert at Cursor",
   "editai.discard": "Discard (Esc)",
   "editai.generating": "AI is generating...",
-  "exportai.title": "AI Typography & Style Designer",
+  "exportai.title": "AI Typography",
   "exportai.placeholder": "e.g. Academic LaTeX paper / Morandi minimal / Business dark gold...",
   "exportai.generateBtn": "Generate Style with AI",
   "exportai.generating": "Designing typography parameters...",

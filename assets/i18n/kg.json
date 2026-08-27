@@ -1100,7 +1100,7 @@
   "editai.insert": "Kotesa va kisonono kieti",
   "editai.discard": "Yambula (Esc)",
   "editai.generating": "AI kieti kusala...",
-  "exportai.title": "Mubongisi ya Nsonokono na Mfundu ya AI",
+  "exportai.title": "Kutuba ya AI",
   "exportai.placeholder": "kifu. Mukanda ya Nsangu LaTeX / Mfundu ya Morandi...",
   "exportai.generateBtn": "Salama na AI",
   "exportai.generating": "Kieti kubongisa mitelema ya nsonokono...",

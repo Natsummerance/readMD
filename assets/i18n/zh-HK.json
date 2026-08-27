@@ -1100,7 +1100,7 @@
   "editai.insert": "插入游標處",
   "editai.discard": "放棄 (Esc)",
   "editai.generating": "AI 正在深度生成中...",
-  "exportai.title": "AI 風格排版設計師",
+  "exportai.title": "AI 排版",
   "exportai.placeholder": "例如：學術頂會 LaTeX 論文排版 / 莫蘭迪畫冊風格...",
   "exportai.generateBtn": "AI 生成",
   "exportai.generating": "正在分析並設計排版參數...",

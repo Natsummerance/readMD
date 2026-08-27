@@ -522,7 +522,7 @@ function bindEvents() {
   $('top-btn').addEventListener('click', () => { $('content').scrollTo({ top: 0, behavior: 'smooth' }); });
 
   /* --- 14. AI 智能助手与会话管理 (AI Assistant) [联动: features/ai.js] --- */
-  $('btn-ai').addEventListener('click', toggleAiPanel);
+  $('btn-ai').addEventListener('click', typeof handleTopAiButtonClick === 'function' ? handleTopAiButtonClick : toggleAiPanel);
   $('ai-close').addEventListener('click', () => { $('ai-panel').classList.add('hidden'); });
   $('ai-settings-open').addEventListener('click', () => openAiModal('ai-settings-modal', $('ai-settings-open')));
   $('ai-settings-close').addEventListener('click', () => closeAiModal('ai-settings-modal'));
@@ -804,7 +804,7 @@ function bindEvents() {
     else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); toggleTheme(); } // Ctrl+D: 主题切换
     else if (mod && e.key.toLowerCase() === 'r') { e.preventDefault(); if (state.file && state.mode === 'file') loadFile(state.file, { force: true }); } // Ctrl+R: 强制重载文件
     else if (mod && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); openExportModal(); } // Ctrl+P: 导出面板
-    else if (mod && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); toggleAiPanel(); } // Ctrl+Shift+A: AI面板
+    else if (mod && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); if (typeof handleTopAiButtonClick === 'function') handleTopAiButtonClick(); else toggleAiPanel(); } // Ctrl+Shift+A: AI面板/AI编辑助手
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'p' && state.editing) { e.preventDefault(); openMdCommandPalette(); } // Ctrl+Shift+P: 命令面板
     else if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoom(10); } // Ctrl++: 放大字号
     else if (mod && e.key === '-') { e.preventDefault(); zoom(-10); } // Ctrl+-: 缩小字号

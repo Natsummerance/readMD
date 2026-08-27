@@ -1100,7 +1100,7 @@
   "editai.insert": "Isingit sa Cursor",
   "editai.discard": "Ibasura (Esc)",
   "editai.generating": "Bumubuo ang AI...",
-  "exportai.title": "Disenyador ng Tipograpiya at Estilo ng AI",
+  "exportai.title": "Tipograpiya ng AI",
   "exportai.placeholder": "hal. Papel na Akademikong LaTeX...",
   "exportai.generateBtn": "Bumuo gamit ang AI",
   "exportai.generating": "Dinedisenyo ang mga parameter ng tipograpiya...",

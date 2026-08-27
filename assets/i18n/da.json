@@ -1100,7 +1100,7 @@
   "editai.insert": "Indsæt ved markør",
   "editai.discard": "Annuller (Esc)",
   "editai.generating": "AI genererer...",
-  "exportai.title": "AI typografi- og stildesigner",
+  "exportai.title": "AI-typografi",
   "exportai.placeholder": "f.eks. Akademisk LaTeX-papir...",
   "exportai.generateBtn": "Generer med AI",
   "exportai.generating": "Designer typografiparametre...",

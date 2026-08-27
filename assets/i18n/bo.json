@@ -1100,7 +1100,7 @@
   "editai.insert": "འོད་རྟགས་སར་འཇུག་པ",
   "editai.discard": "དོར་བ (Esc)",
   "editai.generating": "AI ཡིས་བསྐྲུན་བཞིན་པ...",
-  "exportai.title": "AI ཡིག་གཟུགས་དང་ཉམས་འགྱུར་ཇུས་འགོད་པ",
+  "exportai.title": "AI པར་གཞི་སྒྲིག་བཀོད",
   "exportai.placeholder": "དཔེར་ན: རིག་གཞུང་དཔྱད་རྩོམ LaTeX རྣམ་གཞག / མོ་རན་ཌི་ཉམས་འགྱུར...",
   "exportai.generateBtn": "AI ཡིས་བསྐྲུན་པ",
   "exportai.generating": "པར་གཞིའི་ཚད་གཞི་ཇུས་འགོད་བྱེད་བཞིན་པ...",

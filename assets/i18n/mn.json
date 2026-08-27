@@ -1100,7 +1100,7 @@
   "editai.insert": "Курсорын байрлалд оруулах",
   "editai.discard": "Цуцлах (Esc)",
   "editai.generating": "AI үүсгэж байна...",
-  "exportai.title": "AI хэвлэлийн дизайн ба хэв маяг",
+  "exportai.title": "AI Форматлах",
   "exportai.placeholder": "ж.нь: Эрдэм шинжилгээний LaTeX нийтлэл / Моранди хэв маяг...",
   "exportai.generateBtn": "AI-аар үүсгэх",
   "exportai.generating": "Хэвлэлийн параметрүүдийг боловсруулж байна...",

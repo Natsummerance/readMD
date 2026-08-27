@@ -1100,7 +1100,7 @@
   "editai.insert": "نۇقتىغا قىستۇرۇش",
   "editai.discard": "ۋاز كېچىش (Esc)",
   "editai.generating": "سۈنئىي ئىدراك ھاسىل قىلىۋاتىدۇ...",
-  "exportai.title": "سۈنئىي ئىدراك بەت پۈتۈش ۋە ئۇسلۇب لايىھىلىگۈچىسى",
+  "exportai.title": "AI ھۆسنخەت تىزىش",
   "exportai.placeholder": "مەسىلەن: ئىلمىي ماقالە LaTeX ئۇسلۇبى / موران دى ئاددىي ئۇسلۇبى...",
   "exportai.generateBtn": "سۈنئىي ئىدراك ئارقىلىق ھاسىل قىلىش",
   "exportai.generating": "بەت پۈتۈش پارامېتىرلىرى لايىھىلىنىۋاتىدۇ...",

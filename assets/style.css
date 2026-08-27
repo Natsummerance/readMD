@@ -2116,7 +2116,15 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
 }
 .exp-save-btns { display: flex; gap: 6px; }
 .exp-save-btns .tb-btn { flex: 1; padding: 6px 4px; font-size: 12px; }
-.export-opts { flex: 1; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 10px; }
+.export-main-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+}
+.export-opts { flex: 1; overflow-y: auto; padding-right: 6px; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
 .export-opts > * { flex-shrink: 0; }
 .exp-sec { border: 1px solid var(--border); border-radius: var(--radius-s); overflow: hidden; }
 .exp-sec-head {
@@ -4859,14 +4867,16 @@ body.zen-mode #content {
    Export AI Typography Designer Card
    ============================================================ */
 .exp-ai-style-card {
-  margin-top: 10px;
-  padding: 10px 12px;
+  margin-top: 0;
+  margin-bottom: 2px;
+  padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-m);
   background: var(--bg-sec);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 .exp-ai-style-header {
   display: flex;

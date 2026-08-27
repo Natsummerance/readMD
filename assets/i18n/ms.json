@@ -1100,7 +1100,7 @@
   "editai.insert": "Sisip pada Kursor",
   "editai.discard": "Buang (Esc)",
   "editai.generating": "AI sedang menjana...",
-  "exportai.title": "Pereka Tipografi & Gaya AI",
+  "exportai.title": "Tipografi AI",
   "exportai.placeholder": "cth. Kertas Akademik LaTeX...",
   "exportai.generateBtn": "Jana dengan AI",
   "exportai.generating": "Mereka bentuk parameter tipografi...",

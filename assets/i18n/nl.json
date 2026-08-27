@@ -1100,7 +1100,7 @@
   "editai.insert": "Invoegen bij cursor",
   "editai.discard": "Negeren (Esc)",
   "editai.generating": "AI genereert...",
-  "exportai.title": "AI-typografie- en stijlontwerper",
+  "exportai.title": "AI-typografie",
   "exportai.placeholder": "bijv. Academisch LaTeX-document / Morandi-minimalisme...",
   "exportai.generateBtn": "Genereren met AI",
   "exportai.generating": "Typografische parameters ontwerpen...",

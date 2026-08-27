@@ -1100,7 +1100,7 @@
   "editai.insert": "Ionsáigh ag an gCúrsóir",
   "editai.discard": "Caith Uait (Esc)",
   "editai.generating": "Tá an AI ag giniúint...",
-  "exportai.title": "Dearthóir Clóghrafaíochta & Stíle AI",
+  "exportai.title": "Clóghrafaíocht AI",
   "exportai.placeholder": "m.sh. Páipéar Acadúil LaTeX / Íostachas Morandi...",
   "exportai.generateBtn": "Gin le hintleacht shaorga",
   "exportai.generating": "Paraiméadair chlóghrafaíochta á ndearadh...",

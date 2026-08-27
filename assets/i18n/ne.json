@@ -1100,7 +1100,7 @@
   "editai.insert": "कर्सरमा सम्मिलित गर्नुहोस्",
   "editai.discard": "रद्द गर्नुहोस् (Esc)",
   "editai.generating": "AI ले सिर्जना गर्दैछ...",
-  "exportai.title": "AI मुद्रणकला र शैली डिजाइनर",
+  "exportai.title": "AI टाइपोग्राफी",
   "exportai.placeholder": "उदा. शैक्षिक LaTeX शोधपत्र / मोरन्डी मिनिमल...",
   "exportai.generateBtn": "AI बाट सिर्जना गर्नुहोस्",
   "exportai.generating": "मुद्रणकला प्यारामिटरहरू डिजाइन गरिँदै...",

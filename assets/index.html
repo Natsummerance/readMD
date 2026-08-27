@@ -128,10 +128,6 @@
         <button id="btn-insert-frontmatter" data-md="frontmatter" data-i18n="editor.frontmatter">样式元数据 (Frontmatter)</button>
       </div></div>
     <button id="formula-open" class="md-tool-btn md-group" title="公式选择器" data-i18n="editor.formula" data-i18n-title="dialog.formulaTitle">∑ 公式</button>
-    <button id="btn-edit-ai-assistant" class="md-tool-btn ai-btn" title="AI 编辑助手与智能补全 (Alt+K)" data-i18n-title="editai.title">
-      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
-      <span data-i18n="editai.title">AI 助手 (Alt+K)</span>
-    </button>
   </div>
   <span class="edit-tip"><span id="edit-doc-stats">0 字 · 阅读约 1 分钟</span> <span data-i18n="editor.shortcutsTip">· Ctrl+S 保存 · Esc 取消</span></span>
   <div class="edit-actions-right">
@@ -829,18 +825,6 @@
           </div>
         </div>
 
-        <!-- AI 风格排版设计师 -->
-        <div class="exp-ai-style-card">
-          <div class="exp-ai-style-header">
-            <svg class="tb-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
-            <span data-i18n="exportai.title">AI 风格排版设计师</span>
-          </div>
-          <div class="exp-ai-style-input-row">
-            <input id="exp-ai-prompt" type="text" placeholder="例如：学术顶会 LaTeX 论文排版 / 莫兰迪画册风格..." data-i18n-placeholder="exportai.placeholder" autocomplete="off">
-            <button id="exp-ai-gen-btn" class="tb-btn accent" data-i18n="exportai.generateBtn">AI 生成</button>
-          </div>
-          <div id="exp-ai-status" class="exp-ai-status hidden" data-i18n="exportai.generating">正在分析并设计排版参数...</div>
-        </div>
         <button id="export-preview-card" type="button" class="export-preview-card" aria-label="打开全屏排版预览" data-i18n-aria="export.previewCardTitle" title="点击打开全屏排版预览" data-i18n-title="export.previewCardTitle">
           <div class="export-preview-header">
             <span class="export-preview-title" data-i18n="export.preview">排版预览</span>
@@ -858,7 +842,21 @@
           </div>
         </button>
       </div>
-      <div class="export-opts" id="export-opts" role="tabpanel" aria-labelledby="export-tab-pdf" tabindex="0"></div>
+      <div class="export-main-col">
+        <!-- AI 排版 -->
+        <div class="exp-ai-style-card">
+          <div class="exp-ai-style-header">
+            <svg class="tb-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
+            <span data-i18n="exportai.title">AI 排版</span>
+          </div>
+          <div class="exp-ai-style-input-row">
+            <input id="exp-ai-prompt" type="text" placeholder="例如：学术顶会 LaTeX 论文排版 / 莫兰迪画册风格..." data-i18n-placeholder="exportai.placeholder" autocomplete="off">
+            <button id="exp-ai-gen-btn" class="tb-btn accent" data-i18n="exportai.generateBtn">AI 生成</button>
+          </div>
+          <div id="exp-ai-status" class="exp-ai-status hidden" data-i18n="exportai.generating">正在分析并设计排版参数...</div>
+        </div>
+        <div class="export-opts" id="export-opts" role="tabpanel" aria-labelledby="export-tab-pdf" tabindex="0"></div>
+      </div>
     </div>
     <div class="export-foot">
       <span id="export-result" class="export-result"></span>

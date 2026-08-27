@@ -1100,7 +1100,7 @@
   "editai.insert": "إدراج عند المؤشر",
   "editai.discard": "تراجع (Esc)",
   "editai.generating": "الذكاء الاصطناعي يقوم بالتوليد...",
-  "exportai.title": "مصمم التنسيق والطباعة بالذكاء الاصطناعي",
+  "exportai.title": "تنسيق بالذكاء الاصطناعي",
   "exportai.placeholder": "مثال: ورقة أكاديمية بنمط LaTeX / أسلوب موراندي البسيط...",
   "exportai.generateBtn": "توليد بالذكاء الاصطناعي",
   "exportai.generating": "جاري تحليل وتصميم معلمات الطباعة...",

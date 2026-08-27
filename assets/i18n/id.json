@@ -1100,7 +1100,7 @@
   "editai.insert": "Sisipkan di Kursor",
   "editai.discard": "Batal (Esc)",
   "editai.generating": "AI sedang menghasilkan...",
-  "exportai.title": "Perancang Tipografi dan Gaya AI",
+  "exportai.title": "Tipografi AI",
   "exportai.placeholder": "contoh: Makalah Akademik LaTeX / Minimalis Morandi...",
   "exportai.generateBtn": "Hasilkan dengan AI",
   "exportai.generating": "Merancang parameter tipografi...",

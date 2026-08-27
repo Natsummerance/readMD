@@ -1100,7 +1100,7 @@
   "editai.insert": "কার্সারে সন্নিবেশ করুন",
   "editai.discard": "বাতিল (Esc)",
   "editai.generating": "AI তৈরি করছে...",
-  "exportai.title": "AI টাইপোগ্রাফি ও শৈলী ডিজাইনার",
+  "exportai.title": "AI টাইপোগ্রাফি",
   "exportai.placeholder": "যেমন: একাডেমিক LaTeX গবেষণাপত্র / মোরান্ডি মিনিমাল...",
   "exportai.generateBtn": "AI দিয়ে তৈরি করুন",
   "exportai.generating": "টাইপোগ্রাফি পরামিতি ডিজাইন করা হচ্ছে...",

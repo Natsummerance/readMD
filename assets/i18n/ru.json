@@ -1100,7 +1100,7 @@
   "editai.insert": "Вставить в позицию курсора",
   "editai.discard": "Отклонить (Esc)",
   "editai.generating": "ИИ генерирует ответ...",
-  "exportai.title": "ИИ-дизайнер типографики и стилей",
+  "exportai.title": "AI Вёрстка",
   "exportai.placeholder": "напр. Научная статья LaTeX / Стиль Моранди...",
   "exportai.generateBtn": "Создать с помощью ИИ",
   "exportai.generating": "Настройка параметров типографики...",

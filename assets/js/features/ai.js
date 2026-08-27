@@ -46,6 +46,19 @@ function toggleAiPanel() {
   }
 }
 
+function handleTopAiButtonClick() {
+  const isEditing = !!state.editing;
+  const isPreviewOpen = isEditing && state.pvLayout && state.pvLayout !== 'none';
+  if (isEditing && isPreviewOpen) {
+    if (typeof openEditAiBar === 'function') {
+      openEditAiBar();
+    }
+  } else {
+    toggleAiPanel();
+  }
+}
+window.handleTopAiButtonClick = handleTopAiButtonClick;
+
 function openAiPanelWithPrompt(act, promptText) {
   const p = $('ai-panel');
   if (!p) return;

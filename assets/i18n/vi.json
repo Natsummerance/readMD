@@ -1100,7 +1100,7 @@
   "editai.insert": "Chèn tại con trỏ",
   "editai.discard": "Hủy (Esc)",
   "editai.generating": "AI đang tạo nội dung...",
-  "exportai.title": "Nhà thiết kế kiểu chữ và phong cách AI",
+  "exportai.title": "Định dạng AI",
   "exportai.placeholder": "ví dụ: Bài báo khoa học LaTeX / Phong cách tối giản Morandi...",
   "exportai.generateBtn": "Tạo bằng AI",
   "exportai.generating": "Đang thiết kế tham số định dạng...",

@@ -1100,7 +1100,7 @@
   "editai.insert": "Vstavi ob kazalcu",
   "editai.discard": "Zavrzi (Esc)",
   "editai.generating": "AI ustvarja...",
-  "exportai.title": "AI oblikovalec tipografije in sloga",
+  "exportai.title": "AI tipografija",
   "exportai.placeholder": "npr. Akademski LaTeX članek / Minimalizem Morandi...",
   "exportai.generateBtn": "Ustvari z AI",
   "exportai.generating": "Oblikovanje tipografskih parametrov...",

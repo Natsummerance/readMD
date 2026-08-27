@@ -1100,7 +1100,7 @@
   "editai.insert": "Aseta kohdistimen kohdalle",
   "editai.discard": "Hylkää (Esc)",
   "editai.generating": "Tekoäly luo sisältöä...",
-  "exportai.title": "Tekoälyn typografia- ja tyylisuunnittelija",
+  "exportai.title": "Tekoälytypografia",
   "exportai.placeholder": "esim. Akateeminen LaTeX-paperi...",
   "exportai.generateBtn": "Luo tekoälyllä",
   "exportai.generating": "Suunnitellaan typografiaparametreja...",

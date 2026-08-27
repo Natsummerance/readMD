@@ -1100,7 +1100,7 @@
   "editai.insert": "Umetni na kursor",
   "editai.discard": "Odbaci (Esc)",
   "editai.generating": "AI generira...",
-  "exportai.title": "AI dizajner tipografije i stila",
+  "exportai.title": "AI tipografija",
   "exportai.placeholder": "npr. Akademski LaTeX rad...",
   "exportai.generateBtn": "Generiraj pomocu AI",
   "exportai.generating": "Dizajniranje tipografskih parametara...",

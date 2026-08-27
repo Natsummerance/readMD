@@ -1100,7 +1100,7 @@
   "editai.insert": "Daħħal fil-Kursur",
   "editai.discard": "Armi (Esc)",
   "editai.generating": "L-AI qed tiġġenera...",
-  "exportai.title": "Disinjatur tat-Tipografija u l-Istil tal-AI",
+  "exportai.title": "Tipografija AI",
   "exportai.placeholder": "eż. Dokument Akkademiku LaTeX / Minimaliżmu Morandi...",
   "exportai.generateBtn": "Iġġenera bl-AI",
   "exportai.generating": "Qed jiġu ddisinjati l-parametri tat-tipografija...",

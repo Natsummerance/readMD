@@ -1100,7 +1100,7 @@
   "editai.insert": "ကာဆာနေရာတွင် ထည့်သွင်းပါ",
   "editai.discard": "ပယ်ဖျက်ပါ (Esc)",
   "editai.generating": "AI မှ ထုတ်လုပ်နေပါသည်...",
-  "exportai.title": "AI စာစီစာရိုက်နှင့် စတိုင် ဒီဇိုင်နာ",
+  "exportai.title": "AI စာစီစာရိုက်",
   "exportai.placeholder": "ဥပမာ - ပညာရပ်ဆိုင်ရာ LaTeX စာတမ်း / Morandi စတိုင်...",
   "exportai.generateBtn": "AI ဖြင့် ထုတ်လုပ်ပါ",
   "exportai.generating": "စာစီစာရိုက် ကန့်သတ်ချက်များ ရေးဆွဲနေသည်...",

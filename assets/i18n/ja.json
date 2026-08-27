@@ -1100,7 +1100,7 @@
   "editai.insert": "カーソル位置に挿入",
   "editai.discard": "破棄 (Esc)",
   "editai.generating": "AI 生成中...",
-  "exportai.title": "AI タイポグラフィ＆スタイルデザイナー",
+  "exportai.title": "AI 組版",
   "exportai.placeholder": "例: 学術論文 LaTeX スタイル / モランディミニマル...",
   "exportai.generateBtn": "AI 生成",
   "exportai.generating": "タイポグラフィパラメータを分析・設計中...",

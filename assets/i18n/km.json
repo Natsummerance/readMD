@@ -1100,7 +1100,7 @@
   "editai.insert": "បញ្ចូលត្រង់ទស្សន៍ទ្រនិច",
   "editai.discard": "បោះបង់ (Esc)",
   "editai.generating": "AI កំពុងបង្កើត...",
-  "exportai.title": "អ្នករចនាអក្សរ និងរចនាប័ទ្ម AI",
+  "exportai.title": "ការរៀបចំទំព័រ AI",
   "exportai.placeholder": "ឧ. អត្ថបទសិក្សា LaTeX / រចនាប័ទ្ម Morandi...",
   "exportai.generateBtn": "បង្កើតដោយ AI",
   "exportai.generating": "កំពុងរចនាប៉ារ៉ាម៉ែត្រអក្សរ...",
