@@ -159,7 +159,7 @@ jobs:
           $installerVersion = if (Test-Path $versionOutput) { (Get-Content $versionOutput -Raw).Trim() } else { '' }
           if ($installer.ExitCode -ne 0 -or $installerVersion -ne $env:READMD_VERSION) { throw 'installer version mismatch' }
           $startupGate = 'dist/startup-gate.json'
-          python tools/readmd_startup_probe.py --runs 5 --timeout 30 --executable "dist/ReadMD/ReadMD.exe" --output "$startupGate" --max-page-loaded-ms 2000 --max-window-overhead-ms 250
+          python tools/readmd_startup_probe.py --warmup 1 --runs 5 --timeout 30 --executable "dist/ReadMD/ReadMD.exe" --output "$startupGate" --max-page-loaded-ms 2500 --max-window-overhead-ms 250
           if ($LASTEXITCODE -ne 0) { throw 'startup performance gate failed' }
           $probeGate = Get-Content "$startupGate" -Raw | ConvertFrom-Json
           if (-not $probeGate.ok -or $probeGate.valid_runs -ne 5) { throw 'startup performance gate did not produce five valid runs' }

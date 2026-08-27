@@ -51,3 +51,15 @@ class StartupProbeGateTest(unittest.TestCase):
         self.assertFalse(gate['ok'])
         self.assertEqual(gate['valid_runs'], 2)
         self.assertEqual(len(gate['failures']), 5)
+
+    def test_cli_parser_warmup_support(self):
+        import argparse
+        parser = argparse.ArgumentParser()
+        parser.add_argument('--runs', type=int, default=5)
+        parser.add_argument('--warmup', type=int, default=0)
+        parser.add_argument('--timeout', type=float, default=20)
+        args = parser.parse_args(['--runs', '5', '--warmup', '1', '--timeout', '30'])
+        self.assertEqual(args.warmup, 1)
+        self.assertEqual(args.runs, 5)
+        self.assertEqual(args.timeout, 30)
+

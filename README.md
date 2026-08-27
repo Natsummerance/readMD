@@ -35,15 +35,15 @@
 
 ## 直接下载
 
-[Windows 安装包](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMDSetup-v2.3.7-beta.5.exe) ·
-[Windows 便携版](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-portable-v2.3.7-beta.5.exe) ·
-[macOS Apple Silicon](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-macos-arm64-v2.3.7-beta.5.zip) ·
-[macOS Intel](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-macos-x64-v2.3.7-beta.5.zip) ·
-[Linux AppImage](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage) ·
-[Linux ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage) ·
-[UOS / 麒麟 Deb](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.5_amd64.deb) ·
-[麒麟 V10 ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.5_arm64.deb) ·
-[SHA-256](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/SHA256SUMS.txt)
+[Windows 安装包](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe) ·
+[Windows 便携版](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe) ·
+[macOS Apple Silicon](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip) ·
+[macOS Intel](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip) ·
+[Linux AppImage](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage) ·
+[Linux ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage) ·
+[UOS / 麒麟 Deb](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb) ·
+[麒麟 V10 ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb) ·
+[SHA-256](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt)
 
 ## 三步开始
 
@@ -66,25 +66,25 @@ ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，�
 
 | 操作系统 / 平台 | 架构 / 格式 | 直接下载链接 (GitHub Release) | 说明 |
 | :--- | :--- | :--- | :--- |
-| 🪟 **Windows** | x64 (安装版) | [⬇️ **ReadMDSetup-v2.3.7-beta.5.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMDSetup-v2.3.7-beta.5.exe) | 动画安装向导，自动关联 `.md` 文件为默认打开方式 |
-| 💼 **Windows** | x64 (绿色便携版) | [⬇️ **ReadMD-portable-v2.3.7-beta.5.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-portable-v2.3.7-beta.5.exe) | 单文件绿色版，免安装解压即用 |
-| 🍏 **macOS** | Apple Silicon (M系列) | [⬇️ **ReadMD-macos-arm64-v2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-macos-arm64-v2.3.7-beta.5.zip) | M1 / M2 / M3 / M4 原生构建（含 Vision 离线 OCR） |
-| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-macos-x64-v2.3.7-beta.5.zip) | Intel 芯片 Mac 原生构建（含 Vision 离线 OCR） |
-| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage) | 通用 Linux 免安装 AppImage，赋予执行权限后直接运行 |
-| 🐧 **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage) | 飞腾 / 鲲鹏等 ARM64 设备免安装运行 |
-| 🇨🇳 **国产信创系统** | 统信 UOS / 银河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.7-beta.5_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.5_amd64.deb) | Deb 原生安装包，集成应用菜单图标、MIME 关联与 UKUI/DDE 主题适配 |
-| 🖥️ **麒麟 V10 / 飞腾** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7-beta.5_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.5_arm64.deb) | 飞腾 D2000/E2000 原生构建，内置 UKUI/X11 与软件渲染安全回退 |
+| 🪟 **Windows** | x64 (安装版) | [⬇️ **ReadMDSetup-v2.3.7-beta.5.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe) | 动画安装向导，自动关联 `.md` 文件为默认打开方式 |
+| 💼 **Windows** | x64 (绿色便携版) | [⬇️ **ReadMD-portable-v2.3.7-beta.5.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe) | 单文件绿色版，免安装解压即用 |
+| 🍏 **macOS** | Apple Silicon (M系列) | [⬇️ **ReadMD-macos-arm64-v2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip) | M1 / M2 / M3 / M4 原生构建（含 Vision 离线 OCR） |
+| 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip) | Intel 芯片 Mac 原生构建（含 Vision 离线 OCR） |
+| 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage) | 通用 Linux 免安装 AppImage，赋予执行权限后直接运行 |
+| 🐧 **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage) | 飞腾 / 鲲鹏等 ARM64 设备免安装运行 |
+| 🇨🇳 **国产信创系统** | 统信 UOS / 银河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.7-beta.5_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb) | Deb 原生安装包，集成应用菜单图标、MIME 关联与 UKUI/DDE 主题适配 |
+| 🖥️ **麒麟 V10 / 飞腾** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7-beta.5_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb) | 飞腾 D2000/E2000 原生构建，内置 UKUI/X11 与软件渲染安全回退 |
 | 📱 **HarmonyOS NEXT** | 源码工程 (DevEco 构建) | [🧩 **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb 源码工程；当前不提供预编译 HAP |
-| 🧩 **VSCode 插件** | 通用 VSIX 扩展包 | [⬇️ **readmd-vscode-2.3.7-beta.5.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd-vscode-2.3.7-beta.5.vsix) | VSCode 离线安装包，支持双向同步预览与格式自愈 |
-| 🤖 **MCP Server** | FastMCP stdio 独立包 | [⬇️ **readmd-mcp-server-2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd-mcp-server-2.3.7-beta.5.zip) | 独立 FastMCP 服务端，供 Claude Desktop / Cursor 一键接入 |
-| 🔐 **SHA-256 校验** | 完整性清单 | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/SHA256SUMS.txt) | 全量资产 SHA-256 哈希校验清单 |
+| 🧩 **VSCode 插件** | 通用 VSIX 扩展包 | [⬇️ **readmd-vscode-2.3.7-beta.5.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix) | VSCode 离线安装包，支持双向同步预览与格式自愈 |
+| 🤖 **MCP Server** | FastMCP stdio 独立包 | [⬇️ **readmd-mcp-server-2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip) | 独立 FastMCP 服务端，供 Claude Desktop / Cursor 一键接入 |
+| 🔐 **SHA-256 校验** | 完整性清单 | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt) | 全量资产 SHA-256 哈希校验清单 |
 
 ---
 
 ## 💻 多系统与信创国产 / 鸿蒙深度适配
 
 ### 1. Linux 与国产操作系统适配（统信 UOS / 银河麒麟 / 深度 / openEuler）
-- **直接安装使用**：下载 [`readmd_2.3.7-beta.5_amd64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.5_amd64.deb) 双击安装，或直接运行 [`ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage)。银河麒麟 V10 + 飞腾 ARM64 设备使用 [`readmd_2.3.7-beta.5_arm64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd_2.3.7-beta.5_arm64.deb)。
+- **直接安装使用**：下载 [`readmd_2.3.7-beta.5_amd64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb) 双击安装，或直接运行 [`ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage)。银河麒麟 V10 + 飞腾 ARM64 设备使用 [`readmd_2.3.7-beta.5_arm64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb)。
 - **飞腾安全回退**：自动识别 Phytium D2000/E2000/FT 系列；WebKitGTK 启动时优先选择 UKUI/X11、禁用 DMABUF 合成并回退 llvmpipe，避免旧 GPU 驱动白屏或崩溃。
 - **系统与环境识别**：`src/readmd_modules/linux_native.py` 自动识别系统发行版，自适应配置 Wayland / X11 显示后端。
 - **桌面与深色模式**：自动侦测 DDE（统信/Deepin）、UKUI（银河麒麟）与 GNOME/KDE 的外观主题，实时同步深色/浅色配色。
@@ -109,7 +109,7 @@ ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，�
 ## 🧩 VSCode 扩展与 MCP Server 生态
 
 ### 1. VSCode 插件安装与使用
-- **界面安装**：下载 [`readmd-vscode-2.3.7-beta.5.vsix`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd-vscode-2.3.7-beta.5.vsix) -> 在 VSCode 扩展面板选择 `... -> 从 VSIX 安装...`。
+- **界面安装**：下载 [`readmd-vscode-2.3.7-beta.5.vsix`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix) -> 在 VSCode 扩展面板选择 `... -> 从 VSIX 安装...`。
 - **命令行安装**：
   ```bash
   code --install-extension readmd-vscode-2.3.7-beta.5.vsix
@@ -117,7 +117,7 @@ ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，�
 - **核心功能**：打开 Markdown 文件点击右上角书本图标开启同步预览；右键菜单支持一键自动修复语法错误与转换为 LaTeX 源码。
 
 ### 2. MCP (Model Context Protocol) Server 配置
-直接下载解压 [`readmd-mcp-server-2.3.7-beta.5.zip`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.4/readmd-mcp-server-2.3.7-beta.5.zip)，在 Claude Desktop、Cursor、Antigravity 与 Cline 中配置：
+直接下载解压 [`readmd-mcp-server-2.3.7-beta.5.zip`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip)，在 Claude Desktop、Cursor、Antigravity 与 Cline 中配置：
 
 ```json
 {
