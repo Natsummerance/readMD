@@ -1,0 +1,31 @@
+# Maintainer: Natsummerance <natsummerance@github.com>
+pkgname=readmd-bin
+pkgver=2.3.7
+pkgrel=1
+pkgdesc="Lightweight native Markdown viewer and editor with auto-repair and presentation mode"
+arch=('x86_64' 'aarch64')
+url="https://readmd.asia"
+license=('MIT')
+depends=('glibc' 'xdg-utils')
+optdepends=(
+    'webkit2gtk-4.1: Native GTK webview backend'
+    'webkit2gtk: Legacy GTK webview backend'
+    'qt5-webengine: Qt WebEngine backend'
+    'chromium: Standalone Browser App mode'
+    'google-chrome: Standalone Browser App mode'
+    'libnotify: Native desktop notifications'
+)
+provides=('readmd')
+conflicts=('readmd')
+
+package() {
+    install -d "${pkgdir}/opt/readmd" "${pkgdir}/usr/bin" "${pkgdir}/usr/share/applications" "${pkgdir}/usr/share/icons/hicolor/512x512/apps" "${pkgdir}/usr/share/mime/packages"
+
+    cp -r "${srcdir}/ReadMD/"* "${pkgdir}/opt/readmd/"
+    chmod 755 "${pkgdir}/opt/readmd/ReadMD"
+    ln -sf /opt/readmd/ReadMD "${pkgdir}/usr/bin/readmd"
+
+    install -Dm644 "${srcdir}/io.github.natsummerance.readmd.desktop" "${pkgdir}/usr/share/applications/io.github.natsummerance.readmd.desktop"
+    install -Dm644 "${srcdir}/ReadMD.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/readmd.png"
+    install -Dm644 "${srcdir}/readmd.xml" "${pkgdir}/usr/share/mime/packages/readmd.xml"
+}

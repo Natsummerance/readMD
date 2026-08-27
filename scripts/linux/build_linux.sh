@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
-# ReadMD Linux & 信创全架构 (x86_64 / aarch64 / loongarch64) 与鸿蒙打包脚本
+# ReadMD Linux & 信创全架构 (x86_64 / aarch64 / loongarch64 / mips64el / sw64 / armhf) 打包脚本
 set -euo pipefail
 
 VERSION="${READMD_BUILD_VERSION:-${READMD_VERSION:-$(python3 -c 'import readmd; print(readmd.VERSION)' 2>/dev/null || echo '2.3.4')}}"
 ARCH="$(uname -m)"
-DEB_ARCH="amd64"
-if [ "${ARCH}" = "aarch64" ]; then
-  DEB_ARCH="arm64"
-elif [ "${ARCH}" = "loongarch64" ]; then
-  DEB_ARCH="loongarch64"
+DEB_ARCH="${READMD_DEB_ARCH:-}"
+if [ -z "${DEB_ARCH}" ]; then
+  case "${ARCH}" in
+    aarch64|arm64) DEB_ARCH="arm64" ;;
+    loongarch64)   DEB_ARCH="loongarch64" ;;
+    mips64el)      DEB_ARCH="mips64el" ;;
+    sw_64|sw64)    DEB_ARCH="sw64" ;;
+    armv7l|armhf)  DEB_ARCH="armhf" ;;
+    *)             DEB_ARCH="amd64" ;;
+  esac
 fi
 
 echo "=== Building ReadMD v${VERSION} for Linux (${ARCH} / ${DEB_ARCH}) ==="
@@ -35,7 +40,27 @@ python3 -m PyInstaller \
   --collect-submodules src.readmd_modules \
   readmd.py
 
-# 2. 构建 AppDir
+# 2. 校验构建出的 ELF 二进制架构与目标包架构一致性
+if [ -f "dist/ReadMD/ReadMD" ] && command -v file >/dev/null 2>&1; then
+  BIN_INFO="$(file dist/ReadMD/ReadMD)"
+  echo "Verifying binary architecture: ${BIN_INFO}"
+  case "${DEB_ARCH}" in
+    arm64)
+      if ! echo "${BIN_INFO}" | grep -Eqi 'aarch64|ARM aarch64'; then
+        echo "ERROR: Target deb architecture is arm64, but binary is not ARM64: ${BIN_INFO}" >&2
+        exit 1
+      fi
+      ;;
+    amd64)
+      if ! echo "${BIN_INFO}" | grep -Eqi 'x86-64|x86_64'; then
+        echo "ERROR: Target deb architecture is amd64, but binary is not x86_64: ${BIN_INFO}" >&2
+        exit 1
+      fi
+      ;;
+  esac
+fi
+
+# 3. 构建 AppDir
 APPDIR="dist/ReadMD.AppDir"
 rm -rf "${APPDIR}"
 mkdir -p "${APPDIR}/usr/bin" "${APPDIR}/usr/share/applications" "${APPDIR}/usr/share/icons/hicolor/512x512/apps" "${APPDIR}/usr/share/mime/packages"
@@ -69,7 +94,7 @@ exec "${HERE}/usr/bin/ReadMD" "$@"
 EOF
 chmod +x "${APPDIR}/AppRun"
 
-# 3. 构建 AppImage
+# 4. 构建 AppImage
 APPIMAGE_NAME="ReadMD-linux-${ARCH}-v${VERSION}.AppImage"
 if command -v appimagetool >/dev/null 2>&1; then
   appimagetool "${APPDIR}" "dist/${APPIMAGE_NAME}"
@@ -88,7 +113,7 @@ else
   fi
 fi
 
-# 4. 构建 DEB 安装包 (适用于 Ubuntu / Debian / 统信 UOS / 银河麒麟 KylinOS / 深度 Deepin)
+# 5. 构建 DEB 安装包 (适用于 Ubuntu / Debian / 统信 UOS / 银河麒麟 KylinOS / 深度 Deepin / openEuler)
 DEB_DIR="dist/deb_build"
 rm -rf "${DEB_DIR}"
 mkdir -p "${DEB_DIR}/DEBIAN" "${DEB_DIR}/usr/bin" "${DEB_DIR}/usr/share/applications" "${DEB_DIR}/usr/share/icons/hicolor/512x512/apps" "${DEB_DIR}/usr/share/mime/packages" "${DEB_DIR}/opt/readmd"
@@ -99,6 +124,7 @@ cp scripts/linux/io.github.natsummerance.readmd.desktop "${DEB_DIR}/usr/share/ap
 cp assets/ReadMD.png "${DEB_DIR}/usr/share/icons/hicolor/512x512/apps/readmd.png"
 cp scripts/linux/readmd.xml "${DEB_DIR}/usr/share/mime/packages/"
 
+# 控制文件：Depends 仅约束基础底座，所有 WebKitGTK 版本并联为 Recommends，实现全版本兼容零依赖阻塞
 cat << EOF > "${DEB_DIR}/DEBIAN/control"
 Package: readmd
 Version: ${VERSION}
@@ -106,10 +132,51 @@ Section: utils
 Priority: optional
 Architecture: ${DEB_ARCH}
 Maintainer: Natsummerance <natsummerance@github.com>
+Homepage: https://readmd.asia
 Description: ReadMD - Lightweight Markdown viewer and editor with auto-repair, LaTeX PRO, and multi-platform support.
-Depends: libgtk-3-0, libwebkit2gtk-4.0-37 | libwebkit2gtk-4.1-0, gir1.2-gtk-3.0, gir1.2-webkit2-4.0 | gir1.2-webkit2-4.1, python3-gi, python3-gi-cairo, tesseract-ocr, xdg-utils
-Recommends: libnotify-bin
+Depends: libc6, libgtk-3-0 | xdg-utils | libwebkit2gtk-4.0-37 | libwebkit2gtk-4.1-0 | libwebkit2gtk-6.0-4
+Recommends: gir1.2-webkit2-4.0 | gir1.2-webkit2-4.1 | gir1.2-webkit-6.0 | libwebkit2gtk-4.0-37 | libwebkit2gtk-4.1-0 | libwebkit2gtk-6.0-4, gir1.2-gtk-3.0, libnotify-bin
+Suggests: kylin-browser | uos-browser | chromium-browser | google-chrome-stable | firefox, tesseract-ocr
 EOF
+
+cat << 'EOF' > "${DEB_DIR}/DEBIAN/postinst"
+#!/bin/sh
+set -e
+if [ "$1" = "configure" ]; then
+  if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database -q /usr/share/applications || true
+  fi
+  if command -v update-mime-database >/dev/null 2>&1; then
+    update-mime-database /usr/share/mime || true
+  fi
+  if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+  fi
+  chmod +x /opt/readmd/ReadMD 2>/dev/null || true
+  ln -sf /opt/readmd/ReadMD /usr/bin/readmd
+fi
+exit 0
+EOF
+chmod 755 "${DEB_DIR}/DEBIAN/postinst"
+
+cat << 'EOF' > "${DEB_DIR}/DEBIAN/postrm"
+#!/bin/sh
+set -e
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+  rm -f /usr/bin/readmd
+  if command -v update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database -q /usr/share/applications || true
+  fi
+  if command -v update-mime-database >/dev/null 2>&1; then
+    update-mime-database /usr/share/mime || true
+  fi
+  if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+    gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+  fi
+fi
+exit 0
+EOF
+chmod 755 "${DEB_DIR}/DEBIAN/postrm"
 
 dpkg-deb --build "${DEB_DIR}" "dist/readmd_${VERSION}_${DEB_ARCH}.deb" || echo "dpkg-deb not available, skipping deb package"
 

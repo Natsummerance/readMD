@@ -88,7 +88,7 @@ def _env_or_bundle_version():
 APP_VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
                or os.environ.get('READMD_VERSION')
                or os.environ.get('READMD_BUILD_VERSION')
-               or _env_or_bundle_version() or '2.3.7-beta.4')
+               or _env_or_bundle_version() or '2.3.7-beta.5')
 
 
 
@@ -1110,7 +1110,17 @@ def run_gui(uninstall_mode):
     if rt is not None:
         os.environ['READMD_WEBVIEW2_RUNTIME'] = rt
         os.environ['READMD_WEBVIEW2_USERDATA'] = os.path.join(app_data_dir(), 'setup_userdata')
-    webview.start()
+    try:
+        webview.start()
+    except Exception as exc:
+        logging.warning('Installer webview.start failed: %s, falling back to browser...', exc)
+        import webbrowser
+        webbrowser.open('http://127.0.0.1:%d/' % server_port)
+        try:
+            while True:
+                threading.Event().wait(3600)
+        except KeyboardInterrupt:
+            pass
     return 0
 
 

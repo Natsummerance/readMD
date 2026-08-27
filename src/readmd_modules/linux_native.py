@@ -6,7 +6,10 @@
 2. Wayland 与 X11 显示协议自适应配置；
 3. 系统深色/浅色外观主题探针；
 4. 原生文件管理器打开与系统通知；
-5. WebKitGTK 与 QtWebEngine 启动环境变量注入。
+5. WebKitGTK 与 QtWebEngine 启动环境变量注入；
+6. WebKit 4.1/4.0/6.0 动态探测与 Qt/Browser-App 四重降级自愈矩阵；
+7. 独立 Browser App 模式（零原生 GUI 依赖即可秒开）；
+8. 信创真机环境自检与诊断探针 (--check-linux)。
 """
 
 import logging
@@ -16,6 +19,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 
 IS_LINUX = sys.platform.startswith('linux')
 
@@ -95,30 +99,50 @@ def architecture():
         return 'arm64'
     if machine.startswith('armv'):
         return 'arm'
+    if 'loongarch' in machine:
+        return 'loongarch64'
+    if 'mips' in machine:
+        return 'mips64el'
+    if 'sw_64' in machine or 'sw64' in machine:
+        return 'sw64'
+    if machine in ('x86_64', 'amd64'):
+        return 'x86_64'
     return machine or 'unknown'
 
 
 def detect_cpu_vendor():
-    """Identify domestic ARM CPUs where GPU drivers commonly need a safe fallback."""
-    if not IS_LINUX or architecture() != 'arm64':
+    """Identify domestic and standard CPUs where GPU drivers commonly need a safe fallback."""
+    if not IS_LINUX:
         return ''
     samples = []
     try:
-        with open('/proc/cpuinfo', 'r', encoding='utf-8', errors='ignore') as handle:
-            samples.append(handle.read())
+        if os.path.exists('/proc/cpuinfo'):
+            with open('/proc/cpuinfo', 'r', encoding='utf-8', errors='ignore') as handle:
+                samples.append(handle.read())
     except Exception as exc:
         logging.debug('cpuinfo probe failed: %s', exc)
-    for path in ('/proc/device-tree/model', '/proc/device-tree/vendor'):
+    for path in ('/proc/device-tree/model', '/proc/device-tree/vendor', '/sys/devices/soc0/machine'):
         try:
-            with open(path, 'rb') as handle:
-                samples.append(handle.read(512).decode('ascii', errors='ignore'))
+            if os.path.exists(path):
+                with open(path, 'rb') as handle:
+                    samples.append(handle.read(512).decode('ascii', errors='ignore'))
         except Exception:
             pass
     text = ' '.join(samples).lower()
     if re.search(r'phytium|ft-?\d{3,4}|feiteng|tengyun|d2000|e2000|s2500', text):
         return 'phytium'
-    if re.search(r'kunpeng|kirin', text):
-        return text.split()[0] if text.split() else 'unknown-domestic'
+    if re.search(r'kunpeng|kirin|hi36\d{2}|hi62\d{2}|hi37\d{2}', text):
+        return 'kunpeng'
+    if re.search(r'loongson|godson|3a5000|3c5000|3a6000', text):
+        return 'loongson'
+    if re.search(r'zhaoxin|centaurhauls|kaihua|kaixian', text):
+        return 'zhaoxin'
+    if re.search(r'hygon|dhyana', text):
+        return 'hygon'
+    if 'intel' in text:
+        return 'intel'
+    if 'amd' in text:
+        return 'amd'
     return ''
 
 
@@ -220,6 +244,226 @@ def setup_linux_env():
         set_env_default('WEBKIT_DISABLE_COMPOSITING_MODE', '0')
     # 针对 HiDPI 屏幕分数缩放
     set_env_default('GDK_DPI_SCALE', '1')
+
+
+def probe_webkit_version():
+    """Probe available WebKit2 / WebKit GObject Introspection API version."""
+    if not IS_LINUX:
+        return None
+    try:
+        import gi
+        for ver in ('4.1', '4.0', '6.0'):
+            try:
+                gi.require_version('WebKit2', ver)
+                from gi.repository import WebKit2  # noqa: F401
+                return ver
+            except (ValueError, ImportError, AttributeError):
+                pass
+        try:
+            gi.require_version('WebKit', '6.0')
+            from gi.repository import WebKit  # noqa: F401
+            return '6.0'
+        except (ValueError, ImportError, AttributeError):
+            pass
+    except Exception as exc:
+        logging.debug('probe_webkit_version failed: %s', exc)
+    return None
+
+
+def probe_qt_webengine():
+    """Probe whether QtWebEngine (PyQt5/PySide2/PyQt6/PySide6) is available."""
+    for mod in ('PyQt5.QtWebEngineWidgets', 'PySide2.QtWebEngineWidgets',
+                'PyQt6.QtWebEngineWidgets', 'PySide6.QtWebEngineWidgets'):
+        try:
+            __import__(mod)
+            return True
+        except Exception:
+            pass
+    return False
+
+
+def find_app_browser():
+    """Find a suitable browser supporting standalone application window mode on Linux."""
+    candidates = [
+        # 银河麒麟与统信 UOS 专有浏览器
+        'kylin-browser',
+        'uos-browser',
+        'browser',
+        # Chromium 体系（支持 --app= 独立无边框应用窗口模式）
+        'google-chrome-stable',
+        'google-chrome',
+        'chromium-browser',
+        'chromium',
+        'microsoft-edge-stable',
+        'microsoft-edge',
+        'brave-browser',
+        'opera',
+        'vivaldi',
+        # GNOME Web (Epiphany) 支持 --application-mode
+        'epiphany-browser',
+        'epiphany',
+        # Firefox 体系（支持 --new-window）
+        'firefox',
+    ]
+    for name in candidates:
+        path = shutil.which(name)
+        if path and os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+    return None
+
+
+def launch_browser_app(url, window_title='ReadMD', width=1280, height=800):
+    """Launch the URL inside a native standalone browser application window."""
+    browser = find_app_browser()
+    if not browser:
+        try:
+            import webbrowser
+            webbrowser.open(url)
+            return None
+        except Exception:
+            return None
+
+    name = os.path.basename(browser).lower()
+    user_data_dir = os.path.join(tempfile.gettempdir(), 'readmd_browser_app_profile')
+    os.makedirs(user_data_dir, exist_ok=True)
+
+    cmd = []
+    if any(c in name for c in ('chrome', 'chromium', 'kylin', 'uos', 'edge', 'brave', 'browser', 'opera', 'vivaldi')):
+        cmd = [
+            browser,
+            '--app=%s' % url,
+            '--user-data-dir=%s' % user_data_dir,
+            '--window-size=%d,%d' % (width, height),
+            '--no-first-run',
+            '--no-default-browser-check',
+            '--disable-sync',
+            '--disable-background-networking',
+            '--disable-features=Translate',
+        ]
+    elif 'epiphany' in name:
+        cmd = [browser, '--application-mode=%s' % url]
+    elif 'firefox' in name:
+        cmd = [browser, '--new-window', url]
+    else:
+        cmd = [browser, url]
+
+    try:
+        logging.info('Launching native Linux app browser: %s', ' '.join(cmd))
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True
+        )
+        return proc
+    except Exception as exc:
+        logging.warning('Failed to launch browser app: %s', exc)
+        try:
+            import webbrowser
+            webbrowser.open(url)
+        except Exception:
+            pass
+        return None
+
+
+def probe_gui_backends():
+    """Probe available Linux GUI backends and return diagnostic capabilities."""
+    webkit_ver = probe_webkit_version()
+    qt_avail = probe_qt_webengine()
+    app_browser = find_app_browser()
+    xdg_avail = bool(shutil.which('xdg-open'))
+
+    preferred = 'browser-app'
+    if webkit_ver:
+        preferred = 'gtk'
+    elif qt_avail:
+        preferred = 'qt'
+    elif app_browser:
+        preferred = 'browser-app'
+    elif xdg_avail:
+        preferred = 'xdg-open'
+    else:
+        preferred = 'unknown'
+
+    return {
+        'gtk_webkit': webkit_ver,
+        'qt_webengine': qt_avail,
+        'app_browser': app_browser,
+        'xdg_open': xdg_avail,
+        'preferred_backend': preferred,
+    }
+
+
+def diagnose_system():
+    """Gather full diagnostic information about Linux distribution and graphics stack."""
+    distro = detect_distro_info()
+    arch = architecture()
+    cpu_vendor = detect_cpu_vendor()
+    backends = probe_gui_backends()
+    dark_mode = detect_system_dark_mode()
+    wayland = is_wayland()
+
+    is_phytium_chip = (cpu_vendor == 'phytium')
+    is_kylin_10 = (distro['id'] == 'kylinos' and bool(re.search(r'v\s*10|(^|[^\d])10([^\d]|$)', distro['version_id'], re.I)))
+
+    return {
+        'is_linux': IS_LINUX,
+        'distro': distro,
+        'architecture': arch,
+        'cpu_vendor': cpu_vendor or 'generic',
+        'is_phytium': is_phytium_chip,
+        'is_kylin_v10': is_kylin_10,
+        'is_uos': is_uos(),
+        'is_deepin': is_deepin(),
+        'wayland': wayland,
+        'system_dark_mode': dark_mode,
+        'backends': backends,
+        'status': 'ready' if (backends['gtk_webkit'] or backends['qt_webengine'] or backends['app_browser'] or backends['xdg_open']) else 'degraded',
+    }
+
+
+def format_diagnosis_report():
+    """Generate formatted human-readable diagnostic report for Linux / Kylin."""
+    diag = diagnose_system()
+    backends = diag['backends']
+    distro = diag['distro']
+
+    lines = [
+        "=" * 64,
+        " ReadMD 信创与 Linux 操作系统原生适配环境诊断报告",
+        "=" * 64,
+        "[*] 操作系统类型: %s (ID: %s, Version: %s)" % (
+            distro['pretty_name'] or distro['id'],
+            distro['id'],
+            distro['version_id'] or 'N/A'
+        ),
+        "[*] 处理器架构: %s (CPU 厂商/特性: %s)" % (
+            diag['architecture'],
+            diag['cpu_vendor']
+        ),
+        "[*] 银河麒麟 V10: %s" % ('是 (已启用专有兼容层)' if diag['is_kylin_v10'] else '否'),
+        "[*] 统信 UOS / 深度: %s" % ('是 (已启用 DDE 原生适配)' if diag['is_uos'] or diag['is_deepin'] else '否'),
+        "[*] 飞腾 Phytium 处理器: %s" % ('是 (已启用 Mesa llvmpipe 渲染自愈防花屏)' if diag['is_phytium'] else '否'),
+        "[*] 显示服务器: %s" % ('Wayland (双协议自适应)' if diag['wayland'] else 'X11'),
+        "[*] 桌面深色模式: %s" % ('已开启' if diag['system_dark_mode'] else '浅色/默认'),
+        "-" * 64,
+        "[*] 图形引擎探测 (四重自愈双轨矩阵):",
+        "  - WebKitGTK 原生引擎: %s" % (
+            ('已就绪 (版本: %s)' % backends['gtk_webkit']) if backends['gtk_webkit'] else '未安装或缺少绑定 (将自动平滑降级)'
+        ),
+        "  - QtWebEngine 原生引擎: %s" % ('已就绪' if backends['qt_webengine'] else '未就绪'),
+        "  - 独立 Browser App 模式: %s" % (
+            ('已就绪 (%s)' % backends['app_browser']) if backends['app_browser'] else '未找到适配浏览器'
+        ),
+        "  - 系统默认浏览器 (xdg-open): %s" % ('可用' if backends['xdg_open'] else '未找到'),
+        "  - 自动首选启动链路: %s" % backends['preferred_backend'],
+        "-" * 64,
+        "[*] 综合就绪状态: %s" % (
+            '[OK] 原生全生态开箱即用' if diag['status'] == 'ready' else '[WARNING] 需要安装基础浏览器或 WebKitGTK'
+        ),
+        "=" * 64,
+    ]
+    return "\n".join(lines)
 
 
 def show_notification(title, message):

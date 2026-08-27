@@ -2204,7 +2204,26 @@ console.log(JSON.stringify({ inside, outside, fitted, clipped, visibleOverflow }
             data_uri = "data:image/png;base64," + __import__("base64").b64encode(
                 source.read_bytes()
             ).decode("ascii")
-            playwright = (ROOT / "ui-tests" / "node_modules" / "@playwright" / "test").with_suffix("")
+            playwright = ROOT / "ui-tests" / "node_modules" / "@playwright" / "test"
+            if not playwright.exists():
+                found = False
+                for cand in [
+                    ROOT / "showcase" / "node_modules" / "@playwright" / "test",
+                ]:
+                    if cand.exists():
+                        playwright = cand
+                        found = True
+                        break
+                if not found:
+                    try:
+                        res = subprocess.run(["node", "-e", "require('@playwright/test')"], capture_output=True)
+                        if res.returncode == 0:
+                            playwright = Path("@playwright/test")
+                            found = True
+                    except Exception:
+                        pass
+                if not found:
+                    self.skipTest("playwright node module not installed in environment")
             script = r"""
 const { chromium } = require(process.argv[1]);
 const { buildCardHtml, drawnImageBox } = require(process.argv[2]);

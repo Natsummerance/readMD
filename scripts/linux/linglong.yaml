@@ -1,0 +1,26 @@
+package:
+  id: io.github.natsummerance.readmd
+  name: ReadMD
+  version: 2.3.7.5
+  kind: app
+  description: |
+    ReadMD 是全功能、本地隐私优先的 Markdown 阅读、编辑与排版套件。
+    支持自动语法自愈、LaTeX 公式、幻灯片放映与全平台原生开箱即用。
+
+base: org.deepin.foundation/23.0.0
+runtime: org.deepin.Runtime/23.0.0
+
+sources:
+  - kind: local
+    path: ../../
+
+build:
+  kind: manual
+  manual:
+    build: |
+      mkdir -p $PREFIX/bin $PREFIX/share/applications $PREFIX/share/icons/hicolor/512x512/apps $PREFIX/share/mime/packages
+      cp -r dist/ReadMD/* $PREFIX/bin/
+      ln -sf $PREFIX/bin/ReadMD $PREFIX/bin/readmd
+      cp scripts/linux/io.github.natsummerance.readmd.desktop $PREFIX/share/applications/
+      cp assets/ReadMD.png $PREFIX/share/icons/hicolor/512x512/apps/readmd.png
+      cp scripts/linux/readmd.xml $PREFIX/share/mime/packages/

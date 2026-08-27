@@ -92,7 +92,7 @@ def _env_or_bundle_version():
     return _bundle_version()
 
 
-VERSION = (_env_or_bundle_version() or '2.3.7-beta.4')
+VERSION = (_env_or_bundle_version() or '2.3.7-beta.5')
 
 
 
@@ -3428,7 +3428,32 @@ def main():
                         help='把 --startup-probe 的 JSON 报告原子写入 PATH')
     parser.add_argument('--startup-probe-timeout', type=float, default=20.0, metavar='SECONDS',
                         help='启动 probe 超时秒数（默认 20）')
+    parser.add_argument('--check-linux', action='store_true',
+                        help='诊断 Linux / 银河麒麟 / 统信 UOS 系统环境与图形引擎兼容性')
+    parser.add_argument('--check-windows', action='store_true',
+                        help='诊断 Windows 系统环境与 Edge WebView2 运行时兼容性')
+    parser.add_argument('--check-macos', action='store_true',
+                        help='诊断 macOS 系统环境与 Cocoa WKWebView 兼容性')
+    parser.add_argument('--diagnose', '--check-system', dest='diagnose', action='store_true',
+                        help='全平台系统与图形引擎自适应原生运行环境综合诊断')
     args = parser.parse_args()
+
+    if getattr(args, 'diagnose', False):
+        from src.readmd_modules import system_native
+        print(system_native.format_unified_report())
+        return 0
+    if getattr(args, 'check_linux', False):
+        from src.readmd_modules import linux_native
+        print(linux_native.format_diagnosis_report())
+        return 0
+    if getattr(args, 'check_windows', False):
+        from src.readmd_modules import windows_native
+        print(windows_native.format_diagnosis_report())
+        return 0
+    if getattr(args, 'check_macos', False):
+        from src.readmd_modules import macos_native
+        print(macos_native.format_diagnosis_report())
+        return 0
 
     if args.startup_probe_json and not args.startup_probe:
         parser.error('--startup-probe-json 需要 --startup-probe')
@@ -3597,14 +3622,69 @@ def main():
 
     try:
         if IS_MAC:
-            webview.start(gui='cocoa')
-        elif IS_LINUX:
             try:
-                webview.start(gui='gtk')
-            except Exception:
-                webview.start()
+                webview.start(gui='cocoa')
+            except Exception as exc:
+                logging.warning('macOS Cocoa WKWebView start failed (%s), falling back to browser-app...', exc)
+                from src.readmd_modules import macos_native
+                proc = macos_native.launch_browser_app(url)
+                if proc is not None:
+                    try:
+                        proc.wait()
+                    except KeyboardInterrupt:
+                        pass
+                else:
+                    import webbrowser
+                    webbrowser.open(url)
+        elif IS_LINUX:
+            from src.readmd_modules import linux_native
+            backend_info = linux_native.probe_gui_backends()
+            started = False
+            if backend_info.get('gtk_webkit'):
+                try:
+                    webview.start(gui='gtk')
+                    started = True
+                except Exception as exc:
+                    logging.warning('WebKitGTK start failed (%s), falling back to other backends...', exc)
+            if not started and backend_info.get('qt_webengine'):
+                try:
+                    webview.start(gui='qt')
+                    started = True
+                except Exception as exc:
+                    logging.warning('QtWebEngine start failed (%s), falling back to browser-app...', exc)
+            if not started:
+                # Tier 3 & 4 Universal Fallback: Launch standalone native Browser App Mode
+                logging.info('Activating universal Linux Browser App Mode fallback...')
+                proc = linux_native.launch_browser_app(url)
+                if proc is not None:
+                    try:
+                        proc.wait()
+                    except KeyboardInterrupt:
+                        pass
+                    started = True
+                else:
+                    try:
+                        webview.start()
+                        started = True
+                    except Exception:
+                        import webbrowser
+                        webbrowser.open(url)
+                        started = True
         else:
-            webview.start()
+            try:
+                webview.start()
+            except Exception as exc:
+                logging.warning('Windows WebView2 start failed (%s), falling back to Edge/Chrome App Mode...', exc)
+                from src.readmd_modules import windows_native
+                proc = windows_native.launch_browser_app(url)
+                if proc is not None:
+                    try:
+                        proc.wait()
+                    except KeyboardInterrupt:
+                        pass
+                else:
+                    import webbrowser
+                    webbrowser.open(url)
     except Exception as e:
         logging.exception('webview start failed')
         safe_print('启动失败：%s' % e)

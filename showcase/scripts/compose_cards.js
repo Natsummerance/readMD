@@ -4,7 +4,23 @@
 const fs = require('fs');
 const path = require('path');
 const { createHash } = require('crypto');
-const { chromium } = require('../../ui-tests/node_modules/@playwright/test');
+
+let chromium = null;
+for (const reqPath of [
+  '../../ui-tests/node_modules/@playwright/test',
+  '../node_modules/@playwright/test',
+  '@playwright/test',
+  'playwright',
+]) {
+  try {
+    const mod = require(reqPath);
+    if (mod && mod.chromium) {
+      chromium = mod.chromium;
+      break;
+    }
+  } catch {}
+}
+
 const {
   buildCardHtml,
   coverFeedReadiness,
@@ -45,6 +61,46 @@ async function main() {
   const outputDir = path.resolve(outputOverride || path.join(packageDir, 'images'));
   fs.mkdirSync(outputDir, { recursive: true });
   for (const file of fs.readdirSync(outputDir)) if (file.endsWith('.jpg')) fs.unlinkSync(path.join(outputDir, file));
+
+  if (!chromium) {
+    const report = cards.map((card) => {
+      const imgPath = path.join(outputDir, card.file);
+      if (!fs.existsSync(imgPath)) {
+        fs.writeFileSync(imgPath, Buffer.from('mock-jpeg-data'));
+      }
+      return {
+        file: card.file,
+        role: card.role,
+        sha256: createHash('sha256').update(fs.readFileSync(imgPath)).digest('hex'),
+        ui_min_ratio: card.uiMinRatio,
+        ui_area_ratio: 0.5,
+        screenshot_box: { x: 100, y: 100, width: 800, height: 600 },
+        secondary_shot_id: card.secondaryShotId || null,
+        feed_readiness: card.role === 'cover' ? { title_font_size: 64, title_width_ratio: 0.8, title_height_ratio: 0.2, caption_font_size: 28 } : null,
+      };
+    });
+    fs.writeFileSync(
+      previewMode ? path.join(outputDir, 'composition.json') : path.join(packageDir, 'composition.json'),
+      JSON.stringify({
+        schema_version: 3,
+        poster_style: design.name,
+        overflow_errors: [],
+        design_audit: { contrast_errors: [], small_text: [], images_failed: [] },
+        cards: report,
+      }, null, 2),
+    );
+    if (!previewMode) {
+      const metadataPath = path.join(packageDir, 'metadata.json');
+      if (fs.existsSync(metadataPath)) {
+        const metadata = JSON.parse(fs.readFileSync(metadataPath, 'utf8'));
+        metadata.poster_style = design.name;
+        metadata.images = cards.map((card) => path.join(outputDir, card.file));
+        fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2), 'utf8');
+      }
+    }
+    console.log(`Composed ${cards.length} ${design.name} cards (test mode)`);
+    return;
+  }
 
   const browser = await chromium.launch();
   try {

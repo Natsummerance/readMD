@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  readmd:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: readmd:latest
+    container_name: readmd-server
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docs:/docs:ro
+    environment:
+      - PYTHONUNBUFFERED=1

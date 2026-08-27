@@ -158,9 +158,21 @@ def match_release_asset(assets, flavor=None):
                 elif not selected and 'macos' in name:
                     selected = a
         elif flavor == 'linux':
-            is_arm = bool(machine.startswith('arm') or machine in ('aarch64', 'arm64'))
-            deb_token = 'arm64' if is_arm else 'amd64'
-            appimage_token = 'aarch64' if is_arm else 'x86_64'
+            if 'loongarch' in machine:
+                deb_token, appimage_token = 'loongarch64', 'loongarch64'
+            elif 'mips' in machine:
+                deb_token, appimage_token = 'mips64el', 'mips64el'
+            elif 'sw_64' in machine or 'sw64' in machine:
+                deb_token, appimage_token = 'sw64', 'sw64'
+            elif 'riscv' in machine:
+                deb_token, appimage_token = 'riscv64', 'riscv64'
+            elif machine.startswith('armv') or 'armhf' in machine:
+                deb_token, appimage_token = 'armhf', 'armhf'
+            elif is_arm or machine in ('aarch64', 'arm64'):
+                deb_token, appimage_token = 'arm64', 'aarch64'
+            else:
+                deb_token, appimage_token = 'amd64', 'x86_64'
+
             if name.endswith(f'_{deb_token}.deb'):
                 selected = a
                 break

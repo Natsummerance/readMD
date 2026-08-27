@@ -55,7 +55,7 @@ class KylinV10CompatibilityTest(unittest.TestCase):
     def test_linux_updater_selects_machine_architecture(self):
         assets = [
             {'name': f'readmd_{VERSION}_{arch}.deb'}
-            for arch in ('amd64', 'arm64')
+            for arch in ('amd64', 'arm64', 'loongarch64', 'mips64el', 'sw64', 'riscv64', 'armhf')
         ]
         with patch('sys.platform', 'linux'), patch('platform.machine', return_value='aarch64'):
             asset, _ = updater.match_release_asset(assets, flavor='linux')
@@ -64,6 +64,14 @@ class KylinV10CompatibilityTest(unittest.TestCase):
         with patch('sys.platform', 'linux'), patch('platform.machine', return_value='x86_64'):
             asset, _ = updater.match_release_asset(assets, flavor='linux')
             self.assertEqual(asset['name'], f'readmd_{VERSION}_amd64.deb')
+
+        with patch('sys.platform', 'linux'), patch('platform.machine', return_value='loongarch64'):
+            asset, _ = updater.match_release_asset(assets, flavor='linux')
+            self.assertEqual(asset['name'], f'readmd_{VERSION}_loongarch64.deb')
+
+        with patch('sys.platform', 'linux'), patch('platform.machine', return_value='sw_64'):
+            asset, _ = updater.match_release_asset(assets, flavor='linux')
+            self.assertEqual(asset['name'], f'readmd_{VERSION}_sw64.deb')
 
     def test_release_publishes_kylin_assets_and_safe_fallback(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
@@ -80,8 +88,82 @@ class KylinV10CompatibilityTest(unittest.TestCase):
         self.assertIn('readmd_${{ env.READMD_VERSION }}_arm64.deb', workflow)
         self.assertIn('appimagetool-${APPIMAGE_TOOL_ARCH}.AppImage', build_script)
         self.assertIn('libwebkit2gtk-4.0-37 | libwebkit2gtk-4.1-0', build_script)
+        self.assertIn('Recommends: gir1.2-webkit2-4.0 | gir1.2-webkit2-4.1 | gir1.2-webkit-6.0', build_script)
+        self.assertIn('postinst', build_script)
+        self.assertIn('postrm', build_script)
+        self.assertIn('READMD_DEB_ARCH', build_script)
         self.assertIn(f'ReadMD-linux-aarch64-v{VERSION}.AppImage', notes)
         self.assertIn(f'readmd_{VERSION}_arm64.deb', notes)
+
+    def test_probe_webkit_versions(self):
+        with patch.object(linux_native, 'IS_LINUX', True):
+            # Probing returns None on mock failure
+            self.assertIn(linux_native.probe_webkit_version(), (None, '4.1', '4.0', '6.0'))
+
+    def test_find_app_browser_detects_domestic_and_chromium(self):
+        with patch('shutil.which', side_effect=lambda name: f'/usr/bin/{name}' if name in ('kylin-browser', 'google-chrome') else None), \
+             patch('os.path.isfile', return_value=True), \
+             patch('os.access', return_value=True):
+            browser = linux_native.find_app_browser()
+            self.assertEqual(browser, '/usr/bin/kylin-browser')
+
+    def test_launch_browser_app_uses_app_mode(self):
+        with patch.object(linux_native, 'find_app_browser', return_value='/usr/bin/kylin-browser'), \
+             patch('subprocess.Popen') as mock_popen, \
+             patch('os.makedirs'):
+            mock_proc = mock_popen.return_value
+            proc = linux_native.launch_browser_app('http://127.0.0.1:18888', window_title='ReadMD')
+            self.assertEqual(proc, mock_proc)
+            called_cmd = mock_popen.call_args[0][0]
+            self.assertEqual(called_cmd[0], '/usr/bin/kylin-browser')
+            self.assertTrue(any(arg.startswith('--app=http://127.0.0.1:18888') for arg in called_cmd))
+            self.assertTrue(any(arg.startswith('--user-data-dir=') for arg in called_cmd))
+
+    def test_probe_gui_backends_prioritizes_fallbacks(self):
+        # 1. When GTK WebKit is available -> preferred is gtk
+        with patch.object(linux_native, 'probe_webkit_version', return_value='4.1'), \
+             patch.object(linux_native, 'probe_qt_webengine', return_value=True), \
+             patch.object(linux_native, 'find_app_browser', return_value='/usr/bin/chromium'):
+            backends = linux_native.probe_gui_backends()
+            self.assertEqual(backends['preferred_backend'], 'gtk')
+            self.assertEqual(backends['gtk_webkit'], '4.1')
+
+        # 2. When GTK WebKit is missing, but Qt is available -> preferred is qt
+        with patch.object(linux_native, 'probe_webkit_version', return_value=None), \
+             patch.object(linux_native, 'probe_qt_webengine', return_value=True), \
+             patch.object(linux_native, 'find_app_browser', return_value='/usr/bin/chromium'):
+            backends = linux_native.probe_gui_backends()
+            self.assertEqual(backends['preferred_backend'], 'qt')
+
+        # 3. When both GTK and Qt are missing, but browser app is available -> preferred is browser-app
+        with patch.object(linux_native, 'probe_webkit_version', return_value=None), \
+             patch.object(linux_native, 'probe_qt_webengine', return_value=False), \
+             patch.object(linux_native, 'find_app_browser', return_value='/usr/bin/kylin-browser'):
+            backends = linux_native.probe_gui_backends()
+            self.assertEqual(backends['preferred_backend'], 'browser-app')
+
+    def test_diagnose_system_and_report(self):
+        with patch.object(linux_native, 'IS_LINUX', True), \
+             patch.object(linux_native, 'detect_distro_info', return_value={'id': 'kylinos', 'version_id': 'v10', 'pretty_name': 'Kylin Linux Advanced Server V10'}), \
+             patch.object(linux_native, 'architecture', return_value='arm64'), \
+             patch.object(linux_native, 'detect_cpu_vendor', return_value='phytium'), \
+             patch.object(linux_native, 'probe_gui_backends', return_value={'gtk_webkit': None, 'qt_webengine': False, 'app_browser': '/usr/bin/kylin-browser', 'xdg_open': True, 'preferred_backend': 'browser-app'}), \
+             patch.object(linux_native, 'detect_system_dark_mode', return_value=True), \
+             patch.object(linux_native, 'is_wayland', return_value=False):
+            diag = linux_native.diagnose_system()
+            self.assertEqual(diag['architecture'], 'arm64')
+            self.assertEqual(diag['cpu_vendor'], 'phytium')
+            self.assertTrue(diag['is_kylin_v10'])
+            self.assertTrue(diag['is_phytium'])
+            self.assertEqual(diag['status'], 'ready')
+
+            report = linux_native.format_diagnosis_report()
+            self.assertIn('Kylin Linux Advanced Server V10', report)
+            self.assertIn('arm64', report)
+            self.assertIn('phytium', report)
+            self.assertIn('Mesa llvmpipe', report)
+            self.assertIn('browser-app', report)
+            self.assertIn('[OK] 原生全生态开箱即用', report)
 
 
 if __name__ == '__main__':

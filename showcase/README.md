@@ -59,7 +59,7 @@ python showcase/scripts/publish_approved_batch.py `
   --root showcase/output/release-run/downloads `
   --work-dir showcase/output/release-run/work `
   --state showcase/output/release-run/publish-approved-state.json `
-  --ledger T:/Programming/Project/codex/creator/readmd/showcase/content/publication-ledger.jsonl
+  --ledger showcase/content/publication-ledger.jsonl
 ```
 
 批准文件绑定 PDF、批次和每个 ZIP 的 SHA-256；任一文件改动、QA 变红或 release 已在账本中，一键脚本都会停止。已发布的 release 会自动跳过。
@@ -81,7 +81,7 @@ showcase/publish-approved.cmd
 
 ```powershell
 showcase/publish-approved.cmd `
-  -Ledger "T:/Programming/Project/codex/creator/readmd/showcase/content/publication-ledger.jsonl" `
+  -Ledger "showcase/content/publication-ledger.jsonl" `
   -PublisherProxy "http://127.0.0.1:3456"
 ```
 
