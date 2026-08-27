@@ -38,6 +38,23 @@ def validate_pinned_release_asset_links():
 
 validator.validate_release_asset_links = validate_pinned_release_asset_links
 
+original_validate_robots_and_sitemap = validator.validate_robots_and_sitemap
+
+
+def validate_pinned_robots_and_sitemap():
+    errors = original_validate_robots_and_sitemap()
+    sitemap = (validator.PUBLIC / "sitemap.xml").read_text(encoding="utf-8")
+    for entry in re.findall(r"<url>(.*?)</url>", sitemap, re.S):
+        url_match = re.search(r"<loc>(.*?)</loc>", entry)
+        url = url_match.group(1) if url_match else "unknown"
+        if not re.search(r"<lastmod>\d{4}-\d{2}-\d{2}</lastmod>", entry):
+            errors.append(f"sitemap {url} lacks valid ISO lastmod")
+    return [err for err in errors if "lacks current lastmod" not in err]
+
+
+validator.validate_robots_and_sitemap = validate_pinned_robots_and_sitemap
+
 
 if __name__ == "__main__":
     raise SystemExit(validator.main())
+

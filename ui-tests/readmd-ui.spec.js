@@ -1133,8 +1133,11 @@ test('saving a dirty background tab does not mark a clean active tab dirty', asy
   await expect(page.locator('#close-confirm-modal')).toBeVisible();
   await page.locator('#close-confirm-save').click();
   await expect.poll(() => saves).toEqual([expect.objectContaining({ path: 'C:/two.md', content: '# two changed' })]);
-  await page.waitForFunction(() => state.tabs.length === 1 && state.tabs[0].id === 'one');
-  expect(await page.evaluate(() => Boolean(getActiveTab().isDirty))).toBe(false);
+  await expect.poll(() => page.evaluate(() => ({
+    len: state.tabs.length,
+    firstId: state.tabs[0]?.id,
+    activeDirty: Boolean(getActiveTab()?.isDirty),
+  }))).toEqual({ len: 1, firstId: 'one', activeDirty: false });
 });
 
 test('keyboard delete closes a tab and restores visible tab focus', async ({ page }) => {
