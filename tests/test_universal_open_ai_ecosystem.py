@@ -154,6 +154,27 @@ class TestUniversalOpenAndAiEcosystem(unittest.TestCase):
         # preview card is on the left before export-main-col
         self.assertTrue(preview_card_idx < main_col_idx)
 
+    def test_export_preview_multipage_pagination(self):
+        """Verify export.js contains splitMdForExportPreview and multi-page sheet rendering logic."""
+        export_js_path = os.path.join(ROOT_DIR, "assets", "js", "features", "export.js")
+        with open(export_js_path, "r", encoding="utf-8") as f:
+            export_js = f.read()
+
+        self.assertIn("function splitMdForExportPreview(", export_js)
+        self.assertIn("export-preview-page-sheet", export_js)
+        self.assertIn("export-page-header", export_js)
+        self.assertIn("export-page-body", export_js)
+        self.assertIn("export-page-footer", export_js)
+
+        css_path = os.path.join(ROOT_DIR, "assets", "style.css")
+        with open(css_path, "r", encoding="utf-8") as f:
+            css = f.read()
+
+        self.assertIn(".export-preview-page-sheet", css)
+        self.assertIn(".export-page-header", css)
+        self.assertIn(".export-page-footer", css)
+        self.assertIn("--preview-canvas-bg", css)
+
 
 if __name__ == "__main__":
     unittest.main()

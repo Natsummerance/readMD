@@ -109,8 +109,10 @@ function apiFetch(url, opts) {
 }
 
 const MD_RE = /\.(md|markdown|mdown|mkd|mdx|txt)$/i;
+const TEXT_CODE_RE = /\.(md|markdown|mdown|mkd|mdx|txt|toml|ya?ml|json[5c]?|ini|cfg|conf|config|env|properties|xml|plist|inf|bat|cmd|ps1|psm1|sh|bash|zsh|fish|vbs|py|m?js|c?js|tsx?|jsx|c|cpp|h|hpp|cc|cxx|cs|java|kts?|rs|go|rb|php|swift|lua|r|m|dart|sql|dockerfile|makefile|gradle|html?|css|scss|sass|less|vue|svelte|log|out|err|diff|patch|gitignore|gitattributes|editorconfig|npmrc|rst|asciidoc|adoc|bib|csv|tsv)$/i;
+const CONVERT_BINARY_RE = /\.(docx?|pptx?|xlsx?|pdf|epub|mobi|rtf|odt)$/i;
 const IMG_RE = /\.(png|jpe?g|bmp|webp|gif|tiff?)$/i;
-const CONVERT_EXTS = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm', '.epub', '.mobi', '.rtf', '.odt', '.csv', '.tsv', '.json', '.xml', '.yaml', '.yml', '.rst', '.tex', '.latex'];
+const CONVERT_EXTS = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm', '.epub', '.mobi', '.rtf', '.odt', '.csv', '.tsv', '.json', '.xml', '.yaml', '.yml', '.rst', '.tex', '.latex', '.toml', '.ini', '.bat', '.ps1', '.py', '.log', '.sql'];
 
 const state = {
   tabs: [],            // 多标签列表：{ id, mode, source, path, dir, name, title, content, original, fixed, fixes, stats, size, mtime, encoding, webAssets, isDirty, scrollPos, isVirtual }
@@ -1915,20 +1917,20 @@ function bindGlobalDragAndDrop() {
     const dt = e.dataTransfer;
     if (!dt) return;
 
-    // 1. 处理文件拖拽
+    // 1. 处理文件拖拽（万物皆可开：代码/配置/脚本/文本直接开，Office/PDF 走转换）
     if (dt.files && dt.files.length > 0) {
       const files = Array.from(dt.files);
-      const mdFiles = files.filter(f => MD_RE.test(f.name || ''));
-      const otherFiles = files.filter(f => !MD_RE.test(f.name || ''));
+      const binaryConvertFiles = files.filter(f => (typeof CONVERT_BINARY_RE !== 'undefined' ? CONVERT_BINARY_RE.test(f.name || '') : false) || IMG_RE.test(f.name || ''));
+      const textAndCodeFiles = files.filter(f => !binaryConvertFiles.includes(f));
 
-      if (mdFiles.length > 0) {
-        for (const f of mdFiles) {
+      if (textAndCodeFiles.length > 0) {
+        for (const f of textAndCodeFiles) {
           const path = f.path ? f.path : await uploadFile(f);
           if (path) await loadFile(path, { browserCopy: !f.path });
         }
       }
-      if (otherFiles.length > 0) {
-        for (const f of otherFiles) {
+      if (binaryConvertFiles.length > 0) {
+        for (const f of binaryConvertFiles) {
           const path = f.path ? f.path : await uploadFile(f);
           if (path) await convertOrOcr(path, 'convert');
         }
@@ -3226,6 +3228,9 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
       mtime: d.mtime,
       encoding: d.encoding,
       webAssets: [],
+      is_code: d.is_code || false,
+      code_lang: d.code_lang || '',
+      ext: d.ext || '',
     };
 
     if (existingTab) {
@@ -4177,6 +4182,42 @@ async function renderContent(content, name) {
     showPaginationBar(false);
   }
 
+  const isCodeDoc = state.is_code || (name && !MD_RE.test(name) && typeof TEXT_CODE_RE !== 'undefined' && TEXT_CODE_RE.test(name));
+  if (isCodeDoc) {
+    const ext = state.ext || (name ? (name.match(/\.[^.]+$/) || [''])[0] : '');
+    const lang = state.code_lang || ext.replace(/^\./, '');
+    const sizeKb = ((content || '').length / 1024).toFixed(1);
+    
+    const headerHtml = `
+      <div class="code-doc-header">
+        <div class="code-doc-meta">
+          <span class="code-doc-badge">${escapeHtml(lang || 'code')}</span>
+          <span class="code-doc-path">${escapeHtml(name || '')}</span>
+          <span class="code-doc-lines" data-i18n="codebar.lines">${_t('codebar.lines', { count: linesCount }) || (linesCount + ' 行')}</span>
+          <span class="code-doc-size">${sizeKb} KB</span>
+        </div>
+        <div class="code-doc-actions">
+          <button class="btn btn-sm btn-primary" id="btn-code-to-md" data-i18n="codebar.aiToMd" title="转换为结构化 Markdown 文档">${_t('codebar.aiToMd') || 'AI 结构化转 MD'}</button>
+          <button class="btn btn-sm" id="btn-code-edit" data-i18n="codebar.edit" title="进入源码编辑器 (Ctrl+E)">${_t('codebar.edit') || '编辑源码 (Ctrl+E)'}</button>
+          <button class="btn btn-sm" id="btn-code-ai-explain" data-i18n="codebar.aiExplain" title="调用 AI 进行深度解析与排错">${_t('codebar.aiExplain') || 'AI 深度解析'}</button>
+          <button class="btn btn-sm" id="btn-code-copy" data-i18n="codebar.copyCode" title="复制代码正文">${_t('codebar.copyCode') || '复制代码'}</button>
+        </div>
+      </div>`;
+    
+    const codeBlockMarkdown = '```' + (lang || '') + '\n' + content + '\n```';
+    const prot = protectMath(codeBlockMarkdown);
+    const html = parseMarkdownWithSourceMap(prot.src);
+    const finalHtml = restoreMath(html, prot.saved);
+    if (!isReaderRenderCurrent(render)) return;
+    $('content').innerHTML = '<article class="markdown-body">' + headerHtml + sanitizeRenderedHtml(finalHtml) + '</article>';
+    postProcess();
+    bindCodeDocActions(content, name, lang);
+    if (saved) requestAnimationFrame(() => {
+      if (isReaderRenderCurrent(render)) $('content').scrollTop = saved;
+    });
+    return;
+  }
+
   const big = content.length > INCREMENTAL_THRESHOLD || linesCount > INCREMENTAL_LINES;
   if (big) {
     await renderContentIncremental(content, saved, render);
@@ -4192,6 +4233,46 @@ async function renderContent(content, name) {
   if (saved) requestAnimationFrame(() => {
     if (isReaderRenderCurrent(render)) $('content').scrollTop = saved;
   });
+}
+
+function bindCodeDocActions(content, name, lang) {
+  const toMdBtn = $('btn-code-to-md');
+  const editBtn = $('btn-code-edit');
+  const aiBtn = $('btn-code-ai-explain');
+  const copyBtn = $('btn-code-copy');
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+
+  if (toMdBtn) {
+    toMdBtn.addEventListener('click', async () => {
+      if (typeof openAiPanelWithPrompt === 'function') {
+        openAiPanelWithPrompt('quick_read', `请将以下 ${lang || '代码'} 源码/配置文件深度结构化转换为规范、美观、带章节与说明的 Markdown 文档：\n\n\`\`\`${lang || ''}\n${content}\n\`\`\``);
+      } else if (state.file) {
+        await convertOrOcr(state.file, 'convert');
+      }
+    });
+  }
+  if (editBtn) {
+    editBtn.addEventListener('click', () => {
+      if (typeof enterEdit === 'function') enterEdit();
+    });
+  }
+  if (aiBtn) {
+    aiBtn.addEventListener('click', () => {
+      if (typeof openAiPanelWithPrompt === 'function') {
+        openAiPanelWithPrompt('ask', `请深度解析以下 ${lang || '代码'} 代码/配置文件的核心逻辑、关键配置项与潜在问题：\n\n\`\`\`${lang || ''}\n${content}\n\`\`\``);
+      }
+    });
+  }
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(content);
+        showToast(_t('toast.copied') || '已复制代码内容');
+      } catch (e) {
+        showToast(_t('toast.copyFailed') || '复制失败');
+      }
+    });
+  }
 }
 
 
@@ -6192,7 +6273,15 @@ function createEditor(doc) {
       CM.markdown({ base: CM.markdownLanguage, codeLanguages: CM.languages }),
       CM.autocompletion({ override: [cmMarkdownCompletions()], activateOnTyping: true }),
       CM.closeBrackets(),
-      CM.keymap.of([CM.indentWithTab, ...CM.closeBracketsKeymap, ...CM.defaultKeymap, ...CM.historyKeymap, ...CM.completionKeymap]),
+      CM.keymap.of([
+        { key: 'Alt-k', run: () => { openEditAiBar(); return true; } },
+        { key: 'Ctrl-j', run: () => { openEditAiBar(); return true; } },
+        CM.indentWithTab,
+        ...CM.closeBracketsKeymap,
+        ...CM.defaultKeymap,
+        ...CM.historyKeymap,
+        ...CM.completionKeymap
+      ]),
       CM.EditorView.lineWrapping,
       CM.EditorView.contentAttributes.of({ 'aria-label': _t('toolbar.edit') || 'Markdown editor' }),
       CM.EditorView.updateListener.of(u => {
@@ -6842,6 +6931,209 @@ function insertCustomTable(rows, cols) {
   }
 }
 
+/* ============================================================
+   Editor Studio PRO: AI Assistant & Inline Completion (Alt+K)
+   ============================================================ */
+
+let editAiCurrentResult = '';
+let editAiSelectionRange = null;
+
+function openEditAiBar() {
+  if (!state.editing || !cmView) return;
+  const bar = $('edit-ai-bar');
+  if (!bar) return;
+  
+  const sel = cmView.state.selection.main;
+  if (sel && !sel.empty) {
+    editAiSelectionRange = { from: sel.from, to: sel.to, text: cmView.state.sliceDoc(sel.from, sel.to) };
+  } else {
+    const cursorPos = sel ? sel.from : cmView.state.doc.length;
+    const contextBefore = cmView.state.sliceDoc(Math.max(0, cursorPos - 1200), cursorPos);
+    editAiSelectionRange = { from: cursorPos, to: cursorPos, text: '', context: contextBefore };
+  }
+
+  bar.classList.remove('hidden');
+  const input = $('edit-ai-input');
+  if (input) {
+    input.value = '';
+    setTimeout(() => input.focus(), 30);
+  }
+}
+
+function closeEditAiBar() {
+  const bar = $('edit-ai-bar');
+  if (bar) bar.classList.add('hidden');
+  const preview = $('edit-ai-preview');
+  if (preview) preview.classList.add('hidden');
+  editAiCurrentResult = '';
+  editAiSelectionRange = null;
+  if (cmView) cmView.focus();
+}
+
+async function runEditAiAction(act, customPrompt = '') {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const preview = $('edit-ai-preview');
+  const previewContent = $('edit-ai-preview-content');
+  const statusEl = $('edit-ai-status');
+  if (preview) preview.classList.remove('hidden');
+  if (previewContent) previewContent.innerHTML = '';
+  if (statusEl) statusEl.textContent = _t('editai.generating') || 'AI 正在深度生成中...';
+
+  const range = editAiSelectionRange || { from: 0, to: 0, text: '' };
+  let systemPrompt = '你是 ReadMD 智能写作与编辑助手。根据用户的要求或上下文进行高质量 Markdown 处理。只输出生成的正文，不要有任何多余的寒暄或解释。';
+  let userMessage = '';
+
+  if (act === 'complete') {
+    systemPrompt = '你是 Markdown 智能续写助手。根据用户给出的前文内容与光标上下文，自然流畅地续写下一段落或后续内容。只输出续写内容本身。';
+    userMessage = `前文内容：\n${range.context || range.text || (cmView ? cmView.state.doc.toString() : '')}\n\n请自然续写后续内容：`;
+  } else if (act === 'polish') {
+    systemPrompt = '你是专业特约编辑。深度润色用户给出的 Markdown 文本：纠错字、通语病、增强流畅度与文采，严格保留原格式标记与公式。只输出润色后的正文。';
+    userMessage = `请润色以下文本：\n\n${range.text || (cmView ? cmView.state.doc.toString() : '')}`;
+  } else if (act === 'fix') {
+    systemPrompt = '你是 Markdown 语法排版专家。修复文本中的表格对齐、公式符号、未闭合标记与排版缺陷。只输出修复后的完整 Markdown。';
+    userMessage = `请修复以下 Markdown 排版与语法：\n\n${range.text || (cmView ? cmView.state.doc.toString() : '')}`;
+  } else if (act === 'translate') {
+    systemPrompt = '你是专业翻译。若输入主要是中文则翻译为高质量地道英文；若主要是英文则翻译为地道严谨简体中文。只输出翻译结果。';
+    userMessage = `请翻译以下内容：\n\n${range.text || (cmView ? cmView.state.doc.toString() : '')}`;
+  } else {
+    userMessage = customPrompt || '请优化此段内容';
+    if (range.text) userMessage += `\n\n参考文本：\n${range.text}`;
+  }
+
+  editAiCurrentResult = '';
+
+  try {
+    const res = await apiFetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ],
+        stream: false
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      let errMsg = 'HTTP ' + res.status;
+      try {
+        const errJson = JSON.parse(errText);
+        if (errJson.error) errMsg = errJson.error;
+      } catch (e) {
+        if (errText) errMsg = errText.slice(0, 100);
+      }
+      throw new Error(errMsg);
+    }
+
+    let resultText = '';
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const data = await res.json();
+      resultText = data.content || (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    } else {
+      const rawText = await res.text();
+      const lines = rawText.split('\n');
+      const chunks = [];
+      for (const line of lines) {
+        if (line.startsWith('data:')) {
+          const jsonStr = line.slice(5).trim();
+          if (jsonStr && jsonStr !== '[DONE]') {
+            try {
+              const d = JSON.parse(jsonStr);
+              if (d.d) chunks.push(d.d);
+              else if (d.content) chunks.push(d.content);
+            } catch (e) {}
+          }
+        }
+      }
+      resultText = chunks.length ? chunks.join('') : rawText;
+    }
+
+    editAiCurrentResult = resultText;
+    if (previewContent) {
+      previewContent.textContent = resultText;
+    }
+    if (statusEl) statusEl.textContent = _t('editai.title') || '生成完成';
+  } catch (err) {
+    if (statusEl) statusEl.textContent = (_t('ai.reqFailMsg') || 'AI 请求失败：') + err.message;
+    if (previewContent) previewContent.textContent = err.message;
+  }
+}
+
+function applyEditAiResult() {
+  if (!cmView || !editAiCurrentResult) {
+    closeEditAiBar();
+    return;
+  }
+  const range = editAiSelectionRange || { from: cmView.state.selection.main.from, to: cmView.state.selection.main.to };
+  cmView.dispatch({
+    changes: { from: range.from, to: range.to, insert: editAiCurrentResult },
+    selection: { anchor: range.from + editAiCurrentResult.length }
+  });
+  closeEditAiBar();
+}
+
+function insertEditAiResult() {
+  if (!cmView || !editAiCurrentResult) {
+    closeEditAiBar();
+    return;
+  }
+  const sel = cmView.state.selection.main;
+  const pos = sel ? sel.to : cmView.state.doc.length;
+  cmView.dispatch({
+    changes: { from: pos, to: pos, insert: '\n' + editAiCurrentResult + '\n' },
+    selection: { anchor: pos + editAiCurrentResult.length + 2 }
+  });
+  closeEditAiBar();
+}
+
+function discardEditAiResult() {
+  closeEditAiBar();
+}
+
+function bindEditorAiEvents() {
+  const btnAssistant = $('btn-edit-ai-assistant');
+  const cmSelAi = $('cm-sel-ai');
+  const closeBtn = $('edit-ai-close');
+  const submitBtn = $('edit-ai-submit');
+  const inputEl = $('edit-ai-input');
+  const applyBtn = $('edit-ai-apply');
+  const insertBtn = $('edit-ai-insert');
+  const discardBtn = $('edit-ai-discard');
+
+  if (btnAssistant) btnAssistant.addEventListener('click', openEditAiBar);
+  if (cmSelAi) cmSelAi.addEventListener('click', () => { hideCmSelectionToolbar(); openEditAiBar(); });
+  if (closeBtn) closeBtn.addEventListener('click', closeEditAiBar);
+  if (discardBtn) discardBtn.addEventListener('click', discardEditAiResult);
+  if (applyBtn) applyBtn.addEventListener('click', applyEditAiResult);
+  if (insertBtn) insertBtn.addEventListener('click', insertEditAiResult);
+
+  if (submitBtn && inputEl) {
+    submitBtn.addEventListener('click', () => {
+      const val = inputEl.value.trim();
+      if (val) runEditAiAction('custom', val);
+    });
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = inputEl.value.trim();
+        if (val) runEditAiAction('custom', val);
+      } else if (e.key === 'Escape') {
+        closeEditAiBar();
+      }
+    });
+  }
+
+  document.querySelectorAll('.edit-ai-act-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const act = btn.dataset.act;
+      if (act) runEditAiAction(act);
+    });
+  });
+}
+
 ;
 'use strict';
 /* ============================================================
@@ -6890,6 +7182,35 @@ function toggleAiPanel() {
     setTimeout(() => $('ai-prompt') && $('ai-prompt').focus(), 0);
   }
 }
+
+function handleTopAiButtonClick() {
+  const isEditing = !!state.editing;
+  const isPreviewOpen = isEditing && state.pvLayout && state.pvLayout !== 'none';
+  if (isEditing && isPreviewOpen) {
+    if (typeof openEditAiBar === 'function') {
+      openEditAiBar();
+    }
+  } else {
+    toggleAiPanel();
+  }
+}
+window.handleTopAiButtonClick = handleTopAiButtonClick;
+
+function openAiPanelWithPrompt(act, promptText) {
+  const p = $('ai-panel');
+  if (!p) return;
+  if (p.classList.contains('hidden')) {
+    toggleAiPanel();
+  }
+  const promptInput = $('ai-prompt');
+  if (promptInput && promptText) {
+    promptInput.value = promptText;
+  }
+  if (act) {
+    setTimeout(() => runAi(act), 50);
+  }
+}
+window.openAiPanelWithPrompt = openAiPanelWithPrompt;
 
 function toggleAiFullscreen() {
   const p = $('ai-panel');
@@ -9106,6 +9427,7 @@ function renderExportModal() {
   $('export-modal').classList.remove('hidden');
   renderExportPresetSelect();
   renderExportSections();
+  initExportAiDesigner();
   updateExportLivePreview();
   const r = $('export-result');
   r.textContent = ''; r.className = 'export-result';
@@ -9273,7 +9595,7 @@ function generateExportPreviewCss(opts, fmt) {
     }
 
     /* Full Modal Preview Dynamic Styling */
-    #export-preview-full-page {
+    #export-preview-full-page, .export-preview-page-sheet {
       background: ${pageBg} !important;
       color: ${baseFg} !important;
       font-family: ${fontFamily} !important;
@@ -9283,16 +9605,16 @@ function generateExportPreviewCss(opts, fmt) {
       padding: ${page.marginTop || 20}mm ${page.marginRight || 18}mm ${page.marginBottom || 20}mm ${page.marginLeft || 18}mm !important;
       ${page.orientation === 'landscape' ? 'width: 270mm; min-height: 190mm;' : 'width: 190mm; min-height: 270mm;'}
     }
-    #export-preview-full-page p, #export-preview-full-page li, #export-preview-full-page span, #export-preview-full-page div {
+    #export-preview-full-page p, .export-preview-page-sheet p, .export-page-body p, #export-preview-full-page li, .export-page-body li, #export-preview-full-page span, .export-page-body span, #export-preview-full-page div, .export-page-body div {
       color: ${baseFg} !important;
       font-size: ${ty.size || 11}pt !important;
       line-height: ${ty.lineHeight || 1.6} !important;
       text-align: ${ty.align || 'left'} !important;
     }
-    #export-preview-full-page p {
+    #export-preview-full-page p, .export-page-body p {
       margin: ${ty.spacing || 6}pt 0 !important;
     }
-    #export-preview-full-page h1 {
+    #export-preview-full-page h1, .export-page-body h1 {
       color: ${h1.color || '#1a1a1a'} !important;
       font-size: ${h1.size || 20}pt !important;
       font-weight: ${h1.bold ? 'bold' : 'normal'} !important;
@@ -9302,7 +9624,7 @@ function generateExportPreviewCss(opts, fmt) {
       line-height: 1.35 !important;
       border-bottom: none !important;
     }
-    #export-preview-full-page h2 {
+    #export-preview-full-page h2, .export-page-body h2 {
       color: ${h2.color || '#1f2937'} !important;
       font-size: ${h2.size || 16}pt !important;
       font-weight: ${h2.bold ? 'bold' : 'normal'} !important;
@@ -9312,7 +9634,7 @@ function generateExportPreviewCss(opts, fmt) {
       line-height: 1.35 !important;
       border-bottom: none !important;
     }
-    #export-preview-full-page h3 {
+    #export-preview-full-page h3, .export-page-body h3 {
       color: ${h3.color || '#2d3748'} !important;
       font-size: ${h3.size || 14}pt !important;
       font-weight: ${h3.bold ? 'bold' : 'normal'} !important;
@@ -9321,7 +9643,7 @@ function generateExportPreviewCss(opts, fmt) {
       margin-bottom: ${h3.after || 6}pt !important;
       line-height: 1.35 !important;
     }
-    #export-preview-full-page h4 {
+    #export-preview-full-page h4, .export-page-body h4 {
       color: ${h4.color || '#374151'} !important;
       font-size: ${h4.size || 12}pt !important;
       font-weight: ${h4.bold ? 'bold' : 'normal'} !important;
@@ -9329,7 +9651,7 @@ function generateExportPreviewCss(opts, fmt) {
       margin-top: ${h4.before || 10}pt !important;
       margin-bottom: ${h4.after || 6}pt !important;
     }
-    #export-preview-full-page h5 {
+    #export-preview-full-page h5, .export-page-body h5 {
       color: ${h5.color || '#4a5568'} !important;
       font-size: ${h5.size || 11}pt !important;
       font-weight: ${h5.bold ? 'bold' : 'normal'} !important;
@@ -9337,7 +9659,7 @@ function generateExportPreviewCss(opts, fmt) {
       margin-top: ${h5.before || 8}pt !important;
       margin-bottom: ${h5.after || 4}pt !important;
     }
-    #export-preview-full-page h6 {
+    #export-preview-full-page h6, .export-page-body h6 {
       color: ${h6.color || '#4a5568'} !important;
       font-size: ${h6.size || 10.5}pt !important;
       font-weight: ${h6.bold ? 'bold' : 'normal'} !important;
@@ -9345,27 +9667,27 @@ function generateExportPreviewCss(opts, fmt) {
       margin-top: ${h6.before || 8}pt !important;
       margin-bottom: ${h6.after || 4}pt !important;
     }
-    #export-preview-full-page table {
+    #export-preview-full-page table, .export-page-body table {
       border-collapse: collapse !important;
       width: ${tb.widthPct || 100}% !important;
       margin: 12pt auto !important;
       font-size: ${tb.cellSize || 10}pt !important;
     }
-    #export-preview-full-page th, #export-preview-full-page td {
+    #export-preview-full-page th, .export-page-body th, #export-preview-full-page td, .export-page-body td {
       border: ${tb.borderWidth || 0.75}px solid ${tb.borderColor || '#c8cdd4'} !important;
       padding: ${tb.cellPadding || 6}px !important;
       text-align: ${tb.align || 'left'} !important;
       color: ${baseFg} !important;
     }
-    #export-preview-full-page th {
+    #export-preview-full-page th, .export-page-body th {
       background: ${tb.headerBg || '#3b6ef5'} !important;
       color: ${tb.headerColor || '#ffffff'} !important;
       font-weight: ${tb.headerBold ? 'bold' : 'normal'} !important;
     }
-    #export-preview-full-page tbody tr:nth-child(even) td {
+    #export-preview-full-page tbody tr:nth-child(even) td, .export-page-body tbody tr:nth-child(even) td {
       background: ${tb.banded ? (tb.bandColor || '#f3f5f9') : 'transparent'} !important;
     }
-    #export-preview-full-page pre {
+    #export-preview-full-page pre, .export-page-body pre {
       background: ${codeBg} !important;
       color: ${code.color || '#2f3b4a'} !important;
       border: ${code.borderWidth || 0.5}px solid ${code.borderColor || '#dfe3e8'} !important;
@@ -9377,60 +9699,154 @@ function generateExportPreviewCss(opts, fmt) {
       line-height: 1.5 !important;
       margin: 8pt 0 !important;
     }
-    #export-preview-full-page code {
+    #export-preview-full-page code, .export-page-body code {
       font-family: ${code.font || 'Consolas'}, Consolas, monospace !important;
     }
-    #export-preview-full-page :not(pre) > code {
+    #export-preview-full-page :not(pre) > code, .export-page-body :not(pre) > code {
       background: ${codeBg} !important;
       color: #c7254e !important;
       padding: 2px 5px !important;
       border-radius: 4px !important;
       font-size: 0.92em !important;
     }
-    #export-preview-full-page blockquote {
+    #export-preview-full-page blockquote, .export-page-body blockquote {
       margin: 8pt 0 !important;
       padding: 8pt 14pt !important;
       background: ${quoteBg} !important;
       color: ${quote.color || '#4a5568'} !important;
       border-left: 4px solid ${quote.barColor || '#3b6ef5'} !important;
     }
-    #export-preview-full-page blockquote p {
+    #export-preview-full-page blockquote p, .export-page-body blockquote p {
       color: ${quote.color || '#4a5568'} !important;
       margin: 4pt 0 !important;
     }
-    #export-preview-full-page a {
+    #export-preview-full-page a, .export-page-body a {
       color: ${link.color || '#2b6cb0'} !important;
       text-decoration: underline !important;
     }
-    #export-preview-full-page hr {
+    #export-preview-full-page hr, .export-page-body hr {
       border: none !important;
       border-top: 1px solid ${hr.color || '#d8dce2'} !important;
       margin: 14pt 0 !important;
     }
-    #export-preview-full-page img {
+    #export-preview-full-page img, .export-page-body img {
       max-width: 100% !important;
       height: auto !important;
+    }
+    .export-page-header, .export-page-footer {
+      color: ${baseFg} !important;
+      opacity: 0.65;
+      border-color: ${baseFg}33 !important;
     }
   `;
 }
 
+function splitMdForExportPreview(md, opts = {}) {
+  if (!md || typeof md !== 'string') return [''];
+  const lines = md.split(/\r?\n/);
+  const totalLines = lines.length;
+  
+  const page = opts.page || {};
+  const isLandscape = page.orientation === 'landscape';
+  const targetLines = isLandscape ? 28 : 42;
+  const minLines = isLandscape ? 12 : 18;
+
+  if (totalLines <= targetLines && md.length <= 2200) {
+    return [md];
+  }
+
+  const pages = [];
+  let curLines = [];
+  let inFence = false;
+  let fenceMarker = '';
+  let inMath = false;
+  let inTable = false;
+
+  for (let i = 0; i < totalLines; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // 1. 代码块围栏跟踪
+    if (!inFence && (/^```/.test(trimmed) || /^~~~/.test(trimmed))) {
+      inFence = true;
+      fenceMarker = trimmed.slice(0, 3);
+    } else if (inFence && trimmed.startsWith(fenceMarker)) {
+      inFence = false;
+      fenceMarker = '';
+    }
+
+    // 2. 公式块跟踪
+    if (!inFence) {
+      if (!inMath && (/^\$\$$/.test(trimmed) || /^\\begin\{(align\*?|aligned|equation\*?|cases|gather\*?|matrix|pmatrix|bmatrix)\}/.test(trimmed))) {
+        inMath = true;
+      } else if (inMath && (/^\$\$$/.test(trimmed) || /^\\end\{(align\*?|aligned|equation\*?|cases|gather\*?|matrix|pmatrix|bmatrix)\}/.test(trimmed))) {
+        inMath = false;
+      }
+    }
+
+    // 3. 表格行跟踪
+    inTable = !inFence && !inMath && trimmed.startsWith('|') && trimmed.endsWith('|');
+
+    const canBreak = !inFence && !inMath && !inTable;
+    let shouldBreak = false;
+
+    // 手动分页指令
+    if (trimmed === '<div style="page-break-after: always"></div>' || trimmed === '\\newpage' || trimmed === '<div style="page-break-before: always"></div>') {
+      shouldBreak = true;
+    } else if (canBreak && curLines.length >= minLines) {
+      // 遇到一级/二级标题 (# / ##)
+      if (/^#{1,2}\s+/.test(trimmed)) {
+        shouldBreak = true;
+      }
+      // 遇到空行且达到目标行数
+      else if (curLines.length >= targetLines && trimmed === '') {
+        shouldBreak = true;
+      }
+      // 超过硬上限行数且在任意段落空行或三四级标题分切
+      else if (curLines.length >= (targetLines * 1.5) && (trimmed === '' || /^#{1,4}\s+/.test(trimmed))) {
+        shouldBreak = true;
+      }
+    }
+
+    if (shouldBreak && curLines.length > 0) {
+      pages.push(curLines.join('\n'));
+      curLines = [];
+    }
+
+    curLines.push(line);
+  }
+
+  if (curLines.length > 0) {
+    pages.push(curLines.join('\n'));
+  }
+
+  return pages.length > 0 ? pages : [md];
+}
+
 function updateExportLivePreview() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const fmt = state.export.fmt;
+  const fmt = state.export.fmt || 'pdf';
   const opts = collectExportOptions();
   const badge = $('export-preview-badge');
   const sel = $('exp-preset');
   const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : (_t('export.presetDefault') || '默认');
   if (badge) badge.textContent = fmt.toUpperCase() + ' · ' + presetName;
 
+  const content = currentExportContent();
+  const docTitle = currentExportName();
+
+  const isHtmlMode = fmt === 'html';
+  const pageList = isHtmlMode ? [content] : splitMdForExportPreview(content, opts);
+  const totalPages = pageList.length;
+
   const paperMeta = $('export-preview-paper-meta');
   if (paperMeta) {
     const page = opts.page || {};
     const sz = page.size || 'A4';
     const ori = (page.orientation === 'landscape') ? (_t('export.orientationLandscape') || '横向') : (_t('export.orientationPortrait') || '纵向');
-    paperMeta.textContent = sz + ' · ' + ori + ' · ' + presetName;
+    const pageText = isHtmlMode ? 'HTML Web' : (_t('reader.totalPage', { total: totalPages }) || `共 ${totalPages} 页`);
+    paperMeta.textContent = `${sz} · ${ori} · ${pageText} · ${presetName}`;
   }
-
 
   // 注入或更新动态样式表
   let styleEl = $('export-preview-dynamic-style');
@@ -9441,24 +9857,54 @@ function updateExportLivePreview() {
   }
   styleEl.textContent = generateExportPreviewCss(opts, fmt);
 
-  const content = currentExportContent();
+  // Mini Preview 侧边栏预览
   const miniHost = $('export-preview-mini-content');
   if (miniHost) {
-    const previewChunk = (content || '').slice(0, 1500);
-    const prot = protectMath(previewChunk);
+    const miniContent = (pageList[0] || content || '').slice(0, 1500);
+    const prot = protectMath(miniContent);
     const html = marked.parse(prot.src, { gfm: true, breaks: false });
     miniHost.innerHTML = restoreMath(html, prot.saved);
     renderMath(miniHost);
   }
 
+  // Full Modal Preview 真实多页排版渲染
   const fullModal = $('export-preview-modal');
   if (fullModal && !fullModal.classList.contains('hidden')) {
-    const fullHost = $('export-preview-full-page');
-    if (fullHost) {
-      const fullProt = protectMath(content || '');
-      const fullHtml = marked.parse(fullProt.src, { gfm: true, breaks: false });
-      fullHost.innerHTML = restoreMath(fullHtml, fullProt.saved);
-      renderMath(fullHost);
+    const wrapper = fullModal.querySelector('.export-preview-paper-wrapper');
+    if (wrapper) {
+      wrapper.innerHTML = '';
+      
+      const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      
+      pageList.forEach((pageMarkdown, index) => {
+        const sheet = document.createElement('div');
+        sheet.className = isHtmlMode ? 'export-preview-page-sheet export-preview-html-sheet' : 'export-preview-page-sheet';
+        sheet.dataset.page = (index + 1).toString();
+        
+        if (!isHtmlMode) {
+          const headerEl = document.createElement('div');
+          headerEl.className = 'export-page-header';
+          headerEl.innerHTML = `<span>${esc(docTitle)}</span><span>${fmt.toUpperCase()} · ${esc(presetName)}</span>`;
+          sheet.appendChild(headerEl);
+        }
+        
+        const bodyEl = document.createElement('div');
+        bodyEl.className = 'export-page-body';
+        const pageProt = protectMath(pageMarkdown || '');
+        const pageHtml = marked.parse(pageProt.src, { gfm: true, breaks: false });
+        bodyEl.innerHTML = restoreMath(pageHtml, pageProt.saved);
+        sheet.appendChild(bodyEl);
+        
+        if (!isHtmlMode) {
+          const footerEl = document.createElement('div');
+          footerEl.className = 'export-page-footer';
+          footerEl.innerHTML = `<span>ReadMD</span><span>${index + 1} / ${totalPages}</span>`;
+          sheet.appendChild(footerEl);
+        }
+        
+        wrapper.appendChild(sheet);
+        renderMath(bodyEl);
+      });
     }
   }
 }
@@ -9689,6 +10135,130 @@ async function expSavePreset() {
   };
   $('exp-save-cancel').onclick = () => box.classList.add('hidden');
 }
+
+/* ---------------- AI 风格排版设计师 ---------------- */
+
+function initExportAiDesigner() {
+  const genBtn = $('exp-ai-gen-btn');
+  const promptInput = $('exp-ai-prompt');
+  if (genBtn && promptInput) {
+    genBtn.onclick = () => generateExportStyleWithAi(promptInput.value.trim());
+    promptInput.onkeydown = e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        generateExportStyleWithAi(promptInput.value.trim());
+      }
+    };
+  }
+}
+
+async function generateExportStyleWithAi(stylePrompt) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (!stylePrompt) {
+    showToast(_t('exportai.placeholder') || '请输入排版风格描述');
+    return;
+  }
+  const statusEl = $('exp-ai-status');
+  if (statusEl) {
+    statusEl.classList.remove('hidden');
+    statusEl.textContent = _t('exportai.generating') || '正在分析并设计排版参数...';
+  }
+
+  const systemPrompt = `You are a professional document and book typography designer.
+Based on user style prompt, return ONLY a valid strict JSON object specifying export typography parameters for ReadMD.
+Allowed keys and values:
+{
+  "typography.font": "MicrosoftYaHei" | "SimSun" | "SimHei" | "KaiTi" | "Arial",
+  "typography.size": integer between 9 and 16,
+  "typography.lineHeight": float between 1.2 and 2.0,
+  "typography.spacing": integer between 4 and 16,
+  "typography.color": "#xxxxxx",
+  "typography.align": "left" | "justify" | "center",
+  "headings.h1.size": integer between 18 and 28,
+  "headings.h1.color": "#xxxxxx",
+  "headings.h1.bold": true | false,
+  "headings.h2.size": integer between 14 and 22,
+  "headings.h2.color": "#xxxxxx",
+  "headings.h2.bold": true | false,
+  "table.headerBg": "#xxxxxx",
+  "table.headerColor": "#xxxxxx",
+  "page.marginTop": integer between 10 and 35,
+  "page.marginRight": integer between 10 and 35,
+  "page.marginBottom": integer between 10 and 35,
+  "page.marginLeft": integer between 10 and 35
+}
+Output ONLY raw JSON. No markdown backticks, no conversational text.`;
+
+  try {
+    const res = await apiFetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `排版风格要求：${stylePrompt}` }
+        ],
+        stream: false
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      let errMsg = 'HTTP ' + res.status;
+      try {
+        const errJson = JSON.parse(errText);
+        if (errJson.error) errMsg = errJson.error;
+      } catch (e) {
+        if (errText) errMsg = errText.slice(0, 100);
+      }
+      throw new Error(errMsg);
+    }
+
+    let text = '';
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const data = await res.json();
+      text = data.content || (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    } else {
+      const rawText = await res.text();
+      const lines = rawText.split('\n');
+      const chunks = [];
+      for (const line of lines) {
+        if (line.startsWith('data:')) {
+          const jsonStr = line.slice(5).trim();
+          if (jsonStr && jsonStr !== '[DONE]') {
+            try {
+              const d = JSON.parse(jsonStr);
+              if (d.d) chunks.push(d.d);
+              else if (d.content) chunks.push(d.content);
+            } catch (e) {}
+          }
+        }
+      }
+      text = chunks.length ? chunks.join('') : rawText;
+    }
+
+    text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+    const parsed = JSON.parse(text);
+    
+    // Apply options to export state and DOM
+    state.export.options = expDeepMerge(state.export.options || state.export.defaults, parsed);
+    applyExportOptionsToDom();
+    updateExportLivePreview();
+
+    if (statusEl) {
+      statusEl.textContent = _t('exportai.applied') || '已应用 AI 生成的排版样式预设';
+      setTimeout(() => statusEl.classList.add('hidden'), 3000);
+    }
+    showToast(_t('exportai.applied') || '已应用 AI 生成的排版样式预设');
+  } catch (e) {
+    if (statusEl) {
+      statusEl.textContent = (_t('ai.reqFailMsg') || 'AI 请求失败：') + e.message;
+    }
+    showToast((_t('toast.unknownError') || '生成失败：') + e.message);
+  }
+}
+
 
 
 ;
@@ -10227,6 +10797,7 @@ function bindEvents() {
   if ($('cm-sel-copy')) $('cm-sel-copy').addEventListener('click', cmCopySelection);
   if ($('cm-sel-cut')) $('cm-sel-cut').addEventListener('click', cmCutSelection);
   if ($('cm-sel-paste')) $('cm-sel-paste').addEventListener('click', cmPasteSelection);
+  if (typeof bindEditorAiEvents === 'function') bindEditorAiEvents();
 
 
   /* --- 7. 实时分栏预览与滚动同步控制 (Split Preview) [联动: editor/preview.js] --- */
@@ -10447,7 +11018,7 @@ function bindEvents() {
   $('top-btn').addEventListener('click', () => { $('content').scrollTo({ top: 0, behavior: 'smooth' }); });
 
   /* --- 14. AI 智能助手与会话管理 (AI Assistant) [联动: features/ai.js] --- */
-  $('btn-ai').addEventListener('click', toggleAiPanel);
+  $('btn-ai').addEventListener('click', typeof handleTopAiButtonClick === 'function' ? handleTopAiButtonClick : toggleAiPanel);
   $('ai-close').addEventListener('click', () => { $('ai-panel').classList.add('hidden'); });
   $('ai-settings-open').addEventListener('click', () => openAiModal('ai-settings-modal', $('ai-settings-open')));
   $('ai-settings-close').addEventListener('click', () => closeAiModal('ai-settings-modal'));
@@ -10729,7 +11300,7 @@ function bindEvents() {
     else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); toggleTheme(); } // Ctrl+D: 主题切换
     else if (mod && e.key.toLowerCase() === 'r') { e.preventDefault(); if (state.file && state.mode === 'file') loadFile(state.file, { force: true }); } // Ctrl+R: 强制重载文件
     else if (mod && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); openExportModal(); } // Ctrl+P: 导出面板
-    else if (mod && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); toggleAiPanel(); } // Ctrl+Shift+A: AI面板
+    else if (mod && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); if (typeof handleTopAiButtonClick === 'function') handleTopAiButtonClick(); else toggleAiPanel(); } // Ctrl+Shift+A: AI面板/AI编辑助手
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'p' && state.editing) { e.preventDefault(); openMdCommandPalette(); } // Ctrl+Shift+P: 命令面板
     else if (mod && (e.key === '=' || e.key === '+')) { e.preventDefault(); zoom(10); } // Ctrl++: 放大字号
     else if (mod && e.key === '-') { e.preventDefault(); zoom(-10); } // Ctrl+-: 缩小字号
@@ -11023,3 +11594,5 @@ function updateUnloadGuard() {
   } : null;
 }
 
+
+;

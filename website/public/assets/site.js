@@ -528,7 +528,7 @@
       ghfast: (url) => `https://ghfast.top/${url}`,
       ghproxy: (url) => `https://ghproxy.net/${url}`,
       gitmirror: (url) => `https://hub.gitmirror.com/${url}`,
-      fastgit: (url) => url.replace('https://github.com/', 'https://download.fastgit.org/'),
+      fastgit: (url) => `https://gh-proxy.com/${url}`,
     };
 
     let activeMirror = localStorage.getItem('readmd_download_mirror') || 'direct';
@@ -582,6 +582,31 @@
         document.querySelectorAll('.latest-version-badge').forEach((el) => {
           el.textContent = version;
         });
+
+        // Synchronize all asset links with latest release tag and filenames
+        const assetMap = {};
+        if (Array.isArray(data.assets)) {
+          data.assets.forEach((asset) => {
+            if (asset.name && asset.browser_download_url) {
+              assetMap[asset.name.toLowerCase()] = asset.browser_download_url;
+            }
+          });
+        }
+
+        document.querySelectorAll('a[data-mirror-url]').forEach((link) => {
+          let orig = link.dataset.mirrorUrl;
+          if (orig.includes('/releases/download/')) {
+            const oldTagMatch = orig.match(/\/releases\/download\/([^/]+)\//);
+            if (oldTagMatch && oldTagMatch[1] && oldTagMatch[1] !== version) {
+              const oldTag = oldTagMatch[1];
+              let updated = orig.replace(new RegExp(`/releases/download/${oldTag}/`, 'g'), `/releases/download/${version}/`);
+              updated = updated.replace(new RegExp(oldTag, 'g'), version);
+              link.dataset.mirrorUrl = updated;
+            }
+          }
+        });
+
+        updateDownloadLinks(activeMirror);
       })
       .catch(() => {
         // Graceful fallback to pre-rendered version

@@ -401,7 +401,7 @@ function generateExportPreviewCss(opts, fmt) {
     }
 
     /* Full Modal Preview Dynamic Styling */
-    #export-preview-full-page {
+    #export-preview-full-page, .export-preview-page-sheet {
       background: ${pageBg} !important;
       color: ${baseFg} !important;
       font-family: ${fontFamily} !important;
@@ -411,16 +411,16 @@ function generateExportPreviewCss(opts, fmt) {
       padding: ${page.marginTop || 20}mm ${page.marginRight || 18}mm ${page.marginBottom || 20}mm ${page.marginLeft || 18}mm !important;
       ${page.orientation === 'landscape' ? 'width: 270mm; min-height: 190mm;' : 'width: 190mm; min-height: 270mm;'}
     }
-    #export-preview-full-page p, #export-preview-full-page li, #export-preview-full-page span, #export-preview-full-page div {
+    #export-preview-full-page p, .export-preview-page-sheet p, .export-page-body p, #export-preview-full-page li, .export-page-body li, #export-preview-full-page span, .export-page-body span, #export-preview-full-page div, .export-page-body div {
       color: ${baseFg} !important;
       font-size: ${ty.size || 11}pt !important;
       line-height: ${ty.lineHeight || 1.6} !important;
       text-align: ${ty.align || 'left'} !important;
     }
-    #export-preview-full-page p {
+    #export-preview-full-page p, .export-page-body p {
       margin: ${ty.spacing || 6}pt 0 !important;
     }
-    #export-preview-full-page h1 {
+    #export-preview-full-page h1, .export-page-body h1 {
       color: ${h1.color || '#1a1a1a'} !important;
       font-size: ${h1.size || 20}pt !important;
       font-weight: ${h1.bold ? 'bold' : 'normal'} !important;
@@ -430,7 +430,7 @@ function generateExportPreviewCss(opts, fmt) {
       line-height: 1.35 !important;
       border-bottom: none !important;
     }
-    #export-preview-full-page h2 {
+    #export-preview-full-page h2, .export-page-body h2 {
       color: ${h2.color || '#1f2937'} !important;
       font-size: ${h2.size || 16}pt !important;
       font-weight: ${h2.bold ? 'bold' : 'normal'} !important;
@@ -440,7 +440,7 @@ function generateExportPreviewCss(opts, fmt) {
       line-height: 1.35 !important;
       border-bottom: none !important;
     }
-    #export-preview-full-page h3 {
+    #export-preview-full-page h3, .export-page-body h3 {
       color: ${h3.color || '#2d3748'} !important;
       font-size: ${h3.size || 14}pt !important;
       font-weight: ${h3.bold ? 'bold' : 'normal'} !important;
@@ -449,7 +449,7 @@ function generateExportPreviewCss(opts, fmt) {
       margin-bottom: ${h3.after || 6}pt !important;
       line-height: 1.35 !important;
     }
-    #export-preview-full-page h4 {
+    #export-preview-full-page h4, .export-page-body h4 {
       color: ${h4.color || '#374151'} !important;
       font-size: ${h4.size || 12}pt !important;
       font-weight: ${h4.bold ? 'bold' : 'normal'} !important;
@@ -457,7 +457,7 @@ function generateExportPreviewCss(opts, fmt) {
       margin-top: ${h4.before || 10}pt !important;
       margin-bottom: ${h4.after || 6}pt !important;
     }
-    #export-preview-full-page h5 {
+    #export-preview-full-page h5, .export-page-body h5 {
       color: ${h5.color || '#4a5568'} !important;
       font-size: ${h5.size || 11}pt !important;
       font-weight: ${h5.bold ? 'bold' : 'normal'} !important;
@@ -465,7 +465,7 @@ function generateExportPreviewCss(opts, fmt) {
       margin-top: ${h5.before || 8}pt !important;
       margin-bottom: ${h5.after || 4}pt !important;
     }
-    #export-preview-full-page h6 {
+    #export-preview-full-page h6, .export-page-body h6 {
       color: ${h6.color || '#4a5568'} !important;
       font-size: ${h6.size || 10.5}pt !important;
       font-weight: ${h6.bold ? 'bold' : 'normal'} !important;
@@ -473,27 +473,27 @@ function generateExportPreviewCss(opts, fmt) {
       margin-top: ${h6.before || 8}pt !important;
       margin-bottom: ${h6.after || 4}pt !important;
     }
-    #export-preview-full-page table {
+    #export-preview-full-page table, .export-page-body table {
       border-collapse: collapse !important;
       width: ${tb.widthPct || 100}% !important;
       margin: 12pt auto !important;
       font-size: ${tb.cellSize || 10}pt !important;
     }
-    #export-preview-full-page th, #export-preview-full-page td {
+    #export-preview-full-page th, .export-page-body th, #export-preview-full-page td, .export-page-body td {
       border: ${tb.borderWidth || 0.75}px solid ${tb.borderColor || '#c8cdd4'} !important;
       padding: ${tb.cellPadding || 6}px !important;
       text-align: ${tb.align || 'left'} !important;
       color: ${baseFg} !important;
     }
-    #export-preview-full-page th {
+    #export-preview-full-page th, .export-page-body th {
       background: ${tb.headerBg || '#3b6ef5'} !important;
       color: ${tb.headerColor || '#ffffff'} !important;
       font-weight: ${tb.headerBold ? 'bold' : 'normal'} !important;
     }
-    #export-preview-full-page tbody tr:nth-child(even) td {
+    #export-preview-full-page tbody tr:nth-child(even) td, .export-page-body tbody tr:nth-child(even) td {
       background: ${tb.banded ? (tb.bandColor || '#f3f5f9') : 'transparent'} !important;
     }
-    #export-preview-full-page pre {
+    #export-preview-full-page pre, .export-page-body pre {
       background: ${codeBg} !important;
       color: ${code.color || '#2f3b4a'} !important;
       border: ${code.borderWidth || 0.5}px solid ${code.borderColor || '#dfe3e8'} !important;
@@ -505,60 +505,154 @@ function generateExportPreviewCss(opts, fmt) {
       line-height: 1.5 !important;
       margin: 8pt 0 !important;
     }
-    #export-preview-full-page code {
+    #export-preview-full-page code, .export-page-body code {
       font-family: ${code.font || 'Consolas'}, Consolas, monospace !important;
     }
-    #export-preview-full-page :not(pre) > code {
+    #export-preview-full-page :not(pre) > code, .export-page-body :not(pre) > code {
       background: ${codeBg} !important;
       color: #c7254e !important;
       padding: 2px 5px !important;
       border-radius: 4px !important;
       font-size: 0.92em !important;
     }
-    #export-preview-full-page blockquote {
+    #export-preview-full-page blockquote, .export-page-body blockquote {
       margin: 8pt 0 !important;
       padding: 8pt 14pt !important;
       background: ${quoteBg} !important;
       color: ${quote.color || '#4a5568'} !important;
       border-left: 4px solid ${quote.barColor || '#3b6ef5'} !important;
     }
-    #export-preview-full-page blockquote p {
+    #export-preview-full-page blockquote p, .export-page-body blockquote p {
       color: ${quote.color || '#4a5568'} !important;
       margin: 4pt 0 !important;
     }
-    #export-preview-full-page a {
+    #export-preview-full-page a, .export-page-body a {
       color: ${link.color || '#2b6cb0'} !important;
       text-decoration: underline !important;
     }
-    #export-preview-full-page hr {
+    #export-preview-full-page hr, .export-page-body hr {
       border: none !important;
       border-top: 1px solid ${hr.color || '#d8dce2'} !important;
       margin: 14pt 0 !important;
     }
-    #export-preview-full-page img {
+    #export-preview-full-page img, .export-page-body img {
       max-width: 100% !important;
       height: auto !important;
+    }
+    .export-page-header, .export-page-footer {
+      color: ${baseFg} !important;
+      opacity: 0.65;
+      border-color: ${baseFg}33 !important;
     }
   `;
 }
 
+function splitMdForExportPreview(md, opts = {}) {
+  if (!md || typeof md !== 'string') return [''];
+  const lines = md.split(/\r?\n/);
+  const totalLines = lines.length;
+  
+  const page = opts.page || {};
+  const isLandscape = page.orientation === 'landscape';
+  const targetLines = isLandscape ? 28 : 42;
+  const minLines = isLandscape ? 12 : 18;
+
+  if (totalLines <= targetLines && md.length <= 2200) {
+    return [md];
+  }
+
+  const pages = [];
+  let curLines = [];
+  let inFence = false;
+  let fenceMarker = '';
+  let inMath = false;
+  let inTable = false;
+
+  for (let i = 0; i < totalLines; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // 1. 代码块围栏跟踪
+    if (!inFence && (/^```/.test(trimmed) || /^~~~/.test(trimmed))) {
+      inFence = true;
+      fenceMarker = trimmed.slice(0, 3);
+    } else if (inFence && trimmed.startsWith(fenceMarker)) {
+      inFence = false;
+      fenceMarker = '';
+    }
+
+    // 2. 公式块跟踪
+    if (!inFence) {
+      if (!inMath && (/^\$\$$/.test(trimmed) || /^\\begin\{(align\*?|aligned|equation\*?|cases|gather\*?|matrix|pmatrix|bmatrix)\}/.test(trimmed))) {
+        inMath = true;
+      } else if (inMath && (/^\$\$$/.test(trimmed) || /^\\end\{(align\*?|aligned|equation\*?|cases|gather\*?|matrix|pmatrix|bmatrix)\}/.test(trimmed))) {
+        inMath = false;
+      }
+    }
+
+    // 3. 表格行跟踪
+    inTable = !inFence && !inMath && trimmed.startsWith('|') && trimmed.endsWith('|');
+
+    const canBreak = !inFence && !inMath && !inTable;
+    let shouldBreak = false;
+
+    // 手动分页指令
+    if (trimmed === '<div style="page-break-after: always"></div>' || trimmed === '\\newpage' || trimmed === '<div style="page-break-before: always"></div>') {
+      shouldBreak = true;
+    } else if (canBreak && curLines.length >= minLines) {
+      // 遇到一级/二级标题 (# / ##)
+      if (/^#{1,2}\s+/.test(trimmed)) {
+        shouldBreak = true;
+      }
+      // 遇到空行且达到目标行数
+      else if (curLines.length >= targetLines && trimmed === '') {
+        shouldBreak = true;
+      }
+      // 超过硬上限行数且在任意段落空行或三四级标题分切
+      else if (curLines.length >= (targetLines * 1.5) && (trimmed === '' || /^#{1,4}\s+/.test(trimmed))) {
+        shouldBreak = true;
+      }
+    }
+
+    if (shouldBreak && curLines.length > 0) {
+      pages.push(curLines.join('\n'));
+      curLines = [];
+    }
+
+    curLines.push(line);
+  }
+
+  if (curLines.length > 0) {
+    pages.push(curLines.join('\n'));
+  }
+
+  return pages.length > 0 ? pages : [md];
+}
+
 function updateExportLivePreview() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const fmt = state.export.fmt;
+  const fmt = state.export.fmt || 'pdf';
   const opts = collectExportOptions();
   const badge = $('export-preview-badge');
   const sel = $('exp-preset');
   const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : (_t('export.presetDefault') || '默认');
   if (badge) badge.textContent = fmt.toUpperCase() + ' · ' + presetName;
 
+  const content = currentExportContent();
+  const docTitle = currentExportName();
+
+  const isHtmlMode = fmt === 'html';
+  const pageList = isHtmlMode ? [content] : splitMdForExportPreview(content, opts);
+  const totalPages = pageList.length;
+
   const paperMeta = $('export-preview-paper-meta');
   if (paperMeta) {
     const page = opts.page || {};
     const sz = page.size || 'A4';
     const ori = (page.orientation === 'landscape') ? (_t('export.orientationLandscape') || '横向') : (_t('export.orientationPortrait') || '纵向');
-    paperMeta.textContent = sz + ' · ' + ori + ' · ' + presetName;
+    const pageText = isHtmlMode ? 'HTML Web' : (_t('reader.totalPage', { total: totalPages }) || `共 ${totalPages} 页`);
+    paperMeta.textContent = `${sz} · ${ori} · ${pageText} · ${presetName}`;
   }
-
 
   // 注入或更新动态样式表
   let styleEl = $('export-preview-dynamic-style');
@@ -569,24 +663,54 @@ function updateExportLivePreview() {
   }
   styleEl.textContent = generateExportPreviewCss(opts, fmt);
 
-  const content = currentExportContent();
+  // Mini Preview 侧边栏预览
   const miniHost = $('export-preview-mini-content');
   if (miniHost) {
-    const previewChunk = (content || '').slice(0, 1500);
-    const prot = protectMath(previewChunk);
+    const miniContent = (pageList[0] || content || '').slice(0, 1500);
+    const prot = protectMath(miniContent);
     const html = marked.parse(prot.src, { gfm: true, breaks: false });
     miniHost.innerHTML = restoreMath(html, prot.saved);
     renderMath(miniHost);
   }
 
+  // Full Modal Preview 真实多页排版渲染
   const fullModal = $('export-preview-modal');
   if (fullModal && !fullModal.classList.contains('hidden')) {
-    const fullHost = $('export-preview-full-page');
-    if (fullHost) {
-      const fullProt = protectMath(content || '');
-      const fullHtml = marked.parse(fullProt.src, { gfm: true, breaks: false });
-      fullHost.innerHTML = restoreMath(fullHtml, fullProt.saved);
-      renderMath(fullHost);
+    const wrapper = fullModal.querySelector('.export-preview-paper-wrapper');
+    if (wrapper) {
+      wrapper.innerHTML = '';
+      
+      const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      
+      pageList.forEach((pageMarkdown, index) => {
+        const sheet = document.createElement('div');
+        sheet.className = isHtmlMode ? 'export-preview-page-sheet export-preview-html-sheet' : 'export-preview-page-sheet';
+        sheet.dataset.page = (index + 1).toString();
+        
+        if (!isHtmlMode) {
+          const headerEl = document.createElement('div');
+          headerEl.className = 'export-page-header';
+          headerEl.innerHTML = `<span>${esc(docTitle)}</span><span>${fmt.toUpperCase()} · ${esc(presetName)}</span>`;
+          sheet.appendChild(headerEl);
+        }
+        
+        const bodyEl = document.createElement('div');
+        bodyEl.className = 'export-page-body';
+        const pageProt = protectMath(pageMarkdown || '');
+        const pageHtml = marked.parse(pageProt.src, { gfm: true, breaks: false });
+        bodyEl.innerHTML = restoreMath(pageHtml, pageProt.saved);
+        sheet.appendChild(bodyEl);
+        
+        if (!isHtmlMode) {
+          const footerEl = document.createElement('div');
+          footerEl.className = 'export-page-footer';
+          footerEl.innerHTML = `<span>ReadMD</span><span>${index + 1} / ${totalPages}</span>`;
+          sheet.appendChild(footerEl);
+        }
+        
+        wrapper.appendChild(sheet);
+        renderMath(bodyEl);
+      });
     }
   }
 }
