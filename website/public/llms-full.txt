@@ -5,7 +5,7 @@
 
 ReadMD is an application for people who keep documentation, research notes, course material, technical specifications, and books in Markdown. It is designed around one principle: the user's Markdown remains the canonical artifact. Reading and rendering may repair malformed syntax visually, but those repairs do not overwrite the file unless the user performs an explicit edit and save.
 
-The project publishes source code under the MIT license at https://github.com/Natsummerance/readMD. The current public prerelease is version 2.3.7-beta.4. Release packages and SHA256 checksums are distributed through GitHub Releases.
+The project publishes source code under the MIT license at https://github.com/Natsummerance/readMD. The current public prerelease is version 2.3.7-beta.5. Release packages and SHA256 checksums are distributed through GitHub Releases.
 
 ## What Problem ReadMD Solves
 
@@ -167,7 +167,7 @@ Dedicated answer: https://readmd.asia/bibtex-citations/
 
 Place a `.bib` file in the same directory as the Markdown document so ReadMD can scan the neighboring bibliography. Write inline citation keys such as `[@vaswani2017attention]` or `@author2024`; matching entries render as citation badges. Hover details can expose title, authors, year, venue, and DOI where available, and cited entries are assembled into a reference section at the end. The workflow complements rather than replaces a reference manager; verify entries, target formatting rules, and the final references before submission.
 
-## Task Guide: v2.3.7-beta.4 Release Notes
+## Task Guide: v2.3.7-beta.5 Release Notes
 
 Dedicated answer: https://readmd.asia/release-notes/
 
@@ -177,7 +177,7 @@ Beta.4 hardens the Reveal presentation path and update integrity while improving
 
 - Product name: ReadMD
 - Repository: https://github.com/Natsummerance/readMD
-- Version referenced by this site: 2.3.7-beta.4
+- Version referenced by this site: 2.3.7-beta.5
 - License: MIT
 - Primary languages: English, Simplified Chinese, Traditional Chinese, Japanese
 - Application languages: 46

@@ -35,7 +35,7 @@
 - [GitHub repository](https://github.com/Natsummerance/readMD): MIT-licensed source code, releases, checksums, issues, and platform download assets.
 
 ## Key Facts
-- Current public version: 2.3.7-beta.4
+- Current public version: 2.3.7-beta.5
 - License: MIT
 - Languages: 46 interface languages, including LTR and RTL layouts
 - Core model: local-first processing; no cloud account required for core document work

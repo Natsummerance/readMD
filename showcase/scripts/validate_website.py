@@ -74,17 +74,19 @@ ANSWER_PAGES = {
     "ja-bibtex": {"path": PUBLIC / "ja" / "bibtex-citations" / "index.html", "canonical": "https://readmd.asia/ja/bibtex-citations/"},
 }
 
+VERSION = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
+
 RELEASE_ASSETS = frozenset({
-    "ReadMDSetup-v2.3.7-beta.4.exe",
-    "ReadMD-portable-v2.3.7-beta.4.exe",
-    "ReadMD-macos-arm64-v2.3.7-beta.4.zip",
-    "ReadMD-macos-x64-v2.3.7-beta.4.zip",
-    "ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage",
-    "ReadMD-linux-aarch64-v2.3.7-beta.4.AppImage",
-    "readmd_2.3.7-beta.4_amd64.deb",
-    "readmd_2.3.7-beta.4_arm64.deb",
-    "readmd-vscode-2.3.7-beta.4.vsix",
-    "readmd-mcp-server-2.3.7-beta.4.zip",
+    f"ReadMDSetup-v{VERSION}.exe",
+    f"ReadMD-portable-v{VERSION}.exe",
+    f"ReadMD-macos-arm64-v{VERSION}.zip",
+    f"ReadMD-macos-x64-v{VERSION}.zip",
+    f"ReadMD-linux-x86_64-v{VERSION}.AppImage",
+    f"ReadMD-linux-aarch64-v{VERSION}.AppImage",
+    f"readmd_{VERSION}_amd64.deb",
+    f"readmd_{VERSION}_arm64.deb",
+    f"readmd-vscode-{VERSION}.vsix",
+    f"readmd-mcp-server-{VERSION}.zip",
     "SHA256SUMS.txt",
 })
 
@@ -560,12 +562,13 @@ def validate_answer_internal_links() -> list[str]:
 def validate_release_asset_links() -> list[str]:
     """Every download page must expose the exact canonical Release asset set."""
     errors: list[str] = []
+    tag_pattern = rf'(?:latest/download|download/v{re.escape(VERSION)})'
     for language, contract in DOWNLOAD_PAGES.items():
         content = contract["path"].read_text(encoding="utf-8")
         linked = {
             name
-            for _, name in re.findall(
-                r'href="(https://github\.com/Natsummerance/readMD/releases/latest/download/([^"]+))"',
+            for name in re.findall(
+                rf'href="https://github\.com/Natsummerance/readMD/releases/{tag_pattern}/([^"]+)"',
                 content,
             )
         }

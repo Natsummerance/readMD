@@ -186,6 +186,54 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
     if new_src != src:
         diffs.append((index_path, src, new_src))
 
+    # 10. Website public and document files
+    website_public = os.path.join(ROOT, 'website', 'public')
+    if os.path.isdir(website_public):
+        for root_dir, _, files in os.walk(website_public):
+            for file in sorted(files):
+                if file.endswith(('.html', '.xml', '.txt', '.json')):
+                    fpath = os.path.join(root_dir, file)
+                    with open(fpath, 'r', encoding='utf-8') as f:
+                        src = f.read()
+                    new_src = re.sub(r'(?P<prefix>-)v(?P<version>\d[0-9a-zA-Z.-]*)(?P<suffix>\.(?:exe|zip|AppImage|deb|vsix)\b)', f'\\g<prefix>v{target_ver}\\g<suffix>', src)
+                    new_src = re.sub(r'(_)[0-9a-zA-Z.-]+(_amd64\.deb)', f'\\g<1>{target_ver}\\g<2>', new_src)
+                    new_src = re.sub(r'(_)[0-9a-zA-Z.-]+(_arm64\.deb)', f'\\g<1>{target_ver}\\g<2>', new_src)
+                    new_src = re.sub(r'(vscode-)[0-9a-zA-Z.-]+(\.vsix)', f'\\g<1>{target_ver}\\g<2>', new_src)
+                    new_src = re.sub(r'(server-)[0-9a-zA-Z.-]+(\.zip)', f'\\g<1>{target_ver}\\g<2>', new_src)
+                    new_src = re.sub(r'(releases/tag/v)[0-9a-zA-Z.-]+', f'\\g<1>{target_ver}', new_src)
+                    new_src = re.sub(r'(releases/download/v)[0-9a-zA-Z.-]+', f'\\g<1>{target_ver}', new_src)
+                    new_src = re.sub(r'("softwareVersion":\s*")[^"]+"', f'\\g<1>{target_ver}"', new_src)
+                    new_src = re.sub(r'("artifactSection":\s*"v)[^"]+"', f'\\g<1>{target_ver}"', new_src)
+                    new_src = re.sub(r'(ReadMD\s+v)2\.3\.7-beta\.\d+', f'\\g<1>{target_ver}', new_src)
+                    new_src = re.sub(r'(version\s+)2\.3\.7-beta\.\d+', f'\\g<1>{target_ver}', new_src)
+                    new_src = re.sub(r'(版本[：:\s]+)2\.3\.7-beta\.\d+', f'\\g<1>{target_ver}', new_src)
+                    new_src = re.sub(r'(バージョン[：:\s]+)2\.3\.7-beta\.\d+', f'\\g<1>{target_ver}', new_src)
+                    new_src = re.sub(r'2\.3\.7-beta\.\d+', target_ver, new_src)
+                    if new_src != src:
+                        diffs.append((fpath, src, new_src))
+
+        # Update _headers CSP sha256 hash for JSON-LD in index.html
+        site_index = os.path.join(website_public, 'index.html')
+        headers_file = os.path.join(website_public, '_headers')
+        if os.path.isfile(site_index) and os.path.isfile(headers_file):
+            import base64, hashlib
+            with open(site_index, 'r', encoding='utf-8') as f:
+                idx_content = f.read()
+            # If site_index was modified in this run, use the updated content
+            for p, _, nc in diffs:
+                if p == site_index:
+                    idx_content = nc
+                    break
+            m = re.search(r'(?s)<script type="application/ld\+json">(.*?)</script>', idx_content)
+            if m:
+                digest = hashlib.sha256(m.group(1).encode('utf-8')).digest()
+                csp_hash = 'sha256-' + base64.b64encode(digest).decode('ascii')
+                with open(headers_file, 'r', encoding='utf-8') as f:
+                    h_content = f.read()
+                new_h_content = re.sub(r"'sha256-[^']+'", f"'{csp_hash}'", h_content)
+                if new_h_content != h_content:
+                    diffs.append((headers_file, h_content, new_h_content))
+
     if check_only:
         if diffs:
             print(f'[FAIL] Found {len(diffs)} files out of sync with target version {target_ver}:')

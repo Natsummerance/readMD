@@ -23,10 +23,10 @@
   </entry>
   <entry>
     <id>https://readmd.asia/zh-tw/release-notes/</id>
-    <title>ReadMD v2.3.7-beta.4 發布說明 | 安全放映與更新校驗</title>
+    <title>ReadMD v2.3.7-beta.5 發布說明 | 安全放映與更新校驗</title>
     <link rel="alternate" href="https://readmd.asia/zh-tw/release-notes/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>查看 ReadMD v2.3.7-beta.4 發布說明：Reveal 放映隔離、更新套件暫存檔與 SHA-256 校驗、啟動分階段載入、標籤狀態重新整理、更大觸控目標，以及 Windows、macOS、Linux、UOS 和麒麟安裝套件下載。</summary>
+    <summary>查看 ReadMD v2.3.7-beta.5 發布說明：Reveal 放映隔離、更新套件暫存檔與 SHA-256 校驗、啟動分階段載入、標籤狀態重新整理、更大觸控目標，以及 Windows、macOS、Linux、UOS 和麒麟安裝套件下載。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/zh-tw/pdf-to-markdown/</id>
@@ -93,10 +93,10 @@
   </entry>
   <entry>
     <id>https://readmd.asia/zh-cn/release-notes/</id>
-    <title>ReadMD v2.3.7-beta.4 发布说明 | 安全放映与更新校验</title>
+    <title>ReadMD v2.3.7-beta.5 发布说明 | 安全放映与更新校验</title>
     <link rel="alternate" href="https://readmd.asia/zh-cn/release-notes/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>查看 ReadMD v2.3.7-beta.4 发布说明：Reveal 放映隔离、更新包临时文件与 SHA-256 校验、启动分阶段加载、标签状态刷新、更大触控目标，以及 Windows、macOS、Linux、UOS 和麒麟安装包下载。</summary>
+    <summary>查看 ReadMD v2.3.7-beta.5 发布说明：Reveal 放映隔离、更新包临时文件与 SHA-256 校验、启动分阶段加载、标签状态刷新、更大触控目标，以及 Windows、macOS、Linux、UOS 和麒麟安装包下载。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/zh-cn/pdf-to-markdown/</id>
@@ -163,10 +163,10 @@
   </entry>
   <entry>
     <id>https://readmd.asia/release-notes/</id>
-    <title>ReadMD v2.3.7-beta.4 Release Notes | Safe Presenting And Updates</title>
+    <title>ReadMD v2.3.7-beta.5 Release Notes | Safe Presenting And Updates</title>
     <link rel="alternate" href="https://readmd.asia/release-notes/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>ReadMD v2.3.7-beta.4 release notes covering safer Reveal presenting, update integrity checks, startup loading refinements, tab reliability, larger touch targets, Windows, macOS, Linux, UOS, and Kylin packages.</summary>
+    <summary>ReadMD v2.3.7-beta.5 release notes covering safer Reveal presenting, update integrity checks, startup loading refinements, tab reliability, larger touch targets, Windows, macOS, Linux, UOS, and Kylin packages.</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/pdf-to-markdown/</id>
@@ -212,10 +212,10 @@
   </entry>
   <entry>
     <id>https://readmd.asia/ja/release-notes/</id>
-    <title>ReadMD v2.3.7-beta.4 リリースノート | 安全な発表と更新検証</title>
+    <title>ReadMD v2.3.7-beta.5 リリースノート | 安全な発表と更新検証</title>
     <link rel="alternate" href="https://readmd.asia/ja/release-notes/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>ReadMD v2.3.7-beta.4 の変更点を確認できます。Reveal発表の分離、更新ファイルの一時保存とSHA-256検証、段階的な起動読み込み、タブ状態の即時更新、大きなタッチ操作領域、Windows、macOS、Linux、UOS、Kylin向けパッケージを説明します。</summary>
+    <summary>ReadMD v2.3.7-beta.5 の変更点を確認できます。Reveal発表の分離、更新ファイルの一時保存とSHA-256検証、段階的な起動読み込み、タブ状態の即時更新、大きなタッチ操作領域、Windows、macOS、Linux、UOS、Kylin向けパッケージを説明します。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/ja/pdf-to-markdown/</id>
