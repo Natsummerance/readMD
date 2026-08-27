@@ -26,7 +26,10 @@ const aiFiles = [
   page.on('console', message => {
     if (message.type() === 'error') errors.push(message.text());
   });
-  page.on('requestfailed', request => failedRequests.push(request.url()));
+  page.on('requestfailed', request => {
+    if (request.url().includes('/cdn-cgi/rum')) return;
+    failedRequests.push(request.url());
+  });
 
   const pages = [];
   for (const route of routes) {
