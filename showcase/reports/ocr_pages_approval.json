@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "artifact": "Localized scan-to-Markdown OCR answer pages",
+  "reviewed_at": "2026-08-25T00:50:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "ai-discovery-review",
+      "status": "approved",
+      "score": 9.87,
+      "evidence": [
+        "Four new URLs target concrete AI and search intents for extracting text from scans, screenshots, and PDF pages into Markdown.",
+        "Each page exposes one direct H1, HowTo steps, four visible questions and answers, speakable selectors, canonical URL, hreflang set, and BreadcrumbList.",
+        "Root and localized llms indexes and full corpora cite the qualified OCR workflow with absolute URLs."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "design-and-ux-review",
+      "status": "approved",
+      "score": 9.81,
+      "evidence": [
+        "The pages preserve the existing light theme, single accent system, type hierarchy, real product capture treatment, responsive collapse, and restrained static motion level.",
+        "Each hero uses a relevant ReadMD converter capture with WebP fallback, intrinsic dimensions, meaningful alt text, and high fetch priority.",
+        "Homepages, workflow answers, download pages, breadcrumbs, sibling answer pages, and the new OCR cluster form a closed internal-link loop without duplicate download CTA labels."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-compliance-review",
+      "status": "approved",
+      "score": 9.79,
+      "evidence": [
+        "OCR claims are qualified to Windows WinRT and macOS Apple Vision; no Linux or UOS parity is implied.",
+        "Screenshot extraction, local processing, no-cloud-account behavior, and post-recognition review trace to README-backed product facts.",
+        "No Apple protected material, fake accuracy metrics, tracking scripts, credentials, or unpublished release claims are introduced."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_pull_request",
+    "score": 9.83,
+    "participants": ["AI discovery", "design and UX", "release compliance"],
+    "conditions": [
+      "Release build validation must pass before merge.",
+      "Browser smoke must pass all twenty-eight localized routes.",
+      "CI must pass and GitHub Pages deployment must finish before live verification and IndexNow submission."
+    ]
+  }
+}

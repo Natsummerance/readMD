@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "artifact": "Localized visible-answer FAQPage structured data",
+  "reviewed_at": "2026-08-24T21:40:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "ai-discovery-review",
+      "status": "approved",
+      "score": 9.86,
+      "evidence": [
+        "All FAQ entities mirror question-and-answer text that is already visible on the page.",
+        "English, Simplified Chinese, Traditional Chinese, and Japanese homepages expose six high-intent answers each.",
+        "All four workflow pages expose five task-level answers for long documents, conversion, offline OCR, presentation, and platforms."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "seo-technical-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "Each FAQPage identifier resolves to the page canonical plus the #faq fragment.",
+        "The release validator enforces one FAQPage per eligible page, exact visible-question counts, canonical identifiers, and valid JSON-LD.",
+        "Canonical URLs, hreflang sets, sitemap inventory, and crawler permissions remain unchanged."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "content-compliance-review",
+      "status": "approved",
+      "score": 9.78,
+      "evidence": [
+        "No new product claims, pricing promises, security guarantees, or competitor comparisons are introduced.",
+        "Privacy and conversion answers retain their supported-platform and review-after-conversion qualifiers.",
+        "No protected Apple material, tracking scripts, credentials, or unpublished release claims are added."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_pull_request",
+    "score": 9.83,
+    "participants": ["AI discovery", "technical SEO", "content compliance"],
+    "conditions": [
+      "Release build validation must pass before merge.",
+      "Playwright browser smoke must pass across all twelve localized routes.",
+      "CI must pass and GitHub Pages deployment must finish before production verification."
+    ]
+  }
+}

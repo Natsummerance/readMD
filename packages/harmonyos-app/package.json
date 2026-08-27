@@ -1,11 +1,11 @@
 {
   "name": "readmd-harmonyos",
-  "version": "2.3.6",
+  "version": "2.3.7-beta.4",
   "description": "ReadMD for HarmonyOS NEXT & OpenHarmony",
   "main": "index.ets",
   "author": "Natsummerance",
   "license": "MIT",
   "scripts": {
-    "build": "hvigorw assembleHap"
+    "sync:web": "node scripts/sync-web-assets.mjs"
   }
 }

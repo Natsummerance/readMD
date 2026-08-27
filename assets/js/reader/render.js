@@ -209,6 +209,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
       updateStatus();
       setProgress(100);
       if (d.structured) showToast(_t('toast.txtStructureRecognized') || '已智能识别 TXT 结构（标题 / 表格 / 列表 / 目录）');
+      renderTabsBar();
       afterRender();
       return;
     }
@@ -681,6 +682,8 @@ function initPaginationEvents() {
         const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
         if (activeTab) {
           activeTab.scrollPos = content.scrollTop || 0;
+          const scrollKey = normalizePath(activeTab.title || activeTab.name || activeTab.path || '');
+          if (scrollKey) state.scrollPos[scrollKey] = activeTab.scrollPos;
           if (state.pagination.enabled && state.pagination.mode === 'continuous') {
             activeTab.continuousScroll = content.scrollTop || 0;
           }
@@ -1570,19 +1573,33 @@ window.renderAllDiagrams = renderAllDiagrams;
 
 function toggleZenMode(force) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const toolbar = document.getElementById('toolbar');
+  const toolbarHeight = toolbar?.getBoundingClientRect().height || 0;
   if (typeof force === 'boolean') {
     document.body.classList.toggle('zen-mode', force);
   } else {
     document.body.classList.toggle('zen-mode');
   }
   const isZen = document.body.classList.contains('zen-mode');
-  const toolbar = document.getElementById('toolbar');
+  document.body.classList.toggle('zen-entering', isZen);
   if (toolbar) toolbar.classList.remove('zen-toolbar-revealed');
   
   if (isZen) {
-    showToast(_t('toast.zenEntered') || '已进入禅模式（鼠标移至顶部可唤出工具栏，按 Esc 退出）', 2200);
-    if (window.cmView) window.cmView.focus();
+    const reader = document.getElementById('content');
+    if (toolbar) {
+      document.body.style.setProperty('--zen-toolbar-height', `${toolbarHeight}px`);
+    }
+    if (reader && !state.editing) {
+      reader.tabIndex = -1;
+      reader.focus({ preventScroll: true });
+    } else if (window.cmView) {
+      window.cmView.focus();
+    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => document.body.classList.remove('zen-entering'));
+    });
   } else {
+    document.body.style.removeProperty('--zen-toolbar-height');
     showToast(_t('toast.zenExited') || '已退出禅模式', 1200);
   }
 }
@@ -1605,7 +1622,7 @@ window.closePresentationMode = function closePresentationMode() {
 };
 
 async function launchPresentationMode() {
-  const content = state.original || (cmView ? cmView.state.doc.toString() : '');
+  const content = rewritePresentationAssets(state.original || (cmView ? cmView.state.doc.toString() : ''));
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!content) {
     showToast(_t('presentation.noDoc') || '当前没有可演示的文档内容');
@@ -1752,6 +1769,18 @@ function resolvePath(baseDir, rel) {
   } catch (e) {
     return rel;
   }
+}
+
+/* 演示模式专用：把相对路径图片改写为 /raw 本地端点，避免 srcdoc 内相对路径失效 */
+function rewritePresentationAssets(md) {
+  if (!md || !state.dir) return md;
+  const isRel = u => u && !/^(https?:|data:|blob:|file:|\/\/|\/)/i.test(u);
+  const toRaw = u => '/raw?p=' + encodeURIComponent(resolvePath(state.dir, u));
+  let out = md.replace(/(!\[[^\]]*\]\()([^)\s]+)([^)]*\))/g,
+    (m, pre, src, post) => isRel(src) ? pre + toRaw(src) + post : m);
+  out = out.replace(/(<img\b[^>]*\bsrc=["'])([^"']+)(["'])/gi,
+    (m, pre, src, post) => isRel(src) ? pre + toRaw(src) + post : m);
+  return out;
 }
 
 function fixLinks(body) {

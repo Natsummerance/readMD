@@ -5,63 +5,189 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ReadMD | 純本地 Markdown 閱讀、編輯、轉換與放映</title>
   <meta name="description" content="ReadMD 是跨越 Windows、macOS、Linux、麒麟與統信 UOS 的本地 Markdown 工作台，可快速開啟長篇文件、在顯示層修正語法、轉換 Office 與 PDF，並直接放映 Markdown。">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="ReadMD | 純本地 Markdown 閱讀、編輯、轉換與放映">
   <meta property="og:description" content="本地開啟長篇文件；顯示層自動修正；Office 與 PDF 轉 Markdown；同一份檔案直接放映。">
-  <meta property="og:url" content="https://app.syminu.online/zh-tw/">
-  <meta property="og:image" content="https://app.syminu.online/media/overview-reader.png">
+  <meta property="og:url" content="https://readmd.asia/zh-tw/">
+  <meta property="og:image" content="https://readmd.asia/media/overview-reader.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="ReadMD product interface with formatted Markdown and its outline.">
   <meta property="og:locale" content="zh_TW">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="ReadMD | 純本地 Markdown 閱讀、編輯、轉換與放映">
   <meta name="twitter:description" content="支援 Windows、macOS、Linux、麒麟與統信 UOS 的本地 Markdown 工作台。">
-  <meta name="twitter:image" content="https://app.syminu.online/media/overview-reader.png">
-  <link rel="canonical" href="https://app.syminu.online/zh-tw/">
-  <link rel="alternate" hreflang="en" href="https://app.syminu.online/">
-  <link rel="alternate" hreflang="zh-CN" href="https://app.syminu.online/zh-cn/">
-  <link rel="alternate" hreflang="zh-TW" href="https://app.syminu.online/zh-tw/">
-  <link rel="alternate" hreflang="ja" href="https://app.syminu.online/ja/">
+  <meta name="twitter:image" content="https://readmd.asia/media/overview-reader.png">
+  <meta name="twitter:image:alt" content="ReadMD product interface with formatted Markdown and its outline.">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://readmd.asia/zh-tw/">
+  <link rel="alternate" hreflang="en" href="https://readmd.asia/">
+  <link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/">
+  <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/">
+  <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/">
+  <link rel="alternate" hreflang="x-default" href="https://readmd.asia/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
+  <link rel="preload" as="image" href="/media/overview-reader.webp" fetchpriority="high">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebSite",
-        "@id": "https://app.syminu.online/zh-tw/#website",
-        "url": "https://app.syminu.online/zh-tw/",
-        "name": "ReadMD",
-        "inLanguage": "zh-TW"
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://readmd.asia/zh-tw/#website",
+      "url": "https://readmd.asia/zh-tw/",
+      "name": "ReadMD",
+      "inLanguage": [
+        "en",
+        "zh-CN",
+        "zh-TW",
+        "ja"
+      ],
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       },
-      {
+      "copyrightYear": "2026",
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE"
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/zh-tw/#webpage",
+      "url": "https://readmd.asia/zh-tw/",
+      "name": "ReadMD | 純本地 Markdown 閱讀、編輯、轉換與放映",
+      "isPartOf": {
+        "@id": "https://readmd.asia/zh-tw/#website"
+      },
+      "about": {
+        "@id": "https://readmd.asia/zh-tw/#software"
+      },
+      "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
+      "dateModified": "2026-08-24",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#capabilities p"
+        ]
+      },
+      "inLanguage": "zh-TW",
+      "mainEntityOfPage": {
         "@type": "WebPage",
-        "@id": "https://app.syminu.online/zh-tw/#webpage",
-        "url": "https://app.syminu.online/zh-tw/",
-        "name": "ReadMD | 純本地 Markdown 閱讀、編輯、轉換與放映",
-        "isPartOf": {"@id": "https://app.syminu.online/zh-tw/#website"},
-        "about": {"@id": "https://app.syminu.online/zh-tw/#software"},
-        "primaryImageOfPage": "https://app.syminu.online/media/overview-reader.png",
-        "dateModified": "2026-08-24",
-        "speakable": {"@type": "SpeakableSpecification", "cssSelector": ["h1", "#capabilities p"]}
+        "@id": "https://readmd.asia/zh-tw/"
       },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://app.syminu.online/zh-tw/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-24",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "featureList": "長文件分頁、非破壞性顯示修正、DOCX/PDF 轉換、離線 OCR、LaTeX 引用、放映模式、區域網路共用",
-        "author": {"@type": "Organization", "name": "ReadMD"}
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
       }
-    ]
-  }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/zh-tw/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-24",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "featureList": "長文件分頁、非破壞性顯示修正、DOCX/PDF 轉換、離線 OCR、LaTeX 引用、放映模式、區域網路共用",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/zh-tw/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-reader.png",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    }
+  ]
+}
   </script>
+<script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/zh-tw/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "ReadMD 如何開啟超長 Markdown？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "當文件超過約 8,000 行或 500 KB，ReadMD 會啟動語意分頁。目錄、全文搜尋、公式和頁面控制項仍然連動，讀者可以繼續滾動和跳轉，不需等待整份文件一次渲染。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "自動修正會改原始檔嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不會。語法修復只作用於記憶體中的顯示層。缺少表格分隔列、未閉合符號和公式排版問題會被視覺修正，原始 Markdown 位元組保持不變，直到你主動儲存編輯。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "能取代簡報軟體嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "對技術分享和課程教材可以。ReadMD 的放映模式直接使用寫作與審閱用的同一條 Markdown，標題、數學、圖表和程式碼保留在原處，臨時修改後不必複製到另一份簡報。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "支援哪些系統？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "提供 Windows 7 到 11、Apple Silicon 與 Intel macOS、Linux AppImage/Deb 套件，以及統信 UOS 和銀河麒麟版本。VSCode 擴充套件與 MCP Server 可連接編輯器和 AI 工具。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "資料私密嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "核心閱讀、編輯、分頁、OCR 和轉換設計為本地執行，文件不需要雲端帳號。網頁擷取和共用都是明確操作；區域網路共用面向同一 Wi-Fi 內的裝置。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "採用什麼授權？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD 以 MIT 授權發布。原始碼、發行套件、校驗清單和平臺資產都在公開儲存庫 Natsummerance/readMD 中。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/zh-tw/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://readmd.asia/zh-tw/"
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
@@ -76,7 +202,7 @@
       <h1 class="hero-title mx-auto max-w-4xl">檔案留在本地。</h1>
       <p class="section-copy mx-auto mt-6">ReadMD 讓同一份 Markdown 從閱讀走到編輯、格式轉換和上臺放映。超過 8,000 行的長文會啟用語意分頁；表格和公式只在渲染層自動修正，原始檔案不會被改寫。Windows、macOS、Linux、銀河麒麟與統信 UOS 都能離線使用。</p>
       <div class="mt-8 flex flex-wrap justify-center gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">免費下載</a><a class="button-secondary" href="#answers">查看答案</a></div>
-      <figure class="product-frame mx-auto mt-14 max-w-5xl"><img src="/media/overview-reader.png" width="1440" height="900" alt="ReadMD 閱讀介面顯示排版後的 Markdown 文件與目錄。" loading="eager" fetchpriority="high"></figure>
+      <figure class="product-frame mx-auto mt-14 max-w-5xl"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD 閱讀介面顯示排版後的 Markdown 文件與目錄。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="capabilities" class="bg-[var(--color-surface)] py-20">
       <div class="mx-auto grid max-w-6xl gap-10 px-5 lg:grid-cols-[0.9fr_1.1fr]">
@@ -94,10 +220,12 @@
           <article class="answer-card"><h3>支援哪些系統？</h3><p>提供 Windows 7 到 11、Apple Silicon 與 Intel macOS、Linux AppImage/Deb 套件，以及統信 UOS 和銀河麒麟版本。VSCode 擴充套件與 MCP Server 可連接編輯器和 AI 工具。</p></article>
           <article class="answer-card"><h3>資料私密嗎？</h3><p>核心閱讀、編輯、分頁、OCR 和轉換設計為本地執行，文件不需要雲端帳號。網頁擷取和共用都是明確操作；區域網路共用面向同一 Wi-Fi 內的裝置。</p></article>
           <article class="answer-card"><h3>採用什麼授權？</h3><p>ReadMD 以 MIT 授權發布。原始碼、發行套件、校驗清單和平臺資產都在公開儲存庫 Natsummerance/readMD 中。</p></article>
+          <div class="col-span-full mt-2 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-tw/large-markdown-files/">開啟超大 Markdown 檔案</a><a class="link-action" href="/zh-tw/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-tw/convert-to-markdown/">文件轉 Markdown</a><a class="link-action" href="/zh-tw/markdown-tables/">建立 Markdown 表格</a><a class="link-action" href="/zh-tw/pdf-to-markdown/">PDF 轉 Markdown</a><a class="link-action" href="/zh-tw/scan-to-markdown/">掃描件擷取文字</a><a class="link-action" href="/zh-tw/bibtex-citations/">管理 BibTeX 引用</a><a class="link-action" href="/zh-tw/release-notes/">發布說明</a></div>
         </div>
       </div>
     </section>
-    <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD。MIT 授權。</p><nav class="flex flex-wrap gap-5"><a href="/llms.txt">llms.txt</a><a href="/zh-tw/llms-full.txt">AI 完整文字</a><a href="https://github.com/Natsummerance/readMD">GitHub</a></nav></div></footer>
+    <section id="share" class="border-t border-[var(--color-line)] py-14"><div class="mx-auto max-w-4xl px-5 text-center"><h2 class="display-title">分享 ReadMD</h2><p class="section-copy mx-auto mt-5">身邊有被超長 Markdown、格式轉換或上臺簡報困住的人？把這個工作流程發給他們。</p><div class="mt-6 flex flex-wrap justify-center gap-3"><a class="button-secondary" href="https://service.weibo.com/share/share.php?url=https%3A%2F%2Freadmd.asia%2Fzh-tw%2F&title=ReadMD%EF%BC%9A%E7%B4%94%E6%9C%AC%E5%9C%B0%20Markdown%20%E9%96%B1%E8%AE%80%E3%80%81%E8%BD%89%E6%8F%9B%E8%88%87%E6%94%BE%E6%98%A0" rel="noopener">微博</a><a class="button-secondary" href="https://twitter.com/intent/tweet?text=ReadMD%EF%BC%9A%E7%B4%94%E6%9C%AC%E5%9C%B0%20Markdown%20%E9%96%B1%E8%AE%80%E3%80%81%E8%BD%89%E6%8F%9B%E8%88%87%E6%94%BE%E6%98%A0&url=https%3A%2F%2Freadmd.asia%2Fzh-tw%2F" rel="noopener">X</a><a class="button-secondary" href="https://t.me/share/url?url=https%3A%2F%2Freadmd.asia%2Fzh-tw%2F&text=ReadMD%EF%BC%9A%E7%B4%94%E6%9C%AC%E5%9C%B0%20Markdown%20%E9%96%B1%E8%AE%80%E3%80%81%E8%BD%89%E6%8F%9B%E8%88%87%E6%94%BE%E6%98%A0" rel="noopener">Telegram</a><a class="button-secondary" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Freadmd.asia%2Fzh-tw%2F" rel="noopener">LinkedIn</a></div></div></section>
+    <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD。MIT 授權。</p><nav class="flex flex-wrap gap-5"><a href="/zh-tw/llms.txt">llms.txt</a><a href="/zh-tw/llms-full.txt">AI 完整文字</a><a href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 給 Star</a></nav></div></footer>
   </main>
 </body>
 </html>

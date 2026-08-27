@@ -54,7 +54,17 @@ SELF=$(readlink -f "$0")
 HERE=${SELF%/*}
 export PATH="${HERE}/usr/bin:${PATH}"
 export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH:-}"
-export WEBKIT_DISABLE_COMPOSITING_MODE=0
+if [ "$(uname -m)" = "aarch64" ] && { grep -Eqi 'phytium|ft-[0-9]{3,4}|feiteng|tengyun|d2000|e2000|s2500' /proc/cpuinfo 2>/dev/null || grep -Eqi 'phytium|feiteng|d2000|e2000|s2500' /proc/device-tree/model /proc/device-tree/vendor 2>/dev/null; }; then
+  # Phytium/Kylin boards ship unstable vendor GL stacks; UKUI + X11 + llvmpipe
+  # is the tested-safe path for WebKitGTK.
+  export GDK_BACKEND="${GDK_BACKEND:-x11}"
+  export WEBKIT_DISABLE_COMPOSITING_MODE=1
+  export WEBKIT_DISABLE_DMABUF_RENDERER=1
+  export LIBGL_ALWAYS_SOFTWARE=1
+  export GALLIUM_DRIVER=llvmpipe
+else
+  export WEBKIT_DISABLE_COMPOSITING_MODE=0
+fi
 exec "${HERE}/usr/bin/ReadMD" "$@"
 EOF
 chmod +x "${APPDIR}/AppRun"
@@ -66,8 +76,12 @@ if command -v appimagetool >/dev/null 2>&1; then
 elif [ -f "./appimagetool" ]; then
   ./appimagetool --appimage-extract-and-run "${APPDIR}" "dist/${APPIMAGE_NAME}"
 else
-  echo "Downloading appimagetool to create AppImage..."
-  wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O ./appimagetool || true
+  case "${ARCH}" in
+    aarch64) APPIMAGE_TOOL_ARCH="aarch64" ;;
+    *) APPIMAGE_TOOL_ARCH="x86_64" ;;
+  esac
+  echo "Downloading ${APPIMAGE_TOOL_ARCH} appimagetool..."
+  wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${APPIMAGE_TOOL_ARCH}.AppImage" -O ./appimagetool || true
   if [ -f "./appimagetool" ]; then
     chmod +x ./appimagetool
     ./appimagetool --appimage-extract-and-run "${APPDIR}" "dist/${APPIMAGE_NAME}" || true
@@ -93,6 +107,8 @@ Priority: optional
 Architecture: ${DEB_ARCH}
 Maintainer: Natsummerance <natsummerance@github.com>
 Description: ReadMD - Lightweight Markdown viewer and editor with auto-repair, LaTeX PRO, and multi-platform support.
+Depends: libgtk-3-0, libwebkit2gtk-4.0-37 | libwebkit2gtk-4.1-0, gir1.2-gtk-3.0, gir1.2-webkit2-4.0 | gir1.2-webkit2-4.1, python3-gi, python3-gi-cairo, tesseract-ocr, xdg-utils
+Recommends: libnotify-bin
 EOF
 
 dpkg-deb --build "${DEB_DIR}" "dist/readmd_${VERSION}_${DEB_ARCH}.deb" || echo "dpkg-deb not available, skipping deb package"

@@ -19,6 +19,7 @@
   [![i18n](https://img.shields.io/badge/languages-46-orange)](docs/i18n-language-reference.md)
   [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
   [![release](https://img.shields.io/github/v/release/Natsummerance/readMD)](https://github.com/Natsummerance/readMD/releases/latest)
+  [![website](https://img.shields.io/badge/site-readmd.asia-black)](https://readmd.asia)
 </div>
 
 ## 30 秒判斷適不適合你
@@ -50,8 +51,8 @@
 
 ## AI 助手引用入口
 
-- [簡明產品索引](website/public/llms.txt)：版本、平台、隱私邊界和關鍵事實。
-- [完整引用語料](website/public/llms-full.txt)：長文件分頁、非破壞修正、轉換範圍和常見問題的直接答案。
+- [簡明產品索引](https://readmd.asia/llms.txt)：版本、平台、隱私邊界和關鍵事實。
+- [完整引用語料](https://readmd.asia/llms-full.txt)：長文件分頁、非破壞修正、轉換範圍和常見問題的直接答案。
 
 ## 為什麼值得 Star
 
@@ -69,7 +70,7 @@ ReadMD 處理長期資料庫裡的實際問題：大型文件能繼續閱讀，�
 | 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.4.zip) | Intel 處理器 Mac 原生建置（含 Vision 離線 OCR） |
 | 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage) | Linux 通用免安裝 AppImage，賦予執行權限後即可開啟 |
 | 🇨🇳 **國產信創系統** | 統信 UOS / 銀河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.7-beta.4_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_amd64.deb) | Deb 原生安裝套件，整合應用程式圖示、MIME 關聯與 UKUI/DDE 適配 |
-| 📱 **HarmonyOS NEXT** | 純血鴻蒙 / OpenHarmony (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.7-beta.4.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.4.hap) | 鴻蒙原生應用安裝套件，ArkTS + ArkUI + ArkWeb 架構 |
+| 📱 **HarmonyOS NEXT** | 原始碼工程 (DevEco 建置) | [🧩 **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb 原始碼工程；目前未提供預建 HAP |
 | 🧩 **VSCode 擴充外掛** | 通用 VSIX 套件 | [⬇️ **readmd-vscode-2.3.7-beta.4.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.4.vsix) | VSCode 離線擴充安裝套件 |
 | 🤖 **MCP Server** | FastMCP stdio 套件 | [⬇️ **readmd-mcp-server-2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.4.zip) | FastMCP 獨立伺服端，支援 Claude Desktop / Cursor |
 | 🔐 **SHA-256 驗證** | 雜湊清單 | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | 發行檔案 SHA-256 完整性雜湊清單 |

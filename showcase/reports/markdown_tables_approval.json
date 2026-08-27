@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "artifact": "Localized Markdown Tables answer pages",
+  "reviewed_at": "2026-08-26T01:45:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "content_system_application": {
+    "question_unit": "How do I create or repair a Markdown table without losing the meaning of spreadsheet fields?",
+    "concept_units": ["header semantics", "Markdown pipe boundaries", "display repair versus explicit save"],
+    "solution_unit": "Define columns, paste supported Excel or CSV material, normalize separators, then review semantic edge cases before saving.",
+    "relationship_to_existing_pages": {
+      "explains": "/convert-to-markdown/",
+      "conflicts_with_no_page": true,
+      "duplicate_decision": "Distinct task intent; not a near-duplicate of general document conversion."
+    }
+  },
+  "transmission_review": {
+    "method": "dbs-spread five-theory decoder",
+    "silence_spiral": "The audience is tired of pasting spreadsheets into tools that break structure or lock it in proprietary formats.",
+    "uses_and_gratifications": ["information value", "social capital when sharing clean documents"],
+    "framing": "Stand with people who need the table to remain portable and reviewable, not with a tool that owns the data.",
+    "two_step_flow": "First communicators are technical writers, researchers, analysts, and course maintainers who exchange source files.",
+    "cognitive_consistency": "Confirm that Markdown should stay canonical while challenging the habit of skipping header, blank-value, and merged-cell review.",
+    "avoid": "No productivity hype, no claim of perfect conversion, and no implication that cloud processing is required."
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "seo-intent-review",
+      "status": "approved",
+      "score": 9.89,
+      "evidence": [
+        "The Markdown Tables family targets a distinct high-frequency task rather than duplicating document conversion.",
+        "All four localized pages expose unique titles, descriptions, canonical URLs, hreflang sets, FAQPage, HowTo, and BreadcrumbList entities.",
+        "Home, workflow, download, sitemap, llms.txt, and localized full-corpus surfaces link the new canonical paths."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "content-accuracy-review",
+      "status": "approved",
+      "score": 9.83,
+      "evidence": [
+        "Visual table construction is tied to the documented ReadMD table designer.",
+        "Excel and CSV paste conversion is stated with a review boundary for headers, delimiters, line breaks, and field order.",
+        "The pages explicitly distinguish in-memory display repairs from an explicit edit-and-save action and do not claim native support for every merged-cell pattern."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-engineering-review",
+      "status": "approved",
+      "score": 9.79,
+      "evidence": [
+        "Website validator passes 40 canonical URLs, including four new localized table answers, with three recorded approval rounds.",
+        "Release build validation passes after the expanded corpus and sitemap are copied into dist.",
+        "Browser smoke passes all 40 routes with zero failures, zero broken images, matching PNG social metadata, and four verified table routes."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_staged_publication",
+    "score": 9.84,
+    "participants": ["SEO intent", "content accuracy", "release engineering"],
+    "conditions": [
+      "CI must pass before merge.",
+      "Production check must verify all forty canonical routes before deployment is considered complete.",
+      "IndexNow resubmission must follow a successful production check."
+    ]
+  }
+}

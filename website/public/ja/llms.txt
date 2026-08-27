@@ -1,0 +1,27 @@
+# ReadMD 日本語インデックス
+> ReadMD はローカル処理を優先するクロスプラットフォームの Markdown リーダー、エディター、変換ツール、発表ツールです。
+
+## Docs
+- [日本語ホームページ](https://readmd.asia/ja/): 製品定義、対応環境、プライバシー境界、直接引用できる回答。
+- [ワークフロー回答](https://readmd.asia/ja/workflows/): 長文の改ページ、オフィス形式変換、オフライン OCR、直接発表に関する実務的な回答。
+- [巨大な Markdown](https://readmd.asia/ja/large-markdown-files/): 長文向けの意味的な改ページ、検索、目次ナビゲーション、表示だけの非破壊修復。
+- [Markdown 発表](https://readmd.asia/ja/markdown-to-slides/): 同じソースから見出し、コード、数式、図、表を保ったまま発表します。
+- [Markdown 変換](https://readmd.asia/ja/convert-to-markdown/): DOCX、PPTX、XLSX、PDF、HTML、LaTeX をローカルで変換し、構造を確認します。
+- [Markdown 表](https://readmd.asia/ja/markdown-tables/): ビジュアルな表エディターと Excel、CSV の貼り付け変換を確認境界付きで説明します。
+- [PDF から Markdown](https://readmd.asia/ja/pdf-to-markdown/): テキスト型 PDF とスキャン文書のための条件付きローカル変換ワークフロー。
+- [スキャンから Markdown](https://readmd.asia/ja/scan-to-markdown/): Windows と macOS のローカル OCR でスキャン頁やスクリーンショットから文字を抽出します。
+- [BibTeX 引用](https://readmd.asia/ja/bibtex-citations/): 同じ場所の `.bib` library を inline 引用 badge、文献カード、コピー可能な BibTeX、参考文献まとめに接続します。
+- [リリースノート](https://readmd.asia/ja/release-notes/): beta.4の発表安全、更新検証、起動読み込み、タブ状態、プラットフォーム資産。
+- [ダウンロードページ](https://readmd.asia/ja/download/): Windows、macOS、Linux、中国系 OS、エディター、MCP パッケージの入手路径。
+- [日本語全文コーパス](https://readmd.asia/ja/llms-full.txt): 長文の改ページ、非破壊修復、変換、オフライン作業、リリース事実を説明します。
+- [英語インデックス](https://readmd.asia/llms.txt): 多言語入口、英語コーパス、公式な製品情報。
+
+## Key Facts
+- 公開バージョン: 2.3.7-beta.4
+- ライセンス: MIT
+- 長文の閾値: 約 8,000 行または 500 KB で意味単位の改ページ
+- 基本モデル: 読書、編集、改ページ、ローカル変換にクラウドアカウントは不要
+- 変換元: DOCX、PPTX、XLSX、PDF、HTML、LaTeX
+
+## Source
+- [GitHub リポジトリ](https://github.com/Natsummerance/readMD): MIT ソースコード、リリースファイル、チェックサム、Issue。

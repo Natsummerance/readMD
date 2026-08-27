@@ -2,21 +2,21 @@
 
 ## Production target
 
-- Canonical site: `https://app.syminu.online/`
+- Canonical site: `https://readmd.asia/`
 - Hosting: GitHub Pages on the free plan
-- Domain strategy: Cloudflare manages a dedicated subdomain of the existing active `syminu.online` zone. No new domain purchase is required.
+- Domain strategy: Cloudflare is authoritative for a dedicated subdomain of the existing active `syminu.online` zone. No new domain purchase is required.
 
 ## Active release path
 
 Merging an approved website change into `main` runs `.github/workflows/website-github-pages.yml`. The workflow rebuilds `website/dist`, runs `validate_website.py --release`, uploads the artifact, and deploys GitHub Pages. The custom domain is declared by `website/public/CNAME`.
 
-The required DNS-only record is:
+The active DNS-only record is:
 
 ```text
-app.syminu.online. CNAME Natsummerance.github.io.
+readmd.asia. CNAME Natsummerance.github.io.
 ```
 
-Do not use the existing `readmd.syminu.online` or `www.syminu.online` records; both already point to other services. After GitHub issues a certificate, HTTPS enforcement can be enabled through the Pages API.
+Do not use the existing `readmd.syminu.online` or `www.syminu.online` records; both already point to other services. GitHub Pages has issued a certificate, and HTTPS enforcement is enabled in the Pages configuration.
 
 ## Local release check
 
@@ -28,9 +28,18 @@ npm run verify:release
 
 This builds `dist/` and runs the GEO, approval, rights, security-header, structured-data, and release-build checks.
 
+## Security headers
+
+GitHub Pages does not process the `website/public/_headers` file, so those headers are not emitted by the current DNS-only origin. Applying the policy at the Cloudflare edge requires either:
+
+- Zone > Transform Rules > Edit permission, followed by an HTTP response header transform scoped to `http.host eq "readmd.asia"`; or
+- migrating the origin to Cloudflare Workers/Pages, where `_headers` can be honored directly.
+
+Until one of those changes is made, do not claim that CSP, HSTS, or frame-protection headers are live. The file remains the canonical security policy for the future Cloudflare-native hosting migration.
+
 ## Future direct Cloudflare hosting
 
-Cloudflare Workers remains available as a later hosting migration. The current token can identify the account, read zones, and edit DNS, but Cloudflare rejects Worker/Pages writes with authentication error `10000`. To enable that path, create a token with:
+Cloudflare Workers remains available as a later hosting migration. Its deployment workflow is manual-only until the token is upgraded. The current token can identify the account, read zones, and edit DNS, but Cloudflare rejects Worker/Pages writes with authentication error `10000`. To enable that path, create a token with:
 
 - Account > Workers Scripts > Edit
 - Account > Account Settings > Edit (only needed the first time a workers.dev subdomain is registered)
@@ -43,7 +52,7 @@ Then run:
 npx wrangler deploy --config wrangler.worker.jsonc
 ```
 
-Afterward, change the `app.syminu.online` CNAME target from `Natsummerance.github.io` to the Cloudflare custom-domain target and re-run the site validator.
+Afterward, change the `readmd.asia` CNAME target from `Natsummerance.github.io` to the Cloudflare custom-domain target and re-run the site validator.
 
 ## Historical Cloudflare blocker
 

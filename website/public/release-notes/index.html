@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReadMD v2.3.7-beta.4 Release Notes | Safe Presenting And Updates</title>
+  <meta name="description" content="ReadMD v2.3.7-beta.4 release notes covering safer Reveal presenting, update integrity checks, startup loading refinements, tab reliability, larger touch targets, Windows, macOS, Linux, UOS, and Kylin packages.">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ReadMD">
+  <meta property="og:title" content="ReadMD v2.3.7-beta.4 Release Notes | Safe Presenting And Updates">
+  <meta property="og:description" content="Version-specific changes for safer presenting, updates, startup loading, tabs, touch targets, and local-first Markdown workflows.">
+  <meta property="og:url" content="https://readmd.asia/release-notes/">
+  <meta property="og:image" content="https://readmd.asia/media/overview-reader.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="ReadMD desktop interface showing a formatted Markdown document beside its outline.">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="zh_TW">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ReadMD v2.3.7-beta.4 Release Notes | Safe Presenting And Updates">
+  <meta name="twitter:description" content="Read the beta.4 release facts, security boundaries, platform assets, and checksum guidance.">
+  <meta name="twitter:image" content="https://readmd.asia/media/overview-reader.png">
+  <meta name="twitter:image:alt" content="ReadMD desktop interface showing a formatted Markdown document beside its outline.">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://readmd.asia/release-notes/">
+  <link rel="alternate" hreflang="en" href="https://readmd.asia/release-notes/">
+  <link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/release-notes/">
+  <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/release-notes/">
+  <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/release-notes/">
+  <link rel="alternate" hreflang="x-default" href="https://readmd.asia/release-notes/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/release-notes/#webpage",
+      "url": "https://readmd.asia/release-notes/",
+      "name": "ReadMD v2.3.7-beta.4 Release Notes | Safe Presenting And Updates",
+      "isPartOf": {
+        "@id": "https://readmd.asia/#website"
+      },
+      "about": {
+        "@id": "https://readmd.asia/release-notes/#software"
+      },
+      "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#release-highlights p"
+        ]
+      },
+      "inLanguage": "en",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/release-notes/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/release-notes/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-reader.png",
+      "featureList": "Long-document pagination, local conversion, offline OCR, Markdown tables, PDF import, citations, and presentation mode.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/release-notes/#howto",
+      "name": "How to evaluate the ReadMD beta.4 release safely",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "Safer presentation path",
+          "text": "In-app Reveal.js loads same-origin offline resources; slide HTML passes through whitelist sanitization."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Integrity-first updates",
+          "text": "Official assets download to a fixed directory, pass SHA-256, publish atomically, and are rechecked before execution."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Lighter interaction",
+          "text": "Entry scripts load in stages, shared resources load on demand, ETag revalidation reduces repeat transfers, and search Enter keeps focus."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Clear tab state",
+          "text": "Selection and ARIA state refresh immediately, stale render results are discarded, overflow finds the active tab, and Zen mode keeps one Escape path."
+        }
+      ]
+    },
+    {
+      "@type": "TechArticle",
+      "@id": "https://readmd.asia/release-notes/#article",
+      "headline": "ReadMD v2.3.7-beta.4 Release Notes | Safe Presenting And Updates",
+      "description": "ReadMD v2.3.7-beta.4 release notes covering safer Reveal presenting, update integrity checks, startup loading refinements, tab reliability, larger touch targets, Windows, macOS, Linux, UOS, and Kylin packages.",
+      "inLanguage": "en",
+      "datePublished": "2026-08-26",
+      "dateModified": "2026-08-26",
+      "author": {
+        "@id": "https://readmd.asia/#organization"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
+      },
+      "mainEntityOfPage": {
+        "@id": "https://readmd.asia/release-notes/"
+      },
+      "about": {
+        "@id": "https://readmd.asia/release-notes/#software"
+      },
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "artifactSection": "v2.3.7-beta.4"
+    }
+  ]
+}
+  </script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/release-notes/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is v2.3.7-beta.4 production ready?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. This is a beta. It is suitable for testing and feedback, but you should keep backups and verify checksums before installation."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does display repair change my Markdown?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Rendering repairs affect the in-memory display. Source bytes change only when you explicitly edit and save the document."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How are updates checked?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Updates come from official GitHub Release assets into a fixed directory, use temporary files and SHA-256 verification, then publish atomically and recheck before execution."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which platforms receive packages?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Windows, macOS Intel and Apple Silicon, Linux x86_64, UOS, Kylin AMD64 and ARM64 receive packages; HarmonyOS NEXT remains a DevEco source project."
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/release-notes/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://readmd.asia/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "v2.3.7-beta.4",
+      "item": "https://readmd.asia/release-notes/"
+    }
+  ]
+}</script>
+</head>
+<body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#release-highlights">Highlights</a><a href="/workflows/">More answers</a><a href="https://github.com/Natsummerance/readMD">Source</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/tag/v2.3.7-beta.4">Download</a></div>
+  </header>
+  <main>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/">Home</a> / <span>Release notes</span> / <span>v2.3.7-beta.4</span></nav>
+    <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
+      <h1 class="display-title">What changed in ReadMD v2.3.7-beta.4.</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">This beta tightens presentation isolation, update integrity, startup resource loading, and tab feedback while keeping your Markdown as the canonical file.</p>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD desktop interface showing a formatted Markdown document beside its outline." loading="eager" fetchpriority="high" decoding="async"></picture></figure>
+    </section>
+    <section id="release-highlights" class="bg-[var(--color-surface)] py-16">
+      <div class="mx-auto max-w-5xl px-5">
+        <h2 class="text-2xl font-semibold tracking-tight">Release highlights and boundaries</h2>
+        <ol class="mt-8 grid gap-6 md:grid-cols-2">
+          <li class="answer-card"><h3 class="text-lg font-semibold">Safer presentation path</h3><p>In-app Reveal.js loads same-origin offline resources; slide HTML passes through whitelist sanitization.</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">Integrity-first updates</h3><p>Official assets download to a fixed directory, pass SHA-256, publish atomically, and are rechecked before execution.</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">Lighter interaction</h3><p>Entry scripts load in stages, shared resources load on demand, ETag revalidation reduces repeat transfers, and search Enter keeps focus.</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">Clear tab state</h3><p>Selection and ARIA state refresh immediately, stale render results are discarded, overflow finds the active tab, and Zen mode keeps one Escape path.</p></li>
+          </ol>
+      </div>
+    </section>
+    <section class="mx-auto max-w-5xl px-5 py-16">
+      <h2 class="text-2xl font-semibold tracking-tight">Beta.4 release questions</h2>
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <article class="answer-card"><h3>Is v2.3.7-beta.4 production ready?</h3><p>No. This is a beta. It is suitable for testing and feedback, but you should keep backups and verify checksums before installation.</p></article>
+        <article class="answer-card"><h3>Does display repair change my Markdown?</h3><p>No. Rendering repairs affect the in-memory display. Source bytes change only when you explicitly edit and save the document.</p></article>
+        <article class="answer-card"><h3>How are updates checked?</h3><p>Updates come from official GitHub Release assets into a fixed directory, use temporary files and SHA-256 verification, then publish atomically and recheck before execution.</p></article>
+        <article class="answer-card"><h3>Which platforms receive packages?</h3><p>Windows, macOS Intel and Apple Silicon, Linux x86_64, UOS, Kylin AMD64 and ARM64 receive packages; HarmonyOS NEXT remains a DevEco source project.</p></article>
+      </div>
+      <div class="mt-10 flex flex-wrap gap-5">
+        <a class="link-action" href="/download/">Download ReadMD</a>
+        <a class="link-action" href="/markdown-to-slides/">Present without PowerPoint</a>
+      </div>
+      <div class="mt-8 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/tag/v2.3.7-beta.4">Get ReadMD</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">Star on GitHub</a></div>
+    </section>
+  </main>
+  <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD. MIT License.</p><nav class="flex flex-wrap gap-5"><a href="/llms.txt">llms.txt</a><a href="/llms-full.txt">Full text for AI</a><a href="https://github.com/Natsummerance/readMD/stargazers">GitHub Stars</a></nav></div></footer>
+</body>
+</html>

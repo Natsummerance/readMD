@@ -7,6 +7,7 @@ _test_assets/
 Thumbs.db
 build/
 dist/
+!assets/vendor/reveal/dist/
 !assets/vendor/katex/dist/
 !assets/vendor/katex/dist/**
 *.spec
@@ -36,6 +37,7 @@ website/node_modules/
 website/dist/
 graphify-out/
 test-results/
+.pytest-beta4*/
 
 
 IDEA.md

@@ -1,0 +1,7 @@
+{
+  "string": [
+    { "name": "module_desc", "value": "ReadMD entry module" },
+    { "name": "EntryAbility_desc", "value": "ReadMD local Markdown reader" },
+    { "name": "EntryAbility_label", "value": "ReadMD" }
+  ]
+}

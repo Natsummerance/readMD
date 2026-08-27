@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ReadMD v2.3.7-beta.4 发布说明 | 安全放映与更新校验</title>
+  <meta name="description" content="查看 ReadMD v2.3.7-beta.4 发布说明：Reveal 放映隔离、更新包临时文件与 SHA-256 校验、启动分阶段加载、标签状态刷新、更大触控目标，以及 Windows、macOS、Linux、UOS 和麒麟安装包下载。">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ReadMD">
+  <meta property="og:title" content="ReadMD v2.3.7-beta.4 发布说明 | 安全放映与更新校验">
+  <meta property="og:description" content="beta.4 的版本事实：安全放映、更新完整性、启动加载、标签状态与本地优先工作流。">
+  <meta property="og:url" content="https://readmd.asia/zh-cn/release-notes/">
+  <meta property="og:image" content="https://readmd.asia/media/overview-reader.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="ReadMD 桌面界面显示排版后的 Markdown 文档和目录。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_TW">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ReadMD v2.3.7-beta.4 发布说明 | 安全放映与更新校验">
+  <meta name="twitter:description" content="阅读 beta.4 的发布边界、平台资产和校验清单。">
+  <meta name="twitter:image" content="https://readmd.asia/media/overview-reader.png">
+  <meta name="twitter:image:alt" content="ReadMD 桌面界面显示排版后的 Markdown 文档和目录。">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://readmd.asia/zh-cn/release-notes/">
+  <link rel="alternate" hreflang="en" href="https://readmd.asia/release-notes/">
+  <link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/release-notes/">
+  <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/release-notes/">
+  <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/release-notes/">
+  <link rel="alternate" hreflang="x-default" href="https://readmd.asia/release-notes/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/zh-cn/release-notes/#webpage",
+      "url": "https://readmd.asia/zh-cn/release-notes/",
+      "name": "ReadMD v2.3.7-beta.4 发布说明 | 安全放映与更新校验",
+      "isPartOf": {
+        "@id": "https://readmd.asia/#website"
+      },
+      "about": {
+        "@id": "https://readmd.asia/zh-cn/release-notes/#software"
+      },
+      "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#release-highlights p"
+        ]
+      },
+      "inLanguage": "zh-CN",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/zh-cn/release-notes/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/zh-cn/release-notes/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/zh-cn/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-reader.png",
+      "featureList": "超长文档分页、本地格式转换、离线 OCR、Markdown 表格、PDF 导入、文献引用和放映模式。",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/zh-cn/release-notes/#howto",
+      "name": "如何安全评估 ReadMD beta.4 发布",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "更安全的放映路径",
+          "text": "应用内 Reveal.js 只加载同源离线资源；幻灯片 HTML 继续通过白名单净化。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "完整性优先更新",
+          "text": "官方资产下载到固定目录，通过 SHA-256 后原子发布，执行前再次复核。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "更轻的交互加载",
+          "text": "入口脚本分阶段加载，共享资源按需引入，静态响应支持 ETag 复验，搜索 Enter 保持焦点。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "更清楚的标签状态",
+          "text": "选中和 ARIA 状态立即刷新，过期渲染结果被丢弃，溢出时定位活动标签，Zen 模式保持一致的 Escape 路径。"
+        }
+      ]
+    },
+    {
+      "@type": "TechArticle",
+      "@id": "https://readmd.asia/zh-cn/release-notes/#article",
+      "headline": "ReadMD v2.3.7-beta.4 发布说明 | 安全放映与更新校验",
+      "description": "查看 ReadMD v2.3.7-beta.4 发布说明：Reveal 放映隔离、更新包临时文件与 SHA-256 校验、启动分阶段加载、标签状态刷新、更大触控目标，以及 Windows、macOS、Linux、UOS 和麒麟安装包下载。",
+      "inLanguage": "en",
+      "datePublished": "2026-08-26",
+      "dateModified": "2026-08-26",
+      "author": {
+        "@id": "https://readmd.asia/#organization"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
+      },
+      "mainEntityOfPage": {
+        "@id": "https://readmd.asia/zh-cn/release-notes/"
+      },
+      "about": {
+        "@id": "https://readmd.asia/zh-cn/release-notes/#software"
+      },
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "artifactSection": "v2.3.7-beta.4"
+    }
+  ]
+}
+  </script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/zh-cn/release-notes/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "v2.3.7-beta.4 是正式版吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不是。这是 beta 版本，适合测试和反馈；安装前应保留备份并校验 SHA-256。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "显示修复会改写我的 Markdown 吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不会。渲染修复只影响内存中的显示层；只有你明确编辑并保存时，源文件字节才会变化。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "更新包如何检查？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "更新只来自官方 GitHub Release 资产，先进入固定目录和临时文件，经 SHA-256 校验后原子发布，并在执行前复核。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "哪些平台会收到安装包？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Windows、Intel 和 Apple Silicon macOS、Linux x86_64、UOS 以及麒麟 AMD64/ARM64 提供包；HarmonyOS NEXT 仍是 DevEco 源码项目。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/zh-cn/release-notes/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首页",
+      "item": "https://readmd.asia/zh-cn/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "v2.3.7-beta.4",
+      "item": "https://readmd.asia/zh-cn/release-notes/"
+    }
+  ]
+}</script>
+</head>
+<body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/zh-cn/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#release-highlights">发布重点</a><a href="/zh-cn/workflows/">更多答案</a><a href="https://github.com/Natsummerance/readMD">源码</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/tag/v2.3.7-beta.4">下载</a></div>
+  </header>
+  <main>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-cn/">首页</a> / <span>发布说明</span> / <span>v2.3.7-beta.4</span></nav>
+    <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
+      <h1 class="display-title">ReadMD v2.3.7-beta.4 改了什么。</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">这个测试版收紧放映隔离和更新完整性，优化启动资源加载与标签反馈；你的 Markdown 仍然是权威源文件。</p>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD 桌面界面显示排版后的 Markdown 文档和目录。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
+    </section>
+    <section id="release-highlights" class="bg-[var(--color-surface)] py-16">
+      <div class="mx-auto max-w-5xl px-5">
+        <h2 class="text-2xl font-semibold tracking-tight">发布亮点与边界</h2>
+        <ol class="mt-8 grid gap-6 md:grid-cols-2">
+          <li class="answer-card"><h3 class="text-lg font-semibold">更安全的放映路径</h3><p>应用内 Reveal.js 只加载同源离线资源；幻灯片 HTML 继续通过白名单净化。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">完整性优先更新</h3><p>官方资产下载到固定目录，通过 SHA-256 后原子发布，执行前再次复核。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">更轻的交互加载</h3><p>入口脚本分阶段加载，共享资源按需引入，静态响应支持 ETag 复验，搜索 Enter 保持焦点。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">更清楚的标签状态</h3><p>选中和 ARIA 状态立即刷新，过期渲染结果被丢弃，溢出时定位活动标签，Zen 模式保持一致的 Escape 路径。</p></li>
+          </ol>
+      </div>
+    </section>
+    <section class="mx-auto max-w-5xl px-5 py-16">
+      <h2 class="text-2xl font-semibold tracking-tight">beta.4 发布常见问题</h2>
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <article class="answer-card"><h3>v2.3.7-beta.4 是正式版吗？</h3><p>不是。这是 beta 版本，适合测试和反馈；安装前应保留备份并校验 SHA-256。</p></article>
+        <article class="answer-card"><h3>显示修复会改写我的 Markdown 吗？</h3><p>不会。渲染修复只影响内存中的显示层；只有你明确编辑并保存时，源文件字节才会变化。</p></article>
+        <article class="answer-card"><h3>更新包如何检查？</h3><p>更新只来自官方 GitHub Release 资产，先进入固定目录和临时文件，经 SHA-256 校验后原子发布，并在执行前复核。</p></article>
+        <article class="answer-card"><h3>哪些平台会收到安装包？</h3><p>Windows、Intel 和 Apple Silicon macOS、Linux x86_64、UOS 以及麒麟 AMD64/ARM64 提供包；HarmonyOS NEXT 仍是 DevEco 源码项目。</p></article>
+      </div>
+      <div class="mt-10 flex flex-wrap gap-5">
+        <a class="link-action" href="/download/">下载 ReadMD</a>
+        <a class="link-action" href="/markdown-to-slides/">不用 PowerPoint 放映</a>
+      </div>
+      <div class="mt-8 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/tag/v2.3.7-beta.4">获取 ReadMD</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 点 Star</a></div>
+    </section>
+  </main>
+  <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD. MIT License.</p><nav class="flex flex-wrap gap-5"><a href="/zh-cn/llms.txt">llms.txt</a><a href="/zh-cn/llms-full.txt">AI 完整文本</a><a href="https://github.com/Natsummerance/readMD/stargazers">GitHub Stars</a></nav></div></footer>
+</body>
+</html>

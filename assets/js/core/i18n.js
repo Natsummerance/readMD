@@ -70,7 +70,22 @@ window.i18n = {
     'menu.saveAs': '另存为',
     'menu.share': '共享',
     'menu.fix': '修复详情',
-    'menu.lang': '语言'
+    'menu.lang': '语言',
+    'menu.convert': '万物转换',
+    'menu.ocr': '扫描识别',
+    'menu.web': '网页提取',
+    'editor.table': '表格',
+    'editor.bold': '加粗',
+    'editor.formula': '公式',
+    'editor.h2': '标题',
+    'status.fixes': '修复',
+    'status.noFixNeeded': '无需修正',
+    'toast.openDocumentToUse': '请先打开文档后再使用该功能',
+    'toast.opened': '已打开：{name}',
+    'toast.openedPages': '已打开：{name} · {count} 页',
+    'toast.openFailed': '无法打开：{error}',
+    'toast.loadFailed': '加载失败：{error}',
+    'toast.openFolderBrowserNotice': '浏览器模式下请使用“打开文件”'
   },
 
   browserDefaults: {

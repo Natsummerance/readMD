@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import sys, os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..")); import readmd
 
 
-port = int(sys.argv[1]) if len(sys.argv) > 1 else 28473
+port = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get('READMD_UI_PORT', '28473'))
 server = readmd.start_server(port)
 print("ReadMD UI test server ready", flush=True)
 try:

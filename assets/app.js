@@ -433,7 +433,8 @@ function bindEvents() {
       clearTimeout(searchDebounce);
       if (globalSearchState.query !== e.target.value) {
         initialSearchFocused = false;
-        doSearch(e.target.value, undefined, { jump: false });
+        // Enter must win against the input debounce and immediately reveal the result.
+        doSearch(e.target.value, undefined, { jump: true });
         return;
       }
       if (!initialSearchFocused) {
@@ -933,27 +934,19 @@ async function openInitialFile(path) {
 }
 
 /* ----------------------------------------------------------------------------------------------
-   应用启动引导序列 (Application Bootstrap Lifecycle)
-   ---------------------------------------------------------------------------------------------- */
-async function init() {
-  // 1. 尝试建立 Python pywebview 跨进程 API 桥接
-  bindPy();
-  // 2. 加载并应用本地持久化设置 (主题/字号/AI配置等)
-  await loadSettings();
-  // 2.1 启动 i18n 国际化引擎并自动侦测系统语言
-  if (window.i18n) await window.i18n.init();
-  syncBuildVersionLabels();
-  syncDesktopControls();
-  // 3. 缓存欢迎界面骨架 HTML，以便随时通过 goHome() 复原
+  应用启动引导序列 (Application Bootstrap Lifecycle)
+  ---------------------------------------------------------------------------------------------- */
+let startupServicesStarted = false;
 
+async function init() {
+  // 1. Make the already-parsed welcome shell interactive before optional preferences arrive.
+  bindPy();
+  applySettings();
+  syncDesktopControls();
+  // 2. Cache the welcome skeleton, then attach input paths without waiting on preferences.
   if ($('content')) state.welcomeHtml = $('content').innerHTML;
-  // 4. 执行集中事件绑定
   bindEvents();
-  // 5. 刷新最近文件与模块状态
-  refreshRecent();
-  updateModuleUi();
   updateStatus();
-  // 6. 检查 CLI 命令行传参或 URL 参数中的目标文件
   const params = new URLSearchParams(location.search);
   const file = params.get('file');
   if (file) {
@@ -961,10 +954,15 @@ async function init() {
   } else {
     restoreLastFile();
   }
-  // 7. 开启文件变更自动监控轮询
   startAutoReload();
-  // 8. 执行就绪收尾
+  // 3. Report the readable shell now; localized preferences continue in the background.
   finishInit();
+
+  await loadSettings();
+  if (window.i18n) await window.i18n.init();
+  syncBuildVersionLabels();
+  refreshRecent();
+  updateModuleUi();
 }
 
 /* ----------------------------------------------------------------------------------------------
@@ -973,13 +971,19 @@ async function init() {
 function finishInit() {
   performance.mark('readmd-app-ready');
   window.__readmdAppReady = true;
+  reportNativeReady();
+  if (startupServicesStarted) return;
+  startupServicesStarted = true;
+  checkAutostart(); // 初始化开机自启状态
+  startControlPoll(); // 启动后端单例 IPC 唤醒与文件打开指令轮询
+  setTimeout(() => checkUpdate(true), 2500); // 延迟 2.5s 静默检查软件更新
+}
+
+function reportNativeReady() {
   if (hasPy) {
     if (py.report_ready) { try { py.report_ready(); } catch (e) { /* ignore */ } }
     window.__trayOpenFile = loadFileDialog;
   }
-  checkAutostart(); // 初始化开机自启状态
-  startControlPoll(); // 启动后端单例 IPC 唤醒与文件打开指令轮询
-  setTimeout(() => checkUpdate(true), 2500); // 延迟 2.5s 静默检查软件更新
 }
 
 
@@ -1069,7 +1073,7 @@ window.addEventListener('pywebviewready', async () => {
     await loadSettings();
     refreshRecent();
     syncDesktopControls();
-    finishInit();
+    reportNativeReady();
   }
 });
 window.addEventListener('DOMContentLoaded', init);

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#3b6ef5">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: https:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: https:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="readmd-app-token" content="">
 <title>ReadMD</title>
 <link rel="stylesheet" href="/assets/style.css">
@@ -183,7 +183,7 @@
   </aside>
 
   <div id="main-col">
-    <main id="content" role="tabpanel" aria-label="当前文档" data-i18n-aria="reader.currentDoc">
+    <main id="content" role="tabpanel" tabindex="-1" aria-label="当前文档" data-i18n-aria="reader.currentDoc">
       <div id="welcome">
         <div class="welcome-inner">
           <div class="logo">Read<span>MD</span></div>
@@ -230,7 +230,7 @@
     <div id="pagination-bar" class="pagination-bar hidden" role="navigation" aria-label="文档分页导航" data-i18n-aria="pagination.ariaLabel">
       <div id="pagination-live" role="status" aria-live="polite" class="visually-hidden"></div>
       <div class="pg-left">
-        <span class="pg-mode-badge" id="pg-mode-badge" title="分页阅读模式" data-i18n-title="pagination.pagedBadge">
+        <span class="pg-mode-badge" id="pg-mode-badge" title="分页阅读模式">
           <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         </span>
         <span class="pg-chapter-label" id="pg-chapter-label"></span>
@@ -310,7 +310,7 @@
 
         <label class="ai-sel"><input id="ai-selection" type="checkbox"> <span data-i18n="editor.text">仅处理选中文字</span></label>
         <label class="ai-sel"><input id="ai-incognito" type="checkbox"> <span data-i18n="ai.incognito">无痕</span></label>
-        <span id="ai-usage"></span>
+        <span id="ai-usage">Token：—</span>
         <span class="ai-grow"></span>
         <button id="ai-clear-ctx" class="tb-btn" title="开始一轮新对话" data-i18n="ai.newSession" data-i18n-title="ai.newSession">新对话</button>
         <button id="ai-stop" class="tb-btn" data-i18n="ai.stop" disabled>停止</button>
@@ -458,11 +458,7 @@
           <label class="img-ctl"><span data-i18n="img.angle">角度</span> <input id="img-angle" type="range" min="-180" max="180" step="0.1" value="0"><input id="img-angle-number" class="img-number" type="number" min="-180" max="180" step="0.1" value="0" aria-label="角度" data-i18n-aria="img.angle">°</label></div>
         <div class="img-section"><strong data-i18n="img.view">查看</strong><label class="img-ctl"><span data-i18n="img.zoom">画布缩放</span> <input id="img-view-zoom" type="range" min="25" max="400" value="100"><span id="img-view-zoom-val">100%</span></label><p class="img-help" data-i18n="img.help">滚轮缩放 · 空格拖拽平移 · +/- 缩放</p></div>
         <div class="img-section"><strong data-i18n="img.cropAndOutput">裁剪与输出</strong><select id="img-ratio" title="裁剪比例" data-i18n-title="img.ratio"><option value="free" data-i18n="img.ratioFree">自由比例</option><option value="1:1" data-i18n="img.ratio1_1">1:1 方形</option><option value="4:3" data-i18n="img.ratio4_3">4:3</option><option value="3:2" data-i18n="img.ratio3_2">3:2</option><option value="16:9" data-i18n="img.ratio16_9">16:9</option><option value="orig" data-i18n="img.ratioOrig">原图比例</option></select>
-<<<<<<< HEAD
-          <div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" title="锁定宽高比" data-i18n-title="img.lockRatio"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
-=======
 <div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" aria-label="锁定宽高比" title="锁定宽高比" data-i18n-title="img.lockRatio">🔗</button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
->>>>>>> codex/showcase-batch-gates
         <div class="img-btn-row"><button id="img-undo" class="tb-btn" data-i18n="editor.undo" disabled>撤销</button><button id="img-redo" class="tb-btn" data-i18n="editor.redo" disabled>重做</button><button id="img-reset" class="tb-btn" data-i18n="img.reset">重置</button></div>
       </aside>
     </div>
@@ -893,13 +889,8 @@
 <div id="lang-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lang-title">
   <div class="modal-dialog lang-modal-dialog">
     <div class="modal-header">
-<<<<<<< HEAD
-      <h3 data-i18n="lang.title">选择界面语言 (Language)</h3>
-      <button class="modal-close" onclick="i18n.closeModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-=======
       <h3 id="lang-title" data-i18n="lang.title">选择界面语言 (Language)</h3>
       <button class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close" onclick="i18n.closeModal()">✕</button>
->>>>>>> codex/showcase-batch-gates
     </div>
     <div class="lang-search-wrap">
 <input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." aria-label="搜索语言" aria-controls="lang-grid" data-i18n-placeholder="lang.search" data-i18n-aria="lang.search" oninput="i18n.renderLanguageGrid(this.value)">
@@ -912,13 +903,8 @@
 <div id="table-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="table-title">
   <div class="modal-dialog" style="max-width: 320px;">
     <div class="modal-header">
-<<<<<<< HEAD
-      <h3 data-i18n="editor.table">插入表格</h3>
-      <button class="modal-close" onclick="closeTableModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
-=======
       <h3 id="table-title" data-i18n="editor.table">插入表格</h3>
       <button class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close" onclick="closeTableModal()">✕</button>
->>>>>>> codex/showcase-batch-gates
     </div>
     <div style="padding: 12px 16px; text-align: center;">
       <div id="table-grid-picker" class="table-grid-picker"></div>
@@ -932,13 +918,8 @@
 
 <footer id="statusbar">
   <div class="statusbar-left-group">
-<<<<<<< HEAD
-    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.7-beta.4</span>
-    <span id="status-pagination" class="status-pagination hidden" role="button" tabindex="0" title="点击切换阅读模式" data-i18n-title="pagination.toggleTip"></span>
-=======
     <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.7-beta.4</span>
     <button id="status-pagination" type="button" class="status-pagination hidden" title="点击切换阅读模式"></button>
->>>>>>> codex/showcase-batch-gates
     <span id="status-left"></span>
   </div>
   <span id="status-right"></span>
@@ -960,9 +941,9 @@
       <div>
         <h3 id="style-modal-title" data-i18n="dialog.styleCustomTitle">自定义排版样式与外部资源</h3>
       </div>
-      <button id="style-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <button id="style-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
-    <div class="modal-body" style="padding:16px 20px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;">
+    <div class="modal-body">
       <p class="style-modal-desc" data-i18n="dialog.styleCustomDesc">注入自定义 CSS 规则与 HTML Head 标签，即时应用于阅读、编辑与导出排版。</p>
       
       <div class="style-presets-bar">
@@ -994,16 +975,16 @@
   <div class="modal-dialog" style="max-width: 480px;">
     <div class="modal-header">
       <h3 id="code-chunk-title" data-i18n="editor.codeChunkModalTitle">插入交互式代码块 (Interactive Code Chunk)</h3>
-      <button id="code-chunk-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <button id="code-chunk-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 16px;">
       <div class="modal-form-group">
-        <label for="code-chunk-lang" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkLang">编程语言：</label>
+        <label for="code-chunk-lang" data-i18n="editor.codeChunkLang">编程语言：</label>
         <select id="code-chunk-lang" class="modal-select">
-          <option value="python">Python</option>
+          <option value="python">Python (Pyodide / 本地运行)</option>
           <option value="javascript">JavaScript (Node / Web)</option>
           <option value="bash">Bash / Shell</option>
-          <option value="r">R</option>
+          <option value="r">R (科学计算)</option>
           <option value="php">PHP</option>
           <option value="go">Go</option>
           <option value="ruby">Ruby</option>
@@ -1020,7 +1001,7 @@
         </label>
       </div>
       <div class="modal-form-group">
-        <label for="code-chunk-code" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.codeChunkCode">代码内容：</label>
+        <label for="code-chunk-code" data-i18n="editor.codeChunkCode">代码内容：</label>
         <textarea id="code-chunk-code" class="modal-textarea" placeholder="import matplotlib.pyplot as plt\nimport numpy as np\nx = np.linspace(0, 10, 100)\nplt.plot(x, np.sin(x))\nplt.show()"></textarea>
       </div>
       <div class="modal-footer">
@@ -1036,23 +1017,23 @@
   <div class="modal-dialog" style="max-width: 520px;">
     <div class="modal-header">
       <h3 id="diagram-title" data-i18n="editor.diagramModalTitle">插入科学与工程图表 (Diagrams)</h3>
-      <button id="diagram-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <button id="diagram-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 16px;">
       <div class="modal-form-group">
-        <label for="diagram-type" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramType">图表类型：</label>
+        <label for="diagram-type" data-i18n="editor.diagramType">图表类型：</label>
         <select id="diagram-type" class="modal-select">
-          <option value="plantuml">PlantUML</option>
-          <option value="tikz">TikZ / PGFPlots</option>
-          <option value="wavedrom">WaveDrom</option>
-          <option value="vega-lite">Vega-Lite</option>
-          <option value="graphviz">Graphviz / DOT</option>
-          <option value="d2">D2</option>
-          <option value="bitfield">BitField</option>
+          <option value="plantuml">PlantUML (时序图 / 架构图 / UML)</option>
+          <option value="tikz">TikZ / PGFPlots (LaTeX 矢量几何与函数图)</option>
+          <option value="wavedrom">WaveDrom (数字电路波形图)</option>
+          <option value="vega-lite">Vega-Lite (统计数据可视化与图表)</option>
+          <option value="graphviz">Graphviz / DOT (有向图与网络拓扑)</option>
+          <option value="d2">D2 (现代声明式架构图)</option>
+          <option value="bitfield">BitField (硬件寄存器与协议字段图)</option>
         </select>
       </div>
-      <div class="modal-form-group" style="margin-top: 12px;">
-        <label for="diagram-code" style="font-weight:600;font-size:13px;display:block;margin-bottom:4px;" data-i18n="editor.diagramTemplate">图表代码模版：</label>
+        <div class="modal-form-group form-gap-top">
+        <label for="diagram-code" data-i18n="editor.diagramTemplate">图表代码模版：</label>
         <textarea id="diagram-code" class="modal-textarea"></textarea>
       </div>
       <div class="modal-footer">
@@ -1068,7 +1049,7 @@
   <div class="modal-dialog" style="max-width: 480px;">
     <div class="modal-header">
       <h3 id="doc-import-title" data-i18n="editor.docImportModalTitle">插入子文档引用 (@import)</h3>
-      <button id="doc-import-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <button id="doc-import-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 16px;">
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.docImportDesc">引用外部 Markdown 文件、源码或图表，渲染时将自动无缝嵌入当前文档。</p>
@@ -1086,7 +1067,7 @@
           </select>
         </div>
         <div class="modal-form-group">
-          <label for="doc-import-lines" data-i18n="editor.docImportLines">行号切片 (可选)：</label>
+        <label for="doc-import-lines" data-i18n="editor.docImportLines">行号切片 (可选)：</label>
           <input id="doc-import-lines" type="text" class="modal-input" placeholder="例如: 10-50">
         </div>
       </div>
@@ -1103,7 +1084,7 @@
   <div class="modal-dialog" style="max-width: 500px;">
     <div class="modal-header">
       <h3 id="frontmatter-title" data-i18n="editor.frontmatterModalTitle">配置文档元数据与演说主题 (Frontmatter)</h3>
-      <button id="frontmatter-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+      <button id="frontmatter-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 16px;">
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.frontmatterModalDesc">在文档顶部插入标准 YAML Frontmatter，用于配置文档标题、作者、Reveal.js 演示主题及全局样式。</p>
@@ -1111,7 +1092,7 @@
         <label for="fm-input-title" data-i18n="editor.frontmatterTitle">文档标题：</label>
         <input id="fm-input-title" type="text" class="modal-input" placeholder="我的演说 / 报告文档">
       </div>
-      <div class="modal-form-group" style="margin-top: 10px;">
+      <div class="modal-form-group form-gap-top">
         <label for="fm-input-author" data-i18n="editor.frontmatterAuthor">作者 / 演讲者：</label>
         <input id="fm-input-author" type="text" class="modal-input" placeholder="ReadMD User">
       </div>
@@ -1119,27 +1100,27 @@
         <div class="modal-form-group">
           <label for="fm-select-theme" data-i18n="editor.frontmatterTheme">Reveal.js 演示主题：</label>
           <select id="fm-select-theme" class="modal-select">
-            <option value="black">Black</option>
-            <option value="white">White</option>
-            <option value="league">League</option>
-            <option value="beige">Beige</option>
-            <option value="night">Night</option>
-            <option value="serif">Serif</option>
-            <option value="simple">Simple</option>
-            <option value="solarized">Solarized</option>
-            <option value="blood">Blood</option>
-            <option value="moon">Moon</option>
+            <option value="black">Black (现代深色 / 默认)</option>
+            <option value="white">White (明亮纯白)</option>
+            <option value="league">League (几何现代灰)</option>
+            <option value="beige">Beige (复古暖米色)</option>
+            <option value="night">Night (暗夜高对比)</option>
+            <option value="serif">Serif (优雅衬线文学)</option>
+            <option value="simple">Simple (极简清爽)</option>
+            <option value="solarized">Solarized (程序员经典太阳色)</option>
+            <option value="blood">Blood (深红暗黑风格)</option>
+            <option value="moon">Moon (蓝调月夜)</option>
           </select>
         </div>
         <div class="modal-form-group">
           <label for="fm-select-transition" data-i18n="editor.frontmatterTransition">幻灯片切页动效：</label>
           <select id="fm-select-transition" class="modal-select">
-            <option value="slide" data-i18n="presentation.transitionSlide">Slide</option>
-            <option value="fade" data-i18n="presentation.transitionFade">Fade</option>
-            <option value="convex" data-i18n="presentation.transitionConvex">Convex</option>
-            <option value="concave" data-i18n="presentation.transitionConcave">Concave</option>
-            <option value="zoom" data-i18n="presentation.transitionZoom">Zoom</option>
-            <option value="none" data-i18n="presentation.transitionNone">None</option>
+            <option value="slide">Slide (平滑滑动 / 默认)</option>
+            <option value="fade">Fade (淡入淡出)</option>
+            <option value="convex">Convex (凸面翻转)</option>
+            <option value="concave">Concave (凹面翻转)</option>
+            <option value="zoom">Zoom (缩放进出)</option>
+            <option value="none">None (无动画)</option>
           </select>
         </div>
       </div>
@@ -1151,44 +1132,6 @@
   </div>
 </div>
 
-
-
-<script defer src="/assets/vendor/marked.min.js"></script>
-
-<!-- Core Infrastructure -->
-<script defer src="/assets/js/core/state.js"></script>
-<script defer src="/assets/js/core/i18n.js"></script>
-<script defer src="/assets/js/core/dialog.js"></script>
-<script defer src="/assets/js/core/settings.js"></script>
-<script defer src="/assets/js/core/modules.js"></script>
-<script defer src="/assets/js/core/tabs.js"></script>
-<script defer src="/assets/js/core/history.js"></script>
-<script defer src="/assets/js/core/dragdrop.js"></script>
-
-<!-- Reader & Document Rendering -->
-<script defer src="/assets/js/reader/formula.js"></script>
-<script defer src="/assets/js/reader/fixes.js"></script>
-<script defer src="/assets/js/reader/toc.js"></script>
-<script defer src="/assets/js/reader/search.js"></script>
-<script defer src="/assets/js/reader/folder.js"></script>
-<script defer src="/assets/js/reader/render.js"></script>
-
-<!-- Editor & Multimedia -->
-<script defer src="/assets/js/editor/preview.js"></script>
-<script defer src="/assets/js/editor/image.js"></script>
-<script defer src="/assets/js/editor/editor.js"></script>
-
-<!-- Specialized Features -->
-<script defer src="/assets/js/features/ai.js"></script>
-<script defer src="/assets/js/features/share.js"></script>
-<script defer src="/assets/js/features/convert.js"></script>
-<script defer src="/assets/js/features/ocr.js"></script>
-<script defer src="/assets/js/features/web.js"></script>
-<script defer src="/assets/js/features/clipboard.js"></script>
-<script defer src="/assets/js/features/export.js"></script>
-<script defer src="/assets/js/features/updater.js"></script>
-
-<!-- Application Bootstrap & Integration -->
-<script defer src="/assets/app.js"></script>
+<script defer src="/assets/readmd.boot.js?v=2.3.7-beta.4"></script>
 </body>
 </html>

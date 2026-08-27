@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "artifact": "Capability cinema: all-feature scroll rail over frame-difference film",
+  "reviewed_at": "2026-08-26T08:00:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "design_read": "Original premium product stage for Markdown users; cinematic scroll rhythm inspired by high-end launch pages without copying Apple text, images, logo, source, or trade dress.",
+  "motion_dials": {
+    "variance": 7,
+    "motion_intensity": 8,
+    "visual_density": 4,
+    "reduced_motion": "static full-height feature list; canvas and rail transforms disabled"
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "design-review",
+      "status": "approved",
+      "score": 9.91,
+      "evidence": [
+        "Continuous horizontal capability rail covers nine documented feature clusters instead of discrete slides.",
+        "Background uses real recording frames with interpolated blending, velocity ghosting, slice displacement, particles, grid, and scanlines.",
+        "Dark immersive media section is an intentional single-stage exception while the rest of the page retains the established light/dark token system."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "accessibility-performance-review",
+      "status": "approved",
+      "score": 9.87,
+      "evidence": [
+        "Canvas rendering is IntersectionObserver-gated, pauses when hidden, caps DPR at 1.5, and reuses one shared frame store across both film sections.",
+        "Reduced-motion users receive a static accessible feature list; foreground content remains semantic HTML with real links.",
+        "Browser smoke records canvas progress above 0.85 and a moved capability rail across 44 routes with zero failures."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-engineering-review",
+      "status": "approved",
+      "score": 9.84,
+      "evidence": [
+        "Website release validation adds a capability-cinema contract for markers, nine panels, interpolation, slices, particles, and absence of main-thread scroll listeners.",
+        "Build passes after the shared frame store refactor and syntax checks pass.",
+        "Browser smoke reports 44/44 passing routes and zero broken images."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_staged_publication",
+    "score": 9.88,
+    "participants": [
+      "design",
+      "accessibility performance",
+      "release engineering"
+    ],
+    "conditions": [
+      "CI must pass before merge.",
+      "Production check must remain green after deployment.",
+      "Homepage must be resubmitted through IndexNow after successful verification."
+    ]
+  }
+}

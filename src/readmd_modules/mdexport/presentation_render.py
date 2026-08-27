@@ -18,8 +18,16 @@
 """
 
 import json
+import html
+import os
 import re
+import sys
 from typing import Any, Dict, List, Optional, Tuple
+from html.parser import HTMLParser
+
+_REVEAL_THEMES = ('black', 'white', 'league', 'beige', 'night', 'serif',
+                  'simple', 'solarized', 'blood', 'moon', 'sky')
+_REVEAL_TRANSITIONS = ('slide', 'fade', 'zoom', 'convex', 'concave', 'none')
 
 SLIDE_SPLIT_REGEX = re.compile(
     r'(?:^[ \t]*<!--\s*slide(?:\s+[\s\S]*?)?-->[ \t]*$|^[ \t]*---[ \t]*$)',
@@ -87,6 +95,188 @@ def _restore_blocks(text: str, blocks: Dict[str, str]) -> str:
     for k, v in blocks.items():
         text = text.replace(k, v)
     return text
+
+
+_PRESENTATION_ALLOWED_TAGS = frozenset({
+    'a', 'abbr', 'article', 'b', 'blockquote', 'br', 'caption', 'cite',
+    'code', 'dd', 'del', 'details', 'div', 'dl', 'dt', 'em', 'figcaption',
+    'figure', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'ins',
+    'kbd', 'li', 'mark', 'ol', 'p', 'pre', 'q', 's', 'section', 'span',
+    'strike', 'strong', 'sub', 'summary', 'sup', 'table', 'tbody', 'td',
+    'tfoot', 'th', 'thead', 'time', 'tr', 'u', 'ul',
+})
+_PRESENTATION_DROP_CONTENT = frozenset({
+    'base', 'embed', 'form', 'frame', 'frameset', 'iframe', 'link', 'meta',
+    'noscript', 'object', 'script', 'style', 'template', 'title',
+})
+_PRESENTATION_VOID_TAGS = frozenset({'br', 'hr', 'img'})
+_PRESENTATION_GLOBAL_ATTRS = {'class', 'style', 'title', 'lang', 'dir', 'role'}
+_PRESENTATION_CSS_PROPERTY = re.compile(r'^[A-Za-z][A-Za-z0-9-]*$')
+_PRESENTATION_CSS_FORBIDDEN = re.compile(
+    r'(?:javascript|vbscript|data\s*:|url\s*\(|expression\s*\(|@import|behavior\s*:|position\s*:\s*fixed)',
+    re.IGNORECASE,
+)
+_PRESENTATION_TAG_ATTRS = {
+    '*': _PRESENTATION_GLOBAL_ATTRS | {'aria-label'},
+    'a': {'href', 'target'},
+    'details': {'open'},
+    'img': {'src', 'srcset', 'alt', 'width', 'height', 'loading'},
+    'source': {'src', 'srcset'},
+    'ol': {'start', 'type'},
+    'td': {'colspan', 'rowspan'},
+    'th': {'colspan', 'rowspan', 'scope'},
+    'time': {'datetime'},
+    'blockquote': {'cite'},
+}
+
+
+def _presentation_safe_url(value: str) -> bool:
+    value = value.strip()
+    if not value or value.startswith('#'):
+        return True
+    lowered = value.lower()
+    if lowered.startswith(('data:image/', 'blob:')):
+        return True
+    return '://' in value or value.startswith('//') or value.startswith('/') or (
+        not re.match(r'^[a-z][a-z0-9+.-]*:', lowered)
+    )
+
+
+def _presentation_attr(tag: str, name: str, value: str):
+    name = name.lower()
+    allowed = set(_PRESENTATION_TAG_ATTRS.get('*', ()))
+    allowed.update(_PRESENTATION_TAG_ATTRS.get(tag, ()))
+    if name not in allowed:
+        return None
+    if name in ('href', 'src') and not _presentation_safe_url(value):
+        return None
+    if name == 'srcset':
+        candidates = []
+        for candidate in value.split(','):
+            pieces = candidate.strip().split()
+            if pieces and not _presentation_safe_url(pieces[0]):
+                continue
+            candidates.append(' '.join(pieces))
+        return 'srcset', ', '.join(candidates)
+    if name == 'id' and not re.match(r'^[A-Za-z][A-Za-z0-9_:.-]*$', value):
+        return None
+    if name == 'style' and not _safe_inline_css(value):
+        return None
+    return name, value
+
+
+def _safe_inline_css(value: str):
+    declarations = []
+    for declaration in value.split(';'):
+        if ':' not in declaration:
+            continue
+        prop, css_value = (part.strip() for part in declaration.split(':', 1))
+        if not prop or not css_value:
+            continue
+        if not _PRESENTATION_CSS_PROPERTY.match(prop):
+            continue
+        if _PRESENTATION_CSS_FORBIDDEN.search(f'{prop}:{css_value}'):
+            continue
+        declarations.append(f'{prop}: {css_value}')
+    return '; '.join(declarations)
+
+
+class _PresentationHTMLSanitizer(HTMLParser):
+    """Whitelist sanitizer for user-authored slide HTML."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.output = []
+        self.stack = []
+        self.skip_tag = None
+        self.skip_depth = 0
+
+    def _safe_start(self, tag, attrs):
+        allowed = set(_PRESENTATION_TAG_ATTRS.get('*', ()))
+        allowed.update(_PRESENTATION_TAG_ATTRS.get(tag, ()))
+        rendered = []
+        for raw_name, raw_value in attrs:
+            name = raw_name.lower()
+            if name.startswith('on') or name not in allowed:
+                continue
+            value = raw_value or ''
+            checked = _presentation_attr(tag, name, value)
+            if not checked:
+                continue
+            name, value = checked
+            rendered.append(f' {name}="{html.escape(value, quote=True)}"')
+        suffix = ' />' if tag in _PRESENTATION_VOID_TAGS else '>'
+        self.output.append(f'<{tag}{"".join(rendered)}{suffix}')
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+        if self.skip_depth:
+            if tag not in _PRESENTATION_VOID_TAGS:
+                self.skip_depth += 1
+            return
+        if tag in _PRESENTATION_DROP_CONTENT:
+            self.skip_tag = tag
+            self.skip_depth = 1
+            return
+        if tag in _PRESENTATION_ALLOWED_TAGS:
+            self._safe_start(tag, attrs)
+            if tag not in _PRESENTATION_VOID_TAGS:
+                self.stack.append(tag)
+
+    def handle_startendtag(self, tag, attrs):
+        if self.skip_depth:
+            return
+        tag = tag.lower()
+        if tag in _PRESENTATION_ALLOWED_TAGS:
+            self._safe_start(tag, attrs)
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+        if self.skip_depth:
+            if tag == self.skip_tag:
+                self.skip_depth -= 1
+                if not self.skip_depth:
+                    self.skip_tag = None
+            elif tag not in _PRESENTATION_VOID_TAGS:
+                self.skip_depth += 1
+            return
+        if tag in _PRESENTATION_ALLOWED_TAGS and tag in self.stack:
+            while self.stack:
+                open_tag = self.stack.pop()
+                if open_tag == tag:
+                    self.output.append(f'</{tag}>')
+                    break
+                self.output.append(f'</{open_tag}>')
+
+    def handle_data(self, data):
+        if not self.skip_depth and data:
+            self.output.append(html.escape(data, quote=False))
+
+    def result(self):
+        while self.stack:
+            self.output.append(f'</{self.stack.pop()}>')
+        return ''.join(self.output)
+
+
+def _sanitize_slide_html(markdown: str) -> str:
+    """Remove active HTML while preserving Markdown and protected samples."""
+    protected, code_blocks = _protect_blocks(markdown)
+
+    inline_blocks: Dict[str, str] = {}
+    inline_pattern = re.compile(r'(?<!`)(`+)(?!`)([\s\S]*?)(?<!`)\1(?!`)')
+
+    def inline_repl(match: re.Match) -> str:
+        key = f"__READMD_INLINE_CODE_{len(inline_blocks)}__"
+        inline_blocks[key] = match.group(0)
+        return key
+
+    protected = inline_pattern.sub(inline_repl, protected)
+    parser = _PresentationHTMLSanitizer()
+    parser.feed(protected)
+    parser.close()
+    clean = parser.result()
+    clean = _restore_blocks(clean, inline_blocks)
+    return _restore_blocks(clean, code_blocks)
 
 
 def _auto_split_long_chunk(chunk: str, max_chars: int = 800) -> List[str]:
@@ -179,6 +369,7 @@ def split_slides_structure(content: str) -> List[List[Dict[str, str]]]:
                 return ""
             
             clean_slide_content = NOTE_SPLIT_REGEX.sub(extract_note, v_chunk).strip()
+            clean_slide_content = _sanitize_slide_html(clean_slide_content)
             note_text = "\n\n".join(notes)
             
             vertical_slides.append({
@@ -197,19 +388,77 @@ def _escape_template_md(md: str) -> str:
     return md.replace('</textarea>', '&lt;/textarea&gt;')
 
 
+# 本地 vendor 资源（相对应用根；srcdoc iframe 继承父页面 base URL 与 CSP 'self'）
+_REVEAL_BASE = 'assets/vendor/reveal/dist'
+_KATEX_BASE = 'assets/vendor/katex/dist'
+_REVEAL_STYLESHEETS = ('reveal.css', 'plugin/highlight/monokai.css')
+_REVEAL_SCRIPTS = ('reveal.js', 'plugin/markdown/markdown.js',
+                   'plugin/highlight/highlight.js', 'plugin/notes/notes.js',
+                   'plugin/math/math.js')
+
+
+def _read_vendor(rel_path: str) -> str:
+    """读取 assets/vendor 下的离线资源；打包与源码运行均已覆盖。
+
+    注意：不使用 mdexport.APP_DIR（其解析少上一层、指向 src/，
+    为既有行为，此处独立计算应用根避免牵连其他导出模块）。
+    """
+    if getattr(sys, 'frozen', False):
+        root = sys._MEIPASS
+    else:
+        # presentation_render.py -> mdexport -> readmd_modules -> src -> 应用根
+        root = os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__)))))
+    full = os.path.join(root, 'assets', 'vendor', *rel_path.split('/'))
+    with open(full, 'r', encoding='utf-8') as handle:
+        return handle.read()
+
+
+def _css_tag(rel_path: str, standalone: bool, link_id: str = '') -> str:
+    if standalone:
+        return '<style>\n' + _read_vendor(os.path.join('reveal', 'dist', *rel_path.split('/'))) + '\n</style>'
+    id_attr = ' id="%s"' % link_id if link_id else ''
+    return '<link rel="stylesheet" href="%s/%s"%s>' % (_REVEAL_BASE, rel_path, id_attr)
+
+
+def _script_tag(rel_path: str, standalone: bool) -> str:
+    if standalone:
+        return '<script>\n' + _read_vendor(os.path.join('reveal', 'dist', *rel_path.split('/'))) + '\n</script>'
+    return '<script src="%s/%s"></script>' % (_REVEAL_BASE, rel_path)
+
+
+def _katex_tags(standalone: bool) -> str:
+    """KaTeX 资源：应用内由 RevealMath.KaTeX 按 local 路径注入；导出单文件直接内联。"""
+    if not standalone:
+        return ''
+    katex_css = _read_vendor('katex/dist/katex.min.css')
+    katex_js = _read_vendor('katex/dist/katex.min.js')
+    auto_render = _read_vendor('katex/dist/contrib/auto-render.min.js')
+    return ('<style>\n' + katex_css + '\n</style>\n'
+            '<script>\n' + katex_js + '\n</script>\n'
+            '<script>\n' + auto_render + '\n</script>')
+
+
 def render_presentation_html(content: str, title: str = "ReadMD Presentation",
-                             theme: str = "black", transition: str = "slide") -> str:
-    """将 Markdown 编译为完整的单文件 Reveal.js HTML 演说稿（精致舒适排版、防截断滚动与双向事件控制）。"""
+                             theme: str = "black", transition: str = "slide",
+                             standalone: bool = False) -> str:
+    """将 Markdown 编译为 Reveal.js 演说稿。
+
+    standalone=False（应用内预览）：引用本地 vendor 资源（同源，符合 CSP，完全离线）。
+    standalone=True（导出 .html 单文件）：全部资源内联，任何机器离线可开。
+    """
     meta, _ = parse_frontmatter(content)
     theme = meta.get('theme', theme)
     if theme.endswith('.css'):
         theme = theme[:-4]
     transition = meta.get('transition', transition)
     title = meta.get('title', title)
-    
+    if theme not in _REVEAL_THEMES:
+        theme = 'black'
+
     slides_matrix = split_slides_structure(content)
     sections_html = []
-    
+
     for h_idx, v_slides in enumerate(slides_matrix):
         if len(v_slides) == 1:
             slide = v_slides[0]
@@ -226,16 +475,37 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
 
     slides_body = "\n".join(sections_html)
 
+    head_css = '\n'.join([
+        _css_tag('reveal.css', standalone),
+        _css_tag('theme/%s.css' % theme, standalone, link_id='theme'),
+        _css_tag('plugin/highlight/monokai.css', standalone),
+        _katex_tags(standalone),
+    ])
+    body_scripts = '\n'.join(_script_tag(p, standalone) for p in _REVEAL_SCRIPTS)
+
+    # 启动配置：JSON <script> 不被执行，不受 CSP 限制；boot 代码本体走同源加载
+    boot_rel = 'reveal/dist/readmd-boot.js'
+    boot_js = _read_vendor(os.path.join('reveal', 'dist', 'readmd-boot.js'))
+    reveal_config = {
+        'transition': transition if transition in _REVEAL_TRANSITIONS else 'slide',
+        'themeBase': _REVEAL_BASE + '/theme/',
+        # KaTeX 插件会自行追加 /dist/...，这里给到包根
+        'katexLocal': 'assets/vendor/katex',
+        'standalone': bool(standalone),
+    }
+    config_json = json.dumps(reveal_config, ensure_ascii=False).replace('</', '<\\/')
+    if standalone:
+        boot_tag = '<script>\n' + boot_js + '\n</script>'
+    else:
+        boot_tag = '<script src="%s/readmd-boot.js"></script>' % _REVEAL_BASE
+
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>{title}</title>
-  <link rel="stylesheet" href="/assets/vendor/reveal/reveal.css">
-  <link rel="stylesheet" href="/assets/vendor/reveal/theme/{theme}.css" id="theme">
-  <link rel="stylesheet" href="/assets/vendor/reveal/plugin/highlight/monokai.css">
-  <link rel="stylesheet" href="/assets/vendor/katex/dist/katex.min.css">
+{head_css}
   <style>
     :root {{
       --reveal-base-font-size: 24px;
@@ -347,13 +617,9 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
 {slides_body}
     </div>
   </div>
-  <script src="/assets/vendor/reveal/reveal.min.js"></script>
-  <script src="/assets/vendor/reveal/plugin/markdown/markdown.js"></script>
-  <script src="/assets/vendor/reveal/plugin/highlight/highlight.js"></script>
-  <script src="/assets/vendor/reveal/plugin/notes/notes.js"></script>
-  <script src="/assets/vendor/katex/dist/katex.min.js"></script>
-  <script src="/assets/vendor/reveal/plugin/math/math.js"></script>
-  <script src="/assets/vendor/reveal/presentation-bootstrap.js"></script>
+{body_scripts}
+  <script type="application/json" id="readmd-reveal-config">{config_json}</script>
+{boot_tag}
 </body>
 </html>"""
 

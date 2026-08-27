@@ -226,7 +226,7 @@ class TestUpdaterModule(unittest.TestCase):
             try:
                 ok, message = updater.apply_update(forged)
                 self.assertFalse(ok)
-                self.assertIn('不受信任', message)
+                self.assertIn('只允许', message)
             finally:
                 updater._download_state.clear()
                 updater._download_state.update(original_state)

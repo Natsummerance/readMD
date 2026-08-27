@@ -11,6 +11,8 @@
 
 import logging
 import os
+import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -55,6 +57,78 @@ def detect_distro():
     except Exception as e:
         logging.debug('detect_distro failed: %s', e)
     return 'generic-linux'
+
+
+def detect_distro_info():
+    """Return normalized distribution fields used by the Kylin compatibility layer."""
+    info = {'id': detect_distro(), 'version_id': '', 'pretty_name': ''}
+    if not IS_LINUX:
+        return info
+    try:
+        if os.path.exists('/etc/os-release'):
+            values = {}
+            with open('/etc/os-release', 'r', encoding='utf-8', errors='ignore') as handle:
+                for line in handle:
+                    key, sep, value = line.strip().partition('=')
+                    if sep:
+                        values[key.strip().upper()] = value.strip().strip('"').strip("'")
+            if values.get('ID'):
+                lowered = values['ID'].lower()
+                if 'uos' in lowered or 'uniontech' in lowered:
+                    info['id'] = 'uos'
+                elif 'kylin' in lowered or 'neokylin' in lowered:
+                    info['id'] = 'kylinos'
+                elif 'deepin' in lowered:
+                    info['id'] = 'deepin'
+                else:
+                    info['id'] = lowered
+            info['version_id'] = values.get('VERSION_ID', '')
+            info['pretty_name'] = values.get('PRETTY_NAME', '')
+    except Exception as exc:
+        logging.debug('detect_distro_info failed: %s', exc)
+    return info
+
+
+def architecture():
+    machine = (platform.machine() or '').lower()
+    if machine in ('arm64', 'aarch64'):
+        return 'arm64'
+    if machine.startswith('armv'):
+        return 'arm'
+    return machine or 'unknown'
+
+
+def detect_cpu_vendor():
+    """Identify domestic ARM CPUs where GPU drivers commonly need a safe fallback."""
+    if not IS_LINUX or architecture() != 'arm64':
+        return ''
+    samples = []
+    try:
+        with open('/proc/cpuinfo', 'r', encoding='utf-8', errors='ignore') as handle:
+            samples.append(handle.read())
+    except Exception as exc:
+        logging.debug('cpuinfo probe failed: %s', exc)
+    for path in ('/proc/device-tree/model', '/proc/device-tree/vendor'):
+        try:
+            with open(path, 'rb') as handle:
+                samples.append(handle.read(512).decode('ascii', errors='ignore'))
+        except Exception:
+            pass
+    text = ' '.join(samples).lower()
+    if re.search(r'phytium|ft-?\d{3,4}|feiteng|tengyun|d2000|e2000|s2500', text):
+        return 'phytium'
+    if re.search(r'kunpeng|kirin', text):
+        return text.split()[0] if text.split() else 'unknown-domestic'
+    return ''
+
+
+def is_kylin_v10():
+    info = detect_distro_info()
+    return info['id'] == 'kylinos' and bool(re.search(r'v\s*10|(^|[^\d])10([^\d]|$)', info['version_id'], re.I))
+
+
+def is_phytium():
+    return detect_cpu_vendor() == 'phytium'
 
 
 def is_uos():
@@ -117,16 +191,35 @@ def setup_linux_env():
     if not IS_LINUX:
         return
 
+    def set_env_default(name, value):
+        # CI shells sometimes export compatibility switches as empty values.
+        if not os.environ.get(name):
+            os.environ[name] = value
+
     # 优先兼容 Wayland 与 X11
     if is_wayland():
-        os.environ.setdefault('GDK_BACKEND', 'wayland,x11')
+        set_env_default('GDK_BACKEND', 'wayland,x11')
     else:
-        os.environ.setdefault('GDK_BACKEND', 'x11')
+        set_env_default('GDK_BACKEND', 'x11')
 
-    # WebKitGTK 硬件加速在特定虚拟机/信创板卡上兼容性配置
-    os.environ.setdefault('WEBKIT_DISABLE_COMPOSITING_MODE', '0')
+    legacy_gpu = (
+        (is_kylin_v10() and architecture() == 'arm64' and is_phytium())
+        or os.environ.get('READMD_SOFTWARE_WEBKIT', '').lower() in ('1', 'true', 'yes')
+    )
+    if legacy_gpu:
+        # UKUI/X11 plus software WebGL is the stable path on Phytium D2000/E2000
+        # boards whose vendor GL drivers fail inside WebKitGTK.
+        set_env_default('GDK_BACKEND', 'x11')
+        set_env_default('WEBKIT_DISABLE_COMPOSITING_MODE', '1')
+        set_env_default('WEBKIT_DISABLE_DMABUF_RENDERER', '1')
+        set_env_default('LIBGL_ALWAYS_SOFTWARE', '1')
+        set_env_default('GALLIUM_DRIVER', 'llvmpipe')
+        set_env_default('MESA_LOADER_DRIVER_OVERRIDE', 'swrast')
+    else:
+        # WebKitGTK hardware acceleration works on mainstream Linux GPUs.
+        set_env_default('WEBKIT_DISABLE_COMPOSITING_MODE', '0')
     # 针对 HiDPI 屏幕分数缩放
-    os.environ.setdefault('GDK_DPI_SCALE', '1')
+    set_env_default('GDK_DPI_SCALE', '1')
 
 
 def show_notification(title, message):

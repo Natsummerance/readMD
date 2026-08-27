@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "artifact": "Compatible PNG social previews for all public website routes",
+  "reviewed_at": "2026-08-25T04:10:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "distribution-preview-review",
+      "status": "approved",
+      "score": 9.88,
+      "evidence": [
+        "All 32 indexed pages now expose Open Graph and Twitter images in the widely supported PNG format.",
+        "Each social image matches the page's existing product capture: reader, editor, or converter.",
+        "The change targets only crawler-facing metadata; visible pages retain optimized WebP sources for performance."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "technical-seo-review",
+      "status": "approved",
+      "score": 9.85,
+      "evidence": [
+        "Open Graph image type is explicitly image/png, dimensions remain 1440x900, and every referenced media file exists in the release output.",
+        "Twitter image exactly matches the Open Graph image, and structured primaryImageOfPage values use the same compatible PNG assets.",
+        "Canonical URLs, hreflang sets, sitemap inventory, alt text, AI corpora, and crawler access rules are unchanged."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "release-compliance-review",
+      "status": "approved",
+      "score": 9.81,
+      "evidence": [
+        "The validator enforces PNG fallbacks, matching Twitter images, correct MIME types, asset existence, and structured primary-image compatibility.",
+        "Browser smoke checks every unique Open Graph image over HTTP and retains zero-broken-image coverage across all localized routes.",
+        "No Apple protected material, tracking scripts, invented metrics, credentials, or unpublished release claims are introduced."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_pull_request",
+    "score": 9.85,
+    "participants": ["distribution", "technical SEO", "release compliance"],
+    "conditions": [
+      "Release build validation must pass before merge.",
+      "Browser smoke must pass all thirty-two localized routes and every unique social preview URL.",
+      "CI must pass and GitHub Pages deployment must finish before live metadata verification."
+    ]
+  }
+}

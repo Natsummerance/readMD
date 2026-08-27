@@ -19,6 +19,7 @@
   [![i18n](https://img.shields.io/badge/languages-46-orange)](docs/i18n-language-reference.md)
   [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
   [![release](https://img.shields.io/github/v/release/Natsummerance/readMD)](https://github.com/Natsummerance/readMD/releases/latest)
+  [![website](https://img.shields.io/badge/site-readmd.asia-black)](https://readmd.asia)
 </div>
 
 ## Is it right for you?
@@ -40,6 +41,7 @@
 [macOS Intel](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.4.zip) ·
 [Linux AppImage](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage) ·
 [Deb for UOS/Kylin](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_amd64.deb) ·
+[Kylin V10 ARM64](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_arm64.deb) ·
 [SHA-256](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt)
 
 ## Start in three steps
@@ -50,8 +52,8 @@
 
 ## AI assistant citations
 
-- [Concise product index](website/public/llms.txt): version, platforms, privacy boundary, and key facts.
-- [Full citation corpus](website/public/llms-full.txt): direct answers about long-document pagination, non-destructive repair, conversion, and frequent questions.
+- [Concise product index](https://readmd.asia/llms.txt): version, platforms, privacy boundary, and key facts.
+- [Full citation corpus](https://readmd.asia/llms-full.txt): direct answers about long-document pagination, non-destructive repair, conversion, and frequent questions.
 
 ## Why star ReadMD?
 
@@ -68,7 +70,8 @@ ReadMD solves the unglamorous problems in a long-lived document library: large f
 | 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.4.zip) | Native build for Intel Macs with Vision OCR |
 | 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage) | Portable Linux AppImage for Ubuntu, Debian, Fedora, Arch |
 | 🇨🇳 **Domestic OS / Linux** | UOS / Kylin / Deepin / Debian / Ubuntu | [⬇️ **readmd_2.3.7-beta.4_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_amd64.deb) | Native Deb package with desktop entry & MIME association |
-| 📱 **HarmonyOS NEXT** | OpenHarmony (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.7-beta.4.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.4.hap) | HarmonyOS native application package (.hap) |
+| 🖥️ **Kylin V10 / Phytium** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7-beta.4_arm64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_arm64.deb) | Native build for D2000/E2000 boards with UKUI/X11 software-render fallback |
+| 📱 **HarmonyOS NEXT** | Source project (DevEco build) | [🧩 **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb source project; no prebuilt HAP is provided |
 | 🧩 **VSCode Extension** | Universal VSIX | [⬇️ **readmd-vscode-2.3.7-beta.4.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.4.vsix) | Offline VSIX extension with sync preview & auto-repair |
 | 🤖 **MCP Server** | FastMCP stdio Package | [⬇️ **readmd-mcp-server-2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.4.zip) | Standalone FastMCP server for Claude Desktop / Cursor |
 | 🔐 **SHA-256 Hashes** | Checksum List | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | Complete SHA-256 integrity verification list |
@@ -85,7 +88,7 @@ ReadMD solves the unglamorous problems in a long-lived document library: large f
 - **Linglong Format**: Declarative `packages/linglong/linglong.yaml` for UOS AppStore distribution.
 
 ### 2. HarmonyOS NEXT (Pure Harmony) & OpenHarmony
-- **HAP Package**: Download [`ReadMD-harmonyos-v2.3.7-beta.4.hap`](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.4.hap) or compile from source in DevEco Studio NEXT (`packages/harmonyos-app/`).
+- **Source Build**: Open [`packages/harmonyos-app/`](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) in DevEco Studio NEXT and compile it; no prebuilt HAP is provided.
 - **ArkUI + ArkWeb**: Reuses ReadMD offline rendering engine inside ArkWeb containers.
 - **ReadMDBridge (`ReadMDBridge.ets`)**:
   - Clipboard integration (`@ohos.pasteboard`);

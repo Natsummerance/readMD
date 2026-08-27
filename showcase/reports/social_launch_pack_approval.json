@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "artifact": "manual social launch distribution pack",
+  "reviewed_at": "2026-08-24T15:00:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "copy-quality-review",
+      "status": "approved",
+      "score": 9.74,
+      "evidence": [
+        "Posts lead with concrete long-document and local-workflow benefits rather than generic praise.",
+        "Community drafts disclose developer affiliation and invite specific technical feedback."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "platform-safety-review",
+      "status": "approved",
+      "score": 9.78,
+      "evidence": [
+        "The pack warns against identical cross-posting and communities that prohibit self-promotion.",
+        "No external credential, giveaway, misleading urgency, or platform bypass instruction is included."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "claim-evidence-review",
+      "status": "approved",
+      "score": 9.81,
+      "evidence": [
+        "Pagination threshold, display-only repair, import formats, OCR, license, and platform scope match approved website facts.",
+        "No star count, adoption claim, performance ranking, or AI-citation guarantee appears."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_manual_distribution",
+    "score": 9.79,
+    "participants": ["product", "content", "community", "compliance"],
+    "conditions": [
+      "Do not automate posting to third-party communities.",
+      "Adapt titles and bodies per platform rules.",
+      "Record actual links and engagement after manual publication.",
+      "Do not claim star growth before GitHub reports it."
+    ]
+  }
+}

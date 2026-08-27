@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>管理 BibTeX 引用 | ReadMD 學術寫作</title>
+  <meta name="description" content="把 BibTeX 檔案放在 Markdown 同目錄，使用內嵌引用鍵繼續寫作；懸停引用徽章檢查標題、作者、年份和 DOI，複核文末彙整參考文獻後再提交論文或技術報告。">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ReadMD">
+  <meta property="og:title" content="管理 BibTeX 引用 | ReadMD 學術寫作">
+  <meta property="og:description" content="面向 BibTeX 引用鍵、來源卡片和參考文獻彙整的本機寫作工作流程。">
+  <meta property="og:url" content="https://readmd.asia/zh-tw/bibtex-citations/">
+  <meta property="og:image" content="https://readmd.asia/media/overview-editor.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="ReadMD 編輯器顯示 Markdown 原始碼和渲染預覽。">
+  <meta property="og:locale" content="zh_TW">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="管理 BibTeX 引用 | ReadMD 學術寫作">
+  <meta name="twitter:description" content="用 BibTeX 鍵寫作，檢查文獻資訊，並複核產生的參考文獻。">
+  <meta name="twitter:image" content="https://readmd.asia/media/overview-editor.png">
+  <meta name="twitter:image:alt" content="ReadMD 編輯器顯示 Markdown 原始碼和渲染預覽。">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://readmd.asia/zh-tw/bibtex-citations/">
+  <link rel="alternate" hreflang="en" href="https://readmd.asia/bibtex-citations/">
+  <link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/bibtex-citations/">
+  <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/bibtex-citations/">
+  <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/bibtex-citations/">
+  <link rel="alternate" hreflang="x-default" href="https://readmd.asia/bibtex-citations/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/zh-tw/bibtex-citations/#webpage",
+      "url": "https://readmd.asia/zh-tw/bibtex-citations/",
+      "name": "管理 BibTeX 引用 | ReadMD 學術寫作",
+      "about": {
+        "@id": "https://readmd.asia/zh-tw/bibtex-citations/#software"
+      },
+      "primaryImageOfPage": "https://readmd.asia/media/overview-editor.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#citation-workflow p"
+        ]
+      },
+      "inLanguage": "zh-TW",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/zh-tw/bibtex-citations/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/zh-tw/bibtex-citations/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "featureList": "BibTeX 文獻掃描、內嵌引用徽章、懸浮中繼資料、可複製 BibTeX、參考文獻彙整",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/zh-tw/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-editor.png",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/zh-tw/bibtex-citations/#howto",
+      "name": "如何在 Markdown 中管理 BibTeX 引用",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "放置參考文獻",
+          "text": "把 `.bib` 檔案和 Markdown 文件放在同一目錄。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "寫入引用鍵",
+          "text": "寫作時使用 `[@vaswani2017attention]` 或 `@author2024` 這類內嵌形式。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "檢查引用卡片",
+          "text": "查看徽章詳細資訊，包括可用的標題、作者、年份、期刊會議和 DOI。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "複核參考文獻",
+          "text": "提交前檢查文末自動彙整的參考文獻區。"
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/zh-tw/bibtex-citations/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "ReadMD 支援哪些引用語法？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD 支援 `[@vaswani2017attention]` 或 `@author2024` 這類內嵌寫法；當匹配項目可用時會渲染成引用徽章。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "BibTeX 檔案應該放在哪裡？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "把 `.bib` 檔案和 Markdown 文件放在同一目錄，ReadMD 就能掃描相鄰的參考文獻庫。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "引用卡片可以顯示哪些資訊？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "在欄位可用時，懸浮卡片可以顯示論文標題、作者、年份、期刊或會議、DOI 連結，並支援複製 BibTeX 項目。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "這會替代文獻管理器嗎？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不會。它把現有 BibTeX 庫連接到寫作流程；提交前仍應檢查項目、期刊格式要求和最終參考文獻區。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/zh-tw/bibtex-citations/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首頁",
+      "item": "https://readmd.asia/zh-tw/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "BibTeX 引用",
+      "item": "https://readmd.asia/zh-tw/bibtex-citations/"
+    }
+  ]
+}</script>
+</head>
+<body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/zh-tw/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#citation-workflow">工作流程</a><a href="/zh-tw/workflows/">更多答案</a><a href="https://github.com/Natsummerance/readMD">原始碼</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/latest">下載</a></div>
+  </header>
+  <main>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-tw/">首頁</a> / <a class="link-action" href="/zh-tw/workflows/">工作流程</a> / <span>BibTeX 引用</span></nav>
+    <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
+      <h1 class="display-title">讓引用始終連接你的草稿。</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">把 BibTeX 檔案放在 Markdown 旁邊，用內嵌鍵引用，按需查看文獻資訊，並在同一份文件裡複核參考文獻。</p>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="2880" height="1620" alt="ReadMD 編輯器顯示 Markdown 原始碼和渲染預覽。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
+    </section>
+    <section id="citation-workflow" class="bg-[var(--color-surface)] py-16">
+      <div class="mx-auto max-w-5xl px-5">
+        <h2 class="text-2xl font-semibold tracking-tight">本機引用工作流程</h2>
+        <ol class="mt-8 grid gap-6 md:grid-cols-2">
+          <li class="answer-card"><h3 class="text-lg font-semibold">放好參考文獻</h3><p>把 `.bib` 檔案保存在 Markdown 文件同一資料夾，ReadMD 會自動掃描它。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">寫入引用鍵</h3><p>寫作時使用 `[@vaswani2017attention]` 或 `@author2024` 這樣的內嵌格式。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">檢查卡片</h3><p>懸停引用徽章，查看可用的標題、作者、年份、期刊會議和 DOI 資訊。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">複核參考文獻</h3><p>檢查文末彙整的參考文獻區，必要時複製 BibTeX 來修正或重複使用項目。</p></li>
+        </ol>
+      </div>
+    </section>
+    <section class="mx-auto max-w-5xl px-5 py-16">
+      <h2 class="text-2xl font-semibold tracking-tight">學術引用常見問題</h2>
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <article class="answer-card"><h3>ReadMD 支援哪些引用語法？</h3><p>ReadMD 支援 `[@vaswani2017attention]` 或 `@author2024` 這類內嵌寫法；當匹配項目可用時會渲染成引用徽章。</p></article>
+        <article class="answer-card"><h3>BibTeX 檔案應該放在哪裡？</h3><p>把 `.bib` 檔案和 Markdown 文件放在同一目錄，ReadMD 就能掃描相鄰的參考文獻庫。</p></article>
+        <article class="answer-card"><h3>引用卡片可以顯示哪些資訊？</h3><p>在欄位可用時，懸浮卡片可以顯示論文標題、作者、年份、期刊或會議、DOI 連結，並支援複製 BibTeX 項目。</p></article>
+        <article class="answer-card"><h3>這會替代文獻管理器嗎？</h3><p>不會。它把現有 BibTeX 庫連接到寫作流程；提交前仍應檢查項目、期刊格式要求和最終參考文獻區。</p></article>
+      </div>
+      <div class="mt-10 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-tw/large-markdown-files/">開啟超大 Markdown 檔案</a><a class="link-action" href="/zh-tw/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-tw/convert-to-markdown/">文件轉 Markdown</a><a class="link-action" href="/zh-tw/scan-to-markdown/">掃描件擷取文字</a></div>
+      <div class="mt-8 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">取得 ReadMD</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 給 Star</a></div>
+    </section>
+  </main>
+  <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD。MIT 授權。</p><nav class="flex flex-wrap gap-5"><a href="/zh-tw/llms.txt">llms.txt</a><a href="/zh-tw/llms-full.txt">AI 完整文字</a><a href="https://github.com/Natsummerance/readMD/stargazers">GitHub Star</a></nav></div></footer>
+</body>
+</html>

@@ -1,0 +1,87 @@
+name: Website Production Check
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify readmd.asia routes and crawler surfaces
+        run: |
+          set -euo pipefail
+          origin="https://readmd.asia"
+          routes=(
+            /
+            /workflows/
+            /download/
+            /large-markdown-files/
+            /markdown-to-slides/
+            /convert-to-markdown/
+            /pdf-to-markdown/
+            /markdown-tables/
+            /scan-to-markdown/
+            /bibtex-citations/
+          )
+          for language in zh-cn zh-tw ja; do
+            for suffix in / /workflows/ /download/ /large-markdown-files/ /markdown-to-slides/ /convert-to-markdown/ /pdf-to-markdown/ /markdown-tables/ /release-notes/ /scan-to-markdown/ /bibtex-citations/; do
+              routes+=("/${language}${suffix}")
+            done
+          done
+
+          failures=0
+          for route in "${routes[@]}"; do
+            body="$(mktemp)"
+            code="$(curl --silent --show-error --max-time 30 --output "$body" --write-out '%{http_code}' "${origin}${route}")"
+            if [ "$code" != "200" ]; then
+              echo "::error::${route} returned HTTP ${code}"
+              failures=$((failures + 1))
+              continue
+            fi
+            expected="${origin}${route}"
+            if ! grep -q "rel=\"canonical\" href=\"${expected}\"" "$body"; then
+              echo "::error::${route} does not expose canonical ${expected}"
+              failures=$((failures + 1))
+            fi
+          done
+
+          for path in robots.txt sitemap.xml feed.xml llms.txt llms-full.txt zh-cn/llms.txt zh-tw/llms.txt ja/llms.txt .well-known/security.txt; do
+            code="$(curl --silent --show-error --max-time 30 --output /dev/null --write-out '%{http_code}' "${origin}/${path}")"
+            if [ "$code" != "200" ]; then
+              echo "::error::/${path} returned HTTP ${code}"
+              failures=$((failures + 1))
+            fi
+          done
+
+          not_found="$(mktemp)"
+          not_found_code="$(curl --silent --show-error --max-time 30 --output "$not_found" --write-out '%{http_code}' "${origin}/definitely-not-a-readmd-page")"
+          if [ "$not_found_code" != "404" ]; then
+            echo "::error::404 handler returned HTTP ${not_found_code}, expected HTTP 404"
+            failures=$((failures + 1))
+          fi
+          if ! grep -q 'Official homepage' "$not_found" || ! grep -q '/release-notes/' "$not_found"; then
+            echo "::error::404 handler omits recovery entry points"
+            failures=$((failures + 1))
+          fi
+
+          for image in media/overview-reader.png media/overview-editor.png media/convert-home.png; do
+            response="$(curl --silent --show-error --max-time 30 --head "${origin}/${image}")"
+            if ! printf '%s\n' "$response" | grep -qi '^HTTP/[0-9.]* 200'; then
+              echo "::error::/${image} did not return HTTP 200"
+              failures=$((failures + 1))
+            fi
+            if ! printf '%s\n' "$response" | grep -qi '^content-type: image/png'; then
+              echo "::error::/${image} does not declare image/png"
+              failures=$((failures + 1))
+            fi
+          done
+
+          if [ "$failures" -ne 0 ]; then
+            echo "::error::Production check failed with ${failures} failures"
+            exit 1
+          fi
+          echo "Verified ${#routes[@]} routes, four language corpora families, Atom feed, security.txt, quality 404, robots, sitemap, and PNG social assets at ${origin}."

@@ -7,10 +7,10 @@ Single Source of Truth: .env (READMD_VERSION) 或根目录 VERSION 文件
 1. Python 主服务 (readmd.py)
 2. Windows 安装器 (installer/setup_app.py)
 3. VSCode 扩展 (packages/vscode-extension/package.json)
-4. 鸿蒙 HarmonyOS NEXT (packages/harmonyos-app/AppScope/app.json5)
+4. 鸿蒙 HarmonyOS NEXT (packages/harmonyos-app/package.json 和 AppScope/app.json5)
 5. 统信/深度 玲珑打包 (packages/linglong/linglong.yaml)
 6. GitHub Actions CI/CD 流水线 (.github/workflows/release.yml)
-7. 多语言 README (README.md, README.en.md, README.ja.md)
+7. 多语言 README (README.md, README.en.md, README.ja.md, README.zh-TW.md)
 8. 发版说明 (release/release_notes.md)
 """
 
@@ -119,6 +119,14 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
         diffs.append((vscode_pkg, '', new_content))
 
     # 5. packages/harmonyos-app/AppScope/app.json5
+    harmony_pkg = os.path.join(ROOT, 'packages', 'harmonyos-app', 'package.json')
+    with open(harmony_pkg, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    if data.get('version') != target_ver:
+        data['version'] = target_ver
+        new_content = json.dumps(data, ensure_ascii=False, indent=2) + '\n'
+        diffs.append((harmony_pkg, '', new_content))
+
     app_json5 = os.path.join(ROOT, 'packages', 'harmonyos-app', 'AppScope', 'app.json5')
     with open(app_json5, 'r', encoding='utf-8') as f:
         src = f.read()
@@ -144,7 +152,7 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
         diffs.append((release_yml, src, new_src))
 
     # 8. README files
-    for rname in ('README.md', 'README.en.md', 'README.ja.md'):
+    for rname in ('README.md', 'README.en.md', 'README.ja.md', 'README.zh-TW.md'):
         rpath = os.path.join(ROOT, rname)
         if not os.path.isfile(rpath):
             continue
@@ -153,12 +161,13 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
         # 替换 badge
         new_src = re.sub(r'badge/version-v[0-9a-zA-Z.-]+-3b6ef5', f'badge/version-v{target_ver}-3b6ef5', src)
         # 替换下载资产后缀
-        new_src = re.sub(r'(?P<prefix>-)v(?P<version>\d[0-9a-zA-Z.-]*)(?P<suffix>\.(?:exe|zip|AppImage|deb|hap|vsix)\b)', f'\\g<prefix>v{target_ver}\\g<suffix>', new_src)
+        new_src = re.sub(r'(?P<prefix>-)v(?P<version>\d[0-9a-zA-Z.-]*)(?P<suffix>\.(?:exe|zip|AppImage|deb|vsix)\b)', f'\\g<prefix>v{target_ver}\\g<suffix>', new_src)
         new_src = re.sub(r'(_)[0-9a-zA-Z.-]+(_amd64\.deb)', f'\\g<1>{target_ver}\\g<2>', new_src)
+        new_src = re.sub(r'(_)[0-9a-zA-Z.-]+(_arm64\.deb)', f'\\g<1>{target_ver}\\g<2>', new_src)
         new_src = re.sub(r'(vscode-)[0-9a-zA-Z.-]+(\.vsix)', f'\\g<1>{target_ver}\\g<2>', new_src)
         new_src = re.sub(r'(server-)[0-9a-zA-Z.-]+(\.zip)', f'\\g<1>{target_ver}\\g<2>', new_src)
-    if new_src != src:
-        diffs.append((rpath, src, new_src))
+        if new_src != src:
+            diffs.append((rpath, src, new_src))
 
     # 9. Shared frontend/runtime version labels
     core_config = os.path.join(ROOT, 'src', 'readmd_core', 'config.py')

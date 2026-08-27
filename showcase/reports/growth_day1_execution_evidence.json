@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-25T10:35:00Z",
+  "action": "GitHub Discussion feedback prompt",
+  "status": "published",
+  "approved_artifact": "showcase/distribution/growth_execution_kit_2026-08-25.md",
+  "approval_record": "showcase/reports/growth_execution_kit_approval.json",
+  "approval_status": "approved_for_internal_distribution_planning",
+  "approval_score": 9.83,
+  "target": {
+    "platform": "GitHub Discussions",
+    "repository": "Natsummerance/readMD",
+    "discussion_number": 12,
+    "discussion_title": "ReadMD v2.3.7-beta.3: same Markdown, reading to presentation"
+  },
+  "publication": {
+    "comment_database_id": 18147161,
+    "comment_node_id": "DC_kwDOTstmss4BFOdZ",
+    "url": "https://github.com/Natsummerance/readMD/discussions/12#discussioncomment-18147161",
+    "created_at": "2026-08-25T10:33:53Z"
+  },
+  "prepublication_checks": {
+    "workflow_pages_http_200": [
+      "https://app.syminu.online/large-markdown-files/",
+      "https://app.syminu.online/markdown-to-slides/",
+      "https://app.syminu.online/convert-to-markdown/",
+      "https://app.syminu.online/scan-to-markdown/",
+      "https://app.syminu.online/bibtex-citations/"
+    ],
+    "version_fact": "2.3.7-beta.3",
+    "pagination_fact": "8,000 lines or 500 KB",
+    "windows_ocr_fact": "Windows uses WinRT recognition",
+    "macos_ocr_fact": "Apple Vision offline recognition",
+    "harmonyos_boundary_source": "https://app.syminu.online/download/",
+    "harmonyos_boundary_fact": "no prebuilt HAP is provided",
+    "community_rule_check": "GitHub repository is maintainer-owned; approved manual distribution rules permit a repository Discussion update"
+  },
+  "outcome": {
+    "substantive_replies": 0,
+    "qualified_visits": 0,
+    "release_downloads": 0,
+    "issues_opened": 0,
+    "stars_snapshot": 18,
+    "next_review_at": "2026-08-27T10:35:00Z"
+  }
+}

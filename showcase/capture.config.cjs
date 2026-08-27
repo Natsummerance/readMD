@@ -10,9 +10,9 @@ function parseViewport(value) {
 }
 
 function loadCaptureConfig(env = process.env) {
-  // A portrait desktop window preserves the complete workbench in the card-2
-  // hero without cropping the authentic viewport screenshot.
-  const viewport = parseViewport(env.SHOWCASE_VIEWPORT || '960x1280');
+  // ReadMD is a landscape desktop application; capture the full workbench at a
+  // 16:9 stage so website media does not require portrait cropping.
+  const viewport = parseViewport(env.SHOWCASE_VIEWPORT || '1440x810');
   const scale = Number(env.SHOWCASE_SCALE || '2');
   if (!Number.isInteger(scale) || scale < 1 || scale > 4) throw new Error('SHOWCASE_SCALE must be an integer from 1 to 4');
   return {

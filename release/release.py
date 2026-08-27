@@ -69,6 +69,12 @@ def asset_names(tag):
         "ReadMD-portable-v%s.exe" % version,
         "ReadMD-macos-x64-v%s.zip" % version,
         "ReadMD-macos-arm64-v%s.zip" % version,
+        "ReadMD-linux-x86_64-v%s.AppImage" % version,
+        "ReadMD-linux-aarch64-v%s.AppImage" % version,
+        "readmd_%s_amd64.deb" % version,
+        "readmd_%s_arm64.deb" % version,
+        "readmd-vscode-%s.vsix" % version,
+        "readmd-mcp-server-%s.zip" % version,
         "SHA256SUMS.txt",
     ]
 

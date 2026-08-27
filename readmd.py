@@ -51,6 +51,8 @@ from src.readmd_core import (
     readmd_fix,
 )
 from src.readmd_core.file_writer import save_text_atomic
+from src.readmd_core.static_assets import resolve_asset
+from src.readmd_core.safe_open import safe_external_url, safe_file_target
 import src.readmd_modules as RM
 from src.readmd_modules.validators import validate_file_path, validate_command, paths_within
 
@@ -631,6 +633,7 @@ class ReadMDHTTPServer(ThreadingHTTPServer):
 
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = 'HTTP/1.1'
     server_version = 'ReadMD/' + VERSION
     LAN_TOKEN = None
     LAN_BLOCKED_PATHS = frozenset({
@@ -685,7 +688,7 @@ class Handler(BaseHTTPRequestHandler):
             return False
         if not self.LAN_TOKEN:
             return True
-        if u.path in ('/', '/index.html') or u.path.startswith('/assets/'):
+        if u.path in ('/', '/index.html') or u.path.startswith('/assets/') or u.path.startswith('/i18n/'):
             return True
         qs = parse_qs(u.query)
         supplied = qs.get('t', [''])[0] or self.headers.get('X-ReadMD-Token', '')
@@ -734,27 +737,24 @@ class Handler(BaseHTTPRequestHandler):
         u = urlparse(self.path)
         path = u.path
         qs = parse_qs(u.query)
-        if path in ('/', '/index.html'):
-            self._send_index()
-        elif path.startswith('/assets/') or path.startswith('/i18n/'):
-            if path.startswith('/assets/'):
-                rel = path[len('/assets/'):]
-            else:
-                rel = path.lstrip('/')
-            fp = os.path.normpath(os.path.join(APP_DIR, 'assets', rel))
-            base = os.path.normpath(os.path.join(APP_DIR, 'assets'))
-            if not paths_within(fp, base):
+        asset = resolve_asset(APP_DIR, path, qs)
+        if asset is not None:
+            if asset.forbidden:
                 self._send(403, 'text/plain; charset=utf-8', b'forbidden')
                 return
+            if asset.body is not None:
+                self._send(
+                    200,
+                    asset.mime,
+                    asset.body,
+                    cache_control='public, max-age=31536000, immutable',
+                )
+                return
+            self._send_file(asset.path, asset.mime, immutable=asset.immutable)
+            return
 
-            mime = mimetypes.guess_type(fp)[0] or 'application/octet-stream'
-            if mime.startswith('text/') or mime in ('application/javascript', 'application/json'):
-                mime += '; charset=utf-8'
-            is_cached = rel.startswith('vendor/') or rel.startswith('i18n/')
-            self._send_file(fp, mime, immutable=bool(
-                is_cached or
-                parse_qs(u.query).get('v') or parse_qs(u.query).get('version') or
-                parse_qs(u.query).get('hash')))
+        if path in ('/', '/index.html'):
+            self._send_index()
 
         elif path == '/api/file':
             p = unquote(qs.get('p', [''])[0])
@@ -867,11 +867,13 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send(404, 'text/plain; charset=utf-8', b'not found')
 
-    def _send(self, code, ctype, body, cache_control='no-cache'):
+    def _send(self, code, ctype, body, cache_control='no-cache', x_frame_options=None):
         self.send_response(code)
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control', cache_control)
+        if x_frame_options:
+            self.send_header('X-Frame-Options', x_frame_options)
         self.end_headers()
         self.wfile.write(body)
 
@@ -931,7 +933,8 @@ class Handler(BaseHTTPRequestHandler):
         if app_token:
             data = data.replace(b'<meta name="readmd-app-token" content="">',
                                 ('<meta name="readmd-app-token" content="%s">' % app_token).encode('utf-8'))
-        self._send(200, 'text/html; charset=utf-8', data, 'no-store')
+        self._send(200, 'text/html; charset=utf-8', data, 'no-store',
+                   x_frame_options='DENY')
 
     def _sse(self, obj):
         try:
@@ -2414,10 +2417,35 @@ class Api(object):
         except Exception as e:
             return {'ok': False, 'error': str(e)}
 
-    def export_presentation(self, content, theme='black', transition='slide'):
-        """生成 Reveal.js 演示文稿 HTML。"""
+    def export_presentation(self, content, theme='black', transition='slide', save=False):
+        """生成 Reveal.js 演示文稿 HTML。
+
+        save=False（默认）：返回 html 供应用内预览 iframe 使用（行为与旧版一致）。
+        save=True：弹出保存对话框，写入自包含单文件 HTML，返回 {ok, path}。
+        """
         try:
             from src.readmd_modules.mdexport import presentation_render
+            if save:
+                import webview
+                if self._window is None:
+                    return {'ok': False, 'error': '窗口未就绪'}
+                try:
+                    target = self._window.create_file_dialog(
+                        webview.SAVE_DIALOG, save_filename='presentation.html',
+                        file_types=('HTML 网页 (*.html)',))
+                except Exception as e:
+                    return {'ok': False, 'error': '保存对话框失败：%s' % e}
+                if not target:
+                    return {'ok': False, 'canceled': True}
+                try:
+                    target = normalize_dialog_path(target, '.html')
+                except ValueError as e:
+                    return {'ok': False, 'error': str(e)}
+                html_out = presentation_render.generate_presentation_html(
+                    content, theme=theme, transition=transition, standalone=True)
+                with open(target, 'w', encoding='utf-8') as handle:
+                    handle.write(html_out)
+                return {'ok': True, 'path': target}
             html_out = presentation_render.generate_presentation_html(content, theme=theme, transition=transition)
             return {'ok': True, 'html': html_out}
         except Exception as e:
@@ -2857,6 +2885,11 @@ class Api(object):
 
     def open_external(self, url):
         try:
+            url = safe_external_url(url)
+        except Exception as exc:
+            logging.warning('Blocked unsafe external URL: %s', exc)
+            return False
+        try:
             webbrowser.open(url)
             return True
         except Exception:
@@ -2864,6 +2897,11 @@ class Api(object):
 
     def open_path(self, path):
         """用系统默认程序打开文件（如图片、PDF 或外部文档）。"""
+        try:
+            path = safe_file_target(path)
+        except Exception as exc:
+            logging.warning('Blocked unsafe file open: %s', exc)
+            return False
         try:
             if IS_MAC:
                 subprocess.Popen(['open', path])
@@ -3391,6 +3429,13 @@ def main():
         parser.error('--startup-probe 不能与 --browser 同时使用')
     if args.startup_probe_timeout <= 0:
         parser.error('--startup-probe-timeout 必须大于 0')
+
+    if IS_LINUX:
+        try:
+            from src.readmd_modules import linux_native
+            linux_native.setup_linux_env()
+        except Exception:
+            logging.exception('Linux compatibility setup failed')
     if args.startup_probe:
         _T0 = time.time()
         with _BOOT_LOCK:
@@ -3542,12 +3587,6 @@ def main():
         pass
 
     setup_win7_webview2_env()
-    if IS_LINUX:
-        try:
-            from src.readmd_modules import linux_native
-            linux_native.setup_linux_env()
-        except Exception:
-            pass
 
     try:
         if IS_MAC:

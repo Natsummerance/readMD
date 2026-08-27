@@ -18,6 +18,9 @@ module.exports = defineConfig({
     command: `python ../tools/ui_server.py ${uiPort}`,
     port: uiPort,
     reuseExistingServer: process.env.READMD_REUSE_UI_SERVER === '1',
+    env: {
+      READMD_UI_PORT: String(uiPort),
+    },
     cwd: __dirname
   },
   projects: [

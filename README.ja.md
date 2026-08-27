@@ -19,6 +19,7 @@
   [![i18n](https://img.shields.io/badge/languages-46-orange)](docs/i18n-language-reference.md)
   [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
   [![release](https://img.shields.io/github/v/release/Natsummerance/readMD)](https://github.com/Natsummerance/readMD/releases/latest)
+  [![website](https://img.shields.io/badge/site-readmd.asia-black)](https://readmd.asia)
 </div>
 
 ## こんな用途に向いています
@@ -50,8 +51,8 @@
 
 ## AI アシスタント引用リソース
 
-- [製品インデックス](website/public/llms.txt): バージョン、対応環境、プライバシー境界、主要な事実。
-- [完全引用コーパス](website/public/llms-full.txt): 長文の改ページ、非破壊修復、変換、よくある質問への直接回答。
+- [製品インデックス](https://readmd.asia/llms.txt): バージョン、対応環境、プライバシー境界、主要な事実。
+- [完全引用コーパス](https://readmd.asia/llms-full.txt): 長文の改ページ、非破壊修復、変換、よくある質問への直接回答。
 
 ## Star が役に立つ理由
 
@@ -70,7 +71,7 @@ ReadMD は、長期間保管する資料で起こりやすい問題に取り組�
 | 💻 **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-macos-x64-v2.3.7-beta.4.zip) | Intel Mac 向けネイティブビルド (Vision OCR 内蔵) |
 | 🐧 **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage) | インストール不要の Linux AppImage パッケージ |
 | 🇨🇳 **Linux / 国産 OS** | Debian / Ubuntu / UOS / 麒麟 | [⬇️ **readmd_2.3.7-beta.4_amd64.deb**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd_2.3.7-beta.4_amd64.deb) | Deb ネイティブインストールパッケージ |
-| 📱 **HarmonyOS** | HarmonyOS NEXT (HAP) | [⬇️ **ReadMD-harmonyos-v2.3.7-beta.4.hap**](https://github.com/Natsummerance/readMD/releases/latest/download/ReadMD-harmonyos-v2.3.7-beta.4.hap) | 鴻蒙ネイティブアプリパッケージ (.hap) |
+| 📱 **HarmonyOS** | ソースプロジェクト (DevEco ビルド) | [🧩 **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb のソースプロジェクト。ビルド済み HAP は未提供 |
 | 🧩 **VSCode 拡張** | VSIX パッケージ | [⬇️ **readmd-vscode-2.3.7-beta.4.vsix**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-vscode-2.3.7-beta.4.vsix) | オフラインインストール用 VSIX 拡張機能 |
 | 🤖 **MCP Server** | FastMCP stdio パッケージ | [⬇️ **readmd-mcp-server-2.3.7-beta.4.zip**](https://github.com/Natsummerance/readMD/releases/latest/download/readmd-mcp-server-2.3.7-beta.4.zip) | Claude Desktop / Cursor 連携用 FastMCP パッケージ |
 | 🔐 **チェックサム** | SHA-256 リスト | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/latest/download/SHA256SUMS.txt) | 配布ファイルの整合性検証用チェックサム |

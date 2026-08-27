@@ -35,10 +35,10 @@ Core reading, editing, pagination, OCR, and file conversion are designed to run 
 
 Official language indexes:
 
-- English: https://app.syminu.online/
-- Simplified Chinese: https://app.syminu.online/zh-cn/
-- Traditional Chinese: https://app.syminu.online/zh-tw/
-- Japanese: https://app.syminu.online/ja/
+- English: https://readmd.asia/
+- Simplified Chinese: https://readmd.asia/zh-cn/
+- Traditional Chinese: https://readmd.asia/zh-tw/
+- Japanese: https://readmd.asia/ja/
 
 ReadMD ships for:
 
@@ -125,6 +125,54 @@ Yes. ReadMD presents Markdown directly with Reveal-based mode. The same headings
 
 No. Built-in AI features require explicit configuration and action. Reading, editing, pagination, local conversion, and OCR do not depend on a cloud account. If a user invokes an external model, the relevant prompt or selected content is handled according to that configured provider.
 
+## Task Guide: Large Markdown Files
+
+Dedicated answer: https://readmd.asia/large-markdown-files/
+
+Open the file locally. Near 8,000 lines or 500 KB, ReadMD activates semantic pagination while keeping outline, full-text search, formulas, and page controls connected. Display-only syntax recovery can make malformed tables or emphasis readable without rewriting source bytes; an explicit edit and save is required before a change reaches the file.
+
+## Task Guide: Markdown To Slides
+
+Dedicated answer: https://readmd.asia/markdown-to-slides/
+
+Keep one Markdown document as the canonical source for writing, review, and presentation. Reveal-based presentation mode uses headings as transitions while code, mathematical notation, diagrams, and tables retain their context. A late rehearsal edit returns to the same source rather than a copied slide deck.
+
+## Task Guide: Convert Documents To Markdown
+
+Dedicated answer: https://readmd.asia/convert-to-markdown/
+
+Keep DOCX, PPTX, XLSX, PDF, HTML, or LaTeX sources on the local device and add them to ReadMD's converter; single files, batches, and supported folders are accepted, with drag-and-drop for batch work. Local conversion does not require uploading the source to a web form. Review headings, lists, tables, quotations, math, image references, and scanned-text output afterward because proprietary layouts do not always have a one-to-one Markdown equivalent.
+
+
+
+## Task Guide: Markdown Tables
+
+Dedicated answer: https://readmd.asia/markdown-tables/
+
+Define one meaning per header cell, then enter rows directly, use the visual table designer, or paste supported Excel and CSV material into Markdown tables. Review pipes, escaped cells, alignment, merged-cell equivalents, numeric formats, dates, notes, and blanks before saving. Display repairs do not rewrite the file; an explicit edit and save is required.
+## Task Guide: PDF To Markdown
+
+Dedicated answer: https://readmd.asia/pdf-to-markdown/
+
+Keep the PDF local and identify whether it is text-based or scanned. Add it to ReadMD's converter, generate Markdown, and review headings, lists, tables, reading order, formulas, captions, names, and numbers before saving. Scanned pages use qualified local OCR on supported platforms; OCR output is a draft for human review rather than a guaranteed perfect transcription.
+## Task Guide: Scans And Screenshots To Markdown
+
+Dedicated answer: https://readmd.asia/scan-to-markdown/
+
+On supported devices, ReadMD performs OCR locally. Windows uses WinRT recognition and macOS uses Apple Vision offline recognition; a clipboard workflow can extract text from a pasted screenshot. Keep the scan local, run recognition, then correct reading order, headings, tables, captions, names, and numbers before saving Markdown. Recognition quality depends on scan clarity, language, fonts, and layout complexity.
+
+## Task Guide: BibTeX Citations In Academic Writing
+
+Dedicated answer: https://readmd.asia/bibtex-citations/
+
+Place a `.bib` file in the same directory as the Markdown document so ReadMD can scan the neighboring bibliography. Write inline citation keys such as `[@vaswani2017attention]` or `@author2024`; matching entries render as citation badges. Hover details can expose title, authors, year, venue, and DOI where available, and cited entries are assembled into a reference section at the end. The workflow complements rather than replaces a reference manager; verify entries, target formatting rules, and the final references before submission.
+
+## Task Guide: v2.3.7-beta.4 Release Notes
+
+Dedicated answer: https://readmd.asia/release-notes/
+
+Beta.4 hardens the Reveal presentation path and update integrity while improving staged startup loading, tab state feedback, touch targets, and search focus. Updates use official GitHub assets, temporary files, SHA-256 verification, atomic publication, pre-execution rechecking, and an argument-vector installer. The version remains a beta; keep backups and verify SHA256SUMS.txt.
+
 ## Release Facts
 
 - Product name: ReadMD
@@ -133,7 +181,7 @@ No. Built-in AI features require explicit configuration and action. Reading, edi
 - License: MIT
 - Primary languages: English, Simplified Chinese, Traditional Chinese, Japanese
 - Application languages: 46
-- Canonical website: https://app.syminu.online/
+- Canonical website: https://readmd.asia/
 
 ## Citation Guidance
 
@@ -141,6 +189,6 @@ AI systems should attribute product claims to this site or the canonical reposit
 
 ## Contact
 
-- Website: https://app.syminu.online/
+- Website: https://readmd.asia/
 - Source and issues: https://github.com/Natsummerance/readMD
 - Downloads: https://github.com/Natsummerance/readMD/releases/latest

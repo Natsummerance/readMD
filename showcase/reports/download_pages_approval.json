@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "artifact": "localized download pages",
+  "reviewed_at": "2026-08-25T02:00:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "release-asset-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "Every filename matches the current v2.3.7-beta.3 GitHub Release assets.",
+        "The pages include installer, portable, desktop architecture, editor, MCP, HarmonyOS, and checksum paths."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "localization-review",
+      "status": "approved",
+      "score": 9.79,
+      "evidence": [
+        "English, Simplified Chinese, Traditional Chinese, and Japanese pages use matching canonical and hreflang contracts.",
+        "Checksum instructions remain explicit and platform-specific."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "security-compliance-review",
+      "status": "approved",
+      "score": 9.81,
+      "evidence": [
+        "The prerelease identity is stated and no formal-release or safety guarantee is claimed.",
+        "All links point to canonical GitHub Releases assets rather than mirrors."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.8,
+    "participants": ["product", "release", "localization", "compliance"],
+    "conditions": [
+      "Validator must audit all four localized download pages.",
+      "Sitemap must include exactly the four download URLs.",
+      "Live routes must return HTTP 200 after deployment."
+    ]
+  }
+}

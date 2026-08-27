@@ -41,6 +41,8 @@ function captureReaderState(tab) {
   if (!tab) return;
   const pagination = state.pagination || {};
   tab.scrollPos = $('content')?.scrollTop || 0;
+  const scrollKey = normalizePath(tab.title || tab.name || state.file || '');
+  if (scrollKey) state.scrollPos[scrollKey] = tab.scrollPos;
   tab.readerMode = pagination.enabled ? pagination.mode : 'paged';
   tab.readerPage = pagination.enabled && pagination.mode === 'paged'
     ? pagination.currentPage
@@ -225,7 +227,11 @@ function renderTabsBar() {
       item.type = 'button';
       item.setAttribute('role', 'menuitem');
       item.tabIndex = -1;
-      item.innerHTML = '<span>' + (tab.title || tab.name) + (tab.isDirty ? ' &bull;' : '') + '</span><small>' + (tab.path || (tab.isVirtual ? (_t('tabs.virtual') || '虚拟') : '')) + '</small>';
+      const label = document.createElement('span');
+      label.textContent = (tab.title || tab.name) + (tab.isDirty ? ' •' : '');
+      const meta = document.createElement('small');
+      meta.textContent = tab.path || (tab.isVirtual ? (_t('tabs.virtual') || '虚拟') : '');
+      item.append(label, meta);
       item.addEventListener('click', () => {
         switchTab(tab.id);
         dropdown.classList.add('hidden');
@@ -236,8 +242,12 @@ function renderTabsBar() {
   }
 
   if (bar && overflowWrap) {
-    const isOverflow = bar.scrollWidth > bar.clientWidth + 6;
-    overflowWrap.classList.toggle('hidden', !isOverflow);
+    const syncOverflow = () => {
+      if (!bar.isConnected || !overflowWrap.isConnected) return;
+      overflowWrap.classList.toggle('hidden', !(bar.scrollWidth > bar.clientWidth + 6));
+    };
+    syncOverflow();
+    requestAnimationFrame(syncOverflow);
   }
 
   const revealActiveTab = (container) => {
@@ -427,6 +437,10 @@ function closeTabContextMenu({ restoreFocus = false } = {}) {
 async function renderActiveTab({ restoreScroll = false } = {}) {
   const nextTab = getActiveTab();
   if (!nextTab) return;
+  const scrollKey = normalizePath(nextTab.title || nextTab.name || nextTab.path || '');
+  if (scrollKey && typeof nextTab.scrollPos === 'number') {
+    state.scrollPos[scrollKey] = nextTab.scrollPos;
+  }
   const renderEpoch = ++tabRenderEpoch;
   setFixes(nextTab.fixes || [], nextTab.stats || {});
   await renderContent(nextTab.content, nextTab.title || nextTab.name);
@@ -511,6 +525,7 @@ async function switchTab(tabId) {
   syncStateFromActiveTab();
   renderTabsBar();
   const nextTabState = getActiveTab();
+  renderTabsBar();
   if (nextTabState?.externalChanged && nextTabState.path && !nextTabState.isDirty) {
     nextTabState.externalChanged = false;
     await loadFile(nextTabState.path, { force: true });

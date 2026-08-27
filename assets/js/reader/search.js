@@ -85,6 +85,31 @@ function highlightTextMatches(body, query) {
   }
 }
 
+function highlightCurrentPageForSearch(query) {
+  const body = document.querySelector('#content .markdown-body');
+  if (!body) return false;
+  state.currentMarks = [];
+  state.searchIndex = 0;
+  highlightTextMatches(body, query);
+  return true;
+}
+
+function focusPagedSearchMatch(match) {
+  if (!match || match.pageIndex === state.pagination.currentPage) {
+    if (match) jumpToLocalMark(match.matchIdxInPage);
+    return;
+  }
+
+  // Page replacement removes the previous DOM marks synchronously.  Do not
+  // queue the re-highlight behind a frame: low-end devices can starve frames
+  // while laying out a long page, which would leave the search result lost.
+  renderPage(match.pageIndex);
+  if (!highlightCurrentPageForSearch(globalSearchState.query)) return;
+  updateSearchCount();
+  enterAdvancePending = true;
+  jumpToLocalMark(match.matchIdxInPage);
+}
+
 function doSearch(q, jumpToIdx, { jump = true } = {}) {
   clearMarks();
   state.lastQuery = q;
@@ -123,9 +148,7 @@ function doSearch(q, jumpToIdx, { jump = true } = {}) {
   if (!isPaged) {
     globalSearchState = { query: q, matches: [], globalIndex: 0 };
   }
-  const body = document.querySelector('#content .markdown-body');
-  if (!body) return;
-  highlightTextMatches(body, q);
+  if (!highlightCurrentPageForSearch(q)) return;
 
   updateSearchCount();
   enterAdvancePending = true;
@@ -134,10 +157,7 @@ function doSearch(q, jumpToIdx, { jump = true } = {}) {
     const curMatch = globalSearchState.matches[globalSearchState.globalIndex];
     if (!jump) return;
     if (curMatch && curMatch.pageIndex !== state.pagination.currentPage) {
-      renderPage(curMatch.pageIndex);
-      requestAnimationFrame(() => {
-        doSearch(globalSearchState.query, globalSearchState.globalIndex, { jump });
-      });
+      focusPagedSearchMatch(curMatch);
       return;
     }
     if (curMatch && curMatch.pageIndex === state.pagination.currentPage) {
@@ -153,14 +173,7 @@ function focusCurrentSearchMatch() {
   if (isPaged) {
     const match = globalSearchState.matches[globalSearchState.globalIndex];
     if (!match) return;
-    if (match.pageIndex !== state.pagination.currentPage) {
-      renderPage(match.pageIndex);
-      requestAnimationFrame(() => {
-        doSearch(globalSearchState.query, globalSearchState.globalIndex);
-      });
-      return;
-    }
-    jumpToLocalMark(match.matchIdxInPage);
+    focusPagedSearchMatch(match);
     return;
   }
   jumpToLocalMark(0);
@@ -183,11 +196,7 @@ function jumpToMark(dir) {
     const targetMatch = globalSearchState.matches[nextGlobal];
 
     if (targetMatch.pageIndex !== state.pagination.currentPage) {
-      renderPage(targetMatch.pageIndex);
-      // 页面切换渲染后重新高亮本页并在本页定位对应匹配项
-      requestAnimationFrame(() => {
-        doSearch(globalSearchState.query, nextGlobal);
-      });
+      focusPagedSearchMatch(targetMatch);
     } else {
       updateSearchCount();
       jumpToLocalMark(targetMatch.matchIdxInPage);

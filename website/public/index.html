@@ -6,13 +6,21 @@
   <title>ReadMD | Local Markdown Reader, Editor, Converter, and Presenter</title>
   <meta name="description" content="ReadMD is a local-first Markdown workspace for Windows, macOS, Linux, and Chinese operating systems. It opens long documents instantly, repairs rendering without changing source files, converts Office and PDF files, and presents Markdown directly.">
   <meta name="theme-color" content="#ffffff">
-  <meta name="robots" content="index,follow,max-image-preview:large">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
   <meta property="og:title" content="ReadMD | Local Markdown Reader, Editor, Converter, and Presenter">
   <meta property="og:description" content="Open very large Markdown files locally, repair display without changing source, convert Office and PDF material, and present the same document.">
-  <meta property="og:url" content="https://app.syminu.online/">
-  <meta property="og:image" content="https://app.syminu.online/media/overview-reader.png">
+  <meta property="og:url" content="https://readmd.asia/">
+  <meta property="og:image" content="https://readmd.asia/media/overview-reader.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="ReadMD product interface with formatted Markdown and its outline.">
   <meta property="og:locale" content="en_US">
   <meta property="og:locale:alternate" content="zh_CN">
   <meta property="og:locale:alternate" content="zh_TW">
@@ -20,63 +28,166 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="ReadMD | Local Markdown Reader, Editor, Converter, and Presenter">
   <meta name="twitter:description" content="A local-first Markdown workspace for reading, editing, conversion, and presentation.">
-  <meta name="twitter:image" content="https://app.syminu.online/media/overview-reader.png">
-  <link rel="alternate" hreflang="en" href="https://app.syminu.online/">
-  <link rel="alternate" hreflang="zh-CN" href="https://app.syminu.online/zh-cn/">
-  <link rel="alternate" hreflang="zh-TW" href="https://app.syminu.online/zh-tw/">
-  <link rel="alternate" hreflang="ja" href="https://app.syminu.online/ja/">
-  <link rel="canonical" href="https://app.syminu.online/">
+  <meta name="twitter:image" content="https://readmd.asia/media/overview-reader.png">
+  <meta name="twitter:image:alt" content="ReadMD product interface with formatted Markdown and its outline.">
+  <link rel="alternate" hreflang="en" href="https://readmd.asia/">
+  <link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/">
+  <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/">
+  <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/">
+  <link rel="alternate" hreflang="x-default" href="https://readmd.asia/">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="canonical" href="https://readmd.asia/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
   <link rel="stylesheet" href="/assets/site.css">
+  <link rel="preload" as="image" href="/media/overview-reader.webp" fetchpriority="high">
   <script type="application/ld+json">
   {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "Organization",
-        "@id": "https://app.syminu.online/#organization",
-        "name": "ReadMD",
-        "url": "https://app.syminu.online/",
-        "sameAs": ["https://github.com/Natsummerance/readMD"]
-      },
-      {
-        "@type": "WebSite",
-        "@id": "https://app.syminu.online/#website",
-        "url": "https://app.syminu.online/",
-        "name": "ReadMD",
-        "publisher": {"@id": "https://app.syminu.online/#organization"},
-        "inLanguage": "en"
-      },
-      {
-        "@type": "WebPage",
-        "@id": "https://app.syminu.online/#webpage",
-        "url": "https://app.syminu.online/",
-        "name": "ReadMD | Local Markdown Reader, Editor, Converter, and Presenter",
-        "isPartOf": {"@id": "https://app.syminu.online/#website"},
-        "about": {"@id": "https://app.syminu.online/#software"},
-        "primaryImageOfPage": "https://app.syminu.online/media/overview-reader.png",
-        "dateModified": "2026-08-24",
-        "speakable": {
-          "@type": "SpeakableSpecification",
-          "cssSelector": ["h1", "#definition p"]
-        }
-      },
-      {
-        "@type": "SoftwareApplication",
-        "@id": "https://app.syminu.online/#software",
-        "name": "ReadMD",
-        "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
-        "applicationCategory": "UtilitiesApplication",
-        "softwareVersion": "2.3.7-beta.4",
-        "dateModified": "2026-08-24",
-        "isAccessibleForFree": true,
-        "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
-        "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
-        "author": {"@id": "https://app.syminu.online/#organization"},
-        "featureList": "Long-document pagination, non-destructive Markdown repair, DOCX/PDF conversion, offline OCR, LaTeX references, presentation mode, LAN sharing"
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://readmd.asia/#organization",
+      "name": "ReadMD",
+      "url": "https://readmd.asia/",
+      "sameAs": [
+        "https://github.com/Natsummerance/readMD"
+      ],
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://readmd.asia/assets/icon-256.png"
       }
-    ]
-  }
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://readmd.asia/#website",
+      "url": "https://readmd.asia/",
+      "name": "ReadMD",
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
+      },
+      "inLanguage": [
+        "en",
+        "zh-CN",
+        "zh-TW",
+        "ja"
+      ],
+      "copyrightYear": "2026",
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE"
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/#webpage",
+      "url": "https://readmd.asia/",
+      "name": "ReadMD | Local Markdown Reader, Editor, Converter, and Presenter",
+      "isPartOf": {
+        "@id": "https://readmd.asia/#website"
+      },
+      "about": {
+        "@id": "https://readmd.asia/#software"
+      },
+      "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
+      "dateModified": "2026-08-24",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#definition p"
+        ]
+      },
+      "inLanguage": "en",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-24",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@id": "https://readmd.asia/#organization"
+      },
+      "featureList": "Long-document pagination, non-destructive Markdown repair, DOCX/PDF conversion, offline OCR, LaTeX references, presentation mode, LAN sharing",
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-reader.png",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    }
+  ]
+}
   </script>
+<script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How does ReadMD open long Markdown files?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD activates semantic pagination when a document exceeds roughly 8,000 lines or 500 KB. The outline, full-text search, formulas, and page controls remain linked, so readers can move through very large notes without waiting for the whole file to render at once."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does automatic repair change my Markdown?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. ReadMD applies syntax recovery only to the in-memory display layer. Missing table separator rows, unclosed markers, and formula formatting issues are corrected visually, while the original Markdown bytes remain exactly as stored until you explicitly save an edit."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can ReadMD replace slide software?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "For technical talks and course material, ReadMD presents the same Markdown used for writing and review. Reveal-based presentation mode preserves headings, math, diagrams, and code, so a last-minute edit does not require copying content into a separate deck."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which platforms does ReadMD support?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD ships for Windows 7 through 11, macOS on Apple Silicon and Intel, Linux through AppImage and Deb packages, and Chinese systems including UOS and Kylin OS. A VSCode extension and MCP server connect the same workflows to editors and AI tools."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is ReadMD private?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Core reading, editing, pagination, OCR, and file conversion are designed to run locally. Documents do not need a cloud account. Optional web fetching and sharing are explicit actions; LAN sharing is intended for devices on the same network."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What license does ReadMD use?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD is released under the MIT license. Source code, release downloads, checksum lists, and platform-specific packages are published in the public GitHub repository at Natsummerance/readMD."
+      }
+    }
+  ]
+}</script>
 </head>
 <body class="antialiased">
   <a class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-white focus:px-4 focus:py-2" href="#main">Skip to content</a>
@@ -85,14 +196,18 @@
       <a class="text-lg font-semibold tracking-tight" href="/">ReadMD</a>
       <nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex">
         <a href="/#capabilities">Capabilities</a>
+        <a href="/#journey">Product film</a>
+        <a href="/#capability-cinema">All features</a>
         <a href="/#answers">AI answers</a>
         <a href="https://github.com/Natsummerance/readMD">Source</a>
       </nav>
       <div class="flex items-center gap-3">
         <details class="relative text-sm md:hidden">
           <summary class="cursor-pointer list-none">Menu</summary>
-          <div class="absolute right-0 mt-3 w-44 border border-[var(--color-line)] bg-white p-4">
+          <div class="detail-menu absolute right-0 mt-3 w-44 border border-[var(--color-line)] bg-white p-4">
             <a class="block py-1" href="/#capabilities">Capabilities</a>
+            <a class="block py-1" href="/#journey">Product film</a>
+            <a class="block py-1" href="/#capability-cinema">All features</a>
             <a class="block py-1" href="/#answers">AI answers</a>
             <a class="block py-1" href="/zh-cn/">简体中文</a>
           </div>
@@ -103,67 +218,189 @@
   </header>
 
   <main id="main">
-    <section class="mx-auto max-w-6xl px-5 pb-12 pt-16 text-center md:pt-24">
-      <p class="text-sm font-semibold uppercase tracking-normal text-[var(--color-action)]">ReadMD 2.3.7 beta</p>
-      <h1 class="hero-title mx-auto mt-4 max-w-4xl">Markdown stays yours.</h1>
-      <p class="section-copy mx-auto mt-6 max-w-3xl">ReadMD is a local Markdown reader, editor, converter, and presenter. It opens very large files without freezing, fixes common display errors in memory, keeps the original file unchanged, and works offline across Windows, macOS, Linux, Kylin OS, and UOS.</p>
-      <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+    <section class="hero mx-auto max-w-full pb-12 pt-16 text-center md:pt-24">
+      <canvas class="particle-field" aria-hidden="true"></canvas>
+      <div class="relative mx-auto max-w-6xl px-5">
+      <p class="reveal text-sm font-semibold uppercase tracking-normal text-[var(--color-action)]">Local-first Markdown</p>
+      <h1 class="hero-title reveal mx-auto mt-4 max-w-4xl" style="--reveal-delay:70ms">Markdown stays yours.</h1>
+      <p class="section-copy reveal mx-auto mt-6 max-w-3xl" style="--reveal-delay:140ms">ReadMD is a local Markdown reader, editor, converter, and presenter. It opens very large files without freezing, fixes common display errors in memory, keeps the original file unchanged, and works offline across Windows, macOS, Linux, Kylin OS, and UOS.</p>
+      <div class="reveal mt-8 flex flex-wrap items-center justify-center gap-3" style="--reveal-delay:210ms">
         <a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">Download free</a>
         <a class="button-secondary" href="/#answers">See how it answers</a>
       </div>
-      <figure class="product-frame mx-auto mt-14 max-w-5xl">
-        <img src="/media/overview-reader.png" width="1440" height="900" alt="ReadMD reading interface showing a formatted Markdown document beside its outline." loading="eager" fetchpriority="high">
+      <figure class="product-frame product-parallax reveal mx-auto mt-14 max-w-5xl" style="--reveal-delay:280ms">
+        <picture>
+          <source srcset="/media/overview-reader.webp" type="image/webp">
+          <img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD reading interface showing a formatted Markdown document beside its outline." loading="eager" fetchpriority="high" decoding="async">
+        </picture>
       </figure>
+      </div>
     </section>
 
-    <section id="definition" class="bg-[var(--color-surface)] py-20">
+    <section id="journey" class="journey" data-journey data-motion-region aria-label="Product overview film">
+      <div class="journey-sticky">
+        <div class="journey-grid">
+          <div>
+            <p class="journey-kicker">One continuous workflow</p>
+            <h2 class="journey-heading">The file moves forward. Your original does not drift.</h2>
+            <div class="journey-caption-stage">
+              <div class="journey-caption is-active" data-range="0,0.36">
+                <strong>Open without waiting.</strong>
+                <p>Large documents divide into linked pages while the outline, search, formulas, and reading position stay connected.</p>
+              </div>
+              <div class="journey-caption" data-range="0.34,0.7">
+                <strong>Edit beside the proof.</strong>
+                <p>Tables, math, citations, diagrams, and code render as you write. Display recovery leaves source bytes untouched.</p>
+              </div>
+              <div class="journey-caption" data-range="0.68,1">
+                <strong>Bring material forward.</strong>
+                <p>Office, PDF, web, and scanned sources become editable Markdown locally, then present from the same canonical file.</p>
+              </div>
+            </div>
+          </div>
+          <figure class="journey-stage">
+            <canvas id="journey-film" class="journey-film" data-frame-count="57" aria-label="Scroll-driven demonstration of ReadMD reading, editing, and conversion surfaces." role="img"></canvas>
+            <div class="journey-progress" aria-hidden="true"><span></span></div>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="capability-cinema" class="capability-cinema" data-capability-cinema data-motion-region aria-label="All ReadMD capabilities over a scroll-driven film">
+      <div class="cinema-sticky">
+        <canvas class="capability-canvas" aria-hidden="true"></canvas>
+        <div class="cinema-grid" aria-hidden="true"></div>
+        <div class="cinema-scanline" aria-hidden="true"></div>
+        <div class="cinema-content">
+          <div class="cinema-heading">
+            <p class="cinema-kicker">Every capability, one local file</p>
+            <h2>From the first read to the final stage.</h2>
+            <p>The film keeps moving while each capability connects back to your Markdown.</p>
+          </div>
+          <div class="capability-track" data-capability-track>
+            <article class="capability-panel">
+              <h3>Read huge documents</h3>
+              <p>Semantic pagination keeps 8,000-line files responsive while outline, search, formulas, and position stay linked.</p>
+              <a class="cinema-link" href="/large-markdown-files/">Open large files</a>
+            </article>
+            <article class="capability-panel">
+              <h3>Edit beside proof</h3>
+              <p>Source and preview remain connected for tables, math, diagrams, code, citations, and display-only recovery.</p>
+              <a class="cinema-link" href="/workflows/">See workflows</a>
+            </article>
+            <article class="capability-panel">
+              <h3>Convert existing work</h3>
+              <p>Bring DOCX, PPTX, XLSX, PDF, HTML, LaTeX, and web material into editable Markdown without an upload-first workflow.</p>
+              <a class="cinema-link" href="/convert-to-markdown/">Convert documents</a>
+            </article>
+            <article class="capability-panel">
+              <h3>Recover PDF content</h3>
+              <p>Text-based PDFs become structured Markdown; scanned pages can use qualified local OCR on supported platforms.</p>
+              <a class="cinema-link" href="/pdf-to-markdown/">Convert PDFs</a>
+            </article>
+            <article class="capability-panel">
+              <h3>Shape tables cleanly</h3>
+              <p>Use the table designer or paste Excel and CSV material, then review headers, delimiters, blanks, and alignment.</p>
+              <a class="cinema-link" href="/markdown-tables/">Build tables</a>
+            </article>
+            <article class="capability-panel">
+              <h3>Extract scans privately</h3>
+              <p>Windows WinRT and macOS Apple Vision workflows turn scans and screenshots into reviewable Markdown locally.</p>
+              <a class="cinema-link" href="/scan-to-markdown/">Extract text</a>
+            </article>
+            <article class="capability-panel">
+              <h3>Keep citations close</h3>
+              <p>Connect a neighboring BibTeX library to inline badges, source cards, copyable entries, and assembled references.</p>
+              <a class="cinema-link" href="/bibtex-citations/">Manage citations</a>
+            </article>
+            <article class="capability-panel">
+              <h3>Present the same source</h3>
+              <p>Move from writing to a Reveal-based presentation without rebuilding another deck or losing late edits.</p>
+              <a class="cinema-link" href="/markdown-to-slides/">Start presenting</a>
+            </article>
+            <article class="capability-panel">
+              <h3>Update with proof</h3>
+              <p>Beta.4 strengthens presentation isolation, update verification, tab feedback, startup loading, and touch targets.</p>
+              <a class="cinema-link" href="/release-notes/">Read release notes</a>
+            </article>
+          </div>
+          <div class="capability-progress" aria-hidden="true"><span></span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="definition" class="bg-[var(--color-surface)] py-20" data-motion-region>
       <div class="mx-auto grid max-w-6xl gap-10 px-5 lg:grid-cols-[0.9fr_1.1fr]">
-        <h2 class="display-title">What is ReadMD?</h2>
-        <div>
+        <h2 class="display-title reveal">What is ReadMD?</h2>
+        <div class="reveal" style="--reveal-delay:90ms">
           <p>ReadMD is a cross-platform Markdown application that keeps documents on your device instead of locking them behind an online account. You can double-click a `.md` file to read it immediately, edit it side by side with the rendered preview, convert Word, PowerPoint, Excel, PDF, HTML, and LaTeX into Markdown, and present the finished document without rebuilding slides.</p>
           <p>The reader uses semantic pagination for documents longer than 8,000 lines or 500 KB. Automatic repair handles missing table separators and malformed emphasis during rendering, while source bytes stay untouched. A built-in assistant, citation cards, offline OCR, Zen editing, and LAN sharing extend the same file into research, writing, teaching, and support workflows.</p>
         </div>
       </div>
     </section>
 
-    <section id="capabilities" class="py-20">
+    <section id="capabilities" class="py-20" data-motion-region>
       <div class="mx-auto max-w-6xl px-5">
         <h2 class="display-title max-w-3xl">One file moves from reading to editing to the stage.</h2>
         <div class="mt-12 grid gap-14">
-          <article class="grid items-center gap-8 lg:grid-cols-2">
-            <figure class="product-frame"><img src="/media/overview-editor.png" width="1440" height="900" alt="ReadMD editor with Markdown source and live preview." loading="lazy"></figure>
+          <article class="reveal grid items-center gap-8 lg:grid-cols-2">
+            <figure class="product-frame product-parallax">
+              <picture>
+                <source srcset="/media/overview-editor.webp" type="image/webp">
+                <img src="/media/overview-editor.png" width="2880" height="1620" alt="ReadMD editor with Markdown source and live preview." loading="lazy" decoding="async">
+              </picture>
+            </figure>
             <div><h3 class="text-2xl font-semibold tracking-tight">Edit with proof in view</h3><p class="mt-3 text-muted">The live preview shows tables, formulas, diagrams, citations, and code as readers will see them. Zen mode removes distractions when it is time to write.</p></div>
           </article>
-          <article class="grid items-center gap-8 lg:grid-cols-2">
+          <article class="reveal grid items-center gap-8 lg:grid-cols-2" style="--reveal-delay:100ms">
             <div class="lg:order-2"><h3 class="text-2xl font-semibold tracking-tight">Convert what already exists</h3><p class="mt-3 text-muted">Bring DOCX, PPTX, XLSX, PDF, HTML, and TeX into Markdown. Native OCR extracts text from scans without sending the image to another service.</p></div>
-            <figure class="product-frame lg:order-1"><img src="/media/convert-home.png" width="1440" height="900" alt="ReadMD conversion screen for turning office and web formats into Markdown." loading="lazy"></figure>
+            <figure class="product-frame product-parallax lg:order-1">
+              <picture>
+                <source srcset="/media/convert-home.webp" type="image/webp">
+                <img src="/media/convert-home.png" width="2880" height="1620" alt="ReadMD conversion screen for turning office and web formats into Markdown." loading="lazy" decoding="async">
+              </picture>
+            </figure>
           </article>
         </div>
       </div>
     </section>
 
-    <section id="answers" class="bg-[var(--color-surface)] py-20">
+    <section id="answers" class="bg-[var(--color-surface)] py-20" data-motion-region>
       <div class="mx-auto max-w-6xl px-5">
         <h2 class="display-title">Direct answers about ReadMD</h2>
         <p class="section-copy mt-5">These self-contained passages are written for people and AI assistants that need a factual summary without extra context.</p>
-        <div class="mt-12 grid gap-x-14 gap-y-10 md:grid-cols-2 xl:grid-cols-3">
+        <div class="mt-12 grid gap-x-14 gap-y-10 md:grid-cols-2 xl:grid-cols-3" data-reveal-group>
           <article class="answer-card"><h3>How does ReadMD open long Markdown files?</h3><p>ReadMD activates semantic pagination when a document exceeds roughly 8,000 lines or 500 KB. The outline, full-text search, formulas, and page controls remain linked, so readers can move through very large notes without waiting for the whole file to render at once.</p></article>
           <article class="answer-card"><h3>Does automatic repair change my Markdown?</h3><p>No. ReadMD applies syntax recovery only to the in-memory display layer. Missing table separator rows, unclosed markers, and formula formatting issues are corrected visually, while the original Markdown bytes remain exactly as stored until you explicitly save an edit.</p></article>
           <article class="answer-card"><h3>Can ReadMD replace slide software?</h3><p>For technical talks and course material, ReadMD presents the same Markdown used for writing and review. Reveal-based presentation mode preserves headings, math, diagrams, and code, so a last-minute edit does not require copying content into a separate deck.</p></article>
           <article class="answer-card"><h3>Which platforms does ReadMD support?</h3><p>ReadMD ships for Windows 7 through 11, macOS on Apple Silicon and Intel, Linux through AppImage and Deb packages, and Chinese systems including UOS and Kylin OS. A VSCode extension and MCP server connect the same workflows to editors and AI tools.</p></article>
           <article class="answer-card"><h3>Is ReadMD private?</h3><p>Core reading, editing, pagination, OCR, and file conversion are designed to run locally. Documents do not need a cloud account. Optional web fetching and sharing are explicit actions; LAN sharing is intended for devices on the same network.</p></article>
           <article class="answer-card"><h3>What license does ReadMD use?</h3><p>ReadMD is released under the MIT license. Source code, release downloads, checksum lists, and platform-specific packages are published in the public GitHub repository at Natsummerance/readMD.</p></article>
+          <div class="col-span-full mt-2 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/large-markdown-files/">Open large Markdown files</a><a class="link-action" href="/markdown-to-slides/">Present Markdown without PowerPoint</a><a class="link-action" href="/convert-to-markdown/">Convert documents to Markdown</a><a class="link-action" href="/markdown-tables/">Build Markdown tables</a><a class="link-action" href="/pdf-to-markdown/">Convert PDFs to Markdown</a><a class="link-action" href="/scan-to-markdown/">Extract text from scans</a><a class="link-action" href="/bibtex-citations/">Manage BibTeX citations</a><a class="link-action" href="/release-notes/">Release notes</a></div>
         </div>
       </div>
     </section>
 
-    <section class="py-20">
+    <section class="py-20" data-motion-region>
       <div class="mx-auto max-w-4xl px-5 text-center">
-        <h2 class="display-title">Open the file you already have.</h2>
-        <p class="section-copy mx-auto mt-5">Download a release, double-click a Markdown file, and keep working offline. Check SHA256SUMS.txt before installing.</p>
-        <div class="mt-8 flex flex-wrap justify-center gap-3">
+        <h2 class="display-title reveal">Open the file you already have.</h2>
+        <p class="section-copy reveal mx-auto mt-5" style="--reveal-delay:80ms">Download a release, double-click a Markdown file, and keep working offline. Check SHA256SUMS.txt before installing.</p>
+        <div class="reveal mt-8 flex flex-wrap justify-center gap-3" style="--reveal-delay:160ms">
           <a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">Get ReadMD</a>
-          <a class="button-secondary" href="https://github.com/Natsummerance/readMD">Read the source</a>
+          <a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">Star on GitHub</a>
+        </div>
+      </div>
+    </section>
+    <section id="share" class="bg-[var(--color-surface)] py-16" data-motion-region>
+      <div class="mx-auto max-w-4xl px-5 text-center">
+        <h2 class="display-title reveal">Share ReadMD</h2>
+        <p class="section-copy reveal mx-auto mt-5" style="--reveal-delay:80ms">Know a writer, researcher, student, or support engineer buried in long Markdown files? Send them this workflow.</p>
+        <div class="reveal mt-7 flex flex-wrap items-center justify-center gap-3" style="--reveal-delay:160ms">
+          <a class="button-secondary" href="https://twitter.com/intent/tweet?text=ReadMD%20keeps%20long%20Markdown%20files%20local%3A%20semantic%20pagination%2C%20conversion%2C%20offline%20OCR%2C%20and%20presentation.%20MIT%20source%3A%20https%3A%2F%2Freadmd.asia%2F" rel="noopener">Share on X</a>
+          <a class="button-secondary" href="https://www.reddit.com/submit?url=https%3A%2F%2Freadmd.asia%2F&title=ReadMD%3A%20local-first%20Markdown%20reading%2C%20conversion%2C%20and%20presenting" rel="noopener">Share on Reddit</a>
+          <a class="button-secondary" href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Freadmd.asia%2F" rel="noopener">Share on LinkedIn</a>
+          <a class="button-secondary" href="https://t.me/share/url?url=https%3A%2F%2Freadmd.asia%2F&text=ReadMD%3A%20local-first%20Markdown%20reading%2C%20conversion%2C%20and%20presenting." rel="noopener">Share on Telegram</a>
+          <a class="button-secondary" href="https://service.weibo.com/share/share.php?url=https%3A%2F%2Freadmd.asia%2F&title=ReadMD%3A%20local-first%20Markdown%20reading%2C%20conversion%2C%20and%20presenting." rel="noopener">Share on Weibo</a>
         </div>
       </div>
     </section>
@@ -175,9 +412,10 @@
       <nav aria-label="Footer" class="flex flex-wrap gap-5">
         <a href="/llms.txt">llms.txt</a>
         <a href="/llms-full.txt">Full text for AI</a>
-        <a href="https://github.com/Natsummerance/readMD">GitHub</a>
+        <a href="https://github.com/Natsummerance/readMD/stargazers">Star on GitHub</a>
       </nav>
     </div>
   </footer>
+  <script src="/assets/site.js" defer></script>
 </body>
 </html>

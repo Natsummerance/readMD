@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Extract Text From Scans | ReadMD Offline OCR</title>
+  <meta name="description" content="Turn scans and screenshots into editable Markdown with local OCR on Windows or macOS. ReadMD uses WinRT or Apple Vision offline recognition without uploading the source image.">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ReadMD">
+  <meta property="og:title" content="Extract Text From Scans | ReadMD Offline OCR">
+  <meta property="og:description" content="A qualified local OCR workflow for scanned pages and screenshots on Windows and macOS.">
+  <meta property="og:url" content="https://readmd.asia/scan-to-markdown/">
+  <meta property="og:image" content="https://readmd.asia/media/convert-home.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="ReadMD conversion interface used to prepare scanned sources for Markdown output.">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="zh_CN">
+  <meta property="og:locale:alternate" content="zh_TW">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Extract Text From Scans | ReadMD Offline OCR">
+  <meta name="twitter:description" content="Use native Windows or macOS recognition locally, then review the Markdown before saving it.">
+  <meta name="twitter:image" content="https://readmd.asia/media/convert-home.png">
+  <meta name="twitter:image:alt" content="ReadMD conversion interface used to prepare scanned sources for Markdown output.">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://readmd.asia/scan-to-markdown/">
+  <link rel="alternate" hreflang="en" href="https://readmd.asia/scan-to-markdown/">
+  <link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/scan-to-markdown/">
+  <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/scan-to-markdown/">
+  <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/scan-to-markdown/">
+  <link rel="alternate" hreflang="x-default" href="https://readmd.asia/scan-to-markdown/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/scan-to-markdown/#webpage",
+      "url": "https://readmd.asia/scan-to-markdown/",
+      "name": "Extract Text From Scans | ReadMD Offline OCR",
+      "isPartOf": {
+        "@id": "https://readmd.asia/#website"
+      },
+      "about": {
+        "@id": "https://readmd.asia/scan-to-markdown/#software"
+      },
+      "primaryImageOfPage": "https://readmd.asia/media/convert-home.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#scan-workflow p"
+        ]
+      },
+      "inLanguage": "en",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/scan-to-markdown/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/scan-to-markdown/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "featureList": "Native WinRT OCR on Windows, Apple Vision OCR on macOS, screenshot extraction, Markdown review and editing",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/release-notes/",
+      "screenshot": "https://readmd.asia/media/convert-home.png",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/scan-to-markdown/#howto",
+      "name": "How to extract text from a scan into Markdown",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "Prepare the scan",
+          "text": "Keep the scanned page or screenshot on the local device."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Add the source",
+          "text": "Add the scan in ReadMD, or paste a screenshot through the supported clipboard workflow."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Run local recognition",
+          "text": "On Windows, ReadMD calls WinRT OCR; on macOS, it calls Apple Vision offline recognition."
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Review the Markdown",
+          "text": "Correct headings, lists, tables, numbers, names, and reading order before saving the Markdown file."
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/scan-to-markdown/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Which platforms support offline OCR?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD supports local offline OCR on Windows through WinRT and on macOS through Apple Vision. Availability follows the capabilities of the operating system and device."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I extract text from a screenshot?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes on supported platforms. ReadMD includes a clipboard workflow for extracting text from a pasted screenshot without sending it to a web service."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Will OCR perfectly preserve tables and layout?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Recognition quality depends on scan clarity, language, fonts, and layout complexity. Review headings, tables, numbers, names, and reading order after extraction."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is the scanned page uploaded for recognition?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. The qualified Windows and macOS OCR paths are designed to run locally and do not require a cloud account."
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/scan-to-markdown/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://readmd.asia/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Scan to Markdown",
+      "item": "https://readmd.asia/scan-to-markdown/"
+    }
+  ]
+}</script>
+</head>
+<body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#scan-workflow">Workflow</a><a href="/workflows/">More answers</a><a href="https://github.com/Natsummerance/readMD">Source</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/latest">Download</a></div>
+  </header>
+  <main>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/">Home</a> / <a class="link-action" href="/workflows/">Workflows</a> / <span>Scan to Markdown</span></nav>
+    <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
+      <h1 class="display-title">Extract scan text into editable Markdown.</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">On Windows and macOS, ReadMD calls the operating system's native recognition engine locally. The scan stays on your device while you turn recognized text into a reviewable document.</p>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="2880" height="1620" alt="ReadMD conversion workspace used to bring scanned sources into Markdown." loading="eager" fetchpriority="high" decoding="async"></picture></figure>
+    </section>
+    <section id="scan-workflow" class="bg-[var(--color-surface)] py-16">
+      <div class="mx-auto max-w-5xl px-5">
+        <h2 class="text-2xl font-semibold tracking-tight">Local OCR workflow</h2>
+        <ol class="mt-8 grid gap-6 md:grid-cols-2">
+          <li class="answer-card"><h3 class="text-lg font-semibold">Prepare the scan</h3><p>Use a clear image or PDF page stored on the device. Straight pages and readable type usually produce cleaner results.</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">Add or paste the source</h3><p>Add a scan in ReadMD, or use the clipboard workflow to extract text from a pasted screenshot.</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">Recognize locally</h3><p>Windows uses WinRT OCR. macOS uses Apple Vision offline recognition. No cloud account is required for these paths.</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">Review and save Markdown</h3><p>Correct reading order, headings, tables, figures, names, and numbers before saving or editing the Markdown.</p></li>
+        </ol>
+      </div>
+    </section>
+    <section class="mx-auto max-w-5xl px-5 py-16">
+      <h2 class="text-2xl font-semibold tracking-tight">OCR questions</h2>
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <article class="answer-card"><h3>Which platforms support offline OCR?</h3><p>ReadMD supports local offline OCR on Windows through WinRT and on macOS through Apple Vision. Availability follows the capabilities of the operating system and device.</p></article>
+        <article class="answer-card"><h3>Can I extract text from a screenshot?</h3><p>Yes on supported platforms. ReadMD includes a clipboard workflow for extracting text from a pasted screenshot without sending it to a web service.</p></article>
+        <article class="answer-card"><h3>Will OCR perfectly preserve tables and layout?</h3><p>No. Recognition quality depends on scan clarity, language, fonts, and layout complexity. Review headings, tables, numbers, names, and reading order after extraction.</p></article>
+        <article class="answer-card"><h3>Is the scanned page uploaded for recognition?</h3><p>No. The qualified Windows and macOS OCR paths are designed to run locally and do not require a cloud account.</p></article>
+      </div>
+      <div class="mt-10 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/large-markdown-files/">Open large Markdown files</a><a class="link-action" href="/markdown-to-slides/">Present Markdown without PowerPoint</a><a class="link-action" href="/convert-to-markdown/">Convert documents to Markdown</a></div>
+      <div class="mt-8 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">Get ReadMD</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">Star on GitHub</a></div>
+    </section>
+  </main>
+  <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD. MIT License.</p><nav class="flex flex-wrap gap-5"><a href="/llms.txt">llms.txt</a><a href="/llms-full.txt">Full text for AI</a><a href="https://github.com/Natsummerance/readMD/stargazers">GitHub Stars</a></nav></div></footer>
+</body>
+</html>

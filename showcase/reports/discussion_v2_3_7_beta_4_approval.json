@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "artifact": "GitHub Discussions announcement for v2.3.7-beta.4",
+  "draft_file": "showcase/distribution/discussion_v2_3_7_beta_4.md",
+  "target_category": "Announcements",
+  "target_category_id": "DIC_kwDOTstmss4DEAs1",
+  "reviewed_at": "2026-08-26T05:45:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "content_system_application": {
+    "question_unit": "How do I safely read, convert, present, and update local Markdown across desktop and Chinese operating systems?",
+    "opinion_unit": "A beta should make its security boundary, platform coverage, and integrity checks explicit instead of hiding them behind feature claims.",
+    "solution_unit": "Publish the verified release matrix, checksum workflow, local-first boundaries, and citation-ready answer corpus in one announcement.",
+    "duplicate_decision": "Not a duplicate of beta.3; it announces a newly released beta.4 and its distinct security, startup, tab, and touch changes."
+  },
+  "transmission_review": {
+    "method": "dbs-spread five-theory decoder",
+    "silence_spiral": "Users worry that a local tool will quietly upload documents or break their existing files.",
+    "uses_and_gratifications": [
+      "information value",
+      "control over local material",
+      "social capital when sharing polished documents"
+    ],
+    "framing": "Stand with people whose Markdown is the canonical artifact, not with a service that owns the workspace.",
+    "two_step_flow": "First communicators are technical writers, researchers, students, and support engineers who exchange long source files.",
+    "cognitive_consistency": "Confirm that local control matters while challenging users to verify checksums and review converted structure.",
+    "avoid": "No adoption claims, no formal-release claim, no unsupported performance guarantee, and no reciprocal-star demand."
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "announcement-copy-review",
+      "status": "approved",
+      "score": 9.88,
+      "evidence": [
+        "The opening names one canonical-file workflow rather than listing unrelated features.",
+        "The beta identity is explicit and no formal-release or adoption claim is made.",
+        "Chinese and English readers receive the same local-first position without duplicated filler."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "technical-accuracy-review",
+      "status": "approved",
+      "score": 9.85,
+      "evidence": [
+        "Presentation, startup, tab, touch, updater, installer, and LAN-sharing claims match the published v2.3.7-beta.4 release notes.",
+        "All eleven linked asset filenames exist on the latest release API payload.",
+        "The official-site and AI-corpus URLs use the approved readmd.asia origin covered by production checks."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "community-compliance-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "The discussion targets the existing Announcements category and asks for platform, document size, and workflow context.",
+        "Checksum verification and known boundaries are included before installation guidance.",
+        "The star request is transparent and separated from technical support."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.86,
+    "participants": [
+      "product",
+      "technical accuracy",
+      "transmission",
+      "community compliance"
+    ],
+    "conditions": [
+      "Publish only in the Announcements category.",
+      "Verify the official site, both AI-corpus URLs, release API, and every download asset immediately before mutation.",
+      "Record the actual discussion number and URL after publication.",
+      "Monitor replies for 48 hours and answer technical questions before new distribution."
+    ]
+  },
+  "publication": {
+    "status": "published",
+    "number": 46,
+    "url": "https://github.com/Natsummerance/readMD/discussions/46",
+    "category": "Announcements",
+    "published_at": "2026-08-26T06:32:37Z"
+  }
+}

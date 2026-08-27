@@ -135,7 +135,7 @@ theme: league
             # --- 执行链路步骤 5: Reveal.js 演说稿生成 ---
             deck_html = render_presentation_html(with_toc, title="测试演说白皮书")
             self.assertIn("<title>ReadMD 技术白皮书</title>", deck_html)
-            self.assertIn("/assets/vendor/reveal/reveal.min.js", deck_html)
+            self.assertIn("assets/vendor/reveal/dist/readmd-boot.js", deck_html)
             self.assertIn('<aside class="notes">演讲者要点提示。</aside>', deck_html)
 
             # --- 执行链路步骤 6: 自定义 CSS 样式注入 ---

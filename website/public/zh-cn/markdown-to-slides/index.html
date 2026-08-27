@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>不用 PowerPoint 放映 Markdown | ReadMD 幻灯</title>
+  <meta name="description" content="使用 ReadMD 基于 Reveal 的放映模式直接展示 Markdown，不需要先复制成另一套幻灯片。标题、代码、公式、图表、表格和说明文字都保留在写作、评审、彩排修改和现场放映所用的同一份权威源文件里。">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ReadMD">
+  <meta property="og:title" content="不用 PowerPoint 放映 Markdown | ReadMD 幻灯">
+  <meta property="og:description" content="把一份 Markdown 源文件变成基于 Reveal 的放映，不再重建另一套幻灯片。">
+  <meta property="og:url" content="https://readmd.asia/zh-cn/markdown-to-slides/">
+  <meta property="og:image" content="https://readmd.asia/media/overview-editor.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="ReadMD 编辑界面左侧显示 Markdown 源码，右侧显示实时预览。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_TW">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="不用 PowerPoint 放映 Markdown | ReadMD 幻灯">
+  <meta name="twitter:description" content="继续用 Markdown 写作，然后直接放映同一份内容。">
+  <meta name="twitter:image" content="https://readmd.asia/media/overview-editor.png">
+  <meta name="twitter:image:alt" content="ReadMD 编辑界面左侧显示 Markdown 源码，右侧显示实时预览。">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://readmd.asia/zh-cn/markdown-to-slides/">
+  <link rel="alternate" hreflang="en" href="https://readmd.asia/markdown-to-slides/">
+  <link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/markdown-to-slides/">
+  <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/markdown-to-slides/">
+  <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/markdown-to-slides/">
+  <link rel="alternate" hreflang="x-default" href="https://readmd.asia/markdown-to-slides/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/zh-cn/markdown-to-slides/#webpage",
+      "url": "https://readmd.asia/zh-cn/markdown-to-slides/",
+      "name": "不用 PowerPoint 放映 Markdown | ReadMD 幻灯",
+      "about": {
+        "@id": "https://readmd.asia/zh-cn/markdown-to-slides/#software"
+      },
+      "primaryImageOfPage": "https://readmd.asia/media/overview-editor.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#markdown-presentation-workflow p"
+        ]
+      },
+      "inLanguage": "zh-CN",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/zh-cn/markdown-to-slides/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/zh-cn/markdown-to-slides/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/zh-cn/release-notes/",
+      "screenshot": "https://readmd.asia/media/overview-editor.png",
+      "featureList": "超长文档分页、本地格式转换、离线 OCR、Markdown 表格、PDF 导入、文献引用和放映模式。",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/zh-cn/markdown-to-slides/#howto",
+      "name": "如何不重做幻灯片直接放映 Markdown",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "完成一份源文件",
+          "text": "在同一份文档中写标题、段落、列表、公式、代码、图表、表格和引用。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "打开放映模式",
+          "text": "从同一份 Markdown 启动 ReadMD 基于 Reveal 的放映模式。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "用标题组织过渡",
+          "text": "按讲述顺序前进，代码、数学、图表和表格保留在上下文中。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "彩排后回到源文件",
+          "text": "修改措辞并保存 Markdown，下一次放映继续使用同一份权威来源。"
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/zh-cn/markdown-to-slides/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Markdown 能不放 PowerPoint 直接讲吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可以。ReadMD 使用基于 Reveal 的模式直接放映 Markdown，技术分享和课程材料不需要另一套幻灯片。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "放映时哪些 Markdown 元素会保留？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "标题成为过渡；代码、数学记号、图表、表格以及周围说明文字都保留上下文。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "彩排时还能修改吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "可以。临场或彩排修改可以写回同一份 Markdown 文件，下一次放映直接使用。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "这能替代所有专业幻灯片工具吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不能。它适合以 Markdown 为权威来源的人。复杂定制动画设计仍可能需要专门设计工具。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/zh-cn/markdown-to-slides/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首页",
+      "item": "https://readmd.asia/zh-cn/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Markdown 转幻灯",
+      "item": "https://readmd.asia/zh-cn/markdown-to-slides/"
+    }
+  ]
+}</script>
+</head>
+<body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/zh-cn/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#markdown-presentation-workflow">工作流</a><a href="/zh-cn/workflows/">更多答案</a><a href="https://github.com/Natsummerance/readMD">源码</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/latest">下载</a></div>
+  </header>
+  <main>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-cn/">首页</a> / <a class="link-action" href="/zh-cn/workflows/">工作流</a> / <span>Markdown 转幻灯</span></nav>
+    <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
+      <h1 class="display-title">不重做幻灯片，直接讲 Markdown。</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">写作、评审、仓库历史和现场讲解共用一份权威文件。标题负责结构，技术内容留在原来的位置。</p>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/overview-editor.webp" type="image/webp"><img src="/media/overview-editor.png" width="2880" height="1620" alt="ReadMD 编辑器一侧是 Markdown 源码，另一侧是渲染预览。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
+    </section>
+    <section id="markdown-presentation-workflow" class="bg-[var(--color-surface)] py-16">
+      <div class="mx-auto max-w-5xl px-5">
+        <h2 class="text-2xl font-semibold tracking-tight">单一来源放映工作流</h2>
+        <ol class="mt-8 grid gap-6 md:grid-cols-2">
+          <li class="answer-card"><h3 class="text-lg font-semibold">先写一份源文件</h3><p>在同一个 Markdown 文档中准备标题、正文、列表、公式、代码、图表、表格和参考文献。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">打开 Reveal 放映</h3><p>放映模式从这份文档启动，不会要求你把章节复制到另一个演示文稿。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">讲清技术细节</h3><p>标题提供过渡，代码、数学、图表和表格仍然连接着它们的解释。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">彩排时直接修订</h3><p>浮动工具栏提供主题、字体缩放和导航控制；修改会回到同一份源文件。</p></li>
+        </ol>
+      </div>
+    </section>
+    <section class="mx-auto max-w-5xl px-5 py-16">
+      <h2 class="text-2xl font-semibold tracking-tight">演讲者常问的问题</h2>
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <article class="answer-card"><h3>Markdown 能不放 PowerPoint 直接讲吗？</h3><p>可以。ReadMD 使用基于 Reveal 的模式直接放映 Markdown，技术分享和课程材料不需要另一套幻灯片。</p></article>
+        <article class="answer-card"><h3>放映时哪些 Markdown 元素会保留？</h3><p>标题成为过渡；代码、数学记号、图表、表格以及周围说明文字都保留上下文。</p></article>
+        <article class="answer-card"><h3>彩排时还能修改吗？</h3><p>可以。临场或彩排修改可以写回同一份 Markdown 文件，下一次放映直接使用。</p></article>
+        <article class="answer-card"><h3>这能替代所有专业幻灯片工具吗？</h3><p>不能。它适合以 Markdown 为权威来源的人。复杂定制动画设计仍可能需要专门设计工具。</p></article>
+      </div>
+      <div class="mt-12 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">获取 ReadMD</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 点 Star</a></div>
+    </section>
+  </main>
+  <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD。MIT 许可证。</p><nav class="flex flex-wrap gap-5"><a href="/zh-cn/llms.txt">llms.txt</a><a href="/zh-cn/llms-full.txt">AI 完整文本</a><a href="https://github.com/Natsummerance/readMD/stargazers">GitHub Star</a></nav></div></footer>
+</body>
+</html>

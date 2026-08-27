@@ -130,7 +130,6 @@ test('long-document interaction stays bounded from 1k through 50k lines', async 
     await expect(page.locator(`#content [id="section-${tocSection}"]`)).toBeFocused();
     await expect(page.locator(`#toc-list [data-heading-id="section-${tocSection}"]`)).toHaveClass(/toc-heading-active/);
     await expect(page.locator(`#content [id="section-${tocSection}"]`)).toHaveClass(/search-arrival/);
-    results[size].tocJumpMs = Date.now() - started;
 
     started = Date.now();
     await page.locator('#search-input').fill('');

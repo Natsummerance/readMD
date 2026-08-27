@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF 转 Markdown | ReadMD 本地 PDF 转换器</title>
+  <meta name="description" content="在受支持平台上用 ReadMD 把 PDF 本地转换为 Markdown，尽量保留标题、列表、表格、引言、公式和图片引用，并在保存前复核扫描文本、阅读顺序、题注和复杂版式，避免把来源文件上传到网页表单。">
+  <meta name="author" content="ReadMD">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="ReadMD">
+  <meta property="og:title" content="PDF 转 Markdown | ReadMD 本地 PDF 转换器">
+  <meta property="og:description" content="面向文字型 PDF 和扫描文档的合格本地转换工作流。">
+  <meta property="og:url" content="https://readmd.asia/zh-cn/pdf-to-markdown/">
+  <meta property="og:image" content="https://readmd.asia/media/convert-home.png">
+  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:width" content="1440">
+  <meta property="og:image:height" content="900">
+  <meta property="og:image:alt" content="ReadMD 转换界面正在把 PDF 文档转为 Markdown。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:locale:alternate" content="zh_TW">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="PDF 转 Markdown | ReadMD 本地 PDF 转换器">
+  <meta name="twitter:description" content="把本机 PDF 资料转成可复核的 Markdown，不需要上传到网页表单。">
+  <meta name="twitter:image" content="https://readmd.asia/media/convert-home.png">
+  <meta name="twitter:image:alt" content="ReadMD 转换界面正在把 PDF 文档转为 Markdown。">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
+  <link rel="icon" href="/assets/icon-256.png" sizes="256x256" type="image/png">
+  <link rel="apple-touch-icon" href="/assets/icon-256.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="canonical" href="https://readmd.asia/zh-cn/pdf-to-markdown/">
+  <link rel="alternate" hreflang="en" href="https://readmd.asia/pdf-to-markdown/">
+  <link rel="alternate" hreflang="zh-CN" href="https://readmd.asia/zh-cn/pdf-to-markdown/">
+  <link rel="alternate" hreflang="zh-TW" href="https://readmd.asia/zh-tw/pdf-to-markdown/">
+  <link rel="alternate" hreflang="ja" href="https://readmd.asia/ja/pdf-to-markdown/">
+  <link rel="alternate" hreflang="x-default" href="https://readmd.asia/pdf-to-markdown/">
+  <link rel="license" href="https://github.com/Natsummerance/readMD/blob/main/LICENSE">
+  <link rel="alternate" type="application/atom+xml" title="ReadMD updates" href="/feed.xml">
+  <link rel="stylesheet" href="/assets/site.css">
+  <script type="application/ld+json">
+  {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://readmd.asia/zh-cn/pdf-to-markdown/#webpage",
+      "url": "https://readmd.asia/zh-cn/pdf-to-markdown/",
+      "name": "PDF 转 Markdown | ReadMD 本地 PDF 转换器",
+      "isPartOf": {
+        "@id": "https://readmd.asia/#website"
+      },
+      "about": {
+        "@id": "https://readmd.asia/zh-cn/pdf-to-markdown/#software"
+      },
+      "primaryImageOfPage": "https://readmd.asia/media/convert-home.png",
+      "dateModified": "2026-08-26",
+      "speakable": {
+        "@type": "SpeakableSpecification",
+        "cssSelector": [
+          "h1",
+          "#conversion-workflow p"
+        ]
+      },
+      "inLanguage": "zh-CN",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "https://readmd.asia/zh-cn/pdf-to-markdown/"
+      },
+      "publisher": {
+        "@id": "https://readmd.asia/#organization"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://readmd.asia/zh-cn/pdf-to-markdown/#software",
+      "name": "ReadMD",
+      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "applicationCategory": "UtilitiesApplication",
+      "softwareVersion": "2.3.7-beta.4",
+      "dateModified": "2026-08-26",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
+      "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
+      "author": {
+        "@type": "Organization",
+        "name": "ReadMD"
+      },
+      "applicationSuite": "ReadMD",
+      "releaseNotes": "https://readmd.asia/zh-cn/release-notes/",
+      "screenshot": "https://readmd.asia/media/convert-home.png",
+      "featureList": "超长文档分页、本地格式转换、离线 OCR、Markdown 表格、PDF 导入、文献引用和放映模式。",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "availability": "https://schema.org/InStock",
+        "url": "https://github.com/Natsummerance/readMD/releases/latest"
+      }
+    },
+    {
+      "@type": "HowTo",
+      "@id": "https://readmd.asia/zh-cn/pdf-to-markdown/#howto",
+      "name": "如何在本地把 PDF 转换成 Markdown",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "name": "PDF 保留在本机",
+          "text": "把来源 PDF 放到设备上，先判断它是文字型还是扫描型。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "导入文件",
+          "text": "把 PDF 添加到 ReadMD；多个文档需要同一轮复核时可批量导入。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "转换为 Markdown",
+          "text": "运行转换器，并把结果放在原始 PDF 旁查看。"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "保存前复核",
+          "text": "检查标题、列表、表格、阅读顺序、公式、题注和图片引用，再编辑或发布。"
+        }
+      ]
+    }
+  ]
+}
+  </script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "@id": "https://readmd.asia/zh-cn/pdf-to-markdown/#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "ReadMD 能转换哪些 PDF？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ReadMD 转换器接受 PDF 来源。文字型文档通常更容易映射为 Markdown；扫描页应在受支持平台使用合格的本地 OCR 工作流。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "PDF 转换会上传我的文件吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不会。本地 PDF 转换设计为不需要云账号，也不经过浏览器上传表单。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "会保留哪些 Markdown 结构？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "只要 PDF 提供可恢复的结构，转换器尽量保留标题、列表、表格、引言、公式和图片引用。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "每个扫描 PDF 都能完美转换吗？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "不能。OCR 质量受清晰度、语言、字体和版式复杂度影响。保存前应复核名称、数字、表格、题注和阅读顺序。"
+      }
+    }
+  ]
+}</script>
+  <script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "@id": "https://readmd.asia/zh-cn/pdf-to-markdown/#breadcrumbs",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "首页",
+      "item": "https://readmd.asia/zh-cn/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "PDF 转 Markdown",
+      "item": "https://readmd.asia/zh-cn/pdf-to-markdown/"
+    }
+  ]
+}</script>
+</head>
+<body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/zh-cn/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#conversion-workflow">工作流</a><a href="/zh-cn/workflows/">更多答案</a><a href="https://github.com/Natsummerance/readMD">源码</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/latest">下载</a></div>
+  </header>
+  <main>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-cn/">首页</a> / <a class="link-action" href="/zh-cn/workflows/">工作流</a> / <span>PDF 转 Markdown</span></nav>
+    <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
+      <h1 class="display-title">把 PDF 变成可编辑 Markdown。</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">文字型报告、论文、手册和扫描页可以在本地进入 Markdown。来源文件保留在你的设备上，可复用的结构继续保留。</p>
+      <figure class="product-frame mt-10"><picture><source srcset="/media/convert-home.webp" type="image/webp"><img src="/media/convert-home.png" width="2880" height="1620" alt="ReadMD 转换界面正在把 PDF 文档转为 Markdown。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
+    </section>
+    <section id="conversion-workflow" class="bg-[var(--color-surface)] py-16">
+      <div class="mx-auto max-w-5xl px-5">
+        <h2 class="text-2xl font-semibold tracking-tight">本地 PDF 转换工作流</h2>
+        <ol class="mt-8 grid gap-6 md:grid-cols-2">
+          <li class="answer-card"><h3 class="text-lg font-semibold">PDF 保留在本机</h3><p>把来源 PDF 放到设备上，先判断它是文字型还是扫描型。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">导入文件</h3><p>把 PDF 添加到 ReadMD；多个文档需要同一轮复核时可批量导入。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">转换为 Markdown</h3><p>运行转换器，并把结果放在原始 PDF 旁查看。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">保存前复核</h3><p>检查标题、列表、表格、阅读顺序、公式、题注和图片引用，再编辑或发布。</p></li>
+          </ol>
+      </div>
+    </section>
+    <section class="mx-auto max-w-5xl px-5 py-16">
+      <h2 class="text-2xl font-semibold tracking-tight">PDF 转换常见问题</h2>
+      <div class="mt-8 grid gap-6 md:grid-cols-2">
+        <article class="answer-card"><h3>ReadMD 能转换哪些 PDF？</h3><p>ReadMD 转换器接受 PDF 来源。文字型文档通常更容易映射为 Markdown；扫描页应在受支持平台使用合格的本地 OCR 工作流。</p></article>
+        <article class="answer-card"><h3>PDF 转换会上传我的文件吗？</h3><p>不会。本地 PDF 转换设计为不需要云账号，也不经过浏览器上传表单。</p></article>
+        <article class="answer-card"><h3>会保留哪些 Markdown 结构？</h3><p>只要 PDF 提供可恢复的结构，转换器尽量保留标题、列表、表格、引言、公式和图片引用。</p></article>
+        <article class="answer-card"><h3>每个扫描 PDF 都能完美转换吗？</h3><p>不能。OCR 质量受清晰度、语言、字体和版式复杂度影响。保存前应复核名称、数字、表格、题注和阅读顺序。</p></article>
+      </div>
+      <div class="mt-10 flex flex-wrap gap-5">
+        <a class="link-action" href="/convert-to-markdown/">文档转 Markdown</a>
+        <a class="link-action" href="/scan-to-markdown/">提取扫描件和截图</a>
+      </div>
+      <div class="mt-8 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">获取 ReadMD</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 点 Star</a></div>
+    </section>
+  </main>
+  <footer class="border-t border-[var(--color-line)] py-10 text-sm text-muted"><div class="mx-auto flex max-w-6xl flex-col gap-4 px-5 md:flex-row md:items-center md:justify-between"><p>© 2026 ReadMD. MIT License.</p><nav class="flex flex-wrap gap-5"><a href="/zh-cn/llms.txt">llms.txt</a><a href="/zh-cn/llms-full.txt">AI 完整文本</a><a href="https://github.com/Natsummerance/readMD/stargazers">GitHub Stars</a></nav></div></footer>
+</body>
+</html>
