@@ -117,17 +117,72 @@
   ]
 }</script></head>
 <body class="antialiased">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/zh-cn/">ReadMD</a><a class="button-primary text-sm" href="#download-paths">立即下载</a></div>
+  </header>
   <main class="mx-auto max-w-5xl px-5 py-16"><nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-cn/">首页</a><span aria-hidden="true"> / </span><a class="link-action" href="/zh-cn/download/">下载</a><span aria-hidden="true"> / </span><a class="link-action" href="/zh-cn/workflows/">工作流</a></nav>
-    <h1 class="display-title">下载 ReadMD。</h1>
-    <p class="section-copy mt-6">当前公开预览版是 2.3.7-beta.5。安装前请使用 SHA256SUMS.txt 校验发行包。</p>
-    <section id="download-paths" class="mt-12 space-y-10">
-      <article class="answer-card"><h2>Windows</h2><p><a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe">Windows 安装版</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe">Windows 便携版</a></p></article>
-      <article class="answer-card"><h2>macOS</h2><p><a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip">Apple Silicon zip</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip">Intel zip</a></p></article>
-      <article class="answer-card"><h2>Linux 和国产系统</h2><p><a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage">x86_64 AppImage</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage">ARM64 AppImage</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb">AMD64 Deb</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb">ARM64 Deb</a></p></article>
-      <article class="answer-card"><h2>编辑器、MCP 和鸿蒙</h2><p>VS Code 插件提供同步预览与语法修复；MCP Server 连接兼容 AI 工具。鸿蒙支持以 ArkTS 源码工程提供，可使用 DevEco Studio 构建，当前无预编译 HAP。</p><p><a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix">VS Code 插件</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip">MCP Server</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app">鸿蒙源码工程</a></p></article>
+    <div class="mt-4 text-center">
+      <h1 class="display-title">下载 ReadMD</h1>
+      <p class="section-copy mx-auto mt-4 max-w-2xl">当前公开预览版是 <span class="latest-version-badge font-semibold text-[var(--color-action)]">v2.3.7-beta.5</span>。请在下方选择适合您系统的安装包，支持国内镜像加速直连，安装前可使用 SHA256SUMS.txt 校验发行包。</p>
+      <div class="mt-8">
+        <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">下载通道与镜像加速 · Download Mirror</p>
+        <div class="mirror-nav" role="tablist" aria-label="下载源选择">
+          <button class="mirror-tab is-active" data-mirror="direct" type="button">🌐 官方直连 (GitHub)</button>
+          <button class="mirror-tab" data-mirror="ghfast" type="button">⚡ 国内加速 1 (GHFast)</button>
+          <button class="mirror-tab" data-mirror="ghproxy" type="button">⚡ 国内加速 2 (GHProxy)</button>
+          <button class="mirror-tab" data-mirror="gitmirror" type="button">⚡ 国内加速 3 (GitMirror)</button>
+          <button class="mirror-tab" data-mirror="fastgit" type="button">⚡ 国内加速 4 (FastGit)</button>
+        </div>
+      </div>
+    </div>
+
+    <section id="download-paths" class="mt-12 platform-grid">
+      <article class="platform-card" data-platform="windows">
+        <h2 class="text-xl font-semibold">Windows 系统</h2>
+        <p class="mt-2 text-sm text-muted">支持 Windows 10 / 11 以及 Windows 7 SP1+。提供安装版与即开即用便携版。</p>
+        <div class="mt-6 flex flex-col gap-3">
+          <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe">Windows 安装版 (.exe)</a>
+          <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe">Windows 便携版 (.exe)</a>
+        </div>
+      </article>
+
+      <article class="platform-card" data-platform="macos">
+        <h2 class="text-xl font-semibold">macOS 系统</h2>
+        <p class="mt-2 text-sm text-muted">支持 Apple Silicon (M系列芯片) 与 Intel x86_64 Mac。解压即可运行。</p>
+        <div class="mt-6 flex flex-col gap-3">
+          <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip">Apple Silicon 芯片 (.zip)</a>
+          <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip">Intel 处理器 (.zip)</a>
+        </div>
+      </article>
+
+      <article class="platform-card" data-platform="linux">
+        <h2 class="text-xl font-semibold">Linux & 国产操作系统</h2>
+        <p class="mt-2 text-sm text-muted">统信 UOS、银河麒麟 Kylin OS、Ubuntu、Debian、Deepin 全面适配。</p>
+        <div class="mt-6 grid grid-cols-2 gap-2 text-xs">
+          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage">x86_64 AppImage</a>
+          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage">ARM64 AppImage</a>
+          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb">AMD64 Deb (UOS/麒麟)</a>
+          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb">ARM64 Deb (UOS/麒麟)</a>
+        </div>
+      </article>
+
+      <article class="platform-card">
+        <h2 class="text-xl font-semibold">扩展组件与校验</h2>
+        <p class="mt-2 text-sm text-muted">VS Code 扩展、AI MCP Server、华为鸿蒙 DevEco 源码工程与哈希校验。</p>
+        <div class="mt-6 flex flex-col gap-2">
+          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix">VS Code 插件 (.vsix)</a>
+          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip">AI MCP Server (.zip)</a>
+          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app">鸿蒙 ArkTS 源码工程</a>
+        </div>
+      </article>
     </section>
-    <div class="mt-10 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-cn/large-markdown-files/">打开超大 Markdown 文件</a><a class="link-action" href="/zh-cn/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-cn/convert-to-markdown/">文档转 Markdown</a><a class="link-action" href="/zh-cn/markdown-tables/">构建 Markdown 表格</a><a class="link-action" href="/zh-cn/pdf-to-markdown/">PDF 转 Markdown</a><a class="link-action" href="/zh-cn/scan-to-markdown/">扫描件提取文字</a><a class="link-action" href="/zh-cn/bibtex-citations/">管理 BibTeX 引用</a><a class="link-action" href="/zh-cn/release-notes/">发布说明</a></div>
-    <div class="mt-6 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt">SHA256SUMS.txt</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 点 Star</a></div>
+
+    <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-cn/large-markdown-files/">打开超大 Markdown 文件</a><a class="link-action" href="/zh-cn/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-cn/convert-to-markdown/">文档转 Markdown</a><a class="link-action" href="/zh-cn/markdown-tables/">构建 Markdown 表格</a><a class="link-action" href="/zh-cn/pdf-to-markdown/">PDF 转 Markdown</a><a class="link-action" href="/zh-cn/scan-to-markdown/">扫描件提取文字</a><a class="link-action" href="/zh-cn/bibtex-citations/">管理 BibTeX 引用</a><a class="link-action" href="/zh-cn/release-notes/">发布说明</a></div>
+    <div class="mt-8 flex flex-wrap items-center gap-4">
+      <a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt">SHA256SUMS.txt</a>
+      <a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 点 Star</a>
+    </div>
   </main>
+  <script src="/assets/site.js" defer></script>
 </body>
 </html>

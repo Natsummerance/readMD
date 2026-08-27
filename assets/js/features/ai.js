@@ -6,18 +6,29 @@
 /* ---------------- AI 助手 ---------------- */
 
 const AI_ACTIONS = {
-  quick_read: 'tpl.actionQuickRead', polish: 'tpl.actionPolish', modify: 'tpl.actionModify',
-  expand: 'tpl.actionExpand', continue: 'tpl.actionContinue', translate: 'tpl.actionTranslate', ask: 'tpl.actionAsk',
+  quick_read: 'tpl.actionQuickRead',
+  polish: 'tpl.actionPolish',
+  proofread: 'tpl.actionProofread',
+  translate_en: 'tpl.actionTranslateEn',
+  translate_zh: 'tpl.actionTranslateZh',
+  todo: 'tpl.actionTodo',
+  continue: 'tpl.actionContinue',
+  ask: 'tpl.actionAsk',
+  modify: 'tpl.actionModify',
+  expand: 'tpl.actionExpand',
 };
 
 const AI_SYSTEM = {
-  quick_read: '你是 ReadMD 的文档阅读助手。对用户给出的 Markdown 文档做快速阅读，输出：1) 一句话概述；2) 核心要点列表；3) 文档结构目录；4) 值得注意的细节或疑问。使用 Markdown 格式。',
-  polish: '你是资深中文编辑。润色用户给出的 Markdown 文档：修正错别字、病句、表达生硬之处，保留原有结构与全部 Markdown 标记，只输出润色后的完整文档，不要加任何解释。',
-  modify: '你是文档修订助手。根据用户要求修改文档，修正明显错误（错别字、标点、Markdown 格式错误）。只输出修改后的完整文档，不要加任何解释。',
+  quick_read: '你是 ReadMD 的资深文档领读助手。对用户给出的 Markdown 文档进行结构化深度提炼，输出：1) 核心主旨（1~2 句话提纲挈领）；2) 核心要点清单（按重要度排序）；3) 结构逻辑脉络；4) 关键结论、行动项或待澄清疑问。排版清晰美观，使用规范 Markdown 格式。',
+  polish: '你是专业级中文特约编辑。深度润色用户给出的 Markdown 文档：纠正错别字、语病及生硬翻译腔，去除啰嗦冗余表达，增强行文流畅度与文采。严格保留原文所有标题层级、列表、代码块、LaTeX 公式、表格及 Markdown 标记。只输出润色后的完整正文，不要输出任何开场白或解释性文字。',
+  proofread: '你是严格的出版级文字校对专家。对用户给出的 Markdown 文档进行全方位勘误：1) 错别字与错用词；2) 标点符号规范（中英文标点混用、全半角引号等）；3) 语病与语序混乱；4) Markdown 排版规范。先列出【修改对照清单】，再输出【修正后的完整 Markdown 文档】。',
+  translate_en: 'You are a professional academic and technical translator. Translate the provided document into clear, natural, and idiomatic English. Preserve all Markdown structure, headings, lists, tables, code blocks, and LaTeX math formulas intact. Output ONLY the translated content without conversational filler or extra explanations.',
+  translate_zh: '你是资深专业翻译。将用户给出的文档精确翻译为地道、严谨、流畅的简体中文（遵循信达雅原则）。严格保留全部 Markdown 格式、表格、代码块及 LaTeX 公式。只输出译文正文，不要添加任何寒暄或附注说明。',
+  todo: '你是高效任务与项目管理助手。深入分析用户文档，精准提取所有待办事项、决策行动项与跟进任务。用 Markdown 任务清单（- [ ]）与表格（事项 / 责任人 / 预期成果 / 优先级）结构化输出。',
+  continue: '你是优秀的同构写作与思维延伸助手。深度承接用户文档末尾的思想逻辑与文风语调，自然展开后续段落或章节写作，提供有深度、有逻辑的实质性内容扩展。只输出续写新增内容，不要重复原文。',
+  ask: '你是 ReadMD 文档问答助手。基于用户给出的文档内容，条理清晰地回答用户的问题；如果文档中未提及相关信息，请诚实明确指出。',
+  modify: '你是 Markdown 格式专家。修正文档中的格式问题：表格对齐补全、加粗未闭合、公式排版、标题层级。只输出修正后的完整文档，不要解释。',
   expand: '你是文档扩充助手。在保持原有结构与语气的前提下，为文档补充细节、示例、解释，使内容更丰富。只输出扩充后的完整文档，不要加任何解释。',
-  continue: '你是文档续写助手。从文档末尾自然延续写作，保持风格一致。只输出续写的新增内容，不要重复原文。',
-  translate: '你是专业翻译。将用户给出的文档翻译成指定语言，保留 Markdown 结构、表格与代码块，只输出译文。',
-  ask: '你是文档问答助手。基于用户给出的文档内容回答问题；文档中没有的内容请明确说明。',
 };
 
 function toggleAiPanel() {
@@ -28,8 +39,38 @@ function toggleAiPanel() {
     updateAiUsage();
     if (!state.ai.config) loadAiOnDemand();
     else { loadAiPrompts(); loadAiSessions(); }
+    if (!state.ai.messages || state.ai.messages.length === 0) {
+      renderAiEmptyState();
+    }
     setTimeout(() => $('ai-prompt') && $('ai-prompt').focus(), 0);
   }
+}
+
+function toggleAiFullscreen() {
+  const p = $('ai-panel');
+  if (!p) return;
+  const isFull = p.classList.toggle('fullscreen');
+  const icExpand = p.querySelector('.ai-ic-expand');
+  const icCompress = p.querySelector('.ai-ic-compress');
+  if (icExpand) icExpand.classList.toggle('hidden', isFull);
+  if (icCompress) icCompress.classList.toggle('hidden', !isFull);
+}
+
+function renderAiEmptyState() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const out = $('ai-output');
+  if (!out) return;
+  if (state.ai.messages && state.ai.messages.length > 0) return;
+  out.innerHTML = `
+    <div class="ai-empty-state">
+      <svg class="ai-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+        <circle cx="12" cy="12" r="3.5"/>
+      </svg>
+      <div class="ai-empty-title">${_t('ai.emptyTitle') || '随时向 AI 提问或处理文档'}</div>
+      <div class="ai-empty-desc">${_t('ai.emptyDesc') || '点击上方快捷指令进行全文总结、专业润色或学术翻译，也可在下方直接输入要求。'}</div>
+    </div>
+  `;
 }
 
 async function loadAiOnDemand() {
@@ -101,7 +142,7 @@ function onAiTemplateChange() {
   document.querySelectorAll('.ai-act').forEach(b => {
     b.classList.toggle('active', !!(t && t.action && t.action !== 'custom' && b.dataset.act === t.action));
   });
-  if (t && t.action === 'translate') $('ai-prompt').placeholder = _t('ai.promptTranslatePlaceholder') || '翻译：目标语言（如：英语 / 日语）';
+  if (t && (t.action === 'translate' || t.action === 'translate_en' || t.action === 'translate_zh')) $('ai-prompt').placeholder = _t('ai.promptTranslatePlaceholder') || '翻译：目标语言（如：英语 / 日语）';
   else $('ai-prompt').placeholder = _t('ai.promptDefaultPlaceholder') || '补充要求 / 提问内容 / 翻译目标语言（可选）';
 }
 
@@ -115,8 +156,18 @@ function openTplModal() {
 function renderTplList() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const list = $('tpl-list');
+  if (!list) return;
+  const q = ($('tpl-search') && $('tpl-search').value || '').trim().toLowerCase();
   list.innerHTML = '';
-  (state.ai.templates || []).forEach(t => {
+  const filtered = (state.ai.templates || []).filter(t => !q || (t.name || '').toLowerCase().includes(q) || (t.system || '').toLowerCase().includes(q));
+  if (!filtered.length) {
+    const empty = document.createElement('li');
+    empty.className = 'ai-history-empty';
+    empty.textContent = _t('tpl.noTemplates') || '无匹配模板';
+    list.appendChild(empty);
+    return;
+  }
+  filtered.forEach(t => {
     const li = document.createElement('li');
     li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
     li.dataset.id = t.id;
@@ -147,6 +198,146 @@ function selectTpl(id) {
   $('tpl-system').value = t ? (t.system || '') : '';
   $('tpl-user').value = t ? (t.user || '') : '';
   $('tpl-del').disabled = !t;
+}
+
+function parseMarkdownTemplate(content, filename) {
+  const text = String(content || '').trim();
+  let name = (filename || '未命名模板').replace(/\.(md|markdown|json|txt)$/i, '');
+  let action = 'custom';
+  let system = '';
+  let user = '';
+
+  // 1. YAML frontmatter 格式解析
+  if (text.startsWith('---')) {
+    const endIdx = text.indexOf('\n---', 3);
+    if (endIdx > 0) {
+      const fm = text.slice(3, endIdx).trim();
+      const body = text.slice(endIdx + 4).trim();
+      fm.split('\n').forEach(line => {
+        const colon = line.indexOf(':');
+        if (colon > 0) {
+          const k = line.slice(0, colon).trim().toLowerCase();
+          const v = line.slice(colon + 1).trim().replace(/^["']|["']$/g, '');
+          if (k === 'name' || k === 'title') name = v;
+          else if (k === 'action') action = v;
+          else if (k === 'system' || k === 'prompt') system = v;
+          else if (k === 'user' || k === 'template') user = v;
+        }
+      });
+      if (!system && body) {
+        system = body;
+      } else if (system && body && !user) {
+        user = body;
+      }
+      return { name, action, system, user };
+    }
+  }
+
+  // 2. Markdown 标题格式解析
+  const lines = text.split('\n');
+  let bodyLines = [];
+  let currentSection = null;
+  let sectionBuffers = { system: [], user: [] };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const h1Match = line.match(/^#\s+(.+)$/);
+    const h2Match = line.match(/^##\s+(.+)$/);
+
+    if (h1Match && !system && !bodyLines.length) {
+      name = h1Match[1].trim();
+      continue;
+    }
+    if (h2Match) {
+      const h2Text = h2Match[1].trim().toLowerCase();
+      if (/system|系统|角色/.test(h2Text)) {
+        currentSection = 'system';
+        continue;
+      } else if (/user|用户|模板|template/.test(h2Text)) {
+        currentSection = 'user';
+        continue;
+      }
+    }
+    if (currentSection) {
+      sectionBuffers[currentSection].push(line);
+    } else {
+      bodyLines.push(line);
+    }
+  }
+
+  if (sectionBuffers.system.length || sectionBuffers.user.length) {
+    system = sectionBuffers.system.join('\n').trim();
+    user = sectionBuffers.user.join('\n').trim();
+  } else {
+    system = bodyLines.join('\n').trim() || text;
+  }
+
+  return { name, action, system, user };
+}
+
+async function importTemplatesFromFile(file) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (!file) return;
+  const isJson = /\.json$/i.test(file.name);
+  const reader = new FileReader();
+  reader.onload = async () => {
+    try {
+      const content = reader.result;
+      let templates = [];
+      if (isJson) {
+        const parsed = JSON.parse(content);
+        if (Array.isArray(parsed)) {
+          templates = parsed;
+        } else if (parsed && Array.isArray(parsed.templates)) {
+          templates = parsed.templates;
+        } else if (parsed && (parsed.system || parsed.name)) {
+          templates = [parsed];
+        }
+      } else {
+        const tpl = parseMarkdownTemplate(content, file.name);
+        if (tpl && (tpl.system || tpl.name)) {
+          templates = [tpl];
+        }
+      }
+
+      if (!templates.length) {
+        showToast(_t('toast.noValidTemplates') || '未能解析到有效模板');
+        return;
+      }
+
+      const r = await apiFetch('/api/ai/prompts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'batch_save', templates }),
+      });
+      const d = await r.json();
+      if (!r.ok || !d.ok) throw new Error(d.error || '导入失败');
+
+      await loadAiPrompts();
+      renderTplList();
+      showToast((_t('toast.importedTemplates', { count: templates.length }) || `成功导入 ${templates.length} 个模板`));
+    } catch (e) {
+      showToast((_t('toast.importFailed') || '导入失败：') + e.message);
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function exportTemplatesAsJson() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const data = {
+    version: '1.0',
+    exported_at: new Date().toISOString(),
+    templates: state.ai.templates || [],
+  };
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'readmd_prompts_backup.json';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  showToast(_t('toast.exportedTemplates') || '已导出全部 Prompt 模板');
 }
 
 async function saveTplForm() {
@@ -779,6 +970,9 @@ async function runAi(action) {
   msgs.push({ role: 'user', content: userMsg, ephemeral: isIncognito });
 
   const out = $('ai-output');
+  const emptyState = out.querySelector('.ai-empty-state');
+  if (emptyState) emptyState.remove();
+
   const userBubble = document.createElement('div');
   userBubble.className = 'ai-msg user';
   const uTag = document.createElement('div');
@@ -799,6 +993,7 @@ async function runAi(action) {
   aiTag.textContent = _t('ai.generating') || 'AI 生成中…';
   const aiBody = document.createElement('div');
   aiBody.className = 'ai-msg-body';
+  aiBody.innerHTML = '<span class="streaming-cursor"></span>';
   aiBubble.appendChild(aiTag); aiBubble.appendChild(aiBody);
   out.appendChild(aiBubble);
   out.scrollTop = out.scrollHeight;
@@ -812,7 +1007,7 @@ async function runAi(action) {
   const render = () => {
     renderTimer = null;
     if (!state.ai.raw) return;
-    aiBody.innerHTML = renderSafeMarkdown(state.ai.raw);
+    aiBody.innerHTML = renderSafeMarkdown(state.ai.raw) + '<span class="streaming-cursor"></span>';
     out.scrollTop = out.scrollHeight;
   };
   try {
@@ -863,7 +1058,8 @@ async function runAi(action) {
         if (!renderTimer) renderTimer = setTimeout(render, state.ai.raw.length > 150000 ? 500 : 120);
       }
     }
-    if (renderTimer) { clearTimeout(renderTimer); renderTimer = null; render(); }
+    if (renderTimer) { clearTimeout(renderTimer); renderTimer = null; }
+    aiBody.innerHTML = renderSafeMarkdown(state.ai.raw);
     renderMath(aiBody);
     aiTag.textContent = (_t('ai.aiTag', { seq: userSeq }) || ('AI · 回答 ' + userSeq)) + ' · ' + model + fmtAiUsage(state.ai.usage);
     if (state.ai.raw) {
@@ -882,6 +1078,7 @@ async function runAi(action) {
     if (e.name === 'AbortError') {
       aiTag.textContent = (_t('ai.aiTag', { seq: userSeq }) || ('AI · 回答 ' + userSeq)) + ' ' + (_t('ai.stoppedSuffix') || '（已停止）');
       if (state.ai.raw) {
+        aiBody.innerHTML = renderSafeMarkdown(state.ai.raw);
         const last = { role: 'assistant', content: state.ai.raw, ephemeral: isIncognito };
         if (state.ai.usage) last.usage = state.ai.usage;
         msgs.push(last);
@@ -949,18 +1146,30 @@ async function copyCurrentConversation() {
 }
 
 async function exportCurrentConversation() {
-  try { const md = await selectedConversationMarkdown(); await saveMarkdownText(md, 'readmd-conversation.md'); }
-  catch (e) { showToast(e.message); }
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  try {
+    const md = await selectedConversationMarkdown();
+    const id = state.ai.sessionId || $('ai-session').value || 'conversation';
+    const s = (state.ai.sessions || []).find(x => x.id === id);
+    const title = (s && s.title) || 'ai-dialog';
+    const filename = sanitizeFilename(title) + '.md';
+    if (hasPy && py.save_as) {
+      const out = await py.save_as(md, filename);
+      if (out) showToast((_t('toast.savedPrefix') || '已保存：') + out);
+    } else {
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+      showToast(_t('toast.exportedConversation') || '已导出对话 Markdown');
+    }
+  } catch (e) { showToast((_t('toast.exportFailed') || '导出失败：') + e.message); }
 }
 
-async function saveMarkdownText(markdown, suggested) {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (hasPy && py.save_as) {
-    const result = await py.save_as(markdown, suggested || 'conversation.md');
-    if (result) { showToast((_t('toast.savedPrefix') || '已保存：') + result); return; }
-    showToast(_t('toast.notSaved') || '未保存'); return;
-  }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown;charset=utf-8' })); a.download = suggested || 'conversation.md'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); showToast(_t('toast.downloadStarted') || '已开始下载');
+function sanitizeFilename(name) {
+  return String(name || 'dialog').trim().replace(/[\\/:*?"<>|]/g, '_').slice(0, 80) || 'dialog';
 }
 
 /* ---------------- 安全对话导入 ---------------- */
@@ -986,15 +1195,26 @@ function closeAiModal(id) {
 function bindAiResize() {
   const handle = $('ai-resize-handle');
   if (!handle) return;
+
+  // Restore saved width from localStorage if present
+  try {
+    const savedWidth = parseInt(localStorage.getItem('readmd_ai_panel_width'), 10);
+    if (savedWidth && savedWidth >= 320 && savedWidth <= Math.floor(window.innerWidth * 0.94)) {
+      state.aiPanelWidth = savedWidth;
+      document.body.style.setProperty('--ai-panel-width', savedWidth + 'px');
+    }
+  } catch (e) {}
+
   let startX = 0, startWidth = 0;
   const maxWidth = () => Math.max(360, Math.floor(window.innerWidth * 0.94));
   const syncResizeState = () => {
     handle.setAttribute('aria-valuemax', String(maxWidth()));
-    handle.setAttribute('aria-valuenow', String(state.aiPanelWidth));
+    handle.setAttribute('aria-valuenow', String(state.aiPanelWidth || 440));
   };
   const setPanelWidth = width => {
-    state.aiPanelWidth = Math.max(360, Math.min(maxWidth(), Math.round(width)));
+    state.aiPanelWidth = Math.max(320, Math.min(maxWidth(), Math.round(width)));
     document.body.style.setProperty('--ai-panel-width', state.aiPanelWidth + 'px');
+    try { localStorage.setItem('readmd_ai_panel_width', String(state.aiPanelWidth)); } catch (e) {}
     syncResizeState();
   };
   handle.addEventListener('keydown', e => {
@@ -1006,9 +1226,13 @@ function bindAiResize() {
   handle.addEventListener('keyup', e => {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') saveSettings();
   });
+  handle.addEventListener('dblclick', () => {
+    setPanelWidth(440);
+    saveSettings();
+  });
   window.addEventListener('resize', syncResizeState);
   handle.addEventListener('pointerdown', e => {
-    startX = e.clientX; startWidth = state.aiPanelWidth;
+    startX = e.clientX; startWidth = state.aiPanelWidth || 440;
     handle.setPointerCapture(e.pointerId);
     document.body.classList.add('ai-resizing');
   });

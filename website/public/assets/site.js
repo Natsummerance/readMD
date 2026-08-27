@@ -49,14 +49,14 @@
       canvas.height = Math.max(1, Math.round(rect.height * dpr));
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      const count = clamp(Math.round((rect.width * rect.height) / 28000), 22, 68);
+      const count = clamp(Math.round((rect.width * rect.height) / 24000), 24, 72);
       particles = Array.from({ length: count }, () => ({
         x: Math.random() * rect.width,
         y: Math.random() * rect.height,
-        vx: (Math.random() - 0.5) * 0.16,
-        vy: (Math.random() - 0.5) * 0.16,
-        radius: 0.7 + Math.random() * 1.1,
-        alpha: 0.16 + Math.random() * 0.18,
+        vx: (Math.random() - 0.5) * 0.18,
+        vy: (Math.random() - 0.5) * 0.18,
+        radius: 0.8 + Math.random() * 1.2,
+        alpha: 0.18 + Math.random() * 0.22,
       }));
     };
 
@@ -74,17 +74,17 @@
           const dx = particle.x - other.x;
           const dy = particle.y - other.y;
           const distance = Math.hypot(dx, dy);
-          if (distance > 108) continue;
+          if (distance > 115) continue;
 
-          context.strokeStyle = `rgba(10, 114, 232, ${0.07 * (1 - distance / 108)})`;
-          context.lineWidth = 0.7;
+          context.strokeStyle = `rgba(0, 113, 227, ${0.08 * (1 - distance / 115)})`;
+          context.lineWidth = 0.75;
           context.beginPath();
           context.moveTo(particle.x, particle.y);
           context.lineTo(other.x, other.y);
           context.stroke();
         }
 
-        context.fillStyle = `rgba(10, 114, 232, ${particle.alpha})`;
+        context.fillStyle = `rgba(0, 113, 227, ${particle.alpha})`;
         context.beginPath();
         context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
         context.fill();
@@ -133,7 +133,7 @@
     document.querySelectorAll('[data-reveal-group]').forEach((group) => {
       Array.from(group.children).forEach((child, index) => {
         child.classList.add('reveal');
-        child.style.setProperty('--reveal-delay', `${Math.min(index * 65, 350)}ms`);
+        child.style.setProperty('--reveal-delay', `${Math.min(index * 60, 320)}ms`);
       });
     });
 
@@ -151,7 +151,7 @@
         entry.target.classList.add('is-visible');
         observer.unobserve(entry.target);
       });
-    }, { threshold: 0.16, rootMargin: '0px 0px -8% 0px' });
+    }, { threshold: 0.15, rootMargin: '0px 0px -6% 0px' });
 
     targets.forEach((target) => observer.observe(target));
   };
@@ -167,7 +167,9 @@
     const regions = Array.from(document.querySelectorAll('[data-motion-region]'));
     let activeRegions = new Set(regions.slice(0, 1));
     let effectsFrame = 0;
-    let lastProgress = -1;
+    let targetProgress = 0;
+    let currentProgress = 0;
+    let lastRenderedProgress = -1;
     let lastFrameIndex = -1;
     let filmFrames = sharedFilm.frames;
 
@@ -189,9 +191,9 @@
     };
 
     const loadFilmFrames = () => {
-    if (!filmCanvas || !frameCount) return;
-    ensureSharedFilmFrames().then(() => {
-      filmFrames = sharedFilm.frames;
+      if (!filmCanvas || !frameCount) return;
+      ensureSharedFilmFrames().then(() => {
+        filmFrames = sharedFilm.frames;
         drawFilmFrame(Math.max(lastFrameIndex, 0));
         filmCanvas.dataset.framesReady = 'true';
       });
@@ -207,23 +209,29 @@
       const rect = journey.getBoundingClientRect();
       const range = Math.max(rect.height - window.innerHeight, 1);
       const linear = clamp(-rect.top / range, 0, 1);
-      const progress = linear <= 0.5
+      targetProgress = linear <= 0.5
         ? 2 * linear * linear
         : 1 - ((-2 * linear + 2) ** 2) / 2;
 
-      if (Math.abs(progress - lastProgress) >= 0.0012) {
-        lastProgress = progress;
-        if (progressBar) progressBar.style.transform = `scaleX(${progress})`;
+      // Spring lerp smoothing for physical fluid motion
+      currentProgress += (targetProgress - currentProgress) * 0.16;
+      if (Math.abs(targetProgress - currentProgress) < 0.0005) {
+        currentProgress = targetProgress;
+      }
+
+      if (Math.abs(currentProgress - lastRenderedProgress) >= 0.0008) {
+        lastRenderedProgress = currentProgress;
+        if (progressBar) progressBar.style.transform = `scaleX(${currentProgress})`;
         if (stage) {
-          stage.style.transform = `perspective(1300px) rotateX(${((0.5 - progress) * 3).toFixed(3)}deg) scale(${(0.975 + progress * 0.025).toFixed(4)})`;
+          stage.style.transform = `perspective(1400px) rotateX(${((0.5 - currentProgress) * 2.8).toFixed(3)}deg) scale(${(0.98 + currentProgress * 0.02).toFixed(4)})`;
         }
         ranges.forEach(({ element, start, end }) => {
-          element.classList.toggle('is-active', progress >= start && progress <= end);
+          element.classList.toggle('is-active', currentProgress >= start && currentProgress <= end);
         });
       }
 
-      syncFilm(progress);
-      journey.dataset.motionProgress = progress.toFixed(4);
+      syncFilm(currentProgress);
+      journey.dataset.motionProgress = currentProgress.toFixed(4);
       return true;
     };
 
@@ -233,7 +241,7 @@
         const rect = target.getBoundingClientRect();
         if (rect.bottom < -120 || rect.top > window.innerHeight + 120) return;
         const offset = (rect.top + rect.height / 2 - viewportCenter) / window.innerHeight;
-        target.style.transform = `translateY(${(-offset * 20).toFixed(2)}px)`;
+        target.style.transform = `translateY(${(-offset * 18).toFixed(2)}px)`;
       });
     };
 
@@ -284,11 +292,12 @@
 
     const context = canvas.getContext('2d', { alpha: false });
     const frameCount = sharedFilm.frames.length;
-    let canvasWidth = 1280;
-    let canvasHeight = 720;
+    let canvasWidth = 1440;
+    let canvasHeight = 900;
     let effectsFrame = 0;
     let visible = false;
-    let lastProgress = -1;
+    let targetProgress = 0;
+    let currentProgress = 0;
     let lastPosition = -1;
     let velocity = 0;
     let lastTime = performance.now();
@@ -302,12 +311,12 @@
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
-      particles = Array.from({ length: 42 }, () => ({
+      particles = Array.from({ length: 48 }, () => ({
         x: Math.random() * rect.width,
         y: Math.random() * rect.height,
-        radius: 0.6 + Math.random() * 1.5,
-        speed: 0.15 + Math.random() * 0.55,
-        alpha: 0.08 + Math.random() * 0.14,
+        radius: 0.7 + Math.random() * 1.6,
+        speed: 0.18 + Math.random() * 0.45,
+        alpha: 0.12 + Math.random() * 0.18,
       }));
     };
 
@@ -326,6 +335,7 @@
       context.globalAlpha = 1;
     };
 
+    // Smooth blended cinematic frames
     const drawBlendedFrame = (position, alpha, progress) => {
       const clamped = clamp(position, 0, frameCount - 1);
       const firstIndex = Math.floor(clamped);
@@ -333,26 +343,27 @@
       const amount = clamped - firstIndex;
       const first = sharedFilm.frames[firstIndex];
       const second = sharedFilm.frames[secondIndex];
-      drawCover(first, 1.16 + progress * 0.12, 0, 0, alpha);
-      if (second && amount > 0.02) {
+      drawCover(first, 1.12 + progress * 0.08, 0, 0, alpha);
+      if (second && amount > 0.01) {
         context.globalCompositeOperation = 'lighter';
-        drawCover(second, 1.18 + progress * 0.12, Math.sin(progress * Math.PI * 4) * 12, Math.cos(progress * Math.PI * 3) * 8, alpha * 0.28 * amount);
+        drawCover(second, 1.14 + progress * 0.08, Math.sin(progress * Math.PI * 2) * 8, Math.cos(progress * Math.PI * 2) * 6, alpha * 0.22 * amount);
         context.globalCompositeOperation = 'source-over';
       }
     };
 
+    // Clean subtle depth slices
     const drawSlices = (position, progress) => {
-      const bands = 8;
+      const bands = 6;
       const bandHeight = canvasHeight / bands;
       for (let index = 0; index < bands; index += 1) {
-        if ((index + Math.round(progress * 12)) % 3 !== 0) continue;
-        const neighborPosition = clamp(position + (index % 2 === 0 ? -0.035 : 0.04), 0, frameCount - 1);
+        if ((index + Math.round(progress * 8)) % 2 !== 0) continue;
+        const neighborPosition = clamp(position + (index % 2 === 0 ? -0.02 : 0.02), 0, frameCount - 1);
         const frame = sharedFilm.frames[Math.floor(neighborPosition)];
         if (!frame) continue;
         const sourceY = (index / bands) * frame.naturalHeight;
         const sourceHeight = frame.naturalHeight / bands;
-        const offset = Math.sin(index * 1.7 + progress * 11) * (10 + velocity * 90);
-        context.globalAlpha = 0.22;
+        const offset = Math.sin(index * 1.5 + progress * 8) * (6 + Math.abs(velocity) * 40);
+        context.globalAlpha = 0.15;
         context.drawImage(
           frame,
           0,
@@ -368,11 +379,12 @@
       }
     };
 
+    // Subtle Apple-grade particle starfield
     const drawParticles = () => {
       for (const particle of particles) {
         particle.y -= particle.speed;
         if (particle.y < -4) particle.y = canvas.clientHeight + 4;
-        context.fillStyle = `rgba(157, 202, 255, ${particle.alpha})`;
+        context.fillStyle = `rgba(144, 202, 249, ${particle.alpha})`;
         context.beginPath();
         context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
         context.fill();
@@ -383,46 +395,53 @@
       const rect = section.getBoundingClientRect();
       const range = Math.max(rect.height - window.innerHeight, 1);
       const linear = clamp(-rect.top / range, 0, 1);
-      const progress = linear <= 0.45
-        ? linear / 0.45 * 0.24
-        : 0.24 + ((linear - 0.45) / 0.55) * 0.76;
+      targetProgress = linear <= 0.45
+        ? (linear / 0.45) * 0.25
+        : 0.25 + ((linear - 0.45) / 0.55) * 0.75;
+
+      // Spring physics lerp
+      currentProgress += (targetProgress - currentProgress) * 0.14;
+      if (Math.abs(targetProgress - currentProgress) < 0.0005) {
+        currentProgress = targetProgress;
+      }
 
       const now = timestamp || performance.now();
       const elapsed = Math.max(now - lastTime, 16);
       lastTime = now;
       if (lastPosition >= 0) {
-        const instantVelocity = (progress - lastPosition) / elapsed * 1000;
+        const instantVelocity = (currentProgress - lastPosition) / elapsed * 1000;
         velocity += (instantVelocity - velocity) * 0.12;
       }
-      velocity = clamp(velocity, -0.35, 0.35);
-      lastPosition = progress;
-      canvas.dataset.syncProgress = progress.toFixed(4);
+      velocity = clamp(velocity, -0.3, 0.3);
+      lastPosition = currentProgress;
+      canvas.dataset.syncProgress = currentProgress.toFixed(4);
 
-      const position = progress * (frameCount - 1);
+      const position = currentProgress * (frameCount - 1);
       context.clearRect(0, 0, canvasWidth, canvasHeight);
-      context.fillStyle = '#050609';
+      context.fillStyle = '#08090c';
       context.fillRect(0, 0, canvasWidth, canvasHeight);
       if (!sharedFilm.ready) return true;
 
-      drawBlendedFrame(position, 0.82, progress);
-      drawSlices(position, progress);
+      drawBlendedFrame(position, 0.88, currentProgress);
+      drawSlices(position, currentProgress);
       context.globalCompositeOperation = 'lighter';
-      drawCover(sharedFilm.frames[Math.floor(clamp(position + velocity * 7, 0, frameCount - 1))], 1.2, velocity * -70, velocity * -35, Math.min(Math.abs(velocity) * 1.3, 0.2));
+      drawCover(sharedFilm.frames[Math.floor(clamp(position + velocity * 5, 0, frameCount - 1))], 1.15, velocity * -40, velocity * -20, Math.min(Math.abs(velocity) * 0.8, 0.18));
       context.globalCompositeOperation = 'source-over';
       drawParticles();
 
-      const railDistance = Math.max(track.scrollWidth - window.innerWidth + 48, 0);
-      const railEase = progress <= 0.35 ? 0 : (progress - 0.35) / 0.65;
-      track.style.transform = `translate3d(${-railDistance * (railEase ** 2 * (3 - 2 * railEase))}px,0,0)`;
-      if (progressBar) progressBar.style.transform = `scaleX(${progress})`;
+      const railDistance = Math.max(track.scrollWidth - window.innerWidth + 56, 0);
+      const railEase = currentProgress <= 0.32 ? 0 : (currentProgress - 0.32) / 0.68;
+      const railTranslate = -railDistance * (railEase ** 2 * (3 - 2 * railEase));
+      track.style.transform = `translate3d(${railTranslate.toFixed(2)}px,0,0)`;
+      if (progressBar) progressBar.style.transform = `scaleX(${currentProgress})`;
 
       const viewportCenter = window.innerWidth / 2;
       panels.forEach((panel) => {
         const panelRect = panel.getBoundingClientRect();
         const distance = Math.abs(panelRect.left + panelRect.width / 2 - viewportCenter) / window.innerWidth;
-        const proximity = clamp(1 - distance * 1.7, 0, 1);
-        panel.style.opacity = (0.34 + proximity * 0.66).toFixed(3);
-        panel.style.transform = `translateY(${(1 - proximity) * 26}px) scale(${0.94 + proximity * 0.06})`;
+        const proximity = clamp(1 - distance * 1.6, 0, 1);
+        panel.style.opacity = (0.4 + proximity * 0.6).toFixed(3);
+        panel.style.transform = `translateY(${((1 - proximity) * 22).toFixed(1)}px) scale(${(0.95 + proximity * 0.05).toFixed(3)})`;
       });
       return true;
     };
@@ -452,7 +471,7 @@
     const visibilityObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
       playCinema();
-    }, { rootMargin: '12% 0px' });
+    }, { rootMargin: '15% 0px' });
     visibilityObserver.observe(section);
     document.addEventListener('visibilitychange', playCinema);
 
@@ -471,6 +490,73 @@
     }
   };
 
+  /* Dual-Channel High-Speed Download Hub & Mirror Engine */
+  const setupDownloadHub = () => {
+    const mirrorEngines = {
+      direct: (url) => url,
+      ghfast: (url) => `https://ghfast.top/${url}`,
+      ghproxy: (url) => `https://ghproxy.net/${url}`,
+      gitmirror: (url) => `https://hub.gitmirror.com/${url}`,
+      fastgit: (url) => url.replace('https://github.com/', 'https://download.fastgit.org/'),
+    };
+
+    let activeMirror = localStorage.getItem('readmd_download_mirror') || 'direct';
+
+    const updateDownloadLinks = (mirrorKey) => {
+      activeMirror = mirrorKey;
+      localStorage.setItem('readmd_download_mirror', mirrorKey);
+
+      document.querySelectorAll('[data-mirror-url]').forEach((link) => {
+        const original = link.dataset.mirrorUrl;
+        const transform = mirrorEngines[mirrorKey] || mirrorEngines.direct;
+        link.href = transform(original);
+      });
+
+      document.querySelectorAll('.mirror-tab').forEach((tab) => {
+        tab.classList.toggle('is-active', tab.dataset.mirror === mirrorKey);
+      });
+    };
+
+    document.querySelectorAll('.mirror-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        updateDownloadLinks(tab.dataset.mirror);
+      });
+    });
+
+    // Detect user platform
+    const ua = navigator.userAgent.toLowerCase();
+    let detectedOS = 'windows';
+    if (ua.includes('mac') || ua.includes('darwin')) detectedOS = 'macos';
+    else if (ua.includes('linux') || ua.includes('x11') || ua.includes('kylin') || ua.includes('uos')) detectedOS = 'linux';
+
+    document.querySelectorAll(`[data-platform="${detectedOS}"]`).forEach((card) => {
+      card.classList.add('is-recommended');
+    });
+
+    // Initialize links with data-mirror-url if present
+    document.querySelectorAll('a[href^="https://github.com/Natsummerance/readMD/releases/download/"]').forEach((link) => {
+      if (!link.dataset.mirrorUrl) link.dataset.mirrorUrl = link.href;
+    });
+
+    updateDownloadLinks(activeMirror);
+
+    // Asynchronously fetch latest release metadata from GitHub
+    fetch('https://api.github.com/repos/Natsummerance/readMD/releases/latest', {
+      headers: { 'Accept': 'application/vnd.github.v3+json' }
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data || !data.tag_name) return;
+        const version = data.tag_name;
+        document.querySelectorAll('.latest-version-badge').forEach((el) => {
+          el.textContent = version;
+        });
+      })
+      .catch(() => {
+        // Graceful fallback to pre-rendered version
+      });
+  };
+
   const initialize = () => {
     const navShell = document.querySelector('.nav-shell');
     const hero = document.querySelector('.hero');
@@ -485,6 +571,7 @@
     prepareReveals();
     startScrollEffects();
     startCapabilityCinema();
+    setupDownloadHub();
   };
 
   if (document.readyState === 'loading') {
@@ -493,3 +580,4 @@
     initialize();
   }
 })();
+

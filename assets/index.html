@@ -266,61 +266,85 @@
     <div id="pv-splitter" class="hidden" role="separator" tabindex="0" aria-label="调整编辑与预览比例" aria-orientation="vertical" aria-valuemin="25" aria-valuemax="70" aria-valuenow="50" aria-valuetext="50%" data-i18n-aria="editor.pvSplitterAria"></div>
     <div id="preview-wrap" class="hidden"><div id="preview-pane" class="markdown-body"></div></div>
   </div>
-</div>
 
-<!-- AI 助手面板 -->
-<div id="ai-panel" class="hidden">
-  <div id="ai-resize-handle" role="separator" tabindex="0" aria-orientation="vertical" aria-label="调整 AI 面板宽度" data-i18n-aria="ai.resizeHandle" aria-valuemin="360" aria-valuemax="1200" aria-valuenow="432" title="拖动或用左右方向键调整 AI 面板宽度" data-i18n-title="ai.resizeHandle"></div>
-  <div class="ai-head">
-    <span class="ai-head-title">
-      <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3.5"/></svg>
-      <span data-i18n="ai.title">AI 对话</span>
-    </span>
-    <div class="ai-head-actions">
-      <button id="ai-settings-open" class="tb-btn icon" title="AI 连接设置" aria-label="AI 连接设置" data-i18n-title="ai.settings" data-i18n-aria="ai.settings">
-        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-      </button>
-      <button id="ai-close" class="tb-btn icon" title="关闭" aria-label="关闭 AI 对话" data-i18n-title="toolbar.close" data-i18n-aria="toolbar.close">
-        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
-    </div>
-  </div>
-
-  <div class="ai-body">
-    <div class="ai-conversation-bar">
-      <div class="ai-connection-summary"><span id="ai-connection-dot" class="conn-dot" aria-hidden="true"></span><span id="ai-connection-label" aria-live="polite" data-i18n="ai.statusReading">正在读取连接…</span></div>
-      <span id="ai-model-summary" class="ai-model-summary" aria-label="当前模型" data-i18n-aria="ai.currentModelAria" data-i18n="ai.customModel">未选择模型</span>
-      <button id="ai-history-open" class="tb-btn" title="会话历史" data-i18n="ai.history" data-i18n-title="ai.historyTitle">历史</button>
-    </div>
-    <div class="ai-actions" aria-label="快捷动作" data-i18n-aria="ai.actionsAria">
-      <button class="ai-act" data-act="quick_read" title="总结全文" data-i18n="ai.quickSummarize" data-i18n-title="ai.quickSummarize">总结全文</button>
-      <button class="ai-act" data-act="polish" title="润色文稿" data-i18n="ai.quickPolish" data-i18n-title="ai.quickPolish">润色文稿</button>
-      <button class="ai-act" data-act="modify" title="提取待办" data-i18n="ai.quickTodo" data-i18n-title="ai.quickTodo">提取待办</button>
-      <button class="ai-act" data-act="expand" title="续写内容" data-i18n="ai.quickContinue" data-i18n-title="ai.quickContinue">续写内容</button>
-      <button class="ai-act" data-act="continue" title="翻译为英文" data-i18n="ai.quickTranslateEn" data-i18n-title="ai.quickTranslateEn">翻译为英文</button>
-      <button class="ai-act" data-act="translate" title="纠正语法" data-i18n="ai.quickGrammar" data-i18n-title="ai.quickGrammar">纠正语法</button>
-      <button class="ai-act" data-act="ask" title="向 AI 提问" data-i18n="ai.send" data-i18n-title="ai.send">提问</button>
-    </div>
-    <div class="ai-output-wrap" aria-label="对话内容" data-i18n-aria="ai.outputAria">
-      <div id="ai-output" aria-live="polite"></div>
-    </div>
-    <div class="ai-composer">
-      <textarea id="ai-prompt" rows="3" placeholder="向 AI 提问，或选择上方快捷指令... (Enter 发送, Shift+Enter 换行)" aria-label="向 AI 提问" data-i18n-placeholder="ai.promptPlaceholder" data-i18n-aria="ai.promptPlaceholder" autocomplete="off"></textarea>
-      <div class="ai-composer-actions">
-
-        <label class="ai-sel"><input id="ai-selection" type="checkbox"> <span data-i18n="editor.text">仅处理选中文字</span></label>
-        <label class="ai-sel"><input id="ai-incognito" type="checkbox"> <span data-i18n="ai.incognito">无痕</span></label>
-        <span id="ai-usage">Token：—</span>
-        <span class="ai-grow"></span>
-        <button id="ai-clear-ctx" class="tb-btn" title="开始一轮新对话" data-i18n="ai.newSession" data-i18n-title="ai.newSession">新对话</button>
-        <button id="ai-stop" class="tb-btn" data-i18n="ai.stop" disabled>停止</button>
-        <button id="ai-run" class="tb-btn accent" data-i18n="ai.send">发送</button>
+  <!-- AI 助手工作台 (Split Workspace / Floating Panel) -->
+  <div id="ai-panel" class="hidden">
+    <div id="ai-resize-handle" role="separator" tabindex="0" aria-orientation="vertical" aria-label="调整 AI 面板宽度" data-i18n-aria="ai.resizeHandle" aria-valuemin="320" aria-valuemax="1400" aria-valuenow="440" title="拖动或用左右方向键调整 AI 面板宽度" data-i18n-title="ai.resizeHandle"></div>
+    <div class="ai-head">
+      <div class="ai-head-left">
+        <span class="ai-head-title">
+          <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3.5"/></svg>
+          <span data-i18n="ai.title">AI 对话</span>
+        </span>
+        <div class="ai-connection-summary"><span id="ai-connection-dot" class="conn-dot" aria-hidden="true"></span><span id="ai-connection-label" aria-live="polite" data-i18n="ai.statusReading">正在读取连接…</span></div>
+        <span id="ai-model-summary" class="ai-model-summary" aria-label="当前模型" data-i18n-aria="ai.currentModelAria" data-i18n="ai.customModel">未选择模型</span>
       </div>
-      <div class="ai-result-actions">
-        <button id="ai-apply" class="tb-btn" data-i18n="ai.apply" disabled>应用到正文</button>
-        <button id="ai-copy" class="tb-btn" data-i18n="ai.copy" disabled>复制回答</button>
-        <button id="ai-saveas" class="tb-btn" data-i18n="ai.saveAsMd" disabled>另存为 MD</button>
-        <span id="ai-status" role="status" aria-live="polite"></span>
+      <div class="ai-head-actions">
+        <button id="ai-history-open" class="tb-btn icon" title="会话历史" aria-label="会话历史" data-i18n-title="ai.historyTitle" data-i18n-aria="ai.historyTitle">
+          <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </button>
+        <button id="ai-settings-open" class="tb-btn icon" title="AI 连接设置" aria-label="AI 连接设置" data-i18n-title="ai.settings" data-i18n-aria="ai.settings">
+          <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button id="ai-expand-toggle" class="tb-btn icon" title="切换全屏 / 分屏" aria-label="切换全屏或分屏" data-i18n-title="ai.toggleFullscreen" data-i18n-aria="ai.toggleFullscreen">
+          <svg class="tb-ic ai-ic-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+          <svg class="tb-ic ai-ic-compress hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/></svg>
+        </button>
+        <button id="ai-close" class="tb-btn icon" title="关闭" aria-label="关闭 AI 对话" data-i18n-title="toolbar.close" data-i18n-aria="toolbar.close">
+          <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="ai-body">
+      <div class="ai-template-bar">
+        <div class="ai-template-selector-wrap">
+          <svg class="ai-tpl-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <select id="ai-template" title="Prompt 模板：选择后应用到本次对话" data-i18n-title="ai.tplSelectTitle" aria-label="Prompt 模板"></select>
+          <button id="ai-tpl-btn" class="tb-btn" title="Prompt 模板管理与导入" data-i18n-title="ai.templateManage" aria-label="Prompt 模板管理">
+            <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            <span data-i18n="ai.templateManage">模板库</span>
+          </button>
+        </div>
+      </div>
+      <div class="ai-actions" aria-label="快捷动作" data-i18n-aria="ai.actionsAria">
+        <button class="ai-act" data-act="quick_read" title="总结全文结构与要点" data-i18n="ai.quickSummarize" data-i18n-title="ai.quickSummarize">总结全文</button>
+        <button class="ai-act" data-act="polish" title="深度润色文稿语句" data-i18n="ai.quickPolish" data-i18n-title="ai.quickPolish">润色文稿</button>
+        <button class="ai-act" data-act="proofread" title="校对错别字与语法标点" data-i18n="ai.quickProofread" data-i18n-title="ai.quickProofread">语法纠错</button>
+        <button class="ai-act" data-act="translate_en" title="精确翻译为英文" data-i18n="ai.quickTranslateEn" data-i18n-title="ai.quickTranslateEn">翻译为英文</button>
+        <button class="ai-act" data-act="translate_zh" title="精确翻译为中文" data-i18n="ai.quickTranslateZh" data-i18n-title="ai.quickTranslateZh">翻译为中文</button>
+        <button class="ai-act" data-act="todo" title="智能提取待办与行动项" data-i18n="ai.quickTodo" data-i18n-title="ai.quickTodo">提取待办</button>
+        <button class="ai-act" data-act="continue" title="承接上文逻辑续写" data-i18n="ai.quickContinue" data-i18n-title="ai.quickContinue">续写内容</button>
+        <button class="ai-act" data-act="ask" title="基于文档自由提问" data-i18n="ai.send" data-i18n-title="ai.send">自由提问</button>
+      </div>
+      <div class="ai-output-wrap" aria-label="对话内容" data-i18n-aria="ai.outputAria">
+        <div id="ai-output" aria-live="polite"></div>
+      </div>
+      <div class="ai-composer">
+        <div class="ai-composer-input-wrap">
+          <textarea id="ai-prompt" rows="2" placeholder="向 AI 提问，或选择上方快捷指令... (Enter 发送, Shift+Enter 换行)" aria-label="向 AI 提问" data-i18n-placeholder="ai.promptPlaceholder" data-i18n-aria="ai.promptPlaceholder" autocomplete="off"></textarea>
+        </div>
+        <div class="ai-composer-actions">
+          <div class="ai-composer-left">
+            <label class="ai-sel" title="仅处理当前在编辑器或阅读器中选中的文本" data-i18n-title="ai.scopeSelectionTitle"><input id="ai-selection" type="checkbox"> <span data-i18n="editor.text">仅处理选中文字</span></label>
+            <label class="ai-sel" title="无痕模式：本次会话不保存到历史记录" data-i18n-title="ai.incognitoTitle"><input id="ai-incognito" type="checkbox"> <span data-i18n="ai.incognito">无痕</span></label>
+            <span id="ai-usage">Token：—</span>
+          </div>
+          <div class="ai-composer-right">
+            <button id="ai-clear-ctx" class="tb-btn" title="开始一轮新对话" data-i18n="ai.newSession" data-i18n-title="ai.newSession">新对话</button>
+            <button id="ai-stop" class="tb-btn" data-i18n="ai.stop" disabled>停止</button>
+            <button id="ai-run" class="tb-btn accent ai-send-btn" title="发送 (Enter)" aria-label="发送" data-i18n-title="ai.send">
+              <span data-i18n="ai.send">发送</span>
+              <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="ai-result-actions">
+          <button id="ai-apply" class="tb-btn" data-i18n="ai.apply" disabled>应用到正文</button>
+          <button id="ai-copy" class="tb-btn" data-i18n="ai.copy" disabled>复制回答</button>
+          <button id="ai-saveas" class="tb-btn" data-i18n="ai.saveAsMd" disabled>另存为 MD</button>
+          <span id="ai-status" role="status" aria-live="polite"></span>
+        </div>
       </div>
     </div>
   </div>
@@ -329,7 +353,12 @@
 <!-- AI 设置：连接细节不打断对话 -->
 <div id="ai-settings-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="ai-settings-title">
   <div id="ai-settings-box" class="ai-drawer-box">
-    <div class="export-head"><h3 id="ai-settings-title" data-i18n="ai.settings">AI 连接设置</h3><button id="ai-settings-close" class="tb-btn icon" aria-label="关闭连接设置" data-i18n-aria="toolbar.close">×</button></div>
+    <div class="export-head">
+      <h3 id="ai-settings-title" data-i18n="ai.settings">AI 连接设置</h3>
+      <button id="ai-settings-close" class="tb-btn icon modal-close-btn" aria-label="关闭连接设置" data-i18n-aria="toolbar.close">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
     <p class="ai-settings-intro" data-i18n="ai.settingsDesc">密钥只保存在本机。连接状态会区分鉴权、限流和网络问题。</p>
     <div class="conn-grid">
         <div class="conn-field">
@@ -400,17 +429,18 @@
 <!-- AI 历史：筛选、改名和导出不占用对话区域 -->
 <div id="ai-history-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="ai-history-title">
   <div id="ai-history-box" class="ai-drawer-box">
-    <div class="export-head"><h3 id="ai-history-title" data-i18n="ai.historyTitle">会话历史</h3><button id="ai-history-close" class="tb-btn icon" aria-label="关闭会话历史" data-i18n-aria="toolbar.close">×</button></div>
+    <div class="export-head">
+      <h3 id="ai-history-title" data-i18n="ai.historyTitle">会话历史</h3>
+      <button id="ai-history-close" class="tb-btn icon modal-close-btn" aria-label="关闭会话历史" data-i18n-aria="toolbar.close">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
     <input id="ai-history-search" type="search" placeholder="搜索历史会话..." data-i18n-placeholder="ai.searchHistory" aria-label="搜索会话历史" data-i18n-aria="ai.searchHistory">
     <div id="ai-history-list" class="ai-history-list"></div>
     <div class="ai-history-actions"><button id="ai-history-copy" class="tb-btn" data-i18n="ai.copy">复制回答</button><button id="ai-history-export" class="tb-btn" data-i18n="ai.exportHistory">导出记录</button><button id="ai-history-clear" class="tb-btn" data-i18n="ai.clearHistory">清空历史</button></div>
     <!-- 保留旧 ID，供自动化和旧调用兼容 -->
     <select id="ai-session" class="hidden" aria-hidden="true"></select>
     <button id="ai-save-session" class="hidden" tabindex="-1" data-i18n="ai.save">存</button><button id="ai-del-session" class="hidden" tabindex="-1" data-i18n="ai.delete">删</button>
-    <div class="ai-row ai-template-row">
-      <select id="ai-template" title="Prompt 模板：选择后应用到本次对话" data-i18n-title="ai.tplSelectTitle"></select>
-      <button id="ai-tpl-btn" class="tb-btn" title="模板管理" data-i18n="ai.templateManage" data-i18n-title="ai.templateManage">模板</button>
-    </div>
   </div>
 </div>
 
@@ -476,20 +506,40 @@
 <!-- Prompt 模板管理弹窗 -->
 <div id="tpl-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="tpl-title">
   <div id="tpl-box">
-    <h3 id="tpl-title" data-i18n="tpl.title">&#128221; Prompt 模板管理</h3>
+    <div class="export-head">
+      <h3 id="tpl-title" data-i18n="tpl.title">Prompt 模板管理</h3>
+      <button id="tpl-close" class="tb-btn icon modal-close-btn" aria-label="关闭模板管理" data-i18n-aria="toolbar.close">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="tpl-toolbar-actions">
+      <input id="tpl-search" type="search" placeholder="搜索模板..." aria-label="搜索模板" data-i18n-placeholder="tpl.searchPlaceholder">
+      <button id="tpl-import-btn" class="tb-btn" title="支持导入 .md / .json 格式的提示词模板文件" data-i18n="tpl.importMd" data-i18n-title="tpl.importHint">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span data-i18n="tpl.importMd">导入模板 (.md)</span>
+      </button>
+      <input type="file" id="tpl-file-input" accept=".md,.markdown,.json,.txt" multiple style="display:none">
+      <button id="tpl-export-btn" class="tb-btn" title="将全部模板导出为 .json 备份" data-i18n="tpl.exportJson" data-i18n-title="tpl.exportHint">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span data-i18n="tpl.exportJson">导出模板</span>
+      </button>
+    </div>
     <div class="tpl-layout">
       <ul id="tpl-list" class="tpl-list" role="listbox" aria-label="Prompt 模板" data-i18n-aria="tpl.title"></ul>
       <div class="tpl-form">
         <input id="tpl-id" type="hidden">
-        <input id="tpl-name" type="text" placeholder="模板名称（如：总结要点 / 生成周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
-        <select id="tpl-action" aria-label="动作：快速阅读">
+        <input id="tpl-name" type="text" placeholder="模板名称（如：深度论文精读 / 结构化周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
+        <select id="tpl-action" aria-label="动作分类">
           <option value="quick_read" data-i18n="tpl.actionQuickRead">动作：快速阅读</option>
-          <option value="polish" data-i18n="tpl.actionPolish">动作：润色</option>
-          <option value="modify" data-i18n="tpl.actionModify">动作：修改</option>
-          <option value="expand" data-i18n="tpl.actionExpand">动作：扩充</option>
-          <option value="continue" data-i18n="tpl.actionContinue">动作：续写</option>
-          <option value="translate" data-i18n="tpl.actionTranslate">动作：翻译</option>
-          <option value="ask" data-i18n="tpl.actionAsk">动作：提问</option>
+          <option value="polish" data-i18n="tpl.actionPolish">动作：润色文稿</option>
+          <option value="proofread" data-i18n="tpl.actionProofread">动作：语法纠错</option>
+          <option value="translate_en" data-i18n="tpl.actionTranslateEn">动作：翻译为英文</option>
+          <option value="translate_zh" data-i18n="tpl.actionTranslateZh">动作：翻译为中文</option>
+          <option value="todo" data-i18n="tpl.actionTodo">动作：提取待办</option>
+          <option value="continue" data-i18n="tpl.actionContinue">动作：续写内容</option>
+          <option value="ask" data-i18n="tpl.actionAsk">动作：自由提问</option>
+          <option value="modify" data-i18n="tpl.actionModify">动作：修订格式</option>
+          <option value="expand" data-i18n="tpl.actionExpand">动作：扩展细节</option>
           <option value="custom" data-i18n="tpl.actionCustom">自定义动作</option>
         </select>
         <textarea id="tpl-system" rows="4" placeholder="系统提示词：角色设定与任务说明" aria-label="系统提示词" data-i18n-placeholder="tpl.systemPlaceholder" data-i18n-aria="tpl.systemPlaceholder"></textarea>
@@ -500,9 +550,9 @@
       <button id="tpl-new" class="tb-btn" data-i18n="ai.newSession">新建</button>
       <button id="tpl-save" class="tb-btn accent" data-i18n="editor.save">保存</button>
       <button id="tpl-del" class="tb-btn" data-i18n="tpl.delete">删除</button>
-      <button id="tpl-close" class="tb-btn" data-i18n="toolbar.close">关闭</button>
+      <button id="tpl-close-btn" class="tb-btn" data-i18n="toolbar.close">关闭</button>
     </div>
-    <p class="fix-note" data-i18n="tpl.hint">内置模板可直接编辑并保存（覆盖默认行为）；删除内置模板即恢复默认。{doc} / {prompt} 会在发送时自动替换为文档内容与补充要求。</p>
+    <p class="fix-note" data-i18n="tpl.hint">支持导入标准 Markdown 格式（含 YAML Frontmatter 或 # 标题）模板文件与 .json 模板。内置模板可直接编辑并保存覆盖；删除内置模板即恢复默认。{doc} 与 {prompt} 会在发送时自动替换为文档内容与补充要求。</p>
   </div>
 </div>
 

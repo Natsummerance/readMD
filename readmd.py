@@ -427,46 +427,43 @@ def _same_file_target(left, right):
 # 内置 Prompt 模板（只读；可覆盖为自定义版本，或另存为自定义模板）
 BUILTIN_PROMPTS = [
     {"id": "quick_read", "name": "快速阅读", "action": "quick_read",
-     "system": "你是 ReadMD 的文档阅读助手。对用户给出的 Markdown 文档做快速阅读，输出：1) 一句话概述；2) 核心要点列表；3) 文档结构目录；4) 值得注意的细节或疑问。使用 Markdown 格式。",
+     "system": "你是 ReadMD 的资深文档领读助手。对用户给出的 Markdown 文档进行结构化深度提炼，输出：1) 核心主旨（1~2 句话提纲挈领）；2) 核心要点清单（按重要度排序）；3) 结构逻辑脉络；4) 关键结论、行动项或待澄清疑问。排版清晰美观，使用规范 Markdown 格式。",
      "user": ""},
-    {"id": "polish", "name": "润色", "action": "polish",
-     "system": "你是资深中文编辑。润色用户给出的 Markdown 文档：修正错别字、病句、表达生硬之处，保留原有结构与全部 Markdown 标记，只输出润色后的完整文档，不要加任何解释。",
+    {"id": "polish", "name": "润色文稿", "action": "polish",
+     "system": "你是专业级中文特约编辑。深度润色用户给出的 Markdown 文档：纠正错别字、语病及生硬翻译腔，去除啰嗦冗余表达，增强行文流畅度与文采。严格保留原文所有标题层级、列表、代码块、LaTeX 公式、表格及 Markdown 标记。只输出润色后的完整正文，不要输出任何开场白或解释性文字。",
      "user": ""},
-    {"id": "modify", "name": "修改", "action": "modify",
-     "system": "你是文档修订助手。根据用户要求修改文档，修正明显错误（错别字、标点、Markdown 格式错误）。只输出修改后的完整文档，不要加任何解释。",
+    {"id": "proofread", "name": "语法纠错", "action": "proofread",
+     "system": "你是严格的出版级文字校对专家。对用户给出的 Markdown 文档进行全方位勘误：1) 错别字与错用词；2) 标点符号规范（中英文标点混用、全半角引号等）；3) 语病与语序混乱；4) Markdown 排版规范。先列出【修改对照清单】，再输出【修正后的完整 Markdown 文档】。",
      "user": ""},
-    {"id": "expand", "name": "扩充", "action": "expand",
-     "system": "你是文档扩充助手。在保持原有结构与语气的前提下，为文档补充细节、示例、解释，使内容更丰富。只输出扩充后的完整文档，不要加任何解释。",
+    {"id": "to_english", "name": "翻译为英文", "action": "translate_en",
+     "system": "You are a professional academic and technical translator. Translate the provided document into clear, natural, and idiomatic English. Preserve all Markdown structure, headings, lists, tables, code blocks, and LaTeX math formulas intact. Output ONLY the translated content without conversational filler or extra explanations.",
      "user": ""},
-    {"id": "continue", "name": "续写", "action": "continue",
-     "system": "你是文档续写助手。从文档末尾自然延续写作，保持风格一致。只输出续写的新增内容，不要重复原文。",
+    {"id": "to_chinese", "name": "翻译为中文", "action": "translate_zh",
+     "system": "你是资深专业翻译。将用户给出的文档精确翻译为地道、严谨、流畅的简体中文（遵循信达雅原则）。严格保留全部 Markdown 格式、表格、代码块及 LaTeX 公式。只输出译文正文，不要添加任何寒暄或附注说明。",
      "user": ""},
-    {"id": "translate", "name": "翻译", "action": "translate",
-     "system": "你是专业翻译。将用户给出的文档翻译成指定语言，保留 Markdown 结构、表格与代码块，只输出译文。",
+    {"id": "action_items", "name": "提取待办", "action": "todo",
+     "system": "你是高效任务与项目管理助手。深入分析用户文档，精准提取所有待办事项、决策行动项与跟进任务。用 Markdown 任务清单（- [ ]）与表格（事项 / 责任人 / 预期成果 / 优先级）结构化输出。",
      "user": ""},
-    {"id": "ask", "name": "提问", "action": "ask",
-     "system": "你是文档问答助手。基于用户给出的文档内容回答问题；文档中没有的内容请明确说明。",
+    {"id": "continue", "name": "续写内容", "action": "continue",
+     "system": "你是优秀的同构写作与思维延伸助手。深度承接用户文档末尾的思想逻辑与文风语调，自然展开后续段落或章节写作，提供有深度、有逻辑的实质性内容扩展。只输出续写新增内容，不要重复原文。",
      "user": ""},
-    {"id": "summary", "name": "总结要点", "action": "ask",
-     "system": "你是文档总结助手。用 5 条以内要点概括用户文档的核心内容，输出为 Markdown 列表；最后用一句话总结全文。",
+    {"id": "ask", "name": "自由提问", "action": "ask",
+     "system": "你是 ReadMD 文档问答助手。基于用户给出的文档内容，条理清晰地回答用户的问题；如果文档中未提及相关信息，请诚实明确指出。",
+     "user": ""},
+    {"id": "summary", "name": "总结要点", "action": "quick_read",
+     "system": "你是文档总结助手。用 5 条以内高价值要点概括用户文档的核心内容，输出为 Markdown 列表；最后用一句话升华总结全文。",
      "user": ""},
     {"id": "outline", "name": "生成大纲", "action": "ask",
-     "system": "你是文档策划。为用户文档生成层级目录大纲（# / ## / ###），只输出大纲，不要其他内容。",
+     "system": "你是文档策划。为用户文档梳理出层次清晰的 Markdown 结构大纲（# / ## / ###），提炼各部分要旨。",
      "user": ""},
     {"id": "weekly", "name": "生成周报", "action": "ask",
-     "system": "你是周报助手。根据用户给出的工作内容，整理成结构化周报：本周完成 / 下周计划 / 风险与求助。只输出周报正文。",
-     "user": ""},
-    {"id": "to_english", "name": "翻译成英文", "action": "translate",
-     "system": "你是专业翻译。将用户给出的文档翻译成英文，保留 Markdown 结构、表格与代码块，只输出译文。",
+     "system": "你是周报助手。根据用户给出的工作内容或笔记，整理成结构化职场周报：1) 本周核心成果；2) 关键进展与产出；3) 下周重点计划；4) 潜在风险与需协调事项。只输出周报正文。",
      "user": ""},
     {"id": "code_review", "name": "代码审查", "action": "ask",
-     "system": "你是资深代码审查员。审查用户文档中的代码块：指出 bug、安全隐患、可读性问题，并给出修改建议与示例代码。用 Markdown 输出。",
+     "system": "你是资深软件架构师与代码审查员。审查用户文档中的代码：排查 bug、安全隐患、性能瓶颈及代码风格问题，并给出规范的优化建议与示例代码。",
      "user": ""},
-    {"id": "action_items", "name": "提取行动项", "action": "ask",
-     "system": "你是任务管理助手。从用户文档中提取可执行行动项，用 Markdown 表格输出：事项 / 负责人 / 截止时间 / 优先级。",
-     "user": ""},
-    {"id": "fix_format", "name": "修正 Markdown 格式", "action": "modify",
-     "system": "你是 Markdown 格式专家。修正文档中的格式问题：表格对齐、加粗符号配对、公式写法、标题层级。只输出修正后的完整文档，不要解释。",
+    {"id": "fix_format", "name": "修正格式", "action": "modify",
+     "system": "你是 Markdown 格式专家。修正文档中的格式问题：表格对齐补全、加粗未闭合、公式排版、标题层级。只输出修正后的完整文档，不要解释。",
      "user": ""},
 ]
 
@@ -1283,6 +1280,13 @@ class Handler(BaseHTTPRequestHandler):
             action = body.get('action', 'save')
             if action == 'delete':
                 self._send_json(200, {'ok': delete_prompt(body.get('id') or '')})
+            elif action == 'batch_save':
+                templates = body.get('templates', [])
+                results = []
+                for t in templates:
+                    if isinstance(t, dict):
+                        results.append(save_prompt(t))
+                self._send_json(200, {'ok': True, 'count': len(results), 'templates': results})
             else:
                 t = save_prompt(body.get('template') or {})
                 self._send_json(200, {'ok': True, 'template': t})

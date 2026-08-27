@@ -557,11 +557,16 @@ function bindEvents() {
   $('tpl-save').addEventListener('click', saveTplForm);
   $('tpl-del').addEventListener('click', deleteCurrentTpl);
   $('tpl-close').addEventListener('click', () => $('tpl-modal').classList.add('hidden'));
-  $('tpl-modal').addEventListener('click', e => { if (e.target === $('tpl-modal')) $('tpl-modal').classList.add('hidden'); });
   $('ai-session').addEventListener('change', onAiSessionChange);
   $('ai-save-session').addEventListener('click', saveCurrentSession);
   $('ai-del-session').addEventListener('click', deleteCurrentSession);
   $('ai-clear-ctx').addEventListener('click', clearAiContext);
+  $('ai-expand-toggle') && $('ai-expand-toggle').addEventListener('click', toggleAiFullscreen);
+  $('tpl-search') && $('tpl-search').addEventListener('input', renderTplList);
+  $('tpl-import-btn') && $('tpl-import-btn').addEventListener('click', () => $('tpl-file-input') && $('tpl-file-input').click());
+  $('tpl-file-input') && $('tpl-file-input').addEventListener('change', e => { if (e.target.files) Array.from(e.target.files).forEach(f => importTemplatesFromFile(f)); e.target.value = ''; });
+  $('tpl-export-btn') && $('tpl-export-btn').addEventListener('click', exportTemplatesAsJson);
+  $('tpl-close-btn') && $('tpl-close-btn').addEventListener('click', () => $('tpl-modal').classList.add('hidden'));
   bindAiResize(); // 绑定 AI 侧边栏宽度拖拽调节手柄
 
   /* --- 15. 局域网分享 (LAN Share) [联动: features/share.js] --- */

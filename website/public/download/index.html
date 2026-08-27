@@ -122,16 +122,68 @@
     <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/">ReadMD</a><a class="button-primary text-sm" href="#download-paths">Downloads</a></div>
   </header>
   <main class="mx-auto max-w-5xl px-5 py-16"><nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/">Home</a><span aria-hidden="true"> / </span><a class="link-action" href="/download/">Download</a><span aria-hidden="true"> / </span><a class="link-action" href="/workflows/">Workflows</a></nav>
-    <h1 class="display-title">Download ReadMD.</h1>
-    <p class="section-copy mt-6">The current public prerelease is version 2.3.7-beta.5. Packages are served by GitHub Releases; verify your download against SHA256SUMS.txt before installing.</p>
-    <section id="download-paths" class="mt-12 space-y-12">
-      <article class="answer-card"><h2 class="text-xl font-semibold">Windows</h2><p>Choose the installer for a normal desktop setup, or the portable executable when installation is not allowed. Both are x64 builds.</p><p><a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe">Windows installer</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe">Windows portable</a></p></article>
-      <article class="answer-card"><h2 class="text-xl font-semibold">macOS</h2><p>Use Apple Silicon packages on M-series Macs and the Intel package for x86_64 Macs. Unzip, then follow macOS gatekeeper guidance if prompted.</p><p><a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip">Apple Silicon zip</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip">Intel zip</a></p></article>
-      <article class="answer-card"><h2 class="text-xl font-semibold">Linux and Chinese systems</h2><p>AppImage works across common x86_64 distributions; Deb packages integrate with Debian-based systems including UOS and Kylin OS.</p><p><a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage">x86_64 AppImage</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage">ARM64 AppImage</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb">AMD64 Deb</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb">ARM64 Deb</a></p></article>
-      <article class="answer-card"><h2 class="text-xl font-semibold">Editor, MCP, and HarmonyOS</h2><p>The VS Code extension brings synchronized preview and syntax repair into the editor. The MCP Server connects compatible AI tools. HarmonyOS support is available as an ArkTS source project for DevEco Studio; no prebuilt HAP is provided.</p><p><a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix">VS Code extension</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip">MCP Server</a> · <a class="link-action" href="https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app">HarmonyOS source project</a></p></article>
+    <div class="mt-4 text-center">
+      <h1 class="display-title">Download ReadMD</h1>
+      <p class="section-copy mx-auto mt-4 max-w-2xl">The current public prerelease is version <span class="latest-version-badge font-semibold text-[var(--color-action)]">v2.3.7-beta.5</span>. Select your platform below. Verify packages with SHA256SUMS.txt.</p>
+      <div class="mt-8">
+        <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Download Mirror & Acceleration · 下载源与镜像加速</p>
+        <div class="mirror-nav" role="tablist" aria-label="Download mirror selectors">
+          <button class="mirror-tab is-active" data-mirror="direct" type="button">🌐 Official GitHub</button>
+          <button class="mirror-tab" data-mirror="ghfast" type="button">⚡ 国内加速 1 (GHFast)</button>
+          <button class="mirror-tab" data-mirror="ghproxy" type="button">⚡ 国内加速 2 (GHProxy)</button>
+          <button class="mirror-tab" data-mirror="gitmirror" type="button">⚡ 国内加速 3 (GitMirror)</button>
+          <button class="mirror-tab" data-mirror="fastgit" type="button">⚡ 国内加速 4 (FastGit)</button>
+        </div>
+      </div>
+    </div>
+
+    <section id="download-paths" class="mt-12 platform-grid">
+      <article class="platform-card" data-platform="windows">
+        <h2 class="text-xl font-semibold">Windows</h2>
+        <p class="mt-2 text-sm text-muted">Windows 10 / 11 and Windows 7 SP1+. Installer or portable x64 binary.</p>
+        <div class="mt-6 flex flex-col gap-3">
+          <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe">Windows Installer (.exe)</a>
+          <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe">Windows Portable (.exe)</a>
+        </div>
+      </article>
+
+      <article class="platform-card" data-platform="macos">
+        <h2 class="text-xl font-semibold">macOS</h2>
+        <p class="mt-2 text-sm text-muted">Apple Silicon (M1/M2/M3/M4) or Intel x86_64 Mac. macOS 12 Monterey or later.</p>
+        <div class="mt-6 flex flex-col gap-3">
+          <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip">Apple Silicon (.zip)</a>
+          <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip">Intel Mac (.zip)</a>
+        </div>
+      </article>
+
+      <article class="platform-card" data-platform="linux">
+        <h2 class="text-xl font-semibold">Linux & 国产操作系统</h2>
+        <p class="mt-2 text-sm text-muted">Ubuntu, Debian, Fedora, Arch, 统信 UOS, 银河麒麟 Kylin OS.</p>
+        <div class="mt-6 grid grid-cols-2 gap-2 text-xs">
+          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage">x86_64 AppImage</a>
+          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage">ARM64 AppImage</a>
+          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb">AMD64 Deb</a>
+          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb">ARM64 Deb</a>
+        </div>
+      </article>
+
+      <article class="platform-card">
+        <h2 class="text-xl font-semibold">Integrations & Checksum</h2>
+        <p class="mt-2 text-sm text-muted">VS Code extension, MCP Server for AI agents, HarmonyOS DevEco project, SHA256.</p>
+        <div class="mt-6 flex flex-col gap-2">
+          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix">VS Code extension (.vsix)</a>
+          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip">MCP Server (.zip)</a>
+          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app">HarmonyOS ArkTS project</a>
+        </div>
+      </article>
     </section>
-    <div class="mt-10 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/large-markdown-files/">Open large Markdown files</a><a class="link-action" href="/markdown-to-slides/">Present Markdown without PowerPoint</a><a class="link-action" href="/convert-to-markdown/">Convert documents to Markdown</a><a class="link-action" href="/markdown-tables/">Build Markdown tables</a><a class="link-action" href="/pdf-to-markdown/">Convert PDFs to Markdown</a><a class="link-action" href="/scan-to-markdown/">Extract text from scans</a><a class="link-action" href="/bibtex-citations/">Manage BibTeX citations</a><a class="link-action" href="/release-notes/">Release notes</a></div>
-    <div class="mt-6 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt">SHA256SUMS.txt</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">Star on GitHub</a></div>
+
+    <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/large-markdown-files/">Open large Markdown files</a><a class="link-action" href="/markdown-to-slides/">Present Markdown without PowerPoint</a><a class="link-action" href="/convert-to-markdown/">Convert documents to Markdown</a><a class="link-action" href="/markdown-tables/">Build Markdown tables</a><a class="link-action" href="/pdf-to-markdown/">Convert PDFs to Markdown</a><a class="link-action" href="/scan-to-markdown/">Extract text from scans</a><a class="link-action" href="/bibtex-citations/">Manage BibTeX citations</a><a class="link-action" href="/release-notes/">Release notes</a></div>
+    <div class="mt-8 flex flex-wrap items-center gap-4">
+      <a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt">SHA256SUMS.txt</a>
+      <a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">Star on GitHub</a>
+    </div>
   </main>
+  <script src="/assets/site.js" defer></script>
 </body>
 </html>
