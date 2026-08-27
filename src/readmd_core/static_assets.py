@@ -12,7 +12,6 @@ from src.readmd_modules.validators import paths_within
 
 STARTUP_SCRIPTS = (
     'vendor/marked.min.js',
-    'vendor/qrcode.min.js',
     'js/core/state.js',
     'js/core/i18n.js',
     'js/core/dialog.js',

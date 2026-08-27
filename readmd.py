@@ -53,6 +53,8 @@ from src.readmd_core import (
 from src.readmd_core.file_writer import save_text_atomic
 from src.readmd_core.static_assets import resolve_asset
 from src.readmd_core.safe_open import safe_external_url, safe_file_target
+from src.readmd_core.versioning import compare_versions as _version_compare
+from src.readmd_core.versioning import parse_version as _version_parse
 import src.readmd_modules as RM
 from src.readmd_modules.validators import validate_file_path, validate_command, paths_within
 
@@ -105,20 +107,16 @@ WIN7_UNAVAILABLE = '该功能在 Win7 版暂不支持（本版本仅保留 docx 
 # ------------------------------------------------------------------ 升级推送（静默）
 
 _UPGRADE_RELEASE_URL = 'https://api.github.com/repos/Natsummerance/readMD/releases/latest'
+_UPGRADE_RELEASES_URL = 'https://api.github.com/repos/Natsummerance/readMD/releases?per_page=100'
 _UPGRADE_CACHE = {'done': False, 'result': None}
 
 
 def _parse_version(value):
-    """'v2.2.6' / '2.2.6' -> (2, 2, 5)；无法解析返回 None。"""
-    try:
-        parts = []
-        for chunk in re.sub(r'^v', '', str(value or '')).replace('-', '.').split('.'):
-            if not chunk.isdigit():
-                return None
-            parts.append(int(chunk))
-        return tuple(parts) if parts else None
-    except Exception:
-        return None
+    return _version_parse(value)
+
+
+def _compare_versions(left, right):
+    return _version_compare(left, right)
 
 
 def check_latest_release():
@@ -128,19 +126,28 @@ def check_latest_release():
     result = None
     try:
         import urllib.request as _urlreq
-        req = _urlreq.Request(_UPGRADE_RELEASE_URL, headers={
+        parsed_current = _parse_version(VERSION)
+        current_is_prerelease = bool(parsed_current and parsed_current[1] == 0)
+        url = _UPGRADE_RELEASES_URL if current_is_prerelease else _UPGRADE_RELEASE_URL
+        req = _urlreq.Request(url, headers={
             'User-Agent': 'ReadMD/%s' % VERSION,
             'Accept': 'application/vnd.github+json',
         })
         with _urlreq.urlopen(req, timeout=4) as resp:
-            data = json.loads(resp.read(1024 * 1024).decode('utf-8'))
-        tag = str(data.get('tag_name') or '')
-        latest = _parse_version(tag)
+            payload = json.loads(resp.read(1024 * 1024).decode('utf-8'))
+        releases = payload if isinstance(payload, list) else [payload]
+        releases = [item for item in releases if item.get('tag_name') and not item.get('draft')]
+        latest_release = max(
+            releases,
+            key=lambda item: _parse_version(item.get('tag_name')) or ((0, 0, 0), ()),
+            default=None,
+        )
+        tag = str(latest_release.get('tag_name') or '') if latest_release else ''
         current = _parse_version(VERSION)
-        if latest and current and latest > current:
+        if latest_release and current and (_compare_versions(tag, VERSION) or 0) > 0:
             result = {
                 'latest': tag,
-                'url': str(data.get('html_url') or _UPGRADE_RELEASE_URL),
+                'url': str(latest_release.get('html_url') or _UPGRADE_RELEASE_URL),
             }
     except Exception:
         logging.debug('upgrade check failed (silent)', exc_info=True)

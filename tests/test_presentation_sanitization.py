@@ -47,6 +47,24 @@ class PresentationSanitizationTest(unittest.TestCase):
         self.assertNotIn('onerror=', html)
         self.assertNotIn('javascript:', html)
 
+    def test_standalone_title_notes_and_fonts_are_contained(self):
+        markdown = (
+            '---\n'
+            'title: "</title><script>window.__pptTitleXss=1</script>"\n'
+            '---\n\n'
+            '# Safe slide\n\n'
+            '<!-- note -->\n<img src=x onerror="window.__noteXss=1">Keep note text\n'
+        )
+        html = presentation_render.render_presentation_html(markdown, standalone=True)
+
+        self.assertNotIn('<script>window.__pptTitleXss', html)
+        self.assertIn('&lt;/title&gt;', html)
+        self.assertNotIn('window.__noteXss', html)
+        self.assertNotIn('<img src=x onerror', html)
+        self.assertIn('Keep note text', html)
+        self.assertNotIn('url(fonts/', html)
+        self.assertIn('data:font/woff2;base64,', html)
+
     def test_in_app_presentation_loads_only_same_origin_active_resources(self):
         markdown = '# CSP\n\n$E=mc^2$\n<!-- slide -->\n## Second'
         html = presentation_render.render_presentation_html(markdown)

@@ -173,6 +173,7 @@ function updateStatus() {
 }
 
 function goHome() {
+  window.invalidateDocumentLoads?.();
   state.mode = 'welcome';
   state.file = null;
   state.sourceName = '';

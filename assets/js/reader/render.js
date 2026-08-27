@@ -115,6 +115,7 @@ function openFileRename() {
 async function loadFile(path, { force = false, browserCopy = null } = {}) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!path) return;
+  const loadEpoch = beginDocumentLoad();
   const existingTab = findTabByPath(path);
   if (existingTab && !force) {
     await switchTab(existingTab.id);
@@ -134,6 +135,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
       return;
     }
     const d = await r.json();
+    if (!isDocumentLoadCurrent(loadEpoch)) return;
     const isBrowserCopy = force && browserCopy === null
       ? existingTab.browserCopy === true
       : browserCopy === true;
@@ -157,6 +159,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
     };
 
     if (existingTab) {
+      if (!isDocumentLoadCurrent(loadEpoch)) return;
       const wasActive = state.activeTabId === existingTab.id;
       const previousPage = wasActive && state.pagination.enabled && state.pagination.mode === 'paged'
         ? state.pagination.currentPage
@@ -168,18 +171,22 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
 
       if (wasActive) {
         await prepareDocCitations(d.path, d.content);
+        if (!isDocumentLoadCurrent(loadEpoch)) return;
         setFixes(d.fixes || [], d.stats || {});
         await renderContent(d.content, d.name);
+        if (!isDocumentLoadCurrent(loadEpoch)) return;
         if (state.pagination.enabled && state.pagination.mode === 'paged' && previousPage > 0) {
           renderPage(previousPage, null, true);
         }
         requestAnimationFrame(() => {
-          $('content').scrollTop = previousScroll;
+          if (isDocumentLoadCurrent(loadEpoch)) $('content').scrollTop = previousScroll;
         });
         updateStatus();
       }
+      if (!isDocumentLoadCurrent(loadEpoch)) return;
       showToast(_t('toolbar.reload') + ': ' + d.name);
     } else {
+      if (!isDocumentLoadCurrent(loadEpoch)) return;
       const newTab = {
         id: 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
         ...fileFields,
@@ -191,8 +198,10 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
       state.activeTabId = newTab.id;
       syncStateFromActiveTab();
       await prepareDocCitations(d.path, d.content);
+      if (!isDocumentLoadCurrent(loadEpoch)) return;
       setFixes(d.fixes || [], d.stats || {});
       await renderContent(d.content, d.name);
+      if (!isDocumentLoadCurrent(loadEpoch)) return;
       if (state.pagination.enabled && state.pagination.totalPages > 1) {
         showToast(_t('toast.openedPages', { name: d.name, count: state.pagination.totalPages }), 4000);
       } else {
@@ -567,18 +576,20 @@ async function togglePaginationMode() {
   const p = state.pagination;
   if (!p || !p.enabled) return;
   const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
+  const navigation = captureNavigationEpoch();
 
   if (p.mode === 'paged') {
     if (p.pages.length > 20 && !(await confirmContinuousMode(p.pages.length))) {
       return;
     }
+    if (!isNavigationCurrent(navigation)) return;
     p.mode = 'continuous';
     if (activeTab) {
       activeTab.readerMode = 'continuous';
       activeTab.continuousScroll = $('content')?.scrollTop || 0;
     }
     showToast(_t('pagination.switchToContinuousToast') || '已切换至全卷连续阅读模式', 1800);
-    renderContentIncremental(p.rawContent, 0);
+    await renderContentIncremental(p.rawContent, 0, beginReaderRender());
   } else {
     p.mode = 'paged';
     if (activeTab) {
@@ -586,6 +597,7 @@ async function togglePaginationMode() {
       activeTab.readerPage = 0;
     }
     showToast(_t('pagination.switchToPagedToast') || '已切换至智能分页阅读模式', 1800);
+    beginReaderRender();
     renderPage(0, null, false);
   }
   updatePaginationBar();
@@ -897,6 +909,46 @@ const RENDER_BUTTON_CLASSES = new Set([
   'code-chunk-clear-btn',
   'diagram-reload-btn',
 ]);
+const MARKDOWN_RESERVED_IDS = new Set([
+  'content', 'toolbar', 'statusbar', 'doc-tabs-container', 'doc-tabs-bar',
+  'ai-output', 'update-notes-content', 'presentation-modal', 'share-modal',
+]);
+const MARKDOWN_RESERVED_CLASS_RE = /^(?:modal|modal-dialog|modal-header|modal-footer|drag-overlay|tab-item|tab-close|zen-mode|zen-entering|presentation-modal|presentation-iframe)$/;
+let readerRenderEpoch = 0;
+let readerRenderAborter = null;
+let documentLoadEpoch = 0;
+
+function beginReaderRender() {
+  const epoch = ++readerRenderEpoch;
+  if (readerRenderAborter) readerRenderAborter.abort();
+  readerRenderAborter = new AbortController();
+  return { epoch, signal: readerRenderAborter.signal };
+}
+
+function isReaderRenderCurrent(render) {
+  return Boolean(render && render.epoch === readerRenderEpoch && !render.signal.aborted);
+}
+
+function beginDocumentLoad() {
+  return ++documentLoadEpoch;
+}
+
+function invalidateDocumentLoads() {
+  documentLoadEpoch += 1;
+}
+
+function isDocumentLoadCurrent(loadEpoch) {
+  return loadEpoch === documentLoadEpoch;
+}
+
+function captureNavigationEpoch() {
+  return { document: documentLoadEpoch, render: readerRenderEpoch };
+}
+
+function isNavigationCurrent(epoch) {
+  return Boolean(epoch && epoch.document === documentLoadEpoch && epoch.render === readerRenderEpoch);
+}
+window.invalidateDocumentLoads = invalidateDocumentLoads;
 
 function isSanctionedRenderButton(node) {
   const classes = Array.from(node.classList);
@@ -917,11 +969,16 @@ function safeResourceUrl(value) {
   }
 }
 
-function sanitizeRenderedHtml(html) {
+function sanitizeRenderedHtml(html, { allowInteractive = true } = {}) {
   const template = document.createElement('template');
   template.innerHTML = String(html || '');
   Array.from(template.content.querySelectorAll('*')).forEach(node => {
     const tag = node.tagName.toLowerCase();
+    if (!allowInteractive && (tag === 'button' ||
+        node.classList.contains('code-chunk-card') || node.classList.contains('diagram-card'))) {
+      node.replaceWith(...node.childNodes);
+      return;
+    }
     if (MARKDOWN_REMOVED_TAGS.has(tag)) {
       node.remove();
       return;
@@ -951,8 +1008,20 @@ function sanitizeRenderedHtml(html) {
     Array.from(node.attributes).forEach(attribute => {
       const name = attribute.name.toLowerCase();
       const value = attribute.value;
+      if (name === 'id' && MARKDOWN_RESERVED_IDS.has(value)) {
+        node.removeAttribute(attribute.name);
+        return;
+      }
+      if (name === 'class' && value.split(/\s+/).some(className => MARKDOWN_RESERVED_CLASS_RE.test(className))) {
+        node.removeAttribute(attribute.name);
+        return;
+      }
+      if (name === 'role' || name === 'aria-hidden' || name === 'aria-live') {
+        node.removeAttribute(attribute.name);
+        return;
+      }
       if (name.startsWith('data-') || name === 'class' || name.startsWith('aria-') ||
-          ['title', 'lang', 'dir', 'role', 'alt', 'width', 'height', 'loading',
+          ['title', 'lang', 'dir', 'alt', 'width', 'height', 'loading',
            'colspan', 'rowspan', 'datetime', 'cite'].includes(name)) return;
       if (name === 'id') {
         if (!/^[A-Za-z][A-Za-z0-9_:.-]*$/.test(value)) node.removeAttribute(attribute.name);
@@ -992,8 +1061,16 @@ function sanitizeRenderedHtml(html) {
 }
 window.sanitizeRenderedHtml = sanitizeRenderedHtml;
 
+function renderSafeMarkdown(source, { breaks = false } = {}) {
+  const prot = protectMath(String(source || ''));
+  const html = marked.parse(prot.src, { gfm: true, breaks });
+  return sanitizeRenderedHtml(restoreMath(html, prot.saved), { allowInteractive: false });
+}
+window.renderSafeMarkdown = renderSafeMarkdown;
+
 async function renderContent(content, name) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const render = beginReaderRender();
   const saved = state.scrollPos[normalizePath(name || state.file || '')] || 0;
   
   // 预处理 @import
@@ -1002,6 +1079,7 @@ async function renderContent(content, name) {
       content = await processDocImports(content, state.file || name || '');
     } catch (e) {}
   }
+  if (!isReaderRenderCurrent(render)) return;
 
   const linesCount = (content || '').split('\n').length;
   const isUltraLong = linesCount > PAGINATION_THRESHOLD_LINES || (content || '').length > PAGINATION_THRESHOLD_BYTES;
@@ -1017,12 +1095,13 @@ async function renderContent(content, name) {
       showPaginationBar(true);
       return;
     } else {
-      renderContentIncremental(content, saved);
+      await renderContentIncremental(content, saved, render);
       showPaginationBar(true);
       return;
     }
   } else {
     state.pagination.enabled = false;
+    state.pagination.rawContent = null;
     state.pagination.pages = [];
     state.pagination.totalPages = 0;
     showPaginationBar(false);
@@ -1030,16 +1109,19 @@ async function renderContent(content, name) {
 
   const big = content.length > INCREMENTAL_THRESHOLD || linesCount > INCREMENTAL_LINES;
   if (big) {
-    renderContentIncremental(content, saved);
+    await renderContentIncremental(content, saved, render);
     return;
   }
   const transformed = transformAcademicCallouts(content);
   const prot = protectMath(transformed);
   const html = parseMarkdownWithSourceMap(prot.src);
   const finalHtml = restoreMath(html, prot.saved);
+  if (!isReaderRenderCurrent(render)) return;
   $('content').innerHTML = '<article class="markdown-body">' + sanitizeRenderedHtml(finalHtml) + '</article>';
   postProcess();
-  if (saved) requestAnimationFrame(() => { $('content').scrollTop = saved; });
+  if (saved) requestAnimationFrame(() => {
+    if (isReaderRenderCurrent(render)) $('content').scrollTop = saved;
+  });
 }
 
 
@@ -1085,43 +1167,50 @@ function splitMdBlocks(md) {
   return out;
 }
 
-async function renderContentIncremental(content, savedTop) {
+async function renderContentIncremental(content, savedTop, render = null) {
+  const task = render || beginReaderRender();
+  if (!isReaderRenderCurrent(task)) return;
   const el = $('content');
   el.innerHTML = '<article class="markdown-body"></article>';
   const body = el.querySelector('.markdown-body');
   const blocks = splitMdBlocks(content);
   const total = blocks.length;
-  if (total <= 1) {
-    const prot = protectMath(content);
-    body.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
-    postProcess();
-    if (savedTop) el.scrollTop = savedTop;
-    return;
-  }
-  const prog = document.createElement('div');
-  prog.id = 'render-progress';
-  prog.setAttribute('role', 'status');
-  prog.setAttribute('aria-live', 'polite');
-  prog.setAttribute('aria-atomic', 'true');
-  el.appendChild(prog);
-  const CHUNK = 8;
-  for (let i = 0; i < total; i += CHUNK) {
-    const frag = document.createDocumentFragment();
-    const end = Math.min(i + CHUNK, total);
-    for (let k = i; k < end; k++) {
-      const div = document.createElement('div');
-      const prot = protectMath(blocks[k]);
-      div.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
-      frag.appendChild(div);
+  let prog = null;
+  try {
+    if (total <= 1) {
+      const prot = protectMath(content);
+      body.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
+      postProcess();
+      if (savedTop) el.scrollTop = savedTop;
+      return;
     }
-    body.appendChild(frag);
-    const pct = Math.round((end / total) * 100);
-    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-    if (pct >= 100 || pct % 10 < 8) prog.textContent = (_t('reader.renderingProgress', { percent: Math.min(pct, 100) }) || ('渲染中… ' + Math.min(pct, 100) + '%'));
-    if (end < total) await new Promise(r => setTimeout(r, 0));
-
+    prog = document.createElement('div');
+    prog.id = 'render-progress';
+    prog.setAttribute('role', 'status');
+    prog.setAttribute('aria-live', 'polite');
+    prog.setAttribute('aria-atomic', 'true');
+    el.appendChild(prog);
+    const CHUNK = 8;
+    for (let i = 0; i < total; i += CHUNK) {
+      if (!isReaderRenderCurrent(task)) return;
+      const frag = document.createDocumentFragment();
+      const end = Math.min(i + CHUNK, total);
+      for (let k = i; k < end; k++) {
+        const div = document.createElement('div');
+        const prot = protectMath(blocks[k]);
+        div.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
+        frag.appendChild(div);
+      }
+      body.appendChild(frag);
+      const pct = Math.round((end / total) * 100);
+      const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+      if (pct >= 100 || pct % 20 === 0) prog.textContent = (_t('reader.renderingProgress', { percent: Math.min(pct, 100) }) || ('渲染中… ' + Math.min(pct, 100) + '%'));
+      if (end < total) await new Promise(r => setTimeout(r, 0));
+    }
+  } finally {
+    prog?.remove();
   }
-  prog.remove();
+  if (!isReaderRenderCurrent(task)) return;
   if (savedTop) el.scrollTop = savedTop;
   postProcess();
   updatePaginationBar();
@@ -1585,6 +1674,7 @@ function toggleZenMode(force) {
   if (toolbar) toolbar.classList.remove('zen-toolbar-revealed');
   
   if (isZen) {
+    document.body.classList.add('zen-toolbar-suppressed');
     const reader = document.getElementById('content');
     if (toolbar) {
       document.body.style.setProperty('--zen-toolbar-height', `${toolbarHeight}px`);
@@ -1598,7 +1688,11 @@ function toggleZenMode(force) {
     requestAnimationFrame(() => {
       requestAnimationFrame(() => document.body.classList.remove('zen-entering'));
     });
+    window.addEventListener('pointermove', event => {
+      if (event.clientY > 12) document.body.classList.remove('zen-toolbar-suppressed');
+    }, { once: true });
   } else {
+    document.body.classList.remove('zen-toolbar-suppressed');
     document.body.style.removeProperty('--zen-toolbar-height');
     showToast(_t('toast.zenExited') || '已退出禅模式', 1200);
   }
@@ -1895,6 +1989,7 @@ async function renderVirtual(source, name, dir, content, fixes, extras) {
     scrollPos: 0,
     isVirtual: true,
   };
+  window.invalidateDocumentLoads?.();
   state.tabs.push(newTab);
   state.activeTabId = newTab.id;
   syncStateFromActiveTab();

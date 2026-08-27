@@ -86,7 +86,7 @@ test.describe('presentation security audit', () => {
     }, { timeout: 5000 }).toBeTruthy();
     expect(frame).toBeTruthy();
     await frame.waitForSelector('.reveal .slides section');
-    await frame.waitForFunction(() => Boolean(window.Reveal && window.deck));
+    await expect.poll(async () => await frame.evaluate(() => Boolean(window.Reveal && window.deck))).toBe(true);
     await expect(frame.locator('.reveal .slides section')).toHaveCount(2);
     await expect(frame.locator('.reveal .slides').first()).toContainText('CSP Slide One');
 

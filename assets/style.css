@@ -3847,6 +3847,10 @@ body.zen-mode #toolbar {
   border-bottom: 1px solid var(--border);
 }
 
+body.zen-mode.zen-toolbar-suppressed #toolbar:not(:focus-within) {
+  transform: translateY(-100%) !important;
+}
+
 body.zen-mode.zen-entering #toolbar { transition: none; }
 body.zen-mode #content:focus { outline: none; }
 

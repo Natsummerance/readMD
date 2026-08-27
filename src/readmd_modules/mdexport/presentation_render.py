@@ -17,6 +17,7 @@
   ---
 """
 
+import base64
 import json
 import html
 import os
@@ -370,7 +371,7 @@ def split_slides_structure(content: str) -> List[List[Dict[str, str]]]:
             
             clean_slide_content = NOTE_SPLIT_REGEX.sub(extract_note, v_chunk).strip()
             clean_slide_content = _sanitize_slide_html(clean_slide_content)
-            note_text = "\n\n".join(notes)
+            note_text = _sanitize_slide_html("\n\n".join(notes)).strip()
             
             vertical_slides.append({
                 "content": clean_slide_content,
@@ -414,6 +415,34 @@ def _read_vendor(rel_path: str) -> str:
         return handle.read()
 
 
+def _read_vendor_bytes(rel_path: str) -> bytes:
+    if getattr(sys, 'frozen', False):
+        root = sys._MEIPASS
+    else:
+        root = os.path.dirname(os.path.dirname(os.path.dirname(
+            os.path.dirname(os.path.abspath(__file__)))))
+    full = os.path.join(root, 'assets', 'vendor', *rel_path.split('/'))
+    with open(full, 'rb') as handle:
+        return handle.read()
+
+
+def _vendor_data_uri(rel_path: str) -> str:
+    media_types = {'.ttf': 'font/ttf', '.woff': 'font/woff', '.woff2': 'font/woff2'}
+    suffix = os.path.splitext(rel_path)[1].lower()
+    payload = base64.b64encode(_read_vendor_bytes(rel_path)).decode('ascii')
+    return f'data:{media_types[suffix]};base64,{payload}'
+
+
+def _inline_relative_css_assets(css: str, base_dir: str) -> str:
+    """Replace relative font URLs so a standalone HTML file remains self-contained."""
+    def inline(match: re.Match) -> str:
+        quote, relative = match.group(1), match.group(2)
+        asset = os.path.join(base_dir, *relative.split('/')).replace('\\', '/')
+        return f'url("{_vendor_data_uri(asset)}")'
+
+    return re.sub(r'url\(\s*([\'"]?)(fonts/[^\'")]+)\1\s*\)', inline, css)
+
+
 def _css_tag(rel_path: str, standalone: bool, link_id: str = '') -> str:
     if standalone:
         return '<style>\n' + _read_vendor(os.path.join('reveal', 'dist', *rel_path.split('/'))) + '\n</style>'
@@ -431,7 +460,9 @@ def _katex_tags(standalone: bool) -> str:
     """KaTeX 资源：应用内由 RevealMath.KaTeX 按 local 路径注入；导出单文件直接内联。"""
     if not standalone:
         return ''
-    katex_css = _read_vendor('katex/dist/katex.min.css')
+    katex_css = _inline_relative_css_assets(
+        _read_vendor('katex/dist/katex.min.css'), 'katex/dist'
+    )
     katex_js = _read_vendor('katex/dist/katex.min.js')
     auto_render = _read_vendor('katex/dist/contrib/auto-render.min.js')
     return ('<style>\n' + katex_css + '\n</style>\n'
@@ -452,7 +483,7 @@ def render_presentation_html(content: str, title: str = "ReadMD Presentation",
     if theme.endswith('.css'):
         theme = theme[:-4]
     transition = meta.get('transition', transition)
-    title = meta.get('title', title)
+    title = html.escape(str(meta.get('title', title)), quote=True)
     if theme not in _REVEAL_THEMES:
         theme = 'black'
 

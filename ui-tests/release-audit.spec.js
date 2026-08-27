@@ -1,5 +1,29 @@
 const { test, expect } = require('@playwright/test');
 
+test('QR code stays out of startup and loads once on demand', async ({ page }) => {
+  let qrcodeRequests = 0;
+  await page.route('**/assets/vendor/qrcode.min.js*', async route => {
+    qrcodeRequests += 1;
+    await route.continue();
+  });
+
+  await page.goto('/');
+  await page.waitForFunction(() => typeof loadQrLibrary === 'function');
+  expect(await page.evaluate(() => typeof qrcode)).toBe('undefined');
+
+  await page.evaluate(() => loadQrLibrary());
+  await page.waitForFunction(() => typeof qrcode === 'function');
+  const generated = await page.evaluate(() => {
+    const qr = qrcode(0, 'M');
+    qr.addData('readmd:lazy-qr');
+    qr.make();
+    return qr.getModuleCount();
+  });
+
+  expect(qrcodeRequests).toBe(1);
+  expect(generated).toBeGreaterThan(20);
+});
+
 test.beforeEach(async ({ page }) => {
   await page.route('**/api/update/check', route => route.fulfill({
     status: 200,
@@ -139,6 +163,38 @@ test('F11 enters immersive Zen once without layout jitter', async ({ page }) => 
   await expect(page.locator('body')).not.toHaveClass(/zen-mode/);
 });
 
+test('clicked Zen remains immersive until the pointer moves away', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof toggleZenMode === 'function' && typeof renderContent === 'function');
+  await page.evaluate(() => renderContent('# Clicked Zen\n\nImmersive reading body.', 'clicked-zen.md'));
+  await page.click('#btn-zen');
+  await expect(page.locator('body')).toHaveClass(/zen-mode/);
+  await expect(page.locator('body')).not.toHaveClass(/zen-entering/);
+
+  const suppressed = await page.evaluate(() => ({
+    className: document.body.className,
+    transform: getComputedStyle(document.getElementById('toolbar')).transform,
+    bottom: document.getElementById('toolbar').getBoundingClientRect().bottom,
+  }));
+  expect(suppressed.className).toContain('zen-toolbar-suppressed');
+  expect(suppressed.transform).toMatch(/matrix\(1, 0, 0, 1, 0, -\d+\)/);
+  expect(suppressed.bottom).toBeLessThanOrEqual(0);
+
+  await page.mouse.move(195, 300);
+  await expect(page.locator('body')).not.toHaveClass(/zen-toolbar-suppressed/);
+  await page.mouse.move(195, 4);
+  await expect.poll(async () => page.evaluate(() =>
+    getComputedStyle(document.getElementById('toolbar')).transform
+  )).toContain('matrix(1, 0, 0, 1, 0, 0)');
+
+  await page.mouse.move(195, 300);
+  await expect.poll(async () => page.evaluate(() =>
+    getComputedStyle(document.getElementById('toolbar')).transform
+  )).toMatch(/matrix\(1, 0, 0, 1, 0, -\d+\)/);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('body')).not.toHaveClass(/zen-mode/);
+});
+
 test('rapid tab switching stays aligned and reveals the active tab', async ({ page }) => {
   await page.goto('/');
   await page.waitForFunction(() => typeof renderTabsBar === 'function');
@@ -182,4 +238,153 @@ test('rapid tab switching stays aligned and reveals the active tab', async ({ pa
   expect(alignment.visible).toBe(true);
   expect(alignment.heights).toHaveLength(1);
   expect(alignment.selectedCount).toBe(1);
+});
+
+test('superseded incremental renders stop without stale content', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderContent === 'function');
+
+  const result = await page.evaluate(async () => {
+    const originalSplit = splitMdBlocks;
+    const started = performance.now();
+    try {
+      splitMdBlocks = () => Array.from(
+        { length: 80 },
+        (_, index) => `# Stale ${index}\n\n${'x'.repeat(1200)}`
+      );
+      void renderContent('x'.repeat(301 * 1024), 'long.md');
+      await renderContent('# Final short', 'short.md');
+
+      let frames = 0;
+      await new Promise(resolve => {
+        const tick = () => {
+          if (++frames === 20) resolve();
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+
+      return {
+        elapsed: performance.now() - started,
+        finalVisible: document.getElementById('content')?.textContent.includes('Final short'),
+        staleVisible: [...document.querySelectorAll('#content h1')]
+          .some(heading => heading.textContent.startsWith('Stale ')),
+        progressVisible: Boolean(document.getElementById('render-progress')),
+      };
+    } finally {
+      splitMdBlocks = originalSplit;
+    }
+  });
+
+  expect(result.finalVisible).toBe(true);
+  expect(result.staleVisible).toBe(false);
+  expect(result.progressVisible).toBe(false);
+  expect(result.elapsed).toBeLessThan(750);
+});
+
+test('a completed stale tab switch cannot restore the abandoned document', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof switchTab === 'function');
+
+  const result = await page.evaluate(async () => {
+    const originalSplit = splitMdBlocks;
+    try {
+      splitMdBlocks = () => Array.from(
+        { length: 60 },
+        (_, index) => `# Abandoned ${index}\n\n${'x'.repeat(1200)}`
+      );
+      state.tabs = [
+        { id: 'long', title: 'long.md', name: 'long.md', content: 'x'.repeat(301 * 1024) },
+        {
+          id: 'short',
+          title: 'short.md',
+          name: 'short.md',
+          content: ['# Short winner'].concat(
+            Array.from({ length: 80 }, (_, index) => `Winner paragraph ${index} provides scroll room.`)
+          ).join('\n\n'),
+        },
+      ];
+      state.activeTabId = 'short';
+      syncStateFromActiveTab();
+      renderTabsBar();
+      await renderActiveTab();
+      document.getElementById('content').scrollTop = 48;
+
+      void switchTab('long');
+      await switchTab('short');
+      let frames = 0;
+      await new Promise(resolve => {
+        const tick = () => {
+          if (++frames === 15) resolve();
+          else requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+
+      return {
+        activeId: state.activeTabId,
+        winnerVisible: document.getElementById('content').textContent.includes('Short winner'),
+        staleVisible: [...document.querySelectorAll('#content h1')]
+          .some(heading => heading.textContent.startsWith('Abandoned ')),
+        progressVisible: Boolean(document.getElementById('render-progress')),
+        scroll: document.getElementById('content').scrollTop,
+      };
+    } finally {
+      splitMdBlocks = originalSplit;
+    }
+  });
+
+  expect(result.activeId).toBe('short');
+  expect(result.winnerVisible).toBe(true);
+  expect(result.staleVisible).toBe(false);
+  expect(result.progressVisible).toBe(false);
+  expect(Math.abs(result.scroll - 48)).toBeLessThanOrEqual(2);
+});
+
+test('going home cancels a still-loading document', async ({ page }) => {
+  let releaseFile = () => {};
+  const fileRequest = new Promise(resolve => { releaseFile = resolve; });
+  await page.route('**/api/file?p=slow.md', async route => {
+    await fileRequest;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        path: 'slow.md',
+        dir: '',
+        name: 'slow.md',
+        content: '# Slow must not override Home',
+        original: '# Slow must not override Home',
+        fixed: '# Slow must not override Home',
+        fixes: [],
+        stats: {},
+        size: 32,
+        mtime: Date.now(),
+        encoding: 'utf-8',
+      }),
+    });
+  });
+
+  await page.goto('/');
+  await page.waitForFunction(() => typeof loadFile === 'function' && typeof goHome === 'function');
+  void page.evaluate(() => loadFile('slow.md'));
+  await page.waitForTimeout(50);
+  await page.evaluate(() => goHome());
+  const welcomeText = await page.evaluate(() => document.getElementById('content').textContent);
+  releaseFile();
+  await page.waitForTimeout(100);
+
+  expect(welcomeText).not.toContain('Slow must not override Home');
+  expect(await page.evaluate(() => ({
+    mode: state.mode,
+    activeTabId: state.activeTabId,
+    title: document.title,
+    visible: document.getElementById('content').textContent,
+  }))).toEqual({
+    mode: 'welcome',
+    activeTabId: null,
+    title: 'ReadMD',
+    visible: welcomeText,
+  });
 });

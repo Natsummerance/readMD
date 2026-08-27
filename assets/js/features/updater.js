@@ -61,11 +61,9 @@ function openUpdateModal() {
 
   const notesEl = $('update-notes-content');
   if (updateInfo.release_notes) {
-    // Release notes cross a trust boundary: fail closed if the shared renderer
-    // sanitizer is unavailable instead of inserting raw GitHub-authored HTML.
-    const renderedNotes = marked.parse(updateInfo.release_notes);
-    notesEl.innerHTML = typeof window.sanitizeRenderedHtml === 'function'
-      ? window.sanitizeRenderedHtml(renderedNotes)
+    // Release notes cross a trust boundary: fail closed if the shared renderer is unavailable.
+    notesEl.innerHTML = typeof window.renderSafeMarkdown === 'function'
+      ? window.renderSafeMarkdown(updateInfo.release_notes)
       : '';
   } else {
     notesEl.textContent = _t('update.noNotes') || '暂无详细更新说明。';
