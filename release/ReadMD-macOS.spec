@@ -8,10 +8,10 @@ ROOT_DIR = os.path.abspath(os.path.join(SPECPATH, '..'))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 try:
-    import readmd
-    VERSION = getattr(readmd, 'VERSION', '2.3.7-beta.5')
+    from src.readmd_core.config import get_version
+    VERSION = get_version()
 except Exception:
-    VERSION = os.environ.get('READMD_VERSION', '2.3.7-beta.5')
+    VERSION = os.environ.get('READMD_VERSION', '')
 
 modules_dir = os.path.join(ROOT_DIR, 'src', 'readmd_modules')
 module_datas = []

@@ -72,23 +72,33 @@ def _env_or_bundle_version():
     if v:
         return v.strip()
     try:
-        env_p = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.env')
-        if os.path.isfile(env_p):
-            with open(env_p, 'r', encoding='utf-8') as f:
-                for line in f:
-                    if line.startswith('READMD_VERSION='):
-                        val = line.split('=', 1)[1].strip().strip('\'"')
-                        if val:
-                            return val
+        for d in [
+            os.path.dirname(os.path.abspath(__file__)),
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            getattr(sys, '_MEIPASS', ''),
+        ]:
+            if not d:
+                continue
+            env_p = os.path.join(d, '.env')
+            if os.path.isfile(env_p):
+                with open(env_p, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        if line.startswith('READMD_VERSION='):
+                            val = line.split('=', 1)[1].strip().strip('\'"')
+                            if val:
+                                return val
+            v_p = os.path.join(d, 'VERSION')
+            if os.path.isfile(v_p):
+                with open(v_p, 'r', encoding='utf-8') as f:
+                    val = f.read().strip()
+                    if val:
+                        return val
     except Exception:
         pass
-    return _bundle_version()
+    return _bundle_version() or os.environ.get('READMD_VERSION', '')
 
 
-APP_VERSION = (os.environ.get('READMD_VERSION_OVERRIDE')
-               or os.environ.get('READMD_VERSION')
-               or os.environ.get('READMD_BUILD_VERSION')
-               or _env_or_bundle_version() or '2.3.7-beta.5')
+APP_VERSION = _env_or_bundle_version()
 
 
 

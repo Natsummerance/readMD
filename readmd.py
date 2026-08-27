@@ -60,39 +60,20 @@ from src.readmd_modules.validators import validate_file_path, validate_command, 
 
 APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 
+from src.readmd_core.config import (
+    DATA_DIR,
+    SETTINGS_FILE,
+    RECENT_FILE,
+    PROMPTS_FILE,
+    HISTORY_FILE,
+    LOG_FILE,
+    get_system_language,
+    get_version,
+    load_dotenv,
+    VERSION,
+)
 
-def _bundle_version():
-
-    """frozen 构建内嵌 version.txt（Win7 链：2.1.1 Beta）。"""
-    try:
-        if getattr(sys, 'frozen', False):
-            base = getattr(sys, '_MEIPASS', None) or os.path.dirname(os.path.abspath(sys.executable))
-            p = os.path.join(base, 'version.txt')
-            if os.path.isfile(p):
-                v = open(p, encoding='utf-8').read().strip()
-                if v:
-                    return v
-    except Exception:
-        pass
-def _env_or_bundle_version():
-    v = os.environ.get('READMD_VERSION') or os.environ.get('READMD_BUILD_VERSION')
-    if v:
-        return v.strip()
-    try:
-        env_p = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
-        if os.path.isfile(env_p):
-            with open(env_p, 'r', encoding='utf-8') as f:
-                for line in f:
-                    if line.startswith('READMD_VERSION='):
-                        val = line.split('=', 1)[1].strip().strip('\'"')
-                        if val:
-                            return val
-    except Exception:
-        pass
-    return _bundle_version()
-
-
-VERSION = (_env_or_bundle_version() or '2.3.7-beta.5')
+load_dotenv()
 
 
 
@@ -1170,7 +1151,8 @@ class Handler(BaseHTTPRequestHandler):
             mod = RM.get('ai')
             provider = mod.find_provider(q.get('provider', [''])[0]) or {}
             key = q.get('key', [''])[0] or mod.resolve_key(provider)
-            ids = mod.list_models(q.get('base_url', [''])[0] or None,
+            base_url = q.get('base_url', [''])[0] or provider.get('base_url') or ''
+            ids = mod.list_models(base_url,
                                   key,
                                   q.get('mode', ['auto'])[0])
             self._send_json(200, {'models': ids})

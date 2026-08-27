@@ -12,8 +12,9 @@ dist/
 !assets/vendor/katex/dist/**
 *.spec
 !release/*.spec
-.env
-*.env
+.env.local
+*.env.local
+.env.*.local
 
 
 tools/cm-bundle/node_modules/

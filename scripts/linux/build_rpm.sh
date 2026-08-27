@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 # ReadMD RPM 打包脚本 (适用于 openEuler / Fedora / RHEL / CentOS / Anolis / openSUSE)
 set -euo pipefail
-
-VERSION="${READMD_BUILD_VERSION:-${READMD_VERSION:-$(cat VERSION 2>/dev/null || python3 -c 'import readmd; print(readmd.VERSION)' 2>/dev/null || echo '2.3.7-beta.5')}"
+if [ -z "${READMD_VERSION:-}" ]; then
+  if [ -f ".env" ]; then
+    READMD_VERSION="$(grep -E '^READMD_VERSION=' .env | head -n1 | cut -d'=' -f2- | tr -d '\r\"\'')"
+  elif [ -f "VERSION" ]; then
+    READMD_VERSION="$(head -n1 VERSION | tr -d '\r\n')"
+  else
+    READMD_VERSION="$(python3 -c 'from src.readmd_core.config import get_version; print(get_version())' 2>/dev/null)"
+  fi
+fi
+VERSION="${READMD_BUILD_VERSION:-${READMD_VERSION}}"
 ARCH="$(uname -m)"
 RPM_ARCH="${READMD_RPM_ARCH:-}"
 if [ -z "${RPM_ARCH}" ]; then

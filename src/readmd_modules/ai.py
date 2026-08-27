@@ -20,6 +20,10 @@ CONFIG_SCHEMA_VERSION = 2
 
 # 内置预设（只读模板，可被自定义覆盖）
 PRESETS = [
+    {"name": "OpenCode Zen", "base_url": "https://opencode.ai/zen/v1", "format": "openai",
+     "models": ["hy3-free", "laguna-s-2.1-free", "mimo-v2.5-free", "muse-spark-1.2-contributor-free", "nemotron-3-ultra-free", "nemotron-3.5-lightning-free", "deepseek-v4-flash-free", "claude-sonnet-4-5", "gpt-5.4"],
+     "env_key": "OPENCODE_API_KEY", "website": "https://opencode.ai/zen",
+     "note": "OpenCode 免费与高质量大模型聚合服务"},
     {"name": "OpenAI", "base_url": "https://api.openai.com/v1", "format": "openai",
      "models": ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "o3-mini"],
      "env_key": "OPENAI_API_KEY", "website": "https://platform.openai.com",
@@ -253,9 +257,18 @@ class ChatError(Exception):
     pass
 
 
+DEFAULT_HTTP_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 ReadMD-AI/2.3",
+    "Accept": "application/json, text/plain, */*",
+}
+
+
 def _http_json(url, headers, body, timeout=240):
+    req_headers = dict(DEFAULT_HTTP_HEADERS)
+    if headers:
+        req_headers.update(headers)
     data = json.dumps(body).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    req = urllib.request.Request(url, data=data, headers=req_headers, method="POST")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.read().decode("utf-8", "replace")
@@ -267,8 +280,11 @@ def _http_json(url, headers, body, timeout=240):
 
 
 def _http_stream(url, headers, body, timeout=300):
+    req_headers = dict(DEFAULT_HTTP_HEADERS)
+    if headers:
+        req_headers.update(headers)
     data = json.dumps(body).encode("utf-8")
-    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    req = urllib.request.Request(url, data=data, headers=req_headers, method="POST")
     try:
         return urllib.request.urlopen(req, timeout=timeout)
     except urllib.error.HTTPError as e:
@@ -655,7 +671,10 @@ def _chat_anthropic(base_url, api_key, model, messages, temperature, stream):
     return gen()
 
 def _http_get_json(url, headers, timeout=30):
-    req = urllib.request.Request(url, headers=headers, method="GET")
+    req_headers = dict(DEFAULT_HTTP_HEADERS)
+    if headers:
+        req_headers.update(headers)
+    req = urllib.request.Request(url, headers=req_headers, method="GET")
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.read().decode("utf-8", "replace")
@@ -666,30 +685,64 @@ def _http_get_json(url, headers, timeout=30):
         raise ChatError("网络错误：%s" % e.reason) from e
 
 
-def list_models(base_url, api_key, mode="auto"):
-    """通过 API Key 获取可用模型列表。OpenAI 兼容 GET {base}/models；Anthropic GET {base}/v1/models。"""
-    base_url = (base_url or "").rstrip("/")
+def list_models(base_url, api_key="", mode="auto"):
+    """通过 API Key 获取可用模型列表。智能适配 OpenAI, OpenCode Zen, Anthropic, Ollama 等各类端点。"""
+    base_url = (base_url or "").strip().rstrip("/")
     if not base_url:
         raise ChatError("请先填写 Base URL")
-    if not api_key:
-        raise ChatError("请先填写 API Key 再获取模型列表")
+    
+    clean_base = _normalize_base_url(base_url, endpoint="")
     mode = (mode or "").strip().lower()
+
+    urls_to_try = []
     if mode in ("messages", "anthropic"):
-        url = base_url + "/v1/models"
-        headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01"}
+        auth_hdrs = {"x-api-key": api_key, "anthropic-version": "2023-06-01"} if api_key else {}
+        urls_to_try.append((clean_base + "/v1/models" if not clean_base.endswith("/v1") else clean_base + "/models", auth_hdrs))
     else:
-        url = base_url + "/models"
-        headers = {"Authorization": "Bearer " + api_key}
-    data = _http_get_json(url, headers)
+        auth_hdrs = {"Authorization": "Bearer " + api_key} if api_key else {}
+        if clean_base.endswith("/v1"):
+            urls_to_try.append((clean_base + "/models", auth_hdrs))
+            urls_to_try.append((clean_base[:-3].rstrip("/") + "/models", auth_hdrs))
+        else:
+            urls_to_try.append((clean_base + "/models", auth_hdrs))
+            urls_to_try.append((clean_base + "/v1/models", auth_hdrs))
+            urls_to_try.append((clean_base + "/api/tags", auth_hdrs))
+
+    last_err = None
+    data = None
+    for url, hdrs in urls_to_try:
+        try:
+            data = _http_get_json(url, hdrs)
+            if data:
+                break
+        except Exception as e:
+            last_err = e
+
+    if not data:
+        if last_err:
+            raise last_err
+        raise ChatError("未能连接到模型接口")
+
     try:
         d = json.loads(data)
     except Exception as e:
         raise ChatError("模型列表解析失败：%s" % data[:300]) from e
-    items = d.get("data") or []
+
+    raw_items = []
+    if isinstance(d, dict):
+        raw_items = d.get("data") or d.get("models") or []
+    elif isinstance(d, list):
+        raw_items = d
+
     ids = []
-    for it in items:
-        if isinstance(it, dict) and it.get("id"):
-            ids.append(str(it["id"]))
+    for it in raw_items:
+        if isinstance(it, dict):
+            mid = it.get("id") or it.get("name") or it.get("model")
+            if mid:
+                ids.append(str(mid))
+        elif isinstance(it, str) and it.strip():
+            ids.append(it.strip())
+
     if not ids:
         raise ChatError("接口未返回模型列表（data 为空）")
     return ids

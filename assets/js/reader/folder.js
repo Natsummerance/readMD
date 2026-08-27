@@ -273,9 +273,24 @@ function showSide(tab) {
 
 function toggleSide(tab) {
   const side = $('side');
+  if (!side) return;
   if (!side.classList.contains('hidden')) {
-    side.classList.add('hidden');
-    return;
+    const isCurrentTab = (tab === 'files' && !$('file-list').classList.contains('hidden')) ||
+                         (tab === 'toc' && !$('toc-list').classList.contains('hidden'));
+    if (!tab || isCurrentTab) {
+      side.classList.add('hidden');
+      return;
+    }
   }
   showSide(tab || 'toc');
 }
+
+(function bindSideClose() {
+  const btn = $('side-close-btn');
+  if (btn) {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      $('side')?.classList.add('hidden');
+    });
+  }
+})();

@@ -2413,7 +2413,18 @@ function buildToc() {
   if (!list) return;
 
   if (state.mode === 'welcome' || (!state.file && !state.original && !state.fixed && (!state.tabs || !state.tabs.length))) {
-    list.innerHTML = `<div class="side-empty">${_t('sidebar.emptyToc') || '（当前文档暂无标题大纲）'}</div>`;
+    list.innerHTML = `
+      <div class="side-empty">
+        <p>${_t('sidebar.emptyToc') || '（当前文档暂无标题大纲）'}</p>
+        <button type="button" class="side-empty-close" id="toc-empty-close">${_t('toolbar.close') || '收起侧栏'}</button>
+      </div>`;
+    const emptyCloseBtn = list.querySelector('#toc-empty-close');
+    if (emptyCloseBtn) {
+      emptyCloseBtn.addEventListener('click', e => {
+        e.preventDefault();
+        $('side')?.classList.add('hidden');
+      });
+    }
     tocCache = { source: null, pageCount: 0 };
     return;
   }
@@ -3152,12 +3163,27 @@ function showSide(tab) {
 
 function toggleSide(tab) {
   const side = $('side');
+  if (!side) return;
   if (!side.classList.contains('hidden')) {
-    side.classList.add('hidden');
-    return;
+    const isCurrentTab = (tab === 'files' && !$('file-list').classList.contains('hidden')) ||
+                         (tab === 'toc' && !$('toc-list').classList.contains('hidden'));
+    if (!tab || isCurrentTab) {
+      side.classList.add('hidden');
+      return;
+    }
   }
   showSide(tab || 'toc');
 }
+
+(function bindSideClose() {
+  const btn = $('side-close-btn');
+  if (btn) {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      $('side')?.classList.add('hidden');
+    });
+  }
+})();
 
 ;
 'use strict';
@@ -10620,7 +10646,7 @@ async function checkUpdate(silent = true) {
         showToast(_t('update.foundNew', { ver: res.latest_version }) || ('发现新版本 ' + res.latest_version), 5000);
       }
     } else {
-      const curVer = res.current_version || (typeof VERSION !== 'undefined' ? VERSION : '2.3.7-beta.5');
+      const curVer = res.current_version || (typeof VERSION !== 'undefined' ? VERSION : (document.documentElement.getAttribute('data-version') || ''));
       if (!silent) showToast(_t('update.latest', { ver: curVer, version: curVer }) || ('当前已是最新版本 (v' + curVer + ')'));
     }
   } catch (e) {
@@ -11647,6 +11673,7 @@ function bindEvents() {
       if ($('tpl-modal')) $('tpl-modal').classList.add('hidden');
       if ($('convert-modal')) $('convert-modal').classList.add('hidden');
       if ($('lang-modal') && window.i18n) window.i18n.closeModal();
+      if ($('side') && !$('side').classList.contains('hidden')) $('side').classList.add('hidden');
       if ($('table-modal')) closeTableModal();
       closeFormulaModal(); closeMdPopups();
       stopConvertPoll();

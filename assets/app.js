@@ -835,6 +835,7 @@ function bindEvents() {
       if ($('tpl-modal')) $('tpl-modal').classList.add('hidden');
       if ($('convert-modal')) $('convert-modal').classList.add('hidden');
       if ($('lang-modal') && window.i18n) window.i18n.closeModal();
+      if ($('side') && !$('side').classList.contains('hidden')) $('side').classList.add('hidden');
       if ($('table-modal')) closeTableModal();
       closeFormulaModal(); closeMdPopups();
       stopConvertPoll();

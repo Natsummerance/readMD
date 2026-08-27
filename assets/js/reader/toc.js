@@ -23,7 +23,18 @@ function buildToc() {
   if (!list) return;
 
   if (state.mode === 'welcome' || (!state.file && !state.original && !state.fixed && (!state.tabs || !state.tabs.length))) {
-    list.innerHTML = `<div class="side-empty">${_t('sidebar.emptyToc') || '（当前文档暂无标题大纲）'}</div>`;
+    list.innerHTML = `
+      <div class="side-empty">
+        <p>${_t('sidebar.emptyToc') || '（当前文档暂无标题大纲）'}</p>
+        <button type="button" class="side-empty-close" id="toc-empty-close">${_t('toolbar.close') || '收起侧栏'}</button>
+      </div>`;
+    const emptyCloseBtn = list.querySelector('#toc-empty-close');
+    if (emptyCloseBtn) {
+      emptyCloseBtn.addEventListener('click', e => {
+        e.preventDefault();
+        $('side')?.classList.add('hidden');
+      });
+    }
     tocCache = { source: null, pageCount: 0 };
     return;
   }

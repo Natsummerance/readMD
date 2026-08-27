@@ -46,7 +46,7 @@ def load_env_version():
             val = f.read().strip()
             if val:
                 return val
-    return os.environ.get('READMD_VERSION') or '2.3.7-beta.5'
+    return os.environ.get('READMD_VERSION', '')
 
 
 def parse_semver(ver: str):
@@ -198,23 +198,7 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
     else:
         diffs.append((vpath, '', vcontent))
 
-    # 2. Python 主服务与核心运行时
-    readmd_path = os.path.join(ROOT, 'readmd.py')
-    if os.path.isfile(readmd_path):
-        with open(readmd_path, 'r', encoding='utf-8') as f:
-            src = f.read()
-        new_src = re.sub(r"(_env_or_bundle_version\(\)\s*or\s*')[^']+'\)", f"\\g<1>{target_ver}')", src)
-        if new_src != src:
-            diffs.append((readmd_path, src, new_src))
-
-    core_config = os.path.join(ROOT, 'src', 'readmd_core', 'config.py')
-    if os.path.isfile(core_config):
-        with open(core_config, 'r', encoding='utf-8') as f:
-            src = f.read()
-        new_src = re.sub(r"VERSION\s*=\s*'[^']+'", f"VERSION = '{target_ver}'", src)
-        if new_src != src:
-            diffs.append((core_config, src, new_src))
-
+    # 2. Python 主服务与核心运行时（均直接从 .env / config.py 动态解析，无需硬编码 fallback）
     mcp_server_py = os.path.join(ROOT, 'packages', 'mcp-server', 'readmd_mcp_server.py')
     if os.path.isfile(mcp_server_py):
         with open(mcp_server_py, 'r', encoding='utf-8') as f:
@@ -223,35 +207,7 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
         if new_src != src:
             diffs.append((mcp_server_py, src, new_src))
 
-    # 3. Windows 打包与安装器
-    setup_path = os.path.join(ROOT, 'installer', 'setup_app.py')
-    if os.path.isfile(setup_path):
-        with open(setup_path, 'r', encoding='utf-8') as f:
-            src = f.read()
-        new_src = re.sub(r"(_env_or_bundle_version\(\)\s*or\s*')[^']+'\)", f"\\g<1>{target_ver}')", src)
-        if new_src != src:
-            diffs.append((setup_path, src, new_src))
-
-    for bat_file in ['scripts/windows/package.bat', 'scripts/windows/build_win7.bat']:
-        bat_path = os.path.join(ROOT, bat_file)
-        if os.path.isfile(bat_path):
-            with open(bat_path, 'r', encoding='utf-8') as f:
-                src = f.read()
-            new_src = re.sub(r'(set "READMD_VERSION(?:_OVERRIDE)?=)[^\r\n"]+', f'\\g<1>{target_ver}', src)
-            if new_src != src:
-                diffs.append((bat_path, src, new_src))
-
-    # 4. macOS spec
-    macos_spec = os.path.join(ROOT, 'release', 'ReadMD-macOS.spec')
-    if os.path.isfile(macos_spec):
-        with open(macos_spec, 'r', encoding='utf-8') as f:
-            src = f.read()
-        new_src = re.sub(r"(getattr\(readmd,\s*'VERSION',\s*')[^']+'\)", f"\\g<1>{target_ver}')", src)
-        new_src = re.sub(r"(os\.environ\.get\('READMD_VERSION',\s*')[^']+'\)", f"\\g<1>{target_ver}')", new_src)
-        if new_src != src:
-            diffs.append((macos_spec, src, new_src))
-
-    # 5. Linux & 信创脚本
+    # 3. Linux & 信创脚本
     for frel in ['scripts/linux/linglong.yaml', 'packages/linglong/linglong.yaml']:
         ll_path = os.path.join(ROOT, frel)
         if os.path.isfile(ll_path):
@@ -260,15 +216,6 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
             new_src = re.sub(r'(version:\s*)[0-9.]+', f'\\g<1>{linglong_ver}', src)
             if new_src != src:
                 diffs.append((ll_path, src, new_src))
-
-    for sh_file in ['scripts/linux/build_linux.sh', 'scripts/linux/build_rpm.sh']:
-        sh_path = os.path.join(ROOT, sh_file)
-        if os.path.isfile(sh_path):
-            with open(sh_path, 'r', encoding='utf-8') as f:
-                src = f.read()
-            new_src = re.sub(r"(echo\s*')[^']+'\)\}\}\"", f"\\g<1>{target_ver}')}}\"", src)
-            if new_src != src:
-                diffs.append((sh_path, src, new_src))
 
     pkgbuild_path = os.path.join(ROOT, 'scripts', 'linux', 'PKGBUILD')
     if os.path.isfile(pkgbuild_path):

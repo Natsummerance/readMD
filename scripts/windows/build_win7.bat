@@ -23,16 +23,15 @@ title ReadMD Win7 Packager
 
 
 
-rem ---- 版本串（Win7 兼容版；优先从环境变量、VERSION 或 .env 读取）----
+rem ---- 版本串（Win7 兼容版；严格从 .env / VERSION 绑定，禁止代码硬编码）----
+if "%READMD_VERSION_OVERRIDE%"=="" (
+    for /f "usebackq tokens=1,* delims==" %%A in (".env") do (
+        if "%%A"=="READMD_VERSION" set "READMD_VERSION_OVERRIDE=%%B"
+    )
+)
 if "%READMD_VERSION_OVERRIDE%"=="" (
     if exist "VERSION" set /p READMD_VERSION_OVERRIDE=<VERSION
 )
-if "%READMD_VERSION_OVERRIDE%"=="" (
-    for /f "usebackq tokens=1,* delims==" %%A in (".env") do (
-        if "%%A"=="READMD_VERSION" set "READMD_VERSION_OVERRIDE=2.3.7-beta.5"
-    )
-)
-if "%READMD_VERSION_OVERRIDE%"=="" set "READMD_VERSION_OVERRIDE=2.3.7-beta.5"
 
 set "PY39=%LOCALAPPDATA%\ReadMD-build\python39"
 set "WVENV=.venv-win7"

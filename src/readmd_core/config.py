@@ -69,4 +69,70 @@ def get_system_language() -> str:
     return 'zh-CN'
 
 
-VERSION = '2.3.7-beta.5'
+def _parse_env_file(filepath: str):
+    """解析单个 env 文件并写入 os.environ（不覆盖已存在的变量）。"""
+    if not filepath or not os.path.isfile(filepath):
+        return
+    try:
+        with open(filepath, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#') or '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                k = k.strip()
+                v = v.strip().strip('\'"')
+                if k and k not in os.environ:
+                    os.environ[k] = v
+    except Exception:
+        pass
+
+
+def load_dotenv():
+    """按优先级从运行环境、.env.local、.env 和 VERSION 加载全局配置。"""
+    # 1. 寻找根目录与包目录候选
+    candidates = []
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.dirname(os.path.dirname(current_dir))
+    candidates.extend([root_dir, os.getcwd()])
+    if sys.argv and sys.argv[0]:
+        candidates.append(os.path.dirname(os.path.abspath(sys.argv[0])))
+    if hasattr(sys, '_MEIPASS'):
+        candidates.append(getattr(sys, '_MEIPASS'))
+
+    # 优先加载本地私有配置 .env.local
+    for d in candidates:
+        if d:
+            _parse_env_file(os.path.join(d, '.env.local'))
+
+    # 其次加载全局统一版本配置 .env
+    for d in candidates:
+        if d:
+            _parse_env_file(os.path.join(d, '.env'))
+
+
+def get_version() -> str:
+    """严格从 .env / 环境变量或 VERSION 文件中读取全局版本，杜绝代码内硬编码 fallback。"""
+    load_dotenv()
+    if os.environ.get('READMD_VERSION'):
+        return os.environ['READMD_VERSION']
+    if os.environ.get('VERSION'):
+        return os.environ['VERSION']
+
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.dirname(os.path.dirname(current_dir))
+    for d in [root_dir, os.getcwd(), getattr(sys, '_MEIPASS', '')]:
+        if d:
+            vfile = os.path.join(d, 'VERSION')
+            if os.path.isfile(vfile):
+                try:
+                    with open(vfile, 'r', encoding='utf-8') as f:
+                        v = f.read().strip()
+                        if v:
+                            return v
+                except Exception:
+                    pass
+    return os.environ.get('READMD_VERSION', '')
+
+
+VERSION = get_version()
