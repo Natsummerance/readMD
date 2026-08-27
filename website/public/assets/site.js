@@ -533,24 +533,45 @@
 
     let activeMirror = localStorage.getItem('readmd_download_mirror') || 'direct';
 
-    const updateDownloadLinks = (mirrorKey) => {
+    const updateDownloadLinks = (mirrorKey, animate = true) => {
       activeMirror = mirrorKey;
       localStorage.setItem('readmd_download_mirror', mirrorKey);
 
-      document.querySelectorAll('[data-mirror-url]').forEach((link) => {
-        const original = link.dataset.mirrorUrl;
-        const transform = mirrorEngines[mirrorKey] || mirrorEngines.direct;
-        link.href = transform(original);
-      });
+      const targetElements = document.querySelectorAll('.platform-card a, .platform-card button');
+      
+      const applyLinks = () => {
+        document.querySelectorAll('[data-mirror-url]').forEach((link) => {
+          const original = link.dataset.mirrorUrl;
+          const transform = mirrorEngines[mirrorKey] || mirrorEngines.direct;
+          link.href = transform(original);
+        });
 
-      document.querySelectorAll('.mirror-tab').forEach((tab) => {
-        tab.classList.toggle('is-active', tab.dataset.mirror === mirrorKey);
-      });
+        document.querySelectorAll('.mirror-tab').forEach((tab) => {
+          tab.classList.toggle('is-active', tab.dataset.mirror === mirrorKey);
+        });
+      };
+
+      if (animate && targetElements.length > 0) {
+        targetElements.forEach((el) => {
+          el.style.transition = 'opacity 0.18s cubic-bezier(0.25, 0.1, 0.25, 1), transform 0.18s cubic-bezier(0.25, 0.1, 0.25, 1)';
+          el.style.opacity = '0.35';
+          el.style.transform = 'scale(0.985)';
+        });
+        setTimeout(() => {
+          applyLinks();
+          targetElements.forEach((el) => {
+            el.style.opacity = '1';
+            el.style.transform = 'scale(1)';
+          });
+        }, 120);
+      } else {
+        applyLinks();
+      }
     };
 
     document.querySelectorAll('.mirror-tab').forEach((tab) => {
       tab.addEventListener('click', () => {
-        updateDownloadLinks(tab.dataset.mirror);
+        updateDownloadLinks(tab.dataset.mirror, true);
       });
     });
 

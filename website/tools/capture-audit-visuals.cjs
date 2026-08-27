@@ -7,9 +7,9 @@ const fs = require('fs');
 function getPlaywright() {
   const candidates = [
     'playwright',
-    '../../ui-tests/node_modules/playwright',
-    '../ui-tests/node_modules/playwright',
-    './ui-tests/node_modules/playwright',
+    path.resolve(__dirname, '../../ui-tests/node_modules/playwright'),
+    path.resolve(__dirname, '../ui-tests/node_modules/playwright'),
+    path.resolve(__dirname, '../../../readmd-soe-share-png/ui-tests/node_modules/playwright'),
   ];
   for (const c of candidates) {
     try {

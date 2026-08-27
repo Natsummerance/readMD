@@ -146,8 +146,10 @@
 
     <section id="download-paths" class="mt-12 platform-grid">
       <article class="platform-card" data-platform="windows">
-        <h2 class="text-xl font-semibold">Windows</h2>
-        <p class="mt-2 text-sm text-muted">Windows 10 / 11 and Windows 7 SP1+. Installer or portable x64 binary.</p>
+        <div>
+          <h2 class="text-xl font-semibold">Windows</h2>
+          <p class="mt-2 text-sm text-muted">Windows 10 / 11 and Windows 7 SP1+. Installer or portable x64 binary.</p>
+        </div>
         <div class="mt-6 flex flex-col gap-3">
           <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe">Windows Installer (.exe)</a>
           <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe">Windows Portable (.exe)</a>
@@ -155,8 +157,10 @@
       </article>
 
       <article class="platform-card" data-platform="macos">
-        <h2 class="text-xl font-semibold">macOS</h2>
-        <p class="mt-2 text-sm text-muted">Apple Silicon (M1/M2/M3/M4) or Intel x86_64 Mac. macOS 12 Monterey or later.</p>
+        <div>
+          <h2 class="text-xl font-semibold">macOS</h2>
+          <p class="mt-2 text-sm text-muted">Apple Silicon (M1/M2/M3/M4) or Intel x86_64 Mac. macOS 12 Monterey or later.</p>
+        </div>
         <div class="mt-6 flex flex-col gap-3">
           <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip">Apple Silicon (.zip)</a>
           <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip">Intel Mac (.zip)</a>
@@ -164,44 +168,57 @@
       </article>
 
       <article class="platform-card" data-platform="linux">
-        <h2 class="text-xl font-semibold">Linux & 国产操作系统</h2>
-        <p class="mt-2 text-sm text-muted">Ubuntu, Debian, Fedora, Arch, 统信 UOS, 银河麒麟 Kylin OS.</p>
+        <div>
+          <h2 class="text-xl font-semibold">Linux & 国产操作系统</h2>
+          <p class="mt-2 text-sm text-muted">Ubuntu, Debian, Fedora, Arch, 统信 UOS, 银河麒麟 Kylin OS.</p>
+        </div>
         <div class="mt-6 flex flex-col gap-2">
           <div class="grid grid-cols-2 gap-2">
-            <a class="button-secondary text-xs !px-2 !py-2.5 text-center flex flex-col justify-center items-center gap-0.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage">
-              <span class="font-semibold text-foreground">x86_64</span>
-              <span class="text-[11px] text-muted">AppImage</span>
+            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage">
+              <span class="font-semibold text-xs leading-tight">x86_64</span>
+              <span class="sub-text text-[11px] text-muted leading-tight">AppImage</span>
             </a>
-            <a class="button-secondary text-xs !px-2 !py-2.5 text-center flex flex-col justify-center items-center gap-0.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage">
-              <span class="font-semibold text-foreground">ARM64</span>
-              <span class="text-[11px] text-muted">AppImage</span>
+            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage">
+              <span class="font-semibold text-xs leading-tight">ARM64</span>
+              <span class="sub-text text-[11px] text-muted leading-tight">AppImage</span>
             </a>
           </div>
           <div class="grid grid-cols-2 gap-2">
-            <a class="button-secondary text-xs !px-2 !py-2.5 text-center flex flex-col justify-center items-center gap-0.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb">
-              <span class="font-semibold text-foreground">AMD64 Deb</span>
-              <span class="text-[11px] text-muted">UOS / 麒麟</span>
+            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb">
+              <span class="font-semibold text-xs leading-tight">AMD64 Deb</span>
+              <span class="sub-text text-[11px] text-muted leading-tight">UOS / 麒麟</span>
             </a>
-            <a class="button-secondary text-xs !px-2 !py-2.5 text-center flex flex-col justify-center items-center gap-0.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb">
-              <span class="font-semibold text-foreground">ARM64 Deb</span>
-              <span class="text-[11px] text-muted">UOS / 麒麟</span>
+            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb">
+              <span class="font-semibold text-xs leading-tight">ARM64 Deb</span>
+              <span class="sub-text text-[11px] text-muted leading-tight">UOS / 麒麟</span>
             </a>
           </div>
         </div>
       </article>
 
       <article class="platform-card">
-        <h2 class="text-xl font-semibold">Integrations & Checksum</h2>
-        <p class="mt-2 text-sm text-muted">VS Code extension, MCP Server for AI agents, HarmonyOS DevEco project, SHA256.</p>
+        <div>
+          <h2 class="text-xl font-semibold">Integrations & Checksum</h2>
+          <p class="mt-2 text-sm text-muted">VS Code extension, MCP Server for AI agents, HarmonyOS DevEco project, SHA256.</p>
+        </div>
         <div class="mt-6 flex flex-col gap-2">
-          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix">VS Code extension (.vsix)</a>
-          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip">MCP Server (.zip)</a>
-          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app">HarmonyOS ArkTS project</a>
+          <a class="apple-link-item" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix">
+            <span>VS Code extension (.vsix)</span>
+            <span class="chevron-arrow" aria-hidden="true">›</span>
+          </a>
+          <a class="apple-link-item" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip">
+            <span>MCP Server (.zip)</span>
+            <span class="chevron-arrow" aria-hidden="true">›</span>
+          </a>
+          <a class="apple-link-item" href="https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app">
+            <span>HarmonyOS ArkTS project</span>
+            <span class="chevron-arrow" aria-hidden="true">›</span>
+          </a>
         </div>
       </article>
     </section>
 
-    <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/large-markdown-files/">Open large Markdown files</a><a class="link-action" href="/markdown-to-slides/">Present Markdown without PowerPoint</a><a class="link-action" href="/convert-to-markdown/">Convert documents to Markdown</a><a class="link-action" href="/markdown-tables/">Build Markdown tables</a><a class="link-action" href="/pdf-to-markdown/">Convert PDFs to Markdown</a><a class="link-action" href="/scan-to-markdown/">Extract text from scans</a><a class="link-action" href="/bibtex-citations/">Manage BibTeX citations</a><a class="link-action" href="/release-notes/">Release notes</a></div>
+    <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/workflows/">Workflows</a><a class="link-action" href="/large-markdown-files/">Open large Markdown files</a><a class="link-action" href="/markdown-to-slides/">Present Markdown without PowerPoint</a><a class="link-action" href="/convert-to-markdown/">Convert documents to Markdown</a><a class="link-action" href="/markdown-tables/">Build Markdown tables</a><a class="link-action" href="/pdf-to-markdown/">Convert PDFs to Markdown</a><a class="link-action" href="/scan-to-markdown/">Extract text from scans</a><a class="link-action" href="/bibtex-citations/">Manage BibTeX citations</a><a class="link-action" href="/release-notes/">Release notes</a></div>
     <section class="mt-10 rounded-2xl border border-border bg-card p-6 text-sm">
       <h3 class="font-semibold text-foreground">Open Source Security & Trust Notice</h3>
       <p class="mt-2 text-muted leading-relaxed">

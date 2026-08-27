@@ -117,9 +117,16 @@
 }</script></head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
-    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/zh-tw/">ReadMD</a><a class="button-primary text-sm" href="#download-paths">立即下載</a></div>
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
+      <a class="text-lg font-semibold tracking-tight" href="/zh-tw/">ReadMD</a>
+      <div class="flex items-center gap-4">
+        <a class="text-sm text-muted hover:text-foreground" href="/download/">English</a>
+        <a class="button-primary text-sm" href="#download-paths">立即下載</a>
+      </div>
+    </div>
   </header>
-  <main class="mx-auto max-w-5xl px-5 py-16"><nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-tw/">首頁</a><span aria-hidden="true"> / </span><a class="link-action" href="/zh-tw/download/">下載</a><span aria-hidden="true"> / </span><a class="link-action" href="/zh-tw/workflows/">工作流程</a></nav>
+  <main class="mx-auto max-w-5xl px-5 py-16">
+    <nav class="pt-2 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-tw/">首頁</a><span aria-hidden="true"> / </span><span class="text-foreground font-medium">下載</span></nav>
     <div class="mt-4 text-center">
       <h1 class="display-title">下載 ReadMD</h1>
       <p class="section-copy mx-auto mt-4 max-w-2xl">目前公開預覽版為 <span class="latest-version-badge font-semibold text-[var(--color-action)]">v2.3.7-beta.5</span>。請在下方選擇適合您系統的安裝套件，支援鏡像加速直連，安裝前可使用 SHA256SUMS.txt 校驗發行套件。</p>
@@ -137,8 +144,10 @@
 
     <section id="download-paths" class="mt-12 platform-grid">
       <article class="platform-card" data-platform="windows">
-        <h2 class="text-xl font-semibold">Windows 系統</h2>
-        <p class="mt-2 text-sm text-muted">支援 Windows 10 / 11 以及 Windows 7 SP1+。提供安裝版與免安裝便攜版。</p>
+        <div>
+          <h2 class="text-xl font-semibold">Windows 系統</h2>
+          <p class="mt-2 text-sm text-muted">支援 Windows 10 / 11 以及 Windows 7 SP1+。提供安裝版與免安裝便攜版。</p>
+        </div>
         <div class="mt-6 flex flex-col gap-3">
           <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe">Windows 安裝版 (.exe)</a>
           <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe">Windows 便攜版 (.exe)</a>
@@ -146,8 +155,10 @@
       </article>
 
       <article class="platform-card" data-platform="macos">
-        <h2 class="text-xl font-semibold">macOS 系統</h2>
-        <p class="mt-2 text-sm text-muted">支援 Apple Silicon (M系列晶片) 與 Intel x86_64 Mac。解壓即可直接執行。</p>
+        <div>
+          <h2 class="text-xl font-semibold">macOS 系統</h2>
+          <p class="mt-2 text-sm text-muted">支援 Apple Silicon (M系列晶片) 與 Intel x86_64 Mac。解壓即可直接執行。</p>
+        </div>
         <div class="mt-6 flex flex-col gap-3">
           <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip">Apple Silicon 晶片 (.zip)</a>
           <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip">Intel 處理器 (.zip)</a>
@@ -155,28 +166,57 @@
       </article>
 
       <article class="platform-card" data-platform="linux">
-        <h2 class="text-xl font-semibold">Linux 與國產系統</h2>
-        <p class="mt-2 text-sm text-muted">統信 UOS、銀河麒麟 Kylin OS、Ubuntu、Debian 全面適配支援。</p>
-        <div class="mt-6 grid grid-cols-2 gap-2 text-xs">
-          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage">x86_64 AppImage</a>
-          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage">ARM64 AppImage</a>
-          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb">AMD64 Deb</a>
-          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb">ARM64 Deb</a>
+        <div>
+          <h2 class="text-xl font-semibold">Linux 與國產系統</h2>
+          <p class="mt-2 text-sm text-muted">統信 UOS、銀河麒麟 Kylin OS、Ubuntu、Debian 全面適配支援。</p>
+        </div>
+        <div class="mt-6 flex flex-col gap-2">
+          <div class="grid grid-cols-2 gap-2">
+            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage">
+              <span class="font-semibold text-xs leading-tight">x86_64</span>
+              <span class="sub-text text-[11px] text-muted leading-tight">AppImage</span>
+            </a>
+            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage">
+              <span class="font-semibold text-xs leading-tight">ARM64</span>
+              <span class="sub-text text-[11px] text-muted leading-tight">AppImage</span>
+            </a>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb">
+              <span class="font-semibold text-xs leading-tight">AMD64 Deb</span>
+              <span class="sub-text text-[11px] text-muted leading-tight">UOS / 麒麟</span>
+            </a>
+            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb">
+              <span class="font-semibold text-xs leading-tight">ARM64 Deb</span>
+              <span class="sub-text text-[11px] text-muted leading-tight">UOS / 麒麟</span>
+            </a>
+          </div>
         </div>
       </article>
 
       <article class="platform-card">
-        <h2 class="text-xl font-semibold">擴充套件與校驗</h2>
-        <p class="mt-2 text-sm text-muted">VS Code 擴充、AI MCP Server、華為鴻蒙 DevEco 原始碼工程與雜湊校驗。</p>
+        <div>
+          <h2 class="text-xl font-semibold">擴充套件與校驗</h2>
+          <p class="mt-2 text-sm text-muted">VS Code 擴充、AI MCP Server、華為鴻蒙 DevEco 原始碼工程與雜湊校驗。</p>
+        </div>
         <div class="mt-6 flex flex-col gap-2">
-          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix">VS Code 擴充套件 (.vsix)</a>
-          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip">AI MCP Server (.zip)</a>
-          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app">鴻蒙 ArkTS 原始碼工程</a>
+          <a class="apple-link-item" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix">
+            <span>VS Code 擴充套件 (.vsix)</span>
+            <span class="chevron-arrow" aria-hidden="true">›</span>
+          </a>
+          <a class="apple-link-item" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip">
+            <span>AI MCP Server (.zip)</span>
+            <span class="chevron-arrow" aria-hidden="true">›</span>
+          </a>
+          <a class="apple-link-item" href="https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app">
+            <span>鴻蒙 ArkTS 原始碼工程</span>
+            <span class="chevron-arrow" aria-hidden="true">›</span>
+          </a>
         </div>
       </article>
     </section>
 
-    <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-tw/large-markdown-files/">開啟超大 Markdown 檔案</a><a class="link-action" href="/zh-tw/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-tw/convert-to-markdown/">文件轉 Markdown</a><a class="link-action" href="/zh-tw/markdown-tables/">建立 Markdown 表格</a><a class="link-action" href="/zh-tw/pdf-to-markdown/">PDF 轉 Markdown</a><a class="link-action" href="/zh-tw/scan-to-markdown/">掃描件擷取文字</a><a class="link-action" href="/zh-tw/bibtex-citations/">管理 BibTeX 引用</a><a class="link-action" href="/zh-tw/release-notes/">發布說明</a></div>
+    <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-tw/workflows/">工作流程</a><a class="link-action" href="/zh-tw/large-markdown-files/">開啟超大 Markdown 檔案</a><a class="link-action" href="/zh-tw/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-tw/convert-to-markdown/">文件轉 Markdown</a><a class="link-action" href="/zh-tw/markdown-tables/">建立 Markdown 表格</a><a class="link-action" href="/zh-tw/pdf-to-markdown/">PDF 轉 Markdown</a><a class="link-action" href="/zh-tw/scan-to-markdown/">掃描件擷取文字</a><a class="link-action" href="/zh-tw/bibtex-citations/">管理 BibTeX 引用</a><a class="link-action" href="/zh-tw/release-notes/">發布說明</a></div>
     <section class="mt-10 rounded-2xl border border-border bg-card p-6 text-sm">
       <h3 class="font-semibold text-foreground">開源軟體包系統信任與安裝指引</h3>
       <p class="mt-2 text-muted leading-relaxed">

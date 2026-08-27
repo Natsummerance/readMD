@@ -117,9 +117,16 @@
 }</script></head>
 <body class="antialiased">
   <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
-    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/ja/">ReadMD</a><a class="button-primary text-sm" href="#download-paths">ダウンロード</a></div>
+    <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
+      <a class="text-lg font-semibold tracking-tight" href="/ja/">ReadMD</a>
+      <div class="flex items-center gap-4">
+        <a class="text-sm text-muted hover:text-foreground" href="/download/">English</a>
+        <a class="button-primary text-sm" href="#download-paths">ダウンロード</a>
+      </div>
+    </div>
   </header>
-  <main class="mx-auto max-w-5xl px-5 py-16"><nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/ja/">ホーム</a><span aria-hidden="true"> / </span><a class="link-action" href="/ja/download/">ダウンロード</a><span aria-hidden="true"> / </span><a class="link-action" href="/ja/workflows/">ワークフロー</a></nav>
+  <main class="mx-auto max-w-5xl px-5 py-16">
+    <nav class="pt-2 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/ja/">ホーム</a><span aria-hidden="true"> / </span><span class="text-foreground font-medium">ダウンロード</span></nav>
     <div class="mt-4 text-center">
       <h1 class="display-title">ReadMD をダウンロード</h1>
       <p class="section-copy mx-auto mt-4 max-w-2xl">現在の公開プレリリースは <span class="latest-version-badge font-semibold text-[var(--color-action)]">v2.3.7-beta.5</span> です。お使いの OS に適したパッケージを選択してください。インストール前に SHA256SUMS.txt で検証できます。</p>
@@ -137,8 +144,10 @@
 
     <section id="download-paths" class="mt-12 platform-grid">
       <article class="platform-card" data-platform="windows">
-        <h2 class="text-xl font-semibold">Windows</h2>
-        <p class="mt-2 text-sm text-muted">Windows 10 / 11 および Windows 7 SP1+。インストーラーまたはポータブル版。</p>
+        <div>
+          <h2 class="text-xl font-semibold">Windows</h2>
+          <p class="mt-2 text-sm text-muted">Windows 10 / 11 および Windows 7 SP1+。インストーラーまたはポータブル版。</p>
+        </div>
         <div class="mt-6 flex flex-col gap-3">
           <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe">Windows インストーラー (.exe)</a>
           <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe">Windows ポータブル版 (.exe)</a>
@@ -146,8 +155,10 @@
       </article>
 
       <article class="platform-card" data-platform="macos">
-        <h2 class="text-xl font-semibold">macOS</h2>
-        <p class="mt-2 text-sm text-muted">Apple Silicon (M1/M2/M3/M4) または Intel x86_64 Mac。解凍後すぐに実行可能。</p>
+        <div>
+          <h2 class="text-xl font-semibold">macOS</h2>
+          <p class="mt-2 text-sm text-muted">Apple Silicon (M1/M2/M3/M4) または Intel x86_64 Mac。解凍後すぐに実行可能。</p>
+        </div>
         <div class="mt-6 flex flex-col gap-3">
           <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip">Apple Silicon 搭載 Mac (.zip)</a>
           <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip">Intel プロセッサ搭載 Mac (.zip)</a>
@@ -155,28 +166,57 @@
       </article>
 
       <article class="platform-card" data-platform="linux">
-        <h2 class="text-xl font-semibold">Linux & 中国系 OS</h2>
-        <p class="mt-2 text-sm text-muted">Ubuntu, Debian, Fedora, Arch, 統信 UOS, 銀河麒麟 Kylin OS に対応。</p>
-        <div class="mt-6 grid grid-cols-2 gap-2 text-xs">
-          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage">x86_64 AppImage</a>
-          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage">ARM64 AppImage</a>
-          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb">AMD64 Deb</a>
-          <a class="button-secondary text-xs" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb">ARM64 Deb</a>
+        <div>
+          <h2 class="text-xl font-semibold">Linux & 中国系 OS</h2>
+          <p class="mt-2 text-sm text-muted">Ubuntu, Debian, Fedora, Arch, 統信 UOS, 銀河麒麟 Kylin OS に対応。</p>
+        </div>
+        <div class="mt-6 flex flex-col gap-2">
+          <div class="grid grid-cols-2 gap-2">
+            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage">
+              <span class="font-semibold text-xs leading-tight">x86_64</span>
+              <span class="sub-text text-[11px] text-muted leading-tight">AppImage</span>
+            </a>
+            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage">
+              <span class="font-semibold text-xs leading-tight">ARM64</span>
+              <span class="sub-text text-[11px] text-muted leading-tight">AppImage</span>
+            </a>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb">
+              <span class="font-semibold text-xs leading-tight">AMD64 Deb</span>
+              <span class="sub-text text-[11px] text-muted leading-tight">UOS / 麒麟</span>
+            </a>
+            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb">
+              <span class="font-semibold text-xs leading-tight">ARM64 Deb</span>
+              <span class="sub-text text-[11px] text-muted leading-tight">UOS / 麒麟</span>
+            </a>
+          </div>
         </div>
       </article>
 
       <article class="platform-card">
-        <h2 class="text-xl font-semibold">拡張機能と検証</h2>
-        <p class="mt-2 text-sm text-muted">VS Code 拡張、AI 連携 MCP Server、HarmonyOS ArkTS ソースプロジェクト。</p>
+        <div>
+          <h2 class="text-xl font-semibold">拡張機能と検証</h2>
+          <p class="mt-2 text-sm text-muted">VS Code 拡張、AI 連携 MCP Server、HarmonyOS ArkTS ソースプロジェクト。</p>
+        </div>
         <div class="mt-6 flex flex-col gap-2">
-          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix">VS Code 拡張機能 (.vsix)</a>
-          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip">AI MCP Server (.zip)</a>
-          <a class="link-action text-sm" href="https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app">HarmonyOS ArkTS ソース</a>
+          <a class="apple-link-item" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix">
+            <span>VS Code 拡張機能 (.vsix)</span>
+            <span class="chevron-arrow" aria-hidden="true">›</span>
+          </a>
+          <a class="apple-link-item" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip">
+            <span>AI MCP Server (.zip)</span>
+            <span class="chevron-arrow" aria-hidden="true">›</span>
+          </a>
+          <a class="apple-link-item" href="https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app">
+            <span>HarmonyOS ArkTS ソース</span>
+            <span class="chevron-arrow" aria-hidden="true">›</span>
+          </a>
         </div>
       </article>
     </section>
 
-    <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/ja/large-markdown-files/">巨大な Markdown を開く</a><a class="link-action" href="/ja/markdown-to-slides/">PowerPoint を使わず発表</a><a class="link-action" href="/ja/convert-to-markdown/">文書を Markdown へ変換</a><a class="link-action" href="/ja/markdown-tables/">Markdown 表を作成</a><a class="link-action" href="/ja/pdf-to-markdown/">PDF から Markdown</a><a class="link-action" href="/ja/scan-to-markdown/">スキャン文字を抽出</a><a class="link-action" href="/ja/bibtex-citations/">BibTeX 文献を管理</a><a class="link-action" href="/ja/release-notes/">リリースノート</a></div>
+    <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/ja/workflows/">ワークフロー</a><a class="link-action" href="/ja/large-markdown-files/">巨大な Markdown を開く</a><a class="link-action" href="/ja/markdown-to-slides/">PowerPoint を使わず発表</a><a class="link-action" href="/ja/convert-to-markdown/">文書を Markdown へ変換</a><a class="link-action" href="/ja/markdown-tables/">Markdown 表を作成</a><a class="link-action" href="/ja/pdf-to-markdown/">PDF から Markdown</a><a class="link-action" href="/ja/scan-to-markdown/">スキャン文字を抽出</a><a class="link-action" href="/ja/bibtex-citations/">BibTeX 文献を管理</a><a class="link-action" href="/ja/release-notes/">リリースノート</a></div>
     <section class="mt-10 rounded-2xl border border-border bg-card p-6 text-sm">
       <h3 class="font-semibold text-foreground">オープンソース版のシステム信頼とインストール案内</h3>
       <p class="mt-2 text-muted leading-relaxed">
