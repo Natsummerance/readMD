@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "name": "morandi-cinematic",
+  "template": "morandi-cinematic",
+  "palette": {
+    "background": "#e5e4de",
+    "surface": "#efeeea",
+    "ink": "#242a27",
+    "muted": "#58615b",
+    "line": "#cbcfc8",
+    "accent": "#667f68",
+    "screenshot_frame": "#242a27"
+  },
+  "type": {
+    "display": {
+      "family": "\"Microsoft YaHei\", \"Noto Sans CJK SC\", sans-serif",
+      "size": 98,
+      "weight": 900,
+      "line_height": 1.12
+    },
+    "body": {
+      "family": "\"Microsoft YaHei\", \"Noto Sans CJK SC\", sans-serif",
+      "size": 26,
+      "weight": 400,
+      "line_height": 1.46
+    },
+    "utility": {
+      "family": "Consolas, \"SFMono-Regular\", monospace",
+      "size": 23,
+      "weight": 700,
+      "line_height": 1.2
+    }
+  },
+  "layout": {
+    "canvas": [1080, 1440],
+    "padding": [48, 52],
+    "radius": 4,
+    "gap": 26
+  },
+  "signature": "cinematic proof: muted matte framing around an unedited running scene"
+}

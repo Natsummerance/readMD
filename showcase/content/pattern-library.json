@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "local-xhs-title",
+      "name": "dbs-xhs-title formula library",
+      "type": "local-skill",
+      "license": "local-private",
+      "url": "Z:/Natsumer/.codex/skills/dbs-xhs-title/SKILL.md",
+      "reviewed_at": "2026-08-22"
+    },
+    {
+      "id": "post-editor",
+      "name": "ThoughtfulBits reader-first post editor",
+      "type": "local-skill",
+      "license": "local-plugin",
+      "url": "Z:/Natsumer/.codex/plugins/cache/openai-curated-remote/thoughtfulbits-skills/1.4.0/skills/post-editor/SKILL.md",
+      "reviewed_at": "2026-08-22"
+    },
+    {
+      "id": "local-design-foundations",
+      "name": "Apple Design and Frontend Design type hierarchy",
+      "type": "local-skills",
+      "license": "local-private",
+      "url": "Z:/Natsumer/.codex/skills/apple-design/SKILL.md; Z:/Natsumer/.codex/skills/frontend-design/SKILL.md",
+      "reviewed_at": "2026-08-23"
+    },
+    {
+      "id": "local-product-rule",
+      "name": "ReadMD authentic product showcase rule",
+      "type": "local-project",
+      "license": "MIT",
+      "url": "showcase/README.md",
+      "reviewed_at": "2026-08-22"
+    },
+    {
+      "id": "dbs-resonate-local",
+      "name": "dbs-resonate core-mechanism diagnosis",
+      "type": "local-skill",
+      "license": "local-private",
+      "url": "Z:/Natsumer/.codex/skills/dbs-resonate/SKILL.md",
+      "reviewed_at": "2026-08-22"
+    },
+    {
+      "id": "xhs-visual-director",
+      "name": "Xiaohongshu Visual Director Skill",
+      "type": "github",
+      "license": "MIT",
+      "url": "https://github.com/ziguishian/xhs-visual-director-skill",
+      "commit": "5c730c688f2c7e64f798d611608997ffba43813d",
+      "files_read": [
+        "docs/anti_patterns.md",
+        "docs/page_structure_rules.md",
+        "templates/visual_review_checklist.md",
+        "templates/final_caption_template.md"
+      ],
+      "execution_allowed": false,
+      "reviewed_at": "2026-08-22"
+    }
+  ],
+  "patterns": [
+    {
+      "id": "one-hook-cover",
+      "source_id": "xhs-visual-director",
+      "mechanism": "A cover carries one dominant hook so a cold reader can decide during the feed pause.",
+      "application": "Keep the cover headline short, put the mechanism in the subtitle, and use one authentic UI strip instead of a feature inventory."
+    },
+    {
+      "id": "thumbnail-first-cover",
+      "source_id": "local-design-foundations",
+      "mechanism": "Hierarchy comes from measured size, weight, and leading together; a feed decision happens before the full-resolution card is seen.",
+      "application": "Render the cover hook at display scale, verify its real text block occupies enough of the 1080x1440 canvas, and keep supporting copy readable without opening the image."
+    },
+    {
+      "id": "pain-to-removal",
+      "source_id": "post-editor",
+      "mechanism": "Recognition grows when the opening describes a task the reader already performs, then removes it.",
+      "application": "Open with finishing a document but rebuilding slides; say that Markdown can now present directly."
+    },
+    {
+      "id": "product-first-proof",
+      "source_id": "local-product-rule",
+      "mechanism": "Software posts earn trust when the second image answers what does it look like.",
+      "application": "Card two must be the full ReadMD interface with minimal overlay."
+    },
+    {
+      "id": "single-primary-feature",
+      "source_id": "dbs-resonate-local",
+      "mechanism": "One core mechanism prevents a release list from diluting recall.",
+      "application": "Let presentation mode lead; compress other updates into supporting workflow sentences."
+    },
+    {
+      "id": "outcome-not-adjective",
+      "source_id": "post-editor",
+      "mechanism": "Concrete outcomes transfer better than quality adjectives.",
+      "application": "Describe theme switching, font sizing, protected code/table slicing, and direct presenting rather than calling the UI premium."
+    },
+    {
+      "id": "reader-task-fit",
+      "source_id": "post-editor",
+      "mechanism": "A niche tool becomes shareable when tied to a recognizable human task.",
+      "application": "Name course notes, group-meeting reports, technical talks, and paper presentations."
+    },
+    {
+      "id": "collectible-clarity",
+      "source_id": "xhs-visual-director",
+      "mechanism": "Practical structure increases saves because readers can reuse the decision rule.",
+      "application": "Give each feature card one title, one benefit sentence, and one authentic UI region."
+    },
+    {
+      "id": "save-worthy-rule",
+      "source_id": "post-editor",
+      "mechanism": "A reusable decision criterion gives readers a reason to save the post beyond visual inspiration.",
+      "application": "State the mechanism-specific conditions under which this workflow is the right choice."
+    },
+    {
+      "id": "specific-question",
+      "source_id": "local-xhs-title",
+      "mechanism": "A scoped comment prompt produces usable feedback better than a broad call for support.",
+      "application": "Ask which Markdown file the reader would present first."
+    },
+    {
+      "id": "consistent-series-lock",
+      "source_id": "xhs-visual-director",
+      "mechanism": "Repeated canvas, margins, palette, type, and component style create recognition across swipe.",
+      "application": "All cards read from one token file and lock 1080x1440, cool paper surface, ink text, and signal-red accent."
+    },
+    {
+      "id": "anti-ppt-layout",
+      "source_id": "xhs-visual-director",
+      "mechanism": "Social carousels fail when pages look like bullet-slide screenshots.",
+      "application": "Use magazine-like headers, generous whitespace, real UI regions, and one job per card."
+    }
+  ],
+  "forbidden": [
+    "blue-purple gradient as the default technology style",
+    "bullet-point slide screenshots as social cards",
+    "generic words like revolutionary, seamless, next-gen",
+    "fabricated user counts, downloads, revenue, or testimonials",
+    "release asset filenames presented as user-facing fixes"
+  ]
+}

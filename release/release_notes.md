@@ -1,62 +1,61 @@
-# ReadMD v2.3.7-beta.3 (演说模式重构与体验精细化发布)
+# ReadMD v2.3.7-beta.4 (离线演说与沉浸写作修复)
 
 ReadMD 是免费、开源的本地 Markdown 智能阅读、编辑与全格式转换排版套件；纯本地离线可用、秒级极速渲染，绝不改写原文件。
 
 ## 📦 全平台发布资产 (Release Assets)
 
-- 🪟 Windows 安装版：`ReadMDSetup-v2.3.7-beta.3.exe`
-- 💼 Windows 便携版：`ReadMD-portable-v2.3.7-beta.3.exe`
-- 🍏 Apple Silicon Mac：`ReadMD-macos-arm64-v2.3.7-beta.3.zip`
-- 💻 Intel Mac：`ReadMD-macos-x64-v2.3.7-beta.3.zip`
-- 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.7-beta.3.AppImage`
-- 🇨🇳 Linux / 国产信创 Deb 安装包 (UOS / 银河麒麟 / Deepin / Ubuntu / Debian)：`readmd_2.3.7-beta.3_amd64.deb`
-- 📱 HarmonyOS NEXT 纯血鸿蒙安装包：`ReadMD-harmonyos-v2.3.7-beta.3.hap`
-- 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.7-beta.3.vsix`
-- 🤖 FastMCP Server 独立包：`readmd-mcp-server-2.3.7-beta.3.zip`
+- 🪟 Windows 安装版：`ReadMDSetup-v2.3.7-beta.4.exe`
+- 💼 Windows 便携版：`ReadMD-portable-v2.3.7-beta.4.exe`
+- 🍏 Apple Silicon Mac：`ReadMD-macos-arm64-v2.3.7-beta.4.zip`
+- 💻 Intel Mac：`ReadMD-macos-x64-v2.3.7-beta.4.zip`
+- 🐧 Linux 通用 AppImage：`ReadMD-linux-x86_64-v2.3.7-beta.4.AppImage`
+- 🇨🇳 Linux / 国产信创 Deb 安装包：`readmd_2.3.7-beta.4_amd64.deb`
+- 🧩 VSCode 扩展离线包：`readmd-vscode-2.3.7-beta.4.vsix`
+- 🤖 FastMCP Server 源码包：`readmd-mcp-server-2.3.7-beta.4.zip`
 - 🔐 校验清单：`SHA256SUMS.txt`
 
 ---
 
-## 🌟 本次版本核心修复与优化 (v2.3.7-beta.3)
+## 🌟 本次版本核心修复与优化
 
-### 1. 检查更新提示 `{version}` 占位符裸露修复
-- **精准版本号替换**：彻底修复 `updater.js` 与 46 种语言 i18n 字典的占位符参数映射，检查更新弹出 Toast 统一准确显示当前版本（如 `当前已是最新版本 (v2.3.7-beta.3)`），绝无裸露字段名。
+### 1. 演讲演示完全本地离线渲染
+- Reveal.js、Markdown、高亮、备注、KaTeX、主题和字体全部纳入本地 `assets/vendor`；
+- 演示页在 CSP 下不再请求 jsDelivr 或其他外部 CDN，公式、表格与幻灯片初始化不再被网络安全策略截断；
+- 新增端到端审计验证零外部请求、Reveal `ready` 状态、KaTeX 渲染和悬浮工具栏可用性。
 
-### 2. 返回主页后右下角「返回主页」按钮状态联动修复
-- **状态感知联动**：修复多标签页状态栏 `renderTabsBar()` 在欢迎主页时的按钮显示逻辑，无论当前是否存在后台标签，只要处于欢迎主页（`state.mode === 'welcome'`），右下角返回主页按钮严格隐藏。
+### 2. 禅模式一次进入，真正沉浸
+- 合并重复的 Zen 状态实现，修复 F11 被两个监听器连续处理导致“进入又立即退出”的问题；
+- 进入禅模式时立即隐藏工作台噪声并稳定正文布局，工具栏保留顶部悬停唤出；
+- 回归测试覆盖 F11 单次进入、Esc 退出和多帧布局稳定性。
 
-### 3. 演讲演示（Reveal.js）深度优化与自定义支持 (对齐 MPE 规范)
-- **排版与舒适演说字号重构**：将默认过大的 Reveal.js 字体调整为精致舒适尺寸（基准字号 24px，标题 1.5~1.8em，行高 1.65），杜绝因字号过大导致的多段落溢出与截断；
-- **智能防溢出滚动**：单页幻灯片容器增加优雅平滑滚动（`overflow-y: auto`），长文章与大表格内容 100% 完整展示；
-- **代码块与表格保护分片**：采用 AST 占位保护分片算法，智能自愈切片时严格保证围栏代码块（```）、数学公式块（$$）与表格不被腰斩截断；
-- **MPE 语法全量对齐**：完整支持 `<!-- slide -->` / `---`（横向）、`<!-- subslide -->` / `--`（垂直下钻）、`<!-- note -->`（演讲者备注）以及 YAML Frontmatter `presentation:` 配置；
-- **演说悬浮控制栏（Floating Quick Toolbar）**：在放映界面右上角提供精致毛玻璃悬浮工具栏，支持即时切换 11 款专业主题（Black, White, League, Night, Serif, Simple 等）、6 种转场特效（Slide, Fade, Zoom 等）、字号缩放（`A-` 20px / `A` 24px / `A+` 28px）、总览视图（`O` 键）与一键全屏（`F11`）。
+### 3. 多标签页即时反馈与溢出对齐
+- 切换标签页时先同步高亮活动标签，再用渲染代数丢弃过期结果，避免快速切换后的旧内容回写；
+- 标签栏恢复父容器宽度约束，溢出时自动滚动到活动标签；
+- 回归测试覆盖 18 个标签快速切换、唯一选中态、等高排列和末尾标签可见性。
 
-### 4. 全球 46 国语言 i18n 与前端自动化测试 100% 覆盖
-- **46 种语言 100% 对齐**：所有新增演示控制栏词条全量同步至 46 种语言 JSON 字典文件（1,017 词条，0 缺失）；
-- **端到端测试全覆盖**：全量 25 项 Playwright UI 端到端测试与 340 项单元/压力测试 100% 通过。
+### 4. 前端控件样式接入清理
+- 自定义样式、代码块、图表、子文档引用和 Frontmatter 弹层统一使用共享表单与按钮样式；
+- 清理裸露的 `btn-primary` / `btn-secondary` 和重复内联样式；
+- 学术 Callout、AI 历史空态、大纲空态和外部修改标记补齐明确视觉状态。
 
 ---
 
 ## 🔒 隐私与安全
 
 - **纯本地运算**：Markdown 自愈、图表解析、Code Chunk 执行、EPUB 打包均在本地沙箱完成；
-- **安全沙箱**：@import 包含越权路径防御与死循环防护，Code Chunk 具备进程隔离与超时自动终止；
-- **零凭证泄露**：全仓经过严苛自动化隐私扫描，无任何硬编码密钥或外部未经授权的网络回传。
+- **离线演示**：Reveal/KaTeX 资源随应用分发，放映阶段不依赖第三方网络；
+- **安全沙箱**：`@import` 包含越权路径防御与死循环防护，Code Chunk 具备进程隔离与超时自动终止。
 
 ---
 
 ## 🛠️ SHA-256 完整性校验
 
-下载对应文件后，核对文件名对应的一行：
-
 Windows PowerShell：
 ```powershell
-Get-FileHash .\ReadMDSetup-v2.3.7-beta.1.exe -Algorithm SHA256
+Get-FileHash .\ReadMDSetup-v2.3.7-beta.4.exe -Algorithm SHA256
 ```
 
 macOS / Linux 终端：
 ```bash
-shasum -a 256 ReadMD-macos-arm64-v2.3.7-beta.1.zip
+shasum -a 256 ReadMD-macos-arm64-v2.3.7-beta.4.zip
 ```
-

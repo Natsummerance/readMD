@@ -4,6 +4,11 @@
    ============================================================ */
 
 const $ = id => document.getElementById(id);
+
+function preferredScrollBehavior() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+}
+
 let py = (window.pywebview && window.pywebview.api) ? window.pywebview.api : null;
 let hasPy = !!py;
 const moduleLoadRequests = Object.create(null);
@@ -19,11 +24,15 @@ function bindPy() {
 }
 
 const LAN_TOKEN = window.LAN_TOKEN || null;
+const APP_TOKEN = document.querySelector('meta[name="readmd-app-token"]')?.content || null;
 
 function apiFetch(url, opts) {
   opts = opts || {};
   if (LAN_TOKEN) {
     opts.headers = Object.assign({}, opts.headers || {}, { 'X-ReadMD-Token': LAN_TOKEN });
+  }
+  if (APP_TOKEN) {
+    opts.headers = Object.assign({}, opts.headers || {}, { 'X-ReadMD-App-Token': APP_TOKEN });
   }
   return fetch(url, opts);
 }

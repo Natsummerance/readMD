@@ -1,0 +1,12 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and workflow discussions
+    url: https://github.com/Natsummerance/readMD/discussions
+    about: Ask usage questions, share workflows, or propose ideas before opening a feature request.
+  - name: Private security report
+    url: https://github.com/Natsummerance/readMD/security/advisories/new
+    about: Report vulnerabilities privately. Please include affected version, environment and reproduction boundary.
+  - name: Documentation and downloads
+    url: https://app.syminu.online/
+    about: Review supported platforms, release assets and checksum guidance.
+

@@ -60,10 +60,20 @@ function openFileRename() {
   const wrap = document.createElement('div');
   wrap.id = 'file-rename-wrap';
   wrap.className = 'file-rename-wrap';
-  wrap.innerHTML = '<input id="file-rename-input" class="file-rename-input" value="' + stem.replace(/"/g, '&quot;') + '" spellcheck="false" autocomplete="off" aria-label="' + (_t('tabs.rename') || '文件名称') + '"><span id="file-rename-ext" class="file-rename-ext">' + ext + '</span>';
+  const input = document.createElement('input');
+  input.id = 'file-rename-input';
+  input.className = 'file-rename-input';
+  input.value = stem;
+  input.spellcheck = false;
+  input.autocomplete = 'off';
+  input.setAttribute('aria-label', _t('tabs.rename') || '文件名称');
+  const extension = document.createElement('span');
+  extension.id = 'file-rename-ext';
+  extension.className = 'file-rename-ext';
+  extension.textContent = ext;
+  wrap.append(input, extension);
   title.parentNode.insertBefore(wrap, title.nextSibling);
 
-  const input = wrap.querySelector('#file-rename-input');
   input.focus();
   input.select();
 
@@ -102,12 +112,16 @@ function openFileRename() {
 }
 
 
-async function loadFile(path) {
+async function loadFile(path, { force = false, browserCopy = null } = {}) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!path) return;
   const existingTab = findTabByPath(path);
-  if (existingTab) {
-    switchTab(existingTab.id);
+  if (existingTab && !force) {
+    await switchTab(existingTab.id);
+    return;
+  }
+  if (existingTab && (existingTab.isDirty || (state.activeTabId === existingTab.id && state.editing))) {
+    showToast(_t('toast.reloadBlockedDirty') || '未保存修改已保留，未重新加载外部更改');
     return;
   }
   setProgress(8);
@@ -116,58 +130,97 @@ async function loadFile(path) {
     if (!r.ok) {
       const d = await r.json().catch(() => ({}));
       showToast((_t('toast.openFailed') || '无法打开：') + (d.error || r.status));
+      setProgress(0);
       return;
     }
     const d = await r.json();
-    const newTab = {
-      id: 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    const isBrowserCopy = force && browserCopy === null
+      ? existingTab.browserCopy === true
+      : browserCopy === true;
+    const fileFields = {
       mode: 'file',
       source: 'file',
+      browserCopy: isBrowserCopy,
       path: d.path,
       dir: d.dir,
       name: d.name,
-      title: d.name,
       content: d.content,
       original: d.original,
       fixed: d.content,
+      title: isBrowserCopy ? `${d.name} (${_t('app.browserCopy') || 'browser copy'})` : d.name,
       fixes: d.fixes || [],
       stats: d.stats || {},
       size: d.size,
       mtime: d.mtime,
       encoding: d.encoding,
       webAssets: [],
-      isDirty: false,
-      scrollPos: 0,
-      isVirtual: false,
     };
-    state.tabs.push(newTab);
-    state.activeTabId = newTab.id;
-    syncStateFromActiveTab();
-    await loadDocCitations(d.path);
-    setFixes(d.fixes || [], d.stats || {});
-    renderContent(d.content, d.name);
 
-    document.title = d.name + ' - ReadMD';
-    setFileTitle(d.name, hasPy, d.path);
-    addRecent(d.path);
-    pushHistory(d.path);
-    saveLastFile(d.path);
-    updateStatus();
-    exitEdit();
-    clearAiOutput();
+    if (existingTab) {
+      const wasActive = state.activeTabId === existingTab.id;
+      const previousPage = wasActive && state.pagination.enabled && state.pagination.mode === 'paged'
+        ? state.pagination.currentPage
+        : 0;
+      const previousScroll = wasActive ? ($('content')?.scrollTop || 0) : (existingTab.scrollPos || 0);
+      Object.assign(existingTab, fileFields, { isDirty: false });
+      if (wasActive) syncStateFromActiveTab();
+      if (!wasActive) existingTab.scrollPos = previousScroll;
+
+      if (wasActive) {
+        await prepareDocCitations(d.path, d.content);
+        setFixes(d.fixes || [], d.stats || {});
+        await renderContent(d.content, d.name);
+        if (state.pagination.enabled && state.pagination.mode === 'paged' && previousPage > 0) {
+          renderPage(previousPage, null, true);
+        }
+        requestAnimationFrame(() => {
+          $('content').scrollTop = previousScroll;
+        });
+        updateStatus();
+      }
+      showToast(_t('toolbar.reload') + ': ' + d.name);
+    } else {
+      const newTab = {
+        id: 'tab_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        ...fileFields,
+        isDirty: false,
+        scrollPos: 0,
+        isVirtual: false,
+      };
+      state.tabs.push(newTab);
+      state.activeTabId = newTab.id;
+      syncStateFromActiveTab();
+      await prepareDocCitations(d.path, d.content);
+      setFixes(d.fixes || [], d.stats || {});
+      await renderContent(d.content, d.name);
+      if (state.pagination.enabled && state.pagination.totalPages > 1) {
+        showToast(_t('toast.openedPages', { name: d.name, count: state.pagination.totalPages }), 4000);
+      } else {
+        showToast(_t('toast.opened', { name: d.name }), 4000);
+      }
+      const displayTitle = isBrowserCopy ? `${d.name} (${_t('app.browserCopy') || 'browser copy'})` : d.name;
+      document.title = displayTitle + ' - ReadMD';
+      setFileTitle(displayTitle, hasPy, d.path);
+      addRecent(d.path);
+      pushHistory(d.path);
+      saveLastFile(d.path);
+      exitEdit();
+      clearAiOutput();
+      updateStatus();
+      setProgress(100);
+      if (d.structured) showToast(_t('toast.txtStructureRecognized') || '已智能识别 TXT 结构（标题 / 表格 / 列表 / 目录）');
+      afterRender();
+      return;
+    }
+
     renderTabsBar();
     setProgress(100);
-    if (d.structured) showToast(_t('toast.txtStructureRecognized') || '已智能识别 TXT 结构（标题 / 表格 / 列表 / 目录）');
-    afterRender();
   } catch (e) {
     console.error(e);
     showToast((_t('toast.loadFailed') || '加载失败：') + e.message);
     setProgress(0);
   }
 }
-
-
-
 /* ---------------- 外部唤起（单实例常驻：托盘 / 双击 .md） ---------------- */
 
 async function openExternalFile(path) {
@@ -224,6 +277,18 @@ const PAGINATION_THRESHOLD_LINES = 8000;  // 8000 行以上超长文档自动激
 const PAGINATION_THRESHOLD_BYTES = 500 * 1024; // 500KB 以上超长文档自动激活智能分页
 
 let currentDocCitations = {};
+
+function documentMayCite(content) {
+  return /(?:^|\s)\[@[^\]\s]+|(?:^|\s)@[A-Za-z0-9_:-]+/.test(String(content || ''));
+}
+
+async function prepareDocCitations(filePath, content) {
+  if (!documentMayCite(content)) {
+    currentDocCitations = {};
+    return;
+  }
+  await loadDocCitations(filePath);
+}
 
 async function loadDocCitations(filePath) {
   currentDocCitations = {};
@@ -418,7 +483,9 @@ function updatePaginationBar() {
   const sel = $('pg-page-select');
   if (sel) {
     sel.disabled = (p.mode === 'continuous');
-    if (sel.options.length !== total) {
+    const pageSignature = p.pages.map(page => `${page.pageIndex}:${page.title || ''}`).join('|');
+    if (sel.options.length !== total || sel.dataset.pageSignature !== pageSignature) {
+      sel.dataset.pageSignature = pageSignature;
       sel.innerHTML = '';
       p.pages.forEach((pg, idx) => {
         const opt = document.createElement('option');
@@ -443,24 +510,80 @@ function updatePaginationBar() {
       iconPaged.classList.remove('hidden');
     }
   }
+  $('pg-mode-toggle')?.setAttribute('aria-pressed', p.mode === 'paged' ? 'true' : 'false');
 
+  const _t = (k, params) => window.i18n ? window.i18n.t(k, params) : k;
   const stBadge = $('status-pagination');
   if (stBadge) {
-    stBadge.textContent = p.mode === 'paged' ? `${cur + 1} / ${total}` : '全卷';
+    stBadge.textContent = p.mode === 'paged'
+      ? `${cur + 1} / ${total}`
+      : (_t('pagination.continuousBadge') || '全卷');
+    stBadge.title = p.mode === 'paged'
+      ? (_t('pagination.pagedBadge') || '分页模式')
+      : (_t('pagination.continuousBadge') || '全卷连续');
+  }
+
+  const live = $('pagination-live');
+  if (live) {
+    live.textContent = p.mode === 'paged'
+      ? (_t('pagination.pageInfo', { current: cur + 1, total }) + (curPage.title ? ` · ${curPage.title}` : ''))
+      : (_t('pagination.continuousBadge') || '全卷连续');
   }
 }
 
-function togglePaginationMode() {
+function confirmContinuousMode(pageCount) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  return new Promise(resolve => {
+    const modal = $('continuous-modal');
+    if (!modal) {
+      resolve(window.confirm(_t('pagination.continuousWarning', { count: pageCount }) || `连续模式将一次渲染 ${pageCount} 页，可能造成卡顿。是否继续？`));
+      return;
+    }
+    modal.classList.remove('hidden');
+    $('continuous-desc').textContent = _t('pagination.continuousWarning', { count: pageCount });
+    const onKeyDown = event => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        finish(false);
+      }
+    };
+    const finish = accepted => {
+      modal.classList.add('hidden');
+      $('continuous-confirm').onclick = null;
+      $('continuous-cancel').onclick = null;
+      modal.removeEventListener('keydown', onKeyDown);
+      resolve(accepted);
+    };
+    modal.addEventListener('keydown', onKeyDown);
+    setTimeout(() => $('continuous-confirm')?.focus(), 20);
+    $('continuous-confirm').onclick = () => finish(true);
+    $('continuous-cancel').onclick = () => finish(false);
+  });
+}
+
+async function togglePaginationMode() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const p = state.pagination;
   if (!p || !p.enabled) return;
+  const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
 
   if (p.mode === 'paged') {
+    if (p.pages.length > 20 && !(await confirmContinuousMode(p.pages.length))) {
+      return;
+    }
     p.mode = 'continuous';
+    if (activeTab) {
+      activeTab.readerMode = 'continuous';
+      activeTab.continuousScroll = $('content')?.scrollTop || 0;
+    }
     showToast(_t('pagination.switchToContinuousToast') || '已切换至全卷连续阅读模式', 1800);
     renderContentIncremental(p.rawContent, 0);
   } else {
     p.mode = 'paged';
+    if (activeTab) {
+      activeTab.readerMode = 'paged';
+      activeTab.readerPage = 0;
+    }
     showToast(_t('pagination.switchToPagedToast') || '已切换至智能分页阅读模式', 1800);
     renderPage(0, null, false);
   }
@@ -471,6 +594,11 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
   if (!state.pagination.pages || !state.pagination.pages.length) return;
   pageIndex = Math.max(0, Math.min(pageIndex, state.pagination.pages.length - 1));
   state.pagination.currentPage = pageIndex;
+  const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
+  if (activeTab) {
+    activeTab.readerMode = 'paged';
+    activeTab.readerPage = pageIndex;
+  }
   const page = state.pagination.pages[pageIndex];
 
   const el = $('content');
@@ -480,7 +608,21 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
   const prot = protectMath(transformed);
   const html = marked.parse(prot.src, { gfm: true, breaks: false });
   const finalHtml = restoreMath(html, prot.saved);
-  el.innerHTML = '<article class="markdown-body">' + finalHtml + '</article>';
+  el.innerHTML = '<article class="markdown-body">' + sanitizeRenderedHtml(finalHtml) + '</article>';
+
+  if (state.pagination.allHeadings?.length) {
+    const pageOutline = state.pagination.allHeadings.filter(heading => heading.pageIndex === pageIndex);
+    const pageHeadings = el.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6');
+    const outlineByLine = new Map(pageOutline.map(heading => [String(heading.sourceLine), heading]));
+    let outlineCursor = 0;
+    pageHeadings.forEach(heading => {
+      const outline = outlineByLine.get(heading.dataset.sourceLine) || pageOutline[outlineCursor];
+      if (outline) {
+        heading.id = outline.id;
+        outlineCursor += 1;
+      }
+    });
+  }
 
   postProcess();
   updatePaginationBar();
@@ -496,11 +638,24 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
         } catch (e) {}
       }
       if (targetEl) {
-        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        targetEl.tabIndex = -1;
+        targetEl.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
+        targetEl.focus({ preventScroll: true });
+        document.querySelectorAll('#toc-list .toc-heading-active')
+          .forEach(link => link.classList.remove('toc-heading-active'));
+        const activeTocLink = document.querySelector(`#toc-list [data-heading-id="${CSS.escape(targetEl.id)}"]`);
+        const targetGroup = document.querySelector(`#toc-list details[data-page-idx="${pageIndex}"]`);
+        if (targetGroup && !targetGroup.open) targetGroup.open = true;
+        if (activeTocLink) activeTocLink.classList.add('toc-heading-active');
         targetEl.classList.remove('heading-target-highlight');
+        targetEl.classList.remove('search-arrival');
         void targetEl.offsetWidth;
         targetEl.classList.add('heading-target-highlight');
-        setTimeout(() => targetEl.classList.remove('heading-target-highlight'), 1500);
+        targetEl.classList.add('search-arrival');
+        setTimeout(() => {
+          targetEl.classList.remove('heading-target-highlight');
+          targetEl.classList.remove('search-arrival');
+        }, 2400);
       } else {
         el.scrollTop = 0;
       }
@@ -514,6 +669,25 @@ let paginationEventsBound = false;
 function initPaginationEvents() {
   if (paginationEventsBound) return;
   paginationEventsBound = true;
+
+  const content = $('content');
+  if (content) {
+    let tocScrollFrame = 0;
+    content.addEventListener('scroll', () => {
+      if (tocScrollFrame) return;
+      tocScrollFrame = requestAnimationFrame(() => {
+        tocScrollFrame = 0;
+        updateActiveTocHeading();
+        const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
+        if (activeTab) {
+          activeTab.scrollPos = content.scrollTop || 0;
+          if (state.pagination.enabled && state.pagination.mode === 'continuous') {
+            activeTab.continuousScroll = content.scrollTop || 0;
+          }
+        }
+      });
+    });
+  }
 
   const btnFirst = $('pg-first-btn');
   if (btnFirst) btnFirst.addEventListener('click', () => { if (state.pagination.enabled && state.pagination.mode === 'paged') renderPage(0); });
@@ -592,6 +766,7 @@ async function processDocImports(mdText, filePath) {
 window.processDocImports = processDocImports;
 
 function parseMarkdownWithSourceMap(content, options = {}) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const breaks = !!(state && state.breakOnSingleNewline);
   try {
     const renderer = new marked.Renderer();
@@ -653,10 +828,10 @@ function parseMarkdownWithSourceMap(content, options = {}) {
         return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
           <div class="code-chunk-header">
             <span class="code-chunk-badge">${lang.toUpperCase()}</span>
-            <span class="code-chunk-status">${_t('status.ready')}</span>
+            <span class="code-chunk-status" role="status" aria-live="polite">${_t('status.ready')}</span>
             <span class="code-chunk-timer"></span>
             <div class="code-chunk-actions">
-              <button class="code-chunk-run-btn" title="${_t('menu.runCode')} (Shift+Enter)">▶ ${_t('menu.runCode')}</button>
+              <button class="code-chunk-run-btn" title="${_t('menu.runCode')} (Shift+Enter)" aria-label="${_t('menu.runCode')}">▶ ${_t('menu.runCode')}</button>
             </div>
           </div>
           <div class="code-chunk-src ${isHidden ? 'hidden' : ''}">
@@ -666,8 +841,8 @@ function parseMarkdownWithSourceMap(content, options = {}) {
             <div class="code-chunk-output-header">
               <span>${_t('reader.executionOutput')}</span>
               <div class="code-chunk-out-actions">
-                <button class="code-chunk-copy-btn" title="${_t('reader.copyOutput')}">${_t('reader.copyOutput')}</button>
-                <button class="code-chunk-clear-btn" title="${_t('reader.clearOutput')}">${_t('reader.clearOutput')}</button>
+                <button class="code-chunk-copy-btn" title="${_t('reader.copyOutput')}" aria-label="${_t('reader.copyOutput')}">${_t('reader.copyOutput')}</button>
+                <button class="code-chunk-clear-btn" title="${_t('reader.clearOutput')}" aria-label="${_t('reader.clearOutput')}">${_t('reader.clearOutput')}</button>
               </div>
             </div>
             <pre class="code-chunk-stdout"></pre>
@@ -683,7 +858,7 @@ function parseMarkdownWithSourceMap(content, options = {}) {
         return `<div class="diagram-card" ${lineAttr} data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
           <div class="diagram-header">
             <span class="diagram-badge">${_t('reader.diagramBadge', { lang: lang.toUpperCase() })}</span>
-            <button class="diagram-reload-btn" title="${_t('reader.refresh')}">⟳ ${_t('reader.refresh')}</button>
+            <button class="diagram-reload-btn" title="${_t('reader.refresh')}" aria-label="${_t('reader.refresh')}">⟳ ${_t('reader.refresh')}</button>
           </div>
           <div class="diagram-preview"><div class="diagram-loading">${_t('reader.diagramLoading')}</div></div>
           <details class="diagram-src-wrap"><summary>${_t('reader.viewCode')}</summary><pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre></details>
@@ -700,6 +875,119 @@ function parseMarkdownWithSourceMap(content, options = {}) {
   }
 }
 window.parseMarkdownWithSourceMap = parseMarkdownWithSourceMap;
+
+const MARKDOWN_ALLOWED_TAGS = new Set([
+  'a', 'abbr', 'article', 'b', 'blockquote', 'br', 'caption', 'cite', 'code',
+  'dd', 'del', 'details', 'div', 'dl', 'dt', 'em', 'figcaption', 'figure',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr', 'i', 'img', 'input', 'ins',
+  'button', 'kbd', 'li', 'mark', 'ol', 'p', 'pre', 'q', 's', 'section', 'span',
+  'strike', 'strong', 'sub', 'summary', 'sup', 'table', 'tbody', 'td',
+  'tfoot', 'th', 'thead', 'time', 'tr', 'u', 'ul',
+]);
+const MARKDOWN_REMOVED_TAGS = new Set([
+  'base', 'embed', 'form', 'frame', 'frameset', 'iframe', 'link', 'meta',
+  'noscript', 'object', 'script', 'style', 'template', 'title',
+]);
+const RENDER_BUTTON_CLASSES = new Set([
+  'code-chunk-run-btn',
+  'code-chunk-copy-btn',
+  'code-chunk-clear-btn',
+  'diagram-reload-btn',
+]);
+
+function isSanctionedRenderButton(node) {
+  const classes = Array.from(node.classList);
+  return Boolean(node.closest('.code-chunk-card, .diagram-card'))
+    && classes.length > 0
+    && classes.every(className => RENDER_BUTTON_CLASSES.has(className));
+}
+
+function safeResourceUrl(value) {
+  if (!value) return false;
+  const trimmed = String(value).trim();
+  if (trimmed.startsWith('#')) return true;
+  if (/^(data|blob|javascript|vbscript):/i.test(trimmed)) return /^data:image\//i.test(trimmed);
+  try {
+    return ['http:', 'https:', 'mailto:', 'file:'].includes(new URL(trimmed, window.location.href).protocol);
+  } catch (_) {
+    return false;
+  }
+}
+
+function sanitizeRenderedHtml(html) {
+  const template = document.createElement('template');
+  template.innerHTML = String(html || '');
+  Array.from(template.content.querySelectorAll('*')).forEach(node => {
+    const tag = node.tagName.toLowerCase();
+    if (MARKDOWN_REMOVED_TAGS.has(tag)) {
+      node.remove();
+      return;
+    }
+    if (!MARKDOWN_ALLOWED_TAGS.has(tag)) {
+      node.replaceWith(...node.childNodes);
+      return;
+    }
+    if (tag === 'button') {
+      if (!isSanctionedRenderButton(node)) node.replaceWith(...node.childNodes);
+    }
+    if (tag === 'img') {
+      const source = node.getAttribute('src') || '';
+      if (/^https?:/i.test(source)) {
+        const link = document.createElement('a');
+        link.href = source;
+        link.rel = 'noopener noreferrer';
+        link.target = '_blank';
+        link.className = 'remote-image-link';
+        link.textContent = node.getAttribute('alt')
+          || `[${new URL(source).hostname}]`;
+        node.replaceWith(link);
+        return;
+      }
+    }
+
+    Array.from(node.attributes).forEach(attribute => {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value;
+      if (name.startsWith('data-') || name === 'class' || name.startsWith('aria-') ||
+          ['title', 'lang', 'dir', 'role', 'alt', 'width', 'height', 'loading',
+           'colspan', 'rowspan', 'datetime', 'cite'].includes(name)) return;
+      if (name === 'id') {
+        if (!/^[A-Za-z][A-Za-z0-9_:.-]*$/.test(value)) node.removeAttribute(attribute.name);
+        return;
+      }
+      if ((tag === 'a' && name === 'href') || ((tag === 'img' || tag === 'source') && name === 'src')) {
+        if (!safeResourceUrl(value)) node.removeAttribute(attribute.name);
+        return;
+      }
+      if (name === 'srcset') {
+        const urls = value.split(',').map(item => item.trim().split(/\s+/)[0]).filter(Boolean);
+        if (!urls.length || !urls.every(safeResourceUrl)) node.removeAttribute(attribute.name);
+        return;
+      }
+      if (tag === 'input' && ['type', 'checked', 'disabled'].includes(name)) {
+        if (name === 'type' && value.toLowerCase() !== 'checkbox') node.removeAttribute(attribute.name);
+        return;
+      }
+      if ((tag === 'ol' && ['start', 'type'].includes(name)) ||
+          (tag === 'details' && name === 'open') || (tag === 'a' && name === 'target')) return;
+      node.removeAttribute(attribute.name);
+    });
+
+    if (tag === 'a') {
+      const href = node.getAttribute('href');
+      if (!href) node.removeAttribute('target');
+      else if (/^https?:/i.test(href)) node.setAttribute('rel', 'noopener noreferrer');
+      else if (node.classList.contains('remote-image-link')) node.setAttribute('rel', 'noopener noreferrer');
+    }
+    if (tag === 'input' && !node.hasAttribute('disabled')) node.setAttribute('disabled', '');
+    if (tag === 'button') {
+      if (isSanctionedRenderButton(node)) node.setAttribute('type', 'button');
+    }
+  });
+
+  return template.innerHTML;
+}
+window.sanitizeRenderedHtml = sanitizeRenderedHtml;
 
 async function renderContent(content, name) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
@@ -718,6 +1006,7 @@ async function renderContent(content, name) {
   if (isUltraLong) {
     state.pagination.enabled = true;
     state.pagination.rawContent = content;
+    state.pagination.searchText = null;
     state.pagination.pages = splitMdIntoPages(content);
     state.pagination.totalPages = state.pagination.pages.length;
     if (state.pagination.mode === 'paged') {
@@ -745,7 +1034,7 @@ async function renderContent(content, name) {
   const prot = protectMath(transformed);
   const html = parseMarkdownWithSourceMap(prot.src);
   const finalHtml = restoreMath(html, prot.saved);
-  $('content').innerHTML = '<article class="markdown-body">' + finalHtml + '</article>';
+  $('content').innerHTML = '<article class="markdown-body">' + sanitizeRenderedHtml(finalHtml) + '</article>';
   postProcess();
   if (saved) requestAnimationFrame(() => { $('content').scrollTop = saved; });
 }
@@ -801,13 +1090,16 @@ async function renderContentIncremental(content, savedTop) {
   const total = blocks.length;
   if (total <= 1) {
     const prot = protectMath(content);
-    body.innerHTML = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
+    body.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
     postProcess();
     if (savedTop) el.scrollTop = savedTop;
     return;
   }
   const prog = document.createElement('div');
   prog.id = 'render-progress';
+  prog.setAttribute('role', 'status');
+  prog.setAttribute('aria-live', 'polite');
+  prog.setAttribute('aria-atomic', 'true');
   el.appendChild(prog);
   const CHUNK = 8;
   for (let i = 0; i < total; i += CHUNK) {
@@ -816,7 +1108,7 @@ async function renderContentIncremental(content, savedTop) {
     for (let k = i; k < end; k++) {
       const div = document.createElement('div');
       const prot = protectMath(blocks[k]);
-      div.innerHTML = restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved);
+      div.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
       frag.appendChild(div);
     }
     body.appendChild(frag);
@@ -928,22 +1220,28 @@ function processBibCitations(body) {
     const parent = n.parentNode;
     if (!parent) continue;
     const text = n.nodeValue;
-    const replaced = text.replace(/\[@([a-zA-Z0-9_\-:]+)\]|@([a-zA-Z0-9_\-:]+)/g, (match, k1, k2) => {
-      const citeKey = k1 || k2;
+    const citationPattern = /\[@([a-zA-Z0-9_\-:]+)\]|@([a-zA-Z0-9_\-:]+)/g;
+    let cursor = 0;
+    let replaced = false;
+    let match;
+    while ((match = citationPattern.exec(text))) {
+      const citeKey = match[1] || match[2];
       const entry = currentDocCitations[citeKey];
-      if (!entry) return match;
+      if (!entry) continue;
       usedKeys.add(citeKey);
       const label = entry.short_cite || `[${citeKey}]`;
-      return `<span class="bib-cite-badge" data-citekey="${citeKey}">${label}</span>`;
-    });
-    if (replaced !== text) {
-      const temp = document.createElement('span');
-      temp.innerHTML = replaced;
-      while (temp.firstChild) {
-        parent.insertBefore(temp.firstChild, n);
-      }
-      parent.removeChild(n);
+      if (match.index > cursor) parent.insertBefore(document.createTextNode(text.slice(cursor, match.index)), n);
+      const badge = document.createElement('span');
+      badge.className = 'bib-cite-badge';
+      badge.dataset.citekey = citeKey;
+      badge.textContent = label;
+      parent.insertBefore(badge, n);
+      cursor = citationPattern.lastIndex;
+      replaced = true;
     }
+    if (!replaced) continue;
+    if (cursor < text.length) parent.insertBefore(document.createTextNode(text.slice(cursor)), n);
+    parent.removeChild(n);
   }
 
   body.querySelectorAll('.bib-cite-badge').forEach(badge => {
@@ -955,15 +1253,17 @@ function processBibCitations(body) {
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     const refSection = document.createElement('section');
     refSection.className = 'academic-references';
-    refSection.innerHTML = '<h3>' + (_t('reader.referencesHeading') || 'References / 参考文献') + '</h3><ol></ol>';
-    const ol = refSection.querySelector('ol');
+    const heading = document.createElement('h3');
+    heading.textContent = _t('reader.referencesHeading') || 'References / 参考文献';
+    const ol = document.createElement('ol');
+    refSection.append(heading, ol);
 
     for (const key of usedKeys) {
       const entry = currentDocCitations[key];
       const li = document.createElement('li');
-      li.id = 'ref-' + key;
+      li.id = 'ref-' + encodeURIComponent(key);
       if (entry && entry.full_reference) {
-        li.innerHTML = marked.parseInline(entry.full_reference);
+        li.textContent = entry.full_reference;
       } else {
         li.textContent = key;
       }
@@ -991,15 +1291,33 @@ function showBibHoverCard(e, key) {
   bibCardEl = document.createElement('div');
   bibCardEl.className = 'bib-hover-card';
   bibCardEl.dataset.key = key;
-  bibCardEl.innerHTML = `
-    <div class="bib-card-title">${entry.title || key}</div>
-    <div class="bib-card-author">${entry.author || ''} ${entry.year ? `(${entry.year})` : ''}</div>
-    <div class="bib-card-journal">${entry.journal || entry.booktitle || ''}</div>
-    <div class="bib-card-actions">
-      ${entry.doi ? `<a class="bib-card-btn" href="https://doi.org/${entry.doi}" target="_blank">DOI</a>` : ''}
-      <button class="bib-card-btn" id="bib-copy-btn">${_t('reader.copyBibtex') || '复制 BibTeX'}</button>
-    </div>
-  `;
+  const cardTitle = document.createElement('div');
+  cardTitle.className = 'bib-card-title';
+  cardTitle.textContent = entry.title || key;
+  const cardAuthor = document.createElement('div');
+  cardAuthor.className = 'bib-card-author';
+  cardAuthor.textContent = `${entry.author || ''} ${entry.year ? `(${entry.year})` : ''}`.trim();
+  const cardJournal = document.createElement('div');
+  cardJournal.className = 'bib-card-journal';
+  cardJournal.textContent = entry.journal || entry.booktitle || '';
+  const cardActions = document.createElement('div');
+  cardActions.className = 'bib-card-actions';
+  if (/^10\.\d{4,9}\/[^\s<>"']+$/.test(entry.doi || '')) {
+    const doiLink = document.createElement('a');
+    doiLink.className = 'bib-card-btn';
+    doiLink.href = `https://doi.org/${encodeURIComponent(entry.doi)}`;
+    doiLink.target = '_blank';
+    doiLink.rel = 'noopener noreferrer';
+    doiLink.textContent = 'DOI';
+    cardActions.appendChild(doiLink);
+  }
+  const copyButton = document.createElement('button');
+  copyButton.className = 'bib-card-btn';
+  copyButton.id = 'bib-copy-btn';
+  copyButton.type = 'button';
+  copyButton.textContent = _t('reader.copyBibtex') || '复制 BibTeX';
+  cardActions.appendChild(copyButton);
+  bibCardEl.append(cardTitle, cardAuthor, cardJournal, cardActions);
   document.body.appendChild(bibCardEl);
 
   bibCardEl.addEventListener('mouseenter', () => {
@@ -1111,7 +1429,7 @@ function renderAllCodeChunks(container) {
             res.images.forEach(imgSrc => {
               const img = document.createElement('img');
               img.src = imgSrc;
-              img.alt = 'Plot Output';
+              img.alt = `${lang} plot output`;
               plotEl.appendChild(img);
             });
           }
@@ -1270,6 +1588,22 @@ function toggleZenMode(force) {
 }
 window.toggleZenMode = toggleZenMode;
 
+let presentationOpener = null;
+
+window.closePresentationMode = function closePresentationMode() {
+  const modal = document.getElementById('presentation-modal');
+  if (!modal || modal.classList.contains('hidden')) return false;
+  if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+  modal.classList.add('hidden');
+  const iframe = modal.querySelector('.presentation-iframe');
+  if (iframe) iframe.src = 'about:blank';
+  if (presentationOpener?.isConnected) presentationOpener.focus({ preventScroll: true });
+  presentationOpener = null;
+  return true;
+};
+
 async function launchPresentationMode() {
   const content = state.original || (cmView ? cmView.state.doc.toString() : '');
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
@@ -1277,11 +1611,15 @@ async function launchPresentationMode() {
     showToast(_t('presentation.noDoc') || '当前没有可演示的文档内容');
     return;
   }
+  if (!document.activeElement?.closest('#presentation-modal')) presentationOpener = document.activeElement;
   let modal = document.getElementById('presentation-modal');
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'presentation-modal';
     modal.className = 'hidden';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', _t('menu.presentation') || '演讲演示');
     modal.innerHTML = `
       <div class="presentation-toolbar" id="presentation-toolbar">
         <div class="presentation-tool-item">
@@ -1318,7 +1656,7 @@ async function launchPresentationMode() {
         <button type="button" class="presentation-btn" id="presentation-fullscreen-btn" title="${_t('presentation.fullscreenTitle')}">${_t('presentation.fullscreenLabel')}</button>
         <button type="button" class="presentation-close-btn" id="presentation-close-btn" title="${_t('presentation.closeTitle')}" data-i18n-title="presentation.closeTitle"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
       </div>
-      <iframe class="presentation-iframe" src="about:blank"></iframe>
+      <iframe class="presentation-iframe" title="${_t('menu.presentation') || '演讲演示'}" src="about:blank"></iframe>
     `;
     document.body.appendChild(modal);
 
@@ -1371,12 +1709,7 @@ async function launchPresentationMode() {
     }
 
     const closePresentation = () => {
-      if (document.fullscreenElement && document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-      }
-      modal.classList.add('hidden');
-      const iframe = modal.querySelector('.presentation-iframe');
-      if (iframe) iframe.src = 'about:blank';
+      window.closePresentationMode();
     };
 
     if ($('presentation-close-btn')) {
@@ -1401,6 +1734,7 @@ async function launchPresentationMode() {
       modal.classList.remove('hidden');
       const iframe = modal.querySelector('.presentation-iframe');
       iframe.srcdoc = res.html;
+      $('presentation-theme-select')?.focus({ preventScroll: true });
     } else {
       showToast((_t('toast.presentationFail') || '演示文稿生成失败：') + ((res && res.error) || '未知错误'));
     }
@@ -1439,7 +1773,9 @@ function fixLinks(body) {
           el = findMatchingHeading(targetId, a.textContent, allHeadings);
         }
         if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          el.tabIndex = -1;
+          el.focus({ preventScroll: true });
+          el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
           el.classList.remove('heading-target-highlight');
           void el.offsetWidth;
           el.classList.add('heading-target-highlight');
@@ -1617,7 +1953,7 @@ function loadFileDialog() {
     const f = input.files && input.files[0];
     if (!f) return;
     const p = await uploadFile(f);
-    if (p && MD_RE.test(p)) loadFile(p);
+    if (p && MD_RE.test(p)) loadFile(p, { browserCopy: true });
     else if (p) convertOrOcr(p, 'convert');
   };
   input.click();

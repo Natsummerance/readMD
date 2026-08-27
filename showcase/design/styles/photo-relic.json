@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "name": "photo-relic",
+  "template": "photo-relic",
+  "palette": {
+    "background": "#efe9df",
+    "surface": "#faf6ee",
+    "ink": "#201a15",
+    "muted": "#63584c",
+    "line": "#d8cdbb",
+    "accent": "#b4552e",
+    "screenshot_frame": "#201a15"
+  },
+  "type": {
+    "display": {
+      "family": "\"Noto Serif SC\", \"Source Han Serif SC\", Georgia, serif",
+      "size": 100,
+      "weight": 900,
+      "line_height": 1.12
+    },
+    "body": {
+      "family": "\"Microsoft YaHei\", \"Noto Sans CJK SC\", sans-serif",
+      "size": 27,
+      "weight": 400,
+      "line_height": 1.45
+    },
+    "utility": {
+      "family": "Consolas, \"SFMono-Regular\", monospace",
+      "size": 23,
+      "weight": 700,
+      "line_height": 1.2
+    }
+  },
+  "layout": {
+    "canvas": [1080, 1440],
+    "padding": [56, 60],
+    "radius": 0,
+    "gap": 30
+  },
+  "signature": "relic proof: the untouched capture stays above and the derived memory panel stays below"
+}

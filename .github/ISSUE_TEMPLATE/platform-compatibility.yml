@@ -1,0 +1,45 @@
+name: Platform compatibility report
+description: Report success details or a compatibility gap on Windows, macOS, Linux, Chinese domestic OS or HarmonyOS.
+labels: ["platform", "compatibility", "triage"]
+assignees: ["Natsummerance"]
+body:
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows 7 / 8
+        - Windows 10 / 11
+        - macOS Apple Silicon
+        - macOS Intel
+        - Linux AppImage
+        - Debian / Ubuntu Deb
+        - UOS
+        - KylinOS
+        - Deepin
+        - openEuler
+        - HarmonyOS / OpenHarmony
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment details
+      description: Include OS build, desktop environment, architecture and installation package type.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Result
+      description: State whether launch, rendering, conversion, OCR, export or integration worked. Include safe logs where needed.
+    validations:
+      required: true
+  - type: textarea
+    id: expectation
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+

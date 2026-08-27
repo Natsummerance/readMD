@@ -222,9 +222,13 @@ async function uploadFile(file) {
   try {
     const qs = '?ext=' + encodeURIComponent(ext) + '&name=' + encodeURIComponent(fileName);
     const r = await apiFetch('/api/upload' + qs, { method: 'POST', body: file });
-    const d = await r.json();
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     return d.path || null;
-  } catch (e) { showToast(_t('toast.uploadFailed') || '上传失败'); return null; }
+  } catch (e) {
+    showToast((_t('toast.uploadFailed') || '上传失败：') + (e.message || e));
+    return null;
+  }
 }
 
 function convertOrOcr(p, mode) {

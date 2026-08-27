@@ -81,7 +81,7 @@ class TestV231Features(unittest.TestCase):
         app_js_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'app.js')
         with open(app_js_path, 'r', encoding='utf-8') as f:
             app_js = f.read()
-        self.assertIn('function closeMoreMenu()', app_js)
+        self.assertIn('function closeMoreMenu(', app_js)
 
     def test_convert_js_supports_multi_file_ocr(self):
         convert_js_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'js', 'features', 'convert.js')
@@ -174,5 +174,4 @@ class TestV231Features(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-
 

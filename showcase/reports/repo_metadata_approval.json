@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "artifact": "GitHub repository About metadata",
+  "reviewed_at": "2026-08-24T18:30:00Z",
+  "required_rounds": 3,
+  "minimum_score": 9.7,
+  "proposed": {
+    "description": "本地优先的全平台 Markdown 阅读器与编辑器：长文档语义分页、显示层非破坏纠错、Office/PDF/网页转 MD、离线 OCR、LaTeX 学术增强与 MCP 接入。",
+    "homepage": "https://app.syminu.online",
+    "topics_add": [
+      "docx-to-markdown",
+      "pdf-to-markdown",
+      "markdown-converter",
+      "presentation",
+      "offline-first"
+    ],
+    "topics_keep": [
+      "bibtex",
+      "cross-platform",
+      "desktop-app",
+      "kylinos",
+      "latex",
+      "linux",
+      "local-first",
+      "macos",
+      "markdown",
+      "markdown-editor",
+      "markdown-viewer",
+      "mcp",
+      "ocr",
+      "uos",
+      "windows"
+    ]
+  },
+  "rounds": [
+    {
+      "round": 1,
+      "reviewer": "search-intent-review",
+      "status": "approved",
+      "score": 9.74,
+      "evidence": [
+        "Description names reader/editor, conversion, OCR, LaTeX, and MCP without an unverifiable startup-speed claim.",
+        "New topics cover document conversion, presentation, and offline intent."
+      ]
+    },
+    {
+      "round": 2,
+      "reviewer": "product-evidence-review",
+      "status": "approved",
+      "score": 9.82,
+      "evidence": [
+        "Every retained capability maps to README, website corpus, or existing release assets.",
+        "The homepage remains the approved production target and is not replaced by an unrelated domain."
+      ]
+    },
+    {
+      "round": 3,
+      "reviewer": "metadata-compliance-review",
+      "status": "approved",
+      "score": 9.76,
+      "evidence": [
+        "Proposed topic count stays within GitHub's twenty-topic limit.",
+        "No competitor trademark, unrelated framework, or unsupported ranking claim is added."
+      ]
+    }
+  ],
+  "final_decision_meeting": {
+    "status": "approved_for_publication",
+    "score": 9.79,
+    "participants": ["product", "GEO", "compliance"],
+    "conditions": [
+      "Do not remove the Cloudflare production homepage while deployment is pending.",
+      "Record the API response and resulting topic count."
+    ]
+  }
+}

@@ -28,6 +28,8 @@ import time
 import threading
 import webbrowser
 import urllib.request
+from datetime import datetime, timezone
+from email.utils import formatdate, parsedate_to_datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
@@ -48,8 +50,9 @@ from src.readmd_core import (
     read_text,
     readmd_fix,
 )
+from src.readmd_core.file_writer import save_text_atomic
 import src.readmd_modules as RM
-from src.readmd_modules.validators import validate_file_path, validate_command
+from src.readmd_modules.validators import validate_file_path, validate_command, paths_within
 
 APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 
@@ -85,7 +88,7 @@ def _env_or_bundle_version():
     return _bundle_version()
 
 
-VERSION = (_env_or_bundle_version() or '2.3.7-beta.3')
+VERSION = (_env_or_bundle_version() or '2.3.7-beta.4')
 
 
 
@@ -614,9 +617,30 @@ def read_text(path):
 
 # ---------------------------------------------------------------- HTTP 服务
 
+SAVE_EXTENSIONS = frozenset(('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt'))
+
+
+class ReadMDHTTPServer(ThreadingHTTPServer):
+    daemon_threads = True
+    request_queue_size = 128
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.app_token = secrets.token_urlsafe(24)
+        self.authorized_save_paths = set()
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = 'ReadMD/' + VERSION
     LAN_TOKEN = None
+    LAN_BLOCKED_PATHS = frozenset({
+        '/api/save', '/api/upload', '/api/image/save', '/api/code/run',
+        '/api/update/download', '/api/update/apply', '/api/import/process',
+        '/api/control/open', '/api/control/next',
+    })
+    LAN_SCOPED_PATHS = frozenset({
+        '/api/file', '/api/list', '/api/ocr', '/api/convert', '/raw',
+    })
 
     def log_message(self, fmt, *args):
         pass  # 静默访问日志
@@ -635,9 +659,16 @@ class Handler(BaseHTTPRequestHandler):
                 pass
 
     def do_POST(self):
-        if not self._lan_authorized():
+        if not self._lan_authorized() or not self._post_origin_authorized():
             self._send(403, 'text/plain; charset=utf-8', b'forbidden')
             return
+        u = urlparse(self.path)
+        if u.path == '/api/save':
+            supplied_token = self.headers.get('X-ReadMD-App-Token', '')
+            if (not self.server.app_token or not supplied_token or
+                    not secrets.compare_digest(supplied_token, self.server.app_token)):
+                self._send(403, 'text/plain; charset=utf-8', b'forbidden')
+                return
         try:
             self._route()
         except Exception as e:
@@ -649,15 +680,55 @@ class Handler(BaseHTTPRequestHandler):
 
     def _lan_authorized(self):
         """局域网模式下，除页面与静态资源外，所有 API 都要求携带 token。"""
+        u = urlparse(self.path)
+        if u.path.startswith('/api/') and not self._local_host_authorized():
+            return False
         if not self.LAN_TOKEN:
             return True
-        u = urlparse(self.path)
         if u.path in ('/', '/index.html') or u.path.startswith('/assets/'):
             return True
         qs = parse_qs(u.query)
-        if qs.get('t', [''])[0] == self.LAN_TOKEN:
+        supplied = qs.get('t', [''])[0] or self.headers.get('X-ReadMD-Token', '')
+        if not secrets.compare_digest(supplied, self.LAN_TOKEN):
+            return False
+        return self._lan_route_authorized(u.path)
+
+    def _lan_route_authorized(self, path):
+        """Restrict shared clients to the document scope and reader-only APIs."""
+        if path in self.LAN_BLOCKED_PATHS:
+            return False
+        if path not in self.LAN_SCOPED_PATHS:
             return True
-        return self.headers.get('X-ReadMD-Token', '') == self.LAN_TOKEN
+        root = getattr(self.server, 'shared_root', None)
+        if not root:
+            return False
+        requested = parse_qs(urlparse(self.path).query).get('p', [''])[0]
+        if not requested:
+            return False
+        try:
+            target = os.path.realpath(unquote(requested))
+        except Exception:
+            return False
+        return paths_within(target, root)
+
+    def _local_host_authorized(self):
+        if self.LAN_TOKEN:
+            return True
+        parsed = urlparse('//' + (self.headers.get('Host') or ''))
+        hostname = (parsed.hostname or '').lower()
+        return (hostname in ('127.0.0.1', 'localhost', '::1')
+                and (parsed.port is None or parsed.port == self.server.server_port))
+
+    def _post_origin_authorized(self):
+        if not self._local_host_authorized():
+            return False
+        origin = self.headers.get('Origin')
+        if origin:
+            parsed = urlparse(origin)
+            host = urlparse('//' + (self.headers.get('Host') or ''))
+            return ((parsed.hostname or '').lower() == (host.hostname or '').lower()
+                    and parsed.port == host.port)
+        return self.headers.get('Sec-Fetch-Site', 'none') in ('none', 'same-origin')
 
     def _route(self):
         u = urlparse(self.path)
@@ -672,7 +743,7 @@ class Handler(BaseHTTPRequestHandler):
                 rel = path.lstrip('/')
             fp = os.path.normpath(os.path.join(APP_DIR, 'assets', rel))
             base = os.path.normpath(os.path.join(APP_DIR, 'assets'))
-            if not fp.startswith(base):
+            if not paths_within(fp, base):
                 self._send(403, 'text/plain; charset=utf-8', b'forbidden')
                 return
 
@@ -736,7 +807,12 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/ai/history':
             self._api_ai_history()
         elif path == '/api/share/start':
-            self._send_json(200, start_lan_server())
+            try:
+                length = int(self.headers.get('Content-Length', 0) or 0)
+                body = json.loads(self.rfile.read(length).decode('utf-8')) if length else {}
+                self._send_json(200, start_lan_server(body.get('current_file')))
+            except Exception as e:
+                self._send_json(500, {'ok': False, 'error': str(e)})
         elif path == '/api/share/stop':
             self._send_json(200, stop_lan_server())
         elif path == '/api/share/status':
@@ -796,7 +872,6 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control', cache_control)
-        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(body)
 
@@ -852,7 +927,11 @@ class Handler(BaseHTTPRequestHandler):
         if self.LAN_TOKEN:
             data = data.replace(b'window.LAN_TOKEN=null;',
                                 ('window.LAN_TOKEN="%s";' % self.LAN_TOKEN).encode('utf-8'))
-        self._send(200, 'text/html; charset=utf-8', data)
+        app_token = self.server.app_token
+        if app_token:
+            data = data.replace(b'<meta name="readmd-app-token" content="">',
+                                ('<meta name="readmd-app-token" content="%s">' % app_token).encode('utf-8'))
+        self._send(200, 'text/html; charset=utf-8', data, 'no-store')
 
     def _sse(self, obj):
         try:
@@ -1096,7 +1175,6 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
             self.send_header('Cache-Control', 'no-cache')
             self.send_header('Connection', 'close')
-            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             if isinstance(gen, str):
                 self._sse({'d': gen})
@@ -1135,20 +1213,50 @@ class Handler(BaseHTTPRequestHandler):
             fmt = 'png'
         try:
             import base64 as _b64
+            from io import BytesIO
+
+            from PIL import Image
+
             raw = _b64.b64decode(data_b64)
             if not raw:
                 self._send_json(400, {'error': '图片数据为空'})
                 return
+            if len(raw) > 25 * 1024 * 1024:
+                self._send_json(413, {'error': '图片超过 25 MB 限制'})
+                return
+
+            try:
+                image = Image.open(BytesIO(raw))
+                actual_format = (image.format or '').lower()
+                image.verify()
+            except Exception:
+                self._send_json(400, {'error': '无效图片数据'})
+                return
+            expected_format = 'jpeg' if fmt == 'jpg' else fmt
+            if actual_format != expected_format:
+                self._send_json(400, {'error': '图片内容与格式不一致'})
+                return
+
             img_dir = os.path.join(dir_path, 'images')
             os.makedirs(img_dir, exist_ok=True)
-            if not name or not re.match(r'^[A-Za-z0-9_\-]+', name):
+            safe_name = os.path.basename(name.replace('\\', '/'))
+            if ('..' in safe_name or '..' in name
+                    or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,180}', safe_name)):
                 name = 'img_%d_%s' % (int(time.time() * 1000), os.urandom(3).hex())
-            if not name.lower().endswith('.' + fmt):
-                name += '.' + fmt
-            target = os.path.join(img_dir, name)
+            else:
+                name = safe_name.rsplit('.', 1)[0]
+            filename = '%s.%s' % (name, fmt)
+            img_dir = os.path.realpath(img_dir)
+            target = os.path.realpath(os.path.join(img_dir, filename))
+            if not paths_within(target, img_dir):
+                self._send_json(403, {'error': '图片路径不受信任'})
+                return
+            if not name or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,180}', name):
+                self._send_json(400, {'error': '图片文件名无效'})
+                return
             with open(target, 'wb') as f:
                 f.write(raw)
-            rel = os.path.join('images', name).replace('\\', '/')
+            rel = os.path.join('images', os.path.basename(filename)).replace('\\', '/')
             self._send_json(200, {'ok': True, 'path': target, 'rel': rel})
         except Exception as e:
             logging.exception('image save failed')
@@ -1209,14 +1317,45 @@ class Handler(BaseHTTPRequestHandler):
         if not os.path.isfile(fp):
             self._send(404, 'text/plain; charset=utf-8', b'not found')
             return
+        stat = os.stat(fp)
+        etag = '"%x-%x-%x"' % (stat.st_ino, stat.st_size, stat.st_mtime_ns)
+        cache_control = 'public, max-age=31536000, immutable' if immutable else 'no-cache'
+        if self._resource_not_modified(etag, stat):
+            self.send_response(304)
+            self.send_header('Cache-Control', cache_control)
+            self.send_header('ETag', etag)
+            self.end_headers()
+            return
         with open(fp, 'rb') as f:
-            self._send(200, ctype, f.read(),
-                       'public, max-age=31536000, immutable' if immutable else 'no-cache')
+            body = f.read()
+        self.send_response(200)
+        self.send_header('Content-Type', ctype)
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', cache_control)
+        self.send_header('ETag', etag)
+        self.send_header('Last-Modified', formatdate(stat.st_mtime, usegmt=True))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _resource_not_modified(self, etag, stat):
+        none_match = self.headers.get('If-None-Match')
+        if none_match is not None:
+            requested = {item.strip().removeprefix('W/') for item in none_match.split(',')}
+            return etag.removeprefix('W/') in requested or '*' in requested
+        modified_since = self.headers.get('If-Modified-Since')
+        if not modified_since:
+            return False
+        try:
+            requested_at = parsedate_to_datetime(modified_since).timestamp()
+            return int(requested_at) >= int(stat.st_mtime)
+        except (TypeError, ValueError, OverflowError):
+            return False
 
     def _api_file(self, p, meta_only):
         if not os.path.isfile(p):
             self._send_json(404, {'error': '文件不存在'})
             return
+        self.server.authorized_save_paths.add(os.path.realpath(p))
         try:
             st = os.stat(p)
         except OSError:
@@ -1588,21 +1727,20 @@ class Handler(BaseHTTPRequestHandler):
         path = body.get('path') or ''
         content = body.get('content') or ''
         enc = body.get('encoding') or 'utf-8'
+        expected_mtime = body.get('expected_mtime')
         if not path:
             self._send_json(400, {'error': '缺少文件路径'})
             return
-        try:
-            import shutil
-            bak = None
-            if os.path.isfile(path) and not os.path.exists(path + '.bak'):
-                shutil.copy2(path, path + '.bak')
-                bak = path + '.bak'
-            with open(path, 'w', encoding=enc, newline='') as f:
-                f.write(content)
-            self._send_json(200, {'ok': True, 'path': path, 'backup': bak})
-        except Exception as e:
-            logging.exception('save failed: %s', path)
-            self._send_json(500, {'error': '保存失败：%s' % e})
+        safe_path = os.path.realpath(os.path.normpath(path))
+        if (safe_path not in self.server.authorized_save_paths
+                or os.path.splitext(safe_path)[1].lower() not in SAVE_EXTENSIONS):
+            self._send_json(403, {'error': '文件未被授权保存'})
+            return
+        result = save_text_atomic(safe_path, content, enc, expected_mtime=expected_mtime)
+        self._send_json(
+            200 if result.get('ok') else (409 if result.get('conflict') else 500),
+            result,
+        )
 
     def _send_raw(self, p):
         if not os.path.isfile(p):
@@ -1619,12 +1757,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', mime)
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Cache-Control', 'no-cache')
-        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(body)
 
 
-LAN = {'server': None, 'token': None}
+LAN = {'server': None, 'token': None, 'shared_file': None}
 
 
 def _is_private(ip):
@@ -1672,7 +1809,18 @@ def share_status():
             'url': 'http://%s:%d/' % (get_lan_ip(), srv.server_port)}
 
 
-def start_lan_server():
+def configure_lan_server(server, shared_file=None):
+    """Bind a share server to one document directory and remove the local control token."""
+    server.app_token = None
+    server.shared_file = ''
+    server.shared_root = ''
+    if shared_file and os.path.isfile(shared_file):
+        real_file = os.path.realpath(shared_file)
+        server.shared_file = real_file
+        server.shared_root = os.path.dirname(real_file)
+
+
+def start_lan_server(shared_file=None):
     """启动局域网共享服务器（带随机 token 鉴权），供手机等设备访问。"""
     if LAN['server'] is not None:
         return share_status()
@@ -1682,13 +1830,14 @@ def start_lan_server():
         LAN_TOKEN = token
 
     try:
-        srv = ThreadingHTTPServer(('0.0.0.0', 0), LanHandler)
+        srv = ReadMDHTTPServer(('0.0.0.0', 0), LanHandler)
     except OSError as e:
         return {'ok': False, 'error': '无法监听局域网：%s' % e}
-    srv.daemon_threads = True
+    configure_lan_server(srv, shared_file)
     threading.Thread(target=srv.serve_forever, daemon=True, name='readmd-lan').start()
     LAN['server'] = srv
     LAN['token'] = token
+    LAN['shared_file'] = srv.shared_file
     d = share_status()
     d['ok'] = True
     logging.info('LAN share started: %s', d.get('url'))
@@ -1709,6 +1858,7 @@ def stop_lan_server():
         pass
     LAN['server'] = None
     LAN['token'] = None
+    LAN['shared_file'] = None
     logging.info('LAN share stopped')
     return {'ok': True, 'running': False}
 
@@ -1722,13 +1872,12 @@ def start_server(port=0):
     if not port:
         port = CONTROL_PORT
     try:
-        server = ThreadingHTTPServer(('127.0.0.1', port), Handler)
+        server = ReadMDHTTPServer(('127.0.0.1', port), Handler)
     except OSError:
         try:
-            server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+            server = ReadMDHTTPServer(('127.0.0.1', 0), Handler)
         except OSError:
             raise
-    server.daemon_threads = True
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
     return server
@@ -1951,7 +2100,7 @@ class Api(object):
         try:
             files = self._window.create_file_dialog(
                 webview.OPEN_DIALOG,
-                file_types=('Markdown 文件 (*.md;*.markdown;*.mdown;*.mkd;*.txt)',))
+                file_types=('Markdown 文件 (*.md;*.markdown;*.mdown;*.mkd;*.mdx;*.txt)',))
             return files[0] if files else None
         except Exception as e:
             logging.exception('choose_file failed')
@@ -2566,20 +2715,14 @@ class Api(object):
         return {'ok': True, 'path': new_path, 'name': os.path.basename(new_path),
                 'old_path': old_path, 'warnings': warnings}
 
-    def save_file(self, path, content, encoding):
+    def save_file(self, path, content, encoding, expected_mtime=None):
         """编辑保存：写回文件，首次保存自动生成 .bak 备份。"""
-        try:
-            import shutil
-            bak = None
-            if os.path.isfile(path) and not os.path.exists(path + '.bak'):
-                shutil.copy2(path, path + '.bak')
-                bak = path + '.bak'
-            with open(path, 'w', encoding=encoding or 'utf-8', newline='') as f:
-                f.write(content)
-            return {'ok': True, 'backup': bak}
-        except Exception as e:
-            logging.exception('save_file failed')
-            return {'ok': False, 'error': str(e)}
+        result = save_text_atomic(
+            validate_file_path(path), content, encoding, expected_mtime=expected_mtime
+        )
+        if not result.get('ok'):
+            logging.warning('save_file rejected: %s', result.get('error'))
+        return result
 
     def save_as(self, content, suggested, assets=None):
         """把转换 / 网页 / OCR 结果另存为 .md 文件。"""
@@ -2610,8 +2753,10 @@ class Api(object):
                     relative = asset_name + '/' + os.path.basename(name)
                     content = content.replace(source.replace('\\', '/'), relative)
                     content = content.replace(source, relative)
-            with open(target, 'w', encoding='utf-8', newline='') as f:
-                f.write(content)
+            result = save_text_atomic(target, content, 'utf-8')
+            if not result.get('ok'):
+                logging.warning('save_as rejected: %s', result.get('error'))
+                return None
             return target
         except Exception as e:
             logging.exception('save_as failed')
@@ -3004,8 +3149,7 @@ def run_selftest():
     try:
         import urllib.request as _urlreq
         old_inst = _read_instance()
-        srv = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
-        srv.daemon_threads = True
+        srv = ReadMDHTTPServer(('127.0.0.1', 0), Handler)
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         p = srv.server_port
         tok = 'selftest-%s' % os.urandom(4).hex()
@@ -3091,8 +3235,7 @@ def run_selftest():
         from src.readmd_modules import convert as _CV
         txt, eng, err = _CV.convert_verbose(_dp)
         assert eng == 'docx' and err is None and '# Selftest' in txt, (eng, err)
-        srv3 = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
-        srv3.daemon_threads = True
+        srv3 = ReadMDHTTPServer(('127.0.0.1', 0), Handler)
         threading.Thread(target=srv3.serve_forever, daemon=True).start()
         p3 = srv3.server_port
         req = _uq.Request('http://127.0.0.1:%d/api/convert/batch' % p3,

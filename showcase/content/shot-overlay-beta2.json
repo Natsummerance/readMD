@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "shots": {
+    "presentation.reveal": {
+      "assertions": ["#presentation-modal"]
+    }
+  }
+}

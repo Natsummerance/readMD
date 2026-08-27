@@ -96,6 +96,23 @@ function historyForward() {
   }
 }
 
+function setUnavailableReason(element, reason) {
+  if (!element) return;
+  if (element.disabled) {
+    if (!element.dataset.actionTitle) element.dataset.actionTitle = element.title || '';
+    if (reason) {
+      element.title = reason;
+      element.setAttribute('aria-description', reason);
+    }
+    return;
+  }
+  element.removeAttribute('aria-description');
+  if (element.dataset.actionTitle) {
+    element.title = element.dataset.actionTitle;
+    delete element.dataset.actionTitle;
+  }
+}
+
 function updateStatus() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const srcLabels = {
@@ -119,23 +136,34 @@ function updateStatus() {
   if (state.size) parts.push((state.size / 1024).toFixed(1) + ' KB');
   if (state.encoding) parts.push(state.encoding);
   $('status-right').textContent = parts.join(' · ');
-  const canEdit = (state.mode === 'file' || state.mode === 'virtual') && !!state.original && !state.editing;
-  const canReload = state.mode === 'file';
-  const canSaveas = state.mode === 'virtual' || state.fixed !== '';
-  $('btn-edit').disabled = !canEdit && !state.editing;
-  $('btn-reload').disabled = !canReload;
-  $('btn-saveas').disabled = !canSaveas;
-
   const isWelcome = state.mode === 'welcome';
   const hasDoc = (state.mode === 'file' || state.mode === 'virtual') && !!state.original;
-  if ($('btn-print')) $('btn-print').disabled = isWelcome;
+  const canEdit = hasDoc && !state.editing;
+  const canReload = state.mode === 'file';
+  const canSaveas = hasDoc && (state.mode === 'virtual' || state.fixed !== '');
+  $('btn-edit').disabled = !canEdit && !state.editing;
+  setUnavailableReason($('btn-edit'), _t('toast.openDocumentToUse'));
+  $('btn-reload').disabled = !canReload;
+  $('btn-saveas').disabled = !canSaveas;
+  setUnavailableReason($('btn-saveas'), _t('toast.openDocumentToUse'));
+  if ($('btn-print')) {
+    const browserOnly = !hasPy;
+    $('btn-print').disabled = isWelcome || browserOnly;
+    const exportHint = browserOnly
+      ? '导出需使用桌面版；浏览器模式可另存或打印'
+      : '导出文档 (Ctrl+P)';
+    $('btn-print').title = exportHint;
+    $('btn-print').setAttribute('aria-label', exportHint);
+  }
   if ($('btn-a')) $('btn-a').disabled = isWelcome;
   if ($('btn-A')) $('btn-A').disabled = isWelcome;
   if ($('btn-search')) $('btn-search').disabled = isWelcome;
+  setUnavailableReason($('btn-search'), _t('toast.searchNeedsDocument'));
   if ($('btn-presentation-menu')) $('btn-presentation-menu').disabled = !hasDoc;
   if ($('btn-run-all-chunks')) $('btn-run-all-chunks').disabled = !hasDoc;
   if ($('btn-share')) $('btn-share').disabled = !hasDoc;
   if ($('btn-fix')) $('btn-fix').disabled = !hasDoc;
+  setUnavailableReason($('btn-fix'), _t('toast.openDocumentToUse'));
 
   const btnHome = $('btn-home');
   if (btnHome) {
@@ -156,6 +184,16 @@ function goHome() {
   state.editing = false;
   state.activeTabId = null;
   state.headings = [];
+  Object.assign(state.pagination, {
+    enabled: false,
+    mode: 'paged',
+    rawContent: null,
+    searchText: null,
+    pages: [],
+    allHeadings: [],
+    totalPages: 0,
+    currentPage: 0,
+  });
   document.title = 'ReadMD';
   setFileTitle('', false);
 
@@ -179,6 +217,7 @@ function goHome() {
   document.querySelectorAll('#toolbar .tool-btn').forEach(b => b.classList.remove('active'));
   closeSearch();
   closeMdPopups();
+  showPaginationBar(false);
   updateStatus();
   renderTabsBar();
 }
@@ -202,15 +241,22 @@ let autoReloadTimer = null;
 function startAutoReload() {
   stopAutoReload();
   autoReloadTimer = setInterval(async () => {
-    if (!state.file || !state.autoReload || state.mode !== 'file') return;
+    if (!state.autoReload || state.editing) return;
     try {
-      const r = await apiFetch('/api/file?p=' + encodeURIComponent(state.file) + '&meta=1');
-      if (!r.ok) return;
-      const d = await r.json();
-      if (d.mtime !== state.mtime) {
-        const sc = $('content').scrollTop;
-        await loadFile(state.file);
-        if (sc) $('content').scrollTop = sc;
+      for (const tab of [...state.tabs]) {
+        if (tab.mode !== 'file' || !tab.path || tab.isDirty || tab.externalChanged) continue;
+        const r = await apiFetch('/api/file?p=' + encodeURIComponent(tab.path) + '&meta=1');
+        if (!r.ok) continue;
+        const d = await r.json();
+        if (d.mtime === tab.mtime) continue;
+        if (tab.id === state.activeTabId) {
+          const sc = $('content')?.scrollTop || 0;
+          await loadFile(tab.path, { force: true });
+          if (sc) $('content').scrollTop = sc;
+        } else {
+          tab.externalChanged = true;
+          renderTabsBar();
+        }
       }
     } catch (e) { /* ignore */ }
   }, 2500);
@@ -250,6 +296,13 @@ function saveLastFile(path) {
   if (hasPy) {
     try { py.save_settings({ last: path }); } catch (e) { /* ignore */ }
   }
+}
+
+function syncBuildVersionLabels() {
+  const version = document.documentElement.dataset.version;
+  if (!version) return;
+  if ($('status-version')) $('status-version').textContent = 'v' + version;
+  if ($('menu-version-label')) $('menu-version-label').textContent = '当前版本 v' + version;
 }
 
 function afterRender() {

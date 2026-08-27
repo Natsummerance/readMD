@@ -7,18 +7,21 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  release:
+    types: [published]
 
 permissions:
   contents: read
 
 env:
-  READMD_VERSION: '2.3.7-beta.3'
+  READMD_VERSION: '2.3.7-beta.4'
   PYTHONUTF8: '1'
 
 
 jobs:
   windows-test:
     name: Test · Windows x64
+    if: github.event_name != 'release'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,6 +59,7 @@ jobs:
 
   macos-test:
     name: Test · macOS ${{ matrix.arch }}
+    if: github.event_name != 'release'
     strategy:
       fail-fast: false
       matrix:
@@ -98,6 +102,7 @@ jobs:
 
   linux-test:
     name: Test · Linux x64 (Ubuntu)
+    if: github.event_name != 'release'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -121,7 +126,7 @@ jobs:
 
   windows-package:
     name: Package · Windows x64
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name != 'release' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [windows-test, linux-test]
     runs-on: windows-latest
     steps:
@@ -153,10 +158,11 @@ jobs:
           $installer = Start-Process -FilePath "dist/ReadMDSetup-v$env:READMD_VERSION.exe" -ArgumentList '--version' -RedirectStandardOutput $versionOutput -WindowStyle Hidden -Wait -PassThru
           $installerVersion = if (Test-Path $versionOutput) { (Get-Content $versionOutput -Raw).Trim() } else { '' }
           if ($installer.ExitCode -ne 0 -or $installerVersion -ne $env:READMD_VERSION) { throw 'installer version mismatch' }
-          $probeProcess = Start-Process -FilePath 'dist/ReadMD/ReadMD.exe' -ArgumentList @('--startup-probe', '--startup-probe-json', 'dist/startup-probe.json', '--startup-probe-timeout', '30') -WindowStyle Hidden -Wait -PassThru
-          if ($probeProcess.ExitCode -ne 0) { throw 'startup probe process failed' }
-          $probe = Get-Content dist/startup-probe.json -Raw | ConvertFrom-Json
-          if ($probe.version -ne $env:READMD_VERSION -or $probe.timed_out -or $null -eq $probe.milestones_ms.page_loaded) { throw 'startup probe failed' }
+          $startupGate = 'dist/startup-gate.json'
+          python tools/readmd_startup_probe.py --runs 5 --timeout 30 --executable "dist/ReadMD/ReadMD.exe" --output "$startupGate" --max-page-loaded-ms 2000 --max-window-overhead-ms 250
+          if ($LASTEXITCODE -ne 0) { throw 'startup performance gate failed' }
+          $probeGate = Get-Content "$startupGate" -Raw | ConvertFrom-Json
+          if (-not $probeGate.ok -or $probeGate.valid_runs -ne 5) { throw 'startup performance gate did not produce five valid runs' }
           if (!(Test-Path 'dist/ReadMD/_internal/assets/markdown-file.ico')) { throw 'Markdown association icon missing' }
           if (!(Test-Path 'dist/ReadMD/_internal/assets/vendor/defuddle.bundle.js')) { throw 'Defuddle bundle missing' }
           if (!(Test-Path 'dist/ReadMD/_internal/assets/vendor/defuddle.LICENSE.txt')) { throw 'Defuddle license missing' }
@@ -170,7 +176,7 @@ jobs:
           cd ../..
           python -c "import os, shutil, glob; os.makedirs('dist', exist_ok=True); vs = glob.glob('packages/vscode-extension/*.vsix'); assert vs, 'No vsix produced'; shutil.copy(sorted(vs)[-1], 'dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix')"
           if (!(Test-Path "dist/readmd-vscode-$env:READMD_VERSION.vsix")) { throw "readmd-vscode-$env:READMD_VERSION.vsix missing in dist" }
-          python -c "import zipfile; z = zipfile.ZipFile('dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip', 'w', zipfile.ZIP_DEFLATED); z.write('packages/mcp-server/readmd_mcp_server.py', 'readmd_mcp_server.py'); z.write('packages/mcp-server/README.md', 'README.md'); z.close()"
+          python -c "import glob, os, zipfile; z = zipfile.ZipFile('dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip', 'w', zipfile.ZIP_DEFLATED); paths = ['packages/mcp-server/readmd_mcp_server.py', 'packages/mcp-server/README.md', 'config/requirements-common.txt'] + sorted(glob.glob('src/**/*.py', recursive=True)) + [path for path in sorted(glob.glob('assets/**/*', recursive=True)) if os.path.isfile(path)]; [z.write(path, path) for path in paths]; z.close()"
           if (!(Test-Path "dist/readmd-mcp-server-$env:READMD_VERSION.zip")) { throw "readmd-mcp-server-$env:READMD_VERSION.zip missing in dist" }
       - name: Upload main-branch release candidate
         if: github.ref == 'refs/heads/main'
@@ -200,7 +206,7 @@ jobs:
 
   macos-package:
     name: Package · macOS ${{ matrix.arch }}
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name != 'release' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [macos-test, linux-test]
     strategy:
       fail-fast: false
@@ -264,8 +270,8 @@ jobs:
           overwrite: true
 
   linux-package:
-    name: Package · Linux & HarmonyOS
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    name: Package · Linux
+    if: github.event_name != 'release' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [linux-test]
     runs-on: ubuntu-latest
     steps:
@@ -291,7 +297,7 @@ jobs:
             zip \
             file || true
           python -m pip install --disable-pip-version-check -r config/requirements-linux.txt pyinstaller
-      - name: Build Linux onedir, AppImage, Deb, and HarmonyOS HAP
+      - name: Build Linux onedir, AppImage, and Deb
         run: |
           bash scripts/linux/build_linux.sh
       - name: Smoke test Linux binary
@@ -300,7 +306,6 @@ jobs:
       - name: Verify build outputs
         run: |
           ls -la dist/
-          test -s "dist/ReadMD-harmonyos-v${{ env.READMD_VERSION }}.hap"
           test -s "dist/readmd_${{ env.READMD_VERSION }}_amd64.deb"
       - name: Upload main-branch release candidate
         if: github.ref == 'refs/heads/main'
@@ -310,7 +315,6 @@ jobs:
           path: |
             dist/ReadMD-linux-x86_64-v${{ env.READMD_VERSION }}.AppImage
             dist/readmd_${{ env.READMD_VERSION }}_amd64.deb
-            dist/ReadMD-harmonyos-v${{ env.READMD_VERSION }}.hap
           if-no-files-found: ignore
           overwrite: true
           retention-days: 7
@@ -322,13 +326,12 @@ jobs:
           path: |
             dist/ReadMD-linux-x86_64-v${{ env.READMD_VERSION }}.AppImage
             dist/readmd_${{ env.READMD_VERSION }}_amd64.deb
-            dist/ReadMD-harmonyos-v${{ env.READMD_VERSION }}.hap
           if-no-files-found: ignore
           overwrite: true
 
   release:
     name: Publish ReadMD Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name != 'release' && startsWith(github.ref, 'refs/tags/v')
     needs: [windows-package, macos-package, linux-package]
     runs-on: ubuntu-latest
     permissions:
@@ -366,7 +369,7 @@ jobs:
               print(" -", f)
           PY
           V="${{ env.READMD_VERSION }}"
-          for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "ReadMD-harmonyos-v${V}.hap" "readmd-mcp-server-${V}.zip"; do
+          for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "readmd-mcp-server-${V}.zip"; do
             test -s "release-assets/$asset"
           done
           python tools/sync_version.py --check
@@ -420,5 +423,88 @@ jobs:
           files: release-assets/*
           prerelease: true
           fail_on_unmatched_files: true
+
+  product-showcase:
+    name: Build authentic product showcase package
+    if: github.event_name == 'release' && !github.event.release.draft
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    env:
+      CURRENT_RELEASE: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.release.tag_name }}
+          fetch-tags: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install showcase dependencies
+        run: |
+          python -m pip install --disable-pip-version-check pillow numpy
+          npm ci
+        working-directory: ui-tests
+      - name: Install Chromium
+        run: npx playwright install chromium
+        working-directory: ui-tests
+      - name: Resolve release evidence
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $current = $env:CURRENT_RELEASE
+          $headers = @{ Authorization = "Bearer $env:GITHUB_TOKEN"; Accept = 'application/vnd.github+json' }
+          $api = "$($env:GITHUB_API_URL)/repos/${{ github.repository }}/releases/tags/$current"
+          $release = Invoke-RestMethod -Uri $api -Headers $headers
+          if ([string]::IsNullOrWhiteSpace($release.body)) {
+            Copy-Item 'release/release_notes.md' 'showcase/release-notes.md'
+          } else {
+            Set-Content -Path 'showcase/release-notes.md' -Value $release.body -Encoding UTF8
+          }
+          $tags = @(git tag --list --merged HEAD --sort=-creatordate)
+          $previous = & python showcase/scripts/resolve_previous_release.py --current $current @tags
+          if (-not $previous) { throw "No previous tag found for $current" }
+          git diff --binary "$previous..$current" > 'showcase/release.diff'
+          "PREVIOUS_RELEASE=$previous" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Prepare story and copy
+        run: >
+          python showcase/scripts/build_package.py
+          --release "$env:CURRENT_RELEASE"
+          --previous-release "$env:PREVIOUS_RELEASE"
+          --notes showcase/release-notes.md
+          --diff showcase/release.diff
+          --output showcase/output/package
+          --poster-style auto
+          --skip-compose
+      - name: Capture authentic UI shots
+        working-directory: showcase
+        env:
+          SHOWCASE_RELEASE: ${{ github.event.release.tag_name }}
+          SHOWCASE_OUTPUT_DIR: output/package/raw
+        run: npm run capture
+      - name: Compose Xiaohongshu cards
+        run: node showcase/scripts/compose_cards.js showcase/output/package
+      - name: Generate preflight dashboard and aggregate QA
+        run: python showcase/scripts/build_package.py --output showcase/output/package --finalize
+      - name: Run hard QA gate
+        run: python showcase/scripts/validate_package.py showcase/output/package
+      - name: Package QA-green content
+        run: >-
+          python showcase/scripts/package_content.py
+          --package showcase/output/package
+          --output showcase/content-package.zip
+      - name: Upload content package
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-showcase-${{ github.event.release.tag_name }}
+          path: |
+            showcase/content-package.zip
+            showcase/content-package.zip.manifest.json
+            showcase/output/package/qa.json
+          if-no-files-found: error
 
 

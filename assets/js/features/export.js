@@ -189,6 +189,12 @@ async function loadExportPresets() {
 
 function openExportModal() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const editorContent = typeof getEditContent === 'function' ? getEditContent() : '';
+  const exportContent = (state.editing ? editorContent : '') || state.original || state.fixed || '';
+  if (state.mode === 'welcome' || !exportContent) {
+    showToast(_t('toast.openDocumentToUse') || '请先打开文档后再使用此操作');
+    return;
+  }
   if (!bindPy()) { showToast(_t('toast.exportBrowserNotice') || '浏览器模式请使用桌面版导出'); return; }
   if (!state.export.ready) {
     loadExportPresets().then(ok => {
@@ -660,19 +666,20 @@ function renderExportSections() {
 function expFieldEl(f) {
   const box = document.createElement('div');
   box.className = 'exp-field' + (f.full ? ' full' : '');
-  let inner = '<label>' + f.label + '</label>';
+  const fieldId = 'exp-field-' + f.k.replace(/[^a-z0-9_-]+/ig, '-') + '-' + Math.random().toString(36).slice(2, 7);
+  let inner = '<label for="' + fieldId + '">' + f.label + '</label>';
   if (f.type === 'select') {
     inner += '<select data-k="' + f.k + '">' + (f.opts || []).map(o =>
       '<option value="' + (Array.isArray(o) ? o[0] : o) + '">' + (Array.isArray(o) ? o[1] : o) + '</option>'
     ).join('') + '</select>';
   } else if (f.type === 'checkbox') {
-    inner = '<label class="exp-check"><input type="checkbox" data-k="' + f.k + '"> ' + f.label + '</label>';
+    inner = '<label class="exp-check"><input id="' + fieldId + '" type="checkbox" data-k="' + f.k + '"> ' + f.label + '</label>';
   } else if (f.type === 'color') {
-    inner += '<input type="color" data-k="' + f.k + '">';
+    inner += '<input id="' + fieldId + '" type="color" data-k="' + f.k + '">';
   } else if (f.type === 'number') {
-    inner += '<input type="number" data-k="' + f.k + '" min="' + (f.min != null ? f.min : '') + '" max="' + (f.max != null ? f.max : '') + '" step="' + (f.step != null ? f.step : '1') + '">';
+    inner += '<input id="' + fieldId + '" type="number" data-k="' + f.k + '" min="' + (f.min != null ? f.min : '') + '" max="' + (f.max != null ? f.max : '') + '" step="' + (f.step != null ? f.step : '1') + '">';
   } else {
-    inner += '<input type="text" data-k="' + f.k + '">';
+    inner += '<input id="' + fieldId + '" type="text" data-k="' + f.k + '">';
   }
   box.innerHTML = inner;
   return box;

@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "name": "minimal-zine",
+  "template": "minimal-zine",
+  "palette": {
+    "background": "#f4f1ea",
+    "surface": "#fffdf8",
+    "ink": "#1f1c18",
+    "muted": "#5d574f",
+    "line": "#ddd4c6",
+    "accent": "#0b5fd7",
+    "screenshot_frame": "#1f1c18"
+  },
+  "type": {
+    "display": {
+      "family": "\"Microsoft YaHei\", \"Noto Sans CJK SC\", sans-serif",
+      "size": 104,
+      "weight": 900,
+      "line_height": 1.08
+    },
+    "body": {
+      "family": "\"Microsoft YaHei\", \"Noto Sans CJK SC\", sans-serif",
+      "size": 26,
+      "weight": 400,
+      "line_height": 1.48
+    },
+    "utility": {
+      "family": "Consolas, \"SFMono-Regular\", monospace",
+      "size": 23,
+      "weight": 700,
+      "line_height": 1.2
+    }
+  },
+  "layout": {
+    "canvas": [1080, 1440],
+    "padding": [64, 68],
+    "radius": 2,
+    "gap": 28
+  },
+  "signature": "quiet zine proof: wide paper margins, one blue registration block, and authentic UI"
+}

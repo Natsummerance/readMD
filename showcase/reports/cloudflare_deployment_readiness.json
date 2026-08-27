@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-08-24",
+  "account_id": "9c2426e139b0a61b52715d8dc00597a6",
+  "target": {
+    "worker_name": "readmd-site",
+    "canonical_url": "https://app.syminu.online/",
+    "hosting_plan": "free",
+    "strategy": "Workers static assets plus custom subdomain of an existing active zone"
+  },
+  "zone_evidence": [
+    {
+      "name": "syminu.online",
+      "status": "active",
+      "paused": false,
+      "type": "full"
+    }
+  ],
+  "attempts": [
+    {
+      "operation": "create_pages_project_readmd",
+      "result": "blocked",
+      "http_status": 403,
+      "error_code": 10000,
+      "evidence": "A request to /pages/projects failed with authentication error."
+    },
+    {
+      "operation": "read_or_register_workers_dev_subdomain",
+      "result": "blocked",
+      "http_status": 404,
+      "error_code": null,
+      "evidence": "Subdomain lookup returned 404; registration PUT returned HTTP 403 code 10000."
+    },
+    {
+      "operation": "deploy_worker_without_subdomain",
+      "result": "blocked_before_upload",
+      "http_status": null,
+      "error_code": null,
+      "evidence": "Wrangler reported that no workers.dev subdomain was registered and could not automatically register one."
+    },
+    {
+      "operation": "upload_readmd_site_static_assets_to_existing_zone_custom_domain",
+      "result": "blocked",
+      "http_status": 403,
+      "error_code": 10000,
+      "evidence": "Wrangler read 21 dist files but the assets-upload-session request returned authentication error."
+    }
+  ],
+  "required_token_permissions": [
+    "Account > Workers Scripts > Edit",
+    "Account > Account Settings > Edit for first-time workers.dev setup",
+    "Zone > Workers Routes > Edit for syminu.online",
+    "Zone > DNS > Edit for syminu.online"
+  ],
+  "safe_next_action": "Replace CLOUDFLARE_API_TOKEN with a scoped write-capable token, then run npm run deploy from website/.",
+  "existing_resources_changed": false
+}

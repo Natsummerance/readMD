@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "name": "photo-abstract",
+  "template": "photo-abstract",
+  "palette": {
+    "background": "#f1eee8",
+    "surface": "#fbfaf7",
+    "ink": "#17191c",
+    "muted": "#565e67",
+    "line": "#d5d9de",
+    "accent": "#e05a33",
+    "screenshot_frame": "#17191c"
+  },
+  "type": {
+    "display": {
+      "family": "\"Microsoft YaHei\", \"Noto Sans CJK SC\", sans-serif",
+      "size": 102,
+      "weight": 900,
+      "line_height": 1.1
+    },
+    "body": {
+      "family": "\"Microsoft YaHei\", \"Noto Sans CJK SC\", sans-serif",
+      "size": 26,
+      "weight": 400,
+      "line_height": 1.46
+    },
+    "utility": {
+      "family": "Consolas, \"SFMono-Regular\", monospace",
+      "size": 23,
+      "weight": 700,
+      "line_height": 1.2
+    }
+  },
+  "layout": {
+    "canvas": [1080, 1440],
+    "padding": [72, 76],
+    "radius": 12,
+    "gap": 30
+  },
+  "signature": "abstract proof: faithful capture above and a restrained geometric evidence panel below"
+}

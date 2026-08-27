@@ -5,24 +5,57 @@
 
 /* ---------------- 目录 ---------------- */
 
+let tocCache = { source: null, pageCount: 0 };
+
+function refreshCurrentTocPage(list) {
+  const currentPage = state.pagination.currentPage;
+  const currentGroup = list.querySelector(`details.toc-page-group[data-page-idx="${CSS.escape(String(currentPage))}"]`);
+  list.querySelectorAll('.toc-cur-page').forEach(link => link.classList.remove('toc-cur-page'));
+  list.querySelectorAll('.toc-page-group').forEach(group => {
+    group.open = group === currentGroup;
+  });
+  currentGroup?.querySelector('a')?.classList.add('toc-cur-page');
+}
+
 function buildToc() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const list = $('toc-list');
   if (!list) return;
-  list.innerHTML = '';
 
   // 1. 分页模式下：从全文所有分页提取全局完整大纲
   if (state.pagination && state.pagination.enabled && state.pagination.mode === 'paged' && state.pagination.pages && state.pagination.pages.length) {
+    const canReuseOutline =
+      tocCache.source === state.pagination.rawContent &&
+      tocCache.pageCount === state.pagination.pages.length &&
+      list.childElementCount;
+    if (canReuseOutline) {
+      refreshCurrentTocPage(list);
+      if (typeof updateActiveTocHeading === 'function') updateActiveTocHeading();
+      return;
+    }
+
+    list.innerHTML = '';
     const seen = {};
     const globalHeadings = [];
 
     state.pagination.pages.forEach((pg, pageIdx) => {
-      const lines = pg.content.split('\n');
-      let inFence = false;
-      lines.forEach(line => {
-        const trimmed = line.trim();
-        if (/^```/.test(trimmed)) { inFence = !inFence; return; }
-        if (inFence) return;
+    const lines = pg.content.split('\n');
+    let inFence = false;
+    let fenceMarker = '';
+    lines.forEach((line, lineIndex) => {
+      const trimmed = line.trim();
+      if (/^(```|~~~)/.test(trimmed)) {
+        const marker = trimmed.slice(0, 3);
+        if (!inFence) {
+          inFence = true;
+          fenceMarker = marker;
+        } else if (trimmed.startsWith(fenceMarker)) {
+          inFence = false;
+          fenceMarker = '';
+        }
+        return;
+      }
+      if (inFence) return;
 
         const m = trimmed.match(/^(#{1,6})\s+(.+)$/);
         if (m) {
@@ -41,8 +74,9 @@ function buildToc() {
           globalHeadings.push({
             id: slug,
             text: rawText,
-            level: Math.min(level, 3),
+            level,
             pageIndex: pageIdx,
+            sourceLine: lineIndex + 1,
           });
         }
       });
@@ -55,36 +89,82 @@ function buildToc() {
       return;
     }
 
-    globalHeadings.forEach((h, i) => {
+    const headingGroups = new Map();
+    globalHeadings.forEach(h => {
+      if (!headingGroups.has(h.pageIndex)) headingGroups.set(h.pageIndex, []);
+      headingGroups.get(h.pageIndex).push(h);
+    });
+
+    const appendTocHeading = (container, h) => {
       const a = document.createElement('a');
       a.href = '#' + h.id;
-      a.textContent = h.text || ((_t('toc.sectionDefault') || '章节') + ' ' + (i + 1));
+      a.textContent = h.text || ((_t('toc.sectionDefault') || '章节'));
       a.className = 'lv' + h.level;
       if (h.pageIndex === state.pagination.currentPage) a.classList.add('toc-cur-page');
       a.setAttribute('data-page-idx', h.pageIndex);
       a.setAttribute('data-heading-id', h.id);
 
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        if (h.pageIndex === state.pagination.currentPage) {
-          const el = document.getElementById(h.id);
+      container.appendChild(a);
+    };
+
+    const fillTocGroup = (container, headings) => {
+      if (container.childElementCount) return;
+      const fragment = document.createDocumentFragment();
+      headings.forEach(h => appendTocHeading(fragment, h));
+      container.appendChild(fragment);
+    };
+
+    if (!list.dataset.delegationBound) {
+      list.dataset.delegationBound = 'true';
+      list.addEventListener('click', event => {
+        const link = event.target.closest('[data-heading-id]');
+        if (!link) return;
+        event.preventDefault();
+        const pageIndex = Number(link.dataset.pageIdx);
+        const headingId = link.dataset.headingId;
+        if (pageIndex === state.pagination.currentPage) {
+          const el = document.getElementById(headingId);
           if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            el.tabIndex = -1;
+            el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
+            el.focus({ preventScroll: true });
             el.classList.remove('heading-target-highlight');
             void el.offsetWidth;
             el.classList.add('heading-target-highlight');
             setTimeout(() => el.classList.remove('heading-target-highlight'), 1500);
           }
         } else {
-          renderPage(h.pageIndex, h.id);
+          renderPage(pageIndex, headingId);
         }
       });
-      list.appendChild(a);
+    }
+
+    headingGroups.forEach((headings, pageIndex) => {
+      const group = document.createElement('details');
+      group.className = 'toc-page-group';
+      group.dataset.pageIdx = String(pageIndex);
+      const summary = document.createElement('summary');
+      summary.textContent = `P.${pageIndex + 1} · ${headings.length}`;
+      const container = document.createElement('div');
+      container.className = 'toc-group-body';
+      group.addEventListener('toggle', () => {
+        if (group.open) fillTocGroup(container, headings);
+      });
+      if (pageIndex === state.pagination.currentPage) {
+        group.open = true;
+        fillTocGroup(container, headings);
+      }
+      group.append(summary, container);
+      list.appendChild(group);
     });
+    tocCache = { source: state.pagination.rawContent, pageCount: state.pagination.pages.length };
+    if (typeof updateActiveTocHeading === 'function') updateActiveTocHeading();
     return;
   }
 
   // 2. 连续/常规模式下：从当前 DOM 提取大纲
+  tocCache = { source: null, pageCount: 0 };
+  list.innerHTML = '';
   const headings = document.querySelectorAll('#content h1, #content h2, #content h3, #content h4, #content h5, #content h6');
   if (!headings.length) {
     list.innerHTML = `<div class="side-empty">${_t('sidebar.emptyToc') || '（当前文档暂无标题大纲）'}</div>`;
@@ -96,14 +176,16 @@ function buildToc() {
     const a = document.createElement('a');
     a.href = '#' + h.id;
     a.textContent = h.textContent.trim() || ((_t('toc.sectionDefault') || '章节') + ' ' + (i + 1));
-    const lv = Math.min(+h.tagName[1], 3);
+    const lv = +h.tagName[1];
 
     a.className = 'lv' + lv;
     a.addEventListener('click', e => {
       e.preventDefault();
       const el = document.getElementById(h.id);
       if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.tabIndex = -1;
+        el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
+        el.focus({ preventScroll: true });
         el.classList.remove('heading-target-highlight');
         void el.offsetWidth;
         el.classList.add('heading-target-highlight');
@@ -112,4 +194,25 @@ function buildToc() {
     });
     list.appendChild(a);
   });
+}
+
+function updateActiveTocHeading() {
+  const p = state.pagination;
+  if (!p || !p.enabled || p.mode !== 'paged' || !p.pages?.length) return;
+  const content = $('content');
+  const list = $('toc-list');
+  if (!content || !list) return;
+  const headings = Array.from(content.querySelectorAll('.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6'));
+  const focusedHeading = content.contains(document.activeElement) && document.activeElement?.id ? document.activeElement : null;
+  const visibleTop = content.scrollTop + 72;
+  let active = focusedHeading || headings[0];
+  if (!focusedHeading) {
+    headings.forEach(heading => {
+      if (heading.offsetTop <= visibleTop) active = heading;
+    });
+  }
+  list.querySelectorAll('.toc-heading-active').forEach(link => link.classList.remove('toc-heading-active'));
+  if (!active?.id) return;
+  const link = list.querySelector(`[data-heading-id="${CSS.escape(active.id)}"]`);
+  if (link) link.classList.add('toc-heading-active');
 }

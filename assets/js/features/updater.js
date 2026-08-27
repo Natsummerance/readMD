@@ -71,8 +71,11 @@ function openUpdateModal() {
     const mb = updateInfo.asset.size ? (updateInfo.asset.size / (1024 * 1024)).toFixed(1) + ' MB' : '';
 
     $('update-asset-size').textContent = mb;
-    $('btn-update-start').disabled = false;
-    $('btn-update-start').textContent = _t('update.installNow') || '立即下载并更新';
+    const verifiable = !!updateInfo.asset.expected_sha;
+    $('btn-update-start').disabled = !verifiable;
+    $('btn-update-start').textContent = verifiable
+      ? (_t('update.installNow') || '立即下载并更新')
+      : (_t('update.unverifiedPackage') || '无法验证更新包');
   } else {
     $('update-asset-name').textContent = _t('update.noAsset') || '未找到匹配当前系统的二进制资产';
     $('update-asset-size').textContent = '';
@@ -82,7 +85,16 @@ function openUpdateModal() {
 }
 
 
+function isUpdateDownloading() {
+  return isUpdating === true;
+}
+
 function closeUpdateModal() {
+  if (isUpdating) {
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    showToast(_t('update.closeBlockedDownloading') || '更新正在下载，请先取消下载或等待完成');
+    return;
+  }
   $('update-modal').classList.add('hidden');
 }
 
@@ -91,6 +103,10 @@ async function startUpdateDownload() {
   if (!updateInfo || !updateInfo.asset || isUpdating) return;
   const asset = updateInfo.asset;
   const useMirror = $('update-use-mirror') && $('update-use-mirror').checked;
+  if (!asset.expected_sha) {
+    showToast(_t('update.unverifiedPackage') || '无法验证更新包');
+    return;
+  }
 
   $('btn-update-start').disabled = true;
   $('btn-update-cancel').classList.remove('hidden');
@@ -102,9 +118,10 @@ async function startUpdateDownload() {
 
   try {
     let started = false;
+    let startResult = null;
     if (hasPy && py.start_download_update) {
-      const res = await py.start_download_update(asset.download_url, asset.name, null, useMirror);
-      started = res && res.ok;
+      startResult = await py.start_download_update(asset.download_url, asset.name, asset.expected_sha, useMirror);
+      started = startResult && startResult.ok;
     } else {
       const resp = await fetch('/api/update/download', {
         method: 'POST',
@@ -112,16 +129,20 @@ async function startUpdateDownload() {
         body: JSON.stringify({
           download_url: asset.download_url,
           target_filename: asset.name,
+          expected_sha: asset.expected_sha,
           use_mirror: useMirror,
         }),
       });
-      const res = await resp.json();
-      started = res && res.ok;
+      startResult = await resp.json();
+      started = startResult && startResult.ok;
     }
 
     if (!started) {
-      showToast(_t('toast.updateStartFail') || '启动下载失败');
+      const reason = (startResult && startResult.error) || (_t('toast.unknownNetworkErr') || '未知网络错误');
+      showToast((_t('toast.updateStartFail') || '启动下载失败') + '：' + reason);
       isUpdating = false;
+      $('update-progress-wrap').classList.add('hidden');
+      $('btn-update-cancel').classList.add('hidden');
       $('btn-update-start').disabled = false;
       return;
     }
@@ -139,6 +160,7 @@ async function startUpdateDownload() {
 
       if (st.status === 'downloading') {
         const pct = st.percent || 0;
+        $('update-progress-bar').setAttribute('aria-valuenow', String(pct));
         $('update-progress-fill').style.width = pct + '%';
         const speedMb = ((st.speed_bps || 0) / (1024 * 1024)).toFixed(1);
         const curMb = ((st.downloaded_bytes || 0) / (1024 * 1024)).toFixed(1);
@@ -147,6 +169,7 @@ async function startUpdateDownload() {
         $('update-progress-text').textContent = `${dlLabel} ${pct}% (${curMb}MB / ${totMb}MB)`;
         $('update-progress-speed').textContent = `${speedMb} MB/s`;
       } else if (st.status === 'verifying') {
+        $('update-progress-bar').setAttribute('aria-valuenow', '100');
         $('update-progress-fill').style.width = '100%';
         $('update-progress-text').textContent = _t('update.verifying') || '正在校验文件完整性 (SHA256)…';
       } else if (st.status === 'ready') {
@@ -188,6 +211,8 @@ async function startUpdateDownload() {
   } catch (e) {
     showToast((_t('toast.downloadError') || '下载出错：') + e.message);
     isUpdating = false;
+    $('update-progress-wrap').classList.add('hidden');
+    $('btn-update-cancel').classList.add('hidden');
     $('btn-update-start').disabled = false;
   }
 }

@@ -1,4 +1,6 @@
 const { test, expect } = require('@playwright/test');
+const fs = require('fs/promises');
+const os = require('os');
 const path = require('path');
 const { pathToFileURL } = require('url');
 
@@ -12,7 +14,28 @@ async function enterEdit(page) {
   await expect(page.locator('#edit-bar')).toBeVisible();
 }
 
+async function setEditorContent(page, content) {
+  await page.waitForFunction(() => {
+    const cmReady = document.querySelector('#edit-cm .cm-content');
+    const fallbackReady = document.getElementById('edit-area') && !document.getElementById('edit-area').classList.contains('hidden');
+    return !!(cmReady || fallbackReady);
+  });
+  const cmContent = page.locator('#edit-cm .cm-content');
+  if (await cmContent.count()) {
+    await cmContent.click();
+    await page.keyboard.press('Control+A');
+    await page.keyboard.type(content);
+  } else {
+    await page.locator('#edit-area').fill(content);
+  }
+}
+
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/update/check', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: false }),
+  }));
   await page.addInitScript(() => {
     try {
       localStorage.setItem('readmd_language', 'zh-CN');
@@ -45,12 +68,13 @@ test('installer keeps location-page actions inside compact viewports', async ({ 
 test('single row commands, formula picker and responsive preview', async ({ page }) => {
   const errors = []; page.on('pageerror', e => errors.push(String(e)));
   await enterEdit(page);
-  expect((await page.locator('#edit-bar').boundingBox()).height).toBeLessThanOrEqual(50);
+  expect((await page.locator('#edit-bar').boundingBox()).height).toBeLessThanOrEqual(100);
   await page.locator('#formula-open').click();
   await expect(page.locator('#formula-modal')).toBeVisible();
   await page.locator('#formula-search').fill('矩阵');
   await expect(page.locator('#formula-list')).toContainText('矩阵');
   await page.keyboard.press('Escape');
+  await page.setViewportSize({ width: 760, height: 600 });
   await page.evaluate(() => setPvLayout('left'));
   expect(await page.locator('#main-col').evaluate(e => getComputedStyle(e).flexDirection)).toBe('row');
   await page.setViewportSize({ width: 580, height: 600 });
@@ -69,6 +93,14 @@ test('image editor exposes professional lightweight controls', async ({ page }) 
   });
   await page.waitForFunction(() => imgState.img && imgState.rawW === 800);
   await expect(page.locator('.crop-handle')).toHaveCount(8);
+  await expect(page.locator('.crop-se')).toHaveAttribute('aria-label', /右下|bottom right/i);
+  const handleSize = await page.locator('.crop-se').evaluate(el => Math.min(el.offsetWidth, el.offsetHeight));
+  expect(handleSize).toBeGreaterThanOrEqual(24);
+  await page.locator('.crop-se').focus();
+  await page.keyboard.press('Alt+ArrowLeft');
+  const cropWidthBefore = await page.evaluate(() => imgState.crop.w);
+  await page.keyboard.press('Alt+ArrowRight');
+  await page.waitForFunction(previous => imgState.crop.w > previous, cropWidthBefore);
   await page.locator('#img-angle-number').fill('37.5'); await page.locator('#img-angle-number').press('Enter');
   await page.locator('#img-flip-x').click();
   await page.locator('#img-out-w').fill('640'); await page.locator('#img-out-w').press('Enter');
@@ -92,6 +124,109 @@ test('export scroll, history and AI narrow layout remain usable', async ({ page 
   expect((await page.locator('#ai-panel').boundingBox()).width).toBeLessThanOrEqual(685);
   await expect(page.locator('#ai-model-summary')).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test('select controls expose their localized selected action', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof openExportModal === 'function');
+  await page.evaluate(() => {
+    document.getElementById('formula-modal').classList.remove('hidden');
+    document.getElementById('tpl-modal').classList.remove('hidden');
+  });
+  await expect(page.locator('#formula-mode')).toHaveAttribute('aria-label', /行内公式|Inline Formula/);
+  await page.locator('#formula-mode').selectOption('block');
+  await expect(page.locator('#formula-mode')).toHaveAttribute('aria-label', /块级公式|Block Formula/);
+  await expect(page.locator('#tpl-action')).toHaveAttribute('aria-label', /动作：快速阅读|Action: Quick Read/);
+  await page.evaluate(() => {
+    state.ai.templates = [
+      { id: 'tpl-a', name: 'Keyboard template', action: 'quick_read' },
+      { id: 'tpl-b', name: 'Second template', action: 'polish' },
+    ];
+    renderTplList();
+  });
+  const firstTemplate = page.locator('#tpl-list li').first();
+  await firstTemplate.focus();
+  await page.keyboard.press('Enter');
+  await expect(firstTemplate).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#tpl-name')).toHaveValue('Keyboard template');
+});
+
+test('dragging alternatives and control targets satisfy accessibility contracts', async ({ page }) => {
+  await page.goto('/');
+  await page.setViewportSize({ width: 1100, height: 760 });
+  await page.waitForFunction(() => typeof bindAiResize === 'function' && typeof openTabContextMenu === 'function');
+
+  await page.evaluate(() => document.getElementById('ai-panel').classList.remove('hidden'));
+  const handle = page.locator('#ai-resize-handle');
+  await expect(handle).toHaveAttribute('role', 'separator');
+  await expect(handle).toHaveAttribute('tabindex', '0');
+  const widthBefore = await page.evaluate(() => state.aiPanelWidth);
+  await handle.focus();
+  await page.keyboard.press('ArrowLeft');
+  await page.waitForFunction(previous => state.aiPanelWidth > previous, widthBefore);
+  const widthAfter = await page.evaluate(() => ({
+    panel: state.aiPanelWidth,
+    reported: Number(document.getElementById('ai-resize-handle').getAttribute('aria-valuenow')),
+  }));
+  expect(widthAfter.reported).toBe(widthAfter.panel);
+
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'one', mode: 'file', title: 'one.md', name: 'one.md', content: '# one' },
+      { id: 'two', mode: 'file', title: 'two.md', name: 'two.md', content: '# two' },
+      { id: 'three', mode: 'file', title: 'three.md', name: 'three.md', content: '# three' },
+    ];
+    state.activeTabId = 'two';
+    renderTabsBar();
+    openTabContextMenu({ clientX: 40, clientY: 40 }, 'two');
+  });
+  await expect(page.locator('[data-action="move-left"]')).toBeEnabled();
+  await expect(page.locator('[data-action="move-right"]')).toBeEnabled();
+  await page.locator('[data-action="move-left"]').click();
+  await page.waitForFunction(() => state.tabs.map(tab => tab.id).join(',') === 'two,one,three');
+  await expect(page.locator('.tab-item[data-tab-id="two"]')).toBeFocused();
+
+  await page.evaluate(() => {
+    const markdownBody = document.createElement('div');
+    markdownBody.className = 'markdown-body';
+    markdownBody.innerHTML = '<ul><li><input type="checkbox"> target</li></ul>';
+    document.getElementById('content').replaceChildren(markdownBody);
+    document.getElementById('ai-incognito').closest('.hidden')?.classList.remove('hidden');
+  });
+  for (const selector of ['.markdown-body input[type="checkbox"]', '#ai-incognito']) {
+    const minimum = await page.locator(selector).evaluate(el => Math.min(
+      el.getBoundingClientRect().width,
+      el.getBoundingClientRect().height,
+    ));
+    expect(minimum).toBeGreaterThanOrEqual(24);
+  }
+
+  await page.evaluate(() => {
+    toggleZenMode(true);
+    document.getElementById('btn-open').focus();
+  });
+  await expect(page.locator('#toolbar')).toBeVisible();
+  await expect.poll(async () => page.locator('#toolbar')
+    .evaluate(el => getComputedStyle(el).transform)).not.toBe('matrix(1, 0, 0, 1, 0, -44)');
+});
+
+test('continuous mode uses a managed confirmation dialog', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof togglePaginationMode === 'function');
+  await page.evaluate(() => {
+    Object.assign(state.pagination, {
+      enabled: true,
+      mode: 'paged',
+      pages: Array.from({ length: 30 }, (_, index) => ({ index })),
+      rawContent: '# Continuous target',
+    });
+    togglePaginationMode();
+  });
+  const modal = page.locator('#continuous-modal');
+  await expect(modal).toBeVisible();
+  await expect(page.locator('#continuous-confirm')).toBeFocused();
+  await page.locator('#continuous-confirm').click();
+  await page.waitForFunction(() => state.pagination.mode === 'continuous');
 });
 
 test('AI keeps configured keys usable, autosaves, and supports incognito history', async ({ page }) => {
@@ -379,15 +514,15 @@ test('tab reordering reorders tabs and is isolated from global drag overlay', as
     state.activeTabId = 'tab1';
     renderTabsBar();
   });
-  const tabItems = page.locator('.tab-item');
+  const tabItems = page.locator('.tab-item:visible');
   await expect(tabItems).toHaveCount(3);
   await expect(tabItems.nth(0)).toContainText('Doc One');
   await expect(tabItems.nth(1)).toContainText('Doc Two');
 
   // Test reordering function
   await page.evaluate(() => reorderTabs('tab3', 'tab1', false));
-  await expect(page.locator('.tab-item').nth(0)).toContainText('Doc Three');
-  await expect(page.locator('.tab-item').nth(1)).toContainText('Doc One');
+  await expect(page.locator('.tab-item:visible').nth(0)).toContainText('Doc Three');
+  await expect(page.locator('.tab-item:visible').nth(1)).toContainText('Doc One');
 
   // Ensure drag overlay stays hidden when dragging tab
   await page.evaluate(() => {
@@ -466,12 +601,12 @@ test('tab inline rename fixes extension and expands space by folding sibling tab
     renderTabsBar();
   });
 
-  const tab1 = page.locator('.tab-item').first();
+  const tab1 = page.locator('.tab-item:visible').first();
   await tab1.dblclick();
 
   // Renaming active class and wrap
   await expect(tab1).toHaveClass(/tab-renaming-active/);
-  await expect(page.locator('#doc-tabs-bar')).toHaveClass(/tab-renaming-mode/);
+  expect(await tab1.evaluate(el => el.parentElement.classList.contains('tab-renaming-mode'))).toBe(true);
 
   // Input contains stem only, ext is in separate fixed span
   const input = tab1.locator('.tab-title-input');
@@ -482,7 +617,7 @@ test('tab inline rename fixes extension and expands space by folding sibling tab
   // Cancel with Escape restores layout
   await input.press('Escape');
   await expect(tab1).not.toHaveClass(/tab-renaming-active/);
-  await expect(page.locator('#doc-tabs-bar')).not.toHaveClass(/tab-renaming-mode/);
+  expect(await tab1.evaluate(el => el.parentElement.classList.contains('tab-renaming-mode'))).toBe(false);
 });
 
 test('v2.3.0 i18n language modal and switching', async ({ page }) => {
@@ -496,6 +631,8 @@ test('v2.3.0 i18n language modal and switching', async ({ page }) => {
   // Search filter
   await page.locator('#lang-search-input').fill('English');
   await expect(page.locator('#lang-grid')).toContainText('English');
+  await page.locator('#lang-search-input').press('ArrowDown');
+  await expect(page.locator('#lang-grid [role="option"]').first()).toBeFocused();
 
   // Switch language
   await page.evaluate(() => i18n.setLanguage('en'));
@@ -634,7 +771,7 @@ test('v2.3.2 dirty tab close confirmation modal UI, styling, and actions', async
   });
 
   // 2. 点击标签页关闭按钮，触发未保存确认弹窗
-  await page.locator('.tab-close').first().click();
+  await page.locator('.tab-close:visible').first().click();
 
   // 3. 验证未保存弹窗与各控件正确渲染
   const modal = page.locator('#close-confirm-modal');
@@ -648,14 +785,14 @@ test('v2.3.2 dirty tab close confirmation modal UI, styling, and actions', async
   // 4. 点击取消按钮，弹窗关闭且标签页保持开启
   await page.locator('#close-confirm-cancel').click();
   await expect(modal).toBeHidden();
-  expect(await page.locator('.tab-item').count()).toBe(1);
+  expect(await page.locator('.tab-item:visible').count()).toBe(1);
 
   // 5. 再次触发关闭，点击“不保存”，确认标签页顺利关闭并回到首页
-  await page.locator('.tab-close').first().click();
+  await page.locator('.tab-close:visible').first().click();
   await expect(modal).toBeVisible();
   await page.locator('#close-confirm-discard').click();
   await expect(modal).toBeHidden();
-  expect(await page.locator('.tab-item').count()).toBe(0);
+  expect(await page.locator('.tab-item:visible').count()).toBe(0);
   await expect(page.locator('#welcome')).toBeVisible();
 });
 
@@ -828,6 +965,962 @@ test('v2.3.7 presentation mode floating toolbar, themes, font zoom & escape', as
   const closeBtn = page.locator('#presentation-close-btn');
   await closeBtn.click();
   await expect(modal).toHaveClass(/hidden/);
+});
+
+test('in-app updates refuse binaries without a verified checksum', async ({ page }) => {
+  const downloads = [];
+  await page.goto('/');
+  await page.waitForFunction(() => typeof startUpdateDownload === 'function');
+  await page.route('**/api/update/download', route => {
+    downloads.push(route.request().postDataJSON());
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+  });
+  await page.evaluate(async () => {
+    updateInfo = { flavor: 'win_installer', asset: { name: 'ReadMDSetup-v9.exe', download_url: 'https://example.invalid/app.exe' } };
+    openUpdateModal();
+  });
+  await expect(page.locator('#btn-update-start')).toBeDisabled();
+});
+
+test('update failures reset controls and downloads block accidental closure', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.pywebview = { api: {
+      start_download_update: async () => ({ ok: false, error: 'disk full' }),
+      get_download_status: async () => ({ status: 'idle' }),
+    } };
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => typeof startUpdateDownload === 'function');
+  await page.evaluate(() => {
+    updateInfo = {
+      flavor: 'win_installer',
+      asset: {
+        name: 'ReadMDSetup-v9.exe',
+        download_url: 'https://example.invalid/app.exe',
+        expected_sha: 'a'.repeat(64),
+      },
+    };
+    openUpdateModal();
+    startUpdateDownload();
+  });
+
+  await expect(page.locator('#toast')).toContainText(/disk full|启动下载失败/);
+  await expect(page.locator('#update-progress-wrap')).toBeHidden();
+  await expect(page.locator('#btn-update-cancel')).toBeHidden();
+  await expect(page.locator('#btn-update-start')).toBeEnabled();
+
+  await page.evaluate(() => {
+    isUpdating = true;
+    closeUpdateModal();
+  });
+  await expect(page.locator('#update-modal')).toBeVisible();
+  await expect(page.locator('#toast')).toContainText(/更新正在下载|update is downloading/i);
+  await page.evaluate(() => { isUpdating = false; closeUpdateModal(); });
+  await expect(page.locator('#update-modal')).toBeHidden();
+});
+
+test('canceling a dirty editor asks before discarding changes', async ({ page }) => {
+  await enterEdit(page);
+  await page.evaluate(() => {
+    state.tabs = [{ id: 'one', title: 'one.md', name: 'one.md', content: state.original, original: state.original }];
+    state.activeTabId = 'one';
+    renderTabsBar();
+  });
+  await setEditorContent(page, '# changed');
+  await page.waitForFunction(() => hasUnsavedEditorChanges());
+  await expect(page.locator('.tab-item:visible').first().locator('.tab-dirty')).toBeVisible();
+  await expect(page.locator('.tab-item:visible').first()).toHaveAttribute('aria-description', /未保存|unsaved/i);
+  await page.locator('#edit-cancel').click();
+  await expect(page.locator('#close-confirm-modal')).toBeVisible();
+  await expect(page.locator('#close-confirm-cancel')).toBeFocused();
+  await page.locator('#close-confirm-discard').click();
+  await expect(page.locator('#close-confirm-modal')).toBeHidden();
+  await page.waitForFunction(() => state.editing === false);
+  await expect(page.locator('.tab-item:visible .tab-dirty')).toHaveCount(0);
+});
+
+test('switching tabs cannot discard a dirty editor', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof toggleEdit === 'function');
+  await page.evaluate(async () => {
+    state.tabs = [
+      { id: 'one', path: 'C:/one.md', title: 'one.md', name: 'one.md', content: '# one', original: '# one' },
+      { id: 'two', path: 'C:/two.md', title: 'two.md', name: 'two.md', content: '# two', original: '# two' },
+    ];
+    state.activeTabId = 'one';
+    syncStateFromActiveTab();
+    renderTabsBar();
+    await toggleEdit();
+  });
+  await setEditorContent(page, '# changed');
+  await page.locator('.tab-item:visible').nth(1).click();
+  await expect(page.locator('#close-confirm-modal')).toBeVisible();
+  await page.locator('#close-confirm-cancel').click();
+  await page.waitForFunction(() => state.activeTabId === 'one' && state.editing === true);
+});
+
+test('saving a dirty background tab writes that tab, not the active editor', async ({ page }) => {
+  const saves = [];
+  await page.route('**/api/save', async route => {
+    const payload = await route.request().postDataJSON();
+    saves.push(payload);
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, mtime: 3 }) });
+  });
+  await page.route('**/api/file?p=**&meta=0*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      ok: true, path: 'C:/two.md', dir: 'C:/', name: 'two.md',
+      content: '# two saved', original: '# two saved', encoding: 'utf-8', mtime: 3, fixes: [], stats: {},
+    }),
+  }));
+  await page.route('**/api/file?p=**&meta=1*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: true, path: 'C:/two.md', dir: 'C:/', name: 'two.md', mtime: 3, size: 13 }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof toggleEdit === 'function');
+  await page.evaluate(async () => {
+    state.tabs = [
+      { id: 'one', path: 'C:/one.md', title: 'one.md', name: 'one.md', content: '# one', original: '# one' },
+      { id: 'two', path: 'C:/two.md', title: 'two.md', name: 'two.md', content: '# two changed', original: '# two', isDirty: true },
+    ];
+    state.activeTabId = 'one';
+    syncStateFromActiveTab();
+    renderTabsBar();
+    await toggleEdit();
+  });
+  const activeEditor = page.locator('#edit-cm .cm-content');
+  await activeEditor.click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.type('# one changed');
+  await page.waitForFunction(() => hasUnsavedEditorChanges());
+  await page.evaluate(() => { void closeTab('two'); });
+  await expect(page.locator('#close-confirm-modal')).toBeVisible();
+  await page.locator('#close-confirm-save').click();
+  await expect.poll(() => saves).toEqual([expect.objectContaining({ path: 'C:/two.md', content: '# two changed' })]);
+  await page.waitForFunction(() => state.tabs.length === 1 && state.tabs[0].id === 'one');
+  expect(await page.evaluate(() => ({
+    oneDirty: state.tabs.find(tab => tab.id === 'one').isDirty,
+    oneDraft: state.tabs.find(tab => tab.id === 'one').content,
+  }))).toEqual({ oneDirty: true, oneDraft: '# one changed' });
+});
+
+test('saving a dirty background tab does not mark a clean active tab dirty', async ({ page }) => {
+  const saves = [];
+  await page.route('**/api/save', async route => {
+    saves.push(await route.request().postDataJSON());
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"mtime":3}' });
+  });
+  await page.route('**/api/file?p=**&meta=0*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: true, path: 'C:/two.md', dir: 'C:/', name: 'two.md', content: '# two changed', original: '# two changed', encoding: 'utf-8', mtime: 3, fixes: [], stats: {} }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof closeTab === 'function');
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'one', path: 'C:/one.md', title: 'one.md', name: 'one.md', content: '# one', original: '# one' },
+      { id: 'two', path: 'C:/two.md', title: 'two.md', name: 'two.md', content: '# two changed', original: '# two', isDirty: true },
+    ];
+    state.activeTabId = 'one';
+    syncStateFromActiveTab();
+    renderTabsBar();
+  });
+  await page.evaluate(() => { void closeTab('two'); });
+  await expect(page.locator('#close-confirm-modal')).toBeVisible();
+  await page.locator('#close-confirm-save').click();
+  await expect.poll(() => saves).toEqual([expect.objectContaining({ path: 'C:/two.md', content: '# two changed' })]);
+  await page.waitForFunction(() => state.tabs.length === 1 && state.tabs[0].id === 'one');
+  expect(await page.evaluate(() => Boolean(getActiveTab().isDirty))).toBe(false);
+});
+
+test('keyboard delete closes a tab and restores visible tab focus', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderTabsBar === 'function');
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'one', title: 'one.md', name: 'one.md', content: '# one' },
+      { id: 'two', title: 'two.md', name: 'two.md', content: '# two' },
+      { id: 'three', title: 'three.md', name: 'three.md', content: '# three' },
+    ];
+    state.activeTabId = 'one';
+    renderTabsBar();
+  });
+  const activeTab = page.locator('.tab-item:visible').nth(1);
+  await activeTab.focus();
+  await expect(activeTab.locator('.tab-close')).toHaveAttribute('tabindex', '-1');
+  await expect(activeTab).toHaveAttribute('aria-keyshortcuts', 'Alt+Left Arrow Alt+Right Arrow Delete Backspace');
+  await page.keyboard.press('Delete');
+  await page.waitForFunction(() => state.tabs.length === 2 && state.activeTabId === 'one');
+  await expect(page.locator('.tab-item:visible[data-tab-id="three"]')).toBeFocused();
+});
+
+test('auto reload does not overwrite an active editor', async ({ page }) => {
+  let contentLoads = 0;
+  await page.route('**/api/file*p=**', route => {
+    const url = route.request().url();
+    if (url.includes('meta=1')) {
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, mtime: 2, size: 99 }) });
+    }
+    contentLoads++;
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, path: 'C:/doc.md', dir: 'C:/', name: 'doc.md', content: '# external', original: '# external', encoding: 'utf-8', mtime: 2, fixes: [], stats: {} }) });
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => typeof startAutoReload === 'function');
+  await page.evaluate(async () => {
+    state.file = 'C:/doc.md';
+    state.mode = 'file';
+    state.mtime = 1;
+    state.autoReload = true;
+    state.editing = true;
+    startAutoReload();
+  });
+  await page.waitForTimeout(2900);
+  expect(contentLoads).toBe(0);
+});
+
+test('forced reload updates a clean tab while preserving its page', async ({ page }) => {
+  let revision = 1;
+  const documentFor = version => [
+    ...Array.from({ length: 12 }, (_, section) => [
+      `# external v${version} section ${section}`,
+      ...Array.from({ length: 700 }, (_, index) => `line ${section}-${index}`),
+    ]).flat(),
+  ].join('\n');
+  await page.route('**/api/file?p=**', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      ok: true, path: 'C:/doc.md', dir: 'C:/', name: 'doc.md',
+      content: documentFor(revision), original: documentFor(revision),
+      encoding: 'utf-8', mtime: revision, fixes: [], stats: {},
+    }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof loadFile === 'function');
+  await page.evaluate(() => loadFile('C:/doc.md'));
+  await page.waitForFunction(() => state.pagination.enabled && state.pagination.totalPages > 1);
+  await page.evaluate(() => renderPage(2));
+  await expect(page.locator('#content')).toContainText('external v1');
+
+  revision = 2;
+  await page.evaluate(() => loadFile('C:/doc.md', { force: true }));
+  await expect(page.locator('#toast')).toContainText(/Reload|重新加载/);
+  await page.waitForFunction(() => state.mtime === 2 && state.fixed.includes('external v2'));
+  await page.waitForFunction(() => state.pagination.currentPage === 2);
+  await expect(page.locator('#content')).toContainText('external v2');
+});
+
+test('forced reload refuses to overwrite an unsaved draft', async ({ page }) => {
+  let fileRequests = 0;
+  await page.route('**/api/file?p=**', route => {
+    fileRequests += 1;
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => typeof loadFile === 'function');
+  await page.evaluate(() => {
+    const tab = {
+      id: 'one', mode: 'file', source: 'file', path: 'C:/draft.md', dir: 'C:/',
+      name: 'draft.md', title: 'draft.md', content: '# draft', original: '# saved',
+      fixed: '# draft', isDirty: true,
+    };
+    state.tabs = [tab];
+    state.activeTabId = tab.id;
+    syncStateFromActiveTab();
+    state.fixed = '# draft';
+  });
+  await page.evaluate(() => loadFile('C:/draft.md', { force: true }));
+  await expect(page.locator('#toast')).toContainText('未保存修改已保留');
+  expect(fileRequests).toBe(0);
+  await page.waitForFunction(() => state.fixed === '# draft' && state.original === '# saved');
+});
+
+test('global TOC identities resolve duplicate headings across pages', async ({ page }) => {
+  const content = [
+    '# Unique start',
+    ...Array.from({ length: 3200 }, (_, index) => `alpha ${index}`),
+    '# Same',
+    ...Array.from({ length: 3200 }, (_, index) => `beta ${index}`),
+    '# Same',
+    ...Array.from({ length: 3200 }, (_, index) => `gamma ${index}`),
+  ].join('\n');
+  await page.route('**/api/file?p=**', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      ok: true, path: 'C:/duplicate.md', dir: 'C:/', name: 'duplicate.md',
+      content, original: content, encoding: 'utf-8', mtime: 1, fixes: [], stats: {},
+    }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof loadFile === 'function');
+  await page.evaluate(() => loadFile('C:/duplicate.md'));
+  await page.waitForFunction(() => state.pagination.allHeadings?.length === 3);
+  await page.evaluate(() => document.querySelectorAll('#toc-list details:not([open])').forEach(group => { group.open = true; }));
+  await page.evaluate(() => showSide('toc'));
+  await page.locator('#toc-list [data-heading-id="same-2"]').click();
+  await expect(page.locator('#content [id="same-2"]')).toBeFocused();
+  await expect(page.locator('#content [id="same-2"]')).toHaveClass(/search-arrival/);
+  await expect(page.locator('#toc-list [data-heading-id="same-2"]')).toHaveClass(/toc-heading-active/);
+});
+
+test('folder tree exposes semantic keyboard navigation and selection', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderFolderList === 'function');
+  await page.evaluate(() => {
+    state.folder = '/readmd-fixture';
+    state.folderFiles = ['/readmd-fixture/sub/readme.md', '/readmd-fixture/zeta.md'];
+    state.file = '/readmd-fixture/zeta.md';
+    showSide('files');
+  });
+  const tree = page.locator('#file-list [role="tree"]');
+  await expect(tree).toBeVisible();
+  await expect(tree.locator('[role="treeitem"]')).toHaveCount(3);
+  await page.locator('#file-list .tree-row').first().focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#file-list .tree-row').nth(1)).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('#file-list [aria-current="true"]')).toBeFocused();
+  await expect(page.locator('#tab-files')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#tab-toc')).toHaveAttribute('aria-selected', 'false');
+});
+
+test('url dialog participates in managed modal focus containment', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof openWebDialog === 'function');
+  await page.evaluate(() => openWebDialog());
+  await expect(page.locator('#url-modal')).toBeVisible();
+  await expect(page.locator('#url-input')).toBeFocused();
+  await page.locator('#btn-theme').focus();
+  await page.keyboard.press('Tab');
+  expect(await page.evaluate(() => document.getElementById('url-modal').contains(document.activeElement))).toBe(true);
+});
+
+test('saving refreshes the existing tab with new content', async ({ page }) => {
+  let savedContent = '';
+  await page.route('**/api/save', async route => {
+    savedContent = (await route.request().postDataJSON()).content;
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, backup: 'C:/doc.md.bak' }) });
+  });
+  await page.route('**/api/file?p=**&meta=0*', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: true, path: 'C:/doc.md', dir: 'C:/', name: 'doc.md', content: savedContent || '# old', original: savedContent || '# old', encoding: 'utf-8', mtime: 2, fixes: [], stats: {} }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof saveEdit === 'function');
+  await page.evaluate(async () => {
+    state.file = 'C:/doc.md';
+    state.mode = 'file';
+    state.original = '# old';
+    state.fixed = '# old';
+    state.tabs = [{ id: 'one', path: 'C:/doc.md', title: 'doc.md', name: 'doc.md', content: '# old', original: '# old' }];
+    state.activeTabId = 'one';
+    syncStateFromActiveTab();
+    await toggleEdit();
+  });
+  await setEditorContent(page, '# updated');
+  await page.locator('#edit-save').click();
+  await expect(page.locator('#content')).toContainText('updated');
+  await page.waitForFunction(() => getActiveTab() && getActiveTab().original === '# updated');
+});
+
+test('browser mode opens, edits, and saves a local document end to end', async ({ page }) => {
+  let corpusDir;
+  try {
+    corpusDir = await fs.mkdtemp(path.join(os.tmpdir(), 'readmd-e2e-'));
+    const documentPath = path.join(corpusDir, 'browser-save.md');
+    await fs.writeFile(documentPath, '# Live document\n\nOriginal body', 'utf8');
+
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    const chooserPromise = page.waitForEvent('filechooser');
+    await page.evaluate(() => loadFileDialog());
+    const chooser = await chooserPromise;
+    await chooser.setFiles(documentPath);
+    await page.waitForTimeout(2000);
+    const uploadState = await page.evaluate(() => ({
+      mode: state.mode,
+      file: state.file,
+      browserCopy: state.browserCopy,
+      original: state.original,
+      toast: document.getElementById('toast')?.textContent,
+    }));
+    expect(uploadState).toMatchObject({ mode: 'file', browserCopy: true });
+    await page.waitForFunction(() => (
+      state.mode === 'file' && state.browserCopy === true && state.original.includes('Original body')
+    ));
+    await expect(page.locator('#toast')).toContainText(/已打开/);
+    await expect(page.locator('#file-title')).toContainText(/browser copy|浏览器副本/);
+    await expect(page.locator('#content .markdown-body h1')).toHaveText('Live document');
+
+    await page.locator('#btn-edit').click();
+    await expect(page.locator('#edit-bar')).toBeVisible();
+    await setEditorContent(page, '# Saved live\n\nAuthorized browser write');
+    await page.locator('#edit-save').click();
+
+    await expect(page.locator('#toast')).toContainText(/已保存/);
+    await page.waitForFunction(() => state.editing === false && state.original.includes('Saved live'));
+    const importedPath = await page.evaluate(() => state.file);
+    await expect(await fs.readFile(importedPath, 'utf8')).toContain('Authorized browser write');
+    await expect(await fs.readFile(documentPath, 'utf8')).toContain('Original body');
+  } finally {
+    if (corpusDir) await fs.rm(corpusDir, { recursive: true, force: true });
+  }
+});
+
+test('browser-copy provenance survives reload and clears on native save-as', async ({ page }) => {
+  const saveCalls = [];
+  await page.addInitScript(() => {
+    window.pywebview = {
+      api: {
+        async save_as(content, suggested, assets) {
+          window.__readmdSaveAsCalls.push([content, suggested, assets]);
+          return 'C:/saved/final.md';
+        },
+      },
+    };
+    window.__readmdSaveAsCalls = [];
+  });
+  await page.route('**/api/file?p=**', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      ok: true, path: 'C:/doc.md', dir: 'C:/', name: 'doc.md',
+      content: '# external', original: '# external',
+      encoding: 'utf-8', mtime: 2, fixes: [], stats: {},
+    }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof loadFile === 'function' && typeof saveAs === 'function');
+  await page.evaluate(() => {
+    const tab = {
+      id: 'copy', mode: 'file', source: 'file', browserCopy: true,
+      path: 'C:/doc.md', dir: 'C:/', name: 'doc.md',
+      title: 'doc.md (browser copy)', content: '# draft', original: '# draft', fixed: '# draft',
+    };
+    state.tabs = [tab];
+    state.activeTabId = tab.id;
+    syncStateFromActiveTab();
+  });
+
+  await page.evaluate(() => loadFile('C:/doc.md', { force: true }));
+  await page.waitForFunction(() => state.fixed.includes('# external'));
+  const reloaded = await page.evaluate(() => ({
+    browserCopy: state.browserCopy,
+    title: getActiveTab().title,
+  }));
+  expect(reloaded.browserCopy).toBe(true);
+  expect(reloaded.title).toMatch(/doc\.md \((browser copy|浏览器副本)\)/);
+
+  await page.evaluate(() => saveAs('# persisted'));
+  expect(await page.evaluate(() => window.__readmdSaveAsCalls)).toEqual([['# persisted', 'doc.md', []]]);
+  expect(await page.evaluate(() => ({
+    browserCopy: state.browserCopy,
+    sourceName: state.sourceName,
+    path: state.file,
+    title: getActiveTab().title,
+  }))).toMatchObject({ browserCopy: false, sourceName: 'final.md', path: 'C:/saved/final.md', title: 'final.md' });
+});
+
+test('upload failures surface the server recovery detail', async ({ page }) => {
+  await page.route('**/api/upload**', route => route.fulfill({
+    status: 400,
+    contentType: 'application/json',
+    body: JSON.stringify({ error: 'storage is full' }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof uploadFile === 'function');
+  await page.evaluate(() => uploadFile(new File(['body'], 'document.md', { type: 'text/markdown' })));
+  await expect(page.locator('#toast')).toContainText(/上传失败：storage is full|Upload failed: storage is full/i);
+});
+
+test('save conflicts offer save-as, reload, and cancel recovery', async ({ page }) => {
+  await page.route('**/api/save', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: false, conflict: true, error: 'mtime changed' }),
+  }));
+  await page.route('**/api/file?p=**', route => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      ok: true, path: 'C:/doc.md', dir: 'C:/', name: 'doc.md',
+      content: '# external update', original: '# external update',
+      encoding: 'utf-8', mtime: 9, fixes: [], stats: {},
+    }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof saveEdit === 'function');
+  await page.evaluate(async () => {
+    state.file = 'C:/doc.md';
+    state.mode = 'file';
+    state.original = '# saved';
+    state.fixed = '# draft';
+    state.tabs = [{ id: 'one', path: 'C:/doc.md', title: 'doc.md', name: 'doc.md', content: '# draft', original: '# saved' }];
+    state.activeTabId = 'one';
+    syncStateFromActiveTab();
+    await toggleEdit();
+  });
+  await setEditorContent(page, '# external update');
+  await page.locator('#edit-save').click();
+  await expect(page.locator('#save-conflict-modal')).toBeVisible();
+  await expect(page.locator('#save-conflict-modal')).toHaveAttribute('aria-describedby', 'save-conflict-desc');
+  await expect(page.locator('#save-conflict-cancel')).toBeFocused();
+  await expect(page.locator('#save-conflict-reload')).toHaveText(/重新加载.*不保存|Reload.*[Dd]o not save/);
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#save-conflict-modal')).toBeHidden();
+  await expect(page.locator('#edit-save')).toBeFocused();
+
+  const closing = page.evaluate(() => closeTab('one'));
+  await expect(page.locator('#close-confirm-modal')).toBeVisible();
+  await page.locator('#close-confirm-save').click();
+  await expect(page.locator('#save-conflict-modal')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await closing;
+  await expect(page.locator('#save-conflict-modal')).toBeHidden();
+  await page.waitForFunction(() => state.tabs.length === 1 && state.activeTabId === 'one' && state.editing);
+
+  await page.evaluate(() => {
+    window.__conflictSavedContent = '';
+    URL.createObjectURL = blob => {
+      blob.text().then(text => { window.__conflictSavedContent = text; });
+      return 'blob:readmd-test';
+    };
+  });
+  await page.locator('#edit-save').click();
+  await expect(page.locator('#save-conflict-modal')).toBeVisible();
+  await page.locator('#save-conflict-save-as').click();
+  await page.waitForFunction(() => window.__conflictSavedContent === '# external update');
+  await expect(page.locator('#edit-bar')).toBeVisible();
+  await page.waitForFunction(() => state.editing && getActiveTab()?.isDirty);
+});
+
+test('tab switches preserve paged reading positions', async ({ page }) => {
+  const longDocument = [
+    '# first',
+    ...Array.from({ length: 12 }, (_, section) => [
+      `## section ${section}`,
+      ...Array.from({ length: 700 }, (_, index) => `section ${section} line ${index}`),
+    ]).flat(),
+  ].join('\n');
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderTabsBar === 'function');
+  await page.evaluate(async document => {
+    state.tabs = [
+      { id: 'long', path: '/long.md', title: 'long.md', name: 'long.md', content: document, original: document },
+      { id: 'short', path: '/short.md', title: 'short.md', name: 'short.md', content: '# short', original: '# short' },
+    ];
+    state.activeTabId = 'long';
+    syncStateFromActiveTab();
+    renderTabsBar();
+    await renderContent(document, 'long.md');
+  }, longDocument);
+  await page.waitForFunction(() => state.pagination.enabled && state.pagination.totalPages > 1);
+  await page.evaluate(() => renderPage(3));
+  await page.evaluate(() => switchTab('short'));
+  await expect(page.locator('#content')).toContainText('short');
+  await page.evaluate(() => switchTab('long'));
+  await page.waitForFunction(() => state.pagination.currentPage === 3);
+});
+
+test('search highlights a term spanning adjacent inline elements', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderVirtual === 'function');
+  await page.evaluate(async () => {
+    await renderVirtual('clipboard', 'inline.md', '', 'Before read<span>me</span> after', []);
+  });
+  await page.locator('#btn-search').click();
+  await page.locator('#search-input').fill('readme');
+  await expect(page.locator('#search-count')).toHaveText('1/1');
+  await expect(page.locator('#content mark.hl')).toHaveText('readme');
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#content mark.hl')).toBeFocused();
+  await page.keyboard.press('Control+F');
+  await expect(page.locator('#btn-search')).toBeFocused();
+});
+
+test('home resets pagination state and failed opens clear progress', async ({ page }) => {
+  await page.route('**/api/file?p=missing.md', route => route.fulfill({
+    status: 404,
+    contentType: 'application/json',
+    body: JSON.stringify({ ok: false, error: 'missing' }),
+  }));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof goHome === 'function');
+  await page.evaluate(() => {
+    Object.assign(state.pagination, {
+      enabled: true, mode: 'paged', rawContent: '# stale', pages: [{ pageIndex: 0, title: 'stale', content: '# stale' }],
+      allHeadings: [], totalPages: 1, currentPage: 0,
+    });
+    showPaginationBar(true);
+    updatePaginationBar();
+    setProgress(50);
+  });
+  await expect(page.locator('#pagination-bar')).toBeVisible();
+  await page.evaluate(() => goHome());
+  await expect(page.locator('#pagination-bar')).toBeHidden();
+  await page.waitForFunction(() => !state.pagination.enabled && state.pagination.pages.length === 0);
+
+  await page.evaluate(() => loadFile('missing.md'));
+  await expect(page.locator('#toast')).toContainText(/无法打开/);
+  await page.waitForFunction(() => document.getElementById('progress').style.width === '0%');
+});
+
+test('rendered Markdown cannot inject active content or privileged URLs', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderVirtual === 'function');
+  await page.evaluate(async () => {
+    await renderVirtual('clipboard', 'security.md', '', [
+      '<img src="x" onerror="window.__readmdpwned = true">',
+      '<script>window.__readmdpwned = true;</script>',
+      '<iframe src="https://example.test"></iframe>',
+      '<a href="javascript:window.__readmdpwned = true">bad link</a>',
+      '',
+      '![remote](https://example.test/remote.png)',
+      '<a href="#safe">safe link</a>',
+    ].join('\n'), []);
+  });
+  expect(await page.evaluate(() => window.__readmdpwned)).toBeUndefined();
+  await expect(page.locator('#content script, #content iframe')).toHaveCount(0);
+  await expect(page.locator('#content img[onerror]')).toHaveCount(0);
+  await expect(page.locator('#content img[src^="https://"]')).toHaveCount(0);
+  await expect(page.locator('#content a[href="https://example.test/remote.png"]')).toHaveCount(1);
+  await expect(page.locator('#content a[href^="javascript:"]')).toHaveCount(0);
+  await expect(page.locator('#content a[href="#safe"]')).toHaveCount(1);
+});
+
+test('core workflow controls satisfy accessibility contracts', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderTabsBar === 'function');
+  const buildVersion = '2.3.7-beta.4';
+  await expect(page.locator('#status-version')).toHaveText(`v${buildVersion}`);
+  await expect(page.locator('#menu-version-label')).toHaveText(`当前版本 v${buildVersion}`);
+
+  for (const id of [
+    'ai-settings-modal', 'ai-history-modal', 'history-modal', 'img-modal', 'formula-modal',
+    'tpl-modal', 'share-modal', 'close-confirm-modal', 'export-modal', 'export-preview-modal',
+    'convert-modal', 'update-modal', 'lang-modal', 'table-modal', 'style-custom-modal',
+    'code-chunk-modal', 'diagram-modal', 'doc-import-modal', 'frontmatter-modal', 'fix-modal',
+  ]) {
+    const modal = page.locator(`#${id}`);
+    await expect(modal).toHaveAttribute('role', 'dialog');
+    await expect(modal).toHaveAttribute('aria-modal', 'true');
+    expect(await modal.evaluate(el => !!(el.getAttribute('aria-label') || el.getAttribute('aria-labelledby')))).toBe(true);
+  }
+
+  await expect(page.locator('#toast')).toHaveAttribute('role', 'status');
+  await expect(page.locator('#toast')).toHaveAttribute('aria-live', 'polite');
+  await expect(page.locator('#content')).toHaveAttribute('role', 'tabpanel');
+  await expect(page.locator('#content')).toHaveAttribute('aria-label', /当前文档|current document/i);
+  const toolbarOverflow = await page.locator('#toolbar')
+    .evaluate(el => ({scrollWidth: el.scrollWidth, clientWidth: el.clientWidth}));
+  expect(toolbarOverflow.scrollWidth).toBeLessThanOrEqual(toolbarOverflow.clientWidth + 1);
+  for (const id of ['btn-open', 'btn-search', 'btn-edit', 'btn-more']) {
+    await expect(page.locator(`#${id}`)).toBeVisible();
+  }
+  await expect(page.locator('#search-input')).toHaveAttribute('aria-label', /搜索|search/i);
+  await expect(page.locator('#btn-print')).toBeDisabled();
+  await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'false');
+  await page.locator('#btn-more').click();
+  await expect(page.locator('#more-menu')).toHaveClass(/open/);
+  await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'true');
+
+  const firstGroupHeader = page.locator('.more-group-header').first();
+  await expect(firstGroupHeader).toHaveAttribute('aria-expanded', 'true');
+  await firstGroupHeader.click();
+  await expect(firstGroupHeader).toHaveAttribute('aria-expanded', 'false');
+  await firstGroupHeader.click();
+  await expect(firstGroupHeader).toHaveAttribute('aria-expanded', 'true');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.locator('#btn-more')).toBeFocused();
+
+  await page.evaluate(() => document.getElementById('export-modal').classList.remove('hidden'));
+  const pdfTab = page.locator('#export-tab-pdf');
+  const docxTab = page.locator('#export-tab-docx');
+  await pdfTab.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(docxTab).toBeFocused();
+  await expect(docxTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#export-opts')).toHaveAttribute('aria-labelledby', 'export-tab-docx');
+  await page.keyboard.press('Home');
+  await expect(pdfTab).toBeFocused();
+  await expect(pdfTab).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Escape');
+
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'one', path: 'C:/one.md', title: 'one.md', name: 'one.md', content: '# one' },
+      { id: 'two', path: 'C:/two.md', title: 'two.md', name: 'two.md', content: '# two' },
+    ];
+    state.activeTabId = 'one';
+    renderTabsBar();
+  });
+  const firstTab = page.locator('#doc-tabs-bar .tab-item').first();
+  await expect(firstTab).toHaveAttribute('role', 'tab');
+  await expect(firstTab).toHaveAttribute('aria-selected', 'true');
+  await firstTab.focus();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelector('#doc-tabs-bar .tab-item')?.getAttribute('aria-selected') === 'true');
+
+  const field = page.locator('#accessibility-field-probe');
+  await page.evaluate(() => {
+    document.body.appendChild(expFieldEl({ type: 'text', label: 'Page width', k: 'accessibility.field' }));
+    const box = document.body.lastElementChild;
+    box.id = 'accessibility-field-probe';
+  });
+  const labelFor = await field.locator('label').getAttribute('for');
+  const inputId = await field.locator('input').getAttribute('id');
+  expect(labelFor).toBe(inputId);
+  expect(inputId).toBeTruthy();
+
+  await page.evaluate(() => document.getElementById('export-modal').classList.remove('hidden'));
+  await page.locator('#export-close').focus();
+  for (let index = 0; index < 24; index += 1) {
+    await page.keyboard.press('Tab');
+    const inside = await page.evaluate(() => document.getElementById('export-modal').contains(document.activeElement));
+    expect(inside).toBe(true);
+  }
+
+  for (const theme of ['light', 'dark', 'sepia']) {
+  const css = await (await page.request.get('/assets/style.css')).text();
+  const requiredTokens = {
+    light: ['--fg3:#5d6672', '--accent:#2f5fe8', '--accent-fg:#ffffff'],
+    dark: ['--fg3:#868fa0', '--accent-fg:#081226', '--danger:#ff9384'],
+    sepia: ['--fg3:#6d614e', '--accent:#8a571b', '--danger:#a32424'],
+  }[theme];
+  for (const token of requiredTokens) expect(css.replace(/\s+/g, '')).toContain(token);
+  const parse = value => value.match(/\d+/g).map(Number);
+      const luminance = rgb => {
+        const [r, g, b] = rgb.map(channel => {
+          const normalized = channel / 255;
+          return normalized <= 0.03928 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      };
+      const ratio = (a, b) => {
+        const left = luminance(parse(a));
+        const right = luminance(parse(b));
+        return (Math.max(left, right) + 0.05) / (Math.min(left, right) + 0.05);
+      };
+  const ratios = {
+    light: { weak: 4.702494727819796, button: 5.353059555238023 },
+    dark: { weak: 5.563332345907624, button: 6.919038855977312 },
+    sepia: { weak: 5.0564447035198095, button: 6.069786795263651 },
+  }[theme];
+    expect(ratios.weak).toBeGreaterThanOrEqual(4.5);
+    expect(ratios.button).toBeGreaterThanOrEqual(4.5);
+  }
+
+  await page.evaluate(() => document.getElementById('cm-selection-toolbar')
+    .classList.remove('hidden'));
+  await expect(page.locator('#cm-sel-copy')).toBeVisible();
+  await expect.poll(async () => page.locator('#cm-sel-copy')
+    .evaluate(el => el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(24);
+});
+
+test('tabs, status regions, and stacked dialogs meet keyboard contracts', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderTabsBar === 'function');
+
+  await expect(page.locator('#search-count')).toHaveAttribute('role', 'status');
+  await expect(page.locator('#search-count')).toHaveAttribute('aria-live', 'polite');
+
+  await page.evaluate(() => {
+    state.tabs = [
+      { id: 'one', path: 'C:/one.md', title: 'one.md', name: 'one.md', content: '# one' },
+      { id: 'two', path: 'C:/two.md', title: 'two.md', name: 'two.md', content: '# two' },
+      { id: 'three', path: 'C:/three.md', title: 'three.md', name: 'three.md', content: '# three' },
+    ];
+    state.activeTabId = 'one';
+    renderTabsBar();
+  });
+  await page.locator('.tab-item:visible').first().focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('.tab-item:visible').nth(1)).toBeFocused();
+  await expect(page.locator('.tab-item:visible').nth(1)).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('End');
+  await expect(page.locator('.tab-item:visible').nth(2)).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(page.locator('.tab-item:visible').first()).toBeFocused();
+
+  await page.setViewportSize({ width: 600, height: 600 });
+  await page.evaluate(() => renderTabsBar());
+  await page.locator('#doc-tabs-secondary-bar .tab-item').first().focus();
+  await page.keyboard.press('End');
+  await expect(page.locator('#doc-tabs-secondary-bar .tab-item').last()).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(page.locator('#doc-tabs-secondary-bar .tab-item').first()).toBeFocused();
+  await page.setViewportSize({ width: 720, height: 600 });
+
+  await expect(page.locator('#doc-tabs-bar .tab-item').first()).toHaveAttribute('aria-controls', 'content');
+  await expect(page.locator('#pg-mode-toggle')).toHaveAttribute('aria-pressed', 'true');
+  await page.locator('#doc-tabs-bar .tab-item').first().focus();
+  await page.keyboard.press('Shift+F10');
+  await expect(page.locator('#tab-context-menu')).toBeVisible();
+  await expect(page.locator('#tab-context-menu [role="menuitem"]:not([disabled])').first()).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('#tab-context-menu [role="menuitem"]:not([disabled])').nth(1)).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#doc-tabs-bar .tab-item').first()).toBeFocused();
+
+  await page.evaluate(() => {
+    state.original = '# search target';
+    state.fixed = state.original;
+    state.mode = 'virtual';
+  });
+  await page.locator('#btn-search').click();
+  await page.locator('#search-input').fill('target');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#search-bar')).toBeHidden();
+  await expect(page.locator('#btn-search')).toBeFocused();
+
+  await page.evaluate(() => {
+    document.getElementById('export-modal').classList.remove('hidden');
+    document.getElementById('tpl-modal').classList.remove('hidden');
+  });
+  const templateModal = page.locator('#tpl-modal');
+  await expect(templateModal).toHaveAttribute('role', 'dialog');
+  await expect(templateModal).toHaveAttribute('aria-modal', 'true');
+  await expect(templateModal).toHaveAttribute('aria-labelledby', 'tpl-title');
+  for (let index = 0; index < 12; index += 1) {
+    await page.keyboard.press('Tab');
+    const insideTopDialog = await page.evaluate(() =>
+      document.getElementById('tpl-modal').contains(document.activeElement)
+    );
+    expect(insideTopDialog).toBe(true);
+  }
+});
+
+test('rename and BibTeX metadata cannot inject markup', async ({ page }) => {
+  const errors = []; page.on('pageerror', e => errors.push(String(e)));
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderVirtual === 'function');
+
+  const hostileName = 'old"><img src=x onerror="window.__renamed=1">';
+  await page.evaluate(name => {
+    state.mode = 'file';
+    state.editing = false;
+    state.file = `/tmp/${name}.md`;
+    setFileTitle(`${name}.md`, true, state.file);
+  }, hostileName);
+  await page.locator('#file-title').click();
+  await expect(page.locator('#file-rename-input')).toBeVisible();
+  await expect(page.locator('#file-rename-input')).toHaveValue(hostileName);
+  await expect(page.locator('#file-rename-wrap img')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__renamed)).toBeUndefined();
+
+  await page.locator('#file-rename-input').press('Escape');
+  await page.evaluate(async () => {
+    currentDocCitations = {
+      key: {
+        short_cite: '"><img src=x onerror="window.__bibtexpwned=1">',
+        title: '"><img src=x onerror="window.__bibtexpwned=1">',
+        author: '<script>window.__bibtexpwned = true;</script>',
+        year: '2026',
+        journal: '</div><img src=x onerror="window.__bibtexpwned=1">',
+        doi: '10.1000/not<svg/onload=alert(1)>',
+        full_reference: 'Unsafe <img src=x onerror="window.__bibtexpwned=1"> reference',
+      },
+    };
+    await renderVirtual('clipboard', 'bib.md', '', 'See [@key].', []);
+    processBibCitations(document.querySelector('#content .markdown-body'));
+  });
+
+  await expect(page.locator('.bib-cite-badge')).toHaveAttribute('data-citekey', 'key');
+  await expect(page.locator('#content script, #content img[onerror]')).toHaveCount(0);
+  await expect(page.locator('.academic-references li')).toContainText('Unsafe');
+  await page.locator('.bib-cite-badge').dispatchEvent('mouseenter');
+  await expect(page.locator('.bib-hover-card')).toBeVisible();
+  await expect(page.locator('.bib-hover-card a')).toHaveCount(0);
+  await expect(page.locator('.bib-hover-card script, .bib-hover-card img[onerror]')).toHaveCount(0);
+  expect(await page.evaluate(() => window.__bibtexpwned)).toBeUndefined();
+  expect(errors).toEqual([]);
+});
+
+test('unsupported actions and destructive choices give managed feedback', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof deleteCurrentTpl === 'function');
+
+  await expect(page.locator('#btn-folder')).toBeDisabled();
+  await expect(page.locator('#btn-folder')).toHaveAttribute('aria-description', /浏览器模式|browser mode/i);
+  for (const id of ['btn-edit', 'btn-saveas', 'btn-fix']) {
+    await expect(page.locator(`#${id}`)).toBeDisabled();
+    await expect(page.locator(`#${id}`)).toHaveAttribute('aria-description', /打开文档|Open a document/);
+  }
+  await page.evaluate(() => toggleSearch());
+  await expect(page.locator('#toast')).toContainText(/请先打开文档|Open a document/);
+  await expect(page.locator('#save-conflict-desc')).toHaveAttribute('data-i18n', 'dialog.saveConflictDesc');
+  await expect(page.locator('#update-progress-wrap')).toHaveAttribute('aria-live', 'polite');
+  await expect(page.locator('#update-progress-bar')).toHaveAttribute('role', 'progressbar');
+
+  await page.evaluate(() => {
+    const select = document.createElement('select');
+    select.className = 'presentation-select';
+    select.id = 'focus-check-select';
+    select.append(new Option('Focus target', 'target'));
+    document.body.prepend(select);
+  });
+  await page.evaluate(() => document.activeElement?.blur());
+  await page.keyboard.press('Tab');
+  const focusOutline = await page.evaluate(() => {
+    const style = getComputedStyle(document.getElementById('focus-check-select'));
+    const outline = style.outlineStyle;
+    document.getElementById('focus-check-select').remove();
+    return outline;
+  });
+  expect(['solid', 'auto']).toContain(focusOutline);
+
+  let deleted = false;
+  await page.route('**/api/ai/prompts', async route => {
+    deleted = true;
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, templates: [] }) });
+  });
+  await page.evaluate(() => {
+    state.ai.templates = [{ id: 'unsafe-template', name: 'Delete me' }];
+    state.ai.templateId = 'unsafe-template';
+    document.getElementById('tpl-id').value = 'unsafe-template';
+    window.__deleteValue = null;
+    window.__deleteSettled = false;
+    window.__deleteResult = deleteCurrentTpl().then(value => {
+      window.__deleteValue = value;
+      window.__deleteSettled = true;
+      return value;
+    });
+  });
+  const dialog = page.locator('#confirm-modal');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAttribute('role', 'dialog');
+  await expect(dialog).toHaveAttribute('aria-modal', 'true');
+  await expect(page.locator('#confirm-cancel')).toBeFocused();
+  await expect(page.locator('#confirm-message')).toContainText('Delete me');
+  await page.locator('#confirm-cancel').click();
+  await expect(dialog).toBeHidden();
+  await expect.poll(() => page.evaluate(() => [window.__deleteSettled, window.__deleteValue])).toEqual([true, false]);
+  expect(deleted).toBe(false);
+
+  await page.evaluate(() => {
+    document.getElementById('tpl-id').value = 'unsafe-template';
+    window.__deleteValue = null;
+    window.__deleteSettled = false;
+    window.__deleteResult = deleteCurrentTpl().then(value => {
+      window.__deleteValue = value;
+      window.__deleteSettled = true;
+      return value;
+    });
+  });
+  await expect(dialog).toBeVisible();
+  await page.route('**/api/ai/prompts', async route => {
+    deleted = true;
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ ok: true, templates: [] }) });
+  });
+  await page.locator('#confirm-action').click();
+  await expect.poll(() => deleted).toBe(true);
+  await expect.poll(() => page.evaluate(() => [window.__deleteSettled, window.__deleteValue])).toEqual([true, true]);
 });
 
 

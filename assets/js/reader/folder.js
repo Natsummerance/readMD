@@ -33,6 +33,7 @@ async function listFolder(dir) {
 
 
 function renderFolderList() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const box = $('file-list');
   box.innerHTML = '';
   if (!state.folder) return;
@@ -84,8 +85,11 @@ function renderFolderList() {
 
   const treeContainer = document.createElement('div');
   treeContainer.className = 'tree-children';
+  treeContainer.setAttribute('role', 'tree');
+  treeContainer.setAttribute('aria-label', _t('sidebar.files') || '文件');
   renderTreeNodes(treeContainer, rootNode.children, 0);
   box.appendChild(treeContainer);
+  updateTreeTabIndex();
 }
 
 function renderTreeNodes(container, childrenObj, depth) {
@@ -102,15 +106,25 @@ function renderTreeNodes(container, childrenObj, depth) {
     const item = childrenObj[key];
     const nodeEl = document.createElement('div');
     nodeEl.className = 'tree-node';
+    nodeEl.setAttribute('role', 'none');
 
-    const row = document.createElement('div');
+    const row = document.createElement('button');
+    row.type = 'button';
     row.className = 'tree-row';
+    row.setAttribute('role', 'treeitem');
+    row.setAttribute('aria-level', String(depth + 1));
+    row.tabIndex = -1;
     if (item.type === 'file' && item.path === state.file) {
       row.classList.add('active');
+      row.setAttribute('aria-selected', 'true');
+      row.setAttribute('aria-current', 'true');
+    } else {
+      row.setAttribute('aria-selected', 'false');
     }
 
     const toggle = document.createElement('span');
     toggle.className = 'tree-toggle';
+    toggle.setAttribute('aria-hidden', 'true');
 
     if (item.type === 'dir') {
       const childrenCount = Object.keys(item.children || {}).length;
@@ -124,6 +138,7 @@ function renderTreeNodes(container, childrenObj, depth) {
       const icon = document.createElement('span');
       icon.className = 'tree-icon';
       icon.innerHTML = TREE_ICONS.dir;
+      icon.setAttribute('aria-hidden', 'true');
 
       const nameEl = document.createElement('span');
       nameEl.className = 'tree-name';
@@ -136,17 +151,22 @@ function renderTreeNodes(container, childrenObj, depth) {
 
       const childrenContainer = document.createElement('div');
       childrenContainer.className = 'tree-children';
+      childrenContainer.setAttribute('role', 'group');
+      childrenContainer.setAttribute('aria-label', item.name);
       renderTreeNodes(childrenContainer, item.children, depth + 1);
       nodeEl.appendChild(childrenContainer);
+      row.setAttribute('aria-expanded', 'true');
 
       row.addEventListener('click', e => {
         e.stopPropagation();
         const collapsed = childrenContainer.classList.toggle('collapsed');
+        row.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
         if (collapsed) {
           toggle.classList.remove('open');
         } else {
           toggle.classList.add('open');
         }
+        updateTreeTabIndex();
       });
     } else {
       toggle.classList.add('empty');
@@ -154,6 +174,7 @@ function renderTreeNodes(container, childrenObj, depth) {
       const icon = document.createElement('span');
       icon.className = 'tree-icon';
       icon.innerHTML = TREE_ICONS.file;
+      icon.setAttribute('aria-hidden', 'true');
 
       const nameEl = document.createElement('span');
       nameEl.className = 'tree-name';
@@ -175,22 +196,79 @@ function renderTreeNodes(container, childrenObj, depth) {
   });
 }
 
+function visibleTreeRows() {
+  return Array.from(document.querySelectorAll('#file-list .tree-row'))
+    .filter(row => row.offsetParent !== null);
+}
+
+function updateTreeTabIndex() {
+  const rows = visibleTreeRows();
+  rows.forEach((row, index) => { row.tabIndex = index === 0 ? 0 : -1; });
+}
+
+function handleTreeKeydown(event, row) {
+  const rows = visibleTreeRows();
+  const index = rows.indexOf(row);
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    const next = rows[(index + (event.key === 'ArrowDown' ? 1 : rows.length - 1)) % rows.length];
+    next.focus();
+    return;
+  }
+  if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+  event.preventDefault();
+  const expanded = row.getAttribute('aria-expanded');
+  if (event.key === 'ArrowRight') {
+    if (expanded === 'false') {
+      row.click();
+    } else {
+      const childContainer = row.closest('.tree-node')?.querySelector(':scope > .tree-children');
+      const childRow = childContainer?.querySelector(':scope > .tree-node > .tree-row');
+      if (childRow && childRow.offsetParent) childRow.focus();
+    }
+    return;
+  }
+  if (expanded === 'true') {
+    row.click();
+    return;
+  }
+  row.closest('.tree-node')?.parentElement?.closest('.tree-node')?.querySelector(':scope > .tree-row')?.focus();
+}
+
 function showSide(tab) {
   $('side').classList.remove('hidden');
+  const tabs = { toc: $('tab-toc'), files: $('tab-files') };
+  Object.entries(tabs).forEach(([name, button]) => {
+    const active = name === tab;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', active ? 'true' : 'false');
+    button.tabIndex = active ? 0 : -1;
+  });
+  $('file-list').classList.toggle('hidden', tab !== 'files');
+  $('toc-list').classList.toggle('hidden', tab !== 'toc');
   if (tab === 'files') {
-    $('tab-files').classList.add('active');
-    $('tab-toc').classList.remove('active');
-    $('file-list').classList.remove('hidden');
-    $('toc-list').classList.add('hidden');
     if (state.folderFiles.length) renderFolderList();
     else listFolder(state.dir || '');
   } else {
-    $('tab-toc').classList.add('active');
-    $('tab-files').classList.remove('active');
-    $('toc-list').classList.remove('hidden');
-    $('file-list').classList.add('hidden');
+    updateTreeTabIndex();
   }
 }
+
+(function bindSideTabKeys() {
+  const tablist = $('#side-tabs') || document.getElementById('side-tabs');
+  if (!tablist) return;
+  tablist.addEventListener('keydown', event => {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    event.preventDefault();
+    const next = event.key === 'ArrowRight' ? 'files' : 'toc';
+    showSide(next);
+    $(next === 'files' ? 'tab-files' : 'tab-toc').focus();
+  });
+  document.addEventListener('keydown', event => {
+    const row = event.target instanceof Element ? event.target.closest('#file-list .tree-row') : null;
+    if (row) handleTreeKeydown(event, row);
+  });
+})();
 
 function toggleSide(tab) {
   const side = $('side');

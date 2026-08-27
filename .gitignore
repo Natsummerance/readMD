@@ -7,6 +7,8 @@ _test_assets/
 Thumbs.db
 build/
 dist/
+!assets/vendor/katex/dist/
+!assets/vendor/katex/dist/**
 *.spec
 !release/ReadMD-macOS.spec
 
@@ -15,12 +17,25 @@ tools/cm-bundle/node_modules/
 ui-tests/node_modules/
 ui-tests/test-results/
 ui-tests/playwright-report/
+showcase/raw/
 showcase/test-results/
+showcase/output/
+showcase/downloads/
+showcase/publish-work/
+showcase/publish-state.json
+showcase/content/publication-ledger.jsonl
+showcase/content-package.zip
+showcase/content-package.zip.manifest.json
 .venv-win7/
 installer/webview2_runtime/
 release_body_win7_beta.md
 
 .token-optimizer/
+sandbox/vendor/
+website/node_modules/
+website/dist/
+graphify-out/
+test-results/
 
 
 IDEA.md
