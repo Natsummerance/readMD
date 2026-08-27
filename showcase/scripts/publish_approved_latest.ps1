@@ -10,6 +10,23 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $showcaseRoot = Split-Path -Parent $scriptDir
 $repoRoot = Split-Path -Parent $showcaseRoot
 
+function Resolve-PrimaryRepoRoot([string]$CurrentRepoRoot) {
+    try {
+        $commonDir = (& git -C $CurrentRepoRoot rev-parse --git-common-dir 2>$null)
+        if ($LASTEXITCODE -eq 0 -and $commonDir) {
+            $trimmed = $commonDir.Trim()
+            if (-not [System.IO.Path]::IsPathRooted($trimmed)) {
+                $trimmed = [System.IO.Path]::GetFullPath((Join-Path $CurrentRepoRoot $trimmed))
+            }
+            $candidate = Split-Path -Parent $trimmed
+            if (Test-Path $candidate -PathType Container) {
+                return $candidate
+            }
+        }
+    } catch {}
+    return $CurrentRepoRoot
+}
+
 if (-not $DownloadRoot) {
     $DownloadRoot = Join-Path $repoRoot "showcase\output\release-run\downloads"
 }
@@ -17,7 +34,16 @@ if (-not $Ledger) {
     if ($env:READMD_PUBLICATION_LEDGER) {
         $Ledger = $env:READMD_PUBLICATION_LEDGER
     } else {
-        $Ledger = Join-Path $repoRoot "showcase\content\publication-ledger.jsonl"
+        $primaryRoot = Resolve-PrimaryRepoRoot $repoRoot
+        $primaryCandidate = Join-Path $primaryRoot "showcase\content\publication-ledger.jsonl"
+        $localCandidate = Join-Path $repoRoot "showcase\content\publication-ledger.jsonl"
+        if (Test-Path $primaryCandidate -PathType Leaf) {
+            $Ledger = $primaryCandidate
+        } elseif (Test-Path $localCandidate -PathType Leaf) {
+            $Ledger = $localCandidate
+        } else {
+            throw "Publication ledger not found at '$primaryCandidate' or '$localCandidate'. Specify -Ledger or set READMD_PUBLICATION_LEDGER."
+        }
     }
 }
 
