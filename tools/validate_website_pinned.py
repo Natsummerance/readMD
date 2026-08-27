@@ -18,15 +18,10 @@ def validate_pinned_release_asset_links():
     errors = []
     version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     tag = re.escape(f"v{version}")
+    pattern = rf'href="https://github\.com/Natsummerance/readMD/releases/(?:latest/download|download/{tag})/([^"]+)"'
     for language, contract in validator.DOWNLOAD_PAGES.items():
         content = contract["path"].read_text(encoding="utf-8")
-        linked = {
-            name
-            for _, name in re.findall(
-                rf'href="(https://github\.com/Natsummerance/readMD/releases/download/{tag}/([^"]+))"',
-                content,
-            )
-        }
+        linked = set(re.findall(pattern, content))
         if linked != validator.RELEASE_ASSETS:
             errors.append(
                 f"{language} download assets mismatch: "
