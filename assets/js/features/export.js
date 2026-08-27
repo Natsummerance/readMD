@@ -233,6 +233,7 @@ function renderExportModal() {
   $('export-modal').classList.remove('hidden');
   renderExportPresetSelect();
   renderExportSections();
+  initExportAiDesigner();
   updateExportLivePreview();
   const r = $('export-result');
   r.textContent = ''; r.className = 'export-result';
@@ -816,4 +817,128 @@ async function expSavePreset() {
   };
   $('exp-save-cancel').onclick = () => box.classList.add('hidden');
 }
+
+/* ---------------- AI 风格排版设计师 ---------------- */
+
+function initExportAiDesigner() {
+  const genBtn = $('exp-ai-gen-btn');
+  const promptInput = $('exp-ai-prompt');
+  if (genBtn && promptInput) {
+    genBtn.onclick = () => generateExportStyleWithAi(promptInput.value.trim());
+    promptInput.onkeydown = e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        generateExportStyleWithAi(promptInput.value.trim());
+      }
+    };
+  }
+}
+
+async function generateExportStyleWithAi(stylePrompt) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (!stylePrompt) {
+    showToast(_t('exportai.placeholder') || '请输入排版风格描述');
+    return;
+  }
+  const statusEl = $('exp-ai-status');
+  if (statusEl) {
+    statusEl.classList.remove('hidden');
+    statusEl.textContent = _t('exportai.generating') || '正在分析并设计排版参数...';
+  }
+
+  const systemPrompt = `You are a professional document and book typography designer.
+Based on user style prompt, return ONLY a valid strict JSON object specifying export typography parameters for ReadMD.
+Allowed keys and values:
+{
+  "typography.font": "MicrosoftYaHei" | "SimSun" | "SimHei" | "KaiTi" | "Arial",
+  "typography.size": integer between 9 and 16,
+  "typography.lineHeight": float between 1.2 and 2.0,
+  "typography.spacing": integer between 4 and 16,
+  "typography.color": "#xxxxxx",
+  "typography.align": "left" | "justify" | "center",
+  "headings.h1.size": integer between 18 and 28,
+  "headings.h1.color": "#xxxxxx",
+  "headings.h1.bold": true | false,
+  "headings.h2.size": integer between 14 and 22,
+  "headings.h2.color": "#xxxxxx",
+  "headings.h2.bold": true | false,
+  "table.headerBg": "#xxxxxx",
+  "table.headerColor": "#xxxxxx",
+  "page.marginTop": integer between 10 and 35,
+  "page.marginRight": integer between 10 and 35,
+  "page.marginBottom": integer between 10 and 35,
+  "page.marginLeft": integer between 10 and 35
+}
+Output ONLY raw JSON. No markdown backticks, no conversational text.`;
+
+  try {
+    const res = await apiFetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `排版风格要求：${stylePrompt}` }
+        ],
+        stream: false
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      let errMsg = 'HTTP ' + res.status;
+      try {
+        const errJson = JSON.parse(errText);
+        if (errJson.error) errMsg = errJson.error;
+      } catch (e) {
+        if (errText) errMsg = errText.slice(0, 100);
+      }
+      throw new Error(errMsg);
+    }
+
+    let text = '';
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const data = await res.json();
+      text = data.content || (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    } else {
+      const rawText = await res.text();
+      const lines = rawText.split('\n');
+      const chunks = [];
+      for (const line of lines) {
+        if (line.startsWith('data:')) {
+          const jsonStr = line.slice(5).trim();
+          if (jsonStr && jsonStr !== '[DONE]') {
+            try {
+              const d = JSON.parse(jsonStr);
+              if (d.d) chunks.push(d.d);
+              else if (d.content) chunks.push(d.content);
+            } catch (e) {}
+          }
+        }
+      }
+      text = chunks.length ? chunks.join('') : rawText;
+    }
+
+    text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+    const parsed = JSON.parse(text);
+    
+    // Apply options to export state and DOM
+    state.export.options = expDeepMerge(state.export.options || state.export.defaults, parsed);
+    applyExportOptionsToDom();
+    updateExportLivePreview();
+
+    if (statusEl) {
+      statusEl.textContent = _t('exportai.applied') || '已应用 AI 生成的排版样式预设';
+      setTimeout(() => statusEl.classList.add('hidden'), 3000);
+    }
+    showToast(_t('exportai.applied') || '已应用 AI 生成的排版样式预设');
+  } catch (e) {
+    if (statusEl) {
+      statusEl.textContent = (_t('ai.reqFailMsg') || 'AI 请求失败：') + e.message;
+    }
+    showToast((_t('toast.unknownError') || '生成失败：') + e.message);
+  }
+}
+
 

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -18,7 +19,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--request", type=Path, required=True)
     parser.add_argument("--root", type=Path)
-    parser.add_argument("--reviewer", default="Natsumer")
+    parser.add_argument("--reviewer", default=os.getenv("READMD_REVIEWER", "maintainer"))
     args = parser.parse_args()
 
     request_path = args.request.resolve()

@@ -263,13 +263,11 @@ body {
 .journey-stage {
   position: relative;
   overflow: hidden;
-  border-radius: 24px;
+  border-radius: 20px;
   aspect-ratio: 16 / 9;
   background: #0d0e12;
-  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.22), 0 0 0 1px rgba(255, 255, 255, 0.1);
-  transform: perspective(1400px) rotateX(0deg) scale(0.98);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(0, 0, 0, 0.08);
   will-change: transform;
-  transition: box-shadow 0.3s ease;
 }
 
 .journey-stage video,
@@ -277,7 +275,8 @@ body {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #0d0e12;
 }
 
 .journey-progress {
@@ -323,19 +322,14 @@ body {
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.85;
+  opacity: 0.9;
   pointer-events: none;
 }
 
 .cinema-grid {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(circle at 50% 35%, rgba(0, 113, 227, 0.15) 0%, transparent 60%),
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: auto, 80px 80px, 80px 80px;
-  mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 85%);
+  background: radial-gradient(circle at 50% 40%, rgba(0, 113, 227, 0.12) 0%, rgba(8, 9, 12, 0.72) 70%, #08090c 100%);
   pointer-events: none;
 }
 

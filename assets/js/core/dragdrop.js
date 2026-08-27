@@ -75,20 +75,20 @@ function bindGlobalDragAndDrop() {
     const dt = e.dataTransfer;
     if (!dt) return;
 
-    // 1. 处理文件拖拽
+    // 1. 处理文件拖拽（万物皆可开：代码/配置/脚本/文本直接开，Office/PDF 走转换）
     if (dt.files && dt.files.length > 0) {
       const files = Array.from(dt.files);
-      const mdFiles = files.filter(f => MD_RE.test(f.name || ''));
-      const otherFiles = files.filter(f => !MD_RE.test(f.name || ''));
+      const binaryConvertFiles = files.filter(f => (typeof CONVERT_BINARY_RE !== 'undefined' ? CONVERT_BINARY_RE.test(f.name || '') : false) || IMG_RE.test(f.name || ''));
+      const textAndCodeFiles = files.filter(f => !binaryConvertFiles.includes(f));
 
-      if (mdFiles.length > 0) {
-        for (const f of mdFiles) {
+      if (textAndCodeFiles.length > 0) {
+        for (const f of textAndCodeFiles) {
           const path = f.path ? f.path : await uploadFile(f);
           if (path) await loadFile(path, { browserCopy: !f.path });
         }
       }
-      if (otherFiles.length > 0) {
-        for (const f of otherFiles) {
+      if (binaryConvertFiles.length > 0) {
+        for (const f of binaryConvertFiles) {
           const path = f.path ? f.path : await uploadFile(f);
           if (path) await convertOrOcr(path, 'convert');
         }

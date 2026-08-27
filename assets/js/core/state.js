@@ -38,8 +38,10 @@ function apiFetch(url, opts) {
 }
 
 const MD_RE = /\.(md|markdown|mdown|mkd|mdx|txt)$/i;
+const TEXT_CODE_RE = /\.(md|markdown|mdown|mkd|mdx|txt|toml|ya?ml|json[5c]?|ini|cfg|conf|config|env|properties|xml|plist|inf|bat|cmd|ps1|psm1|sh|bash|zsh|fish|vbs|py|m?js|c?js|tsx?|jsx|c|cpp|h|hpp|cc|cxx|cs|java|kts?|rs|go|rb|php|swift|lua|r|m|dart|sql|dockerfile|makefile|gradle|html?|css|scss|sass|less|vue|svelte|log|out|err|diff|patch|gitignore|gitattributes|editorconfig|npmrc|rst|asciidoc|adoc|bib|csv|tsv)$/i;
+const CONVERT_BINARY_RE = /\.(docx?|pptx?|xlsx?|pdf|epub|mobi|rtf|odt)$/i;
 const IMG_RE = /\.(png|jpe?g|bmp|webp|gif|tiff?)$/i;
-const CONVERT_EXTS = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm', '.epub', '.mobi', '.rtf', '.odt', '.csv', '.tsv', '.json', '.xml', '.yaml', '.yml', '.rst', '.tex', '.latex'];
+const CONVERT_EXTS = ['.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm', '.epub', '.mobi', '.rtf', '.odt', '.csv', '.tsv', '.json', '.xml', '.yaml', '.yml', '.rst', '.tex', '.latex', '.toml', '.ini', '.bat', '.ps1', '.py', '.log', '.sql'];
 
 const state = {
   tabs: [],            // 多标签列表：{ id, mode, source, path, dir, name, title, content, original, fixed, fixes, stats, size, mtime, encoding, webAssets, isDirty, scrollPos, isVirtual }

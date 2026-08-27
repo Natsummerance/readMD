@@ -301,6 +301,7 @@ function bindEvents() {
   if ($('cm-sel-copy')) $('cm-sel-copy').addEventListener('click', cmCopySelection);
   if ($('cm-sel-cut')) $('cm-sel-cut').addEventListener('click', cmCutSelection);
   if ($('cm-sel-paste')) $('cm-sel-paste').addEventListener('click', cmPasteSelection);
+  if (typeof bindEditorAiEvents === 'function') bindEditorAiEvents();
 
 
   /* --- 7. 实时分栏预览与滚动同步控制 (Split Preview) [联动: editor/preview.js] --- */

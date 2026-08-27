@@ -128,6 +128,10 @@
         <button id="btn-insert-frontmatter" data-md="frontmatter" data-i18n="editor.frontmatter">样式元数据 (Frontmatter)</button>
       </div></div>
     <button id="formula-open" class="md-tool-btn md-group" title="公式选择器" data-i18n="editor.formula" data-i18n-title="dialog.formulaTitle">∑ 公式</button>
+    <button id="btn-edit-ai-assistant" class="md-tool-btn ai-btn" title="AI 编辑助手与智能补全 (Alt+K)" data-i18n-title="editai.title">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
+      <span data-i18n="editai.title">AI 助手 (Alt+K)</span>
+    </button>
   </div>
   <span class="edit-tip"><span id="edit-doc-stats">0 字 · 阅读约 1 分钟</span> <span data-i18n="editor.shortcutsTip">· Ctrl+S 保存 · Esc 取消</span></span>
   <div class="edit-actions-right">
@@ -156,6 +160,10 @@
 
 <!-- 编辑器选中文本浮动快捷操作栏 -->
 <div id="cm-selection-toolbar" class="cm-selection-toolbar hidden" role="toolbar" aria-label="选中文本快捷操作" data-i18n-aria="editor.selectionToolbar">
+  <button id="cm-sel-ai" class="cm-sel-btn ai-highlight" title="AI 润色与智能修改" data-i18n-title="editai.actPolish">
+    <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
+    <span data-i18n="editai.title">AI</span>
+  </button>
   <button id="cm-sel-copy" class="cm-sel-btn" title="复制 (Ctrl+C)" data-i18n-title="editor.copy">
     <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
     <span data-i18n="editor.copy">复制</span>
@@ -167,7 +175,6 @@
   <button id="cm-sel-paste" class="cm-sel-btn" title="粘贴 (Ctrl+V)" data-i18n-title="editor.paste">
     <svg class="cm-sel-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
     <span data-i18n="editor.paste">粘贴</span>
-
   </button>
 </div>
 
@@ -265,6 +272,42 @@
     <div id="edit-wrap" class="hidden"><div id="edit-cm"></div></div>
     <div id="pv-splitter" class="hidden" role="separator" tabindex="0" aria-label="调整编辑与预览比例" aria-orientation="vertical" aria-valuemin="25" aria-valuemax="70" aria-valuenow="50" aria-valuetext="50%" data-i18n-aria="editor.pvSplitterAria"></div>
     <div id="preview-wrap" class="hidden"><div id="preview-pane" class="markdown-body"></div></div>
+
+    <!-- 编辑器 AI 助手交互浮层 (Alt+K) -->
+    <div id="edit-ai-bar" class="edit-ai-bar hidden" role="dialog" aria-label="AI 编辑助手" data-i18n-aria="editai.title">
+      <div class="edit-ai-header">
+        <div class="edit-ai-title">
+          <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
+          <span data-i18n="editai.title">AI 编辑助手 (Alt+K)</span>
+        </div>
+        <button id="edit-ai-close" class="modal-close-btn" aria-label="关闭" data-i18n-aria="toolbar.close">
+          <svg class="modal-close-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="edit-ai-body">
+        <div class="edit-ai-input-wrap">
+          <input id="edit-ai-input" type="text" placeholder="告诉 AI 如何修改，或直接点击下方快捷动作..." data-i18n-placeholder="editai.placeholder" autocomplete="off">
+          <button id="edit-ai-submit" class="btn btn-sm btn-primary" data-i18n="ai.send">发送</button>
+        </div>
+        <div class="edit-ai-quick-actions">
+          <button class="edit-ai-act-chip" data-act="complete" data-i18n="editai.actComplete">智能续写补全</button>
+          <button class="edit-ai-act-chip" data-act="polish" data-i18n="editai.actPolish">润色选中文本</button>
+          <button class="edit-ai-act-chip" data-act="fix" data-i18n="editai.actFix">排版与语法自愈</button>
+          <button class="edit-ai-act-chip" data-act="translate" data-i18n="editai.actTranslate">翻译为英文/中文</button>
+        </div>
+        <div id="edit-ai-preview" class="edit-ai-preview hidden">
+          <div class="edit-ai-preview-header">
+            <span id="edit-ai-status" class="edit-ai-status" data-i18n="editai.generating">AI 正在深度生成中...</span>
+            <div class="edit-ai-preview-actions">
+              <button id="edit-ai-apply" class="btn btn-sm btn-accent" data-i18n="editai.apply">应用替换 (Tab)</button>
+              <button id="edit-ai-insert" class="btn btn-sm" data-i18n="editai.insert">插入光标处</button>
+              <button id="edit-ai-discard" class="btn btn-sm" data-i18n="editai.discard">放弃 (Esc)</button>
+            </div>
+          </div>
+          <div id="edit-ai-preview-content" class="edit-ai-preview-content markdown-body"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- AI 助手工作台 (Split Workspace / Floating Panel) -->
@@ -488,7 +531,7 @@
           <label class="img-ctl"><span data-i18n="img.angle">角度</span> <input id="img-angle" type="range" min="-180" max="180" step="0.1" value="0"><input id="img-angle-number" class="img-number" type="number" min="-180" max="180" step="0.1" value="0" aria-label="角度" data-i18n-aria="img.angle">°</label></div>
         <div class="img-section"><strong data-i18n="img.view">查看</strong><label class="img-ctl"><span data-i18n="img.zoom">画布缩放</span> <input id="img-view-zoom" type="range" min="25" max="400" value="100"><span id="img-view-zoom-val">100%</span></label><p class="img-help" data-i18n="img.help">滚轮缩放 · 空格拖拽平移 · +/- 缩放</p></div>
         <div class="img-section"><strong data-i18n="img.cropAndOutput">裁剪与输出</strong><select id="img-ratio" title="裁剪比例" data-i18n-title="img.ratio"><option value="free" data-i18n="img.ratioFree">自由比例</option><option value="1:1" data-i18n="img.ratio1_1">1:1 方形</option><option value="4:3" data-i18n="img.ratio4_3">4:3</option><option value="3:2" data-i18n="img.ratio3_2">3:2</option><option value="16:9" data-i18n="img.ratio16_9">16:9</option><option value="orig" data-i18n="img.ratioOrig">原图比例</option></select>
-<div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" aria-label="锁定宽高比" title="锁定宽高比" data-i18n-title="img.lockRatio">🔗</button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
+<div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" aria-label="锁定宽高比" title="锁定宽高比" data-i18n-title="img.lockRatio"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
         <div class="img-btn-row"><button id="img-undo" class="tb-btn" data-i18n="editor.undo" disabled>撤销</button><button id="img-redo" class="tb-btn" data-i18n="editor.redo" disabled>重做</button><button id="img-reset" class="tb-btn" data-i18n="img.reset">重置</button></div>
       </aside>
     </div>
@@ -742,7 +785,9 @@
   <div id="export-box">
     <div class="export-head">
       <h3 data-i18n="export.title">导出文档</h3>
-      <button id="export-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">&#10005;</button>
+      <button id="export-close" class="modal-close-btn" aria-label="关闭" data-i18n-aria="toolbar.close">
+        <svg class="modal-close-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
     </div>
     <div class="export-body">
       <div class="export-side">
@@ -782,6 +827,19 @@
             <button id="exp-save-ok" class="tb-btn accent" data-i18n="editor.save">保存</button>
             <button id="exp-save-cancel" class="tb-btn" data-i18n="editor.cancel">取消</button>
           </div>
+        </div>
+
+        <!-- AI 风格排版设计师 -->
+        <div class="exp-ai-style-card">
+          <div class="exp-ai-style-header">
+            <svg class="tb-ic" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4L12 3z"/><path d="M19 14l.9 2.3L22 17l-2.1.7L19 20l-.9-2.3L16 17l2.1-.7L19 14z"/></svg>
+            <span data-i18n="exportai.title">AI 风格排版设计师</span>
+          </div>
+          <div class="exp-ai-style-input-row">
+            <input id="exp-ai-prompt" type="text" placeholder="例如：学术顶会 LaTeX 论文排版 / 莫兰迪画册风格..." data-i18n-placeholder="exportai.placeholder" autocomplete="off">
+            <button id="exp-ai-gen-btn" class="tb-btn accent" data-i18n="exportai.generateBtn">AI 生成</button>
+          </div>
+          <div id="exp-ai-status" class="exp-ai-status hidden" data-i18n="exportai.generating">正在分析并设计排版参数...</div>
         </div>
         <button id="export-preview-card" type="button" class="export-preview-card" aria-label="打开全屏排版预览" data-i18n-aria="export.previewCardTitle" title="点击打开全屏排版预览" data-i18n-title="export.previewCardTitle">
           <div class="export-preview-header">

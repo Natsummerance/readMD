@@ -126,11 +126,11 @@
       <div class="mt-8">
         <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">ダウンロードソースと高速ミラー · Download Mirror</p>
         <div class="mirror-nav" role="tablist" aria-label="ダウンロードソース選択">
-          <button class="mirror-tab is-active" data-mirror="direct" type="button">🌐 公式 GitHub</button>
-          <button class="mirror-tab" data-mirror="ghfast" type="button">⚡ 高速ミラー 1 (GHFast)</button>
-          <button class="mirror-tab" data-mirror="ghproxy" type="button">⚡ 高速ミラー 2 (GHProxy)</button>
-          <button class="mirror-tab" data-mirror="gitmirror" type="button">⚡ 高速ミラー 3 (GitMirror)</button>
-          <button class="mirror-tab" data-mirror="fastgit" type="button">⚡ 高速ミラー 4 (FastGit)</button>
+          <button class="mirror-tab is-active" data-mirror="direct" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>公式 GitHub</button>
+        <button class="mirror-tab" data-mirror="ghfast" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>高速ミラー 1 (GHFast)</button>
+        <button class="mirror-tab" data-mirror="ghproxy" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>高速ミラー 2 (GHProxy)</button>
+        <button class="mirror-tab" data-mirror="gitmirror" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>高速ミラー 3 (GitMirror)</button>
+        <button class="mirror-tab" data-mirror="fastgit" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>高速ミラー 4 (FastGit)</button>
         </div>
       </div>
     </div>
@@ -177,6 +177,18 @@
     </section>
 
     <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/ja/large-markdown-files/">巨大な Markdown を開く</a><a class="link-action" href="/ja/markdown-to-slides/">PowerPoint を使わず発表</a><a class="link-action" href="/ja/convert-to-markdown/">文書を Markdown へ変換</a><a class="link-action" href="/ja/markdown-tables/">Markdown 表を作成</a><a class="link-action" href="/ja/pdf-to-markdown/">PDF から Markdown</a><a class="link-action" href="/ja/scan-to-markdown/">スキャン文字を抽出</a><a class="link-action" href="/ja/bibtex-citations/">BibTeX 文献を管理</a><a class="link-action" href="/ja/release-notes/">リリースノート</a></div>
+    <section class="mt-10 rounded-2xl border border-border bg-card p-6 text-sm">
+      <h3 class="font-semibold text-foreground">オープンソース版のシステム信頼とインストール案内</h3>
+      <p class="mt-2 text-muted leading-relaxed">
+        ReadMD のすべてのリリースは GitHub Actions CI で自動ビルドされています。コミュニティ版は商用署名がないため、初回起動時に OS の警告が表示される場合があります：
+      </p>
+      <ul class="mt-3 list-disc pl-5 space-y-1.5 text-muted">
+        <li><strong>Windows:</strong> Microsoft Defender SmartScreen が表示された場合は「詳細情報」をクリックし「実行」を選択してください。</li>
+        <li><strong>macOS:</strong> Gatekeeper でブロックされた場合はアプリアイコンを右クリックして「開く」を選択するか、ターミナルで <code>xattr -d com.apple.quarantine ReadMD.app</code> を実行してください。</li>
+        <li><strong>Linux:</strong> AppImage を実行する前にターミナルで <code>chmod +x ReadMD-linux-*.AppImage</code> を実行して実行権限を付与してください。</li>
+      </ul>
+    </section>
+
     <div class="mt-8 flex flex-wrap items-center gap-4">
       <a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt">SHA256SUMS.txt</a>
       <a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">GitHub で Star</a>

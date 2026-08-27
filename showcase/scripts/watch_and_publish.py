@@ -40,7 +40,7 @@ from validate_package import (
     variant_selection_integrity_errors,
 )
 
-DEFAULT_PUBLISHER = Path("Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
+DEFAULT_PUBLISHER = Path(os.getenv("XHS_PUBLISHER_SCRIPT", "tools/xhs_publish.py"))
 STATE_VERSION = 1
 SHOWCASE_ROOT = Path(__file__).resolve().parents[1]
 ORIGINALITY_ENDPOINT_COOLDOWN_RELEASES = 8

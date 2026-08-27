@@ -335,6 +335,31 @@ def chat(payload):
     if mode == "responses":
         return _chat_openai_responses(base_url, api_key, model, messages, temperature, stream)
     return _chat_openai(base_url, api_key, model, messages, temperature, stream)
+def _normalize_base_url(base_url, endpoint="chat/completions"):
+    """清洗与规范化 base_url，防止用户输入带尾部重复端点或多余斜杠。"""
+    u = (base_url or "").strip().rstrip("/")
+    if not u:
+        return u
+    suffixes_to_strip = [
+        "/chat/completions",
+        "/completions",
+        "/responses",
+        "/v1/messages",
+        "/messages",
+        "/v1/models",
+        "/models",
+    ]
+    for s in suffixes_to_strip:
+        if u.lower().endswith(s):
+            u = u[:len(u) - len(s)].rstrip("/")
+            break
+
+    if not endpoint:
+        return u
+    endpoint = endpoint.lstrip("/")
+    return u + "/" + endpoint
+
+
 def _openai_usage(d):
     u = d.get("usage") or {}
     if not u:
@@ -350,7 +375,7 @@ def _openai_usage(d):
 
 
 def _chat_openai(base_url, api_key, model, messages, temperature, stream):
-    url = base_url + "/chat/completions"
+    url = _normalize_base_url(base_url, "chat/completions")
     body = {"model": model, "messages": _openai_messages(messages), "stream": stream, "temperature": temperature}
     if stream:
         body["stream_options"] = {"include_usage": True}
@@ -413,7 +438,7 @@ def _chat_openai(base_url, api_key, model, messages, temperature, stream):
 
 
 def _chat_openai_completion(base_url, api_key, model, messages, temperature, stream):
-    url = base_url + "/completions"
+    url = _normalize_base_url(base_url, "completions")
     msgs = _openai_messages(messages)
     prompt_text = "\n\n".join(m.get("content", "") for m in msgs if m.get("content"))
     body = {"model": model, "prompt": prompt_text, "max_tokens": 4096,
@@ -477,7 +502,7 @@ def _chat_openai_completion(base_url, api_key, model, messages, temperature, str
 
 
 def _chat_openai_responses(base_url, api_key, model, messages, temperature, stream):
-    url = base_url + "/responses"
+    url = _normalize_base_url(base_url, "responses")
     msgs = []
     for m in _openai_messages(messages):
         if m["role"] == "system":
@@ -555,7 +580,7 @@ def _anthropic_usage(u):
 
 
 def _chat_anthropic(base_url, api_key, model, messages, temperature, stream):
-    url = base_url + "/v1/messages"
+    url = _normalize_base_url(base_url, "v1/messages")
     system, msgs = _anthropic_messages(messages)
     body = {"model": model, "max_tokens": 4096, "messages": msgs, "temperature": temperature, "stream": stream}
     if system:

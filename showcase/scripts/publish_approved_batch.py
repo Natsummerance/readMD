@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 from pathlib import Path
 from datetime import datetime, timezone
@@ -103,12 +104,12 @@ def main() -> int:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--approval", type=Path)
     group.add_argument("--approval-request", type=Path)
-    parser.add_argument("--reviewer", default="Natsumer")
+    parser.add_argument("--reviewer", default=os.getenv("READMD_REVIEWER", "maintainer"))
     parser.add_argument("--root", type=Path)
     parser.add_argument("--work-dir", type=Path, required=True)
     parser.add_argument("--state", type=Path, required=True)
     parser.add_argument("--ledger", type=Path, required=True)
-    parser.add_argument("--publisher", default="Z:/Natsumer/.codex/skills/xhs-publish/scripts/xhs_publish.py")
+    parser.add_argument("--publisher", default=os.getenv("XHS_PUBLISHER_SCRIPT", "tools/xhs_publish.py"))
     parser.add_argument("--publisher-proxy", default="http://127.0.0.1:3456")
     parser.add_argument("--max-attempts", type=int, choices={1, 2, 3}, default=2)
     parser.add_argument("--validate-only", action="store_true", help="verify PDF, hashes, QA, and ledger state without creating an approval or publishing")

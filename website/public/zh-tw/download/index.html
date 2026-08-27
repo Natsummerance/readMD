@@ -126,11 +126,11 @@
       <div class="mt-8">
         <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">下載通道與鏡像加速 · Download Mirror</p>
         <div class="mirror-nav" role="tablist" aria-label="下載源選擇">
-          <button class="mirror-tab is-active" data-mirror="direct" type="button">🌐 官方直連 (GitHub)</button>
-          <button class="mirror-tab" data-mirror="ghfast" type="button">⚡ 鏡像加速 1 (GHFast)</button>
-          <button class="mirror-tab" data-mirror="ghproxy" type="button">⚡ 鏡像加速 2 (GHProxy)</button>
-          <button class="mirror-tab" data-mirror="gitmirror" type="button">⚡ 鏡像加速 3 (GitMirror)</button>
-          <button class="mirror-tab" data-mirror="fastgit" type="button">⚡ 鏡像加速 4 (FastGit)</button>
+          <button class="mirror-tab is-active" data-mirror="direct" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>官方直連 (GitHub)</button>
+          <button class="mirror-tab" data-mirror="ghfast" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 1 (GHFast)</button>
+          <button class="mirror-tab" data-mirror="ghproxy" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 2 (GHProxy)</button>
+          <button class="mirror-tab" data-mirror="gitmirror" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 3 (GitMirror)</button>
+          <button class="mirror-tab" data-mirror="fastgit" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 4 (FastGit)</button>
         </div>
       </div>
     </div>
@@ -177,6 +177,18 @@
     </section>
 
     <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-tw/large-markdown-files/">開啟超大 Markdown 檔案</a><a class="link-action" href="/zh-tw/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-tw/convert-to-markdown/">文件轉 Markdown</a><a class="link-action" href="/zh-tw/markdown-tables/">建立 Markdown 表格</a><a class="link-action" href="/zh-tw/pdf-to-markdown/">PDF 轉 Markdown</a><a class="link-action" href="/zh-tw/scan-to-markdown/">掃描件擷取文字</a><a class="link-action" href="/zh-tw/bibtex-citations/">管理 BibTeX 引用</a><a class="link-action" href="/zh-tw/release-notes/">發布說明</a></div>
+    <section class="mt-10 rounded-2xl border border-border bg-card p-6 text-sm">
+      <h3 class="font-semibold text-foreground">開源軟體包系統信任與安裝指引</h3>
+      <p class="mt-2 text-muted leading-relaxed">
+        ReadMD 所有版本均透過 GitHub Actions 公開流水線透明建置。因社群建置未購買商業簽章，首次啟動時作業系統可能彈出安全提示：
+      </p>
+      <ul class="mt-3 list-disc pl-5 space-y-1.5 text-muted">
+        <li><strong>Windows：</strong>若彈出 Microsoft Defender SmartScreen，點擊「詳細資訊」並選擇「仍要執行」即可。</li>
+        <li><strong>macOS：</strong>若遇 Gatekeeper 攔截，請右鍵點擊應用圖示選擇「開啟」，或在終端機執行 <code>xattr -d com.apple.quarantine ReadMD.app</code> 移除隔離屬性。</li>
+        <li><strong>Linux：</strong>執行 AppImage 格式前需在終端機執行 <code>chmod +x ReadMD-linux-*.AppImage</code> 賦予執行權限。</li>
+      </ul>
+    </section>
+
     <div class="mt-8 flex flex-wrap items-center gap-4">
       <a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt">SHA256SUMS.txt</a>
       <a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 給 Star</a>

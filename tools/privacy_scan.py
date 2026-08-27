@@ -13,7 +13,9 @@ KEY_PATTERNS = [
     re.compile(rb"\bAIza[0-9A-Za-z_-]{30,}\b"),
 ]
 LOCAL_PATH_PATTERNS = [
-    re.compile(rb"[a-zA-Z]:[/\\](?:users|programming|project|workspace|home|desktop|downloads)", re.IGNORECASE),
+    re.compile(rb"[a-zA-Z]:[/\\](?:users|programming|project|workspace|home|desktop|downloads|natsumer|[a-zA-Z0-9_.-]+[/\\]\.(?:codex|gemini|antigravity))", re.IGNORECASE),
+    re.compile(rb"[a-zA-Z]:[/\\][a-zA-Z0-9_.-]+[/\\](?:skills|plugins|creator)[/\\]", re.IGNORECASE),
+    re.compile(rb"/(?:Users|home)/[a-zA-Z0-9_.-]+/(?:\.codex|\.gemini|Programming|Projects)", re.IGNORECASE),
 ]
 
 

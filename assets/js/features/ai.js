@@ -46,6 +46,22 @@ function toggleAiPanel() {
   }
 }
 
+function openAiPanelWithPrompt(act, promptText) {
+  const p = $('ai-panel');
+  if (!p) return;
+  if (p.classList.contains('hidden')) {
+    toggleAiPanel();
+  }
+  const promptInput = $('ai-prompt');
+  if (promptInput && promptText) {
+    promptInput.value = promptText;
+  }
+  if (act) {
+    setTimeout(() => runAi(act), 50);
+  }
+}
+window.openAiPanelWithPrompt = openAiPanelWithPrompt;
+
 function toggleAiFullscreen() {
   const p = $('ai-panel');
   if (!p) return;

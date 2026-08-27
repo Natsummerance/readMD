@@ -54,7 +54,15 @@ function createEditor(doc) {
       CM.markdown({ base: CM.markdownLanguage, codeLanguages: CM.languages }),
       CM.autocompletion({ override: [cmMarkdownCompletions()], activateOnTyping: true }),
       CM.closeBrackets(),
-      CM.keymap.of([CM.indentWithTab, ...CM.closeBracketsKeymap, ...CM.defaultKeymap, ...CM.historyKeymap, ...CM.completionKeymap]),
+      CM.keymap.of([
+        { key: 'Alt-k', run: () => { openEditAiBar(); return true; } },
+        { key: 'Ctrl-j', run: () => { openEditAiBar(); return true; } },
+        CM.indentWithTab,
+        ...CM.closeBracketsKeymap,
+        ...CM.defaultKeymap,
+        ...CM.historyKeymap,
+        ...CM.completionKeymap
+      ]),
       CM.EditorView.lineWrapping,
       CM.EditorView.contentAttributes.of({ 'aria-label': _t('toolbar.edit') || 'Markdown editor' }),
       CM.EditorView.updateListener.of(u => {
@@ -702,4 +710,207 @@ function insertCustomTable(rows, cols) {
     });
     cmView.focus();
   }
+}
+
+/* ============================================================
+   Editor Studio PRO: AI Assistant & Inline Completion (Alt+K)
+   ============================================================ */
+
+let editAiCurrentResult = '';
+let editAiSelectionRange = null;
+
+function openEditAiBar() {
+  if (!state.editing || !cmView) return;
+  const bar = $('edit-ai-bar');
+  if (!bar) return;
+  
+  const sel = cmView.state.selection.main;
+  if (sel && !sel.empty) {
+    editAiSelectionRange = { from: sel.from, to: sel.to, text: cmView.state.sliceDoc(sel.from, sel.to) };
+  } else {
+    const cursorPos = sel ? sel.from : cmView.state.doc.length;
+    const contextBefore = cmView.state.sliceDoc(Math.max(0, cursorPos - 1200), cursorPos);
+    editAiSelectionRange = { from: cursorPos, to: cursorPos, text: '', context: contextBefore };
+  }
+
+  bar.classList.remove('hidden');
+  const input = $('edit-ai-input');
+  if (input) {
+    input.value = '';
+    setTimeout(() => input.focus(), 30);
+  }
+}
+
+function closeEditAiBar() {
+  const bar = $('edit-ai-bar');
+  if (bar) bar.classList.add('hidden');
+  const preview = $('edit-ai-preview');
+  if (preview) preview.classList.add('hidden');
+  editAiCurrentResult = '';
+  editAiSelectionRange = null;
+  if (cmView) cmView.focus();
+}
+
+async function runEditAiAction(act, customPrompt = '') {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const preview = $('edit-ai-preview');
+  const previewContent = $('edit-ai-preview-content');
+  const statusEl = $('edit-ai-status');
+  if (preview) preview.classList.remove('hidden');
+  if (previewContent) previewContent.innerHTML = '';
+  if (statusEl) statusEl.textContent = _t('editai.generating') || 'AI 正在深度生成中...';
+
+  const range = editAiSelectionRange || { from: 0, to: 0, text: '' };
+  let systemPrompt = '你是 ReadMD 智能写作与编辑助手。根据用户的要求或上下文进行高质量 Markdown 处理。只输出生成的正文，不要有任何多余的寒暄或解释。';
+  let userMessage = '';
+
+  if (act === 'complete') {
+    systemPrompt = '你是 Markdown 智能续写助手。根据用户给出的前文内容与光标上下文，自然流畅地续写下一段落或后续内容。只输出续写内容本身。';
+    userMessage = `前文内容：\n${range.context || range.text || (cmView ? cmView.state.doc.toString() : '')}\n\n请自然续写后续内容：`;
+  } else if (act === 'polish') {
+    systemPrompt = '你是专业特约编辑。深度润色用户给出的 Markdown 文本：纠错字、通语病、增强流畅度与文采，严格保留原格式标记与公式。只输出润色后的正文。';
+    userMessage = `请润色以下文本：\n\n${range.text || (cmView ? cmView.state.doc.toString() : '')}`;
+  } else if (act === 'fix') {
+    systemPrompt = '你是 Markdown 语法排版专家。修复文本中的表格对齐、公式符号、未闭合标记与排版缺陷。只输出修复后的完整 Markdown。';
+    userMessage = `请修复以下 Markdown 排版与语法：\n\n${range.text || (cmView ? cmView.state.doc.toString() : '')}`;
+  } else if (act === 'translate') {
+    systemPrompt = '你是专业翻译。若输入主要是中文则翻译为高质量地道英文；若主要是英文则翻译为地道严谨简体中文。只输出翻译结果。';
+    userMessage = `请翻译以下内容：\n\n${range.text || (cmView ? cmView.state.doc.toString() : '')}`;
+  } else {
+    userMessage = customPrompt || '请优化此段内容';
+    if (range.text) userMessage += `\n\n参考文本：\n${range.text}`;
+  }
+
+  editAiCurrentResult = '';
+
+  try {
+    const res = await apiFetch('/api/ai/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage }
+        ],
+        stream: false
+      })
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      let errMsg = 'HTTP ' + res.status;
+      try {
+        const errJson = JSON.parse(errText);
+        if (errJson.error) errMsg = errJson.error;
+      } catch (e) {
+        if (errText) errMsg = errText.slice(0, 100);
+      }
+      throw new Error(errMsg);
+    }
+
+    let resultText = '';
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const data = await res.json();
+      resultText = data.content || (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+    } else {
+      const rawText = await res.text();
+      const lines = rawText.split('\n');
+      const chunks = [];
+      for (const line of lines) {
+        if (line.startsWith('data:')) {
+          const jsonStr = line.slice(5).trim();
+          if (jsonStr && jsonStr !== '[DONE]') {
+            try {
+              const d = JSON.parse(jsonStr);
+              if (d.d) chunks.push(d.d);
+              else if (d.content) chunks.push(d.content);
+            } catch (e) {}
+          }
+        }
+      }
+      resultText = chunks.length ? chunks.join('') : rawText;
+    }
+
+    editAiCurrentResult = resultText;
+    if (previewContent) {
+      previewContent.textContent = resultText;
+    }
+    if (statusEl) statusEl.textContent = _t('editai.title') || '生成完成';
+  } catch (err) {
+    if (statusEl) statusEl.textContent = (_t('ai.reqFailMsg') || 'AI 请求失败：') + err.message;
+    if (previewContent) previewContent.textContent = err.message;
+  }
+}
+
+function applyEditAiResult() {
+  if (!cmView || !editAiCurrentResult) {
+    closeEditAiBar();
+    return;
+  }
+  const range = editAiSelectionRange || { from: cmView.state.selection.main.from, to: cmView.state.selection.main.to };
+  cmView.dispatch({
+    changes: { from: range.from, to: range.to, insert: editAiCurrentResult },
+    selection: { anchor: range.from + editAiCurrentResult.length }
+  });
+  closeEditAiBar();
+}
+
+function insertEditAiResult() {
+  if (!cmView || !editAiCurrentResult) {
+    closeEditAiBar();
+    return;
+  }
+  const sel = cmView.state.selection.main;
+  const pos = sel ? sel.to : cmView.state.doc.length;
+  cmView.dispatch({
+    changes: { from: pos, to: pos, insert: '\n' + editAiCurrentResult + '\n' },
+    selection: { anchor: pos + editAiCurrentResult.length + 2 }
+  });
+  closeEditAiBar();
+}
+
+function discardEditAiResult() {
+  closeEditAiBar();
+}
+
+function bindEditorAiEvents() {
+  const btnAssistant = $('btn-edit-ai-assistant');
+  const cmSelAi = $('cm-sel-ai');
+  const closeBtn = $('edit-ai-close');
+  const submitBtn = $('edit-ai-submit');
+  const inputEl = $('edit-ai-input');
+  const applyBtn = $('edit-ai-apply');
+  const insertBtn = $('edit-ai-insert');
+  const discardBtn = $('edit-ai-discard');
+
+  if (btnAssistant) btnAssistant.addEventListener('click', openEditAiBar);
+  if (cmSelAi) cmSelAi.addEventListener('click', () => { hideCmSelectionToolbar(); openEditAiBar(); });
+  if (closeBtn) closeBtn.addEventListener('click', closeEditAiBar);
+  if (discardBtn) discardBtn.addEventListener('click', discardEditAiResult);
+  if (applyBtn) applyBtn.addEventListener('click', applyEditAiResult);
+  if (insertBtn) insertBtn.addEventListener('click', insertEditAiResult);
+
+  if (submitBtn && inputEl) {
+    submitBtn.addEventListener('click', () => {
+      const val = inputEl.value.trim();
+      if (val) runEditAiAction('custom', val);
+    });
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const val = inputEl.value.trim();
+        if (val) runEditAiAction('custom', val);
+      } else if (e.key === 'Escape') {
+        closeEditAiBar();
+      }
+    });
+  }
+
+  document.querySelectorAll('.edit-ai-act-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const act = btn.dataset.act;
+      if (act) runEditAiAction(act);
+    });
+  });
 }

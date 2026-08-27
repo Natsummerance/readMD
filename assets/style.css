@@ -3485,6 +3485,23 @@ html[dir="rtl"] .edit-actions-right {
   margin-left: 0;
   margin-right: auto;
 }
+html[dir="rtl"] .code-doc-header {
+  flex-direction: row-reverse;
+}
+html[dir="rtl"] .code-doc-actions {
+  margin-left: 0;
+  margin-right: auto;
+}
+html[dir="rtl"] #edit-ai-bar {
+  direction: rtl;
+  text-align: right;
+}
+html[dir="rtl"] .edit-ai-header {
+  flex-direction: row-reverse;
+}
+html[dir="rtl"] .edit-ai-actions {
+  flex-direction: row-reverse;
+}
 html[dir="rtl"] .academic-callout {
   border-left: none;
   border-right: 4px solid var(--accent);
@@ -4622,3 +4639,276 @@ body.zen-mode #content {
     margin-left: 6px;
   }
 }
+
+/* ============================================================
+   Universal Code & Config Viewer Styles
+   ============================================================ */
+.code-doc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  background: var(--bg-sec);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+}
+.code-doc-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--fg2);
+  min-width: 0;
+}
+.code-doc-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+.code-doc-path {
+  font-weight: 600;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.code-doc-lines, .code-doc-size {
+  color: var(--fg3);
+}
+.code-doc-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.code-doc-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.code-doc-actions .btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+}
+.code-doc-actions .btn.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.code-doc-actions .btn.btn-primary:hover {
+  filter: brightness(1.08);
+}
+
+/* ============================================================
+   Editor AI Assistant Floating Bar (Alt+K)
+   ============================================================ */
+.edit-ai-bar {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, calc(100% - 32px));
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16), 0 2px 8px rgba(0, 0, 0, 0.08);
+  z-index: 90;
+  overflow: hidden;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.edit-ai-bar.hidden {
+  display: none !important;
+}
+.edit-ai-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--bg-sec);
+  border-bottom: 1px solid var(--border);
+}
+.edit-ai-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.edit-ai-title svg {
+  width: 15px;
+  height: 15px;
+  stroke: var(--accent);
+}
+.edit-ai-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.edit-ai-input-wrap {
+  display: flex;
+  gap: 8px;
+}
+.edit-ai-input-wrap input {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--bg);
+  color: var(--fg);
+  outline: none;
+}
+.edit-ai-input-wrap input:focus {
+  border-color: var(--accent);
+}
+.edit-ai-input-wrap .btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-s);
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+.edit-ai-quick-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.edit-ai-act-chip {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-sec);
+  color: var(--fg2);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.edit-ai-act-chip:hover {
+  background: var(--accent-light, rgba(59, 130, 246, 0.1));
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.edit-ai-preview {
+  margin-top: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--bg-sec);
+  padding: 10px;
+}
+.edit-ai-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.edit-ai-status {
+  font-size: 12px;
+  color: var(--fg3);
+}
+.edit-ai-preview-actions {
+  display: flex;
+  gap: 6px;
+}
+.edit-ai-preview-actions .btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--fg);
+  cursor: pointer;
+}
+.edit-ai-preview-actions .btn.btn-accent {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.edit-ai-preview-content {
+  max-height: 180px;
+  overflow-y: auto;
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 4px;
+}
+
+/* ============================================================
+   Export AI Typography Designer Card
+   ============================================================ */
+.exp-ai-style-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--bg-sec);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.exp-ai-style-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.exp-ai-style-header svg {
+  stroke: var(--accent);
+}
+.exp-ai-style-input-row {
+  display: flex;
+  gap: 6px;
+}
+.exp-ai-style-input-row input {
+  flex: 1;
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  background: var(--bg);
+  color: var(--fg);
+  outline: none;
+}
+.exp-ai-style-input-row input:focus {
+  border-color: var(--accent);
+}
+.exp-ai-style-input-row button {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-s);
+  white-space: nowrap;
+}
+.exp-ai-status {
+  font-size: 11px;
+  color: var(--fg3);
+}
+.cm-sel-btn.ai-highlight {
+  color: var(--accent);
+  font-weight: 600;
+}
+

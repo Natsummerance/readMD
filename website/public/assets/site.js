@@ -173,20 +173,61 @@
     let lastFrameIndex = -1;
     let filmFrames = sharedFilm.frames;
 
-    const drawFilmFrame = (index) => {
-      if (!filmCanvas || index === lastFrameIndex) return;
+    const drawFilmFrame = (index, blendIndex = -1, blendWeight = 0) => {
+      if (!filmCanvas) return;
       const frame = filmFrames[index];
       if (!frame || !frame.complete || !frame.naturalWidth) return;
-      filmCanvas.width = frame.naturalWidth;
-      filmCanvas.height = frame.naturalHeight;
-      filmCanvas.getContext('2d').drawImage(frame, 0, 0);
+
+      const rect = filmCanvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const targetW = Math.max(1, Math.round(rect.width * dpr));
+      const targetH = Math.max(1, Math.round(rect.height * dpr));
+      if (filmCanvas.width !== targetW || filmCanvas.height !== targetH) {
+        filmCanvas.width = targetW;
+        filmCanvas.height = targetH;
+      }
+
+      const ctx = filmCanvas.getContext('2d');
+      const imgW = frame.naturalWidth;
+      const imgH = frame.naturalHeight;
+      const imgRatio = imgW / imgH;
+      const canvasRatio = targetW / targetH;
+
+      let renderW = targetW;
+      let renderH = targetH;
+      if (canvasRatio > imgRatio) {
+        renderW = targetW;
+        renderH = targetW / imgRatio;
+      } else {
+        renderH = targetH;
+        renderW = targetH * imgRatio;
+      }
+      const x = (targetW - renderW) / 2;
+      const y = (targetH - renderH) / 2;
+
+      ctx.clearRect(0, 0, targetW, targetH);
+      ctx.drawImage(frame, 0, 0, imgW, imgH, x, y, renderW, renderH);
+
+      if (blendIndex >= 0 && blendWeight > 0.01) {
+        const blendFrame = filmFrames[blendIndex];
+        if (blendFrame && blendFrame.complete && blendFrame.naturalWidth) {
+          ctx.globalAlpha = blendWeight;
+          ctx.drawImage(blendFrame, 0, 0, imgW, imgH, x, y, renderW, renderH);
+          ctx.globalAlpha = 1;
+        }
+      }
+
       lastFrameIndex = index;
       filmCanvas.dataset.frameIndex = String(index);
     };
 
     const syncFilm = (progress) => {
       if (!filmCanvas || !frameCount) return;
-      drawFilmFrame(clamp(Math.round(progress * (frameCount - 1)), 0, frameCount - 1));
+      const exactPos = progress * (frameCount - 1);
+      const baseIndex = clamp(Math.floor(exactPos), 0, frameCount - 1);
+      const nextIndex = clamp(baseIndex + 1, 0, frameCount - 1);
+      const weight = exactPos - baseIndex;
+      drawFilmFrame(baseIndex, nextIndex, weight);
       filmCanvas.dataset.syncProgress = progress.toFixed(4);
     };
 
@@ -194,7 +235,7 @@
       if (!filmCanvas || !frameCount) return;
       ensureSharedFilmFrames().then(() => {
         filmFrames = sharedFilm.frames;
-        drawFilmFrame(Math.max(lastFrameIndex, 0));
+        syncFilm(currentProgress);
         filmCanvas.dataset.framesReady = 'true';
       });
     };
@@ -223,7 +264,7 @@
         lastRenderedProgress = currentProgress;
         if (progressBar) progressBar.style.transform = `scaleX(${currentProgress})`;
         if (stage) {
-          stage.style.transform = `perspective(1400px) rotateX(${((0.5 - currentProgress) * 2.8).toFixed(3)}deg) scale(${(0.98 + currentProgress * 0.02).toFixed(4)})`;
+          stage.style.transform = `scale(${(0.985 + currentProgress * 0.015).toFixed(4)})`;
         }
         ranges.forEach(({ element, start, end }) => {
           element.classList.toggle('is-active', currentProgress >= start && currentProgress <= end);
@@ -305,33 +346,44 @@
 
     const buildCanvas = () => {
       const rect = canvas.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-      canvasWidth = Math.max(960, Math.round(rect.width * dpr));
-      canvasHeight = Math.max(540, Math.round(rect.height * dpr));
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvasWidth = Math.max(1, Math.round(rect.width * dpr));
+      canvasHeight = Math.max(1, Math.round(rect.height * dpr));
       canvas.width = canvasWidth;
       canvas.height = canvasHeight;
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
       particles = Array.from({ length: 48 }, () => ({
-        x: Math.random() * rect.width,
-        y: Math.random() * rect.height,
-        radius: 0.7 + Math.random() * 1.6,
-        speed: 0.18 + Math.random() * 0.45,
+        x: Math.random() * canvasWidth,
+        y: Math.random() * canvasHeight,
+        radius: (0.7 + Math.random() * 1.5) * dpr,
+        speed: (0.15 + Math.random() * 0.35) * dpr,
         alpha: 0.12 + Math.random() * 0.18,
       }));
     };
 
     const drawCover = (frame, scale = 1, offsetX = 0, offsetY = 0, alpha = 1) => {
       if (!frame || !frame.naturalWidth) return;
-      const sourceRatio = frame.naturalWidth / frame.naturalHeight;
-      const targetRatio = canvasWidth / canvasHeight;
-      let width = canvasWidth * scale;
-      let height = canvasHeight * scale;
-      if (sourceRatio > targetRatio) width = height * sourceRatio;
-      else height = width / sourceRatio;
-      const left = (canvasWidth - width) / 2 + offsetX;
-      const top = (canvasHeight - height) / 2 + offsetY;
+      const imgW = frame.naturalWidth;
+      const imgH = frame.naturalHeight;
+      const imgRatio = imgW / imgH; // 16 / 9 = 1.777778
+      const screenRatio = canvasWidth / canvasHeight;
+
+      let renderW, renderH;
+      if (screenRatio > imgRatio) {
+        // Screen is wider than 16:9 -> match width, crop height
+        renderW = canvasWidth * scale;
+        renderH = (canvasWidth / imgRatio) * scale;
+      } else {
+        // Screen is taller than 16:9 -> match height, crop width
+        renderH = canvasHeight * scale;
+        renderW = (canvasHeight * imgRatio) * scale;
+      }
+
+      const left = (canvasWidth - renderW) / 2 + offsetX;
+      const top = (canvasHeight - renderH) / 2 + offsetY;
+
       context.globalAlpha = alpha;
-      context.drawImage(frame, left, top, width, height);
+      context.drawImage(frame, 0, 0, imgW, imgH, left, top, renderW, renderH);
       context.globalAlpha = 1;
     };
 
@@ -343,47 +395,29 @@
       const amount = clamped - firstIndex;
       const first = sharedFilm.frames[firstIndex];
       const second = sharedFilm.frames[secondIndex];
-      drawCover(first, 1.12 + progress * 0.08, 0, 0, alpha);
+
+      drawCover(first, 1.0, 0, 0, alpha);
       if (second && amount > 0.01) {
-        context.globalCompositeOperation = 'lighter';
-        drawCover(second, 1.14 + progress * 0.08, Math.sin(progress * Math.PI * 2) * 8, Math.cos(progress * Math.PI * 2) * 6, alpha * 0.22 * amount);
-        context.globalCompositeOperation = 'source-over';
+        drawCover(second, 1.0, 0, 0, alpha * amount);
       }
     };
 
-    // Clean subtle depth slices
+    // Clean subtle depth bloom (preserves contract without distortion)
     const drawSlices = (position, progress) => {
-      const bands = 6;
-      const bandHeight = canvasHeight / bands;
-      for (let index = 0; index < bands; index += 1) {
-        if ((index + Math.round(progress * 8)) % 2 !== 0) continue;
-        const neighborPosition = clamp(position + (index % 2 === 0 ? -0.02 : 0.02), 0, frameCount - 1);
-        const frame = sharedFilm.frames[Math.floor(neighborPosition)];
-        if (!frame) continue;
-        const sourceY = (index / bands) * frame.naturalHeight;
-        const sourceHeight = frame.naturalHeight / bands;
-        const offset = Math.sin(index * 1.5 + progress * 8) * (6 + Math.abs(velocity) * 40);
-        context.globalAlpha = 0.15;
-        context.drawImage(
-          frame,
-          0,
-          sourceY,
-          frame.naturalWidth,
-          sourceHeight,
-          offset,
-          index * bandHeight,
-          canvasWidth,
-          bandHeight,
-        );
-        context.globalAlpha = 1;
-      }
+      if (Math.abs(velocity) < 0.02) return;
+      const frame = sharedFilm.frames[Math.floor(clamp(position, 0, frameCount - 1))];
+      if (!frame) return;
+      context.save();
+      context.globalAlpha = Math.min(Math.abs(velocity) * 0.12, 0.05);
+      drawCover(frame, 1.02, velocity * -10, 0, 1);
+      context.restore();
     };
 
     // Subtle Apple-grade particle starfield
     const drawParticles = () => {
       for (const particle of particles) {
         particle.y -= particle.speed;
-        if (particle.y < -4) particle.y = canvas.clientHeight + 4;
+        if (particle.y < -4) particle.y = canvasHeight + 4;
         context.fillStyle = `rgba(144, 202, 249, ${particle.alpha})`;
         context.beginPath();
         context.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
@@ -422,11 +456,8 @@
       context.fillRect(0, 0, canvasWidth, canvasHeight);
       if (!sharedFilm.ready) return true;
 
-      drawBlendedFrame(position, 0.88, currentProgress);
+      drawBlendedFrame(position, 0.92, currentProgress);
       drawSlices(position, currentProgress);
-      context.globalCompositeOperation = 'lighter';
-      drawCover(sharedFilm.frames[Math.floor(clamp(position + velocity * 5, 0, frameCount - 1))], 1.15, velocity * -40, velocity * -20, Math.min(Math.abs(velocity) * 0.8, 0.18));
-      context.globalCompositeOperation = 'source-over';
       drawParticles();
 
       const railDistance = Math.max(track.scrollWidth - window.innerWidth + 56, 0);

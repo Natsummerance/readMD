@@ -6,7 +6,7 @@
       "name": "dbs-xhs-title formula library",
       "type": "local-skill",
       "license": "local-private",
-      "url": "Z:/Natsumer/.codex/skills/dbs-xhs-title/SKILL.md",
+      "url": "skills://dbs-xhs-title/SKILL.md",
       "reviewed_at": "2026-08-22"
     },
     {
@@ -14,7 +14,7 @@
       "name": "ThoughtfulBits reader-first post editor",
       "type": "local-skill",
       "license": "local-plugin",
-      "url": "Z:/Natsumer/.codex/plugins/cache/openai-curated-remote/thoughtfulbits-skills/1.4.0/skills/post-editor/SKILL.md",
+      "url": "skills://post-editor/SKILL.md",
       "reviewed_at": "2026-08-22"
     },
     {
@@ -22,7 +22,7 @@
       "name": "Apple Design and Frontend Design type hierarchy",
       "type": "local-skills",
       "license": "local-private",
-      "url": "Z:/Natsumer/.codex/skills/apple-design/SKILL.md; Z:/Natsumer/.codex/skills/frontend-design/SKILL.md",
+      "url": "skills://apple-design/SKILL.md; skills://frontend-design/SKILL.md",
       "reviewed_at": "2026-08-23"
     },
     {
@@ -38,7 +38,7 @@
       "name": "dbs-resonate core-mechanism diagnosis",
       "type": "local-skill",
       "license": "local-private",
-      "url": "Z:/Natsumer/.codex/skills/dbs-resonate/SKILL.md",
+      "url": "skills://dbs-resonate/SKILL.md",
       "reviewed_at": "2026-08-22"
     },
     {

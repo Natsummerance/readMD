@@ -9,7 +9,6 @@ function getPlaywright() {
     'playwright',
     '../../ui-tests/node_modules/playwright',
     '../ui-tests/node_modules/playwright',
-    'T:/Programming/Project/codex/creator/readmd-soe-share-png/ui-tests/node_modules/playwright',
   ];
   for (const c of candidates) {
     try {

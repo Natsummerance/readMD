@@ -156,6 +156,9 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
       mtime: d.mtime,
       encoding: d.encoding,
       webAssets: [],
+      is_code: d.is_code || false,
+      code_lang: d.code_lang || '',
+      ext: d.ext || '',
     };
 
     if (existingTab) {
@@ -1107,6 +1110,42 @@ async function renderContent(content, name) {
     showPaginationBar(false);
   }
 
+  const isCodeDoc = state.is_code || (name && !MD_RE.test(name) && typeof TEXT_CODE_RE !== 'undefined' && TEXT_CODE_RE.test(name));
+  if (isCodeDoc) {
+    const ext = state.ext || (name ? (name.match(/\.[^.]+$/) || [''])[0] : '');
+    const lang = state.code_lang || ext.replace(/^\./, '');
+    const sizeKb = ((content || '').length / 1024).toFixed(1);
+    
+    const headerHtml = `
+      <div class="code-doc-header">
+        <div class="code-doc-meta">
+          <span class="code-doc-badge">${escapeHtml(lang || 'code')}</span>
+          <span class="code-doc-path">${escapeHtml(name || '')}</span>
+          <span class="code-doc-lines" data-i18n="codebar.lines">${_t('codebar.lines', { count: linesCount }) || (linesCount + ' 行')}</span>
+          <span class="code-doc-size">${sizeKb} KB</span>
+        </div>
+        <div class="code-doc-actions">
+          <button class="btn btn-sm btn-primary" id="btn-code-to-md" data-i18n="codebar.aiToMd" title="转换为结构化 Markdown 文档">${_t('codebar.aiToMd') || 'AI 结构化转 MD'}</button>
+          <button class="btn btn-sm" id="btn-code-edit" data-i18n="codebar.edit" title="进入源码编辑器 (Ctrl+E)">${_t('codebar.edit') || '编辑源码 (Ctrl+E)'}</button>
+          <button class="btn btn-sm" id="btn-code-ai-explain" data-i18n="codebar.aiExplain" title="调用 AI 进行深度解析与排错">${_t('codebar.aiExplain') || 'AI 深度解析'}</button>
+          <button class="btn btn-sm" id="btn-code-copy" data-i18n="codebar.copyCode" title="复制代码正文">${_t('codebar.copyCode') || '复制代码'}</button>
+        </div>
+      </div>`;
+    
+    const codeBlockMarkdown = '```' + (lang || '') + '\n' + content + '\n```';
+    const prot = protectMath(codeBlockMarkdown);
+    const html = parseMarkdownWithSourceMap(prot.src);
+    const finalHtml = restoreMath(html, prot.saved);
+    if (!isReaderRenderCurrent(render)) return;
+    $('content').innerHTML = '<article class="markdown-body">' + headerHtml + sanitizeRenderedHtml(finalHtml) + '</article>';
+    postProcess();
+    bindCodeDocActions(content, name, lang);
+    if (saved) requestAnimationFrame(() => {
+      if (isReaderRenderCurrent(render)) $('content').scrollTop = saved;
+    });
+    return;
+  }
+
   const big = content.length > INCREMENTAL_THRESHOLD || linesCount > INCREMENTAL_LINES;
   if (big) {
     await renderContentIncremental(content, saved, render);
@@ -1122,6 +1161,46 @@ async function renderContent(content, name) {
   if (saved) requestAnimationFrame(() => {
     if (isReaderRenderCurrent(render)) $('content').scrollTop = saved;
   });
+}
+
+function bindCodeDocActions(content, name, lang) {
+  const toMdBtn = $('btn-code-to-md');
+  const editBtn = $('btn-code-edit');
+  const aiBtn = $('btn-code-ai-explain');
+  const copyBtn = $('btn-code-copy');
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+
+  if (toMdBtn) {
+    toMdBtn.addEventListener('click', async () => {
+      if (typeof openAiPanelWithPrompt === 'function') {
+        openAiPanelWithPrompt('quick_read', `请将以下 ${lang || '代码'} 源码/配置文件深度结构化转换为规范、美观、带章节与说明的 Markdown 文档：\n\n\`\`\`${lang || ''}\n${content}\n\`\`\``);
+      } else if (state.file) {
+        await convertOrOcr(state.file, 'convert');
+      }
+    });
+  }
+  if (editBtn) {
+    editBtn.addEventListener('click', () => {
+      if (typeof enterEdit === 'function') enterEdit();
+    });
+  }
+  if (aiBtn) {
+    aiBtn.addEventListener('click', () => {
+      if (typeof openAiPanelWithPrompt === 'function') {
+        openAiPanelWithPrompt('ask', `请深度解析以下 ${lang || '代码'} 代码/配置文件的核心逻辑、关键配置项与潜在问题：\n\n\`\`\`${lang || ''}\n${content}\n\`\`\``);
+      }
+    });
+  }
+  if (copyBtn) {
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(content);
+        showToast(_t('toast.copied') || '已复制代码内容');
+      } catch (e) {
+        showToast(_t('toast.copyFailed') || '复制失败');
+      }
+    });
+  }
 }
 
 

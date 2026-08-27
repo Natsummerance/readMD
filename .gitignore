@@ -99,3 +99,8 @@ tools/bo_p2.py
 update_kl.py
 update_local_install.bat
 update_ro_json.py
+_temp_frames/
+_temp_video/
+showcase/test-*.png
+showcase/variant-*.png
+showcase/scripts/*.cjs

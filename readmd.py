@@ -99,8 +99,21 @@ VERSION = (_env_or_bundle_version() or '2.3.7-beta.5')
 
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
+CODE_CONFIG_EXTS = (
+    '.toml', '.yaml', '.yml', '.json', '.json5', '.jsonc', '.ini', '.cfg',
+    '.conf', '.config', '.env', '.properties', '.xml', '.plist', '.inf',
+    '.bat', '.cmd', '.ps1', '.psm1', '.sh', '.bash', '.zsh', '.fish', '.vbs',
+    '.py', '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.c', '.cpp',
+    '.h', '.hpp', '.cc', '.cxx', '.cs', '.java', '.kt', '.kts', '.rs',
+    '.go', '.rb', '.php', '.swift', '.lua', '.r', '.m', '.dart', '.sql',
+    '.dockerfile', '.makefile', '.gradle', '.html', '.htm', '.css', '.scss',
+    '.sass', '.less', '.vue', '.svelte', '.log', '.out', '.err', '.diff',
+    '.patch', '.gitignore', '.gitattributes', '.editorconfig', '.npmrc',
+    '.rst', '.asciidoc', '.adoc', '.bib', '.csv', '.tsv',
+)
+ALL_TEXT_EXTS = MD_EXTS + CODE_CONFIG_EXTS
 CONVERT_EXTS = ('.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm',
-                '.txt', '.csv', '.json', '.xml', '.zip', '.eml', '.msg', '.rtf', '.odt', '.epub')
+                '.txt', '.csv', '.json', '.xml', '.zip', '.eml', '.msg', '.rtf', '.odt', '.epub') + CODE_CONFIG_EXTS
 WIN7_CONVERT_EXTS = ('.docx', '.pdf')
 WIN7_UNAVAILABLE = '该功能在 Win7 版暂不支持（本版本仅保留 docx / pdf 转 MD 与导出功能）'
 
@@ -1166,7 +1179,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(500, {'error': str(e)})
 
     def _api_ai_chat(self):
-        """AI 对话：SSE 流式返回，兼容 OpenAI / Anthropic 双协议。"""
+        """AI 对话：兼容 SSE 流式与标准 JSON 双模式返回。"""
         if not self._module_ready('ai', 'AI 模块加载中，请稍候再试'):
             return
         try:
@@ -1175,9 +1188,33 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             self._send_json(400, {'error': '请求格式错误'})
             return
+
+        is_stream = payload.get('stream', True)
         try:
             mod = RM.get('ai')
             gen = mod.chat(payload)
+            if not is_stream:
+                # 非流式模式：组装并返回标准 JSON
+                full_content = []
+                usage_info = None
+                if isinstance(gen, str):
+                    full_content.append(gen)
+                else:
+                    for item in gen:
+                        if isinstance(item, dict):
+                            if 'usage' in item:
+                                usage_info = item['usage']
+                            elif 'error' in item:
+                                self._send_json(500, {'error': item['error']})
+                                return
+                        elif isinstance(item, str):
+                            full_content.append(item)
+                res_payload = {'ok': True, 'content': ''.join(full_content)}
+                if usage_info:
+                    res_payload['usage'] = usage_info
+                self._send_json(200, res_payload)
+                return
+
             self.send_response(200)
             self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
             self.send_header('Cache-Control', 'no-cache')
@@ -1195,6 +1232,9 @@ class Handler(BaseHTTPRequestHandler):
             self._sse({'done': True})
         except Exception as e:
             logging.exception('ai chat failed')
+            if not is_stream:
+                self._send_json(500, {'error': str(e)})
+                return
             try:
                 self._sse({'error': str(e)})
                 self._sse({'done': True})
@@ -1376,9 +1416,22 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(404, {'error': '无法访问文件'})
             return
         name = os.path.basename(p)
+        ext = os.path.splitext(name)[1].lower()
+        is_code = ext in CODE_CONFIG_EXTS
+        code_lang = ''
+        if is_code:
+            try:
+                from src.readmd_modules.convert import EXT_TO_LANG
+                code_lang = EXT_TO_LANG.get(ext, '')
+            except Exception:
+                code_lang = ''
+
         d = {
             'path': p, 'name': name, 'dir': os.path.dirname(p),
             'mtime': st.st_mtime, 'size': st.st_size,
+            'is_code': is_code,
+            'code_lang': code_lang,
+            'ext': ext,
         }
         if meta_only:
             self._send_json(200, d)
@@ -1393,14 +1446,27 @@ class Handler(BaseHTTPRequestHandler):
             if tstats.get('changed'):
                 text = md
                 structured = True
-        fr = readmd_fix.fix_markdown(text)
+        
+        if is_code:
+            fixes = []
+            stats = {'lines': len(text.splitlines()), 'chars': len(text)}
+            fixed_text = text
+        else:
+            fr = readmd_fix.fix_markdown(text)
+            fixes = fr.fixes
+            stats = fr.stats
+            fixed_text = fr.text
+
         d.update({
             'encoding': enc,
-            'content': fr.text,
+            'content': fixed_text,
             'original': raw,
-            'fixes': fr.fixes,
-            'stats': fr.stats,
+            'fixes': fixes,
+            'stats': stats,
             'structured': structured,
+            'is_code': is_code,
+            'code_lang': code_lang,
+            'ext': ext,
         })
         self._send_json(200, d)
 
@@ -2666,9 +2732,9 @@ class Api(object):
         if not old_path or not os.path.isfile(old_path):
             return {'ok': False, 'code': 'not_found', 'error': '文件不存在或已被移动'}
         extension = os.path.splitext(old_path)[1]
-        if extension.lower() not in MD_EXTS:
+        if extension.lower() not in ALL_TEXT_EXTS:
             return {'ok': False, 'code': 'unsupported_type',
-                    'error': '只能重命名 Markdown 或文本文件'}
+                    'error': '只能重命名 Markdown 或文本/代码文件'}
         try:
             stem = _validate_rename_stem(new_stem, extension)
         except ValueError as exc:

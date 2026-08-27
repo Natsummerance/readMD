@@ -29,6 +29,30 @@ _CODE_LANG_HINTS = (
     ('kotlin', 'kotlin'), ('c#', 'csharp'), ('c', 'c'), ('cs', 'csharp'),
 )
 
+EXT_TO_LANG = {
+    '.toml': 'toml', '.yaml': 'yaml', '.yml': 'yaml', '.json': 'json',
+    '.json5': 'json5', '.jsonc': 'jsonc', '.ini': 'ini', '.cfg': 'ini',
+    '.conf': 'ini', '.config': 'xml', '.env': 'bash', '.properties': 'properties',
+    '.xml': 'xml', '.plist': 'xml', '.inf': 'ini', '.bat': 'batch',
+    '.cmd': 'batch', '.ps1': 'powershell', '.psm1': 'powershell', '.sh': 'bash',
+    '.bash': 'bash', '.zsh': 'bash', '.fish': 'fish', '.vbs': 'vbscript',
+    '.py': 'python', '.js': 'javascript', '.mjs': 'javascript', '.cjs': 'javascript',
+    '.ts': 'typescript', '.tsx': 'tsx', '.jsx': 'jsx', '.c': 'c',
+    '.cpp': 'cpp', '.h': 'c', '.hpp': 'cpp', '.cc': 'cpp', '.cxx': 'cpp',
+    '.cs': 'csharp', '.java': 'java', '.kt': 'kotlin', '.kts': 'kotlin',
+    '.rs': 'rust', '.go': 'go', '.rb': 'ruby', '.php': 'php',
+    '.swift': 'swift', '.lua': 'lua', '.r': 'r', '.m': 'objectivec',
+    '.dart': 'dart', '.sql': 'sql', '.dockerfile': 'dockerfile', '.makefile': 'makefile',
+    '.gradle': 'groovy', '.html': 'html', '.htm': 'html', '.css': 'css',
+    '.scss': 'scss', '.sass': 'sass', '.less': 'less', '.vue': 'vue',
+    '.svelte': 'svelte', '.log': 'log', '.out': 'log', '.err': 'log',
+    '.diff': 'diff', '.patch': 'diff', '.gitignore': 'gitignore',
+    '.gitattributes': 'gitignore', '.editorconfig': 'ini', '.npmrc': 'ini',
+    '.rst': 'rst', '.asciidoc': 'asciidoc', '.adoc': 'asciidoc',
+    '.bib': 'bibtex', '.tex': 'latex', '.latex': 'latex',
+    '.csv': 'csv', '.tsv': 'tsv',
+}
+
 _MATH_CHARS = set('+-*/=<>^_~%∑∫√∞≈≠±×÷∂∇∏πθαβγδφψωλμνστρΔΩΦΓΛεηζξοπς')
 
 
@@ -47,8 +71,73 @@ def convert(path):
     return text
 
 
+def csv2md(path, delimiter=None):
+    """CSV / TSV 格式化转 Markdown 表格。"""
+    import csv
+    import io
+    from . import txtmd
+    text, _enc = txtmd.read_text(path)
+    if not text.strip():
+        return "# %s\n\n*(空文件)*" % os.path.basename(path)
+    
+    if delimiter is None:
+        ext = os.path.splitext(path)[1].lower()
+        if ext == '.tsv':
+            delimiter = '\t'
+        else:
+            first_line = text.splitlines()[0] if text.splitlines() else ''
+            delimiter = '\t' if '\t' in first_line and ',' not in first_line else ','
+            
+    reader = csv.reader(io.StringIO(text), delimiter=delimiter)
+    rows = [r for r in reader if r and any(cell.strip() for cell in r)]
+    if not rows:
+        return "# %s\n\n*(空表格)*" % os.path.basename(path)
+    
+    col_count = max(len(r) for r in rows)
+    norm_rows = [r + [''] * (col_count - len(r)) for r in rows]
+    
+    header = norm_rows[0]
+    data_rows = norm_rows[1:]
+    
+    def esc(s):
+        return str(s).replace('\n', '<br>').replace('|', '\\|').strip()
+    
+    md_lines = ["# %s" % os.path.basename(path), ""]
+    md_lines.append("| " + " | ".join(esc(c) for c in header) + " |")
+    md_lines.append("| " + " | ".join(["---"] * col_count) + " |")
+    for r in data_rows:
+        md_lines.append("| " + " | ".join(esc(c) for c in r) + " |")
+    
+    return "\n".join(md_lines)
+
+
+def code2md(path, ext=None):
+    """纯文本 / 代码 / 配置 / 日志转带高亮与信息栏的结构化 Markdown。"""
+    from . import txtmd
+    text, _enc = txtmd.read_text(path)
+    filename = os.path.basename(path)
+    if ext is None:
+        ext = os.path.splitext(path)[1].lower()
+    
+    lang = EXT_TO_LANG.get(ext, '')
+    lines_count = len(text.splitlines())
+    size_kb = len(text.encode('utf-8')) / 1024.0
+    
+    out = [
+        "# %s" % filename,
+        "",
+        "> **文件信息**：`%s` · %d 行 · %.1f KB" % (lang or 'plain text', lines_count, size_kb),
+        "",
+        "```%s" % lang,
+        text,
+        "```",
+        ""
+    ]
+    return "\n".join(out)
+
+
 def convert_verbose(path):
-    """返回 (text, engine, error)。engine: 'docx' | 'pdf' | 'markitdown' | ''"""
+    """返回 (text, engine, error)。engine: 'docx' | 'pdf' | 'csv' | 'code' | 'txtmd' | 'texmd' | 'markitdown' | ''"""
     ext = os.path.splitext(path)[1].lower()
     if ext == '.docx':
         try:
@@ -66,6 +155,11 @@ def convert_verbose(path):
                 return _markitdown_convert(path), 'markitdown', None
             except Exception as e2:  # noqa: BLE001
                 return '', '', '%s（MarkItDown 兜底也失败：%s）' % (e, e2)
+    if ext in ('.csv', '.tsv'):
+        try:
+            return csv2md(path), 'csv', None
+        except Exception as e:  # noqa: BLE001
+            return '', '', 'CSV 表格转换失败：%s' % e
     if ext in ('.tex', '.latex'):
         try:
             from . import texmd
@@ -74,11 +168,28 @@ def convert_verbose(path):
             return texmd.latex_to_md(tex_content, base_dir=os.path.dirname(os.path.abspath(path))), 'texmd', None
         except Exception as e:  # noqa: BLE001
             return '', '', 'LaTeX 转换失败：%s' % e
+    if ext in ('.txt', '.text'):
+        try:
+            from . import txtmd
+            text, _enc = txtmd.read_text(path)
+            md, tstats = txtmd.to_markdown(text)
+            return md, 'txtmd', None
+        except Exception as e:  # noqa: BLE001
+            return '', '', '文本转换失败：%s' % e
+    if ext in EXT_TO_LANG:
+        try:
+            return code2md(path, ext), 'code', None
+        except Exception as e:  # noqa: BLE001
+            return '', '', '代码/配置格式化转换失败：%s' % e
 
+    # 兜底：先尝试 MarkItDown，若失败尝试通用文本读取 code2md 兜底，做到万物皆可转 MD
     try:
         return _markitdown_convert(path), 'markitdown', None
     except Exception as e:  # noqa: BLE001
-        return '', '', str(e)
+        try:
+            return code2md(path, ext), 'code_fallback', None
+        except Exception:
+            return '', '', str(e)
 
 
 

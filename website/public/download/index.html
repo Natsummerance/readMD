@@ -128,11 +128,11 @@
       <div class="mt-8">
         <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Download Mirror & Acceleration · 下载源与镜像加速</p>
         <div class="mirror-nav" role="tablist" aria-label="Download mirror selectors">
-          <button class="mirror-tab is-active" data-mirror="direct" type="button">🌐 Official GitHub</button>
-          <button class="mirror-tab" data-mirror="ghfast" type="button">⚡ 国内加速 1 (GHFast)</button>
-          <button class="mirror-tab" data-mirror="ghproxy" type="button">⚡ 国内加速 2 (GHProxy)</button>
-          <button class="mirror-tab" data-mirror="gitmirror" type="button">⚡ 国内加速 3 (GitMirror)</button>
-          <button class="mirror-tab" data-mirror="fastgit" type="button">⚡ 国内加速 4 (FastGit)</button>
+          <button class="mirror-tab is-active" data-mirror="direct" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>Official GitHub</button>
+        <button class="mirror-tab" data-mirror="ghfast" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Mirror 1 (GHFast)</button>
+        <button class="mirror-tab" data-mirror="ghproxy" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Mirror 2 (GHProxy)</button>
+        <button class="mirror-tab" data-mirror="gitmirror" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Mirror 3 (GitMirror)</button>
+        <button class="mirror-tab" data-mirror="fastgit" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Mirror 4 (FastGit)</button>
         </div>
       </div>
     </div>
@@ -179,6 +179,18 @@
     </section>
 
     <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/large-markdown-files/">Open large Markdown files</a><a class="link-action" href="/markdown-to-slides/">Present Markdown without PowerPoint</a><a class="link-action" href="/convert-to-markdown/">Convert documents to Markdown</a><a class="link-action" href="/markdown-tables/">Build Markdown tables</a><a class="link-action" href="/pdf-to-markdown/">Convert PDFs to Markdown</a><a class="link-action" href="/scan-to-markdown/">Extract text from scans</a><a class="link-action" href="/bibtex-citations/">Manage BibTeX citations</a><a class="link-action" href="/release-notes/">Release notes</a></div>
+    <section class="mt-10 rounded-2xl border border-border bg-card p-6 text-sm">
+      <h3 class="font-semibold text-foreground">Open Source Security & Trust Notice</h3>
+      <p class="mt-2 text-muted leading-relaxed">
+        ReadMD releases are built via public GitHub Actions CI. Because community builds are unsigned, your OS may display a security prompt on first launch:
+      </p>
+      <ul class="mt-3 list-disc pl-5 space-y-1.5 text-muted">
+        <li><strong>Windows:</strong> Click "More info" then "Run anyway" if Microsoft Defender SmartScreen appears.</li>
+        <li><strong>macOS:</strong> If Gatekeeper blocks the app, right-click the application icon and select "Open", or run <code>xattr -d com.apple.quarantine ReadMD.app</code> in Terminal.</li>
+        <li><strong>Linux:</strong> Run <code>chmod +x ReadMD-linux-*.AppImage</code> before executing the AppImage binary.</li>
+      </ul>
+    </section>
+
     <div class="mt-8 flex flex-wrap items-center gap-4">
       <a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt">SHA256SUMS.txt</a>
       <a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">Star on GitHub</a>
