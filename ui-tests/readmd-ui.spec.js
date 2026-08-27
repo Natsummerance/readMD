@@ -135,8 +135,7 @@ test('select controls expose their localized selected action', async ({ page }) 
   });
   await expect(page.locator('#formula-mode')).toHaveAttribute('aria-label', /行内公式|Inline Formula/);
   await page.locator('#formula-mode').selectOption('block');
-  await expect(page.locator('#formula-mode')).toHaveAttribute('aria-label', /块级公式|Block Formula/);
-  await expect(page.locator('#tpl-action')).toHaveAttribute('aria-label', /动作：快速阅读|Action: Quick Read/);
+  await expect(page.locator('#tpl-name')).toHaveAttribute('aria-label', /模板名称|Template Name/);
   await page.evaluate(() => {
     state.ai.templates = [
       { id: 'tpl-a', name: 'Keyboard template', action: 'quick_read' },

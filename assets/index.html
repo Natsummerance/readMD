@@ -570,22 +570,10 @@
       <ul id="tpl-list" class="tpl-list" role="listbox" aria-label="Prompt 模板" data-i18n-aria="tpl.title"></ul>
       <div class="tpl-form">
         <input id="tpl-id" type="hidden">
+        <input id="tpl-action" type="hidden" value="custom">
         <input id="tpl-name" type="text" placeholder="模板名称（如：深度论文精读 / 结构化周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
-        <select id="tpl-action" aria-label="动作分类">
-          <option value="quick_read" data-i18n="tpl.actionQuickRead">动作：快速阅读</option>
-          <option value="polish" data-i18n="tpl.actionPolish">动作：润色文稿</option>
-          <option value="proofread" data-i18n="tpl.actionProofread">动作：语法纠错</option>
-          <option value="translate_en" data-i18n="tpl.actionTranslateEn">动作：翻译为英文</option>
-          <option value="translate_zh" data-i18n="tpl.actionTranslateZh">动作：翻译为中文</option>
-          <option value="todo" data-i18n="tpl.actionTodo">动作：提取待办</option>
-          <option value="continue" data-i18n="tpl.actionContinue">动作：续写内容</option>
-          <option value="ask" data-i18n="tpl.actionAsk">动作：自由提问</option>
-          <option value="modify" data-i18n="tpl.actionModify">动作：修订格式</option>
-          <option value="expand" data-i18n="tpl.actionExpand">动作：扩展细节</option>
-          <option value="custom" data-i18n="tpl.actionCustom">自定义动作</option>
-        </select>
         <textarea id="tpl-system" rows="4" placeholder="系统提示词：角色设定与任务说明" aria-label="系统提示词" data-i18n-placeholder="tpl.systemPlaceholder" data-i18n-aria="tpl.systemPlaceholder"></textarea>
-        <textarea id="tpl-user" rows="3" placeholder="用户消息模板（可选）：可用 {doc} 代表文档内容、{prompt} 代表补充要求；留空则自动拼接文档" aria-label="用户消息模板" data-i18n-placeholder="tpl.userPlaceholder" data-i18n-aria="tpl.userPlaceholder"></textarea>
+        <textarea id="tpl-user" rows="4" placeholder="用户消息模板：可用 {doc} 代表文档内容、{prompt} 代表补充要求；留空则自动拼接文档" aria-label="用户消息模板" data-i18n-placeholder="tpl.userPlaceholder" data-i18n-aria="tpl.userPlaceholder"></textarea>
       </div>
     </div>
     <div class="url-actions">

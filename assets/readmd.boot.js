@@ -7561,7 +7561,8 @@ function openTplModal() {
   $('tpl-modal').classList.remove('hidden');
   if (!state.ai.templates.length) loadAiPrompts();
   renderTplList();
-  selectTpl(null);
+  const cur = state.ai.templateId || (state.ai.templates[0] && state.ai.templates[0].id) || null;
+  selectTpl(cur);
 }
 
 function renderTplList() {
@@ -7585,7 +7586,7 @@ function renderTplList() {
     li.setAttribute('role', 'option');
     li.tabIndex = 0;
     li.setAttribute('aria-selected', 'false');
-    li.title = (_t('ai.actionPrefix') || '动作：') + (t.action || 'custom') + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '含用户消息模板')) : '');
+    li.title = t.name + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '含用户消息模板')) : '');
     li.addEventListener('click', () => selectTpl(t.id));
     li.addEventListener('keydown', e => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -7605,7 +7606,7 @@ function selectTpl(id) {
   });
   $('tpl-id').value = t ? t.id : '';
   $('tpl-name').value = t ? t.name : '';
-  $('tpl-action').value = (t && t.action) || 'custom';
+  if ($('tpl-action')) $('tpl-action').value = (t && t.action) || 'custom';
   $('tpl-system').value = t ? (t.system || '') : '';
   $('tpl-user').value = t ? (t.user || '') : '';
   $('tpl-del').disabled = !t;
