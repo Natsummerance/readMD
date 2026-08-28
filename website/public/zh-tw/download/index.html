@@ -133,11 +133,11 @@
       <div class="mt-8">
         <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">下載通道與鏡像加速 · Download Mirror</p>
         <div class="mirror-nav" role="tablist" aria-label="下載源選擇">
-          <button class="mirror-tab is-active" data-mirror="direct" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>官方直連 (GitHub)</button>
-          <button class="mirror-tab" data-mirror="ghfast" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 1 (GHFast)</button>
-          <button class="mirror-tab" data-mirror="ghproxy" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 2 (GHProxy)</button>
-          <button class="mirror-tab" data-mirror="gitmirror" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 3 (GitMirror)</button>
-          <button class="mirror-tab" data-mirror="fastgit" type="button"><svg class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 4 (FastGit)</button>
+          <button class="mirror-tab is-active" data-mirror="direct" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>官方直連 (GitHub)</button>
+          <button class="mirror-tab" data-mirror="ghfast" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 1 (GHFast)</button>
+          <button class="mirror-tab" data-mirror="ghproxy" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 2 (GHProxy)</button>
+          <button class="mirror-tab" data-mirror="gitmirror" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 3 (GitMirror)</button>
+          <button class="mirror-tab" data-mirror="fastgit" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 4 (FastGit)</button>
         </div>
       </div>
     </div>
@@ -204,12 +204,119 @@
             <span>VS Code 擴充套件 (.vsix)</span>
             <span class="chevron-arrow" aria-hidden="true">›</span>
           </a>
-          <a class="apple-link-item" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip">
-            <span>AI MCP Server (.zip)</span>
+          <a class="apple-link-item" href="#mcp-guide">
+            <span>AI MCP Server (開箱即用指引)</span>
             <span class="chevron-arrow" aria-hidden="true">›</span>
           </a>
         </div>
       </article>
+    </section>
+
+    <!-- MCP Server Interactive Guide & 1-Click Installation Section -->
+    <section id="mcp-guide" class="mt-12 rounded-3xl border border-border bg-card p-6 md:p-8">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+        <div>
+          <div class="inline-flex items-center gap-2 rounded-full border border-[rgba(0,113,227,0.2)] bg-[rgba(0,113,227,0.06)] px-3 py-1 text-xs font-semibold text-[var(--color-action)]">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            AI AGENT 智慧體協同 · MODEL CONTEXT PROTOCOL
+          </div>
+          <h2 class="mt-2 text-2xl md:text-3xl font-bold tracking-tight text-foreground">ReadMD MCP Server · 開箱即用一鍵安裝</h2>
+          <p class="mt-1.5 text-sm text-muted max-w-2xl">賦能 Claude Desktop、Cursor、Antigravity、VS Code 等 AI 助手，獲得本機 Markdown 智慧自愈修復、學術 LaTeX 雙向轉換與 Office/PDF 原生擷取能力。</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <a class="button-primary inline-flex items-center gap-2" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip" data-mirror-url="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            下載 MCP Server 獨立套件 (.zip)
+          </a>
+          <a class="button-secondary inline-flex items-center gap-2" href="https://github.com/Natsummerance/readMD/tree/main/packages/mcp-server" target="_blank" rel="noopener">
+            GitHub 原始碼
+          </a>
+        </div>
+      </div>
+
+      <!-- 3-Step Quick Start Workflow -->
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="rounded-2xl border border-border bg-surface p-4">
+          <div class="flex items-center gap-2 font-semibold text-sm text-foreground">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-action)] text-xs text-white">1</span>
+            下載解壓縮或複製
+          </div>
+          <p class="mt-2 text-xs text-muted leading-relaxed">下載上方 <code>readmd-mcp-server.zip</code> 並解壓縮至本機任意目錄（例如 <code>~/readmd-mcp</code>）。</p>
+        </div>
+        <div class="rounded-2xl border border-border bg-surface p-4">
+          <div class="flex items-center gap-2 font-semibold text-sm text-foreground">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-action)] text-xs text-white">2</span>
+            複製一鍵設定 JSON
+          </div>
+          <p class="mt-2 text-xs text-muted leading-relaxed">在下方選擇你的 AI 客戶端（Claude / Cursor / Antigravity），點擊「一鍵複製」填入設定檔即可。</p>
+        </div>
+        <div class="rounded-2xl border border-border bg-surface p-4">
+          <div class="flex items-center gap-2 font-semibold text-sm text-foreground">
+            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-action)] text-xs text-white">3</span>
+            重啟即享原生能力
+          </div>
+          <p class="mt-2 text-xs text-muted leading-relaxed">無需額外註冊或付費，AI 助理將自動接管 Markdown 修復、LaTeX 互轉與論文文獻引用解析。</p>
+        </div>
+      </div>
+
+      <!-- Interactive Client Config Tabs -->
+      <div class="mt-8">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+          <div class="mcp-tabs flex flex-wrap gap-2" role="tablist" aria-label="MCP Client Selector">
+            <button class="mcp-tab is-active" data-mcp-target="claude" type="button">Claude Desktop</button>
+            <button class="mcp-tab" data-mcp-target="cursor" type="button">Cursor IDE</button>
+            <button class="mcp-tab" data-mcp-target="antigravity" type="button">Antigravity / Gemini</button>
+            <button class="mcp-tab" data-mcp-target="vscode" type="button">VS Code (Cline / Roo)</button>
+            <button class="mcp-tab" data-mcp-target="cli" type="button">Terminal (uv / python)</button>
+          </div>
+          <button class="btn-copy-mcp inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-surface transition-all" type="button">
+            <svg class="copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            <span class="copy-text">一鍵複製設定 JSON</span>
+          </button>
+        </div>
+
+        <!-- Pre Code Snippets -->
+        <div class="mt-4 relative rounded-2xl bg-[#0d1117] p-4 text-xs font-mono text-[#c9d1d9] overflow-x-auto">
+          <div class="text-[11px] text-[#8b949e] mb-2 font-sans flex items-center justify-between">
+            <span class="mcp-config-path">設定檔路徑：macOS <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> | Windows <code>%APPDATA%\Claude\claude_desktop_config.json</code></span>
+          </div>
+          <pre class="mcp-code-block"><code>{
+  "mcpServers": {
+    "readmd": {
+      "command": "python",
+      "args": ["/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"]
+    }
+  }
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- MCP Tools Capabilities Grid -->
+      <div class="mt-8 border-t border-border pt-6">
+        <h3 class="text-base font-semibold text-foreground">開箱即用的 5 大核心 MCP Tools</h3>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+          <div class="rounded-xl border border-border bg-surface p-3">
+            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_fix_markdown</div>
+            <p class="mt-1 text-muted">自動偵測並記憶體自我修復 LaTeX 語法、未閉合圍欄、錯位表格與標點空格。</p>
+          </div>
+          <div class="rounded-xl border border-border bg-surface p-3">
+            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_convert_to_markdown</div>
+            <p class="mt-1 text-muted">一鍵將 PDF、Word (.docx)、PPTX、Excel 與 TeX 文件擷取為標準 Markdown。</p>
+          </div>
+          <div class="rounded-xl border border-border bg-surface p-3">
+            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_latex_to_md</div>
+            <p class="mt-1 text-muted">將學術論文 LaTeX 原始碼完整轉換為符合 GFM 規範的高品質 Markdown。</p>
+          </div>
+          <div class="rounded-xl border border-border bg-surface p-3">
+            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_md_to_latex</div>
+            <p class="mt-1 text-muted">將 Markdown 筆記即時編譯匯出為可直接由 TeXLive / Overleaf 編譯的學術論文程式碼。</p>
+          </div>
+          <div class="rounded-xl border border-border bg-surface p-3">
+            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_parse_bibtex</div>
+            <p class="mt-1 text-muted">深度解析 .bib 文獻資料庫，快速擷取作者、年份與標準 Citation 引用標註。</p>
+          </div>
+        </div>
+      </div>
     </section>
 
     <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-tw/workflows/">工作流程</a><a class="link-action" href="/zh-tw/large-markdown-files/">開啟超大 Markdown 檔案</a><a class="link-action" href="/zh-tw/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-tw/convert-to-markdown/">文件轉 Markdown</a><a class="link-action" href="/zh-tw/markdown-tables/">建立 Markdown 表格</a><a class="link-action" href="/zh-tw/pdf-to-markdown/">PDF 轉 Markdown</a><a class="link-action" href="/zh-tw/scan-to-markdown/">掃描件擷取文字</a><a class="link-action" href="/zh-tw/bibtex-citations/">管理 BibTeX 引用</a><a class="link-action" href="/zh-tw/release-notes/">發布說明</a></div>

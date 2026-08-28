@@ -65,27 +65,39 @@ function createStaticServer(distDir) {
   const browser = await chromium.launch();
 
   const captures = [
-    { name: '01-desktop-home-hero.png', url: '/', width: 1920, height: 1080, scroll: 0 },
-    { name: '02-desktop-home-journey.png', url: '/', width: 1920, height: 1080, scroll: 1800 },
-    { name: '03-desktop-home-cinema.png', url: '/#capability-cinema', width: 1920, height: 1080, scroll: 6200 },
-    { name: '04-desktop-download-en.png', url: '/download/', width: 1920, height: 1080, scroll: 0 },
-    { name: '05-desktop-zh-cn-home.png', url: '/zh-cn/', width: 1920, height: 1080, scroll: 0 },
-    { name: '06-desktop-zh-cn-download.png', url: '/zh-cn/download/', width: 1920, height: 1080, scroll: 0 },
-    { name: '07-laptop-home-hero.png', url: '/', width: 1440, height: 900, scroll: 0 },
-    { name: '08-laptop-download-en.png', url: '/download/', width: 1440, height: 900, scroll: 0 },
-    { name: '09-mobile-home-hero.png', url: '/', width: 390, height: 844, scroll: 0 },
-    { name: '10-mobile-download-en.png', url: '/download/', width: 390, height: 844, scroll: 0 },
-    { name: '11-mobile-zh-cn-download.png', url: '/zh-cn/download/', width: 390, height: 844, scroll: 0 },
+    { name: '01-desktop-home-hero.png', url: '/', width: 1920, height: 1080, scroll: 0, colorScheme: 'light' },
+    { name: '02-desktop-home-journey-0.png', url: '/', width: 1920, height: 1080, scroll: 1200, colorScheme: 'light' },
+    { name: '02-desktop-home-journey-50.png', url: '/', width: 1920, height: 1080, scroll: 2600, colorScheme: 'light' },
+    { name: '03-desktop-home-cinema.png', url: '/#capability-cinema', width: 1920, height: 1080, scroll: 6200, colorScheme: 'light' },
+    { name: '04-desktop-download-light.png', url: '/download/', width: 1920, height: 1080, scroll: 0, colorScheme: 'light' },
+    { name: '04-desktop-download-dark.png', url: '/download/', width: 1920, height: 1080, scroll: 0, colorScheme: 'dark' },
+    { name: '05-desktop-download-mcp-guide.png', url: '/zh-cn/download/', width: 1920, height: 1080, scroll: 650, colorScheme: 'dark' },
+    { name: '06-desktop-zh-cn-download-dark.png', url: '/zh-cn/download/', width: 1920, height: 1080, scroll: 0, colorScheme: 'dark' },
+    { name: '07-laptop-home-hero.png', url: '/', width: 1440, height: 900, scroll: 0, colorScheme: 'light' },
+    { name: '08-laptop-download-dark.png', url: '/download/', width: 1440, height: 900, scroll: 0, colorScheme: 'dark' },
+    { name: '09-mobile-home-hero.png', url: '/', width: 390, height: 844, scroll: 0, colorScheme: 'light' },
+    { name: '10-mobile-download-dark.png', url: '/download/', width: 390, height: 844, scroll: 0, colorScheme: 'dark' },
   ];
 
   for (const item of captures) {
     const page = await browser.newPage({
       viewport: { width: item.width, height: item.height },
       deviceScaleFactor: 2,
+      colorScheme: item.colorScheme || 'light',
     });
+    
+    page.on('console', (msg) => {
+      if (msg.type() === 'error' || msg.type() === 'warning') {
+        console.log(`[Browser Console ${msg.type()}]:`, msg.text());
+      }
+    });
+    page.on('pageerror', (err) => console.log('[Browser Error]:', err.message));
+
     await page.goto('http://127.0.0.1:4173' + item.url, { waitUntil: 'networkidle' });
     if (item.scroll > 0) {
       await page.evaluate((s) => window.scrollTo(0, s), item.scroll);
+      await page.waitForTimeout(600);
+    } else {
       await page.waitForTimeout(400);
     }
     const savePath = path.join(outDir, item.name);

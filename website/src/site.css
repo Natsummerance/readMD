@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../public";
 
 @theme {
   --color-ink: #0b0c0e;
@@ -564,6 +565,9 @@ body {
 }
 
 .mirror-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   padding: 0.45rem 1.05rem;
   border-radius: 999px;
   font-size: 0.88rem;
@@ -572,7 +576,18 @@ body {
   background: transparent;
   border: none;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mirror-tab svg {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  max-width: 16px !important;
+  display: inline-block;
+  vertical-align: -2px;
+  flex-shrink: 0;
 }
 
 .mirror-tab:hover {
@@ -584,6 +599,42 @@ body {
   color: var(--color-action);
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.mcp-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.mcp-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--color-muted);
+  background: rgba(0, 0, 0, 0.04);
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mcp-tab:hover {
+  color: var(--color-ink);
+  background: rgba(0, 0, 0, 0.07);
+}
+
+.mcp-tab.is-active {
+  background: var(--color-card);
+  color: var(--color-action);
+  font-weight: 600;
+  border-color: rgba(0, 113, 227, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .platform-grid {
@@ -759,23 +810,97 @@ body {
   }
 
   .mirror-nav {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.14);
+  }
+
+  .mirror-tab {
+    color: rgba(255, 255, 255, 0.65);
+  }
+
+  .mirror-tab:hover {
+    color: #ffffff;
   }
 
   .mirror-tab.is-active {
     background: #2c2c2e;
     color: #2997ff;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   }
 
   .platform-card {
     background: #1c1c1e;
+    border-color: rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    color: #f5f5f7;
+  }
+
+  .button-pill-sub {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #f5f5f7;
+  }
+
+  .button-pill-sub:hover {
+    background: #2997ff;
+    border-color: #2997ff;
+    color: #ffffff;
+  }
+
+  .button-pill-sub .pill-sub-title {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  .button-pill-sub:hover .pill-sub-title {
+    color: rgba(255, 255, 255, 0.9);
+  }
+
+  .apple-link-item {
+    background: rgba(255, 255, 255, 0.04);
     border-color: rgba(255, 255, 255, 0.1);
+    color: #2997ff;
+  }
+
+  .apple-link-item .chevron-arrow {
+    color: #2997ff;
+  }
+
+  .apple-link-item:hover {
+    background: rgba(41, 151, 255, 0.12);
+    border-color: rgba(41, 151, 255, 0.35);
   }
 
   .detail-menu {
     background: #1c1c1e;
     border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .mcp-tab {
+    color: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .mcp-tab:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.09);
+  }
+
+  .mcp-tab.is-active {
+    background: #2c2c2e;
+    color: #2997ff;
+    border-color: rgba(41, 151, 255, 0.35);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  }
+
+  .btn-copy-mcp {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #f5f5f7;
+  }
+
+  .btn-copy-mcp:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
   }
 }
 

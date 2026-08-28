@@ -1,10 +1,6 @@
-# ReadMD · 本地 Markdown 学术与工程工作台
+# ReadMD · 本地 Markdown 学术工作台
 
-> **运行环境**: 本地离线优先 · **文档引擎**: 秒级冷启动 · **渲染管线**: 内存零改写 · **版本**: v2.3.7
-
-[TOC]
-
----
+> **运行环境**: 本地离线优先 · **渲染管线**: 内存零改写 · **响应速度**: 毫秒级
 
 ## 1 核心特性矩阵
 
@@ -21,39 +17,35 @@
 
 多行对齐矩阵与变分自编码器损失函数原生渲染：
 
-
+$$
 \begin{aligned}
 \mathcal{L}_{\mathrm{VAE}}(\theta, \phi; \mathbf{x}) &= \mathbb{E}_{q_\phi(\mathbf{z}|\mathbf{x})}\left[\log p_\theta(\mathbf{x}|\mathbf{z})\right] - D_{\mathrm{KL}}\left(q_\phi(\mathbf{z}|\mathbf{x}) \,\|\, p(\mathbf{z})\right) \\
 \mathbf{H}^{(l+1)} &= \sigma\left(\mathbf{\tilde{D}}^{-\frac{1}{2}} \mathbf{\tilde{A}} \mathbf{\tilde{D}}^{-\frac{1}{2}} \mathbf{H}^{(l)} \mathbf{W}^{(l)}\right)
 \end{aligned}
+$$
 
-
-::: theorem 高斯–马尔可夫定理 (Gauss-Markov Theorem)
-在所有线性无偏估计量中，普通最小二乘估计量（OLS）具备最小方差，是最佳线性无偏估计量（BLUE）。
-:::
-
-::: proof 严格推导与代数证明
-设 $\hat{\beta}$ 为 OLS 估计量，$\tilde{\beta}=\mathbf{CY}$ 为任意线性无偏估计量。根据协方差矩阵的正定性可证明 $\mathrm{Cov}(\tilde{\beta}) - \mathrm{Cov}(\hat{\beta}) \succeq 0$。
-:::
+> **高斯–马尔可夫定理 (Gauss-Markov Theorem)**  
+> 在所有线性无偏估计量中，普通最小二乘估计量（OLS）具备最小方差，是最佳线性无偏估计量（BLUE）。
+>
+> **代数推导与正定性**：设 $\hat{\beta}$ 为 OLS 估计量，$\tilde{\beta}=\mathbf{CY}$ 为任意线性无偏估计量。协方差矩阵满足 $\mathrm{Cov}(\tilde{\beta}) - \mathrm{Cov}(\hat{\beta}) \succeq 0$。
 
 ---
 
 ## 3 科学图表与硬件时序
 
-`wavedrom
-{
-  signal: [
-    { name: "CLK",  wave: "p......" },
-    { name: "Data", wave: "x.345x.", data: ["head", "body", "tail"] },
-    { name: "Req",  wave: "0.1..0." },
-    { name: "Ack",  wave: "0..1.0." }
-  ]
-}
-`
+```mermaid
+graph LR
+    A[Raw Markdown Source] --> B(AST Parser & Stream)
+    B --> C{Memory Engine}
+    C -->|Zero Copy| D[KaTeX / Tables / Visual DOM]
+    C -->|Split Sync| E[Live CodeMirror 6]
+    D --> F[Reveal.js Slide Presentation]
+```
 
-`python
-# 纯本地数据管道示例
+```python
+# 纯本地数据管道与零改写渲染
 def render_pipeline(doc_path: Path) -> RenderResult:
     tokens = tokenize_safe(doc_path.read_bytes())
     return build_virtual_dom(tokens, memory_only=True)
-`
+```
+

@@ -634,6 +634,82 @@
       });
   };
 
+  /* Interactive MCP Configuration & 1-Click Copy Engine */
+  const setupMcpGuide = () => {
+    const mcpConfigs = {
+      claude: {
+        path: 'Claude Desktop 配置文件 (macOS: ~/Library/Application Support/Claude/claude_desktop_config.json | Windows: %APPDATA%\\Claude\\claude_desktop_config.json)',
+        code: `{\n  "mcpServers": {\n    "readmd": {\n      "command": "python",\n      "args": ["/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"]\n    }\n  }\n}`,
+      },
+      cursor: {
+        path: 'Cursor IDE 配置文件 (.cursor/mcp.json 或 Cursor Settings > MCP)',
+        code: `{\n  "mcpServers": {\n    "readmd": {\n      "command": "python",\n      "args": ["/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"]\n    }\n  }\n}`,
+      },
+      antigravity: {
+        path: 'Antigravity / Gemini CLI 配置 (~/.gemini/antigravity/mcp/readmd.json)',
+        code: `{\n  "mcpServers": {\n    "readmd": {\n      "command": "python",\n      "args": ["/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"]\n    }\n  }\n}`,
+      },
+      vscode: {
+        path: 'VS Code (Cline / Roo Code Settings > MCP Servers)',
+        code: `{\n  "mcpServers": {\n    "readmd": {\n      "command": "python",\n      "args": ["/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"]\n    }\n  }\n}`,
+      },
+      cli: {
+        path: 'Terminal (Direct stdio execution via Python / UV)',
+        code: `# 直接通过 Python FastMCP stdio 运行\npython /path/to/readmd/packages/mcp-server/readmd_mcp_server.py\n\n# 或使用 uv 零配置秒级执行\nuv run /path/to/readmd/packages/mcp-server/readmd_mcp_server.py`,
+      },
+    };
+
+    let currentTarget = 'claude';
+
+    const updateMcpView = (target) => {
+      currentTarget = target;
+      const data = mcpConfigs[target] || mcpConfigs.claude;
+      document.querySelectorAll('.mcp-tab').forEach((tab) => {
+        tab.classList.toggle('is-active', tab.dataset.mcpTarget === target);
+      });
+      document.querySelectorAll('.mcp-config-path').forEach((el) => {
+        el.textContent = data.path;
+      });
+      document.querySelectorAll('.mcp-code-block code').forEach((el) => {
+        el.textContent = data.code;
+      });
+    };
+
+    document.querySelectorAll('.mcp-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        updateMcpView(tab.dataset.mcpTarget);
+      });
+    });
+
+    document.querySelectorAll('.btn-copy-mcp').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const data = mcpConfigs[currentTarget] || mcpConfigs.claude;
+        const textEl = btn.querySelector('.copy-text');
+        const origText = textEl ? textEl.textContent : '';
+        try {
+          await navigator.clipboard.writeText(data.code);
+          if (textEl) textEl.textContent = '✓ Copied!';
+          btn.style.borderColor = 'var(--color-action)';
+          setTimeout(() => {
+            if (textEl) textEl.textContent = origText;
+            btn.style.borderColor = '';
+          }, 2000);
+        } catch (e) {
+          const textarea = document.createElement('textarea');
+          textarea.value = data.code;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          if (textEl) textEl.textContent = '✓ Copied!';
+          setTimeout(() => {
+            if (textEl) textEl.textContent = origText;
+          }, 2000);
+        }
+      });
+    });
+  };
+
   const initialize = () => {
     const navShell = document.querySelector('.nav-shell');
     const hero = document.querySelector('.hero');
@@ -649,6 +725,7 @@
     startScrollEffects();
     startCapabilityCinema();
     setupDownloadHub();
+    setupMcpGuide();
   };
 
   if (document.readyState === 'loading') {
