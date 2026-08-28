@@ -9,18 +9,19 @@ rem ============================================================
 setlocal
 cd /d "%~dp0.."
 title ReadMD Setup Builder
+set "PIP_CACHE_DIR=%TEMP%\ReadMD-pip-cache"
 
 echo [1/3] Checking venv and dist\ReadMD\ReadMD.exe ...
 if not exist ".venv\Scripts\python.exe" (
     python -m venv .venv
-    ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r config/requirements.txt pyinstaller
+    ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check --no-cache-dir -q -r config/requirements.txt pyinstaller
 ) else (
     ".venv\Scripts\python.exe" -c "import sys; print(sys.version)" >nul 2>nul
     if errorlevel 1 (
         echo Existing .venv is stale; rebuilding it in place ...
         python -m venv --clear .venv
         if errorlevel 1 exit /b 1
-        ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r config/requirements.txt pyinstaller
+        ".venv\Scripts\python.exe" -m pip install --disable-pip-version-check --no-cache-dir -q -r config/requirements.txt pyinstaller
     )
 )
 if not exist "dist\ReadMD\ReadMD.exe" (

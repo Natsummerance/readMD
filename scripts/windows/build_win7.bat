@@ -19,6 +19,7 @@ rem ============================================================
 setlocal
 cd /d "%~dp0..\.."
 title ReadMD Win7 Packager
+set "PIP_CACHE_DIR=%TEMP%\ReadMD-pip-cache"
 
 
 

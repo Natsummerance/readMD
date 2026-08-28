@@ -8,6 +8,7 @@ rem ============================================================
 setlocal
 cd /d "%~dp0..\.."
 title ReadMD Packager
+set "PIP_CACHE_DIR=%TEMP%\ReadMD-pip-cache"
 rem ---- 读取全局版本号（严格从 .env / VERSION 绑定，禁止代码硬编码）----
 if "%READMD_VERSION%"=="" (
     for /f "usebackq tokens=1,* delims==" %%A in (".env") do (
@@ -41,7 +42,7 @@ if exist ".venv\Scripts\python.exe" (
     python -m venv .venv
     if errorlevel 1 goto :err
 )
-".venv\Scripts\python.exe" -m pip install --disable-pip-version-check -q -r config/requirements.txt pyinstaller
+".venv\Scripts\python.exe" -m pip install --disable-pip-version-check --no-cache-dir -q -r config/requirements.txt pyinstaller
 if errorlevel 1 goto :err
 
 echo [3/5] Generating icon ...
