@@ -41,7 +41,11 @@ hiddenimports += [m for m in collect_submodules('src.readmd_modules') if not m.e
 # previous ordering referenced this variable before assignment, causing every
 # macOS build to fail during spec evaluation.
 codesign_identity = os.environ.get('READMD_CODESIGN_IDENTITY', '').strip() or None
-if os.environ.get('READMD_FORMAL_RELEASE') == '1' and not codesign_identity:
+if (
+    os.environ.get('READMD_FORMAL_RELEASE') == '1'
+    and os.environ.get('READMD_SELF_USE_RELEASE') != '1'
+    and not codesign_identity
+):
     raise SystemExit('READMD_CODESIGN_IDENTITY is required for a formal macOS release')
 
 a = Analysis(

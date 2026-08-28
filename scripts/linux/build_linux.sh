@@ -4,7 +4,7 @@
 set -euo pipefail
 if [ -z "${READMD_VERSION:-}" ]; then
   if [ -f ".env" ]; then
-    READMD_VERSION="$(grep -E '^READMD_VERSION=' .env | head -n1 | cut -d'=' -f2- | tr -d '\r\"\'')"
+    READMD_VERSION="$(grep -E '^READMD_VERSION=' .env | head -n1 | cut -d'=' -f2- | tr -d '\r\"')"
   elif [ -f "VERSION" ]; then
     READMD_VERSION="$(head -n1 VERSION | tr -d '\r\n')"
   else
