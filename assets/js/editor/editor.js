@@ -455,7 +455,7 @@ function openFrontmatterModal() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const modal = $('frontmatter-modal');
   if (!modal) return;
-  
+
   if ($('fm-input-title')) {
     const defTitle = (state.mode === 'file' && state.file) ? state.file.split(/[\\/]/).pop().replace(/\.[^.]+$/, '') : (_t('editor.docTitleDefault') || '文档标题');
     $('fm-input-title').value = defTitle;
@@ -604,7 +604,7 @@ function handleSmartExcelPaste(e) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const colCount = Math.max(...lines.map(r => r.length));
   const mdRows = [];
-  
+
   // 表头
   const defaultCol = _t('editor.table') || '列';
   const headers = lines[0].map(c => c.trim() || defaultCol);
@@ -723,7 +723,7 @@ function openEditAiBar() {
   if (!state.editing || !cmView) return;
   const bar = $('edit-ai-bar');
   if (!bar) return;
-  
+
   const sel = cmView.state.selection.main;
   if (sel && !sel.empty) {
     editAiSelectionRange = { from: sel.from, to: sel.to, text: cmView.state.sliceDoc(sel.from, sel.to) };

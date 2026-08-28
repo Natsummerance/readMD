@@ -1,5 +1,8 @@
 -r requirements-common.txt
 
+# Win10/11 native WebView2; Win7 is built with pywebview==4.4.1 separately.
+pywebview>=5.1
+
 # Windows Runtime OCR projection. Never installed by the macOS build.
 winrt-Windows.Media.Ocr
 winrt-Windows.Graphics.Imaging

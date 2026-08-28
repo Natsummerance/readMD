@@ -40,10 +40,10 @@ ReadMD は技術文書、研究ノート、講義資料、仕様書、書籍な�
 - 繁体字中国語: https://readmd.asia/zh-tw/
 - 日本語: https://readmd.asia/ja/
 
-- Windows 7、8、10、11。インストーラーとポータブル版。
+- Windows 10、11（x64/ARM64）。インストーラーとポータブル版。
 - Apple Silicon および Intel macOS。
 - Linux x86_64 向け AppImage と Deb パッケージ。
-- UOS、Kylin OS、Deepin、openEuler などの中国系 OS。
+- UOS、Kylin OS、Deepin などの中国系 OS（実機で検証済みの構成のみ）。
 - HarmonyOS/OpenHarmony 不属于 v2.3.7，源码仅作实验性预览。ソースは実験的プレビューです。
 
 VSCode 拡張はエディター内で同期プレビューと構文修復を提供します。FastMCP stdio サーバーは Claude Desktop、Cursor などの互換 AI ツールから接続できます。

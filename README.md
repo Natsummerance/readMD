@@ -15,7 +15,7 @@
 
  ReadMD 是本地优先的 Markdown 阅读器和编辑器：双击即读，超长文档不假死，常见语法错误只在显示层修复；支持 Office / PDF / 网页转 MD、离线 OCR、LaTeX 学术增强和 MCP 接入。
 
- [![platform](https://img.shields.io/badge/Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20KylinOS%20%7C%20UOS-blue)](#全平台直接下载矩阵-release-assets)
+ [![platform](https://img.shields.io/badge/Windows%2010%2F11%20%7C%20macOS%2013%2B%20%7C%20Linux%20%7C%20UOS%20%7C%20Kylin-blue)](#正式下载矩阵-release-assets)
  [![i18n](https://img.shields.io/badge/languages-46-orange)](#全球-46-语种-i18n-全量母语化)
  [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
  [![release](https://img.shields.io/github/v/release/Natsummerance/readMD)](https://github.com/Natsummerance/readMD/releases/latest)
@@ -62,7 +62,9 @@ ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，�
 
 如果它帮你省下一次整理时间，请 [点 Star](https://github.com/Natsummerance/readMD)，让更多写作者找到这个项目。
 
-## 全平台直接下载矩阵 (Release Assets)
+## 正式下载矩阵 (Release Assets)
+
+本矩阵只列正式版承诺的平台。Windows 7 仅提供单独的遗留运行时构建，不与 Windows 10/11 安装包混装；HarmonyOS/OpenHarmony 及未完成实机验收的架构不属于 V2.3.7 正式支持。
 
 | 操作系统 / 平台 | 架构 / 格式 | 直接下载链接 (GitHub Release) | 说明 |
 | :--- | :--- | :--- | :--- |
@@ -72,7 +74,7 @@ ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，�
 | **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-x64-v2.3.7.zip) | Intel 芯片 Mac 原生构建（含 Vision 离线 OCR） |
 | **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage) | 通用 Linux 免安装 AppImage，赋予执行权限后直接运行 |
 | **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.7.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-aarch64-v2.3.7.AppImage) | 飞腾 / 鲲鹏等 ARM64 设备免安装运行 |
-| **国产信创系统** | 统信 UOS / 银河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.7_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb) | Deb 原生安装包，集成应用菜单图标、MIME 关联与 UKUI/DDE 主题适配 |
+| **国产信创系统** | 统信 UOS / 银河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.7_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb) | Deb 原生安装包；需以对应系统的实机验收记录为准 |
 | ️ **麒麟 V10 / 飞腾** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_arm64.deb) | 飞腾 D2000/E2000 原生构建，内置 UKUI/X11 与软件渲染安全回退 |
 | **VSCode 插件** | 通用 VSIX 扩展包 | [⬇️ **readmd-vscode-2.3.7.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-vscode-2.3.7.vsix) | VSCode 离线安装包，支持双向同步预览与格式自愈 |
 | **MCP Server** | FastMCP stdio 独立包 | [⬇️ **readmd-mcp-server-2.3.7.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip) | 独立 FastMCP 服务端，供 Claude Desktop / Cursor 一键接入 |
@@ -82,13 +84,13 @@ ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，�
 
 ## 多系统与信创国产适配
 
-### 1. Linux 与国产操作系统适配（统信 UOS / 银河麒麟 / 深度 / openEuler）
+### 1. Linux 与国产操作系统适配（统信 UOS / 银河麒麟 / 深度）
 - **直接安装使用**：下载 [`readmd_2.3.7_amd64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb) 双击安装，或直接运行 [`ReadMD-linux-x86_64-v2.3.7.AppImage`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage)。银河麒麟 V10 + 飞腾 ARM64 设备使用 [`readmd_2.3.7_arm64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_arm64.deb)。
 - **飞腾安全回退**：自动识别 Phytium D2000/E2000/FT 系列；WebKitGTK 启动时优先选择 UKUI/X11、禁用 DMABUF 合成并回退 llvmpipe，避免旧 GPU 驱动白屏或崩溃。
 - **系统与环境识别**：`src/readmd_modules/linux_native.py` 自动识别系统发行版，自适应配置 Wayland / X11 显示后端。
 - **桌面与深色模式**：自动侦测 DDE（统信/Deepin）、UKUI（银河麒麟）与 GNOME/KDE 的外观主题，实时同步深色/浅色配色。
 - **桌面集成与关联**：内置 FreeDesktop 桌面入口与 MIME 类型声明，支持双击 `.md` 默认打开。
-- **玲珑分发格式**：提供 `packages/linglong/linglong.yaml`，适配统信应用商店分发。
+- **支持边界**：本版本不宣称 openEuler、玲珑或其他未列出的发行版具备完整原生支持。
 
 ### 2. Windows & macOS 平台特性
 - **Windows**：内置 WinRT 原生 OCR、WebView2 硬件加速渲染、系统托盘常驻与智能单实例通信。
@@ -211,7 +213,7 @@ readmd/
 ## 更新日志 (v2.3.7)
 
 - **46 语种全量母语化与机翻清洗**：深入审核 42 个非中英文语言字典，消除波兰语混淆、西部之塔、农作物裁剪等全部系统性翻译错误，实现 100% 完整覆盖。
-- **Linux 全架构与信创国产系统支持**：新增 `linux_native.py` 原生模块，适配银河麒麟 KylinOS V10 SP2、统信 UOS 20、深度 Deepin、openEuler；提供 FreeDesktop 桌面集成与玲珑容器声明。
+- **Linux 与信创国产系统适配**：新增 `linux_native.py` 原生模块；V2.3.7 的正式支持只覆盖矩阵中有实机证据的 Ubuntu、Debian、UOS、银河麒麟和 Deepin 架构。
 - **离线来源与 Skills**：上游原文、许可证和适配元数据随包提供，AI 指令统一从 Skills 加载。
 - **LaTeX PRO 学术论文套件**：零配置 `.bib` 参考文献浮动卡片、学术 Callout 盒子与 LaTeX 导出。
 - **Editor Studio PRO 体验重塑**：Zen 禅模式全屏专注、10×10 表格设计器、Excel 智能转换。
@@ -232,6 +234,6 @@ readmd/
 
 <div align="center">
 
-**ReadMD** · 纯本地优先，全平台自由阅读写作。
+**ReadMD** · 纯本地优先，在已验收平台上自由阅读写作。
 
 </div>

@@ -87,7 +87,7 @@ function createStaticServer(distDir) {
       deviceScaleFactor: 2,
       colorScheme: item.colorScheme || 'light',
     });
-    
+
     page.on('console', (msg) => {
       if (msg.type() === 'error' || msg.type() === 'warning') {
         console.log(`[Browser Console ${msg.type()}]:`, msg.text());

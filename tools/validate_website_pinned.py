@@ -52,4 +52,3 @@ validator.validate_robots_and_sitemap = validate_pinned_robots_and_sitemap
 
 if __name__ == "__main__":
     raise SystemExit(validator.main())
-

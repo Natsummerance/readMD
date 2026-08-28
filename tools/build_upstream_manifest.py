@@ -35,7 +35,6 @@ def _files() -> Iterable[Path]:
         for path in UPSTREAM_ROOT.rglob("*")
         if path.is_file()
         and path != MANIFEST
-        and not any(part.startswith(".") for part in path.relative_to(UPSTREAM_ROOT).parts)
         and "__pycache__" not in path.parts
     )
 

@@ -873,7 +873,7 @@ def list_models(base_url, api_key="", mode="auto", endpoint_mode="prefix", custo
     base_url = (base_url or "").strip().rstrip("/")
     if not base_url:
         raise ChatError("请先填写 Base URL")
-    
+
     clean_base = _normalize_base_url(base_url, endpoint="")
     mode = (mode or "").strip().lower()
 

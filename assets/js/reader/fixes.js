@@ -97,5 +97,3 @@ document.addEventListener('DOMContentLoaded', () => {
     aiFixBtn.addEventListener('click', handleAiDocumentFix);
   }
 });
-
-

@@ -231,6 +231,7 @@ function renderTplList() {
 }
 
 function selectTpl(id) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const t = (state.ai.templates || []).find(x => x.id === id) || null;
   const builtin = !!(t && t.builtin);
   document.querySelectorAll('#tpl-list li').forEach(li => {
@@ -250,9 +251,7 @@ function selectTpl(id) {
   $('tpl-del').disabled = !t || builtin;
   if ($('tpl-publish')) $('tpl-publish').disabled = !t || builtin;
   const status = $('tpl-draft-status');
-  if (status) status.textContent = builtin
-    ? '内置 Skill 只读；如需改造请复制到用户作用域后再发布。'
-    : (t ? '用户 Skill 可编辑；保存后请先试跑，发布动作需要明确确认。' : 'AI 生成的 Skill 默认是禁用草稿，发布前请先试跑并检查差异。');
+  if (status) status.textContent = _t('tpl.hint');
 }
 
 function copyCurrentSkill() {
@@ -284,10 +283,10 @@ async function generateSkillDraft() {
   if (!active.credential_id && !isLocalAiProvider(active)) {
     showToast(_t('toast.noApiKeyNotice') || '请先在连接设置中配置凭据'); return;
   }
-  const request = window.prompt('请描述你要创建的 Skill（目标、触发条件、输出格式和安全边界）：', '创建一个适合当前文档的写作 Skill');
+  const request = window.prompt(_t('ai.promptPlaceholder'), '');
   if (!request || !request.trim()) return;
   const button = $('tpl-ai-generate');
-  if (button) { button.disabled = true; button.textContent = '生成中…'; }
+  if (button) { button.disabled = true; button.textContent = _t('ai.generating'); }
   try {
     const r = await apiFetch('/api/skills', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -296,9 +295,9 @@ async function generateSkillDraft() {
         language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en' }),
     });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.ok || !d.draft) throw new Error(d.error || 'Skill 草稿生成失败');
+    if (!r.ok || !d.ok || !d.draft) throw new Error(d.error || _t('ai.aiError'));
     const draft = d.draft;
-    const description = draft.description || 'Use when a ReadMD document needs this workflow.';
+    const description = draft.description || _t('tpl.hint');
     const content = `---\nname: ${draft.id}\ndescription: ${description}\n---\n\n${draft.instructions || ''}`;
     state.ai.skillDraft = { id: draft.id, content, metadata: Object.assign({}, draft.metadata, { enabled: false }) };
     selectTpl(null);
@@ -307,12 +306,12 @@ async function generateSkillDraft() {
     $('tpl-system').value = content;
     $('tpl-user').value = '';
     if ($('tpl-publish')) $('tpl-publish').disabled = false;
-    if ($('tpl-draft-status')) $('tpl-draft-status').textContent = '已生成禁用草稿：请检查指令并点击“发布 Skill”后才会进入真实流程。';
-    showToast('Skill 草稿已生成，尚未发布');
+    if ($('tpl-draft-status')) $('tpl-draft-status').textContent = _t('tpl.hint');
+    showToast(_t('ai.generating'));
   } catch (e) {
-    showToast('Skill 草稿生成失败：' + e.message);
+    showToast(_t('ai.aiError') + ': ' + e.message);
   } finally {
-    if (button) { button.disabled = false; button.textContent = 'AI 生成 Skill 草稿'; }
+    if (button) { button.disabled = false; button.textContent = _t('exportai.generateBtn'); }
   }
 }
 
@@ -320,17 +319,29 @@ async function publishCurrentSkill() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const id = String($('tpl-id').value || '').trim();
   const content = String($('tpl-system').value || '').trim();
-  if (!id || !content) { showToast('请先选择或生成一个用户 Skill'); return; }
-  if (!(await confirmAction({ title: '发布 Skill', message: '发布后此 Skill 可用于真实文档流程，确定继续吗？', confirmText: '发布', cancelText: _t('dialog.cancel') || '取消', danger: true }))) return;
+  if (!id || !content) { showToast(_t('toast.openDocumentToUse')); return; }
+  let evaluationToken = '';
+  try {
+    const evaluation = await apiFetch('/api/skills', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'evaluate', id, content, metadata: { id, source: 'skill-workbench', enabled: false, scripts_allowed: false },
+        variables: { document: getAiTargetText().text, selection: '', request: '', language: (window.i18n && window.i18n.locale) || 'en', context: 'ReadMD Skill workbench', output_format: 'Markdown' } }) });
+    const evaluated = await evaluation.json().catch(() => ({}));
+    if (!evaluation.ok || !evaluated.ok || !evaluated.evaluation_token) throw new Error(evaluated.error || 'Skill evaluation failed');
+    evaluationToken = evaluated.evaluation_token;
+  } catch (e) {
+    showToast(_t('ai.aiError') + ': ' + e.message);
+    return;
+  }
+  if (!(await confirmAction({ title: _t('tpl.title') || _t('ai.aiError'), message: _t('tpl.hint'), confirmText: _t('exportai.generateBtn'), cancelText: _t('dialog.cancel'), danger: true }))) return;
   try {
     const r = await apiFetch('/api/skills', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'publish', confirm: true, id, content, metadata: { id, source: 'skill-workbench', enabled: true, scripts_allowed: false } }) });
+      body: JSON.stringify({ action: 'publish', confirm: true, evaluation_token: evaluationToken, id, content, metadata: { id, source: 'skill-workbench', enabled: true, scripts_allowed: false } }) });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.ok) throw new Error(d.error || '发布失败');
+    if (!r.ok || !d.ok) throw new Error(d.error || _t('ai.aiError'));
     state.ai.skillDraft = null;
     await loadAiPrompts();
-    showToast('Skill 已发布');
-  } catch (e) { showToast('Skill 发布失败：' + e.message); }
+    showToast(_t('toast.saved') || _t('tpl.hint'));
+  } catch (e) { showToast(_t('ai.aiError') + ': ' + e.message); }
 }
 
 function parseMarkdownTemplate(content, filename) {

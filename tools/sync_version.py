@@ -57,20 +57,20 @@ def parse_semver(ver: str):
         major, minor, patch = int(m.group(1)), int(m.group(2)), int(m.group(3))
         extra = m.group(4) or ''
         return major, minor, patch, extra
-    return 2, 3, 7, ''
+    raise ValueError('invalid semantic version: %s' % ver)
 
 
 def generate_env_block(target_ver: str, existing_env: str = '') -> str:
     """根据目标版本生成统一的多平台版本矩阵环境变量块，同时保留现有密钥等自定义配置。"""
     major, minor, patch, extra = parse_semver(target_ver)
     triplet = f"{major}.{minor}.{patch}"
-    
+
     digits = re.findall(r'\d+', extra) if extra else []
     linglong_extra = digits[0] if digits else ('1' if extra else '0')
     linglong_ver = f"{major}.{minor}.{patch}.{linglong_extra}"
     harmony_code = major * 10000 + minor * 100 + patch
     today = datetime.date.today().strftime('%Y-%m-%d')
-    
+
     version_keys = [
         'READMD_VERSION',
         'READMD_VERSION_TAG',
@@ -89,7 +89,7 @@ def generate_env_block(target_ver: str, existing_env: str = '') -> str:
         'READMD_VERSION_ARCH_REL',
         'READMD_VERSION_BUILD_DATE',
     ]
-    
+
     env_lines = [
         '# ReadMD 全局统一版本配置 (Single Source of Truth for Global Versioning)',
         '# 修改此文件中的 READMD_VERSION 或运行 python tools/sync_version.py <version> 即可一键同步全库所有文件',
@@ -112,7 +112,7 @@ def generate_env_block(target_ver: str, existing_env: str = '') -> str:
         f'READMD_VERSION_BUILD_DATE={today}',
         ''
     ]
-    
+
     # 提取非版本控制的自定义环境变量（如 API KEY、URL 等）
     custom_lines = []
     if existing_env:
@@ -123,12 +123,12 @@ def generate_env_block(target_ver: str, existing_env: str = '') -> str:
             k = line_str.split('=', 1)[0].strip()
             if k not in version_keys and k != 'VERSION':
                 custom_lines.append(line.strip())
-                
+
     if custom_lines:
         env_lines.append('# 自定义本地凭据与运行时环境')
         env_lines.extend(custom_lines)
         env_lines.append('')
-        
+
     return '\n'.join(env_lines)
 
 
@@ -160,14 +160,14 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
     target_ver = target_ver.strip().lstrip('vV')
     major, minor, patch, extra = parse_semver(target_ver)
     triplet = f"{major}.{minor}.{patch}"
-    
+
     digits = re.findall(r'\d+', extra) if extra else []
     linglong_extra = digits[0] if digits else ('1' if extra else '0')
     linglong_ver = f"{major}.{minor}.{patch}.{linglong_extra}"
     harmony_code = major * 10000 + minor * 100 + patch
-    
+
     diffs = []
-    
+
     # 1. .env & .env.example
     env_path = os.path.join(ROOT, '.env')
     old_env = ''
@@ -177,7 +177,7 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
     new_env = generate_env_block(target_ver, old_env)
     if old_env.strip() != new_env.strip():
         diffs.append((env_path, old_env, new_env))
-        
+
     example_path = os.path.join(ROOT, '.env.example')
     old_example = ''
     if os.path.isfile(example_path):
@@ -186,7 +186,7 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
     new_example = generate_env_block(target_ver, '')
     if old_example.strip() != new_example.strip():
         diffs.append((example_path, old_example, new_example))
-        
+
     # VERSION
     vpath = os.path.join(ROOT, 'VERSION')
     vcontent = f'{target_ver}\n'
@@ -410,5 +410,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     ver = args.version or load_env_version()
-    success = sync_all(ver, check_only=args.check)
+    try:
+        success = sync_all(ver, check_only=args.check)
+    except ValueError as exc:
+        print('[ERROR] %s' % exc, file=sys.stderr)
+        sys.exit(2)
     sys.exit(0 if success else 1)

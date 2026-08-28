@@ -361,6 +361,18 @@ def _bundle_size():
         return 110 * 1024 * 1024
 
 
+def _webview2_runtime_size():
+    """Return the bundled fixed-runtime size when this is a Win7 build."""
+    root = bundled_webview2_runtime_dir()
+    if not root:
+        return 0
+    try:
+        return sum(os.path.getsize(os.path.join(base, name))
+                   for base, _dirs, files in os.walk(root) for name in files)
+    except OSError:
+        return 0
+
+
 def preflight_install(directory, options=None, *, disk_usage=shutil.disk_usage,
                       running_check=app_running, admin_check=_is_admin,
                       write_probe=True):
@@ -391,7 +403,9 @@ def preflight_install(directory, options=None, *, disk_usage=shutil.disk_usage,
         free = disk_usage(parent).free
         required = _bundle_size() + 32 * 1024 * 1024
         if options.get('webview2'):
-            required += 160 * 1024 * 1024
+            # Prefer the actual fixed runtime size (it is currently ~444 MiB),
+            # with a conservative fallback for preflight before extraction.
+            required += max(_webview2_runtime_size(), 160 * 1024 * 1024)
         if free < required:
             return _result(False, 'no_space', path, '可用空间不足。', ['change_dir'],
                            free_bytes=free, required_bytes=required)
@@ -733,8 +747,15 @@ def _copy_install_payload(stage_dir, opts):
     _copy_file(bundled_exe(UNINST_EXE), os.path.join(stage_dir, UNINST_EXE), optional=True)
     if opts.get('webview2', False):
         rt = bundled_webview2_runtime_dir()
-        if rt is not None:
-            _copy_tree(rt, os.path.join(stage_dir, 'webview2_runtime'))
+        if rt is None:
+            raise InstallError('runtime_missing',
+                               'Win7 固定版 WebView2 运行时缺失，无法继续安装。',
+                               os.path.join(stage_dir, 'webview2_runtime'))
+        _copy_tree(rt, os.path.join(stage_dir, 'webview2_runtime'))
+        if not os.path.isfile(os.path.join(stage_dir, 'webview2_runtime', 'msedgewebview2.exe')):
+            raise InstallError('runtime_missing',
+                               'Win7 固定版 WebView2 运行时校验失败。',
+                               os.path.join(stage_dir, 'webview2_runtime'))
     _write_install_manifest(stage_dir, opts)
     _validate_staged_install(stage_dir)
 
@@ -792,7 +813,10 @@ def do_install(opts, progress):
         os.makedirs(stage_dir, exist_ok=False)
         progress(22, 'copy', '复制并校验程序文件')
         _copy_install_payload(stage_dir, opts)
-        progress(34, 'runtime', '切换到新版本')
+        if opts.get('webview2'):
+            progress(34, 'runtime', '安装固定版 WebView2 运行时')
+        else:
+            progress(34, 'copy', '程序文件已准备')
         _commit_staged_install(stage_dir, inst_dir)
         # From here stage_dir no longer exists. Desktop/registry work is performed
         # only after a verified executable is in its final location.
@@ -1100,6 +1124,8 @@ def run_gui(uninstall_mode):
         'running': app_running(),
         'win7': is_win7(),
         'webview2Default': is_win7() and not system_webview2_installed(),
+        'install_steps': (INSTALL_STEPS if is_win7()
+                          else [step for step in INSTALL_STEPS if step[0] != 'runtime']),
         'progress': {'running': False, 'percent': 0, 'step': '', 'text': '', 'done': False, 'error': '',
                      'code': '', 'path': '', 'actions': []},
     }

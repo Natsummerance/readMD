@@ -79,7 +79,7 @@ def csv2md(path, delimiter=None):
     text, _enc = txtmd.read_text(path)
     if not text.strip():
         return "# %s\n\n*(空文件)*" % os.path.basename(path)
-    
+
     if delimiter is None:
         ext = os.path.splitext(path)[1].lower()
         if ext == '.tsv':
@@ -87,27 +87,27 @@ def csv2md(path, delimiter=None):
         else:
             first_line = text.splitlines()[0] if text.splitlines() else ''
             delimiter = '\t' if '\t' in first_line and ',' not in first_line else ','
-            
+
     reader = csv.reader(io.StringIO(text), delimiter=delimiter)
     rows = [r for r in reader if r and any(cell.strip() for cell in r)]
     if not rows:
         return "# %s\n\n*(空表格)*" % os.path.basename(path)
-    
+
     col_count = max(len(r) for r in rows)
     norm_rows = [r + [''] * (col_count - len(r)) for r in rows]
-    
+
     header = norm_rows[0]
     data_rows = norm_rows[1:]
-    
+
     def esc(s):
         return str(s).replace('\n', '<br>').replace('|', '\\|').strip()
-    
+
     md_lines = ["# %s" % os.path.basename(path), ""]
     md_lines.append("| " + " | ".join(esc(c) for c in header) + " |")
     md_lines.append("| " + " | ".join(["---"] * col_count) + " |")
     for r in data_rows:
         md_lines.append("| " + " | ".join(esc(c) for c in r) + " |")
-    
+
     return "\n".join(md_lines)
 
 
@@ -118,11 +118,11 @@ def code2md(path, ext=None):
     filename = os.path.basename(path)
     if ext is None:
         ext = os.path.splitext(path)[1].lower()
-    
+
     lang = EXT_TO_LANG.get(ext, '')
     lines_count = len(text.splitlines())
     size_kb = len(text.encode('utf-8')) / 1024.0
-    
+
     out = [
         "# %s" % filename,
         "",
@@ -850,11 +850,11 @@ def _page_to_md(page, default_body_size: float = 11.0):
                 line_text = ''.join((sp.get('text') or '') for sp in spans).rstrip()
                 if not line_text.strip():
                     continue
-                
+
                 max_size = max(sp.get('size', body_size) for sp in spans)
                 is_bold = any(bool(sp.get('flags', 0) & 2) or 'bold' in (sp.get('font') or '').lower() for sp in spans)
                 is_mono = any(_is_mono_font(sp.get('font') or '') for sp in spans)
-                
+
                 extracted_lines.append({
                     'y0': bbox.y0,
                     'seq': seq,
@@ -872,7 +872,7 @@ def _page_to_md(page, default_body_size: float = 11.0):
     while idx < len(extracted_lines):
         cur = extracted_lines[idx]
         txt = cur['text'].strip()
-        
+
         # 1. 代码块判断（等宽字体）
         if cur['mono']:
             code_lines = [cur['text']]
@@ -890,7 +890,7 @@ def _page_to_md(page, default_body_size: float = 11.0):
         sz = cur['size']
         is_bold = cur['bold']
         is_short = len(txt) <= 80 and not txt.endswith(('。', '.', '；', ';', '，', ','))
-        
+
         if sz >= 1.45 * bs and is_short:
             items.append((cur['y0'], cur['seq'], 'heading', '# ' + txt))
             idx += 1
@@ -903,7 +903,7 @@ def _page_to_md(page, default_body_size: float = 11.0):
             items.append((cur['y0'], cur['seq'], 'heading', '### ' + txt))
             idx += 1
             continue
-        
+
         # 3. 列表判断
         if _BULLET_PREFIX_RE.match(txt):
             clean_item = _BULLET_PREFIX_RE.sub('', txt).strip()
@@ -914,7 +914,7 @@ def _page_to_md(page, default_body_size: float = 11.0):
             items.append((cur['y0'], cur['seq'], 'list', txt))
             idx += 1
             continue
-        
+
         # 4. 公式判断
         if _looks_like_formula(txt):
             items.append((cur['y0'], cur['seq'], 'formula', '$' + txt + '$'))
@@ -933,7 +933,7 @@ def _page_to_md(page, default_body_size: float = 11.0):
                 break
             para_text = _join_lines(para_text, nxt['text'])
             j += 1
-        
+
         items.append((cur['y0'], cur['seq'], 'text', para_text.strip()))
         idx = j
 

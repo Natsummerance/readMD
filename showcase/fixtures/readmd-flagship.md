@@ -24,7 +24,7 @@ $$
 \end{aligned}
 $$
 
-> **高斯–马尔可夫定理 (Gauss-Markov Theorem)**  
+> **高斯–马尔可夫定理 (Gauss-Markov Theorem)**
 > 在所有线性无偏估计量中，普通最小二乘估计量（OLS）具备最小方差，是最佳线性无偏估计量（BLUE）。
 >
 > **代数推导与正定性**：设 $\hat{\beta}$ 为 OLS 估计量，$\tilde{\beta}=\mathbf{CY}$ 为任意线性无偏估计量。协方差矩阵满足 $\mathrm{Cov}(\tilde{\beta}) - \mathrm{Cov}(\hat{\beta}) \succeq 0$。
@@ -48,4 +48,3 @@ def render_pipeline(doc_path: Path) -> RenderResult:
     tokens = tokenize_safe(doc_path.read_bytes())
     return build_virtual_dom(tokens, memory_only=True)
 ```
-

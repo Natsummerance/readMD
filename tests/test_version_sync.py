@@ -41,7 +41,7 @@ class TestVersionSync(unittest.TestCase):
     def test_mcp_server_and_frontend_version_sync(self):
         """测试 MCP Server 与前端 HTML/JS 版本与配置保持一致。"""
         ver = load_env_version()
-        
+
         mcp_path = os.path.join(ROOT, 'packages', 'mcp-server', 'readmd_mcp_server.py')
         with open(mcp_path, 'r', encoding='utf-8') as f:
             mcp_src = f.read()

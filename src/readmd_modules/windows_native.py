@@ -317,4 +317,3 @@ def format_diagnosis_report():
         "=" * 64,
     ]
     return "\n".join(lines)
-

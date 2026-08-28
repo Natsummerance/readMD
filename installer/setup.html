@@ -280,10 +280,10 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
         </div>
         <div class="opt-card" id="card-webview2" style="display:none">
           <div class="ic">&#128230;</div>
-          <div class="opt-t"><b>安装 WebView2 运行时</b><span>Win7 必需（内置 109 固定版，约 143 MB）；系统已装 WebView2 时可关闭</span></div>
+          <div class="opt-t"><b>安装 WebView2 运行时</b><span>仅 Win7 兼容版需要；标准版不内置此运行时</span></div>
           <div class="switch on" id="sw-webview2" data-key="webview2"><i></i></div>
         </div>
-        <div class="size-note" id="size-note">安装大小约 110 MB · 随时可在「设置 → 应用」中卸载</div>
+        <div class="size-note" id="size-note">安装大小取决于当前构建 · 随时可在「设置 → 应用」中卸载</div>
       </div>
       <div class="actions option-actions">
         <button class="btn btn-ghost" id="btn-opt-back">返回</button>
@@ -416,7 +416,9 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
 
   var mockTimer = null;
   function mockRun(){
-    var seq = [['prepare','准备安装目录',12],['copy','复制程序文件',32],['runtime','安装 WebView2 运行时',44],['assoc','注册文件关联',62],['shortcut','创建快捷方式',80],['uninst','写入卸载信息',100]];
+    var seq = (state.install_steps || STEP_LABELS.install).map(function(s, i){
+      return [s[0], s[1], Math.min(100, 12 + i * Math.round(88 / Math.max(1, (state.install_steps || STEP_LABELS.install).length - 1)))];
+    });
     var i = 0;
     mockTimer = setInterval(function(){
       if (i >= seq.length){
@@ -516,7 +518,7 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
   function initState(st){
     state = st || state;
     var un = state.mode === 'uninstall';
-    steps = un ? STEP_LABELS.uninstall : STEP_LABELS.install;
+    steps = un ? STEP_LABELS.uninstall : (state.install_steps || STEP_LABELS.install);
     $('welcome-title').textContent = un ? '卸载 ReadMD？' : '欢迎使用 ReadMD';
     $('welcome-sub').innerHTML = un
       ? '将移除文件关联、快捷方式与安装目录。你的文档与设置不会受影响。'
@@ -544,8 +546,8 @@ h1{font-size:29px; font-weight:700; letter-spacing:-.02em; margin-bottom:8px; an
     }
     var sizeNote = $('size-note');
     if (sizeNote) sizeNote.textContent = state.win7 && !un
-      ? '安装大小约 260 MB（含 WebView2 运行时）· 随时可在「设置 → 应用」中卸载'
-      : '安装大小约 110 MB · 随时可在「设置 → 应用」中卸载';
+      ? 'Win7 兼容版包含固定版 WebView2 运行时 · 随时可在「设置 → 应用」中卸载'
+      : '标准版不内置 WebView2 运行时 · 随时可在「设置 → 应用」中卸载';
   }
 
   function startInstall(){

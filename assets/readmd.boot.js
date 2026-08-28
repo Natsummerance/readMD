@@ -1540,18 +1540,21 @@ async function getRecentEntries() {
 }
 
 async function removeRecent(path) {
-  if (!path) return;
+  if (!path) return false;
+  let ok = true;
   if (hasPy && py.remove_recent) {
-    try { await py.remove_recent(path); } catch (e) { /* ignore */ }
+    try { ok = (await py.remove_recent(path)) !== false; } catch (e) { ok = false; }
   } else {
     try {
-      await apiFetch('/api/recent/remove', {
+      const response = await apiFetch('/api/recent/remove', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path })
       });
-    } catch (e) { /* ignore */ }
+      ok = !!(response && response.ok);
+    } catch (e) { ok = false; }
   }
+  if (!ok) return false;
   await refreshRecent();
   const historyModal = $('history-modal');
   if (historyModal && !historyModal.classList.contains('hidden')) {
@@ -1559,11 +1562,12 @@ async function removeRecent(path) {
     const rec = await getRecentEntries();
     const list = $('history-list');
     if (!rec.length) {
-      if (list) list.innerHTML = '<li class="empty">' + (_t('history.noRecentFiles') || '暂无最近文件') + '</li>';
+      if (list) list.innerHTML = '<li class="empty">' + _t('history.noRecentFiles') + '</li>';
     } else {
       renderRecentList(list, rec, p => { historyModal.classList.add('hidden'); loadFile(p); });
     }
   }
+  return true;
 }
 
 async function checkRecentStatus(paths) {
@@ -1586,7 +1590,7 @@ async function checkRecentStatus(paths) {
   } catch (e) { /* ignore */ }
   return (paths || []).map(p => ({
     path: p,
-    status: 'exists',
+    status: 'unknown',
     resolved_path: p,
     name: String(p).split(/[\\/]/).pop() || p,
     dir: String(p).slice(0, String(p).length - (String(p).split(/[\\/]/).pop() || p).length).replace(/[\\/]+$/, '') || ''
@@ -1631,7 +1635,7 @@ function renderRecentList(list, rec, onOpen) {
     btn.addEventListener('click', e => {
       e.preventDefault();
       if (card.classList.contains('is-deleted')) {
-        showToast(_t('toast.fileNotFound') || '文件不存在或已被删除');
+        showToast(_t('toast.fileNotFound'));
         return;
       }
       const targetPath = card.dataset.resolvedPath || p;
@@ -1641,14 +1645,14 @@ function renderRecentList(list, rec, onOpen) {
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'recent-remove';
-    removeBtn.setAttribute('aria-label', _t('toolbar.close') || '关闭');
-    removeBtn.title = _t('toolbar.close') || '关闭';
+    removeBtn.setAttribute('aria-label', _t('ai.delete'));
+    removeBtn.title = _t('ai.delete');
     removeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
     removeBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
       li.classList.add('removing');
-      await removeRecent(p);
+      if (!(await removeRecent(p))) li.classList.remove('removing');
     });
 
     card.appendChild(btn);
@@ -1667,7 +1671,7 @@ function renderRecentList(list, rec, onOpen) {
         entry.card.classList.add('is-deleted');
         entry.nm.classList.add('is-deleted');
         entry.btn.setAttribute('aria-disabled', 'true');
-        entry.btn.title = _t('toast.fileNotFound') || '文件不存在或已被删除';
+        entry.btn.title = _t('toast.fileNotFound');
       } else if (item.status === 'moved') {
         entry.card.classList.add('is-moved');
         entry.card.dataset.resolvedPath = item.resolved_path;
@@ -1696,7 +1700,7 @@ async function openHistoryModal() {
   list.innerHTML = '';
   if (!rec.length) {
     const li = document.createElement('li');
-    li.className = 'empty'; li.textContent = _t('history.noRecentFiles') || '暂无最近文件'; list.appendChild(li);
+    li.className = 'empty'; li.textContent = _t('history.noRecentFiles'); list.appendChild(li);
   } else {
     renderRecentList(list, rec, p => { modal.classList.add('hidden'); loadFile(p); });
   }
@@ -1705,14 +1709,30 @@ async function openHistoryModal() {
 
 async function clearRecent() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (hasPy) await py.clear_recent();
+  if (hasPy && py.clear_recent) {
+    await py.clear_recent();
+  } else {
+    const response = await apiFetch('/api/recent/clear', { method: 'POST' });
+    if (!response || !response.ok) return;
+  }
   await refreshRecent();
   const list = $('history-list');
-  if (list) list.innerHTML = '<li class="empty">' + (_t('history.noRecentFiles') || '暂无最近文件') + '</li>';
+  if (list) list.innerHTML = '<li class="empty">' + _t('history.noRecentFiles') + '</li>';
 }
 
 async function addRecent(path) {
-  if (hasPy && path) { try { await py.add_recent(path); } catch (e) { /* ignore */ } }
+  if (!path) return;
+  if (hasPy && py.add_recent) {
+    try { await py.add_recent(path); } catch (e) { /* ignore */ }
+  } else {
+    try {
+      await apiFetch('/api/recent/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path })
+      });
+    } catch (e) { /* ignore */ }
+  }
 }
 
 /* ---------------- 历史 / 状态 ---------------- */
@@ -2502,8 +2522,6 @@ document.addEventListener('DOMContentLoaded', () => {
     aiFixBtn.addEventListener('click', handleAiDocumentFix);
   }
 });
-
-
 
 ;
 'use strict';
@@ -4404,7 +4422,7 @@ async function renderContent(content, name) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const render = beginReaderRender();
   const saved = state.scrollPos[normalizePath(name || state.file || '')] || 0;
-  
+
   // 预处理 @import
   if (content && /@import\s+["']/.test(content)) {
     try {
@@ -4444,7 +4462,7 @@ async function renderContent(content, name) {
     const ext = state.ext || (name ? (name.match(/\.[^.]+$/) || [''])[0] : '');
     const lang = state.code_lang || ext.replace(/^\./, '');
     const sizeKb = ((content || '').length / 1024).toFixed(1);
-    
+
     const headerHtml = `
       <div class="code-doc-header">
         <div class="code-doc-meta">
@@ -4460,7 +4478,7 @@ async function renderContent(content, name) {
           <button class="btn btn-sm" id="btn-code-copy" data-i18n="codebar.copyCode" title="复制代码正文">${_t('codebar.copyCode') || '复制代码'}</button>
         </div>
       </div>`;
-    
+
     const codeBlockMarkdown = '```' + (lang || '') + '\n' + content + '\n```';
     const prot = protectMath(codeBlockMarkdown);
     const html = parseMarkdownWithSourceMap(prot.src);
@@ -5080,7 +5098,7 @@ function toggleZenMode(force) {
   const isZen = document.body.classList.contains('zen-mode');
   document.body.classList.toggle('zen-entering', isZen);
   if (toolbar) toolbar.classList.remove('zen-toolbar-revealed');
-  
+
   if (isZen) {
     document.body.classList.add('zen-toolbar-suppressed');
     const reader = document.getElementById('content');
@@ -6577,7 +6595,7 @@ async function exportAndInsertImg() {
   octx.imageSmoothingQuality = 'high';
   octx.drawImage(tmp, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
   const blob = await new Promise(res => out.toBlob(res, 'image/png'));
-  if (!blob) { showToast(_t('toast.imgExportFail') || '图片导出失败'); return; 
+  if (!blob) { showToast(_t('toast.imgExportFail') || '图片导出失败'); return;
   }
   const b64 = await new Promise(res => {
     const fr = new FileReader();
@@ -7060,7 +7078,7 @@ function openFrontmatterModal() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const modal = $('frontmatter-modal');
   if (!modal) return;
-  
+
   if ($('fm-input-title')) {
     const defTitle = (state.mode === 'file' && state.file) ? state.file.split(/[\\/]/).pop().replace(/\.[^.]+$/, '') : (_t('editor.docTitleDefault') || '文档标题');
     $('fm-input-title').value = defTitle;
@@ -7209,7 +7227,7 @@ function handleSmartExcelPaste(e) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const colCount = Math.max(...lines.map(r => r.length));
   const mdRows = [];
-  
+
   // 表头
   const defaultCol = _t('editor.table') || '列';
   const headers = lines[0].map(c => c.trim() || defaultCol);
@@ -7328,7 +7346,7 @@ function openEditAiBar() {
   if (!state.editing || !cmView) return;
   const bar = $('edit-ai-bar');
   if (!bar) return;
-  
+
   const sel = cmView.state.selection.main;
   if (sel && !sel.empty) {
     editAiSelectionRange = { from: sel.from, to: sel.to, text: cmView.state.sliceDoc(sel.from, sel.to) };
@@ -7757,6 +7775,7 @@ function renderTplList() {
 }
 
 function selectTpl(id) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const t = (state.ai.templates || []).find(x => x.id === id) || null;
   const builtin = !!(t && t.builtin);
   document.querySelectorAll('#tpl-list li').forEach(li => {
@@ -7776,9 +7795,7 @@ function selectTpl(id) {
   $('tpl-del').disabled = !t || builtin;
   if ($('tpl-publish')) $('tpl-publish').disabled = !t || builtin;
   const status = $('tpl-draft-status');
-  if (status) status.textContent = builtin
-    ? '内置 Skill 只读；如需改造请复制到用户作用域后再发布。'
-    : (t ? '用户 Skill 可编辑；保存后请先试跑，发布动作需要明确确认。' : 'AI 生成的 Skill 默认是禁用草稿，发布前请先试跑并检查差异。');
+  if (status) status.textContent = _t('tpl.hint');
 }
 
 function copyCurrentSkill() {
@@ -7810,10 +7827,10 @@ async function generateSkillDraft() {
   if (!active.credential_id && !isLocalAiProvider(active)) {
     showToast(_t('toast.noApiKeyNotice') || '请先在连接设置中配置凭据'); return;
   }
-  const request = window.prompt('请描述你要创建的 Skill（目标、触发条件、输出格式和安全边界）：', '创建一个适合当前文档的写作 Skill');
+  const request = window.prompt(_t('ai.promptPlaceholder'), '');
   if (!request || !request.trim()) return;
   const button = $('tpl-ai-generate');
-  if (button) { button.disabled = true; button.textContent = '生成中…'; }
+  if (button) { button.disabled = true; button.textContent = _t('ai.generating'); }
   try {
     const r = await apiFetch('/api/skills', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -7822,9 +7839,9 @@ async function generateSkillDraft() {
         language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en' }),
     });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.ok || !d.draft) throw new Error(d.error || 'Skill 草稿生成失败');
+    if (!r.ok || !d.ok || !d.draft) throw new Error(d.error || _t('ai.aiError'));
     const draft = d.draft;
-    const description = draft.description || 'Use when a ReadMD document needs this workflow.';
+    const description = draft.description || _t('tpl.hint');
     const content = `---\nname: ${draft.id}\ndescription: ${description}\n---\n\n${draft.instructions || ''}`;
     state.ai.skillDraft = { id: draft.id, content, metadata: Object.assign({}, draft.metadata, { enabled: false }) };
     selectTpl(null);
@@ -7833,12 +7850,12 @@ async function generateSkillDraft() {
     $('tpl-system').value = content;
     $('tpl-user').value = '';
     if ($('tpl-publish')) $('tpl-publish').disabled = false;
-    if ($('tpl-draft-status')) $('tpl-draft-status').textContent = '已生成禁用草稿：请检查指令并点击“发布 Skill”后才会进入真实流程。';
-    showToast('Skill 草稿已生成，尚未发布');
+    if ($('tpl-draft-status')) $('tpl-draft-status').textContent = _t('tpl.hint');
+    showToast(_t('ai.generating'));
   } catch (e) {
-    showToast('Skill 草稿生成失败：' + e.message);
+    showToast(_t('ai.aiError') + ': ' + e.message);
   } finally {
-    if (button) { button.disabled = false; button.textContent = 'AI 生成 Skill 草稿'; }
+    if (button) { button.disabled = false; button.textContent = _t('exportai.generateBtn'); }
   }
 }
 
@@ -7846,17 +7863,29 @@ async function publishCurrentSkill() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const id = String($('tpl-id').value || '').trim();
   const content = String($('tpl-system').value || '').trim();
-  if (!id || !content) { showToast('请先选择或生成一个用户 Skill'); return; }
-  if (!(await confirmAction({ title: '发布 Skill', message: '发布后此 Skill 可用于真实文档流程，确定继续吗？', confirmText: '发布', cancelText: _t('dialog.cancel') || '取消', danger: true }))) return;
+  if (!id || !content) { showToast(_t('toast.openDocumentToUse')); return; }
+  let evaluationToken = '';
+  try {
+    const evaluation = await apiFetch('/api/skills', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'evaluate', id, content, metadata: { id, source: 'skill-workbench', enabled: false, scripts_allowed: false },
+        variables: { document: getAiTargetText().text, selection: '', request: '', language: (window.i18n && window.i18n.locale) || 'en', context: 'ReadMD Skill workbench', output_format: 'Markdown' } }) });
+    const evaluated = await evaluation.json().catch(() => ({}));
+    if (!evaluation.ok || !evaluated.ok || !evaluated.evaluation_token) throw new Error(evaluated.error || 'Skill evaluation failed');
+    evaluationToken = evaluated.evaluation_token;
+  } catch (e) {
+    showToast(_t('ai.aiError') + ': ' + e.message);
+    return;
+  }
+  if (!(await confirmAction({ title: _t('tpl.title') || _t('ai.aiError'), message: _t('tpl.hint'), confirmText: _t('exportai.generateBtn'), cancelText: _t('dialog.cancel'), danger: true }))) return;
   try {
     const r = await apiFetch('/api/skills', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'publish', confirm: true, id, content, metadata: { id, source: 'skill-workbench', enabled: true, scripts_allowed: false } }) });
+      body: JSON.stringify({ action: 'publish', confirm: true, evaluation_token: evaluationToken, id, content, metadata: { id, source: 'skill-workbench', enabled: true, scripts_allowed: false } }) });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.ok) throw new Error(d.error || '发布失败');
+    if (!r.ok || !d.ok) throw new Error(d.error || _t('ai.aiError'));
     state.ai.skillDraft = null;
     await loadAiPrompts();
-    showToast('Skill 已发布');
-  } catch (e) { showToast('Skill 发布失败：' + e.message); }
+    showToast(_t('toast.saved') || _t('tpl.hint'));
+  } catch (e) { showToast(_t('ai.aiError') + ': ' + e.message); }
 }
 
 function parseMarkdownTemplate(content, filename) {
@@ -10455,7 +10484,7 @@ function generateExportPreviewCss(opts, fmt) {
 function paginateHtmlIntoExportSheets(fullHtml, opts = {}) {
   const page = opts.page || {};
   const isLandscape = page.orientation === 'landscape';
-  
+
   // A4 标准毫米规格与边距
   const PAGE_WIDTH_MM = isLandscape ? 297 : 210;
   const PAGE_HEIGHT_MM = isLandscape ? 210 : 297;
@@ -10670,33 +10699,33 @@ function updateExportLivePreview() {
       // style refresh.
       wrapper.innerHTML = '<div id="export-preview-full-page" class="export-preview-full-page"></div>';
       const fullPageHost = wrapper.querySelector('#export-preview-full-page');
-      
+
       const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      
+
       pageHtmlList.forEach((pageHtml, index) => {
         const sheet = document.createElement('div');
         sheet.className = isHtmlMode ? 'export-preview-page-sheet export-preview-html-sheet' : 'export-preview-page-sheet';
         sheet.dataset.page = (index + 1).toString();
-        
+
         if (!isHtmlMode) {
           const headerEl = document.createElement('div');
           headerEl.className = 'export-page-header';
           headerEl.innerHTML = `<span>${esc(docTitle)}</span><span>${fmt.toUpperCase()} · ${esc(presetName)}</span>`;
           sheet.appendChild(headerEl);
         }
-        
+
         const bodyEl = document.createElement('div');
         bodyEl.className = 'export-page-body';
         bodyEl.innerHTML = pageHtml;
         sheet.appendChild(bodyEl);
-        
+
         if (!isHtmlMode) {
           const footerEl = document.createElement('div');
           footerEl.className = 'export-page-footer';
           footerEl.innerHTML = `<span>ReadMD</span><span>${index + 1} / ${totalPages}</span>`;
           sheet.appendChild(footerEl);
         }
-        
+
         fullPageHost.appendChild(sheet);
         renderMath(bodyEl);
       });
@@ -11039,7 +11068,7 @@ async function generateExportStyleWithAi(stylePrompt) {
 
     text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
     const parsed = normalizeExportAiPayload(JSON.parse(text));
-    
+
     // Apply options to export state and DOM
     state.export.options = expDeepMerge(state.export.options || state.export.defaults, parsed);
     applyExportOptionsToDom();
@@ -11057,8 +11086,6 @@ async function generateExportStyleWithAi(stylePrompt) {
     showToast((_t('toast.unknownError') || '生成失败：') + e.message);
   }
 }
-
-
 
 ;
 'use strict';
@@ -11302,7 +11329,7 @@ function syncSelectAccessibleName(el) {
 /* ==============================================================================================
    ReadMD v2 - Application Integration Bus & Bootstrap (主集成总线与生命周期调度器)
    ==============================================================================================
-   
+
    【架构定位】
    本项目采用分级分类的模块化架构，assets/app.js 作为前端总调度中心，负责：
      1. 全局生命周期初始化 (DOMContentLoaded, pywebviewready, beforeunload)
@@ -11313,7 +11340,7 @@ function syncSelectAccessibleName(el) {
    ==============================================================================================
    【模块目录索引与职责映射表 (Architecture & Module Directory Index)】
    ==============================================================================================
-   
+
     assets/js/core/ - 核心基础设施与全局状态
    ----------------------------------------------------------------------------------------------
      • state.js     : 全局状态单例 (window.state)、DOM选择器 ($)、网络请求 (apiFetch)、提示 (showToast/busy)、Python桥接 (bindPy)
@@ -11322,7 +11349,7 @@ function syncSelectAccessibleName(el) {
      • tabs.js      : 多标签系统 (createTab/switchTab/closeTab/closeOtherTabs/closeAllTabs/renderTabsBar/promptDirtyClose)
      • history.js   : 最近打开文件、主页深度重置 (goHome)、欢迎页卡片交互 (bindWelcomeEvents)、自动重载 (startAutoReload)
      • dragdrop.js  : 全局文件与图片拖拽放置识别 (bindGlobalDragAndDrop)
-   
+
     assets/js/reader/ - 文档解析、渲染与阅读增强引擎
    ----------------------------------------------------------------------------------------------
      • render.js    : Markdown 核心解析、分块虚拟渲染 (renderMarkdown/renderVirtual/loadFile/loadFileDialog/saveAs)
@@ -11331,13 +11358,13 @@ function syncSelectAccessibleName(el) {
      • toc.js       : 目录大纲提取、侧边栏层级生成与滚动追踪高亮 (buildToc/updateActiveToc)
      • search.js    : 正文全文关键词即时检索、多结果高亮与上下跳转 (toggleSearch/doSearch/jumpToMark/closeSearch)
      • folder.js    : 本地工作区文件夹侧边栏树形浏览与文件快速切换 (openFolder/showSide/toggleSide)
-   
+
     assets/js/editor/ - Markdown 源码编辑器与图片工作台
    ----------------------------------------------------------------------------------------------
      • editor.js    : CodeMirror 6 编辑器实例、Markdown语法插入 (cmInsertSyntax)、命令面板 (openMdCommandPalette)、saveEdit/exitEdit
      • preview.js   : 四向分栏实时预览布局 (setPvLayout)、双向滚动同步 (pvSyncFromPreview)、分栏拖拽手柄 (bindPvSplitter)
      • image.js     : 轻量图片编辑器 (openImgModal/rotateImg/flipImg/applyRatio/undoImg/redoImg/exportAndInsertImg)
-   
+
     assets/js/features/ - 高级业务扩展功能
    ----------------------------------------------------------------------------------------------
      • ai.js        : AI 侧边栏对话、多模型切换 (onAiProviderChange)、Prompt模板 (openTplModal)、流式推理 (runAi)、无痕会话
@@ -11348,7 +11375,7 @@ function syncSelectAccessibleName(el) {
      • export.js    : 多格式导出 (PDF/DOCX/HTML/LaTeX) (openExportModal/renderExportSections/updateExportLivePreview/runExport)
      • share.js     : 局域网移动端二维码与热点分享 (openShareModal/startShare/stopShare)
      • updater.js   : 客户端内自动检查更新与静默升级 (checkUpdate/openUpdateModal/startUpdateDownload)
-   
+
    ==============================================================================================
    【核心跨模块联动关系 (Core Inter-Module Collaborations)】
    ==============================================================================================
@@ -11579,7 +11606,7 @@ function bindEvents() {
   $('formula-close').addEventListener('click', closeFormulaModal);
   $('formula-search').addEventListener('input', renderFormulaPicker);
   $('formula-modal').addEventListener('click', e => { if (e.target === $('formula-modal')) closeFormulaModal(); });
-  
+
   // 编辑保存与退出
   $('edit-save').addEventListener('click', saveEdit);
   $('edit-area').addEventListener('input', () => {
@@ -12042,7 +12069,7 @@ function bindEvents() {
   /* --- 19. 全局键盘快捷键矩阵 (Global Keyboard Shortcuts) --- */
   document.addEventListener('keydown', e => {
     const mod = e.ctrlKey || e.metaKey;
-    
+
     // 模态弹窗 ESC 优先拦截与层级关闭
     if (e.key === 'Escape') {
       const allModalIds = [
@@ -12082,7 +12109,7 @@ function bindEvents() {
         return;
       }
     }
-    
+
     const presentationVisible = $('presentation-modal') && !$('presentation-modal').classList.contains('hidden');
     if (e.key === 'F11') {
       e.preventDefault();
@@ -12416,5 +12443,3 @@ function updateUnloadGuard() {
     return '';
   } : null;
 }
-
-

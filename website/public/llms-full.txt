@@ -42,10 +42,10 @@ Official language indexes:
 
 ReadMD ships for:
 
-- Windows 7, 8, 10, and 11, including installer and portable builds.
+- Windows 10 and 11 (x64/ARM64), including installer and portable builds.
 - macOS on Apple Silicon and Intel processors.
 - Linux x86_64 through AppImage and Debian packages.
-- Chinese operating systems including UnionTech UOS, Kylin OS, Deepin, and openEuler.
+- Chinese operating systems including UnionTech UOS, Kylin OS, and Deepin; only configurations with native evidence are supported.
 - HarmonyOS/OpenHarmony is out of scope for v2.3.7; the source preview is experimental.
 
 A VSCode extension supports synchronized preview and syntax repair inside the editor. A FastMCP stdio server allows compatible AI programming assistants to connect to ReadMD workflows.

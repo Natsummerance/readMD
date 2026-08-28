@@ -1,5 +1,8 @@
 -r requirements-common.txt
 
+# Native WebView shell (Win7 uses the dedicated pinned requirement below).
+pywebview>=5.1
+
 # Windows-only: WinRT OCR
 winrt-Windows.Media.Ocr; sys_platform == 'win32'
 winrt-Windows.Graphics.Imaging; sys_platform == 'win32'

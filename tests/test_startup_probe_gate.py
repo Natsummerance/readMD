@@ -62,4 +62,3 @@ class StartupProbeGateTest(unittest.TestCase):
         self.assertEqual(args.warmup, 1)
         self.assertEqual(args.runs, 5)
         self.assertEqual(args.timeout, 30)
-

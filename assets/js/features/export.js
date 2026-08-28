@@ -568,7 +568,7 @@ function generateExportPreviewCss(opts, fmt) {
 function paginateHtmlIntoExportSheets(fullHtml, opts = {}) {
   const page = opts.page || {};
   const isLandscape = page.orientation === 'landscape';
-  
+
   // A4 标准毫米规格与边距
   const PAGE_WIDTH_MM = isLandscape ? 297 : 210;
   const PAGE_HEIGHT_MM = isLandscape ? 210 : 297;
@@ -783,33 +783,33 @@ function updateExportLivePreview() {
       // style refresh.
       wrapper.innerHTML = '<div id="export-preview-full-page" class="export-preview-full-page"></div>';
       const fullPageHost = wrapper.querySelector('#export-preview-full-page');
-      
+
       const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      
+
       pageHtmlList.forEach((pageHtml, index) => {
         const sheet = document.createElement('div');
         sheet.className = isHtmlMode ? 'export-preview-page-sheet export-preview-html-sheet' : 'export-preview-page-sheet';
         sheet.dataset.page = (index + 1).toString();
-        
+
         if (!isHtmlMode) {
           const headerEl = document.createElement('div');
           headerEl.className = 'export-page-header';
           headerEl.innerHTML = `<span>${esc(docTitle)}</span><span>${fmt.toUpperCase()} · ${esc(presetName)}</span>`;
           sheet.appendChild(headerEl);
         }
-        
+
         const bodyEl = document.createElement('div');
         bodyEl.className = 'export-page-body';
         bodyEl.innerHTML = pageHtml;
         sheet.appendChild(bodyEl);
-        
+
         if (!isHtmlMode) {
           const footerEl = document.createElement('div');
           footerEl.className = 'export-page-footer';
           footerEl.innerHTML = `<span>ReadMD</span><span>${index + 1} / ${totalPages}</span>`;
           sheet.appendChild(footerEl);
         }
-        
+
         fullPageHost.appendChild(sheet);
         renderMath(bodyEl);
       });
@@ -1152,7 +1152,7 @@ async function generateExportStyleWithAi(stylePrompt) {
 
     text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
     const parsed = normalizeExportAiPayload(JSON.parse(text));
-    
+
     // Apply options to export state and DOM
     state.export.options = expDeepMerge(state.export.options || state.export.defaults, parsed);
     applyExportOptionsToDom();
@@ -1170,5 +1170,3 @@ async function generateExportStyleWithAi(stylePrompt) {
     showToast((_t('toast.unknownError') || '生成失败：') + e.message);
   }
 }
-
-

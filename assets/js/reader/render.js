@@ -1075,7 +1075,7 @@ async function renderContent(content, name) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const render = beginReaderRender();
   const saved = state.scrollPos[normalizePath(name || state.file || '')] || 0;
-  
+
   // 预处理 @import
   if (content && /@import\s+["']/.test(content)) {
     try {
@@ -1115,7 +1115,7 @@ async function renderContent(content, name) {
     const ext = state.ext || (name ? (name.match(/\.[^.]+$/) || [''])[0] : '');
     const lang = state.code_lang || ext.replace(/^\./, '');
     const sizeKb = ((content || '').length / 1024).toFixed(1);
-    
+
     const headerHtml = `
       <div class="code-doc-header">
         <div class="code-doc-meta">
@@ -1131,7 +1131,7 @@ async function renderContent(content, name) {
           <button class="btn btn-sm" id="btn-code-copy" data-i18n="codebar.copyCode" title="复制代码正文">${_t('codebar.copyCode') || '复制代码'}</button>
         </div>
       </div>`;
-    
+
     const codeBlockMarkdown = '```' + (lang || '') + '\n' + content + '\n```';
     const prot = protectMath(codeBlockMarkdown);
     const html = parseMarkdownWithSourceMap(prot.src);
@@ -1751,7 +1751,7 @@ function toggleZenMode(force) {
   const isZen = document.body.classList.contains('zen-mode');
   document.body.classList.toggle('zen-entering', isZen);
   if (toolbar) toolbar.classList.remove('zen-toolbar-revealed');
-  
+
   if (isZen) {
     document.body.classList.add('zen-toolbar-suppressed');
     const reader = document.getElementById('content');

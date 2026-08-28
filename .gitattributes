@@ -1,0 +1,4 @@
+# Vendored source snapshots are immutable byte payloads; never rewrite their
+# line endings during a Windows checkout.
+assets/upstream/** -text
+assets/providers/provider-catalog.json -text

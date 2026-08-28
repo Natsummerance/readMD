@@ -23,8 +23,16 @@ from typing import Any, Dict, List, Optional
 # 引入 ReadMD 核心算法路径
 _SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
 _PACKAGED_ROOT = os.path.dirname(_SERVER_DIR)
-ROOT_DIR = (_PACKAGED_ROOT if os.path.isdir(os.path.join(_PACKAGED_ROOT, 'src'))
-            else os.path.dirname(os.path.dirname(os.path.dirname(_SERVER_DIR))))
+# The release ZIP keeps ``packages/mcp-server`` and ``src`` beside each other.
+# Resolve from the archive layout first, then support a source checkout.
+_ROOT_CANDIDATES = (
+    os.path.dirname(_PACKAGED_ROOT),
+    os.path.dirname(os.path.dirname(_SERVER_DIR)),
+    os.getcwd(),
+)
+ROOT_DIR = next((candidate for candidate in _ROOT_CANDIDATES
+                 if os.path.isdir(os.path.join(candidate, 'src'))),
+                os.path.dirname(_SERVER_DIR))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
@@ -47,14 +55,28 @@ except ImportError as e:
 # Workflow metadata is deliberately kept separate from instructions.  The
 # registry below reads the same built-in/user/project Skills as the desktop
 # service, so MCP cannot drift into a second prompt implementation.
-WORKFLOW_SKILLS = {
-    "quick_read": ("快速阅读", "readmd-quick-read"), "polish": ("智能润色", "readmd-polish"),
-    "modify": ("语法修改", "readmd-format-fix"), "expand": ("内容扩充", "readmd-polish"),
-    "continue": ("自然续写", "readmd-continue"), "translate": ("学术翻译", "readmd-translate"),
-    "ask": ("文档问答", "readmd-ask"), "summary": ("核心总结", "readmd-summary"),
-    "outline": ("生成大纲", "readmd-outline"), "weekly": ("周报整理", "readmd-weekly"),
-    "to_english": ("英文翻译", "readmd-translate"), "code_review": ("代码审查", "readmd-code-review"),
+# One-release compatibility aliases for clients that still send the former
+# workflow IDs.  They are metadata only; prompts/list is always the live Skill
+# registry and no instruction text is duplicated here.
+LEGACY_WORKFLOW_ALIASES = {
+    "quick_read": "readmd-quick-read", "polish": "readmd-polish",
+    "modify": "readmd-format-fix", "expand": "readmd-polish",
+    "continue": "readmd-continue", "translate": "readmd-translate",
+    "ask": "readmd-ask", "summary": "readmd-summary",
+    "outline": "readmd-outline", "weekly": "readmd-weekly",
+    "to_english": "readmd-translate", "code_review": "readmd-code-review",
 }
+LEGACY_WORKFLOW_NAMES = {
+    "quick_read": "快速阅读", "polish": "智能润色", "modify": "语法修改",
+    "expand": "内容扩充", "continue": "自然续写", "translate": "学术翻译",
+    "ask": "文档问答", "summary": "核心总结", "outline": "生成大纲",
+    "weekly": "周报整理", "to_english": "英文翻译", "code_review": "代码审查",
+}
+
+
+def _resolve_skill_id(identifier):
+    requested = str(identifier or '').strip()
+    return LEGACY_WORKFLOW_ALIASES.get(requested, requested)
 
 # MCP clients must make side effects explicit. Reads and analysis remain
 # available by default; exports, network fetches and code execution require a
@@ -202,12 +224,12 @@ TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "workflow_id": {
                     "type": "string",
-                    "enum": list(WORKFLOW_SKILLS.keys()),
-                        "description": "工作流标识符；具体指令由 ReadMD Skill Registry 提供"
+                    "description": "旧版工作流别名（兼容字段）；优先使用 skill_id"
                 },
+                "skill_id": {"type": "string", "description": "ReadMD Skill 标识符"},
                 "markdown_content": {"type": "string", "description": "待处理的文档正文内容（可选）"}
             },
-            "required": ["workflow_id"]
+            "required": []
         }
     },
     {
@@ -443,8 +465,8 @@ def handle_tool_call(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
             return {"content": [{"type": "text", "text": omml}]}
 
         elif name == "readmd_ai_assistant":
-            wf_id = str(args.get("workflow_id", "quick_read"))
-            wf_name, skill_id = WORKFLOW_SKILLS.get(wf_id, WORKFLOW_SKILLS["quick_read"])
+            wf_id = str(args.get("workflow_id", ""))
+            skill_id = _resolve_skill_id(args.get("skill_id") or wf_id or "readmd-quick-read")
             doc_content = str(args.get("markdown_content", "")) or "(no document supplied)"
             skill = _skills_registry().get(skill_id)
             if skill is None:
@@ -463,7 +485,7 @@ def handle_tool_call(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
                         "type": "text",
                         "text": json.dumps({
                             "workflow_id": wf_id,
-                            "workflow_name": wf_name,
+                            "workflow_name": LEGACY_WORKFLOW_NAMES.get(wf_id, skill.name),
                             "skill_id": skill_id,
                             "system_prompt": system_prompt,
                             "user_payload": doc_content
@@ -695,17 +717,10 @@ def _read_resource(uri):
 
 
 def _prompt_descriptors():
-    descriptors = [{"name": name, "description": "ReadMD Skill workflow", "arguments": [
-        {"name": "markdown_content", "description": "Document text", "required": False},
-        {"name": "request", "description": "User request", "required": False},
-    ], "skill_id": skill_id, "workflow_id": wf_id}
-            for wf_id, (name, skill_id) in WORKFLOW_SKILLS.items()]
-    known_names = {item["name"] for item in descriptors}
-    # Every discoverable Skill is also a first-class MCP prompt.  Workflow
-    # aliases above remain for clients using the legacy names.
+    descriptors = []
+    # Every discoverable Skill is a first-class MCP prompt.  The legacy aliases
+    # are accepted only by prompts/get and are deliberately not advertised.
     for skill in _skills_registry().list():
-        if skill.id in known_names:
-            continue
         descriptors.append({"name": skill.id, "description": skill.description,
                             "arguments": [
                                 {"name": "markdown_content", "description": "Document text", "required": False},
@@ -766,17 +781,12 @@ def run_stdio_server():
                 res = {"jsonrpc": "2.0", "id": req_id, "result": {"prompts": _prompt_descriptors()}}
             elif method == "prompts/get":
                 params = req.get("params", {})
-                requested = str(params.get("name") or "quick_read")
-                if requested in WORKFLOW_SKILLS:
-                    wf_id = requested
-                    name, skill_id = WORKFLOW_SKILLS[wf_id]
-                else:
-                    wf_id = ""
-                    skill_id = requested
-                    skill = _skills_registry().get(skill_id)
-                    if skill is None:
-                        raise SkillError("Skill not found: " + skill_id)
-                    name = skill.name
+                requested = str(params.get("name") or "readmd-quick-read")
+                skill_id = _resolve_skill_id(requested)
+                skill = _skills_registry().get(skill_id)
+                if skill is None:
+                    raise SkillError("Skill not found: " + skill_id)
+                name = skill.name
                 arguments = params.get("arguments") or {}
                 doc = str(arguments.get("markdown_content") or "(no document supplied)")
                 prompt = _skills_registry().render(skill_id, {

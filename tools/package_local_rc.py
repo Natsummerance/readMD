@@ -35,6 +35,10 @@ def copy_item(src: Path, dst: Path) -> None:
         shutil.copy2(src, dst)
 
 
+def first_existing(*paths: Path) -> Path | None:
+    return next((path for path in paths if path.exists()), None)
+
+
 def git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True, encoding="utf-8").strip()
 
@@ -66,17 +70,22 @@ def main() -> int:
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
     dist = root / "dist"
-    onedir = dist / "ReadMD-v2.3.7-RC"
-    if not onedir.exists():
-        onedir = dist / "ReadMD"
+    onedir = first_existing(dist / "ReadMD-v2.3.7-RC", dist / "ReadMD")
+    portable = first_existing(dist / "ReadMD-portable-v2.3.7-RC.exe", dist / "ReadMD-portable.exe")
+    installer = first_existing(dist / "ReadMDSetup-v2.3.7-RC.exe", dist / "ReadMDSetup.exe")
+    mcp = first_existing(dist / "readmd-mcp-server-2.3.7-RC.zip", dist / "readmd-mcp-server-2.3.7.zip")
+    vsix = first_existing(
+        root / "packages" / "vscode-extension" / "readmd-vscode-2.3.7.vsix",
+        *sorted((root / "packages" / "vscode-extension").glob("*.vsix")),
+    )
     required = {
         "ReadMD-windows-x64-onedir": onedir,
-        "ReadMD-windows-x64-portable.exe": dist / "ReadMD-portable-v2.3.7-RC.exe",
-        "ReadMDSetup-windows-x64-RC.exe": dist / "ReadMDSetup-v2.3.7-RC.exe",
-        "readmd-vscode-2.3.7.vsix": root / "packages" / "vscode-extension" / "readmd-vscode-2.3.7.vsix",
-        "readmd-mcp-server-2.3.7.zip": dist / "readmd-mcp-server-2.3.7-RC.zip",
+        "ReadMD-windows-x64-portable.exe": portable,
+        "ReadMDSetup-windows-x64-RC.exe": installer,
+        "readmd-vscode-2.3.7.vsix": vsix,
+        "readmd-mcp-server-2.3.7.zip": mcp,
     }
-    missing = [str(path) for path in required.values() if not path.exists()]
+    missing = [name for name, path in required.items() if path is None or not path.exists()]
     if missing:
         raise SystemExit("local RC inputs missing:\n" + "\n".join(missing))
     for name, src in required.items():

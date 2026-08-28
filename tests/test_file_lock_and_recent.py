@@ -13,7 +13,7 @@ def test_api_recent_operations(monkeypatch):
         recent_json = os.path.join(tmpdir, 'recent.json')
         monkeypatch.setattr(config, 'RECENT_FILE', recent_json)
         monkeypatch.setattr(readmd, 'RECENT_FILE', recent_json)
-        
+
         api = Api()
         file1 = os.path.join(tmpdir, 'doc1.md')
         file2 = os.path.join(tmpdir, 'doc2.md')
@@ -26,7 +26,7 @@ def test_api_recent_operations(monkeypatch):
         api.add_recent(file1)
         api.add_recent(file2)
         api.add_recent(file3)
-        
+
         entries = api.get_recent()
         assert len(entries) == 3
         assert entries[0] == file3

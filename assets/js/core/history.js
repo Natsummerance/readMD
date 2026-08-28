@@ -20,18 +20,21 @@ async function getRecentEntries() {
 }
 
 async function removeRecent(path) {
-  if (!path) return;
+  if (!path) return false;
+  let ok = true;
   if (hasPy && py.remove_recent) {
-    try { await py.remove_recent(path); } catch (e) { /* ignore */ }
+    try { ok = (await py.remove_recent(path)) !== false; } catch (e) { ok = false; }
   } else {
     try {
-      await apiFetch('/api/recent/remove', {
+      const response = await apiFetch('/api/recent/remove', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path })
       });
-    } catch (e) { /* ignore */ }
+      ok = !!(response && response.ok);
+    } catch (e) { ok = false; }
   }
+  if (!ok) return false;
   await refreshRecent();
   const historyModal = $('history-modal');
   if (historyModal && !historyModal.classList.contains('hidden')) {
@@ -39,11 +42,12 @@ async function removeRecent(path) {
     const rec = await getRecentEntries();
     const list = $('history-list');
     if (!rec.length) {
-      if (list) list.innerHTML = '<li class="empty">' + (_t('history.noRecentFiles') || '暂无最近文件') + '</li>';
+      if (list) list.innerHTML = '<li class="empty">' + _t('history.noRecentFiles') + '</li>';
     } else {
       renderRecentList(list, rec, p => { historyModal.classList.add('hidden'); loadFile(p); });
     }
   }
+  return true;
 }
 
 async function checkRecentStatus(paths) {
@@ -66,7 +70,7 @@ async function checkRecentStatus(paths) {
   } catch (e) { /* ignore */ }
   return (paths || []).map(p => ({
     path: p,
-    status: 'exists',
+    status: 'unknown',
     resolved_path: p,
     name: String(p).split(/[\\/]/).pop() || p,
     dir: String(p).slice(0, String(p).length - (String(p).split(/[\\/]/).pop() || p).length).replace(/[\\/]+$/, '') || ''
@@ -111,7 +115,7 @@ function renderRecentList(list, rec, onOpen) {
     btn.addEventListener('click', e => {
       e.preventDefault();
       if (card.classList.contains('is-deleted')) {
-        showToast(_t('toast.fileNotFound') || '文件不存在或已被删除');
+        showToast(_t('toast.fileNotFound'));
         return;
       }
       const targetPath = card.dataset.resolvedPath || p;
@@ -121,14 +125,14 @@ function renderRecentList(list, rec, onOpen) {
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
     removeBtn.className = 'recent-remove';
-    removeBtn.setAttribute('aria-label', _t('toolbar.close') || '关闭');
-    removeBtn.title = _t('toolbar.close') || '关闭';
+    removeBtn.setAttribute('aria-label', _t('ai.delete'));
+    removeBtn.title = _t('ai.delete');
     removeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
     removeBtn.addEventListener('click', async (e) => {
       e.preventDefault();
       e.stopPropagation();
       li.classList.add('removing');
-      await removeRecent(p);
+      if (!(await removeRecent(p))) li.classList.remove('removing');
     });
 
     card.appendChild(btn);
@@ -147,7 +151,7 @@ function renderRecentList(list, rec, onOpen) {
         entry.card.classList.add('is-deleted');
         entry.nm.classList.add('is-deleted');
         entry.btn.setAttribute('aria-disabled', 'true');
-        entry.btn.title = _t('toast.fileNotFound') || '文件不存在或已被删除';
+        entry.btn.title = _t('toast.fileNotFound');
       } else if (item.status === 'moved') {
         entry.card.classList.add('is-moved');
         entry.card.dataset.resolvedPath = item.resolved_path;
@@ -176,7 +180,7 @@ async function openHistoryModal() {
   list.innerHTML = '';
   if (!rec.length) {
     const li = document.createElement('li');
-    li.className = 'empty'; li.textContent = _t('history.noRecentFiles') || '暂无最近文件'; list.appendChild(li);
+    li.className = 'empty'; li.textContent = _t('history.noRecentFiles'); list.appendChild(li);
   } else {
     renderRecentList(list, rec, p => { modal.classList.add('hidden'); loadFile(p); });
   }
@@ -185,14 +189,30 @@ async function openHistoryModal() {
 
 async function clearRecent() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (hasPy) await py.clear_recent();
+  if (hasPy && py.clear_recent) {
+    await py.clear_recent();
+  } else {
+    const response = await apiFetch('/api/recent/clear', { method: 'POST' });
+    if (!response || !response.ok) return;
+  }
   await refreshRecent();
   const list = $('history-list');
-  if (list) list.innerHTML = '<li class="empty">' + (_t('history.noRecentFiles') || '暂无最近文件') + '</li>';
+  if (list) list.innerHTML = '<li class="empty">' + _t('history.noRecentFiles') + '</li>';
 }
 
 async function addRecent(path) {
-  if (hasPy && path) { try { await py.add_recent(path); } catch (e) { /* ignore */ } }
+  if (!path) return;
+  if (hasPy && py.add_recent) {
+    try { await py.add_recent(path); } catch (e) { /* ignore */ }
+  } else {
+    try {
+      await apiFetch('/api/recent/add', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path })
+      });
+    } catch (e) { /* ignore */ }
+  }
 }
 
 /* ---------------- 历史 / 状态 ---------------- */

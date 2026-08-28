@@ -15,6 +15,7 @@
 """
 
 import argparse
+import hashlib
 import json
 import logging
 import mimetypes
@@ -34,16 +35,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from src.readmd_core import (
-    DATA_DIR,
-    SETTINGS_FILE,
-    RECENT_FILE,
-    PROMPTS_FILE,
-    HISTORY_FILE,
-    LOG_FILE,
-    IS_MAC,
-    IS_WIN,
-    IS_LINUX,
-    get_system_language,
     normalize_dialog_path,
     load_json,
     save_json,
@@ -71,27 +62,15 @@ from src.readmd_core.config import (
     PROMPTS_FILE,
     HISTORY_FILE,
     LOG_FILE,
+    IS_MAC,
+    IS_WIN,
+    IS_LINUX,
     get_system_language,
-    get_version,
     load_dotenv,
     VERSION,
 )
 
 load_dotenv()
-
-# Windows 文件关联或双击打开时，Windows Explorer 会将进程工作目录设为文档所在目录，
-# 导致该文档目录被 OS 进程锁定无法重命名或删除。启动时重置工作目录至应用目录/数据目录。
-try:
-    if os.path.isdir(APP_DIR):
-        os.chdir(APP_DIR)
-    elif os.path.isdir(DATA_DIR):
-        os.chdir(DATA_DIR)
-except Exception:
-    pass
-
-
-
-
 
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 CODE_CONFIG_EXTS = (
@@ -798,6 +777,39 @@ class ReadMDHTTPServer(ThreadingHTTPServer):
         self.authorized_save_paths = set()
 
 
+_SKILL_EVALUATION_TOKENS = {}
+_SKILL_EVALUATION_TTL = 10 * 60
+
+
+def _skill_content_digest(skill_id, content):
+    payload = ('%s\0%s' % (skill_id, content)).encode('utf-8')
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _issue_skill_evaluation_token(skill_id, content):
+    token = secrets.token_urlsafe(32)
+    _SKILL_EVALUATION_TOKENS[token] = {
+        'digest': _skill_content_digest(skill_id, content),
+        'expires': time.time() + _SKILL_EVALUATION_TTL,
+    }
+    # Keep the in-memory registry bounded even if a client abandons drafts.
+    now = time.time()
+    for key, value in list(_SKILL_EVALUATION_TOKENS.items()):
+        if value.get('expires', 0) <= now:
+            _SKILL_EVALUATION_TOKENS.pop(key, None)
+    return token
+
+
+def _consume_skill_evaluation_token(token, skill_id, content):
+    if not isinstance(token, str) or not token:
+        return False
+    record = _SKILL_EVALUATION_TOKENS.pop(token, None)
+    if not record or record.get('expires', 0) <= time.time():
+        return False
+    return secrets.compare_digest(
+        record.get('digest', ''), _skill_content_digest(skill_id, content))
+
+
 class Handler(BaseHTTPRequestHandler):
     protocol_version = 'HTTP/1.1'
     server_version = 'ReadMD/' + VERSION
@@ -881,6 +893,10 @@ class Handler(BaseHTTPRequestHandler):
         # Skill imports can fetch remote archives and write the local Skill
         # registry; never expose that mutating surface through LAN sharing.
         if path.startswith('/api/skill-imports'):
+            return False
+        # Recent-file metadata contains local paths outside the shared root and
+        # the add/remove/clear APIs mutate local state.  Keep all of it local.
+        if path.startswith('/api/recent/'):
             return False
         if path in self.LAN_BLOCKED_PATHS:
             return False
@@ -1061,6 +1077,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {'pending': act is not None, 'file': act or ''})
         elif path == '/api/recent/status':
             self._api_recent_status(qs)
+        elif path == '/api/recent/add':
+            self._api_recent_add()
+        elif path == '/api/recent/clear':
+            self._api_recent_clear()
         elif path == '/api/recent/remove':
             self._api_recent_remove()
         elif path == '/raw':
@@ -1322,19 +1342,48 @@ class Handler(BaseHTTPRequestHandler):
             elif qs.get('p'):
                 paths = [unquote(qs.get('p', [''])[0])]
             res = Api().check_recent_status(paths)
-            self._send_json(200, res)
+            self._send_json(200 if res.get('ok') else 400, res)
+        except ValueError:
+            self._send_json(400, {'ok': False, 'code': 'invalid_recent_paths'})
         except Exception as e:
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            logging.exception('recent status failed')
+            self._send_json(500, {'ok': False, 'code': 'recent_status_failed'})
+
+    def _api_recent_add(self):
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            path = body.get('path')
+            if not isinstance(path, str) or not path or len(path) > Api.MAX_RECENT_PATH_LENGTH:
+                raise ValueError('invalid path')
+            self._send_json(200, {'ok': bool(Api().add_recent(path))})
+        except ValueError:
+            self._send_json(400, {'ok': False, 'code': 'invalid_recent_path'})
+        except Exception:
+            logging.exception('recent add failed')
+            self._send_json(500, {'ok': False, 'code': 'recent_add_failed'})
+
+    def _api_recent_clear(self):
+        try:
+            self._send_json(200, {'ok': bool(Api().clear_recent())})
+        except Exception:
+            logging.exception('recent clear failed')
+            self._send_json(500, {'ok': False, 'code': 'recent_clear_failed'})
 
     def _api_recent_remove(self):
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
             body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
-            path = body.get('path', '')
+            path = body.get('path')
+            if not isinstance(path, str) or not path or len(path) > Api.MAX_RECENT_PATH_LENGTH:
+                raise ValueError('invalid path')
             ok = Api().remove_recent(path)
             self._send_json(200, {'ok': ok})
+        except ValueError:
+            self._send_json(400, {'ok': False, 'code': 'invalid_recent_path'})
         except Exception as e:
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            logging.exception('recent remove failed')
+            self._send_json(500, {'ok': False, 'code': 'recent_remove_failed'})
 
     def _api_control_open(self):
         n = int(self.headers.get('Content-Length', 0) or 0)
@@ -1674,20 +1723,32 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, {'ok': True, 'skill': result, 'published': False})
                 return
             if action == 'evaluate':
-                result = validate_skill_document(body.get('id') or '', body.get('content') or '', body.get('metadata'))
+                skill_id = body.get('id') or ''
+                content = body.get('content') or ''
+                result = validate_skill_document(skill_id, content, body.get('metadata'))
                 variables = body.get('variables') or {}
                 rendered = result.get('instructions', '')
                 for name, value in variables.items():
                     if re.fullmatch(r'(document|selection|request|language|context|output_format)', str(name)):
                         rendered = re.sub(r'\{\{\s*' + re.escape(str(name)) + r'\s*\}\}', str(value or ''), rendered)
+                evaluation_token = _issue_skill_evaluation_token(skill_id, content)
                 self._send_json(200, {'ok': True, 'skill': result, 'rendered': rendered,
-                                      'published': False, 'baseline': 'no-skill baseline required'})
+                                      'published': False, 'baseline': 'no-skill baseline required',
+                                      'evaluation_token': evaluation_token,
+                                      'evaluation_expires_in': _SKILL_EVALUATION_TTL})
                 return
             if action in ('save', 'publish'):
                 if action == 'publish' and body.get('confirm') is not True:
                     self._send_json(400, {'error': '发布 Skill 需要 confirm=true'})
                     return
-                result = save_user_skill(body.get('id') or '', body.get('content') or '', body.get('metadata'))
+                skill_id = body.get('id') or ''
+                content = body.get('content') or ''
+                if action == 'publish' and not _consume_skill_evaluation_token(
+                        body.get('evaluation_token'), skill_id, content):
+                    self._send_json(400, {'ok': False, 'code': 'skill_evaluation_required',
+                                          'error': '发布前必须完成当前内容的试跑评估'})
+                    return
+                result = save_user_skill(skill_id, content, body.get('metadata'))
                 self._send_json(200, {'ok': True, 'skill': result, 'published': True})
                 return
             if action in ('disable', 'enable'):
@@ -2030,7 +2091,7 @@ class Handler(BaseHTTPRequestHandler):
             if tstats.get('changed'):
                 text = md
                 structured = True
-        
+
         if is_code:
             fixes = []
             stats = {'lines': len(text.splitlines()), 'chars': len(text)}
@@ -2551,6 +2612,9 @@ def start_server(port=0, host='127.0.0.1'):
 # ---------------------------------------------------------------- JS 桥接 API
 
 class Api(object):
+    MAX_RECENT_ENTRIES = 24
+    MAX_RECENT_PATH_LENGTH = 4096
+    MAX_RECENT_SCAN_ENTRIES = 512
     """暴露给前端 window.pywebview.api 的方法（浏览器模式下不可用）。"""
 
     def __init__(self):
@@ -3655,10 +3719,13 @@ class Api(object):
             paths = load_json(RECENT_FILE, [])
         if isinstance(paths, str):
             paths = [paths]
+        if not isinstance(paths, (list, tuple)):
+            raise ValueError('recent_paths_must_be_list')
+        paths = list(paths[:self.MAX_RECENT_ENTRIES])
         results = []
         for p in paths:
-            if not p:
-                continue
+            if not isinstance(p, str) or not p or len(p) > self.MAX_RECENT_PATH_LENGTH:
+                raise ValueError('invalid recent path')
             name = os.path.basename(p)
             dirname = os.path.dirname(p)
             # 1. 检查原路径是否存在
@@ -3672,29 +3739,46 @@ class Api(object):
                 })
                 continue
 
-            # 2. 原路径不存在，尝试启发式探测是否被移至别处
+            # 2. 原路径不存在，尝试有界的邻近目录探测。不要递归扫描整棵
+            # 用户目录/网络盘；最近文件检查必须保持轻量且可预测。
             moved_path = None
             try:
-                # 2.1 检查同级目录的同层或一层子目录
-                if dirname and os.path.isdir(dirname):
-                    for root, dirs, files in os.walk(dirname):
-                        if name in files:
-                            candidate = os.path.join(root, name)
-                            if os.path.isfile(candidate):
-                                moved_path = candidate
-                                break
-                        if root != dirname:
-                            dirs.clear()
+                def find_in(directory, include_children=False):
+                    if not directory or not os.path.isdir(directory):
+                        return None
+                    children = []
+                    checked = 0
+                    try:
+                        with os.scandir(directory) as entries:
+                            for entry in entries:
+                                checked += 1
+                                if checked > self.MAX_RECENT_SCAN_ENTRIES:
+                                    break
+                                if entry.name == name and entry.is_file(follow_symlinks=False):
+                                    return entry.path
+                                if include_children and entry.is_dir(follow_symlinks=False):
+                                    children.append(entry.path)
+                        if include_children:
+                            for child in children[:64]:
+                                try:
+                                    with os.scandir(child) as entries:
+                                        for entry in entries:
+                                            if entry.name == name and entry.is_file(follow_symlinks=False):
+                                                return entry.path
+                                except OSError:
+                                    continue
+                    except OSError:
+                        return None
+                    return None
 
-                # 2.2 检查父目录
+                # 2.1 检查同级目录与一层子目录
+                moved_path = find_in(dirname, include_children=True)
+
+                # 2.2 检查父目录的直接子项
                 if not moved_path and dirname:
-                    parent = os.path.dirname(dirname)
-                    if parent and os.path.isdir(parent):
-                        candidate = os.path.join(parent, name)
-                        if os.path.isfile(candidate):
-                            moved_path = candidate
+                    moved_path = find_in(os.path.dirname(dirname))
 
-                # 2.3 检查用户的常见文档/桌面/下载目录
+                # 2.3 仅检查常见目录的直接路径，不遍历其内容
                 if not moved_path:
                     user_home = os.path.expanduser('~')
                     common_dirs = [
@@ -3703,11 +3787,10 @@ class Api(object):
                         os.path.join(user_home, 'Downloads'),
                     ]
                     for cd in common_dirs:
-                        if os.path.isdir(cd):
-                            candidate = os.path.join(cd, name)
-                            if os.path.isfile(candidate):
-                                moved_path = candidate
-                                break
+                        candidate = os.path.join(cd, name)
+                        if os.path.isfile(candidate):
+                            moved_path = candidate
+                            break
             except Exception:
                 moved_path = None
 

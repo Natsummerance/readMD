@@ -538,7 +538,7 @@
       localStorage.setItem('readmd_download_mirror', mirrorKey);
 
       const targetElements = document.querySelectorAll('.platform-card a, .platform-card button');
-      
+
       const applyLinks = () => {
         document.querySelectorAll('[data-mirror-url]').forEach((link) => {
           const original = link.dataset.mirrorUrl;
@@ -907,4 +907,3 @@
     initialize();
   }
 })();
-

@@ -123,7 +123,7 @@ class TestUniversalOpenAndAiEcosystem(unittest.TestCase):
         ai_js_path = os.path.join(ROOT_DIR, "assets", "js", "features", "ai.js")
         with open(ai_js_path, "r", encoding="utf-8") as f:
             ai_js = f.read()
-        
+
         self.assertIn("function handleTopAiButtonClick()", ai_js)
         self.assertIn("state.editing", ai_js)
         self.assertIn("state.pvLayout", ai_js)
@@ -140,7 +140,7 @@ class TestUniversalOpenAndAiEcosystem(unittest.TestCase):
         html_path = os.path.join(ROOT_DIR, "assets", "index.html")
         with open(html_path, "r", encoding="utf-8") as f:
             html = f.read()
-        
+
         card_idx = html.find('class="exp-ai-style-card"')
         opts_idx = html.find('id="export-opts"')
         preview_card_idx = html.find('id="export-preview-card"')
@@ -224,4 +224,3 @@ class TestUniversalOpenAndAiEcosystem(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

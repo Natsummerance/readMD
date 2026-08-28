@@ -40,10 +40,10 @@ ReadMD 面向用 Markdown 保存技术文档、研究笔记、课程材料、规
 - 繁体中文：https://readmd.asia/zh-tw/
 - 日文：https://readmd.asia/ja/
 
-- Windows 7、8、10、11，提供安装版和便携版。
+- Windows 10、11（x64/ARM64），提供安装版和便携版。
 - macOS Apple Silicon 与 Intel 处理器。
 - Linux x86_64，提供 AppImage 和 Deb 包。
-- 统信 UOS、银河麒麟、Deepin、openEuler 等国产系统。
+- 统信 UOS、银河麒麟、Deepin 等国产系统；仅承诺已有实机证据的配置。
 - HarmonyOS/OpenHarmony 不属于 v2.3.7，源码仅作实验性预览。
 
 VSCode 插件可在编辑器内同步预览并修复语法。FastMCP stdio 服务端可连接 Claude Desktop、Cursor 等兼容 AI 编程助手。

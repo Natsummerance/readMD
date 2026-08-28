@@ -61,7 +61,9 @@
 ReadMD solves the unglamorous problems in a long-lived document library: large files remain readable, imported material needs less cleanup, sensitive drafts stay local, and the original file retains final authority. If it saves you one cleanup session, please [star the repository](https://github.com/Natsummerance/readMD) so other writers can find it.
 
 
-## Direct Downloads & Platforms Matrix (Release Assets)
+## Official Downloads & Platforms Matrix (Release Assets)
+
+Only platforms with release evidence belong in this matrix. Windows 7 is a separate legacy-runtime build and is not bundled with the Windows 10/11 package; HarmonyOS/OpenHarmony and unevidenced architectures are outside the V2.3.7 support promise.
 
 | OS / Platform | Architecture / Format | Direct Download Link (GitHub Release) | Description |
 | :--- | :--- | :--- | :--- |
@@ -69,7 +71,7 @@ ReadMD solves the unglamorous problems in a long-lived document library: large f
 | **Windows** | x64 (Portable) | [⬇️ **ReadMD-portable-v2.3.7.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-portable-v2.3.7.exe) | Standalone single executable, no installation needed |
 | **macOS** | Apple Silicon (M-Series) | [⬇️ **ReadMD-macos-arm64-v2.3.7.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-arm64-v2.3.7.zip) | Native build for Apple Silicon Macs with Vision OCR |
 | **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-x64-v2.3.7.zip) | Native build for Intel Macs with Vision OCR |
-| **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage) | Portable Linux AppImage for Ubuntu, Debian, Fedora, Arch |
+| **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage) | Portable Linux AppImage for the tested Ubuntu/Debian matrix |
 | **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.7.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-aarch64-v2.3.7.AppImage) | Portable build for Phytium, Kunpeng, and other ARM64 devices |
 | **Domestic OS / Linux** | UOS / Kylin / Deepin / Debian / Ubuntu | [⬇️ **readmd_2.3.7_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb) | Native Deb package with desktop entry & MIME association |
 | ️ **Kylin V10 / Phytium** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_arm64.deb) | Native build for D2000/E2000 boards with UKUI/X11 software-render fallback |
@@ -81,12 +83,12 @@ ReadMD solves the unglamorous problems in a long-lived document library: large f
 
 ## Multi-System & Native OS Integration
 
-### 1. Linux & Chinese Domestic OS (KylinOS / UOS / Deepin / openEuler)
+### 1. Linux & Chinese Domestic OS (KylinOS / UOS / Deepin)
 - **Direct Installation**: Download [`readmd_2.3.7_amd64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb) to install directly, or run [`ReadMD-linux-x86_64-v2.3.7.AppImage`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage).
 - **Environment Detection**: `src/readmd_modules/linux_native.py` detects OS distributions and dynamically adapts Wayland / X11 display backends.
 - **Desktop Themes**: Probes DDE, UKUI, GNOME, and KDE dark mode settings via `gsettings`.
 - **Desktop Entry**: Includes FreeDesktop launcher and MIME XML declaration.
-- **Linglong Format**: Declarative `packages/linglong/linglong.yaml` for UOS AppStore distribution.
+- **Support boundary**: openEuler, Linglong and other unevidenced distributions are not claimed as fully supported in this release.
 
 ### 2. Windows & macOS
 - **Windows**: Native WinRT OCR, Edge WebView2 hardware-accelerated rendering, single-instance tray daemon.
@@ -96,6 +98,6 @@ ReadMD solves the unglamorous problems in a long-lived document library: large f
 
 <div align="center">
 
-**ReadMD** · Pure local-first, distraction-free Markdown across all platforms.
+**ReadMD** · Pure local-first, distraction-free Markdown on tested supported platforms.
 
 </div>

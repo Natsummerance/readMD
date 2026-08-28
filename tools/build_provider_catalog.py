@@ -115,7 +115,8 @@ def main() -> int:
     data = build()
     encoded = json.dumps(data, ensure_ascii=False, indent=2, sort_keys=False) + "\n"
     if args.check:
-        if not CATALOG.is_file() or CATALOG.read_text(encoding="utf-8") != encoded:
+        current = CATALOG.read_text(encoding="utf-8").replace("\r\n", "\n") if CATALOG.is_file() else ""
+        if current != encoded:
             raise SystemExit("provider catalog is stale; run tools/build_provider_catalog.py")
         print("provider catalog verified (%d presets, %d upstream entries)" % (len(data["providers"]), len(data["upstream_entries"])))
         return 0

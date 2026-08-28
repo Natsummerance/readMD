@@ -12,7 +12,7 @@ rem    dist\ReadMDUninstall-win7.exe         Win7 卸载器
 
 rem    dist\ReadMDSetup-win7.exe             Win7 安装器（onefile）
 
-rem    dist\ReadMDSetup-2.1.1-Beta-win7-x64.exe  最终发布资产
+rem    dist\ReadMDSetup-%READMD_VERSION_OVERRIDE%-win7-x64.exe  测试发布资产
 
 rem ============================================================
 
@@ -60,27 +60,37 @@ if not exist "%WVENV%\Scripts\python.exe" (
     if errorlevel 1 goto :err
 )
 
-echo [4/7] install pywebview 4.4.1 + pyinstaller in .venv-win7 ...
+echo [4/8] install pinned Win7 dependencies in .venv-win7 ...
 "%WVENV%\Scripts\python.exe" -m pip install --quiet pywebview==4.4.1 pyinstaller
 if errorlevel 1 goto :err
 if exist "config\requirements-windows.txt" (
-    "%WVENV%\Scripts\python.exe" -m pip install --quiet -r config\requirements-windows.txt
+    "%WVENV%\Scripts\python.exe" -m pip install --quiet -r config\requirements-common.txt
 )
 
-echo [5/7] version + icon ...
+echo [5/8] patch pywebview and bundle the fixed WebView2 109 runtime ...
+"%WVENV%\Scripts\python.exe" tools\win7_pywebview_edgechromium.patch
+if errorlevel 1 goto :err
+"%WVENV%\Scripts\python.exe" tools\bundle_runtime.py
+if errorlevel 1 goto :err
+if not exist "installer\webview2_runtime\msedgewebview2.exe" (
+    echo Win7 runtime is missing after bundling.
+    goto :err
+)
+
+echo [6/8] version + icon ...
 if not exist "build" mkdir build
 > "build\version.txt" echo %READMD_VERSION_OVERRIDE%
 "%WVENV%\Scripts\python.exe" tools\make_icon.py
 if errorlevel 1 goto :err
 
-echo [6/7] build onedir app + uninstaller ...
+echo [7/8] build onedir app + uninstaller ...
 "%WVENV%\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD-win7 --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_core;src/readmd_core" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --hidden-import src.readmd_core --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_core --collect-submodules src.readmd_modules readmd.py
 if errorlevel 1 goto :err
 
 "%WVENV%\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall-win7 --icon assets/readmd.ico --add-data "installer;installer" installer/setup_app.py
 if errorlevel 1 goto :err
 
-echo [7/7] build setup (embeds app + uninstaller + runtime) ...
+echo [8/8] build setup (embeds app + uninstaller + runtime) ...
 "%WVENV%\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup-win7 --icon assets/readmd.ico --add-data "installer;installer" --add-binary "dist/ReadMD-win7;ReadMD" --add-binary "dist/ReadMDUninstall-win7.exe;." installer/setup_app.py
 if errorlevel 1 goto :err
 

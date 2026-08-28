@@ -148,8 +148,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if ((python -c "import readmd; print(readmd.VERSION)") -ne $env:READMD_VERSION) { throw 'source version mismatch' }
-          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_modules readmd.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_core;src/readmd_core" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --hidden-import src.readmd_core --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_core --collect-submodules src.readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_core;src/readmd_core" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --hidden-import src.readmd_core --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_core --collect-submodules src.readmd_modules readmd.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." installer/setup_app.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." --add-binary "dist/ReadMD;ReadMD" --add-binary "dist/ReadMDUninstall.exe;." installer/setup_app.py
           Move-Item dist/ReadMDSetup.exe "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
@@ -180,7 +180,7 @@ jobs:
           cd ../..
           python -c "import os, shutil, glob; os.makedirs('dist', exist_ok=True); vs = glob.glob('packages/vscode-extension/*.vsix'); assert vs, 'No vsix produced'; shutil.copy(sorted(vs)[-1], 'dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix')"
           if (!(Test-Path "dist/readmd-vscode-$env:READMD_VERSION.vsix")) { throw "readmd-vscode-$env:READMD_VERSION.vsix missing in dist" }
-          python -c "import glob, os, zipfile; z = zipfile.ZipFile('dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip', 'w', zipfile.ZIP_DEFLATED); paths = ['packages/mcp-server/readmd_mcp_server.py', 'packages/mcp-server/README.md', 'config/requirements-common.txt'] + sorted(glob.glob('src/**/*.py', recursive=True)) + [path for path in sorted(glob.glob('assets/**/*', recursive=True)) if os.path.isfile(path)]; [z.write(path, path) for path in paths]; z.close()"
+          python -c "import glob, os, zipfile; z = zipfile.ZipFile('dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip', 'w', zipfile.ZIP_DEFLATED); paths = ['VERSION', 'packages/mcp-server/readmd_mcp_server.py', 'packages/mcp-server/README.md', 'config/requirements-common.txt'] + sorted(glob.glob('src/**/*.py', recursive=True)) + [path for path in sorted(glob.glob('assets/**/*', recursive=True)) if os.path.isfile(path)]; [z.write(path, path) for path in paths]; z.close()"
           if (!(Test-Path "dist/readmd-mcp-server-$env:READMD_VERSION.zip")) { throw "readmd-mcp-server-$env:READMD_VERSION.zip missing in dist" }
       - name: Upload main-branch release candidate
         if: github.ref == 'refs/heads/main'
@@ -248,8 +248,8 @@ jobs:
         shell: pwsh
         run: |
           if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString() -ne 'Arm64') { throw 'runner is not ARM64' }
-          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD-arm64 --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_modules readmd.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable-arm64 --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD-arm64 --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_core;src/readmd_core" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --hidden-import src.readmd_core --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_core --collect-submodules src.readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable-arm64 --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_core;src/readmd_core" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --hidden-import src.readmd_core --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_core --collect-submodules src.readmd_modules readmd.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall-arm64 --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." installer/setup_app.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup-arm64 --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." --add-binary "dist/ReadMD-arm64;ReadMD" --add-binary "dist/ReadMDUninstall-arm64.exe;." installer/setup_app.py
           $portable = Start-Process -FilePath "dist/ReadMD-portable-arm64.exe" -ArgumentList '--selftest' -WindowStyle Hidden -Wait -PassThru
@@ -525,6 +525,20 @@ jobs:
             test -s "release-assets/$asset"
           done
           python tools/sync_version.py --check
+          python tools/build_upstream_manifest.py --check
+          python tools/build_provider_catalog.py --check
+          python - <<'PY'
+          import json
+          matrix = json.load(open('release/platform-matrix.json', encoding='utf-8'))
+          policy = matrix.get('evidence_policy') or {}
+          if policy.get('status') != 'complete':
+              raise SystemExit('formal release blocked: native platform evidence is incomplete')
+          if matrix.get('feature_matrix', {}).get('default_status') != 'complete':
+              raise SystemExit('formal release blocked: feature matrix contains unverified cells')
+          if matrix.get('feature_matrix', {}).get('overrides') is None:
+              raise SystemExit('formal release blocked: feature matrix overrides are missing')
+          print('native platform evidence manifest is complete')
+          PY
           python -c "import readmd; assert readmd.VERSION == '${V}'"
           test -s assets/vendor/defuddle.bundle.js
           test -s assets/vendor/defuddle.LICENSE.txt

@@ -756,9 +756,9 @@ mark.hl.cur { background: var(--hl-cur); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  margin-right: 8px;
+  width: 44px;
+  height: 44px;
+  margin-right: 0;
   padding: 0;
   border-radius: 50%;
   border: none;
@@ -5191,4 +5191,3 @@ body.zen-mode #content {
   color: var(--accent);
   font-weight: 600;
 }
-

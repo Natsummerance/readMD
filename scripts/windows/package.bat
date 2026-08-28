@@ -30,7 +30,14 @@ if errorlevel 1 (
 )
 
 echo [2/5] Preparing venv and build dependencies ...
-if not exist ".venv\Scripts\python.exe" (
+if exist ".venv\Scripts\python.exe" (
+    ".venv\Scripts\python.exe" -c "import sys; print(sys.version)" >nul 2>nul
+    if errorlevel 1 (
+        echo Existing .venv is stale; rebuilding it in place ...
+        python -m venv --clear .venv
+        if errorlevel 1 goto :err
+    )
+) else (
     python -m venv .venv
     if errorlevel 1 goto :err
 )
