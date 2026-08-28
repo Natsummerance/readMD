@@ -72,12 +72,13 @@ function createStaticServer(distDir) {
     { name: '04-desktop-download-light.png', url: '/download/', width: 1920, height: 1080, scroll: 0, colorScheme: 'light' },
     { name: '04-desktop-download-dark.png', url: '/download/', width: 1920, height: 1080, scroll: 0, colorScheme: 'dark' },
     { name: '05-desktop-download-mcp-guide.png', url: '/zh-cn/download/', width: 1920, height: 1080, scroll: 650, colorScheme: 'dark' },
+    { name: '05-desktop-download-mcp-terminal.png', url: '/zh-cn/download/', width: 1920, height: 1080, scroll: 1250, colorScheme: 'dark' },
     { name: '06-desktop-zh-cn-download-dark.png', url: '/zh-cn/download/', width: 1920, height: 1080, scroll: 0, colorScheme: 'dark' },
     { name: '07-laptop-home-hero.png', url: '/', width: 1440, height: 900, scroll: 0, colorScheme: 'light' },
     { name: '08-laptop-download-dark.png', url: '/download/', width: 1440, height: 900, scroll: 0, colorScheme: 'dark' },
     { name: '09-mobile-home-hero.png', url: '/', width: 390, height: 844, scroll: 0, colorScheme: 'light' },
     { name: '10-mobile-download-dark.png', url: '/download/', width: 390, height: 844, scroll: 0, colorScheme: 'dark' },
-    { name: '11-mobile-mcp-guide.png', url: '/zh-cn/download/#mcp-guide', width: 390, height: 844, scroll: 1700, colorScheme: 'dark' },
+    { name: '11-mobile-mcp-guide.png', url: '/zh-cn/download/#mcp-guide', width: 390, height: 844, scroll: 1450, colorScheme: 'dark' },
   ];
 
   for (const item of captures) {
