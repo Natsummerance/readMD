@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ReadMD v2.3.7 发布说明 | 安全放映与更新校验</title>
-  <meta name="description" content="查看 ReadMD v2.3.7 发布说明：Reveal 放映隔离、更新包临时文件与 SHA-256 校验、启动分阶段加载、标签状态刷新、更大触控目标，以及 Windows、macOS、Linux、UOS 和麒麟安装包下载。">
+  <meta name="description" content="查看 ReadMD v2.3.7 验收候选说明：Reveal 放映隔离、更新包完整性、启动加载、标签状态与正式平台证据门槛，并了解本地测试、校验和以及正式平台发布前必须完成的原生功能验收。">
   <meta name="author" content="ReadMD">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
@@ -130,7 +130,7 @@
       "@type": "TechArticle",
       "@id": "https://readmd.asia/zh-cn/release-notes/#article",
       "headline": "ReadMD v2.3.7 发布说明 | 安全放映与更新校验",
-      "description": "查看 ReadMD v2.3.7 发布说明：Reveal 放映隔离、更新包临时文件与 SHA-256 校验、启动分阶段加载、标签状态刷新、更大触控目标，以及 Windows、macOS、Linux、UOS 和麒麟安装包下载。",
+      "description": "查看 ReadMD v2.3.7 验收候选说明：Reveal 放映隔离、更新包完整性、启动加载、标签状态与正式平台证据门槛，并了解本地测试、校验和以及正式平台发布前必须完成的原生功能验收。",
       "inLanguage": "en",
       "datePublished": "2026-08-26",
       "dateModified": "2026-08-26",
@@ -186,7 +186,7 @@
       "name": "哪些平台会收到安装包？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Windows、Intel 和 Apple Silicon macOS、Linux x86_64、UOS 以及麒麟 AMD64/ARM64 提供包；HarmonyOS/OpenHarmony 不属于 v2.3.7，源码仅作实验性预览。"
+        "text": "候选目标包含 Windows、Intel 与 Apple Silicon macOS、Linux x86_64/ARM64、UOS、麒麟和 Deepin；每个平台必须完成原生构建、冷启动、离线、隐私和功能证据后，才能确认安装包与正式支持。HarmonyOS/OpenHarmony 不属于 v2.3.7。"
       }
     }
   ]
@@ -239,7 +239,7 @@
         <article class="answer-card"><h3>v2.3.7 是正式版吗？</h3><p>当前页面描述的是验收候选，需等所有必需的平台证据完成后才可作为正式版；请在安装前保留备份并校验 SHA-256。</p></article>
         <article class="answer-card"><h3>显示修复会改写我的 Markdown 吗？</h3><p>不会。渲染修复只影响内存中的显示层；只有你明确编辑并保存时，源文件字节才会变化。</p></article>
         <article class="answer-card"><h3>更新包如何检查？</h3><p>更新只来自官方 GitHub Release 资产，先进入固定目录和临时文件，经 SHA-256 校验后原子发布，并在执行前复核。</p></article>
-        <article class="answer-card"><h3>哪些平台会收到安装包？</h3><p>Windows、Intel 和 Apple Silicon macOS、Linux x86_64、UOS 以及麒麟 AMD64/ARM64 提供包；HarmonyOS/OpenHarmony 不属于 v2.3.7，源码仅作实验性预览。</p></article>
+        <article class="answer-card"><h3>哪些平台会收到安装包？</h3><p>候选目标包含 Windows、Intel 与 Apple Silicon macOS、Linux x86_64/ARM64、UOS、麒麟和 Deepin；每个平台完成原生证据后才会确认安装包与正式支持。HarmonyOS/OpenHarmony 不属于 v2.3.7。</p></article>
       </div>
       <div class="mt-10 flex flex-wrap gap-5">
         <a class="link-action" href="/download/">下载 ReadMD</a>

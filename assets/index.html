@@ -589,7 +589,7 @@
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span data-i18n="tpl.exportJson">导出模板</span>
       </button>
-      <button id="tpl-ai-generate" class="tb-btn accent" title="通过 ReadMD skill-creator 生成禁用草稿">AI 生成 Skill 草稿</button>
+      <button id="tpl-ai-generate" class="tb-btn accent" data-i18n="exportai.generateBtn" data-i18n-title="tpl.title">AI 生成</button>
     </div>
     <div class="tpl-layout">
       <ul id="tpl-list" class="tpl-list" role="listbox" aria-label="ReadMD Skills" data-i18n-aria="tpl.title"></ul>
@@ -599,14 +599,14 @@
         <input id="tpl-name" type="text" placeholder="模板名称（如：深度论文精读 / 结构化周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
         <textarea id="tpl-system" rows="8" placeholder="SKILL.md：标准 frontmatter 与指令（使用 {{document}} 等受限变量）" aria-label="SKILL.md 指令" data-i18n-placeholder="tpl.systemPlaceholder" data-i18n-aria="tpl.systemPlaceholder"></textarea>
         <textarea id="tpl-user" rows="3" placeholder="变量/补充请求模板（可选）；发布前会执行结构与安全校验" aria-label="Skill 变量与补充请求" data-i18n-placeholder="tpl.userPlaceholder" data-i18n-aria="tpl.userPlaceholder"></textarea>
-        <p id="tpl-draft-status" class="fix-note" role="status" aria-live="polite">AI 生成的 Skill 默认是禁用草稿，发布前请先试跑并检查差异。</p>
+        <p id="tpl-draft-status" class="fix-note" role="status" aria-live="polite" data-i18n="tpl.hint">内置模板可直接编辑并保存。</p>
       </div>
     </div>
     <div class="url-actions">
       <button id="tpl-new" class="tb-btn" data-i18n="ai.newSession">新建</button>
-      <button id="tpl-copy" class="tb-btn">复制为用户 Skill</button>
+      <button id="tpl-copy" class="tb-btn" data-i18n="editor.copy">复制</button>
       <button id="tpl-save" class="tb-btn accent" data-i18n="editor.save">保存</button>
-      <button id="tpl-publish" class="tb-btn accent">发布 Skill</button>
+      <button id="tpl-publish" class="tb-btn accent" data-i18n="export.groupPublish">发布</button>
       <button id="tpl-del" class="tb-btn" data-i18n="tpl.delete">删除</button>
       <button id="tpl-close-btn" class="tb-btn" data-i18n="toolbar.close">关闭</button>
     </div>

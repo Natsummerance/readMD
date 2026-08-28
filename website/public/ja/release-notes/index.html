@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ReadMD v2.3.7 リリースノート | 安全な発表と更新検証</title>
-  <meta name="description" content="ReadMD v2.3.7 の変更点を確認できます。Reveal発表の分離、更新ファイルの一時保存とSHA-256検証、段階的な起動読み込み、タブ状態の即時更新、大きなタッチ操作領域、Windows、macOS、Linux、UOS、Kylin向けパッケージを説明します。">
+  <meta name="description" content="ReadMD v2.3.7 リリース候補の変更点、Reveal 表示と更新の整合性、起動読み込み、タブ状態、ローカルテストの手順、正式なプラットフォーム提供前に必要なネイティブ機能検証の条件を説明します。">
   <meta name="author" content="ReadMD">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
@@ -130,7 +130,7 @@
       "@type": "TechArticle",
       "@id": "https://readmd.asia/ja/release-notes/#article",
       "headline": "ReadMD v2.3.7 リリースノート | 安全な発表と更新検証",
-      "description": "ReadMD v2.3.7 の変更点を確認できます。Reveal発表の分離、更新ファイルの一時保存とSHA-256検証、段階的な起動読み込み、タブ状態の即時更新、大きなタッチ操作領域、Windows、macOS、Linux、UOS、Kylin向けパッケージを説明します。",
+      "description": "ReadMD v2.3.7 リリース候補の変更点、Reveal 表示と更新の整合性、起動読み込み、タブ状態、ローカルテストの手順、正式なプラットフォーム提供前に必要なネイティブ機能検証の条件を説明します。",
       "inLanguage": "en",
       "datePublished": "2026-08-26",
       "dateModified": "2026-08-26",
@@ -186,7 +186,7 @@
       "name": "どのプラットフォームにパッケージがありますか？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Windows、Intel および Apple Silicon macOS、Linux x86_64、UOS、Kylin AMD64/ARM64 にあります。HarmonyOS/OpenHarmony 不属于 v2.3.7，源码仅作实验性预览。ソースは実験的プレビューです。"
+        "text": "候補は Windows、Intel/Apple Silicon macOS、Linux x86_64/ARM64、UOS、Kylin、Deepin を対象とします。各環境のネイティブビルド、起動、オフライン、プライバシー、機能証拠が揃うまで正式提供を確定しません。HarmonyOS/OpenHarmony は v2.3.7 の対象外です。"
       }
     }
   ]
@@ -239,7 +239,7 @@
         <article class="answer-card"><h3>v2.3.7 は正式版ですか？</h3><p>いいえ。ベータです。テストとフィードバックに適しますが、インストール前にバックアップと SHA-256 検証を行ってください。</p></article>
         <article class="answer-card"><h3>表示修復は Markdown を書き換えますか？</h3><p>いいえ。描画修復はメモリー上の表示層だけです。明示的に編集して保存したときだけソースバイトが変わります。</p></article>
         <article class="answer-card"><h3>更新はどう検証しますか？</h3><p>更新は公式 GitHub Release 資産から固定ディレクトリの一時ファイルへ入り、SHA-256 検証後に原子的に公開され、実行前にも再検証します。</p></article>
-        <article class="answer-card"><h3>どのプラットフォームにパッケージがありますか？</h3><p>Windows、Intel および Apple Silicon macOS、Linux x86_64、UOS、Kylin AMD64/ARM64 にあります。HarmonyOS/OpenHarmony 不属于 v2.3.7，源码仅作实验性预览。ソースは実験的プレビューです。</p></article>
+        <article class="answer-card"><h3>どのプラットフォームにパッケージがありますか？</h3><p>候補は Windows、Intel/Apple Silicon macOS、Linux x86_64/ARM64、UOS、Kylin、Deepin を対象とします。各環境のネイティブ証拠が揃うまで正式提供を確定しません。HarmonyOS/OpenHarmony は v2.3.7 の対象外です。</p></article>
       </div>
       <div class="mt-10 flex flex-wrap gap-5">
         <a class="link-action" href="/download/">ReadMD をダウンロード</a>
