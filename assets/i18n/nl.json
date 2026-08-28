@@ -153,7 +153,7 @@
   "app.name": "ReadMD",
   "app.noRecent": "Geen recente bestanden",
   "app.ocr": "Scannen naar MD",
-  "app.ocrSub": "Offline OCR",
+  "app.ocrSub": "Offline OCR-herkenning",
   "app.open": "Markdown openen",
   "app.processing": "Bezig met verwerken…",
   "app.recent": "Recent geopend",

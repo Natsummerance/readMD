@@ -120,7 +120,7 @@
   "ai.stoppedSuffix": "(ရပ်)",
   "ai.stream": "လွှင့်ထုတ်မှု",
   "ai.summarize": "စာသားအပြည့်အစုံကို အကျဉ်းချုပ်ပါ။",
-  "ai.systemPrompt": "System Prompt",
+  "ai.systemPrompt": "စနစ် ညွှန်ကြားချက် (System Prompt)",
   "ai.temperature": "အပူချိန်",
   "ai.templateManage": "ပုံစံခွက်",
   "ai.testConnection": "စမ်းသပ်ချိတ်ဆက်မှု",

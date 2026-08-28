@@ -1041,7 +1041,7 @@
   "presentation.fontNorm": "Standard betűtípus (24px)",
   "presentation.fontInc": "Nagyobb betűtípus (28px)",
   "presentation.overviewTitle": "Dia áttekintése (O billentyű)",
-  "presentation.fullscreenTitle": "Telts képernyő (F11)",
+  "presentation.fullscreenTitle": "Teljes képernyős vetítés (F11)",
   "presentation.overviewLabel": "Áttekintés",
   "presentation.fullscreenLabel": "Teljes képernyő",
   "presentation.closeTitle": "Kilépés a bemutatóból (Esc)",
