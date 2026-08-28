@@ -18,8 +18,90 @@ for (const entry of fs.readdirSync(RAW_DIR)) {
 }
 
 const FIXTURE_DIR = path.join(__dirname, 'fixtures');
+const SKILL_ROOT = path.resolve(__dirname, '..', 'assets', 'skills');
+const PROVIDER_CATALOG = JSON.parse(fs.readFileSync(path.resolve(__dirname, '..', 'assets', 'providers', 'provider-catalog.json'), 'utf8'));
+
+function builtinSkillFixtures() {
+  return fs.readdirSync(SKILL_ROOT, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => {
+      const folder = path.join(SKILL_ROOT, entry.name);
+      const instructions = fs.readFileSync(path.join(folder, 'SKILL.md'), 'utf8');
+      const metadata = JSON.parse(fs.readFileSync(path.join(folder, 'readmd.skill.json'), 'utf8'));
+      const name = (instructions.match(/^name:\s*(.+)$/m) || [])[1] || metadata.id;
+      const description = (instructions.match(/^description:\s*(.+)$/m) || [])[1] || metadata.adaptation || '';
+      return {
+        id: metadata.id,
+        name,
+        description,
+        instructions,
+        scope: 'builtin',
+        metadata,
+        variables: [...instructions.matchAll(/{{([a-z_]+)}}/g)].map((match) => match[1]),
+      };
+    })
+    .sort((left, right) => left.id.localeCompare(right.id));
+}
+
+const BUILTIN_SKILLS = builtinSkillFixtures();
+
+function providerFixtures() {
+  return (PROVIDER_CATALOG.providers || []).slice(0, 12).map((provider, index) => ({
+    ...provider,
+    id: `catalog:${index}:${String(provider.name || 'provider').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`,
+    has_key: index === 0,
+    key_source: index === 0 ? 'credential-store' : '',
+    credential_id: index === 0 ? 'cred:showcase-fixture' : '',
+    category: provider.category || 'preset',
+    capabilities: provider.capabilities || { chat: true, models: true, stream: true },
+  }));
+}
+
+async function seedAiServices(page) {
+  const providers = providerFixtures();
+  const upstreamCatalog = (PROVIDER_CATALOG.upstream_entries || []).slice(0, 12);
+  const imported = BUILTIN_SKILLS.slice(0, 3).map((skill) => ({
+    id: skill.id,
+    name: skill.name,
+    description: skill.description,
+    path: `assets/skills/${skill.id}/SKILL.md`,
+    directory: `assets/skills/${skill.id}`,
+    valid: true,
+    scripts_present: false,
+  }));
+  await page.route('**/api/modules/load', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' }));
+  await page.route('**/api/ai/config', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ current: { provider_id: providers[0].id, model: providers[0].models?.[0] || '' }, custom: [], presets: providers, upstream_catalog: upstreamCatalog }),
+  }));
+  await page.route('**/api/ai/prompts', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"templates":[]}' }));
+  await page.route('**/api/ai/history', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"sessions":[]}' }));
+  await page.route('**/api/skills', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ skills: BUILTIN_SKILLS }) }));
+  await page.route('**/api/skill-imports/preview', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      ok: true,
+      preview: {
+        source_id: 'gh-readmd-v237-showcase',
+        source: { canonical_url: 'https://github.com/Natsummerance/readMD' },
+        skills: imported,
+      },
+    }),
+  }));
+}
+
+async function openReadyAi(page) {
+  await seedAiServices(page);
+  await page.evaluate(() => toggleAiPanel());
+  await expect(page.locator('#ai-panel')).toBeVisible();
+  await expect.poll(() => page.locator('#ai-template option[value]').count()).toBeGreaterThan(1);
+  await expect(page.locator('#ai-model')).toHaveValue(/.+/);
+}
 
 test.beforeEach(async ({ page }) => {
+  await page.route('**/api/update/check', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true,"update":false}' }));
   await page.addInitScript(({ locale, theme }) => {
     try {
       localStorage.setItem('readmd_language', locale);
@@ -176,6 +258,55 @@ test('sharing.export captures the mobile sharing panel', async ({ page }) => {
   await assertVisible(page, library.shots['sharing.export'].assertions);
   await page.waitForTimeout(350);
   await shoot(page, 'sharing.export');
+});
+
+test('ai.panel captures the Skill-first AI conversation surface', async ({ page }) => {
+  await prepareShot(page, 'ai.panel');
+  await openDemo(page, 'ai.panel');
+  await openReadyAi(page);
+  await assertVisible(page, library.shots['ai.panel'].assertions);
+  await page.waitForTimeout(350);
+  await shoot(page, 'ai.panel');
+});
+
+test('skills.workbench captures builtin Skills from the real registry', async ({ page }) => {
+  await prepareShot(page, 'skills.workbench');
+  await openDemo(page, 'skills.workbench');
+  await openReadyAi(page);
+  await page.evaluate(() => openTplModal());
+  await assertVisible(page, library.shots['skills.workbench'].assertions);
+  await page.waitForTimeout(350);
+  await shoot(page, 'skills.workbench');
+});
+
+test('providers.catalog captures provider v3 configuration from the offline catalogue', async ({ page }) => {
+  await prepareShot(page, 'providers.catalog');
+  await openReadyAi(page);
+  await page.evaluate(() => document.getElementById('ai-settings-modal').classList.remove('hidden'));
+  await assertVisible(page, library.shots['providers.catalog'].assertions);
+  await page.waitForTimeout(350);
+  await shoot(page, 'providers.catalog');
+});
+
+test('skills.github-import captures a preview derived from the current builtin Skill source', async ({ page }) => {
+  await prepareShot(page, 'skills.github-import');
+  await openReadyAi(page);
+  await page.evaluate(() => openTplModal());
+  await page.locator('#tpl-github-import summary').click();
+  await page.locator('#tpl-github-url').fill('https://github.com/Natsummerance/readMD/tree/v2.3.7/assets/skills');
+  await page.locator('#tpl-github-preview-btn').click();
+  await assertVisible(page, library.shots['skills.github-import'].assertions);
+  await page.waitForTimeout(350);
+  await shoot(page, 'skills.github-import');
+});
+
+test('i18n.library captures the full language chooser', async ({ page }) => {
+  await prepareShot(page, 'i18n.library');
+  await page.evaluate(() => i18n.openModal());
+  await assertVisible(page, library.shots['i18n.library'].assertions);
+  await expect(page.locator('#lang-grid [role=option]')).toHaveCount(46);
+  await page.waitForTimeout(350);
+  await shoot(page, 'i18n.library');
 });
 
 test.afterAll(async () => {

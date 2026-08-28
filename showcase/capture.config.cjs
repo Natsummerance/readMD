@@ -16,7 +16,7 @@ function loadCaptureConfig(env = process.env) {
   const scale = Number(env.SHOWCASE_SCALE || '2');
   if (!Number.isInteger(scale) || scale < 1 || scale > 4) throw new Error('SHOWCASE_SCALE must be an integer from 1 to 4');
   return {
-    release: env.SHOWCASE_RELEASE || 'v2.3.7-beta.3',
+    release: env.SHOWCASE_RELEASE || 'v2.3.7',
     locale: env.SHOWCASE_LOCALE || 'zh-CN',
     theme: env.SHOWCASE_THEME || 'dark',
     viewport,

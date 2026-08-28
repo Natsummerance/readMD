@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createRequire } from 'node:module';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -10,10 +10,10 @@ const { loadCaptureConfig, loadShotLibrary } = require('../capture.config.cjs');
 
 test('capture config uses safe defaults and accepts environment overrides', () => {
   const config = loadCaptureConfig({});
-  assert.equal(config.release, 'v2.3.7-beta.3');
+  assert.equal(config.release, 'v2.3.7');
   assert.equal(config.locale, 'zh-CN');
   assert.equal(config.theme, 'dark');
-  assert.deepEqual(config.viewport, { width: 960, height: 1280 });
+  assert.deepEqual(config.viewport, { width: 1440, height: 810 });
   assert.equal(config.scale, 2);
   assert.equal(config.outputDir, 'raw');
 
@@ -34,7 +34,7 @@ test('capture config uses safe defaults and accepts environment overrides', () =
   assert.equal(overridden.outputDir, 'dist/raw');
 });
 
-test('shot library defines the eight stable authentic shots', () => {
+test('shot library defines the thirteen stable authentic shots', () => {
   const library = loadShotLibrary();
   const ids = Object.keys(library.shots);
   assert.deepEqual(ids, [
@@ -46,6 +46,11 @@ test('shot library defines the eight stable authentic shots', () => {
     'editor.code-chunk',
     'convert.home',
     'sharing.export',
+    'ai.panel',
+    'skills.workbench',
+    'providers.catalog',
+    'skills.github-import',
+    'i18n.library',
   ]);
   for (const [id, shot] of Object.entries(library.shots)) {
     assert.equal(shot.id, id);
@@ -61,15 +66,19 @@ test('shot library defines the eight stable authentic shots', () => {
 test('shot overlay adjusts assertions without changing evidence identity', async () => {
   const root = await mkdtemp(join(tmpdir(), 'readmd-shot-overlay-'));
   const overlayPath = join(root, 'overlay.json');
-  await writeFile(overlayPath, JSON.stringify({
-    schema_version: 1,
-    shots: {
-      'presentation.reveal': { assertions: ['#presentation-modal'], visuality: 0.9 },
-    },
-  }));
-  const library = loadShotLibrary(undefined, overlayPath);
-  assert.deepEqual(library.shots['presentation.reveal'].assertions, ['#presentation-modal']);
-  assert.equal(library.shots['presentation.reveal'].visuality, 0.9);
-  assert.equal(library.shots['presentation.reveal'].output, 'presentation-reveal.png');
-  assert.equal(library.shots['presentation.reveal'].evidence.length > 0, true);
+  try {
+    await writeFile(overlayPath, JSON.stringify({
+      schema_version: 1,
+      shots: {
+        'presentation.reveal': { assertions: ['#presentation-modal'], visuality: 0.9 },
+      },
+    }));
+    const library = loadShotLibrary(undefined, overlayPath);
+    assert.deepEqual(library.shots['presentation.reveal'].assertions, ['#presentation-modal']);
+    assert.equal(library.shots['presentation.reveal'].visuality, 0.9);
+    assert.equal(library.shots['presentation.reveal'].output, 'presentation-reveal.png');
+    assert.equal(library.shots['presentation.reveal'].evidence.length > 0, true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

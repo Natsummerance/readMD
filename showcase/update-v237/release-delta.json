@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "release": "v2.3.7",
+  "range": "v2.3.6..v2.3.7",
+  "title": {
+    "zh-CN": "ReadMD 2.3.7｜让文档留在原处，工作继续向前",
+    "en": "ReadMD 2.3.7 | Keep the document. Move the work forward."
+  },
+  "sources": {
+    "mcp-guide": {
+      "type": "repository-file",
+      "path": "showcase/audit-captures/05-desktop-download-mcp-guide.png",
+      "description": "ReadMD 下载页内的 MCP 配置指引真实截图",
+      "evidence": ["website/public/zh-cn/download/index.html", "packages/mcp-server/readmd_mcp_server.py"]
+    }
+  },
+  "pages": [
+    {
+      "id": "reader",
+      "shot_id": "overview.reader",
+      "layout": "specimen",
+      "evidence": ["assets/js/reader/render.js", "showcase/fixtures/readmd-showcase.md"],
+      "copy": {
+        "zh-CN": { "eyebrow": "01 / 阅读底座", "title": "一份文档，留在原处", "body": "长文档阅读、目录和显示层修复被收进同一张工作台：看见问题，不必先改写原文件。", "note": "显示层修复 · 目录联动 · 原文保持不动" },
+        "en": { "eyebrow": "01 / Reading foundation", "title": "Keep the document where it is", "body": "Long-form reading, outline navigation and display-layer repair meet in one workbench without rewriting the source first.", "note": "Display repair · outline links · source preserved" }
+      }
+    },
+    {
+      "id": "editor",
+      "shot_id": "overview.editor",
+      "layout": "ledger",
+      "evidence": ["assets/js/editor/editor.js", "ui-tests/readmd-ui.spec.js"],
+      "copy": {
+        "zh-CN": { "eyebrow": "02 / 编辑体验", "title": "写作与预览，同步向前", "body": "编辑器和预览并排工作；表格、格式与文档结构在同一视线里被确认。", "note": "分栏编辑 · 实时预览 · 结构可见" },
+        "en": { "eyebrow": "02 / Editing", "title": "Write and preview in one glance", "body": "Editor and preview work side by side, keeping tables, structure and formatting visible while you revise.", "note": "Split editor · live preview · visible structure" }
+      }
+    },
+    {
+      "id": "conversion",
+      "shot_id": "convert.home",
+      "layout": "archive",
+      "evidence": ["assets/index.html", "src/readmd_modules/converter.py"],
+      "copy": {
+        "zh-CN": { "eyebrow": "03 / 入口重整", "title": "资料进来，不必重做", "body": "打开、转换、网页提取与扫描识别收拢为清晰入口；从原始资料到 Markdown 的路径被缩短。", "note": "文档转换 · 网页提取 · 本地 OCR" },
+        "en": { "eyebrow": "03 / Intake", "title": "Bring material in without starting over", "body": "Open, conversion, web extraction and scan recognition are gathered into clear entry points for a shorter route to Markdown.", "note": "Document conversion · web extraction · local OCR" }
+      }
+    },
+    {
+      "id": "academic",
+      "shot_id": "academic.latex-bib",
+      "layout": "blueprint",
+      "evidence": ["src/readmd_modules/mdexport/latex_export.py", "showcase/fixtures/readmd-paper.md"],
+      "copy": {
+        "zh-CN": { "eyebrow": "04 / 学术写作", "title": "公式、引用与定理，不再分家", "body": "LaTeX、BibTeX 与 theorem/proof 语义进入同一份 Markdown 流程，论文内容能读、能写、也能导出。", "note": "LaTeX PRO · BibTeX · theorem / proof" },
+        "en": { "eyebrow": "04 / Academic work", "title": "Equations, citations and proofs stay together", "body": "LaTeX, BibTeX and theorem/proof semantics now live in the same Markdown workflow for reading, writing and export.", "note": "LaTeX PRO · BibTeX · theorem / proof" }
+      }
+    },
+    {
+      "id": "diagrams",
+      "shot_id": "editor.diagram-picker",
+      "layout": "specimen",
+      "evidence": ["assets/js/editor/editor.js", "showcase/fixtures/readmd-science.md"],
+      "copy": {
+        "zh-CN": { "eyebrow": "05 / 可视化", "title": "把关系画出来", "body": "PlantUML、Graphviz、WaveDrom、Vega 与 TikZ 通过统一选择器进入文档，而不是散落在外部工具里。", "note": "多种图表引擎 · 统一插入 · 文档内完成" },
+        "en": { "eyebrow": "05 / Diagrams", "title": "Draw the relationships", "body": "PlantUML, Graphviz, WaveDrom, Vega and TikZ enter through one picker instead of being scattered across external tools.", "note": "Multiple engines · one insertion path · in-document" }
+      }
+    },
+    {
+      "id": "code",
+      "shot_id": "editor.code-chunk",
+      "layout": "ledger",
+      "evidence": ["assets/js/reader/render.js", "showcase/fixtures/readmd-lab.md"],
+      "copy": {
+        "zh-CN": { "eyebrow": "06 / 技术笔记", "title": "代码不是文档的旁注", "body": "可执行代码块把状态、输出与原始说明放在同一张卡片里，实验记录仍然是可阅读的文档。", "note": "代码块 · 运行状态 · 输出区域" },
+        "en": { "eyebrow": "06 / Technical notes", "title": "Code is not a footnote", "body": "Runnable code blocks keep source, status and output in one readable record rather than splitting an experiment from its document.", "note": "Code blocks · runtime status · output region" }
+      }
+    },
+    {
+      "id": "presentation",
+      "shot_id": "presentation.reveal",
+      "layout": "blueprint",
+      "evidence": ["assets/js/reader/render.js", "showcase/fixtures/readmd-talk.md"],
+      "copy": {
+        "zh-CN": { "eyebrow": "07 / 放映", "title": "写完，就能讲", "body": "同一份 Markdown 可以进入 Reveal 放映；标题、公式、图表和代码不必在演示前再复制一次。", "note": "Reveal 放映 · 同一份 Markdown · 离线资源" },
+        "en": { "eyebrow": "07 / Present", "title": "When it is written, it can be presented", "body": "The same Markdown enters Reveal presentation mode, keeping headings, equations, diagrams and code out of a second copy.", "note": "Reveal mode · one Markdown source · offline assets" }
+      }
+    },
+    {
+      "id": "sharing",
+      "shot_id": "sharing.export",
+      "layout": "archive",
+      "evidence": ["assets/js/features/share.js", "assets/index.html"],
+      "copy": {
+        "zh-CN": { "eyebrow": "08 / 交付", "title": "把阅读带到另一块屏幕", "body": "局域网共享面板让手机读取或继续编辑同一份内容；入口、令牌与开关都被明确展示。", "note": "局域网共享 · 二维码入口 · 明确启停" },
+        "en": { "eyebrow": "08 / Share", "title": "Carry reading to another screen", "body": "The LAN sharing panel lets a phone read or continue the same content with a visible entry point, token and on/off control.", "note": "LAN sharing · QR entry · explicit control" }
+      }
+    },
+    {
+      "id": "ai-panel",
+      "shot_id": "ai.panel",
+      "layout": "specimen",
+      "evidence": ["assets/js/features/ai.js", "src/readmd_modules/ai.py", "src/readmd_modules/skills.py"],
+      "copy": {
+        "zh-CN": { "eyebrow": "09 / AI 对话", "title": "不再把提示词堆成设置", "body": "AI 对话从共享 Skill 注册表取用动作；连接、模型、流式输出与文档上下文在同一处被看见。", "note": "统一 SSE · Skill 选择 · 会话边界" },
+        "en": { "eyebrow": "09 / AI chat", "title": "Prompts no longer pile up as settings", "body": "AI actions resolve from the shared Skill registry while connection, model, streaming and document context remain visible together.", "note": "Unified SSE · Skill selection · session boundary" }
+      }
+    },
+    {
+      "id": "skills",
+      "shot_id": "skills.workbench",
+      "layout": "ledger",
+      "evidence": ["assets/js/features/ai.js", "assets/skills", "assets/upstream/manifest.json"],
+      "copy": {
+        "zh-CN": { "eyebrow": "10 / Skills", "title": "提示词，终于有了来源与边界", "body": "内置 Skill、原始离线快照与用户草稿进入同一个工作台；生成结果先验证，再由用户发布。", "note": "离线来源 · 草稿默认禁用 · 发布前校验" },
+        "en": { "eyebrow": "10 / Skills", "title": "Prompts finally have provenance and boundaries", "body": "Built-in Skills, offline source snapshots and user drafts meet in one workbench. Generated work is validated before a user publishes it.", "note": "Offline sources · drafts disabled · pre-publish checks" }
+      }
+    },
+    {
+      "id": "providers",
+      "shot_id": "providers.catalog",
+      "layout": "blueprint",
+      "evidence": ["assets/providers/provider-catalog.json", "src/readmd_modules/ai.py", "src/readmd_modules/crypto.py"],
+      "copy": {
+        "zh-CN": { "eyebrow": "11 / Provider v3", "title": "选择服务商，不等于被服务商锁定", "body": "可搜索的 Provider 目录把协议、模型能力与连接设置放到同一个界面；凭据用 ID 引用，不进入 URL。", "note": "目录可搜索 · 协议可选 · credential_id" },
+        "en": { "eyebrow": "11 / Provider v3", "title": "Choose a provider without being locked to one", "body": "A searchable provider directory puts protocol, model capabilities and connection settings together while credentials are referenced by ID, never URL.", "note": "Searchable catalogue · selectable protocol · credential_id" }
+      }
+    },
+    {
+      "id": "github-import",
+      "shot_id": "skills.github-import",
+      "layout": "archive",
+      "evidence": ["assets/js/features/ai.js", "src/readmd_modules/skill_import.py"],
+      "copy": {
+        "zh-CN": { "eyebrow": "12 / 可扩展", "title": "从 GitHub 带回可审查的 Skill", "body": "导入前先列出仓库中的 SKILL.md，选择需要的目录后再确认；来源、提交和本地版本可以被追溯。", "note": "多 Skill 预览 · 选择导入 · 手动更新" },
+        "en": { "eyebrow": "12 / Extensible", "title": "Bring back Skills from GitHub for review", "body": "Skills are listed before import. Choose folders, confirm the import, then retain a traceable source, commit and local version.", "note": "Multi-Skill preview · selected import · manual updates" }
+      }
+    },
+    {
+      "id": "locales",
+      "shot_id": "i18n.library",
+      "layout": "specimen",
+      "evidence": ["assets/js/core/i18n.js", "assets/i18n"],
+      "copy": {
+        "zh-CN": { "eyebrow": "13 / 语言", "title": "46 种书写语境，仍是一套界面", "body": "语言选择器保留每种语言自己的名称与方向；切换、占位符和对话框跟随同一份界面系统。", "note": "46 locales · RTL 支持 · 动态切换" },
+        "en": { "eyebrow": "13 / Language", "title": "46 writing contexts, one interface", "body": "The language picker keeps each language's own name and direction while controls, placeholders and dialogs follow the same interface system.", "note": "46 locales · RTL support · dynamic switch" }
+      }
+    },
+    {
+      "id": "mcp",
+      "source_id": "mcp-guide",
+      "layout": "ledger",
+      "evidence": ["packages/mcp-server/readmd_mcp_server.py", "packages/vscode-extension/README.md", "website/public/zh-cn/download/index.html"],
+      "copy": {
+        "zh-CN": { "eyebrow": "14 / 生态", "title": "桌面之外，还是同一个 Core", "body": "MCP 与 VS Code 复用 Provider、Credential、Skill、History 和 SSE 数据模型，把文档流程交给兼容的工作环境。", "note": "MCP resources · VS Code 扩展 · 共享 Core Service" },
+        "en": { "eyebrow": "14 / Ecosystem", "title": "Beyond the desktop, the same Core", "body": "MCP and VS Code reuse the Provider, Credential, Skill, History and SSE data model so compatible tools share the document workflow.", "note": "MCP resources · VS Code extension · shared Core Service" }
+      }
+    }
+  ]
+}

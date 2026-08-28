@@ -125,6 +125,78 @@
       "keywords": ["共享", "分享", "二维码", "移动端", "导出", "局域网"],
       "assertions": ["#share-modal", "#share-start:not([disabled])", "#share-stop[disabled]"],
       "evidence": ["assets/js/features/share.js", "assets/index.html"]
+    },
+    "ai.panel": {
+      "id": "ai.panel",
+      "name": "AI 对话与受限 Skill 选择",
+      "level": "A",
+      "category": "AI",
+      "role": "annotated_ui",
+      "visuality": 0.91,
+      "description": "真实 AI 对话侧栏：连接状态、模型、流式开关与从 Skill 注册表加载的动作选择器",
+      "output": "ai-panel.png",
+      "fixture": "readmd-product-plan.md",
+      "viewport": { "width": 1280, "height": 800 },
+      "keywords": ["AI", "Skill", "流式", "模型", "对话"],
+      "assertions": ["#ai-panel", "#ai-template", "#ai-model-summary", "#ai-prompt"],
+      "evidence": ["assets/js/features/ai.js", "src/readmd_modules/ai.py", "src/readmd_modules/skills.py"]
+    },
+    "skills.workbench": {
+      "id": "skills.workbench",
+      "name": "Skill 工作台与离线来源",
+      "level": "A",
+      "category": "AI",
+      "role": "annotated_ui",
+      "visuality": 0.93,
+      "description": "真实 Skill 工作台：内置 Skill 清单、只读指令预览与发布前草稿边界",
+      "output": "skills-workbench.png",
+      "fixture": "readmd-product-plan.md",
+      "viewport": { "width": 1280, "height": 800 },
+      "keywords": ["Skill", "工作台", "离线来源", "草稿", "AI"],
+      "assertions": ["#tpl-modal", "#tpl-list [role=option]", "#tpl-system", "#tpl-draft-status"],
+      "evidence": ["assets/js/features/ai.js", "src/readmd_modules/skills.py", "assets/skills"]
+    },
+    "providers.catalog": {
+      "id": "providers.catalog",
+      "name": "Provider v3 连接目录",
+      "level": "A",
+      "category": "AI",
+      "role": "annotated_ui",
+      "visuality": 0.92,
+      "description": "真实连接设置：可搜索 Provider 卡片、协议模式、模型能力与受限凭据输入",
+      "output": "providers-catalog.png",
+      "viewport": { "width": 1280, "height": 800 },
+      "keywords": ["Provider", "连接", "模型", "凭据", "协议"],
+      "assertions": ["#ai-settings-modal", "#ai-provider-cards [role=option]", "#ai-provider", "#ai-mode"],
+      "evidence": ["assets/js/features/ai.js", "src/readmd_modules/ai.py", "assets/providers/provider-catalog.json"]
+    },
+    "skills.github-import": {
+      "id": "skills.github-import",
+      "name": "GitHub Skill 安全导入预览",
+      "level": "A",
+      "category": "AI",
+      "role": "annotated_ui",
+      "visuality": 0.90,
+      "description": "真实 Skill 工作台的 GitHub 预览：选择多个 SKILL.md、显示目录与导入确认入口",
+      "output": "skills-github-import.png",
+      "viewport": { "width": 1280, "height": 800 },
+      "keywords": ["GitHub", "导入", "Skill", "预览", "确认"],
+      "assertions": ["#tpl-modal", "#tpl-github-preview .tpl-github-item", "#tpl-github-apply-btn"],
+      "evidence": ["assets/js/features/ai.js", "src/readmd_modules/skill_import.py", "src/readmd_modules/skills.py"]
+    },
+    "i18n.library": {
+      "id": "i18n.library",
+      "name": "46 语种语言选择器",
+      "level": "A",
+      "category": "Localization",
+      "role": "annotated_ui",
+      "visuality": 0.87,
+      "description": "真实界面语言选择器：可搜索语言列表、原生语言名与当前选择状态",
+      "output": "i18n-library.png",
+      "viewport": { "width": 1024, "height": 760 },
+      "keywords": ["语言", "i18n", "RTL", "本地化", "46"],
+      "assertions": ["#lang-modal", "#lang-search-input", "#lang-grid [role=option]"],
+      "evidence": ["assets/js/core/i18n.js", "assets/i18n"]
     }
   }
 }
