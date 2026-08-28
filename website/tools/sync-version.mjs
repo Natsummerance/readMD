@@ -24,11 +24,11 @@ async function extractVersion() {
         const match = content.match(/(?:READMD_VERSION|VITE_APP_VERSION|APP_VERSION|VERSION)\s*=\s*["']?([^"'\r\n]+)["']?/);
         if (match && match[1]?.trim()) {
           const v = match[1].trim();
-          console.log(`[sync-version] Detected version from ${p}`);
+          console.log("[sync-version] Detected version from environment configuration");
           return v;
         }
       } catch (err) {
-        console.warn(`[sync-version] Could not read ${p}:`, err.message);
+        console.warn("[sync-version] Could not read environment configuration:", err.message);
       }
     }
   }
@@ -67,7 +67,7 @@ async function main() {
   await mkdir(distDir, { recursive: true });
   const distVersionPath = resolve(distDir, "version.json");
   await writeFile(distVersionPath, JSON.stringify(versionData, null, 2), "utf8");
-  console.log(`[sync-version] Wrote ${distVersionPath} successfully.`);
+  console.log("[sync-version] Wrote dist/version.json successfully.");
 }
 
 main().catch((err) => {
