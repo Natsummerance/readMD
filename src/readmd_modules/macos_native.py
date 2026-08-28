@@ -258,7 +258,9 @@ def diagnose_system():
         'app_browser': app_browser,
         'system_dark_mode': dark_mode,
         'preferred_backend': preferred,
-        'status': 'ready' if (webkit_ok or app_browser) else 'degraded',
+        # Browser-App/open fallback cannot provide the pywebview bridge and is
+        # therefore not equivalent to the native Cocoa backend.
+        'status': 'ready' if webkit_ok else ('degraded' if app_browser else 'blocked'),
     }
 
 
@@ -285,7 +287,9 @@ def format_diagnosis_report():
         "  - 自动首选启动链路: %s" % diag['preferred_backend'],
         "-" * 64,
         "[*] 综合就绪状态: %s" % (
-            '[OK] 原生全生态开箱即用' if diag['status'] == 'ready' else '[WARNING] 系统缺少图形渲染组件'
+            '[OK] 原生全生态开箱即用' if diag['status'] == 'ready'
+            else ('[WARNING] 仅有浏览器降级，完整功能需要 Cocoa WKWebView'
+                  if diag['status'] == 'degraded' else '[BLOCKED] 缺少 Cocoa WKWebView')
         ),
         "=" * 64,
     ]

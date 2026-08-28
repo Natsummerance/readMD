@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ReadMD 工作流程 | 長篇文件、格式轉換、離線 OCR 與放映</title>
-  <meta name="description" content="了解 ReadMD 如何處理約 8,000 行或 500 KB 的長篇文件，轉換 Word、PDF、網頁和 LaTeX，離線擷取掃描文字，並在 Windows、macOS、Linux、UOS 和麒麟放映同一份 Markdown。">
+  <meta name="description" content="了解 ReadMD 如何處理約 8,000 行或 500 KB 的長篇文件，轉換 Word、PDF、網頁和 LaTeX，離線擷取掃描文字，並驗證 Windows、macOS、Linux 候選環境的原生流程。">
   <meta name="author" content="ReadMD">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
@@ -72,7 +72,7 @@
       "@type": "SoftwareApplication",
       "@id": "https://readmd.asia/zh-tw/workflows/#software",
       "name": "ReadMD",
-      "operatingSystem": "Windows, macOS, Linux, Kylin OS, UOS",
+      "operatingSystem": "Windows 10/11, macOS 13+, Linux（候選）",
       "applicationCategory": "UtilitiesApplication",
       "softwareVersion": "2.3.7",
       "dateModified": "2026-08-26",
@@ -140,7 +140,7 @@
       "name": "哪些系統可以執行？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "提供 Windows 10/11（x64/ARM64）、Apple Silicon 和 Intel macOS、Linux AppImage/Deb 套件，以及統信 UOS 和銀河麒麟版本；VSCode 擴充套件與 FastMCP Server 可連接編輯器和相容 AI 工具。"
+        "text": "V2.3.7 候選面向 Windows 10/11、macOS 13+ 與 Linux x86_64/ARM64。每個平台完成原生建置、冷啟動、離線、隱私與功能證據後，才會確認正式支援；VSCode 擴充套件與 FastMCP Server 可連接編輯器和相容 AI 工具。"
       }
     }
   ]
@@ -176,7 +176,7 @@
       <article class="answer-card"><h2 class="text-xl font-semibold">DOCX、PDF、HTML 或 LaTeX 能轉 Markdown 嗎？</h2><p>可以。轉換工作流程支援 Word、PowerPoint、Excel、PDF、HTML 和 LaTeX 匯入，保留標題、列表、表格、引言、公式和圖片引用等結構。複雜專有版式轉換後仍應人工複核。</p></article>
       <article class="answer-card"><h2 class="text-xl font-semibold">掃描件能不上傳就擷取文字嗎？</h2><p>在受支援的平台可以。ReadMD 呼叫作業系統原生 OCR 在本機辨識，之後在 Markdown 中修正標題和表格。這條本地路徑不需要雲端帳號。</p></article>
       <article class="answer-card"><h2 class="text-xl font-semibold">能不重做簡報直接報告嗎？</h2><p>可以。繼續用 Markdown 寫作，準備好後開啟 Reveal 型放映模式；程式碼、數學、圖表和表格保留上下文，臨時修改也回到同一份檔案。</p></article>
-      <article class="answer-card"><h2 class="text-xl font-semibold">哪些系統可以執行？</h2><p>提供 Windows 10/11（x64/ARM64）、Apple Silicon 和 Intel macOS、Linux AppImage/Deb 套件，以及統信 UOS 和銀河麒麟版本；VSCode 擴充套件與 FastMCP Server 可連接編輯器和相容 AI 工具。</p></article>
+      <article class="answer-card"><h2 class="text-xl font-semibold">哪些系統可以執行？</h2><p>V2.3.7 候選面向 Windows 10/11、macOS 13+ 與 Linux x86_64/ARM64。正式支援只在對應平台的原生建置、冷啟動、離線、隱私與完整功能證據齊全後公布；VSCode 擴充套件與 FastMCP Server 可連接編輯器和相容 AI 工具。</p></article>
     </section>
     <div class="mt-10 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-tw/large-markdown-files/">開啟超大 Markdown 檔案</a><a class="link-action" href="/zh-tw/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-tw/convert-to-markdown/">文件轉 Markdown</a><a class="link-action" href="/zh-tw/markdown-tables/">建立 Markdown 表格</a><a class="link-action" href="/zh-tw/pdf-to-markdown/">PDF 轉 Markdown</a><a class="link-action" href="/zh-tw/scan-to-markdown/">掃描件擷取文字</a><a class="link-action" href="/zh-tw/bibtex-citations/">管理 BibTeX 引用</a><a class="link-action" href="/zh-tw/release-notes/">發布說明</a></div>
     <div class="mt-6 flex flex-wrap gap-3"><a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/latest">取得 ReadMD</a><a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">在 GitHub 給 Star</a></div>

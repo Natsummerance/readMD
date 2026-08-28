@@ -12,7 +12,7 @@
     <title>ReadMD 工作流程 | 長篇文件、格式轉換、離線 OCR 與放映</title>
     <link rel="alternate" href="https://readmd.asia/zh-tw/workflows/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>了解 ReadMD 如何處理約 8,000 行或 500 KB 的長篇文件，轉換 Word、PDF、網頁和 LaTeX，離線擷取掃描文字，並在 Windows、macOS、Linux、UOS 和麒麟放映同一份 Markdown。</summary>
+    <summary>了解 ReadMD 如何處理約 8,000 行或 500 KB 的長篇文件，轉換 Word、PDF、網頁和 LaTeX，離線擷取掃描文字，並驗證 Windows、macOS、Linux 候選環境的原生流程。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/zh-tw/scan-to-markdown/</id>
@@ -26,7 +26,7 @@
     <title>ReadMD v2.3.7 發布說明 | 安全放映與更新校驗</title>
     <link rel="alternate" href="https://readmd.asia/zh-tw/release-notes/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>查看 ReadMD v2.3.7 發布說明：Reveal 放映隔離、更新套件暫存檔與 SHA-256 校驗、啟動分階段載入、標籤狀態重新整理、更大觸控目標，以及 Windows、macOS、Linux、UOS 和麒麟安裝套件下載。</summary>
+    <summary>查看 ReadMD v2.3.7 候選說明：Reveal 放映隔離、更新套件暫存檔與 SHA-256 校驗、啟動分階段載入、標籤狀態重新整理與更大觸控目標；正式平台套件仍待原生證據。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/zh-tw/pdf-to-markdown/</id>
@@ -58,10 +58,10 @@
   </entry>
   <entry>
     <id>https://readmd.asia/zh-tw/download/</id>
-    <title>下載 ReadMD | Windows、macOS、Linux、UOS 和麒麟版本</title>
+    <title>下載 ReadMD | Windows、macOS、Linux 候選版本</title>
     <link rel="alternate" href="https://readmd.asia/zh-tw/download/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>下載 ReadMD 的 Windows 安裝版或便攜版、Apple Silicon 和 Intel macOS、Linux AppImage 與 Deb、統信 UOS/麒麟、鴻蒙、VS Code 擴充套件和 MCP Server，並使用 SHA256SUMS.txt 校驗。</summary>
+    <summary>下載 ReadMD 的候選 Windows、Apple Silicon 與 Intel macOS、Linux AppImage 與 Deb、VS Code 擴充套件和 MCP Server，並使用 SHA256SUMS.txt 校驗；UOS、麒麟與鴻蒙不在本版正式承諾內。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/zh-tw/convert-to-markdown/</id>
@@ -82,7 +82,7 @@
     <title>ReadMD 工作流 | 超长文档、格式转换、离线 OCR 与放映</title>
     <link rel="alternate" href="https://readmd.asia/zh-cn/workflows/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>了解 ReadMD 如何处理约 8,000 行或 500 KB 的长文档，转换 Word、PDF、网页和 LaTeX，离线提取扫描文字，并在 Windows、macOS、Linux、UOS 和麒麟上放映同一份 Markdown。</summary>
+    <summary>了解 ReadMD 如何处理约 8,000 行或 500 KB 的长文档，转换 Word、PDF、网页和 LaTeX，离线提取扫描文字，并验证 Windows、macOS、Linux 候选环境的原生流程。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/zh-cn/scan-to-markdown/</id>
@@ -96,7 +96,7 @@
     <title>ReadMD v2.3.7 发布说明 | 安全放映与更新校验</title>
     <link rel="alternate" href="https://readmd.asia/zh-cn/release-notes/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>查看 ReadMD v2.3.7 发布说明：Reveal 放映隔离、更新包临时文件与 SHA-256 校验、启动分阶段加载、标签状态刷新、更大触控目标，以及 Windows、macOS、Linux、UOS 和麒麟安装包下载。</summary>
+    <summary>查看 ReadMD v2.3.7 候选说明：Reveal 放映隔离、更新包临时文件与 SHA-256 校验、启动分阶段加载、标签状态刷新和更大触控目标；正式平台安装包仍待原生证据。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/zh-cn/pdf-to-markdown/</id>
@@ -128,10 +128,10 @@
   </entry>
   <entry>
     <id>https://readmd.asia/zh-cn/download/</id>
-    <title>下载 ReadMD | Windows、macOS、Linux、UOS 和麒麟版本</title>
+    <title>下载 ReadMD | Windows、macOS、Linux 候选版本</title>
     <link rel="alternate" href="https://readmd.asia/zh-cn/download/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>下载 ReadMD 的 Windows 安装版或便携版、Apple Silicon 和 Intel macOS、Linux AppImage 与 Deb、统信 UOS/麒麟、VS Code 插件和 MCP Server，并使用 SHA256SUMS.txt 校验。</summary>
+    <summary>下载 ReadMD 的候选 Windows、Apple Silicon 与 Intel macOS、Linux AppImage 与 Deb、VS Code 插件和 MCP Server，并使用 SHA256SUMS.txt 校验；UOS 与麒麟仍待原生证据。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/zh-cn/convert-to-markdown/</id>
@@ -152,7 +152,7 @@
     <title>ReadMD Workflows | Long Markdown, Conversion, OCR, and Presenting</title>
     <link rel="alternate" href="https://readmd.asia/workflows/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>Learn how ReadMD handles 8,000-line Markdown files, converts DOCX/PDF/HTML/LaTeX, extracts scanned text offline, presents one source file, and runs across Windows, macOS, Linux, UOS, and Kylin.</summary>
+    <summary>Learn how ReadMD handles 8,000-line Markdown files, converts DOCX/PDF/HTML/LaTeX, extracts scanned text offline, presents one source file, and validates native Windows, macOS, and Linux candidates.</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/scan-to-markdown/</id>
@@ -166,7 +166,7 @@
     <title>ReadMD v2.3.7 Release Notes | Safe Presenting And Updates</title>
     <link rel="alternate" href="https://readmd.asia/release-notes/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>ReadMD v2.3.7 release notes covering safer Reveal presenting, update integrity checks, startup loading refinements, tab reliability, larger touch targets, Windows, macOS, Linux, UOS, and Kylin packages.</summary>
+    <summary>ReadMD v2.3.7 candidate notes cover safer Reveal presenting, update integrity checks, startup loading refinements, tab reliability, and larger touch targets; formal platform packages remain evidence-gated.</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/pdf-to-markdown/</id>
@@ -201,7 +201,7 @@
     <title>ReadMD ワークフロー | 長文、変換、オフライン OCR、発表</title>
     <link rel="alternate" href="https://readmd.asia/ja/workflows/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>ReadMD が約 8,000 行または 500 KB の長文、Word/PDF/Web/LaTeX の取り込み、スキャン文字のオフライン認識、Windows/macOS/Linux/UOS/Kylin での発表をどのように扱うかを説明します。</summary>
+    <summary>ReadMD が約 8,000 行または 500 KB の長文、Word/PDF/Web/LaTeX の取り込み、スキャン文字のオフライン認識、Windows/macOS/Linux 候補環境のネイティブ手順を説明します。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/ja/scan-to-markdown/</id>
@@ -215,7 +215,7 @@
     <title>ReadMD v2.3.7 リリースノート | 安全な発表と更新検証</title>
     <link rel="alternate" href="https://readmd.asia/ja/release-notes/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>ReadMD v2.3.7 の変更点を確認できます。Reveal発表の分離、更新ファイルの一時保存とSHA-256検証、段階的な起動読み込み、タブ状態の即時更新、大きなタッチ操作領域、Windows、macOS、Linux、UOS、Kylin向けパッケージを説明します。</summary>
+    <summary>ReadMD v2.3.7 候補の変更点を確認できます。Reveal発表の分離、更新ファイルの一時保存とSHA-256検証、段階的な起動読み込み、タブ状態の即時更新、大きなタッチ操作領域を説明します。正式パッケージはネイティブ証拠待ちです。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/ja/pdf-to-markdown/</id>
@@ -247,10 +247,10 @@
   </entry>
   <entry>
     <id>https://readmd.asia/ja/download/</id>
-    <title>ReadMD ダウンロード | Windows、macOS、Linux、UOS、Kylin</title>
+    <title>ReadMD ダウンロード | Windows、macOS、Linux 候補版</title>
     <link rel="alternate" href="https://readmd.asia/ja/download/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>ReadMD の Windows インストーラー/ポータブル版、Apple Silicon および Intel macOS、Linux AppImage/Deb、UOS/Kylin、VS Code 拡張、MCP Server を入手し、SHA256SUMS.txt で検証できます。</summary>
+    <summary>ReadMD の候補 Windows インストーラー/ポータブル版、Apple Silicon および Intel macOS、Linux AppImage/Deb、VS Code 拡張、MCP Server を入手し、SHA256SUMS.txt で検証できます。UOS/Kylin は原生証拠待ちです。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/ja/convert-to-markdown/</id>
@@ -268,10 +268,10 @@
   </entry>
   <entry>
     <id>https://readmd.asia/download/</id>
-    <title>Download ReadMD | Windows, macOS, Linux, UOS, and Kylin Builds</title>
+    <title>Download ReadMD | Windows, macOS, and Linux Candidate Builds</title>
     <link rel="alternate" href="https://readmd.asia/download/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>Download ReadMD for Windows installer or portable use, Apple Silicon and Intel macOS, Linux AppImage and Deb, UOS/Kylin, VS Code, and MCP Server. Verify every package with SHA256SUMS.txt.</summary>
+    <summary>Download the ReadMD candidate for Windows installer or portable use, Apple Silicon and Intel macOS, Linux AppImage and Deb, VS Code, and MCP Server. Verify every package with SHA256SUMS.txt; UOS/Kylin remain evidence-gated.</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/convert-to-markdown/</id>
@@ -292,21 +292,21 @@
     <title>ReadMD | 純本地 Markdown 閱讀、編輯、轉換與放映</title>
     <link rel="alternate" href="https://readmd.asia/zh-tw/"/>
     <updated>2026-08-24T00:00:00Z</updated>
-    <summary>ReadMD 是跨越 Windows、macOS、Linux、麒麟與統信 UOS 的本地 Markdown 工作台，可快速開啟長篇文件、在顯示層修正語法、轉換 Office 與 PDF，並直接放映 Markdown。</summary>
+    <summary>ReadMD 是面向 Windows、macOS、Linux 候選環境的本地 Markdown 工作台，可快速開啟長篇文件、在顯示層修正語法、轉換 Office 與 PDF，並直接放映 Markdown；正式支援以原生證據為準。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/zh-cn/</id>
     <title>ReadMD | 纯本地 Markdown 阅读、编辑、转换与放映</title>
     <link rel="alternate" href="https://readmd.asia/zh-cn/"/>
     <updated>2026-08-24T00:00:00Z</updated>
-    <summary>ReadMD 是跨 Windows、macOS、Linux、麒麟和统信 UOS 的本地 Markdown 工作台，可秒开超长文档、渲染前自动修正显示问题、转换 Office 与 PDF，并直接用 Markdown 放映。</summary>
+    <summary>ReadMD 是面向 Windows、macOS、Linux 候选环境的本地 Markdown 工作台，可快速打开超长文档、修正显示问题、转换 Office 与 PDF，并直接用 Markdown 放映；正式支持以原生证据为准。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/ja/</id>
     <title>ReadMD | ローカルで使う Markdown リーダー、エディター、変換、発表ツール</title>
     <link rel="alternate" href="https://readmd.asia/ja/"/>
     <updated>2026-08-24T00:00:00Z</updated>
-    <summary>ReadMD は Windows、macOS、Linux、Kylin OS、UOS 向けのローカル Markdown ワークスペースです。長文を高速に開き、表示だけを自動修復し、Office や PDF を変換し、Markdown をそのまま発表できます。</summary>
+    <summary>ReadMD は Windows、macOS、Linux 候補環境向けのローカル Markdown ワークスペースです。長文を高速に開き、表示だけを自動修復し、Office や PDF を変換し、Markdown をそのまま発表できます。正式対応はネイティブ証拠に基づきます。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/</id>

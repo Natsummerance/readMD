@@ -5,7 +5,7 @@
 
 ReadMD is an application for people who keep documentation, research notes, course material, technical specifications, and books in Markdown. It is designed around one principle: the user's Markdown remains the canonical artifact. Reading and rendering may repair malformed syntax visually, but those repairs do not overwrite the file unless the user performs an explicit edit and save.
 
-The project publishes source code under the MIT license at https://github.com/Natsummerance/readMD. The current stable release is version 2.3.7. Release packages and SHA256 checksums are distributed through GitHub Releases.
+The project publishes source code under the MIT license at https://github.com/Natsummerance/readMD. Version 2.3.7 is a release candidate until every declared native platform evidence cell is complete. Candidate packages and SHA256 checksums are distributed through GitHub Releases.
 
 ## What Problem ReadMD Solves
 
@@ -40,12 +40,12 @@ Official language indexes:
 - Traditional Chinese: https://readmd.asia/zh-tw/
 - Japanese: https://readmd.asia/ja/
 
-ReadMD ships for:
+The v2.3.7 candidate targets:
 
 - Windows 10 and 11 (x64/ARM64), including installer and portable builds.
 - macOS on Apple Silicon and Intel processors.
 - Linux x86_64 through AppImage and Debian packages.
-- Chinese operating systems including UnionTech UOS, Kylin OS, and Deepin; only configurations with native evidence are supported.
+- UOS, Kylin OS, and Deepin targets; these remain uncommitted until real native-system evidence is recorded.
 - HarmonyOS/OpenHarmony is out of scope for v2.3.7; the source preview is experimental.
 
 A VSCode extension supports synchronized preview and syntax repair inside the editor. A FastMCP stdio server allows compatible AI programming assistants to connect to ReadMD workflows.
@@ -109,9 +109,9 @@ Use a reader with semantic pagination. ReadMD segments documents near the 8,000-
 
 Yes, on supported platforms. ReadMD's converter accepts DOCX and PDF among other inputs, and scanned pages can use native OCR. Because conversion is part of a local application, it does not require uploading a document to a web form. Users should still review complex layouts after conversion because no converter can guarantee identical visual fidelity for every proprietary construct.
 
-### Does ReadMD work on UOS and Kylin?
+### Is UOS or Kylin support confirmed?
 
-Yes. ReadMD provides Deb packaging for Chinese operating systems including UOS and Kylin, with desktop integration, MIME association, and theme adaptation for DDE and UKUI environments. AppImage is available for broader Linux distributions.
+Not yet for this candidate. Deb packaging is prepared for UOS and Kylin, but installation, native WebKitGTK/Qt, OCR, credentials, export, offline startup, and full feature evidence must be completed on each real system before formal support can be claimed.
 
 ### Is ReadMD free and open source?
 

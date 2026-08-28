@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# ReadMD Linux & 信创全架构 (x86_64 / aarch64 / loongarch64 / mips64el / sw64 / armhf) 打包脚本
+# ReadMD Linux 原生打包脚本（本版本正式支持 x86_64 / aarch64）。
+# 其他架构必须使用专门的、已验证的构建流程，不得被此脚本误标为正式产物。
 set -euo pipefail
 if [ -z "${READMD_VERSION:-}" ]; then
   if [ -f ".env" ]; then
@@ -16,11 +17,11 @@ DEB_ARCH="${READMD_DEB_ARCH:-}"
 if [ -z "${DEB_ARCH}" ]; then
   case "${ARCH}" in
     aarch64|arm64) DEB_ARCH="arm64" ;;
-    loongarch64)   DEB_ARCH="loongarch64" ;;
-    mips64el)      DEB_ARCH="mips64el" ;;
-    sw_64|sw64)    DEB_ARCH="sw64" ;;
-    armv7l|armhf)  DEB_ARCH="armhf" ;;
-    *)             DEB_ARCH="amd64" ;;
+    x86_64|amd64)   DEB_ARCH="amd64" ;;
+    *)
+      echo "ERROR: unsupported architecture for the v2.3.7 Linux release: ${ARCH}" >&2
+      exit 2
+      ;;
   esac
 fi
 
@@ -104,21 +105,30 @@ chmod +x "${APPDIR}/AppRun"
 
 # 4. 构建 AppImage
 APPIMAGE_NAME="ReadMD-linux-${ARCH}-v${VERSION}.AppImage"
+APPIMAGE_BUILT=0
 if command -v appimagetool >/dev/null 2>&1; then
   appimagetool "${APPDIR}" "dist/${APPIMAGE_NAME}"
+  APPIMAGE_BUILT=1
 elif [ -f "./appimagetool" ]; then
   ./appimagetool --appimage-extract-and-run "${APPDIR}" "dist/${APPIMAGE_NAME}"
+  APPIMAGE_BUILT=1
 else
   case "${ARCH}" in
     aarch64) APPIMAGE_TOOL_ARCH="aarch64" ;;
     *) APPIMAGE_TOOL_ARCH="x86_64" ;;
   esac
+  APPIMAGE_TOOL="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/readmd-appimagetool-${APPIMAGE_TOOL_ARCH}"
   echo "Downloading ${APPIMAGE_TOOL_ARCH} appimagetool..."
-  wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${APPIMAGE_TOOL_ARCH}.AppImage" -O ./appimagetool || true
-  if [ -f "./appimagetool" ]; then
-    chmod +x ./appimagetool
-    ./appimagetool --appimage-extract-and-run "${APPDIR}" "dist/${APPIMAGE_NAME}" || true
+  if wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-${APPIMAGE_TOOL_ARCH}.AppImage" -O "${APPIMAGE_TOOL}"; then
+    chmod +x "${APPIMAGE_TOOL}"
+    "${APPIMAGE_TOOL}" --appimage-extract-and-run "${APPDIR}" "dist/${APPIMAGE_NAME}"
+    APPIMAGE_BUILT=1
   fi
+  rm -f "${APPIMAGE_TOOL}"
+fi
+if [ "${APPIMAGE_BUILT}" -ne 1 ] || [ ! -s "dist/${APPIMAGE_NAME}" ]; then
+  echo "ERROR: AppImage creation failed; refusing to report a green Linux build." >&2
+  exit 1
 fi
 
 # 5. 构建 DEB 安装包 (适用于 Ubuntu / Debian / 统信 UOS / 银河麒麟 KylinOS / 深度 Deepin / openEuler)
@@ -132,7 +142,7 @@ cp scripts/linux/io.github.natsummerance.readmd.desktop "${DEB_DIR}/usr/share/ap
 cp assets/ReadMD.png "${DEB_DIR}/usr/share/icons/hicolor/512x512/apps/readmd.png"
 cp scripts/linux/readmd.xml "${DEB_DIR}/usr/share/mime/packages/"
 
-# 控制文件：Depends 仅约束基础底座，所有 WebKitGTK 版本并联为 Recommends，实现全版本兼容零依赖阻塞
+# 控制文件：原生窗口和 OCR 是正式功能的硬依赖，不能降级为浏览器或缺失组件。
 cat << EOF > "${DEB_DIR}/DEBIAN/control"
 Package: readmd
 Version: ${VERSION}
@@ -142,9 +152,9 @@ Architecture: ${DEB_ARCH}
 Maintainer: Natsummerance <natsummerance@github.com>
 Homepage: https://readmd.asia
 Description: ReadMD - Lightweight Markdown viewer and editor with auto-repair, LaTeX PRO, and multi-platform support.
-Depends: libc6, libgtk-3-0 | xdg-utils | libwebkit2gtk-4.0-37 | libwebkit2gtk-4.1-0 | libwebkit2gtk-6.0-4
-Recommends: gir1.2-webkit2-4.0 | gir1.2-webkit2-4.1 | gir1.2-webkit-6.0 | libwebkit2gtk-4.0-37 | libwebkit2gtk-4.1-0 | libwebkit2gtk-6.0-4, gir1.2-gtk-3.0, libnotify-bin
-Suggests: kylin-browser | uos-browser | chromium-browser | google-chrome-stable | firefox, tesseract-ocr
+Depends: libc6, libgtk-3-0, libwebkit2gtk-4.0-37 | libwebkit2gtk-4.1-0 | libwebkit2gtk-6.0-4, xdg-utils, shared-mime-info, tesseract-ocr
+Recommends: gir1.2-webkit2-4.0 | gir1.2-webkit2-4.1 | gir1.2-webkit-6.0, gir1.2-gtk-3.0, libnotify-bin
+Suggests: kylin-browser | uos-browser | chromium-browser | google-chrome-stable | firefox
 EOF
 
 cat << 'EOF' > "${DEB_DIR}/DEBIAN/postinst"
@@ -186,6 +196,12 @@ exit 0
 EOF
 chmod 755 "${DEB_DIR}/DEBIAN/postrm"
 
-dpkg-deb --build "${DEB_DIR}" "dist/readmd_${VERSION}_${DEB_ARCH}.deb" || echo "dpkg-deb not available, skipping deb package"
+if ! command -v dpkg-deb >/dev/null 2>&1; then
+  echo "ERROR: dpkg-deb is required to produce the Linux release asset." >&2
+  exit 1
+fi
+DEB_OUTPUT="dist/readmd_${VERSION}_${DEB_ARCH}.deb"
+dpkg-deb --build "${DEB_DIR}" "${DEB_OUTPUT}"
+test -s "${DEB_OUTPUT}"
 
 echo "=== Linux and multi-platform packaging completed ==="

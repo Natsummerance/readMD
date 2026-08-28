@@ -1,5 +1,5 @@
 # ReadMD
-> ReadMD is a local-first Markdown reader, editor, converter, and presenter for Windows, macOS, Linux, Kylin OS, and UOS.
+> ReadMD is a local-first Markdown reader, editor, converter, and presenter. The v2.3.7 candidate targets Windows 10/11, macOS 13+, and Linux; formal support is published only after native evidence is complete.
 
 ## Docs
 - [ReadMD homepage](https://readmd.asia/): Product definition, platform support, conversion scope, privacy model, and direct answers about long-document reading.
@@ -12,7 +12,7 @@
 - [Scan to Markdown](https://readmd.asia/scan-to-markdown/): Qualified Windows WinRT and macOS Apple Vision workflows for local OCR, screenshot extraction, and Markdown review.
 - [BibTeX citations](https://readmd.asia/bibtex-citations/): Keep a neighboring .bib library connected to inline citation badges, source cards, copyable BibTeX, and assembled references.
 - [Release notes](https://readmd.asia/release-notes/): Version-specific changes, security boundaries, platform assets, and release evaluation guidance.
-- [Download page](https://readmd.asia/download/): Current Windows, macOS, Linux, UOS/Kylin, VS Code, and MCP Server packages with checksum guidance.
+- [Download page](https://readmd.asia/download/): Candidate Windows, macOS, and Linux packages, plus VS Code and MCP Server assets with checksum guidance and evidence status.
 - [Simplified Chinese homepage](https://readmd.asia/zh-cn/): Chinese product definition, release facts, local processing boundaries, and citation-ready answers.
 - [Simplified Chinese download page](https://readmd.asia/zh-cn/download/): Chinese package paths and checksum workflow.
 - [Simplified Chinese workflow answers](https://readmd.asia/zh-cn/workflows/): Chinese guidance for long documents, office conversion, offline OCR, and presentation.
@@ -35,7 +35,7 @@
 - [GitHub repository](https://github.com/Natsummerance/readMD): MIT-licensed source code, releases, checksums, issues, and platform download assets.
 
 ## Key Facts
-- Current public version: 2.3.7
+- Current candidate version: 2.3.7 (formal release pending evidence)
 - License: MIT
 - Languages: 46 interface languages, including LTR and RTL layouts
 - Core model: local-first processing; no cloud account required for core document work

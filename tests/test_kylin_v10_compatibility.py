@@ -157,7 +157,9 @@ class KylinV10CompatibilityTest(unittest.TestCase):
             self.assertEqual(diag['cpu_vendor'], 'phytium')
             self.assertTrue(diag['is_kylin_v10'])
             self.assertTrue(diag['is_phytium'])
-            self.assertEqual(diag['status'], 'ready')
+            # A browser-app fallback is not feature-equivalent to the
+            # pywebview bridge, so diagnostics must mark it degraded.
+            self.assertEqual(diag['status'], 'degraded')
 
             report = linux_native.format_diagnosis_report()
             self.assertIn('Kylin Linux Advanced Server V10', report)
@@ -165,7 +167,7 @@ class KylinV10CompatibilityTest(unittest.TestCase):
             self.assertIn('phytium', report)
             self.assertIn('Mesa llvmpipe', report)
             self.assertIn('browser-app', report)
-            self.assertIn('[OK] 原生全生态开箱即用', report)
+            self.assertIn('[WARNING] 仅有浏览器降级', report)
 
 
 if __name__ == '__main__':

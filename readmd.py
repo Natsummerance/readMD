@@ -73,6 +73,22 @@ from src.readmd_core.config import (
 
 load_dotenv()
 
+
+def native_gui_required():
+    """Return whether a Linux/macOS frozen build must use its native backend.
+
+    Formal packages fail closed when the native engine is unavailable.  The
+    explicit ``--browser`` mode remains available for development and
+    diagnostics, but a packaged release must never silently lose the Python
+    bridge by opening a regular browser window.
+    """
+    if not (IS_MAC or IS_LINUX):
+        return False
+    value = os.environ.get('READMD_REQUIRE_NATIVE_GUI')
+    if value is not None:
+        return value.strip().lower() in ('1', 'true', 'yes', 'on')
+    return bool(getattr(sys, 'frozen', False))
+
 MD_EXTS = ('.md', '.markdown', '.mdown', '.mkd', '.mdx', '.txt')
 CODE_CONFIG_EXTS = (
     '.toml', '.yaml', '.yml', '.json', '.json5', '.jsonc', '.ini', '.cfg',
@@ -4477,7 +4493,9 @@ def main():
             try:
                 webview.start(gui='cocoa')
             except Exception as exc:
-                logging.warning('macOS Cocoa WKWebView start failed (%s), falling back to browser-app...', exc)
+                if native_gui_required():
+                    raise RuntimeError('macOS Cocoa WKWebView is unavailable; install the native release dependencies') from exc
+                logging.warning('macOS Cocoa WKWebView start failed (%s), falling back to browser-app in development mode...', exc)
                 from src.readmd_modules import macos_native
                 proc = macos_native.launch_browser_app(url)
                 if proc is not None:
@@ -4505,6 +4523,8 @@ def main():
                 except Exception as exc:
                     logging.warning('QtWebEngine start failed (%s), falling back to browser-app...', exc)
             if not started:
+                if native_gui_required():
+                    raise RuntimeError('Linux WebKitGTK/QtWebEngine is unavailable; install the native release dependencies')
                 # Tier 3 & 4 Universal Fallback: Launch standalone native Browser App Mode
                 logging.info('Activating universal Linux Browser App Mode fallback...')
                 proc = linux_native.launch_browser_app(url)

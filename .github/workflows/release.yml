@@ -391,7 +391,7 @@ jobs:
             python3-gi-cairo \
             tesseract-ocr \
             zip \
-            file || true
+            file
           python -m pip install --disable-pip-version-check -r config/requirements-linux.txt pyinstaller
       - name: Build Linux onedir, AppImage, and Deb
         run: |

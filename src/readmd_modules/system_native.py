@@ -51,7 +51,7 @@ def get_unified_diagnosis():
         'platform_flavor': flavor,
         'platform': sys.platform,
         'architecture': (platform.machine() or 'unknown').lower(),
-        'status': 'ready',
+        'status': 'unsupported',
     }
 
 

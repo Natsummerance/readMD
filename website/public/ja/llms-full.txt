@@ -43,7 +43,7 @@ ReadMD は技術文書、研究ノート、講義資料、仕様書、書籍な�
 - Windows 10、11（x64/ARM64）。インストーラーとポータブル版。
 - Apple Silicon および Intel macOS。
 - Linux x86_64 向け AppImage と Deb パッケージ。
-- UOS、Kylin OS、Deepin などの中国系 OS（実機で検証済みの構成のみ）。
+- UOS、Kylin OS、Deepin などの中国系 OS は候補対象ですが、実機証拠が揃うまで正式対応を約束しません。
 - HarmonyOS/OpenHarmony 不属于 v2.3.7，源码仅作实验性预览。ソースは実験的プレビューです。
 
 VSCode 拡張はエディター内で同期プレビューと構文修復を提供します。FastMCP stdio サーバーは Claude Desktop、Cursor などの互換 AI ツールから接続できます。
@@ -103,9 +103,9 @@ ReadMD には内蔵アシスタント画面があり、外部 AI ツール向け
 
 対応環境では可能です。ReadMD は DOCX や PDF を受け付け、スキャン画像にはネイティブ OCR を使えます。ローカル アプリの一部として動作するため、Web フォームへのアップロードは必須ではありません。ただし複雑なレイアウトは変換後に確認してください。
 
-### UOS や Kylin に対応していますか？
+### UOS や Kylin の対応は確認済みですか？
 
-対応します。UOS、Kylin OS など向けに Deb パッケージがあり、デスクトップ エントリー、MIME 関連付け、DDE / UKUI テーマ調整を含みます。広く Linux で使う場合は AppImage もあります。
+まだ確認されていません。候補には UOS と Kylin 向け Deb ビルドが含まれますが、実機でのインストール、ネイティブ WebKitGTK/Qt、OCR、資格情報、エクスポート、オフライン起動、全機能の証拠が揃うまで正式対応とはしません。
 
 ### 無料でオープンソースですか？
 

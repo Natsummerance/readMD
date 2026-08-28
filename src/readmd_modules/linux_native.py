@@ -418,7 +418,11 @@ def diagnose_system():
         'wayland': wayland,
         'system_dark_mode': dark_mode,
         'backends': backends,
-        'status': 'ready' if (backends['gtk_webkit'] or backends['qt_webengine'] or backends['app_browser'] or backends['xdg_open']) else 'degraded',
+        # Browser-App/xdg-open keeps a page visible but cannot expose the
+        # pywebview bridge used by file dialogs, export, OCR and AI.  It is a
+        # diagnostic fallback, never evidence of native feature parity.
+        'status': 'ready' if (backends['gtk_webkit'] or backends['qt_webengine'])
+                   else ('degraded' if (backends['app_browser'] or backends['xdg_open']) else 'blocked'),
     }
 
 
@@ -459,7 +463,9 @@ def format_diagnosis_report():
         "  - 自动首选启动链路: %s" % backends['preferred_backend'],
         "-" * 64,
         "[*] 综合就绪状态: %s" % (
-            '[OK] 原生全生态开箱即用' if diag['status'] == 'ready' else '[WARNING] 需要安装基础浏览器或 WebKitGTK'
+            '[OK] 原生全生态开箱即用' if diag['status'] == 'ready'
+            else ('[WARNING] 仅有浏览器降级，完整功能需要 WebKitGTK/QtWebEngine'
+                  if diag['status'] == 'degraded' else '[BLOCKED] 缺少原生图形引擎')
         ),
         "=" * 64,
     ]

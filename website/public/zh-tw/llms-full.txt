@@ -43,7 +43,7 @@ ReadMD 面向以 Markdown 保存技術文件、研究筆記、課程教材、規
 - Windows 10、11（x64/ARM64），提供安裝版與便攜版。
 - macOS Apple Silicon 與 Intel 處理器。
 - Linux x86_64，提供 AppImage 與 Deb 套件。
-- 統信 UOS、銀河麒麟、Deepin 等系統；僅承諾已有實機證據的配置。
+- 統信 UOS、銀河麒麟、Deepin 等系統目標；本候選尚未完成逐系統實機證據，不構成正式支援承諾。
 - HarmonyOS/OpenHarmony 不屬於 v2.3.7，原始碼僅作實驗性預覽。
 
 VSCode 擴充套件能在編輯器內同步預覽並修復語法。FastMCP stdio 伺服器可連接 Claude Desktop、Cursor 等相容 AI 工具。
@@ -103,9 +103,9 @@ ReadMD 內建助手介面，也提供 MCP 伺服器供外部 AI 工具連接。�
 
 在受支援的平台可以。ReadMD 接受 DOCX、PDF 等等輸入，掃描頁可使用原生 OCR。因為轉換屬於本地應用的一部分，不需將文件上傳到網頁表單。複雜版式轉換後仍應人工複核，因為沒有轉換器能保證所有專有結構完全一致。
 
-### 支援 UOS 和麒麟嗎？
+### UOS 和麒麟支援確認了嗎？
 
-支援。ReadMD 為統信 UOS、銀河麒麟等系統提供 Deb 套件，包含桌面入口、MIME 關聯以及 DDE、UKUI 主題适配；更廣泛的 Linux 發行版可使用 AppImage。
+尚未確認。本候選已準備 UOS 和麒麟 Deb 建置流程，但仍需在真實系統完成安裝、原生 WebKitGTK/Qt、OCR、憑據、匯出、離線啟動和完整功能證據後，才能宣稱正式支援。
 
 ### 免費開源嗎？
 
