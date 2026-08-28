@@ -32,6 +32,7 @@ showcase/content-package.zip
 showcase/content-package.zip.manifest.json
 .venv-win7/
 installer/webview2_runtime/
+packages/vscode-extension/core/
 release_body_win7_beta.md
 
 .token-optimizer/
