@@ -1,6 +1,6 @@
-# ReadMD v2.3.7 release candidate
+# ReadMD v2.3.7 更新说明
 
-ReadMD 是本地优先的 Markdown 阅读、编辑与格式转换工具。本文件描述候选版本的目标矩阵，不代表目标平台已经通过原生验收；正式支持只在对应证据单元完成后公布。
+ReadMD 是本地优先的 Markdown 阅读、编辑与格式转换工具。本版本聚焦 AI Skills、Provider 配置、跨端 Core Service、文档转换与启动体验。
 
 ## 正式支持矩阵与发布资产
 
