@@ -79,6 +79,16 @@ from src.readmd_core.config import (
 
 load_dotenv()
 
+# Windows 文件关联或双击打开时，Windows Explorer 会将进程工作目录设为文档所在目录，
+# 导致该文档目录被 OS 进程锁定无法重命名或删除。启动时重置工作目录至应用目录/数据目录。
+try:
+    if os.path.isdir(APP_DIR):
+        os.chdir(APP_DIR)
+    elif os.path.isdir(DATA_DIR):
+        os.chdir(DATA_DIR)
+except Exception:
+    pass
+
 
 
 
@@ -1049,6 +1059,10 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/control/next':
             act = pop_control()
             self._send_json(200, {'pending': act is not None, 'file': act or ''})
+        elif path == '/api/recent/status':
+            self._api_recent_status(qs)
+        elif path == '/api/recent/remove':
+            self._api_recent_remove()
         elif path == '/raw':
             p = unquote(qs.get('p', [''])[0])
             self._send_raw(p)
@@ -1297,6 +1311,30 @@ class Handler(BaseHTTPRequestHandler):
         t = qs.get('t', [''])[0]
         return bool(t) and t == _read_instance().get('token', '')
 
+
+    def _api_recent_status(self, qs):
+        try:
+            paths = None
+            if self.command == 'POST':
+                n = int(self.headers.get('Content-Length', 0) or 0)
+                body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+                paths = body.get('paths')
+            elif qs.get('p'):
+                paths = [unquote(qs.get('p', [''])[0])]
+            res = Api().check_recent_status(paths)
+            self._send_json(200, res)
+        except Exception as e:
+            self._send_json(500, {'ok': False, 'error': str(e)})
+
+    def _api_recent_remove(self):
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            path = body.get('path', '')
+            ok = Api().remove_recent(path)
+            self._send_json(200, {'ok': ok})
+        except Exception as e:
+            self._send_json(500, {'ok': False, 'error': str(e)})
 
     def _api_control_open(self):
         n = int(self.headers.get('Content-Length', 0) or 0)
@@ -3597,6 +3635,100 @@ class Api(object):
     def clear_recent(self):
         save_json(RECENT_FILE, [])
         return True
+
+    def remove_recent(self, path):
+        """从最近打开记录中单条移除指定文件。"""
+        if not path:
+            return False
+        rec = load_json(RECENT_FILE, [])
+        try:
+            target = os.path.normcase(os.path.normpath(path))
+            rec = [x for x in rec if os.path.normcase(os.path.normpath(x)) != target]
+        except Exception:
+            rec = [x for x in rec if x != path]
+        save_json(RECENT_FILE, rec)
+        return True
+
+    def check_recent_status(self, paths=None):
+        """检查最近文件列表的存在状态与迁移/删除情况。"""
+        if paths is None:
+            paths = load_json(RECENT_FILE, [])
+        if isinstance(paths, str):
+            paths = [paths]
+        results = []
+        for p in paths:
+            if not p:
+                continue
+            name = os.path.basename(p)
+            dirname = os.path.dirname(p)
+            # 1. 检查原路径是否存在
+            if os.path.isfile(p):
+                results.append({
+                    'path': p,
+                    'status': 'exists',
+                    'resolved_path': p,
+                    'name': name,
+                    'dir': dirname,
+                })
+                continue
+
+            # 2. 原路径不存在，尝试启发式探测是否被移至别处
+            moved_path = None
+            try:
+                # 2.1 检查同级目录的同层或一层子目录
+                if dirname and os.path.isdir(dirname):
+                    for root, dirs, files in os.walk(dirname):
+                        if name in files:
+                            candidate = os.path.join(root, name)
+                            if os.path.isfile(candidate):
+                                moved_path = candidate
+                                break
+                        if root != dirname:
+                            dirs.clear()
+
+                # 2.2 检查父目录
+                if not moved_path and dirname:
+                    parent = os.path.dirname(dirname)
+                    if parent and os.path.isdir(parent):
+                        candidate = os.path.join(parent, name)
+                        if os.path.isfile(candidate):
+                            moved_path = candidate
+
+                # 2.3 检查用户的常见文档/桌面/下载目录
+                if not moved_path:
+                    user_home = os.path.expanduser('~')
+                    common_dirs = [
+                        os.path.join(user_home, 'Desktop'),
+                        os.path.join(user_home, 'Documents'),
+                        os.path.join(user_home, 'Downloads'),
+                    ]
+                    for cd in common_dirs:
+                        if os.path.isdir(cd):
+                            candidate = os.path.join(cd, name)
+                            if os.path.isfile(candidate):
+                                moved_path = candidate
+                                break
+            except Exception:
+                moved_path = None
+
+            if moved_path:
+                results.append({
+                    'path': p,
+                    'status': 'moved',
+                    'resolved_path': moved_path,
+                    'name': name,
+                    'dir': os.path.dirname(moved_path),
+                })
+            else:
+                results.append({
+                    'path': p,
+                    'status': 'deleted',
+                    'resolved_path': p,
+                    'name': name,
+                    'dir': dirname,
+                })
+
+        return {'ok': True, 'items': results}
 
     def save_fixed(self, path, content):
         """把修正后的文本另存为新文件。"""

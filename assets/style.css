@@ -661,7 +661,8 @@ mark.hl.cur { background: var(--hl-cur); }
   font-weight: 600;
   letter-spacing: .02em;
 }
-#recent-list {
+#recent-list,
+.recent-list {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -669,30 +670,55 @@ mark.hl.cur { background: var(--hl-cur); }
   grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
-#recent-list li {
+#recent-list li,
+.recent-list li {
   min-width: 0;
   display: flex;
 }
-.recent-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.recent-item {
+  position: relative;
   width: 100%;
-  text-align: left;
-  padding: 10px 14px;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.recent-item.removing {
+  opacity: 0;
+  transform: scale(0.95);
+  pointer-events: none;
+}
+.recent-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
   border: 1px solid var(--border);
   background: var(--bg2);
   color: var(--fg);
   border-radius: var(--radius-m);
-  cursor: pointer;
   box-shadow: var(--shadow-1);
-  transition: border-color .15s ease, transform .12s ease;
+  transition: border-color .15s ease, transform .12s ease, opacity .2s ease, background-color .2s ease;
   min-width: 0;
   box-sizing: border-box;
+  overflow: hidden;
 }
 .recent-card:hover {
   border-color: var(--accent);
   transform: translateY(-1px);
+}
+.recent-card-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+  width: calc(100% - 34px);
+  text-align: left;
+  padding: 10px 8px 10px 14px;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .recent-name {
   font-size: 13px;
@@ -702,6 +728,10 @@ mark.hl.cur { background: var(--hl-cur); }
   white-space: nowrap;
   display: block;
 }
+.recent-name.is-deleted {
+  text-decoration: line-through;
+  color: var(--fg3);
+}
 .recent-dir {
   font-size: 11.5px;
   color: var(--fg3);
@@ -709,6 +739,44 @@ mark.hl.cur { background: var(--hl-cur); }
   text-overflow: ellipsis;
   white-space: nowrap;
   display: block;
+}
+.recent-card.is-deleted {
+  opacity: 0.55;
+  background: var(--bg);
+  border-style: dashed;
+}
+.recent-card.is-deleted:hover {
+  border-color: var(--border);
+  transform: none;
+}
+.recent-card.is-deleted .recent-card-btn {
+  cursor: not-allowed;
+}
+.recent-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  margin-right: 8px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--fg3);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.recent-remove:hover {
+  opacity: 1;
+  color: #ff453a;
+  background: rgba(255, 69, 58, 0.12);
+  transform: scale(1.1);
+}
+.recent-remove:active {
+  transform: scale(0.92);
 }
 .link-btn { background: none; border: none; color: var(--fg3); cursor: pointer; font-size: 12px; padding: 2px 4px; }
 .link-btn:hover { color: var(--accent); text-decoration: underline; }

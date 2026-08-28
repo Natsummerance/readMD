@@ -3,36 +3,165 @@
    ReadMD Core - History, Welcome & Auto Reload
    ============================================================ */
 
-/* ---------------- 最近文件 ---------------- */
+/* ---------------- 最近文件与历史记录 ---------------- */
+
+async function getRecentEntries() {
+  if (hasPy && py.get_recent) {
+    try { return await py.get_recent() || []; } catch (e) { return []; }
+  }
+  try {
+    const r = await apiFetch('/api/recent/status');
+    if (r && r.ok) {
+      const data = await r.json();
+      if (data && Array.isArray(data.items)) return data.items.map(it => it.path);
+    }
+  } catch (e) { /* ignore */ }
+  return [];
+}
+
+async function removeRecent(path) {
+  if (!path) return;
+  if (hasPy && py.remove_recent) {
+    try { await py.remove_recent(path); } catch (e) { /* ignore */ }
+  } else {
+    try {
+      await apiFetch('/api/recent/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path })
+      });
+    } catch (e) { /* ignore */ }
+  }
+  await refreshRecent();
+  const historyModal = $('history-modal');
+  if (historyModal && !historyModal.classList.contains('hidden')) {
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    const rec = await getRecentEntries();
+    const list = $('history-list');
+    if (!rec.length) {
+      if (list) list.innerHTML = '<li class="empty">' + (_t('history.noRecentFiles') || '暂无最近文件') + '</li>';
+    } else {
+      renderRecentList(list, rec, p => { historyModal.classList.add('hidden'); loadFile(p); });
+    }
+  }
+}
+
+async function checkRecentStatus(paths) {
+  if (hasPy && py.check_recent_status) {
+    try {
+      const res = await py.check_recent_status(paths);
+      if (res && res.ok && Array.isArray(res.items)) return res.items;
+    } catch (e) { /* ignore */ }
+  }
+  try {
+    const res = await apiFetch('/api/recent/status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths })
+    });
+    if (res && res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.items)) return data.items;
+    }
+  } catch (e) { /* ignore */ }
+  return (paths || []).map(p => ({
+    path: p,
+    status: 'exists',
+    resolved_path: p,
+    name: String(p).split(/[\\/]/).pop() || p,
+    dir: String(p).slice(0, String(p).length - (String(p).split(/[\\/]/).pop() || p).length).replace(/[\\/]+$/, '') || ''
+  }));
+}
 
 function renderRecentList(list, rec, onOpen) {
   if (!list) return;
   list.innerHTML = '';
-  rec.slice(0, 24).forEach(p => {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const slice = rec.slice(0, 24);
+  if (!slice.length) return;
+
+  const itemMap = new Map();
+  slice.forEach(p => {
     const li = document.createElement('li');
+    li.className = 'recent-item';
+
+    const card = document.createElement('div');
+    card.className = 'recent-card';
+
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'recent-card';
+    btn.className = 'recent-card-btn';
+
     const name = String(p).split(/[\\/]/).pop() || p;
     const dir = String(p).slice(0, String(p).length - name.length).replace(/[\\/]+$/, '') || '';
-    const nm = document.createElement('span');
-    nm.className = 'recent-name'; nm.textContent = name; nm.title = p;
-    const dp = document.createElement('span');
-    dp.className = 'recent-dir'; dp.textContent = dir; dp.title = p;
-    btn.appendChild(nm); btn.appendChild(dp);
-    btn.addEventListener('click', e => { e.preventDefault(); onOpen(p); });
-    li.appendChild(btn); list.appendChild(li);
-  });
-}
 
-async function getRecentEntries() {
-  if (!hasPy) return [];
-  try { return await py.get_recent() || []; } catch (e) { return []; }
+    const nm = document.createElement('span');
+    nm.className = 'recent-name';
+    nm.textContent = name;
+    nm.title = p;
+
+    const dp = document.createElement('span');
+    dp.className = 'recent-dir';
+    dp.textContent = dir;
+    dp.title = p;
+
+    btn.appendChild(nm);
+    btn.appendChild(dp);
+
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      if (card.classList.contains('is-deleted')) {
+        showToast(_t('toast.fileNotFound') || '文件不存在或已被删除');
+        return;
+      }
+      const targetPath = card.dataset.resolvedPath || p;
+      onOpen(targetPath);
+    });
+
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'recent-remove';
+    removeBtn.setAttribute('aria-label', _t('toolbar.close') || '关闭');
+    removeBtn.title = _t('toolbar.close') || '关闭';
+    removeBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+    removeBtn.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      li.classList.add('removing');
+      await removeRecent(p);
+    });
+
+    card.appendChild(btn);
+    card.appendChild(removeBtn);
+    li.appendChild(card);
+    list.appendChild(li);
+
+    itemMap.set(p, { li, card, btn, nm, dp });
+  });
+
+  checkRecentStatus(slice).then(items => {
+    (items || []).forEach(item => {
+      const entry = itemMap.get(item.path);
+      if (!entry) return;
+      if (item.status === 'deleted') {
+        entry.card.classList.add('is-deleted');
+        entry.nm.classList.add('is-deleted');
+        entry.btn.setAttribute('aria-disabled', 'true');
+        entry.btn.title = _t('toast.fileNotFound') || '文件不存在或已被删除';
+      } else if (item.status === 'moved') {
+        entry.card.classList.add('is-moved');
+        entry.card.dataset.resolvedPath = item.resolved_path;
+        entry.dp.textContent = item.dir;
+        entry.dp.title = item.resolved_path;
+        entry.nm.title = item.resolved_path;
+      }
+    });
+  }).catch(() => {});
 }
 
 async function refreshRecent() {
   const box = $('recent-box');
-  if (!hasPy) { box.classList.add('hidden'); return; }
+  if (!box) return;
   const rec = await getRecentEntries();
   if (!rec.length) { box.classList.add('hidden'); return; }
   box.classList.remove('hidden');
@@ -61,7 +190,6 @@ async function clearRecent() {
   const list = $('history-list');
   if (list) list.innerHTML = '<li class="empty">' + (_t('history.noRecentFiles') || '暂无最近文件') + '</li>';
 }
-
 
 async function addRecent(path) {
   if (hasPy && path) { try { await py.add_recent(path); } catch (e) { /* ignore */ } }
