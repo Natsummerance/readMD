@@ -3607,17 +3607,13 @@ def run_selftest():
         if os.path.isfile(setup_py):
             with open(setup_py, encoding='utf-8') as f:
                 _src = f.read()
-            # 常规链：APP_VERSION 与 VERSION 一致；Win7 链使用环境变量覆盖。
-            m1 = _re.search(r"APP_VERSION\s*=\s*\(?[\s\S]*?or\s+'([^']+)'", _src)
-            m2 = _re.search(r"APP_VERSION\s*=\s*'([^']+)'", _src)
-            if os.environ.get('READMD_VERSION_OVERRIDE'):
-                # 版本来自同一环境变量，两侧天然一致；确认 fallback 存在即可
-                assert m1 is not None or m2 is not None, '未找到 APP_VERSION（env override 链）'
-                safe_print('version consistency OK (%s, env override)' % VERSION)
-            else:
-                inst_ver = (m1.group(1) if m1 else (m2.group(1) if m2 else None))
-                assert inst_ver == VERSION, '安装器版本 %s 与主程序 %s 不一致' % (inst_ver, VERSION)
-                safe_print('version consistency OK (%s)' % VERSION)
+            # 安装器使用同一动态解析器（环境覆盖 → .env/VERSION → 内嵌版本）。
+            # 不要用跨文件贪婪正则抓“or '...''”：安装器还会校验字符串中的
+            # NUL 字节，旧正则会把那个校验字面量误报成版本号。
+            assignment = _re.search(r"(?m)^\s*APP_VERSION\s*=\s*([^\r\n]+)", _src)
+            assert assignment and '_env_or_bundle_version' in assignment.group(1), '安装器未绑定统一版本解析器'
+            assert 'READMD_VERSION' in _src and 'VERSION' in _src, '安装器缺少 VERSION/环境回退链'
+            safe_print('version consistency OK (%s, dynamic resolver)' % VERSION)
         else:
             safe_print('installer/setup_app.py not found, skip version check')
     except Exception as e:
