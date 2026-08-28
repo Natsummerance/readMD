@@ -15,6 +15,7 @@
 """
 
 import argparse
+import gzip
 import hashlib
 import json
 import logging
@@ -1089,10 +1090,26 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send(404, 'text/plain; charset=utf-8', b'not found')
 
+    @staticmethod
+    def _compressible_content_type(ctype):
+        return (ctype.startswith('text/') or 'javascript' in ctype or
+                'json' in ctype or 'xml' in ctype)
+
+    def _maybe_compress(self, ctype, body):
+        """Use negotiated gzip for local text assets to reduce cold-start IO."""
+        if (body and len(body) >= 1024 and self._compressible_content_type(ctype)
+                and 'gzip' in (self.headers.get('Accept-Encoding', '') or '').lower()):
+            return gzip.compress(body, compresslevel=6, mtime=0), True
+        return body, False
+
     def _send(self, code, ctype, body, cache_control='no-cache', x_frame_options=None):
+        body, compressed = self._maybe_compress(ctype, body)
         self.send_response(code)
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
+        if compressed:
+            self.send_header('Content-Encoding', 'gzip')
+            self.send_header('Vary', 'Accept-Encoding')
         self.send_header('Cache-Control', cache_control)
         if x_frame_options:
             self.send_header('X-Frame-Options', x_frame_options)
@@ -2027,9 +2044,13 @@ class Handler(BaseHTTPRequestHandler):
             return
         with open(fp, 'rb') as f:
             body = f.read()
+        body, compressed = self._maybe_compress(ctype, body)
         self.send_response(200)
         self.send_header('Content-Type', ctype)
         self.send_header('Content-Length', str(len(body)))
+        if compressed:
+            self.send_header('Content-Encoding', 'gzip')
+            self.send_header('Vary', 'Accept-Encoding')
         self.send_header('Cache-Control', cache_control)
         self.send_header('ETag', etag)
         self.send_header('Last-Modified', formatdate(stat.st_mtime, usegmt=True))

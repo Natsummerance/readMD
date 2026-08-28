@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import http.client
+import gzip
 import os
 import sys
 import unittest
@@ -63,6 +64,15 @@ class StaticCacheTest(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertTrue(body)
+
+    def test_startup_bundle_negotiates_gzip(self):
+        status, headers, body = self.request(
+            '/assets/readmd.boot.js?v=2.3.7', {'Accept-Encoding': 'gzip, deflate'})
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get('Content-Encoding'), 'gzip')
+        self.assertIn('Accept-Encoding', headers.get('Vary', ''))
+        self.assertLess(len(body), 200_000)
+        self.assertIn(b'window.addEventListener', gzip.decompress(body))
 
     def test_modified_since_can_revalidate(self):
         _, first, _ = self.request('/assets/vendor/qrcode.min.js')
