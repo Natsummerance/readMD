@@ -1,6 +1,6 @@
 {
   "name": "entry",
-  "version": "2.3.7-beta.3",
+  "version": "2.3.7",
   "description": "ReadMD HarmonyOS entry module",
   "license": "MIT",
   "dependencies": {}

@@ -30,6 +30,12 @@ I18N_DIR = os.path.join(ROOT_DIR, 'assets', 'i18n')
 META_FILE = os.path.join(I18N_DIR, 'meta.json')
 BASE_FILE = os.path.join(I18N_DIR, 'zh-CN.json')
 
+try:
+    from src.readmd_modules.skills import SkillRegistry, default_skill_roots
+except ImportError:
+    SkillRegistry = None
+    default_skill_roots = None
+
 
 def load_json(fp):
     if not os.path.isfile(fp):
@@ -81,16 +87,17 @@ def google_translate_text(text, target_lang, source_lang='zh-CN'):
 
 def llm_translate_dict(source_dict, target_lang, target_lang_name, api_base, api_key, model='deepseek-chat'):
     """使用兼容 OpenAI 协议的大模型（DeepSeek / Qwen / Mimo 等）批量高质量翻译字典。"""
-    system_prompt = f"""You are a professional localization and internationalization expert for ReadMD, a modern high-performance Markdown reader and editor desktop application.
-Translate the following UI strings from Chinese into {target_lang_name} ({target_lang}).
-
-STRICT RULES:
-1. Maintain professional, natural, native software terminology (e.g. File, Edit, View, Table of Contents, Markdown, LaTeX, Export, OCR, Settings).
-2. DO NOT change or translate placeholders in curly braces like {{count}}, {{name}}, {{version}}, {{time}}, {{percent}}, {{mb}}, {{fmt}}.
-3. Keep concise UI button lengths suitable for compact menus and toolbars.
-4. Output valid JSON ONLY matching the exact input keys. Do not include markdown codeblocks or extra text."""
-
-    user_prompt = f"Target language: {target_lang_name} ({target_lang})\nInput JSON:\n{json.dumps(source_dict, ensure_ascii=False, indent=2)}"
+    if SkillRegistry is None or default_skill_roots is None:
+        raise RuntimeError('ReadMD Skills runtime is unavailable; refusing an inline prompt fallback')
+    registry = SkillRegistry(default_skill_roots())
+    if registry.get('readmd-localization') is None:
+        raise RuntimeError('readmd-localization Skill is not installed')
+    user_prompt = registry.render('readmd-localization', {
+        'document': json.dumps(source_dict, ensure_ascii=False, indent=2),
+        'language': f'{target_lang_name} ({target_lang})',
+        'request': 'Translate the source JSON from Simplified Chinese into the target locale.',
+        'selection': '', 'context': '', 'output_format': 'JSON',
+    })
 
     headers = {
         'Content-Type': 'application/json',
@@ -99,7 +106,6 @@ STRICT RULES:
     payload = {
         'model': model,
         'messages': [
-            {'role': 'system', 'content': system_prompt},
             {'role': 'user', 'content': user_prompt},
         ],
         'temperature': 0.1,

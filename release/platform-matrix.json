@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "release": "2.3.7",
+  "formal_support": [
+    {"id": "windows-x64", "os": "Windows 10/11", "arch": "x64", "artifacts": ["installer", "portable"], "native_backend": "WebView2"},
+    {"id": "windows-arm64", "os": "Windows 10/11", "arch": "ARM64", "artifacts": ["installer", "portable"], "native_backend": "WebView2"},
+    {"id": "macos-x64", "os": "macOS 13+", "arch": "x64", "artifacts": ["zip"], "native_backend": "WKWebView"},
+    {"id": "macos-arm64", "os": "macOS 13+", "arch": "ARM64", "artifacts": ["zip"], "native_backend": "WKWebView"},
+    {"id": "linux-x64", "os": "Ubuntu 22.04/24.04, Debian 12", "arch": "x64", "artifacts": ["appimage", "deb"], "native_backend": "WebKitGTK/Qt"},
+    {"id": "linux-arm64", "os": "Ubuntu 22.04/24.04, Debian 12", "arch": "ARM64", "artifacts": ["appimage", "deb"], "native_backend": "WebKitGTK/Qt"},
+    {"id": "uos-x64", "os": "UOS 20", "arch": "x64", "artifacts": ["deb"], "native_backend": "WebKitGTK/Qt"},
+    {"id": "uos-arm64", "os": "UOS 20", "arch": "ARM64", "artifacts": ["deb"], "native_backend": "WebKitGTK/Qt"},
+    {"id": "kylin-x64", "os": "银河麒麟 V10", "arch": "x64", "artifacts": ["deb"], "native_backend": "WebKitGTK/Qt"},
+    {"id": "kylin-arm64", "os": "银河麒麟 V10", "arch": "ARM64", "artifacts": ["deb"], "native_backend": "WebKitGTK/Qt"},
+    {"id": "deepin-x64", "os": "Deepin 23", "arch": "x64", "artifacts": ["deb"], "native_backend": "WebKitGTK/Qt"},
+    {"id": "deepin-arm64", "os": "Deepin 23", "arch": "ARM64", "artifacts": ["deb"], "native_backend": "WebKitGTK/Qt"}
+  ],
+  "features": [
+    "open", "edit", "save", "history", "search", "toc", "preview", "convert", "export",
+    "ocr", "ai", "skills", "credentials", "updates", "file_association", "vsix", "mcp"
+  ],
+  "feature_matrix": {
+    "platforms_key": "formal_support[*].id",
+    "features_key": "features[*]",
+    "default_status": "pending-native-evidence",
+    "overrides": {},
+    "no_implicit_empty_cells": true
+  },
+  "evidence_policy": {
+    "required_per_cell": ["native_build", "cold_start", "offline_start", "open_edit_export", "privacy_scan"],
+    "status": "pending-native-runner-evidence",
+    "release_blocked_until_complete": true
+  },
+  "out_of_scope": ["HarmonyOS/OpenHarmony", "Windows 7/8", "LoongArch", "MIPS", "SW64", "RISC-V", "Alpine", "AUR", "Flatpak", "Linglong"]
+}

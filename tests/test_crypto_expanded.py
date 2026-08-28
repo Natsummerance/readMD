@@ -46,13 +46,12 @@ class TestCryptoExpanded(unittest.TestCase):
             self.assertTrue(len(key) > 0)
 
     def test_crypto_fallback_without_library(self):
-        """测试无 cryptography 模块时的降级行为。"""
+        """Missing cryptography must fail closed, never store plaintext."""
         with patch.object(crypto, 'CRYPTO_AVAILABLE', False):
             raw = "sk-test-key-without-crypto"
-            enc = crypto.encrypt_api_key(raw)
-            self.assertEqual(enc, raw)
-            dec = crypto.decrypt_api_key(enc)
-            self.assertEqual(dec, raw)
+            with self.assertRaises(RuntimeError):
+                crypto.encrypt_api_key(raw)
+            self.assertEqual(crypto.decrypt_api_key(raw), '')
 
 
 if __name__ == '__main__':

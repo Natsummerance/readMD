@@ -1,0 +1,948 @@
+{
+  "version": 1,
+  "purpose": "Human-authored control corpus for measuring this detector's false-positive rate. Hash-only: text is never committed. See corpus/README.md.",
+  "documents": [
+    {
+      "id": "emerson-essays-1841",
+      "title": "Essays (First Series)",
+      "author": "Ralph Waldo Emerson",
+      "year": 1841,
+      "register": "essay-literary",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://www.gutenberg.org/cache/epub/16643/pg16643.txt",
+        "license": "public-domain",
+        "gutenberg": true
+      },
+      "slice": {
+        "after": "MR. PRESIDENT AND GENTLEMEN",
+        "maxWords": 6000
+      },
+      "added": "2026-07-31",
+      "sha256": "bf096596d40be111aadc5e125f660fea4f6e6d631469655977a7a56e9565518b",
+      "words": 6000,
+      "class": "human"
+    },
+    {
+      "id": "thoreau-walden-1854",
+      "title": "Walden",
+      "author": "Henry David Thoreau",
+      "year": 1854,
+      "register": "essay-literary",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://www.gutenberg.org/cache/epub/205/pg205.txt",
+        "license": "public-domain",
+        "gutenberg": true
+      },
+      "slice": {
+        "after": "When I wrote the following pages",
+        "maxWords": 6000
+      },
+      "added": "2026-07-31",
+      "sha256": "f07283e1911eebf008b757d5212f53c90bc9920be3ce901a342340ad6a1b5c70",
+      "words": 6000,
+      "class": "human"
+    },
+    {
+      "id": "dubois-souls-1903",
+      "title": "The Souls of Black Folk",
+      "author": "W. E. B. Du Bois",
+      "year": 1903,
+      "register": "essay-literary",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://www.gutenberg.org/cache/epub/408/pg408.txt",
+        "license": "public-domain",
+        "gutenberg": true
+      },
+      "slice": {
+        "after": "Herein lie buried many things",
+        "maxWords": 6000
+      },
+      "added": "2026-07-31",
+      "sha256": "35733684fc41282fdeb331528ac1afded4be9498a84e58bf44a7d0babc3f15d7",
+      "words": 6000,
+      "class": "human"
+    },
+    {
+      "id": "twain-how-to-tell-a-story-1897",
+      "title": "How to Tell a Story, and Other Essays",
+      "author": "Mark Twain",
+      "year": 1897,
+      "register": "essay-literary",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://www.gutenberg.org/cache/epub/3250/pg3250.txt",
+        "license": "public-domain",
+        "gutenberg": true
+      },
+      "slice": {
+        "after": "I do not claim that I can tell a story",
+        "maxWords": 6000
+      },
+      "added": "2026-07-31",
+      "sha256": "901fb19a14501999557be22f6554aa32c00c3511822aa9d4735aec88e54685d1",
+      "words": 6000,
+      "class": "human"
+    },
+    {
+      "id": "james-pragmatism-1907",
+      "title": "Pragmatism: A New Name for Some Old Ways of Thinking",
+      "author": "William James",
+      "year": 1907,
+      "register": "academic",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://www.gutenberg.org/cache/epub/5116/pg5116.txt",
+        "license": "public-domain",
+        "gutenberg": true
+      },
+      "slice": {
+        "after": "The lectures that follow were delivered at the Lowell Institute",
+        "maxWords": 6000
+      },
+      "added": "2026-07-31",
+      "sha256": "9b4cdb5a0748d21905be1f875cd4444b27740aeefe0a213de02a905280f52289",
+      "words": 6000,
+      "class": "human"
+    },
+    {
+      "id": "darwin-origin-1859",
+      "title": "On the Origin of Species",
+      "author": "Charles Darwin",
+      "year": 1859,
+      "register": "academic",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://www.gutenberg.org/cache/epub/1228/pg1228.txt",
+        "license": "public-domain",
+        "gutenberg": true
+      },
+      "slice": {
+        "after": "When on board H.M.S. ‘Beagle,’ as naturalist",
+        "maxWords": 6000
+      },
+      "added": "2026-07-31",
+      "sha256": "743625896ff84f4cdec9b9cac9692b706543c376492f5eeb02906343a9b57d6f",
+      "words": 6000,
+      "class": "human"
+    },
+    {
+      "id": "federalist-papers-1788",
+      "title": "The Federalist Papers",
+      "author": "Hamilton, Madison, Jay",
+      "year": 1788,
+      "register": "academic",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://www.gutenberg.org/cache/epub/18/pg18.txt",
+        "license": "public-domain",
+        "gutenberg": true
+      },
+      "slice": {
+        "after": "After an unequivocal experience of the inefficacy",
+        "maxWords": 6000
+      },
+      "added": "2026-07-31",
+      "sha256": "20b24f2fe39cbd2358962b14862981e9122a141ede27d502b8674cb69f989b3b",
+      "words": 6000,
+      "class": "human"
+    },
+    {
+      "id": "faraday-candle-1861",
+      "title": "The Chemical History of a Candle",
+      "author": "Michael Faraday",
+      "year": 1861,
+      "register": "technical-blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://www.gutenberg.org/cache/epub/14474/pg14474.txt",
+        "license": "public-domain",
+        "gutenberg": true
+      },
+      "slice": {
+        "after": "I purpose, in return for the honour",
+        "maxWords": 6000
+      },
+      "note": "Lectures explaining a technical subject to a general audience. The closest public-domain analogue to a technical explainer, and still not a README.",
+      "added": "2026-07-31",
+      "sha256": "d29179787eb4daecb862c3286f396c7caa01d4c0f6f1e985663d955f5d489ebd",
+      "words": 6000,
+      "class": "human"
+    },
+    {
+      "id": "franklin-autobiography-1791",
+      "title": "Autobiography of Benjamin Franklin",
+      "author": "Benjamin Franklin",
+      "year": 1791,
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://www.gutenberg.org/cache/epub/20203/pg20203.txt",
+        "license": "public-domain",
+        "gutenberg": true
+      },
+      "slice": {
+        "after": "I have ever had pleasure in obtaining any little anecdotes",
+        "maxWords": 6000
+      },
+      "note": "First-person narrative addressed to one reader. Stands in for personal-blog register, imperfectly.",
+      "added": "2026-07-31",
+      "sha256": "7ba5c04870fb9e2a7cb46b07fe3bdf72d96ae51650a49ae2aae9a0897c65aa2d",
+      "words": 6000,
+      "class": "human"
+    },
+    {
+      "id": "cb-portland-got-it-right-seattle-needs-e-scooters-too",
+      "title": "Portland got it right – Seattle needs E-Scooters too",
+      "author": "Conor Bronsdon",
+      "year": 2019,
+      "date": "2019-01-29",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20210309221955id_/https://conorbronsdon.com/blog/portland-got-it-right-seattle-needs-e-scooters-too",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2021-03-09",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.968
+      },
+      "sha256": "f12c9bb62a4519926b21195f198b3caa248cacaaa32f7b7bb3a6d6dc80c51a33",
+      "words": 867,
+      "class": "human"
+    },
+    {
+      "id": "cb-senate-bill-5638-what-does-the-new-blockchain-bill-mean-for-washington-state",
+      "title": "Senate Bill 5638: What Does the New “Blockchain Bill” Mean for Washington State?",
+      "author": "Conor Bronsdon",
+      "year": 2019,
+      "date": "2019-02-05",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20210316074238id_/https://conorbronsdon.com/blog/senate-bill-5638-what-does-the-new-blockchain-bill-mean-for-washington-state",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2021-03-16",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.918
+      },
+      "sha256": "4c90701c3dd8e270aaab0fae4321f4033036e86fca24d98db0078bbdbde1da5e",
+      "words": 1282,
+      "class": "human"
+    },
+    {
+      "id": "cb-seattle-should-lead-on-mass-timberand-solve-our-housing-crisis",
+      "title": "Seattle Should Lead on Mass Timber–and Solve Our Housing Crisis",
+      "author": "Conor Bronsdon",
+      "year": 2019,
+      "date": "2019-02-15",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20210309203710id_/https://conorbronsdon.com/blog/seattle-should-lead-on-mass-timberand-solve-our-housing-crisis",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2021-03-09",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.951
+      },
+      "sha256": "e0e1e39396292f7bb2a5d9f220f24652767de670a645764645792a0685b82f82",
+      "words": 1244,
+      "class": "human"
+    },
+    {
+      "id": "cb-washington-state-senate-unanimously-passes-blockchain-bill",
+      "title": "Washington State Senate Unanimously Passes Blockchain Bill",
+      "author": "Conor Bronsdon",
+      "year": 2019,
+      "date": "2019-03-06",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20210316074555id_/https://conorbronsdon.com/blog/washington-state-senate-unanimously-passes-blockchain-bill",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2021-03-16",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.919
+      },
+      "sha256": "25d18e4184d724d5d106685ec44d9b4be94ac4b4228e8739a6e703ed540a024f",
+      "words": 353,
+      "class": "human"
+    },
+    {
+      "id": "cb-twilight-imperium-how-playing-a-board-game-is-the-best-exercise-for-your-brain",
+      "title": "Twilight Imperium – How playing a board game is the best exercise for your brain",
+      "author": "Conor Bronsdon",
+      "year": 2019,
+      "date": "2019-06-08",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20190818222328id_/https://conorbronsdon.com/blog/whytwilightimperium",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2019-08-18",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.921
+      },
+      "sha256": "6870f670ca27dcfdc53e33f2b99bd4f09394e0d8741b3994bdc1b7b00e5fac7b",
+      "words": 1006,
+      "class": "human"
+    },
+    {
+      "id": "cb-how-political-campaigns-can-effectively-use-chatbots-and-ai",
+      "title": "How political campaigns can effectively use chatbots and AI",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-01-08",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20221208195227id_/https://conorbronsdon.com/blog/how-political-campaigns-can-effectively-use-chatbots-and-ai",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2022-12-08",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.927
+      },
+      "sha256": "42afd425ef6904c8633ccce5baa0a036176b7e1922a16b272bda91d5e33d49ba",
+      "words": 1218,
+      "class": "human"
+    },
+    {
+      "id": "cb-how-to-pitch-a-story-to-media-5-tips-and-best-practices",
+      "title": "How to pitch a story to media: 5 tips and best practices",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-09-21",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20201004010757id_/https://conorbronsdon.com/blog/bestpracticesforpitchingastory",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2020-10-04",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.896
+      },
+      "sha256": "4bd2ddd96176a00d24d1c34e0afc2bddf19530c67e0059e6d0326413b2461a6b",
+      "words": 1090,
+      "class": "human"
+    },
+    {
+      "id": "cb-october-2020-update-mass-timber-psbj-podcast-and-patreon",
+      "title": "October 2020 Update: Mass Timber, PSBJ, Podcast, and Patreon",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-10-02",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20201031054225id_/https://conorbronsdon.com/blog/october2020update",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2020-10-31",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.926
+      },
+      "sha256": "63e8871b3eaf5d2905ba63bd6b4a0996db48571ff2294e23a892d79d11188bdb",
+      "words": 310,
+      "class": "human"
+    },
+    {
+      "id": "cb-a-green-new-deal-for-washington-state",
+      "title": "A Green New Deal for Washington State",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-10-15",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20201101023205id_/https://conorbronsdon.com/blog/a-green-new-deal-for-washington-state",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2020-11-01",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.964
+      },
+      "sha256": "8ae367e3644432f62cd6b52a56171277b18759c489f3f38b3c23909be0b2f2c8",
+      "words": 972,
+      "class": "human"
+    },
+    {
+      "id": "cb-divest-washington-state-pension-funds",
+      "title": "Divest Washington State's Public Employees Retirement System",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-10-16",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20201116204430id_/https://conorbronsdon.com/blog/divest-washington-state-pension-funds",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2020-11-16",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.958
+      },
+      "sha256": "73c1160f1a806708ff8f5356cdc46de8e1abe79728b4ec346f4c3a8d4d6fc932",
+      "words": 768,
+      "class": "human"
+    },
+    {
+      "id": "cb-how-to-redefine-us-agriculture-for-working-families",
+      "title": "How to Redefine US Agriculture for Working Families",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-10-24",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20210309221452id_/https://conorbronsdon.com/blog/how-to-redefine-us-agriculture-for-working-families",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2021-03-09",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.951
+      },
+      "sha256": "4da1515256ad34b1c2e228b207a36c0a9e301bdd80681b178c0ca86945fa8fa7",
+      "words": 1390,
+      "class": "human"
+    },
+    {
+      "id": "cb-what-is-st-2040-expanding-washingtons-public-transit-with-bidens-clean-energy-plan",
+      "title": "What is ST 2040: Expanding Washington's Public Transit With Biden's Clean Energy Plan",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-10-26",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20201101134723id_/https://conorbronsdon.com/blog/st-2040-expanding-washingtons-public-transit-with-bidens-clean-energy-plan",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2020-11-01",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.919
+      },
+      "sha256": "90e09cd9c0ab75ed9f464f554256c4fabfca8d0214d832b52048a9f24f34bb70",
+      "words": 1452,
+      "class": "human"
+    },
+    {
+      "id": "cb-what-is-weatherization-building-the-green-economy-with-the-biden-climate-plan",
+      "title": "What is Weatherization? -Building the Green Economy with the Biden Climate Plan",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-11-01",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20201101182641id_/https://conorbronsdon.com/blog/weatherization-building-the-green-economy-with-the-biden-climate-plan",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2020-11-01",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.906
+      },
+      "sha256": "05a0040abcf2152911036a66aa19749e3c3cffbcfa74c62c048991a6366bd0c2",
+      "words": 431,
+      "class": "human"
+    },
+    {
+      "id": "cb-democrats-must-run-a-progressive-message",
+      "title": "So you've decided to run as a Democrat? Congrats, you're a socialist.",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-11-06",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20211231033214id_/https://conorbronsdon.com/blog/democrats-must-run-a-progressive-message",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2021-12-31",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.787
+      },
+      "sha256": "b123b11d4992b2d50bae9209d30d2a40d30c83a9f0f0df2d7d2a061cf5ff12fa",
+      "words": 908,
+      "class": "human"
+    },
+    {
+      "id": "cb-how-to-save-modern-media",
+      "title": "How to save modern media",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-11-09",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20210222222955id_/https://conorbronsdon.com/blog/how-to-save-modern-media",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2021-02-22",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.982
+      },
+      "sha256": "03db4a24840a7cabde229499785b30018deb71634fc752b8825f3ff248230f4f",
+      "words": 2759,
+      "class": "human"
+    },
+    {
+      "id": "cb-mass-timber-helps-stop-wildfires-and-builds-the-green-economy",
+      "title": "How mass timber helps stop wildfires and builds the green economy",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-11-11",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20210208005233id_/https://conorbronsdon.com/blog/mass-timber-helps-stop-wildfires-and-builds-the-green-economy",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2021-02-08",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.951
+      },
+      "sha256": "ce222c68c1bc621028996bf8d109e84c5196e0c46494100bf65bbb7fb7357857",
+      "words": 1134,
+      "class": "human"
+    },
+    {
+      "id": "cb-how-to-fix-the-democratic-party",
+      "title": "6 ways the Democratic party failed in the 2020 elections and the 6 ways to fix it",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-11-23",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20201123164656id_/https://conorbronsdon.com/blog/six-ways-to-fix-the-democratic-party",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2020-11-23",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.881
+      },
+      "sha256": "dc62439a641572b86186513251b222f127bb253515b09099fbeb6745f13ecebe",
+      "words": 4155,
+      "class": "human"
+    },
+    {
+      "id": "cb-will-voting-on-blockchain-keep-elections-fair-and-transparent",
+      "title": "Will Voting on Blockchain keep elections fair and transparent?",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-11-25",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20211130023653id_/https://conorbronsdon.com/blog/will-voting-on-blockchain-keep-elections-fair-and-transparent",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2021-11-30",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.945
+      },
+      "sha256": "e445712d2793113ea0a8995c86b7f2f5312445999d9f8bd1c2c89d9ab04edf40",
+      "words": 588,
+      "class": "human"
+    },
+    {
+      "id": "cb-the-energy-side-of-blockchain-bitcoin-amp-cryptocurrency",
+      "title": "The Energy Side of Blockchain, Bitcoin, & Cryptocurrency",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-11-30",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20201130163638id_/https://conorbronsdon.com/blog/the-energy-side-of-blockchain-bitcoin-cryptocurrency",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2020-11-30",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.933
+      },
+      "sha256": "0d823051ee684fcd0086903d2d12128d88c3687538a19eeb7d6298f82c19adf4",
+      "words": 992,
+      "class": "human"
+    },
+    {
+      "id": "cb-how-to-subscribe-to-a-twitch-streamer-using-amazon-prime",
+      "title": "How to Subscribe to a Twitch Streamer Using Amazon Prime",
+      "author": "Conor Bronsdon",
+      "year": 2020,
+      "date": "2020-12-16",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20201216185204id_/https://conorbronsdon.com/blog/how-to-subscribe-to-a-twitch-streamer-using-amazon-prime",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2020-12-16",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.76
+      },
+      "sha256": "d4d55b763f926c6fc44844d517c00c32e39e3f097f24ee0db3469ae85d92e21b",
+      "words": 705,
+      "class": "human"
+    },
+    {
+      "id": "cb-two-years-of-writing-and-whats-next",
+      "title": "Celebrating Two Years of Writing and What’s Next",
+      "author": "Conor Bronsdon",
+      "year": 2021,
+      "date": "2021-01-08",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20210109170109id_/https://conorbronsdon.com/blog/two-years-of-writing-and-whats-next",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2021-01-09",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.905
+      },
+      "sha256": "4a48f8cf2aa01ad5344a5634596bd4dfab5db107c3aac4801ab9f05974c68a1e",
+      "words": 753,
+      "class": "human"
+    },
+    {
+      "id": "cb-challenger-marketing-contenthow-to-make-an-effective-digital-marketing-funnel",
+      "title": "Challenger Marketing Content—How to make an effective digital marketing funnel",
+      "author": "Conor Bronsdon",
+      "year": 2021,
+      "date": "2021-02-01",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20190724031659id_/https://conorbronsdon.com/blog/challengerfunnel",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2019-07-24",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.848
+      },
+      "sha256": "8be5946d3eaf6ee2d05508150419da4a3cb714c64ac30b021fa381d71eb22fba",
+      "words": 643,
+      "class": "human"
+    },
+    {
+      "id": "cb-what-do-different-twitter-emojis-mean",
+      "title": "What do different Twitter emojis mean?",
+      "author": "Conor Bronsdon",
+      "year": 2021,
+      "date": "2021-02-06",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20210214040738id_/https://conorbronsdon.com/blog/what-do-different-twitter-emojis-mean",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2021-02-14",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.937
+      },
+      "sha256": "1005dcb76cdb5a2ff2da3d859c1b2f5108401ec7327e647004a547f60b83bffb",
+      "words": 1162,
+      "class": "human"
+    },
+    {
+      "id": "cb-why-electric-cars-wont-solve-climate-change",
+      "title": "Why electric cars won't solve climate change",
+      "author": "Conor Bronsdon",
+      "year": 2021,
+      "date": "2021-02-23",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20221228212937id_/https://conorbronsdon.com/blog/why-electric-cars-wont-solve-climate-change",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2022-12-28",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.918
+      },
+      "sha256": "ce059296e9409d517275e314e60805b4b0aed8454bf35ff60af21539f284e032",
+      "words": 1895,
+      "class": "human"
+    },
+    {
+      "id": "cb-four-lessons-from-crashing-a-1700-person-stream",
+      "title": "4 Lessons from Crashing a 1700+ Person Livestream",
+      "author": "Conor Bronsdon",
+      "year": 2022,
+      "date": "2022-04-20",
+      "register": "blog",
+      "authorship": "human-pre-llm",
+      "source": {
+        "type": "url",
+        "url": "https://web.archive.org/web/20220817203409id_/https://conorbronsdon.com/blog/four-lessons-from-crashing-a-1700-person-stream",
+        "license": "author-owned-not-redistributed",
+        "html": {
+          "mode": "paragraphs",
+          "match": "white-space:pre-wrap"
+        }
+      },
+      "provenance": {
+        "captured": "2022-08-17",
+        "via": "web.archive.org",
+        "similarity_to_current": 0.923
+      },
+      "sha256": "db2a20a4a12957143060c54654e4bcb6bbcdef08fe7ca023291ae8ecae104d0f",
+      "words": 563,
+      "class": "human"
+    },
+    {
+      "id": "raid-en",
+      "title": "RAID benchmark — English generations across 11 model families",
+      "author": "Dugan et al. 2024",
+      "year": 2024,
+      "register": "mixed",
+      "class": "mixed",
+      "authorship": "labelled-by-source",
+      "citation": "Dugan, Hwang, Trhlik, Ludan, Zhu, Xu, Ippolito, Callison-Burch. RAID: A Shared Benchmark for Robust Evaluation of Machine-Generated Text Detectors. ACL 2024.",
+      "source": {
+        "type": "dataset",
+        "dataset": "raid",
+        "url": "https://huggingface.co/datasets/liamdugan/raid/resolve/main/train.csv",
+        "license": "MIT",
+        "select": {
+          "windows": 48,
+          "perCell": 10,
+          "seed": 20260731,
+          "minWords": 60
+        }
+      },
+      "added": "2026-07-31",
+      "sha256": "63715c2dec41f5592e6cc030cfe62ea0bec04bf831a48d1c411e087c0cf0a871",
+      "stats": {
+        "cells": 27,
+        "selected": 270,
+        "by_class": {
+          "machine": 230,
+          "human": 40
+        },
+        "by_model": {
+          "gpt2": 40,
+          "human": 40,
+          "mpt": 20,
+          "chatgpt": 10,
+          "mistral-chat": 40,
+          "mistral": 40,
+          "llama-chat": 40,
+          "mpt-chat": 20,
+          "cohere": 10,
+          "gpt4": 10
+        },
+        "by_domain": {
+          "books": 50,
+          "poetry": 50,
+          "abstracts": 40,
+          "wiki": 30,
+          "reddit": 70,
+          "recipes": 30
+        }
+      }
+    },
+    {
+      "id": "hc3-en",
+      "title": "HC3 — paired human and ChatGPT answers",
+      "author": "Guo et al. 2023",
+      "year": 2022,
+      "register": "mixed",
+      "class": "mixed",
+      "authorship": "labelled-by-source",
+      "citation": "Guo, Zhang, Wang, Jiang, Nie, Ding, Yue, Wu. How Close is ChatGPT to Human Experts? Comparison Corpus, Evaluation, and Detection. arXiv:2301.07597, 2023.",
+      "source": {
+        "type": "dataset",
+        "dataset": "hc3",
+        "url": "https://huggingface.co/datasets/Hello-SimpleAI/HC3",
+        "license": "CC-BY-SA-4.0",
+        "select": {
+          "perDomain": 60,
+          "seed": 20260731,
+          "minWords": 60
+        }
+      },
+      "added": "2026-07-31",
+      "sha256": "a40b80621fa880c70774d561bc89862f41e2b164f9b8049c1d30990c3fcfc304",
+      "stats": {
+        "selected": 600,
+        "by_class": {
+          "human": 300,
+          "machine": 300
+        },
+        "by_domain": {
+          "finance": 120,
+          "medicine": 120,
+          "open_qa": 120,
+          "reddit_eli5": 120,
+          "wiki_csai": 120
+        },
+        "warnings": [
+          "single model family (ChatGPT, Dec 2022) — a TPR here is an upper bound, not an estimate for current models"
+        ]
+      }
+    }
+  ]
+}

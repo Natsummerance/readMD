@@ -1,0 +1,19 @@
+{
+  "id": "creative-writing-craft",
+  "version": 1,
+  "category": "creative",
+  "source": "haowjy/creative-writing-skills (offline snapshot)",
+  "source_url": "https://github.com/haowjy/creative-writing-skills/tree/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3",
+  "upstream_revision": "fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3",
+  "license": "Apache-2.0",
+  "provenance": {
+    "snapshot_id": "haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3",
+    "raw_embedded": true,
+    "source_files": ["skills/**", "README.md", "LICENSE"],
+    "adaptation": "ReadMD wrapper points at the complete offline genre/resource directory"
+  },
+  "scopes": ["builtin"],
+  "scripts_allowed": false,
+  "locales": ["zh-CN", "en", "ja", "de", "fr"],
+  "adaptation": "ReadMD prose-preserving creative writing craft"
+}

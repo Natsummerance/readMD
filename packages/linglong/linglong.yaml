@@ -3,7 +3,7 @@ version: "1"
 package:
   id: io.github.natsummerance.readmd
   name: ReadMD
-  version: 2.3.7.5
+  version: 2.3.7.0
   kind: app
   description: |
     ReadMD —— 轻量级本地 Markdown 阅读器与编辑器。

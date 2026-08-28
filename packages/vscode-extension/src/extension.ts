@@ -8,6 +8,67 @@ let diagnosticStatusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext) {
   const bridge = new ReadMDBridge(context);
+  context.subscriptions.push({ dispose: () => bridge.dispose() });
+
+  // Native Skill/AI entry points share the same persistent ReadMD Core
+  // connection as conversion and preview commands.
+  const skillsDisposable = vscode.commands.registerCommand('readmd.openSkills', async () => {
+    try {
+      const skills = await bridge.listSkills();
+      const pick = await vscode.window.showQuickPick(skills.map((s: any) => ({
+        label: s.name || s.uri, description: s.description || '', uri: s.uri,
+      })), { placeHolder: '选择 ReadMD Skill' });
+      if (!pick) return;
+      const text = await bridge.readSkill(pick.uri);
+      const doc = await vscode.workspace.openTextDocument({ content: text, language: 'markdown' });
+      await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+    } catch (err: any) { vscode.window.showErrorMessage(`ReadMD Skills 打开失败: ${err.message}`); }
+  });
+
+  const aiWorkbenchDisposable = vscode.commands.registerCommand('readmd.openAiWorkbench', async () => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) { vscode.window.showInformationMessage('请先打开 Markdown 文档'); return; }
+    try {
+      const workflow = await vscode.window.showQuickPick([
+        { label: '快速阅读', id: 'quick_read', skillId: 'readmd-quick-read' }, { label: '润色文稿', id: 'polish', skillId: 'readmd-polish' },
+        { label: '总结要点', id: 'summary', skillId: 'readmd-summary' }, { label: '生成大纲', id: 'outline', skillId: 'readmd-outline' },
+        { label: '代码审查', id: 'code_review', skillId: 'readmd-code-review' }, { label: '文档问答', id: 'ask', skillId: 'readmd-ask' },
+      ], { placeHolder: '选择 ReadMD AI Skill 工作流' });
+      if (!workflow) return;
+      const providers = (await bridge.listProviders()).filter((p: any) => p.credential_id || p.key_source || p.name?.includes('Ollama'));
+      if (!providers.length) {
+        vscode.window.showWarningMessage('请先在 ReadMD 桌面端配置 AI 提供商和凭据');
+        return;
+      }
+      const provider: any = await vscode.window.showQuickPick(providers.map((p: any) => ({
+        label: p.name, description: p.has_key ? '已配置凭据' : '使用环境变量或本地服务', value: p,
+      })), { placeHolder: '选择 AI 提供商' });
+      if (!provider) return;
+      const models = provider.value.models || [];
+      const modelPick: any = models.length > 1
+        ? await vscode.window.showQuickPick(models.map((m: string) => ({ label: m, value: m })), { placeHolder: '选择模型' })
+        : models[0] ? { value: models[0] } : undefined;
+      const model = modelPick?.value || '';
+      if (!model) { vscode.window.showWarningMessage('当前提供商没有可用模型，请先刷新模型列表'); return; }
+      const result = await bridge.aiChat({
+        provider: provider.value.id, credential_id: provider.value.credential_id,
+        model, skill_id: workflow.skillId, markdown_content: editor.document.getText(),
+        language: vscode.env.language || 'en', stream: false,
+      });
+      const output = result?.content || '';
+      if (!output) { vscode.window.showWarningMessage('AI 未返回可应用内容'); return; }
+      const choice = await vscode.window.showInformationMessage('ReadMD AI 已生成结果', '替换选区', '插入末尾', '仅查看');
+      if (choice === '替换选区') {
+        await editor.edit(editBuilder => editBuilder.replace(editor.selection, output));
+      } else if (choice === '插入末尾') {
+        await editor.edit(editBuilder => editBuilder.insert(editor.document.positionAt(editor.document.getText().length), `\n\n${output}\n`));
+      } else if (choice === '仅查看') {
+        const doc = await vscode.workspace.openTextDocument({ content: output, language: 'markdown' });
+        await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+      }
+    } catch (err: any) { vscode.window.showErrorMessage(`ReadMD AI 工作台失败: ${err.message}`); }
+  });
+  context.subscriptions.push(skillsDisposable, aiWorkbenchDisposable);
 
   // 1. 注册侧边栏工具箱视图
   const toolboxProvider = new ReadMDToolboxProvider();
@@ -546,7 +607,7 @@ export function activate(context: vscode.ExtensionContext) {
   // 16. 命令：一键配置工作区 MCP Server
   const setupMcpDisposable = vscode.commands.registerCommand('readmd.setupMcpServer', async () => {
     const wsFolders = vscode.workspace.workspaceFolders;
-    const mcpScriptPath = path.join(context.extensionPath, '..', 'mcp-server', 'readmd_mcp_server.py');
+    const mcpScriptPath = bridge.getServerPath();
 
     const mcpConfig = {
       mcpServers: {

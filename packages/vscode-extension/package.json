@@ -2,7 +2,7 @@
   "name": "readmd-vscode",
   "displayName": "ReadMD —— 高性能 Markdown 智能预览与自愈修复",
   "description": "轻量级本地 Markdown 智能阅读与编辑扩展：实时双向同步预览、格式自愈修复、全格式文档互转、排版级 PDF/Word/EPUB 导出、LaTeX/TikZ 科学绘图、多语言 Code Chunk、Reveal.js 演说模式、@import 模块化、[TOC]目录生成与 MCP 智能体协同。",
-  "version": "2.3.7-beta.5",
+  "version": "2.3.7",
   "publisher": "Natsummerance",
   "icon": "icon.png",
   "license": "MIT",
@@ -39,6 +39,8 @@
   "main": "./out/extension.js",
   "activationEvents": [
     "onLanguage:markdown",
+    "onCommand:readmd.openAiWorkbench",
+    "onCommand:readmd.openSkills",
     "onCommand:readmd.preview",
     "onCommand:readmd.fixCurrentDocument",
     "onCommand:readmd.openPresentation",
@@ -64,6 +66,16 @@
       }
     ],
     "commands": [
+      {
+        "command": "readmd.openAiWorkbench",
+        "title": "ReadMD: 打开 AI Skill 工作台 (Open AI Skill Workbench)",
+        "icon": "$(sparkle)"
+      },
+      {
+        "command": "readmd.openSkills",
+        "title": "ReadMD: 浏览 Skills (Browse Skills)",
+        "icon": "$(list-tree)"
+      },
       {
         "command": "readmd.preview",
         "title": "ReadMD: 打开智能实时双向预览 (Open Custom Preview)",
@@ -257,6 +269,11 @@
           "type": "string",
           "default": "",
           "description": "用户自定义全局 custom.css 文件的绝对路径"
+        },
+        "readmd.mcpServerPath": {
+          "type": "string",
+          "default": "",
+          "description": "可选的 ReadMD Core/MCP 服务路径；留空使用工作区内置服务"
         }
       }
     }
@@ -265,7 +282,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "package": "vsce package --no-dependencies",
+    "package": "node scripts/stage-core.mjs && vsce package --no-dependencies",
     "publish:ovsx": "node publish-ovsx.js",
     "release:ovsx": "npm run package && npm run publish:ovsx",
     "publish": "vsce publish"

@@ -243,6 +243,25 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
             data['version'] = target_ver
             new_content = json.dumps(data, ensure_ascii=False, indent=2) + '\n'
             diffs.append((harmony_pkg, '', new_content))
+    # DevEco package manifests are JSON5, so keep their formatting and update
+    # only the declared package version.
+    for harmony_manifest in ('packages/harmonyos-app/oh-package.json5',
+                             'packages/harmonyos-app/entry/oh-package.json5'):
+        manifest_path = os.path.join(ROOT, harmony_manifest)
+        if os.path.isfile(manifest_path):
+            with open(manifest_path, 'r', encoding='utf-8') as f:
+                src = f.read()
+            new_src = re.sub(r'("version"\s*:\s*")[^"]+("),', rf'\g<1>{target_ver}\g<2>,', src, count=1)
+            if new_src != src:
+                diffs.append((manifest_path, src, new_src))
+
+    ui_tests_pkg = os.path.join(ROOT, 'ui-tests', 'package.json')
+    if os.path.isfile(ui_tests_pkg):
+        with open(ui_tests_pkg, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if data.get('version') != target_ver:
+            data['version'] = target_ver
+            diffs.append((ui_tests_pkg, '', json.dumps(data, ensure_ascii=False, indent=2) + '\n'))
 
     app_json5 = os.path.join(ROOT, 'packages', 'harmonyos-app', 'AppScope', 'app.json5')
     if os.path.isfile(app_json5):
@@ -386,7 +405,7 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='ReadMD Unified Version Synchronization Tool')
-    parser.add_argument('version', nargs='?', default=None, help='Target version (e.g. 2.3.7-beta.5 or 2.4.0)')
+    parser.add_argument('version', nargs='?', default=None, help='Target version (e.g. 2.3.7 or 2.4.0)')
     parser.add_argument('--check', action='store_true', help='Check if all files are in sync without writing')
     args = parser.parse_args()
 

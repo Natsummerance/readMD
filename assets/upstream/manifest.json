@@ -1,0 +1,1303 @@
+{
+  "schema_version": 1,
+  "purpose": "ReadMD offline upstream source allowlist; files are immutable snapshots",
+  "sources": [
+    {
+      "id": "blader-humanizer/e2e92e7b4b8229253ed5c8e81dc65463fdeddda5",
+      "files": 6,
+      "bytes": 52009
+    },
+    {
+      "id": "codex-humanizer/local",
+      "files": 6,
+      "bytes": 50224
+    },
+    {
+      "id": "codex-skill-creator/sha256-cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288",
+      "files": 9,
+      "bytes": 54229
+    },
+    {
+      "id": "codex-writing-skills/local",
+      "files": 7,
+      "bytes": 107437
+    },
+    {
+      "id": "conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca",
+      "files": 38,
+      "bytes": 988802
+    },
+    {
+      "id": "farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0",
+      "files": 76,
+      "bytes": 1469877
+    },
+    {
+      "id": "haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3",
+      "files": 56,
+      "bytes": 191129
+    },
+    {
+      "id": "lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1",
+      "files": 16,
+      "bytes": 198816
+    },
+    {
+      "id": "obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797",
+      "files": 11,
+      "bytes": 130684
+    },
+    {
+      "id": "paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d",
+      "files": 24,
+      "bytes": 232130
+    }
+  ],
+  "files": [
+    {
+      "path": "assets/upstream/blader-humanizer/e2e92e7b4b8229253ed5c8e81dc65463fdeddda5/agents/openai.yaml",
+      "bytes": 205,
+      "sha256": "d9ca04edb13bf6d7096e3b9127615e010d0c864652db2b6a080252fe5d00a08f"
+    },
+    {
+      "path": "assets/upstream/blader-humanizer/e2e92e7b4b8229253ed5c8e81dc65463fdeddda5/AGENTS.md",
+      "bytes": 2530,
+      "sha256": "cd4278e5618d22ceef7c7009e8dbf43f0eca54fe0fe5de7e5e846582993b8577"
+    },
+    {
+      "path": "assets/upstream/blader-humanizer/e2e92e7b4b8229253ed5c8e81dc65463fdeddda5/LICENSE",
+      "bytes": 1087,
+      "sha256": "caa1be9cba41c1afb88fe730ab1a4e04728295ea5b29ac2ee9f003a4ffbe3a77"
+    },
+    {
+      "path": "assets/upstream/blader-humanizer/e2e92e7b4b8229253ed5c8e81dc65463fdeddda5/README.md",
+      "bytes": 14249,
+      "sha256": "7d9c58c52d64509ff177596980f5a175a4b3f45569b47bf35d3ac6d4a1a9d372"
+    },
+    {
+      "path": "assets/upstream/blader-humanizer/e2e92e7b4b8229253ed5c8e81dc65463fdeddda5/scripts/validate-package.py",
+      "bytes": 3073,
+      "sha256": "5eb3b138d9a715f7625f0286db74df0a12dd27769503b032c8b2ec62114c6056"
+    },
+    {
+      "path": "assets/upstream/blader-humanizer/e2e92e7b4b8229253ed5c8e81dc65463fdeddda5/SKILL.md",
+      "bytes": 30865,
+      "sha256": "5fd504ab8c910a4e59418fae143f6f7c6928822ffedf45fb525a9b3bb8d7a83b"
+    },
+    {
+      "path": "assets/upstream/codex-humanizer/local/agents/openai.yaml",
+      "bytes": 211,
+      "sha256": "969fdfa85b2a31c98fffa1971536b58963348c5a844f073e4c7fc5184da1ca1e"
+    },
+    {
+      "path": "assets/upstream/codex-humanizer/local/AGENTS.md",
+      "bytes": 2701,
+      "sha256": "4a378b9914a3e78cd49e81a19b80dfd34a6d4b8951dd81b8551956ca4d4b434d"
+    },
+    {
+      "path": "assets/upstream/codex-humanizer/local/LICENSE",
+      "bytes": 1087,
+      "sha256": "caa1be9cba41c1afb88fe730ab1a4e04728295ea5b29ac2ee9f003a4ffbe3a77"
+    },
+    {
+      "path": "assets/upstream/codex-humanizer/local/README.md",
+      "bytes": 14168,
+      "sha256": "fa09a5406679e166e93bc0a5c0eaea71c815b8305d3c22153d6da805283c7fd6"
+    },
+    {
+      "path": "assets/upstream/codex-humanizer/local/scripts/validate-package.py",
+      "bytes": 2013,
+      "sha256": "9299f19ee98c498adb7f488785d551b2d455cd4fdff9be8aae756ff744aa4d5d"
+    },
+    {
+      "path": "assets/upstream/codex-humanizer/local/SKILL.md",
+      "bytes": 30044,
+      "sha256": "54472020cae053394f68506cbd06d838943e3afbbb933c141952b7b83fe516e6"
+    },
+    {
+      "path": "assets/upstream/codex-skill-creator/sha256-cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288/agents/openai.yaml",
+      "bytes": 188,
+      "sha256": "b750627cdd588fdbb5b46e854d3384d1a504fad3b8ed73ca5d7ead3804df78b6"
+    },
+    {
+      "path": "assets/upstream/codex-skill-creator/sha256-cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288/assets/skill-creator-small.svg",
+      "bytes": 1322,
+      "sha256": "edb19a0c59f9a1b5253b9af6d2f9f03cac27b2fe6a0275ebccbbdbff07891a1a"
+    },
+    {
+      "path": "assets/upstream/codex-skill-creator/sha256-cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288/assets/skill-creator.png",
+      "bytes": 1563,
+      "sha256": "a4024b0306ddb05847e1012879d37aaf1e658205199da596f5145ed7a88d9162"
+    },
+    {
+      "path": "assets/upstream/codex-skill-creator/sha256-cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288/license.txt",
+      "bytes": 11560,
+      "sha256": "3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5"
+    },
+    {
+      "path": "assets/upstream/codex-skill-creator/sha256-cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288/references/openai_yaml.md",
+      "bytes": 2405,
+      "sha256": "7039d465b05342cbacf861f08d20192ab1eeee112bc5d8ff0fb66234756887a9"
+    },
+    {
+      "path": "assets/upstream/codex-skill-creator/sha256-cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288/scripts/generate_openai_yaml.py",
+      "bytes": 6845,
+      "sha256": "9ea002c57657e169b1bddcae227e55a5d87c43735da6d87cf682b3e216abb84b"
+    },
+    {
+      "path": "assets/upstream/codex-skill-creator/sha256-cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288/scripts/init_skill.py",
+      "bytes": 10454,
+      "sha256": "a93cf5f565294be2eca73387aee3d91ba0179e94a2b928604b63b4077c68b6b6"
+    },
+    {
+      "path": "assets/upstream/codex-skill-creator/sha256-cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288/scripts/quick_validate.py",
+      "bytes": 4352,
+      "sha256": "547af3cec2ae71ac2a4ef606365d23a8c58b586862211e9c7a9be7bfd0e30fbb"
+    },
+    {
+      "path": "assets/upstream/codex-skill-creator/sha256-cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288/SKILL.md",
+      "bytes": 15540,
+      "sha256": "cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288"
+    },
+    {
+      "path": "assets/upstream/codex-writing-skills/local/anthropic-best-practices.md",
+      "bytes": 46197,
+      "sha256": "217629b356c09c9bd11017c9788e8fc654ca1b32c92d4a51cd490e16dd65e59a"
+    },
+    {
+      "path": "assets/upstream/codex-writing-skills/local/examples/CLAUDE_MD_TESTING.md",
+      "bytes": 5423,
+      "sha256": "0b379a3415e185d3c434b3ad283d8aa132f3022c2a4f210f168865b5986bcef0"
+    },
+    {
+      "path": "assets/upstream/codex-writing-skills/local/graphviz-conventions.dot",
+      "bytes": 6141,
+      "sha256": "b18a02773875f6c7b92f2a260e88550c92a62549b0009df9d680f7e9541d0ecc"
+    },
+    {
+      "path": "assets/upstream/codex-writing-skills/local/persuasion-principles.md",
+      "bytes": 5901,
+      "sha256": "a51bc9bf75189ea73a27b3fb504a2fdfdb966fb1f7f1cdf03203230a216ccc03"
+    },
+    {
+      "path": "assets/upstream/codex-writing-skills/local/render-graphs.js",
+      "bytes": 4857,
+      "sha256": "ccda971a87bb185f8febf81c56b556a20d026fa980c17b35fa3e8824fbb37852"
+    },
+    {
+      "path": "assets/upstream/codex-writing-skills/local/SKILL.md",
+      "bytes": 26360,
+      "sha256": "d34db5c8aed6a4e0440132bd0613aace70a693ec7819d5637ad77481d8e10d1b"
+    },
+    {
+      "path": "assets/upstream/codex-writing-skills/local/testing-skills-with-subagents.md",
+      "bytes": 12558,
+      "sha256": "c711346852c911b24a84aa161e0cff06a4cd7f4e2fa9e9c0a266cead5afcbade"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/CHANGELOG.md",
+      "bytes": 68971,
+      "sha256": "d34fdc6cae2dca8872662c39d93b28150d3688d688d5bfea268ae5eb91617426"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/CLAUDE.md",
+      "bytes": 3589,
+      "sha256": "31db6d898d526e028954c07c45ab42865bc5e3ed86299a8fa4a5e0b7c6ec79b6"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/CONTRIBUTING.md",
+      "bytes": 4019,
+      "sha256": "503141a3d5060b01518112919c06f0af2bbfc2175b28f24e2e63812ea390c5e3"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/corpus/manifest.json",
+      "bytes": 33349,
+      "sha256": "37e3e7d2fbcde165ad94ed5d828d9aac353d742cecb7beec14d3d18a64421257"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/corpus/README.md",
+      "bytes": 11959,
+      "sha256": "d7284d42dadef271536767c9491b5aaa494321d9dbefec3b76fac62052645226"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/cursor-rules/avoid-ai-writing.mdc",
+      "bytes": 94932,
+      "sha256": "ba7884025e0adda90698d9c64c4eaa169dc349c55702d7a602b2cf301a893946"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/cursor-rules/README.md",
+      "bytes": 2075,
+      "sha256": "6229deb3df05afa3c405f40538b7346166c62801ea645e0de5b6c15a32578d07"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/detector/CATEGORIES.md",
+      "bytes": 8644,
+      "sha256": "b9a89ed42a3f382327bd798531986f421b342d6393ab417c77dd81c5ba036da6"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/detector/categories.test.js",
+      "bytes": 5261,
+      "sha256": "4fc501e8686ab2adff06b2efc462256537fa691396ce6430d1424a6796ca513a"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/detector/patterns.js",
+      "bytes": 112109,
+      "sha256": "61bbdfcb8d38531e6d9838f3dbe6a763575b2205f63c6fed226828395f034b3c"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/detector/patterns.test.js",
+      "bytes": 100053,
+      "sha256": "e6e82501ce5272edfbaf86385ee77a0da8e1217118b6730388bbf025b3e58dbf"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/detector/README.md",
+      "bytes": 4190,
+      "sha256": "d030b3f679fd5720f1303ecbaf206b45edced738e73b8a40ab24b9e93baae580"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/detector/validate.js",
+      "bytes": 15010,
+      "sha256": "273949974dce4f34ad574f375a11c066b6d6a6f816a363000f27c1bcc0efddca"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/detector/validate.test.js",
+      "bytes": 9839,
+      "sha256": "2515ad407d8f6e72e5cb678fb898af246c2c7933924b7e856fd47508e00c700d"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/docs/demo.gif",
+      "bytes": 135243,
+      "sha256": "24818ce2ee8228401c014f3229f0f516242a1b434ba0428692744432f882297d"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/docs/social-preview.png",
+      "bytes": 27697,
+      "sha256": "546c62f7bc2e8a9bc4fffd408e69227d9ef143768f336870d3efc3dee10c3c87"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/examples/prose.json",
+      "bytes": 395,
+      "sha256": "766f9c1def61802f29a1d7fc5befbd0a388c6fce5c214ec1912c6a21ec16889e"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/examples/README.md",
+      "bytes": 4894,
+      "sha256": "82d33dec9bd83a323ac191c00c85a12f579b1ab73337fa33f751f85dd706192c"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/examples/technical.json",
+      "bytes": 559,
+      "sha256": "9ef387d1750e586b0ea56c8e3e1de17fd77c9cbf7d8c22687e1937bcb8623ac2"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/LICENSE",
+      "bytes": 1092,
+      "sha256": "6df1a0ed4216d044d6ab8475c8fd46b46c78ab5eaed653eaf8e4232996a87500"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/package.json",
+      "bytes": 1005,
+      "sha256": "347052bd2ebe1bebdbeba1fa865c9881c8880f2be6c9f07f65d3b94dc97d9de1"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/plugins/avoid-ai-writing/skills/avoid-ai-writing/SKILL.md",
+      "bytes": 94936,
+      "sha256": "06bfeeec1891a2eb24cd1dd39c885e0304a72bbbdab86666469e2f65c81cdc47"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/PROOF.md",
+      "bytes": 7301,
+      "sha256": "bbdabd190cc3284731a64434187824e4ef2ac089f5f08d244640a766a84042a3"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/README.md",
+      "bytes": 33897,
+      "sha256": "9e30d019824fcf82633b1142ef5b78a2b2e643c023aefc3197be4a205fcaf4cf"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/check-pattern-count.sh",
+      "bytes": 5832,
+      "sha256": "6aba5b366f4650ec40541dfcef19315240d68b15b30d7fcf940ad46cce9eed05"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/check-style.js",
+      "bytes": 15492,
+      "sha256": "e5a7e722c6d779c91109e7c9e8823142693b54b6a2e10a02f738154b4fdfbe10"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/check-style.test.js",
+      "bytes": 16767,
+      "sha256": "1cb08e59e33a4f6a10b680e92d42d8ec7616142d82170c859cc62d240cc0b436"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/corpus.js",
+      "bytes": 14771,
+      "sha256": "216d6fdb4d0f14793e8e3c0c5d41532c61abb16b0c73242c77ae79ef324a6759"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/corpus.test.js",
+      "bytes": 8020,
+      "sha256": "01fb1e3a35bfa820588f58df7ced55284620826b3f909d08be136893350781f4"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/csv-lite.js",
+      "bytes": 2444,
+      "sha256": "ce55ad28da821a3867f2533edafd8802fadd90fa4c2c7f191b2e77d58b9d7db3"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/dataset-hc3.js",
+      "bytes": 5489,
+      "sha256": "8de26621ce2a3ffc5464afffe28aaff74c869907468e6e44e51cfeaad9fc0e71"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/dataset-raid.js",
+      "bytes": 7156,
+      "sha256": "70c8422ff0909cd146a1802380b4540eb2923022d2a56f540583c7ea05f791fd"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/fp-measure.js",
+      "bytes": 10550,
+      "sha256": "0e99ae9dd0c4c5fc2d364235208741c3b2dc7ac84a86583eaa039ac7fbf3382f"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/promo-drift-report.py",
+      "bytes": 3645,
+      "sha256": "693709d1f33b222ecfaa657f70e10146cb0784ffb5dc0a54f01f05a85de38d00"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/self-scan.js",
+      "bytes": 7859,
+      "sha256": "cc9320ea58bcaaf3f596ae585415d3af9be52d443dd96901986a997f61350c73"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/sync-cursor-rules.sh",
+      "bytes": 12969,
+      "sha256": "e9845169445018c1bbafd98da777e3c8318fa8063f462b9825b7de936757b66d"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/scripts/sync-plugin-skill.sh",
+      "bytes": 1853,
+      "sha256": "efa878cb2af65f1e4846bf02b83a427429719338f02df92b56d4034782699653"
+    },
+    {
+      "path": "assets/upstream/conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca/SKILL.md",
+      "bytes": 94936,
+      "sha256": "06bfeeec1891a2eb24cd1dd39c885e0304a72bbbdab86666469e2f65c81cdc47"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/LICENSE",
+      "bytes": 1087,
+      "sha256": "d7205ca3df388956995a2f1bb31c03c10a408e619e4f9588bdbd6b243bec3b1f"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/claudeDesktopProviderPresets.ts",
+      "bytes": 38307,
+      "sha256": "c556894f16f2c5ad3f2d28e4344273884051da50f8afc799381f6a0c6e89b0d4"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/claudeProviderPresets.ts",
+      "bytes": 50558,
+      "sha256": "f2dbee90cfea041b03864e7906569b4ccfbace8789a8f0c68051951d5d620ff8"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/codexProviderPresets.ts",
+      "bytes": 73764,
+      "sha256": "3364b34e65ae1bdd20250b9bce52a6eedcab1baa50f6b65a6a557b0bcc17b8c0"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/codexTemplates.ts",
+      "bytes": 585,
+      "sha256": "7f92efdc0356de940e40d712db36ded5f447c4bab9aaf51c85abc7d98a4fe904"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/codingPlanProviders.test.ts",
+      "bytes": 4917,
+      "sha256": "abe26841d2049421d36c2315fe978b413c8d93946f53f8d1fb19945f657fdb59"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/codingPlanProviders.ts",
+      "bytes": 5679,
+      "sha256": "b23551e093494fd8cf4324a664cf9112431e8c06c59305bbdc547fbd55ef2284"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/constants.ts",
+      "bytes": 1250,
+      "sha256": "cfa8a6b7d1be42db2b31e8d4a95caf2ee9ef09705537a181b2ec14372e3d2254"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/geminiProviderPresets.ts",
+      "bytes": 14822,
+      "sha256": "aba14e4f09f4d3812a144b57a7dc96b9d0f6b8b8461884da7f58314e9137a405"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/grokBuildProviderPresets.test.ts",
+      "bytes": 2553,
+      "sha256": "6aa3cb093299df60990da660deb29183492e9eb7732ed2c9bca08587180128a9"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/grokBuildProviderPresets.ts",
+      "bytes": 18549,
+      "sha256": "0ca431657af5ca47e0c817be9f6b39a85a6d4333d685076ae3cd5fea76bdb0b7"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/hermesProviderPresets.ts",
+      "bytes": 49642,
+      "sha256": "51eda6599b11cbb7153be19ec15097a9e6b50ab49f7d9575e65d14cf75f17d5d"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/jiekouProviderPresets.test.ts",
+      "bytes": 6636,
+      "sha256": "571324fd584235f1b0234041a45ec19904c86dd50b95a99b5347f147606f9883"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/mcpPresets.ts",
+      "bytes": 3288,
+      "sha256": "b206c70b1143b64e9c9927c9b126a209f8495f551ec5d9dcbd793674305f9c24"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/openclawProviderPresets.ts",
+      "bytes": 72302,
+      "sha256": "f1de2f2c3153612763772fe5235ca13b6662bd823a4a8d642f7041626ef54544"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/opencodeProviderPresets.ts",
+      "bytes": 58797,
+      "sha256": "0ea0e2c9831929e35494e71e34d32e3a27452d21e8beeb53fd24bdbffe3980d4"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/piModelCatalog.ts",
+      "bytes": 13082,
+      "sha256": "7a3f16c806cca0db892d71c2f5fed7f4e897d4aa132bff91917ce5b7dc157b7c"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/piProviderPresets.ts",
+      "bytes": 41043,
+      "sha256": "2461f387e4d1bf4fda983f41d1930c123c9be772d4aead970e7d7a4965b16bf3"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/piThinkingProfiles.ts",
+      "bytes": 7877,
+      "sha256": "67716bbb2f3ab37d51efb9175d64d2cf74512986799a1c58cb3410efe9836944"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/ppioProviderPresets.test.ts",
+      "bytes": 6616,
+      "sha256": "bcf266882feca6ef17e15a898a62bdf88dd5cc214c3c2d41b1fef2e1da84158f"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/universalProviderPresets.ts",
+      "bytes": 3117,
+      "sha256": "9a7a660832210fcecb601c1d28be539cdd3591453140edb3756dd44c4bdf8a9d"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/config/userAgentPresets.ts",
+      "bytes": 1044,
+      "sha256": "1838abe468980d46d90ed4a552b5b5a9c58659e67ac721be440aac1e7d6ff3e1"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/i18n/locales/en.json",
+      "bytes": 178297,
+      "sha256": "4d9bf596590dcb187d2eb37fcfda78d6e9b79b075fc673142fb6e2a2f68b6bc0"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/i18n/locales/ja.json",
+      "bytes": 222006,
+      "sha256": "e5d0c54835d2ccca0a897033e1a50ab05fc0e43571ec979245e9205d97c4eae5"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/i18n/locales/zh-TW.json",
+      "bytes": 172774,
+      "sha256": "c5f865d9d21c2a72f526585154237584a6d447a8335da4f90b348bdcd20ef2cd"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/i18n/locales/zh.json",
+      "bytes": 171108,
+      "sha256": "e2414289ba00564bcce7fbeb25cdca4b6440aa719c4b24f56b8b69857b25ea51"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/types.ts",
+      "bytes": 25290,
+      "sha256": "a355260c6bd2782131022cbad44bd767c8fb059606c3ca2a97227f0c0faf67ef"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/deepClone.ts",
+      "bytes": 1119,
+      "sha256": "a330a025b7622a846a8635a0dc2501a85023e8e9affa849f82f1693f81b2f69a"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/deepLinkConfigPreview.ts",
+      "bytes": 2923,
+      "sha256": "8b42967c568589d66dadd7fba281dc5ef678656e468b8e1b187adddeb0ba05df"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/deeplinkRisk.test.ts",
+      "bytes": 7966,
+      "sha256": "15b88f5c6a3b5bbf52978f572091b9b5f4a1df53d03650ecd4b2c4eea7cc3b2d"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/deeplinkRisk.ts",
+      "bytes": 8305,
+      "sha256": "bbc650868d0291d419387c98bd63ebf74143dbc41454f8f1af2967a926c2283a"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/domUtils.ts",
+      "bytes": 297,
+      "sha256": "8550020712d5e249df712a95eec6a5e203ec93f1eff011ac8446df9a3efd5e00"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/errorUtils.ts",
+      "bytes": 4185,
+      "sha256": "723e79462c6e2dc9ecc88e838526087810343a6d7d283f7274cc13a2e69fdfe0"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/formatters.ts",
+      "bytes": 2280,
+      "sha256": "cde2feccf6599bbe25385cf19d19f9c338ac029f56524b0b779db7964bc3cba5"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/grokBuildConfig.test.ts",
+      "bytes": 4328,
+      "sha256": "703658d6c0c26af9a3b6cfef4129320bcc29e3c03dc4a6f925c96128b7947769"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/grokBuildConfig.ts",
+      "bytes": 5479,
+      "sha256": "aaa66842ea4c2aeab374f622639dd9417dc894a3c106244a0c3f6074e2f4cd69"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/postChangeSync.ts",
+      "bytes": 541,
+      "sha256": "a5f322ead217a5f443b11848208007947378a652247128bc8980761b23221fe4"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/providerCapabilities.test.ts",
+      "bytes": 11293,
+      "sha256": "de919b610086e0d7715ba9815e0bc70ef53d4c3d8135458d5ea2b14049d84906"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/providerCapabilities.ts",
+      "bytes": 5525,
+      "sha256": "270a13150654000a0438888e247839918631009a25040d1604e6bc8d4bb61093"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/providerConfigUtils.test.ts",
+      "bytes": 10011,
+      "sha256": "b4e229b8c014b8592ac88fc200d53dae043944795b0d00cf3a593168270b76f2"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/providerConfigUtils.ts",
+      "bytes": 46500,
+      "sha256": "0937c611900a0048c1733bc0c285f8cbefe72de978f5ab75d484539b6c894f3a"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/providerIcon.test.ts",
+      "bytes": 813,
+      "sha256": "9cca864112e265c1e9c0248fc141abcd8d0cff19b4a00d15025a4c584de23853"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/providerIcon.ts",
+      "bytes": 709,
+      "sha256": "d175b29c93ebb27c64be4efaf895eb0349e752dc21757942240d515591a8ebe6"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/providerMetaUtils.ts",
+      "bytes": 2013,
+      "sha256": "90b8055af05388b3acc11d7abbce4cadaba98a3732f227d049b7906318c4130e"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/textNormalization.ts",
+      "bytes": 740,
+      "sha256": "ea8329a5d1f3196bae062c010955431a68fe5877271d3d4b88a5503ae4ff211b"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/tomlUtils.ts",
+      "bytes": 6762,
+      "sha256": "978ec59e79c338905fed5da221b4bd818c51983cf61a12d4bce2af3e9dbad701"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/usageDisplay.ts",
+      "bytes": 1659,
+      "sha256": "536a0ae930efe536b0ca8c38867ce65108e18cc6da57f625e2aa106863747522"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/src/utils/uuid.ts",
+      "bytes": 1075,
+      "sha256": "0839524bf828b2896e3fa7e75ed1cfefd99065817a22365bfb7655e252770dba"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/claudeProviderPresets.test.ts",
+      "bytes": 6382,
+      "sha256": "d843ef1ce03d32472a68bbe1f428fcb7f917da607b99c3c22277f04d034dc64c"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/codexChatProviderPresets.test.ts",
+      "bytes": 8314,
+      "sha256": "20165a48e64c88fd7013d9d979ce22b3ea6e1566409a803fcd1aab4c5eaa27d5"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/codexReasoningLevelPresets.test.ts",
+      "bytes": 10021,
+      "sha256": "a54c8a200ba3014f5548c47d4a97e617c610d4608581b5c1a146e937e3689870"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/codexTemplates.test.ts",
+      "bytes": 656,
+      "sha256": "7cc071bb2bbf0d5ff2c6ea578855355e79d0dda97acc64edcf57e3fa46ef75f4"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/doubaoSeedPresets.test.ts",
+      "bytes": 1661,
+      "sha256": "fbcd2e62f5759c5f71af410406d04bf04c503c09eee6ea21dd0b0d1fb34d02c3"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/localeCoverage.test.ts",
+      "bytes": 2718,
+      "sha256": "ac153f4af7daa8ee731177a2b691f9f85ae8c3ae34a0da87d7dcba1615c143a6"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/longcatProviderPresets.test.ts",
+      "bytes": 5083,
+      "sha256": "b17636cabd7d33c569695c20888fc82f78078beab331bc278fd56396f1072f37"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/managementListLocales.test.ts",
+      "bytes": 1989,
+      "sha256": "fd9adab3f8066a2c048cd4edda5b1904c79df7d06f91a8239c70f3645e474574"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/mimoTokenPlanPresets.test.ts",
+      "bytes": 1725,
+      "sha256": "4c314b9c07c57b1f0fcdac985ed45e06c5cc9adeac85747e65375801e663fc29"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/opencodeProviderPresets.test.ts",
+      "bytes": 3536,
+      "sha256": "a68c62322a12e0c45a3cdd13f9ec29ae175ee360d222713f76a8f4b415be1b92"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/piIcon.test.ts",
+      "bytes": 479,
+      "sha256": "3f9719252a7ca38fe1e6a44b719fc207f06becc9ff79be163f4fc14d9f7d529b"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/piProviderPresets.test.ts",
+      "bytes": 5714,
+      "sha256": "c25001db3378c46d5be6f56deb836aed7cba105962981008c47a3e027ffee781"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/piThinkingProfiles.test.ts",
+      "bytes": 4188,
+      "sha256": "62879618ac480a53dd8cb1d4847d33b26d607d2e82bd8727dd2752562af577e3"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/qianfanTokenPlanPresets.test.ts",
+      "bytes": 4658,
+      "sha256": "45b008522047f7b983f6f5f7957db73ace010202dbcb3446ba0517af828af8d3"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/subrouterProviderPresets.test.ts",
+      "bytes": 5046,
+      "sha256": "a61900a870f311cca5519bea80bf59cb90b635f402072ca56f2be3e7eb1ff8a8"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/therouterOpenCodeOpenClawPresets.test.ts",
+      "bytes": 3198,
+      "sha256": "12b73fcbf31f52b12a818e8293d9c6eef6d67864495e99947938899973ecf651"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/therouterProviderPresets.test.ts",
+      "bytes": 3121,
+      "sha256": "fe66e5b8877d0c961562868aab99e7c10dae963f4c6844f5b020b1e3b52f96a9"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/toolManagementLocales.test.ts",
+      "bytes": 2161,
+      "sha256": "0b63bd3fb1c607bba54efe065d7fbc98dd6a23aee51bfbb0f7e6ed30b47ddfa3"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/xaiOauthLocales.test.ts",
+      "bytes": 1684,
+      "sha256": "d2ff7b5eff4449e72d7e6131b97dd343c1a65ba47e428c74019de2e1160ca6e3"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/config/xaiOauthProviderPresets.test.ts",
+      "bytes": 3987,
+      "sha256": "d6255f92c1b4fb4e96c9525863cf4ac8e45a9f2d4756df213c74c77638ddab9b"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/utils/deepClone.test.ts",
+      "bytes": 945,
+      "sha256": "842848b1254118451f276ef24f5b9486b091b08151a5c636c0b7f866aa52c6e0"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/utils/deepLinkConfigPreview.test.ts",
+      "bytes": 5041,
+      "sha256": "8b2cb571625afb99d05a45042cfcceb84ad5037038875bcb7e47f9613460f087"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/utils/errorUtils.test.ts",
+      "bytes": 925,
+      "sha256": "d3552663cb8242825ae31fb3e57b611136be8b876c73b6f54b208bd65306a142"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/utils/omoConfig.test.ts",
+      "bytes": 1977,
+      "sha256": "6e714a90878a20723c149b48a5380da45136b4ed3846264d1ed60eba2c8d478b"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/utils/providerConfigUtils.codex.test.ts",
+      "bytes": 11656,
+      "sha256": "d585c24539911c867922456eb98e5e75da1d5e1bf340a6c0353ddae3a2f75ea8"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/utils/providerMetaUtils.test.ts",
+      "bytes": 2218,
+      "sha256": "09c14b04de977e2e86554241e63dd0a944a2ab35ac5a8df2e5ec55dc57ab58b3"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/utils/testQueryClient.ts",
+      "bytes": 200,
+      "sha256": "b00044aa8797a095bfae1f8e2e8e2c391135bae7ccb3e4c425c08a32ab5cd5fe"
+    },
+    {
+      "path": "assets/upstream/farion1231-cc-switch/6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0/tests/utils/usageDisplay.test.ts",
+      "bytes": 1081,
+      "sha256": "00a5aaa21fde75f5cbe95ffc632e7c6c767429a8d6f3bf1e395e4d67fa0e1947"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/LICENSE",
+      "bytes": 11558,
+      "sha256": "1eb85fc97224598dad1852b5d6483bbcf0aa8608790dcc657a5a2a761ae9c8c6"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/README.md",
+      "bytes": 10842,
+      "sha256": "34451152d65934fd97af715720c0cff9fbed3a8522a1e7268ad66b3c93f3a33f"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/character-sim/SKILL.md",
+      "bytes": 1714,
+      "sha256": "27e54516c1ab0ea9f9ba951e2e21745d8a91b085604c02575f505211b70034d8"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-research/SKILL.md",
+      "bytes": 3398,
+      "sha256": "6d82084bbc50897e751ca457a921c2c5d1b47c5daf964b036f766cd936ce3657"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-craft/resources/genre/fantasy.md",
+      "bytes": 950,
+      "sha256": "30159460528d7fa2754da427679faa9664f746afa9654b630f182cc72597a1d9"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-craft/resources/genre/horror.md",
+      "bytes": 927,
+      "sha256": "6c1da73da147c3456e981043c8f0d3ec6a57781c57c3423983de3826d021c3ef"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-craft/resources/genre/litfic.md",
+      "bytes": 901,
+      "sha256": "9f5e2b1a932bd47f2d4a2da42e3f141de71b5e019810e6144e49937c1c1ca3a5"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-craft/resources/genre/mystery.md",
+      "bytes": 891,
+      "sha256": "3d34e0ddac7fab91d6f8240cec19bac668bcd24bdb633a9a28156cd682d4f59e"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-craft/resources/genre/romance.md",
+      "bytes": 936,
+      "sha256": "8738e5e86f9304afd0251a60499e7c6460d94ad42d03660f2731e8732ed08725"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-craft/resources/genre/thriller.md",
+      "bytes": 805,
+      "sha256": "848ac2a0815556018c0b45fbe0ad55bbcf6f9b9bcfbdd31d05436c43459d0c67"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-craft/resources/prose-writing.md",
+      "bytes": 4158,
+      "sha256": "a750e9ade57453f20b9c18a711be12c0f37936a3704758d839e552298bfe8c3b"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-craft/resources/scene-construction.md",
+      "bytes": 2798,
+      "sha256": "cdaf6b4043e43e2ef0875e06b1f63a7ccc98f86c4ca6a9af8e8a164cf0320281"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-craft/resources/style-analysis.md",
+      "bytes": 3840,
+      "sha256": "0a08844aac286f6af1892e7a42fab914cdcd63b7cc33ae7a48ec540f28824cd3"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-craft/SKILL.md",
+      "bytes": 1067,
+      "sha256": "1007a6ec796b6e1ffd1494bc1191da632f92f9937584a2098123981853f11881"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-modes/resources/prose-modes.md",
+      "bytes": 3341,
+      "sha256": "64ffb30fe1c70a6502461920eb5049be3aaa3e6133d5a8275a3baac86cd260b4"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-modes/SKILL.md",
+      "bytes": 1520,
+      "sha256": "175a256819e64c8b60d66a7443061fc4c15815cfc8f3052c794cfd49b4a59801"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/creative-writing-muse/SKILL.md",
+      "bytes": 2218,
+      "sha256": "cff9b0b7a412db00b1534d29b7db831562a0dfb4b3bdf0e240740f13e74f7051"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/reader-sim/SKILL.md",
+      "bytes": 2848,
+      "sha256": "0eec22cb76bd03c88822123cc8cd22f2d0ab532046619ad089bd0291b576dedf"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-memory/resources/fact-extraction.md",
+      "bytes": 2733,
+      "sha256": "26097ce9bc70fd0d42006592bf6c42df6e7b576c740985ba1a0954e97e736a89"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-memory/resources/story-context.md",
+      "bytes": 5640,
+      "sha256": "e606aaae16ade0e3b80a78f1baf717c86c3f946cf453ea0aa61d2ee2de6a9851"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-memory/resources/story-reference-writing/reference-modes.md",
+      "bytes": 2162,
+      "sha256": "e4a59d800ee971e04c0233fdc22973d9e8de677e7b66d58ebc7c6785ba7302d9"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-memory/resources/story-reference-writing.md",
+      "bytes": 1037,
+      "sha256": "fc6ed1efccc4e17ee30e1f2b25cc565963ffb6969112fdabfac396f877d940fd"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-memory/resources/writing-artifacts.md",
+      "bytes": 1826,
+      "sha256": "e1239938867ea848a46f3fa2de82215237dbdbd896624c7e40391e271f8057b3"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-memory/resources/writing-issues.md",
+      "bytes": 3302,
+      "sha256": "aad00de88083c1df3f48c3a6df48b6b64732e9603dce0aa95c3ae40426f0bd4e"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-memory/SKILL.md",
+      "bytes": 1165,
+      "sha256": "5f00c44022ee93cc4a5209e9e4eae77658ec3b66ade5f29d86f22323ee333dee"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-planning/resources/brainstorming/chapter-planning.md",
+      "bytes": 2243,
+      "sha256": "6d0d852f5f0c500ef66d1eba194aafc8d4c8e10474ba630e47c7a3d057304fe4"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-planning/resources/brainstorming/character-development.md",
+      "bytes": 2771,
+      "sha256": "caa73ba684fbb3d18b5ddea419d4b6f972b13d95cd4a0cf818985507598c56c7"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-planning/resources/brainstorming/continuity-timeline.md",
+      "bytes": 2366,
+      "sha256": "14b074caeab327c27a01a186783e4d1fade045ec0078f0be489531ec29a41b23"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-planning/resources/brainstorming/worldbuilding.md",
+      "bytes": 2545,
+      "sha256": "082a26433ea230fc646fabaf9c313bb77ba6b509373ea873f854abd5d6f06e44"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-planning/resources/brainstorming.md",
+      "bytes": 4122,
+      "sha256": "7db68d95743540220cb2cbbb52df15fe42ef5167f49b7ecefcd3aa915e6675d6"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-planning/resources/creative-direction.md",
+      "bytes": 1788,
+      "sha256": "480529ca2cdc5689de7798095d1a4b3a6a2a7f9d8dc2478e0ff99c724a7f9c5d"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-planning/resources/story-architecture/arc-design.md",
+      "bytes": 1987,
+      "sha256": "a142d40694dbad76951e72cbca338e901ab2a711a07c8f69c292033730479444"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-planning/resources/story-architecture/chapter-and-scene.md",
+      "bytes": 2322,
+      "sha256": "659dc8f318a08ff19308d9c80b41ba52190ce528a3a79231f781d301ec13aebc"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-planning/resources/story-architecture/structural-problems.md",
+      "bytes": 1421,
+      "sha256": "2266bb72b61d33401ee2fa0e082011fc540b0c588d57fed8d03857f8cc464c81"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-planning/resources/story-architecture.md",
+      "bytes": 3046,
+      "sha256": "dee14dbc1fae0ee862bc57d05cb01327264c7adfe1f0ca4ac366bbdf11e8fa0e"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-planning/SKILL.md",
+      "bytes": 738,
+      "sha256": "04e265fd89827a1e3fe00ab7be4c6408d03c1eac419869ed29150f88aee6589e"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/copyedit.md",
+      "bytes": 3068,
+      "sha256": "6afce009987673a844bc3ecef91599dbb4b660cb767df07789579453ef129b86"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/developmental-edit.md",
+      "bytes": 3169,
+      "sha256": "bd2ef906874605bf4ce348557208bb8d809795729213cd38102df605a5e242ae"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/editorial-review.md",
+      "bytes": 5042,
+      "sha256": "9313be59b7a0f2b839b2a38a879c7654ffcc566940847547b9ba003ba72fc0de"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/line-edit.md",
+      "bytes": 2636,
+      "sha256": "9be67e2850ba6046c2b61e7c9db185acbe3a4e96cdee6449a05b2f028d1c419b"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/proofreading.md",
+      "bytes": 2779,
+      "sha256": "c500788bfd5ad56f185ee38227485cee2ec3211b6b602b6691c0176c4105c6da"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/prose-critique/analyze.py",
+      "bytes": 9360,
+      "sha256": "109de640cf94ee87364390b4c1194025e806ccfb4e2996c2e2ee681589ec7f13"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/prose-critique/antipatterns.md",
+      "bytes": 4826,
+      "sha256": "efec29ebde469b9036b218d6b2d53cd94d70f206d33bde5532c583bb9ab482bb"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/prose-critique/baseline.md",
+      "bytes": 3108,
+      "sha256": "380c72ea9e63f05259cc117b5015ee8c4183a8a6128c49d9402b072757acf7b5"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/prose-critique/character.md",
+      "bytes": 3951,
+      "sha256": "e436a7625c395939f2376379030eb9de1bb5996baad6af7d60ff9e01b73cd6c9"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/prose-critique/continuity.md",
+      "bytes": 4064,
+      "sha256": "245b6cabee4c6126a0f4fc35b3e82d41be92a00f5cba8057a4caefbc93ee12d0"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/prose-critique/prose.md",
+      "bytes": 6754,
+      "sha256": "a280108491091217243c8388f3f8116d867fb053083647c0c7659934de6cf096"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/prose-critique/structure.md",
+      "bytes": 3328,
+      "sha256": "5ca173ec48c4af869bca77295b90466b7ca876b379221d0d05da0e67c04ff49a"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/prose-critique/voice.md",
+      "bytes": 4324,
+      "sha256": "ee77fff60dd895fcb08a97d7d79067fe31546f6ce0c82ccb0886552f7f36661e"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/prose-critique.md",
+      "bytes": 6117,
+      "sha256": "8c0c629a3f1c71e79a5c7ae253f3090c4795afbcf4f78041b502db4720ddc09a"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/resources/reader-sim-signal.md",
+      "bytes": 3125,
+      "sha256": "983830d155cee81d5765e6d5dec90db74299f8de1e941265816e89adb02658ba"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/story-review/SKILL.md",
+      "bytes": 1882,
+      "sha256": "eeaa78d60d261896aa07a0d2ed6489ad2b358990cc79d99b512ded105a656476"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/writing-principles/resources/citations.md",
+      "bytes": 7094,
+      "sha256": "13029ee39f09936393884249996d5bd485847a4e301f43ff302727031621f560"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/writing-principles/resources/failure-modes.md",
+      "bytes": 8018,
+      "sha256": "3a7cee4c463336c816d5b32158790a92f7093c946484ffa974277e64006a13fd"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/writing-principles/SKILL.md",
+      "bytes": 5371,
+      "sha256": "59a0eda1e3171472eae28af3855f6a7d9625d3e18d58884794ef16245011c414"
+    },
+    {
+      "path": "assets/upstream/haowjy-creative-writing-skills/fd7a3ad9cd7697a0645ff6ff4bd5e809cf7673a3/skills/writing-staffing/SKILL.md",
+      "bytes": 5187,
+      "sha256": "c52cfe864f1c0e0f7a3c62aacb71cba8574076e56caf7191c32ad04efa7d4e14"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/composer/references/section_guides.md",
+      "bytes": 21839,
+      "sha256": "6ffe833e456e0ca84bfab520df30f9cb55819838323340942d1b13e7b757ee81"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/composer/references/writing_standards.md",
+      "bytes": 17117,
+      "sha256": "e4d7b04190c1907cad02f018d3c6d9b474457873f8ebbfb09d5574adc71e791c"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/composer/scripts/chapter_quality_check.py",
+      "bytes": 16787,
+      "sha256": "787641484668de6a70a4b4e3309e158105c74125162b44e0610d932faa968af8"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/composer/scripts/final_evaluation.py",
+      "bytes": 20623,
+      "sha256": "cc27d5896cc817927f7900991f5072c118c241ad201dda01171e67a4e9a16286"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/composer/SKILL.md",
+      "bytes": 26283,
+      "sha256": "d2a22cfea11be86512f9330f40549eb980f01e6e08c58b39d1992db64783984c"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/CONTRIBUTING.md",
+      "bytes": 1822,
+      "sha256": "082eb7aaa36aacd181bbfe4f0b19f691aef76c7e057b79523eb9d544dc4f5e4a"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/examples/ai-ethics-paper.md",
+      "bytes": 5896,
+      "sha256": "be8dcead72f85d99815efeb02f7ef986ff7292281e7d6c1aea5d944ba39c4b1c"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/examples/consciousness-paper.md",
+      "bytes": 5019,
+      "sha256": "2471fd175d493d24feac303ebb4a2a9bd09df826e815d07274a8711f87d6432a"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/LICENSE",
+      "bytes": 1089,
+      "sha256": "79f70fe8927d74fcf22f38054577344ae50902968adbf038f1e7406235927dcc"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/README.md",
+      "bytes": 5679,
+      "sha256": "814d7e1e4a0e463724dc194127502694447adbea6cf560003e79bee0bc9cd079"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/README_CN.md",
+      "bytes": 5380,
+      "sha256": "6bf6e2ef7af387f9b9069cffae2f2db96aec902fe2d01be37ed0d9d347d35074"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/strategist/references/quality_standards.md",
+      "bytes": 9865,
+      "sha256": "0598285f09213efc0d0a6b3c1ec59490a1238e7906031b2cb78af3fcdaf9e0d4"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/strategist/references/search_strategy.md",
+      "bytes": 13905,
+      "sha256": "52e9df40d1a6e86aa0d62b6b0afda9d29f7ab0abe40bf17ac243d130872cdc51"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/strategist/scripts/evaluate_samples.py",
+      "bytes": 10857,
+      "sha256": "3efaa0aedbecd1b6ab3b72b8be5a7b2089a0b5cb9edb7dd0427a33a807b2ca78"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/strategist/scripts/gap_analysis.py",
+      "bytes": 14107,
+      "sha256": "5deb4909908ab4aa6fdd0d878a05bc7ac9a14f8373f107a95f4842e5bcf54c1b"
+    },
+    {
+      "path": "assets/upstream/lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1/strategist/SKILL.md",
+      "bytes": 22548,
+      "sha256": "55164ac3fb2b7b4f60d43f2d2637242550fab85252d793e6885b67c2fe818f15"
+    },
+    {
+      "path": "assets/upstream/obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/LICENSE",
+      "bytes": 1091,
+      "sha256": "0da33ed814ee87e72db078f489c4447af72f13d9f25d9e17476f32efd77705fc"
+    },
+    {
+      "path": "assets/upstream/obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/test-driven-development/SKILL.md",
+      "bytes": 9015,
+      "sha256": "bf1b8216e523851a411e91d429a7c1c2a173e79d88957bc78e348218d50edd54"
+    },
+    {
+      "path": "assets/upstream/obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/test-driven-development/writing-good-tests.md",
+      "bytes": 8268,
+      "sha256": "51471c853306ff92ca8bb41dcaea05f31c0e46b03651f8f3c99754b7172f4ae1"
+    },
+    {
+      "path": "assets/upstream/obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/using-superpowers/references/codex-tools.md",
+      "bytes": 4762,
+      "sha256": "1a38ad9b188c393052f58d95657a1c35ea6aafc8b5a27f198f3922912f70bbe7"
+    },
+    {
+      "path": "assets/upstream/obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/writing-skills/anthropic-best-practices.md",
+      "bytes": 46197,
+      "sha256": "217629b356c09c9bd11017c9788e8fc654ca1b32c92d4a51cd490e16dd65e59a"
+    },
+    {
+      "path": "assets/upstream/obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/writing-skills/examples/CLAUDE_MD_TESTING.md",
+      "bytes": 5423,
+      "sha256": "0b379a3415e185d3c434b3ad283d8aa132f3022c2a4f210f168865b5986bcef0"
+    },
+    {
+      "path": "assets/upstream/obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/writing-skills/graphviz-conventions.dot",
+      "bytes": 6141,
+      "sha256": "b18a02773875f6c7b92f2a260e88550c92a62549b0009df9d680f7e9541d0ecc"
+    },
+    {
+      "path": "assets/upstream/obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/writing-skills/persuasion-principles.md",
+      "bytes": 5901,
+      "sha256": "a51bc9bf75189ea73a27b3fb504a2fdfdb966fb1f7f1cdf03203230a216ccc03"
+    },
+    {
+      "path": "assets/upstream/obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/writing-skills/render-graphs.js",
+      "bytes": 4968,
+      "sha256": "c7f412cc629461c4d10287e668731874c0497707023e3e3f74a5355eb2cee196"
+    },
+    {
+      "path": "assets/upstream/obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/writing-skills/SKILL.md",
+      "bytes": 26360,
+      "sha256": "d34db5c8aed6a4e0440132bd0613aace70a693ec7819d5637ad77481d8e10d1b"
+    },
+    {
+      "path": "assets/upstream/obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/writing-skills/testing-skills-with-subagents.md",
+      "bytes": 12558,
+      "sha256": "c711346852c911b24a84aa161e0cff06a4cd7f4e2fa9e9c0a266cead5afcbade"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/LICENSE",
+      "bytes": 1091,
+      "sha256": "a1e6bfc1b3053e45256bf01f9e5867ae88b788d6d525b24e7e8c79e18d5b4a1e"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/README.md",
+      "bytes": 8860,
+      "sha256": "d603048e7e4b46ee6696e754896d62dd09dd1d208270a19c3f9f74058ce52a71"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/academic-cv-builder/SKILL.md",
+      "bytes": 10012,
+      "sha256": "31fec0edc0db38bba95f305574443eecc88de319c0ea9c38b87ccd818b768a4b"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/application-form-filler/SKILL.md",
+      "bytes": 8331,
+      "sha256": "5ff945677afdabbcd3893420f01de1f4935482f1901fe67eb44cc98222d181af"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/career-changer-translator/SKILL.md",
+      "bytes": 10845,
+      "sha256": "c0e27057a7e3d366612a44b7c12018b030d8ade065d4096f59e97ff4e9b12164"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/cold-email-writer/SKILL.md",
+      "bytes": 7773,
+      "sha256": "ece96b5d76012528fdf7b21a2730545f9942ec93aeca48b9de21269611cb7ef6"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/cover-letter-generator/SKILL.md",
+      "bytes": 9460,
+      "sha256": "cf12609ff400c958531eff798e67bc6cad7c59ed3639421d86ed09d7efcb5ef0"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/creative-portfolio-resume/SKILL.md",
+      "bytes": 8238,
+      "sha256": "ee95a3c93f9e58d77a3d113a7c6584553e1b9c7d45f85ac907fa5308c6af0ca2"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/executive-resume-writer/SKILL.md",
+      "bytes": 9520,
+      "sha256": "95742b77e18744d355a5487c6d4637fc02b0c357b24ac8756f1a7e22534934bb"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/interview-prep-generator/SKILL.md",
+      "bytes": 12430,
+      "sha256": "1ef7374e4bdcbca6a8988309e7027f5348a90b5a4a1c61917b5d883fc0291701"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/job-description-analyzer/SKILL.md",
+      "bytes": 14883,
+      "sha256": "078b180a7665deddcaefff71aa082acd3091dfea7878bd751f5fe8bf90752a6b"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/linkedin-profile-optimizer/SKILL.md",
+      "bytes": 10541,
+      "sha256": "2fb968912d1a68f9b54fa8b3f1cc46ed18729016dcbfe7d50857b2c075996668"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/offer-comparison-analyzer/SKILL.md",
+      "bytes": 9716,
+      "sha256": "2b45d146565505a6dad17413e9244c3a3ff4675b70f45378b922625e45d8f50a"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/portfolio-case-study-writer/SKILL.md",
+      "bytes": 9346,
+      "sha256": "6f82643885466baf853f990c9d86b31472c4f23df8bcd3000eb0e425b90e24d5"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/reference-list-builder/SKILL.md",
+      "bytes": 8723,
+      "sha256": "f6c866d521a992daa0426416ab9f280e89a72cfc4dfac28bce069bb56a57c20c"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/resume-ats-optimizer/SKILL.md",
+      "bytes": 9490,
+      "sha256": "ece1ee6c0bf425dd68b33b33096d50c5bed3714ba61c48d9df2bccfd899d4a58"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/resume-bullet-writer/SKILL.md",
+      "bytes": 14742,
+      "sha256": "1ef6da496f26213b83ec4d01a73557b7179ad58d43c265b5ef66e24b0f6a5d74"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/resume-formatter/SKILL.md",
+      "bytes": 8897,
+      "sha256": "fb3e2e5ab30fdb144be0f79576d04a89ed50aa1890880c5868f5980bf47c1868"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/resume-quantifier/SKILL.md",
+      "bytes": 8803,
+      "sha256": "2c72c02d1aa5c3c0494b61ca82e02f81af07d945f47d28ed1ecc99e327ff3b19"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/resume-section-builder/SKILL.md",
+      "bytes": 9937,
+      "sha256": "2199eb6fefcece63b09fafbae24981865f6ca4b8c04a5fd7b81b166625fdeb66"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/resume-tailor/SKILL.md",
+      "bytes": 9683,
+      "sha256": "fb4c9828f7c0644138d696c944298266e4ff184b803e75704d6b516d8d8ee98e"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/resume-version-manager/SKILL.md",
+      "bytes": 8812,
+      "sha256": "70184490be0b5cd248201a36db7d27e567e1835fc58b2d973d7cea592550c28c"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/salary-negotiation-prep/SKILL.md",
+      "bytes": 11071,
+      "sha256": "f170bcbd3fbb30f970b694867f526652778a0bd479f1173657eb93e0f2cca007"
+    },
+    {
+      "path": "assets/upstream/paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d/skills/tech-resume-optimizer/SKILL.md",
+      "bytes": 10926,
+      "sha256": "19d42a21dea66c389be7824e023c6e67dec93a00abb947c576e20358f5279df0"
+    }
+  ]
+}

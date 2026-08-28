@@ -1,0 +1,19 @@
+{
+  "id": "readmd-quick-read",
+  "version": 1,
+  "source": "ReadMD built-in",
+  "upstream_revision": "fdf6c877",
+  "license": "MIT",
+  "capabilities": [
+    "document",
+    "writing"
+  ],
+  "scopes": [
+    "builtin"
+  ],
+  "scripts_allowed": false,
+  "locales": [
+    "zh-CN",
+    "en"
+  ]
+}

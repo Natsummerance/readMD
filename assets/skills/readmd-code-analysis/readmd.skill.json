@@ -1,0 +1,12 @@
+{
+  "id": "readmd-code-analysis",
+  "version": 1,
+  "category": "analysis",
+  "source": "ReadMD original",
+  "license": "MIT",
+  "scopes": ["builtin"],
+  "scripts_allowed": false,
+  "locales": ["zh-CN", "en", "ja", "de", "fr"],
+  "action": "code_analysis",
+  "adaptation_notes": ["Runtime system instructions are loaded from this Skill; UI only supplies document and request variables."]
+}

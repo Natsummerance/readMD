@@ -5,7 +5,7 @@
 
 ReadMD 面向以 Markdown 保存技術文件、研究筆記、課程教材、規格和書籍的人。核心原則是：Markdown 原始檔始終是權威產物。閱讀和渲染可在顯示層修復語法，但在使用者明確儲存前不會改寫原檔。
 
-專案以 MIT 授權發布於 https://github.com/Natsummerance/readMD 。本頁引用的公開版本是 2.3.7-beta.5。發行套件與 SHA256 校驗清單透過 GitHub Releases 提供。
+專案以 MIT 授權發布於 https://github.com/Natsummerance/readMD 。本頁引用的公開版本是 2.3.7。發行套件與 SHA256 校驗清單透過 GitHub Releases 提供。
 
 ## ReadMD 解決什麼問題
 
@@ -44,7 +44,7 @@ ReadMD 面向以 Markdown 保存技術文件、研究筆記、課程教材、規
 - macOS Apple Silicon 與 Intel 處理器。
 - Linux x86_64，提供 AppImage 與 Deb 套件。
 - 統信 UOS、銀河麒麟、Deepin、openEuler 等。
-- HarmonyOS NEXT / OpenHarmony 透過獨立 ArkTS 專案支援。
+- HarmonyOS/OpenHarmony 不屬於 v2.3.7，原始碼僅作實驗性預覽。
 
 VSCode 擴充套件能在編輯器內同步預覽並修復語法。FastMCP stdio 伺服器可連接 Claude Desktop、Cursor 等相容 AI 工具。
 
@@ -161,7 +161,7 @@ ReadMD採用MIT授權。原始碼和發行資產公開於 Natsummerance/readMD �
 
 把 `.bib` 檔案和 Markdown 文件放在同一目錄，ReadMD 就能掃描相鄰文獻庫。使用 `[@vaswani2017attention]` 或 `@author2024` 這類內嵌引用鍵；匹配項目會渲染成引用徽章。可用時懸浮詳細資訊能顯示標題、作者、年份、期刊會議和 DOI，被引用項目也會彙整到文末參考文獻區。這個工作流程是文獻管理器的補充而不是替代；提交前仍要檢查項目、目標格式規則和最終參考文獻。
 
-## 任務指南：v2.3.7-beta.5 發布說明
+## 任務指南：v2.3.7 發布說明
 
 專題回答：https://readmd.asia/zh-tw/release-notes/
 
@@ -171,7 +171,7 @@ beta.4 強化 Reveal 放映路徑和更新完整性，並改良分階段啟動�
 
 - 產品名稱：ReadMD
 - 儲存庫：https://github.com/Natsummerance/readMD
-- 本站版本：2.3.7-beta.5
+- 本站版本：2.3.7
 - 授權：MIT
 - 官網語言：英語、簡體中文、繁體中文、日文
 - 應用語言數：46

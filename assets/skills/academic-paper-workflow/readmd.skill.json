@@ -1,0 +1,19 @@
+{
+  "id": "academic-paper-workflow",
+  "version": 1,
+  "category": "academic",
+  "source": "lishix520/academic-paper-skills (offline snapshot)",
+  "source_url": "https://github.com/lishix520/academic-paper-skills/tree/c325557646e9418939ccc7b99171b149ad6314f1",
+  "upstream_revision": "c325557646e9418939ccc7b99171b149ad6314f1",
+  "license": "MIT",
+  "provenance": {
+    "snapshot_id": "lishix520-academic-paper-skills/c325557646e9418939ccc7b99171b149ad6314f1",
+    "raw_embedded": true,
+    "source_files": ["composer/**", "strategist/**", "examples/**", "README.md", "LICENSE"],
+    "adaptation": "Only signed, allowlisted checks may execute; ordinary user Skills remain text-only"
+  },
+  "scopes": ["builtin"],
+  "scripts_allowed": false,
+  "locales": ["zh-CN", "en", "ja", "de", "fr"],
+  "adaptation": "ReadMD staged planner/composer without executable dependencies"
+}

@@ -22,7 +22,7 @@ class TestReadMDMCPServer(unittest.TestCase):
     def test_tools_list_schema_integrity(self):
         """测试 MCP 工具注册表完整性。"""
         tools = readmd_mcp_server.TOOLS
-        self.assertEqual(len(tools), 15)
+        self.assertEqual(len(tools), 17)
         tool_names = [t["name"] for t in tools]
         expected_names = [
             "readmd_fix_markdown",
@@ -35,6 +35,8 @@ class TestReadMDMCPServer(unittest.TestCase):
             "readmd_parse_bibtex",
             "readmd_latex_to_omml",
             "readmd_ai_assistant",
+            "readmd_ai_providers",
+            "readmd_ai_chat",
             "readmd_process_imports",
             "readmd_generate_toc",
             "readmd_export_presentation",
@@ -84,6 +86,43 @@ class TestReadMDMCPServer(unittest.TestCase):
         self.assertEqual(payload["workflow_id"], "quick_read")
         self.assertIn("快速阅读", payload["workflow_name"])
 
+    def test_mcp_resources_and_prompts_cover_skills(self):
+        resources = readmd_mcp_server._skill_resources()
+        prompts = readmd_mcp_server._prompt_descriptors()
+        self.assertGreaterEqual(len(resources), 8)
+        self.assertTrue(any(item["uri"] == "readmd://skills/readmd-summary" for item in resources))
+        self.assertTrue(any(item["name"] == "readmd-summary" for item in prompts))
+        direct = readmd_mcp_server._read_skill_resource("readmd://skills/readmd-summary")
+        self.assertIn("Summarize", direct["contents"][0]["text"])
+
+    def test_mcp_read_only_resources_omit_secrets(self):
+        resources = readmd_mcp_server._all_resources()
+        uris = {item["uri"] for item in resources}
+        self.assertIn("readmd://sessions", uris)
+        self.assertIn("readmd://providers", uris)
+        scrubbed = readmd_mcp_server._scrub_resource({"token": "secret", "nested": {"api_key": "secret", "ok": 1}})
+        self.assertEqual(scrubbed, {"nested": {"ok": 1}})
+
+    def test_mcp_side_effect_requires_confirmation(self):
+        res = readmd_mcp_server.handle_tool_call("readmd_export_epub", {
+            "markdown_content": "# x", "output_path": os.path.join(tempfile.gettempdir(), "x.epub")
+        })
+        self.assertTrue(res.get("isError"))
+
+    def test_mcp_ai_chat_uses_credential_handle(self):
+        fake_ai = MagicMock()
+        fake_ai.chat.return_value = iter(["ok", {"usage": {"total_tokens": 2}}])
+        with patch.object(readmd_mcp_server.RM, "get", return_value=fake_ai):
+            res = readmd_mcp_server.handle_tool_call("readmd_ai_chat", {
+                "provider": "custom:test", "credential_id": "cred:abc12345",
+                "model": "mock", "skill_id": "readmd-summary", "markdown_content": "# x"
+            })
+        payload = json.loads(res["content"][0]["text"])
+        self.assertTrue(payload["ok"])
+        self.assertEqual(payload["content"], "ok")
+        fake_ai.chat.assert_called_once()
+        self.assertNotIn("api_key", fake_ai.chat.call_args.args[0])
+
     def test_tool_process_imports(self):
         """测试 readmd_process_imports 工具。"""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -117,7 +156,7 @@ class TestReadMDMCPServer(unittest.TestCase):
             res = readmd_mcp_server.handle_tool_call("readmd_export_presentation", {
                 "markdown_content": doc,
                 "output_path": out_html,
-                "title": "测试演讲"
+                "title": "测试演讲", "confirm": True
             })
             self.assertFalse(res.get("isError", False))
             self.assertTrue(os.path.isfile(out_html))
@@ -130,7 +169,7 @@ class TestReadMDMCPServer(unittest.TestCase):
             res = readmd_mcp_server.handle_tool_call("readmd_export_epub", {
                 "markdown_content": doc,
                 "output_path": out_epub,
-                "title": "MCP 电子书"
+                "title": "MCP 电子书", "confirm": True
             })
             self.assertFalse(res.get("isError", False))
             self.assertTrue(os.path.isfile(out_epub))
@@ -141,7 +180,7 @@ class TestReadMDMCPServer(unittest.TestCase):
         res = readmd_mcp_server.handle_tool_call("readmd_run_code_chunk", {
             "code": code,
             "language": "python",
-            "capture_plot": False
+            "capture_plot": False, "confirm": True
         })
         self.assertFalse(res.get("isError", False))
         payload = json.loads(res["content"][0]["text"])
@@ -157,7 +196,7 @@ class TestReadMDMCPServer(unittest.TestCase):
                     "markdown_content": "# 测试导出\n内容",
                     "output_path": out_pdf,
                     "output_format": "pdf",
-                    "style_preset": "academic"
+                    "style_preset": "academic", "confirm": True
                 })
                 self.assertFalse(res.get("isError", False))
                 payload = json.loads(res["content"][0]["text"])
@@ -167,7 +206,7 @@ class TestReadMDMCPServer(unittest.TestCase):
     def test_tool_web_to_markdown_mock(self):
         """测试 readmd_web_to_markdown 抓取。"""
         with patch("src.readmd_modules.web.fetch_document", return_value=({"title": "网页标题", "markdown": "# 网页内容", "images": []}, [])):
-            res = readmd_mcp_server.handle_tool_call("readmd_web_to_markdown", {"url": "https://example.com/article"})
+            res = readmd_mcp_server.handle_tool_call("readmd_web_to_markdown", {"url": "https://example.com/article", "confirm": True})
             self.assertFalse(res.get("isError", False))
             payload = json.loads(res["content"][0]["text"])
             self.assertTrue(payload["ok"])

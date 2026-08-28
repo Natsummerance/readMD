@@ -37,6 +37,13 @@ datas += collect_data_files('trafilatura')
 hiddenimports += collect_submodules('src.readmd_core')
 hiddenimports += [m for m in collect_submodules('src.readmd_modules') if not m.endswith('windows_native')]
 
+# Resolve signing policy before constructing the PyInstaller EXE object.  The
+# previous ordering referenced this variable before assignment, causing every
+# macOS build to fail during spec evaluation.
+codesign_identity = os.environ.get('READMD_CODESIGN_IDENTITY', '').strip() or None
+if os.environ.get('READMD_FORMAL_RELEASE') == '1' and not codesign_identity:
+    raise SystemExit('READMD_CODESIGN_IDENTITY is required for a formal macOS release')
+
 a = Analysis(
     [os.path.join(ROOT_DIR, 'readmd.py')],
     pathex=[ROOT_DIR],
@@ -70,7 +77,7 @@ exe = EXE(
     disable_windowed_traceback=False,
     argv_emulation=True,
     target_arch=None,
-    codesign_identity=None,
+    codesign_identity=codesign_identity,
     entitlements_file=None,
     icon=[os.path.join(ROOT_DIR, 'assets', 'ReadMD.icns')],
 )
@@ -85,7 +92,6 @@ coll = COLLECT(
     name='ReadMD',
 )
 
-# macOS .app bundle
 app = BUNDLE(
     coll,
     name='ReadMD.app',

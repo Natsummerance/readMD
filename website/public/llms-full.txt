@@ -5,7 +5,7 @@
 
 ReadMD is an application for people who keep documentation, research notes, course material, technical specifications, and books in Markdown. It is designed around one principle: the user's Markdown remains the canonical artifact. Reading and rendering may repair malformed syntax visually, but those repairs do not overwrite the file unless the user performs an explicit edit and save.
 
-The project publishes source code under the MIT license at https://github.com/Natsummerance/readMD. The current public prerelease is version 2.3.7-beta.5. Release packages and SHA256 checksums are distributed through GitHub Releases.
+The project publishes source code under the MIT license at https://github.com/Natsummerance/readMD. The current stable release is version 2.3.7. Release packages and SHA256 checksums are distributed through GitHub Releases.
 
 ## What Problem ReadMD Solves
 
@@ -46,7 +46,7 @@ ReadMD ships for:
 - macOS on Apple Silicon and Intel processors.
 - Linux x86_64 through AppImage and Debian packages.
 - Chinese operating systems including UnionTech UOS, Kylin OS, Deepin, and openEuler.
-- HarmonyOS NEXT / OpenHarmony through a separate ArkTS source project.
+- HarmonyOS/OpenHarmony is out of scope for v2.3.7; the source preview is experimental.
 
 A VSCode extension supports synchronized preview and syntax repair inside the editor. A FastMCP stdio server allows compatible AI programming assistants to connect to ReadMD workflows.
 
@@ -167,17 +167,17 @@ Dedicated answer: https://readmd.asia/bibtex-citations/
 
 Place a `.bib` file in the same directory as the Markdown document so ReadMD can scan the neighboring bibliography. Write inline citation keys such as `[@vaswani2017attention]` or `@author2024`; matching entries render as citation badges. Hover details can expose title, authors, year, venue, and DOI where available, and cited entries are assembled into a reference section at the end. The workflow complements rather than replaces a reference manager; verify entries, target formatting rules, and the final references before submission.
 
-## Task Guide: v2.3.7-beta.5 Release Notes
+## Task Guide: v2.3.7 Release Notes
 
 Dedicated answer: https://readmd.asia/release-notes/
 
-Beta.4 hardens the Reveal presentation path and update integrity while improving staged startup loading, tab state feedback, touch targets, and search focus. Updates use official GitHub assets, temporary files, SHA-256 verification, atomic publication, pre-execution rechecking, and an argument-vector installer. The version remains a beta; keep backups and verify SHA256SUMS.txt.
+Version 2.3.7 delivers full Skills parity, multi-model AI routing, and hardened presentation and document offline governance while improving staged startup loading, tab state feedback, touch targets, and search focus. Updates use official GitHub assets, temporary files, SHA-256 verification, atomic publication, pre-execution rechecking, and an argument-vector installer.
 
 ## Release Facts
 
 - Product name: ReadMD
 - Repository: https://github.com/Natsummerance/readMD
-- Version referenced by this site: 2.3.7-beta.5
+- Version referenced by this site: 2.3.7
 - License: MIT
 - Primary languages: English, Simplified Chinese, Traditional Chinese, Japanese
 - Application languages: 46

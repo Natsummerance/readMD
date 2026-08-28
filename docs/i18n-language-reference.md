@@ -104,7 +104,7 @@ assets/i18n/
 | `{size}` | 文件大小 | `export.success` |
 | `{time}` | 时间 | `ai.timePrefix` |
 | `{source}` | 来源标识 | `ai.keyReady` |
-| `{lang}` | 语言名称 | `ai.system_translate_prompt` |
+| `language` | 目标语言名称 | `assets/skills/readmd-translate/SKILL.md` |
 | `{percent}` | 百分比 | `reader.renderingProgress` |
 | `{current}` / `{total}` | 当前/总数 | `search.matchCount` |
 | `{done}` / `{failed}` / `{ok}` / `{skipped}` | 批处理统计 | `convert.allCompleted` |

@@ -1,0 +1,19 @@
+{
+  "id": "avoid-ai-writing",
+  "version": 1,
+  "category": "style-audit",
+  "source": "conorbronsdon/avoid-ai-writing (offline snapshot)",
+  "source_url": "https://github.com/conorbronsdon/avoid-ai-writing/tree/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca",
+  "upstream_revision": "40328bd292bc682d46010a6f9ac2cdbf4fb4ceca",
+  "license": "MIT",
+  "provenance": {
+    "snapshot_id": "conorbronsdon-avoid-ai-writing/40328bd292bc682d46010a6f9ac2cdbf4fb4ceca",
+    "raw_embedded": true,
+    "source_files": ["SKILL.md", "detector/**", "scripts/check-style.js", "examples/**", "package.json", "LICENSE"],
+    "adaptation": "ReadMD runtime uses the text Skill; detector scripts remain read-only upstream sources"
+  },
+  "scopes": ["builtin"],
+  "scripts_allowed": false,
+  "locales": ["zh-CN", "en", "ja", "de", "fr"],
+  "adaptation": "ReadMD document-preserving audit and rewrite"
+}

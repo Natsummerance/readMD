@@ -14,7 +14,7 @@ from src.readmd_modules import crypto
 
 
 class TestCryptoModule(unittest.TestCase):
-    """测试 API Key 的加密、解密与优雅降级。"""
+    """测试 API Key 的加密与 fail-closed 行为。"""
 
     def test_encrypt_and_decrypt_roundtrip(self):
         """测试加密与解密往返一致性。"""
@@ -31,11 +31,8 @@ class TestCryptoModule(unittest.TestCase):
                 decrypted = crypto.decrypt_api_key(encrypted, key_path=key_path)
                 self.assertEqual(decrypted, raw_key)
             else:
-                # 降级模式
-                encrypted = crypto.encrypt_api_key(raw_key, key_path=key_path)
-                self.assertEqual(encrypted, raw_key)
-                decrypted = crypto.decrypt_api_key(encrypted, key_path=key_path)
-                self.assertEqual(decrypted, raw_key)
+                with self.assertRaises(RuntimeError):
+                    crypto.encrypt_api_key(raw_key, key_path=key_path)
 
     def test_empty_key_handling(self):
         """测试空 key 处理。"""
@@ -43,9 +40,9 @@ class TestCryptoModule(unittest.TestCase):
         self.assertEqual(crypto.decrypt_api_key(''), '')
 
     def test_plaintext_pass_through(self):
-        """测试未加密明文自动透传。"""
+        """Legacy plaintext is rejected rather than exposed."""
         plaintext = 'sk-legacy-unencrypted-key'
-        self.assertEqual(crypto.decrypt_api_key(plaintext), plaintext)
+        self.assertEqual(crypto.decrypt_api_key(plaintext), '')
 
     def test_invalid_token_handling(self):
         """测试损坏密文解密容错。"""

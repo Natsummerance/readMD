@@ -1,0 +1,19 @@
+{
+  "id": "career-writing",
+  "version": 1,
+  "category": "career",
+  "source": "Paramchoudhary/ResumeSkills (offline snapshot)",
+  "source_url": "https://github.com/Paramchoudhary/ResumeSkills/tree/74ae19e7c62b0516d1c298328e5544976c12da5d",
+  "upstream_revision": "74ae19e7c62b0516d1c298328e5544976c12da5d",
+  "license": "MIT",
+  "provenance": {
+    "snapshot_id": "paramchoudhary-ResumeSkills/74ae19e7c62b0516d1c298328e5544976c12da5d",
+    "raw_embedded": true,
+    "source_files": ["skills/**", "README.md", "LICENSE"],
+    "adaptation": "ReadMD enables the resume, cover-letter and case-study subset by default"
+  },
+  "scopes": ["builtin"],
+  "scripts_allowed": false,
+  "locales": ["zh-CN", "en", "ja", "de", "fr"],
+  "adaptation": "ReadMD selected resume/application workflows"
+}

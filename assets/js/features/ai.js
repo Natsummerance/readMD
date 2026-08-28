@@ -18,17 +18,13 @@ const AI_ACTIONS = {
   expand: 'tpl.actionExpand',
 };
 
-const AI_SYSTEM = {
-  quick_read: '你是 ReadMD 的资深文档领读助手。对用户给出的 Markdown 文档进行结构化深度提炼，输出：1) 核心主旨（1~2 句话提纲挈领）；2) 核心要点清单（按重要度排序）；3) 结构逻辑脉络；4) 关键结论、行动项或待澄清疑问。排版清晰美观，使用规范 Markdown 格式。',
-  polish: '你是专业级中文特约编辑。深度润色用户给出的 Markdown 文档：纠正错别字、语病及生硬翻译腔，去除啰嗦冗余表达，增强行文流畅度与文采。严格保留原文所有标题层级、列表、代码块、LaTeX 公式、表格及 Markdown 标记。只输出润色后的完整正文，不要输出任何开场白或解释性文字。',
-  proofread: '你是严格的出版级文字校对专家。对用户给出的 Markdown 文档进行全方位勘误：1) 错别字与错用词；2) 标点符号规范（中英文标点混用、全半角引号等）；3) 语病与语序混乱；4) Markdown 排版规范。先列出【修改对照清单】，再输出【修正后的完整 Markdown 文档】。',
-  translate_en: 'You are a professional academic and technical translator. Translate the provided document into clear, natural, and idiomatic English. Preserve all Markdown structure, headings, lists, tables, code blocks, and LaTeX math formulas intact. Output ONLY the translated content without conversational filler or extra explanations.',
-  translate_zh: '你是资深专业翻译。将用户给出的文档精确翻译为地道、严谨、流畅的简体中文（遵循信达雅原则）。严格保留全部 Markdown 格式、表格、代码块及 LaTeX 公式。只输出译文正文，不要添加任何寒暄或附注说明。',
-  todo: '你是高效任务与项目管理助手。深入分析用户文档，精准提取所有待办事项、决策行动项与跟进任务。用 Markdown 任务清单（- [ ]）与表格（事项 / 责任人 / 预期成果 / 优先级）结构化输出。',
-  continue: '你是优秀的同构写作与思维延伸助手。深度承接用户文档末尾的思想逻辑与文风语调，自然展开后续段落或章节写作，提供有深度、有逻辑的实质性内容扩展。只输出续写新增内容，不要重复原文。',
-  ask: '你是 ReadMD 文档问答助手。基于用户给出的文档内容，条理清晰地回答用户的问题；如果文档中未提及相关信息，请诚实明确指出。',
-  modify: '你是 Markdown 格式专家。修正文档中的格式问题：表格对齐补全、加粗未闭合、公式排版、标题层级。只输出修正后的完整文档，不要解释。',
-  expand: '你是文档扩充助手。在保持原有结构与语气的前提下，为文档补充细节、示例、解释，使内容更丰富。只输出扩充后的完整文档，不要加任何解释。',
+const AI_SKILLS = {
+  quick_read: 'readmd-quick-read', polish: 'readmd-polish', proofread: 'readmd-proofread',
+  translate_en: 'readmd-translate', translate_zh: 'readmd-translate', todo: 'readmd-todo',
+  continue: 'readmd-continue', ask: 'readmd-ask', summary: 'readmd-summary',
+  outline: 'readmd-outline', weekly: 'readmd-weekly', code_review: 'readmd-code-review',
+  modify: 'readmd-format-fix', expand: 'readmd-polish', translate: 'readmd-translate',
+  code_to_doc: 'readmd-code-to-doc', code_analysis: 'readmd-code-analysis'
 };
 
 function toggleAiPanel() {
@@ -59,7 +55,7 @@ function handleTopAiButtonClick() {
 }
 window.handleTopAiButtonClick = handleTopAiButtonClick;
 
-function openAiPanelWithPrompt(act, promptText) {
+function openAiPanelWithPrompt(act, promptText, targetText) {
   const p = $('ai-panel');
   if (!p) return;
   if (p.classList.contains('hidden')) {
@@ -69,6 +65,10 @@ function openAiPanelWithPrompt(act, promptText) {
   if (promptInput && promptText) {
     promptInput.value = promptText;
   }
+  // Code/document actions can supply an ephemeral target without embedding a
+  // second instruction prompt in the UI bundle.  It is consumed by runAi and
+  // never persisted to history as provider configuration.
+  state.ai.targetOverride = typeof targetText === 'string' ? targetText : null;
   if (act) {
     setTimeout(() => runAi(act), 50);
   }
@@ -123,7 +123,7 @@ function updateAiConnectionSummary() {
   const summary = $('ai-model-summary');
   if (summary) summary.textContent = (model && model.value) || (_t('ai.noModel') || '未选择模型');
   if (!p) return setAiConnectionState('warn', _t('ai.noProvider') || '请选择连接');
-  const local = /ollama/i.test(p.name || '');
+  const local = isLocalAiProvider(p);
   if (local || p.has_key || p.key_source) setAiConnectionState('ready', p.name + ' · ' + (_t('ai.statusReady') || '已就绪'));
   else setAiConnectionState('warn', p.name + ' · ' + (_t('ai.needKey') || '需要 API Key'));
 }
@@ -131,9 +131,24 @@ function updateAiConnectionSummary() {
 
 async function loadAiPrompts() {
   try {
-    const r = await apiFetch('/api/ai/prompts');
-    if (!r.ok) return;
-    state.ai.templates = (await r.json()).templates || [];
+    const [promptResponse, skillResponse] = await Promise.all([
+      apiFetch('/api/ai/prompts'), apiFetch('/api/skills'),
+    ]);
+    const legacy = promptResponse.ok ? ((await promptResponse.json()).templates || []) : [];
+    const skills = skillResponse.ok ? ((await skillResponse.json()).skills || []) : [];
+    const legacyBySkill = new Map(legacy.filter(t => t && t.skill_id).map(t => [t.skill_id, t]));
+    // The workbench is Skill-first: every selectable action resolves to the
+    // shared registry, while legacy template metadata is retained only for a
+    // one-version action/name compatibility layer.
+    state.ai.templates = skills.map(s => {
+      const old = legacyBySkill.get(s.id) || {};
+      return {
+        id: old.id || s.id, skill_id: s.id, name: old.name || s.name,
+        action: old.action || 'custom', user: old.user || '',
+        system: s.instructions || '', builtin: s.scope === 'builtin',
+        scope: s.scope, metadata: s.metadata || {}, variables: s.variables || [],
+      };
+    });
     fillAiTemplates();
   } catch (e) { /* ignore */ }
 }
@@ -217,6 +232,7 @@ function renderTplList() {
 
 function selectTpl(id) {
   const t = (state.ai.templates || []).find(x => x.id === id) || null;
+  const builtin = !!(t && t.builtin);
   document.querySelectorAll('#tpl-list li').forEach(li => {
     const selected = li.dataset.id === id;
     li.classList.toggle('active', selected);
@@ -227,7 +243,94 @@ function selectTpl(id) {
   if ($('tpl-action')) $('tpl-action').value = (t && t.action) || 'custom';
   $('tpl-system').value = t ? (t.system || '') : '';
   $('tpl-user').value = t ? (t.user || '') : '';
-  $('tpl-del').disabled = !t;
+  $('tpl-name').readOnly = builtin;
+  $('tpl-system').readOnly = builtin;
+  $('tpl-user').readOnly = builtin;
+  if ($('tpl-save')) $('tpl-save').disabled = builtin;
+  $('tpl-del').disabled = !t || builtin;
+  if ($('tpl-publish')) $('tpl-publish').disabled = !t || builtin;
+  const status = $('tpl-draft-status');
+  if (status) status.textContent = builtin
+    ? '内置 Skill 只读；如需改造请复制到用户作用域后再发布。'
+    : (t ? '用户 Skill 可编辑；保存后请先试跑，发布动作需要明确确认。' : 'AI 生成的 Skill 默认是禁用草稿，发布前请先试跑并检查差异。');
+}
+
+function copyCurrentSkill() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const current = (state.ai.templates || []).find(x => x.id === $('tpl-id').value);
+  if (!current) return;
+  const base = String(current.skill_id || current.id || 'skill').replace(/[^a-z0-9-]/gi, '-').toLowerCase().replace(/^-+|-+$/g, '') || 'skill';
+  const copyId = (base + '-custom').slice(0, 64);
+  selectTpl(null);
+  $('tpl-id').value = copyId;
+  $('tpl-name').value = (current.name || copyId) + ' (Copy)';
+  $('tpl-system').value = current.system || '';
+  $('tpl-user').value = current.user || '';
+  $('tpl-name').readOnly = $('tpl-system').readOnly = $('tpl-user').readOnly = false;
+  if ($('tpl-save')) $('tpl-save').disabled = false;
+  if ($('tpl-publish')) $('tpl-publish').disabled = false;
+  if ($('tpl-draft-status')) $('tpl-draft-status').textContent = _t('tpl.hint') || '复制后的 Skill 尚未发布。保存后请先试跑，再明确发布。';
+  $('tpl-name').focus(); $('tpl-name').select();
+}
+
+async function generateSkillDraft() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const p = currentAiProvider();
+  if (!p) { showToast(_t('toast.selectProviderFirst') || '请先选择 AI 提供商'); return; }
+  if (!p.credential_id) {
+    if (!(await saveAiSelection(true))) return;
+  }
+  const active = currentAiProvider() || p;
+  if (!active.credential_id && !isLocalAiProvider(active)) {
+    showToast(_t('toast.noApiKeyNotice') || '请先在连接设置中配置凭据'); return;
+  }
+  const request = window.prompt('请描述你要创建的 Skill（目标、触发条件、输出格式和安全边界）：', '创建一个适合当前文档的写作 Skill');
+  if (!request || !request.trim()) return;
+  const button = $('tpl-ai-generate');
+  if (button) { button.disabled = true; button.textContent = '生成中…'; }
+  try {
+    const r = await apiFetch('/api/skills', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'generate', provider: active.id, credential_id: active.credential_id,
+        model: $('ai-model').value || (active.models || [])[0] || '', request, document: getAiTargetText().text,
+        language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en' }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok || !d.draft) throw new Error(d.error || 'Skill 草稿生成失败');
+    const draft = d.draft;
+    const description = draft.description || 'Use when a ReadMD document needs this workflow.';
+    const content = `---\nname: ${draft.id}\ndescription: ${description}\n---\n\n${draft.instructions || ''}`;
+    state.ai.skillDraft = { id: draft.id, content, metadata: Object.assign({}, draft.metadata, { enabled: false }) };
+    selectTpl(null);
+    $('tpl-id').value = draft.id;
+    $('tpl-name').value = draft.name || draft.id;
+    $('tpl-system').value = content;
+    $('tpl-user').value = '';
+    if ($('tpl-publish')) $('tpl-publish').disabled = false;
+    if ($('tpl-draft-status')) $('tpl-draft-status').textContent = '已生成禁用草稿：请检查指令并点击“发布 Skill”后才会进入真实流程。';
+    showToast('Skill 草稿已生成，尚未发布');
+  } catch (e) {
+    showToast('Skill 草稿生成失败：' + e.message);
+  } finally {
+    if (button) { button.disabled = false; button.textContent = 'AI 生成 Skill 草稿'; }
+  }
+}
+
+async function publishCurrentSkill() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const id = String($('tpl-id').value || '').trim();
+  const content = String($('tpl-system').value || '').trim();
+  if (!id || !content) { showToast('请先选择或生成一个用户 Skill'); return; }
+  if (!(await confirmAction({ title: '发布 Skill', message: '发布后此 Skill 可用于真实文档流程，确定继续吗？', confirmText: '发布', cancelText: _t('dialog.cancel') || '取消', danger: true }))) return;
+  try {
+    const r = await apiFetch('/api/skills', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'publish', confirm: true, id, content, metadata: { id, source: 'skill-workbench', enabled: true, scripts_allowed: false } }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.error || '发布失败');
+    state.ai.skillDraft = null;
+    await loadAiPrompts();
+    showToast('Skill 已发布');
+  } catch (e) { showToast('Skill 发布失败：' + e.message); }
 }
 
 function parseMarkdownTemplate(content, filename) {
@@ -638,6 +741,7 @@ async function loadAiConfig() {
     state.ai.config = await r.json();
     const cfg = state.ai.config;
     state.ai.providers = mergeAiProviders(cfg.custom || [], cfg.presets || []);
+    state.ai.upstreamCatalog = Array.isArray(cfg.upstream_catalog) ? cfg.upstream_catalog : [];
     fillAiProviders(state.ai.providers, cfg.current || {});
     loadAiPrompts();
     loadAiSessions();
@@ -667,6 +771,31 @@ function fillAiProviders(merged, current) {
   if (customGroup.children.length) sel.appendChild(customGroup);
   if (presetGroup.children.length) sel.appendChild(presetGroup);
   if (curId) sel.value = curId;
+  const cards = $('ai-provider-cards');
+  const search = $('ai-provider-search');
+  if (cards) {
+    const query = String(search && search.value || '').trim().toLowerCase();
+    const sourceEntries = (state.ai.upstreamCatalog || []).map(p => Object.assign({ source_only: true }, p));
+    const cardProviders = merged.concat(sourceEntries);
+    cards.innerHTML = '';
+    cardProviders.filter(p => !query || [p.name, p.note, p.website, p.category, p.format].some(v => String(v || '').toLowerCase().includes(query)))
+      .forEach(p => {
+        const card = document.createElement('button');
+        card.type = 'button'; card.className = 'ai-provider-card' + (p.id === curId ? ' active' : '') + (p.source_only ? ' source-only' : '');
+        if (p.source_only) card.disabled = true;
+        card.setAttribute('role', 'option'); card.setAttribute('aria-selected', p.id === curId ? 'true' : 'false');
+        const title = document.createElement('strong'); title.textContent = p.name || p.id;
+        const meta = document.createElement('span');
+        const caps = p.capabilities && typeof p.capabilities === 'object' ? Object.keys(p.capabilities).filter(k => p.capabilities[k]).slice(0, 3) : [];
+        const capLabels = { chat: _t('ai.aiResult') || 'Chat', models: _t('ai.model') || 'Models', vision: _t('ai.explain') || 'Vision', tools: _t('ai.advanced') || 'Tools' };
+        const kind = p.source_only ? (_t('ai.sourcePrefix') || '离线来源目录') : (p.custom ? (_t('ai.customConnections') || 'Custom') : (_t('ai.officialPresets') || 'Presets'));
+        meta.textContent = kind + (caps.length ? ' · ' + caps.map(k => capLabels[k] || k).join(' · ') : '');
+        const status = document.createElement('i'); status.className = 'ai-provider-state'; status.setAttribute('aria-label', p.has_key ? (_t('ai.keyConfigured') || 'Key configured') : (_t('ai.noKeyConfigured') || 'No key configured')); status.textContent = p.has_key ? '●' : '○';
+        card.append(title, meta, status);
+        if (!p.source_only) card.addEventListener('click', () => { sel.value = p.id; onAiProviderChange(); fillAiProviders(merged, { provider_id: p.id, model: $('ai-model').value }); });
+        cards.appendChild(card);
+      });
+  }
   onAiProviderChange();
 }
 
@@ -675,8 +804,25 @@ function currentAiProvider() {
   return (state.ai.providers || []).find(p => p.id === id || p.name === id) || null;
 }
 
+function isLocalAiProvider(provider) {
+  if (!provider) return false;
+  if (String(provider.category || '').toLowerCase() === 'local') return true;
+  const url = String(provider.base_url || '').toLowerCase();
+  return /(^|[/:])(?:localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(url);
+}
+
 function aiPresetBase(p) {
   return (p && p.base_url) || '';
+}
+
+function readAiCustomHeaders() {
+  const raw = $('ai-headers') ? $('ai-headers').value.trim() : '';
+  if (!raw) return {};
+  const parsed = JSON.parse(raw);
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+    throw new Error('请求头必须是 JSON 对象');
+  }
+  return parsed;
 }
 
 function fillAiModels(models, selected) {
@@ -700,11 +846,14 @@ function onAiProviderChange() {
   $('ai-base-url').value = base;
   const mode = p.mode || (p.format === 'anthropic' ? 'messages' : 'auto');
   $('ai-mode').value = (mode === 'anthropic') ? 'messages' : mode;
+  if ($('ai-endpoint-mode')) $('ai-endpoint-mode').value = p.endpoint_mode || 'prefix';
   const current = (state.ai.config && state.ai.config.current) || {};
   fillAiModels(p.models, (current.provider_id || current.provider) === p.id ? current.model : '');
   $('ai-provider-name').value = p.name || '';
   $('ai-provider-name').disabled = !p.custom;
   $('ai-provider-delete').disabled = !p.custom;
+  const headers = $('ai-headers');
+  if (headers) headers.value = p.headers && typeof p.headers === 'object' ? JSON.stringify(p.headers, null, 2) : '';
   syncAiKey();
 }
 
@@ -716,13 +865,13 @@ function syncAiKey() {
   if (!p) { inp.value = ''; inp.placeholder = ''; if (status) status.textContent = ''; return; }
   // API Key 不会从后端回传；切换连接时也不保留前一个连接的输入值。
   inp.value = '';
-  inp.placeholder = (p.key_source && p.key_source.indexOf('env:') === 0)
-    ? (_t('ai.readFromEnv', { env: p.key_source.slice(4) }) || ('已从环境变量 ' + p.key_source.slice(4) + ' 读取，可覆盖'))
-    : (p.name.indexOf('Ollama') >= 0 ? (_t('ai.apiKeyOllama') || 'API Key（本地 Ollama 可留空）') : (_t('ai.apiKeyRequired') || 'API Key（必填）'));
+   inp.placeholder = (p.key_source && p.key_source.indexOf('env:') === 0)
+     ? (_t('ai.readFromEnv', { env: p.key_source.slice(4) }) || ('已从环境变量 ' + p.key_source.slice(4) + ' 读取，可覆盖'))
+     : (isLocalAiProvider(p) ? (_t('ai.apiKeyOllama') || 'API Key（本地服务可留空）') : (_t('ai.apiKeyRequired') || 'API Key（必填）'));
   if (status) {
     status.textContent = p.has_key
       ? (p.key_source ? (_t('ai.keyReady', { source: p.key_source }) || ('Key 就绪（' + p.key_source + '）')) : (_t('ai.keyConfigured') || 'Key 已配置'))
-      : (p.name.indexOf('Ollama') >= 0 ? (_t('ai.localNoKey') || '本地模型无需 Key') : (_t('ai.noKeyConfigured') || '未配置 Key'));
+       : (isLocalAiProvider(p) ? (_t('ai.localNoKey') || '本地模型无需 Key') : (_t('ai.noKeyConfigured') || '未配置 Key'));
   }
   updateAiConnectionSummary();
 }
@@ -802,15 +951,23 @@ async function deleteAiProvider() {
 
 
 async function saveAiSelection(silent) {
-  const p = currentAiProvider();
-  if (!p || !state.ai.config) return;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  let p = currentAiProvider();
+  if (!p || !state.ai.config) return false;
   const custom = (state.ai.config.custom || []).map(c => Object.assign({}, c));
   const keyVal = $('ai-key').value.trim();
   const baseUrl = $('ai-base-url').value.trim();
   const mode = $('ai-mode').value || 'auto';
+  const endpointMode = $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix';
+  try {
+    var customHeaders = readAiCustomHeaders();
+  } catch (e) {
+    showToast((_t('toast.saveFailedSimple') || '请求头 JSON 无效：') + ' ' + e.message);
+    return false;
+  }
   const requestedName = $('ai-provider-name').value.trim() || p.name;
   if (p.custom && requestedName !== p.name && custom.some(c => c.name === requestedName)) {
-    showToast(_t('toast.customConnNameExists') || '自定义连接名称已存在'); return;
+    showToast(_t('toast.customConnNameExists') || '自定义连接名称已存在'); return false;
   }
   let over = custom.find(c => c.id === p.id);
   if (!over) {
@@ -829,6 +986,8 @@ async function saveAiSelection(silent) {
   if (baseUrl) over.base_url = baseUrl;
   else delete over.base_url;
   over.mode = mode;
+  over.endpoint_mode = endpointMode;
+  over.headers = customHeaders;
   if (mode === 'messages') over.format = 'anthropic';
   else over.format = 'openai';
   if (keyVal) over.api_key = keyVal;
@@ -845,12 +1004,14 @@ async function saveAiSelection(silent) {
       const status = $('ai-conn-status');
       if (status) status.textContent = _t('status.saved') || '已保存';
       if (!silent) showToast(_t('toast.connSettingsSaved') || '连接设置已保存');
+      return true;
     } else {
       const d = await r.json().catch(() => ({}));
       throw new Error(d.error || 'HTTP ' + r.status);
     }
   } catch (e) {
     showToast((_t('toast.saveFailed') || '保存失败：') + e.message);
+    return false;
   }
 }
 
@@ -888,17 +1049,27 @@ async function loadAiModels() {
   const baseUrl = $('ai-base-url').value.trim();
   const key = $('ai-key').value.trim();
   const mode = $('ai-mode').value || 'auto';
+  const endpointMode = $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix';
   if (!baseUrl) { showToast(_t('toast.enterBaseUrlFirst') || '请先填写 Base URL'); return; }
-  const p = currentAiProvider();
-  const local = p && p.name.indexOf('Ollama') >= 0;
+  let p = currentAiProvider();
+  const local = isLocalAiProvider(p);
   if (!local && !key && !(p && p.has_key)) { showToast(_t('toast.enterApiKeyFirst') || '请先填写 API Key'); return; }
+  try {
+    var requestHeaders = readAiCustomHeaders();
+  } catch (e) {
+    showToast((_t('toast.saveFailedSimple') || '请求头 JSON 无效：') + ' ' + e.message);
+    return;
+  }
   const btn = $('ai-models-btn');
   const old = btn.textContent;
   btn.disabled = true; btn.textContent = _t('toast.fetchingModels') || '获取中…';
   const status = $('ai-conn-status');
   try {
-    const q = new URLSearchParams({ provider: (p && p.id) || '', base_url: baseUrl, key: key, mode: mode });
-    const r = await apiFetch('/api/ai/models?' + q.toString());
+    const r = await apiFetch('/api/ai/models', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: (p && p.id) || '', credential_id: (p && p.credential_id) || undefined, base_url: baseUrl, mode: mode, endpoint_mode: endpointMode, headers: requestHeaders })
+    });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
     const ids = d.models || [];
@@ -967,9 +1138,13 @@ async function runAi(action) {
   const p = currentAiProvider();
   if (!p) { showToast(_t('toast.selectProviderFirst') || '请先选择 AI 提供商'); return; }
   const keyVal = $('ai-key').value.trim();
-  const local = p.name.indexOf('Ollama') >= 0;
+  const local = isLocalAiProvider(p);
   if (!local && !keyVal && !p.has_key && !p.key_source) { showToast(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接'); return; }
-  const { text, isSelection } = getAiTargetText();
+  const target = state.ai.targetOverride;
+  const { text, isSelection } = target != null
+    ? { text: target, isSelection: true }
+    : getAiTargetText();
+  state.ai.targetOverride = null;
   if (!text || !text.trim()) { showToast(_t('toast.noDocContentNotice') || '没有可处理的文档内容'); return; }
   const prompt = $('ai-prompt').value.trim();
   const isIncognito = $('ai-incognito').checked;
@@ -977,13 +1152,17 @@ async function runAi(action) {
   const mode = $('ai-mode').value || 'auto';
   const baseUrl = $('ai-base-url').value.trim();
   const stream = $('ai-stream').checked;
-  saveAiSelection();
+  const endpointMode = $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix';
+  // Persist a newly entered credential before starting the request. This
+  // prevents the request from racing the config write and lets the server
+  // resolve the opaque credential_id instead of receiving a raw key.
+  if (!(await saveAiSelection(true))) return;
+  const activeProvider = currentAiProvider() || p;
+  let requestHeaders = {};
+  try { requestHeaders = readAiCustomHeaders(); } catch (e) { return; }
 
   const tpl = currentAiTemplate();
-  let sys = (tpl && tpl.system) || (_t('ai.system_' + action) || AI_SYSTEM[action] || '你是 ReadMD 的文档助手。');
-  if (action === 'translate' && prompt && !(tpl && tpl.system)) {
-    sys = _t('ai.system_translate_prompt', { lang: prompt }) || ('你是专业翻译。将用户给出的文档翻译成「' + prompt + '」，保留 Markdown 结构、表格与代码块，只输出译文。');
-  }
+  const skillId = (tpl && tpl.skill_id) || AI_SKILLS[action] || 'readmd-ask';
   const docs = text.length > 120000 ? text.slice(0, 120000) + '\n\n' + (_t('ai.contentTruncated') || '[内容过长已截断，请分段处理]') : text;
   const fill = s => String(s || '').replace(/\{doc\}/g, docs).replace(/\{prompt\}/g, prompt || '');
   let userMsg;
@@ -1045,9 +1224,17 @@ async function runAi(action) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        provider: p.id, model: model, api_key: keyVal || undefined,
-        base_url: baseUrl || undefined, mode: mode, stream: stream,
-        messages: [{ role: 'system', content: sys }].concat(msgs),
+        provider: activeProvider.id, model: model,
+        credential_id: activeProvider.credential_id || undefined,
+        // One-version compatibility for a newly created, not-yet-persisted
+        // connection. Once saved, subsequent calls use only credential_id.
+        api_key: activeProvider.credential_id ? undefined : (keyVal || undefined),
+        base_url: baseUrl || undefined, mode: mode, endpoint_mode: endpointMode, headers: requestHeaders, stream: stream,
+        skill_id: skillId,
+        skill_variables: { document: docs, selection: isSelection ? docs : '', request: prompt,
+          language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en',
+          context: '', output_format: 'Markdown' },
+        messages: msgs,
         temperature: 0.7,
       }),
       signal: ctrl.signal,
@@ -1072,19 +1259,21 @@ async function runAi(action) {
         if (!data) continue;
         let obj;
         try { obj = JSON.parse(data); } catch (e) { continue; }
-        if (obj.error) throw new Error(obj.error);
-        if (obj.done) break;
-        if (obj.usage) {
-          state.ai.usage = obj.usage;
+        if (obj.type === 'error' || obj.error) throw new Error(obj.error || 'AI stream error');
+        if (obj.type === 'done' || obj.done) break;
+        const usage = obj.usage || (obj.type === 'usage' ? obj.usage : null);
+        if (usage) {
+          state.ai.usage = usage;
           const s = state.ai.sessUsage;
-          s.prompt_tokens += obj.usage.prompt_tokens || 0;
-          s.completion_tokens += obj.usage.completion_tokens || 0;
-          s.total_tokens += obj.usage.total_tokens || 0;
+          s.prompt_tokens += usage.prompt_tokens || 0;
+          s.completion_tokens += usage.completion_tokens || 0;
+          s.total_tokens += usage.total_tokens || 0;
           updateAiUsage();
           continue;
         }
-        if (obj.d === undefined) continue;
-        state.ai.raw += obj.d;
+        const delta = obj.type === 'delta' ? obj.delta : obj.d;
+        if (delta === undefined) continue;
+        state.ai.raw += delta;
         if (!renderTimer) renderTimer = setTimeout(render, state.ai.raw.length > 150000 ? 500 : 120);
       }
     }
@@ -1136,8 +1325,15 @@ async function testAiConnection() {
   button.disabled = true; button.textContent = _t('toast.testingConn') || '测试中…';
   setAiConnectionState('loading', _t('toast.testingConn') || '正在测试连接…');
   try {
-    const q = new URLSearchParams({ provider: p.id || '', base_url: $('ai-base-url').value.trim(), key: $('ai-key').value.trim(), mode: $('ai-mode').value || 'auto' });
-    const r = await apiFetch('/api/ai/models?' + q.toString());
+    await saveAiSelection(true);
+    const active = currentAiProvider() || p;
+    const r = await apiFetch('/api/ai/models', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: active.id || '', credential_id: active.credential_id || undefined,
+        base_url: $('ai-base-url').value.trim(), mode: $('ai-mode').value || 'auto',
+        endpoint_mode: $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix' })
+    });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.error || 'HTTP ' + r.status);
     setAiConnectionState('ready', _t('toast.connReady', { name: p.name }) || (p.name + ' · 连接正常'));

@@ -424,7 +424,13 @@ function bindEvents() {
   $('search-prev').addEventListener('click', () => jumpToMark(-1));
   let searchDebounce = null;
   let initialSearchFocused = false;
+  let searchQueryNeedsInitialEnter = false;
   $('search-input').addEventListener('input', e => {
+    // Treat every edit as a new query even when the debounce wins the race
+    // before Enter.  The first Enter must establish the query's initial
+    // result; the following Enter advances to the next match.
+    initialSearchFocused = false;
+    searchQueryNeedsInitialEnter = true;
     clearTimeout(searchDebounce);
     searchDebounce = setTimeout(() => doSearch(e.target.value, undefined, { jump: false }), 40);
   });
@@ -433,7 +439,8 @@ function bindEvents() {
     if (e.key === 'Enter') {
       e.preventDefault();
       clearTimeout(searchDebounce);
-      if (globalSearchState.query !== e.target.value) {
+      if (searchQueryNeedsInitialEnter || globalSearchState.query !== e.target.value) {
+        searchQueryNeedsInitialEnter = false;
         initialSearchFocused = false;
         // Enter must win against the input debounce and immediately reveal the result.
         doSearch(e.target.value, undefined, { jump: true });
@@ -536,6 +543,9 @@ function bindEvents() {
   $('ai-history-export').addEventListener('click', exportCurrentConversation);
   $('ai-history-clear').addEventListener('click', clearAiSessions);
   $('ai-provider').addEventListener('change', onAiProviderChange);
+  $('ai-provider-search') && $('ai-provider-search').addEventListener('input', () => {
+    fillAiProviders(state.ai.providers || [], { provider_id: $('ai-provider').value, model: $('ai-model').value });
+  });
   $('ai-provider-new').addEventListener('click', newAiProvider);
   $('ai-provider-delete').addEventListener('click', deleteAiProvider);
   $('ai-mode').addEventListener('change', () => { /* 协议变更由保存设置时生效 */ });
@@ -556,7 +566,10 @@ function bindEvents() {
   $('ai-template').addEventListener('change', onAiTemplateChange);
   $('ai-tpl-btn').addEventListener('click', openTplModal);
   $('tpl-new').addEventListener('click', () => selectTpl(null));
+  $('tpl-copy') && $('tpl-copy').addEventListener('click', copyCurrentSkill);
   $('tpl-save').addEventListener('click', saveTplForm);
+  $('tpl-ai-generate') && $('tpl-ai-generate').addEventListener('click', generateSkillDraft);
+  $('tpl-publish') && $('tpl-publish').addEventListener('click', publishCurrentSkill);
   $('tpl-del').addEventListener('click', deleteCurrentTpl);
   $('tpl-close').addEventListener('click', () => $('tpl-modal').classList.add('hidden'));
   $('ai-session').addEventListener('change', onAiSessionChange);

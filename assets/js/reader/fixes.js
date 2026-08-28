@@ -39,30 +39,20 @@ async function handleAiDocumentFix() {
   showToast(_t('fixes.aiFixing') || '正在进行 AI 深度格式排版自愈...', 2500);
 
   try {
-    const promptText = `请对以下 Markdown 文档进行全面的格式排版与渲染自愈精修。
-精细修复要求：
-1. 表格自愈：对齐所有列数、补齐缺失表头分隔线（|---|---|）、正确转义单元格内的游离竖线；
-2. 数学公式自愈：修复未闭合的 $ 与 $$ 公式，修复 LaTeX 矩阵与对齐环境，转义金额中的美元符号；
-3. 代码块自愈：补齐未闭合的代码块围栏（\`\`\`），自动识别并标注代码语言；
-4. 标题与列表规范：统一标题层级规范（确保 # 后面有空格）、修复嵌套列表缩进断层；
-5. 纯净输出：严格保持原文所有语义和内容，禁止删减文字，禁止添加任何解释说明或前导后置客套话，全篇禁止任何 Emoji，直接输出修复后的 Markdown 源码：
-
-${rawContent}`;
-
     const resp = await apiFetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        messages: [
-          {
-            role: 'system',
-            content: '你是 ReadMD 专业 Markdown 排版自愈与格式精修引擎。严格保持原文所有内容和语义，禁止删减，禁止输出客套话，直接输出修复后的纯 Markdown 源码。'
-          },
-          {
-            role: 'user',
-            content: promptText
-          }
-        ],
+        skill_id: 'readmd-format-fix',
+        skill_variables: {
+          document: rawContent,
+          selection: rawContent,
+          request: '',
+          language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en',
+          context: '',
+          output_format: 'Markdown'
+        },
+        messages: [{ role: 'user', content: rawContent }],
         stream: false
       })
     });

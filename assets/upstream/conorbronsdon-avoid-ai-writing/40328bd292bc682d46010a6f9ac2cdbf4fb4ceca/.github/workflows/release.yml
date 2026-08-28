@@ -1,0 +1,179 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "CHANGELOG.md"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Both jobs check-then-act against shared state: the release job reads
+# `gh release view` before `gh release create`, and publish-npm reads
+# `npm view` before `npm publish`. Overlapping runs can both read "not there
+# yet" and then collide. Two runs carrying the same version turn one of them
+# red; two runs carrying different versions can finish out of order and leave
+# npm's `latest` pointing at the older one. Serializing puts the second run's
+# checks after the first run's writes, so its `exists` guards see the truth and
+# skip — the guards and this block do the job together, neither one alone.
+#
+# The group omits `github.ref` on purpose: the registry and the release list are
+# repo-global, so a workflow_dispatch has to queue behind a main push too.
+# Never cancel — a cancelled run can die between its check and its publish, or
+# leave a GitHub release standing with nothing published against it.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Parse latest version from CHANGELOG.md
+        id: changelog
+        run: |
+          HEADING_LINE="$(grep -m1 -E '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md || true)"
+          if [ -z "$HEADING_LINE" ]; then
+            echo "::error::Could not find a '## [X.Y.Z]' heading in CHANGELOG.md"
+            exit 1
+          fi
+          VERSION="$(echo "$HEADING_LINE" | sed -E 's/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/')"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Latest CHANGELOG.md version: $VERSION"
+
+          PKG_VERSION="$(node -p "require('./package.json').version" 2>/dev/null || echo unknown)"
+          if [ "$PKG_VERSION" != "$VERSION" ]; then
+            echo "::warning::package.json version ($PKG_VERSION) does not match the top CHANGELOG.md entry ($VERSION). This is pre-existing drift, not something this workflow fixes."
+          fi
+
+      - name: Check if the release tag already exists
+        id: tagcheck
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${{ steps.changelog.outputs.version }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release $TAG already exists — nothing to do."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Extract this version's changelog section
+        if: steps.tagcheck.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.changelog.outputs.version }}"
+          awk -v heading="## [$VERSION]" '
+            $0 ~ /^## \[/ {
+              if (found) exit
+              if (index($0, heading) == 1) { found = 1; next }
+            }
+            found { print }
+          ' CHANGELOG.md > /tmp/release-notes.md
+          # Drop the "---" section separators and any leading blank lines.
+          sed -i '/^---$/d' /tmp/release-notes.md
+          sed -i '/./,$!d' /tmp/release-notes.md
+          echo "--- release notes ---"
+          cat /tmp/release-notes.md
+
+      - name: Create GitHub release
+        if: steps.tagcheck.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.changelog.outputs.version }}"
+          gh release create "v$VERSION" \
+            --target "$GITHUB_SHA" \
+            --title "v$VERSION" \
+            --notes-file /tmp/release-notes.md
+
+  # npm stayed frozen at 3.22.1 while the repo walked to 3.23.0 because this
+  # workflow only ever created GitHub releases — there was no publish step at
+  # all. This job closes that gap. It is independently idempotent (skips when
+  # the version is already on npm), so re-runs and already-tagged pushes are
+  # safe, and it publishes package.json's version only after proving it matches
+  # the CHANGELOG heading the release job used — the drift this workflow
+  # already warns about must block a publish, not ride into the registry.
+  publish-npm:
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm Trusted Publishing (OIDC) + --provenance
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Refuse to publish a version that disagrees with CHANGELOG.md
+        run: |
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          HEADING_LINE="$(grep -m1 -E '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md || true)"
+          if [ -z "$HEADING_LINE" ]; then
+            echo "::error::Could not find a '## [X.Y.Z]' heading in CHANGELOG.md"
+            exit 1
+          fi
+          CHANGELOG_VERSION="$(echo "$HEADING_LINE" | sed -E 's/^## \[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/')"
+          if [ "$PKG_VERSION" != "$CHANGELOG_VERSION" ]; then
+            echo "::error::package.json ($PKG_VERSION) != CHANGELOG.md ($CHANGELOG_VERSION) — fix the drift, then re-run. Publishing a mismatched version bakes the drift into the registry."
+            exit 1
+          fi
+
+      - name: Skip if this version is already on npm
+        id: npmcheck
+        run: |
+          PKG="$(node -p "require('./package.json').name")"
+          VERSION="$(node -p "require('./package.json').version")"
+          PUBLISHED="$(npm view "$PKG@$VERSION" version 2>/dev/null || true)"
+          if [ "$PUBLISHED" = "$VERSION" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "$PKG@$VERSION already on npm — nothing to publish."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The version guard above proves package.json and CHANGELOG.md agree on
+      # which *version* this is. It says nothing about which *commit*, and the
+      # two come apart on exactly the recovery this job exists for: npm sat at
+      # 3.22.1 while main walked eight commits past the v3.23.0 tag, so a
+      # dispatch from main would ship post-tag work to npm as 3.23.0 while the
+      # GitHub release for 3.23.0 names an older commit. Checking out the tag
+      # here would fix the tarball and leave the attestation lying — npm builds
+      # provenance from the run's github.sha, not from the worktree — and a
+      # published version is immutable, so this fails closed instead. Only
+      # runs when something is actually about to be published: a CHANGELOG.md
+      # edit that does not bump the version is a normal reason to be off the
+      # tag, and it must not turn the workflow red.
+      - name: Refuse to publish a commit that is not the release tag
+        if: steps.npmcheck.outputs.exists == 'false'
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v$VERSION"
+          # The default checkout is depth-1 with no tags, so fetch the one tag
+          # this resolves. A missing tag is a different failure from a moved one.
+          if ! git fetch --no-tags --depth=1 origin "+refs/tags/$TAG:refs/tags/$TAG"; then
+            echo "::error::Tag $TAG does not exist — check the release job's log, and that the release is not still a draft (a draft creates no tag). The release job creates $TAG before this job runs, so publishing without it would put $VERSION on npm with no GitHub release behind it."
+            exit 1
+          fi
+          TAG_SHA="$(git rev-parse --verify "refs/tags/$TAG^{commit}")"
+          HEAD_SHA="$(git rev-parse HEAD)"
+          if [ "$TAG_SHA" != "$HEAD_SHA" ]; then
+            echo "::error::HEAD ($HEAD_SHA) is not the commit tagged $TAG ($TAG_SHA) — bump to a new version and let the push to main tag and publish that. Publishing here would ship this commit to npm as $VERSION while the GitHub release for $VERSION names a different commit, and --provenance would sign the mismatch in."
+            exit 1
+          fi
+          echo "HEAD is the commit tagged $TAG ($TAG_SHA) — safe to publish."
+
+      - name: Test before publish
+        if: steps.npmcheck.outputs.exists == 'false'
+        run: npm test
+
+      - name: Publish with provenance
+        if: steps.npmcheck.outputs.exists == 'false'
+        run: npm publish --provenance --access public

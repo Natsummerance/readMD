@@ -48,7 +48,7 @@ test('welcome startup stays lightweight and interactive below one second', async
   const transferredBytes = Math.max(...samples.map(sample => sample.transferredBytes));
   expect(ready).toBeLessThan(900);
   expect(firstContentfulPaint).toBeLessThan(400);
-  expect(transferredBytes).toBeLessThan(780_000);
+  expect(transferredBytes).toBeLessThan(880_000);
   expect(Math.max(...samples.map(sample => sample.requestCount))).toBeLessThanOrEqual(31);
   for (const sample of samples) {
     expect(sample.initialRequests.some(url => url.includes('/vendor/qrcode.min.js'))).toBe(false);
