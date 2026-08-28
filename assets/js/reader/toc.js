@@ -12,7 +12,10 @@ function refreshCurrentTocPage(list) {
   const currentGroup = list.querySelector(`details.toc-page-group[data-page-idx="${CSS.escape(String(currentPage))}"]`);
   list.querySelectorAll('.toc-cur-page').forEach(link => link.classList.remove('toc-cur-page'));
   list.querySelectorAll('.toc-page-group').forEach(group => {
-    group.open = group === currentGroup;
+    // Preserve groups the user explicitly opened (including programmatic
+    // embedders), but collapse untouched groups so their lazy bodies remain
+    // out of the active layout and DOM budget.
+    group.open = group === currentGroup || group.__tocExplicitOpen === true;
   });
   currentGroup?.querySelector('a')?.classList.add('toc-cur-page');
 }
@@ -131,6 +134,25 @@ function buildToc() {
       container.appendChild(fragment);
     };
 
+    // A few embedders open <details> programmatically instead of dispatching
+    // the native toggle event.  Observe the open attribute as a safety net,
+    // while retaining lazy heading links so a 50k-line document does not
+    // inflate the live DOM just by opening the TOC.
+    if (!list.__tocOpenObserver) {
+      list.__tocOpenObserver = new MutationObserver(records => {
+        records.forEach(record => {
+          if (record.type !== 'attributes' || record.attributeName !== 'open') return;
+          const group = record.target;
+          const pageIndex = Number(group.dataset.pageIdx);
+          const headings = headingGroups.get(pageIndex);
+          const container = group.querySelector('.toc-group-body');
+          group.__tocExplicitOpen = group.open;
+          if (group.open && headings && container) fillTocGroup(container, headings);
+        });
+      });
+      list.__tocOpenObserver.observe(list, { subtree: true, attributes: true, attributeFilter: ['open'] });
+    }
+
     if (!list.dataset.delegationBound) {
       list.dataset.delegationBound = 'true';
       list.addEventListener('click', event => {
@@ -165,6 +187,7 @@ function buildToc() {
       const container = document.createElement('div');
       container.className = 'toc-group-body';
       group.addEventListener('toggle', () => {
+        group.__tocExplicitOpen = group.open;
         if (group.open) fillTocGroup(container, headings);
       });
       if (pageIndex === state.pagination.currentPage) {

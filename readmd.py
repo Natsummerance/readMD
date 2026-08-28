@@ -57,6 +57,9 @@ from src.readmd_core.versioning import compare_versions as _version_compare
 from src.readmd_core.versioning import parse_version as _version_parse
 import src.readmd_modules as RM
 from src.readmd_modules.validators import validate_file_path, validate_command, paths_within
+from src.readmd_modules.skills import SkillError, SkillRegistry, default_skill_roots
+from src.readmd_core.service import ReadMDCoreService
+from src.readmd_core import upstream as _upstream_sources
 
 APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
 
@@ -418,48 +421,59 @@ def _same_file_target(left, right):
 
 # ---------------------------------------------------------------- AI 模板 / 历史会话
 
-# 内置 Prompt 模板（只读；可覆盖为自定义版本，或另存为自定义模板）
-BUILTIN_PROMPTS = [
-    {"id": "quick_read", "name": "快速阅读", "action": "quick_read",
-     "system": "你是 ReadMD 的资深文档领读助手。对用户给出的 Markdown 文档进行结构化深度提炼，输出：1) 核心主旨（1~2 句话提纲挈领）；2) 核心要点清单（按重要度排序）；3) 结构逻辑脉络；4) 关键结论、行动项或待澄清疑问。排版清晰美观，使用规范 Markdown 格式。",
-     "user": "请按以下结构领读并提炼该文档：\n1. 核心主旨（1~2 句话）\n2. 核心要点清单（按重要度排序）\n3. 结构逻辑脉络\n4. 关键结论与待办\n\n文档内容：\n{doc}\n\n{prompt}"},
-    {"id": "polish", "name": "润色文稿", "action": "polish",
-     "system": "你是专业级中文特约编辑。深度润色用户给出的 Markdown 文档：纠正错别字、语病及生硬翻译腔，去除啰嗦冗余表达，增强行文流畅度与文采。严格保留原文所有标题层级、列表、代码块、LaTeX 公式、表格及 Markdown 标记。只输出润色后的完整正文，不要输出任何开场白或解释性文字。",
-     "user": "请深度润色以下 Markdown 文档（直接输出完整正文）：\n\n{doc}\n\n{prompt}"},
-    {"id": "proofread", "name": "语法纠错", "action": "proofread",
-     "system": "你是严格的出版级文字校对专家。对用户给出的 Markdown 文档进行全方位勘误：1) 错别字与错用词；2) 标点符号规范（中英文标点混用、全半角引号等）；3) 语病与语序混乱；4) Markdown 排版规范。先列出【修改对照清单】，再输出【修正后的完整 Markdown 文档】。",
-     "user": "请对以下 Markdown 文档进行全方位语法与排版纠错（先列出修改对照清单，再输出修正后的完整文档）：\n\n{doc}\n\n{prompt}"},
-    {"id": "to_english", "name": "翻译为英文", "action": "translate_en",
-     "system": "You are a professional academic and technical translator. Translate the provided document into clear, natural, and idiomatic English. Preserve all Markdown structure, headings, lists, tables, code blocks, and LaTeX math formulas intact. Output ONLY the translated content without conversational filler or extra explanations.",
-     "user": "Please translate the following document into natural and accurate English:\n\n{doc}\n\n{prompt}"},
-    {"id": "to_chinese", "name": "翻译为中文", "action": "translate_zh",
-     "system": "你是资深专业翻译。将用户给出的文档精确翻译为地道、严谨、流畅的简体中文（遵循信达雅原则）。严格保留全部 Markdown 格式、表格、代码块及 LaTeX 公式。只输出译文正文，不要添加任何寒暄或附注说明。",
-     "user": "请将以下文档精确翻译为严谨流畅的简体中文：\n\n{doc}\n\n{prompt}"},
-    {"id": "action_items", "name": "提取待办", "action": "todo",
-     "system": "你是高效任务与项目管理助手。深入分析用户文档，精准提取所有待办事项、决策行动项与跟进任务。用 Markdown 任务清单（- [ ]）与表格（事项 / 责任人 / 预期成果 / 优先级）结构化输出。",
-     "user": "请分析以下文档，提取所有明确与潜在的行动项与待办清单（使用 Markdown 任务列表与表格）：\n\n{doc}\n\n{prompt}"},
-    {"id": "continue", "name": "续写内容", "action": "continue",
-     "system": "你是优秀的同构写作与思维延伸助手。深度承接用户文档末尾的思想逻辑与文风语调，自然展开后续段落或章节写作，提供有深度、有逻辑的实质性内容扩展。只输出续写新增内容，不要重复原文。",
-     "user": "请承接以下文档的思路与语调，继续自然续写后续段落（只输出续写的新增内容）：\n\n{doc}\n\n{prompt}"},
-    {"id": "ask", "name": "自由提问", "action": "ask",
-     "system": "你是 ReadMD 文档问答助手。基于用户给出的文档内容，条理清晰地回答用户的问题；如果文档中未提及相关信息，请诚实明确指出。",
-     "user": "请基于以下文档内容回答问题：\n\n{doc}\n\n问题：{prompt}"},
-    {"id": "summary", "name": "总结要点", "action": "summary",
-     "system": "你是文档总结助手。用 5 条以内高价值要点概括用户文档的核心内容，输出为 Markdown 列表；最后用一句话升华总结全文。",
-     "user": "请为以下文档总结核心要点（输出 5 条以内高价值要点清单，末尾附带一句话主旨概括）：\n\n{doc}\n\n{prompt}"},
-    {"id": "outline", "name": "生成大纲", "action": "outline",
-     "system": "你是文档策划。为用户文档梳理出层次清晰的 Markdown 结构大纲（# / ## / ###），提炼各部分要旨。",
-     "user": "请为以下文档生成结构分明的 Markdown 层级大纲（# / ## / ###）：\n\n{doc}\n\n{prompt}"},
-    {"id": "weekly", "name": "生成周报", "action": "weekly",
-     "system": "你是周报助手。根据用户给出的工作内容或笔记，整理成结构化职场周报：1) 本周核心成果；2) 关键进展与产出；3) 下周重点计划；4) 潜在风险与需协调事项。只输出周报正文。",
-     "user": "请根据以下工作内容与笔记，整理为规范的职场周报（本周成果/关键进展/下周计划/风险协调）：\n\n{doc}\n\n{prompt}"},
-    {"id": "code_review", "name": "代码审查", "action": "code_review",
-     "system": "你是资深软件架构师与代码审查员。审查用户文档中的代码：排查 bug、安全隐患、性能瓶颈及代码风格问题，并给出规范的优化建议与示例代码。",
-     "user": "请对以下文档中的代码进行专业审查与优化建议（排查 bug、隐患与性能瓶颈并给出重构示例）：\n\n{doc}\n\n{prompt}"},
-    {"id": "fix_format", "name": "修正格式", "action": "modify",
-     "system": "你是 Markdown 格式专家。修正文档中的格式问题：表格对齐补全、加粗未闭合、公式排版、标题层级。只输出修正后的完整文档，不要解释。",
-     "user": "请修正以下文档中的所有 Markdown 格式与排版问题（直接输出修正后的完整文档）：\n\n{doc}\n\n{prompt}"},
-]
+# Built-in actions are metadata only; instruction text lives in assets/skills.
+_BUILTIN_ACTIONS = (
+    ("quick_read", "快速阅读", "quick_read", "readmd-quick-read"),
+    ("polish", "润色文稿", "polish", "readmd-polish"),
+    ("proofread", "语法纠错", "proofread", "readmd-proofread"),
+    ("to_english", "翻译为英文", "translate_en", "readmd-translate"),
+    ("to_chinese", "翻译为中文", "translate_zh", "readmd-translate"),
+    ("action_items", "提取待办", "todo", "readmd-todo"),
+    ("continue", "续写内容", "continue", "readmd-continue"),
+    ("ask", "自由提问", "ask", "readmd-ask"),
+    ("summary", "总结要点", "summary", "readmd-summary"),
+    ("outline", "生成大纲", "outline", "readmd-outline"),
+    ("weekly", "生成周报", "weekly", "readmd-weekly"),
+    ("code_review", "代码审查", "code_review", "readmd-code-review"),
+    ("fix_format", "修正格式", "modify", "readmd-format-fix"),
+)
+
+
+def _skill_registry(project_dir=None):
+    """Return the canonical shared Skill registry used by every client."""
+    if project_dir:
+        return ReadMDCoreService(project_dir).skills
+    global _DESKTOP_CORE_SERVICE
+    if _DESKTOP_CORE_SERVICE is None:
+        _DESKTOP_CORE_SERVICE = ReadMDCoreService()
+    else:
+        _DESKTOP_CORE_SERVICE.reload()
+    return _DESKTOP_CORE_SERVICE.skills
+
+
+_DESKTOP_CORE_SERVICE = None
+
+
+def _builtin_prompts():
+    registry = _skill_registry()
+    result = []
+    for template_id, name, action, skill_id in _BUILTIN_ACTIONS:
+        skill = registry.get(skill_id)
+        if not skill:
+            continue
+        result.append({
+            "id": template_id,
+            "skill_id": skill_id,
+            "name": name,
+            "action": action,
+            "system": skill.instructions,
+            "user": "{doc}\n\n{prompt}",
+            "builtin": True,
+        })
+    return result
+
+
+BUILTIN_PROMPTS = _builtin_prompts()
 
 
 def load_prompts():
@@ -481,6 +495,107 @@ def load_prompts():
     return {'templates': merged}
 
 
+def _public_skill(skill, include_instructions=False):
+    # Never return an absolute user path to a renderer, extension or MCP
+    # client.  It is both unnecessary for the workbench and a local privacy
+    # leak in exported history/screenshots.
+    try:
+        safe_path = os.path.relpath(skill.path, skill.root).replace('\\', '/')
+    except (TypeError, ValueError):
+        safe_path = skill.id
+    data = {
+        'id': skill.id,
+        'name': skill.name,
+        'description': skill.description,
+        'scope': skill.scope,
+        'variables': skill.variables,
+        'path': safe_path,
+        'metadata': dict(skill.metadata),
+    }
+    provenance = data['metadata'].get('provenance')
+    if isinstance(provenance, dict):
+        data['provenance'] = dict(provenance)
+    data.setdefault('source_files', data['metadata'].get('source_files', []))
+    data.setdefault('license', data['metadata'].get('license', ''))
+    data.setdefault('adaptation_notes', data['metadata'].get('adaptation_notes', []))
+    if include_instructions:
+        data['instructions'] = skill.instructions
+    return data
+
+
+def load_skills(project_dir=None):
+    """List Skills from builtin, user and optional project roots."""
+    # The workbench needs a local preview without another round trip.  This is
+    # still instruction text (never credentials) and follows the same registry
+    # precedence and path checks as the read endpoint.
+    return [_public_skill(skill, include_instructions=True) for skill in _skill_registry(project_dir).list()]
+
+
+def _user_skill_folder(skill_id):
+    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,63}', str(skill_id or '')):
+        raise SkillError('Skill id must be lowercase kebab-case')
+    folder = os.path.realpath(os.path.join(DATA_DIR, 'skills', str(skill_id)))
+    root = os.path.realpath(os.path.join(DATA_DIR, 'skills'))
+    if not paths_within(folder, root) or folder == root:
+        raise SkillError('Skill path is outside the user Skill directory')
+    return folder
+
+
+def validate_skill_document(skill_id, content, metadata=None):
+    """Validate a Skill document in memory before it is persisted."""
+    if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,63}', str(skill_id or '')):
+        raise SkillError('Skill id must be lowercase kebab-case')
+    if not isinstance(content, str) or not content.strip() or len(content.encode('utf-8')) > 512 * 1024:
+        raise SkillError('Skill content is empty or too large')
+    import tempfile
+    with tempfile.TemporaryDirectory(prefix='readmd-skill-') as tmp:
+        folder = os.path.join(tmp, str(skill_id))
+        os.makedirs(folder, exist_ok=True)
+        with open(os.path.join(folder, 'SKILL.md'), 'w', encoding='utf-8', newline='\n') as handle:
+            handle.write(content)
+        if metadata is not None:
+            with open(os.path.join(folder, 'readmd.skill.json'), 'w', encoding='utf-8', newline='\n') as handle:
+                json.dump(metadata, handle, ensure_ascii=False, indent=2)
+        skill = SkillRegistry([tmp]).get(str(skill_id))
+        if skill is None:
+            raise SkillError('Skill was not discovered after validation')
+        return _public_skill(skill, include_instructions=True)
+
+
+def save_user_skill(skill_id, content, metadata=None):
+    """Atomically publish a validated user Skill; scripts are never enabled."""
+    validated = validate_skill_document(skill_id, content, metadata)
+    folder = _user_skill_folder(skill_id)
+    # Keep a local rollback snapshot before replacing an existing user Skill.
+    if os.path.isfile(os.path.join(folder, 'SKILL.md')):
+        import shutil
+        stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+        version_dir = os.path.join(os.path.dirname(folder), '.versions', str(skill_id), stamp)
+        os.makedirs(version_dir, exist_ok=True)
+        shutil.copy2(os.path.join(folder, 'SKILL.md'), os.path.join(version_dir, 'SKILL.md'))
+        old_meta = os.path.join(folder, 'readmd.skill.json')
+        if os.path.isfile(old_meta):
+            shutil.copy2(old_meta, os.path.join(version_dir, 'readmd.skill.json'))
+    os.makedirs(folder, exist_ok=True)
+    save_text_atomic(os.path.join(folder, 'SKILL.md'), content.strip() + '\n')
+    if metadata is not None:
+        safe_meta = dict(metadata)
+        safe_meta['scripts_allowed'] = False
+        save_text_atomic(os.path.join(folder, 'readmd.skill.json'), json.dumps(safe_meta, ensure_ascii=False, indent=2) + '\n')
+    return validated
+
+
+def _skill_versions(skill_id):
+    """Return rollback snapshots for one user Skill, newest first."""
+    _user_skill_folder(skill_id)
+    root = os.path.join(DATA_DIR, 'skills', '.versions', str(skill_id))
+    if not os.path.isdir(root):
+        return []
+    return [name for name in sorted(os.listdir(root), reverse=True)
+            if re.fullmatch(r'\d{8}T\d{6}Z', name)
+            and os.path.isfile(os.path.join(root, name, 'SKILL.md'))]
+
+
 def save_prompt(template):
     """新增 / 更新模板。id 为空时自动生成；内置 id 表示覆盖内置模板。"""
     t = dict(template or {})
@@ -489,6 +604,36 @@ def save_prompt(template):
     if not t.get('name'):
         t['name'] = '未命名模板'
     t.pop('builtin', None)
+
+    # 兼容旧版自定义模板：第一次保存时将 system 指令迁移为用户 Skill。
+    # 迁移只写入 DATA_DIR/skills，且由同一套 Skill 校验器检查，避免继续
+    # 在 prompts.json 中维护第二份可执行 Prompt 实现。
+    if not t.get('skill_id') and str(t.get('system') or '').strip():
+        raw_id = re.sub(r'[^a-z0-9-]+', '-', str(t.get('id') or '').lower()).strip('-')
+        skill_id = ('prompt-' + raw_id)[:64].rstrip('-') or ('prompt-%d' % int(time.time() * 1000))
+        system = str(t.get('system') or '').strip()
+        skill_doc = (
+            '---\n'
+            'name: %s\n'
+            'description: Use when running the custom ReadMD prompt %s.\n'
+            '---\n\n%s\n' % (skill_id, str(t.get('name') or skill_id), system)
+        )
+        try:
+            save_user_skill(skill_id, skill_doc, {
+                'id': skill_id,
+                'source': 'legacy-prompt-migration',
+                'version': 1,
+                'scripts_allowed': False,
+                'legacy_template_id': t.get('id'),
+            })
+            t['skill_id'] = skill_id
+            # Keep user text template only as a presentation/compatibility field;
+            # the system instruction is now owned by SKILL.md.
+            t.pop('system', None)
+        except SkillError:
+            # Do not persist an unvalidated legacy Prompt. The caller receives a
+            # normal validation error instead of silently retaining raw Prompt code.
+            raise
     d = load_json(PROMPTS_FILE, {})
     customs = [c for c in d.get('templates', []) if c.get('id') != t.get('id')]
     customs.append(t)
@@ -498,8 +643,20 @@ def save_prompt(template):
 
 def delete_prompt(prompt_id):
     d = load_json(PROMPTS_FILE, {})
+    removed = [t for t in d.get('templates', []) if t.get('id') == prompt_id]
     d['templates'] = [t for t in d.get('templates', []) if t.get('id') != prompt_id]
     save_json(PROMPTS_FILE, d)
+    # Remove only the exact migrated user Skill, never a builtin/project Skill.
+    for template in removed:
+        skill_id = str(template.get('skill_id') or '')
+        if skill_id.startswith('prompt-'):
+            try:
+                folder = _user_skill_folder(skill_id)
+                if os.path.isdir(folder):
+                    import shutil
+                    shutil.rmtree(folder)
+            except (OSError, SkillError):
+                logging.debug('legacy prompt skill cleanup failed', exc_info=True)
     return True
 
 
@@ -804,6 +961,12 @@ class Handler(BaseHTTPRequestHandler):
             self._api_ai_prompts()
         elif path == '/api/ai/history':
             self._api_ai_history()
+        elif path == '/api/skills':
+            self._api_skills()
+        elif path == '/api/upstream-sources':
+            self._api_upstream_sources()
+        elif path.startswith('/api/upstream-sources/'):
+            self._api_upstream_source_detail(path)
         elif path == '/api/share/start':
             try:
                 length = int(self.headers.get('Content-Length', 0) or 0)
@@ -1142,7 +1305,12 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(500, {'error': 'AI 配置失败：%s' % e})
 
     def _api_ai_models(self):
-        """拉取模型列表；保存过的 Key 只在服务端解析，不回传给浏览器。"""
+        """拉取模型列表。
+
+        Credentials are accepted only in a POST body (or resolved server-side
+        from a configured provider).  The legacy query-string form is rejected
+        so a reverse proxy, browser history, or access log cannot capture a key.
+        """
         if not self._module_ready('ai', 'AI 模块加载中，请稍候再试'):
             return
         try:
@@ -1150,11 +1318,35 @@ class Handler(BaseHTTPRequestHandler):
             q = parse_qs(u.query)
             mod = RM.get('ai')
             provider = mod.find_provider(q.get('provider', [''])[0]) or {}
-            key = q.get('key', [''])[0] or mod.resolve_key(provider)
-            base_url = q.get('base_url', [''])[0] or provider.get('base_url') or ''
+            if q.get('key'):
+                self._send_json(400, {'error': 'API Key 不得出现在 URL，请使用 POST 请求体'})
+                return
+            body = {}
+            if self.command == 'POST':
+                n = int(self.headers.get('Content-Length', 0) or 0)
+                body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+                if not isinstance(body, dict):
+                    raise ValueError('请求体必须是 JSON 对象')
+                provider = mod.find_provider(body.get('provider') or body.get('provider_id') or '') or provider
+            credential_id = str(body.get('credential_id') or '').strip()
+            if credential_id:
+                if provider.get('credential_id') and provider.get('credential_id') != credential_id:
+                    self._send_json(403, {'error': '凭据与提供商不匹配'})
+                    return
+                if not provider.get('credential_id'):
+                    provider = mod.find_provider_by_credential(credential_id) or provider
+            # api_key is retained only for one-version local compatibility and
+            # is accepted in a POST body, never in a query string or response.
+            key = str(body.get('api_key') or body.get('key') or '').strip() or mod.resolve_key(provider)
+            base_url = str(body.get('base_url') or provider.get('base_url') or '').strip()
+            mode = str(body.get('mode') or provider.get('mode') or q.get('mode', ['auto'])[0])
+            endpoint_mode = str(body.get('endpoint_mode') or provider.get('endpoint_mode', 'prefix'))
+            headers = body.get('headers') if isinstance(body.get('headers'), dict) else provider.get('headers')
             ids = mod.list_models(base_url,
                                   key,
-                                  q.get('mode', ['auto'])[0])
+                                  mode,
+                                  endpoint_mode,
+                                  headers)
             self._send_json(200, {'models': ids})
         except Exception as e:
             logging.exception('ai models failed')
@@ -1171,6 +1363,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(400, {'error': '请求格式错误'})
             return
 
+        if not isinstance(payload, dict):
+            self._send_json(400, {'error': '请求体必须是 JSON 对象'})
+            return
         is_stream = payload.get('stream', True)
         try:
             mod = RM.get('ai')
@@ -1202,24 +1397,31 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Cache-Control', 'no-cache')
             self.send_header('Connection', 'close')
             self.end_headers()
+            self._sse({'type': 'meta', 'provider': payload.get('provider') or '',
+                       'model': payload.get('model') or '', 'skill_id': payload.get('skill_id') or ''})
             if isinstance(gen, str):
-                self._sse({'d': gen})
-                self._sse({'done': True})
+                self._sse({'type': 'delta', 'delta': gen})
+                self._sse({'type': 'done'})
                 return
             for item in gen:
                 if isinstance(item, dict):
-                    self._sse(item)
+                    if 'usage' in item:
+                        self._sse({'type': 'usage', 'usage': item.get('usage') or {}})
+                    elif 'error' in item:
+                        self._sse({'type': 'error', 'error': item.get('error')})
+                    else:
+                        self._sse(item)
                 else:
-                    self._sse({'d': item})
-            self._sse({'done': True})
+                    self._sse({'type': 'delta', 'delta': item})
+            self._sse({'type': 'done'})
         except Exception as e:
             logging.exception('ai chat failed')
             if not is_stream:
                 self._send_json(500, {'error': str(e)})
                 return
             try:
-                self._sse({'error': str(e)})
-                self._sse({'done': True})
+                self._sse({'type': 'error', 'error': str(e)})
+                self._sse({'type': 'done'})
             except Exception:
                 pass
 
@@ -1315,6 +1517,212 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             logging.exception('ai prompts failed')
             self._send_json(500, {'error': '模板操作失败：%s' % e})
+
+    def _api_skills(self):
+        """Skills registry API; user writes are explicit and validated first."""
+        try:
+            if self.command == 'GET':
+                q = parse_qs(urlparse(self.path).query)
+                project_dir = q.get('project_dir', [''])[0] or None
+                skill_id = q.get('id', [''])[0]
+                registry = _skill_registry(project_dir)
+                if skill_id:
+                    skill = registry.get(skill_id)
+                    if not skill:
+                        self._send_json(404, {'error': 'Skill 不存在'})
+                        return
+                    self._send_json(200, {'skill': _public_skill(skill, include_instructions=True)})
+                else:
+                    payload = {'skills': load_skills(project_dir)}
+                    if q.get('versions', [''])[0] == '1' and q.get('id', [''])[0]:
+                        payload['versions'] = _skill_versions(q['id'][0])
+                    self._send_json(200, payload)
+                return
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            if not isinstance(body, dict):
+                self._send_json(400, {'error': '请求体必须是 JSON 对象'})
+                return
+            action = str(body.get('action') or 'validate').lower()
+            if action == 'generate':
+                # AI generation is intentionally draft-only.  The generated
+                # document is validated in memory and never published until
+                # the caller explicitly submits a separate publish request.
+                provider = str(body.get('provider') or '').strip()
+                credential_id = str(body.get('credential_id') or '').strip()
+                request = str(body.get('request') or '').strip()
+                if not provider or not request:
+                    self._send_json(400, {'error': '生成 Skill 需要 provider 和 request'})
+                    return
+                if not self._module_ready('ai', 'AI 模块加载中，请稍候再试'):
+                    return
+                ai_mod = RM.get('ai')
+                selected_provider = ai_mod.find_provider(provider) or {}
+                if not credential_id and not ai_mod._is_local_provider(selected_provider):
+                    self._send_json(400, {'error': '云端提供商必须使用 credential_id；本地服务可省略'})
+                    return
+                document = str(body.get('document') or '')[:120000]
+                gen = ai_mod.chat({
+                    'provider': provider,
+                    'credential_id': credential_id,
+                    'model': str(body.get('model') or ''),
+                    'skill_id': 'readmd-skill-creator',
+                    'skill_variables': {
+                        'document': document,
+                        'selection': '',
+                        'request': request,
+                        'language': str(body.get('language') or 'en'),
+                        'context': 'ReadMD Skill workbench; return a disabled draft only.',
+                        'output_format': 'SKILL.md plus readmd.skill.json',
+                    },
+                    'messages': [{'role': 'user', 'content': request}],
+                    'stream': False,
+                })
+                chunks, usage = [], None
+                for item in gen:
+                    if isinstance(item, dict):
+                        if item.get('error'):
+                            raise ValueError(str(item['error']))
+                        usage = item.get('usage') or usage
+                    elif item:
+                        chunks.append(str(item))
+                generated = ''.join(chunks).strip()
+                if not generated:
+                    raise SkillError('AI 未生成可用 Skill 草稿')
+                # The creator Skill is asked to return a portable SKILL.md;
+                # accept fenced markdown but do not try to execute or persist
+                # arbitrary response text.
+                fenced = re.search(r'```(?:markdown|md)?\s*\n(.*?)```', generated, re.S | re.I)
+                candidate = fenced.group(1).strip() if fenced else generated
+                skill_id = str(body.get('id') or '').strip()
+                if not skill_id:
+                    name_match = re.search(r'^name:\s*([a-z0-9][a-z0-9-]{0,63})\s*$', candidate, re.M)
+                    skill_id = name_match.group(1) if name_match else 'draft-skill'
+                validated = validate_skill_document(skill_id, candidate, {
+                    'id': skill_id, 'source': 'ai-generated-draft', 'version': 1,
+                    'enabled': False, 'scripts_allowed': False,
+                })
+                self._send_json(200, {'ok': True, 'draft': validated, 'usage': usage, 'published': False})
+                return
+            if action in ('validate', 'draft'):
+                result = validate_skill_document(body.get('id') or '', body.get('content') or '', body.get('metadata'))
+                self._send_json(200, {'ok': True, 'skill': result, 'published': False})
+                return
+            if action == 'evaluate':
+                result = validate_skill_document(body.get('id') or '', body.get('content') or '', body.get('metadata'))
+                variables = body.get('variables') or {}
+                rendered = result.get('instructions', '')
+                for name, value in variables.items():
+                    if re.fullmatch(r'(document|selection|request|language|context|output_format)', str(name)):
+                        rendered = re.sub(r'\{\{\s*' + re.escape(str(name)) + r'\s*\}\}', str(value or ''), rendered)
+                self._send_json(200, {'ok': True, 'skill': result, 'rendered': rendered,
+                                      'published': False, 'baseline': 'no-skill baseline required'})
+                return
+            if action in ('save', 'publish'):
+                if action == 'publish' and body.get('confirm') is not True:
+                    self._send_json(400, {'error': '发布 Skill 需要 confirm=true'})
+                    return
+                result = save_user_skill(body.get('id') or '', body.get('content') or '', body.get('metadata'))
+                self._send_json(200, {'ok': True, 'skill': result, 'published': True})
+                return
+            if action in ('disable', 'enable'):
+                skill_id = body.get('id') or ''
+                folder = _user_skill_folder(skill_id)
+                skill_file = os.path.join(folder, 'SKILL.md')
+                if not os.path.isfile(skill_file):
+                    self._send_json(404, {'error': '仅可管理已发布的用户 Skill'})
+                    return
+                meta_file = os.path.join(folder, 'readmd.skill.json')
+                meta = load_json(meta_file, {}) if os.path.isfile(meta_file) else {}
+                meta['id'] = skill_id
+                meta['enabled'] = action == 'enable'
+                meta['scripts_allowed'] = False
+                save_text_atomic(meta_file, json.dumps(meta, ensure_ascii=False, indent=2) + '\n')
+                self._send_json(200, {'ok': True, 'enabled': meta['enabled']})
+                return
+            if action == 'export':
+                skill_id = body.get('id') or ''
+                folder = _user_skill_folder(skill_id)
+                skill_file = os.path.join(folder, 'SKILL.md')
+                if not os.path.isfile(skill_file):
+                    self._send_json(404, {'error': '用户 Skill 不存在'})
+                    return
+                meta_file = os.path.join(folder, 'readmd.skill.json')
+                self._send_json(200, {'ok': True, 'id': skill_id,
+                                      'content': read_text(skill_file),
+                                      'metadata': load_json(meta_file, {}) if os.path.isfile(meta_file) else {}})
+                return
+            if action == 'rollback':
+                skill_id = body.get('id') or ''
+                versions = _skill_versions(skill_id)
+                version = str(body.get('version') or (versions[0] if versions else ''))
+                if version not in versions:
+                    self._send_json(404, {'error': '没有可回退的 Skill 版本'})
+                    return
+                if body.get('confirm') is not True:
+                    self._send_json(400, {'error': '回退 Skill 需要 confirm=true'})
+                    return
+                root = os.path.join(DATA_DIR, 'skills', '.versions', skill_id, version)
+                content = read_text(os.path.join(root, 'SKILL.md'))
+                metadata = load_json(os.path.join(root, 'readmd.skill.json'), {})
+                result = save_user_skill(skill_id, content, metadata)
+                self._send_json(200, {'ok': True, 'skill': result, 'version': version})
+                return
+            if action == 'delete':
+                folder = _user_skill_folder(body.get('id') or '')
+                if os.path.isdir(folder):
+                    import shutil
+                    shutil.rmtree(folder)
+                self._send_json(200, {'ok': True})
+                return
+            self._send_json(400, {'error': '不支持的 Skill 操作'})
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            # A browser may close a short-lived fetch while its test/context is
+            # shutting down; there is no response left to write and this is
+            # not an application error.
+            return
+        except (SkillError, ValueError, json.JSONDecodeError) as exc:
+            self._send_json(400, {'error': str(exc)})
+        except Exception as exc:
+            logging.exception('skills api failed')
+            self._send_json(500, {'error': 'Skill 操作失败：%s' % exc})
+
+    def _api_upstream_sources(self):
+        """List immutable, offline upstream snapshots without exposing paths."""
+        if self.command != 'GET':
+            self._send_json(405, {'error': '仅支持 GET 请求'})
+            return
+        try:
+            self._send_json(200, {
+                'schema_version': 1,
+                'offline': True,
+                'sources': _upstream_sources.list_sources(),
+            })
+        except _upstream_sources.UpstreamSourceError as exc:
+            self._send_json(503, {'error': str(exc)})
+
+    def _api_upstream_source_detail(self, path):
+        """Read a manifest-allowlisted source/file by opaque IDs only."""
+        if self.command != 'GET':
+            self._send_json(405, {'error': '仅支持 GET 请求'})
+            return
+        prefix = '/api/upstream-sources/'
+        rest = path[len(prefix):]
+        try:
+            if '/files/' in rest:
+                source_raw, file_raw = rest.rsplit('/files/', 1)
+                source_id, file_id = unquote(source_raw).strip('/'), unquote(file_raw).strip('/')
+                if not source_id or not file_id or '/' in file_id:
+                    raise _upstream_sources.UpstreamSourceError('invalid upstream file id')
+                self._send_json(200, _upstream_sources.get_file(source_id, file_id))
+                return
+            source_id = unquote(rest).strip('/')
+            if source_id:
+                self._send_json(200, _upstream_sources.get_source(source_id))
+                return
+            self._send_json(404, {'error': '来源或文件不存在'})
+        except _upstream_sources.UpstreamSourceError as exc:
+            self._send_json(404, {'error': str(exc)})
 
     def _api_ai_history(self):
         """AI 会话：GET 列表/详情，POST 保存/删除/清空。"""
@@ -1925,7 +2333,7 @@ def stop_lan_server():
     return {'ok': True, 'running': False}
 
 
-def start_server(port=0):
+def start_server(port=0, host='127.0.0.1'):
     """启动本地 HTTP 服务。
 
     默认绑定固定控制端口（CONTROL_PORT）以支持单实例常驻；
@@ -1933,11 +2341,12 @@ def start_server(port=0):
     """
     if not port:
         port = CONTROL_PORT
+    bind_host = str(host or '127.0.0.1').strip()
     try:
-        server = ReadMDHTTPServer(('127.0.0.1', port), Handler)
+        server = ReadMDHTTPServer((bind_host, port), Handler)
     except OSError:
         try:
-            server = ReadMDHTTPServer(('127.0.0.1', 0), Handler)
+            server = ReadMDHTTPServer((bind_host, 0), Handler)
         except OSError:
             raise
     t = threading.Thread(target=server.serve_forever, daemon=True)
@@ -3468,6 +3877,8 @@ def main():
     parser.add_argument('file', nargs='?', help='要打开的 .md 文件')
     parser.add_argument('--browser', action='store_true', help='用默认浏览器打开（兜底模式）')
     parser.add_argument('--port', type=int, default=0, help='本地服务端口（默认随机）')
+    parser.add_argument('--host', default='127.0.0.1',
+                        help='绑定地址（默认仅本机；容器/局域网部署可显式使用 0.0.0.0）')
     parser.add_argument('--selftest', action='store_true', help='运行自测')
     parser.add_argument('--webview-selftest', action='store_true',
                         help='运行原生 WebView 私网隔离自测')
@@ -3562,7 +3973,7 @@ def main():
         if not args.file or forward_open(port, token, os.path.abspath(args.file)):
             return 0
 
-    server = start_server(args.port)
+    server = start_server(args.port, args.host)
     if server.server_port == CONTROL_PORT:
         _write_instance(CONTROL_PORT, secrets.token_urlsafe(16))
     milestone('boot', 'server_up')
@@ -3586,7 +3997,8 @@ def main():
         else:
             safe_print('文件不存在: %s' % args.file)
 
-    url = 'http://127.0.0.1:%d/' % server.server_port
+    display_host = '127.0.0.1' if args.host in ('0.0.0.0', '::') else args.host
+    url = 'http://%s:%d/' % (display_host, server.server_port)
     if initial:
         url += '?file=' + quote(initial)
 

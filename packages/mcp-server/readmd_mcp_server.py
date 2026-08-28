@@ -21,11 +21,15 @@ import sys
 from typing import Any, Dict, List, Optional
 
 # 引入 ReadMD 核心算法路径
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_SERVER_DIR = os.path.dirname(os.path.abspath(__file__))
+_PACKAGED_ROOT = os.path.dirname(_SERVER_DIR)
+ROOT_DIR = (_PACKAGED_ROOT if os.path.isdir(os.path.join(_PACKAGED_ROOT, 'src'))
+            else os.path.dirname(os.path.dirname(os.path.dirname(_SERVER_DIR))))
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 try:
+    import src.readmd_modules as RM
     from src.readmd_core import readmd_fix
     from src.readmd_core.toc_engine import process_toc_markers, generate_toc_markdown, extract_headings
     from src.readmd_modules import bibtex, convert, latex2omml, mdexport, ocr, texmd, txtmd, web
@@ -33,59 +37,47 @@ try:
     from src.readmd_modules.mdexport.presentation_render import render_presentation_html
     from src.readmd_modules.mdexport.epub_render import export_epub
     from src.readmd_modules.code_chunk_runner import execute_python_chunk, execute_code_chunk
+    from src.readmd_modules.skills import SkillRegistry, SkillError, default_skill_roots
+    from src.readmd_core.service import ReadMDCoreService
+    from src.readmd_core import upstream as upstream_sources
+    from src.readmd_core.config import VERSION, HISTORY_FILE
 except ImportError as e:
     logging.warning("ReadMD modules import warning in MCP server: %s", e)
 
-PROMPT_WORKFLOWS = {
-    "quick_read": {
-        "name": "快速阅读",
-        "system": "你是 ReadMD 的文档阅读助手。对用户给出的 Markdown 文档做快速阅读，输出：1) 一句话概述；2) 核心要点列表；3) 文档结构目录；4) 值得注意的细节或疑问。使用 Markdown 格式。"
-    },
-    "polish": {
-        "name": "智能润色",
-        "system": "你是资深中文编辑。润色用户给出的 Markdown 文档：修正错别字、病句、表达生硬之处，保留原有结构与全部 Markdown 标记，只输出润色后的完整文档，不要加任何解释。"
-    },
-    "modify": {
-        "name": "语法修改",
-        "system": "你是文档修订助手。根据用户要求修改文档，修正明显错误（错别字、标点、Markdown 格式错误）。只输出修改后的完整文档，不要加任何解释。"
-    },
-    "expand": {
-        "name": "内容扩充",
-        "system": "你是文档扩充助手。在保持原有结构与语气的前提下，为文档补充细节、示例、解释，使内容更丰富。只输出扩充后的完整文档，不要加任何解释。"
-    },
-    "continue": {
-        "name": "自然续写",
-        "system": "你是文档续写助手。从文档末尾自然延续写作，保持风格一致。只输出续写的新增内容，不要重复原文。"
-    },
-    "translate": {
-        "name": "学术翻译",
-        "system": "你是专业翻译。将用户给出的文档翻译成目标语言，保留 Markdown 结构、公式、表格与代码块，只输出译文。"
-    },
-    "ask": {
-        "name": "文档问答",
-        "system": "你是文档问答助手。基于用户给出的文档内容回答问题；文档中没有的内容请明确说明。"
-    },
-    "summary": {
-        "name": "核心总结",
-        "system": "你是文档总结助手。用 5 条以内要点概括用户文档的核心内容，输出为 Markdown 列表；最后用一句话总结全文。"
-    },
-    "outline": {
-        "name": "生成大纲",
-        "system": "你是文档策划。为用户文档生成层级目录大纲（# / ## / ###），只输出大纲，不要其他内容。"
-    },
-    "weekly": {
-        "name": "周报整理",
-        "system": "你是周报助手。根据用户给出的工作内容，整理成结构化周报：本周完成 / 下周计划 / 风险与求助。只输出周报正文。"
-    },
-    "to_english": {
-        "name": "英文翻译",
-        "system": "你是专业翻译。将用户给出的文档翻译成地道专业英文，保留 Markdown 结构、公式、表格与代码块，只输出译文。"
-    },
-    "code_review": {
-        "name": "代码审查",
-        "system": "你是资深代码审查员。审查用户文档中的代码块：指出 bug、安全隐患、可读性问题，并给出修改建议与示例代码。用 Markdown 输出。"
-    }
+# Workflow metadata is deliberately kept separate from instructions.  The
+# registry below reads the same built-in/user/project Skills as the desktop
+# service, so MCP cannot drift into a second prompt implementation.
+WORKFLOW_SKILLS = {
+    "quick_read": ("快速阅读", "readmd-quick-read"), "polish": ("智能润色", "readmd-polish"),
+    "modify": ("语法修改", "readmd-format-fix"), "expand": ("内容扩充", "readmd-polish"),
+    "continue": ("自然续写", "readmd-continue"), "translate": ("学术翻译", "readmd-translate"),
+    "ask": ("文档问答", "readmd-ask"), "summary": ("核心总结", "readmd-summary"),
+    "outline": ("生成大纲", "readmd-outline"), "weekly": ("周报整理", "readmd-weekly"),
+    "to_english": ("英文翻译", "readmd-translate"), "code_review": ("代码审查", "readmd-code-review"),
 }
+
+# MCP clients must make side effects explicit. Reads and analysis remain
+# available by default; exports, network fetches and code execution require a
+# literal ``confirm: true`` in the tool arguments.
+CONFIRM_REQUIRED = {
+    "readmd_web_to_markdown", "readmd_export_document",
+    "readmd_export_presentation", "readmd_export_epub", "readmd_run_code_chunk",
+}
+
+
+def _skills_registry():
+    global _CORE_SERVICE
+    if _CORE_SERVICE is None:
+        _CORE_SERVICE = ReadMDCoreService()
+    return _CORE_SERVICE.skills
+
+
+_CORE_SERVICE = None
+
+
+# Keep a literal in source for older ecosystem manifest scanners; the runtime
+# value remains sourced from the single VERSION file below.
+# "version": "2.3.7"
 
 TOOLS: List[Dict[str, Any]] = [
     {
@@ -116,9 +108,10 @@ TOOLS: List[Dict[str, Any]] = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "url": {"type": "string", "description": "目标网页的 HTTP/HTTPS URL 地址"}
+                "url": {"type": "string", "description": "目标网页的 HTTP/HTTPS URL 地址"},
+                "confirm": {"type": "boolean", "const": True, "description": "明确确认联网抓取"}
             },
-            "required": ["url"]
+            "required": ["url", "confirm"]
         }
     },
     {
@@ -151,8 +144,9 @@ TOOLS: List[Dict[str, Any]] = [
                     "description": "排版风格预设（默认 minimal）"
                 },
                 "title": {"type": "string", "description": "文档标题（可选）"}
+                ,"confirm": {"type": "boolean", "const": True, "description": "明确确认写入导出文件"}
             },
-            "required": ["markdown_content", "output_path", "output_format"]
+            "required": ["markdown_content", "output_path", "output_format", "confirm"]
         }
     },
     {
@@ -208,12 +202,35 @@ TOOLS: List[Dict[str, Any]] = [
             "properties": {
                 "workflow_id": {
                     "type": "string",
-                    "enum": list(PROMPT_WORKFLOWS.keys()),
-                    "description": "工作流标识符：quick_read | polish | modify | expand | continue | translate | ask | summary | outline | weekly | to_english | code_review"
+                    "enum": list(WORKFLOW_SKILLS.keys()),
+                        "description": "工作流标识符；具体指令由 ReadMD Skill Registry 提供"
                 },
                 "markdown_content": {"type": "string", "description": "待处理的文档正文内容（可选）"}
             },
             "required": ["workflow_id"]
+        }
+    },
+    {
+        "name": "readmd_ai_providers",
+        "description": "读取 ReadMD 共享 AI 提供商目录与脱敏连接状态；不会返回 API Key。",
+        "inputSchema": {"type": "object", "properties": {}}
+    },
+    {
+        "name": "readmd_ai_chat",
+        "description": "使用共享凭据和 ReadMD Skill 执行一次 AI 文档处理；凭据只能使用 credential_id。",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "provider": {"type": "string", "description": "提供商 ID"},
+                "credential_id": {"type": "string", "description": "已保存凭据句柄，不是 API Key"},
+                "model": {"type": "string"},
+                "skill_id": {"type": "string"},
+                "markdown_content": {"type": "string"},
+                "request": {"type": "string"},
+                "language": {"type": "string"},
+                "stream": {"type": "boolean", "default": False}
+            },
+            "required": ["provider", "model", "skill_id", "markdown_content"]
         }
     },
     {
@@ -253,8 +270,9 @@ TOOLS: List[Dict[str, Any]] = [
                 "title": {"type": "string", "description": "演示文稿标题"},
                 "theme": {"type": "string", "description": "Reveal.js 主题 (black, white, league, sky, beige, night, serif, simple, solarized)"},
                 "transition": {"type": "string", "description": "转场效果 (slide, fade, zoom, convex, concave)"}
+                ,"confirm": {"type": "boolean", "const": True, "description": "明确确认写入导出文件"}
             },
-            "required": ["markdown_content", "output_path"]
+            "required": ["markdown_content", "output_path", "confirm"]
         }
     },
     {
@@ -268,8 +286,9 @@ TOOLS: List[Dict[str, Any]] = [
                 "title": {"type": "string", "description": "电子书标题 (默认 'ReadMD 电子书')"},
                 "author": {"type": "string", "description": "电子书作者 (默认 'ReadMD Author')"},
                 "language": {"type": "string", "description": "语言代码 (默认 'zh-CN')"}
+                ,"confirm": {"type": "boolean", "const": True, "description": "明确确认写入导出文件"}
             },
-            "required": ["markdown_content", "output_path"]
+            "required": ["markdown_content", "output_path", "confirm"]
         }
     },
     {
@@ -281,8 +300,9 @@ TOOLS: List[Dict[str, Any]] = [
                 "code": {"type": "string", "description": "待执行的源码内容"},
                 "language": {"type": "string", "description": "代码语言类型 (python, js, bash, powershell, r, rust 等，默认 python)"},
                 "capture_plot": {"type": "boolean", "description": "是否自动捕获 Matplotlib 等图表 (默认 true)"}
+                ,"confirm": {"type": "boolean", "const": True, "description": "明确确认执行代码"}
             },
-            "required": ["code"]
+            "required": ["code", "confirm"]
         }
     }
 ]
@@ -291,6 +311,10 @@ TOOLS: List[Dict[str, Any]] = [
 def handle_tool_call(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
     """统一调度处理各 MCP 工具调用并返回标准响应。"""
     try:
+        if name in CONFIRM_REQUIRED and args.get("confirm") is not True:
+            return {"isError": True, "content": [{"type": "text", "text": json.dumps({
+                "ok": False, "error": "此操作会产生副作用，请在请求中明确设置 confirm=true"
+            }, ensure_ascii=False)}]}
         if name == "readmd_fix_markdown":
             content = str(args.get("content", ""))
             res = readmd_fix.fix_markdown(content)
@@ -420,21 +444,74 @@ def handle_tool_call(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
 
         elif name == "readmd_ai_assistant":
             wf_id = str(args.get("workflow_id", "quick_read"))
-            wf = PROMPT_WORKFLOWS.get(wf_id, PROMPT_WORKFLOWS["quick_read"])
-            doc_content = str(args.get("markdown_content", ""))
+            wf_name, skill_id = WORKFLOW_SKILLS.get(wf_id, WORKFLOW_SKILLS["quick_read"])
+            doc_content = str(args.get("markdown_content", "")) or "(no document supplied)"
+            skill = _skills_registry().get(skill_id)
+            if skill is None:
+                raise SkillError("Skill not found: " + skill_id)
+            system_prompt = _skills_registry().render(skill_id, {
+                "document": doc_content,
+                "selection": "",
+                "request": str(args.get("request", "")),
+                "language": str(args.get("language", "en")),
+                "context": "",
+                "output_format": "Markdown",
+            })
             return {
                 "content": [
                     {
                         "type": "text",
                         "text": json.dumps({
                             "workflow_id": wf_id,
-                            "workflow_name": wf["name"],
-                            "system_prompt": wf["system"],
+                            "workflow_name": wf_name,
+                            "skill_id": skill_id,
+                            "system_prompt": system_prompt,
                             "user_payload": doc_content
                         }, ensure_ascii=False, indent=2)
                     }
                 ]
             }
+        elif name == "readmd_ai_providers":
+            cfg = RM.get('ai').get_config()
+            return {"content": [{"type": "text", "text": json.dumps({
+                "schema_version": cfg.get("schema_version"),
+                "providers": cfg.get("presets", []) + cfg.get("custom", []),
+                "current": cfg.get("current", {})
+            }, ensure_ascii=False, indent=2)}]}
+        elif name == "readmd_ai_chat":
+            if "api_key" in args or "key" in args:
+                return {"isError": True, "content": [{"type": "text", "text": "AI Chat 只接受 credential_id，不接受 API Key"}]}
+            provider = str(args.get("provider") or "")
+            credential_id = str(args.get("credential_id") or "")
+            skill_id = str(args.get("skill_id") or "")
+            document = str(args.get("markdown_content") or "")
+            if not provider or not skill_id or not document:
+                return {"isError": True, "content": [{"type": "text", "text": "provider、skill_id、markdown_content 均为必填"}]}
+            selected_provider = RM.get('ai').find_provider(provider) or {}
+            local_provider = RM.get('ai')._is_local_provider(selected_provider)
+            if not credential_id and not local_provider:
+                return {"isError": True, "content": [{"type": "text", "text": "云端提供商必须使用 credential_id；本地服务可省略"}]}
+            gen = RM.get('ai').chat({
+                "provider": provider, "credential_id": credential_id,
+                "model": str(args.get("model") or ""), "skill_id": skill_id,
+                "skill_variables": {"document": document, "selection": "",
+                                     "request": str(args.get("request") or ""),
+                                     "language": str(args.get("language") or "en"),
+                                     "context": "", "output_format": "Markdown"},
+                "messages": [{"role": "user", "content": document}],
+                "stream": bool(args.get("stream", False)),
+            })
+            chunks, usage = [], None
+            for item in gen:
+                if isinstance(item, dict):
+                    if item.get("error"):
+                        return {"isError": True, "content": [{"type": "text", "text": str(item["error"])}]}
+                    usage = item.get("usage") or usage
+                elif item:
+                    chunks.append(str(item))
+            return {"content": [{"type": "text", "text": json.dumps({
+                "ok": True, "content": "".join(chunks), "usage": usage, "skill_id": skill_id
+            }, ensure_ascii=False)}]}
         elif name == "readmd_process_imports":
             md_content = str(args.get("markdown_content", ""))
             base_dir = str(args.get("base_dir", os.getcwd()))
@@ -515,6 +592,129 @@ def handle_tool_call(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
         return {"isError": True, "content": [{"type": "text", "text": f"工具执行异常: {str(e)}"}]}
 
 
+def _skill_resources():
+    """Expose read-only Skill metadata/instructions as MCP resources."""
+    resources = []
+    for skill in _skills_registry().list():
+        resources.append({
+            "uri": "readmd://skills/" + skill.id,
+            "name": skill.name,
+            "description": skill.description,
+            "mimeType": "text/markdown",
+        })
+    return resources
+
+
+def _all_resources():
+    """Return read-only Skills plus persisted session/provider resources."""
+    resources = _skill_resources()
+    resources.extend([
+        {
+            "uri": "readmd://sessions",
+            "name": "ReadMD AI sessions",
+            "description": "Read-only summaries and messages from local AI history.",
+            "mimeType": "application/json",
+        },
+        {
+            "uri": "readmd://providers",
+            "name": "ReadMD AI providers",
+            "description": "Read-only provider catalog and credential status; secrets are omitted.",
+            "mimeType": "application/json",
+        },
+    ])
+    for source in upstream_sources.list_sources():
+        source_id = source["id"]
+        detail = upstream_sources.get_source(source_id)
+        resources.append({
+            "uri": "readmd://upstream/" + source_id,
+            "name": "ReadMD upstream " + source_id.split("/")[0],
+            "description": "Offline immutable source snapshot metadata and file allowlist.",
+            "mimeType": "application/json",
+        })
+        for item in detail.get("source_files", []):
+            resources.append({
+                "uri": "readmd://upstream/%s/files/%s" % (source_id, item["id"]),
+                "name": item.get("relative_path", item["id"]),
+                "description": "Read-only vendored upstream source file (%s)." % item.get("sha256", ""),
+                "mimeType": "text/plain",
+            })
+    return resources
+
+
+def _scrub_resource(value):
+    """Remove credential-like fields before exposing a JSON resource."""
+    if isinstance(value, dict):
+        return {k: _scrub_resource(v) for k, v in value.items()
+                if str(k).lower() not in {"api_key", "key", "secret", "password", "token"}}
+    if isinstance(value, list):
+        return [_scrub_resource(item) for item in value]
+    return value
+
+
+def _read_skill_resource(uri):
+    prefix = "readmd://skills/"
+    skill_id = str(uri or "")[len(prefix):] if str(uri or "").startswith(prefix) else ""
+    if not skill_id or "/" in skill_id or "\\" in skill_id:
+        raise SkillError("invalid Skill resource URI")
+    skill = _skills_registry().get(skill_id)
+    if not skill:
+        raise SkillError("Skill not found: " + skill_id)
+    return {"contents": [{"uri": uri, "mimeType": "text/markdown", "text": skill.instructions}]}
+
+
+def _read_resource(uri):
+    if uri == "readmd://sessions":
+        try:
+            with open(HISTORY_FILE, encoding="utf-8") as handle:
+                value = json.load(handle)
+        except (OSError, ValueError, json.JSONDecodeError):
+            value = {"sessions": []}
+        return {"contents": [{"uri": uri, "mimeType": "application/json",
+                              "text": json.dumps(_scrub_resource(value), ensure_ascii=False)}]}
+    if uri == "readmd://providers":
+        cfg = RM.get('ai').get_config()
+        value = {"schema_version": cfg.get("schema_version"),
+                 "providers": cfg.get("presets", []) + cfg.get("custom", []),
+                 "current": cfg.get("current", {})}
+        return {"contents": [{"uri": uri, "mimeType": "application/json",
+                              "text": json.dumps(_scrub_resource(value), ensure_ascii=False)}]}
+    prefix = "readmd://upstream/"
+    if str(uri or "").startswith(prefix):
+        ident = str(uri)[len(prefix):]
+        marker = "/files/"
+        if marker in ident:
+            source_id, file_id = ident.rsplit(marker, 1)
+            value = upstream_sources.get_file(source_id, file_id)
+            return {"contents": [{"uri": uri, "mimeType": value.get("mime", "text/plain"),
+                                  "text": value.get("content", "")}]}
+        value = upstream_sources.get_source(ident)
+        value.pop("source_files", None)
+        return {"contents": [{"uri": uri, "mimeType": "application/json",
+                              "text": json.dumps(_scrub_resource(value), ensure_ascii=False)}]}
+    return _read_skill_resource(uri)
+
+
+def _prompt_descriptors():
+    descriptors = [{"name": name, "description": "ReadMD Skill workflow", "arguments": [
+        {"name": "markdown_content", "description": "Document text", "required": False},
+        {"name": "request", "description": "User request", "required": False},
+    ], "skill_id": skill_id, "workflow_id": wf_id}
+            for wf_id, (name, skill_id) in WORKFLOW_SKILLS.items()]
+    known_names = {item["name"] for item in descriptors}
+    # Every discoverable Skill is also a first-class MCP prompt.  Workflow
+    # aliases above remain for clients using the legacy names.
+    for skill in _skills_registry().list():
+        if skill.id in known_names:
+            continue
+        descriptors.append({"name": skill.id, "description": skill.description,
+                            "arguments": [
+                                {"name": "markdown_content", "description": "Document text", "required": False},
+                                {"name": "request", "description": "User request", "required": False},
+                                {"name": "language", "description": "Output language", "required": False},
+                            ], "skill_id": skill.id})
+    return descriptors
+
+
 def run_stdio_server():
     """标准 JSON-RPC 2.0 stdio 通信主循环。"""
     if sys.platform == 'win32' and hasattr(sys.stdin, 'reconfigure'):
@@ -544,11 +744,9 @@ def run_stdio_server():
                         "protocolVersion": "2024-11-05",
                         "serverInfo": {
                             "name": "readmd-mcp-server",
-                            "version": "2.3.7-beta.5"
+                            "version": VERSION
                         },
-                        "capabilities": {
-                            "tools": {}
-                        }
+                        "capabilities": {"tools": {}, "resources": {}, "prompts": {}}
                     }
                 }
             elif method == "tools/list":
@@ -559,6 +757,34 @@ def run_stdio_server():
                         "tools": TOOLS
                     }
                 }
+            elif method == "resources/list":
+                res = {"jsonrpc": "2.0", "id": req_id, "result": {"resources": _all_resources()}}
+            elif method == "resources/read":
+                params = req.get("params", {})
+                res = {"jsonrpc": "2.0", "id": req_id, "result": _read_resource(params.get("uri"))}
+            elif method == "prompts/list":
+                res = {"jsonrpc": "2.0", "id": req_id, "result": {"prompts": _prompt_descriptors()}}
+            elif method == "prompts/get":
+                params = req.get("params", {})
+                requested = str(params.get("name") or "quick_read")
+                if requested in WORKFLOW_SKILLS:
+                    wf_id = requested
+                    name, skill_id = WORKFLOW_SKILLS[wf_id]
+                else:
+                    wf_id = ""
+                    skill_id = requested
+                    skill = _skills_registry().get(skill_id)
+                    if skill is None:
+                        raise SkillError("Skill not found: " + skill_id)
+                    name = skill.name
+                arguments = params.get("arguments") or {}
+                doc = str(arguments.get("markdown_content") or "(no document supplied)")
+                prompt = _skills_registry().render(skill_id, {
+                    "document": doc, "selection": "", "request": str(arguments.get("request") or ""),
+                    "language": str(arguments.get("language") or "en"), "context": "", "output_format": "Markdown",
+                })
+                res = {"jsonrpc": "2.0", "id": req_id, "result": {"description": name,
+                    "messages": [{"role": "user", "content": {"type": "text", "text": prompt}}]}}
             elif method == "tools/call":
                 params = req.get("params", {})
                 name = params.get("name")

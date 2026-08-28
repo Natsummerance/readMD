@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-version="2.3.7-beta.5">
+<html lang="zh-CN" data-version="2.3.7">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -89,7 +89,7 @@
           <button id="btn-lang" class="more-item"><span data-i18n="menu.lang">界面语言</span><em id="lang-current-label">简体中文</em></button>
           <button id="btn-assoc" class="more-item"><span data-i18n="menu.assoc">设为默认</span><em data-i18n="menu.assocSub">.md 打开方式</em></button>
           <button id="btn-autostart" class="more-item"><span data-i18n="menu.autoStart">开机自启</span><em id="autostart-status-label" data-i18n="app.disabled">未开启</em></button>
-          <button id="btn-check-update" class="more-item"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.7-beta.5</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
+          <button id="btn-check-update" class="more-item"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.7</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
         </div>
       </div>
     </div>
@@ -343,7 +343,7 @@
         <div class="ai-template-selector-wrap">
           <svg class="ai-tpl-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           <select id="ai-template" title="Prompt 模板：选择后应用到本次对话" data-i18n-title="ai.tplSelectTitle" aria-label="Prompt 模板"></select>
-          <button id="ai-tpl-btn" class="tb-btn" title="Prompt 模板管理与导入" data-i18n-title="ai.templateManage" aria-label="Prompt 模板管理">
+          <button id="ai-tpl-btn" class="tb-btn" title="Skill 工作台与导入" data-i18n-title="ai.templateManage" aria-label="Skill 工作台">
             <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
             <span data-i18n="ai.templateManage">模板库</span>
           </button>
@@ -402,6 +402,10 @@
       </button>
     </div>
     <p class="ai-settings-intro" data-i18n="ai.settingsDesc">密钥只保存在本机。连接状态会区分鉴权、限流和网络问题。</p>
+    <div class="ai-provider-browser" aria-label="AI provider browser">
+      <input id="ai-provider-search" type="search" data-i18n-placeholder="ai.provider" autocomplete="off" spellcheck="false">
+      <div id="ai-provider-cards" class="ai-provider-cards" role="listbox" aria-label="AI providers"></div>
+    </div>
     <div class="conn-grid">
         <div class="conn-field">
           <label for="ai-provider" data-i18n="ai.provider">提供商</label>
@@ -425,6 +429,13 @@
             <option value="messages">Anthropic messages</option>
           </select>
         </div>
+        <div class="conn-field">
+          <label for="ai-endpoint-mode" data-i18n="ai.protocol">端点填写方式</label>
+          <select id="ai-endpoint-mode" title="选择 URL 是前缀还是完整端点" data-i18n-title="ai.protocol">
+            <option value="prefix" data-i18n="ai.modeAuto">Base URL（自动追加接口路径）</option>
+            <option value="full_url" data-i18n="ai.baseUrl">完整接口 URL（不追加路径）</option>
+          </select>
+        </div>
         <details class="conn-advanced"><summary data-i18n="ai.advanced">高级参数</summary><div class="conn-advanced-grid">
         <div class="conn-field">
           <label for="ai-base-url" data-i18n="ai.baseUrl">Base URL</label>
@@ -446,6 +457,10 @@
               <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
           </div>
+        </div>
+        <div class="conn-field conn-field-wide">
+          <label for="ai-headers" data-i18n="ai.advanced">自定义请求头（JSON，可选）</label>
+          <textarea id="ai-headers" rows="3" placeholder='{"X-Organization":"example"}' spellcheck="false" autocomplete="off"></textarea>
         </div>
 
         <div class="conn-field">
@@ -549,7 +564,7 @@
 <div id="tpl-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="tpl-title">
   <div id="tpl-box">
     <div class="export-head">
-      <h3 id="tpl-title" data-i18n="tpl.title">Prompt 模板管理</h3>
+      <h3 id="tpl-title" data-i18n="tpl.title">Skill 工作台</h3>
       <button id="tpl-close" class="tb-btn icon modal-close-btn" aria-label="关闭模板管理" data-i18n-aria="toolbar.close">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
@@ -565,24 +580,28 @@
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span data-i18n="tpl.exportJson">导出模板</span>
       </button>
+      <button id="tpl-ai-generate" class="tb-btn accent" title="通过 ReadMD skill-creator 生成禁用草稿">AI 生成 Skill 草稿</button>
     </div>
     <div class="tpl-layout">
-      <ul id="tpl-list" class="tpl-list" role="listbox" aria-label="Prompt 模板" data-i18n-aria="tpl.title"></ul>
+      <ul id="tpl-list" class="tpl-list" role="listbox" aria-label="ReadMD Skills" data-i18n-aria="tpl.title"></ul>
       <div class="tpl-form">
         <input id="tpl-id" type="hidden">
         <input id="tpl-action" type="hidden" value="custom">
         <input id="tpl-name" type="text" placeholder="模板名称（如：深度论文精读 / 结构化周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
-        <textarea id="tpl-system" rows="4" placeholder="系统提示词：角色设定与任务说明" aria-label="系统提示词" data-i18n-placeholder="tpl.systemPlaceholder" data-i18n-aria="tpl.systemPlaceholder"></textarea>
-        <textarea id="tpl-user" rows="4" placeholder="用户消息模板：可用 {doc} 代表文档内容、{prompt} 代表补充要求；留空则自动拼接文档" aria-label="用户消息模板" data-i18n-placeholder="tpl.userPlaceholder" data-i18n-aria="tpl.userPlaceholder"></textarea>
+        <textarea id="tpl-system" rows="8" placeholder="SKILL.md：标准 frontmatter 与指令（使用 {{document}} 等受限变量）" aria-label="SKILL.md 指令" data-i18n-placeholder="tpl.systemPlaceholder" data-i18n-aria="tpl.systemPlaceholder"></textarea>
+        <textarea id="tpl-user" rows="3" placeholder="变量/补充请求模板（可选）；发布前会执行结构与安全校验" aria-label="Skill 变量与补充请求" data-i18n-placeholder="tpl.userPlaceholder" data-i18n-aria="tpl.userPlaceholder"></textarea>
+        <p id="tpl-draft-status" class="fix-note" role="status" aria-live="polite">AI 生成的 Skill 默认是禁用草稿，发布前请先试跑并检查差异。</p>
       </div>
     </div>
     <div class="url-actions">
       <button id="tpl-new" class="tb-btn" data-i18n="ai.newSession">新建</button>
+      <button id="tpl-copy" class="tb-btn">复制为用户 Skill</button>
       <button id="tpl-save" class="tb-btn accent" data-i18n="editor.save">保存</button>
+      <button id="tpl-publish" class="tb-btn accent">发布 Skill</button>
       <button id="tpl-del" class="tb-btn" data-i18n="tpl.delete">删除</button>
       <button id="tpl-close-btn" class="tb-btn" data-i18n="toolbar.close">关闭</button>
     </div>
-    <p class="fix-note" data-i18n="tpl.hint">支持导入标准 Markdown 格式（含 YAML Frontmatter 或 # 标题）模板文件与 .json 模板。内置模板可直接编辑并保存覆盖；删除内置模板即恢复默认。{doc} 与 {prompt} 会在发送时自动替换为文档内容与补充要求。</p>
+    <p class="fix-note" data-i18n="tpl.hint">支持导入标准 SKILL.md 或兼容 JSON。内置 Skill 只读；用户 Skill 发布前必须校验，AI 生成结果默认禁用，可随时回退版本。</p>
   </div>
 </div>
 
@@ -1016,7 +1035,7 @@
 
 <footer id="statusbar">
   <div class="statusbar-left-group">
-    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.7-beta.5</span>
+    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.7</span>
     <button id="status-pagination" type="button" class="status-pagination hidden" title="点击切换阅读模式"></button>
     <span id="status-left"></span>
   </div>
@@ -1230,6 +1249,6 @@
   </div>
 </div>
 
-<script defer src="/assets/readmd.boot.js?v=2.3.7-beta.5"></script>
+<script defer src="/assets/readmd.boot.js?v=2.3.7"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
 
 ReadMD は技術文書、研究ノート、講義資料、仕様書、書籍などを Markdown で管理する人向けです。中心原則は、Markdown ソースが常に正となることです。表示のための構文修復はあっても、利用者が明示的に保存しない限り元ファイルは上書きされません。
 
-プロジェクトは MIT ライセンスで https://github.com/Natsummerance/readMD に公開されています。このサイトが参照する公開版は 2.3.7-beta.5 です。リリースファイルと SHA256 チェックサムは GitHub Releases で配布されます。
+プロジェクトは MIT ライセンスで https://github.com/Natsummerance/readMD に公開されています。このサイトが参照する公開版は 2.3.7 です。リリースファイルと SHA256 チェックサムは GitHub Releases で配布されます。
 
 ## 解決する問題
 
@@ -44,7 +44,7 @@ ReadMD は技術文書、研究ノート、講義資料、仕様書、書籍な�
 - Apple Silicon および Intel macOS。
 - Linux x86_64 向け AppImage と Deb パッケージ。
 - UOS、Kylin OS、Deepin、openEuler などの中国系 OS。
-- HarmonyOS NEXT / OpenHarmony は独立した ArkTS プロジェクト。
+- HarmonyOS/OpenHarmony 不属于 v2.3.7，源码仅作实验性预览。ソースは実験的プレビューです。
 
 VSCode 拡張はエディター内で同期プレビューと構文修復を提供します。FastMCP stdio サーバーは Claude Desktop、Cursor などの互換 AI ツールから接続できます。
 
@@ -161,7 +161,7 @@ PDF をローカルに残し、テキスト型かスキャン型かを判断し�
 
 `.bib` ファイルを Markdown 文書と同じ directory に置くと、近くの書誌データを読み取れます。`[@vaswani2017attention]` や `@author2024` のような inline 引用キーを使うと、一致する項目が引用 badge になります。利用できる場合は hover 情報に題名、著者、年、掲載先、DOI を出せ、引用された項目は文末の参考文献にまとまります。この workflow は文献管理アプリを置き換えるものでなく、提出前に項目、指定書式、最終参考文献を確認してください。
 
-## タスクガイド: v2.3.7-beta.5 リリースノート
+## タスクガイド: v2.3.7 リリースノート
 
 専用回答: https://readmd.asia/ja/release-notes/
 
@@ -171,7 +171,7 @@ beta.4 は Reveal 発表経路と更新整合性を強化し、段階的な起�
 
 - 製品名: ReadMD
 - リポジトリ: https://github.com/Natsummerance/readMD
-- 本サイトのバージョン: 2.3.7-beta.5
+- 本サイトのバージョン: 2.3.7
 - ライセンス: MIT
 - サイト言語: 英語、簡体字中国語、繁体字中国語、日本語
 - アプリ言語数: 46

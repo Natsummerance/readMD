@@ -1,0 +1,13 @@
+{
+  "id": "readmd-localization",
+  "scope": "builtin",
+  "version": 1,
+  "source": "ReadMD",
+  "license": "MIT",
+  "variables": ["document", "request", "language"],
+  "required_variables": ["document", "language"],
+  "capabilities": ["localization", "placeholder-validation"],
+  "risk": "text-only",
+  "scripts_allowed": false,
+  "enabled": true
+}

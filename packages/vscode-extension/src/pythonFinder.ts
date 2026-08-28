@@ -52,15 +52,17 @@ export async function findPythonPath(): Promise<string> {
   // 4. 常见默认路径兜底
   if (process.platform === 'win32') {
     const localApp = process.env.LOCALAPPDATA || '';
-    const winCandidates = [
-      path.join(localApp, 'Programs', 'Python', 'Python311', 'python.exe'),
-      path.join(localApp, 'Programs', 'Python', 'Python312', 'python.exe'),
-      path.join(localApp, 'Programs', 'Python', 'Python310', 'python.exe'),
-      path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Python311', 'python.exe'),
-      path.join(process.env.ProgramFiles || 'C:\\Program Files', 'Python312', 'python.exe'),
-      path.join(process.env.SystemDrive || 'C:', 'Python311', 'python.exe'),
-      path.join(process.env.SystemDrive || 'C:', 'Python312', 'python.exe'),
-    ];
+    const installRoots = [
+      localApp ? path.join(localApp, 'Programs') : '',
+      process.env.ProgramFiles || '',
+      process.env['ProgramFiles(x86)'] || '',
+      process.env.SystemDrive || '',
+    ].filter(Boolean);
+    const versions = ['Python313', 'Python312', 'Python311', 'Python310'];
+    const winCandidates = installRoots.flatMap(root => versions.map(version =>
+      path.join(root, 'Python', version, 'python.exe')))
+      .concat(installRoots.flatMap(root => versions.map(version =>
+        path.join(root, version, 'python.exe'))));
     for (const p of winCandidates) {
       if (fs.existsSync(p)) return p;
     }

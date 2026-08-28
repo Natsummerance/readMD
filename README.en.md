@@ -35,15 +35,15 @@
 
 ## Direct downloads
 
-[Windows Setup](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe) ·
-[Windows Portable](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe) ·
-[macOS Apple Silicon](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip) ·
-[macOS Intel](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip) ·
-[Linux AppImage](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage) ·
-[Linux ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage) ·
-[Deb for UOS/Kylin](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb) ·
-[Kylin V10 ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb) ·
-[SHA-256](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt)
+[Windows Setup](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMDSetup-v2.3.7.exe) ·
+[Windows Portable](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-portable-v2.3.7.exe) ·
+[macOS Apple Silicon](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-arm64-v2.3.7.zip) ·
+[macOS Intel](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-x64-v2.3.7.zip) ·
+[Linux AppImage](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage) ·
+[Linux ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-aarch64-v2.3.7.AppImage) ·
+[Deb for UOS/Kylin](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb) ·
+[Kylin V10 ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_arm64.deb) ·
+[SHA-256](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/SHA256SUMS.txt)
 
 ## Start in three steps
 
@@ -65,40 +65,30 @@ ReadMD solves the unglamorous problems in a long-lived document library: large f
 
 | OS / Platform | Architecture / Format | Direct Download Link (GitHub Release) | Description |
 | :--- | :--- | :--- | :--- |
-| **Windows** | x64 (Installer) | [⬇️ **ReadMDSetup-v2.3.7-beta.5.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMDSetup-v2.3.7-beta.5.exe) | Setup wizard with automatic `.md` file associations |
-| **Windows** | x64 (Portable) | [⬇️ **ReadMD-portable-v2.3.7-beta.5.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-portable-v2.3.7-beta.5.exe) | Standalone single executable, no installation needed |
-| **macOS** | Apple Silicon (M-Series) | [⬇️ **ReadMD-macos-arm64-v2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-arm64-v2.3.7-beta.5.zip) | Native build for Apple Silicon Macs with Vision OCR |
-| **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-macos-x64-v2.3.7-beta.5.zip) | Native build for Intel Macs with Vision OCR |
-| **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage) | Portable Linux AppImage for Ubuntu, Debian, Fedora, Arch |
-| **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-aarch64-v2.3.7-beta.5.AppImage) | Portable build for Phytium, Kunpeng, and other ARM64 devices |
-| **Domestic OS / Linux** | UOS / Kylin / Deepin / Debian / Ubuntu | [⬇️ **readmd_2.3.7-beta.5_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb) | Native Deb package with desktop entry & MIME association |
-| ️ **Kylin V10 / Phytium** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7-beta.5_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_arm64.deb) | Native build for D2000/E2000 boards with UKUI/X11 software-render fallback |
-| **HarmonyOS NEXT** | Source project (DevEco build) | [ **packages/harmonyos-app**](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) | ArkTS + ArkUI + ArkWeb source project; no prebuilt HAP is provided |
-| **VSCode Extension** | Universal VSIX | [⬇️ **readmd-vscode-2.3.7-beta.5.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-vscode-2.3.7-beta.5.vsix) | Offline VSIX extension with sync preview & auto-repair |
-| **MCP Server** | FastMCP stdio Package | [⬇️ **readmd-mcp-server-2.3.7-beta.5.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd-mcp-server-2.3.7-beta.5.zip) | Standalone FastMCP server for Claude Desktop / Cursor |
-| **SHA-256 Hashes** | Checksum List | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/SHA256SUMS.txt) | Complete SHA-256 integrity verification list |
+| **Windows** | x64 (Installer) | [⬇️ **ReadMDSetup-v2.3.7.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMDSetup-v2.3.7.exe) | Setup wizard with automatic `.md` file associations |
+| **Windows** | x64 (Portable) | [⬇️ **ReadMD-portable-v2.3.7.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-portable-v2.3.7.exe) | Standalone single executable, no installation needed |
+| **macOS** | Apple Silicon (M-Series) | [⬇️ **ReadMD-macos-arm64-v2.3.7.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-arm64-v2.3.7.zip) | Native build for Apple Silicon Macs with Vision OCR |
+| **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-x64-v2.3.7.zip) | Native build for Intel Macs with Vision OCR |
+| **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage) | Portable Linux AppImage for Ubuntu, Debian, Fedora, Arch |
+| **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.7.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-aarch64-v2.3.7.AppImage) | Portable build for Phytium, Kunpeng, and other ARM64 devices |
+| **Domestic OS / Linux** | UOS / Kylin / Deepin / Debian / Ubuntu | [⬇️ **readmd_2.3.7_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb) | Native Deb package with desktop entry & MIME association |
+| ️ **Kylin V10 / Phytium** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_arm64.deb) | Native build for D2000/E2000 boards with UKUI/X11 software-render fallback |
+| **VSCode Extension** | Universal VSIX | [⬇️ **readmd-vscode-2.3.7.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-vscode-2.3.7.vsix) | Offline VSIX extension with sync preview & auto-repair |
+| **MCP Server** | FastMCP stdio Package | [⬇️ **readmd-mcp-server-2.3.7.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip) | Standalone FastMCP server for Claude Desktop / Cursor |
+| **SHA-256 Hashes** | Checksum List | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/SHA256SUMS.txt) | Complete SHA-256 integrity verification list |
 
 ---
 
 ## Multi-System & Native OS Integration
 
 ### 1. Linux & Chinese Domestic OS (KylinOS / UOS / Deepin / openEuler)
-- **Direct Installation**: Download [`readmd_2.3.7-beta.5_amd64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/readmd_2.3.7-beta.5_amd64.deb) to install directly, or run [`ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7-beta.5/ReadMD-linux-x86_64-v2.3.7-beta.5.AppImage).
+- **Direct Installation**: Download [`readmd_2.3.7_amd64.deb`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb) to install directly, or run [`ReadMD-linux-x86_64-v2.3.7.AppImage`](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage).
 - **Environment Detection**: `src/readmd_modules/linux_native.py` detects OS distributions and dynamically adapts Wayland / X11 display backends.
 - **Desktop Themes**: Probes DDE, UKUI, GNOME, and KDE dark mode settings via `gsettings`.
 - **Desktop Entry**: Includes FreeDesktop launcher and MIME XML declaration.
 - **Linglong Format**: Declarative `packages/linglong/linglong.yaml` for UOS AppStore distribution.
 
-### 2. HarmonyOS NEXT (Pure Harmony) & OpenHarmony
-- **Source Build**: Open [`packages/harmonyos-app/`](https://github.com/Natsummerance/readMD/tree/main/packages/harmonyos-app) in DevEco Studio NEXT and compile it; no prebuilt HAP is provided.
-- **ArkUI + ArkWeb**: Reuses ReadMD offline rendering engine inside ArkWeb containers.
-- **ReadMDBridge (`ReadMDBridge.ets`)**:
- - Clipboard integration (`@ohos.pasteboard`);
- - Native file picker and file system (`@ohos.file.picker` / `@ohos.file.fs`);
- - System locale detection (`@ohos.i18n`);
- - Native offline OCR (`@ohos.ai.OCR`).
-
-### 3. Windows & macOS
+### 2. Windows & macOS
 - **Windows**: Native WinRT OCR, Edge WebView2 hardware-accelerated rendering, single-instance tray daemon.
 - **macOS**: Apple Vision offline OCR framework, native WebKit window, Touch Bar shortcuts.
 

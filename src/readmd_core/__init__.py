@@ -33,6 +33,7 @@ from .dialogs import MARKDOWN_FILTER, IMAGE_FILTER, PDF_FILTER, WORD_FILTER, ALL
 
 from . import window_state
 from .window_state import WindowStateManager
+from .service import ReadMDCoreService
 
 __all__ = [
     # 配置与路径
@@ -66,6 +67,7 @@ __all__ = [
     'find_available_port',
     'ReadMDHTTPHandler',
     'ThreadedReadMDServer',
+    'ReadMDCoreService',
 
     # 对话框与过滤
     'dialogs',

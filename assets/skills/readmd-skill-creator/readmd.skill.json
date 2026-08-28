@@ -1,0 +1,25 @@
+{
+  "id": "readmd-skill-creator",
+  "version": 1,
+  "source": "OpenAI Codex Skill (offline snapshot)",
+  "source_url": "https://github.com/openai/skills/tree/main/skills/.system/skill-creator",
+  "upstream_revision": "sha256:cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288",
+  "license": "Apache-2.0",
+  "provenance": {
+    "snapshot_id": "codex-skill-creator/sha256-cccd291077ec57c6f50ca6529f0f3fb93212da09473effb2fcec808e81b21288",
+    "raw_embedded": true,
+    "adaptation": "ReadMD wrapper is separate; upstream files remain byte-for-byte and read-only"
+  },
+  "capabilities": [
+    "document",
+    "writing"
+  ],
+  "scopes": [
+    "builtin"
+  ],
+  "scripts_allowed": false,
+  "locales": [
+    "zh-CN",
+    "en"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "id": "research-paper-writing",
+  "version": 1,
+  "category": "academic",
+  "source": "ReadMD original skill (independently rewritten)",
+  "source_url": "https://github.com/Master-cai/Research-Paper-Writing-Skills",
+  "license": "Apache-2.0",
+  "scopes": ["builtin"],
+  "scripts_allowed": false,
+  "locales": ["zh-CN", "en", "ja", "de", "fr"],
+  "provenance": {
+    "raw_embedded": false,
+    "adaptation": "Independent ReadMD implementation; no upstream text, name or structure is copied",
+    "creation_evidence": "ReadMD research-writing acceptance cases cover claim/evidence separation, citation gaps, limitations and non-fabrication"
+  },
+  "adaptation": "Portable Markdown-only research writing workflow"
+}

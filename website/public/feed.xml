@@ -23,10 +23,10 @@
   </entry>
   <entry>
     <id>https://readmd.asia/zh-tw/release-notes/</id>
-    <title>ReadMD v2.3.7-beta.5 發布說明 | 安全放映與更新校驗</title>
+    <title>ReadMD v2.3.7 發布說明 | 安全放映與更新校驗</title>
     <link rel="alternate" href="https://readmd.asia/zh-tw/release-notes/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>查看 ReadMD v2.3.7-beta.5 發布說明：Reveal 放映隔離、更新套件暫存檔與 SHA-256 校驗、啟動分階段載入、標籤狀態重新整理、更大觸控目標，以及 Windows、macOS、Linux、UOS 和麒麟安裝套件下載。</summary>
+    <summary>查看 ReadMD v2.3.7 發布說明：Reveal 放映隔離、更新套件暫存檔與 SHA-256 校驗、啟動分階段載入、標籤狀態重新整理、更大觸控目標，以及 Windows、macOS、Linux、UOS 和麒麟安裝套件下載。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/zh-tw/pdf-to-markdown/</id>
@@ -93,10 +93,10 @@
   </entry>
   <entry>
     <id>https://readmd.asia/zh-cn/release-notes/</id>
-    <title>ReadMD v2.3.7-beta.5 发布说明 | 安全放映与更新校验</title>
+    <title>ReadMD v2.3.7 发布说明 | 安全放映与更新校验</title>
     <link rel="alternate" href="https://readmd.asia/zh-cn/release-notes/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>查看 ReadMD v2.3.7-beta.5 发布说明：Reveal 放映隔离、更新包临时文件与 SHA-256 校验、启动分阶段加载、标签状态刷新、更大触控目标，以及 Windows、macOS、Linux、UOS 和麒麟安装包下载。</summary>
+    <summary>查看 ReadMD v2.3.7 发布说明：Reveal 放映隔离、更新包临时文件与 SHA-256 校验、启动分阶段加载、标签状态刷新、更大触控目标，以及 Windows、macOS、Linux、UOS 和麒麟安装包下载。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/zh-cn/pdf-to-markdown/</id>
@@ -131,7 +131,7 @@
     <title>下载 ReadMD | Windows、macOS、Linux、UOS 和麒麟版本</title>
     <link rel="alternate" href="https://readmd.asia/zh-cn/download/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>下载 ReadMD 的 Windows 安装版或便携版、Apple Silicon 和 Intel macOS、Linux AppImage 与 Deb、统信 UOS/麒麟、鸿蒙、VS Code 插件和 MCP Server，并使用 SHA256SUMS.txt 校验。</summary>
+    <summary>下载 ReadMD 的 Windows 安装版或便携版、Apple Silicon 和 Intel macOS、Linux AppImage 与 Deb、统信 UOS/麒麟、VS Code 插件和 MCP Server，并使用 SHA256SUMS.txt 校验。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/zh-cn/convert-to-markdown/</id>
@@ -163,10 +163,10 @@
   </entry>
   <entry>
     <id>https://readmd.asia/release-notes/</id>
-    <title>ReadMD v2.3.7-beta.5 Release Notes | Safe Presenting And Updates</title>
+    <title>ReadMD v2.3.7 Release Notes | Safe Presenting And Updates</title>
     <link rel="alternate" href="https://readmd.asia/release-notes/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>ReadMD v2.3.7-beta.5 release notes covering safer Reveal presenting, update integrity checks, startup loading refinements, tab reliability, larger touch targets, Windows, macOS, Linux, UOS, and Kylin packages.</summary>
+    <summary>ReadMD v2.3.7 release notes covering safer Reveal presenting, update integrity checks, startup loading refinements, tab reliability, larger touch targets, Windows, macOS, Linux, UOS, and Kylin packages.</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/pdf-to-markdown/</id>
@@ -212,10 +212,10 @@
   </entry>
   <entry>
     <id>https://readmd.asia/ja/release-notes/</id>
-    <title>ReadMD v2.3.7-beta.5 リリースノート | 安全な発表と更新検証</title>
+    <title>ReadMD v2.3.7 リリースノート | 安全な発表と更新検証</title>
     <link rel="alternate" href="https://readmd.asia/ja/release-notes/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>ReadMD v2.3.7-beta.5 の変更点を確認できます。Reveal発表の分離、更新ファイルの一時保存とSHA-256検証、段階的な起動読み込み、タブ状態の即時更新、大きなタッチ操作領域、Windows、macOS、Linux、UOS、Kylin向けパッケージを説明します。</summary>
+    <summary>ReadMD v2.3.7 の変更点を確認できます。Reveal発表の分離、更新ファイルの一時保存とSHA-256検証、段階的な起動読み込み、タブ状態の即時更新、大きなタッチ操作領域、Windows、macOS、Linux、UOS、Kylin向けパッケージを説明します。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/ja/pdf-to-markdown/</id>
@@ -250,7 +250,7 @@
     <title>ReadMD ダウンロード | Windows、macOS、Linux、UOS、Kylin</title>
     <link rel="alternate" href="https://readmd.asia/ja/download/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>ReadMD の Windows インストーラー/ポータブル版、Apple Silicon および Intel macOS、Linux AppImage/Deb、UOS/Kylin、HarmonyOS、VS Code 拡張、MCP Server を入手し、SHA256SUMS.txt で検証できます。</summary>
+    <summary>ReadMD の Windows インストーラー/ポータブル版、Apple Silicon および Intel macOS、Linux AppImage/Deb、UOS/Kylin、VS Code 拡張、MCP Server を入手し、SHA256SUMS.txt で検証できます。</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/ja/convert-to-markdown/</id>
@@ -271,7 +271,7 @@
     <title>Download ReadMD | Windows, macOS, Linux, UOS, and Kylin Builds</title>
     <link rel="alternate" href="https://readmd.asia/download/"/>
     <updated>2026-08-26T00:00:00Z</updated>
-    <summary>Download ReadMD for Windows installer or portable use, Apple Silicon and Intel macOS, Linux AppImage and Deb, UOS/Kylin, HarmonyOS, VS Code, and MCP Server. Verify every package with SHA256SUMS.txt.</summary>
+    <summary>Download ReadMD for Windows installer or portable use, Apple Silicon and Intel macOS, Linux AppImage and Deb, UOS/Kylin, VS Code, and MCP Server. Verify every package with SHA256SUMS.txt.</summary>
   </entry>
   <entry>
     <id>https://readmd.asia/convert-to-markdown/</id>

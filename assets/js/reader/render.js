@@ -1173,7 +1173,7 @@ function bindCodeDocActions(content, name, lang) {
   if (toMdBtn) {
     toMdBtn.addEventListener('click', async () => {
       if (typeof openAiPanelWithPrompt === 'function') {
-        openAiPanelWithPrompt('quick_read', `请将以下 ${lang || '代码'} 源码/配置文件深度结构化转换为规范、美观、带章节与说明的 Markdown 文档：\n\n\`\`\`${lang || ''}\n${content}\n\`\`\``);
+        openAiPanelWithPrompt('code_to_doc', '', content);
       } else if (state.file) {
         await convertOrOcr(state.file, 'convert');
       }
@@ -1187,7 +1187,7 @@ function bindCodeDocActions(content, name, lang) {
   if (aiBtn) {
     aiBtn.addEventListener('click', () => {
       if (typeof openAiPanelWithPrompt === 'function') {
-        openAiPanelWithPrompt('ask', `请深度解析以下 ${lang || '代码'} 代码/配置文件的核心逻辑、关键配置项与潜在问题：\n\n\`\`\`${lang || ''}\n${content}\n\`\`\``);
+        openAiPanelWithPrompt('code_analysis', '', content);
       }
     });
   }

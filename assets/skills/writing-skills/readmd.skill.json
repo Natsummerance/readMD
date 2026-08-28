@@ -1,0 +1,19 @@
+{
+  "id": "writing-skills",
+  "version": 1,
+  "category": "skill-authoring",
+  "source": "obra/superpowers (offline snapshot)",
+  "source_url": "https://github.com/obra/superpowers/tree/b36e0829c6d0140e93cfef2ca599b1b07d4a7797/skills/writing-skills",
+  "upstream_revision": "b36e0829c6d0140e93cfef2ca599b1b07d4a7797",
+  "license": "MIT",
+  "provenance": {
+    "snapshot_id": "obra-superpowers/b36e0829c6d0140e93cfef2ca599b1b07d4a7797",
+    "raw_embedded": true,
+    "source_files": ["skills/writing-skills/**", "skills/test-driven-development/**", "skills/using-superpowers/references/codex-tools.md", "LICENSE"],
+    "adaptation": "ReadMD wrapper is separate from the verbatim upstream directories"
+  },
+  "scopes": ["builtin"],
+  "scripts_allowed": false,
+  "locales": ["zh-CN", "en", "ja", "de", "fr"],
+  "adaptation": "ReadMD-specific test-first Skill authoring workflow"
+}

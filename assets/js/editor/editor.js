@@ -761,24 +761,21 @@ async function runEditAiAction(act, customPrompt = '') {
   if (statusEl) statusEl.textContent = _t('editai.generating') || 'AI 正在深度生成中...';
 
   const range = editAiSelectionRange || { from: 0, to: 0, text: '' };
-  let systemPrompt = '你是 ReadMD 智能写作与编辑助手。根据用户的要求或上下文进行高质量 Markdown 处理。只输出生成的正文，不要有任何多余的寒暄或解释。';
+  const skillByAction = { complete: 'readmd-continue', polish: 'readmd-polish', fix: 'readmd-format-fix', translate: 'readmd-translate' };
+  const skillId = skillByAction[act] || 'readmd-polish';
   let userMessage = '';
+  const sourceText = range.text || (cmView ? cmView.state.doc.toString() : '');
 
   if (act === 'complete') {
-    systemPrompt = '你是 Markdown 智能续写助手。根据用户给出的前文内容与光标上下文，自然流畅地续写下一段落或后续内容。只输出续写内容本身。';
-    userMessage = `前文内容：\n${range.context || range.text || (cmView ? cmView.state.doc.toString() : '')}\n\n请自然续写后续内容：`;
+    userMessage = customPrompt || '';
   } else if (act === 'polish') {
-    systemPrompt = '你是专业特约编辑。深度润色用户给出的 Markdown 文本：纠错字、通语病、增强流畅度与文采，严格保留原格式标记与公式。只输出润色后的正文。';
-    userMessage = `请润色以下文本：\n\n${range.text || (cmView ? cmView.state.doc.toString() : '')}`;
+    userMessage = customPrompt || '';
   } else if (act === 'fix') {
-    systemPrompt = '你是 Markdown 语法排版专家。修复文本中的表格对齐、公式符号、未闭合标记与排版缺陷。只输出修复后的完整 Markdown。';
-    userMessage = `请修复以下 Markdown 排版与语法：\n\n${range.text || (cmView ? cmView.state.doc.toString() : '')}`;
+    userMessage = customPrompt || '';
   } else if (act === 'translate') {
-    systemPrompt = '你是专业翻译。若输入主要是中文则翻译为高质量地道英文；若主要是英文则翻译为地道严谨简体中文。只输出翻译结果。';
-    userMessage = `请翻译以下内容：\n\n${range.text || (cmView ? cmView.state.doc.toString() : '')}`;
+    userMessage = customPrompt || '';
   } else {
-    userMessage = customPrompt || '请优化此段内容';
-    if (range.text) userMessage += `\n\n参考文本：\n${range.text}`;
+    userMessage = customPrompt || '';
   }
 
   editAiCurrentResult = '';
@@ -788,10 +785,16 @@ async function runEditAiAction(act, customPrompt = '') {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage }
-        ],
+        skill_id: skillId,
+        skill_variables: {
+          document: range.context || sourceText,
+          selection: sourceText,
+          request: userMessage,
+          language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en',
+          context: range.context || '',
+          output_format: 'Markdown'
+        },
+        messages: [{ role: 'user', content: userMessage }],
         stream: false
       })
     });

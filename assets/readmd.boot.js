@@ -150,7 +150,7 @@ const state = {
   busyCount: 0,
   ai: {
     config: null, providers: [], busy: false, aborter: null, raw: '',
-    templates: [], templateId: '', messages: [], sessionId: null, sessions: [],
+    templates: [], templateId: '', skillDraft: null, messages: [], sessionId: null, sessions: [],
     usage: null, sessUsage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
   },
   pvLayout: 'none', pvSync: false, pvSplitX: 50, pvSplitY: 46,
@@ -2316,30 +2316,20 @@ async function handleAiDocumentFix() {
   showToast(_t('fixes.aiFixing') || '正在进行 AI 深度格式排版自愈...', 2500);
 
   try {
-    const promptText = `请对以下 Markdown 文档进行全面的格式排版与渲染自愈精修。
-精细修复要求：
-1. 表格自愈：对齐所有列数、补齐缺失表头分隔线（|---|---|）、正确转义单元格内的游离竖线；
-2. 数学公式自愈：修复未闭合的 $ 与 $$ 公式，修复 LaTeX 矩阵与对齐环境，转义金额中的美元符号；
-3. 代码块自愈：补齐未闭合的代码块围栏（\`\`\`），自动识别并标注代码语言；
-4. 标题与列表规范：统一标题层级规范（确保 # 后面有空格）、修复嵌套列表缩进断层；
-5. 纯净输出：严格保持原文所有语义和内容，禁止删减文字，禁止添加任何解释说明或前导后置客套话，全篇禁止任何 Emoji，直接输出修复后的 Markdown 源码：
-
-${rawContent}`;
-
     const resp = await apiFetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        messages: [
-          {
-            role: 'system',
-            content: '你是 ReadMD 专业 Markdown 排版自愈与格式精修引擎。严格保持原文所有内容和语义，禁止删减，禁止输出客套话，直接输出修复后的纯 Markdown 源码。'
-          },
-          {
-            role: 'user',
-            content: promptText
-          }
-        ],
+        skill_id: 'readmd-format-fix',
+        skill_variables: {
+          document: rawContent,
+          selection: rawContent,
+          request: '',
+          language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en',
+          context: '',
+          output_format: 'Markdown'
+        },
+        messages: [{ role: 'user', content: rawContent }],
         stream: false
       })
     });
@@ -2402,7 +2392,10 @@ function refreshCurrentTocPage(list) {
   const currentGroup = list.querySelector(`details.toc-page-group[data-page-idx="${CSS.escape(String(currentPage))}"]`);
   list.querySelectorAll('.toc-cur-page').forEach(link => link.classList.remove('toc-cur-page'));
   list.querySelectorAll('.toc-page-group').forEach(group => {
-    group.open = group === currentGroup;
+    // Preserve groups the user explicitly opened (including programmatic
+    // embedders), but collapse untouched groups so their lazy bodies remain
+    // out of the active layout and DOM budget.
+    group.open = group === currentGroup || group.__tocExplicitOpen === true;
   });
   currentGroup?.querySelector('a')?.classList.add('toc-cur-page');
 }
@@ -2521,6 +2514,25 @@ function buildToc() {
       container.appendChild(fragment);
     };
 
+    // A few embedders open <details> programmatically instead of dispatching
+    // the native toggle event.  Observe the open attribute as a safety net,
+    // while retaining lazy heading links so a 50k-line document does not
+    // inflate the live DOM just by opening the TOC.
+    if (!list.__tocOpenObserver) {
+      list.__tocOpenObserver = new MutationObserver(records => {
+        records.forEach(record => {
+          if (record.type !== 'attributes' || record.attributeName !== 'open') return;
+          const group = record.target;
+          const pageIndex = Number(group.dataset.pageIdx);
+          const headings = headingGroups.get(pageIndex);
+          const container = group.querySelector('.toc-group-body');
+          group.__tocExplicitOpen = group.open;
+          if (group.open && headings && container) fillTocGroup(container, headings);
+        });
+      });
+      list.__tocOpenObserver.observe(list, { subtree: true, attributes: true, attributeFilter: ['open'] });
+    }
+
     if (!list.dataset.delegationBound) {
       list.dataset.delegationBound = 'true';
       list.addEventListener('click', event => {
@@ -2555,6 +2567,7 @@ function buildToc() {
       const container = document.createElement('div');
       container.className = 'toc-group-body';
       group.addEventListener('toggle', () => {
+        group.__tocExplicitOpen = group.open;
         if (group.open) fillTocGroup(container, headings);
       });
       if (pageIndex === state.pagination.currentPage) {
@@ -4361,7 +4374,7 @@ function bindCodeDocActions(content, name, lang) {
   if (toMdBtn) {
     toMdBtn.addEventListener('click', async () => {
       if (typeof openAiPanelWithPrompt === 'function') {
-        openAiPanelWithPrompt('quick_read', `请将以下 ${lang || '代码'} 源码/配置文件深度结构化转换为规范、美观、带章节与说明的 Markdown 文档：\n\n\`\`\`${lang || ''}\n${content}\n\`\`\``);
+        openAiPanelWithPrompt('code_to_doc', '', content);
       } else if (state.file) {
         await convertOrOcr(state.file, 'convert');
       }
@@ -4375,7 +4388,7 @@ function bindCodeDocActions(content, name, lang) {
   if (aiBtn) {
     aiBtn.addEventListener('click', () => {
       if (typeof openAiPanelWithPrompt === 'function') {
-        openAiPanelWithPrompt('ask', `请深度解析以下 ${lang || '代码'} 代码/配置文件的核心逻辑、关键配置项与潜在问题：\n\n\`\`\`${lang || ''}\n${content}\n\`\`\``);
+        openAiPanelWithPrompt('code_analysis', '', content);
       }
     });
   }
@@ -7225,24 +7238,21 @@ async function runEditAiAction(act, customPrompt = '') {
   if (statusEl) statusEl.textContent = _t('editai.generating') || 'AI 正在深度生成中...';
 
   const range = editAiSelectionRange || { from: 0, to: 0, text: '' };
-  let systemPrompt = '你是 ReadMD 智能写作与编辑助手。根据用户的要求或上下文进行高质量 Markdown 处理。只输出生成的正文，不要有任何多余的寒暄或解释。';
+  const skillByAction = { complete: 'readmd-continue', polish: 'readmd-polish', fix: 'readmd-format-fix', translate: 'readmd-translate' };
+  const skillId = skillByAction[act] || 'readmd-polish';
   let userMessage = '';
+  const sourceText = range.text || (cmView ? cmView.state.doc.toString() : '');
 
   if (act === 'complete') {
-    systemPrompt = '你是 Markdown 智能续写助手。根据用户给出的前文内容与光标上下文，自然流畅地续写下一段落或后续内容。只输出续写内容本身。';
-    userMessage = `前文内容：\n${range.context || range.text || (cmView ? cmView.state.doc.toString() : '')}\n\n请自然续写后续内容：`;
+    userMessage = customPrompt || '';
   } else if (act === 'polish') {
-    systemPrompt = '你是专业特约编辑。深度润色用户给出的 Markdown 文本：纠错字、通语病、增强流畅度与文采，严格保留原格式标记与公式。只输出润色后的正文。';
-    userMessage = `请润色以下文本：\n\n${range.text || (cmView ? cmView.state.doc.toString() : '')}`;
+    userMessage = customPrompt || '';
   } else if (act === 'fix') {
-    systemPrompt = '你是 Markdown 语法排版专家。修复文本中的表格对齐、公式符号、未闭合标记与排版缺陷。只输出修复后的完整 Markdown。';
-    userMessage = `请修复以下 Markdown 排版与语法：\n\n${range.text || (cmView ? cmView.state.doc.toString() : '')}`;
+    userMessage = customPrompt || '';
   } else if (act === 'translate') {
-    systemPrompt = '你是专业翻译。若输入主要是中文则翻译为高质量地道英文；若主要是英文则翻译为地道严谨简体中文。只输出翻译结果。';
-    userMessage = `请翻译以下内容：\n\n${range.text || (cmView ? cmView.state.doc.toString() : '')}`;
+    userMessage = customPrompt || '';
   } else {
-    userMessage = customPrompt || '请优化此段内容';
-    if (range.text) userMessage += `\n\n参考文本：\n${range.text}`;
+    userMessage = customPrompt || '';
   }
 
   editAiCurrentResult = '';
@@ -7252,10 +7262,16 @@ async function runEditAiAction(act, customPrompt = '') {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userMessage }
-        ],
+        skill_id: skillId,
+        skill_variables: {
+          document: range.context || sourceText,
+          selection: sourceText,
+          request: userMessage,
+          language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en',
+          context: range.context || '',
+          output_format: 'Markdown'
+        },
+        messages: [{ role: 'user', content: userMessage }],
         stream: false
       })
     });
@@ -7400,17 +7416,13 @@ const AI_ACTIONS = {
   expand: 'tpl.actionExpand',
 };
 
-const AI_SYSTEM = {
-  quick_read: '你是 ReadMD 的资深文档领读助手。对用户给出的 Markdown 文档进行结构化深度提炼，输出：1) 核心主旨（1~2 句话提纲挈领）；2) 核心要点清单（按重要度排序）；3) 结构逻辑脉络；4) 关键结论、行动项或待澄清疑问。排版清晰美观，使用规范 Markdown 格式。',
-  polish: '你是专业级中文特约编辑。深度润色用户给出的 Markdown 文档：纠正错别字、语病及生硬翻译腔，去除啰嗦冗余表达，增强行文流畅度与文采。严格保留原文所有标题层级、列表、代码块、LaTeX 公式、表格及 Markdown 标记。只输出润色后的完整正文，不要输出任何开场白或解释性文字。',
-  proofread: '你是严格的出版级文字校对专家。对用户给出的 Markdown 文档进行全方位勘误：1) 错别字与错用词；2) 标点符号规范（中英文标点混用、全半角引号等）；3) 语病与语序混乱；4) Markdown 排版规范。先列出【修改对照清单】，再输出【修正后的完整 Markdown 文档】。',
-  translate_en: 'You are a professional academic and technical translator. Translate the provided document into clear, natural, and idiomatic English. Preserve all Markdown structure, headings, lists, tables, code blocks, and LaTeX math formulas intact. Output ONLY the translated content without conversational filler or extra explanations.',
-  translate_zh: '你是资深专业翻译。将用户给出的文档精确翻译为地道、严谨、流畅的简体中文（遵循信达雅原则）。严格保留全部 Markdown 格式、表格、代码块及 LaTeX 公式。只输出译文正文，不要添加任何寒暄或附注说明。',
-  todo: '你是高效任务与项目管理助手。深入分析用户文档，精准提取所有待办事项、决策行动项与跟进任务。用 Markdown 任务清单（- [ ]）与表格（事项 / 责任人 / 预期成果 / 优先级）结构化输出。',
-  continue: '你是优秀的同构写作与思维延伸助手。深度承接用户文档末尾的思想逻辑与文风语调，自然展开后续段落或章节写作，提供有深度、有逻辑的实质性内容扩展。只输出续写新增内容，不要重复原文。',
-  ask: '你是 ReadMD 文档问答助手。基于用户给出的文档内容，条理清晰地回答用户的问题；如果文档中未提及相关信息，请诚实明确指出。',
-  modify: '你是 Markdown 格式专家。修正文档中的格式问题：表格对齐补全、加粗未闭合、公式排版、标题层级。只输出修正后的完整文档，不要解释。',
-  expand: '你是文档扩充助手。在保持原有结构与语气的前提下，为文档补充细节、示例、解释，使内容更丰富。只输出扩充后的完整文档，不要加任何解释。',
+const AI_SKILLS = {
+  quick_read: 'readmd-quick-read', polish: 'readmd-polish', proofread: 'readmd-proofread',
+  translate_en: 'readmd-translate', translate_zh: 'readmd-translate', todo: 'readmd-todo',
+  continue: 'readmd-continue', ask: 'readmd-ask', summary: 'readmd-summary',
+  outline: 'readmd-outline', weekly: 'readmd-weekly', code_review: 'readmd-code-review',
+  modify: 'readmd-format-fix', expand: 'readmd-polish', translate: 'readmd-translate',
+  code_to_doc: 'readmd-code-to-doc', code_analysis: 'readmd-code-analysis'
 };
 
 function toggleAiPanel() {
@@ -7441,7 +7453,7 @@ function handleTopAiButtonClick() {
 }
 window.handleTopAiButtonClick = handleTopAiButtonClick;
 
-function openAiPanelWithPrompt(act, promptText) {
+function openAiPanelWithPrompt(act, promptText, targetText) {
   const p = $('ai-panel');
   if (!p) return;
   if (p.classList.contains('hidden')) {
@@ -7451,6 +7463,10 @@ function openAiPanelWithPrompt(act, promptText) {
   if (promptInput && promptText) {
     promptInput.value = promptText;
   }
+  // Code/document actions can supply an ephemeral target without embedding a
+  // second instruction prompt in the UI bundle.  It is consumed by runAi and
+  // never persisted to history as provider configuration.
+  state.ai.targetOverride = typeof targetText === 'string' ? targetText : null;
   if (act) {
     setTimeout(() => runAi(act), 50);
   }
@@ -7505,7 +7521,7 @@ function updateAiConnectionSummary() {
   const summary = $('ai-model-summary');
   if (summary) summary.textContent = (model && model.value) || (_t('ai.noModel') || '未选择模型');
   if (!p) return setAiConnectionState('warn', _t('ai.noProvider') || '请选择连接');
-  const local = /ollama/i.test(p.name || '');
+  const local = isLocalAiProvider(p);
   if (local || p.has_key || p.key_source) setAiConnectionState('ready', p.name + ' · ' + (_t('ai.statusReady') || '已就绪'));
   else setAiConnectionState('warn', p.name + ' · ' + (_t('ai.needKey') || '需要 API Key'));
 }
@@ -7513,9 +7529,24 @@ function updateAiConnectionSummary() {
 
 async function loadAiPrompts() {
   try {
-    const r = await apiFetch('/api/ai/prompts');
-    if (!r.ok) return;
-    state.ai.templates = (await r.json()).templates || [];
+    const [promptResponse, skillResponse] = await Promise.all([
+      apiFetch('/api/ai/prompts'), apiFetch('/api/skills'),
+    ]);
+    const legacy = promptResponse.ok ? ((await promptResponse.json()).templates || []) : [];
+    const skills = skillResponse.ok ? ((await skillResponse.json()).skills || []) : [];
+    const legacyBySkill = new Map(legacy.filter(t => t && t.skill_id).map(t => [t.skill_id, t]));
+    // The workbench is Skill-first: every selectable action resolves to the
+    // shared registry, while legacy template metadata is retained only for a
+    // one-version action/name compatibility layer.
+    state.ai.templates = skills.map(s => {
+      const old = legacyBySkill.get(s.id) || {};
+      return {
+        id: old.id || s.id, skill_id: s.id, name: old.name || s.name,
+        action: old.action || 'custom', user: old.user || '',
+        system: s.instructions || '', builtin: s.scope === 'builtin',
+        scope: s.scope, metadata: s.metadata || {}, variables: s.variables || [],
+      };
+    });
     fillAiTemplates();
   } catch (e) { /* ignore */ }
 }
@@ -7599,6 +7630,7 @@ function renderTplList() {
 
 function selectTpl(id) {
   const t = (state.ai.templates || []).find(x => x.id === id) || null;
+  const builtin = !!(t && t.builtin);
   document.querySelectorAll('#tpl-list li').forEach(li => {
     const selected = li.dataset.id === id;
     li.classList.toggle('active', selected);
@@ -7609,7 +7641,94 @@ function selectTpl(id) {
   if ($('tpl-action')) $('tpl-action').value = (t && t.action) || 'custom';
   $('tpl-system').value = t ? (t.system || '') : '';
   $('tpl-user').value = t ? (t.user || '') : '';
-  $('tpl-del').disabled = !t;
+  $('tpl-name').readOnly = builtin;
+  $('tpl-system').readOnly = builtin;
+  $('tpl-user').readOnly = builtin;
+  if ($('tpl-save')) $('tpl-save').disabled = builtin;
+  $('tpl-del').disabled = !t || builtin;
+  if ($('tpl-publish')) $('tpl-publish').disabled = !t || builtin;
+  const status = $('tpl-draft-status');
+  if (status) status.textContent = builtin
+    ? '内置 Skill 只读；如需改造请复制到用户作用域后再发布。'
+    : (t ? '用户 Skill 可编辑；保存后请先试跑，发布动作需要明确确认。' : 'AI 生成的 Skill 默认是禁用草稿，发布前请先试跑并检查差异。');
+}
+
+function copyCurrentSkill() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const current = (state.ai.templates || []).find(x => x.id === $('tpl-id').value);
+  if (!current) return;
+  const base = String(current.skill_id || current.id || 'skill').replace(/[^a-z0-9-]/gi, '-').toLowerCase().replace(/^-+|-+$/g, '') || 'skill';
+  const copyId = (base + '-custom').slice(0, 64);
+  selectTpl(null);
+  $('tpl-id').value = copyId;
+  $('tpl-name').value = (current.name || copyId) + ' (Copy)';
+  $('tpl-system').value = current.system || '';
+  $('tpl-user').value = current.user || '';
+  $('tpl-name').readOnly = $('tpl-system').readOnly = $('tpl-user').readOnly = false;
+  if ($('tpl-save')) $('tpl-save').disabled = false;
+  if ($('tpl-publish')) $('tpl-publish').disabled = false;
+  if ($('tpl-draft-status')) $('tpl-draft-status').textContent = _t('tpl.hint') || '复制后的 Skill 尚未发布。保存后请先试跑，再明确发布。';
+  $('tpl-name').focus(); $('tpl-name').select();
+}
+
+async function generateSkillDraft() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const p = currentAiProvider();
+  if (!p) { showToast(_t('toast.selectProviderFirst') || '请先选择 AI 提供商'); return; }
+  if (!p.credential_id) {
+    if (!(await saveAiSelection(true))) return;
+  }
+  const active = currentAiProvider() || p;
+  if (!active.credential_id && !isLocalAiProvider(active)) {
+    showToast(_t('toast.noApiKeyNotice') || '请先在连接设置中配置凭据'); return;
+  }
+  const request = window.prompt('请描述你要创建的 Skill（目标、触发条件、输出格式和安全边界）：', '创建一个适合当前文档的写作 Skill');
+  if (!request || !request.trim()) return;
+  const button = $('tpl-ai-generate');
+  if (button) { button.disabled = true; button.textContent = '生成中…'; }
+  try {
+    const r = await apiFetch('/api/skills', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'generate', provider: active.id, credential_id: active.credential_id,
+        model: $('ai-model').value || (active.models || [])[0] || '', request, document: getAiTargetText().text,
+        language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en' }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok || !d.draft) throw new Error(d.error || 'Skill 草稿生成失败');
+    const draft = d.draft;
+    const description = draft.description || 'Use when a ReadMD document needs this workflow.';
+    const content = `---\nname: ${draft.id}\ndescription: ${description}\n---\n\n${draft.instructions || ''}`;
+    state.ai.skillDraft = { id: draft.id, content, metadata: Object.assign({}, draft.metadata, { enabled: false }) };
+    selectTpl(null);
+    $('tpl-id').value = draft.id;
+    $('tpl-name').value = draft.name || draft.id;
+    $('tpl-system').value = content;
+    $('tpl-user').value = '';
+    if ($('tpl-publish')) $('tpl-publish').disabled = false;
+    if ($('tpl-draft-status')) $('tpl-draft-status').textContent = '已生成禁用草稿：请检查指令并点击“发布 Skill”后才会进入真实流程。';
+    showToast('Skill 草稿已生成，尚未发布');
+  } catch (e) {
+    showToast('Skill 草稿生成失败：' + e.message);
+  } finally {
+    if (button) { button.disabled = false; button.textContent = 'AI 生成 Skill 草稿'; }
+  }
+}
+
+async function publishCurrentSkill() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const id = String($('tpl-id').value || '').trim();
+  const content = String($('tpl-system').value || '').trim();
+  if (!id || !content) { showToast('请先选择或生成一个用户 Skill'); return; }
+  if (!(await confirmAction({ title: '发布 Skill', message: '发布后此 Skill 可用于真实文档流程，确定继续吗？', confirmText: '发布', cancelText: _t('dialog.cancel') || '取消', danger: true }))) return;
+  try {
+    const r = await apiFetch('/api/skills', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'publish', confirm: true, id, content, metadata: { id, source: 'skill-workbench', enabled: true, scripts_allowed: false } }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.error || '发布失败');
+    state.ai.skillDraft = null;
+    await loadAiPrompts();
+    showToast('Skill 已发布');
+  } catch (e) { showToast('Skill 发布失败：' + e.message); }
 }
 
 function parseMarkdownTemplate(content, filename) {
@@ -8020,6 +8139,7 @@ async function loadAiConfig() {
     state.ai.config = await r.json();
     const cfg = state.ai.config;
     state.ai.providers = mergeAiProviders(cfg.custom || [], cfg.presets || []);
+    state.ai.upstreamCatalog = Array.isArray(cfg.upstream_catalog) ? cfg.upstream_catalog : [];
     fillAiProviders(state.ai.providers, cfg.current || {});
     loadAiPrompts();
     loadAiSessions();
@@ -8049,6 +8169,31 @@ function fillAiProviders(merged, current) {
   if (customGroup.children.length) sel.appendChild(customGroup);
   if (presetGroup.children.length) sel.appendChild(presetGroup);
   if (curId) sel.value = curId;
+  const cards = $('ai-provider-cards');
+  const search = $('ai-provider-search');
+  if (cards) {
+    const query = String(search && search.value || '').trim().toLowerCase();
+    const sourceEntries = (state.ai.upstreamCatalog || []).map(p => Object.assign({ source_only: true }, p));
+    const cardProviders = merged.concat(sourceEntries);
+    cards.innerHTML = '';
+    cardProviders.filter(p => !query || [p.name, p.note, p.website, p.category, p.format].some(v => String(v || '').toLowerCase().includes(query)))
+      .forEach(p => {
+        const card = document.createElement('button');
+        card.type = 'button'; card.className = 'ai-provider-card' + (p.id === curId ? ' active' : '') + (p.source_only ? ' source-only' : '');
+        if (p.source_only) card.disabled = true;
+        card.setAttribute('role', 'option'); card.setAttribute('aria-selected', p.id === curId ? 'true' : 'false');
+        const title = document.createElement('strong'); title.textContent = p.name || p.id;
+        const meta = document.createElement('span');
+        const caps = p.capabilities && typeof p.capabilities === 'object' ? Object.keys(p.capabilities).filter(k => p.capabilities[k]).slice(0, 3) : [];
+        const capLabels = { chat: _t('ai.aiResult') || 'Chat', models: _t('ai.model') || 'Models', vision: _t('ai.explain') || 'Vision', tools: _t('ai.advanced') || 'Tools' };
+        const kind = p.source_only ? (_t('ai.sourcePrefix') || '离线来源目录') : (p.custom ? (_t('ai.customConnections') || 'Custom') : (_t('ai.officialPresets') || 'Presets'));
+        meta.textContent = kind + (caps.length ? ' · ' + caps.map(k => capLabels[k] || k).join(' · ') : '');
+        const status = document.createElement('i'); status.className = 'ai-provider-state'; status.setAttribute('aria-label', p.has_key ? (_t('ai.keyConfigured') || 'Key configured') : (_t('ai.noKeyConfigured') || 'No key configured')); status.textContent = p.has_key ? '●' : '○';
+        card.append(title, meta, status);
+        if (!p.source_only) card.addEventListener('click', () => { sel.value = p.id; onAiProviderChange(); fillAiProviders(merged, { provider_id: p.id, model: $('ai-model').value }); });
+        cards.appendChild(card);
+      });
+  }
   onAiProviderChange();
 }
 
@@ -8057,8 +8202,25 @@ function currentAiProvider() {
   return (state.ai.providers || []).find(p => p.id === id || p.name === id) || null;
 }
 
+function isLocalAiProvider(provider) {
+  if (!provider) return false;
+  if (String(provider.category || '').toLowerCase() === 'local') return true;
+  const url = String(provider.base_url || '').toLowerCase();
+  return /(^|[/:])(?:localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(url);
+}
+
 function aiPresetBase(p) {
   return (p && p.base_url) || '';
+}
+
+function readAiCustomHeaders() {
+  const raw = $('ai-headers') ? $('ai-headers').value.trim() : '';
+  if (!raw) return {};
+  const parsed = JSON.parse(raw);
+  if (!parsed || Array.isArray(parsed) || typeof parsed !== 'object') {
+    throw new Error('请求头必须是 JSON 对象');
+  }
+  return parsed;
 }
 
 function fillAiModels(models, selected) {
@@ -8082,11 +8244,14 @@ function onAiProviderChange() {
   $('ai-base-url').value = base;
   const mode = p.mode || (p.format === 'anthropic' ? 'messages' : 'auto');
   $('ai-mode').value = (mode === 'anthropic') ? 'messages' : mode;
+  if ($('ai-endpoint-mode')) $('ai-endpoint-mode').value = p.endpoint_mode || 'prefix';
   const current = (state.ai.config && state.ai.config.current) || {};
   fillAiModels(p.models, (current.provider_id || current.provider) === p.id ? current.model : '');
   $('ai-provider-name').value = p.name || '';
   $('ai-provider-name').disabled = !p.custom;
   $('ai-provider-delete').disabled = !p.custom;
+  const headers = $('ai-headers');
+  if (headers) headers.value = p.headers && typeof p.headers === 'object' ? JSON.stringify(p.headers, null, 2) : '';
   syncAiKey();
 }
 
@@ -8098,13 +8263,13 @@ function syncAiKey() {
   if (!p) { inp.value = ''; inp.placeholder = ''; if (status) status.textContent = ''; return; }
   // API Key 不会从后端回传；切换连接时也不保留前一个连接的输入值。
   inp.value = '';
-  inp.placeholder = (p.key_source && p.key_source.indexOf('env:') === 0)
-    ? (_t('ai.readFromEnv', { env: p.key_source.slice(4) }) || ('已从环境变量 ' + p.key_source.slice(4) + ' 读取，可覆盖'))
-    : (p.name.indexOf('Ollama') >= 0 ? (_t('ai.apiKeyOllama') || 'API Key（本地 Ollama 可留空）') : (_t('ai.apiKeyRequired') || 'API Key（必填）'));
+   inp.placeholder = (p.key_source && p.key_source.indexOf('env:') === 0)
+     ? (_t('ai.readFromEnv', { env: p.key_source.slice(4) }) || ('已从环境变量 ' + p.key_source.slice(4) + ' 读取，可覆盖'))
+     : (isLocalAiProvider(p) ? (_t('ai.apiKeyOllama') || 'API Key（本地服务可留空）') : (_t('ai.apiKeyRequired') || 'API Key（必填）'));
   if (status) {
     status.textContent = p.has_key
       ? (p.key_source ? (_t('ai.keyReady', { source: p.key_source }) || ('Key 就绪（' + p.key_source + '）')) : (_t('ai.keyConfigured') || 'Key 已配置'))
-      : (p.name.indexOf('Ollama') >= 0 ? (_t('ai.localNoKey') || '本地模型无需 Key') : (_t('ai.noKeyConfigured') || '未配置 Key'));
+       : (isLocalAiProvider(p) ? (_t('ai.localNoKey') || '本地模型无需 Key') : (_t('ai.noKeyConfigured') || '未配置 Key'));
   }
   updateAiConnectionSummary();
 }
@@ -8184,15 +8349,23 @@ async function deleteAiProvider() {
 
 
 async function saveAiSelection(silent) {
-  const p = currentAiProvider();
-  if (!p || !state.ai.config) return;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  let p = currentAiProvider();
+  if (!p || !state.ai.config) return false;
   const custom = (state.ai.config.custom || []).map(c => Object.assign({}, c));
   const keyVal = $('ai-key').value.trim();
   const baseUrl = $('ai-base-url').value.trim();
   const mode = $('ai-mode').value || 'auto';
+  const endpointMode = $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix';
+  try {
+    var customHeaders = readAiCustomHeaders();
+  } catch (e) {
+    showToast((_t('toast.saveFailedSimple') || '请求头 JSON 无效：') + ' ' + e.message);
+    return false;
+  }
   const requestedName = $('ai-provider-name').value.trim() || p.name;
   if (p.custom && requestedName !== p.name && custom.some(c => c.name === requestedName)) {
-    showToast(_t('toast.customConnNameExists') || '自定义连接名称已存在'); return;
+    showToast(_t('toast.customConnNameExists') || '自定义连接名称已存在'); return false;
   }
   let over = custom.find(c => c.id === p.id);
   if (!over) {
@@ -8211,6 +8384,8 @@ async function saveAiSelection(silent) {
   if (baseUrl) over.base_url = baseUrl;
   else delete over.base_url;
   over.mode = mode;
+  over.endpoint_mode = endpointMode;
+  over.headers = customHeaders;
   if (mode === 'messages') over.format = 'anthropic';
   else over.format = 'openai';
   if (keyVal) over.api_key = keyVal;
@@ -8227,12 +8402,14 @@ async function saveAiSelection(silent) {
       const status = $('ai-conn-status');
       if (status) status.textContent = _t('status.saved') || '已保存';
       if (!silent) showToast(_t('toast.connSettingsSaved') || '连接设置已保存');
+      return true;
     } else {
       const d = await r.json().catch(() => ({}));
       throw new Error(d.error || 'HTTP ' + r.status);
     }
   } catch (e) {
     showToast((_t('toast.saveFailed') || '保存失败：') + e.message);
+    return false;
   }
 }
 
@@ -8270,17 +8447,27 @@ async function loadAiModels() {
   const baseUrl = $('ai-base-url').value.trim();
   const key = $('ai-key').value.trim();
   const mode = $('ai-mode').value || 'auto';
+  const endpointMode = $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix';
   if (!baseUrl) { showToast(_t('toast.enterBaseUrlFirst') || '请先填写 Base URL'); return; }
-  const p = currentAiProvider();
-  const local = p && p.name.indexOf('Ollama') >= 0;
+  let p = currentAiProvider();
+  const local = isLocalAiProvider(p);
   if (!local && !key && !(p && p.has_key)) { showToast(_t('toast.enterApiKeyFirst') || '请先填写 API Key'); return; }
+  try {
+    var requestHeaders = readAiCustomHeaders();
+  } catch (e) {
+    showToast((_t('toast.saveFailedSimple') || '请求头 JSON 无效：') + ' ' + e.message);
+    return;
+  }
   const btn = $('ai-models-btn');
   const old = btn.textContent;
   btn.disabled = true; btn.textContent = _t('toast.fetchingModels') || '获取中…';
   const status = $('ai-conn-status');
   try {
-    const q = new URLSearchParams({ provider: (p && p.id) || '', base_url: baseUrl, key: key, mode: mode });
-    const r = await apiFetch('/api/ai/models?' + q.toString());
+    const r = await apiFetch('/api/ai/models', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: (p && p.id) || '', credential_id: (p && p.credential_id) || undefined, base_url: baseUrl, mode: mode, endpoint_mode: endpointMode, headers: requestHeaders })
+    });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
     const ids = d.models || [];
@@ -8349,9 +8536,13 @@ async function runAi(action) {
   const p = currentAiProvider();
   if (!p) { showToast(_t('toast.selectProviderFirst') || '请先选择 AI 提供商'); return; }
   const keyVal = $('ai-key').value.trim();
-  const local = p.name.indexOf('Ollama') >= 0;
+  const local = isLocalAiProvider(p);
   if (!local && !keyVal && !p.has_key && !p.key_source) { showToast(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接'); return; }
-  const { text, isSelection } = getAiTargetText();
+  const target = state.ai.targetOverride;
+  const { text, isSelection } = target != null
+    ? { text: target, isSelection: true }
+    : getAiTargetText();
+  state.ai.targetOverride = null;
   if (!text || !text.trim()) { showToast(_t('toast.noDocContentNotice') || '没有可处理的文档内容'); return; }
   const prompt = $('ai-prompt').value.trim();
   const isIncognito = $('ai-incognito').checked;
@@ -8359,13 +8550,17 @@ async function runAi(action) {
   const mode = $('ai-mode').value || 'auto';
   const baseUrl = $('ai-base-url').value.trim();
   const stream = $('ai-stream').checked;
-  saveAiSelection();
+  const endpointMode = $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix';
+  // Persist a newly entered credential before starting the request. This
+  // prevents the request from racing the config write and lets the server
+  // resolve the opaque credential_id instead of receiving a raw key.
+  if (!(await saveAiSelection(true))) return;
+  const activeProvider = currentAiProvider() || p;
+  let requestHeaders = {};
+  try { requestHeaders = readAiCustomHeaders(); } catch (e) { return; }
 
   const tpl = currentAiTemplate();
-  let sys = (tpl && tpl.system) || (_t('ai.system_' + action) || AI_SYSTEM[action] || '你是 ReadMD 的文档助手。');
-  if (action === 'translate' && prompt && !(tpl && tpl.system)) {
-    sys = _t('ai.system_translate_prompt', { lang: prompt }) || ('你是专业翻译。将用户给出的文档翻译成「' + prompt + '」，保留 Markdown 结构、表格与代码块，只输出译文。');
-  }
+  const skillId = (tpl && tpl.skill_id) || AI_SKILLS[action] || 'readmd-ask';
   const docs = text.length > 120000 ? text.slice(0, 120000) + '\n\n' + (_t('ai.contentTruncated') || '[内容过长已截断，请分段处理]') : text;
   const fill = s => String(s || '').replace(/\{doc\}/g, docs).replace(/\{prompt\}/g, prompt || '');
   let userMsg;
@@ -8427,9 +8622,17 @@ async function runAi(action) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        provider: p.id, model: model, api_key: keyVal || undefined,
-        base_url: baseUrl || undefined, mode: mode, stream: stream,
-        messages: [{ role: 'system', content: sys }].concat(msgs),
+        provider: activeProvider.id, model: model,
+        credential_id: activeProvider.credential_id || undefined,
+        // One-version compatibility for a newly created, not-yet-persisted
+        // connection. Once saved, subsequent calls use only credential_id.
+        api_key: activeProvider.credential_id ? undefined : (keyVal || undefined),
+        base_url: baseUrl || undefined, mode: mode, endpoint_mode: endpointMode, headers: requestHeaders, stream: stream,
+        skill_id: skillId,
+        skill_variables: { document: docs, selection: isSelection ? docs : '', request: prompt,
+          language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en',
+          context: '', output_format: 'Markdown' },
+        messages: msgs,
         temperature: 0.7,
       }),
       signal: ctrl.signal,
@@ -8454,19 +8657,21 @@ async function runAi(action) {
         if (!data) continue;
         let obj;
         try { obj = JSON.parse(data); } catch (e) { continue; }
-        if (obj.error) throw new Error(obj.error);
-        if (obj.done) break;
-        if (obj.usage) {
-          state.ai.usage = obj.usage;
+        if (obj.type === 'error' || obj.error) throw new Error(obj.error || 'AI stream error');
+        if (obj.type === 'done' || obj.done) break;
+        const usage = obj.usage || (obj.type === 'usage' ? obj.usage : null);
+        if (usage) {
+          state.ai.usage = usage;
           const s = state.ai.sessUsage;
-          s.prompt_tokens += obj.usage.prompt_tokens || 0;
-          s.completion_tokens += obj.usage.completion_tokens || 0;
-          s.total_tokens += obj.usage.total_tokens || 0;
+          s.prompt_tokens += usage.prompt_tokens || 0;
+          s.completion_tokens += usage.completion_tokens || 0;
+          s.total_tokens += usage.total_tokens || 0;
           updateAiUsage();
           continue;
         }
-        if (obj.d === undefined) continue;
-        state.ai.raw += obj.d;
+        const delta = obj.type === 'delta' ? obj.delta : obj.d;
+        if (delta === undefined) continue;
+        state.ai.raw += delta;
         if (!renderTimer) renderTimer = setTimeout(render, state.ai.raw.length > 150000 ? 500 : 120);
       }
     }
@@ -8518,8 +8723,15 @@ async function testAiConnection() {
   button.disabled = true; button.textContent = _t('toast.testingConn') || '测试中…';
   setAiConnectionState('loading', _t('toast.testingConn') || '正在测试连接…');
   try {
-    const q = new URLSearchParams({ provider: p.id || '', base_url: $('ai-base-url').value.trim(), key: $('ai-key').value.trim(), mode: $('ai-mode').value || 'auto' });
-    const r = await apiFetch('/api/ai/models?' + q.toString());
+    await saveAiSelection(true);
+    const active = currentAiProvider() || p;
+    const r = await apiFetch('/api/ai/models', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ provider: active.id || '', credential_id: active.credential_id || undefined,
+        base_url: $('ai-base-url').value.trim(), mode: $('ai-mode').value || 'auto',
+        endpoint_mode: $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix' })
+    });
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.error || 'HTTP ' + r.status);
     setAiConnectionState('ready', _t('toast.connReady', { name: p.name }) || (p.name + ' · 连接正常'));
@@ -10217,7 +10429,12 @@ function updateExportLivePreview() {
   if (fullModal && !fullModal.classList.contains('hidden')) {
     const wrapper = fullModal.querySelector('.export-preview-paper-wrapper');
     if (wrapper) {
-      wrapper.innerHTML = '';
+      // Keep the stable full-page host in the DOM.  Besides preserving CSS
+      // hooks, this makes the preview accessible to keyboard/screen-reader
+      // clients and avoids tests or extensions losing their target after a
+      // style refresh.
+      wrapper.innerHTML = '<div id="export-preview-full-page" class="export-preview-full-page"></div>';
+      const fullPageHost = wrapper.querySelector('#export-preview-full-page');
       
       const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       
@@ -10245,7 +10462,7 @@ function updateExportLivePreview() {
           sheet.appendChild(footerEl);
         }
         
-        wrapper.appendChild(sheet);
+        fullPageHost.appendChild(sheet);
         renderMath(bodyEl);
       });
     }
@@ -10367,6 +10584,29 @@ function collectExportOptions() {
     expSet(opts, el.dataset.k, v);
   });
   return opts;
+}
+
+// AI providers sometimes return a flat dotted object while the exporter uses
+// nested options. Normalize both forms and drop unknown keys before merging so
+// a model cannot mutate unrelated export state.
+function normalizeExportAiPayload(value) {
+  const allowed = new Set(['typography', 'headings', 'table', 'page']);
+  const out = {};
+  const visit = (obj, prefix = '') => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+    Object.entries(obj).forEach(([key, val]) => {
+      const full = prefix ? prefix + '.' + key : key;
+      if (full.includes('.')) {
+        const parts = full.split('.');
+        if (!allowed.has(parts[0]) || parts.length > 4) return;
+        expSet(out, full, val);
+      } else if (allowed.has(key) && val && typeof val === 'object' && !Array.isArray(val)) {
+        visit(val, full);
+      }
+    });
+  };
+  visit(value);
+  return out;
 }
 
 function renderExportPresetSelect() {
@@ -10507,40 +10747,20 @@ async function generateExportStyleWithAi(stylePrompt) {
     statusEl.textContent = _t('exportai.generating') || '正在分析并设计排版参数...';
   }
 
-  const systemPrompt = `You are a professional document and book typography designer.
-Based on user style prompt, return ONLY a valid strict JSON object specifying export typography parameters for ReadMD.
-Allowed keys and values:
-{
-  "typography.font": "MicrosoftYaHei" | "SimSun" | "SimHei" | "KaiTi" | "Arial",
-  "typography.size": integer between 9 and 16,
-  "typography.lineHeight": float between 1.2 and 2.0,
-  "typography.spacing": integer between 4 and 16,
-  "typography.color": "#xxxxxx",
-  "typography.align": "left" | "justify" | "center",
-  "headings.h1.size": integer between 18 and 28,
-  "headings.h1.color": "#xxxxxx",
-  "headings.h1.bold": true | false,
-  "headings.h2.size": integer between 14 and 22,
-  "headings.h2.color": "#xxxxxx",
-  "headings.h2.bold": true | false,
-  "table.headerBg": "#xxxxxx",
-  "table.headerColor": "#xxxxxx",
-  "page.marginTop": integer between 10 and 35,
-  "page.marginRight": integer between 10 and 35,
-  "page.marginBottom": integer between 10 and 35,
-  "page.marginLeft": integer between 10 and 35
-}
-Output ONLY raw JSON. No markdown backticks, no conversational text.`;
-
   try {
     const res = await apiFetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `排版风格要求：${stylePrompt}` }
-        ],
+        skill_id: 'readmd-export-style',
+        skill_variables: {
+          request: stylePrompt,
+          context: 'Use typography.font/size/lineHeight/spacing/color/align, headings.h1/h2 size/color/bold, table.headerBg/headerColor, page.marginTop/Right/Bottom/Left with the documented bounds.',
+          document: stylePrompt,
+          language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en',
+          output_format: 'JSON'
+        },
+        messages: [{ role: 'user', content: stylePrompt }],
         stream: false
       })
     });
@@ -10572,7 +10792,8 @@ Output ONLY raw JSON. No markdown backticks, no conversational text.`;
           if (jsonStr && jsonStr !== '[DONE]') {
             try {
               const d = JSON.parse(jsonStr);
-              if (d.d) chunks.push(d.d);
+              if (d.type === 'delta' && d.delta) chunks.push(d.delta);
+              else if (d.d) chunks.push(d.d);
               else if (d.content) chunks.push(d.content);
             } catch (e) {}
           }
@@ -10582,7 +10803,7 @@ Output ONLY raw JSON. No markdown backticks, no conversational text.`;
     }
 
     text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
-    const parsed = JSON.parse(text);
+    const parsed = normalizeExportAiPayload(JSON.parse(text));
     
     // Apply options to export state and DOM
     state.export.options = expDeepMerge(state.export.options || state.export.defaults, parsed);
@@ -11263,7 +11484,13 @@ function bindEvents() {
   $('search-prev').addEventListener('click', () => jumpToMark(-1));
   let searchDebounce = null;
   let initialSearchFocused = false;
+  let searchQueryNeedsInitialEnter = false;
   $('search-input').addEventListener('input', e => {
+    // Treat every edit as a new query even when the debounce wins the race
+    // before Enter.  The first Enter must establish the query's initial
+    // result; the following Enter advances to the next match.
+    initialSearchFocused = false;
+    searchQueryNeedsInitialEnter = true;
     clearTimeout(searchDebounce);
     searchDebounce = setTimeout(() => doSearch(e.target.value, undefined, { jump: false }), 40);
   });
@@ -11272,7 +11499,8 @@ function bindEvents() {
     if (e.key === 'Enter') {
       e.preventDefault();
       clearTimeout(searchDebounce);
-      if (globalSearchState.query !== e.target.value) {
+      if (searchQueryNeedsInitialEnter || globalSearchState.query !== e.target.value) {
+        searchQueryNeedsInitialEnter = false;
         initialSearchFocused = false;
         // Enter must win against the input debounce and immediately reveal the result.
         doSearch(e.target.value, undefined, { jump: true });
@@ -11375,6 +11603,9 @@ function bindEvents() {
   $('ai-history-export').addEventListener('click', exportCurrentConversation);
   $('ai-history-clear').addEventListener('click', clearAiSessions);
   $('ai-provider').addEventListener('change', onAiProviderChange);
+  $('ai-provider-search') && $('ai-provider-search').addEventListener('input', () => {
+    fillAiProviders(state.ai.providers || [], { provider_id: $('ai-provider').value, model: $('ai-model').value });
+  });
   $('ai-provider-new').addEventListener('click', newAiProvider);
   $('ai-provider-delete').addEventListener('click', deleteAiProvider);
   $('ai-mode').addEventListener('change', () => { /* 协议变更由保存设置时生效 */ });
@@ -11395,7 +11626,10 @@ function bindEvents() {
   $('ai-template').addEventListener('change', onAiTemplateChange);
   $('ai-tpl-btn').addEventListener('click', openTplModal);
   $('tpl-new').addEventListener('click', () => selectTpl(null));
+  $('tpl-copy') && $('tpl-copy').addEventListener('click', copyCurrentSkill);
   $('tpl-save').addEventListener('click', saveTplForm);
+  $('tpl-ai-generate') && $('tpl-ai-generate').addEventListener('click', generateSkillDraft);
+  $('tpl-publish') && $('tpl-publish').addEventListener('click', publishCurrentSkill);
   $('tpl-del').addEventListener('click', deleteCurrentTpl);
   $('tpl-close').addEventListener('click', () => $('tpl-modal').classList.add('hidden'));
   $('ai-session').addEventListener('change', onAiSessionChange);

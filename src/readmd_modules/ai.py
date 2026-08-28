@@ -7,100 +7,70 @@ API Key 优先级：界面配置 > 环境变量 > 空。
 import json
 import logging
 import os
+import re
 import uuid
 import urllib.request
 import urllib.error
 
 
 from ..readmd_core.config import DATA_DIR
-from .crypto import encrypt_api_key, decrypt_api_key
+from ..readmd_core.service import ReadMDCoreService
+from .crypto import (encrypt_api_key, decrypt_api_key, is_crypto_available,
+                      store_credential, load_credential, delete_credential)
+from .skills import SkillError
 
 CONFIG_FILE = os.path.join(DATA_DIR, 'ai.json')
-CONFIG_SCHEMA_VERSION = 2
+CONFIG_SCHEMA_VERSION = 3
 
 # 内置预设（只读模板，可被自定义覆盖）
-PRESETS = [
-    {"name": "OpenCode Zen", "base_url": "https://opencode.ai/zen/v1", "format": "openai",
-     "models": ["hy3-free", "laguna-s-2.1-free", "mimo-v2.5-free", "muse-spark-1.2-contributor-free", "nemotron-3-ultra-free", "nemotron-3.5-lightning-free", "deepseek-v4-flash-free", "claude-sonnet-4-5", "gpt-5.4"],
-     "env_key": "OPENCODE_API_KEY", "website": "https://opencode.ai/zen",
-     "note": "OpenCode 免费与高质量大模型聚合服务"},
-    {"name": "OpenAI", "base_url": "https://api.openai.com/v1", "format": "openai",
-     "models": ["gpt-4o", "gpt-4o-mini", "gpt-4.1", "o3-mini"],
-     "env_key": "OPENAI_API_KEY", "website": "https://platform.openai.com",
-     "note": "OpenAI 官方（国内直连需代理）"},
-    {"name": "DeepSeek", "base_url": "https://api.deepseek.com/v1", "format": "openai",
-     "models": ["deepseek-chat", "deepseek-reasoner"],
-     "env_key": "DEEPSEEK_API_KEY", "website": "https://platform.deepseek.com",
-     "note": "深度求索，性价比高"},
-    {"name": "Kimi (Moonshot)", "base_url": "https://api.moonshot.cn/v1", "format": "openai",
-     "models": ["kimi-k2-0711-preview", "moonshot-v1-32k", "moonshot-v1-128k"],
-     "env_key": "MOONSHOT_API_KEY", "website": "https://platform.moonshot.cn",
-     "note": "月之暗面 Kimi"},
-    {"name": "智谱 GLM", "base_url": "https://open.bigmodel.cn/api/paas/v4", "format": "openai",
-     "models": ["glm-4-plus", "glm-4-flash", "glm-4-air"],
-     "env_key": "ZHIPU_API_KEY", "website": "https://open.bigmodel.cn",
-     "note": "智谱 AI"},
-    {"name": "通义千问 Qwen", "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1", "format": "openai",
-     "models": ["qwen-max", "qwen-plus", "qwen-turbo"],
-     "env_key": "DASHSCOPE_API_KEY", "website": "https://dashscope.aliyun.com",
-     "note": "阿里云百炼"},
-    {"name": "硅基流动 SiliconFlow", "base_url": "https://api.siliconflow.cn/v1", "format": "openai",
-     "models": ["deepseek-ai/DeepSeek-V3", "Qwen/Qwen2.5-72B-Instruct", "THUDM/glm-4-9b-chat"],
-     "env_key": "SILICONFLOW_API_KEY", "website": "https://siliconflow.cn",
-     "note": "国内聚合，含众多开源模型"},
-    {"name": "OpenRouter", "base_url": "https://openrouter.ai/api/v1", "format": "openai",
-     "models": ["openai/gpt-4o", "anthropic/claude-3.5-sonnet", "deepseek/deepseek-chat"],
-     "env_key": "OPENROUTER_API_KEY", "website": "https://openrouter.ai",
-     "note": "国际聚合，可访问 Claude / GPT / Gemini"},
-    {"name": "xAI Grok", "base_url": "https://api.x.ai/v1", "format": "openai",
-     "models": ["grok-2-latest", "grok-beta"],
-     "env_key": "XAI_API_KEY", "website": "https://x.ai/api"},
-    {"name": "Groq", "base_url": "https://api.groq.com/openai/v1", "format": "openai",
-     "models": ["llama-3.3-70b-versatile", "llama-3.1-8b-instant"],
-     "env_key": "GROQ_API_KEY", "website": "https://console.groq.com"},
-    {"name": "Mistral", "base_url": "https://api.mistral.ai/v1", "format": "openai",
-     "models": ["mistral-large-latest", "mistral-small-latest"],
-     "env_key": "MISTRAL_API_KEY", "website": "https://console.mistral.ai"},
-    {"name": "Gemini (Google)", "base_url": "https://generativelanguage.googleapis.com/v1beta/openai/", "format": "openai",
-     "models": ["gemini-1.5-pro", "gemini-1.5-flash", "gemini-2.0-flash"],
-     "env_key": "GEMINI_API_KEY", "website": "https://ai.google.dev/",
-     "note": "通过 Google 的 OpenAI 兼容端点访问"},
-    {"name": "火山方舟 Ark", "base_url": "https://ark.cn-beijing.volces.com/api/v3", "format": "openai",
-     "models": ["doubao-1-5-pro-32k-250115", "doubao-seed-1-6-flash"],
-     "env_key": "ARK_API_KEY", "website": "https://console.volcengine.com/ark",
-     "note": "字节跳动豆包"},
-    {"name": "腾讯混元 Hunyuan", "base_url": "https://api.hunyuan.cloud.tencent.com/v1", "format": "openai",
-     "models": ["hunyuan-turbo", "hunyuan-lite"],
-     "env_key": "HUNYUAN_API_KEY", "website": "https://cloud.tencent.com/product/hunyuan"},
-    {"name": "Ollama (本地)", "base_url": "http://localhost:11434/v1", "format": "openai",
-     "models": ["llama3.1", "qwen2.5:7b", "gemma2:9b"],
-     "env_key": "", "website": "https://ollama.com",
-     "note": "本机 Ollama，免费离线（需先安装并启动 Ollama）"},
-    {"name": "Anthropic Claude", "base_url": "https://api.anthropic.com", "format": "anthropic",
-     "models": ["claude-sonnet-4-5", "claude-3-5-haiku-latest", "claude-opus-4-1"],
-     "env_key": "ANTHROPIC_API_KEY", "website": "https://console.anthropic.com",
-     "note": "Anthropic 官方 Messages 协议（国内直连需代理）"},
-]
+CATALOG_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                             "assets", "providers", "provider-catalog.json")
 
-# 动作预设（前端会附带，服务端兜底一份，防止直接调 API 时缺少）
+
+def _load_provider_catalog():
+    """Load the pinned provider catalog without network access."""
+    try:
+        with open(CATALOG_FILE, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        providers = data.get("providers") if isinstance(data, dict) else data
+        if not isinstance(providers, list):
+            raise ValueError("provider catalog must contain a list")
+        return [dict(item) for item in providers if isinstance(item, dict) and item.get("name")]
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        logging.error("provider catalog unavailable: %s", exc)
+        return []
+
+
+PRESETS = _load_provider_catalog()
+
+
+def _load_upstream_provider_catalog():
+    """Load source-only CC-SWITCH entries for the provider workbench.
+
+    These records are intentionally kept separate from selectable ReadMD
+    presets: a source entry may not have a safe endpoint or model list yet.
+    The UI can search it and import its protocol hints, while runtime calls
+    still go through the normal Provider v3 validation path.
+    """
+    try:
+        with open(CATALOG_FILE, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        entries = data.get("upstream_entries", []) if isinstance(data, dict) else []
+        return [dict(item) for item in entries if isinstance(item, dict) and item.get("name")]
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        logging.error("upstream provider catalog unavailable: %s", exc)
+        return []
+
+
+UPSTREAM_PROVIDERS = _load_upstream_provider_catalog()
+
+# Backward-compatible action index. Prompt text is intentionally absent; all
+# instructions are resolved from assets/skills through ``_skill_messages``.
 ACTIONS = {
-    "quick_read": ("快速阅读", "你是 ReadMD 的文档阅读助手。对用户给出的 Markdown 文档做快速阅读，"
-                   "输出：1) 一句话概述；2) 核心要点列表；3) 文档结构目录；4) 值得注意的细节或疑问。使用 Markdown 格式。"),
-    "polish": ("润色", "你是资深中文编辑。润色用户给出的 Markdown 文档：修正错别字、病句、表达生硬之处，"
-               "保留原有结构与全部 Markdown 标记，只输出润色后的完整文档，不要加任何解释。"),
-    "modify": ("修改", "你是文档修订助手。根据用户要求修改文档，修正明显错误（错别字、标点、Markdown 格式错误）。"
-               "只输出修改后的完整文档，不要加任何解释。"),
-    "expand": ("扩充", "你是文档扩充助手。在保持原有结构与语气的前提下，为文档补充细节、示例、解释，使内容更丰富。"
-               "只输出扩充后的完整文档，不要加任何解释。"),
-    "continue": ("续写", "你是文档续写助手。从文档末尾自然延续写作，保持风格一致。只输出续写的新增内容，不要重复原文。"),
-    "translate": ("翻译", "你是专业翻译。将用户给出的文档翻译成指定语言，保留 Markdown 结构、表格与代码块，只输出译文。"),
-    "ask": ("问答", "你是文档问答助手。基于用户给出的文档内容回答问题；文档中没有的内容请明确说明。"),
-    "format_fix": ("排版自愈修复", "你是 ReadMD 专业 Markdown 排版自愈与格式精修引擎。对用户提供的 Markdown 文档进行深度渲染修复与排版规范化：\n"
-                    "1. 表格自愈：修复断裂表格、对齐列数、补齐表头分割线（|---|---|）、正确转义单元格内的竖线；\n"
-                    "2. 公式自愈：修复未闭合的数学公式（$...$ 与 $$...$$），补齐 LaTeX 环境声明，转义货币金额符号；\n"
-                    "3. 代码块自愈：补齐未闭合的代码块围栏（```），推断并标注缺失的编程语言；\n"
-                    "4. 结构规范：统一标题层级（确保 # 与标题间有空格）、修复列表缩进断层、修复破损链接语法；\n"
-                    "5. 纯净输出：严格保持原文所有语义和内容，禁止删减文字，禁止添加任何解释说明或前导后置客套话，全篇禁止任何 Emoji，直接输出修复后的 Markdown 源码。"),
+    "quick_read": ("快速阅读", "readmd-quick-read"), "polish": ("润色", "readmd-polish"),
+    "modify": ("修改", "readmd-format-fix"), "expand": ("扩充", "readmd-polish"),
+    "continue": ("续写", "readmd-continue"), "translate": ("翻译", "readmd-translate"),
+    "ask": ("问答", "readmd-ask"), "format_fix": ("排版自愈修复", "readmd-format-fix"),
 }
 
 
@@ -117,10 +87,17 @@ def ensure_config():
     仅保留公开预设；之后用户新建的连接保持在本机。
     """
     cfg = _read_cfg()
-    if cfg.get("schema_version") != CONFIG_SCHEMA_VERSION:
+    if cfg.get("schema_version") not in (2, CONFIG_SCHEMA_VERSION):
         cfg = {"schema_version": CONFIG_SCHEMA_VERSION, "providers": [], "current": {}}
         _write_cfg(cfg)
     else:
+        if cfg.get("schema_version") == 2:
+            cfg["schema_version"] = CONFIG_SCHEMA_VERSION
+            for provider in cfg.get("providers", []):
+                if isinstance(provider, dict):
+                    provider.setdefault("endpoint_mode", "prefix")
+                    provider.setdefault("capabilities", {})
+            _write_cfg(cfg)
         cfg.setdefault("providers", [])
         cfg.setdefault("current", {})
         changed = False
@@ -128,6 +105,38 @@ def ensure_config():
             if isinstance(provider, dict) and not provider.get("id"):
                 provider["id"] = "custom:" + uuid.uuid4().hex
                 changed = True
+            if isinstance(provider, dict) and provider.get("api_key"):
+                # Migrate encrypted v2 material into the OS credential store
+                # (or the encrypted vault fallback) and remove it from ai.json.
+                legacy = str(provider.get("api_key"))
+                if legacy.startswith("enc:") and is_crypto_available():
+                    secret = decrypt_api_key(legacy)
+                    if secret:
+                        cid = str(provider.get("credential_id") or ("cred:" + uuid.uuid4().hex))
+                        try:
+                            backend = store_credential(cid, secret)
+                            provider["credential_id"] = cid
+                            provider["credential_backend"] = backend
+                            provider.pop("api_key", None)
+                            changed = True
+                        except Exception:
+                            logging.error("legacy credential migration failed", exc_info=True)
+                            provider.pop("api_key", None)
+                            provider.pop("credential_id", None)
+                            provider["credential_reset_required"] = True
+                            changed = True
+                    else:
+                        provider.pop("api_key", None)
+                        provider.pop("credential_id", None)
+                        provider["credential_reset_required"] = True
+                        changed = True
+                else:
+                    # Never keep a plaintext legacy key in the v3 file.  The
+                    # UI must request a fresh key instead of exposing it.
+                    provider.pop("api_key", None)
+                    provider.pop("credential_id", None)
+                    provider["credential_reset_required"] = True
+                    changed = True
         current = cfg["current"]
         if current.get("provider") and not current.get("provider_id"):
             legacy_name = current.get("provider")
@@ -170,14 +179,46 @@ def get_config():
         d["has_key"] = bool(resolve_key(d))
         d["key_source"] = key_source(d)
         d["mode"] = p.get("mode") or ("messages" if p.get("format") == "anthropic" else "auto")
+        d.setdefault("category", "custom" if p.get("custom") else "preset")
+        d.setdefault("endpoint_mode", "prefix")
+        d.setdefault("capabilities", {"chat": True, "models": bool(p.get("models"))})
+        d.setdefault("website", "")
+        d.setdefault("provenance", {
+            "source": "CC-SWITCH offline snapshot",
+            "upstream_commit": "6243e20ad6f1835f9ac94ab39ea0eb62a6795bc0",
+            "source_files": ["assets/upstream/manifest.json"],
+            "adaptation_notes": ["ReadMD runtime keeps protocol/model fields and omits promotion/affiliate parameters."],
+        })
+        # credential_id is the only identifier exposed to clients; encrypted
+        # material remains server-side in the private config file.
+        if p.get("credential_id"):
+            d["credential_id"] = p.get("credential_id")
+        d.setdefault("endpoint_mode", "prefix")
+        d.setdefault("capabilities", {})
         # 配置接口只提供状态，绝不把保存在磁盘中的 API Key 回传给前端。
         d.pop("api_key", None)
         return d
 
     presets = [annotate(dict(p)) for p in PRESETS]
+    upstream = []
+    for source in UPSTREAM_PROVIDERS:
+        item = annotate(dict(source))
+        # Source-only records are browseable/importable but cannot silently
+        # become the active provider until the user supplies an endpoint.
+        item["selectable"] = False
+        item["has_key"] = False
+        item["provenance"] = {
+            "source": "CC-SWITCH offline snapshot",
+            "source_ref": source.get("source_ref", ""),
+            "source_sha256": source.get("source_sha256", ""),
+            "upstream_commit": source.get("upstream_commit", ""),
+            "adaptation_notes": source.get("adaptation_notes", []),
+        }
+        upstream.append(item)
     customs = [annotate(dict(p)) for p in custom]
     return {"schema_version": CONFIG_SCHEMA_VERSION, "presets": presets,
-            "custom": customs, "current": cfg.get("current", {})}
+            "custom": customs, "upstream_catalog": upstream,
+            "current": cfg.get("current", {})}
 
 
 def save_config(payload):
@@ -202,14 +243,53 @@ def save_config(payload):
             p["id"] = provider_id
             p["custom"] = True
             p["models"] = [str(m).strip() for m in (p.get("models") or []) if str(m).strip()]
+            p["endpoint_mode"] = str(p.get("endpoint_mode") or "prefix").strip().lower()
+            if p["endpoint_mode"] not in ("prefix", "full_url"):
+                p["endpoint_mode"] = "prefix"
+            if not isinstance(p.get("capabilities"), dict):
+                p["capabilities"] = {}
+            raw_headers = p.get("headers") if isinstance(p.get("headers"), dict) else {}
+            safe_headers = {}
+            for header_name, header_value in raw_headers.items():
+                header_name = str(header_name).strip()
+                lower_name = header_name.lower()
+                if (not header_name or len(header_name) > 128 or
+                        any(marker in lower_name for marker in ("authorization", "api-key", "apikey", "token", "secret", "password", "cookie"))):
+                    continue
+                value = str(header_value)
+                if len(value) <= 2048 and not any(ord(ch) < 32 for ch in value):
+                    safe_headers[header_name] = value
+            p["headers"] = safe_headers
             # 前端不会收到旧 Key；编辑其它字段时保留原 Key。只有显式标记才清除。
             previous = old.get(provider_id) or old_by_name.get(name) or {}
             if p.get("api_key"):
-                p["api_key"] = encrypt_api_key(p["api_key"])
-            elif previous.get("api_key") and not p.pop("clear_key", False):
-                p["api_key"] = previous["api_key"]
+                if not is_crypto_available():
+                    raise RuntimeError("当前环境缺少凭据加密支持，拒绝以明文保存 API Key")
+                candidate = str(p.get("credential_id") or previous.get("credential_id") or "")
+                candidate = candidate if re.fullmatch(r"cred:[A-Za-z0-9_-]{8,128}", candidate) else ("cred:" + uuid.uuid4().hex)
+                p["credential_id"] = candidate
+                p["credential_backend"] = store_credential(candidate, str(p.pop("api_key")))
+            elif (previous.get("api_key") or previous.get("credential_id")) and not p.pop("clear_key", False):
+                candidate = str(p.get("credential_id") or previous.get("credential_id") or "")
+                candidate = candidate if re.fullmatch(r"cred:[A-Za-z0-9_-]{8,128}", candidate) else ("cred:" + uuid.uuid4().hex)
+                if previous.get("credential_id") and not previous.get("api_key"):
+                    p["credential_id"] = candidate
+                    p["credential_backend"] = previous.get("credential_backend", "native")
+                else:
+                    legacy = str(previous.get("api_key") or "")
+                    secret = decrypt_api_key(legacy) if legacy.startswith("enc:") else ""
+                    if not secret:
+                        raise RuntimeError("旧凭据无法安全迁移，请重新输入 API Key")
+                    p["credential_id"] = candidate
+                    p["credential_backend"] = store_credential(candidate, secret)
             else:
                 p.pop("clear_key", None)
+                old_credential = str(previous.get("credential_id") or p.get("credential_id") or "")
+                if old_credential:
+                    delete_credential(old_credential)
+                p.pop("credential_id", None)
+                p.pop("credential_backend", None)
+            p.pop("api_key", None)
             providers.append(p)
         cfg["providers"] = providers
     if "current" in payload:
@@ -232,9 +312,23 @@ def find_provider(identifier):
     return None
 
 
+def find_provider_by_credential(credential_id):
+    """Resolve a credential handle without accepting secret material from clients."""
+    cid = str(credential_id or "").strip()
+    if not cid or len(cid) > 128 or not cid.startswith("cred:"):
+        return None
+    cfg = ensure_config()
+    for p in cfg.get("providers", []):
+        if p.get("credential_id") == cid:
+            return dict(p, custom=True)
+    return None
+
+
 def resolve_key(p):
     """API Key：界面配置 > 环境变量。"""
-    if p.get("api_key"):
+    if p.get("credential_id"):
+        return load_credential(p.get("credential_id"))
+    if p.get("api_key", "").startswith("enc:"):
         return decrypt_api_key(p["api_key"])
     env = p.get("env_key") or ""
     if env:
@@ -245,12 +339,32 @@ def resolve_key(p):
 
 
 def key_source(p):
-    if p.get("api_key"):
+    if p.get("credential_id") and load_credential(p.get("credential_id")):
         return "configured"
     env = p.get("env_key") or ""
     if env and os.environ.get(env):
         return "env:" + env
     return ""
+
+
+def _is_local_provider(provider):
+    """Return whether a provider is expected to work without a credential.
+
+    Local OpenAI-compatible servers (Ollama/LM Studio and user supplied
+    localhost endpoints) normally do not require authentication.  Keeping
+    this decision server-side prevents the UI/MCP clients from having to
+    special-case provider names and avoids sending an empty ``Bearer`` value.
+    """
+    if not isinstance(provider, dict):
+        return False
+    if str(provider.get("category") or "").lower() == "local":
+        return True
+    base_url = str(provider.get("base_url") or "").lower()
+    return any(host in base_url for host in ("localhost", "127.0.0.1", "::1"))
+
+
+def _openai_auth_headers(api_key):
+    return {"Authorization": "Bearer " + api_key} if api_key else {}
 
 
 class ChatError(Exception):
@@ -303,8 +417,6 @@ def _openai_messages(messages):
             out.insert(0, {"role": "system", "content": content})
         else:
             out.append({"role": role, "content": content})
-    if not any(m["role"] == "system" for m in out):
-        out.insert(0, {"role": "system", "content": "You are ReadMD, a helpful Markdown document assistant."})
     return out
 
 
@@ -327,6 +439,36 @@ def _anthropic_messages(messages):
     return "\n\n".join(system), msgs
 
 
+def _skill_messages(payload):
+    """Resolve a Skill into a system message without accepting raw prompt code."""
+    skill_id = str(payload.get("skill_id") or "").strip()
+    messages = list(payload.get("messages") or [])
+    if not skill_id:
+        return messages
+    try:
+        global _CORE_SERVICE
+        if _CORE_SERVICE is None:
+            _CORE_SERVICE = ReadMDCoreService()
+        else:
+            _CORE_SERVICE.reload()
+        variables = dict(payload.get("skill_variables") or {})
+        if not variables.get("document"):
+            users = [m.get("content", "") for m in messages if m.get("role") == "user"]
+            variables["document"] = users[-1] if users else ""
+        variables.setdefault("language", "the document's language")
+        variables.setdefault("request", "")
+        variables.setdefault("context", "")
+        variables.setdefault("selection", variables.get("document", ""))
+        variables.setdefault("output_format", "Markdown")
+        system = _CORE_SERVICE.render_skill(skill_id, variables)
+    except SkillError as exc:
+        raise ChatError(str(exc)) from exc
+    return [{"role": "system", "content": system}] + [m for m in messages if m.get("role") != "system"]
+
+
+_CORE_SERVICE = None
+
+
 def chat(payload):
     """调用大模型。payload: {provider?, base_url?, format?, api_key?, model,
     messages, temperature?, stream?, mode?}。统一返回生成器：产出 str 增量，
@@ -339,24 +481,39 @@ def chat(payload):
         prov = {}
     base_url = (payload.get("base_url") or prov.get("base_url") or "").rstrip("/")
     fmt = payload.get("format") or prov.get("format") or "openai"
+    credential_id = str(payload.get("credential_id") or "").strip()
+    if credential_id:
+        if prov.get("credential_id") and prov.get("credential_id") != credential_id:
+            raise ChatError("凭据与提供商不匹配")
+        if not prov.get("credential_id"):
+            prov = find_provider_by_credential(credential_id) or prov
+    # api_key remains a one-version compatibility path for local clients; it
+    # is never persisted or accepted through a URL. New clients send only the
+    # opaque credential_id handle.
     api_key = payload.get("api_key") or resolve_key(prov)
-    if not api_key:
+    if not api_key and not _is_local_provider(prov):
         raise ChatError("未配置 API Key（可填入界面，或设置环境变量 %s）" % (prov.get("env_key") or ""))
     model = payload.get("model") or (prov.get("models") or [""])[0] or ""
-    messages = payload.get("messages") or []
+    messages = _skill_messages(payload)
     temperature = payload.get("temperature", 0.4)
     stream = bool(payload.get("stream", True))
     mode = (payload.get("mode") or prov.get("mode") or "").strip().lower()
     if not mode:
         mode = "messages" if fmt == "anthropic" else "auto"
+    endpoint_mode = str(payload.get("endpoint_mode") or prov.get("endpoint_mode") or "prefix")
+    custom_headers = payload.get("headers") if isinstance(payload.get("headers"), dict) else prov.get("headers")
 
     if mode in ("messages", "anthropic"):
-        return _chat_anthropic(base_url, api_key, model, messages, temperature, stream)
+        return _chat_anthropic(base_url, api_key, model, messages, temperature, stream,
+                               endpoint_mode, custom_headers)
     if mode == "completion":
-        return _chat_openai_completion(base_url, api_key, model, messages, temperature, stream)
+        return _chat_openai_completion(base_url, api_key, model, messages, temperature, stream,
+                                       endpoint_mode, custom_headers)
     if mode == "responses":
-        return _chat_openai_responses(base_url, api_key, model, messages, temperature, stream)
-    return _chat_openai(base_url, api_key, model, messages, temperature, stream)
+        return _chat_openai_responses(base_url, api_key, model, messages, temperature, stream,
+                                      endpoint_mode, custom_headers)
+    return _chat_openai(base_url, api_key, model, messages, temperature, stream,
+                        endpoint_mode, custom_headers)
 def _normalize_base_url(base_url, endpoint="chat/completions"):
     """清洗与规范化 base_url，防止用户输入带尾部重复端点或多余斜杠。"""
     u = (base_url or "").strip().rstrip("/")
@@ -382,6 +539,28 @@ def _normalize_base_url(base_url, endpoint="chat/completions"):
     return u + "/" + endpoint
 
 
+def _endpoint_url(base_url, endpoint, endpoint_mode="prefix"):
+    """Resolve either a URL prefix or a user-supplied complete endpoint."""
+    if str(endpoint_mode or "prefix").lower() == "full_url":
+        return (base_url or "").strip().rstrip("/")
+    return _normalize_base_url(base_url, endpoint)
+
+
+def _request_headers(base, custom=None):
+    """Merge non-sensitive provider headers without allowing auth override."""
+    out = dict(base or {})
+    if isinstance(custom, dict):
+        for key, value in custom.items():
+            key = str(key).strip()
+            if not key or key.lower() in {"authorization", "x-api-key", "cookie"}:
+                continue
+            value = str(value)
+            if len(key) > 128 or len(value) > 2048 or any(ord(c) < 32 for c in value):
+                continue
+            out[key] = value
+    return out
+
+
 def _openai_usage(d):
     u = d.get("usage") or {}
     if not u:
@@ -396,12 +575,13 @@ def _openai_usage(d):
     return out or None
 
 
-def _chat_openai(base_url, api_key, model, messages, temperature, stream):
-    url = _normalize_base_url(base_url, "chat/completions")
+def _chat_openai(base_url, api_key, model, messages, temperature, stream,
+                 endpoint_mode="prefix", custom_headers=None):
+    url = _endpoint_url(base_url, "chat/completions", endpoint_mode)
     body = {"model": model, "messages": _openai_messages(messages), "stream": stream, "temperature": temperature}
     if stream:
         body["stream_options"] = {"include_usage": True}
-    headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
+    headers = _request_headers({"Content-Type": "application/json", **_openai_auth_headers(api_key)}, custom_headers)
 
     if not stream:
         text = _http_json(url, headers, body)
@@ -459,13 +639,14 @@ def _chat_openai(base_url, api_key, model, messages, temperature, stream):
     return gen()
 
 
-def _chat_openai_completion(base_url, api_key, model, messages, temperature, stream):
-    url = _normalize_base_url(base_url, "completions")
+def _chat_openai_completion(base_url, api_key, model, messages, temperature, stream,
+                            endpoint_mode="prefix", custom_headers=None):
+    url = _endpoint_url(base_url, "completions", endpoint_mode)
     msgs = _openai_messages(messages)
     prompt_text = "\n\n".join(m.get("content", "") for m in msgs if m.get("content"))
     body = {"model": model, "prompt": prompt_text, "max_tokens": 4096,
             "temperature": temperature, "stream": stream}
-    headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
+    headers = _request_headers({"Content-Type": "application/json", **_openai_auth_headers(api_key)}, custom_headers)
 
     if not stream:
         text = _http_json(url, headers, body)
@@ -523,8 +704,9 @@ def _chat_openai_completion(base_url, api_key, model, messages, temperature, str
     return gen()
 
 
-def _chat_openai_responses(base_url, api_key, model, messages, temperature, stream):
-    url = _normalize_base_url(base_url, "responses")
+def _chat_openai_responses(base_url, api_key, model, messages, temperature, stream,
+                           endpoint_mode="prefix", custom_headers=None):
+    url = _endpoint_url(base_url, "responses", endpoint_mode)
     msgs = []
     for m in _openai_messages(messages):
         if m["role"] == "system":
@@ -532,7 +714,7 @@ def _chat_openai_responses(base_url, api_key, model, messages, temperature, stre
         else:
             msgs.append(m)
     body = {"model": model, "input": msgs, "stream": stream, "temperature": temperature}
-    headers = {"Content-Type": "application/json", "Authorization": "Bearer " + api_key}
+    headers = _request_headers({"Content-Type": "application/json", **_openai_auth_headers(api_key)}, custom_headers)
 
     if not stream:
         text = _http_json(url, headers, body)
@@ -601,13 +783,14 @@ def _anthropic_usage(u):
     return out or None
 
 
-def _chat_anthropic(base_url, api_key, model, messages, temperature, stream):
-    url = _normalize_base_url(base_url, "v1/messages")
+def _chat_anthropic(base_url, api_key, model, messages, temperature, stream,
+                    endpoint_mode="prefix", custom_headers=None):
+    url = _endpoint_url(base_url, "v1/messages", endpoint_mode)
     system, msgs = _anthropic_messages(messages)
     body = {"model": model, "max_tokens": 4096, "messages": msgs, "temperature": temperature, "stream": stream}
     if system:
         body["system"] = system
-    headers = {"Content-Type": "application/json", "x-api-key": api_key, "anthropic-version": "2023-06-01"}
+    headers = _request_headers({"Content-Type": "application/json", **({"x-api-key": api_key} if api_key else {}), "anthropic-version": "2023-06-01"}, custom_headers)
 
     if not stream:
         text = _http_json(url, headers, body)
@@ -685,7 +868,7 @@ def _http_get_json(url, headers, timeout=30):
         raise ChatError("网络错误：%s" % e.reason) from e
 
 
-def list_models(base_url, api_key="", mode="auto"):
+def list_models(base_url, api_key="", mode="auto", endpoint_mode="prefix", custom_headers=None):
     """通过 API Key 获取可用模型列表。智能适配 OpenAI, OpenCode Zen, Anthropic, Ollama 等各类端点。"""
     base_url = (base_url or "").strip().rstrip("/")
     if not base_url:
@@ -707,6 +890,15 @@ def list_models(base_url, api_key="", mode="auto"):
             urls_to_try.append((clean_base + "/models", auth_hdrs))
             urls_to_try.append((clean_base + "/v1/models", auth_hdrs))
             urls_to_try.append((clean_base + "/api/tags", auth_hdrs))
+
+    if str(endpoint_mode or "prefix").lower() == "full_url":
+        # In full-url mode the configured URL is the model endpoint itself.
+        auth = ({"x-api-key": api_key, "anthropic-version": "2023-06-01"}
+                if mode in ("messages", "anthropic") else
+                ({"Authorization": "Bearer " + api_key} if api_key else {}))
+        urls_to_try = [(base_url.strip().rstrip("/"), _request_headers(auth, custom_headers))]
+    else:
+        urls_to_try = [(u, _request_headers(h, custom_headers)) for u, h in urls_to_try]
 
     last_err = None
     data = None

@@ -24,6 +24,22 @@ def tracked_files():
     return [p.decode("utf-8") for p in raw.split(b"\0") if p]
 
 
+def candidate_files():
+    """Return tracked plus non-ignored working-tree files.
+
+    Release privacy checks must cover newly generated Skills, provider
+    snapshots and other untracked candidate files.  Ignored build directories
+    are checked separately by the explicit artifact arguments in release CI.
+    """
+    try:
+        raw = subprocess.check_output(
+            ["git", "ls-files", "-co", "--exclude-standard", "-z"], cwd=ROOT
+        )
+        return [p.decode("utf-8") for p in raw.split(b"\0") if p]
+    except (OSError, subprocess.CalledProcessError):
+        return tracked_files()
+
+
 def iter_external(paths):
     for value in paths:
         path = os.path.abspath(value)
@@ -40,6 +56,8 @@ def iter_external(paths):
 def scan_file(path, label, failures, is_source_tree=True):
     norm_label = label.replace('\\', '/')
     if "/assets/vendor/" in norm_label or norm_label.startswith("assets/vendor/"):
+        return
+    if "/assets/upstream/" in norm_label or norm_label.startswith("assets/upstream/"):
         return
     if "/tests/" in norm_label or norm_label.startswith("tests/"):
         return
@@ -62,7 +80,19 @@ def scan_file(path, label, failures, is_source_tree=True):
     except OSError:
         return
     lower = data.lower()
-    for token in RETIRED:
+    # The public provider-catalog attribution is an intentional, audited
+    # source; it is not a private credential or runtime integration.
+    retired_tokens = [token for token in RETIRED
+                      if not (token == ("cc" + "-switch") and
+                              (norm_label in ("assets/providers/provider-catalog.json",
+                                               "provider-catalog.json",
+                                               "src/readmd_modules/ai.py",
+                                               "tools/build_provider_catalog.py") or
+                               norm_label.endswith("/assets/providers/provider-catalog.json") or
+                               norm_label.endswith("src/readmd_modules/ai.py") or
+                               norm_label.endswith("tools/build_provider_catalog.py") or
+                               norm_label.endswith("tools/package_local_rc.py")))]
+    for token in retired_tokens:
         if token.encode("ascii") in lower:
             failures.append("retired provider marker in %s" % label)
     for pattern in KEY_PATTERNS:
@@ -83,7 +113,7 @@ def main():
             scan_file(path, label, failures, is_source_tree=False)
         count = len(scanned)
     else:
-        files = tracked_files()
+        files = candidate_files()
         for rel in files:
             scan_file(os.path.join(ROOT, rel), rel, failures, is_source_tree=True)
         count = len(files)

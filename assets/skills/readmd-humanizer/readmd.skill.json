@@ -1,0 +1,18 @@
+{
+  "id": "readmd-humanizer",
+  "version": 1,
+  "source": "blader/humanizer (offline snapshot)",
+  "source_url": "https://github.com/blader/humanizer/tree/e2e92e7b4b8229253ed5c8e81dc65463fdeddda5",
+  "upstream_revision": "e2e92e7b4b8229253ed5c8e81dc65463fdeddda5",
+  "license": "MIT",
+  "provenance": {
+    "snapshot_id": "blader-humanizer/e2e92e7b4b8229253ed5c8e81dc65463fdeddda5",
+    "raw_embedded": true,
+    "source_files": ["SKILL.md", "README.md", "LICENSE"],
+    "adaptation": "ReadMD wrapper keeps the upstream attribution and source notes"
+  },
+  "capabilities": ["rewrite", "style"],
+  "scopes": ["builtin"],
+  "scripts_allowed": false,
+  "locales": ["zh-CN", "en", "ja", "de", "fr"]
+}

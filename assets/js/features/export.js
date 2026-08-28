@@ -777,7 +777,12 @@ function updateExportLivePreview() {
   if (fullModal && !fullModal.classList.contains('hidden')) {
     const wrapper = fullModal.querySelector('.export-preview-paper-wrapper');
     if (wrapper) {
-      wrapper.innerHTML = '';
+      // Keep the stable full-page host in the DOM.  Besides preserving CSS
+      // hooks, this makes the preview accessible to keyboard/screen-reader
+      // clients and avoids tests or extensions losing their target after a
+      // style refresh.
+      wrapper.innerHTML = '<div id="export-preview-full-page" class="export-preview-full-page"></div>';
+      const fullPageHost = wrapper.querySelector('#export-preview-full-page');
       
       const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       
@@ -805,7 +810,7 @@ function updateExportLivePreview() {
           sheet.appendChild(footerEl);
         }
         
-        wrapper.appendChild(sheet);
+        fullPageHost.appendChild(sheet);
         renderMath(bodyEl);
       });
     }
@@ -927,6 +932,29 @@ function collectExportOptions() {
     expSet(opts, el.dataset.k, v);
   });
   return opts;
+}
+
+// AI providers sometimes return a flat dotted object while the exporter uses
+// nested options. Normalize both forms and drop unknown keys before merging so
+// a model cannot mutate unrelated export state.
+function normalizeExportAiPayload(value) {
+  const allowed = new Set(['typography', 'headings', 'table', 'page']);
+  const out = {};
+  const visit = (obj, prefix = '') => {
+    if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
+    Object.entries(obj).forEach(([key, val]) => {
+      const full = prefix ? prefix + '.' + key : key;
+      if (full.includes('.')) {
+        const parts = full.split('.');
+        if (!allowed.has(parts[0]) || parts.length > 4) return;
+        expSet(out, full, val);
+      } else if (allowed.has(key) && val && typeof val === 'object' && !Array.isArray(val)) {
+        visit(val, full);
+      }
+    });
+  };
+  visit(value);
+  return out;
 }
 
 function renderExportPresetSelect() {
@@ -1067,40 +1095,20 @@ async function generateExportStyleWithAi(stylePrompt) {
     statusEl.textContent = _t('exportai.generating') || '正在分析并设计排版参数...';
   }
 
-  const systemPrompt = `You are a professional document and book typography designer.
-Based on user style prompt, return ONLY a valid strict JSON object specifying export typography parameters for ReadMD.
-Allowed keys and values:
-{
-  "typography.font": "MicrosoftYaHei" | "SimSun" | "SimHei" | "KaiTi" | "Arial",
-  "typography.size": integer between 9 and 16,
-  "typography.lineHeight": float between 1.2 and 2.0,
-  "typography.spacing": integer between 4 and 16,
-  "typography.color": "#xxxxxx",
-  "typography.align": "left" | "justify" | "center",
-  "headings.h1.size": integer between 18 and 28,
-  "headings.h1.color": "#xxxxxx",
-  "headings.h1.bold": true | false,
-  "headings.h2.size": integer between 14 and 22,
-  "headings.h2.color": "#xxxxxx",
-  "headings.h2.bold": true | false,
-  "table.headerBg": "#xxxxxx",
-  "table.headerColor": "#xxxxxx",
-  "page.marginTop": integer between 10 and 35,
-  "page.marginRight": integer between 10 and 35,
-  "page.marginBottom": integer between 10 and 35,
-  "page.marginLeft": integer between 10 and 35
-}
-Output ONLY raw JSON. No markdown backticks, no conversational text.`;
-
   try {
     const res = await apiFetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `排版风格要求：${stylePrompt}` }
-        ],
+        skill_id: 'readmd-export-style',
+        skill_variables: {
+          request: stylePrompt,
+          context: 'Use typography.font/size/lineHeight/spacing/color/align, headings.h1/h2 size/color/bold, table.headerBg/headerColor, page.marginTop/Right/Bottom/Left with the documented bounds.',
+          document: stylePrompt,
+          language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en',
+          output_format: 'JSON'
+        },
+        messages: [{ role: 'user', content: stylePrompt }],
         stream: false
       })
     });
@@ -1132,7 +1140,8 @@ Output ONLY raw JSON. No markdown backticks, no conversational text.`;
           if (jsonStr && jsonStr !== '[DONE]') {
             try {
               const d = JSON.parse(jsonStr);
-              if (d.d) chunks.push(d.d);
+              if (d.type === 'delta' && d.delta) chunks.push(d.delta);
+              else if (d.d) chunks.push(d.d);
               else if (d.content) chunks.push(d.content);
             } catch (e) {}
           }
@@ -1142,7 +1151,7 @@ Output ONLY raw JSON. No markdown backticks, no conversational text.`;
     }
 
     text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
-    const parsed = JSON.parse(text);
+    const parsed = normalizeExportAiPayload(JSON.parse(text));
     
     // Apply options to export state and DOM
     state.export.options = expDeepMerge(state.export.options || state.export.defaults, parsed);

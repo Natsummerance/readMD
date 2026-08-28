@@ -79,7 +79,7 @@ const state = {
   busyCount: 0,
   ai: {
     config: null, providers: [], busy: false, aborter: null, raw: '',
-    templates: [], templateId: '', messages: [], sessionId: null, sessions: [],
+    templates: [], templateId: '', skillDraft: null, messages: [], sessionId: null, sessions: [],
     usage: null, sessUsage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
   },
   pvLayout: 'none', pvSync: false, pvSplitX: 50, pvSplitY: 46,

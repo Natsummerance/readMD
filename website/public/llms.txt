@@ -11,8 +11,8 @@
 - [PDF to Markdown](https://readmd.asia/pdf-to-markdown/): Qualified local workflow for text-based PDFs and scanned documents requiring review.
 - [Scan to Markdown](https://readmd.asia/scan-to-markdown/): Qualified Windows WinRT and macOS Apple Vision workflows for local OCR, screenshot extraction, and Markdown review.
 - [BibTeX citations](https://readmd.asia/bibtex-citations/): Keep a neighboring .bib library connected to inline citation badges, source cards, copyable BibTeX, and assembled references.
-- [Release notes](https://readmd.asia/release-notes/): Version-specific changes, security boundaries, platform assets, and beta evaluation guidance.
-- [Download page](https://readmd.asia/download/): Current Windows, macOS, Linux, UOS/Kylin, HarmonyOS, VS Code, and MCP Server packages with checksum guidance.
+- [Release notes](https://readmd.asia/release-notes/): Version-specific changes, security boundaries, platform assets, and release evaluation guidance.
+- [Download page](https://readmd.asia/download/): Current Windows, macOS, Linux, UOS/Kylin, VS Code, and MCP Server packages with checksum guidance.
 - [Simplified Chinese homepage](https://readmd.asia/zh-cn/): Chinese product definition, release facts, local processing boundaries, and citation-ready answers.
 - [Simplified Chinese download page](https://readmd.asia/zh-cn/download/): Chinese package paths and checksum workflow.
 - [Simplified Chinese workflow answers](https://readmd.asia/zh-cn/workflows/): Chinese guidance for long documents, office conversion, offline OCR, and presentation.
@@ -35,7 +35,7 @@
 - [GitHub repository](https://github.com/Natsummerance/readMD): MIT-licensed source code, releases, checksums, issues, and platform download assets.
 
 ## Key Facts
-- Current public version: 2.3.7-beta.5
+- Current public version: 2.3.7
 - License: MIT
 - Languages: 46 interface languages, including LTR and RTL layouts
 - Core model: local-first processing; no cloud account required for core document work

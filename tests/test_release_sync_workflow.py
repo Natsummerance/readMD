@@ -17,7 +17,7 @@ class ReleaseSyncWorkflowTest(unittest.TestCase):
 
     def test_only_follows_successful_same_repo_main_builds(self):
         trigger = self.workflow[True]["workflow_run"]
-        job_if = self.workflow["jobs"]["update-beta-release"]["if"]
+        job_if = self.workflow["jobs"]["synchronize-release-assets"]["if"]
         self.assertEqual(trigger["workflows"], ["Test, package and release ReadMD"])
         for condition in (
             "success",

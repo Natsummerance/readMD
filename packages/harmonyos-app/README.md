@@ -1,6 +1,6 @@
-# ReadMD for HarmonyOS NEXT & OpenHarmony
+# ReadMD HarmonyOS/OpenHarmony 源码预览（未支持）
 
-本工程为 **ReadMD 鸿蒙原生应用 (HarmonyOS NEXT 纯血鸿蒙 / OpenHarmony 4.1+)** 工程，基于 DevEco Studio 5.0+ 与 ArkTS 声明式 UI 构建。
+本目录仅保留实验性 ArkTS 外壳，**不属于 ReadMD v2.3.7 正式支持矩阵**，也不代表核心功能、安装包或兼容性承诺。HarmonyOS/OpenHarmony 将在有真实设备和完整原生验收证据后另行评估。
 
 ## 架构说明
 
@@ -19,4 +19,4 @@
 3. 选择 `entry` 模块并点击 **Build -> Build Hap(s) / APP(s) -> Build Hap(s)**；
 4. 生成产物位于 `entry/build/default/outputs/default/entry-default-unsigned.hap`。
 
-当前工程提供可构建的 ArkUI/ArkWeb 外壳与资源同步脚本；完整桌面后端能力仍需继续接入原生文件、剪贴板和 OCR 桥接。
+当前工程提供可构建的 ArkUI/ArkWeb 外壳与资源同步脚本；完整桌面后端能力仍需继续接入原生文件、剪贴板和 OCR 桥接。请勿将其作为发布资产或“全平台支持”证据。

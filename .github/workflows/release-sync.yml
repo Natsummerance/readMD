@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  update-beta-release:
+  synchronize-release-assets:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: >-
@@ -46,7 +46,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Stage and switch existing prerelease assets
+      - name: Stage and switch release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
