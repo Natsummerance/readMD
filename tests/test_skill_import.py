@@ -22,6 +22,30 @@ def test_parse_github_urls_support_repo_tree_and_blob():
     assert blob["canonical_url"].endswith("/tree/main")
 
 
+def test_resolve_supports_slash_containing_branch_names(monkeypatch):
+    source = skill_import.parse_github_url(
+        "https://github.com/acme/readmd-skills/tree/feature/docs/skills"
+    )
+
+    def fake_json(url, token=""):
+        if url.endswith("/acme/readmd-skills"):
+            return {"default_branch": "main"}
+        if "/commits/feature%2Fdocs%2Fskills" in url:
+            raise skill_import.SkillImportError("github_not_found", "missing")
+        if "/commits/feature%2Fdocs" in url:
+            return {"sha": "a" * 40}
+        if "/git/trees/" in url:
+            return {"tree": [{"type": "blob", "path": "skills/note/SKILL.md"}]}
+        raise AssertionError(url)
+
+    monkeypatch.setattr(skill_import, "_json", fake_json)
+    sha, _, _ = skill_import._resolve(source, "")
+    assert sha == "a" * 40
+    assert source["ref"] == "feature/docs"
+    assert source["subdir"] == "skills"
+    assert "/tree/feature%2Fdocs/skills" in source["canonical_url"]
+
+
 @pytest.mark.parametrize(
     "url, code",
     [

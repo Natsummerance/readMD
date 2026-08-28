@@ -71,12 +71,18 @@ def parse_github_url(value: str) -> Dict[str, str]:
     if not re.fullmatch(r"[A-Za-z0-9_.-]{1,100}", owner) or not re.fullmatch(r"[A-Za-z0-9_.-]{1,100}", repo):
         raise SkillImportError("github_repo_invalid", "GitHub owner 或仓库名称无效")
     ref, subdir = "", ""
+    marker = ""
+    ref_tail: List[str] = []
     if len(segments) > 2:
         marker = segments[2].lower()
         if marker not in ("tree", "blob") or len(segments) < 4:
             raise SkillImportError("github_url_invalid", "仅支持仓库、tree 或 blob 链接")
-        ref = segments[3]
-        remaining = segments[4:]
+        # GitHub does not encode where a slash-containing branch name ends.
+        # Keep the complete tail so _resolve can probe ref candidates from
+        # longest to shortest and then derive the actual subdirectory.
+        ref_tail = segments[3:]
+        ref = ref_tail[0]
+        remaining = ref_tail[1:]
         subdir = "/".join(remaining)
         if marker == "blob" and remaining and remaining[-1].lower() == "skill.md":
             subdir = "/".join(remaining[:-1])
@@ -87,7 +93,15 @@ def parse_github_url(value: str) -> Dict[str, str]:
         canonical += "/tree/" + urllib.parse.quote(ref, safe="")
         if subdir:
             canonical += "/" + "/".join(urllib.parse.quote(x, safe="") for x in subdir.split("/"))
-    return {"owner": owner, "repo": repo, "ref": ref, "subdir": subdir, "canonical_url": canonical}
+    return {
+        "owner": owner,
+        "repo": repo,
+        "ref": ref,
+        "subdir": subdir,
+        "canonical_url": canonical,
+        "_ref_tail": ref_tail,
+        "_marker": marker,
+    }
 
 
 def _token(credential_id: str) -> str:
@@ -107,6 +121,18 @@ def _safe_url(url: str, api: bool = False) -> str:
     return url
 
 
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Reject redirects before urllib opens an untrusted host."""
+
+    def __init__(self, api: bool):
+        super().__init__()
+        self.api = api
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _safe_url(newurl, api=self.api)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
 def _request(url: str, token: str = "", *, api: bool = True, limit: int = MAX_RESPONSE_BYTES) -> bytes:
     _safe_url(url, api=api)
     headers = {"Accept": "application/vnd.github+json", "User-Agent": "ReadMD-Skill-Importer"}
@@ -114,13 +140,16 @@ def _request(url: str, token: str = "", *, api: bool = True, limit: int = MAX_RE
         headers["Authorization"] = "Bearer " + token
     req = urllib.request.Request(url, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=25) as response:
+        opener = urllib.request.build_opener(_SafeRedirectHandler(api))
+        with opener.open(req, timeout=25) as response:
             _safe_url(response.geturl(), api=api)
             data = response.read(limit + 1)
     except urllib.error.HTTPError as exc:
+        if exc.code == 429 or (exc.code == 403 and exc.headers.get("X-RateLimit-Remaining") == "0"):
+            raise SkillImportError("github_rate_limited", "GitHub 请求已达到速率限制，请稍后重试") from exc
         if exc.code in (401, 403):
             raise SkillImportError("github_auth_failed", "GitHub 凭据无权读取此仓库") from exc
-        if exc.code == 404:
+        if exc.code in (404, 422):
             raise SkillImportError("github_not_found", "仓库、分支或文件不存在，或仓库为私有") from exc
         raise SkillImportError("github_http_error", "GitHub 请求失败（HTTP %s）" % exc.code) from exc
     except (urllib.error.URLError, TimeoutError) as exc:
@@ -145,7 +174,42 @@ def _resolve(source: Mapping[str, str], token: str) -> Tuple[str, Dict[str, Any]
     base = _api_base(source)
     repo = _json(base, token)
     ref = source.get("ref") or str(repo.get("default_branch") or "main")
-    commit = _json(base + "/commits/" + urllib.parse.quote(ref, safe=""), token)
+    ref_tail = list(source.get("_ref_tail") or [])
+    candidates = []
+    if ref_tail:
+        # Prefer the longest existing ref, which makes URLs such as
+        # tree/feature/docs/skills resolve to branch feature/docs when it
+        # exists, while still falling back to branch feature + subdirectory
+        # docs/skills.  A missing candidate is expected and is not surfaced.
+        candidates = ["/".join(ref_tail[:index]) for index in range(len(ref_tail), 0, -1)]
+    else:
+        candidates = [ref]
+    commit = None
+    resolved_ref = ref
+    for candidate in candidates:
+        try:
+            commit = _json(base + "/commits/" + urllib.parse.quote(candidate, safe=""), token)
+            if isinstance(commit, dict) and commit.get("sha"):
+                resolved_ref = candidate
+                break
+        except SkillImportError as exc:
+            if exc.code == "github_not_found":
+                continue
+            raise
+    if not isinstance(commit, dict):
+        raise SkillImportError("github_commit_invalid", "无法解析仓库提交")
+    if isinstance(source, dict):
+        source["ref"] = resolved_ref
+        if ref_tail:
+            remainder = ref_tail[len(resolved_ref.split("/")):]
+            if source.get("_marker") == "blob" and remainder and remainder[-1].lower() == "skill.md":
+                remainder = remainder[:-1]
+            source["subdir"] = "/".join(remainder)
+            canonical = "https://github.com/%s/%s/tree/%s" % (
+                source["owner"], source["repo"], urllib.parse.quote(resolved_ref, safe=""))
+            if source["subdir"]:
+                canonical += "/" + "/".join(urllib.parse.quote(item, safe="") for item in source["subdir"].split("/"))
+            source["canonical_url"] = canonical
     sha = str(commit.get("sha") or "")
     if not re.fullmatch(r"[0-9a-fA-F]{7,64}", sha):
         raise SkillImportError("github_commit_invalid", "无法解析仓库提交")

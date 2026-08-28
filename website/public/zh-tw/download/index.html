@@ -116,155 +116,243 @@
   ]
 }</script></head>
 <body class="antialiased">
-  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)] backdrop-blur-xl bg-background/80">
     <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
-      <a class="text-lg font-semibold tracking-tight" href="/zh-tw/">ReadMD</a>
+      <a class="text-lg font-bold tracking-tight text-foreground flex items-center gap-2" href="/zh-tw/">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-[var(--color-action)]"></span>
+        ReadMD
+      </a>
       <div class="flex items-center gap-4">
-        <a class="text-sm text-muted hover:text-foreground" href="/download/">English</a>
-        <a class="button-primary text-sm" href="#download-paths">立即下載</a>
+        <a class="text-sm font-medium text-muted hover:text-foreground transition-colors" href="/download/">English</a>
+        <a class="apple-pill-primary text-xs !py-2 !px-4" href="#download-paths">立即下載</a>
       </div>
     </div>
   </header>
-  <main class="mx-auto max-w-5xl px-5 py-16">
-    <nav class="pt-2 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-tw/">首頁</a><span aria-hidden="true"> / </span><span class="text-foreground font-medium">下載</span></nav>
-    <div class="mt-4 text-center">
-      <h1 class="display-title">下載 ReadMD</h1>
-      <p class="section-copy mx-auto mt-4 max-w-2xl">目前公開預覽版為 <span class="latest-version-badge font-semibold text-[var(--color-action)]">v2.3.7</span>。請在下方選擇適合您系統的安裝套件，支援鏡像加速直連，安裝前可使用 SHA256SUMS.txt 校驗發行套件。</p>
+
+  <main class="mx-auto max-w-6xl px-5 py-12 md:py-20">
+    <nav class="text-xs font-medium text-muted" aria-label="Breadcrumb">
+      <a class="link-action text-muted hover:text-foreground" href="/zh-tw/">首頁</a>
+      <span class="mx-1 text-muted/50">/</span>
+      <span class="text-foreground font-semibold">下載中心</span>
+    </nav>
+
+    <div class="mt-8 text-center">
+      <div class="inline-flex items-center gap-2 rounded-full border border-[rgba(0,113,227,0.3)] bg-[rgba(0,113,227,0.08)] px-4 py-1.5 text-xs font-semibold text-[var(--color-action)] tracking-wide uppercase">
+        全系平台 · 深度最佳化
+      </div>
+      <h1 class="mt-4 text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
+        下載 ReadMD
+      </h1>
+      <p class="mx-auto mt-4 max-w-2xl text-base md:text-lg text-muted leading-relaxed">
+        目前穩定發行版為 <span class="latest-version-badge font-semibold text-[var(--color-action)]">v2.3.7</span>。本機優先，秒開百兆巨著。原生支援 Windows、macOS 與 Linux，全系晶片深度最佳化。
+      </p>
+
       <div class="mt-8">
-        <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">下載通道與鏡像加速 · Download Mirror</p>
-        <div class="mirror-nav" role="tablist" aria-label="下載源選擇">
-          <button class="mirror-tab is-active" data-mirror="direct" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>官方直連 (GitHub)</button>
-          <button class="mirror-tab" data-mirror="ghfast" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 1 (GHFast)</button>
-          <button class="mirror-tab" data-mirror="ghproxy" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 2 (GHProxy)</button>
-          <button class="mirror-tab" data-mirror="gitmirror" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 3 (GitMirror)</button>
-          <button class="mirror-tab" data-mirror="fastgit" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>鏡像加速 4 (FastGit)</button>
+        <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-muted/80">下載通道與鏡像加速 · Download Mirror</p>
+        <div class="inline-flex flex-wrap items-center justify-center gap-1.5 p-1.5 rounded-full bg-surface/70 border border-border/80 backdrop-blur-xl shadow-lg" role="tablist" aria-label="下載源選擇">
+          <button class="mirror-tab is-active" data-mirror="direct" type="button">
+            <svg width="15" height="15" class="inline-block mr-1 align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            官方直連 (GitHub)
+          </button>
+          <button class="mirror-tab" data-mirror="ghfast" type="button">
+            <svg width="15" height="15" class="inline-block mr-1 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            鏡像加速 1 (GHFast)
+          </button>
+          <button class="mirror-tab" data-mirror="ghproxy" type="button">
+            <svg width="15" height="15" class="inline-block mr-1 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            鏡像加速 2 (GHProxy)
+          </button>
+          <button class="mirror-tab" data-mirror="gitmirror" type="button">
+            <svg width="15" height="15" class="inline-block mr-1 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            鏡像加速 3 (GitMirror)
+          </button>
+          <button class="mirror-tab" data-mirror="fastgit" type="button">
+            <svg width="15" height="15" class="inline-block mr-1 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            鏡像加速 4 (FastGit)
+          </button>
         </div>
       </div>
     </div>
 
-    <section id="download-paths" class="mt-12 platform-grid">
-      <article class="platform-card" data-platform="windows">
-        <div>
-          <h2 class="text-xl font-semibold">Windows 系統</h2>
-          <p class="mt-2 text-sm text-muted">支援 Windows 10 / 11 以及 Windows 7 SP1+。提供安裝版與免安裝便攜版。</p>
-        </div>
-        <div class="mt-6 flex flex-col gap-3">
-          <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMDSetup-v2.3.7.exe">Windows 安裝版 (.exe)</a>
-          <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-portable-v2.3.7.exe">Windows 便攜版 (.exe)</a>
-        </div>
-      </article>
-
-      <article class="platform-card" data-platform="macos">
-        <div>
-          <h2 class="text-xl font-semibold">macOS 系統</h2>
-          <p class="mt-2 text-sm text-muted">支援 Apple Silicon (M系列晶片) 與 Intel x86_64 Mac。解壓即可直接執行。</p>
-        </div>
-        <div class="mt-6 flex flex-col gap-3">
-          <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-arm64-v2.3.7.zip">Apple Silicon 晶片 (.zip)</a>
-          <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-x64-v2.3.7.zip">Intel 處理器 (.zip)</a>
-        </div>
-      </article>
-
-      <article class="platform-card" data-platform="linux">
-        <div>
-          <h2 class="text-xl font-semibold">Linux 與國產系統</h2>
-          <p class="mt-2 text-sm text-muted">統信 UOS、銀河麒麟 Kylin OS、Ubuntu、Debian 全面適配支援。</p>
-        </div>
-        <div class="mt-6 flex flex-col gap-2">
-          <div class="grid grid-cols-2 gap-2">
-            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage">
-              <span class="font-semibold text-xs leading-tight">x86_64</span>
-              <span class="sub-text text-[11px] text-muted leading-tight">AppImage</span>
-            </a>
-            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-aarch64-v2.3.7.AppImage">
-              <span class="font-semibold text-xs leading-tight">ARM64</span>
-              <span class="sub-text text-[11px] text-muted leading-tight">AppImage</span>
-            </a>
+    <section id="download-paths" class="mt-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <article class="apple-platform-card is-recommended" data-platform="windows">
+        <div class="apple-platform-inner">
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-7 h-7 text-[#0078d4]" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.551H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+                <h2 class="text-xl font-bold tracking-tight text-white">Windows</h2>
+              </div>
+              <span class="rounded-full bg-[#0071e3]/20 border border-[#0071e3]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[#58a6ff]">官方推薦</span>
+            </div>
+            <p class="mt-3 text-xs text-[#8b949e] leading-relaxed">
+              支援 Windows 11、10 及 Windows 7 SP1+ (x64)。本機優先極速算繪，記憶體零竄改自癒。
+            </p>
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb">
-              <span class="font-semibold text-xs leading-tight">AMD64 Deb</span>
-              <span class="sub-text text-[11px] text-muted leading-tight">UOS / 麒麟</span>
+          <div class="flex flex-col gap-2.5">
+            <a class="apple-pill-primary w-full text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMDSetup-v2.3.7.exe">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Windows 安裝版 (.exe)
             </a>
-            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_arm64.deb">
-              <span class="font-semibold text-xs leading-tight">ARM64 Deb</span>
-              <span class="sub-text text-[11px] text-muted leading-tight">UOS / 麒麟</span>
+            <a class="apple-pill-secondary w-full text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-portable-v2.3.7.exe">
+              便攜免安裝版 (.exe)
             </a>
           </div>
         </div>
       </article>
 
-      <article class="platform-card">
-        <div>
-          <h2 class="text-xl font-semibold">擴充套件與校驗</h2>
-          <p class="mt-2 text-sm text-muted">VS Code 擴充、AI MCP Server、華為鴻蒙 DevEco 原始碼工程與雜湊校驗。</p>
+      <article class="apple-platform-card" data-platform="macos">
+        <div class="apple-platform-inner">
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.85-.9.04-2 .6-2.65 1.35-.58.66-.99 1.73-.87 2.76.99.08 1.98-.51 2.6-1.26z"/></svg>
+                <h2 class="text-xl font-bold tracking-tight text-white">macOS</h2>
+              </div>
+              <span class="rounded-full bg-white/10 border border-white/20 px-2.5 py-0.5 text-[11px] font-semibold text-white/80">M1/M2/M3/M4</span>
+            </div>
+            <p class="mt-3 text-xs text-[#8b949e] leading-relaxed">
+              全面適配 Apple Silicon 晶片與 Intel Mac，針對 macOS 12+ 及 Retina 視網膜螢幕深度最佳化。
+            </p>
+          </div>
+          <div class="flex flex-col gap-2.5">
+            <a class="apple-pill-primary w-full text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-arm64-v2.3.7.zip">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Apple Silicon 晶片 (.zip)
+            </a>
+            <a class="apple-pill-secondary w-full text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-x64-v2.3.7.zip">
+              Intel 處理器 (.zip)
+            </a>
+          </div>
         </div>
-        <div class="mt-6 flex flex-col gap-2">
-          <a class="apple-link-item" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-vscode-2.3.7.vsix">
-            <span>VS Code 擴充套件 (.vsix)</span>
-            <span class="chevron-arrow" aria-hidden="true">›</span>
-          </a>
-          <a class="apple-link-item" href="#mcp-guide">
-            <span>AI MCP Server (開箱即用指引)</span>
-            <span class="chevron-arrow" aria-hidden="true">›</span>
-          </a>
+      </article>
+
+      <article class="apple-platform-card" data-platform="linux">
+        <div class="apple-platform-inner">
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-7 h-7 text-[#f34f29]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                <h2 class="text-xl font-bold tracking-tight text-white">Linux</h2>
+              </div>
+              <span class="rounded-full bg-white/10 border border-white/20 px-2.5 py-0.5 text-[11px] font-semibold text-white/80">UOS / 麒麟</span>
+            </div>
+            <p class="mt-3 text-xs text-[#8b949e] leading-relaxed">
+              原生支援統信 UOS、銀河麒麟 Kylin OS、Ubuntu、Debian 與 Arch，提供 AppImage 與 Deb。
+            </p>
+          </div>
+          <div class="flex flex-col gap-2">
+            <div class="grid grid-cols-2 gap-2">
+              <a class="apple-pill-secondary !py-2 !px-2 !text-xs !justify-center text-center truncate" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage">
+                x86_64 AppImage
+              </a>
+              <a class="apple-pill-secondary !py-2 !px-2 !text-xs !justify-center text-center truncate" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-aarch64-v2.3.7.AppImage">
+                ARM64 AppImage
+              </a>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <a class="apple-pill-secondary !py-2 !px-2 !text-xs !justify-center text-center truncate" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb">
+                AMD64 Deb (UOS)
+              </a>
+              <a class="apple-pill-secondary !py-2 !px-2 !text-xs !justify-center text-center truncate" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_arm64.deb">
+                ARM64 Deb (麒麟)
+              </a>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="apple-platform-card">
+        <div class="apple-platform-inner">
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-7 h-7 text-[#007acc]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 2.81a1.2 1.2 0 0 0-1.78.85v16.68a1.2 1.2 0 0 0 1.78.85L16.5 14.6l5.3 4.14a1.2 1.2 0 0 0 1.9-.94V6.2a1.2 1.2 0 0 0-1.9-.94z"/></svg>
+                <h2 class="text-xl font-bold tracking-tight text-white">擴充與協同</h2>
+              </div>
+              <span class="rounded-full bg-[#0071e3]/20 border border-[#0071e3]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[#58a6ff]">MCP 原生</span>
+            </div>
+            <p class="mt-3 text-xs text-[#8b949e] leading-relaxed">
+              VS Code 原生外掛、AI Agent MCP Server 智慧體服務與 SHA256SUMS.txt 安全雜湊校驗。
+            </p>
+          </div>
+          <div class="flex flex-col gap-2.5">
+            <a class="apple-pill-primary w-full text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-vscode-2.3.7.vsix">
+              VS Code 外掛 (.vsix)
+            </a>
+            <a class="apple-pill-secondary w-full text-center" href="#mcp-guide">
+              AI MCP 協同展台 ↓
+            </a>
+          </div>
         </div>
       </article>
     </section>
 
-    <!-- MCP Server Interactive Guide & 1-Click Installation Section -->
-    <section id="mcp-guide" class="mt-12 rounded-3xl border border-border bg-card p-6 md:p-8">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+    <section id="mcp-guide" class="mt-20 md:mt-28 rounded-[2.5rem] bg-gradient-to-b from-[#11161d] to-[#080b0f] border border-white/10 p-6 md:p-12 lg:p-14 shadow-2xl relative overflow-hidden">
+      <div class="pointer-events-none absolute -right-20 -top-20 h-96 w-96 rounded-full bg-blue-600/15 blur-3xl"></div>
+      <div class="pointer-events-none absolute -left-20 -bottom-20 h-96 w-96 rounded-full bg-emerald-600/10 blur-3xl"></div>
+
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/10 pb-8">
         <div>
-          <div class="inline-flex items-center gap-2 rounded-full border border-[rgba(0,113,227,0.2)] bg-[rgba(0,113,227,0.06)] px-3 py-1 text-xs font-semibold text-[var(--color-action)]">
+          <div class="inline-flex items-center gap-2 rounded-full border border-[rgba(0,113,227,0.3)] bg-[rgba(0,113,227,0.1)] px-3.5 py-1 text-xs font-semibold text-[#58a6ff]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            AI AGENT 智慧體協同 · MODEL CONTEXT PROTOCOL
+            AI AGENT 生態協同 · MODEL CONTEXT PROTOCOL
           </div>
-          <h2 class="mt-2 text-2xl md:text-3xl font-bold tracking-tight text-foreground">ReadMD MCP Server · 開箱即用一鍵安裝</h2>
-          <p class="mt-1.5 text-sm text-muted max-w-2xl">賦能 Claude Desktop、Cursor、Antigravity、VS Code 等 AI 助手，獲得本機 Markdown 智慧自愈修復、學術 LaTeX 雙向轉換與 Office/PDF 原生擷取能力。</p>
+          <h2 class="mt-3 text-3xl md:text-4xl font-bold tracking-tight text-white">
+            賦能你的 AI 助手，獲得本機文件超能力
+          </h2>
+          <p class="mt-2 text-sm md:text-base text-[#8b949e] max-w-2xl leading-relaxed">
+            無論你使用 Claude Desktop、Cursor、Codex 還是 DeepSeek，只需一鍵設定，大模型即可在本機無縫呼叫 ReadMD 核心引擎。
+          </p>
         </div>
-        <div class="flex flex-wrap items-center gap-3">
-          <a class="button-primary inline-flex items-center gap-2" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip" data-mirror-url="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip">
+        <div class="flex flex-wrap items-center gap-3 shrink-0">
+          <a class="apple-pill-primary" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip" data-mirror-url="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            下載 MCP Server 獨立套件 (.zip)
+            下載 MCP 獨立套件 (.zip)
           </a>
-          <a class="button-secondary inline-flex items-center gap-2" href="https://github.com/Natsummerance/readMD/tree/main/packages/mcp-server" target="_blank" rel="noopener">
+          <a class="apple-pill-secondary" href="https://github.com/Natsummerance/readMD/tree/main/packages/mcp-server" target="_blank" rel="noopener">
             GitHub 原始碼
           </a>
         </div>
       </div>
 
-      <!-- 3-Step Quick Start Workflow -->
-      <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="rounded-2xl border border-border bg-surface p-4">
-          <div class="flex items-center gap-2 font-semibold text-sm text-foreground">
-            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-action)] text-xs text-white">1</span>
-            下載解壓縮或複製
+      <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-md">
+          <div class="flex items-center gap-3">
+            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-[#0071e3] text-xs font-bold text-white shadow-md shadow-blue-500/30">01</span>
+            <span class="text-sm font-semibold text-white">準備 MCP 獨立套件</span>
           </div>
-          <p class="mt-2 text-xs text-muted leading-relaxed">下載上方 <code>readmd-mcp-server.zip</code> 並解壓縮至本機任意目錄（例如 <code>~/readmd-mcp</code> 或 <code>D:\readmd-mcp</code>）。</p>
+          <p class="mt-2.5 text-xs text-[#8b949e] leading-relaxed">
+            點擊上方按鈕下載 <code>readmd-mcp-server.zip</code> 並解壓縮至本機任意路徑（如 <code>~/readmd-mcp</code> 或 <code>D:\readmd-mcp</code>）。
+          </p>
         </div>
-        <div class="rounded-2xl border border-border bg-surface p-4">
-          <div class="flex items-center gap-2 font-semibold text-sm text-foreground">
-            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-action)] text-xs text-white">2</span>
-            選擇 Agent 並複製設定
+
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-md">
+          <div class="flex items-center gap-3">
+            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-[#0071e3] text-xs font-bold text-white shadow-md shadow-blue-500/30">02</span>
+            <span class="text-sm font-semibold text-white">一鍵複製設定與路徑</span>
           </div>
-          <p class="mt-2 text-xs text-muted leading-relaxed">在下方選擇你的智慧體客戶端，點擊「一鍵複製設定」或「複製路徑」填入即可。</p>
+          <p class="mt-2.5 text-xs text-[#8b949e] leading-relaxed">
+            在下方選擇你的智慧體平台，點擊「一鍵複製設定」與「複製路徑」，直接填入對應用戶端設定檔。
+          </p>
         </div>
-        <div class="rounded-2xl border border-border bg-surface p-4">
-          <div class="flex items-center gap-2 font-semibold text-sm text-foreground">
-            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-action)] text-xs text-white">3</span>
-            重啟即享原生協同
+
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-md">
+          <div class="flex items-center gap-3">
+            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-[#0071e3] text-xs font-bold text-white shadow-md shadow-blue-500/30">03</span>
+            <span class="text-sm font-semibold text-white">重啟即享原生自愈</span>
           </div>
-          <p class="mt-2 text-xs text-muted leading-relaxed">無需額外註冊或付費，AI 程式設計助理將自動接管 Markdown 修復、LaTeX 互轉與論文文獻引用解析。</p>
+          <p class="mt-2.5 text-xs text-[#8b949e] leading-relaxed">
+            無需外部網路與 API Key，AI 助手在處理 Markdown 時將自動呼叫本機工具完成秒級自愈與 LaTeX 互轉。
+          </p>
         </div>
       </div>
 
-      <!-- Top Double-Group Agent Ribbon -->
-      <div class="mt-8 rounded-2xl border border-border bg-surface/50 p-4">
-        <div class="flex flex-col gap-3">
-          <div class="flex flex-col md:flex-row md:items-center gap-2">
-            <span class="mcp-category-title w-32 shrink-0">IDE 與桌面客戶端:</span>
-            <div class="mcp-tabs flex flex-wrap gap-1.5" role="tablist" aria-label="MCP IDE Selector">
+      <div class="mt-8 mcp-ribbon-container">
+        <div class="mcp-ribbon-group">
+          <div>
+            <span class="mcp-ribbon-label">IDE 與桌面用戶端</span>
+            <div class="mcp-tabs-track mt-2" role="tablist" aria-label="MCP IDE Selector">
               <button class="mcp-tab is-active" data-mcp-target="claude" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.5h-2v-2h2zm0-4h-2V7h2z"/></svg>
                 Claude Desktop
@@ -292,9 +380,9 @@
             </div>
           </div>
 
-          <div class="flex flex-col md:flex-row md:items-center gap-2 pt-2 border-t border-border/60">
-            <span class="mcp-category-title w-32 shrink-0">Agent 智慧體框架:</span>
-            <div class="mcp-tabs flex flex-wrap gap-1.5" role="tablist" aria-label="MCP Agent Harness Selector">
+          <div class="pt-3 border-t border-white/10">
+            <span class="mcp-ribbon-label">Agent 智慧體框架</span>
+            <div class="mcp-tabs-track mt-2" role="tablist" aria-label="MCP Agent Harness Selector">
               <button class="mcp-tab" data-mcp-target="codex" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 16 4-4-4-4"/><path d="M12 19h7"/></svg>
                 Codex / ChatGPT
@@ -336,27 +424,29 @@
         </div>
       </div>
 
-      <!-- Left-Right Synergy Showcase -->
-      <div class="mt-8 apple-synergy-grid">
-        <!-- Left: Apple Accordion List -->
+      <div class="mt-10 apple-synergy-grid">
         <div>
-          <div class="mb-4">
-            <h3 class="text-xl font-bold tracking-tight text-foreground">ReadMD 與你的 AI 程式設計助理協同</h3>
-            <p class="mt-1 text-xs text-muted">賦予大模型開箱即用的本機 Markdown 智慧自我修復、LaTeX 互轉與論文文獻解析能力。</p>
+          <div class="mb-5">
+            <h3 class="text-2xl font-bold tracking-tight text-white">ReadMD × AI 智慧體協同</h3>
+            <p class="mt-1.5 text-xs md:text-sm text-[#8b949e] leading-relaxed">
+              大模型接管 Markdown 算繪與格式時，呼叫本機底層工具獲得毫秒級確定性。
+            </p>
           </div>
 
-          <div class="apple-accordion-list" role="region" aria-label="生態協同能力清單">
+          <div class="apple-accordion-list" role="region" aria-label="生態協同能力列表">
             <div class="apple-accordion-item is-open">
               <div class="apple-accordion-header" tabindex="0">
                 <div class="apple-accordion-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-action)]"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>
-                  Markdown 智慧自我修復與零損解析
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[#0071e3] shrink-0"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>
+                  Markdown 智慧自愈與零損解析
                 </div>
                 <svg class="apple-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               <div class="apple-accordion-content">
-                <p class="text-xs text-muted leading-relaxed">自動修復 AI 生成文稿中的斷行、錯位表格、未閉合圍欄與不合規標記，且完全在記憶體完成，絕不損壞本機原檔案。</p>
-                <div class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-action)]">
+                <p class="text-xs text-[#8b949e] leading-relaxed">
+                  自動修復 AI 生成文稿中的斷行、錯位表格、未閉合圍欄與不合規標記。記憶體即時自愈，絕不篡改損壞本機原檔案。
+                </p>
+                <div class="mt-3 inline-flex items-center gap-1.5 rounded-md bg-[#0071e3]/10 border border-[#0071e3]/30 px-2.5 py-1 text-[11px] font-mono text-[#58a6ff]">
                   <code>readmd_fix_markdown</code>
                 </div>
               </div>
@@ -365,14 +455,16 @@
             <div class="apple-accordion-item">
               <div class="apple-accordion-header" tabindex="0">
                 <div class="apple-accordion-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-action)]"><path d="m4 6 8-4 8 4"/><path d="m4 18 8 4 8-4"/><path d="M4 12l8 4 8-4"/></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[#0071e3] shrink-0"><path d="m4 6 8-4 8 4"/><path d="m4 18 8 4 8-4"/><path d="M4 12l8 4 8-4"/></svg>
                   學術 LaTeX 與數學公式雙向轉換
                 </div>
                 <svg class="apple-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               <div class="apple-accordion-content">
-                <p class="text-xs text-muted leading-relaxed">KaTeX / MathJax 與標準學術 LaTeX 原始碼雙向零損互轉，精準保持長矩陣、上下標和分式語意，杜絕公式跳脫報錯。</p>
-                <div class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-action)]">
+                <p class="text-xs text-[#8b949e] leading-relaxed">
+                  KaTeX / MathJax 與標準學術 LaTeX 原始碼雙向零損互轉，精準保持長矩陣、上下標和分式語意，杜絕公式跳脫報錯。
+                </p>
+                <div class="mt-3 inline-flex items-center gap-1.5 rounded-md bg-[#0071e3]/10 border border-[#0071e3]/30 px-2.5 py-1 text-[11px] font-mono text-[#58a6ff]">
                   <code>readmd_latex_to_md</code> · <code>readmd_md_to_latex</code>
                 </div>
               </div>
@@ -381,14 +473,16 @@
             <div class="apple-accordion-item">
               <div class="apple-accordion-header" tabindex="0">
                 <div class="apple-accordion-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-action)]"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
-                  多源文獻與複雜文件結構化提取
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[#0071e3] shrink-0"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+                  多源文獻與複雜文件結構化擷取
                 </div>
                 <svg class="apple-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               <div class="apple-accordion-content">
-                <p class="text-xs text-muted leading-relaxed">毫秒級解析 PDF、Word (.docx) 與學術 BibTeX 引用題錄，直接將高純度結構化 Markdown 餵入 Agent 上下文視窗。</p>
-                <div class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-action)]">
+                <p class="text-xs text-[#8b949e] leading-relaxed">
+                  毫秒級解析 PDF、Word (.docx) 與學術 BibTeX 引用題錄，直接將高純度結構化 Markdown 投喂至 Agent 上下文視窗。
+                </p>
+                <div class="mt-3 inline-flex items-center gap-1.5 rounded-md bg-[#0071e3]/10 border border-[#0071e3]/30 px-2.5 py-1 text-[11px] font-mono text-[#58a6ff]">
                   <code>readmd_convert_to_markdown</code> · <code>readmd_parse_bibtex</code>
                 </div>
               </div>
@@ -396,7 +490,6 @@
           </div>
         </div>
 
-        <!-- Right: macOS Glass Terminal Showcase -->
         <div>
           <div class="macos-terminal">
             <div class="macos-terminal-bar">
@@ -406,15 +499,19 @@
                 <span class="macos-dot green"></span>
               </div>
               <div class="macos-agent-badge">
+                <span class="macos-agent-dot"></span>
                 <span class="macos-agent-name">Claude Desktop</span>
               </div>
               <span class="mcp-format-badge">JSON</span>
             </div>
 
             <div class="macos-path-bar">
-              <span class="mcp-config-path truncate">macOS: ~/Library/Application Support/Claude/claude_desktop_config.json | Windows: %APPDATA%\Claude\claude_desktop_config.json</span>
+              <div class="flex items-center gap-2 truncate text-xs">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white/60 shrink-0"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                <span class="mcp-config-path truncate">macOS: ~/Library/Application Support/Claude/claude_desktop_config.json</span>
+              </div>
               <button class="btn-copy-path shrink-0 ml-2" type="button">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 <span class="copy-text">複製路徑</span>
               </button>
             </div>
@@ -429,11 +526,11 @@
 }</code></pre>
 
             <div class="macos-actions-bar">
-              <a class="button-secondary text-xs inline-flex items-center gap-1.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip" data-mirror-url="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip">
+              <a class="apple-pill-secondary !py-2 !px-3.5 !text-xs inline-flex items-center gap-1.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip" data-mirror-url="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                下載 MCP 獨立包 (.zip)
+                下載獨立套件 (.zip)
               </a>
-              <button class="button-primary btn-copy-mcp inline-flex items-center gap-1.5" type="button">
+              <button class="apple-pill-primary btn-copy-mcp !py-2 !px-4 !text-xs inline-flex items-center gap-1.5" type="button">
                 <svg class="copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 <span class="copy-text">一鍵複製設定</span>
               </button>
@@ -442,37 +539,47 @@
         </div>
       </div>
 
-      <!-- MCP Tools Capabilities Grid -->
-      <div class="mt-8 border-t border-border pt-6">
-        <h3 class="text-base font-semibold text-foreground">開箱即用的 5 大核心 MCP Tools</h3>
-        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
-          <div class="rounded-xl border border-border bg-surface p-3">
-            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_fix_markdown</div>
-            <p class="mt-1 text-muted">自動偵測並記憶體自我修復 LaTeX 語法、未閉合圍欄、錯位表格與標點空格。</p>
+      <div class="mt-12 border-t border-white/10 pt-8">
+        <h3 class="text-base font-semibold text-white">開箱即用的 5 大核心 MCP Tools</h3>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
+          <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 transition-all">
+            <div class="font-mono font-semibold text-[#58a6ff]">readmd_fix_markdown</div>
+            <p class="mt-1.5 text-[#8b949e] leading-relaxed">自動檢測並記憶體自愈 LaTeX 語法、未閉合圍欄、錯位表格與混排標點空格。</p>
           </div>
-          <div class="rounded-xl border border-border bg-surface p-3">
-            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_convert_to_markdown</div>
-            <p class="mt-1 text-muted">一鍵將 PDF、Word (.docx)、PPTX、Excel 與 TeX 文件擷取為標準 Markdown。</p>
+          <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 transition-all">
+            <div class="font-mono font-semibold text-[#58a6ff]">readmd_convert_to_markdown</div>
+            <p class="mt-1.5 text-[#8b949e] leading-relaxed">一鍵將 PDF、Word (.docx)、PPTX、Excel 與 TeX 本機文件擷取為標準 Markdown。</p>
           </div>
-          <div class="rounded-xl border border-border bg-surface p-3">
-            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_latex_to_md</div>
-            <p class="mt-1 text-muted">將學術論文 LaTeX 原始碼完整轉換為符合 GFM 規範的高品質 Markdown。</p>
+          <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 transition-all">
+            <div class="font-mono font-semibold text-[#58a6ff]">readmd_latex_to_md</div>
+            <p class="mt-1.5 text-[#8b949e] leading-relaxed">將學術論文 LaTeX 原始碼完整轉換為符合 GFM 規範的高品質 Markdown。</p>
           </div>
-          <div class="rounded-xl border border-border bg-surface p-3">
-            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_md_to_latex</div>
-            <p class="mt-1 text-muted">將 Markdown 筆記即時編譯匯出為可直接由 TeXLive / Overleaf 編譯的學術論文程式碼。</p>
+          <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 transition-all">
+            <div class="font-mono font-semibold text-[#58a6ff]">readmd_md_to_latex</div>
+            <p class="mt-1.5 text-[#8b949e] leading-relaxed">將 Markdown 筆記即時編譯匯出為可直接由 TeXLive / Overleaf 編譯的學術論文代碼。</p>
           </div>
-          <div class="rounded-xl border border-border bg-surface p-3">
-            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_parse_bibtex</div>
-            <p class="mt-1 text-muted">深度解析 .bib 文獻資料庫，快速擷取作者、年份與標準 Citation 引用標註。</p>
+          <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 transition-all">
+            <div class="font-mono font-semibold text-[#58a6ff]">readmd_parse_bibtex</div>
+            <p class="mt-1.5 text-[#8b949e] leading-relaxed">深度解析 .bib 文獻資料庫，快速擷取作者、年份與標準 Citation 引用標註。</p>
           </div>
         </div>
       </div>
     </section>
 
-    <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-tw/workflows/">工作流程</a><a class="link-action" href="/zh-tw/large-markdown-files/">開啟超大 Markdown 檔案</a><a class="link-action" href="/zh-tw/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-tw/convert-to-markdown/">文件轉 Markdown</a><a class="link-action" href="/zh-tw/markdown-tables/">建立 Markdown 表格</a><a class="link-action" href="/zh-tw/pdf-to-markdown/">PDF 轉 Markdown</a><a class="link-action" href="/zh-tw/scan-to-markdown/">掃描件擷取文字</a><a class="link-action" href="/zh-tw/bibtex-citations/">管理 BibTeX 引用</a><a class="link-action" href="/zh-tw/release-notes/">發布說明</a></div>
-    <section class="mt-10 rounded-2xl border border-border bg-card p-6 text-sm">
-      <h3 class="font-semibold text-foreground">開源軟體包系統信任與安裝指引</h3>
+    <div class="mt-16 flex flex-wrap gap-x-6 gap-y-3 text-xs md:text-sm text-muted">
+      <a class="link-action" href="/zh-tw/workflows/">工作流</a>
+      <a class="link-action" href="/zh-tw/large-markdown-files/">開啟超大 Markdown 檔案</a>
+      <a class="link-action" href="/zh-tw/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a>
+      <a class="link-action" href="/zh-tw/convert-to-markdown/">文件轉 Markdown</a>
+      <a class="link-action" href="/zh-tw/markdown-tables/">構建 Markdown 表格</a>
+      <a class="link-action" href="/zh-tw/pdf-to-markdown/">PDF 轉 Markdown</a>
+      <a class="link-action" href="/zh-tw/scan-to-markdown/">掃描件擷取文字</a>
+      <a class="link-action" href="/zh-tw/bibtex-citations/">管理 BibTeX 引用</a>
+      <a class="link-action" href="/zh-tw/release-notes/">發行說明</a>
+    </div>
+
+    <section class="mt-10 rounded-2xl border border-border bg-card/60 backdrop-blur-md p-6 text-sm">
+      <h3 class="font-semibold text-foreground">開源軟體套件系統信任與安裝指引</h3>
       <p class="mt-2 text-muted leading-relaxed">
         ReadMD 所有版本均透過 GitHub Actions 公開流水線透明建置。因社群建置未購買商業簽章，首次啟動時作業系統可能彈出安全提示：
       </p>

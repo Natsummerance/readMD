@@ -117,156 +117,261 @@
     }
   ]
 }</script></head>
-<body class="antialiased">
-  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)]">
+  <header class="nav-shell sticky top-0 z-40 border-b border-[var(--color-line)] backdrop-blur-xl bg-background/80">
     <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
-      <a class="text-lg font-semibold tracking-tight" href="/">ReadMD</a>
+      <a class="text-lg font-bold tracking-tight text-foreground flex items-center gap-2" href="/">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-[var(--color-action)]"></span>
+        ReadMD
+      </a>
       <div class="flex items-center gap-4">
-        <a class="text-sm text-muted hover:text-foreground" href="/zh-cn/download/">中文</a>
-        <a class="button-primary text-sm" href="#download-paths">Downloads</a>
+        <a class="text-sm font-medium text-muted hover:text-foreground transition-colors" href="/zh-cn/download/">中文</a>
+        <a class="apple-pill-primary text-xs !py-2 !px-4" href="#download-paths">Downloads</a>
       </div>
     </div>
   </header>
-  <main class="mx-auto max-w-5xl px-5 py-16">
-    <nav class="pt-2 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/">Home</a><span aria-hidden="true"> / </span><span class="text-foreground font-medium">Download</span></nav>
-    <div class="mt-4 text-center">
-      <h1 class="display-title">Download ReadMD</h1>
-      <p class="section-copy mx-auto mt-4 max-w-2xl">The current stable release is version <span class="latest-version-badge font-semibold text-[var(--color-action)]">v2.3.7</span>. Select your platform below. Verify packages with SHA256SUMS.txt.</p>
+
+  <main class="mx-auto max-w-6xl px-5 py-12 md:py-20">
+    <!-- Breadcrumb -->
+    <nav class="text-xs font-medium text-muted" aria-label="Breadcrumb">
+      <a class="link-action text-muted hover:text-foreground" href="/">Home</a>
+      <span class="mx-1 text-muted/50">/</span>
+      <span class="text-foreground font-semibold">Download</span>
+    </nav>
+
+    <!-- Hero Header -->
+    <div class="mt-8 text-center">
+      <div class="inline-flex items-center gap-2 rounded-full border border-[rgba(0,113,227,0.3)] bg-[rgba(0,113,227,0.08)] px-4 py-1.5 text-xs font-semibold text-[var(--color-action)] tracking-wide uppercase">
+        All Platforms · Deeply Optimized
+      </div>
+      <h1 class="mt-4 text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground">
+        Download ReadMD
+      </h1>
+      <p class="mx-auto mt-4 max-w-2xl text-base md:text-lg text-muted leading-relaxed">
+        The current stable release is <span class="latest-version-badge font-semibold text-[var(--color-action)]">v2.3.7</span>. Local-first performance without compromise. Native binaries for Windows, macOS, and Linux.
+      </p>
+
+      <!-- Apple Glass Mirror Capsule -->
       <div class="mt-8">
-        <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Download Mirror & Acceleration · 下载源与镜像加速</p>
-        <div class="mirror-nav" role="tablist" aria-label="Download mirror selectors">
-          <button class="mirror-tab is-active" data-mirror="direct" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>Official GitHub</button>
-          <button class="mirror-tab" data-mirror="ghfast" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Mirror 1 (GHFast)</button>
-          <button class="mirror-tab" data-mirror="ghproxy" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Mirror 2 (GHProxy)</button>
-          <button class="mirror-tab" data-mirror="gitmirror" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Mirror 3 (GitMirror)</button>
-          <button class="mirror-tab" data-mirror="fastgit" type="button"><svg width="16" height="16" class="inline-block w-4 h-4 mr-1.5 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Mirror 4 (FastGit)</button>
+        <p class="mb-3 text-xs font-semibold uppercase tracking-widest text-muted/80">Download Mirror & Global Acceleration</p>
+        <div class="inline-flex flex-wrap items-center justify-center gap-1.5 p-1.5 rounded-full bg-surface/70 border border-border/80 backdrop-blur-xl shadow-lg" role="tablist" aria-label="Download mirror selection">
+          <button class="mirror-tab is-active" data-mirror="direct" type="button">
+            <svg width="15" height="15" class="inline-block mr-1 align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            Official GitHub
+          </button>
+          <button class="mirror-tab" data-mirror="ghfast" type="button">
+            <svg width="15" height="15" class="inline-block mr-1 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Fast Mirror 1 (GHFast)
+          </button>
+          <button class="mirror-tab" data-mirror="ghproxy" type="button">
+            <svg width="15" height="15" class="inline-block mr-1 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Fast Mirror 2 (GHProxy)
+          </button>
+          <button class="mirror-tab" data-mirror="gitmirror" type="button">
+            <svg width="15" height="15" class="inline-block mr-1 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Fast Mirror 3 (GitMirror)
+          </button>
+          <button class="mirror-tab" data-mirror="fastgit" type="button">
+            <svg width="15" height="15" class="inline-block mr-1 align-middle text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            Fast Mirror 4 (FastGit)
+          </button>
         </div>
       </div>
     </div>
 
-    <section id="download-paths" class="mt-12 platform-grid">
-      <article class="platform-card" data-platform="windows">
-        <div>
-          <h2 class="text-xl font-semibold">Windows</h2>
-          <p class="mt-2 text-sm text-muted">Windows 10 / 11 and Windows 7 SP1+. Installer or portable x64 binary.</p>
-        </div>
-        <div class="mt-6 flex flex-col gap-3">
-          <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMDSetup-v2.3.7.exe">Windows Installer (.exe)</a>
-          <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-portable-v2.3.7.exe">Windows Portable (.exe)</a>
-        </div>
-      </article>
-
-      <article class="platform-card" data-platform="macos">
-        <div>
-          <h2 class="text-xl font-semibold">macOS</h2>
-          <p class="mt-2 text-sm text-muted">Apple Silicon (M1/M2/M3/M4) or Intel x86_64 Mac. macOS 12 Monterey or later.</p>
-        </div>
-        <div class="mt-6 flex flex-col gap-3">
-          <a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-arm64-v2.3.7.zip">Apple Silicon (.zip)</a>
-          <a class="button-secondary text-sm" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-x64-v2.3.7.zip">Intel Mac (.zip)</a>
-        </div>
-      </article>
-
-      <article class="platform-card" data-platform="linux">
-        <div>
-          <h2 class="text-xl font-semibold">Linux & 国产操作系统</h2>
-          <p class="mt-2 text-sm text-muted">Ubuntu, Debian, Fedora, Arch, 统信 UOS, 银河麒麟 Kylin OS.</p>
-        </div>
-        <div class="mt-6 flex flex-col gap-2">
-          <div class="grid grid-cols-2 gap-2">
-            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage">
-              <span class="font-semibold text-xs leading-tight">x86_64</span>
-              <span class="sub-text text-[11px] text-muted leading-tight">AppImage</span>
-            </a>
-            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-aarch64-v2.3.7.AppImage">
-              <span class="font-semibold text-xs leading-tight">ARM64</span>
-              <span class="sub-text text-[11px] text-muted leading-tight">AppImage</span>
-            </a>
+    <!-- Platform Hardware Showcase Grid -->
+    <section id="download-paths" class="mt-14 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <!-- Windows Card (Recommended) -->
+      <article class="apple-platform-card is-recommended" data-platform="windows">
+        <div class="apple-platform-inner">
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-7 h-7 text-[#0078d4]" viewBox="0 0 24 24" fill="currentColor"><path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.551H10.949M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-12.9-1.801"/></svg>
+                <h2 class="text-xl font-bold tracking-tight text-white">Windows</h2>
+              </div>
+              <span class="rounded-full bg-[#0071e3]/20 border border-[#0071e3]/40 px-2.5 py-0.5 text-[11px] font-semibold text-[#58a6ff]">RECOMMENDED</span>
+            </div>
+            <p class="mt-3 text-xs text-[#8b949e] leading-relaxed">
+              Windows 11, 10, and Windows 7 SP1+ (x64). Zero freeze on 100MB+ documents. Memory self-healing engine.
+            </p>
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb">
-              <span class="font-semibold text-xs leading-tight">AMD64 Deb</span>
-              <span class="sub-text text-[11px] text-muted leading-tight">UOS / 麒麟</span>
+          <div class="flex flex-col gap-2.5">
+            <a class="apple-pill-primary w-full text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMDSetup-v2.3.7.exe">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Windows Installer (.exe)
             </a>
-            <a class="button-pill-sub" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_arm64.deb">
-              <span class="font-semibold text-xs leading-tight">ARM64 Deb</span>
-              <span class="sub-text text-[11px] text-muted leading-tight">UOS / 麒麟</span>
+            <a class="apple-pill-secondary w-full text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-portable-v2.3.7.exe">
+              Portable Binary (.exe)
             </a>
           </div>
         </div>
       </article>
 
-      <article class="platform-card">
-        <div>
-          <h2 class="text-xl font-semibold">Integrations & Checksum</h2>
-          <p class="mt-2 text-sm text-muted">VS Code extension, MCP Server for AI agents DevEco project, SHA256.</p>
+      <!-- macOS Card -->
+      <article class="apple-platform-card" data-platform="macos">
+        <div class="apple-platform-inner">
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.85-.9.04-2 .6-2.65 1.35-.58.66-.99 1.73-.87 2.76.99.08 1.98-.51 2.6-1.26z"/></svg>
+                <h2 class="text-xl font-bold tracking-tight text-white">macOS</h2>
+              </div>
+              <span class="rounded-full bg-white/10 border border-white/20 px-2.5 py-0.5 text-[11px] font-semibold text-white/80">M1/M2/M3/M4</span>
+            </div>
+            <p class="mt-3 text-xs text-[#8b949e] leading-relaxed">
+              Native Apple Silicon (M-series) and Intel x86_64 Mac. macOS 12 Monterey or later with Retina display polish.
+            </p>
+          </div>
+          <div class="flex flex-col gap-2.5">
+            <a class="apple-pill-primary w-full text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-arm64-v2.3.7.zip">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Apple Silicon (.zip)
+            </a>
+            <a class="apple-pill-secondary w-full text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-x64-v2.3.7.zip">
+              Intel Mac (.zip)
+            </a>
+          </div>
         </div>
-        <div class="mt-6 flex flex-col gap-2">
-          <a class="apple-link-item" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-vscode-2.3.7.vsix">
-            <span>VS Code extension (.vsix)</span>
-            <span class="chevron-arrow" aria-hidden="true">›</span>
-          </a>
-          <a class="apple-link-item" href="#mcp-guide">
-            <span>MCP Server (AI Agent Guide)</span>
-            <span class="chevron-arrow" aria-hidden="true">›</span>
-          </a>
+      </article>
+
+      <!-- Linux & Distros Card -->
+      <article class="apple-platform-card" data-platform="linux">
+        <div class="apple-platform-inner">
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-7 h-7 text-[#f34f29]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                <h2 class="text-lg md:text-xl font-bold tracking-tight text-white whitespace-nowrap">Linux</h2>
+              </div>
+              <span class="rounded-full bg-white/10 border border-white/20 px-2 py-0.5 text-[10px] font-semibold text-white/80 shrink-0">AppImage / Deb</span>
+            </div>
+            <p class="mt-3 text-xs text-[#8b949e] leading-relaxed">
+              Universal support for Ubuntu, Debian, Fedora, Arch, Kylin OS, and UOS with AppImage and native Deb packages.
+            </p>
+          </div>
+          <div class="flex flex-col gap-2">
+            <div class="grid grid-cols-2 gap-2">
+              <a class="flex flex-col items-center justify-center rounded-xl bg-white/[0.04] border border-white/10 hover:border-white/20 hover:bg-white/[0.08] py-2 px-1 transition-all text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage">
+                <span class="font-semibold text-xs text-white">x86_64</span>
+                <span class="text-[10px] text-[#8b949e]">AppImage</span>
+              </a>
+              <a class="flex flex-col items-center justify-center rounded-xl bg-white/[0.04] border border-white/10 hover:border-white/20 hover:bg-white/[0.08] py-2 px-1 transition-all text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-aarch64-v2.3.7.AppImage">
+                <span class="font-semibold text-xs text-white">ARM64</span>
+                <span class="text-[10px] text-[#8b949e]">AppImage</span>
+              </a>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <a class="flex flex-col items-center justify-center rounded-xl bg-white/[0.04] border border-white/10 hover:border-white/20 hover:bg-white/[0.08] py-2 px-1 transition-all text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb">
+                <span class="font-semibold text-xs text-white">AMD64 Deb</span>
+                <span class="text-[10px] text-[#8b949e]">Ubuntu / Debian</span>
+              </a>
+              <a class="flex flex-col items-center justify-center rounded-xl bg-white/[0.04] border border-white/10 hover:border-white/20 hover:bg-white/[0.08] py-2 px-1 transition-all text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_arm64.deb">
+                <span class="font-semibold text-xs text-white">ARM64 Deb</span>
+                <span class="text-[10px] text-[#8b949e]">Kylin / UOS</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Extensions & MCP Suite Card -->
+      <article class="apple-platform-card">
+        <div class="apple-platform-inner">
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <svg class="w-7 h-7 text-[#007acc]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 2.81a1.2 1.2 0 0 0-1.78.85v16.68a1.2 1.2 0 0 0 1.78.85L16.5 14.6l5.3 4.14a1.2 1.2 0 0 0 1.9-.94V6.2a1.2 1.2 0 0 0-1.9-.94z"/></svg>
+                <h2 class="text-lg md:text-xl font-bold tracking-tight text-white whitespace-nowrap">Extensions</h2>
+              </div>
+              <span class="rounded-full bg-[#0071e3]/20 border border-[#0071e3]/40 px-2 py-0.5 text-[10px] font-semibold text-[#58a6ff] shrink-0">MCP NATIVE</span>
+            </div>
+            <p class="mt-3 text-xs text-[#8b949e] leading-relaxed">
+              VS Code extension, standalone Model Context Protocol AI Server, and SHA256 cryptographic verification.
+            </p>
+          </div>
+          <div class="flex flex-col gap-2.5">
+            <a class="apple-pill-primary w-full text-center" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-vscode-2.3.7.vsix">
+              VS Code Extension (.vsix)
+            </a>
+            <a class="apple-pill-secondary w-full text-center" href="#mcp-guide">
+              AI MCP Showcase ↓
+            </a>
+          </div>
         </div>
       </article>
     </section>
 
-    <!-- MCP Server Interactive Guide & 1-Click Installation Section -->
-    <section id="mcp-guide" class="mt-12 rounded-3xl border border-border bg-card p-6 md:p-8">
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+    <!-- MCP Server Interactive Guide & 1-Click Installation Section (Apple Synergy Showcase) -->
+    <section id="mcp-guide" class="mt-20 md:mt-28 rounded-[2.5rem] bg-gradient-to-b from-[#11161d] to-[#080b0f] border border-white/10 p-6 md:p-12 lg:p-14 shadow-2xl relative overflow-hidden">
+      <!-- Ambient Glow Orb -->
+      <div class="pointer-events-none absolute -right-20 -top-20 h-96 w-96 rounded-full bg-blue-600/15 blur-3xl"></div>
+      <div class="pointer-events-none absolute -left-20 -bottom-20 h-96 w-96 rounded-full bg-emerald-600/10 blur-3xl"></div>
+
+      <!-- Section Header -->
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/10 pb-8">
         <div>
-          <div class="inline-flex items-center gap-2 rounded-full border border-[rgba(0,113,227,0.2)] bg-[rgba(0,113,227,0.06)] px-3 py-1 text-xs font-semibold text-[var(--color-action)]">
+          <div class="inline-flex items-center gap-2 rounded-full border border-[rgba(0,113,227,0.3)] bg-[rgba(0,113,227,0.1)] px-3.5 py-1 text-xs font-semibold text-[#58a6ff]">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-            AI AGENT INTEGRATION · MODEL CONTEXT PROTOCOL
+            AI AGENT ECOSYSTEM · MODEL CONTEXT PROTOCOL
           </div>
-          <h2 class="mt-2 text-2xl md:text-3xl font-bold tracking-tight text-foreground">ReadMD MCP Server · 1-Click AI Integration</h2>
-          <p class="mt-1.5 text-sm text-muted max-w-2xl">Empower Claude Desktop, Cursor, Antigravity, and VS Code with self-healing Markdown repairs, bidirectional LaTeX math conversion, and multi-format document extraction.</p>
+          <h2 class="mt-3 text-3xl md:text-4xl font-bold tracking-tight text-white">
+            Give Your AI Assistants Native Markdown Superpowers
+          </h2>
+          <p class="mt-2 text-sm md:text-base text-[#8b949e] max-w-2xl leading-relaxed">
+            Whether you use Claude Desktop, Cursor, Codex, or DeepSeek, one-click integration connects your models to ReadMD's local high-performance engine.
+          </p>
         </div>
-        <div class="flex flex-wrap items-center gap-3">
-          <a class="button-primary inline-flex items-center gap-2" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip" data-mirror-url="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip">
+        <div class="flex flex-wrap items-center gap-3 shrink-0">
+          <a class="apple-pill-primary" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip" data-mirror-url="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             Download MCP Package (.zip)
           </a>
-          <a class="button-secondary inline-flex items-center gap-2" href="https://github.com/Natsummerance/readMD/tree/main/packages/mcp-server" target="_blank" rel="noopener">
+          <a class="apple-pill-secondary" href="https://github.com/Natsummerance/readMD/tree/main/packages/mcp-server" target="_blank" rel="noopener">
             View on GitHub
           </a>
         </div>
       </div>
 
-      <!-- 3-Step Quick Start Workflow -->
-      <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div class="rounded-2xl border border-border bg-surface p-4">
-          <div class="flex items-center gap-2 font-semibold text-sm text-foreground">
-            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-action)] text-xs text-white">1</span>
-            Download & Extract
+      <!-- 3-Step Apple Visual Guide -->
+      <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-md">
+          <div class="flex items-center gap-3">
+            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-[#0071e3] text-xs font-bold text-white shadow-md shadow-blue-500/30">01</span>
+            <span class="text-sm font-semibold text-white">Unpack Standalone Package</span>
           </div>
-          <p class="mt-2 text-xs text-muted leading-relaxed">Download <code>readmd-mcp-server.zip</code> and unpack it to any local directory (e.g., <code>~/readmd-mcp</code>).</p>
+          <p class="mt-2.5 text-xs text-[#8b949e] leading-relaxed">
+            Download <code>readmd-mcp-server.zip</code> and extract it anywhere locally (e.g. <code>~/readmd-mcp</code> or <code>D:\readmd-mcp</code>).
+          </p>
         </div>
-        <div class="rounded-2xl border border-border bg-surface p-4">
-          <div class="flex items-center gap-2 font-semibold text-sm text-foreground">
-            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-action)] text-xs text-white">2</span>
-            Select Agent & Copy Config
+
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-md">
+          <div class="flex items-center gap-3">
+            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-[#0071e3] text-xs font-bold text-white shadow-md shadow-blue-500/30">02</span>
+            <span class="text-sm font-semibold text-white">Copy Config & Path</span>
           </div>
-          <p class="mt-2 text-xs text-muted leading-relaxed">Choose your AI harness below and click <strong>Copy Config</strong> or <strong>Copy Path</strong>.</p>
+          <p class="mt-2.5 text-xs text-[#8b949e] leading-relaxed">
+            Select your AI harness below and click "Copy Configuration" and "Copy Path" into your agent configuration file.
+          </p>
         </div>
-        <div class="rounded-2xl border border-border bg-surface p-4">
-          <div class="flex items-center gap-2 font-semibold text-sm text-foreground">
-            <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-action)] text-xs text-white">3</span>
-            Restart & Enjoy Native Synergy
+
+        <div class="rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-md">
+          <div class="flex items-center gap-3">
+            <span class="flex h-7 w-7 items-center justify-center rounded-full bg-[#0071e3] text-xs font-bold text-white shadow-md shadow-blue-500/30">03</span>
+            <span class="text-sm font-semibold text-white">Restart & Enjoy Local Power</span>
           </div>
-          <p class="mt-2 text-xs text-muted leading-relaxed">Restart your agent. Your AI assistant will automatically leverage ReadMD tools for instant document repair and LaTeX conversions.</p>
+          <p class="mt-2.5 text-xs text-[#8b949e] leading-relaxed">
+            Zero API key needed. Your AI models automatically invoke local tools for self-healing Markdown repairs and LaTeX conversions.
+          </p>
         </div>
       </div>
 
-      <!-- Top Double-Group Agent Ribbon -->
-      <div class="mt-8 rounded-2xl border border-border bg-surface/50 p-4">
-        <div class="flex flex-col gap-3">
-          <div class="flex flex-col md:flex-row md:items-center gap-2">
-            <span class="mcp-category-title w-32 shrink-0">IDEs & Desktop:</span>
-            <div class="mcp-tabs flex flex-wrap gap-1.5" role="tablist" aria-label="MCP IDE Selector">
+      <!-- Top Double-Deck Agent Ribbon (Apple Navigation Bar style) -->
+      <div class="mt-8 mcp-ribbon-container">
+        <div class="mcp-ribbon-group">
+          <!-- Category 1: IDEs -->
+          <div>
+            <span class="mcp-ribbon-label">IDEs & Desktop Clients</span>
+            <div class="mcp-tabs-track mt-2" role="tablist" aria-label="MCP IDE Selector">
               <button class="mcp-tab is-active" data-mcp-target="claude" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.5h-2v-2h2zm0-4h-2V7h2z"/></svg>
                 Claude Desktop
@@ -289,14 +394,15 @@
               </button>
               <button class="mcp-tab" data-mcp-target="qoder" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
-                Qoder
+                Qoder (Alibaba)
               </button>
             </div>
           </div>
 
-          <div class="flex flex-col md:flex-row md:items-center gap-2 pt-2 border-t border-border/60">
-            <span class="mcp-category-title w-32 shrink-0">Agent Harnesses:</span>
-            <div class="mcp-tabs flex flex-wrap gap-1.5" role="tablist" aria-label="MCP Agent Harness Selector">
+          <!-- Category 2: Agents -->
+          <div class="pt-3 border-t border-white/10">
+            <span class="mcp-ribbon-label">Autonomous Agent Frameworks</span>
+            <div class="mcp-tabs-track mt-2" role="tablist" aria-label="MCP Agent Harness Selector">
               <button class="mcp-tab" data-mcp-target="codex" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 16 4-4-4-4"/><path d="M12 19h7"/></svg>
                 Codex / ChatGPT
@@ -323,7 +429,7 @@
               </button>
               <button class="mcp-tab" data-mcp-target="workbuddy" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-                WorkBuddy
+                WorkBuddy (Tencent)
               </button>
               <button class="mcp-tab" data-mcp-target="doubao" type="button">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
@@ -338,59 +444,70 @@
         </div>
       </div>
 
-      <!-- Left-Right Synergy Showcase -->
-      <div class="mt-8 apple-synergy-grid">
+      <!-- Left-Right Synergy Showcase Stage (Inspired by Apple iPhone + Mac) -->
+      <div class="mt-10 apple-synergy-grid">
         <!-- Left: Apple Accordion List -->
         <div>
-          <div class="mb-4">
-            <h3 class="text-xl font-bold tracking-tight text-foreground">ReadMD & Your AI Assistant</h3>
-            <p class="mt-1 text-xs text-muted">Seamless out-of-the-box superpowers for local Markdown, LaTeX, and research artifacts.</p>
+          <div class="mb-5">
+            <h3 class="text-2xl font-bold tracking-tight text-white">ReadMD × Agent Ecosystem</h3>
+            <p class="mt-1.5 text-xs md:text-sm text-[#8b949e] leading-relaxed">
+              When AI models generate, repair, or format Markdown, invoke deterministic local tools.
+            </p>
           </div>
 
-          <div class="apple-accordion-list" role="region" aria-label="Synergy Capabilities">
+          <div class="apple-accordion-list" role="region" aria-label="Ecosystem Capabilities List">
+            <!-- Accordion 1 -->
             <div class="apple-accordion-item is-open">
               <div class="apple-accordion-header" tabindex="0">
                 <div class="apple-accordion-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-action)]"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[#0071e3] shrink-0"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>
                   Self-Healing Markdown Repairs
                 </div>
                 <svg class="apple-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               <div class="apple-accordion-content">
-                <p class="text-xs text-muted leading-relaxed">Fixes broken table columns, missing fence closures, and irregular syntax on-the-fly without corrupting original files.</p>
-                <div class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-action)]">
+                <p class="text-xs text-[#8b949e] leading-relaxed">
+                  Automatically recovers unclosed code fences, misaligned tables, broken line-breaks, and malformed tags in memory without touching source files on disk.
+                </p>
+                <div class="mt-3 inline-flex items-center gap-1.5 rounded-md bg-[#0071e3]/10 border border-[#0071e3]/30 px-2.5 py-1 text-[11px] font-mono text-[#58a6ff]">
                   <code>readmd_fix_markdown</code>
                 </div>
               </div>
             </div>
 
+            <!-- Accordion 2 -->
             <div class="apple-accordion-item">
               <div class="apple-accordion-header" tabindex="0">
                 <div class="apple-accordion-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-action)]"><path d="m4 6 8-4 8 4"/><path d="m4 18 8 4 8-4"/><path d="M4 12l8 4 8-4"/></svg>
-                  Bidirectional Academic LaTeX Math
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[#0071e3] shrink-0"><path d="m4 6 8-4 8 4"/><path d="m4 18 8 4 8-4"/><path d="M4 12l8 4 8-4"/></svg>
+                  Bidirectional LaTeX Math Conversion
                 </div>
                 <svg class="apple-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               <div class="apple-accordion-content">
-                <p class="text-xs text-muted leading-relaxed">Converts math equations between KaTeX, MathJax, and standard LaTeX flawlessly. Eliminates formula escape errors in agent generations.</p>
-                <div class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-action)]">
+                <p class="text-xs text-[#8b949e] leading-relaxed">
+                  Losslessly convert between KaTeX/MathJax and standard academic LaTeX source syntax while preserving matrices, subscripts, fractions, and symbols.
+                </p>
+                <div class="mt-3 inline-flex items-center gap-1.5 rounded-md bg-[#0071e3]/10 border border-[#0071e3]/30 px-2.5 py-1 text-[11px] font-mono text-[#58a6ff]">
                   <code>readmd_latex_to_md</code> · <code>readmd_md_to_latex</code>
                 </div>
               </div>
             </div>
 
+            <!-- Accordion 3 -->
             <div class="apple-accordion-item">
               <div class="apple-accordion-header" tabindex="0">
                 <div class="apple-accordion-title">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-action)]"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
-                  Multi-Source Research & Document Extraction
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[#0071e3] shrink-0"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+                  Multi-Source Extraction & BibTeX Parsing
                 </div>
                 <svg class="apple-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
               </div>
               <div class="apple-accordion-content">
-                <p class="text-xs text-muted leading-relaxed">Extracts structured Markdown from PDF, Word (.docx), and BibTeX citations directly into your Agent context window in milliseconds.</p>
-                <div class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-action)]">
+                <p class="text-xs text-[#8b949e] leading-relaxed">
+                  Fast structural extraction from PDF, Word (.docx), PPTX, and BibTeX citation databases directly into high-fidelity Markdown for LLM prompt context.
+                </p>
+                <div class="mt-3 inline-flex items-center gap-1.5 rounded-md bg-[#0071e3]/10 border border-[#0071e3]/30 px-2.5 py-1 text-[11px] font-mono text-[#58a6ff]">
                   <code>readmd_convert_to_markdown</code> · <code>readmd_parse_bibtex</code>
                 </div>
               </div>
@@ -398,7 +515,7 @@
           </div>
         </div>
 
-        <!-- Right: macOS Glass Terminal Showcase -->
+        <!-- Right: Studio-Quality macOS Glass Window Showcase -->
         <div>
           <div class="macos-terminal">
             <div class="macos-terminal-bar">
@@ -408,15 +525,19 @@
                 <span class="macos-dot green"></span>
               </div>
               <div class="macos-agent-badge">
+                <span class="macos-agent-dot"></span>
                 <span class="macos-agent-name">Claude Desktop</span>
               </div>
               <span class="mcp-format-badge">JSON</span>
             </div>
 
             <div class="macos-path-bar">
-              <span class="mcp-config-path truncate">macOS: ~/Library/Application Support/Claude/claude_desktop_config.json | Windows: %APPDATA%\Claude\claude_desktop_config.json</span>
+              <div class="flex items-center gap-2 truncate text-xs">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-white/60 shrink-0"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>
+                <span class="mcp-config-path truncate">macOS: ~/Library/Application Support/Claude/claude_desktop_config.json</span>
+              </div>
               <button class="btn-copy-path shrink-0 ml-2" type="button">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 <span class="copy-text">Copy Path</span>
               </button>
             </div>
@@ -431,63 +552,77 @@
 }</code></pre>
 
             <div class="macos-actions-bar">
-              <a class="button-secondary text-xs inline-flex items-center gap-1.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip" data-mirror-url="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip">
+              <a class="apple-pill-secondary !py-2 !px-3.5 !text-xs inline-flex items-center gap-1.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip" data-mirror-url="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                 Download Package (.zip)
               </a>
-              <button class="button-primary btn-copy-mcp inline-flex items-center gap-1.5" type="button">
+              <button class="apple-pill-primary btn-copy-mcp !py-2 !px-4 !text-xs inline-flex items-center gap-1.5" type="button">
                 <svg class="copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                <span class="copy-text">Copy Config</span>
+                <span class="copy-text">Copy Configuration</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- MCP Tools Capabilities Grid -->
-      <div class="mt-8 border-t border-border pt-6">
-        <h3 class="text-base font-semibold text-foreground">Out-of-the-Box MCP Tools Included</h3>
-        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
-          <div class="rounded-xl border border-border bg-surface p-3">
-            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_fix_markdown</div>
-            <p class="mt-1 text-muted">Auto-scans and heals syntax flaws, unclosed fences, math blocks, and misaligned tables.</p>
+      <!-- Core MCP Tools Bento Grid -->
+      <div class="mt-12 border-t border-white/10 pt-8">
+        <h3 class="text-base font-semibold text-white">5 Core Ready-to-Use MCP Tools</h3>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 text-xs">
+          <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 transition-all">
+            <div class="font-mono font-semibold text-[#58a6ff]">readmd_fix_markdown</div>
+            <p class="mt-1.5 text-[#8b949e] leading-relaxed">Auto-repairs LaTeX math, unclosed code fences, misaligned tables, and mixed punctuation.</p>
           </div>
-          <div class="rounded-xl border border-border bg-surface p-3">
-            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_convert_to_markdown</div>
-            <p class="mt-1 text-muted">Converts Word (.docx), PDF, PPTX, Excel, and TeX files to clean GitHub Flavored Markdown.</p>
+          <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 transition-all">
+            <div class="font-mono font-semibold text-[#58a6ff]">readmd_convert_to_markdown</div>
+            <p class="mt-1.5 text-[#8b949e] leading-relaxed">Extracts PDF, Word (.docx), PPTX, Excel, and TeX files into clean standard Markdown.</p>
           </div>
-          <div class="rounded-xl border border-border bg-surface p-3">
-            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_latex_to_md</div>
-            <p class="mt-1 text-muted">Translates academic LaTeX papers and complex formulas to standard Markdown.</p>
+          <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 transition-all">
+            <div class="font-mono font-semibold text-[#58a6ff]">readmd_latex_to_md</div>
+            <p class="mt-1.5 text-[#8b949e] leading-relaxed">Transforms academic LaTeX source documents into GFM-compliant Markdown.</p>
           </div>
-          <div class="rounded-xl border border-border bg-surface p-3">
-            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_md_to_latex</div>
-            <p class="mt-1 text-muted">Compiles Markdown drafts to publication-ready LaTeX for Overleaf and TeXLive.</p>
+          <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 transition-all">
+            <div class="font-mono font-semibold text-[#58a6ff]">readmd_md_to_latex</div>
+            <p class="mt-1.5 text-[#8b949e] leading-relaxed">Compiles Markdown notes into production-ready LaTeX code for TeXLive or Overleaf.</p>
           </div>
-          <div class="rounded-xl border border-border bg-surface p-3">
-            <div class="font-mono font-semibold text-[var(--color-action)]">readmd_parse_bibtex</div>
-            <p class="mt-1 text-muted">Parses BibTeX databases and extracts formatted academic citations.</p>
+          <div class="rounded-2xl border border-white/10 bg-white/[0.02] p-4 hover:border-white/20 transition-all">
+            <div class="font-mono font-semibold text-[#58a6ff]">readmd_parse_bibtex</div>
+            <p class="mt-1.5 text-[#8b949e] leading-relaxed">Parses .bib literature databases into structured author, year, and citation records.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <div class="mt-12 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/workflows/">Workflows</a><a class="link-action" href="/large-markdown-files/">Open large Markdown files</a><a class="link-action" href="/markdown-to-slides/">Present Markdown without PowerPoint</a><a class="link-action" href="/convert-to-markdown/">Convert documents to Markdown</a><a class="link-action" href="/markdown-tables/">Build Markdown tables</a><a class="link-action" href="/pdf-to-markdown/">Convert PDFs to Markdown</a><a class="link-action" href="/scan-to-markdown/">Extract text from scans</a><a class="link-action" href="/bibtex-citations/">Manage BibTeX citations</a><a class="link-action" href="/release-notes/">Release notes</a></div>
-    <section class="mt-10 rounded-2xl border border-border bg-card p-6 text-sm">
-      <h3 class="font-semibold text-foreground">Open Source Security & Trust Notice</h3>
+    <!-- Workflows Quick Jump -->
+    <div class="mt-16 flex flex-wrap gap-x-6 gap-y-3 text-xs md:text-sm text-muted">
+      <a class="link-action" href="/workflows/">Workflows</a>
+      <a class="link-action" href="/large-markdown-files/">Open Large Markdown Files</a>
+      <a class="link-action" href="/markdown-to-slides/">Markdown Slides without PowerPoint</a>
+      <a class="link-action" href="/convert-to-markdown/">Convert Documents to Markdown</a>
+      <a class="link-action" href="/markdown-tables/">Markdown Table Builder</a>
+      <a class="link-action" href="/pdf-to-markdown/">PDF to Markdown</a>
+      <a class="link-action" href="/scan-to-markdown/">Scan OCR to Markdown</a>
+      <a class="link-action" href="/bibtex-citations/">Manage BibTeX Citations</a>
+      <a class="link-action" href="/release-notes/">Release Notes</a>
+    </div>
+
+    <!-- Security & Trust Notice -->
+    <section class="mt-10 rounded-2xl border border-border bg-card/60 backdrop-blur-md p-6 text-sm">
+      <h3 class="font-semibold text-foreground">Open-Source System Trust & Installation Guidance</h3>
       <p class="mt-2 text-muted leading-relaxed">
-        ReadMD releases are built via public GitHub Actions CI. Because community builds are unsigned, your OS may display a security prompt on first launch:
+        All ReadMD builds are created transparently through public GitHub Actions CI. Unsigned community binaries may trigger OS security dialogs on initial launch:
       </p>
       <ul class="mt-3 list-disc pl-5 space-y-1.5 text-muted">
-        <li><strong>Windows:</strong> Click "More info" then "Run anyway" if Microsoft Defender SmartScreen appears.</li>
-        <li><strong>macOS:</strong> If Gatekeeper blocks the app, right-click the application icon and select "Open", or run <code>xattr -d com.apple.quarantine ReadMD.app</code> in Terminal.</li>
-        <li><strong>Linux:</strong> Run <code>chmod +x ReadMD-linux-*.AppImage</code> before executing the AppImage binary.</li>
+        <li><strong>Windows:</strong> On Microsoft Defender SmartScreen, click "More info" and select "Run anyway".</li>
+        <li><strong>macOS:</strong> If blocked by Gatekeeper, right-click the app icon and select "Open", or run <code>xattr -d com.apple.quarantine ReadMD.app</code> in terminal.</li>
+        <li><strong>Linux:</strong> Grant execution permissions before launching AppImage via <code>chmod +x ReadMD-linux-*.AppImage</code>.</li>
       </ul>
     </section>
 
+    <!-- Footer Action Buttons -->
     <div class="mt-8 flex flex-wrap items-center gap-4">
-      <a class="button-primary" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/SHA256SUMS.txt">SHA256SUMS.txt</a>
-      <a class="button-secondary" href="https://github.com/Natsummerance/readMD/stargazers">Star on GitHub</a>
+      <a class="apple-pill-primary" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/SHA256SUMS.txt">SHA256SUMS.txt Checksum</a>
+      <a class="apple-pill-secondary" href="https://github.com/Natsummerance/readMD/stargazers">Star on GitHub ⭐</a>
     </div>
   </main>
   <script src="/assets/site.js" defer></script>
