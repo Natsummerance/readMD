@@ -61,7 +61,13 @@ def scan_file(path, label, failures, is_source_tree=True):
         return
     if "/tests/" in norm_label or norm_label.startswith("tests/"):
         return
-    if "verify-macos" in norm_label or "/Contents/" in norm_label or "/Frameworks/" in norm_label:
+    if (
+        "verify-macos" in norm_label
+        or norm_label.startswith("Contents/")
+        or "/Contents/" in norm_label
+        or norm_label.startswith("Frameworks/")
+        or "/Frameworks/" in norm_label
+    ):
         return
     if norm_label.endswith(('.png', '.ico', '.icns', '.lock', '.svg', '.woff', '.woff2', '.ttf', '.eot')):
         return
