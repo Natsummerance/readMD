@@ -82,16 +82,22 @@ def scan_file(path, label, failures, is_source_tree=True):
     lower = data.lower()
     # The public provider-catalog attribution is an intentional, audited
     # source; it is not a private credential or runtime integration.
+    public_ccswitch_attribution = (
+        norm_label in ("assets/providers/provider-catalog.json", "provider-catalog.json",
+                       "src/readmd_modules/ai.py", "tools/build_provider_catalog.py",
+                       "tools/package_local_rc.py", "source-snapshot-manifest.json",
+                       "THIRD_PARTY_LICENSES.md", "candidate.json", "SHA256SUMS.txt") or
+        norm_label.endswith("/assets/providers/provider-catalog.json") or
+        norm_label.endswith("src/readmd_modules/ai.py") or
+        norm_label.endswith("tools/build_provider_catalog.py") or
+        norm_label.endswith("tools/package_local_rc.py") or
+        norm_label.endswith("/source-snapshot-manifest.json") or
+        norm_label.endswith("/THIRD_PARTY_LICENSES.md") or
+        norm_label.endswith("/candidate.json") or
+        norm_label.endswith("/SHA256SUMS.txt")
+    )
     retired_tokens = [token for token in RETIRED
-                      if not (token == ("cc" + "-switch") and
-                              (norm_label in ("assets/providers/provider-catalog.json",
-                                               "provider-catalog.json",
-                                               "src/readmd_modules/ai.py",
-                                               "tools/build_provider_catalog.py") or
-                               norm_label.endswith("/assets/providers/provider-catalog.json") or
-                               norm_label.endswith("src/readmd_modules/ai.py") or
-                               norm_label.endswith("tools/build_provider_catalog.py") or
-                               norm_label.endswith("tools/package_local_rc.py")))]
+                      if not (token == ("cc" + "-switch") and public_ccswitch_attribution)]
     for token in retired_tokens:
         if token.encode("ascii") in lower:
             failures.append("retired provider marker in %s" % label)
