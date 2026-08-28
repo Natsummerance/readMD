@@ -106,8 +106,12 @@ def main() -> int:
         encoding="utf-8", newline="\n",
     )
     files = []
+    # The checksum list covers distributable assets and audit evidence.  Its
+    # own bytes and the self-describing candidate metadata are intentionally
+    # excluded to avoid a self-referential hash; the metadata records this
+    # exclusion explicitly and carries the candidate commit for verification.
     for path in sorted(out.rglob("*")):
-        if path.is_file() and path.name != "SHA256SUMS.txt":
+        if path.is_file() and path.name not in {"SHA256SUMS.txt", "candidate.json"}:
             files.append({"file": path.relative_to(out).as_posix(), "bytes": path.stat().st_size, "sha256": sha256(path)})
     (out / "SHA256SUMS.txt").write_text(
         "".join(f"{item['sha256']}  {item['file']}\n" for item in files), encoding="utf-8", newline="\n"
@@ -119,6 +123,7 @@ def main() -> int:
         "built_at_utc": datetime.now(timezone.utc).isoformat(),
         "toolchain": {"python": platform.python_version(), "platform": platform.platform(), "pyinstaller": "6.22.2"},
         "files": files,
+        "checksum_exclusions": ["SHA256SUMS.txt", "candidate.json"],
         "formal_release": False,
     }
     (out / "candidate.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
