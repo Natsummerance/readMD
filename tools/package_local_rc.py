@@ -70,7 +70,10 @@ def main() -> int:
     out = args.output.resolve()
     out.mkdir(parents=True, exist_ok=True)
     dist = root / "dist"
-    onedir = first_existing(dist / "ReadMD-v2.3.7-RC", dist / "ReadMD")
+    # Prefer the freshly built canonical output.  A stale RC directory can
+    # remain in dist from an earlier audit and must never silently become the
+    # candidate payload; the RC name is only the fallback for older builders.
+    onedir = first_existing(dist / "ReadMD", dist / "ReadMD-v2.3.7-RC")
     portable = first_existing(dist / "ReadMD-portable-v2.3.7-RC.exe", dist / "ReadMD-portable.exe")
     installer = first_existing(dist / "ReadMDSetup-v2.3.7-RC.exe", dist / "ReadMDSetup.exe")
     mcp = first_existing(dist / "readmd-mcp-server-2.3.7-RC.zip", dist / "readmd-mcp-server-2.3.7.zip")
