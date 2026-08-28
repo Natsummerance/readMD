@@ -55,14 +55,18 @@ APP_NAME = 'ReadMD'
 APP_EXE = 'ReadMD.exe'
 UNINST_EXE = 'ReadMDUninstall.exe'
 def _bundle_version():
-    """frozen 安装器内嵌 version.txt（Win7 链：2.1.1 Beta）。"""
+    """Read the version embedded by PyInstaller in a frozen installer."""
     try:
         if getattr(sys, '_MEIPASS', None):
-            p = os.path.join(sys._MEIPASS, 'version.txt')
-            if os.path.isfile(p):
-                v = open(p, encoding='utf-8').read().strip()
-                if v:
-                    return v
+            for p in (
+                os.path.join(sys._MEIPASS, 'VERSION'),
+                os.path.join(sys._MEIPASS, 'version.txt'),
+                os.path.join(sys._MEIPASS, 'version.txt', 'VERSION'),
+            ):
+                if os.path.isfile(p):
+                    v = open(p, encoding='utf-8').read().strip()
+                    if v:
+                        return v
     except Exception:
         pass
 def _env_or_bundle_version():

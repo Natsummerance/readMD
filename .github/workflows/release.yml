@@ -150,8 +150,8 @@ jobs:
           if ((python -c "import readmd; print(readmd.VERSION)") -ne $env:READMD_VERSION) { throw 'source version mismatch' }
           python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_modules readmd.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_modules readmd.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall --icon assets/readmd.ico --add-data "installer;installer" installer/setup_app.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup --icon assets/readmd.ico --add-data "installer;installer" --add-binary "dist/ReadMD;ReadMD" --add-binary "dist/ReadMDUninstall.exe;." installer/setup_app.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall --icon assets/readmd.ico --add-data "installer;installer" --add-data "VERSION;." installer/setup_app.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup --icon assets/readmd.ico --add-data "installer;installer" --add-data "VERSION;." --add-binary "dist/ReadMD;ReadMD" --add-binary "dist/ReadMDUninstall.exe;." installer/setup_app.py
           Move-Item dist/ReadMDSetup.exe "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
           Move-Item dist/ReadMD-portable.exe "dist/ReadMD-portable-v$env:READMD_VERSION.exe"
           $onedir = Start-Process -FilePath 'dist/ReadMD/ReadMD.exe' -ArgumentList '--selftest' -WindowStyle Hidden -Wait -PassThru
@@ -248,11 +248,16 @@ jobs:
         shell: pwsh
         run: |
           if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString() -ne 'Arm64') { throw 'runner is not ARM64' }
-          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD-arm64 --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --collect-submodules src.readmd_modules readmd.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable-arm64 --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --collect-submodules src.readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD-arm64 --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable-arm64 --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_modules readmd.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall-arm64 --icon assets/readmd.ico --add-data "installer;installer" --add-data "VERSION;." installer/setup_app.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup-arm64 --icon assets/readmd.ico --add-data "installer;installer" --add-data "VERSION;." --add-binary "dist/ReadMD-arm64;ReadMD" --add-binary "dist/ReadMDUninstall-arm64.exe;." installer/setup_app.py
           $portable = Start-Process -FilePath "dist/ReadMD-portable-arm64.exe" -ArgumentList '--selftest' -WindowStyle Hidden -Wait -PassThru
           if ($portable.ExitCode -ne 0) { throw 'ARM64 portable selftest failed' }
-          python tools/privacy_scan.py dist/ReadMD-arm64 dist/ReadMD-portable-arm64.exe
+          $installer = Start-Process -FilePath "dist/ReadMDSetup-arm64.exe" -ArgumentList '--version' -RedirectStandardOutput "$env:RUNNER_TEMP\readmd-installer-arm64-version.txt" -WindowStyle Hidden -Wait -PassThru
+          $installerVersion = if (Test-Path "$env:RUNNER_TEMP\readmd-installer-arm64-version.txt") { (Get-Content "$env:RUNNER_TEMP\readmd-installer-arm64-version.txt" -Raw).Trim() } else { '' }
+          if ($installer.ExitCode -ne 0 -or $installerVersion -ne $env:READMD_VERSION) { throw 'ARM64 installer version mismatch' }
+          python tools/privacy_scan.py dist/ReadMD-arm64 dist/ReadMD-portable-arm64.exe dist/ReadMDSetup-arm64.exe
       - name: Upload ARM64 candidate
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
@@ -261,6 +266,7 @@ jobs:
           path: |
             dist/ReadMD-arm64
             dist/ReadMD-portable-arm64.exe
+            dist/ReadMDSetup-arm64.exe
           if-no-files-found: error
           overwrite: true
           retention-days: 7

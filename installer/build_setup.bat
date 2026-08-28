@@ -24,14 +24,14 @@ if not exist "dist\ReadMD\ReadMD.exe" (
 echo [2/3] Building ReadMDUninstall.exe ...
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
     --name ReadMDUninstall --icon "assets\readmd.ico" ^
-    --add-data "installer;installer" ^
+    --add-data "installer;installer" --add-data "VERSION;." ^
     installer\setup_app.py
 if errorlevel 1 goto :err
 
 echo [3/3] Building ReadMDSetup.exe (embedding onedir app) ...
 ".venv\Scripts\python.exe" -m PyInstaller --noconfirm --clean --onefile --windowed ^
     --name ReadMDSetup --icon "assets\readmd.ico" ^
-    --add-data "installer;installer" ^
+    --add-data "installer;installer" --add-data "VERSION;." ^
     --add-binary "dist\ReadMD;ReadMD" ^
     --add-binary "dist\ReadMDUninstall.exe;." ^
     installer\setup_app.py
