@@ -59,7 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
       const result = await bridge.aiChat({
         provider: provider.value.id, credential_id: provider.value.credential_id,
         model, skill_id: workflow.skillId, markdown_content: editor.document.getText(),
-        language: vscode.env.language || 'en', stream: false,
+        language: vscode.env.language || 'en', stream: true,
       });
       const output = result?.content || '';
       if (!output) { vscode.window.showWarningMessage('AI 未返回可应用内容'); return; }

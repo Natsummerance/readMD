@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 import platform
+import re
 import shutil
 import subprocess
 import sys
@@ -39,21 +40,54 @@ def first_existing(*paths: Path) -> Path | None:
     return next((path for path in paths if path.exists()), None)
 
 
+def newest_source_mtime(root: Path) -> float:
+    """Return the newest mtime of files that can affect a packaged payload."""
+    roots = (root / "readmd.py", root / "src", root / "assets", root / "config", root / "VERSION")
+    files = []
+    for item in roots:
+        if item.is_file():
+            files.append(item)
+        elif item.is_dir():
+            files.extend(path for path in item.rglob("*") if path.is_file())
+    return max((path.stat().st_mtime for path in files), default=0.0)
+
+
+def assert_fresh(path: Path, source_mtime: float, label: str) -> None:
+    if path.stat().st_mtime + 1e-6 < source_mtime:
+        raise SystemExit(
+            f"stale local RC input: {label} is older than source files; rebuild before packaging ({path})"
+        )
+
+
 def git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True, encoding="utf-8").strip()
 
 
-def build_sbom() -> dict:
+def build_sbom(root: Path) -> dict:
+    """Describe declared runtime/build dependencies, never the host's global env."""
     components = []
-    try:
-        from importlib import metadata
-        for dist in sorted(metadata.distributions(), key=lambda d: (d.metadata.get("Name") or "").lower()):
-            name = dist.metadata.get("Name")
-            version = dist.version
-            if name and version:
-                components.append({"type": "library", "name": name, "version": version})
-    except Exception:
-        pass
+    seen = set()
+    for req_file in sorted((root / "config").glob("requirements*.txt")):
+        for raw in req_file.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = raw.split("#", 1)[0].strip()
+            if not line or line.startswith("-") or line.startswith("python"):
+                continue
+            # Keep environment markers and ranges as evidence rather than
+            # pretending a host-installed version is the packaged version.
+            requirement = line
+            name_match = re.match(r"([A-Za-z0-9_.-]+)", requirement)
+            if not name_match:
+                continue
+            name = name_match.group(1)
+            key = (name.lower(), requirement)
+            if key in seen:
+                continue
+            seen.add(key)
+            components.append({
+                "type": "library", "name": name, "version": requirement[len(name):].strip() or "unspecified",
+                "properties": [{"name": "readmd:requirement-file", "value": req_file.name}],
+            })
+    components.sort(key=lambda item: (item["name"].lower(), item["version"]))
     return {
         "bomFormat": "CycloneDX", "specVersion": "1.5", "version": 1,
         "metadata": {"component": {"type": "application", "name": "ReadMD", "version": "2.3.7"}},
@@ -68,6 +102,8 @@ def main() -> int:
     args = parser.parse_args()
     root = args.candidate_root.resolve()
     out = args.output.resolve()
+    if out.exists() and any(out.iterdir()):
+        raise SystemExit(f"output directory must be new or empty: {out}")
     out.mkdir(parents=True, exist_ok=True)
     dist = root / "dist"
     # Prefer the freshly built canonical output.  A stale RC directory can
@@ -91,6 +127,9 @@ def main() -> int:
     missing = [name for name, path in required.items() if path is None or not path.exists()]
     if missing:
         raise SystemExit("local RC inputs missing:\n" + "\n".join(missing))
+    source_mtime = newest_source_mtime(root)
+    for name, src in required.items():
+        assert_fresh(src, source_mtime, name)
     for name, src in required.items():
         copy_item(src, out / name)
     manifest = root / "assets" / "upstream" / "manifest.json"
@@ -106,7 +145,7 @@ def main() -> int:
         "- Codex skill-creator snapshot: Apache-2.0\n",
         encoding="utf-8", newline="\n",
     )
-    (out / "sbom.cdx.json").write_text(json.dumps(build_sbom(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    (out / "sbom.cdx.json").write_text(json.dumps(build_sbom(root), ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     (out / "functional-acceptance.md").write_text(
         "# ReadMD V2.3.7 Windows RC acceptance\n\n"
         "Candidate is intentionally non-publishing. Verify installer/portable cold start, "

@@ -61,11 +61,15 @@ if not exist "%WVENV%\Scripts\python.exe" (
 )
 
 echo [4/8] install pinned Win7 dependencies in .venv-win7 ...
-"%WVENV%\Scripts\python.exe" -m pip install --quiet pywebview==4.4.1 pyinstaller
-if errorlevel 1 goto :err
-if exist "config\requirements-windows.txt" (
-    "%WVENV%\Scripts\python.exe" -m pip install --quiet -r config\requirements-common.txt
+rem Win7 is a deliberately separate, reproducible dependency set. Do not
+rem install the Win10/11 requirements (they pull in incompatible WebView2 and
+rem WinRT packages).
+if not exist "config\win7-reqs.txt" (
+    echo Missing pinned Win7 requirements: config\win7-reqs.txt
+    goto :err
 )
+"%WVENV%\Scripts\python.exe" -m pip install --quiet -r config\win7-reqs.txt
+if errorlevel 1 goto :err
 
 echo [5/8] patch pywebview and bundle the fixed WebView2 109 runtime ...
 "%WVENV%\Scripts\python.exe" tools\win7_pywebview_edgechromium.patch

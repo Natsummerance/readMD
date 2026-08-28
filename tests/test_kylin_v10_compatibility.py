@@ -73,12 +73,13 @@ class KylinV10CompatibilityTest(unittest.TestCase):
             asset, _ = updater.match_release_asset(assets, flavor='linux')
             self.assertEqual(asset['name'], f'readmd_{VERSION}_sw64.deb')
 
-    def test_release_publishes_kylin_assets_and_safe_fallback(self):
+    def test_release_keeps_generic_arm64_distinct_from_kylin_evidence(self):
         workflow = (ROOT / '.github/workflows/release.yml').read_text(encoding='utf-8')
         build_script = (ROOT / 'scripts/linux/build_linux.sh').read_text(encoding='utf-8')
         notes = (ROOT / 'release/release_notes.md').read_text(encoding='utf-8')
 
-        self.assertIn('kylin-v10-arm64-package:', workflow)
+        self.assertIn('linux-arm64-compat-package:', workflow)
+        self.assertNotIn('kylin-v10-arm64-package:', workflow)
         self.assertIn('runs-on: ubuntu-24.04-arm', workflow)
         self.assertIn('image: ubuntu:20.04', workflow)
         self.assertIn('Python-3.11.16.tgz', workflow)
@@ -86,6 +87,7 @@ class KylinV10CompatibilityTest(unittest.TestCase):
         self.assertIn('libwebkit2gtk-4.0-dev', workflow)
         self.assertIn('ReadMD-linux-aarch64-', workflow)
         self.assertIn('readmd_${{ env.READMD_VERSION }}_arm64.deb', workflow)
+        self.assertIn('not Kylin/UOS evidence', workflow)
         self.assertIn('appimagetool-${APPIMAGE_TOOL_ARCH}.AppImage', build_script)
         self.assertIn('libwebkit2gtk-4.0-37 | libwebkit2gtk-4.1-0', build_script)
         self.assertIn('Recommends: gir1.2-webkit2-4.0 | gir1.2-webkit2-4.1 | gir1.2-webkit-6.0', build_script)

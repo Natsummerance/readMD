@@ -84,7 +84,8 @@ class TestReadMDMCPServer(unittest.TestCase):
         self.assertFalse(res.get("isError", False))
         payload = json.loads(res["content"][0]["text"])
         self.assertEqual(payload["workflow_id"], "quick_read")
-        self.assertIn("快速阅读", payload["workflow_name"])
+        self.assertTrue(payload["workflow_name"])
+        self.assertNotIn("12 种", payload["workflow_name"])
 
     def test_mcp_resources_and_prompts_cover_skills(self):
         resources = readmd_mcp_server._skill_resources()

@@ -11,7 +11,7 @@
 - [PDF から Markdown](https://readmd.asia/ja/pdf-to-markdown/): テキスト型 PDF とスキャン文書のための条件付きローカル変換ワークフロー。
 - [スキャンから Markdown](https://readmd.asia/ja/scan-to-markdown/): Windows と macOS のローカル OCR でスキャン頁やスクリーンショットから文字を抽出します。
 - [BibTeX 引用](https://readmd.asia/ja/bibtex-citations/): 同じ場所の `.bib` library を inline 引用 badge、文献カード、コピー可能な BibTeX、参考文献まとめに接続します。
-- [リリースノート](https://readmd.asia/ja/release-notes/): beta.4の発表安全、更新検証、起動読み込み、タブ状態、プラットフォーム資産。
+- [リリースノート](https://readmd.asia/ja/release-notes/): V2.3.7リリース候補の安全な発表、更新検証、起動読み込み、タブ状態、プラットフォーム資産。
 - [ダウンロードページ](https://readmd.asia/ja/download/): Windows、macOS、Linux、中国系 OS、エディター、MCP パッケージの入手路径。
 - [日本語全文コーパス](https://readmd.asia/ja/llms-full.txt): 長文の改ページ、非破壊修復、変換、オフライン作業、リリース事実を説明します。
 - [英語インデックス](https://readmd.asia/llms.txt): 多言語入口、英語コーパス、公式な製品情報。

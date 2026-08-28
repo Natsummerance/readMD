@@ -18,7 +18,7 @@
 
 ## 语言文件结构
 
-所有语言字典存放于 `assets/i18n/<code>.json`，格式为 UTF-8 编码的 JSON，共 **904 个键值对**，分 25 个模块前缀组织。
+所有语言字典存放于 `assets/i18n/<code>.json`，格式为 UTF-8 编码的 JSON，共 **1109 个键值对**，分 25 个模块前缀组织。键数量由 `tools/i18n_sync.py --validate-only` 在发布门禁中复核。
 
 ```
 assets/i18n/
@@ -222,7 +222,7 @@ assets/i18n/
 | `tpl` | 14 | 内置模板 |
 | `update` | 35 | 版本更新 |
 | `web` | 50 | 网页转 MD |
-| **总计** | **904** | |
+| **总计** | **1109** | |
 
 ---
 
@@ -234,7 +234,7 @@ assets/i18n/
 | 🟡 良好 | 97%–99% | 少量技术术语保留英文（合规） |
 | 🔴 待改进 | < 95% | 英文 fallback 过多，不推荐上线 |
 
-**v2.3.1 全部 46 种语言均达到 97%+ 真实母语化率。**
+当前候选要求 46 个 locale 的键、占位符和方向一致；语义审校与真实平台验收仍以发布门禁报告为准，不以静态字典数量推断“全量母语化”。
 
 审计工具：
 
@@ -251,7 +251,7 @@ python scratch/audit_true_translation.py
    "xx": { "name": "Language Name", "native": "Native Name", "dir": "ltr", "region": "Region" }
    ```
 
-2. 复制 `en.json` 为 `xx.json`，逐一翻译全部 904 键
+2. 复制 `en.json` 为 `xx.json`，逐一翻译全部 1109 键
 
 3. 遵守专有名词保护和占位符规范
 

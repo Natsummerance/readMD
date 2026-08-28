@@ -11,7 +11,7 @@
 7. `readmd_md_to_latex`: Markdown 文档编译为标准学术 LaTeX 源码；
 8. `readmd_parse_bibtex`: 自动解析 BibTeX 文献数据库并生成学术引用映射；
 9. `readmd_latex_to_omml`: 将 LaTeX 公式转为 Word 原生 Office Math (OMML) / MathML XML；
-10. `readmd_ai_assistant`: 获取 ReadMD 内置 12 种专业文档 AI 提示词流程（快速阅读、润色、大纲、代码审查等）。
+10. `readmd_ai_assistant`: 使用 ReadMD 共享 Skill Registry 执行兼容的文档 AI 流程。
 """
 
 import json
@@ -66,14 +66,6 @@ LEGACY_WORKFLOW_ALIASES = {
     "outline": "readmd-outline", "weekly": "readmd-weekly",
     "to_english": "readmd-translate", "code_review": "readmd-code-review",
 }
-LEGACY_WORKFLOW_NAMES = {
-    "quick_read": "快速阅读", "polish": "智能润色", "modify": "语法修改",
-    "expand": "内容扩充", "continue": "自然续写", "translate": "学术翻译",
-    "ask": "文档问答", "summary": "核心总结", "outline": "生成大纲",
-    "weekly": "周报整理", "to_english": "英文翻译", "code_review": "代码审查",
-}
-
-
 def _resolve_skill_id(identifier):
     requested = str(identifier or '').strip()
     return LEGACY_WORKFLOW_ALIASES.get(requested, requested)
@@ -218,7 +210,7 @@ TOOLS: List[Dict[str, Any]] = [
     },
     {
         "name": "readmd_ai_assistant",
-        "description": "获取 ReadMD 内置的 12 种专业文档 AI 提示词流程模板（快速阅读、润色、代码审查、大纲生成等）。",
+        "description": "使用 ReadMD 共享 Skill Registry 获取并渲染文档 AI 流程模板。",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -485,7 +477,7 @@ def handle_tool_call(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
                         "type": "text",
                         "text": json.dumps({
                             "workflow_id": wf_id,
-                            "workflow_name": LEGACY_WORKFLOW_NAMES.get(wf_id, skill.name),
+                            "workflow_name": skill.name,
                             "skill_id": skill_id,
                             "system_prompt": system_prompt,
                             "user_payload": doc_content

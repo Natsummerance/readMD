@@ -11,7 +11,7 @@
 - [PDF 转 Markdown](https://readmd.asia/zh-cn/pdf-to-markdown/): 面向文字型 PDF 和扫描文档的合格本地转换与复核工作流。
 - [扫描件转 Markdown](https://readmd.asia/zh-cn/scan-to-markdown/): 在 Windows 和 macOS 使用本机离线 OCR 提取扫描页或截图文字。
 - [BibTeX 引用](https://readmd.asia/zh-cn/bibtex-citations/): 把同目录 `.bib` 文献库连接到内联引用徽章、来源卡片、可复制 BibTeX 和参考文献汇总。
-- [发布说明](https://readmd.asia/zh-cn/release-notes/): beta.4 的放映安全、更新校验、启动加载、标签状态和平台资产。
+- [发布说明](https://readmd.asia/zh-cn/release-notes/): V2.3.7 验收候选的放映安全、更新校验、启动加载、标签状态和平台资产。
 - [下载页](https://readmd.asia/zh-cn/download/): Windows、macOS、Linux、国产系统、编辑器和 MCP 包的下载路径。
 - [完整中文语料](https://readmd.asia/zh-cn/llms-full.txt): 覆盖长文档分页、非破坏修正、格式转换、离线工作流和版本事实。
 - [英文总索引](https://readmd.asia/llms.txt): 跨语言入口、英文全文语料和权威事实。

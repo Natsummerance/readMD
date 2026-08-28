@@ -268,7 +268,7 @@ function copyCurrentSkill() {
   $('tpl-name').readOnly = $('tpl-system').readOnly = $('tpl-user').readOnly = false;
   if ($('tpl-save')) $('tpl-save').disabled = false;
   if ($('tpl-publish')) $('tpl-publish').disabled = false;
-  if ($('tpl-draft-status')) $('tpl-draft-status').textContent = _t('tpl.hint') || '复制后的 Skill 尚未发布。保存后请先试跑，再明确发布。';
+  if ($('tpl-draft-status')) $('tpl-draft-status').textContent = _t('tpl.hint');
   $('tpl-name').focus(); $('tpl-name').select();
 }
 
@@ -319,17 +319,17 @@ async function publishCurrentSkill() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const id = String($('tpl-id').value || '').trim();
   const content = String($('tpl-system').value || '').trim();
-  if (!id || !content) { showToast(_t('toast.openDocumentToUse')); return; }
+  if (!id || !content) { showToast(_t('ai.aiError')); return; }
   let evaluationToken = '';
   try {
     const evaluation = await apiFetch('/api/skills', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'evaluate', id, content, metadata: { id, source: 'skill-workbench', enabled: false, scripts_allowed: false },
         variables: { document: getAiTargetText().text, selection: '', request: '', language: (window.i18n && window.i18n.locale) || 'en', context: 'ReadMD Skill workbench', output_format: 'Markdown' } }) });
     const evaluated = await evaluation.json().catch(() => ({}));
-    if (!evaluation.ok || !evaluated.ok || !evaluated.evaluation_token) throw new Error(evaluated.error || 'Skill evaluation failed');
+    if (!evaluation.ok || !evaluated.ok || !evaluated.evaluation_token) throw new Error(evaluated.error || _t('ai.aiError'));
     evaluationToken = evaluated.evaluation_token;
   } catch (e) {
-    showToast(_t('ai.aiError') + ': ' + e.message);
+    showToast(_t('ai.aiError'));
     return;
   }
   if (!(await confirmAction({ title: _t('tpl.title') || _t('ai.aiError'), message: _t('tpl.hint'), confirmText: _t('exportai.generateBtn'), cancelText: _t('dialog.cancel'), danger: true }))) return;
@@ -341,7 +341,7 @@ async function publishCurrentSkill() {
     state.ai.skillDraft = null;
     await loadAiPrompts();
     showToast(_t('toast.saved') || _t('tpl.hint'));
-  } catch (e) { showToast(_t('ai.aiError') + ': ' + e.message); }
+  } catch (e) { showToast(_t('ai.aiError')); }
 }
 
 function parseMarkdownTemplate(content, filename) {

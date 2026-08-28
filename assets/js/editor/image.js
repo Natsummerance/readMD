@@ -369,7 +369,7 @@ async function exportAndInsertImg() {
   octx.imageSmoothingQuality = 'high';
   octx.drawImage(tmp, srcX, srcY, srcW, srcH, 0, 0, outW, outH);
   const blob = await new Promise(res => out.toBlob(res, 'image/png'));
-  if (!blob) { showToast(_t('toast.imgExportFail') || '图片导出失败'); return; 
+  if (!blob) { showToast(_t('toast.imgExportFail') || '图片导出失败'); return;
   }
   const b64 = await new Promise(res => {
     const fr = new FileReader();

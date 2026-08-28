@@ -133,6 +133,8 @@ jobs:
     if: github.event_name != 'release' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [windows-test, linux-test]
     runs-on: windows-latest
+    env:
+      READMD_FORMAL_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') && '1' || '0' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -172,6 +174,12 @@ jobs:
           if (!(Test-Path 'dist/ReadMD/_internal/assets/vendor/defuddle.LICENSE.txt')) { throw 'Defuddle license missing' }
           if (!(Test-Path 'dist/ReadMD/_internal/assets/js/core/state.js')) { throw 'Modular JS assets missing' }
           python tools/privacy_scan.py dist/ReadMD "dist/ReadMD-portable-v$env:READMD_VERSION.exe" "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
+          if ($env:READMD_FORMAL_RELEASE -eq '1') {
+            foreach ($signedAsset in @("dist/ReadMD-portable-v$env:READMD_VERSION.exe", "dist/ReadMDSetup-v$env:READMD_VERSION.exe")) {
+              $signature = Get-AuthenticodeSignature $signedAsset
+              if ($signature.Status -ne 'Valid') { throw "formal release requires a valid Authenticode signature: $signedAsset ($($signature.Status))" }
+            }
+          }
       - name: Build VSCode extension VSIX and MCP Server package
         run: |
           cd packages/vscode-extension
@@ -257,7 +265,9 @@ jobs:
           $installer = Start-Process -FilePath "dist/ReadMDSetup-arm64.exe" -ArgumentList '--version' -RedirectStandardOutput "$env:RUNNER_TEMP\readmd-installer-arm64-version.txt" -WindowStyle Hidden -Wait -PassThru
           $installerVersion = if (Test-Path "$env:RUNNER_TEMP\readmd-installer-arm64-version.txt") { (Get-Content "$env:RUNNER_TEMP\readmd-installer-arm64-version.txt" -Raw).Trim() } else { '' }
           if ($installer.ExitCode -ne 0 -or $installerVersion -ne $env:READMD_VERSION) { throw 'ARM64 installer version mismatch' }
-          python tools/privacy_scan.py dist/ReadMD-arm64 dist/ReadMD-portable-arm64.exe dist/ReadMDSetup-arm64.exe
+          Move-Item -Force dist/ReadMD-portable-arm64.exe "dist/ReadMD-portable-arm64-v$env:READMD_VERSION.exe"
+          Move-Item -Force dist/ReadMDSetup-arm64.exe "dist/ReadMDSetup-arm64-v$env:READMD_VERSION.exe"
+          python tools/privacy_scan.py dist/ReadMD-arm64 "dist/ReadMD-portable-arm64-v$env:READMD_VERSION.exe" "dist/ReadMDSetup-arm64-v$env:READMD_VERSION.exe"
       - name: Upload ARM64 candidate
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
@@ -265,11 +275,22 @@ jobs:
           name: rc-windows-arm64-${{ github.sha }}
           path: |
             dist/ReadMD-arm64
-            dist/ReadMD-portable-arm64.exe
-            dist/ReadMDSetup-arm64.exe
+            dist/ReadMD-portable-arm64-v${{ env.READMD_VERSION }}.exe
+            dist/ReadMDSetup-arm64-v${{ env.READMD_VERSION }}.exe
           if-no-files-found: error
           overwrite: true
           retention-days: 7
+      - name: Upload tagged ARM64 assets
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-arm64
+          path: |
+            dist/ReadMD-arm64
+            dist/ReadMD-portable-arm64-v${{ env.READMD_VERSION }}.exe
+            dist/ReadMDSetup-arm64-v${{ env.READMD_VERSION }}.exe
+          if-no-files-found: error
+          overwrite: true
 
   macos-package:
     name: Package · macOS ${{ matrix.arch }}
@@ -319,6 +340,11 @@ jobs:
           test -s dist/ReadMD.app/Contents/Resources/assets/js/core/state.js
           dist/ReadMD.app/Contents/MacOS/ReadMD --selftest
           python tools/privacy_scan.py dist/ReadMD.app
+          if [ "$READMD_FORMAL_RELEASE" = "1" ]; then
+            test -n "$READMD_CODESIGN_IDENTITY" || { echo 'formal release requires READMD_CODESIGN_IDENTITY' >&2; exit 1; }
+            codesign --verify --deep --strict --verbose=2 dist/ReadMD.app
+            xcrun stapler validate dist/ReadMD.app
+          fi
           ditto -c -k --sequesterRsrc --keepParent dist/ReadMD.app "ReadMD-macos-${{ matrix.arch }}-v${{ env.READMD_VERSION }}.zip"
           unzip -t "ReadMD-macos-${{ matrix.arch }}-v${{ env.READMD_VERSION }}.zip"
       - name: Upload main-branch release candidate
@@ -399,8 +425,8 @@ jobs:
           if-no-files-found: error
           overwrite: true
 
-  kylin-v10-arm64-package:
-    name: Package · Kylin V10 ARM64
+  linux-arm64-compat-package:
+    name: Package · Linux ARM64 compatibility candidate
     if: github.event_name != 'release' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     needs: [linux-test]
     runs-on: ubuntu-24.04-arm
@@ -416,7 +442,7 @@ jobs:
             libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
             libsqlite3-dev libffi-dev liblzma-dev
       - uses: actions/checkout@v4
-      - name: Install Python 3.11 for Kylin V10 compatibility
+      - name: Install Python 3.11 for ARM64 compatibility candidate
         run: |
           export DEBIAN_FRONTEND=noninteractive
           wget -q https://www.python.org/ftp/python/3.11.16/Python-3.11.16.tgz
@@ -432,7 +458,7 @@ jobs:
           "$RUNNER_TEMP/python3.11/bin/python3.11" -m venv .venv
           echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> "$GITHUB_ENV"
           echo "$GITHUB_WORKSPACE/.venv/bin" >> "$GITHUB_PATH"
-      - name: Install Kylin-compatible system dependencies
+      - name: Install Ubuntu compatibility dependencies
         run: |
           export DEBIAN_FRONTEND=noninteractive
           apt-get update
@@ -451,7 +477,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install --disable-pip-version-check -r config/requirements-linux.txt pyinstaller
-      - name: Build Kylin-compatible ARM64 bundle
+      - name: Build generic Linux ARM64 bundle (not Kylin/UOS evidence)
         run: bash scripts/linux/build_linux.sh
       - name: Smoke test and verify ARM64 binary
         run: |
@@ -459,22 +485,22 @@ jobs:
           test "$(uname -m)" = "aarch64"
           file dist/ReadMD/ReadMD | grep -E 'aarch64|ARM aarch64'
           test -s "dist/readmd_${{ env.READMD_VERSION }}_arm64.deb"
-      - name: Upload main-branch Kylin candidate
+      - name: Upload main-branch generic ARM64 candidate
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
-          name: rc-linux-arm64-${{ github.sha }}
+          name: rc-linux-arm64-compat-${{ github.sha }}
           path: |
             dist/ReadMD-linux-aarch64-v${{ env.READMD_VERSION }}.AppImage
             dist/readmd_${{ env.READMD_VERSION }}_arm64.deb
           if-no-files-found: error
           overwrite: true
           retention-days: 7
-      - name: Upload tagged Kylin assets
+      - name: Upload tagged generic ARM64 assets
         if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
-          name: release-linux-arm64
+          name: release-linux-arm64-compat
           path: |
             dist/ReadMD-linux-aarch64-v${{ env.READMD_VERSION }}.AppImage
             dist/readmd_${{ env.READMD_VERSION }}_arm64.deb
@@ -484,7 +510,7 @@ jobs:
   release:
     name: Publish ReadMD Release
     if: github.event_name != 'release' && startsWith(github.ref, 'refs/tags/v')
-    needs: [windows-package, windows-arm64-package, macos-package, linux-package, kylin-v10-arm64-package]
+    needs: [windows-package, windows-arm64-package, macos-package, linux-package, linux-arm64-compat-package]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -521,7 +547,7 @@ jobs:
               print(" -", f)
           PY
           V="${{ env.READMD_VERSION }}"
-          for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "ReadMD-linux-x86_64-v${V}.AppImage" "ReadMD-linux-aarch64-v${V}.AppImage" "readmd_${V}_arm64.deb" "readmd-mcp-server-${V}.zip"; do
+          for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMDSetup-arm64-v${V}.exe" "ReadMD-portable-arm64-v${V}.exe" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "ReadMD-linux-x86_64-v${V}.AppImage" "ReadMD-linux-aarch64-v${V}.AppImage" "readmd_${V}_arm64.deb" "readmd-mcp-server-${V}.zip"; do
             test -s "release-assets/$asset"
           done
           python tools/sync_version.py --check

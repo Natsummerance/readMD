@@ -7,7 +7,7 @@ function syncSelectAccessibleName(el) {
 /* ==============================================================================================
    ReadMD v2 - Application Integration Bus & Bootstrap (主集成总线与生命周期调度器)
    ==============================================================================================
-   
+
    【架构定位】
    本项目采用分级分类的模块化架构，assets/app.js 作为前端总调度中心，负责：
      1. 全局生命周期初始化 (DOMContentLoaded, pywebviewready, beforeunload)
@@ -18,7 +18,7 @@ function syncSelectAccessibleName(el) {
    ==============================================================================================
    【模块目录索引与职责映射表 (Architecture & Module Directory Index)】
    ==============================================================================================
-   
+
     assets/js/core/ - 核心基础设施与全局状态
    ----------------------------------------------------------------------------------------------
      • state.js     : 全局状态单例 (window.state)、DOM选择器 ($)、网络请求 (apiFetch)、提示 (showToast/busy)、Python桥接 (bindPy)
@@ -27,7 +27,7 @@ function syncSelectAccessibleName(el) {
      • tabs.js      : 多标签系统 (createTab/switchTab/closeTab/closeOtherTabs/closeAllTabs/renderTabsBar/promptDirtyClose)
      • history.js   : 最近打开文件、主页深度重置 (goHome)、欢迎页卡片交互 (bindWelcomeEvents)、自动重载 (startAutoReload)
      • dragdrop.js  : 全局文件与图片拖拽放置识别 (bindGlobalDragAndDrop)
-   
+
     assets/js/reader/ - 文档解析、渲染与阅读增强引擎
    ----------------------------------------------------------------------------------------------
      • render.js    : Markdown 核心解析、分块虚拟渲染 (renderMarkdown/renderVirtual/loadFile/loadFileDialog/saveAs)
@@ -36,13 +36,13 @@ function syncSelectAccessibleName(el) {
      • toc.js       : 目录大纲提取、侧边栏层级生成与滚动追踪高亮 (buildToc/updateActiveToc)
      • search.js    : 正文全文关键词即时检索、多结果高亮与上下跳转 (toggleSearch/doSearch/jumpToMark/closeSearch)
      • folder.js    : 本地工作区文件夹侧边栏树形浏览与文件快速切换 (openFolder/showSide/toggleSide)
-   
+
     assets/js/editor/ - Markdown 源码编辑器与图片工作台
    ----------------------------------------------------------------------------------------------
      • editor.js    : CodeMirror 6 编辑器实例、Markdown语法插入 (cmInsertSyntax)、命令面板 (openMdCommandPalette)、saveEdit/exitEdit
      • preview.js   : 四向分栏实时预览布局 (setPvLayout)、双向滚动同步 (pvSyncFromPreview)、分栏拖拽手柄 (bindPvSplitter)
      • image.js     : 轻量图片编辑器 (openImgModal/rotateImg/flipImg/applyRatio/undoImg/redoImg/exportAndInsertImg)
-   
+
     assets/js/features/ - 高级业务扩展功能
    ----------------------------------------------------------------------------------------------
      • ai.js        : AI 侧边栏对话、多模型切换 (onAiProviderChange)、Prompt模板 (openTplModal)、流式推理 (runAi)、无痕会话
@@ -53,7 +53,7 @@ function syncSelectAccessibleName(el) {
      • export.js    : 多格式导出 (PDF/DOCX/HTML/LaTeX) (openExportModal/renderExportSections/updateExportLivePreview/runExport)
      • share.js     : 局域网移动端二维码与热点分享 (openShareModal/startShare/stopShare)
      • updater.js   : 客户端内自动检查更新与静默升级 (checkUpdate/openUpdateModal/startUpdateDownload)
-   
+
    ==============================================================================================
    【核心跨模块联动关系 (Core Inter-Module Collaborations)】
    ==============================================================================================
@@ -284,7 +284,7 @@ function bindEvents() {
   $('formula-close').addEventListener('click', closeFormulaModal);
   $('formula-search').addEventListener('input', renderFormulaPicker);
   $('formula-modal').addEventListener('click', e => { if (e.target === $('formula-modal')) closeFormulaModal(); });
-  
+
   // 编辑保存与退出
   $('edit-save').addEventListener('click', saveEdit);
   $('edit-area').addEventListener('input', () => {
@@ -747,7 +747,7 @@ function bindEvents() {
   /* --- 19. 全局键盘快捷键矩阵 (Global Keyboard Shortcuts) --- */
   document.addEventListener('keydown', e => {
     const mod = e.ctrlKey || e.metaKey;
-    
+
     // 模态弹窗 ESC 优先拦截与层级关闭
     if (e.key === 'Escape') {
       const allModalIds = [
@@ -787,7 +787,7 @@ function bindEvents() {
         return;
       }
     }
-    
+
     const presentationVisible = $('presentation-modal') && !$('presentation-modal').classList.contains('hidden');
     if (e.key === 'F11') {
       e.preventDefault();
@@ -1121,4 +1121,3 @@ function updateUnloadGuard() {
     return '';
   } : null;
 }
-

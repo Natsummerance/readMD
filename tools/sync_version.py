@@ -153,7 +153,10 @@ def bundle_readmd_boot():
             with open(sp, 'rb') as f:
                 chunks.append(f.read())
     with open(out_path, 'wb') as out:
-        out.write(b'\n;\n'.join(chunks) + b'\n')
+        body = b'\n;\n'.join(chunks)
+        # Source files may already end with CRLF.  Avoid manufacturing a
+        # second blank line at EOF in the generated bundle (diff --check).
+        out.write(body if body.endswith((b'\n', b'\r')) else body + b'\n')
 
 
 def sync_all(target_ver: str, check_only: bool = False) -> bool:
