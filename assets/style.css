@@ -1789,6 +1789,19 @@ body.ai-resizing { cursor: col-resize !important; user-select: none; }
   width: 14px;
   height: 14px;
 }
+.tpl-github-import { position: relative; }
+.tpl-github-import > summary { list-style: none; cursor: pointer; }
+.tpl-github-import > summary::-webkit-details-marker { display: none; }
+.tpl-github-fields { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+.tpl-github-fields input { width: min(280px, 42vw); min-width: 0; }
+.tpl-github-fields input[type="text"] { width: 130px; }
+.tpl-github-preview { max-height: 180px; overflow: auto; margin-top: 6px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--bg); }
+.tpl-github-preview:empty { display: none; }
+.tpl-github-item { display: flex; gap: 7px; align-items: flex-start; padding: 5px 2px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.tpl-github-item:last-child { border-bottom: none; }
+.tpl-github-item input { margin-top: 2px; accent-color: var(--accent); }
+.tpl-github-item small { display: block; color: var(--fg3); overflow-wrap: anywhere; }
+.tpl-github-importing { opacity: .65; pointer-events: none; }
 
 /* ---------- 编辑模式 / CodeMirror ---------- */
 #edit-area {
@@ -2102,6 +2115,8 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
   .markdown-body { padding: 18px 20px 140px; }
   .welcome-btns { grid-template-columns: repeat(2, 1fr); }
   #search-bar { flex-wrap: wrap; }
+  .tpl-github-fields { flex-wrap: wrap; }
+  .tpl-github-fields input, .tpl-github-fields input[type="text"] { flex: 1 1 180px; width: auto; }
 }
 @media (max-width: 600px) {
   body { font-size: 14px; }

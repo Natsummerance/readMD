@@ -246,41 +246,180 @@
         <div class="rounded-2xl border border-border bg-surface p-4">
           <div class="flex items-center gap-2 font-semibold text-sm text-foreground">
             <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-action)] text-xs text-white">2</span>
-            設定 JSON をコピー
+            Agent を選択して設定コピー
           </div>
-          <p class="mt-2 text-xs text-muted leading-relaxed">ご利用の AI クライアント（Claude / Cursor / Antigravity）を選択し、「設定 JSON をコピー」をクリックします。</p>
+          <p class="mt-2 text-xs text-muted leading-relaxed">ご利用の AI クライアントを選択し、「設定をコピー」または「パスをコピー」をクリックします。</p>
         </div>
         <div class="rounded-2xl border border-border bg-surface p-4">
           <div class="flex items-center gap-2 font-semibold text-sm text-foreground">
             <span class="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-action)] text-xs text-white">3</span>
-            再起動して即時利用
+            再起動して即時協調
           </div>
           <p class="mt-2 text-xs text-muted leading-relaxed">AI アプリを再起動すると、Markdown 修復や LaTeX 変換が自動的に利用可能になります。</p>
         </div>
       </div>
 
-      <!-- Interactive Client Config Tabs -->
-      <div class="mt-8">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-          <div class="mcp-tabs flex flex-wrap gap-2" role="tablist" aria-label="MCP Client Selector">
-            <button class="mcp-tab is-active" data-mcp-target="claude" type="button">Claude Desktop</button>
-            <button class="mcp-tab" data-mcp-target="cursor" type="button">Cursor IDE</button>
-            <button class="mcp-tab" data-mcp-target="antigravity" type="button">Antigravity / Gemini</button>
-            <button class="mcp-tab" data-mcp-target="vscode" type="button">VS Code (Cline / Roo)</button>
-            <button class="mcp-tab" data-mcp-target="cli" type="button">Terminal (uv / python)</button>
+      <!-- Top Double-Group Agent Ribbon -->
+      <div class="mt-8 rounded-2xl border border-border bg-surface/50 p-4">
+        <div class="flex flex-col gap-3">
+          <div class="flex flex-col md:flex-row md:items-center gap-2">
+            <span class="mcp-category-title w-32 shrink-0">IDE / デスクトップ:</span>
+            <div class="mcp-tabs flex flex-wrap gap-1.5" role="tablist" aria-label="MCP IDE Selector">
+              <button class="mcp-tab is-active" data-mcp-target="claude" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.5h-2v-2h2zm0-4h-2V7h2z"/></svg>
+                Claude Desktop
+              </button>
+              <button class="mcp-tab" data-mcp-target="cursor" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 3 21 12 12 14 9 21 3 3"/></svg>
+                Cursor IDE
+              </button>
+              <button class="mcp-tab" data-mcp-target="trae" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                Trae (ByteDance)
+              </button>
+              <button class="mcp-tab" data-mcp-target="vscode" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16.5 9.4 7.55 2.81a1.2 1.2 0 0 0-1.78.85v16.68a1.2 1.2 0 0 0 1.78.85L16.5 14.6l5.3 4.14a1.2 1.2 0 0 0 1.9-.94V6.2a1.2 1.2 0 0 0-1.9-.94z"/></svg>
+                VS Code (Cline/Roo)
+              </button>
+              <button class="mcp-tab" data-mcp-target="zcode" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg>
+                ZCode IDE
+              </button>
+              <button class="mcp-tab" data-mcp-target="qoder" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+                Qoder (アリババ/共通)
+              </button>
+            </div>
           </div>
-          <button class="btn-copy-mcp inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-semibold text-foreground hover:bg-surface transition-all" type="button">
-            <svg class="copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            <span class="copy-text">設定 JSON をコピー</span>
-          </button>
+
+          <div class="flex flex-col md:flex-row md:items-center gap-2 pt-2 border-t border-border/60">
+            <span class="mcp-category-title w-32 shrink-0">AI エージェント / Harness:</span>
+            <div class="mcp-tabs flex flex-wrap gap-1.5" role="tablist" aria-label="MCP Agent Harness Selector">
+              <button class="mcp-tab" data-mcp-target="codex" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 16 4-4-4-4"/><path d="M12 19h7"/></svg>
+                Codex / ChatGPT
+              </button>
+              <button class="mcp-tab" data-mcp-target="antigravity" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/></svg>
+                Antigravity / Gemini
+              </button>
+              <button class="mcp-tab" data-mcp-target="deepseek" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3"/><path d="M12 19v3"/><path d="M2 12h3"/><path d="M19 12h3"/></svg>
+                DeepSeek Harness
+              </button>
+              <button class="mcp-tab" data-mcp-target="hermes" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275z"/></svg>
+                Nous Hermes
+              </button>
+              <button class="mcp-tab" data-mcp-target="opencode" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                OpenCode CLI
+              </button>
+              <button class="mcp-tab" data-mcp-target="openclaw" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8"/><path d="m8 12 4 4 4-4"/></svg>
+                OpenClaw
+              </button>
+              <button class="mcp-tab" data-mcp-target="workbuddy" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                WorkBuddy (テンセント)
+              </button>
+              <button class="mcp-tab" data-mcp-target="doubao" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                Doubao / Coze
+              </button>
+              <button class="mcp-tab" data-mcp-target="cli" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                Terminal (uv/python)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Left-Right Synergy Showcase -->
+      <div class="mt-8 apple-synergy-grid">
+        <!-- Left: Apple Accordion List -->
+        <div>
+          <div class="mb-4">
+            <h3 class="text-xl font-bold tracking-tight text-foreground">ReadMD と AI エージェントの協調</h3>
+            <p class="mt-1 text-xs text-muted">ローカル Markdown 修復、LaTeX 相互変換、論文引用解析の強力な機能を即座に提供。</p>
+          </div>
+
+          <div class="apple-accordion-list" role="region" aria-label="協調機能一覧">
+            <div class="apple-accordion-item is-open">
+              <div class="apple-accordion-header" tabindex="0">
+                <div class="apple-accordion-title">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-action)]"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>
+                  Markdown インメモリ自動修復
+                </div>
+                <svg class="apple-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="apple-accordion-content">
+                <p class="text-xs text-muted leading-relaxed">表のズレ、未閉じのコードブロック、構文の崩れをメモリ上で安全に修復し、元ファイルを破損させません。</p>
+                <div class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-action)]">
+                  <code>readmd_fix_markdown</code>
+                </div>
+              </div>
+            </div>
+
+            <div class="apple-accordion-item">
+              <div class="apple-accordion-header" tabindex="0">
+                <div class="apple-accordion-title">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-action)]"><path d="m4 6 8-4 8 4"/><path d="m4 18 8 4 8-4"/><path d="M4 12l8 4 8-4"/></svg>
+                  学術 LaTeX / 数式双方向変換
+                </div>
+                <svg class="apple-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="apple-accordion-content">
+                <p class="text-xs text-muted leading-relaxed">KaTeX / MathJax と標準 LaTeX 構文を可逆変換。長大な行列や分数式のエスケープエラーを防止します。</p>
+                <div class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-action)]">
+                  <code>readmd_latex_to_md</code> · <code>readmd_md_to_latex</code>
+                </div>
+              </div>
+            </div>
+
+            <div class="apple-accordion-item">
+              <div class="apple-accordion-header" tabindex="0">
+                <div class="apple-accordion-title">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-[var(--color-action)]"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"/><path d="M6 6h10"/><path d="M6 10h10"/></svg>
+                  文献・マルチフォーマット抽出
+                </div>
+                <svg class="apple-accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              <div class="apple-accordion-content">
+                <p class="text-xs text-muted leading-relaxed">PDF、Word (.docx)、BibTeX 引用データをミリ秒単位でパースし、クリーンな Markdown を Agent コンテキストへ直接供給します。</p>
+                <div class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-mono text-[var(--color-action)]">
+                  <code>readmd_convert_to_markdown</code> · <code>readmd_parse_bibtex</code>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Pre Code Snippets -->
-        <div class="mt-4 relative rounded-2xl bg-[#0d1117] p-4 text-xs font-mono text-[#c9d1d9] overflow-x-auto">
-          <div class="text-[11px] text-[#8b949e] mb-2 font-sans flex items-center justify-between">
-            <span class="mcp-config-path">設定ファイルパス: macOS <code>~/Library/Application Support/Claude/claude_desktop_config.json</code> | Windows <code>%APPDATA%\Claude\claude_desktop_config.json</code></span>
-          </div>
-          <pre class="mcp-code-block"><code>{
+        <!-- Right: macOS Glass Terminal Showcase -->
+        <div>
+          <div class="macos-terminal">
+            <div class="macos-terminal-bar">
+              <div class="macos-traffic-lights">
+                <span class="macos-dot red"></span>
+                <span class="macos-dot yellow"></span>
+                <span class="macos-dot green"></span>
+              </div>
+              <div class="macos-agent-badge">
+                <span class="macos-agent-name">Claude Desktop</span>
+              </div>
+              <span class="mcp-format-badge">JSON</span>
+            </div>
+
+            <div class="macos-path-bar">
+              <span class="mcp-config-path truncate">macOS: ~/Library/Application Support/Claude/claude_desktop_config.json | Windows: %APPDATA%\Claude\claude_desktop_config.json</span>
+              <button class="btn-copy-path shrink-0 ml-2" type="button">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                <span class="copy-text">パスをコピー</span>
+              </button>
+            </div>
+
+            <pre class="macos-code-area mcp-code-block"><code>{
   "mcpServers": {
     "readmd": {
       "command": "python",
@@ -288,6 +427,18 @@
     }
   }
 }</code></pre>
+
+            <div class="macos-actions-bar">
+              <a class="button-secondary text-xs inline-flex items-center gap-1.5" href="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip" data-mirror-url="https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                MCP パッケージ (.zip)
+              </a>
+              <button class="button-primary btn-copy-mcp inline-flex items-center gap-1.5" type="button">
+                <svg class="copy-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span class="copy-text">設定をコピー</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

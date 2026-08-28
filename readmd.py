@@ -58,6 +58,7 @@ from src.readmd_core.versioning import parse_version as _version_parse
 import src.readmd_modules as RM
 from src.readmd_modules.validators import validate_file_path, validate_command, paths_within
 from src.readmd_modules.skills import SkillError, SkillRegistry, default_skill_roots
+from src.readmd_modules import skill_import as _skill_import
 from src.readmd_core.service import ReadMDCoreService
 from src.readmd_core import upstream as _upstream_sources
 
@@ -836,6 +837,20 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
 
+    def do_DELETE(self):
+        """Handle the small, explicitly-scoped delete API surface."""
+        if not self._lan_authorized() or not self._post_origin_authorized():
+            self._send(403, 'text/plain; charset=utf-8', b'forbidden')
+            return
+        try:
+            self._route()
+        except Exception as e:
+            logging.exception('http delete error: %s', self.path)
+            try:
+                self._send(500, 'text/plain; charset=utf-8', ('error: %s' % e).encode('utf-8'))
+            except Exception:
+                pass
+
     def _lan_authorized(self):
         """局域网模式下，除页面与静态资源外，所有 API 都要求携带 token。"""
         u = urlparse(self.path)
@@ -853,6 +868,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def _lan_route_authorized(self, path):
         """Restrict shared clients to the document scope and reader-only APIs."""
+        # Skill imports can fetch remote archives and write the local Skill
+        # registry; never expose that mutating surface through LAN sharing.
+        if path.startswith('/api/skill-imports'):
+            return False
         if path in self.LAN_BLOCKED_PATHS:
             return False
         if path not in self.LAN_SCOPED_PATHS:
@@ -963,6 +982,14 @@ class Handler(BaseHTTPRequestHandler):
             self._api_ai_history()
         elif path == '/api/skills':
             self._api_skills()
+        elif path == '/api/skill-imports':
+            self._api_skill_imports()
+        elif path == '/api/skill-imports/preview':
+            self._api_skill_import_preview()
+        elif path == '/api/skill-imports/apply':
+            self._api_skill_import_apply()
+        elif path.startswith('/api/skill-imports/'):
+            self._api_skill_import_source(path)
         elif path == '/api/upstream-sources':
             self._api_upstream_sources()
         elif path.startswith('/api/upstream-sources/'):
@@ -1686,6 +1713,135 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             logging.exception('skills api failed')
             self._send_json(500, {'error': 'Skill 操作失败：%s' % exc})
+
+    @staticmethod
+    def _skill_import_body(handler):
+        """Read a bounded JSON object for Skill import endpoints."""
+        try:
+            length = int(handler.headers.get('Content-Length', 0) or 0)
+        except (TypeError, ValueError):
+            raise _skill_import.SkillImportError('request_invalid', '请求体大小无效')
+        if length < 0 or length > 2 * 1024 * 1024:
+            raise _skill_import.SkillImportError('request_too_large', '请求体超过安全大小限制')
+        try:
+            body = json.loads(handler.rfile.read(length).decode('utf-8')) if length else {}
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise _skill_import.SkillImportError('request_invalid', '请求体必须是有效 JSON') from exc
+        if not isinstance(body, dict):
+            raise _skill_import.SkillImportError('request_invalid', '请求体必须是 JSON 对象')
+        return body
+
+    def _skill_import_error(self, exc, status=400):
+        self._send_json(status, {'ok': False, 'error_code': exc.code, 'error': str(exc)})
+
+    def _api_skill_import_preview(self):
+        if self.command != 'POST':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed',
+                                  'error': '仅支持 POST 请求'})
+            return
+        try:
+            body = self._skill_import_body(self)
+            url = str(body.get('url') or '').strip()
+            credential_id = str(body.get('credential_id') or '').strip()
+            if not url:
+                raise _skill_import.SkillImportError('github_url_required', '请输入 GitHub 仓库链接')
+            self._send_json(200, {'ok': True, 'preview': _skill_import.preview_import(url, credential_id)})
+        except _skill_import.SkillImportError as exc:
+            self._skill_import_error(exc)
+        except Exception:
+            logging.exception('skill import preview failed')
+            self._send_json(500, {'ok': False, 'error_code': 'internal_error',
+                                  'error': 'Skill 导入预览失败'})
+
+    def _api_skill_import_apply(self):
+        if self.command != 'POST':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed',
+                                  'error': '仅支持 POST 请求'})
+            return
+        try:
+            body = self._skill_import_body(self)
+            preview = body.get('preview')
+            selections = body.get('selections')
+            if not isinstance(preview, dict) or not isinstance(selections, list):
+                raise _skill_import.SkillImportError('request_invalid', '缺少预览或 Skill 选择列表')
+            result = _skill_import.apply_import(
+                preview, selections, str(body.get('credential_id') or '').strip(),
+                confirm=body.get('confirm') is True,
+            )
+            self._send_json(200, result)
+        except _skill_import.SkillImportError as exc:
+            self._skill_import_error(exc)
+        except Exception:
+            logging.exception('skill import apply failed')
+            self._send_json(500, {'ok': False, 'error_code': 'internal_error',
+                                  'error': 'Skill 导入失败'})
+
+    def _api_skill_imports(self):
+        if self.command == 'GET':
+            self._send_json(200, {'schema_version': 1, 'sources': _skill_import.list_sources()})
+            return
+        if self.command == 'DELETE':
+            try:
+                body = self._skill_import_body(self)
+                source_id = str(body.get('source_id') or '').strip()
+                if not source_id:
+                    raise _skill_import.SkillImportError('source_required', '缺少来源 ID')
+                if body.get('confirm') is not True:
+                    raise _skill_import.SkillImportError('confirmation_required', '移除来源需要明确确认')
+                if not _skill_import.remove_source(source_id):
+                    raise _skill_import.SkillImportError('source_not_found', '来源不存在')
+                self._send_json(200, {'ok': True, 'source_id': source_id, 'skills_removed': False})
+            except _skill_import.SkillImportError as exc:
+                self._skill_import_error(exc)
+            except Exception:
+                logging.exception('skill import source delete failed')
+                self._send_json(500, {'ok': False, 'error_code': 'internal_error',
+                                      'error': '移除 Skill 来源失败'})
+            return
+        self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed',
+                              'error': '仅支持 GET 或 DELETE 请求'})
+
+    def _api_skill_import_source(self, path):
+        """Check or manually update one pinned GitHub source."""
+        rest = path[len('/api/skill-imports/'):].strip('/')
+        parts = [unquote(p) for p in rest.split('/') if p]
+        if len(parts) != 2 or parts[1] not in ('check', 'update'):
+            self._send_json(404, {'ok': False, 'error_code': 'source_not_found',
+                                  'error': 'Skill 来源不存在'})
+            return
+        source_id, action = parts
+        source = _skill_import.find_source(source_id)
+        if not source:
+            self._send_json(404, {'ok': False, 'error_code': 'source_not_found',
+                                  'error': 'Skill 来源不存在'})
+            return
+        if self.command != 'POST':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed',
+                                  'error': '仅支持 POST 请求'})
+            return
+        try:
+            body = self._skill_import_body(self)
+            credential_id = str(body.get('credential_id') or source.get('credential_id') or '').strip()
+            preview = _skill_import.preview_import(str(source.get('repository_url') or ''), credential_id)
+            changed = str(preview.get('source', {}).get('resolved_commit') or '') != str(source.get('resolved_commit') or '')
+            if action == 'check':
+                self._send_json(200, {'ok': True, 'source_id': source_id, 'changed': changed,
+                                      'current_commit': source.get('resolved_commit', ''),
+                                      'preview': preview})
+                return
+            if body.get('confirm') is not True:
+                raise _skill_import.SkillImportError('confirmation_required', '更新 Skill 来源需要明确确认')
+            selections = body.get('selections')
+            if not isinstance(selections, list) or not selections:
+                raise _skill_import.SkillImportError('selection_required', '更新前请先选择要导入的 Skill')
+            result = _skill_import.apply_import(preview, selections, credential_id, confirm=True)
+            self._send_json(200, {'ok': True, 'source_id': source_id, 'changed': changed, **result})
+        except _skill_import.SkillImportError as exc:
+            self._skill_import_error(exc)
+        except Exception:
+            logging.exception('skill import source action failed')
+            self._send_json(500, {'ok': False, 'error_code': 'internal_error',
+                                  'error': 'Skill 来源检查失败'})
 
     def _api_upstream_sources(self):
         """List immutable, offline upstream snapshots without exposing paths."""

@@ -29,11 +29,17 @@ export function activate(context: vscode.ExtensionContext) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showInformationMessage('请先打开 Markdown 文档'); return; }
     try {
-      const workflow = await vscode.window.showQuickPick([
-        { label: '快速阅读', id: 'quick_read', skillId: 'readmd-quick-read' }, { label: '润色文稿', id: 'polish', skillId: 'readmd-polish' },
-        { label: '总结要点', id: 'summary', skillId: 'readmd-summary' }, { label: '生成大纲', id: 'outline', skillId: 'readmd-outline' },
-        { label: '代码审查', id: 'code_review', skillId: 'readmd-code-review' }, { label: '文档问答', id: 'ask', skillId: 'readmd-ask' },
-      ], { placeHolder: '选择 ReadMD AI Skill 工作流' });
+      const prompts = await bridge.listPrompts();
+      if (!prompts.length) {
+        vscode.window.showWarningMessage('当前 Core 没有可用 Skill');
+        return;
+      }
+      const workflow = await vscode.window.showQuickPick(prompts.map((prompt: any) => ({
+        label: prompt.name || prompt.skill_id,
+        description: prompt.description || prompt.skill_id || '',
+        id: prompt.name || prompt.skill_id,
+        skillId: prompt.skill_id || prompt.name,
+      })), { placeHolder: '选择 ReadMD AI Skill 工作流' });
       if (!workflow) return;
       const providers = (await bridge.listProviders()).filter((p: any) => p.credential_id || p.key_source || p.name?.includes('Ollama'));
       if (!providers.length) {

@@ -441,9 +441,24 @@ def validate_motion_experience() -> list[str]:
             errors.append("site.js uses a main-thread scroll event listener")
 
     frame_dir = PUBLIC / "media" / "journey-frames"
-    frame_count = len(list(frame_dir.glob("frame-*.webp"))) if frame_dir.is_dir() else 0
+    frames = sorted(frame_dir.glob("frame-*.webp")) if frame_dir.is_dir() else []
+    frame_count = len(frames)
     if frame_count != 57:
         errors.append(f"scroll-driven film expects 57 frames, found {frame_count}")
+    if frames:
+        hashes = [hashlib.sha256(frame.read_bytes()).hexdigest() for frame in frames]
+        unique_ratio = len(set(hashes)) / len(hashes)
+        if unique_ratio < 0.75:
+            errors.append(f"scroll-driven film has too many duplicate frames (unique ratio {unique_ratio:.2%})")
+        run = 1
+        for index in range(1, len(hashes)):
+            if hashes[index] == hashes[index - 1]:
+                run += 1
+                if run > 8:
+                    errors.append("scroll-driven film contains a repeated frame run longer than 8 frames")
+                    break
+            else:
+                run = 1
     return errors
 
 

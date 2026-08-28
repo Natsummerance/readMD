@@ -124,6 +124,12 @@ export class ReadMDBridge {
     return result?.resources || [];
   }
 
+  /** Return the Core's current Skill-backed prompt descriptors. */
+  public async listPrompts(): Promise<any[]> {
+    const result = await this.callMcpMethod('prompts/list');
+    return Array.isArray(result?.prompts) ? result.prompts : [];
+  }
+
   public async readSkill(uri: string): Promise<string> {
     const result = await this.callMcpMethod('resources/read', { uri });
     return result?.contents?.[0]?.text || '';

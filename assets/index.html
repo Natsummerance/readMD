@@ -576,6 +576,15 @@
         <span data-i18n="tpl.importMd">导入模板 (.md)</span>
       </button>
       <input type="file" id="tpl-file-input" accept=".md,.markdown,.json,.txt" multiple style="display:none">
+      <details id="tpl-github-import" class="tpl-github-import">
+        <summary class="tb-btn" aria-label="GitHub" data-i18n-aria="tpl.importMd">↗</summary>
+        <div class="tpl-github-fields">
+          <input id="tpl-github-url" type="url" inputmode="url" placeholder="https://github.com/owner/repository" aria-label="GitHub" data-i18n-aria="tpl.importMd" autocomplete="off">
+          <input id="tpl-github-credential" type="text" placeholder="credential_id（可选）" aria-label="credential_id" autocomplete="off">
+          <button id="tpl-github-preview-btn" type="button" class="tb-btn" aria-label="导入模板" data-i18n-aria="tpl.importMd">⌕</button>
+        </div>
+        <div id="tpl-github-preview" class="tpl-github-preview" role="list" aria-live="polite"></div>
+      </details>
       <button id="tpl-export-btn" class="tb-btn" title="将全部模板导出为 .json 备份" data-i18n="tpl.exportJson" data-i18n-title="tpl.exportHint">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span data-i18n="tpl.exportJson">导出模板</span>

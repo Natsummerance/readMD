@@ -25,6 +25,7 @@ SETTINGS_FILE = os.path.join(DATA_DIR, 'settings.json')
 RECENT_FILE = os.path.join(DATA_DIR, 'recent.json')
 PROMPTS_FILE = os.path.join(DATA_DIR, 'prompts.json')
 HISTORY_FILE = os.path.join(DATA_DIR, 'chat_history.json')
+SKILLS_FILE = os.path.join(DATA_DIR, 'skills.json')
 LOG_FILE = os.path.join(DATA_DIR, 'readmd.log')
 
 

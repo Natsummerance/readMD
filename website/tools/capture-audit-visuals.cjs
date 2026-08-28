@@ -77,6 +77,7 @@ function createStaticServer(distDir) {
     { name: '08-laptop-download-dark.png', url: '/download/', width: 1440, height: 900, scroll: 0, colorScheme: 'dark' },
     { name: '09-mobile-home-hero.png', url: '/', width: 390, height: 844, scroll: 0, colorScheme: 'light' },
     { name: '10-mobile-download-dark.png', url: '/download/', width: 390, height: 844, scroll: 0, colorScheme: 'dark' },
+    { name: '11-mobile-mcp-guide.png', url: '/zh-cn/download/#mcp-guide', width: 390, height: 844, scroll: 1700, colorScheme: 'dark' },
   ];
 
   for (const item of captures) {

@@ -580,6 +580,8 @@ function bindEvents() {
   $('tpl-search') && $('tpl-search').addEventListener('input', renderTplList);
   $('tpl-import-btn') && $('tpl-import-btn').addEventListener('click', () => $('tpl-file-input') && $('tpl-file-input').click());
   $('tpl-file-input') && $('tpl-file-input').addEventListener('change', e => { if (e.target.files) Array.from(e.target.files).forEach(f => importTemplatesFromFile(f)); e.target.value = ''; });
+  $('tpl-github-preview-btn') && $('tpl-github-preview-btn').addEventListener('click', previewGithubSkillImport);
+  $('tpl-github-url') && $('tpl-github-url').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); previewGithubSkillImport(); } });
   $('tpl-export-btn') && $('tpl-export-btn').addEventListener('click', exportTemplatesAsJson);
   $('tpl-close-btn') && $('tpl-close-btn').addEventListener('click', () => $('tpl-modal').classList.add('hidden'));
   bindAiResize(); // 绑定 AI 侧边栏宽度拖拽调节手柄

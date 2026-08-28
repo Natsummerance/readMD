@@ -7854,6 +7854,113 @@ async function importTemplatesFromFile(file) {
   reader.readAsText(file, 'UTF-8');
 }
 
+function githubImportErrorText(payload, _t) {
+  const code = String(payload && payload.error_code || '');
+  const known = {
+    github_auth_failed: 'toast.enterApiKeyFirst',
+    github_network_error: 'toast.unknownNetworkErr',
+    github_not_found: 'toast.fileNotFound',
+    github_url_required: 'toast.invalidUrl',
+  };
+  const key = known[code] || 'toast.importFailed';
+  const text = _t(key) || _t('toast.importFailed') || '导入失败';
+  return code ? `${text} (${code})` : text;
+}
+
+function renderGithubSkillPreview(preview) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const host = $('tpl-github-preview');
+  if (!host) return;
+  host.innerHTML = '';
+  const skills = Array.isArray(preview && preview.skills) ? preview.skills : [];
+  skills.forEach((skill, index) => {
+    const row = document.createElement('label');
+    row.className = 'tpl-github-item';
+    row.dataset.index = String(index);
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox'; checkbox.checked = !!skill.valid; checkbox.disabled = !skill.valid;
+    checkbox.dataset.skillIndex = String(index);
+    checkbox.setAttribute('aria-label', skill.name || skill.id || skill.path || 'Skill');
+    const details = document.createElement('span');
+    const title = document.createElement('strong');
+    title.textContent = skill.name || skill.id || skill.path || '';
+    const meta = document.createElement('small');
+    meta.textContent = [skill.path, skill.scripts_present ? '⚙' : ''].filter(Boolean).join(' · ');
+    details.append(title, meta);
+    if (skill.description) {
+      const desc = document.createElement('small');
+      desc.textContent = skill.description;
+      details.appendChild(desc);
+    }
+    row.append(checkbox, details);
+    host.appendChild(row);
+  });
+  const apply = document.createElement('button');
+  apply.type = 'button'; apply.id = 'tpl-github-apply-btn'; apply.className = 'tb-btn accent';
+  apply.textContent = _t('tpl.importMd') || '导入模板 (.md)';
+  apply.disabled = !skills.some(s => s.valid);
+  apply.addEventListener('click', () => applyGithubSkillImport(preview));
+  host.appendChild(apply);
+}
+
+async function previewGithubSkillImport() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const url = String($('tpl-github-url') && $('tpl-github-url').value || '').trim();
+  const credentialId = String($('tpl-github-credential') && $('tpl-github-credential').value || '').trim();
+  if (!url) { showToast(_t('toast.invalidUrl') || '请输入有效链接'); return; }
+  const button = $('tpl-github-preview-btn');
+  if (button) { button.disabled = true; button.classList.add('tpl-github-importing'); }
+  try {
+    const r = await apiFetch('/api/skill-imports/preview', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, credential_id: credentialId }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok || !d.preview) throw d;
+    const preview = d.preview;
+    preview.credential_id = credentialId;
+    renderGithubSkillPreview(preview);
+  } catch (e) {
+    showToast(githubImportErrorText(e, _t));
+  } finally {
+    if (button) { button.disabled = false; button.classList.remove('tpl-github-importing'); }
+  }
+}
+
+async function applyGithubSkillImport(preview) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const host = $('tpl-github-preview');
+  const selected = [...(host ? host.querySelectorAll('input[type="checkbox"]:checked') : [])]
+    .map(input => preview.skills[Number(input.dataset.skillIndex)])
+    .filter(Boolean)
+    .map(skill => Object.assign({}, skill, { conflict_action: 'skip' }));
+  if (!selected.length) return;
+  const confirmed = await confirmAction({
+    title: _t('tpl.title') || 'Skill 工作台',
+    message: _t('tpl.hint') || '导入前请检查 Skill 内容和来源。',
+    confirmText: _t('tpl.importMd') || '导入模板 (.md)',
+    cancelText: _t('dialog.cancel') || '取消',
+  });
+  if (!confirmed) return;
+  const button = $('tpl-github-apply-btn');
+  if (button) { button.disabled = true; button.classList.add('tpl-github-importing'); }
+  try {
+    const r = await apiFetch('/api/skill-imports/apply', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preview, selections: selected, credential_id: preview.credential_id || '', confirm: true }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw d;
+    await loadAiPrompts(); renderTplList();
+    if (host) host.innerHTML = '';
+    showToast(_t('toast.importedTemplates', { count: (d.skills || []).length }) || '已导入');
+  } catch (e) {
+    showToast(githubImportErrorText(e, _t));
+  } finally {
+    if (button) { button.disabled = false; button.classList.remove('tpl-github-importing'); }
+  }
+}
+
 function exportTemplatesAsJson() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const data = {
@@ -11640,6 +11747,8 @@ function bindEvents() {
   $('tpl-search') && $('tpl-search').addEventListener('input', renderTplList);
   $('tpl-import-btn') && $('tpl-import-btn').addEventListener('click', () => $('tpl-file-input') && $('tpl-file-input').click());
   $('tpl-file-input') && $('tpl-file-input').addEventListener('change', e => { if (e.target.files) Array.from(e.target.files).forEach(f => importTemplatesFromFile(f)); e.target.value = ''; });
+  $('tpl-github-preview-btn') && $('tpl-github-preview-btn').addEventListener('click', previewGithubSkillImport);
+  $('tpl-github-url') && $('tpl-github-url').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); previewGithubSkillImport(); } });
   $('tpl-export-btn') && $('tpl-export-btn').addEventListener('click', exportTemplatesAsJson);
   $('tpl-close-btn') && $('tpl-close-btn').addEventListener('click', () => $('tpl-modal').classList.add('hidden'));
   bindAiResize(); // 绑定 AI 侧边栏宽度拖拽调节手柄
