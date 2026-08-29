@@ -922,8 +922,76 @@
     gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
     if (Flip) gsap.registerPlugin(Flip);
 
+    const hero = document.querySelector('.hero');
+    const motionMedia = gsap.matchMedia();
+    if (hero) {
+      const orbit = document.createElement('div');
+      orbit.className = 'gsap-orbit';
+      orbit.setAttribute('aria-hidden', 'true');
+      orbit.innerHTML = '<i class="gsap-orbit-node"></i><i class="gsap-orbit-node"></i><i class="gsap-orbit-node"></i>';
+      hero.prepend(orbit);
+
+      const pointerLight = document.createElement('div');
+      pointerLight.className = 'gsap-pointer-light';
+      pointerLight.setAttribute('aria-hidden', 'true');
+      hero.append(pointerLight);
+
+      motionMedia.add('(min-width: 768px)', () => {
+        const nodes = orbit.querySelectorAll('.gsap-orbit-node');
+        const image = hero.querySelector('.product-frame img');
+        const xTo = gsap.quickTo(pointerLight, 'x', { duration: 0.55, ease: 'power3.out' });
+        const yTo = gsap.quickTo(pointerLight, 'y', { duration: 0.55, ease: 'power3.out' });
+        const rotateXTo = image ? gsap.quickTo(image, 'rotationX', { duration: 0.55, ease: 'power3.out' }) : null;
+        const rotateYTo = image ? gsap.quickTo(image, 'rotationY', { duration: 0.55, ease: 'power3.out' }) : null;
+
+        gsap.set(pointerLight, { x: hero.clientWidth / 2 - 176, y: hero.clientHeight * 0.32 - 176, autoAlpha: 0.8 });
+        gsap.to(nodes[0], { x: 36, y: 22, rotation: 12, duration: 8, ease: 'sine.inOut', repeat: -1, yoyo: true });
+        gsap.to(nodes[1], { x: -28, y: 30, rotation: -16, duration: 7.2, ease: 'sine.inOut', repeat: -1, yoyo: true });
+        gsap.to(nodes[2], { x: 18, y: -24, scale: 1.08, duration: 6.4, ease: 'sine.inOut', repeat: -1, yoyo: true });
+
+        const onPointerMove = (event) => {
+          const rect = hero.getBoundingClientRect();
+          const horizontal = gsap.utils.clamp(-1, 1, ((event.clientX - rect.left) / rect.width) * 2 - 1);
+          const vertical = gsap.utils.clamp(-1, 1, ((event.clientY - rect.top) / rect.height) * 2 - 1);
+          xTo(event.clientX - rect.left - 176);
+          yTo(event.clientY - rect.top - 176);
+          rotateXTo?.(-vertical * 2.4);
+          rotateYTo?.(horizontal * 3.2);
+        };
+        const onPointerLeave = () => {
+          rotateXTo?.(0);
+          rotateYTo?.(0);
+          gsap.to(pointerLight, { autoAlpha: 0.45, duration: 0.35, overwrite: 'auto' });
+        };
+        const onPointerEnter = () => gsap.to(pointerLight, { autoAlpha: 0.85, duration: 0.3, overwrite: 'auto' });
+        hero.addEventListener('pointermove', onPointerMove, { passive: true });
+        hero.addEventListener('pointerleave', onPointerLeave);
+        hero.addEventListener('pointerenter', onPointerEnter);
+
+        return () => {
+          hero.removeEventListener('pointermove', onPointerMove);
+          hero.removeEventListener('pointerleave', onPointerLeave);
+          hero.removeEventListener('pointerenter', onPointerEnter);
+        };
+      });
+
+      const heroImage = hero.querySelector('.product-frame img');
+      if (heroImage) {
+        gsap.to(heroImage, {
+          scale: 1.045,
+          yPercent: -2,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: hero,
+            start: 'top top',
+            end: 'bottom top',
+            scrub: 0.7,
+          },
+        });
+      }
+    }
+
     const context = gsap.context(() => {
-      const hero = document.querySelector('.hero');
       if (hero) {
         const intro = Array.from(hero.querySelectorAll('p, h1, .button-primary, .button-secondary, .product-frame'));
         if (intro.length) {
@@ -995,9 +1063,15 @@
       ScrollTrigger.refresh();
     }, document.body);
 
-    document.addEventListener('pagehide', () => context.revert(), { once: true });
+    document.addEventListener('pagehide', () => {
+      context.revert();
+      motionMedia.revert();
+    }, { once: true });
     reducedMotion.addEventListener('change', (event) => {
-      if (event.matches) context.revert();
+      if (event.matches) {
+        context.revert();
+        motionMedia.revert();
+      }
     }, { once: true });
   };
 

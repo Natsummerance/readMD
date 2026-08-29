@@ -232,6 +232,62 @@ body {
   background: radial-gradient(circle at 50% -20%, rgba(0, 113, 227, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
 }
 
+.hero--poster {
+  border-radius: 0 0 3rem 3rem;
+}
+
+.gsap-orbit {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.gsap-orbit-node {
+  position: absolute;
+  display: block;
+  border: 1px solid rgba(0, 113, 227, 0.18);
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.92), rgba(129, 189, 255, 0.25) 42%, rgba(0, 113, 227, 0.05) 70%);
+  box-shadow: 0 18px 70px rgba(0, 113, 227, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  will-change: transform;
+}
+
+.gsap-orbit-node:nth-child(1) { width: clamp(11rem, 20vw, 21rem); height: clamp(11rem, 20vw, 21rem); top: -7rem; left: -6rem; }
+.gsap-orbit-node:nth-child(2) { width: clamp(8rem, 14vw, 15rem); height: clamp(8rem, 14vw, 15rem); right: -3rem; top: 24%; }
+.gsap-orbit-node:nth-child(3) { width: clamp(5rem, 9vw, 10rem); height: clamp(5rem, 9vw, 10rem); bottom: 5%; left: 11%; }
+
+.gsap-pointer-light {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(118, 190, 255, 0.2) 0%, rgba(118, 190, 255, 0.08) 34%, rgba(118, 190, 255, 0) 70%);
+  filter: blur(2px);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.hero .product-frame {
+  z-index: 1;
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+.hero > :not(.gsap-orbit):not(.gsap-pointer-light):not(.particle-field) {
+  position: relative;
+  z-index: 1;
+}
+
+.hero .product-frame img {
+  will-change: transform;
+}
+
 .particle-field {
   position: absolute;
   inset: 0;
@@ -1145,6 +1201,17 @@ body {
     background: radial-gradient(circle at 50% -20%, rgba(41, 151, 255, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
   }
 
+  .gsap-orbit-node {
+    border-color: rgba(110, 190, 255, 0.2);
+    background: radial-gradient(circle at 35% 35%, rgba(152, 207, 255, 0.34), rgba(41, 151, 255, 0.12) 46%, rgba(0, 0, 0, 0.04) 72%);
+    box-shadow: 0 20px 80px rgba(0, 113, 227, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.14);
+  }
+
+  .gsap-pointer-light {
+    mix-blend-mode: screen;
+    background: radial-gradient(circle, rgba(66, 157, 255, 0.25) 0%, rgba(66, 157, 255, 0.1) 36%, rgba(66, 157, 255, 0) 72%);
+  }
+
   .journey {
     background: #000000;
   }
@@ -1293,7 +1360,9 @@ body {
 
   .particle-field,
   .journey-progress,
-  .capability-progress {
+  .capability-progress,
+  .gsap-orbit,
+  .gsap-pointer-light {
     display: none !important;
   }
 

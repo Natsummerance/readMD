@@ -1857,19 +1857,31 @@ body.ai-resizing { cursor: col-resize !important; user-select: none; }
   width: 14px;
   height: 14px;
 }
-.tpl-github-import { position: relative; }
+.tpl-github-import { position: relative; z-index: 3; }
 .tpl-github-import > summary { list-style: none; cursor: pointer; }
 .tpl-github-import > summary::-webkit-details-marker { display: none; }
-.tpl-github-fields { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
-.tpl-github-fields input { width: min(280px, 42vw); min-width: 0; }
-.tpl-github-fields input[type="text"] { width: 130px; }
-.tpl-github-preview { max-height: 180px; overflow: auto; margin-top: 6px; padding: 6px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--bg); }
+.tpl-github-import[open] > .tpl-github-trigger { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 46%, var(--border)); color: var(--accent); }
+.tpl-github-popover { position: absolute; top: calc(100% + 8px); right: 0; width: min(460px, calc(100vw - 42px)); padding: 10px; border: 1px solid color-mix(in srgb, var(--border) 82%, transparent); border-radius: var(--radius-m); background: color-mix(in srgb, var(--bg2) 94%, transparent); box-shadow: var(--shadow-2); backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2); }
+.tpl-github-fields { display: flex; gap: 7px; align-items: center; }
+.tpl-github-input { display: flex; align-items: center; gap: 7px; flex: 1 1 220px; min-width: 0; min-height: 34px; padding: 0 9px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--bg); color: var(--fg3); transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
+.tpl-github-input:focus-within { border-color: var(--accent); background: var(--bg2); box-shadow: 0 0 0 3px var(--accent-soft); color: var(--accent); }
+.tpl-github-input svg { width: 15px; height: 15px; flex: 0 0 auto; }
+.tpl-github-input input { width: 100%; min-width: 0; height: 32px; padding: 0; border: 0; outline: 0; background: transparent; color: var(--fg); font: inherit; font-size: 12px; }
+.tpl-github-input input::placeholder { color: var(--fg3); }
+.tpl-github-credential { flex: 0 1 142px; }
+.tpl-github-preview-btn { width: 34px; min-width: 34px; padding: 0 !important; justify-content: center; }
+.tpl-github-preview { max-height: 210px; overflow: auto; margin-top: 8px; padding: 7px; border: 1px solid color-mix(in srgb, var(--border) 82%, transparent); border-radius: var(--radius-m); background: var(--bg); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--fg) 3%, transparent); }
 .tpl-github-preview:empty { display: none; }
-.tpl-github-item { display: flex; gap: 7px; align-items: flex-start; padding: 5px 2px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.tpl-github-item { display: flex; gap: 8px; align-items: flex-start; padding: 8px; border: 1px solid transparent; border-radius: var(--radius-s); font-size: 12px; transition: background .15s ease, border-color .15s ease; }
+.tpl-github-item:hover { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 24%, transparent); }
 .tpl-github-item:last-child { border-bottom: none; }
 .tpl-github-item input { margin-top: 2px; accent-color: var(--accent); }
-.tpl-github-item small { display: block; color: var(--fg3); overflow-wrap: anywhere; }
+.tpl-github-item strong { display: block; color: var(--fg); font-weight: 600; line-height: 1.35; }
+.tpl-github-item small { display: block; margin-top: 2px; color: var(--fg3); line-height: 1.4; overflow-wrap: anywhere; }
+.tpl-github-apply-btn { width: 100%; justify-content: center; min-height: 34px; margin-top: 7px; }
 .tpl-github-importing { opacity: .65; pointer-events: none; }
+.tpl-github-importing .tb-ic { animation: tpl-github-spin .7s linear infinite; }
+@keyframes tpl-github-spin { to { transform: rotate(360deg); } }
 
 /* ---------- 编辑模式 / CodeMirror ---------- */
 #edit-area {
@@ -2184,7 +2196,7 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
   .welcome-btns { grid-template-columns: repeat(2, 1fr); }
   #search-bar { flex-wrap: wrap; }
   .tpl-github-fields { flex-wrap: wrap; }
-  .tpl-github-fields input, .tpl-github-fields input[type="text"] { flex: 1 1 180px; width: auto; }
+  .tpl-github-input, .tpl-github-credential { flex: 1 1 180px; }
 }
 @media (max-width: 600px) {
   body { font-size: 14px; }

@@ -509,7 +509,7 @@ function renderGithubSkillPreview(preview) {
     host.appendChild(row);
   });
   const apply = document.createElement('button');
-  apply.type = 'button'; apply.id = 'tpl-github-apply-btn'; apply.className = 'tb-btn accent';
+  apply.type = 'button'; apply.id = 'tpl-github-apply-btn'; apply.className = 'tb-btn accent tpl-github-apply-btn';
   apply.textContent = _t('tpl.importMd') || '导入模板 (.md)';
   apply.disabled = !skills.some(s => s.valid);
   apply.addEventListener('click', () => applyGithubSkillImport(preview));
