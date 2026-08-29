@@ -883,6 +883,124 @@
     });
   };
 
+  const loadScript = (src) => new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing?.dataset.loaded === 'true') return resolve();
+    if (existing) {
+      existing.addEventListener('load', resolve, { once: true });
+      existing.addEventListener('error', reject, { once: true });
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    script.onload = () => {
+      script.dataset.loaded = 'true';
+      resolve();
+    };
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+
+  const startGsapMotion = async () => {
+    if (reducedMotion.matches || !document.body) return;
+
+    try {
+      await loadScript('/assets/vendor/gsap/gsap.min.js');
+      await Promise.all([
+        loadScript('/assets/vendor/gsap/ScrollTrigger.min.js'),
+        loadScript('/assets/vendor/gsap/ScrollToPlugin.min.js'),
+        loadScript('/assets/vendor/gsap/Flip.min.js'),
+      ]);
+    } catch (_) {
+      // CSS and native scrolling remain the resilient, zero-dependency fallback.
+      return;
+    }
+
+    const { gsap, ScrollTrigger, ScrollToPlugin, Flip } = window;
+    if (!gsap || !ScrollTrigger || !ScrollToPlugin) return;
+    gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+    if (Flip) gsap.registerPlugin(Flip);
+
+    const context = gsap.context(() => {
+      const hero = document.querySelector('.hero');
+      if (hero) {
+        const intro = Array.from(hero.querySelectorAll('p, h1, .button-primary, .button-secondary, .product-frame'));
+        if (intro.length) {
+          gsap.timeline({ defaults: { ease: 'power3.out' } })
+            .fromTo(intro, { autoAlpha: 0, y: 22 }, { autoAlpha: 1, y: 0, duration: 0.72, stagger: 0.07, clearProps: 'visibility' });
+        }
+      }
+
+      const answerCards = gsap.utils.toArray('.answer-card');
+      if (answerCards.length) {
+        gsap.set(answerCards, { autoAlpha: 0, y: 18 });
+        ScrollTrigger.batch(answerCards, {
+          start: 'top 86%',
+          once: true,
+          interval: 0.08,
+          onEnter: (batch) => gsap.to(batch, {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.5,
+            stagger: 0.07,
+            ease: 'power2.out',
+            clearProps: 'visibility,transform',
+            overwrite: 'auto',
+          }),
+        });
+      }
+
+      const capabilityLinks = gsap.utils.toArray('.capability-panel .cinema-link');
+      if (capabilityLinks.length) {
+        ScrollTrigger.batch(capabilityLinks, {
+          start: 'top 82%',
+          once: true,
+          onEnter: (batch) => gsap.fromTo(batch, { autoAlpha: 0, y: 10 }, {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.42,
+            stagger: 0.05,
+            ease: 'power2.out',
+            clearProps: 'visibility,transform',
+          }),
+        });
+      }
+
+      document.querySelectorAll('a[href^="#"], a[href^="/#"]').forEach((link) => {
+        link.addEventListener('click', (event) => {
+          if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          const hash = new URL(link.href, window.location.href).hash;
+          const target = hash ? document.querySelector(hash) : null;
+          if (!target) return;
+          event.preventDefault();
+          history.pushState(null, '', hash);
+          gsap.to(window, { duration: 0.72, scrollTo: { y: target, offsetY: 56 }, ease: 'power3.inOut', overwrite: 'auto' });
+        });
+      });
+
+      if (Flip) {
+        document.querySelectorAll('details').forEach((details) => {
+          const summary = details.querySelector('summary');
+          const menu = details.querySelector(':scope > div');
+          if (!summary || !menu) return;
+          summary.addEventListener('click', () => {
+            if (details.open) return;
+            const state = Flip.getState(menu);
+            window.requestAnimationFrame(() => Flip.from(state, { duration: 0.24, ease: 'power2.out', absolute: true }));
+          });
+        });
+      }
+
+      ScrollTrigger.refresh();
+    }, document.body);
+
+    document.addEventListener('pagehide', () => context.revert(), { once: true });
+    reducedMotion.addEventListener('change', (event) => {
+      if (event.matches) context.revert();
+    }, { once: true });
+  };
+
   const initialize = () => {
     const navShell = document.querySelector('.nav-shell');
     const hero = document.querySelector('.hero');
@@ -899,6 +1017,7 @@
     startCapabilityCinema();
     setupDownloadHub();
     setupMcpGuide();
+    startGsapMotion();
   };
 
   if (document.readyState === 'loading') {

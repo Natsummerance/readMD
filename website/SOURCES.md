@@ -4,6 +4,8 @@
 
 The implementation uses Tailwind CSS v4 as the production CSS build system. A live GitHub repository search for `css framework` ranked `tailwindlabs/tailwindcss` at **97,306 stars**, behind Bootstrap at **174,642 stars**. Tailwind was selected because the site needs a small utility-driven stylesheet, deterministic minified output, and a Cloudflare Pages build without shipping unused JavaScript components.
 
+The progressive motion layer uses GSAP 3.13.0 under its MIT license. The production build copies only GSAP core plus ScrollTrigger, ScrollToPlugin, and Flip into local static assets; it does not use a CDN. Motion is skipped entirely when visitors request reduced motion, while CSS and native anchor navigation remain available if the enhancement assets fail to load.
+
 The four requested research repositories were cloned into the ignored sandbox path `sandbox/vendor/` on commit `HEAD` at the time of review:
 
 - `every-app/open-seo`: used its workflow taxonomy—keyword intent, site audit, competitor insight, backlinks, technical audit, and AI visibility—to structure the promotion checklist rather than copying UI code.
