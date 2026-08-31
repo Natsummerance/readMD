@@ -1,0 +1,486 @@
+{
+  "schema_version": 1,
+  "audit_id": "readmd-v2.3.8-ux-live2d-2026-08-31",
+  "generated_at": "2026-08-31T08:33:23+08:00",
+  "scope": [
+    "skill-management-and-import-ux",
+    "transparent-desktop-pet-windows",
+    "live2d-rendering",
+    "drag-drop-and-batch-processing"
+  ],
+  "method": {
+    "revision_resolution": "git ls-remote --symref <repository> HEAD",
+    "license_resolution": "license file at pinned revision; package metadata or README claims are explicitly downgraded",
+    "source_priority": [
+      "upstream source and license at pinned revision",
+      "official vendor documentation",
+      "upstream README at pinned revision"
+    ],
+    "limitations": [
+      "This is a source and license triage, not a complete legal opinion.",
+      "Repositories were inspected read-only and were not built as part of this audit.",
+      "NOASSERTION means no sufficient repository-root license grant was found at the audited revision."
+    ]
+  },
+  "repositories": [
+    {
+      "id": "omrikais-skill-manager",
+      "category": "skill-management",
+      "repository": "omrikais/skill-manager",
+      "url": "https://github.com/omrikais/skill-manager",
+      "default_branch": "master",
+      "revision": "70c576faa3f89f439d9cf4f521748d80f005e90b",
+      "license": {
+        "spdx": "MIT",
+        "status": "verified-file",
+        "evidence": "https://github.com/omrikais/skill-manager/blob/70c576faa3f89f439d9cf4f521748d80f005e90b/LICENSE"
+      },
+      "reusable_mechanisms": ["canonical skill store", "dry-run import", "diff preview", "version history and rollback", "remote sources"],
+      "risks": ["symlink deployment does not map directly to ReadMD's portable data directory"],
+      "readmd_decision": "Adapt the canonical-store, preview-before-apply, provenance and rollback concepts; do not copy its deployment topology."
+    },
+    {
+      "id": "yibie-skills-manager",
+      "category": "skill-management",
+      "repository": "yibie/skills-manager",
+      "url": "https://github.com/yibie/skills-manager",
+      "default_branch": "main",
+      "revision": "505d1ffe2f2364c378063db2ef2813183f948b5d",
+      "license": {
+        "spdx": "MIT",
+        "status": "verified-file",
+        "evidence": "https://github.com/yibie/skills-manager/blob/505d1ffe2f2364c378063db2ef2813183f948b5d/LICENSE"
+      },
+      "reusable_mechanisms": ["library-collection-mount model", "durable skill identity", "visible divergence states", "recoverable ownership changes"],
+      "risks": ["macOS-first implementation", "agent mounting and symlinks are outside the ReadMD import requirement"],
+      "readmd_decision": "Use durable IDs and explicit missing/shared/diverged states as UX references."
+    },
+    {
+      "id": "gishamer-skill-ui",
+      "category": "skill-management",
+      "repository": "gishamer/skill-ui",
+      "url": "https://github.com/gishamer/skill-ui",
+      "default_branch": "main",
+      "revision": "3a91861f421f2ea0589aa3219e432e28071b21f0",
+      "license": {
+        "spdx": "NOASSERTION",
+        "status": "metadata-claim-only",
+        "claim": "package.json declares MIT, but no repository-root license file was found",
+        "evidence": "https://github.com/gishamer/skill-ui/blob/3a91861f421f2ea0589aa3219e432e28071b21f0/package.json"
+      },
+      "reusable_mechanisms": ["full skill-bundle handling", "validate-before-install", "human UI plus agent CLI", "repository config defaults"],
+      "risks": ["license notice is incomplete at the audited revision"],
+      "readmd_decision": "Concept-only reference until a complete upstream license grant is verified."
+    },
+    {
+      "id": "daim2tsos-skillsmanager",
+      "category": "skill-management",
+      "repository": "daim2tsos/SkillsManager",
+      "url": "https://github.com/daim2tsos/SkillsManager",
+      "default_branch": "main",
+      "revision": "ccc908fb01a6f3b7cac405867bb124e12db321e5",
+      "license": {
+        "spdx": "NOASSERTION",
+        "status": "metadata-claim-only",
+        "claim": "pyproject.toml declares MIT, but no repository-root license text was found",
+        "evidence": "https://github.com/daim2tsos/SkillsManager/blob/ccc908fb01a6f3b7cac405867bb124e12db321e5/pyproject.toml"
+      },
+      "reusable_mechanisms": ["folder-tree preview", "automatic snapshots", "visual diff and rollback", "recoverable trash"],
+      "risks": ["license notice is incomplete", "per-skill Git repositories would add avoidable weight and complexity"],
+      "readmd_decision": "Use tree preview, diff and recoverability concepts; retain ReadMD's lighter snapshot store."
+    },
+    {
+      "id": "dees91-agent-skill-manager",
+      "category": "skill-management",
+      "repository": "dees91/agent-skill-manager",
+      "url": "https://github.com/dees91/agent-skill-manager",
+      "default_branch": "main",
+      "revision": "0b41a765cb7fb40936a1763ead05c25562ce15dd",
+      "license": {
+        "spdx": "MIT",
+        "status": "verified-file",
+        "evidence": "https://github.com/dees91/agent-skill-manager/blob/0b41a765cb7fb40936a1763ead05c25562ce15dd/LICENSE"
+      },
+      "reusable_mechanisms": ["source labels", "reversible enable-disable", "preserve exact original bundles"],
+      "risks": ["fixed provider roots", "public-preview maturity"],
+      "readmd_decision": "Reuse the reversible-state and exact-original preservation principles."
+    },
+    {
+      "id": "floatboatai-nexus-editor",
+      "category": "editor-ux",
+      "repository": "floatboatai/Nexus-Editor",
+      "url": "https://github.com/floatboatai/Nexus-Editor",
+      "default_branch": "main",
+      "revision": "af58999e9f7579428f464d7b22b76585c2ddac95",
+      "license": {
+        "spdx": "NOASSERTION",
+        "status": "readme-claim-only",
+        "claim": "README says MIT; no repository-root license file or package license field was found",
+        "evidence": "https://github.com/floatboatai/Nexus-Editor/blob/af58999e9f7579428f464d7b22b76585c2ddac95/README.md"
+      },
+      "reusable_mechanisms": ["Markdown-as-source model", "optional live preview", "round-trip-safety framing"],
+      "risks": ["not a Skill manager", "license grant not complete at audited revision"],
+      "readmd_decision": "Use only as an editor UX comparison; do not copy code."
+    },
+    {
+      "id": "oniontang-skill-manager",
+      "category": "skill-management",
+      "repository": "oniontang/skill-manager",
+      "url": "https://github.com/oniontang/skill-manager",
+      "default_branch": "main",
+      "revision": "76e3dc656d65c852ee3db74e0663bec0331655bf",
+      "license": {
+        "spdx": "NOASSERTION",
+        "status": "metadata-claim-only",
+        "claim": "package.json declares MIT, but no repository-root license text was found",
+        "evidence": "https://github.com/oniontang/skill-manager/blob/76e3dc656d65c852ee3db74e0663bec0331655bf/package.json"
+      },
+      "reusable_mechanisms": ["folder and ZIP import", "file-tree and rendered-source detail", "multi-target export"],
+      "risks": ["license notice is incomplete", "broad full-disk scanning exceeds ReadMD scope"],
+      "readmd_decision": "Adopt folder/ZIP discovery and preview concepts, bounded to user-selected sources."
+    },
+    {
+      "id": "zhang-skill-manager-client",
+      "category": "skill-management",
+      "repository": "ZhangYiqun018/skill-manager-client",
+      "url": "https://github.com/ZhangYiqun018/skill-manager-client",
+      "default_branch": "main",
+      "revision": "259b5ff2aade7f46ca6a9d8aacfc6401deff7a5d",
+      "license": {
+        "spdx": "MIT",
+        "status": "verified-file",
+        "evidence": "https://github.com/ZhangYiqun018/skill-manager-client/blob/259b5ff2aade7f46ca6a9d8aacfc6401deff7a5d/LICENSE"
+      },
+      "reusable_mechanisms": ["library-discover-targets information architecture", "visual conflict diff", "offline local import boundary"],
+      "risks": ["marketplace and multi-agent installation are outside ReadMD's first-party runtime"],
+      "readmd_decision": "Use its separation between managed library, discovery and destinations as an information-architecture reference."
+    },
+    {
+      "id": "evanfan-desktop-pet",
+      "category": "desktop-pet",
+      "repository": "Evanfan007/desktop-pet",
+      "url": "https://github.com/Evanfan007/desktop-pet",
+      "default_branch": "main",
+      "revision": "1a265174e203169a75d0b525d246f1e26cf0b4e4",
+      "license": {
+        "spdx": "NOASSERTION",
+        "status": "missing",
+        "evidence": "https://github.com/Evanfan007/desktop-pet/tree/1a265174e203169a75d0b525d246f1e26cf0b4e4"
+      },
+      "reusable_mechanisms": ["transparent frameless always-on-top window", "drag IPC", "tray lifecycle", "per-platform packaging"],
+      "risks": ["no license grant", "Electron duplicates ReadMD's existing webview runtime", "sprite asset rights not established"],
+      "readmd_decision": "Behavioral reference only; copy neither code nor assets."
+    },
+    {
+      "id": "kadywilson-desktop-pet",
+      "category": "desktop-pet",
+      "repository": "kadywilson/desktop-pet",
+      "url": "https://github.com/kadywilson/desktop-pet",
+      "default_branch": "main",
+      "revision": "3aaf3a7a0e5e3fa36913182f19a226f355be2d7c",
+      "license": {
+        "spdx": "MIT",
+        "status": "verified-file",
+        "evidence": "https://github.com/kadywilson/desktop-pet/blob/3aaf3a7a0e5e3fa36913182f19a226f355be2d7c/LICENSE"
+      },
+      "reusable_mechanisms": ["local-first pet process", "transparent PySide window", "speech bubble", "sanitized local data bridge"],
+      "risks": ["Windows-only proof", "PySide6 would materially increase ReadMD package size"],
+      "readmd_decision": "Use local-data minimization and bubble behavior; do not add PySide6 solely for the pet."
+    },
+    {
+      "id": "xter-openpet",
+      "category": "desktop-pet",
+      "repository": "X-T-E-R/OpenPet",
+      "url": "https://github.com/X-T-E-R/OpenPet",
+      "default_branch": "master",
+      "revision": "0675f4932a41d66d1b1fdbc6ddd94c46d6bd0ccd",
+      "license": {
+        "spdx": "GPL-3.0-only",
+        "status": "verified-file",
+        "evidence": "https://github.com/X-T-E-R/OpenPet/blob/0675f4932a41d66d1b1fdbc6ddd94c46d6bd0ccd/LICENSE"
+      },
+      "reusable_mechanisms": ["pet package validation", "reduced-motion setting", "local API control", "explicit platform evidence labels"],
+      "risks": ["GPL obligations are not compatible with copying code into an MIT-only distribution without a deliberate relicensing decision", "macOS and Linux behavior is not manually verified upstream", "third-party pet assets need separate rights"],
+      "readmd_decision": "Use concepts and test claims only; do not copy code or assets."
+    },
+    {
+      "id": "jordansbc-pixelpaws",
+      "category": "desktop-pet",
+      "repository": "jordansbc/pixelpaws",
+      "url": "https://github.com/jordansbc/pixelpaws",
+      "default_branch": "main",
+      "revision": "626ef333a3d87a1c8cd7782f5ba956f48ab47ae7",
+      "license": {
+        "spdx": "MIT",
+        "status": "verified-file",
+        "evidence": "https://github.com/jordansbc/pixelpaws/blob/626ef333a3d87a1c8cd7782f5ba956f48ab47ae7/LICENSE"
+      },
+      "reusable_mechanisms": ["state machine separated from rendering", "persistent click-through effects overlay", "DPI and monitor handling", "single-instance tray lifecycle"],
+      "risks": ["Windows-specific WPF and Win32 implementation", "art provenance is not established by the code architecture"],
+      "readmd_decision": "Adapt state-renderer separation and DPI test cases; keep native adapters platform-specific."
+    },
+    {
+      "id": "solt-desktop-pet-framework",
+      "category": "desktop-pet",
+      "repository": "solt-frfr/desktop-pet-framework",
+      "url": "https://github.com/solt-frfr/desktop-pet-framework",
+      "default_branch": "main",
+      "revision": "ae9bbf5b6061f1991260b61d7712be3cb8345157",
+      "license": {
+        "spdx": "NOASSERTION",
+        "status": "missing",
+        "evidence": "https://github.com/solt-frfr/desktop-pet-framework/tree/ae9bbf5b6061f1991260b61d7712be3cb8345157"
+      },
+      "reusable_mechanisms": ["data-driven animation states", "per-platform mod data directories", "drag and drop animation states"],
+      "risks": ["no license grant", "example character references may carry independent rights", "Godot runtime is not lightweight for ReadMD"],
+      "readmd_decision": "Concept-only reference; no code or assets."
+    },
+    {
+      "id": "xiangking-agent-pet",
+      "category": "desktop-pet",
+      "repository": "xiangking/agent-pet",
+      "url": "https://github.com/xiangking/agent-pet",
+      "default_branch": "main",
+      "revision": "de49036a61090ffeaf7c1b3a1720653ad67f61ef",
+      "license": {
+        "spdx": "MIT",
+        "status": "verified-file",
+        "evidence": "https://github.com/xiangking/agent-pet/blob/de49036a61090ffeaf7c1b3a1720653ad67f61ef/LICENSE"
+      },
+      "reusable_mechanisms": ["transparent Tauri window", "pet ID and sprite dimension validation", "settings and tray split", "local activity bridge"],
+      "risks": ["Linux not fully verified upstream", "a Tauri sidecar would duplicate ReadMD's window/runtime stack"],
+      "readmd_decision": "Use validation rules and evidence wording; avoid a second application runtime."
+    },
+    {
+      "id": "latipun-hermes-webui-companion",
+      "category": "desktop-pet",
+      "repository": "latipun7/hermes-webui-companion",
+      "url": "https://github.com/latipun7/hermes-webui-companion",
+      "default_branch": "main",
+      "revision": "4e7c9618fef0a7591a352d4b20fd4c4f0010d209",
+      "license": {
+        "spdx": "NOASSERTION",
+        "status": "missing",
+        "evidence": "https://github.com/latipun7/hermes-webui-companion/tree/4e7c9618fef0a7591a352d4b20fd4c4f0010d209"
+      },
+      "reusable_mechanisms": ["renderer separated from activity provider", "CSS sprite animation", "bubble overlay", "direct-filesystem versus sidecar transport"],
+      "risks": ["no license grant", "depends on externally installed Petdex assets", "Tauri duplication"],
+      "readmd_decision": "Use the provider-renderer boundary concept only; do not copy code or pet assets."
+    },
+    {
+      "id": "nousresearch-hermes-agent",
+      "category": "desktop-pet-core",
+      "repository": "NousResearch/hermes-agent",
+      "url": "https://github.com/NousResearch/hermes-agent",
+      "default_branch": "main",
+      "revision": "4f22543509d1b91dc45bcb369447126c5eb14fb7",
+      "license": {
+        "spdx": "MIT",
+        "status": "verified-file-code-scope",
+        "evidence": "https://github.com/NousResearch/hermes-agent/blob/4f22543509d1b91dc45bcb369447126c5eb14fb7/LICENSE",
+        "asset_caveat": "Downloaded Petdex and locally installed pet art require their own provenance and license."
+      },
+      "reusable_mechanisms": ["192x208 cell sprite contract", "8x9 current and 9x8 legacy atlas inference", "activity-to-state priority", "manifest host pinning", "deterministic atlas normalization and validation"],
+      "risks": ["MIT code license does not establish rights to downloaded pet artwork", "pet.json does not require author or license fields", "sprite generation does not produce a rigged Live2D model"],
+      "readmd_decision": "Adapt the protocol and validation ideas with attribution; import no Hermes or Petdex art."
+    },
+    {
+      "id": "fathah-hermes-desktop",
+      "category": "desktop-shell",
+      "repository": "fathah/hermes-desktop",
+      "url": "https://github.com/fathah/hermes-desktop",
+      "default_branch": "main",
+      "revision": "3aaadb01076a749d7f9389dca4ffce081cf8ebaa",
+      "license": {
+        "spdx": "MIT",
+        "status": "verified-file",
+        "evidence": "https://github.com/fathah/hermes-desktop/blob/3aaadb01076a749d7f9389dca4ffce081cf8ebaa/LICENSE"
+      },
+      "reusable_mechanisms": ["guided setup", "profile isolation", "honest unsigned-package warnings", "secrets-provider boundary"],
+      "risks": ["Electron duplication", "broader agent product is outside ReadMD scope"],
+      "readmd_decision": "Use documentation and secrets-boundary patterns only."
+    },
+    {
+      "id": "rainnoon-oc-claw",
+      "category": "desktop-pet",
+      "repository": "rainnoon/oc-claw",
+      "url": "https://github.com/rainnoon/oc-claw",
+      "default_branch": "main",
+      "revision": "4667c8c082cecf7e38440dfc2f6f89f7a9b6cc90",
+      "license": {
+        "spdx": "MIT",
+        "status": "verified-split-scope",
+        "evidence": "https://github.com/rainnoon/oc-claw/blob/4667c8c082cecf7e38440dfc2f6f89f7a9b6cc90/LICENSE",
+        "asset_caveat": "Art assets are restricted to non-commercial learning, demonstration and personal use."
+      },
+      "reusable_mechanisms": ["activity polling to state machine", "platform-specific window positioning", "collapsed and expanded companion surfaces"],
+      "risks": ["bundled art is not commercially reusable", "macOS notch and Windows taskbar assumptions are not portable to Linux"],
+      "readmd_decision": "Code concepts only; categorically exclude all upstream art."
+    },
+    {
+      "id": "soundpulse-hermes-live2d",
+      "category": "live2d-desktop-pet",
+      "repository": "Soundpulse/hermes-live2d",
+      "url": "https://github.com/Soundpulse/hermes-live2d",
+      "default_branch": "main",
+      "revision": "e996e994fd2c9bc5a89ed6656a8438e238a7b12b",
+      "license": {
+        "spdx": "NOASSERTION",
+        "status": "missing",
+        "evidence": "https://github.com/Soundpulse/hermes-live2d/tree/e996e994fd2c9bc5a89ed6656a8438e238a7b12b"
+      },
+      "reusable_mechanisms": ["Live2D renderer behind a local command surface", "expression and lip-sync mapping", "window state persistence"],
+      "risks": ["no source license", "Apple-Silicon-only and private macOS window APIs", "model is intentionally excluded and must be obtained separately", "Cubism runtime has separate proprietary terms"],
+      "readmd_decision": "Architecture comparison only; copy neither code nor model references."
+    },
+    {
+      "id": "guansss-pixi-live2d-display",
+      "category": "live2d-renderer",
+      "repository": "guansss/pixi-live2d-display",
+      "url": "https://github.com/guansss/pixi-live2d-display",
+      "default_branch": "master",
+      "revision": "31317b37d5e22955a44d5b11f37f421e94a11269",
+      "license": {
+        "spdx": "MIT",
+        "status": "verified-file-wrapper-only",
+        "evidence": "https://github.com/guansss/pixi-live2d-display/blob/31317b37d5e22955a44d5b11f37f421e94a11269/LICENSE",
+        "runtime_caveat": "The required Cubism Core is separately licensed proprietary software."
+      },
+      "reusable_mechanisms": ["high-level Pixi model API", "motion reservation", "separate bundles per Cubism generation", "WebGL rendering"],
+      "risks": ["MIT applies to the wrapper, not Cubism Core or model assets", "PixiJS 6 compatibility and maintenance must be verified", "does not create or rig models"],
+      "readmd_decision": "Candidate renderer only after Cubism clearance, dependency audit and native-WebView proof."
+    },
+    {
+      "id": "live2d-cubism-web-samples",
+      "category": "live2d-official",
+      "repository": "Live2D/CubismWebSamples",
+      "url": "https://github.com/Live2D/CubismWebSamples",
+      "default_branch": "develop",
+      "revision": "b1de66b0b1f1cb881d95fb6158622aeb6a2827bd",
+      "license": {
+        "spdx": "LicenseRef-Live2D-Mixed",
+        "status": "verified-vendor-license",
+        "evidence": "https://github.com/Live2D/CubismWebSamples/blob/b1de66b0b1f1cb881d95fb6158622aeb6a2827bd/LICENSE.md",
+        "scope": "Components: Live2D Open Software License; Core: Live2D Proprietary Software License; listed sample models: Free Material License plus per-model terms."
+      },
+      "reusable_mechanisms": ["official Web SDK integration patterns", "WebGL compatibility matrix"],
+      "risks": ["not an OSI-open-source license bundle", "Core is not stored in GitHub", "sample model rights are separate", "publication licensing may apply"],
+      "readmd_decision": "Use as the authoritative integration reference only; do not vendor sample models."
+    },
+    {
+      "id": "live2d-cubism-native-samples",
+      "category": "live2d-official",
+      "repository": "Live2D/CubismNativeSamples",
+      "url": "https://github.com/Live2D/CubismNativeSamples",
+      "default_branch": "develop",
+      "revision": "a3a64f6cb327aafce380949e0f54fe51c4d773d9",
+      "license": {
+        "spdx": "LicenseRef-Live2D-Mixed",
+        "status": "verified-vendor-license",
+        "evidence": "https://github.com/Live2D/CubismNativeSamples/blob/a3a64f6cb327aafce380949e0f54fe51c4d773d9/LICENSE.md"
+      },
+      "reusable_mechanisms": ["official native renderer examples", "platform compatibility list"],
+      "risks": ["native Core must be downloaded separately", "C++ native integration would create a second, heavier platform matrix"],
+      "readmd_decision": "Do not adopt for V2.3.8; use only to cross-check platform claims."
+    },
+    {
+      "id": "live2d-cubism-web-framework",
+      "category": "live2d-official",
+      "repository": "Live2D/CubismWebFramework",
+      "url": "https://github.com/Live2D/CubismWebFramework",
+      "default_branch": "develop",
+      "revision": "d4da0aa07e47d2c1e4f5fa7ea6047861ea5e5d0b",
+      "license": {
+        "spdx": "LicenseRef-Live2D-Open-Software",
+        "status": "verified-vendor-license",
+        "evidence": "https://github.com/Live2D/CubismWebFramework/blob/d4da0aa07e47d2c1e4f5fa7ea6047861ea5e5d0b/LICENSE.md",
+        "runtime_caveat": "Cubism Core remains proprietary."
+      },
+      "reusable_mechanisms": ["official model, motion, physics and rendering abstractions", "blink and lip-sync effects"],
+      "risks": ["vendor license obligations", "publication agreement may apply", "incompatible-license restrictions require review"],
+      "readmd_decision": "Technical reference only until written license applicability is recorded."
+    },
+    {
+      "id": "live2d-cubism-native-framework",
+      "category": "live2d-official",
+      "repository": "Live2D/CubismNativeFramework",
+      "url": "https://github.com/Live2D/CubismNativeFramework",
+      "default_branch": "develop",
+      "revision": "45de21229a9faab9675525bc59deddbe089b0e95",
+      "license": {
+        "spdx": "LicenseRef-Live2D-Open-Software",
+        "status": "verified-vendor-license",
+        "evidence": "https://github.com/Live2D/CubismNativeFramework/blob/45de21229a9faab9675525bc59deddbe089b0e95/LICENSE.md",
+        "runtime_caveat": "Cubism Core remains proprietary."
+      },
+      "reusable_mechanisms": ["official cross-platform C++ model and renderer abstractions"],
+      "risks": ["substantial native build and ABI burden", "vendor terms", "does not align with ReadMD's existing pywebview footprint"],
+      "readmd_decision": "Reject for V2.3.8's lightweight target."
+    },
+    {
+      "id": "lorisyounger-vpet",
+      "category": "desktop-pet",
+      "repository": "LorisYounger/VPet",
+      "url": "https://github.com/LorisYounger/VPet",
+      "default_branch": "main",
+      "revision": "b6f7b00363529bafe3e7fc14bf51e17640941691",
+      "license": {
+        "spdx": "Apache-2.0",
+        "status": "verified-file-code-scope",
+        "evidence": "https://github.com/LorisYounger/VPet/blob/b6f7b00363529bafe3e7fc14bf51e17640941691/LICENSE",
+        "asset_caveat": "The README states that bundled animations have separate copyright and authorization terms."
+      },
+      "reusable_mechanisms": ["core separated from Windows shell", "mod data model", "animation state system"],
+      "risks": ["WPF and Windows-specific", "animation assets are not covered by the code license"],
+      "readmd_decision": "Use modularity concepts only; copy no animations or character designs."
+    },
+    {
+      "id": "tauri-apps-tauri",
+      "category": "desktop-window-framework",
+      "repository": "tauri-apps/tauri",
+      "url": "https://github.com/tauri-apps/tauri",
+      "default_branch": "dev",
+      "revision": "dd6befda925845fc74ca595d6d42de6c49580dd8",
+      "license": {
+        "spdx": "Apache-2.0 OR MIT",
+        "status": "verified-metadata-and-mit-text",
+        "evidence": "https://github.com/tauri-apps/tauri/blob/dd6befda925845fc74ca595d6d42de6c49580dd8/Cargo.toml"
+      },
+      "reusable_mechanisms": ["native system webviews", "transparent secondary windows", "cross-platform bundling", "Rust command boundary"],
+      "risks": ["introducing Tauri beside pywebview creates another runtime, toolchain and release matrix"],
+      "readmd_decision": "Do not add a Tauri sidecar for V2.3.8; use it only as a window-behavior reference."
+    }
+  ],
+  "release_blockers": [
+    {
+      "id": "live2d-license-clearance",
+      "severity": "P0",
+      "condition": "Written determination of the applicable Live2D Open Software, Proprietary Software and Publication/Expandable Application terms is absent.",
+      "exit_criteria": "Store the applicable agreement or written vendor determination, NOTICE wording, allowed runtime redistribution scope and any fee/review result in release evidence."
+    },
+    {
+      "id": "original-model-rights",
+      "severity": "P0",
+      "condition": "The shipped model lacks a complete original-source and rights packet.",
+      "exit_criteria": "Provide layered source, Cubism source, runtime export, author/commission contract, prompt and edit provenance, third-party-material declaration, SHA-256 manifest and redistribution grant."
+    },
+    {
+      "id": "native-window-evidence",
+      "severity": "P0",
+      "condition": "Transparent, always-on-top, click-through, drag-drop and multi-monitor behavior has not passed on every advertised native platform.",
+      "exit_criteria": "Bind each platform/architecture result to candidate commit, artifact hash, OS version and evidence. Browser fallback does not count."
+    },
+    {
+      "id": "live2d-runtime-integrity",
+      "severity": "P1",
+      "condition": "Cubism/Pixi dependencies and model resources are not pinned, hashed, offline-loadable and covered by SBOM/NOTICE.",
+      "exit_criteria": "Pin exact runtime versions, vendor only authorized files, verify hashes and prohibit runtime CDN/model downloads."
+    },
+    {
+      "id": "lightweight-budget",
+      "severity": "P1",
+      "condition": "The pet increases initial startup work or duplicates the desktop runtime.",
+      "exit_criteria": "No Electron/Tauri/PySide sidecar; pet disabled by default, assets lazy-loaded, no first-screen request, idle CPU and package-size budgets pass."
+    }
+  ]
+}
