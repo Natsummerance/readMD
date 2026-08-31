@@ -11,6 +11,7 @@ from src.readmd_modules.pet import (
     PetBatchQueue,
     PetController,
     NativePetProbe,
+    PetProbeDragBridge,
     verify_model_bundle,
 )
 
@@ -132,3 +133,41 @@ def test_native_probe_only_claims_capabilities_available_in_current_backend():
     assert report["always_on_top"] is True
     assert report["click_through"] == "manual-verification-required"
     assert report["release_ready"] is False
+
+
+def test_native_probe_uses_pointer_offset_drag_without_native_easy_drag_fighting():
+    class Window:
+        x = 120
+        y = 80
+
+        def __init__(self):
+            self.moves = []
+
+        def move(self, x, y):
+            self.moves.append((x, y))
+            self.x, self.y = x, y
+
+    window = Window()
+    bridge = PetProbeDragBridge(window)
+
+    bridge.begin_drag(160, 120)
+    report = bridge.move_drag(200, 180)
+
+    assert report == {"ok": True, "x": 160, "y": 140}
+    assert window.moves == [(160, 140)]
+    assert bridge.end_drag() == {"ok": True}
+
+
+def test_native_probe_disables_pywebview_automatic_drag_and_exposes_bridge():
+    class CompatibleWebview:
+        @staticmethod
+        def create_window(title, **kwargs):
+            return type("Window", (), {"x": 0, "y": 0, "move": lambda self, x, y: None})()
+
+        @staticmethod
+        def start(*args, **kwargs):
+            return None
+
+    window = NativePetProbe.create_probe_window(CompatibleWebview)
+
+    assert window._pet_probe_bridge is not None
