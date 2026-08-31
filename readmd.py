@@ -53,10 +53,12 @@ from src.readmd_modules.validators import validate_file_path, validate_command, 
 from src.readmd_modules.skills import SkillError, SkillRegistry, default_skill_roots
 from src.readmd_modules import skill_import as _skill_import
 from src.readmd_modules.crypto import store_credential as _store_credential, delete_credential as _delete_credential
+from src.readmd_modules.pet import PetBatchQueue, PetController, verify_model_bundle
 from src.readmd_core.service import ReadMDCoreService
 from src.readmd_core import upstream as _upstream_sources
 
 APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+PET_MODEL_DIR = os.path.join(APP_DIR, 'assets', 'pet', 'model')
 
 from src.readmd_core.config import (
     DATA_DIR,
@@ -2684,6 +2686,10 @@ class Api(object):
         self._web_private_grants = {}
         self._clipboard_lock = threading.Lock()
         self._clipboard_tokens = {}
+        # The optional pet starts disabled and cannot be enabled until a
+        # verified, redistributable original model bundle is present.
+        self._pet_controller = PetController()
+        self._pet_queue = PetBatchQueue()
 
     @staticmethod
     def _web_origin(url):
@@ -3754,6 +3760,41 @@ class Api(object):
 
 
         return load_json(SETTINGS_FILE, {})
+
+    def _pet_model_status(self):
+        try:
+            return verify_model_bundle(PET_MODEL_DIR)
+        except Exception:
+            return {'ready': False, 'code': 'model_validation_failed'}
+
+    def get_pet_runtime_status(self):
+        status = self._pet_controller.snapshot()
+        status['model'] = self._pet_model_status()
+        return status
+
+    def configure_pet(self, settings):
+        if not isinstance(settings, dict):
+            return {'ok': False, 'code': 'invalid_pet_settings'}
+        if 'reduced_motion' in settings:
+            self._pet_controller.set_reduced_motion(bool(settings['reduced_motion']))
+        if settings.get('enabled') is False:
+            return {'ok': True, 'runtime': self._pet_controller.disable()}
+        if settings.get('enabled') is True:
+            model = self._pet_model_status()
+            if not model.get('ready'):
+                return {'ok': False, 'code': model.get('code', 'model_not_ready')}
+            return {'ok': True, 'runtime': self._pet_controller.enable(), 'model': model}
+        return {'ok': True, 'runtime': self._pet_controller.snapshot()}
+
+    def enqueue_pet_files(self, paths):
+        if not isinstance(paths, (list, tuple)):
+            return {'ok': False, 'code': 'invalid_pet_batch'}
+        if len(paths) > 128 or any(not isinstance(path, str) or not path for path in paths):
+            return {'ok': False, 'code': 'invalid_pet_batch'}
+        return {'ok': True, 'tasks': self._pet_queue.submit(paths)}
+
+    def get_pet_batch(self):
+        return self._pet_queue.grouped_snapshot()
 
     def save_settings(self, settings):
         cur = load_json(SETTINGS_FILE, {})
