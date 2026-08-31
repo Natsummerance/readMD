@@ -70,7 +70,7 @@ The MCP setup command writes a workspace-scoped configuration. Read-only resourc
 - Core 数据目录由桌面应用决定（Windows 通常位于 `%APPDATA%\\ReadMD`，macOS 位于 `~/Library/Application Support/ReadMD`，Linux 位于 `${XDG_DATA_HOME:-~/.local/share}/ReadMD`）。扩展设置只保存连接方式，不复制凭据。
 - “Core 无法连接”：执行 `Developer: Reload Window`，确认没有第二个实例占用端口，再从设置中重新连接或选择自动启动。
 - “没有模型”：检查 Provider 的协议、Base URL、模型发现权限和凭据 ID；先运行连接测试。
-- “Skill 不显示”：检查 `SKILL.md` frontmatter、目录名、description 是否以 `Use when` 开头，以及是否被禁用；GitHub 导入后可在桌面工作台启用。
+- “Skill 不显示”：检查 `SKILL.md` frontmatter、目录名、description 是否为空，以及是否被禁用；description 可以使用任意语言。GitHub 导入后可在桌面工作台启用。
 - “导入被阻止”：重新预览并检查 commit、许可证、路径和脚本提示。压缩包超限、符号链接、目录穿越和无许可证内容会被拒绝。
 - “导出失败”：确认目标目录可写，并安装对应的系统转换依赖；错误消息不会包含 API Key。
 

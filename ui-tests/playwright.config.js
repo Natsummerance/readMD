@@ -1,4 +1,4 @@
-const { defineConfig } = require('@playwright/test');
+const { defineConfig, devices } = require('@playwright/test');
 const uiPort = Number(process.env.READMD_UI_PORT || 28473);
 
 module.exports = defineConfig({
@@ -25,6 +25,8 @@ module.exports = defineConfig({
   },
   projects: [
     { name: 'desktop', use: { viewport: { width: 1440, height: 900 } } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'], viewport: { width: 1440, height: 900 } } },
+    { name: 'webkit', use: { ...devices['Desktop Safari'], viewport: { width: 1440, height: 900 } } },
     { name: 'mobile', use: { viewport: { width: 390, height: 844 }, hasTouch: true } },
   ],
 });

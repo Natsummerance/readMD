@@ -1365,7 +1365,8 @@ test('browser mode opens, edits, and saves a local document end to end', async (
     await page.locator('#edit-save').click();
 
     await expect(page.locator('#toast')).toContainText(/已保存/);
-    await page.waitForFunction(() => state.editing === false && state.original.includes('Saved live'));
+    await page.waitForFunction(() => state.editing === true && state.original.includes('Saved live'));
+    await expect(page.locator('#edit-bar')).toBeVisible();
     const importedPath = await page.evaluate(() => state.file);
     await expect(await fs.readFile(importedPath, 'utf8')).toContain('Authorized browser write');
     await expect(await fs.readFile(documentPath, 'utf8')).toContain('Original body');

@@ -37,7 +37,7 @@ jobs:
         working-directory: ui-tests
         run: |
           npm ci
-          npx playwright install chromium
+          npx playwright install chromium firefox webkit
       - name: Run Windows regression suite
         run: |
           python tests/test_fix_test.py
@@ -652,8 +652,8 @@ jobs:
           python -m pip install --disable-pip-version-check pillow numpy
           npm ci
         working-directory: ui-tests
-      - name: Install Chromium
-        run: npx playwright install chromium
+      - name: Install Playwright browsers
+        run: npx playwright install chromium firefox webkit
         working-directory: ui-tests
       - name: Resolve release evidence
         shell: pwsh
