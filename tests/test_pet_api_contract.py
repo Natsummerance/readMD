@@ -46,6 +46,21 @@ def test_hermes_sprite_uses_compact_cell_scale_when_no_user_scale_is_saved(monke
     assert api._pet_preferences()["info"]["scale"] == 0.33
 
 
+def test_pet_plugin_file_picker_returns_only_a_user_selected_zip(monkeypatch):
+    api = readmd.Api()
+
+    class Window:
+        def create_file_dialog(self, mode, file_types=()):
+            assert file_types == ('ReadMD desktop pet (*.zip)',)
+            return ('C:/downloads/readmd-pet.zip',)
+
+    fake_webview = type('Webview', (), {'OPEN_DIALOG': 1})
+    monkeypatch.setitem(__import__('sys').modules, 'webview', fake_webview)
+    api._window = Window()
+
+    assert api.choose_pet_plugin() == 'C:/downloads/readmd-pet.zip'
+
+
 def test_api_exposes_non_destructive_pet_batch_queue(tmp_path):
     source = tmp_path / "note.md"
     source.write_text("unchanged", encoding="utf-8")

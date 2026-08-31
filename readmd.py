@@ -3020,6 +3020,25 @@ class Api(object):
             logging.exception('choose Skill source failed: %s', kind)
             return None
 
+    def choose_pet_plugin(self):
+        """Choose an explicit optional desktop-pet package through the native dialog.
+
+        This returns a path only; :meth:`install_pet_plugin` still requires the
+        caller's separate confirmation and verifies the package manifest.
+        """
+        import webview
+        if self._window is None:
+            return None
+        try:
+            files = self._window.create_file_dialog(
+                webview.OPEN_DIALOG,
+                file_types=('ReadMD desktop pet (*.zip)',),
+            )
+            return files[0] if files else None
+        except Exception:
+            logging.exception('choose desktop pet plugin failed')
+            return None
+
     def authorize_clipboard_read(self):
         """Grant one short-lived clipboard read after an explicit UI action."""
         token = secrets.token_urlsafe(18)
