@@ -24,7 +24,7 @@ import urllib.request
 import urllib.parse
 import uuid
 
-from src.readmd_core.versioning import compare_versions, parse_version
+from src.readmd_core.versioning import compare_versions, parse_version, select_update_release
 
 GITHUB_REPO = 'Natsummerance/readMD'
 GITHUB_API_LATEST = f'https://api.github.com/repos/{GITHUB_REPO}/releases/latest'
@@ -268,15 +268,8 @@ def check_update(current_version, timeout=4):
     for url in urls_to_try:
         try:
             payload = _fetch_release_json(url, timeout=timeout)
-            if isinstance(payload, list):
-                candidates = [item for item in payload if item.get('tag_name') and not item.get('draft')]
-                data = max(
-                    candidates,
-                    key=lambda item: parse_version(item.get('tag_name')) or ((0, 0, 0), ()),
-                    default=None,
-                )
-            else:
-                data = payload
+            releases = payload if isinstance(payload, list) else [payload]
+            data = select_update_release(current_version, releases)
             if data and data.get('tag_name'):
                 break
         except Exception as e:

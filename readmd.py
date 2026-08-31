@@ -47,10 +47,12 @@ from src.readmd_core.static_assets import resolve_asset
 from src.readmd_core.safe_open import safe_external_url, safe_file_target
 from src.readmd_core.versioning import compare_versions as _version_compare
 from src.readmd_core.versioning import parse_version as _version_parse
+from src.readmd_core.versioning import select_update_release as _select_update_release
 import src.readmd_modules as RM
 from src.readmd_modules.validators import validate_file_path, validate_command, paths_within
 from src.readmd_modules.skills import SkillError, SkillRegistry, default_skill_roots
 from src.readmd_modules import skill_import as _skill_import
+from src.readmd_modules.crypto import store_credential as _store_credential, delete_credential as _delete_credential
 from src.readmd_core.service import ReadMDCoreService
 from src.readmd_core import upstream as _upstream_sources
 
@@ -140,12 +142,7 @@ def check_latest_release():
         with _urlreq.urlopen(req, timeout=4) as resp:
             payload = json.loads(resp.read(1024 * 1024).decode('utf-8'))
         releases = payload if isinstance(payload, list) else [payload]
-        releases = [item for item in releases if item.get('tag_name') and not item.get('draft')]
-        latest_release = max(
-            releases,
-            key=lambda item: _parse_version(item.get('tag_name')) or ((0, 0, 0), ()),
-            default=None,
-        )
+        latest_release = _select_update_release(VERSION, releases)
         tag = str(latest_release.get('tag_name') or '') if latest_release else ''
         current = _parse_version(VERSION)
         if latest_release and current and (_compare_versions(tag, VERSION) or 0) > 0:

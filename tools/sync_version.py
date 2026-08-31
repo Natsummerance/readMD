@@ -159,6 +159,13 @@ def bundle_readmd_boot():
         out.write(body if body.endswith((b'\n', b'\r')) else body + b'\n')
 
 
+def _env_for_compare(env_text: str) -> str:
+    # BUILD_DATE 随当天日期漂移，不代表失步；比对时剔除，避免时间依赖的假失败。
+    lines = [ln for ln in env_text.splitlines()
+             if not ln.strip().startswith('READMD_VERSION_BUILD_DATE=')]
+    return '\n'.join(lines).strip()
+
+
 def sync_all(target_ver: str, check_only: bool = False) -> bool:
     target_ver = target_ver.strip().lstrip('vV')
     major, minor, patch, extra = parse_semver(target_ver)
@@ -178,7 +185,7 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
         with open(env_path, 'r', encoding='utf-8') as f:
             old_env = f.read()
     new_env = generate_env_block(target_ver, old_env)
-    if old_env.strip() != new_env.strip():
+    if _env_for_compare(old_env) != _env_for_compare(new_env):
         diffs.append((env_path, old_env, new_env))
 
     example_path = os.path.join(ROOT, '.env.example')
@@ -187,7 +194,7 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
         with open(example_path, 'r', encoding='utf-8') as f:
             old_example = f.read()
     new_example = generate_env_block(target_ver, '')
-    if old_example.strip() != new_example.strip():
+    if _env_for_compare(old_example) != _env_for_compare(new_example):
         diffs.append((example_path, old_example, new_example))
 
     # VERSION

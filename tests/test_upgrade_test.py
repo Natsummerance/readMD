@@ -7,6 +7,7 @@ sys.path.insert(0, ROOT)
 import readmd
 import unittest
 from unittest import mock
+import json
 
 
 
@@ -58,6 +59,40 @@ class TestUpgradeCheck(unittest.TestCase):
         with mock.patch('urllib.request.urlopen', side_effect=OSError('offline'), create=True):
             self.assertIsNone(readmd.check_latest_release())
         self.assertTrue(readmd._UPGRADE_CACHE['done'])
+        readmd._UPGRADE_CACHE['done'] = False
+        readmd._UPGRADE_CACHE['result'] = None
+
+    def test_startup_beta_detects_formal_release(self):
+        payload = json.dumps([
+            {'tag_name': 'v2.3.7-beta.5', 'draft': False, 'prerelease': True},
+            {'tag_name': 'v2.3.7', 'draft': False, 'prerelease': False,
+             'html_url': 'https://github.com/Natsummerance/readMD/releases/tag/v2.3.7'},
+        ]).encode('utf-8')
+        readmd._UPGRADE_CACHE.update(done=False, result=None)
+        with mock.patch.object(readmd, 'VERSION', '2.3.7-beta.3'), mock.patch(
+                'urllib.request.urlopen',
+                return_value=mock.MagicMock(
+                    __enter__=lambda s: s,
+                    __exit__=lambda *a: None,
+                    read=lambda n: payload),
+                create=True):
+            result = readmd.check_latest_release()
+        self.assertEqual(result['latest'], 'v2.3.7')
+
+    def test_startup_formal_build_ignores_beta_release(self):
+        payload = json.dumps([
+            {'tag_name': 'v2.3.7', 'draft': False, 'prerelease': False},
+            {'tag_name': 'v2.3.8-beta.1', 'draft': False, 'prerelease': True},
+        ]).encode('utf-8')
+        readmd._UPGRADE_CACHE.update(done=False, result=None)
+        with mock.patch.object(readmd, 'VERSION', '2.3.7'), mock.patch(
+                'urllib.request.urlopen',
+                return_value=mock.MagicMock(
+                    __enter__=lambda s: s,
+                    __exit__=lambda *a: None,
+                    read=lambda n: payload),
+                create=True):
+            self.assertIsNone(readmd.check_latest_release())
         readmd._UPGRADE_CACHE['done'] = False
         readmd._UPGRADE_CACHE['result'] = None
 
