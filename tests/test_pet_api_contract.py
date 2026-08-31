@@ -182,3 +182,29 @@ def test_api_rejects_invalid_pet_clipboard_image(monkeypatch, tmp_path):
     assert api._open_pet_clipboard({"text": "", "image_png": "not-base64", "paths": []}) == {
         "type": "clipboard", "accepted": 0, "code": "clipboard_image_write_failed"
     }
+
+
+def test_pet_mixed_clipboard_keeps_text_and_queues_each_file_kind(monkeypatch, tmp_path):
+    markdown = tmp_path / "from-clipboard.md"
+    document = tmp_path / "from-clipboard.pdf"
+    markdown.write_text("# existing", encoding="utf-8")
+    document.write_bytes(b"pdf")
+    api = readmd.Api()
+    opened, notified = [], []
+    monkeypatch.setattr(readmd, "DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setattr(readmd, "push_control", opened.append)
+    monkeypatch.setattr(readmd, "push_pet_batch", lambda paths: notified.append(list(paths)) or True)
+    monkeypatch.setattr(api, "_record_pet_event", lambda _event: None)
+
+    result = api._open_pet_clipboard({
+        "text": "# copied text", "image_png": "", "paths": [str(markdown), str(document)],
+    })
+
+    assert result["accepted"] == 3
+    assert result["batch"] == {
+        "type": "drop", "accepted": 2, "queued": {"markdown": 1, "convert": 1},
+        "requires_confirmation": True,
+    }
+    assert notified == [[str(markdown), str(document)]]
+    assert len(opened) == 1
+    assert open(opened[0], encoding="utf-8").read() == "# copied text"

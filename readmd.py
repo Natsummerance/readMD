@@ -3991,8 +3991,17 @@ class Api(object):
             return self._open_pet_clipboard(command)
         if command.get('type') != 'drop':
             return command
+        return self._queue_pet_drop(command.get('paths', []))
+
+    def _queue_pet_drop(self, raw_paths):
+        """Classify local file paths and request the shared confirmation UI.
+
+        Both a physical drop and a clipboard file-list use this helper.  It
+        deliberately queues rather than opening or converting anything, so a
+        mixed clipboard cannot make one category bypass the user's decision.
+        """
         paths = []
-        for raw_path in command.get('paths', []):
+        for raw_path in raw_paths or ():
             try:
                 path = os.path.abspath(os.fspath(raw_path))
             except (TypeError, ValueError):
@@ -4030,16 +4039,20 @@ class Api(object):
         self._pet_command_thread.start()
 
     def _open_pet_clipboard(self, command):
-        """Materialize an explicit clipboard action under ReadMD data only."""
+        """Split an explicit clipboard action without discarding any type.
+
+        A Windows clipboard can carry CF_HDROP plus text and an image at the
+        same time. File entries enter the user-confirmed batch queue while the
+        textual/image portion becomes one local Markdown note. Neither branch
+        overwrites the other, and a bad image does not suppress valid files.
+        """
         text = command.get('text') or ''
         image = command.get('image_png') or ''
         paths = command.get('paths') or []
-        if paths:
-            self._pet_bridge.command_path.write_text(
-                json.dumps({'command': {'type': 'drop', 'paths': paths}}), encoding='utf-8'
-            )
-            return self._drain_pet_command()
+        drop_result = self._queue_pet_drop(paths) if paths else {'type': 'drop', 'accepted': 0}
         if not text and not image:
+            if drop_result.get('accepted'):
+                return {'type': 'clipboard', 'accepted': drop_result['accepted'], 'batch': drop_result}
             return {'type': 'clipboard', 'accepted': 0}
         inbox = os.path.join(DATA_DIR, 'pet', 'clipboard')
         os.makedirs(inbox, exist_ok=True)
@@ -4056,12 +4069,20 @@ class Api(object):
                 relative = os.path.basename(image_path)
                 content = (content + '\n\n' if content else '') + '![' + relative + '](' + relative + ')\n'
             except (OSError, ValueError, UnicodeError, binascii.Error):
+                if drop_result.get('accepted'):
+                    return {
+                        'type': 'clipboard', 'accepted': drop_result['accepted'],
+                        'batch': drop_result, 'code': 'clipboard_image_write_failed',
+                    }
                 return {'type': 'clipboard', 'accepted': 0, 'code': 'clipboard_image_write_failed'}
         markdown_path = os.path.join(inbox, 'clipboard-%s.md' % stamp)
         _write_md(markdown_path, content)
         push_control(markdown_path)
         self._record_pet_event('work_succeeded')
-        return {'type': 'clipboard', 'accepted': 1, 'path': markdown_path}
+        return {
+            'type': 'clipboard', 'accepted': 1 + drop_result.get('accepted', 0),
+            'path': markdown_path, 'batch': drop_result if drop_result.get('accepted') else None,
+        }
 
     def save_settings(self, settings):
         cur = load_json(SETTINGS_FILE, {})
