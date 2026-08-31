@@ -31,7 +31,7 @@ class TestUniversalOpenAndAiEcosystem(unittest.TestCase):
         expected_exts = [
             '.toml', '.yaml', '.yml', '.json', '.ini', '.cfg', '.conf',
             '.bat', '.cmd', '.ps1', '.sh', '.py', '.js', '.ts', '.rs',
-            '.go', '.c', '.cpp', '.java', '.kt', '.sql', '.html', '.css',
+            '.go', '.c', '.cpp', '.java', '.kt', '.sql', '.css',
             '.log', '.csv', '.tsv'
         ]
         for ext in expected_exts:

@@ -11,6 +11,10 @@ v2.1.1 质量升级：
 
 import os
 import re
+import shutil
+import subprocess
+import tempfile
+import time
 from collections import Counter
 
 _engine = None
@@ -43,7 +47,7 @@ EXT_TO_LANG = {
     '.rs': 'rust', '.go': 'go', '.rb': 'ruby', '.php': 'php',
     '.swift': 'swift', '.lua': 'lua', '.r': 'r', '.m': 'objectivec',
     '.dart': 'dart', '.sql': 'sql', '.dockerfile': 'dockerfile', '.makefile': 'makefile',
-    '.gradle': 'groovy', '.html': 'html', '.htm': 'html', '.css': 'css',
+    '.gradle': 'groovy', '.css': 'css',
     '.scss': 'scss', '.sass': 'sass', '.less': 'less', '.vue': 'vue',
     '.svelte': 'svelte', '.log': 'log', '.out': 'log', '.err': 'log',
     '.diff': 'diff', '.patch': 'diff', '.gitignore': 'gitignore',
@@ -54,6 +58,8 @@ EXT_TO_LANG = {
 }
 
 _MATH_CHARS = set('+-*/=<>^_~%∑∫√∞≈≠±×÷∂∇∏πθαβγδφψωλμνστρΔΩΦΓΛεηζξοπς')
+# 强数学算子：连字符/百分号不算（日期、电话、百分数会被密度误判成公式）
+_STRONG_MATH = set('=+*/^_~<>' + '∑∫√∞≈≠±×÷∂∇∏π')
 
 
 def load():
@@ -136,17 +142,30 @@ def code2md(path, ext=None):
     return "\n".join(out)
 
 
-def convert_verbose(path):
+def convert_verbose(path, form_tables=True):
     """返回 (text, engine, error)。engine: 'docx' | 'pdf' | 'csv' | 'code' | 'txtmd' | 'texmd' | 'markitdown' | ''"""
     ext = os.path.splitext(path)[1].lower()
     if ext == '.docx':
         try:
-            return docx2md(path), 'docx', None
+            return docx2md(path, form_tables=form_tables), 'docx', None
         except Exception as e:  # noqa: BLE001
             try:
                 return _markitdown_convert(path), 'markitdown', None
             except Exception as e2:  # noqa: BLE001
                 return '', '', '%s（MarkItDown 兜底也失败：%s）' % (e, e2)
+    if ext == '.doc':
+        text, err = doc2md(path, form_tables=form_tables)
+        if err is None:
+            return text, 'doc', None
+        try:
+            md = _markitdown_convert(path)
+        except Exception as e2:  # noqa: BLE001
+            return '', '', '%s（MarkItDown 兜底也失败：%s）' % (err, e2)
+        # MarkItDown 对未知二进制会原样吐字节当"成功"，含 NUL 的输出视为垃圾，
+        # 回落到上面的稳定错误码（真 RTF 文本不含 NUL，仍可被兜底救回）。
+        if md and '\x00' not in md:
+            return md, 'markitdown', None
+        return '', '', err
     if ext == '.pdf':
         try:
             return pdf2md(path), 'pdf', None
@@ -191,6 +210,124 @@ def convert_verbose(path):
         except Exception:
             return '', '', str(e)
 
+
+
+OLE2_MAGIC = b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'
+
+
+def _find_soffice():
+    """定位 LibreOffice soffice 可执行文件；找不到返回 None。"""
+    exe = shutil.which('soffice') or shutil.which('soffice.exe')
+    if exe:
+        return exe
+    candidates = (
+        r'C:\Program Files\LibreOffice\program\soffice.exe',
+        r'C:\Program Files (x86)\LibreOffice\program\soffice.exe',
+        '/usr/bin/soffice',
+        '/usr/local/bin/soffice',
+        '/Applications/LibreOffice.app/Contents/MacOS/soffice',
+    )
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    return None
+
+
+_WORD_RETRY_HRESULTS = frozenset({
+    -2147418111,  # RPC_E_CALL_REJECTED：调用被呼叫方拒绝（Word 冷启动/忙）
+    -2147417846,  # RPC_E_SERVERCALL_RETRYLATER：服务器忙，稍后重试
+    -2146959355,  # CO_E_SERVER_EXEC_FAILURE：服务器启动失败（冷启动竞争）
+})
+
+
+def _word_com_retry(fn, attempts=4, delays=(0.5, 1.0, 2.0)):
+    """对 Word COM 暂态故障（调用被拒 / 服务器忙 / 启动失败）做有界重试。
+
+    其余异常立即抛出；重试耗尽后抛出最后一次异常。
+    """
+    for attempt in range(attempts):
+        try:
+            return fn()
+        except Exception as e:  # noqa: BLE001
+            hresult = getattr(e, 'hresult', None)
+            if hresult is None and e.args and isinstance(e.args[0], int):
+                hresult = e.args[0]
+            if hresult not in _WORD_RETRY_HRESULTS or attempt == attempts - 1:
+                raise
+            time.sleep(delays[min(attempt, len(delays) - 1)])
+
+
+def _doc2docx_word_com(src, out_dir):
+    """用本机 Word COM 把 .doc 转成 .docx；无 pywin32/Word 时返回 None。"""
+    try:
+        import pythoncom
+        import win32com.client
+    except ImportError:
+        return None
+    pythoncom.CoInitialize()
+    word = None
+    try:
+        word = _word_com_retry(
+            lambda: win32com.client.DispatchEx('Word.Application'))
+        word.Visible = False
+        word.DisplayAlerts = 0
+
+        def _open_and_save():
+            doc = word.Documents.Open(os.path.abspath(src), ReadOnly=True)
+            try:
+                out = os.path.abspath(os.path.join(
+                    out_dir, os.path.splitext(os.path.basename(src))[0] + '.docx'))
+                doc.SaveAs2(out, FileFormat=16)  # wdFormatXMLDocument
+            finally:
+                doc.Close(False)
+            return out
+
+        out = _word_com_retry(_open_and_save)
+        return out if os.path.isfile(out) else None
+    finally:
+        if word is not None:
+            word.Quit()
+        pythoncom.CoUninitialize()
+
+
+def _doc2docx_soffice(src, out_dir):
+    """用 LibreOffice headless 把 .doc 转成 .docx；未安装时返回 None。"""
+    exe = _find_soffice()
+    if not exe:
+        return None
+    subprocess.run(
+        [exe, '--headless', '--convert-to', 'docx', '--outdir', out_dir,
+         os.path.abspath(src)],
+        timeout=180, capture_output=True, check=True)
+    out = os.path.join(out_dir, os.path.splitext(os.path.basename(src))[0] + '.docx')
+    return out if os.path.isfile(out) else None
+
+
+def doc2md(path, form_tables=True):
+    """Word 97-2003 .doc 专用解析：magic bytes 校验 → Word COM → soffice 兜底。
+
+    返回 (text, error)；error 为 None 表示成功。
+    """
+    try:
+        with open(path, 'rb') as f:
+            magic = f.read(8)
+    except OSError as e:
+        return '', 'doc-read-failed：%s' % e
+    if magic != OLE2_MAGIC:
+        return '', 'doc-not-ole2：不是有效的 Word 97-2003 文档（magic bytes 不匹配）'
+    last = None
+    with tempfile.TemporaryDirectory(prefix='readmd-doc-') as td:
+        for converter in (_doc2docx_word_com, _doc2docx_soffice):
+            try:
+                out = converter(path, td)
+            except Exception as e:  # noqa: BLE001
+                last = e
+                continue
+            if out and os.path.isfile(out):
+                return docx2md(out, form_tables=form_tables), None
+    if last is not None:
+        return '', 'doc-convert-failed：转换引擎执行失败（%s）' % last
+    return '', 'doc-no-engine：本机未找到可用的 DOC 转换引擎（需要安装 Microsoft Word 或 LibreOffice）'
 
 
 def _markitdown_convert(path):
@@ -583,26 +720,68 @@ def _para_inline_with_math(p, doc=None):
     return res
 
 
-def _table_to_md(tbl, doc=None):
-    """w:tbl → 规整管道表（按实际 tc 遍历，支持单元格内公式与合并去重）。"""
+def _form_table_items(rows):
+    """两列短文本表 → key-value 列表项；不满足启发式条件返回空列表。"""
+    if len(rows) < 2:
+        return []
+    for r in rows:
+        if len(r) != 2 or not r[0] or len(r[0]) > 30 or len(r[1]) > 30:
+            return []
+        if r[0].isdigit():
+            return []
+        for s in r:
+            if '$' in s or '](' in s or s.startswith('`'):
+                return []
+    return ['- **%s**: %s' % (r[0], r[1]) if r[1] else '- **%s**' % r[0] for r in rows]
+
+
+def _table_to_md(tbl, doc=None, form_tables=True):
+    """w:tbl → 规整管道表（展开 gridSpan/vMerge 合并单元格，保持列对齐）。"""
     from docx.table import _Cell
+    ns = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
     rows = []
-    for tr in tbl._tbl.findall('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tr'):
-        cells = []
-        seen = set()
-        for tc in tr.findall('{http://schemas.openxmlformats.org/wordprocessingml/2006/main}tc'):
-            if id(tc) in seen:
-                continue
-            seen.add(id(tc))
+    restart_texts = {}
+    for tr in tbl._tbl.findall(ns + 'tr'):
+        parsed = []
+        col = 0
+        for tc in tr.findall(ns + 'tc'):
             c = _Cell(tc, tbl)
             txt = '\n'.join(_para_inline_with_math(pp, doc) for pp in c.paragraphs)
             txt = txt.replace('\n', ' ').replace('|', '\\|').strip()
+            span = 1
+            vmerge = ''
+            tc_pr = tc.find(ns + 'tcPr')
+            if tc_pr is not None:
+                gs = tc_pr.find(ns + 'gridSpan')
+                if gs is not None:
+                    try:
+                        span = max(1, int(gs.get(ns + 'val') or gs.get('val') or '1'))
+                    except (TypeError, ValueError):
+                        span = 1
+                vm = tc_pr.find(ns + 'vMerge')
+                if vm is not None:
+                    vmerge = (vm.get(ns + 'val') or vm.get('val') or 'continue').lower()
+                    if vmerge not in ('continue', 'restart'):
+                        vmerge = 'continue'
+            parsed.append((txt, span, vmerge, col))
+            col += span
+        cells = []
+        for txt, span, vmerge, col in parsed:
+            if vmerge == 'continue':
+                txt = restart_texts.get(col, txt)
+            else:
+                restart_texts[col] = txt
             cells.append(txt)
+            cells.extend([''] * (span - 1))
         rows.append(cells)
     if not rows:
         return ''
     ncol = max(len(r) for r in rows)
     rows = [r + [''] * (ncol - len(r)) for r in rows]
+    if form_tables and ncol == 2:
+        items = _form_table_items(rows)
+        if items:
+            return '\n'.join(items)
     out = ['| ' + ' | '.join(rows[0]) + ' |',
            '| ' + ' | '.join(['---'] * ncol) + ' |']
     for r in rows[1:]:
@@ -610,7 +789,44 @@ def _table_to_md(tbl, doc=None):
     return '\n'.join(out)
 
 
-def docx2md(path):
+def _para_list_info(p):
+    """返回 (is_list, ilvl, ordered)：段落级 numPr 或样式链推断列表层级与有序性。"""
+    from docx.oxml.ns import qn
+
+    def _val(el):
+        if el is None:
+            return None
+        return el.get(qn('w:val'), el.get('val'))
+
+    def _ilvl(numpr):
+        try:
+            return max(0, min(5, int(_val(numpr.find(qn('w:ilvl'))) or 0)))
+        except (TypeError, ValueError):
+            return 0
+
+    ppr = p._p.find(qn('w:pPr'))
+    if ppr is not None:
+        numpr = ppr.find(qn('w:numPr'))
+        if numpr is not None:
+            return True, _ilvl(numpr), False
+    try:
+        st = p.style
+        depth = 0
+        while st is not None and depth < 8:
+            spPr = st.element.find(qn('w:pPr'))
+            s_numpr = spPr.find(qn('w:numPr')) if spPr is not None else None
+            if 'list number' in (st.name or '').lower():
+                return True, (_ilvl(s_numpr) if s_numpr is not None else 0), True
+            if s_numpr is not None:
+                return True, _ilvl(s_numpr), False
+            st = st.base_style
+            depth += 1
+    except Exception:  # noqa: BLE001
+        pass
+    return False, 0, False
+
+
+def docx2md(path, form_tables=True):
     """docx → Markdown：OMML 公式→LaTeX、标题层级、表格、等宽字体代码块。"""
     from docx import Document
     from docx.oxml.ns import qn
@@ -622,6 +838,7 @@ def docx2md(path):
     lines = []
     code_buf = []
     code_lang = ''
+    ordered_n = 0
 
     def flush_code():
         nonlocal code_buf, code_lang
@@ -633,7 +850,7 @@ def docx2md(path):
             code_buf, code_lang = [], ''
 
     def handle_para(p):
-        nonlocal code_buf, code_lang
+        nonlocal code_buf, code_lang, ordered_n
         style_name = ''
         try:
             style_name = (p.style.name or '') if p.style is not None else ''
@@ -641,6 +858,7 @@ def docx2md(path):
             style_name = ''
         if style_name and style_name.lower().startswith('heading'):
             flush_code()
+            ordered_n = 0
             try:
                 level = int(''.join(ch for ch in style_name if ch.isdigit()) or '1')
             except ValueError:
@@ -653,6 +871,7 @@ def docx2md(path):
             return
         if style_name and style_name.lower() == 'title':
             flush_code()
+            ordered_n = 0
             txt = _para_inline_with_math(p, doc).strip()
             if txt:
                 lines.append('# ' + txt)
@@ -669,28 +888,18 @@ def docx2md(path):
         txt = _para_inline_with_math(p, doc).strip()
         if not txt:
             return
-        # 列表：段落级或样式级 numPr → "- "
-        is_list = False
-        ppr = p._p.find(qn('w:pPr'))
-        if ppr is not None and ppr.find(qn('w:numPr')) is not None:
-            is_list = True
-        else:
-            try:
-                st = p.style
-                depth = 0
-                while st is not None and depth < 8:
-                    spPr = st.element.find(qn('w:pPr'))
-                    if spPr is not None and spPr.find(qn('w:numPr')) is not None:
-                        is_list = True
-                        break
-                    st = st.base_style
-                    depth += 1
-            except Exception:  # noqa: BLE001
-                is_list = False
+        # 列表：段落级或样式级 numPr → 缩进列表项（ilvl 控制层级，有序列表跨段计数）
+        is_list, ilvl, ordered = _para_list_info(p)
         if is_list:
-            lines.append('- ' + txt)
+            if ordered:
+                ordered_n += 1
+                lines.append('   ' * ilvl + '%d. %s' % (ordered_n, txt))
+            else:
+                ordered_n = 0
+                lines.append('  ' * ilvl + '- ' + txt)
             lines.append('')
             return
+        ordered_n = 0
         lines.append(txt)
         lines.append('')
 
@@ -700,7 +909,7 @@ def docx2md(path):
             handle_para(Paragraph(child, doc))
         elif child.tag == qn('w:tbl'):
             flush_code()
-            md = _table_to_md(Table(child, doc), doc)
+            md = _table_to_md(Table(child, doc), doc, form_tables)
             if md:
                 lines.append(md)
                 lines.append('')
@@ -766,14 +975,111 @@ def _data_to_md(data):
     return '\n'.join(out)
 
 
+def _pipe_cells(line):
+    s = line.strip()
+    return [c.strip() for c in s[1:-1].split('|')]
+
+
+def _is_table_line(line):
+    s = line.strip()
+    return s.startswith('|') and s.endswith('|')
+
+
+def _is_sep_row(line):
+    cs = _pipe_cells(line)
+    return bool(cs) and all(c == '---' for c in cs)
+
+
+def _merge_split_tables(md):
+    """合并被分页打断的相邻同列数管道表（仅限 pdf2md 输出）。"""
+    lines = md.split('\n')
+    out = []
+    i = 0
+    n = len(lines)
+    in_fence = False
+    while i < n:
+        line = lines[i]
+        if line.strip().startswith('```'):
+            in_fence = not in_fence
+            out.append(line)
+            i += 1
+            continue
+        if in_fence or not _is_table_line(line):
+            out.append(line)
+            i += 1
+            continue
+        block = []
+        while i < n and _is_table_line(lines[i]):
+            block.append(lines[i])
+            i += 1
+        while True:
+            j = i
+            while j < n and not lines[j].strip():
+                j += 1
+            k = j
+            while k < n and _is_table_line(lines[k]):
+                k += 1
+            if j >= k:
+                break
+            frag = lines[j:k]
+            if len(_pipe_cells(frag[0])) != len(_pipe_cells(block[0])):
+                break
+            if _pipe_cells(frag[0]) == _pipe_cells(block[0]):
+                # 重复表头：去片段首行与其中的分隔行
+                for l in frag[1:]:
+                    if not _is_sep_row(l):
+                        block.append(l)
+            else:
+                # 片段首行是数据被误升格为表头：整段保留，仅去伪分隔行
+                for idx, l in enumerate(frag):
+                    if idx > 0 and _is_sep_row(l):
+                        continue
+                    block.append(l)
+            i = k
+        out.extend(block)
+    return '\n'.join(out)
+
+
 def _looks_like_formula(line):
     s = line.strip()
     if not s or len(s) < 2 or len(s) > 160:
         return False
     if any('\u4e00' <= ch <= '\u9fff' for ch in s):
         return False
+    if not any(ch in _STRONG_MATH for ch in s):
+        return False
     sig = sum(1 for ch in s if ch in _MATH_CHARS or ch.isdigit() or ch in '()[]{},.')
-    return sig / max(len(s), 1) >= 0.45
+    return sig / max(len(s), 1) >= 0.3
+
+
+def _accept_text_table(rows):
+    """text 策略候选的行列门槛：≥2 列，且 ≥2 行各有 ≥2 个非空单元格。"""
+    if not rows:
+        return False
+    if max(len(r) for r in rows) < 2:
+        return False
+    multi = 0
+    for r in rows:
+        if sum(1 for c in r if (c or '').strip()) >= 2:
+            multi += 1
+    return multi >= 2
+
+
+def _retry_text_strategy_tables(page):
+    """无边框表格兜底：默认策略找不到表格时用 text 策略重试，仅保留过门槛的候选。"""
+    try:
+        candidates = list(page.find_tables(strategy='text').tables)
+    except Exception:  # noqa: BLE001
+        return []
+    kept = []
+    for t in candidates:
+        try:
+            rows = t.extract()
+        except Exception:  # noqa: BLE001
+            continue
+        if _accept_text_table(rows):
+            kept.append(t)
+    return kept
 
 
 def _page_to_md(page, default_body_size: float = 11.0):
@@ -786,6 +1092,8 @@ def _page_to_md(page, default_body_size: float = 11.0):
         tables = list(page.find_tables().tables)
     except Exception:  # noqa: BLE001
         tables = []
+    if not tables:
+        tables = _retry_text_strategy_tables(page)
     tbl_boxes = []
     for t in tables:
         try:
@@ -977,6 +1285,8 @@ def pdf2md(path):
     finally:
         doc.close()
     text = '\n\n'.join(parts).strip()
+    if text:
+        text = _merge_split_tables(text)
     if not text:
         raise ValueError('pdf 未提取到文字内容（可能是扫描件，请用 OCR）')
     return text
