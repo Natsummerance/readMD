@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "בוטל {canceled}",
   "batch.title": "שולחן עבודה קבוצתי",
   "menu.batch": "שולחן עבודה קבוצתי",
-  "menu.batchSub": "המרת קבצים מרובים / OCR"
+  "menu.batchSub": "המרת קבצים מרובים / OCR",
+  "menu.pet": "חיית מחמד לשולחן העבודה",
+  "menu.petSub": "תוסף אופציונלי"
 }

@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Me katulama {canceled}",
   "batch.title": "Kisalu ya bafishe mingi",
   "menu.batch": "Kisalu ya bafishe mingi",
-  "menu.batchSub": "Kubalula bafishe mingi / OCR"
+  "menu.batchSub": "Kubalula bafishe mingi / OCR",
+  "menu.pet": "Kibulu kia mesa",
+  "menu.petSub": "Plug-in ya kusola"
 }

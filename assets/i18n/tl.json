@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Kinansela {canceled}",
   "batch.title": "Batch Workbench",
   "menu.batch": "Batch Workbench",
-  "menu.batchSub": "Conversion ng maraming file / OCR"
+  "menu.batchSub": "Conversion ng maraming file / OCR",
+  "menu.pet": "Alagang hayop sa desktop",
+  "menu.petSub": "Opsyonal na plugin"
 }

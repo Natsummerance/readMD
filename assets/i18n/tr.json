@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "İptal Edildi {canceled}",
   "batch.title": "Toplu İş Tezgahı",
   "menu.batch": "Toplu İş Tezgahı",
-  "menu.batchSub": "Birden çok dosya dönüştürme / OCR"
+  "menu.batchSub": "Birden çok dosya dönüştürme / OCR",
+  "menu.pet": "Masaüstü evcil hayvanı",
+  "menu.petSub": "İsteğe bağlı eklenti"
 }

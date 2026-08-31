@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Cancelado {canceled}",
   "batch.title": "Mesa de trabajo por lotes",
   "menu.batch": "Mesa de trabajo por lotes",
-  "menu.batchSub": "Conversión de varios archivos / OCR"
+  "menu.batchSub": "Conversión de varios archivos / OCR",
+  "menu.pet": "Mascota de escritorio",
+  "menu.petSub": "Complemento opcional"
 }

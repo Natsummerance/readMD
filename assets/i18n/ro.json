@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Anulat {canceled}",
   "batch.title": "Spațiu de lucru în lot",
   "menu.batch": "Spațiu de lucru în lot",
-  "menu.batchSub": "Conversie fișiere multiple / OCR"
+  "menu.batchSub": "Conversie fișiere multiple / OCR",
+  "menu.pet": "Animal de companie pentru desktop",
+  "menu.petSub": "Plugin opțional"
 }

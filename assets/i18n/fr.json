@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Annulé {canceled}",
   "batch.title": "Atelier par lots",
   "menu.batch": "Atelier par lots",
-  "menu.batchSub": "Conversion de plusieurs fichiers / OCR"
+  "menu.batchSub": "Conversion de plusieurs fichiers / OCR",
+  "menu.pet": "Animal de bureau",
+  "menu.petSub": "Module facultatif"
 }

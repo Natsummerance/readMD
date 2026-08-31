@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Ikkanċellat {canceled}",
   "batch.title": "Workbench tal-lott",
   "menu.batch": "Workbench tal-lott",
-  "menu.batchSub": "Konverżjoni ta' diversi fajls / OCR"
+  "menu.batchSub": "Konverżjoni ta' diversi fajls / OCR",
+  "menu.pet": "Annimal domestiku tad-desktop",
+  "menu.petSub": "Plugin fakultattiv"
 }

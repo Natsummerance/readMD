@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Annullato {canceled}",
   "batch.title": "Banco di lavoro batch",
   "menu.batch": "Banco di lavoro batch",
-  "menu.batchSub": "Conversione di più file / OCR"
+  "menu.batchSub": "Conversione di più file / OCR",
+  "menu.pet": "Animaletto desktop",
+  "menu.petSub": "Plugin opzionale"
 }

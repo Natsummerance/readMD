@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Цуцалсан {canceled}",
   "batch.title": "Багц ажлын ширээ",
   "menu.batch": "Багц ажлын ширээ",
-  "menu.batchSub": "Олон файл хөрвүүлэх / OCR"
+  "menu.batchSub": "Олон файл хөрвүүлэх / OCR",
+  "menu.pet": "Ширээний тэжээвэр амьтан",
+  "menu.petSub": "Сонголтот нэмэлт"
 }

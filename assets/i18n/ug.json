@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "بىكار قىلىندى {canceled}",
   "batch.title": "توپ ئىش ئۈستىلى",
   "menu.batch": "توپ ئىش ئۈستىلى",
-  "menu.batchSub": "كۆپ ھۆججەت ئايلاندۇرۇش / OCR"
+  "menu.batchSub": "كۆپ ھۆججەت ئايلاندۇرۇش / OCR",
+  "menu.pet": "ئۈستەلئۈستى ئەرمەك ھايۋان",
+  "menu.petSub": "ئىختىيارى قىستۇرما"
 }

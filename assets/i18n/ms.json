@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Dibatalkan {canceled}",
   "batch.title": "Ruang Kerja Kelompok",
   "menu.batch": "Ruang Kerja Kelompok",
-  "menu.batchSub": "Penukaran berbilang fail / OCR"
+  "menu.batchSub": "Penukaran berbilang fail / OCR",
+  "menu.pet": "Haiwan peliharaan desktop",
+  "menu.petSub": "Pemalam pilihan"
 }

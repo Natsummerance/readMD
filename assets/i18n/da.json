@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Annulleret {canceled}",
   "batch.title": "Batch-arbejdsbord",
   "menu.batch": "Batch-arbejdsbord",
-  "menu.batchSub": "Konvertering af flere filer / OCR"
+  "menu.batchSub": "Konvertering af flere filer / OCR",
+  "menu.pet": "Skrivebordskæledyr",
+  "menu.petSub": "Valgfrit plugin"
 }

@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Đã hủy {canceled}",
   "batch.title": "Bàn làm việc hàng loạt",
   "menu.batch": "Bàn làm việc hàng loạt",
-  "menu.batchSub": "Chuyển đổi nhiều tệp / OCR"
+  "menu.batchSub": "Chuyển đổi nhiều tệp / OCR",
+  "menu.pet": "Thú cưng trên màn hình",
+  "menu.petSub": "Trình cắm tùy chọn"
 }

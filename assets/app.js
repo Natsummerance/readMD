@@ -624,6 +624,7 @@ function bindEvents() {
 
   /* --- 17. 客户端内版本检查、语言切换、开机自启与自动升级 [联动: core/i18n.js, features/updater.js] --- */
   if ($('btn-lang')) $('btn-lang').addEventListener('click', () => { closeMoreMenu(); if (window.i18n) window.i18n.openModal(); });
+  if ($('btn-pet')) $('btn-pet').addEventListener('click', () => { if (typeof configurePetFromMenu === 'function') configurePetFromMenu(); });
   if ($('btn-autostart')) $('btn-autostart').addEventListener('click', () => { closeMoreMenu(); toggleAutostart(); });
   if ($('btn-check-update')) $('btn-check-update').addEventListener('click', () => { closeMoreMenu(); checkUpdate(false); });
 

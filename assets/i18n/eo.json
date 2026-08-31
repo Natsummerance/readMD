@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Nuligite {canceled}",
   "batch.title": "Stapla labortablo",
   "menu.batch": "Stapla labortablo",
-  "menu.batchSub": "Konverti plurajn dosierojn / OCR"
+  "menu.batchSub": "Konverti plurajn dosierojn / OCR",
+  "menu.pet": "Labortabla dorlotbesto",
+  "menu.petSub": "Laŭvola kromaĵo"
 }

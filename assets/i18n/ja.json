@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "キャンセル {canceled}",
   "batch.title": "一括ワークベンチ",
   "menu.batch": "一括ワークベンチ",
-  "menu.batchSub": "複数ファイル変換 / OCR"
+  "menu.batchSub": "複数ファイル変換 / OCR",
+  "menu.pet": "デスクトップペット",
+  "menu.petSub": "オプションプラグイン"
 }

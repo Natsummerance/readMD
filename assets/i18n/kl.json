@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Taamaatippaa {canceled}",
   "batch.title": "Suliarinnittarfik",
   "menu.batch": "Suliarinnittarfik",
-  "menu.batchSub": "Filit amerlasuut allanngortinnerat / OCR"
+  "menu.batchSub": "Filit amerlasuut allanngortinnerat / OCR",
+  "menu.pet": "Qarasaasiami uumasoq",
+  "menu.petSub": "Ilassut nammineq toqqagaq"
 }

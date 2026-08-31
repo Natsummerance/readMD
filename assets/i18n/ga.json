@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Cealaithe {canceled}",
   "batch.title": "Binse oibre baisc",
   "menu.batch": "Binse oibre baisc",
-  "menu.batchSub": "Tiontú ilchomhad / OCR"
+  "menu.batchSub": "Tiontú ilchomhad / OCR",
+  "menu.pet": "Peata deisce",
+  "menu.petSub": "Breiseán roghnach"
 }

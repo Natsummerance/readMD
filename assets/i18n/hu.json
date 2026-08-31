@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Megszakítva {canceled}",
   "batch.title": "Kötegelt munkaasztal",
   "menu.batch": "Kötegelt munkaasztal",
-  "menu.batchSub": "Több fájl konvertálása / OCR"
+  "menu.batchSub": "Több fájl konvertálása / OCR",
+  "menu.pet": "Asztali kisállat",
+  "menu.petSub": "Opcionális bővítmény"
 }

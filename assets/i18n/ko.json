@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "취소됨 {canceled}",
   "batch.title": "일괄 작업대",
   "menu.batch": "일괄 작업대",
-  "menu.batchSub": "여러 파일 변환 / OCR"
+  "menu.batchSub": "여러 파일 변환 / OCR",
+  "menu.pet": "데스크톱 펫",
+  "menu.petSub": "선택적 플러그인"
 }

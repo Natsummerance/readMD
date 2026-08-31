@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Peruutettu {canceled}",
   "batch.title": "Eräajo",
   "menu.batch": "Eräajo",
-  "menu.batchSub": "Useiden tiedostojen muuntaminen / OCR"
+  "menu.batchSub": "Useiden tiedostojen muuntaminen / OCR",
+  "menu.pet": "Työpöytälemmikki",
+  "menu.petSub": "Valinnainen lisäosa"
 }

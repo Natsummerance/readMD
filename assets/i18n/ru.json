@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Отменено {canceled}",
   "batch.title": "Пакетная обработка",
   "menu.batch": "Пакетная обработка",
-  "menu.batchSub": "Конвертация нескольких файлов / OCR"
+  "menu.batchSub": "Конвертация нескольких файлов / OCR",
+  "menu.pet": "Настольный питомец",
+  "menu.petSub": "Необязательный плагин"
 }

@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Yahagaritswe {canceled}",
   "batch.title": "Ahakorerwa akazi kenshi",
   "menu.batch": "Ahakorerwa akazi kenshi",
-  "menu.batchSub": "Guhindura dosiye nyinshi / OCR"
+  "menu.batchSub": "Guhindura dosiye nyinshi / OCR",
+  "menu.pet": "Itungo ryo kuri mudasobwa",
+  "menu.petSub": "Porogaramu y'inyongera"
 }

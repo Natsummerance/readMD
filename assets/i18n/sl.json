@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Preklicano {canceled}",
   "batch.title": "Paketna miza",
   "menu.batch": "Paketna miza",
-  "menu.batchSub": "Pretvorba več datotek / OCR"
+  "menu.batchSub": "Pretvorba več datotek / OCR",
+  "menu.pet": "Namizni ljubljenček",
+  "menu.petSub": "Izbirni vtičnik"
 }

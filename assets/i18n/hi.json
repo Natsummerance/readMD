@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "रद्द किया गया {canceled}",
   "batch.title": "बैच वर्कबेंच",
   "menu.batch": "बैच वर्कबेंच",
-  "menu.batchSub": "कई फ़ाइलें रूपांतरण / OCR"
+  "menu.batchSub": "कई फ़ाइलें रूपांतरण / OCR",
+  "menu.pet": "डेस्कटॉप पालतू",
+  "menu.petSub": "वैकल्पिक प्लग-इन"
 }

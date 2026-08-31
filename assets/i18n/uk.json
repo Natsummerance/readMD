@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Скасовано {canceled}",
   "batch.title": "Пакетний робочий стіл",
   "menu.batch": "Пакетний робочий стіл",
-  "menu.batchSub": "Конвертація кількох файлів / OCR"
+  "menu.batchSub": "Конвертація кількох файлів / OCR",
+  "menu.pet": "Настільний улюбленець",
+  "menu.petSub": "Необов'язковий плагін"
 }

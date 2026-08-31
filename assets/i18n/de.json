@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Abgebrochen {canceled}",
   "batch.title": "Stapelverarbeitung",
   "menu.batch": "Stapelverarbeitung",
-  "menu.batchSub": "Mehrere Dateien konvertieren / OCR"
+  "menu.batchSub": "Mehrere Dateien konvertieren / OCR",
+  "menu.pet": "Desktop-Haustier",
+  "menu.petSub": "Optionales Plugin"
 }

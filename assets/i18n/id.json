@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Dibatalkan {canceled}",
   "batch.title": "Meja Kerja Batch",
   "menu.batch": "Meja Kerja Batch",
-  "menu.batchSub": "Konversi banyak berkas / OCR"
+  "menu.batchSub": "Konversi banyak berkas / OCR",
+  "menu.pet": "Hewan peliharaan desktop",
+  "menu.petSub": "Plugin opsional"
 }

@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Kansellert {canceled}",
   "batch.title": "Partiarbeidsbenk",
   "menu.batch": "Partiarbeidsbenk",
-  "menu.batchSub": "Konvertering av flere filer / OCR"
+  "menu.batchSub": "Konvertering av flere filer / OCR",
+  "menu.pet": "Skrivebordskjæledyr",
+  "menu.petSub": "Valgfri utvidelse"
 }

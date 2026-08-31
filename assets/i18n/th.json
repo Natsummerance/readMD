@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "ยกเลิกแล้ว {canceled}",
   "batch.title": "โต๊ะทำงานชุด",
   "menu.batch": "โต๊ะทำงานชุด",
-  "menu.batchSub": "แปลงไฟล์หลายไฟล์ / OCR"
+  "menu.batchSub": "แปลงไฟล์หลายไฟล์ / OCR",
+  "menu.pet": "สัตว์เลี้ยงบนเดสก์ท็อป",
+  "menu.petSub": "ปลั๊กอินเสริม"
 }

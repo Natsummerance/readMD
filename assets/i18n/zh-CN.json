@@ -1124,5 +1124,7 @@
   "exportai.generating": "正在分析并设计排版参数...",
   "exportai.applied": "已应用 AI 生成的排版样式预设",
   "convert.aiFixFormat": "AI 自愈排版",
-  "convert.aiFixDesc": "使用 AI 深度修复表格对齐、公式排版与断行问题"
+  "convert.aiFixDesc": "使用 AI 深度修复表格对齐、公式排版与断行问题",
+  "menu.pet": "桌宠",
+  "menu.petSub": "外置插件"
 }

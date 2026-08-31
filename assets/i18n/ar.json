@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "تم الإلغاء {canceled}",
   "batch.title": "منصة المعالجة الجماعية",
   "menu.batch": "منصة المعالجة الجماعية",
-  "menu.batchSub": "تحويل متعدد الملفات / OCR"
+  "menu.batchSub": "تحويل متعدد الملفات / OCR",
+  "menu.pet": "حيوان أليف لسطح المكتب",
+  "menu.petSub": "إضافة اختيارية"
 }

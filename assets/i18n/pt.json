@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Cancelado {canceled}",
   "batch.title": "Área de trabalho em lote",
   "menu.batch": "Área de trabalho em lote",
-  "menu.batchSub": "Conversão de vários arquivos / OCR"
+  "menu.batchSub": "Conversão de vários arquivos / OCR",
+  "menu.pet": "Mascote de área de trabalho",
+  "menu.petSub": "Plugin opcional"
 }

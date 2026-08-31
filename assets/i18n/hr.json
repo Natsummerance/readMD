@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Otkazano {canceled}",
   "batch.title": "Skupni radni stol",
   "menu.batch": "Skupni radni stol",
-  "menu.batchSub": "Pretvorba više datoteka / OCR"
+  "menu.batchSub": "Pretvorba više datoteka / OCR",
+  "menu.pet": "Ljubimac na radnoj površini",
+  "menu.petSub": "Dodatak po izboru"
 }

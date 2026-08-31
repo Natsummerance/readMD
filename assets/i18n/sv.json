@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "Avbruten {canceled}",
   "batch.title": "Batcharbetsbord",
   "menu.batch": "Batcharbetsbord",
-  "menu.batchSub": "Konvertering av flera filer / OCR"
+  "menu.batchSub": "Konvertering av flera filer / OCR",
+  "menu.pet": "Skrivbordsdjur",
+  "menu.petSub": "Valfritt insticksprogram"
 }

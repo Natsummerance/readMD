@@ -1124,5 +1124,7 @@
   "batch.summaryCanceled": "ຍົກເລີກ {canceled}",
   "batch.title": "ໂຕະເຮັດວຽກຊຸດ",
   "menu.batch": "ໂຕະເຮັດວຽກຊຸດ",
-  "menu.batchSub": "ແປງຫຼາຍໄຟລ໌ / OCR"
+  "menu.batchSub": "ແປງຫຼາຍໄຟລ໌ / OCR",
+  "menu.pet": "ສັດລ້ຽງເທິງເດັສກ໌ທັອບ",
+  "menu.petSub": "ປລັກອິນເສີມ"
 }
