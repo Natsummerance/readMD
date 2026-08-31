@@ -147,6 +147,9 @@ async function loadAiPrompts() {
         action: old.action || 'custom', user: old.user || '',
         system: s.instructions || '', builtin: s.scope === 'builtin',
         scope: s.scope, metadata: s.metadata || {}, variables: s.variables || [],
+        description: s.description || '', provenance: s.provenance || {},
+        license: s.license || '', source_files: s.source_files || [],
+        adaptation_notes: s.adaptation_notes || '',
       };
     });
     fillAiTemplates();
@@ -230,7 +233,92 @@ function renderTplList() {
   });
 }
 
-function selectTpl(id) {
+function skillLicenseText(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return value.spdx || value.id || value.name || value.license || '';
+}
+
+function skillRevisionText(value) {
+  if (!value || typeof value !== 'object') return '';
+  return value.revision || value.commit || value.ref || value.source_revision || '';
+}
+
+function appendSkillFact(host, text, prefix) {
+  if (!text) return;
+  const fact = document.createElement('span');
+  fact.className = 'tpl-skill-fact';
+  fact.textContent = (prefix || '') + text;
+  host.appendChild(fact);
+}
+
+function renderSkillOverview(t) {
+  const host = $('tpl-skill-overview');
+  if (!host) return;
+  host.replaceChildren();
+  if (!t) return;
+  const title = document.createElement('h4');
+  title.textContent = t.name || t.skill_id || t.id || '';
+  host.appendChild(title);
+  if (t.description) {
+    const description = document.createElement('p');
+    description.textContent = t.description;
+    host.appendChild(description);
+  }
+  const facts = document.createElement('div');
+  facts.className = 'tpl-skill-facts';
+  appendSkillFact(facts, t.scope || (t.builtin ? 'builtin' : 'user'), '◫ ');
+  appendSkillFact(facts, skillLicenseText(t.license), '© ');
+  appendSkillFact(facts, skillRevisionText(t.provenance), '@ ');
+  (t.variables || []).forEach(variable => appendSkillFact(facts, variable, '{ } '));
+  if (facts.childElementCount) host.appendChild(facts);
+
+  const sourceLines = (Array.isArray(t.source_files) ? t.source_files : [])
+    .map(item => {
+      if (typeof item === 'string') return item;
+      const file = item && (item.path || item.file || item.name) || '';
+      const hash = item && (item.sha256 || item.hash) || '';
+      return [file, hash ? hash.slice(0, 16) : ''].filter(Boolean).join('  ·  ');
+    }).filter(Boolean);
+  if (sourceLines.length) {
+    const sources = document.createElement('pre');
+    sources.className = 'tpl-skill-source';
+    sources.textContent = sourceLines.join('\n');
+    host.appendChild(sources);
+  }
+  if (t.adaptation_notes) {
+    const note = document.createElement('p');
+    note.textContent = t.adaptation_notes;
+    host.appendChild(note);
+  }
+  if (t.system) {
+    const instructions = document.createElement('pre');
+    instructions.className = 'tpl-skill-instructions';
+    instructions.textContent = t.system;
+    host.appendChild(instructions);
+  }
+}
+
+function setTplEditing(editing) {
+  const selected = (state.ai.templates || []).find(x => x.id === $('tpl-id').value) || null;
+  const builtin = !!(selected && selected.builtin);
+  $('tpl-skill-overview') && $('tpl-skill-overview').classList.toggle('hidden', !!editing);
+  $('tpl-editor-fields') && $('tpl-editor-fields').classList.toggle('hidden', !editing);
+  if ($('tpl-edit')) {
+    $('tpl-edit').classList.toggle('active', !!editing);
+    $('tpl-edit').setAttribute('aria-pressed', editing ? 'true' : 'false');
+  }
+  if ($('tpl-save')) $('tpl-save').disabled = !editing || builtin;
+  if ($('tpl-publish')) $('tpl-publish').disabled = !editing || !selected || builtin;
+  if (editing && $('tpl-name')) $('tpl-name').focus();
+}
+
+function editCurrentSkill() {
+  if (!$('tpl-id').value) return setTplEditing(true);
+  setTplEditing(true);
+}
+
+function selectTpl(id, editing) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const t = (state.ai.templates || []).find(x => x.id === id) || null;
   const builtin = !!(t && t.builtin);
@@ -247,11 +335,11 @@ function selectTpl(id) {
   $('tpl-name').readOnly = builtin;
   $('tpl-system').readOnly = builtin;
   $('tpl-user').readOnly = builtin;
-  if ($('tpl-save')) $('tpl-save').disabled = builtin;
   $('tpl-del').disabled = !t || builtin;
-  if ($('tpl-publish')) $('tpl-publish').disabled = !t || builtin;
   const status = $('tpl-draft-status');
   if (status) status.textContent = _t('tpl.hint');
+  renderSkillOverview(t);
+  setTplEditing(editing === true || !t);
 }
 
 function copyCurrentSkill() {
@@ -260,7 +348,7 @@ function copyCurrentSkill() {
   if (!current) return;
   const base = String(current.skill_id || current.id || 'skill').replace(/[^a-z0-9-]/gi, '-').toLowerCase().replace(/^-+|-+$/g, '') || 'skill';
   const copyId = (base + '-custom').slice(0, 64);
-  selectTpl(null);
+  selectTpl(null, true);
   $('tpl-id').value = copyId;
   $('tpl-name').value = (current.name || copyId) + ' (Copy)';
   $('tpl-system').value = current.system || '';
@@ -467,6 +555,78 @@ async function importTemplatesFromFile(file) {
   reader.readAsText(file, 'UTF-8');
 }
 
+function toggleSkillImportMenu(force) {
+  const menu = $('tpl-import-menu');
+  const trigger = $('tpl-import-btn');
+  if (!menu) return;
+  const open = typeof force === 'boolean' ? force : menu.classList.contains('hidden');
+  menu.classList.toggle('hidden', !open);
+  if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) selectSkillImportSource('github', false);
+}
+
+async function selectSkillImportSource(source, openPicker = true) {
+  const allowed = new Set(['github', 'folder', 'zip']);
+  const selected = allowed.has(source) ? source : 'github';
+  allowed.forEach(name => {
+    const button = $(`tpl-import-source-${name}`);
+    if (!button) return;
+    const active = name === selected;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  const githubPanel = $('tpl-import-panel-github');
+  if (githubPanel) githubPanel.classList.toggle('hidden', selected !== 'github');
+  if (!openPicker) return;
+  if (selected === 'github') {
+    $('tpl-github-url') && $('tpl-github-url').focus();
+    return;
+  }
+  if (typeof hasPy !== 'undefined' && hasPy && py && py.choose_skill_source) {
+    const sourcePath = await py.choose_skill_source(selected === 'folder' ? 'directory' : 'zip');
+    if (sourcePath) await previewSkillImportSource({
+      source_type: selected === 'folder' ? 'directory' : 'zip',
+      source: sourcePath,
+    });
+    return;
+  }
+  if (selected === 'folder' && $('tpl-folder-input')) $('tpl-folder-input').click();
+  if (selected === 'zip' && $('tpl-zip-input')) $('tpl-zip-input').click();
+}
+
+function revealGithubCredential() {
+  const wrap = $('tpl-github-credential-wrap');
+  const input = $('tpl-github-credential');
+  if (wrap) wrap.classList.remove('hidden');
+  if (input) requestAnimationFrame(() => input.focus());
+}
+
+async function previewSkillImportSource(payload) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  try {
+    const r = await apiFetch('/api/skill-imports/preview', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok || !d.preview) throw d;
+    const preview = d.preview;
+    preview.credential_id = d.credential_id || payload.credential_id || '';
+    renderGithubSkillPreview(preview);
+    return preview;
+  } catch (e) {
+    if (String(e && e.error_code || '') === 'github_auth_failed') revealGithubCredential();
+    showToast(githubImportErrorText(e, _t));
+    return null;
+  }
+}
+
+async function previewBrowserZipSkill(file) {
+  if (!file) return;
+  const path = typeof uploadFile === 'function' ? await uploadFile(file) : null;
+  if (path) await previewSkillImportSource({ source_type: 'zip', source: path });
+}
+
 function githubImportErrorText(payload, _t) {
   const code = String(payload && payload.error_code || '');
   const known = {
@@ -519,22 +679,13 @@ function renderGithubSkillPreview(preview) {
 async function previewGithubSkillImport() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const url = String($('tpl-github-url') && $('tpl-github-url').value || '').trim();
-  const credentialId = String($('tpl-github-credential') && $('tpl-github-credential').value || '').trim();
+  const githubToken = String($('tpl-github-credential') && $('tpl-github-credential').value || '').trim();
   if (!url) { showToast(_t('toast.invalidUrl') || '请输入有效链接'); return; }
   const button = $('tpl-github-preview-btn');
   if (button) { button.disabled = true; button.classList.add('tpl-github-importing'); }
   try {
-    const r = await apiFetch('/api/skill-imports/preview', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, credential_id: credentialId }),
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.ok || !d.preview) throw d;
-    const preview = d.preview;
-    preview.credential_id = credentialId;
-    renderGithubSkillPreview(preview);
-  } catch (e) {
-    showToast(githubImportErrorText(e, _t));
+    await previewSkillImportSource({ source_type: 'github', source: url, github_token: githubToken });
+    if ($('tpl-github-credential')) $('tpl-github-credential').value = '';
   } finally {
     if (button) { button.disabled = false; button.classList.remove('tpl-github-importing'); }
   }
@@ -920,6 +1071,32 @@ function fillAiProviders(merged, current) {
 function currentAiProvider() {
   const id = $('ai-provider').value;
   return (state.ai.providers || []).find(p => p.id === id || p.name === id) || null;
+}
+
+async function resolveSharedAiConnection() {
+  if (!state.ai.config) await loadAiConfig();
+  const current = (state.ai.config && state.ai.config.current) || {};
+  const currentId = current.provider_id || current.provider || '';
+  const selectedId = $('ai-provider') ? $('ai-provider').value : '';
+  const providers = state.ai.providers || [];
+  const provider = providers.find(p => p.id === selectedId || p.name === selectedId)
+    || providers.find(p => p.id === currentId || p.name === currentId)
+    || null;
+  if (!provider) return null;
+  const selectedModel = $('ai-model') ? $('ai-model').value : '';
+  let headers = {};
+  try { headers = readAiCustomHeaders(); } catch (e) { headers = provider.headers || {}; }
+  return {
+    provider: provider.id || provider.name || '',
+    credential_id: provider.credential_id || undefined,
+    model: selectedModel || current.model || (provider.models || [])[0] || '',
+    base_url: provider.base_url || undefined,
+    mode: provider.mode || (provider.format === 'anthropic' ? 'messages' : 'auto'),
+    endpoint_mode: provider.endpoint_mode || 'prefix',
+    headers,
+    has_key: !!(provider.has_key || provider.key_source || provider.credential_id),
+    local: isLocalAiProvider(provider),
+  };
 }
 
 function isLocalAiProvider(provider) {

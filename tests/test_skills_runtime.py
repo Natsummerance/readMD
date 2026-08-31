@@ -57,6 +57,20 @@ def test_skill_registry_precedence_project_over_user_over_builtin(tmp_path):
     assert registry.render("same", {"document": "doc"}).startswith("project")
 
 
+def test_skill_registry_accepts_localized_trigger_description(tmp_path):
+    from src.readmd_modules.skills import SkillRegistry
+
+    folder = tmp_path / "localized" / "zh-writer"
+    folder.mkdir(parents=True)
+    (folder / "SKILL.md").write_text(
+        "---\nname: zh-writer\ndescription: 当需要润色中文文档时使用。\n---\n润色 {{document}}。\n",
+        encoding="utf-8",
+    )
+    skill = SkillRegistry([tmp_path / "localized"]).get("zh-writer")
+    assert skill is not None
+    assert skill.description == "当需要润色中文文档时使用。"
+
+
 def test_skill_registry_blocks_path_traversal_and_scripts(skill_root, tmp_path):
     from src.readmd_modules.skills import SkillError, SkillRegistry
 

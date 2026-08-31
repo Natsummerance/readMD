@@ -1876,11 +1876,28 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             body = self._skill_import_body(self)
-            url = str(body.get('url') or '').strip()
+            source_type = str(body.get('source_type') or ('github' if body.get('url') else '')).strip().lower()
+            source = str(body.get('source') or body.get('url') or '').strip()
             credential_id = str(body.get('credential_id') or '').strip()
-            if not url:
-                raise _skill_import.SkillImportError('github_url_required', '请输入 GitHub 仓库链接')
-            self._send_json(200, {'ok': True, 'preview': _skill_import.preview_import(url, credential_id)})
+            github_token = str(body.get('github_token') or '').strip()
+            if not source:
+                code = 'github_url_required' if source_type == 'github' else 'source_required'
+                raise _skill_import.SkillImportError(code, '缺少 Skill 来源')
+            created_credential = ''
+            if github_token:
+                if source_type != 'github':
+                    raise _skill_import.SkillImportError('credential_not_allowed', '该来源不接受 GitHub 凭据')
+                created_credential = 'cred:github:' + secrets.token_urlsafe(18)
+                _store_credential(created_credential, github_token)
+                credential_id = created_credential
+            try:
+                preview = _skill_import.preview_source(source_type, source, credential_id)
+            except Exception:
+                if created_credential:
+                    _delete_credential(created_credential)
+                raise
+            self._send_json(200, {'ok': True, 'preview': preview,
+                                  'credential_id': credential_id if created_credential else ''})
         except _skill_import.SkillImportError as exc:
             self._skill_import_error(exc)
         except Exception:
@@ -1899,7 +1916,7 @@ class Handler(BaseHTTPRequestHandler):
             selections = body.get('selections')
             if not isinstance(preview, dict) or not isinstance(selections, list):
                 raise _skill_import.SkillImportError('request_invalid', '缺少预览或 Skill 选择列表')
-            result = _skill_import.apply_import(
+            result = _skill_import.apply_source_import(
                 preview, selections, str(body.get('credential_id') or '').strip(),
                 confirm=body.get('confirm') is True,
             )
@@ -1937,7 +1954,7 @@ class Handler(BaseHTTPRequestHandler):
                               'error': '仅支持 GET 或 DELETE 请求'})
 
     def _api_skill_import_source(self, path):
-        """Check or manually update one pinned GitHub source."""
+        """Check or manually update one pinned Skill source."""
         rest = path[len('/api/skill-imports/'):].strip('/')
         parts = [unquote(p) for p in rest.split('/') if p]
         if len(parts) != 2 or parts[1] not in ('check', 'update'):
@@ -1957,8 +1974,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = self._skill_import_body(self)
             credential_id = str(body.get('credential_id') or source.get('credential_id') or '').strip()
-            preview = _skill_import.preview_import(str(source.get('repository_url') or ''), credential_id)
-            changed = str(preview.get('source', {}).get('resolved_commit') or '') != str(source.get('resolved_commit') or '')
+            preview = _skill_import.preview_saved_source(source, credential_id)
+            changed = _skill_import.source_preview_changed(source, preview)
             if action == 'check':
                 self._send_json(200, {'ok': True, 'source_id': source_id, 'changed': changed,
                                       'current_commit': source.get('resolved_commit', ''),
@@ -1969,7 +1986,7 @@ class Handler(BaseHTTPRequestHandler):
             selections = body.get('selections')
             if not isinstance(selections, list) or not selections:
                 raise _skill_import.SkillImportError('selection_required', '更新前请先选择要导入的 Skill')
-            result = _skill_import.apply_import(preview, selections, credential_id, confirm=True)
+            result = _skill_import.apply_source_import(preview, selections, credential_id, confirm=True)
             self._send_json(200, {'ok': True, 'source_id': source_id, 'changed': changed, **result})
         except _skill_import.SkillImportError as exc:
             self._skill_import_error(exc)
@@ -2873,6 +2890,27 @@ class Api(object):
             return files[0] if files else None
         except Exception as e:
             logging.exception('choose_file failed')
+            return None
+
+    def choose_skill_source(self, source_type):
+        """Choose a local Skill directory or ZIP through the native dialog."""
+        import webview
+        if self._window is None:
+            return None
+        kind = str(source_type or '').strip().lower()
+        try:
+            if kind in ('directory', 'folder'):
+                files = self._window.create_file_dialog(webview.FOLDER_DIALOG)
+            elif kind in ('zip', 'archive'):
+                files = self._window.create_file_dialog(
+                    webview.OPEN_DIALOG,
+                    file_types=('ZIP Skill bundle (*.zip)',),
+                )
+            else:
+                return None
+            return files[0] if files else None
+        except Exception:
+            logging.exception('choose Skill source failed: %s', kind)
             return None
 
     def authorize_clipboard_read(self):

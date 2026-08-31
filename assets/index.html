@@ -8,6 +8,7 @@
 <meta name="readmd-app-token" content="">
 <title>ReadMD</title>
 <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/skill-workbench.css">
 </head>
 <body>
 <header id="toolbar">
@@ -571,32 +572,36 @@
     </div>
     <div class="tpl-toolbar-actions">
       <input id="tpl-search" type="search" placeholder="搜索模板..." aria-label="搜索模板" data-i18n-placeholder="tpl.searchPlaceholder">
-      <button id="tpl-import-btn" class="tb-btn" title="支持导入 .md / .json 格式的提示词模板文件" data-i18n="tpl.importMd" data-i18n-title="tpl.importHint">
+      <button id="tpl-import-btn" class="tb-btn" title="支持导入 .md / .json 格式的提示词模板文件" data-i18n="tpl.importMd" data-i18n-title="tpl.importHint" aria-expanded="false" aria-controls="tpl-import-menu">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span data-i18n="tpl.importMd">导入模板 (.md)</span>
       </button>
-      <input type="file" id="tpl-file-input" accept=".md,.markdown,.json,.txt" multiple style="display:none">
-      <details id="tpl-github-import" class="tpl-github-import">
-        <summary class="tb-btn icon tpl-github-trigger" aria-label="GitHub" data-i18n-aria="tpl.importMd">
-          <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 22v-3.9c.04-1-.34-1.97-1.06-2.66 3.54-.4 7.26-1.74 7.26-7.9A6.16 6.16 0 0 0 19.56 3.25 5.73 5.73 0 0 0 19.4.6S18.04.16 15 2.2a14.24 14.24 0 0 0-6 0C5.96.16 4.6.6 4.6.6a5.73 5.73 0 0 0-.16 2.65A6.16 6.16 0 0 0 2.8 7.54c0 6.15 3.71 7.5 7.25 7.9A3.71 3.71 0 0 0 9 18.2V22"/><path d="M9 19c-3 .9-3-1.5-4.2-1.9"/></svg>
-        </summary>
-        <div class="tpl-github-popover">
+      <input type="file" id="tpl-file-input" accept=".md,.markdown,.json,.txt" multiple hidden>
+      <input type="file" id="tpl-folder-input" webkitdirectory directory multiple hidden>
+      <input type="file" id="tpl-zip-input" accept=".zip,application/zip" hidden>
+      <div id="tpl-import-menu" class="tpl-import-menu hidden">
+        <div class="tpl-import-sources" role="tablist" aria-label="Skill">
+          <button id="tpl-import-source-github" class="tpl-import-source active" type="button" role="tab" aria-selected="true">GitHub</button>
+          <button id="tpl-import-source-folder" class="tpl-import-source" type="button" role="tab" aria-selected="false" data-i18n="app.folder">打开文件夹</button>
+          <button id="tpl-import-source-zip" class="tpl-import-source" type="button" role="tab" aria-selected="false">ZIP</button>
+        </div>
+        <div id="tpl-import-panel-github" class="tpl-import-panel">
           <div class="tpl-github-fields">
             <label class="tpl-github-input" for="tpl-github-url">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07.07l2-2A5 5 0 0 0 12 4l-1.15 1.15"/><path d="M14 11a5 5 0 0 0-7.07-.07l-2 2A5 5 0 0 0 12 20l1.15-1.15"/></svg>
               <input id="tpl-github-url" type="url" inputmode="url" placeholder="https://github.com/owner/repository" aria-label="GitHub" data-i18n-aria="tpl.importMd" autocomplete="off">
             </label>
-            <label class="tpl-github-input tpl-github-credential" for="tpl-github-credential">
+            <label id="tpl-github-credential-wrap" class="tpl-github-input tpl-github-credential hidden" for="tpl-github-credential">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-              <input id="tpl-github-credential" type="text" placeholder="credential_id（可选）" aria-label="credential_id" autocomplete="off">
+              <input id="tpl-github-credential" type="password" placeholder="GitHub token" aria-label="GitHub token" autocomplete="off" spellcheck="false">
             </label>
             <button id="tpl-github-preview-btn" type="button" class="tb-btn accent icon tpl-github-preview-btn" aria-label="导入模板" data-i18n-aria="tpl.importMd">
               <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m20 20-4-4"/></svg>
             </button>
           </div>
+          <div id="tpl-github-preview" class="tpl-github-preview" role="list" aria-live="polite"></div>
         </div>
-        <div id="tpl-github-preview" class="tpl-github-preview" role="list" aria-live="polite"></div>
-      </details>
+      </div>
       <button id="tpl-export-btn" class="tb-btn" title="将全部模板导出为 .json 备份" data-i18n="tpl.exportJson" data-i18n-title="tpl.exportHint">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span data-i18n="tpl.exportJson">导出模板</span>
@@ -608,14 +613,18 @@
       <div class="tpl-form">
         <input id="tpl-id" type="hidden">
         <input id="tpl-action" type="hidden" value="custom">
-        <input id="tpl-name" type="text" placeholder="模板名称（如：深度论文精读 / 结构化周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
-        <textarea id="tpl-system" rows="8" placeholder="SKILL.md：标准 frontmatter 与指令（使用 {{document}} 等受限变量）" aria-label="SKILL.md 指令" data-i18n-placeholder="tpl.systemPlaceholder" data-i18n-aria="tpl.systemPlaceholder"></textarea>
-        <textarea id="tpl-user" rows="3" placeholder="变量/补充请求模板（可选）；发布前会执行结构与安全校验" aria-label="Skill 变量与补充请求" data-i18n-placeholder="tpl.userPlaceholder" data-i18n-aria="tpl.userPlaceholder"></textarea>
-        <p id="tpl-draft-status" class="fix-note" role="status" aria-live="polite" data-i18n="tpl.hint">内置模板可直接编辑并保存。</p>
+        <article id="tpl-skill-overview" class="tpl-skill-overview" aria-live="polite"></article>
+        <div id="tpl-editor-fields" class="tpl-editor-fields hidden">
+          <input id="tpl-name" type="text" placeholder="模板名称（如：深度论文精读 / 结构化周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
+          <textarea id="tpl-system" rows="8" placeholder="SKILL.md：标准 frontmatter 与指令（使用 {{document}} 等受限变量）" aria-label="SKILL.md 指令" data-i18n-placeholder="tpl.systemPlaceholder" data-i18n-aria="tpl.systemPlaceholder"></textarea>
+          <textarea id="tpl-user" rows="3" placeholder="变量/补充请求模板（可选）；发布前会执行结构与安全校验" aria-label="Skill 变量与补充请求" data-i18n-placeholder="tpl.userPlaceholder" data-i18n-aria="tpl.userPlaceholder"></textarea>
+          <p id="tpl-draft-status" class="fix-note" role="status" aria-live="polite" data-i18n="tpl.hint">内置模板可直接编辑并保存。</p>
+        </div>
       </div>
     </div>
     <div class="url-actions">
       <button id="tpl-new" class="tb-btn" data-i18n="ai.newSession">新建</button>
+      <button id="tpl-edit" class="tb-btn" data-i18n="toolbar.edit">编辑</button>
       <button id="tpl-copy" class="tb-btn" data-i18n="editor.copy">复制</button>
       <button id="tpl-save" class="tb-btn accent" data-i18n="editor.save">保存</button>
       <button id="tpl-publish" class="tb-btn accent" data-i18n="export.groupPublish">发布</button>

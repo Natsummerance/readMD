@@ -781,10 +781,24 @@ async function runEditAiAction(act, customPrompt = '') {
   editAiCurrentResult = '';
 
   try {
+    const connection = typeof resolveSharedAiConnection === 'function'
+      ? await resolveSharedAiConnection()
+      : null;
+    if (!connection) throw new Error(_t('toast.selectProviderFirst') || '请先选择 AI 提供商');
+    if (!connection.local && !connection.has_key) {
+      throw new Error(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接');
+    }
     const res = await apiFetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        provider: connection.provider,
+        credential_id: connection.credential_id,
+        model: connection.model,
+        base_url: connection.base_url,
+        mode: connection.mode,
+        endpoint_mode: connection.endpoint_mode,
+        headers: connection.headers,
         skill_id: skillId,
         skill_variables: {
           document: range.context || sourceText,

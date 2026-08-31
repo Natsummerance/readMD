@@ -566,6 +566,7 @@ function bindEvents() {
   $('ai-template').addEventListener('change', onAiTemplateChange);
   $('ai-tpl-btn').addEventListener('click', openTplModal);
   $('tpl-new').addEventListener('click', () => selectTpl(null));
+  $('tpl-edit') && $('tpl-edit').addEventListener('click', editCurrentSkill);
   $('tpl-copy') && $('tpl-copy').addEventListener('click', copyCurrentSkill);
   $('tpl-save').addEventListener('click', saveTplForm);
   $('tpl-ai-generate') && $('tpl-ai-generate').addEventListener('click', generateSkillDraft);
@@ -578,8 +579,20 @@ function bindEvents() {
   $('ai-clear-ctx').addEventListener('click', clearAiContext);
   $('ai-expand-toggle') && $('ai-expand-toggle').addEventListener('click', toggleAiFullscreen);
   $('tpl-search') && $('tpl-search').addEventListener('input', renderTplList);
-  $('tpl-import-btn') && $('tpl-import-btn').addEventListener('click', () => $('tpl-file-input') && $('tpl-file-input').click());
+  $('tpl-import-btn') && $('tpl-import-btn').addEventListener('click', () => toggleSkillImportMenu());
   $('tpl-file-input') && $('tpl-file-input').addEventListener('change', e => { if (e.target.files) Array.from(e.target.files).forEach(f => importTemplatesFromFile(f)); e.target.value = ''; });
+  $('tpl-import-source-github') && $('tpl-import-source-github').addEventListener('click', () => selectSkillImportSource('github'));
+  $('tpl-import-source-folder') && $('tpl-import-source-folder').addEventListener('click', () => selectSkillImportSource('folder'));
+  $('tpl-import-source-zip') && $('tpl-import-source-zip').addEventListener('click', () => selectSkillImportSource('zip'));
+  $('tpl-folder-input') && $('tpl-folder-input').addEventListener('change', e => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) showToast(window.i18n ? window.i18n.t('toast.convertBrowserNotice') : 'Browser mode is unavailable');
+    e.target.value = '';
+  });
+  $('tpl-zip-input') && $('tpl-zip-input').addEventListener('change', async e => {
+    await previewBrowserZipSkill((e.target.files || [])[0]);
+    e.target.value = '';
+  });
   $('tpl-github-preview-btn') && $('tpl-github-preview-btn').addEventListener('click', previewGithubSkillImport);
   $('tpl-github-url') && $('tpl-github-url').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); previewGithubSkillImport(); } });
   $('tpl-export-btn') && $('tpl-export-btn').addEventListener('click', exportTemplatesAsJson);

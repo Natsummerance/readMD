@@ -39,10 +39,24 @@ async function handleAiDocumentFix() {
   showToast(_t('fixes.aiFixing') || '正在进行 AI 深度格式排版自愈...', 2500);
 
   try {
+    const connection = typeof resolveSharedAiConnection === 'function'
+      ? await resolveSharedAiConnection()
+      : null;
+    if (!connection) throw new Error(_t('toast.selectProviderFirst') || '请先选择 AI 提供商');
+    if (!connection.local && !connection.has_key) {
+      throw new Error(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接');
+    }
     const resp = await apiFetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        provider: connection.provider,
+        credential_id: connection.credential_id,
+        model: connection.model,
+        base_url: connection.base_url,
+        mode: connection.mode,
+        endpoint_mode: connection.endpoint_mode,
+        headers: connection.headers,
         skill_id: 'readmd-format-fix',
         skill_variables: {
           document: rawContent,

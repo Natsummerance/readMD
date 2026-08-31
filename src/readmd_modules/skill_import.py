@@ -16,6 +16,7 @@ import os
 import posixpath
 import re
 import shutil
+import stat
 import tempfile
 import urllib.error
 import urllib.parse
@@ -38,7 +39,17 @@ MAX_RESPONSE_BYTES = 64 * 1024 * 1024
 MAX_EXTRACTED_BYTES = 128 * 1024 * 1024
 MAX_FILES = 2000
 MAX_PATH_LENGTH = 240
+MAX_PATH_DEPTH = 16
+MAX_FILE_BYTES = 16 * 1024 * 1024
 _ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+_VARIABLE_RE = re.compile(r"\{\{\s*([a-zA-Z0-9_-]+)\s*\}\}")
+_ALLOWED_VARIABLES = {"document", "selection", "request", "language", "context", "output_format"}
+_SCRIPT_SUFFIXES = {".py", ".js", ".mjs", ".cjs", ".sh", ".ps1", ".bat", ".cmd"}
+_TEXT_SUFFIXES = {
+    ".md", ".markdown", ".txt", ".json", ".yaml", ".yml", ".toml", ".ini", ".cfg",
+    ".py", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".sh", ".ps1", ".bat",
+    ".cmd", ".html", ".css", ".xml", ".csv",
+}
 
 
 class SkillImportError(ValueError):
@@ -249,6 +260,233 @@ def _frontmatter(text: str) -> Tuple[str, str]:
     return values.get("name", ""), values.get("description", "")
 
 
+def _is_license_path(path: str) -> bool:
+    name = posixpath.basename(path).lower()
+    return name.startswith(("license", "licence", "copying")) or name == "notice" or name.startswith("notice.")
+
+
+def _manifest_sha256(files: Iterable[Mapping[str, Any]]) -> str:
+    digest = hashlib.sha256()
+    for item in sorted(files, key=lambda value: str(value.get("path") or "")):
+        digest.update(str(item.get("path") or "").encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(str(item.get("sha256") or "").encode("ascii"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _scan_directory(root: Path) -> List[Dict[str, Any]]:
+    """Return a deterministic regular-file manifest for an untrusted tree."""
+    root = root.expanduser()
+    if root.is_symlink():
+        raise SkillImportError("source_symlink", "Skill 来源目录不能是符号链接")
+    if not root.is_dir():
+        raise SkillImportError("source_not_found", "Skill 来源目录不存在")
+    root = root.resolve()
+    files: List[Dict[str, Any]] = []
+    total = 0
+    for current, directories, filenames in os.walk(root, topdown=True, followlinks=False):
+        current_path = Path(current)
+        for name in list(directories):
+            candidate = current_path / name
+            mode = candidate.lstat().st_mode
+            if stat.S_ISLNK(mode):
+                raise SkillImportError("source_symlink", "Skill 来源包含不允许的符号链接")
+            if not stat.S_ISDIR(mode):
+                raise SkillImportError("source_special_file", "Skill 来源包含不支持的特殊目录项")
+            relative = candidate.relative_to(root).as_posix()
+            if len(relative) > MAX_PATH_LENGTH:
+                raise SkillImportError("source_path_too_long", "Skill 来源路径过长")
+            if len(Path(relative).parts) > MAX_PATH_DEPTH:
+                raise SkillImportError("source_path_too_deep", "Skill 来源目录层级超过限制")
+        for name in filenames:
+            candidate = current_path / name
+            mode = candidate.lstat().st_mode
+            if stat.S_ISLNK(mode):
+                raise SkillImportError("source_symlink", "Skill 来源包含不允许的符号链接")
+            if not stat.S_ISREG(mode):
+                raise SkillImportError("source_special_file", "Skill 来源包含不支持的特殊文件")
+            relative = candidate.relative_to(root).as_posix()
+            if len(relative) > MAX_PATH_LENGTH:
+                raise SkillImportError("source_path_too_long", "Skill 来源路径过长")
+            if len(Path(relative).parts) > MAX_PATH_DEPTH:
+                raise SkillImportError("source_path_too_deep", "Skill 来源目录层级超过限制")
+            size = candidate.stat().st_size
+            if size > MAX_FILE_BYTES:
+                raise SkillImportError("source_file_too_large", "Skill 来源包含超过大小限制的文件")
+            total += size
+            if total > MAX_EXTRACTED_BYTES:
+                raise SkillImportError("source_too_large", "Skill 来源总大小超过限制")
+            if len(files) >= MAX_FILES:
+                raise SkillImportError("source_too_many_files", "Skill 来源文件数量超过限制")
+            digest = hashlib.sha256()
+            with open(candidate, "rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            files.append({"path": relative, "size": size, "sha256": digest.hexdigest()})
+    return sorted(files, key=lambda item: item["path"])
+
+
+def _applicable_licenses(directory: str, license_paths: Iterable[str]) -> List[str]:
+    directory = directory.strip("/")
+    result = []
+    for path in license_paths:
+        parent = posixpath.dirname(path).strip("/")
+        if not parent or directory == parent or directory.startswith(parent + "/"):
+            result.append(path)
+    return sorted(result)
+
+
+def _scan_skill_candidates(root: Path, manifest: Iterable[Mapping[str, Any]]) -> Tuple[List[Dict[str, Any]], List[str]]:
+    manifest_items = [dict(item) for item in manifest]
+    paths = [str(item.get("path") or "") for item in manifest_items]
+    by_path = {str(item.get("path") or ""): item for item in manifest_items}
+    license_paths = sorted(path for path in paths if _is_license_path(path))
+    skills: List[Dict[str, Any]] = []
+    for path in paths:
+        if posixpath.basename(path).lower() != "skill.md":
+            continue
+        directory = posixpath.dirname(path)
+        skill_file = root / Path(path)
+        errors: List[str] = []
+        try:
+            text = skill_file.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            text = ""
+            errors.append("skill_not_utf8")
+        name, description = _frontmatter(text)
+        if not _ID_RE.fullmatch(name):
+            errors.append("skill_name_invalid")
+        if not description:
+            errors.append("skill_description_invalid")
+        if set(_VARIABLE_RE.findall(text)) - _ALLOWED_VARIABLES:
+            errors.append("skill_variables_invalid")
+        sidecar_path = posixpath.join(directory, "readmd.skill.json") if directory else "readmd.skill.json"
+        if sidecar_path in by_path:
+            try:
+                sidecar = json.loads((root / Path(sidecar_path)).read_text(encoding="utf-8"))
+                if not isinstance(sidecar, dict):
+                    raise ValueError
+                declared = sidecar.get("variables")
+                required = sidecar.get("required_variables")
+                metadata_id = str(sidecar.get("id") or name)
+                invalid_declared = declared is not None and (
+                    not isinstance(declared, list) or set(map(str, declared)) - _ALLOWED_VARIABLES
+                )
+                invalid_required = required is not None and (
+                    not isinstance(required, list) or set(map(str, required)) - _ALLOWED_VARIABLES
+                )
+                if isinstance(declared, list) and isinstance(required, list):
+                    invalid_required = invalid_required or bool(set(map(str, required)) - set(map(str, declared)))
+                if metadata_id != name or not _ID_RE.fullmatch(metadata_id) or invalid_declared or invalid_required:
+                    errors.append("skill_metadata_invalid")
+            except (OSError, UnicodeError, json.JSONDecodeError, ValueError, TypeError):
+                errors.append("skill_metadata_invalid")
+        applicable_licenses = _applicable_licenses(directory, license_paths)
+        if not applicable_licenses:
+            errors.append("skill_license_missing")
+        file_items = [dict(item) for item in manifest_items if _under(str(item.get("path") or ""), directory)]
+        text_paths = {str(item.get("path") or "") for item in file_items if Path(str(item.get("path") or "")).suffix.lower() in _TEXT_SUFFIXES}
+        text_paths.update(applicable_licenses)
+        for text_path in sorted(text_paths):
+            try:
+                (root / Path(text_path)).read_text(encoding="utf-8")
+            except (OSError, UnicodeError):
+                errors.append("skill_resource_not_utf8")
+                break
+        skill_id = name if _ID_RE.fullmatch(name) else _slug(posixpath.basename(directory) or "root")
+        skills.append({
+            "id": skill_id,
+            "path": path,
+            "directory": directory,
+            "name": name or skill_id,
+            "description": description,
+            "files": [item["path"] for item in file_items],
+            "source_files": file_items,
+            "license_files": applicable_licenses,
+            "valid": not errors,
+            "error_code": errors[0] if errors else "",
+            "error_codes": errors,
+            "scripts_present": any(Path(item["path"]).suffix.lower() in _SCRIPT_SUFFIXES for item in file_items),
+        })
+    return skills, license_paths
+
+
+def _preview_directory(path: os.PathLike[str] | str) -> Dict[str, Any]:
+    root = Path(path).expanduser()
+    manifest = _scan_directory(root)
+    root = root.resolve()
+    skills, license_paths = _scan_skill_candidates(root, manifest)
+    if not skills:
+        raise SkillImportError("skill_not_found", "来源中没有可导入的 SKILL.md")
+    source_hash = _manifest_sha256(manifest)
+    identity = str(root)
+    return {
+        "source_id": "dir-" + hashlib.sha256(identity.encode("utf-8")).hexdigest()[:20],
+        "source": {"type": "directory", "path": identity, "sha256": source_hash},
+        "license_files": license_paths,
+        "skills": skills,
+        "offline_copy": True,
+        "credential_required": False,
+    }
+
+
+def _read_local_archive(path: os.PathLike[str] | str) -> Tuple[Path, bytes, str]:
+    archive_path = Path(path).expanduser()
+    if archive_path.is_symlink():
+        raise SkillImportError("source_symlink", "ZIP 来源不能是符号链接")
+    if not archive_path.is_file():
+        raise SkillImportError("source_not_found", "ZIP 来源文件不存在")
+    archive_path = archive_path.resolve()
+    if archive_path.stat().st_size > MAX_RESPONSE_BYTES:
+        raise SkillImportError("archive_too_large", "ZIP 文件超过安全大小限制")
+    try:
+        blob = archive_path.read_bytes()
+    except OSError as exc:
+        raise SkillImportError("source_unreadable", "无法读取 ZIP 来源文件") from exc
+    return archive_path, blob, hashlib.sha256(blob).hexdigest()
+
+
+def _preview_zip(path: os.PathLike[str] | str) -> Dict[str, Any]:
+    archive_path, blob, archive_hash = _read_local_archive(path)
+    extracted = _extract(blob)
+    try:
+        root = _archive_root(extracted)
+        manifest = _scan_directory(root)
+        skills, license_paths = _scan_skill_candidates(root, manifest)
+        if not skills:
+            raise SkillImportError("skill_not_found", "ZIP 中没有可导入的 SKILL.md")
+        content_hash = _manifest_sha256(manifest)
+        identity = str(archive_path)
+        return {
+            "source_id": "zip-" + hashlib.sha256(identity.encode("utf-8")).hexdigest()[:20],
+            "source": {
+                "type": "zip",
+                "path": identity,
+                "archive_sha256": archive_hash,
+                "sha256": content_hash,
+            },
+            "license_files": license_paths,
+            "skills": skills,
+            "offline_copy": True,
+            "credential_required": False,
+        }
+    finally:
+        shutil.rmtree(extracted, ignore_errors=True)
+
+
+def preview_source(source_type: str, source: os.PathLike[str] | str, credential_id: str = "") -> Dict[str, Any]:
+    """Preview a GitHub URL, local Skill directory, or ZIP archive."""
+    kind = str(source_type or "").strip().lower()
+    if kind in {"directory", "folder", "local"}:
+        return _preview_directory(source)
+    if kind in {"zip", "archive"}:
+        return _preview_zip(source)
+    if kind == "github":
+        return preview_import(str(source), credential_id)
+    raise SkillImportError("source_type_invalid", "不支持的 Skill 来源类型")
+
+
 def preview_import(url: str, credential_id: str = "") -> Dict[str, Any]:
     source = parse_github_url(url)
     token = _token(credential_id)
@@ -256,6 +494,7 @@ def preview_import(url: str, credential_id: str = "") -> Dict[str, Any]:
     prefix = source.get("subdir", "").strip("/")
     skills: List[Dict[str, Any]] = []
     paths = [str(item.get("path") or "") for item in entries if item.get("type") == "blob"]
+    license_paths = [p for p in paths if _is_license_path(p)]
     for path in paths:
         if not path.lower().endswith("/skill.md") and path.lower() != "skill.md":
             continue
@@ -268,6 +507,16 @@ def preview_import(url: str, credential_id: str = "") -> Dict[str, Any]:
         except SkillImportError as exc:
             skills.append({"path": path, "id": _slug(posixpath.basename(folder)), "valid": False, "error_code": exc.code})
             continue
+        errors: List[str] = []
+        if not _ID_RE.fullmatch(name):
+            errors.append("skill_name_invalid")
+        if not description:
+            errors.append("skill_description_invalid")
+        if set(_VARIABLE_RE.findall(text)) - _ALLOWED_VARIABLES:
+            errors.append("skill_variables_invalid")
+        applicable_licenses = _applicable_licenses(folder, license_paths)
+        if not applicable_licenses:
+            errors.append("skill_license_missing")
         skill_id = name if _ID_RE.fullmatch(name) else _slug(posixpath.basename(folder) or "root")
         file_list = sorted(p for p in paths if _under(p, folder))
         skills.append({
@@ -277,16 +526,18 @@ def preview_import(url: str, credential_id: str = "") -> Dict[str, Any]:
             "name": name or skill_id,
             "description": description,
             "files": file_list,
-            "valid": bool(name and description),
-            "scripts_present": any(Path(p).suffix.lower() in {".py", ".js", ".mjs", ".sh", ".ps1", ".bat", ".cmd"} for p in file_list),
+            "license_files": applicable_licenses,
+            "valid": not errors,
+            "error_code": errors[0] if errors else "",
+            "error_codes": errors,
+            "scripts_present": any(Path(p).suffix.lower() in _SCRIPT_SUFFIXES for p in file_list),
         })
     if not skills:
         raise SkillImportError("skill_not_found", "仓库中没有可导入的 SKILL.md")
-    license_paths = [p for p in paths if posixpath.basename(p).lower().startswith("license") or posixpath.basename(p).lower() == "notice"]
     source_id = "gh-" + hashlib.sha256(source["canonical_url"].encode("utf-8")).hexdigest()[:20]
     return {
         "source_id": source_id,
-        "source": {**source, "resolved_commit": sha, "repository_name": repo.get("full_name", "")},
+        "source": {**source, "type": "github", "resolved_commit": sha, "repository_name": repo.get("full_name", "")},
         "license_files": license_paths,
         "skills": skills,
         "offline_copy": False,
@@ -314,6 +565,8 @@ def _safe_member(name: str) -> str:
         raise SkillImportError("archive_path_invalid", "归档包含不安全路径")
     if len(name) > MAX_PATH_LENGTH:
         raise SkillImportError("archive_path_too_long", "归档路径过长")
+    if len(Path(name).parts) > MAX_PATH_DEPTH:
+        raise SkillImportError("archive_path_too_deep", "归档路径层级超过限制")
     return name
 
 
@@ -325,13 +578,25 @@ def _extract(blob: bytes) -> Path:
             if len(infos) > MAX_FILES:
                 raise SkillImportError("archive_too_many_files", "归档文件数量超过限制")
             total = 0
+            seen_names = set()
             for info in infos:
                 name = _safe_member(info.filename.rstrip("/")) if info.filename.rstrip("/") else ""
                 if not name:
                     continue
-                # ZIP mode bits mark symlinks; never materialize them.
-                if ((info.external_attr >> 16) & 0o170000) == 0o120000:
+                folded = name.casefold()
+                if folded in seen_names:
+                    raise SkillImportError("archive_duplicate_path", "归档包含重复或大小写冲突的路径")
+                seen_names.add(folded)
+                if info.flag_bits & 0x1:
+                    raise SkillImportError("archive_encrypted", "不支持加密的 ZIP 文件")
+                # UNIX mode bits identify symlinks and device/special files.
+                file_type = (info.external_attr >> 16) & 0o170000
+                if file_type == 0o120000:
                     raise SkillImportError("archive_symlink", "归档包含不允许的符号链接")
+                if file_type not in (0, stat.S_IFREG, stat.S_IFDIR):
+                    raise SkillImportError("archive_special_file", "归档包含不允许的特殊文件")
+                if int(info.file_size or 0) > MAX_FILE_BYTES:
+                    raise SkillImportError("archive_file_too_large", "归档包含超过大小限制的文件")
                 total += int(info.file_size or 0)
                 if total > MAX_EXTRACTED_BYTES:
                     raise SkillImportError("archive_too_large", "归档展开后超过安全大小限制")
@@ -363,6 +628,12 @@ def _skill_file(folder: Path) -> Optional[Path]:
     return None
 
 
+def _restore_skill_backup(backup: Optional[Path], destination: Path) -> None:
+    shutil.rmtree(destination, ignore_errors=True)
+    if backup is not None and backup.is_dir():
+        shutil.copytree(backup, destination)
+
+
 def apply_import(preview: Mapping[str, Any], selections: Iterable[Mapping[str, Any]], credential_id: str = "", confirm: bool = False) -> Dict[str, Any]:
     if not confirm:
         raise SkillImportError("confirmation_required", "导入 Skill 需要明确确认")
@@ -381,14 +652,29 @@ def apply_import(preview: Mapping[str, Any], selections: Iterable[Mapping[str, A
         for item in entries
         if item.get("type") == "blob"
     }
+    manifest = _scan_directory(root)
+    manifest_paths = {str(item.get("path") or "") for item in manifest}
+    if not manifest_paths.issubset(allowed_paths):
+        shutil.rmtree(extracted, ignore_errors=True)
+        raise SkillImportError("source_changed", "GitHub 归档与已解析的提交目录不一致")
+    scanned_skills, scanned_license_paths = _scan_skill_candidates(root, manifest)
+    scanned_by_path = {str(item.get("path") or ""): item for item in scanned_skills}
+    selections = list(selections)
     imported: List[Dict[str, Any]] = []
+    skipped: List[Dict[str, str]] = []
     config = _load_sources()
     try:
         for selected in selections:
-            if not isinstance(selected, Mapping) or selected.get("valid") is False:
+            if not isinstance(selected, Mapping):
                 continue
             path = str(selected.get("path") or "").replace("\\", "/")
-            directory = str(selected.get("directory") or posixpath.dirname(path)).strip("/")
+            declared = scanned_by_path.get(path)
+            if not isinstance(declared, Mapping):
+                raise SkillImportError("skill_path_invalid", "选中的 Skill 路径不在提交清单中")
+            if declared.get("valid") is not True:
+                code = str(declared.get("error_code") or "skill_invalid")
+                raise SkillImportError(code, "选中的 Skill 未通过安全校验")
+            directory = str(declared.get("directory") or posixpath.dirname(path)).strip("/")
             if not directory:
                 directory = ""
             if path not in allowed_paths or not path.lower().endswith("/skill.md") and path.lower() != "skill.md":
@@ -401,72 +687,94 @@ def apply_import(preview: Mapping[str, Any], selections: Iterable[Mapping[str, A
             source_skill_file = _skill_file(source_dir)
             if not source_dir.is_dir() or source_skill_file is None:
                 raise SkillImportError("skill_missing", "选中的 Skill 目录不完整")
-            skill_id = str(selected.get("id") or _slug(source_dir.name))
+            skill_id = str(selected.get("target_id") or selected.get("id") or declared.get("id") or "")
             if not _ID_RE.fullmatch(skill_id):
-                skill_id = _slug(skill_id)
+                raise SkillImportError("skill_id_invalid", "Skill ID 必须使用小写 kebab-case")
             destination = Path(DATA_DIR) / "skills" / skill_id
+            backup: Optional[Path] = None
             action = str(selected.get("conflict_action") or "skip").lower()
             if destination.exists():
                 if action == "skip":
+                    skipped.append({"id": skill_id, "reason": "conflict"})
                     continue
                 if action not in ("replace", "rename"):
                     raise SkillImportError("skill_conflict", "Skill 已存在，请选择跳过、重命名或替换")
                 if action == "rename":
-                    skill_id = _slug(skill_id + "-imported")
+                    base = skill_id + "-imported"
+                    skill_id = base
+                    counter = 2
+                    while (Path(DATA_DIR) / "skills" / skill_id).exists():
+                        skill_id = "%s-%d" % (base, counter)
+                        counter += 1
                     destination = Path(DATA_DIR) / "skills" / skill_id
                 else:
                     backup = Path(DATA_DIR) / "skills" / ".versions" / skill_id / ("github-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
                     backup.parent.mkdir(parents=True, exist_ok=True)
                     shutil.move(str(destination), str(backup))
             destination.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(source_dir, destination)
-            imported_skill_file = _skill_file(destination)
-            if imported_skill_file is None:
-                shutil.rmtree(destination, ignore_errors=True)
-                raise SkillImportError("skill_missing", "选中的 Skill 目录不完整")
-            if imported_skill_file.name != "SKILL.md":
-                imported_skill_file.rename(destination / "SKILL.md")
-            # A renamed destination must also have a matching frontmatter id;
-            # otherwise SkillRegistry correctly indexes it under the upstream
-            # name and the imported record would point at a non-existent id.
-            skill_file = destination / "SKILL.md"
-            original_skill_text = skill_file.read_text(encoding="utf-8")
-            if skill_id != str(selected.get("id") or ""):
-                original_name = re.search(r"^(name:\s*)([^\r\n]+)", original_skill_text, re.M)
-                if original_name:
-                    skill_file.write_text(
-                        original_skill_text[:original_name.start(2)] + skill_id + original_skill_text[original_name.end(2):],
-                        encoding="utf-8", newline="\n",
-                    )
-            source_files = []
-            for source_file in sorted(p for p in destination.rglob("*") if p.is_file()):
-                if source_file.name == "readmd.skill.json":
-                    continue
-                digest = hashlib.sha256(source_file.read_bytes()).hexdigest()
-                source_files.append({"path": source_file.relative_to(destination).as_posix(), "sha256": digest})
-            source_hash = _directory_sha256(destination)
-            metadata = {
-                "id": skill_id,
-                "scope": "user",
-                "enabled": True,
-                "scripts_allowed": False,
-                "source": "github",
-                "provenance": {"repository": parsed["canonical_url"], "commit": sha, "path": path},
-                "source_files": source_files,
-                "source_sha256": source_hash,
-                "license": ", ".join(str(x) for x in preview.get("license_files", [])),
-                "adaptation_notes": ["Imported from GitHub as data; scripts remain disabled."],
-            }
-            save_text_atomic(str(destination / "readmd.skill.json"), json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
-            # Validate the on-disk structure directly after writing metadata.
             try:
-                check = SkillRegistry([destination.parent]).validate(destination)
-            except SkillError:
-                check = None
-            if check is None:
-                shutil.rmtree(destination, ignore_errors=True)
-                raise SkillImportError("skill_invalid", "导入后 Skill 未通过结构校验")
-            imported.append({"id": skill_id, "path": path, "sha256": source_hash})
+                shutil.copytree(source_dir, destination)
+                imported_skill_file = _skill_file(destination)
+                if imported_skill_file is None:
+                    raise SkillImportError("skill_missing", "选中的 Skill 目录不完整")
+                if imported_skill_file.name != "SKILL.md":
+                    imported_skill_file.rename(destination / "SKILL.md")
+                # A renamed destination must also have a matching frontmatter id;
+                # otherwise SkillRegistry correctly indexes it under the upstream
+                # name and the imported record would point at a non-existent id.
+                skill_file = destination / "SKILL.md"
+                original_skill_text = skill_file.read_text(encoding="utf-8")
+                if skill_id != str(selected.get("id") or ""):
+                    original_name = re.search(r"^(name:\s*)([^\r\n]+)", original_skill_text, re.M)
+                    if original_name:
+                        skill_file.write_text(
+                            original_skill_text[:original_name.start(2)] + skill_id + original_skill_text[original_name.end(2):],
+                            encoding="utf-8", newline="\n",
+                        )
+                for license_path in declared.get("license_files", []):
+                    license_path = str(license_path or "").replace("\\", "/")
+                    if not license_path or _under(license_path, directory):
+                        continue
+                    _safe_member(license_path)
+                    license_source = root / Path(license_path)
+                    if not license_source.is_file() or license_source.is_symlink():
+                        raise SkillImportError("skill_license_missing", "Skill 许可证文件不可用")
+                    license_destination = destination / ".readmd-licenses" / Path(license_path)
+                    license_destination.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(license_source, license_destination)
+                source_files = []
+                for source_file in sorted(p for p in destination.rglob("*") if p.is_file()):
+                    if source_file.name == "readmd.skill.json":
+                        continue
+                    digest = hashlib.sha256(source_file.read_bytes()).hexdigest()
+                    source_files.append({"path": source_file.relative_to(destination).as_posix(), "sha256": digest})
+                source_hash = _directory_sha256(destination)
+                metadata = {
+                    "id": skill_id,
+                    "scope": "user",
+                    "enabled": True,
+                    "scripts_allowed": False,
+                    "source": "github",
+                    "provenance": {"repository": parsed["canonical_url"], "commit": sha, "path": path},
+                    "source_files": source_files,
+                    "source_sha256": source_hash,
+                    "license": ", ".join(str(x) for x in declared.get("license_files", [])),
+                    "adaptation_notes": ["Imported from GitHub as data; scripts remain disabled."],
+                }
+                save_text_atomic(str(destination / "readmd.skill.json"), json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
+                # Validate the on-disk structure directly after writing metadata.
+                try:
+                    check = SkillRegistry([destination.parent]).validate(destination)
+                except Exception as exc:
+                    if isinstance(exc, SkillError):
+                        raise SkillImportError("skill_invalid", "导入后 Skill 未通过结构校验") from exc
+                    raise
+            except BaseException:
+                _restore_skill_backup(backup, destination)
+                raise
+            imported.append({"id": skill_id, "path": path, "sha256": source_hash, "source_files": source_files})
+        if not imported and skipped:
+            return {"ok": True, "source": None, "skills": [], "skipped": skipped}
         if not imported:
             raise SkillImportError("nothing_imported", "没有导入任何 Skill")
         source_id = preview.get("source_id") or "gh-" + hashlib.sha256(parsed["canonical_url"].encode()).hexdigest()[:20]
@@ -475,6 +783,8 @@ def apply_import(preview: Mapping[str, Any], selections: Iterable[Mapping[str, A
         merged_skills.update({str(item.get("id")): item for item in imported})
         source_record = {
             "source_id": source_id,
+            "source_type": "github",
+            "source_sha256": _manifest_sha256(manifest),
             "repository_url": parsed["canonical_url"],
             "owner": parsed["owner"], "repo": parsed["repo"], "subdir": parsed.get("subdir", ""),
             "requested_ref": parsed.get("ref", ""), "resolved_commit": sha,
@@ -484,9 +794,203 @@ def apply_import(preview: Mapping[str, Any], selections: Iterable[Mapping[str, A
         config["sources"] = [s for s in config.get("sources", []) if s.get("source_id") != source_record["source_id"]]
         config["sources"].append(source_record)
         _save_sources(config)
-        return {"ok": True, "source": source_record, "skills": imported}
+        return {"ok": True, "source": source_record, "skills": imported, "skipped": skipped}
     finally:
         shutil.rmtree(extracted, ignore_errors=True)
+
+
+def _apply_filesystem_import(
+    preview: Mapping[str, Any],
+    selections: Iterable[Mapping[str, Any]],
+    root: Path,
+    actual_hash: str,
+    source_type: str,
+    source_path: str,
+    archive_hash: str = "",
+) -> Dict[str, Any]:
+    preview_skills = {
+        str(item.get("path") or ""): item
+        for item in preview.get("skills", [])
+        if isinstance(item, Mapping)
+    }
+    imported: List[Dict[str, Any]] = []
+    skipped: List[Dict[str, str]] = []
+    config = _load_sources()
+    for selected in selections:
+        if not isinstance(selected, Mapping):
+            continue
+        path = str(selected.get("path") or "").replace("\\", "/")
+        declared = preview_skills.get(path)
+        if not isinstance(declared, Mapping) or declared.get("valid") is not True:
+            raise SkillImportError("skill_path_invalid", "选中的 Skill 不在有效预览清单中")
+        directory = str(declared.get("directory") or "").strip("/")
+        if path.lower() != (posixpath.join(directory, "skill.md") if directory else "skill.md").lower():
+            raise SkillImportError("skill_path_invalid", "选中的 Skill 目录与入口文件不匹配")
+        source_dir = root / Path(directory)
+        source_skill_file = _skill_file(source_dir)
+        if source_skill_file is None:
+            raise SkillImportError("skill_missing", "选中的 Skill 目录不完整")
+        skill_id = str(selected.get("target_id") or selected.get("id") or declared.get("id") or "")
+        if not _ID_RE.fullmatch(skill_id):
+            raise SkillImportError("skill_id_invalid", "Skill ID 必须使用小写 kebab-case")
+        destination = Path(DATA_DIR) / "skills" / skill_id
+        backup: Optional[Path] = None
+        action = str(selected.get("conflict_action") or "skip").lower()
+        if destination.exists():
+            if action == "skip":
+                skipped.append({"id": skill_id, "reason": "conflict"})
+                continue
+            if action not in {"replace", "rename"}:
+                raise SkillImportError("skill_conflict", "Skill 已存在，请选择跳过、重命名或替换")
+            if action == "rename":
+                base = skill_id + "-imported"
+                skill_id = base
+                counter = 2
+                while (Path(DATA_DIR) / "skills" / skill_id).exists():
+                    skill_id = "%s-%d" % (base, counter)
+                    counter += 1
+                destination = Path(DATA_DIR) / "skills" / skill_id
+            else:
+                backup = Path(DATA_DIR) / "skills" / ".versions" / skill_id / (
+                    source_type + "-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                )
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                shutil.move(str(destination), str(backup))
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            shutil.copytree(source_dir, destination)
+            imported_skill_file = _skill_file(destination)
+            if imported_skill_file is None:
+                raise SkillImportError("skill_missing", "选中的 Skill 目录不完整")
+            if imported_skill_file.name != "SKILL.md":
+                imported_skill_file.rename(destination / "SKILL.md")
+            skill_file = destination / "SKILL.md"
+            text = skill_file.read_text(encoding="utf-8")
+            original_id = str(declared.get("id") or "")
+            if skill_id != original_id:
+                match = re.search(r"^(name:\s*)([^\r\n]+)", text, re.M)
+                if match:
+                    text = text[:match.start(2)] + skill_id + text[match.end(2):]
+                    skill_file.write_text(text, encoding="utf-8", newline="\n")
+            for license_path in declared.get("license_files", []):
+                license_path = str(license_path or "").replace("\\", "/")
+                if not license_path or _under(license_path, directory):
+                    continue
+                _safe_member(license_path)
+                license_source = root / Path(license_path)
+                if not license_source.is_file() or license_source.is_symlink():
+                    raise SkillImportError("skill_license_missing", "Skill 许可证文件不可用")
+                license_destination = destination / ".readmd-licenses" / Path(license_path)
+                license_destination.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(license_source, license_destination)
+            source_files = []
+            for source_file in sorted(p for p in destination.rglob("*") if p.is_file()):
+                if source_file.name == "readmd.skill.json":
+                    continue
+                source_files.append({
+                    "path": source_file.relative_to(destination).as_posix(),
+                    "sha256": hashlib.sha256(source_file.read_bytes()).hexdigest(),
+                })
+            source_hash = _directory_sha256(destination)
+            metadata = {
+                "id": skill_id,
+                "scope": "user",
+                "enabled": True,
+                "scripts_allowed": False,
+                "source": source_type,
+                "provenance": {
+                    "type": source_type,
+                    "source_path": source_path,
+                    "source_sha256": actual_hash,
+                    "archive_sha256": archive_hash,
+                    "skill_path": path,
+                },
+                "source_files": source_files,
+                "source_sha256": source_hash,
+                "license": ", ".join(str(item) for item in declared.get("license_files", [])),
+                "adaptation_notes": ["Imported from a local %s as data; scripts remain disabled." % source_type],
+            }
+            save_text_atomic(str(destination / "readmd.skill.json"), json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
+            try:
+                SkillRegistry([destination.parent]).validate(destination)
+            except Exception as exc:
+                if isinstance(exc, SkillError):
+                    raise SkillImportError("skill_invalid", "导入后 Skill 未通过结构校验") from exc
+                raise
+        except BaseException:
+            _restore_skill_backup(backup, destination)
+            raise
+        imported.append({"id": skill_id, "path": path, "sha256": source_hash, "source_files": source_files})
+    if not imported and skipped:
+        return {"ok": True, "source": None, "skills": [], "skipped": skipped}
+    if not imported:
+        raise SkillImportError("nothing_imported", "没有导入任何 Skill")
+    prefix = "dir" if source_type == "directory" else source_type
+    source_id = str(preview.get("source_id") or prefix + "-" + hashlib.sha256(source_path.encode("utf-8")).hexdigest()[:20])
+    source_record = {
+        "source_id": source_id,
+        "source_type": source_type,
+        "source_path": source_path,
+        "source_sha256": actual_hash,
+        "archive_sha256": archive_hash,
+        "update_policy": "manual",
+        "skills": imported,
+        "imported_at": datetime.now(timezone.utc).isoformat(),
+    }
+    config["sources"] = [item for item in config.get("sources", []) if item.get("source_id") != source_id]
+    config["sources"].append(source_record)
+    _save_sources(config)
+    return {"ok": True, "source": source_record, "skills": imported, "skipped": skipped}
+
+
+def _apply_directory_import(preview: Mapping[str, Any], selections: Iterable[Mapping[str, Any]]) -> Dict[str, Any]:
+    source = preview.get("source") if isinstance(preview.get("source"), Mapping) else {}
+    root = Path(str(source.get("path") or "")).expanduser()
+    manifest = _scan_directory(root)
+    root = root.resolve()
+    actual_hash = _manifest_sha256(manifest)
+    if not source.get("sha256") or actual_hash != str(source.get("sha256")):
+        raise SkillImportError("source_changed", "预览后 Skill 来源已发生变化，请重新预览")
+    return _apply_filesystem_import(preview, selections, root, actual_hash, "directory", str(root))
+
+
+def _apply_zip_import(preview: Mapping[str, Any], selections: Iterable[Mapping[str, Any]]) -> Dict[str, Any]:
+    source = preview.get("source") if isinstance(preview.get("source"), Mapping) else {}
+    archive_path, blob, archive_hash = _read_local_archive(str(source.get("path") or ""))
+    if not source.get("archive_sha256") or archive_hash != str(source.get("archive_sha256")):
+        raise SkillImportError("source_changed", "预览后 ZIP 来源已发生变化，请重新预览")
+    extracted = _extract(blob)
+    try:
+        root = _archive_root(extracted)
+        manifest = _scan_directory(root)
+        actual_hash = _manifest_sha256(manifest)
+        if not source.get("sha256") or actual_hash != str(source.get("sha256")):
+            raise SkillImportError("source_changed", "预览后 ZIP 内容已发生变化，请重新预览")
+        return _apply_filesystem_import(
+            preview, selections, root, actual_hash, "zip", str(archive_path), archive_hash
+        )
+    finally:
+        shutil.rmtree(extracted, ignore_errors=True)
+
+
+def apply_source_import(
+    preview: Mapping[str, Any],
+    selections: Iterable[Mapping[str, Any]],
+    credential_id: str = "",
+    confirm: bool = False,
+) -> Dict[str, Any]:
+    """Apply a preview produced by :func:`preview_source`."""
+    if not confirm:
+        raise SkillImportError("confirmation_required", "导入 Skill 需要明确确认")
+    source = preview.get("source") if isinstance(preview.get("source"), Mapping) else {}
+    kind = str(source.get("type") or "github").lower()
+    if kind == "directory":
+        return _apply_directory_import(preview, selections)
+    if kind == "zip":
+        return _apply_zip_import(preview, selections)
+    if kind == "github":
+        return apply_import(preview, selections, credential_id, confirm=True)
+    raise SkillImportError("source_type_invalid", "不支持的 Skill 来源类型")
 
 
 def _directory_sha256(directory: Path) -> str:
@@ -507,6 +1011,28 @@ def find_source(source_id: str) -> Optional[Dict[str, Any]]:
     return next((s for s in list_sources() if s.get("source_id") == source_id), None)
 
 
+def preview_saved_source(source: Mapping[str, Any], credential_id: str = "") -> Dict[str, Any]:
+    """Re-preview a persisted source through its original adapter."""
+    kind = str(source.get("source_type") or "github").strip().lower()
+    if kind == "github":
+        value = str(source.get("repository_url") or "")
+    elif kind in {"directory", "zip"}:
+        value = str(source.get("source_path") or "")
+    else:
+        raise SkillImportError("source_type_invalid", "不支持的 Skill 来源类型")
+    if not value:
+        raise SkillImportError("source_not_found", "Skill 来源不可用")
+    return preview_source(kind, value, credential_id)
+
+
+def source_preview_changed(source: Mapping[str, Any], preview: Mapping[str, Any]) -> bool:
+    kind = str(source.get("source_type") or "github").strip().lower()
+    next_source = preview.get("source") if isinstance(preview.get("source"), Mapping) else {}
+    if kind == "github":
+        return str(next_source.get("resolved_commit") or "") != str(source.get("resolved_commit") or "")
+    return str(next_source.get("sha256") or "") != str(source.get("source_sha256") or "")
+
+
 def remove_source(source_id: str) -> bool:
     """Remove only the source binding; imported Skill files remain intact."""
     data = _load_sources()
@@ -518,4 +1044,8 @@ def remove_source(source_id: str) -> bool:
     return True
 
 
-__all__ = ["SkillImportError", "parse_github_url", "preview_import", "apply_import", "list_sources", "find_source", "remove_source"]
+__all__ = [
+    "SkillImportError", "parse_github_url", "preview_source", "apply_source_import",
+    "preview_import", "apply_import", "list_sources", "find_source", "preview_saved_source",
+    "source_preview_changed", "remove_source",
+]
