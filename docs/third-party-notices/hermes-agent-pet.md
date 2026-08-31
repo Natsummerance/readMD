@@ -30,11 +30,7 @@ The upstream repository is licensed under the MIT License:
 > OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 > SOFTWARE.
 
-ReadMD's optional `packages/pet-overlay` copies the overlay architecture and
-the upstream fallback sprite
-`apps/desktop/public/hermes-sprite.png` (SHA-256
-`e328d387a2fca8c02452fa534da1a89bdb8be9292cc51ffa66905018e74097a3`).
-It does not copy generated user pets, service credentials, or Hermes UI
-dependencies. Electron is not bundled in the ReadMD main application and the
-overlay is not started on application launch. The selected default character is
-the separately recorded Arch-chan model, not the Hermes fallback sprite.
+ReadMD does not copy or redistribute Hermes/Petdex character sprites, thumbnails,
+generated pets, service credentials, Electron runtime, or UI dependencies. The
+adaptation replaces Electron's `BrowserWindow` calls with pywebview's public
+window API so ReadMD retains its existing lightweight desktop runtime.
