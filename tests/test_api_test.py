@@ -15,6 +15,20 @@ import urllib.request
 from unittest import mock
 
 
+class TestHttpResponseLifecycle(unittest.TestCase):
+    def test_send_treats_cancelled_browser_response_as_normal_disconnect(self):
+        handler = object.__new__(readmd.Handler)
+        handler.headers = {'Accept-Encoding': ''}
+        handler.close_connection = False
+        handler.send_response = mock.Mock()
+        handler.send_header = mock.Mock()
+        handler.end_headers = mock.Mock()
+        handler.wfile = mock.Mock()
+        handler.wfile.write.side_effect = ConnectionAbortedError(10053, 'cancelled')
+
+        handler._send(200, 'application/json; charset=utf-8', b'{}')
+
+        self.assertTrue(handler.close_connection)
 
 
 class TestRenameFile(unittest.TestCase):

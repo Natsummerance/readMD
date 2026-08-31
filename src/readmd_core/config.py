@@ -11,7 +11,13 @@ IS_LINUX = sys.platform.startswith('linux')
 
 
 def _platform_data_dir() -> str:
-    """跨平台数据目录：Windows APPDATA, macOS ~/Library/Application Support, Linux ~/.local/share."""
+    """跨平台数据目录：Windows APPDATA, macOS ~/Library/Application Support, Linux ~/.local/share.
+
+    READMD_DATA_DIR 环境变量优先，供 UI 测试服务器等场景隔离真实用户数据。
+    """
+    override = os.environ.get('READMD_DATA_DIR')
+    if override:
+        return override
     if sys.platform == 'darwin':
         return os.path.join(os.path.expanduser('~'), 'Library', 'Application Support', 'ReadMD')
     if sys.platform == 'win32':

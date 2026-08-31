@@ -115,16 +115,19 @@ function openFileRename() {
 async function loadFile(path, { force = false, browserCopy = null } = {}) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!path) return;
-  const loadEpoch = beginDocumentLoad();
   const existingTab = findTabByPath(path);
-  if (existingTab && !force) {
-    await switchTab(existingTab.id);
-    return;
-  }
   if (existingTab && (existingTab.isDirty || (state.activeTabId === existingTab.id && state.editing))) {
     showToast(_t('toast.reloadBlockedDirty') || '未保存修改已保留，未重新加载外部更改');
     return;
   }
+  if (existingTab && !force && state.activeTabId !== existingTab.id) {
+    await switchTab(existingTab.id);
+    if (state.activeTabId !== existingTab.id) return;
+  }
+  // Opening an already-open clean path is an explicit refresh request.  Start
+  // the load only after tab switching, because switching invalidates older
+  // document epochs by design.
+  const loadEpoch = beginDocumentLoad();
   setProgress(8);
   try {
     const r = await apiFetch('/api/file?p=' + encodeURIComponent(path));

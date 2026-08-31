@@ -506,7 +506,7 @@ async function switchTab(tabId) {
         const action = await promptDirtyClose(prevTab.title || prevTab.name || 'document');
         if (action === 'cancel') return;
         if (action === 'save') {
-          await saveEdit();
+          await saveEdit({ exitAfterSave: true });
           if (state.editing) return;
         } else {
           exitEdit();
@@ -609,7 +609,7 @@ async function closeTab(tabId, force = false) {
     if (action === 'cancel') return;
     if (action === 'save') {
       await activateTabForSave(tabId);
-      const saved = await saveEdit();
+      const saved = await saveEdit({ exitAfterSave: true });
       if (!saved || (getActiveTab()?.id === tabId && state.editing)) return;
     }
   }
@@ -643,7 +643,7 @@ async function closeOtherTabs(keepTabId) {
         if (action === 'cancel') return;
       if (action === 'save') {
         await activateTabForSave(t.id);
-        const saved = await saveEdit();
+        const saved = await saveEdit({ exitAfterSave: true });
         if (!saved || state.tabs.some(item => item.id === t.id && item.isDirty)) return;
         }
       }
@@ -663,7 +663,7 @@ async function closeAllTabs() {
       if (action === 'cancel') return;
       if (action === 'save') {
         await activateTabForSave(t.id);
-        const saved = await saveEdit();
+        const saved = await saveEdit({ exitAfterSave: true });
         if (!saved || (getActiveTab()?.isDirty || state.editing)) return;
       }
     }

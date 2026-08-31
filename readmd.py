@@ -1116,18 +1116,24 @@ class Handler(BaseHTTPRequestHandler):
         return body, False
 
     def _send(self, code, ctype, body, cache_control='no-cache', x_frame_options=None):
-        body, compressed = self._maybe_compress(ctype, body)
-        self.send_response(code)
-        self.send_header('Content-Type', ctype)
-        self.send_header('Content-Length', str(len(body)))
-        if compressed:
-            self.send_header('Content-Encoding', 'gzip')
-            self.send_header('Vary', 'Accept-Encoding')
-        self.send_header('Cache-Control', cache_control)
-        if x_frame_options:
-            self.send_header('X-Frame-Options', x_frame_options)
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            body, compressed = self._maybe_compress(ctype, body)
+            self.send_response(code)
+            self.send_header('Content-Type', ctype)
+            self.send_header('Content-Length', str(len(body)))
+            if compressed:
+                self.send_header('Content-Encoding', 'gzip')
+                self.send_header('Vary', 'Accept-Encoding')
+            self.send_header('Cache-Control', cache_control)
+            if x_frame_options:
+                self.send_header('X-Frame-Options', x_frame_options)
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            # Browsers routinely cancel superseded polling/fetch requests while
+            # navigating.  There is no peer left to receive a fallback body, so
+            # treating this as an application failure only creates false errors.
+            self.close_connection = True
 
     def _send_json(self, code, obj):
         self._send(code, 'application/json; charset=utf-8',

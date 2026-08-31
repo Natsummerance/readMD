@@ -366,6 +366,15 @@ test('going home cancels a still-loading document', async ({ page }) => {
     });
   });
 
+  // goHome() re-renders the recents panel asynchronously, which races the two
+  // #content captures below; pin the recents feed to empty so the DOM is stable.
+  await page.route('**/api/recent/status*', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, items: [] }),
+    }));
+
   await page.goto('/');
   await page.waitForFunction(() => typeof loadFile === 'function' && typeof goHome === 'function');
   void page.evaluate(() => loadFile('slow.md'));
