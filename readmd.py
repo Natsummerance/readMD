@@ -15,6 +15,8 @@
 """
 
 import argparse
+import base64
+import binascii
 import gzip
 import hashlib
 import json
@@ -53,7 +55,14 @@ from src.readmd_modules.validators import validate_file_path, validate_command, 
 from src.readmd_modules.skills import SkillError, SkillRegistry, default_skill_roots
 from src.readmd_modules import skill_import as _skill_import
 from src.readmd_modules.crypto import store_credential as _store_credential, delete_credential as _delete_credential
-from src.readmd_modules.pet import PetBatchQueue, PetController, verify_model_bundle
+from src.readmd_modules.pet import (
+    HermesPetBridge,
+    HermesPetLauncher,
+    HermesPetPluginInstaller,
+    PetBatchQueue,
+    PetController,
+    verify_model_bundle,
+)
 from src.readmd_core.service import ReadMDCoreService
 from src.readmd_core import upstream as _upstream_sources
 
@@ -272,7 +281,7 @@ def _finish_startup_probe(timed_out=False):
 # 固定控制端口 + instance.json（端口/随机 token）。新进程先 ping 已有实例，
 # 命中则把要打开的文件 POST 过去后立即退出，实现“双击 .md 秒开”。
 
-_CONTROL = {'queue': [], 'window': None, 'ready': False}
+_CONTROL = {'queue': [], 'pet_batches': [], 'pet_menus': 0, 'window': None, 'ready': False}
 _control_lock = threading.Lock()
 
 
@@ -351,6 +360,69 @@ def pop_control():
         if _CONTROL['queue']:
             return _CONTROL['queue'].pop(0)
     return None
+
+
+def push_pet_batch(paths):
+    """Request a user-confirmed batch through the already-loaded ReadMD UI."""
+    safe_paths = [path for path in (paths or ()) if isinstance(path, str) and path]
+    if not safe_paths:
+        return False
+    with _control_lock:
+        _CONTROL['pet_batches'].append(safe_paths)
+        win = _CONTROL.get('window')
+        ready = _CONTROL.get('ready')
+    if win is not None and ready:
+        try:
+            win.evaluate_js('window.receivePetBatch && window.receivePetBatch(%s);' %
+                            json.dumps(safe_paths))
+            with _control_lock:
+                if _CONTROL['pet_batches'] and _CONTROL['pet_batches'][0] == safe_paths:
+                    _CONTROL['pet_batches'].pop(0)
+        except Exception:
+            pass
+        try:
+            win.show()
+            win.restore()
+        except Exception:
+            pass
+    return True
+
+
+def pop_pet_batch():
+    with _control_lock:
+        if _CONTROL['pet_batches']:
+            return _CONTROL['pet_batches'].pop(0)
+    return None
+
+
+def push_pet_menu():
+    """Open the existing More menu from the copied Hermes single-click event."""
+    with _control_lock:
+        _CONTROL['pet_menus'] += 1
+        win = _CONTROL.get('window')
+        ready = _CONTROL.get('ready')
+    if win is not None and ready:
+        try:
+            win.evaluate_js('window.openPetQuickMenu && window.openPetQuickMenu();')
+            with _control_lock:
+                if _CONTROL['pet_menus']:
+                    _CONTROL['pet_menus'] -= 1
+        except Exception:
+            pass
+        try:
+            win.show()
+            win.restore()
+        except Exception:
+            pass
+    return True
+
+
+def pop_pet_menu():
+    with _control_lock:
+        if _CONTROL['pet_menus']:
+            _CONTROL['pet_menus'] -= 1
+            return True
+    return False
 
 
 def quit_app():
@@ -1093,6 +1165,11 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/control/next':
             act = pop_control()
             self._send_json(200, {'pending': act is not None, 'file': act or ''})
+        elif path == '/api/control/pet-batch':
+            paths = pop_pet_batch()
+            self._send_json(200, {'pending': paths is not None, 'paths': paths or []})
+        elif path == '/api/control/pet-menu':
+            self._send_json(200, {'pending': pop_pet_menu()})
         elif path == '/api/recent/status':
             self._api_recent_status(qs)
         elif path == '/api/recent/add':
@@ -2702,10 +2779,18 @@ class Api(object):
         self._web_private_grants = {}
         self._clipboard_lock = threading.Lock()
         self._clipboard_tokens = {}
-        # The optional pet starts disabled and cannot be enabled until a
-        # verified, redistributable original model bundle is present.
+        # The optional Hermes-derived pet is disabled by default. Its external
+        # Electron runtime lives in user data so it never affects reader start.
         self._pet_controller = PetController()
         self._pet_queue = PetBatchQueue()
+        self._pet_bridge = HermesPetBridge(DATA_DIR)
+        self._pet_installer = HermesPetPluginInstaller(DATA_DIR)
+        self._pet_launcher = HermesPetLauncher(
+            APP_DIR, self._pet_bridge,
+            adapter_dir=os.path.join(DATA_DIR, 'pet', 'hermes-adapter'),
+        )
+        self._pet_command_stop = threading.Event()
+        self._pet_command_thread = None
 
     @staticmethod
     def _web_origin(url):
@@ -3783,24 +3868,80 @@ class Api(object):
         except Exception:
             return {'ready': False, 'code': 'model_validation_failed'}
 
+    def _pet_preferences(self):
+        settings = load_json(SETTINGS_FILE, {})
+        settings = settings if isinstance(settings, dict) else {}
+        bounds = settings.get('pet_bounds')
+        if not isinstance(bounds, dict):
+            bounds = None
+        try:
+            # Match the copied Hermes overlay's fallback scale.  The fallback
+            # asset is a 384x512 cell (not the old, incorrectly treated
+            # 1536x1024 whole sheet), so 0.33 is compact while remaining easy
+            # to grab on a high-DPI desktop.
+            scale = round(float(settings.get('pet_scale', 0.33)), 2)
+        except (TypeError, ValueError):
+            scale = 0.33
+        return {'bounds': bounds, 'info': {'scale': max(0.18, min(0.72, scale))}}
+
+    def _publish_pet_runtime(self, runtime=None):
+        runtime = runtime if isinstance(runtime, dict) else self._pet_controller.snapshot()
+        prefs = self._pet_preferences()
+        return self._pet_bridge.publish(runtime, info=prefs['info'], bounds=prefs['bounds'])
+
+    def _record_pet_event(self, event):
+        try:
+            return self._publish_pet_runtime(self._pet_controller.handle_event(event))
+        except ValueError:
+            return self._publish_pet_runtime()
+
     def get_pet_runtime_status(self):
         status = self._pet_controller.snapshot()
         status['model'] = self._pet_model_status()
+        status['adapter'] = self._pet_launcher.status()
         return status
+
+    def install_pet_plugin(self, archive_path, confirm=False):
+        """Install an explicit local desktop-pet package into user data only."""
+        if self._pet_launcher.status().get('running'):
+            return {'ok': False, 'code': 'pet_plugin_stop_before_install'}
+        if not isinstance(archive_path, str) or len(archive_path) > 32768:
+            return {'ok': False, 'code': 'invalid_pet_plugin_archive'}
+        return self._pet_installer.install_archive(archive_path, confirm=bool(confirm))
 
     def configure_pet(self, settings):
         if not isinstance(settings, dict):
             return {'ok': False, 'code': 'invalid_pet_settings'}
+        renderer = str(settings.get('renderer') or 'hermes-sprite')
+        if renderer not in ('hermes-sprite', 'live2d'):
+            return {'ok': False, 'code': 'invalid_pet_renderer'}
         if 'reduced_motion' in settings:
             self._pet_controller.set_reduced_motion(bool(settings['reduced_motion']))
         if settings.get('enabled') is False:
-            return {'ok': True, 'runtime': self._pet_controller.disable()}
+            runtime = self._pet_controller.disable()
+            self._publish_pet_runtime(runtime)
+            self._pet_command_stop.set()
+            self._pet_launcher.stop()
+            return {'ok': True, 'runtime': runtime}
         if settings.get('enabled') is True:
             model = self._pet_model_status()
-            if not model.get('ready'):
+            # Hermes's copied sprite overlay is an independent, MIT-licensed
+            # fallback.  Only the optional Cubism renderer requires a verified
+            # Live2D rights chain; otherwise a missing model would wrongly make
+            # the already bundled Hermes plugin impossible to start.
+            if renderer == 'live2d' and not model.get('ready'):
                 return {'ok': False, 'code': model.get('code', 'model_not_ready')}
-            return {'ok': True, 'runtime': self._pet_controller.enable(), 'model': model}
-        return {'ok': True, 'runtime': self._pet_controller.snapshot()}
+            launched = self._pet_launcher.start()
+            if not launched.get('ok'):
+                return launched
+            runtime = self._pet_controller.enable()
+            self._publish_pet_runtime(runtime)
+            self._start_pet_command_loop()
+            return {'ok': True, 'runtime': runtime, 'renderer': renderer, 'model': model,
+                    'adapter': launched.get('runtime')}
+        runtime = self._pet_controller.snapshot()
+        self._publish_pet_runtime(runtime)
+        return {'ok': True, 'runtime': runtime, 'adapter': self._pet_launcher.status()}
 
     def enqueue_pet_files(self, paths):
         if not isinstance(paths, (list, tuple)):
@@ -3810,7 +3951,98 @@ class Api(object):
         return {'ok': True, 'tasks': self._pet_queue.submit(paths)}
 
     def get_pet_batch(self):
+        self._drain_pet_command()
         return self._pet_queue.grouped_snapshot()
+
+    def _drain_pet_command(self):
+        """Consume one external-pet command without granting it shell access."""
+        command = self._pet_bridge.take_command()
+        if not command:
+            return None
+        if command.get('type') == 'open-menu':
+            push_pet_menu()
+            return {'type': 'open-menu', 'ok': True}
+        if command.get('type') == 'bounds':
+            self.save_settings({'pet_bounds': command['bounds']})
+            return {'type': 'bounds', 'ok': True}
+        if command.get('type') == 'scale':
+            self.save_settings({'pet_scale': command['scale']})
+            return {'type': 'scale', 'ok': True}
+        if command.get('type') == 'clipboard':
+            return self._open_pet_clipboard(command)
+        if command.get('type') != 'drop':
+            return command
+        paths = []
+        for raw_path in command.get('paths', []):
+            try:
+                path = os.path.abspath(os.fspath(raw_path))
+            except (TypeError, ValueError):
+                continue
+            if os.path.isfile(path):
+                paths.append(path)
+        if not paths:
+            return {'type': 'drop', 'accepted': 0}
+        tasks = self._pet_queue.submit(paths)
+        self._record_pet_event('work_started')
+        # A pet drop is deliberately non-destructive.  The unified batch
+        # workbench owns the explicit open/convert confirmation, so a stray
+        # drop can never launch documents or start a conversion job by itself.
+        grouped = {}
+        for task in tasks:
+            grouped[task['kind']] = grouped.get(task['kind'], 0) + 1
+        push_pet_batch(paths)
+        return {'type': 'drop', 'accepted': len(tasks), 'queued': grouped,
+                'requires_confirmation': True}
+
+    def _start_pet_command_loop(self):
+        thread = self._pet_command_thread
+        if thread is not None and thread.is_alive():
+            return
+        self._pet_command_stop.clear()
+
+        def run():
+            while not self._pet_command_stop.wait(0.25):
+                try:
+                    self._drain_pet_command()
+                except Exception:
+                    logging.exception('pet command bridge failed')
+
+        self._pet_command_thread = threading.Thread(target=run, name='readmd-pet-bridge', daemon=True)
+        self._pet_command_thread.start()
+
+    def _open_pet_clipboard(self, command):
+        """Materialize an explicit clipboard action under ReadMD data only."""
+        text = command.get('text') or ''
+        image = command.get('image_png') or ''
+        paths = command.get('paths') or []
+        if paths:
+            self._pet_bridge.command_path.write_text(
+                json.dumps({'command': {'type': 'drop', 'paths': paths}}), encoding='utf-8'
+            )
+            return self._drain_pet_command()
+        if not text and not image:
+            return {'type': 'clipboard', 'accepted': 0}
+        inbox = os.path.join(DATA_DIR, 'pet', 'clipboard')
+        os.makedirs(inbox, exist_ok=True)
+        stamp = datetime.now().strftime('%Y%m%d-%H%M%S-%f')
+        content = text
+        if image:
+            try:
+                image_path = os.path.join(inbox, 'clipboard-%s.png' % stamp)
+                raw = base64.b64decode(image.encode('ascii'), validate=True)
+                if not raw.startswith(b'\x89PNG\r\n\x1a\n'):
+                    return {'type': 'clipboard', 'accepted': 0, 'code': 'invalid_clipboard_image'}
+                with open(image_path, 'wb') as handle:
+                    handle.write(raw)
+                relative = os.path.basename(image_path)
+                content = (content + '\n\n' if content else '') + '![' + relative + '](' + relative + ')\n'
+            except (OSError, ValueError, UnicodeError, binascii.Error):
+                return {'type': 'clipboard', 'accepted': 0, 'code': 'clipboard_image_write_failed'}
+        markdown_path = os.path.join(inbox, 'clipboard-%s.md' % stamp)
+        _write_md(markdown_path, content)
+        push_control(markdown_path)
+        self._record_pet_event('work_succeeded')
+        return {'type': 'clipboard', 'accepted': 1, 'path': markdown_path}
 
     def save_settings(self, settings):
         cur = load_json(SETTINGS_FILE, {})
