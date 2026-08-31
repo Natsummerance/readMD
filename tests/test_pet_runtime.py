@@ -116,6 +116,14 @@ def test_model_bundle_rejects_path_escape_and_digest_mismatch(tmp_path):
     assert verified["code"] == "unsafe_asset_path"
 
 
+def test_selected_arch_chan_candidate_remains_fail_closed_until_cubism_is_approved():
+    root = Path(__file__).resolve().parents[1] / "assets" / "pet" / "model"
+
+    verified = verify_model_bundle(root)
+
+    assert verified == {"ready": False, "code": "cubism_publication_license_pending"}
+
+
 def test_native_probe_only_claims_capabilities_available_in_current_backend():
     class CompatibleWebview:
         @staticmethod
