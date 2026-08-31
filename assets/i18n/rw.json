@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "Guhindura neza AI mu buryo bwuzuye ibyerekezo byagenze",
   "fixes.aiFixFail": "Guhindura neza AI bitagenze:",
   "fixes.noDocContent": "Ubu nta byanditswe by'inkuru bishoboka kugenzurwa",
-  "presentation.exitFullscreenLabel": "Sohoka ku gahunda yose"
+  "presentation.exitFullscreenLabel": "Sohoka ku gahunda yose",
+  "batch.cancel": "Kureka byose",
+  "batch.converting": "Guhindura {done} / {total}…",
+  "batch.note": "Inyandiko zihindurwa icyarimwe, amashusho akorerwa OCR imwe imwe; dosiye imwe inaniranye ntibangamira imirimo ikurikira, ibisubizo bishobora gukurikiranwa umurongo ku wundi.",
+  "batch.preparing": "Mu kwitegura…",
+  "batch.selectFiles": "Hitamo dosiye (nyinshi)",
+  "batch.selectFolder": "Hitamo ububiko",
+  "batch.statusCanceled": "Yahagaritswe",
+  "batch.statusError": "Kunanirwa",
+  "batch.statusOk": "Intsinzi",
+  "batch.statusQueued": "Gutonda umurongo",
+  "batch.statusRunning": "Gutunganya",
+  "batch.statusSkipped": "Simbuka (bimaze kubaho)",
+  "batch.summary": "Kurangiza: Intsinzi {ok} · Simbuka {skipped} · Kunanirwa {failed}",
+  "batch.summaryCanceled": "Yahagaritswe {canceled}",
+  "batch.title": "Ahakorerwa akazi kenshi",
+  "menu.batch": "Ahakorerwa akazi kenshi",
+  "menu.batchSub": "Guhindura dosiye nyinshi / OCR"
 }

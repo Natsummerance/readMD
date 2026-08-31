@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "Η βαθιά επιδιόρθωση μορφοποίησης AI ολοκληρώθηκε",
   "fixes.aiFixFail": "Η επιδιόρθωση AI απέτυχε:",
   "fixes.noDocContent": "Δεν υπάρχει περιεχόμενο εγγράφου για επιδιόρθωση",
-  "presentation.exitFullscreenLabel": "Έξοδος από πλήρη οθόνη"
+  "presentation.exitFullscreenLabel": "Έξοδος από πλήρη οθόνη",
+  "batch.cancel": "Ακύρωση όλων",
+  "batch.converting": "Μετατροπή {done}/{total}…",
+  "batch.note": "Τα έγγραφα μετατρέπονται μαζικά, οι εικόνες με OCR μία-μία· η αποτυχία ενός αρχείου δεν επηρεάζει τις επόμενες εργασίες και τα αποτελέσματα είναι ανιχνεύσιμα ανά γραμμή.",
+  "batch.preparing": "Σε προετοιμασία…",
+  "batch.selectFiles": "Επιλογή αρχείων (πολλαπλά)",
+  "batch.selectFolder": "Επιλογή φακέλου",
+  "batch.statusCanceled": "Ακυρώθηκε",
+  "batch.statusError": "Αποτυχία",
+  "batch.statusOk": "Επιτυχία",
+  "batch.statusQueued": "Σε ουρά",
+  "batch.statusRunning": "Επεξεργασία",
+  "batch.statusSkipped": "Παράβλεψη (υπάρχει ήδη)",
+  "batch.summary": "Ολοκληρώθηκε: Επιτυχία {ok} · Παράλειψη {skipped} · Αποτυχία {failed}",
+  "batch.summaryCanceled": "Ακυρώθηκε {canceled}",
+  "batch.title": "Πίνακας μαζικής επεξεργασίας",
+  "menu.batch": "Πίνακας μαζικής επεξεργασίας",
+  "menu.batchSub": "Μετατροπή πολλών αρχείων / OCR"
 }

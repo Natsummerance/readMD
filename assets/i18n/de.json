@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "KI-Layout-Reparatur abgeschlossen",
   "fixes.aiFixFail": "KI-Reparatur fehlgeschlagen: ",
   "fixes.noDocContent": "Kein Dokumentinhalt zum Reparieren vorhanden",
-  "presentation.exitFullscreenLabel": "Vollbild beenden"
+  "presentation.exitFullscreenLabel": "Vollbild beenden",
+  "batch.cancel": "Alle abbrechen",
+  "batch.converting": "Konvertieren von {done}/{total}…",
+  "batch.note": "Dokumente werden stapelweise konvertiert, Bilder einzeln per OCR verarbeitet; ein Fehlschlag betrifft keine Folgeaufgaben, Ergebnisse sind zeilenweise nachvollziehbar.",
+  "batch.preparing": "In Vorbereitung…",
+  "batch.selectFiles": "Dateien auswählen (mehrere möglich)",
+  "batch.selectFolder": "Ordner auswählen",
+  "batch.statusCanceled": "Abgesagt",
+  "batch.statusError": "Fehler",
+  "batch.statusOk": "Erfolg",
+  "batch.statusQueued": "Warteschlange",
+  "batch.statusRunning": "Verarbeitung",
+  "batch.statusSkipped": "Überspringen (existiert bereits)",
+  "batch.summary": "Abschluss: Erfolg {ok} · Überspringen {skipped} · Fehler {failed}",
+  "batch.summaryCanceled": "Abgebrochen {canceled}",
+  "batch.title": "Stapelverarbeitung",
+  "menu.batch": "Stapelverarbeitung",
+  "menu.batchSub": "Mehrere Dateien konvertieren / OCR"
 }

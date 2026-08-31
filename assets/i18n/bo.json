@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI གི་སྐོར་གྱང་གི་སྐོར་གྱང་གི་སྐོར་གྱང་",
   "fixes.aiFixFail": "AI གི་སྐོར་གྱང་གི་སྐོར་གྱང་: ",
   "fixes.noDocContent": "བང་གི་སྐོར་གྱང་གི་སྐོར་གྱང་གི་སྐོར་གྱང་",
-  "presentation.exitFullscreenLabel": "བང་གི་སྐོར་གྱང་གི་སྐོར་གྱང་"
+  "presentation.exitFullscreenLabel": "བང་གི་སྐོར་གྱང་གི་སྐོར་གྱང་",
+  "batch.cancel": "ཚང་མ་འདོར་བ",
+  "batch.converting": "{done}/{total} བསྒྱུར་བཞིན་ཡོད།",
+  "batch.note": "ཡིག་ཆ་ཚོགས་པ་བརྗེ་སྒྱུར་བྱེད་པ་དང་། པར་རིས་རེ་རེ་བཞིན་ OCR བྱེད་པ། ཡིག་ཆ་གཅིག་ཕམ་ཁ་བྱུང་ཡང་རྗེས་མའི་ལས་འགན་ལ་ཤུགས་རྐྱེན་མི་ཐེབས། འབྲས་བུ་གྲལ་རེ་བཞིན་རྟོག་ཞིབ་ཐུབ།",
+  "batch.preparing": "གྲ་སྒྲིག་ཁྲོད།",
+  "batch.selectFiles": "ཡིག་ཆ་འདེམས། (མང་པོ)",
+  "batch.selectFolder": "སྣོད་ཐོ་འདེམས།",
+  "batch.statusCanceled": "ཕྱིར་འཐེན་བྱས།",
+  "batch.statusError": "འཐུས་ཤོར།",
+  "batch.statusOk": "མཐར་ཕྱིན།",
+  "batch.statusQueued": "གྲལ་སྒྲིག་པ།",
+  "batch.statusRunning": "ལས་སྣོན།",
+  "batch.statusSkipped": "མཆོང་ (སྔོན་ནས་ཡོད་)",
+  "batch.summary": "མཇུག་སྒྲིལ།: མཐར་ཕྱིན། {ok} · {skipped} མཆོང་། · འཐུས་ཤོར། {failed}",
+  "batch.summaryCanceled": "ཕྱིར་འཐེན་བྱས། {canceled}",
+  "batch.title": "ཚོགས་པའི་ལས་སྟེགས།",
+  "menu.batch": "ཚོགས་པའི་ལས་སྟེགས།",
+  "menu.batchSub": "ཡིག་ཆ་མང་པོ་སྒྱུར་བ / OCR"
 }

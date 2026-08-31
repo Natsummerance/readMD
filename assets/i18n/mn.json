@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI гүнзгий дүрслэл засаглалт дууслаа",
   "fixes.aiFixFail": "AI засаглалт амжилтгүй:",
   "fixes.noDocContent": "Одоо засах боломжтой бичийн агуулга байхгүй",
-  "presentation.exitFullscreenLabel": "Бүх дэлгэцээс гарах"
+  "presentation.exitFullscreenLabel": "Бүх дэлгэцээс гарах",
+  "batch.cancel": "Бүгдийг цуцлах",
+  "batch.converting": "Хөрвүүлж байна {done}/{total}…",
+  "batch.note": "Баримт бичгүүд багцаар хөрвүүлэгдэж, зургууд нэг нэгээр нь OCR хийгдэнэ; нэг файл амжилтгүй болсон ч дараагийн даалгаварт нөлөөлөхгүй, үр дүнг мөрөөр нь хянаж болно.",
+  "batch.preparing": "Бэлтгэж байна…",
+  "batch.selectFiles": "Файл сонгох (олон)",
+  "batch.selectFolder": "Хавтас сонгох",
+  "batch.statusCanceled": "Цуцалсан",
+  "batch.statusError": "Амжилтгүй",
+  "batch.statusOk": "Амжилттай",
+  "batch.statusQueued": "Дараалалд байна",
+  "batch.statusRunning": "Боловсруулж байна",
+  "batch.statusSkipped": "Алгассан (аль хэдийн байгаа)",
+  "batch.summary": "Дууссан: Амжилттай {ok} · Алгассан {skipped} · Амжилтгүй {failed}",
+  "batch.summaryCanceled": "Цуцалсан {canceled}",
+  "batch.title": "Багц ажлын ширээ",
+  "menu.batch": "Багц ажлын ширээ",
+  "menu.batchSub": "Олон файл хөрвүүлэх / OCR"
 }

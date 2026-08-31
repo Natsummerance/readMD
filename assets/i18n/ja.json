@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI レイアウト修復が完了しました",
   "fixes.aiFixFail": "AI 修復に失敗しました: ",
   "fixes.noDocContent": "修復可能な文書内容がありません",
-  "presentation.exitFullscreenLabel": "全画面を解除"
+  "presentation.exitFullscreenLabel": "全画面を解除",
+  "batch.cancel": "すべてキャンセル",
+  "batch.converting": "{done}/{total} を変換中…",
+  "batch.note": "ドキュメントは一括変換、画像は 1 枚ずつ OCR します。1 つのファイルが失敗しても以降のタスクには影響せず、結果は行ごとに確認できます。",
+  "batch.preparing": "準備中…",
+  "batch.selectFiles": "ファイルを選択（複数可）",
+  "batch.selectFolder": "フォルダーを選択",
+  "batch.statusCanceled": "キャンセル",
+  "batch.statusError": "失敗",
+  "batch.statusOk": "成功",
+  "batch.statusQueued": "キューイング",
+  "batch.statusRunning": "処理",
+  "batch.statusSkipped": "スキップ（すでに存在します）",
+  "batch.summary": "完了: 成功 {ok} · スキップ {skipped} · 失敗 {failed}",
+  "batch.summaryCanceled": "キャンセル {canceled}",
+  "batch.title": "一括ワークベンチ",
+  "menu.batch": "一括ワークベンチ",
+  "menu.batchSub": "複数ファイル変換 / OCR"
 }

@@ -992,6 +992,8 @@ class Handler(BaseHTTPRequestHandler):
             self._api_convert_batch()
         elif path == '/api/convert/progress':
             self._api_convert_progress(qs.get('job', [''])[0])
+        elif path == '/api/convert/cancel':
+            self._api_convert_cancel()
         elif path == '/api/convert':
             p = unquote(qs.get('p', [''])[0])
             self._api_convert(p)
@@ -2334,6 +2336,20 @@ class Handler(BaseHTTPRequestHandler):
             'total': len(job['items']),
             'items': job['items'],
         })
+
+    def _api_convert_cancel(self):
+        n = int(self.headers.get('Content-Length', 0) or 0)
+        try:
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+        except Exception:
+            self._send_json(400, {'error': '请求格式错误'})
+            return
+        job = _CONVERT_JOBS.get((body.get('job') or '') if isinstance(body, dict) else '')
+        if not job:
+            self._send_json(404, {'error': '任务不存在'})
+            return
+        job['cancel'] = True
+        self._send_json(200, {'ok': True, 'job': job.get('id')})
 
     def _api_ocr(self, p):
         if not os.path.isfile(p):

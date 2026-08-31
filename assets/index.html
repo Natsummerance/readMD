@@ -68,6 +68,7 @@
         <button class="more-group-header" type="button" aria-expanded="true"><span data-i18n="menu.grpImport">导入</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
           <button id="btn-convert" class="more-item"><span data-i18n="menu.convert">万物转换</span><em data-i18n="menu.convertSub">格式转 MD</em></button>
+          <button id="btn-batch" class="more-item"><span data-i18n="menu.batch">批量工作台</span><em data-i18n="menu.batchSub">多文件转换 / OCR</em></button>
           <button id="btn-web" class="more-item"><span data-i18n="menu.web">网页提取</span><em data-i18n="menu.webSub">网页转 MD</em></button>
           <button id="btn-ocr" class="more-item"><span data-i18n="menu.ocr">扫描识别</span><em data-i18n="menu.ocrSub">OCR 识别</em></button>
           <button id="btn-clipboard-new" class="more-item"><span data-i18n="menu.clipboard">剪贴新建</span><em data-i18n="menu.clipboardSub">剪贴板转 MD</em></button>
@@ -954,6 +955,29 @@
   </div>
 </div>
 
+<!-- 批量工作台弹窗 -->
+<div id="batch-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="batch-title">
+  <div id="batch-box">
+    <div class="export-head">
+      <h3 id="batch-title" data-i18n="batch.title">批量工作台</h3>
+      <button id="batch-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">&#10005;</button>
+    </div>
+    <div class="convert-body">
+      <div class="convert-actions">
+        <button id="batch-files" class="tb-btn accent" data-i18n="batch.selectFiles">选择文件（可多选）</button>
+        <button id="batch-folder" class="tb-btn" data-i18n="batch.selectFolder">选择文件夹</button>
+      </div>
+      <div id="batch-list" class="convert-list batch-list"></div>
+      <div class="convert-foot">
+        <span id="batch-status" class="convert-status"></span>
+        <span class="export-spacer"></span>
+        <button id="batch-cancel" class="tb-btn hidden" data-i18n="batch.cancel">取消全部</button>
+      </div>
+    </div>
+    <p class="fix-note" id="batch-note" data-i18n="batch.note">文档批量转换，图片逐张 OCR；单个文件失败不影响后续任务，结果逐行可追溯。</p>
+  </div>
+</div>
+
 <!-- 版本更新弹窗 -->
 <div id="update-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="update-modal-title">
   <div id="update-box" class="update-box">
@@ -1001,6 +1025,7 @@
 <div id="busy" class="hidden" role="status" aria-live="polite"><span data-i18n="app.processing">处理中…</span></div>
 <button id="top-btn" class="hidden" title="回到顶部" data-i18n-title="toolbar.backToTop">&#8593;</button>
 <input id="file-input" type="file" class="hidden">
+<input id="batch-file-input" type="file" class="hidden" multiple>
 <input id="img-file-input" type="file" accept="image/*" class="hidden">
 
 <!-- 标签右键菜单 -->

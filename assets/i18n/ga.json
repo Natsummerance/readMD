@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI deep formatting repair completed",
   "fixes.aiFixFail": "AI repair failed:",
   "fixes.noDocContent": "There is no document content to repair",
-  "presentation.exitFullscreenLabel": "Exit full screen"
+  "presentation.exitFullscreenLabel": "Exit full screen",
+  "batch.cancel": "Cealaigh gach rud",
+  "batch.converting": "{done}/{total} á thiontú…",
+  "batch.note": "Tiontaítear doiciméid i mbaisceanna, déantar OCR ar íomhánna ceann ar cheann; ní chuireann teip comhaid amháin isteach ar na tascanna ina dhiaidh, agus tá na torthaí inrianaithe líne ar líne.",
+  "batch.preparing": "Ag ullmhú…",
+  "batch.selectFiles": "Roghnaigh comhaid (iolrach)",
+  "batch.selectFolder": "Roghnaigh fillteán",
+  "batch.statusCanceled": "Ar ceal",
+  "batch.statusError": "Teip",
+  "batch.statusOk": "Rath",
+  "batch.statusQueued": "Ciúáil",
+  "batch.statusRunning": "Ag próiseáil",
+  "batch.statusSkipped": "Léim (ann cheana)",
+  "batch.summary": "Críochnú: Rath {ok} · Léim ar {skipped} · Teip {failed}",
+  "batch.summaryCanceled": "Cealaithe {canceled}",
+  "batch.title": "Binse oibre baisc",
+  "menu.batch": "Binse oibre baisc",
+  "menu.batchSub": "Tiontú ilchomhad / OCR"
 }

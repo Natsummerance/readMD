@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "Reparação de layout com IA concluída",
   "fixes.aiFixFail": "Falha na reparação com IA: ",
   "fixes.noDocContent": "Nenhum conteúdo de documento disponível para reparação",
-  "presentation.exitFullscreenLabel": "Sair da tela inteira"
+  "presentation.exitFullscreenLabel": "Sair da tela inteira",
+  "batch.cancel": "Cancelar tudo",
+  "batch.converting": "Convertendo {done}/{total}…",
+  "batch.note": "Documentos são convertidos em lote, imagens passam por OCR uma a uma; a falha de um arquivo não afeta as tarefas seguintes e os resultados são rastreáveis linha por linha.",
+  "batch.preparing": "Em preparação…",
+  "batch.selectFiles": "Selecionar arquivos (vários)",
+  "batch.selectFolder": "Selecionar pasta",
+  "batch.statusCanceled": "Cancelado",
+  "batch.statusError": "Falha",
+  "batch.statusOk": "Sucesso",
+  "batch.statusQueued": "Na fila",
+  "batch.statusRunning": "Processamento",
+  "batch.statusSkipped": "Pular (já existe)",
+  "batch.summary": "Conclusão: Sucesso {ok} · Pular {skipped} · Falha {failed}",
+  "batch.summaryCanceled": "Cancelado {canceled}",
+  "batch.title": "Área de trabalho em lote",
+  "menu.batch": "Área de trabalho em lote",
+  "menu.batchSub": "Conversão de vários arquivos / OCR"
 }

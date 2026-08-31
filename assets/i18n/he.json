@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "תיקון עימוד ה-AI הושלם",
   "fixes.aiFixFail": "תיקון ה-AI נכשל: ",
   "fixes.noDocContent": "אין תוכן מסמך לתיקון",
-  "presentation.exitFullscreenLabel": "יציאה ממסך מלא"
+  "presentation.exitFullscreenLabel": "יציאה ממסך מלא",
+  "batch.cancel": "ביטול הכול",
+  "batch.converting": "ממיר {done}/{total}...",
+  "batch.note": "מסמכים מומרים באצווה, תמונות עוברות OCR אחת אחת; כשל בקובץ אחד אינו משפיע על המשימות הבאות, והתוצאות ניתנות למעקב שורה אחר שורה.",
+  "batch.preparing": "בהכנה…",
+  "batch.selectFiles": "בחירת קבצים (מרובים)",
+  "batch.selectFolder": "בחירת תיקייה",
+  "batch.statusCanceled": "בּוּטלָה",
+  "batch.statusError": "כישלון",
+  "batch.statusOk": "הצלחה",
+  "batch.statusQueued": "הִזדַנְבוּת",
+  "batch.statusRunning": "מעבד",
+  "batch.statusSkipped": "דלג (כבר קיים)",
+  "batch.summary": "השלמה: הצלחה {ok} · דלג על {skipped} · כישלון {failed}",
+  "batch.summaryCanceled": "בוטל {canceled}",
+  "batch.title": "שולחן עבודה קבוצתי",
+  "menu.batch": "שולחן עבודה קבוצתי",
+  "menu.batchSub": "המרת קבצים מרובים / OCR"
 }

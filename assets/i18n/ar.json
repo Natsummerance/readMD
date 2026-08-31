@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "اكتمل إصلاح التنسيق بالذكاء الاصطناعي",
   "fixes.aiFixFail": "فشل الإصلاح بالذكاء الاصطناعي: ",
   "fixes.noDocContent": "لا يوجد محتوى مستند للإصلاح",
-  "presentation.exitFullscreenLabel": "إنهاء ملء الشاشة"
+  "presentation.exitFullscreenLabel": "إنهاء ملء الشاشة",
+  "batch.cancel": "إلغاء الكل",
+  "batch.converting": "جارٍ التحويل {done}/{total}...",
+  "batch.note": "تُحوَّل المستندات دفعةً واحدة، وتُعالج الصور بالتعرف الضوئي واحدة تلو الأخرى؛ فشل ملف واحد لا يؤثر على المهام اللاحقة، والنتائج قابلة للتتبع سطرًا بسطر.",
+  "batch.preparing": "جارٍ التحضير…",
+  "batch.selectFiles": "اختيار ملفات (متعدد)",
+  "batch.selectFolder": "اختيار مجلد",
+  "batch.statusCanceled": "تم الإلغاء",
+  "batch.statusError": "فشل",
+  "batch.statusOk": "نجح",
+  "batch.statusQueued": "في قائمة الانتظار",
+  "batch.statusRunning": "جارٍ المعالجة",
+  "batch.statusSkipped": "تم التخطي (موجود مسبقًا)",
+  "batch.summary": "المكتمل: نجح {ok} · تم تخطي {skipped} · فشل {failed}",
+  "batch.summaryCanceled": "تم الإلغاء {canceled}",
+  "batch.title": "منصة المعالجة الجماعية",
+  "menu.batch": "منصة المعالجة الجماعية",
+  "menu.batchSub": "تحويل متعدد الملفات / OCR"
 }

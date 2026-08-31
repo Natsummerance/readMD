@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import io, json, os, sys, tempfile, threading, unittest, urllib.request
+import io, json, os, sys, tempfile, threading, unittest, urllib.error, urllib.request
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -266,6 +266,50 @@ class TestConvertApi(unittest.TestCase):
             self.assertEqual(pr2['items'][0]['status'], 'skipped', pr2)
             pr3 = self._poll(self._start([p1], True))
             self.assertEqual(pr3['items'][0]['status'], 'ok', pr3)
+
+    def test_batch_cancel(self):
+        import time
+        from readmd import RM
+        conv = RM.get('convert')
+        orig = conv.convert_verbose
+        calls = [0]
+
+        def slow(src, *a, **kw):
+            calls[0] += 1
+            time.sleep(0.6)
+            return orig(src, *a, **kw)
+
+        conv.convert_verbose = slow
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                paths = [self._mk_docx(td, 'k%d' % i) for i in range(3)]
+                jid = self._start(paths, False)
+                time.sleep(0.15)
+                req = urllib.request.Request(
+                    self.base + '/api/convert/cancel',
+                    data=json.dumps({'job': jid}).encode('utf-8'),
+                    headers={'Content-Type': 'application/json'}, method='POST')
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    cd = json.loads(r.read().decode('utf-8'))
+                self.assertTrue(cd.get('ok'), cd)
+                pr = self._poll(jid)
+                self.assertTrue(pr['finished'], pr)
+                statuses = [i['status'] for i in pr['items']]
+                self.assertIn('canceled', statuses, pr)
+                self.assertEqual(statuses.count('canceled'), 2, pr)
+        finally:
+            conv.convert_verbose = orig
+
+    def test_batch_cancel_unknown_job_404(self):
+        req = urllib.request.Request(
+            self.base + '/api/convert/cancel',
+            data=json.dumps({'job': 'nope'}).encode('utf-8'),
+            headers={'Content-Type': 'application/json'}, method='POST')
+        try:
+            urllib.request.urlopen(req, timeout=30)
+            self.fail('expected HTTP 404')
+        except urllib.error.HTTPError as e:
+            self.assertEqual(e.code, 404)
 
     def _start(self, paths, overwrite):
         req = urllib.request.Request(

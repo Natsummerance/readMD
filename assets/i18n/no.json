@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI dyp formateringsreparasjon fullført",
   "fixes.aiFixFail": "AI-reparasjon feilet:",
   "fixes.noDocContent": "Ingen dokumentinnhold å reparere for øyeblikket",
-  "presentation.exitFullscreenLabel": "Avslutt fullskjerm"
+  "presentation.exitFullscreenLabel": "Avslutt fullskjerm",
+  "batch.cancel": "Avbryt alle",
+  "batch.converting": "Konverterer {done}/{total} …",
+  "batch.note": "Dokumenter konverteres i partier, bilder OCR-leses ett om gangen; en feilslått fil påvirker ikke påfølgende oppgaver, og resultatene kan spores linje for linje.",
+  "batch.preparing": "Under forberedelse…",
+  "batch.selectFiles": "Velg filer (flere mulig)",
+  "batch.selectFolder": "Velg mappe",
+  "batch.statusCanceled": "Kansellert",
+  "batch.statusError": "Feil",
+  "batch.statusOk": "Suksess",
+  "batch.statusQueued": "I kø",
+  "batch.statusRunning": "Behandling",
+  "batch.statusSkipped": "Hopp over (eksisterer allerede)",
+  "batch.summary": "Fullføring: Suksess {ok} · Hopp over {skipped} · Mislykket {failed}",
+  "batch.summaryCanceled": "Kansellert {canceled}",
+  "batch.title": "Partiarbeidsbenk",
+  "menu.batch": "Partiarbeidsbenk",
+  "menu.batchSub": "Konvertering av flere filer / OCR"
 }

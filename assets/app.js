@@ -115,6 +115,14 @@ function bindEvents() {
   });
   $('convert-modal').addEventListener('click', e => { if (e.target === $('convert-modal')) closeConvertModal(); });
 
+  /* --- 3b. 批量工作台 [联动: features/batch.js] --- */
+  if ($('btn-batch')) $('btn-batch').addEventListener('click', () => { closeMoreMenu(); openBatchModal(); });
+  if ($('batch-files')) $('batch-files').addEventListener('click', pickBatchFiles);
+  if ($('batch-folder')) $('batch-folder').addEventListener('click', pickBatchFolder);
+  if ($('batch-close')) $('batch-close').addEventListener('click', closeBatchModal);
+  if ($('batch-cancel')) $('batch-cancel').addEventListener('click', onBatchCancel);
+  if ($('batch-modal')) $('batch-modal').addEventListener('click', e => { if (e.target === $('batch-modal')) closeBatchModal(); });
+
   /* --- 4. 离线 OCR / 网页抓取 / 剪贴板新建 / 演示 / 样式定制 / 禅模式 [联动: convert.js, ocr.js, web.js, clipboard.js, render.js] --- */
   $('btn-ocr').addEventListener('click', () => chooseFile('ocr')); // 触发离线 OCR 识别
   $('btn-web').addEventListener('click', openWebDialog);           // 打开网页抓取弹窗
@@ -149,6 +157,7 @@ function bindEvents() {
         ['doc-import-modal', closeDocImportModal],
         ['style-custom-modal', closeStyleModal],
         ['convert-modal', closeConvertModal],
+        ['batch-modal', closeBatchModal],
         ['export-modal', closeExportModal],
         ['img-modal', closeImgModal],
         ['formula-modal', closeFormulaModal],
@@ -767,7 +776,7 @@ function bindEvents() {
         'close-confirm-modal',
         'confirm-modal',
         'code-chunk-modal', 'diagram-modal', 'doc-import-modal', 'frontmatter-modal',
-        'table-modal', 'export-preview-modal', 'export-modal', 'convert-modal',
+        'table-modal', 'export-preview-modal', 'export-modal', 'convert-modal', 'batch-modal',
         'update-modal', 'style-custom-modal', 'lang-modal', 'ai-history-modal',
         'ai-settings-modal', 'formula-modal', 'presentation-modal'
       ];
@@ -784,6 +793,7 @@ function bindEvents() {
         else if (activeModal === 'export-preview-modal') $(activeModal).classList.add('hidden');
         else if (activeModal === 'export-modal') closeExportModal();
         else if (activeModal === 'convert-modal') $('convert-modal').classList.add('hidden');
+        else if (activeModal === 'batch-modal') closeBatchModal();
         else if (activeModal === 'update-modal') {
           if (!isUpdateDownloading()) $('update-modal').classList.add('hidden');
         }
@@ -862,11 +872,13 @@ function bindEvents() {
       if ($('share-modal')) $('share-modal').classList.add('hidden');
       if ($('tpl-modal')) $('tpl-modal').classList.add('hidden');
       if ($('convert-modal')) $('convert-modal').classList.add('hidden');
+      if ($('batch-modal')) closeBatchModal();
       if ($('lang-modal') && window.i18n) window.i18n.closeModal();
       if ($('side') && !$('side').classList.contains('hidden')) $('side').classList.add('hidden');
       if ($('table-modal')) closeTableModal();
       closeFormulaModal(); closeMdPopups();
       stopConvertPoll();
+      stopBatchPoll();
       if (document.body.classList.contains('zen-mode')) toggleZenMode(false);
       if (state.editing) confirmExitEdit();
     }
@@ -881,7 +893,7 @@ function getModalRoots() {
   return [
     'close-confirm-modal', 'code-chunk-modal', 'diagram-modal', 'doc-import-modal',
     'frontmatter-modal', 'table-modal', 'export-preview-modal', 'export-modal',
-    'convert-modal', 'update-modal', 'style-custom-modal', 'lang-modal',
+    'convert-modal', 'batch-modal', 'update-modal', 'style-custom-modal', 'lang-modal',
     'ai-history-modal', 'ai-settings-modal', 'formula-modal', 'presentation-modal',
     'img-modal', 'history-modal', 'share-modal', 'tpl-modal', 'url-modal',
     'save-conflict-modal', 'fix-modal', 'continuous-modal', 'confirm-modal'

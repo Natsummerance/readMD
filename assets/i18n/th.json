@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "เสร็จสิ้นการซ่อมแซมการจัดรูปแบบเชิงลึกด้วย AI",
   "fixes.aiFixFail": "การซ่อมแซมด้วย AI ล้มเหลว:",
   "fixes.noDocContent": "ไม่มีเนื้อหาเอกสารที่สามารถซ่อมแซมได้ในขณะนี้",
-  "presentation.exitFullscreenLabel": "ออกจากโหมดเต็มหน้าจอ"
+  "presentation.exitFullscreenLabel": "ออกจากโหมดเต็มหน้าจอ",
+  "batch.cancel": "ยกเลิกทั้งหมด",
+  "batch.converting": "กำลังแปลง {done}/{total}…",
+  "batch.note": "เอกสารถูกแปลงเป็นชุด รูปภาพจะถูก OCR ทีละรูป ไฟล์ที่ล้มเหลวหนึ่งไฟล์จะไม่กระทบงานถัดไป และผลลัพธ์ตรวจสอบได้ทีละบรรทัด",
+  "batch.preparing": "กำลังเตรียม…",
+  "batch.selectFiles": "เลือกไฟล์ (หลายไฟล์ได้)",
+  "batch.selectFolder": "เลือกโฟลเดอร์",
+  "batch.statusCanceled": "ยกเลิกแล้ว",
+  "batch.statusError": "ล้มเหลว",
+  "batch.statusOk": "สำเร็จ",
+  "batch.statusQueued": "อยู่ในคิว",
+  "batch.statusRunning": "กำลังประมวลผล",
+  "batch.statusSkipped": "ข้าม (มีอยู่แล้ว)",
+  "batch.summary": "เสร็จสมบูรณ์: สำเร็จ {ok} · ข้าม {skipped} · ล้มเหลว {failed}",
+  "batch.summaryCanceled": "ยกเลิกแล้ว {canceled}",
+  "batch.title": "โต๊ะทำงานชุด",
+  "menu.batch": "โต๊ะทำงานชุด",
+  "menu.batchSub": "แปลงไฟล์หลายไฟล์ / OCR"
 }

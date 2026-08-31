@@ -125,6 +125,28 @@ def llm_translate_dict(source_dict, target_lang, target_lang_name, api_base, api
         return None
 
 
+def sync_locale_file(fp, base, lang, translate):
+    """补齐单个语种文件缺失的顶层 key，translate(text, lang) 由调用方注入以便测试。
+
+    translate 返回 None 视为翻译失败：该 key 不写入，保持缺失（由 parity 校验暴露），
+    避免把原文/中文写入目标语种。返回实际补齐的 key 列表；无写入时不改写文件。
+    """
+    d = load_json(fp)
+    missing = [k for k in base if k not in d]
+    if not missing:
+        return []
+    filled = []
+    for k in missing:
+        v = translate(base[k], lang)
+        if v is None or v == base[k]:
+            continue
+        d[k] = v
+        filled.append(k)
+    if filled:
+        save_json(fp, d)
+    return filled
+
+
 def validate_all_locales():
     """验证全部语种字典完整性。"""
     base = load_json(BASE_FILE)
@@ -167,6 +189,27 @@ def main():
     if args.validate_only:
         ok = validate_all_locales()
         sys.exit(0 if ok else 1)
+
+    if args.google:
+        base = load_json(BASE_FILE)
+        meta = load_json(META_FILE)
+
+        def throttled(text, lang):
+            time.sleep(0.2)
+            return google_translate_text(text, lang)
+
+        total = 0
+        for lang, m in meta.items():
+            fp = os.path.join(I18N_DIR, f'{lang}.json')
+            if not os.path.isfile(fp):
+                print(f'[-] 跳过缺失语种文件: {lang}.json')
+                continue
+            filled = sync_locale_file(fp, base, lang, throttled)
+            if filled:
+                print(f'[OK] {lang:<8} {m.get("name", ""):<12} 补齐 {len(filled)} 词条')
+                total += len(filled)
+        print(f'[*] Google 机翻补齐完成: 共 {total} 词条')
+        return
 
     print('[*] 启动 i18n 字典检查与同步...')
     validate_all_locales()

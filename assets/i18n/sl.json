@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI globoko oblikovanje popravljeno",
   "fixes.aiFixFail": "Popravila AI ni uspela:",
   "fixes.noDocContent": "Trenutno ni vsebine dokumenta za popravilo",
-  "presentation.exitFullscreenLabel": "Zapri poln zaslon"
+  "presentation.exitFullscreenLabel": "Zapri poln zaslon",
+  "batch.cancel": "Prekliči vse",
+  "batch.converting": "Pretvarjanje {done}/{total}…",
+  "batch.note": "Dokumenti se pretvarjajo paketno, slike se OCR-jo ena za drugo; neuspeh ene datoteke ne vpliva na nadaljnja opravila, rezultati pa so sledljivi po vrsticah.",
+  "batch.preparing": "Priprava…",
+  "batch.selectFiles": "Izberi datoteke (več)",
+  "batch.selectFolder": "Izberi mapo",
+  "batch.statusCanceled": "Preklicano",
+  "batch.statusError": "Neuspešno",
+  "batch.statusOk": "Uspešno",
+  "batch.statusQueued": "V čakalni vrsti",
+  "batch.statusRunning": "Obdelava",
+  "batch.statusSkipped": "Preskočeno (že obstaja)",
+  "batch.summary": "Zaključeno: uspešno {ok} · preskočeno {skipped} · neuspešno {failed}",
+  "batch.summaryCanceled": "Preklicano {canceled}",
+  "batch.title": "Paketna miza",
+  "menu.batch": "Paketna miza",
+  "menu.batchSub": "Pretvorba več datotek / OCR"
 }

@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "Kuyidika ya mudindu ya AI me manisa",
   "fixes.aiFixFail": "AI ya kusa kuzola:",
   "fixes.noDocContent": "Kuna kuna nkanda a kuzola kuna siku",
-  "presentation.exitFullscreenLabel": "Suka ku nzo nene"
+  "presentation.exitFullscreenLabel": "Suka ku nzo nene",
+  "batch.cancel": "Kukatula yonso",
+  "batch.converting": "Ke balula {done}/{total}...",
+  "batch.note": "Mikanda ke balulama na kimvuka, bifwanisu ke salama OCR kaka mosi; kana fishe mosi me nunga ve, yo ke buyisa ve misalu ya kulanda, mpi mbuma lenda talama na mutindu mosi.",
+  "batch.preparing": "Ke yilama...",
+  "batch.selectFiles": "Pona bafishe (mingi)",
+  "batch.selectFolder": "Pona kaye",
+  "batch.statusCanceled": "Me katulama",
+  "batch.statusError": "Me nunga ve",
+  "batch.statusOk": "Me nunga",
+  "batch.statusQueued": "Na mulongo",
+  "batch.statusRunning": "Kuyidika",
+  "batch.statusSkipped": "Me luta (Kele dezia)",
+  "batch.summary": "Kumanisa: Me nunga {ok} · Me luta {skipped} · Me nunga ve {failed}",
+  "batch.summaryCanceled": "Me katulama {canceled}",
+  "batch.title": "Kisalu ya bafishe mingi",
+  "menu.batch": "Kisalu ya bafishe mingi",
+  "menu.batchSub": "Kubalula bafishe mingi / OCR"
 }

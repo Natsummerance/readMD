@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "Hoàn tất sửa lỗi định dạng sâu bằng AI",
   "fixes.aiFixFail": "Sửa lỗi bằng AI thất bại:",
   "fixes.noDocContent": "Hiện không có nội dung tài liệu nào để sửa",
-  "presentation.exitFullscreenLabel": "Thoát toàn màn hình"
+  "presentation.exitFullscreenLabel": "Thoát toàn màn hình",
+  "batch.cancel": "Hủy tất cả",
+  "batch.converting": "Đang chuyển đổi {done}/{total}…",
+  "batch.note": "Tài liệu được chuyển đổi theo lô, hình ảnh được OCR từng tấm; một tệp thất bại không ảnh hưởng đến các tác vụ tiếp theo, kết quả có thể theo dõi từng dòng.",
+  "batch.preparing": "Đang chuẩn bị…",
+  "batch.selectFiles": "Chọn tệp (nhiều tệp)",
+  "batch.selectFolder": "Chọn thư mục",
+  "batch.statusCanceled": "Đã hủy",
+  "batch.statusError": "Thất bại",
+  "batch.statusOk": "Thành công",
+  "batch.statusQueued": "Trong hàng đợi",
+  "batch.statusRunning": "Đang xử lý",
+  "batch.statusSkipped": "Bỏ qua (Đã tồn tại)",
+  "batch.summary": "Hoàn tất: Thành công {ok} · Bỏ qua {skipped} · Thất bại {failed}",
+  "batch.summaryCanceled": "Đã hủy {canceled}",
+  "batch.title": "Bàn làm việc hàng loạt",
+  "menu.batch": "Bàn làm việc hàng loạt",
+  "menu.batchSub": "Chuyển đổi nhiều tệp / OCR"
 }

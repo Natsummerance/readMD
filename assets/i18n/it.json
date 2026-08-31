@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "Riparazione dell impaginazione IA completata",
   "fixes.aiFixFail": "Riparazione IA non riuscita: ",
   "fixes.noDocContent": "Nessun contenuto del documento da riparare",
-  "presentation.exitFullscreenLabel": "Esci da schermo intero"
+  "presentation.exitFullscreenLabel": "Esci da schermo intero",
+  "batch.cancel": "Annulla tutto",
+  "batch.converting": "Conversione in corso: {done}/{total}…",
+  "batch.note": "I documenti vengono convertiti in batch, le immagini con OCR una alla volta; il mancato completamento di un file non influisce sulle attività successive e i risultati sono tracciabili riga per riga.",
+  "batch.preparing": "Preparazione in corso…",
+  "batch.selectFiles": "Seleziona file (multipli)",
+  "batch.selectFolder": "Seleziona cartella",
+  "batch.statusCanceled": "Annullato",
+  "batch.statusError": "Non riuscito",
+  "batch.statusOk": "Riuscito",
+  "batch.statusQueued": "In coda",
+  "batch.statusRunning": "Elaborazione in corso",
+  "batch.statusSkipped": "Saltato (già esistente)",
+  "batch.summary": "Completato: {ok} riusciti · {skipped} saltati · {failed} non riusciti",
+  "batch.summaryCanceled": "Annullato {canceled}",
+  "batch.title": "Banco di lavoro batch",
+  "menu.batch": "Banco di lavoro batch",
+  "menu.batchSub": "Conversione di più file / OCR"
 }

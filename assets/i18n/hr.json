@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI dubinsko popravljanje rasporeda završeno",
   "fixes.aiFixFail": "AI popravak neuspješan:",
   "fixes.noDocContent": "Trenutno nema sadržaja dokumenta za popravak",
-  "presentation.exitFullscreenLabel": "Izlaz iz cijelog zaslona"
+  "presentation.exitFullscreenLabel": "Izlaz iz cijelog zaslona",
+  "batch.cancel": "Odustani od svega",
+  "batch.converting": "Pretvaranje {done}/{total}…",
+  "batch.note": "Dokumenti se pretvaraju skupno, slike se OCR-iraju jedna po jedna; neuspjeh jedne datoteke ne utječe na sljedeće zadatke, a rezultati su vidljivi redak po redak.",
+  "batch.preparing": "Priprema…",
+  "batch.selectFiles": "Odaberite datoteke (više njih)",
+  "batch.selectFolder": "Odaberite mapu",
+  "batch.statusCanceled": "Otkazano",
+  "batch.statusError": "Neuspjelo",
+  "batch.statusOk": "Uspješno",
+  "batch.statusQueued": "U redu čekanja",
+  "batch.statusRunning": "Obrada",
+  "batch.statusSkipped": "Preskočeno (postoji)",
+  "batch.summary": "Dovršeno: Uspješno {ok} · Preskočeno {skipped} · Neuspjelo {failed}",
+  "batch.summaryCanceled": "Otkazano {canceled}",
+  "batch.title": "Skupni radni stol",
+  "menu.batch": "Skupni radni stol",
+  "menu.batchSub": "Pretvorba više datoteka / OCR"
 }

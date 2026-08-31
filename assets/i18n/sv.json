@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI-djup formateringsåterställning klar",
   "fixes.aiFixFail": "AI-återställning misslyckades:",
   "fixes.noDocContent": "Det finns inget dokumentinnehåll att återställa just nu",
-  "presentation.exitFullscreenLabel": "Avsluta fullskärm"
+  "presentation.exitFullscreenLabel": "Avsluta fullskärm",
+  "batch.cancel": "Avbryt alla",
+  "batch.converting": "Konverterar {done}/{total}...",
+  "batch.note": "Dokument konverteras i satser, bilder OCR-läses en i taget; ett misslyckat arkiv påverkar inte efterföljande uppgifter och resultaten kan spåras rad för rad.",
+  "batch.preparing": "Under förberedelse…",
+  "batch.selectFiles": "Välj filer (flera möjliga)",
+  "batch.selectFolder": "Välj mapp",
+  "batch.statusCanceled": "Avbruten",
+  "batch.statusError": "Misslyckande",
+  "batch.statusOk": "Framgång",
+  "batch.statusQueued": "I kö",
+  "batch.statusRunning": "Bearbetar",
+  "batch.statusSkipped": "Hoppa över (finns redan)",
+  "batch.summary": "Slutförande: Framgång {ok} · Hoppa över {skipped} · Misslyckande {failed}",
+  "batch.summaryCanceled": "Avbruten {canceled}",
+  "batch.title": "Batcharbetsbord",
+  "menu.batch": "Batcharbetsbord",
+  "menu.batchSub": "Konvertering av flera filer / OCR"
 }

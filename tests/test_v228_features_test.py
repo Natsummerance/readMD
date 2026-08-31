@@ -163,7 +163,7 @@ class TestV228Features(unittest.TestCase):
         self.assertIn('export-preview-dynamic-style', js)
 
     def test_drag_and_drop_convert_auto_open(self):
-        """Ensure dropped non-md files and batch convert results are automatically loaded into tabs."""
+        """Dropped non-md files route into the batch workbench; finished results load into tabs."""
         js_files = [os.path.join(ROOT_DIR, 'assets', 'app.js')]
         js_dir = os.path.join(ROOT_DIR, 'assets', 'js')
         if os.path.exists(js_dir):
@@ -175,8 +175,9 @@ class TestV228Features(unittest.TestCase):
         for fp in js_files:
             with open(fp, 'r', encoding='utf-8') as f:
                 js += '\n' + f.read()
-        self.assertIn('await convertOrOcr(path, \'convert\')', js)
+        self.assertIn('enqueueBatchFiles(paths, false)', js)
         self.assertIn('await loadFile(it.out)', js)
+        self.assertIn('await loadFile(row.dataset.out)', js)
 
 
 

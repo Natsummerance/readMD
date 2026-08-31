@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI تېخىمۇ ئۇزۇن تۇھۇلىشتۇرۇش تامام چىقتى",
   "fixes.aiFixFail": "AI تۇھۇلىشتۇرۇشتا خاتالىق كۆرۈندى:",
   "fixes.noDocContent": "نۆڭىرىدىكى ھۆججەت مەزمۇنى يوق",
-  "presentation.exitFullscreenLabel": "تولۇق ئېكراندىن چىقىش"
+  "presentation.exitFullscreenLabel": "تولۇق ئېكراندىن چىقىش",
+  "batch.cancel": "ھەممىنى بىكار قىلىش",
+  "batch.converting": "ئايلاندۇرۇلماقتا {done}/{total}…",
+  "batch.note": "پۈتۈكلەر توپ بويىچە ئايلاندۇرۇلىدۇ، رەسىملەر بىرمۇ-بىر OCR قىلىنىدۇ؛ بىر ھۆججەت مەغلۇپ بولسىمۇ كېيىنكى ۋەزىپىلەرگە تەسىر كۆرسەتمەيدۇ، نەتىجىلەر قۇر بويىچە ئىز قوغغىلى بولىدۇ.",
+  "batch.preparing": "تەييارلىنىۋاتىدۇ…",
+  "batch.selectFiles": "ھۆججەتلەرنى تاللاش (كۆپ)",
+  "batch.selectFolder": "قىسقۇچ تاللاش",
+  "batch.statusCanceled": "بىكار قىلىندى",
+  "batch.statusError": "مەغلۇپ",
+  "batch.statusOk": "مۇۋەپپەقىيەتلىك",
+  "batch.statusQueued": "ئۆچرەتتە",
+  "batch.statusRunning": "بىر تەرەپ قىلىنماقتا",
+  "batch.statusSkipped": "ئاتلاپ ئۆتۈلدى (ئاللىبۇرۇن مەۋجۇت)",
+  "batch.summary": "تاماملاندى: مۇۋەپپەقىيەتلىك {ok} · ئاتلاپ ئۆتۈلگىنى {skipped} · مەغلۇپ بولغىنى {failed}",
+  "batch.summaryCanceled": "بىكار قىلىندى {canceled}",
+  "batch.title": "توپ ئىش ئۈستىلى",
+  "menu.batch": "توپ ئىش ئۈستىلى",
+  "menu.batchSub": "كۆپ ھۆججەت ئايلاندۇرۇش / OCR"
 }

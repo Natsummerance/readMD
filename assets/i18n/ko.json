@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI 조판 복구가 완료되었습니다",
   "fixes.aiFixFail": "AI 복구 실패: ",
   "fixes.noDocContent": "복구할 문서 내용이 없습니다",
-  "presentation.exitFullscreenLabel": "전체 화면 종료"
+  "presentation.exitFullscreenLabel": "전체 화면 종료",
+  "batch.cancel": "모두 취소",
+  "batch.converting": "{done}/{total} 변환 중…",
+  "batch.note": "문서는 일괄 변환되고, 이미지는 한 장씩 OCR됩니다. 파일 하나가 실패해도 이후 작업에는 영향이 없으며, 결과는 행별로 확인할 수 있습니다.",
+  "batch.preparing": "준비중…",
+  "batch.selectFiles": "파일 선택 (여러 개 가능)",
+  "batch.selectFolder": "폴더 선택",
+  "batch.statusCanceled": "취소",
+  "batch.statusError": "실패",
+  "batch.statusOk": "성공",
+  "batch.statusQueued": "대기열",
+  "batch.statusRunning": "처리 중",
+  "batch.statusSkipped": "건너뛰기(이미 존재함)",
+  "batch.summary": "완료: 성공 {ok} · 건너뛰기 {skipped} · 실패 {failed}",
+  "batch.summaryCanceled": "취소됨 {canceled}",
+  "batch.title": "일괄 작업대",
+  "menu.batch": "일괄 작업대",
+  "menu.batchSub": "여러 파일 변환 / OCR"
 }

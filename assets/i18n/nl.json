@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI-diepgaande opmaakreparatur voltooid",
   "fixes.aiFixFail": "AI-reparatur mislukt:",
   "fixes.noDocContent": "Momenteel geen documentinhoud beschikbaar voor reparatur",
-  "presentation.exitFullscreenLabel": "Volledig scherm sluiten"
+  "presentation.exitFullscreenLabel": "Volledig scherm sluiten",
+  "batch.cancel": "Alles annuleren",
+  "batch.converting": "Bezig met converteren van {done}/{total}…",
+  "batch.note": "Documenten worden in batches geconverteerd, afbeeldingen één voor één via OCR; een mislukt bestand heeft geen invloed op de volgende taken en resultaten zijn per regel te volgen.",
+  "batch.preparing": "Voorbereiden…",
+  "batch.selectFiles": "Bestanden selecteren (meerdere)",
+  "batch.selectFolder": "Map selecteren",
+  "batch.statusCanceled": "Geannuleerd",
+  "batch.statusError": "Mislukt",
+  "batch.statusOk": "Geslaagd",
+  "batch.statusQueued": "In wachtrij",
+  "batch.statusRunning": "Bezig met verwerken",
+  "batch.statusSkipped": "Overgeslagen (bestaat al)",
+  "batch.summary": "Voltooid: {ok} geslaagd · {skipped} overgeslagen · {failed} mislukt",
+  "batch.summaryCanceled": "Geannuleerd {canceled}",
+  "batch.title": "Batchwerkbank",
+  "menu.batch": "Batchwerkbank",
+  "menu.batchSub": "Meerdere bestanden converteren / OCR"
 }

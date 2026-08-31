@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI formatting fix completed",
   "fixes.aiFixFail": "AI fix failed: ",
   "fixes.noDocContent": "No document content available to fix",
-  "presentation.exitFullscreenLabel": "Exit Fullscreen"
+  "presentation.exitFullscreenLabel": "Exit Fullscreen",
+  "batch.cancel": "Cancel All",
+  "batch.converting": "Converting {done}/{total}…",
+  "batch.note": "Documents are batch-converted, images are OCR'd one by one; a single file failure won't affect later tasks, and each result is traceable per row.",
+  "batch.preparing": "Preparing...",
+  "batch.selectFiles": "Select Files (multiple allowed)",
+  "batch.selectFolder": "Select Folder",
+  "batch.statusCanceled": "Canceled",
+  "batch.statusError": "Failed",
+  "batch.statusOk": "Success",
+  "batch.statusQueued": "Queued",
+  "batch.statusRunning": "Processing",
+  "batch.statusSkipped": "Skipped (Exists)",
+  "batch.summary": "Completed: Success {ok} · Skipped {skipped} · Failed {failed}",
+  "batch.summaryCanceled": "Canceled {canceled}",
+  "batch.title": "Batch Workbench",
+  "menu.batch": "Batch Workbench",
+  "menu.batchSub": "Multi-file conversion / OCR"
 }

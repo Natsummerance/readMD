@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI koreering",
   "fixes.aiFixFail": "AI koreering:",
   "fixes.noDocContent": "Inuugineq",
-  "presentation.exitFullscreenLabel": "Siorlugu kalaallit"
+  "presentation.exitFullscreenLabel": "Siorlugu kalaallit",
+  "batch.cancel": "Tamarmik taamaatippakkit",
+  "batch.converting": "{done}/{total}-imik allanngortitsineq...",
+  "batch.note": "Allagaatit amerlasuut allanngortinneqartarput, assit ataasiakkaarlugit OCR-neqartarput; fil ataaseq kukkuguni kingornatigut suliassat sunnerneqanngillat, inerneralu nalunaarsuiffimmi malinnaaffigineqarsinnaavoq.",
+  "batch.preparing": "Piareersarnermi...",
+  "batch.selectFiles": "Filit toqqaruk (amerlasuut)",
+  "batch.selectFolder": "Mappe toqqaruk",
+  "batch.statusCanceled": "Taarserneqarpoq",
+  "batch.statusError": "Kukkuneq",
+  "batch.statusOk": "Iluatsitsineq",
+  "batch.statusQueued": "Tulleq",
+  "batch.statusRunning": "Suliarineq",
+  "batch.statusSkipped": "Skip (pioreersoq)",
+  "batch.summary": "Naammassineq: Angusaqarluarneq {ok} · Skip {skipped} · Kukkuneq {failed}",
+  "batch.summaryCanceled": "Taamaatippaa {canceled}",
+  "batch.title": "Suliarinnittarfik",
+  "menu.batch": "Suliarinnittarfik",
+  "menu.batchSub": "Filit amerlasuut allanngortinnerat / OCR"
 }

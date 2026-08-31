@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "Reparația de tipărire profundă AI finalizată",
   "fixes.aiFixFail": "Reparația AI a eșuat:",
   "fixes.noDocContent": "În prezent, nu există conținut de document de reparat",
-  "presentation.exitFullscreenLabel": "Ieșiți din ecranul complet"
+  "presentation.exitFullscreenLabel": "Ieșiți din ecranul complet",
+  "batch.cancel": "Anulează tot",
+  "batch.converting": "Se convertește {done}/{total}…",
+  "batch.note": "Documentele sunt convertite în lot, imaginile trec prin OCR una câte una; eșecul unui fișier nu afectează sarcinile următoare, iar rezultatele pot fi urmărite rând cu rând.",
+  "batch.preparing": "În pregătire…",
+  "batch.selectFiles": "Selectați fișierele (mai multe)",
+  "batch.selectFolder": "Selectați dosarul",
+  "batch.statusCanceled": "Anulat",
+  "batch.statusError": "Eșec",
+  "batch.statusOk": "Succes",
+  "batch.statusQueued": "La coadă",
+  "batch.statusRunning": "Prelucrare",
+  "batch.statusSkipped": "Omite (există deja)",
+  "batch.summary": "Finalizare: Succes {ok} · Omite {skipped} · Eșec {failed}",
+  "batch.summaryCanceled": "Anulat {canceled}",
+  "batch.title": "Spațiu de lucru în lot",
+  "menu.batch": "Spațiu de lucru în lot",
+  "menu.batchSub": "Conversie fișiere multiple / OCR"
 }

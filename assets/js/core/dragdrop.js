@@ -88,10 +88,12 @@ function bindGlobalDragAndDrop() {
         }
       }
       if (binaryConvertFiles.length > 0) {
+        const paths = [];
         for (const f of binaryConvertFiles) {
           const path = f.path ? f.path : await uploadFile(f);
-          if (path) await convertOrOcr(path, 'convert');
+          if (path) paths.push(path);
         }
+        if (paths.length) enqueueBatchFiles(paths, false);
       }
       return;
     }
@@ -123,10 +125,7 @@ async function openConvertModalWithFiles(files) {
     const path = f.path ? f.path : await uploadFile(f);
     if (path) paths.push(path);
   }
-  if (paths.length > 0) {
-    openConvertModal();
-    await startBatchConvert(paths, $('convert-overwrite') ? $('convert-overwrite').checked : false);
-  }
+  if (paths.length > 0) enqueueBatchFiles(paths, false);
 }
 
 

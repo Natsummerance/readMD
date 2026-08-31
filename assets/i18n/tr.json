@@ -1107,5 +1107,22 @@
   "fixes.aiFixed": "AI derinlik biçimlendirme düzeltmesi tamamlandı",
   "fixes.aiFixFail": "AI düzeltme başarısız:",
   "fixes.noDocContent": "Şu anda düzeltilecek belge içeriği yok",
-  "presentation.exitFullscreenLabel": "Tam ekrana çık"
+  "presentation.exitFullscreenLabel": "Tam ekrana çık",
+  "batch.cancel": "Tümünü İptal Et",
+  "batch.converting": "Dönüştürülüyor {done}/{total}…",
+  "batch.note": "Belgeler toplu olarak dönüştürülür, görseller tek tek OCR edilir; tek bir dosyanın hatası sonraki görevleri etkilemez ve sonuçlar satır satır izlenebilir.",
+  "batch.preparing": "Hazırlanıyor…",
+  "batch.selectFiles": "Dosyaları Seç (birden çok)",
+  "batch.selectFolder": "Klasör Seç",
+  "batch.statusCanceled": "İptal Edildi",
+  "batch.statusError": "Başarısız",
+  "batch.statusOk": "Başarılı",
+  "batch.statusQueued": "Kuyrukta",
+  "batch.statusRunning": "İşleniyor",
+  "batch.statusSkipped": "Atlandı (Zaten mevcut)",
+  "batch.summary": "Tamamlandı: Başarılı {ok} · Atlanan {skipped} · Başarısız {failed}",
+  "batch.summaryCanceled": "İptal Edildi {canceled}",
+  "batch.title": "Toplu İş Tezgahı",
+  "menu.batch": "Toplu İş Tezgahı",
+  "menu.batchSub": "Birden çok dosya dönüştürme / OCR"
 }
