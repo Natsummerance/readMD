@@ -124,7 +124,7 @@ def test_selected_arch_chan_candidate_remains_fail_closed_until_cubism_is_approv
     assert verified == {"ready": False, "code": "cubism_publication_license_pending"}
 
 
-def test_native_probe_only_claims_capabilities_available_in_current_backend():
+def test_native_probe_refuses_to_claim_windows_transparency_from_a_signature_only():
     class CompatibleWebview:
         @staticmethod
         def create_window(title, **kwargs):
@@ -136,11 +136,28 @@ def test_native_probe_only_claims_capabilities_available_in_current_backend():
 
     report = NativePetProbe.probe_capabilities(CompatibleWebview, platform_name="win32")
 
+    assert report["native_window"] is False
+    assert report["transparent_window"] is False
+    assert report["always_on_top"] is True
+    assert report["click_through"] == "windows_overlay_adapter_required"
+    assert report["release_ready"] is False
+
+
+def test_native_probe_keeps_non_windows_backends_pending_manual_evidence():
+    class CompatibleWebview:
+        @staticmethod
+        def create_window(title, **kwargs):
+            return {"title": title, **kwargs}
+
+        @staticmethod
+        def start(*args, **kwargs):
+            return None
+
+    report = NativePetProbe.probe_capabilities(CompatibleWebview, platform_name="darwin")
+
     assert report["native_window"] is True
     assert report["transparent_window"] is True
-    assert report["always_on_top"] is True
     assert report["click_through"] == "manual-verification-required"
-    assert report["release_ready"] is False
 
 
 def test_native_probe_uses_pointer_offset_drag_without_native_easy_drag_fighting():
@@ -176,6 +193,6 @@ def test_native_probe_disables_pywebview_automatic_drag_and_exposes_bridge():
         def start(*args, **kwargs):
             return None
 
-    window = NativePetProbe.create_probe_window(CompatibleWebview)
+    window = NativePetProbe.create_probe_window(CompatibleWebview, platform_name="darwin")
 
     assert window._pet_probe_bridge is not None

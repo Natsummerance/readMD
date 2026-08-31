@@ -36,12 +36,21 @@ class NativePetProbe:
             frameless = supports("frameless")
         except (TypeError, ValueError):
             return _report(platform_name, False, False, False, "unknown")
-        native_window = all((transparent, on_top, frameless))
-        return _report(platform_name, native_window, transparent, on_top, "manual-verification-required")
+        # pywebview exposes ``transparent`` in its Python signature on Windows,
+        # but its own backend contract explicitly says transparent windows are
+        # not supported there.  A signature check alone previously produced a
+        # false positive and sent a tester into a white rectangular window.
+        # Do not call this native-ready until a platform overlay adapter supplies
+        # real alpha composition.
+        windows_transparency = platform_name.startswith("win")
+        transparent_window = transparent and not windows_transparency
+        native_window = all((transparent_window, on_top, frameless))
+        code = "windows_overlay_adapter_required" if windows_transparency else "manual-verification-required"
+        return _report(platform_name, native_window, transparent_window, on_top, code)
 
     @staticmethod
-    def create_probe_window(webview_module):
-        report = NativePetProbe.probe_capabilities(webview_module)
+    def create_probe_window(webview_module, platform_name=None):
+        report = NativePetProbe.probe_capabilities(webview_module, platform_name=platform_name)
         if not report["native_window"]:
             raise RuntimeError("native_pet_window_capability_unavailable")
         bridge = PetProbeDragBridge()
