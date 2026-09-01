@@ -4745,7 +4745,8 @@ def run_selftest():
         threading.Thread(target=srv3.serve_forever, daemon=True).start()
         p3 = srv3.server_port
         req = _uq.Request('http://127.0.0.1:%d/api/convert/batch' % p3,
-                          data=json.dumps({'paths': [_dp], 'overwrite': True}).encode('utf-8'),
+                          data=json.dumps({'paths': [_dp], 'overwrite': True,
+                                           'confirm': True}).encode('utf-8'),
                           method='POST', headers={'Content-Type': 'application/json'})
         with _uq.urlopen(req, timeout=30) as r:
             bd = json.loads(r.read().decode('utf-8'))

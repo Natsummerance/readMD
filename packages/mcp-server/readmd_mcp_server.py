@@ -121,7 +121,7 @@ _CORE_SERVICE = None
 
 # Keep a literal in source for older ecosystem manifest scanners; the runtime
 # value remains sourced from the single VERSION file below.
-# "version": "2.3.7"
+# "version": "2.3.8-preview.1"
 
 TOOLS: List[Dict[str, Any]] = [
     {

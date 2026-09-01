@@ -9,6 +9,15 @@ IS_MAC = sys.platform == 'darwin'
 IS_WIN = sys.platform == 'win32'
 IS_LINUX = sys.platform.startswith('linux')
 
+# Keep the host values so platform-path unit tests (and embedders that probe
+# another platform by temporarily patching ``sys.platform``/its data-root
+# variable) do not accidentally inherit a test-only READMD_DATA_DIR override.
+# A real process sets the override before importing this module, so it remains
+# the first choice during normal startup.
+_INITIAL_PLATFORM = sys.platform
+_INITIAL_APPDATA = os.environ.get('APPDATA')
+_INITIAL_XDG_DATA_HOME = os.environ.get('XDG_DATA_HOME')
+
 
 def _platform_data_dir() -> str:
     """跨平台数据目录：Windows APPDATA, macOS ~/Library/Application Support, Linux ~/.local/share.
@@ -16,6 +25,14 @@ def _platform_data_dir() -> str:
     READMD_DATA_DIR 环境变量优先，供 UI 测试服务器等场景隔离真实用户数据。
     """
     override = os.environ.get('READMD_DATA_DIR')
+    if override:
+        platform_changed = sys.platform != _INITIAL_PLATFORM
+        env_root_changed = (
+            os.environ.get('APPDATA') != _INITIAL_APPDATA
+            or os.environ.get('XDG_DATA_HOME') != _INITIAL_XDG_DATA_HOME
+        )
+        if platform_changed or env_root_changed:
+            override = None
     if override:
         return override
     if sys.platform == 'darwin':
