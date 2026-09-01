@@ -7,6 +7,7 @@ passes :func:`verify_model_bundle` and platform evidence is attached.
 """
 
 from .controller import PetController
+from .fullscreen import foreground_fullscreen
 from .hermes_adapter import HermesPetBridge, HermesPetLauncher, HermesPetPluginInstaller
 from .model_manifest import verify_model_bundle
 from .task_queue import PetBatchQueue
@@ -20,5 +21,6 @@ __all__ = [
     "PetBatchQueue",
     "PetController",
     "PetProbeDragBridge",
+    "foreground_fullscreen",
     "verify_model_bundle",
 ]

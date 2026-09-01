@@ -1131,5 +1131,8 @@
   "tray.quit": "Afslut ReadMD",
   "pet.enable": "Aktivér skrivebordskæledyr",
   "pet.size": "Størrelse",
-  "pet.opacity": "Uigennemsigtighed"
+  "pet.opacity": "Uigennemsigtighed",
+  "pet.renderer": "Renderer",
+  "pet.renderer.sprite": "Hermes-sprite",
+  "pet.renderer.live2d": "Live2D"
 }

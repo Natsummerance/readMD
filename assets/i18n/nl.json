@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD afsluiten",
   "pet.enable": "Bureaublad-huisdier inschakelen",
   "pet.size": "Grootte",
-  "pet.opacity": "Ondoorzichtigheid"
+  "pet.opacity": "Ondoorzichtigheid",
+  "pet.renderer": "Renderer",
+  "pet.renderer.sprite": "Hermes-sprite",
+  "pet.renderer.live2d": "Live2D"
 }

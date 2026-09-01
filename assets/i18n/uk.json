@@ -1131,5 +1131,8 @@
   "tray.quit": "Вийти з ReadMD",
   "pet.enable": "Увімкнути настільного улюбленця",
   "pet.size": "Розмір",
-  "pet.opacity": "Непрозорість"
+  "pet.opacity": "Непрозорість",
+  "pet.renderer": "Рендерер",
+  "pet.renderer.sprite": "Спрайт Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

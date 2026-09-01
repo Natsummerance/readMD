@@ -1131,5 +1131,8 @@
   "tray.quit": "Thoát ReadMD",
   "pet.enable": "Bật thú cưng trên màn hình",
   "pet.size": "Kích thước",
-  "pet.opacity": "Độ mờ đục"
+  "pet.opacity": "Độ mờ đục",
+  "pet.renderer": "Bộ kết xuất",
+  "pet.renderer.sprite": "Sprite Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

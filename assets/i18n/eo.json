@@ -1131,5 +1131,8 @@
   "tray.quit": "Fermi ReadMD",
   "pet.enable": "Aktivigi labortablan dorlotbeston",
   "pet.size": "Grandeco",
-  "pet.opacity": "Maldiafano"
+  "pet.opacity": "Maldiafano",
+  "pet.renderer": "Bildigilo",
+  "pet.renderer.sprite": "Hermes-spriteo",
+  "pet.renderer.live2d": "Live2D"
 }

@@ -1131,5 +1131,8 @@
   "tray.quit": "צא מ-ReadMD",
   "pet.enable": "הפעל חיית מחמד בשולחן העבודה",
   "pet.size": "גודל",
-  "pet.opacity": "אטימות"
+  "pet.opacity": "אטימות",
+  "pet.renderer": "מנוע תצוגה",
+  "pet.renderer.sprite": "ספרייט Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

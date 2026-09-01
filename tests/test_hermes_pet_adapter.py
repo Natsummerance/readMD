@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import json
 import hashlib
+import os
+import re
 import zipfile
 from pathlib import Path
 
@@ -27,6 +29,81 @@ def test_optional_host_applies_a_bounded_native_window_opacity():
     assert 'function currentOpacity()' in source
     assert 'Math.max(0.35, Math.min(1, raw))' in source
     assert 'overlay.setOpacity(currentOpacity())' in source
+
+
+def test_optional_host_loads_the_overlay_with_a_renderer_query():
+    source = Path('packages/readmd-hermes-pet-adapter/src/electron-main.ts').read_text(encoding='utf-8')
+    assert "loadFile(path.join(app.getAppPath(), 'renderer', 'index.html')" in source
+    assert 'query: { renderer }' in source
+
+
+def test_optional_host_reloads_in_place_when_the_renderer_preference_changes():
+    source = Path('packages/readmd-hermes-pet-adapter/src/electron-main.ts').read_text(encoding='utf-8')
+    assert 'lastRenderer' in source
+    assert 'renderer !== lastRenderer' in source
+    # A renderer switch only swaps the page in the existing window; the Electron
+    # process and its IPC registrations must survive.
+    assert 'app.relaunch' not in source
+    assert 'app.quit()' not in source
+
+
+def test_optional_host_hides_the_overlay_during_fullscreen_and_restores_afterwards():
+    source = Path('packages/readmd-hermes-pet-adapter/src/electron-main.ts').read_text(encoding='utf-8')
+    assert 'if (next.fullscreen === true) overlay.hide()' in source
+    assert 'else overlay.showInactive()' in source
+
+
+def test_overlay_entry_branches_to_the_live2d_stage_by_query_parameter():
+    source = Path('packages/readmd-hermes-pet-adapter/src/renderer.tsx').read_text(encoding='utf-8')
+    assert "location.search" in source
+    assert "import('./live2d/stage')" in source
+    assert "import('../.generated/overlay-root')" in source
+
+
+def test_live2d_stage_boots_cubism_core_before_the_model_runtime():
+    source = Path('packages/readmd-hermes-pet-adapter/src/live2d/stage.ts').read_text(encoding='utf-8')
+    assert "'../vendor/live2dcubismcore.min.js'" in source
+    assert 'Live2DCubismCore' in source
+    assert "'../models/arch-chan/readmd.live2d.json'" in source
+
+
+def test_live2d_stage_reuses_the_hermes_overlay_ipc_contract():
+    source = Path('packages/readmd-hermes-pet-adapter/src/live2d/stage.ts').read_text(encoding='utf-8')
+    assert 'hermesDesktop' in source
+    assert 'petOverlay' in source
+    assert "type: 'ready'" in source
+    assert "type: 'open-menu'" in source
+    assert "type: 'toggle-app'" in source
+    assert 'setBounds' in source
+    assert 'setIgnoreMouse' in source
+    assert 'onState' in source
+    assert 'info.scale' in source
+    assert 'hitTest' in source
+    assert 'expression' in source
+
+
+def test_live2d_dependencies_stay_inside_the_optional_adapter_package():
+    manifest = json.loads(Path('packages/readmd-hermes-pet-adapter/package.json').read_text(encoding='utf-8'))
+    assert manifest['dependencies']['pixi.js'] == '^6.5.10'
+    assert manifest['dependencies']['pixi-live2d-display'] == '^0.4.0'
+
+
+def test_build_pins_the_cubism_core_download_with_a_verified_hash():
+    source = Path('packages/readmd-hermes-pet-adapter/scripts/build.mjs').read_text(encoding='utf-8')
+    assert 'ensureCubismCore' in source
+    assert 'READMD_PET_CUBISM_CORE' in source
+    assert 'cubism.live2d.com' in source
+    assert 'live2dcubismcore.min.js' in source
+    assert re.search(r"'[0-9a-f]{64}'", source)
+    assert "'.cache'" in source
+    assert "path.join(out, 'vendor')" in source
+
+
+def test_staging_includes_the_arch_chan_model_bundle():
+    source = Path('packages/readmd-hermes-pet-adapter/scripts/stage-plugin.mjs').read_text(encoding='utf-8')
+    assert "path.resolve(root, '../../assets/pet/model')" in source
+    assert "path.join(output, 'app', 'models', 'arch-chan')" in source
+    assert re.search(r'(?<!path\.)\bresolve\(', source) is None
 
 
 def test_bridge_writes_only_narrow_display_state_and_sanitizes_bounds(tmp_path):
@@ -52,6 +129,27 @@ def test_bridge_maps_readmd_work_states_to_the_copied_hermes_activity_contract(t
         "busy": False, "error": False, "justCompleted": True,
     }
     assert bridge.publish({"visible": True, "state": "error"})["activity"]["error"] is True
+
+
+def test_bridge_publishes_optional_renderer_and_fullscreen_keys(tmp_path):
+    bridge = HermesPetBridge(str(tmp_path))
+
+    payload = bridge.publish({"visible": True}, renderer="live2d", fullscreen=True)
+
+    on_disk = json.loads(bridge.state_path.read_text(encoding="utf-8"))
+    assert payload == on_disk
+    assert payload["renderer"] == "live2d"
+    assert payload["fullscreen"] is True
+    assert payload["format_version"] == 1
+
+
+def test_bridge_omits_renderer_and_fullscreen_keys_when_not_supplied(tmp_path):
+    bridge = HermesPetBridge(str(tmp_path))
+
+    payload = bridge.publish({"visible": True, "state": "busy"})
+
+    assert "renderer" not in payload
+    assert "fullscreen" not in payload
 
 
 def test_bridge_accepts_only_known_control_commands(tmp_path):
@@ -194,3 +292,89 @@ def test_plugin_update_replaces_only_the_verified_optional_runtime(tmp_path):
 
     assert (installer.target / "app" / "package.json").read_text(encoding="utf-8") == "{}"
     assert not (installer.root / "hermes-adapter.previous").exists()
+
+
+def test_install_retries_swap_when_files_are_transiently_locked(tmp_path, monkeypatch):
+    archive = tmp_path / "readmd-pet.zip"
+    _write_plugin_archive(archive)
+    installer = HermesPetPluginInstaller(str(tmp_path / "data"))
+    monkeypatch.setattr(installer, "SWAP_ATTEMPTS", 2, raising=False)
+    monkeypatch.setattr(installer, "SWAP_RETRY_DELAY", 0.0, raising=False)
+
+    real_replace = os.replace
+    swapped = []
+
+    def flaky_replace(source, destination):
+        swapped.append(destination)
+        if Path(destination).name == "hermes-adapter" and len(swapped) == 1:
+            raise PermissionError(5, "transient lock")
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", flaky_replace)
+
+    assert installer.install_archive(str(archive), confirm=True)["ok"] is True
+    assert len([d for d in swapped if Path(d).name == "hermes-adapter"]) >= 2
+
+
+def test_install_swap_outlasts_a_lock_window_longer_than_the_legacy_retry_budget(tmp_path, monkeypatch):
+    # A real-world install hit a scanner window (~6s) longer than the legacy
+    # 8 x 0.75s budget; the swap must keep retrying well past that window.
+    archive = tmp_path / "readmd-pet.zip"
+    _write_plugin_archive(archive)
+    installer = HermesPetPluginInstaller(str(tmp_path / "data"))
+    monkeypatch.setattr(installer, "SWAP_RETRY_DELAY", 0.0, raising=False)
+
+    real_replace = os.replace
+    locked = {"count": 0}
+
+    def scanning_replace(source, destination):
+        if Path(destination).name == "hermes-adapter" and locked["count"] < 12:
+            locked["count"] += 1
+            raise PermissionError(5, "scanner still holds the freshly written file")
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", scanning_replace)
+
+    assert installer.install_archive(str(archive), confirm=True)["ok"] is True
+    assert locked["count"] == 12
+
+
+def test_swap_retry_budget_covers_a_realistic_antivirus_scan_window():
+    assert HermesPetPluginInstaller.SWAP_ATTEMPTS * HermesPetPluginInstaller.SWAP_RETRY_DELAY >= 30
+
+
+def test_install_falls_back_to_copy_when_a_staged_file_stays_locked(tmp_path, monkeypatch):
+    # A scanner can keep an open handle on a freshly written file for longer
+    # than any reasonable retry budget, which keeps blocking the directory
+    # rename itself. The verified bytes must still reach the target by being
+    # copied to fresh paths, which no open handle can block.
+    archive = tmp_path / "readmd-pet.zip"
+    _write_plugin_archive(archive)
+    installer = HermesPetPluginInstaller(str(tmp_path / "data"))
+    monkeypatch.setattr(installer, "SWAP_RETRY_DELAY", 0.0, raising=False)
+
+    real_replace = os.replace
+
+    def replace_denied_for_staged_dir(source, destination):
+        if Path(source).name == "adapter" and Path(destination).name == "hermes-adapter":
+            raise PermissionError(5, "scanner keeps a staged file open")
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", replace_denied_for_staged_dir)
+
+    assert installer.install_archive(str(archive), confirm=True) == {"ok": True, "installed": True, "files": 5}
+    assert (installer.target / "electron.exe").read_bytes() == b"runtime"
+    assert (installer.target / "app" / "renderer" / "index.html").read_text(encoding="utf-8") == "<main></main>"
+    assert not (installer.root / "hermes-adapter.previous").exists()
+
+
+def test_install_sweeps_stale_temp_dirs_left_by_failed_installs(tmp_path):
+    archive = tmp_path / "readmd-pet.zip"
+    _write_plugin_archive(archive)
+    installer = HermesPetPluginInstaller(str(tmp_path / "data"))
+    garbage = installer.root / "readmd-pet-garbage"
+    (garbage / "adapter" / "resources").mkdir(parents=True)
+    (garbage / "adapter" / "resources" / "default_app.asar").write_bytes(b"stale")
+
+    assert installer.install_archive(str(archive), confirm=True)["ok"] is True
+    assert not garbage.exists()

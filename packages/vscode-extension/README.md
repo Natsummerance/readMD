@@ -13,7 +13,7 @@ ReadMD for VS Code is the editor front end for the ReadMD desktop app. It connec
 
 Install the matching `readmd-vscode-2.3.7.vsix` from Releases with **Extensions: Install from VSIX...**, reload the window, and open a Markdown file. The extension starts the bundled local Core on first use, or can connect to an existing Core configured in Settings. Uninstalling the extension does not delete documents or credentials.
 
-## 21 个命令 / Command reference
+## 22 个命令 / Command reference
 
 所有命令都可在 `Ctrl/Cmd+Shift+P` 搜索，也会按上下文出现在编辑器标题栏或右键菜单中。
 
@@ -40,6 +40,7 @@ Install the matching `readmd-vscode-2.3.7.vsix` from Releases with **Extensions:
 | `ReadMD: 一键编译转为学术 LaTeX 源码` (`readmd.convertToLatex`) | 生成可继续编辑的 `.tex` 文件。 |
 | `ReadMD: 解析 BibTeX 参考文献` (`readmd.parseBibtex`) | 解析当前 BibTeX 并返回引用数据。 |
 | `ReadMD: 一键配置工作区 MCP Server` (`readmd.setupMcpServer`) | 在确认后写入工作区 MCP 配置。 |
+| `ReadMD: 打开指定 Skill` (`readmd.openSkillByUri`) | 从侧边栏或链接直接在工作台中打开指定 Skill。 |
 
 ## AI、Provider 与凭据 / AI, providers and credentials
 

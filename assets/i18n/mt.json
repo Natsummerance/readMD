@@ -1131,5 +1131,8 @@
   "tray.quit": "Oħroġ minn ReadMD",
   "pet.enable": "Attiva l-annimal domestiku tad-desktop",
   "pet.size": "Daqs",
-  "pet.opacity": "Opaċità"
+  "pet.opacity": "Opaċità",
+  "pet.renderer": "Renderer",
+  "pet.renderer.sprite": "Sprite ta' Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

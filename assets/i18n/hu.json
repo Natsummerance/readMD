@@ -1131,5 +1131,8 @@
   "tray.quit": "Kilépés a ReadMD-ből",
   "pet.enable": "Asztali kisállat engedélyezése",
   "pet.size": "Méret",
-  "pet.opacity": "Átlátszatlanság"
+  "pet.opacity": "Átlátszatlanság",
+  "pet.renderer": "Megjelenítő",
+  "pet.renderer.sprite": "Hermes-sprite",
+  "pet.renderer.live2d": "Live2D"
 }

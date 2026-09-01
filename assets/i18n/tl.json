@@ -1131,5 +1131,8 @@
   "tray.quit": "Lumabas sa ReadMD",
   "pet.enable": "Paganahin ang alagang hayop sa desktop",
   "pet.size": "Laki",
-  "pet.opacity": "Opacity"
+  "pet.opacity": "Opacity",
+  "pet.renderer": "Tagapag-render",
+  "pet.renderer.sprite": "Sprite ng Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

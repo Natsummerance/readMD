@@ -1131,5 +1131,8 @@
   "tray.quit": "Keluar dari ReadMD",
   "pet.enable": "Aktifkan hewan peliharaan desktop",
   "pet.size": "Ukuran",
-  "pet.opacity": "Opasitas"
+  "pet.opacity": "Opasitas",
+  "pet.renderer": "Perender",
+  "pet.renderer.sprite": "Sprite Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

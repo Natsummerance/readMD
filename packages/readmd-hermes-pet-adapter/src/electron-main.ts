@@ -17,6 +17,7 @@ let latest: RuntimeState = {}
 let bridgeTimer: NodeJS.Timeout | undefined
 let lastBridgeContents = ''
 let fallbackSpriteInfo: Record<string, unknown> | undefined
+let lastRenderer: string | undefined
 
 function getFallbackSpriteInfo(): Record<string, unknown> {
   if (fallbackSpriteInfo) return fallbackSpriteInfo
@@ -71,7 +72,15 @@ function applyOverlayOpacity(): void {
   if (overlay && !overlay.isDestroyed()) overlay.setOpacity(currentOpacity())
 }
 
-function openPetOverlay(bounds: unknown): void {
+// A renderer-preference change swaps the page inside the surviving window, so
+// the Electron process and its registered IPC handlers are never restarted.
+function loadOverlayPage(renderer?: string): void {
+  if (!overlay || overlay.isDestroyed()) return
+  overlay.loadFile(path.join(app.getAppPath(), 'renderer', 'index.html'), renderer ? { query: { renderer } } : undefined)
+  overlay.webContents.once('did-finish-load', () => pushState())
+}
+
+function openPetOverlay(bounds: unknown, renderer?: string): void {
   const next = clampBounds((bounds || {}) as Bounds)
   if (overlay && !overlay.isDestroyed()) {
     overlay.setBounds(next)
@@ -92,9 +101,8 @@ function openPetOverlay(bounds: unknown): void {
   })
   applyOverlayOpacity()
   overlay.setAlwaysOnTop(true, 'screen-saver')
-  overlay.loadFile(path.join(app.getAppPath(), 'renderer', 'index.html'))
-  overlay.webContents.once('did-finish-load', () => pushState())
   overlay.on('closed', () => { overlay = null })
+  loadOverlayPage(renderer)
 }
 
 function closePetOverlay(): void {
@@ -136,10 +144,23 @@ function pollBridge(): void {
     // drag through `setBounds`; the host only publishes a changed snapshot.
     if (contents === lastBridgeContents) return
     lastBridgeContents = contents
-    const next = JSON.parse(contents) as RuntimeState & { bounds?: Bounds; visible?: boolean }
+    const next = JSON.parse(contents) as RuntimeState & { bounds?: Bounds; visible?: boolean; renderer?: string; fullscreen?: boolean }
     latest = normalizeState(next)
     if (next.visible === false) { closePetOverlay(); return }
-    if (!overlay || overlay.isDestroyed()) openPetOverlay(next.bounds)
+    const renderer = typeof next.renderer === 'string' ? next.renderer : undefined
+    if (!overlay || overlay.isDestroyed()) {
+      lastRenderer = renderer
+      openPetOverlay(next.bounds, renderer)
+      return
+    }
+    overlay.setBounds(clampBounds(next.bounds || {}))
+    if (next.fullscreen === true) overlay.hide()
+    else overlay.showInactive()
+    if (renderer !== lastRenderer) {
+      lastRenderer = renderer
+      loadOverlayPage(renderer)
+      return
+    }
     pushState()
   } catch { /* bridge has not been published yet */ }
 }

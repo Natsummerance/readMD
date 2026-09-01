@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD qimiguk",
   "pet.enable": "Qarasaasiami uumasoq aallartiguk",
   "pet.size": "Angissuseq",
-  "pet.opacity": "Ersarissuseq"
+  "pet.opacity": "Ersarissuseq",
+  "pet.renderer": "Renderer",
+  "pet.renderer.sprite": "Hermes sprite",
+  "pet.renderer.live2d": "Live2D"
 }

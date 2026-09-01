@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD beenden",
   "pet.enable": "Desktop-Haustier aktivieren",
   "pet.size": "Größe",
-  "pet.opacity": "Deckkraft"
+  "pet.opacity": "Deckkraft",
+  "pet.renderer": "Renderer",
+  "pet.renderer.sprite": "Hermes-Sprite",
+  "pet.renderer.live2d": "Live2D"
 }

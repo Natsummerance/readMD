@@ -27,6 +27,9 @@ fs.rmSync(output, { force: true, recursive: true })
 fs.mkdirSync(output, { recursive: true })
 fs.cpSync(electron, output, { recursive: true })
 fs.cpSync(app, path.join(output, 'app'), { recursive: true })
+// The CC0 model bundle ships inside the optional plugin only; the repository
+// copy stays the single source of truth for licenses and hashes.
+fs.cpSync(path.resolve(root, '../../assets/pet/model'), path.join(output, 'app', 'models', 'arch-chan'), { recursive: true })
 fs.copyFileSync(path.join(root, 'assets', 'NOTICE.md'), path.join(output, 'NOTICE.md'))
 const files = []
 function collect(directory) {

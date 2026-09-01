@@ -1131,5 +1131,8 @@
   "tray.quit": "Funga ReadMD",
   "pet.enable": "Koresha itungo ryo kuri mudasobwa",
   "pet.size": "Ingano",
-  "pet.opacity": "Kudabonerana"
+  "pet.opacity": "Kudabonerana",
+  "pet.renderer": "Renderer",
+  "pet.renderer.sprite": "Hermes sprite",
+  "pet.renderer.live2d": "Live2D"
 }

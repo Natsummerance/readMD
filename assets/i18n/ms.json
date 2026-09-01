@@ -1131,5 +1131,8 @@
   "tray.quit": "Keluar dari ReadMD",
   "pet.enable": "Dayakan haiwan peliharaan desktop",
   "pet.size": "Saiz",
-  "pet.opacity": "Kelegapan"
+  "pet.opacity": "Kelegapan",
+  "pet.renderer": "Perender",
+  "pet.renderer.sprite": "Sprite Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

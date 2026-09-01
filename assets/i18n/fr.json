@@ -1131,5 +1131,8 @@
   "tray.quit": "Quitter ReadMD",
   "pet.enable": "Activer le compagnon de bureau",
   "pet.size": "Taille",
-  "pet.opacity": "Opacité"
+  "pet.opacity": "Opacité",
+  "pet.renderer": "Moteur de rendu",
+  "pet.renderer.sprite": "Sprite Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

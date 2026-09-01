@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD を終了",
   "pet.enable": "デスクトップペットを有効化",
   "pet.size": "サイズ",
-  "pet.opacity": "不透明度"
+  "pet.opacity": "不透明度",
+  "pet.renderer": "レンダラー",
+  "pet.renderer.sprite": "Hermes スプライト",
+  "pet.renderer.live2d": "Live2D"
 }

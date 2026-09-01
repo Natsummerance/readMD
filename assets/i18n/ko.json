@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD 종료",
   "pet.enable": "데스크톱 펫 활성화",
   "pet.size": "크기",
-  "pet.opacity": "불투명도"
+  "pet.opacity": "불투명도",
+  "pet.renderer": "렌더러",
+  "pet.renderer.sprite": "Hermes 스프라이트",
+  "pet.renderer.live2d": "Live2D"
 }

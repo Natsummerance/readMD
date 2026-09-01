@@ -1131,5 +1131,8 @@
   "tray.quit": "Scoir de ReadMD",
   "pet.enable": "Cumasaigh Peata Deisce",
   "pet.size": "Méid",
-  "pet.opacity": "Teimhneacht"
+  "pet.opacity": "Teimhneacht",
+  "pet.renderer": "Rindreálaí",
+  "pet.renderer.sprite": "Sprinte Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

@@ -61,6 +61,7 @@ from src.readmd_modules.pet import (
     HermesPetPluginInstaller,
     PetBatchQueue,
     PetController,
+    foreground_fullscreen,
     verify_model_bundle,
 )
 from src.readmd_core.service import ReadMDCoreService
@@ -2791,6 +2792,7 @@ class Api(object):
         )
         self._pet_command_stop = threading.Event()
         self._pet_command_thread = None
+        self._pet_fullscreen_thread = None
 
     @staticmethod
     def _web_origin(url):
@@ -3905,8 +3907,12 @@ class Api(object):
             opacity = round(float(settings.get('pet_opacity', 1.0)), 2)
         except (TypeError, ValueError):
             opacity = 1.0
+        renderer = settings.get('pet_renderer')
+        if renderer not in ('hermes-sprite', 'live2d'):
+            renderer = 'hermes-sprite'
         return {
             'bounds': bounds,
+            'renderer': renderer,
             'info': {
                 'scale': max(0.18, min(0.72, scale)),
                 'opacity': max(0.35, min(1.0, opacity)),
@@ -3916,7 +3922,10 @@ class Api(object):
     def _publish_pet_runtime(self, runtime=None):
         runtime = runtime if isinstance(runtime, dict) else self._pet_controller.snapshot()
         prefs = self._pet_preferences()
-        return self._pet_bridge.publish(runtime, info=prefs['info'], bounds=prefs['bounds'])
+        return self._pet_bridge.publish(
+            runtime, info=prefs['info'], bounds=prefs['bounds'],
+            renderer=prefs['renderer'], fullscreen=foreground_fullscreen(),
+        )
 
     def _record_pet_event(self, event):
         try:
@@ -3928,7 +3937,8 @@ class Api(object):
         status = self._pet_controller.snapshot()
         status['model'] = self._pet_model_status()
         status['adapter'] = self._pet_launcher.status()
-        status['preferences'] = self._pet_preferences()['info']
+        prefs = self._pet_preferences()
+        status['preferences'] = dict(prefs['info'], renderer=prefs['renderer'])
         return status
 
     def install_pet_plugin(self, archive_path, confirm=False):
@@ -3962,6 +3972,8 @@ class Api(object):
             if not 0.35 <= opacity <= 1.0:
                 return {'ok': False, 'code': 'invalid_pet_opacity'}
             preference_updates['pet_opacity'] = opacity
+        if 'renderer' in settings:
+            preference_updates['pet_renderer'] = renderer
         if preference_updates:
             self.save_settings(preference_updates)
         if 'reduced_motion' in settings:
@@ -3994,6 +4006,7 @@ class Api(object):
             runtime = self._pet_controller.enable()
             self._publish_pet_runtime(runtime)
             self._start_pet_command_loop()
+            self._start_pet_fullscreen_loop()
             return {'ok': True, 'runtime': runtime, 'renderer': renderer, 'model': model,
                     'adapter': launched.get('runtime')}
         runtime = self._pet_controller.snapshot()
@@ -4075,6 +4088,37 @@ class Api(object):
 
         self._pet_command_thread = threading.Thread(target=run, name='readmd-pet-bridge', daemon=True)
         self._pet_command_thread.start()
+
+    def _start_pet_fullscreen_loop(self):
+        thread = self._pet_fullscreen_thread
+        if thread is not None and thread.is_alive():
+            return
+        self._pet_command_stop.clear()
+
+        def run():
+            last = None
+            while not self._pet_command_stop.wait(2.0):
+                try:
+                    enabled = bool(self._pet_controller.snapshot().get('enabled'))
+                except Exception:
+                    continue
+                if not enabled:
+                    last = None
+                    continue
+                try:
+                    current = foreground_fullscreen()
+                except Exception:
+                    current = False
+                if current == last:
+                    continue
+                last = current
+                try:
+                    self._publish_pet_runtime()
+                except Exception:
+                    logging.exception('pet fullscreen publish failed')
+
+        self._pet_fullscreen_thread = threading.Thread(target=run, name='readmd-pet-fullscreen', daemon=True)
+        self._pet_fullscreen_thread.start()
 
     def _open_pet_clipboard(self, command):
         """Split an explicit clipboard action without discarding any type.

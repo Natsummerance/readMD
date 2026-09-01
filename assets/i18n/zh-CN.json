@@ -1131,5 +1131,8 @@
   "menu.petSub": "外置插件",
   "pet.enable": "启用桌宠",
   "pet.size": "大小",
-  "pet.opacity": "不透明度"
+  "pet.opacity": "不透明度",
+  "pet.renderer": "渲染器",
+  "pet.renderer.sprite": "Hermes 精灵图",
+  "pet.renderer.live2d": "Live2D"
 }

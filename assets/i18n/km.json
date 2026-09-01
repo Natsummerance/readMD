@@ -1131,5 +1131,8 @@
   "tray.quit": "ចាកចេញពី ReadMD",
   "pet.enable": "បើកសត្វចិញ្ចឹមលើផ្ទៃតុ",
   "pet.size": "ទំហំ",
-  "pet.opacity": "ភាពស្រអាប់"
+  "pet.opacity": "ភាពស្រអាប់",
+  "pet.renderer": "កម្មវិធីបង្ហាញ",
+  "pet.renderer.sprite": "រូបភាព Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

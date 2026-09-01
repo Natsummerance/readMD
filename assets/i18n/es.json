@@ -1131,5 +1131,8 @@
   "tray.quit": "Salir de ReadMD",
   "pet.enable": "Habilitar mascota de escritorio",
   "pet.size": "Tamaño",
-  "pet.opacity": "Opacidad"
+  "pet.opacity": "Opacidad",
+  "pet.renderer": "Motor de renderizado",
+  "pet.renderer.sprite": "Sprite de Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

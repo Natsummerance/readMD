@@ -1131,5 +1131,8 @@
   "tray.quit": "Sair do ReadMD",
   "pet.enable": "Ativar mascote de área de trabalho",
   "pet.size": "Tamanho",
-  "pet.opacity": "Opacidade"
+  "pet.opacity": "Opacidade",
+  "pet.renderer": "Renderizador",
+  "pet.renderer.sprite": "Sprite do Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD မှ ထွက်ရန်",
   "pet.enable": "ဒက်စ်တော့အိမ်မွေးတိရစ္ဆာန် ဖွင့်ရန်",
   "pet.size": "အရွယ်အစား",
-  "pet.opacity": "အလင်းပိတ်မှု"
+  "pet.opacity": "အလင်းပိတ်မှု",
+  "pet.renderer": "ပုံဖော်စနစ်",
+  "pet.renderer.sprite": "Hermes ပုံ",
+  "pet.renderer.live2d": "Live2D"
 }

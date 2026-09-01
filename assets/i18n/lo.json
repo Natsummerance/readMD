@@ -1131,5 +1131,8 @@
   "tray.quit": "ອອກຈາກ ReadMD",
   "pet.enable": "ເປີດໃຊ້ງານສັດລ້ຽງເທິງເດັສກ໌ທັອບ",
   "pet.size": "ຂະໜາດ",
-  "pet.opacity": "ຄວາມໂປ່ງແສງ"
+  "pet.opacity": "ຄວາມໂປ່ງແສງ",
+  "pet.renderer": "ຕົວສະແດງຜົນ",
+  "pet.renderer.sprite": "ຮູບ Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

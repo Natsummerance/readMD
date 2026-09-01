@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import threading
 import tempfile
+import time
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -34,7 +35,8 @@ class HermesPetBridge:
         self._lock = threading.Lock()
 
     def publish(self, runtime: Dict[str, Any], *, info: Optional[Dict[str, Any]] = None,
-                activity: Optional[Dict[str, Any]] = None, bounds: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                activity: Optional[Dict[str, Any]] = None, bounds: Optional[Dict[str, Any]] = None,
+                renderer: Optional[str] = None, fullscreen: Optional[bool] = None) -> Dict[str, Any]:
         """Atomically publish only the narrow display state required by Hermes."""
         runtime = runtime if isinstance(runtime, dict) else {}
         state = str(runtime.get("state") or "")
@@ -54,6 +56,10 @@ class HermesPetBridge:
         }
         if isinstance(bounds, dict):
             payload["bounds"] = self._safe_bounds(bounds)
+        if renderer is not None:
+            payload["renderer"] = str(renderer)
+        if fullscreen is not None:
+            payload["fullscreen"] = bool(fullscreen)
         self._root.mkdir(parents=True, exist_ok=True)
         tmp = self.state_path.with_suffix(".tmp")
         encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
@@ -181,10 +187,25 @@ class HermesPetPluginInstaller:
     MAX_ARCHIVE_BYTES = 350 * 1024 * 1024
     MAX_EXPANDED_BYTES = 750 * 1024 * 1024
     MAX_FILES = 3000
+    SWAP_ATTEMPTS = 40
+    SWAP_RETRY_DELAY = 0.75
 
     def __init__(self, data_dir: str):
         self.root = Path(data_dir).resolve() / "pet"
         self.target = self.root / "hermes-adapter"
+
+    def _replace_with_retry(self, source: Path, destination: Path) -> None:
+        # Windows real-time scanners keep freshly written executables open for
+        # a scan window (observed ~6s) that blocks the rename; the budget must
+        # comfortably outlast that window, hence ~30s of retries.
+        for remaining in range(self.SWAP_ATTEMPTS - 1, -1, -1):
+            try:
+                os.replace(str(source), str(destination))
+                return
+            except PermissionError as error:
+                if remaining == 0:
+                    raise
+                time.sleep(self.SWAP_RETRY_DELAY)
 
     @staticmethod
     def _is_safe_name(name: str) -> bool:
@@ -244,7 +265,11 @@ class HermesPetPluginInstaller:
                 if not set(expected).issubset(names):
                     return {"ok": False, "code": "pet_plugin_file_missing"}
                 self.root.mkdir(parents=True, exist_ok=True)
-                with tempfile.TemporaryDirectory(prefix="readmd-pet-", dir=str(self.root)) as temporary:
+                # A previously failed install can leave a locked staging dir
+                # behind; clear it best-effort before opening a fresh one.
+                for stale in self.root.glob("readmd-pet-*"):
+                    shutil.rmtree(stale, ignore_errors=True)
+                with tempfile.TemporaryDirectory(prefix="readmd-pet-", dir=str(self.root), ignore_cleanup_errors=True) as temporary:
                     staged = Path(temporary) / "adapter"
                     staged.mkdir()
                     for name in expected:
@@ -266,14 +291,27 @@ class HermesPetPluginInstaller:
                     if backup.exists():
                         shutil.rmtree(backup)
                     if self.target.exists():
-                        os.replace(str(self.target), str(backup))
+                        self._replace_with_retry(self.target, backup)
                     try:
-                        os.replace(str(staged), str(self.target))
+                        try:
+                            self._replace_with_retry(staged, self.target)
+                        except PermissionError:
+                            # A scanner can keep an open handle on a freshly
+                            # written file inside the staged tree for longer
+                            # than any retry budget, which keeps blocking the
+                            # directory rename itself. Copying to fresh target
+                            # paths is unaffected by such handles and the bytes
+                            # were already verified above.
+                            try:
+                                shutil.copytree(staged, self.target)
+                            except OSError:
+                                shutil.rmtree(self.target, ignore_errors=True)
+                                raise
                     except OSError:
-                        # Preserve the last working adapter if the atomic swap
+                        # Preserve the last working adapter if the publish
                         # itself fails; no partially extracted runtime remains.
                         if backup.exists() and not self.target.exists():
-                            os.replace(str(backup), str(self.target))
+                            self._replace_with_retry(backup, self.target)
                         raise
                     if backup.exists():
                         shutil.rmtree(backup)

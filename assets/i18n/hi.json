@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD से बाहर निकलें",
   "pet.enable": "डेस्कटॉप पाल्तु जानवर सक्षम करें",
   "pet.size": "आकार",
-  "pet.opacity": "अस्पष्टता"
+  "pet.opacity": "अस्पष्टता",
+  "pet.renderer": "रेंडरर",
+  "pet.renderer.sprite": "Hermes स्प्राइट",
+  "pet.renderer.live2d": "Live2D"
 }

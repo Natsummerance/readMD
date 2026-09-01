@@ -471,18 +471,30 @@ def test_saved_local_source_check_uses_original_adapter(tmp_path):
     assert skill_import.source_preview_changed(saved, changed) is True
 
 
+def _write_installed_skill(skills_dir: Path, skill_id: str = "note-helper") -> Path:
+    folder = skills_dir / skill_id
+    folder.mkdir(parents=True, exist_ok=True)
+    (folder / "references").mkdir(parents=True, exist_ok=True)
+    (folder / "tools").mkdir(parents=True, exist_ok=True)
+    (folder / "SKILL.md").write_text(
+        "---\n"
+        f"name: {skill_id}\n"
+        "description: Use when a note needs cleanup.\n"
+        "---\n\n"
+        "Rewrite {{document}} for {{language}}.\n",
+        encoding="utf-8",
+    )
+    (folder / "references" / "marker.md").write_text("old\n", encoding="utf-8")
+    (folder / "tools" / "run.py").write_text("print('disabled')\n", encoding="utf-8")
+    return folder
+
+
 def test_failed_local_replace_copytree_restores_installed_skill(tmp_path, monkeypatch):
     source_root = tmp_path / "bundle"
     source_folder = _write_skill_bundle(source_root)
     (source_folder / "references" / "marker.md").write_text("new\n", encoding="utf-8")
     data_root = tmp_path / "data"
-    _write_skill_bundle(data_root / "skills", "note-helper")
-    installed = data_root / "skills" / "note-helper"
-    nested = data_root / "skills" / "skills" / "note-helper"
-    nested.replace(installed)
-    (data_root / "skills" / "LICENSE").unlink()
-    (data_root / "skills" / "skills").rmdir()
-    (installed / "references" / "marker.md").write_text("old\n", encoding="utf-8")
+    installed = _write_installed_skill(data_root / "skills", "note-helper")
     monkeypatch.setattr(skill_import, "DATA_DIR", str(data_root))
     monkeypatch.setattr(skill_import, "SKILLS_FILE", str(data_root / "skills.json"))
     preview = skill_import.preview_source("directory", source_root)
@@ -507,13 +519,7 @@ def test_failed_local_replace_copytree_restores_installed_skill(tmp_path, monkey
 
 def test_failed_github_replace_copytree_restores_installed_skill(tmp_path, monkeypatch):
     root = tmp_path / "data"
-    _write_skill_bundle(root / "skills", "note-helper")
-    installed = root / "skills" / "note-helper"
-    nested = root / "skills" / "skills" / "note-helper"
-    nested.replace(installed)
-    (root / "skills" / "LICENSE").unlink()
-    (root / "skills" / "skills").rmdir()
-    (installed / "references" / "marker.md").write_text("old\n", encoding="utf-8")
+    installed = _write_installed_skill(root / "skills", "note-helper")
     monkeypatch.setattr(skill_import, "DATA_DIR", str(root))
     monkeypatch.setattr(skill_import, "SKILLS_FILE", str(root / "skills.json"))
     archive_bytes = io.BytesIO()

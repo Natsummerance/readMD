@@ -1131,5 +1131,8 @@
   "tray.quit": "Ieși din ReadMD",
   "pet.enable": "Activează animalul de companie pentru desktop",
   "pet.size": "Dimensiune",
-  "pet.opacity": "Opacitate"
+  "pet.opacity": "Opacitate",
+  "pet.renderer": "Motor de randare",
+  "pet.renderer.sprite": "Sprite Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

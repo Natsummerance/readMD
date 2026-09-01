@@ -1131,5 +1131,8 @@
   "tray.quit": "Sulje ReadMD",
   "pet.enable": "Ota työpöytälemmikki käyttöön",
   "pet.size": "Koko",
-  "pet.opacity": "Peittävyys"
+  "pet.opacity": "Peittävyys",
+  "pet.renderer": "Renderoija",
+  "pet.renderer.sprite": "Hermes-sprite",
+  "pet.renderer.live2d": "Live2D"
 }

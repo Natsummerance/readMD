@@ -1131,5 +1131,8 @@
   "menu.petSub": "Optional plug-in",
   "pet.enable": "Enable Desktop Pet",
   "pet.size": "Size",
-  "pet.opacity": "Opacity"
+  "pet.opacity": "Opacity",
+  "pet.renderer": "Renderer",
+  "pet.renderer.sprite": "Hermes sprite",
+  "pet.renderer.live2d": "Live2D"
 }

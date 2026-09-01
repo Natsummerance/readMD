@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD'den Çık",
   "pet.enable": "Masaüstü evcil hayvanını etkinleştir",
   "pet.size": "Boyut",
-  "pet.opacity": "Opaklık"
+  "pet.opacity": "Opaklık",
+  "pet.renderer": "Görüntü işleyici",
+  "pet.renderer.sprite": "Hermes sprite",
+  "pet.renderer.live2d": "Live2D"
 }

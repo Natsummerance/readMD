@@ -1131,5 +1131,8 @@
   "tray.quit": "Zatvori ReadMD",
   "pet.enable": "Omogući ljubimca radne površine",
   "pet.size": "Veličina",
-  "pet.opacity": "Neprozirnost"
+  "pet.opacity": "Neprozirnost",
+  "pet.renderer": "Prikazivač",
+  "pet.renderer.sprite": "Hermes sprite",
+  "pet.renderer.live2d": "Live2D"
 }

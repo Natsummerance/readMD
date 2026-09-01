@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD ནས་ཕྱིར་འཐེན།",
   "pet.enable": "ཅོག་ཙེའི་གཅེས་ཉར་སྒོ་འབྱེད།",
   "pet.size": "ཆེ་ཆུང་།",
-  "pet.opacity": "གསལ་ལ་མི་གསལ་བའི་ཚད།"
+  "pet.opacity": "གསལ་ལ་མི་གསལ་བའི་ཚད།",
+  "pet.renderer": "གཟུགས་བརྙན་འཆར་བྱེད",
+  "pet.renderer.sprite": "Hermes གཟུགས་བརྙན",
+  "pet.renderer.live2d": "Live2D"
 }

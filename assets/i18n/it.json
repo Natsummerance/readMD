@@ -1131,5 +1131,8 @@
   "tray.quit": "Esci da ReadMD",
   "pet.enable": "Abilita animaletto desktop",
   "pet.size": "Dimensioni",
-  "pet.opacity": "Opacità"
+  "pet.opacity": "Opacità",
+  "pet.renderer": "Renderer",
+  "pet.renderer.sprite": "Sprite Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

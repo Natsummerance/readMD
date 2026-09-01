@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD دىن چېكىنىش",
   "pet.enable": "ئۈستەلئۈستى ئەرمەك ھايۋانىنى قوزغىتىش",
   "pet.size": "چوڭ-كىچىكلىكى",
-  "pet.opacity": "تۇتۇقلۇقى"
+  "pet.opacity": "تۇتۇقلۇقى",
+  "pet.renderer": "كۆرسىتىش ئۇسۇلى",
+  "pet.renderer.sprite": "Hermes سۈرەت",
+  "pet.renderer.live2d": "Live2D"
 }

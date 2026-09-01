@@ -60,9 +60,11 @@ function renderPetSettings(status) {
   activePetSettingsStatus = status || null;
   const preferences = status && status.preferences ? status.preferences : {};
   const enabled = $('pet-enabled');
+  const renderer = $('pet-renderer');
   const scale = $('pet-scale');
   const opacity = $('pet-opacity');
   if (enabled) enabled.checked = Boolean(status && status.enabled);
+  if (renderer) renderer.value = preferences.renderer || 'hermes-sprite';
   if (scale) scale.value = String(petPercent(preferences.scale, 0.33));
   if (opacity) opacity.value = String(petPercent(preferences.opacity, 1));
   updatePetRangeLabels();
@@ -112,7 +114,7 @@ async function savePetSettings({ allowInstall = false } = {}) {
   const result = await py.configure_pet({
     enabled,
     opacity: Number($('pet-opacity')?.value || 100) / 100,
-    renderer: 'hermes-sprite',
+    renderer: $('pet-renderer')?.value || 'hermes-sprite',
     scale: Number($('pet-scale')?.value || 33) / 100,
   });
   if (!result || !result.ok) {
@@ -172,6 +174,7 @@ window.addEventListener('load', () => {
       if (await installPetPlugin()) renderPetSettings(await py.get_pet_runtime_status());
     });
     $('pet-enabled')?.addEventListener('change', () => { void savePetSettings({ allowInstall: true }); });
+    $('pet-renderer')?.addEventListener('change', () => { void savePetSettings(); });
     $('pet-scale')?.addEventListener('input', updatePetRangeLabels);
     $('pet-opacity')?.addEventListener('input', updatePetRangeLabels);
     $('pet-scale')?.addEventListener('change', () => { void savePetSettings(); });

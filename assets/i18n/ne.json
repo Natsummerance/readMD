@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD बन्द गर्नुहोस्",
   "pet.enable": "डेस्कटप पाल्तु जनावर सक्षम गर्नुहोस्",
   "pet.size": "साइज",
-  "pet.opacity": "अस्पष्टता"
+  "pet.opacity": "अस्पष्टता",
+  "pet.renderer": "रेन्डरর",
+  "pet.renderer.sprite": "Hermes स्प्राइट",
+  "pet.renderer.live2d": "Live2D"
 }

@@ -1131,5 +1131,8 @@
   "tray.quit": "ออกจาก ReadMD",
   "pet.enable": "เปิดใช้งานสัตว์เลี้ยงบนเดสก์ท็อป",
   "pet.size": "ขนาด",
-  "pet.opacity": "ความทึบแสง"
+  "pet.opacity": "ความทึบแสง",
+  "pet.renderer": "ตัวเรนเดอร์",
+  "pet.renderer.sprite": "สไปรต์ Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

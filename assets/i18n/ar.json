@@ -1131,5 +1131,8 @@
   "tray.quit": "إنهاء ReadMD",
   "pet.enable": "تفعيل حيوان سطح المكتب",
   "pet.size": "الحجم",
-  "pet.opacity": "العتامة"
+  "pet.opacity": "العتامة",
+  "pet.renderer": "المُصيِّر",
+  "pet.renderer.sprite": "سبرايت Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

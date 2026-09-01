@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD-с гарах",
   "pet.enable": "Ширээний тэжээвэр амьтныг идэвхжүүлэх",
   "pet.size": "Хэмжээ",
-  "pet.opacity": "Тунгалаг бус байдал"
+  "pet.opacity": "Тунгалаг бус байдал",
+  "pet.renderer": "Дүрслэгч",
+  "pet.renderer.sprite": "Hermes спрайт",
+  "pet.renderer.live2d": "Live2D"
 }

@@ -2418,16 +2418,196 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
 .ai-result-actions { min-height: 32px; }.ai-result-actions #ai-status { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ai-drawer-box, #chat-import-box { background: var(--bg2); color: var(--fg); border-radius: var(--radius-l); box-shadow: var(--shadow-3); padding: 18px 20px; width: min(620px, calc(100vw - 28px)); max-height: calc(100dvh - 28px); display: flex; flex-direction: column; gap: 12px; }
 #ai-settings-modal, #ai-history-modal, #chat-import-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 14px; background: var(--overlay); z-index: 101; }
-#ai-settings-modal.hidden, #ai-history-modal.hidden, #chat-import-modal.hidden { display: none; }
-.pet-settings-list { display: grid; gap: 8px; }
-.pet-setting-toggle, .pet-setting-range { display: grid; grid-template-columns: minmax(72px, 1fr) minmax(96px, 2fr) auto; align-items: center; gap: 10px; min-height: 44px; padding: 7px 9px; box-sizing: border-box; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--bg); color: var(--fg2); font-size: 12.5px; }
-.pet-setting-toggle { grid-template-columns: 1fr auto; }
-.pet-setting-range input { width: 100%; min-width: 72px; }
-.pet-setting-range output { min-width: 38px; color: var(--fg3); font-variant-numeric: tabular-nums; text-align: right; }
-.pet-settings-actions { justify-content: flex-end; }
-#pet-settings-modal { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 14px; background: var(--overlay); z-index: 101; }
+/* ==========================================================================
+   Pet Settings Modal - Apple Glass Design Polish
+   ========================================================================== */
+#pet-settings-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  background: var(--overlay, rgba(0, 0, 0, 0.45));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 101;
+  transition: opacity 0.2s ease;
+}
 #pet-settings-modal.hidden { display: none; }
-#pet-settings-box { width: min(420px, calc(100vw - 28px)); }
+#pet-settings-box {
+  width: min(440px, calc(100vw - 28px));
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-l, 16px);
+  box-shadow: var(--shadow-3, 0 20px 40px rgba(0, 0, 0, 0.35));
+  padding: 20px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pet-settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pet-setting-toggle,
+.pet-setting-range {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 10px 14px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m, 12px);
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 500;
+  gap: 12px;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.pet-setting-toggle:hover,
+.pet-setting-range:hover {
+  border-color: var(--border-hover, var(--fg3));
+}
+.pet-setting-toggle > span,
+.pet-setting-range > span {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg);
+  flex: 0 0 auto;
+}
+input#pet-enabled {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--border, rgba(120, 120, 128, 0.3));
+  position: relative;
+  cursor: pointer;
+  outline: none;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+  transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease;
+}
+input#pet-enabled::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+input#pet-enabled:checked {
+  background: var(--accent, #3b82f6);
+}
+input#pet-enabled:checked::before {
+  transform: translateX(20px);
+}
+input#pet-enabled:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+select#pet-renderer {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--bg2);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s, 8px);
+  padding: 6px 30px 6px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  min-width: 140px;
+}
+select#pet-renderer:hover {
+  border-color: var(--fg3);
+}
+select#pet-renderer:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.pet-setting-range {
+  display: grid;
+  grid-template-columns: 75px 1fr auto;
+  align-items: center;
+}
+.pet-setting-range input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border, rgba(120, 120, 128, 0.25));
+  outline: none;
+  margin: 0;
+  cursor: pointer;
+}
+.pet-setting-range input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.pet-setting-range input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.pet-setting-range input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(0.95);
+}
+.pet-setting-range output {
+  min-width: 44px;
+  text-align: center;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg2);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+.pet-settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+#pet-install {
+  border-radius: 999px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  transition: transform 0.12s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+#pet-install:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+#pet-install:active {
+  transform: translateY(0);
+}
 .ai-settings-intro, .chat-import-status { margin: 0; font-size: 12px; color: var(--fg2); }
 #ai-settings-box .conn-grid { overflow: auto; padding: 2px; }.conn-advanced { grid-column: 1 / -1; border: 1px solid var(--border); border-radius: var(--radius-s); padding: 8px; }.conn-advanced summary { cursor: pointer; font-size: 12px; color: var(--fg2); }.conn-advanced-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px 12px; padding-top: 10px; }
 .ai-provider-browser { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
@@ -4984,7 +5164,7 @@ body.zen-mode #content {
   .tab-close { width: 28px; height: 28px; font-size: 14px; }
 }
 @media (max-width: 720px), (pointer: coarse) {
-  #ai-settings-box .tb-btn, #ai-settings-box select, #ai-settings-box input, #pet-settings-box .tb-btn, #pet-settings-box input { min-height: var(--touch-target); }
+  #ai-settings-box .tb-btn, #ai-settings-box select, #ai-settings-box input, #pet-settings-box .tb-btn, #pet-settings-box select, #pet-settings-box input { min-height: var(--touch-target); }
   #ai-settings-box .conn-inline .tb-btn.icon { min-width: var(--touch-target); }
   #search-input { min-height: var(--touch-target); }
   .pg-nav-btn,

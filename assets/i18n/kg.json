@@ -1131,5 +1131,8 @@
   "tray.quit": "Bika ReadMD",
   "pet.enable": "Kusadisa kibulu kia mesa",
   "pet.size": "Nene",
-  "pet.opacity": "Kukonda kumonika"
+  "pet.opacity": "Kukonda kumonika",
+  "pet.renderer": "Renderer",
+  "pet.renderer.sprite": "Hermes sprite",
+  "pet.renderer.live2d": "Live2D"
 }

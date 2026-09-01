@@ -116,12 +116,17 @@ def test_model_bundle_rejects_path_escape_and_digest_mismatch(tmp_path):
     assert verified["code"] == "unsafe_asset_path"
 
 
-def test_selected_arch_chan_candidate_remains_fail_closed_until_cubism_is_approved():
+def test_selected_arch_chan_bundle_is_ready_after_license_acceptance():
     root = Path(__file__).resolve().parents[1] / "assets" / "pet" / "model"
 
     verified = verify_model_bundle(root)
 
-    assert verified == {"ready": False, "code": "cubism_publication_license_pending"}
+    assert verified["ready"] is True
+    assert verified["code"] == "ready_for_platform_probe"
+    assert verified["model_id"] == "arch-chan"
+    assert verified["renderer"] == "cubism-web"
+    assert verified["license"] == "CC0-1.0"
+    assert verified["asset_count"] == 6
 
 
 def test_native_probe_refuses_to_claim_windows_transparency_from_a_signature_only():

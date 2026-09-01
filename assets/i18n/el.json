@@ -1131,5 +1131,8 @@
   "tray.quit": "Έξοδος από το ReadMD",
   "pet.enable": "Ενεργοποίηση κατοικιδίου επιφάνειας εργασίας",
   "pet.size": "Μέγεθος",
-  "pet.opacity": "Αδιαφάνεια"
+  "pet.opacity": "Αδιαφάνεια",
+  "pet.renderer": "Μονάδα σχεδίασης",
+  "pet.renderer.sprite": "Sprite Hermes",
+  "pet.renderer.live2d": "Live2D"
 }

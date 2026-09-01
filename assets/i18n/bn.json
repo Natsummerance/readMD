@@ -1131,5 +1131,8 @@
   "tray.quit": "ReadMD থেকে প্রস্থান করুন",
   "pet.enable": "ডেস্কটপ পোষা প্রাণী সক্ষম করুন",
   "pet.size": "আকার",
-  "pet.opacity": "অস্বচ্ছতা"
+  "pet.opacity": "অস্বচ্ছতা",
+  "pet.renderer": "রেন্ডারার",
+  "pet.renderer.sprite": "Hermes স্প্রাইট",
+  "pet.renderer.live2d": "Live2D"
 }
