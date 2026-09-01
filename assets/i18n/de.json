@@ -1127,6 +1127,9 @@
   "menu.batchSub": "Mehrere Dateien konvertieren / OCR",
   "menu.pet": "Desktop-Haustier",
   "menu.petSub": "Optionales Plugin",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "ReadMD anzeigen",
+  "tray.quit": "ReadMD beenden",
+  "pet.enable": "Desktop-Haustier aktivieren",
+  "pet.size": "Größe",
+  "pet.opacity": "Deckkraft"
 }

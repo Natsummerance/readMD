@@ -1112,7 +1112,7 @@
   "batch.converting": "রূপান্তর হচ্ছে {done}/{total}…",
   "batch.note": "নথিগুলো ব্যাচে রূপান্তরিত হয়, ছবি একে একে OCR হয়; একটি ফাইল ব্যর্থ হলেও পরবর্তী কাজে প্রভাব পড়ে না, ফলাফল প্রতি সারিতে অনুসরণযোগ্য।",
   "batch.preparing": "প্রস্তুতি চলছে…",
-  "batch.selectFiles": "ফাইল নির্বাচন করুন (একাধিক)",
+  "batch.selectFiles": "ফাইল নির্বাচন করুন (একাধিক নির্বাচনযোগ্য)",
   "batch.selectFolder": "ফোল্ডার নির্বাচন করুন",
   "batch.statusCanceled": "বাতিল",
   "batch.statusError": "ব্যর্থ",
@@ -1127,6 +1127,9 @@
   "menu.batchSub": "একাধিক ফাইল রূপান্তর / OCR",
   "menu.pet": "ডেস্কটপ পোষ্য",
   "menu.petSub": "ঐচ্ছিক প্লাগইন",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "ReadMD দেখান",
+  "tray.quit": "ReadMD থেকে প্রস্থান করুন",
+  "pet.enable": "ডেস্কটপ পোষা প্রাণী সক্ষম করুন",
+  "pet.size": "আকার",
+  "pet.opacity": "অস্বচ্ছতা"
 }

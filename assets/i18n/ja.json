@@ -1127,6 +1127,9 @@
   "menu.batchSub": "複数ファイル変換 / OCR",
   "menu.pet": "デスクトップペット",
   "menu.petSub": "オプションプラグイン",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "ReadMD を表示",
+  "tray.quit": "ReadMD を終了",
+  "pet.enable": "デスクトップペットを有効化",
+  "pet.size": "サイズ",
+  "pet.opacity": "不透明度"
 }

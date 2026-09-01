@@ -1112,8 +1112,8 @@
   "batch.converting": "Pretvaranje {done}/{total}…",
   "batch.note": "Dokumenti se pretvaraju skupno, slike se OCR-iraju jedna po jedna; neuspjeh jedne datoteke ne utječe na sljedeće zadatke, a rezultati su vidljivi redak po redak.",
   "batch.preparing": "Priprema…",
-  "batch.selectFiles": "Odaberite datoteke (više njih)",
-  "batch.selectFolder": "Odaberite mapu",
+  "batch.selectFiles": "Odaberi datoteke (višestruki odabir)",
+  "batch.selectFolder": "Odaberi mapu",
   "batch.statusCanceled": "Otkazano",
   "batch.statusError": "Neuspjelo",
   "batch.statusOk": "Uspješno",
@@ -1122,11 +1122,14 @@
   "batch.statusSkipped": "Preskočeno (postoji)",
   "batch.summary": "Dovršeno: Uspješno {ok} · Preskočeno {skipped} · Neuspjelo {failed}",
   "batch.summaryCanceled": "Otkazano {canceled}",
-  "batch.title": "Skupni radni stol",
+  "batch.title": "Radna površina za skupnu obradu",
   "menu.batch": "Skupni radni stol",
   "menu.batchSub": "Pretvorba više datoteka / OCR",
   "menu.pet": "Ljubimac na radnoj površini",
   "menu.petSub": "Dodatak po izboru",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "Prikaži ReadMD",
+  "tray.quit": "Zatvori ReadMD",
+  "pet.enable": "Omogući ljubimca radne površine",
+  "pet.size": "Veličina",
+  "pet.opacity": "Neprozirnost"
 }

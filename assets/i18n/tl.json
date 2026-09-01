@@ -1112,7 +1112,7 @@
   "batch.converting": "Kino-convert ang {done}/{total}…",
   "batch.note": "Ang mga dokumento ay iko-convert nang batch, ang mga larawan ay OCR isa-isa; ang pagkabigo ng isang file ay hindi makakaapekto sa mga susunod na gawain, at ang mga resulta ay masusubaybayan bawat linya.",
   "batch.preparing": "Naghahanda…",
-  "batch.selectFiles": "Pumili ng mga File (marami)",
+  "batch.selectFiles": "Pumili ng mga File (Maaaring marami)",
   "batch.selectFolder": "Pumili ng Folder",
   "batch.statusCanceled": "Kinansela",
   "batch.statusError": "Nabigo",
@@ -1127,6 +1127,9 @@
   "menu.batchSub": "Conversion ng maraming file / OCR",
   "menu.pet": "Alagang hayop sa desktop",
   "menu.petSub": "Opsyonal na plugin",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "Ipakita ang ReadMD",
+  "tray.quit": "Lumabas sa ReadMD",
+  "pet.enable": "Paganahin ang alagang hayop sa desktop",
+  "pet.size": "Laki",
+  "pet.opacity": "Opacity"
 }

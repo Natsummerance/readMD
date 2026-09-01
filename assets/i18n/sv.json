@@ -1101,7 +1101,7 @@
   "exportai.generating": "Designer typografiparametre...",
   "exportai.applied": "AI-typografiförinställning tillämpad",
   "convert.aiFixFormat": "AI-formateringsreparation",
-  "convert.aiFixDesc": "Brug AI til at rette tabeller, formler og linjeskift",
+  "convert.aiFixDesc": "Använd AI för att korrigera tabelljustering, formler och radbrytningar",
   "fixes.aiFix": "AI-djuprengöring",
   "fixes.aiFixing": "Pågår AI-djup formateringsåterställning...",
   "fixes.aiFixed": "AI-djup formateringsåterställning klar",
@@ -1127,6 +1127,9 @@
   "menu.batchSub": "Konvertering av flera filer / OCR",
   "menu.pet": "Skrivbordsdjur",
   "menu.petSub": "Valfritt insticksprogram",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "Visa ReadMD",
+  "tray.quit": "Avsluta ReadMD",
+  "pet.enable": "Aktivera skrivbordsdjur",
+  "pet.size": "Storlek",
+  "pet.opacity": "Opacitet"
 }

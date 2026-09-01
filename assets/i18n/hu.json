@@ -1112,7 +1112,7 @@
   "batch.converting": "{done}/{total} konvertálása…",
   "batch.note": "A dokumentumok kötegelten konvertálódnak, a képek egyesével OCR-en mennek keresztül; egyetlen fájl hibája nem érinti a következő feladatokat, az eredmények soronként követhetők.",
   "batch.preparing": "Előkészítés…",
-  "batch.selectFiles": "Fájlok kiválasztása (több is lehet)",
+  "batch.selectFiles": "Fájlok kiválasztása (több is kijelölhető)",
   "batch.selectFolder": "Mappa kiválasztása",
   "batch.statusCanceled": "Megszakítva",
   "batch.statusError": "Sikertelen",
@@ -1127,6 +1127,9 @@
   "menu.batchSub": "Több fájl konvertálása / OCR",
   "menu.pet": "Asztali kisállat",
   "menu.petSub": "Opcionális bővítmény",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "ReadMD megjelenítése",
+  "tray.quit": "Kilépés a ReadMD-ből",
+  "pet.enable": "Asztali kisállat engedélyezése",
+  "pet.size": "Méret",
+  "pet.opacity": "Átlátszatlanság"
 }

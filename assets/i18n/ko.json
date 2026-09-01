@@ -1127,6 +1127,9 @@
   "menu.batchSub": "여러 파일 변환 / OCR",
   "menu.pet": "데스크톱 펫",
   "menu.petSub": "선택적 플러그인",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "ReadMD 표시",
+  "tray.quit": "ReadMD 종료",
+  "pet.enable": "데스크톱 펫 활성화",
+  "pet.size": "크기",
+  "pet.opacity": "불투명도"
 }

@@ -1128,5 +1128,8 @@
   "menu.batch": "Batch Workbench",
   "menu.batchSub": "Multi-file conversion / OCR",
   "menu.pet": "Desktop pet",
-  "menu.petSub": "Optional plug-in"
+  "menu.petSub": "Optional plug-in",
+  "pet.enable": "Enable Desktop Pet",
+  "pet.size": "Size",
+  "pet.opacity": "Opacity"
 }

@@ -1110,9 +1110,9 @@
   "presentation.exitFullscreenLabel": "Tam ekrana çık",
   "batch.cancel": "Tümünü İptal Et",
   "batch.converting": "Dönüştürülüyor {done}/{total}…",
-  "batch.note": "Belgeler toplu olarak dönüştürülür, görseller tek tek OCR edilir; tek bir dosyanın hatası sonraki görevleri etkilemez ve sonuçlar satır satır izlenebilir.",
+  "batch.note": "Belgeler toplu olarak dönüştürülür, görseller tek tek OCR ile taranır; tek bir dosyanın hatası sonraki görevleri etkilemez ve sonuçlar satır satır izlenebilir.",
   "batch.preparing": "Hazırlanıyor…",
-  "batch.selectFiles": "Dosyaları Seç (birden çok)",
+  "batch.selectFiles": "Dosyaları Seç (Çoklu seçim yapılabilir)",
   "batch.selectFolder": "Klasör Seç",
   "batch.statusCanceled": "İptal Edildi",
   "batch.statusError": "Başarısız",
@@ -1124,9 +1124,12 @@
   "batch.summaryCanceled": "İptal Edildi {canceled}",
   "batch.title": "Toplu İş Tezgahı",
   "menu.batch": "Toplu İş Tezgahı",
-  "menu.batchSub": "Birden çok dosya dönüştürme / OCR",
-  "menu.pet": "Masaüstü evcil hayvanı",
+  "menu.batchSub": "Çoklu dosya dönüştürme / OCR",
+  "menu.pet": "Masaüstü Evcil Hayvanı",
   "menu.petSub": "İsteğe bağlı eklenti",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "ReadMD'yi Göster",
+  "tray.quit": "ReadMD'den Çık",
+  "pet.enable": "Masaüstü evcil hayvanını etkinleştir",
+  "pet.size": "Boyut",
+  "pet.opacity": "Opaklık"
 }

@@ -1111,8 +1111,8 @@
   "batch.cancel": "Ακύρωση όλων",
   "batch.converting": "Μετατροπή {done}/{total}…",
   "batch.note": "Τα έγγραφα μετατρέπονται μαζικά, οι εικόνες με OCR μία-μία· η αποτυχία ενός αρχείου δεν επηρεάζει τις επόμενες εργασίες και τα αποτελέσματα είναι ανιχνεύσιμα ανά γραμμή.",
-  "batch.preparing": "Σε προετοιμασία…",
-  "batch.selectFiles": "Επιλογή αρχείων (πολλαπλά)",
+  "batch.preparing": "Προετοιμασία…",
+  "batch.selectFiles": "Επιλογή αρχείων (επιτρέπεται πολλαπλή)",
   "batch.selectFolder": "Επιλογή φακέλου",
   "batch.statusCanceled": "Ακυρώθηκε",
   "batch.statusError": "Αποτυχία",
@@ -1122,11 +1122,14 @@
   "batch.statusSkipped": "Παράβλεψη (υπάρχει ήδη)",
   "batch.summary": "Ολοκληρώθηκε: Επιτυχία {ok} · Παράλειψη {skipped} · Αποτυχία {failed}",
   "batch.summaryCanceled": "Ακυρώθηκε {canceled}",
-  "batch.title": "Πίνακας μαζικής επεξεργασίας",
+  "batch.title": "Χώρος μαζικής επεξεργασίας",
   "menu.batch": "Πίνακας μαζικής επεξεργασίας",
   "menu.batchSub": "Μετατροπή πολλών αρχείων / OCR",
   "menu.pet": "Κατοικίδιο επιφάνειας εργασίας",
   "menu.petSub": "Προαιρετική προσθήκη",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "Εμφάνιση ReadMD",
+  "tray.quit": "Έξοδος από το ReadMD",
+  "pet.enable": "Ενεργοποίηση κατοικιδίου επιφάνειας εργασίας",
+  "pet.size": "Μέγεθος",
+  "pet.opacity": "Αδιαφάνεια"
 }

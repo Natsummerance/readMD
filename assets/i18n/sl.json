@@ -1112,8 +1112,8 @@
   "batch.converting": "Pretvarjanje {done}/{total}…",
   "batch.note": "Dokumenti se pretvarjajo paketno, slike se OCR-jo ena za drugo; neuspeh ene datoteke ne vpliva na nadaljnja opravila, rezultati pa so sledljivi po vrsticah.",
   "batch.preparing": "Priprava…",
-  "batch.selectFiles": "Izberi datoteke (več)",
-  "batch.selectFolder": "Izberi mapo",
+  "batch.selectFiles": "Izberite datoteke (več možnosti)",
+  "batch.selectFolder": "Izberite mapo",
   "batch.statusCanceled": "Preklicano",
   "batch.statusError": "Neuspešno",
   "batch.statusOk": "Uspešno",
@@ -1122,11 +1122,14 @@
   "batch.statusSkipped": "Preskočeno (že obstaja)",
   "batch.summary": "Zaključeno: uspešno {ok} · preskočeno {skipped} · neuspešno {failed}",
   "batch.summaryCanceled": "Preklicano {canceled}",
-  "batch.title": "Paketna miza",
+  "batch.title": "Paketna delovna miza",
   "menu.batch": "Paketna miza",
   "menu.batchSub": "Pretvorba več datotek / OCR",
   "menu.pet": "Namizni ljubljenček",
   "menu.petSub": "Izbirni vtičnik",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "Prikaži ReadMD",
+  "tray.quit": "Zapri ReadMD",
+  "pet.enable": "Omogoči namiznega ljubljenčka",
+  "pet.size": "Velikost",
+  "pet.opacity": "Motnost"
 }

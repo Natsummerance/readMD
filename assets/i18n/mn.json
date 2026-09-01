@@ -1112,7 +1112,7 @@
   "batch.converting": "Хөрвүүлж байна {done}/{total}…",
   "batch.note": "Баримт бичгүүд багцаар хөрвүүлэгдэж, зургууд нэг нэгээр нь OCR хийгдэнэ; нэг файл амжилтгүй болсон ч дараагийн даалгаварт нөлөөлөхгүй, үр дүнг мөрөөр нь хянаж болно.",
   "batch.preparing": "Бэлтгэж байна…",
-  "batch.selectFiles": "Файл сонгох (олон)",
+  "batch.selectFiles": "Файл сонгох (олон сонголттой)",
   "batch.selectFolder": "Хавтас сонгох",
   "batch.statusCanceled": "Цуцалсан",
   "batch.statusError": "Амжилтгүй",
@@ -1122,11 +1122,14 @@
   "batch.statusSkipped": "Алгассан (аль хэдийн байгаа)",
   "batch.summary": "Дууссан: Амжилттай {ok} · Алгассан {skipped} · Амжилтгүй {failed}",
   "batch.summaryCanceled": "Цуцалсан {canceled}",
-  "batch.title": "Багц ажлын ширээ",
+  "batch.title": "Багц ажлын талбар",
   "menu.batch": "Багц ажлын ширээ",
   "menu.batchSub": "Олон файл хөрвүүлэх / OCR",
   "menu.pet": "Ширээний тэжээвэр амьтан",
   "menu.petSub": "Сонголтот нэмэлт",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "ReadMD-г харуулах",
+  "tray.quit": "ReadMD-с гарах",
+  "pet.enable": "Ширээний тэжээвэр амьтныг идэвхжүүлэх",
+  "pet.size": "Хэмжээ",
+  "pet.opacity": "Тунгалаг бус байдал"
 }

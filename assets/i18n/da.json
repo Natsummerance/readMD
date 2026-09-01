@@ -1127,6 +1127,9 @@
   "menu.batchSub": "Konvertering af flere filer / OCR",
   "menu.pet": "Skrivebordskæledyr",
   "menu.petSub": "Valgfrit plugin",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "Vis ReadMD",
+  "tray.quit": "Afslut ReadMD",
+  "pet.enable": "Aktivér skrivebordskæledyr",
+  "pet.size": "Størrelse",
+  "pet.opacity": "Uigennemsigtighed"
 }

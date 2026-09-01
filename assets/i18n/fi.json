@@ -1127,6 +1127,9 @@
   "menu.batchSub": "Useiden tiedostojen muuntaminen / OCR",
   "menu.pet": "Työpöytälemmikki",
   "menu.petSub": "Valinnainen lisäosa",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "Näytä ReadMD",
+  "tray.quit": "Sulje ReadMD",
+  "pet.enable": "Ota työpöytälemmikki käyttöön",
+  "pet.size": "Koko",
+  "pet.opacity": "Peittävyys"
 }

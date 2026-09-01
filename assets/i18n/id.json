@@ -1112,7 +1112,7 @@
   "batch.converting": "Mengonversi {done}/{total}…",
   "batch.note": "Dokumen dikonversi secara batch, gambar di-OCR satu per satu; kegagalan satu berkas tidak memengaruhi tugas berikutnya, dan hasilnya dapat ditelusuri per baris.",
   "batch.preparing": "Menyiapkan…",
-  "batch.selectFiles": "Pilih Berkas (boleh banyak)",
+  "batch.selectFiles": "Pilih File (Bisa pilih banyak)",
   "batch.selectFolder": "Pilih Folder",
   "batch.statusCanceled": "Dibatalkan",
   "batch.statusError": "Gagal",
@@ -1127,6 +1127,9 @@
   "menu.batchSub": "Konversi banyak berkas / OCR",
   "menu.pet": "Hewan peliharaan desktop",
   "menu.petSub": "Plugin opsional",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "Tampilkan ReadMD",
+  "tray.quit": "Keluar dari ReadMD",
+  "pet.enable": "Aktifkan hewan peliharaan desktop",
+  "pet.size": "Ukuran",
+  "pet.opacity": "Opasitas"
 }

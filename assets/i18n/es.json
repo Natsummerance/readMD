@@ -1127,6 +1127,9 @@
   "menu.batchSub": "Conversión de varios archivos / OCR",
   "menu.pet": "Mascota de escritorio",
   "menu.petSub": "Complemento opcional",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "Mostrar ReadMD",
+  "tray.quit": "Salir de ReadMD",
+  "pet.enable": "Habilitar mascota de escritorio",
+  "pet.size": "Tamaño",
+  "pet.opacity": "Opacidad"
 }

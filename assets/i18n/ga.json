@@ -1112,8 +1112,8 @@
   "batch.converting": "{done}/{total} á thiontú…",
   "batch.note": "Tiontaítear doiciméid i mbaisceanna, déantar OCR ar íomhánna ceann ar cheann; ní chuireann teip comhaid amháin isteach ar na tascanna ina dhiaidh, agus tá na torthaí inrianaithe líne ar líne.",
   "batch.preparing": "Ag ullmhú…",
-  "batch.selectFiles": "Roghnaigh comhaid (iolrach)",
-  "batch.selectFolder": "Roghnaigh fillteán",
+  "batch.selectFiles": "Roghnaigh Comhaid (ceadaítear rogha iolrach)",
+  "batch.selectFolder": "Roghnaigh Fillteán",
   "batch.statusCanceled": "Ar ceal",
   "batch.statusError": "Teip",
   "batch.statusOk": "Rath",
@@ -1122,11 +1122,14 @@
   "batch.statusSkipped": "Léim (ann cheana)",
   "batch.summary": "Críochnú: Rath {ok} · Léim ar {skipped} · Teip {failed}",
   "batch.summaryCanceled": "Cealaithe {canceled}",
-  "batch.title": "Binse oibre baisc",
+  "batch.title": "Binsé Saothair Baisce",
   "menu.batch": "Binse oibre baisc",
   "menu.batchSub": "Tiontú ilchomhad / OCR",
   "menu.pet": "Peata deisce",
   "menu.petSub": "Breiseán roghnach",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "Taispeáin ReadMD",
+  "tray.quit": "Scoir de ReadMD",
+  "pet.enable": "Cumasaigh Peata Deisce",
+  "pet.size": "Méid",
+  "pet.opacity": "Teimhneacht"
 }

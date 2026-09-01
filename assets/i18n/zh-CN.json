@@ -1128,5 +1128,8 @@
   "convert.aiFixFormat": "AI 自愈排版",
   "convert.aiFixDesc": "使用 AI 深度修复表格对齐、公式排版与断行问题",
   "menu.pet": "桌宠",
-  "menu.petSub": "外置插件"
+  "menu.petSub": "外置插件",
+  "pet.enable": "启用桌宠",
+  "pet.size": "大小",
+  "pet.opacity": "不透明度"
 }

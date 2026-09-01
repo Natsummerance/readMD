@@ -1127,6 +1127,9 @@
   "menu.batchSub": "Meerdere bestanden converteren / OCR",
   "menu.pet": "Bureaublad-huisdier",
   "menu.petSub": "Optionele plug-in",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "ReadMD weergeven",
+  "tray.quit": "ReadMD afsluiten",
+  "pet.enable": "Bureaublad-huisdier inschakelen",
+  "pet.size": "Grootte",
+  "pet.opacity": "Ondoorzichtigheid"
 }

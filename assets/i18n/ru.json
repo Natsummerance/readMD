@@ -1127,6 +1127,9 @@
   "menu.batchSub": "Конвертация нескольких файлов / OCR",
   "menu.pet": "Настольный питомец",
   "menu.petSub": "Необязательный плагин",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "Показать ReadMD",
+  "tray.quit": "Выйти из ReadMD",
+  "pet.enable": "Включить настольного питомца",
+  "pet.size": "Размер",
+  "pet.opacity": "Непрозрачность"
 }

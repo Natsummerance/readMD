@@ -1127,6 +1127,9 @@
   "menu.batchSub": "Conversão de vários arquivos / OCR",
   "menu.pet": "Mascote de área de trabalho",
   "menu.petSub": "Plugin opcional",
-  "tray.show": "Show ReadMD",
-  "tray.quit": "Quit ReadMD"
+  "tray.show": "Mostrar ReadMD",
+  "tray.quit": "Sair do ReadMD",
+  "pet.enable": "Ativar mascote de área de trabalho",
+  "pet.size": "Tamanho",
+  "pet.opacity": "Opacidade"
 }
