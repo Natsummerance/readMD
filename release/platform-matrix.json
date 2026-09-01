@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "release": "2.3.7",
+  "release": "2.3.8-preview.1",
   "formal_support": [
     {"id": "windows-x64", "os": "Windows 10/11", "arch": "x64", "artifacts": ["installer", "portable"], "native_backend": "WebView2"},
     {"id": "windows-arm64", "os": "Windows 10/11", "arch": "ARM64", "artifacts": ["installer", "portable"], "native_backend": "WebView2"},

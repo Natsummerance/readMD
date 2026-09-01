@@ -1,0 +1,132 @@
+/* V2.3.8 Skill workbench: isolated from the core layout stylesheet. */
+.tpl-import-menu {
+  position: absolute;
+  z-index: 14;
+  top: 52px;
+  left: min(300px, 28vw);
+  width: min(500px, calc(100vw - 48px));
+  padding: 10px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border-radius: var(--radius-m);
+  background: color-mix(in srgb, var(--bg2) 96%, transparent);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(18px) saturate(1.2);
+}
+
+.tpl-import-sources {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 3px;
+  margin-bottom: 9px;
+  border-radius: var(--radius-s);
+  background: var(--bg3);
+}
+
+.tpl-import-source {
+  min-height: 34px;
+  border: 0;
+  border-radius: calc(var(--radius-s) - 2px);
+  background: transparent;
+  color: var(--fg2);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tpl-import-source:hover,
+.tpl-import-source.active {
+  color: var(--accent);
+  background: var(--bg2);
+  box-shadow: 0 1px 5px color-mix(in srgb, var(--fg) 9%, transparent);
+}
+
+.tpl-skill-overview {
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 8px 10px;
+}
+
+.tpl-skill-overview:empty::before {
+  content: "—";
+  color: var(--fg3);
+}
+
+.tpl-skill-overview h4 {
+  margin: 2px 0 7px;
+  color: var(--fg);
+  font-size: 18px;
+}
+
+.tpl-skill-overview p {
+  margin: 0 0 10px;
+  color: var(--fg2);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.tpl-skill-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.tpl-skill-fact {
+  max-width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg2);
+  background: var(--bg3);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.tpl-skill-source,
+.tpl-skill-instructions {
+  margin: 0 0 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-m);
+  background: var(--bg);
+  color: var(--fg2);
+  font-family: var(--font-code);
+  font-size: 11.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.tpl-skill-instructions {
+  max-height: min(340px, 42vh);
+  overflow: auto;
+}
+
+.tpl-editor-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.tpl-editor-fields.hidden,
+.tpl-import-menu.hidden,
+#tpl-github-credential-wrap.hidden {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .tpl-import-menu {
+    position: fixed;
+    top: max(74px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+@media (max-width: 520px) {
+  .tpl-import-menu { width: calc(100vw - 24px); }
+  .tpl-github-fields { display: grid; grid-template-columns: minmax(0, 1fr) 34px; }
+  .tpl-github-credential { grid-column: 1 / -1; }
+}

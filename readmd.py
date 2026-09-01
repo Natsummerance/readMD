@@ -15,6 +15,8 @@
 """
 
 import argparse
+import base64
+import binascii
 import gzip
 import hashlib
 import json
@@ -26,6 +28,7 @@ import secrets
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import threading
 import webbrowser
@@ -47,14 +50,26 @@ from src.readmd_core.static_assets import resolve_asset
 from src.readmd_core.safe_open import safe_external_url, safe_file_target
 from src.readmd_core.versioning import compare_versions as _version_compare
 from src.readmd_core.versioning import parse_version as _version_parse
+from src.readmd_core.versioning import select_update_release as _select_update_release
 import src.readmd_modules as RM
 from src.readmd_modules.validators import validate_file_path, validate_command, paths_within
 from src.readmd_modules.skills import SkillError, SkillRegistry, default_skill_roots
 from src.readmd_modules import skill_import as _skill_import
+from src.readmd_modules.crypto import store_credential as _store_credential, delete_credential as _delete_credential
+from src.readmd_modules.pet import (
+    HermesPetBridge,
+    HermesPetLauncher,
+    HermesPetPluginInstaller,
+    PetBatchQueue,
+    PetController,
+    foreground_fullscreen,
+    verify_model_bundle,
+)
 from src.readmd_core.service import ReadMDCoreService
 from src.readmd_core import upstream as _upstream_sources
 
 APP_DIR = sys._MEIPASS if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+PET_MODEL_DIR = os.path.join(APP_DIR, 'assets', 'pet', 'model')
 
 from src.readmd_core.config import (
     DATA_DIR,
@@ -140,12 +155,7 @@ def check_latest_release():
         with _urlreq.urlopen(req, timeout=4) as resp:
             payload = json.loads(resp.read(1024 * 1024).decode('utf-8'))
         releases = payload if isinstance(payload, list) else [payload]
-        releases = [item for item in releases if item.get('tag_name') and not item.get('draft')]
-        latest_release = max(
-            releases,
-            key=lambda item: _parse_version(item.get('tag_name')) or ((0, 0, 0), ()),
-            default=None,
-        )
+        latest_release = _select_update_release(VERSION, releases)
         tag = str(latest_release.get('tag_name') or '') if latest_release else ''
         current = _parse_version(VERSION)
         if latest_release and current and (_compare_versions(tag, VERSION) or 0) > 0:
@@ -273,7 +283,7 @@ def _finish_startup_probe(timed_out=False):
 # 固定控制端口 + instance.json（端口/随机 token）。新进程先 ping 已有实例，
 # 命中则把要打开的文件 POST 过去后立即退出，实现“双击 .md 秒开”。
 
-_CONTROL = {'queue': [], 'window': None, 'ready': False}
+_CONTROL = {'queue': [], 'pet_batches': [], 'pet_menus': 0, 'window': None, 'ready': False}
 _control_lock = threading.Lock()
 
 
@@ -352,6 +362,69 @@ def pop_control():
         if _CONTROL['queue']:
             return _CONTROL['queue'].pop(0)
     return None
+
+
+def push_pet_batch(paths):
+    """Request a user-confirmed batch through the already-loaded ReadMD UI."""
+    safe_paths = [path for path in (paths or ()) if isinstance(path, str) and path]
+    if not safe_paths:
+        return False
+    with _control_lock:
+        _CONTROL['pet_batches'].append(safe_paths)
+        win = _CONTROL.get('window')
+        ready = _CONTROL.get('ready')
+    if win is not None and ready:
+        try:
+            win.evaluate_js('window.receivePetBatch && window.receivePetBatch(%s);' %
+                            json.dumps(safe_paths))
+            with _control_lock:
+                if _CONTROL['pet_batches'] and _CONTROL['pet_batches'][0] == safe_paths:
+                    _CONTROL['pet_batches'].pop(0)
+        except Exception:
+            pass
+        try:
+            win.show()
+            win.restore()
+        except Exception:
+            pass
+    return True
+
+
+def pop_pet_batch():
+    with _control_lock:
+        if _CONTROL['pet_batches']:
+            return _CONTROL['pet_batches'].pop(0)
+    return None
+
+
+def push_pet_menu():
+    """Open the existing More menu from the copied Hermes single-click event."""
+    with _control_lock:
+        _CONTROL['pet_menus'] += 1
+        win = _CONTROL.get('window')
+        ready = _CONTROL.get('ready')
+    if win is not None and ready:
+        try:
+            win.evaluate_js('window.openPetQuickMenu && window.openPetQuickMenu();')
+            with _control_lock:
+                if _CONTROL['pet_menus']:
+                    _CONTROL['pet_menus'] -= 1
+        except Exception:
+            pass
+        try:
+            win.show()
+            win.restore()
+        except Exception:
+            pass
+    return True
+
+
+def pop_pet_menu():
+    with _control_lock:
+        if _CONTROL['pet_menus']:
+            _CONTROL['pet_menus'] -= 1
+            return True
+    return False
 
 
 def quit_app():
@@ -702,10 +775,57 @@ def _md_output_path(src):
     return os.path.join(d, base + '.md')
 
 
+def _batch_output_paths(paths):
+    """Plan collision-free Markdown targets without touching source files."""
+    planned, used = {}, set()
+    seen_sources = set()
+    for src in paths:
+        source_key = os.path.normcase(os.path.realpath(os.path.abspath(src)))
+        if source_key in seen_sources:
+            continue
+        seen_sources.add(source_key)
+        candidate = _md_output_path(src)
+        key = os.path.normcase(os.path.abspath(candidate))
+        if key not in used:
+            planned[src] = candidate
+            used.add(key)
+            continue
+        try:
+            with open(src, 'rb') as handle:
+                digest = hashlib.sha256(handle.read()).hexdigest()[:8]
+        except OSError:
+            digest = hashlib.sha256(os.path.abspath(src).encode('utf-8', errors='replace')).hexdigest()[:8]
+        stem, ext = os.path.splitext(candidate)
+        candidate = '%s-%s%s' % (stem, digest, ext)
+        suffix = 2
+        while os.path.normcase(os.path.abspath(candidate)) in used:
+            candidate = '%s-%s-%d%s' % (stem, digest, suffix, ext)
+            suffix += 1
+        planned[src] = candidate
+        used.add(os.path.normcase(os.path.abspath(candidate)))
+    return planned
+
+
 def _write_md(path, content):
     with open(path, 'w', encoding='utf-8', newline='\n') as f:
         f.write(content)
     return True
+
+
+def _safe_export_target(path, suffix):
+    """Validate a caller-supplied export target without requiring it to exist."""
+    raw = os.fspath(path or '')
+    if not raw or '\x00' in raw or any(ord(ch) < 32 for ch in raw):
+        raise ValueError('invalid_output_path')
+    candidate = os.path.realpath(os.path.abspath(raw))
+    if not candidate.lower().endswith(str(suffix).lower()):
+        raise ValueError('invalid_output_extension')
+    parent = os.path.dirname(candidate)
+    if not os.path.isdir(parent):
+        raise ValueError('output_directory_not_found')
+    if os.path.lexists(candidate) and not os.path.isfile(candidate):
+        raise ValueError('output_target_not_regular')
+    return candidate
 
 
 def _convert_worker(job):
@@ -721,21 +841,24 @@ def _convert_worker(job):
             if err and not text:
                 it['status'] = 'error'
                 it['error'] = err
+                it['error_code'] = 'conversion_failed'
                 it['done'] = True
                 continue
             if not text.strip():
                 it['status'] = 'error'
                 it['error'] = '未提取到文字（可尝试 OCR）'
+                it['error_code'] = 'empty_output'
                 it['done'] = True
                 continue
             import src.readmd_modules.mdcheck as MDC
             fixed, warns = MDC.check(text, os.path.dirname(os.path.abspath(it['src'])))
-            out = _md_output_path(it['src'])
+            out = it.get('planned_out') or _md_output_path(it['src'])
             it['out'] = out
             it['engine'] = engine
             it['warns'] = warns
             if os.path.exists(out) and not job.get('overwrite'):
                 it['status'] = 'skipped'
+                it['error_code'] = 'output_exists'
             else:
                 try:
                     _write_md(out, fixed)
@@ -743,10 +866,12 @@ def _convert_worker(job):
                 except Exception as e:  # noqa: BLE001
                     it['status'] = 'error'
                     it['error'] = '写入失败：%s' % e
+                    it['error_code'] = 'write_failed'
         except Exception as e:  # noqa: BLE001
             logging.exception('batch convert failed: %s', it.get('src'))
             it['status'] = 'error'
             it['error'] = str(e)
+            it['error_code'] = 'conversion_failed'
         it['done'] = True
     job['running'] = False
     job['finished'] = True
@@ -756,9 +881,11 @@ def _start_convert_job(paths, overwrite):
     with _CONVERT_LOCK:
         _CONVERT_JOB_SEQ[0] += 1
         jid = 'c%d' % _CONVERT_JOB_SEQ[0]
+        outputs = _batch_output_paths(paths)
         job = {'id': jid, 'overwrite': bool(overwrite), 'running': True,
                'finished': False, 'cancel': False,
-               'items': [{'src': p, 'status': 'queued', 'done': False} for p in paths]}
+               'items': [{'src': p, 'planned_out': outputs.get(p),
+                          'status': 'queued', 'done': False} for p in paths]}
         _CONVERT_JOBS[jid] = job
         threading.Thread(target=_convert_worker, args=(job,), daemon=True,
                          name='convert-batch-%s' % jid).start()
@@ -993,6 +1120,8 @@ class Handler(BaseHTTPRequestHandler):
             self._api_convert_batch()
         elif path == '/api/convert/progress':
             self._api_convert_progress(qs.get('job', [''])[0])
+        elif path == '/api/convert/cancel':
+            self._api_convert_cancel()
         elif path == '/api/convert':
             p = unquote(qs.get('p', [''])[0])
             self._api_convert(p)
@@ -1092,6 +1221,11 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/control/next':
             act = pop_control()
             self._send_json(200, {'pending': act is not None, 'file': act or ''})
+        elif path == '/api/control/pet-batch':
+            paths = pop_pet_batch()
+            self._send_json(200, {'pending': paths is not None, 'paths': paths or []})
+        elif path == '/api/control/pet-menu':
+            self._send_json(200, {'pending': pop_pet_menu()})
         elif path == '/api/recent/status':
             self._api_recent_status(qs)
         elif path == '/api/recent/add':
@@ -1119,18 +1253,24 @@ class Handler(BaseHTTPRequestHandler):
         return body, False
 
     def _send(self, code, ctype, body, cache_control='no-cache', x_frame_options=None):
-        body, compressed = self._maybe_compress(ctype, body)
-        self.send_response(code)
-        self.send_header('Content-Type', ctype)
-        self.send_header('Content-Length', str(len(body)))
-        if compressed:
-            self.send_header('Content-Encoding', 'gzip')
-            self.send_header('Vary', 'Accept-Encoding')
-        self.send_header('Cache-Control', cache_control)
-        if x_frame_options:
-            self.send_header('X-Frame-Options', x_frame_options)
-        self.end_headers()
-        self.wfile.write(body)
+        try:
+            body, compressed = self._maybe_compress(ctype, body)
+            self.send_response(code)
+            self.send_header('Content-Type', ctype)
+            self.send_header('Content-Length', str(len(body)))
+            if compressed:
+                self.send_header('Content-Encoding', 'gzip')
+                self.send_header('Vary', 'Accept-Encoding')
+            self.send_header('Cache-Control', cache_control)
+            if x_frame_options:
+                self.send_header('X-Frame-Options', x_frame_options)
+            self.end_headers()
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+            # Browsers routinely cancel superseded polling/fetch requests while
+            # navigating.  There is no peer left to receive a fallback body, so
+            # treating this as an application failure only creates false errors.
+            self.close_connection = True
 
     def _send_json(self, code, obj):
         self._send(code, 'application/json; charset=utf-8',
@@ -1160,7 +1300,7 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get('Content-Length', 0) or 0)
             body = json.loads(self.rfile.read(length).decode('utf-8')) if length else {}
         except Exception:
-            self._send_json(400, {'error': '请求格式错误'})
+            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求格式错误'})
             return
         name = body.get('name') if isinstance(body, dict) else None
         if name not in RM.MODULES:
@@ -1257,16 +1397,25 @@ class Handler(BaseHTTPRequestHandler):
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
             body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            if body.get('confirm') is not True:
+                self._send_json(400, {'ok': False, 'error_code': 'confirmation_required'})
+                return
             lang = body.get('lang', 'python')
             code = body.get('code', '')
             cwd = body.get('cwd') or None
             timeout = int(body.get('timeout', 10))
             from src.readmd_modules import code_chunk_runner
-            res = code_chunk_runner.execute_code_chunk(lang, code, cwd=cwd, timeout=timeout)
+            res = code_chunk_runner.execute_code_chunk(code=code, lang=lang, cwd=cwd, timeout=timeout)
+            if not res.get('ok'):
+                known = {'network_not_allowed', 'path_access_not_allowed',
+                         'cwd_not_found', 'cwd_not_allowed', 'output_truncated'}
+                raw_error = str(res.get('error') or '')
+                res.setdefault('error_code', raw_error if raw_error in known else
+                               ('execution_timeout' if '超时' in raw_error else 'execution_failed'))
             self._send_json(200, res)
         except Exception as e:
             logging.exception('api_code_run failed')
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            self._send_json(500, {'ok': False, 'error_code': 'execution_failed', 'error': str(e)})
 
     def _api_diagram_render(self):
         try:
@@ -1305,17 +1454,42 @@ class Handler(BaseHTTPRequestHandler):
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
             body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            if body.get('confirm') is not True:
+                self._send_json(400, {'ok': False, 'code': 'confirmation_required'})
+                return
             content = body.get('content', '')
             out_path = body.get('out_path', '')
             meta = body.get('meta') or {}
             from src.readmd_modules.mdexport import epub_render
             if not out_path:
-                out_path = os.path.join(tempfile.gettempdir(), f'readmd_export_{int(time.time()*1000)}.epub')
-            ok = epub_render.build_epub(content, out_path, meta=meta)
-            self._send_json(200, {'ok': ok, 'path': out_path})
+                # Keep generated files in the app data export area instead of
+                # leaking untracked temporary EPUBs into the system temp dir.
+                out_dir = os.path.join(DATA_DIR, 'exports')
+                os.makedirs(out_dir, exist_ok=True)
+                out_path = os.path.join(out_dir, f'readmd_export_{int(time.time()*1000)}.epub')
+            else:
+                out_path = _safe_export_target(out_path, '.epub')
+                if os.path.exists(out_path) and not body.get('overwrite'):
+                    self._send_json(409, {'ok': False, 'code': 'output_exists'})
+                    return
+            ok = epub_render.build_epub(
+                content,
+                out_path,
+                title=str(meta.get('title') or 'ReadMD Document'),
+                author=str(meta.get('author') or 'ReadMD'),
+                language=str(meta.get('language') or 'zh-CN'),
+                options=meta,
+            )
+            self._send_json(200, {'ok': bool(ok), 'path': out_path})
         except Exception as e:
             logging.exception('api_export_epub failed')
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            raw_error = str(e)
+            known = {'invalid_output_path', 'invalid_output_extension',
+                     'output_directory_not_found', 'output_target_not_regular'}
+            self._send_json(400 if raw_error in known else 500,
+                            {'ok': False,
+                             'error_code': raw_error if raw_error in known else 'export_failed',
+                             'error': raw_error})
 
     def _api_export_presentation(self):
         try:
@@ -1497,7 +1671,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {'models': ids})
         except Exception as e:
             logging.exception('ai models failed')
-            self._send_json(500, {'error': str(e)})
+            self._send_json(400, {'ok': False, 'error_code': 'model_list_failed', 'error': str(e)})
 
     def _api_ai_chat(self):
         """AI 对话：兼容 SSE 流式与标准 JSON 双模式返回。"""
@@ -1507,13 +1681,20 @@ class Handler(BaseHTTPRequestHandler):
             n = int(self.headers.get('Content-Length', 0) or 0)
             payload = json.loads(self.rfile.read(n).decode('utf-8'))
         except Exception:
-            self._send_json(400, {'error': '请求格式错误'})
+            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求格式错误'})
             return
 
         if not isinstance(payload, dict):
-            self._send_json(400, {'error': '请求体必须是 JSON 对象'})
+            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求体必须是 JSON 对象'})
             return
-        is_stream = payload.get('stream', True)
+        # Runtime AI requests must resolve through the shared Skill registry;
+        # accepting an ad-hoc system prompt here would reintroduce the second
+        # prompt implementation that the v2.3.8 contract removes.
+        if not str(payload.get('skill_id') or '').strip():
+            self._send_json(400, {'ok': False, 'error_code': 'skill_required'})
+            return
+        raw_stream = payload.get('stream', True)
+        is_stream = raw_stream not in (False, 0, '0', 'false', 'False', 'no', 'off')
         try:
             mod = RM.get('ai')
             gen = mod.chat(payload)
@@ -1529,7 +1710,7 @@ class Handler(BaseHTTPRequestHandler):
                             if 'usage' in item:
                                 usage_info = item['usage']
                             elif 'error' in item:
-                                self._send_json(500, {'error': item['error']})
+                                self._send_json(502, {'ok': False, 'error_code': 'provider_error', 'error': item['error']})
                                 return
                         elif isinstance(item, str):
                             full_content.append(item)
@@ -1555,7 +1736,8 @@ class Handler(BaseHTTPRequestHandler):
                     if 'usage' in item:
                         self._sse({'type': 'usage', 'usage': item.get('usage') or {}})
                     elif 'error' in item:
-                        self._sse({'type': 'error', 'error': item.get('error')})
+                        self._sse({'type': 'error', 'error_code': item.get('error_code') or 'provider_error',
+                                   'error': item.get('error')})
                     else:
                         self._sse(item)
                 else:
@@ -1564,10 +1746,10 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             logging.exception('ai chat failed')
             if not is_stream:
-                self._send_json(500, {'error': str(e)})
+                self._send_json(502, {'ok': False, 'error_code': 'provider_error', 'error': str(e)})
                 return
             try:
-                self._sse({'type': 'error', 'error': str(e)})
+                self._sse({'type': 'error', 'error_code': 'provider_error', 'error': str(e)})
                 self._sse({'type': 'done'})
             except Exception:
                 pass
@@ -1873,11 +2055,28 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             body = self._skill_import_body(self)
-            url = str(body.get('url') or '').strip()
+            source_type = str(body.get('source_type') or ('github' if body.get('url') else '')).strip().lower()
+            source = str(body.get('source') or body.get('url') or '').strip()
             credential_id = str(body.get('credential_id') or '').strip()
-            if not url:
-                raise _skill_import.SkillImportError('github_url_required', '请输入 GitHub 仓库链接')
-            self._send_json(200, {'ok': True, 'preview': _skill_import.preview_import(url, credential_id)})
+            github_token = str(body.get('github_token') or '').strip()
+            if not source:
+                code = 'github_url_required' if source_type == 'github' else 'source_required'
+                raise _skill_import.SkillImportError(code, '缺少 Skill 来源')
+            created_credential = ''
+            if github_token:
+                if source_type != 'github':
+                    raise _skill_import.SkillImportError('credential_not_allowed', '该来源不接受 GitHub 凭据')
+                created_credential = 'cred:github:' + secrets.token_urlsafe(18)
+                _store_credential(created_credential, github_token)
+                credential_id = created_credential
+            try:
+                preview = _skill_import.preview_source(source_type, source, credential_id)
+            except Exception:
+                if created_credential:
+                    _delete_credential(created_credential)
+                raise
+            self._send_json(200, {'ok': True, 'preview': preview,
+                                  'credential_id': credential_id if created_credential else ''})
         except _skill_import.SkillImportError as exc:
             self._skill_import_error(exc)
         except Exception:
@@ -1896,7 +2095,7 @@ class Handler(BaseHTTPRequestHandler):
             selections = body.get('selections')
             if not isinstance(preview, dict) or not isinstance(selections, list):
                 raise _skill_import.SkillImportError('request_invalid', '缺少预览或 Skill 选择列表')
-            result = _skill_import.apply_import(
+            result = _skill_import.apply_source_import(
                 preview, selections, str(body.get('credential_id') or '').strip(),
                 confirm=body.get('confirm') is True,
             )
@@ -1910,7 +2109,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _api_skill_imports(self):
         if self.command == 'GET':
-            self._send_json(200, {'schema_version': 1, 'sources': _skill_import.list_sources()})
+            self._send_json(200, {'schema_version': 2, 'sources': _skill_import.list_sources()})
             return
         if self.command == 'DELETE':
             try:
@@ -1934,7 +2133,7 @@ class Handler(BaseHTTPRequestHandler):
                               'error': '仅支持 GET 或 DELETE 请求'})
 
     def _api_skill_import_source(self, path):
-        """Check or manually update one pinned GitHub source."""
+        """Check or manually update one pinned Skill source."""
         rest = path[len('/api/skill-imports/'):].strip('/')
         parts = [unquote(p) for p in rest.split('/') if p]
         if len(parts) != 2 or parts[1] not in ('check', 'update'):
@@ -1954,8 +2153,8 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = self._skill_import_body(self)
             credential_id = str(body.get('credential_id') or source.get('credential_id') or '').strip()
-            preview = _skill_import.preview_import(str(source.get('repository_url') or ''), credential_id)
-            changed = str(preview.get('source', {}).get('resolved_commit') or '') != str(source.get('resolved_commit') or '')
+            preview = _skill_import.preview_saved_source(source, credential_id)
+            changed = _skill_import.source_preview_changed(source, preview)
             if action == 'check':
                 self._send_json(200, {'ok': True, 'source_id': source_id, 'changed': changed,
                                       'current_commit': source.get('resolved_commit', ''),
@@ -1966,7 +2165,7 @@ class Handler(BaseHTTPRequestHandler):
             selections = body.get('selections')
             if not isinstance(selections, list) or not selections:
                 raise _skill_import.SkillImportError('selection_required', '更新前请先选择要导入的 Skill')
-            result = _skill_import.apply_import(preview, selections, credential_id, confirm=True)
+            result = _skill_import.apply_source_import(preview, selections, credential_id, confirm=True)
             self._send_json(200, {'ok': True, 'source_id': source_id, 'changed': changed, **result})
         except _skill_import.SkillImportError as exc:
             self._skill_import_error(exc)
@@ -2282,14 +2481,27 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
         except Exception:
-            self._send_json(400, {'error': '请求格式错误'})
+            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求格式错误'})
+            return
+        if body.get('confirm') is not True:
+            self._send_json(400, {'ok': False, 'code': 'confirmation_required'})
             return
         paths = [p for p in (body.get('paths') or [])
                  if isinstance(p, str) and os.path.isfile(p)]
+        # A repeated selection should represent one work item, otherwise two
+        # workers could race on the same output and report a false success.
+        unique_paths, seen_paths = [], set()
+        for path in paths:
+            key = os.path.normcase(os.path.realpath(os.path.abspath(path)))
+            if key in seen_paths:
+                continue
+            seen_paths.add(key)
+            unique_paths.append(path)
+        paths = unique_paths
         if is_win7():
             paths = [p for p in paths if os.path.splitext(p)[1].lower() in WIN7_CONVERT_EXTS]
         if not paths:
-            self._send_json(400, {'error': '没有可转换的文件'})
+            self._send_json(400, {'ok': False, 'error_code': 'no_convertible_files', 'error': '没有可转换的文件'})
             return
         if not self._module_ready('convert', '转换模块加载中，请稍候再试'):
             return
@@ -2298,12 +2510,13 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {'job': jid, 'total': len(paths)})
         except Exception as e:
             logging.exception('convert batch start failed')
-            self._send_json(500, {'error': '批量转换启动失败：%s' % e})
+            self._send_json(500, {'ok': False, 'error_code': 'batch_start_failed',
+                                  'error': '批量转换启动失败：%s' % e})
 
     def _api_convert_progress(self, jid):
         job = _CONVERT_JOBS.get(jid or '')
         if not job:
-            self._send_json(404, {'error': '任务不存在'})
+            self._send_json(404, {'ok': False, 'error_code': 'job_not_found', 'error': '任务不存在'})
             return
         self._send_json(200, {
             'job': jid, 'running': job.get('running', False),
@@ -2312,6 +2525,20 @@ class Handler(BaseHTTPRequestHandler):
             'total': len(job['items']),
             'items': job['items'],
         })
+
+    def _api_convert_cancel(self):
+        n = int(self.headers.get('Content-Length', 0) or 0)
+        try:
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+        except Exception:
+            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求格式错误'})
+            return
+        job = _CONVERT_JOBS.get((body.get('job') or '') if isinstance(body, dict) else '')
+        if not job:
+            self._send_json(404, {'ok': False, 'error_code': 'job_not_found', 'error': '任务不存在'})
+            return
+        job['cancel'] = True
+        self._send_json(200, {'ok': True, 'job': job.get('id')})
 
     def _api_ocr(self, p):
         if not os.path.isfile(p):
@@ -2664,6 +2891,19 @@ class Api(object):
         self._web_private_grants = {}
         self._clipboard_lock = threading.Lock()
         self._clipboard_tokens = {}
+        # The optional Hermes-derived pet is disabled by default. Its external
+        # Electron runtime lives in user data so it never affects reader start.
+        self._pet_controller = PetController()
+        self._pet_queue = PetBatchQueue()
+        self._pet_bridge = HermesPetBridge(DATA_DIR)
+        self._pet_installer = HermesPetPluginInstaller(DATA_DIR)
+        self._pet_launcher = HermesPetLauncher(
+            APP_DIR, self._pet_bridge,
+            adapter_dir=os.path.join(DATA_DIR, 'pet', 'hermes-adapter'),
+        )
+        self._pet_command_stop = threading.Event()
+        self._pet_command_thread = None
+        self._pet_fullscreen_thread = None
 
     @staticmethod
     def _web_origin(url):
@@ -2870,6 +3110,46 @@ class Api(object):
             return files[0] if files else None
         except Exception as e:
             logging.exception('choose_file failed')
+            return None
+
+    def choose_skill_source(self, source_type):
+        """Choose a local Skill directory or ZIP through the native dialog."""
+        import webview
+        if self._window is None:
+            return None
+        kind = str(source_type or '').strip().lower()
+        try:
+            if kind in ('directory', 'folder'):
+                files = self._window.create_file_dialog(webview.FOLDER_DIALOG)
+            elif kind in ('zip', 'archive'):
+                files = self._window.create_file_dialog(
+                    webview.OPEN_DIALOG,
+                    file_types=('ZIP Skill bundle (*.zip)',),
+                )
+            else:
+                return None
+            return files[0] if files else None
+        except Exception:
+            logging.exception('choose Skill source failed: %s', kind)
+            return None
+
+    def choose_pet_plugin(self):
+        """Choose an explicit optional desktop-pet package through the native dialog.
+
+        This returns a path only; :meth:`install_pet_plugin` still requires the
+        caller's separate confirmation and verifies the package manifest.
+        """
+        import webview
+        if self._window is None:
+            return None
+        try:
+            files = self._window.create_file_dialog(
+                webview.OPEN_DIALOG,
+                file_types=('ReadMD desktop pet (*.zip)',),
+            )
+            return files[0] if files else None
+        except Exception:
+            logging.exception('choose desktop pet plugin failed')
             return None
 
     def authorize_clipboard_read(self):
@@ -3140,11 +3420,14 @@ class Api(object):
         st, err = RM.status()
         return {'modules': st, 'errors': err}
 
-    def run_code_chunk(self, lang, code, cwd=None, timeout=10):
+    def run_code_chunk(self, lang, code, cwd=None, timeout=10, confirm=False):
         """执行多语言代码块。"""
+        if confirm is not True:
+            return {'ok': False, 'error_code': 'confirmation_required',
+                    'stdout': '', 'stderr': '', 'images': [], 'exit_code': 1}
         try:
             from src.readmd_modules import code_chunk_runner
-            return code_chunk_runner.execute_code_chunk(lang, code, cwd=cwd, timeout=int(timeout))
+            return code_chunk_runner.execute_code_chunk(code=code, lang=lang, cwd=cwd, timeout=int(timeout))
         except Exception as e:
             return {'ok': False, 'error': str(e), 'stdout': '', 'stderr': str(e), 'images': [], 'exit_code': 1}
 
@@ -3169,14 +3452,30 @@ class Api(object):
         except Exception as e:
             return {'ok': False, 'error': str(e), 'content': content}
 
-    def export_epub(self, content, output_path='', meta=None):
+    def export_epub(self, content, output_path='', meta=None, confirm=False):
         """导出 EPUB 3.0 电子书。"""
+        if confirm is not True:
+            return {'ok': False, 'error_code': 'confirmation_required'}
         try:
             from src.readmd_modules.mdexport import epub_render
             if not output_path:
-                output_path = os.path.join(tempfile.gettempdir(), f'readmd_export_{int(time.time()*1000)}.epub')
-            ok = epub_render.build_epub(content, output_path, meta=meta or {})
-            return {'ok': ok, 'path': output_path}
+                out_dir = os.path.join(DATA_DIR, 'exports')
+                os.makedirs(out_dir, exist_ok=True)
+                output_path = os.path.join(out_dir, f'readmd_export_{int(time.time()*1000)}.epub')
+            else:
+                output_path = _safe_export_target(output_path, '.epub')
+                if os.path.exists(output_path):
+                    return {'ok': False, 'code': 'output_exists'}
+            meta = meta or {}
+            ok = epub_render.build_epub(
+                content,
+                output_path,
+                title=str(meta.get('title') or 'ReadMD Document'),
+                author=str(meta.get('author') or 'ReadMD'),
+                language=str(meta.get('language') or 'zh-CN'),
+                options=meta,
+            )
+            return {'ok': bool(ok), 'path': output_path}
         except Exception as e:
             return {'ok': False, 'error': str(e)}
 
@@ -3714,6 +4013,289 @@ class Api(object):
 
         return load_json(SETTINGS_FILE, {})
 
+    def _pet_model_status(self):
+        try:
+            return verify_model_bundle(PET_MODEL_DIR)
+        except Exception:
+            return {'ready': False, 'code': 'model_validation_failed'}
+
+    def _pet_preferences(self):
+        settings = load_json(SETTINGS_FILE, {})
+        settings = settings if isinstance(settings, dict) else {}
+        bounds = settings.get('pet_bounds')
+        if not isinstance(bounds, dict):
+            bounds = None
+        try:
+            # Match the copied Hermes overlay's fallback scale.  The fallback
+            # asset is a 384x512 cell (not the old, incorrectly treated
+            # 1536x1024 whole sheet), so 0.33 is compact while remaining easy
+            # to grab on a high-DPI desktop.
+            scale = round(float(settings.get('pet_scale', 0.33)), 2)
+        except (TypeError, ValueError):
+            scale = 0.33
+        try:
+            opacity = round(float(settings.get('pet_opacity', 1.0)), 2)
+        except (TypeError, ValueError):
+            opacity = 1.0
+        renderer = settings.get('pet_renderer')
+        if renderer not in ('hermes-sprite', 'live2d'):
+            renderer = 'hermes-sprite'
+        return {
+            'bounds': bounds,
+            'renderer': renderer,
+            'info': {
+                'scale': max(0.18, min(0.72, scale)),
+                'opacity': max(0.35, min(1.0, opacity)),
+            },
+        }
+
+    def _publish_pet_runtime(self, runtime=None):
+        runtime = runtime if isinstance(runtime, dict) else self._pet_controller.snapshot()
+        prefs = self._pet_preferences()
+        return self._pet_bridge.publish(
+            runtime, info=prefs['info'], bounds=prefs['bounds'],
+            renderer=prefs['renderer'], fullscreen=foreground_fullscreen(),
+        )
+
+    def _record_pet_event(self, event):
+        try:
+            return self._publish_pet_runtime(self._pet_controller.handle_event(event))
+        except ValueError:
+            return self._publish_pet_runtime()
+
+    def get_pet_runtime_status(self):
+        status = self._pet_controller.snapshot()
+        status['model'] = self._pet_model_status()
+        status['adapter'] = self._pet_launcher.status()
+        prefs = self._pet_preferences()
+        status['preferences'] = dict(prefs['info'], renderer=prefs['renderer'])
+        return status
+
+    def install_pet_plugin(self, archive_path, confirm=False):
+        """Install an explicit local desktop-pet package into user data only."""
+        if self._pet_launcher.status().get('running'):
+            return {'ok': False, 'code': 'pet_plugin_stop_before_install'}
+        if not isinstance(archive_path, str) or len(archive_path) > 32768:
+            return {'ok': False, 'code': 'invalid_pet_plugin_archive'}
+        return self._pet_installer.install_archive(archive_path, confirm=bool(confirm))
+
+    def configure_pet(self, settings):
+        if not isinstance(settings, dict):
+            return {'ok': False, 'code': 'invalid_pet_settings'}
+        renderer = str(settings.get('renderer') or 'hermes-sprite')
+        if renderer not in ('hermes-sprite', 'live2d'):
+            return {'ok': False, 'code': 'invalid_pet_renderer'}
+        preference_updates = {}
+        if 'scale' in settings:
+            try:
+                scale = round(float(settings['scale']), 2)
+            except (TypeError, ValueError):
+                return {'ok': False, 'code': 'invalid_pet_scale'}
+            if not 0.18 <= scale <= 0.72:
+                return {'ok': False, 'code': 'invalid_pet_scale'}
+            preference_updates['pet_scale'] = scale
+        if 'opacity' in settings:
+            try:
+                opacity = round(float(settings['opacity']), 2)
+            except (TypeError, ValueError):
+                return {'ok': False, 'code': 'invalid_pet_opacity'}
+            if not 0.35 <= opacity <= 1.0:
+                return {'ok': False, 'code': 'invalid_pet_opacity'}
+            preference_updates['pet_opacity'] = opacity
+        if 'renderer' in settings:
+            preference_updates['pet_renderer'] = renderer
+        if preference_updates:
+            self.save_settings(preference_updates)
+        if 'reduced_motion' in settings:
+            self._pet_controller.set_reduced_motion(bool(settings['reduced_motion']))
+        if settings.get('enabled') is False:
+            runtime = self._pet_controller.disable()
+            self._publish_pet_runtime(runtime)
+            self._pet_command_stop.set()
+            self._pet_launcher.stop()
+            return {'ok': True, 'runtime': runtime}
+        if settings.get('enabled') is True:
+            model = self._pet_model_status()
+            # Hermes's copied sprite overlay is an independent, MIT-licensed
+            # fallback.  Only the optional Cubism renderer requires a verified
+            # Live2D rights chain; otherwise a missing model would wrongly make
+            # the already bundled Hermes plugin impossible to start.
+            if renderer == 'live2d' and not model.get('ready'):
+                return {'ok': False, 'code': model.get('code', 'model_not_ready')}
+            # Updating a slider while the pet is already open must only
+            # republish preferences. Re-enabling here would reset a working
+            # animation back to idle and needlessly restart its command loop.
+            if self._pet_controller.snapshot().get('enabled'):
+                runtime = self._pet_controller.snapshot()
+                self._publish_pet_runtime(runtime)
+                return {'ok': True, 'runtime': runtime, 'renderer': renderer, 'model': model,
+                        'adapter': self._pet_launcher.status()}
+            launched = self._pet_launcher.start()
+            if not launched.get('ok'):
+                return launched
+            runtime = self._pet_controller.enable()
+            self._publish_pet_runtime(runtime)
+            self._start_pet_command_loop()
+            self._start_pet_fullscreen_loop()
+            return {'ok': True, 'runtime': runtime, 'renderer': renderer, 'model': model,
+                    'adapter': launched.get('runtime')}
+        runtime = self._pet_controller.snapshot()
+        self._publish_pet_runtime(runtime)
+        return {'ok': True, 'runtime': runtime, 'adapter': self._pet_launcher.status()}
+
+    def enqueue_pet_files(self, paths):
+        if not isinstance(paths, (list, tuple)):
+            return {'ok': False, 'code': 'invalid_pet_batch'}
+        if len(paths) > 128 or any(not isinstance(path, str) or not path for path in paths):
+            return {'ok': False, 'code': 'invalid_pet_batch'}
+        return {'ok': True, 'tasks': self._pet_queue.submit(paths)}
+
+    def get_pet_batch(self):
+        self._drain_pet_command()
+        return self._pet_queue.grouped_snapshot()
+
+    def _drain_pet_command(self):
+        """Consume one external-pet command without granting it shell access."""
+        command = self._pet_bridge.take_command()
+        if not command:
+            return None
+        if command.get('type') == 'open-menu':
+            push_pet_menu()
+            return {'type': 'open-menu', 'ok': True}
+        if command.get('type') == 'bounds':
+            self.save_settings({'pet_bounds': command['bounds']})
+            return {'type': 'bounds', 'ok': True}
+        if command.get('type') == 'scale':
+            self.save_settings({'pet_scale': command['scale']})
+            return {'type': 'scale', 'ok': True}
+        if command.get('type') == 'clipboard':
+            return self._open_pet_clipboard(command)
+        if command.get('type') != 'drop':
+            return command
+        return self._queue_pet_drop(command.get('paths', []))
+
+    def _queue_pet_drop(self, raw_paths):
+        """Classify local file paths and request the shared confirmation UI.
+
+        Both a physical drop and a clipboard file-list use this helper.  It
+        deliberately queues rather than opening or converting anything, so a
+        mixed clipboard cannot make one category bypass the user's decision.
+        """
+        paths = []
+        for raw_path in raw_paths or ():
+            try:
+                path = os.path.abspath(os.fspath(raw_path))
+            except (TypeError, ValueError):
+                continue
+            if os.path.isfile(path):
+                paths.append(path)
+        if not paths:
+            return {'type': 'drop', 'accepted': 0}
+        tasks = self._pet_queue.submit(paths)
+        self._record_pet_event('work_started')
+        # A pet drop is deliberately non-destructive.  The unified batch
+        # workbench owns the explicit open/convert confirmation, so a stray
+        # drop can never launch documents or start a conversion job by itself.
+        grouped = {}
+        for task in tasks:
+            grouped[task['kind']] = grouped.get(task['kind'], 0) + 1
+        push_pet_batch(paths)
+        return {'type': 'drop', 'accepted': len(tasks), 'queued': grouped,
+                'requires_confirmation': True}
+
+    def _start_pet_command_loop(self):
+        thread = self._pet_command_thread
+        if thread is not None and thread.is_alive():
+            return
+        self._pet_command_stop.clear()
+
+        def run():
+            while not self._pet_command_stop.wait(0.25):
+                try:
+                    self._drain_pet_command()
+                except Exception:
+                    logging.exception('pet command bridge failed')
+
+        self._pet_command_thread = threading.Thread(target=run, name='readmd-pet-bridge', daemon=True)
+        self._pet_command_thread.start()
+
+    def _start_pet_fullscreen_loop(self):
+        thread = self._pet_fullscreen_thread
+        if thread is not None and thread.is_alive():
+            return
+        self._pet_command_stop.clear()
+
+        def run():
+            last = None
+            while not self._pet_command_stop.wait(2.0):
+                try:
+                    enabled = bool(self._pet_controller.snapshot().get('enabled'))
+                except Exception:
+                    continue
+                if not enabled:
+                    last = None
+                    continue
+                try:
+                    current = foreground_fullscreen()
+                except Exception:
+                    current = False
+                if current == last:
+                    continue
+                last = current
+                try:
+                    self._publish_pet_runtime()
+                except Exception:
+                    logging.exception('pet fullscreen publish failed')
+
+        self._pet_fullscreen_thread = threading.Thread(target=run, name='readmd-pet-fullscreen', daemon=True)
+        self._pet_fullscreen_thread.start()
+
+    def _open_pet_clipboard(self, command):
+        """Split an explicit clipboard action without discarding any type.
+
+        A Windows clipboard can carry CF_HDROP plus text and an image at the
+        same time. File entries enter the user-confirmed batch queue while the
+        textual/image portion becomes one local Markdown note. Neither branch
+        overwrites the other, and a bad image does not suppress valid files.
+        """
+        text = command.get('text') or ''
+        image = command.get('image_png') or ''
+        paths = command.get('paths') or []
+        drop_result = self._queue_pet_drop(paths) if paths else {'type': 'drop', 'accepted': 0}
+        if not text and not image:
+            if drop_result.get('accepted'):
+                return {'type': 'clipboard', 'accepted': drop_result['accepted'], 'batch': drop_result}
+            return {'type': 'clipboard', 'accepted': 0}
+        inbox = os.path.join(DATA_DIR, 'pet', 'clipboard')
+        os.makedirs(inbox, exist_ok=True)
+        stamp = datetime.now().strftime('%Y%m%d-%H%M%S-%f')
+        content = text
+        if image:
+            try:
+                image_path = os.path.join(inbox, 'clipboard-%s.png' % stamp)
+                raw = base64.b64decode(image.encode('ascii'), validate=True)
+                if not raw.startswith(b'\x89PNG\r\n\x1a\n'):
+                    return {'type': 'clipboard', 'accepted': 0, 'code': 'invalid_clipboard_image'}
+                with open(image_path, 'wb') as handle:
+                    handle.write(raw)
+                relative = os.path.basename(image_path)
+                content = (content + '\n\n' if content else '') + '![' + relative + '](' + relative + ')\n'
+            except (OSError, ValueError, UnicodeError, binascii.Error):
+                if drop_result.get('accepted'):
+                    return {
+                        'type': 'clipboard', 'accepted': drop_result['accepted'],
+                        'batch': drop_result, 'code': 'clipboard_image_write_failed',
+                    }
+                return {'type': 'clipboard', 'accepted': 0, 'code': 'clipboard_image_write_failed'}
+        markdown_path = os.path.join(inbox, 'clipboard-%s.md' % stamp)
+        _write_md(markdown_path, content)
+        push_control(markdown_path)
+        self._record_pet_event('work_succeeded')
+        return {
+            'type': 'clipboard', 'accepted': 1 + drop_result.get('accepted', 0),
+            'path': markdown_path, 'batch': drop_result if drop_result.get('accepted') else None,
+        }
+
     def save_settings(self, settings):
         cur = load_json(SETTINGS_FILE, {})
         cur.update(settings or {})
@@ -3900,6 +4482,20 @@ class Api(object):
             except Exception:
                 pass
         return True
+
+    def toggle_native_fullscreen(self):
+        """Toggle the host window's native fullscreen state when supported."""
+        if self._window is None:
+            return {'ok': False, 'code': 'window_not_ready', 'supported': False}
+        toggle = getattr(self._window, 'toggle_fullscreen', None)
+        if not callable(toggle):
+            return {'ok': False, 'code': 'native_fullscreen_unavailable', 'supported': False}
+        try:
+            result = toggle()
+            return {'ok': True, 'supported': True, 'fullscreen': bool(result) if isinstance(result, bool) else None}
+        except Exception:
+            logging.exception('native fullscreen toggle failed')
+            return {'ok': False, 'code': 'native_fullscreen_failed', 'supported': False}
 
     def request_quit(self):
         quit_app()
@@ -4149,7 +4745,8 @@ def run_selftest():
         threading.Thread(target=srv3.serve_forever, daemon=True).start()
         p3 = srv3.server_port
         req = _uq.Request('http://127.0.0.1:%d/api/convert/batch' % p3,
-                          data=json.dumps({'paths': [_dp], 'overwrite': True}).encode('utf-8'),
+                          data=json.dumps({'paths': [_dp], 'overwrite': True,
+                                           'confirm': True}).encode('utf-8'),
                           method='POST', headers={'Content-Type': 'application/json'})
         with _uq.urlopen(req, timeout=30) as r:
             bd = json.loads(r.read().decode('utf-8'))
@@ -4597,6 +5194,30 @@ _tray_icon = {'icon': None, 'started': False}
 _tray_lock = threading.Lock()
 
 
+def _tray_labels():
+    """Resolve tray menu labels from the current locale (en/zh fallback)."""
+    try:
+        lang = get_system_language() or ''
+    except Exception:
+        lang = ''
+    is_zh = lang.lower().startswith('zh')
+    defaults = {
+        'tray.show': '显示 ReadMD' if is_zh else 'Show ReadMD',
+        'menu.open': '打开文件…' if is_zh else 'Open File…',
+        'tray.quit': '退出 ReadMD' if is_zh else 'Quit ReadMD',
+    }
+    strings = {}
+    for code in (lang, 'zh-CN' if is_zh else 'en'):
+        try:
+            path = os.path.join(APP_DIR, 'assets', 'i18n', f'{code}.json')
+            with open(path, encoding='utf-8') as f:
+                strings = json.load(f)
+            break
+        except Exception:
+            continue
+    return {key: strings.get(key) or default for key, default in defaults.items()}
+
+
 def _start_tray_once(window):
     """Create the tray only after the page is usable, and never twice."""
     with _tray_lock:
@@ -4647,11 +5268,12 @@ def _start_tray(window):
         quit_app()
 
     try:
+        labels = _tray_labels()
         menu = pystray.Menu(
-            pystray.MenuItem('显示 ReadMD', act_show, default=True),
-            pystray.MenuItem('打开文件…', act_open),
+            pystray.MenuItem(labels['tray.show'], act_show, default=True),
+            pystray.MenuItem(labels['menu.open'], act_open),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem('退出 ReadMD', act_quit),
+            pystray.MenuItem(labels['tray.quit'], act_quit),
         )
         icon = pystray.Icon('readmd', img, 'ReadMD', menu=menu)
         icon.run_detached()
@@ -4661,7 +5283,6 @@ def _start_tray(window):
     except Exception as e:
         logging.exception('tray start failed: %s', e)
         return None
-    return 0
 
 
 if __name__ == '__main__':

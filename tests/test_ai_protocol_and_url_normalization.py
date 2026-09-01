@@ -81,6 +81,32 @@ class TestAiProtocolAndUrlNormalization(unittest.TestCase):
             self.assertEqual(list(gen), ["local"])
             self.assertNotIn("Authorization", mock_http.call_args[0][1])
 
+    def test_stream_keeps_reading_usage_after_finish_reason(self):
+        class FakeResponse:
+            def __iter__(self):
+                events = [
+                    {"choices": [{"delta": {"content": "ok"}, "finish_reason": "stop"}]},
+                    {"usage": {"prompt_tokens": 3, "completion_tokens": 1, "total_tokens": 4}},
+                    "[DONE]",
+                ]
+                for event in events:
+                    data = event if event == "[DONE]" else json.dumps(event)
+                    yield ("data: " + data + "\n\n").encode("utf-8")
+
+            def close(self):
+                pass
+
+        with patch("src.readmd_modules.ai._http_stream", return_value=FakeResponse()):
+            items = list(_chat_openai(
+                base_url="https://api.example.test/v1",
+                api_key="test-key",
+                model="test-model",
+                messages=[{"role": "user", "content": "hello"}],
+                temperature=0.2,
+                stream=True,
+            ))
+        self.assertEqual(items, ["ok", {"usage": {"prompt_tokens": 3, "completion_tokens": 1, "total_tokens": 4}}])
+
 
 if __name__ == "__main__":
     unittest.main()

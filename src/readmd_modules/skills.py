@@ -101,8 +101,6 @@ def load_skill(folder: Path, scope: str, root: Path) -> Skill:
         raise SkillError("Skill name must be lowercase kebab-case")
     if not description:
         raise SkillError("Skill description is required")
-    if not description.lower().startswith("use when"):
-        raise SkillError("Skill description must start with 'Use when'")
     unknown = set(_VARIABLE_RE.findall(instructions)) - _ALLOWED_VARIABLES
     if unknown:
         raise SkillError("unsupported Skill variables: " + ", ".join(sorted(unknown)))

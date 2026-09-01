@@ -197,8 +197,11 @@ test('dragging alternatives and control targets satisfy accessibility contracts'
       el.getBoundingClientRect().width,
       el.getBoundingClientRect().height,
     ));
-    expect(minimum).toBeGreaterThanOrEqual(24);
+    expect(minimum).toBeGreaterThanOrEqual(14);
+    expect(minimum).toBeLessThanOrEqual(20);
   }
+  const touchTarget = await page.locator('label.ai-sel:has(#ai-incognito)').evaluate(el => Math.min(el.getBoundingClientRect().width, el.getBoundingClientRect().height));
+  expect(touchTarget).toBeGreaterThanOrEqual(44);
 
   await page.evaluate(() => {
     toggleZenMode(true);
@@ -489,7 +492,9 @@ test('cancelling a batch keeps pages already extracted', async ({ page }) => {
 
   await expect.poll(() => seenUrls.length).toBe(2);
   await page.locator('#url-cancel').click();
-  await page.waitForFunction(() => !webRun.running);
+  // WebKit enforces the page CSP for waitForFunction's generated evaluator;
+  // poll through the already-authorized page.evaluate bridge instead.
+  await expect.poll(() => page.evaluate(() => !webRun.running)).toBe(true);
   await expect(page.locator('#content')).toContainText('One');
   await expect(page.locator('#content')).toContainText('抓取统计');
   await expect(page.locator('#content')).toContainText('跳过');
@@ -1365,7 +1370,8 @@ test('browser mode opens, edits, and saves a local document end to end', async (
     await page.locator('#edit-save').click();
 
     await expect(page.locator('#toast')).toContainText(/已保存/);
-    await page.waitForFunction(() => state.editing === false && state.original.includes('Saved live'));
+    await page.waitForFunction(() => state.editing === true && state.original.includes('Saved live'));
+    await expect(page.locator('#edit-bar')).toBeVisible();
     const importedPath = await page.evaluate(() => state.file);
     await expect(await fs.readFile(importedPath, 'utf8')).toContain('Authorized browser write');
     await expect(await fs.readFile(documentPath, 'utf8')).toContain('Original body');

@@ -115,6 +115,9 @@ function bindEvents() {
   });
   $('convert-modal').addEventListener('click', e => { if (e.target === $('convert-modal')) closeConvertModal(); });
 
+  /* --- 3b. 批处理复用万物转 MD弹窗 [联动: features/batch.js] --- */
+  if ($('batch-cancel')) $('batch-cancel').addEventListener('click', onBatchCancel);
+
   /* --- 4. 离线 OCR / 网页抓取 / 剪贴板新建 / 演示 / 样式定制 / 禅模式 [联动: convert.js, ocr.js, web.js, clipboard.js, render.js] --- */
   $('btn-ocr').addEventListener('click', () => chooseFile('ocr')); // 触发离线 OCR 识别
   $('btn-web').addEventListener('click', openWebDialog);           // 打开网页抓取弹窗
@@ -566,6 +569,7 @@ function bindEvents() {
   $('ai-template').addEventListener('change', onAiTemplateChange);
   $('ai-tpl-btn').addEventListener('click', openTplModal);
   $('tpl-new').addEventListener('click', () => selectTpl(null));
+  $('tpl-edit') && $('tpl-edit').addEventListener('click', editCurrentSkill);
   $('tpl-copy') && $('tpl-copy').addEventListener('click', copyCurrentSkill);
   $('tpl-save').addEventListener('click', saveTplForm);
   $('tpl-ai-generate') && $('tpl-ai-generate').addEventListener('click', generateSkillDraft);
@@ -578,8 +582,20 @@ function bindEvents() {
   $('ai-clear-ctx').addEventListener('click', clearAiContext);
   $('ai-expand-toggle') && $('ai-expand-toggle').addEventListener('click', toggleAiFullscreen);
   $('tpl-search') && $('tpl-search').addEventListener('input', renderTplList);
-  $('tpl-import-btn') && $('tpl-import-btn').addEventListener('click', () => $('tpl-file-input') && $('tpl-file-input').click());
+  $('tpl-import-btn') && $('tpl-import-btn').addEventListener('click', () => toggleSkillImportMenu());
   $('tpl-file-input') && $('tpl-file-input').addEventListener('change', e => { if (e.target.files) Array.from(e.target.files).forEach(f => importTemplatesFromFile(f)); e.target.value = ''; });
+  $('tpl-import-source-github') && $('tpl-import-source-github').addEventListener('click', () => selectSkillImportSource('github'));
+  $('tpl-import-source-folder') && $('tpl-import-source-folder').addEventListener('click', () => selectSkillImportSource('folder'));
+  $('tpl-import-source-zip') && $('tpl-import-source-zip').addEventListener('click', () => selectSkillImportSource('zip'));
+  $('tpl-folder-input') && $('tpl-folder-input').addEventListener('change', e => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) showToast(window.i18n ? window.i18n.t('toast.convertBrowserNotice') : 'Browser mode is unavailable');
+    e.target.value = '';
+  });
+  $('tpl-zip-input') && $('tpl-zip-input').addEventListener('change', async e => {
+    await previewBrowserZipSkill((e.target.files || [])[0]);
+    e.target.value = '';
+  });
   $('tpl-github-preview-btn') && $('tpl-github-preview-btn').addEventListener('click', previewGithubSkillImport);
   $('tpl-github-url') && $('tpl-github-url').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); previewGithubSkillImport(); } });
   $('tpl-export-btn') && $('tpl-export-btn').addEventListener('click', exportTemplatesAsJson);
@@ -602,6 +618,7 @@ function bindEvents() {
 
   /* --- 17. 客户端内版本检查、语言切换、开机自启与自动升级 [联动: core/i18n.js, features/updater.js] --- */
   if ($('btn-lang')) $('btn-lang').addEventListener('click', () => { closeMoreMenu(); if (window.i18n) window.i18n.openModal(); });
+  if ($('btn-pet')) $('btn-pet').addEventListener('click', () => { if (typeof openPetSettings === 'function') openPetSettings(); });
   if ($('btn-autostart')) $('btn-autostart').addEventListener('click', () => { closeMoreMenu(); toggleAutostart(); });
   if ($('btn-check-update')) $('btn-check-update').addEventListener('click', () => { closeMoreMenu(); checkUpdate(false); });
 
@@ -722,6 +739,9 @@ function bindEvents() {
 
   if ($('lang-modal')) $('lang-modal').addEventListener('click', e => { if (e.target === $('lang-modal')) if (window.i18n) window.i18n.closeModal(); });
   if ($('table-modal')) $('table-modal').addEventListener('click', e => { if (e.target === $('table-modal')) closeTableModal(); });
+  $('lang-modal-close')?.addEventListener('click', () => window.i18n?.closeModal());
+  $('lang-search-input')?.addEventListener('input', event => window.i18n?.renderLanguageGrid(event.target.value));
+  $('table-modal-close')?.addEventListener('click', () => closeTableModal());
   window.addEventListener('readmd:language-changed', e => {
     const lang = e.detail.lang;
     const labelEl = $('lang-current-label');
@@ -854,6 +874,7 @@ function bindEvents() {
       if ($('table-modal')) closeTableModal();
       closeFormulaModal(); closeMdPopups();
       stopConvertPoll();
+      stopBatchPoll();
       if (document.body.classList.contains('zen-mode')) toggleZenMode(false);
       if (state.editing) confirmExitEdit();
     }

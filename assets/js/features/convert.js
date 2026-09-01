@@ -5,30 +5,45 @@
 
 /* ---------------- 批量转换（转 MD） ---------------- */
 
-let convertJobTimer = null;
 let convertLastDir = null;
 
 async function openConvertModal() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!hasPy) { showToast(_t('toast.convertBrowserNotice') || '浏览器模式请使用“打开文件”转换'); return; }
   const note = $('convert-note');
   if (note) note.textContent = state.win7 ? (_t('convert.noteWin7') || 'Win7 版仅支持 docx / pdf 转 Markdown；转换结果自动保存为源文件同目录同名 .md。') : (_t('convert.note') || '转换结果自动保存为源文件同目录同名 .md（如 report.docx → report.md）。docx 公式、PDF 表格走专用解析，其余格式自动回退通用转换；输出经过严格校验（表格 / 代码围栏 / 公式 / 图片引用）。');
   $('convert-modal').classList.remove('hidden');
   $('convert-list').innerHTML = '';
   $('convert-status').textContent = '';
+  $('batch-cancel')?.classList.add('hidden');
   $('convert-open-dir').classList.add('hidden');
 }
 
 function closeConvertModal() {
-  stopConvertPoll();
+  if (typeof stopBatchPoll === 'function') stopBatchPoll();
   $('convert-modal').classList.add('hidden');
 }
 
 async function pickConvertFiles() {
   let files = [];
-  try { files = await py.choose_many_files(); } catch (e) { files = []; }
-  if (!files || !files.length) return;
-  await startBatchConvert(files, $('convert-overwrite').checked);
+  if (hasPy) {
+    try { files = await py.choose_many_files(); } catch (e) { files = []; }
+  } else {
+    const input = $('file-input');
+    if (!input) return;
+    input.value = '';
+    input.multiple = true;
+    input.onchange = async () => {
+      const uploaded = [];
+      for (const file of Array.from(input.files || [])) {
+        const path = await uploadFile(file);
+        if (path) uploaded.push(path);
+      }
+      if (uploaded.length) await startBatchConvert(uploaded, $('convert-overwrite').checked);
+    };
+    input.click();
+    return;
+  }
+  if (files.length) await startBatchConvert(files, $('convert-overwrite').checked);
 }
 
 async function pickConvertFolder() {
@@ -48,106 +63,13 @@ async function pickConvertFolder() {
 }
 
 async function startBatchConvert(files, overwrite) {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!(await ensureModule('convert'))) return;
-  const list = $('convert-list');
-  list.innerHTML = '';
-  files.forEach(p => {
-    const row = document.createElement('div');
-    row.className = 'convert-item queued';
-    const nm = document.createElement('span');
-    nm.className = 'convert-name';
-    nm.textContent = p.split(/[\\/]/).pop();
-    nm.title = p;
-    const st = document.createElement('span');
-    st.className = 'convert-state';
-    st.textContent = _t('convert.statusQueued') || '排队中';
-    row.appendChild(nm); row.appendChild(st);
-    list.appendChild(row);
-  });
-  $('convert-status').textContent = _t('convert.statusPreparing') || '准备中…';
-  try {
-    const r = await apiFetch('/api/convert/batch', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paths: files, overwrite: !!overwrite }),
-    });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || (_t('convert.statusStartFail') || '启动失败'));
-    if (files.length) {
-      const parts = files[0].split(/[\\/]/);
-      parts.pop();
-      convertLastDir = parts.join('\\');
-    }
-    pollConvertJob(d.job);
-  } catch (e) {
-    $('convert-status').textContent = (_t('convert.statusStartFail') || '启动失败：') + e.message;
+  if (typeof enqueueBatchFiles === 'function') {
+    return enqueueBatchFiles(files, overwrite);
   }
-}
-
-
-function pollConvertJob(jid) {
-  stopConvertPoll();
-  convertJobTimer = setInterval(async () => {
-    try {
-      const r = await apiFetch('/api/convert/progress?job=' + encodeURIComponent(jid));
-      if (!r.ok) { stopConvertPoll(); return; }
-      const d = await r.json();
-      renderConvertProgress(d);
-      if (d.finished) stopConvertPoll();
-    } catch (e) { stopConvertPoll(); }
-  }, 600);
-}
-
-function stopConvertPoll() {
-  if (convertJobTimer) { clearInterval(convertJobTimer); convertJobTimer = null; }
-}
-
-function renderConvertProgress(d) {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const rows = $('convert-list').querySelectorAll('.convert-item');
-  const statusMap = {
-    ok: _t('convert.statusOk') || '成功',
-    skipped: _t('convert.statusSkipped') || '跳过（已存在）',
-    error: _t('convert.statusError') || '失败',
-    canceled: _t('convert.statusCanceled') || '已取消',
-    queued: _t('convert.statusQueued') || '排队中'
-  };
-  let ok = 0, skipped = 0, err = 0, warnCount = 0;
-  (d.items || []).forEach((it, i) => {
-    const row = rows[i];
-    if (row) {
-      row.className = 'convert-item ' + (it.status || 'queued');
-      const st = row.querySelector('.convert-state');
-      if (st) {
-        st.textContent = statusMap[it.status] || it.status;
-        if (it.status === 'error' && it.error) st.title = it.error;
-      }
-    }
-    if (it.status === 'ok') { ok++; warnCount += (it.warns || []).filter(w => w.level !== 'auto').length; }
-    else if (it.status === 'skipped') skipped++;
-    else if (it.status === 'error') err++;
-  });
-  const status = $('convert-status');
-  if (!status) return;
-  if (d.running) {
-    status.textContent = _t('convert.converting', { done: d.done, total: d.total }) || ('转换中 ' + d.done + '/' + d.total + '…');
-  } else {
-    status.textContent = _t('convert.summary', { ok: ok, skipped: skipped, failed: err }) || ('完成：成功 ' + ok + ' · 跳过 ' + skipped + ' · 失败 ' + err + (warnCount ? ' · 警告 ' + warnCount : ''));
-    $('convert-open-dir').classList.remove('hidden');
-    if (!d._autoOpened) {
-      d._autoOpened = true;
-      const okItems = (d.items || []).filter(it => it.status === 'ok' && it.out);
-      if (okItems.length > 0) {
-        (async () => {
-          for (const it of okItems) {
-            await loadFile(it.out);
-          }
-          closeConvertModal();
-          showToast(_t('toast.convertSuccess') || '转换完成，已自动在新标签页中打开');
-        })();
-      }
-    }
-  }
+  // The batch module is part of the generated boot bundle.  Keep a stable
+  // error instead of maintaining a second conversion implementation when a
+  // custom host accidentally omits it.
+  showToast((window.i18n && window.i18n.t('convert.moduleUnavailable')) || '转换模块不可用');
 }
 
 

@@ -473,7 +473,12 @@ def chat(payload):
     """调用大模型。payload: {provider?, base_url?, format?, api_key?, model,
     messages, temperature?, stream?, mode?}。统一返回生成器：产出 str 增量，
     末尾可产出 {'usage': {...}} 用量事件。mode: auto|chat|completion|responses|messages。"""
+    current = {}
     name = payload.get("provider") or ""
+    if not name:
+        cfg = ensure_config()
+        current = cfg.get("current") if isinstance(cfg.get("current"), dict) else {}
+        name = str(current.get("provider_id") or current.get("provider") or "").strip()
     prov = find_provider(name) if name else {}
     if not prov and name:
         raise ChatError("未知提供商：%s" % name)
@@ -493,7 +498,7 @@ def chat(payload):
     api_key = payload.get("api_key") or resolve_key(prov)
     if not api_key and not _is_local_provider(prov):
         raise ChatError("未配置 API Key（可填入界面，或设置环境变量 %s）" % (prov.get("env_key") or ""))
-    model = payload.get("model") or (prov.get("models") or [""])[0] or ""
+    model = payload.get("model") or current.get("model") or (prov.get("models") or [""])[0] or ""
     messages = _skill_messages(payload)
     temperature = payload.get("temperature", 0.4)
     stream = bool(payload.get("stream", True))
@@ -625,8 +630,10 @@ def _chat_openai(base_url, api_key, model, messages, temperature, stream,
                 delta = choices[0].get("delta") or {}
                 if delta.get("content"):
                     yield delta["content"]
-                if choices[0].get("finish_reason"):
-                    break
+                # Some OpenAI-compatible providers send the usage-only event
+                # after the final choice carries ``finish_reason``.  Keep
+                # reading until the protocol terminator so the shared SSE
+                # contract can emit usage before done.
         except urllib.error.URLError as e:
             raise ChatError("连接中断：%s" % e.reason) from e
         finally:
@@ -690,8 +697,8 @@ def _chat_openai_completion(base_url, api_key, model, messages, temperature, str
                 delta = choices[0].get("delta") or {}
                 if delta.get("text"):
                     yield delta["text"]
-                if choices[0].get("finish_reason"):
-                    break
+                # Do not terminate on finish_reason: usage may follow as a
+                # choice-less SSE event before [DONE].
         except urllib.error.URLError as e:
             raise ChatError("连接中断：%s" % e.reason) from e
         finally:

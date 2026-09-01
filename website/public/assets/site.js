@@ -372,6 +372,7 @@
     let velocity = 0;
     let lastTime = performance.now();
     let particles = [];
+    let cinemaLoadStarted = false;
 
     const buildCanvas = () => {
       const rect = canvas.getBoundingClientRect();
@@ -518,6 +519,17 @@
       }
     };
 
+    const loadCinemaWhenVisible = () => {
+      if (reducedMotion.matches || cinemaLoadStarted) return cinemaFilm.promise || Promise.resolve(cinemaFilm.frames);
+      cinemaLoadStarted = true;
+      return ensureCinemaFilmFrames().then(() => {
+        buildCanvas();
+        updateCapabilityCinema(performance.now());
+        playCinema();
+        return cinemaFilm.frames;
+      });
+    };
+
     buildCanvas();
     const resizeObserver = new ResizeObserver(() => {
       buildCanvas();
@@ -528,17 +540,16 @@
     const visibilityObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
       if (visible) {
-        updateCapabilityCinema(performance.now());
-        playCinema();
+        loadCinemaWhenVisible().then(() => {
+          if (visible && !reducedMotion.matches) {
+            updateCapabilityCinema(performance.now());
+            playCinema();
+          }
+        });
       }
     }, { rootMargin: '25% 0px' });
     visibilityObserver.observe(section);
     document.addEventListener('visibilitychange', playCinema);
-
-    ensureCinemaFilmFrames().then(() => {
-      buildCanvas();
-      updateCapabilityCinema(performance.now());
-    });
 
     if (reducedMotion.matches) {
       if (progressBar) progressBar.style.display = 'none';

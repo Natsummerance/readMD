@@ -1,0 +1,26 @@
+{
+  "format_version": 1,
+  "id": "arch-chan",
+  "renderer": "cubism-web",
+  "entry": "arch chan model0.model3.json",
+  "author": "RavioliMavioli; archival fork maintained by Speykious",
+  "license": "CC0-1.0",
+  "source": {
+    "repository": "https://github.com/Speykious/arch-chan",
+    "revision": "ed43dcf7e88d56f79d2e42fecb084bf6923f44e0",
+    "license_file": "ARCH-CHAN-CC0-1.0.txt"
+  },
+  "rights": {
+    "asset_origin": "https://github.com/Speykious/arch-chan",
+    "redistribution_authorization": "CC0-1.0; see ARCH-CHAN-CC0-1.0.txt",
+    "cubism_publication_license": "accepted-2026-09-01-readmd-plugin-publisher"
+  },
+  "files": {
+    "Arch Chan Model0.cdi3.json": "e9f0e4e169d87abb95d2b3967d1cd2e377fa66ec10e3ad80c35eaf6339e11138",
+    "Arch Chan Model0.moc3": "edd79490147c4920d16dc7c80dffe3fc998db0e599c9024c884fd9d4e1041f9b",
+    "arch chan model0.model3.json": "7cf692d3ed094648a63721e94737c946336f64a69f9f68358ef6b1c4f671cb59",
+    "Arch Chan Model0.physics3.json": "d3ad90fbe6f3e11bc0ef28ed416bb67b263613c3c508f58e6af604d00275fac8",
+    "Mouse.exp3.json": "5d6352d98243e26d0378efc02567cec45269eed7cec4e47d03035cd523de9bc3",
+    "Arch Chan Model0.2048/texture_00.png": "83ada01290c90713c7b6eb7f038f513756acb7156282aeeb6e997f565dfbc246"
+  }
+}

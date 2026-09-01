@@ -14,13 +14,14 @@ class VersionComparatorTest(unittest.TestCase):
         self.assertEqual(parse_version('v2.3.7'), ((2, 3, 7), 1, ()))
         self.assertEqual(
             parse_version('v2.3.7-beta.4'),
-            ((2, 3, 7), 0, ((1, 'beta'), (2, 4))),
+            ((2, 3, 7), 0, ((1, 'beta'), (0, 4))),
         )
         self.assertEqual(compare_versions('v2.3.7', '2.3.7'), 0)
         self.assertLess(compare_versions('v2.3.7-beta.3', 'v2.3.7-beta.4'), 0)
         self.assertLess(compare_versions('v2.3.7-beta.4', 'v2.3.7-rc.1'), 0)
         self.assertLess(compare_versions('v2.3.7-rc.1', 'v2.3.7'), 0)
         self.assertIsNone(compare_versions('not-a-version', 'v2.3.7'))
+        self.assertLess(compare_versions('1.0.0-1', '1.0.0-alpha'), 0)
 
     def test_readmd_startup_check_uses_shared_comparator(self):
         self.assertEqual(readmd._compare_versions('beta-placeholder', 'beta-placeholder'), None)
@@ -50,3 +51,25 @@ class VersionComparatorTest(unittest.TestCase):
         self.assertTrue(result['ok'])
         self.assertTrue(result['has_update'])
         self.assertEqual(result['latest_version'], 'v2.3.7-beta.5')
+
+    def test_beta_build_detects_formal_release_of_the_same_core(self):
+        releases = [
+            {'tag_name': 'v2.3.7-beta.5', 'draft': False, 'prerelease': True, 'assets': []},
+            {'tag_name': 'v2.3.7', 'draft': False, 'prerelease': False, 'assets': []},
+        ]
+        with patch.object(updater, '_fetch_release_json', return_value=releases):
+            result = updater.check_update('2.3.7-beta.3')
+        self.assertTrue(result['ok'])
+        self.assertTrue(result['has_update'])
+        self.assertEqual(result['latest_version'], 'v2.3.7')
+
+    def test_formal_build_never_receives_a_prerelease(self):
+        releases = [
+            {'tag_name': 'v2.3.7', 'draft': False, 'prerelease': False, 'assets': []},
+            {'tag_name': 'v2.3.8-beta.1', 'draft': False, 'prerelease': True, 'assets': []},
+        ]
+        with patch.object(updater, '_fetch_release_json', return_value=releases):
+            result = updater.check_update('2.3.7')
+        self.assertTrue(result['ok'])
+        self.assertFalse(result['has_update'])
+        self.assertEqual(result['latest_version'], 'v2.3.7')

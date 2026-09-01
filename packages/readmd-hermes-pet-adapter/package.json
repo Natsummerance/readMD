@@ -1,0 +1,26 @@
+{
+  "name": "@readmd/hermes-pet-adapter",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "ReadMD host bridge for the vendored Hermes desktop pet module.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/dev.mjs",
+    "verify-upstream": "node scripts/verify-upstream.mjs",
+    "stage": "node scripts/stage-plugin.mjs"
+  },
+  "dependencies": {
+    "@nanostores/react": "1.1.0",
+    "nanostores": "1.4.2",
+    "pixi-live2d-display": "^0.4.0",
+    "pixi.js": "^6.5.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "electron": "40.10.2",
+    "esbuild": "0.28.1",
+    "vite": "8.2.0"
+  }
+}

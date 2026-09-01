@@ -1,0 +1,9 @@
+dist/
+stage/
+node_modules/
+.cache/
+.preview-bridge.json
+.preview-bridge.json.command
+.vite-cache/
+.generated/
+runtime-smoke*.png

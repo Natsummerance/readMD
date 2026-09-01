@@ -13,7 +13,7 @@ ReadMD for VS Code is the editor front end for the ReadMD desktop app. It connec
 
 Install the matching `readmd-vscode-2.3.7.vsix` from Releases with **Extensions: Install from VSIX...**, reload the window, and open a Markdown file. The extension starts the bundled local Core on first use, or can connect to an existing Core configured in Settings. Uninstalling the extension does not delete documents or credentials.
 
-## 21 个命令 / Command reference
+## 22 个命令 / Command reference
 
 所有命令都可在 `Ctrl/Cmd+Shift+P` 搜索，也会按上下文出现在编辑器标题栏或右键菜单中。
 
@@ -40,6 +40,7 @@ Install the matching `readmd-vscode-2.3.7.vsix` from Releases with **Extensions:
 | `ReadMD: 一键编译转为学术 LaTeX 源码` (`readmd.convertToLatex`) | 生成可继续编辑的 `.tex` 文件。 |
 | `ReadMD: 解析 BibTeX 参考文献` (`readmd.parseBibtex`) | 解析当前 BibTeX 并返回引用数据。 |
 | `ReadMD: 一键配置工作区 MCP Server` (`readmd.setupMcpServer`) | 在确认后写入工作区 MCP 配置。 |
+| `ReadMD: 打开指定 Skill` (`readmd.openSkillByUri`) | 从侧边栏或链接直接在工作台中打开指定 Skill。 |
 
 ## AI、Provider 与凭据 / AI, providers and credentials
 
@@ -70,7 +71,7 @@ The MCP setup command writes a workspace-scoped configuration. Read-only resourc
 - Core 数据目录由桌面应用决定（Windows 通常位于 `%APPDATA%\\ReadMD`，macOS 位于 `~/Library/Application Support/ReadMD`，Linux 位于 `${XDG_DATA_HOME:-~/.local/share}/ReadMD`）。扩展设置只保存连接方式，不复制凭据。
 - “Core 无法连接”：执行 `Developer: Reload Window`，确认没有第二个实例占用端口，再从设置中重新连接或选择自动启动。
 - “没有模型”：检查 Provider 的协议、Base URL、模型发现权限和凭据 ID；先运行连接测试。
-- “Skill 不显示”：检查 `SKILL.md` frontmatter、目录名、description 是否以 `Use when` 开头，以及是否被禁用；GitHub 导入后可在桌面工作台启用。
+- “Skill 不显示”：检查 `SKILL.md` frontmatter、目录名、description 是否为空，以及是否被禁用；description 可以使用任意语言。GitHub 导入后可在桌面工作台启用。
 - “导入被阻止”：重新预览并检查 commit、许可证、路径和脚本提示。压缩包超限、符号链接、目录穿越和无许可证内容会被拒绝。
 - “导出失败”：确认目标目录可写，并安装对应的系统转换依赖；错误消息不会包含 API Key。
 

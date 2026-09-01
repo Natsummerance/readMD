@@ -8,6 +8,7 @@
 let pvTimer = null;
 let pvLast = '';
 let pvEditorEl = null;
+let pvRenderEpoch = 0;
 
 function hasUnsavedEditorChanges() {
   if (!state.editing) return false;
@@ -74,12 +75,21 @@ function setPvLayout(layout) {
   const pw = $('preview-wrap');
   if (!mc || !pw) return;
   mc.classList.remove('pv-left', 'pv-right', 'pv-bottom', 'pv-top');
+  mc.classList.remove('pv-auto-hidden');
   if (state.editing && layout !== 'none') {
     mc.classList.add('pv-' + layout);
-    pw.classList.remove('hidden');
-    $('pv-splitter').classList.remove('hidden');
-    applyPvSplit();
-    schedulePreview();
+    const bounds = mc.getBoundingClientRect();
+    const horizontal = layout === 'left' || layout === 'right';
+    // Decide on window width: main-col width is circular here (it shrinks when the
+    // preview pane is already flexed), while the specs pin the boundary at 720/760.
+    const constrained = horizontal ? window.innerWidth < 740 : bounds.height < 520;
+    mc.classList.toggle('pv-auto-hidden', constrained);
+    pw.classList.toggle('hidden', constrained);
+    $('pv-splitter').classList.toggle('hidden', constrained);
+    if (!constrained) {
+      applyPvSplit();
+      schedulePreview();
+    }
   } else {
     pw.classList.add('hidden');
     $('pv-splitter').classList.add('hidden');
@@ -90,7 +100,10 @@ function setPvLayout(layout) {
 function applyPvSplit() {
   const pw = $('preview-wrap'); if (!pw) return;
   const horizontal = state.pvLayout === 'left' || state.pvLayout === 'right';
-  const pct = horizontal ? state.pvSplitX : state.pvSplitY;
+  const key = horizontal ? 'pvSplitX' : 'pvSplitY';
+  const raw = Number(state[key]);
+  const pct = Math.max(25, Math.min(70, Number.isFinite(raw) ? raw : (horizontal ? 50 : 46)));
+  state[key] = pct;
   pw.style.flexBasis = pct + '%';
   const splitter = $('pv-splitter');
   if (splitter) {
@@ -118,7 +131,7 @@ function bindPvSplitter() {
   bar.addEventListener('pointermove', e => { if (bar.hasPointerCapture(e.pointerId)) update(e); });
   bar.addEventListener('pointerup', e => { if (bar.hasPointerCapture(e.pointerId)) bar.releasePointerCapture(e.pointerId); saveSettings(); });
   bar.addEventListener('keydown', e => { if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return; e.preventDefault(); const delta = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 2 : -2; if (state.pvLayout === 'left' || state.pvLayout === 'right') state.pvSplitX = Math.max(25, Math.min(70, state.pvSplitX + delta)); else state.pvSplitY = Math.max(25, Math.min(70, state.pvSplitY + delta)); applyPvSplit(); saveSettings(); });
-  window.addEventListener('resize', () => setPvLayout(state.pvLayout));
+  window.addEventListener('resize', () => requestAnimationFrame(() => setPvLayout(state.pvLayout)));
 }
 
 let isSyncingFromEditor = false;
@@ -127,11 +140,14 @@ let isSyncingFromPreview = false;
 function schedulePreview() {
   if (pvTimer) clearTimeout(pvTimer);
   if (state.liveUpdate === false) return; // Save-only mode
-  pvTimer = setTimeout(renderPreview, 300);
+  const size = getEditContent().length;
+  const delay = size >= 100000 ? 700 : size >= 30000 ? 450 : 300;
+  pvTimer = setTimeout(renderPreview, delay);
 }
 
 async function renderPreview() {
   pvTimer = null;
+  const renderEpoch = ++pvRenderEpoch;
   const pane = $('preview-pane');
   if (!pane || state.pvLayout === 'none' || !state.editing) return;
   let src = getEditContent();
@@ -141,6 +157,7 @@ async function renderPreview() {
   // 预处理 @import
   if (window.processDocImports) {
     src = await window.processDocImports(src, state.file || '');
+    if (renderEpoch !== pvRenderEpoch) return;
   }
 
   let html;
@@ -156,6 +173,7 @@ async function renderPreview() {
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     html = '<p class="ai-err">' + (_t('editor.previewRenderFail') || '预览渲染失败') + '</p>';
   }
+  if (renderEpoch !== pvRenderEpoch) return;
   pane.innerHTML = window.sanitizeRenderedHtml ? window.sanitizeRenderedHtml(html) : html;
   fixLinks(pane);
   fixImages(pane);
@@ -306,6 +324,7 @@ async function toggleEdit() {
   $('edit-bar').classList.remove('hidden');
   $('content').classList.add('hidden');
   state.editing = true;
+  $('main-col')?.classList.add('is-editing');
   setEditBtn(_t('editor.editing') || '编辑中');
   pvLast = '';
   try {
@@ -336,7 +355,7 @@ async function confirmExitEdit() {
   const action = await promptDirtyClose(state.sourceName || state.file || 'document');
   if (action === 'cancel') return false;
   if (action === 'save') {
-    await saveEdit();
+    await saveEdit({ exitAfterSave: true });
     return !state.editing;
   }
   const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
@@ -360,7 +379,7 @@ function exitEdit() {
   const pw = $('preview-wrap');
   if (pw) pw.classList.add('hidden');
   const mc = $('main-col');
-  if (mc) mc.classList.remove('pv-left', 'pv-right', 'pv-bottom', 'pv-top');
+  if (mc) mc.classList.remove('pv-left', 'pv-right', 'pv-bottom', 'pv-top', 'pv-auto-hidden', 'is-editing');
   pvLast = '';
   if (!state.editing) {
     $('edit-bar').classList.add('hidden');
@@ -380,8 +399,9 @@ function exitEdit() {
   if (typeof updateUnloadGuard === 'function') updateUnloadGuard();
 }
 
-async function saveEdit() {
+async function saveEdit(options = {}) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const exitAfterSave = Boolean(options && options.exitAfterSave);
   if (!state.editing) return false;
   const content = cmView ? cmView.state.doc.toString() : $('edit-area').value;
   if (!state.file) {
@@ -434,13 +454,15 @@ async function saveEdit() {
       syncSavedTab(state.file, content);
       applySavedMtime(ok);
       await renderSavedDocument(content);
+      if (typeof renderTabsBar === 'function') renderTabsBar();
+      if (typeof updateUnloadGuard === 'function') updateUnloadGuard();
       const savedTarget = state.browserCopy
         ? `${state.sourceName || state.file} (${_t('app.browserCopy') || 'browser copy'})`
         : (state.file || state.sourceName || 'document');
       showToast(ok.backup
         ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）'))
         : ((_t('toast.savedPrefix') || '已保存：') + savedTarget));
-      exitEdit();
+      if (exitAfterSave) exitEdit();
       return true;
     } else {
       if (ok && ok.conflict) {

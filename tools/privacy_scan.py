@@ -17,6 +17,11 @@ LOCAL_PATH_PATTERNS = [
     re.compile(rb"[a-zA-Z]:[/\\][a-zA-Z0-9_.-]+[/\\](?:skills|plugins|creator)[/\\]", re.IGNORECASE),
     re.compile(rb"/(?:Users|home)/[a-zA-Z0-9_.-]+/(?:\.codex|\.gemini|Programming|Projects)", re.IGNORECASE),
 ]
+# Real personal documents must never enter the repo; filename hit = failure,
+# checked before every other early-return path in scan_file.
+SENSITIVE_NAME_PATTERNS = [
+    re.compile(r"北京交通大学软件学院毕业实习文档"),
+]
 
 
 def tracked_files():
@@ -55,6 +60,10 @@ def iter_external(paths):
 
 def scan_file(path, label, failures, is_source_tree=True):
     norm_label = label.replace('\\', '/')
+    for pattern in SENSITIVE_NAME_PATTERNS:
+        if pattern.search(norm_label):
+            failures.append("sensitive real-document name in %s" % label)
+            return
     if "/assets/vendor/" in norm_label or norm_label.startswith("assets/vendor/"):
         return
     if "/assets/upstream/" in norm_label or norm_label.startswith("assets/upstream/"):

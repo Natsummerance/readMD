@@ -115,16 +115,25 @@ function openFileRename() {
 async function loadFile(path, { force = false, browserCopy = null } = {}) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!path) return;
-  const loadEpoch = beginDocumentLoad();
   const existingTab = findTabByPath(path);
-  if (existingTab && !force) {
-    await switchTab(existingTab.id);
-    return;
-  }
-  if (existingTab && (existingTab.isDirty || (state.activeTabId === existingTab.id && state.editing))) {
+  const activeEditing = !!(existingTab && state.activeTabId === existingTab.id && state.editing);
+  const activeDirty = activeEditing && hasUnsavedEditorChanges();
+  if (existingTab && (existingTab.isDirty || activeDirty)) {
     showToast(_t('toast.reloadBlockedDirty') || '未保存修改已保留，未重新加载外部更改');
     return;
   }
+  // A second open/double-click of the same clean file is a refresh request.
+  // Leave edit mode first so the freshly loaded document is not hidden behind
+  // a stale CodeMirror instance.
+  if (activeEditing) exitEdit();
+  if (existingTab && !force && state.activeTabId !== existingTab.id) {
+    await switchTab(existingTab.id);
+    if (state.activeTabId !== existingTab.id) return;
+  }
+  // Opening an already-open clean path is an explicit refresh request.  Start
+  // the load only after tab switching, because switching invalidates older
+  // document epochs by design.
+  const loadEpoch = beginDocumentLoad();
   setProgress(8);
   try {
     const r = await apiFetch('/api/file?p=' + encodeURIComponent(path));
@@ -1576,12 +1585,12 @@ function renderAllCodeChunks(container) {
       try {
         let res;
         if (hasPy && py.run_code_chunk) {
-          res = await py.run_code_chunk(lang, code);
+          res = await py.run_code_chunk(lang, code, null, 10, true);
         } else {
           const r = await apiFetch('/api/code/run', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lang: lang, code: code })
+            body: JSON.stringify({ lang: lang, code: code, confirm: true })
           });
           res = await r.json();
         }
@@ -1786,9 +1795,25 @@ let presZenActive = false;
 
 async function togglePresentationFullscreen(modal) {
   const doc = document;
-  const isFull = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+  const nativeState = !!window.__readmdNativeFullscreen;
+  const isFull = nativeState || !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
   const btn = $('presentation-fullscreen-btn');
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+
+  // pywebview embeds the page in a native window where the browser Fullscreen
+  // API is unavailable. Prefer the host window in that environment and keep a
+  // local state bit so Esc/F11 can restore the previous window state.
+  if (window.pywebview?.api?.toggle_native_fullscreen) {
+    const native = await window.pywebview.api.toggle_native_fullscreen();
+    if (native && native.supported) {
+      window.__readmdNativeFullscreen = !isFull;
+      if (btn) {
+        btn.classList.toggle('active', !isFull);
+        btn.textContent = !isFull ? (_t('presentation.exitFullscreenLabel') || '退出全屏') : (_t('presentation.fullscreenLabel') || '全屏');
+      }
+      return;
+    }
+  }
 
   if (!isFull) {
     const target = modal || doc.documentElement;
@@ -1830,6 +1855,10 @@ window.closePresentationMode = function closePresentationMode() {
   clearTimeout(presControlsHideTimer);
   presZenActive = false;
 
+  if (window.__readmdNativeFullscreen && window.pywebview?.api?.toggle_native_fullscreen) {
+    window.pywebview.api.toggle_native_fullscreen().catch(() => {});
+    window.__readmdNativeFullscreen = false;
+  }
   if ((document.fullscreenElement || document.webkitFullscreenElement) && document.exitFullscreen) {
     document.exitFullscreen().catch(() => {});
   }

@@ -32,6 +32,8 @@ STARTUP_SCRIPTS = (
     'js/features/ai.js',
     'js/features/share.js',
     'js/features/convert.js',
+    'js/features/batch.js',
+    'js/features/pet-batch.js',
     'js/features/ocr.js',
     'js/features/web.js',
     'js/features/clipboard.js',

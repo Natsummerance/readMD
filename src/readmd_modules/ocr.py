@@ -19,6 +19,8 @@ IS_WIN = sys.platform == 'win32'
 
 _engine_cache = {}
 
+_OCR_IMAGE_EXTS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tif', '.tiff', '.webp')
+
 
 # ---------------------------------------------------------------- Windows WinRT OCR
 
@@ -26,7 +28,7 @@ def _winrt_pick_language():
     from winrt.windows.media.ocr import OcrEngine
     tags = [l.language_tag for l in OcrEngine.available_recognizer_languages]
     if not tags:
-        raise RuntimeError('系统未安装任何 OCR 语言')
+        raise RuntimeError('ocr-no-engine：系统未安装任何 OCR 语言')
     for cand in ('zh-Hans', 'zh-CN', 'zh', 'en-US', 'en'):
         for t in tags:
             if t.lower().startswith(cand.lower()):
@@ -100,7 +102,7 @@ def _mac_vision_ocr_bytes(data):
 
         return '\n'.join(result_text)
     except ImportError:
-        raise RuntimeError('macOS Vision OCR 需要 PyObjC：pip install pyobjc-framework-Vision pyobjc-framework-Quartz')
+        raise RuntimeError('ocr-no-engine：macOS Vision OCR 需要 PyObjC：pip install pyobjc-framework-Vision pyobjc-framework-Quartz')
     except Exception as e:
         logging.exception('macOS Vision OCR failed')
         raise
@@ -120,7 +122,7 @@ def _tesseract_ocr_bytes(data):
             capture_output=True, timeout=30)
         return result.stdout.decode('utf-8', errors='replace').strip()
     except FileNotFoundError:
-        raise RuntimeError('Tesseract 未安装。请运行：brew install tesseract tesseract-lang（macOS）或 apt install tesseract-ocr（Linux）')
+        raise RuntimeError('ocr-no-engine：Tesseract 未安装。请运行：brew install tesseract tesseract-lang（macOS）或 apt install tesseract-ocr（Linux）')
     except subprocess.TimeoutExpired:
         return ''
     finally:
@@ -172,14 +174,14 @@ def _ocr_bytes(data):
     elif engine == 'tesseract':
         return _tesseract_ocr_bytes(data)
     else:
-        raise RuntimeError('无可用 OCR 引擎。Windows 需要 WinRT，macOS 需要 PyObjC，其他平台需要 Tesseract。')
+        raise RuntimeError('ocr-no-engine：无可用 OCR 引擎。Windows 需要 WinRT，macOS 需要 PyObjC，其他平台需要 Tesseract。')
 
 
 def load():
     """提前验证 OCR 引擎可用。"""
     engine = _pick_engine()
     if engine is None:
-        raise RuntimeError('无可用 OCR 引擎')
+        raise RuntimeError('ocr-no-engine：无可用 OCR 引擎')
     if engine == 'winrt':
         _engine_cache['lang'] = _winrt_pick_language()
     return True
@@ -269,7 +271,7 @@ def normalize_ocr_text(text):
 
     # 5. 调用 txtmd 模块进行 Markdown 结构化整理
     try:
-        from src.readmd_modules import txtmd
+        from . import txtmd
         md_text, _ = txtmd.to_markdown(cleaned_text)
         return md_text.strip()
     except Exception:
@@ -302,6 +304,10 @@ def ocr_pdf_to_md(path, max_pages=200):
     import fitz
     doc = fitz.open(path)
     pages = list(doc)[:max_pages]
+    try:
+        total = int(doc.page_count)
+    except Exception:
+        total = len(pages)
     parts = []
     for idx, page in enumerate(pages, 1):
         text = (page.get_text() or '').strip()
@@ -320,13 +326,17 @@ def ocr_pdf_to_md(path, max_pages=200):
     doc.close()
     if not parts:
         return '> （PDF 未提取到文字，且 OCR 无结果）'
+    if total > len(pages):
+        parts.append('> （注意：文档共 %d 页，本次仅处理前 %d 页，其余未转换）' % (total, len(pages)))
     return '\n\n---\n\n'.join(parts)
 
 
 def ocr_any(path):
-    """按扩展名分发：图片 → OCR；PDF → 文字层/OCR；其他交给 convert。"""
+    """按扩展名分发：PDF → 文字层/OCR；已知图片 → OCR；其他类型拒绝。"""
     ext = os.path.splitext(path)[1].lower()
     if ext == '.pdf':
         return ocr_pdf_to_md(path)
-    return ocr_image_to_md(path)
+    if ext in _OCR_IMAGE_EXTS:
+        return ocr_image_to_md(path)
+    raise ValueError('ocr-unsupported-type：%s 不是可识别的图片或 PDF 文件' % (ext or '未知类型'))
 

@@ -1,6 +1,6 @@
 # Maintainer: Natsummerance <natsummerance@github.com>
 pkgname=readmd-bin
-pkgver=2.3.7
+pkgver=2.3.8
 pkgrel=1
 pkgdesc="Lightweight native Markdown viewer and editor with auto-repair and presentation mode"
 arch=('x86_64' 'aarch64')

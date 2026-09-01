@@ -14,8 +14,10 @@ permissions:
   contents: read
 
 env:
-  READMD_VERSION: '2.3.7'
-  READMD_SELF_USE_RELEASE: ${{ github.ref == 'refs/tags/v2.3.7' && '1' || '0' }}
+  READMD_VERSION: '2.3.8-preview.1'
+  # Preview and formal tags must both pass the signing gate.  There is no
+  # implicit self-use exception tied to an old release tag.
+  READMD_SELF_USE_RELEASE: '0'
   PYTHONUTF8: '1'
 
 
@@ -37,7 +39,7 @@ jobs:
         working-directory: ui-tests
         run: |
           npm ci
-          npx playwright install chromium
+          npx playwright install chromium firefox webkit
       - name: Run Windows regression suite
         run: |
           python tests/test_fix_test.py
@@ -623,7 +625,7 @@ jobs:
           name: ReadMD v${{ env.READMD_VERSION }}
           body_path: release/release_notes.md
           files: release-assets/*
-          prerelease: false
+          prerelease: ${{ contains(env.READMD_VERSION, '-') }}
           fail_on_unmatched_files: true
 
   product-showcase:
@@ -652,8 +654,8 @@ jobs:
           python -m pip install --disable-pip-version-check pillow numpy
           npm ci
         working-directory: ui-tests
-      - name: Install Chromium
-        run: npx playwright install chromium
+      - name: Install Playwright browsers
+        run: npx playwright install chromium firefox webkit
         working-directory: ui-tests
       - name: Resolve release evidence
         shell: pwsh

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-version="2.3.7">
+<html lang="zh-CN" data-version="2.3.8-preview.1">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -8,6 +8,7 @@
 <meta name="readmd-app-token" content="">
 <title>ReadMD</title>
 <link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/skill-workbench.css">
 </head>
 <body>
 <header id="toolbar">
@@ -87,9 +88,10 @@
         <button class="more-group-header" type="button" aria-expanded="false"><span data-i18n="menu.grpSettings">设置</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
           <button id="btn-lang" class="more-item"><span data-i18n="menu.lang">界面语言</span><em id="lang-current-label">简体中文</em></button>
+          <button id="btn-pet" class="more-item"><span data-i18n="menu.pet">桌宠</span><em id="pet-status-label" data-i18n="menu.petSub">外置插件</em></button>
           <button id="btn-assoc" class="more-item"><span data-i18n="menu.assoc">设为默认</span><em data-i18n="menu.assocSub">.md 打开方式</em></button>
           <button id="btn-autostart" class="more-item"><span data-i18n="menu.autoStart">开机自启</span><em id="autostart-status-label" data-i18n="app.disabled">未开启</em></button>
-          <button id="btn-check-update" class="more-item"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.7</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
+          <button id="btn-check-update" class="more-item"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.8-preview.1</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
         </div>
       </div>
     </div>
@@ -392,6 +394,26 @@
   </div>
 </div>
 
+<div id="pet-settings-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="pet-settings-title">
+  <div id="pet-settings-box" class="ai-drawer-box">
+    <div class="export-head">
+      <h3 id="pet-settings-title" data-i18n="menu.pet">桌宠</h3>
+      <button id="pet-settings-close" class="tb-btn icon modal-close-btn" aria-label="关闭" data-i18n-aria="toolbar.close">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="pet-settings-list">
+      <label class="pet-setting-toggle"><span data-i18n="pet.enable">启用桌宠</span><input id="pet-enabled" type="checkbox" data-i18n-aria="pet.enable"></label>
+      <label class="pet-setting-toggle"><span data-i18n="pet.renderer">渲染器</span><select id="pet-renderer" data-i18n-aria="pet.renderer"><option value="hermes-sprite" data-i18n="pet.renderer.sprite">Hermes 精灵图</option><option value="live2d" data-i18n="pet.renderer.live2d">Live2D</option></select></label>
+      <label class="pet-setting-range"><span data-i18n="pet.size">大小</span><input id="pet-scale" type="range" min="18" max="72" value="33" step="1" data-i18n-aria="pet.size"><output id="pet-scale-value">33%</output></label>
+      <label class="pet-setting-range"><span data-i18n="pet.opacity">不透明度</span><input id="pet-opacity" type="range" min="35" max="100" value="100" step="1" data-i18n-aria="pet.opacity"><output id="pet-opacity-value">100%</output></label>
+    </div>
+    <div class="conn-actions pet-settings-actions">
+      <button id="pet-install" class="tb-btn accent" data-i18n="update.installNow">立即安装</button>
+    </div>
+  </div>
+</div>
+
 <!-- AI 设置：连接细节不打断对话 -->
 <div id="ai-settings-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="ai-settings-title">
   <div id="ai-settings-box" class="ai-drawer-box">
@@ -571,32 +593,36 @@
     </div>
     <div class="tpl-toolbar-actions">
       <input id="tpl-search" type="search" placeholder="搜索模板..." aria-label="搜索模板" data-i18n-placeholder="tpl.searchPlaceholder">
-      <button id="tpl-import-btn" class="tb-btn" title="支持导入 .md / .json 格式的提示词模板文件" data-i18n="tpl.importMd" data-i18n-title="tpl.importHint">
+      <button id="tpl-import-btn" class="tb-btn" title="支持导入 .md / .json 格式的提示词模板文件" data-i18n="tpl.importMd" data-i18n-title="tpl.importHint" aria-expanded="false" aria-controls="tpl-import-menu">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span data-i18n="tpl.importMd">导入模板 (.md)</span>
       </button>
-      <input type="file" id="tpl-file-input" accept=".md,.markdown,.json,.txt" multiple style="display:none">
-      <details id="tpl-github-import" class="tpl-github-import">
-        <summary class="tb-btn icon tpl-github-trigger" aria-label="GitHub" data-i18n-aria="tpl.importMd">
-          <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 22v-3.9c.04-1-.34-1.97-1.06-2.66 3.54-.4 7.26-1.74 7.26-7.9A6.16 6.16 0 0 0 19.56 3.25 5.73 5.73 0 0 0 19.4.6S18.04.16 15 2.2a14.24 14.24 0 0 0-6 0C5.96.16 4.6.6 4.6.6a5.73 5.73 0 0 0-.16 2.65A6.16 6.16 0 0 0 2.8 7.54c0 6.15 3.71 7.5 7.25 7.9A3.71 3.71 0 0 0 9 18.2V22"/><path d="M9 19c-3 .9-3-1.5-4.2-1.9"/></svg>
-        </summary>
-        <div class="tpl-github-popover">
+      <input type="file" id="tpl-file-input" accept=".md,.markdown,.json,.txt" multiple hidden>
+      <input type="file" id="tpl-folder-input" webkitdirectory directory multiple hidden>
+      <input type="file" id="tpl-zip-input" accept=".zip,application/zip" hidden>
+      <div id="tpl-import-menu" class="tpl-import-menu hidden">
+        <div class="tpl-import-sources" role="tablist" aria-label="Skill" data-i18n-aria="tpl.title">
+          <button id="tpl-import-source-github" class="tpl-import-source active" type="button" role="tab" aria-selected="true">GitHub</button>
+          <button id="tpl-import-source-folder" class="tpl-import-source" type="button" role="tab" aria-selected="false" data-i18n="app.folder">打开文件夹</button>
+          <button id="tpl-import-source-zip" class="tpl-import-source" type="button" role="tab" aria-selected="false">ZIP</button>
+        </div>
+        <div id="tpl-import-panel-github" class="tpl-import-panel">
           <div class="tpl-github-fields">
             <label class="tpl-github-input" for="tpl-github-url">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07.07l2-2A5 5 0 0 0 12 4l-1.15 1.15"/><path d="M14 11a5 5 0 0 0-7.07-.07l-2 2A5 5 0 0 0 12 20l1.15-1.15"/></svg>
-              <input id="tpl-github-url" type="url" inputmode="url" placeholder="https://github.com/owner/repository" aria-label="GitHub" data-i18n-aria="tpl.importMd" autocomplete="off">
+              <input id="tpl-github-url" type="url" inputmode="url" placeholder="https://github.com/owner/repository" aria-label="GitHub" data-i18n-aria="web.urlPlaceholder" autocomplete="off">
             </label>
-            <label class="tpl-github-input tpl-github-credential" for="tpl-github-credential">
+            <label id="tpl-github-credential-wrap" class="tpl-github-input tpl-github-credential hidden" for="tpl-github-credential">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-              <input id="tpl-github-credential" type="text" placeholder="credential_id（可选）" aria-label="credential_id" autocomplete="off">
+              <input id="tpl-github-credential" type="password" placeholder="GitHub token" aria-label="GitHub token" data-i18n-aria="ai.apiKey" autocomplete="off" spellcheck="false">
             </label>
             <button id="tpl-github-preview-btn" type="button" class="tb-btn accent icon tpl-github-preview-btn" aria-label="导入模板" data-i18n-aria="tpl.importMd">
               <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m20 20-4-4"/></svg>
             </button>
           </div>
+          <div id="tpl-github-preview" class="tpl-github-preview" role="list" aria-live="polite"></div>
         </div>
-        <div id="tpl-github-preview" class="tpl-github-preview" role="list" aria-live="polite"></div>
-      </details>
+      </div>
       <button id="tpl-export-btn" class="tb-btn" title="将全部模板导出为 .json 备份" data-i18n="tpl.exportJson" data-i18n-title="tpl.exportHint">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span data-i18n="tpl.exportJson">导出模板</span>
@@ -608,14 +634,18 @@
       <div class="tpl-form">
         <input id="tpl-id" type="hidden">
         <input id="tpl-action" type="hidden" value="custom">
-        <input id="tpl-name" type="text" placeholder="模板名称（如：深度论文精读 / 结构化周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
-        <textarea id="tpl-system" rows="8" placeholder="SKILL.md：标准 frontmatter 与指令（使用 {{document}} 等受限变量）" aria-label="SKILL.md 指令" data-i18n-placeholder="tpl.systemPlaceholder" data-i18n-aria="tpl.systemPlaceholder"></textarea>
-        <textarea id="tpl-user" rows="3" placeholder="变量/补充请求模板（可选）；发布前会执行结构与安全校验" aria-label="Skill 变量与补充请求" data-i18n-placeholder="tpl.userPlaceholder" data-i18n-aria="tpl.userPlaceholder"></textarea>
-        <p id="tpl-draft-status" class="fix-note" role="status" aria-live="polite" data-i18n="tpl.hint">内置模板可直接编辑并保存。</p>
+        <article id="tpl-skill-overview" class="tpl-skill-overview" aria-live="polite"></article>
+        <div id="tpl-editor-fields" class="tpl-editor-fields hidden">
+          <input id="tpl-name" type="text" placeholder="模板名称（如：深度论文精读 / 结构化周报）" aria-label="模板名称" data-i18n-placeholder="tpl.namePlaceholder" data-i18n-aria="tpl.namePlaceholder">
+          <textarea id="tpl-system" rows="8" placeholder="SKILL.md：标准 frontmatter 与指令（使用 {{document}} 等受限变量）" aria-label="SKILL.md 指令" data-i18n-placeholder="tpl.systemPlaceholder" data-i18n-aria="tpl.systemPlaceholder"></textarea>
+          <textarea id="tpl-user" rows="3" placeholder="变量/补充请求模板（可选）；发布前会执行结构与安全校验" aria-label="Skill 变量与补充请求" data-i18n-placeholder="tpl.userPlaceholder" data-i18n-aria="tpl.userPlaceholder"></textarea>
+          <p id="tpl-draft-status" class="fix-note" role="status" aria-live="polite" data-i18n="tpl.hint">内置模板可直接编辑并保存。</p>
+        </div>
       </div>
     </div>
     <div class="url-actions">
       <button id="tpl-new" class="tb-btn" data-i18n="ai.newSession">新建</button>
+      <button id="tpl-edit" class="tb-btn" data-i18n="toolbar.edit">编辑</button>
       <button id="tpl-copy" class="tb-btn" data-i18n="editor.copy">复制</button>
       <button id="tpl-save" class="tb-btn accent" data-i18n="editor.save">保存</button>
       <button id="tpl-publish" class="tb-btn accent" data-i18n="export.groupPublish">发布</button>
@@ -938,6 +968,7 @@
       <div class="convert-foot">
         <span id="convert-status" class="convert-status"></span>
         <span class="export-spacer"></span>
+        <button id="batch-cancel" class="tb-btn hidden" data-i18n="batch.cancel">取消全部</button>
         <button id="convert-open-dir" class="tb-btn hidden" data-i18n="convert.openDir">打开结果目录</button>
       </div>
     </div>
@@ -992,6 +1023,7 @@
 <div id="busy" class="hidden" role="status" aria-live="polite"><span data-i18n="app.processing">处理中…</span></div>
 <button id="top-btn" class="hidden" title="回到顶部" data-i18n-title="toolbar.backToTop">&#8593;</button>
 <input id="file-input" type="file" class="hidden">
+<input id="batch-file-input" type="file" class="hidden" multiple>
 <input id="img-file-input" type="file" accept="image/*" class="hidden">
 
 <!-- 标签右键菜单 -->
@@ -1028,10 +1060,10 @@
   <div class="modal-dialog lang-modal-dialog">
     <div class="modal-header">
       <h3 id="lang-title" data-i18n="lang.title">选择界面语言 (Language)</h3>
-      <button class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close" onclick="i18n.closeModal()">✕</button>
+      <button id="lang-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div class="lang-search-wrap">
-<input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." aria-label="搜索语言" aria-controls="lang-grid" data-i18n-placeholder="lang.search" data-i18n-aria="lang.search" oninput="i18n.renderLanguageGrid(this.value)">
+<input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." aria-label="搜索语言" aria-controls="lang-grid" data-i18n-placeholder="lang.search" data-i18n-aria="lang.search">
     </div>
     <div id="lang-grid" class="lang-grid-container" role="listbox" aria-label="语言 / Language"></div>
   </div>
@@ -1042,7 +1074,7 @@
   <div class="modal-dialog" style="max-width: 320px;">
     <div class="modal-header">
       <h3 id="table-title" data-i18n="editor.table">插入表格</h3>
-      <button class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close" onclick="closeTableModal()">✕</button>
+      <button id="table-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 12px 16px; text-align: center;">
       <div id="table-grid-picker" class="table-grid-picker"></div>
@@ -1056,7 +1088,7 @@
 
 <footer id="statusbar">
   <div class="statusbar-left-group">
-    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.7</span>
+    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.8-preview.1</span>
     <button id="status-pagination" type="button" class="status-pagination hidden" title="点击切换阅读模式"></button>
     <span id="status-left"></span>
   </div>
@@ -1270,6 +1302,6 @@
   </div>
 </div>
 
-<script defer src="/assets/readmd.boot.js?v=2.3.7"></script>
+<script defer src="/assets/readmd.boot.js?v=2.3.8-preview.1"></script>
 </body>
 </html>

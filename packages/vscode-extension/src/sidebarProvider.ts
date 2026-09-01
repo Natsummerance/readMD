@@ -1,8 +1,16 @@
 import * as vscode from 'vscode';
 
+export interface SkillEntry {
+  name?: string;
+  uri: string;
+  description?: string;
+}
+
 export class ReadMDToolboxProvider implements vscode.TreeDataProvider<ToolboxItem> {
   private _onDidChangeTreeData: vscode.EventEmitter<ToolboxItem | undefined | null | void> = new vscode.EventEmitter<ToolboxItem | undefined | null | void>();
   readonly onDidChangeTreeData: vscode.Event<ToolboxItem | undefined | null | void> = this._onDidChangeTreeData.event;
+
+  constructor(private readonly listSkills?: () => Promise<SkillEntry[]>) {}
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
@@ -95,7 +103,12 @@ export class ReadMDToolboxProvider implements vscode.TreeDataProvider<ToolboxIte
             title: '配置 MCP Server',
           }, 'hubot'),
         ], undefined, 'hubot'),
+        new ToolboxItem('ReadMD Skills 技能库', vscode.TreeItemCollapsibleState.Collapsed, 'group_skills', [], undefined, 'library'),
       ]);
+    }
+
+    if (element.contextValue === 'group_skills') {
+      return this.getSkillChildren();
     }
 
     if (element.children) {
@@ -104,6 +117,33 @@ export class ReadMDToolboxProvider implements vscode.TreeDataProvider<ToolboxIte
 
     return Promise.resolve([]);
   }
+
+  private async getSkillChildren(): Promise<ToolboxItem[]> {
+    if (!this.listSkills) {
+      return [new ToolboxItem('Skill 列表不可用（未连接 ReadMD Core）', vscode.TreeItemCollapsibleState.None, 'skill_unavailable')];
+    }
+    try {
+      return buildSkillItems(await this.listSkills());
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      return [new ToolboxItem(`读取 Skill 失败：${message}`, vscode.TreeItemCollapsibleState.None, 'skill_error')];
+    }
+  }
+}
+
+export function buildSkillItems(skills: SkillEntry[]): ToolboxItem[] {
+  if (skills.length === 0) {
+    return [new ToolboxItem('未发现可用 Skill', vscode.TreeItemCollapsibleState.None, 'skill_empty')];
+  }
+  return skills.map(skill => new ToolboxItem(
+    skill.name || skill.uri,
+    vscode.TreeItemCollapsibleState.None,
+    'skill',
+    [],
+    { command: 'readmd.openSkillByUri', title: '打开 Skill', arguments: [skill.uri] },
+    'library',
+    skill.description
+  ));
 }
 
 export class ToolboxItem extends vscode.TreeItem {
@@ -113,9 +153,13 @@ export class ToolboxItem extends vscode.TreeItem {
     public readonly contextValue: string,
     public readonly children: ToolboxItem[] = [],
     public readonly command?: vscode.Command,
-    public readonly iconName?: string
+    public readonly iconName?: string,
+    public readonly itemDescription?: string
   ) {
     super(label, collapsibleState);
+    if (itemDescription) {
+      this.description = itemDescription;
+    }
     if (iconName) {
       this.iconPath = new vscode.ThemeIcon(iconName);
     }
