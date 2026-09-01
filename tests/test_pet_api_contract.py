@@ -44,6 +44,37 @@ def test_hermes_sprite_uses_compact_cell_scale_when_no_user_scale_is_saved(monke
     api = readmd.Api()
 
     assert api._pet_preferences()["info"]["scale"] == 0.33
+    assert api._pet_preferences()["info"]["opacity"] == 1.0
+
+
+def test_pet_preferences_are_validated_saved_and_published(monkeypatch):
+    api = readmd.Api()
+    saved, published = [], []
+    monkeypatch.setattr(api, 'save_settings', lambda value: saved.append(value) or True)
+    monkeypatch.setattr(api, '_publish_pet_runtime', lambda runtime=None: published.append(runtime) or {})
+
+    result = api.configure_pet({'scale': 0.42, 'opacity': 0.8})
+
+    assert result['ok'] is True
+    assert saved == [{'pet_scale': 0.42, 'pet_opacity': 0.8}]
+    assert published
+    assert api.configure_pet({'scale': 1.0}) == {'ok': False, 'code': 'invalid_pet_scale'}
+    assert api.configure_pet({'opacity': 0.1}) == {'ok': False, 'code': 'invalid_pet_opacity'}
+
+
+def test_active_pet_preference_update_does_not_restart_or_reset_animation(monkeypatch):
+    api = readmd.Api()
+    api._pet_controller.enable()
+    published = []
+    monkeypatch.setattr(api, 'save_settings', lambda _value: True)
+    monkeypatch.setattr(api, '_publish_pet_runtime', lambda runtime=None: published.append(runtime) or {})
+    monkeypatch.setattr(api._pet_launcher, 'start', lambda: (_ for _ in ()).throw(AssertionError('must not restart')))
+
+    result = api.configure_pet({'enabled': True, 'scale': 0.5, 'opacity': 0.7})
+
+    assert result['ok'] is True
+    assert result['runtime']['enabled'] is True
+    assert published
 
 
 def test_pet_plugin_file_picker_returns_only_a_user_selected_zip(monkeypatch):

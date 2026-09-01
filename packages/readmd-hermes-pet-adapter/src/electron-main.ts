@@ -62,6 +62,15 @@ function clampBounds(input: Bounds = {}): Required<Bounds> {
   return { width, height, x: Math.round(Number(input.x) || 72), y: Math.round(Number(input.y) || 72) }
 }
 
+function currentOpacity(): number {
+  const raw = Number(latest.info?.opacity)
+  return Number.isFinite(raw) ? Math.max(0.35, Math.min(1, raw)) : 1
+}
+
+function applyOverlayOpacity(): void {
+  if (overlay && !overlay.isDestroyed()) overlay.setOpacity(currentOpacity())
+}
+
 function openPetOverlay(bounds: unknown): void {
   const next = clampBounds((bounds || {}) as Bounds)
   if (overlay && !overlay.isDestroyed()) {
@@ -81,6 +90,7 @@ function openPetOverlay(bounds: unknown): void {
     transparent: true,
     webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(app.getAppPath(), 'preload.cjs') }
   })
+  applyOverlayOpacity()
   overlay.setAlwaysOnTop(true, 'screen-saver')
   overlay.loadFile(path.join(app.getAppPath(), 'renderer', 'index.html'))
   overlay.webContents.once('did-finish-load', () => pushState())
@@ -94,6 +104,7 @@ function closePetOverlay(): void {
 
 function pushState(): void {
   if (overlay && !overlay.isDestroyed()) {
+    applyOverlayOpacity()
     overlay.webContents.send('hermes:pet-overlay:state', latest)
   }
 }

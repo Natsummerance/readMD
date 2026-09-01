@@ -49,46 +49,95 @@ async function refreshPetMenuStatus() {
   try { setPetMenuStatus(await py.get_pet_runtime_status()); } catch (_error) { /* optional plugin */ }
 }
 
-async function configurePetFromMenu() {
-  closeMoreMenu();
+let activePetSettingsStatus = null;
+
+function petPercent(value, fallback) {
+  const number = Number(value);
+  return Math.round((Number.isFinite(number) ? number : fallback) * 100);
+}
+
+function renderPetSettings(status) {
+  activePetSettingsStatus = status || null;
+  const preferences = status && status.preferences ? status.preferences : {};
+  const enabled = $('pet-enabled');
+  const scale = $('pet-scale');
+  const opacity = $('pet-opacity');
+  if (enabled) enabled.checked = Boolean(status && status.enabled);
+  if (scale) scale.value = String(petPercent(preferences.scale, 0.33));
+  if (opacity) opacity.value = String(petPercent(preferences.opacity, 1));
+  updatePetRangeLabels();
+  const install = $('pet-install');
+  if (install) install.classList.toggle('hidden', Boolean(status && status.adapter && status.adapter.available));
+}
+
+function updatePetRangeLabels() {
+  const scale = $('pet-scale');
+  const opacity = $('pet-opacity');
+  if ($('pet-scale-value') && scale) $('pet-scale-value').textContent = scale.value + '%';
+  if ($('pet-opacity-value') && opacity) $('pet-opacity-value').textContent = opacity.value + '%';
+}
+
+function closePetSettings() {
+  $('pet-settings-modal')?.classList.add('hidden');
+}
+
+async function installPetPlugin() {
+  if (!hasPy || !py.choose_pet_plugin || !py.install_pet_plugin) return false;
+  const archive = await py.choose_pet_plugin();
+  if (!archive) return false;
+  const confirmed = await confirmAction({
+    title: petT('menu.pet'), message: petT('menu.petSub'),
+    confirmText: petT('update.installNow'), cancelText: petT('dialog.cancel'),
+  });
+  if (!confirmed) return false;
+  const result = await py.install_pet_plugin(archive, true);
+  if (!result || !result.ok) {
+    if (typeof showToast === 'function') showToast(petT('app.failed'));
+    return false;
+  }
+  return true;
+}
+
+async function savePetSettings({ allowInstall = false } = {}) {
   if (!hasPy || !py.get_pet_runtime_status || !py.configure_pet) return;
-  try {
-    let status = await py.get_pet_runtime_status();
-    if (status.enabled) {
-      await py.configure_pet({ enabled: false, renderer: 'hermes-sprite' });
-      await refreshPetMenuStatus();
-      if (typeof showToast === 'function') showToast(petT('app.disabled'));
+  const enabled = Boolean($('pet-enabled')?.checked);
+  let status = activePetSettingsStatus || await py.get_pet_runtime_status();
+  if (enabled && (!status.adapter || !status.adapter.available)) {
+    if (!allowInstall || !(await installPetPlugin())) {
+      renderPetSettings(status);
       return;
     }
-    if (!status.adapter || !status.adapter.available) {
-      const archive = py.choose_pet_plugin ? await py.choose_pet_plugin() : null;
-      if (!archive) return;
-      const confirmed = await confirmAction({
-        title: petT('menu.pet'), message: petT('menu.petSub'),
-        confirmText: petT('update.installNow'), cancelText: petT('dialog.cancel'),
-      });
-      if (!confirmed) return;
-      const installed = await py.install_pet_plugin(archive, true);
-      if (!installed || !installed.ok) {
-        if (typeof showToast === 'function') showToast(petT('app.failed'));
-        await refreshPetMenuStatus();
-        return;
-      }
-      status = await py.get_pet_runtime_status();
-    }
-    const enabled = await py.configure_pet({ enabled: true, renderer: 'hermes-sprite' });
-    if (!enabled || !enabled.ok) {
-      if (typeof showToast === 'function') showToast(petT('app.failed'));
-    } else if (typeof showToast === 'function') {
-      showToast(petT('app.enabled'));
-    }
-    await refreshPetMenuStatus();
+    status = await py.get_pet_runtime_status();
+  }
+  const result = await py.configure_pet({
+    enabled,
+    opacity: Number($('pet-opacity')?.value || 100) / 100,
+    renderer: 'hermes-sprite',
+    scale: Number($('pet-scale')?.value || 33) / 100,
+  });
+  if (!result || !result.ok) {
+    if (typeof showToast === 'function') showToast(petT('app.failed'));
+  } else if (typeof showToast === 'function') {
+    showToast(enabled ? petT('app.enabled') : petT('app.disabled'));
+  }
+  await refreshPetMenuStatus();
+  renderPetSettings(await py.get_pet_runtime_status());
+}
+
+async function openPetSettings() {
+  closeMoreMenu();
+  if (!hasPy || !py.get_pet_runtime_status) return;
+  const modal = $('pet-settings-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  try {
+    renderPetSettings(await py.get_pet_runtime_status());
   } catch (_error) {
     if (typeof showToast === 'function') showToast(petT('app.failed'));
   }
 }
 
-window.configurePetFromMenu = configurePetFromMenu;
+window.openPetSettings = openPetSettings;
 window.refreshPetMenuStatus = refreshPetMenuStatus;
 
 function openPetQuickMenu() {
@@ -118,6 +167,15 @@ async function pollPetQuickMenu() {
 window.addEventListener('load', () => {
   setTimeout(() => {
     refreshPetMenuStatus();
+    $('pet-settings-close')?.addEventListener('click', closePetSettings);
+    $('pet-install')?.addEventListener('click', async () => {
+      if (await installPetPlugin()) renderPetSettings(await py.get_pet_runtime_status());
+    });
+    $('pet-enabled')?.addEventListener('change', () => { void savePetSettings({ allowInstall: true }); });
+    $('pet-scale')?.addEventListener('input', updatePetRangeLabels);
+    $('pet-opacity')?.addEventListener('input', updatePetRangeLabels);
+    $('pet-scale')?.addEventListener('change', () => { void savePetSettings(); });
+    $('pet-opacity')?.addEventListener('change', () => { void savePetSettings(); });
     setInterval(pollPetBatch, 1000);
     setInterval(pollPetQuickMenu, 1000);
   }, 1200);

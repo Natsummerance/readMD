@@ -395,6 +395,25 @@
   </div>
 </div>
 
+<div id="pet-settings-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="pet-settings-title">
+  <div id="pet-settings-box" class="ai-drawer-box">
+    <div class="export-head">
+      <h3 id="pet-settings-title" data-i18n="menu.pet">桌宠</h3>
+      <button id="pet-settings-close" class="tb-btn icon modal-close-btn" aria-label="关闭" data-i18n-aria="toolbar.close">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="pet-settings-list">
+      <label class="pet-setting-toggle"><span data-i18n="pet.enable">启用桌宠</span><input id="pet-enabled" type="checkbox" data-i18n-aria="pet.enable"></label>
+      <label class="pet-setting-range"><span data-i18n="pet.size">大小</span><input id="pet-scale" type="range" min="18" max="72" value="33" step="1" data-i18n-aria="pet.size"><output id="pet-scale-value">33%</output></label>
+      <label class="pet-setting-range"><span data-i18n="pet.opacity">不透明度</span><input id="pet-opacity" type="range" min="35" max="100" value="100" step="1" data-i18n-aria="pet.opacity"><output id="pet-opacity-value">100%</output></label>
+    </div>
+    <div class="conn-actions pet-settings-actions">
+      <button id="pet-install" class="tb-btn accent" data-i18n="update.installNow">立即安装</button>
+    </div>
+  </div>
+</div>
+
 <!-- AI 设置：连接细节不打断对话 -->
 <div id="ai-settings-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="ai-settings-title">
   <div id="ai-settings-box" class="ai-drawer-box">

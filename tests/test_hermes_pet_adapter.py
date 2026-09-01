@@ -22,6 +22,13 @@ def test_hermes_fallback_sheet_uses_its_actual_cell_geometry():
     assert 'frameW: 1536' not in source
 
 
+def test_optional_host_applies_a_bounded_native_window_opacity():
+    source = Path('packages/readmd-hermes-pet-adapter/src/electron-main.ts').read_text(encoding='utf-8')
+    assert 'function currentOpacity()' in source
+    assert 'Math.max(0.35, Math.min(1, raw))' in source
+    assert 'overlay.setOpacity(currentOpacity())' in source
+
+
 def test_bridge_writes_only_narrow_display_state_and_sanitizes_bounds(tmp_path):
     bridge = HermesPetBridge(str(tmp_path))
     payload = bridge.publish(

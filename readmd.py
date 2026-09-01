@@ -3901,7 +3901,17 @@ class Api(object):
             scale = round(float(settings.get('pet_scale', 0.33)), 2)
         except (TypeError, ValueError):
             scale = 0.33
-        return {'bounds': bounds, 'info': {'scale': max(0.18, min(0.72, scale))}}
+        try:
+            opacity = round(float(settings.get('pet_opacity', 1.0)), 2)
+        except (TypeError, ValueError):
+            opacity = 1.0
+        return {
+            'bounds': bounds,
+            'info': {
+                'scale': max(0.18, min(0.72, scale)),
+                'opacity': max(0.35, min(1.0, opacity)),
+            },
+        }
 
     def _publish_pet_runtime(self, runtime=None):
         runtime = runtime if isinstance(runtime, dict) else self._pet_controller.snapshot()
@@ -3918,6 +3928,7 @@ class Api(object):
         status = self._pet_controller.snapshot()
         status['model'] = self._pet_model_status()
         status['adapter'] = self._pet_launcher.status()
+        status['preferences'] = self._pet_preferences()['info']
         return status
 
     def install_pet_plugin(self, archive_path, confirm=False):
@@ -3934,6 +3945,25 @@ class Api(object):
         renderer = str(settings.get('renderer') or 'hermes-sprite')
         if renderer not in ('hermes-sprite', 'live2d'):
             return {'ok': False, 'code': 'invalid_pet_renderer'}
+        preference_updates = {}
+        if 'scale' in settings:
+            try:
+                scale = round(float(settings['scale']), 2)
+            except (TypeError, ValueError):
+                return {'ok': False, 'code': 'invalid_pet_scale'}
+            if not 0.18 <= scale <= 0.72:
+                return {'ok': False, 'code': 'invalid_pet_scale'}
+            preference_updates['pet_scale'] = scale
+        if 'opacity' in settings:
+            try:
+                opacity = round(float(settings['opacity']), 2)
+            except (TypeError, ValueError):
+                return {'ok': False, 'code': 'invalid_pet_opacity'}
+            if not 0.35 <= opacity <= 1.0:
+                return {'ok': False, 'code': 'invalid_pet_opacity'}
+            preference_updates['pet_opacity'] = opacity
+        if preference_updates:
+            self.save_settings(preference_updates)
         if 'reduced_motion' in settings:
             self._pet_controller.set_reduced_motion(bool(settings['reduced_motion']))
         if settings.get('enabled') is False:
@@ -3950,6 +3980,14 @@ class Api(object):
             # the already bundled Hermes plugin impossible to start.
             if renderer == 'live2d' and not model.get('ready'):
                 return {'ok': False, 'code': model.get('code', 'model_not_ready')}
+            # Updating a slider while the pet is already open must only
+            # republish preferences. Re-enabling here would reset a working
+            # animation back to idle and needlessly restart its command loop.
+            if self._pet_controller.snapshot().get('enabled'):
+                runtime = self._pet_controller.snapshot()
+                self._publish_pet_runtime(runtime)
+                return {'ok': True, 'runtime': runtime, 'renderer': renderer, 'model': model,
+                        'adapter': self._pet_launcher.status()}
             launched = self._pet_launcher.start()
             if not launched.get('ok'):
                 return launched
