@@ -1,4 +1,4 @@
-# ReadMD v2.3.7 更新说明
+# ReadMD v2.3.8-preview.1 更新说明
 
 ReadMD 是本地优先的 Markdown 阅读、编辑与格式转换工具。本版本聚焦 AI Skills、Provider 配置、跨端 Core Service、文档转换与启动体验。
 
@@ -8,10 +8,10 @@ ReadMD 是本地优先的 Markdown 阅读、编辑与格式转换工具。本版
 | --- | --- | --- | --- |
 | Windows 10/11 | x64、ARM64 | 候选安装版、便携版 | 需绑定当前提交的原生构建与签名证据 |
 | macOS 13+ | Intel x64、Apple Silicon ARM64 | 候选原生压缩包 | 需绑定当前提交的签名、公证与冷启动证据 |
-| Ubuntu 22.04/24.04、Debian 12 | x64、ARM64 | 候选 AppImage、Deb | `ReadMD-linux-x86_64-v2.3.7.AppImage` / `ReadMD-linux-aarch64-v2.3.7.AppImage`；需绑定对应系统的原生安装与功能证据 |
-| 统信 UOS 20、银河麒麟 V10、Deepin 23 | x64、ARM64 | 目标 Deb | `readmd_2.3.7_amd64.deb` / `readmd_2.3.7_arm64.deb`；真实系统证据完成前不构成正式支持承诺 |
-| VS Code | Extension Host 支持的桌面架构 | VSIX | `readmd-vscode-2.3.7.vsix` |
-| MCP 客户端 | Python 3.11+ / stdio | MCP ZIP | `readmd-mcp-server-2.3.7.zip` |
+| Ubuntu 22.04/24.04、Debian 12 | x64、ARM64 | 候选 AppImage、Deb | `ReadMD-linux-x86_64-v2.3.8-preview.1.AppImage` / `ReadMD-linux-aarch64-v2.3.8-preview.1.AppImage`；需绑定对应系统的原生安装与功能证据 |
+| 统信 UOS 20、银河麒麟 V10、Deepin 23 | x64、ARM64 | 目标 Deb | `readmd_2.3.8-preview.1_amd64.deb` / `readmd_2.3.8-preview.1_arm64.deb`；真实系统证据完成前不构成正式支持承诺 |
+| VS Code | Extension Host 支持的桌面架构 | VSIX | `readmd-vscode-2.3.8-preview.1.vsix` |
+| MCP 客户端 | Python 3.11+ / stdio | MCP ZIP | `readmd-mcp-server-2.3.8-preview.1.zip` |
 | 校验清单 | 全架构 | SHA-256 | `SHA256SUMS.txt` |
 
 HarmonyOS/OpenHarmony、Windows 7/8、LoongArch、MIPS、SW64、RISC-V、Alpine、AUR、Flatpak 和 Linglong 在本版本不属于正式支持范围。`packages/harmonyos-app` 仅保留为未支持的源码预览，不提供功能或兼容性承诺。

@@ -35,15 +35,15 @@
 
 ## 直接下載
 
-[Windows 安裝版](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMDSetup-v2.3.7.exe) ·
-[Windows 免安裝版](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-portable-v2.3.7.exe) ·
-[macOS Apple Silicon](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-arm64-v2.3.7.zip) ·
-[macOS Intel](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-x64-v2.3.7.zip) ·
-[Linux AppImage](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage) ·
-[Linux ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-aarch64-v2.3.7.AppImage) ·
-[UOS / 麒麟 Deb](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb) ·
-[麒麟 V10 ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_arm64.deb) ·
-[SHA-256](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/SHA256SUMS.txt)
+[Windows 安裝版](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/ReadMDSetup-v2.3.8-preview.1.exe) ·
+[Windows 免安裝版](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/ReadMD-portable-v2.3.8-preview.1.exe) ·
+[macOS Apple Silicon](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/ReadMD-macos-arm64-v2.3.8-preview.1.zip) ·
+[macOS Intel](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/ReadMD-macos-x64-v2.3.8-preview.1.zip) ·
+[Linux AppImage](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/ReadMD-linux-x86_64-v2.3.8-preview.1.AppImage) ·
+[Linux ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/ReadMD-linux-aarch64-v2.3.8-preview.1.AppImage) ·
+[UOS / 麒麟 Deb](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/readmd_2.3.8-preview.1_amd64.deb) ·
+[麒麟 V10 ARM64](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/readmd_2.3.8-preview.1_arm64.deb) ·
+[SHA-256](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/SHA256SUMS.txt)
 
 ## 三步開始
 
@@ -66,17 +66,17 @@ ReadMD 處理長期資料庫裡的實際問題：大型文件能繼續閱讀，�
 
 | 作業系統 / 平台 | 架構 / 格式 | 直接下載連結 (GitHub Release) | 說明 |
 | :--- | :--- | :--- | :--- |
-| **Windows** | x64 (安裝版) | [⬇️ **ReadMDSetup-v2.3.7.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMDSetup-v2.3.7.exe) | 具備安裝精靈，自動註冊 `.md` 檔案關聯 |
-| **Windows** | x64 (免安裝便攜版) | [⬇️ **ReadMD-portable-v2.3.7.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-portable-v2.3.7.exe) | 單一執行檔，解壓縮即用，隨身攜帶 |
-| **macOS** | Apple Silicon (M系列) | [⬇️ **ReadMD-macos-arm64-v2.3.7.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-arm64-v2.3.7.zip) | M1 / M2 / M3 / M4 原生建置（含 Vision 離線 OCR） |
-| **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.7.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-macos-x64-v2.3.7.zip) | Intel 處理器 Mac 原生建置（含 Vision 離線 OCR） |
-| **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.7.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-x86_64-v2.3.7.AppImage) | Linux 通用免安裝 AppImage，賦予執行權限後即可開啟 |
-| **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.7.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/ReadMD-linux-aarch64-v2.3.7.AppImage) | 飛騰 / 鯤鵬等 ARM64 裝置免安裝執行 |
-| **國產信創系統** | 統信 UOS / 銀河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.7_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_amd64.deb) | Deb 原生安裝套件，整合應用程式圖示、MIME 關聯與 UKUI/DDE 適配 |
-| ️ **麒麟 V10 / 飛騰** | ARM64 (aarch64) | [⬇️ **readmd_2.3.7_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd_2.3.7_arm64.deb) | ARM64 原生 Deb 安裝套件 |
-| **VSCode 擴充外掛** | 通用 VSIX 套件 | [⬇️ **readmd-vscode-2.3.7.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-vscode-2.3.7.vsix) | VSCode 離線擴充安裝套件 |
-| **MCP Server** | FastMCP stdio 套件 | [⬇️ **readmd-mcp-server-2.3.7.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/readmd-mcp-server-2.3.7.zip) | FastMCP 獨立伺服端，支援 Claude Desktop / Cursor |
-| **SHA-256 驗證** | 雜湊清單 | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/download/v2.3.7/SHA256SUMS.txt) | 發行檔案 SHA-256 完整性雜湊清單 |
+| **Windows** | x64 (安裝版) | [⬇️ **ReadMDSetup-v2.3.8-preview.1.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/ReadMDSetup-v2.3.8-preview.1.exe) | 具備安裝精靈，自動註冊 `.md` 檔案關聯 |
+| **Windows** | x64 (免安裝便攜版) | [⬇️ **ReadMD-portable-v2.3.8-preview.1.exe**](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/ReadMD-portable-v2.3.8-preview.1.exe) | 單一執行檔，解壓縮即用，隨身攜帶 |
+| **macOS** | Apple Silicon (M系列) | [⬇️ **ReadMD-macos-arm64-v2.3.8-preview.1.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/ReadMD-macos-arm64-v2.3.8-preview.1.zip) | M1 / M2 / M3 / M4 原生建置（含 Vision 離線 OCR） |
+| **macOS** | Intel x86_64 | [⬇️ **ReadMD-macos-x64-v2.3.8-preview.1.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/ReadMD-macos-x64-v2.3.8-preview.1.zip) | Intel 處理器 Mac 原生建置（含 Vision 離線 OCR） |
+| **Linux** | x86_64 (AppImage) | [⬇️ **ReadMD-linux-x86_64-v2.3.8-preview.1.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/ReadMD-linux-x86_64-v2.3.8-preview.1.AppImage) | Linux 通用免安裝 AppImage，賦予執行權限後即可開啟 |
+| **Linux** | ARM64 (AppImage) | [⬇️ **ReadMD-linux-aarch64-v2.3.8-preview.1.AppImage**](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/ReadMD-linux-aarch64-v2.3.8-preview.1.AppImage) | 飛騰 / 鯤鵬等 ARM64 裝置免安裝執行 |
+| **國產信創系統** | 統信 UOS / 銀河麒麟 / Deepin / Ubuntu | [⬇️ **readmd_2.3.8-preview.1_amd64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/readmd_2.3.8-preview.1_amd64.deb) | Deb 原生安裝套件，整合應用程式圖示、MIME 關聯與 UKUI/DDE 適配 |
+| ️ **麒麟 V10 / 飛騰** | ARM64 (aarch64) | [⬇️ **readmd_2.3.8-preview.1_arm64.deb**](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/readmd_2.3.8-preview.1_arm64.deb) | ARM64 原生 Deb 安裝套件 |
+| **VSCode 擴充外掛** | 通用 VSIX 套件 | [⬇️ **readmd-vscode-2.3.8-preview.1.vsix**](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/readmd-vscode-2.3.8-preview.1.vsix) | VSCode 離線擴充安裝套件 |
+| **MCP Server** | FastMCP stdio 套件 | [⬇️ **readmd-mcp-server-2.3.8-preview.1.zip**](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/readmd-mcp-server-2.3.8-preview.1.zip) | FastMCP 獨立伺服端，支援 Claude Desktop / Cursor |
+| **SHA-256 驗證** | 雜湊清單 | [⬇️ **SHA256SUMS.txt**](https://github.com/Natsummerance/readMD/releases/download/v2.3.8-preview.1/SHA256SUMS.txt) | 發行檔案 SHA-256 完整性雜湊清單 |
 
 ---
 
