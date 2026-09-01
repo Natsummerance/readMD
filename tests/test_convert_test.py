@@ -253,7 +253,7 @@ class TestConvertApi(unittest.TestCase):
             p2 = self._mk_docx(td, 'x2')
             req = urllib.request.Request(
                 self.base + '/api/convert/batch',
-                data=json.dumps({'paths': [p1, p2], 'overwrite': False}).encode('utf-8'),
+                data=json.dumps({'paths': [p1, p2], 'overwrite': False, 'confirm': True}).encode('utf-8'),
                 headers={'Content-Type': 'application/json'}, method='POST')
             with urllib.request.urlopen(req, timeout=30) as r:
                 bd = json.loads(r.read().decode('utf-8'))
@@ -314,7 +314,7 @@ class TestConvertApi(unittest.TestCase):
     def _start(self, paths, overwrite):
         req = urllib.request.Request(
             self.base + '/api/convert/batch',
-            data=json.dumps({'paths': paths, 'overwrite': overwrite}).encode('utf-8'),
+            data=json.dumps({'paths': paths, 'overwrite': overwrite, 'confirm': True}).encode('utf-8'),
             headers={'Content-Type': 'application/json'}, method='POST')
         with urllib.request.urlopen(req, timeout=30) as r:
             return json.loads(r.read().decode('utf-8'))['job']

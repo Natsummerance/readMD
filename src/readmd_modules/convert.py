@@ -15,6 +15,9 @@ import shutil
 import subprocess
 import tempfile
 import time
+import zipfile
+import html as _html
+import xml.etree.ElementTree as ET
 from collections import Counter
 
 _engine = None
@@ -56,6 +59,16 @@ EXT_TO_LANG = {
     '.bib': 'bibtex', '.tex': 'latex', '.latex': 'latex',
     '.csv': 'csv', '.tsv': 'tsv',
 }
+
+# Never pass archives, executables or media through a text decoder. A
+# replacement-decoded binary would look like a successful but unusable MD
+# conversion; images are handled by the OCR lane instead.
+_BINARY_ONLY_EXTS = frozenset({
+    '.zip', '.7z', '.rar', '.tar', '.gz', '.bz2', '.xz', '.iso',
+    '.exe', '.dll', '.so', '.dylib', '.bin', '.dat', '.db', '.sqlite',
+    '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.tif', '.tiff',
+    '.mp3', '.wav', '.mp4', '.mov', '.avi', '.mkv', '.woff', '.woff2',
+})
 
 _MATH_CHARS = set('+-*/=<>^_~%∑∫√∞≈≠±×÷∂∇∏πθαβγδφψωλμνστρΔΩΦΓΛεηζξοπς')
 # 强数学算子：连字符/百分号不算（日期、电话、百分数会被密度误判成公式）
@@ -142,6 +155,140 @@ def code2md(path, ext=None):
     return "\n".join(out)
 
 
+def _rtf_to_md(path):
+    """Convert the text subset of RTF without shelling out to Word/LibreOffice.
+
+    Formatting controls that cannot be represented safely are ignored; plain
+    text, paragraphs, tabs and basic bold/italic markers are preserved.
+    """
+    raw = open(path, 'rb').read().decode('latin-1', errors='replace')
+    out, i, skip = [], 0, False
+    # RTF destinations (fonttbl/colortbl/pict/...) are scoped to their
+    # enclosing group.  A single boolean without a group stack permanently
+    # suppresses the document body after the first font table.
+    skip_stack = []
+    while i < len(raw):
+        ch = raw[i]
+        if ch == '{':
+            skip_stack.append(skip); i += 1; continue
+        if ch == '}':
+            skip = skip_stack.pop() if skip_stack else False
+            i += 1; continue
+        if ch != '\\':
+            if not skip:
+                out.append(ch)
+            i += 1; continue
+        i += 1
+        if i >= len(raw):
+            break
+        if raw[i] in '{}\\':
+            if not skip:
+                out.append(raw[i])
+            i += 1; continue
+        if raw[i] == "'" and i + 2 < len(raw):
+            try:
+                if not skip:
+                    out.append(bytes.fromhex(raw[i + 1:i + 3]).decode('cp1252', errors='replace'))
+            except ValueError:
+                pass
+            i += 3; continue
+        m = re.match(r'([a-zA-Z]+)(-?\d+)? ?', raw[i:])
+        if not m:
+            i += 1; continue
+        word = m.group(1).lower()
+        i += len(m.group(0))
+        if word in ('fonttbl', 'colortbl', 'stylesheet', 'info', 'pict'):
+            skip = True
+        elif word == 'par':
+            if not skip:
+                out.append('\n')
+        elif word == 'line':
+            if not skip:
+                out.append('\n')
+        elif word == 'tab':
+            if not skip:
+                out.append('\t')
+        elif word in ('b', 'i', 'ul') and not skip:
+            out.append('**' if word == 'b' else '*')
+    text = _html.unescape(''.join(out))
+    text = re.sub(r'\n{3,}', '\n\n', text).strip()
+    if not text:
+        raise ValueError('rtf-empty')
+    return '# %s\n\n%s\n' % (os.path.basename(path), text)
+
+
+def _odt_to_md(path):
+    """Extract paragraphs, headings and simple tables from an ODT package."""
+    ns = {
+        'text': 'urn:oasis:names:tc:opendocument:xmlns:text:1.0',
+        'table': 'urn:oasis:names:tc:opendocument:xmlns:table:1.0',
+    }
+    with zipfile.ZipFile(path) as archive:
+        root = ET.fromstring(archive.read('content.xml'))
+    lines = ['# %s' % os.path.basename(path), '']
+    body = root.find('.//{urn:oasis:names:tc:opendocument:xmlns:office:1.0}body')
+    if body is None:
+        raise ValueError('odt-empty')
+    for node in body.iter():
+        tag = node.tag.rsplit('}', 1)[-1] if isinstance(node.tag, str) else ''
+        if tag in ('h', 'p'):
+            text = ''.join(node.itertext()).strip()
+            if not text:
+                continue
+            if tag == 'h':
+                level = min(6, int(node.get('{%s}outline-level' % ns['text'], '1') or 1))
+                lines.extend(['%s %s' % ('#' * level, text), ''])
+            else:
+                lines.extend([text, ''])
+        elif tag == 'table':
+            rows = []
+            for row in node.findall('.//table:table-row', ns):
+                cells = [' '.join(''.join(c.itertext()).split()) for c in row.findall('table:table-cell', ns)]
+                if cells:
+                    rows.append(cells)
+            if rows:
+                width = max(len(r) for r in rows)
+                rows = [r + [''] * (width - len(r)) for r in rows]
+                lines.append('| ' + ' | '.join(rows[0]) + ' |')
+                lines.append('| ' + ' | '.join(['---'] * width) + ' |')
+                lines.extend('| ' + ' | '.join(r) + ' |' for r in rows[1:])
+                lines.append('')
+    if len(lines) <= 2:
+        raise ValueError('odt-empty')
+    return '\n'.join(lines).strip() + '\n'
+
+
+def _html_fragment_to_md(content):
+    content = re.sub(r'<(script|style|noscript)\b[^>]*>.*?</\1>', '', content, flags=re.I | re.S)
+    for level in range(6, 0, -1):
+        content = re.sub(r'<h%d\b[^>]*>(.*?)</h%d>' % (level, level),
+                         lambda m: '\n%s %s\n' % ('#' * level, re.sub(r'<[^>]+>', '', m.group(1))),
+                         content, flags=re.I | re.S)
+    content = re.sub(r'<(br|p|div|li|tr)\b[^>]*>', '\n', content, flags=re.I)
+    content = re.sub(r'</(p|div|li|tr|table|ul|ol)>', '\n', content, flags=re.I)
+    content = re.sub(r'<[^>]+>', '', content)
+    content = _html.unescape(content)
+    return re.sub(r'\n{3,}', '\n\n', content).strip()
+
+
+def _epub_to_md(path):
+    """Convert EPUB spine XHTML into readable Markdown text."""
+    with zipfile.ZipFile(path) as archive:
+        names = archive.namelist()
+        html_names = [n for n in names if n.lower().endswith(('.xhtml', '.html', '.htm'))]
+        if not html_names:
+            raise ValueError('epub-no-content')
+        chunks = []
+        for name in sorted(html_names):
+            text = archive.read(name).decode('utf-8', errors='replace')
+            converted = _html_fragment_to_md(text)
+            if converted:
+                chunks.append(converted)
+    if not chunks:
+        raise ValueError('epub-empty')
+    return '# %s\n\n%s\n' % (os.path.basename(path), '\n\n'.join(chunks))
+
+
 def convert_verbose(path, form_tables=True):
     """返回 (text, engine, error)。engine: 'docx' | 'pdf' | 'csv' | 'code' | 'txtmd' | 'texmd' | 'markitdown' | ''"""
     ext = os.path.splitext(path)[1].lower()
@@ -195,13 +342,33 @@ def convert_verbose(path, form_tables=True):
             return md, 'txtmd', None
         except Exception as e:  # noqa: BLE001
             return '', '', '文本转换失败：%s' % e
+    if ext == '.rtf':
+        try:
+            return _rtf_to_md(path), 'rtf', None
+        except Exception as e:  # noqa: BLE001
+            return '', '', 'RTF 转换失败：%s' % e
+    if ext == '.odt':
+        try:
+            return _odt_to_md(path), 'odt', None
+        except Exception as e:  # noqa: BLE001
+            return '', '', 'ODT 转换失败：%s' % e
+    if ext == '.epub':
+        try:
+            return _epub_to_md(path), 'epub', None
+        except Exception as e:  # noqa: BLE001
+            return '', '', 'EPUB 转换失败：%s' % e
     if ext in EXT_TO_LANG:
         try:
             return code2md(path, ext), 'code', None
         except Exception as e:  # noqa: BLE001
             return '', '', '代码/配置格式化转换失败：%s' % e
 
-    # 兜底：先尝试 MarkItDown，若失败尝试通用文本读取 code2md 兜底，做到万物皆可转 MD
+    # Binary payloads must fail explicitly instead of becoming unreadable
+    # replacement-decoded Markdown. Images are handled by the OCR lane.
+    if ext in _BINARY_ONLY_EXTS or _looks_binary(path):
+        return '', '', 'unsupported_format'
+
+    # 兜底：先尝试 MarkItDown，若失败尝试通用文本读取 code2md 兜底
     try:
         return _markitdown_convert(path), 'markitdown', None
     except Exception as e:  # noqa: BLE001
@@ -340,6 +507,23 @@ def _markitdown_convert(path):
         _engine = MarkItDown()
     result = _engine.convert(path)
     return (result.text_content or '').strip()
+
+
+def _looks_binary(path):
+    """Cheap guard against replacement-decoding arbitrary binary payloads."""
+    try:
+        with open(path, 'rb') as handle:
+            sample = handle.read(8192)
+    except OSError:
+        return False
+    if not sample or b'\x00' in sample:
+        return bool(sample and b'\x00' in sample)
+    try:
+        decoded = sample.decode('utf-8')
+    except UnicodeDecodeError:
+        # Legacy encodings are still eligible for the text readers.
+        return False
+    return decoded.count('\ufffd') / max(1, len(decoded)) > 0.02
 
 
 # ---------------------------------------------------------------- docx 专用

@@ -100,7 +100,10 @@ function setPvLayout(layout) {
 function applyPvSplit() {
   const pw = $('preview-wrap'); if (!pw) return;
   const horizontal = state.pvLayout === 'left' || state.pvLayout === 'right';
-  const pct = horizontal ? state.pvSplitX : state.pvSplitY;
+  const key = horizontal ? 'pvSplitX' : 'pvSplitY';
+  const raw = Number(state[key]);
+  const pct = Math.max(25, Math.min(70, Number.isFinite(raw) ? raw : (horizontal ? 50 : 46)));
+  state[key] = pct;
   pw.style.flexBasis = pct + '%';
   const splitter = $('pv-splitter');
   if (splitter) {

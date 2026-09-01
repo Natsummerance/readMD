@@ -79,6 +79,36 @@ CONFIRM_REQUIRED = {
 }
 
 
+def _mcp_output_target(raw_path: Any, suffix: str, overwrite: bool = False) -> str:
+    """Validate an explicit MCP output target before any filesystem write.
+
+    MCP callers may choose the destination, but the server must never turn an
+    omitted/relative path into the current working directory or silently
+    replace an existing file.  Realpath normalization also makes symlinked
+    targets fail closed through the regular-file check below.
+    """
+    raw = os.fspath(raw_path or "")
+    if not raw or "\x00" in raw or not os.path.isabs(raw):
+        raise ValueError("output_path_must_be_absolute")
+    target = os.path.realpath(os.path.abspath(raw))
+    if not target.lower().endswith(str(suffix).lower()):
+        raise ValueError("invalid_output_extension")
+    parent = os.path.dirname(target)
+    if not os.path.isdir(parent):
+        raise ValueError("output_directory_not_found")
+    if os.path.lexists(target) and not os.path.isfile(target):
+        raise ValueError("output_target_not_regular")
+    if os.path.isfile(target) and not overwrite:
+        raise FileExistsError("output_exists")
+    return target
+
+
+def _mcp_error(code: str) -> Dict[str, Any]:
+    return {"isError": True, "content": [{"type": "text", "text": json.dumps({
+        "ok": False, "error_code": code
+    }, ensure_ascii=False)}]}
+
+
 def _skills_registry():
     global _CORE_SERVICE
     if _CORE_SERVICE is None:
@@ -158,6 +188,7 @@ TOOLS: List[Dict[str, Any]] = [
                     "description": "排版风格预设（默认 minimal）"
                 },
                 "title": {"type": "string", "description": "文档标题（可选）"}
+                ,"overwrite": {"type": "boolean", "default": False, "description": "目标已存在时是否明确允许覆盖"}
                 ,"confirm": {"type": "boolean", "const": True, "description": "明确确认写入导出文件"}
             },
             "required": ["markdown_content", "output_path", "output_format", "confirm"]
@@ -284,6 +315,7 @@ TOOLS: List[Dict[str, Any]] = [
                 "title": {"type": "string", "description": "演示文稿标题"},
                 "theme": {"type": "string", "description": "Reveal.js 主题 (black, white, league, sky, beige, night, serif, simple, solarized)"},
                 "transition": {"type": "string", "description": "转场效果 (slide, fade, zoom, convex, concave)"}
+                ,"overwrite": {"type": "boolean", "default": False, "description": "目标已存在时是否明确允许覆盖"}
                 ,"confirm": {"type": "boolean", "const": True, "description": "明确确认写入导出文件"}
             },
             "required": ["markdown_content", "output_path", "confirm"]
@@ -300,6 +332,7 @@ TOOLS: List[Dict[str, Any]] = [
                 "title": {"type": "string", "description": "电子书标题 (默认 'ReadMD 电子书')"},
                 "author": {"type": "string", "description": "电子书作者 (默认 'ReadMD Author')"},
                 "language": {"type": "string", "description": "语言代码 (默认 'zh-CN')"}
+                ,"overwrite": {"type": "boolean", "default": False, "description": "目标已存在时是否明确允许覆盖"}
                 ,"confirm": {"type": "boolean", "const": True, "description": "明确确认写入导出文件"}
             },
             "required": ["markdown_content", "output_path", "confirm"]
@@ -326,9 +359,7 @@ def handle_tool_call(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
     """统一调度处理各 MCP 工具调用并返回标准响应。"""
     try:
         if name in CONFIRM_REQUIRED and args.get("confirm") is not True:
-            return {"isError": True, "content": [{"type": "text", "text": json.dumps({
-                "ok": False, "error": "此操作会产生副作用，请在请求中明确设置 confirm=true"
-            }, ensure_ascii=False)}]}
+            return _mcp_error("confirmation_required")
         if name == "readmd_fix_markdown":
             content = str(args.get("content", ""))
             res = readmd_fix.fix_markdown(content)
@@ -398,12 +429,18 @@ def handle_tool_call(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
 
         elif name == "readmd_export_document":
             md_content = str(args.get("markdown_content", ""))
-            out_path = os.path.abspath(str(args.get("output_path", "")))
             fmt = str(args.get("output_format", "pdf")).lower()
             preset = str(args.get("style_preset", "minimal"))
             title = str(args.get("title", "ReadMD Document"))
-
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+            if fmt not in {"pdf", "docx", "html", "tex"}:
+                return _mcp_error("unsupported_output_format")
+            try:
+                out_path = _mcp_output_target(args.get("output_path"), "." + fmt,
+                                              bool(args.get("overwrite", False)))
+            except FileExistsError:
+                return _mcp_error("output_exists")
+            except ValueError as exc:
+                return _mcp_error(str(exc))
 
             if fmt == 'tex':
                 tex = texmd.markdown_to_latex(md_content, title=title)
@@ -543,11 +580,16 @@ def handle_tool_call(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
 
         elif name == "readmd_export_presentation":
             md_content = str(args.get("markdown_content", ""))
-            out_path = os.path.abspath(str(args.get("output_path", "")))
             title = str(args.get("title", "ReadMD Presentation"))
             theme = str(args.get("theme", "black"))
             transition = str(args.get("transition", "slide"))
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+            try:
+                out_path = _mcp_output_target(args.get("output_path"), ".html",
+                                              bool(args.get("overwrite", False)))
+            except FileExistsError:
+                return _mcp_error("output_exists")
+            except ValueError as exc:
+                return _mcp_error(str(exc))
             html = render_presentation_html(md_content, title=title, theme=theme, transition=transition)
             with open(out_path, 'w', encoding='utf-8') as f:
                 f.write(html)
@@ -566,11 +608,16 @@ def handle_tool_call(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
 
         elif name == "readmd_export_epub":
             md_content = str(args.get("markdown_content", ""))
-            out_path = os.path.abspath(str(args.get("output_path", "")))
             title = str(args.get("title", "ReadMD 电子书"))
             author = str(args.get("author", "ReadMD Author"))
             language = str(args.get("language", "zh-CN"))
-            os.makedirs(os.path.dirname(out_path), exist_ok=True)
+            try:
+                out_path = _mcp_output_target(args.get("output_path"), ".epub",
+                                              bool(args.get("overwrite", False)))
+            except FileExistsError:
+                return _mcp_error("output_exists")
+            except ValueError as exc:
+                return _mcp_error(str(exc))
             export_epub(md_content, out_path, title=title, author=author, language=language)
             return {
                 "content": [

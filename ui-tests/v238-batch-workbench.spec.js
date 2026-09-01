@@ -23,7 +23,7 @@ async function mockModulesReady(page) {
 }
 
 function batchRows(page) {
-  return page.locator('#batch-list .batch-item');
+  return page.locator('#convert-list .batch-item');
 }
 
 test.beforeEach(async ({ page }) => {
@@ -35,17 +35,16 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('readmd_language', 'zh-CN'));
 });
 
-test('batch workbench opens from the more menu with file and folder entry points', async ({ page }) => {
+test('all-to-markdown workbench is the single entry point for batch conversion', async ({ page }) => {
   await waitForApp(page);
   await page.locator('#btn-more').click();
   await expect(page.locator('#more-menu')).toHaveClass(/open/);
-  await page.locator('#btn-batch').click();
-
-  await expect(page.locator('#batch-modal')).toBeVisible();
-  await expect(page.locator('#batch-title')).toContainText('批量工作台');
-  await expect(page.locator('#batch-files')).toBeVisible();
-  await expect(page.locator('#batch-folder')).toBeVisible();
-  await expect(page.locator('#batch-list .batch-item')).toHaveCount(0);
+  await page.locator('#btn-convert').click();
+  await expect(page.locator('#convert-modal')).toBeVisible();
+  await expect(page.locator('#convert-title')).toContainText('转 Markdown');
+  await expect(page.locator('#convert-files')).toBeVisible();
+  await expect(page.locator('#convert-folder')).toBeVisible();
+  await expect(page.locator('#convert-list .batch-item, #convert-list .convert-item')).toHaveCount(0);
 });
 
 test('mixed enqueue routes docs into one batch job and images into sequential OCR', async ({ page }) => {
@@ -83,7 +82,7 @@ test('mixed enqueue routes docs into one batch job and images into sequential OC
   await waitForApp(page);
   await page.evaluate(paths => enqueueBatchFiles(paths, false), [DOC_A, DOC_B, IMG_C]);
 
-  await expect(page.locator('#batch-modal')).toBeVisible();
+  await expect(page.locator('#convert-modal')).toBeVisible();
   await expect(batchRows(page)).toHaveCount(3);
   await expect(batchRows(page).nth(0)).toContainText('a.docx');
   await expect(batchRows(page).nth(1)).toContainText('b.pdf');
@@ -97,7 +96,7 @@ test('mixed enqueue routes docs into one batch job and images into sequential OC
   await expect(batchRows(page).nth(0)).toContainText('成功', { timeout: 10000 });
   await expect(batchRows(page).nth(1)).toContainText('成功', { timeout: 10000 });
   await expect(batchRows(page).nth(2)).toContainText('成功', { timeout: 10000 });
-  await expect(page.locator('#batch-status')).toContainText('完成');
+  await expect(page.locator('#convert-status')).toContainText('完成');
 });
 
 test('cancel stops the docs job via the cancel endpoint and marks rows canceled', async ({ page }) => {
@@ -221,6 +220,6 @@ test('failures do not stop the queue and stay traceable per row', async ({ page 
   await expect(batchRows(page).nth(0)).toContainText('失败', { timeout: 10000 });
   await expect(batchRows(page).nth(1)).toContainText('成功', { timeout: 10000 });
   await expect(batchRows(page).nth(2)).toContainText('失败', { timeout: 10000 });
-  await expect(page.locator('#batch-status')).toContainText('完成');
-  await expect(page.locator('#batch-status')).toContainText('成功 1');
+  await expect(page.locator('#convert-status')).toContainText('完成');
+  await expect(page.locator('#convert-status')).toContainText('成功 1');
 });

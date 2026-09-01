@@ -211,10 +211,12 @@ def test_github_apply_revalidates_archive_license_at_apply_boundary(tmp_path, mo
         "skills": [{"id": "note", "path": "note/SKILL.md", "directory": "note", "valid": True}],
     }
 
-    with pytest.raises(skill_import.SkillImportError) as exc:
-        skill_import.apply_import(preview, preview["skills"], confirm=True)
-
-    assert exc.value.code == "skill_license_missing"
+    result = skill_import.apply_import(preview, preview["skills"], confirm=True)
+    assert result["ok"] is True
+    installed = root / "skills" / "note"
+    metadata = json.loads((installed / "readmd.skill.json").read_text(encoding="utf-8"))
+    assert metadata["enabled"] is False
+    assert metadata["publishable"] is False
 
 
 def test_local_directory_import_copies_complete_skill_and_records_source_manifest(tmp_path, monkeypatch):

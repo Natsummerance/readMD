@@ -28,6 +28,7 @@ import secrets
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import threading
 import webbrowser
@@ -774,10 +775,57 @@ def _md_output_path(src):
     return os.path.join(d, base + '.md')
 
 
+def _batch_output_paths(paths):
+    """Plan collision-free Markdown targets without touching source files."""
+    planned, used = {}, set()
+    seen_sources = set()
+    for src in paths:
+        source_key = os.path.normcase(os.path.realpath(os.path.abspath(src)))
+        if source_key in seen_sources:
+            continue
+        seen_sources.add(source_key)
+        candidate = _md_output_path(src)
+        key = os.path.normcase(os.path.abspath(candidate))
+        if key not in used:
+            planned[src] = candidate
+            used.add(key)
+            continue
+        try:
+            with open(src, 'rb') as handle:
+                digest = hashlib.sha256(handle.read()).hexdigest()[:8]
+        except OSError:
+            digest = hashlib.sha256(os.path.abspath(src).encode('utf-8', errors='replace')).hexdigest()[:8]
+        stem, ext = os.path.splitext(candidate)
+        candidate = '%s-%s%s' % (stem, digest, ext)
+        suffix = 2
+        while os.path.normcase(os.path.abspath(candidate)) in used:
+            candidate = '%s-%s-%d%s' % (stem, digest, suffix, ext)
+            suffix += 1
+        planned[src] = candidate
+        used.add(os.path.normcase(os.path.abspath(candidate)))
+    return planned
+
+
 def _write_md(path, content):
     with open(path, 'w', encoding='utf-8', newline='\n') as f:
         f.write(content)
     return True
+
+
+def _safe_export_target(path, suffix):
+    """Validate a caller-supplied export target without requiring it to exist."""
+    raw = os.fspath(path or '')
+    if not raw or '\x00' in raw or any(ord(ch) < 32 for ch in raw):
+        raise ValueError('invalid_output_path')
+    candidate = os.path.realpath(os.path.abspath(raw))
+    if not candidate.lower().endswith(str(suffix).lower()):
+        raise ValueError('invalid_output_extension')
+    parent = os.path.dirname(candidate)
+    if not os.path.isdir(parent):
+        raise ValueError('output_directory_not_found')
+    if os.path.lexists(candidate) and not os.path.isfile(candidate):
+        raise ValueError('output_target_not_regular')
+    return candidate
 
 
 def _convert_worker(job):
@@ -793,21 +841,24 @@ def _convert_worker(job):
             if err and not text:
                 it['status'] = 'error'
                 it['error'] = err
+                it['error_code'] = 'conversion_failed'
                 it['done'] = True
                 continue
             if not text.strip():
                 it['status'] = 'error'
                 it['error'] = '未提取到文字（可尝试 OCR）'
+                it['error_code'] = 'empty_output'
                 it['done'] = True
                 continue
             import src.readmd_modules.mdcheck as MDC
             fixed, warns = MDC.check(text, os.path.dirname(os.path.abspath(it['src'])))
-            out = _md_output_path(it['src'])
+            out = it.get('planned_out') or _md_output_path(it['src'])
             it['out'] = out
             it['engine'] = engine
             it['warns'] = warns
             if os.path.exists(out) and not job.get('overwrite'):
                 it['status'] = 'skipped'
+                it['error_code'] = 'output_exists'
             else:
                 try:
                     _write_md(out, fixed)
@@ -815,10 +866,12 @@ def _convert_worker(job):
                 except Exception as e:  # noqa: BLE001
                     it['status'] = 'error'
                     it['error'] = '写入失败：%s' % e
+                    it['error_code'] = 'write_failed'
         except Exception as e:  # noqa: BLE001
             logging.exception('batch convert failed: %s', it.get('src'))
             it['status'] = 'error'
             it['error'] = str(e)
+            it['error_code'] = 'conversion_failed'
         it['done'] = True
     job['running'] = False
     job['finished'] = True
@@ -828,9 +881,11 @@ def _start_convert_job(paths, overwrite):
     with _CONVERT_LOCK:
         _CONVERT_JOB_SEQ[0] += 1
         jid = 'c%d' % _CONVERT_JOB_SEQ[0]
+        outputs = _batch_output_paths(paths)
         job = {'id': jid, 'overwrite': bool(overwrite), 'running': True,
                'finished': False, 'cancel': False,
-               'items': [{'src': p, 'status': 'queued', 'done': False} for p in paths]}
+               'items': [{'src': p, 'planned_out': outputs.get(p),
+                          'status': 'queued', 'done': False} for p in paths]}
         _CONVERT_JOBS[jid] = job
         threading.Thread(target=_convert_worker, args=(job,), daemon=True,
                          name='convert-batch-%s' % jid).start()
@@ -1245,7 +1300,7 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get('Content-Length', 0) or 0)
             body = json.loads(self.rfile.read(length).decode('utf-8')) if length else {}
         except Exception:
-            self._send_json(400, {'error': '请求格式错误'})
+            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求格式错误'})
             return
         name = body.get('name') if isinstance(body, dict) else None
         if name not in RM.MODULES:
@@ -1342,16 +1397,25 @@ class Handler(BaseHTTPRequestHandler):
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
             body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            if body.get('confirm') is not True:
+                self._send_json(400, {'ok': False, 'error_code': 'confirmation_required'})
+                return
             lang = body.get('lang', 'python')
             code = body.get('code', '')
             cwd = body.get('cwd') or None
             timeout = int(body.get('timeout', 10))
             from src.readmd_modules import code_chunk_runner
-            res = code_chunk_runner.execute_code_chunk(lang, code, cwd=cwd, timeout=timeout)
+            res = code_chunk_runner.execute_code_chunk(code=code, lang=lang, cwd=cwd, timeout=timeout)
+            if not res.get('ok'):
+                known = {'network_not_allowed', 'path_access_not_allowed',
+                         'cwd_not_found', 'cwd_not_allowed', 'output_truncated'}
+                raw_error = str(res.get('error') or '')
+                res.setdefault('error_code', raw_error if raw_error in known else
+                               ('execution_timeout' if '超时' in raw_error else 'execution_failed'))
             self._send_json(200, res)
         except Exception as e:
             logging.exception('api_code_run failed')
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            self._send_json(500, {'ok': False, 'error_code': 'execution_failed', 'error': str(e)})
 
     def _api_diagram_render(self):
         try:
@@ -1390,17 +1454,42 @@ class Handler(BaseHTTPRequestHandler):
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
             body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            if body.get('confirm') is not True:
+                self._send_json(400, {'ok': False, 'code': 'confirmation_required'})
+                return
             content = body.get('content', '')
             out_path = body.get('out_path', '')
             meta = body.get('meta') or {}
             from src.readmd_modules.mdexport import epub_render
             if not out_path:
-                out_path = os.path.join(tempfile.gettempdir(), f'readmd_export_{int(time.time()*1000)}.epub')
-            ok = epub_render.build_epub(content, out_path, meta=meta)
-            self._send_json(200, {'ok': ok, 'path': out_path})
+                # Keep generated files in the app data export area instead of
+                # leaking untracked temporary EPUBs into the system temp dir.
+                out_dir = os.path.join(DATA_DIR, 'exports')
+                os.makedirs(out_dir, exist_ok=True)
+                out_path = os.path.join(out_dir, f'readmd_export_{int(time.time()*1000)}.epub')
+            else:
+                out_path = _safe_export_target(out_path, '.epub')
+                if os.path.exists(out_path) and not body.get('overwrite'):
+                    self._send_json(409, {'ok': False, 'code': 'output_exists'})
+                    return
+            ok = epub_render.build_epub(
+                content,
+                out_path,
+                title=str(meta.get('title') or 'ReadMD Document'),
+                author=str(meta.get('author') or 'ReadMD'),
+                language=str(meta.get('language') or 'zh-CN'),
+                options=meta,
+            )
+            self._send_json(200, {'ok': bool(ok), 'path': out_path})
         except Exception as e:
             logging.exception('api_export_epub failed')
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            raw_error = str(e)
+            known = {'invalid_output_path', 'invalid_output_extension',
+                     'output_directory_not_found', 'output_target_not_regular'}
+            self._send_json(400 if raw_error in known else 500,
+                            {'ok': False,
+                             'error_code': raw_error if raw_error in known else 'export_failed',
+                             'error': raw_error})
 
     def _api_export_presentation(self):
         try:
@@ -1582,7 +1671,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {'models': ids})
         except Exception as e:
             logging.exception('ai models failed')
-            self._send_json(500, {'error': str(e)})
+            self._send_json(400, {'ok': False, 'error_code': 'model_list_failed', 'error': str(e)})
 
     def _api_ai_chat(self):
         """AI 对话：兼容 SSE 流式与标准 JSON 双模式返回。"""
@@ -1592,13 +1681,20 @@ class Handler(BaseHTTPRequestHandler):
             n = int(self.headers.get('Content-Length', 0) or 0)
             payload = json.loads(self.rfile.read(n).decode('utf-8'))
         except Exception:
-            self._send_json(400, {'error': '请求格式错误'})
+            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求格式错误'})
             return
 
         if not isinstance(payload, dict):
-            self._send_json(400, {'error': '请求体必须是 JSON 对象'})
+            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求体必须是 JSON 对象'})
             return
-        is_stream = payload.get('stream', True)
+        # Runtime AI requests must resolve through the shared Skill registry;
+        # accepting an ad-hoc system prompt here would reintroduce the second
+        # prompt implementation that the v2.3.8 contract removes.
+        if not str(payload.get('skill_id') or '').strip():
+            self._send_json(400, {'ok': False, 'error_code': 'skill_required'})
+            return
+        raw_stream = payload.get('stream', True)
+        is_stream = raw_stream not in (False, 0, '0', 'false', 'False', 'no', 'off')
         try:
             mod = RM.get('ai')
             gen = mod.chat(payload)
@@ -1614,7 +1710,7 @@ class Handler(BaseHTTPRequestHandler):
                             if 'usage' in item:
                                 usage_info = item['usage']
                             elif 'error' in item:
-                                self._send_json(500, {'error': item['error']})
+                                self._send_json(502, {'ok': False, 'error_code': 'provider_error', 'error': item['error']})
                                 return
                         elif isinstance(item, str):
                             full_content.append(item)
@@ -1640,7 +1736,8 @@ class Handler(BaseHTTPRequestHandler):
                     if 'usage' in item:
                         self._sse({'type': 'usage', 'usage': item.get('usage') or {}})
                     elif 'error' in item:
-                        self._sse({'type': 'error', 'error': item.get('error')})
+                        self._sse({'type': 'error', 'error_code': item.get('error_code') or 'provider_error',
+                                   'error': item.get('error')})
                     else:
                         self._sse(item)
                 else:
@@ -1649,10 +1746,10 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             logging.exception('ai chat failed')
             if not is_stream:
-                self._send_json(500, {'error': str(e)})
+                self._send_json(502, {'ok': False, 'error_code': 'provider_error', 'error': str(e)})
                 return
             try:
-                self._sse({'type': 'error', 'error': str(e)})
+                self._sse({'type': 'error', 'error_code': 'provider_error', 'error': str(e)})
                 self._sse({'type': 'done'})
             except Exception:
                 pass
@@ -2012,7 +2109,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _api_skill_imports(self):
         if self.command == 'GET':
-            self._send_json(200, {'schema_version': 1, 'sources': _skill_import.list_sources()})
+            self._send_json(200, {'schema_version': 2, 'sources': _skill_import.list_sources()})
             return
         if self.command == 'DELETE':
             try:
@@ -2384,14 +2481,27 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
         except Exception:
-            self._send_json(400, {'error': '请求格式错误'})
+            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求格式错误'})
+            return
+        if body.get('confirm') is not True:
+            self._send_json(400, {'ok': False, 'code': 'confirmation_required'})
             return
         paths = [p for p in (body.get('paths') or [])
                  if isinstance(p, str) and os.path.isfile(p)]
+        # A repeated selection should represent one work item, otherwise two
+        # workers could race on the same output and report a false success.
+        unique_paths, seen_paths = [], set()
+        for path in paths:
+            key = os.path.normcase(os.path.realpath(os.path.abspath(path)))
+            if key in seen_paths:
+                continue
+            seen_paths.add(key)
+            unique_paths.append(path)
+        paths = unique_paths
         if is_win7():
             paths = [p for p in paths if os.path.splitext(p)[1].lower() in WIN7_CONVERT_EXTS]
         if not paths:
-            self._send_json(400, {'error': '没有可转换的文件'})
+            self._send_json(400, {'ok': False, 'error_code': 'no_convertible_files', 'error': '没有可转换的文件'})
             return
         if not self._module_ready('convert', '转换模块加载中，请稍候再试'):
             return
@@ -2400,12 +2510,13 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {'job': jid, 'total': len(paths)})
         except Exception as e:
             logging.exception('convert batch start failed')
-            self._send_json(500, {'error': '批量转换启动失败：%s' % e})
+            self._send_json(500, {'ok': False, 'error_code': 'batch_start_failed',
+                                  'error': '批量转换启动失败：%s' % e})
 
     def _api_convert_progress(self, jid):
         job = _CONVERT_JOBS.get(jid or '')
         if not job:
-            self._send_json(404, {'error': '任务不存在'})
+            self._send_json(404, {'ok': False, 'error_code': 'job_not_found', 'error': '任务不存在'})
             return
         self._send_json(200, {
             'job': jid, 'running': job.get('running', False),
@@ -2420,11 +2531,11 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
         except Exception:
-            self._send_json(400, {'error': '请求格式错误'})
+            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求格式错误'})
             return
         job = _CONVERT_JOBS.get((body.get('job') or '') if isinstance(body, dict) else '')
         if not job:
-            self._send_json(404, {'error': '任务不存在'})
+            self._send_json(404, {'ok': False, 'error_code': 'job_not_found', 'error': '任务不存在'})
             return
         job['cancel'] = True
         self._send_json(200, {'ok': True, 'job': job.get('id')})
@@ -3309,11 +3420,14 @@ class Api(object):
         st, err = RM.status()
         return {'modules': st, 'errors': err}
 
-    def run_code_chunk(self, lang, code, cwd=None, timeout=10):
+    def run_code_chunk(self, lang, code, cwd=None, timeout=10, confirm=False):
         """执行多语言代码块。"""
+        if confirm is not True:
+            return {'ok': False, 'error_code': 'confirmation_required',
+                    'stdout': '', 'stderr': '', 'images': [], 'exit_code': 1}
         try:
             from src.readmd_modules import code_chunk_runner
-            return code_chunk_runner.execute_code_chunk(lang, code, cwd=cwd, timeout=int(timeout))
+            return code_chunk_runner.execute_code_chunk(code=code, lang=lang, cwd=cwd, timeout=int(timeout))
         except Exception as e:
             return {'ok': False, 'error': str(e), 'stdout': '', 'stderr': str(e), 'images': [], 'exit_code': 1}
 
@@ -3338,14 +3452,30 @@ class Api(object):
         except Exception as e:
             return {'ok': False, 'error': str(e), 'content': content}
 
-    def export_epub(self, content, output_path='', meta=None):
+    def export_epub(self, content, output_path='', meta=None, confirm=False):
         """导出 EPUB 3.0 电子书。"""
+        if confirm is not True:
+            return {'ok': False, 'error_code': 'confirmation_required'}
         try:
             from src.readmd_modules.mdexport import epub_render
             if not output_path:
-                output_path = os.path.join(tempfile.gettempdir(), f'readmd_export_{int(time.time()*1000)}.epub')
-            ok = epub_render.build_epub(content, output_path, meta=meta or {})
-            return {'ok': ok, 'path': output_path}
+                out_dir = os.path.join(DATA_DIR, 'exports')
+                os.makedirs(out_dir, exist_ok=True)
+                output_path = os.path.join(out_dir, f'readmd_export_{int(time.time()*1000)}.epub')
+            else:
+                output_path = _safe_export_target(output_path, '.epub')
+                if os.path.exists(output_path):
+                    return {'ok': False, 'code': 'output_exists'}
+            meta = meta or {}
+            ok = epub_render.build_epub(
+                content,
+                output_path,
+                title=str(meta.get('title') or 'ReadMD Document'),
+                author=str(meta.get('author') or 'ReadMD'),
+                language=str(meta.get('language') or 'zh-CN'),
+                options=meta,
+            )
+            return {'ok': bool(ok), 'path': output_path}
         except Exception as e:
             return {'ok': False, 'error': str(e)}
 
@@ -4352,6 +4482,20 @@ class Api(object):
             except Exception:
                 pass
         return True
+
+    def toggle_native_fullscreen(self):
+        """Toggle the host window's native fullscreen state when supported."""
+        if self._window is None:
+            return {'ok': False, 'code': 'window_not_ready', 'supported': False}
+        toggle = getattr(self._window, 'toggle_fullscreen', None)
+        if not callable(toggle):
+            return {'ok': False, 'code': 'native_fullscreen_unavailable', 'supported': False}
+        try:
+            result = toggle()
+            return {'ok': True, 'supported': True, 'fullscreen': bool(result) if isinstance(result, bool) else None}
+        except Exception:
+            logging.exception('native fullscreen toggle failed')
+            return {'ok': False, 'code': 'native_fullscreen_failed', 'supported': False}
 
     def request_quit(self):
         quit_app()

@@ -21,9 +21,76 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import signal
 from typing import Any, Dict, List, Optional
 
+try:  # Unix-only resource ceilings; Windows uses process-group teardown below.
+    import resource as _resource
+except ImportError:  # pragma: no cover - exercised on Windows builds
+    _resource = None
+
 EXECUTION_TIMEOUT = 10  # 最大超时秒数
+MAX_OUTPUT_CHARS = 200_000
+MAX_TIMEOUT_SECONDS = 10
+MAX_MEMORY_BYTES = 512 * 1024 * 1024
+MAX_FILE_BYTES = 16 * 1024 * 1024
+MAX_CHILD_PROCESSES = 32
+
+# Code chunks run without inherited credentials or service configuration.  A
+# child process receives only the variables needed to find runtimes and write
+# temporary output; API keys, proxy settings and arbitrary user variables are
+# deliberately excluded.
+_SAFE_ENV_KEYS = (
+    'PATH', 'PATHEXT', 'SYSTEMROOT', 'SYSTEMDRIVE', 'COMSPEC',
+    'TEMP', 'TMP', 'TMPDIR', 'USERPROFILE', 'HOME', 'LANG', 'LC_ALL',
+)
+_NETWORK_PATTERNS = (
+    re.compile(r'(?i)\b(?:requests|httpx|urllib(?:\.request)?|socket|ftplib|aiohttp)\b'),
+    re.compile(r'''(?ix)(?:require\s*\(\s*['"](?:node:)?(?:http|https|net|tls|dns|dgram|undici)['"]|from\s+['"](?:node:)?(?:http|https|net|tls|dns|dgram|undici)['"]|\bfetch\s*\()'''),
+    re.compile(r'(?i)\b(?:curl|wget|Invoke-WebRequest|Invoke-RestMethod|nc|netcat|ping|nslookup|dig|tracert|netsh)\b'),
+    re.compile(r'(?i)\bhttps?://'),
+)
+_PATH_ESCAPE_PATTERNS = (
+    re.compile(r'(?i)(?:[A-Za-z]:[\\/]|\\\\[^\\s]+)'),
+    re.compile(r'''(?ix)(?:^|["'\s])/(?:etc|home|root|tmp|var|usr|opt|workspace|mnt|proc|sys)(?:[/\s"']|$)'''),
+    re.compile(r'(?i)(?:^|[\"\'\s])\.\.[\\/]'),
+    # File/process APIs are denied rather than relying on a caller-provided
+    # cwd. This also closes dynamic-import and Node.js module escape hatches.
+    re.compile(r'''(?ix)\b(?:__import__|importlib|pathlib|open|io\.open|os\.(?:chdir|listdir|walk|scandir|remove|unlink|rename|replace|makedirs|mkdir|rmdir|system|popen|exec|spawn)|shutil\.|subprocess\.|ctypes\.|winreg\.|tempfile\.)'''),
+    re.compile(r'''(?ix)\bos\.environ(?:\b|\[)'''),
+    re.compile(r'''(?ix)(?:require\s*\(\s*['"](?:node:)?(?:fs|fs/promises|child_process|module)['"]|from\s+['"](?:node:)?(?:fs|fs/promises|child_process|module)['"]|\bprocess\.(?:binding|dlopen|env|exec|spawn)|\b(?:Deno|Bun)\.)'''),
+    re.compile(r'''(?ix)\b(?:type|copy|xcopy|move|del|erase|dir|cat|cp|mv|rm|rmdir|find|grep|dd)\s+[^\n]*[/\\.]'''),
+)
+
+
+def _limit_child_resources(timeout: int) -> None:
+    """Apply best-effort OS resource ceilings before starting user code.
+
+    Unix kernels enforce CPU, address-space, file-size and child-process
+    limits.  Windows has no stdlib equivalent; its process group is still
+    killed recursively on timeout and the packaged runner should be treated
+    as a convenience executor, not a hostile-code sandbox.
+    """
+    if _resource is None:
+        return
+    cpu = max(1, min(int(timeout or EXECUTION_TIMEOUT), MAX_TIMEOUT_SECONDS)) + 1
+    limits = (
+        ('RLIMIT_CPU', cpu),
+        ('RLIMIT_AS', MAX_MEMORY_BYTES),
+        ('RLIMIT_FSIZE', MAX_FILE_BYTES),
+        ('RLIMIT_NPROC', MAX_CHILD_PROCESSES),
+    )
+    for name, ceiling in limits:
+        kind = getattr(_resource, name, None)
+        if kind is None:
+            continue
+        try:
+            hard = _resource.getrlimit(kind)[1]
+            maximum = ceiling if hard == _resource.RLIM_INFINITY else min(ceiling, hard)
+            _resource.setrlimit(kind, (maximum, maximum))
+        except (OSError, ValueError):
+            # A restricted host may not permit one of the optional limits.
+            continue
 
 # Matplotlib 图表捕获包装模板
 MATPLOTLIB_WRAPPER = """
@@ -53,12 +120,19 @@ except Exception as _e:
 
 def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECUTION_TIMEOUT) -> Dict[str, Any]:
     """底层安全进程调用与 UTF-8 管道捕获。"""
-    env = os.environ.copy()
+    env = {key: os.environ[key] for key in _SAFE_ENV_KEYS if os.environ.get(key)}
     env['PYTHONIOENCODING'] = 'utf-8'
     env['PYTHONUTF8'] = '1'
     env['NODE_OPTIONS'] = '--no-warnings'
+    timeout = max(1, min(int(timeout or EXECUTION_TIMEOUT), MAX_TIMEOUT_SECONDS))
 
     try:
+        popen_kwargs = {}
+        if sys.platform == 'win32':
+            popen_kwargs['creationflags'] = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0)
+        else:
+            popen_kwargs['start_new_session'] = True
+            popen_kwargs['preexec_fn'] = lambda: _limit_child_resources(timeout)
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -67,17 +141,27 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
             encoding='utf-8',
             errors='replace',
             env=env,
-            cwd=cwd
+            cwd=cwd,
+            **popen_kwargs
         )
 
         try:
             stdout, stderr = proc.communicate(timeout=timeout)
             exit_code = proc.returncode
         except subprocess.TimeoutExpired:
-            proc.kill()
+            if sys.platform == 'win32':
+                subprocess.run(['taskkill', '/T', '/F', '/PID', str(proc.pid)],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               check=False)
+            else:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except Exception:
+                    proc.kill()
             stdout, stderr = proc.communicate()
             return {
                 "ok": False,
+                "error_code": "execution_timeout",
                 "error": f"代码执行超时 (超过 {timeout} 秒限制)",
                 "stdout": stdout,
                 "stderr": stderr,
@@ -85,12 +169,14 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
                 "exit_code": -1
             }
 
+        truncated = len(stdout) > MAX_OUTPUT_CHARS or len(stderr) > MAX_OUTPUT_CHARS
         return {
             "ok": exit_code == 0,
-            "stdout": stdout.strip(),
-            "stderr": stderr.strip(),
+            "stdout": stdout[:MAX_OUTPUT_CHARS].strip(),
+            "stderr": stderr[:MAX_OUTPUT_CHARS].strip(),
             "images": [],
-            "exit_code": exit_code
+            "exit_code": exit_code,
+            "warning": "output_truncated" if truncated else None,
         }
 
     except Exception as e:
@@ -105,16 +191,15 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
 
 
 def execute_python_chunk(code: str, capture_plot: bool = True,
-                         timeout: int = EXECUTION_TIMEOUT) -> Dict[str, Any]:
+                         timeout: int = EXECUTION_TIMEOUT,
+                         cwd: Optional[str] = None) -> Dict[str, Any]:
     """安全执行 Python 代码块并捕获文本输出与 Matplotlib 图像。"""
     wrapped_code = MATPLOTLIB_WRAPPER.format(user_code=code) if capture_plot else code
 
-    with tempfile.NamedTemporaryFile(suffix='.py', delete=False, mode='w', encoding='utf-8') as f:
-        f.write(wrapped_code)
-        tmp_script = f.name
+    tmp_script, script_dir = _write_temp_script('.py', wrapped_code, cwd)
 
     try:
-        res = _run_process([sys.executable, tmp_script], timeout=timeout)
+        res = _run_process([sys.executable, tmp_script], cwd=cwd, timeout=timeout)
         if not res["ok"] and res.get("error"):
             return res
 
@@ -132,21 +217,101 @@ def execute_python_chunk(code: str, capture_plot: bool = True,
         return res
 
     finally:
-        if os.path.exists(tmp_script):
-            try:
-                os.remove(tmp_script)
-            except Exception:
-                pass
+        _cleanup_temp_script(tmp_script, script_dir)
+
+
+def _allowed_cwd(cwd: Optional[str]) -> Optional[str]:
+    """Return a permitted working directory, or None for a fresh sandbox.
+
+    Explicit working directories are restricted to the configured ReadMD data
+    root (or the system temporary directory).  This keeps the compatibility
+    ``cwd`` argument while preventing arbitrary file-system traversal.
+    """
+    if not cwd:
+        return None
+    candidate = os.path.realpath(os.path.abspath(str(cwd)))
+    if not os.path.isdir(candidate):
+        raise ValueError("cwd_not_found")
+    roots = [os.path.realpath(tempfile.gettempdir())]
+    configured_root = os.environ.get('READMD_DATA_DIR')
+    # ``realpath('')`` resolves to the process cwd.  Never let an unset data
+    # root accidentally turn the repository/current directory into an allowed
+    # execution workspace.
+    if configured_root:
+        roots.insert(0, os.path.realpath(configured_root))
+    roots = [r for r in roots if r and os.path.isdir(r)]
+    if not any(candidate == root or candidate.startswith(root + os.sep) for root in roots):
+        raise ValueError("cwd_not_allowed")
+    return candidate
+
+
+def _write_temp_script(suffix: str, content: str, cwd: Optional[str]):
+    """Write a transient script in a disposable directory."""
+    script_dir = tempfile.mkdtemp(prefix='readmd-script-', dir=cwd or None)
+    path = os.path.join(script_dir, 'main' + suffix)
+    with open(path, 'w', encoding='utf-8', newline='\n') as handle:
+        handle.write(content)
+    return path, script_dir
+
+
+def _cleanup_temp_script(path: Optional[str], script_dir: Optional[str]):
+    if script_dir:
+        shutil.rmtree(script_dir, ignore_errors=True)
+    elif path:
+        try:
+            os.remove(path)
+        except OSError:
+            pass
 
 
 def execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = True,
-                       timeout: int = EXECUTION_TIMEOUT) -> Dict[str, Any]:
-    """多语言统一代码块调度执行器。"""
+                       timeout: int = EXECUTION_TIMEOUT,
+                       cwd: Optional[str] = None) -> Dict[str, Any]:
+    """多语言统一代码块调度执行器。
+
+    The public argument order is intentionally ``code, lang``.  Callers that
+    used the old accidental ``lang, code`` order are fixed at their boundary.
+    Every invocation runs in a disposable temporary directory unless an
+    explicitly allowed ReadMD data/temp directory is supplied.
+    """
+    source = str(code or '')
+    if any(pattern.search(source) for pattern in _NETWORK_PATTERNS):
+        return {
+            "ok": False, "error": "network_not_allowed", "stdout": "",
+            "stderr": "network_not_allowed", "images": [], "exit_code": 1,
+            "lang": str(lang or "python")
+        }
+    if any(pattern.search(source) for pattern in _PATH_ESCAPE_PATTERNS):
+        return {
+            "ok": False, "error": "path_access_not_allowed", "stdout": "",
+            "stderr": "path_access_not_allowed", "images": [], "exit_code": 1,
+            "lang": str(lang or "python")
+        }
+    try:
+        explicit_cwd = _allowed_cwd(cwd)
+    except ValueError as exc:
+        return {
+            "ok": False, "error": str(exc), "stdout": "", "stderr": str(exc),
+            "images": [], "exit_code": 1, "lang": str(lang or "python")
+        }
+    sandbox = tempfile.mkdtemp(prefix='readmd-code-')
+    run_cwd = explicit_cwd or sandbox
+    try:
+        return _execute_code_chunk(code, lang=lang, capture_plot=capture_plot,
+                                   timeout=timeout, cwd=run_cwd)
+    finally:
+        shutil.rmtree(sandbox, ignore_errors=True)
+
+
+def _execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = True,
+                        timeout: int = EXECUTION_TIMEOUT,
+                        cwd: Optional[str] = None) -> Dict[str, Any]:
+    """Internal dispatcher; ``cwd`` has already passed the sandbox gate."""
     normalized_lang = lang.lower().strip().lstrip('.')
 
     # 1. Python 调度
     if normalized_lang in ('python', 'py'):
-        res = execute_python_chunk(code, capture_plot=capture_plot, timeout=timeout)
+        res = execute_python_chunk(code, capture_plot=capture_plot, timeout=timeout, cwd=cwd)
         res["lang"] = "python"
         return res
 
@@ -163,19 +328,13 @@ def execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tru
                 "exit_code": 127,
                 "lang": normalized_lang
             }
-        with tempfile.NamedTemporaryFile(suffix='.js', delete=False, mode='w', encoding='utf-8') as f:
-            f.write(code)
-            tmp_script = f.name
+        tmp_script, script_dir = _write_temp_script('.js', code, cwd)
         try:
-            res = _run_process([node_bin, tmp_script], timeout=timeout)
+            res = _run_process([node_bin, tmp_script], cwd=cwd, timeout=timeout)
             res["lang"] = normalized_lang
             return res
         finally:
-            if os.path.exists(tmp_script):
-                try:
-                    os.remove(tmp_script)
-                except Exception:
-                    pass
+            _cleanup_temp_script(tmp_script, script_dir)
 
     # 3. Shell / Bash / PowerShell 调度
     elif normalized_lang in ('bash', 'sh', 'shell', 'powershell', 'cmd', 'bat'):
@@ -183,7 +342,7 @@ def execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tru
             cmd = ['powershell', '-Command', code] if normalized_lang == 'powershell' else ['cmd', '/c', code]
         else:
             cmd = ['/bin/bash', '-c', code] if os.path.exists('/bin/bash') else ['/bin/sh', '-c', code]
-        res = _run_process(cmd, timeout=timeout)
+        res = _run_process(cmd, cwd=cwd, timeout=timeout)
         res["lang"] = normalized_lang
         return res
 
@@ -200,19 +359,13 @@ def execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tru
                 "exit_code": 127,
                 "lang": normalized_lang
             }
-        with tempfile.NamedTemporaryFile(suffix='.R', delete=False, mode='w', encoding='utf-8') as f:
-            f.write(code)
-            tmp_script = f.name
+        tmp_script, script_dir = _write_temp_script('.R', code, cwd)
         try:
-            res = _run_process([r_bin, tmp_script], timeout=timeout)
+            res = _run_process([r_bin, tmp_script], cwd=cwd, timeout=timeout)
             res["lang"] = normalized_lang
             return res
         finally:
-            if os.path.exists(tmp_script):
-                try:
-                    os.remove(tmp_script)
-                except Exception:
-                    pass
+            _cleanup_temp_script(tmp_script, script_dir)
 
     # 5. SQL 内存与本地 SQLite 调度
     elif normalized_lang in ('sql', 'sqlite', 'sqlite3'):
@@ -272,28 +425,22 @@ def execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tru
                 "exit_code": 127,
                 "lang": normalized_lang
             }
-        with tempfile.NamedTemporaryFile(suffix='.go', delete=False, mode='w', encoding='utf-8') as f:
-            # 如果没有 package main，自动包装
-            if 'package main' not in code:
-                code = f"package main\nimport \"fmt\"\nfunc main() {{\n{code}\n}}"
-            f.write(code)
-            tmp_script = f.name
+        # 如果没有 package main，自动包装
+        if 'package main' not in code:
+            code = f"package main\nimport \"fmt\"\nfunc main() {{\n{code}\n}}"
+        tmp_script, script_dir = _write_temp_script('.go', code, cwd)
         try:
-            res = _run_process([go_bin, 'run', tmp_script], timeout=timeout)
+            res = _run_process([go_bin, 'run', tmp_script], cwd=cwd, timeout=timeout)
             res["lang"] = normalized_lang
             return res
         finally:
-            if os.path.exists(tmp_script):
-                try:
-                    os.remove(tmp_script)
-                except Exception:
-                    pass
+            _cleanup_temp_script(tmp_script, script_dir)
 
     # 7. Rust 脚本化调度
     elif normalized_lang in ('rust', 'rs'):
         rust_script = shutil.which('rust-script')
         if rust_script:
-            res = _run_process([rust_script, '-e', code], timeout=timeout)
+            res = _run_process([rust_script, '-e', code], cwd=cwd, timeout=timeout)
             res["lang"] = normalized_lang
             return res
         rustc_bin = shutil.which('rustc')
@@ -307,27 +454,20 @@ def execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tru
                 "exit_code": 127,
                 "lang": normalized_lang
             }
-        with tempfile.NamedTemporaryFile(suffix='.rs', delete=False, mode='w', encoding='utf-8') as f:
-            if 'fn main()' not in code:
-                code = f"fn main() {{\n{code}\n}}"
-            f.write(code)
-            tmp_script = f.name
+        if 'fn main()' not in code:
+            code = f"fn main() {{\n{code}\n}}"
+        tmp_script, script_dir = _write_temp_script('.rs', code, cwd)
         out_bin = tmp_script[:-3] + ('.exe' if sys.platform == 'win32' else '')
         try:
-            c_res = _run_process([rustc_bin, tmp_script, '-o', out_bin], timeout=timeout)
+            c_res = _run_process([rustc_bin, tmp_script, '-o', out_bin], cwd=cwd, timeout=timeout)
             if not c_res['ok'] or c_res['exit_code'] != 0:
                 c_res["lang"] = normalized_lang
                 return c_res
-            res = _run_process([out_bin], timeout=timeout)
+            res = _run_process([out_bin], cwd=cwd, timeout=timeout)
             res["lang"] = normalized_lang
             return res
         finally:
-            for p in (tmp_script, out_bin):
-                if os.path.exists(p):
-                    try:
-                        os.remove(p)
-                    except Exception:
-                        pass
+            _cleanup_temp_script(tmp_script, script_dir)
 
     # 8. C / C++ 编译调度
     elif normalized_lang in ('c', 'cpp', 'c++'):
@@ -343,28 +483,21 @@ def execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tru
                 "lang": normalized_lang
             }
         suffix = '.cpp' if normalized_lang in ('cpp', 'c++') else '.c'
-        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False, mode='w', encoding='utf-8') as f:
-            if 'main(' not in code:
-                header = "#include <iostream>\nusing namespace std;\n" if suffix == '.cpp' else "#include <stdio.h>\n"
-                code = f"{header}int main() {{\n{code}\nreturn 0;\n}}"
-            f.write(code)
-            tmp_script = f.name
+        if 'main(' not in code:
+            header = "#include <iostream>\nusing namespace std;\n" if suffix == '.cpp' else "#include <stdio.h>\n"
+            code = f"{header}int main() {{\n{code}\nreturn 0;\n}}"
+        tmp_script, script_dir = _write_temp_script(suffix, code, cwd)
         out_bin = tmp_script[:-len(suffix)] + ('.exe' if sys.platform == 'win32' else '')
         try:
-            c_res = _run_process([compiler, tmp_script, '-o', out_bin], timeout=timeout)
+            c_res = _run_process([compiler, tmp_script, '-o', out_bin], cwd=cwd, timeout=timeout)
             if not c_res['ok'] or c_res['exit_code'] != 0:
                 c_res["lang"] = normalized_lang
                 return c_res
-            res = _run_process([out_bin], timeout=timeout)
+            res = _run_process([out_bin], cwd=cwd, timeout=timeout)
             res["lang"] = normalized_lang
             return res
         finally:
-            for p in (tmp_script, out_bin):
-                if os.path.exists(p):
-                    try:
-                        os.remove(p)
-                    except Exception:
-                        pass
+            _cleanup_temp_script(tmp_script, script_dir)
 
     # 未知或未适配语言兜底
     return {

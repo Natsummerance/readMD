@@ -395,6 +395,10 @@ def _scan_skill_candidates(root: Path, manifest: Iterable[Mapping[str, Any]]) ->
                 errors.append("skill_resource_not_utf8")
                 break
         skill_id = name if _ID_RE.fullmatch(name) else _slug(posixpath.basename(directory) or "root")
+        # A missing license is reviewable data, not an unsafe archive.  Keep
+        # the preview selectable as a disabled draft; malformed metadata,
+        # unknown variables and unreadable files remain hard blockers.
+        blocking_errors = [item for item in errors if item != "skill_license_missing"]
         skills.append({
             "id": skill_id,
             "path": path,
@@ -405,6 +409,8 @@ def _scan_skill_candidates(root: Path, manifest: Iterable[Mapping[str, Any]]) ->
             "source_files": file_items,
             "license_files": applicable_licenses,
             "valid": not errors,
+            "draft_allowed": bool(blocking_errors == [] and errors),
+            "publishable": not errors,
             "error_code": errors[0] if errors else "",
             "error_codes": errors,
             "scripts_present": any(Path(item["path"]).suffix.lower() in _SCRIPT_SUFFIXES for item in file_items),
@@ -519,6 +525,7 @@ def preview_import(url: str, credential_id: str = "") -> Dict[str, Any]:
             errors.append("skill_license_missing")
         skill_id = name if _ID_RE.fullmatch(name) else _slug(posixpath.basename(folder) or "root")
         file_list = sorted(p for p in paths if _under(p, folder))
+        blocking_errors = [item for item in errors if item != "skill_license_missing"]
         skills.append({
             "id": skill_id,
             "path": path,
@@ -528,6 +535,8 @@ def preview_import(url: str, credential_id: str = "") -> Dict[str, Any]:
             "files": file_list,
             "license_files": applicable_licenses,
             "valid": not errors,
+            "draft_allowed": bool(blocking_errors == [] and errors),
+            "publishable": not errors,
             "error_code": errors[0] if errors else "",
             "error_codes": errors,
             "scripts_present": any(Path(p).suffix.lower() in _SCRIPT_SUFFIXES for p in file_list),
@@ -547,10 +556,35 @@ def preview_import(url: str, credential_id: str = "") -> Dict[str, Any]:
 
 def _load_sources() -> Dict[str, Any]:
     data = load_json(SKILLS_FILE, {})
-    if not isinstance(data, dict) or data.get("schema_version") != 1:
-        return {"schema_version": 1, "sources": []}
+    if not isinstance(data, dict):
+        return {"schema_version": 2, "sources": []}
+    # Migrate the old source list while stripping persisted absolute paths.
+    # Local sources can still be re-imported from a fresh preview; their old
+    # path is intentionally not retained in the user-facing config.
+    if data.get("schema_version") not in (1, 2):
+        return {"schema_version": 2, "sources": []}
     if not isinstance(data.get("sources"), list):
         data["sources"] = []
+    data["schema_version"] = 2
+    migrated = False
+    for source in data["sources"]:
+        if not isinstance(source, dict):
+            continue
+        path = source.pop("source_path", "")
+        migrated = migrated or bool(path)
+        if path and not source.get("source_label"):
+            source["source_label"] = os.path.basename(str(path))
+        provenance = source.get("provenance")
+        if isinstance(provenance, dict):
+            path = provenance.pop("source_path", "")
+            migrated = migrated or bool(path)
+            if path and not source.get("source_label"):
+                source["source_label"] = os.path.basename(str(path))
+    # Persist the privacy migration immediately.  Keeping the sanitisation in
+    # memory only would leave legacy absolute paths (including usernames and
+    # drive letters) on disk and restore them on the next process start.
+    if migrated:
+        _save_sources(data)
     return data
 
 
@@ -671,9 +705,11 @@ def apply_import(preview: Mapping[str, Any], selections: Iterable[Mapping[str, A
             declared = scanned_by_path.get(path)
             if not isinstance(declared, Mapping):
                 raise SkillImportError("skill_path_invalid", "选中的 Skill 路径不在提交清单中")
-            if declared.get("valid") is not True:
+            if not _declaration_importable(declared):
                 code = str(declared.get("error_code") or "skill_invalid")
                 raise SkillImportError(code, "选中的 Skill 未通过安全校验")
+            if declared.get("valid") is True and not declared.get("license_files") and declared.get("publishable") is not False:
+                raise SkillImportError("skill_license_missing", "Skill 许可证文件不可用")
             directory = str(declared.get("directory") or posixpath.dirname(path)).strip("/")
             if not directory:
                 directory = ""
@@ -749,17 +785,21 @@ def apply_import(preview: Mapping[str, Any], selections: Iterable[Mapping[str, A
                     digest = hashlib.sha256(source_file.read_bytes()).hexdigest()
                     source_files.append({"path": source_file.relative_to(destination).as_posix(), "sha256": digest})
                 source_hash = _directory_sha256(destination)
+                enabled = bool(declared.get("publishable", True))
                 metadata = {
                     "id": skill_id,
                     "scope": "user",
-                    "enabled": True,
+                    "enabled": enabled,
+                    "publishable": enabled,
                     "scripts_allowed": False,
                     "source": "github",
                     "provenance": {"repository": parsed["canonical_url"], "commit": sha, "path": path},
                     "source_files": source_files,
                     "source_sha256": source_hash,
                     "license": ", ".join(str(x) for x in declared.get("license_files", [])),
-                    "adaptation_notes": ["Imported from GitHub as data; scripts remain disabled."],
+                    "adaptation_notes": [
+                        "Imported from GitHub as data; scripts remain disabled."
+                    ] + (["License review required before publishing or running."] if not enabled else []),
                 }
                 save_text_atomic(str(destination / "readmd.skill.json"), json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
                 # Validate the on-disk structure directly after writing metadata.
@@ -821,8 +861,10 @@ def _apply_filesystem_import(
             continue
         path = str(selected.get("path") or "").replace("\\", "/")
         declared = preview_skills.get(path)
-        if not isinstance(declared, Mapping) or declared.get("valid") is not True:
+        if not isinstance(declared, Mapping) or not _declaration_importable(declared):
             raise SkillImportError("skill_path_invalid", "选中的 Skill 不在有效预览清单中")
+        if declared.get("valid") is True and not declared.get("license_files") and declared.get("publishable") is not False:
+            raise SkillImportError("skill_license_missing", "Skill 许可证文件不可用")
         directory = str(declared.get("directory") or "").strip("/")
         if path.lower() != (posixpath.join(directory, "skill.md") if directory else "skill.md").lower():
             raise SkillImportError("skill_path_invalid", "选中的 Skill 目录与入口文件不匹配")
@@ -892,15 +934,17 @@ def _apply_filesystem_import(
                     "sha256": hashlib.sha256(source_file.read_bytes()).hexdigest(),
                 })
             source_hash = _directory_sha256(destination)
+            enabled = bool(declared.get("publishable", True))
             metadata = {
                 "id": skill_id,
                 "scope": "user",
-                "enabled": True,
+                "enabled": enabled,
+                "publishable": enabled,
                 "scripts_allowed": False,
                 "source": source_type,
                 "provenance": {
                     "type": source_type,
-                    "source_path": source_path,
+                    "source_label": os.path.basename(str(source_path)),
                     "source_sha256": actual_hash,
                     "archive_sha256": archive_hash,
                     "skill_path": path,
@@ -908,7 +952,9 @@ def _apply_filesystem_import(
                 "source_files": source_files,
                 "source_sha256": source_hash,
                 "license": ", ".join(str(item) for item in declared.get("license_files", [])),
-                "adaptation_notes": ["Imported from a local %s as data; scripts remain disabled." % source_type],
+                "adaptation_notes": [
+                    "Imported from a local %s as data; scripts remain disabled." % source_type
+                ] + (["License review required before publishing or running."] if not enabled else []),
             }
             save_text_atomic(str(destination / "readmd.skill.json"), json.dumps(metadata, ensure_ascii=False, indent=2) + "\n")
             try:
@@ -926,11 +972,11 @@ def _apply_filesystem_import(
     if not imported:
         raise SkillImportError("nothing_imported", "没有导入任何 Skill")
     prefix = "dir" if source_type == "directory" else source_type
-    source_id = str(preview.get("source_id") or prefix + "-" + hashlib.sha256(source_path.encode("utf-8")).hexdigest()[:20])
+    source_id = str(preview.get("source_id") or prefix + "-" + actual_hash[:20])
     source_record = {
         "source_id": source_id,
         "source_type": source_type,
-        "source_path": source_path,
+        "source_label": os.path.basename(str(source_path)),
         "source_sha256": actual_hash,
         "archive_sha256": archive_hash,
         "update_policy": "manual",
@@ -1003,6 +1049,16 @@ def _directory_sha256(directory: Path) -> str:
     return digest.hexdigest()
 
 
+def _declaration_importable(declared: Mapping[str, Any]) -> bool:
+    """Allow a license-less Skill only as a disabled, reviewable draft."""
+    if declared.get("valid") is True:
+        return True
+    codes = {str(code) for code in (declared.get("error_codes") or []) if code}
+    if not codes and declared.get("error_code"):
+        codes.add(str(declared.get("error_code")))
+    return declared.get("draft_allowed") is True and codes == {"skill_license_missing"}
+
+
 def list_sources() -> List[Dict[str, Any]]:
     return list(_load_sources().get("sources", []))
 
@@ -1017,6 +1073,8 @@ def preview_saved_source(source: Mapping[str, Any], credential_id: str = "") -> 
     if kind == "github":
         value = str(source.get("repository_url") or "")
     elif kind in {"directory", "zip"}:
+        # New persisted records intentionally omit absolute paths.  Legacy
+        # callers may still provide one explicitly for a one-off re-check.
         value = str(source.get("source_path") or "")
     else:
         raise SkillImportError("source_type_invalid", "不支持的 Skill 来源类型")

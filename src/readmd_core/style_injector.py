@@ -3,8 +3,8 @@
 
 查找优先级：
 1. 当前工作区 / 文档所在目录下的 `.readmd/custom.css` 与 `.readmd/head.html`
-2. 用户主目录 `~/.readmd/custom.css` 与 `~/.readmd/head.html`
-3. 自定义配置指定的路径
+2. ReadMD 平台数据目录下的 `custom.css` 与 `head.html`
+3. 旧版用户主目录 `~/.readmd/custom.css` 与 `~/.readmd/head.html`
 """
 
 import os
@@ -19,7 +19,19 @@ def find_custom_file(filename: str, workspace_dir: Optional[str] = None) -> Opti
         if os.path.isfile(ws_path):
             return ws_path
 
-    # 2. 探测用户家目录 ~/.readmd/
+    # 2. ReadMD 配置目录（可由 READMD_DATA_DIR 隔离覆盖）。
+    try:
+        data_dir = os.environ.get('READMD_DATA_DIR')
+        if not data_dir:
+            from .config import DATA_DIR
+            data_dir = DATA_DIR
+        data_path = os.path.join(data_dir, filename)
+        if os.path.isfile(data_path):
+            return data_path
+    except Exception:
+        pass
+
+    # 3. 兼容旧版用户家目录 ~/.readmd/
     home_dir = os.path.expanduser('~')
     home_path = os.path.join(home_dir, '.readmd', filename)
     if os.path.isfile(home_path):
@@ -76,17 +88,31 @@ def inject_custom_styles_to_html(html_content: str, workspace_dir: Optional[str]
 
 def get_custom_styles(workspace_dir: Optional[str] = None) -> dict:
     """获取自定义 CSS 和 Head 结构。"""
+    css_path = find_custom_file('custom.css', workspace_dir=workspace_dir)
+    head_path = find_custom_file('head.html', workspace_dir=workspace_dir)
     return {
         'css': get_custom_css(workspace_dir=workspace_dir),
         'head': get_custom_head(workspace_dir=workspace_dir),
-        'css_path': find_custom_file('custom.css', workspace_dir=workspace_dir) or '',
-        'head_path': find_custom_file('head.html', workspace_dir=workspace_dir) or ''
+        # Never expose local absolute paths through the bridge/API.  The UI
+        # only needs to know whether a file is present and its conventional
+        # name; workspace location remains an implementation detail.
+        'css_path': os.path.basename(css_path) if css_path else '',
+        'head_path': os.path.basename(head_path) if head_path else ''
     }
 
 
 def save_custom_styles(css: str, head_html: str, workspace_dir: Optional[str] = None) -> bool:
     """保存自定义 CSS 和 Head。"""
-    target_dir = os.path.join(workspace_dir, '.readmd') if workspace_dir else os.path.join(os.path.expanduser('~'), '.readmd')
+    if workspace_dir:
+        target_dir = os.path.join(workspace_dir, '.readmd')
+    else:
+        try:
+            target_dir = os.environ.get('READMD_DATA_DIR')
+            if not target_dir:
+                from .config import DATA_DIR
+                target_dir = DATA_DIR
+        except Exception:
+            return False
     try:
         os.makedirs(target_dir, exist_ok=True)
         with open(os.path.join(target_dir, 'custom.css'), 'w', encoding='utf-8') as f:
@@ -96,4 +122,3 @@ def save_custom_styles(css: str, head_html: str, workspace_dir: Optional[str] = 
         return True
     except Exception:
         return False
-

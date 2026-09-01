@@ -33,6 +33,35 @@
     return sharedFilm.promise;
   };
 
+  const cinemaFilm = {
+    frames: Array.from({ length: 124 }, () => null),
+    ready: false,
+    promise: null,
+  };
+
+  const loadCinemaFrame = (index) => new Promise((resolve) => {
+    if (cinemaFilm.frames[index]) return resolve(cinemaFilm.frames[index]);
+    const frame = new Image();
+    frame.decoding = 'async';
+    frame.onload = () => {
+      cinemaFilm.frames[index] = frame;
+      resolve(frame);
+    };
+    frame.onerror = () => resolve(null);
+    frame.src = `/media/cinema-frames/frame-${String(index + 1).padStart(3, '0')}.webp`;
+  });
+
+  const ensureCinemaFilmFrames = () => {
+    if (!cinemaFilm.promise) {
+      cinemaFilm.promise = Promise.all(Array.from({ length: cinemaFilm.frames.length }, (_, index) => loadCinemaFrame(index)))
+        .then(() => {
+          cinemaFilm.ready = true;
+          return cinemaFilm.frames;
+        });
+    }
+    return cinemaFilm.promise;
+  };
+
   const startParticles = (canvas) => {
     const context = canvas.getContext('2d', { alpha: true });
     if (!context) return;
@@ -332,7 +361,7 @@
     if (!section || !canvas || !track) return;
 
     const context = canvas.getContext('2d', { alpha: false });
-    const frameCount = sharedFilm.frames.length;
+    const frameCount = cinemaFilm.frames.length;
     let canvasWidth = 1440;
     let canvasHeight = 900;
     let effectsFrame = 0;
@@ -343,6 +372,7 @@
     let velocity = 0;
     let lastTime = performance.now();
     let particles = [];
+    let cinemaLoadStarted = false;
 
     const buildCanvas = () => {
       const rect = canvas.getBoundingClientRect();
@@ -393,8 +423,8 @@
       const firstIndex = Math.floor(clamped);
       const secondIndex = Math.min(firstIndex + 1, frameCount - 1);
       const amount = clamped - firstIndex;
-      const first = sharedFilm.frames[firstIndex];
-      const second = sharedFilm.frames[secondIndex];
+      const first = cinemaFilm.frames[firstIndex];
+      const second = cinemaFilm.frames[secondIndex];
 
       drawCover(first, 1.0, 0, 0, alpha);
       if (second && amount > 0.01) {
@@ -405,7 +435,7 @@
     // Clean subtle depth bloom (preserves contract without distortion)
     const drawSlices = (position, progress) => {
       if (Math.abs(velocity) < 0.02) return;
-      const frame = sharedFilm.frames[Math.floor(clamp(position, 0, frameCount - 1))];
+      const frame = cinemaFilm.frames[Math.floor(clamp(position, 0, frameCount - 1))];
       if (!frame) return;
       context.save();
       context.globalAlpha = Math.min(Math.abs(velocity) * 0.12, 0.05);
@@ -429,13 +459,11 @@
       const rect = section.getBoundingClientRect();
       const range = Math.max(rect.height - window.innerHeight, 1);
       const linear = clamp(-rect.top / range, 0, 1);
-      targetProgress = linear <= 0.45
-        ? (linear / 0.45) * 0.25
-        : 0.25 + ((linear - 0.45) / 0.55) * 0.75;
+      targetProgress = linear;
 
-      // Spring physics lerp
-      currentProgress += (targetProgress - currentProgress) * 0.14;
-      if (Math.abs(targetProgress - currentProgress) < 0.0005) {
+      // Smooth lerp physics
+      currentProgress += (targetProgress - currentProgress) * 0.18;
+      if (Math.abs(targetProgress - currentProgress) < 0.0002) {
         currentProgress = targetProgress;
       }
 
@@ -450,19 +478,9 @@
       lastPosition = currentProgress;
       canvas.dataset.syncProgress = currentProgress.toFixed(4);
 
-      const position = currentProgress * (frameCount - 1);
-      context.clearRect(0, 0, canvasWidth, canvasHeight);
-      context.fillStyle = '#08090c';
-      context.fillRect(0, 0, canvasWidth, canvasHeight);
-      if (!sharedFilm.ready) return true;
-
-      drawBlendedFrame(position, 0.92, currentProgress);
-      drawSlices(position, currentProgress);
-      drawParticles();
-
-      const railDistance = Math.max(track.scrollWidth - window.innerWidth + 56, 0);
-      const railEase = currentProgress <= 0.32 ? 0 : (currentProgress - 0.32) / 0.68;
-      const railTranslate = -railDistance * (railEase ** 2 * (3 - 2 * railEase));
+      // Uniformly distributed horizontal rail translation
+      const railDistance = Math.max(track.scrollWidth - window.innerWidth + 64, 0);
+      const railTranslate = -railDistance * currentProgress;
       track.style.transform = `translate3d(${railTranslate.toFixed(2)}px,0,0)`;
       if (progressBar) progressBar.style.transform = `scaleX(${currentProgress})`;
 
@@ -470,10 +488,19 @@
       panels.forEach((panel) => {
         const panelRect = panel.getBoundingClientRect();
         const distance = Math.abs(panelRect.left + panelRect.width / 2 - viewportCenter) / window.innerWidth;
-        const proximity = clamp(1 - distance * 1.6, 0, 1);
-        panel.style.opacity = (0.4 + proximity * 0.6).toFixed(3);
-        panel.style.transform = `translateY(${((1 - proximity) * 22).toFixed(1)}px) scale(${(0.95 + proximity * 0.05).toFixed(3)})`;
+        const proximity = clamp(1 - distance * 1.5, 0, 1);
+        panel.style.opacity = (0.35 + proximity * 0.65).toFixed(3);
+        panel.style.transform = `translateY(${((1 - proximity) * 18).toFixed(1)}px) scale(${(0.96 + proximity * 0.04).toFixed(3)})`;
       });
+
+      // Canvas rendering synchronized 1:1 across all 124 frames
+      const position = currentProgress * (frameCount - 1);
+      context.clearRect(0, 0, canvasWidth, canvasHeight);
+      context.fillStyle = '#08090c';
+      context.fillRect(0, 0, canvasWidth, canvasHeight);
+      drawBlendedFrame(position, 0.92, currentProgress);
+      drawSlices(position, currentProgress);
+      drawParticles();
       return true;
     };
 
@@ -492,6 +519,17 @@
       }
     };
 
+    const loadCinemaWhenVisible = () => {
+      if (reducedMotion.matches || cinemaLoadStarted) return cinemaFilm.promise || Promise.resolve(cinemaFilm.frames);
+      cinemaLoadStarted = true;
+      return ensureCinemaFilmFrames().then(() => {
+        buildCanvas();
+        updateCapabilityCinema(performance.now());
+        playCinema();
+        return cinemaFilm.frames;
+      });
+    };
+
     buildCanvas();
     const resizeObserver = new ResizeObserver(() => {
       buildCanvas();
@@ -501,15 +539,17 @@
 
     const visibilityObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
-      playCinema();
-    }, { rootMargin: '15% 0px' });
+      if (visible) {
+        loadCinemaWhenVisible().then(() => {
+          if (visible && !reducedMotion.matches) {
+            updateCapabilityCinema(performance.now());
+            playCinema();
+          }
+        });
+      }
+    }, { rootMargin: '25% 0px' });
     visibilityObserver.observe(section);
     document.addEventListener('visibilitychange', playCinema);
-
-    ensureSharedFilmFrames().then(() => {
-      buildCanvas();
-      updateCapabilityCinema(performance.now());
-    });
 
     if (reducedMotion.matches) {
       if (progressBar) progressBar.style.display = 'none';

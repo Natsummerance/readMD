@@ -68,7 +68,6 @@
         <button class="more-group-header" type="button" aria-expanded="true"><span data-i18n="menu.grpImport">导入</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
           <button id="btn-convert" class="more-item"><span data-i18n="menu.convert">万物转换</span><em data-i18n="menu.convertSub">格式转 MD</em></button>
-          <button id="btn-batch" class="more-item"><span data-i18n="menu.batch">批量工作台</span><em data-i18n="menu.batchSub">多文件转换 / OCR</em></button>
           <button id="btn-web" class="more-item"><span data-i18n="menu.web">网页提取</span><em data-i18n="menu.webSub">网页转 MD</em></button>
           <button id="btn-ocr" class="more-item"><span data-i18n="menu.ocr">扫描识别</span><em data-i18n="menu.ocrSub">OCR 识别</em></button>
           <button id="btn-clipboard-new" class="more-item"><span data-i18n="menu.clipboard">剪贴新建</span><em data-i18n="menu.clipboardSub">剪贴板转 MD</em></button>
@@ -602,7 +601,7 @@
       <input type="file" id="tpl-folder-input" webkitdirectory directory multiple hidden>
       <input type="file" id="tpl-zip-input" accept=".zip,application/zip" hidden>
       <div id="tpl-import-menu" class="tpl-import-menu hidden">
-        <div class="tpl-import-sources" role="tablist" aria-label="Skill">
+        <div class="tpl-import-sources" role="tablist" aria-label="Skill" data-i18n-aria="tpl.title">
           <button id="tpl-import-source-github" class="tpl-import-source active" type="button" role="tab" aria-selected="true">GitHub</button>
           <button id="tpl-import-source-folder" class="tpl-import-source" type="button" role="tab" aria-selected="false" data-i18n="app.folder">打开文件夹</button>
           <button id="tpl-import-source-zip" class="tpl-import-source" type="button" role="tab" aria-selected="false">ZIP</button>
@@ -611,11 +610,11 @@
           <div class="tpl-github-fields">
             <label class="tpl-github-input" for="tpl-github-url">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07.07l2-2A5 5 0 0 0 12 4l-1.15 1.15"/><path d="M14 11a5 5 0 0 0-7.07-.07l-2 2A5 5 0 0 0 12 20l1.15-1.15"/></svg>
-              <input id="tpl-github-url" type="url" inputmode="url" placeholder="https://github.com/owner/repository" aria-label="GitHub" data-i18n-aria="tpl.importMd" autocomplete="off">
+              <input id="tpl-github-url" type="url" inputmode="url" placeholder="https://github.com/owner/repository" aria-label="GitHub" data-i18n-aria="web.urlPlaceholder" autocomplete="off">
             </label>
             <label id="tpl-github-credential-wrap" class="tpl-github-input tpl-github-credential hidden" for="tpl-github-credential">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-              <input id="tpl-github-credential" type="password" placeholder="GitHub token" aria-label="GitHub token" autocomplete="off" spellcheck="false">
+              <input id="tpl-github-credential" type="password" placeholder="GitHub token" aria-label="GitHub token" data-i18n-aria="ai.apiKey" autocomplete="off" spellcheck="false">
             </label>
             <button id="tpl-github-preview-btn" type="button" class="tb-btn accent icon tpl-github-preview-btn" aria-label="导入模板" data-i18n-aria="tpl.importMd">
               <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6"/><path d="m20 20-4-4"/></svg>
@@ -969,33 +968,11 @@
       <div class="convert-foot">
         <span id="convert-status" class="convert-status"></span>
         <span class="export-spacer"></span>
+        <button id="batch-cancel" class="tb-btn hidden" data-i18n="batch.cancel">取消全部</button>
         <button id="convert-open-dir" class="tb-btn hidden" data-i18n="convert.openDir">打开结果目录</button>
       </div>
     </div>
     <p class="fix-note" id="convert-note" data-i18n="convert.note">转换结果自动保存为源文件同目录同名 .md（如 report.docx → report.md）。docx 公式、PDF 表格走专用解析，其余格式自动回退通用转换；输出经过严格校验（表格 / 代码围栏 / 公式 / 图片引用）。</p>
-  </div>
-</div>
-
-<!-- 批量工作台弹窗 -->
-<div id="batch-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="batch-title">
-  <div id="batch-box">
-    <div class="export-head">
-      <h3 id="batch-title" data-i18n="batch.title">批量工作台</h3>
-      <button id="batch-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">&#10005;</button>
-    </div>
-    <div class="convert-body">
-      <div class="convert-actions">
-        <button id="batch-files" class="tb-btn accent" data-i18n="batch.selectFiles">选择文件（可多选）</button>
-        <button id="batch-folder" class="tb-btn" data-i18n="batch.selectFolder">选择文件夹</button>
-      </div>
-      <div id="batch-list" class="convert-list batch-list"></div>
-      <div class="convert-foot">
-        <span id="batch-status" class="convert-status"></span>
-        <span class="export-spacer"></span>
-        <button id="batch-cancel" class="tb-btn hidden" data-i18n="batch.cancel">取消全部</button>
-      </div>
-    </div>
-    <p class="fix-note" id="batch-note" data-i18n="batch.note">文档批量转换，图片逐张 OCR；单个文件失败不影响后续任务，结果逐行可追溯。</p>
   </div>
 </div>
 
@@ -1083,10 +1060,10 @@
   <div class="modal-dialog lang-modal-dialog">
     <div class="modal-header">
       <h3 id="lang-title" data-i18n="lang.title">选择界面语言 (Language)</h3>
-      <button class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close" onclick="i18n.closeModal()">✕</button>
+      <button id="lang-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div class="lang-search-wrap">
-<input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." aria-label="搜索语言" aria-controls="lang-grid" data-i18n-placeholder="lang.search" data-i18n-aria="lang.search" oninput="i18n.renderLanguageGrid(this.value)">
+<input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." aria-label="搜索语言" aria-controls="lang-grid" data-i18n-placeholder="lang.search" data-i18n-aria="lang.search">
     </div>
     <div id="lang-grid" class="lang-grid-container" role="listbox" aria-label="语言 / Language"></div>
   </div>
@@ -1097,7 +1074,7 @@
   <div class="modal-dialog" style="max-width: 320px;">
     <div class="modal-header">
       <h3 id="table-title" data-i18n="editor.table">插入表格</h3>
-      <button class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close" onclick="closeTableModal()">✕</button>
+      <button id="table-modal-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">✕</button>
     </div>
     <div style="padding: 12px 16px; text-align: center;">
       <div id="table-grid-picker" class="table-grid-picker"></div>

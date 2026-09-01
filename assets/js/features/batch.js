@@ -27,16 +27,21 @@ function openBatchModal() {
   batchFinished = false;
   batchCount = { ok: 0, skipped: 0, error: 0, canceled: 0 };
   for (const k in batchRowsBySrc) delete batchRowsBySrc[k];
-  const modal = $('batch-modal');
+  const modal = $('convert-modal');
   if (modal) modal.classList.remove('hidden');
-  $('batch-list').innerHTML = '';
-  $('batch-status').textContent = '';
+  // Batch and single-file conversion share one surface; never leak the
+  // single-file "open output" action into a fresh batch run.
+  $('convert-open-dir')?.classList.add('hidden');
+  $('convert-list').innerHTML = '';
+  $('convert-status').textContent = '';
+  const note = $('convert-note');
+  if (note) note.textContent = batchT('batch.note') || '';
   $('batch-cancel').classList.add('hidden');
 }
 
 function closeBatchModal() {
   stopBatchPoll();
-  $('batch-modal').classList.add('hidden');
+  $('convert-modal').classList.add('hidden');
 }
 
 function stopBatchPoll() {
@@ -52,7 +57,7 @@ function makeBatchRow(path) {
   nm.title = path;
   const st = document.createElement('span');
   st.className = 'batch-state';
-  st.textContent = batchT('batch.statusQueued') || '排队中';
+  st.textContent = batchT('batch.statusQueued') || '';
   row.appendChild(nm); row.appendChild(st);
   row.addEventListener('click', async () => {
     if (!row.dataset.done || !row.dataset.out) return;
@@ -67,12 +72,12 @@ function setBatchRow(row, status, title) {
   const st = row.querySelector('.batch-state');
   if (st) {
     const labels = {
-      queued: batchT('batch.statusQueued') || '排队中',
-      running: batchT('batch.statusRunning') || '处理中',
-      ok: batchT('batch.statusOk') || '成功',
-      skipped: batchT('batch.statusSkipped') || '跳过（已存在）',
-      error: batchT('batch.statusError') || '失败',
-      canceled: batchT('batch.statusCanceled') || '已取消',
+      queued: batchT('batch.statusQueued') || '',
+      running: batchT('batch.statusRunning') || '',
+      ok: batchT('batch.statusOk') || '',
+      skipped: batchT('batch.statusSkipped') || '',
+      error: batchT('batch.statusError') || '',
+      canceled: batchT('batch.statusCanceled') || '',
     };
     st.textContent = labels[status] || status;
     if (status === 'error' && title) st.title = title;
@@ -92,7 +97,7 @@ async function enqueueBatchFiles(paths, overwrite) {
   if (list.some(p => !IMG_RE.test(p)) && moduleBlocked('convert')) return;
   openBatchModal();
   const docs = [], images = [];
-  const listEl = $('batch-list');
+  const listEl = $('convert-list');
   list.forEach(p => {
     const row = makeBatchRow(p);
     listEl.appendChild(row);
@@ -103,20 +108,20 @@ async function enqueueBatchFiles(paths, overwrite) {
   batchOcrDone = images.length === 0;
   batchFinished = false;
   $('batch-cancel').classList.remove('hidden');
-  $('batch-status').textContent = batchT('batch.preparing') || '准备中…';
+  $('convert-status').textContent = batchT('batch.preparing') || '';
   if (docs.length) runBatchDocsLane(docs, overwrite);
   if (images.length) runBatchOcrLane(images);
 }
 
 async function runBatchDocsLane(paths, overwrite) {
   try {
-    if (!(await ensureModule('convert'))) throw new Error(batchT('convert.statusError') || '失败');
+    if (!(await ensureModule('convert'))) throw new Error('convert_module_unavailable');
     const r = await apiFetch('/api/convert/batch', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paths, overwrite: !!overwrite }),
+      body: JSON.stringify({ paths, overwrite: !!overwrite, confirm: true }),
     });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(d.error || ('HTTP ' + r.status));
+    if (!r.ok) throw new Error(d.error_code || ('http_' + r.status));
     batchJobId = d.job;
     if (batchCancelRequested) sendBatchCancel();
     pollBatchJob(d.job);
@@ -177,8 +182,8 @@ function renderBatchProgress(d) {
     }
   });
   if (d.running) {
-    $('batch-status').textContent = batchT('batch.converting', { done: d.done, total: d.total })
-      || ('转换中 ' + d.done + '/' + d.total + '…');
+    $('convert-status').textContent = batchT('batch.converting', { done: d.done, total: d.total })
+      || '';
   }
 }
 
@@ -202,7 +207,7 @@ async function runBatchOcrLane(items) {
       const r = await apiFetch('/api/ocr?p=' + encodeURIComponent(path));
       const d = await r.json().catch(() => ({}));
       const ok = r.ok && d.content;
-      setBatchRow(row, ok ? 'ok' : 'error', ok ? '' : (d.error || d.note || ('HTTP ' + r.status)));
+      setBatchRow(row, ok ? 'ok' : 'error', ok ? '' : (d.error_code || 'ocr_failed'));
       countBatchRow(row, ok ? 'ok' : 'error');
     } catch (e) {
       setBatchRow(row, 'error', e && e.message);
@@ -218,11 +223,11 @@ function maybeFinishBatch() {
   batchFinished = true;
   const c = batchCount;
   let text = batchT('batch.summary', { ok: c.ok, skipped: c.skipped, failed: c.error })
-    || ('完成：成功 ' + c.ok + ' · 跳过 ' + c.skipped + ' · 失败 ' + c.error);
+    || '';
   if (c.canceled) {
-    text += ' · ' + (batchT('batch.summaryCanceled', { canceled: c.canceled }) || ('已取消 ' + c.canceled));
+    text += ' · ' + (batchT('batch.summaryCanceled', { canceled: c.canceled }) || '');
   }
-  $('batch-status').textContent = text;
+  $('convert-status').textContent = text;
   $('batch-cancel').classList.add('hidden');
 }
 
@@ -230,43 +235,4 @@ function onBatchCancel() {
   batchOcrCanceled = true;
   batchCancelRequested = true;
   sendBatchCancel();
-}
-
-function pickBatchFiles() {
-  if (hasPy) {
-    py.choose_many_files().then(files => {
-      if (files && files.length) enqueueBatchFiles(files, false);
-    }).catch(() => {});
-    return;
-  }
-  const input = $('batch-file-input');
-  input.value = '';
-  input.onchange = async () => {
-    const files = Array.from(input.files || []);
-    if (!files.length) return;
-    const paths = [];
-    for (const f of files) {
-      const p = await uploadFile(f);
-      if (p) paths.push(p);
-    }
-    if (paths.length) enqueueBatchFiles(paths, false);
-  };
-  input.click();
-}
-
-async function pickBatchFolder() {
-  if (!hasPy) { showToast(batchT('toast.convertBrowserNotice') || '浏览器模式请使用“选择文件”转换'); return; }
-  let dir = null;
-  try { dir = await py.choose_folder(); } catch (e) { dir = null; }
-  if (!dir) return;
-  try {
-    const r = await apiFetch('/api/convert/collect?dir=' + encodeURIComponent(dir));
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || (batchT('convert.statusError') || '收集失败'));
-    const files = d.files || [];
-    if (!files.length) { showToast(batchT('convert.noConvertibleFiles') || '该目录下没有可转换的文件'); return; }
-    enqueueBatchFiles(files, false);
-  } catch (e) {
-    showToast((batchT('toast.collectFilesFail') || '收集文件失败：') + e.message);
-  }
 }

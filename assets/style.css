@@ -105,14 +105,11 @@ input[type="checkbox"] {
   flex: 0 0 auto;
   accent-color: var(--accent);
 }
-/* markdown task lists and the incognito toggle keep their 24px touch targets */
-.markdown-body input[type="checkbox"],
-#ai-incognito {
-  width: 24px;
-  height: 24px;
-}
+/* The control stays compact while its surrounding label remains touch-safe. */
 label:has(input[type="checkbox"]) {
+  display: inline-flex;
   min-height: 44px;
+  padding-block: 4px;
   align-items: center;
 }
 input[type="range"] { min-height: 28px; accent-color: var(--accent); }
@@ -2849,6 +2846,9 @@ body[data-theme="dark"] .conn-status { color: var(--fg3); }
 #main-col.pv-right #pv-splitter { order: 2; }
 #main-col.pv-right #preview-wrap { order: 3; border-top: none; border-left: 1px solid var(--border); }
 #main-col.pv-left #preview-wrap, #main-col.pv-right #preview-wrap { flex: 0 0 50%; }
+#main-col.pv-left #edit-wrap, #main-col.pv-right #edit-wrap,
+#main-col.pv-left #edit-area, #main-col.pv-right #edit-area { min-width: 320px; flex: 1 1 50%; }
+#main-col.pv-left #preview-wrap, #main-col.pv-right #preview-wrap { min-width: 320px; }
 #main-col.pv-left #pv-splitter, #main-col.pv-right #pv-splitter { cursor: col-resize; }
 #main-col.pv-left #pv-splitter::after, #main-col.pv-right #pv-splitter::after { inset: 30% 2px; }
 #main-col.pv-bottom #preview-wrap, #main-col.pv-top #preview-wrap { flex: 0 0 46%; }
@@ -2942,30 +2942,6 @@ body[data-theme="dark"] .conn-status { color: var(--fg3); }
 .convert-status { font-size: 12px; color: var(--fg2); flex: 1; min-width: 0; }
 #convert-open-dir .tb-label { }
 
-/* ---------- 批量工作台弹窗 ---------- */
-#batch-modal {
-  position: fixed;
-  inset: 0;
-  background: var(--overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-#batch-modal.hidden { display: none; }
-#batch-box {
-  background: var(--bg2);
-  color: var(--fg);
-  border-radius: var(--radius-l);
-  box-shadow: var(--shadow-3);
-  padding: 18px 20px;
-  width: min(560px, 95vw);
-  max-height: 88vh;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-#batch-box h3 { margin: 0; font-size: 15px; }
 .batch-item {
   display: flex;
   align-items: center;

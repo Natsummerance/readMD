@@ -991,12 +991,12 @@ async function runExport() {
   try {
     if (fmt === 'epub') {
       if (hasPy && py.export_epub) {
-        r = await py.export_epub(content, '', options.meta || {});
+        r = await py.export_epub(content, '', options.meta || {}, true);
       } else {
         const resp = await apiFetch('/api/export/epub', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: content, meta: options.meta || {} })
+          body: JSON.stringify({ content: content, meta: options.meta || {}, confirm: true })
         });
         r = await resp.json();
       }
@@ -1032,13 +1032,13 @@ async function runExport() {
   const res = $('export-result');
   res.textContent = (_t('toast.exportedPrefix') || '已导出：') + (r.path || '导出完成');
   res.className = 'export-result ok';
-  if (r.path) {
+  if (r.path && hasPy && py) {
     $('export-open').classList.remove('hidden');
     $('export-reveal').classList.remove('hidden');
     $('export-open').onclick = () => py.open_path(r.path);
     $('export-reveal').onclick = () => py.reveal_path(r.path);
   }
-  try { py.save_export_presets({ last: { fmt: fmt, options: options } }); } catch (e) { /* ignore */ }
+  try { if (hasPy && py.save_export_presets) py.save_export_presets({ last: { fmt: fmt, options: options } }); } catch (e) { /* ignore */ }
   if (r.warns && r.warns.length) showToast(_t('toast.exportCompleteWarns', { count: r.warns.length }) || ('导出完成，' + r.warns.length + ' 条提示'));
   else showToast(_t('toast.exportSuccess') || '导出成功');
 }

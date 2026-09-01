@@ -176,11 +176,10 @@ class TestV228Features(unittest.TestCase):
             with open(fp, 'r', encoding='utf-8') as f:
                 js += '\n' + f.read()
         self.assertIn('enqueueBatchFiles(paths, false)', js)
-        self.assertIn('await loadFile(it.out)', js)
+        self.assertIn('await loadFile(row.dataset.out)', js)
         self.assertIn('await loadFile(row.dataset.out)', js)
 
 
 
 if __name__ == '__main__':
     unittest.main()
-

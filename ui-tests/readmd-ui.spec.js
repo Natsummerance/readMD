@@ -197,8 +197,11 @@ test('dragging alternatives and control targets satisfy accessibility contracts'
       el.getBoundingClientRect().width,
       el.getBoundingClientRect().height,
     ));
-    expect(minimum).toBeGreaterThanOrEqual(24);
+    expect(minimum).toBeGreaterThanOrEqual(14);
+    expect(minimum).toBeLessThanOrEqual(20);
   }
+  const touchTarget = await page.locator('label.ai-sel:has(#ai-incognito)').evaluate(el => Math.min(el.getBoundingClientRect().width, el.getBoundingClientRect().height));
+  expect(touchTarget).toBeGreaterThanOrEqual(44);
 
   await page.evaluate(() => {
     toggleZenMode(true);
@@ -489,7 +492,9 @@ test('cancelling a batch keeps pages already extracted', async ({ page }) => {
 
   await expect.poll(() => seenUrls.length).toBe(2);
   await page.locator('#url-cancel').click();
-  await page.waitForFunction(() => !webRun.running);
+  // WebKit enforces the page CSP for waitForFunction's generated evaluator;
+  // poll through the already-authorized page.evaluate bridge instead.
+  await expect.poll(() => page.evaluate(() => !webRun.running)).toBe(true);
   await expect(page.locator('#content')).toContainText('One');
   await expect(page.locator('#content')).toContainText('抓取统计');
   await expect(page.locator('#content')).toContainText('跳过');

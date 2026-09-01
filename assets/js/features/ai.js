@@ -239,6 +239,17 @@ function skillLicenseText(value) {
   return value.spdx || value.id || value.name || value.license || '';
 }
 
+// All AI entry points (editor, export, fixes and the main assistant) consume
+// the same provider registry.  Refresh the shared status immediately after a
+// settings save/load so no surface keeps a stale "not configured" indicator.
+window.addEventListener('readmd:ai-config-changed', () => {
+  updateAiConnectionSummary();
+  document.querySelectorAll('[data-ai-config-state]').forEach(el => {
+    const configured = !!(state.ai.providers || []).some(p => p.has_key || p.key_source || p.credential_id || isLocalAiProvider(p));
+    el.dataset.aiConfigured = configured ? 'true' : 'false';
+  });
+});
+
 function skillRevisionText(value) {
   if (!value || typeof value !== 'object') return '';
   return value.revision || value.commit || value.ref || value.source_revision || '';
@@ -253,6 +264,7 @@ function appendSkillFact(host, text, prefix) {
 }
 
 function renderSkillOverview(t) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const host = $('tpl-skill-overview');
   if (!host) return;
   host.replaceChildren();
@@ -267,7 +279,8 @@ function renderSkillOverview(t) {
   }
   const facts = document.createElement('div');
   facts.className = 'tpl-skill-facts';
-  appendSkillFact(facts, t.scope || (t.builtin ? 'builtin' : 'user'), '◫ ');
+  const scopeLabel = t.builtin ? _t('ai.officialPresets') : _t('ai.customConnections');
+  appendSkillFact(facts, scopeLabel, '◫ ');
   appendSkillFact(facts, skillLicenseText(t.license), '© ');
   appendSkillFact(facts, skillRevisionText(t.provenance), '@ ');
   (t.variables || []).forEach(variable => appendSkillFact(facts, variable, '{ } '));
@@ -278,7 +291,10 @@ function renderSkillOverview(t) {
       if (typeof item === 'string') return item;
       const file = item && (item.path || item.file || item.name) || '';
       const hash = item && (item.sha256 || item.hash) || '';
-      return [file, hash ? hash.slice(0, 16) : ''].filter(Boolean).join('  ·  ');
+      // Provenance is useful in the workbench, but never expose a local
+      // absolute path from legacy registries or API responses.
+      const safeFile = String(file).split(/[\\/]/).pop();
+      return [safeFile, hash ? hash.slice(0, 16) : ''].filter(Boolean).join('  ·  ');
     }).filter(Boolean);
   if (sourceLines.length) {
     const sources = document.createElement('pre');
@@ -332,6 +348,7 @@ function selectTpl(id, editing) {
   if ($('tpl-action')) $('tpl-action').value = (t && t.action) || 'custom';
   $('tpl-system').value = t ? (t.system || '') : '';
   $('tpl-user').value = t ? (t.user || '') : '';
+  $('tpl-user').setAttribute('placeholder', _t('tpl.userPlaceholder') || '');
   $('tpl-name').readOnly = builtin;
   $('tpl-system').readOnly = builtin;
   $('tpl-user').readOnly = builtin;
@@ -350,7 +367,7 @@ function copyCurrentSkill() {
   const copyId = (base + '-custom').slice(0, 64);
   selectTpl(null, true);
   $('tpl-id').value = copyId;
-  $('tpl-name').value = (current.name || copyId) + ' (Copy)';
+  $('tpl-name').value = current.name || copyId;
   $('tpl-system').value = current.system || '';
   $('tpl-user').value = current.user || '';
   $('tpl-name').readOnly = $('tpl-system').readOnly = $('tpl-user').readOnly = false;
@@ -371,8 +388,16 @@ async function generateSkillDraft() {
   if (!active.credential_id && !isLocalAiProvider(active)) {
     showToast(_t('toast.noApiKeyNotice') || '请先在连接设置中配置凭据'); return;
   }
-  const request = window.prompt(_t('ai.promptPlaceholder'), '');
-  if (!request || !request.trim()) return;
+  const requestField = $('tpl-user');
+  const request = String((requestField && requestField.value) || ($('ai-prompt') && $('ai-prompt').value) || '').trim();
+  if (!request) {
+    if (requestField) {
+      requestField.setAttribute('placeholder', _t('ai.extraReqLabel') || '补充要求');
+      requestField.focus();
+    }
+    showToast(_t('ai.extraReqLabel') || _t('ai.promptPlaceholder'));
+    return;
+  }
   const button = $('tpl-ai-generate');
   if (button) { button.disabled = true; button.textContent = _t('ai.generating'); }
   try {
@@ -1012,6 +1037,11 @@ async function loadAiConfig() {
     state.ai.providers = mergeAiProviders(cfg.custom || [], cfg.presets || []);
     state.ai.upstreamCatalog = Array.isArray(cfg.upstream_catalog) ? cfg.upstream_catalog : [];
     fillAiProviders(state.ai.providers, cfg.current || {});
+    window.dispatchEvent(new CustomEvent('readmd:ai-config-changed', { detail: {
+      providerId: (cfg.current || {}).provider_id || '',
+      model: (cfg.current || {}).model || '',
+      configured: state.ai.providers.some(p => p.has_key || p.key_source || p.credential_id || isLocalAiProvider(p)),
+    }}));
     loadAiPrompts();
     loadAiSessions();
     return cfg;
@@ -1349,6 +1379,12 @@ async function loadAiModels() {
   let p = currentAiProvider();
   const local = isLocalAiProvider(p);
   if (!local && !key && !(p && p.has_key)) { showToast(_t('toast.enterApiKeyFirst') || '请先填写 API Key'); return; }
+  // Persist a newly entered key before discovery so the provider endpoint
+  // receives only an opaque credential_id, never a raw secret.
+  if (!local && key && p && !p.credential_id) {
+    if (!(await saveAiSelection(true))) return;
+    p = currentAiProvider() || p;
+  }
   try {
     var requestHeaders = readAiCustomHeaders();
   } catch (e) {
@@ -1521,9 +1557,6 @@ async function runAi(action) {
       body: JSON.stringify({
         provider: activeProvider.id, model: model,
         credential_id: activeProvider.credential_id || undefined,
-        // One-version compatibility for a newly created, not-yet-persisted
-        // connection. Once saved, subsequent calls use only credential_id.
-        api_key: activeProvider.credential_id ? undefined : (keyVal || undefined),
         base_url: baseUrl || undefined, mode: mode, endpoint_mode: endpointMode, headers: requestHeaders, stream: stream,
         skill_id: skillId,
         skill_variables: { document: docs, selection: isSelection ? docs : '', request: prompt,

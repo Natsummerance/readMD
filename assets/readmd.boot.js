@@ -1349,7 +1349,7 @@ async function switchTab(tabId) {
         const action = await promptDirtyClose(prevTab.title || prevTab.name || 'document');
         if (action === 'cancel') return;
         if (action === 'save') {
-          await saveEdit();
+          await saveEdit({ exitAfterSave: true });
           if (state.editing) return;
         } else {
           exitEdit();
@@ -1452,7 +1452,7 @@ async function closeTab(tabId, force = false) {
     if (action === 'cancel') return;
     if (action === 'save') {
       await activateTabForSave(tabId);
-      const saved = await saveEdit();
+      const saved = await saveEdit({ exitAfterSave: true });
       if (!saved || (getActiveTab()?.id === tabId && state.editing)) return;
     }
   }
@@ -1486,7 +1486,7 @@ async function closeOtherTabs(keepTabId) {
         if (action === 'cancel') return;
       if (action === 'save') {
         await activateTabForSave(t.id);
-        const saved = await saveEdit();
+        const saved = await saveEdit({ exitAfterSave: true });
         if (!saved || state.tabs.some(item => item.id === t.id && item.isDirty)) return;
         }
       }
@@ -1506,7 +1506,7 @@ async function closeAllTabs() {
       if (action === 'cancel') return;
       if (action === 'save') {
         await activateTabForSave(t.id);
-        const saved = await saveEdit();
+        const saved = await saveEdit({ exitAfterSave: true });
         if (!saved || (getActiveTab()?.isDirty || state.editing)) return;
       }
     }
@@ -2078,10 +2078,12 @@ function bindGlobalDragAndDrop() {
         }
       }
       if (binaryConvertFiles.length > 0) {
+        const paths = [];
         for (const f of binaryConvertFiles) {
           const path = f.path ? f.path : await uploadFile(f);
-          if (path) await convertOrOcr(path, 'convert');
+          if (path) paths.push(path);
         }
+        if (paths.length) enqueueBatchFiles(paths, false);
       }
       return;
     }
@@ -2113,10 +2115,7 @@ async function openConvertModalWithFiles(files) {
     const path = f.path ? f.path : await uploadFile(f);
     if (path) paths.push(path);
   }
-  if (paths.length > 0) {
-    openConvertModal();
-    await startBatchConvert(paths, $('convert-overwrite') ? $('convert-overwrite').checked : false);
-  }
+  if (paths.length > 0) enqueueBatchFiles(paths, false);
 }
 
 
@@ -2464,10 +2463,24 @@ async function handleAiDocumentFix() {
   showToast(_t('fixes.aiFixing') || '正在进行 AI 深度格式排版自愈...', 2500);
 
   try {
+    const connection = typeof resolveSharedAiConnection === 'function'
+      ? await resolveSharedAiConnection()
+      : null;
+    if (!connection) throw new Error(_t('toast.selectProviderFirst') || '请先选择 AI 提供商');
+    if (!connection.local && !connection.has_key) {
+      throw new Error(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接');
+    }
     const resp = await apiFetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        provider: connection.provider,
+        credential_id: connection.credential_id,
+        model: connection.model,
+        base_url: connection.base_url,
+        mode: connection.mode,
+        endpoint_mode: connection.endpoint_mode,
+        headers: connection.headers,
         skill_id: 'readmd-format-fix',
         skill_variables: {
           document: rawContent,
@@ -3462,16 +3475,25 @@ function openFileRename() {
 async function loadFile(path, { force = false, browserCopy = null } = {}) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!path) return;
-  const loadEpoch = beginDocumentLoad();
   const existingTab = findTabByPath(path);
-  if (existingTab && !force) {
-    await switchTab(existingTab.id);
-    return;
-  }
-  if (existingTab && (existingTab.isDirty || (state.activeTabId === existingTab.id && state.editing))) {
+  const activeEditing = !!(existingTab && state.activeTabId === existingTab.id && state.editing);
+  const activeDirty = activeEditing && hasUnsavedEditorChanges();
+  if (existingTab && (existingTab.isDirty || activeDirty)) {
     showToast(_t('toast.reloadBlockedDirty') || '未保存修改已保留，未重新加载外部更改');
     return;
   }
+  // A second open/double-click of the same clean file is a refresh request.
+  // Leave edit mode first so the freshly loaded document is not hidden behind
+  // a stale CodeMirror instance.
+  if (activeEditing) exitEdit();
+  if (existingTab && !force && state.activeTabId !== existingTab.id) {
+    await switchTab(existingTab.id);
+    if (state.activeTabId !== existingTab.id) return;
+  }
+  // Opening an already-open clean path is an explicit refresh request.  Start
+  // the load only after tab switching, because switching invalidates older
+  // document epochs by design.
+  const loadEpoch = beginDocumentLoad();
   setProgress(8);
   try {
     const r = await apiFetch('/api/file?p=' + encodeURIComponent(path));
@@ -4923,12 +4945,12 @@ function renderAllCodeChunks(container) {
       try {
         let res;
         if (hasPy && py.run_code_chunk) {
-          res = await py.run_code_chunk(lang, code);
+          res = await py.run_code_chunk(lang, code, null, 10, true);
         } else {
           const r = await apiFetch('/api/code/run', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ lang: lang, code: code })
+            body: JSON.stringify({ lang: lang, code: code, confirm: true })
           });
           res = await r.json();
         }
@@ -5133,9 +5155,25 @@ let presZenActive = false;
 
 async function togglePresentationFullscreen(modal) {
   const doc = document;
-  const isFull = !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
+  const nativeState = !!window.__readmdNativeFullscreen;
+  const isFull = nativeState || !!(doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement || doc.msFullscreenElement);
   const btn = $('presentation-fullscreen-btn');
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+
+  // pywebview embeds the page in a native window where the browser Fullscreen
+  // API is unavailable. Prefer the host window in that environment and keep a
+  // local state bit so Esc/F11 can restore the previous window state.
+  if (window.pywebview?.api?.toggle_native_fullscreen) {
+    const native = await window.pywebview.api.toggle_native_fullscreen();
+    if (native && native.supported) {
+      window.__readmdNativeFullscreen = !isFull;
+      if (btn) {
+        btn.classList.toggle('active', !isFull);
+        btn.textContent = !isFull ? (_t('presentation.exitFullscreenLabel') || '退出全屏') : (_t('presentation.fullscreenLabel') || '全屏');
+      }
+      return;
+    }
+  }
 
   if (!isFull) {
     const target = modal || doc.documentElement;
@@ -5177,6 +5215,10 @@ window.closePresentationMode = function closePresentationMode() {
   clearTimeout(presControlsHideTimer);
   presZenActive = false;
 
+  if (window.__readmdNativeFullscreen && window.pywebview?.api?.toggle_native_fullscreen) {
+    window.pywebview.api.toggle_native_fullscreen().catch(() => {});
+    window.__readmdNativeFullscreen = false;
+  }
   if ((document.fullscreenElement || document.webkitFullscreenElement) && document.exitFullscreen) {
     document.exitFullscreen().catch(() => {});
   }
@@ -5649,6 +5691,7 @@ function loadFileDialog() {
 let pvTimer = null;
 let pvLast = '';
 let pvEditorEl = null;
+let pvRenderEpoch = 0;
 
 function hasUnsavedEditorChanges() {
   if (!state.editing) return false;
@@ -5715,12 +5758,21 @@ function setPvLayout(layout) {
   const pw = $('preview-wrap');
   if (!mc || !pw) return;
   mc.classList.remove('pv-left', 'pv-right', 'pv-bottom', 'pv-top');
+  mc.classList.remove('pv-auto-hidden');
   if (state.editing && layout !== 'none') {
     mc.classList.add('pv-' + layout);
-    pw.classList.remove('hidden');
-    $('pv-splitter').classList.remove('hidden');
-    applyPvSplit();
-    schedulePreview();
+    const bounds = mc.getBoundingClientRect();
+    const horizontal = layout === 'left' || layout === 'right';
+    // Decide on window width: main-col width is circular here (it shrinks when the
+    // preview pane is already flexed), while the specs pin the boundary at 720/760.
+    const constrained = horizontal ? window.innerWidth < 740 : bounds.height < 520;
+    mc.classList.toggle('pv-auto-hidden', constrained);
+    pw.classList.toggle('hidden', constrained);
+    $('pv-splitter').classList.toggle('hidden', constrained);
+    if (!constrained) {
+      applyPvSplit();
+      schedulePreview();
+    }
   } else {
     pw.classList.add('hidden');
     $('pv-splitter').classList.add('hidden');
@@ -5731,7 +5783,10 @@ function setPvLayout(layout) {
 function applyPvSplit() {
   const pw = $('preview-wrap'); if (!pw) return;
   const horizontal = state.pvLayout === 'left' || state.pvLayout === 'right';
-  const pct = horizontal ? state.pvSplitX : state.pvSplitY;
+  const key = horizontal ? 'pvSplitX' : 'pvSplitY';
+  const raw = Number(state[key]);
+  const pct = Math.max(25, Math.min(70, Number.isFinite(raw) ? raw : (horizontal ? 50 : 46)));
+  state[key] = pct;
   pw.style.flexBasis = pct + '%';
   const splitter = $('pv-splitter');
   if (splitter) {
@@ -5759,7 +5814,7 @@ function bindPvSplitter() {
   bar.addEventListener('pointermove', e => { if (bar.hasPointerCapture(e.pointerId)) update(e); });
   bar.addEventListener('pointerup', e => { if (bar.hasPointerCapture(e.pointerId)) bar.releasePointerCapture(e.pointerId); saveSettings(); });
   bar.addEventListener('keydown', e => { if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)) return; e.preventDefault(); const delta = (e.key === 'ArrowRight' || e.key === 'ArrowDown') ? 2 : -2; if (state.pvLayout === 'left' || state.pvLayout === 'right') state.pvSplitX = Math.max(25, Math.min(70, state.pvSplitX + delta)); else state.pvSplitY = Math.max(25, Math.min(70, state.pvSplitY + delta)); applyPvSplit(); saveSettings(); });
-  window.addEventListener('resize', () => setPvLayout(state.pvLayout));
+  window.addEventListener('resize', () => requestAnimationFrame(() => setPvLayout(state.pvLayout)));
 }
 
 let isSyncingFromEditor = false;
@@ -5768,11 +5823,14 @@ let isSyncingFromPreview = false;
 function schedulePreview() {
   if (pvTimer) clearTimeout(pvTimer);
   if (state.liveUpdate === false) return; // Save-only mode
-  pvTimer = setTimeout(renderPreview, 300);
+  const size = getEditContent().length;
+  const delay = size >= 100000 ? 700 : size >= 30000 ? 450 : 300;
+  pvTimer = setTimeout(renderPreview, delay);
 }
 
 async function renderPreview() {
   pvTimer = null;
+  const renderEpoch = ++pvRenderEpoch;
   const pane = $('preview-pane');
   if (!pane || state.pvLayout === 'none' || !state.editing) return;
   let src = getEditContent();
@@ -5782,6 +5840,7 @@ async function renderPreview() {
   // 预处理 @import
   if (window.processDocImports) {
     src = await window.processDocImports(src, state.file || '');
+    if (renderEpoch !== pvRenderEpoch) return;
   }
 
   let html;
@@ -5797,6 +5856,7 @@ async function renderPreview() {
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
     html = '<p class="ai-err">' + (_t('editor.previewRenderFail') || '预览渲染失败') + '</p>';
   }
+  if (renderEpoch !== pvRenderEpoch) return;
   pane.innerHTML = window.sanitizeRenderedHtml ? window.sanitizeRenderedHtml(html) : html;
   fixLinks(pane);
   fixImages(pane);
@@ -5947,6 +6007,7 @@ async function toggleEdit() {
   $('edit-bar').classList.remove('hidden');
   $('content').classList.add('hidden');
   state.editing = true;
+  $('main-col')?.classList.add('is-editing');
   setEditBtn(_t('editor.editing') || '编辑中');
   pvLast = '';
   try {
@@ -5977,7 +6038,7 @@ async function confirmExitEdit() {
   const action = await promptDirtyClose(state.sourceName || state.file || 'document');
   if (action === 'cancel') return false;
   if (action === 'save') {
-    await saveEdit();
+    await saveEdit({ exitAfterSave: true });
     return !state.editing;
   }
   const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
@@ -6001,7 +6062,7 @@ function exitEdit() {
   const pw = $('preview-wrap');
   if (pw) pw.classList.add('hidden');
   const mc = $('main-col');
-  if (mc) mc.classList.remove('pv-left', 'pv-right', 'pv-bottom', 'pv-top');
+  if (mc) mc.classList.remove('pv-left', 'pv-right', 'pv-bottom', 'pv-top', 'pv-auto-hidden', 'is-editing');
   pvLast = '';
   if (!state.editing) {
     $('edit-bar').classList.add('hidden');
@@ -6021,8 +6082,9 @@ function exitEdit() {
   if (typeof updateUnloadGuard === 'function') updateUnloadGuard();
 }
 
-async function saveEdit() {
+async function saveEdit(options = {}) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const exitAfterSave = Boolean(options && options.exitAfterSave);
   if (!state.editing) return false;
   const content = cmView ? cmView.state.doc.toString() : $('edit-area').value;
   if (!state.file) {
@@ -6075,13 +6137,15 @@ async function saveEdit() {
       syncSavedTab(state.file, content);
       applySavedMtime(ok);
       await renderSavedDocument(content);
+      if (typeof renderTabsBar === 'function') renderTabsBar();
+      if (typeof updateUnloadGuard === 'function') updateUnloadGuard();
       const savedTarget = state.browserCopy
         ? `${state.sourceName || state.file} (${_t('app.browserCopy') || 'browser copy'})`
         : (state.file || state.sourceName || 'document');
       showToast(ok.backup
         ? (_t('toast.savedWithBackup', { backup: ok.backup }) || ('已保存（备份：' + ok.backup + '）'))
         : ((_t('toast.savedPrefix') || '已保存：') + savedTarget));
-      exitEdit();
+      if (exitAfterSave) exitEdit();
       return true;
     } else {
       if (ok && ok.conflict) {
@@ -7404,10 +7468,24 @@ async function runEditAiAction(act, customPrompt = '') {
   editAiCurrentResult = '';
 
   try {
+    const connection = typeof resolveSharedAiConnection === 'function'
+      ? await resolveSharedAiConnection()
+      : null;
+    if (!connection) throw new Error(_t('toast.selectProviderFirst') || '请先选择 AI 提供商');
+    if (!connection.local && !connection.has_key) {
+      throw new Error(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接');
+    }
     const res = await apiFetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        provider: connection.provider,
+        credential_id: connection.credential_id,
+        model: connection.model,
+        base_url: connection.base_url,
+        mode: connection.mode,
+        endpoint_mode: connection.endpoint_mode,
+        headers: connection.headers,
         skill_id: skillId,
         skill_variables: {
           document: range.context || sourceText,
@@ -7691,6 +7769,9 @@ async function loadAiPrompts() {
         action: old.action || 'custom', user: old.user || '',
         system: s.instructions || '', builtin: s.scope === 'builtin',
         scope: s.scope, metadata: s.metadata || {}, variables: s.variables || [],
+        description: s.description || '', provenance: s.provenance || {},
+        license: s.license || '', source_files: s.source_files || [],
+        adaptation_notes: s.adaptation_notes || '',
       };
     });
     fillAiTemplates();
@@ -7774,7 +7855,108 @@ function renderTplList() {
   });
 }
 
-function selectTpl(id) {
+function skillLicenseText(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  return value.spdx || value.id || value.name || value.license || '';
+}
+
+// All AI entry points (editor, export, fixes and the main assistant) consume
+// the same provider registry.  Refresh the shared status immediately after a
+// settings save/load so no surface keeps a stale "not configured" indicator.
+window.addEventListener('readmd:ai-config-changed', () => {
+  updateAiConnectionSummary();
+  document.querySelectorAll('[data-ai-config-state]').forEach(el => {
+    const configured = !!(state.ai.providers || []).some(p => p.has_key || p.key_source || p.credential_id || isLocalAiProvider(p));
+    el.dataset.aiConfigured = configured ? 'true' : 'false';
+  });
+});
+
+function skillRevisionText(value) {
+  if (!value || typeof value !== 'object') return '';
+  return value.revision || value.commit || value.ref || value.source_revision || '';
+}
+
+function appendSkillFact(host, text, prefix) {
+  if (!text) return;
+  const fact = document.createElement('span');
+  fact.className = 'tpl-skill-fact';
+  fact.textContent = (prefix || '') + text;
+  host.appendChild(fact);
+}
+
+function renderSkillOverview(t) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const host = $('tpl-skill-overview');
+  if (!host) return;
+  host.replaceChildren();
+  if (!t) return;
+  const title = document.createElement('h4');
+  title.textContent = t.name || t.skill_id || t.id || '';
+  host.appendChild(title);
+  if (t.description) {
+    const description = document.createElement('p');
+    description.textContent = t.description;
+    host.appendChild(description);
+  }
+  const facts = document.createElement('div');
+  facts.className = 'tpl-skill-facts';
+  const scopeLabel = t.builtin ? _t('ai.officialPresets') : _t('ai.customConnections');
+  appendSkillFact(facts, scopeLabel, '◫ ');
+  appendSkillFact(facts, skillLicenseText(t.license), '© ');
+  appendSkillFact(facts, skillRevisionText(t.provenance), '@ ');
+  (t.variables || []).forEach(variable => appendSkillFact(facts, variable, '{ } '));
+  if (facts.childElementCount) host.appendChild(facts);
+
+  const sourceLines = (Array.isArray(t.source_files) ? t.source_files : [])
+    .map(item => {
+      if (typeof item === 'string') return item;
+      const file = item && (item.path || item.file || item.name) || '';
+      const hash = item && (item.sha256 || item.hash) || '';
+      // Provenance is useful in the workbench, but never expose a local
+      // absolute path from legacy registries or API responses.
+      const safeFile = String(file).split(/[\\/]/).pop();
+      return [safeFile, hash ? hash.slice(0, 16) : ''].filter(Boolean).join('  ·  ');
+    }).filter(Boolean);
+  if (sourceLines.length) {
+    const sources = document.createElement('pre');
+    sources.className = 'tpl-skill-source';
+    sources.textContent = sourceLines.join('\n');
+    host.appendChild(sources);
+  }
+  if (t.adaptation_notes) {
+    const note = document.createElement('p');
+    note.textContent = t.adaptation_notes;
+    host.appendChild(note);
+  }
+  if (t.system) {
+    const instructions = document.createElement('pre');
+    instructions.className = 'tpl-skill-instructions';
+    instructions.textContent = t.system;
+    host.appendChild(instructions);
+  }
+}
+
+function setTplEditing(editing) {
+  const selected = (state.ai.templates || []).find(x => x.id === $('tpl-id').value) || null;
+  const builtin = !!(selected && selected.builtin);
+  $('tpl-skill-overview') && $('tpl-skill-overview').classList.toggle('hidden', !!editing);
+  $('tpl-editor-fields') && $('tpl-editor-fields').classList.toggle('hidden', !editing);
+  if ($('tpl-edit')) {
+    $('tpl-edit').classList.toggle('active', !!editing);
+    $('tpl-edit').setAttribute('aria-pressed', editing ? 'true' : 'false');
+  }
+  if ($('tpl-save')) $('tpl-save').disabled = !editing || builtin;
+  if ($('tpl-publish')) $('tpl-publish').disabled = !editing || !selected || builtin;
+  if (editing && $('tpl-name')) $('tpl-name').focus();
+}
+
+function editCurrentSkill() {
+  if (!$('tpl-id').value) return setTplEditing(true);
+  setTplEditing(true);
+}
+
+function selectTpl(id, editing) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const t = (state.ai.templates || []).find(x => x.id === id) || null;
   const builtin = !!(t && t.builtin);
@@ -7788,14 +7970,15 @@ function selectTpl(id) {
   if ($('tpl-action')) $('tpl-action').value = (t && t.action) || 'custom';
   $('tpl-system').value = t ? (t.system || '') : '';
   $('tpl-user').value = t ? (t.user || '') : '';
+  $('tpl-user').setAttribute('placeholder', _t('tpl.userPlaceholder') || '');
   $('tpl-name').readOnly = builtin;
   $('tpl-system').readOnly = builtin;
   $('tpl-user').readOnly = builtin;
-  if ($('tpl-save')) $('tpl-save').disabled = builtin;
   $('tpl-del').disabled = !t || builtin;
-  if ($('tpl-publish')) $('tpl-publish').disabled = !t || builtin;
   const status = $('tpl-draft-status');
   if (status) status.textContent = _t('tpl.hint');
+  renderSkillOverview(t);
+  setTplEditing(editing === true || !t);
 }
 
 function copyCurrentSkill() {
@@ -7804,9 +7987,9 @@ function copyCurrentSkill() {
   if (!current) return;
   const base = String(current.skill_id || current.id || 'skill').replace(/[^a-z0-9-]/gi, '-').toLowerCase().replace(/^-+|-+$/g, '') || 'skill';
   const copyId = (base + '-custom').slice(0, 64);
-  selectTpl(null);
+  selectTpl(null, true);
   $('tpl-id').value = copyId;
-  $('tpl-name').value = (current.name || copyId) + ' (Copy)';
+  $('tpl-name').value = current.name || copyId;
   $('tpl-system').value = current.system || '';
   $('tpl-user').value = current.user || '';
   $('tpl-name').readOnly = $('tpl-system').readOnly = $('tpl-user').readOnly = false;
@@ -7827,8 +8010,16 @@ async function generateSkillDraft() {
   if (!active.credential_id && !isLocalAiProvider(active)) {
     showToast(_t('toast.noApiKeyNotice') || '请先在连接设置中配置凭据'); return;
   }
-  const request = window.prompt(_t('ai.promptPlaceholder'), '');
-  if (!request || !request.trim()) return;
+  const requestField = $('tpl-user');
+  const request = String((requestField && requestField.value) || ($('ai-prompt') && $('ai-prompt').value) || '').trim();
+  if (!request) {
+    if (requestField) {
+      requestField.setAttribute('placeholder', _t('ai.extraReqLabel') || '补充要求');
+      requestField.focus();
+    }
+    showToast(_t('ai.extraReqLabel') || _t('ai.promptPlaceholder'));
+    return;
+  }
   const button = $('tpl-ai-generate');
   if (button) { button.disabled = true; button.textContent = _t('ai.generating'); }
   try {
@@ -8011,6 +8202,78 @@ async function importTemplatesFromFile(file) {
   reader.readAsText(file, 'UTF-8');
 }
 
+function toggleSkillImportMenu(force) {
+  const menu = $('tpl-import-menu');
+  const trigger = $('tpl-import-btn');
+  if (!menu) return;
+  const open = typeof force === 'boolean' ? force : menu.classList.contains('hidden');
+  menu.classList.toggle('hidden', !open);
+  if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) selectSkillImportSource('github', false);
+}
+
+async function selectSkillImportSource(source, openPicker = true) {
+  const allowed = new Set(['github', 'folder', 'zip']);
+  const selected = allowed.has(source) ? source : 'github';
+  allowed.forEach(name => {
+    const button = $(`tpl-import-source-${name}`);
+    if (!button) return;
+    const active = name === selected;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  const githubPanel = $('tpl-import-panel-github');
+  if (githubPanel) githubPanel.classList.toggle('hidden', selected !== 'github');
+  if (!openPicker) return;
+  if (selected === 'github') {
+    $('tpl-github-url') && $('tpl-github-url').focus();
+    return;
+  }
+  if (typeof hasPy !== 'undefined' && hasPy && py && py.choose_skill_source) {
+    const sourcePath = await py.choose_skill_source(selected === 'folder' ? 'directory' : 'zip');
+    if (sourcePath) await previewSkillImportSource({
+      source_type: selected === 'folder' ? 'directory' : 'zip',
+      source: sourcePath,
+    });
+    return;
+  }
+  if (selected === 'folder' && $('tpl-folder-input')) $('tpl-folder-input').click();
+  if (selected === 'zip' && $('tpl-zip-input')) $('tpl-zip-input').click();
+}
+
+function revealGithubCredential() {
+  const wrap = $('tpl-github-credential-wrap');
+  const input = $('tpl-github-credential');
+  if (wrap) wrap.classList.remove('hidden');
+  if (input) requestAnimationFrame(() => input.focus());
+}
+
+async function previewSkillImportSource(payload) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  try {
+    const r = await apiFetch('/api/skill-imports/preview', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok || !d.preview) throw d;
+    const preview = d.preview;
+    preview.credential_id = d.credential_id || payload.credential_id || '';
+    renderGithubSkillPreview(preview);
+    return preview;
+  } catch (e) {
+    if (String(e && e.error_code || '') === 'github_auth_failed') revealGithubCredential();
+    showToast(githubImportErrorText(e, _t));
+    return null;
+  }
+}
+
+async function previewBrowserZipSkill(file) {
+  if (!file) return;
+  const path = typeof uploadFile === 'function' ? await uploadFile(file) : null;
+  if (path) await previewSkillImportSource({ source_type: 'zip', source: path });
+}
+
 function githubImportErrorText(payload, _t) {
   const code = String(payload && payload.error_code || '');
   const known = {
@@ -8053,7 +8316,7 @@ function renderGithubSkillPreview(preview) {
     host.appendChild(row);
   });
   const apply = document.createElement('button');
-  apply.type = 'button'; apply.id = 'tpl-github-apply-btn'; apply.className = 'tb-btn accent';
+  apply.type = 'button'; apply.id = 'tpl-github-apply-btn'; apply.className = 'tb-btn accent tpl-github-apply-btn';
   apply.textContent = _t('tpl.importMd') || '导入模板 (.md)';
   apply.disabled = !skills.some(s => s.valid);
   apply.addEventListener('click', () => applyGithubSkillImport(preview));
@@ -8063,22 +8326,13 @@ function renderGithubSkillPreview(preview) {
 async function previewGithubSkillImport() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const url = String($('tpl-github-url') && $('tpl-github-url').value || '').trim();
-  const credentialId = String($('tpl-github-credential') && $('tpl-github-credential').value || '').trim();
+  const githubToken = String($('tpl-github-credential') && $('tpl-github-credential').value || '').trim();
   if (!url) { showToast(_t('toast.invalidUrl') || '请输入有效链接'); return; }
   const button = $('tpl-github-preview-btn');
   if (button) { button.disabled = true; button.classList.add('tpl-github-importing'); }
   try {
-    const r = await apiFetch('/api/skill-imports/preview', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, credential_id: credentialId }),
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok || !d.ok || !d.preview) throw d;
-    const preview = d.preview;
-    preview.credential_id = credentialId;
-    renderGithubSkillPreview(preview);
-  } catch (e) {
-    showToast(githubImportErrorText(e, _t));
+    await previewSkillImportSource({ source_type: 'github', source: url, github_token: githubToken });
+    if ($('tpl-github-credential')) $('tpl-github-credential').value = '';
   } finally {
     if (button) { button.disabled = false; button.classList.remove('tpl-github-importing'); }
   }
@@ -8405,6 +8659,11 @@ async function loadAiConfig() {
     state.ai.providers = mergeAiProviders(cfg.custom || [], cfg.presets || []);
     state.ai.upstreamCatalog = Array.isArray(cfg.upstream_catalog) ? cfg.upstream_catalog : [];
     fillAiProviders(state.ai.providers, cfg.current || {});
+    window.dispatchEvent(new CustomEvent('readmd:ai-config-changed', { detail: {
+      providerId: (cfg.current || {}).provider_id || '',
+      model: (cfg.current || {}).model || '',
+      configured: state.ai.providers.some(p => p.has_key || p.key_source || p.credential_id || isLocalAiProvider(p)),
+    }}));
     loadAiPrompts();
     loadAiSessions();
     return cfg;
@@ -8464,6 +8723,32 @@ function fillAiProviders(merged, current) {
 function currentAiProvider() {
   const id = $('ai-provider').value;
   return (state.ai.providers || []).find(p => p.id === id || p.name === id) || null;
+}
+
+async function resolveSharedAiConnection() {
+  if (!state.ai.config) await loadAiConfig();
+  const current = (state.ai.config && state.ai.config.current) || {};
+  const currentId = current.provider_id || current.provider || '';
+  const selectedId = $('ai-provider') ? $('ai-provider').value : '';
+  const providers = state.ai.providers || [];
+  const provider = providers.find(p => p.id === selectedId || p.name === selectedId)
+    || providers.find(p => p.id === currentId || p.name === currentId)
+    || null;
+  if (!provider) return null;
+  const selectedModel = $('ai-model') ? $('ai-model').value : '';
+  let headers = {};
+  try { headers = readAiCustomHeaders(); } catch (e) { headers = provider.headers || {}; }
+  return {
+    provider: provider.id || provider.name || '',
+    credential_id: provider.credential_id || undefined,
+    model: selectedModel || current.model || (provider.models || [])[0] || '',
+    base_url: provider.base_url || undefined,
+    mode: provider.mode || (provider.format === 'anthropic' ? 'messages' : 'auto'),
+    endpoint_mode: provider.endpoint_mode || 'prefix',
+    headers,
+    has_key: !!(provider.has_key || provider.key_source || provider.credential_id),
+    local: isLocalAiProvider(provider),
+  };
 }
 
 function isLocalAiProvider(provider) {
@@ -8716,6 +9001,12 @@ async function loadAiModels() {
   let p = currentAiProvider();
   const local = isLocalAiProvider(p);
   if (!local && !key && !(p && p.has_key)) { showToast(_t('toast.enterApiKeyFirst') || '请先填写 API Key'); return; }
+  // Persist a newly entered key before discovery so the provider endpoint
+  // receives only an opaque credential_id, never a raw secret.
+  if (!local && key && p && !p.credential_id) {
+    if (!(await saveAiSelection(true))) return;
+    p = currentAiProvider() || p;
+  }
   try {
     var requestHeaders = readAiCustomHeaders();
   } catch (e) {
@@ -8888,9 +9179,6 @@ async function runAi(action) {
       body: JSON.stringify({
         provider: activeProvider.id, model: model,
         credential_id: activeProvider.credential_id || undefined,
-        // One-version compatibility for a newly created, not-yet-persisted
-        // connection. Once saved, subsequent calls use only credential_id.
-        api_key: activeProvider.credential_id ? undefined : (keyVal || undefined),
         base_url: baseUrl || undefined, mode: mode, endpoint_mode: endpointMode, headers: requestHeaders, stream: stream,
         skill_id: skillId,
         skill_variables: { document: docs, selection: isSelection ? docs : '', request: prompt,
@@ -9306,30 +9594,45 @@ async function stopShare() {
 
 /* ---------------- 批量转换（转 MD） ---------------- */
 
-let convertJobTimer = null;
 let convertLastDir = null;
 
 async function openConvertModal() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!hasPy) { showToast(_t('toast.convertBrowserNotice') || '浏览器模式请使用“打开文件”转换'); return; }
   const note = $('convert-note');
   if (note) note.textContent = state.win7 ? (_t('convert.noteWin7') || 'Win7 版仅支持 docx / pdf 转 Markdown；转换结果自动保存为源文件同目录同名 .md。') : (_t('convert.note') || '转换结果自动保存为源文件同目录同名 .md（如 report.docx → report.md）。docx 公式、PDF 表格走专用解析，其余格式自动回退通用转换；输出经过严格校验（表格 / 代码围栏 / 公式 / 图片引用）。');
   $('convert-modal').classList.remove('hidden');
   $('convert-list').innerHTML = '';
   $('convert-status').textContent = '';
+  $('batch-cancel')?.classList.add('hidden');
   $('convert-open-dir').classList.add('hidden');
 }
 
 function closeConvertModal() {
-  stopConvertPoll();
+  if (typeof stopBatchPoll === 'function') stopBatchPoll();
   $('convert-modal').classList.add('hidden');
 }
 
 async function pickConvertFiles() {
   let files = [];
-  try { files = await py.choose_many_files(); } catch (e) { files = []; }
-  if (!files || !files.length) return;
-  await startBatchConvert(files, $('convert-overwrite').checked);
+  if (hasPy) {
+    try { files = await py.choose_many_files(); } catch (e) { files = []; }
+  } else {
+    const input = $('file-input');
+    if (!input) return;
+    input.value = '';
+    input.multiple = true;
+    input.onchange = async () => {
+      const uploaded = [];
+      for (const file of Array.from(input.files || [])) {
+        const path = await uploadFile(file);
+        if (path) uploaded.push(path);
+      }
+      if (uploaded.length) await startBatchConvert(uploaded, $('convert-overwrite').checked);
+    };
+    input.click();
+    return;
+  }
+  if (files.length) await startBatchConvert(files, $('convert-overwrite').checked);
 }
 
 async function pickConvertFolder() {
@@ -9349,106 +9652,13 @@ async function pickConvertFolder() {
 }
 
 async function startBatchConvert(files, overwrite) {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!(await ensureModule('convert'))) return;
-  const list = $('convert-list');
-  list.innerHTML = '';
-  files.forEach(p => {
-    const row = document.createElement('div');
-    row.className = 'convert-item queued';
-    const nm = document.createElement('span');
-    nm.className = 'convert-name';
-    nm.textContent = p.split(/[\\/]/).pop();
-    nm.title = p;
-    const st = document.createElement('span');
-    st.className = 'convert-state';
-    st.textContent = _t('convert.statusQueued') || '排队中';
-    row.appendChild(nm); row.appendChild(st);
-    list.appendChild(row);
-  });
-  $('convert-status').textContent = _t('convert.statusPreparing') || '准备中…';
-  try {
-    const r = await apiFetch('/api/convert/batch', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ paths: files, overwrite: !!overwrite }),
-    });
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || (_t('convert.statusStartFail') || '启动失败'));
-    if (files.length) {
-      const parts = files[0].split(/[\\/]/);
-      parts.pop();
-      convertLastDir = parts.join('\\');
-    }
-    pollConvertJob(d.job);
-  } catch (e) {
-    $('convert-status').textContent = (_t('convert.statusStartFail') || '启动失败：') + e.message;
+  if (typeof enqueueBatchFiles === 'function') {
+    return enqueueBatchFiles(files, overwrite);
   }
-}
-
-
-function pollConvertJob(jid) {
-  stopConvertPoll();
-  convertJobTimer = setInterval(async () => {
-    try {
-      const r = await apiFetch('/api/convert/progress?job=' + encodeURIComponent(jid));
-      if (!r.ok) { stopConvertPoll(); return; }
-      const d = await r.json();
-      renderConvertProgress(d);
-      if (d.finished) stopConvertPoll();
-    } catch (e) { stopConvertPoll(); }
-  }, 600);
-}
-
-function stopConvertPoll() {
-  if (convertJobTimer) { clearInterval(convertJobTimer); convertJobTimer = null; }
-}
-
-function renderConvertProgress(d) {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const rows = $('convert-list').querySelectorAll('.convert-item');
-  const statusMap = {
-    ok: _t('convert.statusOk') || '成功',
-    skipped: _t('convert.statusSkipped') || '跳过（已存在）',
-    error: _t('convert.statusError') || '失败',
-    canceled: _t('convert.statusCanceled') || '已取消',
-    queued: _t('convert.statusQueued') || '排队中'
-  };
-  let ok = 0, skipped = 0, err = 0, warnCount = 0;
-  (d.items || []).forEach((it, i) => {
-    const row = rows[i];
-    if (row) {
-      row.className = 'convert-item ' + (it.status || 'queued');
-      const st = row.querySelector('.convert-state');
-      if (st) {
-        st.textContent = statusMap[it.status] || it.status;
-        if (it.status === 'error' && it.error) st.title = it.error;
-      }
-    }
-    if (it.status === 'ok') { ok++; warnCount += (it.warns || []).filter(w => w.level !== 'auto').length; }
-    else if (it.status === 'skipped') skipped++;
-    else if (it.status === 'error') err++;
-  });
-  const status = $('convert-status');
-  if (!status) return;
-  if (d.running) {
-    status.textContent = _t('convert.converting', { done: d.done, total: d.total }) || ('转换中 ' + d.done + '/' + d.total + '…');
-  } else {
-    status.textContent = _t('convert.summary', { ok: ok, skipped: skipped, failed: err }) || ('完成：成功 ' + ok + ' · 跳过 ' + skipped + ' · 失败 ' + err + (warnCount ? ' · 警告 ' + warnCount : ''));
-    $('convert-open-dir').classList.remove('hidden');
-    if (!d._autoOpened) {
-      d._autoOpened = true;
-      const okItems = (d.items || []).filter(it => it.status === 'ok' && it.out);
-      if (okItems.length > 0) {
-        (async () => {
-          for (const it of okItems) {
-            await loadFile(it.out);
-          }
-          closeConvertModal();
-          showToast(_t('toast.convertSuccess') || '转换完成，已自动在新标签页中打开');
-        })();
-      }
-    }
-  }
+  // The batch module is part of the generated boot bundle.  Keep a stable
+  // error instead of maintaining a second conversion implementation when a
+  // custom host accidentally omits it.
+  showToast((window.i18n && window.i18n.t('convert.moduleUnavailable')) || '转换模块不可用');
 }
 
 
@@ -9537,6 +9747,435 @@ function convertOrOcr(p, mode) {
   else convertFile(p);
 }
 
+
+;
+'use strict';
+/* ============================================================
+   ReadMD Features - Unified Batch Workbench (convert + OCR)
+   ============================================================ */
+
+/* ---------------- 批量工作台：文档批量转换 + 图片逐张 OCR ---------------- */
+
+let batchJobTimer = null;
+let batchJobId = null;
+let batchCancelRequested = false;
+let batchOcrCanceled = false;
+let batchDocsDone = false;
+let batchOcrDone = false;
+let batchFinished = false;
+let batchCount = { ok: 0, skipped: 0, error: 0, canceled: 0 };
+const batchRowsBySrc = Object.create(null);
+
+function batchT(k, p) {
+  return window.i18n ? window.i18n.t(k, p) : k;
+}
+
+function openBatchModal() {
+  stopBatchPoll();
+  batchJobId = null;
+  batchCancelRequested = false;
+  batchOcrCanceled = false;
+  batchFinished = false;
+  batchCount = { ok: 0, skipped: 0, error: 0, canceled: 0 };
+  for (const k in batchRowsBySrc) delete batchRowsBySrc[k];
+  const modal = $('convert-modal');
+  if (modal) modal.classList.remove('hidden');
+  // Batch and single-file conversion share one surface; never leak the
+  // single-file "open output" action into a fresh batch run.
+  $('convert-open-dir')?.classList.add('hidden');
+  $('convert-list').innerHTML = '';
+  $('convert-status').textContent = '';
+  const note = $('convert-note');
+  if (note) note.textContent = batchT('batch.note') || '';
+  $('batch-cancel').classList.add('hidden');
+}
+
+function closeBatchModal() {
+  stopBatchPoll();
+  $('convert-modal').classList.add('hidden');
+}
+
+function stopBatchPoll() {
+  if (batchJobTimer) { clearInterval(batchJobTimer); batchJobTimer = null; }
+}
+
+function makeBatchRow(path) {
+  const row = document.createElement('div');
+  row.className = 'batch-item queued';
+  const nm = document.createElement('span');
+  nm.className = 'batch-name';
+  nm.textContent = path.split(/[\\/]/).pop();
+  nm.title = path;
+  const st = document.createElement('span');
+  st.className = 'batch-state';
+  st.textContent = batchT('batch.statusQueued') || '';
+  row.appendChild(nm); row.appendChild(st);
+  row.addEventListener('click', async () => {
+    if (!row.dataset.done || !row.dataset.out) return;
+    closeBatchModal();
+    await loadFile(row.dataset.out);
+  });
+  return row;
+}
+
+function setBatchRow(row, status, title) {
+  row.className = 'batch-item ' + status;
+  const st = row.querySelector('.batch-state');
+  if (st) {
+    const labels = {
+      queued: batchT('batch.statusQueued') || '',
+      running: batchT('batch.statusRunning') || '',
+      ok: batchT('batch.statusOk') || '',
+      skipped: batchT('batch.statusSkipped') || '',
+      error: batchT('batch.statusError') || '',
+      canceled: batchT('batch.statusCanceled') || '',
+    };
+    st.textContent = labels[status] || status;
+    if (status === 'error' && title) st.title = title;
+  }
+}
+
+function countBatchRow(row, status) {
+  if (row.dataset.done) return;
+  row.dataset.done = '1';
+  if (status in batchCount) batchCount[status]++;
+}
+
+async function enqueueBatchFiles(paths, overwrite) {
+  const list = (paths || []).filter(p => typeof p === 'string' && p.trim());
+  if (!list.length) return;
+  if (list.some(p => IMG_RE.test(p)) && moduleBlocked('ocr')) return;
+  if (list.some(p => !IMG_RE.test(p)) && moduleBlocked('convert')) return;
+  openBatchModal();
+  const docs = [], images = [];
+  const listEl = $('convert-list');
+  list.forEach(p => {
+    const row = makeBatchRow(p);
+    listEl.appendChild(row);
+    if (IMG_RE.test(p)) images.push([p, row]);
+    else { docs.push(p); batchRowsBySrc[p] = row; }
+  });
+  batchDocsDone = docs.length === 0;
+  batchOcrDone = images.length === 0;
+  batchFinished = false;
+  $('batch-cancel').classList.remove('hidden');
+  $('convert-status').textContent = batchT('batch.preparing') || '';
+  if (docs.length) runBatchDocsLane(docs, overwrite);
+  if (images.length) runBatchOcrLane(images);
+}
+
+async function runBatchDocsLane(paths, overwrite) {
+  try {
+    if (!(await ensureModule('convert'))) throw new Error('convert_module_unavailable');
+    const r = await apiFetch('/api/convert/batch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paths, overwrite: !!overwrite, confirm: true }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error_code || ('http_' + r.status));
+    batchJobId = d.job;
+    if (batchCancelRequested) sendBatchCancel();
+    pollBatchJob(d.job);
+  } catch (e) {
+    failBatchDocsLane(e && e.message);
+  }
+}
+
+function sendBatchCancel() {
+  if (!batchJobId || !batchCancelRequested) return;
+  apiFetch('/api/convert/cancel', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ job: batchJobId }),
+  }).catch(() => {});
+}
+
+function pollBatchJob(jid) {
+  stopBatchPoll();
+  batchJobTimer = setInterval(async () => {
+    try {
+      const r = await apiFetch('/api/convert/progress?job=' + encodeURIComponent(jid));
+      if (!r.ok) { failBatchDocsLane('HTTP ' + r.status); return; }
+      const d = await r.json();
+      renderBatchProgress(d);
+      if (d.finished) {
+        stopBatchPoll();
+        batchDocsDone = true;
+        maybeFinishBatch();
+      }
+    } catch (e) {
+      failBatchDocsLane(e && e.message);
+    }
+  }, 600);
+}
+
+function failBatchDocsLane(message) {
+  stopBatchPoll();
+  for (const src in batchRowsBySrc) {
+    const row = batchRowsBySrc[src];
+    if (!row.dataset.done) {
+      setBatchRow(row, 'error', message || '');
+      countBatchRow(row, 'error');
+    }
+  }
+  batchDocsDone = true;
+  maybeFinishBatch();
+}
+
+function renderBatchProgress(d) {
+  (d.items || []).forEach(it => {
+    const row = batchRowsBySrc[it.src];
+    if (!row) return;
+    const status = it.status || 'queued';
+    if (status !== 'queued') {
+      if (status === 'ok' && it.out) row.dataset.out = it.out;
+      setBatchRow(row, status, it.error || '');
+      countBatchRow(row, status);
+    }
+  });
+  if (d.running) {
+    $('convert-status').textContent = batchT('batch.converting', { done: d.done, total: d.total })
+      || '';
+  }
+}
+
+async function runBatchOcrLane(items) {
+  if (!(await ensureModule('ocr'))) {
+    items.forEach(([, row]) => { setBatchRow(row, 'error'); countBatchRow(row, 'error'); });
+    batchOcrDone = true;
+    maybeFinishBatch();
+    return;
+  }
+  for (let i = 0; i < items.length; i++) {
+    const [path, row] = items[i];
+    // 首项不检查取消标记：保证队列启动后至少处理一个任务，且取消语义可预期
+    if (i > 0 && batchOcrCanceled && !row.dataset.done) {
+      setBatchRow(row, 'canceled');
+      countBatchRow(row, 'canceled');
+      continue;
+    }
+    setBatchRow(row, 'running');
+    try {
+      const r = await apiFetch('/api/ocr?p=' + encodeURIComponent(path));
+      const d = await r.json().catch(() => ({}));
+      const ok = r.ok && d.content;
+      setBatchRow(row, ok ? 'ok' : 'error', ok ? '' : (d.error_code || 'ocr_failed'));
+      countBatchRow(row, ok ? 'ok' : 'error');
+    } catch (e) {
+      setBatchRow(row, 'error', e && e.message);
+      countBatchRow(row, 'error');
+    }
+  }
+  batchOcrDone = true;
+  maybeFinishBatch();
+}
+
+function maybeFinishBatch() {
+  if (batchFinished || !batchDocsDone || !batchOcrDone) return;
+  batchFinished = true;
+  const c = batchCount;
+  let text = batchT('batch.summary', { ok: c.ok, skipped: c.skipped, failed: c.error })
+    || '';
+  if (c.canceled) {
+    text += ' · ' + (batchT('batch.summaryCanceled', { canceled: c.canceled }) || '');
+  }
+  $('convert-status').textContent = text;
+  $('batch-cancel').classList.add('hidden');
+}
+
+function onBatchCancel() {
+  batchOcrCanceled = true;
+  batchCancelRequested = true;
+  sendBatchCancel();
+}
+
+;
+'use strict';
+/* Hermes pet -> existing ReadMD batch-workbench bridge.
+   No second modal is created: a drop reuses the shared confirmation dialog
+   and then the normal batch workbench, with its existing focus/i18n styling. */
+
+const petBatchInbox = [];
+let petBatchConfirming = false;
+
+function petBatchText(key) {
+  return window.i18n ? window.i18n.t(key) : key;
+}
+
+async function receivePetBatch(paths) {
+  const safePaths = (paths || []).filter(path => typeof path === 'string' && path);
+  if (!safePaths.length) return;
+  petBatchInbox.push(safePaths);
+  if (petBatchConfirming) return;
+  petBatchConfirming = true;
+  try {
+    while (petBatchInbox.length) {
+      const next = petBatchInbox.shift();
+      const confirmed = await confirmAction({
+        title: petBatchText('batch.title'),
+        message: petBatchText('batch.note'),
+        confirmText: petBatchText('dialog.confirm'),
+        cancelText: petBatchText('dialog.cancel'),
+      });
+      if (confirmed) await enqueueBatchFiles(next, false);
+    }
+  } finally {
+    petBatchConfirming = false;
+  }
+}
+
+window.receivePetBatch = receivePetBatch;
+
+const petT = (key, params) => window.i18n ? window.i18n.t(key, params) : key;
+
+function setPetMenuStatus(status) {
+  const label = $('pet-status-label');
+  if (!label) return;
+  if (status && status.enabled) label.textContent = petT('app.enabled');
+  else if (status && status.adapter && status.adapter.available) label.textContent = petT('app.disabled');
+  else label.textContent = petT('menu.petSub');
+}
+
+async function refreshPetMenuStatus() {
+  if (!hasPy || !py.get_pet_runtime_status) return;
+  try { setPetMenuStatus(await py.get_pet_runtime_status()); } catch (_error) { /* optional plugin */ }
+}
+
+let activePetSettingsStatus = null;
+
+function petPercent(value, fallback) {
+  const number = Number(value);
+  return Math.round((Number.isFinite(number) ? number : fallback) * 100);
+}
+
+function renderPetSettings(status) {
+  activePetSettingsStatus = status || null;
+  const preferences = status && status.preferences ? status.preferences : {};
+  const enabled = $('pet-enabled');
+  const renderer = $('pet-renderer');
+  const scale = $('pet-scale');
+  const opacity = $('pet-opacity');
+  if (enabled) enabled.checked = Boolean(status && status.enabled);
+  if (renderer) renderer.value = preferences.renderer || 'hermes-sprite';
+  if (scale) scale.value = String(petPercent(preferences.scale, 0.33));
+  if (opacity) opacity.value = String(petPercent(preferences.opacity, 1));
+  updatePetRangeLabels();
+  const install = $('pet-install');
+  if (install) install.classList.toggle('hidden', Boolean(status && status.adapter && status.adapter.available));
+}
+
+function updatePetRangeLabels() {
+  const scale = $('pet-scale');
+  const opacity = $('pet-opacity');
+  if ($('pet-scale-value') && scale) $('pet-scale-value').textContent = scale.value + '%';
+  if ($('pet-opacity-value') && opacity) $('pet-opacity-value').textContent = opacity.value + '%';
+}
+
+function closePetSettings() {
+  $('pet-settings-modal')?.classList.add('hidden');
+}
+
+async function installPetPlugin() {
+  if (!hasPy || !py.choose_pet_plugin || !py.install_pet_plugin) return false;
+  const archive = await py.choose_pet_plugin();
+  if (!archive) return false;
+  const confirmed = await confirmAction({
+    title: petT('menu.pet'), message: petT('menu.petSub'),
+    confirmText: petT('update.installNow'), cancelText: petT('dialog.cancel'),
+  });
+  if (!confirmed) return false;
+  const result = await py.install_pet_plugin(archive, true);
+  if (!result || !result.ok) {
+    if (typeof showToast === 'function') showToast(petT('app.failed'));
+    return false;
+  }
+  return true;
+}
+
+async function savePetSettings({ allowInstall = false } = {}) {
+  if (!hasPy || !py.get_pet_runtime_status || !py.configure_pet) return;
+  const enabled = Boolean($('pet-enabled')?.checked);
+  let status = activePetSettingsStatus || await py.get_pet_runtime_status();
+  if (enabled && (!status.adapter || !status.adapter.available)) {
+    if (!allowInstall || !(await installPetPlugin())) {
+      renderPetSettings(status);
+      return;
+    }
+    status = await py.get_pet_runtime_status();
+  }
+  const result = await py.configure_pet({
+    enabled,
+    opacity: Number($('pet-opacity')?.value || 100) / 100,
+    renderer: $('pet-renderer')?.value || 'hermes-sprite',
+    scale: Number($('pet-scale')?.value || 33) / 100,
+  });
+  if (!result || !result.ok) {
+    if (typeof showToast === 'function') showToast(petT('app.failed'));
+  } else if (typeof showToast === 'function') {
+    showToast(enabled ? petT('app.enabled') : petT('app.disabled'));
+  }
+  await refreshPetMenuStatus();
+  renderPetSettings(await py.get_pet_runtime_status());
+}
+
+async function openPetSettings() {
+  closeMoreMenu();
+  if (!hasPy || !py.get_pet_runtime_status) return;
+  const modal = $('pet-settings-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  try {
+    renderPetSettings(await py.get_pet_runtime_status());
+  } catch (_error) {
+    if (typeof showToast === 'function') showToast(petT('app.failed'));
+  }
+}
+
+window.openPetSettings = openPetSettings;
+window.refreshPetMenuStatus = refreshPetMenuStatus;
+
+function openPetQuickMenu() {
+  const trigger = $('btn-more');
+  const menu = $('more-menu');
+  if (trigger && menu && !menu.classList.contains('open')) trigger.click();
+}
+
+window.openPetQuickMenu = openPetQuickMenu;
+
+async function pollPetBatch() {
+  try {
+    const response = await apiFetch('/api/control/pet-batch');
+    const payload = await response.json();
+    if (payload && payload.pending) receivePetBatch(payload.paths);
+  } catch (_error) { /* native bridge may be unavailable in browser mode */ }
+}
+
+async function pollPetQuickMenu() {
+  try {
+    const response = await apiFetch('/api/control/pet-menu');
+    const payload = await response.json();
+    if (payload && payload.pending) openPetQuickMenu();
+  } catch (_error) { /* native bridge may be unavailable in browser mode */ }
+}
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    refreshPetMenuStatus();
+    $('pet-settings-close')?.addEventListener('click', closePetSettings);
+    $('pet-install')?.addEventListener('click', async () => {
+      if (await installPetPlugin()) renderPetSettings(await py.get_pet_runtime_status());
+    });
+    $('pet-enabled')?.addEventListener('change', () => { void savePetSettings({ allowInstall: true }); });
+    $('pet-renderer')?.addEventListener('change', () => { void savePetSettings(); });
+    $('pet-scale')?.addEventListener('input', updatePetRangeLabels);
+    $('pet-opacity')?.addEventListener('input', updatePetRangeLabels);
+    $('pet-scale')?.addEventListener('change', () => { void savePetSettings(); });
+    $('pet-opacity')?.addEventListener('change', () => { void savePetSettings(); });
+    setInterval(pollPetBatch, 1000);
+    setInterval(pollPetQuickMenu, 1000);
+  }, 1200);
+});
+
+window.addEventListener('readmd:language-changed', refreshPetMenuStatus);
 
 ;
 'use strict';
@@ -10907,12 +11546,12 @@ async function runExport() {
   try {
     if (fmt === 'epub') {
       if (hasPy && py.export_epub) {
-        r = await py.export_epub(content, '', options.meta || {});
+        r = await py.export_epub(content, '', options.meta || {}, true);
       } else {
         const resp = await apiFetch('/api/export/epub', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: content, meta: options.meta || {} })
+          body: JSON.stringify({ content: content, meta: options.meta || {}, confirm: true })
         });
         r = await resp.json();
       }
@@ -10948,13 +11587,13 @@ async function runExport() {
   const res = $('export-result');
   res.textContent = (_t('toast.exportedPrefix') || '已导出：') + (r.path || '导出完成');
   res.className = 'export-result ok';
-  if (r.path) {
+  if (r.path && hasPy && py) {
     $('export-open').classList.remove('hidden');
     $('export-reveal').classList.remove('hidden');
     $('export-open').onclick = () => py.open_path(r.path);
     $('export-reveal').onclick = () => py.reveal_path(r.path);
   }
-  try { py.save_export_presets({ last: { fmt: fmt, options: options } }); } catch (e) { /* ignore */ }
+  try { if (hasPy && py.save_export_presets) py.save_export_presets({ last: { fmt: fmt, options: options } }); } catch (e) { /* ignore */ }
   if (r.warns && r.warns.length) showToast(_t('toast.exportCompleteWarns', { count: r.warns.length }) || ('导出完成，' + r.warns.length + ' 条提示'));
   else showToast(_t('toast.exportSuccess') || '导出成功');
 }
@@ -11012,14 +11651,28 @@ async function generateExportStyleWithAi(stylePrompt) {
   }
 
   try {
+    const connection = typeof resolveSharedAiConnection === 'function'
+      ? await resolveSharedAiConnection()
+      : null;
+    if (!connection) throw new Error(_t('toast.selectProviderFirst') || '请先选择 AI 提供商');
+    if (!connection.local && !connection.has_key) {
+      throw new Error(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接');
+    }
     const res = await apiFetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        provider: connection.provider,
+        credential_id: connection.credential_id,
+        model: connection.model,
+        base_url: connection.base_url,
+        mode: connection.mode,
+        endpoint_mode: connection.endpoint_mode,
+        headers: connection.headers,
         skill_id: 'readmd-export-style',
         skill_variables: {
           request: stylePrompt,
-          context: 'Use typography.font/size/lineHeight/spacing/color/align, headings.h1/h2 size/color/bold, table.headerBg/headerColor, page.marginTop/Right/Bottom/Left with the documented bounds.',
+          context: '',
           document: stylePrompt,
           language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en',
           output_format: 'JSON'
@@ -11436,6 +12089,9 @@ function bindEvents() {
     if (convertLastDir && py.open_dir) py.open_dir(convertLastDir);
   });
   $('convert-modal').addEventListener('click', e => { if (e.target === $('convert-modal')) closeConvertModal(); });
+
+  /* --- 3b. 批处理复用万物转 MD弹窗 [联动: features/batch.js] --- */
+  if ($('batch-cancel')) $('batch-cancel').addEventListener('click', onBatchCancel);
 
   /* --- 4. 离线 OCR / 网页抓取 / 剪贴板新建 / 演示 / 样式定制 / 禅模式 [联动: convert.js, ocr.js, web.js, clipboard.js, render.js] --- */
   $('btn-ocr').addEventListener('click', () => chooseFile('ocr')); // 触发离线 OCR 识别
@@ -11888,6 +12544,7 @@ function bindEvents() {
   $('ai-template').addEventListener('change', onAiTemplateChange);
   $('ai-tpl-btn').addEventListener('click', openTplModal);
   $('tpl-new').addEventListener('click', () => selectTpl(null));
+  $('tpl-edit') && $('tpl-edit').addEventListener('click', editCurrentSkill);
   $('tpl-copy') && $('tpl-copy').addEventListener('click', copyCurrentSkill);
   $('tpl-save').addEventListener('click', saveTplForm);
   $('tpl-ai-generate') && $('tpl-ai-generate').addEventListener('click', generateSkillDraft);
@@ -11900,8 +12557,20 @@ function bindEvents() {
   $('ai-clear-ctx').addEventListener('click', clearAiContext);
   $('ai-expand-toggle') && $('ai-expand-toggle').addEventListener('click', toggleAiFullscreen);
   $('tpl-search') && $('tpl-search').addEventListener('input', renderTplList);
-  $('tpl-import-btn') && $('tpl-import-btn').addEventListener('click', () => $('tpl-file-input') && $('tpl-file-input').click());
+  $('tpl-import-btn') && $('tpl-import-btn').addEventListener('click', () => toggleSkillImportMenu());
   $('tpl-file-input') && $('tpl-file-input').addEventListener('change', e => { if (e.target.files) Array.from(e.target.files).forEach(f => importTemplatesFromFile(f)); e.target.value = ''; });
+  $('tpl-import-source-github') && $('tpl-import-source-github').addEventListener('click', () => selectSkillImportSource('github'));
+  $('tpl-import-source-folder') && $('tpl-import-source-folder').addEventListener('click', () => selectSkillImportSource('folder'));
+  $('tpl-import-source-zip') && $('tpl-import-source-zip').addEventListener('click', () => selectSkillImportSource('zip'));
+  $('tpl-folder-input') && $('tpl-folder-input').addEventListener('change', e => {
+    const files = Array.from(e.target.files || []);
+    if (files.length) showToast(window.i18n ? window.i18n.t('toast.convertBrowserNotice') : 'Browser mode is unavailable');
+    e.target.value = '';
+  });
+  $('tpl-zip-input') && $('tpl-zip-input').addEventListener('change', async e => {
+    await previewBrowserZipSkill((e.target.files || [])[0]);
+    e.target.value = '';
+  });
   $('tpl-github-preview-btn') && $('tpl-github-preview-btn').addEventListener('click', previewGithubSkillImport);
   $('tpl-github-url') && $('tpl-github-url').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); previewGithubSkillImport(); } });
   $('tpl-export-btn') && $('tpl-export-btn').addEventListener('click', exportTemplatesAsJson);
@@ -11924,6 +12593,7 @@ function bindEvents() {
 
   /* --- 17. 客户端内版本检查、语言切换、开机自启与自动升级 [联动: core/i18n.js, features/updater.js] --- */
   if ($('btn-lang')) $('btn-lang').addEventListener('click', () => { closeMoreMenu(); if (window.i18n) window.i18n.openModal(); });
+  if ($('btn-pet')) $('btn-pet').addEventListener('click', () => { if (typeof openPetSettings === 'function') openPetSettings(); });
   if ($('btn-autostart')) $('btn-autostart').addEventListener('click', () => { closeMoreMenu(); toggleAutostart(); });
   if ($('btn-check-update')) $('btn-check-update').addEventListener('click', () => { closeMoreMenu(); checkUpdate(false); });
 
@@ -12044,6 +12714,9 @@ function bindEvents() {
 
   if ($('lang-modal')) $('lang-modal').addEventListener('click', e => { if (e.target === $('lang-modal')) if (window.i18n) window.i18n.closeModal(); });
   if ($('table-modal')) $('table-modal').addEventListener('click', e => { if (e.target === $('table-modal')) closeTableModal(); });
+  $('lang-modal-close')?.addEventListener('click', () => window.i18n?.closeModal());
+  $('lang-search-input')?.addEventListener('input', event => window.i18n?.renderLanguageGrid(event.target.value));
+  $('table-modal-close')?.addEventListener('click', () => closeTableModal());
   window.addEventListener('readmd:language-changed', e => {
     const lang = e.detail.lang;
     const labelEl = $('lang-current-label');
@@ -12176,6 +12849,7 @@ function bindEvents() {
       if ($('table-modal')) closeTableModal();
       closeFormulaModal(); closeMdPopups();
       stopConvertPoll();
+      stopBatchPoll();
       if (document.body.classList.contains('zen-mode')) toggleZenMode(false);
       if (state.editing) confirmExitEdit();
     }

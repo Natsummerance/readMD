@@ -106,7 +106,9 @@ test('GitHub token is submitted once and replaced by an opaque credential id', a
   await expect(page.locator('#tpl-github-credential')).toHaveValue('');
   await page.locator('#tpl-github-apply-btn').click();
   await page.locator('#confirm-action').click();
-  await page.waitForFunction(() => document.getElementById('tpl-github-preview').children.length === 0);
+  // WebKit evaluates waitForFunction through an eval path rejected by the
+  // page CSP; observe the DOM through the authorized page.evaluate bridge.
+  await expect.poll(() => page.evaluate(() => document.getElementById('tpl-github-preview').children.length)).toBe(0);
 
   expect(previewPayload.github_token).toBe('github_pat_secret');
   expect(previewPayload.credential_id).toBeUndefined();

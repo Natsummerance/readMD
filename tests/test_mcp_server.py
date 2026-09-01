@@ -175,6 +175,33 @@ class TestReadMDMCPServer(unittest.TestCase):
             self.assertFalse(res.get("isError", False))
             self.assertTrue(os.path.isfile(out_epub))
 
+    def test_side_effect_tools_require_confirmation_and_safe_targets(self):
+        denied = readmd_mcp_server.handle_tool_call("readmd_export_epub", {
+            "markdown_content": "# x", "output_path": "relative.epub"
+        })
+        self.assertTrue(denied.get("isError"))
+        payload = json.loads(denied["content"][0]["text"])
+        self.assertEqual(payload["error_code"], "confirmation_required")
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_epub = os.path.join(tmpdir, "safe.epub")
+            invalid = readmd_mcp_server.handle_tool_call("readmd_export_epub", {
+                "markdown_content": "# x", "output_path": "safe.epub", "confirm": True
+            })
+            self.assertTrue(invalid.get("isError"))
+            self.assertEqual(json.loads(invalid["content"][0]["text"])["error_code"],
+                             "output_path_must_be_absolute")
+            first = readmd_mcp_server.handle_tool_call("readmd_export_epub", {
+                "markdown_content": "# x", "output_path": out_epub, "confirm": True
+            })
+            self.assertFalse(first.get("isError", False))
+            conflict = readmd_mcp_server.handle_tool_call("readmd_export_epub", {
+                "markdown_content": "# y", "output_path": out_epub, "confirm": True
+            })
+            self.assertTrue(conflict.get("isError"))
+            self.assertEqual(json.loads(conflict["content"][0]["text"])["error_code"],
+                             "output_exists")
+
     def test_tool_run_code_chunk(self):
         """测试 readmd_run_code_chunk 工具。"""
         code = "a = 10\nb = 20\nprint(f'SUM={a+b}')"

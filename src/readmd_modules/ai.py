@@ -630,8 +630,10 @@ def _chat_openai(base_url, api_key, model, messages, temperature, stream,
                 delta = choices[0].get("delta") or {}
                 if delta.get("content"):
                     yield delta["content"]
-                if choices[0].get("finish_reason"):
-                    break
+                # Some OpenAI-compatible providers send the usage-only event
+                # after the final choice carries ``finish_reason``.  Keep
+                # reading until the protocol terminator so the shared SSE
+                # contract can emit usage before done.
         except urllib.error.URLError as e:
             raise ChatError("连接中断：%s" % e.reason) from e
         finally:
@@ -695,8 +697,8 @@ def _chat_openai_completion(base_url, api_key, model, messages, temperature, str
                 delta = choices[0].get("delta") or {}
                 if delta.get("text"):
                     yield delta["text"]
-                if choices[0].get("finish_reason"):
-                    break
+                # Do not terminate on finish_reason: usage may follow as a
+                # choice-less SSE event before [DONE].
         except urllib.error.URLError as e:
             raise ChatError("连接中断：%s" % e.reason) from e
         finally:
