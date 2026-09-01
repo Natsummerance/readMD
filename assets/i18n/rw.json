@@ -1126,5 +1126,7 @@
   "menu.batch": "Ahakorerwa akazi kenshi",
   "menu.batchSub": "Guhindura dosiye nyinshi / OCR",
   "menu.pet": "Itungo ryo kuri mudasobwa",
-  "menu.petSub": "Porogaramu y'inyongera"
+  "menu.petSub": "Porogaramu y'inyongera",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

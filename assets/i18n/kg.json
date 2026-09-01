@@ -1126,5 +1126,7 @@
   "menu.batch": "Kisalu ya bafishe mingi",
   "menu.batchSub": "Kubalula bafishe mingi / OCR",
   "menu.pet": "Kibulu kia mesa",
-  "menu.petSub": "Plug-in ya kusola"
+  "menu.petSub": "Plug-in ya kusola",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

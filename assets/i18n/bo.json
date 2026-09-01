@@ -1126,5 +1126,7 @@
   "menu.batch": "ཚོགས་པའི་ལས་སྟེགས།",
   "menu.batchSub": "ཡིག་ཆ་མང་པོ་སྒྱུར་བ / OCR",
   "menu.pet": "ཅོག་ཙེའི་སྟེང་གི་སྒོ་ཕྱུག",
-  "menu.petSub": "གདམ་ཁའི་ཁ་སྣོན།"
+  "menu.petSub": "གདམ་ཁའི་ཁ་སྣོན།",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

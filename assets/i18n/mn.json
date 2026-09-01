@@ -1126,5 +1126,7 @@
   "menu.batch": "Багц ажлын ширээ",
   "menu.batchSub": "Олон файл хөрвүүлэх / OCR",
   "menu.pet": "Ширээний тэжээвэр амьтан",
-  "menu.petSub": "Сонголтот нэмэлт"
+  "menu.petSub": "Сонголтот нэмэлт",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

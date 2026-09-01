@@ -1126,5 +1126,7 @@
   "menu.batch": "שולחן עבודה קבוצתי",
   "menu.batchSub": "המרת קבצים מרובים / OCR",
   "menu.pet": "חיית מחמד לשולחן העבודה",
-  "menu.petSub": "תוסף אופציונלי"
+  "menu.petSub": "תוסף אופציונלי",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

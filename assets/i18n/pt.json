@@ -1126,5 +1126,7 @@
   "menu.batch": "Área de trabalho em lote",
   "menu.batchSub": "Conversão de vários arquivos / OCR",
   "menu.pet": "Mascote de área de trabalho",
-  "menu.petSub": "Plugin opcional"
+  "menu.petSub": "Plugin opcional",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

@@ -1126,5 +1126,7 @@
   "menu.batch": "Batchwerkbank",
   "menu.batchSub": "Meerdere bestanden converteren / OCR",
   "menu.pet": "Bureaublad-huisdier",
-  "menu.petSub": "Optionele plug-in"
+  "menu.petSub": "Optionele plug-in",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

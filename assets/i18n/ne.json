@@ -1126,5 +1126,7 @@
   "menu.batch": "ब्याच वर्कबेन्च",
   "menu.batchSub": "कई फाइल रूपान्तरण / OCR",
   "menu.pet": "डेस्कटप पाल्तु जनावर",
-  "menu.petSub": "वैकल्पिक प्लगइन"
+  "menu.petSub": "वैकल्पिक प्लगइन",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

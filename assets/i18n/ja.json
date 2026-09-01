@@ -1126,5 +1126,7 @@
   "menu.batch": "一括ワークベンチ",
   "menu.batchSub": "複数ファイル変換 / OCR",
   "menu.pet": "デスクトップペット",
-  "menu.petSub": "オプションプラグイン"
+  "menu.petSub": "オプションプラグイン",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

@@ -1126,5 +1126,7 @@
   "menu.batch": "منصة المعالجة الجماعية",
   "menu.batchSub": "تحويل متعدد الملفات / OCR",
   "menu.pet": "حيوان أليف لسطح المكتب",
-  "menu.petSub": "إضافة اختيارية"
+  "menu.petSub": "إضافة اختيارية",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

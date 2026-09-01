@@ -937,6 +937,8 @@
   "toast.win7Blocked": "Win7 系统不支持加载此模块（转换器及依赖环境）",
   "toast.zenEntered": "已进入禅模式（鼠标移至顶部可唤出工具栏，按 Esc 退出）",
   "toc.sectionDefault": "章节",
+  "tray.show": "显示 ReadMD",
+  "tray.quit": "退出 ReadMD",
   "toolbar.ai": "AI 助手 (Ctrl+Shift+A)",
   "toolbar.backToTop": "回到顶部",
   "toolbar.close": "关闭",

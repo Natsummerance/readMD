@@ -1126,5 +1126,7 @@
   "menu.batch": "Bàn làm việc hàng loạt",
   "menu.batchSub": "Chuyển đổi nhiều tệp / OCR",
   "menu.pet": "Thú cưng trên màn hình",
-  "menu.petSub": "Trình cắm tùy chọn"
+  "menu.petSub": "Trình cắm tùy chọn",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

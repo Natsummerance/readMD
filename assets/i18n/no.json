@@ -1126,5 +1126,7 @@
   "menu.batch": "Partiarbeidsbenk",
   "menu.batchSub": "Konvertering av flere filer / OCR",
   "menu.pet": "Skrivebordskjæledyr",
-  "menu.petSub": "Valgfri utvidelse"
+  "menu.petSub": "Valgfri utvidelse",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

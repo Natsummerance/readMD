@@ -1126,5 +1126,7 @@
   "menu.batch": "批次工作台",
   "menu.batchSub": "多檔案轉換 / OCR",
   "menu.pet": "桌面寵物",
-  "menu.petSub": "外掛程式"
+  "menu.petSub": "外掛程式",
+  "tray.show": "顯示 ReadMD",
+  "tray.quit": "退出 ReadMD"
 }

@@ -1126,5 +1126,7 @@
   "menu.batch": "Mesa de trabajo por lotes",
   "menu.batchSub": "Conversión de varios archivos / OCR",
   "menu.pet": "Mascota de escritorio",
-  "menu.petSub": "Complemento opcional"
+  "menu.petSub": "Complemento opcional",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

@@ -1126,5 +1126,7 @@
   "menu.batch": "အစုလိုက် လုပ်ဆောင်ချက်",
   "menu.batchSub": "ဖိုင်များစွာ ပြောင်းလဲခြင်း / OCR",
   "menu.pet": "ဒက်စ်တော့အိမ်မွေးတိရစ္ဆာန်",
-  "menu.petSub": "ရွေးချယ်နိုင်သော ပလပ်အင်"
+  "menu.petSub": "ရွေးချယ်နိုင်သော ပလပ်အင်",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

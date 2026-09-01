@@ -1126,5 +1126,7 @@
   "menu.batch": "Stapelverarbeitung",
   "menu.batchSub": "Mehrere Dateien konvertieren / OCR",
   "menu.pet": "Desktop-Haustier",
-  "menu.petSub": "Optionales Plugin"
+  "menu.petSub": "Optionales Plugin",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

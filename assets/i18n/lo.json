@@ -1126,5 +1126,7 @@
   "menu.batch": "ໂຕະເຮັດວຽກຊຸດ",
   "menu.batchSub": "ແປງຫຼາຍໄຟລ໌ / OCR",
   "menu.pet": "ສັດລ້ຽງເທິງເດັສກ໌ທັອບ",
-  "menu.petSub": "ປລັກອິນເສີມ"
+  "menu.petSub": "ປລັກອິນເສີມ",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

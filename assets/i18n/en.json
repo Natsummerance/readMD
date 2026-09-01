@@ -903,6 +903,8 @@
   "toast.win7Blocked": "Windows 7 does not support loading this module (converters and runtime dependencies)",
   "toast.zenEntered": "Entered Zen Mode (Hover top to reveal toolbar, press Esc to exit)",
   "toc.sectionDefault": "Section",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD",
   "toolbar.ai": "AI Assistant (Ctrl+Shift+A)",
   "toolbar.backToTop": "Back to Top",
   "toolbar.close": "Close",

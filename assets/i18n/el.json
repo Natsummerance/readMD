@@ -1126,5 +1126,7 @@
   "menu.batch": "Πίνακας μαζικής επεξεργασίας",
   "menu.batchSub": "Μετατροπή πολλών αρχείων / OCR",
   "menu.pet": "Κατοικίδιο επιφάνειας εργασίας",
-  "menu.petSub": "Προαιρετική προσθήκη"
+  "menu.petSub": "Προαιρετική προσθήκη",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

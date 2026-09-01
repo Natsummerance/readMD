@@ -1126,5 +1126,7 @@
   "menu.batch": "ব্যাচ ওয়ার্কবেঞ্চ",
   "menu.batchSub": "একাধিক ফাইল রূপান্তর / OCR",
   "menu.pet": "ডেস্কটপ পোষ্য",
-  "menu.petSub": "ঐচ্ছিক প্লাগইন"
+  "menu.petSub": "ঐচ্ছিক প্লাগইন",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

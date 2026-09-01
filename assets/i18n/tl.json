@@ -1126,5 +1126,7 @@
   "menu.batch": "Batch Workbench",
   "menu.batchSub": "Conversion ng maraming file / OCR",
   "menu.pet": "Alagang hayop sa desktop",
-  "menu.petSub": "Opsyonal na plugin"
+  "menu.petSub": "Opsyonal na plugin",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

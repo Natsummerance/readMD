@@ -1126,5 +1126,7 @@
   "menu.batch": "توپ ئىش ئۈستىلى",
   "menu.batchSub": "كۆپ ھۆججەت ئايلاندۇرۇش / OCR",
   "menu.pet": "ئۈستەلئۈستى ئەرمەك ھايۋان",
-  "menu.petSub": "ئىختىيارى قىستۇرما"
+  "menu.petSub": "ئىختىيارى قىستۇرما",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

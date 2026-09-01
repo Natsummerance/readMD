@@ -1126,5 +1126,7 @@
   "menu.batch": "Ruang Kerja Kelompok",
   "menu.batchSub": "Penukaran berbilang fail / OCR",
   "menu.pet": "Haiwan peliharaan desktop",
-  "menu.petSub": "Pemalam pilihan"
+  "menu.petSub": "Pemalam pilihan",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

@@ -1126,5 +1126,7 @@
   "menu.batch": "Suliarinnittarfik",
   "menu.batchSub": "Filit amerlasuut allanngortinnerat / OCR",
   "menu.pet": "Qarasaasiami uumasoq",
-  "menu.petSub": "Ilassut nammineq toqqagaq"
+  "menu.petSub": "Ilassut nammineq toqqagaq",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

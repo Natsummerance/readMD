@@ -1126,5 +1126,7 @@
   "menu.batch": "โต๊ะทำงานชุด",
   "menu.batchSub": "แปลงไฟล์หลายไฟล์ / OCR",
   "menu.pet": "สัตว์เลี้ยงบนเดสก์ท็อป",
-  "menu.petSub": "ปลั๊กอินเสริม"
+  "menu.petSub": "ปลั๊กอินเสริม",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

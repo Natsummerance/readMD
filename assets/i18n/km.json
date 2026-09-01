@@ -1126,5 +1126,7 @@
   "menu.batch": "កន្លែងធ្វើការច្រើន",
   "menu.batchSub": "បម្លែងឯកសារច្រើន / OCR",
   "menu.pet": "សត្វចិញ្ចឹមលើផ្ទៃតុ",
-  "menu.petSub": "កម្មវិធីជំនួយស្រេចចិត្ត"
+  "menu.petSub": "កម្មវិធីជំនួយស្រេចចិត្ត",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

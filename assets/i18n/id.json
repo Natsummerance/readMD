@@ -1126,5 +1126,7 @@
   "menu.batch": "Meja Kerja Batch",
   "menu.batchSub": "Konversi banyak berkas / OCR",
   "menu.pet": "Hewan peliharaan desktop",
-  "menu.petSub": "Plugin opsional"
+  "menu.petSub": "Plugin opsional",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

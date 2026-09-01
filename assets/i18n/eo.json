@@ -1126,5 +1126,7 @@
   "menu.batch": "Stapla labortablo",
   "menu.batchSub": "Konverti plurajn dosierojn / OCR",
   "menu.pet": "Labortabla dorlotbesto",
-  "menu.petSub": "Laŭvola kromaĵo"
+  "menu.petSub": "Laŭvola kromaĵo",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

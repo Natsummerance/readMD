@@ -1126,5 +1126,7 @@
   "menu.batch": "Skupni radni stol",
   "menu.batchSub": "Pretvorba više datoteka / OCR",
   "menu.pet": "Ljubimac na radnoj površini",
-  "menu.petSub": "Dodatak po izboru"
+  "menu.petSub": "Dodatak po izboru",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

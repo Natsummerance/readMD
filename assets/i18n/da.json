@@ -1126,5 +1126,7 @@
   "menu.batch": "Batch-arbejdsbord",
   "menu.batchSub": "Konvertering af flere filer / OCR",
   "menu.pet": "Skrivebordskæledyr",
-  "menu.petSub": "Valgfrit plugin"
+  "menu.petSub": "Valgfrit plugin",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

@@ -1126,5 +1126,7 @@
   "menu.batch": "Kötegelt munkaasztal",
   "menu.batchSub": "Több fájl konvertálása / OCR",
   "menu.pet": "Asztali kisállat",
-  "menu.petSub": "Opcionális bővítmény"
+  "menu.petSub": "Opcionális bővítmény",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

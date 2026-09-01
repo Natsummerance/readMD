@@ -1126,5 +1126,7 @@
   "menu.batch": "Paketna miza",
   "menu.batchSub": "Pretvorba več datotek / OCR",
   "menu.pet": "Namizni ljubljenček",
-  "menu.petSub": "Izbirni vtičnik"
+  "menu.petSub": "Izbirni vtičnik",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

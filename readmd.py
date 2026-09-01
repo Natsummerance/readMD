@@ -4967,6 +4967,30 @@ _tray_icon = {'icon': None, 'started': False}
 _tray_lock = threading.Lock()
 
 
+def _tray_labels():
+    """Resolve tray menu labels from the current locale (en/zh fallback)."""
+    try:
+        lang = get_system_language() or ''
+    except Exception:
+        lang = ''
+    is_zh = lang.lower().startswith('zh')
+    defaults = {
+        'tray.show': '显示 ReadMD' if is_zh else 'Show ReadMD',
+        'menu.open': '打开文件…' if is_zh else 'Open File…',
+        'tray.quit': '退出 ReadMD' if is_zh else 'Quit ReadMD',
+    }
+    strings = {}
+    for code in (lang, 'zh-CN' if is_zh else 'en'):
+        try:
+            path = os.path.join(APP_DIR, 'assets', 'i18n', f'{code}.json')
+            with open(path, encoding='utf-8') as f:
+                strings = json.load(f)
+            break
+        except Exception:
+            continue
+    return {key: strings.get(key) or default for key, default in defaults.items()}
+
+
 def _start_tray_once(window):
     """Create the tray only after the page is usable, and never twice."""
     with _tray_lock:
@@ -5017,11 +5041,12 @@ def _start_tray(window):
         quit_app()
 
     try:
+        labels = _tray_labels()
         menu = pystray.Menu(
-            pystray.MenuItem('显示 ReadMD', act_show, default=True),
-            pystray.MenuItem('打开文件…', act_open),
+            pystray.MenuItem(labels['tray.show'], act_show, default=True),
+            pystray.MenuItem(labels['menu.open'], act_open),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem('退出 ReadMD', act_quit),
+            pystray.MenuItem(labels['tray.quit'], act_quit),
         )
         icon = pystray.Icon('readmd', img, 'ReadMD', menu=menu)
         icon.run_detached()
@@ -5031,7 +5056,6 @@ def _start_tray(window):
     except Exception as e:
         logging.exception('tray start failed: %s', e)
         return None
-    return 0
 
 
 if __name__ == '__main__':

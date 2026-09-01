@@ -1126,5 +1126,7 @@
   "menu.batch": "Пакетная обработка",
   "menu.batchSub": "Конвертация нескольких файлов / OCR",
   "menu.pet": "Настольный питомец",
-  "menu.petSub": "Необязательный плагин"
+  "menu.petSub": "Необязательный плагин",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

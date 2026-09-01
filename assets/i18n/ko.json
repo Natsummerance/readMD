@@ -1126,5 +1126,7 @@
   "menu.batch": "일괄 작업대",
   "menu.batchSub": "여러 파일 변환 / OCR",
   "menu.pet": "데스크톱 펫",
-  "menu.petSub": "선택적 플러그인"
+  "menu.petSub": "선택적 플러그인",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

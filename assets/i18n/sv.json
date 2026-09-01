@@ -1126,5 +1126,7 @@
   "menu.batch": "Batcharbetsbord",
   "menu.batchSub": "Konvertering av flera filer / OCR",
   "menu.pet": "Skrivbordsdjur",
-  "menu.petSub": "Valfritt insticksprogram"
+  "menu.petSub": "Valfritt insticksprogram",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }

@@ -1126,5 +1126,7 @@
   "menu.batch": "Eräajo",
   "menu.batchSub": "Useiden tiedostojen muuntaminen / OCR",
   "menu.pet": "Työpöytälemmikki",
-  "menu.petSub": "Valinnainen lisäosa"
+  "menu.petSub": "Valinnainen lisäosa",
+  "tray.show": "Show ReadMD",
+  "tray.quit": "Quit ReadMD"
 }
