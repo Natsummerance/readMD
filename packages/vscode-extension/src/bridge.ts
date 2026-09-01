@@ -27,6 +27,11 @@ export class ReadMDBridge {
   private nextId = 1;
   private buffer = '';
   private pending = new Map<number, { resolve: (value: any) => void; reject: (reason?: any) => void; timer: NodeJS.Timeout }>();
+  private disposed = false;
+  private procSpawned = false;
+  private everConnected = false;
+  private disconnectedListeners = new Set<() => void>();
+  private readyListeners = new Set<() => void>();
 
   constructor(context: vscode.ExtensionContext) {
     this.extensionPath = context.extensionPath;
@@ -42,8 +47,26 @@ export class ReadMDBridge {
 
   public getServerPath(): string { return this.getMcpServerPath(); }
 
+  public onDisconnected(listener: () => void): vscode.Disposable {
+    this.disconnectedListeners.add(listener);
+    return { dispose: () => this.disconnectedListeners.delete(listener) };
+  }
+
+  public onReady(listener: () => void): vscode.Disposable {
+    this.readyListeners.add(listener);
+    return { dispose: () => this.readyListeners.delete(listener) };
+  }
+
+  private fireDisconnected(): void {
+    for (const listener of [...this.disconnectedListeners]) listener();
+  }
+
+  private fireReady(): void {
+    for (const listener of [...this.readyListeners]) listener();
+  }
+
   private async ensureProcess(): Promise<void> {
-    if (this.proc && !this.proc.killed) return;
+    if (this.proc && this.procSpawned && !this.proc.killed) return;
     if (this.starting) return this.starting;
     this.starting = (async () => {
       const pythonExe = await findPythonPath();
@@ -53,13 +76,28 @@ export class ReadMDBridge {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
       this.proc = proc;
+      this.procSpawned = false;
       proc.stdout.on('data', chunk => this.consumeOutput(chunk.toString()));
       proc.stderr.on('data', chunk => { /* protocol responses stay on stdout */ void chunk; });
-      proc.on('error', err => this.failProcess(err));
-      proc.on('close', code => this.failProcess(new Error(`ReadMD Core 进程异常退出: ${code ?? 'unknown'}`)));
+      proc.on('error', err => {
+        if (this.proc === proc) this.failProcess(err);
+      });
+      proc.on('close', code => {
+        if (this.proc === proc) this.failProcess(new Error(`ReadMD Core 进程异常退出: ${code ?? 'unknown'}`));
+      });
       await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(() => reject(new Error('ReadMD Core 启动超时')), 10000);
-        proc.once('spawn', () => { clearTimeout(timer); resolve(); });
+        const timer = setTimeout(() => {
+          if (this.proc === proc) this.proc = undefined;
+          reject(new Error('ReadMD Core 启动超时'));
+        }, 10000);
+        proc.once('spawn', () => {
+          if (this.proc !== proc) return;
+          this.procSpawned = true;
+          this.everConnected = true;
+          clearTimeout(timer);
+          this.fireReady();
+          resolve();
+        });
         proc.once('error', err => { clearTimeout(timer); reject(err); });
       });
     })().finally(() => { this.starting = undefined; });
@@ -89,10 +127,13 @@ export class ReadMDBridge {
   }
 
   private failProcess(error: Error): void {
-    if (this.proc && this.proc.exitCode === null) return;
+    if (this.proc && this.procSpawned && this.proc.exitCode === null && this.proc.signalCode === null) return;
+    const wasConnected = this.everConnected && !this.disposed;
     this.proc = undefined;
+    this.procSpawned = false;
     for (const waiter of this.pending.values()) { clearTimeout(waiter.timer); waiter.reject(error); }
     this.pending.clear(); this.buffer = '';
+    if (wasConnected) this.fireDisconnected();
   }
 
   /**
@@ -149,6 +190,7 @@ export class ReadMDBridge {
   }
 
   public dispose(): void {
+    this.disposed = true;
     for (const waiter of this.pending.values()) { clearTimeout(waiter.timer); waiter.reject(new Error('ReadMD Core 已关闭')); }
     this.pending.clear(); this.proc?.kill(); this.proc = undefined;
   }

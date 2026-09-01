@@ -5,6 +5,8 @@ import { ReadMDBridge } from './bridge';
 import { ReadMDToolboxProvider } from './sidebarProvider';
 
 let diagnosticStatusBarItem: vscode.StatusBarItem;
+let coreStatusBarItem: vscode.StatusBarItem;
+let coreWasDown = false;
 
 export function activate(context: vscode.ExtensionContext) {
   const bridge = new ReadMDBridge(context);
@@ -74,10 +76,18 @@ export function activate(context: vscode.ExtensionContext) {
       }
     } catch (err: any) { vscode.window.showErrorMessage(`ReadMD AI 工作台失败: ${err.message}`); }
   });
-  context.subscriptions.push(skillsDisposable, aiWorkbenchDisposable);
+  const openSkillByUriDisposable = vscode.commands.registerCommand('readmd.openSkillByUri', async (uri?: string) => {
+    if (!uri) return;
+    try {
+      const text = await bridge.readSkill(uri);
+      const doc = await vscode.workspace.openTextDocument({ content: text, language: 'markdown' });
+      await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+    } catch (err: any) { vscode.window.showErrorMessage(`读取 Skill 失败: ${err.message}`); }
+  });
+  context.subscriptions.push(skillsDisposable, aiWorkbenchDisposable, openSkillByUriDisposable);
 
   // 1. 注册侧边栏工具箱视图
-  const toolboxProvider = new ReadMDToolboxProvider();
+  const toolboxProvider = new ReadMDToolboxProvider(() => bridge.listSkills());
   vscode.window.registerTreeDataProvider('readmdToolbox', toolboxProvider);
 
   // 2. 状态栏指示器
@@ -98,6 +108,26 @@ export function activate(context: vscode.ExtensionContext) {
 
   vscode.window.onDidChangeActiveTextEditor(updateStatusBar, null, context.subscriptions);
   updateStatusBar();
+
+  // Core 连接状态指示器：断线时提示，重连成功后自动隐藏
+  coreStatusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99);
+  coreStatusBarItem.name = 'ReadMD Core';
+  context.subscriptions.push(
+    coreStatusBarItem,
+    bridge.onDisconnected(() => {
+      coreWasDown = true;
+      coreStatusBarItem.text = '$(plug) ReadMD Core 已断开';
+      coreStatusBarItem.tooltip = '下次执行操作时会自动重启并重连';
+      coreStatusBarItem.show();
+    }),
+    bridge.onReady(() => {
+      coreStatusBarItem.hide();
+      if (coreWasDown) {
+        coreWasDown = false;
+        void vscode.window.showInformationMessage('ReadMD Core 已重新连接');
+      }
+    })
+  );
 
   // 3. 命令：实时双向同步增强预览 (含 KaTeX、Mermaid、WaveDrom、代码高亮)
   const previewDisposable = vscode.commands.registerCommand('readmd.preview', () => {
