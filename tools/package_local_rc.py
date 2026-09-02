@@ -20,6 +20,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def read_version(root: Path) -> str:
+    """Read the candidate version from the repository source of truth."""
+    value = (root / "VERSION").read_text(encoding="utf-8").strip()
+    if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", value):
+        raise SystemExit(f"invalid VERSION value: {value!r}")
+    return value
+
+
 def sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -63,7 +71,7 @@ def git(*args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True, encoding="utf-8").strip()
 
 
-def build_sbom(root: Path) -> dict:
+def build_sbom(root: Path, version: str) -> dict:
     """Describe declared runtime/build dependencies, never the host's global env."""
     components = []
     seen = set()
@@ -90,7 +98,7 @@ def build_sbom(root: Path) -> dict:
     components.sort(key=lambda item: (item["name"].lower(), item["version"]))
     return {
         "bomFormat": "CycloneDX", "specVersion": "1.5", "version": 1,
-        "metadata": {"component": {"type": "application", "name": "ReadMD", "version": "2.3.7"}},
+        "metadata": {"component": {"type": "application", "name": "ReadMD", "version": version}},
         "components": components,
     }
 
@@ -101,6 +109,8 @@ def main() -> int:
     parser.add_argument("--candidate-root", type=Path, default=ROOT)
     args = parser.parse_args()
     root = args.candidate_root.resolve()
+    version = read_version(root)
+    version_slug = version.replace("+", "-")
     out = args.output.resolve()
     if out.exists() and any(out.iterdir()):
         raise SystemExit(f"output directory must be new or empty: {out}")
@@ -109,20 +119,20 @@ def main() -> int:
     # Prefer the freshly built canonical output.  A stale RC directory can
     # remain in dist from an earlier audit and must never silently become the
     # candidate payload; the RC name is only the fallback for older builders.
-    onedir = first_existing(dist / "ReadMD", dist / "ReadMD-v2.3.7-RC")
-    portable = first_existing(dist / "ReadMD-portable-v2.3.7-RC.exe", dist / "ReadMD-portable.exe")
-    installer = first_existing(dist / "ReadMDSetup-v2.3.7-RC.exe", dist / "ReadMDSetup.exe")
-    mcp = first_existing(dist / "readmd-mcp-server-2.3.7-RC.zip", dist / "readmd-mcp-server-2.3.7.zip")
+    onedir = first_existing(dist / "ReadMD", dist / f"ReadMD-v{version_slug}-RC")
+    portable = first_existing(dist / f"ReadMD-portable-v{version_slug}-RC.exe", dist / "ReadMD-portable.exe")
+    installer = first_existing(dist / f"ReadMDSetup-v{version_slug}-RC.exe", dist / "ReadMDSetup.exe")
+    mcp = first_existing(dist / f"readmd-mcp-server-{version_slug}-RC.zip", dist / f"readmd-mcp-server-{version_slug}.zip")
     vsix = first_existing(
-        root / "packages" / "vscode-extension" / "readmd-vscode-2.3.7.vsix",
+        root / "packages" / "vscode-extension" / f"readmd-vscode-{version_slug}.vsix",
         *sorted((root / "packages" / "vscode-extension").glob("*.vsix")),
     )
     required = {
         "ReadMD-windows-x64-onedir": onedir,
         "ReadMD-windows-x64-portable.exe": portable,
-        "ReadMDSetup-windows-x64-RC.exe": installer,
-        "readmd-vscode-2.3.7.vsix": vsix,
-        "readmd-mcp-server-2.3.7.zip": mcp,
+        f"ReadMDSetup-windows-x64-{version_slug}-RC.exe": installer,
+        f"readmd-vscode-{version_slug}.vsix": vsix,
+        f"readmd-mcp-server-{version_slug}.zip": mcp,
     }
     missing = [name for name, path in required.items() if path is None or not path.exists()]
     if missing:
@@ -135,7 +145,7 @@ def main() -> int:
     manifest = root / "assets" / "upstream" / "manifest.json"
     shutil.copy2(manifest, out / "source-snapshot-manifest.json")
     (out / "THIRD_PARTY_LICENSES.md").write_text(
-        "# ReadMD V2.3.7 RC third-party licenses\n\n"
+        f"# ReadMD {version} RC third-party licenses\n\n"
         "This RC embeds the immutable license/NOTICE files under `assets/upstream/`. "
         "The runtime uses only ReadMD adaptation metadata; upstream source remains read-only.\n\n"
         "- CC-SWITCH: MIT (`assets/upstream/farion1231-cc-switch/.../LICENSE`)\n"
@@ -145,9 +155,9 @@ def main() -> int:
         "- Codex skill-creator snapshot: Apache-2.0\n",
         encoding="utf-8", newline="\n",
     )
-    (out / "sbom.cdx.json").write_text(json.dumps(build_sbom(root), ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    (out / "sbom.cdx.json").write_text(json.dumps(build_sbom(root, version), ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     (out / "functional-acceptance.md").write_text(
-        "# ReadMD V2.3.7 Windows RC acceptance\n\n"
+        f"# ReadMD {version} Windows RC acceptance\n\n"
         "Candidate is intentionally non-publishing. Verify installer/portable cold start, "
         "open/edit/save, preview, TOC/search, export, offline upstream source viewer, Skills, "
         "provider settings, VSIX and MCP before approval.\n\n"
@@ -168,7 +178,7 @@ def main() -> int:
         "".join(f"{item['sha256']}  {item['file']}\n" for item in files), encoding="utf-8", newline="\n"
     )
     metadata = {
-        "schema_version": 1, "release": "2.3.7", "candidate": "Windows x64 RC",
+        "schema_version": 1, "release": version, "candidate": "Windows x64 RC",
         "commit": git("rev-parse", "HEAD"), "branch": git("branch", "--show-current"),
         "dirty_at_packaging": bool(git("status", "--porcelain")),
         "built_at_utc": datetime.now(timezone.utc).isoformat(),
