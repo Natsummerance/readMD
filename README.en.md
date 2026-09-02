@@ -63,7 +63,7 @@ ReadMD solves the unglamorous problems in a long-lived document library: large f
 
 ## Official Downloads & Platforms Matrix (Release Assets)
 
-Only platforms with release evidence belong in this matrix. Windows 7 is a separate legacy-runtime build and is not bundled with the Windows 10/11 package; HarmonyOS/OpenHarmony and unevidenced architectures are outside the V2.3.7 support promise.
+Only platforms with release evidence belong in this matrix. Windows 7 is a separate legacy-runtime build and is not bundled with the Windows 10/11 package; HarmonyOS/OpenHarmony and unevidenced architectures are outside the V2.3.8 support promise.
 
 | OS / Platform | Architecture / Format | Direct Download Link (GitHub Release) | Description |
 | :--- | :--- | :--- | :--- |
