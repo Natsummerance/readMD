@@ -880,7 +880,7 @@ function parseMarkdownWithSourceMap(content, options = {}) {
       }
 
       // 2. Specialized Diagrams
-      const diagramLangs = ['mermaid', 'tikz', 'plantuml', 'puml', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'd2', 'ditaa'];
+      const diagramLangs = ['mermaid', 'tikz', 'plantuml', 'puml', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'chart', 'chartjs', 'chart.js', 'd2', 'ditaa'];
       if (diagramLangs.includes(lang.toLowerCase())) {
         const encodedCode = encodeURIComponent(code);
         return `<div class="diagram-card" ${lineAttr} data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
@@ -1892,6 +1892,36 @@ async function renderLocalDiagram(engine, code, previewEl) {
     // in the shipped shell.
     throw new Error('diagram_engine_unavailable');
   }
+  if (normalized === 'chart' || normalized === 'chartjs' || normalized === 'chart.js') {
+    const Chart = await loadDiagramScript('/assets/vendor/diagrams/chart/chart.umd.js', 'Chart');
+    let config;
+    try { config = JSON.parse(String(code || '')); } catch (_) { throw new Error('diagram_invalid_input'); }
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+      throw new Error('diagram_invalid_input');
+    }
+    const canvas = document.createElement('canvas');
+    canvas.className = 'diagram-chart-canvas';
+    canvas.setAttribute('role', 'img');
+    canvas.setAttribute('aria-label', 'Chart.js diagram');
+    // A bounded canvas keeps malformed configs from forcing unbounded layout
+    // growth while still allowing the card to size naturally in narrow panes.
+    canvas.width = 960;
+    canvas.height = 540;
+    previewEl.replaceChildren(canvas);
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('diagram_engine_unavailable');
+    let chart;
+    try {
+      chart = new Chart(context, config);
+      // Wait for the first synchronous draw before returning the canvas.  The
+      // instance is retained on the node so a reload can destroy it cleanly.
+      canvas._readmdChart = chart;
+    } catch (_) {
+      canvas.remove();
+      throw new Error('diagram_render_failed');
+    }
+    return canvas;
+  }
   if (normalized === 'tikz') {
     // TikZjax is a browser script that normally resolves its WASM/font assets
     // from an upstream S3 URL.  Keep the vendored source byte-for-byte intact,
@@ -1959,14 +1989,20 @@ function renderAllDiagrams(container) {
     const reloadBtn = card.querySelector('.diagram-reload-btn');
 
     const render = async () => {
+      const previousCanvas = previewEl && previewEl.querySelector('.diagram-chart-canvas');
+      if (previousCanvas && previousCanvas._readmdChart && typeof previousCanvas._readmdChart.destroy === 'function') {
+        try { previousCanvas._readmdChart.destroy(); } catch (_) { /* best effort cleanup */ }
+      }
       previewEl.innerHTML = `<div class="diagram-loading">${_t('reader.renderingDiagram', { engine: engine.toUpperCase() })}</div>`;
       try {
         // Vega/Vega-Lite need expression evaluation.  They are rendered by
         // the bundled Node sidecar through /api/diagram/render so the secure
         // WebView CSP never needs unsafe-eval.  The remaining engines are
         // genuinely browser-local and lazy-loaded here.
-        if (['mermaid', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'tikz'].includes(engine)) {
-          previewEl.innerHTML = await renderLocalDiagram(engine, code, previewEl);
+        if (['mermaid', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'tikz', 'chart', 'chartjs', 'chart.js'].includes(engine)) {
+          const rendered = await renderLocalDiagram(engine, code, previewEl);
+          if (rendered instanceof Element) previewEl.replaceChildren(rendered);
+          else previewEl.innerHTML = rendered;
           return;
         }
 

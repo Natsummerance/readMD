@@ -4784,6 +4784,15 @@ body[data-theme="dark"] .code-chunk-status.error,
   object-fit: contain;
 }
 
+.diagram-chart-canvas {
+  display: block;
+  width: 100%;
+  max-width: 960px;
+  height: auto;
+  min-height: 220px;
+  margin: 0 auto;
+}
+
 .diagram-loading {
   font-size: 12px;
   color: var(--fg3);

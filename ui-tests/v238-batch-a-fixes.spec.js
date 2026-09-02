@@ -189,3 +189,33 @@ test('offline diagram dispatcher renders Mermaid, WaveDrom, Bitfield and TikZ wi
   for (const item of result) expect(item.svg, `${item.engine} did not render: ${JSON.stringify(result)}`).toBeTruthy();
   for (const item of result) expect(item.fallback, `${item.engine} unexpectedly fell back`).toBeFalsy();
 });
+
+test('offline Chart.js fence renders a bounded canvas without network', async ({ page }) => {
+  await page.goto('/');
+  await page.waitForFunction(() => typeof renderAllDiagrams === 'function');
+  const result = await page.evaluate(async () => {
+    const card = document.createElement('div');
+    card.className = 'diagram-card';
+    card.dataset.diagramEngine = 'chart';
+    card.dataset.diagramCode = encodeURIComponent(JSON.stringify({
+      type: 'bar',
+      data: { labels: ['A', 'B'], datasets: [{ label: 'ReadMD', data: [1, 2] }] },
+      options: { animation: false, responsive: false },
+    }));
+    card.innerHTML = '<div class="diagram-preview"></div><button class="diagram-reload-btn"></button>';
+    document.body.appendChild(card);
+    renderAllDiagrams(card);
+    const deadline = Date.now() + 12000;
+    while (!card.querySelector('.diagram-chart-canvas, .diagram-fallback') && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    const canvas = card.querySelector('.diagram-chart-canvas');
+    return {
+      canvas: !!canvas,
+      width: canvas?.width || 0,
+      height: canvas?.height || 0,
+      fallback: !!card.querySelector('.diagram-fallback'),
+    };
+  });
+  expect(result).toMatchObject({ canvas: true, width: 960, height: 540, fallback: false });
+});

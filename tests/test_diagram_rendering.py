@@ -9,6 +9,7 @@ import pytest
 from src.readmd_modules.diagrams import (
     DiagramRenderError,
     get_diagram_capabilities,
+    identify_diagram_blocks,
     render_vega_svg,
 )
 
@@ -28,13 +29,22 @@ def test_capabilities_are_local_and_expose_explicit_fallbacks():
     # Every engine has an explicit state; no client needs to infer support
     # from a missing key or attempt an implicit online fallback.
     for engine in ("mermaid", "wavedrom", "bitfield", "viz", "tikz",
-                   "vega", "vega-lite", "plantuml", "d2"):
+                   "chart", "chartjs", "chart.js", "vega", "vega-lite",
+                   "plantuml", "d2"):
         assert engine in engines
         assert isinstance(engines[engine]["available"], bool)
         assert isinstance(engines[engine]["offline"], bool)
         assert isinstance(engines[engine]["requires_network"], bool)
     assert engines["d2"]["available"] is False
     assert engines["d2"]["offline"] is False
+
+
+def test_chartjs_fence_is_discoverable_and_uses_canonical_capability():
+    blocks = identify_diagram_blocks('```chartjs\n{"type":"bar"}\n```')
+    assert blocks and blocks[0]["type"] == "chartjs"
+    capabilities = get_diagram_capabilities()["engines"]
+    assert capabilities["chartjs"] == capabilities["chart"]
+    assert capabilities["chart.js"] == capabilities["chart"]
 
 
 def test_pywebview_capabilities_bridge_matches_module_snapshot():

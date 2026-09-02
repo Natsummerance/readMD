@@ -110,6 +110,7 @@ def get_diagram_capabilities() -> Dict[str, object]:
         "bitfield": vendor / "bitfield" / "bitfield.min.js",
         "viz": vendor / "viz" / "viz-standalone.js",
         "tikz": vendor / "tikzjax" / "tikzjax.js",
+        "chart": vendor / "chart" / "chart.umd.js",
     }
     capabilities: Dict[str, Dict[str, object]] = {}
     for engine, asset in browser_assets.items():
@@ -119,6 +120,11 @@ def get_diagram_capabilities() -> Dict[str, object]:
             "renderer": "browser",
             "requires_network": False,
         }
+    # ``chartjs`` and ``chart.js`` are aliases accepted by the Markdown
+    # dispatcher.  Keep one canonical capability entry so clients can
+    # present a stable status without duplicating asset probes.
+    capabilities["chartjs"] = dict(capabilities["chart"])
+    capabilities["chart.js"] = dict(capabilities["chart"])
 
     node = _node_runtime(root)
     vega_assets = (
@@ -247,7 +253,7 @@ def format_tikz_html(tikz_code: str) -> str:
 def identify_diagram_blocks(markdown: str) -> List[Dict[str, any]]:
     """扫描 Markdown 中的所有专业图表代码块。"""
     pattern = re.compile(
-        r'```(mermaid|puml|plantuml|wavedrom|bitfield|viz|dot|vega|vega-lite|d2|tikz)\b[^\n]*\n([\s\S]*?)```',
+    r'```(mermaid|puml|plantuml|wavedrom|bitfield|viz|dot|vega|vega-lite|chart|chartjs|chart\.js|d2|tikz)\b[^\n]*\n([\s\S]*?)```',
         re.IGNORECASE
     )
     diagrams = []
