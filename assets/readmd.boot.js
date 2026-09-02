@@ -8467,7 +8467,7 @@ async function generateSkillDraft() {
     if ($('tpl-draft-status')) $('tpl-draft-status').textContent = _t('tpl.hint');
     showToast(_t('ai.generating'));
   } catch (e) {
-    showToast(_t('ai.aiError') + ': ' + e.message);
+    showToast(_t('ai.aiError') || '');
   } finally {
     if (button) { button.disabled = false; button.textContent = _t('exportai.generateBtn'); }
   }
@@ -8518,7 +8518,7 @@ async function toggleCurrentSkillEnabled() {
     renderTplList();
     selectTpl(t.id);
     showToast(currentlyEnabled ? (_t('tpl.disabledToast') || '') : (_t('tpl.enabledToast') || ''));
-  } catch (e) { showToast((_t('ai.aiError') || '') + ': ' + e.message); }
+  } catch (e) { showToast(_t('ai.aiError') || ''); }
 }
 
 async function exportCurrentSkill() {
@@ -8535,7 +8535,7 @@ async function exportCurrentSkill() {
       const d = await r.json().catch(() => ({}));
       if (!r.ok || !d.ok) { showToast(d.error || (_t('ai.aiError') || '')); return; }
       content = d.content || '';
-    } catch (e) { showToast((_t('ai.aiError') || '') + ': ' + e.message); return; }
+    } catch (e) { showToast(_t('ai.aiError') || ''); return; }
   } else {
     content = `---\nname: ${t.skill_id || t.id}\ndescription: ${t.description || ''}\n---\n\n${t.system || ''}`;
   }
@@ -8550,7 +8550,7 @@ async function exportCurrentSkill() {
 
 function parseMarkdownTemplate(content, filename) {
   const text = String(content || '').trim();
-  let name = (filename || '未命名模板').replace(/\.(md|markdown|json|txt)$/i, '');
+  let name = String(filename || 'skill').replace(/\.(md|markdown|json|txt)$/i, '');
   let action = 'custom';
   let system = '';
   let user = '';
@@ -8659,13 +8659,13 @@ async function importTemplatesFromFile(file) {
         body: JSON.stringify({ action: 'batch_save', templates }),
       });
       const d = await r.json();
-      if (!r.ok || !d.ok) throw new Error(d.error || '导入失败');
+      if (!r.ok || !d.ok) throw new Error(d.error_code || 'import_failed');
 
       await loadAiPrompts();
       renderTplList();
-      showToast((_t('toast.importedTemplates', { count: templates.length }) || `成功导入 ${templates.length} 个模板`));
+      showToast(_t('toast.importedTemplates', { count: templates.length }) || '');
     } catch (e) {
-      showToast((_t('toast.importFailed') || '') + e.message);
+      showToast(_t('toast.importFailed') || '');
     }
   };
   reader.readAsText(file, 'UTF-8');
@@ -8753,7 +8753,7 @@ function githubImportErrorText(payload, _t) {
   };
   const key = known[code] || 'toast.importFailed';
   const text = _t(key) || _t('toast.importFailed') || '';
-  return code ? `${text} (${code})` : text;
+  return text;
 }
 
 function renderGithubSkillPreview(preview) {
@@ -8769,7 +8769,7 @@ function renderGithubSkillPreview(preview) {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox'; checkbox.checked = !!skill.valid; checkbox.disabled = !skill.valid;
     checkbox.dataset.skillIndex = String(index);
-    checkbox.setAttribute('aria-label', skill.name || skill.id || skill.path || 'Skill');
+    checkbox.setAttribute('aria-label', skill.name || skill.id || skill.path || _t('tpl.title') || '');
     const details = document.createElement('span');
     const title = document.createElement('strong');
     title.textContent = skill.name || skill.id || skill.path || '';
@@ -8833,7 +8833,7 @@ async function applyGithubSkillImport(preview) {
     if (!r.ok || !d.ok) throw d;
     await loadAiPrompts(); renderTplList();
     if (host) host.innerHTML = '';
-    showToast(_t('toast.importedTemplates', { count: (d.skills || []).length }) || '已导入');
+    showToast(_t('toast.importedTemplates', { count: (d.skills || []).length }) || '');
   } catch (e) {
     showToast(githubImportErrorText(e, _t));
   } finally {
