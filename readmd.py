@@ -2373,7 +2373,7 @@ class Handler(BaseHTTPRequestHandler):
     def _api_upstream_sources(self):
         """List immutable, offline upstream snapshots without exposing paths."""
         if self.command != 'GET':
-            self._send_json(405, {'error': '仅支持 GET 请求'})
+            self._send_api_error(405, 'method_not_allowed')
             return
         try:
             self._send_json(200, {
@@ -2382,12 +2382,13 @@ class Handler(BaseHTTPRequestHandler):
                 'sources': _upstream_sources.list_sources(),
             })
         except _upstream_sources.UpstreamSourceError as exc:
-            self._send_json(503, {'error': str(exc)})
+            logging.warning('upstream source list failed: %s', exc)
+            self._send_api_error(503, 'upstream_source_unavailable')
 
     def _api_upstream_source_detail(self, path):
         """Read a manifest-allowlisted source/file by opaque IDs only."""
         if self.command != 'GET':
-            self._send_json(405, {'error': '仅支持 GET 请求'})
+            self._send_api_error(405, 'method_not_allowed')
             return
         prefix = '/api/upstream-sources/'
         rest = path[len(prefix):]
@@ -2403,9 +2404,10 @@ class Handler(BaseHTTPRequestHandler):
             if source_id:
                 self._send_json(200, _upstream_sources.get_source(source_id))
                 return
-            self._send_json(404, {'error': '来源或文件不存在'})
+            self._send_api_error(404, 'upstream_source_not_found')
         except _upstream_sources.UpstreamSourceError as exc:
-            self._send_json(404, {'error': str(exc)})
+            logging.info('upstream source detail unavailable: %s', exc)
+            self._send_api_error(404, 'upstream_source_not_found')
 
     def _api_ai_history(self):
         """AI 会话：GET 列表/详情，POST 保存/删除/清空。"""
@@ -2439,7 +2441,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, {'ok': True, 'session': sess})
         except Exception as e:
             logging.exception('ai history failed')
-            self._send_json(500, {'error': '会话操作失败：%s' % e})
+            self._send_api_error(500, 'ai_history_failed')
     def _send_file(self, fp, ctype, immutable=False):
         if not os.path.isfile(fp):
             self._send(404, 'text/plain; charset=utf-8', b'not found')
@@ -2591,10 +2593,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def _api_convert(self, p):
         if not os.path.isfile(p):
-            self._send_json(404, {'error': '文件不存在'})
+            self._send_api_error(404, 'file_not_found')
             return
         if is_win7() and os.path.splitext(p)[1].lower() not in WIN7_CONVERT_EXTS:
-            self._send_json(415, {'error': WIN7_UNAVAILABLE})
+            self._send_api_error(415, 'unsupported_on_legacy_windows')
             return
         if os.path.splitext(p)[1].lower() == '.txt':
             self._convert_txt(p)
@@ -2605,7 +2607,7 @@ class Handler(BaseHTTPRequestHandler):
             mod = RM.get('convert')
             text, engine, err = mod.convert_verbose(p)
             if err and not text:
-                self._send_json(500, {'error': '转换失败：%s' % err})
+                self._send_api_error(422, 'conversion_failed', engine=engine or '')
                 return
             if not text.strip():
                 self._send_json(200, {'content': '', 'name': os.path.basename(p),
@@ -2634,7 +2636,7 @@ class Handler(BaseHTTPRequestHandler):
                                   'skipped': skipped, 'warns': warns})
         except Exception as e:
             logging.exception('convert failed: %s', p)
-            self._send_json(500, {'error': '转换失败：%s' % e})
+            self._send_api_error(500, 'conversion_failed')
 
     def _convert_txt(self, p):
         """TXT 智能转换（纯 Python，不依赖 convert 模块）。"""
@@ -2670,7 +2672,7 @@ class Handler(BaseHTTPRequestHandler):
                                   'skipped': skipped, 'warns': warns})
         except Exception as e:
             logging.exception('convert txt failed: %s', p)
-            self._send_json(500, {'error': '转换失败：%s' % e})
+            self._send_api_error(500, 'conversion_failed')
 
     def _api_convert_batch(self):
         n = int(self.headers.get('Content-Length', 0) or 0)
@@ -2751,7 +2753,7 @@ class Handler(BaseHTTPRequestHandler):
                                   'dir': os.path.dirname(p), 'source': 'ocr', 'path': p})
         except Exception as e:
             logging.exception('ocr failed: %s', p)
-            self._send_json(500, {'error': 'OCR 失败：%s' % e})
+            self._send_api_error(500, 'ocr_failed')
 
     def _api_url(self, u, crawl):
         if not u:
@@ -2771,7 +2773,7 @@ class Handler(BaseHTTPRequestHandler):
                                   'name': u, 'dir': '', 'source': 'url', 'path': u})
         except Exception as e:
             logging.exception('url convert failed: %s', u)
-            self._send_json(500, {'error': '抓取失败：%s' % e})
+            self._send_api_error(500, 'url_fetch_failed')
 
     def _api_web_extract(self):
         """v2.2.4 webpage extractor; accepts downloaded or WebView HTML."""
@@ -2859,8 +2861,7 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json(exc.http_status, exc.as_dict())
             else:
                 logging.exception('web extraction failed: %s', body.get('url'))
-                self._send_json(500, {'ok': False, 'code': 'internal_error',
-                                      'error': '网页转换失败：%s' % exc})
+                self._send_api_error(500, 'web_extraction_failed', code='internal_error')
 
     def _api_web_cancel(self):
         if not self._module_ready('web', '网页模块加载中，请稍候再试'):
@@ -2872,7 +2873,8 @@ class Handler(BaseHTTPRequestHandler):
             mod.cancel(body.get('task_id') or '')
             self._send_json(200, {'ok': True})
         except Exception as exc:
-            self._send_json(500, {'ok': False, 'error': str(exc)})
+            logging.exception('web cancel failed')
+            self._send_api_error(500, 'web_cancel_failed')
 
 
     def _do_upload(self, ext, name=''):
