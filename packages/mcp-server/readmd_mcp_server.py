@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import sys
+import threading
 from typing import Any, Dict, List, Optional
 
 # 引入 ReadMD 核心算法路径
@@ -117,6 +118,35 @@ def _skills_registry():
 
 
 _CORE_SERVICE = None
+
+# Long-running tool calls (streaming AI generation) run on a worker thread so
+# the stdio loop keeps reading notifications.  Clients cancel an in-flight
+# request with ``notifications/cancelled``; the worker stops at the next chunk
+# boundary.  All stdout writes are serialized so worker progress notifications
+# cannot interleave with responses.
+_STDOUT_LOCK = threading.Lock()
+_CANCEL_EVENTS: Dict[Any, threading.Event] = {}
+
+
+def _write_message(payload: Dict[str, Any]) -> None:
+    with _STDOUT_LOCK:
+        sys.stdout.write(json.dumps(payload, ensure_ascii=False) + '\n')
+        sys.stdout.flush()
+
+
+def _progress_emitter(token: Any):
+    """Build an MCP progress notifier for a tools/call progressToken."""
+    if token is None:
+        return None
+
+    def emit(progress: float, message: str = "") -> None:
+        _write_message({
+            "jsonrpc": "2.0",
+            "method": "notifications/progress",
+            "params": {"progressToken": token, "progress": progress, "message": message},
+        })
+
+    return emit
 
 
 # Keep a literal in source for older ecosystem manifest scanners; the runtime
@@ -355,8 +385,14 @@ TOOLS: List[Dict[str, Any]] = [
 ]
 
 
-def handle_tool_call(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
-    """统一调度处理各 MCP 工具调用并返回标准响应。"""
+def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
+                     cancel_event: Optional[threading.Event] = None) -> Dict[str, Any]:
+    """统一调度处理各 MCP 工具调用并返回标准响应。
+
+    ``progress(progress, message)`` streams incremental output for streaming
+    tools; ``cancel_event`` stops long-running tools at the next chunk
+    boundary when the client sends ``notifications/cancelled``.
+    """
     try:
         if name in CONFIRM_REQUIRED and args.get("confirm") is not True:
             return _mcp_error("confirmation_required")
@@ -553,13 +589,38 @@ def handle_tool_call(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
                 "stream": bool(args.get("stream", False)),
             })
             chunks, usage = [], None
-            for item in gen:
+            cancelled = False
+            emitted = 0
+            gen_iter = iter(gen)
+            while True:
+                # Check cancellation before pulling the next chunk so a cancel
+                # sent during model latency stops without consuming output.
+                if cancel_event is not None and cancel_event.is_set():
+                    cancelled = True
+                    break
+                try:
+                    item = next(gen_iter)
+                except StopIteration:
+                    break
                 if isinstance(item, dict):
                     if item.get("error"):
                         return {"isError": True, "content": [{"type": "text", "text": str(item["error"])}]}
                     usage = item.get("usage") or usage
-                elif item:
-                    chunks.append(str(item))
+                    continue
+                if item:
+                    text = str(item)
+                    chunks.append(text)
+                    emitted += 1
+                    if progress is not None:
+                        try:
+                            progress(emitted, text)
+                        except Exception:
+                            pass
+            if cancelled:
+                return {"content": [{"type": "text", "text": json.dumps({
+                    "ok": False, "error_code": "ai_cancelled",
+                    "content": "".join(chunks), "skill_id": skill_id
+                }, ensure_ascii=False)}]}
             return {"content": [{"type": "text", "text": json.dumps({
                 "ok": True, "content": "".join(chunks), "usage": usage, "skill_id": skill_id
             }, ensure_ascii=False)}]}
@@ -787,8 +848,19 @@ def run_stdio_server():
             if not line:
                 continue
             req = json.loads(line)
+            if not isinstance(req, dict):
+                continue
             req_id = req.get("id")
             method = req.get("method")
+
+            if "id" not in req:
+                # JSON-RPC notification: never answered; cancellation is acted on.
+                if method == "notifications/cancelled":
+                    params = req.get("params") or {}
+                    event = _CANCEL_EVENTS.get(params.get("requestId"))
+                    if event is not None:
+                        event.set()
+                continue
 
             if method == "initialize":
                 res = {
@@ -838,12 +910,26 @@ def run_stdio_server():
                 params = req.get("params", {})
                 name = params.get("name")
                 arguments = params.get("arguments", {})
-                tool_res = handle_tool_call(name, arguments)
-                res = {
-                    "jsonrpc": "2.0",
-                    "id": req_id,
-                    "result": tool_res
-                }
+                progress = _progress_emitter((params.get("_meta") or {}).get("progressToken"))
+                cancel_event = threading.Event()
+                _CANCEL_EVENTS[req_id] = cancel_event
+
+                # Default args snapshot the per-request values: as a plain
+                # closure these names would resolve to the main loop's rebound
+                # locals once the next stdin message is processed.
+                def _run_call(req_id=req_id, name=name, arguments=arguments,
+                              progress=progress, cancel_event=cancel_event):
+                    try:
+                        tool_res = handle_tool_call(name, arguments, progress=progress,
+                                                    cancel_event=cancel_event)
+                        _write_message({"jsonrpc": "2.0", "id": req_id, "result": tool_res})
+                    finally:
+                        _CANCEL_EVENTS.pop(req_id, None)
+
+                # The worker keeps streaming progress while the main loop keeps
+                # reading stdin, so notifications/cancelled stays responsive.
+                threading.Thread(target=_run_call, daemon=True, name="mcp-tool-call").start()
+                continue
             else:
                 res = {
                     "jsonrpc": "2.0",
@@ -854,8 +940,7 @@ def run_stdio_server():
                     }
                 }
 
-            sys.stdout.write(json.dumps(res, ensure_ascii=False) + '\n')
-            sys.stdout.flush()
+            _write_message(res)
         except Exception as e:
             err_res = {
                 "jsonrpc": "2.0",
@@ -865,8 +950,10 @@ def run_stdio_server():
                     "message": str(e)
                 }
             }
-            sys.stdout.write(json.dumps(err_res, ensure_ascii=False) + '\n')
-            sys.stdout.flush()
+            _write_message(err_res)
+
+    for event in list(_CANCEL_EVENTS.values()):
+        event.set()
 
 
 if __name__ == "__main__":

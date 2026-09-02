@@ -288,7 +288,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && node --test test/bridge.test.js test/sidebarProvider.test.js",
+    "test": "npm run compile && node --test test/bridge.test.js test/sidebarProvider.test.js test/commands.test.js",
     "package": "node scripts/stage-core.mjs && vsce package --no-dependencies",
     "publish:ovsx": "node publish-ovsx.js",
     "release:ovsx": "npm run package && npm run publish:ovsx",
