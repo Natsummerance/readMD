@@ -45,4 +45,3 @@ def test_list_ignores_symlink_or_malformed_entries(tmp_path):
     malformed.mkdir()
     (malformed / "pet.json").write_text(json.dumps({"id": "broken"}), encoding="utf-8")
     assert list_pets(tmp_path) == []
-
