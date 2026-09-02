@@ -435,8 +435,12 @@ def test_failed_replace_restores_the_previously_installed_skill(tmp_path, monkey
     source_folder = _write_skill_bundle(source_root)
     (source_folder / "references" / "marker.md").write_text("new\n", encoding="utf-8")
     data_root = tmp_path / "data"
-    _write_skill_bundle(data_root / "skills", "note-helper")
+    # Keep the runtime install path absent while creating the nested source
+    # fixture.  Defining it before the helper mirrors the conflict test above
+    # and makes the directory move portable on Windows (os.replace cannot
+    # overwrite an existing directory there).
     installed = data_root / "skills" / "note-helper"
+    _write_skill_bundle(data_root / "skills", "note-helper")
     nested = data_root / "skills" / "skills" / "note-helper"
     nested.replace(installed)
     (data_root / "skills" / "LICENSE").unlink()

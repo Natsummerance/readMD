@@ -76,7 +76,7 @@ export class ReadMDToolboxProvider implements vscode.TreeDataProvider<ToolboxIte
             command: 'readmd.insertCodeChunk',
             title: '插入交互代码块',
           }, 'play'),
-          new ToolboxItem('插入科学工程图表 (PlantUML/TikZ/Vega/D2)...', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
+          new ToolboxItem('插入科学工程图表 (PlantUML/TikZ/Vega)...', vscode.TreeItemCollapsibleState.None, 'cmd', [], {
             command: 'readmd.insertDiagram',
             title: '插入科学工程图表',
           }, 'graph'),
@@ -125,8 +125,10 @@ export class ReadMDToolboxProvider implements vscode.TreeDataProvider<ToolboxIte
     try {
       return buildSkillItems(await this.listSkills());
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      return [new ToolboxItem(`读取 Skill 失败：${message}`, vscode.TreeItemCollapsibleState.None, 'skill_error')];
+      // Keep backend paths and exception text out of the sidebar.  The Core
+      // bridge exposes stable error codes; the host only needs a concise,
+      // localizable fallback here.
+      return [new ToolboxItem('读取 Skill 失败', vscode.TreeItemCollapsibleState.None, 'skill_error')];
     }
   }
 }

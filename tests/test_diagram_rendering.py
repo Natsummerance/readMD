@@ -10,6 +10,7 @@ from src.readmd_modules.diagrams import (
     DiagramRenderError,
     get_diagram_capabilities,
     identify_diagram_blocks,
+    render_plantuml_svg,
     render_vega_svg,
 )
 
@@ -30,13 +31,14 @@ def test_capabilities_are_local_and_expose_explicit_fallbacks():
     # from a missing key or attempt an implicit online fallback.
     for engine in ("mermaid", "wavedrom", "bitfield", "viz", "tikz",
                    "chart", "chartjs", "chart.js", "vega", "vega-lite",
-                   "plantuml", "d2"):
+                   "plantuml", "puml", "wsd", "d2"):
         assert engine in engines
         assert isinstance(engines[engine]["available"], bool)
         assert isinstance(engines[engine]["offline"], bool)
         assert isinstance(engines[engine]["requires_network"], bool)
     assert engines["d2"]["available"] is False
     assert engines["d2"]["offline"] is False
+    assert engines["wsd"]["available"] is False
 
 
 def test_chartjs_fence_is_discoverable_and_uses_canonical_capability():
@@ -47,12 +49,45 @@ def test_chartjs_fence_is_discoverable_and_uses_canonical_capability():
     assert capabilities["chart.js"] == capabilities["chart"]
 
 
+def test_wsd_fence_is_discoverable_but_fails_closed_without_a_renderer():
+    blocks = identify_diagram_blocks('```wsd\nAlice->Bob: ping\n```')
+    assert blocks and blocks[0]["type"] == "wsd"
+
+
+def test_local_plantuml_uses_shell_free_pipe(monkeypatch):
+    import src.readmd_modules.diagrams as diagrams
+
+    class Result:
+        returncode = 0
+        stdout = b'<svg xmlns="http://www.w3.org/2000/svg"></svg>'
+
+    monkeypatch.setattr(diagrams, "_plantuml_command", lambda: ["plantuml", "-tsvg", "-pipe"])
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return Result()
+
+    monkeypatch.setattr(diagrams.subprocess, "run", fake_run)
+    svg = render_plantuml_svg("Alice -> Bob: ping")
+    assert svg.startswith("<svg")
+    assert calls and calls[0][0][0] == "plantuml"
+    assert calls[0][1]["input"].startswith(b"@startuml")
+
+
 def test_pywebview_capabilities_bridge_matches_module_snapshot():
     import readmd
 
     result = readmd.Api().get_diagram_capabilities()
     assert result["ok"] is True
     assert result["engines"] == get_diagram_capabilities()["engines"]
+
+
+def test_wsd_api_does_not_mislabel_plantuml_as_a_success():
+    import readmd
+
+    result = readmd.Api().render_diagram("wsd", "Alice->Bob: ping")
+    assert result == {"ok": False, "error_code": "diagram_engine_unavailable", "engine": "wsd"}
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node runtime is not installed")

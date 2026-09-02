@@ -14,7 +14,7 @@ plt.show()
 ```
 
 ## 核心控制属性
-- `cmd=true`: 启用执行
-- `cmd=true`: 隐藏源码，只展示结果
-- `cmd=true`: 输出通道
-- `cmd=true`: 会话延续（跨代码块共享变量）
+- `cmd` / `{cmd}`：启用受控执行；`cmd=python` 等值仅允许已声明的运行时别名。
+- `hide=true` 或 `echo=false`：隐藏源码，只展示结果。
+- `output=text|markdown|html|png|none`：选择输出通道；`output=true` 等同于文本输出并允许显式回写。
+- `continue`：MPE 兼容标记，仅在宿主提供会话时启用；ReadMD 默认每个代码块独立沙箱执行。

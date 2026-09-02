@@ -61,7 +61,7 @@ body:
     id: version
     attributes:
       label: ReadMD version
-      description: Example - v2.3.7. If possible, test against the latest release.
+      description: Example - v2.3.8-preview.1. If possible, test against the latest release.
     validations:
       required: true
   - type: textarea

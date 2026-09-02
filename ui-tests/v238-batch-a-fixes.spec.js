@@ -210,12 +210,24 @@ test('offline Chart.js fence renders a bounded canvas without network', async ({
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     const canvas = card.querySelector('.diagram-chart-canvas');
+    const rect = canvas?.getBoundingClientRect();
     return {
       canvas: !!canvas,
       width: canvas?.width || 0,
       height: canvas?.height || 0,
+      cssWidth: rect?.width || 0,
+      cssHeight: rect?.height || 0,
+      devicePixelRatio: window.devicePixelRatio || 1,
       fallback: !!card.querySelector('.diagram-fallback'),
     };
   });
-  expect(result).toMatchObject({ canvas: true, width: 960, height: 540, fallback: false });
+  expect(result.canvas).toBeTruthy();
+  expect(result.fallback).toBeFalsy();
+  // Chart.js retina scaling may enlarge the backing store (WebKit uses DPR 2),
+  // but the rendered CSS box must remain bounded for narrow panes and memory.
+  expect(result.cssWidth).toBeGreaterThan(0);
+  expect(result.cssWidth).toBeLessThanOrEqual(960);
+  expect(result.cssHeight).toBeLessThanOrEqual(540);
+  expect(result.width).toBeLessThanOrEqual(960 * result.devicePixelRatio);
+  expect(result.height).toBeLessThanOrEqual(540 * result.devicePixelRatio);
 });

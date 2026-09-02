@@ -74,7 +74,70 @@ def get_plantuml_svg_url(plantuml_code: str, server_url: str = "https://www.plan
 
 def has_local_plantuml() -> bool:
     """探测系统本地是否具备 Java 及 PlantUML 环境。"""
-    return bool(shutil.which('plantuml') or (shutil.which('java') and os.environ.get('PLANTUML_JAR')))
+    jar = os.environ.get('PLANTUML_JAR')
+    if shutil.which('plantuml'):
+        return True
+    if not (shutil.which('java') and jar):
+        return False
+    try:
+        return Path(jar).is_file()
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def _plantuml_command() -> Optional[List[str]]:
+    """Return a shell-free local PlantUML command, if one is configured."""
+    executable = shutil.which('plantuml')
+    if executable:
+        return [executable, '-tsvg', '-pipe']
+    java = shutil.which('java')
+    jar = os.environ.get('PLANTUML_JAR')
+    if java and jar:
+        try:
+            path = Path(jar)
+            if path.is_file():
+                return [java, '-jar', str(path.resolve()), '-tsvg', '-pipe']
+        except (OSError, ValueError, TypeError):
+            pass
+    return None
+
+
+def render_plantuml_svg(plantuml_code: str, timeout: float = 15.0) -> str:
+    """Render PlantUML through an explicitly installed local runtime.
+
+    No shell, network or temporary source file is used.  If Java/PlantUML is
+    not installed the caller can choose the documented online URL fallback;
+    this function fails closed so an unavailable local runtime is never
+    mistaken for an offline success.
+    """
+    command = _plantuml_command()
+    if not command:
+        raise DiagramRenderError("diagram_dependency_missing")
+    code = str(plantuml_code or '').strip()
+    if not code or len(code.encode('utf-8')) > 2 * 1024 * 1024:
+        raise DiagramRenderError("diagram_input_too_large")
+    if not code.startswith('@start'):
+        code = f'@startuml\n{code}\n@enduml'
+    try:
+        result = subprocess.run(
+            command,
+            input=code.encode('utf-8'),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=max(1.0, min(float(timeout), 30.0)),
+            cwd=str(Path(__file__).resolve().parents[2]),
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise DiagramRenderError("diagram_engine_timeout")
+    if result.returncode != 0:
+        raise DiagramRenderError("diagram_render_failed")
+    svg = result.stdout.decode('utf-8', errors='strict').strip()
+    if '<svg' in svg:
+        svg = svg[svg.find('<svg'):]
+    if not svg.startswith('<svg') or len(svg.encode('utf-8')) > 8 * 1024 * 1024:
+        raise DiagramRenderError("diagram_render_failed")
+    return svg
 
 
 def _node_runtime(root: Path) -> Optional[str]:
@@ -150,6 +213,16 @@ def get_diagram_capabilities() -> Dict[str, object]:
         "reason": "" if local_plantuml else "diagram_online_renderer",
     }
     capabilities["puml"] = dict(capabilities["plantuml"])
+    # WebSequenceDiagrams is intentionally not mapped to PlantUML: the two
+    # languages are not interchangeable.  Keep an explicit unavailable entry
+    # so a fence gets a safe fallback instead of a misleading online success.
+    capabilities["wsd"] = {
+        "available": False,
+        "offline": False,
+        "renderer": "none",
+        "requires_network": False,
+        "reason": "diagram_engine_unavailable",
+    }
     # D2 has no pinned runtime in this release.  Keep the entry so clients can
     # disable it explicitly instead of falling through to an online renderer.
     capabilities["d2"] = {
@@ -253,7 +326,7 @@ def format_tikz_html(tikz_code: str) -> str:
 def identify_diagram_blocks(markdown: str) -> List[Dict[str, any]]:
     """扫描 Markdown 中的所有专业图表代码块。"""
     pattern = re.compile(
-    r'```(mermaid|puml|plantuml|wavedrom|bitfield|viz|dot|vega|vega-lite|chart|chartjs|chart\.js|d2|tikz)\b[^\n]*\n([\s\S]*?)```',
+    r'```(mermaid|puml|plantuml|wsd|wavedrom|bitfield|viz|dot|vega|vega-lite|chart|chartjs|chart\.js|d2|tikz)\b[^\n]*\n([\s\S]*?)```',
         re.IGNORECASE
     )
     diagrams = []

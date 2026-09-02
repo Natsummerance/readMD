@@ -55,7 +55,7 @@ test('onReady fires on spawn and onDisconnected fires when the core exits unexpe
 
   proc.exitCode = 1;
   proc.emit('close', 1);
-  await assert.rejects(pending, /进程异常退出/);
+  await assert.rejects(pending, /core_process_exit/);
   await sleep();
   assert.deepEqual(events, ['ready', 'disconnected']);
   bridge.dispose();
@@ -74,7 +74,7 @@ test('close after a kill signal also fires onDisconnected', async () => {
 
   proc.signalCode = 'SIGTERM';
   proc.emit('close', null, 'SIGTERM');
-  await assert.rejects(pending, /进程异常退出/);
+  await assert.rejects(pending, /core_process_exit/);
   await sleep();
   assert.deepEqual(events, ['disconnected']);
   bridge.dispose();
@@ -92,7 +92,7 @@ test('dispose does not report a disconnect', async () => {
   await sleep();
 
   bridge.dispose();
-  await assert.rejects(pending, /ReadMD Core 已关闭/);
+  await assert.rejects(pending, /core_closed/);
   proc.exitCode = 0;
   proc.emit('close', 0);
   await sleep();

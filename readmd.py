@@ -3646,7 +3646,31 @@ class Api(object):
         try:
             engine = str(engine or 'mermaid').strip().lower()
             if engine in ('puml', 'plantuml'):
-                return {'ok': True, 'type': 'url', 'svg_url': diagrams.get_plantuml_svg_url(code)}
+                # Prefer an explicitly installed local PlantUML runtime.  The
+                # online URL is only a transparent fallback when local Java/
+                # PlantUML is unavailable; callers can inspect ``type`` and
+                # ``requires_network`` instead of mistaking it for offline.
+                if diagrams.has_local_plantuml():
+                    return {
+                        'ok': True,
+                        'type': 'svg',
+                        'svg': diagrams.render_plantuml_svg(code),
+                        'engine': engine,
+                        'requires_network': False,
+                    }
+                return {
+                    'ok': True,
+                    'type': 'url',
+                    'svg_url': diagrams.get_plantuml_svg_url(code),
+                    'engine': engine,
+                    'requires_network': True,
+                }
+            elif engine == 'wsd':
+                # WebSequenceDiagrams syntax is not PlantUML syntax.  There is
+                # no pinned, redistributable offline WSD renderer in this
+                # release, so fail closed rather than sending source to an
+                # unrelated service.
+                return {'ok': False, 'error_code': 'diagram_engine_unavailable', 'engine': engine}
             elif engine == 'tikz':
                 return {'ok': True, 'type': 'html', 'html': diagrams.format_tikz_html(code)}
             elif engine in ('vega', 'vega-lite'):

@@ -83,12 +83,12 @@ export class ReadMDBridge {
         if (this.proc === proc) this.failProcess(err);
       });
       proc.on('close', code => {
-        if (this.proc === proc) this.failProcess(new Error(`ReadMD Core 进程异常退出: ${code ?? 'unknown'}`));
+        if (this.proc === proc) this.failProcess(new Error('core_process_exit'));
       });
       await new Promise<void>((resolve, reject) => {
         const timer = setTimeout(() => {
           if (this.proc === proc) this.proc = undefined;
-          reject(new Error('ReadMD Core 启动超时'));
+          reject(new Error('core_start_timeout'));
         }, 10000);
         proc.once('spawn', () => {
           if (this.proc !== proc) return;
@@ -117,7 +117,7 @@ export class ReadMDBridge {
           const waiter = this.pending.get(id);
           if (waiter) {
             this.pending.delete(id); clearTimeout(waiter.timer);
-            if (response.error) waiter.reject(new Error(response.error.message || 'MCP 执行错误'));
+            if (response.error) waiter.reject(new Error(String(response.error.code || 'mcp_request_failed')));
             else waiter.resolve(response.result);
           }
         } catch { /* ignore partial/non-protocol output */ }
@@ -141,7 +141,16 @@ export class ReadMDBridge {
    */
   public async callMcpTool(name: string, args: Record<string, any>): Promise<any> {
     const result = await this.callMcpMethod('tools/call', { name, arguments: args });
-    if (result?.isError) throw new Error(result.content?.[0]?.text || '执行失败');
+    if (result?.isError) {
+      const raw = result.content?.[0]?.text;
+      try {
+        const parsed = raw ? JSON.parse(raw) : undefined;
+        throw new Error(String(parsed?.error_code || 'mcp_tool_failed'));
+      } catch (error) {
+        if (error instanceof Error && error.message !== 'mcp_tool_failed') throw error;
+        throw new Error('mcp_tool_failed');
+      }
+    }
     const text = result?.content?.[0]?.text;
     try { return text ? JSON.parse(text) : result; } catch { return text || result; }
   }
@@ -150,11 +159,11 @@ export class ReadMDBridge {
   public async callMcpMethod(method: string, params: Record<string, any> = {}): Promise<any> {
     await this.ensureProcess();
     const proc = this.proc;
-    if (!proc || !proc.stdin.writable) throw new Error('ReadMD Core 未连接');
+    if (!proc || !proc.stdin.writable) throw new Error('core_not_connected');
     const id = this.nextId++;
     const request = { jsonrpc: '2.0', id, method, params };
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending.delete(id); reject(new Error(`ReadMD 操作超时 (${method})`)); }, 60000);
+      const timer = setTimeout(() => { this.pending.delete(id); reject(new Error('core_operation_timeout')); }, 60000);
       this.pending.set(id, { resolve, reject, timer });
       proc.stdin.write(JSON.stringify(request) + '\n');
     });
@@ -191,7 +200,7 @@ export class ReadMDBridge {
 
   public dispose(): void {
     this.disposed = true;
-    for (const waiter of this.pending.values()) { clearTimeout(waiter.timer); waiter.reject(new Error('ReadMD Core 已关闭')); }
+    for (const waiter of this.pending.values()) { clearTimeout(waiter.timer); waiter.reject(new Error('core_closed')); }
     this.pending.clear(); this.proc?.kill(); this.proc = undefined;
   }
 

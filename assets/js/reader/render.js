@@ -843,19 +843,60 @@ function parseMarkdownWithSourceMap(content, options = {}) {
       const escaped = typeof token === 'object' ? token.escaped : arguments[2];
       const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
       const info = (infostring || '').trim();
-      const parts = info.split(/\s+/);
-      const lang = parts[0] || '';
-      const hasCmd = info.includes('cmd=true') || info.includes('cmd=True') || info.includes('{cmd}');
+      // Parse the same small attribute vocabulary used by MPE's fenced code
+      // chunks.  The old implementation searched the raw info string, which
+      // missed brace syntax (`{cmd output=markdown}`), quoted values and
+      // command aliases (`cmd=python`).  Keep the parser deliberately
+      // conservative: attributes only affect presentation/format selection;
+      // execution still goes through the existing sandbox endpoint.
+      const fenceTokens = info
+        .replace(/[{}]/g, ' ')
+        .match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+      const lang = fenceTokens.shift() || '';
+      const attributes = Object.create(null);
+      const flags = Object.create(null);
+      fenceTokens.forEach(rawToken => {
+        const tokenText = String(rawToken).trim();
+        if (!tokenText) return;
+        const equalAt = tokenText.indexOf('=');
+        if (equalAt < 0) {
+          flags[tokenText.toLowerCase()] = true;
+          return;
+        }
+        const key = tokenText.slice(0, equalAt).trim().toLowerCase();
+        let value = tokenText.slice(equalAt + 1).trim();
+        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        attributes[key] = value;
+      });
+      const boolAttribute = (name, fallback = false) => {
+        if (Object.prototype.hasOwnProperty.call(attributes, name)) {
+          const value = String(attributes[name]).toLowerCase();
+          return value === 'true' || value === '1' || value === 'yes' || value === 'on';
+        }
+        return Boolean(flags[name]) || fallback;
+      };
+      const commandAttribute = Object.prototype.hasOwnProperty.call(attributes, 'cmd')
+        ? String(attributes.cmd).trim()
+        : '';
+      const commandDisabled = ['false', '0', 'no', 'off'].includes(commandAttribute.toLowerCase());
+      const hasCmd = !commandDisabled && (boolAttribute('cmd') || Boolean(commandAttribute) || Boolean(flags.cmd));
+      const executionLang = commandAttribute && !['true', '1', 'yes', 'on'].includes(commandAttribute.toLowerCase())
+        ? commandAttribute
+        : lang;
 
       // 1. Interactive Code Chunk
       if (hasCmd) {
         const encodedCode = encodeURIComponent(code);
-        const isMatplotlib = info.includes('matplotlib=true') || info.includes('matplotlib=True');
-        const isHidden = info.includes('hide=true') || info.includes('hide=True');
-        const hasOutput = info.includes('output=true') || info.includes('output=True');
-        return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}" data-output="${hasOutput}">
+        const isMatplotlib = boolAttribute('matplotlib');
+        const isHidden = boolAttribute('hide') || (Object.prototype.hasOwnProperty.call(attributes, 'echo') && ['false', '0', 'no', 'off'].includes(String(attributes.echo).toLowerCase()));
+        const outputValue = Object.prototype.hasOwnProperty.call(attributes, 'output') ? String(attributes.output).toLowerCase() : '';
+        const hasOutput = ['true', '1', 'yes', 'on', 'text', 'markdown', 'html', 'json', 'png'].includes(outputValue) || boolAttribute('output');
+        const outputFormat = hasOutput && outputValue && !['true', '1', 'yes', 'on'].includes(outputValue) ? outputValue : '';
+        return `<div class="code-chunk-card" ${lineAttr} data-lang="${executionLang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}" data-echo="${!isHidden}" data-output="${hasOutput}" data-output-format="${outputFormat}">
           <div class="code-chunk-header">
-            <span class="code-chunk-badge">${lang.toUpperCase()}</span>
+            <span class="code-chunk-badge">${executionLang.toUpperCase()}</span>
             <span class="code-chunk-status" role="status" aria-live="polite">${_t('status.ready')}</span>
             <span class="code-chunk-timer"></span>
             <div class="code-chunk-actions">
@@ -863,7 +904,7 @@ function parseMarkdownWithSourceMap(content, options = {}) {
             </div>
           </div>
           <div class="code-chunk-src ${isHidden ? 'hidden' : ''}">
-            <pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>
+            <pre><code class="language-${executionLang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>
           </div>
           <div class="code-chunk-output hidden">
             <div class="code-chunk-output-header">
@@ -880,7 +921,7 @@ function parseMarkdownWithSourceMap(content, options = {}) {
       }
 
       // 2. Specialized Diagrams
-      const diagramLangs = ['mermaid', 'tikz', 'plantuml', 'puml', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'chart', 'chartjs', 'chart.js', 'd2', 'ditaa'];
+      const diagramLangs = ['mermaid', 'tikz', 'plantuml', 'puml', 'wsd', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'chart', 'chartjs', 'chart.js', 'd2', 'ditaa'];
       if (diagramLangs.includes(lang.toLowerCase())) {
         const encodedCode = encodeURIComponent(code);
         return `<div class="diagram-card" ${lineAttr} data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
@@ -1617,9 +1658,21 @@ function renderAllCodeChunks(container) {
         if (res && res.ok) {
           statusEl.className = 'code-chunk-status success';
           statusEl.textContent = _t('convert.statusOk');
-          outWrap.classList.remove('hidden');
-          stdoutEl.textContent = (res.stdout || '') + (res.stderr ? ('\n' + res.stderr) : '');
-          if (!stdoutEl.textContent.trim()) stdoutEl.textContent = _t('reader.noConsoleOutput');
+          const outputFormat = String(card.dataset.outputFormat || 'text').toLowerCase();
+          const outputText = (res.stdout || '') + (res.stderr ? ('\n' + res.stderr) : '');
+          // Match MPE's output channel semantics while keeping every path
+          // inert by default: `none` hides output, `png` relies on captured
+          // images, and all other formats remain escaped text in the output
+          // preformatted node.  Source mutation still requires output=true
+          // and the explicit editor save path below.
+          if (outputFormat === 'none') {
+            outWrap.classList.add('hidden');
+            stdoutEl.textContent = '';
+          } else {
+            outWrap.classList.remove('hidden');
+            stdoutEl.textContent = outputText;
+            if (!stdoutEl.textContent.trim() && outputFormat !== 'png') stdoutEl.textContent = _t('reader.noConsoleOutput');
+          }
           plotEl.innerHTML = '';
           if (res.images && res.images.length > 0) {
             res.images.forEach(imgSrc => {
@@ -1633,8 +1686,7 @@ function renderAllCodeChunks(container) {
           // block only renders into the preview; ``output=true`` adds a
           // bounded marker block after the matching fence and persists it
           // through the editor's normal history/save path.
-          if (card.dataset.output === 'true' && state.editing) {
-            const outputText = (res.stdout || '') + (res.stderr ? ('\n' + res.stderr) : '');
+          if (card.dataset.output === 'true' && outputFormat !== 'none' && state.editing) {
             await persistCodeChunkOutput(card, outputText);
           }
         } else {
@@ -1644,16 +1696,18 @@ function renderAllCodeChunks(container) {
           // The core returns stable error codes; never surface its internal
           // exception text (which may contain local paths or untranslated
           // backend strings) in the document UI.
-          stdoutEl.textContent = (res && res.error_code)
-            ? _t('toast.unknownError')
-            : ((res && res.error) || (res && res.stderr) || _t('toast.unknownError'));
+          // Error details stay in the structured response for diagnostics;
+          // the document UI only renders a localized, stable message.  This
+          // prevents backend paths, subprocess output or untranslated text
+          // from leaking into a document preview.
+          stdoutEl.textContent = _t('toast.unknownError');
         }
       } catch (err) {
         clearInterval(interval);
         statusEl.className = 'code-chunk-status error';
         statusEl.textContent = _t('reader.callFailed');
         outWrap.classList.remove('hidden');
-        stdoutEl.textContent = err.message || String(err);
+        stdoutEl.textContent = _t('toast.unknownError');
       } finally {
         btn.disabled = false;
         btn.textContent = `▶ ${_t('reader.runAgain')}`;
@@ -2040,17 +2094,14 @@ function renderAllDiagrams(container) {
           // Server responses intentionally carry only stable error codes.  Do
           // not leak those codes (or provider/host diagnostics) into the
           // rendered document; the locale owns the user-facing wording.
-          const reason = (res && res.error_code) ? _t('toast.unknownError')
-            : ((res && res.error) || _t('toast.unknownError'));
+          const reason = _t('toast.unknownError');
           const safeReason = window.escapeHtml ? escapeHtml(reason) : reason;
           const message = _t('reader.diagramError', { error: safeReason });
           const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
           previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
         }
       } catch (err) {
-        const rawReason = String(err && err.message || '');
-        const reason = rawReason.startsWith('diagram_') ? _t('toast.unknownError') : rawReason;
-        const safeReason = window.escapeHtml ? escapeHtml(reason || _t('toast.unknownError')) : (reason || _t('toast.unknownError'));
+        const safeReason = window.escapeHtml ? escapeHtml(_t('toast.unknownError')) : _t('toast.unknownError');
         const message = _t('reader.renderFailed', { error: safeReason });
         const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
         previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;

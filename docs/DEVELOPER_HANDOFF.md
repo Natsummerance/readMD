@@ -1,9 +1,9 @@
-# ReadMD V2.3.7 开发交接与技术架构全景文档 (Developer Handoff)
+# ReadMD V2.3.8 开发交接与技术架构全景文档 (Developer Handoff)
 
 ## 📌 1. 项目基础信息
 
 - **项目名称**：ReadMD (高性能本地 Markdown 智能阅读与排版套件)
-- **当前候选版本**：`v2.3.7`（本地 RC；正式发布仍受原生平台证据、签名和启动门禁约束）
+- **当前候选版本**：`v2.3.8-preview.1`（隔离分支 Preview；正式发布仍受原生平台证据、签名和启动门禁约束）
 - **代码仓库结构**：
   ```
   readmd/
@@ -39,7 +39,7 @@
   │   │   │   ├── bridge.ts          # VSCode ⇄ Python/MCP 通信网桥
   │   │   │   ├── sidebarProvider.ts # 侧边栏快捷工具箱
   │   │   │   └── pythonFinder.ts    # 虚拟环境与 Python 自动侦测
-  │   │   └── package.json       # 扩展清单 (v2.3.7)
+  │   │   └── package.json       # 扩展清单 (v2.3.8-preview.1)
   │   └── harmonyos-app/        # HarmonyOS NEXT 纯血鸿蒙应用源码
   ├── assets/
   │   ├── i18n/                 # 46 国多语言本地化字典 (100.0% 词条对齐)
