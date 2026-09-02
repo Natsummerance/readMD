@@ -4777,6 +4777,13 @@ body[data-theme="dark"] .code-chunk-status.error,
   height: auto;
 }
 
+.diagram-preview-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
 .diagram-loading {
   font-size: 12px;
   color: var(--fg3);

@@ -1781,6 +1781,17 @@ function diagramOutputMarkup(markup) {
   return sanitizeRenderedHtml(String(markup || ''), { allowInteractive: false });
 }
 
+function renderDiagramFallback(previewEl, engine, code, messageKey = 'reader.renderFailed') {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (!previewEl) return;
+  const reason = _t('toast.unknownError');
+  const safeReason = window.escapeHtml ? escapeHtml(reason) : reason;
+  const safeCode = window.escapeHtml ? escapeHtml(String(code || '')) : String(code || '');
+  const message = _t(messageKey, { error: safeReason });
+  const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
+  previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${safeCode}</code></pre></div>`;
+}
+
 // A few vendored renderers (notably bitfield) return ONML's array-shaped
 // virtual tree instead of an HTML string.  Convert that trusted tree through
 // the DOM before applying the normal SVG sanitizer; never concatenate it into
@@ -1973,7 +1984,15 @@ function renderAllDiagrams(container) {
 
         if (res && res.ok) {
           if (res.type === 'url' && res.svg_url) {
-            previewEl.innerHTML = `<img src="${res.svg_url}" alt="${engine} diagram" style="max-width:100%;" />`;
+            // PlantUML is intentionally online-by-default when no local Java
+            // runtime is installed.  A network failure must not leave a
+            // broken image or claim that the diagram rendered successfully.
+            const image = document.createElement('img');
+            image.className = 'diagram-preview-image';
+            image.src = res.svg_url;
+            image.alt = `${engine} diagram`;
+            image.addEventListener('error', () => renderDiagramFallback(previewEl, engine, code));
+            previewEl.replaceChildren(image);
           } else if (res.type === 'html' && res.html) {
             previewEl.innerHTML = res.html;
           } else if (res.svg) {
@@ -1988,13 +2007,17 @@ function renderAllDiagrams(container) {
           const reason = (res && res.error_code) ? _t('toast.unknownError')
             : ((res && res.error) || _t('toast.unknownError'));
           const safeReason = window.escapeHtml ? escapeHtml(reason) : reason;
-          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.diagramError', { error: safeReason })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+          const message = _t('reader.diagramError', { error: safeReason });
+          const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
+          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
         }
       } catch (err) {
         const rawReason = String(err && err.message || '');
         const reason = rawReason.startsWith('diagram_') ? _t('toast.unknownError') : rawReason;
         const safeReason = window.escapeHtml ? escapeHtml(reason || _t('toast.unknownError')) : (reason || _t('toast.unknownError'));
-        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.renderFailed', { error: safeReason })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+        const message = _t('reader.renderFailed', { error: safeReason });
+        const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
+        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
       }
     };
 

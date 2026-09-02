@@ -1215,6 +1215,8 @@ class Handler(BaseHTTPRequestHandler):
             self._api_code_run()
         elif path == '/api/diagram/render':
             self._api_diagram_render()
+        elif path == '/api/diagram/capabilities':
+            self._api_diagram_capabilities()
         elif path == '/api/import/process':
             self._api_import_process()
         elif path == '/api/export/epub':
@@ -1600,6 +1602,18 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             logging.exception('api_diagram_render failed')
             self._send_json(500, {'ok': False, 'error_code': 'diagram_render_failed'})
+
+    def _api_diagram_capabilities(self):
+        """Expose local renderer availability without probing the network."""
+        if self.command != 'GET':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            from src.readmd_modules import diagrams
+            self._send_json(200, {'ok': True, **diagrams.get_diagram_capabilities()})
+        except Exception:
+            logging.exception('api_diagram_capabilities failed')
+            self._send_json(500, {'ok': False, 'error_code': 'diagram_capabilities_failed'})
 
     def _api_import_process(self):
         try:
@@ -3641,6 +3655,15 @@ class Api(object):
         except Exception as e:
             logging.exception('render_diagram failed')
             return {'ok': False, 'error_code': 'diagram_render_failed'}
+
+    def get_diagram_capabilities(self):
+        """Return the renderer capability snapshot used by the desktop UI."""
+        try:
+            from src.readmd_modules import diagrams
+            return {'ok': True, **diagrams.get_diagram_capabilities()}
+        except Exception:
+            logging.exception('get_diagram_capabilities failed')
+            return {'ok': False, 'error_code': 'diagram_capabilities_failed'}
 
     def process_imports(self, content, base_dir='', current_file=None):
         """处理 @import 指令。"""

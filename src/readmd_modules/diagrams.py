@@ -76,6 +76,68 @@ def has_local_plantuml() -> bool:
     return bool(shutil.which('plantuml') or (shutil.which('java') and os.environ.get('PLANTUML_JAR')))
 
 
+def get_diagram_capabilities() -> Dict[str, object]:
+    """Return the renderers that are actually available in this installation.
+
+    The reader keeps browser renderers lazy, so this function only checks the
+    immutable files that are shipped with the app and the optional local
+    processes required by server-side renderers.  It deliberately does not
+    perform a network request or execute user-provided diagram source.
+    """
+    root = Path(__file__).resolve().parents[2]
+    vendor = root / "assets" / "vendor" / "diagrams"
+    browser_assets = {
+        "mermaid": vendor / "mermaid" / "mermaid.min.js",
+        "wavedrom": vendor / "wavedrom" / "wavedrom.min.js",
+        "bitfield": vendor / "bitfield" / "bitfield.min.js",
+        "viz": vendor / "viz" / "viz-standalone.js",
+        "tikz": vendor / "tikzjax" / "tikzjax.js",
+    }
+    capabilities: Dict[str, Dict[str, object]] = {}
+    for engine, asset in browser_assets.items():
+        capabilities[engine] = {
+            "available": asset.is_file(),
+            "offline": asset.is_file(),
+            "renderer": "browser",
+            "requires_network": False,
+        }
+
+    node = shutil.which("node")
+    vega_assets = (
+        vendor / "vega" / "vega.min.js",
+        vendor / "vega-lite" / "vega-lite.min.js",
+    )
+    vega_ready = bool(node and all(path.is_file() for path in vega_assets))
+    for engine in ("vega", "vega-lite"):
+        capabilities[engine] = {
+            "available": vega_ready,
+            "offline": vega_ready,
+            "renderer": "node",
+            "requires_network": False,
+            "reason": "" if vega_ready else "diagram_dependency_missing",
+        }
+
+    local_plantuml = has_local_plantuml()
+    capabilities["plantuml"] = {
+        "available": True,
+        "offline": local_plantuml,
+        "renderer": "java" if local_plantuml else "remote",
+        "requires_network": not local_plantuml,
+        "reason": "" if local_plantuml else "diagram_online_renderer",
+    }
+    capabilities["puml"] = dict(capabilities["plantuml"])
+    # D2 has no pinned runtime in this release.  Keep the entry so clients can
+    # disable it explicitly instead of falling through to an online renderer.
+    capabilities["d2"] = {
+        "available": False,
+        "offline": False,
+        "renderer": "none",
+        "requires_network": False,
+        "reason": "diagram_engine_unavailable",
+    }
+    return {"schema_version": 1, "offline": True, "engines": capabilities}
+
+
 def render_vega_svg(spec_text: str, language: str = "vega-lite", timeout: float = 12.0) -> str:
     """Render a Vega/Vega-Lite specification through the bundled Node runtime.
 

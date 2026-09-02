@@ -6,7 +6,36 @@ import shutil
 
 import pytest
 
-from src.readmd_modules.diagrams import DiagramRenderError, render_vega_svg
+from src.readmd_modules.diagrams import (
+    DiagramRenderError,
+    get_diagram_capabilities,
+    render_vega_svg,
+)
+
+
+def test_capabilities_are_local_and_expose_explicit_fallbacks():
+    capabilities = get_diagram_capabilities()
+    assert capabilities["schema_version"] == 1
+    assert capabilities["offline"] is True
+    engines = capabilities["engines"]
+    # Every engine has an explicit state; no client needs to infer support
+    # from a missing key or attempt an implicit online fallback.
+    for engine in ("mermaid", "wavedrom", "bitfield", "viz", "tikz",
+                   "vega", "vega-lite", "plantuml", "d2"):
+        assert engine in engines
+        assert isinstance(engines[engine]["available"], bool)
+        assert isinstance(engines[engine]["offline"], bool)
+        assert isinstance(engines[engine]["requires_network"], bool)
+    assert engines["d2"]["available"] is False
+    assert engines["d2"]["offline"] is False
+
+
+def test_pywebview_capabilities_bridge_matches_module_snapshot():
+    import readmd
+
+    result = readmd.Api().get_diagram_capabilities()
+    assert result["ok"] is True
+    assert result["engines"] == get_diagram_capabilities()["engines"]
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node runtime is not installed")
