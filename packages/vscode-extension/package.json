@@ -1,7 +1,7 @@
 {
   "name": "readmd-vscode",
-  "displayName": "ReadMD —— 高性能 Markdown 智能预览与自愈修复",
-  "description": "轻量级本地 Markdown 智能阅读与编辑扩展：实时双向同步预览、格式自愈修复、全格式文档互转、排版级 PDF/Word/EPUB 导出、LaTeX/TikZ 科学绘图、多语言 Code Chunk、Reveal.js 演说模式、@import 模块化、[TOC]目录生成与 MCP 智能体协同。",
+  "displayName": "%extension.displayName%",
+  "description": "%extension.description%",
   "version": "2.3.8-preview.1",
   "publisher": "Natsummerance",
   "icon": "icon.png",
@@ -69,112 +69,112 @@
     "commands": [
       {
         "command": "readmd.openAiWorkbench",
-        "title": "ReadMD: 打开 AI Skill 工作台 (Open AI Skill Workbench)",
+        "title": "%command.openAiWorkbench%",
         "icon": "$(sparkle)"
       },
       {
         "command": "readmd.openSkills",
-        "title": "ReadMD: 浏览 Skills (Browse Skills)",
+        "title": "%command.openSkills%",
         "icon": "$(list-tree)"
       },
       {
         "command": "readmd.preview",
-        "title": "ReadMD: 打开智能实时双向预览 (Open Custom Preview)",
+        "title": "%command.preview%",
         "icon": "$(book)"
       },
       {
         "command": "readmd.fixCurrentDocument",
-        "title": "ReadMD: 智能诊断并自愈修复格式错误 (Auto-Fix Markdown Formatting)",
+        "title": "%command.fixCurrentDocument%",
         "icon": "$(wrench)"
       },
       {
         "command": "readmd.insertCodeChunk",
-        "title": "ReadMD: 插入交互式代码块 (Insert Interactive Code Chunk)",
+        "title": "%command.insertCodeChunk%",
         "icon": "$(play)"
       },
       {
         "command": "readmd.insertDiagram",
-        "title": "ReadMD: 插入科学与工程图表 (Insert Diagram: PlantUML/TikZ/Vega)",
+        "title": "%command.insertDiagram%",
         "icon": "$(graph)"
       },
       {
         "command": "readmd.insertDocImport",
-        "title": "ReadMD: 插入子文档引用 (Insert @import Module)",
+        "title": "%command.insertDocImport%",
         "icon": "$(references)"
       },
       {
         "command": "readmd.insertFrontmatter",
-        "title": "ReadMD: 插入文档样式与演示元数据 (Insert Frontmatter & Style)",
+        "title": "%command.insertFrontmatter%",
         "icon": "$(gear)"
       },
       {
         "command": "readmd.openPresentation",
-        "title": "ReadMD: 开启全屏 Reveal.js 演说模式 (Open Presentation Mode)",
+        "title": "%command.openPresentation%",
         "icon": "$(screen-full)"
       },
       {
         "command": "readmd.exportPresentation",
-        "title": "ReadMD: 导出 Reveal.js 演说 HTML (Export Presentation HTML)",
+        "title": "%command.exportPresentation%",
         "icon": "$(file-media)"
       },
       {
         "command": "readmd.insertToc",
-        "title": "ReadMD: 插入 [TOC] 自动目录 (Insert TOC)",
+        "title": "%command.insertToc%",
         "icon": "$(list-tree)"
       },
       {
         "command": "readmd.insertSlide",
-        "title": "ReadMD: 插入 <!-- slide --> 幻灯片分页符 (Insert Slide Break)",
+        "title": "%command.insertSlide%",
         "icon": "$(split-horizontal)"
       },
       {
         "command": "readmd.processImports",
-        "title": "ReadMD: 展平并编译 @import 模块化引用 (Flatten @import Modules)",
+        "title": "%command.processImports%",
         "icon": "$(references)"
       },
       {
         "command": "readmd.runCodeChunk",
-        "title": "ReadMD: 安全运行光标所在 Python 代码块 (Run Code Chunk)",
+        "title": "%command.runCodeChunk%",
         "icon": "$(play)"
       },
       {
         "command": "readmd.exportDocument",
-        "title": "ReadMD: 排版级导出文档 (Export to PDF / Word / HTML / LaTeX)",
+        "title": "%command.exportDocument%",
         "icon": "$(export)"
       },
       {
         "command": "readmd.convertFileToMarkdown",
-        "title": "ReadMD: 转换为 Markdown (Convert to Markdown)",
+        "title": "%command.convertFileToMarkdown%",
         "icon": "$(file-symlink-file)"
       },
       {
         "command": "readmd.convertAnyFilePrompt",
-        "title": "ReadMD: 转换本地文档为 Markdown...",
+        "title": "%command.convertAnyFilePrompt%",
         "icon": "$(file-symlink-file)"
       },
       {
         "command": "readmd.fetchWebToMarkdown",
-        "title": "ReadMD: 抓取网页 URL 为 Markdown (Fetch Web Page to Markdown)",
+        "title": "%command.fetchWebToMarkdown%",
         "icon": "$(globe)"
       },
       {
         "command": "readmd.convertToLatex",
-        "title": "ReadMD: 一键编译转为学术 LaTeX 源码 (Convert Markdown to LaTeX)",
+        "title": "%command.convertToLatex%",
         "icon": "$(file-code)"
       },
       {
         "command": "readmd.parseBibtex",
-        "title": "ReadMD: 解析 BibTeX 参考文献 (Parse BibTeX Database)",
+        "title": "%command.parseBibtex%",
         "icon": "$(references)"
       },
       {
         "command": "readmd.setupMcpServer",
-        "title": "ReadMD: 一键配置工作区 MCP Server (Setup ReadMD MCP Server)",
+        "title": "%command.setupMcpServer%",
         "icon": "$(hubot)"
       },
       {
         "command": "readmd.openSkillByUri",
-        "title": "ReadMD: 打开指定 Skill (Open Skill by URI)",
+        "title": "%command.openSkillByUri%",
         "icon": "$(library)"
       }
     ],
@@ -182,7 +182,7 @@
       "activitybar": [
         {
           "id": "readmd-sidebar",
-          "title": "ReadMD 工具箱",
+          "title": "%view.containerTitle%",
           "icon": "icon.png"
         }
       ]
@@ -191,7 +191,7 @@
       "readmd-sidebar": [
         {
           "id": "readmdToolbox",
-          "name": "ReadMD 快捷工具箱"
+          "name": "%view.toolboxName%"
         }
       ]
     },
@@ -264,22 +264,22 @@
       ]
     },
     "configuration": {
-      "title": "ReadMD",
+      "title": "%configuration.title%",
       "properties": {
         "readmd.pythonPath": {
           "type": "string",
           "default": "",
-          "description": "自定义 Python 可执行程序路径（留空则自动检测活动虚拟环境或系统 Python）"
+          "description": "%configuration.pythonPath%"
         },
         "readmd.customCssPath": {
           "type": "string",
           "default": "",
-          "description": "用户自定义全局 custom.css 文件的绝对路径"
+          "description": "%configuration.customCssPath%"
         },
         "readmd.mcpServerPath": {
           "type": "string",
           "default": "",
-          "description": "可选的 ReadMD Core/MCP 服务路径；留空使用工作区内置服务"
+          "description": "%configuration.mcpServerPath%"
         }
       }
     }
@@ -288,7 +288,7 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && node --test test/bridge.test.js test/sidebarProvider.test.js",
+    "test": "npm run compile && node --test test/bridge.test.js test/sidebarProvider.test.js test/commands.test.js",
     "package": "node scripts/stage-core.mjs && vsce package --no-dependencies",
     "publish:ovsx": "node publish-ovsx.js",
     "release:ovsx": "npm run package && npm run publish:ovsx",

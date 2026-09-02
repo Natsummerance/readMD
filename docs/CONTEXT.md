@@ -1,5 +1,7 @@
 # ReadMD 开发上下文（CONTEXT）
 
+> 当前工作基线为 `2.3.8-preview.1` 隔离候选；下文历史版本号仅用于追溯，不能作为当前发布状态或平台验收证据。
+
 > 本文档用于快速恢复开发上下文。新会话开始时先读：README.md、readmd.py、../src/readmd_fix.py、../src/readmd_modules/*.py、installer/setup_app.py、deploy.bat、release.py。
 
 ## 项目一句话
@@ -11,7 +13,7 @@
 - 本地：任意工作区目录（不得在仓库记录开发者绝对路径）
 - GitHub：`https://github.com/Natsummerance/readMD`（public，main 分支）
 - 发布凭据仅由 GitHub Actions 管理，不在源码或文档记录个人账号、邮箱或 Token
-- 当前开发/发布目标：v2.3.7 RC（先完成当前候选验收；平台原生证据、签名/公证和启动性能门禁通过后才可正式发布）
+- 当前开发/发布目标：v2.3.8 Preview（先完成当前候选验收；平台原生证据、签名/公证和启动性能门禁通过后才可正式发布）
 - Win7 兼容版：**v2.1.1 Beta**（pre-release tag `v2.1.1-beta`，资产 `ReadMDSetup-2.1.1-Beta-win7-x64.exe`）——Win7 SP1 x64 + 内嵌固定版 WebView2 109 运行时；独立 Python 3.9.13 构建链（`.venv-win7` / `win7-reqs.txt` / `build_win7.bat` / `ReadMD-win7.spec` / `ReadMDSetup-win7.spec` / `tools\win7_pywebview_edgechromium.patch` / `tools\bundle_runtime.py`）；功能裁剪：仅 docx / pdf 转 MD + 导出（OCR / AI / 网页 / 其他格式在 Win7 下提示不可用）
 
 ## 功能清单（按开发顺序）

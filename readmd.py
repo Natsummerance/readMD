@@ -608,7 +608,8 @@ def load_skills(project_dir=None):
     # The workbench needs a local preview without another round trip.  This is
     # still instruction text (never credentials) and follows the same registry
     # precedence and path checks as the read endpoint.
-    return [_public_skill(skill, include_instructions=True) for skill in _skill_registry(project_dir).list()]
+    return [_public_skill(skill, include_instructions=True)
+            for skill in _skill_registry(project_dir).list(include_disabled=True)]
 
 
 def _user_skill_folder(skill_id):
@@ -961,7 +962,8 @@ class Handler(BaseHTTPRequestHandler):
     LAN_BLOCKED_PATHS = frozenset({
         '/api/save', '/api/upload', '/api/image/save', '/api/code/run',
         '/api/update/download', '/api/update/apply', '/api/import/process',
-        '/api/control/open', '/api/control/next',
+        '/api/control/open', '/api/control/next', '/api/pets/import',
+        '/api/pets/remove', '/api/pets/active',
     })
     LAN_SCOPED_PATHS = frozenset({
         '/api/file', '/api/list', '/api/ocr', '/api/convert', '/raw',
@@ -979,7 +981,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             logging.exception('http error: %s', self.path)
             try:
-                self._send(500, 'text/plain; charset=utf-8', ('error: %s' % e).encode('utf-8'))
+                self._send(500, 'text/plain; charset=utf-8', 'internal error'.encode('utf-8'))
             except Exception:
                 pass
 
@@ -999,7 +1001,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             logging.exception('http post error: %s', self.path)
             try:
-                self._send(500, 'text/plain; charset=utf-8', ('error: %s' % e).encode('utf-8'))
+                self._send(500, 'text/plain; charset=utf-8', 'internal error'.encode('utf-8'))
             except Exception:
                 pass
 
@@ -1013,7 +1015,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             logging.exception('http delete error: %s', self.path)
             try:
-                self._send(500, 'text/plain; charset=utf-8', ('error: %s' % e).encode('utf-8'))
+                self._send(500, 'text/plain; charset=utf-8', 'internal error'.encode('utf-8'))
             except Exception:
                 pass
 
@@ -1154,6 +1156,16 @@ class Handler(BaseHTTPRequestHandler):
             self._api_ai_history()
         elif path == '/api/skills':
             self._api_skills()
+        elif path == '/api/pets':
+            self._api_pets()
+        elif path == '/api/pets/import':
+            self._api_pet_import()
+        elif path == '/api/pets/remove':
+            self._api_pet_remove()
+        elif path == '/api/pets/active':
+            self._api_pet_active()
+        elif path == '/api/pets/thumb':
+            self._api_pet_thumb(qs)
         elif path == '/api/skill-imports':
             self._api_skill_imports()
         elif path == '/api/skill-imports/preview':
@@ -1172,7 +1184,8 @@ class Handler(BaseHTTPRequestHandler):
                 body = json.loads(self.rfile.read(length).decode('utf-8')) if length else {}
                 self._send_json(200, start_lan_server(body.get('current_file')))
             except Exception as e:
-                self._send_json(500, {'ok': False, 'error': str(e)})
+                logging.exception('share start failed')
+                self._send_api_error(500, 'share_start_failed')
         elif path == '/api/share/stop':
             self._send_json(200, stop_lan_server())
         elif path == '/api/share/status':
@@ -1202,6 +1215,8 @@ class Handler(BaseHTTPRequestHandler):
             self._api_code_run()
         elif path == '/api/diagram/render':
             self._api_diagram_render()
+        elif path == '/api/diagram/capabilities':
+            self._api_diagram_capabilities()
         elif path == '/api/import/process':
             self._api_import_process()
         elif path == '/api/export/epub':
@@ -1276,6 +1291,17 @@ class Handler(BaseHTTPRequestHandler):
         self._send(code, 'application/json; charset=utf-8',
                    json.dumps(obj, ensure_ascii=False).encode('utf-8'))
 
+    def _send_api_error(self, status, error_code, **extra):
+        """Return a locale-neutral API failure without leaking host details.
+
+        The UI owns wording through i18n.  Keeping exception strings out of
+        responses also prevents absolute paths, provider diagnostics and local
+        usernames from ending up in logs, history or screenshots.
+        """
+        payload = {'ok': False, 'error_code': str(error_code or 'internal_error')}
+        payload.update(extra)
+        self._send_json(status, payload)
+
     def _module_ready(self, name, message):
         """Ensure exactly one feature module is being loaded for this request."""
         if RM.is_ready(name):
@@ -1284,34 +1310,38 @@ class Handler(BaseHTTPRequestHandler):
         st, errors = RM.status()
         state = st.get(name, state)
         if state in ('disabled', 'error'):
-            self._send_json(503, {'error': errors.get(name) or message,
-                                  'module': name, 'status': state})
+            logging.warning('module %s unavailable: %s', name, errors.get(name) or message)
+            self._send_api_error(503, 'module_unavailable', module=name, status=state)
         else:
             # ``load`` turns an old error into a retrying loading state.
-            self._send_json(409, {'error': message, 'module': name,
-                                  'status': st.get(name, state)})
+            self._send_json(409, {'ok': False, 'error_code': 'module_loading',
+                                  'module': name, 'status': st.get(name, state)})
         return False
 
     def _api_modules_load(self):
         if self.command != 'POST':
-            self._send_json(405, {'error': '仅支持 POST 请求'})
+            self._send_api_error(405, 'method_not_allowed')
             return
         try:
             length = int(self.headers.get('Content-Length', 0) or 0)
             body = json.loads(self.rfile.read(length).decode('utf-8')) if length else {}
         except Exception:
-            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求格式错误'})
+            self._send_api_error(400, 'invalid_request')
             return
         name = body.get('name') if isinstance(body, dict) else None
         if name not in RM.MODULES:
-            self._send_json(400, {'error': '不支持的模块', 'name': name})
+            self._send_api_error(400, 'module_invalid', name=name)
             return
         state = RM.load(name)
         statuses, errors = RM.status()
         state = statuses.get(name, state)
         code = 200 if state == 'ready' else (503 if state in ('disabled', 'error') else 202)
-        self._send_json(code, {'name': name, 'status': state,
-                               'error': errors.get(name, '')})
+        payload = {'ok': code == 200, 'name': name, 'status': state}
+        if state in ('disabled', 'error'):
+            payload['error_code'] = 'module_unavailable'
+        elif state != 'ready':
+            payload['error_code'] = 'module_loading'
+        self._send_json(code, payload)
 
     def _send_index(self):
         """返回首页；局域网模式下注入 token 供前端 fetch 携带。"""
@@ -1344,7 +1374,8 @@ class Handler(BaseHTTPRequestHandler):
             res = updater.check_update(VERSION)
             self._send_json(200 if res.get('ok') else 500, res)
         except Exception as e:
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            logging.exception('api_update_check failed')
+            self._send_api_error(500, 'update_check_failed')
 
     def _api_update_download(self):
         try:
@@ -1361,21 +1392,24 @@ class Handler(BaseHTTPRequestHandler):
             ok, msg = updater.start_download_update(download_url, target_filename, expected_sha, use_mirror)
             self._send_json(200 if ok else 400, {'ok': ok, 'message': msg})
         except Exception as e:
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            logging.exception('api_update_download failed')
+            self._send_api_error(500, 'update_download_failed')
 
     def _api_update_status(self):
         try:
             from src.readmd_modules import updater
             self._send_json(200, updater.get_download_status())
         except Exception as e:
-            self._send_json(500, {'status': 'error', 'error': str(e)})
+            logging.exception('api_update_status failed')
+            self._send_api_error(500, 'update_status_failed', status='error')
 
     def _api_update_cancel(self):
         try:
             from src.readmd_modules import updater
             self._send_json(200, {'ok': updater.cancel_download()})
         except Exception as e:
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            logging.exception('api_update_cancel failed')
+            self._send_api_error(500, 'update_cancel_failed')
 
     def _api_update_apply(self):
         try:
@@ -1385,13 +1419,15 @@ class Handler(BaseHTTPRequestHandler):
             ok, msg = updater.apply_update(body.get('file_path'), body.get('flavor'))
             self._send_json(200 if ok else 400, {'ok': ok, 'message': msg})
         except Exception as e:
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            logging.exception('api_update_apply failed')
+            self._send_api_error(500, 'update_apply_failed')
 
     def _api_system_language(self):
         try:
             self._send_json(200, {'ok': True, 'language': get_system_language()})
         except Exception as e:
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            logging.exception('api_system_language failed')
+            self._send_api_error(500, 'system_language_failed')
 
     def _api_code_run(self):
         try:
@@ -1412,29 +1448,172 @@ class Handler(BaseHTTPRequestHandler):
                 raw_error = str(res.get('error') or '')
                 res.setdefault('error_code', raw_error if raw_error in known else
                                ('execution_timeout' if '超时' in raw_error else 'execution_failed'))
+                # The core runner keeps a diagnostic for local callers, but the
+                # HTTP boundary must not expose tracebacks, absolute paths or
+                # shell details.  Clients localize the stable error code.
+                res.pop('error', None)
+                res.pop('stderr', None)
             self._send_json(200, res)
         except Exception as e:
             logging.exception('api_code_run failed')
-            self._send_json(500, {'ok': False, 'error_code': 'execution_failed', 'error': str(e)})
+            self._send_json(500, {'ok': False, 'error_code': 'execution_failed'})
 
-    def _api_diagram_render(self):
+    def _api_pets(self):
+        """List local Hermes-compatible pets without exposing arbitrary paths."""
+        if self.command != 'GET':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            from src.readmd_modules.pet import list_pets
+            settings = load_json(SETTINGS_FILE, {})
+            active = str(settings.get('pet_slug') or '') if isinstance(settings, dict) else ''
+            self._send_json(200, {'ok': True, 'active': active,
+                                  'pets': [item.as_dict() for item in list_pets(DATA_DIR)]})
+        except Exception:
+            logging.exception('pets list failed')
+            self._send_json(500, {'ok': False, 'error_code': 'pet_list_failed'})
+
+    def _api_pet_import(self):
+        if self.command != 'POST':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            if n <= 0 or n > 24 * 1024 * 1024:
+                self._send_json(413, {'ok': False, 'error_code': 'pet_spritesheet_too_large'})
+                return
+            body = json.loads(self.rfile.read(n).decode('utf-8'))
+            if body.get('confirm') is not True:
+                self._send_json(400, {'ok': False, 'error_code': 'confirmation_required'})
+                return
+            raw = base64.b64decode(str(body.get('image_base64') or ''), validate=True)
+            from src.readmd_modules.pet import register_local_pet
+            pet = register_local_pet(DATA_DIR, slug=str(body.get('slug') or ''),
+                                     spritesheet=raw,
+                                     display_name=str(body.get('display_name') or ''),
+                                     description=str(body.get('description') or ''),
+                                     replace=bool(body.get('replace')))
+            self._send_json(200, {'ok': True, 'pet': pet.as_dict()})
+        except binascii.Error:
+            self._send_json(400, {'ok': False, 'error_code': 'pet_spritesheet_format_invalid'})
+        except Exception as exc:
+            code = getattr(exc, 'code', 'pet_import_failed')
+            self._send_json(400, {'ok': False, 'error_code': code})
+
+    def _api_pet_remove(self):
+        if self.command not in ('POST', 'DELETE'):
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
             body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
-            engine = body.get('engine', 'mermaid')
+            if body.get('confirm') is not True:
+                self._send_json(400, {'ok': False, 'error_code': 'confirmation_required'})
+                return
+            from src.readmd_modules.pet import remove_pet
+            remove_pet(DATA_DIR, str(body.get('slug') or ''))
+            settings = load_json(SETTINGS_FILE, {})
+            if isinstance(settings, dict) and settings.get('pet_slug') == body.get('slug'):
+                settings.pop('pet_slug', None)
+                save_json(SETTINGS_FILE, settings)
+            self._send_json(200, {'ok': True})
+        except Exception as exc:
+            self._send_json(400, {'ok': False, 'error_code': getattr(exc, 'code', 'pet_remove_failed')})
+
+    def _api_pet_active(self):
+        if self.command != 'POST':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            if body.get('confirm') is not True:
+                self._send_json(400, {'ok': False, 'error_code': 'confirmation_required'})
+                return
+            slug = str(body.get('slug') or '').strip().lower()
+            from src.readmd_modules.pet import list_pets
+            if slug and slug not in {item.slug for item in list_pets(DATA_DIR)}:
+                self._send_json(404, {'ok': False, 'error_code': 'pet_not_found'})
+                return
+            settings = load_json(SETTINGS_FILE, {})
+            settings = settings if isinstance(settings, dict) else {}
+            if slug:
+                settings['pet_slug'] = slug
+            else:
+                settings.pop('pet_slug', None)
+            save_json(SETTINGS_FILE, settings)
+            self._send_json(200, {'ok': True, 'active': slug})
+        except Exception as exc:
+            self._send_json(400, {'ok': False, 'error_code': getattr(exc, 'code', 'pet_active_failed')})
+
+    def _api_pet_thumb(self, qs):
+        if self.command != 'GET':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            slug = str(qs.get('slug', [''])[0] or '')
+            from src.readmd_modules.pet import list_pets
+            pet = next((item for item in list_pets(DATA_DIR) if item.slug == slug), None)
+            if not pet:
+                self._send_json(404, {'ok': False, 'error_code': 'pet_not_found'})
+                return
+            path = os.path.realpath(pet.spritesheet)
+            if os.path.dirname(path) != os.path.realpath(pet.directory):
+                self._send_json(403, {'ok': False, 'error_code': 'pet_path_invalid'})
+                return
+            mime = 'image/png' if path.lower().endswith('.png') else 'image/webp'
+            with open(path, 'rb') as stream:
+                body = stream.read(20 * 1024 * 1024 + 1)
+            if len(body) > 20 * 1024 * 1024:
+                self._send_json(413, {'ok': False, 'error_code': 'pet_spritesheet_too_large'})
+                return
+            self._send(200, mime, body, cache_control='private, max-age=3600')
+        except OSError:
+            self._send_json(404, {'ok': False, 'error_code': 'pet_not_found'})
+
+    def _api_diagram_render(self):
+        from src.readmd_modules import diagrams
+        try:
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            engine = str(body.get('engine', 'mermaid') or 'mermaid').strip().lower()
             code = body.get('code', '')
-            from src.readmd_modules import diagrams
             if engine in ('puml', 'plantuml'):
                 svg_url = diagrams.get_plantuml_svg_url(code)
                 self._send_json(200, {'ok': True, 'type': 'url', 'svg_url': svg_url})
             elif engine == 'tikz':
                 html_out = diagrams.format_tikz_html(code)
                 self._send_json(200, {'ok': True, 'type': 'html', 'html': html_out})
+            elif engine in ('vega', 'vega-lite'):
+                svg = diagrams.render_vega_svg(code, engine)
+                self._send_json(200, {'ok': True, 'type': 'svg', 'svg': svg, 'engine': engine})
             else:
-                self._send_json(200, {'ok': True, 'engine': engine, 'code': code})
+                # Mermaid/WaveDrom/Bitfield/Viz are rendered by the browser's
+                # lazy offline dispatcher.  The HTTP endpoint must not echo
+                # source as a successful render: that produced a false-green
+                # preview whenever the bridge was unavailable.
+                self._send_json(422, {
+                    'ok': False,
+                    'error_code': 'diagram_client_renderer_required',
+                    'engine': engine,
+                })
+        except diagrams.DiagramRenderError as exc:
+            self._send_json(422, {'ok': False, 'error_code': exc.code})
         except Exception as e:
             logging.exception('api_diagram_render failed')
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            self._send_json(500, {'ok': False, 'error_code': 'diagram_render_failed'})
+
+    def _api_diagram_capabilities(self):
+        """Expose local renderer availability without probing the network."""
+        if self.command != 'GET':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            from src.readmd_modules import diagrams
+            self._send_json(200, {'ok': True, **diagrams.get_diagram_capabilities()})
+        except Exception:
+            logging.exception('api_diagram_capabilities failed')
+            self._send_json(500, {'ok': False, 'error_code': 'diagram_capabilities_failed'})
 
     def _api_import_process(self):
         try:
@@ -1448,14 +1627,14 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {'ok': True, 'content': processed})
         except Exception as e:
             logging.exception('api_import_process failed')
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            self._send_api_error(500, 'import_process_failed')
 
     def _api_export_epub(self):
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
             body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
             if body.get('confirm') is not True:
-                self._send_json(400, {'ok': False, 'code': 'confirmation_required'})
+                self._send_api_error(400, 'confirmation_required')
                 return
             content = body.get('content', '')
             out_path = body.get('out_path', '')
@@ -1470,7 +1649,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 out_path = _safe_export_target(out_path, '.epub')
                 if os.path.exists(out_path) and not body.get('overwrite'):
-                    self._send_json(409, {'ok': False, 'code': 'output_exists'})
+                    self._send_api_error(409, 'output_exists')
                     return
             ok = epub_render.build_epub(
                 content,
@@ -1489,7 +1668,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(400 if raw_error in known else 500,
                             {'ok': False,
                              'error_code': raw_error if raw_error in known else 'export_failed',
-                             'error': raw_error})
+                             })
 
     def _api_export_presentation(self):
         try:
@@ -1503,7 +1682,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {'ok': True, 'html': html_out})
         except Exception as e:
             logging.exception('api_export_presentation failed')
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            self._send_api_error(500, 'presentation_export_failed')
 
     def _api_style_get(self):
         try:
@@ -1511,7 +1690,8 @@ class Handler(BaseHTTPRequestHandler):
             data = style_injector.get_custom_styles()
             self._send_json(200, {'ok': True, 'data': data})
         except Exception as e:
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            logging.exception('api_style_get failed')
+            self._send_api_error(500, 'style_read_failed')
 
     def _api_style_save(self):
         try:
@@ -1521,7 +1701,8 @@ class Handler(BaseHTTPRequestHandler):
             ok = style_injector.save_custom_styles(body.get('css', ''), body.get('head', ''))
             self._send_json(200, {'ok': ok})
         except Exception as e:
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            logging.exception('api_style_save failed')
+            self._send_api_error(500, 'style_save_failed')
 
     def _api_bibtex(self, qs):
         try:
@@ -1530,7 +1711,8 @@ class Handler(BaseHTTPRequestHandler):
             res = bibtex.find_and_load_bib_for_file(p)
             self._send_json(200, {'ok': True, 'citations': res})
         except Exception as e:
-            self._send_json(500, {'ok': False, 'error': str(e)})
+            logging.exception('api_bibtex failed')
+            self._send_api_error(500, 'bibtex_failed')
 
     def _api_ping(self, qs):
 
@@ -1623,7 +1805,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, {'ok': True})
         except Exception as e:
             logging.exception('ai config failed')
-            self._send_json(500, {'error': 'AI 配置失败：%s' % e})
+            self._send_json(500, {'ok': False, 'error_code': 'ai_config_failed'})
 
     def _api_ai_models(self):
         """拉取模型列表。
@@ -1671,7 +1853,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {'models': ids})
         except Exception as e:
             logging.exception('ai models failed')
-            self._send_json(400, {'ok': False, 'error_code': 'model_list_failed', 'error': str(e)})
+            self._send_json(400, {'ok': False, 'error_code': 'model_list_failed'})
 
     def _api_ai_chat(self):
         """AI 对话：兼容 SSE 流式与标准 JSON 双模式返回。"""
@@ -1710,7 +1892,7 @@ class Handler(BaseHTTPRequestHandler):
                             if 'usage' in item:
                                 usage_info = item['usage']
                             elif 'error' in item:
-                                self._send_json(502, {'ok': False, 'error_code': 'provider_error', 'error': item['error']})
+                                self._send_json(502, {'ok': False, 'error_code': item.get('error_code') or 'provider_error'})
                                 return
                         elif isinstance(item, str):
                             full_content.append(item)
@@ -1736,8 +1918,7 @@ class Handler(BaseHTTPRequestHandler):
                     if 'usage' in item:
                         self._sse({'type': 'usage', 'usage': item.get('usage') or {}})
                     elif 'error' in item:
-                        self._sse({'type': 'error', 'error_code': item.get('error_code') or 'provider_error',
-                                   'error': item.get('error')})
+                        self._sse({'type': 'error', 'error_code': item.get('error_code') or 'provider_error'})
                     else:
                         self._sse(item)
                 else:
@@ -1746,10 +1927,10 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             logging.exception('ai chat failed')
             if not is_stream:
-                self._send_json(502, {'ok': False, 'error_code': 'provider_error', 'error': str(e)})
+                self._send_json(502, {'ok': False, 'error_code': 'provider_error'})
                 return
             try:
-                self._sse({'type': 'error', 'error_code': 'provider_error', 'error': str(e)})
+                self._sse({'type': 'error', 'error_code': 'provider_error'})
                 self._sse({'type': 'done'})
             except Exception:
                 pass
@@ -1945,7 +2126,17 @@ class Handler(BaseHTTPRequestHandler):
                 rendered = result.get('instructions', '')
                 for name, value in variables.items():
                     if re.fullmatch(r'(document|selection|request|language|context|output_format)', str(name)):
-                        rendered = re.sub(r'\{\{\s*' + re.escape(str(name)) + r'\s*\}\}', str(value or ''), rendered)
+                        # ``value`` is user/document content.  Passing it as a
+                        # replacement string makes backslashes such as
+                        # ``C:\\Users`` be interpreted as regex escapes on
+                        # Windows.  A callable replacement inserts it
+                        # verbatim and also handles newlines safely.
+                        replacement = str(value or '')
+                        rendered = re.sub(
+                            r'\{\{\s*' + re.escape(str(name)) + r'\s*\}\}',
+                            lambda _match, replacement=replacement: replacement,
+                            rendered,
+                        )
                 evaluation_token = _issue_skill_evaluation_token(skill_id, content)
                 self._send_json(200, {'ok': True, 'skill': result, 'rendered': rendered,
                                       'published': False, 'baseline': 'no-skill baseline required',
@@ -2022,11 +2213,14 @@ class Handler(BaseHTTPRequestHandler):
             # shutting down; there is no response left to write and this is
             # not an application error.
             return
-        except (SkillError, ValueError, json.JSONDecodeError) as exc:
-            self._send_json(400, {'error': str(exc)})
-        except Exception as exc:
+        except (SkillError, ValueError, json.JSONDecodeError):
+            # Keep transport responses locale-neutral.  The UI maps stable
+            # error codes to the active locale; raw server-language strings
+            # must never leak into the workbench or API clients.
+            self._send_json(400, {'ok': False, 'error_code': 'skill_request_invalid'})
+        except Exception:
             logging.exception('skills api failed')
-            self._send_json(500, {'error': 'Skill 操作失败：%s' % exc})
+            self._send_json(500, {'ok': False, 'error_code': 'skill_operation_failed'})
 
     @staticmethod
     def _skill_import_body(handler):
@@ -2046,7 +2240,9 @@ class Handler(BaseHTTPRequestHandler):
         return body
 
     def _skill_import_error(self, exc, status=400):
-        self._send_json(status, {'ok': False, 'error_code': exc.code, 'error': str(exc)})
+        # Import errors may contain local paths or archive member names.  Keep
+        # the response machine-readable and let the UI map the code to i18n.
+        self._send_json(status, {'ok': False, 'error_code': exc.code})
 
     def _api_skill_import_preview(self):
         if self.command != 'POST':
@@ -2177,7 +2373,7 @@ class Handler(BaseHTTPRequestHandler):
     def _api_upstream_sources(self):
         """List immutable, offline upstream snapshots without exposing paths."""
         if self.command != 'GET':
-            self._send_json(405, {'error': '仅支持 GET 请求'})
+            self._send_api_error(405, 'method_not_allowed')
             return
         try:
             self._send_json(200, {
@@ -2186,12 +2382,13 @@ class Handler(BaseHTTPRequestHandler):
                 'sources': _upstream_sources.list_sources(),
             })
         except _upstream_sources.UpstreamSourceError as exc:
-            self._send_json(503, {'error': str(exc)})
+            logging.warning('upstream source list failed: %s', exc)
+            self._send_api_error(503, 'upstream_source_unavailable')
 
     def _api_upstream_source_detail(self, path):
         """Read a manifest-allowlisted source/file by opaque IDs only."""
         if self.command != 'GET':
-            self._send_json(405, {'error': '仅支持 GET 请求'})
+            self._send_api_error(405, 'method_not_allowed')
             return
         prefix = '/api/upstream-sources/'
         rest = path[len(prefix):]
@@ -2207,9 +2404,10 @@ class Handler(BaseHTTPRequestHandler):
             if source_id:
                 self._send_json(200, _upstream_sources.get_source(source_id))
                 return
-            self._send_json(404, {'error': '来源或文件不存在'})
+            self._send_api_error(404, 'upstream_source_not_found')
         except _upstream_sources.UpstreamSourceError as exc:
-            self._send_json(404, {'error': str(exc)})
+            logging.info('upstream source detail unavailable: %s', exc)
+            self._send_api_error(404, 'upstream_source_not_found')
 
     def _api_ai_history(self):
         """AI 会话：GET 列表/详情，POST 保存/删除/清空。"""
@@ -2243,7 +2441,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(200, {'ok': True, 'session': sess})
         except Exception as e:
             logging.exception('ai history failed')
-            self._send_json(500, {'error': '会话操作失败：%s' % e})
+            self._send_api_error(500, 'ai_history_failed')
     def _send_file(self, fp, ctype, immutable=False):
         if not os.path.isfile(fp):
             self._send(404, 'text/plain; charset=utf-8', b'not found')
@@ -2395,10 +2593,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def _api_convert(self, p):
         if not os.path.isfile(p):
-            self._send_json(404, {'error': '文件不存在'})
+            self._send_api_error(404, 'file_not_found')
             return
         if is_win7() and os.path.splitext(p)[1].lower() not in WIN7_CONVERT_EXTS:
-            self._send_json(415, {'error': WIN7_UNAVAILABLE})
+            self._send_api_error(415, 'unsupported_on_legacy_windows')
             return
         if os.path.splitext(p)[1].lower() == '.txt':
             self._convert_txt(p)
@@ -2409,7 +2607,7 @@ class Handler(BaseHTTPRequestHandler):
             mod = RM.get('convert')
             text, engine, err = mod.convert_verbose(p)
             if err and not text:
-                self._send_json(500, {'error': '转换失败：%s' % err})
+                self._send_api_error(422, 'conversion_failed', engine=engine or '')
                 return
             if not text.strip():
                 self._send_json(200, {'content': '', 'name': os.path.basename(p),
@@ -2438,7 +2636,7 @@ class Handler(BaseHTTPRequestHandler):
                                   'skipped': skipped, 'warns': warns})
         except Exception as e:
             logging.exception('convert failed: %s', p)
-            self._send_json(500, {'error': '转换失败：%s' % e})
+            self._send_api_error(500, 'conversion_failed')
 
     def _convert_txt(self, p):
         """TXT 智能转换（纯 Python，不依赖 convert 模块）。"""
@@ -2474,7 +2672,7 @@ class Handler(BaseHTTPRequestHandler):
                                   'skipped': skipped, 'warns': warns})
         except Exception as e:
             logging.exception('convert txt failed: %s', p)
-            self._send_json(500, {'error': '转换失败：%s' % e})
+            self._send_api_error(500, 'conversion_failed')
 
     def _api_convert_batch(self):
         n = int(self.headers.get('Content-Length', 0) or 0)
@@ -2555,7 +2753,7 @@ class Handler(BaseHTTPRequestHandler):
                                   'dir': os.path.dirname(p), 'source': 'ocr', 'path': p})
         except Exception as e:
             logging.exception('ocr failed: %s', p)
-            self._send_json(500, {'error': 'OCR 失败：%s' % e})
+            self._send_api_error(500, 'ocr_failed')
 
     def _api_url(self, u, crawl):
         if not u:
@@ -2575,7 +2773,7 @@ class Handler(BaseHTTPRequestHandler):
                                   'name': u, 'dir': '', 'source': 'url', 'path': u})
         except Exception as e:
             logging.exception('url convert failed: %s', u)
-            self._send_json(500, {'error': '抓取失败：%s' % e})
+            self._send_api_error(500, 'url_fetch_failed')
 
     def _api_web_extract(self):
         """v2.2.4 webpage extractor; accepts downloaded or WebView HTML."""
@@ -2663,8 +2861,7 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json(exc.http_status, exc.as_dict())
             else:
                 logging.exception('web extraction failed: %s', body.get('url'))
-                self._send_json(500, {'ok': False, 'code': 'internal_error',
-                                      'error': '网页转换失败：%s' % exc})
+                self._send_api_error(500, 'web_extraction_failed', code='internal_error')
 
     def _api_web_cancel(self):
         if not self._module_ready('web', '网页模块加载中，请稍候再试'):
@@ -2676,7 +2873,8 @@ class Handler(BaseHTTPRequestHandler):
             mod.cancel(body.get('task_id') or '')
             self._send_json(200, {'ok': True})
         except Exception as exc:
-            self._send_json(500, {'ok': False, 'error': str(exc)})
+            logging.exception('web cancel failed')
+            self._send_api_error(500, 'web_cancel_failed')
 
 
     def _do_upload(self, ext, name=''):
@@ -3427,21 +3625,71 @@ class Api(object):
                     'stdout': '', 'stderr': '', 'images': [], 'exit_code': 1}
         try:
             from src.readmd_modules import code_chunk_runner
-            return code_chunk_runner.execute_code_chunk(code=code, lang=lang, cwd=cwd, timeout=int(timeout))
+            result = code_chunk_runner.execute_code_chunk(code=code, lang=lang, cwd=cwd, timeout=int(timeout))
+            if not result.get('ok'):
+                raw_error = str(result.get('error') or '')
+                known = {'network_not_allowed', 'path_access_not_allowed',
+                         'cwd_not_found', 'cwd_not_allowed', 'output_truncated'}
+                result['error_code'] = raw_error if raw_error in known else (
+                    'execution_timeout' if '超时' in raw_error else 'execution_failed')
+                result.pop('error', None)
+                result.pop('stderr', None)
+            return result
         except Exception as e:
-            return {'ok': False, 'error': str(e), 'stdout': '', 'stderr': str(e), 'images': [], 'exit_code': 1}
+            logging.exception('run_code_chunk failed')
+            return {'ok': False, 'error_code': 'execution_failed',
+                    'stdout': '', 'stderr': '', 'images': [], 'exit_code': 1}
 
     def render_diagram(self, engine, code, options=None):
         """渲染专业图表。"""
+        from src.readmd_modules import diagrams
         try:
-            from src.readmd_modules import diagrams
+            engine = str(engine or 'mermaid').strip().lower()
             if engine in ('puml', 'plantuml'):
-                return {'ok': True, 'type': 'url', 'svg_url': diagrams.get_plantuml_svg_url(code)}
+                # Prefer an explicitly installed local PlantUML runtime.  The
+                # online URL is only a transparent fallback when local Java/
+                # PlantUML is unavailable; callers can inspect ``type`` and
+                # ``requires_network`` instead of mistaking it for offline.
+                if diagrams.has_local_plantuml():
+                    return {
+                        'ok': True,
+                        'type': 'svg',
+                        'svg': diagrams.render_plantuml_svg(code),
+                        'engine': engine,
+                        'requires_network': False,
+                    }
+                return {
+                    'ok': True,
+                    'type': 'url',
+                    'svg_url': diagrams.get_plantuml_svg_url(code),
+                    'engine': engine,
+                    'requires_network': True,
+                }
+            elif engine == 'wsd':
+                # WebSequenceDiagrams syntax is not PlantUML syntax.  There is
+                # no pinned, redistributable offline WSD renderer in this
+                # release, so fail closed rather than sending source to an
+                # unrelated service.
+                return {'ok': False, 'error_code': 'diagram_engine_unavailable', 'engine': engine}
             elif engine == 'tikz':
                 return {'ok': True, 'type': 'html', 'html': diagrams.format_tikz_html(code)}
-            return {'ok': True, 'engine': engine, 'code': code}
+            elif engine in ('vega', 'vega-lite'):
+                return {'ok': True, 'type': 'svg', 'svg': diagrams.render_vega_svg(code, engine), 'engine': engine}
+            return {'ok': False, 'error_code': 'diagram_client_renderer_required', 'engine': engine}
+        except diagrams.DiagramRenderError as exc:
+            return {'ok': False, 'error_code': exc.code}
         except Exception as e:
-            return {'ok': False, 'error': str(e)}
+            logging.exception('render_diagram failed')
+            return {'ok': False, 'error_code': 'diagram_render_failed'}
+
+    def get_diagram_capabilities(self):
+        """Return the renderer capability snapshot used by the desktop UI."""
+        try:
+            from src.readmd_modules import diagrams
+            return {'ok': True, **diagrams.get_diagram_capabilities()}
+        except Exception:
+            logging.exception('get_diagram_capabilities failed')
+            return {'ok': False, 'error_code': 'diagram_capabilities_failed'}
 
     def process_imports(self, content, base_dir='', current_file=None):
         """处理 @import 指令。"""
@@ -3450,7 +3698,8 @@ class Api(object):
             res = import_processor.process_markdown_imports(content, base_dir=base_dir, current_file=current_file)
             return {'ok': True, 'content': res}
         except Exception as e:
-            return {'ok': False, 'error': str(e), 'content': content}
+            logging.exception('process_imports failed')
+            return {'ok': False, 'error_code': 'import_process_failed', 'content': content}
 
     def export_epub(self, content, output_path='', meta=None, confirm=False):
         """导出 EPUB 3.0 电子书。"""
@@ -3465,7 +3714,7 @@ class Api(object):
             else:
                 output_path = _safe_export_target(output_path, '.epub')
                 if os.path.exists(output_path):
-                    return {'ok': False, 'code': 'output_exists'}
+                    return {'ok': False, 'error_code': 'output_exists'}
             meta = meta or {}
             ok = epub_render.build_epub(
                 content,
@@ -3477,7 +3726,8 @@ class Api(object):
             )
             return {'ok': bool(ok), 'path': output_path}
         except Exception as e:
-            return {'ok': False, 'error': str(e)}
+            logging.exception('export_epub failed')
+            return {'ok': False, 'error_code': 'export_failed'}
 
     def export_presentation(self, content, theme='black', transition='slide', save=False):
         """生成 Reveal.js 演示文稿 HTML。
@@ -3490,19 +3740,20 @@ class Api(object):
             if save:
                 import webview
                 if self._window is None:
-                    return {'ok': False, 'error': '窗口未就绪'}
+                    return {'ok': False, 'error_code': 'window_not_ready'}
                 try:
                     target = self._window.create_file_dialog(
                         webview.SAVE_DIALOG, save_filename='presentation.html',
                         file_types=('HTML 网页 (*.html)',))
                 except Exception as e:
-                    return {'ok': False, 'error': '保存对话框失败：%s' % e}
+                    logging.exception('presentation save dialog failed')
+                    return {'ok': False, 'error_code': 'save_dialog_failed'}
                 if not target:
                     return {'ok': False, 'canceled': True}
                 try:
                     target = normalize_dialog_path(target, '.html')
                 except ValueError as e:
-                    return {'ok': False, 'error': str(e)}
+                    return {'ok': False, 'error_code': 'invalid_output_path'}
                 html_out = presentation_render.generate_presentation_html(
                     content, theme=theme, transition=transition, standalone=True)
                 with open(target, 'w', encoding='utf-8') as handle:
@@ -3511,7 +3762,8 @@ class Api(object):
             html_out = presentation_render.generate_presentation_html(content, theme=theme, transition=transition)
             return {'ok': True, 'html': html_out}
         except Exception as e:
-            return {'ok': False, 'error': str(e)}
+            logging.exception('export_presentation failed')
+            return {'ok': False, 'error_code': 'presentation_export_failed'}
 
     def get_custom_styles(self):
         """获取自定义样式与 Head。"""
@@ -3519,7 +3771,8 @@ class Api(object):
             from src.readmd_core import style_injector
             return {'ok': True, 'data': style_injector.get_custom_styles()}
         except Exception as e:
-            return {'ok': False, 'error': str(e)}
+            logging.exception('get_custom_styles failed')
+            return {'ok': False, 'error_code': 'style_read_failed'}
 
     def save_custom_styles(self, css='', head_html=''):
         """保存自定义样式与 Head。"""
@@ -3528,7 +3781,8 @@ class Api(object):
             ok = style_injector.save_custom_styles(css, head_html)
             return {'ok': ok}
         except Exception as e:
-            return {'ok': False, 'error': str(e)}
+            logging.exception('save_custom_styles failed')
+            return {'ok': False, 'error_code': 'style_save_failed'}
 
     def render_web_page(self, url, task_id='', timeout_ms=25000,
                         interactive=False, private_grant='', source_html=''):
@@ -4070,6 +4324,63 @@ class Api(object):
         prefs = self._pet_preferences()
         status['preferences'] = dict(prefs['info'], renderer=prefs['renderer'])
         return status
+
+    def list_local_pets(self):
+        """Return the local Hermes-compatible gallery entries."""
+        from src.readmd_modules.pet import list_pets
+        settings = load_json(SETTINGS_FILE, {})
+        active = str(settings.get('pet_slug') or '') if isinstance(settings, dict) else ''
+        return {'ok': True, 'active': active,
+                'pets': [item.as_dict() for item in list_pets(DATA_DIR)]}
+
+    def import_local_pet(self, image_path, slug, display_name='', description='', replace=False, confirm=False):
+        """Import one user-selected PNG/WebP pet into ``DATA_DIR/pets``."""
+        if confirm is not True:
+            return {'ok': False, 'error_code': 'confirmation_required'}
+        if not isinstance(image_path, str) or len(image_path) > 32768:
+            return {'ok': False, 'error_code': 'pet_source_invalid'}
+        try:
+            source = os.path.realpath(image_path)
+            if not os.path.isfile(source):
+                return {'ok': False, 'error_code': 'pet_source_not_found'}
+            if os.path.getsize(source) > 20 * 1024 * 1024:
+                return {'ok': False, 'error_code': 'pet_spritesheet_too_large'}
+            from src.readmd_modules.pet import register_local_pet
+            with open(source, 'rb') as stream:
+                spritesheet = stream.read()
+            pet = register_local_pet(DATA_DIR, slug=slug, spritesheet=spritesheet,
+                                     display_name=display_name, description=description,
+                                     replace=bool(replace))
+            return {'ok': True, 'pet': pet.as_dict()}
+        except Exception as exc:
+            return {'ok': False, 'error_code': getattr(exc, 'code', 'pet_import_failed')}
+
+    def remove_local_pet(self, slug, confirm=False):
+        if confirm is not True:
+            return {'ok': False, 'error_code': 'confirmation_required'}
+        try:
+            from src.readmd_modules.pet import remove_pet
+            remove_pet(DATA_DIR, slug)
+            settings = load_json(SETTINGS_FILE, {})
+            if isinstance(settings, dict) and settings.get('pet_slug') == slug:
+                settings.pop('pet_slug', None)
+                save_json(SETTINGS_FILE, settings)
+            return {'ok': True}
+        except Exception as exc:
+            return {'ok': False, 'error_code': getattr(exc, 'code', 'pet_remove_failed')}
+
+    def set_active_pet(self, slug, confirm=False):
+        if confirm is not True:
+            return {'ok': False, 'error_code': 'confirmation_required'}
+        try:
+            from src.readmd_modules.pet import list_pets
+            slug = str(slug or '').strip().lower()
+            if slug and slug not in {item.slug for item in list_pets(DATA_DIR)}:
+                return {'ok': False, 'error_code': 'pet_not_found'}
+            self.save_settings({'pet_slug': slug} if slug else {'pet_slug': None})
+            return {'ok': True, 'active': slug}
+        except Exception:
+            return {'ok': False, 'error_code': 'pet_active_failed'}
 
     def install_pet_plugin(self, archive_path, confirm=False):
         """Install an explicit local desktop-pet package into user data only."""
@@ -5101,7 +5412,6 @@ def main():
                     except KeyboardInterrupt:
                         pass
                 else:
-                    import webbrowser
                     webbrowser.open(url)
         elif IS_LINUX:
             from src.readmd_modules import linux_native
@@ -5136,7 +5446,6 @@ def main():
                         webview.start()
                         started = True
                     except Exception:
-                        import webbrowser
                         webbrowser.open(url)
                         started = True
         else:
@@ -5152,7 +5461,6 @@ def main():
                     except KeyboardInterrupt:
                         pass
                 else:
-                    import webbrowser
                     webbrowser.open(url)
     except Exception as e:
         logging.exception('webview start failed')

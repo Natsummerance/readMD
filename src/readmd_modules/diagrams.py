@@ -11,14 +11,25 @@
 """
 
 import base64
+import json
 import os
 import re
 import shutil
 import subprocess
+import sys
 import zlib
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 PLANTUML_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"
+
+
+class DiagramRenderError(RuntimeError):
+    """A stable, user-safe diagram rendering failure."""
+
+    def __init__(self, code: str):
+        self.code = str(code or "diagram_render_failed")
+        super().__init__(self.code)
 
 
 def plantuml_encode_6bit(b: int) -> str:
@@ -63,12 +74,250 @@ def get_plantuml_svg_url(plantuml_code: str, server_url: str = "https://www.plan
 
 def has_local_plantuml() -> bool:
     """探测系统本地是否具备 Java 及 PlantUML 环境。"""
-    return bool(shutil.which('plantuml') or (shutil.which('java') and os.environ.get('PLANTUML_JAR')))
+    jar = os.environ.get('PLANTUML_JAR')
+    if shutil.which('plantuml'):
+        return True
+    if not (shutil.which('java') and jar):
+        return False
+    try:
+        return Path(jar).is_file()
+    except (OSError, ValueError, TypeError):
+        return False
+
+
+def _plantuml_command() -> Optional[List[str]]:
+    """Return a shell-free local PlantUML command, if one is configured."""
+    executable = shutil.which('plantuml')
+    if executable:
+        return [executable, '-tsvg', '-pipe']
+    java = shutil.which('java')
+    jar = os.environ.get('PLANTUML_JAR')
+    if java and jar:
+        try:
+            path = Path(jar)
+            if path.is_file():
+                return [java, '-jar', str(path.resolve()), '-tsvg', '-pipe']
+        except (OSError, ValueError, TypeError):
+            pass
+    return None
+
+
+def render_plantuml_svg(plantuml_code: str, timeout: float = 15.0) -> str:
+    """Render PlantUML through an explicitly installed local runtime.
+
+    No shell, network or temporary source file is used.  If Java/PlantUML is
+    not installed the caller can choose the documented online URL fallback;
+    this function fails closed so an unavailable local runtime is never
+    mistaken for an offline success.
+    """
+    command = _plantuml_command()
+    if not command:
+        raise DiagramRenderError("diagram_dependency_missing")
+    code = str(plantuml_code or '').strip()
+    if not code or len(code.encode('utf-8')) > 2 * 1024 * 1024:
+        raise DiagramRenderError("diagram_input_too_large")
+    if not code.startswith('@start'):
+        code = f'@startuml\n{code}\n@enduml'
+    try:
+        result = subprocess.run(
+            command,
+            input=code.encode('utf-8'),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=max(1.0, min(float(timeout), 30.0)),
+            cwd=str(Path(__file__).resolve().parents[2]),
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise DiagramRenderError("diagram_engine_timeout")
+    if result.returncode != 0:
+        raise DiagramRenderError("diagram_render_failed")
+    svg = result.stdout.decode('utf-8', errors='strict').strip()
+    if '<svg' in svg:
+        svg = svg[svg.find('<svg'):]
+    if not svg.startswith('<svg') or len(svg.encode('utf-8')) > 8 * 1024 * 1024:
+        raise DiagramRenderError("diagram_render_failed")
+    return svg
+
+
+def _node_runtime(root: Path) -> Optional[str]:
+    """Resolve the Node runtime allowed for server-side diagram rendering.
+
+    Frozen builds must be self-contained: a developer's PATH must not turn
+    Vega support green on a machine where the installed app cannot run it.
+    Development checkouts may use a local Node binary for tests and bundling.
+    """
+    if getattr(sys, "frozen", False):
+        executable = "node.exe" if os.name == "nt" else "node"
+        candidates = (
+            root / "assets" / "vendor" / "node" / executable,
+            root / executable,
+        )
+        return next((str(path) for path in candidates if path.is_file()), None)
+    return shutil.which("node")
+
+
+def get_diagram_capabilities() -> Dict[str, object]:
+    """Return the renderers that are actually available in this installation.
+
+    The reader keeps browser renderers lazy, so this function only checks the
+    immutable files that are shipped with the app and the optional local
+    processes required by server-side renderers.  It deliberately does not
+    perform a network request or execute user-provided diagram source.
+    """
+    root = Path(__file__).resolve().parents[2]
+    vendor = root / "assets" / "vendor" / "diagrams"
+    browser_assets = {
+        "mermaid": vendor / "mermaid" / "mermaid.min.js",
+        "wavedrom": vendor / "wavedrom" / "wavedrom.min.js",
+        "bitfield": vendor / "bitfield" / "bitfield.min.js",
+        "viz": vendor / "viz" / "viz-standalone.js",
+        "tikz": vendor / "tikzjax" / "tikzjax.js",
+        "chart": vendor / "chart" / "chart.umd.js",
+    }
+    capabilities: Dict[str, Dict[str, object]] = {}
+    for engine, asset in browser_assets.items():
+        capabilities[engine] = {
+            "available": asset.is_file(),
+            "offline": asset.is_file(),
+            "renderer": "browser",
+            "requires_network": False,
+        }
+    # ``chartjs`` and ``chart.js`` are aliases accepted by the Markdown
+    # dispatcher.  Keep one canonical capability entry so clients can
+    # present a stable status without duplicating asset probes.
+    capabilities["chartjs"] = dict(capabilities["chart"])
+    capabilities["chart.js"] = dict(capabilities["chart"])
+
+    node = _node_runtime(root)
+    vega_assets = (
+        vendor / "vega" / "vega.min.js",
+        vendor / "vega-lite" / "vega-lite.min.js",
+    )
+    vega_ready = bool(node and all(path.is_file() for path in vega_assets))
+    for engine in ("vega", "vega-lite"):
+        capabilities[engine] = {
+            "available": vega_ready,
+            "offline": vega_ready,
+            "renderer": "node",
+            "requires_network": False,
+            "reason": "" if vega_ready else "diagram_dependency_missing",
+        }
+
+    local_plantuml = has_local_plantuml()
+    capabilities["plantuml"] = {
+        "available": True,
+        "offline": local_plantuml,
+        "renderer": "java" if local_plantuml else "remote",
+        "requires_network": not local_plantuml,
+        "reason": "" if local_plantuml else "diagram_online_renderer",
+    }
+    capabilities["puml"] = dict(capabilities["plantuml"])
+    # WebSequenceDiagrams is intentionally not mapped to PlantUML: the two
+    # languages are not interchangeable.  Keep an explicit unavailable entry
+    # so a fence gets a safe fallback instead of a misleading online success.
+    capabilities["wsd"] = {
+        "available": False,
+        "offline": False,
+        "renderer": "none",
+        "requires_network": False,
+        "reason": "diagram_engine_unavailable",
+    }
+    # D2 has no pinned runtime in this release.  Keep the entry so clients can
+    # disable it explicitly instead of falling through to an online renderer.
+    capabilities["d2"] = {
+        "available": False,
+        "offline": False,
+        "renderer": "none",
+        "requires_network": False,
+        "reason": "diagram_engine_unavailable",
+    }
+    return {"schema_version": 1, "offline": True, "engines": capabilities}
+
+
+def render_vega_svg(spec_text: str, language: str = "vega-lite", timeout: float = 12.0) -> str:
+    """Render a Vega/Vega-Lite specification through the bundled Node runtime.
+
+    Vega generates expression functions at runtime.  The desktop WebView CSP
+    intentionally disallows ``unsafe-eval``, so loading the browser bundle in
+    the page cannot be a reliable offline renderer.  The vendored, pinned
+    bundles are CommonJS-compatible and can render to SVG in a short-lived
+    Node child process instead.  The spec is sent over stdin (never embedded
+    in a command line), and only the resulting SVG crosses the HTTP boundary.
+    """
+    normalized = str(language or "vega-lite").strip().lower()
+    if normalized not in {"vega", "vega-lite"}:
+        raise DiagramRenderError("diagram_engine_invalid")
+    raw = str(spec_text or "").strip()
+    if not raw or len(raw.encode("utf-8")) > 2 * 1024 * 1024:
+        raise DiagramRenderError("diagram_input_too_large")
+    try:
+        spec = json.loads(raw)
+    except (TypeError, ValueError):
+        # Keep the offline renderer deterministic and dependency-free.  YAML
+        # can still be converted to JSON by the editor before insertion.
+        raise DiagramRenderError("diagram_invalid_input")
+    if not isinstance(spec, dict):
+        raise DiagramRenderError("diagram_invalid_input")
+
+    root = Path(__file__).resolve().parents[2]
+    node = _node_runtime(root)
+    vega_path = root / "assets" / "vendor" / "diagrams" / "vega" / "vega.min.js"
+    vega_lite_path = root / "assets" / "vendor" / "diagrams" / "vega-lite" / "vega-lite.min.js"
+    if not node or not vega_path.is_file() or not vega_lite_path.is_file():
+        raise DiagramRenderError("diagram_dependency_missing")
+
+    # This script is constant; user input is JSON on stdin only.  ``renderer:
+    # none`` avoids a native canvas dependency while ``toSVG`` remains fully
+    # offline and preserves Vega's own scenegraph semantics.
+    script = r"""
+const fs = require('fs');
+const vega = require(process.argv[1]);
+const vegaLite = require(process.argv[2]);
+const language = process.argv[3];
+let raw = '';
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', chunk => raw += chunk);
+process.stdin.on('end', async () => {
+  try {
+    const source = JSON.parse(raw);
+    const compiled = language === 'vega-lite' ? vegaLite.compile(source).spec : source;
+    const view = new vega.View(vega.parse(compiled), { renderer: 'none' });
+    const svg = await view.toSVG();
+    process.stdout.write(String(svg || ''));
+  } catch (_) {
+    process.exitCode = 2;
+  }
+});
+"""
+    try:
+        result = subprocess.run(
+            [node, "-e", script, str(vega_path), str(vega_lite_path), normalized],
+            input=json.dumps(spec, ensure_ascii=False).encode("utf-8"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=max(1.0, min(float(timeout), 30.0)),
+            cwd=str(root),
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise DiagramRenderError("diagram_engine_timeout")
+    if result.returncode != 0:
+        raise DiagramRenderError("diagram_render_failed")
+    svg = result.stdout.decode("utf-8", errors="strict").strip()
+    if not svg.startswith("<svg") or len(svg.encode("utf-8")) > 8 * 1024 * 1024:
+        raise DiagramRenderError("diagram_render_failed")
+    return svg
 
 
 def format_tikz_html(tikz_code: str) -> str:
     """将 TikZ 代码片段包装为 TikZjax 标准 HTML 节点。"""
-    code = tikz_code.strip()
+    # TikZ is inserted into a script element by the browser renderer.  A
+    # literal closing tag in user content must not be allowed to terminate the
+    # element and inject arbitrary markup.  Escaping only the slash keeps the
+    # TeX source semantically identical to TikZjax while making the HTML
+    # boundary unambiguous.
+    code = str(tikz_code or '').strip().replace('</script', '<\\/script')
     if not code.startswith("\\begin{tikzpicture}"):
         code = f"\\begin{{tikzpicture}}\n{code}\n\\end{{tikzpicture}}"
     return f'<script type="text/tikz">\n{code}\n</script>'
@@ -77,7 +326,7 @@ def format_tikz_html(tikz_code: str) -> str:
 def identify_diagram_blocks(markdown: str) -> List[Dict[str, any]]:
     """扫描 Markdown 中的所有专业图表代码块。"""
     pattern = re.compile(
-        r'```(mermaid|puml|plantuml|wavedrom|bitfield|viz|dot|vega|vega-lite|d2|tikz)\b[^\n]*\n([\s\S]*?)```',
+    r'```(mermaid|puml|plantuml|wsd|wavedrom|bitfield|viz|dot|vega|vega-lite|chart|chartjs|chart\.js|d2|tikz)\b[^\n]*\n([\s\S]*?)```',
         re.IGNORECASE
     )
     diagrams = []

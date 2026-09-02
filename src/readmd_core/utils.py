@@ -4,6 +4,8 @@
 import json
 import logging
 import os
+import tempfile
+import time
 from typing import Any, Optional
 
 
@@ -52,19 +54,42 @@ def load_json(path: str, default: Any = None) -> Any:
 
 def save_json(path: str, data: Any) -> bool:
     """安全写入 JSON 文件，自动创建上级目录。"""
+    tmp_path = None
     try:
-        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-        tmp_path = path + '.tmp'
-        with open(tmp_path, 'w', encoding='utf-8') as f:
+        target = os.path.abspath(path)
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        # A fixed ``.tmp`` name lets a reader/AV scanner retain the old
+        # handle while another writer truncates the same file.  Use a unique
+        # sibling and retry the final replace briefly on Windows, where an
+        # antivirus/indexer can transiently deny the rename.
+        fd, tmp_path = tempfile.mkstemp(prefix=os.path.basename(target) + '.', suffix='.tmp', dir=os.path.dirname(target))
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
-        if os.path.exists(path):
-            os.replace(tmp_path, path)
-        else:
-            os.rename(tmp_path, path)
+            f.flush()
+            os.fsync(f.fileno())
+        last_error = None
+        for attempt in range(6):
+            try:
+                os.replace(tmp_path, target)
+                tmp_path = None
+                break
+            except PermissionError as exc:
+                last_error = exc
+                if attempt == 5:
+                    raise
+                time.sleep(0.03 * (attempt + 1))
+        if last_error is not None and tmp_path is not None:
+            raise last_error
         return True
     except Exception as e:
         logging.error("保存 JSON 失败 %s: %s", path, e)
         return False
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
 
 def read_text(path: str, default: str = '') -> str:

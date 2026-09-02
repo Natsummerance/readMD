@@ -64,7 +64,7 @@ function createEditor(doc) {
         ...CM.completionKeymap
       ]),
       CM.EditorView.lineWrapping,
-      CM.EditorView.contentAttributes.of({ 'aria-label': _t('toolbar.edit') || 'Markdown editor' }),
+      CM.EditorView.contentAttributes.of({ 'aria-label': _t('toolbar.edit') || '' }),
       CM.EditorView.updateListener.of(u => {
         if (u.docChanged) {
           schedulePreview();
@@ -149,7 +149,7 @@ async function cmCopySelection() {
   const text = cmView.state.sliceDoc(sel.from, sel.to);
   try {
     await navigator.clipboard.writeText(text);
-    showToast(_t('toast.copiedSelection') || '已复制所选文本', 1500);
+    showToast(_t('toast.copiedSelection') || '', 1500);
   } catch (e) {
     document.execCommand('copy');
   }
@@ -171,7 +171,7 @@ async function cmCutSelection() {
     changes: { from: sel.from, to: sel.to, insert: '' },
     selection: { anchor: sel.from }
   });
-  showToast(_t('toast.cutSelection') || '已剪切所选文本', 1500);
+  showToast(_t('toast.cutSelection') || '', 1500);
   hideCmSelectionToolbar();
 }
 
@@ -189,7 +189,7 @@ async function cmPasteSelection() {
     }
   } catch (e) {}
   if (!text) {
-    showToast(_t('toast.noPasteText') || '剪贴板中没有可粘贴的文本');
+    showToast(_t('toast.noPasteText') || '');
     return;
   }
   const sel = cmView.state.selection.main;
@@ -235,31 +235,31 @@ function cmMarkdownCompletions() {
   const item = (label, snippetText, detail, type) => ({
     label, detail, type, apply: CM.snippet(snippetText),
   });
-  const headingWord = _t('editor.headingWord') || 'Heading';
-  const textWord = _t('editor.textWord') || 'text';
-  const codeWord = _t('editor.codeWord') || 'code';
-  const descWord = _t('editor.descWord') || 'desc';
-  const taskWord = _t('editor.taskWord') || 'task';
+  const headingWord = _t('editor.headingWord') || '';
+  const textWord = _t('editor.textWord') || '';
+  const codeWord = _t('editor.codeWord') || '';
+  const descWord = _t('editor.descWord') || '';
+  const taskWord = _t('editor.taskWord') || '';
 
   const ALL = [
-    item('# ' + headingWord, '# ${' + headingWord + '}', _t('editor.h1') || '一级标题', 'markdown'),
-    item('## ' + headingWord, '## ${' + headingWord + '}', _t('editor.h2') || '二级标题', 'markdown'),
-    item('### ' + headingWord, '### ${' + headingWord + '}', _t('editor.h3') || '三级标题', 'markdown'),
-    item('#### ' + headingWord, '#### ${' + headingWord + '}', _t('editor.h4') || '四级标题', 'markdown'),
-    item('**' + (_t('editor.bold') || '加粗') + '**', '**${' + textWord + '}**', _t('editor.bold') || '加粗', 'markdown'),
-    item('*' + (_t('editor.italic') || '斜体') + '*', '*${' + textWord + '}*', _t('editor.italic') || '斜体', 'markdown'),
-    item('~~' + (_t('editor.strikethrough') || '删除线') + '~~', '~~${' + textWord + '}~~', _t('editor.strikethrough') || '删除线', 'markdown'),
-    item('`' + (_t('editor.codeInline') || '行内代码') + '`', '`${' + codeWord + '}`', _t('editor.codeInline') || '行内代码', 'markdown'),
-    item('```' + (_t('editor.codeBlock') || '代码块'), '```\n${' + codeWord + '}\n```', _t('editor.codeBlock') || '代码块', 'markdown'),
-    item('[' + textWord + '](url)', '[${' + textWord + '}](url)', _t('editor.link') || '链接', 'markdown'),
-    item('![' + descWord + '](url)', '![${' + descWord + '}](url)', _t('editor.image') || '图片', 'markdown'),
-    item('> ' + (_t('editor.quote') || '引用'), '> ${' + textWord + '}', _t('editor.quote') || '引用块', 'markdown'),
-    item('$x^2$', '$x^2$', _t('editor.mathInline') || '行内公式', 'markdown'),
-    item('$$...$$', '$$\n${' + textWord + '}\n$$', _t('editor.mathBlock') || '块级公式', 'markdown'),
-    item('| ' + (_t('editor.table') || '表格') + ' |', '| Col 1 | Col 2 |\n|---|---|\n| ${' + textWord + '} |  |', _t('editor.table') || '表格', 'markdown'),
-    item('- ' + (_t('editor.listUnordered') || '列表项'), '- ${' + textWord + '}', _t('editor.listUnordered') || '无序列表', 'markdown'),
-    item('- [ ] ' + (_t('editor.listTask') || '任务'), '- [ ] ${' + taskWord + '}', _t('editor.listTask') || '任务列表', 'markdown'),
-    item('--- ' + (_t('editor.hr') || '分隔线'), '---', _t('editor.hr') || '分隔线', 'markdown'),
+    item('# ' + headingWord, '# ${' + headingWord + '}', _t('editor.h1') || '', 'markdown'),
+    item('## ' + headingWord, '## ${' + headingWord + '}', _t('editor.h2') || '', 'markdown'),
+    item('### ' + headingWord, '### ${' + headingWord + '}', _t('editor.h3') || '', 'markdown'),
+    item('#### ' + headingWord, '#### ${' + headingWord + '}', _t('editor.h4') || '', 'markdown'),
+    item('**' + (_t('editor.bold') || '') + '**', '**${' + textWord + '}**', _t('editor.bold') || '', 'markdown'),
+    item('*' + (_t('editor.italic') || '') + '*', '*${' + textWord + '}*', _t('editor.italic') || '', 'markdown'),
+    item('~~' + (_t('editor.strikethrough') || '') + '~~', '~~${' + textWord + '}~~', _t('editor.strikethrough') || '', 'markdown'),
+    item('`' + (_t('editor.codeInline') || '') + '`', '`${' + codeWord + '}`', _t('editor.codeInline') || '', 'markdown'),
+    item('```' + (_t('editor.codeBlock') || ''), '```\n${' + codeWord + '}\n```', _t('editor.codeBlock') || '', 'markdown'),
+    item('[' + textWord + '](url)', '[${' + textWord + '}](url)', _t('editor.link') || '', 'markdown'),
+    item('![' + descWord + '](url)', '![${' + descWord + '}](url)', _t('editor.image') || '', 'markdown'),
+    item('> ' + (_t('editor.quote') || ''), '> ${' + textWord + '}', _t('editor.quote') || '', 'markdown'),
+    item('$x^2$', '$x^2$', _t('editor.mathInline') || '', 'markdown'),
+    item('$$...$$', '$$\n${' + textWord + '}\n$$', _t('editor.mathBlock') || '', 'markdown'),
+    item('| ' + (_t('editor.table') || '') + ' |', '| Col 1 | Col 2 |\n|---|---|\n| ${' + textWord + '} |  |', _t('editor.table') || '', 'markdown'),
+    item('- ' + (_t('editor.listUnordered') || ''), '- ${' + textWord + '}', _t('editor.listUnordered') || '', 'markdown'),
+    item('- [ ] ' + (_t('editor.listTask') || ''), '- [ ] ${' + taskWord + '}', _t('editor.listTask') || '', 'markdown'),
+    item('--- ' + (_t('editor.hr') || ''), '---', _t('editor.hr') || '', 'markdown'),
   ];
   return context => {
     const before = context.matchBefore(/[\w#*_`\[!>|\$~:]{0,8}/);
@@ -280,13 +280,13 @@ function cmInsertSyntax(kind) {
   const selected = cmView.state.sliceDoc(sel.from, sel.to);
   let insert = null;
   let cursor = sel.from;
-  const textPlaceholder = _t('editor.textWord') || 'text';
-  const codePlaceholder = _t('editor.codeWord') || 'code';
-  const headingPlaceholder = _t('editor.headingWord') || 'Heading';
-  const quotePlaceholder = _t('editor.quote') || 'Quote';
-  const itemPlaceholder = _t('editor.itemWord') || 'item';
-  const taskPlaceholder = _t('editor.taskWord') || 'task';
-  const descPlaceholder = _t('editor.descWord') || 'desc';
+  const textPlaceholder = _t('editor.textWord') || '';
+  const codePlaceholder = _t('editor.codeWord') || '';
+  const headingPlaceholder = _t('editor.headingWord') || '';
+  const quotePlaceholder = _t('editor.quote') || '';
+  const itemPlaceholder = _t('editor.itemWord') || '';
+  const taskPlaceholder = _t('editor.taskWord') || '';
+  const descPlaceholder = _t('editor.descWord') || '';
 
   const wrap = (b, d, a) => {
     insert = b + (selected || d) + a;
@@ -382,8 +382,8 @@ const DIAGRAM_SAMPLES = {
   tikz: '\\begin{tikzpicture}\n\\draw[thick,->] (0,0) -- (4,0) node[anchor=north west] {x};\n\\draw[thick,->] (0,0) -- (0,3) node[anchor=south east] {y};\n\\draw[red,domain=0:3.5] plot (\\x,{0.2*\\x*\\x}) node[right] {$f(x)=\\frac{1}{5}x^2$};\n\\end{tikzpicture}',
   wavedrom: '{\n  signal: [\n    { name: "CLK",  wave: "p......" },\n    { name: "Data", wave: "x.345x.", data: ["head", "body", "tail"] },\n    { name: "Req",  wave: "0.1..0." },\n    { name: "Ack",  wave: "0..1.0." }\n  ]\n}',
   'vega-lite': '{\n  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",\n  "description": "柱状统计图",\n  "data": {\n    "values": [\n      {"类别": "A", "数值": 28}, {"类别": "B", "数值": 55},\n      {"类别": "C", "数值": 43}, {"类别": "D", "数值": 91}\n    ]\n  },\n  "mark": "bar",\n  "encoding": {\n    "x": {"field": "类别", "type": "nominal", "axis": {"labelAngle": 0}},\n    "y": {"field": "数值", "type": "quantitative"}\n  }\n}',
+  chart: '{\n  "type": "bar",\n  "data": {\n    "labels": ["A", "B", "C", "D"],\n    "datasets": [{ "label": "ReadMD", "data": [28, 55, 43, 91] }]\n  },\n  "options": { "responsive": true, "plugins": { "legend": { "display": true } } }\n}',
   graphviz: 'digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded];\n  Start -> Process -> Decision;\n  Decision -> Success [label="是"];\n  Decision -> Failure [label="否"];\n}',
-  d2: 'ReadMD -> Parser: Markdown AST\nParser -> Renderer: HTML + Math\nRenderer -> Webview: DOM 呈现',
   bitfield: '{\n  reg: [\n    {bits: 8, name: "IPO", type: 8},\n    {bits: 8, name: "Payload"},\n    {bits: 16, name: "CRC32", type: 2}\n  ]\n}'
 };
 
@@ -449,6 +449,33 @@ function insertDocImportFromModal() {
   }
 }
 
+function docImportRelativePath(picked) {
+  const norm = s => String(s || '').replace(/\\/g, '/');
+  const target = norm(picked);
+  const base = norm(state.file || '');
+  const baseDir = base ? base.split('/').slice(0, -1) : [];
+  const parts = target.split('/');
+  let i = 0;
+  while (i < baseDir.length && i < parts.length - 1 && baseDir[i].toLowerCase() === parts[i].toLowerCase()) i++;
+  if (!i) return target;
+  const rel = '../'.repeat(baseDir.length - i) + parts.slice(i).join('/');
+  return rel.startsWith('../') ? rel : './' + rel;
+}
+
+async function browseDocImportFile() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const py = window.pywebview && window.pywebview.api;
+  if (!py || typeof py.choose_file !== 'function') {
+    showToast(_t('toast.browserModeHint'));
+    return;
+  }
+  let picked = null;
+  try { picked = await py.choose_file(); } catch (e) { picked = null; }
+  if (!picked) return;
+  const input = $('doc-import-path');
+  if (input) { input.value = docImportRelativePath(picked); input.focus(); }
+}
+
 function openFrontmatterModal() {
   if (!state.editing) return;
   closeMdPopups();
@@ -457,7 +484,7 @@ function openFrontmatterModal() {
   if (!modal) return;
 
   if ($('fm-input-title')) {
-    const defTitle = (state.mode === 'file' && state.file) ? state.file.split(/[\\/]/).pop().replace(/\.[^.]+$/, '') : (_t('editor.docTitleDefault') || '文档标题');
+    const defTitle = (state.mode === 'file' && state.file) ? state.file.split(/[\\/]/).pop().replace(/\.[^.]+$/, '') : (_t('editor.docTitleDefault') || '');
     $('fm-input-title').value = defTitle;
   }
   modal.classList.remove('hidden');
@@ -472,7 +499,7 @@ function closeFrontmatterModal() {
 
 function insertFrontmatterFromModal() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const title = ($('fm-input-title') && $('fm-input-title').value.trim()) || (_t('editor.docTitleDefault') || '文档标题');
+  const title = ($('fm-input-title') && $('fm-input-title').value.trim()) || (_t('editor.docTitleDefault') || '');
   const author = ($('fm-input-author') && $('fm-input-author').value.trim()) || 'ReadMD User';
   const theme = ($('fm-select-theme') && $('fm-select-theme').value) || 'black';
   const transition = ($('fm-select-transition') && $('fm-select-transition').value) || 'slide';
@@ -489,13 +516,13 @@ function insertFrontmatterFromModal() {
         const replaceLen = (endOfFm !== -1 ? endOfFm + 1 : secondDivider + 4);
         cmView.dispatch({ changes: { from: 0, to: replaceLen, insert: frontmatter }, selection: { anchor: frontmatter.length } });
         cmView.focus();
-        showToast(_t('toast.frontmatterUpdated') || '已更新文档 Frontmatter 元数据');
+        showToast(_t('toast.frontmatterUpdated') || '');
         return;
       }
     }
     cmView.dispatch({ changes: { from: 0, to: 0, insert: frontmatter }, selection: { anchor: frontmatter.length } });
     cmView.focus();
-    showToast(_t('toast.frontmatterInserted') || '已插入 Frontmatter 元数据');
+    showToast(_t('toast.frontmatterInserted') || '');
   }
 }
 
@@ -606,7 +633,7 @@ function handleSmartExcelPaste(e) {
   const mdRows = [];
 
   // 表头
-  const defaultCol = _t('editor.table') || '列';
+  const defaultCol = _t('editor.table') || '';
   const headers = lines[0].map(c => c.trim() || defaultCol);
   while (headers.length < colCount) headers.push(defaultCol + (headers.length + 1));
   mdRows.push('| ' + headers.join(' | ') + ' |');
@@ -688,8 +715,8 @@ function initTableGridPicker() {
 
 function insertCustomTable(rows, cols) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const headerPrefix = _t('editor.tableHeaderPrefix') || 'Header';
-  const cellWord = _t('editor.tableCell') || 'Cell';
+  const headerPrefix = _t('editor.tableHeaderPrefix') || '';
+  const cellWord = _t('editor.tableCell') || '';
   const headers = Array.from({ length: cols }, (_, i) => `${headerPrefix} ${i + 1}`);
   const sep = Array.from({ length: cols }, () => '---');
   const mdLines = [
@@ -758,7 +785,7 @@ async function runEditAiAction(act, customPrompt = '') {
   const statusEl = $('edit-ai-status');
   if (preview) preview.classList.remove('hidden');
   if (previewContent) previewContent.innerHTML = '';
-  if (statusEl) statusEl.textContent = _t('editai.generating') || 'AI 正在深度生成中...';
+  if (statusEl) statusEl.textContent = _t('editai.generating') || '';
 
   const range = editAiSelectionRange || { from: 0, to: 0, text: '' };
   const skillByAction = { complete: 'readmd-continue', polish: 'readmd-polish', fix: 'readmd-format-fix', translate: 'readmd-translate' };
@@ -781,12 +808,12 @@ async function runEditAiAction(act, customPrompt = '') {
   editAiCurrentResult = '';
 
   try {
-    const connection = typeof resolveSharedAiConnection === 'function'
-      ? await resolveSharedAiConnection()
-      : null;
-    if (!connection) throw new Error(_t('toast.selectProviderFirst') || '请先选择 AI 提供商');
-    if (!connection.local && !connection.has_key) {
-      throw new Error(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接');
+    const connection = typeof ensureAiConfigured === 'function'
+      ? await ensureAiConfigured()
+      : (typeof resolveSharedAiConnection === 'function' ? await resolveSharedAiConnection() : null);
+    if (!connection) {
+      if (statusEl) statusEl.textContent = _t('toast.noApiKeyNotice');
+      return;
     }
     const res = await apiFetch('/api/ai/chat', {
       method: 'POST',
@@ -853,9 +880,9 @@ async function runEditAiAction(act, customPrompt = '') {
     if (previewContent) {
       previewContent.textContent = resultText;
     }
-    if (statusEl) statusEl.textContent = _t('editai.title') || '生成完成';
+    if (statusEl) statusEl.textContent = _t('editai.title') || '';
   } catch (err) {
-    if (statusEl) statusEl.textContent = (_t('ai.reqFailMsg') || 'AI 请求失败：') + err.message;
+    if (statusEl) statusEl.textContent = (_t('ai.reqFailMsg') || '') + err.message;
     if (previewContent) previewContent.textContent = err.message;
   }
 }

@@ -88,6 +88,7 @@ print_sec3.py
 prepare_ug_audit.py
 review_batches.py
 scratch/
+third_party/mpe-ref/
 scripts_build_all.py
 scripts_inspect.py
 scripts_sec1.py
@@ -108,3 +109,4 @@ _temp_video/
 showcase/test-*.png
 showcase/variant-*.png
 showcase/scripts/*.cjs
+ui-tests/.npm-cache/

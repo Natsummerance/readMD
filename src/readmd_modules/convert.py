@@ -5,7 +5,8 @@ v2.1.1 质量升级：
 - .docx：python-docx + lxml 专用解析 —— OMML 公式转 LaTeX、标题层级、表格、
   等宽字体代码块、图片引用；
 - .pdf：PyMuPDF 专用解析 —— find_tables 还原边框表格 + 公式启发式；
-- 其余格式（pptx/xlsx/html/csv/json/zip 等）走 MarkItDown；
+- .xlsx/.pptx：内置 OOXML 轻量解析（工作表表格 / 幻灯片标题与段落），不依赖第三方库；
+- 旧版 .xls/.ppt 与其余格式（html/csv/json/zip 等）走 MarkItDown；
 - 专用解析异常时逐文件回退 MarkItDown，仍失败抛出带原因的异常。
 """
 
@@ -289,8 +290,195 @@ def _epub_to_md(path):
     return '# %s\n\n%s\n' % (os.path.basename(path), '\n\n'.join(chunks))
 
 
+_XLS_NS = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
+_PPT_NS = 'http://schemas.openxmlformats.org/presentationml/2006/main'
+_RID_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+
+
+def _local(tag):
+    return tag.rsplit('}', 1)[-1] if isinstance(tag, str) else ''
+
+
+def _md_cell(text):
+    return ' '.join(str(text).split()).replace('|', '\\|')
+
+
+def _ooxml_column_index(ref):
+    """'BC12' -> 54（0 基列号）；引用缺字母时返回 None。"""
+    letters = ''.join(ch for ch in ref if ch.isalpha()).upper()
+    if not letters:
+        return None
+    index = 0
+    for ch in letters:
+        index = index * 26 + (ord(ch) - 64)
+    return index - 1
+
+
+def _ooxml_rels(archive, names, base_dir, base_name):
+    """读取包内 rels，映射 rId -> 归一化到 base_dir 下的存档路径。
+
+    rels 文件名跟随主文件名（如 workbook.xml.rels），与 base_dir 无关。
+    """
+    rels = {}
+    rel_path = '%s/_rels/%s.xml.rels' % (base_dir, base_name)
+    if rel_path not in names:
+        return rels
+    root = ET.fromstring(archive.read(rel_path))
+    for rel in root:
+        rid = rel.get('Id')
+        target = (rel.get('Target') or '').lstrip('/')
+        if rid and target:
+            rels[rid] = target if target.startswith('%s/' % base_dir) else '%s/%s' % (base_dir, target)
+    return rels
+
+
+def _xlsx_to_md(path):
+    """Extract per-sheet tables from an XLSX package into Markdown tables."""
+    ns = '{%s}' % _XLS_NS
+    with zipfile.ZipFile(path) as archive:
+        names = set(archive.namelist())
+        if 'xl/workbook.xml' not in names:
+            raise ValueError('xlsx-empty')
+        shared = []
+        if 'xl/sharedStrings.xml' in names:
+            sst = ET.fromstring(archive.read('xl/sharedStrings.xml'))
+            for si in sst.findall('%ssi' % ns):
+                shared.append(''.join(t.text or '' for t in si.iter('%st' % ns)))
+        rels = _ooxml_rels(archive, names, 'xl', 'workbook')
+        workbook = ET.fromstring(archive.read('xl/workbook.xml'))
+        out = ['# %s' % os.path.basename(path), '']
+        produced = False
+        for sheet in workbook.findall('.//%ssheet' % ns):
+            target = rels.get(sheet.get('{%s}id' % _RID_NS) or '')
+            if not target or target not in names:
+                continue
+            root = ET.fromstring(archive.read(target))
+            row_nodes = root.findall('.//%ssheetData/%srow' % (ns, ns))
+            cells = {}
+            max_col = -1
+            for row_idx, row in enumerate(row_nodes):
+                next_col = 0
+                for cell in row.findall('%sc' % ns):
+                    col = _ooxml_column_index(cell.get('r') or '')
+                    if col is None:
+                        col = next_col
+                    next_col = col + 1
+                    kind = cell.get('t') or 'n'
+                    if kind == 'inlineStr':
+                        inline = cell.find('%sis' % ns)
+                        value = ''.join(t.text or '' for t in inline.iter('%st' % ns)) if inline is not None else ''
+                    else:
+                        v_el = cell.find('%sv' % ns)
+                        raw = (v_el.text or '').strip() if v_el is not None else ''
+                        if kind == 's':
+                            try:
+                                value = shared[int(raw)]
+                            except (ValueError, IndexError):
+                                value = ''
+                        elif kind == 'b':
+                            value = 'TRUE' if raw == '1' else 'FALSE' if raw == '0' else raw
+                        else:
+                            value = raw
+                    cells[(row_idx, col)] = value
+                    max_col = max(max_col, col)
+            width = max_col + 1
+            if width <= 0:
+                continue
+            rows = [[cells.get((r, c), '') for c in range(width)] for r in range(len(row_nodes))]
+            while rows and not any(rows[0]):
+                rows.pop(0)
+            while rows and not any(rows[-1]):
+                rows.pop()
+            while width > 0 and not any(row[width - 1] for row in rows):
+                width -= 1
+            rows = [row[:width] for row in rows]
+            if not rows:
+                continue
+            out.append('## %s' % (sheet.get('name') or 'Sheet'))
+            out.append('')
+            out.append('| ' + ' | '.join(_md_cell(c) for c in rows[0]) + ' |')
+            out.append('| ' + ' | '.join(['---'] * width) + ' |')
+            for row in rows[1:]:
+                out.append('| ' + ' | '.join(_md_cell(c) for c in row) + ' |')
+            out.append('')
+            produced = True
+        if not produced:
+            raise ValueError('xlsx-empty')
+        return '\n'.join(out).strip() + '\n'
+
+
+def _pptx_to_md(path):
+    """Extract slide titles, paragraphs and tables from a PPTX package."""
+    p_ns = '{%s}' % _PPT_NS
+    with zipfile.ZipFile(path) as archive:
+        names = set(archive.namelist())
+        if 'ppt/presentation.xml' not in names:
+            raise ValueError('pptx-empty')
+        rels = _ooxml_rels(archive, names, 'ppt', 'presentation')
+        pres = ET.fromstring(archive.read('ppt/presentation.xml'))
+        slide_rids = [s.get('{%s}id' % _RID_NS) or ''
+                      for s in pres.findall('.//%ssldIdLst/%ssldId' % (p_ns, p_ns))]
+        targets = [rels[rid] for rid in slide_rids if rid in rels and rels[rid] in names]
+        if not targets:
+            targets = sorted(n for n in names if re.match(r'ppt/slides/slide\d+\.xml$', n))
+        if not targets:
+            raise ValueError('pptx-empty')
+        out = ['# %s' % os.path.basename(path), '']
+        produced = False
+        for idx, target in enumerate(targets, 1):
+            root = ET.fromstring(archive.read(target))
+            tree = root.find('%scSld/%sspTree' % (p_ns, p_ns))
+            if tree is None:
+                continue
+            lines = []
+            for node in tree.iter():
+                tag = _local(node.tag)
+                if tag == 'sp':
+                    title = any(_local(el.tag) == 'ph' and (el.get('type') or '') in ('title', 'ctrTitle')
+                                for el in node.iter())
+                    texts = []
+                    for el in node.iter():
+                        if _local(el.tag) == 'txBody':
+                            for para in el:
+                                if _local(para.tag) == 'p':
+                                    text = ' '.join(''.join(t.text or '' for t in para.iter()
+                                                            if _local(t.tag) == 't').split())
+                                    if text:
+                                        texts.append(text)
+                            break
+                    if texts:
+                        if title:
+                            lines.extend(['## %s' % texts[0], ''])
+                            texts = texts[1:]
+                        lines.extend(line for text in texts for line in (text, ''))
+                elif tag == 'tbl':
+                    rows = []
+                    for tr in node.iter():
+                        if _local(tr.tag) != 'tr':
+                            continue
+                        cells = [_md_cell(''.join(t.text or '' for t in tc.iter() if _local(t.tag) == 't'))
+                                 for tc in tr if _local(tc.tag) == 'tc']
+                        if cells:
+                            rows.append(cells)
+                    if rows:
+                        width = max(len(r) for r in rows)
+                        rows = [r + [''] * (width - len(r)) for r in rows]
+                        lines.append('| ' + ' | '.join(rows[0]) + ' |')
+                        lines.append('| ' + ' | '.join(['---'] * width) + ' |')
+                        lines.extend('| ' + ' | '.join(r) + ' |' for r in rows[1:])
+                        lines.append('')
+            if lines:
+                if not any(line.startswith('## ') for line in lines):
+                    lines.insert(0, '## Slide %d' % idx)
+                out.extend(lines)
+                produced = True
+        if not produced:
+            raise ValueError('pptx-empty')
+        return '\n'.join(out).strip() + '\n'
+
+
 def convert_verbose(path, form_tables=True):
-    """返回 (text, engine, error)。engine: 'docx' | 'pdf' | 'csv' | 'code' | 'txtmd' | 'texmd' | 'markitdown' | ''"""
+    """返回 (text, engine, error)。engine: 'docx' | 'pdf' | 'csv' | 'code' | 'txtmd' | 'texmd' | 'xlsx' | 'pptx' | 'markitdown' | ''"""
     ext = os.path.splitext(path)[1].lower()
     if ext == '.docx':
         try:
@@ -357,6 +545,28 @@ def convert_verbose(path, form_tables=True):
             return _epub_to_md(path), 'epub', None
         except Exception as e:  # noqa: BLE001
             return '', '', 'EPUB 转换失败：%s' % e
+    if ext == '.xlsx':
+        try:
+            return _xlsx_to_md(path), 'xlsx', None
+        except Exception as e:  # noqa: BLE001
+            try:
+                return _markitdown_convert(path), 'markitdown', None
+            except Exception as e2:  # noqa: BLE001
+                return '', '', '%s（MarkItDown 兜底也失败：%s）' % (e, e2)
+    if ext == '.pptx':
+        try:
+            return _pptx_to_md(path), 'pptx', None
+        except Exception as e:  # noqa: BLE001
+            try:
+                return _markitdown_convert(path), 'markitdown', None
+            except Exception as e2:  # noqa: BLE001
+                return '', '', '%s（MarkItDown 兜底也失败：%s）' % (e, e2)
+    if ext in ('.xls', '.ppt'):
+        # 旧版二进制 Office 格式没有内置解析器；仅在装有 MarkItDown 时可转换。
+        try:
+            return _markitdown_convert(path), 'markitdown', None
+        except Exception as e:  # noqa: BLE001
+            return '', '', 'legacy-office：旧版 %s 二进制格式需安装 MarkItDown 才能转换（%s）' % (ext, e)
     if ext in EXT_TO_LANG:
         try:
             return code2md(path, ext), 'code', None

@@ -26,7 +26,12 @@ export class ReadMDBridge {
   private starting?: Promise<void>;
   private nextId = 1;
   private buffer = '';
-  private pending = new Map<number, { resolve: (value: any) => void; reject: (reason?: any) => void; timer: NodeJS.Timeout }>();
+  private pending = new Map<number, {
+    resolve: (value: any) => void;
+    reject: (reason?: any) => void;
+    timer: NodeJS.Timeout;
+    onProgress?: (message: string) => void;
+  }>();
   private disposed = false;
   private procSpawned = false;
   private everConnected = false;
@@ -83,12 +88,12 @@ export class ReadMDBridge {
         if (this.proc === proc) this.failProcess(err);
       });
       proc.on('close', code => {
-        if (this.proc === proc) this.failProcess(new Error(`ReadMD Core 进程异常退出: ${code ?? 'unknown'}`));
+        if (this.proc === proc) this.failProcess(new Error('core_process_exit'));
       });
       await new Promise<void>((resolve, reject) => {
         const timer = setTimeout(() => {
           if (this.proc === proc) this.proc = undefined;
-          reject(new Error('ReadMD Core 启动超时'));
+          reject(new Error('core_start_timeout'));
         }, 10000);
         proc.once('spawn', () => {
           if (this.proc !== proc) return;
@@ -113,12 +118,19 @@ export class ReadMDBridge {
       if (line) {
         try {
           const response = JSON.parse(line);
-          const id = Number(response.id);
-          const waiter = this.pending.get(id);
-          if (waiter) {
-            this.pending.delete(id); clearTimeout(waiter.timer);
-            if (response.error) waiter.reject(new Error(response.error.message || 'MCP 执行错误'));
-            else waiter.resolve(response.result);
+          if (response.method === 'notifications/progress') {
+            const token = Number(response.params?.progressToken);
+            const waiter = this.pending.get(token);
+            const message = String(response.params?.message ?? '');
+            if (waiter?.onProgress && message) waiter.onProgress(message);
+          } else {
+            const id = Number(response.id);
+            const waiter = this.pending.get(id);
+            if (waiter) {
+              this.pending.delete(id); clearTimeout(waiter.timer);
+              if (response.error) waiter.reject(new Error(String(response.error.code || 'mcp_request_failed')));
+              else waiter.resolve(response.result);
+            }
           }
         } catch { /* ignore partial/non-protocol output */ }
       }
@@ -141,23 +153,80 @@ export class ReadMDBridge {
    */
   public async callMcpTool(name: string, args: Record<string, any>): Promise<any> {
     const result = await this.callMcpMethod('tools/call', { name, arguments: args });
-    if (result?.isError) throw new Error(result.content?.[0]?.text || '执行失败');
+    return this.unwrapToolResult(result);
+  }
+
+  private unwrapToolResult(result: any): any {
+    if (result?.isError) {
+      const raw = result.content?.[0]?.text;
+      try {
+        const parsed = raw ? JSON.parse(raw) : undefined;
+        throw new Error(String(parsed?.error_code || 'mcp_tool_failed'));
+      } catch (error) {
+        if (error instanceof Error && error.message !== 'mcp_tool_failed') throw error;
+        throw new Error('mcp_tool_failed');
+      }
+    }
     const text = result?.content?.[0]?.text;
     try { return text ? JSON.parse(text) : result; } catch { return text || result; }
   }
 
   /** Call a persistent MCP JSON-RPC method (resources/prompts included). */
   public async callMcpMethod(method: string, params: Record<string, any> = {}): Promise<any> {
+    return this.callMcpMethodInternal(method, params);
+  }
+
+  private async callMcpMethodInternal(method: string, params: Record<string, any>,
+      onProgress?: (message: string) => void, token?: vscode.CancellationToken): Promise<any> {
     await this.ensureProcess();
     const proc = this.proc;
-    if (!proc || !proc.stdin.writable) throw new Error('ReadMD Core 未连接');
+    if (!proc || !proc.stdin.writable) throw new Error('core_not_connected');
     const id = this.nextId++;
+    if (onProgress) {
+      params = { ...params, _meta: { ...(params._meta || {}), progressToken: id } };
+    }
     const request = { jsonrpc: '2.0', id, method, params };
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending.delete(id); reject(new Error(`ReadMD 操作超时 (${method})`)); }, 60000);
-      this.pending.set(id, { resolve, reject, timer });
+      let timer!: NodeJS.Timeout;
+      let cancelDisposable: vscode.Disposable | undefined;
+      let settled = false;
+      const settle = (ok: boolean, value: any) => {
+        if (settled) return;
+        settled = true;
+        this.pending.delete(id);
+        clearTimeout(timer);
+        cancelDisposable?.dispose();
+        (ok ? resolve : reject)(value);
+      };
+      timer = setTimeout(() => settle(false, new Error('core_operation_timeout')), 60000);
+      this.pending.set(id, {
+        resolve: value => settle(true, value),
+        reject: value => settle(false, value),
+        timer,
+        onProgress,
+      });
+      if (token) {
+        cancelDisposable = token.onCancellationRequested(() => {
+          settle(false, new Error('ai_cancelled'));
+          if (proc.stdin.writable) {
+            try {
+              proc.stdin.write(JSON.stringify({
+                jsonrpc: '2.0', method: 'notifications/cancelled', params: { requestId: id },
+              }) + '\n');
+            } catch { /* process may already be gone */ }
+          }
+        });
+      }
       proc.stdin.write(JSON.stringify(request) + '\n');
     });
+  }
+
+  /** Streaming tool call: progress notifications are forwarded to onChunk and
+   * an optional CancellationToken cancels via notifications/cancelled. */
+  public async callMcpToolStreaming(name: string, args: Record<string, any>,
+      onChunk: (chunk: string) => void, token?: vscode.CancellationToken): Promise<any> {
+    const result = await this.callMcpMethodInternal('tools/call', { name, arguments: args }, onChunk, token);
+    return this.unwrapToolResult(result);
   }
 
   public async listSkills(): Promise<any[]> {
@@ -189,9 +258,14 @@ export class ReadMDBridge {
     return this.callMcpTool('readmd_ai_chat', args);
   }
 
+  public aiChatStreaming(args: Record<string, any>, onChunk: (chunk: string) => void,
+      token?: vscode.CancellationToken): Promise<any> {
+    return this.callMcpToolStreaming('readmd_ai_chat', args, onChunk, token);
+  }
+
   public dispose(): void {
     this.disposed = true;
-    for (const waiter of this.pending.values()) { clearTimeout(waiter.timer); waiter.reject(new Error('ReadMD Core 已关闭')); }
+    for (const waiter of this.pending.values()) { clearTimeout(waiter.timer); waiter.reject(new Error('core_closed')); }
     this.pending.clear(); this.proc?.kill(); this.proc = undefined;
   }
 

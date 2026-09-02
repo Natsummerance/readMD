@@ -331,8 +331,13 @@ window.i18n = {
       const currentLabel = document.getElementById('lang-current-label');
       if (currentLabel) currentLabel.textContent = '简体中文';
       const d = await this.fetchDict('zh-CN');
-      if (d) this.dict = d;
-      this.loadFallback();
+      if (d) {
+        this.dict = d;
+        // zh-CN is the canonical complete dictionary. Reusing it as the
+        // fallback avoids a second 50+ KB English request during startup.
+        // Other languages still load English lazily after the first paint.
+        this.fallbackDict = d;
+      }
       return;
     }
 
@@ -2458,18 +2463,16 @@ async function handleAiDocumentFix() {
     return;
   }
 
+  const connection = typeof ensureAiConfigured === 'function'
+    ? await ensureAiConfigured()
+    : (typeof resolveSharedAiConnection === 'function' ? await resolveSharedAiConnection() : null);
+  if (!connection) return;
+
   const fixModal = $('fix-modal');
   if (fixModal) fixModal.classList.add('hidden');
   showToast(_t('fixes.aiFixing') || '正在进行 AI 深度格式排版自愈...', 2500);
 
   try {
-    const connection = typeof resolveSharedAiConnection === 'function'
-      ? await resolveSharedAiConnection()
-      : null;
-    if (!connection) throw new Error(_t('toast.selectProviderFirst') || '请先选择 AI 提供商');
-    if (!connection.local && !connection.has_key) {
-      throw new Error(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接');
-    }
     const resp = await apiFetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4203,18 +4206,60 @@ function parseMarkdownWithSourceMap(content, options = {}) {
       const escaped = typeof token === 'object' ? token.escaped : arguments[2];
       const lineAttr = (typeof token === 'object' && token.sourceLine) ? ` data-source-line="${token.sourceLine}"` : '';
       const info = (infostring || '').trim();
-      const parts = info.split(/\s+/);
-      const lang = parts[0] || '';
-      const hasCmd = info.includes('cmd=true') || info.includes('cmd=True') || info.includes('{cmd}');
+      // Parse the same small attribute vocabulary used by MPE's fenced code
+      // chunks.  The old implementation searched the raw info string, which
+      // missed brace syntax (`{cmd output=markdown}`), quoted values and
+      // command aliases (`cmd=python`).  Keep the parser deliberately
+      // conservative: attributes only affect presentation/format selection;
+      // execution still goes through the existing sandbox endpoint.
+      const fenceTokens = info
+        .replace(/[{}]/g, ' ')
+        .match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) || [];
+      const lang = fenceTokens.shift() || '';
+      const attributes = Object.create(null);
+      const flags = Object.create(null);
+      fenceTokens.forEach(rawToken => {
+        const tokenText = String(rawToken).trim();
+        if (!tokenText) return;
+        const equalAt = tokenText.indexOf('=');
+        if (equalAt < 0) {
+          flags[tokenText.toLowerCase()] = true;
+          return;
+        }
+        const key = tokenText.slice(0, equalAt).trim().toLowerCase();
+        let value = tokenText.slice(equalAt + 1).trim();
+        if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+        attributes[key] = value;
+      });
+      const boolAttribute = (name, fallback = false) => {
+        if (Object.prototype.hasOwnProperty.call(attributes, name)) {
+          const value = String(attributes[name]).toLowerCase();
+          return value === 'true' || value === '1' || value === 'yes' || value === 'on';
+        }
+        return Boolean(flags[name]) || fallback;
+      };
+      const commandAttribute = Object.prototype.hasOwnProperty.call(attributes, 'cmd')
+        ? String(attributes.cmd).trim()
+        : '';
+      const commandDisabled = ['false', '0', 'no', 'off'].includes(commandAttribute.toLowerCase());
+      const hasCmd = !commandDisabled && (boolAttribute('cmd') || Boolean(commandAttribute) || Boolean(flags.cmd));
+      const executionLang = commandAttribute && !['true', '1', 'yes', 'on'].includes(commandAttribute.toLowerCase())
+        ? commandAttribute
+        : lang;
 
       // 1. Interactive Code Chunk
       if (hasCmd) {
         const encodedCode = encodeURIComponent(code);
-        const isMatplotlib = info.includes('matplotlib=true') || info.includes('matplotlib=True');
-        const isHidden = info.includes('hide=true') || info.includes('hide=True');
-        return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
+        const isMatplotlib = boolAttribute('matplotlib');
+        const isHidden = boolAttribute('hide') || (Object.prototype.hasOwnProperty.call(attributes, 'echo') && ['false', '0', 'no', 'off'].includes(String(attributes.echo).toLowerCase()));
+        const outputValue = Object.prototype.hasOwnProperty.call(attributes, 'output') ? String(attributes.output).toLowerCase() : '';
+        const hasOutput = ['true', '1', 'yes', 'on', 'text', 'markdown', 'html', 'json', 'png'].includes(outputValue) || boolAttribute('output');
+        const outputFormat = hasOutput && outputValue && !['true', '1', 'yes', 'on'].includes(outputValue) ? outputValue : '';
+        return `<div class="code-chunk-card" ${lineAttr} data-lang="${executionLang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}" data-echo="${!isHidden}" data-output="${hasOutput}" data-output-format="${outputFormat}">
           <div class="code-chunk-header">
-            <span class="code-chunk-badge">${lang.toUpperCase()}</span>
+            <span class="code-chunk-badge">${executionLang.toUpperCase()}</span>
             <span class="code-chunk-status" role="status" aria-live="polite">${_t('status.ready')}</span>
             <span class="code-chunk-timer"></span>
             <div class="code-chunk-actions">
@@ -4222,7 +4267,7 @@ function parseMarkdownWithSourceMap(content, options = {}) {
             </div>
           </div>
           <div class="code-chunk-src ${isHidden ? 'hidden' : ''}">
-            <pre><code class="language-${lang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>
+            <pre><code class="language-${executionLang}">${escaped ? code : (window.escapeHtml ? escapeHtml(code) : code)}</code></pre>
           </div>
           <div class="code-chunk-output hidden">
             <div class="code-chunk-output-header">
@@ -4239,7 +4284,7 @@ function parseMarkdownWithSourceMap(content, options = {}) {
       }
 
       // 2. Specialized Diagrams
-      const diagramLangs = ['tikz', 'plantuml', 'puml', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'd2', 'ditaa'];
+      const diagramLangs = ['mermaid', 'tikz', 'plantuml', 'puml', 'wsd', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'chart', 'chartjs', 'chart.js', 'd2', 'ditaa'];
       if (diagramLangs.includes(lang.toLowerCase())) {
         const encodedCode = encodeURIComponent(code);
         return `<div class="diagram-card" ${lineAttr} data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
@@ -4270,6 +4315,10 @@ const MARKDOWN_ALLOWED_TAGS = new Set([
   'button', 'kbd', 'li', 'mark', 'ol', 'p', 'pre', 'q', 's', 'section', 'span',
   'strike', 'strong', 'sub', 'summary', 'sup', 'table', 'tbody', 'td',
   'tfoot', 'th', 'thead', 'time', 'tr', 'u', 'ul',
+  // Safe, presentation-only SVG primitives emitted by the offline diagram
+  // engines.  Script/event attributes are still rejected below.
+  'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline',
+  'polygon', 'text', 'tspan', 'defs', 'marker', 'clippath', 'use',
 ]);
 const MARKDOWN_REMOVED_TAGS = new Set([
   'base', 'embed', 'form', 'frame', 'frameset', 'iframe', 'link', 'meta',
@@ -4395,6 +4444,17 @@ function sanitizeRenderedHtml(html, { allowInteractive = true } = {}) {
       if (name.startsWith('data-') || name === 'class' || name.startsWith('aria-') ||
           ['title', 'lang', 'dir', 'alt', 'width', 'height', 'loading',
            'colspan', 'rowspan', 'datetime', 'cite'].includes(name)) return;
+      if (tag === 'svg' && ['xmlns', 'viewbox', 'preserveaspectratio', 'role'].includes(name)) return;
+      if (['g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'defs', 'marker', 'clippath', 'use'].includes(tag) &&
+          ['d', 'fill', 'fill-rule', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-linecap',
+           'stroke-linejoin', 'stroke-opacity', 'transform', 'x', 'y', 'x1', 'x2', 'y1', 'y2',
+           'cx', 'cy', 'r', 'rx', 'ry', 'points', 'dx', 'dy', 'font-size', 'font-family',
+           'text-anchor', 'marker-end', 'marker-start', 'markerwidth', 'markerheight',
+           'refx', 'refy', 'orient', 'viewbox', 'width', 'height', 'clip-path', 'id',
+           'href', 'xlink:href'].includes(name)) {
+        if (['href', 'xlink:href'].includes(name) && !value.startsWith('#')) node.removeAttribute(attribute.name);
+        return;
+      }
       if (name === 'id') {
         if (!/^[A-Za-z][A-Za-z0-9_:.-]*$/.test(value)) node.removeAttribute(attribute.name);
         return;
@@ -4961,9 +5021,21 @@ function renderAllCodeChunks(container) {
         if (res && res.ok) {
           statusEl.className = 'code-chunk-status success';
           statusEl.textContent = _t('convert.statusOk');
-          outWrap.classList.remove('hidden');
-          stdoutEl.textContent = (res.stdout || '') + (res.stderr ? ('\n' + res.stderr) : '');
-          if (!stdoutEl.textContent.trim()) stdoutEl.textContent = _t('reader.noConsoleOutput');
+          const outputFormat = String(card.dataset.outputFormat || 'text').toLowerCase();
+          const outputText = (res.stdout || '') + (res.stderr ? ('\n' + res.stderr) : '');
+          // Match MPE's output channel semantics while keeping every path
+          // inert by default: `none` hides output, `png` relies on captured
+          // images, and all other formats remain escaped text in the output
+          // preformatted node.  Source mutation still requires output=true
+          // and the explicit editor save path below.
+          if (outputFormat === 'none') {
+            outWrap.classList.add('hidden');
+            stdoutEl.textContent = '';
+          } else {
+            outWrap.classList.remove('hidden');
+            stdoutEl.textContent = outputText;
+            if (!stdoutEl.textContent.trim() && outputFormat !== 'png') stdoutEl.textContent = _t('reader.noConsoleOutput');
+          }
           plotEl.innerHTML = '';
           if (res.images && res.images.length > 0) {
             res.images.forEach(imgSrc => {
@@ -4973,18 +5045,32 @@ function renderAllCodeChunks(container) {
               plotEl.appendChild(img);
             });
           }
+          // Match MPE's explicit source-write opt-in.  A normal ``cmd``
+          // block only renders into the preview; ``output=true`` adds a
+          // bounded marker block after the matching fence and persists it
+          // through the editor's normal history/save path.
+          if (card.dataset.output === 'true' && outputFormat !== 'none' && state.editing) {
+            await persistCodeChunkOutput(card, outputText);
+          }
         } else {
           statusEl.className = 'code-chunk-status error';
           statusEl.textContent = _t('convert.statusFailed');
           outWrap.classList.remove('hidden');
-          stdoutEl.textContent = (res && res.error) || (res && res.stderr) || _t('toast.unknownError');
+          // The core returns stable error codes; never surface its internal
+          // exception text (which may contain local paths or untranslated
+          // backend strings) in the document UI.
+          // Error details stay in the structured response for diagnostics;
+          // the document UI only renders a localized, stable message.  This
+          // prevents backend paths, subprocess output or untranslated text
+          // from leaking into a document preview.
+          stdoutEl.textContent = _t('toast.unknownError');
         }
       } catch (err) {
         clearInterval(interval);
         statusEl.className = 'code-chunk-status error';
         statusEl.textContent = _t('reader.callFailed');
         outWrap.classList.remove('hidden');
-        stdoutEl.textContent = err.message || String(err);
+        stdoutEl.textContent = _t('toast.unknownError');
       } finally {
         btn.disabled = false;
         btn.textContent = `▶ ${_t('reader.runAgain')}`;
@@ -5021,6 +5107,52 @@ function renderAllCodeChunks(container) {
 }
 window.renderAllCodeChunks = renderAllCodeChunks;
 
+async function persistCodeChunkOutput(card, outputText) {
+  const sourceLine = Number(card && card.dataset && card.dataset.sourceLine);
+  if (!Number.isInteger(sourceLine) || sourceLine < 1 || !state.editing) return false;
+  const current = getEditContent();
+  const lines = String(current || '').split('\n');
+  const fenceStart = Math.max(0, Math.min(lines.length - 1, sourceLine - 1));
+  if (!/^\s*```/.test(lines[fenceStart] || '')) return false;
+  let fenceEnd = fenceStart + 1;
+  while (fenceEnd < lines.length && !/^\s*```\s*$/.test(lines[fenceEnd])) fenceEnd += 1;
+  if (fenceEnd >= lines.length) return false;
+
+  const markerStart = '<!-- code_chunk_output -->';
+  const markerEnd = '<!-- /code_chunk_output -->';
+  let outputStart = -1;
+  for (let index = fenceEnd + 1; index < Math.min(lines.length, fenceEnd + 7); index += 1) {
+    if (lines[index].trim() === markerStart) { outputStart = index; break; }
+  }
+  let replaceFrom;
+  let replaceTo;
+  if (outputStart >= 0) {
+    let outputEnd = outputStart + 1;
+    while (outputEnd < lines.length && lines[outputEnd].trim() !== markerEnd) outputEnd += 1;
+    if (outputEnd >= lines.length) return false;
+    replaceFrom = outputStart;
+    replaceTo = outputEnd + 1;
+  } else {
+    replaceFrom = fenceEnd + 1;
+    replaceTo = fenceEnd + 1;
+  }
+  const safeText = String(outputText || '').replace(/\r\n?/g, '\n');
+  const block = [
+    '', markerStart, '', safeText, '', markerEnd, ''
+  ].join('\n');
+  const offsets = [0];
+  for (const line of lines) offsets.push(offsets[offsets.length - 1] + line.length + 1);
+  const from = offsets[replaceFrom];
+  const to = offsets[replaceTo];
+  const existing = lines.slice(replaceFrom, replaceTo).join('\n');
+  if (existing === block.replace(/^\n/, '').replace(/\n$/, '')) return false;
+  if (cmView) cmView.dispatch({ changes: { from, to, insert: block } });
+  else if ($('edit-area')) $('edit-area').setRangeText(block, from, to, 'end');
+  if (typeof saveEdit === 'function') await saveEdit();
+  return true;
+}
+window.persistCodeChunkOutput = persistCodeChunkOutput;
+
 async function runAllCodeChunks() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const cards = document.querySelectorAll('.code-chunk-card');
@@ -5039,9 +5171,232 @@ async function runAllCodeChunks() {
 }
 window.runAllCodeChunks = runAllCodeChunks;
 
+// Diagram engines are intentionally loaded only when a document contains the
+// corresponding fence.  Keeping each upstream bundle as a separate static
+// asset preserves the fast first paint while making the supported engines
+// usable without a network connection.
+const diagramScriptPromises = new Map();
+let diagramWaveCounter = 0;
+function loadDiagramScript(path, globalName) {
+  if (globalName && window[globalName]) return Promise.resolve(window[globalName]);
+  if (diagramScriptPromises.has(path)) return diagramScriptPromises.get(path);
+  const promise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = path;
+    script.async = true;
+    script.onload = () => globalName && !window[globalName]
+      ? reject(new Error('diagram_engine_unavailable'))
+      : resolve(globalName ? window[globalName] : true);
+    script.onerror = () => reject(new Error('diagram_engine_load_failed'));
+    document.head.appendChild(script);
+  });
+  diagramScriptPromises.set(path, promise);
+  return promise;
+}
+
+function diagramOutputMarkup(markup) {
+  return sanitizeRenderedHtml(String(markup || ''), { allowInteractive: false });
+}
+
+function renderDiagramFallback(previewEl, engine, code, messageKey = 'reader.renderFailed') {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (!previewEl) return;
+  const reason = _t('toast.unknownError');
+  const safeReason = window.escapeHtml ? escapeHtml(reason) : reason;
+  const safeCode = window.escapeHtml ? escapeHtml(String(code || '')) : String(code || '');
+  const message = _t(messageKey, { error: safeReason });
+  const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
+  previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${safeCode}</code></pre></div>`;
+}
+
+// A few vendored renderers (notably bitfield) return ONML's array-shaped
+// virtual tree instead of an HTML string.  Convert that trusted tree through
+// the DOM before applying the normal SVG sanitizer; never concatenate it into
+// markup because values may contain user-provided labels.
+function diagramOnmlToSvg(node) {
+  if (node == null || node === false) return null;
+  if (typeof node === 'string' || typeof node === 'number') return document.createTextNode(String(node));
+  if (!Array.isArray(node) || !node.length) return null;
+  const tag = String(node[0] || '').toLowerCase();
+  if (!/^[a-z][a-z0-9:-]*$/.test(tag)) return null;
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  let index = 1;
+  const attrs = node[1];
+  if (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) {
+    Object.entries(attrs).forEach(([name, value]) => {
+      if (value == null || typeof value === 'function') return;
+      el.setAttribute(name, String(value));
+    });
+    index = 2;
+  }
+  for (; index < node.length; index += 1) {
+    const child = diagramOnmlToSvg(node[index]);
+    if (child) el.appendChild(child);
+  }
+  return el;
+}
+
+function parseWaveDromSource(source) {
+  const raw = String(source || '').trim();
+  try { return JSON.parse(raw); } catch (_) { /* Common WaveDrom examples use JS-like keys. */ }
+  const normalized = raw
+    .replace(/([{,]\s*)([A-Za-z_$][\w$-]*)\s*:/g, '$1"$2":')
+    .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, (_, value) => `"${value.replace(/"/g, '\\"')}"`)
+    .replace(/,\s*([}\]])/g, '$1');
+  try { return JSON.parse(normalized); } catch (_) { throw new Error('diagram_invalid_input'); }
+}
+
+async function renderLocalDiagram(engine, code, previewEl) {
+  const normalized = String(engine || '').toLowerCase();
+  if (normalized === 'mermaid') {
+    const mermaid = await loadDiagramScript('/assets/vendor/diagrams/mermaid/mermaid.min.js', 'mermaid');
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default' });
+    const id = 'readmd-mermaid-' + Math.random().toString(36).slice(2);
+    const rendered = await mermaid.render(id, code);
+    return diagramOutputMarkup(rendered.svg || rendered);
+  }
+  if (normalized === 'wavedrom') {
+    await loadDiagramScript('/assets/vendor/diagrams/wavedrom/skins/default.js', 'WaveSkin');
+    await loadDiagramScript('/assets/vendor/diagrams/wavedrom/skins/narrow.js');
+    const wavedrom = await loadDiagramScript('/assets/vendor/diagrams/wavedrom/wavedrom.min.js', 'WaveDrom');
+    const source = parseWaveDromSource(code);
+    const index = diagramWaveCounter++;
+    const holder = document.createElement('div');
+    const output = document.createElement('div');
+    output.id = `readmd-wavedrom-output-${index}`;
+    holder.append(output);
+    previewEl.replaceChildren(holder);
+    // RenderWaveForm accepts the already parsed object and writes only to the
+    // supplied output node.  This avoids ProcessAll's global InputJSON_*
+    // bookkeeping and keeps concurrent diagram cards isolated.
+    wavedrom.RenderWaveForm(index, source, 'readmd-wavedrom-output-', false);
+    const svg = output.querySelector('svg');
+    if (!svg) throw new Error('diagram_invalid_input');
+    const html = diagramOutputMarkup(svg.outerHTML);
+    holder.remove();
+    return html;
+  }
+  if (normalized === 'bitfield') {
+    const bitfield = await loadDiagramScript('/assets/vendor/diagrams/bitfield/bitfield.min.js', 'bitfield');
+    let description;
+    try { description = JSON.parse(code); } catch (_) { throw new Error('diagram_invalid_input'); }
+    if (description && !Array.isArray(description) && Array.isArray(description.reg)) description = description.reg;
+    if (!Array.isArray(description)) throw new Error('diagram_invalid_input');
+    const rendered = bitfield.render(description, {});
+    const root = rendered && rendered.outerHTML
+      ? rendered
+      : diagramOnmlToSvg(rendered);
+    if (!root || !root.outerHTML) throw new Error('diagram_invalid_input');
+    return diagramOutputMarkup(root.outerHTML);
+  }
+  if (normalized === 'viz' || normalized === 'dot' || normalized === 'graphviz') {
+    const viz = await loadDiagramScript('/assets/vendor/diagrams/viz/viz-standalone.js', 'Viz');
+    const instance = await Promise.race([
+      viz.instance(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('diagram_engine_timeout')), 8000)),
+    ]);
+    return diagramOutputMarkup(await instance.renderString(code, {
+      engine: normalized === 'viz' ? 'dot' : normalized,
+      format: 'svg',
+    }));
+  }
+  if (normalized === 'vega' || normalized === 'vega-lite') {
+    await loadDiagramScript('/assets/vendor/diagrams/vega/vega.min.js', 'vega');
+    await loadDiagramScript('/assets/vendor/diagrams/vega-lite/vega-lite.min.js', 'vegaLite');
+    // Vega's browser runtime uses dynamic JavaScript code generation.  The
+    // application CSP intentionally permits WebAssembly only (not unsafe-eval),
+    // so do not report a misleading success for a renderer that cannot execute
+    // in the shipped shell.
+    throw new Error('diagram_engine_unavailable');
+  }
+  if (normalized === 'chart' || normalized === 'chartjs' || normalized === 'chart.js') {
+    const Chart = await loadDiagramScript('/assets/vendor/diagrams/chart/chart.umd.js', 'Chart');
+    let config;
+    try { config = JSON.parse(String(code || '')); } catch (_) { throw new Error('diagram_invalid_input'); }
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+      throw new Error('diagram_invalid_input');
+    }
+    const canvas = document.createElement('canvas');
+    canvas.className = 'diagram-chart-canvas';
+    canvas.setAttribute('role', 'img');
+    canvas.setAttribute('aria-label', 'Chart.js diagram');
+    // A bounded canvas keeps malformed configs from forcing unbounded layout
+    // growth while still allowing the card to size naturally in narrow panes.
+    canvas.width = 960;
+    canvas.height = 540;
+    previewEl.replaceChildren(canvas);
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('diagram_engine_unavailable');
+    let chart;
+    try {
+      chart = new Chart(context, config);
+      // Wait for the first synchronous draw before returning the canvas.  The
+      // instance is retained on the node so a reload can destroy it cleanly.
+      canvas._readmdChart = chart;
+    } catch (_) {
+      canvas.remove();
+      throw new Error('diagram_render_failed');
+    }
+    return canvas;
+  }
+  if (normalized === 'tikz') {
+    // TikZjax is a browser script that normally resolves its WASM/font assets
+    // from an upstream S3 URL.  Keep the vendored source byte-for-byte intact,
+    // but route those requests to our packaged assets while the renderer runs.
+    // This makes the feature deterministic and offline without weakening CSP.
+    const originalFetch = window.fetch;
+    const localRoot = '/assets/vendor/diagrams/tikzjax/';
+    window.fetch = function(input, init) {
+      const raw = typeof input === 'string' ? input : (input && input.url) || '';
+      if (raw.indexOf('https://s3.us-east-2.amazonaws.com/tikzjax.com/') === 0) {
+        const filename = raw.slice(raw.lastIndexOf('/') + 1);
+        return originalFetch.call(this, localRoot + encodeURIComponent(filename), init);
+      }
+      return originalFetch.call(this, input, init);
+    };
+    const previousOnload = window.onload;
+    try {
+      await loadDiagramScript('/assets/vendor/diagrams/tikzjax/tikzjax.js');
+      const handler = window.onload;
+      if (typeof handler !== 'function' || handler === previousOnload) {
+        throw new Error('diagram_engine_unavailable_handler');
+      }
+      const source = document.createElement('script');
+      source.type = 'text/tikz';
+      source.textContent = String(code || '');
+      previewEl.replaceChildren(source);
+      // TikZjax's onload handler starts an async reduce but does not reliably
+      // return its final replacement promise in every browser.  Wait for the
+      // script node to be replaced instead of racing an already-resolved
+      // wrapper promise; this also prevents the renderer timeout from
+      // removing the node while WASM is still compiling.
+      handler.call(window);
+      const deadline = Date.now() + 30000;
+      while (source.parentNode && Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      const rendered = previewEl.firstElementChild;
+      if (!rendered || rendered.tagName.toLowerCase() === 'script') {
+        throw new Error(Date.now() >= deadline ? 'diagram_engine_timeout' : 'diagram_engine_unavailable_rendered');
+      }
+      return diagramOutputMarkup(rendered.outerHTML);
+    } finally {
+      window.fetch = originalFetch;
+      window.onload = previousOnload;
+    }
+  }
+  // D2 has no bundled offline runtime in this release. Fail explicitly rather
+  // than silently sending source code to an online renderer and reporting a
+  // false success.
+  throw new Error('diagram_engine_unavailable');
+}
+
 function renderAllDiagrams(container) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const cards = (container || document).querySelectorAll('.diagram-card');
+  const root = container || document;
+  const cards = root.matches && root.matches('.diagram-card')
+    ? [root]
+    : root.querySelectorAll('.diagram-card');
   cards.forEach(async card => {
     if (card._rendered) return;
     card._rendered = true;
@@ -5051,12 +5406,20 @@ function renderAllDiagrams(container) {
     const reloadBtn = card.querySelector('.diagram-reload-btn');
 
     const render = async () => {
+      const previousCanvas = previewEl && previewEl.querySelector('.diagram-chart-canvas');
+      if (previousCanvas && previousCanvas._readmdChart && typeof previousCanvas._readmdChart.destroy === 'function') {
+        try { previousCanvas._readmdChart.destroy(); } catch (_) { /* best effort cleanup */ }
+      }
       previewEl.innerHTML = `<div class="diagram-loading">${_t('reader.renderingDiagram', { engine: engine.toUpperCase() })}</div>`;
       try {
-        if (engine === 'mermaid' && window.mermaid) {
-          const id = 'mermaid-' + Math.random().toString(36).slice(2);
-          const { svg } = await window.mermaid.render(id, code);
-          previewEl.innerHTML = svg;
+        // Vega/Vega-Lite need expression evaluation.  They are rendered by
+        // the bundled Node sidecar through /api/diagram/render so the secure
+        // WebView CSP never needs unsafe-eval.  The remaining engines are
+        // genuinely browser-local and lazy-loaded here.
+        if (['mermaid', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'tikz', 'chart', 'chartjs', 'chart.js'].includes(engine)) {
+          const rendered = await renderLocalDiagram(engine, code, previewEl);
+          if (rendered instanceof Element) previewEl.replaceChildren(rendered);
+          else previewEl.innerHTML = rendered;
           return;
         }
 
@@ -5074,31 +5437,37 @@ function renderAllDiagrams(container) {
 
         if (res && res.ok) {
           if (res.type === 'url' && res.svg_url) {
-            previewEl.innerHTML = `<img src="${res.svg_url}" alt="${engine} diagram" style="max-width:100%;" />`;
+            // PlantUML is intentionally online-by-default when no local Java
+            // runtime is installed.  A network failure must not leave a
+            // broken image or claim that the diagram rendered successfully.
+            const image = document.createElement('img');
+            image.className = 'diagram-preview-image';
+            image.src = res.svg_url;
+            image.alt = `${engine} diagram`;
+            image.addEventListener('error', () => renderDiagramFallback(previewEl, engine, code));
+            previewEl.replaceChildren(image);
           } else if (res.type === 'html' && res.html) {
             previewEl.innerHTML = res.html;
           } else if (res.svg) {
             previewEl.innerHTML = res.svg;
           } else {
-            // Kroki 缺省在线矢量渲染
-            const krokiUrl = `https://kroki.io/${engine}/svg`;
-            const kr = await fetch(krokiUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-              body: code
-            });
-            if (kr.ok) {
-              const svgText = await kr.text();
-              previewEl.innerHTML = svgText;
-            } else {
-              previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.renderFailed', { error: _t('toast.unknownNetworkErr') })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
-            }
+            throw new Error('diagram_engine_unavailable');
           }
         } else {
-          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.diagramError', { error: (res && res.error) || _t('toast.unknownError') })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+          // Server responses intentionally carry only stable error codes.  Do
+          // not leak those codes (or provider/host diagnostics) into the
+          // rendered document; the locale owns the user-facing wording.
+          const reason = _t('toast.unknownError');
+          const safeReason = window.escapeHtml ? escapeHtml(reason) : reason;
+          const message = _t('reader.diagramError', { error: safeReason });
+          const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
+          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
         }
       } catch (err) {
-        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.renderFailed', { error: err.message || String(err) })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+        const safeReason = window.escapeHtml ? escapeHtml(_t('toast.unknownError')) : _t('toast.unknownError');
+        const message = _t('reader.renderFailed', { error: safeReason });
+        const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
+        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
       }
     };
 
@@ -6751,7 +7120,7 @@ function createEditor(doc) {
         ...CM.completionKeymap
       ]),
       CM.EditorView.lineWrapping,
-      CM.EditorView.contentAttributes.of({ 'aria-label': _t('toolbar.edit') || 'Markdown editor' }),
+      CM.EditorView.contentAttributes.of({ 'aria-label': _t('toolbar.edit') || '' }),
       CM.EditorView.updateListener.of(u => {
         if (u.docChanged) {
           schedulePreview();
@@ -6836,7 +7205,7 @@ async function cmCopySelection() {
   const text = cmView.state.sliceDoc(sel.from, sel.to);
   try {
     await navigator.clipboard.writeText(text);
-    showToast(_t('toast.copiedSelection') || '已复制所选文本', 1500);
+    showToast(_t('toast.copiedSelection') || '', 1500);
   } catch (e) {
     document.execCommand('copy');
   }
@@ -6858,7 +7227,7 @@ async function cmCutSelection() {
     changes: { from: sel.from, to: sel.to, insert: '' },
     selection: { anchor: sel.from }
   });
-  showToast(_t('toast.cutSelection') || '已剪切所选文本', 1500);
+  showToast(_t('toast.cutSelection') || '', 1500);
   hideCmSelectionToolbar();
 }
 
@@ -6876,7 +7245,7 @@ async function cmPasteSelection() {
     }
   } catch (e) {}
   if (!text) {
-    showToast(_t('toast.noPasteText') || '剪贴板中没有可粘贴的文本');
+    showToast(_t('toast.noPasteText') || '');
     return;
   }
   const sel = cmView.state.selection.main;
@@ -6922,31 +7291,31 @@ function cmMarkdownCompletions() {
   const item = (label, snippetText, detail, type) => ({
     label, detail, type, apply: CM.snippet(snippetText),
   });
-  const headingWord = _t('editor.headingWord') || 'Heading';
-  const textWord = _t('editor.textWord') || 'text';
-  const codeWord = _t('editor.codeWord') || 'code';
-  const descWord = _t('editor.descWord') || 'desc';
-  const taskWord = _t('editor.taskWord') || 'task';
+  const headingWord = _t('editor.headingWord') || '';
+  const textWord = _t('editor.textWord') || '';
+  const codeWord = _t('editor.codeWord') || '';
+  const descWord = _t('editor.descWord') || '';
+  const taskWord = _t('editor.taskWord') || '';
 
   const ALL = [
-    item('# ' + headingWord, '# ${' + headingWord + '}', _t('editor.h1') || '一级标题', 'markdown'),
-    item('## ' + headingWord, '## ${' + headingWord + '}', _t('editor.h2') || '二级标题', 'markdown'),
-    item('### ' + headingWord, '### ${' + headingWord + '}', _t('editor.h3') || '三级标题', 'markdown'),
-    item('#### ' + headingWord, '#### ${' + headingWord + '}', _t('editor.h4') || '四级标题', 'markdown'),
-    item('**' + (_t('editor.bold') || '加粗') + '**', '**${' + textWord + '}**', _t('editor.bold') || '加粗', 'markdown'),
-    item('*' + (_t('editor.italic') || '斜体') + '*', '*${' + textWord + '}*', _t('editor.italic') || '斜体', 'markdown'),
-    item('~~' + (_t('editor.strikethrough') || '删除线') + '~~', '~~${' + textWord + '}~~', _t('editor.strikethrough') || '删除线', 'markdown'),
-    item('`' + (_t('editor.codeInline') || '行内代码') + '`', '`${' + codeWord + '}`', _t('editor.codeInline') || '行内代码', 'markdown'),
-    item('```' + (_t('editor.codeBlock') || '代码块'), '```\n${' + codeWord + '}\n```', _t('editor.codeBlock') || '代码块', 'markdown'),
-    item('[' + textWord + '](url)', '[${' + textWord + '}](url)', _t('editor.link') || '链接', 'markdown'),
-    item('![' + descWord + '](url)', '![${' + descWord + '}](url)', _t('editor.image') || '图片', 'markdown'),
-    item('> ' + (_t('editor.quote') || '引用'), '> ${' + textWord + '}', _t('editor.quote') || '引用块', 'markdown'),
-    item('$x^2$', '$x^2$', _t('editor.mathInline') || '行内公式', 'markdown'),
-    item('$$...$$', '$$\n${' + textWord + '}\n$$', _t('editor.mathBlock') || '块级公式', 'markdown'),
-    item('| ' + (_t('editor.table') || '表格') + ' |', '| Col 1 | Col 2 |\n|---|---|\n| ${' + textWord + '} |  |', _t('editor.table') || '表格', 'markdown'),
-    item('- ' + (_t('editor.listUnordered') || '列表项'), '- ${' + textWord + '}', _t('editor.listUnordered') || '无序列表', 'markdown'),
-    item('- [ ] ' + (_t('editor.listTask') || '任务'), '- [ ] ${' + taskWord + '}', _t('editor.listTask') || '任务列表', 'markdown'),
-    item('--- ' + (_t('editor.hr') || '分隔线'), '---', _t('editor.hr') || '分隔线', 'markdown'),
+    item('# ' + headingWord, '# ${' + headingWord + '}', _t('editor.h1') || '', 'markdown'),
+    item('## ' + headingWord, '## ${' + headingWord + '}', _t('editor.h2') || '', 'markdown'),
+    item('### ' + headingWord, '### ${' + headingWord + '}', _t('editor.h3') || '', 'markdown'),
+    item('#### ' + headingWord, '#### ${' + headingWord + '}', _t('editor.h4') || '', 'markdown'),
+    item('**' + (_t('editor.bold') || '') + '**', '**${' + textWord + '}**', _t('editor.bold') || '', 'markdown'),
+    item('*' + (_t('editor.italic') || '') + '*', '*${' + textWord + '}*', _t('editor.italic') || '', 'markdown'),
+    item('~~' + (_t('editor.strikethrough') || '') + '~~', '~~${' + textWord + '}~~', _t('editor.strikethrough') || '', 'markdown'),
+    item('`' + (_t('editor.codeInline') || '') + '`', '`${' + codeWord + '}`', _t('editor.codeInline') || '', 'markdown'),
+    item('```' + (_t('editor.codeBlock') || ''), '```\n${' + codeWord + '}\n```', _t('editor.codeBlock') || '', 'markdown'),
+    item('[' + textWord + '](url)', '[${' + textWord + '}](url)', _t('editor.link') || '', 'markdown'),
+    item('![' + descWord + '](url)', '![${' + descWord + '}](url)', _t('editor.image') || '', 'markdown'),
+    item('> ' + (_t('editor.quote') || ''), '> ${' + textWord + '}', _t('editor.quote') || '', 'markdown'),
+    item('$x^2$', '$x^2$', _t('editor.mathInline') || '', 'markdown'),
+    item('$$...$$', '$$\n${' + textWord + '}\n$$', _t('editor.mathBlock') || '', 'markdown'),
+    item('| ' + (_t('editor.table') || '') + ' |', '| Col 1 | Col 2 |\n|---|---|\n| ${' + textWord + '} |  |', _t('editor.table') || '', 'markdown'),
+    item('- ' + (_t('editor.listUnordered') || ''), '- ${' + textWord + '}', _t('editor.listUnordered') || '', 'markdown'),
+    item('- [ ] ' + (_t('editor.listTask') || ''), '- [ ] ${' + taskWord + '}', _t('editor.listTask') || '', 'markdown'),
+    item('--- ' + (_t('editor.hr') || ''), '---', _t('editor.hr') || '', 'markdown'),
   ];
   return context => {
     const before = context.matchBefore(/[\w#*_`\[!>|\$~:]{0,8}/);
@@ -6967,13 +7336,13 @@ function cmInsertSyntax(kind) {
   const selected = cmView.state.sliceDoc(sel.from, sel.to);
   let insert = null;
   let cursor = sel.from;
-  const textPlaceholder = _t('editor.textWord') || 'text';
-  const codePlaceholder = _t('editor.codeWord') || 'code';
-  const headingPlaceholder = _t('editor.headingWord') || 'Heading';
-  const quotePlaceholder = _t('editor.quote') || 'Quote';
-  const itemPlaceholder = _t('editor.itemWord') || 'item';
-  const taskPlaceholder = _t('editor.taskWord') || 'task';
-  const descPlaceholder = _t('editor.descWord') || 'desc';
+  const textPlaceholder = _t('editor.textWord') || '';
+  const codePlaceholder = _t('editor.codeWord') || '';
+  const headingPlaceholder = _t('editor.headingWord') || '';
+  const quotePlaceholder = _t('editor.quote') || '';
+  const itemPlaceholder = _t('editor.itemWord') || '';
+  const taskPlaceholder = _t('editor.taskWord') || '';
+  const descPlaceholder = _t('editor.descWord') || '';
 
   const wrap = (b, d, a) => {
     insert = b + (selected || d) + a;
@@ -7069,8 +7438,8 @@ const DIAGRAM_SAMPLES = {
   tikz: '\\begin{tikzpicture}\n\\draw[thick,->] (0,0) -- (4,0) node[anchor=north west] {x};\n\\draw[thick,->] (0,0) -- (0,3) node[anchor=south east] {y};\n\\draw[red,domain=0:3.5] plot (\\x,{0.2*\\x*\\x}) node[right] {$f(x)=\\frac{1}{5}x^2$};\n\\end{tikzpicture}',
   wavedrom: '{\n  signal: [\n    { name: "CLK",  wave: "p......" },\n    { name: "Data", wave: "x.345x.", data: ["head", "body", "tail"] },\n    { name: "Req",  wave: "0.1..0." },\n    { name: "Ack",  wave: "0..1.0." }\n  ]\n}',
   'vega-lite': '{\n  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",\n  "description": "柱状统计图",\n  "data": {\n    "values": [\n      {"类别": "A", "数值": 28}, {"类别": "B", "数值": 55},\n      {"类别": "C", "数值": 43}, {"类别": "D", "数值": 91}\n    ]\n  },\n  "mark": "bar",\n  "encoding": {\n    "x": {"field": "类别", "type": "nominal", "axis": {"labelAngle": 0}},\n    "y": {"field": "数值", "type": "quantitative"}\n  }\n}',
+  chart: '{\n  "type": "bar",\n  "data": {\n    "labels": ["A", "B", "C", "D"],\n    "datasets": [{ "label": "ReadMD", "data": [28, 55, 43, 91] }]\n  },\n  "options": { "responsive": true, "plugins": { "legend": { "display": true } } }\n}',
   graphviz: 'digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded];\n  Start -> Process -> Decision;\n  Decision -> Success [label="是"];\n  Decision -> Failure [label="否"];\n}',
-  d2: 'ReadMD -> Parser: Markdown AST\nParser -> Renderer: HTML + Math\nRenderer -> Webview: DOM 呈现',
   bitfield: '{\n  reg: [\n    {bits: 8, name: "IPO", type: 8},\n    {bits: 8, name: "Payload"},\n    {bits: 16, name: "CRC32", type: 2}\n  ]\n}'
 };
 
@@ -7136,6 +7505,33 @@ function insertDocImportFromModal() {
   }
 }
 
+function docImportRelativePath(picked) {
+  const norm = s => String(s || '').replace(/\\/g, '/');
+  const target = norm(picked);
+  const base = norm(state.file || '');
+  const baseDir = base ? base.split('/').slice(0, -1) : [];
+  const parts = target.split('/');
+  let i = 0;
+  while (i < baseDir.length && i < parts.length - 1 && baseDir[i].toLowerCase() === parts[i].toLowerCase()) i++;
+  if (!i) return target;
+  const rel = '../'.repeat(baseDir.length - i) + parts.slice(i).join('/');
+  return rel.startsWith('../') ? rel : './' + rel;
+}
+
+async function browseDocImportFile() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const py = window.pywebview && window.pywebview.api;
+  if (!py || typeof py.choose_file !== 'function') {
+    showToast(_t('toast.browserModeHint'));
+    return;
+  }
+  let picked = null;
+  try { picked = await py.choose_file(); } catch (e) { picked = null; }
+  if (!picked) return;
+  const input = $('doc-import-path');
+  if (input) { input.value = docImportRelativePath(picked); input.focus(); }
+}
+
 function openFrontmatterModal() {
   if (!state.editing) return;
   closeMdPopups();
@@ -7144,7 +7540,7 @@ function openFrontmatterModal() {
   if (!modal) return;
 
   if ($('fm-input-title')) {
-    const defTitle = (state.mode === 'file' && state.file) ? state.file.split(/[\\/]/).pop().replace(/\.[^.]+$/, '') : (_t('editor.docTitleDefault') || '文档标题');
+    const defTitle = (state.mode === 'file' && state.file) ? state.file.split(/[\\/]/).pop().replace(/\.[^.]+$/, '') : (_t('editor.docTitleDefault') || '');
     $('fm-input-title').value = defTitle;
   }
   modal.classList.remove('hidden');
@@ -7159,7 +7555,7 @@ function closeFrontmatterModal() {
 
 function insertFrontmatterFromModal() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const title = ($('fm-input-title') && $('fm-input-title').value.trim()) || (_t('editor.docTitleDefault') || '文档标题');
+  const title = ($('fm-input-title') && $('fm-input-title').value.trim()) || (_t('editor.docTitleDefault') || '');
   const author = ($('fm-input-author') && $('fm-input-author').value.trim()) || 'ReadMD User';
   const theme = ($('fm-select-theme') && $('fm-select-theme').value) || 'black';
   const transition = ($('fm-select-transition') && $('fm-select-transition').value) || 'slide';
@@ -7176,13 +7572,13 @@ function insertFrontmatterFromModal() {
         const replaceLen = (endOfFm !== -1 ? endOfFm + 1 : secondDivider + 4);
         cmView.dispatch({ changes: { from: 0, to: replaceLen, insert: frontmatter }, selection: { anchor: frontmatter.length } });
         cmView.focus();
-        showToast(_t('toast.frontmatterUpdated') || '已更新文档 Frontmatter 元数据');
+        showToast(_t('toast.frontmatterUpdated') || '');
         return;
       }
     }
     cmView.dispatch({ changes: { from: 0, to: 0, insert: frontmatter }, selection: { anchor: frontmatter.length } });
     cmView.focus();
-    showToast(_t('toast.frontmatterInserted') || '已插入 Frontmatter 元数据');
+    showToast(_t('toast.frontmatterInserted') || '');
   }
 }
 
@@ -7293,7 +7689,7 @@ function handleSmartExcelPaste(e) {
   const mdRows = [];
 
   // 表头
-  const defaultCol = _t('editor.table') || '列';
+  const defaultCol = _t('editor.table') || '';
   const headers = lines[0].map(c => c.trim() || defaultCol);
   while (headers.length < colCount) headers.push(defaultCol + (headers.length + 1));
   mdRows.push('| ' + headers.join(' | ') + ' |');
@@ -7375,8 +7771,8 @@ function initTableGridPicker() {
 
 function insertCustomTable(rows, cols) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const headerPrefix = _t('editor.tableHeaderPrefix') || 'Header';
-  const cellWord = _t('editor.tableCell') || 'Cell';
+  const headerPrefix = _t('editor.tableHeaderPrefix') || '';
+  const cellWord = _t('editor.tableCell') || '';
   const headers = Array.from({ length: cols }, (_, i) => `${headerPrefix} ${i + 1}`);
   const sep = Array.from({ length: cols }, () => '---');
   const mdLines = [
@@ -7445,7 +7841,7 @@ async function runEditAiAction(act, customPrompt = '') {
   const statusEl = $('edit-ai-status');
   if (preview) preview.classList.remove('hidden');
   if (previewContent) previewContent.innerHTML = '';
-  if (statusEl) statusEl.textContent = _t('editai.generating') || 'AI 正在深度生成中...';
+  if (statusEl) statusEl.textContent = _t('editai.generating') || '';
 
   const range = editAiSelectionRange || { from: 0, to: 0, text: '' };
   const skillByAction = { complete: 'readmd-continue', polish: 'readmd-polish', fix: 'readmd-format-fix', translate: 'readmd-translate' };
@@ -7468,12 +7864,12 @@ async function runEditAiAction(act, customPrompt = '') {
   editAiCurrentResult = '';
 
   try {
-    const connection = typeof resolveSharedAiConnection === 'function'
-      ? await resolveSharedAiConnection()
-      : null;
-    if (!connection) throw new Error(_t('toast.selectProviderFirst') || '请先选择 AI 提供商');
-    if (!connection.local && !connection.has_key) {
-      throw new Error(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接');
+    const connection = typeof ensureAiConfigured === 'function'
+      ? await ensureAiConfigured()
+      : (typeof resolveSharedAiConnection === 'function' ? await resolveSharedAiConnection() : null);
+    if (!connection) {
+      if (statusEl) statusEl.textContent = _t('toast.noApiKeyNotice');
+      return;
     }
     const res = await apiFetch('/api/ai/chat', {
       method: 'POST',
@@ -7540,9 +7936,9 @@ async function runEditAiAction(act, customPrompt = '') {
     if (previewContent) {
       previewContent.textContent = resultText;
     }
-    if (statusEl) statusEl.textContent = _t('editai.title') || '生成完成';
+    if (statusEl) statusEl.textContent = _t('editai.title') || '';
   } catch (err) {
-    if (statusEl) statusEl.textContent = (_t('ai.reqFailMsg') || 'AI 请求失败：') + err.message;
+    if (statusEl) statusEl.textContent = (_t('ai.reqFailMsg') || '') + err.message;
     if (previewContent) previewContent.textContent = err.message;
   }
 }
@@ -7718,18 +8114,18 @@ function renderAiEmptyState() {
         <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
         <circle cx="12" cy="12" r="3.5"/>
       </svg>
-      <div class="ai-empty-title">${_t('ai.emptyTitle') || '随时向 AI 提问或处理文档'}</div>
-      <div class="ai-empty-desc">${_t('ai.emptyDesc') || '点击上方快捷指令进行全文总结、专业润色或学术翻译，也可在下方直接输入要求。'}</div>
+      <div class="ai-empty-title">${_t('ai.emptyTitle') || ''}</div>
+      <div class="ai-empty-desc">${_t('ai.emptyDesc') || ''}</div>
     </div>
   `;
 }
 
 async function loadAiOnDemand() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  setAiConnectionState('loading', _t('ai.statusReading') || '正在读取连接…');
+  setAiConnectionState('loading', _t('ai.statusReading') || '');
   try { await apiFetch('/api/modules/load', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'ai' }) }); } catch (e) { /* old servers use the normal poll path */ }
   const cfg = await loadAiConfig();
-  if (!cfg) setAiConnectionState('warn', _t('ai.statusOffline') || '未连接');
+  if (!cfg) setAiConnectionState('warn', _t('ai.statusOffline') || '');
 }
 
 function setAiConnectionState(kind, label) {
@@ -7743,11 +8139,11 @@ function updateAiConnectionSummary() {
   const p = currentAiProvider();
   const model = $('ai-model');
   const summary = $('ai-model-summary');
-  if (summary) summary.textContent = (model && model.value) || (_t('ai.noModel') || '未选择模型');
-  if (!p) return setAiConnectionState('warn', _t('ai.noProvider') || '请选择连接');
+  if (summary) summary.textContent = (model && model.value) || (_t('ai.noModel') || '');
+  if (!p) return setAiConnectionState('warn', _t('ai.noProvider') || '');
   const local = isLocalAiProvider(p);
-  if (local || p.has_key || p.key_source) setAiConnectionState('ready', p.name + ' · ' + (_t('ai.statusReady') || '已就绪'));
-  else setAiConnectionState('warn', p.name + ' · ' + (_t('ai.needKey') || '需要 API Key'));
+  if (local || p.has_key || p.key_source) setAiConnectionState('ready', p.name + ' · ' + (_t('ai.statusReady') || ''));
+  else setAiConnectionState('warn', p.name + ' · ' + (_t('ai.needKey') || ''));
 }
 /* ---------------- Prompt 模板 ---------------- */
 
@@ -7786,7 +8182,7 @@ function fillAiTemplates() {
   sel.innerHTML = '';
   const none = document.createElement('option');
   none.value = '';
-  none.textContent = _t('ai.defaultAction') || '默认动作（不使用模板）';
+  none.textContent = _t('ai.defaultAction') || '';
   sel.appendChild(none);
   (state.ai.templates || []).forEach(t => {
     const o = document.createElement('option');
@@ -7811,8 +8207,8 @@ function onAiTemplateChange() {
   document.querySelectorAll('.ai-act').forEach(b => {
     b.classList.toggle('active', !!(t && t.action && t.action !== 'custom' && b.dataset.act === t.action));
   });
-  if (t && (t.action === 'translate' || t.action === 'translate_en' || t.action === 'translate_zh')) $('ai-prompt').placeholder = _t('ai.promptTranslatePlaceholder') || '翻译：目标语言（如：英语 / 日语）';
-  else $('ai-prompt').placeholder = _t('ai.promptDefaultPlaceholder') || '补充要求 / 提问内容 / 翻译目标语言（可选）';
+  if (t && (t.action === 'translate' || t.action === 'translate_en' || t.action === 'translate_zh')) $('ai-prompt').placeholder = _t('ai.promptTranslatePlaceholder') || '';
+  else $('ai-prompt').placeholder = _t('ai.promptDefaultPlaceholder') || '';
 }
 
 function openTplModal() {
@@ -7833,18 +8229,21 @@ function renderTplList() {
   if (!filtered.length) {
     const empty = document.createElement('li');
     empty.className = 'ai-history-empty';
-    empty.textContent = _t('tpl.noTemplates') || '无匹配模板';
+    empty.textContent = _t('tpl.noTemplates') || '';
     list.appendChild(empty);
     return;
   }
   filtered.forEach(t => {
     const li = document.createElement('li');
-    li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
+    const disabled = !t.builtin && t.metadata && t.metadata.enabled === false;
+    li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name + (disabled ? ' ⏸' : '');
     li.dataset.id = t.id;
     li.setAttribute('role', 'option');
     li.tabIndex = 0;
     li.setAttribute('aria-selected', 'false');
-    li.title = t.name + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '含用户消息模板')) : '');
+    li.title = t.name
+      + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '')) : '')
+      + (disabled ? (' · ' + (_t('tpl.disable') || '')) : '');
     li.addEventListener('click', () => selectTpl(t.id));
     li.addEventListener('keydown', e => {
       if (e.key !== 'Enter' && e.key !== ' ') return;
@@ -7903,6 +8302,10 @@ function renderSkillOverview(t) {
   facts.className = 'tpl-skill-facts';
   const scopeLabel = t.builtin ? _t('ai.officialPresets') : _t('ai.customConnections');
   appendSkillFact(facts, scopeLabel, '◫ ');
+  if (!t.builtin) {
+    const disabled = !!(t.metadata && t.metadata.enabled === false);
+    appendSkillFact(facts, disabled ? (_t('tpl.disable') || '') : (_t('tpl.enable') || ''), '● ');
+  }
   appendSkillFact(facts, skillLicenseText(t.license), '© ');
   appendSkillFact(facts, skillRevisionText(t.provenance), '@ ');
   (t.variables || []).forEach(variable => appendSkillFact(facts, variable, '{ } '));
@@ -7975,6 +8378,13 @@ function selectTpl(id, editing) {
   $('tpl-system').readOnly = builtin;
   $('tpl-user').readOnly = builtin;
   $('tpl-del').disabled = !t || builtin;
+  const toggleBtn = $('tpl-toggle');
+  if (toggleBtn) {
+    toggleBtn.disabled = !t || builtin;
+    const enabled = !(t && t.metadata && t.metadata.enabled === false);
+    toggleBtn.textContent = enabled ? (_t('tpl.disable') || '') : (_t('tpl.enable') || '');
+  }
+  if ($('tpl-export-one')) $('tpl-export-one').disabled = !t;
   const status = $('tpl-draft-status');
   if (status) status.textContent = _t('tpl.hint');
   renderSkillOverview(t);
@@ -7999,27 +8409,90 @@ function copyCurrentSkill() {
   $('tpl-name').focus(); $('tpl-name').select();
 }
 
+let skillIdeaFinish = null;
+
+function openSkillIdeaDialog() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const modal = $('skill-create-modal');
+  if (!modal) return Promise.resolve(null);
+  if (skillIdeaFinish) skillIdeaFinish(null);
+
+  return new Promise(resolve => {
+    const opener = document.activeElement;
+    const nameInput = $('skill-create-name');
+    const purposeInput = $('skill-create-purpose');
+    const goBtn = $('skill-create-go');
+    const cancelBtn = $('skill-create-cancel');
+    const closeBtn = $('skill-create-close');
+    let finished = false;
+    const finish = value => {
+      if (finished) return;
+      finished = true;
+      skillIdeaFinish = null;
+      goBtn.removeEventListener('click', onGo);
+      cancelBtn.removeEventListener('click', onCancel);
+      closeBtn && closeBtn.removeEventListener('click', onCancel);
+      modal.removeEventListener('keydown', onKeyDown);
+      modal.removeEventListener('click', onClick);
+      modal.classList.add('hidden');
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true });
+      resolve(value);
+    };
+    const onCancel = () => finish(null);
+    const onGo = () => {
+      const name = nameInput.value.trim();
+      const purpose = purposeInput.value.trim();
+      if (!name || !purpose) {
+        showToast(_t('tpl.createFieldsReq') || '');
+        (name ? purposeInput : nameInput).focus();
+        return;
+      }
+      finish({ name, purpose });
+    };
+    const onKeyDown = event => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); finish(null); }
+      else if (event.key === 'Enter' && event.target === nameInput) { event.preventDefault(); purposeInput.focus(); }
+    };
+    const onClick = event => { if (event.target === modal) finish(null); };
+
+    skillIdeaFinish = () => finish(null);
+    nameInput.value = '';
+    purposeInput.value = '';
+    goBtn.addEventListener('click', onGo);
+    cancelBtn.addEventListener('click', onCancel);
+    closeBtn && closeBtn.addEventListener('click', onCancel);
+    modal.addEventListener('keydown', onKeyDown);
+    modal.addEventListener('click', onClick);
+    modal.classList.remove('hidden');
+    setTimeout(() => nameInput.focus({ preventScroll: true }), 0);
+  });
+}
+
 async function generateSkillDraft() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const p = currentAiProvider();
-  if (!p) { showToast(_t('toast.selectProviderFirst') || '请先选择 AI 提供商'); return; }
-  if (!p.credential_id) {
-    if (!(await saveAiSelection(true))) return;
-  }
-  const active = currentAiProvider() || p;
-  if (!active.credential_id && !isLocalAiProvider(active)) {
-    showToast(_t('toast.noApiKeyNotice') || '请先在连接设置中配置凭据'); return;
-  }
-  const requestField = $('tpl-user');
-  const request = String((requestField && requestField.value) || ($('ai-prompt') && $('ai-prompt').value) || '').trim();
-  if (!request) {
-    if (requestField) {
-      requestField.setAttribute('placeholder', _t('ai.extraReqLabel') || '补充要求');
-      requestField.focus();
+  let ideaName = '';
+  let request = '';
+  if ($('skill-create-modal')) {
+    const idea = await openSkillIdeaDialog();
+    if (!idea) return;
+    ideaName = idea.name;
+    request = (_t('tpl.createNameLabel') || '') + '：' + idea.name
+      + '\n' + (_t('tpl.createPurposeLabel') || '') + '：' + idea.purpose;
+  } else {
+    const requestField = $('tpl-user');
+    request = String((requestField && requestField.value) || ($('ai-prompt') && $('ai-prompt').value) || '').trim();
+    if (!request) {
+      if (requestField) {
+        requestField.setAttribute('placeholder', _t('ai.extraReqLabel') || '');
+        requestField.focus();
+      }
+      showToast(_t('ai.extraReqLabel') || _t('ai.promptPlaceholder'));
+      return;
     }
-    showToast(_t('ai.extraReqLabel') || _t('ai.promptPlaceholder'));
-    return;
   }
+  if (!(await ensureAiConfigured())) return;
+  const active = currentAiProvider();
+  if (!active) return;
   const button = $('tpl-ai-generate');
   if (button) { button.disabled = true; button.textContent = _t('ai.generating'); }
   try {
@@ -8037,14 +8510,14 @@ async function generateSkillDraft() {
     state.ai.skillDraft = { id: draft.id, content, metadata: Object.assign({}, draft.metadata, { enabled: false }) };
     selectTpl(null);
     $('tpl-id').value = draft.id;
-    $('tpl-name').value = draft.name || draft.id;
+    $('tpl-name').value = draft.name || ideaName || draft.id;
     $('tpl-system').value = content;
     $('tpl-user').value = '';
     if ($('tpl-publish')) $('tpl-publish').disabled = false;
     if ($('tpl-draft-status')) $('tpl-draft-status').textContent = _t('tpl.hint');
     showToast(_t('ai.generating'));
   } catch (e) {
-    showToast(_t('ai.aiError') + ': ' + e.message);
+    showToast(_t('ai.aiError') || '');
   } finally {
     if (button) { button.disabled = false; button.textContent = _t('exportai.generateBtn'); }
   }
@@ -8079,9 +8552,55 @@ async function publishCurrentSkill() {
   } catch (e) { showToast(_t('ai.aiError')); }
 }
 
+async function toggleCurrentSkillEnabled() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const t = (state.ai.templates || []).find(x => x.id === $('tpl-id').value);
+  if (!t || t.builtin) return;
+  const currentlyEnabled = !(t.metadata && t.metadata.enabled === false);
+  try {
+    const r = await apiFetch('/api/skills', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: currentlyEnabled ? 'disable' : 'enable', id: t.skill_id || t.id }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) { showToast(d.error || (_t('ai.aiError') || '')); return; }
+    await loadAiPrompts();
+    renderTplList();
+    selectTpl(t.id);
+    showToast(currentlyEnabled ? (_t('tpl.disabledToast') || '') : (_t('tpl.enabledToast') || ''));
+  } catch (e) { showToast(_t('ai.aiError') || ''); }
+}
+
+async function exportCurrentSkill() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const t = (state.ai.templates || []).find(x => x.id === $('tpl-id').value);
+  if (!t) return;
+  let content = '';
+  if (!t.builtin) {
+    try {
+      const r = await apiFetch('/api/skills', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'export', id: t.skill_id || t.id }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.ok) { showToast(d.error || (_t('ai.aiError') || '')); return; }
+      content = d.content || '';
+    } catch (e) { showToast(_t('ai.aiError') || ''); return; }
+  } else {
+    content = `---\nname: ${t.skill_id || t.id}\ndescription: ${t.description || ''}\n---\n\n${t.system || ''}`;
+  }
+  const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = String(t.skill_id || t.id || 'skill').replace(/[\\/:*?"<>|\s]+/g, '-') + '.SKILL.md';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  showToast(_t('tpl.exportOneDone') || '');
+}
+
 function parseMarkdownTemplate(content, filename) {
   const text = String(content || '').trim();
-  let name = (filename || '未命名模板').replace(/\.(md|markdown|json|txt)$/i, '');
+  let name = String(filename || 'skill').replace(/\.(md|markdown|json|txt)$/i, '');
   let action = 'custom';
   let system = '';
   let user = '';
@@ -8180,7 +8699,7 @@ async function importTemplatesFromFile(file) {
       }
 
       if (!templates.length) {
-        showToast(_t('toast.noValidTemplates') || '未能解析到有效模板');
+        showToast(_t('toast.noValidTemplates') || '');
         return;
       }
 
@@ -8190,13 +8709,13 @@ async function importTemplatesFromFile(file) {
         body: JSON.stringify({ action: 'batch_save', templates }),
       });
       const d = await r.json();
-      if (!r.ok || !d.ok) throw new Error(d.error || '导入失败');
+      if (!r.ok || !d.ok) throw new Error(d.error_code || 'import_failed');
 
       await loadAiPrompts();
       renderTplList();
-      showToast((_t('toast.importedTemplates', { count: templates.length }) || `成功导入 ${templates.length} 个模板`));
+      showToast(_t('toast.importedTemplates', { count: templates.length }) || '');
     } catch (e) {
-      showToast((_t('toast.importFailed') || '导入失败：') + e.message);
+      showToast(_t('toast.importFailed') || '');
     }
   };
   reader.readAsText(file, 'UTF-8');
@@ -8283,8 +8802,8 @@ function githubImportErrorText(payload, _t) {
     github_url_required: 'toast.invalidUrl',
   };
   const key = known[code] || 'toast.importFailed';
-  const text = _t(key) || _t('toast.importFailed') || '导入失败';
-  return code ? `${text} (${code})` : text;
+  const text = _t(key) || _t('toast.importFailed') || '';
+  return text;
 }
 
 function renderGithubSkillPreview(preview) {
@@ -8300,7 +8819,7 @@ function renderGithubSkillPreview(preview) {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox'; checkbox.checked = !!skill.valid; checkbox.disabled = !skill.valid;
     checkbox.dataset.skillIndex = String(index);
-    checkbox.setAttribute('aria-label', skill.name || skill.id || skill.path || 'Skill');
+    checkbox.setAttribute('aria-label', skill.name || skill.id || skill.path || _t('tpl.title') || '');
     const details = document.createElement('span');
     const title = document.createElement('strong');
     title.textContent = skill.name || skill.id || skill.path || '';
@@ -8317,7 +8836,7 @@ function renderGithubSkillPreview(preview) {
   });
   const apply = document.createElement('button');
   apply.type = 'button'; apply.id = 'tpl-github-apply-btn'; apply.className = 'tb-btn accent tpl-github-apply-btn';
-  apply.textContent = _t('tpl.importMd') || '导入模板 (.md)';
+  apply.textContent = _t('tpl.importMd') || '';
   apply.disabled = !skills.some(s => s.valid);
   apply.addEventListener('click', () => applyGithubSkillImport(preview));
   host.appendChild(apply);
@@ -8327,7 +8846,7 @@ async function previewGithubSkillImport() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const url = String($('tpl-github-url') && $('tpl-github-url').value || '').trim();
   const githubToken = String($('tpl-github-credential') && $('tpl-github-credential').value || '').trim();
-  if (!url) { showToast(_t('toast.invalidUrl') || '请输入有效链接'); return; }
+  if (!url) { showToast(_t('toast.invalidUrl') || ''); return; }
   const button = $('tpl-github-preview-btn');
   if (button) { button.disabled = true; button.classList.add('tpl-github-importing'); }
   try {
@@ -8347,10 +8866,10 @@ async function applyGithubSkillImport(preview) {
     .map(skill => Object.assign({}, skill, { conflict_action: 'skip' }));
   if (!selected.length) return;
   const confirmed = await confirmAction({
-    title: _t('tpl.title') || 'Skill 工作台',
-    message: _t('tpl.hint') || '导入前请检查 Skill 内容和来源。',
-    confirmText: _t('tpl.importMd') || '导入模板 (.md)',
-    cancelText: _t('dialog.cancel') || '取消',
+    title: _t('tpl.title') || '',
+    message: _t('tpl.hint') || '',
+    confirmText: _t('tpl.importMd') || '',
+    cancelText: _t('dialog.cancel') || '',
   });
   if (!confirmed) return;
   const button = $('tpl-github-apply-btn');
@@ -8364,7 +8883,7 @@ async function applyGithubSkillImport(preview) {
     if (!r.ok || !d.ok) throw d;
     await loadAiPrompts(); renderTplList();
     if (host) host.innerHTML = '';
-    showToast(_t('toast.importedTemplates', { count: (d.skills || []).length }) || '已导入');
+    showToast(_t('toast.importedTemplates', { count: (d.skills || []).length }) || '');
   } catch (e) {
     showToast(githubImportErrorText(e, _t));
   } finally {
@@ -8386,7 +8905,7 @@ function exportTemplatesAsJson() {
   a.download = 'readmd_prompts_backup.json';
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-  showToast(_t('toast.exportedTemplates') || '已导出全部 Prompt 模板');
+  showToast(_t('toast.exportedTemplates') || '');
 }
 
 async function saveTplForm() {
@@ -8398,7 +8917,7 @@ async function saveTplForm() {
     system: $('tpl-system').value.trim(),
     user: $('tpl-user').value.trim(),
   };
-  if (!t.name) { showToast(_t('toast.tplNameReq') || '请输入模板名称'); return; }
+  if (!t.name) { showToast(_t('toast.tplNameReq') || ''); return; }
   try {
     const r = await apiFetch('/api/ai/prompts', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -8410,8 +8929,8 @@ async function saveTplForm() {
     fillAiTemplates();
     renderTplList();
     selectTpl(d.saved_id);
-    showToast(_t('toast.tplSaved') || '模板已保存');
-  } catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); }
+    showToast(_t('toast.tplSaved') || '');
+  } catch (e) { showToast((_t('toast.saveFailed') || '') + e.message); }
 }
 
 async function deleteCurrentTpl() {
@@ -8419,15 +8938,15 @@ async function deleteCurrentTpl() {
   const id = $('tpl-id').value;
   if (!id) return;
   const cur = (state.ai.templates || []).find(x => x.id === id);
-  const templateName = cur?.name || (_t('ai.untitledTemplate') || '未命名模板');
+  const templateName = cur?.name || (_t('ai.untitledTemplate') || '');
   const msg = cur && cur.builtin
     ? (_t('toast.tplResetConfirm', { name: templateName }) || '将重置为默认模板，确定吗？')
     : (_t('toast.tplDelConfirm', { name: templateName }) || '确定删除此模板吗？');
   if (!(await confirmAction({
-    title: _t('dialog.destructiveTitle') || '请确认',
+    title: _t('dialog.destructiveTitle') || '',
     message: msg,
-    confirmText: _t('dialog.confirm') || '确认',
-    cancelText: _t('dialog.cancel') || '取消',
+    confirmText: _t('dialog.confirm') || '',
+    cancelText: _t('dialog.cancel') || '',
     danger: true,
   }))) {
     return false;
@@ -8444,7 +8963,7 @@ async function deleteCurrentTpl() {
     renderTplList();
     selectTpl(null);
     showToast(_t('toast.tplDeleted', { name: templateName }) || '模板已删除');
-  } catch (e) { showToast((_t('toast.deleteFailed') || '删除失败：') + e.message); }
+  } catch (e) { showToast((_t('toast.deleteFailed') || '') + e.message); }
   return true;
 }
 
@@ -8470,7 +8989,7 @@ function renderAiSessionSelect() {
   if (!rows.length) {
     const empty = document.createElement('div');
     empty.className = 'ai-history-empty';
-    empty.textContent = _t('ai.historyEmpty') || '暂无历史会话';
+    empty.textContent = _t('ai.historyEmpty') || '';
     list.appendChild(empty);
     return;
   }
@@ -8478,14 +8997,14 @@ function renderAiSessionSelect() {
     const row = document.createElement('div'); row.className = 'ai-history-item';
     const load = document.createElement('button'); load.className = 'tb-btn ai-history-load';
     load.innerHTML = '<strong></strong><small></small>';
-    load.querySelector('strong').textContent = s.title || (_t('ai.untitledSession') || '未命名会话');
-    load.querySelector('small').textContent = fmtTime(s.updated) + ' · ' + (s.msgCount || 0) + ' ' + (_t('ai.msgCountUnit') || '条');
+    load.querySelector('strong').textContent = s.title || (_t('ai.untitledSession') || '');
+    load.querySelector('small').textContent = fmtTime(s.updated) + ' · ' + (s.msgCount || 0) + ' ' + (_t('ai.msgCountUnit') || '');
     load.addEventListener('click', async () => { $('ai-session').value = s.id; await onAiSessionChange(); closeAiModal('ai-history-modal'); });
-    const rename = document.createElement('button'); rename.className = 'tb-btn'; rename.textContent = _t('tabs.rename') || '改名'; rename.title = _t('ai.renameSession') || '重命名会话';
+    const rename = document.createElement('button'); rename.className = 'tb-btn'; rename.textContent = _t('tabs.rename') || ''; rename.title = _t('ai.renameSession') || '';
     rename.addEventListener('click', () => renameAiSession(s));
-    const del = document.createElement('button'); del.className = 'tb-btn'; del.textContent = _t('tpl.delete') || '删'; del.title = _t('ai.deleteSession') || '删除会话';
+    const del = document.createElement('button'); del.className = 'tb-btn'; del.textContent = _t('tpl.delete') || ''; del.title = _t('ai.deleteSession') || '';
     del.addEventListener('click', async () => {
-      if (!window.confirm((_t('ai.confirmDeleteSession') || '确定删除会话：') + (s.title || (_t('ai.untitledSession') || '未命名会话')) + '？')) return;
+      if (!window.confirm((_t('ai.confirmDeleteSession') || '') + (s.title || (_t('ai.untitledSession') || '')) + '？')) return;
       await deleteAiSessionById(s.id);
     });
     row.append(load, rename, del); list.appendChild(row);
@@ -8494,18 +9013,18 @@ function renderAiSessionSelect() {
 
 async function renameAiSession(summary) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const title = window.prompt(_t('ai.sessionName') || '会话名称', summary.title || '');
+  const title = window.prompt(_t('ai.sessionName') || '', summary.title || '');
   if (title === null) return;
   const next = title.trim().slice(0, 80);
-  if (!next) { showToast(_t('toast.sessionNameEmpty') || '会话名称不能为空'); return; }
+  if (!next) { showToast(_t('toast.sessionNameEmpty') || ''); return; }
   try {
     const r = await apiFetch('/api/ai/history?id=' + encodeURIComponent(summary.id));
     const d = await r.json(); if (!r.ok || !d.session) throw new Error(d.error || '会话不存在');
     d.session.title = next;
     const saved = await apiFetch('/api/ai/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'save', session: d.session }) });
     if (!saved.ok) throw new Error((await saved.json().catch(() => ({}))).error || '保存失败');
-    await loadAiSessions(); showToast(_t('toast.sessionRenamed') || '会话已重命名');
-  } catch (e) { showToast((_t('toast.renameFailed') || '重命名失败：') + e.message); }
+    await loadAiSessions(); showToast(_t('toast.sessionRenamed') || '');
+  } catch (e) { showToast((_t('toast.renameFailed') || '') + e.message); }
 }
 
 function fmtTime(ts) {
@@ -8521,9 +9040,9 @@ async function onAiSessionChange() {
   if (!id) return;
   try {
     const r = await apiFetch('/api/ai/history?id=' + encodeURIComponent(id));
-    if (!r.ok) { showToast(_t('toast.loadSessionFail') || '加载会话失败'); return; }
+    if (!r.ok) { showToast(_t('toast.loadSessionFail') || ''); return; }
     const s = (await r.json()).session;
-    if (!s) { showToast(_t('toast.sessionNotExist') || '会话不存在'); return; }
+    if (!s) { showToast(_t('toast.sessionNotExist') || ''); return; }
     const savedProvider = (state.ai.providers || []).find(p => p.id === s.provider || p.name === s.provider);
     if (savedProvider) {
       $('ai-provider').value = savedProvider.id;
@@ -8538,10 +9057,84 @@ async function onAiSessionChange() {
     state.ai.sessUsage = s.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
     updateAiUsage();
     renderAiHistory();
-    showToast(_t('toast.sessionLoaded') || '已加载会话');
-  } catch (e) { showToast(_t('toast.loadSessionFail') || '加载会话失败'); }
+    showToast(_t('toast.sessionLoaded') || '');
+  } catch (e) { showToast(_t('toast.loadSessionFail') || ''); }
 }
 
+
+function splitUserDocPrompt(content) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const s = String(content || '');
+  const markers = [];
+  [_t('ai.questionLabel'), _t('ai.reqLabel'), _t('ai.extraReqLabel'),
+    '问题：', '修改要求：', '补充要求：', 'Question: ', 'Question：', 'Requirements: ', 'Additional Request: ', 'Additional requirements: ']
+    .forEach(m => { const v = String(m || '').trim(); if (v && !markers.includes(v)) markers.push(v); });
+  let prompt = '';
+  let doc = s;
+  for (const m of markers) {
+    const idx = s.lastIndexOf('\n\n' + m);
+    if (idx > 0) { prompt = s.slice(idx + 2 + m.length).trim(); doc = s.slice(0, idx); break; }
+  }
+  return { doc, prompt };
+}
+
+function appendAiUserBubble(out, tagText, content, meta) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const bubble = document.createElement('div');
+  bubble.className = 'ai-msg user';
+  const tag = document.createElement('div');
+  tag.className = 'ai-msg-tag';
+  tag.textContent = tagText;
+  const body = document.createElement('div');
+  body.className = 'ai-msg-body';
+  const s = String(content || '');
+  if (s.length <= 900) {
+    body.textContent = s;
+  } else {
+    let info = meta || null;
+    if (!info) {
+      const parts = splitUserDocPrompt(s);
+      info = { prompt: parts.prompt, docLines: parts.doc.split('\n').length, docChars: parts.doc.length };
+    }
+    const card = document.createElement('div');
+    card.className = 'ai-user-card';
+    const head = document.createElement('div');
+    head.className = 'ai-user-card-head';
+    const label = document.createElement('span');
+    label.className = 'ai-user-card-label';
+    label.textContent = info.scopeLabel || (_t('ai.scopeFull') || '');
+    const stats = document.createElement('span');
+    stats.className = 'ai-user-card-stats';
+    stats.textContent = (info.docLines || s.split('\n').length) + ' ' + (_t('ai.linesUnit') || '') + ' · ' + (info.docChars || s.length) + ' ' + (_t('ai.charsUnit') || '');
+    head.appendChild(label);
+    head.appendChild(stats);
+    card.appendChild(head);
+    if (info.prompt) {
+      const promptEl = document.createElement('div');
+      promptEl.className = 'ai-user-card-prompt';
+      promptEl.textContent = info.prompt.length > 300 ? info.prompt.slice(0, 300) + '…' : info.prompt;
+      card.appendChild(promptEl);
+    }
+    const full = document.createElement('pre');
+    full.className = 'ai-user-card-full hidden';
+    full.textContent = s;
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'ai-user-card-toggle';
+    toggle.textContent = _t('ai.expandFull') || '';
+    toggle.addEventListener('click', () => {
+      const nowHidden = full.classList.toggle('hidden');
+      toggle.textContent = nowHidden ? (_t('ai.expandFull') || '') : (_t('ai.collapseFull') || '');
+    });
+    card.appendChild(toggle);
+    card.appendChild(full);
+    body.appendChild(card);
+  }
+  bubble.appendChild(tag);
+  bubble.appendChild(body);
+  out.appendChild(bubble);
+  return bubble;
+}
 
 function renderAiHistory() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
@@ -8551,22 +9144,13 @@ function renderAiHistory() {
   let uSeq = 0, aSeq = 0;
   msgs.forEach((m, i) => {
     if (m.role === 'user') { uSeq++;
-      const ub = document.createElement('div');
-      ub.className = 'ai-msg user';
-      const tag = document.createElement('div');
-      tag.className = 'ai-msg-tag';
-      tag.textContent = _t('ai.meTag', { seq: uSeq }) || ('我 · 提问 ' + uSeq);
-      const body = document.createElement('div');
-      body.className = 'ai-msg-body';
-      body.textContent = m.content.length > 3000 ? m.content.slice(0, 3000) + '\n' + (_t('ai.omittedLong') || '…（已省略）') : m.content;
-      ub.appendChild(tag); ub.appendChild(body);
-      out.appendChild(ub);
+      appendAiUserBubble(out, _t('ai.meTag', { seq: uSeq }) || '', m.content, null);
     } else if (m.role === 'assistant' && m.content) { aSeq++;
       const ab = document.createElement('div');
       ab.className = 'ai-msg ai';
       const tag = document.createElement('div');
       tag.className = 'ai-msg-tag';
-      tag.textContent = (_t('ai.aiTag', { seq: aSeq }) || ('AI · 回答 ' + aSeq)) + (m.model ? ' · ' + m.model : '') + fmtAiUsage(m.usage);
+      tag.textContent = (_t('ai.aiTag', { seq: aSeq }) || '') + (m.model ? ' · ' + m.model : '') + fmtAiUsage(m.usage);
       tag.appendChild(aiAnswerCopyButton(m.content));
       const body = document.createElement('div');
       body.className = 'ai-msg-body';
@@ -8584,8 +9168,8 @@ function renderAiHistory() {
 async function saveCurrentSession(silent) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const msgs = (state.ai.messages || []).filter(m => m && !m.ephemeral);
-  if (!msgs.length) { if (!silent) showToast((state.ai.messages || []).length ? (_t('toast.incognitoNoSave') || '当前会话为无痕内容，不会保存') : (_t('toast.noConversationContent') || '当前没有对话内容')); return false; }
-  const title = ($('ai-prompt').value.trim() || msgs[0].content || (_t('ai.untitledSession') || '未命名会话')).slice(0, 40).replace(/\s+/g, ' ');
+  if (!msgs.length) { if (!silent) showToast((state.ai.messages || []).length ? (_t('toast.incognitoNoSave') || '') : (_t('toast.noConversationContent') || '')); return false; }
+  const title = ($('ai-prompt').value.trim() || msgs[0].content || (_t('ai.untitledSession') || '')).slice(0, 40).replace(/\s+/g, ' ');
   const sess = {
     id: state.ai.sessionId || undefined,
     title: title,
@@ -8601,13 +9185,13 @@ async function saveCurrentSession(silent) {
       body: JSON.stringify({ action: 'save', session: sess }),
     });
     const d = await r.json();
-    if (!r.ok || !d.ok) throw new Error(d.error || (_t('toast.saveFailed') || '保存失败'));
+    if (!r.ok || !d.ok) throw new Error(d.error || (_t('toast.saveFailed') || ''));
     state.ai.sessionId = d.session.id;
     await loadAiSessions();
     $('ai-session').value = state.ai.sessionId;
-    if (!silent) showToast(_t('toast.sessionSaved') || '会话已保存');
+    if (!silent) showToast(_t('toast.sessionSaved') || '');
     return true;
-  } catch (e) { if (!silent) showToast((_t('toast.saveFailed') || '保存失败：') + e.message); return false; }
+  } catch (e) { if (!silent) showToast((_t('toast.saveFailed') || '') + e.message); return false; }
 }
 
 async function deleteCurrentSession() {
@@ -8622,12 +9206,12 @@ async function deleteCurrentSession() {
     if (!r.ok || !d.ok) throw new Error(d.error || '删除失败');
     if (state.ai.sessionId === id) { state.ai.sessionId = null; state.ai.messages = []; clearAiOutput(); }
     await loadAiSessions();
-    showToast(_t('toast.sessionDeleted') || '会话已删除');
-  } catch (e) { showToast((_t('toast.deleteFailed') || '删除失败：') + e.message); }
+    showToast(_t('toast.sessionDeleted') || '');
+  } catch (e) { showToast((_t('toast.deleteFailed') || '') + e.message); }
 }
 
 function clearAiContext() {
-  if (!(state.ai.messages || []).length) { showToast(_t('toast.noContext') || '当前没有上下文'); return; }
+  if (!(state.ai.messages || []).length) { showToast(_t('toast.noContext') || ''); return; }
   state.ai.messages = [];
   state.ai.sessionId = null;
   state.ai.raw = '';
@@ -8636,7 +9220,7 @@ function clearAiContext() {
   updateAiUsage();
   clearAiOutput();
   $('ai-session').value = '';
-  showToast(_t('toast.contextCleared') || '已清空上下文，开始新一轮');
+  showToast(_t('toast.contextCleared') || '');
 }
 
 
@@ -8681,8 +9265,8 @@ function fillAiProviders(merged, current) {
   const sel = $('ai-provider');
   const curId = (current && (current.provider_id || current.provider)) || (merged[0] && merged[0].id) || '';
   sel.innerHTML = '';
-  const customGroup = document.createElement('optgroup'); customGroup.label = _t('ai.customConnections') || '自定义连接';
-  const presetGroup = document.createElement('optgroup'); presetGroup.label = _t('ai.officialPresets') || '官方预设';
+  const customGroup = document.createElement('optgroup'); customGroup.label = _t('ai.customConnections') || '';
+  const presetGroup = document.createElement('optgroup'); presetGroup.label = _t('ai.officialPresets') || '';
   merged.forEach(p => {
     const o = document.createElement('option');
     o.value = p.id;
@@ -8708,10 +9292,10 @@ function fillAiProviders(merged, current) {
         const title = document.createElement('strong'); title.textContent = p.name || p.id;
         const meta = document.createElement('span');
         const caps = p.capabilities && typeof p.capabilities === 'object' ? Object.keys(p.capabilities).filter(k => p.capabilities[k]).slice(0, 3) : [];
-        const capLabels = { chat: _t('ai.aiResult') || 'Chat', models: _t('ai.model') || 'Models', vision: _t('ai.explain') || 'Vision', tools: _t('ai.advanced') || 'Tools' };
-        const kind = p.source_only ? (_t('ai.sourcePrefix') || '离线来源目录') : (p.custom ? (_t('ai.customConnections') || 'Custom') : (_t('ai.officialPresets') || 'Presets'));
+        const capLabels = { chat: _t('ai.aiResult') || '', models: _t('ai.model') || '', vision: _t('ai.explain') || '', tools: _t('ai.advanced') || '' };
+        const kind = p.source_only ? (_t('ai.sourcePrefix') || '') : (p.custom ? (_t('ai.customConnections') || '') : (_t('ai.officialPresets') || ''));
         meta.textContent = kind + (caps.length ? ' · ' + caps.map(k => capLabels[k] || k).join(' · ') : '');
-        const status = document.createElement('i'); status.className = 'ai-provider-state'; status.setAttribute('aria-label', p.has_key ? (_t('ai.keyConfigured') || 'Key configured') : (_t('ai.noKeyConfigured') || 'No key configured')); status.textContent = p.has_key ? '●' : '○';
+        const status = document.createElement('i'); status.className = 'ai-provider-state'; status.setAttribute('aria-label', p.has_key ? (_t('ai.keyConfigured') || '') : (_t('ai.noKeyConfigured') || '')); status.textContent = p.has_key ? '●' : '○';
         card.append(title, meta, status);
         if (!p.source_only) card.addEventListener('click', () => { sel.value = p.id; onAiProviderChange(); fillAiProviders(merged, { provider_id: p.id, model: $('ai-model').value }); });
         cards.appendChild(card);
@@ -8758,6 +9342,32 @@ function isLocalAiProvider(provider) {
   return /(^|[/:])(?:localhost|127\.0\.0\.1|\[::1\])(?::|\/|$)/.test(url);
 }
 
+async function ensureAiConfigured() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (!state.ai.config) await loadAiConfig();
+  const pending = typeof currentAiProvider === 'function' ? currentAiProvider() : null;
+  if (pending && !pending.credential_id && $('ai-key') && $('ai-key').value.trim()) {
+    await saveAiSelection(true);
+  }
+  const connection = typeof resolveSharedAiConnection === 'function'
+    ? await resolveSharedAiConnection()
+    : null;
+  if (connection && (connection.local || connection.has_key)) return connection;
+  showToast(_t('toast.noApiKeyNotice'), 2800);
+  // The settings opener is not present in every host (browser preview,
+  // extension webview, and narrow-window embeds).  Opening the modal must be
+  // deterministic regardless of which host invoked the AI action.
+  const settingsModal = $('ai-settings-modal');
+  if (typeof openAiModal === 'function' && $('ai-settings-open')) {
+    openAiModal('ai-settings-modal', $('ai-settings-open'));
+  } else if (settingsModal) {
+    settingsModal.classList.remove('hidden');
+    const firstField = settingsModal.querySelector('input, button, select, textarea');
+    if (firstField) setTimeout(() => firstField.focus({ preventScroll: true }), 0);
+  }
+  return null;
+}
+
 function aiPresetBase(p) {
   return (p && p.base_url) || '';
 }
@@ -8777,7 +9387,7 @@ function fillAiModels(models, selected) {
   const sel = $('ai-model');
   sel.innerHTML = '';
   const list = Array.isArray(models) ? models.filter(Boolean) : [];
-  const placeholder = new Option(list.length ? (_t('ai.selectModel') || '选择模型') : (_t('ai.fetchModelsFirst') || '请先获取模型'), '');
+  const placeholder = new Option(list.length ? (_t('ai.selectModel') || '') : (_t('ai.fetchModelsFirst') || ''), '');
   placeholder.disabled = true; placeholder.selected = !list.length;
   sel.appendChild(placeholder);
   list.forEach(id => sel.appendChild(new Option(id, id)));
@@ -8813,12 +9423,12 @@ function syncAiKey() {
   // API Key 不会从后端回传；切换连接时也不保留前一个连接的输入值。
   inp.value = '';
    inp.placeholder = (p.key_source && p.key_source.indexOf('env:') === 0)
-     ? (_t('ai.readFromEnv', { env: p.key_source.slice(4) }) || ('已从环境变量 ' + p.key_source.slice(4) + ' 读取，可覆盖'))
-     : (isLocalAiProvider(p) ? (_t('ai.apiKeyOllama') || 'API Key（本地服务可留空）') : (_t('ai.apiKeyRequired') || 'API Key（必填）'));
+     ? (_t('ai.readFromEnv', { env: p.key_source.slice(4) }) || '')
+     : (isLocalAiProvider(p) ? (_t('ai.apiKeyOllama') || '') : (_t('ai.apiKeyRequired') || ''));
   if (status) {
     status.textContent = p.has_key
-      ? (p.key_source ? (_t('ai.keyReady', { source: p.key_source }) || ('Key 就绪（' + p.key_source + '）')) : (_t('ai.keyConfigured') || 'Key 已配置'))
-       : (isLocalAiProvider(p) ? (_t('ai.localNoKey') || '本地模型无需 Key') : (_t('ai.noKeyConfigured') || '未配置 Key'));
+      ? (p.key_source ? (_t('ai.keyReady', { source: p.key_source }) || '') : (_t('ai.keyConfigured') || ''))
+       : (isLocalAiProvider(p) ? (_t('ai.localNoKey') || '') : (_t('ai.noKeyConfigured') || ''));
   }
   updateAiConnectionSummary();
 }
@@ -8826,16 +9436,16 @@ function syncAiKey() {
 function aiAnswerCopyButton(content) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const button = document.createElement('button');
-  button.className = 'tb-btn ai-msg-copy'; button.textContent = _t('toast.copiedAnswer') || '复制回答';
-  button.addEventListener('click', () => copyText(String(content || ''), _t('toast.copiedAnswer') || '已复制回答'));
+  button.className = 'tb-btn ai-msg-copy'; button.textContent = _t('toast.copiedAnswer') || '';
+  button.addEventListener('click', () => copyText(String(content || ''), _t('toast.copiedAnswer') || ''));
   return button;
 }
 
 async function copyText(value, success) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!value) return;
-  try { await navigator.clipboard.writeText(value); showToast(success || (_t('toast.copied') || '已复制')); }
-  catch (e) { const ta = document.createElement('textarea'); ta.value = value; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showToast(success || (_t('toast.copied') || '已复制')); } catch (e2) { showToast(_t('toast.copyFailed') || '复制失败'); } ta.remove(); }
+  try { await navigator.clipboard.writeText(value); showToast(success || (_t('toast.copied') || '')); }
+  catch (e) { const ta = document.createElement('textarea'); ta.value = value; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showToast(success || (_t('toast.copied') || '')); } catch (e2) { showToast(_t('toast.copyFailed') || ''); } ta.remove(); }
 }
 
 async function deleteAiSessionById(id) {
@@ -8843,20 +9453,20 @@ async function deleteAiSessionById(id) {
   if (!id) return;
   try {
     const r = await apiFetch('/api/ai/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id }) });
-    const d = await r.json(); if (!r.ok || !d.ok) throw new Error(d.error || (_t('toast.deleteFailed') || '删除失败'));
+    const d = await r.json(); if (!r.ok || !d.ok) throw new Error(d.error || (_t('toast.deleteFailed') || ''));
     if (state.ai.sessionId === id) clearAiContext();
-    await loadAiSessions(); showToast(_t('toast.sessionDeleted') || '会话已删除');
-  } catch (e) { showToast((_t('toast.deleteFailed') || '删除失败：') + e.message); }
+    await loadAiSessions(); showToast(_t('toast.sessionDeleted') || '');
+  } catch (e) { showToast((_t('toast.deleteFailed') || '') + e.message); }
 }
 
 async function clearAiSessions() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!(state.ai.sessions || []).length || !window.confirm(_t('toast.clearSessionsConfirm') || '清空全部会话历史？此操作无法撤销。')) return;
+  if (!(state.ai.sessions || []).length || !window.confirm(_t('toast.clearSessionsConfirm') || '')) return;
   try {
     const r = await apiFetch('/api/ai/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'clear' }) });
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || (_t('toast.clearFailed') || '清空失败'));
-    state.ai.sessionId = null; state.ai.sessions = []; fillAiSessions(); showToast(_t('toast.sessionsCleared') || '会话历史已清空');
-  } catch (e) { showToast((_t('toast.clearFailed') || '清空失败：') + e.message); }
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || (_t('toast.clearFailed') || ''));
+    state.ai.sessionId = null; state.ai.sessions = []; fillAiSessions(); showToast(_t('toast.sessionsCleared') || '');
+  } catch (e) { showToast((_t('toast.clearFailed') || '') + e.message); }
 }
 
 function newAiProvider() {
@@ -8864,7 +9474,7 @@ function newAiProvider() {
   if (!state.ai.config) return;
   const custom = state.ai.config.custom || (state.ai.config.custom = []);
   let seq = custom.length + 1;
-  const connPrefix = _t('ai.customConnections') || '自定义连接';
+  const connPrefix = _t('ai.customConnections') || '';
   let name = connPrefix + ' ' + seq;
   while ((state.ai.providers || []).some(p => p.name === name)) name = connPrefix + ' ' + (++seq);
   const uid = (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : String(Date.now()) + Math.random().toString(16).slice(2));
@@ -8888,12 +9498,12 @@ async function deleteAiProvider() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ providers: custom, current }),
     });
-    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || (_t('toast.saveFailed') || '保存失败'));
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || (_t('toast.saveFailed') || ''));
     state.ai.config.custom = custom; state.ai.config.current = current;
     state.ai.providers = mergeAiProviders(custom, state.ai.config.presets || []);
     fillAiProviders(state.ai.providers, current);
-    showToast(_t('toast.customConnDeleted') || '已删除自定义连接');
-  } catch (e) { showToast((_t('toast.deleteFailed') || '删除失败：') + e.message); }
+    showToast(_t('toast.customConnDeleted') || '');
+  } catch (e) { showToast((_t('toast.deleteFailed') || '') + e.message); }
 }
 
 
@@ -8909,12 +9519,12 @@ async function saveAiSelection(silent) {
   try {
     var customHeaders = readAiCustomHeaders();
   } catch (e) {
-    showToast((_t('toast.saveFailedSimple') || '请求头 JSON 无效：') + ' ' + e.message);
+    showToast((_t('toast.saveFailedSimple') || '') + ' ' + e.message);
     return false;
   }
   const requestedName = $('ai-provider-name').value.trim() || p.name;
   if (p.custom && requestedName !== p.name && custom.some(c => c.name === requestedName)) {
-    showToast(_t('toast.customConnNameExists') || '自定义连接名称已存在'); return false;
+    showToast(_t('toast.customConnNameExists') || ''); return false;
   }
   let over = custom.find(c => c.id === p.id);
   if (!over) {
@@ -8949,15 +9559,15 @@ async function saveAiSelection(silent) {
     if (r.ok) {
       await loadAiConfig();
       const status = $('ai-conn-status');
-      if (status) status.textContent = _t('status.saved') || '已保存';
-      if (!silent) showToast(_t('toast.connSettingsSaved') || '连接设置已保存');
+      if (status) status.textContent = _t('status.saved') || '';
+      if (!silent) showToast(_t('toast.connSettingsSaved') || '');
       return true;
     } else {
       const d = await r.json().catch(() => ({}));
       throw new Error(d.error || 'HTTP ' + r.status);
     }
   } catch (e) {
-    showToast((_t('toast.saveFailed') || '保存失败：') + e.message);
+    showToast((_t('toast.saveFailed') || '') + e.message);
     return false;
   }
 }
@@ -8967,7 +9577,7 @@ function getAiTargetText() {
   let sel = '';
   if ($('ai-selection').checked) {
     sel = ((window.getSelection && window.getSelection()) || {}).toString() || '';
-    if (!sel) showToast(_t('toast.noTextSelectionNotice') || '未选中文字，将处理全文');
+    if (!sel) showToast(_t('toast.noTextSelectionNotice') || '');
   }
   if (sel) return { text: sel, isSelection: true };
   const src = state.mode === 'file'
@@ -8981,7 +9591,7 @@ function setAiBusy(b) {
   state.ai.busy = b;
   $('ai-run').disabled = b;
   $('ai-stop').disabled = !b;
-  $('ai-status').textContent = b ? (_t('ai.generating') || '生成中…') : '';
+  $('ai-status').textContent = b ? (_t('ai.generating') || '') : '';
 }
 
 function updateAiRawButtons() {
@@ -8997,10 +9607,10 @@ async function loadAiModels() {
   const key = $('ai-key').value.trim();
   const mode = $('ai-mode').value || 'auto';
   const endpointMode = $('ai-endpoint-mode') ? ($('ai-endpoint-mode').value || 'prefix') : 'prefix';
-  if (!baseUrl) { showToast(_t('toast.enterBaseUrlFirst') || '请先填写 Base URL'); return; }
+  if (!baseUrl) { showToast(_t('toast.enterBaseUrlFirst') || ''); return; }
   let p = currentAiProvider();
   const local = isLocalAiProvider(p);
-  if (!local && !key && !(p && p.has_key)) { showToast(_t('toast.enterApiKeyFirst') || '请先填写 API Key'); return; }
+  if (!local && !key && !(p && p.has_key)) { showToast(_t('toast.enterApiKeyFirst') || ''); return; }
   // Persist a newly entered key before discovery so the provider endpoint
   // receives only an opaque credential_id, never a raw secret.
   if (!local && key && p && !p.credential_id) {
@@ -9010,12 +9620,12 @@ async function loadAiModels() {
   try {
     var requestHeaders = readAiCustomHeaders();
   } catch (e) {
-    showToast((_t('toast.saveFailedSimple') || '请求头 JSON 无效：') + ' ' + e.message);
+    showToast((_t('toast.saveFailedSimple') || '') + ' ' + e.message);
     return;
   }
   const btn = $('ai-models-btn');
   const old = btn.textContent;
-  btn.disabled = true; btn.textContent = _t('toast.fetchingModels') || '获取中…';
+  btn.disabled = true; btn.textContent = _t('toast.fetchingModels') || '';
   const status = $('ai-conn-status');
   try {
     const r = await apiFetch('/api/ai/models', {
@@ -9034,12 +9644,12 @@ async function loadAiModels() {
       showToast(_t('toast.fetchedModels', { count: ids.length }) || ('已获取 ' + ids.length + ' 个模型'));
     } else {
       fillAiModels([], '');
-      if (status) status.textContent = _t('toast.noModelsReturned') || '接口未返回可选模型';
-      showToast(_t('toast.noModelsReturned') || '接口未返回可选模型');
+      if (status) status.textContent = _t('toast.noModelsReturned') || '';
+      showToast(_t('toast.noModelsReturned') || '');
     }
   } catch (e) {
-    if (status) status.textContent = _t('toast.fetchFail') || '获取失败';
-    showToast((_t('toast.fetchModelsFail') || '获取模型失败：') + e.message);
+    if (status) status.textContent = _t('toast.fetchFail') || '';
+    showToast((_t('toast.fetchModelsFail') || '') + e.message);
   } finally {
     btn.disabled = false;
     btn.textContent = old;
@@ -9050,7 +9660,7 @@ function toggleAiKey() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const inp = $('ai-key');
   inp.type = (inp.type === 'password') ? 'text' : 'password';
-  $('ai-key-toggle').title = inp.type === 'password' ? (_t('ai.showOrHide') || '显示 / 隐藏') : (_t('ai.hideKey') || '隐藏');
+  $('ai-key-toggle').title = inp.type === 'password' ? (_t('ai.showOrHide') || '') : (_t('ai.hideKey') || '');
 }
 
 function clearAiKey() {
@@ -9060,7 +9670,7 @@ function clearAiKey() {
   p.clear_key = true;
   p.has_key = false;
   $('ai-key').value = '';
-  $('ai-conn-status').textContent = _t('ai.clearKeyOnSave') || '保存后清除已存 Key';
+  $('ai-conn-status').textContent = _t('ai.clearKeyOnSave') || '';
 }
 
 function resetAiUrl() {
@@ -9070,7 +9680,7 @@ function resetAiUrl() {
   $('ai-base-url').value = p.base_url || '';
   const mode = p.mode || (p.format === 'anthropic' ? 'messages' : 'auto');
   $('ai-mode').value = (mode === 'anthropic') ? 'messages' : mode;
-  showToast(_t('ai.resetUrlDone') || '已恢复预设地址');
+  showToast(_t('ai.resetUrlDone') || '');
 }
 
 function updateAiUsage() {
@@ -9080,25 +9690,23 @@ function updateAiUsage() {
   const u = state.ai.usage;
   const s = state.ai.sessUsage;
   const fmt = n => (n == null ? 0 : n);
-  const thisRound = _t('ai.thisRound') || '本次';
-  const sessTotal = _t('ai.sessionTotal') || '会话累计';
+  const thisRound = _t('ai.thisRound') || '';
+  const sessTotal = _t('ai.sessionTotal') || '';
   el.textContent = thisRound + ' ' + fmt(u && u.prompt_tokens) + '/' + fmt(u && u.completion_tokens) + '/' + fmt(u && u.total_tokens)
     + ' · ' + sessTotal + ' ' + fmt(s.prompt_tokens) + '/' + fmt(s.completion_tokens) + '/' + fmt(s.total_tokens);
 }
 
 async function runAi(action) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  if (!(await ensureAiConfigured())) return;
   const p = currentAiProvider();
-  if (!p) { showToast(_t('toast.selectProviderFirst') || '请先选择 AI 提供商'); return; }
-  const keyVal = $('ai-key').value.trim();
-  const local = isLocalAiProvider(p);
-  if (!local && !keyVal && !p.has_key && !p.key_source) { showToast(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接'); return; }
+  if (!p) return;
   const target = state.ai.targetOverride;
   const { text, isSelection } = target != null
     ? { text: target, isSelection: true }
     : getAiTargetText();
   state.ai.targetOverride = null;
-  if (!text || !text.trim()) { showToast(_t('toast.noDocContentNotice') || '没有可处理的文档内容'); return; }
+  if (!text || !text.trim()) { showToast(_t('toast.noDocContentNotice') || ''); return; }
   const prompt = $('ai-prompt').value.trim();
   const isIncognito = $('ai-incognito').checked;
   const model = $('ai-model').value.trim() || (p.models || [''])[0] || '';
@@ -9116,15 +9724,15 @@ async function runAi(action) {
 
   const tpl = currentAiTemplate();
   const skillId = (tpl && tpl.skill_id) || AI_SKILLS[action] || 'readmd-ask';
-  const docs = text.length > 120000 ? text.slice(0, 120000) + '\n\n' + (_t('ai.contentTruncated') || '[内容过长已截断，请分段处理]') : text;
+  const docs = text.length > 120000 ? text.slice(0, 120000) + '\n\n' + (_t('ai.contentTruncated') || '') : text;
   const fill = s => String(s || '').replace(/\{doc\}/g, docs).replace(/\{prompt\}/g, prompt || '');
   let userMsg;
-  const docFollows = _t('ai.docFollows') || '文档如下：';
+  const docFollows = _t('ai.docFollows') || '';
   if (tpl && tpl.user) {
     userMsg = fill(tpl.user);
-  } else if (action === 'ask' && prompt) userMsg = docFollows + '\n\n' + docs + '\n\n' + (_t('ai.questionLabel') || '问题：') + prompt;
-  else if (action === 'modify' && prompt) userMsg = docFollows + '\n\n' + docs + '\n\n' + (_t('ai.reqLabel') || '修改要求：') + prompt;
-  else if (prompt) userMsg = docFollows + '\n\n' + docs + '\n\n' + (_t('ai.extraReqLabel') || '补充要求：') + prompt;
+  } else if (action === 'ask' && prompt) userMsg = docFollows + '\n\n' + docs + '\n\n' + (_t('ai.questionLabel') || '') + prompt;
+  else if (action === 'modify' && prompt) userMsg = docFollows + '\n\n' + docs + '\n\n' + (_t('ai.reqLabel') || '') + prompt;
+  else if (prompt) userMsg = docFollows + '\n\n' + docs + '\n\n' + (_t('ai.extraReqLabel') || '') + prompt;
   else userMsg = docFollows + '\n\n' + docs;
 
 
@@ -9135,24 +9743,19 @@ async function runAi(action) {
   const emptyState = out.querySelector('.ai-empty-state');
   if (emptyState) emptyState.remove();
 
-  const userBubble = document.createElement('div');
-  userBubble.className = 'ai-msg user';
-  const uTag = document.createElement('div');
-  uTag.className = 'ai-msg-tag';
   const userSeq = (state.ai.messages || []).filter(m => m.role === 'user').length + 1;
-  const scopeText = isSelection ? (_t('ai.scopeSelection') || '（选中文字）') : (_t('ai.scopeFull') || '（全文）');
-  uTag.textContent = (_t('ai.meTag', { seq: userSeq }) || ('我 · 提问 ' + userSeq)) + ' · ' + _t(AI_ACTIONS[action] || action) + scopeText + ' · ' + model;
-  const uBody = document.createElement('div');
-  uBody.className = 'ai-msg-body';
-  uBody.textContent = userMsg.length > 2000 ? userMsg.slice(0, 2000) + '\n' + (_t('ai.omittedLong') || '…（已省略）') : userMsg;
-  userBubble.appendChild(uTag); userBubble.appendChild(uBody);
-  out.appendChild(userBubble);
+  const scopeText = isSelection ? (_t('ai.scopeSelection') || '') : (_t('ai.scopeFull') || '');
+  const userTagText = (_t('ai.meTag', { seq: userSeq }) || '') + ' · ' + _t(AI_ACTIONS[action] || action) + scopeText + ' · ' + model;
+  appendAiUserBubble(out, userTagText, userMsg, {
+    scopeLabel: scopeText, prompt: prompt,
+    docLines: docs.split('\n').length, docChars: docs.length,
+  });
 
   const aiBubble = document.createElement('div');
   aiBubble.className = 'ai-msg ai';
   const aiTag = document.createElement('div');
   aiTag.className = 'ai-msg-tag';
-  aiTag.textContent = _t('ai.generating') || 'AI 生成中…';
+  aiTag.textContent = _t('ai.generating') || '';
   const aiBody = document.createElement('div');
   aiBody.className = 'ai-msg-body';
   aiBody.innerHTML = '<span class="streaming-cursor"></span>';
@@ -9230,7 +9833,7 @@ async function runAi(action) {
     if (renderTimer) { clearTimeout(renderTimer); renderTimer = null; }
     aiBody.innerHTML = renderSafeMarkdown(state.ai.raw);
     renderMath(aiBody);
-    aiTag.textContent = (_t('ai.aiTag', { seq: userSeq }) || ('AI · 回答 ' + userSeq)) + ' · ' + model + fmtAiUsage(state.ai.usage);
+    aiTag.textContent = (_t('ai.aiTag', { seq: userSeq }) || '') + ' · ' + model + fmtAiUsage(state.ai.usage);
     if (state.ai.raw) {
       aiTag.appendChild(aiAnswerCopyButton(state.ai.raw));
       const last = { role: 'assistant', content: state.ai.raw, ephemeral: isIncognito };
@@ -9239,13 +9842,13 @@ async function runAi(action) {
       state.ai.messages = msgs;
       const saved = isIncognito ? false : await saveCurrentSession(true);
       updateAiRawButtons();
-      showToast(isIncognito ? (_t('toast.aiIncognitoDone') || 'AI 完成（无痕会话未保存）') : (saved ? (_t('toast.aiSavedDone') || 'AI 完成，已自动保存会话') : (_t('toast.aiSaveFailDone') || 'AI 完成，但会话保存失败；可在历史中重试')));
+      showToast(isIncognito ? (_t('toast.aiIncognitoDone') || '') : (saved ? (_t('toast.aiSavedDone') || '') : (_t('toast.aiSaveFailDone') || '')));
     } else {
       msgs.pop();
     }
   } catch (e) {
     if (e.name === 'AbortError') {
-      aiTag.textContent = (_t('ai.aiTag', { seq: userSeq }) || ('AI · 回答 ' + userSeq)) + ' ' + (_t('ai.stoppedSuffix') || '（已停止）');
+      aiTag.textContent = (_t('ai.aiTag', { seq: userSeq }) || '') + ' ' + (_t('ai.stoppedSuffix') || '');
       if (state.ai.raw) {
         aiBody.innerHTML = renderSafeMarkdown(state.ai.raw);
         const last = { role: 'assistant', content: state.ai.raw, ephemeral: isIncognito };
@@ -9253,9 +9856,9 @@ async function runAi(action) {
         msgs.push(last);
         state.ai.messages = msgs;
       }
-      showToast(_t('ai.stopped') || '已停止');
+      showToast(_t('ai.stopped') || '');
     } else {
-      aiTag.textContent = _t('ai.aiError') || 'AI · 出错';
+      aiTag.textContent = _t('ai.aiError') || '';
       const hint = aiErrorHint(e);
       setAiConnectionState(hint.kind, hint.summary);
       showToast(hint.message);
@@ -9272,8 +9875,8 @@ async function testAiConnection() {
   const p = currentAiProvider();
   if (!p) return;
   const button = $('ai-test-connection'); const before = button.textContent;
-  button.disabled = true; button.textContent = _t('toast.testingConn') || '测试中…';
-  setAiConnectionState('loading', _t('toast.testingConn') || '正在测试连接…');
+  button.disabled = true; button.textContent = _t('toast.testingConn') || '';
+  setAiConnectionState('loading', _t('toast.testingConn') || '');
   try {
     await saveAiSelection(true);
     const active = currentAiProvider() || p;
@@ -9287,8 +9890,8 @@ async function testAiConnection() {
     const data = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(data.error || 'HTTP ' + r.status);
     setAiConnectionState('ready', _t('toast.connReady', { name: p.name }) || (p.name + ' · 连接正常'));
-    $('ai-conn-status').textContent = (_t('toast.connReady', { name: p.name }) || '连接正常') + (data.models && data.models.length ? (' · ' + data.models.length + ' ' + (_t('ai.modelsAvail') || '个模型可用')) : '');
-    showToast(_t('toast.connTestPass') || '连接测试通过');
+    $('ai-conn-status').textContent = (_t('toast.connReady', { name: p.name }) || '连接正常') + (data.models && data.models.length ? (' · ' + data.models.length + ' ' + (_t('ai.modelsAvail') || '')) : '');
+    showToast(_t('toast.connTestPass') || '');
   } catch (e) {
     const hint = aiErrorHint(e); setAiConnectionState(hint.kind, hint.summary); $('ai-conn-status').textContent = hint.message; showToast(hint.message);
   } finally { button.disabled = false; button.textContent = before; }
@@ -9297,28 +9900,28 @@ async function testAiConnection() {
 function aiConversationMarkdown(session) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const s = session || {};
-  const title = String(s.title || (_t('ai.untitledSession') || '未命名会话')).replace(/[\r\n]/g, ' ').slice(0, 300);
-  const lines = ['# ' + title, '', '> ' + (_t('ai.sourcePrefix') || '来源：') + 'ReadMD AI'];
-  if (s.provider) lines.push('> ' + (_t('ai.providerPrefix') || '提供商：') + String(s.provider).slice(0, 120));
-  if (s.model) lines.push('> ' + (_t('ai.modelPrefix') || '模型：') + String(s.model).slice(0, 160));
-  if (s.updated || s.created) lines.push('> ' + (_t('ai.timePrefix') || '时间：') + fmtTime(s.updated || s.created));
-  (s.messages || []).forEach(m => { if (m && (m.role === 'user' || m.role === 'assistant') && m.content) lines.push('', '## ' + (m.role === 'user' ? (_t('ai.userRole') || '用户') : (_t('ai.assistantRole') || 'AI 助手')), '', String(m.content)); });
+  const title = String(s.title || (_t('ai.untitledSession') || '')).replace(/[\r\n]/g, ' ').slice(0, 300);
+  const lines = ['# ' + title, '', '> ' + (_t('ai.sourcePrefix') || '') + 'ReadMD AI'];
+  if (s.provider) lines.push('> ' + (_t('ai.providerPrefix') || '') + String(s.provider).slice(0, 120));
+  if (s.model) lines.push('> ' + (_t('ai.modelPrefix') || '') + String(s.model).slice(0, 160));
+  if (s.updated || s.created) lines.push('> ' + (_t('ai.timePrefix') || '') + fmtTime(s.updated || s.created));
+  (s.messages || []).forEach(m => { if (m && (m.role === 'user' || m.role === 'assistant') && m.content) lines.push('', '## ' + (m.role === 'user' ? (_t('ai.userRole') || '') : (_t('ai.assistantRole') || '')), '', String(m.content)); });
   return lines.join('\n').trim() + '\n';
 }
 
 async function selectedConversationMarkdown() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   let id = state.ai.sessionId || $('ai-session').value;
-  if (!id && (state.ai.messages || []).length) return aiConversationMarkdown({ title: _t('ai.currentSession') || '当前会话', provider: $('ai-provider').value, model: $('ai-model').value, messages: state.ai.messages });
-  if (!id) throw new Error(_t('toast.selectOrFinishSession') || '请先选择或完成一段会话');
+  if (!id && (state.ai.messages || []).length) return aiConversationMarkdown({ title: _t('ai.currentSession') || '', provider: $('ai-provider').value, model: $('ai-model').value, messages: state.ai.messages });
+  if (!id) throw new Error(_t('toast.selectOrFinishSession') || '');
   const r = await apiFetch('/api/ai/history?id=' + encodeURIComponent(id)); const d = await r.json();
-  if (!r.ok || !d.session) throw new Error(d.error || (_t('toast.sessionNotExist') || '会话不存在'));
+  if (!r.ok || !d.session) throw new Error(d.error || (_t('toast.sessionNotExist') || ''));
   return aiConversationMarkdown(d.session);
 }
 
 async function copyCurrentConversation() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  try { await copyText(await selectedConversationMarkdown(), _t('toast.copiedConversation') || '已复制整段对话 Markdown'); } catch (e) { showToast(e.message); }
+  try { await copyText(await selectedConversationMarkdown(), _t('toast.copiedConversation') || ''); } catch (e) { showToast(e.message); }
 }
 
 async function exportCurrentConversation() {
@@ -9331,7 +9934,7 @@ async function exportCurrentConversation() {
     const filename = sanitizeFilename(title) + '.md';
     if (hasPy && py.save_as) {
       const out = await py.save_as(md, filename);
-      if (out) showToast((_t('toast.savedPrefix') || '已保存：') + out);
+      if (out) showToast((_t('toast.savedPrefix') || '') + out);
     } else {
       const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
       const a = document.createElement('a');
@@ -9339,9 +9942,9 @@ async function exportCurrentConversation() {
       a.download = filename;
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-      showToast(_t('toast.exportedConversation') || '已导出对话 Markdown');
+      showToast(_t('toast.exportedConversation') || '');
     }
-  } catch (e) { showToast((_t('toast.exportFailed') || '导出失败：') + e.message); }
+  } catch (e) { showToast((_t('toast.exportFailed') || '') + e.message); }
 }
 
 function sanitizeFilename(name) {
@@ -9430,11 +10033,11 @@ function bindAiResize() {
 
 function aiErrorHint(error) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const raw = String((error && error.message) || error || (_t('toast.unknownError') || '未知错误'));
-  if (/401|403|auth|key|token|鉴权|密钥/i.test(raw)) return { kind: 'error', summary: _t('ai.authFailSummary') || '鉴权失败 · 检查 API Key', message: _t('ai.authFailMsg') || '鉴权失败：请在设置中检查 API Key 或权限' };
-  if (/429|rate.?limit|限流|too many/i.test(raw)) return { kind: 'warn', summary: _t('ai.rateLimitSummary') || '请求受限 · 请稍后再试', message: _t('ai.rateLimitMsg') || '请求过于频繁：请稍后重试或更换模型' };
-  if (/network|fetch|timeout|connect|网络|连接/i.test(raw)) return { kind: 'error', summary: _t('ai.netFailSummary') || '网络不可达 · 检查连接', message: _t('ai.netFailMsg') || '网络连接失败：请检查 Base URL、网络或代理' };
-  return { kind: 'error', summary: _t('ai.reqFailSummary') || '请求失败 · 查看设置', message: (_t('ai.reqFailMsg') || 'AI 请求失败：') + raw };
+  const raw = String((error && error.message) || error || (_t('toast.unknownError') || ''));
+  if (/401|403|auth|key|token|鉴权|密钥/i.test(raw)) return { kind: 'error', summary: _t('ai.authFailSummary') || '', message: _t('ai.authFailMsg') || '' };
+  if (/429|rate.?limit|限流|too many/i.test(raw)) return { kind: 'warn', summary: _t('ai.rateLimitSummary') || '', message: _t('ai.rateLimitMsg') || '' };
+  if (/network|fetch|timeout|connect|网络|连接/i.test(raw)) return { kind: 'error', summary: _t('ai.netFailSummary') || '', message: _t('ai.netFailMsg') || '' };
+  return { kind: 'error', summary: _t('ai.reqFailSummary') || '', message: (_t('ai.reqFailMsg') || '') + raw };
 }
 
 function fmtAiUsage(u) {
@@ -9446,7 +10049,7 @@ function fmtAiUsage(u) {
 async function copyAi() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!state.ai.raw) return;
-  await copyText(state.ai.raw, _t('toast.copiedAnswer') || '已复制回答');
+  await copyText(state.ai.raw, _t('toast.copiedAnswer') || '');
 }
 
 async function applyAi() {
@@ -9460,19 +10063,19 @@ async function applyAi() {
       const cur = state.original || state.fixed || '';
       const i = sel ? cur.indexOf(sel) : -1;
       if (i >= 0) next = cur.slice(0, i) + state.ai.raw + cur.slice(i + sel.length);
-      else { showToast(_t('toast.appliedSelectionFallback') || '未定位到选中文字，已改为全文应用'); }
+      else { showToast(_t('toast.appliedSelectionFallback') || ''); }
     }
     state.original = next;
     state.fixed = next;
     exitEdit();
     await toggleEdit();
-    showToast(_t('toast.appliedSavedNotice') || '已应用，请检查后 Ctrl+S 保存（首存自动备份）');
+    showToast(_t('toast.appliedSavedNotice') || '');
   } else {
     state.fixed = state.ai.raw;
     state.original = state.ai.raw;
-    renderContent(state.ai.raw, (state.sourceName || (_t('ai.aiResult') || 'AI 结果')) + ' · AI');
+    renderContent(state.ai.raw, (state.sourceName || (_t('ai.aiResult') || '')) + ' · AI');
     updateStatus();
-    showToast(_t('toast.appliedVirtualNotice') || '已应用（虚拟文档），可另存为 .md');
+    showToast(_t('toast.appliedVirtualNotice') || '');
   }
 }
 
@@ -9483,7 +10086,7 @@ async function saveAiAs() {
   const suggested = base.replace(/\.[^.]+$/, '') + '.ai.md';
   if (hasPy) {
     const out = await py.save_as(state.ai.raw, suggested);
-    if (out) showToast((_t('toast.savedPrefix') || '已保存：') + out);
+    if (out) showToast((_t('toast.savedPrefix') || '') + out);
   } else {
     const blob = new Blob([state.ai.raw], { type: 'text/markdown;charset=utf-8' });
     const a = document.createElement('a');
@@ -10568,9 +11171,9 @@ const EXPORT_PAGES = ['A4', 'A5', 'B5', 'Letter', 'Legal'];
 function getExportPresetNames() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   return {
-    minimal: _t('export.presetMinimal') || '简约',
-    classic: _t('export.presetClassic') || '经典',
-    business: _t('export.presetBusiness') || '商务'
+    minimal: _t('export.presetMinimal') || '',
+    classic: _t('export.presetClassic') || '',
+    business: _t('export.presetBusiness') || ''
   };
 }
 
@@ -10578,30 +11181,30 @@ function getExportSections() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   return [
     /* --- EPUB 电子书专属参数 --- */
-    { title: _t('export.secEpubMeta') || '电子书元数据', fmts: ['epub'], fields: [
-      { k: 'epub.title', label: _t('export.epubTitle') || '书籍标题（留空自动使用文件名）', type: 'text', full: true },
-      { k: 'epub.author', label: _t('export.epubAuthor') || '书籍作者 / 译者', type: 'text' },
-      { k: 'epub.publisher', label: _t('export.epubPublisher') || '出版方 / 制作方', type: 'text' },
-      { k: 'epub.isbn', label: _t('export.epubIsbn') || '标准 ISBN 书号', type: 'text' },
-      { k: 'epub.language', label: _t('export.epubLanguage') || '主要语言', type: 'select', opts: [
+    { title: _t('export.secEpubMeta') || '', fmts: ['epub'], fields: [
+      { k: 'epub.title', label: _t('export.epubTitle') || '', type: 'text', full: true },
+      { k: 'epub.author', label: _t('export.epubAuthor') || '', type: 'text' },
+      { k: 'epub.publisher', label: _t('export.epubPublisher') || '', type: 'text' },
+      { k: 'epub.isbn', label: _t('export.epubIsbn') || '', type: 'text' },
+      { k: 'epub.language', label: _t('export.epubLanguage') || '', type: 'select', opts: [
         ['zh-CN', '简体中文 (zh-CN)'], ['en', 'English (en)'], ['ja', '日本語 (ja)'], ['zh-TW', '繁體中文 (zh-TW)'], ['fr', 'Français (fr)'], ['de', 'Deutsch (de)'], ['es', 'Español (es)']
       ]},
-      { k: 'epub.splitLevel', label: _t('export.epubSplitLevel') || '章节拆分策略', type: 'select', opts: [
-        ['h1', _t('export.epubSplitH1') || '按一级标题 (H1) 智能切分多章节'],
-        ['h2', _t('export.epubSplitH2') || '按一/二级标题 (H1+H2) 切分章节'],
-        ['none', _t('export.epubSplitNone') || '单章节长文档 (不切分)']
+      { k: 'epub.splitLevel', label: _t('export.epubSplitLevel') || '', type: 'select', opts: [
+        ['h1', _t('export.epubSplitH1') || ''],
+        ['h2', _t('export.epubSplitH2') || ''],
+        ['none', _t('export.epubSplitNone') || '']
       ], full: true },
     ]},
-    { title: _t('export.secEpubStyle') || '电子书阅读版式', fmts: ['epub'], fields: [
-      { k: 'epub.fontSize', label: _t('export.bodySize') || '基准字号 pt', type: 'number', min: 8, max: 24 },
-      { k: 'epub.lineHeight', label: _t('export.lineHeight') || '行高倍数', type: 'number', min: 1.2, max: 2.5, step: 0.1 },
-      { k: 'epub.marginV', label: _t('export.epubMarginV') || '垂直页边距 %', type: 'number', min: 0, max: 20 },
-      { k: 'epub.marginH', label: _t('export.epubMarginH') || '水平页边距 %', type: 'number', min: 0, max: 20 },
+    { title: _t('export.secEpubStyle') || '', fmts: ['epub'], fields: [
+      { k: 'epub.fontSize', label: _t('export.bodySize') || '', type: 'number', min: 8, max: 24 },
+      { k: 'epub.lineHeight', label: _t('export.lineHeight') || '', type: 'number', min: 1.2, max: 2.5, step: 0.1 },
+      { k: 'epub.marginV', label: _t('export.epubMarginV') || '', type: 'number', min: 0, max: 20 },
+      { k: 'epub.marginH', label: _t('export.epubMarginH') || '', type: 'number', min: 0, max: 20 },
     ]},
 
     /* --- LaTeX 学术源码专属参数 --- */
-    { title: _t('export.secLatexDoc') || 'LaTeX 学术编译与宏包', fmts: ['tex'], fields: [
-      { k: 'tex.docClass', label: _t('export.latexDocClass') || 'LaTeX 文档类', type: 'select', opts: [
+    { title: _t('export.secLatexDoc') || '', fmts: ['tex'], fields: [
+      { k: 'tex.docClass', label: _t('export.latexDocClass') || '', type: 'select', opts: [
         ['ctexart', 'ctexart'],
         ['article', 'article'],
         ['ctexrep', 'ctexrep'],
@@ -10609,88 +11212,88 @@ function getExportSections() {
         ['book', 'book'],
         ['beamer', 'beamer']
       ], full: true },
-      { k: 'tex.fontSize', label: _t('export.latexFontSize') || '排版字号', type: 'select', opts: [
+      { k: 'tex.fontSize', label: _t('export.latexFontSize') || '', type: 'select', opts: [
         ['10pt', '10pt'], ['11pt', '11pt'], ['12pt', '12pt']
       ]},
-      { k: 'tex.paperSize', label: _t('export.pageSize') || '纸张规格', type: 'select', opts: [
+      { k: 'tex.paperSize', label: _t('export.pageSize') || '', type: 'select', opts: [
         ['a4paper', 'A4'], ['letterpaper', 'US Letter']
       ]},
-      { k: 'tex.margin', label: _t('export.latexMargin') || '页面边距 (Geometry)', type: 'select', opts: [
+      { k: 'tex.margin', label: _t('export.latexMargin') || '', type: 'select', opts: [
         ['2.5cm', '2.5 cm'], ['1in', '1 in'], ['2cm', '2.0 cm'], ['3cm', '3.0 cm']
       ]},
-      { k: 'tex.bibEngine', label: _t('export.latexBibEngine') || '参考文献引擎', type: 'select', opts: [
+      { k: 'tex.bibEngine', label: _t('export.latexBibEngine') || '', type: 'select', opts: [
         ['biblatex', 'BibLaTeX'], ['natbib', 'Natbib'], ['bibtex', 'BibTeX']
       ]},
-      { k: 'tex.useCtex', label: _t('export.latexUseCtex') || '启用 CJK 中文宏包 (UTF-8 原生支持)', type: 'checkbox' },
+      { k: 'tex.useCtex', label: _t('export.latexUseCtex') || '', type: 'checkbox' },
     ]},
 
     /* --- PDF / DOCX 页面与版式 --- */
-    { title: _t('export.secPage') || '页面设置', fmts: ['pdf', 'docx'], fields: [
-      { k: 'page.size', label: _t('export.pageSize') || '纸张', type: 'select', opts: EXPORT_PAGES },
-      { k: 'page.orientation', label: _t('export.pageOrientation') || '方向', type: 'select', opts: [['portrait', _t('export.portrait') || '纵向'], ['landscape', _t('export.landscape') || '横向']] },
-      { k: 'page.marginTop', label: _t('export.marginTop') || '上边距 mm', type: 'number', min: 0, max: 60 },
-      { k: 'page.marginRight', label: _t('export.marginRight') || '右边距 mm', type: 'number', min: 0, max: 60 },
-      { k: 'page.marginBottom', label: _t('export.marginBottom') || '下边距 mm', type: 'number', min: 0, max: 60 },
-      { k: 'page.marginLeft', label: _t('export.marginLeft') || '左边距 mm', type: 'number', min: 0, max: 60 },
+    { title: _t('export.secPage') || '', fmts: ['pdf', 'docx'], fields: [
+      { k: 'page.size', label: _t('export.pageSize') || '', type: 'select', opts: EXPORT_PAGES },
+      { k: 'page.orientation', label: _t('export.pageOrientation') || '', type: 'select', opts: [['portrait', _t('export.portrait') || ''], ['landscape', _t('export.landscape') || '']] },
+      { k: 'page.marginTop', label: _t('export.marginTop') || '', type: 'number', min: 0, max: 60 },
+      { k: 'page.marginRight', label: _t('export.marginRight') || '', type: 'number', min: 0, max: 60 },
+      { k: 'page.marginBottom', label: _t('export.marginBottom') || '', type: 'number', min: 0, max: 60 },
+      { k: 'page.marginLeft', label: _t('export.marginLeft') || '', type: 'number', min: 0, max: 60 },
     ]},
-    { title: _t('export.secCoverToc') || '封面与目录', fmts: ['pdf', 'docx'], fields: [
-      { k: 'cover.enabled', label: _t('export.enableCover') || '启用封面页', type: 'checkbox' },
-      { k: 'cover.title', label: _t('export.coverTitle') || '封面标题（留空用文件名）', type: 'text', full: true },
-      { k: 'cover.subtitle', label: _t('export.coverSubtitle') || '封面副标题', type: 'text', full: true },
-      { k: 'cover.date', label: _t('export.coverDate') || '封面日期', type: 'text' },
-      { k: 'cover.align', label: _t('export.coverAlign') || '封面对齐', type: 'select', opts: [['center', _t('export.alignCenter') || '居中'], ['left', _t('export.alignLeft') || '左对齐'], ['right', _t('export.alignRight') || '右对齐']] },
-      { k: 'toc.enabled', label: _t('export.enablePdfToc') || 'PDF 目录页', type: 'checkbox', fmts: ['pdf'] },
+    { title: _t('export.secCoverToc') || '', fmts: ['pdf', 'docx'], fields: [
+      { k: 'cover.enabled', label: _t('export.enableCover') || '', type: 'checkbox' },
+      { k: 'cover.title', label: _t('export.coverTitle') || '', type: 'text', full: true },
+      { k: 'cover.subtitle', label: _t('export.coverSubtitle') || '', type: 'text', full: true },
+      { k: 'cover.date', label: _t('export.coverDate') || '', type: 'text' },
+      { k: 'cover.align', label: _t('export.coverAlign') || '', type: 'select', opts: [['center', _t('export.alignCenter') || ''], ['left', _t('export.alignLeft') || ''], ['right', _t('export.alignRight') || '']] },
+      { k: 'toc.enabled', label: _t('export.enablePdfToc') || '', type: 'checkbox', fmts: ['pdf'] },
     ]},
-    { title: _t('export.secTypography') || '正文排版', fmts: ['pdf', 'docx', 'html'], fields: [
-      { k: 'typography.font', label: _t('export.bodyFont') || '正文字体', type: 'select', opts: EXPORT_FONTS.map(f => [f, f]) },
-      { k: 'typography.size', label: _t('export.bodySize') || '字号 pt', type: 'number', min: 8, max: 20 },
-      { k: 'typography.lineHeight', label: _t('export.lineHeight') || '行距', type: 'number', min: 1, max: 2.5, step: 0.1 },
-      { k: 'typography.spacing', label: _t('export.paragraphSpacing') || '段间距 pt', type: 'number', min: 0, max: 30 },
-      { k: 'typography.color', label: _t('export.bodyColor') || '正文颜色', type: 'color' },
-      { k: 'typography.align', label: _t('export.align') || '对齐', type: 'select', opts: [['left', _t('export.alignLeft') || '左对齐'], ['center', _t('export.alignCenter') || '居中'], ['right', _t('export.alignRight') || '右对齐'], ['justify', _t('export.alignJustify') || '两端对齐']] },
+    { title: _t('export.secTypography') || '', fmts: ['pdf', 'docx', 'html'], fields: [
+      { k: 'typography.font', label: _t('export.bodyFont') || '', type: 'select', opts: EXPORT_FONTS.map(f => [f, f]) },
+      { k: 'typography.size', label: _t('export.bodySize') || '', type: 'number', min: 8, max: 20 },
+      { k: 'typography.lineHeight', label: _t('export.lineHeight') || '', type: 'number', min: 1, max: 2.5, step: 0.1 },
+      { k: 'typography.spacing', label: _t('export.paragraphSpacing') || '', type: 'number', min: 0, max: 30 },
+      { k: 'typography.color', label: _t('export.bodyColor') || '', type: 'color' },
+      { k: 'typography.align', label: _t('export.align') || '', type: 'select', opts: [['left', _t('export.alignLeft') || ''], ['center', _t('export.alignCenter') || ''], ['right', _t('export.alignRight') || ''], ['justify', _t('export.alignJustify') || '']] },
     ]},
-    { title: _t('export.secHeadings') || '标题（各级颜色 / 字号 / 加粗 / 对齐）', fmts: ['pdf', 'docx', 'html'], headingRows: true },
-    { title: _t('export.secTable') || '表格', fmts: ['pdf', 'docx', 'html'], fields: [
-      { k: 'table.headerBg', label: _t('export.tableHeaderBg') || '表头背景', type: 'color' },
-      { k: 'table.headerColor', label: _t('export.tableHeaderColor') || '表头文字色', type: 'color' },
-      { k: 'table.headerBold', label: _t('export.tableHeaderBold') || '表头加粗', type: 'checkbox' },
-      { k: 'table.borderColor', label: _t('export.tableBorderColor') || '边框颜色', type: 'color' },
-      { k: 'table.borderWidth', label: _t('export.tableBorderWidth') || '边框宽度 pt', type: 'number', min: 0, max: 3, step: 0.25 },
-      { k: 'table.banded', label: _t('export.tableBanded') || '斑马纹', type: 'checkbox' },
-      { k: 'table.bandColor', label: _t('export.tableBandColor') || '斑马纹颜色', type: 'color' },
-      { k: 'table.cellSize', label: _t('export.tableCellSize') || '单元格字号 pt', type: 'number', min: 7, max: 16 },
-      { k: 'table.cellPadding', label: _t('export.tableCellPadding') || '单元格内边距 pt', type: 'number', min: 0, max: 20 },
-      { k: 'table.align', label: _t('export.align') || '对齐', type: 'select', opts: [['left', _t('export.alignLeft') || '左对齐'], ['center', _t('export.alignCenter') || '居中'], ['right', _t('export.alignRight') || '右对齐'], ['justify', _t('export.alignJustify') || '两端对齐']] },
-      { k: 'table.widthPct', label: _t('export.tableWidthPct') || '表格宽度 %', type: 'number', min: 50, max: 100 },
+    { title: _t('export.secHeadings') || '', fmts: ['pdf', 'docx', 'html'], headingRows: true },
+    { title: _t('export.secTable') || '', fmts: ['pdf', 'docx', 'html'], fields: [
+      { k: 'table.headerBg', label: _t('export.tableHeaderBg') || '', type: 'color' },
+      { k: 'table.headerColor', label: _t('export.tableHeaderColor') || '', type: 'color' },
+      { k: 'table.headerBold', label: _t('export.tableHeaderBold') || '', type: 'checkbox' },
+      { k: 'table.borderColor', label: _t('export.tableBorderColor') || '', type: 'color' },
+      { k: 'table.borderWidth', label: _t('export.tableBorderWidth') || '', type: 'number', min: 0, max: 3, step: 0.25 },
+      { k: 'table.banded', label: _t('export.tableBanded') || '', type: 'checkbox' },
+      { k: 'table.bandColor', label: _t('export.tableBandColor') || '', type: 'color' },
+      { k: 'table.cellSize', label: _t('export.tableCellSize') || '', type: 'number', min: 7, max: 16 },
+      { k: 'table.cellPadding', label: _t('export.tableCellPadding') || '', type: 'number', min: 0, max: 20 },
+      { k: 'table.align', label: _t('export.align') || '', type: 'select', opts: [['left', _t('export.alignLeft') || ''], ['center', _t('export.alignCenter') || ''], ['right', _t('export.alignRight') || ''], ['justify', _t('export.alignJustify') || '']] },
+      { k: 'table.widthPct', label: _t('export.tableWidthPct') || '', type: 'number', min: 50, max: 100 },
     ]},
-    { title: _t('export.secCode') || '代码块', fmts: ['pdf', 'docx', 'html'], fields: [
-      { k: 'code.bg', label: _t('export.codeBg') || '背景色', type: 'color' },
-      { k: 'code.color', label: _t('export.codeColor') || '文字色', type: 'color' },
-      { k: 'code.font', label: _t('export.codeFont') || '等宽字体', type: 'select', opts: EXPORT_MONO.map(f => [f, f]) },
-      { k: 'code.size', label: _t('export.codeSize') || '字号 pt', type: 'number', min: 6, max: 16 },
-      { k: 'code.borderColor', label: _t('export.codeBorderColor') || '边框颜色', type: 'color' },
-      { k: 'code.borderWidth', label: _t('export.codeBorderWidth') || '边框宽度 pt', type: 'number', min: 0, max: 3, step: 0.25 },
-      { k: 'code.rounded', label: _t('export.codeRounded') || '圆角（HTML）', type: 'checkbox', fmts: ['html'] },
+    { title: _t('export.secCode') || '', fmts: ['pdf', 'docx', 'html'], fields: [
+      { k: 'code.bg', label: _t('export.codeBg') || '', type: 'color' },
+      { k: 'code.color', label: _t('export.codeColor') || '', type: 'color' },
+      { k: 'code.font', label: _t('export.codeFont') || '', type: 'select', opts: EXPORT_MONO.map(f => [f, f]) },
+      { k: 'code.size', label: _t('export.codeSize') || '', type: 'number', min: 6, max: 16 },
+      { k: 'code.borderColor', label: _t('export.codeBorderColor') || '', type: 'color' },
+      { k: 'code.borderWidth', label: _t('export.codeBorderWidth') || '', type: 'number', min: 0, max: 3, step: 0.25 },
+      { k: 'code.rounded', label: _t('export.codeRounded') || '', type: 'checkbox', fmts: ['html'] },
     ]},
-    { title: _t('export.secQuoteLink') || '引用与链接', fmts: ['pdf', 'docx', 'html'], fields: [
-      { k: 'quote.barColor', label: _t('export.quoteBarColor') || '引用左边条色', type: 'color' },
-      { k: 'quote.bg', label: _t('export.quoteBg') || '引用背景', type: 'color' },
-      { k: 'quote.color', label: _t('export.quoteColor') || '引用文字色', type: 'color' },
-      { k: 'link.color', label: _t('export.linkColor') || '链接颜色', type: 'color' },
-      { k: 'hr.color', label: _t('export.hrColor') || '分割线颜色', type: 'color' },
+    { title: _t('export.secQuoteLink') || '', fmts: ['pdf', 'docx', 'html'], fields: [
+      { k: 'quote.barColor', label: _t('export.quoteBarColor') || '', type: 'color' },
+      { k: 'quote.bg', label: _t('export.quoteBg') || '', type: 'color' },
+      { k: 'quote.color', label: _t('export.quoteColor') || '', type: 'color' },
+      { k: 'link.color', label: _t('export.linkColor') || '', type: 'color' },
+      { k: 'hr.color', label: _t('export.hrColor') || '', type: 'color' },
     ]},
-    { title: _t('export.secFooterMeta') || '页脚与元数据', fmts: ['pdf', 'docx'], fields: [
-      { k: 'footer.pageNumbers', label: _t('export.showPageNumbers') || '显示页码', type: 'checkbox' },
-      { k: 'footer.text', label: _t('export.footerTextLabel') || '页脚文字', type: 'text', full: true },
-      { k: 'meta.title', label: _t('export.docMetaTitle') || '文档标题（PDF 元数据）', type: 'text', full: true },
-      { k: 'meta.author', label: _t('export.metaAuthor') || '作者', type: 'text' },
-      { k: 'meta.subject', label: _t('export.metaSubject') || '主题', type: 'text' },
+    { title: _t('export.secFooterMeta') || '', fmts: ['pdf', 'docx'], fields: [
+      { k: 'footer.pageNumbers', label: _t('export.showPageNumbers') || '', type: 'checkbox' },
+      { k: 'footer.text', label: _t('export.footerTextLabel') || '', type: 'text', full: true },
+      { k: 'meta.title', label: _t('export.docMetaTitle') || '', type: 'text', full: true },
+      { k: 'meta.author', label: _t('export.metaAuthor') || '', type: 'text' },
+      { k: 'meta.subject', label: _t('export.metaSubject') || '', type: 'text' },
     ]},
-    { title: _t('export.secMath') || '数学公式', fmts: ['pdf', 'docx'], fields: [
-      { k: 'math.dpi', label: _t('export.mathDpi') || '渲染分辨率 DPI', type: 'number', min: 100, max: 500, step: 10 },
+    { title: _t('export.secMath') || '', fmts: ['pdf', 'docx'], fields: [
+      { k: 'math.dpi', label: _t('export.mathDpi') || '', type: 'number', min: 100, max: 500, step: 10 },
     ]},
-    { title: _t('export.secHtmlTheme') || 'HTML 主题', fmts: ['html'], fields: [
-      { k: 'htmlTheme', label: _t('export.htmlThemeLabel') || '页面主题', type: 'select', opts: [['light', _t('export.themeLight') || '亮色'], ['dark', _t('export.themeDark') || '暗色'], ['sepia', _t('export.themeSepia') || '米色']] },
+    { title: _t('export.secHtmlTheme') || '', fmts: ['html'], fields: [
+      { k: 'htmlTheme', label: _t('export.htmlThemeLabel') || '', type: 'select', opts: [['light', _t('export.themeLight') || ''], ['dark', _t('export.themeDark') || ''], ['sepia', _t('export.themeSepia') || '']] },
     ]},
   ];
 }
@@ -10747,14 +11350,14 @@ function openExportModal() {
   const editorContent = typeof getEditContent === 'function' ? getEditContent() : '';
   const exportContent = (state.editing ? editorContent : '') || state.original || state.fixed || '';
   if (state.mode === 'welcome' || !exportContent) {
-    showToast(_t('toast.openDocumentToUse') || '请先打开文档后再使用此操作');
+    showToast(_t('toast.openDocumentToUse') || '');
     return;
   }
-  if (!bindPy()) { showToast(_t('toast.exportBrowserNotice') || '浏览器模式请使用桌面版导出'); return; }
+  if (!bindPy()) { showToast(_t('toast.exportBrowserNotice') || ''); return; }
   if (!state.export.ready) {
     loadExportPresets().then(ok => {
       if (ok) { state.export.ready = true; renderExportModal(); }
-      else showToast(_t('toast.exportModuleLoadFail') || '导出模块加载失败');
+      else showToast(_t('toast.exportModuleLoadFail') || '');
     });
     return;
   }
@@ -10778,9 +11381,9 @@ function currentExportName() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   let n = '';
   if (state.mode === 'file' && state.file) n = state.file.split(/[\\/]/).pop();
-  else n = (state.sourceName || (_t('export.defaultExportName') || '导出')).split(/[\\/]/).pop();
+  else n = (state.sourceName || (_t('export.defaultExportName') || '')).split(/[\\/]/).pop();
   n = n.replace(/\.[^.]+$/, '');
-  return n || (_t('export.defaultExportName') || '导出');
+  return n || (_t('export.defaultExportName') || '');
 }
 
 
@@ -11288,7 +11891,7 @@ function updateExportLivePreview() {
   const opts = collectExportOptions();
   const badge = $('export-preview-badge');
   const sel = $('exp-preset');
-  const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : (_t('export.presetDefault') || '默认');
+  const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : (_t('export.presetDefault') || '');
   if (badge) badge.textContent = fmt.toUpperCase() + ' · ' + presetName;
 
   const content = currentExportContent();
@@ -11315,7 +11918,7 @@ function updateExportLivePreview() {
   if (paperMeta) {
     const page = opts.page || {};
     const sz = page.size || 'A4';
-    const ori = (page.orientation === 'landscape') ? (_t('export.orientationLandscape') || '横向') : (_t('export.orientationPortrait') || '纵向');
+    const ori = (page.orientation === 'landscape') ? (_t('export.orientationLandscape') || '') : (_t('export.orientationPortrait') || '');
     const pageText = isHtmlMode ? 'HTML Web' : (_t('reader.totalPage', { total: totalPages }) || `共 ${totalPages} 页`);
     paperMeta.textContent = `${sz} · ${ori} · ${pageText} · ${presetName}`;
   }
@@ -11410,9 +12013,9 @@ function renderExportSections() {
         row.className = 'exp-field full exp-h-row';
         row.innerHTML =
           '<label>H' + i + '</label>' +
-          '<input type="number" data-k="headings.h' + i + '.size" min="8" max="40" title="' + (_t('export.bodySize') || '字号') + '">' +
-          '<input type="color" data-k="headings.h' + i + '.color" title="' + (_t('export.bodyColor') || '颜色') + '">' +
-          '<label class="exp-check">' + (_t('export.bold') || '加粗') + '<input type="checkbox" data-k="headings.h' + i + '.bold"></label>' +
+          '<input type="number" data-k="headings.h' + i + '.size" min="8" max="40" title="' + (_t('export.bodySize') || '') + '">' +
+          '<input type="color" data-k="headings.h' + i + '.color" title="' + (_t('export.bodyColor') || '') + '">' +
+          '<label class="exp-check">' + (_t('export.bold') || '') + '<input type="checkbox" data-k="headings.h' + i + '.bold"></label>' +
           '<select data-k="headings.h' + i + '.align">' + EXPORT_ALIGNS.map(a => '<option value="' + a + '">' + a + '</option>').join('') + '</select>';
         body.appendChild(row);
       }
@@ -11518,7 +12121,7 @@ function renderExportPresetSelect() {
   sel.textContent = '';
   const presetNames = getExportPresetNames();
   const names = Object.keys(state.export.presets || {}).concat(Object.keys(state.export.custom || {}));
-  sel.appendChild(new Option(_t('export.presetCustom') || '自定义', '__custom__'));
+  sel.appendChild(new Option(_t('export.presetCustom') || '', '__custom__'));
   names.forEach(n => {
     sel.appendChild(new Option(presetNames[n] || n, n));
   });
@@ -11576,16 +12179,16 @@ async function runExport() {
       r = await py.export_doc(fmt, payload);
     }
   } catch (e) {
-    showToast((_t('toast.exportFailed') || '导出失败：') + e.message);
+    showToast((_t('toast.exportFailed') || '') + e.message);
     busy(false);
     return;
   }
   busy(false);
-  if (!r) { showToast(_t('toast.exportFailedSimple') || '导出失败'); return; }
+  if (!r) { showToast(_t('toast.exportFailedSimple') || ''); return; }
   if (r.canceled) return;
-  if (!r.ok) { showToast((_t('toast.exportFailed') || '导出失败：') + (r.error || (_t('toast.unknownError') || '未知错误'))); return; }
+  if (!r.ok) { showToast((_t('toast.exportFailed') || '') + (r.error || (_t('toast.unknownError') || ''))); return; }
   const res = $('export-result');
-  res.textContent = (_t('toast.exportedPrefix') || '已导出：') + (r.path || '导出完成');
+  res.textContent = (_t('toast.exportedPrefix') || '') + (r.path || '导出完成');
   res.className = 'export-result ok';
   if (r.path && hasPy && py) {
     $('export-open').classList.remove('hidden');
@@ -11595,7 +12198,7 @@ async function runExport() {
   }
   try { if (hasPy && py.save_export_presets) py.save_export_presets({ last: { fmt: fmt, options: options } }); } catch (e) { /* ignore */ }
   if (r.warns && r.warns.length) showToast(_t('toast.exportCompleteWarns', { count: r.warns.length }) || ('导出完成，' + r.warns.length + ' 条提示'));
-  else showToast(_t('toast.exportSuccess') || '导出成功');
+  else showToast(_t('toast.exportSuccess') || '');
 }
 
 async function expSavePreset() {
@@ -11607,10 +12210,10 @@ async function expSavePreset() {
   input.focus();
   $('exp-save-ok').onclick = async () => {
     const name = input.value.trim();
-    if (!name) { showToast(_t('toast.enterPresetName') || '请输入预设名称'); return; }
+    if (!name) { showToast(_t('toast.enterPresetName') || ''); return; }
     const presetNames = getExportPresetNames();
     if (presetNames[name] || (state.export.presets && state.export.presets[name])) {
-      showToast(_t('toast.presetNameConflict') || '名称与内置预设冲突');
+      showToast(_t('toast.presetNameConflict') || '');
       return;
     }
     state.export.custom[name] = collectExportOptions();
@@ -11641,22 +12244,22 @@ function initExportAiDesigner() {
 async function generateExportStyleWithAi(stylePrompt) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!stylePrompt) {
-    showToast(_t('exportai.placeholder') || '请输入排版风格描述');
+    showToast(_t('exportai.placeholder') || '');
     return;
   }
   const statusEl = $('exp-ai-status');
   if (statusEl) {
     statusEl.classList.remove('hidden');
-    statusEl.textContent = _t('exportai.generating') || '正在分析并设计排版参数...';
+    statusEl.textContent = _t('exportai.generating') || '';
   }
 
   try {
-    const connection = typeof resolveSharedAiConnection === 'function'
-      ? await resolveSharedAiConnection()
-      : null;
-    if (!connection) throw new Error(_t('toast.selectProviderFirst') || '请先选择 AI 提供商');
-    if (!connection.local && !connection.has_key) {
-      throw new Error(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接');
+    const connection = typeof ensureAiConfigured === 'function'
+      ? await ensureAiConfigured()
+      : (typeof resolveSharedAiConnection === 'function' ? await resolveSharedAiConnection() : null);
+    if (!connection) {
+      if (statusEl) statusEl.textContent = _t('toast.noApiKeyNotice');
+      return;
     }
     const res = await apiFetch('/api/ai/chat', {
       method: 'POST',
@@ -11728,15 +12331,15 @@ async function generateExportStyleWithAi(stylePrompt) {
     updateExportLivePreview();
 
     if (statusEl) {
-      statusEl.textContent = _t('exportai.applied') || '已应用 AI 生成的排版样式预设';
+      statusEl.textContent = _t('exportai.applied') || '';
       setTimeout(() => statusEl.classList.add('hidden'), 3000);
     }
-    showToast(_t('exportai.applied') || '已应用 AI 生成的排版样式预设');
+    showToast(_t('exportai.applied') || '');
   } catch (e) {
     if (statusEl) {
-      statusEl.textContent = (_t('ai.reqFailMsg') || 'AI 请求失败：') + e.message;
+      statusEl.textContent = (_t('ai.reqFailMsg') || '') + e.message;
     }
-    showToast((_t('toast.unknownError') || '生成失败：') + e.message);
+    showToast((_t('toast.unknownError') || '') + e.message);
   }
 }
 
@@ -12176,6 +12779,7 @@ function bindEvents() {
   if ($('doc-import-modal-close')) $('doc-import-modal-close').addEventListener('click', closeDocImportModal);
   if ($('doc-import-cancel')) $('doc-import-cancel').addEventListener('click', closeDocImportModal);
   if ($('doc-import-insert')) $('doc-import-insert').addEventListener('click', insertDocImportFromModal);
+  if ($('doc-import-browse')) $('doc-import-browse').addEventListener('click', browseDocImportFile);
   if ($('doc-import-modal')) $('doc-import-modal').addEventListener('click', e => { if (e.target === $('doc-import-modal')) closeDocImportModal(); });
 
   // Toast 提示点击（用于升级跳转等场景）
@@ -12549,6 +13153,8 @@ function bindEvents() {
   $('tpl-save').addEventListener('click', saveTplForm);
   $('tpl-ai-generate') && $('tpl-ai-generate').addEventListener('click', generateSkillDraft);
   $('tpl-publish') && $('tpl-publish').addEventListener('click', publishCurrentSkill);
+  $('tpl-toggle') && $('tpl-toggle').addEventListener('click', toggleCurrentSkillEnabled);
+  $('tpl-export-one') && $('tpl-export-one').addEventListener('click', exportCurrentSkill);
   $('tpl-del').addEventListener('click', deleteCurrentTpl);
   $('tpl-close').addEventListener('click', () => $('tpl-modal').classList.add('hidden'));
   $('ai-session').addEventListener('change', onAiSessionChange);
@@ -12674,7 +13280,7 @@ function bindEvents() {
     textarea.value += snippet;
     textarea.focus();
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-    showToast(_t('toast.stylePresetAdded') || '已添加排版模板', 1000);
+    showToast(_t('toast.stylePresetAdded') || '', 1000);
   }
 
   if ($('btn-preset-indent')) $('btn-preset-indent').addEventListener('click', () => insertStylePreset('indent'));
@@ -12848,8 +13454,8 @@ function bindEvents() {
       if ($('side') && !$('side').classList.contains('hidden')) $('side').classList.add('hidden');
       if ($('table-modal')) closeTableModal();
       closeFormulaModal(); closeMdPopups();
-      stopConvertPoll();
-      stopBatchPoll();
+      if (typeof stopConvertPoll === 'function') stopConvertPoll();
+      if (typeof stopBatchPoll === 'function') stopBatchPoll();
       if (document.body.classList.contains('zen-mode')) toggleZenMode(false);
       if (state.editing) confirmExitEdit();
     }

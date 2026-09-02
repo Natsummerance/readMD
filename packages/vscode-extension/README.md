@@ -1,4 +1,4 @@
-# ReadMD for VS Code · V2.3.7
+# ReadMD for VS Code · V2.3.8 Preview 1
 
 ReadMD for VS Code 是桌面 ReadMD 的编辑器入口：在 VS Code、Cursor 和兼容的 Extension Host 中复用同一个本地 Core Service，提供 Markdown 预览、修复、转换、AI/Skills 与导出能力。扩展不会把文档上传到 ReadMD；AI、网页抓取和 GitHub Skill 导入是否联网，取决于你主动启用的 Provider 或操作。
 
@@ -6,12 +6,12 @@ ReadMD for VS Code is the editor front end for the ReadMD desktop app. It connec
 
 ## 安装 / Installation
 
-1. 在 Releases 下载与 VS Code 版本匹配的 `readmd-vscode-2.3.7.vsix`，打开命令面板执行 **Extensions: Install from VSIX...**。
+1. 在 Releases 下载与 VS Code 版本匹配的 `readmd-vscode-2.3.8-preview.1.vsix`，打开命令面板执行 **Extensions: Install from VSIX...**。
 2. 重载窗口（Developer: Reload Window），打开一个 `.md` 文件。
 3. 第一次运行任意 ReadMD 命令时，扩展会自动启动本地 Core；也可以在设置中填写已有 Core 地址。
 4. 卸载前先关闭 ReadMD 视图。卸载扩展不会删除文档或凭据；要清除数据，请在桌面应用的设置中执行数据清理。
 
-Install the matching `readmd-vscode-2.3.7.vsix` from Releases with **Extensions: Install from VSIX...**, reload the window, and open a Markdown file. The extension starts the bundled local Core on first use, or can connect to an existing Core configured in Settings. Uninstalling the extension does not delete documents or credentials.
+Install the matching `readmd-vscode-2.3.8-preview.1.vsix` from Releases with **Extensions: Install from VSIX...**, reload the window, and open a Markdown file. The extension starts the bundled local Core on first use, or can connect to an existing Core configured in Settings. Uninstalling the extension does not delete documents or credentials.
 
 ## 22 个命令 / Command reference
 

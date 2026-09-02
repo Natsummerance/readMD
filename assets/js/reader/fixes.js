@@ -34,18 +34,16 @@ async function handleAiDocumentFix() {
     return;
   }
 
+  const connection = typeof ensureAiConfigured === 'function'
+    ? await ensureAiConfigured()
+    : (typeof resolveSharedAiConnection === 'function' ? await resolveSharedAiConnection() : null);
+  if (!connection) return;
+
   const fixModal = $('fix-modal');
   if (fixModal) fixModal.classList.add('hidden');
   showToast(_t('fixes.aiFixing') || '正在进行 AI 深度格式排版自愈...', 2500);
 
   try {
-    const connection = typeof resolveSharedAiConnection === 'function'
-      ? await resolveSharedAiConnection()
-      : null;
-    if (!connection) throw new Error(_t('toast.selectProviderFirst') || '请先选择 AI 提供商');
-    if (!connection.local && !connection.has_key) {
-      throw new Error(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接');
-    }
     const resp = await apiFetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

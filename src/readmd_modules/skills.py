@@ -121,10 +121,12 @@ class SkillRegistry:
             if root.exists() and not root.is_dir():
                 raise SkillError(f"Skill root is not a directory: {root}")
         self._skills: Dict[str, Skill] = {}
+        self._all_skills: Dict[str, Skill] = {}
         self.reload()
 
     def reload(self) -> None:
         self._skills.clear()
+        self._all_skills.clear()
         for index, root in enumerate(self.roots):
             if not root.is_dir():
                 continue
@@ -136,12 +138,21 @@ class SkillRegistry:
                     skill = load_skill(folder, scope, root)
                 except SkillError:
                     continue
+                # Keep disabled drafts discoverable for the workbench without
+                # making them executable.  ``_skills`` remains the runtime
+                # index; ``_all_skills`` is only used by the read-only list
+                # view so a license-gated import is not silently lost.
+                self._all_skills[skill.id] = skill
                 if skill.metadata.get("enabled") is False:
+                    # A higher-precedence disabled Skill intentionally masks
+                    # a lower-precedence implementation with the same id.
+                    self._skills.pop(skill.id, None)
                     continue
                 self._skills[skill.id] = skill
 
-    def list(self) -> List[Skill]:
-        return sorted(self._skills.values(), key=lambda item: item.id)
+    def list(self, include_disabled: bool = False) -> List[Skill]:
+        values = self._all_skills.values() if include_disabled else self._skills.values()
+        return sorted(values, key=lambda item: item.id)
 
     def get(self, skill_id: str) -> Optional[Skill]:
         return self._skills.get(str(skill_id or "").strip())
@@ -156,7 +167,8 @@ class SkillRegistry:
             raise SkillError("missing required Skill variables: " + ", ".join(missing))
         rendered = skill.instructions
         for name in skill.variables:
-            rendered = re.sub(r"\{\{\s*" + re.escape(name) + r"\s*\}\}", str(variables.get(name, "")), rendered)
+            value = str(variables.get(name, ""))
+            rendered = re.sub(r"\{\{\s*" + re.escape(name) + r"\s*\}\}", lambda m: value, rendered)
         return rendered.strip()
 
     def validate(self, folder: os.PathLike[str] | str) -> Skill:

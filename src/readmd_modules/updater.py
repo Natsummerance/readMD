@@ -55,6 +55,7 @@ _download_state = {
     'percent': 0,
     'status': 'idle',  # idle | downloading | verifying | ready | error | cancelled
     'error': '',
+    'error_code': '',
     'target_file': '',
     'cancel_requested': False,
     'asset_name': '',
@@ -264,7 +265,7 @@ def check_update(current_version, timeout=4):
     """请求 GitHub API 获取最新 Release 信息（支持国内加速镜像自动降级），并返回更新详情。"""
     data = None
     urls_to_try = _release_check_urls(current_version)
-    last_err = ''
+    last_error_code = ''
     for url in urls_to_try:
         try:
             payload = _fetch_release_json(url, timeout=timeout)
@@ -273,11 +274,14 @@ def check_update(current_version, timeout=4):
             if data and data.get('tag_name'):
                 break
         except Exception as e:
-            last_err = str(e)
+            # Keep provider/network details in logs only.  The UI receives a
+            # stable code and supplies the localized wording.
+            logging.debug('release check attempt failed: %s', e)
+            last_error_code = 'update_network_error'
             continue
 
     if not data:
-        return {'ok': False, 'error': last_err or '无法连接到更新服务器，请检查网络'}
+        return {'ok': False, 'error_code': last_error_code or 'update_check_failed'}
 
     try:
         latest_tag = data.get('tag_name', '')
@@ -311,7 +315,7 @@ def check_update(current_version, timeout=4):
         }
     except Exception as e:
         logging.warning('Check update parse failed: %s', e)
-        return {'ok': False, 'error': str(e)}
+        return {'ok': False, 'error_code': 'update_response_invalid'}
 
 
 
@@ -397,8 +401,10 @@ def download_asset_thread(download_url, target_filename, expected_sha=None, use_
             os.path.dirname(save_path), f'.{os.path.basename(save_path)}.{uuid.uuid4().hex}.part'
         )
     except Exception as e:
+        logging.exception('Preparing update target failed: %s', e)
         with _download_lock:
-            _download_state.update({'status': 'error', 'error': str(e), 'running': False})
+            _download_state.update({'status': 'error', 'error': '',
+                                    'error_code': 'update_target_invalid', 'running': False})
         return
 
     with _download_lock:
@@ -410,6 +416,8 @@ def download_asset_thread(download_url, target_filename, expected_sha=None, use_
             'percent': 0,
             'status': 'downloading',
             'error': '',
+            'error_code': '',
+            'error_code': '',
             'target_file': save_path,
             'asset_name': os.path.basename(save_path),
             'expected_sha': str(expected_sha).lower(),
@@ -502,7 +510,8 @@ def download_asset_thread(download_url, target_filename, expected_sha=None, use_
             pass
         with _download_lock:
             _download_state['status'] = 'error'
-            _download_state['error'] = str(e)
+            _download_state['error'] = ''
+            _download_state['error_code'] = 'update_download_failed'
             _download_state['running'] = False
             _download_state['target_file'] = ''
             _download_state['expected_sha'] = ''
@@ -638,4 +647,4 @@ del "%~f0"
             return False, '当前平台暂不支持自动替换，请手动解压运行'
     except Exception as e:
         logging.exception('Apply update failed: %s', e)
-        return False, str(e)
+        return False, 'update_apply_failed'

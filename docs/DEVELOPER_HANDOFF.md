@@ -1,15 +1,15 @@
-# ReadMD V2.3.7 开发交接与技术架构全景文档 (Developer Handoff)
+# ReadMD V2.3.8 开发交接与技术架构全景文档 (Developer Handoff)
 
 ## 📌 1. 项目基础信息
 
 - **项目名称**：ReadMD (高性能本地 Markdown 智能阅读与排版套件)
-- **当前候选版本**：`v2.3.7`（本地 RC；正式发布仍受原生平台证据、签名和启动门禁约束）
+- **当前候选版本**：`v2.3.8-preview.1`（隔离分支 Preview；正式发布仍受原生平台证据、签名和启动门禁约束）
 - **代码仓库结构**：
   ```
   readmd/
   ├── src/
   │   ├── readmd_core/          # 核心调度与基础架构 (配置/自愈引擎/TOC/SourceMap/CSS注入)
-  │   │   ├── config.py         # 全局配置与版本号定义 (VERSION = '2.3.4')
+  │   │   ├── config.py         # 全局配置与版本号定义（由 VERSION 文件同步生成）
   │   │   ├── readmd_fix.py     # 格式自愈与纠错管道
   │   │   ├── toc_engine.py     # [TOC] 目录树解析与原地自愈
   │   │   ├── source_map.py     # AST 行号映射与双锚点插值同步
@@ -39,12 +39,12 @@
   │   │   │   ├── bridge.ts          # VSCode ⇄ Python/MCP 通信网桥
   │   │   │   ├── sidebarProvider.ts # 侧边栏快捷工具箱
   │   │   │   └── pythonFinder.ts    # 虚拟环境与 Python 自动侦测
-  │   │   └── package.json       # 扩展清单 (v2.3.7)
+  │   │   └── package.json       # 扩展清单 (v2.3.8-preview.1)
   │   └── harmonyos-app/        # HarmonyOS NEXT 纯血鸿蒙应用源码
   ├── assets/
   │   ├── i18n/                 # 46 国多语言本地化字典 (100.0% 词条对齐)
   │   └── vendor/               # 离线前端核心库 (Marked, KaTeX, Reveal.js 等)
-  ├── tests/                    # 全仓 312+ 项自动化测试套件
+  ├── tests/                    # 全仓 pytest 自动化测试套件
   │   ├── test_extreme_stress_scenarios.py  # 6 大极限压力与多语言测试
   │   ├── test_integration_full_pipeline.py # 全链路复合文档端到端测试
   │   ├── test_mcp_server.py                # 15 项 MCP 工具调度测试
@@ -61,7 +61,7 @@
 
 ### 2.1 运行全量测试套件 (CI/CD Quality Gate)
 ```bash
-# 执行全仓 312+ 项单元测试与集成测试
+# 执行全仓 pytest 单元测试与集成测试
 python -m unittest discover -s tests -p "test_*.py"
 
 # 执行核心功能与环境自检
@@ -79,7 +79,7 @@ python tools/privacy_scan.py
 cd packages/vscode-extension
 npm run compile
 npx @vscode/vsce package --no-dependencies
-# 生成文件位置：packages/vscode-extension/readmd-vscode-2.3.4.vsix
+# 生成文件位置：packages/vscode-extension/readmd-vscode-2.3.8-preview.1.vsix
 ```
 
 ### 2.3 运行桌面客户端与 MCP 服务

@@ -62,9 +62,9 @@ ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，�
 
 如果它帮你省下一次整理时间，请 [点 Star](https://github.com/Natsummerance/readMD)，让更多写作者找到这个项目。
 
-## 正式下载矩阵 (Release Assets)
+## 候选下载矩阵 (Preview Release Assets)
 
-本矩阵只列正式版承诺的平台。Windows 7 仅提供单独的遗留运行时构建，不与 Windows 10/11 安装包混装；HarmonyOS/OpenHarmony 及未完成实机验收的架构不属于 V2.3.7 正式支持。
+本矩阵只列当前候选的交付目标，不等同于正式支持承诺。Windows 7 仅提供单独的遗留运行时构建，不与 Windows 10/11 安装包混装；HarmonyOS/OpenHarmony 及未完成实机验收的架构不属于 V2.3.8 支持范围。
 
 | 操作系统 / 平台 | 架构 / 格式 | 直接下载链接 (GitHub Release) | 说明 |
 | :--- | :--- | :--- | :--- |
@@ -210,14 +210,14 @@ readmd/
 
 ---
 
-## 更新日志 (v2.3.7)
+## 更新日志 (v2.3.8-preview.1)
 
 - **46 语种全量母语化与机翻清洗**：深入审核 42 个非中英文语言字典，消除波兰语混淆、西部之塔、农作物裁剪等全部系统性翻译错误，实现 100% 完整覆盖。
-- **Linux 与信创国产系统适配**：新增 `linux_native.py` 原生模块；V2.3.7 的正式支持只覆盖矩阵中有实机证据的 Ubuntu、Debian、UOS、银河麒麟和 Deepin 架构。
+- **Linux 与信创国产系统适配**：新增 `linux_native.py` 原生模块；正式支持只覆盖矩阵中有实机证据的 Ubuntu、Debian、UOS、银河麒麟和 Deepin 架构。
 - **离线来源与 Skills**：上游原文、许可证和适配元数据随包提供，AI 指令统一从 Skills 加载。
 - **LaTeX PRO 学术论文套件**：零配置 `.bib` 参考文献浮动卡片、学术 Callout 盒子与 LaTeX 导出。
 - **Editor Studio PRO 体验重塑**：Zen 禅模式全屏专注、10×10 表格设计器、Excel 智能转换。
-- **VSCode 插件与 MCP Server 生态完善**：升级至 v2.3.7，提供稳定的多端 AI 写作协作流。
+- **VSCode 插件与 MCP Server 生态完善**：升级至 v2.3.8，提供多端 AI 写作协作流。
 
 ---
 

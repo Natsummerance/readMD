@@ -41,6 +41,11 @@ class TestTikZRendering(unittest.TestCase):
         self.assertIn('\\begin{tikzpicture}', node)
         self.assertIn('\\end{tikzpicture}', node)
 
+    def test_format_tikz_does_not_allow_script_termination(self):
+        node = format_tikz_html('\\draw (0,0) -- (1,1); </script><img src=x onerror=alert(1)>')
+        self.assertNotIn('</script><img', node.lower())
+        self.assertIn('<\\/script>', node.lower())
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -13,9 +13,9 @@ const EXPORT_PAGES = ['A4', 'A5', 'B5', 'Letter', 'Legal'];
 function getExportPresetNames() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   return {
-    minimal: _t('export.presetMinimal') || '简约',
-    classic: _t('export.presetClassic') || '经典',
-    business: _t('export.presetBusiness') || '商务'
+    minimal: _t('export.presetMinimal') || '',
+    classic: _t('export.presetClassic') || '',
+    business: _t('export.presetBusiness') || ''
   };
 }
 
@@ -23,30 +23,30 @@ function getExportSections() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   return [
     /* --- EPUB 电子书专属参数 --- */
-    { title: _t('export.secEpubMeta') || '电子书元数据', fmts: ['epub'], fields: [
-      { k: 'epub.title', label: _t('export.epubTitle') || '书籍标题（留空自动使用文件名）', type: 'text', full: true },
-      { k: 'epub.author', label: _t('export.epubAuthor') || '书籍作者 / 译者', type: 'text' },
-      { k: 'epub.publisher', label: _t('export.epubPublisher') || '出版方 / 制作方', type: 'text' },
-      { k: 'epub.isbn', label: _t('export.epubIsbn') || '标准 ISBN 书号', type: 'text' },
-      { k: 'epub.language', label: _t('export.epubLanguage') || '主要语言', type: 'select', opts: [
+    { title: _t('export.secEpubMeta') || '', fmts: ['epub'], fields: [
+      { k: 'epub.title', label: _t('export.epubTitle') || '', type: 'text', full: true },
+      { k: 'epub.author', label: _t('export.epubAuthor') || '', type: 'text' },
+      { k: 'epub.publisher', label: _t('export.epubPublisher') || '', type: 'text' },
+      { k: 'epub.isbn', label: _t('export.epubIsbn') || '', type: 'text' },
+      { k: 'epub.language', label: _t('export.epubLanguage') || '', type: 'select', opts: [
         ['zh-CN', '简体中文 (zh-CN)'], ['en', 'English (en)'], ['ja', '日本語 (ja)'], ['zh-TW', '繁體中文 (zh-TW)'], ['fr', 'Français (fr)'], ['de', 'Deutsch (de)'], ['es', 'Español (es)']
       ]},
-      { k: 'epub.splitLevel', label: _t('export.epubSplitLevel') || '章节拆分策略', type: 'select', opts: [
-        ['h1', _t('export.epubSplitH1') || '按一级标题 (H1) 智能切分多章节'],
-        ['h2', _t('export.epubSplitH2') || '按一/二级标题 (H1+H2) 切分章节'],
-        ['none', _t('export.epubSplitNone') || '单章节长文档 (不切分)']
+      { k: 'epub.splitLevel', label: _t('export.epubSplitLevel') || '', type: 'select', opts: [
+        ['h1', _t('export.epubSplitH1') || ''],
+        ['h2', _t('export.epubSplitH2') || ''],
+        ['none', _t('export.epubSplitNone') || '']
       ], full: true },
     ]},
-    { title: _t('export.secEpubStyle') || '电子书阅读版式', fmts: ['epub'], fields: [
-      { k: 'epub.fontSize', label: _t('export.bodySize') || '基准字号 pt', type: 'number', min: 8, max: 24 },
-      { k: 'epub.lineHeight', label: _t('export.lineHeight') || '行高倍数', type: 'number', min: 1.2, max: 2.5, step: 0.1 },
-      { k: 'epub.marginV', label: _t('export.epubMarginV') || '垂直页边距 %', type: 'number', min: 0, max: 20 },
-      { k: 'epub.marginH', label: _t('export.epubMarginH') || '水平页边距 %', type: 'number', min: 0, max: 20 },
+    { title: _t('export.secEpubStyle') || '', fmts: ['epub'], fields: [
+      { k: 'epub.fontSize', label: _t('export.bodySize') || '', type: 'number', min: 8, max: 24 },
+      { k: 'epub.lineHeight', label: _t('export.lineHeight') || '', type: 'number', min: 1.2, max: 2.5, step: 0.1 },
+      { k: 'epub.marginV', label: _t('export.epubMarginV') || '', type: 'number', min: 0, max: 20 },
+      { k: 'epub.marginH', label: _t('export.epubMarginH') || '', type: 'number', min: 0, max: 20 },
     ]},
 
     /* --- LaTeX 学术源码专属参数 --- */
-    { title: _t('export.secLatexDoc') || 'LaTeX 学术编译与宏包', fmts: ['tex'], fields: [
-      { k: 'tex.docClass', label: _t('export.latexDocClass') || 'LaTeX 文档类', type: 'select', opts: [
+    { title: _t('export.secLatexDoc') || '', fmts: ['tex'], fields: [
+      { k: 'tex.docClass', label: _t('export.latexDocClass') || '', type: 'select', opts: [
         ['ctexart', 'ctexart'],
         ['article', 'article'],
         ['ctexrep', 'ctexrep'],
@@ -54,88 +54,88 @@ function getExportSections() {
         ['book', 'book'],
         ['beamer', 'beamer']
       ], full: true },
-      { k: 'tex.fontSize', label: _t('export.latexFontSize') || '排版字号', type: 'select', opts: [
+      { k: 'tex.fontSize', label: _t('export.latexFontSize') || '', type: 'select', opts: [
         ['10pt', '10pt'], ['11pt', '11pt'], ['12pt', '12pt']
       ]},
-      { k: 'tex.paperSize', label: _t('export.pageSize') || '纸张规格', type: 'select', opts: [
+      { k: 'tex.paperSize', label: _t('export.pageSize') || '', type: 'select', opts: [
         ['a4paper', 'A4'], ['letterpaper', 'US Letter']
       ]},
-      { k: 'tex.margin', label: _t('export.latexMargin') || '页面边距 (Geometry)', type: 'select', opts: [
+      { k: 'tex.margin', label: _t('export.latexMargin') || '', type: 'select', opts: [
         ['2.5cm', '2.5 cm'], ['1in', '1 in'], ['2cm', '2.0 cm'], ['3cm', '3.0 cm']
       ]},
-      { k: 'tex.bibEngine', label: _t('export.latexBibEngine') || '参考文献引擎', type: 'select', opts: [
+      { k: 'tex.bibEngine', label: _t('export.latexBibEngine') || '', type: 'select', opts: [
         ['biblatex', 'BibLaTeX'], ['natbib', 'Natbib'], ['bibtex', 'BibTeX']
       ]},
-      { k: 'tex.useCtex', label: _t('export.latexUseCtex') || '启用 CJK 中文宏包 (UTF-8 原生支持)', type: 'checkbox' },
+      { k: 'tex.useCtex', label: _t('export.latexUseCtex') || '', type: 'checkbox' },
     ]},
 
     /* --- PDF / DOCX 页面与版式 --- */
-    { title: _t('export.secPage') || '页面设置', fmts: ['pdf', 'docx'], fields: [
-      { k: 'page.size', label: _t('export.pageSize') || '纸张', type: 'select', opts: EXPORT_PAGES },
-      { k: 'page.orientation', label: _t('export.pageOrientation') || '方向', type: 'select', opts: [['portrait', _t('export.portrait') || '纵向'], ['landscape', _t('export.landscape') || '横向']] },
-      { k: 'page.marginTop', label: _t('export.marginTop') || '上边距 mm', type: 'number', min: 0, max: 60 },
-      { k: 'page.marginRight', label: _t('export.marginRight') || '右边距 mm', type: 'number', min: 0, max: 60 },
-      { k: 'page.marginBottom', label: _t('export.marginBottom') || '下边距 mm', type: 'number', min: 0, max: 60 },
-      { k: 'page.marginLeft', label: _t('export.marginLeft') || '左边距 mm', type: 'number', min: 0, max: 60 },
+    { title: _t('export.secPage') || '', fmts: ['pdf', 'docx'], fields: [
+      { k: 'page.size', label: _t('export.pageSize') || '', type: 'select', opts: EXPORT_PAGES },
+      { k: 'page.orientation', label: _t('export.pageOrientation') || '', type: 'select', opts: [['portrait', _t('export.portrait') || ''], ['landscape', _t('export.landscape') || '']] },
+      { k: 'page.marginTop', label: _t('export.marginTop') || '', type: 'number', min: 0, max: 60 },
+      { k: 'page.marginRight', label: _t('export.marginRight') || '', type: 'number', min: 0, max: 60 },
+      { k: 'page.marginBottom', label: _t('export.marginBottom') || '', type: 'number', min: 0, max: 60 },
+      { k: 'page.marginLeft', label: _t('export.marginLeft') || '', type: 'number', min: 0, max: 60 },
     ]},
-    { title: _t('export.secCoverToc') || '封面与目录', fmts: ['pdf', 'docx'], fields: [
-      { k: 'cover.enabled', label: _t('export.enableCover') || '启用封面页', type: 'checkbox' },
-      { k: 'cover.title', label: _t('export.coverTitle') || '封面标题（留空用文件名）', type: 'text', full: true },
-      { k: 'cover.subtitle', label: _t('export.coverSubtitle') || '封面副标题', type: 'text', full: true },
-      { k: 'cover.date', label: _t('export.coverDate') || '封面日期', type: 'text' },
-      { k: 'cover.align', label: _t('export.coverAlign') || '封面对齐', type: 'select', opts: [['center', _t('export.alignCenter') || '居中'], ['left', _t('export.alignLeft') || '左对齐'], ['right', _t('export.alignRight') || '右对齐']] },
-      { k: 'toc.enabled', label: _t('export.enablePdfToc') || 'PDF 目录页', type: 'checkbox', fmts: ['pdf'] },
+    { title: _t('export.secCoverToc') || '', fmts: ['pdf', 'docx'], fields: [
+      { k: 'cover.enabled', label: _t('export.enableCover') || '', type: 'checkbox' },
+      { k: 'cover.title', label: _t('export.coverTitle') || '', type: 'text', full: true },
+      { k: 'cover.subtitle', label: _t('export.coverSubtitle') || '', type: 'text', full: true },
+      { k: 'cover.date', label: _t('export.coverDate') || '', type: 'text' },
+      { k: 'cover.align', label: _t('export.coverAlign') || '', type: 'select', opts: [['center', _t('export.alignCenter') || ''], ['left', _t('export.alignLeft') || ''], ['right', _t('export.alignRight') || '']] },
+      { k: 'toc.enabled', label: _t('export.enablePdfToc') || '', type: 'checkbox', fmts: ['pdf'] },
     ]},
-    { title: _t('export.secTypography') || '正文排版', fmts: ['pdf', 'docx', 'html'], fields: [
-      { k: 'typography.font', label: _t('export.bodyFont') || '正文字体', type: 'select', opts: EXPORT_FONTS.map(f => [f, f]) },
-      { k: 'typography.size', label: _t('export.bodySize') || '字号 pt', type: 'number', min: 8, max: 20 },
-      { k: 'typography.lineHeight', label: _t('export.lineHeight') || '行距', type: 'number', min: 1, max: 2.5, step: 0.1 },
-      { k: 'typography.spacing', label: _t('export.paragraphSpacing') || '段间距 pt', type: 'number', min: 0, max: 30 },
-      { k: 'typography.color', label: _t('export.bodyColor') || '正文颜色', type: 'color' },
-      { k: 'typography.align', label: _t('export.align') || '对齐', type: 'select', opts: [['left', _t('export.alignLeft') || '左对齐'], ['center', _t('export.alignCenter') || '居中'], ['right', _t('export.alignRight') || '右对齐'], ['justify', _t('export.alignJustify') || '两端对齐']] },
+    { title: _t('export.secTypography') || '', fmts: ['pdf', 'docx', 'html'], fields: [
+      { k: 'typography.font', label: _t('export.bodyFont') || '', type: 'select', opts: EXPORT_FONTS.map(f => [f, f]) },
+      { k: 'typography.size', label: _t('export.bodySize') || '', type: 'number', min: 8, max: 20 },
+      { k: 'typography.lineHeight', label: _t('export.lineHeight') || '', type: 'number', min: 1, max: 2.5, step: 0.1 },
+      { k: 'typography.spacing', label: _t('export.paragraphSpacing') || '', type: 'number', min: 0, max: 30 },
+      { k: 'typography.color', label: _t('export.bodyColor') || '', type: 'color' },
+      { k: 'typography.align', label: _t('export.align') || '', type: 'select', opts: [['left', _t('export.alignLeft') || ''], ['center', _t('export.alignCenter') || ''], ['right', _t('export.alignRight') || ''], ['justify', _t('export.alignJustify') || '']] },
     ]},
-    { title: _t('export.secHeadings') || '标题（各级颜色 / 字号 / 加粗 / 对齐）', fmts: ['pdf', 'docx', 'html'], headingRows: true },
-    { title: _t('export.secTable') || '表格', fmts: ['pdf', 'docx', 'html'], fields: [
-      { k: 'table.headerBg', label: _t('export.tableHeaderBg') || '表头背景', type: 'color' },
-      { k: 'table.headerColor', label: _t('export.tableHeaderColor') || '表头文字色', type: 'color' },
-      { k: 'table.headerBold', label: _t('export.tableHeaderBold') || '表头加粗', type: 'checkbox' },
-      { k: 'table.borderColor', label: _t('export.tableBorderColor') || '边框颜色', type: 'color' },
-      { k: 'table.borderWidth', label: _t('export.tableBorderWidth') || '边框宽度 pt', type: 'number', min: 0, max: 3, step: 0.25 },
-      { k: 'table.banded', label: _t('export.tableBanded') || '斑马纹', type: 'checkbox' },
-      { k: 'table.bandColor', label: _t('export.tableBandColor') || '斑马纹颜色', type: 'color' },
-      { k: 'table.cellSize', label: _t('export.tableCellSize') || '单元格字号 pt', type: 'number', min: 7, max: 16 },
-      { k: 'table.cellPadding', label: _t('export.tableCellPadding') || '单元格内边距 pt', type: 'number', min: 0, max: 20 },
-      { k: 'table.align', label: _t('export.align') || '对齐', type: 'select', opts: [['left', _t('export.alignLeft') || '左对齐'], ['center', _t('export.alignCenter') || '居中'], ['right', _t('export.alignRight') || '右对齐'], ['justify', _t('export.alignJustify') || '两端对齐']] },
-      { k: 'table.widthPct', label: _t('export.tableWidthPct') || '表格宽度 %', type: 'number', min: 50, max: 100 },
+    { title: _t('export.secHeadings') || '', fmts: ['pdf', 'docx', 'html'], headingRows: true },
+    { title: _t('export.secTable') || '', fmts: ['pdf', 'docx', 'html'], fields: [
+      { k: 'table.headerBg', label: _t('export.tableHeaderBg') || '', type: 'color' },
+      { k: 'table.headerColor', label: _t('export.tableHeaderColor') || '', type: 'color' },
+      { k: 'table.headerBold', label: _t('export.tableHeaderBold') || '', type: 'checkbox' },
+      { k: 'table.borderColor', label: _t('export.tableBorderColor') || '', type: 'color' },
+      { k: 'table.borderWidth', label: _t('export.tableBorderWidth') || '', type: 'number', min: 0, max: 3, step: 0.25 },
+      { k: 'table.banded', label: _t('export.tableBanded') || '', type: 'checkbox' },
+      { k: 'table.bandColor', label: _t('export.tableBandColor') || '', type: 'color' },
+      { k: 'table.cellSize', label: _t('export.tableCellSize') || '', type: 'number', min: 7, max: 16 },
+      { k: 'table.cellPadding', label: _t('export.tableCellPadding') || '', type: 'number', min: 0, max: 20 },
+      { k: 'table.align', label: _t('export.align') || '', type: 'select', opts: [['left', _t('export.alignLeft') || ''], ['center', _t('export.alignCenter') || ''], ['right', _t('export.alignRight') || ''], ['justify', _t('export.alignJustify') || '']] },
+      { k: 'table.widthPct', label: _t('export.tableWidthPct') || '', type: 'number', min: 50, max: 100 },
     ]},
-    { title: _t('export.secCode') || '代码块', fmts: ['pdf', 'docx', 'html'], fields: [
-      { k: 'code.bg', label: _t('export.codeBg') || '背景色', type: 'color' },
-      { k: 'code.color', label: _t('export.codeColor') || '文字色', type: 'color' },
-      { k: 'code.font', label: _t('export.codeFont') || '等宽字体', type: 'select', opts: EXPORT_MONO.map(f => [f, f]) },
-      { k: 'code.size', label: _t('export.codeSize') || '字号 pt', type: 'number', min: 6, max: 16 },
-      { k: 'code.borderColor', label: _t('export.codeBorderColor') || '边框颜色', type: 'color' },
-      { k: 'code.borderWidth', label: _t('export.codeBorderWidth') || '边框宽度 pt', type: 'number', min: 0, max: 3, step: 0.25 },
-      { k: 'code.rounded', label: _t('export.codeRounded') || '圆角（HTML）', type: 'checkbox', fmts: ['html'] },
+    { title: _t('export.secCode') || '', fmts: ['pdf', 'docx', 'html'], fields: [
+      { k: 'code.bg', label: _t('export.codeBg') || '', type: 'color' },
+      { k: 'code.color', label: _t('export.codeColor') || '', type: 'color' },
+      { k: 'code.font', label: _t('export.codeFont') || '', type: 'select', opts: EXPORT_MONO.map(f => [f, f]) },
+      { k: 'code.size', label: _t('export.codeSize') || '', type: 'number', min: 6, max: 16 },
+      { k: 'code.borderColor', label: _t('export.codeBorderColor') || '', type: 'color' },
+      { k: 'code.borderWidth', label: _t('export.codeBorderWidth') || '', type: 'number', min: 0, max: 3, step: 0.25 },
+      { k: 'code.rounded', label: _t('export.codeRounded') || '', type: 'checkbox', fmts: ['html'] },
     ]},
-    { title: _t('export.secQuoteLink') || '引用与链接', fmts: ['pdf', 'docx', 'html'], fields: [
-      { k: 'quote.barColor', label: _t('export.quoteBarColor') || '引用左边条色', type: 'color' },
-      { k: 'quote.bg', label: _t('export.quoteBg') || '引用背景', type: 'color' },
-      { k: 'quote.color', label: _t('export.quoteColor') || '引用文字色', type: 'color' },
-      { k: 'link.color', label: _t('export.linkColor') || '链接颜色', type: 'color' },
-      { k: 'hr.color', label: _t('export.hrColor') || '分割线颜色', type: 'color' },
+    { title: _t('export.secQuoteLink') || '', fmts: ['pdf', 'docx', 'html'], fields: [
+      { k: 'quote.barColor', label: _t('export.quoteBarColor') || '', type: 'color' },
+      { k: 'quote.bg', label: _t('export.quoteBg') || '', type: 'color' },
+      { k: 'quote.color', label: _t('export.quoteColor') || '', type: 'color' },
+      { k: 'link.color', label: _t('export.linkColor') || '', type: 'color' },
+      { k: 'hr.color', label: _t('export.hrColor') || '', type: 'color' },
     ]},
-    { title: _t('export.secFooterMeta') || '页脚与元数据', fmts: ['pdf', 'docx'], fields: [
-      { k: 'footer.pageNumbers', label: _t('export.showPageNumbers') || '显示页码', type: 'checkbox' },
-      { k: 'footer.text', label: _t('export.footerTextLabel') || '页脚文字', type: 'text', full: true },
-      { k: 'meta.title', label: _t('export.docMetaTitle') || '文档标题（PDF 元数据）', type: 'text', full: true },
-      { k: 'meta.author', label: _t('export.metaAuthor') || '作者', type: 'text' },
-      { k: 'meta.subject', label: _t('export.metaSubject') || '主题', type: 'text' },
+    { title: _t('export.secFooterMeta') || '', fmts: ['pdf', 'docx'], fields: [
+      { k: 'footer.pageNumbers', label: _t('export.showPageNumbers') || '', type: 'checkbox' },
+      { k: 'footer.text', label: _t('export.footerTextLabel') || '', type: 'text', full: true },
+      { k: 'meta.title', label: _t('export.docMetaTitle') || '', type: 'text', full: true },
+      { k: 'meta.author', label: _t('export.metaAuthor') || '', type: 'text' },
+      { k: 'meta.subject', label: _t('export.metaSubject') || '', type: 'text' },
     ]},
-    { title: _t('export.secMath') || '数学公式', fmts: ['pdf', 'docx'], fields: [
-      { k: 'math.dpi', label: _t('export.mathDpi') || '渲染分辨率 DPI', type: 'number', min: 100, max: 500, step: 10 },
+    { title: _t('export.secMath') || '', fmts: ['pdf', 'docx'], fields: [
+      { k: 'math.dpi', label: _t('export.mathDpi') || '', type: 'number', min: 100, max: 500, step: 10 },
     ]},
-    { title: _t('export.secHtmlTheme') || 'HTML 主题', fmts: ['html'], fields: [
-      { k: 'htmlTheme', label: _t('export.htmlThemeLabel') || '页面主题', type: 'select', opts: [['light', _t('export.themeLight') || '亮色'], ['dark', _t('export.themeDark') || '暗色'], ['sepia', _t('export.themeSepia') || '米色']] },
+    { title: _t('export.secHtmlTheme') || '', fmts: ['html'], fields: [
+      { k: 'htmlTheme', label: _t('export.htmlThemeLabel') || '', type: 'select', opts: [['light', _t('export.themeLight') || ''], ['dark', _t('export.themeDark') || ''], ['sepia', _t('export.themeSepia') || '']] },
     ]},
   ];
 }
@@ -192,14 +192,14 @@ function openExportModal() {
   const editorContent = typeof getEditContent === 'function' ? getEditContent() : '';
   const exportContent = (state.editing ? editorContent : '') || state.original || state.fixed || '';
   if (state.mode === 'welcome' || !exportContent) {
-    showToast(_t('toast.openDocumentToUse') || '请先打开文档后再使用此操作');
+    showToast(_t('toast.openDocumentToUse') || '');
     return;
   }
-  if (!bindPy()) { showToast(_t('toast.exportBrowserNotice') || '浏览器模式请使用桌面版导出'); return; }
+  if (!bindPy()) { showToast(_t('toast.exportBrowserNotice') || ''); return; }
   if (!state.export.ready) {
     loadExportPresets().then(ok => {
       if (ok) { state.export.ready = true; renderExportModal(); }
-      else showToast(_t('toast.exportModuleLoadFail') || '导出模块加载失败');
+      else showToast(_t('toast.exportModuleLoadFail') || '');
     });
     return;
   }
@@ -223,9 +223,9 @@ function currentExportName() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   let n = '';
   if (state.mode === 'file' && state.file) n = state.file.split(/[\\/]/).pop();
-  else n = (state.sourceName || (_t('export.defaultExportName') || '导出')).split(/[\\/]/).pop();
+  else n = (state.sourceName || (_t('export.defaultExportName') || '')).split(/[\\/]/).pop();
   n = n.replace(/\.[^.]+$/, '');
-  return n || (_t('export.defaultExportName') || '导出');
+  return n || (_t('export.defaultExportName') || '');
 }
 
 
@@ -733,7 +733,7 @@ function updateExportLivePreview() {
   const opts = collectExportOptions();
   const badge = $('export-preview-badge');
   const sel = $('exp-preset');
-  const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : (_t('export.presetDefault') || '默认');
+  const presetName = (sel && sel.selectedIndex >= 0) ? sel.options[sel.selectedIndex].text : (_t('export.presetDefault') || '');
   if (badge) badge.textContent = fmt.toUpperCase() + ' · ' + presetName;
 
   const content = currentExportContent();
@@ -760,7 +760,7 @@ function updateExportLivePreview() {
   if (paperMeta) {
     const page = opts.page || {};
     const sz = page.size || 'A4';
-    const ori = (page.orientation === 'landscape') ? (_t('export.orientationLandscape') || '横向') : (_t('export.orientationPortrait') || '纵向');
+    const ori = (page.orientation === 'landscape') ? (_t('export.orientationLandscape') || '') : (_t('export.orientationPortrait') || '');
     const pageText = isHtmlMode ? 'HTML Web' : (_t('reader.totalPage', { total: totalPages }) || `共 ${totalPages} 页`);
     paperMeta.textContent = `${sz} · ${ori} · ${pageText} · ${presetName}`;
   }
@@ -855,9 +855,9 @@ function renderExportSections() {
         row.className = 'exp-field full exp-h-row';
         row.innerHTML =
           '<label>H' + i + '</label>' +
-          '<input type="number" data-k="headings.h' + i + '.size" min="8" max="40" title="' + (_t('export.bodySize') || '字号') + '">' +
-          '<input type="color" data-k="headings.h' + i + '.color" title="' + (_t('export.bodyColor') || '颜色') + '">' +
-          '<label class="exp-check">' + (_t('export.bold') || '加粗') + '<input type="checkbox" data-k="headings.h' + i + '.bold"></label>' +
+          '<input type="number" data-k="headings.h' + i + '.size" min="8" max="40" title="' + (_t('export.bodySize') || '') + '">' +
+          '<input type="color" data-k="headings.h' + i + '.color" title="' + (_t('export.bodyColor') || '') + '">' +
+          '<label class="exp-check">' + (_t('export.bold') || '') + '<input type="checkbox" data-k="headings.h' + i + '.bold"></label>' +
           '<select data-k="headings.h' + i + '.align">' + EXPORT_ALIGNS.map(a => '<option value="' + a + '">' + a + '</option>').join('') + '</select>';
         body.appendChild(row);
       }
@@ -963,7 +963,7 @@ function renderExportPresetSelect() {
   sel.textContent = '';
   const presetNames = getExportPresetNames();
   const names = Object.keys(state.export.presets || {}).concat(Object.keys(state.export.custom || {}));
-  sel.appendChild(new Option(_t('export.presetCustom') || '自定义', '__custom__'));
+  sel.appendChild(new Option(_t('export.presetCustom') || '', '__custom__'));
   names.forEach(n => {
     sel.appendChild(new Option(presetNames[n] || n, n));
   });
@@ -1021,16 +1021,16 @@ async function runExport() {
       r = await py.export_doc(fmt, payload);
     }
   } catch (e) {
-    showToast((_t('toast.exportFailed') || '导出失败：') + e.message);
+    showToast((_t('toast.exportFailed') || '') + e.message);
     busy(false);
     return;
   }
   busy(false);
-  if (!r) { showToast(_t('toast.exportFailedSimple') || '导出失败'); return; }
+  if (!r) { showToast(_t('toast.exportFailedSimple') || ''); return; }
   if (r.canceled) return;
-  if (!r.ok) { showToast((_t('toast.exportFailed') || '导出失败：') + (r.error || (_t('toast.unknownError') || '未知错误'))); return; }
+  if (!r.ok) { showToast((_t('toast.exportFailed') || '') + (r.error || (_t('toast.unknownError') || ''))); return; }
   const res = $('export-result');
-  res.textContent = (_t('toast.exportedPrefix') || '已导出：') + (r.path || '导出完成');
+  res.textContent = (_t('toast.exportedPrefix') || '') + (r.path || '导出完成');
   res.className = 'export-result ok';
   if (r.path && hasPy && py) {
     $('export-open').classList.remove('hidden');
@@ -1040,7 +1040,7 @@ async function runExport() {
   }
   try { if (hasPy && py.save_export_presets) py.save_export_presets({ last: { fmt: fmt, options: options } }); } catch (e) { /* ignore */ }
   if (r.warns && r.warns.length) showToast(_t('toast.exportCompleteWarns', { count: r.warns.length }) || ('导出完成，' + r.warns.length + ' 条提示'));
-  else showToast(_t('toast.exportSuccess') || '导出成功');
+  else showToast(_t('toast.exportSuccess') || '');
 }
 
 async function expSavePreset() {
@@ -1052,10 +1052,10 @@ async function expSavePreset() {
   input.focus();
   $('exp-save-ok').onclick = async () => {
     const name = input.value.trim();
-    if (!name) { showToast(_t('toast.enterPresetName') || '请输入预设名称'); return; }
+    if (!name) { showToast(_t('toast.enterPresetName') || ''); return; }
     const presetNames = getExportPresetNames();
     if (presetNames[name] || (state.export.presets && state.export.presets[name])) {
-      showToast(_t('toast.presetNameConflict') || '名称与内置预设冲突');
+      showToast(_t('toast.presetNameConflict') || '');
       return;
     }
     state.export.custom[name] = collectExportOptions();
@@ -1086,22 +1086,22 @@ function initExportAiDesigner() {
 async function generateExportStyleWithAi(stylePrompt) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!stylePrompt) {
-    showToast(_t('exportai.placeholder') || '请输入排版风格描述');
+    showToast(_t('exportai.placeholder') || '');
     return;
   }
   const statusEl = $('exp-ai-status');
   if (statusEl) {
     statusEl.classList.remove('hidden');
-    statusEl.textContent = _t('exportai.generating') || '正在分析并设计排版参数...';
+    statusEl.textContent = _t('exportai.generating') || '';
   }
 
   try {
-    const connection = typeof resolveSharedAiConnection === 'function'
-      ? await resolveSharedAiConnection()
-      : null;
-    if (!connection) throw new Error(_t('toast.selectProviderFirst') || '请先选择 AI 提供商');
-    if (!connection.local && !connection.has_key) {
-      throw new Error(_t('toast.noApiKeyNotice') || '未配置 API Key：请打开设置完成连接');
+    const connection = typeof ensureAiConfigured === 'function'
+      ? await ensureAiConfigured()
+      : (typeof resolveSharedAiConnection === 'function' ? await resolveSharedAiConnection() : null);
+    if (!connection) {
+      if (statusEl) statusEl.textContent = _t('toast.noApiKeyNotice');
+      return;
     }
     const res = await apiFetch('/api/ai/chat', {
       method: 'POST',
@@ -1173,14 +1173,14 @@ async function generateExportStyleWithAi(stylePrompt) {
     updateExportLivePreview();
 
     if (statusEl) {
-      statusEl.textContent = _t('exportai.applied') || '已应用 AI 生成的排版样式预设';
+      statusEl.textContent = _t('exportai.applied') || '';
       setTimeout(() => statusEl.classList.add('hidden'), 3000);
     }
-    showToast(_t('exportai.applied') || '已应用 AI 生成的排版样式预设');
+    showToast(_t('exportai.applied') || '');
   } catch (e) {
     if (statusEl) {
-      statusEl.textContent = (_t('ai.reqFailMsg') || 'AI 请求失败：') + e.message;
+      statusEl.textContent = (_t('ai.reqFailMsg') || '') + e.message;
     }
-    showToast((_t('toast.unknownError') || '生成失败：') + e.message);
+    showToast((_t('toast.unknownError') || '') + e.message);
   }
 }

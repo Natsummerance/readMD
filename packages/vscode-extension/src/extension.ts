@@ -8,6 +8,24 @@ let diagnosticStatusBarItem: vscode.StatusBarItem;
 let coreStatusBarItem: vscode.StatusBarItem;
 let coreWasDown = false;
 
+/** Keep Core error codes out of the UI and out of user documents. */
+function errorText(error: unknown): string {
+  const code = error instanceof Error ? error.message : String(error || '');
+  const zh = vscode.env.language.toLowerCase().startsWith('zh');
+  const messages: Record<string, [string, string]> = {
+    core_process_exit: ['ReadMD Core 进程已退出，请重试', 'ReadMD Core stopped; try again'],
+    core_start_timeout: ['ReadMD Core 启动超时', 'ReadMD Core startup timed out'],
+    core_not_connected: ['ReadMD Core 未连接', 'ReadMD Core is not connected'],
+    core_operation_timeout: ['操作超时，请重试', 'The operation timed out; try again'],
+    core_closed: ['ReadMD Core 已关闭', 'ReadMD Core is closed'],
+    mcp_request_failed: ['Core 请求失败', 'Core request failed'],
+    mcp_tool_failed: ['Core 工具执行失败', 'Core tool failed'],
+    ai_cancelled: ['AI 生成已取消', 'AI generation cancelled'],
+  };
+  const pair = messages[code];
+  return pair ? (zh ? pair[0] : pair[1]) : (zh ? '操作失败，请重试' : 'Operation failed; try again');
+}
+
 export function activate(context: vscode.ExtensionContext) {
   const bridge = new ReadMDBridge(context);
   context.subscriptions.push({ dispose: () => bridge.dispose() });
@@ -24,7 +42,7 @@ export function activate(context: vscode.ExtensionContext) {
       const text = await bridge.readSkill(pick.uri);
       const doc = await vscode.workspace.openTextDocument({ content: text, language: 'markdown' });
       await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
-    } catch (err: any) { vscode.window.showErrorMessage(`ReadMD Skills 打开失败: ${err.message}`); }
+    } catch (err: any) { vscode.window.showErrorMessage(`ReadMD Skills 打开失败: ${errorText(err)}`); }
   });
 
   const aiWorkbenchDisposable = vscode.commands.registerCommand('readmd.openAiWorkbench', async () => {
@@ -58,12 +76,32 @@ export function activate(context: vscode.ExtensionContext) {
         : models[0] ? { value: models[0] } : undefined;
       const model = modelPick?.value || '';
       if (!model) { vscode.window.showWarningMessage('当前提供商没有可用模型，请先刷新模型列表'); return; }
-      const result = await bridge.aiChat({
-        provider: provider.value.id, credential_id: provider.value.credential_id,
-        model, skill_id: workflow.skillId, markdown_content: editor.document.getText(),
-        language: vscode.env.language || 'en', stream: true,
+      let output = '';
+      let cancelled = false;
+      await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: 'ReadMD AI 正在生成...',
+        cancellable: true,
+      }, async (progress, token) => {
+        const result: any = await bridge.aiChatStreaming({
+          provider: provider.value.id, credential_id: provider.value.credential_id,
+          model, skill_id: workflow.skillId, markdown_content: editor.document.getText(),
+          language: vscode.env.language || 'en', stream: true,
+        }, chunk => {
+          output += chunk;
+          progress.report({ message: chunk.length > 48 ? `…${chunk.slice(-48)}` : chunk });
+        }, token);
+        if (result?.ok === false) {
+          output = '';
+          if (result.error_code !== 'ai_cancelled') {
+            throw new Error(String(result.error_code || 'mcp_tool_failed'));
+          }
+          cancelled = true;
+          return;
+        }
+        if (!output && result?.content) output = String(result.content);
       });
-      const output = result?.content || '';
+      if (cancelled) { vscode.window.showInformationMessage('ReadMD AI 生成已取消'); return; }
       if (!output) { vscode.window.showWarningMessage('AI 未返回可应用内容'); return; }
       const choice = await vscode.window.showInformationMessage('ReadMD AI 已生成结果', '替换选区', '插入末尾', '仅查看');
       if (choice === '替换选区') {
@@ -74,7 +112,7 @@ export function activate(context: vscode.ExtensionContext) {
         const doc = await vscode.workspace.openTextDocument({ content: output, language: 'markdown' });
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
       }
-    } catch (err: any) { vscode.window.showErrorMessage(`ReadMD AI 工作台失败: ${err.message}`); }
+    } catch (err: any) { vscode.window.showErrorMessage(`ReadMD AI 工作台失败: ${errorText(err)}`); }
   });
   const openSkillByUriDisposable = vscode.commands.registerCommand('readmd.openSkillByUri', async (uri?: string) => {
     if (!uri) return;
@@ -82,7 +120,7 @@ export function activate(context: vscode.ExtensionContext) {
       const text = await bridge.readSkill(uri);
       const doc = await vscode.workspace.openTextDocument({ content: text, language: 'markdown' });
       await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
-    } catch (err: any) { vscode.window.showErrorMessage(`读取 Skill 失败: ${err.message}`); }
+    } catch (err: any) { vscode.window.showErrorMessage(`读取 Skill 失败: ${errorText(err)}`); }
   });
   context.subscriptions.push(skillsDisposable, aiWorkbenchDisposable, openSkillByUriDisposable);
 
@@ -196,7 +234,7 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.window.showInformationMessage('ReadMD: 当前文档格式规范，未检测到需要修复的语法问题。');
         }
       } catch (err: any) {
-        vscode.window.showErrorMessage(`ReadMD 自愈失败: ${err.message}`);
+        vscode.window.showErrorMessage(`ReadMD 自愈失败: ${errorText(err)}`);
       }
     });
   });
@@ -256,7 +294,7 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.env.openExternal(saveUri);
         }
       } catch (err: any) {
-        vscode.window.showErrorMessage(`演说稿导出失败: ${err.message}`);
+        vscode.window.showErrorMessage(`演说稿导出失败: ${errorText(err)}`);
       }
     });
   });
@@ -325,7 +363,6 @@ export function activate(context: vscode.ExtensionContext) {
       { label: 'wavedrom', description: 'WaveDrom (数字电路时序波形图)', template: '{\n  signal: [\n    { name: "CLK",  wave: "p......" },\n    { name: "Data", wave: "x.345x.", data: ["head", "body", "tail"] },\n    { name: "Req",  wave: "0.1..0." },\n    { name: "Ack",  wave: "0..1.0." }\n  ]\n}' },
       { label: 'vega-lite', description: 'Vega-Lite (统计数据可视化图表)', template: '{\n  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",\n  "mark": "bar",\n  "data": { "values": [{"a": "A", "b": 28}, {"a": "B", "b": 55}] },\n  "encoding": { "x": {"field": "a", "type": "nominal"}, "y": {"field": "b", "type": "quantitative"} }\n}' },
       { label: 'graphviz', description: 'Graphviz DOT (网络拓扑与流程图)', template: 'digraph G {\n  rankdir=LR;\n  node [shape=box, style=rounded];\n  Start -> Process -> End;\n}' },
-      { label: 'd2', description: 'D2 (现代声明式架构图)', template: 'Client -> Gateway: Request\nGateway -> Service: Process\nService -> Database: Query' },
       { label: 'bitfield', description: 'BitField (硬件寄存器与协议字段图)', template: '{\n  reg: [\n    {bits: 8, name: "IPO", type: 8},\n    {bits: 8, name: "Payload"},\n    {bits: 16, name: "CRC32", type: 2}\n  ]\n}' },
     ], { placeHolder: '请选择科学工程图表类型' });
 
@@ -387,7 +424,7 @@ export function activate(context: vscode.ExtensionContext) {
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
         vscode.window.showInformationMessage('ReadMD: 已成功展平编译全部 @import 模块！');
       } catch (err: any) {
-        vscode.window.showErrorMessage(`展平模块失败: ${err.message}`);
+        vscode.window.showErrorMessage(`展平模块失败: ${errorText(err)}`);
       }
     });
   });
@@ -433,10 +470,10 @@ export function activate(context: vscode.ExtensionContext) {
           }
           vscode.window.showInformationMessage(msg);
         } else {
-          vscode.window.showErrorMessage(`代码运行异常:\n${res.stderr || res.error}`);
+          vscode.window.showErrorMessage(`代码运行异常：${errorText(res?.error_code || res?.error)}`);
         }
       } catch (err: any) {
-        vscode.window.showErrorMessage(`运行失败: ${err.message}`);
+        vscode.window.showErrorMessage(`运行失败: ${errorText(err)}`);
       }
     });
   });
@@ -503,7 +540,7 @@ export function activate(context: vscode.ExtensionContext) {
           vscode.env.openExternal(saveUri);
         }
       } catch (err: any) {
-        vscode.window.showErrorMessage(`导出失败: ${err.message}`);
+        vscode.window.showErrorMessage(`导出失败: ${errorText(err)}`);
       }
     });
   });
@@ -540,7 +577,7 @@ export function activate(context: vscode.ExtensionContext) {
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
         vscode.window.showInformationMessage(`ReadMD: 已成功转换 ${path.basename(filePath)}！`);
       } catch (err: any) {
-        vscode.window.showErrorMessage(`文档转换失败: ${err.message}`);
+        vscode.window.showErrorMessage(`文档转换失败: ${errorText(err)}`);
       }
     });
   });
@@ -575,7 +612,7 @@ export function activate(context: vscode.ExtensionContext) {
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
         vscode.window.showInformationMessage(`ReadMD: 成功抓取文章《${res.title || url}》！`);
       } catch (err: any) {
-        vscode.window.showErrorMessage(`抓取网页失败: ${err.message}`);
+        vscode.window.showErrorMessage(`抓取网页失败: ${errorText(err)}`);
       }
     });
   });
@@ -601,7 +638,7 @@ export function activate(context: vscode.ExtensionContext) {
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
         vscode.window.showInformationMessage('ReadMD: 已成功生成标准学术 LaTeX 源码！');
       } catch (err: any) {
-        vscode.window.showErrorMessage(`LaTeX 转换失败: ${err.message}`);
+        vscode.window.showErrorMessage(`LaTeX 转换失败: ${errorText(err)}`);
       }
     });
   });
@@ -636,7 +673,7 @@ export function activate(context: vscode.ExtensionContext) {
       const count = Object.keys(entries || {}).length;
       vscode.window.showInformationMessage(`ReadMD: 成功解析 BibTeX 数据库 (${path.basename(bibPath)})，共加载 ${count} 篇学术条目！`);
     } catch (err: any) {
-      vscode.window.showErrorMessage(`BibTeX 解析失败: ${err.message}`);
+      vscode.window.showErrorMessage(`BibTeX 解析失败: ${errorText(err)}`);
     }
   });
 
@@ -686,7 +723,7 @@ export function activate(context: vscode.ExtensionContext) {
       fs.writeFileSync(targetFile, JSON.stringify(mcpConfig, null, 2), 'utf-8');
       vscode.window.showInformationMessage(`ReadMD: 已成功在 ${targetFile} 生成 MCP 服务配置！`);
     } catch (err: any) {
-      vscode.window.showErrorMessage(`写入 MCP 配置失败: ${err.message}`);
+      vscode.window.showErrorMessage(`写入 MCP 配置失败: ${errorText(err)}`);
     }
   });
 
