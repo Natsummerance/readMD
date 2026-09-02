@@ -13,6 +13,13 @@ from src.readmd_modules.diagrams import (
 )
 
 
+def test_frozen_capability_does_not_use_developer_path(monkeypatch):
+    import src.readmd_modules.diagrams as diagrams
+
+    monkeypatch.setattr(diagrams.sys, "frozen", True, raising=False)
+    assert diagrams._node_runtime(diagrams.Path.cwd()) is None
+
+
 def test_capabilities_are_local_and_expose_explicit_fallbacks():
     capabilities = get_diagram_capabilities()
     assert capabilities["schema_version"] == 1

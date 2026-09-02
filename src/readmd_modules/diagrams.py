@@ -16,6 +16,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import zlib
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -76,6 +77,23 @@ def has_local_plantuml() -> bool:
     return bool(shutil.which('plantuml') or (shutil.which('java') and os.environ.get('PLANTUML_JAR')))
 
 
+def _node_runtime(root: Path) -> Optional[str]:
+    """Resolve the Node runtime allowed for server-side diagram rendering.
+
+    Frozen builds must be self-contained: a developer's PATH must not turn
+    Vega support green on a machine where the installed app cannot run it.
+    Development checkouts may use a local Node binary for tests and bundling.
+    """
+    if getattr(sys, "frozen", False):
+        executable = "node.exe" if os.name == "nt" else "node"
+        candidates = (
+            root / "assets" / "vendor" / "node" / executable,
+            root / executable,
+        )
+        return next((str(path) for path in candidates if path.is_file()), None)
+    return shutil.which("node")
+
+
 def get_diagram_capabilities() -> Dict[str, object]:
     """Return the renderers that are actually available in this installation.
 
@@ -102,7 +120,7 @@ def get_diagram_capabilities() -> Dict[str, object]:
             "requires_network": False,
         }
 
-    node = shutil.which("node")
+    node = _node_runtime(root)
     vega_assets = (
         vendor / "vega" / "vega.min.js",
         vendor / "vega-lite" / "vega-lite.min.js",
@@ -163,8 +181,8 @@ def render_vega_svg(spec_text: str, language: str = "vega-lite", timeout: float 
     if not isinstance(spec, dict):
         raise DiagramRenderError("diagram_invalid_input")
 
-    node = shutil.which("node")
     root = Path(__file__).resolve().parents[2]
+    node = _node_runtime(root)
     vega_path = root / "assets" / "vendor" / "diagrams" / "vega" / "vega.min.js"
     vega_lite_path = root / "assets" / "vendor" / "diagrams" / "vega-lite" / "vega-lite.min.js"
     if not node or not vega_path.is_file() or not vega_lite_path.is_file():
