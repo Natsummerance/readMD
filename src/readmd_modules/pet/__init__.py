@@ -12,6 +12,7 @@ from .hermes_adapter import HermesPetBridge, HermesPetLauncher, HermesPetPluginI
 from .model_manifest import verify_model_bundle
 from .task_queue import PetBatchQueue
 from .window_adapter import NativePetProbe, PetProbeDragBridge
+from .store import InstalledPet, PetStoreError, list_pets, register_local_pet, remove_pet, slugify
 
 __all__ = [
     "NativePetProbe",
@@ -23,4 +24,10 @@ __all__ = [
     "PetProbeDragBridge",
     "foreground_fullscreen",
     "verify_model_bundle",
+    "InstalledPet",
+    "PetStoreError",
+    "list_pets",
+    "register_local_pet",
+    "remove_pet",
+    "slugify",
 ]

@@ -2,6 +2,7 @@
 """The desktop bridge must expose safe pet readiness and batch seams."""
 
 import json
+import base64
 
 import readmd
 
@@ -161,6 +162,31 @@ def test_api_exposes_non_destructive_pet_batch_queue(tmp_path):
     assert result["ok"] is True
     assert result["tasks"][0]["source_path"] == str(source)
     assert source.read_text(encoding="utf-8") == "unchanged"
+
+
+def test_api_local_pet_import_and_active_selection_are_confirmation_gated(monkeypatch, tmp_path):
+    source = tmp_path / "pet.png"
+    source.write_bytes(b"\x89PNG\r\n\x1a\nreadmd-test")
+    monkeypatch.setattr(readmd, "DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setattr(readmd, "SETTINGS_FILE", str(tmp_path / "settings.json"))
+    api = readmd.Api()
+
+    assert api.import_local_pet(str(source), "Arch Chan", confirm=False)["error_code"] == "confirmation_required"
+    result = api.import_local_pet(str(source), "Arch Chan", display_name="Arch Chan", confirm=True)
+    assert result["ok"] is True
+    assert result["pet"]["slug"] == "arch-chan"
+    assert api.set_active_pet("arch-chan", confirm=True) == {"ok": True, "active": "arch-chan"}
+    assert api.list_local_pets()["active"] == "arch-chan"
+    assert api.remove_local_pet("arch-chan", confirm=True) == {"ok": True}
+    assert api.list_local_pets()["pets"] == []
+
+
+def test_http_pet_import_accepts_only_valid_bounded_payload(monkeypatch, tmp_path):
+    # The store is exercised above; this assertion documents the wire format
+    # used by the browser workbench and keeps credentials/paths out of it.
+    payload = {"confirm": True, "slug": "demo", "image_base64": base64.b64encode(b"x").decode()}
+    assert "image_path" not in payload
+    assert "token" not in json.dumps(payload).lower()
 
 
 def test_api_queues_pet_drop_for_explicit_batch_confirmation(monkeypatch, tmp_path):

@@ -113,8 +113,13 @@ window.i18n = {
       const currentLabel = document.getElementById('lang-current-label');
       if (currentLabel) currentLabel.textContent = '简体中文';
       const d = await this.fetchDict('zh-CN');
-      if (d) this.dict = d;
-      this.loadFallback();
+      if (d) {
+        this.dict = d;
+        // zh-CN is the canonical complete dictionary. Reusing it as the
+        // fallback avoids a second 50+ KB English request during startup.
+        // Other languages still load English lazily after the first paint.
+        this.fallbackDict = d;
+      }
       return;
     }
 

@@ -158,6 +158,13 @@ class TestUpdaterModule(unittest.TestCase):
             self.assertTrue(res.get('ok'))
             self.assertFalse(res.get('has_update'))
 
+    def test_check_update_failure_never_returns_exception_text(self):
+        with patch('src.readmd_modules.updater._fetch_release_json', side_effect=RuntimeError('secret path C:/Users/test')):
+            res = updater.check_update(current_version='2.3.3')
+        self.assertFalse(res.get('ok'))
+        self.assertIn(res.get('error_code'), {'update_network_error', 'update_check_failed'})
+        self.assertNotIn('C:/Users/test', str(res))
+
     def test_update_source_is_pinned_to_official_release(self):
         """Only checksummed official release assets may enter the updater."""
         url = 'https://github.com/Natsummerance/readMD/releases/download/v2.4.0/ReadMD-portable-v2.4.0.exe'

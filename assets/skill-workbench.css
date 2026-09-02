@@ -1,9 +1,11 @@
 /* V2.3.8 Skill workbench: isolated from the core layout stylesheet. */
+.tpl-toolbar-actions { position: relative; }
+
 .tpl-import-menu {
   position: absolute;
   z-index: 14;
-  top: 52px;
-  left: min(300px, 28vw);
+  top: calc(100% + 8px);
+  right: 0;
   width: min(500px, calc(100vw - 48px));
   padding: 10px;
   border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
@@ -116,17 +118,7 @@
   display: none !important;
 }
 
-@media (max-width: 900px) {
-  .tpl-import-menu {
-    position: fixed;
-    top: max(74px, env(safe-area-inset-top));
-    left: 50%;
-    transform: translateX(-50%);
-  }
-}
-
 @media (max-width: 520px) {
-  .tpl-import-menu { width: calc(100vw - 24px); }
   .tpl-github-fields { display: grid; grid-template-columns: minmax(0, 1fr) 34px; }
   .tpl-github-credential { grid-column: 1 / -1; }
 }

@@ -15,6 +15,7 @@ import urllib.error
 
 from ..readmd_core.config import DATA_DIR
 from ..readmd_core.service import ReadMDCoreService
+from ..readmd_core.utils import save_json as save_json_atomic
 from .crypto import (encrypt_api_key, decrypt_api_key, is_crypto_available,
                       store_credential, load_credential, delete_credential)
 from .skills import SkillError
@@ -158,15 +159,9 @@ def _read_cfg():
 
 
 def _write_cfg(cfg):
-    try:
-        os.makedirs(DATA_DIR, exist_ok=True)
-        tmp = CONFIG_FILE + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(cfg, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, CONFIG_FILE)
-    except Exception as e:
+    if not save_json_atomic(CONFIG_FILE, cfg):
         logging.exception("ai config save failed")
-        raise
+        raise OSError("ai_config_write_failed")
 
 
 def get_config():
@@ -176,7 +171,8 @@ def get_config():
     def annotate(p):
         d = dict(p)
         d.setdefault("id", "preset:" + str(d.get("name") or "provider"))
-        d["has_key"] = bool(resolve_key(d))
+        resolved_key = resolve_key(d)
+        d["has_key"] = bool(resolved_key)
         d["key_source"] = key_source(d)
         d["mode"] = p.get("mode") or ("messages" if p.get("format") == "anthropic" else "auto")
         d.setdefault("category", "custom" if p.get("custom") else "preset")
@@ -191,8 +187,14 @@ def get_config():
         })
         # credential_id is the only identifier exposed to clients; encrypted
         # material remains server-side in the private config file.
-        if p.get("credential_id"):
+        # Do not advertise a stale credential handle as configured.  A prior
+        # install can retain the opaque id after the OS credential was removed;
+        # returning it made every UI surface report a ready provider and then
+        # fail only when the first request was sent.
+        if p.get("credential_id") and resolved_key:
             d["credential_id"] = p.get("credential_id")
+        else:
+            d.pop("credential_id", None)
         d.setdefault("endpoint_mode", "prefix")
         d.setdefault("capabilities", {})
         # 配置接口只提供状态，绝不把保存在磁盘中的 API Key 回传给前端。
@@ -463,6 +465,9 @@ def _skill_messages(payload):
         system = _CORE_SERVICE.render_skill(skill_id, variables)
     except SkillError as exc:
         raise ChatError(str(exc)) from exc
+    except Exception as exc:
+        logging.exception("Skill rendering failed: %s", skill_id)
+        raise ChatError("Skill 渲染失败：请检查 Skill 模板或文档内容后重试") from exc
     return [{"role": "system", "content": system}] + [m for m in messages if m.get("role") != "system"]
 
 

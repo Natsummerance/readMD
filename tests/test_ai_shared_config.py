@@ -30,3 +30,25 @@ def test_chat_without_explicit_provider_uses_the_saved_current_connection(monkey
     assert captured["base_url"] == "https://api.example.test/v1"
     assert captured["api_key"] == "secret"
     assert captured["model"] == "saved-model"
+
+
+def test_config_does_not_mark_missing_credential_as_ready(monkeypatch):
+    provider = {
+        "id": "custom:stale",
+        "name": "Stale provider",
+        "base_url": "https://api.example.test/v1",
+        "format": "openai",
+        "credential_id": "cred:stale12345",
+    }
+    monkeypatch.setattr(ai, "ensure_config", lambda: {
+        "providers": [provider],
+        "current": {"provider_id": provider["id"], "model": "model"},
+    })
+    monkeypatch.setattr(ai, "resolve_key", lambda _provider: "")
+    monkeypatch.setattr(ai, "key_source", lambda _provider: "")
+    monkeypatch.setattr(ai, "PRESETS", [])
+
+    payload = ai.get_config()
+    item = payload["custom"][0]
+    assert item["has_key"] is False
+    assert "credential_id" not in item

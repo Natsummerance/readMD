@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "ReadMD v2.3.8 系统架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/Natsummerance/readMD.git",
+      "revision": "e6e08ab241c1b6bda4e5d35ecb053bed4ec25810"
+    },
+    "views": [
+      {
+        "id": "core-path",
+        "label": "核心阅读链路",
+        "focus": ["shell", "frontend", "httpapi", "fixengine", "datastore"],
+        "note": "从 pywebview 窗口到本地 HTTP API，经修正引擎落到文件系统的主路径。"
+      },
+      {
+        "id": "lazy-modules",
+        "label": "懒加载能力模块",
+        "focus": ["httpapi", "modules", "export"],
+        "note": "convert / ocr / web / ai 模块按需后台加载，导出包独立惰性导入。"
+      },
+      {
+        "id": "integrations",
+        "label": "外部集成",
+        "focus": ["modules", "aiproviders", "installer", "website", "ecosystem"],
+        "note": "AI 提供商、安装器与官网、生态组件（VSCode / MCP / 桌宠）。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "shell",
+      "type": "frontend",
+      "label": "pywebview 桌面窗口",
+      "sublabel": "单实例 端口 26891",
+      "tag": "秒开",
+      "pos": [70, 300],
+      "size": [150, 62],
+      "sources": [
+        { "path": "readmd.py", "label": "window/tray" },
+        { "path": "README.md", "label": "秒开/单实例" }
+      ]
+    },
+    {
+      "id": "frontend",
+      "type": "frontend",
+      "label": "前端 assets",
+      "sublabel": "marked · MathJax · CodeMirror 6",
+      "tag": "全离线",
+      "pos": [280, 300],
+      "size": [150, 62],
+      "sources": [
+        { "path": "assets/index.html", "label": "UI 入口" },
+        { "path": "assets/app.js", "label": "渲染/编辑" }
+      ]
+    },
+    {
+      "id": "httpapi",
+      "type": "backend",
+      "label": "本地 HTTP API",
+      "sublabel": "readmd.py Handler",
+      "tag": "127.0.0.1",
+      "pos": [490, 300],
+      "size": [150, 62],
+      "sources": [
+        { "path": "readmd.py", "line": 957, "label": "Handler" },
+        { "path": "readmd.py", "line": 962, "label": "写端点白名单" }
+      ]
+    },
+    {
+      "id": "fixengine",
+      "type": "backend",
+      "label": "Markdown 修正引擎",
+      "sublabel": "readmd_fix · mdcheck",
+      "tag": "纯标准库",
+      "pos": [700, 300],
+      "size": [150, 62],
+      "sources": [
+        { "path": "src/readmd_fix.py", "label": "fix_markdown" },
+        { "path": "src/readmd_modules/mdcheck.py", "label": "严格校验" }
+      ]
+    },
+    {
+      "id": "datastore",
+      "type": "database",
+      "label": "文档与数据目录",
+      "sublabel": "settings.json · history · .md",
+      "tag": "READMD_DATA_DIR",
+      "pos": [910, 300],
+      "size": [150, 62],
+      "sources": [
+        { "path": "docs/handoffs/v2.3.8-main-integration.md", "label": "数据隔离" }
+      ]
+    },
+    {
+      "id": "modules",
+      "type": "backend",
+      "label": "懒加载模块注册表",
+      "sublabel": "convert / ocr / web / ai",
+      "tag": "线程安全",
+      "pos": [490, 120],
+      "size": [150, 62],
+      "sources": [
+        { "path": "src/readmd_modules/__init__.py", "label": "MODULES" }
+      ]
+    },
+    {
+      "id": "export",
+      "type": "backend",
+      "label": "导出包 mdexport",
+      "sublabel": "PDF · DOCX · HTML",
+      "pos": [700, 120],
+      "size": [150, 62],
+      "sources": [
+        { "path": "src/readmd_modules/mdexport/__init__.py", "label": "惰性加载" }
+      ]
+    },
+    {
+      "id": "aiproviders",
+      "type": "external",
+      "label": "AI 提供商",
+      "sublabel": "OpenAI 兼容 · Anthropic",
+      "tag": "用户自带 Key",
+      "pos": [490, 480],
+      "size": [150, 62],
+      "sources": [
+        { "path": "src/readmd_modules/ai.py", "label": "四协议请求" }
+      ]
+    },
+    {
+      "id": "installer",
+      "type": "backend",
+      "label": "安装器与打包",
+      "sublabel": "PyInstaller onedir",
+      "pos": [910, 120],
+      "size": [150, 62],
+      "sources": [
+        { "path": "installer/setup_app.py", "label": "静默安装" },
+        { "path": "installer/build_setup.bat", "label": "双产物" }
+      ]
+    },
+    {
+      "id": "website",
+      "type": "cloud",
+      "label": "官网 website",
+      "sublabel": "Cloudflare · wrangler",
+      "pos": [910, 480],
+      "size": [150, 62],
+      "sources": [
+        { "path": "website/wrangler.toml", "label": "部署配置" }
+      ]
+    },
+    {
+      "id": "ecosystem",
+      "type": "external",
+      "label": "生态组件",
+      "sublabel": "VSCode 扩展 · FastMCP · 桌宠",
+      "pos": [700, 480],
+      "size": [150, 62],
+      "sources": [
+        { "path": "packages/vscode-extension/package.json", "label": "VSCode 扩展" },
+        { "path": "packages/mcp-server/readmd_mcp_server.py", "label": "FastMCP 服务" }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "本机进程 · 127.0.0.1 纯本地",
+      "wraps": ["shell", "frontend", "httpapi", "fixengine", "modules", "export", "datastore"]
+    }
+  ],
+  "connections": [
+    { "id": "shell-to-frontend", "from": "shell", "to": "frontend", "label": "加载窗口", "variant": "emphasis" },
+    { "id": "frontend-to-api", "from": "frontend", "to": "httpapi", "label": "HTTP /api/*", "variant": "emphasis" },
+    { "id": "api-to-fix", "from": "httpapi", "to": "fixengine", "label": "打开即修正", "variant": "emphasis" },
+    { "id": "fix-to-data", "from": "fixengine", "to": "datastore", "label": "读写 .md", "variant": "emphasis" },
+    { "id": "api-to-modules", "from": "httpapi", "to": "modules", "label": "按需后台加载", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelDy": -60 },
+    { "id": "modules-to-export", "from": "modules", "to": "export", "label": "惰性导入", "variant": "dashed" },
+    { "id": "export-to-data", "from": "export", "to": "datastore", "label": "导出产物落盘", "variant": "dashed", "fromSide": "right", "toSide": "top", "labelDy": 52 },
+    { "id": "modules-to-ai", "from": "modules", "to": "aiproviders", "label": "流式对话", "variant": "dashed", "fromSide": "top", "toSide": "left", "via": [[565, 80], [16, 80], [16, 511]], "labelAt": [290, 80] },
+    { "id": "data-to-installer", "from": "datastore", "to": "installer", "label": "onedir 部署", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelDy": -60 },
+    { "id": "ecosystem-to-api", "from": "ecosystem", "to": "httpapi", "label": "MCP stdio · 复用能力", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "labelDy": 58 },
+    { "id": "site-to-releases", "from": "website", "to": "datastore", "label": "发布资产引用", "variant": "dashed", "fromSide": "right", "toSide": "right", "labelAt": [1100, 400] }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "本地优先内核",
+      "items": [
+        "pywebview + 127.0.0.1 HTTP 服务，秒开且离线可用",
+        "固定端口 26891 + instance.json 实现单实例",
+        "修正引擎纯标准库，非破坏性内存修正"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "按需加载",
+      "items": [
+        "convert / ocr / web / ai 后台懒加载，端点触发",
+        "mdexport 惰性导入，不进自动加载清单",
+        "缺失平台能力降级为 disabled 而非崩溃"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "发布与集成",
+      "items": [
+        "CI 唯一发布方；onedir 安装版 + 便携单文件",
+        "官网托管于 Cloudflare，发布资产经 SHA-256 校验",
+        "v2.3.8-preview.1：Preview 需在新合并提交重建"
+      ]
+    }
+  ]
+}

@@ -604,6 +604,32 @@ def _safe_member(name: str) -> str:
     return name
 
 
+def _skill_destination(skill_id: str) -> Path:
+    """Return a confined user-Skill destination without following symlinks.
+
+    Import is a write operation.  Checking only ``Path.resolve`` at the end is
+    not sufficient when an attacker swaps the ``skills`` directory (or a
+    conflicting Skill) for a symlink between validation and ``copytree``.
+    Keep the directory itself and the final target boring: an ordinary
+    directory below ``DATA_DIR/skills``.  Existing symlink targets are refused
+    rather than replaced, so the caller can report a deterministic conflict.
+    """
+    if not _ID_RE.fullmatch(str(skill_id or "")):
+        raise SkillImportError("skill_id_invalid", "Skill ID 必须使用小写 kebab-case")
+    root = Path(DATA_DIR) / "skills"
+    if root.exists() and (root.is_symlink() or not root.is_dir()):
+        raise SkillImportError("config_path_invalid", "Skill 数据目录不可用")
+    root.mkdir(parents=True, exist_ok=True)
+    root_real = root.resolve()
+    destination = root / str(skill_id)
+    if destination.is_symlink():
+        raise SkillImportError("skill_conflict", "Skill 目标是符号链接")
+    resolved = destination.resolve()
+    if resolved.parent != root_real or resolved == root_real:
+        raise SkillImportError("skill_path_invalid", "Skill 目标路径无效")
+    return destination
+
+
 def _extract(blob: bytes) -> Path:
     temp = Path(tempfile.mkdtemp(prefix="readmd-skill-import-"))
     try:
@@ -726,7 +752,7 @@ def apply_import(preview: Mapping[str, Any], selections: Iterable[Mapping[str, A
             skill_id = str(selected.get("target_id") or selected.get("id") or declared.get("id") or "")
             if not _ID_RE.fullmatch(skill_id):
                 raise SkillImportError("skill_id_invalid", "Skill ID 必须使用小写 kebab-case")
-            destination = Path(DATA_DIR) / "skills" / skill_id
+            destination = _skill_destination(skill_id)
             backup: Optional[Path] = None
             action = str(selected.get("conflict_action") or "skip").lower()
             if destination.exists():
@@ -739,10 +765,10 @@ def apply_import(preview: Mapping[str, Any], selections: Iterable[Mapping[str, A
                     base = skill_id + "-imported"
                     skill_id = base
                     counter = 2
-                    while (Path(DATA_DIR) / "skills" / skill_id).exists():
+                    while _skill_destination(skill_id).exists():
                         skill_id = "%s-%d" % (base, counter)
                         counter += 1
-                    destination = Path(DATA_DIR) / "skills" / skill_id
+                    destination = _skill_destination(skill_id)
                 else:
                     backup = Path(DATA_DIR) / "skills" / ".versions" / skill_id / ("github-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ"))
                     backup.parent.mkdir(parents=True, exist_ok=True)
@@ -875,7 +901,7 @@ def _apply_filesystem_import(
         skill_id = str(selected.get("target_id") or selected.get("id") or declared.get("id") or "")
         if not _ID_RE.fullmatch(skill_id):
             raise SkillImportError("skill_id_invalid", "Skill ID 必须使用小写 kebab-case")
-        destination = Path(DATA_DIR) / "skills" / skill_id
+        destination = _skill_destination(skill_id)
         backup: Optional[Path] = None
         action = str(selected.get("conflict_action") or "skip").lower()
         if destination.exists():
@@ -888,10 +914,10 @@ def _apply_filesystem_import(
                 base = skill_id + "-imported"
                 skill_id = base
                 counter = 2
-                while (Path(DATA_DIR) / "skills" / skill_id).exists():
+                while _skill_destination(skill_id).exists():
                     skill_id = "%s-%d" % (base, counter)
                     counter += 1
-                destination = Path(DATA_DIR) / "skills" / skill_id
+                destination = _skill_destination(skill_id)
             else:
                 backup = Path(DATA_DIR) / "skills" / ".versions" / skill_id / (
                     source_type + "-" + datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

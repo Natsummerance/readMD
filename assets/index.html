@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#3b6ef5">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: https:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: https:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="readmd-app-token" content="">
 <title>ReadMD</title>
 <link rel="stylesheet" href="/assets/style.css">
@@ -425,7 +425,7 @@
     </div>
     <p class="ai-settings-intro" data-i18n="ai.settingsDesc">密钥只保存在本机。连接状态会区分鉴权、限流和网络问题。</p>
     <div class="ai-provider-browser" aria-label="AI provider browser">
-      <input id="ai-provider-search" type="search" data-i18n-placeholder="ai.provider" autocomplete="off" spellcheck="false">
+      <input id="ai-provider-search" type="search" placeholder="搜索/过滤提供商…" aria-label="搜索提供商" data-i18n-placeholder="ai.providerSearchPlaceholder" data-i18n-aria="ai.providerSearchPlaceholder" autocomplete="off" spellcheck="false">
       <div id="ai-provider-cards" class="ai-provider-cards" role="listbox" aria-label="AI providers"></div>
     </div>
     <div class="conn-grid">
@@ -649,10 +649,36 @@
       <button id="tpl-copy" class="tb-btn" data-i18n="editor.copy">复制</button>
       <button id="tpl-save" class="tb-btn accent" data-i18n="editor.save">保存</button>
       <button id="tpl-publish" class="tb-btn accent" data-i18n="export.groupPublish">发布</button>
+      <button id="tpl-toggle" class="tb-btn" data-i18n="tpl.disable">停用</button>
+      <button id="tpl-export-one" class="tb-btn" data-i18n="tpl.exportOne">导出此 Skill</button>
       <button id="tpl-del" class="tb-btn" data-i18n="tpl.delete">删除</button>
       <button id="tpl-close-btn" class="tb-btn" data-i18n="toolbar.close">关闭</button>
     </div>
     <p class="fix-note" data-i18n="tpl.hint">支持导入标准 SKILL.md 或兼容 JSON。内置 Skill 只读；用户 Skill 发布前必须校验，AI 生成结果默认禁用，可随时回退版本。</p>
+  </div>
+</div>
+
+<!-- Skill AI 创作第一步：询问名称与用途 -->
+<div id="skill-create-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="skill-create-title">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3 id="skill-create-title" data-i18n="tpl.createTitle">创建新 Skill</h3>
+      <button id="skill-create-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="modal-form-group">
+      <label for="skill-create-name" data-i18n="tpl.createNameLabel">Skill 名称</label>
+      <input id="skill-create-name" class="modal-input" type="text" placeholder="例如：论文深度精读" data-i18n-placeholder="tpl.createNamePlaceholder" autocomplete="off">
+    </div>
+    <div class="modal-form-group">
+      <label for="skill-create-purpose" data-i18n="tpl.createPurposeLabel">用途与要求</label>
+      <textarea id="skill-create-purpose" class="modal-textarea" rows="5" placeholder="描述这个 Skill 要完成什么、输出格式与注意事项…" data-i18n-placeholder="tpl.createPurposePlaceholder"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button id="skill-create-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
+      <button id="skill-create-go" class="tb-btn accent" data-i18n="tpl.createGo">生成草稿</button>
+    </div>
   </div>
 </div>
 
@@ -1225,7 +1251,10 @@
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.docImportDesc">引用外部 Markdown 文件、源码或图表，渲染时将自动无缝嵌入当前文档。</p>
       <div class="modal-form-group">
         <label for="doc-import-path" data-i18n="editor.docImportPath">子文档相对路径：</label>
-        <input id="doc-import-path" type="text" class="modal-input" placeholder="chapter1.md 或 ./subdocs/appendix.md">
+        <div class="doc-import-path-row">
+          <input id="doc-import-path" type="text" class="modal-input doc-import-path-input" placeholder="chapter1.md 或 ./subdocs/appendix.md">
+          <button id="doc-import-browse" type="button" class="tb-btn" data-i18n="editor.browseFile">浏览…</button>
+        </div>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
         <div class="modal-form-group">

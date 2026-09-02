@@ -201,6 +201,7 @@ function bindEvents() {
   if ($('doc-import-modal-close')) $('doc-import-modal-close').addEventListener('click', closeDocImportModal);
   if ($('doc-import-cancel')) $('doc-import-cancel').addEventListener('click', closeDocImportModal);
   if ($('doc-import-insert')) $('doc-import-insert').addEventListener('click', insertDocImportFromModal);
+  if ($('doc-import-browse')) $('doc-import-browse').addEventListener('click', browseDocImportFile);
   if ($('doc-import-modal')) $('doc-import-modal').addEventListener('click', e => { if (e.target === $('doc-import-modal')) closeDocImportModal(); });
 
   // Toast 提示点击（用于升级跳转等场景）
@@ -574,6 +575,8 @@ function bindEvents() {
   $('tpl-save').addEventListener('click', saveTplForm);
   $('tpl-ai-generate') && $('tpl-ai-generate').addEventListener('click', generateSkillDraft);
   $('tpl-publish') && $('tpl-publish').addEventListener('click', publishCurrentSkill);
+  $('tpl-toggle') && $('tpl-toggle').addEventListener('click', toggleCurrentSkillEnabled);
+  $('tpl-export-one') && $('tpl-export-one').addEventListener('click', exportCurrentSkill);
   $('tpl-del').addEventListener('click', deleteCurrentTpl);
   $('tpl-close').addEventListener('click', () => $('tpl-modal').classList.add('hidden'));
   $('ai-session').addEventListener('change', onAiSessionChange);
@@ -699,7 +702,7 @@ function bindEvents() {
     textarea.value += snippet;
     textarea.focus();
     const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-    showToast(_t('toast.stylePresetAdded') || '已添加排版模板', 1000);
+    showToast(_t('toast.stylePresetAdded') || '', 1000);
   }
 
   if ($('btn-preset-indent')) $('btn-preset-indent').addEventListener('click', () => insertStylePreset('indent'));
@@ -873,8 +876,8 @@ function bindEvents() {
       if ($('side') && !$('side').classList.contains('hidden')) $('side').classList.add('hidden');
       if ($('table-modal')) closeTableModal();
       closeFormulaModal(); closeMdPopups();
-      stopConvertPoll();
-      stopBatchPoll();
+      if (typeof stopConvertPoll === 'function') stopConvertPoll();
+      if (typeof stopBatchPoll === 'function') stopBatchPoll();
       if (document.body.classList.contains('zen-mode')) toggleZenMode(false);
       if (state.editing) confirmExitEdit();
     }

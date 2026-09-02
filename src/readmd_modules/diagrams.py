@@ -11,14 +11,24 @@
 """
 
 import base64
+import json
 import os
 import re
 import shutil
 import subprocess
 import zlib
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 PLANTUML_CHARS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_"
+
+
+class DiagramRenderError(RuntimeError):
+    """A stable, user-safe diagram rendering failure."""
+
+    def __init__(self, code: str):
+        self.code = str(code or "diagram_render_failed")
+        super().__init__(self.code)
 
 
 def plantuml_encode_6bit(b: int) -> str:
@@ -66,9 +76,89 @@ def has_local_plantuml() -> bool:
     return bool(shutil.which('plantuml') or (shutil.which('java') and os.environ.get('PLANTUML_JAR')))
 
 
+def render_vega_svg(spec_text: str, language: str = "vega-lite", timeout: float = 12.0) -> str:
+    """Render a Vega/Vega-Lite specification through the bundled Node runtime.
+
+    Vega generates expression functions at runtime.  The desktop WebView CSP
+    intentionally disallows ``unsafe-eval``, so loading the browser bundle in
+    the page cannot be a reliable offline renderer.  The vendored, pinned
+    bundles are CommonJS-compatible and can render to SVG in a short-lived
+    Node child process instead.  The spec is sent over stdin (never embedded
+    in a command line), and only the resulting SVG crosses the HTTP boundary.
+    """
+    normalized = str(language or "vega-lite").strip().lower()
+    if normalized not in {"vega", "vega-lite"}:
+        raise DiagramRenderError("diagram_engine_invalid")
+    raw = str(spec_text or "").strip()
+    if not raw or len(raw.encode("utf-8")) > 2 * 1024 * 1024:
+        raise DiagramRenderError("diagram_input_too_large")
+    try:
+        spec = json.loads(raw)
+    except (TypeError, ValueError):
+        # Keep the offline renderer deterministic and dependency-free.  YAML
+        # can still be converted to JSON by the editor before insertion.
+        raise DiagramRenderError("diagram_invalid_input")
+    if not isinstance(spec, dict):
+        raise DiagramRenderError("diagram_invalid_input")
+
+    node = shutil.which("node")
+    root = Path(__file__).resolve().parents[2]
+    vega_path = root / "assets" / "vendor" / "diagrams" / "vega" / "vega.min.js"
+    vega_lite_path = root / "assets" / "vendor" / "diagrams" / "vega-lite" / "vega-lite.min.js"
+    if not node or not vega_path.is_file() or not vega_lite_path.is_file():
+        raise DiagramRenderError("diagram_dependency_missing")
+
+    # This script is constant; user input is JSON on stdin only.  ``renderer:
+    # none`` avoids a native canvas dependency while ``toSVG`` remains fully
+    # offline and preserves Vega's own scenegraph semantics.
+    script = r"""
+const fs = require('fs');
+const vega = require(process.argv[1]);
+const vegaLite = require(process.argv[2]);
+const language = process.argv[3];
+let raw = '';
+process.stdin.setEncoding('utf8');
+process.stdin.on('data', chunk => raw += chunk);
+process.stdin.on('end', async () => {
+  try {
+    const source = JSON.parse(raw);
+    const compiled = language === 'vega-lite' ? vegaLite.compile(source).spec : source;
+    const view = new vega.View(vega.parse(compiled), { renderer: 'none' });
+    const svg = await view.toSVG();
+    process.stdout.write(String(svg || ''));
+  } catch (_) {
+    process.exitCode = 2;
+  }
+});
+"""
+    try:
+        result = subprocess.run(
+            [node, "-e", script, str(vega_path), str(vega_lite_path), normalized],
+            input=json.dumps(spec, ensure_ascii=False).encode("utf-8"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=max(1.0, min(float(timeout), 30.0)),
+            cwd=str(root),
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise DiagramRenderError("diagram_engine_timeout")
+    if result.returncode != 0:
+        raise DiagramRenderError("diagram_render_failed")
+    svg = result.stdout.decode("utf-8", errors="strict").strip()
+    if not svg.startswith("<svg") or len(svg.encode("utf-8")) > 8 * 1024 * 1024:
+        raise DiagramRenderError("diagram_render_failed")
+    return svg
+
+
 def format_tikz_html(tikz_code: str) -> str:
     """将 TikZ 代码片段包装为 TikZjax 标准 HTML 节点。"""
-    code = tikz_code.strip()
+    # TikZ is inserted into a script element by the browser renderer.  A
+    # literal closing tag in user content must not be allowed to terminate the
+    # element and inject arbitrary markup.  Escaping only the slash keeps the
+    # TeX source semantically identical to TikZjax while making the HTML
+    # boundary unambiguous.
+    code = str(tikz_code or '').strip().replace('</script', '<\\/script')
     if not code.startswith("\\begin{tikzpicture}"):
         code = f"\\begin{{tikzpicture}}\n{code}\n\\end{{tikzpicture}}"
     return f'<script type="text/tikz">\n{code}\n</script>'

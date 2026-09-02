@@ -852,7 +852,8 @@ function parseMarkdownWithSourceMap(content, options = {}) {
         const encodedCode = encodeURIComponent(code);
         const isMatplotlib = info.includes('matplotlib=true') || info.includes('matplotlib=True');
         const isHidden = info.includes('hide=true') || info.includes('hide=True');
-        return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}">
+        const hasOutput = info.includes('output=true') || info.includes('output=True');
+        return `<div class="code-chunk-card" ${lineAttr} data-lang="${lang}" data-code="${encodedCode}" data-matplotlib="${isMatplotlib}" data-hide="${isHidden}" data-output="${hasOutput}">
           <div class="code-chunk-header">
             <span class="code-chunk-badge">${lang.toUpperCase()}</span>
             <span class="code-chunk-status" role="status" aria-live="polite">${_t('status.ready')}</span>
@@ -879,7 +880,7 @@ function parseMarkdownWithSourceMap(content, options = {}) {
       }
 
       // 2. Specialized Diagrams
-      const diagramLangs = ['tikz', 'plantuml', 'puml', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'd2', 'ditaa'];
+      const diagramLangs = ['mermaid', 'tikz', 'plantuml', 'puml', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'vega', 'vega-lite', 'd2', 'ditaa'];
       if (diagramLangs.includes(lang.toLowerCase())) {
         const encodedCode = encodeURIComponent(code);
         return `<div class="diagram-card" ${lineAttr} data-diagram-engine="${lang.toLowerCase()}" data-diagram-code="${encodedCode}">
@@ -910,6 +911,10 @@ const MARKDOWN_ALLOWED_TAGS = new Set([
   'button', 'kbd', 'li', 'mark', 'ol', 'p', 'pre', 'q', 's', 'section', 'span',
   'strike', 'strong', 'sub', 'summary', 'sup', 'table', 'tbody', 'td',
   'tfoot', 'th', 'thead', 'time', 'tr', 'u', 'ul',
+  // Safe, presentation-only SVG primitives emitted by the offline diagram
+  // engines.  Script/event attributes are still rejected below.
+  'svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline',
+  'polygon', 'text', 'tspan', 'defs', 'marker', 'clippath', 'use',
 ]);
 const MARKDOWN_REMOVED_TAGS = new Set([
   'base', 'embed', 'form', 'frame', 'frameset', 'iframe', 'link', 'meta',
@@ -1035,6 +1040,17 @@ function sanitizeRenderedHtml(html, { allowInteractive = true } = {}) {
       if (name.startsWith('data-') || name === 'class' || name.startsWith('aria-') ||
           ['title', 'lang', 'dir', 'alt', 'width', 'height', 'loading',
            'colspan', 'rowspan', 'datetime', 'cite'].includes(name)) return;
+      if (tag === 'svg' && ['xmlns', 'viewbox', 'preserveaspectratio', 'role'].includes(name)) return;
+      if (['g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'defs', 'marker', 'clippath', 'use'].includes(tag) &&
+          ['d', 'fill', 'fill-rule', 'fill-opacity', 'stroke', 'stroke-width', 'stroke-linecap',
+           'stroke-linejoin', 'stroke-opacity', 'transform', 'x', 'y', 'x1', 'x2', 'y1', 'y2',
+           'cx', 'cy', 'r', 'rx', 'ry', 'points', 'dx', 'dy', 'font-size', 'font-family',
+           'text-anchor', 'marker-end', 'marker-start', 'markerwidth', 'markerheight',
+           'refx', 'refy', 'orient', 'viewbox', 'width', 'height', 'clip-path', 'id',
+           'href', 'xlink:href'].includes(name)) {
+        if (['href', 'xlink:href'].includes(name) && !value.startsWith('#')) node.removeAttribute(attribute.name);
+        return;
+      }
       if (name === 'id') {
         if (!/^[A-Za-z][A-Za-z0-9_:.-]*$/.test(value)) node.removeAttribute(attribute.name);
         return;
@@ -1613,11 +1629,24 @@ function renderAllCodeChunks(container) {
               plotEl.appendChild(img);
             });
           }
+          // Match MPE's explicit source-write opt-in.  A normal ``cmd``
+          // block only renders into the preview; ``output=true`` adds a
+          // bounded marker block after the matching fence and persists it
+          // through the editor's normal history/save path.
+          if (card.dataset.output === 'true' && state.editing) {
+            const outputText = (res.stdout || '') + (res.stderr ? ('\n' + res.stderr) : '');
+            await persistCodeChunkOutput(card, outputText);
+          }
         } else {
           statusEl.className = 'code-chunk-status error';
           statusEl.textContent = _t('convert.statusFailed');
           outWrap.classList.remove('hidden');
-          stdoutEl.textContent = (res && res.error) || (res && res.stderr) || _t('toast.unknownError');
+          // The core returns stable error codes; never surface its internal
+          // exception text (which may contain local paths or untranslated
+          // backend strings) in the document UI.
+          stdoutEl.textContent = (res && res.error_code)
+            ? _t('toast.unknownError')
+            : ((res && res.error) || (res && res.stderr) || _t('toast.unknownError'));
         }
       } catch (err) {
         clearInterval(interval);
@@ -1661,6 +1690,52 @@ function renderAllCodeChunks(container) {
 }
 window.renderAllCodeChunks = renderAllCodeChunks;
 
+async function persistCodeChunkOutput(card, outputText) {
+  const sourceLine = Number(card && card.dataset && card.dataset.sourceLine);
+  if (!Number.isInteger(sourceLine) || sourceLine < 1 || !state.editing) return false;
+  const current = getEditContent();
+  const lines = String(current || '').split('\n');
+  const fenceStart = Math.max(0, Math.min(lines.length - 1, sourceLine - 1));
+  if (!/^\s*```/.test(lines[fenceStart] || '')) return false;
+  let fenceEnd = fenceStart + 1;
+  while (fenceEnd < lines.length && !/^\s*```\s*$/.test(lines[fenceEnd])) fenceEnd += 1;
+  if (fenceEnd >= lines.length) return false;
+
+  const markerStart = '<!-- code_chunk_output -->';
+  const markerEnd = '<!-- /code_chunk_output -->';
+  let outputStart = -1;
+  for (let index = fenceEnd + 1; index < Math.min(lines.length, fenceEnd + 7); index += 1) {
+    if (lines[index].trim() === markerStart) { outputStart = index; break; }
+  }
+  let replaceFrom;
+  let replaceTo;
+  if (outputStart >= 0) {
+    let outputEnd = outputStart + 1;
+    while (outputEnd < lines.length && lines[outputEnd].trim() !== markerEnd) outputEnd += 1;
+    if (outputEnd >= lines.length) return false;
+    replaceFrom = outputStart;
+    replaceTo = outputEnd + 1;
+  } else {
+    replaceFrom = fenceEnd + 1;
+    replaceTo = fenceEnd + 1;
+  }
+  const safeText = String(outputText || '').replace(/\r\n?/g, '\n');
+  const block = [
+    '', markerStart, '', safeText, '', markerEnd, ''
+  ].join('\n');
+  const offsets = [0];
+  for (const line of lines) offsets.push(offsets[offsets.length - 1] + line.length + 1);
+  const from = offsets[replaceFrom];
+  const to = offsets[replaceTo];
+  const existing = lines.slice(replaceFrom, replaceTo).join('\n');
+  if (existing === block.replace(/^\n/, '').replace(/\n$/, '')) return false;
+  if (cmView) cmView.dispatch({ changes: { from, to, insert: block } });
+  else if ($('edit-area')) $('edit-area').setRangeText(block, from, to, 'end');
+  if (typeof saveEdit === 'function') await saveEdit();
+  return true;
+}
+window.persistCodeChunkOutput = persistCodeChunkOutput;
+
 async function runAllCodeChunks() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const cards = document.querySelectorAll('.code-chunk-card');
@@ -1679,9 +1754,191 @@ async function runAllCodeChunks() {
 }
 window.runAllCodeChunks = runAllCodeChunks;
 
+// Diagram engines are intentionally loaded only when a document contains the
+// corresponding fence.  Keeping each upstream bundle as a separate static
+// asset preserves the fast first paint while making the supported engines
+// usable without a network connection.
+const diagramScriptPromises = new Map();
+let diagramWaveCounter = 0;
+function loadDiagramScript(path, globalName) {
+  if (globalName && window[globalName]) return Promise.resolve(window[globalName]);
+  if (diagramScriptPromises.has(path)) return diagramScriptPromises.get(path);
+  const promise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = path;
+    script.async = true;
+    script.onload = () => globalName && !window[globalName]
+      ? reject(new Error('diagram_engine_unavailable'))
+      : resolve(globalName ? window[globalName] : true);
+    script.onerror = () => reject(new Error('diagram_engine_load_failed'));
+    document.head.appendChild(script);
+  });
+  diagramScriptPromises.set(path, promise);
+  return promise;
+}
+
+function diagramOutputMarkup(markup) {
+  return sanitizeRenderedHtml(String(markup || ''), { allowInteractive: false });
+}
+
+// A few vendored renderers (notably bitfield) return ONML's array-shaped
+// virtual tree instead of an HTML string.  Convert that trusted tree through
+// the DOM before applying the normal SVG sanitizer; never concatenate it into
+// markup because values may contain user-provided labels.
+function diagramOnmlToSvg(node) {
+  if (node == null || node === false) return null;
+  if (typeof node === 'string' || typeof node === 'number') return document.createTextNode(String(node));
+  if (!Array.isArray(node) || !node.length) return null;
+  const tag = String(node[0] || '').toLowerCase();
+  if (!/^[a-z][a-z0-9:-]*$/.test(tag)) return null;
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  let index = 1;
+  const attrs = node[1];
+  if (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) {
+    Object.entries(attrs).forEach(([name, value]) => {
+      if (value == null || typeof value === 'function') return;
+      el.setAttribute(name, String(value));
+    });
+    index = 2;
+  }
+  for (; index < node.length; index += 1) {
+    const child = diagramOnmlToSvg(node[index]);
+    if (child) el.appendChild(child);
+  }
+  return el;
+}
+
+function parseWaveDromSource(source) {
+  const raw = String(source || '').trim();
+  try { return JSON.parse(raw); } catch (_) { /* Common WaveDrom examples use JS-like keys. */ }
+  const normalized = raw
+    .replace(/([{,]\s*)([A-Za-z_$][\w$-]*)\s*:/g, '$1"$2":')
+    .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, (_, value) => `"${value.replace(/"/g, '\\"')}"`)
+    .replace(/,\s*([}\]])/g, '$1');
+  try { return JSON.parse(normalized); } catch (_) { throw new Error('diagram_invalid_input'); }
+}
+
+async function renderLocalDiagram(engine, code, previewEl) {
+  const normalized = String(engine || '').toLowerCase();
+  if (normalized === 'mermaid') {
+    const mermaid = await loadDiagramScript('/assets/vendor/diagrams/mermaid/mermaid.min.js', 'mermaid');
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default' });
+    const id = 'readmd-mermaid-' + Math.random().toString(36).slice(2);
+    const rendered = await mermaid.render(id, code);
+    return diagramOutputMarkup(rendered.svg || rendered);
+  }
+  if (normalized === 'wavedrom') {
+    await loadDiagramScript('/assets/vendor/diagrams/wavedrom/skins/default.js', 'WaveSkin');
+    await loadDiagramScript('/assets/vendor/diagrams/wavedrom/skins/narrow.js');
+    const wavedrom = await loadDiagramScript('/assets/vendor/diagrams/wavedrom/wavedrom.min.js', 'WaveDrom');
+    const source = parseWaveDromSource(code);
+    const index = diagramWaveCounter++;
+    const holder = document.createElement('div');
+    const output = document.createElement('div');
+    output.id = `readmd-wavedrom-output-${index}`;
+    holder.append(output);
+    previewEl.replaceChildren(holder);
+    // RenderWaveForm accepts the already parsed object and writes only to the
+    // supplied output node.  This avoids ProcessAll's global InputJSON_*
+    // bookkeeping and keeps concurrent diagram cards isolated.
+    wavedrom.RenderWaveForm(index, source, 'readmd-wavedrom-output-', false);
+    const svg = output.querySelector('svg');
+    if (!svg) throw new Error('diagram_invalid_input');
+    const html = diagramOutputMarkup(svg.outerHTML);
+    holder.remove();
+    return html;
+  }
+  if (normalized === 'bitfield') {
+    const bitfield = await loadDiagramScript('/assets/vendor/diagrams/bitfield/bitfield.min.js', 'bitfield');
+    let description;
+    try { description = JSON.parse(code); } catch (_) { throw new Error('diagram_invalid_input'); }
+    if (description && !Array.isArray(description) && Array.isArray(description.reg)) description = description.reg;
+    if (!Array.isArray(description)) throw new Error('diagram_invalid_input');
+    const rendered = bitfield.render(description, {});
+    const root = rendered && rendered.outerHTML
+      ? rendered
+      : diagramOnmlToSvg(rendered);
+    if (!root || !root.outerHTML) throw new Error('diagram_invalid_input');
+    return diagramOutputMarkup(root.outerHTML);
+  }
+  if (normalized === 'viz' || normalized === 'dot' || normalized === 'graphviz') {
+    const viz = await loadDiagramScript('/assets/vendor/diagrams/viz/viz-standalone.js', 'Viz');
+    const instance = await Promise.race([
+      viz.instance(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('diagram_engine_timeout')), 8000)),
+    ]);
+    return diagramOutputMarkup(await instance.renderString(code, {
+      engine: normalized === 'viz' ? 'dot' : normalized,
+      format: 'svg',
+    }));
+  }
+  if (normalized === 'vega' || normalized === 'vega-lite') {
+    await loadDiagramScript('/assets/vendor/diagrams/vega/vega.min.js', 'vega');
+    await loadDiagramScript('/assets/vendor/diagrams/vega-lite/vega-lite.min.js', 'vegaLite');
+    // Vega's browser runtime uses dynamic JavaScript code generation.  The
+    // application CSP intentionally permits WebAssembly only (not unsafe-eval),
+    // so do not report a misleading success for a renderer that cannot execute
+    // in the shipped shell.
+    throw new Error('diagram_engine_unavailable');
+  }
+  if (normalized === 'tikz') {
+    // TikZjax is a browser script that normally resolves its WASM/font assets
+    // from an upstream S3 URL.  Keep the vendored source byte-for-byte intact,
+    // but route those requests to our packaged assets while the renderer runs.
+    // This makes the feature deterministic and offline without weakening CSP.
+    const originalFetch = window.fetch;
+    const localRoot = '/assets/vendor/diagrams/tikzjax/';
+    window.fetch = function(input, init) {
+      const raw = typeof input === 'string' ? input : (input && input.url) || '';
+      if (raw.indexOf('https://s3.us-east-2.amazonaws.com/tikzjax.com/') === 0) {
+        const filename = raw.slice(raw.lastIndexOf('/') + 1);
+        return originalFetch.call(this, localRoot + encodeURIComponent(filename), init);
+      }
+      return originalFetch.call(this, input, init);
+    };
+    const previousOnload = window.onload;
+    try {
+      await loadDiagramScript('/assets/vendor/diagrams/tikzjax/tikzjax.js');
+      const handler = window.onload;
+      if (typeof handler !== 'function' || handler === previousOnload) {
+        throw new Error('diagram_engine_unavailable_handler');
+      }
+      const source = document.createElement('script');
+      source.type = 'text/tikz';
+      source.textContent = String(code || '');
+      previewEl.replaceChildren(source);
+      // TikZjax's onload handler starts an async reduce but does not reliably
+      // return its final replacement promise in every browser.  Wait for the
+      // script node to be replaced instead of racing an already-resolved
+      // wrapper promise; this also prevents the renderer timeout from
+      // removing the node while WASM is still compiling.
+      handler.call(window);
+      const deadline = Date.now() + 30000;
+      while (source.parentNode && Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      const rendered = previewEl.firstElementChild;
+      if (!rendered || rendered.tagName.toLowerCase() === 'script') {
+        throw new Error(Date.now() >= deadline ? 'diagram_engine_timeout' : 'diagram_engine_unavailable_rendered');
+      }
+      return diagramOutputMarkup(rendered.outerHTML);
+    } finally {
+      window.fetch = originalFetch;
+      window.onload = previousOnload;
+    }
+  }
+  // D2 has no bundled offline runtime in this release. Fail explicitly rather
+  // than silently sending source code to an online renderer and reporting a
+  // false success.
+  throw new Error('diagram_engine_unavailable');
+}
+
 function renderAllDiagrams(container) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  const cards = (container || document).querySelectorAll('.diagram-card');
+  const root = container || document;
+  const cards = root.matches && root.matches('.diagram-card')
+    ? [root]
+    : root.querySelectorAll('.diagram-card');
   cards.forEach(async card => {
     if (card._rendered) return;
     card._rendered = true;
@@ -1693,10 +1950,12 @@ function renderAllDiagrams(container) {
     const render = async () => {
       previewEl.innerHTML = `<div class="diagram-loading">${_t('reader.renderingDiagram', { engine: engine.toUpperCase() })}</div>`;
       try {
-        if (engine === 'mermaid' && window.mermaid) {
-          const id = 'mermaid-' + Math.random().toString(36).slice(2);
-          const { svg } = await window.mermaid.render(id, code);
-          previewEl.innerHTML = svg;
+        // Vega/Vega-Lite need expression evaluation.  They are rendered by
+        // the bundled Node sidecar through /api/diagram/render so the secure
+        // WebView CSP never needs unsafe-eval.  The remaining engines are
+        // genuinely browser-local and lazy-loaded here.
+        if (['mermaid', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'tikz'].includes(engine)) {
+          previewEl.innerHTML = await renderLocalDiagram(engine, code, previewEl);
           return;
         }
 
@@ -1720,25 +1979,22 @@ function renderAllDiagrams(container) {
           } else if (res.svg) {
             previewEl.innerHTML = res.svg;
           } else {
-            // Kroki 缺省在线矢量渲染
-            const krokiUrl = `https://kroki.io/${engine}/svg`;
-            const kr = await fetch(krokiUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-              body: code
-            });
-            if (kr.ok) {
-              const svgText = await kr.text();
-              previewEl.innerHTML = svgText;
-            } else {
-              previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.renderFailed', { error: _t('toast.unknownNetworkErr') })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
-            }
+            throw new Error('diagram_engine_unavailable');
           }
         } else {
-          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.diagramError', { error: (res && res.error) || _t('toast.unknownError') })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+          // Server responses intentionally carry only stable error codes.  Do
+          // not leak those codes (or provider/host diagnostics) into the
+          // rendered document; the locale owns the user-facing wording.
+          const reason = (res && res.error_code) ? _t('toast.unknownError')
+            : ((res && res.error) || _t('toast.unknownError'));
+          const safeReason = window.escapeHtml ? escapeHtml(reason) : reason;
+          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.diagramError', { error: safeReason })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
         }
       } catch (err) {
-        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.renderFailed', { error: err.message || String(err) })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+        const rawReason = String(err && err.message || '');
+        const reason = rawReason.startsWith('diagram_') ? _t('toast.unknownError') : rawReason;
+        const safeReason = window.escapeHtml ? escapeHtml(reason || _t('toast.unknownError')) : (reason || _t('toast.unknownError'));
+        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${_t('reader.renderFailed', { error: safeReason })}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
       }
     };
 

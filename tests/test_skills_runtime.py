@@ -88,6 +88,16 @@ def test_disabled_user_skill_is_not_resolved(skill_root):
     assert SkillRegistry([skill_root / "builtin"]).get("summarize") is None
 
 
+def test_disabled_skill_is_visible_only_to_read_only_workbench(skill_root):
+    from src.readmd_modules.skills import SkillRegistry
+
+    meta = skill_root / "builtin" / "summarize" / "readmd.skill.json"
+    meta.write_text(json.dumps({"id": "summarize", "enabled": False}), encoding="utf-8")
+    registry = SkillRegistry([skill_root / "builtin"])
+    assert registry.get("summarize") is None
+    assert [item.id for item in registry.list(include_disabled=True)] == ["summarize"]
+
+
 def test_ai_payload_resolves_skill_without_raw_system_prompt():
     from src.readmd_modules.ai import _skill_messages
 
@@ -109,3 +119,37 @@ def test_shared_core_service_exposes_same_registry():
     rendered = service.render_skill("readmd-summary", {"document": "# Title"})
     assert rendered.startswith("Summarize the document")
     assert "# Title" in rendered
+
+
+def test_skill_render_round_trips_windows_paths_without_regex_escape_error(skill_root):
+    """Regression: document content containing C:\\Users paths used to crash
+    SkillRegistry.render with re.error: bad escape \\U (v2.3.8 item 7)."""
+    from src.readmd_modules.skills import SkillRegistry
+
+    registry = SkillRegistry([skill_root / "builtin"])
+    document = (
+        "# Notes\n"
+        "See C:\\Users\\Natsumer\\Documents\\notes.md and\n"
+        "D:\\Data\\实验结果\\run-\\d1\\output.csv for details.\n"
+        "Backslash sequences: \\n \\t \\x41 \\g<1> \\1"
+    )
+    rendered = registry.render(
+        "summarize",
+        {"document": document, "language": "English", "request": "short"},
+    )
+    assert document in rendered
+
+
+def test_api_skill_evaluate_replaces_windows_paths_verbatim():
+    """The HTTP Skill evaluation path must not treat backslashes as regex
+    replacement escapes (the registry path had already been fixed)."""
+    import re
+
+    rendered = "Document: {{document}}"
+    value = "C:\\Users\\Natsumer\\notes\\draft.md\nD:\\Data\\run-\\d1"
+    result = re.sub(
+        r'\{\{\s*document\s*\}\}',
+        lambda _match, replacement=value: replacement,
+        rendered,
+    )
+    assert result == "Document: " + value
