@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Nenhum conteúdo para editar",
   "toast.noModelsReturned": "Interface não retorna modelo opcional",
   "toast.noPasteText": "Não há texto na área de transferência para colar",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Selecione primeiro o texto no documento",
   "toast.notSaved": "não salvo",
   "toast.searchNeedsDocument": "Por favor, abra o documento primeiro e, em seguida, procure com Ctrl+F",
   "toast.ocrFail": "Falha no reconhecimento de OCR",

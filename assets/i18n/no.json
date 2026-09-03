@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Ikke noe innhold å redigere",
   "toast.noModelsReturned": "Grensesnitt returnerer ikke valgfri modell",
   "toast.noPasteText": "Det er ingen tekst i utklippstavlen å lime inn",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Velg først tekst i dokumentet",
   "toast.notSaved": "ikke lagret",
   "toast.searchNeedsDocument": "Vennligst åpne et dokument først, deretter trykk Ctrl+F for å søke",
   "toast.ocrFail": "OCR-gjenkjenning mislyktes",

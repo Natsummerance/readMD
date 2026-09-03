@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Ata mambu mosi ve ya kusoba",
   "toast.noModelsReturned": "Ata modele mosi ve me vutuka katuka na serveur",
   "toast.noPasteText": "Ata masonama mosi ve kele na presse-papier sambu na kunamatisa",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Sadila pona mono ya mukanda ya ntete",
   "toast.notSaved": "Me bumbana ve",
   "toast.searchNeedsDocument": "Veuillez ouvrir un document, puis appuyez sur Ctrl+F pour rechercher",
   "toast.ocrFail": "Kuzaba ya OCR me nunga ve",

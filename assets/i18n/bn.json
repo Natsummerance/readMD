@@ -860,7 +860,7 @@
   "toast.noEditableContent": "সম্পাদনা করার মতো কোনো কন্টেন্ট নেই",
   "toast.noModelsReturned": "সার্ভার থেকে কোনো মডেল পাওয়া যায়নি",
   "toast.noPasteText": "ক্লিপবোর্ডে পেস্ট করার মতো কোনো টেক্সট নেই",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "অনুগ্রহ করে নথিতে প্রথমে টেক্সট নির্বাচন করুন",
   "toast.notSaved": "সংরক্ষিত নয়",
   "toast.searchNeedsDocument": "দয়া করে প্রথমে ডকুমেন্ট খুলুন, তারপর Ctrl+F চাপুন খুঁজতে",
   "toast.ocrFail": "OCR শনাক্তকরণ ব্যর্থ হয়েছে",

@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Nincs szerkeszthető tartalom",
   "toast.noModelsReturned": "A végpont nem adott vissza elérhető modellt",
   "toast.noPasteText": "A vágólapon nincs beilleszthető szöveg",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Először jelöljön ki szöveget a dokumentumban",
   "toast.notSaved": "Nincs mentve",
   "toast.searchNeedsDocument": "Nyissa meg a dokumentumot, majd nyomja meg a Ctrl+F-et a kereséshez",
   "toast.ocrFail": "OCR felismerés sikertelen",

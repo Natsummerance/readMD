@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Gan ábhar le cur in eagar",
   "toast.noModelsReturned": "Ní thugann comhéadan ar ais samhail roghnach",
   "toast.noPasteText": "Níl aon téacs sa ghearrthaisce le greamú",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Roghnaigh téacs sa cháipéis ar dtús",
   "toast.notSaved": "ní shábháil",
   "toast.searchNeedsDocument": "Oscail an doiciméid ar dtús, ansin brúigh Ctrl+F le haghaidh cuardach",
   "toast.ocrFail": "Theip ar aitheantas OCR",

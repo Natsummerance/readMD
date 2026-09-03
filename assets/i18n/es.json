@@ -860,7 +860,7 @@
   "toast.noEditableContent": "No hay contenido para editar",
   "toast.noModelsReturned": "La interfaz no devuelve el modelo opcional",
   "toast.noPasteText": "No hay texto en el portapapeles para pegar",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Selecciona primero el texto del documento",
   "toast.notSaved": "no salvo",
   "toast.searchNeedsDocument": "Abra un documento primero, luego presione Ctrl+F para buscar",
   "toast.ocrFail": "El reconocimiento OCR falló",

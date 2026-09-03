@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Нет контента для редактирования",
   "toast.noModelsReturned": "Интерфейс не возвращает дополнительную модель",
   "toast.noPasteText": "В буфере обмена нет текста для вставки",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Сначала выберите текст в документе",
   "toast.notSaved": "не сохранено",
   "toast.searchNeedsDocument": "Пожалуйста, откройте документ, затем нажмите Ctrl+F для поиска",
   "toast.ocrFail": "Распознавание OCR не удалось",

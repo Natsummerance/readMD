@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Aucun contenu à modifier",
   "toast.noModelsReturned": "L'interface ne renvoie pas de modèle facultatif",
   "toast.noPasteText": "Il n'y a pas de texte à coller dans le presse-papiers",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Sélectionnez d'abord du texte dans le document",
   "toast.notSaved": "non enregistré",
   "toast.searchNeedsDocument": "Veuillez d'abord ouvrir un document, puis appuyez sur Ctrl+F pour rechercher",
   "toast.ocrFail": "La reconnaissance OCR a échoué",

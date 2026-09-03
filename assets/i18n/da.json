@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Intet indhold at redigere",
   "toast.noModelsReturned": "Interface returnerer ikke valgfri model",
   "toast.noPasteText": "Der er ingen tekst i udklipsholderen at indsætte",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Vælg først tekst i dokumentet",
   "toast.notSaved": "ikke gemt",
   "toast.searchNeedsDocument": "Åbn venligst et dokument, og søg derefter med Ctrl+F",
   "toast.ocrFail": "OCR-genkendelse mislykkedes",

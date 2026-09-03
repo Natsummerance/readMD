@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Neniu redaktebla enhavo",
   "toast.noModelsReturned": "Neniuj modeloj redonitaj de la finaĵo",
   "toast.noPasteText": "Neniu algluebla teksto en tondujo",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Bonvolu unue elekti tekston en la dokumento",
   "toast.notSaved": "Nekonservita",
   "toast.searchNeedsDocument": "Bonvolu malfermi dokumenton antaŭ ol serĉi per Ctrl+F",
   "toast.ocrFail": "OCR-rekono malsukcesis",

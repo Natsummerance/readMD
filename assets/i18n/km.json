@@ -860,7 +860,7 @@
   "toast.noEditableContent": "គ្មានខ្លឹមសារដែលត្រូវកែសម្រួលទេ។",
   "toast.noModelsReturned": "ចំណុចប្រទាក់មិនត្រឡប់គំរូស្រេចចិត្តទេ។",
   "toast.noPasteText": "មិនមានអត្ថបទនៅក្នុងក្ដារតម្បៀតខ្ទាស់ដែលត្រូវបិទភ្ជាប់ទេ។",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "សូមជ្រើសរើសអត្ថបទនៅក្នុងឯកសារជាមុនសិន",
   "toast.notSaved": "មិនបានរក្សាទុក",
   "toast.searchNeedsDocument": "សូមបើកឯកសារជាមុនសិន បន្ទាប់មកចុច Ctrl+F ដើម្បីស្វែងរក",
   "toast.ocrFail": "ការទទួលស្គាល់ OCR បានបរាជ័យ",

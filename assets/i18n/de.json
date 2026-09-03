@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Kein Inhalt zum Bearbeiten vorhanden",
   "toast.noModelsReturned": "Die Schnittstelle gibt kein optionales Modell zurück",
   "toast.noPasteText": "In der Zwischenablage befindet sich kein Text zum Einfügen",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Bitte wählen Sie zuerst Text im Dokument aus",
   "toast.notSaved": "nicht gespeichert",
   "toast.searchNeedsDocument": "Bitte öffnen Sie zuerst ein Dokument und drücken Sie dann Strg+F, um zu suchen",
   "toast.ocrFail": "Die OCR-Erkennung ist fehlgeschlagen",

@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Ebda kontenut biex teditja",
   "toast.noModelsReturned": "Interface ma jirritornax mudell fakultattiv",
   "toast.noPasteText": "M'hemm l-ebda test fil-clipboard biex tippejstja",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "L-ewwel agħżel test fid-dokument",
   "toast.notSaved": "mhux salvati",
   "toast.searchNeedsDocument": "Jekk jogħġbok iktar dokument qabel tfittex bil-Ctrl+F",
   "toast.ocrFail": "Ir-rikonoxximent OCR falla",

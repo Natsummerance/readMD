@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Tiada kandungan untuk diedit",
   "toast.noModelsReturned": "Antara muka tidak mengembalikan model pilihan",
   "toast.noPasteText": "Tiada teks dalam papan keratan untuk ditampal",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Sila pilih teks dalam dokumen terlebih dahulu",
   "toast.notSaved": "tidak disimpan",
   "toast.searchNeedsDocument": "Sila buka dokumen dahulu dan kemudian tekan Ctrl+F untuk mencari",
   "toast.ocrFail": "Pengecaman OCR gagal",

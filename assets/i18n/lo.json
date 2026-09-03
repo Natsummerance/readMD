@@ -860,7 +860,7 @@
   "toast.noEditableContent": "ບໍ່ມີເນື້ອຫາໃຫ້ແກ້ໄຂ",
   "toast.noModelsReturned": "ການໂຕ້ຕອບບໍ່ກັບຄືນຮູບແບບທາງເລືອກ",
   "toast.noPasteText": "ບໍ່ມີຂໍ້ຄວາມໃນ clipboard ທີ່ຈະວາງ",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "ກະລຸນາເລືອກຂໍ້ຄວາມໃນເອກະສານກ່ອນ",
   "toast.notSaved": "ບໍ່ໄດ້ບັນທຶກໄວ້",
   "toast.searchNeedsDocument": "ກະລຸນາເປີດເອກະສານກ່ອນ ຈາກນັ້ນກົດ Ctrl+F ເພື່ອຊອກຫາ",
   "toast.ocrFail": "ການຮັບຮູ້ OCR ລົ້ມເຫລວ",

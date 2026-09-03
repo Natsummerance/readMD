@@ -860,7 +860,7 @@
   "toast.noEditableContent": "རྩོམ་སྒྲིག་ནང་དོན་མེད།",
   "toast.noModelsReturned": "ཨིན་ཊར་ཕེས་འདམ་ཀའི་དཔེ་གཞི་ཕྱིར་ལོག་མི་བྱེད།",
   "toast.noPasteText": "བཤུད་སྒྲོམ་ནང་སྦྱར་དགོས་པའི་ཡི་གེ་མེད།",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "ཡིག་ཆའི་ནང་གི་ཚིག་ཡིག་སྔོན་ལ་འདེམས་རོགས།",
   "toast.notSaved": "མ་བསྲུངས།",
   "toast.searchNeedsDocument": "ཐོག་མར་ཡིག་ཆ་ཁ་ཕྱེ་རྗེས་Ctrl+Fམནན་ནས་འཚོལ་བཤེར་བྱེད་རོགས།",
   "toast.ocrFail": "OCRངོས་འཛིན་བྱེད་མ་ཐུབ།",

@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Không có nội dung nào có thể chỉnh sửa",
   "toast.noModelsReturned": "API không trả về mô hình khả dụng nào",
   "toast.noPasteText": "Không có văn bản nào có thể dán trong bảng nhớ tạm",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Vui lòng chọn văn bản trong tài liệu trước",
   "toast.notSaved": "Chưa lưu",
   "toast.searchNeedsDocument": "Vui lòng mở tài liệu trước khi tìm kiếm bằng Ctrl+F",
   "toast.ocrFail": "Nhận dạng OCR thất bại",

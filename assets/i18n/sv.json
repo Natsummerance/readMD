@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Inget innehåll att redigera",
   "toast.noModelsReturned": "Gränssnittet returnerar inte valfri modell",
   "toast.noPasteText": "Det finns ingen text i klippbordet att klistra in",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Markera först text i dokumentet",
   "toast.notSaved": "inte sparat",
   "toast.searchNeedsDocument": "Öppna först ett dokument innan du söker med Ctrl+F",
   "toast.ocrFail": "OCR-igenkänning misslyckades",

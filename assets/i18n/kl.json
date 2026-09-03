@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Imarisaqanngilaq allanngortinniarlugu",
   "toast.noModelsReturned": "Interface-ip modeli toqqarneqarsinnaasoq utertinngilaa",
   "toast.noPasteText": "Clipboardimi allassimasoqanngilaq ikkussorneqarsinnaasumik",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "Allaaserisaq siunngortumik toqqarissiuk",
   "toast.notSaved": "annaanneqanngilaq",
   "toast.searchNeedsDocument": "Qitseqqissuarusiartoq dokumenti sukkuju qitseqqissuarusiartoq, Ctrl+F qitseqqissuarusiartoq",
   "toast.ocrFail": "OCR-imik tunniussineq iluatsinngilaq",

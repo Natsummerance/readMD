@@ -860,7 +860,7 @@
   "toast.noEditableContent": "ไม่มีเนื้อหาที่สามารถแก้ไขได้",
   "toast.noModelsReturned": "อินเทอร์เฟซไม่ได้ส่งคืนโมเดลที่เลือกได้",
   "toast.noPasteText": "ไม่มีข้อความที่สามารถวางได้ในคลิปบอร์ด",
-  "toast.noTextSelectionNotice": "Please select text in the document first",
+  "toast.noTextSelectionNotice": "กรุณาเลือกข้อความในเอกสารก่อน",
   "toast.notSaved": "ยังไม่ได้บันทึก",
   "toast.searchNeedsDocument": "กรุณาเปิดเอกสารก่อน แล้วกด Ctrl+F เพื่อค้นหา",
   "toast.ocrFail": "การรู้จำ OCR ล้มเหลว",
