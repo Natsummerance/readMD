@@ -5581,9 +5581,9 @@ async function renderLocalDiagram(engine, code, previewEl) {
     canvas.setAttribute('role', 'img');
     const chartLabel = window.i18n
       ? window.i18n.t('reader.diagramBadge', { lang: 'Chart.js' })
-      : 'Chart.js diagram';
+      : '';
     canvas.setAttribute('aria-label', chartLabel && chartLabel !== 'reader.diagramBadge'
-      ? chartLabel : 'Chart.js diagram');
+      ? chartLabel : '');
     // A bounded canvas keeps malformed configs from forcing unbounded layout
     // growth while still allowing the card to size naturally in narrow panes.
     canvas.width = 960;
