@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "سۈنئىي ئەقىل قايتۇرغان ئۇسلۇب JSON ئىناۋەتسىز",
+  "pet.statusInstallHint": "سىرتقى ئىجرا مۇھىتى ئورنىتىلمىغان",
+  "pet.statusStopped": "تەييار",
+  "pet.statusRunning": "ئېچىلغان"
 }

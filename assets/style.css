@@ -2575,9 +2575,17 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--text-muted, #94a3b8);
+  background: var(--fg3);
   display: inline-block;
 }
+.export-preview-pager {
+  display: none;
+  padding-inline: 8px;
+}
+.export-preview-pager.is-visible { display: inline-flex; }
+#pet-status-dot.is-running { background: var(--success, #22c55e); }
+#pet-status-dot.is-stopped { background: var(--fg3); }
+#pet-status-dot.is-unavailable { background: var(--warning, #f59e0b); }
 #pet-active-slug {
   color: var(--fg3);
   font-size: 11px;

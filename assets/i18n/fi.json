@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "Tekoälyn palauttama tyyli-JSON on virheellinen",
+  "pet.statusInstallHint": "Ulkoista ajonaikaista ympäristöä ei ole asennettu",
+  "pet.statusStopped": "valmis",
+  "pet.statusRunning": "On jo päällä"
 }

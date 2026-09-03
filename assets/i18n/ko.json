@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "AI가 반환한 스타일 JSON이 올바르지 않습니다",
+  "pet.statusInstallHint": "외부 런타임이 설치되지 않았습니다",
+  "pet.statusStopped": "준비가 된",
+  "pet.statusRunning": "이미 켜져 있음"
 }

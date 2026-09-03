@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "རིག་ནུས་ཀྱིས་ཕྱིར་ལོག་པའི་བཟོ་ལྟའི JSON ནུས་མེད་རེད།",
+  "pet.statusInstallHint": "ཕྱི་ལོགས་ཀྱི་རྒྱུག་འདེད་མ་བསྒྲིགས།",
+  "pet.statusStopped": "གྲ་སྒྲིག",
+  "pet.statusRunning": "སྔོན་ནས་ཁ་ཕྱེ་ཟིན།"
 }

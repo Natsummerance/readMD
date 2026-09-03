@@ -731,6 +731,11 @@ def _doc2docx_word_com(src, out_dir, timeout=30):
             p.terminate()
         finally:
             p.join(timeout=3)
+            try:
+                q.close()
+                q.join_thread()
+            except Exception:
+                pass
         return None
 
     # ``Queue.empty()`` is racy because the feeder thread may not have flushed

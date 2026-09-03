@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "AI द्वारा लौटाया गया शैली JSON अमान्य है",
+  "pet.statusInstallHint": "बाहरी रनटाइम स्थापित नहीं है",
+  "pet.statusStopped": "तैयार",
+  "pet.statusRunning": "पहले से ही चालू है"
 }

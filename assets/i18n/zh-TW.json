@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "内容",
   "tpl.groupLifecycle": "儲存与發布",
   "tpl.groupExport": "导出",
-  "batch.zipSkipped": "已跳过 {count} 个不支持的檔案"
+  "batch.zipSkipped": "已跳过 {count} 个不支持的檔案",
+  "styleai.invalidJson": "AI 回傳的樣式 JSON 無效",
+  "pet.statusInstallHint": "外部執行環境尚未安裝",
+  "pet.statusStopped": "就緒",
+  "pet.statusRunning": "已開啟"
 }

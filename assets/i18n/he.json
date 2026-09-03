@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "JSON הסגנון שהוחזר על ידי הבינה המלאכותית אינו תקין",
+  "pet.statusInstallHint": "סביבת ההרצה החיצונית אינה מותקנת",
+  "pet.statusStopped": "מוּכָן",
+  "pet.statusRunning": "כבר מופעל"
 }

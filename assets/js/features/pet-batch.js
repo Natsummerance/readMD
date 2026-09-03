@@ -34,14 +34,19 @@ async function receivePetBatch(paths) {
 
 window.receivePetBatch = receivePetBatch;
 
-const petT = (key, params) => window.i18n ? window.i18n.t(key, params) : key;
+const petT = (key, params, fallback = '') => {
+  const value = window.i18n ? window.i18n.t(key, params) : '';
+  // i18n.t intentionally returns the key for an unknown entry.  Never expose
+  // that implementation detail in the UI; use a short safe fallback instead.
+  return value && value !== key ? value : fallback;
+};
 
 function setPetMenuStatus(status) {
   const label = $('pet-status-label');
   if (!label) return;
-  if (status && status.enabled) label.textContent = petT('app.enabled');
-  else if (status && status.adapter && status.adapter.available) label.textContent = petT('app.disabled');
-  else label.textContent = petT('menu.petSub');
+  if (status && status.enabled) label.textContent = petT('app.enabled', {}, '已开启');
+  else if (status && status.adapter && status.adapter.available) label.textContent = petT('app.disabled', {}, '未开启');
+  else label.textContent = petT('menu.petSub', {}, '外置插件');
 }
 
 async function refreshPetMenuStatus() {
@@ -76,23 +81,23 @@ function renderPetSettings(status) {
   const activeSlug = $('pet-active-slug');
   const statusLine = $('pet-status-line');
   if (statusDot && statusText) {
+    statusDot.classList.remove('is-running', 'is-stopped', 'is-unavailable');
     if (status && status.enabled) {
-      statusDot.style.background = 'var(--accent, #22c55e)';
-      statusText.textContent = (window.i18n ? window.i18n.t('pet.statusRunning') : '') || '运行中';
+      statusDot.classList.add('is-running');
+      statusText.textContent = petT('pet.statusRunning', {}, '运行中');
     } else if (status && status.adapter && status.adapter.available) {
-      statusDot.style.background = 'var(--text-muted, #94a3b8)';
-      statusText.textContent = (window.i18n ? window.i18n.t('pet.statusStopped') : '') || '未启动';
+      statusDot.classList.add('is-stopped');
+      statusText.textContent = petT('pet.statusStopped', {}, '未启动');
     } else {
-      statusDot.style.background = 'var(--warning, #f59e0b)';
-      statusText.textContent = (window.i18n ? window.i18n.t('pet.statusNotInstalled') : '') || '未安装外置运行时';
+      statusDot.classList.add('is-unavailable');
+      statusText.textContent = petT('pet.statusNotInstalled', {}, '未安装外置运行时');
     }
   }
   if (statusLine) {
-    const adapterDir = (status && (status.adapter_dir || (status.adapter && status.adapter.dir))) || '';
     if (status && status.adapter && status.adapter.available) {
-      statusLine.textContent = (window.i18n ? window.i18n.t('pet.statusInstalled', { path: adapterDir }) : '') || `已安装，目录：${adapterDir}`;
+      statusLine.textContent = petT('pet.statusInstalled', {}, '外置运行时已安装');
     } else {
-      statusLine.textContent = (window.i18n ? window.i18n.t('pet.statusNotInstalled', { path: adapterDir }) : '') || `尚未安装，启用后将安装到：${adapterDir}`;
+      statusLine.textContent = petT('pet.statusInstallHint', {}, '外置运行时尚未安装');
     }
   }
   if (activeSlug) {
@@ -124,7 +129,7 @@ async function installPetPlugin() {
   if (!confirmed) return false;
   if (btn) {
     btn.disabled = true;
-    btn.textContent = (window.i18n ? window.i18n.t('pet.installing') : '') || '正在安装...';
+    btn.textContent = petT('pet.installing', {}, '正在安装...');
   }
   try {
     const result = await py.install_pet_plugin(archive, true);

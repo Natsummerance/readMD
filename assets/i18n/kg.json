@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "JSON ya nsemo yina vutukidi yina yina yina yina",
+  "pet.statusInstallHint": "Ntangu ya nsemo ya nganda kele ve na installation",
+  "pet.statusStopped": "Ya kuyilama",
+  "pet.statusRunning": "Me kanguka"
 }

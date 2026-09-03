@@ -957,6 +957,11 @@ def _consume_skill_evaluation_token(token, skill_id, content):
 
 
 class Handler(BaseHTTPRequestHandler):
+    # ZIP uploads are intentionally bounded before they are copied into
+    # memory.  Browser uploads use the binary request path; local pywebview
+    # callers use ``Api.extract_zip_batch`` and therefore do not need to send
+    # a second copy through HTTP.
+    MAX_ZIP_REQUEST_BYTES = 100 * 1024 * 1024
     protocol_version = 'HTTP/1.1'
     server_version = 'ReadMD/' + VERSION
     LAN_TOKEN = None
@@ -2742,25 +2747,58 @@ class Handler(BaseHTTPRequestHandler):
                                   'error': '批量转换启动失败：%s' % e})
 
     def _api_batch_extract_zip(self):
+        """Extract a user-selected ZIP without leaking paths or exceptions.
+
+        The HTTP endpoint accepts binary uploads and, for backwards
+        compatibility, JSON paths that are already inside the app/data roots.
+        Native file-dialog paths continue through the pywebview bridge where
+        the user explicitly selected the file.
+        """
         try:
             ctype = self.headers.get('Content-Type', '')
             n = int(self.headers.get('Content-Length', 0) or 0)
             from src.readmd_modules.convert import extract_zip_archive
             dest_dir = os.path.join(DATA_DIR, 'temp_zip')
             if 'application/zip' in ctype or 'octet-stream' in ctype:
+                if n < 0 or n > self.MAX_ZIP_REQUEST_BYTES:
+                    self.close_connection = True
+                    self._send_api_error(413, 'zip_archive_too_large')
+                    return
                 data = self.rfile.read(n) if n else b''
+                if len(data) != n:
+                    self._send_api_error(400, 'incomplete_request')
+                    return
                 res = extract_zip_archive(data, base_temp_dir=dest_dir)
             else:
+                if n < 0 or n > 64 * 1024:
+                    self.close_connection = True
+                    self._send_api_error(413, 'request_too_large')
+                    return
                 body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+                if body.get('confirm') is not True:
+                    self._send_api_error(400, 'confirmation_required')
+                    return
                 zip_path = body.get('path', '')
-                if not zip_path or not os.path.isfile(zip_path):
-                    self._send_json(400, {'ok': False, 'error_code': 'invalid_zip_path', 'error': '无效的 ZIP 文件路径'})
+                try:
+                    zip_path = validate_file_path(
+                        zip_path,
+                        allowed_extensions=['.zip'],
+                        allowed_dirs=[DATA_DIR, APP_DIR],
+                    )
+                except Exception:
+                    self._send_api_error(400, 'invalid_zip_path')
                     return
                 res = extract_zip_archive(zip_path, base_temp_dir=dest_dir)
             self._send_json(200, res)
+        except ValueError as e:
+            code = str(e) if str(e) in {
+                'zip_archive_too_large', 'zip_entry_count_exceeded',
+                'invalid_zip_path',
+            } else 'zip_extract_failed'
+            self._send_api_error(422, code, paths=[], skipped=0, total=0)
         except Exception as e:
             logging.exception('api_batch_extract_zip failed')
-            self._send_json(500, {'ok': False, 'error_code': 'zip_extract_failed', 'error': str(e), 'paths': [], 'skipped': 0, 'total': 0})
+            self._send_api_error(500, 'zip_extract_failed', paths=[], skipped=0, total=0)
 
     def _api_convert_progress(self, jid):
         job = _CONVERT_JOBS.get(jid or '')
@@ -3791,7 +3829,7 @@ class Api(object):
             return extract_zip_archive(zip_path, base_temp_dir=dest_dir)
         except Exception as e:
             logging.exception('extract_zip_batch failed')
-            return {'ok': False, 'error_code': 'zip_extract_failed', 'error': str(e), 'paths': [], 'skipped': 0, 'total': 0}
+            return {'ok': False, 'error_code': 'zip_extract_failed', 'paths': [], 'skipped': 0, 'total': 0}
 
     def export_presentation(self, content, theme='black', transition='slide', save=False):
         """生成 Reveal.js 演示文稿 HTML。
@@ -4385,7 +4423,6 @@ class Api(object):
         status = self._pet_controller.snapshot()
         status['model'] = self._pet_model_status()
         status['adapter'] = self._pet_launcher.status()
-        status['adapter_dir'] = os.path.join(DATA_DIR, 'pet', 'hermes-adapter')
         prefs = self._pet_preferences()
         status['preferences'] = dict(prefs['info'], renderer=prefs['renderer'])
         return status

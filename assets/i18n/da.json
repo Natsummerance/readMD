@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "Stil-JSON fra AI er ugyldig",
+  "pet.statusInstallHint": "Den eksterne runtime er ikke installeret",
+  "pet.statusStopped": "parat",
+  "pet.statusRunning": "Allerede tændt"
 }

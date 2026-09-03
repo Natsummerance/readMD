@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "JSON stila koji je vratio AI nije valjan",
+  "pet.statusInstallHint": "Vanjsko okruženje nije instalirano",
+  "pet.statusStopped": "Spremno",
+  "pet.statusRunning": "Omogućeno"
 }

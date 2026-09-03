@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "Di-wasto ang style JSON na ibinalik ng AI",
+  "pet.statusInstallHint": "Hindi naka-install ang panlabas na runtime",
+  "pet.statusStopped": "Handa Na",
+  "pet.statusRunning": "Naka-enable"
 }

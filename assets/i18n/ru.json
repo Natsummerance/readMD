@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "JSON стиля, возвращённый ИИ, недействителен",
+  "pet.statusInstallHint": "Внешняя среда выполнения не установлена",
+  "pet.statusStopped": "готовый",
+  "pet.statusRunning": "Уже включено"
 }

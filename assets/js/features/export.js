@@ -836,8 +836,8 @@ function updateExportLivePreview() {
       const nextBtn = $('export-preview-next-btn');
       if (prevBtn && nextBtn) {
         if (totalPages > 1) {
-          prevBtn.style.display = 'inline-flex';
-          nextBtn.style.display = 'inline-flex';
+          prevBtn.classList.add('is-visible');
+          nextBtn.classList.add('is-visible');
           let curIdx = 0;
           prevBtn.onclick = () => {
             const sheets = fullPageHost.querySelectorAll('.export-preview-page-sheet');
@@ -854,8 +854,8 @@ function updateExportLivePreview() {
             }
           };
         } else {
-          prevBtn.style.display = 'none';
-          nextBtn.style.display = 'none';
+          prevBtn.classList.remove('is-visible');
+          nextBtn.classList.remove('is-visible');
         }
       }
     }

@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "AI ফেরত দেওয়া স্টাইল JSON অবৈধ",
+  "pet.statusInstallHint": "বাহ্যিক রানটাইম ইনস্টল করা নেই",
+  "pet.statusStopped": "প্রস্তুত",
+  "pet.statusRunning": "সক্রিয়"
 }

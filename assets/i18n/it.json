@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "Il JSON dello stile restituito dall’IA non è valido",
+  "pet.statusInstallHint": "Il runtime esterno non è installato",
+  "pet.statusStopped": "Pronto",
+  "pet.statusRunning": "Attivato"
 }

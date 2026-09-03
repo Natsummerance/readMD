@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "Το JSON στυλ που επέστρεψε η τεχνητή νοημοσύνη δεν είναι έγκυρο",
+  "pet.statusInstallHint": "Το εξωτερικό περιβάλλον εκτέλεσης δεν είναι εγκατεστημένο",
+  "pet.statusStopped": "Έτοιμο",
+  "pet.statusRunning": "Ενεργοποιημένο"
 }

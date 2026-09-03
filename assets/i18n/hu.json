@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "A mesterséges intelligencia által visszaadott stílus-JSON érvénytelen",
+  "pet.statusInstallHint": "A külső futtatókörnyezet nincs telepítve",
+  "pet.statusStopped": "Kész",
+  "pet.statusRunning": "Bekapcsolva"
 }

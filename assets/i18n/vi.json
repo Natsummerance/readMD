@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "JSON kiểu dáng do AI trả về không hợp lệ",
+  "pet.statusInstallHint": "Chưa cài đặt môi trường chạy bên ngoài",
+  "pet.statusStopped": "Sẵn sàng",
+  "pet.statusRunning": "Đã bật"
 }

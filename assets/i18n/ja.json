@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "AI が返したスタイル JSON は無効です",
+  "pet.statusInstallHint": "外部ランタイムが未インストールです",
+  "pet.statusStopped": "準備ができて",
+  "pet.statusRunning": "すでにオンになっています"
 }

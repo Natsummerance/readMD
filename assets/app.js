@@ -686,11 +686,14 @@ function bindEvents() {
   if ($('style-custom-modal')) $('style-custom-modal').addEventListener('click', e => { if (e.target === $('style-custom-modal')) closeStyleModal(); });
 
   async function generateCustomStyleWithAi() {
-    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    const _t = (k, p, fallback = '') => {
+      const value = window.i18n ? window.i18n.t(k, p) : '';
+      return value && value !== k ? value : fallback;
+    };
     const promptInput = $('style-ai-prompt');
     const prompt = (promptInput && promptInput.value || '').trim();
     if (!prompt) {
-      showToast(_t('styleai.enterPrompt') || '请输入排版风格诉求');
+      showToast(_t('styleai.enterPrompt', {}, '请输入排版风格诉求'));
       if (promptInput) promptInput.focus();
       return;
     }
@@ -698,7 +701,7 @@ function bindEvents() {
     const genBtn = $('style-ai-gen-btn');
     if (statusEl) {
       statusEl.classList.remove('hidden');
-      statusEl.textContent = _t('styleai.generating') || 'AI 样式生成中...';
+      statusEl.textContent = _t('styleai.generating', {}, 'AI 样式生成中...');
     }
     if (genBtn) genBtn.disabled = true;
 
@@ -707,8 +710,8 @@ function bindEvents() {
         ? await ensureAiConfigured()
         : (typeof resolveSharedAiConnection === 'function' ? await resolveSharedAiConnection() : null);
       if (!connection) {
-        if (statusEl) statusEl.textContent = _t('toast.noApiKeyNotice') || '请先配置 AI 服务';
-        showToast(_t('toast.noApiKeyNotice') || '请先配置 AI 服务');
+        if (statusEl) statusEl.textContent = _t('toast.noApiKeyNotice', {}, '请先配置 AI 服务');
+        showToast(_t('toast.noApiKeyNotice', {}, '请先配置 AI 服务'));
         return;
       }
 
@@ -729,7 +732,8 @@ function bindEvents() {
             request: prompt,
             context: docSnippet,
             document: docSnippet,
-            language: (window.i18n && window.i18n.locale) || 'zh-CN'
+            language: (window.i18n && (window.i18n.currentLang || window.i18n.locale)) || 'zh-CN',
+            output_format: 'json'
           },
           messages: [{
             role: 'user',
@@ -741,23 +745,27 @@ function bindEvents() {
 
       const data = await res.json();
       if (!data || !data.ok) {
-        throw new Error((data && data.error) || '未返回有效内容');
+        throw new Error(_t('ai.reqFailMsg', {}, 'AI 请求未返回有效内容'));
       }
 
       let text = (data.content || '').trim();
-      text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
-      const match = text.match(/\{[\s\S]*\}/);
-      if (!match) {
-        throw new Error(_t('styleai.invalidJson') || 'AI 未返回有效的 JSON 样式数据');
+      const fenced = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+      const candidate = (fenced ? fenced[1] : text).trim();
+      if (!candidate.startsWith('{') || !candidate.endsWith('}')) {
+        throw new Error(_t('styleai.invalidJson', {}, 'AI 返回的样式 JSON 无效'));
       }
       let parsed;
       try {
-        parsed = JSON.parse(match[0]);
+        parsed = JSON.parse(candidate);
       } catch (e) {
-        throw new Error(_t('styleai.invalidJson') || 'AI 样式 JSON 解析失败');
+        throw new Error(_t('styleai.invalidJson', {}, 'AI 返回的样式 JSON 无效'));
       }
-      if (!parsed || (typeof parsed.css !== 'string' && typeof parsed.head !== 'string')) {
-        throw new Error(_t('styleai.invalidJson') || 'AI 返回的样式缺少 css 或 head 字段');
+      const allowedKeys = new Set(['css', 'head']);
+      const keys = parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? Object.keys(parsed) : [];
+      if (!parsed || keys.some(key => !allowedKeys.has(key))
+          || (typeof parsed.css !== 'string' && typeof parsed.head !== 'string')) {
+        throw new Error(_t('styleai.invalidJson', {}, 'AI 返回的样式 JSON 无效'));
       }
 
       if (parsed.css && $('style-custom-css')) {
@@ -768,15 +776,16 @@ function bindEvents() {
       }
 
       if (statusEl) {
-        statusEl.textContent = _t('styleai.generated') || 'AI 样式生成完成，保存即可生效';
+        statusEl.textContent = _t('styleai.generated', {}, 'AI 样式生成完成，保存即可生效');
         setTimeout(() => statusEl.classList.add('hidden'), 3500);
       }
-      showToast(_t('styleai.generated') || 'AI 样式生成完成');
+      showToast(_t('styleai.generated', {}, 'AI 样式生成完成'));
     } catch (err) {
+      const safeError = err && err.message ? String(err.message).slice(0, 240) : _t('ai.reqFailMsg', {}, 'AI 请求失败');
       if (statusEl) {
-        statusEl.textContent = (_t('ai.reqFailMsg') || 'AI 请求失败：') + err.message;
+        statusEl.textContent = _t('ai.reqFailMsg', {}, 'AI 请求失败：') + safeError;
       }
-      showToast((_t('ai.reqFailMsg') || 'AI 请求失败：') + err.message);
+      showToast(_t('ai.reqFailMsg', {}, 'AI 请求失败：') + safeError);
     } finally {
       if (genBtn) genBtn.disabled = false;
     }

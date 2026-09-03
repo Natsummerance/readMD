@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "JSON รูปแบบที่ AI ส่งกลับไม่ถูกต้อง",
+  "pet.statusInstallHint": "ยังไม่ได้ติดตั้งรันไทม์ภายนอก",
+  "pet.statusStopped": "พร้อม",
+  "pet.statusRunning": "เปิดใช้งาน"
 }

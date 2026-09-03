@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "JSON រចនាប័ទ្មដែល AI ត្រឡប់មកមិនត្រឹមត្រូវ",
+  "pet.statusInstallHint": "មិនទាន់បានដំឡើង runtime ខាងក្រៅ",
+  "pet.statusStopped": "រួចរាល់",
+  "pet.statusRunning": "បានបើករួចហើយ"
 }
