@@ -140,7 +140,13 @@ function bindGlobalDragAndDrop() {
             const path = f.path ? f.path : await uploadFile(f);
             if (path) paths.push(path);
           }
-          if (paths.length) enqueueBatchFiles(paths, false);
+          if (paths.length) {
+            if (typeof enqueueBatchFiles === 'function') {
+              enqueueBatchFiles(paths, false);
+            } else if (paths.length === 1 && typeof convertOrOcr === 'function') {
+              convertOrOcr(paths[0], 'convert');
+            }
+          }
         }
       }
       return;

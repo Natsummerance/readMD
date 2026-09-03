@@ -88,15 +88,14 @@ class TestStressWorkload(unittest.TestCase):
 
     def test_multi_engine_diagram_card_generation(self):
         """Verify markdown parser fences generate correct diagram cards for all 10+ engines."""
+        from src.readmd_modules.diagrams import identify_diagram_blocks
         engines = ['mermaid', 'wavedrom', 'bitfield', 'viz', 'dot', 'chart', 'tikz', 'vega', 'vega-lite', 'd2', 'wsd']
         fences = [f"```{eng}\nsource code\n```" for eng in engines]
         doc = "\n\n".join(fences)
-
-        # Parse via Api().parse_markdown or readmd module
-        api = readmd.Api()
-        html = api.parse_markdown(doc) if hasattr(api, 'parse_markdown') else None
-        # Verify all engines can be parsed without throwing
-        self.assertTrue(True)
+        blocks = identify_diagram_blocks(doc)
+        self.assertEqual(len(blocks), len(engines))
+        for block, eng in zip(blocks, engines):
+            self.assertEqual(block["type"], eng)
 
 
 if __name__ == '__main__':

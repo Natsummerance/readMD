@@ -860,7 +860,7 @@
   "toast.noEditableContent": "אין תוכן לעריכה",
   "toast.noModelsReturned": "ממשק לא מחזיר דגם אופציונלי",
   "toast.noPasteText": "אין טקסט בלוח להדבקה",
-  "toast.noTextSelectionNotice": "אם הטקסט לא נבחר, הטקסט המלא יעובד",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "לא נשמר",
   "toast.searchNeedsDocument": "אנא פתחו מסמך לפני חיפוש באמצעות Ctrl+F",
   "toast.ocrFail": "זיהוי OCR נכשל",

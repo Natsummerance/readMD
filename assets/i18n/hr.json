@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Nema sadržaja za uređivanje",
   "toast.noModelsReturned": "Krajnja točka nije vratila nijedan model",
   "toast.noPasteText": "U međuspremniku nema teksta za lijepljenje",
-  "toast.noTextSelectionNotice": "Tekst nije odabran, obrađuje se cijeli dokument",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "Nije spremljeno",
   "toast.searchNeedsDocument": "Please open a document first, then search with Ctrl+F",
   "toast.ocrFail": "OCR prepoznavanje nije uspjelo",

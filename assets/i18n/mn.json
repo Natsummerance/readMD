@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Засварлах боломжтой агуулга алга байна",
   "toast.noModelsReturned": "Интерфэйсээс сонгох загвар ирсэнгүй",
   "toast.noPasteText": "Санах ойд буулгах боломжтой текст байхгүй байна",
-  "toast.noTextSelectionNotice": "Текст сонгогдоогүй тул бүх текстийг боловсруулна",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "Хадгалаагүй",
   "toast.searchNeedsDocument": "Хайлтын тулд Ctrl+F дарж, өргөдлийг нээнэ үү",
   "toast.ocrFail": "OCR танилт амжилтгүй боллоо",

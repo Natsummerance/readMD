@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Walang nilalaman na maaaring i-edit",
   "toast.noModelsReturned": "Walang ibinalik na modelo ang interface",
   "toast.noPasteText": "Walang teksto sa clipboard na maaaring i-paste",
-  "toast.noTextSelectionNotice": "Walang napiling teksto, ipoproseso ang buong dokumento",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "Hindi na-save",
   "toast.searchNeedsDocument": "Please open a document first, then press Ctrl+F to search",
   "toast.ocrFail": "Nabigo ang OCR recognition",

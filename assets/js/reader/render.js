@@ -1949,7 +1949,8 @@ function diagramFallbackMarkup(code, errorCode) {
   const message = _t('reader.diagramError', { error: safeReason });
   const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
   const safeCode = window.escapeHtml ? escapeHtml(String(code || '')) : String(code || '');
-  return `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${safeCode}</code></pre></div>`;
+  const refreshLabel = _t('reader.refresh') || '重试';
+  return `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><button type="button" class="diagram-inline-retry" aria-label="${refreshLabel}"><svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-right:4px;"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg><span>${refreshLabel}</span></button><pre class="diagram-fallback"><code>${safeCode}</code></pre></div>`;
 }
 
 function renderDiagramFallback(previewEl, engine, code, errorCode) {
@@ -2074,11 +2075,11 @@ async function renderLocalDiagram(engine, code, previewEl) {
   const normalized = String(engine || '').toLowerCase();
   if (normalized === 'mermaid') {
     const mermaid = await loadDiagramScript('/assets/vendor/diagrams/mermaid/mermaid.min.js', 'mermaid');
-    const isDark = document.body?.dataset?.theme === 'dark' || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches && document.body?.dataset?.theme !== 'light');
+    const isDark = document.body?.dataset?.theme === 'dark';
     mermaid.initialize({
       startOnLoad: false,
       securityLevel: 'strict',
-      theme: isDark ? 'dark' : 'neutral',
+      theme: isDark ? 'dark' : 'default',
       fontFamily: 'var(--font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)',
       flowchart: {
         useMaxWidth: true,
@@ -2151,9 +2152,32 @@ async function renderLocalDiagram(engine, code, previewEl) {
     if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
       throw new Error('diagram_invalid_input');
     }
+    const isDark = document.body?.dataset?.theme === 'dark';
+    const darkConfig = isDark ? {
+      background: 'transparent',
+      axis: {
+        domainColor: '#868fa0',
+        gridColor: 'rgba(255, 255, 255, 0.08)',
+        tickColor: '#868fa0',
+        labelColor: '#e7e9ee',
+        titleColor: '#e7e9ee'
+      },
+      legend: {
+        labelColor: '#e7e9ee',
+        titleColor: '#e7e9ee'
+      },
+      text: {
+        fill: '#e7e9ee'
+      },
+      title: {
+        color: '#e7e9ee',
+        subtitleColor: '#9aa3b2'
+      }
+    } : { background: 'transparent' };
     try {
-      const compiled = normalized === 'vega-lite' && vegaLite ? vegaLite.compile(spec).spec : spec;
-      const view = new vega.View(vega.parse(compiled), { renderer: 'none' });
+      const compiled = normalized === 'vega-lite' && vegaLite ? vegaLite.compile(spec, { config: darkConfig }).spec : spec;
+      const view = new vega.View(vega.parse(compiled, darkConfig), { renderer: 'none' });
+      await view.runAsync();
       const svg = await view.toSVG();
       if (!svg || !svg.startsWith('<svg')) throw new Error('diagram_render_failed');
       return diagramOutputMarkup(svg);
@@ -2168,6 +2192,54 @@ async function renderLocalDiagram(engine, code, previewEl) {
     try { config = JSON.parse(String(code || '')); } catch (_) { throw new Error('diagram_invalid_input'); }
     if (!config || typeof config !== 'object' || Array.isArray(config)) {
       throw new Error('diagram_invalid_input');
+    }
+    const isDark = document.body?.dataset?.theme === 'dark';
+    const primaryBlue = isDark ? 'rgba(59, 130, 246, 0.75)' : 'rgba(37, 99, 235, 0.8)';
+    const primaryBlueBorder = isDark ? '#60a5fa' : '#2563eb';
+    if (Chart && Chart.defaults) {
+      Chart.defaults.color = isDark ? '#e7e9ee' : '#374151';
+      Chart.defaults.borderColor = isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)';
+      Chart.defaults.backgroundColor = primaryBlue;
+      if (Chart.defaults.elements && Chart.defaults.elements.bar) {
+        Chart.defaults.elements.bar.backgroundColor = primaryBlue;
+        Chart.defaults.elements.bar.borderColor = primaryBlueBorder;
+        Chart.defaults.elements.bar.borderWidth = 1;
+      }
+      if (Chart.defaults.elements && Chart.defaults.elements.line) {
+        Chart.defaults.elements.line.borderColor = primaryBlueBorder;
+        Chart.defaults.elements.line.backgroundColor = isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(37, 99, 235, 0.2)';
+      }
+      if (Chart.defaults.elements && Chart.defaults.elements.point) {
+        Chart.defaults.elements.point.backgroundColor = primaryBlueBorder;
+        Chart.defaults.elements.point.borderColor = isDark ? '#1e293b' : '#ffffff';
+      }
+    }
+    const defaultColors = [
+      isDark ? 'rgba(59, 130, 246, 0.75)' : 'rgba(37, 99, 235, 0.8)',   // blue
+      isDark ? 'rgba(16, 185, 129, 0.75)' : 'rgba(5, 150, 105, 0.8)',   // emerald
+      isDark ? 'rgba(245, 158, 11, 0.75)' : 'rgba(217, 119, 6, 0.8)',   // amber
+      isDark ? 'rgba(239, 68, 68, 0.75)' : 'rgba(220, 38, 38, 0.8)',    // red
+      isDark ? 'rgba(139, 92, 246, 0.75)' : 'rgba(124, 58, 237, 0.8)',  // violet
+      isDark ? 'rgba(6, 182, 212, 0.75)' : 'rgba(8, 145, 178, 0.8)',    // cyan
+    ];
+    const defaultBorders = [
+      isDark ? '#60a5fa' : '#2563eb',
+      isDark ? '#34d399' : '#059669',
+      isDark ? '#fbbf24' : '#d97706',
+      isDark ? '#f87171' : '#dc2626',
+      isDark ? '#a78bfa' : '#7c3aed',
+      isDark ? '#22d3ee' : '#0891b2',
+    ];
+    if (config && config.data && Array.isArray(config.data.datasets)) {
+      config.data.datasets.forEach((ds, idx) => {
+        if (!ds.backgroundColor) {
+          ds.backgroundColor = defaultColors[idx % defaultColors.length];
+        }
+        if (!ds.borderColor) {
+          ds.borderColor = defaultBorders[idx % defaultBorders.length];
+          if (ds.borderWidth == null) ds.borderWidth = 1;
+        }
+      });
     }
     const canvas = document.createElement('canvas');
     canvas.className = 'diagram-chart-canvas';
@@ -2223,6 +2295,10 @@ function renderAllDiagrams(container) {
     const reloadBtn = card.querySelector('.diagram-reload-btn');
 
     const render = async () => {
+      if (reloadBtn) {
+        reloadBtn.disabled = true;
+        reloadBtn.classList.add('is-loading');
+      }
       const previousCanvas = previewEl && previewEl.querySelector('.diagram-chart-canvas');
       if (previousCanvas && previousCanvas._readmdChart && typeof previousCanvas._readmdChart.destroy === 'function') {
         try { previousCanvas._readmdChart.destroy(); } catch (_) { /* best effort cleanup */ }
@@ -2241,13 +2317,14 @@ function renderAllDiagrams(container) {
         }
 
         let res;
+        const allowRemote = Boolean(card._allowRemote);
         if (hasPy && py.render_diagram) {
-          res = await py.render_diagram(engine, code);
+          res = await py.render_diagram(engine, code, { allow_remote: allowRemote });
         } else {
           const r = await apiFetch('/api/diagram/render', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ engine: engine, code: code })
+            body: JSON.stringify({ engine: engine, code: code, allow_remote: allowRemote })
           });
           res = await r.json();
         }
@@ -2263,9 +2340,11 @@ function renderAllDiagrams(container) {
           if (res.requires_network) {
             const badge = card.querySelector('.diagram-type');
             if (badge && !badge.querySelector('.diagram-network-indicator')) {
+              const isZh = window.i18n && window.i18n.locale && window.i18n.locale.startsWith('zh');
               const netSpan = document.createElement('span');
               netSpan.className = 'diagram-network-indicator';
-              netSpan.textContent = ' (Online Proxy)';
+              netSpan.textContent = isZh ? ' · 在线代理' : ' · Online Proxy';
+              netSpan.setAttribute('aria-label', isZh ? '在线代理渲染' : 'Rendered via online proxy');
               badge.appendChild(netSpan);
             }
           }
@@ -2274,19 +2353,58 @@ function renderAllDiagrams(container) {
           // not leak those codes (or provider/host diagnostics) into the
           // rendered document; the locale owns the user-facing wording.
           console.warn('diagram render failed:', engine, res && res.error_code);
-          previewEl.innerHTML = diagramFallbackMarkup(code, res && res.error_code);
+          if (res && res.error_code === 'diagram_dependency_missing' && res.remote_available) {
+            const isZh = window.i18n && window.i18n.locale && window.i18n.locale.startsWith('zh');
+            const confirmText = isZh ? '本机未就绪 PlantUML 环境。点击允许连接 plantuml.com 在线渲染（将上传图表源码）' : 'PlantUML local engine not found. Click to render via plantuml.com (diagram source will be sent)';
+            const btnText = isZh ? '允许在线渲染' : 'Allow Online Render';
+            const safeCode = window.escapeHtml ? escapeHtml(String(code || '')) : String(code || '');
+            previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${confirmText}</div><button type="button" class="diagram-inline-retry diagram-allow-remote-btn" aria-label="${btnText}"><svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;margin-right:4px;"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg><span>${btnText}</span></button><pre class="diagram-fallback"><code>${safeCode}</code></pre></div>`;
+            const allowBtn = previewEl.querySelector('.diagram-allow-remote-btn');
+            if (allowBtn) {
+              allowBtn.addEventListener('click', () => {
+                card._allowRemote = true;
+                card._rendered = false;
+                render();
+              });
+            }
+          } else {
+            previewEl.innerHTML = diagramFallbackMarkup(code, res && res.error_code);
+          }
         }
       } catch (err) {
         console.warn('diagram render threw:', engine, err && err.message);
         previewEl.innerHTML = diagramFallbackMarkup(code, err && err.message);
+      } finally {
+        if (reloadBtn) {
+          reloadBtn.disabled = false;
+          reloadBtn.classList.remove('is-loading');
+        }
+        const inlineRetry = previewEl && previewEl.querySelector('.diagram-inline-retry');
+        if (inlineRetry) {
+          inlineRetry.onclick = () => { render(); };
+        }
       }
     };
 
+    card._renderFn = render;
     if (reloadBtn) reloadBtn.addEventListener('click', render);
     render();
   });
 }
 window.renderAllDiagrams = renderAllDiagrams;
+
+function reloadAllDiagrams(container) {
+  const root = container || document;
+  const cards = root.matches && root.matches('.diagram-card')
+    ? [root]
+    : (root.querySelectorAll ? root.querySelectorAll('.diagram-card') : []);
+  cards.forEach(card => {
+    if (typeof card._renderFn === 'function') {
+      card._renderFn();
+    }
+  });
+}
+window.reloadAllDiagrams = reloadAllDiagrams;
 
 function toggleZenMode(force) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
@@ -2762,7 +2880,8 @@ async function renderVirtual(source, name, dir, content, fixes, extras) {
     mtime: 0,
     encoding: 'utf-8',
     webAssets: source === 'url' ? (((extras || {}).assets) || []) : [],
-    isDirty: source === 'clipboard',
+    originPath: (extras && extras.originPath) || state.file || null,
+    isDirty: source === 'clipboard' || source === 'ai',
     scrollPos: 0,
     isVirtual: true,
   };
@@ -2845,7 +2964,15 @@ function showConvertWarns(warns) {
 
 function loadFileDialog() {
   if (hasPy) {
-    py.choose_file().then(p => { if (p) loadFile(p); });
+    py.choose_file().then(p => {
+      if (p) {
+        if (typeof CONVERT_BINARY_RE !== 'undefined' && CONVERT_BINARY_RE.test(p)) {
+          convertOrOcr(p, 'convert');
+        } else {
+          loadFile(p);
+        }
+      }
+    });
     return;
   }
   const input = $('file-input');

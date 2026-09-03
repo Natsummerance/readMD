@@ -46,5 +46,14 @@
   "latexConvertFailed": "LaTeX 转换失败: {error}",
   "bibtexParseSuccess": "ReadMD: BibTeX 解析完成（共识别 {count} 条文献）",
   "bibtexParseFailed": "BibTeX 解析失败: {error}",
-  "mcpConfigSuccess": "ReadMD: 已生成并写入 MCP 配置文件！"
+  "mcpConfigSuccess": "ReadMD: 已生成并写入 MCP 配置文件！",
+  "errCoreProcessExit": "ReadMD Core 进程已退出，请重试",
+  "errCoreStartTimeout": "ReadMD Core 启动超时",
+  "errCoreNotConnected": "ReadMD Core 未连接",
+  "errCoreOperationTimeout": "操作超时，请重试",
+  "errCoreClosed": "ReadMD Core 已关闭",
+  "errMcpRequestFailed": "Core 请求失败",
+  "errMcpToolFailed": "Core 工具执行失败",
+  "errAiCancelled": "AI 生成已取消",
+  "errOperationFailed": "操作失败，请重试"
 }

@@ -1657,13 +1657,21 @@ class Handler(BaseHTTPRequestHandler):
                         'engine': engine,
                         'requires_network': False,
                     })
-                else:
+                elif body.get('allow_remote') is True:
                     self._send_json(200, {
                         'ok': True,
                         'type': 'svg',
                         'svg': diagrams.fetch_plantuml_svg(code),
                         'engine': engine,
                         'requires_network': True,
+                    })
+                else:
+                    self._send_json(422, {
+                        'ok': False,
+                        'error_code': 'diagram_dependency_missing',
+                        'remote_available': True,
+                        'requires_confirmation': True,
+                        'reason': 'PlantUML 本地环境未就绪。默认禁止静默联网上传图表源码。',
                     })
             elif engine == 'tikz':
                 html_out = diagrams.format_tikz_html(code)
@@ -3073,11 +3081,12 @@ class Handler(BaseHTTPRequestHandler):
     def _do_save(self):
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
-            body = json.loads(self.rfile.read(n).decode('utf-8'))
+            raw_body = self._read_request_body_limited(n, 50 * 1024 * 1024)
+            body = json.loads(raw_body.decode('utf-8'))
         except Exception:
             self._send_json(400, {'error': '无效请求'})
             return
-        path = body.get('path') or ''
+        path = body.get('path') or body.get('file') or ''
         content = body.get('content') or ''
         enc = body.get('encoding') or 'utf-8'
         expected_mtime = body.get('expected_mtime')
@@ -3085,6 +3094,15 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(400, {'error': '缺少文件路径'})
             return
         safe_path = os.path.realpath(os.path.normpath(path))
+        origin_path = body.get('origin_path') or body.get('source_file')
+        if origin_path:
+            safe_origin = os.path.realpath(os.path.normpath(origin_path))
+            if safe_origin in self.server.authorized_save_paths:
+                # 仅允许在已被授权的原文件同目录下，保存派生的 AI 副本文件（例如 AI-foo.md, AI2-foo.md）
+                if os.path.dirname(safe_path) == os.path.dirname(safe_origin):
+                    base_target = os.path.basename(safe_path)
+                    if re.match(r'^AI\d*-', base_target) and os.path.splitext(safe_path)[1].lower() in SAVE_EXTENSIONS:
+                        self.server.authorized_save_paths.add(safe_path)
         if (safe_path not in self.server.authorized_save_paths
                 or os.path.splitext(safe_path)[1].lower() not in SAVE_EXTENSIONS):
             self._send_json(403, {'error': '文件未被授权保存'})
@@ -3824,15 +3842,25 @@ class Api(object):
                         'engine': engine,
                         'requires_network': False,
                     }
-                # The WebView CSP forbids remote <img> sources, so fetch the
-                # SVG server-side (honors system proxies) and return markup
-                # like any other server-rendered diagram.
+                allow_remote = False
+                if isinstance(options, dict):
+                    allow_remote = bool(options.get('allow_remote'))
+                elif isinstance(options, bool):
+                    allow_remote = options
+                if allow_remote:
+                    return {
+                        'ok': True,
+                        'type': 'svg',
+                        'svg': diagrams.fetch_plantuml_svg(code),
+                        'engine': engine,
+                        'requires_network': True,
+                    }
                 return {
-                    'ok': True,
-                    'type': 'svg',
-                    'svg': diagrams.fetch_plantuml_svg(code),
-                    'engine': engine,
-                    'requires_network': True,
+                    'ok': False,
+                    'error_code': 'diagram_dependency_missing',
+                    'remote_available': True,
+                    'requires_confirmation': True,
+                    'reason': 'PlantUML 本地环境未就绪。默认禁止静默联网上传图表源码。',
                 }
             elif engine in ('wsd', 'd2', 'ditaa'):
                 # No pinned, redistributable offline renderer in this release;

@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Ei sisältöä muokattavaa",
   "toast.noModelsReturned": "Käyttöliittymä ei palauta valinnaista mallia",
   "toast.noPasteText": "Leikepöydällä ei ole tekstiä liitettäväksi",
-  "toast.noTextSelectionNotice": "Jos tekstiä ei valita, koko teksti käsitellään",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "ei tallennettu",
   "toast.searchNeedsDocument": "Avaa asiakirja ennen hakemista (Ctrl+F)",
   "toast.ocrFail": "OCR-tunnistus epäonnistui",

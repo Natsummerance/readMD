@@ -860,7 +860,7 @@
   "toast.noEditableContent": "संपादित करने के लिए कोई सामग्री नहीं",
   "toast.noModelsReturned": "इंटरफ़ेस वैकल्पिक मॉडल नहीं लौटाता",
   "toast.noPasteText": "क्लिपबोर्ड में चिपकाने के लिए कोई टेक्स्ट नहीं है",
-  "toast.noTextSelectionNotice": "यदि पाठ का चयन नहीं किया गया है, तो पूरा पाठ संसाधित किया जाएगा",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "सहेजा नहीं गया",
   "toast.searchNeedsDocument": "कृपया पहले दस्तावेज़ खोलें, फिर खोजने के लिए Ctrl+F दबाएं",
   "toast.ocrFail": "OCR पहचान विफल रही",

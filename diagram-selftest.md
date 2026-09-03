@@ -93,10 +93,54 @@ a -> b
 ```vega
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
-  "width": 200,
-  "height": 100,
-  "data": [{"name": "table", "values": [{"x": 1, "y": 2}]}],
-  "marks": [{"type": "rect", "from": {"data": "table"}}]
+  "width": 300,
+  "height": 150,
+  "padding": 5,
+  "data": [
+    {
+      "name": "table",
+      "values": [
+        {"category": "A", "val": 28},
+        {"category": "B", "val": 55},
+        {"category": "C", "val": 43},
+        {"category": "D", "val": 91}
+      ]
+    }
+  ],
+  "scales": [
+    {
+      "name": "xscale",
+      "type": "band",
+      "domain": {"data": "table", "field": "category"},
+      "range": "width",
+      "padding": 0.2
+    },
+    {
+      "name": "yscale",
+      "domain": {"data": "table", "field": "val"},
+      "nice": true,
+      "range": "height"
+    }
+  ],
+  "axes": [
+    {"orient": "bottom", "scale": "xscale"},
+    {"orient": "left", "scale": "yscale"}
+  ],
+  "marks": [
+    {
+      "type": "rect",
+      "from": {"data": "table"},
+      "encode": {
+        "enter": {
+          "x": {"scale": "xscale", "field": "category"},
+          "width": {"scale": "xscale", "band": 1},
+          "y": {"scale": "yscale", "field": "val"},
+          "y2": {"scale": "yscale", "value": 0},
+          "fill": {"value": "#4c78a8"}
+        }
+      }
+    }
+  ]
 }
 ```
 

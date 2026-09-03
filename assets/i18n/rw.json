@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Nta bikubiyemo guhindura",
   "toast.noModelsReturned": "Imigaragarire ntabwo isubiza icyitegererezo",
   "toast.noPasteText": "Nta nyandiko iri muri clip clip yo gukata",
-  "toast.noTextSelectionNotice": "Niba inyandiko idatoranijwe, inyandiko yuzuye izatunganywa",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "ntabwo yakijijwe",
   "toast.searchNeedsDocument": "Tanze kugira kuri dokimenti, kandi ukore Ctrl+F kugira kuri iki cyo",
   "toast.ocrFail": "Kumenyekanisha OCR byarananiranye",

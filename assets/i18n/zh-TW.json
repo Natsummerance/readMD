@@ -860,7 +860,7 @@
   "toast.noEditableContent": "没有可編輯的內容",
   "toast.noModelsReturned": "接口未返回可選模型",
   "toast.noPasteText": "剪貼簿中没有可貼上的文字",
-  "toast.noTextSelectionNotice": "未選中文字，将处理全文",
+  "toast.noTextSelectionNotice": "請先在正文中選擇要處理的文字",
   "toast.notSaved": "未儲存",
   "toast.searchNeedsDocument": "請先開啟檔案，再按 Ctrl+F 搜尋",
   "toast.ocrFail": "OCR 识別失敗",

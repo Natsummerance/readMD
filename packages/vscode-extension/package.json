@@ -37,6 +37,7 @@
     "mcp"
   ],
   "main": "./out/extension.js",
+  "l10n": "./l10n",
   "activationEvents": [
     "onLanguage:markdown",
     "onCommand:readmd.openAiWorkbench",

@@ -860,7 +860,7 @@
   "toast.noEditableContent": "တည်းဖြတ်ရန် အကြောင်းအရာမရှိပါ။",
   "toast.noModelsReturned": "အင်တာဖေ့စ်သည် ရွေးချယ်နိုင်သော မော်ဒယ်ကို မပြန်ပါ။",
   "toast.noPasteText": "ကူးထည့်ရန် ကလစ်ဘုတ်တွင် စာသားမရှိပါ။",
-  "toast.noTextSelectionNotice": "စာသားကို မရွေးချယ်ပါက၊ စာသားအပြည့်အစုံကို လုပ်ဆောင်ပါမည်။",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "မကယ်တင်ပါ။",
   "toast.searchNeedsDocument": "ကျေးဇူးပြု၍ စာရွက်စာတမ်းကို ဦးစွာဖွင့်ပြီး ရှာဖွေရန် Ctrl+F ကိုနှိပ်ပါ။",
   "toast.ocrFail": "OCR အသိအမှတ်ပြုမှု မအောင်မြင်ပါ။",

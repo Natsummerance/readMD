@@ -860,7 +860,7 @@
   "toast.noEditableContent": "لا يوجد محتوى قابل للتحرير",
   "toast.noModelsReturned": "لم يُرجع الخادم أي نماذج متاحة",
   "toast.noPasteText": "لا يوجد نص في الحافظة للصقه",
-  "toast.noTextSelectionNotice": "لم يُحدد أي نص، ستتم معالجة المستند بالكامل",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "غير محفوظ",
   "toast.searchNeedsDocument": "يرجى فتح المستند أولاً، ثم استخدام Ctrl+F للبحث",
   "toast.ocrFail": "فشل التعرف الضوئي على الحروف (OCR)",

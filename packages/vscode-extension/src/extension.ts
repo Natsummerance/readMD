@@ -12,7 +12,18 @@ let coreWasDown = false;
 
 function l10n(key: string, defaultEn: string, args?: Record<string, any>): string {
   if (vscode.l10n && typeof vscode.l10n.t === 'function') {
-    return (vscode.l10n.t as any)({ message: defaultEn, key, args });
+    try {
+      const res = (vscode.l10n.t as any)(key, args);
+      if (res && res !== key) return res;
+    } catch (_) {}
+    try {
+      const byKey = (vscode.l10n.t as any)({ message: key, args, key });
+      if (byKey && byKey !== key) return byKey;
+    } catch (_) {}
+    try {
+      const byMsg = (vscode.l10n.t as any)({ message: defaultEn, args, key });
+      if (byMsg && byMsg !== defaultEn) return byMsg;
+    } catch (_) {}
   }
   let res = defaultEn;
   if (args) {
@@ -25,19 +36,18 @@ function l10n(key: string, defaultEn: string, args?: Record<string, any>): strin
 
 function errorText(error: unknown): string {
   const code = error instanceof Error ? error.message : String(error || '');
-  const zh = vscode.env.language.toLowerCase().startsWith('zh');
   const messages: Record<string, [string, string]> = {
-    core_process_exit: ['ReadMD Core 进程已退出，请重试', 'ReadMD Core stopped; try again'],
-    core_start_timeout: ['ReadMD Core 启动超时', 'ReadMD Core startup timed out'],
-    core_not_connected: ['ReadMD Core 未连接', 'ReadMD Core is not connected'],
-    core_operation_timeout: ['操作超时，请重试', 'The operation timed out; try again'],
-    core_closed: ['ReadMD Core 已关闭', 'ReadMD Core is closed'],
-    mcp_request_failed: ['Core 请求失败', 'Core request failed'],
-    mcp_tool_failed: ['Core 工具执行失败', 'Core tool failed'],
-    ai_cancelled: ['AI 生成已取消', 'AI generation cancelled'],
+    core_process_exit: ['errCoreProcessExit', 'ReadMD Core stopped; try again'],
+    core_start_timeout: ['errCoreStartTimeout', 'ReadMD Core startup timed out'],
+    core_not_connected: ['errCoreNotConnected', 'ReadMD Core is not connected'],
+    core_operation_timeout: ['errCoreOperationTimeout', 'The operation timed out; try again'],
+    core_closed: ['errCoreClosed', 'ReadMD Core is closed'],
+    mcp_request_failed: ['errMcpRequestFailed', 'Core request failed'],
+    mcp_tool_failed: ['errMcpToolFailed', 'Core tool failed'],
+    ai_cancelled: ['errAiCancelled', 'AI generation cancelled'],
   };
   const pair = messages[code];
-  return pair ? (zh ? pair[0] : pair[1]) : (zh ? '操作失败，请重试' : 'Operation failed; try again');
+  return pair ? l10n(pair[0], pair[1]) : l10n('errOperationFailed', 'Operation failed; try again');
 }
 
 export function activate(context: vscode.ExtensionContext) {

@@ -778,6 +778,28 @@ function closeEditAiBar() {
   if (cmView) cmView.focus();
 }
 
+let editAiSnapshot = null;
+
+function switchEditAiToChatPanel() {
+  const bar = $('edit-ai-bar');
+  if (bar && !bar.classList.contains('hidden') && bar.offsetParent !== null && state.editing) {
+    const input = $('edit-ai-input');
+    const promptText = (input && input.value.trim()) || (editAiSelectionRange && editAiSelectionRange.text) || '';
+    closeEditAiBar();
+    const aiPanel = $('ai-panel');
+    if (aiPanel && aiPanel.classList.contains('hidden')) {
+      if (typeof toggleAiPanel === 'function') toggleAiPanel();
+    }
+    if (promptText && $('ai-prompt')) {
+      $('ai-prompt').value = promptText;
+      setTimeout(() => {
+        if ($('ai-prompt')) $('ai-prompt').focus();
+      }, 50);
+    }
+  }
+}
+window.switchEditAiToChatPanel = switchEditAiToChatPanel;
+
 async function runEditAiAction(act, customPrompt = '') {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const preview = $('edit-ai-preview');
@@ -786,12 +808,26 @@ async function runEditAiAction(act, customPrompt = '') {
   if (preview) preview.classList.remove('hidden');
   if (previewContent) previewContent.innerHTML = '';
   if (statusEl) statusEl.textContent = _t('editai.generating') || '';
+  const submitBtn = $('edit-ai-submit');
+  const chips = document.querySelectorAll('.edit-ai-act-chip');
+  if (submitBtn) { submitBtn.disabled = true; submitBtn.classList.add('btn-loading'); }
+  chips.forEach(c => { c.disabled = true; });
 
-  const range = editAiSelectionRange || { from: 0, to: 0, text: '' };
+  const currentDocStr = cmView ? cmView.state.doc.toString() : '';
+  const range = editAiSelectionRange || {
+    from: cmView ? cmView.state.selection.main.from : 0,
+    to: cmView ? cmView.state.selection.main.to : 0,
+    text: cmView ? cmView.state.sliceDoc(cmView.state.selection.main.from, cmView.state.selection.main.to) : ''
+  };
+  editAiSnapshot = {
+    docText: currentDocStr,
+    range: { ...range },
+    hadSelection: range.from !== range.to && Boolean(range.text)
+  };
   const skillByAction = { complete: 'readmd-continue', polish: 'readmd-polish', fix: 'readmd-format-fix', translate: 'readmd-translate' };
   const skillId = skillByAction[act] || 'readmd-polish';
   let userMessage = '';
-  const sourceText = range.text || (cmView ? cmView.state.doc.toString() : '');
+  const sourceText = range.text || currentDocStr;
 
   if (act === 'complete') {
     userMessage = customPrompt || '';
@@ -884,6 +920,9 @@ async function runEditAiAction(act, customPrompt = '') {
   } catch (err) {
     if (statusEl) statusEl.textContent = (_t('ai.reqFailMsg') || '') + err.message;
     if (previewContent) previewContent.textContent = err.message;
+  } finally {
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.classList.remove('btn-loading'); }
+    chips.forEach(c => { c.disabled = false; });
   }
 }
 
@@ -892,12 +931,46 @@ function applyEditAiResult() {
     closeEditAiBar();
     return;
   }
-  const range = editAiSelectionRange || { from: cmView.state.selection.main.from, to: cmView.state.selection.main.to };
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const currentDoc = cmView.state.doc.toString();
+  let from = 0, to = 0;
+
+  if (editAiSnapshot && editAiSnapshot.hadSelection) {
+    const origText = editAiSnapshot.range.text;
+    const snapFrom = editAiSnapshot.range.from;
+    const snapTo = editAiSnapshot.range.to;
+    if (cmView.state.sliceDoc(snapFrom, snapTo) === origText) {
+      from = snapFrom;
+      to = snapTo;
+    } else {
+      const firstIdx = currentDoc.indexOf(origText);
+      const secondIdx = firstIdx >= 0 ? currentDoc.indexOf(origText, firstIdx + 1) : -1;
+      if (firstIdx >= 0 && secondIdx < 0) {
+        from = firstIdx;
+        to = firstIdx + origText.length;
+      } else {
+        showToast(_t('toast.appliedSelectionFallback') || '原选区无法唯一定位，已安全创建副本');
+        if (typeof renderVirtual === 'function' && typeof getNextAiCopyTabName === 'function') {
+          const cleanName = getNextAiCopyTabName(state.sourceName || state.file);
+          renderVirtual('ai', cleanName, state.dir || '', editAiCurrentResult, [], { originPath: state.file });
+        }
+        closeEditAiBar();
+        return;
+      }
+    }
+  } else {
+    const curSel = cmView.state.selection.main;
+    from = curSel ? curSel.from : 0;
+    to = curSel ? curSel.to : 0;
+  }
+
   cmView.dispatch({
-    changes: { from: range.from, to: range.to, insert: editAiCurrentResult },
-    selection: { anchor: range.from + editAiCurrentResult.length }
+    changes: { from, to, insert: editAiCurrentResult },
+    selection: { anchor: from + editAiCurrentResult.length },
+    scrollIntoView: true
   });
   closeEditAiBar();
+  showToast(_t('toast.appliedSavedNotice') || '已应用到正文（可按 Ctrl+Z 撤回，Ctrl+S 保存）');
 }
 
 function insertEditAiResult() {

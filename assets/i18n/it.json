@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Nessun contenuto da modificare",
   "toast.noModelsReturned": "Nessun modello restituito dall'endpoint",
   "toast.noPasteText": "Nessun testo da incollare negli appunti",
-  "toast.noTextSelectionNotice": "Nessun testo selezionato: elaborazione dell'intero documento",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "Non salvato",
   "toast.searchNeedsDocument": "Apri prima un documento, quindi cerca con Ctrl+F",
   "toast.ocrFail": "Riconoscimento OCR non riuscito",

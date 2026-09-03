@@ -562,9 +562,9 @@ function bindEvents() {
   $('ai-save-key').addEventListener('click', () => saveAiSelection());
   $('ai-run').addEventListener('click', () => runAi('ask'));
   $('ai-stop').addEventListener('click', () => { if (state.ai.aborter) state.ai.aborter.abort(); });
-  $('ai-apply').addEventListener('click', applyAi);
-  $('ai-copy').addEventListener('click', copyAi);
-  $('ai-saveas').addEventListener('click', saveAiAs);
+  if ($('ai-apply')) $('ai-apply').addEventListener('click', applyAi);
+  if ($('ai-copy')) $('ai-copy').addEventListener('click', copyAi);
+  if ($('ai-saveas')) $('ai-saveas').addEventListener('click', saveAiAs);
   $('ai-prompt').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('ai-run').click(); } });
   $('ai-template').addEventListener('change', onAiTemplateChange);
   $('ai-tpl-btn').addEventListener('click', openTplModal);
@@ -956,10 +956,17 @@ function bindEvents() {
     else if (mod && e.key.toLowerCase() === 'u') { e.preventDefault(); openWebDialog(); } // Ctrl+U: 网页抓取
     else if (mod && e.key.toLowerCase() === 'e') { e.preventDefault(); if (!$('btn-edit').disabled) toggleEdit(); } // Ctrl+E: 编辑模式
     else if (mod && e.key.toLowerCase() === 's') { // Ctrl+S: 保存文档
-      if (state.editing) { e.preventDefault(); saveEdit(); }
-      else if (state.mode === 'virtual' || (getActiveTab() && getActiveTab().isVirtual)) {
+      if (state.editing) {
         e.preventDefault();
-        saveAs();
+        saveEdit();
+      } else if (state.mode === 'virtual' || (getActiveTab() && getActiveTab().isVirtual)) {
+        e.preventDefault();
+        const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
+        if (activeTab && activeTab.source === 'ai' && (activeTab.dir || state.dir) && typeof autoSaveAiCopyTab === 'function') {
+          autoSaveAiCopyTab(activeTab);
+        } else {
+          saveAs();
+        }
       }
     }
     else if (mod && !e.shiftKey && e.key.toLowerCase() === 'v') { // Ctrl+V: 智能剪贴板新建
@@ -984,29 +991,58 @@ function bindEvents() {
     else if (mod && e.key === 'ArrowLeft') { e.preventDefault(); historyBack(); } // Alt/Ctrl+Left: 历史后退
     else if (mod && e.key === 'ArrowRight') { e.preventDefault(); historyForward(); } // Alt/Ctrl+Right: 历史前进
     else if (e.key === 'Escape') {
-      // 级联清理所有开启的浮层
+      // Layer 1: 模态框与上下文菜单/搜索栏（一旦命中立即阻断返回）
+      if ($('ai-history-modal') && !$('ai-history-modal').classList.contains('hidden')) { if (typeof closeAiModal === 'function') closeAiModal('ai-history-modal'); else $('ai-history-modal').classList.add('hidden'); return; }
+      if ($('ai-settings-modal') && !$('ai-settings-modal').classList.contains('hidden')) { if (typeof closeAiModal === 'function') closeAiModal('ai-settings-modal'); else $('ai-settings-modal').classList.add('hidden'); return; }
+      if ($('chat-import-modal') && !$('chat-import-modal').classList.contains('hidden')) { if (typeof closeAiModal === 'function') closeAiModal('chat-import-modal'); else $('chat-import-modal').classList.add('hidden'); return; }
+      if ($('pet-settings-modal') && !$('pet-settings-modal').classList.contains('hidden')) { $('pet-settings-modal').classList.add('hidden'); return; }
       if ($('style-custom-modal') && !$('style-custom-modal').classList.contains('hidden')) { closeStyleModal(); return; }
       if ($('formula-modal') && !$('formula-modal').classList.contains('hidden')) { closeFormulaModal(); return; }
       if ($('img-modal') && !$('img-modal').classList.contains('hidden')) { closeImgModal(); return; }
       if ($('history-modal') && !$('history-modal').classList.contains('hidden')) { $('history-modal').classList.add('hidden'); return; }
       if ($('export-preview-modal') && !$('export-preview-modal').classList.contains('hidden')) { $('export-preview-modal').classList.add('hidden'); return; }
       if ($('tab-context-menu') && !$('tab-context-menu').classList.contains('hidden')) { closeTabContextMenu({ restoreFocus: true }); return; }
-      closeMoreMenu(true);
-      closeSearch({ restoreFocus: true });
-      if ($('fix-modal')) $('fix-modal').classList.add('hidden');
-      if (typeof closeWebDialog === 'function') closeWebDialog();
-      if ($('ai-panel')) $('ai-panel').classList.add('hidden');
-      if ($('share-modal')) $('share-modal').classList.add('hidden');
-      if ($('tpl-modal')) $('tpl-modal').classList.add('hidden');
-      if ($('convert-modal')) $('convert-modal').classList.add('hidden');
-      if ($('lang-modal') && window.i18n) window.i18n.closeModal();
-      if ($('side') && !$('side').classList.contains('hidden')) $('side').classList.add('hidden');
-      if ($('table-modal')) closeTableModal();
-      closeFormulaModal(); closeMdPopups();
+      if ($('more-menu') && $('more-menu').classList.contains('open')) { closeMoreMenu(true); return; }
+      if ($('search-bar') && !$('search-bar').classList.contains('hidden')) { closeSearch({ restoreFocus: true }); return; }
+      if ($('edit-ai-bar') && !$('edit-ai-bar').classList.contains('hidden')) { if (typeof closeEditAiBar === 'function') closeEditAiBar(); return; }
+      if ($('fix-modal') && !$('fix-modal').classList.contains('hidden')) { $('fix-modal').classList.add('hidden'); return; }
+      if ($('share-modal') && !$('share-modal').classList.contains('hidden')) { $('share-modal').classList.add('hidden'); return; }
+      if ($('tpl-modal') && !$('tpl-modal').classList.contains('hidden')) { $('tpl-modal').classList.add('hidden'); return; }
+      if ($('convert-modal') && !$('convert-modal').classList.contains('hidden')) { $('convert-modal').classList.add('hidden'); return; }
+      if ($('table-modal') && !$('table-modal').classList.contains('hidden')) { closeTableModal(); return; }
+      if ($('lang-modal') && !$('lang-modal').classList.contains('hidden') && window.i18n) { window.i18n.closeModal(); return; }
+      if (typeof closeWebDialog === 'function' && $('url-modal') && !$('url-modal').classList.contains('hidden')) { closeWebDialog(); return; }
+      const openPopups = document.querySelectorAll('.md-menu:not(.hidden), .pv-menu:not(.hidden)');
+      if (openPopups.length > 0) { closeMdPopups(); return; }
+
+      // Layer 2: AI 面板分层退出（全屏退回分屏，分屏收起归还焦点，绝不穿透退出编辑器）
+      const aiPanel = $('ai-panel');
+      if (aiPanel && !aiPanel.classList.contains('hidden')) {
+        if (aiPanel.classList.contains('fullscreen')) {
+          if (typeof toggleAiFullscreen === 'function') toggleAiFullscreen();
+          else aiPanel.classList.remove('fullscreen');
+        } else {
+          aiPanel.classList.add('hidden');
+          const btnAi = $('btn-ai');
+          if (btnAi) btnAi.focus();
+        }
+        return;
+      }
+
+      // Layer 3: 侧边栏与禅模式
+      if ($('side') && !$('side').classList.contains('hidden')) { $('side').classList.add('hidden'); return; }
+      if (document.body.classList.contains('zen-mode')) { toggleZenMode(false); return; }
+
+      // Layer 4: 兜底清理其他小弹层
+      closeMdPopups();
       if (typeof stopConvertPoll === 'function') stopConvertPoll();
       if (typeof stopBatchPoll === 'function') stopBatchPoll();
-      if (document.body.classList.contains('zen-mode')) toggleZenMode(false);
-      if (state.editing) confirmExitEdit();
+
+      // Layer 5: 仅在无任何开启面板/弹窗时，若处于编辑模式才提示退出
+      if (state.editing) {
+        confirmExitEdit();
+        return;
+      }
     }
   });
 

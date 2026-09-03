@@ -860,7 +860,7 @@
   "toast.noEditableContent": "تەھرىرلىگۈدەك مەزمۇن يوق",
   "toast.noModelsReturned": "ئېغىز (API) تاللىغۇدەك مودېل قايتۇرمىدى",
   "toast.noPasteText": "چاپلاش تاختىسىدا چاپلىغۇدەك تېكىست يوق",
-  "toast.noTextSelectionNotice": "تېكىست تاللانمىدى، پۈتۈن مەزمۇن بىر تەرەپ قىلىنىدۇ",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "ساقلانمىدى",
   "toast.searchNeedsDocument": "ئالدى بىلەن ھۆججەتنى ئېچىپ ئاندىن Ctrl + F نى بېسىپ ئىزدەڭ",
   "toast.ocrFail": "OCR تونۇش مەغلۇپ بولدى",

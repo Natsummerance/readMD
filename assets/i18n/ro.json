@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Nu există conținut de editat",
   "toast.noModelsReturned": "Interfața nu returnează modelul opțional",
   "toast.noPasteText": "Nu există text în clipboard de lipit",
-  "toast.noTextSelectionNotice": "Dacă textul nu este selectat, textul complet va fi procesat",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "nu salvat",
   "toast.searchNeedsDocument": "Vă rugăm să deschideți documentul, apoi apăsați Ctrl+F pentru căutare",
   "toast.ocrFail": "Recunoașterea OCR a eșuat",

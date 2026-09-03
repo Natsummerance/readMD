@@ -136,13 +136,16 @@ class TestSaveAuthorization(unittest.TestCase):
         cls.thread.join(timeout=2)
         cls.td.cleanup()
 
-    def _save(self, path, token=None):
+    def _save(self, path, token=None, origin_path=None):
         headers = {'Content-Type': 'application/json', 'Connection': 'close'}
         if token is not None:
             headers['X-ReadMD-App-Token'] = token
+        payload = {'path': path, 'content': '# saved'}
+        if origin_path:
+            payload['origin_path'] = origin_path
         request = urllib.request.Request(
             'http://127.0.0.1:%d/api/save' % self.port,
-            data=json.dumps({'path': path, 'content': '# saved'}).encode('utf-8'),
+            data=json.dumps(payload).encode('utf-8'),
             method='POST', headers=headers)
         try:
             with urllib.request.urlopen(request, timeout=3) as response:
@@ -185,6 +188,20 @@ class TestSaveAuthorization(unittest.TestCase):
         self.assertEqual(result, {'error': '文件未被授权保存'})
         with open(self.unopened, encoding='utf-8') as handle:
             self.assertEqual(handle.read(), '# original')
+
+    def test_derived_ai_copy_can_save_with_authorized_origin_path(self):
+        self._open_document()
+        ai_copy_path = os.path.join(os.path.dirname(self.document), 'AI-opened.md')
+        status, result = self._save(
+            ai_copy_path,
+            self.server.app_token,
+            origin_path=self.document,
+        )
+        self.assertEqual(status, 200)
+        self.assertTrue(result.get('ok'), result)
+        self.assertTrue(os.path.exists(ai_copy_path))
+        with open(ai_copy_path, encoding='utf-8') as handle:
+            self.assertEqual(handle.read(), '# saved')
 
     def test_index_injects_instance_token_for_frontend(self):
         with urllib.request.urlopen(

@@ -860,7 +860,7 @@
   "toast.noEditableContent": "편집할 콘텐츠가 없습니다.",
   "toast.noModelsReturned": "인터페이스가 선택적 모델을 반환하지 않습니다.",
   "toast.noPasteText": "클립보드에 붙여넣을 텍스트가 없습니다.",
-  "toast.noTextSelectionNotice": "텍스트를 선택하지 않으면 전체 텍스트가 처리됩니다.",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "저장되지 않음",
   "toast.searchNeedsDocument": "먼저 문서를 연 후 Ctrl+F를 눌러 검색하세요",
   "toast.ocrFail": "OCR 인식 실패",

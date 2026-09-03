@@ -860,7 +860,7 @@
   "toast.noEditableContent": "編集するコンテンツがありません",
   "toast.noModelsReturned": "インターフェイスがオプションのモデルを返さない",
   "toast.noPasteText": "クリップボードに貼り付けるテキストがありません",
-  "toast.noTextSelectionNotice": "テキストが選択されていない場合は、全文が処理されます。",
+  "toast.noTextSelectionNotice": "本文内で処理するテキストを先に選択してください",
   "toast.notSaved": "保存されていません",
   "toast.searchNeedsDocument": "まずドキュメントを開いてから、Ctrl+F を押して検索してください。",
   "toast.ocrFail": "OCR認識に失敗しました",

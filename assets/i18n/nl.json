@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Geen bewerkbare inhoud",
   "toast.noModelsReturned": "Geen modellen geretourneerd door interface",
   "toast.noPasteText": "Geen tekst op het klembord om te plakken",
-  "toast.noTextSelectionNotice": "Geen tekst geselecteerd; het hele document wordt verwerkt",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "Niet opgeslagen",
   "toast.searchNeedsDocument": "Open eerst een document, druk daarna op Ctrl+F om te zoeken",
   "toast.ocrFail": "OCR-herkenning mislukt",

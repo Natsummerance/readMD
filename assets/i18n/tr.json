@@ -860,7 +860,7 @@
   "toast.noEditableContent": "Düzenlenecek içerik yok",
   "toast.noModelsReturned": "Sunucudan model listesi dönmedi",
   "toast.noPasteText": "Panoda yapıştırılacak metin yok",
-  "toast.noTextSelectionNotice": "Metin seçilmedi, tüm belge işlenecek",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "Kaydedilmedi",
   "toast.searchNeedsDocument": "Please open a document first, then search with Ctrl+F",
   "toast.ocrFail": "OCR tanıma başarısız oldu",

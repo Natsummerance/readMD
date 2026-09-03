@@ -31,6 +31,7 @@ async function saveSettings() {
 }
 
 function applySettings() {
+  const prevTheme = document.body.dataset.theme;
   let theme = state.theme;
   if (theme === 'auto') {
     theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
@@ -40,6 +41,9 @@ function applySettings() {
   document.body.style.setProperty('--line-width', state.lineWidth + 'px');
   document.body.style.setProperty('--ai-panel-width', state.aiPanelWidth + 'px');
   $('btn-theme').textContent = theme === 'dark' ? '\u2600' : '\u263E';
+  if (prevTheme && prevTheme !== theme && typeof reloadAllDiagrams === 'function') {
+    reloadAllDiagrams();
+  }
 }
 
 function toggleTheme() {
