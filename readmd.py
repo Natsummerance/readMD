@@ -2826,6 +2826,12 @@ class Handler(BaseHTTPRequestHandler):
             from src.readmd_modules.convert import extract_zip_archive
             dest_dir = os.path.join(DATA_DIR, 'temp_zip')
             if 'application/zip' in ctype or 'octet-stream' in ctype:
+                # Binary uploads cannot carry the JSON confirmation field;
+                # require the equivalent explicit header so a background POST
+                # can never create extracted files silently.
+                if self.headers.get('X-ReadMD-Confirm', '').strip().lower() != 'true':
+                    self._send_api_error(400, 'confirmation_required')
+                    return
                 if n < 0 or n > self.MAX_ZIP_REQUEST_BYTES:
                     self.close_connection = True
                     self._send_api_error(413, 'zip_archive_too_large')

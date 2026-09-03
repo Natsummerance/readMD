@@ -101,7 +101,7 @@ function bindGlobalDragAndDrop() {
               } else {
                 const resp = await apiFetch('/api/batch/extract-zip', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/zip' },
+                  headers: { 'Content-Type': 'application/zip', 'X-ReadMD-Confirm': 'true' },
                   body: zf
                 });
                 res = await resp.json();
