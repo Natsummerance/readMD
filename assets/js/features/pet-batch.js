@@ -70,6 +70,34 @@ function renderPetSettings(status) {
   updatePetRangeLabels();
   const install = $('pet-install');
   if (install) install.classList.toggle('hidden', Boolean(status && status.adapter && status.adapter.available));
+
+  const statusDot = $('pet-status-dot');
+  const statusText = $('pet-status-text');
+  const activeSlug = $('pet-active-slug');
+  const statusLine = $('pet-status-line');
+  if (statusDot && statusText) {
+    if (status && status.enabled) {
+      statusDot.style.background = 'var(--accent, #22c55e)';
+      statusText.textContent = (window.i18n ? window.i18n.t('pet.statusRunning') : '') || '运行中';
+    } else if (status && status.adapter && status.adapter.available) {
+      statusDot.style.background = 'var(--text-muted, #94a3b8)';
+      statusText.textContent = (window.i18n ? window.i18n.t('pet.statusStopped') : '') || '未启动';
+    } else {
+      statusDot.style.background = 'var(--warning, #f59e0b)';
+      statusText.textContent = (window.i18n ? window.i18n.t('pet.statusNotInstalled') : '') || '未安装外置运行时';
+    }
+  }
+  if (statusLine) {
+    const adapterDir = (status && (status.adapter_dir || (status.adapter && status.adapter.dir))) || '';
+    if (status && status.adapter && status.adapter.available) {
+      statusLine.textContent = (window.i18n ? window.i18n.t('pet.statusInstalled', { path: adapterDir }) : '') || `已安装，目录：${adapterDir}`;
+    } else {
+      statusLine.textContent = (window.i18n ? window.i18n.t('pet.statusNotInstalled', { path: adapterDir }) : '') || `尚未安装，启用后将安装到：${adapterDir}`;
+    }
+  }
+  if (activeSlug) {
+    activeSlug.textContent = (status && (status.active_slug || status.active_pet || (preferences && preferences.renderer))) || 'Hermes';
+  }
 }
 
 function updatePetRangeLabels() {
@@ -85,6 +113,8 @@ function closePetSettings() {
 
 async function installPetPlugin() {
   if (!hasPy || !py.choose_pet_plugin || !py.install_pet_plugin) return false;
+  const btn = $('pet-install');
+  const origText = btn ? btn.textContent : '';
   const archive = await py.choose_pet_plugin();
   if (!archive) return false;
   const confirmed = await confirmAction({
@@ -92,12 +122,25 @@ async function installPetPlugin() {
     confirmText: petT('update.installNow'), cancelText: petT('dialog.cancel'),
   });
   if (!confirmed) return false;
-  const result = await py.install_pet_plugin(archive, true);
-  if (!result || !result.ok) {
-    if (typeof showToast === 'function') showToast(petT('app.failed'));
-    return false;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = (window.i18n ? window.i18n.t('pet.installing') : '') || '正在安装...';
   }
-  return true;
+  try {
+    const result = await py.install_pet_plugin(archive, true);
+    if (!result || !result.ok) {
+      const code = (result && result.error_code) || 'unknown';
+      const msg = (window.i18n ? window.i18n.t('pet.installFailedCode', { code }) : '') || `安装失败：${code}`;
+      if (typeof showToast === 'function') showToast(msg);
+      return false;
+    }
+    return true;
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
+  }
 }
 
 async function savePetSettings({ allowInstall = false } = {}) {

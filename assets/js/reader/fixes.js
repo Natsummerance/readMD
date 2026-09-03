@@ -94,7 +94,10 @@ async function handleAiDocumentFix() {
     } else {
       state.fixed = fixedMd;
       state.original = fixedMd;
-      render();
+      if (typeof renderContent === 'function') {
+        renderContent(fixedMd, state.sourceName || state.file || 'document.md');
+      }
+      if (typeof updateStatus === 'function') updateStatus();
     }
 
     showToast(_t('fixes.aiFixed') || 'AI 深度排版修复完成', 1800);

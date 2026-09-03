@@ -17,6 +17,8 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 import zlib
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -69,7 +71,40 @@ def get_plantuml_svg_url(plantuml_code: str, server_url: str = "https://www.plan
     if not code.startswith("@start"):
         code = f"@startuml\n{code}\n@enduml"
     encoded = plantuml_encode(code)
-    return f"{server_url.rstrip('/')}/svg/~1{encoded}"
+    # Default server format (no prefix) is raw deflate + the PlantUML 6-bit
+    # alphabet, which is exactly what plantuml_encode produces.  A "~1" prefix
+    # makes plantuml.com answer with its "generated a bad URL" error image.
+    return f"{server_url.rstrip('/')}/svg/{encoded}"
+
+
+def fetch_plantuml_svg(plantuml_code: str, timeout: float = 15.0) -> str:
+    """Fetch rendered SVG from the public PlantUML server.
+
+    The WebView CSP forbids loading remote images, so the backend performs the
+    online request (honoring system proxies) and returns SVG markup.  Failures
+    stay honest: no network means a network error code, not a fake success.
+    """
+    url = get_plantuml_svg_url(plantuml_code)
+    try:
+        request = urllib.request.Request(url, headers={'User-Agent': 'ReadMD'})
+        with urllib.request.urlopen(request, timeout=max(5.0, min(float(timeout), 30.0))) as response:
+            data = response.read(8 * 1024 * 1024 + 1)
+    except urllib.error.HTTPError:
+        raise DiagramRenderError("diagram_render_failed")
+    except (OSError, ValueError):
+        raise DiagramRenderError("diagram_network_unavailable")
+    if len(data) > 8 * 1024 * 1024:
+        raise DiagramRenderError("diagram_render_failed")
+    svg = data.decode('utf-8', errors='replace').strip()
+    if '<svg' in svg:
+        svg = svg[svg.find('<svg'):]
+    if not svg.startswith('<svg'):
+        raise DiagramRenderError("diagram_network_unavailable")
+    # plantuml.com answers 200 with an error image when it cannot decode the
+    # encoded source; never present that image as a rendered diagram.
+    if 'generated a bad URL' in svg:
+        raise DiagramRenderError("diagram_render_failed")
+    return svg
 
 
 def has_local_plantuml() -> bool:

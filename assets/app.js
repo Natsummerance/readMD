@@ -559,8 +559,7 @@ function bindEvents() {
   $('ai-models-btn').addEventListener('click', loadAiModels);
   $('ai-model').addEventListener('change', updateAiConnectionSummary);
   $('ai-test-connection').addEventListener('click', testAiConnection);
-  $('ai-save-key').addEventListener('click', saveAiSelection);
-  document.querySelectorAll('.ai-act').forEach(b => b.addEventListener('click', () => runAi(b.dataset.act)));
+  $('ai-save-key').addEventListener('click', () => saveAiSelection());
   $('ai-run').addEventListener('click', () => runAi('ask'));
   $('ai-stop').addEventListener('click', () => { if (state.ai.aborter) state.ai.aborter.abort(); });
   $('ai-apply').addEventListener('click', applyAi);
@@ -685,6 +684,113 @@ function bindEvents() {
   if ($('style-modal-cancel')) $('style-modal-cancel').addEventListener('click', closeStyleModal);
   if ($('style-modal-save')) $('style-modal-save').addEventListener('click', saveStyleModal);
   if ($('style-custom-modal')) $('style-custom-modal').addEventListener('click', e => { if (e.target === $('style-custom-modal')) closeStyleModal(); });
+
+  async function generateCustomStyleWithAi() {
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    const promptInput = $('style-ai-prompt');
+    const prompt = (promptInput && promptInput.value || '').trim();
+    if (!prompt) {
+      showToast(_t('styleai.enterPrompt') || '请输入排版风格诉求');
+      if (promptInput) promptInput.focus();
+      return;
+    }
+    const statusEl = $('style-ai-status');
+    const genBtn = $('style-ai-gen-btn');
+    if (statusEl) {
+      statusEl.classList.remove('hidden');
+      statusEl.textContent = _t('styleai.generating') || 'AI 样式生成中...';
+    }
+    if (genBtn) genBtn.disabled = true;
+
+    try {
+      const connection = typeof ensureAiConfigured === 'function'
+        ? await ensureAiConfigured()
+        : (typeof resolveSharedAiConnection === 'function' ? await resolveSharedAiConnection() : null);
+      if (!connection) {
+        if (statusEl) statusEl.textContent = _t('toast.noApiKeyNotice') || '请先配置 AI 服务';
+        showToast(_t('toast.noApiKeyNotice') || '请先配置 AI 服务');
+        return;
+      }
+
+      const docSnippet = (state.original || state.fixed || '').slice(0, 1200);
+      const res = await apiFetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: connection.provider,
+          credential_id: connection.credential_id,
+          model: connection.model,
+          base_url: connection.base_url,
+          mode: connection.mode,
+          endpoint_mode: connection.endpoint_mode,
+          headers: connection.headers,
+          skill_id: 'readmd-style-custom',
+          skill_variables: {
+            request: prompt,
+            context: docSnippet,
+            document: docSnippet,
+            language: (window.i18n && window.i18n.locale) || 'zh-CN'
+          },
+          messages: [{
+            role: 'user',
+            content: prompt
+          }],
+          stream: false
+        })
+      });
+
+      const data = await res.json();
+      if (!data || !data.ok) {
+        throw new Error((data && data.error) || '未返回有效内容');
+      }
+
+      let text = (data.content || '').trim();
+      text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+      const match = text.match(/\{[\s\S]*\}/);
+      if (!match) {
+        throw new Error(_t('styleai.invalidJson') || 'AI 未返回有效的 JSON 样式数据');
+      }
+      let parsed;
+      try {
+        parsed = JSON.parse(match[0]);
+      } catch (e) {
+        throw new Error(_t('styleai.invalidJson') || 'AI 样式 JSON 解析失败');
+      }
+      if (!parsed || (typeof parsed.css !== 'string' && typeof parsed.head !== 'string')) {
+        throw new Error(_t('styleai.invalidJson') || 'AI 返回的样式缺少 css 或 head 字段');
+      }
+
+      if (parsed.css && $('style-custom-css')) {
+        $('style-custom-css').value = parsed.css;
+      }
+      if (parsed.head && $('style-custom-head')) {
+        $('style-custom-head').value = parsed.head;
+      }
+
+      if (statusEl) {
+        statusEl.textContent = _t('styleai.generated') || 'AI 样式生成完成，保存即可生效';
+        setTimeout(() => statusEl.classList.add('hidden'), 3500);
+      }
+      showToast(_t('styleai.generated') || 'AI 样式生成完成');
+    } catch (err) {
+      if (statusEl) {
+        statusEl.textContent = (_t('ai.reqFailMsg') || 'AI 请求失败：') + err.message;
+      }
+      showToast((_t('ai.reqFailMsg') || 'AI 请求失败：') + err.message);
+    } finally {
+      if (genBtn) genBtn.disabled = false;
+    }
+  }
+
+  if ($('style-ai-gen-btn')) $('style-ai-gen-btn').addEventListener('click', generateCustomStyleWithAi);
+  if ($('style-ai-prompt')) {
+    $('style-ai-prompt').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        generateCustomStyleWithAi();
+      }
+    });
+  }
 
   const STYLE_PRESETS = {
     indent: '/* 中文段落首行缩进 2 字符 */\n.markdown-body p {\n  text-indent: 2em;\n  margin-bottom: 0.8em;\n}\n\n',

@@ -357,12 +357,15 @@ window.i18n = {
 
   /** 高效获取语言词库 JSON */
   async fetchDict(langCode) {
+    // Cache-bust: older builds served locale JSON as immutable, so a WebView
+    // upgrade could keep serving a stale dictionary missing newer keys.
+    const bust = `?v=${Date.now()}`;
     try {
-      const resp = await fetch(`/assets/i18n/${langCode}.json`);
+      const resp = await fetch(`/assets/i18n/${langCode}.json${bust}`);
       if (resp.ok) return await resp.json();
     } catch (e) {}
     try {
-      const resp = await fetch(`assets/i18n/${langCode}.json`);
+      const resp = await fetch(`assets/i18n/${langCode}.json${bust}`);
       if (resp.ok) return await resp.json();
     } catch (e) {}
     return null;
@@ -2070,25 +2073,73 @@ function bindGlobalDragAndDrop() {
     const dt = e.dataTransfer;
     if (!dt) return;
 
-    // 1. 处理文件拖拽（万物皆可开：代码/配置/脚本/文本直接开，Office/PDF 走转换）
+    // 1. 处理文件拖拽（万物皆可开：代码/配置/脚本/文本直接开，Office/PDF 走转换，ZIP 自动解压）
     if (dt.files && dt.files.length > 0) {
       const files = Array.from(dt.files);
-      const binaryConvertFiles = files.filter(f => (typeof CONVERT_BINARY_RE !== 'undefined' ? CONVERT_BINARY_RE.test(f.name || '') : false) || IMG_RE.test(f.name || ''));
-      const textAndCodeFiles = files.filter(f => !binaryConvertFiles.includes(f));
+      const zipFiles = files.filter(f => /\.zip$/i.test(f.name || ''));
+      const otherFiles = files.filter(f => !/\.zip$/i.test(f.name || ''));
 
-      if (textAndCodeFiles.length > 0) {
-        for (const f of textAndCodeFiles) {
-          const path = f.path ? f.path : await uploadFile(f);
-          if (path) await loadFile(path, { browserCopy: !f.path });
+      if (zipFiles.length > 0) {
+        showToast((window.i18n ? window.i18n.t('batch.extractingZip') : '') || '正在解压压缩包...');
+        const extractedPaths = [];
+        let totalSkipped = 0;
+        for (const zf of zipFiles) {
+          try {
+            let res;
+            if (hasPy && py.extract_zip_batch && zf.path) {
+              res = await py.extract_zip_batch(zf.path);
+            } else {
+              if (zf.path) {
+                const resp = await apiFetch('/api/batch/extract-zip', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ path: zf.path })
+                });
+                res = await resp.json();
+              } else {
+                const resp = await apiFetch('/api/batch/extract-zip', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/zip' },
+                  body: zf
+                });
+                res = await resp.json();
+              }
+            }
+            if (res && res.ok && Array.isArray(res.paths)) {
+              if (res.paths.length > 0) extractedPaths.push(...res.paths);
+              if (res.skipped) totalSkipped += Number(res.skipped) || 0;
+            }
+          } catch (err) {
+            console.error('Extract zip error:', err);
+          }
+        }
+        if (totalSkipped > 0) {
+          const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+          showToast(_t('batch.zipSkipped', { count: totalSkipped }) || `已跳过 ${totalSkipped} 个不支持的文件`);
+        }
+        if (extractedPaths.length > 0) {
+          enqueueBatchFiles(extractedPaths, false);
         }
       }
-      if (binaryConvertFiles.length > 0) {
-        const paths = [];
-        for (const f of binaryConvertFiles) {
-          const path = f.path ? f.path : await uploadFile(f);
-          if (path) paths.push(path);
+
+      if (otherFiles.length > 0) {
+        const binaryConvertFiles = otherFiles.filter(f => (typeof CONVERT_BINARY_RE !== 'undefined' ? CONVERT_BINARY_RE.test(f.name || '') : false) || IMG_RE.test(f.name || ''));
+        const textAndCodeFiles = otherFiles.filter(f => !binaryConvertFiles.includes(f));
+
+        if (textAndCodeFiles.length > 0) {
+          for (const f of textAndCodeFiles) {
+            const path = f.path ? f.path : await uploadFile(f);
+            if (path) await loadFile(path, { browserCopy: !f.path });
+          }
         }
-        if (paths.length) enqueueBatchFiles(paths, false);
+        if (binaryConvertFiles.length > 0) {
+          const paths = [];
+          for (const f of binaryConvertFiles) {
+            const path = f.path ? f.path : await uploadFile(f);
+            if (path) paths.push(path);
+          }
+          if (paths.length) enqueueBatchFiles(paths, false);
+        }
       }
       return;
     }
@@ -2523,7 +2574,10 @@ async function handleAiDocumentFix() {
     } else {
       state.fixed = fixedMd;
       state.original = fixedMd;
-      render();
+      if (typeof renderContent === 'function') {
+        renderContent(fixedMd, state.sourceName || state.file || 'document.md');
+      }
+      if (typeof updateStatus === 'function') updateStatus();
     }
 
     showToast(_t('fixes.aiFixed') || 'AI 深度排版修复完成', 1800);
@@ -5177,17 +5231,39 @@ window.runAllCodeChunks = runAllCodeChunks;
 // usable without a network connection.
 const diagramScriptPromises = new Map();
 let diagramWaveCounter = 0;
+// TikZjax owns a single global TeX instance and temporarily swaps
+// window.fetch, window.onload and console.log while compiling, so concurrent
+// tikz cards cross-contaminate: one card's TeX error lines flow through the
+// other card's console hook and abort its wait loop.  Compiles are queued.
+let tikzRenderChain = Promise.resolve();
+// Heading ids leak into `window` through named element access, so a document
+// containing "## mermaid" makes `window.mermaid` an <h2> before the vendor
+// bundle loads.  A plain truthiness check would then skip injecting the
+// engine and every render would crash on the missing API.
+function hasUsableDiagramGlobal(globalName) {
+  if (!globalName) return false;
+  const value = window[globalName];
+  return value != null && !(value instanceof Element);
+}
 function loadDiagramScript(path, globalName) {
-  if (globalName && window[globalName]) return Promise.resolve(window[globalName]);
+  if (hasUsableDiagramGlobal(globalName)) return Promise.resolve(window[globalName]);
   if (diagramScriptPromises.has(path)) return diagramScriptPromises.get(path);
   const promise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = path;
     script.async = true;
-    script.onload = () => globalName && !window[globalName]
-      ? reject(new Error('diagram_engine_unavailable'))
-      : resolve(globalName ? window[globalName] : true);
-    script.onerror = () => reject(new Error('diagram_engine_load_failed'));
+    script.onload = () => {
+      if (globalName && !hasUsableDiagramGlobal(globalName)) {
+        diagramScriptPromises.delete(path);
+        reject(new Error('diagram_engine_unavailable'));
+        return;
+      }
+      resolve(globalName ? window[globalName] : true);
+    };
+    script.onerror = () => {
+      diagramScriptPromises.delete(path);
+      reject(new Error('diagram_engine_load_failed'));
+    };
     document.head.appendChild(script);
   });
   diagramScriptPromises.set(path, promise);
@@ -5195,18 +5271,107 @@ function loadDiagramScript(path, globalName) {
 }
 
 function diagramOutputMarkup(markup) {
-  return sanitizeRenderedHtml(String(markup || ''), { allowInteractive: false });
+  if (!markup) return '';
+  const str = String(markup).trim();
+  if (!str) return '';
+
+  const template = document.createElement('template');
+  template.innerHTML = str;
+
+  // Dangerous executable / navigation tags to strictly eliminate
+  const bannedTags = ['script', 'iframe', 'object', 'embed', 'applet', 'meta', 'link', 'base'];
+  bannedTags.forEach(t => {
+    template.content.querySelectorAll(t).forEach(el => el.remove());
+  });
+
+  // Sanitize every node in the diagram output while preserving rich SVG structure
+  template.content.querySelectorAll('*').forEach(node => {
+    const tag = node.tagName.toLowerCase();
+
+    // Prevent UI hijacking buttons or nested cards inside diagram preview
+    if (tag === 'button' || node.classList.contains('code-chunk-card') || node.classList.contains('diagram-card')) {
+      node.replaceWith(...node.childNodes);
+      return;
+    }
+
+    // Sanitize attributes
+    Array.from(node.attributes).forEach(attr => {
+      const name = attr.name.toLowerCase();
+      const val = attr.value;
+      // Disallow all inline event handlers
+      if (name.startsWith('on')) {
+        node.removeAttribute(attr.name);
+      } else if (name === 'href' || name === 'xlink:href') {
+        // Disallow javascript:, vbscript:, data:text/html
+        if (/^\s*(javascript|vbscript|data:\s*text\/html)/i.test(val)) {
+          node.removeAttribute(attr.name);
+        }
+      } else if (name === 'style') {
+        // Disallow executable CSS expressions
+        if (/expression|javascript:|behavior|-moz-binding/i.test(val)) {
+          node.removeAttribute(attr.name);
+        }
+      }
+    });
+
+    // In <style> blocks, prevent CSS expressions, imports or external url execution
+    if (tag === 'style') {
+      let css = node.textContent || '';
+      if (/expression|javascript:|behavior|-moz-binding|@import/i.test(css)) {
+        node.textContent = css.replace(/expression\s*\([^)]*\)/gi, '')
+                              .replace(/javascript:/gi, '')
+                              .replace(/@import[^;]*;/gi, '');
+      }
+    }
+  });
+
+  return template.innerHTML;
 }
 
-function renderDiagramFallback(previewEl, engine, code, messageKey = 'reader.renderFailed') {
+// Server responses and client throws both carry stable diagram_* error codes.
+// Map them to locale keys once so every failure path shows the same honest
+// wording instead of a blanket "unknown error".
+const DIAGRAM_ERROR_I18N = {
+  diagram_engine_unavailable: 'reader.diagramEngineUnavailable',
+  diagram_engine_load_failed: 'reader.diagramEngineLoadFailed',
+  diagram_engine_timeout: 'reader.diagramTimeout',
+  diagram_engine_unavailable_handler: 'reader.diagramEngineUnavailable',
+  diagram_engine_unavailable_rendered: 'reader.diagramEngineUnavailable',
+  diagram_invalid_input: 'reader.diagramInvalidInput',
+  diagram_dependency_missing: 'reader.diagramDependencyMissing',
+  diagram_client_renderer_required: 'reader.diagramClientRendererRequired',
+  diagram_network_unavailable: 'reader.diagramNetworkUnavailable',
+  diagram_input_too_large: 'reader.diagramInputTooLarge',
+  diagram_render_failed: 'reader.diagramRenderFailed',
+};
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+window.escapeHtml = escapeHtml;
+
+function diagramErrorKey(code) {
+  return (code && DIAGRAM_ERROR_I18N[String(code)]) || 'toast.unknownError';
+}
+
+function diagramFallbackMarkup(code, errorCode) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!previewEl) return;
-  const reason = _t('toast.unknownError');
+  const reason = _t(diagramErrorKey(errorCode));
   const safeReason = window.escapeHtml ? escapeHtml(reason) : reason;
-  const safeCode = window.escapeHtml ? escapeHtml(String(code || '')) : String(code || '');
-  const message = _t(messageKey, { error: safeReason });
+  const message = _t('reader.diagramError', { error: safeReason });
   const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
-  previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${safeCode}</code></pre></div>`;
+  const safeCode = window.escapeHtml ? escapeHtml(String(code || '')) : String(code || '');
+  return `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${safeCode}</code></pre></div>`;
+}
+
+function renderDiagramFallback(previewEl, engine, code, errorCode) {
+  if (!previewEl) return;
+  previewEl.innerHTML = diagramFallbackMarkup(code, errorCode);
 }
 
 // A few vendored renderers (notably bitfield) return ONML's array-shaped
@@ -5246,11 +5411,104 @@ function parseWaveDromSource(source) {
   try { return JSON.parse(normalized); } catch (_) { throw new Error('diagram_invalid_input'); }
 }
 
+async function renderTikzjaxDiagram(code, previewEl) {
+  // TikZjax is a browser script that normally resolves its WASM/font assets
+  // from an upstream S3 URL.  Keep the vendored source byte-for-byte intact,
+  // but route those requests to our packaged assets while the renderer runs.
+  // This makes the feature deterministic and offline without weakening CSP.
+  const originalFetch = window.fetch;
+  const localRoot = '/assets/vendor/diagrams/tikzjax/';
+  window.fetch = function(input, init) {
+    const raw = typeof input === 'string' ? input : (input && input.url) || '';
+    if (raw.indexOf('https://s3.us-east-2.amazonaws.com/tikzjax.com/') === 0) {
+      const filename = raw.slice(raw.lastIndexOf('/') + 1);
+      return originalFetch.call(this, localRoot + encodeURIComponent(filename), init);
+    }
+    return originalFetch.call(this, input, init);
+  };
+  const previousOnload = window.onload;
+  // TeX reports compile errors on the console, and the wasm glue captures
+  // console.log while tikzjax.js itself executes.  The hook therefore has
+  // to be installed before the script loads; otherwise invalid input
+  // would silently hit the render deadline instead of failing fast.
+  // Declared outside try: the finally restore references these, and
+  // sibling blocks (try/finally) do not share block scope.
+  const originalLog = console.log;
+  let texError = '';
+  const texLogHook = function(...args) {
+    if (!texError) {
+      const line = args.map(a => (typeof a === 'string' ? a : '')).join(' ');
+      if (line.slice(0, 2) === '! ' || line.indexOf('Emergency stop') !== -1) texError = line;
+    }
+    return originalLog.apply(this, args);
+  };
+  console.log = texLogHook;
+  try {
+    // tikzjax.js installs its work via window.onload on execution.  The
+    // promise cache would skip re-execution on every render after the
+    // first, leaving window.onload unchanged and the diagram stuck.
+    await loadDiagramScript('/assets/vendor/diagrams/tikzjax/tikzjax.js?reload=' + (++diagramWaveCounter));
+    const handler = window.onload;
+    if (typeof handler !== 'function' || handler === previousOnload) {
+      throw new Error('diagram_engine_unavailable_handler');
+    }
+    const source = document.createElement('script');
+    source.type = 'text/tikz';
+    let tikzSource = String(code || '');
+    // \draw and other TikZ commands are only defined inside the tikzpicture
+    // environment, even in a full TeX install.  Bare snippets are therefore
+    // invalid input as-is; wrap them instead of failing with "Undefined
+    // control sequence" after a full 30s compile.
+    if (!/\\begin\{document\}/.test(tikzSource) && !/\\begin\{tikzpicture\}/.test(tikzSource)) {
+      tikzSource = '\\begin{tikzpicture}\n' + tikzSource + '\n\\end{tikzpicture}';
+    }
+    source.textContent = tikzSource;
+    previewEl.replaceChildren(source);
+    // TikZjax's onload handler starts an async reduce but does not reliably
+    // return its final replacement promise in every browser.  Wait for the
+    // script node to be replaced instead of racing an already-resolved
+    // wrapper promise; this also prevents the renderer timeout from
+    // removing the node while WASM is still compiling.
+    handler.call(window);
+    const deadline = Date.now() + 30000;
+    while (source.parentNode && Date.now() < deadline && !texError) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    const rendered = previewEl.firstElementChild;
+    if (!rendered || rendered.tagName.toLowerCase() === 'script') {
+      if (texError) throw new Error('diagram_render_failed');
+      throw new Error(Date.now() >= deadline ? 'diagram_engine_timeout' : 'diagram_engine_unavailable_rendered');
+    }
+    return diagramOutputMarkup(rendered.outerHTML);
+  } finally {
+    window.fetch = originalFetch;
+    window.onload = previousOnload;
+    if (console.log === texLogHook) console.log = originalLog;
+  }
+}
+
 async function renderLocalDiagram(engine, code, previewEl) {
   const normalized = String(engine || '').toLowerCase();
   if (normalized === 'mermaid') {
     const mermaid = await loadDiagramScript('/assets/vendor/diagrams/mermaid/mermaid.min.js', 'mermaid');
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default' });
+    const isDark = document.body?.dataset?.theme === 'dark' || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches && document.body?.dataset?.theme !== 'light');
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme: isDark ? 'dark' : 'neutral',
+      fontFamily: 'var(--font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      },
+      sequence: {
+        useMaxWidth: true
+      },
+      gantt: {
+        useMaxWidth: true
+      }
+    });
     const id = 'readmd-mermaid-' + Math.random().toString(36).slice(2);
     const rendered = await mermaid.render(id, code);
     return diagramOutputMarkup(rendered.svg || rendered);
@@ -5278,8 +5536,10 @@ async function renderLocalDiagram(engine, code, previewEl) {
   }
   if (normalized === 'bitfield') {
     const bitfield = await loadDiagramScript('/assets/vendor/diagrams/bitfield/bitfield.min.js', 'bitfield');
-    let description;
-    try { description = JSON.parse(code); } catch (_) { throw new Error('diagram_invalid_input'); }
+    // Bitfield examples in the wild use the same JS-like JSON as WaveDrom
+    // (unquoted keys, single quotes, trailing commas); reuse the tolerant
+    // parser instead of a strict JSON.parse that rejects them.
+    let description = parseWaveDromSource(code);
     if (description && !Array.isArray(description) && Array.isArray(description.reg)) description = description.reg;
     if (!Array.isArray(description)) throw new Error('diagram_invalid_input');
     const rendered = bitfield.render(description, {});
@@ -5340,50 +5600,10 @@ async function renderLocalDiagram(engine, code, previewEl) {
     return canvas;
   }
   if (normalized === 'tikz') {
-    // TikZjax is a browser script that normally resolves its WASM/font assets
-    // from an upstream S3 URL.  Keep the vendored source byte-for-byte intact,
-    // but route those requests to our packaged assets while the renderer runs.
-    // This makes the feature deterministic and offline without weakening CSP.
-    const originalFetch = window.fetch;
-    const localRoot = '/assets/vendor/diagrams/tikzjax/';
-    window.fetch = function(input, init) {
-      const raw = typeof input === 'string' ? input : (input && input.url) || '';
-      if (raw.indexOf('https://s3.us-east-2.amazonaws.com/tikzjax.com/') === 0) {
-        const filename = raw.slice(raw.lastIndexOf('/') + 1);
-        return originalFetch.call(this, localRoot + encodeURIComponent(filename), init);
-      }
-      return originalFetch.call(this, input, init);
-    };
-    const previousOnload = window.onload;
-    try {
-      await loadDiagramScript('/assets/vendor/diagrams/tikzjax/tikzjax.js');
-      const handler = window.onload;
-      if (typeof handler !== 'function' || handler === previousOnload) {
-        throw new Error('diagram_engine_unavailable_handler');
-      }
-      const source = document.createElement('script');
-      source.type = 'text/tikz';
-      source.textContent = String(code || '');
-      previewEl.replaceChildren(source);
-      // TikZjax's onload handler starts an async reduce but does not reliably
-      // return its final replacement promise in every browser.  Wait for the
-      // script node to be replaced instead of racing an already-resolved
-      // wrapper promise; this also prevents the renderer timeout from
-      // removing the node while WASM is still compiling.
-      handler.call(window);
-      const deadline = Date.now() + 30000;
-      while (source.parentNode && Date.now() < deadline) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      const rendered = previewEl.firstElementChild;
-      if (!rendered || rendered.tagName.toLowerCase() === 'script') {
-        throw new Error(Date.now() >= deadline ? 'diagram_engine_timeout' : 'diagram_engine_unavailable_rendered');
-      }
-      return diagramOutputMarkup(rendered.outerHTML);
-    } finally {
-      window.fetch = originalFetch;
-      window.onload = previousOnload;
-    }
+    // Serialized through tikzRenderChain: see the comment at its declaration.
+    const turn = tikzRenderChain.then(() => renderTikzjaxDiagram(code, previewEl));
+    tikzRenderChain = turn.then(() => {}, () => {});
+    return turn;
   }
   // D2 has no bundled offline runtime in this release. Fail explicitly rather
   // than silently sending source code to an online renderer and reporting a
@@ -5436,20 +5656,10 @@ function renderAllDiagrams(container) {
         }
 
         if (res && res.ok) {
-          if (res.type === 'url' && res.svg_url) {
-            // PlantUML is intentionally online-by-default when no local Java
-            // runtime is installed.  A network failure must not leave a
-            // broken image or claim that the diagram rendered successfully.
-            const image = document.createElement('img');
-            image.className = 'diagram-preview-image';
-            image.src = res.svg_url;
-            image.alt = `${engine} diagram`;
-            image.addEventListener('error', () => renderDiagramFallback(previewEl, engine, code));
-            previewEl.replaceChildren(image);
-          } else if (res.type === 'html' && res.html) {
-            previewEl.innerHTML = res.html;
+          if (res.type === 'html' && res.html) {
+            previewEl.innerHTML = diagramOutputMarkup(res.html);
           } else if (res.svg) {
-            previewEl.innerHTML = res.svg;
+            previewEl.innerHTML = diagramOutputMarkup(res.svg);
           } else {
             throw new Error('diagram_engine_unavailable');
           }
@@ -5457,17 +5667,12 @@ function renderAllDiagrams(container) {
           // Server responses intentionally carry only stable error codes.  Do
           // not leak those codes (or provider/host diagnostics) into the
           // rendered document; the locale owns the user-facing wording.
-          const reason = _t('toast.unknownError');
-          const safeReason = window.escapeHtml ? escapeHtml(reason) : reason;
-          const message = _t('reader.diagramError', { error: safeReason });
-          const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
-          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+          console.warn('diagram render failed:', engine, res && res.error_code);
+          previewEl.innerHTML = diagramFallbackMarkup(code, res && res.error_code);
         }
       } catch (err) {
-        const safeReason = window.escapeHtml ? escapeHtml(_t('toast.unknownError')) : _t('toast.unknownError');
-        const message = _t('reader.renderFailed', { error: safeReason });
-        const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
-        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+        console.warn('diagram render threw:', engine, err && err.message);
+        previewEl.innerHTML = diagramFallbackMarkup(code, err && err.message);
       }
     };
 
@@ -8036,15 +8241,6 @@ const AI_ACTIONS = {
   expand: 'tpl.actionExpand',
 };
 
-const AI_SKILLS = {
-  quick_read: 'readmd-quick-read', polish: 'readmd-polish', proofread: 'readmd-proofread',
-  translate_en: 'readmd-translate', translate_zh: 'readmd-translate', todo: 'readmd-todo',
-  continue: 'readmd-continue', ask: 'readmd-ask', summary: 'readmd-summary',
-  outline: 'readmd-outline', weekly: 'readmd-weekly', code_review: 'readmd-code-review',
-  modify: 'readmd-format-fix', expand: 'readmd-polish', translate: 'readmd-translate',
-  code_to_doc: 'readmd-code-to-doc', code_analysis: 'readmd-code-analysis'
-};
-
 function toggleAiPanel() {
   if (moduleBlocked('ai')) return;
   const p = $('ai-panel');
@@ -8174,6 +8370,27 @@ async function loadAiPrompts() {
   } catch (e) { /* ignore */ }
 }
 
+const TPL_CATEGORIES = {
+  general: { label: '通用', labelEn: 'General' },
+  writing: { label: '写作与润色', labelEn: 'Writing & Polishing' },
+  coding: { label: '编程与技术', labelEn: 'Coding & Dev' },
+  academic: { label: '学术与研究', labelEn: 'Academic & Research' },
+  custom: { label: '自定义与扩展', labelEn: 'Custom & Extensions' }
+};
+
+function getTemplateCategory(t) {
+  if (!t) return 'general';
+  if (t.category) return t.category;
+  if (t.metadata && t.metadata.category) return t.metadata.category;
+  const id = (t.id || '').toLowerCase();
+  const name = (t.name || '').toLowerCase();
+  if (id.includes('code') || id.includes('dev') || name.includes('代码') || name.includes('编程')) return 'coding';
+  if (id.includes('paper') || id.includes('academic') || id.includes('research') || name.includes('论文') || name.includes('学术')) return 'academic';
+  if (id.includes('write') || id.includes('polish') || id.includes('continue') || id.includes('translate') || id.includes('proofread') || name.includes('写作') || name.includes('润色') || name.includes('翻译') || name.includes('校对')) return 'writing';
+  if (!t.builtin) return 'custom';
+  return 'general';
+}
+
 function fillAiTemplates() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const sel = $('ai-template');
@@ -8182,14 +8399,32 @@ function fillAiTemplates() {
   sel.innerHTML = '';
   const none = document.createElement('option');
   none.value = '';
-  none.textContent = _t('ai.defaultAction') || '';
+  none.textContent = _t('ai.defaultAction') || '默认通用助手';
   sel.appendChild(none);
+
+  const groups = { general: [], writing: [], coding: [], academic: [], custom: [] };
   (state.ai.templates || []).forEach(t => {
-    const o = document.createElement('option');
-    o.value = t.id;
-    o.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
-    sel.appendChild(o);
+    const cat = getTemplateCategory(t);
+    if (groups[cat]) groups[cat].push(t);
+    else groups.custom.push(t);
   });
+
+  const catOrder = ['general', 'writing', 'coding', 'academic', 'custom'];
+  const isEn = window.i18n && window.i18n.locale === 'en';
+  catOrder.forEach(cat => {
+    const items = groups[cat];
+    if (!items || !items.length) return;
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = isEn ? TPL_CATEGORIES[cat].labelEn : TPL_CATEGORIES[cat].label;
+    items.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t.id;
+      o.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
+      optgroup.appendChild(o);
+    });
+    sel.appendChild(optgroup);
+  });
+
   if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
   else state.ai.templateId = '';
 }
@@ -8233,24 +8468,52 @@ function renderTplList() {
     list.appendChild(empty);
     return;
   }
+
+  const groups = { general: [], writing: [], coding: [], academic: [], custom: [] };
   filtered.forEach(t => {
-    const li = document.createElement('li');
-    const disabled = !t.builtin && t.metadata && t.metadata.enabled === false;
-    li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name + (disabled ? ' ⏸' : '');
-    li.dataset.id = t.id;
-    li.setAttribute('role', 'option');
-    li.tabIndex = 0;
-    li.setAttribute('aria-selected', 'false');
-    li.title = t.name
-      + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '')) : '')
-      + (disabled ? (' · ' + (_t('tpl.disable') || '')) : '');
-    li.addEventListener('click', () => selectTpl(t.id));
-    li.addEventListener('keydown', e => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      selectTpl(t.id);
+    const cat = getTemplateCategory(t);
+    if (groups[cat]) groups[cat].push(t);
+    else groups.custom.push(t);
+  });
+
+  const catOrder = ['general', 'writing', 'coding', 'academic', 'custom'];
+  const isEn = window.i18n && window.i18n.locale === 'en';
+
+  catOrder.forEach(cat => {
+    const items = groups[cat];
+    if (!items || !items.length) return;
+
+    const headerLi = document.createElement('li');
+    headerLi.className = 'tpl-group-header';
+    headerLi.textContent = isEn ? TPL_CATEGORIES[cat].labelEn : TPL_CATEGORIES[cat].label;
+    headerLi.style.fontWeight = '600';
+    headerLi.style.fontSize = '11px';
+    headerLi.style.color = 'var(--text-muted, #64748b)';
+    headerLi.style.padding = '8px 10px 4px';
+    headerLi.style.pointerEvents = 'none';
+    headerLi.style.userSelect = 'none';
+    headerLi.style.textTransform = 'uppercase';
+    list.appendChild(headerLi);
+
+    items.forEach(t => {
+      const li = document.createElement('li');
+      const disabled = !t.builtin && t.metadata && t.metadata.enabled === false;
+      li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name + (disabled ? ' ⏸' : '');
+      li.dataset.id = t.id;
+      li.setAttribute('role', 'option');
+      li.tabIndex = 0;
+      li.setAttribute('aria-selected', 'false');
+      li.title = t.name
+        + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '')) : '')
+        + (disabled ? (' · ' + (_t('tpl.disable') || '')) : '');
+      li.addEventListener('click', () => selectTpl(t.id));
+      li.addEventListener('keydown', e => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        selectTpl(t.id);
+      });
+      list.appendChild(li);
     });
-    list.appendChild(li);
   });
 }
 
@@ -9078,6 +9341,44 @@ function splitUserDocPrompt(content) {
   return { doc, prompt };
 }
 
+function renderAiBubbleActions(content) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const row = document.createElement('div');
+  row.className = 'ai-bubble-actions';
+
+  const applyBtn = document.createElement('button');
+  applyBtn.type = 'button';
+  applyBtn.className = 'ai-bubble-act-btn';
+  applyBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>' + (_t('ai.apply') || '应用到正文');
+  applyBtn.onclick = () => {
+    state.ai.raw = content;
+    applyAi();
+  };
+
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'ai-bubble-act-btn';
+  copyBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>' + (_t('ai.copy') || '复制回答');
+  copyBtn.onclick = () => {
+    navigator.clipboard.writeText(content);
+    showToast(_t('toast.copied') || '已复制到剪贴板');
+  };
+
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.className = 'ai-bubble-act-btn';
+  saveBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>' + (_t('ai.saveAsMd') || '另存为 MD');
+  saveBtn.onclick = () => {
+    state.ai.raw = content;
+    saveAsMarkdown();
+  };
+
+  row.appendChild(applyBtn);
+  row.appendChild(copyBtn);
+  row.appendChild(saveBtn);
+  return row;
+}
+
 function appendAiUserBubble(out, tagText, content, meta) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const bubble = document.createElement('div');
@@ -9141,6 +9442,7 @@ function renderAiHistory() {
   const out = $('ai-output');
   out.innerHTML = '';
   const msgs = state.ai.messages || [];
+  const lastAssistantIdx = msgs.map(m => m.role).lastIndexOf('assistant');
   let uSeq = 0, aSeq = 0;
   msgs.forEach((m, i) => {
     if (m.role === 'user') { uSeq++;
@@ -9155,6 +9457,9 @@ function renderAiHistory() {
       const body = document.createElement('div');
       body.className = 'ai-msg-body';
       body.innerHTML = renderSafeMarkdown(m.content);
+      if (i === lastAssistantIdx && m.content) {
+        body.appendChild(renderAiBubbleActions(m.content));
+      }
       ab.appendChild(tag); ab.appendChild(body);
       out.appendChild(ab);
     }
@@ -9561,6 +9866,7 @@ async function saveAiSelection(silent) {
       const status = $('ai-conn-status');
       if (status) status.textContent = _t('status.saved') || '';
       if (!silent) showToast(_t('toast.connSettingsSaved') || '');
+      $('ai-settings-modal')?.classList.add('hidden');
       return true;
     } else {
       const d = await r.json().catch(() => ({}));
@@ -9723,7 +10029,7 @@ async function runAi(action) {
   try { requestHeaders = readAiCustomHeaders(); } catch (e) { return; }
 
   const tpl = currentAiTemplate();
-  const skillId = (tpl && tpl.skill_id) || AI_SKILLS[action] || 'readmd-ask';
+  const skillId = (tpl && tpl.skill_id) || 'readmd-ask';
   const docs = text.length > 120000 ? text.slice(0, 120000) + '\n\n' + (_t('ai.contentTruncated') || '') : text;
   const fill = s => String(s || '').replace(/\{doc\}/g, docs).replace(/\{prompt\}/g, prompt || '');
   let userMsg;
@@ -9836,6 +10142,7 @@ async function runAi(action) {
     aiTag.textContent = (_t('ai.aiTag', { seq: userSeq }) || '') + ' · ' + model + fmtAiUsage(state.ai.usage);
     if (state.ai.raw) {
       aiTag.appendChild(aiAnswerCopyButton(state.ai.raw));
+      aiBody.appendChild(renderAiBubbleActions(state.ai.raw));
       const last = { role: 'assistant', content: state.ai.raw, ephemeral: isIncognito };
       if (state.ai.usage) last.usage = state.ai.usage;
       msgs.push(last);
@@ -10664,6 +10971,34 @@ function renderPetSettings(status) {
   updatePetRangeLabels();
   const install = $('pet-install');
   if (install) install.classList.toggle('hidden', Boolean(status && status.adapter && status.adapter.available));
+
+  const statusDot = $('pet-status-dot');
+  const statusText = $('pet-status-text');
+  const activeSlug = $('pet-active-slug');
+  const statusLine = $('pet-status-line');
+  if (statusDot && statusText) {
+    if (status && status.enabled) {
+      statusDot.style.background = 'var(--accent, #22c55e)';
+      statusText.textContent = (window.i18n ? window.i18n.t('pet.statusRunning') : '') || '运行中';
+    } else if (status && status.adapter && status.adapter.available) {
+      statusDot.style.background = 'var(--text-muted, #94a3b8)';
+      statusText.textContent = (window.i18n ? window.i18n.t('pet.statusStopped') : '') || '未启动';
+    } else {
+      statusDot.style.background = 'var(--warning, #f59e0b)';
+      statusText.textContent = (window.i18n ? window.i18n.t('pet.statusNotInstalled') : '') || '未安装外置运行时';
+    }
+  }
+  if (statusLine) {
+    const adapterDir = (status && (status.adapter_dir || (status.adapter && status.adapter.dir))) || '';
+    if (status && status.adapter && status.adapter.available) {
+      statusLine.textContent = (window.i18n ? window.i18n.t('pet.statusInstalled', { path: adapterDir }) : '') || `已安装，目录：${adapterDir}`;
+    } else {
+      statusLine.textContent = (window.i18n ? window.i18n.t('pet.statusNotInstalled', { path: adapterDir }) : '') || `尚未安装，启用后将安装到：${adapterDir}`;
+    }
+  }
+  if (activeSlug) {
+    activeSlug.textContent = (status && (status.active_slug || status.active_pet || (preferences && preferences.renderer))) || 'Hermes';
+  }
 }
 
 function updatePetRangeLabels() {
@@ -10679,6 +11014,8 @@ function closePetSettings() {
 
 async function installPetPlugin() {
   if (!hasPy || !py.choose_pet_plugin || !py.install_pet_plugin) return false;
+  const btn = $('pet-install');
+  const origText = btn ? btn.textContent : '';
   const archive = await py.choose_pet_plugin();
   if (!archive) return false;
   const confirmed = await confirmAction({
@@ -10686,12 +11023,25 @@ async function installPetPlugin() {
     confirmText: petT('update.installNow'), cancelText: petT('dialog.cancel'),
   });
   if (!confirmed) return false;
-  const result = await py.install_pet_plugin(archive, true);
-  if (!result || !result.ok) {
-    if (typeof showToast === 'function') showToast(petT('app.failed'));
-    return false;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = (window.i18n ? window.i18n.t('pet.installing') : '') || '正在安装...';
   }
-  return true;
+  try {
+    const result = await py.install_pet_plugin(archive, true);
+    if (!result || !result.ok) {
+      const code = (result && result.error_code) || 'unknown';
+      const msg = (window.i18n ? window.i18n.t('pet.installFailedCode', { code }) : '') || `安装失败：${code}`;
+      if (typeof showToast === 'function') showToast(msg);
+      return false;
+    }
+    return true;
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = origText;
+    }
+  }
 }
 
 async function savePetSettings({ allowInstall = false } = {}) {
@@ -11559,7 +11909,20 @@ function generateExportPreviewCss(opts, fmt) {
     }
 
     /* Full Modal Preview Dynamic Styling */
-    #export-preview-full-page, .export-preview-page-sheet {
+    #export-preview-full-page {
+      width: 100% !important;
+      height: auto !important;
+      min-height: 100% !important;
+      overflow: visible !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      gap: 24px !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+    }
+    .export-preview-page-sheet {
       background: ${pageBg} !important;
       color: ${baseFg} !important;
       font-family: ${fontFamily} !important;
@@ -11576,6 +11939,7 @@ function generateExportPreviewCss(opts, fmt) {
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
       border-radius: 2px !important;
       margin-bottom: 24px !important;
+      flex-shrink: 0 !important;
     }
     .export-page-body {
       flex: 1 1 auto !important;
@@ -11971,6 +12335,37 @@ function updateExportLivePreview() {
         fullPageHost.appendChild(sheet);
         renderMath(bodyEl);
       });
+
+      const pagesMeta = $('export-preview-pages-meta');
+      if (pagesMeta) {
+        pagesMeta.textContent = (window.i18n ? window.i18n.t('export.previewPagesMeta', { total: totalPages }) : '') || `共 ${totalPages} 页`;
+      }
+      const prevBtn = $('export-preview-prev-btn');
+      const nextBtn = $('export-preview-next-btn');
+      if (prevBtn && nextBtn) {
+        if (totalPages > 1) {
+          prevBtn.style.display = 'inline-flex';
+          nextBtn.style.display = 'inline-flex';
+          let curIdx = 0;
+          prevBtn.onclick = () => {
+            const sheets = fullPageHost.querySelectorAll('.export-preview-page-sheet');
+            if (curIdx > 0) {
+              curIdx--;
+              sheets[curIdx]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          };
+          nextBtn.onclick = () => {
+            const sheets = fullPageHost.querySelectorAll('.export-preview-page-sheet');
+            if (curIdx < sheets.length - 1) {
+              curIdx++;
+              sheets[curIdx]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          };
+        } else {
+          prevBtn.style.display = 'none';
+          nextBtn.style.display = 'none';
+        }
+      }
     }
   }
 }
@@ -12096,7 +12491,12 @@ function collectExportOptions() {
 // nested options. Normalize both forms and drop unknown keys before merging so
 // a model cannot mutate unrelated export state.
 function normalizeExportAiPayload(value) {
-  const allowed = new Set(['typography', 'headings', 'table', 'page']);
+  const allowed = new Set(['typography', 'headings', 'table', 'page', 'epub']);
+  const ALLOWED_EPUB_KEYS = new Set([
+    'title', 'author', 'publisher', 'isbn', 'language', 'cover',
+    'splitLevel', 'fontSize', 'lineHeight', 'marginV', 'marginH',
+    'css', 'toc', 'generateToc'
+  ]);
   const out = {};
   const visit = (obj, prefix = '') => {
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
@@ -12105,6 +12505,7 @@ function normalizeExportAiPayload(value) {
       if (full.includes('.')) {
         const parts = full.split('.');
         if (!allowed.has(parts[0]) || parts.length > 4) return;
+        if (parts[0] === 'epub' && !ALLOWED_EPUB_KEYS.has(parts[1])) return;
         expSet(out, full, val);
       } else if (allowed.has(key) && val && typeof val === 'object' && !Array.isArray(val)) {
         visit(val, full);
@@ -12148,13 +12549,28 @@ async function runExport() {
 
   try {
     if (fmt === 'epub') {
+      const epubOpts = options.epub || options.meta || {};
+      const epubPayload = {
+        title: epubOpts.title || '',
+        author: epubOpts.author || '',
+        publisher: epubOpts.publisher || '',
+        isbn: epubOpts.isbn || '',
+        language: epubOpts.language || 'zh-CN',
+        splitLevel: epubOpts.splitLevel || 'h1',
+        fontSize: epubOpts.fontSize,
+        lineHeight: epubOpts.lineHeight,
+        marginV: epubOpts.marginV,
+        marginH: epubOpts.marginH,
+        ...epubOpts
+      };
+      const fullPayload = { epub: epubPayload, meta: epubPayload, ...options };
       if (hasPy && py.export_epub) {
-        r = await py.export_epub(content, '', options.meta || {}, true);
+        r = await py.export_epub(content, '', fullPayload, true);
       } else {
         const resp = await apiFetch('/api/export/epub', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: content, meta: options.meta || {}, confirm: true })
+          body: JSON.stringify({ content: content, meta: epubPayload, epub: epubPayload, options: fullPayload, confirm: true })
         });
         r = await resp.json();
       }
@@ -12327,6 +12743,8 @@ async function generateExportStyleWithAi(stylePrompt) {
 
     // Apply options to export state and DOM
     state.export.options = expDeepMerge(state.export.options || state.export.defaults, parsed);
+    const presetSelect = $('exp-preset');
+    if (presetSelect) presetSelect.value = '__custom__';
     applyExportOptionsToDom();
     updateExportLivePreview();
 
@@ -13137,8 +13555,7 @@ function bindEvents() {
   $('ai-models-btn').addEventListener('click', loadAiModels);
   $('ai-model').addEventListener('change', updateAiConnectionSummary);
   $('ai-test-connection').addEventListener('click', testAiConnection);
-  $('ai-save-key').addEventListener('click', saveAiSelection);
-  document.querySelectorAll('.ai-act').forEach(b => b.addEventListener('click', () => runAi(b.dataset.act)));
+  $('ai-save-key').addEventListener('click', () => saveAiSelection());
   $('ai-run').addEventListener('click', () => runAi('ask'));
   $('ai-stop').addEventListener('click', () => { if (state.ai.aborter) state.ai.aborter.abort(); });
   $('ai-apply').addEventListener('click', applyAi);
@@ -13263,6 +13680,113 @@ function bindEvents() {
   if ($('style-modal-cancel')) $('style-modal-cancel').addEventListener('click', closeStyleModal);
   if ($('style-modal-save')) $('style-modal-save').addEventListener('click', saveStyleModal);
   if ($('style-custom-modal')) $('style-custom-modal').addEventListener('click', e => { if (e.target === $('style-custom-modal')) closeStyleModal(); });
+
+  async function generateCustomStyleWithAi() {
+    const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+    const promptInput = $('style-ai-prompt');
+    const prompt = (promptInput && promptInput.value || '').trim();
+    if (!prompt) {
+      showToast(_t('styleai.enterPrompt') || '请输入排版风格诉求');
+      if (promptInput) promptInput.focus();
+      return;
+    }
+    const statusEl = $('style-ai-status');
+    const genBtn = $('style-ai-gen-btn');
+    if (statusEl) {
+      statusEl.classList.remove('hidden');
+      statusEl.textContent = _t('styleai.generating') || 'AI 样式生成中...';
+    }
+    if (genBtn) genBtn.disabled = true;
+
+    try {
+      const connection = typeof ensureAiConfigured === 'function'
+        ? await ensureAiConfigured()
+        : (typeof resolveSharedAiConnection === 'function' ? await resolveSharedAiConnection() : null);
+      if (!connection) {
+        if (statusEl) statusEl.textContent = _t('toast.noApiKeyNotice') || '请先配置 AI 服务';
+        showToast(_t('toast.noApiKeyNotice') || '请先配置 AI 服务');
+        return;
+      }
+
+      const docSnippet = (state.original || state.fixed || '').slice(0, 1200);
+      const res = await apiFetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: connection.provider,
+          credential_id: connection.credential_id,
+          model: connection.model,
+          base_url: connection.base_url,
+          mode: connection.mode,
+          endpoint_mode: connection.endpoint_mode,
+          headers: connection.headers,
+          skill_id: 'readmd-style-custom',
+          skill_variables: {
+            request: prompt,
+            context: docSnippet,
+            document: docSnippet,
+            language: (window.i18n && window.i18n.locale) || 'zh-CN'
+          },
+          messages: [{
+            role: 'user',
+            content: prompt
+          }],
+          stream: false
+        })
+      });
+
+      const data = await res.json();
+      if (!data || !data.ok) {
+        throw new Error((data && data.error) || '未返回有效内容');
+      }
+
+      let text = (data.content || '').trim();
+      text = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '').trim();
+      const match = text.match(/\{[\s\S]*\}/);
+      if (!match) {
+        throw new Error(_t('styleai.invalidJson') || 'AI 未返回有效的 JSON 样式数据');
+      }
+      let parsed;
+      try {
+        parsed = JSON.parse(match[0]);
+      } catch (e) {
+        throw new Error(_t('styleai.invalidJson') || 'AI 样式 JSON 解析失败');
+      }
+      if (!parsed || (typeof parsed.css !== 'string' && typeof parsed.head !== 'string')) {
+        throw new Error(_t('styleai.invalidJson') || 'AI 返回的样式缺少 css 或 head 字段');
+      }
+
+      if (parsed.css && $('style-custom-css')) {
+        $('style-custom-css').value = parsed.css;
+      }
+      if (parsed.head && $('style-custom-head')) {
+        $('style-custom-head').value = parsed.head;
+      }
+
+      if (statusEl) {
+        statusEl.textContent = _t('styleai.generated') || 'AI 样式生成完成，保存即可生效';
+        setTimeout(() => statusEl.classList.add('hidden'), 3500);
+      }
+      showToast(_t('styleai.generated') || 'AI 样式生成完成');
+    } catch (err) {
+      if (statusEl) {
+        statusEl.textContent = (_t('ai.reqFailMsg') || 'AI 请求失败：') + err.message;
+      }
+      showToast((_t('ai.reqFailMsg') || 'AI 请求失败：') + err.message);
+    } finally {
+      if (genBtn) genBtn.disabled = false;
+    }
+  }
+
+  if ($('style-ai-gen-btn')) $('style-ai-gen-btn').addEventListener('click', generateCustomStyleWithAi);
+  if ($('style-ai-prompt')) {
+    $('style-ai-prompt').addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        generateCustomStyleWithAi();
+      }
+    });
+  }
 
   const STYLE_PRESETS = {
     indent: '/* 中文段落首行缩进 2 字符 */\n.markdown-body p {\n  text-indent: 2em;\n  margin-bottom: 0.8em;\n}\n\n',

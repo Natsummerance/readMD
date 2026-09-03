@@ -75,25 +75,73 @@ function bindGlobalDragAndDrop() {
     const dt = e.dataTransfer;
     if (!dt) return;
 
-    // 1. 处理文件拖拽（万物皆可开：代码/配置/脚本/文本直接开，Office/PDF 走转换）
+    // 1. 处理文件拖拽（万物皆可开：代码/配置/脚本/文本直接开，Office/PDF 走转换，ZIP 自动解压）
     if (dt.files && dt.files.length > 0) {
       const files = Array.from(dt.files);
-      const binaryConvertFiles = files.filter(f => (typeof CONVERT_BINARY_RE !== 'undefined' ? CONVERT_BINARY_RE.test(f.name || '') : false) || IMG_RE.test(f.name || ''));
-      const textAndCodeFiles = files.filter(f => !binaryConvertFiles.includes(f));
+      const zipFiles = files.filter(f => /\.zip$/i.test(f.name || ''));
+      const otherFiles = files.filter(f => !/\.zip$/i.test(f.name || ''));
 
-      if (textAndCodeFiles.length > 0) {
-        for (const f of textAndCodeFiles) {
-          const path = f.path ? f.path : await uploadFile(f);
-          if (path) await loadFile(path, { browserCopy: !f.path });
+      if (zipFiles.length > 0) {
+        showToast((window.i18n ? window.i18n.t('batch.extractingZip') : '') || '正在解压压缩包...');
+        const extractedPaths = [];
+        let totalSkipped = 0;
+        for (const zf of zipFiles) {
+          try {
+            let res;
+            if (hasPy && py.extract_zip_batch && zf.path) {
+              res = await py.extract_zip_batch(zf.path);
+            } else {
+              if (zf.path) {
+                const resp = await apiFetch('/api/batch/extract-zip', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ path: zf.path })
+                });
+                res = await resp.json();
+              } else {
+                const resp = await apiFetch('/api/batch/extract-zip', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/zip' },
+                  body: zf
+                });
+                res = await resp.json();
+              }
+            }
+            if (res && res.ok && Array.isArray(res.paths)) {
+              if (res.paths.length > 0) extractedPaths.push(...res.paths);
+              if (res.skipped) totalSkipped += Number(res.skipped) || 0;
+            }
+          } catch (err) {
+            console.error('Extract zip error:', err);
+          }
+        }
+        if (totalSkipped > 0) {
+          const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+          showToast(_t('batch.zipSkipped', { count: totalSkipped }) || `已跳过 ${totalSkipped} 个不支持的文件`);
+        }
+        if (extractedPaths.length > 0) {
+          enqueueBatchFiles(extractedPaths, false);
         }
       }
-      if (binaryConvertFiles.length > 0) {
-        const paths = [];
-        for (const f of binaryConvertFiles) {
-          const path = f.path ? f.path : await uploadFile(f);
-          if (path) paths.push(path);
+
+      if (otherFiles.length > 0) {
+        const binaryConvertFiles = otherFiles.filter(f => (typeof CONVERT_BINARY_RE !== 'undefined' ? CONVERT_BINARY_RE.test(f.name || '') : false) || IMG_RE.test(f.name || ''));
+        const textAndCodeFiles = otherFiles.filter(f => !binaryConvertFiles.includes(f));
+
+        if (textAndCodeFiles.length > 0) {
+          for (const f of textAndCodeFiles) {
+            const path = f.path ? f.path : await uploadFile(f);
+            if (path) await loadFile(path, { browserCopy: !f.path });
+          }
         }
-        if (paths.length) enqueueBatchFiles(paths, false);
+        if (binaryConvertFiles.length > 0) {
+          const paths = [];
+          for (const f of binaryConvertFiles) {
+            const path = f.path ? f.path : await uploadFile(f);
+            if (path) paths.push(path);
+          }
+          if (paths.length) enqueueBatchFiles(paths, false);
+        }
       }
       return;
     }

@@ -401,7 +401,20 @@ function generateExportPreviewCss(opts, fmt) {
     }
 
     /* Full Modal Preview Dynamic Styling */
-    #export-preview-full-page, .export-preview-page-sheet {
+    #export-preview-full-page {
+      width: 100% !important;
+      height: auto !important;
+      min-height: 100% !important;
+      overflow: visible !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      gap: 24px !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      padding: 0 !important;
+    }
+    .export-preview-page-sheet {
       background: ${pageBg} !important;
       color: ${baseFg} !important;
       font-family: ${fontFamily} !important;
@@ -418,6 +431,7 @@ function generateExportPreviewCss(opts, fmt) {
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
       border-radius: 2px !important;
       margin-bottom: 24px !important;
+      flex-shrink: 0 !important;
     }
     .export-page-body {
       flex: 1 1 auto !important;
@@ -813,6 +827,37 @@ function updateExportLivePreview() {
         fullPageHost.appendChild(sheet);
         renderMath(bodyEl);
       });
+
+      const pagesMeta = $('export-preview-pages-meta');
+      if (pagesMeta) {
+        pagesMeta.textContent = (window.i18n ? window.i18n.t('export.previewPagesMeta', { total: totalPages }) : '') || `共 ${totalPages} 页`;
+      }
+      const prevBtn = $('export-preview-prev-btn');
+      const nextBtn = $('export-preview-next-btn');
+      if (prevBtn && nextBtn) {
+        if (totalPages > 1) {
+          prevBtn.style.display = 'inline-flex';
+          nextBtn.style.display = 'inline-flex';
+          let curIdx = 0;
+          prevBtn.onclick = () => {
+            const sheets = fullPageHost.querySelectorAll('.export-preview-page-sheet');
+            if (curIdx > 0) {
+              curIdx--;
+              sheets[curIdx]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          };
+          nextBtn.onclick = () => {
+            const sheets = fullPageHost.querySelectorAll('.export-preview-page-sheet');
+            if (curIdx < sheets.length - 1) {
+              curIdx++;
+              sheets[curIdx]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          };
+        } else {
+          prevBtn.style.display = 'none';
+          nextBtn.style.display = 'none';
+        }
+      }
     }
   }
 }
@@ -938,7 +983,12 @@ function collectExportOptions() {
 // nested options. Normalize both forms and drop unknown keys before merging so
 // a model cannot mutate unrelated export state.
 function normalizeExportAiPayload(value) {
-  const allowed = new Set(['typography', 'headings', 'table', 'page']);
+  const allowed = new Set(['typography', 'headings', 'table', 'page', 'epub']);
+  const ALLOWED_EPUB_KEYS = new Set([
+    'title', 'author', 'publisher', 'isbn', 'language', 'cover',
+    'splitLevel', 'fontSize', 'lineHeight', 'marginV', 'marginH',
+    'css', 'toc', 'generateToc'
+  ]);
   const out = {};
   const visit = (obj, prefix = '') => {
     if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return;
@@ -947,6 +997,7 @@ function normalizeExportAiPayload(value) {
       if (full.includes('.')) {
         const parts = full.split('.');
         if (!allowed.has(parts[0]) || parts.length > 4) return;
+        if (parts[0] === 'epub' && !ALLOWED_EPUB_KEYS.has(parts[1])) return;
         expSet(out, full, val);
       } else if (allowed.has(key) && val && typeof val === 'object' && !Array.isArray(val)) {
         visit(val, full);
@@ -990,13 +1041,28 @@ async function runExport() {
 
   try {
     if (fmt === 'epub') {
+      const epubOpts = options.epub || options.meta || {};
+      const epubPayload = {
+        title: epubOpts.title || '',
+        author: epubOpts.author || '',
+        publisher: epubOpts.publisher || '',
+        isbn: epubOpts.isbn || '',
+        language: epubOpts.language || 'zh-CN',
+        splitLevel: epubOpts.splitLevel || 'h1',
+        fontSize: epubOpts.fontSize,
+        lineHeight: epubOpts.lineHeight,
+        marginV: epubOpts.marginV,
+        marginH: epubOpts.marginH,
+        ...epubOpts
+      };
+      const fullPayload = { epub: epubPayload, meta: epubPayload, ...options };
       if (hasPy && py.export_epub) {
-        r = await py.export_epub(content, '', options.meta || {}, true);
+        r = await py.export_epub(content, '', fullPayload, true);
       } else {
         const resp = await apiFetch('/api/export/epub', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: content, meta: options.meta || {}, confirm: true })
+          body: JSON.stringify({ content: content, meta: epubPayload, epub: epubPayload, options: fullPayload, confirm: true })
         });
         r = await resp.json();
       }
@@ -1169,6 +1235,8 @@ async function generateExportStyleWithAi(stylePrompt) {
 
     // Apply options to export state and DOM
     state.export.options = expDeepMerge(state.export.options || state.export.defaults, parsed);
+    const presetSelect = $('exp-preset');
+    if (presetSelect) presetSelect.value = '__custom__';
     applyExportOptionsToDom();
     updateExportLivePreview();
 

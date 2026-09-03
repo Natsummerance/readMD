@@ -54,7 +54,8 @@ A -> B: Hello
         """测试 PlantUML Base64 编码与在线 SVG URL 生成。"""
         code = "Alice -> Bob: Authentication Request"
         url = get_plantuml_svg_url(code)
-        self.assertTrue(url.startswith("https://www.plantuml.com/plantuml/svg/~1"))
+        self.assertTrue(url.startswith("https://www.plantuml.com/plantuml/svg/"))
+        self.assertNotIn("~1", url)
         self.assertGreater(len(url), 40)
 
 

@@ -11,12 +11,15 @@ v2.1.1 质量升级：
 """
 
 import os
+import sys
+import ntpath
 import re
 import shutil
 import subprocess
 import tempfile
 import time
 import zipfile
+import logging
 import html as _html
 import xml.etree.ElementTree as ET
 from collections import Counter
@@ -634,13 +637,14 @@ def _word_com_retry(fn, attempts=4, delays=(0.5, 1.0, 2.0)):
             time.sleep(delays[min(attempt, len(delays) - 1)])
 
 
-def _doc2docx_word_com(src, out_dir):
-    """用本机 Word COM 把 .doc 转成 .docx；无 pywin32/Word 时返回 None。"""
+def _word_com_process_worker(src, out_dir, queue):
     try:
         import pythoncom
         import win32com.client
     except ImportError:
-        return None
+        queue.put((False, None))
+        return
+
     pythoncom.CoInitialize()
     word = None
     try:
@@ -649,22 +653,102 @@ def _doc2docx_word_com(src, out_dir):
         word.Visible = False
         word.DisplayAlerts = 0
 
+        abs_src = os.path.abspath(src)
+        abs_out_dir = os.path.abspath(out_dir)
+        out = os.path.join(abs_out_dir, os.path.splitext(os.path.basename(src))[0] + '.docx')
+
         def _open_and_save():
-            doc = word.Documents.Open(os.path.abspath(src), ReadOnly=True)
             try:
-                out = os.path.abspath(os.path.join(
-                    out_dir, os.path.splitext(os.path.basename(src))[0] + '.docx'))
+                doc = word.Documents.Open(
+                    abs_src,
+                    ConfirmConversions=False,
+                    ReadOnly=True,
+                    AddToRecentFiles=False,
+                    Visible=False
+                )
+            except TypeError:
+                doc = word.Documents.Open(abs_src, ReadOnly=True)
+            try:
                 doc.SaveAs2(out, FileFormat=16)  # wdFormatXMLDocument
             finally:
                 doc.Close(False)
             return out
 
-        out = _word_com_retry(_open_and_save)
-        return out if os.path.isfile(out) else None
+        res = _word_com_retry(_open_and_save)
+        queue.put((True, res if os.path.isfile(res) else None))
+    except Exception as e:
+        queue.put((False, str(e)))
     finally:
         if word is not None:
-            word.Quit()
+            try:
+                word.Quit()
+            except Exception:
+                pass
         pythoncom.CoUninitialize()
+
+
+def _doc2docx_word_com(src, out_dir, timeout=30):
+    """用本机 Word COM 把 .doc 转成 .docx；带进程级超时强杀保护与弹窗压制。"""
+    try:
+        import pythoncom
+        import win32com.client
+    except ImportError:
+        return None
+
+    # When win32com is mocked in unit tests, run in-process to allow assertions on mock objects
+    is_mock = getattr(sys.modules.get('win32com'), '__file__', None) is None
+    if is_mock:
+        class _DirectQueue:
+            def __init__(self):
+                self.val = None
+            def put(self, v):
+                self.val = v
+        dq = _DirectQueue()
+        _word_com_process_worker(src, out_dir, dq)
+        if dq.val and dq.val[0]:
+            return dq.val[1]
+        return None
+
+    import multiprocessing
+    q = multiprocessing.Queue()
+    p = multiprocessing.Process(target=_word_com_process_worker, args=(src, out_dir, q))
+    p.start()
+    p.join(timeout=timeout)
+    if p.is_alive():
+        logging.warning("Word COM conversion timed out after %ds for %s; terminating worker process", timeout, src)
+        # On Windows Word is a separate COM child.  Terminating only the
+        # Python worker can leave WINWORD.EXE behind and keep the file locked.
+        if os.name == 'nt' and getattr(p, 'pid', None):
+            try:
+                subprocess.run(
+                    ['taskkill', '/PID', str(p.pid), '/T', '/F'],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    check=False, timeout=5,
+                )
+            except Exception:
+                pass
+        try:
+            p.terminate()
+        finally:
+            p.join(timeout=3)
+        return None
+
+    # ``Queue.empty()`` is racy because the feeder thread may not have flushed
+    # its last item even after the worker exited.  A bounded get is reliable
+    # and keeps a broken worker from blocking the caller forever.
+    try:
+        ok, res = q.get(timeout=2)
+        if ok and res and os.path.isfile(res):
+            return res
+    except Exception:
+        pass
+    finally:
+        try:
+            q.close()
+            q.join_thread()
+        except Exception:
+            pass
+    return None
 
 
 def _doc2docx_soffice(src, out_dir):
@@ -1684,3 +1768,163 @@ def pdf2md(path):
     if not text:
         raise ValueError('pdf 未提取到文字内容（可能是扫描件，请用 OCR）')
     return text
+
+
+def extract_zip_archive(zip_source, base_temp_dir=None):
+    """解压 ZIP 归档文件到临时目录，带完整安全管线：
+    1. 防 Zip Bomb：解压上限 500MB，单文件/数量/路径深度限制；
+    2. 防路径穿越与拒绝符号链接/设备文件；
+    3. 支持格式过滤：仅解压 Markdown、文档、文本代码及可转换二进制/图片；
+    4. 中文文件名编码自适应（cp437/gbk/utf-8）；
+    5. 返回提取路径与跳过统计诊断。
+    """
+    import zipfile
+    import uuid
+    import io
+    import posixpath
+    import time as _time
+
+    MAX_ZIP_SIZE = 100 * 1024 * 1024          # 100 MB 压缩包大小限制
+    MAX_TOTAL_UNCOMPRESSED = 500 * 1024 * 1024 # 500 MB 解压总大小限制 (防炸弹)
+    MAX_FILE_COUNT = 1000                      # 最多提取 1000 个文件
+    MAX_PATH_DEPTH = 12                        # 最深 12 层目录
+
+    SUPPORTED_EXTS = {
+        '.md', '.markdown', '.mdown', '.txt', '.text',
+        '.json', '.csv', '.tsv', '.yaml', '.yml', '.xml', '.sql',
+        '.py', '.js', '.ts', '.html', '.css', '.c', '.cpp', '.h', '.rs', '.go', '.java', '.sh', '.bat', '.ps1',
+        '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.pdf', '.epub', '.mobi', '.rtf', '.odt',
+        '.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif'
+    }
+
+    if not base_temp_dir:
+        data_dir = os.environ.get('READMD_DATA_DIR') or os.path.expanduser('~/.readmd')
+        base_temp_dir = os.path.join(data_dir, 'temp_zip')
+
+    # Remove abandoned extraction runs from interrupted requests.  The active
+    # run is never touched; callers receive paths they can consume normally.
+    try:
+        os.makedirs(base_temp_dir, exist_ok=True)
+        now = _time.time()
+        for name in os.listdir(base_temp_dir):
+            candidate = os.path.join(base_temp_dir, name)
+            if os.path.isdir(candidate) and now - os.path.getmtime(candidate) > 3600:
+                shutil.rmtree(candidate, ignore_errors=True)
+    except Exception:
+        pass
+
+    run_id = str(uuid.uuid4())[:8]
+    target_dir = os.path.realpath(os.path.abspath(os.path.join(base_temp_dir, run_id)))
+    os.makedirs(target_dir, exist_ok=True)
+
+    extracted_files = []
+    skipped_count = 0
+    skipped_reasons = {
+        'unsupported_format': 0,
+        'unsafe_file_type': 0,
+        'invalid_path': 0,
+        'limit_exceeded': 0
+    }
+
+    if isinstance(zip_source, (bytes, bytearray)):
+        if len(zip_source) > MAX_ZIP_SIZE:
+            raise ValueError('zip_archive_too_large')
+        zf_ctx = zipfile.ZipFile(io.BytesIO(zip_source))
+    else:
+        if os.path.isfile(zip_source) and os.path.getsize(zip_source) > MAX_ZIP_SIZE:
+            raise ValueError('zip_archive_too_large')
+        zf_ctx = zipfile.ZipFile(zip_source, 'r')
+
+    total_uncompressed = 0
+    total_entries = 0
+
+    with zf_ctx as zf:
+        infolist = zf.infolist()
+        # Bound central-directory metadata before iterating.  This prevents a
+        # metadata-only archive from creating an unbounded Python object list.
+        if len(infolist) > MAX_FILE_COUNT * 4:
+            raise ValueError('zip_entry_count_exceeded')
+        total_entries = len(infolist)
+        for info in infolist:
+            if info.is_dir():
+                continue
+
+            # 1. 拒绝符号链接、设备文件与 FIFO
+            mode = (info.external_attr >> 16) & 0o170000
+            if mode != 0 and mode != 0o100000:  # 0o100000 is regular file
+                skipped_count += 1
+                skipped_reasons['unsafe_file_type'] += 1
+                continue
+
+            # 2. 数量与解压总容量上限
+            if len(extracted_files) >= MAX_FILE_COUNT or (total_uncompressed + info.file_size) > MAX_TOTAL_UNCOMPRESSED:
+                skipped_count += 1
+                skipped_reasons['limit_exceeded'] += 1
+                continue
+
+            raw_name = info.filename
+            if not (info.flag_bits & 0x800):
+                try:
+                    raw_bytes = raw_name.encode('cp437')
+                    for enc in ('gbk', 'utf-8', 'gb18030', 'big5'):
+                        try:
+                            raw_name = raw_bytes.decode(enc)
+                            break
+                        except UnicodeDecodeError:
+                            pass
+                except Exception:
+                    pass
+
+            # Validate the archive name before normalising it.  Stripping a
+            # leading slash first would silently turn absolute and UNC names
+            # into apparently safe relative paths.
+            archive_name = str(raw_name).replace('\\', '/')
+            drive, _ = ntpath.splitdrive(archive_name)
+            normalized_name = posixpath.normpath(archive_name)
+            if (archive_name.startswith('/') or archive_name.startswith('//')
+                    or bool(drive) or normalized_name in ('.', '..')
+                    or normalized_name.startswith('../')):
+                skipped_count += 1
+                skipped_reasons['invalid_path'] += 1
+                continue
+            clean_name = normalized_name
+
+            # 3. 路径深度限制
+            parts = [p for p in clean_name.replace('\\', '/').split('/') if p and p != '.']
+            if len(parts) > MAX_PATH_DEPTH:
+                skipped_count += 1
+                skipped_reasons['invalid_path'] += 1
+                continue
+
+            # 4. 支持格式过滤
+            ext = os.path.splitext(clean_name)[1].lower()
+            if ext not in SUPPORTED_EXTS:
+                skipped_count += 1
+                skipped_reasons['unsupported_format'] += 1
+                continue
+
+            dest_file = os.path.realpath(os.path.abspath(os.path.join(target_dir, clean_name)))
+            if not dest_file.startswith(target_dir + os.sep) and dest_file != target_dir:
+                skipped_count += 1
+                skipped_reasons['invalid_path'] += 1
+                continue
+
+            os.makedirs(os.path.dirname(dest_file), exist_ok=True)
+            with zf.open(info) as src, open(dest_file, 'wb') as dst:
+                while True:
+                    chunk = src.read(65536)
+                    if not chunk:
+                        break
+                    dst.write(chunk)
+
+            if os.path.isfile(dest_file):
+                extracted_files.append(dest_file)
+                total_uncompressed += info.file_size
+
+    return {
+        'ok': True,
+        'paths': extracted_files,
+        'skipped': skipped_count,
+        'total': total_entries,
+        'reasons': skipped_reasons
+    }

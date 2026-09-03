@@ -98,7 +98,9 @@ def resolve_asset(app_dir, path, query=''):
         return ResolvedAsset(path=None, mime='text/plain', immutable=False, forbidden=True)
 
     parsed_query = parse_qs(query) if isinstance(query, str) else (query or {})
-    cached_prefix = rel.startswith('vendor/') or rel.startswith('i18n/')
+    # Locale JSON must stay revalidatable: immutable caching here kept stale
+    # dictionaries alive across upgrades, so newly added i18n keys showed raw.
+    cached_prefix = rel.startswith('vendor/')
     immutable = bool(
         cached_prefix or parsed_query.get('v') or parsed_query.get('version') or parsed_query.get('hash')
     )

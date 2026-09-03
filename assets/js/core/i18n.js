@@ -139,12 +139,15 @@ window.i18n = {
 
   /** 高效获取语言词库 JSON */
   async fetchDict(langCode) {
+    // Cache-bust: older builds served locale JSON as immutable, so a WebView
+    // upgrade could keep serving a stale dictionary missing newer keys.
+    const bust = `?v=${Date.now()}`;
     try {
-      const resp = await fetch(`/assets/i18n/${langCode}.json`);
+      const resp = await fetch(`/assets/i18n/${langCode}.json${bust}`);
       if (resp.ok) return await resp.json();
     } catch (e) {}
     try {
-      const resp = await fetch(`assets/i18n/${langCode}.json`);
+      const resp = await fetch(`assets/i18n/${langCode}.json${bust}`);
       if (resp.ok) return await resp.json();
     } catch (e) {}
     return null;

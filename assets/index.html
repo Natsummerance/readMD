@@ -351,16 +351,6 @@
           </button>
         </div>
       </div>
-      <div class="ai-actions" aria-label="快捷动作" data-i18n-aria="ai.actionsAria">
-        <button class="ai-act" data-act="quick_read" title="总结全文结构与要点" data-i18n="ai.quickSummarize" data-i18n-title="ai.quickSummarize">总结全文</button>
-        <button class="ai-act" data-act="polish" title="深度润色文稿语句" data-i18n="ai.quickPolish" data-i18n-title="ai.quickPolish">润色文稿</button>
-        <button class="ai-act" data-act="proofread" title="校对错别字与语法标点" data-i18n="ai.quickProofread" data-i18n-title="ai.quickProofread">语法纠错</button>
-        <button class="ai-act" data-act="translate_en" title="精确翻译为英文" data-i18n="ai.quickTranslateEn" data-i18n-title="ai.quickTranslateEn">翻译为英文</button>
-        <button class="ai-act" data-act="translate_zh" title="精确翻译为中文" data-i18n="ai.quickTranslateZh" data-i18n-title="ai.quickTranslateZh">翻译为中文</button>
-        <button class="ai-act" data-act="todo" title="智能提取待办与行动项" data-i18n="ai.quickTodo" data-i18n-title="ai.quickTodo">提取待办</button>
-        <button class="ai-act" data-act="continue" title="承接上文逻辑续写" data-i18n="ai.quickContinue" data-i18n-title="ai.quickContinue">续写内容</button>
-        <button class="ai-act" data-act="ask" title="基于文档自由提问" data-i18n="ai.send" data-i18n-title="ai.send">自由提问</button>
-      </div>
       <div class="ai-output-wrap" aria-label="对话内容" data-i18n-aria="ai.outputAria">
         <div id="ai-output" aria-live="polite"></div>
       </div>
@@ -402,6 +392,14 @@
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     </div>
+    <div id="pet-status-card" class="pet-status-card">
+      <div class="pet-status-header">
+        <span id="pet-status-dot" class="conn-dot"></span>
+        <span id="pet-status-text">未启动</span>
+      </div>
+      <span id="pet-active-slug">Hermes</span>
+    </div>
+    <p id="pet-status-line" class="fix-note" role="status" aria-live="polite"></p>
     <div class="pet-settings-list">
       <label class="pet-setting-toggle"><span data-i18n="pet.enable">启用桌宠</span><input id="pet-enabled" type="checkbox" data-i18n-aria="pet.enable"></label>
       <label class="pet-setting-toggle"><span data-i18n="pet.renderer">渲染器</span><select id="pet-renderer" data-i18n-aria="pet.renderer"><option value="hermes-sprite" data-i18n="pet.renderer.sprite">Hermes 精灵图</option><option value="live2d" data-i18n="pet.renderer.live2d">Live2D</option></select></label>
@@ -643,16 +641,25 @@
         </div>
       </div>
     </div>
-    <div class="url-actions">
-      <button id="tpl-new" class="tb-btn" data-i18n="ai.newSession">新建</button>
-      <button id="tpl-edit" class="tb-btn" data-i18n="toolbar.edit">编辑</button>
-      <button id="tpl-copy" class="tb-btn" data-i18n="editor.copy">复制</button>
-      <button id="tpl-save" class="tb-btn accent" data-i18n="editor.save">保存</button>
-      <button id="tpl-publish" class="tb-btn accent" data-i18n="export.groupPublish">发布</button>
-      <button id="tpl-toggle" class="tb-btn" data-i18n="tpl.disable">停用</button>
-      <button id="tpl-export-one" class="tb-btn" data-i18n="tpl.exportOne">导出此 Skill</button>
-      <button id="tpl-del" class="tb-btn" data-i18n="tpl.delete">删除</button>
-      <button id="tpl-close-btn" class="tb-btn" data-i18n="toolbar.close">关闭</button>
+    <div class="url-actions tpl-actions-groups">
+      <div class="tpl-action-group" role="group" aria-labelledby="tpl-grp-content-lbl">
+        <span id="tpl-grp-content-lbl" class="tpl-action-label" data-i18n="tpl.groupContent">内容</span>
+        <button id="tpl-new" class="tb-btn" data-i18n="ai.newSession">新建</button>
+        <button id="tpl-edit" class="tb-btn" data-i18n="toolbar.edit">编辑</button>
+        <button id="tpl-copy" class="tb-btn" data-i18n="editor.copy">复制</button>
+        <button id="tpl-del" class="tb-btn" data-i18n="tpl.delete">删除</button>
+      </div>
+      <div class="tpl-action-group" role="group" aria-labelledby="tpl-grp-life-lbl">
+        <span id="tpl-grp-life-lbl" class="tpl-action-label" data-i18n="tpl.groupLifecycle">保存与发布</span>
+        <button id="tpl-save" class="tb-btn accent" data-i18n="editor.save">保存</button>
+        <button id="tpl-publish" class="tb-btn accent" data-i18n="export.groupPublish">发布</button>
+        <button id="tpl-toggle" class="tb-btn" data-i18n="tpl.disable">停用</button>
+      </div>
+      <div class="tpl-action-group" role="group" aria-labelledby="tpl-grp-export-lbl">
+        <span id="tpl-grp-export-lbl" class="tpl-action-label" data-i18n="tpl.groupExport">导出</span>
+        <button id="tpl-export-one" class="tb-btn" data-i18n="tpl.exportOne">导出此 Skill</button>
+      </div>
+      <button id="tpl-close-btn" class="tb-btn tpl-close-btn" data-i18n="toolbar.close">关闭</button>
     </div>
     <p class="fix-note" data-i18n="tpl.hint">支持导入标准 SKILL.md 或兼容 JSON。内置 Skill 只读；用户 Skill 发布前必须校验，AI 生成结果默认禁用，可随时回退版本。</p>
   </div>
@@ -963,6 +970,9 @@
     <div class="export-head">
       <h3 data-i18n="export.preview">导出排版大图预览</h3>
       <div class="export-preview-head-meta">
+        <span id="export-preview-pages-meta" class="export-preview-pages-meta"></span>
+        <button id="export-preview-prev-btn" class="tb-btn" type="button" title="上一页" aria-label="上一页" style="display:none; padding: 0 8px;">↑ 上一页</button>
+        <button id="export-preview-next-btn" class="tb-btn" type="button" title="下一页" aria-label="下一页" style="display:none; padding: 0 8px;">↓ 下一页</button>
         <span id="export-preview-paper-meta" data-i18n="export.previewPaperMetaA4">A4 · 纵向</span>
         <button id="export-preview-close" class="tb-btn icon" aria-label="关闭预览" data-i18n-aria="toolbar.close">&#10005;</button>
       </div>
@@ -1149,6 +1159,12 @@
         <button type="button" class="btn-preset" id="btn-preset-font" data-i18n="dialog.stylePresetFont">等宽代码字体</button>
         <button type="button" class="btn-preset" id="btn-preset-print" data-i18n="dialog.stylePresetPrint">打印分页优化</button>
       </div>
+
+      <div class="style-ai-bar">
+        <input type="text" id="style-ai-prompt" class="style-ai-input" placeholder="输入排版风格诉求，例如：适合学术论文的衬线体与优雅边距..." data-i18n-placeholder="styleai.placeholder">
+        <button type="button" id="style-ai-gen-btn" class="tb-btn accent" data-i18n="styleai.generate">AI 生成样式</button>
+      </div>
+      <div id="style-ai-status" class="style-ai-status hidden"></div>
 
       <div class="form-group">
         <label for="style-custom-css" data-i18n="dialog.styleCustomCssLabel">自定义 CSS 样式 (应用于阅读、编辑与导出):</label>

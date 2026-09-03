@@ -49,7 +49,7 @@ class StaticAssetsTest(unittest.TestCase):
         self.assertTrue(versioned.immutable)
 
         localized = resolve_asset(ROOT, '/i18n/en.json')
-        self.assertTrue(localized.immutable)
+        self.assertFalse(localized.immutable)
         self.assertEqual(localized.mime, 'application/json; charset=utf-8')
 
     def test_path_traversal_is_rejected(self):

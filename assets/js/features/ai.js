@@ -18,15 +18,6 @@ const AI_ACTIONS = {
   expand: 'tpl.actionExpand',
 };
 
-const AI_SKILLS = {
-  quick_read: 'readmd-quick-read', polish: 'readmd-polish', proofread: 'readmd-proofread',
-  translate_en: 'readmd-translate', translate_zh: 'readmd-translate', todo: 'readmd-todo',
-  continue: 'readmd-continue', ask: 'readmd-ask', summary: 'readmd-summary',
-  outline: 'readmd-outline', weekly: 'readmd-weekly', code_review: 'readmd-code-review',
-  modify: 'readmd-format-fix', expand: 'readmd-polish', translate: 'readmd-translate',
-  code_to_doc: 'readmd-code-to-doc', code_analysis: 'readmd-code-analysis'
-};
-
 function toggleAiPanel() {
   if (moduleBlocked('ai')) return;
   const p = $('ai-panel');
@@ -156,6 +147,27 @@ async function loadAiPrompts() {
   } catch (e) { /* ignore */ }
 }
 
+const TPL_CATEGORIES = {
+  general: { label: '通用', labelEn: 'General' },
+  writing: { label: '写作与润色', labelEn: 'Writing & Polishing' },
+  coding: { label: '编程与技术', labelEn: 'Coding & Dev' },
+  academic: { label: '学术与研究', labelEn: 'Academic & Research' },
+  custom: { label: '自定义与扩展', labelEn: 'Custom & Extensions' }
+};
+
+function getTemplateCategory(t) {
+  if (!t) return 'general';
+  if (t.category) return t.category;
+  if (t.metadata && t.metadata.category) return t.metadata.category;
+  const id = (t.id || '').toLowerCase();
+  const name = (t.name || '').toLowerCase();
+  if (id.includes('code') || id.includes('dev') || name.includes('代码') || name.includes('编程')) return 'coding';
+  if (id.includes('paper') || id.includes('academic') || id.includes('research') || name.includes('论文') || name.includes('学术')) return 'academic';
+  if (id.includes('write') || id.includes('polish') || id.includes('continue') || id.includes('translate') || id.includes('proofread') || name.includes('写作') || name.includes('润色') || name.includes('翻译') || name.includes('校对')) return 'writing';
+  if (!t.builtin) return 'custom';
+  return 'general';
+}
+
 function fillAiTemplates() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const sel = $('ai-template');
@@ -164,14 +176,32 @@ function fillAiTemplates() {
   sel.innerHTML = '';
   const none = document.createElement('option');
   none.value = '';
-  none.textContent = _t('ai.defaultAction') || '';
+  none.textContent = _t('ai.defaultAction') || '默认通用助手';
   sel.appendChild(none);
+
+  const groups = { general: [], writing: [], coding: [], academic: [], custom: [] };
   (state.ai.templates || []).forEach(t => {
-    const o = document.createElement('option');
-    o.value = t.id;
-    o.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
-    sel.appendChild(o);
+    const cat = getTemplateCategory(t);
+    if (groups[cat]) groups[cat].push(t);
+    else groups.custom.push(t);
   });
+
+  const catOrder = ['general', 'writing', 'coding', 'academic', 'custom'];
+  const isEn = window.i18n && window.i18n.locale === 'en';
+  catOrder.forEach(cat => {
+    const items = groups[cat];
+    if (!items || !items.length) return;
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = isEn ? TPL_CATEGORIES[cat].labelEn : TPL_CATEGORIES[cat].label;
+    items.forEach(t => {
+      const o = document.createElement('option');
+      o.value = t.id;
+      o.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
+      optgroup.appendChild(o);
+    });
+    sel.appendChild(optgroup);
+  });
+
   if (cur && [...sel.options].some(o => o.value === cur)) sel.value = cur;
   else state.ai.templateId = '';
 }
@@ -215,24 +245,52 @@ function renderTplList() {
     list.appendChild(empty);
     return;
   }
+
+  const groups = { general: [], writing: [], coding: [], academic: [], custom: [] };
   filtered.forEach(t => {
-    const li = document.createElement('li');
-    const disabled = !t.builtin && t.metadata && t.metadata.enabled === false;
-    li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name + (disabled ? ' ⏸' : '');
-    li.dataset.id = t.id;
-    li.setAttribute('role', 'option');
-    li.tabIndex = 0;
-    li.setAttribute('aria-selected', 'false');
-    li.title = t.name
-      + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '')) : '')
-      + (disabled ? (' · ' + (_t('tpl.disable') || '')) : '');
-    li.addEventListener('click', () => selectTpl(t.id));
-    li.addEventListener('keydown', e => {
-      if (e.key !== 'Enter' && e.key !== ' ') return;
-      e.preventDefault();
-      selectTpl(t.id);
+    const cat = getTemplateCategory(t);
+    if (groups[cat]) groups[cat].push(t);
+    else groups.custom.push(t);
+  });
+
+  const catOrder = ['general', 'writing', 'coding', 'academic', 'custom'];
+  const isEn = window.i18n && window.i18n.locale === 'en';
+
+  catOrder.forEach(cat => {
+    const items = groups[cat];
+    if (!items || !items.length) return;
+
+    const headerLi = document.createElement('li');
+    headerLi.className = 'tpl-group-header';
+    headerLi.textContent = isEn ? TPL_CATEGORIES[cat].labelEn : TPL_CATEGORIES[cat].label;
+    headerLi.style.fontWeight = '600';
+    headerLi.style.fontSize = '11px';
+    headerLi.style.color = 'var(--text-muted, #64748b)';
+    headerLi.style.padding = '8px 10px 4px';
+    headerLi.style.pointerEvents = 'none';
+    headerLi.style.userSelect = 'none';
+    headerLi.style.textTransform = 'uppercase';
+    list.appendChild(headerLi);
+
+    items.forEach(t => {
+      const li = document.createElement('li');
+      const disabled = !t.builtin && t.metadata && t.metadata.enabled === false;
+      li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name + (disabled ? ' ⏸' : '');
+      li.dataset.id = t.id;
+      li.setAttribute('role', 'option');
+      li.tabIndex = 0;
+      li.setAttribute('aria-selected', 'false');
+      li.title = t.name
+        + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '')) : '')
+        + (disabled ? (' · ' + (_t('tpl.disable') || '')) : '');
+      li.addEventListener('click', () => selectTpl(t.id));
+      li.addEventListener('keydown', e => {
+        if (e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        selectTpl(t.id);
+      });
+      list.appendChild(li);
     });
-    list.appendChild(li);
   });
 }
 
@@ -1060,6 +1118,44 @@ function splitUserDocPrompt(content) {
   return { doc, prompt };
 }
 
+function renderAiBubbleActions(content) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const row = document.createElement('div');
+  row.className = 'ai-bubble-actions';
+
+  const applyBtn = document.createElement('button');
+  applyBtn.type = 'button';
+  applyBtn.className = 'ai-bubble-act-btn';
+  applyBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;margin-right:4px;"><polyline points="20 6 9 17 4 12"></polyline></svg>' + (_t('ai.apply') || '应用到正文');
+  applyBtn.onclick = () => {
+    state.ai.raw = content;
+    applyAi();
+  };
+
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'ai-bubble-act-btn';
+  copyBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;margin-right:4px;"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>' + (_t('ai.copy') || '复制回答');
+  copyBtn.onclick = () => {
+    navigator.clipboard.writeText(content);
+    showToast(_t('toast.copied') || '已复制到剪贴板');
+  };
+
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.className = 'ai-bubble-act-btn';
+  saveBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>' + (_t('ai.saveAsMd') || '另存为 MD');
+  saveBtn.onclick = () => {
+    state.ai.raw = content;
+    saveAsMarkdown();
+  };
+
+  row.appendChild(applyBtn);
+  row.appendChild(copyBtn);
+  row.appendChild(saveBtn);
+  return row;
+}
+
 function appendAiUserBubble(out, tagText, content, meta) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const bubble = document.createElement('div');
@@ -1123,6 +1219,7 @@ function renderAiHistory() {
   const out = $('ai-output');
   out.innerHTML = '';
   const msgs = state.ai.messages || [];
+  const lastAssistantIdx = msgs.map(m => m.role).lastIndexOf('assistant');
   let uSeq = 0, aSeq = 0;
   msgs.forEach((m, i) => {
     if (m.role === 'user') { uSeq++;
@@ -1137,6 +1234,9 @@ function renderAiHistory() {
       const body = document.createElement('div');
       body.className = 'ai-msg-body';
       body.innerHTML = renderSafeMarkdown(m.content);
+      if (i === lastAssistantIdx && m.content) {
+        body.appendChild(renderAiBubbleActions(m.content));
+      }
       ab.appendChild(tag); ab.appendChild(body);
       out.appendChild(ab);
     }
@@ -1543,6 +1643,7 @@ async function saveAiSelection(silent) {
       const status = $('ai-conn-status');
       if (status) status.textContent = _t('status.saved') || '';
       if (!silent) showToast(_t('toast.connSettingsSaved') || '');
+      $('ai-settings-modal')?.classList.add('hidden');
       return true;
     } else {
       const d = await r.json().catch(() => ({}));
@@ -1705,7 +1806,7 @@ async function runAi(action) {
   try { requestHeaders = readAiCustomHeaders(); } catch (e) { return; }
 
   const tpl = currentAiTemplate();
-  const skillId = (tpl && tpl.skill_id) || AI_SKILLS[action] || 'readmd-ask';
+  const skillId = (tpl && tpl.skill_id) || 'readmd-ask';
   const docs = text.length > 120000 ? text.slice(0, 120000) + '\n\n' + (_t('ai.contentTruncated') || '') : text;
   const fill = s => String(s || '').replace(/\{doc\}/g, docs).replace(/\{prompt\}/g, prompt || '');
   let userMsg;
@@ -1818,6 +1919,7 @@ async function runAi(action) {
     aiTag.textContent = (_t('ai.aiTag', { seq: userSeq }) || '') + ' · ' + model + fmtAiUsage(state.ai.usage);
     if (state.ai.raw) {
       aiTag.appendChild(aiAnswerCopyButton(state.ai.raw));
+      aiBody.appendChild(renderAiBubbleActions(state.ai.raw));
       const last = { role: 'assistant', content: state.ai.raw, ephemeral: isIncognito };
       if (state.ai.usage) last.usage = state.ai.usage;
       msgs.push(last);

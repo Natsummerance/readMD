@@ -77,17 +77,11 @@ class TestAiFeaturesV2(unittest.TestCase):
         self.assertIn('id="ai-resize-handle"', html)
         self.assertIn('id="ai-expand-toggle"', html)
 
-        # Top template bar
+        # Top template bar and input
         self.assertIn('id="ai-template"', html)
         self.assertIn('id="ai-tpl-btn"', html)
-
-        # Quick action chips
-        self.assertIn('data-act="quick_read"', html)
-        self.assertIn('data-act="polish"', html)
-        self.assertIn('data-act="proofread"', html)
-        self.assertIn('data-act="translate_en"', html)
-        self.assertIn('data-act="translate_zh"', html)
-        self.assertIn('data-act="todo"', html)
+        self.assertIn('id="ai-prompt"', html)
+        self.assertIn('id="ai-run"', html)
 
         # Template modal import/export
         self.assertIn('id="tpl-import-btn"', html)

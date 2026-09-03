@@ -1814,17 +1814,39 @@ window.runAllCodeChunks = runAllCodeChunks;
 // usable without a network connection.
 const diagramScriptPromises = new Map();
 let diagramWaveCounter = 0;
+// TikZjax owns a single global TeX instance and temporarily swaps
+// window.fetch, window.onload and console.log while compiling, so concurrent
+// tikz cards cross-contaminate: one card's TeX error lines flow through the
+// other card's console hook and abort its wait loop.  Compiles are queued.
+let tikzRenderChain = Promise.resolve();
+// Heading ids leak into `window` through named element access, so a document
+// containing "## mermaid" makes `window.mermaid` an <h2> before the vendor
+// bundle loads.  A plain truthiness check would then skip injecting the
+// engine and every render would crash on the missing API.
+function hasUsableDiagramGlobal(globalName) {
+  if (!globalName) return false;
+  const value = window[globalName];
+  return value != null && !(value instanceof Element);
+}
 function loadDiagramScript(path, globalName) {
-  if (globalName && window[globalName]) return Promise.resolve(window[globalName]);
+  if (hasUsableDiagramGlobal(globalName)) return Promise.resolve(window[globalName]);
   if (diagramScriptPromises.has(path)) return diagramScriptPromises.get(path);
   const promise = new Promise((resolve, reject) => {
     const script = document.createElement('script');
     script.src = path;
     script.async = true;
-    script.onload = () => globalName && !window[globalName]
-      ? reject(new Error('diagram_engine_unavailable'))
-      : resolve(globalName ? window[globalName] : true);
-    script.onerror = () => reject(new Error('diagram_engine_load_failed'));
+    script.onload = () => {
+      if (globalName && !hasUsableDiagramGlobal(globalName)) {
+        diagramScriptPromises.delete(path);
+        reject(new Error('diagram_engine_unavailable'));
+        return;
+      }
+      resolve(globalName ? window[globalName] : true);
+    };
+    script.onerror = () => {
+      diagramScriptPromises.delete(path);
+      reject(new Error('diagram_engine_load_failed'));
+    };
     document.head.appendChild(script);
   });
   diagramScriptPromises.set(path, promise);
@@ -1832,18 +1854,107 @@ function loadDiagramScript(path, globalName) {
 }
 
 function diagramOutputMarkup(markup) {
-  return sanitizeRenderedHtml(String(markup || ''), { allowInteractive: false });
+  if (!markup) return '';
+  const str = String(markup).trim();
+  if (!str) return '';
+
+  const template = document.createElement('template');
+  template.innerHTML = str;
+
+  // Dangerous executable / navigation tags to strictly eliminate
+  const bannedTags = ['script', 'iframe', 'object', 'embed', 'applet', 'meta', 'link', 'base'];
+  bannedTags.forEach(t => {
+    template.content.querySelectorAll(t).forEach(el => el.remove());
+  });
+
+  // Sanitize every node in the diagram output while preserving rich SVG structure
+  template.content.querySelectorAll('*').forEach(node => {
+    const tag = node.tagName.toLowerCase();
+
+    // Prevent UI hijacking buttons or nested cards inside diagram preview
+    if (tag === 'button' || node.classList.contains('code-chunk-card') || node.classList.contains('diagram-card')) {
+      node.replaceWith(...node.childNodes);
+      return;
+    }
+
+    // Sanitize attributes
+    Array.from(node.attributes).forEach(attr => {
+      const name = attr.name.toLowerCase();
+      const val = attr.value;
+      // Disallow all inline event handlers
+      if (name.startsWith('on')) {
+        node.removeAttribute(attr.name);
+      } else if (name === 'href' || name === 'xlink:href') {
+        // Disallow javascript:, vbscript:, data:text/html
+        if (/^\s*(javascript|vbscript|data:\s*text\/html)/i.test(val)) {
+          node.removeAttribute(attr.name);
+        }
+      } else if (name === 'style') {
+        // Disallow executable CSS expressions
+        if (/expression|javascript:|behavior|-moz-binding/i.test(val)) {
+          node.removeAttribute(attr.name);
+        }
+      }
+    });
+
+    // In <style> blocks, prevent CSS expressions, imports or external url execution
+    if (tag === 'style') {
+      let css = node.textContent || '';
+      if (/expression|javascript:|behavior|-moz-binding|@import/i.test(css)) {
+        node.textContent = css.replace(/expression\s*\([^)]*\)/gi, '')
+                              .replace(/javascript:/gi, '')
+                              .replace(/@import[^;]*;/gi, '');
+      }
+    }
+  });
+
+  return template.innerHTML;
 }
 
-function renderDiagramFallback(previewEl, engine, code, messageKey = 'reader.renderFailed') {
+// Server responses and client throws both carry stable diagram_* error codes.
+// Map them to locale keys once so every failure path shows the same honest
+// wording instead of a blanket "unknown error".
+const DIAGRAM_ERROR_I18N = {
+  diagram_engine_unavailable: 'reader.diagramEngineUnavailable',
+  diagram_engine_load_failed: 'reader.diagramEngineLoadFailed',
+  diagram_engine_timeout: 'reader.diagramTimeout',
+  diagram_engine_unavailable_handler: 'reader.diagramEngineUnavailable',
+  diagram_engine_unavailable_rendered: 'reader.diagramEngineUnavailable',
+  diagram_invalid_input: 'reader.diagramInvalidInput',
+  diagram_dependency_missing: 'reader.diagramDependencyMissing',
+  diagram_client_renderer_required: 'reader.diagramClientRendererRequired',
+  diagram_network_unavailable: 'reader.diagramNetworkUnavailable',
+  diagram_input_too_large: 'reader.diagramInputTooLarge',
+  diagram_render_failed: 'reader.diagramRenderFailed',
+};
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+window.escapeHtml = escapeHtml;
+
+function diagramErrorKey(code) {
+  return (code && DIAGRAM_ERROR_I18N[String(code)]) || 'toast.unknownError';
+}
+
+function diagramFallbackMarkup(code, errorCode) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!previewEl) return;
-  const reason = _t('toast.unknownError');
+  const reason = _t(diagramErrorKey(errorCode));
   const safeReason = window.escapeHtml ? escapeHtml(reason) : reason;
-  const safeCode = window.escapeHtml ? escapeHtml(String(code || '')) : String(code || '');
-  const message = _t(messageKey, { error: safeReason });
+  const message = _t('reader.diagramError', { error: safeReason });
   const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
-  previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${safeCode}</code></pre></div>`;
+  const safeCode = window.escapeHtml ? escapeHtml(String(code || '')) : String(code || '');
+  return `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${safeCode}</code></pre></div>`;
+}
+
+function renderDiagramFallback(previewEl, engine, code, errorCode) {
+  if (!previewEl) return;
+  previewEl.innerHTML = diagramFallbackMarkup(code, errorCode);
 }
 
 // A few vendored renderers (notably bitfield) return ONML's array-shaped
@@ -1883,11 +1994,104 @@ function parseWaveDromSource(source) {
   try { return JSON.parse(normalized); } catch (_) { throw new Error('diagram_invalid_input'); }
 }
 
+async function renderTikzjaxDiagram(code, previewEl) {
+  // TikZjax is a browser script that normally resolves its WASM/font assets
+  // from an upstream S3 URL.  Keep the vendored source byte-for-byte intact,
+  // but route those requests to our packaged assets while the renderer runs.
+  // This makes the feature deterministic and offline without weakening CSP.
+  const originalFetch = window.fetch;
+  const localRoot = '/assets/vendor/diagrams/tikzjax/';
+  window.fetch = function(input, init) {
+    const raw = typeof input === 'string' ? input : (input && input.url) || '';
+    if (raw.indexOf('https://s3.us-east-2.amazonaws.com/tikzjax.com/') === 0) {
+      const filename = raw.slice(raw.lastIndexOf('/') + 1);
+      return originalFetch.call(this, localRoot + encodeURIComponent(filename), init);
+    }
+    return originalFetch.call(this, input, init);
+  };
+  const previousOnload = window.onload;
+  // TeX reports compile errors on the console, and the wasm glue captures
+  // console.log while tikzjax.js itself executes.  The hook therefore has
+  // to be installed before the script loads; otherwise invalid input
+  // would silently hit the render deadline instead of failing fast.
+  // Declared outside try: the finally restore references these, and
+  // sibling blocks (try/finally) do not share block scope.
+  const originalLog = console.log;
+  let texError = '';
+  const texLogHook = function(...args) {
+    if (!texError) {
+      const line = args.map(a => (typeof a === 'string' ? a : '')).join(' ');
+      if (line.slice(0, 2) === '! ' || line.indexOf('Emergency stop') !== -1) texError = line;
+    }
+    return originalLog.apply(this, args);
+  };
+  console.log = texLogHook;
+  try {
+    // tikzjax.js installs its work via window.onload on execution.  The
+    // promise cache would skip re-execution on every render after the
+    // first, leaving window.onload unchanged and the diagram stuck.
+    await loadDiagramScript('/assets/vendor/diagrams/tikzjax/tikzjax.js?reload=' + (++diagramWaveCounter));
+    const handler = window.onload;
+    if (typeof handler !== 'function' || handler === previousOnload) {
+      throw new Error('diagram_engine_unavailable_handler');
+    }
+    const source = document.createElement('script');
+    source.type = 'text/tikz';
+    let tikzSource = String(code || '');
+    // \draw and other TikZ commands are only defined inside the tikzpicture
+    // environment, even in a full TeX install.  Bare snippets are therefore
+    // invalid input as-is; wrap them instead of failing with "Undefined
+    // control sequence" after a full 30s compile.
+    if (!/\\begin\{document\}/.test(tikzSource) && !/\\begin\{tikzpicture\}/.test(tikzSource)) {
+      tikzSource = '\\begin{tikzpicture}\n' + tikzSource + '\n\\end{tikzpicture}';
+    }
+    source.textContent = tikzSource;
+    previewEl.replaceChildren(source);
+    // TikZjax's onload handler starts an async reduce but does not reliably
+    // return its final replacement promise in every browser.  Wait for the
+    // script node to be replaced instead of racing an already-resolved
+    // wrapper promise; this also prevents the renderer timeout from
+    // removing the node while WASM is still compiling.
+    handler.call(window);
+    const deadline = Date.now() + 30000;
+    while (source.parentNode && Date.now() < deadline && !texError) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    const rendered = previewEl.firstElementChild;
+    if (!rendered || rendered.tagName.toLowerCase() === 'script') {
+      if (texError) throw new Error('diagram_render_failed');
+      throw new Error(Date.now() >= deadline ? 'diagram_engine_timeout' : 'diagram_engine_unavailable_rendered');
+    }
+    return diagramOutputMarkup(rendered.outerHTML);
+  } finally {
+    window.fetch = originalFetch;
+    window.onload = previousOnload;
+    if (console.log === texLogHook) console.log = originalLog;
+  }
+}
+
 async function renderLocalDiagram(engine, code, previewEl) {
   const normalized = String(engine || '').toLowerCase();
   if (normalized === 'mermaid') {
     const mermaid = await loadDiagramScript('/assets/vendor/diagrams/mermaid/mermaid.min.js', 'mermaid');
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'default' });
+    const isDark = document.body?.dataset?.theme === 'dark' || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches && document.body?.dataset?.theme !== 'light');
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      theme: isDark ? 'dark' : 'neutral',
+      fontFamily: 'var(--font-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)',
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: 'basis'
+      },
+      sequence: {
+        useMaxWidth: true
+      },
+      gantt: {
+        useMaxWidth: true
+      }
+    });
     const id = 'readmd-mermaid-' + Math.random().toString(36).slice(2);
     const rendered = await mermaid.render(id, code);
     return diagramOutputMarkup(rendered.svg || rendered);
@@ -1915,8 +2119,10 @@ async function renderLocalDiagram(engine, code, previewEl) {
   }
   if (normalized === 'bitfield') {
     const bitfield = await loadDiagramScript('/assets/vendor/diagrams/bitfield/bitfield.min.js', 'bitfield');
-    let description;
-    try { description = JSON.parse(code); } catch (_) { throw new Error('diagram_invalid_input'); }
+    // Bitfield examples in the wild use the same JS-like JSON as WaveDrom
+    // (unquoted keys, single quotes, trailing commas); reuse the tolerant
+    // parser instead of a strict JSON.parse that rejects them.
+    let description = parseWaveDromSource(code);
     if (description && !Array.isArray(description) && Array.isArray(description.reg)) description = description.reg;
     if (!Array.isArray(description)) throw new Error('diagram_invalid_input');
     const rendered = bitfield.render(description, {});
@@ -1977,50 +2183,10 @@ async function renderLocalDiagram(engine, code, previewEl) {
     return canvas;
   }
   if (normalized === 'tikz') {
-    // TikZjax is a browser script that normally resolves its WASM/font assets
-    // from an upstream S3 URL.  Keep the vendored source byte-for-byte intact,
-    // but route those requests to our packaged assets while the renderer runs.
-    // This makes the feature deterministic and offline without weakening CSP.
-    const originalFetch = window.fetch;
-    const localRoot = '/assets/vendor/diagrams/tikzjax/';
-    window.fetch = function(input, init) {
-      const raw = typeof input === 'string' ? input : (input && input.url) || '';
-      if (raw.indexOf('https://s3.us-east-2.amazonaws.com/tikzjax.com/') === 0) {
-        const filename = raw.slice(raw.lastIndexOf('/') + 1);
-        return originalFetch.call(this, localRoot + encodeURIComponent(filename), init);
-      }
-      return originalFetch.call(this, input, init);
-    };
-    const previousOnload = window.onload;
-    try {
-      await loadDiagramScript('/assets/vendor/diagrams/tikzjax/tikzjax.js');
-      const handler = window.onload;
-      if (typeof handler !== 'function' || handler === previousOnload) {
-        throw new Error('diagram_engine_unavailable_handler');
-      }
-      const source = document.createElement('script');
-      source.type = 'text/tikz';
-      source.textContent = String(code || '');
-      previewEl.replaceChildren(source);
-      // TikZjax's onload handler starts an async reduce but does not reliably
-      // return its final replacement promise in every browser.  Wait for the
-      // script node to be replaced instead of racing an already-resolved
-      // wrapper promise; this also prevents the renderer timeout from
-      // removing the node while WASM is still compiling.
-      handler.call(window);
-      const deadline = Date.now() + 30000;
-      while (source.parentNode && Date.now() < deadline) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      const rendered = previewEl.firstElementChild;
-      if (!rendered || rendered.tagName.toLowerCase() === 'script') {
-        throw new Error(Date.now() >= deadline ? 'diagram_engine_timeout' : 'diagram_engine_unavailable_rendered');
-      }
-      return diagramOutputMarkup(rendered.outerHTML);
-    } finally {
-      window.fetch = originalFetch;
-      window.onload = previousOnload;
-    }
+    // Serialized through tikzRenderChain: see the comment at its declaration.
+    const turn = tikzRenderChain.then(() => renderTikzjaxDiagram(code, previewEl));
+    tikzRenderChain = turn.then(() => {}, () => {});
+    return turn;
   }
   // D2 has no bundled offline runtime in this release. Fail explicitly rather
   // than silently sending source code to an online renderer and reporting a
@@ -2073,20 +2239,10 @@ function renderAllDiagrams(container) {
         }
 
         if (res && res.ok) {
-          if (res.type === 'url' && res.svg_url) {
-            // PlantUML is intentionally online-by-default when no local Java
-            // runtime is installed.  A network failure must not leave a
-            // broken image or claim that the diagram rendered successfully.
-            const image = document.createElement('img');
-            image.className = 'diagram-preview-image';
-            image.src = res.svg_url;
-            image.alt = `${engine} diagram`;
-            image.addEventListener('error', () => renderDiagramFallback(previewEl, engine, code));
-            previewEl.replaceChildren(image);
-          } else if (res.type === 'html' && res.html) {
-            previewEl.innerHTML = res.html;
+          if (res.type === 'html' && res.html) {
+            previewEl.innerHTML = diagramOutputMarkup(res.html);
           } else if (res.svg) {
-            previewEl.innerHTML = res.svg;
+            previewEl.innerHTML = diagramOutputMarkup(res.svg);
           } else {
             throw new Error('diagram_engine_unavailable');
           }
@@ -2094,17 +2250,12 @@ function renderAllDiagrams(container) {
           // Server responses intentionally carry only stable error codes.  Do
           // not leak those codes (or provider/host diagnostics) into the
           // rendered document; the locale owns the user-facing wording.
-          const reason = _t('toast.unknownError');
-          const safeReason = window.escapeHtml ? escapeHtml(reason) : reason;
-          const message = _t('reader.diagramError', { error: safeReason });
-          const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
-          previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+          console.warn('diagram render failed:', engine, res && res.error_code);
+          previewEl.innerHTML = diagramFallbackMarkup(code, res && res.error_code);
         }
       } catch (err) {
-        const safeReason = window.escapeHtml ? escapeHtml(_t('toast.unknownError')) : _t('toast.unknownError');
-        const message = _t('reader.renderFailed', { error: safeReason });
-        const safeMessage = window.escapeHtml ? escapeHtml(message) : message;
-        previewEl.innerHTML = `<div class="diagram-fallback-wrap"><div class="diagram-fallback-hint">${safeMessage}</div><pre class="diagram-fallback"><code>${window.escapeHtml ? escapeHtml(code) : code}</code></pre></div>`;
+        console.warn('diagram render threw:', engine, err && err.message);
+        previewEl.innerHTML = diagramFallbackMarkup(code, err && err.message);
       }
     };
 

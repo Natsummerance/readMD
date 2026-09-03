@@ -836,6 +836,7 @@ def _convert_worker(job):
             it['status'] = 'canceled'
             it['done'] = True
             continue
+        it['status'] = 'running'
         try:
             mod = RM.get('convert')
             text, engine, err = mod.convert_verbose(it['src'])
@@ -1120,6 +1121,8 @@ class Handler(BaseHTTPRequestHandler):
             self._api_convert_collect()
         elif path == '/api/convert/batch':
             self._api_convert_batch()
+        elif path == '/api/batch/extract-zip':
+            self._api_batch_extract_zip()
         elif path == '/api/convert/progress':
             self._api_convert_progress(qs.get('job', [''])[0])
         elif path == '/api/convert/cancel':
@@ -1579,14 +1582,37 @@ class Handler(BaseHTTPRequestHandler):
             engine = str(body.get('engine', 'mermaid') or 'mermaid').strip().lower()
             code = body.get('code', '')
             if engine in ('puml', 'plantuml'):
-                svg_url = diagrams.get_plantuml_svg_url(code)
-                self._send_json(200, {'ok': True, 'type': 'url', 'svg_url': svg_url})
+                # Mirror the desktop bridge: fetch the SVG server-side (which
+                # honors system proxies) because the WebView CSP forbids remote
+                # <img> sources, so a type:'url' reply could never display.
+                if diagrams.has_local_plantuml():
+                    self._send_json(200, {
+                        'ok': True,
+                        'type': 'svg',
+                        'svg': diagrams.render_plantuml_svg(code),
+                        'engine': engine,
+                        'requires_network': False,
+                    })
+                else:
+                    self._send_json(200, {
+                        'ok': True,
+                        'type': 'svg',
+                        'svg': diagrams.fetch_plantuml_svg(code),
+                        'engine': engine,
+                        'requires_network': True,
+                    })
             elif engine == 'tikz':
                 html_out = diagrams.format_tikz_html(code)
                 self._send_json(200, {'ok': True, 'type': 'html', 'html': html_out})
             elif engine in ('vega', 'vega-lite'):
                 svg = diagrams.render_vega_svg(code, engine)
                 self._send_json(200, {'ok': True, 'type': 'svg', 'svg': svg, 'engine': engine})
+            elif engine in ('wsd', 'd2', 'ditaa'):
+                self._send_json(422, {
+                    'ok': False,
+                    'error_code': 'diagram_engine_unavailable',
+                    'engine': engine,
+                })
             else:
                 # Mermaid/WaveDrom/Bitfield/Viz are rendered by the browser's
                 # lazy offline dispatcher.  The HTTP endpoint must not echo
@@ -1638,7 +1664,10 @@ class Handler(BaseHTTPRequestHandler):
                 return
             content = body.get('content', '')
             out_path = body.get('out_path', '')
-            meta = body.get('meta') or {}
+            meta = body.get('epub') or body.get('meta') or {}
+            opts = body.get('options') or {}
+            if isinstance(opts, dict) and 'epub' not in opts:
+                opts['epub'] = meta
             from src.readmd_modules.mdexport import epub_render
             if not out_path:
                 # Keep generated files in the app data export area instead of
@@ -1651,13 +1680,14 @@ class Handler(BaseHTTPRequestHandler):
                 if os.path.exists(out_path) and not body.get('overwrite'):
                     self._send_api_error(409, 'output_exists')
                     return
+            epub_dict = opts.get('epub') if isinstance(opts.get('epub'), dict) else meta
             ok = epub_render.build_epub(
                 content,
                 out_path,
-                title=str(meta.get('title') or 'ReadMD Document'),
-                author=str(meta.get('author') or 'ReadMD'),
-                language=str(meta.get('language') or 'zh-CN'),
-                options=meta,
+                title=str(epub_dict.get('title') or meta.get('title') or 'ReadMD Document'),
+                author=str(epub_dict.get('author') or meta.get('author') or 'ReadMD'),
+                language=str(epub_dict.get('language') or meta.get('language') or 'zh-CN'),
+                options=opts or {'epub': epub_dict},
             )
             self._send_json(200, {'ok': bool(ok), 'path': out_path})
         except Exception as e:
@@ -2711,6 +2741,27 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(500, {'ok': False, 'error_code': 'batch_start_failed',
                                   'error': '批量转换启动失败：%s' % e})
 
+    def _api_batch_extract_zip(self):
+        try:
+            ctype = self.headers.get('Content-Type', '')
+            n = int(self.headers.get('Content-Length', 0) or 0)
+            from src.readmd_modules.convert import extract_zip_archive
+            dest_dir = os.path.join(DATA_DIR, 'temp_zip')
+            if 'application/zip' in ctype or 'octet-stream' in ctype:
+                data = self.rfile.read(n) if n else b''
+                res = extract_zip_archive(data, base_temp_dir=dest_dir)
+            else:
+                body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+                zip_path = body.get('path', '')
+                if not zip_path or not os.path.isfile(zip_path):
+                    self._send_json(400, {'ok': False, 'error_code': 'invalid_zip_path', 'error': '无效的 ZIP 文件路径'})
+                    return
+                res = extract_zip_archive(zip_path, base_temp_dir=dest_dir)
+            self._send_json(200, res)
+        except Exception as e:
+            logging.exception('api_batch_extract_zip failed')
+            self._send_json(500, {'ok': False, 'error_code': 'zip_extract_failed', 'error': str(e), 'paths': [], 'skipped': 0, 'total': 0})
+
     def _api_convert_progress(self, jid):
         job = _CONVERT_JOBS.get(jid or '')
         if not job:
@@ -3658,18 +3709,20 @@ class Api(object):
                         'engine': engine,
                         'requires_network': False,
                     }
+                # The WebView CSP forbids remote <img> sources, so fetch the
+                # SVG server-side (honors system proxies) and return markup
+                # like any other server-rendered diagram.
                 return {
                     'ok': True,
-                    'type': 'url',
-                    'svg_url': diagrams.get_plantuml_svg_url(code),
+                    'type': 'svg',
+                    'svg': diagrams.fetch_plantuml_svg(code),
                     'engine': engine,
                     'requires_network': True,
                 }
-            elif engine == 'wsd':
-                # WebSequenceDiagrams syntax is not PlantUML syntax.  There is
-                # no pinned, redistributable offline WSD renderer in this
-                # release, so fail closed rather than sending source to an
-                # unrelated service.
+            elif engine in ('wsd', 'd2', 'ditaa'):
+                # No pinned, redistributable offline renderer in this release;
+                # fail closed with explicit reason rather than falling through
+                # to a misleading client-renderer message.
                 return {'ok': False, 'error_code': 'diagram_engine_unavailable', 'engine': engine}
             elif engine == 'tikz':
                 return {'ok': True, 'type': 'html', 'html': diagrams.format_tikz_html(code)}
@@ -3715,19 +3768,30 @@ class Api(object):
                 output_path = _safe_export_target(output_path, '.epub')
                 if os.path.exists(output_path):
                     return {'ok': False, 'error_code': 'output_exists'}
-            meta = meta or {}
+            meta_dict = meta if isinstance(meta, dict) else {}
+            epub_dict = meta_dict.get('epub') if isinstance(meta_dict.get('epub'), dict) else meta_dict
             ok = epub_render.build_epub(
                 content,
                 output_path,
-                title=str(meta.get('title') or 'ReadMD Document'),
-                author=str(meta.get('author') or 'ReadMD'),
-                language=str(meta.get('language') or 'zh-CN'),
-                options=meta,
+                title=str(epub_dict.get('title') or meta_dict.get('title') or 'ReadMD Document'),
+                author=str(epub_dict.get('author') or meta_dict.get('author') or 'ReadMD'),
+                language=str(epub_dict.get('language') or meta_dict.get('language') or 'zh-CN'),
+                options=meta_dict if 'epub' in meta_dict else {'epub': epub_dict},
             )
             return {'ok': bool(ok), 'path': output_path}
         except Exception as e:
             logging.exception('export_epub failed')
             return {'ok': False, 'error_code': 'export_failed'}
+
+    def extract_zip_batch(self, zip_path):
+        """解压 ZIP 归档并返回提取出的文件列表与跳过统计。"""
+        try:
+            from src.readmd_modules.convert import extract_zip_archive
+            dest_dir = os.path.join(DATA_DIR, 'temp_zip')
+            return extract_zip_archive(zip_path, base_temp_dir=dest_dir)
+        except Exception as e:
+            logging.exception('extract_zip_batch failed')
+            return {'ok': False, 'error_code': 'zip_extract_failed', 'error': str(e), 'paths': [], 'skipped': 0, 'total': 0}
 
     def export_presentation(self, content, theme='black', transition='slide', save=False):
         """生成 Reveal.js 演示文稿 HTML。
@@ -4321,6 +4385,7 @@ class Api(object):
         status = self._pet_controller.snapshot()
         status['model'] = self._pet_model_status()
         status['adapter'] = self._pet_launcher.status()
+        status['adapter_dir'] = os.path.join(DATA_DIR, 'pet', 'hermes-adapter')
         prefs = self._pet_preferences()
         status['preferences'] = dict(prefs['info'], renderer=prefs['renderer'])
         return status
@@ -5594,4 +5659,6 @@ def _start_tray(window):
 
 
 if __name__ == '__main__':
+    import multiprocessing
+    multiprocessing.freeze_support()
     sys.exit(main())
