@@ -20,6 +20,7 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.error
 import urllib.request
 import urllib.parse
 import uuid
@@ -223,20 +224,39 @@ def clean_old_update_artifacts():
         logging.debug('Clean old update artifacts failed: %s', e)
 
 
+# GitHub API 在部分网络下会偶发 TLS 连接复位（UNEXPECTED_EOF/超时）：
+# 同一地址先做短退避重试，全部失败再交由调用方降级到镜像列表。
+TRANSIENT_FETCH_ATTEMPTS = 3
+TRANSIENT_FETCH_BACKOFF = (0.5, 1.0)
+
+
+def _open_with_retry(url, timeout):
+    last_exc = None
+    for attempt in range(TRANSIENT_FETCH_ATTEMPTS):
+        req = urllib.request.Request(url)
+        req.add_header('User-Agent', 'ReadMD-Updater')
+        try:
+            return urllib.request.urlopen(req, timeout=timeout)
+        except urllib.error.HTTPError:
+            raise  # 4xx/5xx 是服务端明确响应，重试无意义
+        except Exception as exc:  # 连接复位/超时/DNS 等瞬时故障
+            last_exc = exc
+            if attempt < len(TRANSIENT_FETCH_BACKOFF):
+                time.sleep(TRANSIENT_FETCH_BACKOFF[attempt])
+    raise last_exc
+
+
 def _fetch_release_json(url, timeout=5):
     req = urllib.request.Request(url)
-    req.add_header('User-Agent', 'ReadMD-Updater')
     req.add_header('Accept', 'application/vnd.github.v3+json')
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    with _open_with_retry(url, timeout) as resp:
         if resp.status == 200:
             return json.loads(resp.read().decode('utf-8'))
     return None
 
 
 def _fetch_text(url, timeout=5):
-    req = urllib.request.Request(url)
-    req.add_header('User-Agent', 'ReadMD-Updater')
-    with urllib.request.urlopen(req, timeout=timeout) as resp:
+    with _open_with_retry(url, timeout) as resp:
         if resp.status == 200:
             return resp.read().decode('utf-8', errors='replace')
     return None

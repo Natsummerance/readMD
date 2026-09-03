@@ -238,6 +238,49 @@ class TestUpdaterModule(unittest.TestCase):
                 updater._download_state.clear()
                 updater._download_state.update(original_state)
 
+    def test_fetch_release_json_retries_transient_resets(self):
+        """瞬时连接复位应同地址重试，而不是立刻降级到镜像。"""
+        calls = []
+
+        class FakeResponse:
+            def __init__(self, payload):
+                self.status = 200
+                self._payload = payload
+
+            def read(self):
+                return self._payload
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):
+                return False
+
+        def fake_urlopen(req, timeout):
+            calls.append(req.full_url)
+            if len(calls) == 1:
+                raise ConnectionResetError('simulated tls reset')
+            return FakeResponse(json.dumps({'tag_name': 'v2.3.8'}).encode('utf-8'))
+
+        with patch.object(updater.urllib.request, 'urlopen', side_effect=fake_urlopen), \
+                patch.object(updater.time, 'sleep') as fake_sleep:
+            data = updater._fetch_release_json('https://api.github.com/repos/x/y/releases/latest')
+        self.assertEqual(data.get('tag_name'), 'v2.3.8')
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(fake_sleep.call_count, 1)
+
+    def test_fetch_release_json_does_not_retry_http_errors(self):
+        import urllib.error
+
+        def fake_urlopen(req, timeout):
+            raise urllib.error.HTTPError(req.full_url, 403, 'rate limited', {}, None)
+
+        with patch.object(updater.urllib.request, 'urlopen', side_effect=fake_urlopen), \
+                patch.object(updater.time, 'sleep') as fake_sleep:
+            with self.assertRaises(urllib.error.HTTPError):
+                updater._fetch_release_json('https://api.github.com/repos/x/y/releases/latest')
+        self.assertEqual(fake_sleep.call_count, 0)
+
 
 if __name__ == '__main__':
     unittest.main()
