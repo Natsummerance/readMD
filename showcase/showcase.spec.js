@@ -273,7 +273,10 @@ test('skills.workbench captures builtin Skills from the real registry', async ({
   await prepareShot(page, 'skills.workbench');
   await openDemo(page, 'skills.workbench');
   await openReadyAi(page);
-  await page.evaluate(() => openTplModal());
+  await page.evaluate(() => {
+    openTplModal();
+    if (typeof setTplEditing === 'function') setTplEditing(true);
+  });
   await assertVisible(page, library.shots['skills.workbench'].assertions);
   await page.waitForTimeout(350);
   await shoot(page, 'skills.workbench');
@@ -291,9 +294,11 @@ test('providers.catalog captures provider v3 configuration from the offline cata
 test('skills.github-import captures a preview derived from the current builtin Skill source', async ({ page }) => {
   await prepareShot(page, 'skills.github-import');
   await openReadyAi(page);
-  await page.evaluate(() => openTplModal());
-  await page.locator('#tpl-github-import summary').click();
-  await page.locator('#tpl-github-url').fill('https://github.com/Natsummerance/readMD/tree/v2.3.7/assets/skills');
+  await page.evaluate(() => {
+    openTplModal();
+    if (typeof toggleSkillImportMenu === 'function') toggleSkillImportMenu(true);
+  });
+  await page.locator('#tpl-github-url').fill('https://github.com/Natsummerance/readMD/tree/v2.3.8/assets/skills');
   await page.locator('#tpl-github-preview-btn').click();
   await assertVisible(page, library.shots['skills.github-import'].assertions);
   await page.waitForTimeout(350);

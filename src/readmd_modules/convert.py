@@ -20,6 +20,7 @@ import tempfile
 import time
 import zipfile
 import logging
+import struct
 import html as _html
 import xml.etree.ElementTree as ET
 from collections import Counter
@@ -508,10 +509,28 @@ def convert_verbose(path, form_tables=True):
         try:
             return pdf2md(path), 'pdf', None
         except Exception as e:  # noqa: BLE001
+            # 优先使用内置 OCR 模块进行逐页光栅化识别兜底（无文字层信纸/模板、扫描件或纯图片 PDF）
+            ocr_fallback_text = None
             try:
-                return _markitdown_convert(path), 'markitdown', None
-            except Exception as e2:  # noqa: BLE001
-                return '', '', '%s（MarkItDown 兜底也失败：%s）' % (e, e2)
+                from . import ocr
+                ocr_text = ocr.ocr_pdf_to_md(path)
+                if ocr_text and ocr_text.strip():
+                    empty_tag = getattr(ocr, 'OCR_PDF_EMPTY_PLACEHOLDER', '> （PDF 未提取到文字')
+                    if not ocr_text.strip().startswith(empty_tag):
+                        return ocr_text.strip() + '\n', 'ocr', None
+                    ocr_fallback_text = ocr_text.strip() + '\n'
+            except Exception:
+                pass
+            try:
+                md = _markitdown_convert(path)
+                if md and md.strip():
+                    return md.strip() + '\n', 'markitdown', None
+            except Exception:
+                pass
+            if ocr_fallback_text:
+                return ocr_fallback_text, 'ocr', None
+            clean_err = str(e).split(': ')[-1] if e else 'PDF 提取失败'
+            return '', '', '%s（可尝试 OCR 识别）' % clean_err
     if ext in ('.csv', '.tsv'):
         try:
             return csv2md(path), 'csv', None
@@ -798,13 +817,15 @@ def _classify_doc_heading(line):
     return None
 
 
-def _extract_worddocument_stream(data):
-    """从 OLE2 (CFBF) 复合文档中提取真正的 WordDocument 二进制流。"""
-    import struct
+def _extract_ole2_streams(data, wanted_names):
+    """从 OLE2 (CFBF) 复合文档中提取指定的流数据字典。"""
     if len(data) < 512 or data[:8] != OLE2_MAGIC:
-        return None
+        return {}
+    streams = {}
     try:
         sector_shift = struct.unpack_from('<H', data, 30)[0]
+        if sector_shift not in (9, 12):
+            return {}
         sector_size = 1 << sector_shift
         fat_sectors_count = struct.unpack_from('<I', data, 44)[0]
         first_dir_sector = struct.unpack_from('<I', data, 48)[0]
@@ -824,61 +845,77 @@ def _extract_worddocument_stream(data):
             stream_bytes = bytearray()
             cur = start_sec
             visited = set()
-            while cur < len(fat) and cur < 0xFFFFFFFA and len(stream_bytes) < size and cur not in visited:
+            max_stream_size = min(size, len(data))
+            while cur < len(fat) and cur < 0xFFFFFFFA and len(stream_bytes) < max_stream_size and cur not in visited:
                 visited.add(cur)
                 offset = 512 + cur * sector_size
-                chunk = data[offset:offset + min(sector_size, size - len(stream_bytes))]
+                chunk = data[offset:offset + min(sector_size, max_stream_size - len(stream_bytes))]
                 stream_bytes.extend(chunk)
                 cur = fat[cur]
             return bytes(stream_bytes)
 
         dir_data = get_stream(first_dir_sector, 65536)
         if not dir_data:
-            return None
+            return {}
 
+        wanted_set = set(wanted_names)
         for i in range(0, len(dir_data), 128):
             entry = dir_data[i:i + 128]
             if len(entry) < 128:
                 break
             name_len = struct.unpack_from('<H', entry, 64)[0]
-            if name_len <= 2:
+            if name_len <= 2 or name_len > 64:
                 continue
             name_raw = entry[:name_len - 2]
             try:
                 name = name_raw.decode('utf-16le')
             except Exception:
                 continue
-            if name == 'WordDocument':
+            if name in wanted_set:
                 start_sec = struct.unpack_from('<I', entry, 116)[0]
                 size = struct.unpack_from('<I', entry, 120)[0]
-                return get_stream(start_sec, size)
+                streams[name] = get_stream(start_sec, size)
+                if len(streams) == len(wanted_set):
+                    break
     except Exception:
         pass
-    return None
+    return streams
+
+
+def _extract_worddocument_stream(data):
+    """向后兼容辅助函数：从 OLE2 (CFBF) 复合文档中提取真正的 WordDocument 二进制流。"""
+    res = _extract_ole2_streams(data, ['WordDocument'])
+    return res.get('WordDocument')
 
 
 def _parse_doc_stream_to_md(stream_data):
     """解析 MS-DOC 数据流为结构化 Markdown（含原生管道表格、层级标题与列表）。"""
     import re
 
-    text = ''
-    if b'\x07\x00' in stream_data or stream_data.count(b'\x00') > len(stream_data) // 4:
-        text = stream_data.decode('utf-16le', errors='ignore')
+    if isinstance(stream_data, str):
+        text = stream_data
     else:
-        for enc in ('utf-8', 'gb18030', 'cp1252', 'latin1'):
-            try:
-                text = stream_data.decode(enc)
-                break
-            except Exception:
-                continue
+        text = ''
+        if b'\x07\x00' in stream_data or stream_data.count(b'\x00') > len(stream_data) // 4:
+            text = stream_data.decode('utf-16le', errors='ignore')
+        else:
+            for enc in ('utf-8', 'gb18030', 'cp1252', 'latin1'):
+                try:
+                    text = stream_data.decode(enc)
+                    break
+                except Exception:
+                    continue
 
     if not text or len(text.strip()) < 4:
         return ''
 
-    # 校验有效文本比例，防止对随机二进制或损坏数据伪造解析成功
-    valid_chars = sum(1 for ch in text if ('\u4e00' <= ch <= '\u9fa5') or (32 <= ord(ch) <= 126) or ch in '\t\r\n\x07')
-    if (valid_chars / len(text)) < 0.65:
+    valid_chars = sum(1 for ch in text if ch.isprintable() or ch in '\t\r\n\x07')
+    if valid_chars < 4:
         return ''
+    # 仅对未经过精准切片的未知二进制裸流执行严格比率校验，防止误判
+    if not isinstance(stream_data, str):
+        if (valid_chars / max(1, len(text))) < 0.35:
+            return ''
 
     # 清洗 Word 控制字符（保留 \x07 单元格截断符、\t 制表符、\r\n 换行符）
     cleaned_chars = []
@@ -964,22 +1001,121 @@ def _parse_doc_stream_to_md(stream_data):
     return '\n\n'.join(md_blocks)
 
 
+def _decode_doc_ansi_bytes(raw_bytes):
+    """解码 Word 8-bit ANSI 压缩字符片段（优先 GB18030，回退 CP1252）。"""
+    try:
+        return raw_bytes.decode('gb18030')
+    except Exception:
+        return raw_bytes.decode('cp1252', errors='replace')
+
+
 def _doc_extract_text_pure_python(path):
     """Word 97-2003 .doc 纯 Python 内置流与表格解析器。无需任何外部依赖，0 弹窗。"""
     try:
+        if os.path.getsize(path) > 50 * 1024 * 1024:
+            return ''
         with open(path, 'rb') as f:
             data = f.read()
-    except Exception:
-        return ''
-    if not data or len(data) < 512 or data[:8] != OLE2_MAGIC:
-        return ''
+        if not data or len(data) < 512 or data[:8] != OLE2_MAGIC:
+            return ''
 
-    # 1. 尝试从 CFBF 目录结构中精确提取 WordDocument 流
-    stream_data = _extract_worddocument_stream(data)
-    if stream_data:
-        md = _parse_doc_stream_to_md(stream_data)
+        streams = _extract_ole2_streams(data, ['WordDocument', '0Table', '1Table'])
+        word_doc = streams.get('WordDocument')
+        if not word_doc:
+            return ''
+
+        # 1. 尝试从 FIB (File Information Block) 与 Piece Table / CLX 中提取精准正文与表格
+        if len(word_doc) >= 80:
+            w_ident = struct.unpack_from('<H', word_doc, 0)[0]
+            if w_ident == 0xA5EC:  # 标准 Word 97-2003 二进制魔数
+                flags = struct.unpack_from('<H', word_doc, 10)[0]
+                f_which_tbl_stm = bool(flags & 0x0200)
+                tbl_name = '1Table' if f_which_tbl_stm else '0Table'
+                tbl_stream = streams.get(tbl_name)
+
+                # 1.1 优先尝试从 CLX / Piece Table 提取 (复杂或快速保存格式)
+                if tbl_stream and len(word_doc) >= 426:
+                    fc_clx = struct.unpack_from('<I', word_doc, 418)[0]
+                    lcb_clx = struct.unpack_from('<I', word_doc, 422)[0]
+                    if fc_clx + lcb_clx <= len(tbl_stream) and lcb_clx > 0:
+                        clx = tbl_stream[fc_clx:fc_clx + lcb_clx]
+                        pos = 0
+                        pieces_text = []
+                        total_chars = 0
+                        max_total_chars = 10_000_000
+                        while pos < len(clx) and total_chars < max_total_chars:
+                            clxt = clx[pos]
+                            if clxt == 1:
+                                if pos + 3 > len(clx):
+                                    break
+                                cb_grpprl = struct.unpack_from('<H', clx, pos + 1)[0]
+                                pos += 3 + cb_grpprl
+                            elif clxt == 2:
+                                if pos + 5 > len(clx):
+                                    break
+                                lcb = struct.unpack_from('<I', clx, pos + 1)[0]
+                                pos += 5
+                                pcdt_data = clx[pos:pos + lcb]
+                                if len(pcdt_data) >= 4:
+                                    n_pcd = (lcb - 4) // (4 + 8)
+                                    if n_pcd > 0 and len(pcdt_data) >= (n_pcd + 1) * 4 + n_pcd * 8:
+                                        cps = struct.unpack('<%dI' % (n_pcd + 1), pcdt_data[:(n_pcd + 1) * 4])
+                                        pcds_offset = (n_pcd + 1) * 4
+                                        for idx in range(min(n_pcd, 50000)):
+                                            cp_start, cp_end = cps[idx], cps[idx + 1]
+                                            if cp_end <= cp_start:
+                                                continue
+                                            char_count = min(cp_end - cp_start, max_total_chars - total_chars)
+                                            if char_count <= 0:
+                                                break
+                                            pcd = pcdt_data[pcds_offset + idx * 8: pcds_offset + (idx + 1) * 8]
+                                            fc_val = struct.unpack('<I', pcd[2:6])[0]
+                                            f_compressed = bool(fc_val & 0x40000000)
+                                            fc = fc_val & ~0x40000000
+                                            actual_offset = fc // 2 if f_compressed else fc
+                                            if actual_offset >= len(word_doc):
+                                                continue
+                                            avail = len(word_doc) - actual_offset
+                                            take = min(char_count if f_compressed else char_count * 2, avail)
+                                            raw_bytes = word_doc[actual_offset:actual_offset + take]
+                                            piece_str = (
+                                                _decode_doc_ansi_bytes(raw_bytes)
+                                                if f_compressed
+                                                else raw_bytes.decode('utf-16le', errors='replace')
+                                            )
+                                            pieces_text.append(piece_str)
+                                            total_chars += len(piece_str)
+                                break
+                            else:
+                                break
+                        if pieces_text:
+                            full_str = ''.join(pieces_text)
+                            md = _parse_doc_stream_to_md(full_str)
+                            if md and md.strip():
+                                return md.strip()
+
+                # 1.2 其次尝试通过 fc_min 与 ccp_text 提取精准正文切片 (去除 FIB 与尾部样式表干扰)
+                fc_min = struct.unpack_from('<I', word_doc, 24)[0]
+                ccp_text = struct.unpack_from('<I', word_doc, 76)[0]
+                if 0 < fc_min < len(word_doc) and ccp_text > 0:
+                    for scale, decoder in (
+                        (2, lambda b: b.decode('utf-16le', errors='replace')),
+                        (1, _decode_doc_ansi_bytes),
+                    ):
+                        max_chars = (len(word_doc) - fc_min) // scale
+                        ccp = min(ccp_text, max_chars)
+                        if ccp > 0:
+                            slice_str = decoder(word_doc[fc_min:fc_min + ccp * scale])
+                            md = _parse_doc_stream_to_md(slice_str)
+                            if md and md.strip():
+                                return md.strip()
+
+        # 2. 兜底：直接对提取出的 stream_data 全文提取
+        md = _parse_doc_stream_to_md(word_doc)
         if md and md.strip():
             return md.strip()
+    except Exception:
+        pass
     return ''
 
 

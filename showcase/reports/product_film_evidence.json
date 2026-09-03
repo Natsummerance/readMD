@@ -14,12 +14,12 @@
   "encoder": "ffmpeg/libx264",
   "source": "raw\\product-journey.webm",
   "output": "..\\website\\public\\media\\readmd-product-journey.mp4",
-  "duration_seconds": 11.433333,
-  "bytes": 409090,
+  "duration_seconds": 12.933333,
+  "bytes": 372520,
   "stream": {
     "codec_name": "h264",
     "width": 1440,
     "height": 810
   },
-  "captured_at": "2026-08-26T03:35:55.813Z"
+  "captured_at": "2026-09-03T14:42:48.656Z"
 }

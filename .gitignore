@@ -36,6 +36,7 @@ packages/vscode-extension/core/
 release_body_win7_beta.md
 
 .token-optimizer/
+.zcode/
 sandbox/vendor/
 website/node_modules/
 website/dist/

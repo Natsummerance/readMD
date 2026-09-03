@@ -19,6 +19,8 @@ IS_WIN = sys.platform == 'win32'
 
 _engine_cache = {}
 
+OCR_PDF_EMPTY_PLACEHOLDER = '> （PDF 未提取到文字，且 OCR 无结果）'
+
 _OCR_IMAGE_EXTS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tif', '.tiff', '.webp')
 
 
@@ -325,7 +327,7 @@ def ocr_pdf_to_md(path, max_pages=200):
         parts.append('## 第 %d 页\n\n%s' % (idx, formatted_page or text))
     doc.close()
     if not parts:
-        return '> （PDF 未提取到文字，且 OCR 无结果）'
+        return OCR_PDF_EMPTY_PLACEHOLDER
     if total > len(pages):
         parts.append('> （注意：文档共 %d 页，本次仅处理前 %d 页，其余未转换）' % (total, len(pages)))
     return '\n\n---\n\n'.join(parts)

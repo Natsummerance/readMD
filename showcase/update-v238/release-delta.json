@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "release": "v2.3.8",
+  "range": "v2.3.7..v2.3.8",
+  "title": {
+    "zh-CN": "ReadMD 2.3.8｜本地优先、安全加固与全语种大版本",
+    "en": "ReadMD 2.3.8 | Local-first, Hardened Security and Full Localization"
+  },
+  "sources": {
+    "mcp-guide": {
+      "type": "repository-file",
+      "path": "showcase/audit-captures/05-desktop-download-mcp-guide.png",
+      "description": "ReadMD 下载页内的 MCP 配置指引真实截图",
+      "evidence": ["website/public/zh-cn/download/index.html", "packages/mcp-server/readmd_mcp_server.py"]
+    }
+  },
+  "pages": [
+    {
+      "id": "reader",
+      "shot_id": "overview.reader",
+      "layout": "specimen",
+      "evidence": ["assets/js/reader/render.js", "showcase/fixtures/readmd-showcase.md"],
+      "copy": {
+        "zh-CN": { "eyebrow": "01 / 阅读底座", "title": "本地优先，长文沉浸阅读", "body": "长篇文档与大纲秒级联动，显示层语法自愈；文档留在本地磁盘原处，不连外网、不传云端。", "note": "本地优先 · 目录联动 · 原文保持不动" },
+        "en": { "eyebrow": "01 / Reading foundation", "title": "Local-first, immersive reading", "body": "Long-form reading and outline navigation update in milliseconds without rewriting source files or transmitting data to clouds.", "note": "Local-first · outline navigation · source preserved" }
+      }
+    },
+    {
+      "id": "editor",
+      "shot_id": "overview.editor",
+      "layout": "ledger",
+      "evidence": ["assets/js/editor/editor.js", "ui-tests/readmd-ui.spec.js"],
+      "copy": {
+        "zh-CN": { "eyebrow": "02 / 编辑体验", "title": "分栏同步，格式实时可见", "body": "CodeMirror 6 深度集成实时预览，选区操作受底层保护；表格、公式与大纲在同一视线确认。", "note": "分栏编辑 · 实时预览 · 选区保护" },
+        "en": { "eyebrow": "02 / Editing", "title": "Split editor with live preview", "body": "CodeMirror 6 pairs writing with preview, keeping tables, math equations and structure visible while revision selections stay protected.", "note": "Split editor · live preview · selection protected" }
+      }
+    },
+    {
+      "id": "batch-workbench",
+      "shot_id": "convert.home",
+      "layout": "archive",
+      "evidence": ["assets/index.html", "src/readmd_modules/converter.py", "assets/js/features/batch.js"],
+      "copy": {
+        "zh-CN": { "eyebrow": "03 / 批量工作台", "title": "海量文档，随时取消可溯", "body": "统一管理批量文档转换；支持批量取消与逐行进度追溯，中途安全退出不丢已有成果，进程不卡死。", "note": "批量工作台 · 逐行追踪 · 随时取消" },
+        "en": { "eyebrow": "03 / Batch workbench", "title": "Traceable batch pipelines", "body": "Unified batch document intake with per-row progress tracking and instant cancellation without lost outputs or hung processes.", "note": "Batch intake · row progress · cancel safe" }
+      }
+    },
+    {
+      "id": "academic",
+      "shot_id": "academic.latex-bib",
+      "layout": "blueprint",
+      "evidence": ["src/readmd_modules/mdexport/latex_export.py", "showcase/fixtures/readmd-paper.md"],
+      "copy": {
+        "zh-CN": { "eyebrow": "04 / 学术写作", "title": "LaTeX PRO 与 BibTeX 协同", "body": "公式推导、BibTeX 文献引用与 theorem/proof 语义浑然一体，论文草稿既能本地预览，也能无损导出。", "note": "LaTeX PRO · BibTeX · theorem / proof" },
+        "en": { "eyebrow": "04 / Academic work", "title": "LaTeX PRO meets BibTeX citations", "body": "Math derivations, BibTeX citations and theorem/proof blocks share one workflow for local inspection and lossless paper export.", "note": "LaTeX PRO · BibTeX · theorem / proof" }
+      }
+    },
+    {
+      "id": "diagram-sandbox",
+      "shot_id": "editor.diagram-picker",
+      "layout": "specimen",
+      "evidence": ["assets/js/editor/editor.js", "src/readmd_modules/diagrams/vega_sidecar.py"],
+      "copy": {
+        "zh-CN": { "eyebrow": "05 / 图表沙箱", "title": "离线图表，严格沙箱隔离", "body": "Chart.js 纯离线渲染；Vega 与 Vega-Lite 由服务端 Sidecar 沙箱渲染，杜绝 CSP unsafe-eval 与网络外链数据探针。", "note": "Chart.js 离线 · Vega 沙箱 · CSP 零 eval" },
+        "en": { "eyebrow": "05 / Diagram sandbox", "title": "Isolated offline chart rendering", "body": "Chart.js runs offline; Vega and Vega-Lite render via an isolated server sidecar, keeping strict CSP free of unsafe-eval and remote leaks.", "note": "Offline charts · Vega sidecar · zero eval CSP" }
+      }
+    },
+    {
+      "id": "code-chunk",
+      "shot_id": "editor.code-chunk",
+      "layout": "ledger",
+      "evidence": ["assets/js/reader/render.js", "showcase/fixtures/readmd-lab.md"],
+      "copy": {
+        "zh-CN": { "eyebrow": "06 / 代码笔记", "title": "代码与实验，可执行可追溯", "body": "可执行代码块将源码、执行状态与输出结果收录在同一卡片中，实验记录依然是结构工整的纯文本。", "note": "可执行代码块 · 运行状态 · 结果内嵌" },
+        "en": { "eyebrow": "06 / Technical notes", "title": "Runnable code in structured notes", "body": "Executable blocks keep code, status and output together in one readable card while the source remains cleanly formatted text.", "note": "Executable blocks · live status · inline results" }
+      }
+    },
+    {
+      "id": "presentation",
+      "shot_id": "presentation.reveal",
+      "layout": "blueprint",
+      "evidence": ["assets/js/reader/render.js", "showcase/fixtures/readmd-talk.md"],
+      "copy": {
+        "zh-CN": { "eyebrow": "07 / 演说放映", "title": "Markdown 原生秒变放映厅", "body": "同一份 Markdown 直接进入 Reveal.js 演说模式；公式、代码与图表原样呈现，支持离线字体与演讲者备注。", "note": "Reveal 放映 · 离线资源 · 原生演讲者备注" },
+        "en": { "eyebrow": "07 / Presentation", "title": "Markdown directly to the stage", "body": "The same Markdown enters Reveal presentation mode without slide re-authoring, complete with offline fonts, math and speaker notes.", "note": "Reveal mode · offline assets · speaker notes" }
+      }
+    },
+    {
+      "id": "security-archive",
+      "shot_id": "sharing.export",
+      "layout": "archive",
+      "evidence": ["src/readmd_modules/security/archive.py", "assets/js/features/share.js"],
+      "copy": {
+        "zh-CN": { "eyebrow": "08 / 解压防御", "title": "拦截穿越与炸弹，保护磁盘底线", "body": "Zip 解压全面重构：拦截路径穿越、UNC 伪造与 Zip 炸弹，二进制解压需显式确认，失败信息全面脱敏。", "note": "路径穿越拦截 · Zip 炸弹防御 · 0 残留" },
+        "en": { "eyebrow": "08 / Archive security", "title": "Strict zip safety boundaries", "body": "Archive extraction blocks directory traversal, UNC paths and zip bombs. Binary extractions require explicit consent with sanitized logs.", "note": "Traversal blocks · zip bomb defense · clean exits" }
+      }
+    },
+    {
+      "id": "ai-interaction",
+      "shot_id": "ai.panel",
+      "layout": "specimen",
+      "evidence": ["assets/js/features/ai.js", "src/readmd_modules/ai.py"],
+      "copy": {
+        "zh-CN": { "eyebrow": "09 / AI 选区保护", "title": "生成不扰选区，分层退出", "body": "AI 生成期间文本选区与派生文档保存严格受保护；Escape 分层关闭浮层，41 种语言原生提示拒绝英文回退。", "note": "选区防劫持 · 分层 Escape · 原生词条" },
+        "en": { "eyebrow": "09 / AI interaction", "title": "Protected selections and layered escape", "body": "Streaming AI generation preserves text selection and derived document saving while Escape dismisses overlays layer by layer.", "note": "Selection locked · layered escape · native strings" }
+      }
+    },
+    {
+      "id": "skills-workbench",
+      "shot_id": "skills.workbench",
+      "layout": "ledger",
+      "evidence": ["assets/js/features/ai.js", "assets/skills", "assets/upstream/manifest.json"],
+      "copy": {
+        "zh-CN": { "eyebrow": "10 / 事务化技能", "title": "来源感知，全量替换自动回滚", "body": "技能导入升级为来源感知的事务化流程：全量替换失败时自动回滚，草稿默认隔离，发布前严格验证。", "note": "事务化导入 · 失败回滚 · 离线快照" },
+        "en": { "eyebrow": "10 / Transactional skills", "title": "Provenance and transactional rollbacks", "body": "Skill imports are transactional with automatic rollback upon failure. Drafts stay disabled until verified by strict pre-flight checks.", "note": "Transactional import · auto rollback · offline snapshot" }
+      }
+    },
+    {
+      "id": "providers-catalog",
+      "shot_id": "providers.catalog",
+      "layout": "blueprint",
+      "evidence": ["assets/providers/provider-catalog.json", "src/readmd_modules/ai.py"],
+      "copy": {
+        "zh-CN": { "eyebrow": "11 / 模型生态", "title": "主流服务商与本地引擎直连", "body": "可搜索的 Provider 目录整合协议、模型能力与连接设置；凭据用 ID 隔离引用，绝不随 URL 泄露。", "note": "目录可搜索 · credential_id 隔离 · 本地+云端" },
+        "en": { "eyebrow": "11 / Provider catalog", "title": "Local runtimes and major providers", "body": "Searchable provider catalog brings protocols, models and endpoints into one screen with credential IDs isolated from network URLs.", "note": "Searchable catalog · credential_id isolation · hybrid" }
+      }
+    },
+    {
+      "id": "github-import",
+      "shot_id": "skills.github-import",
+      "layout": "archive",
+      "evidence": ["assets/js/features/ai.js", "src/readmd_modules/skill_import.py"],
+      "copy": {
+        "zh-CN": { "eyebrow": "12 / GitHub 导入", "title": "可审计的结构化技能导入", "body": "从 GitHub 仓库带回可审查的 SKILL.md，支持目录级选择导入，来源、提交版本与本地变更全程可溯。", "note": "多 Skill 预览 · 选择导入 · 提交可溯" },
+        "en": { "eyebrow": "12 / GitHub imports", "title": "Auditable structured skill import", "body": "Inspect repository skills before importing. Select directories, review source commits, and keep full provenance tracking.", "note": "Multi-skill preview · selective import · auditable commits" }
+      }
+    },
+    {
+      "id": "locales-final",
+      "shot_id": "i18n.library",
+      "layout": "specimen",
+      "evidence": ["assets/js/core/i18n.js", "assets/i18n"],
+      "copy": {
+        "zh-CN": { "eyebrow": "13 / 46 国语言收尾", "title": "46 种语言全量覆盖收尾", "body": "系统托盘菜单、技能导入、图表与导出设置全部原生收敛；每种语言保持原生书写与 RTL 遵从，零英文回退。", "note": "46 国语言 · RTL 遵从 · 托盘与导出原生化" },
+        "en": { "eyebrow": "13 / Localization", "title": "46 full locale completions", "body": "System tray, skill import errors, diagram labels and export settings are fully localized across 46 languages with zero English fallbacks.", "note": "46 locales · RTL compliance · native system tray" }
+      }
+    },
+    {
+      "id": "mcp-vscode",
+      "source_id": "mcp-guide",
+      "layout": "ledger",
+      "evidence": ["packages/vscode-extension/README.md", "packages/mcp-server/readmd_mcp_server.py"],
+      "copy": {
+        "zh-CN": { "eyebrow": "14 / VS Code 与 MCP", "title": "22 项原生命令，跨端 Core 协同", "body": "VS Code 扩展覆盖 22 项原生指令，支持流式取消与核心连接状态感知；MCP Server 深度联通本地大模型。", "note": "VS Code 22 命令 · 流式取消 · 共享 Core" },
+        "en": { "eyebrow": "14 / Ecosystem", "title": "22 VS Code commands and MCP core", "body": "VS Code extension covers 22 native commands with streaming cancellation and runtime status, sharing the Core Service with MCP.", "note": "VS Code 22 commands · stream cancel · shared Core" }
+      }
+    }
+  ]
+}
