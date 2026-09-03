@@ -5736,7 +5736,7 @@ function renderAllDiagrams(container) {
         // the bundled Node sidecar through /api/diagram/render so the secure
         // WebView CSP never needs unsafe-eval.  The remaining engines are
         // genuinely browser-local and lazy-loaded here.
-        if (['mermaid', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'tikz', 'chart', 'chartjs', 'chart.js', 'vega', 'vega-lite'].includes(engine)) {
+        if (['mermaid', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'tikz', 'chart', 'chartjs', 'chart.js'].includes(engine)) {
           const rendered = await renderLocalDiagram(engine, code, previewEl);
           if (rendered instanceof Element) previewEl.replaceChildren(rendered);
           else previewEl.innerHTML = rendered;
