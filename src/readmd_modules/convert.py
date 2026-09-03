@@ -1957,6 +1957,11 @@ def extract_zip_archive(zip_source, base_temp_dir=None):
                 extracted_files.append(dest_file)
                 total_uncompressed += written
 
+    if not extracted_files:
+        # Do not retain empty run directories for archives that contain only
+        # unsupported or unsafe members.
+        shutil.rmtree(target_dir, ignore_errors=True)
+
     return {
         'ok': True,
         'paths': extracted_files,
