@@ -781,11 +781,20 @@ function bindEvents() {
       }
       showToast(_t('styleai.generated', {}, 'AI 样式生成完成'));
     } catch (err) {
-      const safeError = err && err.message ? String(err.message).slice(0, 240) : _t('ai.reqFailMsg', {}, 'AI 请求失败');
+      // Never surface provider/server exception text in the UI.  It may
+      // contain URLs, model payloads, or implementation details.  Errors
+      // deliberately raised above are already localized and safe to retain;
+      // everything else maps to the stable localised request error.
+      const invalidJsonMessage = _t('styleai.invalidJson', {}, 'AI 返回的样式 JSON 无效');
+      const requestFailedMessage = _t('ai.reqFailMsg', {}, 'AI 请求失败');
+      const candidateMessage = err && typeof err.message === 'string' ? err.message : '';
+      const safeError = candidateMessage === invalidJsonMessage
+        ? candidateMessage
+        : requestFailedMessage;
       if (statusEl) {
-        statusEl.textContent = _t('ai.reqFailMsg', {}, 'AI 请求失败：') + safeError;
+        statusEl.textContent = safeError;
       }
-      showToast(_t('ai.reqFailMsg', {}, 'AI 请求失败：') + safeError);
+      showToast(safeError);
     } finally {
       if (genBtn) genBtn.disabled = false;
     }

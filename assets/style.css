@@ -2187,6 +2187,19 @@ body[data-theme="sepia"] #edit-wrap .cm-editor { background: var(--bg2); }
 .tpl-list li:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .tpl-list li.active { background: var(--accent); color: var(--accent-fg); }
 .tpl-list li .tpl-tag { font-size: 11px; opacity: .75; }
+.tpl-list .tpl-group-header {
+  padding: 8px 10px 4px;
+  border-bottom: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: default;
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+  text-transform: uppercase;
+  user-select: none;
+}
+.tpl-list .tpl-group-header:hover { background: transparent; }
 .tpl-form { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .tpl-form input, .tpl-form select, .tpl-form textarea { width: 100%; box-sizing: border-box; }
 .tpl-form textarea { resize: vertical; }

@@ -975,6 +975,21 @@ class Handler(BaseHTTPRequestHandler):
         '/api/file', '/api/list', '/api/ocr', '/api/convert', '/raw',
     })
 
+    def handle(self):
+        """Handle a request without logging normal client disconnects.
+
+        Browsers routinely cancel a request while navigating, switching
+        locales, or aborting a stream.  ``BaseHTTPRequestHandler`` lets the
+        resulting socket exception escape the worker thread, which produced
+        noisy tracebacks during UI runs and obscured real failures.  A reset
+        or broken pipe is an expected cancellation; all other exceptions
+        retain the default behaviour and remain visible to diagnostics.
+        """
+        try:
+            super().handle()
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            self.close_connection = True
+
     def log_message(self, fmt, *args):
         pass  # 静默访问日志
 

@@ -64,6 +64,12 @@ class TestZipArchiveSecurity(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'zip_entry_count_exceeded'):
                 extract_zip_archive(buf.getvalue(), base_temp_dir=td)
 
+    def test_corrupt_archive_does_not_leave_extraction_directory(self):
+        with tempfile.TemporaryDirectory() as td:
+            with self.assertRaises((zipfile.BadZipFile, ValueError)):
+                extract_zip_archive(b'not a zip archive', base_temp_dir=td)
+            self.assertEqual(os.listdir(td), [])
+
 
 if __name__ == '__main__':
     unittest.main()

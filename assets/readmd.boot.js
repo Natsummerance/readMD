@@ -8232,18 +8232,22 @@ function bindEditorAiEvents() {
 
 /* ---------------- AI 助手 ---------------- */
 
-const AI_ACTIONS = {
-  quick_read: 'tpl.actionQuickRead',
-  polish: 'tpl.actionPolish',
-  proofread: 'tpl.actionProofread',
-  translate_en: 'tpl.actionTranslateEn',
-  translate_zh: 'tpl.actionTranslateZh',
-  todo: 'tpl.actionTodo',
-  continue: 'tpl.actionContinue',
-  ask: 'tpl.actionAsk',
-  modify: 'tpl.actionModify',
-  expand: 'tpl.actionExpand',
-};
+function resolveAiActionLabel(action, template) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : '';
+  // Prefer the currently selected Skill's localized/display name.  The
+  // action-key fallback exists only for legacy templates and never exposes a
+  // raw internal action id to the user.
+  if (template && template.name) return template.name;
+  const normalized = String(action || '').trim();
+  if (normalized) {
+    const suffix = normalized.split('_').map(part => part ? part[0].toUpperCase() + part.slice(1) : '').join('');
+    const key = 'tpl.action' + suffix;
+    const value = _t(key);
+    if (value && value !== key) return value;
+  }
+  const custom = _t('tpl.actionCustom');
+  return custom && custom !== 'tpl.actionCustom' ? custom : '';
+}
 
 function toggleAiPanel() {
   if (moduleBlocked('ai')) return;
@@ -8414,7 +8418,8 @@ function fillAiTemplates() {
   });
 
   const catOrder = ['general', 'writing', 'coding', 'academic', 'custom'];
-  const isEn = window.i18n && window.i18n.locale === 'en';
+  const activeLocale = window.i18n && (window.i18n.currentLang || window.i18n.locale);
+  const isEn = activeLocale === 'en';
   catOrder.forEach(cat => {
     const items = groups[cat];
     if (!items || !items.length) return;
@@ -8481,7 +8486,8 @@ function renderTplList() {
   });
 
   const catOrder = ['general', 'writing', 'coding', 'academic', 'custom'];
-  const isEn = window.i18n && window.i18n.locale === 'en';
+  const activeLocale = window.i18n && (window.i18n.currentLang || window.i18n.locale);
+  const isEn = activeLocale === 'en';
 
   catOrder.forEach(cat => {
     const items = groups[cat];
@@ -8490,13 +8496,8 @@ function renderTplList() {
     const headerLi = document.createElement('li');
     headerLi.className = 'tpl-group-header';
     headerLi.textContent = isEn ? TPL_CATEGORIES[cat].labelEn : TPL_CATEGORIES[cat].label;
-    headerLi.style.fontWeight = '600';
-    headerLi.style.fontSize = '11px';
-    headerLi.style.color = 'var(--text-muted, #64748b)';
-    headerLi.style.padding = '8px 10px 4px';
-    headerLi.style.pointerEvents = 'none';
-    headerLi.style.userSelect = 'none';
-    headerLi.style.textTransform = 'uppercase';
+    headerLi.setAttribute('role', 'presentation');
+    headerLi.setAttribute('aria-hidden', 'true');
     list.appendChild(headerLi);
 
     items.forEach(t => {
@@ -8630,7 +8631,7 @@ function selectTpl(id, editing) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const t = (state.ai.templates || []).find(x => x.id === id) || null;
   const builtin = !!(t && t.builtin);
-  document.querySelectorAll('#tpl-list li').forEach(li => {
+  document.querySelectorAll('#tpl-list li[role="option"]').forEach(li => {
     const selected = li.dataset.id === id;
     li.classList.toggle('active', selected);
     li.setAttribute('aria-selected', selected ? 'true' : 'false');
@@ -8767,7 +8768,7 @@ async function generateSkillDraft() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'generate', provider: active.id, credential_id: active.credential_id,
         model: $('ai-model').value || (active.models || [])[0] || '', request, document: getAiTargetText().text,
-        language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en' }),
+        language: (window.i18n && (window.i18n.currentLang || window.i18n.locale)) || document.documentElement.lang || 'en' }),
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok || !d.ok || !d.draft) throw new Error(d.error || _t('ai.aiError'));
@@ -8799,7 +8800,7 @@ async function publishCurrentSkill() {
   try {
     const evaluation = await apiFetch('/api/skills', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'evaluate', id, content, metadata: { id, source: 'skill-workbench', enabled: false, scripts_allowed: false },
-        variables: { document: getAiTargetText().text, selection: '', request: '', language: (window.i18n && window.i18n.locale) || 'en', context: 'ReadMD Skill workbench', output_format: 'Markdown' } }) });
+        variables: { document: getAiTargetText().text, selection: '', request: '', language: (window.i18n && (window.i18n.currentLang || window.i18n.locale)) || 'en', context: 'ReadMD Skill workbench', output_format: 'Markdown' } }) });
     const evaluated = await evaluation.json().catch(() => ({}));
     if (!evaluation.ok || !evaluated.ok || !evaluated.evaluation_token) throw new Error(evaluated.error || _t('ai.aiError'));
     evaluationToken = evaluated.evaluation_token;
@@ -10055,7 +10056,8 @@ async function runAi(action) {
 
   const userSeq = (state.ai.messages || []).filter(m => m.role === 'user').length + 1;
   const scopeText = isSelection ? (_t('ai.scopeSelection') || '') : (_t('ai.scopeFull') || '');
-  const userTagText = (_t('ai.meTag', { seq: userSeq }) || '') + ' · ' + _t(AI_ACTIONS[action] || action) + scopeText + ' · ' + model;
+  const userTagText = (_t('ai.meTag', { seq: userSeq }) || '') + ' · '
+    + resolveAiActionLabel(action, tpl) + scopeText + ' · ' + model;
   appendAiUserBubble(out, userTagText, userMsg, {
     scopeLabel: scopeText, prompt: prompt,
     docLines: docs.split('\n').length, docChars: docs.length,
@@ -10095,7 +10097,7 @@ async function runAi(action) {
         base_url: baseUrl || undefined, mode: mode, endpoint_mode: endpointMode, headers: requestHeaders, stream: stream,
         skill_id: skillId,
         skill_variables: { document: docs, selection: isSelection ? docs : '', request: prompt,
-          language: (window.i18n && window.i18n.locale) || document.documentElement.lang || 'en',
+          language: (window.i18n && (window.i18n.currentLang || window.i18n.locale)) || document.documentElement.lang || 'en',
           context: '', output_format: 'Markdown' },
         messages: msgs,
         temperature: 0.7,
@@ -13786,11 +13788,20 @@ function bindEvents() {
       }
       showToast(_t('styleai.generated', {}, 'AI 样式生成完成'));
     } catch (err) {
-      const safeError = err && err.message ? String(err.message).slice(0, 240) : _t('ai.reqFailMsg', {}, 'AI 请求失败');
+      // Never surface provider/server exception text in the UI.  It may
+      // contain URLs, model payloads, or implementation details.  Errors
+      // deliberately raised above are already localized and safe to retain;
+      // everything else maps to the stable localised request error.
+      const invalidJsonMessage = _t('styleai.invalidJson', {}, 'AI 返回的样式 JSON 无效');
+      const requestFailedMessage = _t('ai.reqFailMsg', {}, 'AI 请求失败');
+      const candidateMessage = err && typeof err.message === 'string' ? err.message : '';
+      const safeError = candidateMessage === invalidJsonMessage
+        ? candidateMessage
+        : requestFailedMessage;
       if (statusEl) {
-        statusEl.textContent = _t('ai.reqFailMsg', {}, 'AI 请求失败：') + safeError;
+        statusEl.textContent = safeError;
       }
-      showToast(_t('ai.reqFailMsg', {}, 'AI 请求失败：') + safeError);
+      showToast(safeError);
     } finally {
       if (genBtn) genBtn.disabled = false;
     }

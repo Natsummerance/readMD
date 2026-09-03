@@ -1831,14 +1831,21 @@ def extract_zip_archive(zip_source, base_temp_dir=None):
         'limit_exceeded': 0
     }
 
-    if isinstance(zip_source, (bytes, bytearray)):
-        if len(zip_source) > MAX_ZIP_SIZE:
-            raise ValueError('zip_archive_too_large')
-        zf_ctx = zipfile.ZipFile(io.BytesIO(zip_source))
-    else:
-        if os.path.isfile(zip_source) and os.path.getsize(zip_source) > MAX_ZIP_SIZE:
-            raise ValueError('zip_archive_too_large')
-        zf_ctx = zipfile.ZipFile(zip_source, 'r')
+    try:
+        if isinstance(zip_source, (bytes, bytearray)):
+            if len(zip_source) > MAX_ZIP_SIZE:
+                raise ValueError('zip_archive_too_large')
+            zf_ctx = zipfile.ZipFile(io.BytesIO(zip_source))
+        else:
+            if os.path.isfile(zip_source) and os.path.getsize(zip_source) > MAX_ZIP_SIZE:
+                raise ValueError('zip_archive_too_large')
+            zf_ctx = zipfile.ZipFile(zip_source, 'r')
+    except Exception:
+        # A corrupt/oversized archive must not leave an empty extraction run
+        # behind.  The caller receives the stable error while the temp root
+        # remains free of abandoned directories.
+        shutil.rmtree(target_dir, ignore_errors=True)
+        raise
 
     total_uncompressed = 0
     total_entries = 0
@@ -1848,6 +1855,7 @@ def extract_zip_archive(zip_source, base_temp_dir=None):
         # Bound central-directory metadata before iterating.  This prevents a
         # metadata-only archive from creating an unbounded Python object list.
         if len(infolist) > MAX_FILE_COUNT * 4:
+            shutil.rmtree(target_dir, ignore_errors=True)
             raise ValueError('zip_entry_count_exceeded')
         total_entries = len(infolist)
         for info in infolist:
@@ -1915,16 +1923,39 @@ def extract_zip_archive(zip_source, base_temp_dir=None):
                 continue
 
             os.makedirs(os.path.dirname(dest_file), exist_ok=True)
-            with zf.open(info) as src, open(dest_file, 'wb') as dst:
-                while True:
-                    chunk = src.read(65536)
-                    if not chunk:
-                        break
-                    dst.write(chunk)
+            written = 0
+            over_limit = False
+            try:
+                with zf.open(info) as src, open(dest_file, 'wb') as dst:
+                    while True:
+                        chunk = src.read(65536)
+                        if not chunk:
+                            break
+                        written += len(chunk)
+                        # Do not trust the central-directory size alone: a
+                        # malformed archive can advertise a small size and
+                        # expand much further while being streamed.
+                        if total_uncompressed + written > MAX_TOTAL_UNCOMPRESSED:
+                            over_limit = True
+                            break
+                        dst.write(chunk)
+            except Exception:
+                shutil.rmtree(target_dir, ignore_errors=True)
+                raise
+            finally:
+                if over_limit:
+                    try:
+                        os.remove(dest_file)
+                    except OSError:
+                        pass
 
+            if over_limit:
+                skipped_count += 1
+                skipped_reasons['limit_exceeded'] += 1
+                continue
             if os.path.isfile(dest_file):
                 extracted_files.append(dest_file)
-                total_uncompressed += info.file_size
+                total_uncompressed += written
 
     return {
         'ok': True,
