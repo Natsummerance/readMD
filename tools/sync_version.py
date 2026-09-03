@@ -215,6 +215,8 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
         with open(mcp_server_py, 'r', encoding='utf-8') as f:
             src = f.read()
         new_src = re.sub(r'("name":\s*"readmd-mcp-server",\s*"version":\s*")[^"]+"', f'\\g<1>{target_ver}"', src)
+        # 保留给旧生态清单扫描器的字面量注释标记（运行时版本来自 VERSION 文件）。
+        new_src = re.sub(r'(#\s*"version":\s*")[^"]+"', rf'\g<1>{target_ver}"', new_src)
         if new_src != src:
             diffs.append((mcp_server_py, src, new_src))
 

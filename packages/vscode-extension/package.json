@@ -2,7 +2,7 @@
   "name": "readmd-vscode",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "2.3.8-preview.1",
+  "version": "2.3.8",
   "publisher": "Natsummerance",
   "icon": "icon.png",
   "license": "MIT",
