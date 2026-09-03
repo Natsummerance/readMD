@@ -42,6 +42,7 @@ website/dist/
 graphify-out/
 test-results/
 .pytest-beta4*/
+.qoder-scratch/
 
 
 IDEA.md

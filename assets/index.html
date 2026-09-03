@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-version="2.3.8-preview.1">
+<html lang="zh-CN" data-version="2.3.8">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -88,10 +88,12 @@
         <button class="more-group-header" type="button" aria-expanded="false"><span data-i18n="menu.grpSettings">设置</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
           <button id="btn-lang" class="more-item"><span data-i18n="menu.lang">界面语言</span><em id="lang-current-label">简体中文</em></button>
+          <!-- 桌宠功能前端入口（保留所有代码，正式版先隐藏，本地可通过控制台 window.openPetSettings() 调用打磨）
           <button id="btn-pet" class="more-item"><span data-i18n="menu.pet">桌宠</span><em id="pet-status-label" data-i18n="menu.petSub">外置插件</em></button>
+          -->
           <button id="btn-assoc" class="more-item"><span data-i18n="menu.assoc">设为默认</span><em data-i18n="menu.assocSub">.md 打开方式</em></button>
           <button id="btn-autostart" class="more-item"><span data-i18n="menu.autoStart">开机自启</span><em id="autostart-status-label" data-i18n="app.disabled">未开启</em></button>
-          <button id="btn-check-update" class="more-item"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.8-preview.1</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
+          <button id="btn-check-update" class="more-item"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.8</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
         </div>
       </div>
     </div>
@@ -341,43 +343,38 @@
     </div>
 
     <div class="ai-body">
-      <div class="ai-template-bar">
-        <div class="ai-template-selector-wrap">
-          <svg class="ai-tpl-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          <select id="ai-template" title="Prompt 模板：选择后应用到本次对话" data-i18n-title="ai.tplSelectTitle" aria-label="Prompt 模板"></select>
-          <button id="ai-tpl-btn" class="tb-btn" title="Skill 工作台与导入" data-i18n-title="ai.templateManage" aria-label="Skill 工作台">
-            <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-            <span data-i18n="ai.templateManage">模板库</span>
-          </button>
-        </div>
-      </div>
       <div class="ai-output-wrap" aria-label="对话内容" data-i18n-aria="ai.outputAria">
         <div id="ai-output" aria-live="polite"></div>
       </div>
-      <div class="ai-composer">
-        <div class="ai-composer-input-wrap">
-          <textarea id="ai-prompt" rows="2" placeholder="向 AI 提问，或选择上方快捷指令... (Enter 发送, Shift+Enter 换行)" aria-label="向 AI 提问" data-i18n-placeholder="ai.promptPlaceholder" data-i18n-aria="ai.promptPlaceholder" autocomplete="off"></textarea>
-        </div>
-        <div class="ai-composer-actions">
-          <div class="ai-composer-left">
-            <label class="ai-sel" title="仅处理当前在编辑器或阅读器中选中的文本" data-i18n-title="ai.scopeSelectionTitle"><input id="ai-selection" type="checkbox"> <span data-i18n="editor.text">仅处理选中文字</span></label>
-            <label class="ai-sel" title="无痕模式：本次会话不保存到历史记录" data-i18n-title="ai.incognitoTitle"><input id="ai-incognito" type="checkbox"> <span data-i18n="ai.incognito">无痕</span></label>
-            <span id="ai-usage">Token：—</span>
+
+      <div class="ai-composer-wrapper">
+        <div class="composer-skill-bar">
+          <div class="skill-selector-wrap">
+            <svg class="skill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            <select id="ai-template" class="skill-select" title="Prompt 模板：选择后应用到本次对话" data-i18n-title="ai.tplSelectTitle" aria-label="Prompt 模板"></select>
           </div>
-          <div class="ai-composer-right">
-            <button id="ai-clear-ctx" class="tb-btn" title="开始一轮新对话" data-i18n="ai.newSession" data-i18n-title="ai.newSession">新对话</button>
-            <button id="ai-stop" class="tb-btn" data-i18n="ai.stop" disabled>停止</button>
-            <button id="ai-run" class="tb-btn accent ai-send-btn" title="发送 (Enter)" aria-label="发送" data-i18n-title="ai.send">
-              <span data-i18n="ai.send">发送</span>
-              <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            </button>
-          </div>
+          <button id="ai-tpl-btn" class="skill-manage-btn" title="Skill 工作台与导入" data-i18n-title="ai.templateManage" aria-label="Skill 工作台">
+            <span data-i18n="ai.templateManage">模板库</span>
+          </button>
         </div>
-        <div class="ai-result-actions">
-          <button id="ai-apply" class="tb-btn" data-i18n="ai.apply" disabled>应用到正文</button>
-          <button id="ai-copy" class="tb-btn" data-i18n="ai.copy" disabled>复制回答</button>
-          <button id="ai-saveas" class="tb-btn" data-i18n="ai.saveAsMd" disabled>另存为 MD</button>
-          <span id="ai-status" role="status" aria-live="polite"></span>
+
+        <div class="composer-input-card">
+          <textarea id="ai-prompt" class="composer-textarea" rows="2" placeholder="向 AI 提问，或选择快捷指令... (Enter 发送, Shift+Enter 换行)" aria-label="向 AI 提问" data-i18n-placeholder="ai.promptPlaceholder" data-i18n-aria="ai.promptPlaceholder" autocomplete="off"></textarea>
+          <div class="composer-toolbar">
+            <div class="composer-toolbar-left">
+              <label class="ai-sel checkbox-label" title="仅处理当前在编辑器或阅读器中选中的文本" data-i18n-title="ai.scopeSelectionTitle"><input id="ai-selection" type="checkbox"> <span data-i18n="ai.scopeSelection">选区</span></label>
+              <label class="ai-sel checkbox-label" title="无痕模式：本次会话不保存到历史记录" data-i18n-title="ai.incognitoTitle"><input id="ai-incognito" type="checkbox"> <span data-i18n="ai.incognito">无痕</span></label>
+              <span id="ai-usage">Token：—</span>
+            </div>
+            <div class="composer-toolbar-right">
+              <button id="ai-clear-ctx" class="new-chat-btn" title="开始一轮新对话" data-i18n="ai.newSession" data-i18n-title="ai.newSession">新对话</button>
+              <button id="ai-stop" class="new-chat-btn hidden" data-i18n="ai.stop" disabled>停止</button>
+              <button id="ai-run" class="send-btn" title="发送 (Enter)" aria-label="发送" data-i18n-title="ai.send">
+                <span data-i18n="ai.send">发送</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -395,7 +392,7 @@
     <div id="pet-status-card" class="pet-status-card">
       <div class="pet-status-header">
         <span id="pet-status-dot" class="conn-dot"></span>
-        <span id="pet-status-text">未启动</span>
+        <span id="pet-status-text" data-i18n="pet.statusStopped">未启动</span>
       </div>
       <span id="pet-active-slug">Hermes</span>
     </div>
@@ -971,8 +968,8 @@
       <h3 data-i18n="export.preview">导出排版大图预览</h3>
       <div class="export-preview-head-meta">
         <span id="export-preview-pages-meta" class="export-preview-pages-meta"></span>
-        <button id="export-preview-prev-btn" class="tb-btn" type="button" title="上一页" aria-label="上一页" style="display:none; padding: 0 8px;">↑ 上一页</button>
-        <button id="export-preview-next-btn" class="tb-btn" type="button" title="下一页" aria-label="下一页" style="display:none; padding: 0 8px;">↓ 下一页</button>
+        <button id="export-preview-prev-btn" class="tb-btn export-preview-pager" type="button" title="上一页" aria-label="上一页" data-i18n-title="pagination.prevPage" data-i18n-aria="pagination.prevPage">↑</button>
+        <button id="export-preview-next-btn" class="tb-btn export-preview-pager" type="button" title="下一页" aria-label="下一页" data-i18n-title="pagination.nextPage" data-i18n-aria="pagination.nextPage">↓</button>
         <span id="export-preview-paper-meta" data-i18n="export.previewPaperMetaA4">A4 · 纵向</span>
         <button id="export-preview-close" class="tb-btn icon" aria-label="关闭预览" data-i18n-aria="toolbar.close">&#10005;</button>
       </div>
@@ -1124,7 +1121,7 @@
 
 <footer id="statusbar">
   <div class="statusbar-left-group">
-    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.8-preview.1</span>
+    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.8</span>
     <button id="status-pagination" type="button" class="status-pagination hidden" title="点击切换阅读模式"></button>
     <span id="status-left"></span>
   </div>
@@ -1347,6 +1344,6 @@
   </div>
 </div>
 
-<script defer src="/assets/readmd.boot.js?v=2.3.8-preview.1"></script>
+<script defer src="/assets/readmd.boot.js?v=2.3.8"></script>
 </body>
 </html>

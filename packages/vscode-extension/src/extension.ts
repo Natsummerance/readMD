@@ -9,21 +9,45 @@ let coreStatusBarItem: vscode.StatusBarItem;
 let coreWasDown = false;
 
 /** Keep Core error codes out of the UI and out of user documents. */
+
+function l10n(key: string, defaultEn: string, args?: Record<string, any>): string {
+  if (vscode.l10n && typeof vscode.l10n.t === 'function') {
+    try {
+      const res = (vscode.l10n.t as any)(key, args);
+      if (res && res !== key) return res;
+    } catch (_) {}
+    try {
+      const byKey = (vscode.l10n.t as any)({ message: key, args, key });
+      if (byKey && byKey !== key) return byKey;
+    } catch (_) {}
+    try {
+      const byMsg = (vscode.l10n.t as any)({ message: defaultEn, args, key });
+      if (byMsg && byMsg !== defaultEn) return byMsg;
+    } catch (_) {}
+  }
+  let res = defaultEn;
+  if (args) {
+    for (const [k, v] of Object.entries(args)) {
+      res = res.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+    }
+  }
+  return res;
+}
+
 function errorText(error: unknown): string {
   const code = error instanceof Error ? error.message : String(error || '');
-  const zh = vscode.env.language.toLowerCase().startsWith('zh');
   const messages: Record<string, [string, string]> = {
-    core_process_exit: ['ReadMD Core 进程已退出，请重试', 'ReadMD Core stopped; try again'],
-    core_start_timeout: ['ReadMD Core 启动超时', 'ReadMD Core startup timed out'],
-    core_not_connected: ['ReadMD Core 未连接', 'ReadMD Core is not connected'],
-    core_operation_timeout: ['操作超时，请重试', 'The operation timed out; try again'],
-    core_closed: ['ReadMD Core 已关闭', 'ReadMD Core is closed'],
-    mcp_request_failed: ['Core 请求失败', 'Core request failed'],
-    mcp_tool_failed: ['Core 工具执行失败', 'Core tool failed'],
-    ai_cancelled: ['AI 生成已取消', 'AI generation cancelled'],
+    core_process_exit: ['errCoreProcessExit', 'ReadMD Core stopped; try again'],
+    core_start_timeout: ['errCoreStartTimeout', 'ReadMD Core startup timed out'],
+    core_not_connected: ['errCoreNotConnected', 'ReadMD Core is not connected'],
+    core_operation_timeout: ['errCoreOperationTimeout', 'The operation timed out; try again'],
+    core_closed: ['errCoreClosed', 'ReadMD Core is closed'],
+    mcp_request_failed: ['errMcpRequestFailed', 'Core request failed'],
+    mcp_tool_failed: ['errMcpToolFailed', 'Core tool failed'],
+    ai_cancelled: ['errAiCancelled', 'AI generation cancelled'],
   };
   const pair = messages[code];
-  return pair ? (zh ? pair[0] : pair[1]) : (zh ? '操作失败，请重试' : 'Operation failed; try again');
+  return pair ? l10n(pair[0], pair[1]) : l10n('errOperationFailed', 'Operation failed; try again');
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -37,21 +61,21 @@ export function activate(context: vscode.ExtensionContext) {
       const skills = await bridge.listSkills();
       const pick = await vscode.window.showQuickPick(skills.map((s: any) => ({
         label: s.name || s.uri, description: s.description || '', uri: s.uri,
-      })), { placeHolder: '选择 ReadMD Skill' });
+      })), { placeHolder: l10n('pickSkill', 'Select ReadMD Skill') });
       if (!pick) return;
       const text = await bridge.readSkill(pick.uri);
       const doc = await vscode.workspace.openTextDocument({ content: text, language: 'markdown' });
       await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
-    } catch (err: any) { vscode.window.showErrorMessage(`ReadMD Skills 打开失败: ${errorText(err)}`); }
+    } catch (err: any) { vscode.window.showErrorMessage(l10n('skillsOpenFailed', `Failed to open ReadMD Skills: ${errorText(err)}`, { error: errorText(err) })); }
   });
 
   const aiWorkbenchDisposable = vscode.commands.registerCommand('readmd.openAiWorkbench', async () => {
     const editor = vscode.window.activeTextEditor;
-    if (!editor) { vscode.window.showInformationMessage('请先打开 Markdown 文档'); return; }
+    if (!editor) { vscode.window.showInformationMessage(l10n('openDocFirst', 'Please open a Markdown document first')); return; }
     try {
       const prompts = await bridge.listPrompts();
       if (!prompts.length) {
-        vscode.window.showWarningMessage('当前 Core 没有可用 Skill');
+        vscode.window.showWarningMessage(l10n('noSkillsAvailable', 'No Skills available in the current Core'));
         return;
       }
       const workflow = await vscode.window.showQuickPick(prompts.map((prompt: any) => ({
@@ -59,23 +83,23 @@ export function activate(context: vscode.ExtensionContext) {
         description: prompt.description || prompt.skill_id || '',
         id: prompt.name || prompt.skill_id,
         skillId: prompt.skill_id || prompt.name,
-      })), { placeHolder: '选择 ReadMD AI Skill 工作流' });
+      })), { placeHolder: l10n('pickAiWorkflow', 'Select ReadMD AI Skill workflow') });
       if (!workflow) return;
       const providers = (await bridge.listProviders()).filter((p: any) => p.credential_id || p.key_source || p.name?.includes('Ollama'));
       if (!providers.length) {
-        vscode.window.showWarningMessage('请先在 ReadMD 桌面端配置 AI 提供商和凭据');
+        vscode.window.showWarningMessage(l10n('configureAiFirst', 'Please configure AI providers and credentials in the ReadMD desktop app first'));
         return;
       }
       const provider: any = await vscode.window.showQuickPick(providers.map((p: any) => ({
-        label: p.name, description: p.has_key ? '已配置凭据' : '使用环境变量或本地服务', value: p,
-      })), { placeHolder: '选择 AI 提供商' });
+        label: p.name, description: p.has_key ? l10n('hasCredentials', 'Configured credentials') : l10n('usesEnvOrLocal', 'Using environment variables or local service'), value: p,
+      })), { placeHolder: l10n('pickAiProvider', 'Select AI Provider') });
       if (!provider) return;
       const models = provider.value.models || [];
       const modelPick: any = models.length > 1
-        ? await vscode.window.showQuickPick(models.map((m: string) => ({ label: m, value: m })), { placeHolder: '选择模型' })
+        ? await vscode.window.showQuickPick(models.map((m: string) => ({ label: m, value: m })), { placeHolder: l10n('pickModel', 'Select Model') })
         : models[0] ? { value: models[0] } : undefined;
       const model = modelPick?.value || '';
-      if (!model) { vscode.window.showWarningMessage('当前提供商没有可用模型，请先刷新模型列表'); return; }
+      if (!model) { vscode.window.showWarningMessage(l10n('noModelsAvailable', 'No models available for the selected provider, please refresh the model list')); return; }
       let output = '';
       let cancelled = false;
       await vscode.window.withProgress({
@@ -101,18 +125,18 @@ export function activate(context: vscode.ExtensionContext) {
         }
         if (!output && result?.content) output = String(result.content);
       });
-      if (cancelled) { vscode.window.showInformationMessage('ReadMD AI 生成已取消'); return; }
-      if (!output) { vscode.window.showWarningMessage('AI 未返回可应用内容'); return; }
-      const choice = await vscode.window.showInformationMessage('ReadMD AI 已生成结果', '替换选区', '插入末尾', '仅查看');
-      if (choice === '替换选区') {
+      if (cancelled) { vscode.window.showInformationMessage(l10n('aiCancelled', 'ReadMD AI generation was cancelled')); return; }
+      if (!output) { vscode.window.showWarningMessage(l10n('noAiOutput', 'AI did not return applicable content')); return; }
+      const choice = await vscode.window.showInformationMessage(l10n('aiResultGenerated', 'ReadMD AI result generated'), l10n('btnReplaceSelection', 'Replace Selection'), l10n('btnInsertEnd', 'Insert at End'), l10n('btnViewOnly', 'View Only'));
+      if (choice === l10n('btnReplaceSelection', 'Replace Selection') || choice === '替换选区') {
         await editor.edit(editBuilder => editBuilder.replace(editor.selection, output));
-      } else if (choice === '插入末尾') {
+      } else if (choice === l10n('btnInsertEnd', 'Insert at End') || choice === '插入末尾') {
         await editor.edit(editBuilder => editBuilder.insert(editor.document.positionAt(editor.document.getText().length), `\n\n${output}\n`));
-      } else if (choice === '仅查看') {
+      } else if (choice === l10n('btnViewOnly', 'View Only') || choice === '仅查看') {
         const doc = await vscode.workspace.openTextDocument({ content: output, language: 'markdown' });
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
       }
-    } catch (err: any) { vscode.window.showErrorMessage(`ReadMD AI 工作台失败: ${errorText(err)}`); }
+    } catch (err: any) { vscode.window.showErrorMessage(l10n('aiWorkbenchFailed', `ReadMD AI Workbench failed: ${errorText(err)}`, { error: errorText(err) })); }
   });
   const openSkillByUriDisposable = vscode.commands.registerCommand('readmd.openSkillByUri', async (uri?: string) => {
     if (!uri) return;
@@ -120,7 +144,7 @@ export function activate(context: vscode.ExtensionContext) {
       const text = await bridge.readSkill(uri);
       const doc = await vscode.workspace.openTextDocument({ content: text, language: 'markdown' });
       await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
-    } catch (err: any) { vscode.window.showErrorMessage(`读取 Skill 失败: ${errorText(err)}`); }
+    } catch (err: any) { vscode.window.showErrorMessage(l10n('readSkillFailed', `Failed to read Skill: ${errorText(err)}`, { error: errorText(err) })); }
   });
   context.subscriptions.push(skillsDisposable, aiWorkbenchDisposable, openSkillByUriDisposable);
 
@@ -162,7 +186,7 @@ export function activate(context: vscode.ExtensionContext) {
       coreStatusBarItem.hide();
       if (coreWasDown) {
         coreWasDown = false;
-        void vscode.window.showInformationMessage('ReadMD Core 已重新连接');
+        void vscode.window.showInformationMessage(l10n('coreReconnected', 'ReadMD Core reconnected'));
       }
     })
   );
@@ -171,7 +195,7 @@ export function activate(context: vscode.ExtensionContext) {
   const previewDisposable = vscode.commands.registerCommand('readmd.preview', () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-      vscode.window.showInformationMessage('请先在编辑器中打开一个 Markdown 文档');
+      vscode.window.showInformationMessage(l10n('openDocFirst', 'Please open a Markdown document first'));
       return;
     }
 
@@ -206,7 +230,7 @@ export function activate(context: vscode.ExtensionContext) {
   const fixDisposable = vscode.commands.registerCommand('readmd.fixCurrentDocument', async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-      vscode.window.showWarningMessage('请先打开需要修复的 Markdown 文档');
+      vscode.window.showWarningMessage(l10n('openMdToFix', 'Please open a Markdown document to fix'));
       return;
     }
 
@@ -229,12 +253,12 @@ export function activate(context: vscode.ExtensionContext) {
             editBuilder.replace(fullRange, res.repaired_content);
           });
           const detailMsg = res.fixes_count > 0 ? `（共修复 ${res.fixes_count} 处）` : '';
-          vscode.window.showInformationMessage(`ReadMD: 文档格式已成功自愈！${detailMsg}`);
+          vscode.window.showInformationMessage(l10n('docSelfHealed', `ReadMD: Document formatting successfully healed! ${detailMsg}`, { detail: detailMsg }));
         } else {
-          vscode.window.showInformationMessage('ReadMD: 当前文档格式规范，未检测到需要修复的语法问题。');
+          vscode.window.showInformationMessage(l10n('docAlreadyFormatted', 'ReadMD: Document formatting is clean, no syntax issues found.'));
         }
       } catch (err: any) {
-        vscode.window.showErrorMessage(`ReadMD 自愈失败: ${errorText(err)}`);
+        vscode.window.showErrorMessage(l10n('selfHealFailed', `ReadMD self-heal failed: ${errorText(err)}`, { error: errorText(err) }));
       }
     });
   });
@@ -243,7 +267,7 @@ export function activate(context: vscode.ExtensionContext) {
   const presentationDisposable = vscode.commands.registerCommand('readmd.openPresentation', () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-      vscode.window.showWarningMessage('请先打开 Markdown 幻灯片文档');
+      vscode.window.showWarningMessage(l10n('openSlideFirst', 'Please open a Markdown slide presentation first'));
       return;
     }
 
@@ -289,12 +313,12 @@ export function activate(context: vscode.ExtensionContext) {
         const docTitle = path.basename(editor.document.fileName, path.extname(editor.document.fileName));
         await bridge.exportPresentation(text, saveUri.fsPath, docTitle);
         const openBtn = '打开文件';
-        const choice = await vscode.window.showInformationMessage(`ReadMD: 成功导出 Reveal.js 演说稿！`, openBtn);
+        const choice = await vscode.window.showInformationMessage(l10n('presentationExportSuccess', 'ReadMD: Presentation successfully exported!'), l10n('btnOpen', 'Open'));
         if (choice === openBtn) {
           vscode.env.openExternal(saveUri);
         }
       } catch (err: any) {
-        vscode.window.showErrorMessage(`演说稿导出失败: ${errorText(err)}`);
+        vscode.window.showErrorMessage(l10n('exportPresentationFailed', `Failed to export presentation: ${errorText(err)}`, { error: errorText(err) }));
       }
     });
   });
@@ -307,7 +331,7 @@ export function activate(context: vscode.ExtensionContext) {
     editor.edit(editBuilder => {
       editBuilder.insert(editor.selection.active, '\n[TOC]\n\n');
     });
-    vscode.window.showInformationMessage('ReadMD: 已插入 [TOC] 自动目录标签');
+    vscode.window.showInformationMessage(l10n('insertedToc', 'ReadMD: Inserted [TOC] automatic table of contents tag'));
   });
 
   async function getOrCreateEditor(): Promise<vscode.TextEditor | undefined> {
@@ -392,7 +416,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     const doc = editor.document;
     if (doc.getText().startsWith('---')) {
-      vscode.window.showWarningMessage('当前文档已包含 Frontmatter 头部');
+      vscode.window.showWarningMessage(l10n('frontmatterExists', 'The current document already contains Frontmatter'));
       return;
     }
     const docTitle = doc.fileName ? path.basename(doc.fileName, path.extname(doc.fileName)) : '文档标题';
@@ -400,7 +424,7 @@ export function activate(context: vscode.ExtensionContext) {
     editor.edit(editBuilder => {
       editBuilder.insert(new vscode.Position(0, 0), frontmatter);
     });
-    vscode.window.showInformationMessage('ReadMD: 已在文档顶部插入 Frontmatter 样式与演示元数据');
+    vscode.window.showInformationMessage(l10n('insertedFrontmatter', 'ReadMD: Inserted Frontmatter style and presentation metadata'));
   });
 
   // 9. 命令：展平 @import 引用
@@ -422,9 +446,9 @@ export function activate(context: vscode.ExtensionContext) {
           language: 'markdown',
         });
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
-        vscode.window.showInformationMessage('ReadMD: 已成功展平编译全部 @import 模块！');
+        vscode.window.showInformationMessage(l10n('flattenModulesSuccess', 'ReadMD: Successfully compiled and flattened all @import modules!'));
       } catch (err: any) {
-        vscode.window.showErrorMessage(`展平模块失败: ${errorText(err)}`);
+        vscode.window.showErrorMessage(l10n('flattenModulesFailed', `Failed to flatten modules: ${errorText(err)}`, { error: errorText(err) }));
       }
     });
   });
@@ -452,7 +476,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     if (!codeText.trim()) {
-      vscode.window.showInformationMessage('请将光标移至 Python 代码块内或选中需要运行的代码');
+      vscode.window.showInformationMessage(l10n('cursorInPythonChunk', 'Please move the cursor inside a Python code chunk or select the code to run'));
       return;
     }
 
@@ -470,10 +494,10 @@ export function activate(context: vscode.ExtensionContext) {
           }
           vscode.window.showInformationMessage(msg);
         } else {
-          vscode.window.showErrorMessage(`代码运行异常：${errorText(res?.error_code || res?.error)}`);
+          vscode.window.showErrorMessage(l10n('codeExecutionError', `Code execution error: ${errorText(res?.error_code || res?.error)}`, { error: errorText(res?.error_code || res?.error) }));
         }
       } catch (err: any) {
-        vscode.window.showErrorMessage(`运行失败: ${errorText(err)}`);
+        vscode.window.showErrorMessage(l10n('runFailed', `Run failed: ${errorText(err)}`, { error: errorText(err) }));
       }
     });
   });
@@ -482,7 +506,7 @@ export function activate(context: vscode.ExtensionContext) {
   const exportDisposable = vscode.commands.registerCommand('readmd.exportDocument', async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
-      vscode.window.showWarningMessage('请先打开需要导出的 Markdown 文档');
+      vscode.window.showWarningMessage(l10n('openDocToExport', 'Please open a Markdown document to export'));
       return;
     }
 
@@ -535,12 +559,12 @@ export function activate(context: vscode.ExtensionContext) {
           await bridge.exportDoc(text, saveUri.fsPath, formatPick.value, presetPick.label, docTitle);
         }
         const openBtn = '打开文件';
-        const choice = await vscode.window.showInformationMessage(`ReadMD: 成功导出至 ${path.basename(saveUri.fsPath)}！`, openBtn);
+        const choice = await vscode.window.showInformationMessage(l10n('exportSuccess', `ReadMD: Successfully exported to ${path.basename(saveUri.fsPath)}!`, { filename: path.basename(saveUri.fsPath) }), l10n('btnOpen', 'Open'));
         if (choice === openBtn) {
           vscode.env.openExternal(saveUri);
         }
       } catch (err: any) {
-        vscode.window.showErrorMessage(`导出失败: ${errorText(err)}`);
+        vscode.window.showErrorMessage(l10n('exportFailed', `Export failed: ${errorText(err)}`, { error: errorText(err) }));
       }
     });
   });
@@ -575,9 +599,9 @@ export function activate(context: vscode.ExtensionContext) {
           language: 'markdown',
         });
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
-        vscode.window.showInformationMessage(`ReadMD: 已成功转换 ${path.basename(filePath)}！`);
+        vscode.window.showInformationMessage(l10n('convertSuccess', `ReadMD: Successfully converted ${path.basename(filePath)}!`, { filename: path.basename(filePath) }));
       } catch (err: any) {
-        vscode.window.showErrorMessage(`文档转换失败: ${errorText(err)}`);
+        vscode.window.showErrorMessage(l10n('convertFailed', `Conversion failed: ${errorText(err)}`, { error: errorText(err) }));
       }
     });
   });
@@ -610,9 +634,9 @@ export function activate(context: vscode.ExtensionContext) {
           language: 'markdown',
         });
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Active);
-        vscode.window.showInformationMessage(`ReadMD: 成功抓取文章《${res.title || url}》！`);
+        vscode.window.showInformationMessage(l10n('fetchWebSuccess', `ReadMD: Successfully fetched article "${res.title || url}"!`, { title: res.title || url }));
       } catch (err: any) {
-        vscode.window.showErrorMessage(`抓取网页失败: ${errorText(err)}`);
+        vscode.window.showErrorMessage(l10n('fetchWebFailed', `Web fetch failed: ${errorText(err)}`, { error: errorText(err) }));
       }
     });
   });
@@ -636,9 +660,9 @@ export function activate(context: vscode.ExtensionContext) {
           language: 'latex',
         });
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
-        vscode.window.showInformationMessage('ReadMD: 已成功生成标准学术 LaTeX 源码！');
+        vscode.window.showInformationMessage(l10n('latexConvertSuccess', 'ReadMD: Successfully generated standard academic LaTeX source!'));
       } catch (err: any) {
-        vscode.window.showErrorMessage(`LaTeX 转换失败: ${errorText(err)}`);
+        vscode.window.showErrorMessage(l10n('latexConvertFailed', `LaTeX conversion failed: ${errorText(err)}`, { error: errorText(err) }));
       }
     });
   });
@@ -663,7 +687,7 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     if (!bibPath) {
-      vscode.window.showInformationMessage('未找到 .bib 文件');
+      vscode.window.showInformationMessage(l10n('noBibFound', 'No .bib file found'));
       return;
     }
 
@@ -671,9 +695,9 @@ export function activate(context: vscode.ExtensionContext) {
       const res = await bridge.parseBibtex(bibPath);
       const entries = res?.entries || res;
       const count = Object.keys(entries || {}).length;
-      vscode.window.showInformationMessage(`ReadMD: 成功解析 BibTeX 数据库 (${path.basename(bibPath)})，共加载 ${count} 篇学术条目！`);
+      vscode.window.showInformationMessage(l10n('bibtexParseSuccess', `ReadMD: BibTeX database (${path.basename(bibPath)}) loaded with ${count} entries!`, { file: path.basename(bibPath), count }));
     } catch (err: any) {
-      vscode.window.showErrorMessage(`BibTeX 解析失败: ${errorText(err)}`);
+      vscode.window.showErrorMessage(l10n('bibtexParseFailed', `BibTeX parsing failed: ${errorText(err)}`, { error: errorText(err) }));
     }
   });
 
@@ -704,12 +728,12 @@ export function activate(context: vscode.ExtensionContext) {
 
     if (choice.value === 'clipboard') {
       await vscode.env.clipboard.writeText(JSON.stringify(mcpConfig, null, 2));
-      vscode.window.showInformationMessage('ReadMD: 已将 MCP 配置 JSON 复制到剪贴板，可直接粘贴进 Claude Desktop 配置文件中！');
+      vscode.window.showInformationMessage(l10n('mcpCopiedClipboard', 'ReadMD: Copied MCP configuration to clipboard. Paste it into your Claude Desktop config file!'));
       return;
     }
 
     if (!wsFolders || wsFolders.length === 0) {
-      vscode.window.showWarningMessage('请先在 VSCode 中打开一个工作区文件夹');
+      vscode.window.showWarningMessage(l10n('openWorkspaceFirst', 'Please open a workspace folder in VS Code first'));
       return;
     }
 
@@ -723,7 +747,7 @@ export function activate(context: vscode.ExtensionContext) {
       fs.writeFileSync(targetFile, JSON.stringify(mcpConfig, null, 2), 'utf-8');
       vscode.window.showInformationMessage(`ReadMD: 已成功在 ${targetFile} 生成 MCP 服务配置！`);
     } catch (err: any) {
-      vscode.window.showErrorMessage(`写入 MCP 配置失败: ${errorText(err)}`);
+      vscode.window.showErrorMessage(l10n('writeMcpFailed', `Failed to write MCP config: ${errorText(err)}`, { error: errorText(err) }));
     }
   });
 

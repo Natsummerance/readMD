@@ -957,6 +957,11 @@ def _consume_skill_evaluation_token(token, skill_id, content):
 
 
 class Handler(BaseHTTPRequestHandler):
+    # ZIP uploads are intentionally bounded before they are copied into
+    # memory.  Browser uploads use the binary request path; local pywebview
+    # callers use ``Api.extract_zip_batch`` and therefore do not need to send
+    # a second copy through HTTP.
+    MAX_ZIP_REQUEST_BYTES = 100 * 1024 * 1024
     protocol_version = 'HTTP/1.1'
     server_version = 'ReadMD/' + VERSION
     LAN_TOKEN = None
@@ -969,6 +974,21 @@ class Handler(BaseHTTPRequestHandler):
     LAN_SCOPED_PATHS = frozenset({
         '/api/file', '/api/list', '/api/ocr', '/api/convert', '/raw',
     })
+
+    def handle(self):
+        """Handle a request without logging normal client disconnects.
+
+        Browsers routinely cancel a request while navigating, switching
+        locales, or aborting a stream.  ``BaseHTTPRequestHandler`` lets the
+        resulting socket exception escape the worker thread, which produced
+        noisy tracebacks during UI runs and obscured real failures.  A reset
+        or broken pipe is an expected cancellation; all other exceptions
+        retain the default behaviour and remain visible to diagnostics.
+        """
+        try:
+            super().handle()
+        except (ConnectionResetError, ConnectionAbortedError, BrokenPipeError):
+            self.close_connection = True
 
     def log_message(self, fmt, *args):
         pass  # 静默访问日志
@@ -1305,6 +1325,37 @@ class Handler(BaseHTTPRequestHandler):
         payload.update(extra)
         self._send_json(status, payload)
 
+    def _read_request_body_limited(self, length, limit):
+        """Read exactly ``length`` bytes without creating an unbounded buffer.
+
+        ``Content-Length`` is checked before this helper is called, but a
+        bounded chunked read keeps the ZIP endpoint safe when a client sends
+        an incomplete body or a socket returns short reads.  The helper never
+        returns more than ``limit`` bytes and raises a stable ``ValueError``
+        when the request cannot be consumed safely.
+        """
+        try:
+            length = int(length or 0)
+        except (TypeError, ValueError):
+            raise ValueError('invalid_content_length')
+        if length < 0 or length > int(limit):
+            raise ValueError('request_too_large')
+        if length == 0:
+            return b''
+        chunks = []
+        remaining = length
+        total = 0
+        while remaining:
+            chunk = self.rfile.read(min(64 * 1024, remaining))
+            if not chunk:
+                raise ValueError('incomplete_request')
+            total += len(chunk)
+            if total > limit:
+                raise ValueError('request_too_large')
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        return b''.join(chunks)
+
     def _module_ready(self, name, message):
         """Ensure exactly one feature module is being loaded for this request."""
         if RM.is_ready(name):
@@ -1435,12 +1486,25 @@ class Handler(BaseHTTPRequestHandler):
     def _api_code_run(self):
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
-            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            if n < 0 or n > 256 * 1024:
+                self.close_connection = True
+                self._send_api_error(413, 'request_too_large')
+                return
+            body = json.loads(self._read_request_body_limited(n, 256 * 1024).decode('utf-8')) if n else {}
+            if not isinstance(body, dict):
+                self._send_api_error(400, 'invalid_request')
+                return
             if body.get('confirm') is not True:
-                self._send_json(400, {'ok': False, 'error_code': 'confirmation_required'})
+                self._send_api_error(400, 'confirmation_required')
                 return
             lang = body.get('lang', 'python')
             code = body.get('code', '')
+            if not isinstance(lang, str) or not isinstance(code, str):
+                self._send_api_error(400, 'invalid_request')
+                return
+            if len(code) > 200_000:
+                self._send_api_error(413, 'code_too_large')
+                return
             cwd = body.get('cwd') or None
             timeout = int(body.get('timeout', 10))
             from src.readmd_modules import code_chunk_runner
@@ -1593,13 +1657,21 @@ class Handler(BaseHTTPRequestHandler):
                         'engine': engine,
                         'requires_network': False,
                     })
-                else:
+                elif body.get('allow_remote') is True:
                     self._send_json(200, {
                         'ok': True,
                         'type': 'svg',
                         'svg': diagrams.fetch_plantuml_svg(code),
                         'engine': engine,
                         'requires_network': True,
+                    })
+                else:
+                    self._send_json(422, {
+                        'ok': False,
+                        'error_code': 'diagram_dependency_missing',
+                        'remote_available': True,
+                        'requires_confirmation': True,
+                        'reason': 'PlantUML 本地环境未就绪。默认禁止静默联网上传图表源码。',
                     })
             elif engine == 'tikz':
                 html_out = diagrams.format_tikz_html(code)
@@ -2705,14 +2777,22 @@ class Handler(BaseHTTPRequestHandler):
             self._send_api_error(500, 'conversion_failed')
 
     def _api_convert_batch(self):
-        n = int(self.headers.get('Content-Length', 0) or 0)
         try:
-            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            n = int(self.headers.get('Content-Length', 0) or 0)
+        except (TypeError, ValueError):
+            self._send_api_error(400, 'invalid_content_length')
+            return
+        if n < 0 or n > 64 * 1024:
+            self.close_connection = True
+            self._send_api_error(413, 'request_too_large')
+            return
+        try:
+            body = json.loads(self._read_request_body_limited(n, 64 * 1024).decode('utf-8')) if n else {}
         except Exception:
-            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求格式错误'})
+            self._send_api_error(400, 'invalid_request')
             return
         if body.get('confirm') is not True:
-            self._send_json(400, {'ok': False, 'code': 'confirmation_required'})
+            self._send_api_error(400, 'confirmation_required')
             return
         paths = [p for p in (body.get('paths') or [])
                  if isinstance(p, str) and os.path.isfile(p)]
@@ -2729,7 +2809,7 @@ class Handler(BaseHTTPRequestHandler):
         if is_win7():
             paths = [p for p in paths if os.path.splitext(p)[1].lower() in WIN7_CONVERT_EXTS]
         if not paths:
-            self._send_json(400, {'ok': False, 'error_code': 'no_convertible_files', 'error': '没有可转换的文件'})
+            self._send_api_error(400, 'no_convertible_files')
             return
         if not self._module_ready('convert', '转换模块加载中，请稍候再试'):
             return
@@ -2738,29 +2818,72 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {'job': jid, 'total': len(paths)})
         except Exception as e:
             logging.exception('convert batch start failed')
-            self._send_json(500, {'ok': False, 'error_code': 'batch_start_failed',
-                                  'error': '批量转换启动失败：%s' % e})
+            self._send_api_error(500, 'batch_start_failed')
 
     def _api_batch_extract_zip(self):
+        """Extract a user-selected ZIP without leaking paths or exceptions.
+
+        The HTTP endpoint accepts binary uploads and, for backwards
+        compatibility, JSON paths that are already inside the app/data roots.
+        Native file-dialog paths continue through the pywebview bridge where
+        the user explicitly selected the file.
+        """
         try:
             ctype = self.headers.get('Content-Type', '')
             n = int(self.headers.get('Content-Length', 0) or 0)
             from src.readmd_modules.convert import extract_zip_archive
             dest_dir = os.path.join(DATA_DIR, 'temp_zip')
             if 'application/zip' in ctype or 'octet-stream' in ctype:
-                data = self.rfile.read(n) if n else b''
+                # Binary uploads cannot carry the JSON confirmation field;
+                # require the equivalent explicit header so a background POST
+                # can never create extracted files silently.
+                if self.headers.get('X-ReadMD-Confirm', '').strip().lower() != 'true':
+                    self._send_api_error(400, 'confirmation_required')
+                    return
+                if n < 0 or n > self.MAX_ZIP_REQUEST_BYTES:
+                    self.close_connection = True
+                    self._send_api_error(413, 'zip_archive_too_large')
+                    return
+                try:
+                    data = self._read_request_body_limited(n, self.MAX_ZIP_REQUEST_BYTES)
+                except ValueError as exc:
+                    code = str(exc)
+                    status = 413 if code == 'request_too_large' else 400
+                    if status == 413:
+                        self.close_connection = True
+                    self._send_api_error(status, code)
+                    return
                 res = extract_zip_archive(data, base_temp_dir=dest_dir)
             else:
+                if n < 0 or n > 64 * 1024:
+                    self.close_connection = True
+                    self._send_api_error(413, 'request_too_large')
+                    return
                 body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+                if body.get('confirm') is not True:
+                    self._send_api_error(400, 'confirmation_required')
+                    return
                 zip_path = body.get('path', '')
-                if not zip_path or not os.path.isfile(zip_path):
-                    self._send_json(400, {'ok': False, 'error_code': 'invalid_zip_path', 'error': '无效的 ZIP 文件路径'})
+                try:
+                    zip_path = validate_file_path(
+                        zip_path,
+                        allowed_extensions=['.zip'],
+                        allowed_dirs=[DATA_DIR, APP_DIR],
+                    )
+                except Exception:
+                    self._send_api_error(400, 'invalid_zip_path')
                     return
                 res = extract_zip_archive(zip_path, base_temp_dir=dest_dir)
             self._send_json(200, res)
+        except ValueError as e:
+            code = str(e) if str(e) in {
+                'zip_archive_too_large', 'zip_entry_count_exceeded',
+                'invalid_zip_path',
+            } else 'zip_extract_failed'
+            self._send_api_error(422, code, paths=[], skipped=0, total=0)
         except Exception as e:
             logging.exception('api_batch_extract_zip failed')
-            self._send_json(500, {'ok': False, 'error_code': 'zip_extract_failed', 'error': str(e), 'paths': [], 'skipped': 0, 'total': 0})
+            self._send_api_error(500, 'zip_extract_failed', paths=[], skipped=0, total=0)
 
     def _api_convert_progress(self, jid):
         job = _CONVERT_JOBS.get(jid or '')
@@ -2958,11 +3081,12 @@ class Handler(BaseHTTPRequestHandler):
     def _do_save(self):
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
-            body = json.loads(self.rfile.read(n).decode('utf-8'))
+            raw_body = self._read_request_body_limited(n, 50 * 1024 * 1024)
+            body = json.loads(raw_body.decode('utf-8'))
         except Exception:
             self._send_json(400, {'error': '无效请求'})
             return
-        path = body.get('path') or ''
+        path = body.get('path') or body.get('file') or ''
         content = body.get('content') or ''
         enc = body.get('encoding') or 'utf-8'
         expected_mtime = body.get('expected_mtime')
@@ -2970,6 +3094,15 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(400, {'error': '缺少文件路径'})
             return
         safe_path = os.path.realpath(os.path.normpath(path))
+        origin_path = body.get('origin_path') or body.get('source_file')
+        if origin_path:
+            safe_origin = os.path.realpath(os.path.normpath(origin_path))
+            if safe_origin in self.server.authorized_save_paths:
+                # 仅允许在已被授权的原文件同目录下，保存派生的 AI 副本文件（例如 AI-foo.md, AI2-foo.md）
+                if os.path.dirname(safe_path) == os.path.dirname(safe_origin):
+                    base_target = os.path.basename(safe_path)
+                    if re.match(r'^AI\d*-', base_target) and os.path.splitext(safe_path)[1].lower() in SAVE_EXTENSIONS:
+                        self.server.authorized_save_paths.add(safe_path)
         if (safe_path not in self.server.authorized_save_paths
                 or os.path.splitext(safe_path)[1].lower() not in SAVE_EXTENSIONS):
             self._send_json(403, {'error': '文件未被授权保存'})
@@ -3709,15 +3842,25 @@ class Api(object):
                         'engine': engine,
                         'requires_network': False,
                     }
-                # The WebView CSP forbids remote <img> sources, so fetch the
-                # SVG server-side (honors system proxies) and return markup
-                # like any other server-rendered diagram.
+                allow_remote = False
+                if isinstance(options, dict):
+                    allow_remote = bool(options.get('allow_remote'))
+                elif isinstance(options, bool):
+                    allow_remote = options
+                if allow_remote:
+                    return {
+                        'ok': True,
+                        'type': 'svg',
+                        'svg': diagrams.fetch_plantuml_svg(code),
+                        'engine': engine,
+                        'requires_network': True,
+                    }
                 return {
-                    'ok': True,
-                    'type': 'svg',
-                    'svg': diagrams.fetch_plantuml_svg(code),
-                    'engine': engine,
-                    'requires_network': True,
+                    'ok': False,
+                    'error_code': 'diagram_dependency_missing',
+                    'remote_available': True,
+                    'requires_confirmation': True,
+                    'reason': 'PlantUML 本地环境未就绪。默认禁止静默联网上传图表源码。',
                 }
             elif engine in ('wsd', 'd2', 'ditaa'):
                 # No pinned, redistributable offline renderer in this release;
@@ -3791,7 +3934,7 @@ class Api(object):
             return extract_zip_archive(zip_path, base_temp_dir=dest_dir)
         except Exception as e:
             logging.exception('extract_zip_batch failed')
-            return {'ok': False, 'error_code': 'zip_extract_failed', 'error': str(e), 'paths': [], 'skipped': 0, 'total': 0}
+            return {'ok': False, 'error_code': 'zip_extract_failed', 'paths': [], 'skipped': 0, 'total': 0}
 
     def export_presentation(self, content, theme='black', transition='slide', save=False):
         """生成 Reveal.js 演示文稿 HTML。
@@ -4385,7 +4528,6 @@ class Api(object):
         status = self._pet_controller.snapshot()
         status['model'] = self._pet_model_status()
         status['adapter'] = self._pet_launcher.status()
-        status['adapter_dir'] = os.path.join(DATA_DIR, 'pet', 'hermes-adapter')
         prefs = self._pet_preferences()
         status['preferences'] = dict(prefs['info'], renderer=prefs['renderer'])
         return status

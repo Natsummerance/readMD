@@ -34,7 +34,29 @@ function makeEditor(text = '# 测试文档') {
   };
 }
 
+const zhBundle = JSON.parse(fs.readFileSync(path.join(extDir, 'l10n', 'bundle.l10n.zh-cn.json'), 'utf-8'));
+const enBundle = JSON.parse(fs.readFileSync(path.join(extDir, 'l10n', 'bundle.l10n.json'), 'utf-8'));
+
 const vscodeStub = {
+  l10n: {
+    t: (opts, ...args) => {
+      const key = opts && opts.key;
+      const isZh = vscodeStub.env && typeof vscodeStub.env.language === 'string' && vscodeStub.env.language.startsWith('zh');
+      const bundle = isZh ? zhBundle : enBundle;
+      if (key && bundle[key]) {
+        let msg = bundle[key];
+        if (opts.args) {
+          for (const [k, v] of Object.entries(opts.args)) {
+            msg = msg.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v));
+          }
+        }
+        return msg;
+      }
+      if (typeof opts === 'string') return opts;
+      if (opts && opts.message) return opts.message;
+      return '';
+    },
+  },
   commands: {
     registerCommand: (id, handler) => { registered[id] = handler; return { dispose() {} }; },
     executeCommand: async (id, ...args) => {
@@ -327,4 +349,23 @@ test('fetchWebToMarkdown requires an http(s) URL and renders the fetched doc', a
   vscodeStub.window.showInputBox = originalShowInputBox;
   assert.ok(validateResult, 'invalid URL must be rejected by validateInput');
   assert.strictEqual(errors.length, 0);
+});
+
+test('l10n bundle resolves English messages when vscode environment language is English', async () => {
+  freshState();
+  fakeBridgeInstance.listProviders = async () => [{ id: 'custom:test', name: 'Test Provider', credential_id: 'cred:abc12345', has_key: true, models: ['mock-a'] }];
+  const prevLang = vscodeStub.env.language;
+  vscodeStub.env.language = 'en';
+  try {
+    bridgeCalls.aiChatStreamingResult = 'cancelled';
+    activateExtension();
+    const workflow = { label: 'readmd-summary', description: 'summary', skillId: 'readmd-summary' };
+    const provider = { label: 'Test Provider', description: 'Configured credentials', value: { id: 'custom:test', credential_id: 'cred:abc12345', models: ['mock-a'] } };
+    quickPickQueue.push(workflow, provider);
+    await registered['readmd.openAiWorkbench']();
+    assert.ok(messages.some(m => m === 'ReadMD AI generation was cancelled'),
+      `expected English cancellation message, got: ${messages.join(' | ')}`);
+  } finally {
+    vscodeStub.env.language = prevLang;
+  }
 });

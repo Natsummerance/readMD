@@ -1,0 +1,16 @@
+{
+  "id": "readmd-style-custom",
+  "version": "1.0.0",
+  "scope": "builtin",
+  "readmd": {
+    "variables": ["document", "selection", "request", "language", "context", "output_format"],
+    "capabilities": ["style-generation"],
+    "permissions": [],
+    "output": "json"
+  },
+  "provenance": {
+    "source": "ReadMD original adaptation",
+    "license": "MIT",
+    "source_files": ["SKILL.md", "readmd.skill.json"]
+  }
+}

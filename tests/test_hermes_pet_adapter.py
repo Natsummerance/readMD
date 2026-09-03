@@ -233,6 +233,7 @@ def test_launcher_uses_an_external_adapter_dir_without_bloating_the_app(tmp_path
 
     assert launcher.adapter_dir == external.resolve()
     assert launcher.status()["available"] is False
+    assert "bridge_path" not in launcher.status()
 
 
 def _write_plugin_archive(path, *, corrupt=False):

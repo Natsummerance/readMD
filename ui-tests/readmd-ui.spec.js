@@ -143,7 +143,10 @@ test('select controls expose their localized selected action', async ({ page }) 
     ];
     renderTplList();
   });
-  const firstTemplate = page.locator('#tpl-list li').first();
+  // Group headings are presentation-only list children; target the first
+  // selectable option so keyboard assertions remain stable as categories
+  // are added to the Skill workbench.
+  const firstTemplate = page.locator('#tpl-list li[role="option"]').first();
   await firstTemplate.focus();
   await page.keyboard.press('Enter');
   await expect(firstTemplate).toHaveAttribute('aria-selected', 'true');

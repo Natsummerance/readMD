@@ -1,6 +1,6 @@
 {
   "name": "readmd-harmonyos",
-  "version": "2.3.8-preview.1",
+  "version": "2.3.8",
   "description": "ReadMD for HarmonyOS NEXT & OpenHarmony",
   "main": "index.ets",
   "author": "Natsummerance",

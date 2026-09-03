@@ -709,6 +709,11 @@ def _doc2docx_word_com(src, out_dir, timeout=30):
             return dq.val[1]
         return None
 
+    # 默认禁用真实 Word COM 外部进程调用，彻底杜绝任何 Microsoft 登录、激活、许可协议弹窗
+    enable_com = os.environ.get('READMD_ENABLE_WORD_COM', '').strip().lower()
+    if enable_com not in ('1', 'true', 'yes', 'on'):
+        return None
+
     import multiprocessing
     q = multiprocessing.Queue()
     p = multiprocessing.Process(target=_word_com_process_worker, args=(src, out_dir, q))
@@ -731,6 +736,11 @@ def _doc2docx_word_com(src, out_dir, timeout=30):
             p.terminate()
         finally:
             p.join(timeout=3)
+            try:
+                q.close()
+                q.join_thread()
+            except Exception:
+                pass
         return None
 
     # ``Queue.empty()`` is racy because the feeder thread may not have flushed
@@ -764,12 +774,223 @@ def _doc2docx_soffice(src, out_dir):
     return out if os.path.isfile(out) else None
 
 
+def _classify_doc_heading(line):
+    """根据中文序号、数字序号及独立短行推断标题层级（1-3 级），非标题返回 None。"""
+    import re
+    line = line.strip()
+    if not line or len(line) > 60:
+        return None
+    # 列表项不判定为标题
+    if re.match(r'^[\u2022\u00b7\*\-]\s+', line):
+        return None
+    # 1 级标题：第X章/篇/卷、一、大写数字序号
+    if re.match(r'^(第[一二三四五六七八九十百0-9]+[章篇部卷]|一[、\.\s]|[0-9]{1,2}[\.\s、]\s*[\u4e00-\u9fa5A-Za-z])', line):
+        return 1
+    # 3 级标题：1.1.1、(1)、1)
+    if re.match(r'^([0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}[\.\s、]|（[0-9]+）|\([0-9]+\)|[0-9]{1,2}\))', line):
+        return 3
+    # 2 级标题：第X节/条、1.1、(一)
+    if re.match(r'^(第[一二三四五六七八九十0-9]+[节条]|[0-9]{1,2}\.[0-9]{1,2}[\.\s、]|（[一二三四五六七八九十]+）|\([一二三四五六七八九十]+\))', line):
+        return 2
+    # 独立短行（<=30字符且无句尾终止标点）
+    if len(line) <= 30 and not line.endswith(('。', '！', '？', '.', '!', '?', '；', ';', '，', ',')):
+        return 2
+    return None
+
+
+def _extract_worddocument_stream(data):
+    """从 OLE2 (CFBF) 复合文档中提取真正的 WordDocument 二进制流。"""
+    import struct
+    if len(data) < 512 or data[:8] != OLE2_MAGIC:
+        return None
+    try:
+        sector_shift = struct.unpack_from('<H', data, 30)[0]
+        sector_size = 1 << sector_shift
+        fat_sectors_count = struct.unpack_from('<I', data, 44)[0]
+        first_dir_sector = struct.unpack_from('<I', data, 48)[0]
+
+        fat_entries_per_sector = sector_size // 4
+        fat = []
+        for i in range(min(109, fat_sectors_count)):
+            sec_id = struct.unpack_from('<I', data, 76 + i * 4)[0]
+            if sec_id >= 0xFFFFFFFA:
+                continue
+            offset = 512 + sec_id * sector_size
+            if offset + sector_size <= len(data):
+                sec_data = data[offset:offset + sector_size]
+                fat.extend(struct.unpack('<%dI' % fat_entries_per_sector, sec_data))
+
+        def get_stream(start_sec, size):
+            stream_bytes = bytearray()
+            cur = start_sec
+            visited = set()
+            while cur < len(fat) and cur < 0xFFFFFFFA and len(stream_bytes) < size and cur not in visited:
+                visited.add(cur)
+                offset = 512 + cur * sector_size
+                chunk = data[offset:offset + min(sector_size, size - len(stream_bytes))]
+                stream_bytes.extend(chunk)
+                cur = fat[cur]
+            return bytes(stream_bytes)
+
+        dir_data = get_stream(first_dir_sector, 65536)
+        if not dir_data:
+            return None
+
+        for i in range(0, len(dir_data), 128):
+            entry = dir_data[i:i + 128]
+            if len(entry) < 128:
+                break
+            name_len = struct.unpack_from('<H', entry, 64)[0]
+            if name_len <= 2:
+                continue
+            name_raw = entry[:name_len - 2]
+            try:
+                name = name_raw.decode('utf-16le')
+            except Exception:
+                continue
+            if name == 'WordDocument':
+                start_sec = struct.unpack_from('<I', entry, 116)[0]
+                size = struct.unpack_from('<I', entry, 120)[0]
+                return get_stream(start_sec, size)
+    except Exception:
+        pass
+    return None
+
+
+def _parse_doc_stream_to_md(stream_data):
+    """解析 MS-DOC 数据流为结构化 Markdown（含原生管道表格、层级标题与列表）。"""
+    import re
+
+    text = ''
+    if b'\x07\x00' in stream_data or stream_data.count(b'\x00') > len(stream_data) // 4:
+        text = stream_data.decode('utf-16le', errors='ignore')
+    else:
+        for enc in ('utf-8', 'gb18030', 'cp1252', 'latin1'):
+            try:
+                text = stream_data.decode(enc)
+                break
+            except Exception:
+                continue
+
+    if not text or len(text.strip()) < 4:
+        return ''
+
+    # 校验有效文本比例，防止对随机二进制或损坏数据伪造解析成功
+    valid_chars = sum(1 for ch in text if ('\u4e00' <= ch <= '\u9fa5') or (32 <= ord(ch) <= 126) or ch in '\t\r\n\x07')
+    if (valid_chars / len(text)) < 0.65:
+        return ''
+
+    # 清洗 Word 控制字符（保留 \x07 单元格截断符、\t 制表符、\r\n 换行符）
+    cleaned_chars = []
+    for ch in text:
+        code = ord(ch)
+        if ch in ('\x07', '\t', '\r', '\n') or code >= 32:
+            cleaned_chars.append(ch)
+        else:
+            cleaned_chars.append(' ')
+    text = ''.join(cleaned_chars)
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+    raw_lines = text.split('\n')
+
+    md_blocks = []
+    current_table = []
+
+    def flush_table():
+        nonlocal current_table, md_blocks
+        if not current_table:
+            return
+        valid_rows = []
+        for r in current_table:
+            cells = [c.strip() for c in r]
+            if any(cells):
+                valid_rows.append(cells)
+        current_table = []
+        if not valid_rows:
+            return
+
+        max_cols = max(len(r) for r in valid_rows)
+        if max_cols >= 2:
+            tbl_lines = []
+            header = valid_rows[0] + [''] * (max_cols - len(valid_rows[0]))
+            tbl_lines.append('| ' + ' | '.join(header) + ' |')
+            tbl_lines.append('| ' + ' | '.join(['---'] * max_cols) + ' |')
+            for r in valid_rows[1:]:
+                padded = r + [''] * (max_cols - len(r))
+                tbl_lines.append('| ' + ' | '.join(padded) + ' |')
+            md_blocks.append('\n'.join(tbl_lines))
+        else:
+            for r in valid_rows:
+                md_blocks.append(' '.join(r))
+
+    for line in raw_lines:
+        line_clean = line.strip()
+        if not line_clean:
+            flush_table()
+            continue
+
+        if line_clean.startswith(('Root Entry', 'WordDocument', 'SummaryInformation', 'DocumentSummaryInformation', 'CompObj', 'Normal.dot')):
+            continue
+
+        if '\x07' in line:
+            parts = line.split('\x07')
+            cells = []
+            for p in parts:
+                p_text = p.strip().replace('|', '\\|')
+                p_text = re.sub(r'[ \t]+', ' ', p_text)
+                cells.append(p_text)
+            if len(cells) > 1 and not cells[-1]:
+                cells.pop()
+            if any(cells):
+                current_table.append(cells)
+            continue
+
+        flush_table()
+
+        if re.match(r'^[\u2022\u00b7\*\-]\s+', line_clean):
+            item_txt = re.sub(r'^[\u2022\u00b7\*\-]\s*', '', line_clean)
+            md_blocks.append('- ' + item_txt)
+            continue
+
+        lvl = _classify_doc_heading(line_clean)
+        if lvl:
+            clean_title = re.sub(r'^[#\s]+', '', line_clean)
+            md_blocks.append('#' * lvl + ' ' + clean_title)
+        elif re.match(r'^[0-9]+[\.\s、]\s*', line_clean):
+            md_blocks.append(line_clean)
+        else:
+            md_blocks.append(line_clean)
+
+    flush_table()
+    return '\n\n'.join(md_blocks)
+
+
+def _doc_extract_text_pure_python(path):
+    """Word 97-2003 .doc 纯 Python 内置流与表格解析器。无需任何外部依赖，0 弹窗。"""
+    try:
+        with open(path, 'rb') as f:
+            data = f.read()
+    except Exception:
+        return ''
+    if not data or len(data) < 512 or data[:8] != OLE2_MAGIC:
+        return ''
+
+    # 1. 尝试从 CFBF 目录结构中精确提取 WordDocument 流
+    stream_data = _extract_worddocument_stream(data)
+    if stream_data:
+        md = _parse_doc_stream_to_md(stream_data)
+        if md and md.strip():
+            return md.strip()
+    return ''
+
+
 def doc2md(path, form_tables=True):
-    """Word 97-2003 .doc 专用解析：magic bytes 校验 → Word COM → soffice 兜底。
+    """Word 97-2003 .doc 专用解析：magic bytes 校验 → Word COM / soffice → 内置纯 Python 流提取。
 
     返回 (text, error)；error 为 None 表示成功。
     """
     try:
+        if os.path.getsize(path) > 50 * 1024 * 1024:
+            return '', 'doc-file-too-large: .doc 文件大小超过 50MB 上限'
         with open(path, 'rb') as f:
             magic = f.read(8)
     except OSError as e:
@@ -786,9 +1007,15 @@ def doc2md(path, form_tables=True):
                 continue
             if out and os.path.isfile(out):
                 return docx2md(out, form_tables=form_tables), None
+
+    # 内置纯 Python 文本流与表格提取（0 外部依赖，0 弹窗，开箱即用）
+    pure_text = _doc_extract_text_pure_python(path)
+    if pure_text and pure_text.strip():
+        return pure_text.strip() + '\n', None
+
     if last is not None:
         return '', 'doc-convert-failed：转换引擎执行失败（%s）' % last
-    return '', 'doc-no-engine：本机未找到可用的 DOC 转换引擎（需要安装 Microsoft Word 或 LibreOffice）'
+    return '', 'doc-no-engine: unsupported_format: 无法可靠解析该 .doc 文档（文件损坏、受保护或不是有效的 Word 97-2003 格式）'
 
 
 def _markitdown_convert(path):
@@ -1826,100 +2053,138 @@ def extract_zip_archive(zip_source, base_temp_dir=None):
         'limit_exceeded': 0
     }
 
-    if isinstance(zip_source, (bytes, bytearray)):
-        if len(zip_source) > MAX_ZIP_SIZE:
-            raise ValueError('zip_archive_too_large')
-        zf_ctx = zipfile.ZipFile(io.BytesIO(zip_source))
-    else:
-        if os.path.isfile(zip_source) and os.path.getsize(zip_source) > MAX_ZIP_SIZE:
-            raise ValueError('zip_archive_too_large')
-        zf_ctx = zipfile.ZipFile(zip_source, 'r')
+    try:
+        if isinstance(zip_source, (bytes, bytearray)):
+            if len(zip_source) > MAX_ZIP_SIZE:
+                raise ValueError('zip_archive_too_large')
+            zf_ctx = zipfile.ZipFile(io.BytesIO(zip_source))
+        else:
+            if os.path.isfile(zip_source) and os.path.getsize(zip_source) > MAX_ZIP_SIZE:
+                raise ValueError('zip_archive_too_large')
+            zf_ctx = zipfile.ZipFile(zip_source, 'r')
+    except Exception:
+        # A corrupt/oversized archive must not leave an empty extraction run
+        # behind.  The caller receives the stable error while the temp root
+        # remains free of abandoned directories.
+        shutil.rmtree(target_dir, ignore_errors=True)
+        raise
 
     total_uncompressed = 0
     total_entries = 0
 
-    with zf_ctx as zf:
-        infolist = zf.infolist()
-        # Bound central-directory metadata before iterating.  This prevents a
-        # metadata-only archive from creating an unbounded Python object list.
-        if len(infolist) > MAX_FILE_COUNT * 4:
-            raise ValueError('zip_entry_count_exceeded')
-        total_entries = len(infolist)
-        for info in infolist:
-            if info.is_dir():
-                continue
+    extraction_completed = False
+    try:
+        with zf_ctx as zf:
+            infolist = zf.infolist()
+            # Bound central-directory metadata before iterating.  This prevents a
+            # metadata-only archive from creating an unbounded Python object list.
+            if len(infolist) > MAX_FILE_COUNT * 4:
+                raise ValueError('zip_entry_count_exceeded')
+            total_entries = len(infolist)
+            for info in infolist:
+                if info.is_dir():
+                    continue
 
-            # 1. 拒绝符号链接、设备文件与 FIFO
-            mode = (info.external_attr >> 16) & 0o170000
-            if mode != 0 and mode != 0o100000:  # 0o100000 is regular file
-                skipped_count += 1
-                skipped_reasons['unsafe_file_type'] += 1
-                continue
+                # 1. 拒绝符号链接、设备文件与 FIFO
+                mode = (info.external_attr >> 16) & 0o170000
+                if mode != 0 and mode != 0o100000:  # 0o100000 is regular file
+                    skipped_count += 1
+                    skipped_reasons['unsafe_file_type'] += 1
+                    continue
 
-            # 2. 数量与解压总容量上限
-            if len(extracted_files) >= MAX_FILE_COUNT or (total_uncompressed + info.file_size) > MAX_TOTAL_UNCOMPRESSED:
-                skipped_count += 1
-                skipped_reasons['limit_exceeded'] += 1
-                continue
+                # 2. 数量与解压总容量上限
+                if len(extracted_files) >= MAX_FILE_COUNT or (total_uncompressed + info.file_size) > MAX_TOTAL_UNCOMPRESSED:
+                    skipped_count += 1
+                    skipped_reasons['limit_exceeded'] += 1
+                    continue
 
-            raw_name = info.filename
-            if not (info.flag_bits & 0x800):
+                raw_name = info.filename
+                if not (info.flag_bits & 0x800):
+                    try:
+                        raw_bytes = raw_name.encode('cp437')
+                        for enc in ('gbk', 'utf-8', 'gb18030', 'big5'):
+                            try:
+                                raw_name = raw_bytes.decode(enc)
+                                break
+                            except UnicodeDecodeError:
+                                pass
+                    except Exception:
+                        pass
+
+                # Validate the archive name before normalising it.  Stripping a
+                # leading slash first would silently turn absolute and UNC names
+                # into apparently safe relative paths.
+                archive_name = str(raw_name).replace('\\', '/')
+                drive, _ = ntpath.splitdrive(archive_name)
+                normalized_name = posixpath.normpath(archive_name)
+                if (archive_name.startswith('/') or archive_name.startswith('//')
+                        or bool(drive) or normalized_name in ('.', '..')
+                        or normalized_name.startswith('../')):
+                    skipped_count += 1
+                    skipped_reasons['invalid_path'] += 1
+                    continue
+                clean_name = normalized_name
+
+                # 3. 路径深度限制
+                parts = [p for p in clean_name.replace('\\', '/').split('/') if p and p != '.']
+                if len(parts) > MAX_PATH_DEPTH:
+                    skipped_count += 1
+                    skipped_reasons['invalid_path'] += 1
+                    continue
+
+                # 4. 支持格式过滤
+                ext = os.path.splitext(clean_name)[1].lower()
+                if ext not in SUPPORTED_EXTS:
+                    skipped_count += 1
+                    skipped_reasons['unsupported_format'] += 1
+                    continue
+
+                dest_file = os.path.realpath(os.path.abspath(os.path.join(target_dir, clean_name)))
+                if not dest_file.startswith(target_dir + os.sep) and dest_file != target_dir:
+                    skipped_count += 1
+                    skipped_reasons['invalid_path'] += 1
+                    continue
+
+                os.makedirs(os.path.dirname(dest_file), exist_ok=True)
+                written = 0
+                over_limit = False
                 try:
-                    raw_bytes = raw_name.encode('cp437')
-                    for enc in ('gbk', 'utf-8', 'gb18030', 'big5'):
+                    with zf.open(info) as src, open(dest_file, 'wb') as dst:
+                        while True:
+                            chunk = src.read(65536)
+                            if not chunk:
+                                break
+                            written += len(chunk)
+                            # Do not trust the central-directory size alone: a
+                            # malformed archive can advertise a small size and
+                            # expand much further while being streamed.
+                            if total_uncompressed + written > MAX_TOTAL_UNCOMPRESSED:
+                                over_limit = True
+                                break
+                            dst.write(chunk)
+                finally:
+                    if over_limit:
                         try:
-                            raw_name = raw_bytes.decode(enc)
-                            break
-                        except UnicodeDecodeError:
+                            os.remove(dest_file)
+                        except OSError:
                             pass
-                except Exception:
-                    pass
 
-            # Validate the archive name before normalising it.  Stripping a
-            # leading slash first would silently turn absolute and UNC names
-            # into apparently safe relative paths.
-            archive_name = str(raw_name).replace('\\', '/')
-            drive, _ = ntpath.splitdrive(archive_name)
-            normalized_name = posixpath.normpath(archive_name)
-            if (archive_name.startswith('/') or archive_name.startswith('//')
-                    or bool(drive) or normalized_name in ('.', '..')
-                    or normalized_name.startswith('../')):
-                skipped_count += 1
-                skipped_reasons['invalid_path'] += 1
-                continue
-            clean_name = normalized_name
+                if over_limit:
+                    skipped_count += 1
+                    skipped_reasons['limit_exceeded'] += 1
+                    continue
+                if os.path.isfile(dest_file):
+                    extracted_files.append(dest_file)
+                    total_uncompressed += written
+        extraction_completed = True
+    finally:
+        if not extraction_completed:
+            shutil.rmtree(target_dir, ignore_errors=True)
 
-            # 3. 路径深度限制
-            parts = [p for p in clean_name.replace('\\', '/').split('/') if p and p != '.']
-            if len(parts) > MAX_PATH_DEPTH:
-                skipped_count += 1
-                skipped_reasons['invalid_path'] += 1
-                continue
-
-            # 4. 支持格式过滤
-            ext = os.path.splitext(clean_name)[1].lower()
-            if ext not in SUPPORTED_EXTS:
-                skipped_count += 1
-                skipped_reasons['unsupported_format'] += 1
-                continue
-
-            dest_file = os.path.realpath(os.path.abspath(os.path.join(target_dir, clean_name)))
-            if not dest_file.startswith(target_dir + os.sep) and dest_file != target_dir:
-                skipped_count += 1
-                skipped_reasons['invalid_path'] += 1
-                continue
-
-            os.makedirs(os.path.dirname(dest_file), exist_ok=True)
-            with zf.open(info) as src, open(dest_file, 'wb') as dst:
-                while True:
-                    chunk = src.read(65536)
-                    if not chunk:
-                        break
-                    dst.write(chunk)
-
-            if os.path.isfile(dest_file):
-                extracted_files.append(dest_file)
-                total_uncompressed += info.file_size
+    if not extracted_files:
+        # Do not retain empty run directories for archives that contain only
+        # unsupported or unsafe members.
+        shutil.rmtree(target_dir, ignore_errors=True)
 
     return {
         'ok': True,

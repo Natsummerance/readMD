@@ -1,7 +1,7 @@
 package:
   id: io.github.natsummerance.readmd
   name: ReadMD
-  version: 2.3.8.1
+  version: 2.3.8.0
   kind: app
   description: |
     ReadMD 是全功能、本地隐私优先的 Markdown 阅读、编辑与排版套件。

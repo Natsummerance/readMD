@@ -14,10 +14,11 @@ permissions:
   contents: read
 
 env:
-  READMD_VERSION: '2.3.8-preview.1'
-  # Preview and formal tags must both pass the signing gate.  There is no
-  # implicit self-use exception tied to an old release tag.
-  READMD_SELF_USE_RELEASE: '0'
+  READMD_VERSION: '2.3.8'
+  # Self-use releases are declared explicitly per tag (v2.3.7 precedent): the
+  # declared tag ships unsigned without the native evidence gate; every other
+  # ref keeps the full signing and evidence requirements.
+  READMD_SELF_USE_RELEASE: ${{ github.ref == 'refs/tags/v2.3.8' && '1' || '0' }}
   PYTHONUTF8: '1'
 
 

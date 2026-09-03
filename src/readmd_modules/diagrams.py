@@ -241,11 +241,12 @@ def get_diagram_capabilities() -> Dict[str, object]:
 
     local_plantuml = has_local_plantuml()
     capabilities["plantuml"] = {
-        "available": True,
-        "offline": local_plantuml,
+        "available": bool(local_plantuml),
+        "offline": bool(local_plantuml),
         "renderer": "java" if local_plantuml else "remote",
         "requires_network": not local_plantuml,
-        "reason": "" if local_plantuml else "diagram_online_renderer",
+        "remote_available": True,
+        "reason": "" if local_plantuml else "diagram_dependency_missing",
     }
     capabilities["puml"] = dict(capabilities["plantuml"])
     # WebSequenceDiagrams is intentionally not mapped to PlantUML: the two
@@ -267,7 +268,8 @@ def get_diagram_capabilities() -> Dict[str, object]:
         "requires_network": False,
         "reason": "diagram_engine_unavailable",
     }
-    return {"schema_version": 1, "offline": True, "engines": capabilities}
+    all_offline = all(bool(e.get("offline")) for e in capabilities.values() if e.get("available"))
+    return {"schema_version": 1, "offline": all_offline, "engines": capabilities}
 
 
 def render_vega_svg(spec_text: str, language: str = "vega-lite", timeout: float = 12.0) -> str:
@@ -317,7 +319,11 @@ process.stdin.on('end', async () => {
   try {
     const source = JSON.parse(raw);
     const compiled = language === 'vega-lite' ? vegaLite.compile(source).spec : source;
-    const view = new vega.View(vega.parse(compiled), { renderer: 'none' });
+    const loader = (typeof vega.loader === 'function')
+      ? vega.loader({ load: () => Promise.reject(new Error('external data loading blocked in offline mode')) })
+      : undefined;
+    const view = new vega.View(vega.parse(compiled), { renderer: 'none', loader });
+    await view.runAsync();
     const svg = await view.toSVG();
     process.stdout.write(String(svg || ''));
   } catch (_) {
@@ -361,7 +367,7 @@ def format_tikz_html(tikz_code: str) -> str:
 def identify_diagram_blocks(markdown: str) -> List[Dict[str, any]]:
     """扫描 Markdown 中的所有专业图表代码块。"""
     pattern = re.compile(
-    r'```(mermaid|puml|plantuml|wsd|wavedrom|bitfield|viz|dot|vega|vega-lite|chart|chartjs|chart\.js|d2|tikz)\b[^\n]*\n([\s\S]*?)```',
+        r'```(mermaid|plantuml|puml|wsd|wavedrom|bitfield|viz|dot|vega-lite|vega|chart\.js|chartjs|chart|d2|tikz)\b[^\n]*\n([\s\S]*?)```',
         re.IGNORECASE
     )
     diagrams = []

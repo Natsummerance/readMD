@@ -860,7 +860,7 @@
   "toast.noEditableContent": "No editable content",
   "toast.noModelsReturned": "No models returned by endpoint",
   "toast.noPasteText": "No pasteable text in clipboard",
-  "toast.noTextSelectionNotice": "No text selected, processing entire document",
+  "toast.noTextSelectionNotice": "Please select text in the document first",
   "toast.notSaved": "Not saved",
   "toast.searchNeedsDocument": "Open a document first, then press Ctrl+F to search",
   "toast.ocrFail": "OCR recognition failed",
@@ -1176,5 +1176,9 @@
   "tpl.groupContent": "Content",
   "tpl.groupLifecycle": "Save & Publish",
   "tpl.groupExport": "Export",
-  "batch.zipSkipped": "Skipped {count} unsupported file(s)"
+  "batch.zipSkipped": "Skipped {count} unsupported file(s)",
+  "styleai.invalidJson": "The AI response is not valid style JSON",
+  "pet.statusInstallHint": "The external runtime is not installed",
+  "pet.statusStopped": "Ready",
+  "pet.statusRunning": "Enabled"
 }

@@ -2,7 +2,7 @@
   "name": "readmd-vscode",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "2.3.8-preview.1",
+  "version": "2.3.8",
   "publisher": "Natsummerance",
   "icon": "icon.png",
   "license": "MIT",
@@ -37,6 +37,7 @@
     "mcp"
   ],
   "main": "./out/extension.js",
+  "l10n": "./l10n",
   "activationEvents": [
     "onLanguage:markdown",
     "onCommand:readmd.openAiWorkbench",

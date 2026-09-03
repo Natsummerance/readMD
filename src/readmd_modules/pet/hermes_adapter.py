@@ -153,7 +153,9 @@ class HermesPetLauncher:
         app = self.adapter_dir / "app" / "package.json"
         return {
             "available": os.name == "nt" and runtime.is_file() and app.is_file(),
-            "bridge_path": str(self._bridge.state_path),
+            # The bridge path is an implementation detail.  Returning it from
+            # the public status API would expose the user's data directory.
+            "bridge_ready": self._bridge.state_path.is_file(),
             "running": self._process is not None and self._process.poll() is None,
         }
 

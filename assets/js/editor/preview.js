@@ -23,6 +23,7 @@ function syncSavedTab(path, content) {
   tab.fixed = content;
   tab.fixes = [];
   tab.isDirty = false;
+  tab.externalChanged = false;
 }
 
 function applySavedMtime(result) {
@@ -58,6 +59,9 @@ function getEditContent() {
 function setPvLayout(layout) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (['none', 'left', 'right', 'bottom', 'top'].indexOf(layout) < 0) layout = 'none';
+  if (layout === 'none' && typeof switchEditAiToChatPanel === 'function') {
+    switchEditAiToChatPanel();
+  }
   state.pvLayout = layout;
   document.querySelectorAll('.pv-btn').forEach(b => b.classList.toggle('active', b.dataset.pv === layout));
   const names = {
@@ -77,6 +81,11 @@ function setPvLayout(layout) {
   mc.classList.remove('pv-left', 'pv-right', 'pv-bottom', 'pv-top');
   mc.classList.remove('pv-auto-hidden');
   if (state.editing && layout !== 'none') {
+    // 预览界面和AI对话界面不能同时出现：若开启预览，自动收起 AI 对话面板
+    const aiPanel = $('ai-panel');
+    if (aiPanel && !aiPanel.classList.contains('hidden')) {
+      aiPanel.classList.add('hidden');
+    }
     mc.classList.add('pv-' + layout);
     const bounds = mc.getBoundingClientRect();
     const horizontal = layout === 'left' || layout === 'right';
@@ -370,6 +379,7 @@ async function confirmExitEdit() {
 }
 
 function exitEdit() {
+  if (typeof switchEditAiToChatPanel === 'function') switchEditAiToChatPanel();
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (pvTimer) { clearTimeout(pvTimer); pvTimer = null; }
   if (pvEditorEl) {
@@ -403,34 +413,41 @@ async function saveEdit(options = {}) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const exitAfterSave = Boolean(options && options.exitAfterSave);
   if (!state.editing) return false;
-  const content = cmView ? cmView.state.doc.toString() : $('edit-area').value;
-  if (!state.file) {
-    // 虚拟文档（转换 / OCR / 网页）：另存为 .md 后切换为文件模式
-    const name = (state.sourceName || 'document').replace(/[\\/]/g, '_');
-    const suggested = name.replace(/\.[^.]+$/, '') + '.md';
-    let out = null;
-    if (hasPy) {
-      busy(true);
-      try { out = await py.save_as(content, suggested, state.webAssets || []); }
-      catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); busy(false); return false; }
-      busy(false);
-      if (!out) { showToast(_t('toast.saveCancelled') || '已取消保存'); return false; }
-      showToast((_t('toast.savedPrefix') || '已保存：') + out);
-      exitEdit();
-      await loadFile(out);
-      return Boolean(out);
-    }
-    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = suggested;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 3000);
-    showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
-    return true;
-  }
-  busy(true);
+  const saveBtn = $('edit-save');
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.classList.add('btn-loading'); }
   try {
+    const content = cmView ? cmView.state.doc.toString() : $('edit-area').value;
+    if (!state.file) {
+      const activeTab = typeof getActiveTab === 'function' ? getActiveTab() : null;
+      if (activeTab && activeTab.source === 'ai' && (activeTab.dir || state.dir)) {
+        return await autoSaveAiCopyTab(activeTab, { content, exitAfterSave });
+      }
+
+      // 虚拟文档（转换 / OCR / 网页）：另存为 .md 后切换为文件模式
+      const name = (state.sourceName || 'document').replace(/[\\/]/g, '_');
+      const suggested = name.replace(/\.[^.]+$/, '') + '.md';
+      let out = null;
+      if (hasPy) {
+        busy(true);
+        try { out = await py.save_as(content, suggested, state.webAssets || []); }
+        catch (e) { showToast((_t('toast.saveFailed') || '保存失败：') + e.message); busy(false); return false; }
+        busy(false);
+        if (!out) { showToast(_t('toast.saveCancelled') || '已取消保存'); return false; }
+        showToast((_t('toast.savedPrefix') || '已保存：') + out);
+        exitEdit();
+        await loadFile(out);
+        return Boolean(out);
+      }
+      const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = suggested;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+      showToast((_t('toast.downloadedPrefix') || '已下载：') + suggested);
+      return true;
+    }
+    busy(true);
     let ok;
     if (hasPy) {
       ok = await py.save_file(state.file, content, state.encoding || 'utf-8', state.mtime || null);
@@ -504,7 +521,10 @@ async function saveEdit(options = {}) {
   } catch (e) {
     showToast((_t('toast.saveFailed') || '保存失败：') + e.message);
     return false;
-  } finally { busy(false); }
+  } finally {
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.classList.remove('btn-loading'); }
+    busy(false);
+  }
 }
 
 function promptSaveConflict() {
@@ -603,3 +623,60 @@ async function saveAs(contentOverride = null) {
   return false;
 }
 
+async function autoSaveAiCopyTab(tab, options = {}) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const currentTab = tab || (typeof getActiveTab === 'function' ? getActiveTab() : null);
+  if (!currentTab) return false;
+  const targetDir = currentTab.dir || state.dir;
+  if (!targetDir) {
+    if (typeof saveAs === 'function') return saveAs();
+    return false;
+  }
+  const content = options.content != null ? options.content : (currentTab.content || state.original || '');
+  const targetName = currentTab.name || state.name || 'AI-document.md';
+  const sep = targetDir.includes('/') ? '/' : '\\';
+  const targetPath = targetDir.replace(/[\\/]+$/, '') + sep + targetName;
+  busy(true);
+  let res = null;
+  try {
+    if (hasPy) {
+      res = await py.save_file(targetPath, content, 'utf-8', null);
+    } else {
+      const originPath = currentTab.originPath || (currentTab.dir ? (currentTab.dir.replace(/[\\/]+$/, '') + sep + (state.sourceName || 'document.md')) : (state.file || ''));
+      const r = await apiFetch('/api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: targetPath, file: targetPath, origin_path: originPath, content: content, encoding: 'utf-8' })
+      });
+      res = await r.json().catch(() => ({ ok: r.ok }));
+    }
+  } catch (err) {
+    showToast((_t('toast.saveFailed') || '保存失败：') + err.message);
+    busy(false);
+    return false;
+  } finally {
+    busy(false);
+  }
+  const isSuccess = Boolean(res && (res === true || res.ok === true || (typeof res === 'object' && res.ok !== false && !res.error)));
+  if (isSuccess) {
+    state.file = targetPath;
+    currentTab.path = targetPath;
+    currentTab.mode = 'file';
+    currentTab.isVirtual = false;
+    currentTab.isDirty = false;
+    currentTab.content = content;
+    currentTab.original = content;
+    currentTab.fixed = content;
+    state.content = content;
+    state.original = content;
+    state.fixed = content;
+    if (typeof renderTabsBar === 'function') renderTabsBar();
+    showToast((_t('toast.savedPrefix') || '已保存：') + targetPath);
+    if (options.exitAfterSave && typeof exitEdit === 'function') exitEdit();
+    return true;
+  }
+  const errMsg = (res && res.error) ? res.error : (_t('toast.saveFailed') || '保存失败');
+  showToast((_t('toast.saveFailed') || '保存失败：') + errMsg);
+  return false;
+}
+window.autoSaveAiCopyTab = autoSaveAiCopyTab;

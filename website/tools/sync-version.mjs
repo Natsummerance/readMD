@@ -48,7 +48,7 @@ async function extractVersion() {
   }
 
   // 3. Fallback
-  return "2.3.7";
+  return "2.3.8-preview.1";
 }
 
 async function main() {
