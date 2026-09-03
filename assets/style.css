@@ -4865,6 +4865,13 @@ body[data-theme="dark"] .code-chunk-status.error,
   padding: 0;
 }
 
+.diagram-network-indicator {
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.75;
+  margin-left: 4px;
+}
+
 .code-chunk-stdout {
   margin: 0;
   padding: 8px 10px;

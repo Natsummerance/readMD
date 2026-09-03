@@ -48,3 +48,15 @@ markdown-preview-enhanced（MPE）/ crossnote 上游（"照搬"原则）。
   - viz → `Viz.instance().then(i => i.renderString(code, {engine: attrs.engine || 'dot', format:'svg'}))`，出错后重置 instance
   - vega / vega-lite → 首字符 `{` 判 JSON 否则 YAML.parse；vega-lite 先 compile 再走 vega View(renderer:'none').toSVG()
   - tikz → tikzjax.js 客户端 `<script type="text/tikz">`；`window.tikzjaxRender` trick 见 fenced-diagrams.ts
+
+## 外部与非捆绑引擎声明（D2、WSD、Ditaa、PlantUML）
+
+1. **D2 / WSD / Ditaa**：
+   - 当前版本未捆绑数十兆的独立 Go/Java 编译程序；
+   - 遵循用户数据隐私与本地优先原则，系统绝不在未授权时将源码上传至商业第三方云端；
+   - 遇到此类代码块时，系统自动执行**诚实优雅降级（Graceful Fallback）**，以高对比度、等宽代码卡片形式安全呈现源码与明确提示。
+2. **Vega / Vega-Lite**：
+   - 采用独立 Node.js 本地侧端进程离线解析渲染，既保证离线可用与高保真 SVG 产出，又严格遵循桌面 WebView CSP 零 `unsafe-eval` 安全策略。
+3. **PlantUML**：
+   - 优先探测本机 Java 及 `plantuml.jar`（或 `plantuml` CLI）；
+   - 本地无 Java 环境时透明走官方 SVG 代理，前端图表卡片明确标注 `(Online Proxy)` 标识以保证网络透明度。

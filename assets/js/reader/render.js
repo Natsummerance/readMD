@@ -2144,13 +2144,23 @@ async function renderLocalDiagram(engine, code, previewEl) {
     }));
   }
   if (normalized === 'vega' || normalized === 'vega-lite') {
-    await loadDiagramScript('/assets/vendor/diagrams/vega/vega.min.js', 'vega');
-    await loadDiagramScript('/assets/vendor/diagrams/vega-lite/vega-lite.min.js', 'vegaLite');
-    // Vega's browser runtime uses dynamic JavaScript code generation.  The
-    // application CSP intentionally permits WebAssembly only (not unsafe-eval),
-    // so do not report a misleading success for a renderer that cannot execute
-    // in the shipped shell.
-    throw new Error('diagram_engine_unavailable');
+    const vega = await loadDiagramScript('/assets/vendor/diagrams/vega/vega.min.js', 'vega');
+    const vegaLite = await loadDiagramScript('/assets/vendor/diagrams/vega-lite/vega-lite.min.js', 'vegaLite');
+    let spec;
+    try { spec = JSON.parse(String(code || '')); } catch (_) { throw new Error('diagram_invalid_input'); }
+    if (!spec || typeof spec !== 'object' || Array.isArray(spec)) {
+      throw new Error('diagram_invalid_input');
+    }
+    try {
+      const compiled = normalized === 'vega-lite' && vegaLite ? vegaLite.compile(spec).spec : spec;
+      const view = new vega.View(vega.parse(compiled), { renderer: 'none' });
+      const svg = await view.toSVG();
+      if (!svg || !svg.startsWith('<svg')) throw new Error('diagram_render_failed');
+      return diagramOutputMarkup(svg);
+    } catch (err) {
+      if (err && (err.message === 'diagram_invalid_input' || err.message === 'diagram_render_failed')) throw err;
+      throw new Error('diagram_render_failed');
+    }
   }
   if (normalized === 'chart' || normalized === 'chartjs' || normalized === 'chart.js') {
     const Chart = await loadDiagramScript('/assets/vendor/diagrams/chart/chart.umd.js', 'Chart');
@@ -2223,7 +2233,7 @@ function renderAllDiagrams(container) {
         // the bundled Node sidecar through /api/diagram/render so the secure
         // WebView CSP never needs unsafe-eval.  The remaining engines are
         // genuinely browser-local and lazy-loaded here.
-        if (['mermaid', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'tikz', 'chart', 'chartjs', 'chart.js'].includes(engine)) {
+        if (['mermaid', 'wavedrom', 'bitfield', 'viz', 'dot', 'graphviz', 'tikz', 'chart', 'chartjs', 'chart.js', 'vega', 'vega-lite'].includes(engine)) {
           const rendered = await renderLocalDiagram(engine, code, previewEl);
           if (rendered instanceof Element) previewEl.replaceChildren(rendered);
           else previewEl.innerHTML = rendered;
@@ -2249,6 +2259,15 @@ function renderAllDiagrams(container) {
             previewEl.innerHTML = diagramOutputMarkup(res.svg);
           } else {
             throw new Error('diagram_engine_unavailable');
+          }
+          if (res.requires_network) {
+            const badge = card.querySelector('.diagram-type');
+            if (badge && !badge.querySelector('.diagram-network-indicator')) {
+              const netSpan = document.createElement('span');
+              netSpan.className = 'diagram-network-indicator';
+              netSpan.textContent = ' (Online Proxy)';
+              badge.appendChild(netSpan);
+            }
           }
         } else {
           // Server responses intentionally carry only stable error codes.  Do
