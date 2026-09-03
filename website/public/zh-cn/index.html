@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>ReadMD | 纯本地 Markdown 阅读、编辑、转换与放映</title>
-  <meta name="description" content="ReadMD 是面向 Windows 10/11、macOS 13+ 与 Linux 候选包的本地 Markdown 工作台，可快速打开超长文档、修正显示问题、转换 Office 与 PDF，并直接用 Markdown 放映。正式平台支持以原生证据为准。">
+  <meta name="description" content="ReadMD 是面向 Windows 10/11、macOS 13+ 与 Linux x86_64/ARM64 的本地 Markdown 工作台，可快速打开超长文档、修正显示问题、转换 Office 与 PDF，并直接用 Markdown 放映。v2.3.8 正式版已发布。">
   <meta name="author" content="ReadMD">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
@@ -23,7 +23,7 @@
   <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="ReadMD | 纯本地 Markdown 阅读、编辑、转换与放映">
-  <meta name="twitter:description" content="面向 Windows 10/11、macOS 13+ 与 Linux 候选包的本地 Markdown 工作台；正式平台支持以原生证据为准。">
+  <meta name="twitter:description" content="面向 Windows 10/11、macOS 13+ 与 Linux x86_64/ARM64 的本地 Markdown 工作台；v2.3.8 正式版已发布。">
   <meta name="twitter:image" content="https://readmd.asia/media/overview-reader.png">
   <meta name="twitter:image:alt" content="ReadMD product interface with formatted Markdown and its outline.">
   <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
@@ -94,7 +94,7 @@
       "@type": "SoftwareApplication",
       "@id": "https://readmd.asia/zh-cn/#software",
       "name": "ReadMD",
-      "operatingSystem": "Windows 10/11, macOS 13+, Linux（候选）",
+      "operatingSystem": "Windows 10/11, macOS 13+, Linux x86_64/ARM64",
       "applicationCategory": "UtilitiesApplication",
       "softwareVersion": "2.3.8",
       "dateModified": "2026-08-24",
@@ -154,7 +154,7 @@
       "name": "支持哪些系统？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "V2.3.7 候选面向 Windows 10/11、macOS 13+ 与 Linux x86_64/ARM64。每个平台完成原生构建、冷启动、离线、隐私和功能证据后，才会确认正式支持与国产系统安装包。VSCode 插件和 MCP Server 可连接编辑器与 AI 工具。"
+        "text": "ReadMD v2.3.8 正式版面向 Windows 10/11、macOS 13+ 与 Linux x86_64/ARM64。统信 UOS、银河麒麟等国产系统的安装包仍缺原生证据，不构成正式支持承诺。VSCode 插件和 MCP Server 可连接编辑器与 AI 工具。"
       }
     },
     {
@@ -217,7 +217,7 @@
           <article class="answer-card"><h3>ReadMD 怎么打开超长 Markdown？</h3><p>当文档超过约 8,000 行或 500 KB，ReadMD 会启动语义分页。目录、全文搜索、公式和页面控件仍然联动，因此读者可以继续滚动和跳转，不必等整个文件一次性渲染。</p></article>
           <article class="answer-card"><h3>自动修正会改原文件吗？</h3><p>不会。语法恢复只作用于内存中的显示层。缺失表格分隔行、未闭合符号和公式排版问题会被视觉修正，原始 Markdown 字节保持不变，直到你主动保存编辑。</p></article>
           <article class="answer-card"><h3>能替代幻灯片软件吗？</h3><p>对技术分享和课程材料可以。ReadMD 的放映模式直接使用写作和评审用的同一条 Markdown，标题、数学、图表和代码保留在原处，临时修改后不用再复制到另一个演示文稿。</p></article>
-          <article class="answer-card"><h3>支持哪些系统？</h3><p>V2.3.7 候选面向 Windows 10/11、macOS 13+ 与 Linux x86_64/ARM64。正式支持只在对应平台的原生构建、冷启动、离线、隐私和完整功能证据齐全后公布；VSCode 插件和 MCP Server 可连接编辑器与 AI 工具。</p></article>
+          <article class="answer-card"><h3>支持哪些系统？</h3><p>ReadMD v2.3.8 正式版面向 Windows 10/11、macOS 13+ 与 Linux x86_64/ARM64。统信 UOS、银河麒麟等国产系统的安装包仍缺原生证据，不构成正式支持承诺；VSCode 插件和 MCP Server 可连接编辑器与 AI 工具。</p></article>
           <article class="answer-card"><h3>数据私密吗？</h3><p>核心阅读、编辑、分页、OCR 和转换设计为本地运行，文档不需要云账号。网页抓取和共享都是显式操作；局域网共享面向同一 Wi-Fi 内的设备。</p></article>
           <article class="answer-card"><h3>采用什么许可证？</h3><p>ReadMD 使用 MIT 许可证发布。源码、发行包、校验清单和平台资产都在公开仓库 Natsummerance/readMD 中。</p></article>
           <div class="col-span-full mt-2 flex flex-wrap gap-5 text-sm"><a class="link-action" href="/zh-cn/large-markdown-files/">打开超大 Markdown 文件</a><a class="link-action" href="/zh-cn/markdown-to-slides/">不用 PowerPoint 放映 Markdown</a><a class="link-action" href="/zh-cn/convert-to-markdown/">文档转 Markdown</a><a class="link-action" href="/zh-cn/markdown-tables/">构建 Markdown 表格</a><a class="link-action" href="/zh-cn/pdf-to-markdown/">PDF 转 Markdown</a><a class="link-action" href="/zh-cn/scan-to-markdown/">扫描件提取文字</a><a class="link-action" href="/zh-cn/bibtex-citations/">管理 BibTeX 引用</a><a class="link-action" href="/zh-cn/release-notes/">发布说明</a></div>

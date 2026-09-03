@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ReadMD v2.3.7 リリースノート | 安全な発表と更新検証</title>
-  <meta name="description" content="ReadMD v2.3.7 リリース候補の変更点、Reveal 表示と更新の整合性、起動読み込み、タブ状態、ローカルテストの手順、正式なプラットフォーム提供前に必要なネイティブ機能検証の条件を説明します。">
+  <title>ReadMD v2.3.8 リリースノート | 統合バッチワークベンチと安全なチャート</title>
+  <meta name="description" content="ReadMD v2.3.8 正式版の変更点：タスクの中止と行単位の追跡に対応する統合バッチワークベンチ、PPTX/XLSX のネイティブ OOXML 解析、zip 展開とチャート描画の安全強化、VS Code と MCP のストリーミング制御、46 言語の UI を説明します。">
   <meta name="author" content="ReadMD">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
-  <meta property="og:title" content="ReadMD v2.3.7 リリースノート | 安全な発表と更新検証">
-  <meta property="og:description" content="V2.3.7リリース候補の事実：安全な発表、更新整合性、起動読み込み、タブ状態、ローカルファーストなワークフロー。">
+  <meta property="og:title" content="ReadMD v2.3.8 リリースノート | 統合バッチワークベンチと安全なチャート">
+  <meta property="og:description" content="v2.3.8 正式版の事実：統合バッチワークベンチ、ネイティブ OOXML 解析、チャートとアーカイブの安全強化、46 言語のローカライズ。">
   <meta property="og:url" content="https://readmd.asia/ja/release-notes/">
   <meta property="og:image" content="https://readmd.asia/media/overview-reader.png">
   <meta property="og:image:type" content="image/png">
@@ -22,8 +22,8 @@
   <meta property="og:locale:alternate" content="zh_CN">
   <meta property="og:locale:alternate" content="zh_TW">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="ReadMD v2.3.7 リリースノート | 安全な発表と更新検証">
-  <meta name="twitter:description" content="V2.3.7リリース候補の境界、プラットフォーム資産、チェックサム手順を確認できます。">
+  <meta name="twitter:title" content="ReadMD v2.3.8 リリースノート | 統合バッチワークベンチと安全なチャート">
+  <meta name="twitter:description" content="v2.3.8 正式版の境界、プラットフォーム資産、チェックサム手順を確認できます。">
   <meta name="twitter:image" content="https://readmd.asia/media/overview-reader.png">
   <meta name="twitter:image:alt" content="整形された Markdown 文書と目次を表示する ReadMD デスクトップ画面。">
   <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
@@ -47,7 +47,7 @@
       "@type": "WebPage",
       "@id": "https://readmd.asia/ja/release-notes/#webpage",
       "url": "https://readmd.asia/ja/release-notes/",
-      "name": "ReadMD v2.3.7 リリースノート | 安全な発表と更新検証",
+      "name": "ReadMD v2.3.8 リリースノート | 統合バッチワークベンチと安全なチャート",
       "isPartOf": {
         "@id": "https://readmd.asia/#website"
       },
@@ -55,7 +55,7 @@
         "@id": "https://readmd.asia/ja/release-notes/#software"
       },
       "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
-      "dateModified": "2026-08-26",
+      "dateModified": "2026-09-03",
       "speakable": {
         "@type": "SpeakableSpecification",
         "cssSelector": [
@@ -76,10 +76,10 @@
       "@type": "SoftwareApplication",
       "@id": "https://readmd.asia/ja/release-notes/#software",
       "name": "ReadMD",
-      "operatingSystem": "Windows 10/11, macOS 13+, Linux (candidate)",
+      "operatingSystem": "Windows 10/11, macOS 13+, Linux x86_64/ARM64",
       "applicationCategory": "UtilitiesApplication",
       "softwareVersion": "2.3.8",
-      "dateModified": "2026-08-26",
+      "dateModified": "2026-09-03",
       "isAccessibleForFree": true,
       "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
       "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
@@ -102,38 +102,38 @@
     {
       "@type": "HowTo",
       "@id": "https://readmd.asia/ja/release-notes/#howto",
-      "name": "ReadMD V2.3.7 リリース候補を安全に評価する方法",
+      "name": "ReadMD v2.3.8 正式版を安全にインストールする方法",
       "step": [
         {
           "@type": "HowToStep",
-          "name": "より安全な発表経路",
-          "text": "アプリ内 Reveal.js は同一オリジンのオフライン資産だけを読み込み、スライド HTML は許可リストで消毒されます。"
+          "name": "まずチェックサムを検証",
+          "text": "リリースページから SHA256SUMS.txt をダウンロードし、各インストーラーの SHA-256 を実行前に確認します。"
         },
         {
           "@type": "HowToStep",
-          "name": "整合性を優先する更新",
-          "text": "公式资产は固定ディレクトリへダウンロードし、SHA-256 を通してから原子的に公開し、実行前に再検証します。"
+          "name": "初回起動は未署名の警告が出ることがあります",
+          "text": "v2.3.8 は READMD_SELF_USE_RELEASE セルフユースチャネル経由で公開され、資産は Authenticode や macOS codesign で署名されていません。Windows SmartScreen や macOS Gatekeeper が確認を求める場合があります。"
         },
         {
           "@type": "HowToStep",
-          "name": "軽い対話読み込み",
-          "text": "入口スクリプトを段階的に読み込み、共有資産は必要時に読み込み、ETag 再検証に対応し、検索 Enter はフォーカスを保ちます。"
+          "name": "バッチタスクはいつでも中止できます",
+          "text": "統合バッチワークベンチの各タスクは中止でき、結果は行単位で追跡できます。PPTX と XLSX はネイティブ OOXML リーダーで解析します。"
         },
         {
           "@type": "HowToStep",
-          "name": "明確なタブ状態",
-          "text": "選択と ARIA 状態を即時更新し、古い描画結果を破棄し、あふれた場合は活動タブへスクロールし、Zen モードの Escape 経路を統一します。"
+          "name": "チャートはサンドボックス内で描画",
+          "text": "Vega と Vega-Lite はサーバーサイドのサンドボックスで描画し、外部データを読み込まず CSP に unsafe-eval を含みません。Chart.js はオフライン描画、PlantUML はリモート描画前に確認します。"
         }
       ]
     },
     {
       "@type": "TechArticle",
       "@id": "https://readmd.asia/ja/release-notes/#article",
-      "headline": "ReadMD v2.3.7 リリースノート | 安全な発表と更新検証",
-      "description": "ReadMD v2.3.7 リリース候補の変更点、Reveal 表示と更新の整合性、起動読み込み、タブ状態、ローカルテストの手順、正式なプラットフォーム提供前に必要なネイティブ機能検証の条件を説明します。",
+      "headline": "ReadMD v2.3.8 リリースノート | 統合バッチワークベンチと安全なチャート",
+      "description": "ReadMD v2.3.8 正式版の変更点：タスクの中止と行単位の追跡に対応する統合バッチワークベンチ、PPTX/XLSX のネイティブ OOXML 解析、zip 展開とチャート描画の安全強化、VS Code と MCP のストリーミング制御、46 言語の UI を説明します。",
       "inLanguage": "en",
-      "datePublished": "2026-08-26",
-      "dateModified": "2026-08-26",
+      "datePublished": "2026-09-03",
+      "dateModified": "2026-09-03",
       "author": {
         "@id": "https://readmd.asia/#organization"
       },
@@ -159,10 +159,10 @@
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "v2.3.7 は正式版ですか？",
+      "name": "v2.3.8 は正式版ですか？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "いいえ。ベータです。テストとフィードバックに適しますが、インストール前にバックアップと SHA-256 検証を行ってください。"
+        "text": "はい。v2.3.8 は 2026-09-03 に GitHub で正式リリース（プレリリースではありません）として公開されました。READMD_SELF_USE_RELEASE セルフユースチャネル経由の提供のため資産は未署名で、ネイティブ プラットフォーム証拠の一覧は参考情報です。インストール前にバックアップを取り、SHA256SUMS.txt を確認してください。"
       }
     },
     {
@@ -186,7 +186,7 @@
       "name": "どのプラットフォームにパッケージがありますか？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "候補は Windows、Intel/Apple Silicon macOS、Linux x86_64/ARM64、UOS、Kylin、Deepin を対象とします。各環境のネイティブビルド、起動、オフライン、プライバシー、機能証拠が揃うまで正式提供を確定しません。HarmonyOS/OpenHarmony は v2.3.7 の対象外です。"
+        "text": "正式版のパッケージは Windows 10/11（x64/ARM64）、macOS 13+（Intel と Apple Silicon）、Ubuntu 22.04/24.04 と Debian 12 の Linux x86_64/ARM64 を対象とします。UOS、Kylin、Deepin はネイティブ証拠が未整備のため正式サポートの約束ではありません。HarmonyOS/OpenHarmony は v2.3.8 の対象外です。"
       }
     }
   ]
@@ -205,7 +205,7 @@
     {
       "@type": "ListItem",
       "position": 2,
-      "name": "v2.3.7",
+      "name": "v2.3.8",
       "item": "https://readmd.asia/ja/release-notes/"
     }
   ]
@@ -216,30 +216,30 @@
     <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/ja/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#release-highlights">ハイライト</a><a href="/ja/workflows/">その他の回答</a><a href="https://github.com/Natsummerance/readMD">ソース</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/tag/v2.3.8">ダウンロード</a></div>
   </header>
   <main>
-    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/ja/">ホーム</a> / <span>リリースノート</span> / <span>v2.3.7</span></nav>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/ja/">ホーム</a> / <span>リリースノート</span> / <span>v2.3.8</span></nav>
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
-      <h1 class="display-title">ReadMD v2.3.7 の変更点。</h1>
-      <p class="section-copy mt-6 max-w-[68ch]">このベータでは発表の分離と更新整合性を強化し、起動時の資産読み込みとタブ反応を改善します。Markdownは引き続き正となるファイルです。</p>
+      <h1 class="display-title">ReadMD v2.3.8 の変更点。</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">ReadMD v2.3.8 はセルフユースチャネル初の正式版です。バッチ変換を中止可能な統合ワークベンチにまとめ、PPTX と XLSX をネイティブ解析に切り替え、チャートとアーカイブ処理を安全に強化し、46 言語の UI を仕上げました。</p>
       <figure class="product-frame mt-10"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="整形された Markdown 文書と目次を表示する ReadMD デスクトップ画面。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="release-highlights" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">
         <h2 class="text-2xl font-semibold tracking-tight">リリースの要点と境界</h2>
         <ol class="mt-8 grid gap-6 md:grid-cols-2">
-          <li class="answer-card"><h3 class="text-lg font-semibold">より安全な発表経路</h3><p>アプリ内 Reveal.js は同一オリジンのオフライン資産だけを読み込み、スライド HTML は許可リストで消毒されます。</p></li>
-          <li class="answer-card"><h3 class="text-lg font-semibold">整合性を優先する更新</h3><p>公式资产は固定ディレクトリへダウンロードし、SHA-256 を通してから原子的に公開し、実行前に再検証します。</p></li>
-          <li class="answer-card"><h3 class="text-lg font-semibold">軽い対話読み込み</h3><p>入口スクリプトを段階的に読み込み、共有資産は必要時に読み込み、ETag 再検証に対応し、検索 Enter はフォーカスを保ちます。</p></li>
-          <li class="answer-card"><h3 class="text-lg font-semibold">明確なタブ状態</h3><p>選択と ARIA 状態を即時更新し、古い描画結果を破棄し、あふれた場合は活動タブへスクロールし、Zen モードの Escape 経路を統一します。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">ひとつのバッチワークベンチ</h3><p>変換、OCR、書き出しのタスクを統合ワークベンチに集約。どのタスクも中止でき、結果は行単位で追跡できます。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">ネイティブ OOXML 解析</h3><p>PPTX と XLSX はファイル形式を直接読み取ります。旧 Office 形式は曖昧なエラーではなく明確なメッセージを表示します。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">チャートとアーカイブの強化</h3><p>zip 展開はパス操作や zip 爆弾を拒否し、Vega/Vega-Lite は unsafe-eval を使わないサーバーサイド サンドボックスで描画します。PlantUML はリモート描画前に確認、Chart.js はオフライン描画に対応します。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">46 言語と安定した拡張</h3><p>システムトレイからスキル導入までの表示文言を 46 言語に整備。VS Code と MCP は動的スキル、ストリーミング中止、接続状態表示に対応し、スキル導入は失敗時に自動ロールバックします。</p></li>
           </ol>
       </div>
     </section>
     <section class="mx-auto max-w-5xl px-5 py-16">
-      <h2 class="text-2xl font-semibold tracking-tight">V2.3.7 リリース候補のよくある質問</h2>
+      <h2 class="text-2xl font-semibold tracking-tight">v2.3.8 正式版のよくある質問</h2>
       <div class="mt-8 grid gap-6 md:grid-cols-2">
-        <article class="answer-card"><h3>v2.3.7 は正式版ですか？</h3><p>いいえ。ベータです。テストとフィードバックに適しますが、インストール前にバックアップと SHA-256 検証を行ってください。</p></article>
+        <article class="answer-card"><h3>v2.3.8 は正式版ですか？</h3><p>はい。v2.3.8 は 2026-09-03 に GitHub で正式リリース（プレリリースではありません）として公開されました。READMD_SELF_USE_RELEASE セルフユースチャネル経由の提供のため資産は未署名で、ネイティブ プラットフォーム証拠の一覧は参考情報です。インストール前にバックアップを取り、SHA256SUMS.txt を確認してください。</p></article>
         <article class="answer-card"><h3>表示修復は Markdown を書き換えますか？</h3><p>いいえ。描画修復はメモリー上の表示層だけです。明示的に編集して保存したときだけソースバイトが変わります。</p></article>
         <article class="answer-card"><h3>更新はどう検証しますか？</h3><p>更新は公式 GitHub Release 資産から固定ディレクトリの一時ファイルへ入り、SHA-256 検証後に原子的に公開され、実行前にも再検証します。</p></article>
-        <article class="answer-card"><h3>どのプラットフォームにパッケージがありますか？</h3><p>候補は Windows、Intel/Apple Silicon macOS、Linux x86_64/ARM64、UOS、Kylin、Deepin を対象とします。各環境のネイティブ証拠が揃うまで正式提供を確定しません。HarmonyOS/OpenHarmony は v2.3.7 の対象外です。</p></article>
+        <article class="answer-card"><h3>どのプラットフォームにパッケージがありますか？</h3><p>正式版のパッケージは Windows 10/11（x64/ARM64）、macOS 13+（Intel と Apple Silicon）、Ubuntu 22.04/24.04 と Debian 12 の Linux x86_64/ARM64 を対象とします。UOS、Kylin、Deepin はネイティブ証拠が未整備のため正式サポートの約束ではありません。HarmonyOS/OpenHarmony は v2.3.8 の対象外です。</p></article>
       </div>
       <div class="mt-10 flex flex-wrap gap-5">
         <a class="link-action" href="/download/">ReadMD をダウンロード</a>

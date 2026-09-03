@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ReadMD v2.3.7 Release Notes | Safe Presenting And Updates</title>
-  <meta name="description" content="ReadMD v2.3.7 release-candidate notes covering safer Reveal presenting, update integrity checks, startup loading refinements, tab reliability, and the evidence required before formal platform packages.">
+  <title>ReadMD v2.3.8 Release Notes | Batch Workbench And Safer Charts</title>
+  <meta name="description" content="ReadMD v2.3.8 stable release notes: a unified batch workbench with cancellable, traceable tasks, native PPTX/XLSX parsing, hardened zip and chart rendering, VS Code and MCP streaming controls, and 46-language localization.">
   <meta name="author" content="ReadMD">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
-  <meta property="og:title" content="ReadMD v2.3.7 Release Notes | Safe Presenting And Updates">
-  <meta property="og:description" content="Version-specific changes for safer presenting, updates, startup loading, tabs, touch targets, and local-first Markdown workflows.">
+  <meta property="og:title" content="ReadMD v2.3.8 Release Notes | Batch Workbench And Safer Charts">
+  <meta property="og:description" content="Version-specific changes for the v2.3.8 stable release: a unified batch workbench, native OOXML parsing, hardened chart and archive handling, and 46-language localization.">
   <meta property="og:url" content="https://readmd.asia/release-notes/">
   <meta property="og:image" content="https://readmd.asia/media/overview-reader.png">
   <meta property="og:image:type" content="image/png">
@@ -22,8 +22,8 @@
   <meta property="og:locale:alternate" content="zh_TW">
   <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="ReadMD v2.3.7 Release Notes | Safe Presenting And Updates">
-  <meta name="twitter:description" content="Read the V2.3.7 release-candidate facts, security boundaries, platform assets, and checksum guidance.">
+  <meta name="twitter:title" content="ReadMD v2.3.8 Release Notes | Batch Workbench And Safer Charts">
+  <meta name="twitter:description" content="Read the v2.3.8 stable-release facts, security boundaries, platform assets, and checksum guidance.">
   <meta name="twitter:image" content="https://readmd.asia/media/overview-reader.png">
   <meta name="twitter:image:alt" content="ReadMD desktop interface showing a formatted Markdown document beside its outline.">
   <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
@@ -47,7 +47,7 @@
       "@type": "WebPage",
       "@id": "https://readmd.asia/release-notes/#webpage",
       "url": "https://readmd.asia/release-notes/",
-      "name": "ReadMD v2.3.7 Release Notes | Safe Presenting And Updates",
+      "name": "ReadMD v2.3.8 Release Notes | Batch Workbench And Safer Charts",
       "isPartOf": {
         "@id": "https://readmd.asia/#website"
       },
@@ -55,7 +55,7 @@
         "@id": "https://readmd.asia/release-notes/#software"
       },
       "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
-      "dateModified": "2026-08-26",
+      "dateModified": "2026-09-03",
       "speakable": {
         "@type": "SpeakableSpecification",
         "cssSelector": [
@@ -76,10 +76,10 @@
       "@type": "SoftwareApplication",
       "@id": "https://readmd.asia/release-notes/#software",
       "name": "ReadMD",
-      "operatingSystem": "Windows 10/11, macOS 13+, Linux (candidate)",
+      "operatingSystem": "Windows 10/11, macOS 13+, Linux x86_64/ARM64",
       "applicationCategory": "UtilitiesApplication",
       "softwareVersion": "2.3.8",
-      "dateModified": "2026-08-26",
+      "dateModified": "2026-09-03",
       "isAccessibleForFree": true,
       "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
       "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
@@ -102,38 +102,38 @@
     {
       "@type": "HowTo",
       "@id": "https://readmd.asia/release-notes/#howto",
-      "name": "How to evaluate the ReadMD V2.3.7 release candidate safely",
+      "name": "How to install ReadMD v2.3.8 safely",
       "step": [
         {
           "@type": "HowToStep",
-          "name": "Safer presentation path",
-          "text": "In-app Reveal.js loads same-origin offline resources; slide HTML passes through whitelist sanitization."
+          "name": "Verify the checksum first",
+          "text": "Download SHA256SUMS.txt from the release and confirm each installer's SHA-256 before running it."
         },
         {
           "@type": "HowToStep",
-          "name": "Integrity-first updates",
-          "text": "Official assets download to a fixed directory, pass SHA-256, publish atomically, and are rechecked before execution."
+          "name": "Expect an unsigned first run",
+          "text": "v2.3.8 ships through the READMD_SELF_USE_RELEASE self-use channel without Authenticode or macOS codesign; Windows SmartScreen and macOS Gatekeeper may ask for confirmation."
         },
         {
           "@type": "HowToStep",
-          "name": "Lighter interaction",
-          "text": "Entry scripts load in stages, shared resources load on demand, ETag revalidation reduces repeat transfers, and search Enter keeps focus."
+          "name": "Run batch jobs with control",
+          "text": "The unified batch workbench keeps every task cancellable and every result row traceable, including PPTX and XLSX imports via native OOXML readers."
         },
         {
           "@type": "HowToStep",
-          "name": "Clear tab state",
-          "text": "Selection and ARIA state refresh immediately, stale render results are discarded, overflow finds the active tab, and Zen mode keeps one Escape path."
+          "name": "Charts render inside a sandbox",
+          "text": "Vega and Vega-Lite render server-side without external data or unsafe-eval, Chart.js renders offline, and PlantUML asks before any remote render."
         }
       ]
     },
     {
       "@type": "TechArticle",
       "@id": "https://readmd.asia/release-notes/#article",
-      "headline": "ReadMD v2.3.7 Release Notes | Safe Presenting And Updates",
-      "description": "ReadMD v2.3.7 release-candidate notes covering safer Reveal presenting, update integrity checks, startup loading refinements, tab reliability, and the evidence required before formal platform packages.",
+      "headline": "ReadMD v2.3.8 Release Notes | Batch Workbench And Safer Charts",
+      "description": "ReadMD v2.3.8 stable release notes: a unified batch workbench with cancellable, traceable tasks, native PPTX/XLSX parsing, hardened zip and chart rendering, VS Code and MCP streaming controls, and 46-language localization.",
       "inLanguage": "en",
-      "datePublished": "2026-08-26",
-      "dateModified": "2026-08-26",
+      "datePublished": "2026-09-03",
+      "dateModified": "2026-09-03",
       "author": {
         "@id": "https://readmd.asia/#organization"
       },
@@ -159,10 +159,10 @@
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "Is v2.3.7 production ready?",
+      "name": "Is v2.3.8 a stable release?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "This page describes the release candidate. It is for local acceptance testing until every required native-platform gate is complete; keep backups and verify checksums before installation."
+        "text": "Yes. v2.3.8 was published on GitHub as a stable release, not a prerelease, on 2026-09-03. It ships via the READMD_SELF_USE_RELEASE self-use channel: assets are unsigned and the native platform evidence list is informational, so keep backups and verify SHA256SUMS.txt before installation."
       }
     },
     {
@@ -186,7 +186,7 @@
       "name": "Which platforms receive packages?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "The candidate targets Windows, macOS Intel and Apple Silicon, Linux x86_64/ARM64, UOS, Kylin and Deepin. Package availability and formal support remain blocked until each native build, cold-start, offline, privacy and functional evidence cell is complete; HarmonyOS/OpenHarmony is out of scope for v2.3.7."
+        "text": "Stable packages target Windows 10/11 (x64/ARM64), macOS 13+ (Intel and Apple Silicon), and Linux x86_64/ARM64 on Ubuntu 22.04/24.04 and Debian 12. UOS, Kylin, and Deepin still lack native evidence and are not formal support commitments; HarmonyOS/OpenHarmony is out of scope for v2.3.8."
       }
     }
   ]
@@ -205,7 +205,7 @@
     {
       "@type": "ListItem",
       "position": 2,
-      "name": "v2.3.7",
+      "name": "v2.3.8",
       "item": "https://readmd.asia/release-notes/"
     }
   ]
@@ -216,30 +216,30 @@
     <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#release-highlights">Highlights</a><a href="/workflows/">More answers</a><a href="https://github.com/Natsummerance/readMD">Source</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/tag/v2.3.8">Download</a></div>
   </header>
   <main>
-    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/">Home</a> / <span>Release notes</span> / <span>v2.3.7</span></nav>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/">Home</a> / <span>Release notes</span> / <span>v2.3.8</span></nav>
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
-      <h1 class="display-title">What changed in ReadMD v2.3.7.</h1>
-      <p class="section-copy mt-6 max-w-[68ch]">This release candidate tightens presentation isolation, update integrity, startup resource loading, and tab feedback while keeping your Markdown as the canonical file.</p>
+      <h1 class="display-title">What changed in ReadMD v2.3.8.</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">ReadMD v2.3.8 is the first stable release published through the self-use channel. It unifies batch conversion in one cancellable workbench, parses PPTX and XLSX natively, hardens chart and archive handling, and completes the 46-language interface.</p>
       <figure class="product-frame mt-10"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD desktop interface showing a formatted Markdown document beside its outline." loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="release-highlights" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">
         <h2 class="text-2xl font-semibold tracking-tight">Release highlights and boundaries</h2>
         <ol class="mt-8 grid gap-6 md:grid-cols-2">
-          <li class="answer-card"><h3 class="text-lg font-semibold">Safer presentation path</h3><p>In-app Reveal.js loads same-origin offline resources; slide HTML passes through whitelist sanitization.</p></li>
-          <li class="answer-card"><h3 class="text-lg font-semibold">Integrity-first updates</h3><p>Official assets download to a fixed directory, pass SHA-256, publish atomically, and are rechecked before execution.</p></li>
-          <li class="answer-card"><h3 class="text-lg font-semibold">Lighter interaction</h3><p>Entry scripts load in stages, shared resources load on demand, ETag revalidation reduces repeat transfers, and search Enter keeps focus.</p></li>
-          <li class="answer-card"><h3 class="text-lg font-semibold">Clear tab state</h3><p>Selection and ARIA state refresh immediately, stale render results are discarded, overflow finds the active tab, and Zen mode keeps one Escape path.</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">One batch workbench</h3><p>Conversion, OCR, and export jobs share a unified workbench where any task can be cancelled and every result row stays traceable.</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">Native OOXML parsing</h3><p>PPTX and XLSX import reads the files directly, while legacy Office formats fail with a clear message instead of a cryptic error.</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">Hardened charts and archives</h3><p>Zip extraction rejects path traversal and archive bombs, Vega and Vega-Lite render in a server-side sandbox with no unsafe-eval, PlantUML asks before remote rendering, and Chart.js renders offline.</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">46 languages and calmer tooling</h3><p>Interface text from the system tray to skill imports ships in 46 languages; VS Code and MCP gain dynamic skills, streaming cancel, and connection status, while skill imports roll back automatically on failure.</p></li>
           </ol>
       </div>
     </section>
     <section class="mx-auto max-w-5xl px-5 py-16">
-      <h2 class="text-2xl font-semibold tracking-tight">V2.3.7 release-candidate questions</h2>
+      <h2 class="text-2xl font-semibold tracking-tight">v2.3.8 release questions</h2>
       <div class="mt-8 grid gap-6 md:grid-cols-2">
-        <article class="answer-card"><h3>Is v2.3.7 production ready?</h3><p>This page describes the release candidate. It is for local acceptance testing until every required native-platform gate is complete; keep backups and verify checksums before installation.</p></article>
+        <article class="answer-card"><h3>Is v2.3.8 a stable release?</h3><p>Yes. v2.3.8 was published on GitHub as a stable release, not a prerelease, on 2026-09-03. It ships via the READMD_SELF_USE_RELEASE self-use channel: assets are unsigned and the native platform evidence list is informational, so keep backups and verify SHA256SUMS.txt before installation.</p></article>
         <article class="answer-card"><h3>Does display repair change my Markdown?</h3><p>No. Rendering repairs affect the in-memory display. Source bytes change only when you explicitly edit and save the document.</p></article>
         <article class="answer-card"><h3>How are updates checked?</h3><p>Updates come from official GitHub Release assets into a fixed directory, use temporary files and SHA-256 verification, then publish atomically and recheck before execution.</p></article>
-        <article class="answer-card"><h3>Which platforms receive packages?</h3><p>The candidate targets Windows, macOS Intel and Apple Silicon, Linux x86_64/ARM64, UOS, Kylin and Deepin. Package availability and formal support remain blocked until each native evidence cell is complete; HarmonyOS/OpenHarmony is out of scope for v2.3.7.</p></article>
+        <article class="answer-card"><h3>Which platforms receive packages?</h3><p>Stable packages target Windows 10/11 (x64/ARM64), macOS 13+ (Intel and Apple Silicon), and Linux x86_64/ARM64 on Ubuntu 22.04/24.04 and Debian 12. UOS, Kylin, and Deepin still lack native evidence and are not formal support commitments; HarmonyOS/OpenHarmony is out of scope for v2.3.8.</p></article>
       </div>
       <div class="mt-10 flex flex-wrap gap-5">
         <a class="link-action" href="/download/">Download ReadMD</a>

@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ReadMD v2.3.7 發布說明 | 安全放映與更新校驗</title>
-  <meta name="description" content="查看 ReadMD v2.3.7 驗收候選說明：Reveal 放映隔離、更新完整性、啟動載入、標籤狀態與正式平台證據門檻，並了解本機測試、校驗碼與正式平台發行前必須完成的原生功能驗收。">
+  <title>ReadMD v2.3.8 發布說明 | 統一批次工作台與更安全的圖表</title>
+  <meta name="description" content="ReadMD v2.3.8 正式版發布說明：統一批次工作台支援取消與逐列追溯，PPTX/XLSX 原生 OOXML 解析，zip 解壓與圖表渲染安全強化，VS Code 與 MCP 串流控制，46 種語言介面全數就緒。">
   <meta name="author" content="ReadMD">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
-  <meta property="og:title" content="ReadMD v2.3.7 發布說明 | 安全放映與更新校驗">
-  <meta property="og:description" content="V2.3.7 驗收候選的版本事實：安全放映、更新完整性、啟動載入、標籤狀態與本機優先工作流。">
+  <meta property="og:title" content="ReadMD v2.3.8 發布說明 | 統一批次工作台與更安全的圖表">
+  <meta property="og:description" content="v2.3.8 正式版的版本事實：統一批次工作台、原生 OOXML 解析、圖表與壓縮套件安全強化、46 種語言在地化。">
   <meta property="og:url" content="https://readmd.asia/zh-tw/release-notes/">
   <meta property="og:image" content="https://readmd.asia/media/overview-reader.png">
   <meta property="og:image:type" content="image/png">
@@ -22,8 +22,8 @@
   <meta property="og:locale:alternate" content="zh_CN">
   <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="ReadMD v2.3.7 發布說明 | 安全放映與更新校驗">
-  <meta name="twitter:description" content="閱讀 V2.3.7 驗收候選的發布邊界、平台資產和校驗清單。">
+  <meta name="twitter:title" content="ReadMD v2.3.8 發布說明 | 統一批次工作台與更安全的圖表">
+  <meta name="twitter:description" content="了解 v2.3.8 正式版的發布邊界、平台資產和校驗清單。">
   <meta name="twitter:image" content="https://readmd.asia/media/overview-reader.png">
   <meta name="twitter:image:alt" content="ReadMD 桌面介面顯示排版後的 Markdown 文件和目錄。">
   <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
@@ -47,7 +47,7 @@
       "@type": "WebPage",
       "@id": "https://readmd.asia/zh-tw/release-notes/#webpage",
       "url": "https://readmd.asia/zh-tw/release-notes/",
-      "name": "ReadMD v2.3.7 發布說明 | 安全放映與更新校驗",
+      "name": "ReadMD v2.3.8 發布說明 | 統一批次工作台與更安全的圖表",
       "isPartOf": {
         "@id": "https://readmd.asia/#website"
       },
@@ -55,7 +55,7 @@
         "@id": "https://readmd.asia/zh-tw/release-notes/#software"
       },
       "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
-      "dateModified": "2026-08-26",
+      "dateModified": "2026-09-03",
       "speakable": {
         "@type": "SpeakableSpecification",
         "cssSelector": [
@@ -76,10 +76,10 @@
       "@type": "SoftwareApplication",
       "@id": "https://readmd.asia/zh-tw/release-notes/#software",
       "name": "ReadMD",
-      "operatingSystem": "Windows 10/11, macOS 13+, Linux (candidate)",
+      "operatingSystem": "Windows 10/11, macOS 13+, Linux x86_64/ARM64",
       "applicationCategory": "UtilitiesApplication",
       "softwareVersion": "2.3.8",
-      "dateModified": "2026-08-26",
+      "dateModified": "2026-09-03",
       "isAccessibleForFree": true,
       "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
       "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
@@ -102,38 +102,38 @@
     {
       "@type": "HowTo",
       "@id": "https://readmd.asia/zh-tw/release-notes/#howto",
-      "name": "如何安全評估 ReadMD V2.3.7 驗收候選",
+      "name": "如何安全安裝 ReadMD v2.3.8 正式版",
       "step": [
         {
           "@type": "HowToStep",
-          "name": "更安全的放映路徑",
-          "text": "應用內 Reveal.js 只載入同源離線資源；投影片 HTML 繼續透過白名單淨化。"
+          "name": "先核對校驗碼",
+          "text": "從發布頁下載 SHA256SUMS.txt，逐一核對安裝套件的 SHA-256 後再執行。"
         },
         {
           "@type": "HowToStep",
-          "name": "完整性優先更新",
-          "text": "官方資產下載到固定目錄，通過 SHA-256 後原子發布，執行前再次複核。"
+          "name": "首次執行會出現未簽名提示",
+          "text": "v2.3.8 經 READMD_SELF_USE_RELEASE 自用通道發布，資產未做 Authenticode 與 macOS codesign 簽名；Windows SmartScreen 與 macOS Gatekeeper 可能要求確認。"
         },
         {
           "@type": "HowToStep",
-          "name": "更輕的互動載入",
-          "text": "入口腳本分階段載入，共享資源按需引入，靜態回應支援 ETag 複驗，搜尋 Enter 保持焦點。"
+          "name": "批次任務隨時可取消",
+          "text": "統一批次工作台中的每項任務都可取消，結果逐列可追溯；PPTX 與 XLSX 由原生 OOXML 讀取器解析。"
         },
         {
           "@type": "HowToStep",
-          "name": "更清楚的標籤狀態",
-          "text": "選取和 ARIA 狀態立即重新整理，過期渲染結果被捨棄，溢出時定位活動標籤，Zen 模式保持一致的 Escape 路徑。"
+          "name": "圖表在沙箱內渲染",
+          "text": "Vega 與 Vega-Lite 由伺服器端沙箱渲染，不載入外部資料且 CSP 不含 unsafe-eval；Chart.js 離線渲染；PlantUML 遠端渲染前先確認。"
         }
       ]
     },
     {
       "@type": "TechArticle",
       "@id": "https://readmd.asia/zh-tw/release-notes/#article",
-      "headline": "ReadMD v2.3.7 發布說明 | 安全放映與更新校驗",
-      "description": "查看 ReadMD v2.3.7 驗收候選說明：Reveal 放映隔離、更新完整性、啟動載入、標籤狀態與正式平台證據門檻，並了解本機測試、校驗碼與正式平台發行前必須完成的原生功能驗收。",
+      "headline": "ReadMD v2.3.8 發布說明 | 統一批次工作台與更安全的圖表",
+      "description": "ReadMD v2.3.8 正式版發布說明：統一批次工作台支援取消與逐列追溯，PPTX/XLSX 原生 OOXML 解析，zip 解壓與圖表渲染安全強化，VS Code 與 MCP 串流控制，46 種語言介面全數就緒。",
       "inLanguage": "en",
-      "datePublished": "2026-08-26",
-      "dateModified": "2026-08-26",
+      "datePublished": "2026-09-03",
+      "dateModified": "2026-09-03",
       "author": {
         "@id": "https://readmd.asia/#organization"
       },
@@ -159,10 +159,10 @@
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "v2.3.7 是正式版嗎？",
+      "name": "v2.3.8 是正式版嗎？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "目前頁面描述的是驗收候選，需等所有必要的平台證據完成後才可作為正式版；請在安裝前保留備份並校驗 SHA-256。"
+        "text": "是。v2.3.8 已於 2026-09-03 在 GitHub 以正式發行（非預覽版）形式上線，經 READMD_SELF_USE_RELEASE 自用通道發布：資產未做簽名，原生平台證據清單按參考口徑提供；安裝前請保留備份並核對 SHA256SUMS.txt。"
       }
     },
     {
@@ -186,7 +186,7 @@
       "name": "哪些平台會收到安裝套件？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "候選目標包含 Windows、Intel 與 Apple Silicon macOS、Linux x86_64/ARM64、UOS、麒麟與 Deepin；每個平台完成原生建置、冷啟動、離線、隱私與功能證據後，才會確認套件與正式支援。HarmonyOS/OpenHarmony 不屬於 v2.3.7。"
+        "text": "正式版安裝套件涵蓋 Windows 10/11（x64/ARM64）、macOS 13+（Intel 與 Apple Silicon），以及 Ubuntu 22.04/24.04 和 Debian 12 的 Linux x86_64/ARM64；統信 UOS、銀河麒麟與 Deepin 仍缺原生證據，不構成正式支援承諾；HarmonyOS/OpenHarmony 不在 v2.3.8 範圍內。"
       }
     }
   ]
@@ -205,7 +205,7 @@
     {
       "@type": "ListItem",
       "position": 2,
-      "name": "v2.3.7",
+      "name": "v2.3.8",
       "item": "https://readmd.asia/zh-tw/release-notes/"
     }
   ]
@@ -216,30 +216,30 @@
     <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/zh-tw/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#release-highlights">發布重點</a><a href="/zh-tw/workflows/">更多答案</a><a href="https://github.com/Natsummerance/readMD">原始碼</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/tag/v2.3.8">下載</a></div>
   </header>
   <main>
-    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-tw/">首頁</a> / <span>發布說明</span> / <span>v2.3.7</span></nav>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-tw/">首頁</a> / <span>發布說明</span> / <span>v2.3.8</span></nav>
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
-      <h1 class="display-title">ReadMD v2.3.7 改了什麼。</h1>
-      <p class="section-copy mt-6 max-w-[68ch]">這個測試版收緊放映隔離和更新完整性，最佳化啟動資源載入與標籤回饋；你的 Markdown 仍然是權威原始檔。</p>
+      <h1 class="display-title">ReadMD v2.3.8 改了什麼。</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">ReadMD v2.3.8 是自用通道發布的第一個正式版：批次轉檔合併進統一工作台且隨時可取消，PPTX 與 XLSX 改為原生解析，圖表與壓縮套件處理完成安全強化，46 種語言介面全數收尾。</p>
       <figure class="product-frame mt-10"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD 桌面介面顯示排版後的 Markdown 文件和目錄。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="release-highlights" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">
         <h2 class="text-2xl font-semibold tracking-tight">發布亮點與邊界</h2>
         <ol class="mt-8 grid gap-6 md:grid-cols-2">
-          <li class="answer-card"><h3 class="text-lg font-semibold">更安全的放映路徑</h3><p>應用內 Reveal.js 只載入同源離線資源；投影片 HTML 繼續透過白名單淨化。</p></li>
-          <li class="answer-card"><h3 class="text-lg font-semibold">完整性優先更新</h3><p>官方資產下載到固定目錄，通過 SHA-256 後原子發布，執行前再次複核。</p></li>
-          <li class="answer-card"><h3 class="text-lg font-semibold">更輕的互動載入</h3><p>入口腳本分階段載入，共享資源按需引入，靜態回應支援 ETag 複驗，搜尋 Enter 保持焦點。</p></li>
-          <li class="answer-card"><h3 class="text-lg font-semibold">更清楚的標籤狀態</h3><p>選取和 ARIA 狀態立即重新整理，過期渲染結果被捨棄，溢出時定位活動標籤，Zen 模式保持一致的 Escape 路徑。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">統一批次工作台</h3><p>轉檔、OCR 與匯出任務共用一個工作台，任何任務都能取消，結果逐列可追溯。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">原生 OOXML 解析</h3><p>PPTX 與 XLSX 直接按檔案格式讀取；舊版 Office 格式會得到明確錯誤提示，而不是莫名失敗。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">圖表與壓縮套件強化</h3><p>zip 解壓拒絕路徑穿越與壓縮炸彈；Vega/Vega-Lite 改由伺服器端沙箱渲染且 CSP 不含 unsafe-eval；PlantUML 遠端渲染前需確認；Chart.js 支援離線渲染。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">46 種語言與更穩的擴充</h3><p>從系統匣到技能匯入的介面文案涵蓋 46 種語言；VS Code 與 MCP 支援動態技能、串流取消與連線狀態顯示；技能匯入失敗自動回滾。</p></li>
           </ol>
       </div>
     </section>
     <section class="mx-auto max-w-5xl px-5 py-16">
-      <h2 class="text-2xl font-semibold tracking-tight">V2.3.7 驗收候選常見問題</h2>
+      <h2 class="text-2xl font-semibold tracking-tight">v2.3.8 正式版常見問題</h2>
       <div class="mt-8 grid gap-6 md:grid-cols-2">
-        <article class="answer-card"><h3>v2.3.7 是正式版嗎？</h3><p>目前頁面描述的是驗收候選，需等所有必要的平台證據完成後才可作為正式版；請在安裝前保留備份並校驗 SHA-256。</p></article>
+        <article class="answer-card"><h3>v2.3.8 是正式版嗎？</h3><p>是。v2.3.8 已於 2026-09-03 在 GitHub 以正式發行（非預覽版）形式上線，經 READMD_SELF_USE_RELEASE 自用通道發布：資產未做簽名，原生平台證據清單按參考口徑提供；安裝前請保留備份並核對 SHA256SUMS.txt。</p></article>
         <article class="answer-card"><h3>顯示修復會改寫我的 Markdown 嗎？</h3><p>不會。渲染修復只影響記憶體中的顯示層；只有你明確編輯並儲存時，原始檔位元組才會變化。</p></article>
         <article class="answer-card"><h3>更新套件如何檢查？</h3><p>更新只來自官方 GitHub Release 資產，先進入固定目錄和暫存檔，經 SHA-256 校驗後原子發布，並在執行前複核。</p></article>
-        <article class="answer-card"><h3>哪些平台會收到安裝套件？</h3><p>候選目標包含 Windows、Intel 與 Apple Silicon macOS、Linux x86_64/ARM64、UOS、麒麟與 Deepin；每個平台完成原生證據後才會確認套件與正式支援。HarmonyOS/OpenHarmony 不屬於 v2.3.7。</p></article>
+        <article class="answer-card"><h3>哪些平台會收到安裝套件？</h3><p>正式版安裝套件涵蓋 Windows 10/11（x64/ARM64）、macOS 13+（Intel 與 Apple Silicon），以及 Ubuntu 22.04/24.04 和 Debian 12 的 Linux x86_64/ARM64；統信 UOS、銀河麒麟與 Deepin 仍缺原生證據，不構成正式支援承諾；HarmonyOS/OpenHarmony 不在 v2.3.8 範圍內。</p></article>
       </div>
       <div class="mt-10 flex flex-wrap gap-5">
         <a class="link-action" href="/download/">下載 ReadMD</a>
