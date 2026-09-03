@@ -1325,6 +1325,37 @@ class Handler(BaseHTTPRequestHandler):
         payload.update(extra)
         self._send_json(status, payload)
 
+    def _read_request_body_limited(self, length, limit):
+        """Read exactly ``length`` bytes without creating an unbounded buffer.
+
+        ``Content-Length`` is checked before this helper is called, but a
+        bounded chunked read keeps the ZIP endpoint safe when a client sends
+        an incomplete body or a socket returns short reads.  The helper never
+        returns more than ``limit`` bytes and raises a stable ``ValueError``
+        when the request cannot be consumed safely.
+        """
+        try:
+            length = int(length or 0)
+        except (TypeError, ValueError):
+            raise ValueError('invalid_content_length')
+        if length < 0 or length > int(limit):
+            raise ValueError('request_too_large')
+        if length == 0:
+            return b''
+        chunks = []
+        remaining = length
+        total = 0
+        while remaining:
+            chunk = self.rfile.read(min(64 * 1024, remaining))
+            if not chunk:
+                raise ValueError('incomplete_request')
+            total += len(chunk)
+            if total > limit:
+                raise ValueError('request_too_large')
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        return b''.join(chunks)
+
     def _module_ready(self, name, message):
         """Ensure exactly one feature module is being loaded for this request."""
         if RM.is_ready(name):
@@ -2779,9 +2810,14 @@ class Handler(BaseHTTPRequestHandler):
                     self.close_connection = True
                     self._send_api_error(413, 'zip_archive_too_large')
                     return
-                data = self.rfile.read(n) if n else b''
-                if len(data) != n:
-                    self._send_api_error(400, 'incomplete_request')
+                try:
+                    data = self._read_request_body_limited(n, self.MAX_ZIP_REQUEST_BYTES)
+                except ValueError as exc:
+                    code = str(exc)
+                    status = 413 if code == 'request_too_large' else 400
+                    if status == 413:
+                        self.close_connection = True
+                    self._send_api_error(status, code)
                     return
                 res = extract_zip_archive(data, base_temp_dir=dest_dir)
             else:

@@ -686,14 +686,17 @@ function bindEvents() {
   if ($('style-custom-modal')) $('style-custom-modal').addEventListener('click', e => { if (e.target === $('style-custom-modal')) closeStyleModal(); });
 
   async function generateCustomStyleWithAi() {
-    const _t = (k, p, fallback = '') => {
+    // Keep all user-facing wording in the locale bundles.  A missing bundle
+    // must fail silent rather than leaking a source-language fallback into a
+    // translated interface.
+    const _t = (k, p) => {
       const value = window.i18n ? window.i18n.t(k, p) : '';
-      return value && value !== k ? value : fallback;
+      return value && value !== k ? value : '';
     };
     const promptInput = $('style-ai-prompt');
     const prompt = (promptInput && promptInput.value || '').trim();
     if (!prompt) {
-      showToast(_t('styleai.enterPrompt', {}, '请输入排版风格诉求'));
+      showToast(_t('styleai.enterPrompt', {}));
       if (promptInput) promptInput.focus();
       return;
     }
@@ -701,7 +704,7 @@ function bindEvents() {
     const genBtn = $('style-ai-gen-btn');
     if (statusEl) {
       statusEl.classList.remove('hidden');
-      statusEl.textContent = _t('styleai.generating', {}, 'AI 样式生成中...');
+      statusEl.textContent = _t('styleai.generating', {});
     }
     if (genBtn) genBtn.disabled = true;
 
@@ -710,8 +713,8 @@ function bindEvents() {
         ? await ensureAiConfigured()
         : (typeof resolveSharedAiConnection === 'function' ? await resolveSharedAiConnection() : null);
       if (!connection) {
-        if (statusEl) statusEl.textContent = _t('toast.noApiKeyNotice', {}, '请先配置 AI 服务');
-        showToast(_t('toast.noApiKeyNotice', {}, '请先配置 AI 服务'));
+        if (statusEl) statusEl.textContent = _t('toast.noApiKeyNotice', {});
+        showToast(_t('toast.noApiKeyNotice', {}));
         return;
       }
 
@@ -745,27 +748,27 @@ function bindEvents() {
 
       const data = await res.json();
       if (!data || !data.ok) {
-        throw new Error(_t('ai.reqFailMsg', {}, 'AI 请求未返回有效内容'));
+        throw new Error(_t('ai.reqFailMsg', {}));
       }
 
       let text = (data.content || '').trim();
       const fenced = text.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
       const candidate = (fenced ? fenced[1] : text).trim();
       if (!candidate.startsWith('{') || !candidate.endsWith('}')) {
-        throw new Error(_t('styleai.invalidJson', {}, 'AI 返回的样式 JSON 无效'));
+        throw new Error(_t('styleai.invalidJson', {}));
       }
       let parsed;
       try {
         parsed = JSON.parse(candidate);
       } catch (e) {
-        throw new Error(_t('styleai.invalidJson', {}, 'AI 返回的样式 JSON 无效'));
+        throw new Error(_t('styleai.invalidJson', {}));
       }
       const allowedKeys = new Set(['css', 'head']);
       const keys = parsed && typeof parsed === 'object' && !Array.isArray(parsed)
         ? Object.keys(parsed) : [];
       if (!parsed || keys.some(key => !allowedKeys.has(key))
           || (typeof parsed.css !== 'string' && typeof parsed.head !== 'string')) {
-        throw new Error(_t('styleai.invalidJson', {}, 'AI 返回的样式 JSON 无效'));
+        throw new Error(_t('styleai.invalidJson', {}));
       }
 
       if (parsed.css && $('style-custom-css')) {
@@ -776,17 +779,17 @@ function bindEvents() {
       }
 
       if (statusEl) {
-        statusEl.textContent = _t('styleai.generated', {}, 'AI 样式生成完成，保存即可生效');
+        statusEl.textContent = _t('styleai.generated', {});
         setTimeout(() => statusEl.classList.add('hidden'), 3500);
       }
-      showToast(_t('styleai.generated', {}, 'AI 样式生成完成'));
+      showToast(_t('styleai.generated', {}));
     } catch (err) {
       // Never surface provider/server exception text in the UI.  It may
       // contain URLs, model payloads, or implementation details.  Errors
       // deliberately raised above are already localized and safe to retain;
       // everything else maps to the stable localised request error.
-      const invalidJsonMessage = _t('styleai.invalidJson', {}, 'AI 返回的样式 JSON 无效');
-      const requestFailedMessage = _t('ai.reqFailMsg', {}, 'AI 请求失败');
+      const invalidJsonMessage = _t('styleai.invalidJson', {});
+      const requestFailedMessage = _t('ai.reqFailMsg', {});
       const candidateMessage = err && typeof err.message === 'string' ? err.message : '';
       const safeError = candidateMessage === invalidJsonMessage
         ? candidateMessage
