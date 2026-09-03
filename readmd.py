@@ -1486,12 +1486,25 @@ class Handler(BaseHTTPRequestHandler):
     def _api_code_run(self):
         try:
             n = int(self.headers.get('Content-Length', 0) or 0)
-            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            if n < 0 or n > 256 * 1024:
+                self.close_connection = True
+                self._send_api_error(413, 'request_too_large')
+                return
+            body = json.loads(self._read_request_body_limited(n, 256 * 1024).decode('utf-8')) if n else {}
+            if not isinstance(body, dict):
+                self._send_api_error(400, 'invalid_request')
+                return
             if body.get('confirm') is not True:
-                self._send_json(400, {'ok': False, 'error_code': 'confirmation_required'})
+                self._send_api_error(400, 'confirmation_required')
                 return
             lang = body.get('lang', 'python')
             code = body.get('code', '')
+            if not isinstance(lang, str) or not isinstance(code, str):
+                self._send_api_error(400, 'invalid_request')
+                return
+            if len(code) > 200_000:
+                self._send_api_error(413, 'code_too_large')
+                return
             cwd = body.get('cwd') or None
             timeout = int(body.get('timeout', 10))
             from src.readmd_modules import code_chunk_runner
@@ -2756,14 +2769,22 @@ class Handler(BaseHTTPRequestHandler):
             self._send_api_error(500, 'conversion_failed')
 
     def _api_convert_batch(self):
-        n = int(self.headers.get('Content-Length', 0) or 0)
         try:
-            body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
+            n = int(self.headers.get('Content-Length', 0) or 0)
+        except (TypeError, ValueError):
+            self._send_api_error(400, 'invalid_content_length')
+            return
+        if n < 0 or n > 64 * 1024:
+            self.close_connection = True
+            self._send_api_error(413, 'request_too_large')
+            return
+        try:
+            body = json.loads(self._read_request_body_limited(n, 64 * 1024).decode('utf-8')) if n else {}
         except Exception:
-            self._send_json(400, {'ok': False, 'error_code': 'invalid_request', 'error': '请求格式错误'})
+            self._send_api_error(400, 'invalid_request')
             return
         if body.get('confirm') is not True:
-            self._send_json(400, {'ok': False, 'code': 'confirmation_required'})
+            self._send_api_error(400, 'confirmation_required')
             return
         paths = [p for p in (body.get('paths') or [])
                  if isinstance(p, str) and os.path.isfile(p)]
@@ -2780,7 +2801,7 @@ class Handler(BaseHTTPRequestHandler):
         if is_win7():
             paths = [p for p in paths if os.path.splitext(p)[1].lower() in WIN7_CONVERT_EXTS]
         if not paths:
-            self._send_json(400, {'ok': False, 'error_code': 'no_convertible_files', 'error': '没有可转换的文件'})
+            self._send_api_error(400, 'no_convertible_files')
             return
         if not self._module_ready('convert', '转换模块加载中，请稍候再试'):
             return
@@ -2789,8 +2810,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {'job': jid, 'total': len(paths)})
         except Exception as e:
             logging.exception('convert batch start failed')
-            self._send_json(500, {'ok': False, 'error_code': 'batch_start_failed',
-                                  'error': '批量转换启动失败：%s' % e})
+            self._send_api_error(500, 'batch_start_failed')
 
     def _api_batch_extract_zip(self):
         """Extract a user-selected ZIP without leaking paths or exceptions.

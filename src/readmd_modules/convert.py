@@ -1850,112 +1850,114 @@ def extract_zip_archive(zip_source, base_temp_dir=None):
     total_uncompressed = 0
     total_entries = 0
 
-    with zf_ctx as zf:
-        infolist = zf.infolist()
-        # Bound central-directory metadata before iterating.  This prevents a
-        # metadata-only archive from creating an unbounded Python object list.
-        if len(infolist) > MAX_FILE_COUNT * 4:
-            shutil.rmtree(target_dir, ignore_errors=True)
-            raise ValueError('zip_entry_count_exceeded')
-        total_entries = len(infolist)
-        for info in infolist:
-            if info.is_dir():
-                continue
+    extraction_completed = False
+    try:
+        with zf_ctx as zf:
+            infolist = zf.infolist()
+            # Bound central-directory metadata before iterating.  This prevents a
+            # metadata-only archive from creating an unbounded Python object list.
+            if len(infolist) > MAX_FILE_COUNT * 4:
+                raise ValueError('zip_entry_count_exceeded')
+            total_entries = len(infolist)
+            for info in infolist:
+                if info.is_dir():
+                    continue
 
-            # 1. 拒绝符号链接、设备文件与 FIFO
-            mode = (info.external_attr >> 16) & 0o170000
-            if mode != 0 and mode != 0o100000:  # 0o100000 is regular file
-                skipped_count += 1
-                skipped_reasons['unsafe_file_type'] += 1
-                continue
+                # 1. 拒绝符号链接、设备文件与 FIFO
+                mode = (info.external_attr >> 16) & 0o170000
+                if mode != 0 and mode != 0o100000:  # 0o100000 is regular file
+                    skipped_count += 1
+                    skipped_reasons['unsafe_file_type'] += 1
+                    continue
 
-            # 2. 数量与解压总容量上限
-            if len(extracted_files) >= MAX_FILE_COUNT or (total_uncompressed + info.file_size) > MAX_TOTAL_UNCOMPRESSED:
-                skipped_count += 1
-                skipped_reasons['limit_exceeded'] += 1
-                continue
+                # 2. 数量与解压总容量上限
+                if len(extracted_files) >= MAX_FILE_COUNT or (total_uncompressed + info.file_size) > MAX_TOTAL_UNCOMPRESSED:
+                    skipped_count += 1
+                    skipped_reasons['limit_exceeded'] += 1
+                    continue
 
-            raw_name = info.filename
-            if not (info.flag_bits & 0x800):
-                try:
-                    raw_bytes = raw_name.encode('cp437')
-                    for enc in ('gbk', 'utf-8', 'gb18030', 'big5'):
-                        try:
-                            raw_name = raw_bytes.decode(enc)
-                            break
-                        except UnicodeDecodeError:
-                            pass
-                except Exception:
-                    pass
-
-            # Validate the archive name before normalising it.  Stripping a
-            # leading slash first would silently turn absolute and UNC names
-            # into apparently safe relative paths.
-            archive_name = str(raw_name).replace('\\', '/')
-            drive, _ = ntpath.splitdrive(archive_name)
-            normalized_name = posixpath.normpath(archive_name)
-            if (archive_name.startswith('/') or archive_name.startswith('//')
-                    or bool(drive) or normalized_name in ('.', '..')
-                    or normalized_name.startswith('../')):
-                skipped_count += 1
-                skipped_reasons['invalid_path'] += 1
-                continue
-            clean_name = normalized_name
-
-            # 3. 路径深度限制
-            parts = [p for p in clean_name.replace('\\', '/').split('/') if p and p != '.']
-            if len(parts) > MAX_PATH_DEPTH:
-                skipped_count += 1
-                skipped_reasons['invalid_path'] += 1
-                continue
-
-            # 4. 支持格式过滤
-            ext = os.path.splitext(clean_name)[1].lower()
-            if ext not in SUPPORTED_EXTS:
-                skipped_count += 1
-                skipped_reasons['unsupported_format'] += 1
-                continue
-
-            dest_file = os.path.realpath(os.path.abspath(os.path.join(target_dir, clean_name)))
-            if not dest_file.startswith(target_dir + os.sep) and dest_file != target_dir:
-                skipped_count += 1
-                skipped_reasons['invalid_path'] += 1
-                continue
-
-            os.makedirs(os.path.dirname(dest_file), exist_ok=True)
-            written = 0
-            over_limit = False
-            try:
-                with zf.open(info) as src, open(dest_file, 'wb') as dst:
-                    while True:
-                        chunk = src.read(65536)
-                        if not chunk:
-                            break
-                        written += len(chunk)
-                        # Do not trust the central-directory size alone: a
-                        # malformed archive can advertise a small size and
-                        # expand much further while being streamed.
-                        if total_uncompressed + written > MAX_TOTAL_UNCOMPRESSED:
-                            over_limit = True
-                            break
-                        dst.write(chunk)
-            except Exception:
-                shutil.rmtree(target_dir, ignore_errors=True)
-                raise
-            finally:
-                if over_limit:
+                raw_name = info.filename
+                if not (info.flag_bits & 0x800):
                     try:
-                        os.remove(dest_file)
-                    except OSError:
+                        raw_bytes = raw_name.encode('cp437')
+                        for enc in ('gbk', 'utf-8', 'gb18030', 'big5'):
+                            try:
+                                raw_name = raw_bytes.decode(enc)
+                                break
+                            except UnicodeDecodeError:
+                                pass
+                    except Exception:
                         pass
 
-            if over_limit:
-                skipped_count += 1
-                skipped_reasons['limit_exceeded'] += 1
-                continue
-            if os.path.isfile(dest_file):
-                extracted_files.append(dest_file)
-                total_uncompressed += written
+                # Validate the archive name before normalising it.  Stripping a
+                # leading slash first would silently turn absolute and UNC names
+                # into apparently safe relative paths.
+                archive_name = str(raw_name).replace('\\', '/')
+                drive, _ = ntpath.splitdrive(archive_name)
+                normalized_name = posixpath.normpath(archive_name)
+                if (archive_name.startswith('/') or archive_name.startswith('//')
+                        or bool(drive) or normalized_name in ('.', '..')
+                        or normalized_name.startswith('../')):
+                    skipped_count += 1
+                    skipped_reasons['invalid_path'] += 1
+                    continue
+                clean_name = normalized_name
+
+                # 3. 路径深度限制
+                parts = [p for p in clean_name.replace('\\', '/').split('/') if p and p != '.']
+                if len(parts) > MAX_PATH_DEPTH:
+                    skipped_count += 1
+                    skipped_reasons['invalid_path'] += 1
+                    continue
+
+                # 4. 支持格式过滤
+                ext = os.path.splitext(clean_name)[1].lower()
+                if ext not in SUPPORTED_EXTS:
+                    skipped_count += 1
+                    skipped_reasons['unsupported_format'] += 1
+                    continue
+
+                dest_file = os.path.realpath(os.path.abspath(os.path.join(target_dir, clean_name)))
+                if not dest_file.startswith(target_dir + os.sep) and dest_file != target_dir:
+                    skipped_count += 1
+                    skipped_reasons['invalid_path'] += 1
+                    continue
+
+                os.makedirs(os.path.dirname(dest_file), exist_ok=True)
+                written = 0
+                over_limit = False
+                try:
+                    with zf.open(info) as src, open(dest_file, 'wb') as dst:
+                        while True:
+                            chunk = src.read(65536)
+                            if not chunk:
+                                break
+                            written += len(chunk)
+                            # Do not trust the central-directory size alone: a
+                            # malformed archive can advertise a small size and
+                            # expand much further while being streamed.
+                            if total_uncompressed + written > MAX_TOTAL_UNCOMPRESSED:
+                                over_limit = True
+                                break
+                            dst.write(chunk)
+                finally:
+                    if over_limit:
+                        try:
+                            os.remove(dest_file)
+                        except OSError:
+                            pass
+
+                if over_limit:
+                    skipped_count += 1
+                    skipped_reasons['limit_exceeded'] += 1
+                    continue
+                if os.path.isfile(dest_file):
+                    extracted_files.append(dest_file)
+                    total_uncompressed += written
+        extraction_completed = True
+    finally:
+        if not extraction_completed:
+            shutil.rmtree(target_dir, ignore_errors=True)
 
     if not extracted_files:
         # Do not retain empty run directories for archives that contain only
