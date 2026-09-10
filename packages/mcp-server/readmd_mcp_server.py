@@ -41,7 +41,7 @@ try:
     import src.readmd_modules as RM
     from src.readmd_core import readmd_fix
     from src.readmd_core.toc_engine import process_toc_markers, generate_toc_markdown, extract_headings
-    from src.readmd_modules import bibtex, convert, latex2omml, mdexport, ocr, texmd, txtmd, web
+    from src.readmd_modules import bibtex, convert, latex2omml, mdexport, ocr, pdf_editor, texmd, txtmd, web
     from src.readmd_modules.import_processor import process_markdown_imports
     from src.readmd_modules.mdexport.presentation_render import render_presentation_html
     from src.readmd_modules.mdexport.epub_render import export_epub
@@ -77,6 +77,7 @@ def _resolve_skill_id(identifier):
 CONFIRM_REQUIRED = {
     "readmd_web_to_markdown", "readmd_export_document",
     "readmd_export_presentation", "readmd_export_epub", "readmd_run_code_chunk",
+    "readmd_pdf_apply_edit", "readmd_pdf_rollback",
 }
 
 
@@ -151,7 +152,7 @@ def _progress_emitter(token: Any):
 
 # Keep a literal in source for older ecosystem manifest scanners; the runtime
 # value remains sourced from the single VERSION file below.
-# "version": "2.3.8"
+# "version": "2.3.9"
 
 TOOLS: List[Dict[str, Any]] = [
     {
@@ -380,6 +381,75 @@ TOOLS: List[Dict[str, Any]] = [
                 ,"confirm": {"type": "boolean", "const": True, "description": "明确确认执行代码"}
             },
             "required": ["code", "confirm"]
+        }
+    },
+    {
+        "name": "readmd_pdf_audit",
+        "description": "审计 PDF 文档结构、物理尺寸、DPI、旋转角度、只读属性、被占用的系统进程锁以及可选的指定区域微观底色与噪点采样。",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "pdf_path": {"type": "string", "description": "目标 PDF 文件的绝对路径"},
+                "page_num": {"type": "integer", "description": "需要微观采样的页码 (0-indexed，可选)"},
+                "inspect_rect": {
+                    "type": "array",
+                    "items": {"type": "number"},
+                    "description": "需要微观采样的矩形坐标 [x0, y0, x1, y1] (pt，可选)"
+                }
+            },
+            "required": ["pdf_path"]
+        }
+    },
+    {
+        "name": "readmd_pdf_preview_edit",
+        "description": "在沙箱环境中模拟编辑/填写 PDF 并渲染对比图，执行零污染差分质检（Zero-Contamination Gate），绝不修改原文件。",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "pdf_path": {"type": "string", "description": "目标 PDF 文件的绝对路径"},
+                "edits": {
+                    "type": "array",
+                    "description": "编辑条目列表。每项包含 text, x, y, size(pt), font(如仿宋/宋体/黑体), color([r,g,b]), erase_rect([x0,y0,x1,y1]), blur_radius(PSF模糊半径), slant_angle(微度倾角)",
+                    "items": {"type": "object"}
+                },
+                "page_num": {"type": "integer", "default": 0, "description": "编辑的目标页码 (0-indexed)"},
+                "dpi": {"type": "integer", "default": 300, "description": "渲染 DPI (默认 300)"},
+                "output_dir": {"type": "string", "description": "预览图片与热力图输出目录 (可选，默认临时目录)"}
+            },
+            "required": ["pdf_path", "edits"]
+        }
+    },
+    {
+        "name": "readmd_pdf_apply_edit",
+        "description": "物理执行高保真无缝编辑并就地落盘更新 PDF。强制执行 .bak 永久备份、Windows 只读标记解锁与零污染差分质检复核。必须传入 confirm: true。",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "pdf_path": {"type": "string", "description": "目标 PDF 文件的绝对路径"},
+                "edits": {
+                    "type": "array",
+                    "description": "编辑条目列表。每项包含 text, x, y, size(pt), font(如仿宋/宋体/黑体), color([r,g,b]), erase_rect([x0,y0,x1,y1]), blur_radius(PSF模糊半径), slant_angle(微度倾角)",
+                    "items": {"type": "object"}
+                },
+                "page_num": {"type": "integer", "default": 0, "description": "编辑的目标页码 (0-indexed)"},
+                "dpi": {"type": "integer", "default": 300, "description": "渲染 DPI (默认 300)"},
+                "output_path": {"type": "string", "description": "输出文件路径 (可选，默认就地覆盖写入原文件)"},
+                "backup": {"type": "boolean", "default": True, "description": "是否自动创建 .bak 永久备份 (默认 true)"},
+                "confirm": {"type": "boolean", "const": True, "description": "明确确认写入 PDF 文件"}
+            },
+            "required": ["pdf_path", "edits", "confirm"]
+        }
+    },
+    {
+        "name": "readmd_pdf_rollback",
+        "description": "从同目录下的 .bak 永久备份文件一键恢复原始 PDF，必须传入 confirm: true。",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "pdf_path": {"type": "string", "description": "目标 PDF 文件的绝对路径"},
+                "confirm": {"type": "boolean", "const": True, "description": "明确确认回滚文件"}
+            },
+            "required": ["pdf_path", "confirm"]
         }
     }
 ]
@@ -706,6 +776,39 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
                     }
                 ]
             }
+
+        elif name == "readmd_pdf_audit":
+            pdf_path = str(args.get("pdf_path", ""))
+            page_num = args.get("page_num")
+            if page_num is not None:
+                page_num = int(page_num)
+            inspect_rect = args.get("inspect_rect")
+            res = pdf_editor.audit(pdf_path, page_num=page_num, inspect_rect=inspect_rect)
+            return {"content": [{"type": "text", "text": json.dumps(res, ensure_ascii=False, indent=2)}]}
+
+        elif name == "readmd_pdf_preview_edit":
+            pdf_path = str(args.get("pdf_path", ""))
+            edits = args.get("edits", [])
+            page_num = int(args.get("page_num", 0))
+            dpi = int(args.get("dpi", 300))
+            output_dir = args.get("output_dir")
+            res = pdf_editor.preview(pdf_path, edits, page_num=page_num, dpi=dpi, output_dir=output_dir)
+            return {"content": [{"type": "text", "text": json.dumps(res, ensure_ascii=False, indent=2)}]}
+
+        elif name == "readmd_pdf_apply_edit":
+            pdf_path = str(args.get("pdf_path", ""))
+            edits = args.get("edits", [])
+            page_num = int(args.get("page_num", 0))
+            dpi = int(args.get("dpi", 300))
+            output_path = args.get("output_path")
+            backup = bool(args.get("backup", True))
+            res = pdf_editor.apply(pdf_path, edits, page_num=page_num, dpi=dpi, output_path=output_path, backup=backup)
+            return {"content": [{"type": "text", "text": json.dumps(res, ensure_ascii=False, indent=2)}]}
+
+        elif name == "readmd_pdf_rollback":
+            pdf_path = str(args.get("pdf_path", ""))
+            res = pdf_editor.rollback(pdf_path)
+            return {"content": [{"type": "text", "text": json.dumps(res, ensure_ascii=False, indent=2)}]}
 
         return {"isError": True, "content": [{"type": "text", "text": f"未知的工具名称: {name}"}]}
 
