@@ -26,7 +26,7 @@ class TrayLabelsTest(unittest.TestCase):
     def test_zh_tw_labels_from_zh_tw_file(self):
         with mock.patch.object(readmd, 'get_system_language', return_value='zh-TW'):
             labels = readmd._tray_labels()
-        self.assertEqual(labels['menu.open'], '打开檔案…')
+        self.assertEqual(labels['menu.open'], '打開檔案…')
         self.assertEqual(labels['tray.show'], '顯示 ReadMD')
         self.assertEqual(labels['tray.quit'], '退出 ReadMD')
 
