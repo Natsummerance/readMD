@@ -188,6 +188,25 @@ except Exception as _e:
 """
 
 
+def _terminate_posix_group(proc):
+    if proc is None:
+        return
+    try:
+        os.killpg(proc.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    except OSError:
+        if proc.poll() is None:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+    try:
+        proc.wait(timeout=0.5)
+    except Exception:
+        pass
+
+
 def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECUTION_TIMEOUT, runtime: Optional[str] = None) -> Dict[str, Any]:
     """底层安全进程调用与 UTF-8 管道捕获（有界流式内存保护与全路径截断）。"""
     env = {key: os.environ[key] for key in _SAFE_ENV_KEYS if os.environ.get(key)}
@@ -198,6 +217,7 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
 
     job = None
     proc = None
+    sel = None
     try:
         popen_kwargs = {}
         is_posix = sys.platform != 'win32'
@@ -224,6 +244,7 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
         )
 
         if is_posix:
+            import codecs
             import selectors
             sel = selectors.DefaultSelector()
             stdout_fd = proc.stdout.fileno()
@@ -231,12 +252,40 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
             os.set_blocking(stdout_fd, False)
             os.set_blocking(stderr_fd, False)
 
+            decoders = {
+                stdout_fd: codecs.getincrementaldecoder('utf-8')(errors='replace'),
+                stderr_fd: codecs.getincrementaldecoder('utf-8')(errors='replace'),
+            }
+
             stdout_chunks: List[str] = []
             stderr_chunks: List[str] = []
             stdout_truncated = [False]
             stderr_truncated = [False]
             stdout_total = 0
             stderr_total = 0
+
+            def _append_text(text: str, stream_name: str):
+                nonlocal stdout_total, stderr_total
+                if not text:
+                    return
+                if stream_name == 'stdout':
+                    if stdout_total < MAX_OUTPUT_CHARS:
+                        rem = MAX_OUTPUT_CHARS - stdout_total
+                        stdout_chunks.append(text[:rem])
+                        stdout_total += min(len(text), rem)
+                        if len(text) > rem:
+                            stdout_truncated[0] = True
+                    else:
+                        stdout_truncated[0] = True
+                else:
+                    if stderr_total < MAX_OUTPUT_CHARS:
+                        rem = MAX_OUTPUT_CHARS - stderr_total
+                        stderr_chunks.append(text[:rem])
+                        stderr_total += min(len(text), rem)
+                        if len(text) > rem:
+                            stderr_truncated[0] = True
+                    else:
+                        stderr_truncated[0] = True
 
             sel.register(stdout_fd, selectors.EVENT_READ, data='stdout')
             sel.register(stderr_fd, selectors.EVENT_READ, data='stderr')
@@ -272,31 +321,27 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
 
                     if not chunk:
                         try:
+                            tail = decoders[fd].decode(b'', final=True)
+                            _append_text(tail, stream_name)
+                        except Exception:
+                            pass
+                        try:
                             sel.unregister(fd)
                         except Exception:
                             pass
                         open_fds.discard(fd)
                         continue
 
-                    text_chunk = chunk.decode('utf-8', errors='replace')
-                    if stream_name == 'stdout':
-                        if stdout_total < MAX_OUTPUT_CHARS:
-                            rem = MAX_OUTPUT_CHARS - stdout_total
-                            stdout_chunks.append(text_chunk[:rem])
-                            stdout_total += min(len(text_chunk), rem)
-                            if len(text_chunk) > rem:
-                                stdout_truncated[0] = True
-                        else:
-                            stdout_truncated[0] = True
-                    else:
-                        if stderr_total < MAX_OUTPUT_CHARS:
-                            rem = MAX_OUTPUT_CHARS - stderr_total
-                            stderr_chunks.append(text_chunk[:rem])
-                            stderr_total += min(len(text_chunk), rem)
-                            if len(text_chunk) > rem:
-                                stderr_truncated[0] = True
-                        else:
-                            stderr_truncated[0] = True
+                    text_chunk = decoders[fd].decode(chunk, final=False)
+                    _append_text(text_chunk, stream_name)
+
+            for fd, stream_name in ((stdout_fd, 'stdout'), (stderr_fd, 'stderr')):
+                if fd in open_fds:
+                    try:
+                        tail = decoders[fd].decode(b'', final=True)
+                        _append_text(tail, stream_name)
+                    except Exception:
+                        pass
 
             try:
                 sel.close()
@@ -304,17 +349,7 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
                 pass
 
             if timed_out or proc.poll() is None:
-                try:
-                    os.killpg(proc.pid, signal.SIGKILL)
-                except Exception:
-                    try:
-                        proc.kill()
-                    except Exception:
-                        pass
-                try:
-                    proc.wait(timeout=0.5)
-                except Exception:
-                    pass
+                _terminate_posix_group(proc)
                 exit_code = -1
             else:
                 exit_code = proc.poll()
@@ -451,6 +486,19 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
             "exit_code": -1
         }
     finally:
+        if sys.platform != 'win32' and proc is not None:
+            _terminate_posix_group(proc)
+            for stream in (proc.stdout, proc.stderr):
+                if stream is not None:
+                    try:
+                        stream.close()
+                    except Exception:
+                        pass
+        if sel is not None:
+            try:
+                sel.close()
+            except Exception:
+                pass
         if job and _kernel32:
             try:
                 _kernel32.CloseHandle(job)

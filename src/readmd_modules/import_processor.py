@@ -129,7 +129,8 @@ def slice_code_lines(code_content: str, line_begin: Optional[int] = None,
         sliced_lines = lines[start - 1:end]
         sliced = "\n".join(sliced_lines)
 
-    fence = "```"
+    longest = max((len(m.group(0)) for m in re.finditer(r'`+', sliced)), default=0)
+    fence = '`' * max(3, longest + 1)
     return f"{fence}{lang}\n{sliced}\n{fence}"
 
 

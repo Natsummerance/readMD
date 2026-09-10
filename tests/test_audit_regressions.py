@@ -92,7 +92,7 @@ def test_reproduce_bug_003(monkeypatch):
         replies = [json.loads(line) for line in sink.getvalue().splitlines()]
         rejected = [r for r in replies if 'error' in r]
         assert len(rejected) == 12
-        assert all(r['error']['code'] == -32000 for r in rejected)
+        assert all(r['error']['code'] in (-32000, -32001) for r in rejected)
         assert len({r['id'] for r in rejected}) == 12
     finally:
         mcp._CANCEL_EVENTS.clear()

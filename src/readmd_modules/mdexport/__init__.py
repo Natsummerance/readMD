@@ -57,7 +57,7 @@ class ImageResolver(object):
         return out
 
 
-def export(fmt, content, base_dir, out_path, options=None, source_name=''):
+def export(fmt, content, base_dir, out_path, options=None, source_name='', *, overwrite=True):
     """执行导出，返回 {ok, path, size, warns}。"""
     fmt = (fmt or '').lower()
     if fmt not in EXTS:
@@ -119,10 +119,22 @@ def export(fmt, content, base_dir, out_path, options=None, source_name=''):
         if not os.path.isfile(output_tmp) or os.path.getsize(output_tmp) <= 0:
             raise RuntimeError('导出器未生成有效文件')
         stage = 'finalize'
-        os.replace(output_tmp, out_path)
+        if overwrite:
+            os.replace(output_tmp, out_path)
+        else:
+            try:
+                os.link(output_tmp, out_path)
+                os.unlink(output_tmp)
+            except AttributeError:
+                if os.path.exists(out_path):
+                    raise FileExistsError('Output already exists')
+                os.replace(output_tmp, out_path)
         output_tmp = None
         size = os.path.getsize(out_path) if os.path.exists(out_path) else 0
         return {'ok': True, 'path': out_path, 'size': size, 'warns': warns}
+    except FileExistsError:
+        return {'ok': False, 'stage': 'finalize', 'error_code': 'output_exists',
+                'error': 'Output already exists', 'warns': warns}
     except Exception as e:
         import logging
         logging.exception('export %s failed', fmt)

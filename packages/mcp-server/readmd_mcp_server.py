@@ -222,7 +222,8 @@ _CORE_SERVICE = None
 # cannot interleave with responses.
 _STDOUT_LOCK = threading.Lock()
 _CANCEL_EVENTS: Dict[Any, threading.Event] = {}
-MAX_CONCURRENT_TOOL_CALLS = 8
+MAX_CONCURRENT_TOOLS = 8
+MAX_CONCURRENT_TOOL_CALLS = MAX_CONCURRENT_TOOLS
 
 
 def _write_message(payload: Dict[str, Any]) -> None:
@@ -598,8 +599,7 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
                 err = _check_optional_module("txtmd", txtmd)
                 if err:
                     return err
-                with open(fp, 'r', encoding='utf-8', errors='replace') as f:
-                    raw_txt = f.read()
+                raw_txt, _ = txtmd.read_text(fp)
                 md, _ = txtmd.to_markdown(raw_txt)
                 return {"content": [{"type": "text", "text": md}]}
             else:
@@ -680,8 +680,23 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
                 base_dir=os.path.dirname(out_path),
                 out_path=out_path,
                 options=style,
-                source_name=title
+                source_name=title,
+                overwrite=args.get("overwrite") is True,
             )
+            if res.get("ok") is False:
+                return {
+                    "isError": True,
+                    "content": [{
+                        "type": "text",
+                        "text": json.dumps({
+                            "ok": False,
+                            "error_code": res.get("error_code", "export_failed"),
+                            "stage": res.get("stage", "unknown"),
+                            "error": res.get("error", "Export failed"),
+                            "warnings": res.get("warns", res.get("warnings", [])),
+                        }, ensure_ascii=False)
+                    }]
+                }
             return {
                 "content": [
                     {
@@ -691,7 +706,7 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
                             "format": fmt,
                             "output_path": out_path,
                             "file_size": os.path.getsize(out_path) if os.path.exists(out_path) else 0,
-                            "warnings": res.get("warnings", [])
+                            "warnings": res.get("warns", res.get("warnings", []))
                         }, ensure_ascii=False, indent=2)
                     }
                 ]
@@ -1087,7 +1102,8 @@ def _prompt_descriptors():
 
 def run_stdio_server():
     """标准 JSON-RPC 2.0 stdio 通信主循环。"""
-    slots = threading.BoundedSemaphore(MAX_CONCURRENT_TOOL_CALLS)
+    max_tools = globals().get("MAX_CONCURRENT_TOOLS", 8)
+    slots = threading.BoundedSemaphore(max_tools)
     if sys.platform == 'win32' and hasattr(sys.stdin, 'reconfigure'):
         try:
             sys.stdin.reconfigure(encoding='utf-8', errors='replace')
@@ -1191,7 +1207,7 @@ def run_stdio_server():
                     continue
                 if not slots.acquire(blocking=False):
                     _write_message({"jsonrpc": "2.0", "id": req_id,
-                                    "error": {"code": -32000, "message": "server_busy"}})
+                                    "error": {"code": -32001, "message": "server_busy"}})
                     continue
                 progress = _progress_emitter((params.get("_meta") or {}).get("progressToken"))
                 cancel_event = threading.Event()
