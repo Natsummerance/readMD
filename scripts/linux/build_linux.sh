@@ -45,6 +45,8 @@ python3 -m PyInstaller \
   --collect-data reportlab \
   --collect-data matplotlib \
   --collect-data trafilatura \
+  --collect-data pip \
+  --collect-submodules pip \
   --collect-submodules src.readmd_core \
   --collect-submodules src.readmd_modules \
   readmd.py

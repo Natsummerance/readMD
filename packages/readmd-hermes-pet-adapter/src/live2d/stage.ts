@@ -31,7 +31,8 @@ type Live2dModel = {
   y: number
   width: number
   height: number
-  hitTest: (x: number, y: number) => boolean
+  getBounds?: () => { contains: (x: number, y: number) => boolean }
+  hitTest: (x: number, y: number) => string[]
   expression: (name?: string) => unknown
 }
 
@@ -69,24 +70,32 @@ async function mountLive2dStage(): Promise<void> {
   const api = petOverlayApi()
   // Announce the mounted onState listener first: the host replies with the
   // current state instead of relying on a load-time race.
-  api?.control({ type: 'ready' })
 
   const PIXI = await import('pixi.js')
   await loadCubismCore()
   const { Live2DModel } = await import('pixi-live2d-display/cubism4')
   Live2DModel.registerTicker(PIXI.Ticker)
 
-  const app = new PIXI.Application({ backgroundAlpha: 0, autoDensity: true, resolution: 1, resizeTo: window })
-  document.body.appendChild(app.view)
+  const dpr = Math.max(1, window.devicePixelRatio || 1)
+  const app = new PIXI.Application({ backgroundAlpha: 0, autoDensity: true, resolution: dpr, resizeTo: window })
+  // The shared overlay shell reserves a full-height #root. Appending after
+  // it places the canvas below the viewport, where overflow:hidden clips it.
+  const stageRoot = document.getElementById('root') || document.body
+  stageRoot.replaceChildren(app.view)
   document.body.style.margin = '0'
   document.body.style.overflow = 'hidden'
 
   const manifest = await readManifest()
   if (!manifest.entry) throw new Error('live2d manifest has no entry')
-  const modelUrl = new URL(`../models/arch-chan/${manifest.entry}`, new URL(MANIFEST_URL, window.location.href)).toString()
+  const modelUrl = new URL(manifest.entry, new URL(MANIFEST_URL, window.location.href)).toString()
   const model = await Live2DModel.from(modelUrl, { autoInteract: false }) as unknown as Live2dModel
   const naturalWidth = model.width / (model.scale.x || 1)
   app.stage.addChild(model)
+
+  const hitModel = (x: number, y: number) => {
+    const areas = typeof model.hitTest === 'function' ? model.hitTest(x, y) : []
+    return (Array.isArray(areas) && areas.length > 0) || Boolean(model.getBounds?.().contains(x, y))
+  }
 
   let state: OverlayState = {}
   let bounds = { x: 0, y: 0, width: 300, height: 420 }
@@ -104,9 +113,9 @@ async function mountLive2dStage(): Promise<void> {
 
   function applyState(next: unknown): void {
     state = (next || {}) as OverlayState
-    if (state.bounds) bounds = state.bounds
+    if (state.bounds) bounds = { ...state.bounds }
     layout()
-    if (state.activity?.error) model.expression('Mouse')
+    if (state.activity?.error) model.expression('Mouse.exp3.json')
   }
 
   function setIgnoringMouse(ignore: boolean): void {
@@ -124,32 +133,39 @@ async function mountLive2dStage(): Promise<void> {
     }
     clickTimer = window.setTimeout(() => {
       clickTimer = undefined
-      model.expression('Mouse')
+      model.expression('Mouse.exp3.json')
       api?.control({ type: 'open-menu' })
     }, CLICK_WINDOW_MS)
   }
 
   api?.onState(applyState)
+  api?.control({ type: 'ready' })
   window.addEventListener('resize', layout)
   window.addEventListener('pointermove', event => {
     if (dragging) {
+      const nextX = Math.round(dragging.bounds.x + event.screenX - dragging.startX)
+      const nextY = Math.round(dragging.bounds.y + event.screenY - dragging.startY)
+      bounds.x = nextX
+      bounds.y = nextY
       api?.setBounds({
-        x: Math.round(dragging.bounds.x + event.screenX - dragging.startX),
-        y: Math.round(dragging.bounds.y + event.screenY - dragging.startY),
+        x: nextX,
+        y: nextY,
         width: dragging.bounds.width,
         height: dragging.bounds.height
       })
       return
     }
-    setIgnoringMouse(!model.hitTest(event.clientX, event.clientY))
+    setIgnoringMouse(!hitModel(event.clientX, event.clientY))
   })
   window.addEventListener('pointerdown', event => {
-    if (!model.hitTest(event.clientX, event.clientY)) return
+    if (!hitModel(event.clientX, event.clientY)) return
     dragging = { startX: event.screenX, startY: event.screenY, bounds: { ...bounds } }
   })
   window.addEventListener('pointerup', event => {
     if (!dragging) return
     const moved = Math.hypot(event.screenX - dragging.startX, event.screenY - dragging.startY)
+    bounds.x = Math.round(dragging.bounds.x + event.screenX - dragging.startX)
+    bounds.y = Math.round(dragging.bounds.y + event.screenY - dragging.startY)
     dragging = undefined
     if (moved > DRAG_THRESHOLD_PX) return
     handleTap()
@@ -157,6 +173,7 @@ async function mountLive2dStage(): Promise<void> {
   window.addEventListener('pointercancel', () => { dragging = undefined })
 
   layout()
+  document.body.dataset.live2dReady = 'true'
 }
 
 export { mountLive2dStage }

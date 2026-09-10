@@ -34,6 +34,11 @@ datas += collect_data_files('docx')
 datas += collect_data_files('reportlab')
 datas += collect_data_files('matplotlib')
 datas += collect_data_files('trafilatura')
+# 冻结后 sys.executable 指向 ReadMD 本体，插件中心只能用进程内 runpy 跑 pip，
+# 前提是 pip 真的在包里；collect_data_files('pip') 同时带进
+# pip/_vendor/certifi/cacert.pem，缺它则每一次装包请求都死于证书错误。
+datas += collect_data_files('pip')
+hiddenimports += collect_submodules('pip')
 hiddenimports += collect_submodules('src.readmd_core')
 hiddenimports += [m for m in collect_submodules('src.readmd_modules') if not m.endswith('windows_native')]
 

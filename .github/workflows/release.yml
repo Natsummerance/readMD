@@ -14,11 +14,11 @@ permissions:
   contents: read
 
 env:
-  READMD_VERSION: '2.3.8'
+  READMD_VERSION: '2.3.9'
   # Self-use releases are declared explicitly per tag (v2.3.7 precedent): the
   # declared tag ships unsigned without the native evidence gate; every other
   # ref keeps the full signing and evidence requirements.
-  READMD_SELF_USE_RELEASE: ${{ github.ref == 'refs/tags/v2.3.8' && '1' || '0' }}
+  READMD_SELF_USE_RELEASE: ${{ github.ref == 'refs/tags/v2.3.9' && '1' || '0' }}
   PYTHONUTF8: '1'
 
 
@@ -60,6 +60,7 @@ jobs:
           python tests/test_v231_features_test.py
           python tests/test_v232_features_test.py
           python tests/test_i18n_coverage_test.py
+          python tests/test_js_i18n_gate.py
           python readmd.py --selftest
       - name: Run Playwright UI tests
         working-directory: ui-tests
@@ -105,6 +106,7 @@ jobs:
           python tests/test_v229_features_test.py
           python tests/test_v231_features_test.py
           python tests/test_i18n_coverage_test.py
+          python tests/test_js_i18n_gate.py
           python readmd.py --selftest
 
 
@@ -130,6 +132,7 @@ jobs:
           python tests/test_api_test.py
           python tests/test_v231_features_test.py
           python tests/test_i18n_coverage_test.py
+          python tests/test_js_i18n_gate.py
           python readmd.py --selftest
 
   windows-package:
@@ -154,8 +157,11 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           if ((python -c "import readmd; print(readmd.VERSION)") -ne $env:READMD_VERSION) { throw 'source version mismatch' }
-          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_core;src/readmd_core" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --hidden-import src.readmd_core --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_core --collect-submodules src.readmd_modules readmd.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_core;src/readmd_core" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --hidden-import src.readmd_core --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_core --collect-submodules src.readmd_modules readmd.py
+          $env:READMD_ARTIFACT_NAME = 'ReadMD'; $env:READMD_ONEFILE = '0'
+          python -m PyInstaller --noconfirm --clean release/ReadMD-windows.spec
+          $env:READMD_ARTIFACT_NAME = 'ReadMD-portable'; $env:READMD_ONEFILE = '1'
+          python -m PyInstaller --noconfirm --clean release/ReadMD-windows.spec
+          $env:READMD_ONEFILE = '0'
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." installer/setup_app.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." --add-binary "dist/ReadMD;ReadMD" --add-binary "dist/ReadMDUninstall.exe;." installer/setup_app.py
           Move-Item dist/ReadMDSetup.exe "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
@@ -177,6 +183,7 @@ jobs:
           if (!(Test-Path 'dist/ReadMD/_internal/assets/vendor/defuddle.bundle.js')) { throw 'Defuddle bundle missing' }
           if (!(Test-Path 'dist/ReadMD/_internal/assets/vendor/defuddle.LICENSE.txt')) { throw 'Defuddle license missing' }
           if (!(Test-Path 'dist/ReadMD/_internal/assets/js/core/state.js')) { throw 'Modular JS assets missing' }
+          if (!(Test-Path 'dist/ReadMD/_internal/pip/_vendor/certifi/cacert.pem')) { throw 'Bundled pip CA store missing: frozen plugin install cannot reach PyPI' }
           python tools/privacy_scan.py dist/ReadMD "dist/ReadMD-portable-v$env:READMD_VERSION.exe" "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
           if ($env:READMD_FORMAL_RELEASE -eq '1') {
             foreach ($signedAsset in @("dist/ReadMD-portable-v$env:READMD_VERSION.exe", "dist/ReadMDSetup-v$env:READMD_VERSION.exe")) {
@@ -242,6 +249,7 @@ jobs:
           python tests/test_fix_test.py
           python tests/test_api_test.py
           python tests/test_i18n_coverage_test.py
+          python tests/test_js_i18n_gate.py
           python readmd.py --selftest
 
   windows-arm64-package:
@@ -261,8 +269,11 @@ jobs:
         shell: pwsh
         run: |
           if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString() -ne 'Arm64') { throw 'runner is not ARM64' }
-          python -m PyInstaller --noconfirm --clean --onedir --windowed --name ReadMD-arm64 --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_core;src/readmd_core" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --hidden-import src.readmd_core --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_core --collect-submodules src.readmd_modules readmd.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMD-portable-arm64 --icon assets/readmd.ico --add-data "assets;assets" --add-data "src/readmd_core;src/readmd_core" --add-data "src/readmd_modules;src/readmd_modules" --add-data "src/readmd_fix.py;src" --hidden-import src.readmd_fix --hidden-import src.readmd_core --collect-data magika --collect-data docx --collect-data reportlab --collect-data matplotlib --collect-data trafilatura --collect-submodules src.readmd_core --collect-submodules src.readmd_modules readmd.py
+          $env:READMD_ARTIFACT_NAME = 'ReadMD-arm64'; $env:READMD_ONEFILE = '0'
+          python -m PyInstaller --noconfirm --clean release/ReadMD-windows.spec
+          $env:READMD_ARTIFACT_NAME = 'ReadMD-portable-arm64'; $env:READMD_ONEFILE = '1'
+          python -m PyInstaller --noconfirm --clean release/ReadMD-windows.spec
+          $env:READMD_ONEFILE = '0'
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall-arm64 --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." installer/setup_app.py
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup-arm64 --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." --add-binary "dist/ReadMD-arm64;ReadMD" --add-binary "dist/ReadMDUninstall-arm64.exe;." installer/setup_app.py
           $portable = Start-Process -FilePath "dist/ReadMD-portable-arm64.exe" -ArgumentList '--selftest' -WindowStyle Hidden -Wait -PassThru

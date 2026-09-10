@@ -11,7 +11,7 @@ import logging
 import threading
 
 
-MODULES = ('convert', 'ocr', 'web', 'ai')
+MODULES = ('convert', 'ocr', 'web', 'ai', 'transcribe', 'pdf_editor')
 
 _status = {name: 'idle' for name in MODULES}
 _error = {}

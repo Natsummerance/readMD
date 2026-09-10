@@ -97,6 +97,24 @@ function bindEvents() {
       moreMenu.classList.toggle('open');
       moreBtn.setAttribute('aria-expanded', moreMenu.classList.contains('open') ? 'true' : 'false');
     });
+    moreMenu.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeMoreMenu(true);
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const items = Array.from(moreMenu.querySelectorAll('.more-group.open .more-item:not([disabled]):not(.hidden), .more-group-header'));
+        if (!items.length) return;
+        e.preventDefault();
+        const currentIndex = items.indexOf(document.activeElement);
+        let nextIndex;
+        if (e.key === 'ArrowDown') {
+          nextIndex = currentIndex === -1 || currentIndex === items.length - 1 ? 0 : currentIndex + 1;
+        } else {
+          nextIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+        }
+        items[nextIndex].focus();
+      }
+    });
     document.addEventListener('click', e => {
       if (moreMenu.classList.contains('open') && !moreMenu.contains(e.target) && e.target !== moreBtn) {
         closeMoreMenu();
@@ -114,6 +132,10 @@ function bindEvents() {
     if (convertLastDir && py.open_dir) py.open_dir(convertLastDir);
   });
   $('convert-modal').addEventListener('click', e => { if (e.target === $('convert-modal')) closeConvertModal(); });
+  if ($('btn-open-plugins')) $('btn-open-plugins').addEventListener('click', openPluginModal);
+  if ($('btn-plugin-menu')) $('btn-plugin-menu').addEventListener('click', () => { closeMoreMenu(); openPluginModal(); });
+  if ($('plugin-close')) $('plugin-close').addEventListener('click', closePluginModal);
+  if ($('plugin-modal')) $('plugin-modal').addEventListener('click', e => { if (e.target === $('plugin-modal')) closePluginModal(); });
 
   /* --- 3b. 批处理复用万物转 MD弹窗 [联动: features/batch.js] --- */
   if ($('batch-cancel')) $('batch-cancel').addEventListener('click', onBatchCancel);
@@ -127,6 +149,33 @@ function bindEvents() {
   if ($('btn-style-custom')) $('btn-style-custom').addEventListener('click', () => { closeMoreMenu(); openStyleModal(); });
   if ($('btn-zen')) $('btn-zen').addEventListener('click', () => toggleZenMode()); // 顶栏常驻禅模式按钮
   if ($('btn-zen-menu')) $('btn-zen-menu').addEventListener('click', () => { closeMoreMenu(); toggleZenMode(); });
+
+  const _openKnowledgeGraph = () => {
+    const hasDoc = (state && (state.mode === 'file' || state.mode === 'virtual') && !!state.original);
+    if (!hasDoc) {
+      if (typeof showToast === 'function') {
+        const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+        showToast(_t('toast.openDocumentToUse', '请先打开文档'));
+      }
+      return;
+    }
+    const curDir = (state && state.file) ? state.file.substring(0, Math.max(state.file.lastIndexOf('/'), state.file.lastIndexOf('\\'))) : '';
+    if (window.ReadMDGraph) window.ReadMDGraph.open(curDir);
+  };
+  if ($('btn-graph')) $('btn-graph').addEventListener('click', _openKnowledgeGraph);
+  if ($('btn-graph-menu')) $('btn-graph-menu').addEventListener('click', () => { closeMoreMenu(); _openKnowledgeGraph(); });
+  if ($('btn-backlinks-menu')) $('btn-backlinks-menu').addEventListener('click', () => {
+    closeMoreMenu();
+    const hasDoc = (state && (state.mode === 'file' || state.mode === 'virtual') && !!state.original);
+    if (!hasDoc) {
+      if (typeof showToast === 'function') {
+        const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+        showToast(_t('toast.openDocumentToUse', '请先打开文档'));
+      }
+      return;
+    }
+    if (window.ReadMDGraph) window.ReadMDGraph.toggleDrawer();
+  });
 
   // 更多菜单手风琴分组折叠切换
   document.querySelectorAll('.more-group-header').forEach(hdr => {
@@ -146,11 +195,18 @@ function bindEvents() {
       e.preventDefault();
       if (window.launchPresentationMode) launchPresentationMode();
     } else if (e.key === 'Escape') {
+      if ($('more-menu') && $('more-menu').classList.contains('open')) {
+        e.preventDefault();
+        closeMoreMenu(true);
+        return;
+      }
       const openModals = [
+        ['pet-settings-modal', typeof closePetSettings === 'function' ? closePetSettings : () => $('pet-settings-modal').classList.add('hidden')],
         ['code-chunk-modal', closeCodeChunkModal],
         ['diagram-modal', closeDiagramModal],
         ['doc-import-modal', closeDocImportModal],
         ['style-custom-modal', closeStyleModal],
+        ['plugin-modal', closePluginModal],
         ['convert-modal', closeConvertModal],
         ['export-modal', closeExportModal],
         ['img-modal', closeImgModal],
@@ -620,7 +676,7 @@ function bindEvents() {
 
   /* --- 17. 客户端内版本检查、语言切换、开机自启与自动升级 [联动: core/i18n.js, features/updater.js] --- */
   if ($('btn-lang')) $('btn-lang').addEventListener('click', () => { closeMoreMenu(); if (window.i18n) window.i18n.openModal(); });
-  if ($('btn-pet')) $('btn-pet').addEventListener('click', () => { if (typeof openPetSettings === 'function') openPetSettings(); });
+  if ($('btn-pet')) $('btn-pet').addEventListener('click', () => { closeMoreMenu(); if (typeof openPetSettings === 'function') openPetSettings(); });
   if ($('btn-autostart')) $('btn-autostart').addEventListener('click', () => { closeMoreMenu(); toggleAutostart(); });
   if ($('btn-check-update')) $('btn-check-update').addEventListener('click', () => { closeMoreMenu(); checkUpdate(false); });
 
@@ -880,6 +936,7 @@ function bindEvents() {
     }
     updateStatus();
     updateDocStatistics();
+    syncBuildVersionLabels();
     ['formula-mode', 'tpl-action', 'img-ratio'].forEach(id => {
       const select = $(id);
       if (select) syncSelectAccessibleName(select);
@@ -903,6 +960,8 @@ function bindEvents() {
       const allModalIds = [
         'close-confirm-modal',
         'confirm-modal',
+        'plugin-modal',
+        'pet-settings-modal',
         'code-chunk-modal', 'diagram-modal', 'doc-import-modal', 'frontmatter-modal',
         'table-modal', 'export-preview-modal', 'export-modal', 'convert-modal',
         'update-modal', 'style-custom-modal', 'lang-modal', 'ai-history-modal',
@@ -921,6 +980,11 @@ function bindEvents() {
         else if (activeModal === 'export-preview-modal') $(activeModal).classList.add('hidden');
         else if (activeModal === 'export-modal') closeExportModal();
         else if (activeModal === 'convert-modal') $('convert-modal').classList.add('hidden');
+        else if (activeModal === 'plugin-modal') closePluginModal();
+        else if (activeModal === 'pet-settings-modal') {
+          if (typeof window.closePetSettings === 'function') window.closePetSettings();
+          else $('pet-settings-modal').classList.add('hidden');
+        }
         else if (activeModal === 'update-modal') {
           if (!isUpdateDownloading()) $('update-modal').classList.add('hidden');
         }
@@ -982,6 +1046,7 @@ function bindEvents() {
     }
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleSide('toc'); } // Ctrl+Shift+F: 目录大纲
     else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); toggleTheme(); } // Ctrl+D: 主题切换
+    else if (mod && e.key.toLowerCase() === 'g') { e.preventDefault(); _openKnowledgeGraph(); } // Ctrl+G: 知识图谱
     else if (mod && e.key.toLowerCase() === 'r') { e.preventDefault(); if (state.file && state.mode === 'file') loadFile(state.file, { force: true }); } // Ctrl+R: 强制重载文件
     else if (mod && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); openExportModal(); } // Ctrl+P: 导出面板
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); if (typeof handleTopAiButtonClick === 'function') handleTopAiButtonClick(); else toggleAiPanel(); } // Ctrl+Shift+A: AI面板/AI编辑助手
@@ -992,10 +1057,11 @@ function bindEvents() {
     else if (mod && e.key === 'ArrowRight') { e.preventDefault(); historyForward(); } // Alt/Ctrl+Right: 历史前进
     else if (e.key === 'Escape') {
       // Layer 1: 模态框与上下文菜单/搜索栏（一旦命中立即阻断返回）
+      if ($('graph-modal') && !$('graph-modal').classList.contains('hidden')) { if (window.ReadMDGraph) window.ReadMDGraph.close(); return; }
+      if ($('backlinks-panel') && !$('backlinks-panel').classList.contains('hidden')) { $('backlinks-panel').classList.add('hidden'); return; }
       if ($('ai-history-modal') && !$('ai-history-modal').classList.contains('hidden')) { if (typeof closeAiModal === 'function') closeAiModal('ai-history-modal'); else $('ai-history-modal').classList.add('hidden'); return; }
       if ($('ai-settings-modal') && !$('ai-settings-modal').classList.contains('hidden')) { if (typeof closeAiModal === 'function') closeAiModal('ai-settings-modal'); else $('ai-settings-modal').classList.add('hidden'); return; }
       if ($('chat-import-modal') && !$('chat-import-modal').classList.contains('hidden')) { if (typeof closeAiModal === 'function') closeAiModal('chat-import-modal'); else $('chat-import-modal').classList.add('hidden'); return; }
-      if ($('pet-settings-modal') && !$('pet-settings-modal').classList.contains('hidden')) { $('pet-settings-modal').classList.add('hidden'); return; }
       if ($('style-custom-modal') && !$('style-custom-modal').classList.contains('hidden')) { closeStyleModal(); return; }
       if ($('formula-modal') && !$('formula-modal').classList.contains('hidden')) { closeFormulaModal(); return; }
       if ($('img-modal') && !$('img-modal').classList.contains('hidden')) { closeImgModal(); return; }
@@ -1055,10 +1121,10 @@ function getModalRoots() {
   return [
     'close-confirm-modal', 'code-chunk-modal', 'diagram-modal', 'doc-import-modal',
     'frontmatter-modal', 'table-modal', 'export-preview-modal', 'export-modal',
-    'convert-modal', 'update-modal', 'style-custom-modal', 'lang-modal',
-    'ai-history-modal', 'ai-settings-modal', 'formula-modal', 'presentation-modal',
-    'img-modal', 'history-modal', 'share-modal', 'tpl-modal', 'url-modal',
-    'save-conflict-modal', 'fix-modal', 'continuous-modal', 'confirm-modal'
+    'convert-modal', 'plugin-modal', 'pet-settings-modal', 'graph-modal', 'update-modal',
+    'style-custom-modal', 'lang-modal', 'ai-history-modal', 'ai-settings-modal',
+    'formula-modal', 'presentation-modal', 'img-modal', 'history-modal', 'share-modal',
+    'tpl-modal', 'url-modal', 'save-conflict-modal', 'fix-modal', 'continuous-modal', 'confirm-modal'
   ].map(id => $(id)).filter(Boolean);
 }
 

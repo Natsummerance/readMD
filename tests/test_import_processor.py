@@ -40,6 +40,18 @@ class TestImportProcessor(unittest.TestCase):
         self.assertIn("| Alice | 30 | Engineer |", table)
         self.assertIn("| Bob | 25 | Designer |", table)
 
+    def test_csv_to_markdown_table_multiline_cells(self):
+        """测试带换行与竖线的 CSV 单元格正确转义为 <br> 且不破坏表格行结构。"""
+        raw_csv = 'Name,Bio,Role\n"Alice","First line\nSecond line","Lead | Architect"\n'
+        table = csv_to_markdown_table(raw_csv)
+        lines = table.strip().split("\n")
+        # 表头 + 分隔线 + 单条数据行 = 刚好 3 行物理行
+        self.assertEqual(len(lines), 3)
+        self.assertIn("| Name | Bio | Role |", lines[0])
+        self.assertIn("| --- | --- | --- |", lines[1])
+        self.assertIn("First line<br>Second line", lines[2])
+        self.assertIn(r"Lead \| Architect", lines[2])
+
     def test_slice_code_lines(self):
         """测试源码行号切片。"""
         code = "line1\nline2\nline3\nline4\nline5"

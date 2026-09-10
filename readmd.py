@@ -15,8 +15,10 @@
 """
 
 import argparse
+import atexit
 import base64
 import binascii
+import collections
 import gzip
 import hashlib
 import json
@@ -32,7 +34,6 @@ import tempfile
 import time
 import threading
 import webbrowser
-import urllib.request
 from datetime import datetime, timezone
 from email.utils import formatdate, parsedate_to_datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -54,8 +55,6 @@ from src.readmd_core.versioning import select_update_release as _select_update_r
 import src.readmd_modules as RM
 from src.readmd_modules.validators import validate_file_path, validate_command, paths_within
 from src.readmd_modules.skills import SkillError, SkillRegistry, default_skill_roots
-from src.readmd_modules import skill_import as _skill_import
-from src.readmd_modules.crypto import store_credential as _store_credential, delete_credential as _delete_credential
 from src.readmd_modules.pet import (
     HermesPetBridge,
     HermesPetLauncher,
@@ -65,6 +64,7 @@ from src.readmd_modules.pet import (
     foreground_fullscreen,
     verify_model_bundle,
 )
+import src.readmd_modules.skill_import as _skill_import
 from src.readmd_core.service import ReadMDCoreService
 from src.readmd_core import upstream as _upstream_sources
 
@@ -118,8 +118,10 @@ CODE_CONFIG_EXTS = (
     '.rst', '.asciidoc', '.adoc', '.bib', '.csv', '.tsv',
 )
 ALL_TEXT_EXTS = MD_EXTS + CODE_CONFIG_EXTS
+MEDIA_EXTS = ('.mp3', '.wav', '.m4a', '.mp4', '.flac', '.ogg', '.webm', '.aac', '.wma', '.mkv', '.mov', '.avi')
 CONVERT_EXTS = ('.docx', '.doc', '.pptx', '.ppt', '.xlsx', '.xls', '.pdf', '.html', '.htm',
-                '.txt', '.csv', '.json', '.xml', '.zip', '.eml', '.msg', '.rtf', '.odt', '.epub') + CODE_CONFIG_EXTS
+                '.txt', '.csv', '.json', '.xml', '.zip', '.eml', '.msg', '.rtf', '.odt', '.epub',
+                '.tex', '.latex') + MEDIA_EXTS + CODE_CONFIG_EXTS
 WIN7_CONVERT_EXTS = ('.docx', '.pdf')
 WIN7_UNAVAILABLE = '该功能在 Win7 版暂不支持（本版本仅保留 docx / pdf 转 MD 与导出功能）'
 
@@ -427,8 +429,33 @@ def pop_pet_menu():
     return False
 
 
+_ACTIVE_PET_LAUNCHER = None
+
+
+def register_active_pet_launcher(launcher):
+    global _ACTIVE_PET_LAUNCHER
+    _ACTIVE_PET_LAUNCHER = launcher
+
+
+def stop_active_pet():
+    global _ACTIVE_PET_LAUNCHER
+    if _ACTIVE_PET_LAUNCHER is not None:
+        try:
+            _ACTIVE_PET_LAUNCHER.stop()
+        except Exception:
+            pass
+        _ACTIVE_PET_LAUNCHER = None
+
+
+atexit.register(stop_active_pet)
+
+
 def quit_app():
-    """托盘“退出 ReadMD”：清理单实例文件后结束进程。"""
+    """托盘“退出 ReadMD”：清理单实例文件、关闭桌宠后结束进程。"""
+    try:
+        stop_active_pet()
+    except Exception:
+        pass
     try:
         _clear_instance()
     except Exception:
@@ -776,6 +803,15 @@ def _md_output_path(src):
     return os.path.join(d, base + '.md')
 
 
+def _is_upload_path(src):
+    """Check whether a file path resides within the uploads temporary directory."""
+    if not src:
+        return False
+    upload_dir = os.path.realpath(os.path.join(DATA_DIR, 'uploads'))
+    src_real = os.path.realpath(os.path.abspath(src))
+    return src_real.startswith(upload_dir + os.sep) or src_real == upload_dir
+
+
 def _batch_output_paths(paths):
     """Plan collision-free Markdown targets without touching source files."""
     planned, used = {}, set()
@@ -858,7 +894,8 @@ def _convert_worker(job):
             it['out'] = out
             it['engine'] = engine
             it['warns'] = warns
-            if os.path.exists(out) and not job.get('overwrite'):
+            allow_overwrite = bool(job.get('overwrite')) or _is_upload_path(it['src'])
+            if os.path.exists(out) and not allow_overwrite:
                 it['status'] = 'skipped'
                 it['error_code'] = 'output_exists'
             else:
@@ -956,6 +993,12 @@ def _consume_skill_evaluation_token(token, skill_id, content):
         record.get('digest', ''), _skill_content_digest(skill_id, content))
 
 
+_LOOPBACK_BYPASS_GZIP_BYTES = 256 * 1024
+_FILE_PARSE_CACHE = collections.OrderedDict()
+_FILE_PARSE_CACHE_MAX = 32
+_FILE_PARSE_CACHE_LOCK = threading.Lock()
+
+
 class Handler(BaseHTTPRequestHandler):
     # ZIP uploads are intentionally bounded before they are copied into
     # memory.  Browser uploads use the binary request path; local pywebview
@@ -968,11 +1011,18 @@ class Handler(BaseHTTPRequestHandler):
     LAN_BLOCKED_PATHS = frozenset({
         '/api/save', '/api/upload', '/api/image/save', '/api/code/run',
         '/api/update/download', '/api/update/apply', '/api/import/process',
-        '/api/control/open', '/api/control/next', '/api/pets/import',
-        '/api/pets/remove', '/api/pets/active',
+        '/api/control/open', '/api/control/next', '/api/control/pet-batch',
+        '/api/control/pet-menu', '/api/pets/import', '/api/pets/remove',
+        '/api/pets/active', '/api/pets/configure', '/api/pets/install', '/api/pets/runtime/install',
+        '/api/pets/uninstall',
+        '/api/plugins/list', '/api/plugins/install', '/api/plugins/toggle',
+        '/api/plugins/uninstall',
+        '/api/links/index',
+        '/api/transcribe',
     })
     LAN_SCOPED_PATHS = frozenset({
         '/api/file', '/api/list', '/api/ocr', '/api/convert', '/raw',
+        '/api/links/graph', '/api/links/backlinks', '/api/links/deadlinks',
     })
 
     def handle(self):
@@ -1072,14 +1122,18 @@ class Handler(BaseHTTPRequestHandler):
         root = getattr(self.server, 'shared_root', None)
         if not root:
             return False
-        requested = parse_qs(urlparse(self.path).query).get('p', [''])[0]
-        if not requested:
+        qs = parse_qs(urlparse(self.path).query)
+        requested_candidates = [v for k in ('p', 'path', 'dir') for v in qs.get(k, []) if v]
+        if not requested_candidates:
             return False
-        try:
-            target = os.path.realpath(unquote(requested))
-        except Exception:
-            return False
-        return paths_within(target, root)
+        for cand in requested_candidates:
+            try:
+                target = os.path.realpath(unquote(cand))
+            except Exception:
+                return False
+            if not paths_within(target, root):
+                return False
+        return True
 
     def _local_host_authorized(self):
         if self.LAN_TOKEN:
@@ -1115,6 +1169,7 @@ class Handler(BaseHTTPRequestHandler):
                     asset.mime,
                     asset.body,
                     cache_control='public, max-age=31536000, immutable',
+                    force_compress=True,
                 )
                 return
             self._send_file(asset.path, asset.mime, immutable=asset.immutable)
@@ -1181,12 +1236,22 @@ class Handler(BaseHTTPRequestHandler):
             self._api_skills()
         elif path == '/api/pets':
             self._api_pets()
+        elif path == '/api/pets/status':
+            self._api_pet_status()
+        elif path == '/api/pets/configure':
+            self._api_pet_configure()
         elif path == '/api/pets/import':
             self._api_pet_import()
         elif path == '/api/pets/remove':
             self._api_pet_remove()
         elif path == '/api/pets/active':
             self._api_pet_active()
+        elif path == '/api/pets/install':
+            self._api_pet_install()
+        elif path == '/api/pets/runtime/install':
+            self._handle_pet_lifecycle_action('runtime-install', 'install_default_pet_plugin', 'pet_plugin_install_failed')
+        elif path == '/api/pets/uninstall':
+            self._api_pet_uninstall()
         elif path == '/api/pets/thumb':
             self._api_pet_thumb(qs)
         elif path == '/api/skill-imports':
@@ -1242,6 +1307,24 @@ class Handler(BaseHTTPRequestHandler):
             self._api_diagram_capabilities()
         elif path == '/api/import/process':
             self._api_import_process()
+        elif path == '/api/plugins/list':
+            self._api_plugins_list()
+        elif path == '/api/plugins/install':
+            self._api_plugins_install()
+        elif path == '/api/plugins/toggle':
+            self._api_plugins_toggle()
+        elif path == '/api/plugins/uninstall':
+            self._api_plugins_uninstall()
+        elif path == '/api/transcribe':
+            self._api_transcribe()
+        elif path == '/api/links/index':
+            self._api_links_index()
+        elif path == '/api/links/graph':
+            self._api_links_graph(qs)
+        elif path == '/api/links/backlinks':
+            self._api_links_backlinks(qs)
+        elif path == '/api/links/deadlinks':
+            self._api_links_deadlinks(qs)
         elif path == '/api/export/epub':
             self._api_export_epub()
         elif path == '/api/export/presentation':
@@ -1283,16 +1366,21 @@ class Handler(BaseHTTPRequestHandler):
         return (ctype.startswith('text/') or 'javascript' in ctype or
                 'json' in ctype or 'xml' in ctype)
 
-    def _maybe_compress(self, ctype, body):
+    def _maybe_compress(self, ctype, body, force_compress=False):
         """Use negotiated gzip for local text assets to reduce cold-start IO."""
         if (body and len(body) >= 1024 and self._compressible_content_type(ctype)
                 and 'gzip' in (self.headers.get('Accept-Encoding', '') or '').lower()):
-            return gzip.compress(body, compresslevel=6, mtime=0), True
+            client_ip = self.client_address[0] if getattr(self, 'client_address', None) else ''
+            is_loopback = client_ip in ('127.0.0.1', '::1', 'localhost')
+            if is_loopback and not force_compress and len(body) >= _LOOPBACK_BYPASS_GZIP_BYTES:
+                return body, False
+            level = 1 if (is_loopback and not force_compress) else 6
+            return gzip.compress(body, compresslevel=level, mtime=0), True
         return body, False
 
-    def _send(self, code, ctype, body, cache_control='no-cache', x_frame_options=None):
+    def _send(self, code, ctype, body, cache_control='no-cache', x_frame_options=None, force_compress=False):
         try:
-            body, compressed = self._maybe_compress(ctype, body)
+            body, compressed = self._maybe_compress(ctype, body, force_compress=force_compress)
             self.send_response(code)
             self.send_header('Content-Type', ctype)
             self.send_header('Content-Length', str(len(body)))
@@ -1355,6 +1443,14 @@ class Handler(BaseHTTPRequestHandler):
             chunks.append(chunk)
             remaining -= len(chunk)
         return b''.join(chunks)
+
+    def _read_json_body(self, limit=1024 * 1024):
+        """Helper to read and parse JSON request body safely with length and size bounds."""
+        n = int(self.headers.get('Content-Length', 0) or 0)
+        if not n:
+            return {}
+        raw = self._read_request_body_limited(n, limit)
+        return json.loads(raw.decode('utf-8'))
 
     def _module_ready(self, name, message):
         """Ensure exactly one feature module is being loaded for this request."""
@@ -1539,6 +1635,57 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             logging.exception('pets list failed')
             self._send_json(500, {'ok': False, 'error_code': 'pet_list_failed'})
+
+    def _api_pet_status(self):
+        if self.command != 'GET':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            api = _get_shared_api()
+            status = api.get_pet_runtime_status()
+            self._send_json(200, {'ok': True, 'status': status})
+        except Exception:
+            logging.exception('pet status failed')
+            self._send_json(500, {'ok': False, 'error_code': 'pet_status_failed'})
+
+    def _api_pet_configure(self):
+        if self.command != 'POST':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            body = self._read_json_body(65536)
+            api = _get_shared_api()
+            res = api.configure_pet(body)
+            self._send_json(200, res)
+        except ValueError as e:
+            if str(e) == 'payload_too_large':
+                return
+            self._send_json(400, {'ok': False, 'error_code': str(e)})
+        except Exception:
+            logging.exception('pet configure failed')
+            self._send_json(500, {'ok': False, 'error_code': 'pet_configure_failed'})
+
+    def _handle_pet_lifecycle_action(self, action_name, method_name, error_code):
+        if self.command != 'POST':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            self._read_json_body(65536)
+        except Exception:
+            pass
+        try:
+            api = _get_shared_api()
+            res = getattr(api, method_name)()
+            self._send_json(200, res)
+        except Exception:
+            logging.exception(f'pet {action_name} failed')
+            self._send_json(500, {'ok': False, 'error_code': error_code})
+
+    def _api_pet_install(self):
+        self._handle_pet_lifecycle_action('install', 'install_companion_pet', 'pet_install_failed')
+
+    def _api_pet_uninstall(self):
+        self._handle_pet_lifecycle_action('uninstall', 'uninstall_companion_pet', 'pet_uninstall_failed')
 
     def _api_pet_import(self):
         if self.command != 'POST':
@@ -1726,6 +1873,186 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as e:
             logging.exception('api_import_process failed')
             self._send_api_error(500, 'import_process_failed')
+
+    def _api_plugins_list(self):
+        if self.command != 'GET':
+            self._send_api_error(405, 'method_not_allowed')
+            return
+        try:
+            from src.readmd_modules import plugin_manager as pm
+            self._send_json(200, {
+                'ok': True,
+                'plugins': pm.load_manifest(),
+                'ffmpeg': pm.get_ffmpeg_path() is not None,
+                'sandbox_dir': pm.PLUGINS_DIR,
+            })
+        except Exception:
+            logging.exception('api_plugins_list failed')
+            self._send_api_error(500, 'plugins_list_failed')
+
+    def _api_plugins_install(self):
+        if self.command != 'POST':
+            self._send_api_error(405, 'method_not_allowed')
+            return
+        try:
+            body = self._read_json_body(1024 * 1024)
+            plugin_id = str(body.get('plugin_id', '')).strip()
+            if not plugin_id:
+                self._send_api_error(400, 'plugin_id_required')
+                return
+            from src.readmd_modules import plugin_manager as pm
+            if plugin_id not in pm.CONNECTED_PLUGINS:
+                self._send_api_error(400, 'plugin_not_integrated')
+                return
+            ok = pm.install_plugin_async(plugin_id)
+            if not ok:
+                self._send_api_error(400, 'invalid_plugin_id')
+                return
+            self._send_json(200, {'ok': True, 'plugin_id': plugin_id})
+        except ValueError as e:
+            self._send_api_error(400, str(e))
+        except Exception:
+            logging.exception('api_plugins_install failed')
+            self._send_api_error(500, 'plugin_install_failed')
+
+    def _api_plugins_toggle(self):
+        if self.command != 'POST':
+            self._send_api_error(405, 'method_not_allowed')
+            return
+        try:
+            body = self._read_json_body(1024 * 1024)
+            plugin_id = str(body.get('plugin_id', '')).strip()
+            enabled = bool(body.get('enabled'))
+            from src.readmd_modules import plugin_manager as pm
+            if enabled and plugin_id not in pm.CONNECTED_PLUGINS:
+                self._send_api_error(400, 'plugin_not_integrated')
+                return
+            if not pm.is_plugin_installed(plugin_id):
+                self._send_api_error(400, 'plugin_not_installed')
+                return
+            if not pm.set_plugin_enabled(plugin_id, enabled):
+                self._send_api_error(500, 'plugin_toggle_failed')
+                return
+            self._send_json(200, {'ok': True, 'plugin_id': plugin_id, 'enabled': enabled})
+        except ValueError as e:
+            self._send_api_error(400, str(e))
+        except Exception:
+            logging.exception('api_plugins_toggle failed')
+            self._send_api_error(500, 'plugin_toggle_failed')
+
+    def _api_plugins_uninstall(self):
+        if self.command != 'POST':
+            self._send_api_error(405, 'method_not_allowed')
+            return
+        try:
+            body = self._read_json_body(1024 * 1024)
+            plugin_id = str(body.get('plugin_id', '')).strip()
+            from src.readmd_modules import plugin_manager as pm
+            ok = pm.uninstall_plugin(plugin_id)
+            self._send_json(200, {'ok': ok, 'plugin_id': plugin_id})
+        except ValueError as e:
+            self._send_api_error(400, str(e))
+        except Exception:
+            logging.exception('api_plugins_uninstall failed')
+            self._send_api_error(500, 'plugin_uninstall_failed')
+
+    def _api_transcribe(self):
+        if self.command != 'POST':
+            self._send_api_error(405, 'method_not_allowed')
+            return
+        try:
+            body = self._read_json_body(1024 * 1024)
+            file_path = str(body.get('path', '')).strip()
+            language = str(body.get('language', '')).strip() or None
+            model_name = str(body.get('model', 'base')).strip()
+            if not file_path or not os.path.isfile(file_path):
+                self._send_api_error(404, 'file_not_found')
+                return
+            from src.readmd_modules import transcribe
+            if not transcribe.is_supported_media(file_path):
+                self._send_api_error(400, 'unsupported_media_format')
+                return
+            text, err = transcribe.transcribe_to_md(file_path, model_name=model_name, language=language)
+            if text:
+                self._send_json(200, {'ok': True, 'content': text, 'path': file_path, 'warning': err if err else None})
+                return
+            if err:
+                self._send_api_error(422, 'transcribe_failed', error_detail=err)
+                return
+            self._send_api_error(500, 'transcribe_empty')
+        except ValueError as e:
+            self._send_api_error(400, str(e))
+        except Exception:
+            logging.exception('api_transcribe failed')
+            self._send_api_error(500, 'transcribe_failed')
+
+    def _api_links_index(self):
+        if self.command != 'POST':
+            self._send_api_error(405, 'method_not_allowed')
+            return
+        try:
+            body = self._read_json_body(1024 * 1024)
+            directory = str(body.get('dir', '')).strip()
+            force = bool(body.get('force', False))
+            if not directory or not os.path.isdir(directory):
+                self._send_api_error(404, 'dir_not_found')
+                return
+            from src.readmd_modules import link_indexer
+            indexer = link_indexer.get_indexer()
+            stats = indexer.index_directory(directory, force=force)
+            self._send_json(200, {'ok': True, 'stats': stats})
+        except ValueError as e:
+            self._send_api_error(400, str(e))
+        except Exception:
+            logging.exception('api_links_index failed')
+            self._send_api_error(500, 'links_index_failed')
+
+    def _api_links_graph(self, qs):
+        directory = qs.get('dir', [''])[0].strip()
+        max_nodes_str = qs.get('max_nodes', ['500'])[0].strip()
+        try:
+            max_nodes = max(10, min(int(max_nodes_str), 2000))
+        except Exception:
+            max_nodes = 500
+        try:
+            from src.readmd_modules import link_indexer
+            indexer = link_indexer.get_indexer()
+            data = indexer.get_graph_data(root_dir=directory or None, max_nodes=max_nodes)
+            self._send_json(200, {'ok': True, 'graph': data})
+        except Exception:
+            logging.exception('api_links_graph failed')
+            self._send_api_error(500, 'links_graph_failed')
+
+    def _api_links_backlinks(self, qs):
+        file_path = qs.get('path', [''])[0].strip()
+        if not file_path:
+            self._send_api_error(400, 'missing_path')
+            return
+        try:
+            from src.readmd_modules import link_indexer
+            indexer = link_indexer.get_indexer()
+            backlinks = indexer.get_backlinks(file_path)
+            forward_links = indexer.get_forward_links(file_path)
+            self._send_json(200, {
+                'ok': True,
+                'path': file_path,
+                'backlinks': backlinks,
+                'forward_links': forward_links,
+            })
+        except Exception:
+            logging.exception('api_links_backlinks failed')
+            self._send_api_error(500, 'links_backlinks_failed')
+
+    def _api_links_deadlinks(self, qs):
+        directory = qs.get('dir', [''])[0].strip()
+        try:
+            from src.readmd_modules import link_indexer
+            indexer = link_indexer.get_indexer()
+            deadlinks = indexer.get_deadlinks(root_dir=directory or None)
+            self._send_json(200, {'ok': True, 'deadlinks': deadlinks})
+        except Exception:
+            logging.exception('api_links_deadlinks failed')
+            self._send_api_error(500, 'links_deadlinks_failed')
 
     def _api_export_epub(self):
         try:
@@ -2364,6 +2691,7 @@ class Handler(BaseHTTPRequestHandler):
             if github_token:
                 if source_type != 'github':
                     raise _skill_import.SkillImportError('credential_not_allowed', '该来源不接受 GitHub 凭据')
+                from src.readmd_modules.crypto import store_credential as _store_credential
                 created_credential = 'cred:github:' + secrets.token_urlsafe(18)
                 _store_credential(created_credential, github_token)
                 credential_id = created_credential
@@ -2371,6 +2699,7 @@ class Handler(BaseHTTPRequestHandler):
                 preview = _skill_import.preview_source(source_type, source, credential_id)
             except Exception:
                 if created_credential:
+                    from src.readmd_modules.crypto import delete_credential as _delete_credential
                     _delete_credential(created_credential)
                 raise
             self._send_json(200, {'ok': True, 'preview': preview,
@@ -2617,6 +2946,16 @@ class Handler(BaseHTTPRequestHandler):
         if meta_only:
             self._send_json(200, d)
             return
+
+        cache_key = (os.path.realpath(p), st.st_mtime, st.st_size)
+        with _FILE_PARSE_CACHE_LOCK:
+            cached = _FILE_PARSE_CACHE.get(cache_key)
+            if cached is not None:
+                _FILE_PARSE_CACHE.move_to_end(cache_key)
+                d.update(cached)
+                self._send_json(200, d)
+                return
+
         milestone('boot', 'first_document')
         text, enc = read_text(p)
         raw = text
@@ -2638,17 +2977,26 @@ class Handler(BaseHTTPRequestHandler):
             stats = fr.stats
             fixed_text = fr.text
 
-        d.update({
+        file_payload = {
             'encoding': enc,
             'content': fixed_text,
-            'original': raw,
+            'original': None if fixed_text == raw else raw,
             'fixes': fixes,
             'stats': stats,
             'structured': structured,
             'is_code': is_code,
             'code_lang': code_lang,
             'ext': ext,
-        })
+        }
+        with _FILE_PARSE_CACHE_LOCK:
+            if len(_FILE_PARSE_CACHE) >= _FILE_PARSE_CACHE_MAX:
+                try:
+                    _FILE_PARSE_CACHE.popitem(last=False)
+                except Exception:
+                    _FILE_PARSE_CACHE.clear()
+            _FILE_PARSE_CACHE[cache_key] = file_payload
+
+        d.update(file_payload)
         self._send_json(200, d)
 
     def _api_list(self, p):
@@ -2721,7 +3069,7 @@ class Handler(BaseHTTPRequestHandler):
             fixed, warns = MDC.check(text, os.path.dirname(os.path.abspath(p)))
             fixes = [w['msg'] for w in warns if w.get('level') == 'auto']
             out = _md_output_path(p)
-            overwrite = parse_qs(urlparse(self.path).query).get('overwrite', ['0'])[0] == '1'
+            overwrite = (parse_qs(urlparse(self.path).query).get('overwrite', ['0'])[0] == '1') or _is_upload_path(p)
             saved, skipped = False, False
             if os.path.exists(out) and not overwrite:
                 skipped = True
@@ -2756,7 +3104,7 @@ class Handler(BaseHTTPRequestHandler):
             fixed, warns = MDC.check(md, os.path.dirname(os.path.abspath(p)))
             fixes = [w['msg'] for w in warns if w.get('level') == 'auto']
             out = _md_output_path(p)
-            overwrite = parse_qs(urlparse(self.path).query).get('overwrite', ['0'])[0] == '1'
+            overwrite = (parse_qs(urlparse(self.path).query).get('overwrite', ['0'])[0] == '1') or _is_upload_path(p)
             saved, skipped = False, False
             if os.path.exists(out) and not overwrite:
                 skipped = True
@@ -3073,6 +3421,13 @@ class Handler(BaseHTTPRequestHandler):
                 target = os.path.join(upload_dir, safe_name)
             with open(target, 'wb') as f:
                 f.write(data)
+            # 用户拖入或上传新文件时，主动清理此前遗留的同名输出 .md，杜绝已存在误报
+            target_md = _md_output_path(target)
+            if os.path.isfile(target_md):
+                try:
+                    os.remove(target_md)
+                except OSError:
+                    pass
             self._send_json(200, {'path': target})
         except Exception as e:
             logging.exception('upload failed')
@@ -3275,14 +3630,27 @@ class Api(object):
         self._clipboard_tokens = {}
         # The optional Hermes-derived pet is disabled by default. Its external
         # Electron runtime lives in user data so it never affects reader start.
+        from src.readmd_modules.pet import (
+            HermesPetBridge,
+            HermesPetLauncher,
+            HermesPetPluginInstaller,
+            PetBatchQueue,
+            PetController,
+        )
         self._pet_controller = PetController()
+        self._pet_in_app = True
         self._pet_queue = PetBatchQueue()
         self._pet_bridge = HermesPetBridge(DATA_DIR)
-        self._pet_installer = HermesPetPluginInstaller(DATA_DIR)
+        self._pet_install_lock = threading.RLock()
+        self._pet_installer = HermesPetPluginInstaller(os.path.join(DATA_DIR, 'plugins'))
+        legacy_pet_installer = HermesPetPluginInstaller(DATA_DIR)
+        if not self._pet_installer.target.exists() and legacy_pet_installer.target.exists():
+            self._pet_installer = legacy_pet_installer
         self._pet_launcher = HermesPetLauncher(
             APP_DIR, self._pet_bridge,
-            adapter_dir=os.path.join(DATA_DIR, 'pet', 'hermes-adapter'),
+            adapter_dir=str(self._pet_installer.target),
         )
+        register_active_pet_launcher(self._pet_launcher)
         self._pet_command_stop = threading.Event()
         self._pet_command_thread = None
         self._pet_fullscreen_thread = None
@@ -3671,16 +4039,21 @@ class Api(object):
         if self._window is None:
             return []
         try:
+            if is_win7():
+                file_types = (
+                    'Word / PDF (*.docx;*.pdf)',
+                    '文档 (*.docx;*.pdf)',
+                )
+            else:
+                file_types = (
+                    '所有文件 (*.*)',
+                    '文档 (*.md;*.markdown;*.docx;*.doc;*.pptx;*.xlsx;*.pdf;*.html;*.htm;*.txt;*.csv;*.json;*.tex;*.latex)',
+                    '音视频 (*.mp3;*.wav;*.m4a;*.mp4;*.flac;*.ogg;*.webm;*.mkv;*.mov)',
+                    '图片 (*.png;*.jpg;*.jpeg;*.bmp;*.webp;*.tif;*.tiff)',
+                )
             files = self._window.create_file_dialog(
                 webview.OPEN_DIALOG, allow_multiple=True,
-                file_types=(
-                    'Word / PDF (*.docx;*.pdf)' if is_win7() else '所有文件 (*.*)',
-                    '文档 (*.docx;*.pdf)' if is_win7() else '文档 (*.md;*.markdown;*.docx;*.doc;*.pptx;*.xlsx;*.pdf;*.html;*.htm;*.txt;*.csv;*.json)',
-                ) if is_win7() else (
-                    '所有文件 (*.*)',
-                    '文档 (*.md;*.markdown;*.docx;*.doc;*.pptx;*.xlsx;*.pdf;*.html;*.htm;*.txt;*.csv;*.json)',
-                    '图片 (*.png;*.jpg;*.jpeg;*.bmp;*.webp;*.tif;*.tiff)',
-                ))
+                file_types=file_types)
             return list(files or [])
         except Exception:
             return []
@@ -3792,6 +4165,50 @@ class Api(object):
         except Exception as e:
             logging.exception('set_autostart failed: %s', e)
             return {'ok': False, 'error': str(e)}
+
+    def get_links_graph(self, directory='', max_nodes=500):
+        """供前端直接调用获取知识图谱数据。"""
+        try:
+            from src.readmd_modules import link_indexer
+            indexer = link_indexer.get_indexer()
+            return {'ok': True, 'graph': indexer.get_graph_data(root_dir=directory or None, max_nodes=max_nodes)}
+        except Exception as exc:
+            return {'ok': False, 'error': str(exc)}
+
+    def get_backlinks(self, file_path):
+        """供前端直接调用获取当前文档的双向链接信息。"""
+        try:
+            from src.readmd_modules import link_indexer
+            indexer = link_indexer.get_indexer()
+            return {
+                'ok': True,
+                'backlinks': indexer.get_backlinks(file_path),
+                'forward_links': indexer.get_forward_links(file_path),
+            }
+        except Exception as exc:
+            return {'ok': False, 'error': str(exc)}
+
+    def index_directory_links(self, directory, force=False):
+        """供前端直接触发目录增量链接索引。"""
+        try:
+            from src.readmd_modules import link_indexer
+            indexer = link_indexer.get_indexer()
+            return {'ok': True, 'stats': indexer.index_directory(directory, force=force)}
+        except Exception as exc:
+            return {'ok': False, 'error': str(exc)}
+
+    def transcribe_file(self, file_path, language=None, model_name='base'):
+        """供前端直接调用转写音视频文件为 Markdown。"""
+        try:
+            from src.readmd_modules import transcribe
+            if not transcribe.is_supported_media(file_path):
+                return {'ok': False, 'error': 'unsupported_media_format'}
+            text, err = transcribe.transcribe_to_md(file_path, language=language, model_name=model_name)
+            if err and not text:
+                return {'ok': False, 'error': err}
+            return {'ok': True, 'content': text, 'warning': err}
+        except Exception as exc:
+            return {'ok': False, 'error': str(exc)}
 
     def start_modules(self):
         """Compatibility bridge: module loading is now initiated per feature."""
@@ -4476,7 +4893,8 @@ class Api(object):
 
     def _pet_model_status(self):
         try:
-            return verify_model_bundle(PET_MODEL_DIR)
+            installed_model = self._pet_installer.target / 'app' / 'models' / 'arch-chan'
+            return verify_model_bundle(installed_model if installed_model.is_dir() else PET_MODEL_DIR)
         except Exception:
             return {'ready': False, 'code': 'model_validation_failed'}
 
@@ -4513,6 +4931,16 @@ class Api(object):
     def _publish_pet_runtime(self, runtime=None):
         runtime = runtime if isinstance(runtime, dict) else self._pet_controller.snapshot()
         prefs = self._pet_preferences()
+        settings = load_json(SETTINGS_FILE, {})
+        slug = settings.get('pet_slug') if isinstance(settings, dict) else None
+        if slug:
+            from src.readmd_modules.pet import list_pets
+            pet = next((item for item in list_pets(DATA_DIR) if item.slug == slug), None)
+            if pet:
+                with open(pet.spritesheet, 'rb') as source:
+                    prefs['info'].update(spritesheetBase64=base64.b64encode(source.read()).decode('ascii'),
+                                         spritesheetRevision=pet.sha256,
+                                         mime='image/webp' if pet.spritesheet.endswith('.webp') else 'image/png')
         return self._pet_bridge.publish(
             runtime, info=prefs['info'], bounds=prefs['bounds'],
             renderer=prefs['renderer'], fullscreen=foreground_fullscreen(),
@@ -4528,9 +4956,38 @@ class Api(object):
         status = self._pet_controller.snapshot()
         status['model'] = self._pet_model_status()
         status['adapter'] = self._pet_launcher.status()
+        status['in_app'] = self._pet_in_app
         prefs = self._pet_preferences()
         status['preferences'] = dict(prefs['info'], renderer=prefs['renderer'])
+        settings = load_json(SETTINGS_FILE, {})
+        status['active_slug'] = str(settings.get('pet_slug') or '') if isinstance(settings, dict) else ''
+        if isinstance(settings, dict) and 'pet_installed' in settings:
+            status['installed'] = bool(settings['pet_installed'])
+        else:
+            status['installed'] = bool(status.get('adapter', {}).get('available'))
         return status
+
+    def install_companion_pet(self):
+        """Activate the selected renderer without silently reverting to Hermes."""
+        renderer = self._pet_preferences()['renderer']
+        in_app = renderer != 'live2d' and self._pet_in_app
+        if not in_app:
+            installed = self.install_default_pet_plugin()
+            if not installed.get('ok'):
+                return installed
+        result = self.configure_pet({'enabled': True, 'in_app': in_app, 'renderer': renderer})
+        if not result.get('ok'):
+            return result
+        self.save_settings({'pet_installed': True})
+        return {'ok': True, 'installed': True, 'status': self.get_pet_runtime_status()}
+
+    def uninstall_companion_pet(self):
+        """Stop the pet and report actual optional-runtime removal failures."""
+        self.configure_pet({'enabled': False})
+        if not self._pet_installer.uninstall():
+            return {'ok': False, 'code': 'pet_plugin_remove_failed', 'status': self.get_pet_runtime_status()}
+        self.save_settings({'pet_installed': False, 'pet_enabled': False})
+        return {'ok': True, 'installed': False, 'status': self.get_pet_runtime_status()}
 
     def list_local_pets(self):
         """Return the local Hermes-compatible gallery entries."""
@@ -4597,69 +5054,84 @@ class Api(object):
             return {'ok': False, 'code': 'invalid_pet_plugin_archive'}
         return self._pet_installer.install_archive(archive_path, confirm=bool(confirm))
 
+    def install_default_pet_plugin(self):
+        """Install the supplied desktop runtime into ReadMD's managed plugins."""
+        with self._pet_install_lock:
+            return self._install_default_pet_plugin_locked()
+
+    def _install_default_pet_plugin_locked(self):
+        if os.name != 'nt':
+            return {'ok': False, 'code': 'pet_runtime_platform_unsupported'}
+        if self._pet_launcher.status().get('available'):
+            return {'ok': True, 'installed': True}
+        # Packaged applications find the sidecar next to ReadMD.exe; source
+        # checkouts also have the staged build produced by stage-plugin.mjs.
+        roots = [os.path.dirname(sys.executable)] if getattr(sys, 'frozen', False) else []
+        roots.extend([APP_DIR, os.path.join(APP_DIR, 'build')])
+        for root in roots:
+            for name in ('ReadMD-Desktop-Pet.zip', 'ReadMD-Desktop-Pet-review.zip'):
+                archive = os.path.join(root, name)
+                if os.path.isfile(archive):
+                    return self.install_pet_plugin(archive, confirm=True)
+        return {'ok': False, 'code': 'pet_plugin_bundle_missing'}
+
     def configure_pet(self, settings):
         if not isinstance(settings, dict):
             return {'ok': False, 'code': 'invalid_pet_settings'}
-        renderer = str(settings.get('renderer') or 'hermes-sprite')
+        renderer = settings.get('renderer', self._pet_preferences()['renderer'])
         if renderer not in ('hermes-sprite', 'live2d'):
             return {'ok': False, 'code': 'invalid_pet_renderer'}
+        in_app = settings.get('in_app', self._pet_in_app)
+        if not isinstance(in_app, bool) or ('enabled' in settings and not isinstance(settings['enabled'], bool)):
+            return {'ok': False, 'code': 'invalid_pet_settings'}
         preference_updates = {}
-        if 'scale' in settings:
+        for key, low, high in (('scale', 0.18, 0.72), ('opacity', 0.35, 1.0)):
+            if key not in settings:
+                continue
             try:
-                scale = round(float(settings['scale']), 2)
-            except (TypeError, ValueError):
-                return {'ok': False, 'code': 'invalid_pet_scale'}
-            if not 0.18 <= scale <= 0.72:
-                return {'ok': False, 'code': 'invalid_pet_scale'}
-            preference_updates['pet_scale'] = scale
-        if 'opacity' in settings:
-            try:
-                opacity = round(float(settings['opacity']), 2)
-            except (TypeError, ValueError):
-                return {'ok': False, 'code': 'invalid_pet_opacity'}
-            if not 0.35 <= opacity <= 1.0:
-                return {'ok': False, 'code': 'invalid_pet_opacity'}
-            preference_updates['pet_opacity'] = opacity
-        if 'renderer' in settings:
-            preference_updates['pet_renderer'] = renderer
-        if preference_updates:
-            self.save_settings(preference_updates)
-        if 'reduced_motion' in settings:
-            self._pet_controller.set_reduced_motion(bool(settings['reduced_motion']))
-        if settings.get('enabled') is False:
-            runtime = self._pet_controller.disable()
-            self._publish_pet_runtime(runtime)
-            self._pet_command_stop.set()
-            self._pet_launcher.stop()
-            return {'ok': True, 'runtime': runtime}
-        if settings.get('enabled') is True:
-            model = self._pet_model_status()
-            # Hermes's copied sprite overlay is an independent, MIT-licensed
-            # fallback.  Only the optional Cubism renderer requires a verified
-            # Live2D rights chain; otherwise a missing model would wrongly make
-            # the already bundled Hermes plugin impossible to start.
-            if renderer == 'live2d' and not model.get('ready'):
+                value = round(float(settings[key]), 2)
+            except (TypeError, ValueError, OverflowError):
+                return {'ok': False, 'code': 'invalid_pet_' + key}
+            if not low <= value <= high:
+                return {'ok': False, 'code': 'invalid_pet_' + key}
+            preference_updates['pet_' + key] = value
+        enabled = settings.get('enabled', self._pet_controller.snapshot().get('enabled'))
+        model = self._pet_model_status()
+        if enabled and renderer == 'live2d':
+            if not model.get('ready'):
                 return {'ok': False, 'code': model.get('code', 'model_not_ready')}
-            # Updating a slider while the pet is already open must only
-            # republish preferences. Re-enabling here would reset a working
-            # animation back to idle and needlessly restart its command loop.
-            if self._pet_controller.snapshot().get('enabled'):
-                runtime = self._pet_controller.snapshot()
-                self._publish_pet_runtime(runtime)
-                return {'ok': True, 'runtime': runtime, 'renderer': renderer, 'model': model,
-                        'adapter': self._pet_launcher.status()}
+            if in_app:
+                return {'ok': False, 'code': 'live2d_requires_desktop'}
+        if enabled and not in_app:
             launched = self._pet_launcher.start()
             if not launched.get('ok'):
                 return launched
+        elif 'enabled' in settings or in_app != self._pet_in_app:
+            self._pet_command_stop.set()
+            self._pet_launcher.stop()
+        if 'renderer' in settings:
+            preference_updates['pet_renderer'] = renderer
+        if 'in_app' in settings:
+            preference_updates['pet_in_app'] = in_app
+        if 'enabled' in settings:
+            preference_updates['pet_enabled'] = enabled
+        if preference_updates:
+            self.save_settings(preference_updates)
+        self._pet_in_app = in_app
+        if 'reduced_motion' in settings:
+            self._pet_controller.set_reduced_motion(bool(settings['reduced_motion']))
+        if not enabled:
+            runtime = self._pet_controller.disable()
+        elif not self._pet_controller.snapshot().get('enabled'):
             runtime = self._pet_controller.enable()
-            self._publish_pet_runtime(runtime)
+        else:
+            runtime = self._pet_controller.snapshot()
+        self._publish_pet_runtime(runtime)
+        if enabled and not in_app:
             self._start_pet_command_loop()
             self._start_pet_fullscreen_loop()
-            return {'ok': True, 'runtime': runtime, 'renderer': renderer, 'model': model,
-                    'adapter': launched.get('runtime')}
-        runtime = self._pet_controller.snapshot()
-        self._publish_pet_runtime(runtime)
-        return {'ok': True, 'runtime': runtime, 'adapter': self._pet_launcher.status()}
+        return {'ok': True, 'runtime': runtime, 'renderer': renderer, 'model': model,
+                'in_app': in_app, 'adapter': self._pet_launcher.status()}
 
     def enqueue_pet_files(self, paths):
         if not isinstance(paths, (list, tuple)):
@@ -5086,6 +5558,26 @@ def install_association():
         return str(e)
 
 
+_SHARED_API = None
+_SHARED_API_LOCK = threading.Lock()
+
+
+def _get_shared_api():
+    global _SHARED_API
+    if _SHARED_API is None:
+        with _SHARED_API_LOCK:
+            if _SHARED_API is None:
+                _SHARED_API = Api()
+                saved = load_json(SETTINGS_FILE, {})
+                if isinstance(saved, dict) and saved.get('pet_enabled') is True:
+                    _SHARED_API.configure_pet({
+                        'enabled': True,
+                        'renderer': saved.get('pet_renderer', 'hermes-sprite'),
+                        'in_app': saved.get('pet_in_app', True),
+                    })
+    return _SHARED_API
+
+
 # ---------------------------------------------------------------- 自测
 
 def run_selftest():
@@ -5149,6 +5641,7 @@ def run_selftest():
         safe_print('fixer tests import failed:', e)
         ok = False
     try:
+        import urllib.request
         server = start_server(0)
         port = server.server_port
         with urllib.request.urlopen('http://127.0.0.1:%d/' % port, timeout=5) as r:
@@ -5542,7 +6035,7 @@ def main():
             write_startup_probe(args.startup_probe_json, timed_out=False)
         return 1
 
-    api = Api()
+    api = _get_shared_api()
     milestone('boot', 'webview_imported')
     try:
         window = webview.create_window(

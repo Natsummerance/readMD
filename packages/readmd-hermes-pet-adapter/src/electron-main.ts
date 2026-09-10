@@ -12,6 +12,19 @@ type RuntimeState = { info?: Record<string, unknown>; activity?: Record<string, 
 // its command-line API first, with argv only for non-Electron test runners.
 const bridgeArg = process.argv.find(arg => arg.startsWith('--bridge-file='))
 const bridgeFile = process.env.READMD_PET_BRIDGE_FILE || app.commandLine.getSwitchValue('bridge-file') || (bridgeArg ? bridgeArg.slice('--bridge-file='.length) : '')
+const parentPidStr = process.env.READMD_PARENT_PID || app.commandLine.getSwitchValue('parent-pid')
+const parentPid = parentPidStr ? Number.parseInt(parentPidStr, 10) : undefined
+
+function isHostProcessAlive(): boolean {
+  if (!parentPid || Number.isNaN(parentPid) || parentPid <= 0) return true
+  try {
+    process.kill(parentPid, 0)
+    return true
+  } catch (err: unknown) {
+    // ESRCH means process does not exist
+    return false
+  }
+}
 let overlay: BrowserWindow | null = null
 let latest: RuntimeState = {}
 let bridgeTimer: NodeJS.Timeout | undefined
@@ -113,7 +126,8 @@ function closePetOverlay(): void {
 function pushState(): void {
   if (overlay && !overlay.isDestroyed()) {
     applyOverlayOpacity()
-    overlay.webContents.send('hermes:pet-overlay:state', latest)
+    const stateToSend = overlay ? { ...latest, bounds: overlay.getBounds() } : latest
+    overlay.webContents.send('hermes:pet-overlay:state', stateToSend)
   }
 }
 
@@ -137,6 +151,11 @@ function clipboardCommand(): Record<string, unknown> {
 }
 
 function pollBridge(): void {
+  if (!isHostProcessAlive()) {
+    closePetOverlay()
+    app.exit(0)
+    return
+  }
   if (!bridgeFile) return
   try {
     const contents = fs.readFileSync(bridgeFile, 'utf8')

@@ -71,3 +71,6 @@ try {
 } finally {
   fs.rmSync(generated, { force: true, recursive: true })
 }
+
+// Keep development builds runnable without a separate Windows staging step.
+fs.cpSync(path.resolve(root, '../../assets/pet/model'), path.join(out, 'models', 'arch-chan'), { recursive: true })

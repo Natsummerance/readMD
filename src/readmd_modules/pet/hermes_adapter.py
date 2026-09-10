@@ -9,6 +9,7 @@ receives ReadMD settings, credentials, document contents, or network URLs.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import hashlib
 import shutil
@@ -168,13 +169,19 @@ class HermesPetLauncher:
         runtime = self.adapter_dir / "electron.exe"
         app = self.adapter_dir / "app"
         env = os.environ.copy()
+        env.pop('ELECTRON_RUN_AS_NODE', None)
         # Electron consumes arbitrary command-line switches before the adapter
         # sees argv on some platforms. A child-only environment variable keeps
         # the bridge path explicit without exposing it to the renderer.
         env["READMD_PET_BRIDGE_FILE"] = str(self._bridge.state_path)
-        self._process = subprocess.Popen(
-            [str(runtime), str(app)], cwd=str(app), close_fds=True, env=env,
-        )
+        env["READMD_PARENT_PID"] = str(os.getpid())
+        try:
+            self._process = subprocess.Popen(
+                [str(runtime), str(app)], cwd=str(app), close_fds=True, env=env,
+            )
+        except OSError:
+            logging.exception('Could not launch desktop pet')
+            return {"ok": False, "code": "hermes_adapter_start_failed", "runtime": self.status()}
         return {"ok": True, "runtime": self.status()}
 
     def stop(self) -> None:
@@ -191,10 +198,36 @@ class HermesPetPluginInstaller:
     MAX_FILES = 3000
     SWAP_ATTEMPTS = 40
     SWAP_RETRY_DELAY = 0.75
+    SWEEP_ATTEMPTS = 8
+    SWEEP_RETRY_DELAY = 0.25
 
     def __init__(self, data_dir: str):
         self.root = Path(data_dir).resolve() / "pet"
         self.target = self.root / "hermes-adapter"
+
+    def _remove_tree(self, path: Path) -> bool:
+        # A single ignore_errors rmtree is not evidence of anything: Windows
+        # scanners keep freshly written files open for seconds at a time, which
+        # makes the first attempt report success while the tree stays on disk.
+        for remaining in range(self.SWEEP_ATTEMPTS - 1, -1, -1):
+            shutil.rmtree(path, ignore_errors=True)
+            if not path.exists():
+                return True
+            if remaining:
+                time.sleep(self.SWEEP_RETRY_DELAY)
+        return not path.exists()
+
+    def uninstall(self) -> bool:
+        """Removes installed hermes-adapter directory."""
+        if self.target.exists():
+            return self._remove_tree(self.target)
+        return True
+
+    def _sweep_stale_staging(self) -> None:
+        """清掉此前失败安装留下的暂存目录，删不掉的如实记入日志。"""
+        for stale in self.root.glob("readmd-pet-*"):
+            if not self._remove_tree(stale):
+                logging.warning("Could not clear stale pet staging dir %s", stale)
 
     def _replace_with_retry(self, source: Path, destination: Path) -> None:
         # Windows real-time scanners keep freshly written executables open for
@@ -268,9 +301,8 @@ class HermesPetPluginInstaller:
                     return {"ok": False, "code": "pet_plugin_file_missing"}
                 self.root.mkdir(parents=True, exist_ok=True)
                 # A previously failed install can leave a locked staging dir
-                # behind; clear it best-effort before opening a fresh one.
-                for stale in self.root.glob("readmd-pet-*"):
-                    shutil.rmtree(stale, ignore_errors=True)
+                # behind; clear it before opening a fresh one.
+                self._sweep_stale_staging()
                 with tempfile.TemporaryDirectory(prefix="readmd-pet-", dir=str(self.root), ignore_cleanup_errors=True) as temporary:
                     staged = Path(temporary) / "adapter"
                     staged.mkdir()

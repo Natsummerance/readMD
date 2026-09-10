@@ -98,13 +98,15 @@ def _looks_like_code_indent(line):
 
 # ---------------------------------------------------------------- 代码遮蔽
 
-def mask_code_spans(s):
+def mask_code_spans(s, start_idx=0):
     """把行内代码 `` `...` `` 替换为占位符，避免后续修复误伤。"""
+    if '`' not in s:
+        return s, []
     spans = []
     out = []
     i = 0
     n = len(s)
-    idx = 0
+    idx = start_idx
     while i < n:
         if s[i] != '`':
             j = s.find('`', i)
@@ -172,17 +174,21 @@ def mask_all_code(text):
             out.append(ph)
             i += 1
             continue
-        masked_line, line_spans = mask_code_spans(line)
+        masked_line, line_spans = mask_code_spans(line, start_idx=len(spans))
         spans.extend(line_spans)
         out.append(masked_line)
         i += 1
     return '\n'.join(out), spans
 
 
+_RESTORE_RE = re.compile(r'\x1a[A-Za-z0-9_]+\x1a')
+
+
 def restore(text, spans):
-    for ph, orig in spans:
-        text = text.replace(ph, orig)
-    return text
+    if not spans:
+        return text
+    span_map = dict(spans)
+    return _RESTORE_RE.sub(lambda m: span_map.get(m.group(0), m.group(0)), text)
 
 
 # ---------------------------------------------------------------- 表格修复
@@ -307,6 +313,9 @@ def _process_tables(lines, fixes, stats):
     i = 0
     while i < n:
         l = lines[i]
+        if '|' not in l:
+            i += 1
+            continue
         if _looks_like_code_indent(l) or l.lstrip().startswith('>'):
             i += 1
             continue
@@ -316,6 +325,8 @@ def _process_tables(lines, fixes, stats):
         j = i
         while j < n:
             lj = lines[j]
+            if '|' not in lj:
+                break
             if _looks_like_code_indent(lj) or lj.lstrip().startswith('>'):
                 break
             if _is_table_row(lj) or _is_table_sep(lj):
@@ -487,6 +498,8 @@ def fix_emphasis_line(line):
 
 def _process_emphasis(lines, fixes, stats):
     for idx, line in enumerate(lines):
+        if '*' not in line and '_' not in line:
+            continue
         if _looks_like_code_indent(line):
             continue
         fixed, log = fix_emphasis_line(line)
@@ -569,12 +582,17 @@ def _fix_math_line(line):
 
 def _process_math(lines, fixes, stats):
     text = '\n'.join(lines)
-    text, log = _balance_display_math(text)
-    if log:
-        fixes.append('[公式] %s' % log[0])
-        stats['math'] += 1
-    lines = text.split('\n')
+    if '$$' in text:
+        text, log = _balance_display_math(text)
+        if log:
+            fixes.append('[公式] %s' % log[0])
+            stats['math'] += 1
+        lines = text.split('\n')
+    if '$' not in text and '\\(' not in text and '\\[' not in text and '\\)' not in text and '\\]' not in text:
+        return lines
     for idx, line in enumerate(lines):
+        if '$' not in line and '\\' not in line:
+            continue
         if _looks_like_code_indent(line):
             continue
         fixed, log2 = _fix_math_line(line)
@@ -590,6 +608,8 @@ def _process_math(lines, fixes, stats):
 
 def _process_headings(lines, fixes, stats):
     for idx, line in enumerate(lines):
+        if '#' not in line:
+            continue
         if _looks_like_code_indent(line):
             continue
         m = _HEADING_RE.match(line)

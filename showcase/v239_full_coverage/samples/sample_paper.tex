@@ -1,0 +1,78 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\title{Quantum Electrodynamics \& Non-Equilibrium Field Dynamics}
+\author{Prof. Richard P. Feynman \and Dr. Julian Schwinger}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This paper presents a self-contained formulation of quantum electrodynamics (QED) in non-equilibrium thermodynamic regimes. We derive the exact path-integral propagator and demonstrate full gauge invariance under local (1)$ phase transformations.
+\end{abstract}
+
+\section{Introduction}
+Quantum field theory describes fundamental interactions by quantizing classical fields over Minkowski spacetime. The interaction Lagrangian density for electrodynamics is given by:
+
+\begin{equation}
+\mathcal{L} = \bar{\psi} (i \gamma^\mu D_\mu - m) \psi - \frac{1}{4} F_{\mu\nu} F^{\mu\nu}
+\end{equation}
+
+where \mu = \partial_\mu + i e A_\mu$ represents the gauge-covariant derivative, and {\mu\nu} = \partial_\mu A_\nu - \partial_\nu A_\mu$ is the electromagnetic field strength tensor.
+
+\section{Field Equations \& Conservation Laws}
+Applying the Euler-Lagrange variational principle to the action  = \int d^4x \, \mathcal{L}$, we arrive at the coupled equations of motion:
+
+\begin{align}
+(i \gamma^\mu \partial_\mu - m)\psi &= e \gamma^\mu A_\mu \psi \\
+\partial_\nu F^{\nu\mu} &= e \bar{\psi} \gamma^\mu \psi = J^\mu
+\end{align}
+
+\subsection{Commutation Relations}
+The canonical equal-time anti-commutation relations for the Dirac spinor fields satisfy:
+
+\begin{equation}
+\{\psi_a(\mathbf{x}, t), \psi_b^\dagger(\mathbf{y}, t)\} = \delta_{ab} \, \delta^{(3)}(\mathbf{x} - \mathbf{y})
+\end{equation}
+
+\section{Physical Parameters and Constants}
+The experimental measurements of fundamental interaction constants are summarized in Table~\ref{tab:constants}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|c|r|}
+\hline
+\textbf{Constant} & \textbf{Symbol} & \textbf{Value} \\
+\hline
+Fine-structure constant & $\alpha$ & /137.035999$ \\
+Electron rest mass & $ & .510998950 \text{ MeV}$ \\
+Planck constant (reduced) & $\hbar$ & .0545718 \times 10^{-34} \text{ J}\cdot\text{s}$ \\
+Speed of light & $ &  \text{ m/s}$ \\
+\hline
+\end{tabular}
+\caption{Fundamental Physical Constants in Natural Units}
+\label{tab:constants}
+\end{table}
+
+\section{Theorems on Gauge Invariance}
+
+\begin{theorem}
+Every local gauge transformation $\psi(x) \to e^{i\theta(x)}\psi(x)$ preserves the physical observables of the electromagnetic stress-energy tensor.
+\end{theorem}
+
+\begin{proof}
+Direct substitution of the phase factor yields an identical scalar curvature and conserved Noether current ^\mu$.
+\end{proof}
+
+\section{Conclusion}
+We have shown that pure-Python AST parsing of modern LaTeX enables direct, zero-loss transformation to accessible Markdown documentation with preserved mathematical fidelity.
+
+\begin{thebibliography}{99}
+\bibitem{feynman1949} R. P. Feynman, \emph{Space-Time Approach to Quantum Electrodynamics}, Phys. Rev. 76, 769 (1949).
+\bibitem{schwinger1948} J. Schwinger, \emph{Quantum Electrodynamics. I. A Covariant Formulation}, Phys. Rev. 74, 1439 (1948).
+\end{thebibliography}
+
+\end{document}

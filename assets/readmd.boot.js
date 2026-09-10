@@ -204,13 +204,23 @@ function saveLastFile(path) {
 
 function afterRender() {
   startModules();
+  if (window.ReadMDGraph && typeof window.ReadMDGraph.updateVisibility === 'function') {
+    window.ReadMDGraph.updateVisibility();
+  }
+  if (window.ReadMDGraph && typeof window.ReadMDGraph.refreshBacklinks === 'function' && state && state.file) {
+    window.ReadMDGraph.refreshBacklinks(state.file);
+  } else if (!state || !state.file || state.mode === 'welcome') {
+    if (window.ReadMDGraph && typeof window.ReadMDGraph.updateVisibility === 'function') {
+      window.ReadMDGraph.updateVisibility(false);
+    }
+  }
 }
 
 function installAssoc() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!hasPy) { showToast(_t('toast.assocBrowserNotice') || '浏览器模式下请在命令行运行 install.bat'); return; }
+  if (!hasPy) { showToast(_t('toast.assocBrowserNotice')); return; }
   py.install_association().then(ok => {
-    showToast(ok === true ? (_t('toast.assocSuccess') || '已设置为 .md 默认打开方式') : ((_t('toast.assocFailed') || '注册失败：') + ok));
+    showToast(ok === true ? _t('toast.assocSuccess') : _t('toast.assocFailed', { error: ok }));
   });
 }
 
@@ -920,6 +930,9 @@ function renderTabsBar() {
     if (secBar) { secBar.innerHTML = ''; secBar.classList.add('hidden'); }
     if (overflowWrap) overflowWrap.classList.add('hidden');
     if (btnHome) btnHome.classList.add('hidden');
+    if (window.ReadMDGraph && typeof window.ReadMDGraph.updateVisibility === 'function') {
+      window.ReadMDGraph.updateVisibility(false);
+    }
     return;
   }
 
@@ -928,6 +941,14 @@ function renderTabsBar() {
       btnHome.classList.add('hidden');
     } else {
       btnHome.classList.remove('hidden');
+    }
+  }
+
+  if (window.ReadMDGraph && typeof window.ReadMDGraph.updateVisibility === 'function') {
+    if (state.mode === 'welcome') {
+      window.ReadMDGraph.updateVisibility(false);
+    } else {
+      window.ReadMDGraph.updateVisibility();
     }
   }
 
@@ -1829,21 +1850,41 @@ function updateStatus() {
   if ($('btn-print')) {
     const browserOnly = !hasPy;
     $('btn-print').disabled = isWelcome || browserOnly;
-    const exportHint = browserOnly
-      ? '导出需使用桌面版；浏览器模式可另存或打印'
-      : '导出文档 (Ctrl+P)';
+    const exportHint = _t('toolbar.export') + ' (Ctrl+P)';
     $('btn-print').title = exportHint;
     $('btn-print').setAttribute('aria-label', exportHint);
+    if (browserOnly) setUnavailableReason($('btn-print'), _t('toast.exportBrowserNotice'));
   }
   if ($('btn-a')) $('btn-a').disabled = isWelcome;
   if ($('btn-A')) $('btn-A').disabled = isWelcome;
   if ($('btn-search')) $('btn-search').disabled = isWelcome;
   setUnavailableReason($('btn-search'), _t('toast.searchNeedsDocument'));
   if ($('btn-presentation-menu')) $('btn-presentation-menu').disabled = !hasDoc;
-  if ($('btn-run-all-chunks')) $('btn-run-all-chunks').disabled = !hasDoc;
+  if ($('btn-run-all-chunks')) {
+    const chunkCards = document.querySelectorAll('.code-chunk-card');
+    const hasChunks = hasDoc && chunkCards.length > 0;
+    $('btn-run-all-chunks').disabled = !hasChunks;
+    if (hasChunks) {
+      $('btn-run-all-chunks').classList.remove('hidden');
+    } else {
+      $('btn-run-all-chunks').classList.add('hidden');
+    }
+  }
   if ($('btn-share')) $('btn-share').disabled = !hasDoc;
   if ($('btn-fix')) $('btn-fix').disabled = !hasDoc;
   setUnavailableReason($('btn-fix'), _t('toast.openDocumentToUse'));
+  if ($('btn-graph-menu')) {
+    $('btn-graph-menu').disabled = !hasDoc;
+    setUnavailableReason($('btn-graph-menu'), _t('toast.openDocumentToUse'));
+  }
+  if ($('btn-backlinks-menu')) {
+    $('btn-backlinks-menu').disabled = !hasDoc;
+    setUnavailableReason($('btn-backlinks-menu'), _t('toast.openDocumentToUse'));
+  }
+  if ($('btn-graph')) {
+    $('btn-graph').disabled = !hasDoc;
+    setUnavailableReason($('btn-graph'), _t('toast.openDocumentToUse'));
+  }
 
   const btnHome = $('btn-home');
   if (btnHome) {
@@ -1898,6 +1939,14 @@ function goHome() {
   document.querySelectorAll('#toolbar .tool-btn').forEach(b => b.classList.remove('active'));
   closeSearch();
   closeMdPopups();
+  if (window.ReadMDGraph) {
+    if (typeof window.ReadMDGraph.close === 'function') window.ReadMDGraph.close();
+    const panel = document.getElementById('backlinks-panel');
+    if (panel) panel.classList.add('hidden');
+    if (typeof window.ReadMDGraph.updateVisibility === 'function') {
+      window.ReadMDGraph.updateVisibility(false);
+    }
+  }
   showPaginationBar(false);
   updateStatus();
   renderTabsBar();
@@ -1980,21 +2029,18 @@ function saveLastFile(path) {
 }
 
 function syncBuildVersionLabels() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const version = document.documentElement.dataset.version;
   if (!version) return;
   if ($('status-version')) $('status-version').textContent = 'v' + version;
-  if ($('menu-version-label')) $('menu-version-label').textContent = '当前版本 v' + version;
-}
-
-function afterRender() {
-  startModules();
+  if ($('menu-version-label')) $('menu-version-label').textContent = _t('app.currentVersion') + version;
 }
 
 function installAssoc() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!hasPy) { showToast(_t('toast.assocBrowserNotice') || '浏览器模式下请在命令行运行 install.bat'); return; }
+  if (!hasPy) { showToast(_t('toast.assocBrowserNotice')); return; }
   py.install_association().then(ok => {
-    showToast(ok === true ? (_t('toast.assocSuccess') || '已设置为 .md 默认打开方式') : ((_t('toast.assocFailed') || '注册失败：') + ok));
+    showToast(ok === true ? _t('toast.assocSuccess') : _t('toast.assocFailed', { error: ok }));
   });
 }
 
@@ -2143,10 +2189,10 @@ function bindGlobalDragAndDrop() {
             if (path) paths.push(path);
           }
           if (paths.length) {
-            if (typeof enqueueBatchFiles === 'function') {
-              enqueueBatchFiles(paths, false);
-            } else if (paths.length === 1 && typeof convertOrOcr === 'function') {
+            if (paths.length === 1 && typeof convertOrOcr === 'function') {
               convertOrOcr(paths[0], 'convert');
+            } else if (typeof enqueueBatchFiles === 'function') {
+              enqueueBatchFiles(paths, true);
             }
           }
         }
@@ -3583,7 +3629,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
       dir: d.dir,
       name: d.name,
       content: d.content,
-      original: d.original,
+      original: d.original != null ? d.original : d.content,
       fixed: d.content,
       title: isBrowserCopy ? `${d.name} (${_t('app.browserCopy') || 'browser copy'})` : d.name,
       fixes: d.fixes || [],
@@ -3775,6 +3821,79 @@ function transformAcademicCallouts(src) {
     const qed = type.toLowerCase() === 'proof' ? ' <span class="proof-qed">■</span>' : '';
     return `<div class="academic-callout ${info.cls}"><div class="academic-callout-header"><span class="academic-callout-tag">${info.name}</span>${titleHtml}</div><div class="academic-callout-body">${marked.parse(body.trim())}${qed}</div></div>`;
   });
+}
+
+function transformWikilinks(src) {
+  if (!src || !src.includes('[[')) return src;
+
+  // 保护代码块与行内代码，避免代码中的 [[ 语法被误转化
+  const codeBlocks = [];
+  const protectedSrc = src
+    .replace(/```[\s\S]*?```/g, m => {
+      codeBlocks.push(m);
+      return `\x00WIKICODE${codeBlocks.length - 1}\x00`;
+    })
+    .replace(/`[^`\n]+`/g, m => {
+      codeBlocks.push(m);
+      return `\x00WIKICODE${codeBlocks.length - 1}\x00`;
+    });
+
+  // 匹配 [[target]] 或 [[target|alias]] 或 [[target#heading]] 或 [[target#heading|alias]]
+  const replaced = protectedSrc.replace(/\[\[([^\]\n|#]+)(?:#([^\]\n|]+))?(?:\|([^\]\n]+))?\]\]/g, (match, target, heading, alias) => {
+    const rawTarget = (target || '').trim();
+    const cleanHeading = (heading || '').trim();
+    const cleanAlias = (alias || '').trim();
+    const displayText = cleanAlias || (cleanHeading ? `${rawTarget}#${cleanHeading}` : rawTarget);
+    const fullTarget = cleanHeading ? `${rawTarget}#${cleanHeading}` : rawTarget;
+    const safeTarget = escapeHtml(fullTarget);
+    const safeDisplay = escapeHtml(displayText);
+    return `<a class="wikilink" data-target="${safeTarget}" href="javascript:void(0)" title="双链跳转: ${safeTarget}">${safeDisplay}</a>`;
+  });
+
+  return replaced.replace(/\x00WIKICODE(\d+)\x00/g, (_, idx) => codeBlocks[Number(idx)] || '');
+}
+
+async function navigateWikilink(target, allHeadings) {
+  if (!target) return;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const parts = target.split('#');
+  const docName = (parts[0] || '').trim();
+  const headingId = (parts[1] || '').trim();
+
+  // 如果仅为当前文档内小标题跳转，如 [[#heading]]
+  if (!docName && headingId) {
+    let el = document.getElementById(headingId);
+    if (!el) el = findMatchingHeading(headingId, headingId, allHeadings);
+    if (el) {
+      el.tabIndex = -1;
+      el.focus({ preventScroll: true });
+      el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
+      el.classList.add('heading-target-highlight');
+      setTimeout(() => el.classList.remove('heading-target-highlight'), 1500);
+    } else {
+      showToast((_t('toast.headingNotFound') || '未找到对应的文档小标题目标：') + headingId, 2500);
+    }
+    return;
+  }
+
+  // 跨文档跳转：尝试在当前目录查找目标文档
+  const curDir = state.dir || (state.file ? state.file.substring(0, Math.max(state.file.lastIndexOf('/'), state.file.lastIndexOf('\\'))) : '');
+  const candidateNames = docName.endsWith('.md') ? [docName] : [docName + '.md', docName];
+  let targetPath = null;
+
+  for (const name of candidateNames) {
+    const candidate = curDir ? (curDir + (curDir.includes('\\') ? '\\' : '/') + name) : name;
+    targetPath = candidate;
+    break;
+  }
+
+  if (targetPath && typeof window.loadFile === 'function') {
+    window.loadFile(targetPath);
+  } else if (targetPath && hasPy && py.open_file) {
+    py.open_file(targetPath);
+  } else {
+    showToast('正在打开文档：' + docName, 1500);
+  }
 }
 
 /* ---------------- 智能语义分章分页切分算法 ---------------- */
@@ -4056,7 +4175,7 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
   const el = $('content');
   if (!el) return;
 
-  const transformed = transformAcademicCallouts(page.content);
+  const transformed = transformAcademicCallouts(transformWikilinks(page.content));
   const prot = protectMath(transformed);
   const html = marked.parse(prot.src, { gfm: true, breaks: false });
   const finalHtml = restoreMath(html, prot.saved);
@@ -4644,7 +4763,7 @@ async function renderContent(content, name) {
     await renderContentIncremental(content, saved, render);
     return;
   }
-  const transformed = transformAcademicCallouts(content);
+  const transformed = transformAcademicCallouts(transformWikilinks(content));
   const prot = protectMath(transformed);
   const html = parseMarkdownWithSourceMap(prot.src);
   const finalHtml = restoreMath(html, prot.saved);
@@ -4750,7 +4869,8 @@ async function renderContentIncremental(content, savedTop, render = null) {
   let prog = null;
   try {
     if (total <= 1) {
-      const prot = protectMath(content);
+      const transformed = transformAcademicCallouts(transformWikilinks(content));
+      const prot = protectMath(transformed);
       body.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
       postProcess();
       if (savedTop) el.scrollTop = savedTop;
@@ -4769,7 +4889,8 @@ async function renderContentIncremental(content, savedTop, render = null) {
       const end = Math.min(i + CHUNK, total);
       for (let k = i; k < end; k++) {
         const div = document.createElement('div');
-        const prot = protectMath(blocks[k]);
+        const transformed = transformAcademicCallouts(transformWikilinks(blocks[k]));
+        const prot = protectMath(transformed);
         div.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
         frag.appendChild(div);
       }
@@ -5043,6 +5164,16 @@ function postProcess(container) {
 function renderAllCodeChunks(container) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const cards = (container || document).querySelectorAll('.code-chunk-card');
+  const runAllBtn = $('btn-run-all-chunks');
+  if (runAllBtn) {
+    if (cards.length > 0) {
+      runAllBtn.classList.remove('hidden');
+      runAllBtn.disabled = false;
+    } else {
+      runAllBtn.classList.add('hidden');
+      runAllBtn.disabled = true;
+    }
+  }
   cards.forEach(card => {
     if (card._bound) return;
     card._bound = true;
@@ -6202,6 +6333,15 @@ function rewritePresentationAssets(md) {
 function fixLinks(body) {
   const allHeadings = Array.from(body.querySelectorAll('h1, h2, h3, h4, h5, h6'));
   body.querySelectorAll('a').forEach(a => {
+    if (a.classList.contains('wikilink')) {
+      const target = a.dataset.target || '';
+      a.addEventListener('click', async e => {
+        e.preventDefault();
+        e.stopPropagation();
+        await navigateWikilink(target, allHeadings);
+      });
+      return;
+    }
     const href = a.getAttribute('href') || '';
     if (href.startsWith('#')) {
       const targetId = href.slice(1);
@@ -6362,7 +6502,7 @@ async function convertFile(path) {
   if (!(await ensureModule('convert'))) return;
   busy(true);
   try {
-    const r = await apiFetch('/api/convert?p=' + encodeURIComponent(path));
+    const r = await apiFetch('/api/convert?p=' + encodeURIComponent(path) + '&overwrite=1');
     const d = await r.json();
     if (r.status === 409) { showToast(d.error || (_t('toast.moduleLoading') || '模块加载中…')); return; }
     if (!r.ok) { showToast(d.error || (_t('toast.convertFailed') || '转换失败')); return; }
@@ -11138,10 +11278,10 @@ async function stopShare() {
 
 /* ---------------- 批量转换（转 MD） ---------------- */
 
+const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
 let convertLastDir = null;
 
 async function openConvertModal() {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const note = $('convert-note');
   if (note) note.textContent = state.win7 ? (_t('convert.noteWin7') || 'Win7 版仅支持 docx / pdf 转 Markdown；转换结果自动保存为源文件同目录同名 .md。') : (_t('convert.note') || '转换结果自动保存为源文件同目录同名 .md（如 report.docx → report.md）。docx 公式、PDF 表格走专用解析，其余格式自动回退通用转换；输出经过严格校验（表格 / 代码围栏 / 公式 / 图片引用）。');
   $('convert-modal').classList.remove('hidden');
@@ -11180,7 +11320,6 @@ async function pickConvertFiles() {
 }
 
 async function pickConvertFolder() {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   let dir = null;
   try { dir = await py.choose_folder(); } catch (e) { dir = null; }
   if (!dir) return;
@@ -11202,7 +11341,7 @@ async function startBatchConvert(files, overwrite) {
   // The batch module is part of the generated boot bundle.  Keep a stable
   // error instead of maintaining a second conversion implementation when a
   // custom host accidentally omits it.
-  showToast((window.i18n && window.i18n.t('convert.moduleUnavailable')) || '转换模块不可用');
+  showToast(_t('convert.moduleUnavailable'));
 }
 
 
@@ -11210,7 +11349,6 @@ async function startBatchConvert(files, overwrite) {
 
 
 async function ocrFile(path) {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (!(await ensureModule('ocr'))) return;
   busy(true);
   try {
@@ -11227,7 +11365,6 @@ async function ocrFile(path) {
 /* ---------------- 文件选择（含浏览器兜底） ---------------- */
 
 function chooseFile(mode) {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   if (moduleBlocked(mode)) return;
   if (hasPy) {
     if (mode === 'ocr') {
@@ -11271,7 +11408,6 @@ function chooseFile(mode) {
 
 
 async function uploadFile(file) {
-  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const fileName = file.name || 'document.bin';
   const ext = '.' + (fileName.split('.').pop() || 'bin');
   try {
@@ -11289,6 +11425,329 @@ async function uploadFile(file) {
 function convertOrOcr(p, mode) {
   if (mode === 'ocr' || (mode !== 'convert' && IMG_RE.test(p))) ocrFile(p);
   else convertFile(p);
+}
+
+
+/* ---------------- 插件管理中心 (Plugin Center) ---------------- */
+
+let pluginPollTimer = null;
+
+async function openPluginModal() {
+  const modal = $('plugin-modal');
+  if (!modal) return;
+  modal.classList.remove('hidden');
+  await refreshPluginList();
+}
+
+function closePluginModal() {
+  const modal = $('plugin-modal');
+  if (modal) modal.classList.add('hidden');
+  if (pluginPollTimer) {
+    clearInterval(pluginPollTimer);
+    pluginPollTimer = null;
+  }
+}
+
+async function refreshPluginList() {
+  const grid = $('plugin-cards-grid');
+  const ffmpegBadge = $('plugin-ffmpeg-badge');
+  const sandboxPath = $('plugin-sandbox-path');
+  if (!grid) return;
+
+  try {
+    const res = await apiFetch('/api/plugins/list');
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Failed to list plugins');
+
+    if (ffmpegBadge) {
+      if (data.ffmpeg) {
+        ffmpegBadge.textContent = _t('plugin.ffmpegReady') || '已就绪';
+        ffmpegBadge.className = 'plugin-badge ready';
+      } else {
+        ffmpegBadge.textContent = _t('plugin.ffmpegMissing') || '未检测到（音视频转写建议配置）';
+        ffmpegBadge.className = 'plugin-badge missing';
+      }
+    }
+
+    if (sandboxPath && data.sandbox_dir) {
+      sandboxPath.textContent = data.sandbox_dir;
+      sandboxPath.title = data.sandbox_dir;
+    }
+
+    renderPluginCards(data.plugins || {});
+
+    // 如果有安装任务进行中，保持轮询
+    const hasInstalling = Object.values(data.plugins || {}).some(p => p.installing);
+    if (hasInstalling && !pluginPollTimer) {
+      pluginPollTimer = setInterval(refreshPluginList, 1500);
+    } else if (!hasInstalling && pluginPollTimer) {
+      clearInterval(pluginPollTimer);
+      pluginPollTimer = null;
+    }
+  } catch (err) {
+    console.error('refreshPluginList error:', err);
+  }
+}
+
+const PLUGIN_ICONS = {
+  whisper: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>',
+  audio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>',
+  rapidocr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" x2="17" y1="9" y2="9"/><line x1="12" x2="12" y1="9" y2="17"/><line x1="9" x2="15" y1="17" y2="17"/></svg>',
+  easyocr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" x2="17" y1="9" y2="9"/><line x1="12" x2="12" y1="9" y2="17"/><line x1="9" x2="15" y1="17" y2="17"/></svg>',
+  ocr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" x2="17" y1="9" y2="9"/><line x1="12" x2="12" y1="9" y2="17"/><line x1="9" x2="15" y1="17" y2="17"/></svg>',
+  rapid_table: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>',
+  pylatexenc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4 8 2.5 8 3-12 3 12 2.5-8"/><line x1="17" x2="21" y1="12" y2="12"/><line x1="17" x2="21" y1="16" y2="16"/></svg>',
+  latex: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4 8 2.5 8 3-12 3 12 2.5-8"/><line x1="17" x2="21" y1="12" y2="12"/><line x1="17" x2="21" y1="16" y2="16"/></svg>',
+  jieba: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><line x1="8.5" x2="15.5" y1="7.5" y2="7.5"/><line x1="7.5" x2="10.5" y1="8.5" y2="15.5"/><line x1="16.5" x2="13.5" y1="8.5" y2="15.5"/></svg>',
+  pygments: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+  default: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>'
+};
+
+function getPluginIconSvg(id, category) {
+  return PLUGIN_ICONS[id] || PLUGIN_ICONS[category] || PLUGIN_ICONS.default;
+}
+
+// 每个错误码对应一个字面量 _t() 调用：key 只有在调用点写成字面量时
+// tools/check_js_i18n_keys.py 才能静态校验，变量形式的 _t(key) 会绕过门禁。
+const PLUGIN_ERROR_TEXT = {
+  pip_network: () => _t('plugin.error.pip_network'),
+  pip_timeout: () => _t('plugin.error.pip_timeout'),
+  pip_permission: () => _t('plugin.error.pip_permission'),
+  pip_no_distribution: () => _t('plugin.error.pip_no_distribution'),
+  pip_unavailable: () => _t('plugin.error.pip_unavailable'),
+  pip_unknown: () => _t('plugin.error.pip_unknown'),
+  uninstall_locked: () => _t('plugin.error.uninstall_locked'),
+};
+
+// 后缀来自 p.category / 插件 id 等运行时变量，_t() 只能拼出前缀，
+// 所以这里逐类写成字面量调用，否则 tools/check_js_i18n_keys.py 看不到。
+const PLUGIN_CATEGORY_TEXT = {
+  audio: () => _t('plugin.category.audio'),
+  code: () => _t('plugin.category.code'),
+  document: () => _t('plugin.category.document'),
+  latex: () => _t('plugin.category.latex'),
+  ocr: () => _t('plugin.category.ocr'),
+  text: () => _t('plugin.category.text'),
+  tools: () => _t('plugin.category.tools'),
+};
+
+// i18n.t() 查不到 key 时返回 key 本身，所以 `_t(k) || '中文'` 结构上永远兜不了底，
+// 只会把 `plugin.xxx` 打到 46 种语言的界面上。这里显式判「是否未命中」再退回后端值。
+function translatePluginText(key, fallback) {
+  const text = _t(key);
+  return text === key ? (fallback || '') : text;
+}
+
+function pluginErrorMarkup(p) {
+  const resolve = PLUGIN_ERROR_TEXT[p.install_error_code] || PLUGIN_ERROR_TEXT.pip_unknown;
+  const detail = p.install_error_detail || '';
+  const tip = `<span class="plugin-error-msg">${escapeHtml(resolve())}</span>`;
+  if (!detail) return `<div class="plugin-error-wrap">${tip}</div>`;
+  return `
+    <div class="plugin-error-wrap">
+      ${tip}
+      <details class="plugin-error-detail">
+        <summary>${escapeHtml(_t('plugin.errorDetails'))}</summary>
+        <pre class="plugin-error-raw">${escapeHtml(detail)}</pre>
+      </details>
+    </div>
+  `;
+}
+
+function renderPluginCards(plugins) {
+  const grid = $('plugin-cards-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  for (const [id, p] of Object.entries(plugins)) {
+    const card = document.createElement('div');
+    card.className = 'plugin-card' + (p.enabled ? ' is-enabled' : '');
+    card.dataset.pluginId = id;
+
+    const title = translatePluginText('plugin.' + id + '.name', p.name_key || id);
+    const desc = translatePluginText('plugin.' + id + '.desc', p.desc_key);
+    const category = PLUGIN_CATEGORY_TEXT[p.category] ? PLUGIN_CATEGORY_TEXT[p.category]() : (p.category || '');
+    const isCached = Boolean(p.installed && p.cached);
+    const sizeStr = p.approx_size ? p.approx_size : '';
+    const metaParts = [];
+    if (sizeStr) metaParts.push(sizeStr);
+    if (category) metaParts.push(category);
+    metaParts.push(isCached ? _t('plugin.cacheReady') : (p.installed ? _t('plugin.installed') : _t('plugin.available')));
+
+    const iconSvg = getPluginIconSvg(id, p.category);
+
+    let footLeft = '';
+    let footRight = '';
+    let progressHtml = '';
+
+    if (p.installing) {
+      const pct = typeof p.progress === 'number' && p.progress > 0 ? Math.min(100, Math.max(0, p.progress)) : null;
+      footLeft = `
+        <div class="plugin-spinner-row">
+          <span class="plugin-spinner" aria-hidden="true"></span>
+          <span class="plugin-status-txt installing">${_t('plugin.installing')}</span>
+        </div>
+      `;
+      footRight = pct !== null ? `<span class="plugin-progress-text">${pct}%</span>` : '';
+      progressHtml = `
+        <div class="plugin-progress-wrap">
+          <div class="plugin-progress-track" role="progressbar" aria-valuenow="${pct || 0}" aria-valuemin="0" aria-valuemax="100">
+            <div class="plugin-progress-fill ${pct === null ? 'is-indeterminate' : ''}" style="width: ${pct !== null ? pct + '%' : '35%'};"></div>
+          </div>
+          ${p.last_log ? `<div class="plugin-log-tip" title="${escapeHtml(p.last_log)}">${escapeHtml(p.last_log)}</div>` : ''}
+        </div>
+      `;
+    } else if (p.installed) {
+      footLeft = `
+        <label class="apple-switch plugin-switch">
+          <input type="checkbox" class="plugin-switch-input" ${p.enabled ? 'checked' : ''} data-action="toggle" aria-label="${escapeHtml(title)}">
+          <span class="apple-switch-track plugin-switch-track" aria-hidden="true"><span class="apple-switch-thumb plugin-switch-thumb"></span></span>
+          <span class="plugin-status-txt ${p.enabled ? 'active' : ''}">${p.enabled ? _t('plugin.enabled') : _t('plugin.disabled')}</span>
+        </label>
+      `;
+      footRight = `
+        <button class="plugin-action-uninstall-btn" data-action="uninstall">${_t('plugin.uninstall')}</button>
+      `;
+      if (p.install_error_code) progressHtml = pluginErrorMarkup(p);
+    } else {
+      const hasErr = Boolean(p.install_error_code);
+      footLeft = `
+        <div class="plugin-status-dot-indicator ${hasErr ? 'is-error' : ''}">
+          <span class="plugin-dot-pip ${hasErr ? 'error' : ''}"></span>
+          <span>${hasErr ? _t('plugin.installFailed') : _t('plugin.notInstalled')}</span>
+        </div>
+      `;
+      footRight = `<button class="plugin-action-get-btn ${hasErr ? 'is-retry' : ''}" data-action="install">${hasErr ? _t('plugin.retry') : _t('plugin.install')}</button>`;
+      if (hasErr) progressHtml = pluginErrorMarkup(p);
+    }
+
+    card.innerHTML = `
+      <div class="plugin-card-head">
+        <div class="plugin-app-icon" aria-hidden="true">${iconSvg}</div>
+        <div class="plugin-card-meta-wrap">
+          <h4 class="plugin-card-title">${escapeHtml(title)}</h4>
+          <div class="plugin-card-submeta">
+            ${escapeHtml(metaParts.join(' · '))}
+          </div>
+        </div>
+      </div>
+      <p class="plugin-card-desc">${escapeHtml(desc)}</p>
+      ${progressHtml}
+      <div class="plugin-card-foot">
+        <div class="plugin-foot-left">${footLeft}</div>
+        <div class="plugin-foot-right">${footRight}</div>
+      </div>
+    `;
+
+    // 绑定卡片内按钮事件
+    const toggleInput = card.querySelector('input[data-action="toggle"]');
+    if (toggleInput) {
+      toggleInput.addEventListener('change', async (e) => {
+        await setPluginToggle(id, e.target.checked, title);
+      });
+    }
+
+    const installBtn = card.querySelector('button[data-action="install"]');
+    if (installBtn) {
+      installBtn.addEventListener('click', async () => {
+        await startPluginInstall(id, title, sizeStr);
+      });
+    }
+
+    const uninstallBtn = card.querySelector('button[data-action="uninstall"]');
+    if (uninstallBtn) {
+      uninstallBtn.addEventListener('click', async () => {
+        await startPluginUninstall(id, title);
+      });
+    }
+
+    grid.appendChild(card);
+  }
+}
+
+async function setPluginToggle(id, enabled, name) {
+  try {
+    const res = await apiFetch('/api/plugins/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plugin_id: id, enabled: Boolean(enabled) }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Toggle failed');
+    await refreshPluginList();
+  } catch (err) {
+    console.warn('plugin toggle failed:', err);
+    showToast(_t('plugin.toggleFailed', { name: name || id }));
+    await refreshPluginList();
+  }
+}
+
+async function startPluginInstall(id, name, size) {
+  const msg = _t('plugin.installConfirm', { name: name || id, size: size || '' }) ||
+    `确定要在沙箱中安装「${name || id}」吗？将使用 pip 自动拉取依赖，不污染全局环境。`;
+
+  let confirmed = false;
+  if (typeof confirmAction === 'function') {
+    confirmed = await confirmAction({
+      title: _t('plugin.install') || '安装插件',
+      message: msg,
+      confirmText: _t('plugin.install') || '安装',
+      cancelText: _t('dialog.cancel') || '取消',
+    });
+  } else {
+    confirmed = window.confirm(msg);
+  }
+  if (!confirmed) return;
+
+  showToast(_t('plugin.startingInstall', { name: name || id }));
+  try {
+    const res = await apiFetch('/api/plugins/install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plugin_id: id }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Install request failed');
+    await refreshPluginList();
+  } catch (err) {
+    console.warn('plugin install request failed:', err);
+    showToast(_t('plugin.installFail', { name: name || id }));
+    await refreshPluginList();
+  }
+}
+
+async function startPluginUninstall(id, name) {
+  const msg = _t('plugin.uninstallConfirm', { name: name || id }) || `确定要从沙箱中卸载「${name || id}」吗？`;
+
+  let confirmed = false;
+  if (typeof confirmAction === 'function') {
+    confirmed = await confirmAction({
+      title: _t('plugin.uninstall') || '卸载插件',
+      message: msg,
+      confirmText: _t('plugin.uninstall') || '卸载',
+      cancelText: _t('dialog.cancel') || '取消',
+      danger: true,
+    });
+  } else {
+    confirmed = window.confirm(msg);
+  }
+  if (!confirmed) return;
+
+  try {
+    const res = await apiFetch('/api/plugins/uninstall', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plugin_id: id }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Uninstall request failed');
+    showToast(_t('plugin.uninstallSuccess', { name: name || id }));
+    await refreshPluginList();
+  } catch (err) {
+    console.warn('plugin uninstall request failed:', err);
+    showToast(_t('plugin.uninstallFail', { name: name || id }));
+    await refreshPluginList();
+  }
 }
 
 
@@ -11534,16 +11993,89 @@ function onBatchCancel() {
 
 ;
 'use strict';
-/* Hermes pet -> existing ReadMD batch-workbench bridge.
-   No second modal is created: a drop reuses the shared confirmation dialog
-   and then the normal batch workbench, with its existing focus/i18n styling. */
+/**
+ * ReadMD Desktop Pet & Reading Companion
+ * Adheres to: /apple-design, /design-taste-frontend, /frontend-design
+ * Supports direct pointer manipulation (setPointerCapture, grab offset),
+ * file drag-and-drop directly onto pet for batch convert,
+ * reading progress observer with gentle encouraging bubbles,
+ * and dual-channel pywebview bridge + HTTP REST API.
+ */
 
 const petBatchInbox = [];
 let petBatchConfirming = false;
+let activePetSettingsStatus = null;
+let petBubbleTimer = null;
+let petLastReadingMilestone = 0;
 
-function petBatchText(key) {
-  return window.i18n ? window.i18n.t(key) : key;
+const petT = (key, params, fallback = '') => {
+  if (!window.i18n) return fallback || '';
+  const value = window.i18n.t(key, params);
+  return value && value !== key ? value : (fallback || '');
+};
+
+function petPercent(value, fallback) {
+  const number = Number(value);
+  return Math.round((Number.isFinite(number) ? number : fallback) * 100);
 }
+
+// --------------------------------------------------------------------------
+// Dual-Channel API (Native Pywebview Bridge + HTTP REST Fallback)
+// --------------------------------------------------------------------------
+
+async function fetchPetRuntimeStatus() {
+  if (window.hasPy && window.py && typeof window.py.get_pet_runtime_status === 'function') {
+    try {
+      return await window.py.get_pet_runtime_status();
+    } catch (_err) { /* fallback to HTTP */ }
+  }
+  try {
+    const res = await (typeof apiFetch === 'function' ? apiFetch('/api/pets/status') : fetch('/api/pets/status'));
+    if (res && res.ok) {
+      const payload = await res.json();
+      return (payload && payload.status) ? payload.status : payload;
+    }
+  } catch (_err) { /* offline or mock */ }
+
+  return {
+    adapter: { available: false, name: 'Hermes Pet Adapter' },
+    active_pet: 'hermes-sprite',
+    active_slug: 'Hermes',
+    enabled: false,
+    installed: false,
+    in_app: true,
+    preferences: { renderer: 'hermes-sprite', scale: 0.33, opacity: 1.0 },
+    running: false
+  };
+}
+
+async function requestConfigurePet(config) {
+  if (window.hasPy && window.py && typeof window.py.configure_pet === 'function') {
+    try {
+      return await window.py.configure_pet(config);
+    } catch (_err) { /* fallback to HTTP */ }
+  }
+  try {
+    const res = await (typeof apiFetch === 'function' ? apiFetch('/api/pets/configure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    }) : fetch('/api/pets/configure', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    }));
+    if (res && res.ok) {
+      return await res.json();
+    }
+  } catch (_err) { /* ignore */ }
+
+  return { ok: false, code: 'pet_connection_failed' };
+}
+
+// --------------------------------------------------------------------------
+// File Batch Drop & Process Bridge
+// --------------------------------------------------------------------------
 
 async function receivePetBatch(paths) {
   const safePaths = (paths || []).filter(path => typeof path === 'string' && path);
@@ -11554,13 +12086,15 @@ async function receivePetBatch(paths) {
   try {
     while (petBatchInbox.length) {
       const next = petBatchInbox.shift();
-      const confirmed = await confirmAction({
-        title: petBatchText('batch.title'),
-        message: petBatchText('batch.note'),
-        confirmText: petBatchText('dialog.confirm'),
-        cancelText: petBatchText('dialog.cancel'),
-      });
-      if (confirmed) await enqueueBatchFiles(next, false);
+      const confirmed = typeof confirmAction === 'function' ? await confirmAction({
+        title: petT('batch.title', undefined, '批量转换'),
+        message: petT('batch.note', undefined, '确定将文件加入转换队列吗？'),
+        confirmText: petT('dialog.confirm', undefined, '确定'),
+        cancelText: petT('dialog.cancel', undefined, '取消'),
+      }) : true;
+      if (confirmed && typeof enqueueBatchFiles === 'function') {
+        await enqueueBatchFiles(next, false);
+      }
     }
   } finally {
     petBatchConfirming = false;
@@ -11569,31 +12103,323 @@ async function receivePetBatch(paths) {
 
 window.receivePetBatch = receivePetBatch;
 
-const petT = (key, params) => {
-  const value = window.i18n ? window.i18n.t(key, params) : '';
-  // i18n.t intentionally returns the key for an unknown entry. Never expose
-  // that implementation detail in the UI or leak a source-language fallback.
-  return value && value !== key ? value : '';
-};
+// --------------------------------------------------------------------------
+// Speech Bubble & Interaction
+// --------------------------------------------------------------------------
+
+function showPetBubble(text, durationMs = 4500) {
+  const bubble = $('pet-bubble');
+  const bubbleText = $('pet-bubble-text');
+  if (!bubble || !bubbleText) return;
+  if (petBubbleTimer) {
+    clearTimeout(petBubbleTimer);
+    petBubbleTimer = null;
+  }
+  bubbleText.textContent = text;
+  bubble.classList.add('is-visible');
+  if (durationMs > 0) {
+    petBubbleTimer = setTimeout(() => {
+      bubble.classList.remove('is-visible');
+      petBubbleTimer = null;
+    }, durationMs);
+  }
+}
+
+window.showPetBubble = showPetBubble;
+
+function hidePetBubble() {
+  const bubble = $('pet-bubble');
+  if (bubble) bubble.classList.remove('is-visible');
+  if (petBubbleTimer) {
+    clearTimeout(petBubbleTimer);
+    petBubbleTimer = null;
+  }
+}
+
+// --------------------------------------------------------------------------
+// In-App Widget State & Direct Manipulation Dragging
+// --------------------------------------------------------------------------
+
+function applyWidgetAppearance(scaleFraction, opacityFraction) {
+  const widget = $('readmd-pet-widget');
+  const character = $('pet-character');
+  const previewChar = $('pet-preview-character');
+  if (!widget) return;
+
+  const scale = Number.isFinite(scaleFraction) ? scaleFraction : 0.33;
+  const opacity = Number.isFinite(opacityFraction) ? opacityFraction : 1.0;
+
+  // Scale map: 0.18 -> ~0.7, 0.33 -> 1.0, 0.72 -> ~1.4
+  const displayScale = Math.max(0.6, Math.min(1.6, scale * 3.0));
+
+  if (character) {
+    character.style.transform = `scale(${displayScale})`;
+    character.style.opacity = String(opacity);
+  }
+  if (previewChar) {
+    previewChar.style.transform = `scale(${displayScale})`;
+    previewChar.style.opacity = String(opacity);
+  }
+}
+
+function syncPetWidgetVisibility(status) {
+  const widget = $('readmd-pet-widget');
+  if (!widget) return;
+  const enabled = Boolean(status && status.enabled && status.in_app !== false);
+  if (enabled) {
+    widget.classList.remove('hidden');
+    const prefs = (status && status.preferences) || {};
+    applyWidgetAppearance(prefs.scale, prefs.opacity);
+    restoreWidgetPosition();
+  } else {
+    widget.classList.add('hidden');
+    hidePetBubble();
+  }
+}
+
+function restoreWidgetPosition() {
+  const widget = $('readmd-pet-widget');
+  if (!widget) return;
+  try {
+    const saved = localStorage.getItem('readmd_pet_pos');
+    if (saved) {
+      const pos = JSON.parse(saved);
+      if (pos && typeof pos.left === 'number' && typeof pos.top === 'number') {
+        const maxX = Math.max(20, window.innerWidth - 120);
+        const maxY = Math.max(60, window.innerHeight - 150);
+        const clampedX = Math.max(12, Math.min(maxX, pos.left));
+        const clampedY = Math.max(48, Math.min(maxY, pos.top));
+        widget.style.left = `${clampedX}px`;
+        widget.style.top = `${clampedY}px`;
+        widget.style.right = 'auto';
+        widget.style.bottom = 'auto';
+        return;
+      }
+    }
+  } catch (_e) { /* ignore */ }
+
+  widget.style.left = '';
+  widget.style.top = '';
+  widget.style.right = '28px';
+  widget.style.bottom = '32px';
+}
+
+function resetWidgetPosition() {
+  try {
+    localStorage.removeItem('readmd_pet_pos');
+  } catch (_e) { /* ignore */ }
+  restoreWidgetPosition();
+  if (typeof showToast === 'function') {
+    showToast(petT('pet.resetPosDone') || '已重置桌宠位置');
+  }
+  showPetBubble(petT('pet.bubbleReset') || '我回到默认位置啦！', 3000);
+}
+
+function initPetDirectManipulation() {
+  const widget = $('readmd-pet-widget');
+  const charWrap = $('pet-character-wrap');
+  const character = $('pet-character');
+  if (!widget || !charWrap) return;
+
+  let isDragging = false;
+  let hasMoved = false;
+  let startX = 0;
+  let startY = 0;
+  let grabOffsetX = 0;
+  let grabOffsetY = 0;
+
+  charWrap.addEventListener('pointerdown', (e) => {
+    // Ignore clicks on quick toolbar or non-primary button
+    if (e.target.closest('.pet-widget-quick-bar') || e.button !== 0) return;
+
+    const rect = widget.getBoundingClientRect();
+    startX = e.clientX;
+    startY = e.clientY;
+    grabOffsetX = e.clientX - rect.left;
+    grabOffsetY = e.clientY - rect.top;
+    isDragging = true;
+    hasMoved = false;
+
+    try {
+      charWrap.setPointerCapture(e.pointerId);
+    } catch (_err) { /* ignore */ }
+    e.preventDefault();
+  });
+
+  charWrap.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
+    if (dist > 4) {
+      hasMoved = true;
+      const rect = widget.getBoundingClientRect();
+      const maxX = Math.max(12, window.innerWidth - rect.width - 12);
+      const maxY = Math.max(48, window.innerHeight - rect.height - 12);
+      const targetX = Math.max(12, Math.min(maxX, e.clientX - grabOffsetX));
+      const targetY = Math.max(48, Math.min(maxY, e.clientY - grabOffsetY));
+
+      widget.style.left = `${targetX}px`;
+      widget.style.top = `${targetY}px`;
+      widget.style.right = 'auto';
+      widget.style.bottom = 'auto';
+    }
+  });
+
+  const handlePointerEnd = (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    try {
+      if (charWrap.hasPointerCapture(e.pointerId)) {
+        charWrap.releasePointerCapture(e.pointerId);
+      }
+    } catch (_err) { /* ignore */ }
+
+    if (hasMoved) {
+      const rect = widget.getBoundingClientRect();
+      try {
+        localStorage.setItem('readmd_pet_pos', JSON.stringify({ left: rect.left, top: rect.top }));
+      } catch (_err) { /* ignore */ }
+    } else {
+      handlePetInteractiveClick();
+    }
+  };
+
+  charWrap.addEventListener('pointerup', handlePointerEnd);
+  charWrap.addEventListener('pointercancel', handlePointerEnd);
+
+  // File Drag & Drop Direct Target
+  charWrap.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    charWrap.classList.add('is-drop-target');
+  });
+
+  charWrap.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    charWrap.classList.remove('is-drop-target');
+  });
+
+  charWrap.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    charWrap.classList.remove('is-drop-target');
+
+    const dt = e.dataTransfer;
+    if (dt && dt.files && dt.files.length) {
+      showPetBubble(petT('pet.bubbleDropReceived') || '收到文件！正在为你开启极速转换...', 4000);
+      if (typeof enqueueBatchFiles === 'function') {
+        await enqueueBatchFiles(Array.from(dt.files), false);
+      } else {
+        const paths = Array.from(dt.files).map(f => f.path || f.name).filter(Boolean);
+        await receivePetBatch(paths);
+      }
+    }
+  });
+
+  // Quick Buttons
+  $('pet-quick-settings')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openPetSettings();
+  });
+
+  $('pet-quick-hide')?.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const enabledInput = $('pet-enabled');
+    if (enabledInput) enabledInput.checked = false;
+    await savePetSettings();
+  });
+}
+
+function handlePetInteractiveClick() {
+  const char = $('pet-character');
+  if (char) {
+    char.classList.add('pet-bounce', 'hermes-waving');
+    setTimeout(() => {
+      char.classList.remove('pet-bounce', 'hermes-waving');
+    }, 1200);
+  }
+
+  const quotes = [
+    petT('pet.bubbleQuote1') || '嗨！我是你的伴读伙伴，随时为你效劳~',
+    petT('pet.bubbleQuote2') || '今天读书很专注哦，继续保持！✨',
+    petT('pet.bubbleQuote3') || '直接拖拽 Markdown、PDF 或音视频给我，我能帮你转换哦！',
+    petT('pet.bubbleQuote4') || '累了就放松一下眼睛，看看远方吧~ ☕'
+  ];
+  const text = quotes[Math.floor(Math.random() * quotes.length)];
+  showPetBubble(text, 4500);
+}
+
+// --------------------------------------------------------------------------
+// Reading Companion Progress Observer
+// --------------------------------------------------------------------------
+
+function initReadingProgressObserver() {
+  let scrollThrottle = null;
+
+  window.addEventListener('scroll', () => {
+    if (scrollThrottle) return;
+    scrollThrottle = setTimeout(() => {
+      scrollThrottle = null;
+      checkReadingProgress();
+    }, 250);
+  }, { passive: true });
+
+  if ($('content')) {
+    $('content').addEventListener('scroll', () => {
+      if (scrollThrottle) return;
+      scrollThrottle = null;
+      checkReadingProgress();
+    }, { passive: true });
+  }
+}
+
+function checkReadingProgress() {
+  const widget = $('readmd-pet-widget');
+  if (!widget || widget.classList.contains('hidden')) return;
+
+  const bubbleToggle = $('pet-bubble-toggle');
+  if (bubbleToggle && !bubbleToggle.checked) return;
+
+  const scrollEl = document.scrollingElement || document.documentElement;
+  const maxScroll = scrollEl.scrollHeight - window.innerHeight;
+  if (maxScroll <= 200) return;
+
+  const progress = Math.round((scrollEl.scrollTop / maxScroll) * 100);
+
+  if (progress >= 25 && progress < 45 && petLastReadingMilestone < 25) {
+    petLastReadingMilestone = 25;
+    showPetBubble(petT('pet.reading25') || '很好，已经阅读 25% 啦，保持专注！📖', 4000);
+  } else if (progress >= 50 && progress < 75 && petLastReadingMilestone < 50) {
+    petLastReadingMilestone = 50;
+    showPetBubble(petT('pet.reading50'), 4000);
+  } else if (progress >= 80 && progress < 95 && petLastReadingMilestone < 80) {
+    petLastReadingMilestone = 80;
+    showPetBubble(petT('pet.reading80'), 4000);
+  } else if (progress >= 98 && petLastReadingMilestone < 100) {
+    petLastReadingMilestone = 100;
+    showPetBubble(petT('pet.reading100'), 4500);
+  } else if (progress < 15) {
+    petLastReadingMilestone = 0;
+  }
+}
+
+// --------------------------------------------------------------------------
+// Settings Modal & Preferences
+// --------------------------------------------------------------------------
 
 function setPetMenuStatus(status) {
   const label = $('pet-status-label');
   if (!label) return;
-  if (status && status.enabled) label.textContent = petT('app.enabled', {});
-  else if (status && status.adapter && status.adapter.available) label.textContent = petT('app.disabled', {});
-  else label.textContent = petT('menu.petSub', {});
+  if (status && status.enabled) label.textContent = petT('app.enabled');
+  else label.textContent = petT('app.disabled');
 }
 
 async function refreshPetMenuStatus() {
-  if (!hasPy || !py.get_pet_runtime_status) return;
-  try { setPetMenuStatus(await py.get_pet_runtime_status()); } catch (_error) { /* optional plugin */ }
-}
-
-let activePetSettingsStatus = null;
-
-function petPercent(value, fallback) {
-  const number = Number(value);
-  return Math.round((Number.isFinite(number) ? number : fallback) * 100);
+  try {
+    const status = await fetchPetRuntimeStatus();
+    setPetMenuStatus(status);
+    syncPetWidgetVisibility(status);
+  } catch (_error) { /* ignore */ }
 }
 
 function renderPetSettings(status) {
@@ -11603,171 +12429,365 @@ function renderPetSettings(status) {
   const renderer = $('pet-renderer');
   const scale = $('pet-scale');
   const opacity = $('pet-opacity');
+
   if (enabled) enabled.checked = Boolean(status && status.enabled);
   if (renderer) renderer.value = preferences.renderer || 'hermes-sprite';
+  if ($('pet-runtime')) $('pet-runtime').value = status?.in_app === false ? 'desktop' : 'in-app';
   if (scale) scale.value = String(petPercent(preferences.scale, 0.33));
-  if (opacity) opacity.value = String(petPercent(preferences.opacity, 1));
+  if (opacity) opacity.value = String(petPercent(preferences.opacity, 1.0));
+
   updatePetRangeLabels();
-  const install = $('pet-install');
-  if (install) install.classList.toggle('hidden', Boolean(status && status.adapter && status.adapter.available));
+
+  const isInstalled = Boolean(status && (status.installed ?? status.adapter?.available));
+  const installBtn = $('pet-install');
+  if (installBtn) {
+    installBtn.classList.remove('hidden');
+    if (isInstalled) {
+      installBtn.className = 'tb-btn danger';
+      installBtn.textContent = petT('pet.disable');
+      installBtn.dataset.action = 'uninstall';
+    } else {
+      installBtn.className = 'tb-btn accent';
+      installBtn.textContent = petT('pet.enable');
+      installBtn.dataset.action = 'install';
+    }
+  }
+
+  // 动态切换舞台角色外观预览 (Hermes vs Arch-Chan)
+  const currentRenderer = (renderer ? renderer.value : '') || (preferences && preferences.renderer) || 'hermes-sprite';
+  updateCharacterPreview(currentRenderer);
 
   const statusDot = $('pet-status-dot');
   const statusText = $('pet-status-text');
-  const activeSlug = $('pet-active-slug');
   const statusLine = $('pet-status-line');
+
   if (statusDot && statusText) {
     statusDot.classList.remove('is-running', 'is-stopped', 'is-unavailable');
     if (status && status.enabled) {
       statusDot.classList.add('is-running');
-      statusText.textContent = petT('pet.statusRunning', {});
-    } else if (status && status.adapter && status.adapter.available) {
+      statusText.textContent = petT('pet.statusRunning');
+    } else if (isInstalled) {
       statusDot.classList.add('is-stopped');
-      statusText.textContent = petT('pet.statusStopped', {});
+      statusText.textContent = petT('pet.statusStopped');
     } else {
       statusDot.classList.add('is-unavailable');
-      statusText.textContent = petT('pet.statusNotInstalled', {});
+      statusText.textContent = petT('pet.statusNotInstalled');
     }
   }
+
   if (statusLine) {
-    if (status && status.adapter && status.adapter.available) {
-      statusLine.textContent = petT('pet.statusInstalled', {});
+    if (isInstalled) {
+      statusLine.textContent = petT('pet.installSuccess');
     } else {
-      statusLine.textContent = petT('pet.statusInstallHint', {});
+      statusLine.textContent = petT('pet.statusEnableHint');
     }
   }
-  if (activeSlug) {
-    activeSlug.textContent = (status && (status.active_slug || status.active_pet || (preferences && preferences.renderer))) || 'Hermes';
+
+  syncPetWidgetVisibility(status);
+}
+
+function updateCharacterPreview(rendererVal) {
+  const charEl = document.querySelector('.pet-preview-character');
+  const slugEl = $('pet-active-slug');
+  const isLive2d = rendererVal === 'live2d';
+  if (charEl) {
+    charEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan');
+    charEl.classList.add(isLive2d ? 'is-arch-chan' : 'is-hermes');
+  }
+  if (slugEl) {
+    slugEl.textContent = isLive2d ? petT('pet.renderer.live2d') : petT('pet.renderer.sprite');
   }
 }
 
 function updatePetRangeLabels() {
   const scale = $('pet-scale');
   const opacity = $('pet-opacity');
+  const scaleVal = scale ? Number(scale.value) : 33;
+  const opacityVal = opacity ? Number(opacity.value) : 100;
+
   if ($('pet-scale-value') && scale) $('pet-scale-value').textContent = scale.value + '%';
   if ($('pet-opacity-value') && opacity) $('pet-opacity-value').textContent = opacity.value + '%';
+
+  applyWidgetAppearance(scaleVal / 100, opacityVal / 100);
 }
 
 function closePetSettings() {
   $('pet-settings-modal')?.classList.add('hidden');
 }
 
-async function installPetPlugin() {
-  if (!hasPy || !py.choose_pet_plugin || !py.install_pet_plugin) return false;
-  const btn = $('pet-install');
-  const origText = btn ? btn.textContent : '';
-  const archive = await py.choose_pet_plugin();
-  if (!archive) return false;
-  const confirmed = await confirmAction({
-    title: petT('menu.pet'), message: petT('menu.petSub'),
-    confirmText: petT('update.installNow'), cancelText: petT('dialog.cancel'),
-  });
-  if (!confirmed) return false;
-  if (btn) {
-    btn.disabled = true;
-    btn.textContent = petT('pet.installing', {});
-  }
-  try {
-    const result = await py.install_pet_plugin(archive, true);
-    if (!result || !result.ok) {
-      const code = (result && result.error_code) || 'unknown';
-      const msg = petT('pet.installFailedCode', { code });
-      if (typeof showToast === 'function') showToast(msg);
-      return false;
-    }
-    return true;
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = origText;
-    }
-  }
-}
-
-async function savePetSettings({ allowInstall = false } = {}) {
-  if (!hasPy || !py.get_pet_runtime_status || !py.configure_pet) return;
+async function savePetSettings() {
   const enabled = Boolean($('pet-enabled')?.checked);
-  let status = activePetSettingsStatus || await py.get_pet_runtime_status();
-  if (enabled && (!status.adapter || !status.adapter.available)) {
-    if (!allowInstall || !(await installPetPlugin())) {
-      renderPetSettings(status);
+  const scale = Number($('pet-scale')?.value || 33) / 100;
+  const opacity = Number($('pet-opacity')?.value || 100) / 100;
+  const renderer = $('pet-renderer')?.value || 'hermes-sprite';
+
+  const config = {
+    enabled,
+    scale,
+    opacity,
+    renderer,
+    in_app: renderer !== 'live2d' && $('pet-runtime')?.value !== 'desktop'
+  };
+
+  const stateChanged = Boolean(activePetSettingsStatus && activePetSettingsStatus.enabled !== enabled);
+  if (enabled && !config.in_app && !activePetSettingsStatus?.adapter?.available) {
+    const installed = await installDefaultPetRuntime();
+    if (!installed.ok) {
+      renderPetSettings(await fetchPetRuntimeStatus());
       return;
     }
-    status = await py.get_pet_runtime_status();
   }
-  const result = await py.configure_pet({
-    enabled,
-    opacity: Number($('pet-opacity')?.value || 100) / 100,
-    renderer: $('pet-renderer')?.value || 'hermes-sprite',
-    scale: Number($('pet-scale')?.value || 33) / 100,
-  });
+  const result = await requestConfigurePet(config);
   if (!result || !result.ok) {
-    if (typeof showToast === 'function') showToast(petT('app.failed'));
-  } else if (typeof showToast === 'function') {
-    showToast(enabled ? petT('app.enabled') : petT('app.disabled'));
+    const code = (result && result.code) || 'unknown';
+    if (typeof showToast === 'function') showToast(petT('pet.configFailed', { code }));
+  } else if (stateChanged) {
+    if (typeof showToast === 'function') showToast(enabled ? petT('pet.enabledToast') : petT('pet.disabledToast'));
   }
-  await refreshPetMenuStatus();
-  renderPetSettings(await py.get_pet_runtime_status());
+
+  const updatedStatus = await fetchPetRuntimeStatus();
+  renderPetSettings(updatedStatus);
+  setPetMenuStatus(updatedStatus);
+  syncPetWidgetVisibility(updatedStatus);
 }
 
 async function openPetSettings() {
-  closeMoreMenu();
-  if (!hasPy || !py.get_pet_runtime_status) return;
+  if (typeof closeMoreMenu === 'function') closeMoreMenu();
   const modal = $('pet-settings-modal');
   if (!modal) return;
   modal.classList.remove('hidden');
+  const immediateRenderer = $('pet-renderer')?.value || 'hermes-sprite';
+  updateCharacterPreview(immediateRenderer);
   try {
-    renderPetSettings(await py.get_pet_runtime_status());
+    const status = await fetchPetRuntimeStatus();
+    renderPetSettings(status);
+    await refreshPetGallery();
   } catch (_error) {
-    if (typeof showToast === 'function') showToast(petT('app.failed'));
+    console.warn('Failed to load pet status:', _error);
   }
 }
 
 window.openPetSettings = openPetSettings;
+window.closePetSettings = closePetSettings;
 window.refreshPetMenuStatus = refreshPetMenuStatus;
+window.fetchPetRuntimeStatus = fetchPetRuntimeStatus;
+window.requestConfigurePet = requestConfigurePet;
+window.syncPetWidgetVisibility = syncPetWidgetVisibility;
+window.initPetDirectManipulation = initPetDirectManipulation;
+window.savePetSettings = savePetSettings;
 
-function openPetQuickMenu() {
-  const trigger = $('btn-more');
-  const menu = $('more-menu');
-  if (trigger && menu && !menu.classList.contains('open')) trigger.click();
-}
+// --------------------------------------------------------------------------
+// Background Polling & Handlers
+// --------------------------------------------------------------------------
 
-window.openPetQuickMenu = openPetQuickMenu;
-
-async function pollPetBatch() {
+async function pollPetControls() {
   try {
-    const response = await apiFetch('/api/control/pet-batch');
-    const payload = await response.json();
-    if (payload && payload.pending) receivePetBatch(payload.paths);
-  } catch (_error) { /* native bridge may be unavailable in browser mode */ }
+    const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+    const [batchRes, menuRes] = await Promise.allSettled([
+      fetchFn('/api/control/pet-batch'),
+      fetchFn('/api/control/pet-menu')
+    ]);
+
+    if (batchRes.status === 'fulfilled' && batchRes.value && batchRes.value.ok) {
+      const payload = await batchRes.value.json();
+      if (payload && payload.pending) receivePetBatch(payload.paths);
+    }
+
+    if (menuRes.status === 'fulfilled' && menuRes.value && menuRes.value.ok) {
+      const payload = await menuRes.value.json();
+      if (payload && payload.pending) {
+        const trigger = $('btn-more');
+        const menu = $('more-menu');
+        if (trigger && menu && !menu.classList.contains('open')) trigger.click();
+      }
+    }
+  } catch (_error) { /* optional native bridge */ }
 }
 
-async function pollPetQuickMenu() {
-  try {
-    const response = await apiFetch('/api/control/pet-menu');
-    const payload = await response.json();
-    if (payload && payload.pending) openPetQuickMenu();
-  } catch (_error) { /* native bridge may be unavailable in browser mode */ }
-}
+// --------------------------------------------------------------------------
+// Initialization
+// --------------------------------------------------------------------------
 
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    refreshPetMenuStatus();
-    $('pet-settings-close')?.addEventListener('click', closePetSettings);
-    $('pet-install')?.addEventListener('click', async () => {
-      if (await installPetPlugin()) renderPetSettings(await py.get_pet_runtime_status());
+let petInitialized = false;
+function initPetSystem() {
+  if (petInitialized) return;
+  petInitialized = true;
+
+  refreshPetMenuStatus();
+  void refreshPetGallery();
+  initPetDirectManipulation();
+  initReadingProgressObserver();
+
+  $('pet-settings-close')?.addEventListener('click', closePetSettings);
+  const petModal = $('pet-settings-modal');
+  if (petModal) {
+    petModal.addEventListener('click', e => {
+      if (e.target === petModal) closePetSettings();
     });
-    $('pet-enabled')?.addEventListener('change', () => { void savePetSettings({ allowInstall: true }); });
-    $('pet-renderer')?.addEventListener('change', () => { void savePetSettings(); });
-    $('pet-scale')?.addEventListener('input', updatePetRangeLabels);
-    $('pet-opacity')?.addEventListener('input', updatePetRangeLabels);
-    $('pet-scale')?.addEventListener('change', () => { void savePetSettings(); });
-    $('pet-opacity')?.addEventListener('change', () => { void savePetSettings(); });
-    setInterval(pollPetBatch, 1000);
-    setInterval(pollPetQuickMenu, 1000);
-  }, 1200);
-});
+  }
+  $('pet-reset-pos')?.addEventListener('click', resetWidgetPosition);
+
+  // 安装 / 卸载点击事件闭环 (支持 Native Pywebview 双通道与 HTTP 兜底)
+  $('pet-install')?.addEventListener('click', async () => {
+    const btn = $('pet-install');
+    const isUninstall = btn?.dataset.action === 'uninstall';
+
+    if (isUninstall) {
+      const confirmText = petT('pet.uninstallConfirm') || '是否卸载桌宠伴侣插件？卸载后将移除本地扩展组件。';
+      if (!window.confirm(confirmText)) return;
+    }
+
+    const endpoint = isUninstall ? '/api/pets/uninstall' : '/api/pets/install';
+    const pendingText = isUninstall ? (petT('pet.uninstalling') || '正在卸载…') : (petT('pet.installing') || '正在安装…');
+    const successText = isUninstall ? (petT('pet.uninstallSuccess') || '已卸载桌宠插件') : (petT('pet.installSuccess') || '桌宠伴读扩展已就绪');
+    const failText = isUninstall ? (petT('app.failed') || '卸载失败') : (petT('app.failed') || '安装失败');
+
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = pendingText;
+    }
+    try {
+      let data = null;
+      if (window.hasPy && window.py) {
+        try {
+          if (isUninstall && typeof window.py.uninstall_companion_pet === 'function') {
+            data = await window.py.uninstall_companion_pet();
+          } else if (!isUninstall && typeof window.py.install_companion_pet === 'function') {
+            data = await window.py.install_companion_pet();
+          }
+        } catch (pyErr) {
+          console.warn('Native pet lifecycle call failed, trying HTTP:', pyErr);
+        }
+      }
+      if (!data) {
+        const fetchFn = typeof apiFetch === 'function' ? apiFetch : fetch;
+        const res = await fetchFn(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}'
+        });
+        if (res && res.ok) {
+          data = await res.json();
+        }
+      }
+      if (data && data.ok) {
+        if (typeof showToast === 'function') showToast(successText);
+        const updated = await fetchPetRuntimeStatus();
+        renderPetSettings(updated);
+        setPetMenuStatus(updated);
+        syncPetWidgetVisibility(updated);
+      } else {
+        if (typeof showToast === 'function') showToast(failText);
+        const curStatus = await fetchPetRuntimeStatus();
+        renderPetSettings(curStatus);
+      }
+    } catch (err) {
+      console.error(`pet ${isUninstall ? 'uninstall' : 'install'} error:`, err);
+      if (typeof showToast === 'function') showToast(failText);
+      try {
+        const curStatus = await fetchPetRuntimeStatus();
+        renderPetSettings(curStatus);
+      } catch (_) {}
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+
+  $('pet-enabled')?.addEventListener('change', () => { void savePetSettings(); });
+  $('pet-runtime')?.addEventListener('change', () => { void savePetSettings(); });
+  $('pet-install-runtime')?.addEventListener('click', async () => {
+    await installDefaultPetRuntime();
+    renderPetSettings(await fetchPetRuntimeStatus());
+  });
+  $('pet-gallery-import')?.addEventListener('change', async e => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      if (file.size > 17 * 1024 * 1024) throw new Error('pet_spritesheet_too_large');
+      const encoded = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const slug = file.name.replace(/\.[^.]+$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50) || `pet-${Date.now()}`;
+      const result = await petGalleryRequest('/api/pets/import', {
+        slug, display_name: file.name, image_base64: encoded, confirm: true
+      });
+      if (!result.ok) throw new Error(result.error_code || 'pet_import_failed');
+      await refreshPetGallery();
+    } catch (error) { showToast(petT('pet.configFailed', { code: error.message })); }
+    finally { e.target.value = ''; }
+  });
+  $('pet-gallery')?.addEventListener('change', async e => {
+    const result = await petGalleryRequest('/api/pets/active', { slug: e.target.value, confirm: true });
+    if (!result.ok) showToast(petT('pet.configFailed', { code: result.error_code || result.code }));
+    await refreshPetGallery();
+    if (result.ok) await requestConfigurePet({});
+  });
+  $('pet-renderer')?.addEventListener('change', (e) => {
+    updateCharacterPreview(e.target.value);
+    void savePetSettings();
+  });
+  $('pet-scale')?.addEventListener('input', updatePetRangeLabels);
+  $('pet-opacity')?.addEventListener('input', updatePetRangeLabels);
+  $('pet-scale')?.addEventListener('change', () => { void savePetSettings(); });
+  $('pet-opacity')?.addEventListener('change', () => { void savePetSettings(); });
+
+  setInterval(pollPetControls, 2000);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPetSystem);
+} else {
+  initPetSystem();
+}
+window.addEventListener('load', initPetSystem);
 
 window.addEventListener('readmd:language-changed', refreshPetMenuStatus);
+
+async function petGalleryRequest(url, body) {
+  try {
+    const res = await (typeof apiFetch === 'function' ? apiFetch : fetch)(url, body ? {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    } : undefined);
+    return await res.json();
+  } catch (_) { return { ok: false, code: 'pet_connection_failed' }; }
+}
+
+let petRuntimeInstallPromise = null;
+async function installDefaultPetRuntime() {
+  if (petRuntimeInstallPromise) return petRuntimeInstallPromise;
+  const button = $('pet-install-runtime');
+  if (button) button.disabled = true;
+  petRuntimeInstallPromise = (async () => {
+    try {
+      const result = await petGalleryRequest('/api/pets/runtime/install', { confirm: true });
+      showToast(result.ok ? petT('pet.installSuccess') : petT('pet.configFailed', { code: result.code || result.error_code }));
+      return result;
+    } finally {
+      if (button) button.disabled = false;
+      petRuntimeInstallPromise = null;
+    }
+  })();
+  return petRuntimeInstallPromise;
+}
+
+async function refreshPetGallery() {
+  const result = await petGalleryRequest('/api/pets');
+  if (!result.ok) return;
+  const select = $('pet-gallery');
+  if (select) {
+    select.replaceChildren(new Option('Hermes', ''));
+    for (const pet of result.pets || []) select.add(new Option(pet.display_name || pet.slug, pet.slug));
+    select.value = result.active || '';
+  }
+  const image = result.active ? `url("/api/pets/thumb?slug=${encodeURIComponent(result.active)}")` : '';
+  for (const id of ['pet-character', 'pet-preview-character']) {
+    const element = $(id);
+    if (element) element.style.backgroundImage = image;
+  }
+}
 
 ;
 'use strict';
@@ -13633,6 +14653,722 @@ async function cancelUpdateDownload() {
 
 
 ;
+// assets/js/features/graph.js
+// ReadMD Canvas 2D 极速力导向知识图谱与反向链接抽屉 (Zero Dependencies, 60 FPS)
+
+(function () {
+  'use strict';
+
+  const _t = (key, fallback) => {
+    try {
+      if (typeof i18n === 'function') {
+        const val = i18n(key);
+        if (val && val !== key) return val;
+      }
+    } catch (_) {}
+    return fallback;
+  };
+
+  const _escapeHtml = (str) => {
+    if (str == null) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
+  let _modal = null;
+  let _canvas = null;
+  let _ctx = null;
+  let _tooltip = null;
+  let _backlinksPanel = null;
+
+  let _nodes = [];
+  let _edges = [];
+  let _nodesById = new Map();
+  let _animId = null;
+  let _animating = false;
+
+  let _panX = 0;
+  let _panY = 0;
+  let _zoom = 1.0;
+  let _isPanning = false;
+  let _panStartX = 0;
+  let _panStartY = 0;
+
+  let _draggedNode = null;
+  let _hoveredNode = null;
+  let _currentFilePath = null;
+  let _currentDirectory = null;
+
+  // ---------------------------------------------------------------- UI 模态框构建
+  function _createModalIfNeeded() {
+    if (_modal) return;
+
+    _modal = document.createElement('div');
+    _modal.id = 'graph-modal';
+    _modal.className = 'graph-modal hidden';
+    _modal.innerHTML = `
+      <div class="graph-backdrop"></div>
+      <div class="graph-dialog">
+        <div class="graph-header">
+          <div class="graph-title-row">
+            <span class="graph-title-icon">🕸️</span>
+            <h3 class="graph-title" data-i18n="graph.title">${_t('graph.title')}</h3>
+            <span class="graph-stats-badge" id="graph-stats-badge">0 节点 · 0 关系</span>
+          </div>
+          <div class="graph-toolbar">
+            <button class="graph-tool-btn" id="graph-btn-zoom-in" title="${_t('graph.zoomIn')}">+</button>
+            <button class="graph-tool-btn" id="graph-btn-zoom-out" title="${_t('graph.zoomOut')}">-</button>
+            <button class="graph-tool-btn" id="graph-btn-reset" title="${_t('graph.reset')}">⟲</button>
+            <button class="graph-tool-btn graph-close-btn" id="graph-btn-close" title="${_t('toolbar.close')}">✕</button>
+          </div>
+        </div>
+        <div class="graph-body">
+          <canvas id="graph-canvas"></canvas>
+          <div id="graph-tooltip" class="graph-tooltip hidden"></div>
+          <div id="graph-loading" class="graph-loading hidden">
+            <div class="graph-spinner"></div>
+            <span>${_t('graph.loading', '正在构建关系网络...')}</span>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(_modal);
+
+    _canvas = _modal.querySelector('#graph-canvas');
+    _ctx = _canvas.getContext('2d');
+    _tooltip = _modal.querySelector('#graph-tooltip');
+
+    _modal.querySelector('.graph-backdrop').addEventListener('click', closeGraphModal);
+    _modal.querySelector('#graph-btn-close').addEventListener('click', closeGraphModal);
+
+    _modal.querySelector('#graph-btn-zoom-in').addEventListener('click', () => _zoomAtCenter(1.25));
+    _modal.querySelector('#graph-btn-zoom-out').addEventListener('click', () => _zoomAtCenter(0.8));
+    _modal.querySelector('#graph-btn-reset').addEventListener('click', _resetView);
+
+    window.addEventListener('resize', () => {
+      if (!_modal.classList.contains('hidden')) _resizeCanvas();
+    });
+
+    _initCanvasEvents();
+  }
+
+  function _createBacklinksPanelIfNeeded() {
+    if (_backlinksPanel) return;
+
+    _backlinksPanel = document.createElement('div');
+    _backlinksPanel.id = 'backlinks-panel';
+    _backlinksPanel.className = 'backlinks-panel hidden';
+    _backlinksPanel.innerHTML = `
+      <div class="backlinks-header">
+        <span class="backlinks-title-icon">🔗</span>
+        <span class="backlinks-title" data-i18n="graph.backlinks">${_t('graph.backlinks', '反向链接')}</span>
+        <button class="backlinks-close-btn" id="backlinks-btn-close">✕</button>
+      </div>
+      <div class="backlinks-content" id="backlinks-content">
+        <div class="backlinks-empty">${_t('graph.noLinks', '暂无关联笔记')}</div>
+      </div>
+    `;
+    document.body.appendChild(_backlinksPanel);
+
+    _backlinksPanel.querySelector('#backlinks-btn-close').addEventListener('click', () => {
+      _backlinksPanel.classList.add('hidden');
+    });
+  }
+
+  // ---------------------------------------------------------------- 物理力导向引擎
+  function _initSimulation(data) {
+    _nodes = (data.nodes || []).map((n, i) => {
+      const angle = (i / Math.max(data.nodes.length, 1)) * Math.PI * 2;
+      const radius = 100 + Math.random() * 150;
+      return {
+        ...n,
+        x: Math.cos(angle) * radius,
+        y: Math.sin(angle) * radius,
+        vx: 0,
+        vy: 0,
+        radius: Math.max(6, Math.min(6 + (n.degree || 0) * 2, 22)),
+        is_current: _currentFilePath && n.path && n.path === _currentFilePath,
+      };
+    });
+
+    _nodesById = new Map();
+    _nodes.forEach(n => _nodesById.set(n.id, n));
+
+    _edges = (data.edges || []).map(e => {
+      return {
+        ...e,
+        sourceNode: _nodesById.get(e.source),
+        targetNode: _nodesById.get(e.target),
+      };
+    }).filter(e => e.sourceNode && e.targetNode);
+
+    _resetView();
+    _startSimulation();
+  }
+
+  function _stepPhysics() {
+    const kRep = 1200;
+    const kAtt = 0.04;
+    const targetLen = 80;
+    const kGrav = 0.015;
+    const damping = 0.86;
+
+    let totalEnergy = 0;
+
+    // 1. 库仑排斥力 (所有节点对)
+    for (let i = 0; i < _nodes.length; i++) {
+      const n1 = _nodes[i];
+      for (let j = i + 1; j < _nodes.length; j++) {
+        const n2 = _nodes[j];
+        const dx = n2.x - n1.x;
+        const dy = n2.y - n1.y;
+        const distSq = dx * dx + dy * dy + 1.0;
+        const dist = Math.sqrt(distSq);
+
+        if (dist < 450) {
+          const force = kRep / distSq;
+          const fx = (dx / dist) * force;
+          const fy = (dy / dist) * force;
+          n1.vx -= fx;
+          n1.vy -= fy;
+          n2.vx += fx;
+          n2.vy += fy;
+        }
+      }
+    }
+
+    // 2. 弹簧胡克引力 (连线两端)
+    for (let i = 0; i < _edges.length; i++) {
+      const e = _edges[i];
+      const s = e.sourceNode;
+      const t = e.targetNode;
+      const dx = t.x - s.x;
+      const dy = t.y - s.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
+      const force = (dist - targetLen) * kAtt;
+      const fx = (dx / dist) * force;
+      const fy = (dy / dist) * force;
+
+      s.vx += fx;
+      s.vy += fy;
+      t.vx -= fx;
+      t.vy -= fy;
+    }
+
+    // 3. 向心重力与速度位置积分
+    for (let i = 0; i < _nodes.length; i++) {
+      const n = _nodes[i];
+      if (n === _draggedNode) continue; // 拖拽中固定
+
+      n.vx -= n.x * kGrav;
+      n.vy -= n.y * kGrav;
+
+      n.vx *= damping;
+      n.vy *= damping;
+
+      // 限速
+      const speed = Math.sqrt(n.vx * n.vx + n.vy * n.vy);
+      if (speed > 16) {
+        n.vx = (n.vx / speed) * 16;
+        n.vy = (n.vy / speed) * 16;
+      }
+
+      n.x += n.vx;
+      n.y += n.vy;
+
+      totalEnergy += speed;
+    }
+
+    return totalEnergy;
+  }
+
+  function _startSimulation() {
+    if (_animating) return;
+    _animating = true;
+
+    function loop() {
+      const energy = _stepPhysics();
+      _render();
+
+      if (energy > 0.05 || _draggedNode) {
+        _animId = requestAnimationFrame(loop);
+      } else {
+        _animating = false;
+        _render(); // 稳定后画最后一帧
+      }
+    }
+
+    _animId = requestAnimationFrame(loop);
+  }
+
+  function _wakeSimulation() {
+    if (!_animating) {
+      _startSimulation();
+    }
+  }
+
+  // ---------------------------------------------------------------- Canvas 渲染管线
+  function _resizeCanvas() {
+    if (!_canvas) return;
+    const rect = _canvas.parentElement.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    _canvas.width = rect.width * dpr;
+    _canvas.height = rect.height * dpr;
+    _canvas.style.width = rect.width + 'px';
+    _canvas.style.height = rect.height + 'px';
+    _render();
+  }
+
+  function _resetView() {
+    if (!_canvas) return;
+    const rect = _canvas.getBoundingClientRect();
+    _panX = rect.width / 2;
+    _panY = rect.height / 2;
+    _zoom = 1.0;
+    _render();
+  }
+
+  function _zoomAtCenter(factor) {
+    if (!_canvas) return;
+    const rect = _canvas.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    _panX = cx - (cx - _panX) * factor;
+    _panY = cy - (cy - _panY) * factor;
+    _zoom = Math.max(0.15, Math.min(_zoom * factor, 4.0));
+    _render();
+  }
+
+  function _render() {
+    if (!_ctx || !_canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const width = _canvas.width / dpr;
+    const height = _canvas.height / dpr;
+
+    _ctx.save();
+    _ctx.scale(dpr, dpr);
+    _ctx.clearRect(0, 0, width, height);
+
+    // 坐标系位移与缩放
+    _ctx.translate(_panX, _panY);
+    _ctx.scale(_zoom, _zoom);
+
+    const isDark = document.body.classList.contains('dark') ||
+      window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    const edgeColor = isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.14)';
+    const edgeHighlight = '#38bdf8';
+    const deadEdgeColor = 'rgba(239, 68, 68, 0.45)';
+
+    // 1. 绘制连线
+    for (let i = 0; i < _edges.length; i++) {
+      const e = _edges[i];
+      const s = e.sourceNode;
+      const t = e.targetNode;
+
+      const isConnectedToHover = _hoveredNode && (s === _hoveredNode || t === _hoveredNode);
+      const isDead = t.is_deadlink;
+
+      _ctx.beginPath();
+      if (isDead) {
+        _ctx.setLineDash([4, 4]);
+        _ctx.strokeStyle = deadEdgeColor;
+        _ctx.lineWidth = 1.2;
+      } else if (isConnectedToHover) {
+        _ctx.setLineDash([]);
+        _ctx.strokeStyle = edgeHighlight;
+        _ctx.lineWidth = 2.0;
+      } else {
+        _ctx.setLineDash([]);
+        _ctx.strokeStyle = edgeColor;
+        _ctx.lineWidth = 1.0;
+      }
+
+      _ctx.moveTo(s.x, s.y);
+      _ctx.lineTo(t.x, t.y);
+      _ctx.stroke();
+    }
+    _ctx.setLineDash([]);
+
+    // 2. 绘制节点
+    for (let i = 0; i < _nodes.length; i++) {
+      const n = _nodes[i];
+      const isHovered = n === _hoveredNode;
+      const isCurrent = n.is_current;
+      const isDead = n.is_deadlink;
+
+      let fill = isDark ? '#64748b' : '#94a3b8';
+      let stroke = isDark ? '#94a3b8' : '#cbd5e1';
+
+      if (isDead) {
+        fill = '#ef4444';
+        stroke = '#b91c1c';
+      } else if (isCurrent) {
+        fill = '#3b82f6';
+        stroke = '#60a5fa';
+      } else if (n.degree > 3) {
+        fill = '#0284c7';
+        stroke = '#38bdf8';
+      }
+
+      // 外发光/焦点圈
+      if (isCurrent || isHovered) {
+        _ctx.beginPath();
+        _ctx.arc(n.x, n.y, n.radius + 5, 0, Math.PI * 2);
+        _ctx.fillStyle = isCurrent ? 'rgba(59, 130, 246, 0.25)' : 'rgba(56, 189, 248, 0.25)';
+        _ctx.fill();
+      }
+
+      // 节点圆本体
+      _ctx.beginPath();
+      _ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
+      _ctx.fillStyle = fill;
+      _ctx.fill();
+      _ctx.strokeStyle = stroke;
+      _ctx.lineWidth = 1.8;
+      _ctx.stroke();
+
+      // 节点文本
+      if (_zoom > 0.45 || isHovered || isCurrent || n.degree > 2) {
+        _ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        _ctx.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
+        _ctx.textAlign = 'center';
+        _ctx.textBaseline = 'top';
+        const label = n.label.length > 20 ? n.label.slice(0, 18) + '…' : n.label;
+        _ctx.fillText(label, n.x, n.y + n.radius + 4);
+      }
+    }
+
+    _ctx.restore();
+  }
+
+  // ---------------------------------------------------------------- 交互事件处理
+  function _screenToWorld(sx, sy) {
+    return {
+      x: (sx - _panX) / _zoom,
+      y: (sy - _panY) / _zoom,
+    };
+  }
+
+  function _findNodeAt(sx, sy) {
+    const w = _screenToWorld(sx, sy);
+    for (let i = _nodes.length - 1; i >= 0; i--) {
+      const n = _nodes[i];
+      const dx = w.x - n.x;
+      const dy = w.y - n.y;
+      if (dx * dx + dy * dy <= (n.radius + 4) * (n.radius + 4)) {
+        return n;
+      }
+    }
+    return null;
+  }
+
+  function _initCanvasEvents() {
+    _canvas.addEventListener('mousedown', e => {
+      const rect = _canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+
+      const hit = _findNodeAt(sx, sy);
+      if (hit) {
+        _draggedNode = hit;
+        hit.vx = 0;
+        hit.vy = 0;
+        _wakeSimulation();
+      } else {
+        _isPanning = true;
+        _panStartX = sx - _panX;
+        _panStartY = sy - _panY;
+      }
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (!_canvas || _modal.classList.contains('hidden')) return;
+      const rect = _canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+
+      if (_draggedNode) {
+        const w = _screenToWorld(sx, sy);
+        _draggedNode.x = w.x;
+        _draggedNode.y = w.y;
+        _draggedNode.vx = 0;
+        _draggedNode.vy = 0;
+        _wakeSimulation();
+        return;
+      }
+
+      if (_isPanning) {
+        _panX = sx - _panStartX;
+        _panY = sy - _panStartY;
+        _render();
+        return;
+      }
+
+      // 悬停检测
+      const hit = _findNodeAt(sx, sy);
+      if (hit !== _hoveredNode) {
+        _hoveredNode = hit;
+        _canvas.style.cursor = hit ? 'pointer' : 'default';
+        _render();
+
+        if (hit) {
+          _tooltip.innerHTML = `
+            <strong>${_escapeHtml(hit.label)}</strong><br>
+            <span class="muted">${_escapeHtml(hit.path || '（未创建死链）')}</span><br>
+            <span>出链: ${hit.link_count} · 入链: ${hit.backlink_count}</span>
+          `;
+          _tooltip.style.left = `${sx + 15}px`;
+          _tooltip.style.top = `${sy + 15}px`;
+          _tooltip.classList.remove('hidden');
+        } else {
+          _tooltip.classList.add('hidden');
+        }
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      _draggedNode = null;
+      _isPanning = false;
+    });
+
+    _canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      const rect = _canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+
+      const delta = e.deltaY < 0 ? 1.15 : 0.85;
+      const newZoom = Math.max(0.15, Math.min(_zoom * delta, 4.0));
+
+      _panX = sx - (sx - _panX) * (newZoom / _zoom);
+      _panY = sy - (sy - _panY) * (newZoom / _zoom);
+      _zoom = newZoom;
+
+      _render();
+    }, { passive: false });
+
+    _canvas.addEventListener('click', e => {
+      const rect = _canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+
+      const hit = _findNodeAt(sx, sy);
+      if (hit && hit.path) {
+        closeGraphModal();
+        if (typeof window.loadFile === 'function') {
+          window.loadFile(hit.path);
+        }
+      }
+    });
+  }
+
+  function _hasActiveDocument() {
+    if (typeof state === 'undefined' || !state) return false;
+    return (state.mode === 'file' || state.mode === 'virtual') && !!state.original;
+  }
+
+  // ---------------------------------------------------------------- 公开 API 与接口
+  async function openGraphModal(directory) {
+    if (!_hasActiveDocument()) {
+      if (typeof showToast === 'function') {
+        const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+        showToast(_t('toast.openDocumentToUse', '请先打开文档'));
+      }
+      return;
+    }
+    _createModalIfNeeded();
+    _modal.classList.remove('hidden');
+    _resizeCanvas();
+
+    const loading = _modal.querySelector('#graph-loading');
+    loading.classList.remove('hidden');
+
+    _currentDirectory = directory || null;
+
+    try {
+      let data = null;
+      if (window.pywebview && window.pywebview.api && window.pywebview.api.get_links_graph) {
+        const res = await window.pywebview.api.get_links_graph(directory || '');
+        if (res && res.ok) data = res.graph;
+      } else {
+        const url = `/api/links/graph?dir=${encodeURIComponent(directory || '')}&max_nodes=500`;
+        const res = await fetch(url);
+        const json = await res.json();
+        if (json && json.ok) data = json.graph;
+      }
+
+      if (data) {
+        const badge = _modal.querySelector('#graph-stats-badge');
+        if (badge && data.stats) {
+          badge.textContent = `${data.stats.total_nodes} 节点 · ${data.stats.total_edges} 关系 · ${data.stats.deadlinks_count} 死链`;
+        }
+        _initSimulation(data);
+      }
+    } catch (err) {
+      console.error('Failed to load knowledge graph:', err);
+    } finally {
+      loading.classList.add('hidden');
+    }
+  }
+
+  function closeGraphModal() {
+    if (!_modal) return;
+    _modal.classList.add('hidden');
+    if (_animId) {
+      cancelAnimationFrame(_animId);
+      _animId = null;
+    }
+    _animating = false;
+  }
+
+  const WIKILINK_RE = /\[\[([^\]\n|#]+)(?:#([^\]\n|]+))?(?:\|([^\]\n]+))?\]\]/;
+
+  function hasGraphElements(explicitContent) {
+    if (typeof explicitContent === 'string') {
+      return explicitContent.includes('[[') && WIKILINK_RE.test(explicitContent);
+    }
+    if (typeof state === 'undefined' || !state || state.mode === 'welcome' || !_hasActiveDocument()) return false;
+    const content = state.fixed || state.original || (state.tabs && state.tabs.find(t => t.id === state.activeTabId)?.content) || '';
+    return typeof content === 'string' && content.includes('[[') && WIKILINK_RE.test(content);
+  }
+
+  function setTopGraphButtonVisible(visible) {
+    const btn = document.getElementById('btn-graph');
+    if (!btn) return;
+    const hasDoc = _hasActiveDocument();
+    btn.disabled = !hasDoc;
+    if (visible && hasDoc) {
+      btn.classList.remove('hidden');
+    } else {
+      btn.classList.add('hidden');
+    }
+  }
+
+  function updateGraphButtonVisibility(forceVisible) {
+    if (forceVisible === false) {
+      setTopGraphButtonVisible(false);
+      return;
+    }
+    if (forceVisible === true) {
+      setTopGraphButtonVisible(true);
+      return;
+    }
+    setTopGraphButtonVisible(hasGraphElements());
+  }
+
+  async function refreshBacklinks(filePath) {
+    _currentFilePath = filePath || null;
+    _createBacklinksPanelIfNeeded();
+
+    if (!filePath) {
+      _backlinksPanel.querySelector('#backlinks-content').innerHTML = `
+        <div class="backlinks-empty">${_t('graph.noLinks', '暂无关联笔记')}</div>
+      `;
+      updateGraphButtonVisibility(false);
+      return;
+    }
+
+    try {
+      let resData = null;
+      if (window.pywebview && window.pywebview.api && window.pywebview.api.get_backlinks) {
+        const res = await window.pywebview.api.get_backlinks(filePath);
+        if (res && res.ok) resData = res;
+      } else {
+        const url = `/api/links/backlinks?path=${encodeURIComponent(filePath)}`;
+        const res = await fetch(url);
+        const json = await res.json();
+        if (json && json.ok) resData = json;
+      }
+
+      const backlinks = (resData && resData.backlinks) || [];
+      const forwardLinks = (resData && resData.forward_links) || [];
+      const contentEl = _backlinksPanel.querySelector('#backlinks-content');
+
+      const hasConnections = (backlinks.length > 0) || (forwardLinks.length > 0) || hasGraphElements();
+      setTopGraphButtonVisible(hasConnections);
+
+      if (!backlinks.length && !forwardLinks.length) {
+        contentEl.innerHTML = `<div class="backlinks-empty">${_t('graph.noLinks', '暂无关联笔记')}</div>`;
+        return;
+      }
+
+      let html = '';
+      if (backlinks.length > 0) {
+        html += `<div class="backlinks-group-title">${_t('graph.backlinks', '反向链接')} (${backlinks.length})</div>`;
+        for (const item of backlinks) {
+          const title = item.source_title || item.source_path.split(/[\\/]/).pop();
+          html += `
+            <div class="backlink-item" data-path="${_escapeHtml(item.source_path)}" data-line="${item.line_no}">
+              <div class="backlink-title">${_escapeHtml(title)}</div>
+              <div class="backlink-context">行 ${item.line_no}${item.alias ? ' · ' + _escapeHtml(item.alias) : ''}</div>
+            </div>
+          `;
+        }
+      }
+
+      if (forwardLinks.length > 0) {
+        html += `<div class="backlinks-group-title">${_t('graph.outgoing', '正向出链')} (${forwardLinks.length})</div>`;
+        for (const item of forwardLinks) {
+          const target = item.target_clean || item.target_raw;
+          const isDead = !item.target_path;
+          html += `
+            <div class="backlink-item ${isDead ? 'deadlink' : ''}" data-path="${_escapeHtml(item.target_path || '')}">
+              <div class="backlink-title">${_escapeHtml(target)}${isDead ? ' ⚠️' : ''}</div>
+              <div class="backlink-context">${_escapeHtml(item.alias || '')}</div>
+            </div>
+          `;
+        }
+      }
+
+      contentEl.innerHTML = html;
+
+      // 绑定点击跳转
+      contentEl.querySelectorAll('.backlink-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const targetPath = el.dataset.path;
+          if (targetPath && typeof window.loadFile === 'function') {
+            window.loadFile(targetPath);
+          }
+        });
+      });
+    } catch (err) {
+      console.error('Failed to fetch backlinks:', err);
+      updateGraphButtonVisibility();
+    }
+  }
+
+  function toggleBacklinksDrawer() {
+    if (!_hasActiveDocument()) {
+      if (typeof showToast === 'function') {
+        const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+        showToast(_t('toast.openDocumentToUse', '请先打开文档'));
+      }
+      return;
+    }
+    _createBacklinksPanelIfNeeded();
+    _backlinksPanel.classList.toggle('hidden');
+    if (!_backlinksPanel.classList.contains('hidden') && _currentFilePath) {
+      refreshBacklinks(_currentFilePath);
+    }
+  }
+
+  // 挂载到全局
+  window.ReadMDGraph = {
+    open: openGraphModal,
+    close: closeGraphModal,
+    refreshBacklinks: refreshBacklinks,
+    toggleDrawer: toggleBacklinksDrawer,
+    updateVisibility: updateGraphButtonVisibility,
+    hasGraph: hasGraphElements,
+  };
+})();
+
+;
 'use strict';
 
 function syncSelectAccessibleName(el) {
@@ -13732,6 +15468,24 @@ function bindEvents() {
       moreMenu.classList.toggle('open');
       moreBtn.setAttribute('aria-expanded', moreMenu.classList.contains('open') ? 'true' : 'false');
     });
+    moreMenu.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        closeMoreMenu(true);
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const items = Array.from(moreMenu.querySelectorAll('.more-group.open .more-item:not([disabled]):not(.hidden), .more-group-header'));
+        if (!items.length) return;
+        e.preventDefault();
+        const currentIndex = items.indexOf(document.activeElement);
+        let nextIndex;
+        if (e.key === 'ArrowDown') {
+          nextIndex = currentIndex === -1 || currentIndex === items.length - 1 ? 0 : currentIndex + 1;
+        } else {
+          nextIndex = currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+        }
+        items[nextIndex].focus();
+      }
+    });
     document.addEventListener('click', e => {
       if (moreMenu.classList.contains('open') && !moreMenu.contains(e.target) && e.target !== moreBtn) {
         closeMoreMenu();
@@ -13749,6 +15503,10 @@ function bindEvents() {
     if (convertLastDir && py.open_dir) py.open_dir(convertLastDir);
   });
   $('convert-modal').addEventListener('click', e => { if (e.target === $('convert-modal')) closeConvertModal(); });
+  if ($('btn-open-plugins')) $('btn-open-plugins').addEventListener('click', openPluginModal);
+  if ($('btn-plugin-menu')) $('btn-plugin-menu').addEventListener('click', () => { closeMoreMenu(); openPluginModal(); });
+  if ($('plugin-close')) $('plugin-close').addEventListener('click', closePluginModal);
+  if ($('plugin-modal')) $('plugin-modal').addEventListener('click', e => { if (e.target === $('plugin-modal')) closePluginModal(); });
 
   /* --- 3b. 批处理复用万物转 MD弹窗 [联动: features/batch.js] --- */
   if ($('batch-cancel')) $('batch-cancel').addEventListener('click', onBatchCancel);
@@ -13762,6 +15520,33 @@ function bindEvents() {
   if ($('btn-style-custom')) $('btn-style-custom').addEventListener('click', () => { closeMoreMenu(); openStyleModal(); });
   if ($('btn-zen')) $('btn-zen').addEventListener('click', () => toggleZenMode()); // 顶栏常驻禅模式按钮
   if ($('btn-zen-menu')) $('btn-zen-menu').addEventListener('click', () => { closeMoreMenu(); toggleZenMode(); });
+
+  const _openKnowledgeGraph = () => {
+    const hasDoc = (state && (state.mode === 'file' || state.mode === 'virtual') && !!state.original);
+    if (!hasDoc) {
+      if (typeof showToast === 'function') {
+        const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+        showToast(_t('toast.openDocumentToUse', '请先打开文档'));
+      }
+      return;
+    }
+    const curDir = (state && state.file) ? state.file.substring(0, Math.max(state.file.lastIndexOf('/'), state.file.lastIndexOf('\\'))) : '';
+    if (window.ReadMDGraph) window.ReadMDGraph.open(curDir);
+  };
+  if ($('btn-graph')) $('btn-graph').addEventListener('click', _openKnowledgeGraph);
+  if ($('btn-graph-menu')) $('btn-graph-menu').addEventListener('click', () => { closeMoreMenu(); _openKnowledgeGraph(); });
+  if ($('btn-backlinks-menu')) $('btn-backlinks-menu').addEventListener('click', () => {
+    closeMoreMenu();
+    const hasDoc = (state && (state.mode === 'file' || state.mode === 'virtual') && !!state.original);
+    if (!hasDoc) {
+      if (typeof showToast === 'function') {
+        const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+        showToast(_t('toast.openDocumentToUse', '请先打开文档'));
+      }
+      return;
+    }
+    if (window.ReadMDGraph) window.ReadMDGraph.toggleDrawer();
+  });
 
   // 更多菜单手风琴分组折叠切换
   document.querySelectorAll('.more-group-header').forEach(hdr => {
@@ -13781,11 +15566,18 @@ function bindEvents() {
       e.preventDefault();
       if (window.launchPresentationMode) launchPresentationMode();
     } else if (e.key === 'Escape') {
+      if ($('more-menu') && $('more-menu').classList.contains('open')) {
+        e.preventDefault();
+        closeMoreMenu(true);
+        return;
+      }
       const openModals = [
+        ['pet-settings-modal', typeof closePetSettings === 'function' ? closePetSettings : () => $('pet-settings-modal').classList.add('hidden')],
         ['code-chunk-modal', closeCodeChunkModal],
         ['diagram-modal', closeDiagramModal],
         ['doc-import-modal', closeDocImportModal],
         ['style-custom-modal', closeStyleModal],
+        ['plugin-modal', closePluginModal],
         ['convert-modal', closeConvertModal],
         ['export-modal', closeExportModal],
         ['img-modal', closeImgModal],
@@ -14255,7 +16047,7 @@ function bindEvents() {
 
   /* --- 17. 客户端内版本检查、语言切换、开机自启与自动升级 [联动: core/i18n.js, features/updater.js] --- */
   if ($('btn-lang')) $('btn-lang').addEventListener('click', () => { closeMoreMenu(); if (window.i18n) window.i18n.openModal(); });
-  if ($('btn-pet')) $('btn-pet').addEventListener('click', () => { if (typeof openPetSettings === 'function') openPetSettings(); });
+  if ($('btn-pet')) $('btn-pet').addEventListener('click', () => { closeMoreMenu(); if (typeof openPetSettings === 'function') openPetSettings(); });
   if ($('btn-autostart')) $('btn-autostart').addEventListener('click', () => { closeMoreMenu(); toggleAutostart(); });
   if ($('btn-check-update')) $('btn-check-update').addEventListener('click', () => { closeMoreMenu(); checkUpdate(false); });
 
@@ -14515,6 +16307,7 @@ function bindEvents() {
     }
     updateStatus();
     updateDocStatistics();
+    syncBuildVersionLabels();
     ['formula-mode', 'tpl-action', 'img-ratio'].forEach(id => {
       const select = $(id);
       if (select) syncSelectAccessibleName(select);
@@ -14538,6 +16331,8 @@ function bindEvents() {
       const allModalIds = [
         'close-confirm-modal',
         'confirm-modal',
+        'plugin-modal',
+        'pet-settings-modal',
         'code-chunk-modal', 'diagram-modal', 'doc-import-modal', 'frontmatter-modal',
         'table-modal', 'export-preview-modal', 'export-modal', 'convert-modal',
         'update-modal', 'style-custom-modal', 'lang-modal', 'ai-history-modal',
@@ -14556,6 +16351,11 @@ function bindEvents() {
         else if (activeModal === 'export-preview-modal') $(activeModal).classList.add('hidden');
         else if (activeModal === 'export-modal') closeExportModal();
         else if (activeModal === 'convert-modal') $('convert-modal').classList.add('hidden');
+        else if (activeModal === 'plugin-modal') closePluginModal();
+        else if (activeModal === 'pet-settings-modal') {
+          if (typeof window.closePetSettings === 'function') window.closePetSettings();
+          else $('pet-settings-modal').classList.add('hidden');
+        }
         else if (activeModal === 'update-modal') {
           if (!isUpdateDownloading()) $('update-modal').classList.add('hidden');
         }
@@ -14617,6 +16417,7 @@ function bindEvents() {
     }
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'f') { e.preventDefault(); toggleSide('toc'); } // Ctrl+Shift+F: 目录大纲
     else if (mod && e.key.toLowerCase() === 'd') { e.preventDefault(); toggleTheme(); } // Ctrl+D: 主题切换
+    else if (mod && e.key.toLowerCase() === 'g') { e.preventDefault(); _openKnowledgeGraph(); } // Ctrl+G: 知识图谱
     else if (mod && e.key.toLowerCase() === 'r') { e.preventDefault(); if (state.file && state.mode === 'file') loadFile(state.file, { force: true }); } // Ctrl+R: 强制重载文件
     else if (mod && !e.shiftKey && e.key.toLowerCase() === 'p') { e.preventDefault(); openExportModal(); } // Ctrl+P: 导出面板
     else if (mod && e.shiftKey && e.key.toLowerCase() === 'a') { e.preventDefault(); if (typeof handleTopAiButtonClick === 'function') handleTopAiButtonClick(); else toggleAiPanel(); } // Ctrl+Shift+A: AI面板/AI编辑助手
@@ -14627,10 +16428,11 @@ function bindEvents() {
     else if (mod && e.key === 'ArrowRight') { e.preventDefault(); historyForward(); } // Alt/Ctrl+Right: 历史前进
     else if (e.key === 'Escape') {
       // Layer 1: 模态框与上下文菜单/搜索栏（一旦命中立即阻断返回）
+      if ($('graph-modal') && !$('graph-modal').classList.contains('hidden')) { if (window.ReadMDGraph) window.ReadMDGraph.close(); return; }
+      if ($('backlinks-panel') && !$('backlinks-panel').classList.contains('hidden')) { $('backlinks-panel').classList.add('hidden'); return; }
       if ($('ai-history-modal') && !$('ai-history-modal').classList.contains('hidden')) { if (typeof closeAiModal === 'function') closeAiModal('ai-history-modal'); else $('ai-history-modal').classList.add('hidden'); return; }
       if ($('ai-settings-modal') && !$('ai-settings-modal').classList.contains('hidden')) { if (typeof closeAiModal === 'function') closeAiModal('ai-settings-modal'); else $('ai-settings-modal').classList.add('hidden'); return; }
       if ($('chat-import-modal') && !$('chat-import-modal').classList.contains('hidden')) { if (typeof closeAiModal === 'function') closeAiModal('chat-import-modal'); else $('chat-import-modal').classList.add('hidden'); return; }
-      if ($('pet-settings-modal') && !$('pet-settings-modal').classList.contains('hidden')) { $('pet-settings-modal').classList.add('hidden'); return; }
       if ($('style-custom-modal') && !$('style-custom-modal').classList.contains('hidden')) { closeStyleModal(); return; }
       if ($('formula-modal') && !$('formula-modal').classList.contains('hidden')) { closeFormulaModal(); return; }
       if ($('img-modal') && !$('img-modal').classList.contains('hidden')) { closeImgModal(); return; }
@@ -14690,10 +16492,10 @@ function getModalRoots() {
   return [
     'close-confirm-modal', 'code-chunk-modal', 'diagram-modal', 'doc-import-modal',
     'frontmatter-modal', 'table-modal', 'export-preview-modal', 'export-modal',
-    'convert-modal', 'update-modal', 'style-custom-modal', 'lang-modal',
-    'ai-history-modal', 'ai-settings-modal', 'formula-modal', 'presentation-modal',
-    'img-modal', 'history-modal', 'share-modal', 'tpl-modal', 'url-modal',
-    'save-conflict-modal', 'fix-modal', 'continuous-modal', 'confirm-modal'
+    'convert-modal', 'plugin-modal', 'pet-settings-modal', 'graph-modal', 'update-modal',
+    'style-custom-modal', 'lang-modal', 'ai-history-modal', 'ai-settings-modal',
+    'formula-modal', 'presentation-modal', 'img-modal', 'history-modal', 'share-modal',
+    'tpl-modal', 'url-modal', 'save-conflict-modal', 'fix-modal', 'continuous-modal', 'confirm-modal'
   ].map(id => $(id)).filter(Boolean);
 }
 

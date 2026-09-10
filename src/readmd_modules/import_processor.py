@@ -77,6 +77,16 @@ def parse_attributes(attr_str: Optional[str]) -> Dict[str, any]:
     return attrs
 
 
+def _format_markdown_cell(raw: str) -> str:
+    """Format cell value for Markdown tables, converting newlines to <br> and escaping pipes."""
+    if not raw:
+        return ""
+    s = raw.replace("\r\n", "\n").replace("\r", "\n")
+    s = s.replace("\n", "<br>")
+    s = s.replace("|", "\\|")
+    return s.strip()
+
+
 def csv_to_markdown_table(csv_content: str, delimiter: str = ',') -> str:
     """将 CSV/TSV 文本格式化为标准 Markdown 表格。"""
     f = io.StringIO(csv_content.strip())
@@ -92,14 +102,14 @@ def csv_to_markdown_table(csv_content: str, delimiter: str = ',') -> str:
 
     md_lines = []
     # 表头
-    md_lines.append("| " + " | ".join(h.strip().replace("|", "\\|") for h in headers) + " |")
+    md_lines.append("| " + " | ".join(_format_markdown_cell(h) for h in headers) + " |")
     # 分隔线
     md_lines.append("| " + " | ".join("---" for _ in range(num_cols)) + " |")
 
     # 数据行
     for row in rows[1:]:
         padded_row = row + [""] * (num_cols - len(row))
-        md_lines.append("| " + " | ".join(cell.strip().replace("|", "\\|") for cell in padded_row[:num_cols]) + " |")
+        md_lines.append("| " + " | ".join(_format_markdown_cell(cell) for cell in padded_row[:num_cols]) + " |")
 
     return "\n".join(md_lines)
 

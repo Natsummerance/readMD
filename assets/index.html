@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-version="2.3.8">
+<html lang="zh-CN" data-version="2.3.9">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -7,8 +7,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http: https:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="readmd-app-token" content="">
 <title>ReadMD</title>
-<link rel="stylesheet" href="/assets/style.css">
-<link rel="stylesheet" href="/assets/skill-workbench.css">
+<link rel="stylesheet" href="/assets/style.css?v=2.3.9">
+<link rel="stylesheet" href="/assets/skill-workbench.css?v=2.3.9">
 </head>
 <body>
 <header id="toolbar">
@@ -39,7 +39,9 @@
     </div>
   </div>
   <div class="tb-group tb-right">
-
+    <button id="btn-graph" class="tb-btn icon hidden" disabled title="知识图谱 (Ctrl+G)" aria-label="知识图谱" data-i18n-title="graph.title" data-i18n-aria="graph.title">
+      <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="8" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8.5 7.5l7 1.5M7.5 8.5l3.5 7M16.5 10l-3.5 6"/></svg>
+    </button>
     <button id="btn-search" class="tb-btn icon" title="搜索 (Ctrl+F)" aria-label="搜索" data-i18n-title="toolbar.search" data-i18n-aria="toolbar.search">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     </button>
@@ -63,37 +65,38 @@
     <button id="btn-more" class="tb-btn icon" title="更多功能" aria-label="更多功能" data-i18n-title="toolbar.more" data-i18n-aria="toolbar.more" aria-haspopup="true" aria-expanded="false">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
     </button>
-    <div id="more-menu" class="more-menu">
-      <div class="more-group open">
-        <button class="more-group-header" type="button" aria-expanded="true"><span data-i18n="menu.grpImport">导入</span><span class="more-group-arrow">›</span></button>
+    <div id="more-menu" class="more-menu" role="menu" aria-label="更多功能">
+      <div class="more-group">
+        <button class="more-group-header" type="button" aria-expanded="false"><span data-i18n="menu.grpImport">导入</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
-          <button id="btn-convert" class="more-item"><span data-i18n="menu.convert">万物转换</span><em data-i18n="menu.convertSub">格式转 MD</em></button>
-          <button id="btn-web" class="more-item"><span data-i18n="menu.web">网页提取</span><em data-i18n="menu.webSub">网页转 MD</em></button>
-          <button id="btn-ocr" class="more-item"><span data-i18n="menu.ocr">扫描识别</span><em data-i18n="menu.ocrSub">OCR 识别</em></button>
-          <button id="btn-clipboard-new" class="more-item"><span data-i18n="menu.clipboard">剪贴新建</span><em data-i18n="menu.clipboardSub">剪贴板转 MD</em></button>
+          <button id="btn-convert" class="more-item" role="menuitem"><span data-i18n="menu.convert">万物转换</span><em data-i18n="menu.convertSub">格式转 MD</em></button>
+          <button id="btn-web" class="more-item" role="menuitem"><span data-i18n="menu.web">网页提取</span><em data-i18n="menu.webSub">网页转 MD</em></button>
+          <button id="btn-ocr" class="more-item" role="menuitem"><span data-i18n="menu.ocr">扫描识别</span><em data-i18n="menu.ocrSub">OCR 识别</em></button>
+          <button id="btn-clipboard-new" class="more-item" role="menuitem"><span data-i18n="menu.clipboard">剪贴新建</span><em data-i18n="menu.clipboardSub">剪贴板转 MD</em></button>
         </div>
       </div>
-      <div class="more-group open">
-        <button class="more-group-header" type="button" aria-expanded="true"><span data-i18n="menu.grpInteract">互动</span><span class="more-group-arrow">›</span></button>
+      <div class="more-group">
+        <button class="more-group-header" type="button" aria-expanded="false"><span data-i18n="menu.grpInteract">互动</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
-          <button id="btn-presentation-menu" class="more-item" disabled><span data-i18n="menu.presentation">演讲演示</span><em data-i18n="menu.presentationSub">Reveal.js (F5)</em></button>
-          <button id="btn-run-all-chunks" class="more-item" disabled><span data-i18n="menu.runCode">运行代码</span><em data-i18n="menu.runCodeSub">执行代码块</em></button>
-          <button id="btn-style-custom" class="more-item"><span data-i18n="menu.customStyle">样式定制</span><em data-i18n="menu.customStyleSub">CSS / Head 注入</em></button>
-          <button id="btn-saveas" class="more-item" disabled><span data-i18n="menu.saveAs">另存为</span><em data-i18n="menu.saveAsSub">.md 文件</em></button>
-          <button id="btn-fix" class="more-item" disabled><span data-i18n="menu.fix">修复详情</span><em data-i18n="menu.fixSub">自动修正报告</em></button>
-          <button id="btn-share" class="more-item" disabled><span data-i18n="menu.share">扫码共享</span><em data-i18n="menu.shareSub">局域网移动端</em></button>
+          <button id="btn-backlinks-menu" class="more-item" disabled role="menuitem"><span data-i18n="graph.backlinks">反向链接</span><em data-i18n="graph.backlinksSub">双向关联</em></button>
+          <button id="btn-presentation-menu" class="more-item" disabled role="menuitem"><span data-i18n="menu.presentation">演讲演示</span><em data-i18n="menu.presentationSub">Reveal.js (F5)</em></button>
+          <button id="btn-run-all-chunks" class="more-item hidden" disabled role="menuitem"><span data-i18n="menu.runCode">运行代码</span><em data-i18n="menu.runCodeSub">执行代码块</em></button>
+          <button id="btn-style-custom" class="more-item" role="menuitem"><span data-i18n="menu.customStyle">样式定制</span><em data-i18n="menu.customStyleSub">CSS / Head 注入</em></button>
+          <button id="btn-saveas" class="more-item" disabled role="menuitem"><span data-i18n="menu.saveAs">另存为</span><em data-i18n="menu.saveAsSub">.md 文件</em></button>
+          <button id="btn-fix" class="more-item" disabled role="menuitem"><span data-i18n="menu.fix">修复详情</span><em data-i18n="menu.fixSub">自动修正报告</em></button>
+          <button id="btn-share" class="more-item" disabled role="menuitem"><span data-i18n="menu.share">扫码共享</span><em data-i18n="menu.shareSub">局域网移动端</em></button>
         </div>
       </div>
       <div class="more-group">
         <button class="more-group-header" type="button" aria-expanded="false"><span data-i18n="menu.grpSettings">设置</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
-          <button id="btn-lang" class="more-item"><span data-i18n="menu.lang">界面语言</span><em id="lang-current-label">简体中文</em></button>
-          <!-- 桌宠功能前端入口（保留所有代码，正式版先隐藏，本地可通过控制台 window.openPetSettings() 调用打磨）
-          <button id="btn-pet" class="more-item"><span data-i18n="menu.pet">桌宠</span><em id="pet-status-label" data-i18n="menu.petSub">外置插件</em></button>
-          -->
-          <button id="btn-assoc" class="more-item"><span data-i18n="menu.assoc">设为默认</span><em data-i18n="menu.assocSub">.md 打开方式</em></button>
-          <button id="btn-autostart" class="more-item"><span data-i18n="menu.autoStart">开机自启</span><em id="autostart-status-label" data-i18n="app.disabled">未开启</em></button>
-          <button id="btn-check-update" class="more-item"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.8</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
+          <button id="btn-lang" class="more-item" role="menuitem"><span data-i18n="menu.lang">界面语言</span><em id="lang-current-label">简体中文</em></button>
+          <button id="btn-pet" class="more-item" role="menuitem"><span data-i18n="menu.pet">桌宠</span><em id="pet-status-label" data-i18n="app.disabled">未开启</em></button>
+          <!-- 插件中心：主界面"万物转换"弹窗已有扩展管理入口，此处隐藏收拢 -->
+          <!-- <button id="btn-plugin-menu" class="more-item" role="menuitem"><span data-i18n="menu.plugins">插件中心</span><em data-i18n="menu.pluginsSub">扩展管理</em></button> -->
+          <button id="btn-assoc" class="more-item" role="menuitem"><span data-i18n="menu.assoc">设为默认</span><em data-i18n="menu.assocSub">.md 打开方式</em></button>
+          <button id="btn-autostart" class="more-item" role="menuitem"><span data-i18n="menu.autoStart">开机自启</span><em id="autostart-status-label" data-i18n="app.disabled">未开启</em></button>
+          <button id="btn-check-update" class="more-item" role="menuitem"><span data-i18n="menu.checkUpdate">检查更新</span><em id="menu-version-label">当前版本 v2.3.9</em><i id="update-menu-dot" class="update-dot hidden"></i></button>
         </div>
       </div>
     </div>
@@ -382,30 +385,138 @@
 </div>
 
 <div id="pet-settings-modal" class="hidden" role="dialog" aria-modal="true" aria-labelledby="pet-settings-title">
-  <div id="pet-settings-box" class="ai-drawer-box">
-    <div class="export-head">
-      <h3 id="pet-settings-title" data-i18n="menu.pet">桌宠</h3>
-      <button id="pet-settings-close" class="tb-btn icon modal-close-btn" aria-label="关闭" data-i18n-aria="toolbar.close">
-        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+  <div id="pet-settings-box" class="apple-modal-box pet-settings-sheet">
+    <div class="export-head pet-sheet-head">
+      <div>
+        <h3 id="pet-settings-title" data-i18n="menu.pet">桌宠与阅读伴侣</h3>
+        <p class="pet-subtitle" data-i18n="pet.subtitle">伴随阅读进度、实时互动响应、直接拖拽转换文档</p>
+      </div>
+      <button id="pet-settings-close" class="pet-sheet-close" type="button" aria-label="关闭" data-i18n-aria="toolbar.close">
+        <svg class="pet-sheet-close-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     </div>
-    <div id="pet-status-card" class="pet-status-card">
-      <div class="pet-status-header">
-        <span id="pet-status-dot" class="conn-dot"></span>
-        <span id="pet-status-text" data-i18n="pet.statusStopped">未启动</span>
+
+    <div class="pet-sheet-body">
+      <!-- 角色实时预览舞台 -->
+      <div class="pet-preview-stage" id="pet-status-card">
+        <div class="pet-preview-aura" id="pet-preview-aura">
+          <div class="pet-preview-character" id="pet-preview-character"></div>
+        </div>
+        <div class="pet-preview-badge">
+          <span id="pet-status-dot" class="status-indicator conn-dot"></span>
+          <span id="pet-status-text" data-i18n="pet.statusStopped">就绪</span>
+          <span class="pet-slug-divider">·</span>
+          <span id="pet-active-slug">Hermes</span>
+        </div>
+        <p id="pet-status-line" class="pet-status-note" role="status" aria-live="polite"></p>
       </div>
-      <span id="pet-active-slug">Hermes</span>
+
+      <!-- 分组设置清单 (Apple Inset Grouped List) -->
+      <div class="apple-grouped-list">
+        <div class="apple-list-row">
+          <label for="pet-runtime" data-i18n="pet.runtime">运行位置</label>
+          <select id="pet-runtime" class="apple-select">
+            <option value="in-app" data-i18n="pet.runtime.inApp">阅读器内</option>
+            <option value="desktop" data-i18n="pet.runtime.desktop">独立桌面（需桌宠扩展）</option>
+          </select>
+        </div>
+        <div class="apple-list-row">
+          <label for="pet-gallery" data-i18n="pet.gallery">Hermes 桌宠库</label>
+          <select id="pet-gallery" class="apple-select"><option value="">Hermes</option></select>
+          <label class="tb-btn" for="pet-gallery-import" data-i18n="pet.gallery.import">导入精灵图</label>
+          <input id="pet-gallery-import" type="file" accept="image/png,image/webp" hidden>
+        </div>
+        <div class="apple-list-row">
+          <div class="apple-row-info">
+            <span class="apple-row-title" data-i18n="pet.enable">启用桌宠伴侣</span>
+            <span class="apple-row-desc" data-i18n="pet.enableDesc">在屏幕上显示可直接拖放、交互的悬浮桌宠</span>
+          </div>
+          <label class="apple-switch plugin-switch">
+            <input id="pet-enabled" class="plugin-switch-input" type="checkbox" data-i18n-aria="pet.enable">
+            <span class="apple-switch-track plugin-switch-track" aria-hidden="true"><span class="apple-switch-thumb plugin-switch-thumb"></span></span>
+          </label>
+        </div>
+
+        <div class="apple-list-row">
+          <div class="apple-row-info">
+            <span class="apple-row-title" data-i18n="pet.renderer">渲染角色</span>
+            <span class="apple-row-desc" data-i18n="pet.rendererDesc">选择伴读外观与动画模型</span>
+          </div>
+          <select id="pet-renderer" class="apple-select" data-i18n-aria="pet.renderer">
+            <option value="hermes-sprite" data-i18n="pet.renderer.sprite">Hermes 伴读使者</option>
+            <option value="live2d" data-i18n="pet.renderer.live2d">Arch-Chan 少女</option>
+          </select>
+        </div>
+
+        <div class="apple-list-row apple-slider-row">
+          <div class="apple-row-info">
+            <span class="apple-row-title" data-i18n="pet.size">大小比例</span>
+            <span class="apple-row-desc" data-i18n="pet.sizeDesc">调整桌宠在屏幕上的缩放尺寸</span>
+          </div>
+          <div class="apple-slider-wrap">
+            <input id="pet-scale" type="range" class="apple-range" min="18" max="72" value="33" step="1" data-i18n-aria="pet.size">
+            <output id="pet-scale-value" class="apple-range-val">33%</output>
+          </div>
+        </div>
+
+        <div class="apple-list-row apple-slider-row">
+          <div class="apple-row-info">
+            <span class="apple-row-title" data-i18n="pet.opacity">透明度</span>
+            <span class="apple-row-desc" data-i18n="pet.opacityDesc">调节背景阅读时的视线遮挡</span>
+          </div>
+          <div class="apple-slider-wrap">
+            <input id="pet-opacity" type="range" class="apple-range" min="35" max="100" value="100" step="1" data-i18n-aria="pet.opacity">
+            <output id="pet-opacity-value" class="apple-range-val">100%</output>
+          </div>
+        </div>
+
+        <div class="apple-list-row">
+          <div class="apple-row-info">
+            <span class="apple-row-title" data-i18n="pet.bubbleEnable">伴读提示气泡</span>
+            <span class="apple-row-desc" data-i18n="pet.bubbleDesc">随阅读进度弹出亲切提示与转换引导</span>
+          </div>
+          <label class="apple-switch plugin-switch">
+            <input id="pet-bubble-toggle" class="plugin-switch-input" type="checkbox" checked data-i18n-aria="pet.bubbleEnable">
+            <span class="apple-switch-track plugin-switch-track" aria-hidden="true"><span class="apple-switch-thumb plugin-switch-thumb"></span></span>
+          </label>
+        </div>
+      </div>
     </div>
-    <p id="pet-status-line" class="fix-note" role="status" aria-live="polite"></p>
-    <div class="pet-settings-list">
-      <label class="pet-setting-toggle"><span data-i18n="pet.enable">启用桌宠</span><input id="pet-enabled" type="checkbox" data-i18n-aria="pet.enable"></label>
-      <label class="pet-setting-toggle"><span data-i18n="pet.renderer">渲染器</span><select id="pet-renderer" data-i18n-aria="pet.renderer"><option value="hermes-sprite" data-i18n="pet.renderer.sprite">Hermes 精灵图</option><option value="live2d" data-i18n="pet.renderer.live2d">Live2D</option></select></label>
-      <label class="pet-setting-range"><span data-i18n="pet.size">大小</span><input id="pet-scale" type="range" min="18" max="72" value="33" step="1" data-i18n-aria="pet.size"><output id="pet-scale-value">33%</output></label>
-      <label class="pet-setting-range"><span data-i18n="pet.opacity">不透明度</span><input id="pet-opacity" type="range" min="35" max="100" value="100" step="1" data-i18n-aria="pet.opacity"><output id="pet-opacity-value">100%</output></label>
+
+    <!-- 底部操作按钮 -->
+    <div class="pet-sheet-foot">
+      <button id="pet-reset-pos" class="tb-btn secondary" type="button" data-i18n="pet.resetPos">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+        <span data-i18n="pet.resetPos">重置桌宠位置</span>
+      </button>
+      <div class="pet-foot-actions">
+        <button id="pet-install-runtime" class="tb-btn secondary" type="button" data-i18n="pet.runtime.install">一键安装桌面扩展</button>
+        <button id="pet-install" class="tb-btn accent" type="button" data-i18n="pet.install">立即安装</button>
+      </div>
     </div>
-    <div class="conn-actions pet-settings-actions">
-      <button id="pet-install" class="tb-btn accent" data-i18n="update.installNow">立即安装</button>
+  </div>
+</div>
+
+<!-- 原生桌宠悬浮伴读小组件 (可直接拖拽操控与拖放文档转换) -->
+<div id="readmd-pet-widget" class="pet-widget hidden" role="complementary" aria-label="桌宠伴侣">
+  <div class="pet-widget-bubble" id="pet-bubble" aria-live="polite">
+    <span class="pet-bubble-text" id="pet-bubble-text">你好呀！我是你的伴读桌宠~</span>
+    <span class="pet-bubble-arrow"></span>
+  </div>
+  <div class="pet-widget-character-wrap" id="pet-character-wrap" tabindex="0" role="button" aria-label="与桌宠互动">
+    <div class="pet-widget-character hermes-sprite" id="pet-character"></div>
+    <div class="pet-widget-drop-ring" id="pet-drop-ring" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="drop-text" data-i18n="pet.dropConvert">松开直接转换</span>
     </div>
+  </div>
+  <div class="pet-widget-quick-bar">
+    <button class="pet-quick-btn" id="pet-quick-settings" title="桌宠设置" aria-label="桌宠设置">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+    <button class="pet-quick-btn" id="pet-quick-hide" title="收起桌宠" aria-label="收起桌宠">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
   </div>
 </div>
 
@@ -989,12 +1100,20 @@
   <div id="convert-box">
     <div class="export-head">
       <h3 id="convert-title" data-i18n="convert.title">转 Markdown</h3>
-      <button id="convert-close" class="tb-btn icon" aria-label="关闭" data-i18n-aria="toolbar.close">&#10005;</button>
+      <button id="convert-close" class="tb-btn icon modal-close-btn" aria-label="关闭" data-i18n-aria="toolbar.close">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
     </div>
     <div class="convert-body">
       <div class="convert-actions">
         <button id="convert-files" class="tb-btn accent" data-i18n="convert.selectFiles">选择文件（可多选）</button>
         <button id="convert-folder" class="tb-btn" data-i18n="convert.selectFolder">选择文件夹</button>
+        <button id="btn-open-plugins" class="tb-btn" title="管理扩展插件" data-i18n-title="convert.pluginsTooltip" aria-haspopup="dialog">
+          <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5a2.5 2.5 0 0 0-5 0V5H4c-1.1 0-2 .9-2 2v3.8h1.5a2.5 2.5 0 0 1 0 5H2V20c0 1.1.9 2 2 2h3.8v-1.5a2.5 2.5 0 0 1 5 0V22H17c1.1 0 2-.9 2-2v-4h1.5a2.5 2.5 0 0 0 0-5z"/>
+          </svg>
+          <span data-i18n="convert.pluginsBtn">扩展插件</span>
+        </button>
         <label class="ai-sel"><input id="convert-overwrite" type="checkbox"> <span data-i18n="convert.overwrite">覆盖已存在的 .md</span></label>
       </div>
       <div id="convert-list" class="convert-list"></div>
@@ -1006,6 +1125,37 @@
       </div>
     </div>
     <p class="fix-note" id="convert-note" data-i18n="convert.note">转换结果自动保存为源文件同目录同名 .md（如 report.docx → report.md）。docx 公式、PDF 表格走专用解析，其余格式自动回退通用转换；输出经过严格校验（表格 / 代码围栏 / 公式 / 图片引用）。</p>
+  </div>
+</div>
+
+<!-- 插件管理中心弹窗 -->
+<div id="plugin-modal" class="hidden modal-overlay" role="dialog" aria-modal="true" aria-labelledby="plugin-title">
+  <div id="plugin-box" class="plugin-box apple-modal-box">
+    <div class="export-head plugin-sheet-head">
+      <div>
+        <h3 id="plugin-title" data-i18n="plugin.center.title">扩展插件管理中心</h3>
+        <p class="plugin-subtitle" data-i18n="plugin.center.subtitle">按需挂载重型解析与 AI 模型，核心保持轻量秒开，数据完全本地运行</p>
+      </div>
+      <button id="plugin-close" class="tb-btn icon modal-close-btn" aria-label="关闭" data-i18n-aria="toolbar.close">
+        <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    <div class="plugin-system-status">
+      <div class="plugin-status-pill">
+        <span class="status-indicator ready" aria-hidden="true"></span>
+        <span class="status-label" data-i18n="plugin.sandboxReady">本地安全沙箱已就绪 · 零全局依赖污染</span>
+      </div>
+      <div class="plugin-meta-indicators">
+        <div class="plugin-indicator-item">
+          <span class="plugin-meta-label" data-i18n="plugin.ffmpegStatus">FFmpeg 状态</span>：
+          <span id="plugin-ffmpeg-badge" class="plugin-badge">检测中…</span>
+        </div>
+        <span id="plugin-sandbox-path" class="plugin-path hidden">—</span>
+      </div>
+    </div>
+    <div id="plugin-cards-grid" class="plugin-grid">
+      <!-- 动态填充插件卡片 -->
+    </div>
   </div>
 </div>
 
@@ -1056,7 +1206,7 @@
 <div id="busy" class="hidden" role="status" aria-live="polite"><span data-i18n="app.processing">处理中…</span></div>
 <button id="top-btn" class="hidden" title="回到顶部" data-i18n-title="toolbar.backToTop">&#8593;</button>
 <input id="file-input" type="file" class="hidden">
-<input id="batch-file-input" type="file" class="hidden" multiple>
+<input id="batch-file-input" type="file" accept=".md,.markdown,.docx,.doc,.pptx,.xlsx,.pdf,.html,.htm,.txt,.csv,.json,.tex,.latex,.mp3,.wav,.m4a,.mp4,.flac,.ogg,.webm,.mkv,.mov" class="hidden" multiple>
 <input id="img-file-input" type="file" accept="image/*" class="hidden">
 
 <!-- 标签右键菜单 -->
@@ -1121,7 +1271,7 @@
 
 <footer id="statusbar">
   <div class="statusbar-left-group">
-    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.8</span>
+    <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.9</span>
     <button id="status-pagination" type="button" class="status-pagination hidden" title="点击切换阅读模式"></button>
     <span id="status-left"></span>
   </div>
@@ -1344,6 +1494,6 @@
   </div>
 </div>
 
-<script defer src="/assets/readmd.boot.js?v=2.3.8"></script>
+<script defer src="/assets/readmd.boot.js?v=2.3.9"></script>
 </body>
 </html>

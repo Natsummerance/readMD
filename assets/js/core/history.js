@@ -297,21 +297,41 @@ function updateStatus() {
   if ($('btn-print')) {
     const browserOnly = !hasPy;
     $('btn-print').disabled = isWelcome || browserOnly;
-    const exportHint = browserOnly
-      ? '导出需使用桌面版；浏览器模式可另存或打印'
-      : '导出文档 (Ctrl+P)';
+    const exportHint = _t('toolbar.export') + ' (Ctrl+P)';
     $('btn-print').title = exportHint;
     $('btn-print').setAttribute('aria-label', exportHint);
+    if (browserOnly) setUnavailableReason($('btn-print'), _t('toast.exportBrowserNotice'));
   }
   if ($('btn-a')) $('btn-a').disabled = isWelcome;
   if ($('btn-A')) $('btn-A').disabled = isWelcome;
   if ($('btn-search')) $('btn-search').disabled = isWelcome;
   setUnavailableReason($('btn-search'), _t('toast.searchNeedsDocument'));
   if ($('btn-presentation-menu')) $('btn-presentation-menu').disabled = !hasDoc;
-  if ($('btn-run-all-chunks')) $('btn-run-all-chunks').disabled = !hasDoc;
+  if ($('btn-run-all-chunks')) {
+    const chunkCards = document.querySelectorAll('.code-chunk-card');
+    const hasChunks = hasDoc && chunkCards.length > 0;
+    $('btn-run-all-chunks').disabled = !hasChunks;
+    if (hasChunks) {
+      $('btn-run-all-chunks').classList.remove('hidden');
+    } else {
+      $('btn-run-all-chunks').classList.add('hidden');
+    }
+  }
   if ($('btn-share')) $('btn-share').disabled = !hasDoc;
   if ($('btn-fix')) $('btn-fix').disabled = !hasDoc;
   setUnavailableReason($('btn-fix'), _t('toast.openDocumentToUse'));
+  if ($('btn-graph-menu')) {
+    $('btn-graph-menu').disabled = !hasDoc;
+    setUnavailableReason($('btn-graph-menu'), _t('toast.openDocumentToUse'));
+  }
+  if ($('btn-backlinks-menu')) {
+    $('btn-backlinks-menu').disabled = !hasDoc;
+    setUnavailableReason($('btn-backlinks-menu'), _t('toast.openDocumentToUse'));
+  }
+  if ($('btn-graph')) {
+    $('btn-graph').disabled = !hasDoc;
+    setUnavailableReason($('btn-graph'), _t('toast.openDocumentToUse'));
+  }
 
   const btnHome = $('btn-home');
   if (btnHome) {
@@ -366,6 +386,14 @@ function goHome() {
   document.querySelectorAll('#toolbar .tool-btn').forEach(b => b.classList.remove('active'));
   closeSearch();
   closeMdPopups();
+  if (window.ReadMDGraph) {
+    if (typeof window.ReadMDGraph.close === 'function') window.ReadMDGraph.close();
+    const panel = document.getElementById('backlinks-panel');
+    if (panel) panel.classList.add('hidden');
+    if (typeof window.ReadMDGraph.updateVisibility === 'function') {
+      window.ReadMDGraph.updateVisibility(false);
+    }
+  }
   showPaginationBar(false);
   updateStatus();
   renderTabsBar();
@@ -448,21 +476,18 @@ function saveLastFile(path) {
 }
 
 function syncBuildVersionLabels() {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const version = document.documentElement.dataset.version;
   if (!version) return;
   if ($('status-version')) $('status-version').textContent = 'v' + version;
-  if ($('menu-version-label')) $('menu-version-label').textContent = '当前版本 v' + version;
-}
-
-function afterRender() {
-  startModules();
+  if ($('menu-version-label')) $('menu-version-label').textContent = _t('app.currentVersion') + version;
 }
 
 function installAssoc() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-  if (!hasPy) { showToast(_t('toast.assocBrowserNotice') || '浏览器模式下请在命令行运行 install.bat'); return; }
+  if (!hasPy) { showToast(_t('toast.assocBrowserNotice')); return; }
   py.install_association().then(ok => {
-    showToast(ok === true ? (_t('toast.assocSuccess') || '已设置为 .md 默认打开方式') : ((_t('toast.assocFailed') || '注册失败：') + ok));
+    showToast(ok === true ? _t('toast.assocSuccess') : _t('toast.assocFailed', { error: ok }));
   });
 }
 

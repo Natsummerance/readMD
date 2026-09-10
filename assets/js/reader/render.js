@@ -156,7 +156,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
       dir: d.dir,
       name: d.name,
       content: d.content,
-      original: d.original,
+      original: d.original != null ? d.original : d.content,
       fixed: d.content,
       title: isBrowserCopy ? `${d.name} (${_t('app.browserCopy') || 'browser copy'})` : d.name,
       fixes: d.fixes || [],
@@ -348,6 +348,79 @@ function transformAcademicCallouts(src) {
     const qed = type.toLowerCase() === 'proof' ? ' <span class="proof-qed">■</span>' : '';
     return `<div class="academic-callout ${info.cls}"><div class="academic-callout-header"><span class="academic-callout-tag">${info.name}</span>${titleHtml}</div><div class="academic-callout-body">${marked.parse(body.trim())}${qed}</div></div>`;
   });
+}
+
+function transformWikilinks(src) {
+  if (!src || !src.includes('[[')) return src;
+
+  // 保护代码块与行内代码，避免代码中的 [[ 语法被误转化
+  const codeBlocks = [];
+  const protectedSrc = src
+    .replace(/```[\s\S]*?```/g, m => {
+      codeBlocks.push(m);
+      return `\x00WIKICODE${codeBlocks.length - 1}\x00`;
+    })
+    .replace(/`[^`\n]+`/g, m => {
+      codeBlocks.push(m);
+      return `\x00WIKICODE${codeBlocks.length - 1}\x00`;
+    });
+
+  // 匹配 [[target]] 或 [[target|alias]] 或 [[target#heading]] 或 [[target#heading|alias]]
+  const replaced = protectedSrc.replace(/\[\[([^\]\n|#]+)(?:#([^\]\n|]+))?(?:\|([^\]\n]+))?\]\]/g, (match, target, heading, alias) => {
+    const rawTarget = (target || '').trim();
+    const cleanHeading = (heading || '').trim();
+    const cleanAlias = (alias || '').trim();
+    const displayText = cleanAlias || (cleanHeading ? `${rawTarget}#${cleanHeading}` : rawTarget);
+    const fullTarget = cleanHeading ? `${rawTarget}#${cleanHeading}` : rawTarget;
+    const safeTarget = escapeHtml(fullTarget);
+    const safeDisplay = escapeHtml(displayText);
+    return `<a class="wikilink" data-target="${safeTarget}" href="javascript:void(0)" title="双链跳转: ${safeTarget}">${safeDisplay}</a>`;
+  });
+
+  return replaced.replace(/\x00WIKICODE(\d+)\x00/g, (_, idx) => codeBlocks[Number(idx)] || '');
+}
+
+async function navigateWikilink(target, allHeadings) {
+  if (!target) return;
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
+  const parts = target.split('#');
+  const docName = (parts[0] || '').trim();
+  const headingId = (parts[1] || '').trim();
+
+  // 如果仅为当前文档内小标题跳转，如 [[#heading]]
+  if (!docName && headingId) {
+    let el = document.getElementById(headingId);
+    if (!el) el = findMatchingHeading(headingId, headingId, allHeadings);
+    if (el) {
+      el.tabIndex = -1;
+      el.focus({ preventScroll: true });
+      el.scrollIntoView({ behavior: preferredScrollBehavior(), block: 'start' });
+      el.classList.add('heading-target-highlight');
+      setTimeout(() => el.classList.remove('heading-target-highlight'), 1500);
+    } else {
+      showToast((_t('toast.headingNotFound') || '未找到对应的文档小标题目标：') + headingId, 2500);
+    }
+    return;
+  }
+
+  // 跨文档跳转：尝试在当前目录查找目标文档
+  const curDir = state.dir || (state.file ? state.file.substring(0, Math.max(state.file.lastIndexOf('/'), state.file.lastIndexOf('\\'))) : '');
+  const candidateNames = docName.endsWith('.md') ? [docName] : [docName + '.md', docName];
+  let targetPath = null;
+
+  for (const name of candidateNames) {
+    const candidate = curDir ? (curDir + (curDir.includes('\\') ? '\\' : '/') + name) : name;
+    targetPath = candidate;
+    break;
+  }
+
+  if (targetPath && typeof window.loadFile === 'function') {
+    window.loadFile(targetPath);
+  } else if (targetPath && hasPy && py.open_file) {
+    py.open_file(targetPath);
+  } else {
+    showToast('正在打开文档：' + docName, 1500);
+  }
 }
 
 /* ---------------- 智能语义分章分页切分算法 ---------------- */
@@ -629,7 +702,7 @@ function renderPage(pageIndex, targetHeadingId, preserveScroll) {
   const el = $('content');
   if (!el) return;
 
-  const transformed = transformAcademicCallouts(page.content);
+  const transformed = transformAcademicCallouts(transformWikilinks(page.content));
   const prot = protectMath(transformed);
   const html = marked.parse(prot.src, { gfm: true, breaks: false });
   const finalHtml = restoreMath(html, prot.saved);
@@ -1217,7 +1290,7 @@ async function renderContent(content, name) {
     await renderContentIncremental(content, saved, render);
     return;
   }
-  const transformed = transformAcademicCallouts(content);
+  const transformed = transformAcademicCallouts(transformWikilinks(content));
   const prot = protectMath(transformed);
   const html = parseMarkdownWithSourceMap(prot.src);
   const finalHtml = restoreMath(html, prot.saved);
@@ -1323,7 +1396,8 @@ async function renderContentIncremental(content, savedTop, render = null) {
   let prog = null;
   try {
     if (total <= 1) {
-      const prot = protectMath(content);
+      const transformed = transformAcademicCallouts(transformWikilinks(content));
+      const prot = protectMath(transformed);
       body.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
       postProcess();
       if (savedTop) el.scrollTop = savedTop;
@@ -1342,7 +1416,8 @@ async function renderContentIncremental(content, savedTop, render = null) {
       const end = Math.min(i + CHUNK, total);
       for (let k = i; k < end; k++) {
         const div = document.createElement('div');
-        const prot = protectMath(blocks[k]);
+        const transformed = transformAcademicCallouts(transformWikilinks(blocks[k]));
+        const prot = protectMath(transformed);
         div.innerHTML = sanitizeRenderedHtml(restoreMath(marked.parse(prot.src, { gfm: true, breaks: false }), prot.saved));
         frag.appendChild(div);
       }
@@ -1616,6 +1691,16 @@ function postProcess(container) {
 function renderAllCodeChunks(container) {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   const cards = (container || document).querySelectorAll('.code-chunk-card');
+  const runAllBtn = $('btn-run-all-chunks');
+  if (runAllBtn) {
+    if (cards.length > 0) {
+      runAllBtn.classList.remove('hidden');
+      runAllBtn.disabled = false;
+    } else {
+      runAllBtn.classList.add('hidden');
+      runAllBtn.disabled = true;
+    }
+  }
   cards.forEach(card => {
     if (card._bound) return;
     card._bound = true;
@@ -2775,6 +2860,15 @@ function rewritePresentationAssets(md) {
 function fixLinks(body) {
   const allHeadings = Array.from(body.querySelectorAll('h1, h2, h3, h4, h5, h6'));
   body.querySelectorAll('a').forEach(a => {
+    if (a.classList.contains('wikilink')) {
+      const target = a.dataset.target || '';
+      a.addEventListener('click', async e => {
+        e.preventDefault();
+        e.stopPropagation();
+        await navigateWikilink(target, allHeadings);
+      });
+      return;
+    }
     const href = a.getAttribute('href') || '';
     if (href.startsWith('#')) {
       const targetId = href.slice(1);
@@ -2935,7 +3029,7 @@ async function convertFile(path) {
   if (!(await ensureModule('convert'))) return;
   busy(true);
   try {
-    const r = await apiFetch('/api/convert?p=' + encodeURIComponent(path));
+    const r = await apiFetch('/api/convert?p=' + encodeURIComponent(path) + '&overwrite=1');
     const d = await r.json();
     if (r.status === 409) { showToast(d.error || (_t('toast.moduleLoading') || '模块加载中…')); return; }
     if (!r.ok) { showToast(d.error || (_t('toast.convertFailed') || '转换失败')); return; }

@@ -18,9 +18,10 @@ let openedDocs = [];
 let bridgeCalls = {};
 let clipboardText = '';
 
-function makeEditor(text = '# 测试文档') {
+function makeEditor(text = '# 测试文档', version = 1) {
   return {
     document: {
+      version,
       getText: () => text,
       fileName: path.join(os.tmpdir(), 'doc.md'),
       languageId: 'markdown',
@@ -275,13 +276,45 @@ test('setupMcpServer writes the workspace .vscode/mcp.json contract', async () =
   await registered['readmd.setupMcpServer']();
   const written = JSON.parse(fs.readFileSync(path.join(ws, '.vscode', 'mcp.json'), 'utf-8'));
   assert.deepStrictEqual(written, {
-    mcpServers: {
+    servers: {
       readmd: {
         command: 'python',
         args: ['/fake/readmd_mcp_server.py'],
         env: { PYTHONIOENCODING: 'utf-8' },
       },
     },
+  });
+});
+
+test('setupMcpServer merges and preserves existing MCP server configurations', async () => {
+  freshState();
+  const ws = tempWorkspace();
+  vscodeStub.workspace.workspaceFolders = [{ uri: { fsPath: ws } }];
+  const targetDir = path.join(ws, '.vscode');
+  fs.mkdirSync(targetDir, { recursive: true });
+  fs.writeFileSync(path.join(targetDir, 'mcp.json'), JSON.stringify({
+    servers: {
+      existingServer: {
+        command: 'node',
+        args: ['/path/to/existing.js'],
+      },
+    },
+    customSetting: 'preserved',
+  }, null, 2), 'utf-8');
+
+  activateExtension();
+  quickPickQueue.push({ label: 'vscode', value: 'vscode' });
+  await registered['readmd.setupMcpServer']();
+  const written = JSON.parse(fs.readFileSync(path.join(targetDir, 'mcp.json'), 'utf-8'));
+  assert.strictEqual(written.customSetting, 'preserved');
+  assert.deepStrictEqual(written.servers.existingServer, {
+    command: 'node',
+    args: ['/path/to/existing.js'],
+  });
+  assert.deepStrictEqual(written.servers.readmd, {
+    command: 'python',
+    args: ['/fake/readmd_mcp_server.py'],
+    env: { PYTHONIOENCODING: 'utf-8' },
   });
 });
 
@@ -326,6 +359,58 @@ test('fixCurrentDocument applies repaired content to the editor', async () => {
   await registered['readmd.fixCurrentDocument']();
   assert.strictEqual(errors.length, 0);
   assert.ok(messages.some(m => m && m.includes('已成功自愈')));
+});
+
+test('fixCurrentDocument aborts replacement if document version changed during repair', async () => {
+  freshState();
+  let editCalled = false;
+  vscodeStub.window.activeTextEditor = {
+    document: {
+      version: 1,
+      getText: () => '# 原文',
+      fileName: path.join(os.tmpdir(), 'doc.md'),
+      languageId: 'markdown',
+      uri: { toString: () => 'file:///tmp/doc.md' },
+      positionAt: offset => ({ line: 0, character: offset }),
+      offsetAt: () => 0,
+    },
+    selection: { active: { line: 0, character: 0 } },
+    edit: async () => { editCalled = true; return true; },
+    insertSnippet: async () => true,
+  };
+  const originalFix = fakeBridgeInstance.fixMarkdown;
+  fakeBridgeInstance.fixMarkdown = async () => {
+    vscodeStub.window.activeTextEditor.document.version = 2;
+    return { ok: true, repaired_content: '# 修复文', fixes_count: 1 };
+  };
+  try {
+    activateExtension();
+    await registered['readmd.fixCurrentDocument']();
+    assert.strictEqual(editCalled, false, 'editor.edit must not be called when document version changed');
+    assert.ok(messages.some(m => m && m.includes('已变更')));
+  } finally {
+    fakeBridgeInstance.fixMarkdown = originalFix;
+  }
+});
+
+test('exportPresentation opens file externally when user clicks the localized open button', async () => {
+  freshState();
+  let openedUri = null;
+  vscodeStub.env.openExternal = async uri => { openedUri = uri; return true; };
+  const origShowInfo = vscodeStub.window.showInformationMessage;
+  vscodeStub.window.showInformationMessage = async (...args) => {
+    messages.push(args[0]);
+    return args[1]; // Simulate user clicking the button passed as args[1]
+  };
+  vscodeStub.window.showSaveDialog = async () => ({ fsPath: path.join(os.tmpdir(), 'pres.slides.html') });
+  try {
+    activateExtension();
+    await registered['readmd.exportPresentation']();
+    assert.ok(openedUri, 'openExternal must be called when user clicks the open button');
+    assert.strictEqual(openedUri.fsPath, path.join(os.tmpdir(), 'pres.slides.html'));
+  } finally {
+    vscodeStub.window.showInformationMessage = origShowInfo;
+  }
 });
 
 test('runCodeChunk reports successful execution output', async () => {

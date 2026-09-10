@@ -5,6 +5,32 @@ import json
 import base64
 
 import readmd
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def isolated_settings(monkeypatch, tmp_path):
+    monkeypatch.setattr(readmd, 'SETTINGS_FILE', str(tmp_path / 'settings.json'))
+
+
+def test_in_app_enable_does_not_launch_an_available_desktop_adapter(monkeypatch):
+    api = readmd.Api()
+    monkeypatch.setattr(api._pet_launcher, 'start', lambda: pytest.fail('unexpected desktop launch'))
+    assert api.configure_pet({'enabled': True, 'in_app': True})['ok']
+    assert readmd.load_json(readmd.SETTINGS_FILE, {})['pet_enabled'] is True
+
+
+def test_failed_live2d_selection_preserves_preferences(monkeypatch):
+    api = readmd.Api()
+    monkeypatch.setattr(api, '_pet_model_status', lambda: {'ready': False, 'code': 'missing_model'})
+    assert not api.configure_pet({'enabled': True, 'renderer': 'live2d', 'scale': .5})['ok']
+    assert readmd.load_json(readmd.SETTINGS_FILE, {}) == {}
+
+
+def test_uninstall_reports_runtime_removal_failure(monkeypatch):
+    api = readmd.Api()
+    monkeypatch.setattr(api._pet_installer, 'uninstall', lambda: False)
+    assert api.uninstall_companion_pet()['ok'] is False
 
 
 def test_api_refuses_live2d_without_a_verified_original_model(monkeypatch):
@@ -87,7 +113,7 @@ def test_configure_pet_persists_an_explicit_renderer_choice(monkeypatch):
 
     assert result['ok'] is True
     assert result['renderer'] == 'hermes-sprite'
-    assert saved == [{'pet_renderer': 'hermes-sprite'}]
+    assert saved == [{'pet_renderer': 'hermes-sprite', 'pet_enabled': True}]
 
     assert api.configure_pet({'scale': 0.5})['ok'] is True
     assert saved[-1] == {'pet_scale': 0.5}
@@ -324,3 +350,82 @@ def test_pet_mixed_clipboard_keeps_text_and_queues_each_file_kind(monkeypatch, t
     assert notified == [[str(markdown), str(document)]]
     assert len(opened) == 1
     assert open(opened[0], encoding="utf-8").read() == "# copied text"
+
+
+def test_pet_configure_defaults_to_in_app_when_launcher_unavailable(monkeypatch):
+    api = readmd.Api()
+    monkeypatch.setattr(api._pet_launcher, "status", lambda: {"available": False, "running": False})
+    published = []
+    monkeypatch.setattr(api, "_publish_pet_runtime", lambda runtime=None: published.append(runtime) or {})
+
+    result = api.configure_pet({"enabled": True})
+
+    assert result["ok"] is True
+    assert result["in_app"] is True
+    assert result["runtime"]["enabled"] is True
+    assert published
+
+
+def test_pet_configure_fails_when_in_app_false_and_launcher_unavailable(monkeypatch):
+    api = readmd.Api()
+    monkeypatch.setattr(api._pet_launcher, "status", lambda: {"available": False, "running": False})
+
+    result = api.configure_pet({"enabled": True, "in_app": False})
+
+    assert result["ok"] is False
+    assert result["code"] == "hermes_adapter_not_installed"
+
+
+def test_uninstall_companion_pet_removes_adapter_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(readmd, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(readmd, "SETTINGS_FILE", str(tmp_path / "settings.json"))
+    api = readmd.Api()
+    adapter_dir = tmp_path / "plugins" / "pet" / "hermes-adapter"
+    adapter_dir.mkdir(parents=True, exist_ok=True)
+    fake_file = adapter_dir / "electron.exe"
+    fake_file.write_bytes(b"dummy")
+
+    result = api.uninstall_companion_pet()
+
+    assert result["ok"] is True
+    assert result["installed"] is False
+    assert not adapter_dir.exists()
+
+
+def test_http_api_pets_configure_and_status(monkeypatch, tmp_path):
+    monkeypatch.setattr(readmd, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(readmd, "SETTINGS_FILE", str(tmp_path / "settings.json"))
+    handler = object.__new__(readmd.Handler)
+    handler.command = 'POST'
+    sent_responses = []
+
+    def fake_send_json(code, obj):
+        sent_responses.append((code, obj))
+
+    handler._send_json = fake_send_json
+    handler._read_json_body = lambda limit: {"enabled": True, "renderer": "hermes-sprite"}
+
+    api = readmd.Api()
+    monkeypatch.setattr(readmd, "_get_shared_api", lambda: api)
+    monkeypatch.setattr(api._pet_launcher, "status", lambda: {"available": False, "running": False})
+
+    handler._api_pet_configure()
+
+    assert len(sent_responses) == 1
+    code, payload = sent_responses[0]
+    assert code == 200
+    assert payload["ok"] is True
+    assert payload["in_app"] is True
+
+    # Test status endpoint
+    sent_status = []
+    handler._send_json = lambda c, o: sent_status.append((c, o))
+    handler.command = 'GET'
+    handler._api_pet_status()
+
+    assert len(sent_status) == 1
+    s_code, s_payload = sent_status[0]
+    assert s_code == 200
+    assert s_payload["ok"] is True
+    assert s_payload["status"]["enabled"] is True
+

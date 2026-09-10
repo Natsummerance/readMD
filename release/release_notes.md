@@ -1,4 +1,4 @@
-# ReadMD v2.3.8 更新说明
+# ReadMD v2.3.9 更新说明
 
 ReadMD 是本地优先的 Markdown 阅读、编辑与格式转换工具。本版本在延续 AI Skills、Provider 配置与跨端 Core Service 的基础上，完成 46 种语言的本地化收尾、文档转换与图表渲染的安全加固，并引入统一批量工作台。
 
@@ -6,12 +6,12 @@ ReadMD 是本地优先的 Markdown 阅读、编辑与格式转换工具。本版
 
 | 系统 | 架构 | 交付物 | 资产文件名 |
 | --- | --- | --- | --- |
-| Windows 10/11 | x64、ARM64 | 安装版、便携版 | `ReadMDSetup-v2.3.8.exe`、`ReadMD-portable-v2.3.8.exe`（x64）；`ReadMDSetup-arm64-v2.3.8.exe`、`ReadMD-portable-arm64-v2.3.8.exe`（ARM64） |
-| macOS 13+ | Intel x64、Apple Silicon ARM64 | 原生压缩包 | `ReadMD-macos-x64-v2.3.8.zip` / `ReadMD-macos-arm64-v2.3.8.zip` |
-| Ubuntu 22.04/24.04、Debian 12 | x64、ARM64 | AppImage、Deb | `ReadMD-linux-x86_64-v2.3.8.AppImage` / `ReadMD-linux-aarch64-v2.3.8.AppImage`；`readmd_2.3.8_amd64.deb` / `readmd_2.3.8_arm64.deb` |
-| 统信 UOS 20、银河麒麟 V10、Deepin 23 | x64、ARM64 | 目标 Deb | `readmd_2.3.8_amd64.deb` / `readmd_2.3.8_arm64.deb`；真实系统证据完成前不构成正式支持承诺 |
-| VS Code | Extension Host 支持的桌面架构 | VSIX | `readmd-vscode-2.3.8.vsix` |
-| MCP 客户端 | Python 3.11+ / stdio | MCP ZIP | `readmd-mcp-server-2.3.8.zip` |
+| Windows 10/11 | x64、ARM64 | 安装版、便携版 | `ReadMDSetup-v2.3.9.exe`、`ReadMD-portable-v2.3.9.exe`（x64）；`ReadMDSetup-arm64-v2.3.9.exe`、`ReadMD-portable-arm64-v2.3.9.exe`（ARM64） |
+| macOS 13+ | Intel x64、Apple Silicon ARM64 | 原生压缩包 | `ReadMD-macos-x64-v2.3.9.zip` / `ReadMD-macos-arm64-v2.3.9.zip` |
+| Ubuntu 22.04/24.04、Debian 12 | x64、ARM64 | AppImage、Deb | `ReadMD-linux-x86_64-v2.3.9.AppImage` / `ReadMD-linux-aarch64-v2.3.9.AppImage`；`readmd_2.3.9_amd64.deb` / `readmd_2.3.9_arm64.deb` |
+| 统信 UOS 20、银河麒麟 V10、Deepin 23 | x64、ARM64 | 目标 Deb | `readmd_2.3.9_amd64.deb` / `readmd_2.3.9_arm64.deb`；真实系统证据完成前不构成正式支持承诺 |
+| VS Code | Extension Host 支持的桌面架构 | VSIX | `readmd-vscode-2.3.9.vsix` |
+| MCP 客户端 | Python 3.11+ / stdio | MCP ZIP | `readmd-mcp-server-2.3.9.zip` |
 | 校验清单 | 全架构 | SHA-256 | `SHA256SUMS.txt` |
 
 本版本经 `READMD_SELF_USE_RELEASE` 自用通道发布（仅 `v2.3.8` tag 生效）：资产未做 Authenticode / macOS codesign 签名，原生平台证据清单按参考口径（informational）提供；多平台原生构建、冒烟自检、隐私扫描与校验和生成照常执行。首次运行如遇系统"未知发布者"提示，请先核对 `SHA256SUMS.txt` 再安装。

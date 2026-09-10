@@ -112,3 +112,8 @@ showcase/test-*.png
 showcase/variant-*.png
 showcase/scripts/*.cjs
 ui-tests/.npm-cache/
+
+# Local pet/plugin review evidence (retain on disk, exclude generated output)
+/.pytest-tmp-*/
+/.pytest-review-results.txt
+/ui-tests/test-results-pet-*/

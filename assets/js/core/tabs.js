@@ -65,6 +65,9 @@ function renderTabsBar() {
     if (secBar) { secBar.innerHTML = ''; secBar.classList.add('hidden'); }
     if (overflowWrap) overflowWrap.classList.add('hidden');
     if (btnHome) btnHome.classList.add('hidden');
+    if (window.ReadMDGraph && typeof window.ReadMDGraph.updateVisibility === 'function') {
+      window.ReadMDGraph.updateVisibility(false);
+    }
     return;
   }
 
@@ -73,6 +76,14 @@ function renderTabsBar() {
       btnHome.classList.add('hidden');
     } else {
       btnHome.classList.remove('hidden');
+    }
+  }
+
+  if (window.ReadMDGraph && typeof window.ReadMDGraph.updateVisibility === 'function') {
+    if (state.mode === 'welcome') {
+      window.ReadMDGraph.updateVisibility(false);
+    } else {
+      window.ReadMDGraph.updateVisibility();
     }
   }
 

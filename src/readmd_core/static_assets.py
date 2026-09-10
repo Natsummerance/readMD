@@ -39,6 +39,7 @@ STARTUP_SCRIPTS = (
     'js/features/clipboard.js',
     'js/features/export.js',
     'js/features/updater.js',
+    'js/features/graph.js',
     'app.js',
 )
 

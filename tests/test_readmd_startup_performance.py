@@ -75,6 +75,43 @@ class ReadmdStartupPerformanceTest(unittest.TestCase):
             server.shutdown()
             server.server_close()
 
+    def test_loopback_large_payload_compression_bypass_and_file_cache(self):
+        """Loopback clients must bypass slow gzip on large payloads and hit memory cache."""
+        import tempfile, json
+        with tempfile.NamedTemporaryFile('w', suffix='.md', delete=False, encoding='utf-8') as tf:
+            # 300KB file
+            tf.write("# Test Heading\n" + ("Line with `code` content and plain text\n" * 8000))
+            tmp_path = tf.name
+
+        server = readmd.start_server(port=18899)
+        try:
+            conn = http.client.HTTPConnection('127.0.0.1', server.server_port, timeout=5)
+            # First request: should populate cache
+            from urllib.parse import quote
+            conn.request('GET', f'/api/file?p={quote(tmp_path)}', headers={'Accept-Encoding': 'gzip'})
+            resp = conn.getresponse()
+            self.assertEqual(resp.status, 200)
+            # Since payload is > 256KB and on 127.0.0.1 loopback, gzip is bypassed for speed
+            self.assertIsNone(resp.headers.get('Content-Encoding'))
+            data1 = json.loads(resp.read().decode('utf-8'))
+            self.assertEqual(data1['name'], os.path.basename(tmp_path))
+
+            # Second request: cache hit verification
+            conn.request('GET', f'/api/file?p={quote(tmp_path)}', headers={'Accept-Encoding': 'gzip'})
+            resp2 = conn.getresponse()
+            self.assertEqual(resp2.status, 200)
+            data2 = json.loads(resp2.read().decode('utf-8'))
+            self.assertEqual(data2['content'], data1['content'])
+            conn.close()
+        finally:
+            server.shutdown()
+            server.server_close()
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
+
 
 if __name__ == '__main__':
     unittest.main()
+

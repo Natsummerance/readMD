@@ -65,6 +65,33 @@ class TestReadmdFix(unittest.TestCase):
         self.assertIn("#not_a_heading", res.text)
         self.assertIn("| not | a | table |", res.text)
 
+    def test_massive_code_spans_uniqueness_and_performance(self):
+        """测试大规模代码跨度还原的唯一性与毫秒级极速性能。"""
+        import time
+        # 生成 50,000 行，每行具有不同的代码跨度内容，验证绝不发生 cross-line 覆盖
+        lines = [f"Line {i}: `code_{i}_token` plain text" for i in range(50000)]
+        input_text = "\n".join(lines)
+        t0 = time.perf_counter()
+        res = fix_markdown(input_text)
+        elapsed = time.perf_counter() - t0
+        # 50,000 个 code span 必须在 0.8 秒内处理完毕（适应高负载测试环境）
+        self.assertLess(elapsed, 0.8)
+        # 验证首、中、尾及随机行的 code span 内容 100% 准确还原，未被相互覆盖
+        self.assertIn("`code_0_token`", res.text)
+        self.assertIn("`code_25000_token`", res.text)
+        self.assertIn("`code_49999_token`", res.text)
+        self.assertEqual(res.text, input_text)
+
+    def test_sparse_line_filtering(self):
+        """测试稀疏无语法标记行的短路过滤机制。"""
+        text = "普通纯文本行 1\n普通纯文本行 2\n#一级标题未空格\n纯文本 3\n| A | B |\n| 1 | 2 |\n纯文本 4"
+        res = fix_markdown(text)
+        self.assertIn("# 一级标题未空格", res.text)
+        self.assertIn("| --- | --- |", res.text)
+        self.assertIn("普通纯文本行 1", res.text)
+        self.assertIn("纯文本 4", res.text)
+
 
 if __name__ == '__main__':
     unittest.main()
+

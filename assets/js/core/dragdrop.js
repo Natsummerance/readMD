@@ -141,10 +141,10 @@ function bindGlobalDragAndDrop() {
             if (path) paths.push(path);
           }
           if (paths.length) {
-            if (typeof enqueueBatchFiles === 'function') {
-              enqueueBatchFiles(paths, false);
-            } else if (paths.length === 1 && typeof convertOrOcr === 'function') {
+            if (paths.length === 1 && typeof convertOrOcr === 'function') {
               convertOrOcr(paths[0], 'convert');
+            } else if (typeof enqueueBatchFiles === 'function') {
+              enqueueBatchFiles(paths, true);
             }
           }
         }

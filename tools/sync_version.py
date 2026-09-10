@@ -144,7 +144,8 @@ def bundle_readmd_boot():
         'js/features/ai.js', 'js/features/share.js', 'js/features/convert.js',
         'js/features/batch.js', 'js/features/pet-batch.js',
         'js/features/ocr.js', 'js/features/web.js', 'js/features/clipboard.js',
-        'js/features/export.js', 'js/features/updater.js', 'app.js'
+        'js/features/export.js', 'js/features/updater.js', 'js/features/graph.js',
+        'app.js'
     ]
     out_path = os.path.join(ROOT, 'assets', 'readmd.boot.js')
     chunks = []
@@ -248,6 +249,15 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
             new_content = json.dumps(data, ensure_ascii=False, indent=2) + '\n'
             diffs.append((vscode_pkg, '', new_content))
 
+    vscode_readme = os.path.join(ROOT, 'packages', 'vscode-extension', 'README.md')
+    if os.path.isfile(vscode_readme):
+        with open(vscode_readme, 'r', encoding='utf-8') as f:
+            src = f.read()
+        new_src = re.sub(r'(# ReadMD for VS Code · V)[0-9a-zA-Z.-]+(?: [^\n]+)?', f'\\g<1>{target_ver}', src)
+        new_src = re.sub(r'(readmd-vscode-)[0-9a-zA-Z.-]+(?:\.vsix)', f'\\g<1>{target_ver}.vsix', new_src)
+        if new_src != src:
+            diffs.append((vscode_readme, src, new_src))
+
     harmony_pkg = os.path.join(ROOT, 'packages', 'harmonyos-app', 'package.json')
     if os.path.isfile(harmony_pkg):
         with open(harmony_pkg, 'r', encoding='utf-8') as f:
@@ -295,15 +305,35 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
             diffs.append((release_yml, src, new_src))
 
     # 8. 前端界面与 UI 显示
+    silent_misses = []
     index_path = os.path.join(ROOT, 'assets', 'index.html')
     if os.path.isfile(index_path):
         with open(index_path, 'r', encoding='utf-8') as f:
             src = f.read()
-        new_src = re.sub(r'<html([^>]*\bdata-version=")[^"]+"', rf'<html\g<1>{target_ver}"', src)
-        new_src = re.sub(r'(<link[^>]*href="/assets/style\.css\?v=)[^"]+(")', rf'\g<1>{target_ver}\g<2>', new_src)
-        new_src = re.sub(r'(<span id="status-version"[^>]*>)v[^<]+(</span>)', rf'\g<1>v{target_ver}\g<2>', new_src)
-        new_src = re.sub(r'(id="menu-version-label">)当前版本 v[^<]+(</em>)', rf'\g<1>当前版本 v{target_ver}\g<2>', new_src)
-        new_src = re.sub(r'(<script[^>]*src="/assets/readmd\.boot\.js\?v=)[^"]+(")', rf'\g<1>{target_ver}\g<2>', new_src)
+
+        def sub_or_flag(text, pattern, template, label):
+            # 失配的锚点会让版本号永远停在旧值（style.css 的 ?v= 就是这样漏掉的），
+            # 所以未命中必须显式报告，而不是安静地返回原文。
+            new_text, hits = re.subn(pattern, template, text)
+            if hits == 0:
+                silent_misses.append(label)
+            return new_text
+
+        new_src = sub_or_flag(
+            src, r'<html([^>]*\bdata-version=")[^"]+"',
+            rf'<html\g<1>{target_ver}"', 'assets/index.html :: data-version')
+        new_src = sub_or_flag(
+            new_src, r'(<link[^>]*href="/assets/(?:style|skill-workbench)\.css\?v=)[^"]+(")',
+            rf'\g<1>{target_ver}\g<2>', 'assets/index.html :: stylesheet ?v=')
+        new_src = sub_or_flag(
+            new_src, r'(<span id="status-version"[^>]*>)v[^<]+(</span>)',
+            rf'\g<1>v{target_ver}\g<2>', 'assets/index.html :: #status-version')
+        new_src = sub_or_flag(
+            new_src, r'(id="menu-version-label">)当前版本 v[^<]+(</em>)',
+            rf'\g<1>当前版本 v{target_ver}\g<2>', 'assets/index.html :: #menu-version-label')
+        new_src = sub_or_flag(
+            new_src, r'(<script[^>]*src="/assets/readmd\.boot\.js\?v=)[^"]+(")',
+            rf'\g<1>{target_ver}\g<2>', 'assets/index.html :: readmd.boot.js ?v=')
         if new_src != src:
             diffs.append((index_path, src, new_src))
 
@@ -392,11 +422,17 @@ def sync_all(target_ver: str, check_only: bool = False) -> bool:
                 if new_h_content != h_content:
                     diffs.append((headers_file, h_content, new_h_content))
 
+    if silent_misses:
+        print(f'[WARN] {len(silent_misses)} 个版本锚点未命中，对应版本号可能停留在旧值：')
+        for label in silent_misses:
+            print(f' - {label}')
+
     if check_only:
-        if diffs:
-            print(f'[FAIL] Found {len(diffs)} files out of sync with target version {target_ver}:')
-            for fpath, _, _ in diffs:
-                print(f' - {os.path.relpath(fpath, ROOT)}')
+        if diffs or silent_misses:
+            if diffs:
+                print(f'[FAIL] Found {len(diffs)} files out of sync with target version {target_ver}:')
+                for fpath, _, _ in diffs:
+                    print(f' - {os.path.relpath(fpath, ROOT)}')
             return False
         else:
             print(f'[OK] All platform files are 100% synchronized with version {target_ver}!')

@@ -236,6 +236,8 @@ export function activate(context: vscode.ExtensionContext) {
 
     const doc = editor.document;
     const text = doc.getText();
+    const initialVersion = doc.version;
+    const initialUri = doc.uri.toString();
 
     await vscode.window.withProgress({
       location: vscode.ProgressLocation.Notification,
@@ -244,6 +246,10 @@ export function activate(context: vscode.ExtensionContext) {
     }, async () => {
       try {
         const res = await bridge.fixMarkdown(text);
+        if (doc.version !== initialVersion || doc.uri.toString() !== initialUri) {
+          vscode.window.showWarningMessage(l10n('docModifiedDuringFix', 'ReadMD: Document content was modified during repair; aborted replacement to avoid overwriting changes.'));
+          return;
+        }
         if (res.ok && res.repaired_content && res.repaired_content !== text) {
           await editor.edit(editBuilder => {
             const fullRange = new vscode.Range(
@@ -312,8 +318,8 @@ export function activate(context: vscode.ExtensionContext) {
         const text = editor.document.getText();
         const docTitle = path.basename(editor.document.fileName, path.extname(editor.document.fileName));
         await bridge.exportPresentation(text, saveUri.fsPath, docTitle);
-        const openBtn = '打开文件';
-        const choice = await vscode.window.showInformationMessage(l10n('presentationExportSuccess', 'ReadMD: Presentation successfully exported!'), l10n('btnOpen', 'Open'));
+        const openBtn = l10n('btnOpen', 'Open');
+        const choice = await vscode.window.showInformationMessage(l10n('presentationExportSuccess', 'ReadMD: Presentation successfully exported!'), openBtn);
         if (choice === openBtn) {
           vscode.env.openExternal(saveUri);
         }
@@ -558,8 +564,8 @@ export function activate(context: vscode.ExtensionContext) {
         } else {
           await bridge.exportDoc(text, saveUri.fsPath, formatPick.value, presetPick.label, docTitle);
         }
-        const openBtn = '打开文件';
-        const choice = await vscode.window.showInformationMessage(l10n('exportSuccess', `ReadMD: Successfully exported to ${path.basename(saveUri.fsPath)}!`, { filename: path.basename(saveUri.fsPath) }), l10n('btnOpen', 'Open'));
+        const openBtn = l10n('btnOpen', 'Open');
+        const choice = await vscode.window.showInformationMessage(l10n('exportSuccess', `ReadMD: Successfully exported to ${path.basename(saveUri.fsPath)}!`, { filename: path.basename(saveUri.fsPath) }), openBtn);
         if (choice === openBtn) {
           vscode.env.openExternal(saveUri);
         }
@@ -706,15 +712,11 @@ export function activate(context: vscode.ExtensionContext) {
     const wsFolders = vscode.workspace.workspaceFolders;
     const mcpScriptPath = bridge.getServerPath();
 
-    const mcpConfig = {
-      mcpServers: {
-        readmd: {
-          command: 'python',
-          args: [mcpScriptPath],
-          env: {
-            PYTHONIOENCODING: 'utf-8',
-          },
-        },
+    const readmdServerConfig = {
+      command: 'python',
+      args: [mcpScriptPath],
+      env: {
+        PYTHONIOENCODING: 'utf-8',
       },
     };
 
@@ -722,12 +724,17 @@ export function activate(context: vscode.ExtensionContext) {
       { label: '写入当前工作区 .vscode/mcp.json', value: 'vscode' },
       { label: '写入当前工作区 .cursor/mcp.json (Cursor IDE)', value: 'cursor' },
       { label: '复制 Claude Desktop 配置代码到剪贴板', value: 'clipboard' },
-    ], { placeHolder: '请选择要配置的目标客户端' });
+    ], { placeHolder: l10n('pickMcpClient', '请选择要配置的目标客户端') });
 
     if (!choice) return;
 
     if (choice.value === 'clipboard') {
-      await vscode.env.clipboard.writeText(JSON.stringify(mcpConfig, null, 2));
+      const clipboardConfig = {
+        mcpServers: {
+          readmd: readmdServerConfig,
+        },
+      };
+      await vscode.env.clipboard.writeText(JSON.stringify(clipboardConfig, null, 2));
       vscode.window.showInformationMessage(l10n('mcpCopiedClipboard', 'ReadMD: Copied MCP configuration to clipboard. Paste it into your Claude Desktop config file!'));
       return;
     }
@@ -737,15 +744,57 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    const targetDir = path.join(wsFolders[0].uri.fsPath, choice.value === 'vscode' ? '.vscode' : '.cursor');
+    const isVsCode = choice.value === 'vscode';
+    const targetDirName = isVsCode ? '.vscode' : '.cursor';
+    const serverKey = isVsCode ? 'servers' : 'mcpServers';
+
+    const targetDir = path.join(wsFolders[0].uri.fsPath, targetDirName);
     const targetFile = path.join(targetDir, 'mcp.json');
 
     try {
       if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });
       }
-      fs.writeFileSync(targetFile, JSON.stringify(mcpConfig, null, 2), 'utf-8');
-      vscode.window.showInformationMessage(`ReadMD: 已成功在 ${targetFile} 生成 MCP 服务配置！`);
+
+      let existingConfig: Record<string, any> = {};
+      if (fs.existsSync(targetFile)) {
+        try {
+          const raw = fs.readFileSync(targetFile, 'utf-8');
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            existingConfig = parsed;
+          }
+        } catch (parseErr) {
+          try {
+            const backupFile = `${targetFile}.bak.${Date.now()}`;
+            fs.copyFileSync(targetFile, backupFile);
+          } catch (_) {}
+          existingConfig = {};
+        }
+      }
+
+      const existingServers = (existingConfig[serverKey] && typeof existingConfig[serverKey] === 'object' && !Array.isArray(existingConfig[serverKey]))
+        ? existingConfig[serverKey]
+        : {};
+
+      const mergedConfig = {
+        ...existingConfig,
+        [serverKey]: {
+          ...existingServers,
+          readmd: readmdServerConfig,
+        },
+      };
+
+      const tmpFile = path.join(targetDir, `.mcp.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`);
+      fs.writeFileSync(tmpFile, JSON.stringify(mergedConfig, null, 2), 'utf-8');
+      try {
+        fs.renameSync(tmpFile, targetFile);
+      } catch (renameErr) {
+        fs.copyFileSync(tmpFile, targetFile);
+        try { fs.unlinkSync(tmpFile); } catch (_) {}
+      }
+
+      vscode.window.showInformationMessage(l10n('mcpConfigSuccess', `ReadMD: 已成功在 ${targetFile} 生成 MCP 服务配置！`, { path: targetFile }));
     } catch (err: any) {
       vscode.window.showErrorMessage(l10n('writeMcpFailed', `Failed to write MCP config: ${errorText(err)}`, { error: errorText(err) }));
     }

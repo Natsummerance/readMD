@@ -379,3 +379,43 @@ def test_install_sweeps_stale_temp_dirs_left_by_failed_installs(tmp_path):
 
     assert installer.install_archive(str(archive), confirm=True)["ok"] is True
     assert not garbage.exists()
+
+
+def test_live2d_stage_model_url_avoids_duplicate_path_nesting():
+    """PET-001: modelUrl must not duplicate models/arch-chan directory nesting."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/live2d/stage.ts').read_text(encoding='utf-8')
+    assert 'const modelUrl = new URL(manifest.entry, new URL(MANIFEST_URL, window.location.href)).toString()' in source
+    assert '`../models/arch-chan/${manifest.entry}`' not in source
+
+
+def test_live2d_stage_uses_bounding_box_hit_testing_for_empty_hit_areas():
+    """PET-002: hit detection must use getBounds fallback because arch-chan has empty HitAreas."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/live2d/stage.ts').read_text(encoding='utf-8')
+    assert 'hitModel' in source
+    assert 'getBounds' in source
+    assert 'hitTest: (x: number, y: number) => string[]' in source
+    assert 'setIgnoringMouse(!hitModel(event.clientX, event.clientY))' in source
+
+
+def test_live2d_stage_registers_on_state_before_signaling_ready():
+    """PET-003: ready control signal must be sent after onState is registered."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/live2d/stage.ts').read_text(encoding='utf-8')
+    on_state_pos = source.find("api?.onState(applyState)")
+    ready_pos = source.find("api?.control({ type: 'ready' })")
+    assert on_state_pos != -1
+    assert ready_pos != -1
+    assert on_state_pos < ready_pos
+
+
+def test_electron_main_push_state_includes_native_window_bounds():
+    """PET-004: pushState must include native window bounds from overlay.getBounds()."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/electron-main.ts').read_text(encoding='utf-8')
+    assert 'bounds: overlay.getBounds()' in source
+
+
+def test_live2d_stage_uses_exact_model_expression_manifest_name():
+    """PET-005: stage must use Mouse.exp3.json matching the model3.json manifest."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/live2d/stage.ts').read_text(encoding='utf-8')
+    assert "model.expression('Mouse.exp3.json')" in source
+    assert "model.expression('Mouse')" not in source
+

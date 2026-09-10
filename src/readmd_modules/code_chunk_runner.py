@@ -22,6 +22,8 @@ import subprocess
 import sys
 import tempfile
 import signal
+import threading
+import time
 from typing import Any, Dict, List, Optional
 
 try:  # Unix-only resource ceilings; Windows uses process-group teardown below.
@@ -35,6 +37,7 @@ MAX_TIMEOUT_SECONDS = 10
 MAX_MEMORY_BYTES = 512 * 1024 * 1024
 MAX_FILE_BYTES = 16 * 1024 * 1024
 MAX_CHILD_PROCESSES = 32
+MAX_SQL_ROWS = 5000
 
 # Code chunks run without inherited credentials or service configuration.  A
 # child process receives only the variables needed to find runtimes and write
@@ -119,7 +122,7 @@ except Exception as _e:
 
 
 def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECUTION_TIMEOUT) -> Dict[str, Any]:
-    """底层安全进程调用与 UTF-8 管道捕获。"""
+    """底层安全进程调用与 UTF-8 管道捕获（有界流式内存保护与全路径截断）。"""
     env = {key: os.environ[key] for key in _SAFE_ENV_KEYS if os.environ.get(key)}
     env['PYTHONIOENCODING'] = 'utf-8'
     env['PYTHONUTF8'] = '1'
@@ -145,10 +148,46 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
             **popen_kwargs
         )
 
+        stdout_chunks: List[str] = []
+        stderr_chunks: List[str] = []
+        stdout_truncated = [False]
+        stderr_truncated = [False]
+
+        def _bounded_reader(stream, chunks: List[str], trunc_flag: List[bool], limit: int):
+            total = 0
+            try:
+                while True:
+                    chunk = stream.read(4096)
+                    if not chunk:
+                        break
+                    if total < limit:
+                        rem = limit - total
+                        chunks.append(chunk[:rem])
+                        total += min(len(chunk), rem)
+                        if len(chunk) > rem:
+                            trunc_flag[0] = True
+                    else:
+                        trunc_flag[0] = True
+            except Exception:
+                pass
+            finally:
+                try:
+                    stream.close()
+                except Exception:
+                    pass
+
+        t_out = threading.Thread(target=_bounded_reader, args=(proc.stdout, stdout_chunks, stdout_truncated, MAX_OUTPUT_CHARS))
+        t_err = threading.Thread(target=_bounded_reader, args=(proc.stderr, stderr_chunks, stderr_truncated, MAX_OUTPUT_CHARS))
+        t_out.daemon = True
+        t_err.daemon = True
+        t_out.start()
+        t_err.start()
+
+        timed_out = False
         try:
-            stdout, stderr = proc.communicate(timeout=timeout)
-            exit_code = proc.returncode
+            exit_code = proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
+            timed_out = True
             if sys.platform == 'win32':
                 subprocess.run(['taskkill', '/T', '/F', '/PID', str(proc.pid)],
                                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -158,18 +197,26 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
                     os.killpg(proc.pid, signal.SIGKILL)
                 except Exception:
                     proc.kill()
-            stdout, stderr = proc.communicate()
+            exit_code = -1
+
+        t_out.join(timeout=1.0)
+        t_err.join(timeout=1.0)
+
+        stdout = "".join(stdout_chunks)
+        stderr = "".join(stderr_chunks)
+
+        if timed_out:
             return {
                 "ok": False,
                 "error_code": "execution_timeout",
                 "error": f"代码执行超时 (超过 {timeout} 秒限制)",
-                "stdout": stdout,
-                "stderr": stderr,
+                "stdout": stdout[:MAX_OUTPUT_CHARS].strip(),
+                "stderr": stderr[:MAX_OUTPUT_CHARS].strip(),
                 "images": [],
                 "exit_code": -1
             }
 
-        truncated = len(stdout) > MAX_OUTPUT_CHARS or len(stderr) > MAX_OUTPUT_CHARS
+        truncated = stdout_truncated[0] or stderr_truncated[0] or len(stdout) > MAX_OUTPUT_CHARS or len(stderr) > MAX_OUTPUT_CHARS
         return {
             "ok": exit_code == 0,
             "stdout": stdout[:MAX_OUTPUT_CHARS].strip(),
@@ -303,6 +350,120 @@ def execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tru
         shutil.rmtree(sandbox, ignore_errors=True)
 
 
+def _split_sql_statements(sql: str) -> List[str]:
+    """Split SQL script into statements respecting quoted strings, escapes, and comments."""
+    statements: List[str] = []
+    current: List[str] = []
+    in_single_quote = False
+    in_double_quote = False
+    in_backtick = False
+    in_line_comment = False
+    in_block_comment = False
+    i = 0
+    n = len(sql)
+
+    while i < n:
+        ch = sql[i]
+        nxt = sql[i + 1] if i + 1 < n else ''
+
+        if in_line_comment:
+            current.append(ch)
+            if ch == '\n':
+                in_line_comment = False
+            i += 1
+            continue
+
+        if in_block_comment:
+            current.append(ch)
+            if ch == '*' and nxt == '/':
+                current.append(nxt)
+                in_block_comment = False
+                i += 2
+                continue
+            i += 1
+            continue
+
+        if in_single_quote:
+            current.append(ch)
+            if ch == "'":
+                if nxt == "'":
+                    current.append(nxt)
+                    i += 2
+                    continue
+                in_single_quote = False
+            elif ch == '\\' and nxt:
+                current.append(nxt)
+                i += 2
+                continue
+            i += 1
+            continue
+
+        if in_double_quote:
+            current.append(ch)
+            if ch == '"':
+                if nxt == '"':
+                    current.append(nxt)
+                    i += 2
+                    continue
+                in_double_quote = False
+            elif ch == '\\' and nxt:
+                current.append(nxt)
+                i += 2
+                continue
+            i += 1
+            continue
+
+        if in_backtick:
+            current.append(ch)
+            if ch == '`':
+                in_backtick = False
+            i += 1
+            continue
+
+        if ch == '-' and nxt == '-':
+            current.append(ch)
+            current.append(nxt)
+            in_line_comment = True
+            i += 2
+            continue
+        elif ch == '/' and nxt == '*':
+            current.append(ch)
+            current.append(nxt)
+            in_block_comment = True
+            i += 2
+            continue
+        elif ch == "'":
+            current.append(ch)
+            in_single_quote = True
+            i += 1
+            continue
+        elif ch == '"':
+            current.append(ch)
+            in_double_quote = True
+            i += 1
+            continue
+        elif ch == '`':
+            current.append(ch)
+            in_backtick = True
+            i += 1
+            continue
+        elif ch == ';':
+            stmt = "".join(current).strip()
+            if stmt:
+                statements.append(stmt)
+            current = []
+            i += 1
+            continue
+        else:
+            current.append(ch)
+            i += 1
+
+    stmt = "".join(current).strip()
+    if stmt:
+        statements.append(stmt)
+    return statements
+
+
 def _execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = True,
                         timeout: int = EXECUTION_TIMEOUT,
                         cwd: Optional[str] = None) -> Dict[str, Any]:
@@ -369,17 +530,36 @@ def _execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tr
 
     # 5. SQL 内存与本地 SQLite 调度
     elif normalized_lang in ('sql', 'sqlite', 'sqlite3'):
+        con = None
+        start_time = time.monotonic()
+        deadline = start_time + timeout
         try:
             import sqlite3
             con = sqlite3.connect(":memory:")
+
+            def _sql_progress():
+                return 1 if time.monotonic() > deadline else 0
+
+            con.set_progress_handler(_sql_progress, 500)
             cur = con.cursor()
             results = []
-            statements = [s.strip() for s in code.split(';') if s.strip()]
+            statements = _split_sql_statements(code)
+
             for stmt in statements:
                 cur.execute(stmt)
                 if cur.description:
                     headers = [d[0] for d in cur.description]
-                    rows = cur.fetchall()
+                    rows: List[Any] = []
+                    truncated_rows = False
+                    while True:
+                        batch = cur.fetchmany(500)
+                        if not batch:
+                            break
+                        rows.extend(batch)
+                        if len(rows) >= MAX_SQL_ROWS:
+                            truncated_rows = True
+                            break
+
                     col_widths = [len(h) for h in headers]
                     for r in rows:
                         for idx, val in enumerate(r):
@@ -387,18 +567,45 @@ def _execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tr
                     header_line = " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
                     sep_line = "-+-".join("-" * col_widths[i] for i in range(len(headers)))
                     row_lines = [" | ".join(str(val).ljust(col_widths[i]) for i, val in enumerate(r)) for r in rows]
-                    results.append(f"{header_line}\n{sep_line}\n" + "\n".join(row_lines))
+                    table_str = f"{header_line}\n{sep_line}\n" + "\n".join(row_lines)
+                    if truncated_rows:
+                        table_str += f"\n[Output truncated at {MAX_SQL_ROWS} rows]"
+                    results.append(table_str)
                 else:
                     results.append(f"Query OK, {cur.rowcount} rows affected.")
             con.commit()
-            con.close()
+            stdout_str = "\n\n".join(results)
+            truncated = len(stdout_str) > MAX_OUTPUT_CHARS
             return {
                 "ok": True,
                 "error": None,
-                "stdout": "\n\n".join(results),
+                "stdout": stdout_str[:MAX_OUTPUT_CHARS].strip(),
                 "stderr": "",
                 "images": [],
                 "exit_code": 0,
+                "lang": "sql",
+                "warning": "output_truncated" if truncated else None,
+            }
+        except sqlite3.OperationalError as e:
+            is_timeout = "interrupted" in str(e).lower() or time.monotonic() >= deadline
+            if is_timeout:
+                return {
+                    "ok": False,
+                    "error_code": "execution_timeout",
+                    "error": f"SQL 执行超时 (超过 {timeout} 秒限制)",
+                    "stdout": "",
+                    "stderr": str(e),
+                    "images": [],
+                    "exit_code": -1,
+                    "lang": "sql"
+                }
+            return {
+                "ok": False,
+                "error": f"SQL 执行错误: {str(e)}",
+                "stdout": "",
+                "stderr": str(e),
+                "images": [],
+                "exit_code": 1,
                 "lang": "sql"
             }
         except Exception as e:
@@ -411,6 +618,12 @@ def _execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tr
                 "exit_code": 1,
                 "lang": "sql"
             }
+        finally:
+            if con:
+                try:
+                    con.close()
+                except Exception:
+                    pass
 
     # 6. Go 语言调度
     elif normalized_lang in ('go', 'golang'):
