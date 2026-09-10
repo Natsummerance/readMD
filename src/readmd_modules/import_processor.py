@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Set, Tuple
 
 IMPORT_PATTERN = re.compile(
-    r'^[ \t]*@import\s+["\']([^"\']+)["\'](?:\s*\{([^}]*)\})?[ \t]*$',
+    r'^[ \t]*@import\s+["\']([^"\']+)["\'](?:\s*\{([^}]*)\})?[ \t]*\r?$',
     re.MULTILINE
 )
 

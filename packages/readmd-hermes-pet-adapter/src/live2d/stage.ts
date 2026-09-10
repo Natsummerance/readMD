@@ -101,7 +101,7 @@ async function mountLive2dStage(): Promise<void> {
   let bounds = { x: 0, y: 0, width: 300, height: 420 }
   let dragging: { startX: number; startY: number; pointerId: number; target?: Element; bounds: typeof bounds } | undefined
   let clickTimer: number | undefined
-  let ignoringMouse = true
+  let ignoringMouse: boolean | undefined = undefined
 
   function layout(): void {
     const raw = Number(state.info && state.info.scale) || 0.33
@@ -214,6 +214,7 @@ async function mountLive2dStage(): Promise<void> {
   })
 
   layout()
+  setIgnoringMouse(true)
   document.body.dataset.live2dReady = 'true'
 }
 

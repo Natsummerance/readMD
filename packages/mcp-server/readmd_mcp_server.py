@@ -222,6 +222,7 @@ _CORE_SERVICE = None
 # cannot interleave with responses.
 _STDOUT_LOCK = threading.Lock()
 _CANCEL_EVENTS: Dict[Any, threading.Event] = {}
+MAX_CONCURRENT_TOOL_CALLS = 8
 
 
 def _write_message(payload: Dict[str, Any]) -> None:
@@ -1086,6 +1087,7 @@ def _prompt_descriptors():
 
 def run_stdio_server():
     """标准 JSON-RPC 2.0 stdio 通信主循环。"""
+    slots = threading.BoundedSemaphore(MAX_CONCURRENT_TOOL_CALLS)
     if sys.platform == 'win32' and hasattr(sys.stdin, 'reconfigure'):
         try:
             sys.stdin.reconfigure(encoding='utf-8', errors='replace')
@@ -1187,6 +1189,10 @@ def run_stdio_server():
                     _write_message({"jsonrpc": "2.0", "id": req_id,
                                     "error": {"code": -32602, "message": "Invalid params"}})
                     continue
+                if not slots.acquire(blocking=False):
+                    _write_message({"jsonrpc": "2.0", "id": req_id,
+                                    "error": {"code": -32000, "message": "server_busy"}})
+                    continue
                 progress = _progress_emitter((params.get("_meta") or {}).get("progressToken"))
                 cancel_event = threading.Event()
                 _CANCEL_EVENTS[req_id] = cancel_event
@@ -1201,11 +1207,21 @@ def run_stdio_server():
                                                     cancel_event=cancel_event)
                         _write_message({"jsonrpc": "2.0", "id": req_id, "result": tool_res})
                     finally:
-                        _CANCEL_EVENTS.pop(req_id, None)
+                        try:
+                            slots.release()
+                        finally:
+                            _CANCEL_EVENTS.pop(req_id, None)
 
                 # The worker keeps streaming progress while the main loop keeps
                 # reading stdin, so notifications/cancelled stays responsive.
-                threading.Thread(target=_run_call, daemon=True, name="mcp-tool-call").start()
+                try:
+                    threading.Thread(target=_run_call, daemon=True, name="mcp-tool-call").start()
+                except Exception:
+                    try:
+                        slots.release()
+                    finally:
+                        _CANCEL_EVENTS.pop(req_id, None)
+                    raise
                 continue
             else:
                 res = {

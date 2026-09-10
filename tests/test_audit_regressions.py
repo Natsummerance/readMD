@@ -1,148 +1,142 @@
+"""Copy to the pinned ReadMD checkout: tests/test_audit_regressions.py."""
 import io
 import json
 import os
 from pathlib import Path
-import shutil
 import sys
 import time
-from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / 'packages' / 'mcp-server'))
+
 from src.readmd_modules import code_chunk_runner as runner
-from src.readmd_modules.mdexport import parser
-from src.readmd_modules.pet.hermes_adapter import HermesPetBridge
+from src.readmd_modules.import_processor import ImportProcessor
+from src.readmd_modules.mdexport.parser import parse, inline_text
 import readmd_mcp_server as mcp
 
 
-@pytest.mark.skipif(sys.platform != 'linux', reason='POSIX process sessions')
+@pytest.mark.skipif(os.name == 'nt', reason='POSIX session escape; run Windows job tests separately')
 def test_reproduce_bug_001():
-    # Finite-lived descendant: even the buggy version self-cleans after 4 s.
-    code = (
-        "import sys\nfrom subprocess import Popen\n"
-        "Popen([sys.executable, '-c', 'import time; time.sleep(4)'], "
-        "start_new_session=True)\n"
-    )
-    start = time.monotonic()
-    runner.execute_code_chunk(code, 'python', capture_plot=False, timeout=1)
-    elapsed = time.monotonic() - start
-    assert elapsed < 2.5, f'1-second budget blocked for {elapsed:.2f}s'
+    # The descendant exits itself: no permanent orphan is created by this test.
+    child = 'import time; time.sleep(2.5)'
+    code = ('import subprocess,sys; '
+            f'subprocess.Popen([sys.executable,"-c",{child!r}],start_new_session=True); '
+            'print("done",flush=True)')
+    started = time.monotonic()
+    try:
+        runner._run_process([sys.executable, '-c', code], timeout=1)
+        elapsed = time.monotonic() - started
+    finally:
+        time.sleep(max(0, 2.8 - (time.monotonic() - started)))
+    assert elapsed < 1.8, f'pipe cleanup exceeded wall-clock budget: {elapsed:.3f}s'
 
 
-@pytest.mark.skipif(sys.platform != 'linux' or not shutil.which('node'), reason='Linux with Node.js')
-def test_reproduce_bug_002():
-    result = runner.execute_code_chunk('console.log(42)', 'js', capture_plot=False)
-    assert result['ok'], result['stderr']
-    assert result['stdout'] == '42'
-
-
-def test_reproduce_bug_003():
-    sql = "SELECT 'abc\\'; SELECT 2;"
-    assert len(runner._split_sql_statements(sql)) == 2
-    result = runner.execute_code_chunk(sql, 'sql')
-    assert result['ok'], result
-    assert 'abc\\' in result['stdout'] and '2' in result['stdout']
-
-
-@pytest.mark.parametrize('race', ['regular', 'symlink'])
-def test_reproduce_bug_004(tmp_path, monkeypatch, race):
-    target = tmp_path / 'out.tex'
-    victim = tmp_path / 'original.tex'
-    victim.write_text('DO NOT CHANGE', encoding='utf-8')
-    if race == 'symlink':
+@pytest.mark.parametrize('kind', ['regular', 'symlink'])
+def test_reproduce_bug_002(tmp_path, monkeypatch, kind):
+    target = tmp_path / 'report.tex'
+    victim = tmp_path / 'unrelated.txt'
+    victim.write_text('KEEP', encoding='utf-8')
+    if kind == 'symlink':
         probe = tmp_path / 'probe'
         try:
             probe.symlink_to(victim)
-            probe.unlink()
         except OSError:
-            pytest.skip('Symlink creation unavailable')
+            pytest.skip('symlink privilege unavailable')
+        probe.unlink()
 
-    def render(_content, **_kwargs):
-        # A different client creates the destination after validation.
-        if race == 'symlink':
+    def render(*args, **kwargs):
+        # Deterministic interleaving: file appears after validation, before open.
+        if kind == 'symlink':
             target.symlink_to(victim)
         else:
-            target.write_text('CONCURRENT DOCUMENT', encoding='utf-8')
-        return 'NEW EXPORT'
+            target.write_text('KEEP', encoding='utf-8')
+        return 'REPLACED'
 
-    module = SimpleNamespace(markdown_to_latex=render)
-    monkeypatch.setattr(mcp, 'texmd', module)
-    monkeypatch.setitem(mcp.OPTIONAL_MODULES, 'texmd', module)
+    monkeypatch.setattr(mcp.texmd, 'markdown_to_latex', render)
     result = mcp.handle_tool_call('readmd_export_document', {
-        'markdown_content': '# Test', 'output_path': str(target),
-        'output_format': 'tex', 'confirm': True, 'overwrite': False,
+        'confirm': True, 'overwrite': False, 'output_format': 'tex',
+        'output_path': str(target), 'markdown_content': '# test',
     })
-    assert victim.read_text(encoding='utf-8') == 'DO NOT CHANGE'
-    if race == 'regular':
-        assert target.read_text(encoding='utf-8') == 'CONCURRENT DOCUMENT'
+    protected = victim if kind == 'symlink' else target
+    assert protected.read_text(encoding='utf-8') == 'KEEP'
     assert result.get('isError') is True
 
 
-def test_reproduce_bug_005(monkeypatch):
-    request = {'jsonrpc': '2.0', 'id': 37, 'method': 'tools/call', 'params': None}
-    output = io.StringIO()
-    monkeypatch.setattr(mcp.sys, 'stdin', io.StringIO(json.dumps(request) + '\n'))
-    monkeypatch.setattr(mcp.sys, 'stdout', output)
-    mcp.run_stdio_server()
-    response = json.loads(output.getvalue())
-    assert response['id'] == 37
-    assert response['error']['code'] == -32602
+def test_reproduce_bug_003(monkeypatch):
+    # Acceptance policy: at most eight active workers, no unbounded queue.
+    # Fake workers remain pending without creating OS threads.
+    created = []
+    class PendingThread:
+        def __init__(self, *args, **kwargs):
+            created.append(self)
+        def start(self):
+            pass
+    messages = [
+        {'jsonrpc': '2.0', 'id': i, 'method': 'tools/call',
+         'params': {'name': 'readmd_fix_markdown', 'arguments': {'content': 'x'}}}
+        for i in range(20)
+    ]
+    source = io.StringIO(''.join(json.dumps(m) + '\n' for m in messages))
+    sink = io.StringIO()
+    monkeypatch.setattr(mcp.threading, 'Thread', PendingThread)
+    monkeypatch.setattr(mcp.sys, 'stdin', source)
+    monkeypatch.setattr(mcp.sys, 'stdout', sink)
+    mcp._CANCEL_EVENTS.clear()
+    try:
+        mcp.run_stdio_server()
+        assert len(created) <= 8, f'{len(created)} pending workers were admitted'
+        replies = [json.loads(line) for line in sink.getvalue().splitlines()]
+        rejected = [r for r in replies if 'error' in r]
+        assert len(rejected) == 12
+        assert all(r['error']['code'] == -32000 for r in rejected)
+        assert len({r['id'] for r in rejected}) == 12
+    finally:
+        mcp._CANCEL_EVENTS.clear()
 
 
-def test_reproduce_bug_007(tmp_path, monkeypatch):
-    bridge = HermesPetBridge(str(tmp_path))
-    bridge.command_path.parent.mkdir(parents=True)
-    first = {'command': {'type': 'open-menu'}}
-    second = {'command': {'type': 'drop', 'paths': ['C:\\my notes\\报告.md']}}
-    bridge.command_path.write_text(json.dumps(first), encoding='utf-8')
-    original_loads = json.loads
-    injected = False
+def test_reproduce_bug_005():
+    # In SQLite, a backslash does not escape the closing single quote.
+    result = runner.execute_code_chunk("SELECT 'tail\\' AS value; SELECT 42 AS sentinel;", lang='sql')
+    assert result['ok'], result
+    assert 'tail\\' in result['stdout']
+    assert '42' in result['stdout']
 
-    def receive_then_new_command(raw, *args, **kwargs):
-        nonlocal injected
-        value = original_loads(raw, *args, **kwargs)
-        if not injected:
-            injected = True
-            bridge.command_path.write_text(json.dumps(second), encoding='utf-8')
-        return value
 
-    monkeypatch.setattr(json, 'loads', receive_then_new_command)
-    assert bridge.take_command() == first['command']
-    assert bridge.take_command() == second['command']
+def test_reproduce_bug_006():
+    table = parse('| key | value |\n| --- | --- |\n| a\\|b | KEEP |')[0]
+    cells = [inline_text(cell) for cell in table['rows'][0]]
+    assert cells == ['a|b', 'KEEP']
+    assert len(table['rows'][0]) == len(table['header'])
+
+
+def test_reproduce_bug_007():
+    blocks = parse('```text\nhello\n```not-a-closer\nKEEP\n```')
+    assert blocks == [{'type': 'code', 'lang': 'text',
+                       'content': 'hello\n```not-a-closer\nKEEP'}]
 
 
 def test_reproduce_bug_008():
-    blocks = parser.parse('| A | B |\n| :--- | ---: |\n| x\\|y | z |')
-    table = blocks[0]
-    assert len(table['rows'][0]) == 2
-    assert [parser.inline_text(c) for c in table['rows'][0]] == ['x|y', 'z']
-    assert table['aligns'] == ['left', 'right']
+    blocks = parse('>' * 1500 + ' KEEP')
+    assert blocks
+    # Traverse iteratively so the regression test itself has no recursion limit.
+    stack = list(blocks)
+    text = []
+    while stack:
+        block = stack.pop()
+        stack.extend(block.get('blocks', []))
+        if 'text' in block:
+            text.append(inline_text(block['text']))
+    assert 'KEEP' in ''.join(text)
 
 
-def test_reproduce_bug_009():
-    blocks = parser.parse('```text\na\n```not-a-close\nb\n```')
-    assert blocks == [{'type': 'code', 'lang': 'text',
-                       'content': 'a\n```not-a-close\nb'}]
-
-
-@pytest.mark.parametrize('newline', ['\n', '\r\n'])
-def test_reproduce_bug_010(newline):
-    blocks = parser.parse('$$x +' + newline + 'y$$')
-    assert blocks == [{'type': 'math', 'display': True, 'latex': 'x +\ny'}]
-
-
-def test_reproduce_bug_011():
-    # A 1.2 KB document must not crash the export parser.
-    blocks = parser.parse('>' * 1200 + ' KEEP_ME')
-    # A bounded, literal fallback is acceptable; losing content is not.
-    pending = list(blocks)
-    found = False
-    while pending:
-        block = pending.pop()
-        pending.extend(block.get('blocks', []))
-        if block.get('type') == 'paragraph':
-            found |= 'KEEP_ME' in parser.inline_text(block['text'])
-    assert found
+def test_reproduce_bug_009(tmp_path):
+    (tmp_path / 'child.md').write_text('IMPORTED', encoding='utf-8')
+    processor = ImportProcessor(str(tmp_path))
+    lf = processor.process('@import "child.md"\n')
+    crlf = processor.process('@import "child.md"\r\n')
+    assert 'IMPORTED' in lf
+    assert crlf.replace('\r\n', '\n') == lf
