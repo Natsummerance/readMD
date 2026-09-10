@@ -12005,8 +12005,6 @@ function onBatchCancel() {
 const petBatchInbox = [];
 let petBatchConfirming = false;
 let activePetSettingsStatus = null;
-let petBubbleTimer = null;
-let petLastReadingMilestone = 0;
 
 const petT = (key, params, fallback = '') => {
   if (!window.i18n) return fallback || '';
@@ -12104,23 +12102,50 @@ async function receivePetBatch(paths) {
 window.receivePetBatch = receivePetBatch;
 
 // --------------------------------------------------------------------------
-// Speech Bubble & Interaction
+// Speech Bubble & Interaction (Ported from stevenjoezhang/live2d-widget Priority Queue)
 // --------------------------------------------------------------------------
 
-function showPetBubble(text, durationMs = 4500) {
+const PET_BUBBLE_PRIORITY = {
+  LOW_IDLE: 1,       // 问候、发呆、时段提醒
+  INTERACTION: 2,    // 点击互动、戳一戳反馈
+  MILESTONE: 3,      // 25%、50%、80%、100% 伴读进度达成
+  CRITICAL: 4        // 文件拖拽导入、错误、系统配置变更
+};
+
+let currentBubblePriority = 0;
+let petBubbleTimer = null;
+let petLastReadingMilestone = 0;
+let petPokeComboCount = 0;
+let petLastPokeTime = 0;
+
+/**
+ * 优先级气泡管理器：高优先级气泡展示期间，低优先级消息不可抢占
+ * 移植自 stevenjoezhang/live2d-widget (10.9k★) message.ts 调度逻辑
+ */
+function showPetBubble(text, durationMs = 4500, priority = PET_BUBBLE_PRIORITY.LOW_IDLE) {
   const bubble = $('pet-bubble');
   const bubbleText = $('pet-bubble-text');
-  if (!bubble || !bubbleText) return;
+  if (!bubble || !bubbleText || !text) return;
+
+  // 优先级互斥：低优先级不得打断高优先级
+  if (priority < currentBubblePriority) {
+    return;
+  }
+
   if (petBubbleTimer) {
     clearTimeout(petBubbleTimer);
     petBubbleTimer = null;
   }
+
+  currentBubblePriority = priority;
   bubbleText.textContent = text;
   bubble.classList.add('is-visible');
+
   if (durationMs > 0) {
     petBubbleTimer = setTimeout(() => {
       bubble.classList.remove('is-visible');
       petBubbleTimer = null;
+      currentBubblePriority = 0;
     }, durationMs);
   }
 }
@@ -12133,6 +12158,27 @@ function hidePetBubble() {
   if (petBubbleTimer) {
     clearTimeout(petBubbleTimer);
     petBubbleTimer = null;
+  }
+  currentBubblePriority = 0;
+}
+
+/**
+ * 时段情境问候系统 (Ported from stevenjoezhang/live2d-widget)
+ */
+function getContextualGreeting() {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 9) {
+    return '一日之计在于晨，今天也要元气满满地阅读哦！☀️';
+  } else if (hour >= 9 && hour < 12) {
+    return '上午专注时光，静心阅读效率更高呢~ ☕';
+  } else if (hour >= 12 && hour < 14) {
+    return '午后小憩片刻，看书也要注意劳逸结合呀 🥪';
+  } else if (hour >= 14 && hour < 18) {
+    return '下午好！一杯清茶，一本好书，继续探索新知吧 🍵';
+  } else if (hour >= 18 && hour < 22) {
+    return '晚上好！今晚的阅读清单完成得怎么样了？✨';
+  } else {
+    return '夜深了，注意保护视力，早点休息不要太辛苦啦 🌙';
   }
 }
 
@@ -12147,7 +12193,9 @@ function applyWidgetAppearance(scaleFraction, opacityFraction) {
   if (!widget) return;
 
   const scale = Number.isFinite(scaleFraction) ? scaleFraction : 0.33;
-  const opacity = Number.isFinite(opacityFraction) ? opacityFraction : 1.0;
+  const opacity = Number.isFinite(opacityFraction)
+    ? Math.max(0.1, Math.min(1.0, opacityFraction))
+    : 1.0;
 
   // Scale map: 0.18 -> ~0.7, 0.33 -> 1.0, 0.72 -> ~1.4
   const displayScale = Math.max(0.6, Math.min(1.6, scale * 3.0));
@@ -12180,13 +12228,18 @@ function syncPetWidgetVisibility(status) {
 function restoreWidgetPosition() {
   const widget = $('readmd-pet-widget');
   if (!widget) return;
+
+  const rect = widget.getBoundingClientRect();
+  const width = rect && rect.width > 0 ? rect.width : 120;
+  const height = rect && rect.height > 0 ? rect.height : 150;
+  const maxX = Math.max(12, window.innerWidth - width - 12);
+  const maxY = Math.max(48, window.innerHeight - height - 12);
+
   try {
     const saved = localStorage.getItem('readmd_pet_pos');
     if (saved) {
       const pos = JSON.parse(saved);
       if (pos && typeof pos.left === 'number' && typeof pos.top === 'number') {
-        const maxX = Math.max(20, window.innerWidth - 120);
-        const maxY = Math.max(60, window.innerHeight - 150);
         const clampedX = Math.max(12, Math.min(maxX, pos.left));
         const clampedY = Math.max(48, Math.min(maxY, pos.top));
         widget.style.left = `${clampedX}px`;
@@ -12197,6 +12250,18 @@ function restoreWidgetPosition() {
       }
     }
   } catch (_e) { /* ignore */ }
+
+  if (widget.style.left && widget.style.left !== 'auto') {
+    const currentLeft = parseFloat(widget.style.left);
+    const currentTop = parseFloat(widget.style.top);
+    if (Number.isFinite(currentLeft) && Number.isFinite(currentTop)) {
+      const clampedX = Math.max(12, Math.min(maxX, currentLeft));
+      const clampedY = Math.max(48, Math.min(maxY, currentTop));
+      widget.style.left = `${clampedX}px`;
+      widget.style.top = `${clampedY}px`;
+      return;
+    }
+  }
 
   widget.style.left = '';
   widget.style.top = '';
@@ -12275,8 +12340,18 @@ function initPetDirectManipulation() {
 
     if (hasMoved) {
       const rect = widget.getBoundingClientRect();
+      // 边缘平滑物理吸附 (Ported from hacxy/l2d-widget edge clamping)
+      const snapThreshold = 40;
+      let finalLeft = rect.left;
+      if (rect.left < snapThreshold) {
+        finalLeft = 12;
+      } else if (window.innerWidth - (rect.left + rect.width) < snapThreshold) {
+        finalLeft = window.innerWidth - rect.width - 12;
+      }
+      widget.style.left = `${finalLeft}px`;
+
       try {
-        localStorage.setItem('readmd_pet_pos', JSON.stringify({ left: rect.left, top: rect.top }));
+        localStorage.setItem('readmd_pet_pos', JSON.stringify({ left: finalLeft, top: rect.top }));
       } catch (_err) { /* ignore */ }
     } else {
       handlePetInteractiveClick();
@@ -12306,7 +12381,7 @@ function initPetDirectManipulation() {
 
     const dt = e.dataTransfer;
     if (dt && dt.files && dt.files.length) {
-      showPetBubble(petT('pet.bubbleDropReceived') || '收到文件！正在为你开启极速转换...', 4000);
+      showPetBubble(petT('pet.bubbleDropReceived') || '收到文件！正在为你开启极速转换...', 4000, PET_BUBBLE_PRIORITY.CRITICAL);
       if (typeof enqueueBatchFiles === 'function') {
         await enqueueBatchFiles(Array.from(dt.files), false);
       } else {
@@ -12328,6 +12403,11 @@ function initPetDirectManipulation() {
     if (enabledInput) enabledInput.checked = false;
     await savePetSettings();
   });
+
+  // Window Resize Clamping: keep pet in visible bounds on resize
+  window.addEventListener('resize', () => {
+    restoreWidgetPosition();
+  });
 }
 
 function handlePetInteractiveClick() {
@@ -12339,6 +12419,34 @@ function handlePetInteractiveClick() {
     }, 1200);
   }
 
+  // 戳一戳连击检测 (Ported from clawd-on-desk poke interaction)
+  const now = Date.now();
+  if (now - petLastPokeTime < 1500) {
+    petPokeComboCount++;
+  } else {
+    petPokeComboCount = 1;
+  }
+  petLastPokeTime = now;
+
+  if (petPokeComboCount >= 4) {
+    petPokeComboCount = 0;
+    const pokeResponses = [
+      '哇！别戳啦别戳啦，在看书呢！🙈',
+      '再戳我就要变成猫咪逃走啦~ 🐾',
+      '哼，一直戳我，是不是想偷懒不读书了？👀',
+      '好啦好啦，知道你在关注我，快看正文吧！📚'
+    ];
+    const pokeText = pokeResponses[Math.floor(Math.random() * pokeResponses.length)];
+    showPetBubble(pokeText, 3500, PET_BUBBLE_PRIORITY.INTERACTION);
+    return;
+  }
+
+  // 常规互动：50% 概率触发时段问候，50% 概率触发鼓励台词
+  if (Math.random() < 0.5) {
+    showPetBubble(getContextualGreeting(), 4500, PET_BUBBLE_PRIORITY.INTERACTION);
+    return;
+  }
+
   const quotes = [
     petT('pet.bubbleQuote1') || '嗨！我是你的伴读伙伴，随时为你效劳~',
     petT('pet.bubbleQuote2') || '今天读书很专注哦，继续保持！✨',
@@ -12346,7 +12454,7 @@ function handlePetInteractiveClick() {
     petT('pet.bubbleQuote4') || '累了就放松一下眼睛，看看远方吧~ ☕'
   ];
   const text = quotes[Math.floor(Math.random() * quotes.length)];
-  showPetBubble(text, 4500);
+  showPetBubble(text, 4500, PET_BUBBLE_PRIORITY.INTERACTION);
 }
 
 // --------------------------------------------------------------------------
@@ -12388,16 +12496,16 @@ function checkReadingProgress() {
 
   if (progress >= 25 && progress < 45 && petLastReadingMilestone < 25) {
     petLastReadingMilestone = 25;
-    showPetBubble(petT('pet.reading25') || '很好，已经阅读 25% 啦，保持专注！📖', 4000);
+    showPetBubble(petT('pet.reading25') || '很好，已经阅读 25% 啦，保持专注！📖', 4000, PET_BUBBLE_PRIORITY.MILESTONE);
   } else if (progress >= 50 && progress < 75 && petLastReadingMilestone < 50) {
     petLastReadingMilestone = 50;
-    showPetBubble(petT('pet.reading50'), 4000);
+    showPetBubble(petT('pet.reading50'), 4000, PET_BUBBLE_PRIORITY.MILESTONE);
   } else if (progress >= 80 && progress < 95 && petLastReadingMilestone < 80) {
     petLastReadingMilestone = 80;
-    showPetBubble(petT('pet.reading80'), 4000);
+    showPetBubble(petT('pet.reading80'), 4000, PET_BUBBLE_PRIORITY.MILESTONE);
   } else if (progress >= 98 && petLastReadingMilestone < 100) {
     petLastReadingMilestone = 100;
-    showPetBubble(petT('pet.reading100'), 4500);
+    showPetBubble(petT('pet.reading100'), 4500, PET_BUBBLE_PRIORITY.MILESTONE);
   } else if (progress < 15) {
     petLastReadingMilestone = 0;
   }
@@ -12521,12 +12629,13 @@ async function savePetSettings() {
   const opacity = Number($('pet-opacity')?.value || 100) / 100;
   const renderer = $('pet-renderer')?.value || 'hermes-sprite';
 
+  const isDesktopChoice = $('pet-runtime')?.value === 'desktop';
   const config = {
     enabled,
     scale,
     opacity,
     renderer,
-    in_app: renderer !== 'live2d' && $('pet-runtime')?.value !== 'desktop'
+    in_app: renderer !== 'live2d' && !isDesktopChoice
   };
 
   const stateChanged = Boolean(activePetSettingsStatus && activePetSettingsStatus.enabled !== enabled);
@@ -12575,6 +12684,10 @@ window.requestConfigurePet = requestConfigurePet;
 window.syncPetWidgetVisibility = syncPetWidgetVisibility;
 window.initPetDirectManipulation = initPetDirectManipulation;
 window.savePetSettings = savePetSettings;
+window.applyWidgetAppearance = applyWidgetAppearance;
+window.restoreWidgetPosition = restoreWidgetPosition;
+window.hidePetBubble = hidePetBubble;
+window.PET_BUBBLE_PRIORITY = PET_BUBBLE_PRIORITY;
 
 // --------------------------------------------------------------------------
 // Background Polling & Handlers
@@ -12735,6 +12848,95 @@ function initPetSystem() {
   $('pet-opacity')?.addEventListener('change', () => { void savePetSettings(); });
 
   setInterval(pollPetControls, 2000);
+  initPetIdleFSM();
+}
+
+// --------------------------------------------------------------------------
+// Idle & Sleep Cycle FSM (Ported from rullerzhou-afk/clawd-on-desk 6.1k★)
+// --------------------------------------------------------------------------
+
+const PET_STATE = {
+  ACTIVE: 'active',
+  IDLE: 'idle',
+  BORED: 'bored',
+  DOZING: 'dozing',
+  SLEEPING: 'sleeping'
+};
+
+let currentPetState = PET_STATE.IDLE;
+let lastUserActivityTime = Date.now();
+let idleFSMInterval = null;
+
+function markPetUserActive() {
+  lastUserActivityTime = Date.now();
+  if (currentPetState === PET_STATE.DOZING || currentPetState === PET_STATE.SLEEPING) {
+    // 唤醒动画
+    const char = $('pet-character');
+    if (char) {
+      char.classList.remove('pet-sleeping', 'pet-dozing');
+      char.classList.add('pet-bounce');
+      setTimeout(() => char.classList.remove('pet-bounce'), 1000);
+    }
+    showPetBubble('唔……你回来啦！继续一起阅读吧 ✨', 3500, PET_BUBBLE_PRIORITY.LOW_IDLE);
+  }
+  currentPetState = PET_STATE.ACTIVE;
+}
+
+function initPetIdleFSM() {
+  // 监听用户活跃行为（指针移动、按键、滚动）
+  window.addEventListener('pointermove', () => { markPetUserActive(); }, { passive: true });
+  window.addEventListener('keydown', () => { markPetUserActive(); }, { passive: true });
+  window.addEventListener('scroll', () => { markPetUserActive(); }, { passive: true });
+
+  if (idleFSMInterval) clearInterval(idleFSMInterval);
+  idleFSMInterval = setInterval(checkPetIdleState, 15000);
+}
+
+function checkPetIdleState() {
+  const widget = $('readmd-pet-widget');
+  if (!widget || widget.classList.contains('hidden')) return;
+
+  const now = Date.now();
+  const idleDuration = now - lastUserActivityTime;
+  const char = $('pet-character');
+
+  // 10分钟无操作 -> 深度睡眠
+  if (idleDuration > 10 * 60 * 1000) {
+    if (currentPetState !== PET_STATE.SLEEPING) {
+      currentPetState = PET_STATE.SLEEPING;
+      if (char) {
+        char.classList.remove('pet-dozing');
+        char.classList.add('pet-sleeping');
+      }
+      showPetBubble('zZ... 呼……噜…… (睡着了)', 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
+    }
+  }
+  // 4分钟无操作 -> 打瞌睡
+  else if (idleDuration > 4 * 60 * 1000) {
+    if (currentPetState !== PET_STATE.DOZING && currentPetState !== PET_STATE.SLEEPING) {
+      currentPetState = PET_STATE.DOZING;
+      if (char) {
+        char.classList.add('pet-dozing');
+      }
+      showPetBubble('有点困困的呢…… (揉眼睛)', 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
+    }
+  }
+  // 1.5分钟无操作 -> 发呆动作池
+  else if (idleDuration > 90 * 1000) {
+    if (currentPetState === PET_STATE.ACTIVE || currentPetState === PET_STATE.IDLE) {
+      currentPetState = PET_STATE.BORED;
+      const boredQuotes = [
+        '静静地看着你读书~ 🍵',
+        '你在读哪一章呀？我也想瞧瞧 👀',
+        '窗外微风正好，好适合安静看书呀 🍃'
+      ];
+      const quote = boredQuotes[Math.floor(Math.random() * boredQuotes.length)];
+      showPetBubble(quote, 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
+    }
+  } else {
+    currentPetState = PET_STATE.ACTIVE;
+    if (char) char.classList.remove('pet-sleeping', 'pet-dozing');
+  }
 }
 
 if (document.readyState === 'loading') {

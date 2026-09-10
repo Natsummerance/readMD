@@ -134,7 +134,7 @@ function showPetBubble(text, durationMs = 4500, priority = PET_BUBBLE_PRIORITY.L
   if (!bubble || !bubbleText || !text) return;
 
   // 优先级互斥：低优先级不得打断高优先级
-  if (petBubbleTimer && priority < currentBubblePriority) {
+  if (priority < currentBubblePriority) {
     return;
   }
 
@@ -199,7 +199,9 @@ function applyWidgetAppearance(scaleFraction, opacityFraction) {
   if (!widget) return;
 
   const scale = Number.isFinite(scaleFraction) ? scaleFraction : 0.33;
-  const opacity = Number.isFinite(opacityFraction) ? opacityFraction : 1.0;
+  const opacity = Number.isFinite(opacityFraction)
+    ? Math.max(0.1, Math.min(1.0, opacityFraction))
+    : 1.0;
 
   // Scale map: 0.18 -> ~0.7, 0.33 -> 1.0, 0.72 -> ~1.4
   const displayScale = Math.max(0.6, Math.min(1.6, scale * 3.0));
@@ -232,13 +234,18 @@ function syncPetWidgetVisibility(status) {
 function restoreWidgetPosition() {
   const widget = $('readmd-pet-widget');
   if (!widget) return;
+
+  const rect = widget.getBoundingClientRect();
+  const width = rect && rect.width > 0 ? rect.width : 120;
+  const height = rect && rect.height > 0 ? rect.height : 150;
+  const maxX = Math.max(12, window.innerWidth - width - 12);
+  const maxY = Math.max(48, window.innerHeight - height - 12);
+
   try {
     const saved = localStorage.getItem('readmd_pet_pos');
     if (saved) {
       const pos = JSON.parse(saved);
       if (pos && typeof pos.left === 'number' && typeof pos.top === 'number') {
-        const maxX = Math.max(20, window.innerWidth - 120);
-        const maxY = Math.max(60, window.innerHeight - 150);
         const clampedX = Math.max(12, Math.min(maxX, pos.left));
         const clampedY = Math.max(48, Math.min(maxY, pos.top));
         widget.style.left = `${clampedX}px`;
@@ -249,6 +256,18 @@ function restoreWidgetPosition() {
       }
     }
   } catch (_e) { /* ignore */ }
+
+  if (widget.style.left && widget.style.left !== 'auto') {
+    const currentLeft = parseFloat(widget.style.left);
+    const currentTop = parseFloat(widget.style.top);
+    if (Number.isFinite(currentLeft) && Number.isFinite(currentTop)) {
+      const clampedX = Math.max(12, Math.min(maxX, currentLeft));
+      const clampedY = Math.max(48, Math.min(maxY, currentTop));
+      widget.style.left = `${clampedX}px`;
+      widget.style.top = `${clampedY}px`;
+      return;
+    }
+  }
 
   widget.style.left = '';
   widget.style.top = '';
@@ -389,6 +408,11 @@ function initPetDirectManipulation() {
     const enabledInput = $('pet-enabled');
     if (enabledInput) enabledInput.checked = false;
     await savePetSettings();
+  });
+
+  // Window Resize Clamping: keep pet in visible bounds on resize
+  window.addEventListener('resize', () => {
+    restoreWidgetPosition();
   });
 }
 
@@ -666,6 +690,10 @@ window.requestConfigurePet = requestConfigurePet;
 window.syncPetWidgetVisibility = syncPetWidgetVisibility;
 window.initPetDirectManipulation = initPetDirectManipulation;
 window.savePetSettings = savePetSettings;
+window.applyWidgetAppearance = applyWidgetAppearance;
+window.restoreWidgetPosition = restoreWidgetPosition;
+window.hidePetBubble = hidePetBubble;
+window.PET_BUBBLE_PRIORITY = PET_BUBBLE_PRIORITY;
 
 // --------------------------------------------------------------------------
 // Background Polling & Handlers
