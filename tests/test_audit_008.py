@@ -1,7 +1,6 @@
-from src.readmd_modules import code_chunk_runner as runner
+from src.readmd_modules.import_processor import csv_to_markdown_table
 
-def test_reproduce_bug_008(monkeypatch):
-    expected = {"ok": True, "stdout": "https://example.com"}
-    monkeypatch.setattr(runner, "_execute_code_chunk", lambda *a, **kw: expected)
-    result = runner.execute_code_chunk('print("https://example.com")', capture_plot=False)
-    assert result["ok"] is True
+def test_reproduce_bug_008():
+    out = csv_to_markdown_table('name\nAlice,IMPORTANT_VALUE\n')
+    assert 'Alice' in out
+    assert 'IMPORTANT_VALUE' in out

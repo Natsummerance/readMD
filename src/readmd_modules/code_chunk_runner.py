@@ -41,6 +41,17 @@ if sys.platform == 'win32':
         _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000
         _JobObjectExtendedLimitInformation = 9
 
+        _kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+        _kernel32.CreateJobObjectW.argtypes = [wintypes.LPVOID, wintypes.LPCWSTR]
+        _kernel32.SetInformationJobObject.restype = wintypes.BOOL
+        _kernel32.SetInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int, wintypes.LPVOID, wintypes.DWORD]
+        _kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+        _kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        _kernel32.CloseHandle.restype = wintypes.BOOL
+        _kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        _kernel32.TerminateJobObject.restype = wintypes.BOOL
+        _kernel32.TerminateJobObject.argtypes = [wintypes.HANDLE, wintypes.UINT]
+
         class _JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
             _fields_ = [
                 ('PerProcessUserTimeLimit', wintypes.LARGE_INTEGER),
@@ -245,6 +256,19 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
             **popen_kwargs
         )
 
+        if not is_posix and job and _kernel32:
+            try:
+                proc_handle = getattr(proc, '_handle', None)
+                if proc_handle:
+                    assigned = _kernel32.AssignProcessToJobObject(job, wintypes.HANDLE(int(proc_handle)))
+                    if not assigned:
+                        _kernel32.CloseHandle(job)
+                        job = None
+            except Exception:
+                if job:
+                    _kernel32.CloseHandle(job)
+                    job = None
+
         if is_posix:
             import codecs
             import selectors
@@ -350,6 +374,13 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
             except Exception:
                 pass
 
+            if not timed_out and proc.poll() is None:
+                rem = max(0.0, deadline - time.monotonic())
+                try:
+                    proc.wait(timeout=rem)
+                except subprocess.TimeoutExpired:
+                    timed_out = True
+
             if timed_out or proc.poll() is None:
                 _terminate_posix_group(proc)
                 exit_code = -1
@@ -369,12 +400,6 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
             stderr = "".join(stderr_chunks)
 
         else:
-            if job and _kernel32 and hasattr(proc, '_handle'):
-                try:
-                    _kernel32.AssignProcessToJobObject(job, int(proc._handle))
-                except Exception:
-                    pass
-
             stdout_chunks: List[str] = []
             stderr_chunks: List[str] = []
             stdout_truncated = [False]
@@ -567,10 +592,14 @@ def _allowed_cwd(cwd: Optional[str]) -> Optional[str]:
 def _write_temp_script(suffix: str, content: str, cwd: Optional[str]):
     """Write a transient script in a disposable directory."""
     script_dir = tempfile.mkdtemp(prefix='readmd-script-', dir=cwd or None)
-    path = os.path.join(script_dir, 'main' + suffix)
-    with open(path, 'w', encoding='utf-8', newline='\n') as handle:
-        handle.write(content)
-    return path, script_dir
+    try:
+        path = os.path.join(script_dir, 'main' + suffix)
+        with open(path, 'w', encoding='utf-8', newline='\n') as handle:
+            handle.write(content)
+        return path, script_dir
+    except Exception:
+        shutil.rmtree(script_dir, ignore_errors=True)
+        raise
 
 
 def _cleanup_temp_script(path: Optional[str], script_dir: Optional[str]):
@@ -952,11 +981,11 @@ def _execute_sql_chunk(code: str, cwd: Optional[str] = None, timeout: int = EXEC
     """隔离子进程安全执行 SQL 并进行单元格与累积字符有界流式保护。"""
     timeout = max(1, min(int(timeout or EXECUTION_TIMEOUT), MAX_TIMEOUT_SECONDS))
     tmp_script, script_dir = _write_temp_script('.py', _build_sql_runner_source(), cwd)
-    sql_path = os.path.join(script_dir, 'query.sql')
-    with open(sql_path, 'w', encoding='utf-8') as f:
-        f.write(code)
-
     try:
+        sql_path = os.path.join(script_dir, 'query.sql')
+        with open(sql_path, 'w', encoding='utf-8') as f:
+            f.write(code)
+
         res = _run_process([sys.executable, tmp_script], cwd=cwd, timeout=timeout)
         res["lang"] = "sql"
         if not res["ok"]:

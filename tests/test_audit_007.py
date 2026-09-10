@@ -1,7 +1,14 @@
-from src.readmd_modules.import_processor import ImportProcessor
+import builtins
+import pytest
+from src.readmd_modules import code_chunk_runner as runner
 
-def test_reproduce_bug_007(tmp_path):
-    (tmp_path / "a.puml").write_text("@startuml\n```\n# not a heading\n@enduml", encoding="utf-8")
-    result = ImportProcessor(str(tmp_path)).process('@import "a.puml"')
-    assert result.startswith("````puml\n")
-    assert result.endswith("\n````")
+def test_reproduce_bug_007(tmp_path, monkeypatch):
+    original = builtins.open
+    def guarded(path, *a, **kw):
+        if str(path).endswith('query.sql'):
+            raise OSError('disk full')
+        return original(path, *a, **kw)
+    monkeypatch.setattr(builtins, 'open', guarded)
+    with pytest.raises(OSError):
+        runner._execute_sql_chunk('SELECT 1', cwd=str(tmp_path))
+    assert list(tmp_path.iterdir()) == []

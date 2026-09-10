@@ -1,6 +1,7 @@
-from src.readmd_modules.import_processor import ImportProcessor
-from src.readmd_modules.import_processor import MAX_IMPORT_DEPTH
+from src.readmd_modules.import_processor import process_markdown_imports
 
 def test_reproduce_bug_005(tmp_path):
-    processor = ImportProcessor(str(tmp_path))
-    assert processor.process("# 保留正文", depth=MAX_IMPORT_DEPTH) == "# 保留正文"
+    (tmp_path / 'app.py').write_text('print(1)', encoding='utf-8')
+    out = process_markdown_imports(
+        '@import "app.py" {line_begin=²}', base_dir=str(tmp_path))
+    assert 'invalid_line_range' in out

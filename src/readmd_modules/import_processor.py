@@ -119,9 +119,12 @@ def _parse_positive_int(val: any) -> Optional[int]:
         return val if val > 0 else None
     if isinstance(val, str):
         val = val.strip()
-        if val.isdigit():
-            v = int(val)
-            return v if v > 0 else None
+        if val.isascii() and val.isdigit():
+            try:
+                v = int(val)
+                return v if v > 0 else None
+            except ValueError:
+                return None
     return None
 
 
@@ -144,7 +147,7 @@ def _is_inside_root(root: str, target: str) -> bool:
 
 
 def parse_attributes(attr_str: Optional[str]) -> Dict[str, any]:
-    """解析 @import 后的键值属性，如 {line_begin=10 line_end=20 as_code=true}。"""
+    """解析 @import 的键值对属性，如 {line_begin=10 line_end=20 as_code=true}。"""
     attrs: Dict[str, any] = {}
     if not attr_str:
         return attrs
@@ -158,7 +161,16 @@ def parse_attributes(attr_str: Optional[str]) -> Dict[str, any]:
         if v.startswith('[') and v.endswith(']'):
             try:
                 # 解析数组，如 [15, 18]
-                items = [int(x.strip()) for x in v[1:-1].split(',') if x.strip().isdigit()]
+                items = []
+                for x in v[1:-1].split(','):
+                    s = x.strip()
+                    if s.isascii() and s.isdigit():
+                        try:
+                            items.append(int(s))
+                        except ValueError:
+                            items.append(s)
+                    else:
+                        items.append(s)
                 attrs[k] = items
             except Exception:
                 attrs[k] = v
@@ -168,8 +180,11 @@ def parse_attributes(attr_str: Optional[str]) -> Dict[str, any]:
             attrs[k] = True
         elif v.lower() == 'false':
             attrs[k] = False
-        elif v.isdigit():
-            attrs[k] = int(v)
+        elif v.isascii() and v.isdigit():
+            try:
+                attrs[k] = int(v)
+            except ValueError:
+                attrs[k] = v
         else:
             attrs[k] = v
     return attrs
@@ -193,11 +208,11 @@ def csv_to_markdown_table(csv_content: str, delimiter: str = ',') -> str:
     if not rows:
         return ""
 
-    headers = rows[0]
-    num_cols = len(headers)
+    num_cols = max((len(r) for r in rows), default=0)
     if num_cols == 0:
         return ""
 
+    headers = rows[0] + [""] * (num_cols - len(rows[0]))
     md_lines = []
     # 表头
     md_lines.append("| " + " | ".join(_format_markdown_cell(h) for h in headers) + " |")
@@ -404,11 +419,15 @@ class ImportProcessor:
 
         transformed = _process_outside_fences(content, lambda text: IMPORT_PATTERN.sub(replace_import, text))
         if budget.max_output_bytes is not None:
+            limit = max(0, int(budget.max_output_bytes))
             enc = transformed.encode('utf-8')
-            if len(enc) > budget.max_output_bytes:
+            if len(enc) > limit:
                 tag = b"\n> **[ReadMD \xe9\x94\x99\xe8\xaf\xaf]**: import_budget_exceeded\n"
-                cutoff = max(0, budget.max_output_bytes - len(tag))
-                transformed = enc[:cutoff].decode('utf-8', errors='ignore') + tag.decode('utf-8')
+                if limit >= len(tag):
+                    cutoff = limit - len(tag)
+                    transformed = enc[:cutoff].decode('utf-8', errors='ignore') + tag.decode('utf-8')
+                else:
+                    transformed = tag[:limit].decode('utf-8', errors='ignore')
         return transformed
 
 
