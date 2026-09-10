@@ -5064,15 +5064,46 @@ class Api(object):
             return {'ok': False, 'code': 'pet_runtime_platform_unsupported'}
         if self._pet_launcher.status().get('available'):
             return {'ok': True, 'installed': True}
-        # Packaged applications find the sidecar next to ReadMD.exe; source
-        # checkouts also have the staged build produced by stage-plugin.mjs.
-        roots = [os.path.dirname(sys.executable)] if getattr(sys, 'frozen', False) else []
-        roots.extend([APP_DIR, os.path.join(APP_DIR, 'build')])
+        # Packaged applications find the sidecar next to ReadMD.exe or in parent dirs;
+        # source checkouts also have build/, dist/, and adapter dist.
+        roots = []
+        if getattr(sys, 'frozen', False):
+            exe_dir = os.path.dirname(sys.executable)
+            roots.extend([exe_dir, os.path.dirname(exe_dir)])
+        roots.extend([
+            APP_DIR,
+            os.path.join(APP_DIR, 'build'),
+            os.path.join(APP_DIR, 'dist'),
+            os.path.join(APP_DIR, 'dist', 'ReadMD'),
+            os.path.join(APP_DIR, 'packages', 'readmd-hermes-pet-adapter', 'dist'),
+        ])
+        candidate_names = (
+            'ReadMD-Desktop-Pet.zip',
+            'ReadMD-Desktop-Pet-review.zip',
+            'readmd-hermes-pet-adapter-v0.1.0.zip',
+        )
+        seen_roots = set()
         for root in roots:
-            for name in ('ReadMD-Desktop-Pet.zip', 'ReadMD-Desktop-Pet-review.zip'):
+            if not root or root in seen_roots or not os.path.isdir(root):
+                continue
+            seen_roots.add(root)
+            for name in candidate_names:
                 archive = os.path.join(root, name)
                 if os.path.isfile(archive):
-                    return self.install_pet_plugin(archive, confirm=True)
+                    res = self.install_pet_plugin(archive, confirm=True)
+                    if res.get('ok'):
+                        return res
+            # Fallback scan for any pet zip archive in root
+            try:
+                for entry in os.listdir(root):
+                    if entry.endswith('.zip') and ('pet' in entry.lower() or 'hermes' in entry.lower()):
+                        archive = os.path.join(root, entry)
+                        if os.path.isfile(archive):
+                            res = self.install_pet_plugin(archive, confirm=True)
+                            if res.get('ok'):
+                                return res
+            except OSError:
+                pass
         return {'ok': False, 'code': 'pet_plugin_bundle_missing'}
 
     def configure_pet(self, settings):
