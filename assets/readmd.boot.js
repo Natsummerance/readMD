@@ -12195,7 +12195,7 @@ let petLastPokeTime = 0;
 
 /**
  * 优先级气泡管理器：高优先级气泡展示期间，低优先级消息不可抢占
- * 移植自 stevenjoezhang/live2d-widget (10.9k★) message.ts 调度逻辑
+ * 移植自 stevenjoezhang/live2d-widget (10.9k stars) message.ts 调度逻辑
  */
 function showPetBubble(text, durationMs = 4500, priority = PET_BUBBLE_PRIORITY.LOW_IDLE) {
   const bubble = $('pet-bubble');
@@ -12243,17 +12243,17 @@ function hidePetBubble() {
 function getContextualGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 9) {
-    return '一日之计在于晨，今天也要元气满满地阅读哦！☀️';
+    return petT('pet.greetingEarlyMorning') || '一日之计在于晨，今天也要元气满满地阅读哦！☀️';
   } else if (hour >= 9 && hour < 12) {
-    return '上午专注时光，静心阅读效率更高呢~ ☕';
+    return petT('pet.greetingMorning') || '上午专注时光，静心阅读效率更高呢~ ☕';
   } else if (hour >= 12 && hour < 14) {
-    return '午后小憩片刻，看书也要注意劳逸结合呀 🥪';
+    return petT('pet.greetingNoon') || '午后小憩片刻，看书也要注意劳逸结合呀 🥪';
   } else if (hour >= 14 && hour < 18) {
-    return '下午好！一杯清茶，一本好书，继续探索新知吧 🍵';
+    return petT('pet.greetingAfternoon') || '下午好！一杯清茶，一本好书，继续探索新知吧 🍵';
   } else if (hour >= 18 && hour < 22) {
-    return '晚上好！今晚的阅读清单完成得怎么样了？✨';
+    return petT('pet.greetingEvening') || '晚上好！今晚的阅读清单完成得怎么样了？✨';
   } else {
-    return '夜深了，注意保护视力，早点休息不要太辛苦啦 🌙';
+    return petT('pet.greetingNight') || '夜深了，注意保护视力，早点休息不要太辛苦啦 🌙';
   }
 }
 
@@ -12500,10 +12500,10 @@ function handlePetInteractiveClick() {
   if (petPokeComboCount >= 4) {
     petPokeComboCount = 0;
     const pokeResponses = [
-      '哇！别戳啦别戳啦，在看书呢！🙈',
-      '再戳我就要变成猫咪逃走啦~ 🐾',
-      '哼，一直戳我，是不是想偷懒不读书了？👀',
-      '好啦好啦，知道你在关注我，快看正文吧！📚'
+      petT('pet.pokeQuote1') || '哇！别戳啦别戳啦，在看书呢！🙈',
+      petT('pet.pokeQuote2') || '再戳我就要变成猫咪逃走啦~ 🐾',
+      petT('pet.pokeQuote3') || '哼，一直戳我，是不是想偷懒不读书了？👀',
+      petT('pet.pokeQuote4') || '好啦好啦，知道你在关注我，快看正文吧！📚'
     ];
     const pokeText = pokeResponses[Math.floor(Math.random() * pokeResponses.length)];
     showPetBubble(pokeText, 3500, PET_BUBBLE_PRIORITY.INTERACTION);
@@ -12921,7 +12921,7 @@ function initPetSystem() {
 }
 
 // --------------------------------------------------------------------------
-// Idle & Sleep Cycle FSM (Ported from rullerzhou-afk/clawd-on-desk 6.1k★)
+// Idle & Sleep Cycle FSM (Ported from rullerzhou-afk/clawd-on-desk 6.1k stars)
 // --------------------------------------------------------------------------
 
 const PET_STATE = {
@@ -12946,7 +12946,7 @@ function markPetUserActive() {
       char.classList.add('pet-bounce');
       setTimeout(() => char.classList.remove('pet-bounce'), 1000);
     }
-    showPetBubble('唔……你回来啦！继续一起阅读吧 ✨', 3500, PET_BUBBLE_PRIORITY.LOW_IDLE);
+    showPetBubble(petT('pet.returnQuote') || '唔……你回来啦！继续一起阅读吧 ✨', 3500, PET_BUBBLE_PRIORITY.LOW_IDLE);
   }
   currentPetState = PET_STATE.ACTIVE;
 }
@@ -12977,7 +12977,7 @@ function checkPetIdleState() {
         char.classList.remove('pet-dozing');
         char.classList.add('pet-sleeping');
       }
-      showPetBubble('zZ... 呼……噜…… (睡着了)', 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
+      showPetBubble(petT('pet.sleepQuote1') || 'zZ... 呼……噜…… (睡着了) 💤', 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
     }
   }
   // 4分钟无操作 -> 打瞌睡
@@ -12987,7 +12987,7 @@ function checkPetIdleState() {
       if (char) {
         char.classList.add('pet-dozing');
       }
-      showPetBubble('有点困困的呢…… (揉眼睛)', 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
+      showPetBubble(petT('pet.sleepQuote2') || '有点困困的呢…… (揉眼睛) 🥱', 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
     }
   }
   // 1.5分钟无操作 -> 发呆动作池
@@ -12995,9 +12995,9 @@ function checkPetIdleState() {
     if (currentPetState === PET_STATE.ACTIVE || currentPetState === PET_STATE.IDLE) {
       currentPetState = PET_STATE.BORED;
       const boredQuotes = [
-        '静静地看着你读书~ 🍵',
-        '你在读哪一章呀？我也想瞧瞧 👀',
-        '窗外微风正好，好适合安静看书呀 🍃'
+        petT('pet.idleQuote1') || '静静地看着你读书~ 🍵',
+        petT('pet.idleQuote2') || '你在读哪一章呀？我也想瞧瞧 👀',
+        petT('pet.idleQuote3') || '窗外微风正好，好适合安静看书呀 🍃'
       ];
       const quote = boredQuotes[Math.floor(Math.random() * boredQuotes.length)];
       showPetBubble(quote, 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
@@ -14986,15 +14986,15 @@ async function cancelUpdateDownload() {
       <div class="graph-dialog">
         <div class="graph-header">
           <div class="graph-title-row">
-            <span class="graph-title-icon">🕸️</span>
+            <span class="graph-title-icon"><svg class="graph-title-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="8" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8.5 7.5l7 1.5M7.5 8.5l3.5 7M16.5 10l-3.5 6"/></svg></span>
             <h3 class="graph-title" data-i18n="graph.title">${_t('graph.title')}</h3>
-            <span class="graph-stats-badge" id="graph-stats-badge">0 节点 · 0 关系</span>
+            <span class="graph-stats-badge" id="graph-stats-badge">${_t('graph.statsSimple', {nodes: 0, links: 0}) || '0 节点 · 0 关系'}</span>
           </div>
           <div class="graph-toolbar">
             <button class="graph-tool-btn" id="graph-btn-zoom-in" title="${_t('graph.zoomIn')}">+</button>
             <button class="graph-tool-btn" id="graph-btn-zoom-out" title="${_t('graph.zoomOut')}">-</button>
-            <button class="graph-tool-btn" id="graph-btn-reset" title="${_t('graph.reset')}">⟲</button>
-            <button class="graph-tool-btn graph-close-btn" id="graph-btn-close" title="${_t('toolbar.close')}">✕</button>
+            <button class="graph-tool-btn" id="graph-btn-reset" title="${_t('graph.reset')}">&#x21bb;</button>
+            <button class="graph-tool-btn graph-close-btn" id="graph-btn-close" title="${_t('toolbar.close')}">&times;</button>
           </div>
         </div>
         <div class="graph-body">
@@ -15035,9 +15035,9 @@ async function cancelUpdateDownload() {
     _backlinksPanel.className = 'backlinks-panel hidden';
     _backlinksPanel.innerHTML = `
       <div class="backlinks-header">
-        <span class="backlinks-title-icon">🔗</span>
+        <span class="backlinks-title-icon"><svg class="backlinks-title-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
         <span class="backlinks-title" data-i18n="graph.backlinks">${_t('graph.backlinks', '反向链接')}</span>
-        <button class="backlinks-close-btn" id="backlinks-btn-close">✕</button>
+        <button class="backlinks-close-btn" id="backlinks-btn-close">&times;</button>
       </div>
       <div class="backlinks-content" id="backlinks-content">
         <div class="backlinks-empty">${_t('graph.noLinks', '暂无关联笔记')}</div>
@@ -15390,8 +15390,8 @@ async function cancelUpdateDownload() {
         if (hit) {
           _tooltip.innerHTML = `
             <strong>${_escapeHtml(hit.label)}</strong><br>
-            <span class="muted">${_escapeHtml(hit.path || '（未创建死链）')}</span><br>
-            <span>出链: ${hit.link_count} · 入链: ${hit.backlink_count}</span>
+            <span class="muted">${_escapeHtml(hit.path || (_t('graph.deadlinkUncreated') || '（未创建文档）'))}</span><br>
+            <span>${_t('graph.inOutLinks', {out: hit.link_count, in: hit.backlink_count}) || `出链: ${hit.link_count} · 入链: ${hit.backlink_count}`}</span>
           `;
           _tooltip.style.left = `${sx + 15}px`;
           _tooltip.style.top = `${sy + 15}px`;
@@ -15476,7 +15476,11 @@ async function cancelUpdateDownload() {
       if (data) {
         const badge = _modal.querySelector('#graph-stats-badge');
         if (badge && data.stats) {
-          badge.textContent = `${data.stats.total_nodes} 节点 · ${data.stats.total_edges} 关系 · ${data.stats.deadlinks_count} 死链`;
+          badge.textContent = _t('graph.statsBadge', {
+            nodes: data.stats.total_nodes,
+            edges: data.stats.total_edges,
+            deadlinks: data.stats.deadlinks_count
+          }) || `${data.stats.total_nodes} 节点 · ${data.stats.total_edges} 关系 · ${data.stats.deadlinks_count} 死链`;
         }
         _initSimulation(data);
       }
@@ -15576,7 +15580,7 @@ async function cancelUpdateDownload() {
           html += `
             <div class="backlink-item" data-path="${_escapeHtml(item.source_path)}" data-line="${item.line_no}">
               <div class="backlink-title">${_escapeHtml(title)}</div>
-              <div class="backlink-context">行 ${item.line_no}${item.alias ? ' · ' + _escapeHtml(item.alias) : ''}</div>
+              <div class="backlink-context">${_t('graph.linePrefix', {line: item.line_no}) || ('行 ' + item.line_no)}${item.alias ? ' · ' + _escapeHtml(item.alias) : ''}</div>
             </div>
           `;
         }
@@ -15589,7 +15593,7 @@ async function cancelUpdateDownload() {
           const isDead = !item.target_path;
           html += `
             <div class="backlink-item ${isDead ? 'deadlink' : ''}" data-path="${_escapeHtml(item.target_path || '')}">
-              <div class="backlink-title">${_escapeHtml(target)}${isDead ? ' ⚠️' : ''}</div>
+              <div class="backlink-title">${_escapeHtml(target)}</div>
               <div class="backlink-context">${_escapeHtml(item.alias || '')}</div>
             </div>
           `;

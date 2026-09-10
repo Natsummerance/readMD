@@ -130,7 +130,7 @@ def _make_whisper_notice(path: str, details: str = '未检测到语音转写模�
         f'status: "unprocessed"\n'
         f'---\n\n'
         f'# 音频/视频转写：{title}\n\n'
-        f'> ⚠️ **{details}**\n>\n'
+        f'> **{details}**\n>\n'
         f'> **快速安装指引**：\n'
         f'> 1. **方式一（推荐）**：在 ReadMD 右上角打开「插件中心」，启用或一键安装 `whisper` 插件。\n'
         f'> 2. **方式二（手动 CLI 命令）**：\n'

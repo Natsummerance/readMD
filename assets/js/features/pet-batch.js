@@ -201,7 +201,7 @@ let petLastPokeTime = 0;
 
 /**
  * 优先级气泡管理器：高优先级气泡展示期间，低优先级消息不可抢占
- * 移植自 stevenjoezhang/live2d-widget (10.9k★) message.ts 调度逻辑
+ * 移植自 stevenjoezhang/live2d-widget (10.9k stars) message.ts 调度逻辑
  */
 function showPetBubble(text, durationMs = 4500, priority = PET_BUBBLE_PRIORITY.LOW_IDLE) {
   const bubble = $('pet-bubble');
@@ -249,17 +249,17 @@ function hidePetBubble() {
 function getContextualGreeting() {
   const hour = new Date().getHours();
   if (hour >= 5 && hour < 9) {
-    return '一日之计在于晨，今天也要元气满满地阅读哦！☀️';
+    return petT('pet.greetingEarlyMorning') || '一日之计在于晨，今天也要元气满满地阅读哦！☀️';
   } else if (hour >= 9 && hour < 12) {
-    return '上午专注时光，静心阅读效率更高呢~ ☕';
+    return petT('pet.greetingMorning') || '上午专注时光，静心阅读效率更高呢~ ☕';
   } else if (hour >= 12 && hour < 14) {
-    return '午后小憩片刻，看书也要注意劳逸结合呀 🥪';
+    return petT('pet.greetingNoon') || '午后小憩片刻，看书也要注意劳逸结合呀 🥪';
   } else if (hour >= 14 && hour < 18) {
-    return '下午好！一杯清茶，一本好书，继续探索新知吧 🍵';
+    return petT('pet.greetingAfternoon') || '下午好！一杯清茶，一本好书，继续探索新知吧 🍵';
   } else if (hour >= 18 && hour < 22) {
-    return '晚上好！今晚的阅读清单完成得怎么样了？✨';
+    return petT('pet.greetingEvening') || '晚上好！今晚的阅读清单完成得怎么样了？✨';
   } else {
-    return '夜深了，注意保护视力，早点休息不要太辛苦啦 🌙';
+    return petT('pet.greetingNight') || '夜深了，注意保护视力，早点休息不要太辛苦啦 🌙';
   }
 }
 
@@ -506,10 +506,10 @@ function handlePetInteractiveClick() {
   if (petPokeComboCount >= 4) {
     petPokeComboCount = 0;
     const pokeResponses = [
-      '哇！别戳啦别戳啦，在看书呢！🙈',
-      '再戳我就要变成猫咪逃走啦~ 🐾',
-      '哼，一直戳我，是不是想偷懒不读书了？👀',
-      '好啦好啦，知道你在关注我，快看正文吧！📚'
+      petT('pet.pokeQuote1') || '哇！别戳啦别戳啦，在看书呢！🙈',
+      petT('pet.pokeQuote2') || '再戳我就要变成猫咪逃走啦~ 🐾',
+      petT('pet.pokeQuote3') || '哼，一直戳我，是不是想偷懒不读书了？👀',
+      petT('pet.pokeQuote4') || '好啦好啦，知道你在关注我，快看正文吧！📚'
     ];
     const pokeText = pokeResponses[Math.floor(Math.random() * pokeResponses.length)];
     showPetBubble(pokeText, 3500, PET_BUBBLE_PRIORITY.INTERACTION);
@@ -927,7 +927,7 @@ function initPetSystem() {
 }
 
 // --------------------------------------------------------------------------
-// Idle & Sleep Cycle FSM (Ported from rullerzhou-afk/clawd-on-desk 6.1k★)
+// Idle & Sleep Cycle FSM (Ported from rullerzhou-afk/clawd-on-desk 6.1k stars)
 // --------------------------------------------------------------------------
 
 const PET_STATE = {
@@ -952,7 +952,7 @@ function markPetUserActive() {
       char.classList.add('pet-bounce');
       setTimeout(() => char.classList.remove('pet-bounce'), 1000);
     }
-    showPetBubble('唔……你回来啦！继续一起阅读吧 ✨', 3500, PET_BUBBLE_PRIORITY.LOW_IDLE);
+    showPetBubble(petT('pet.returnQuote') || '唔……你回来啦！继续一起阅读吧 ✨', 3500, PET_BUBBLE_PRIORITY.LOW_IDLE);
   }
   currentPetState = PET_STATE.ACTIVE;
 }
@@ -983,7 +983,7 @@ function checkPetIdleState() {
         char.classList.remove('pet-dozing');
         char.classList.add('pet-sleeping');
       }
-      showPetBubble('zZ... 呼……噜…… (睡着了)', 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
+      showPetBubble(petT('pet.sleepQuote1') || 'zZ... 呼……噜…… (睡着了) 💤', 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
     }
   }
   // 4分钟无操作 -> 打瞌睡
@@ -993,7 +993,7 @@ function checkPetIdleState() {
       if (char) {
         char.classList.add('pet-dozing');
       }
-      showPetBubble('有点困困的呢…… (揉眼睛)', 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
+      showPetBubble(petT('pet.sleepQuote2') || '有点困困的呢…… (揉眼睛) 🥱', 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
     }
   }
   // 1.5分钟无操作 -> 发呆动作池
@@ -1001,9 +1001,9 @@ function checkPetIdleState() {
     if (currentPetState === PET_STATE.ACTIVE || currentPetState === PET_STATE.IDLE) {
       currentPetState = PET_STATE.BORED;
       const boredQuotes = [
-        '静静地看着你读书~ 🍵',
-        '你在读哪一章呀？我也想瞧瞧 👀',
-        '窗外微风正好，好适合安静看书呀 🍃'
+        petT('pet.idleQuote1') || '静静地看着你读书~ 🍵',
+        petT('pet.idleQuote2') || '你在读哪一章呀？我也想瞧瞧 👀',
+        petT('pet.idleQuote3') || '窗外微风正好，好适合安静看书呀 🍃'
       ];
       const quote = boredQuotes[Math.floor(Math.random() * boredQuotes.length)];
       showPetBubble(quote, 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);

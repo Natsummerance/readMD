@@ -60,15 +60,15 @@
       <div class="graph-dialog">
         <div class="graph-header">
           <div class="graph-title-row">
-            <span class="graph-title-icon">🕸️</span>
+            <span class="graph-title-icon"><svg class="graph-title-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="8" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8.5 7.5l7 1.5M7.5 8.5l3.5 7M16.5 10l-3.5 6"/></svg></span>
             <h3 class="graph-title" data-i18n="graph.title">${_t('graph.title')}</h3>
-            <span class="graph-stats-badge" id="graph-stats-badge">0 节点 · 0 关系</span>
+            <span class="graph-stats-badge" id="graph-stats-badge">${_t('graph.statsSimple', {nodes: 0, links: 0}) || '0 节点 · 0 关系'}</span>
           </div>
           <div class="graph-toolbar">
             <button class="graph-tool-btn" id="graph-btn-zoom-in" title="${_t('graph.zoomIn')}">+</button>
             <button class="graph-tool-btn" id="graph-btn-zoom-out" title="${_t('graph.zoomOut')}">-</button>
-            <button class="graph-tool-btn" id="graph-btn-reset" title="${_t('graph.reset')}">⟲</button>
-            <button class="graph-tool-btn graph-close-btn" id="graph-btn-close" title="${_t('toolbar.close')}">✕</button>
+            <button class="graph-tool-btn" id="graph-btn-reset" title="${_t('graph.reset')}">&#x21bb;</button>
+            <button class="graph-tool-btn graph-close-btn" id="graph-btn-close" title="${_t('toolbar.close')}">&times;</button>
           </div>
         </div>
         <div class="graph-body">
@@ -109,9 +109,9 @@
     _backlinksPanel.className = 'backlinks-panel hidden';
     _backlinksPanel.innerHTML = `
       <div class="backlinks-header">
-        <span class="backlinks-title-icon">🔗</span>
+        <span class="backlinks-title-icon"><svg class="backlinks-title-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
         <span class="backlinks-title" data-i18n="graph.backlinks">${_t('graph.backlinks', '反向链接')}</span>
-        <button class="backlinks-close-btn" id="backlinks-btn-close">✕</button>
+        <button class="backlinks-close-btn" id="backlinks-btn-close">&times;</button>
       </div>
       <div class="backlinks-content" id="backlinks-content">
         <div class="backlinks-empty">${_t('graph.noLinks', '暂无关联笔记')}</div>
@@ -464,8 +464,8 @@
         if (hit) {
           _tooltip.innerHTML = `
             <strong>${_escapeHtml(hit.label)}</strong><br>
-            <span class="muted">${_escapeHtml(hit.path || '（未创建死链）')}</span><br>
-            <span>出链: ${hit.link_count} · 入链: ${hit.backlink_count}</span>
+            <span class="muted">${_escapeHtml(hit.path || (_t('graph.deadlinkUncreated') || '（未创建文档）'))}</span><br>
+            <span>${_t('graph.inOutLinks', {out: hit.link_count, in: hit.backlink_count}) || `出链: ${hit.link_count} · 入链: ${hit.backlink_count}`}</span>
           `;
           _tooltip.style.left = `${sx + 15}px`;
           _tooltip.style.top = `${sy + 15}px`;
@@ -550,7 +550,11 @@
       if (data) {
         const badge = _modal.querySelector('#graph-stats-badge');
         if (badge && data.stats) {
-          badge.textContent = `${data.stats.total_nodes} 节点 · ${data.stats.total_edges} 关系 · ${data.stats.deadlinks_count} 死链`;
+          badge.textContent = _t('graph.statsBadge', {
+            nodes: data.stats.total_nodes,
+            edges: data.stats.total_edges,
+            deadlinks: data.stats.deadlinks_count
+          }) || `${data.stats.total_nodes} 节点 · ${data.stats.total_edges} 关系 · ${data.stats.deadlinks_count} 死链`;
         }
         _initSimulation(data);
       }
@@ -650,7 +654,7 @@
           html += `
             <div class="backlink-item" data-path="${_escapeHtml(item.source_path)}" data-line="${item.line_no}">
               <div class="backlink-title">${_escapeHtml(title)}</div>
-              <div class="backlink-context">行 ${item.line_no}${item.alias ? ' · ' + _escapeHtml(item.alias) : ''}</div>
+              <div class="backlink-context">${_t('graph.linePrefix', {line: item.line_no}) || ('行 ' + item.line_no)}${item.alias ? ' · ' + _escapeHtml(item.alias) : ''}</div>
             </div>
           `;
         }
@@ -663,7 +667,7 @@
           const isDead = !item.target_path;
           html += `
             <div class="backlink-item ${isDead ? 'deadlink' : ''}" data-path="${_escapeHtml(item.target_path || '')}">
-              <div class="backlink-title">${_escapeHtml(target)}${isDead ? ' ⚠️' : ''}</div>
+              <div class="backlink-title">${_escapeHtml(target)}</div>
               <div class="backlink-context">${_escapeHtml(item.alias || '')}</div>
             </div>
           `;
