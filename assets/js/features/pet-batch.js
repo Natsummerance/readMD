@@ -165,7 +165,14 @@ async function receivePetBatch(paths) {
   try {
     while (petDropQueue.length) {
       const next = petDropQueue.shift();
-      await handlePetDroppedFiles(next);
+      try {
+        await handlePetDroppedFiles(next);
+      } catch (batchErr) {
+        console.error('Failed to process dropped batch:', batchErr);
+        if (typeof showPetBubble === 'function') {
+          showPetBubble(petT('pet.bubbleBatchFailed', {}, '部分文件处理失败'), 4000, PET_BUBBLE_PRIORITY.CRITICAL);
+        }
+      }
     }
   } finally {
     petDropProcessing = false;
