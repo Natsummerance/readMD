@@ -21,9 +21,11 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import io
 import signal
 import threading
 import time
+import tokenize
 from typing import Any, Dict, List, Optional
 
 try:  # Unix-only resource ceilings; Windows uses process-group teardown below.
@@ -117,7 +119,7 @@ _NETWORK_PATTERNS = (
     re.compile(r'(?i)\bhttps?://'),
 )
 _PATH_ESCAPE_PATTERNS = (
-    re.compile(r'(?i)(?:[A-Za-z]:[\\/]|\\\\[^\\s]+)'),
+    re.compile(r'(?i)(?:(?<![A-Za-z0-9_])[A-Za-z]:[\\/]|\\\\[^\\s]+)'),
     re.compile(r'''(?ix)(?:^|["'\s])/(?:etc|home|root|tmp|var|usr|opt|workspace|mnt|proc|sys)(?:[/\s"']|$)'''),
     re.compile(r'(?i)(?:^|[\"\'\s])\.\.[\\/]'),
     # File/process APIs are denied rather than relying on a caller-provided
@@ -581,6 +583,35 @@ def _cleanup_temp_script(path: Optional[str], script_dir: Optional[str]):
             pass
 
 
+def _strip_literals_and_comments(source: str, lang: str = "python") -> str:
+    norm_lang = str(lang or "python").lower().strip().lstrip('.')
+    if norm_lang in ('python', 'py'):
+        try:
+            tokens = tokenize.tokenize(io.BytesIO(source.encode('utf-8')).readline)
+            parts = []
+            for tok in tokens:
+                if tok.type in (tokenize.STRING, tokenize.COMMENT):
+                    parts.append('\n' * tok.string.count('\n'))
+                else:
+                    parts.append(tok.string)
+            return ' '.join(parts)
+        except Exception:
+            pass
+
+    def _replacer(match):
+        s = match.group(0)
+        return '\n' * s.count('\n')
+
+    pattern = re.compile(
+        r'/\*[\s\S]*?\*/|//[^\n]*|#[^\n]*|'
+        r'"(?:\\.|[^"\\])*"|'
+        r"'(?:\\.|[^'\\])*'|"
+        r'`(?:\\.|[^`\\])*`',
+        re.MULTILINE
+    )
+    return pattern.sub(_replacer, source)
+
+
 def execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = True,
                        timeout: int = EXECUTION_TIMEOUT,
                        cwd: Optional[str] = None) -> Dict[str, Any]:
@@ -592,7 +623,8 @@ def execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tru
     explicitly allowed ReadMD data/temp directory is supplied.
     """
     source = str(code or '')
-    if any(pattern.search(source) for pattern in _NETWORK_PATTERNS):
+    cleaned_source = _strip_literals_and_comments(source, lang=lang)
+    if any(pattern.search(cleaned_source) for pattern in _NETWORK_PATTERNS):
         return {
             "ok": False, "error": "network_not_allowed", "stdout": "",
             "stderr": "network_not_allowed", "images": [], "exit_code": 1,
