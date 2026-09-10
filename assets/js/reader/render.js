@@ -146,7 +146,7 @@ async function loadFile(path, { force = false, browserCopy = null } = {}) {
     const d = await r.json();
     if (!isDocumentLoadCurrent(loadEpoch)) return;
     const isBrowserCopy = force && browserCopy === null
-      ? existingTab.browserCopy === true
+      ? (existingTab ? existingTab.browserCopy === true : false)
       : browserCopy === true;
     const fileFields = {
       mode: 'file',

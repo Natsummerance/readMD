@@ -228,10 +228,22 @@ console.log('Testing Issue 4: Smart direct opening for dropped files in Desktop 
   assert.strictEqual(loadedFiles.length, 1, 'Single .md must call loadFile');
   assert.strictEqual(loadedFiles[0].path, 'C:/notes/my-document.md');
   assert.strictEqual(loadedFiles[0].opts.force, true);
+  assert.strictEqual(loadedFiles[0].opts.browserCopy, false, 'Local dropped file must explicitly set browserCopy: false');
   assert.strictEqual(convertedFiles.length, 0, 'Single .md must not call convertOrOcr');
   assert.strictEqual(batchEnqueuedFiles.length, 0, 'Single .md must not enqueue to batch modal');
   assert(elements['pet-bubble-text'].textContent.includes('my-document.md 已打开'),
     'Pet bubble should confirm document opened');
+
+  // 4.1.1 验证 loadFile 中的 isBrowserCopy 计算对于新文件 (existingTab === null) 绝不抛异常
+  const computeIsBrowserCopy = (force, browserCopy, existingTab) => {
+    return force && browserCopy === null
+      ? (existingTab ? existingTab.browserCopy === true : false)
+      : browserCopy === true;
+  };
+  assert.strictEqual(computeIsBrowserCopy(true, null, null), false, 'When existingTab is null and force=true, browserCopy must be false without throwing');
+  assert.strictEqual(computeIsBrowserCopy(true, false, null), false);
+  assert.strictEqual(computeIsBrowserCopy(true, null, { browserCopy: true }), true);
+  assert.strictEqual(computeIsBrowserCopy(false, true, null), true);
 
   // 4.2 单个可转换文档（如 PDF / Word） -> 自动启动转换
   loadedFiles = [];

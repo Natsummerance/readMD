@@ -112,7 +112,7 @@ async function handlePetDroppedFiles(rawItems) {
     const fileName = filePath.split(/[/\\]/).pop() || filePath;
     showPetBubble(petT('pet.bubbleOpening', { name: fileName }, `正在为你打开 ${fileName}...`), 3000, PET_BUBBLE_PRIORITY.CRITICAL);
     if (typeof loadFile === 'function') {
-      await loadFile(filePath, { force: true });
+      await loadFile(filePath, { force: true, browserCopy: false });
       showPetBubble(petT('pet.bubbleOpened', { name: fileName }, `${fileName} 已打开！`), 3500, PET_BUBBLE_PRIORITY.CRITICAL);
     }
     return;
