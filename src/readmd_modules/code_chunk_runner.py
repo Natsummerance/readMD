@@ -31,6 +31,69 @@ try:  # Unix-only resource ceilings; Windows uses process-group teardown below.
 except ImportError:  # pragma: no cover - exercised on Windows builds
     _resource = None
 
+if sys.platform == 'win32':
+    try:
+        import ctypes
+        from ctypes import wintypes
+        _kernel32 = ctypes.windll.kernel32
+        _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x2000
+        _JobObjectExtendedLimitInformation = 9
+
+        class _JOBOBJECT_BASIC_LIMIT_INFORMATION(ctypes.Structure):
+            _fields_ = [
+                ('PerProcessUserTimeLimit', wintypes.LARGE_INTEGER),
+                ('PerJobUserTimeLimit', wintypes.LARGE_INTEGER),
+                ('LimitFlags', wintypes.DWORD),
+                ('MinimumWorkingSetSize', ctypes.c_size_t),
+                ('MaximumWorkingSetSize', ctypes.c_size_t),
+                ('ActiveProcessLimit', wintypes.DWORD),
+                ('Affinity', ctypes.c_size_t),
+                ('PriorityClass', wintypes.DWORD),
+                ('SchedulingClass', wintypes.DWORD),
+            ]
+
+        class _IO_COUNTERS(ctypes.Structure):
+            _fields_ = [
+                ('ReadOperationCount', ctypes.c_uint64),
+                ('WriteOperationCount', ctypes.c_uint64),
+                ('OtherOperationCount', ctypes.c_uint64),
+                ('ReadTransferCount', ctypes.c_uint64),
+                ('WriteTransferCount', ctypes.c_uint64),
+                ('OtherTransferCount', ctypes.c_uint64),
+            ]
+
+        class _JOBOBJECT_EXTENDED_LIMIT_INFORMATION(ctypes.Structure):
+            _fields_ = [
+                ('BasicLimitInformation', _JOBOBJECT_BASIC_LIMIT_INFORMATION),
+                ('IoInfo', _IO_COUNTERS),
+                ('ProcessMemoryLimit', ctypes.c_size_t),
+                ('JobMemoryLimit', ctypes.c_size_t),
+                ('PeakProcessMemoryLimit', ctypes.c_size_t),
+                ('PeakJobMemoryLimit', ctypes.c_size_t),
+            ]
+
+        def _create_job_object():
+            job = _kernel32.CreateJobObjectW(None, None)
+            if not job:
+                return None
+            info = _JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
+            info.BasicLimitInformation.LimitFlags = _JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+            success = _kernel32.SetInformationJobObject(
+                job, _JobObjectExtendedLimitInformation,
+                ctypes.byref(info), ctypes.sizeof(info)
+            )
+            if not success:
+                _kernel32.CloseHandle(job)
+                return None
+            return job
+    except Exception:
+        _kernel32 = None
+        _create_job_object = lambda: None
+else:
+    _kernel32 = None
+    _create_job_object = lambda: None
+
+
 EXECUTION_TIMEOUT = 10  # 最大超时秒数
 MAX_OUTPUT_CHARS = 200_000
 MAX_TIMEOUT_SECONDS = 10
@@ -129,10 +192,18 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
     env['NODE_OPTIONS'] = '--no-warnings'
     timeout = max(1, min(int(timeout or EXECUTION_TIMEOUT), MAX_TIMEOUT_SECONDS))
 
+    job = None
+    proc = None
+    t_out = None
+    t_err = None
     try:
         popen_kwargs = {}
         if sys.platform == 'win32':
             popen_kwargs['creationflags'] = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0)
+            try:
+                job = _create_job_object()
+            except Exception:
+                job = None
         else:
             popen_kwargs['start_new_session'] = True
             popen_kwargs['preexec_fn'] = lambda: _limit_child_resources(timeout)
@@ -147,6 +218,12 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
             cwd=cwd,
             **popen_kwargs
         )
+
+        if job and _kernel32 and hasattr(proc, '_handle'):
+            try:
+                _kernel32.AssignProcessToJobObject(job, int(proc._handle))
+            except Exception:
+                pass
 
         stdout_chunks: List[str] = []
         stderr_chunks: List[str] = []
@@ -188,16 +265,48 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
             exit_code = proc.wait(timeout=timeout)
         except subprocess.TimeoutExpired:
             timed_out = True
-            if sys.platform == 'win32':
-                subprocess.run(['taskkill', '/T', '/F', '/PID', str(proc.pid)],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                               check=False)
-            else:
-                try:
-                    os.killpg(proc.pid, signal.SIGKILL)
-                except Exception:
-                    proc.kill()
             exit_code = -1
+        except Exception:
+            exit_code = -1
+
+        # 无论正常退出还是超时异常，彻底清理进程树与关闭管道
+        if sys.platform == 'win32':
+            if job and _kernel32:
+                try:
+                    _kernel32.TerminateJobObject(job, 0)
+                except Exception:
+                    pass
+                try:
+                    _kernel32.CloseHandle(job)
+                    job = None
+                except Exception:
+                    pass
+            try:
+                if proc.poll() is None:
+                    subprocess.run(['taskkill', '/T', '/F', '/PID', str(proc.pid)],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                   check=False)
+            except Exception:
+                pass
+        else:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+
+        try:
+            if proc.stdout and not proc.stdout.closed:
+                proc.stdout.close()
+        except Exception:
+            pass
+        try:
+            if proc.stderr and not proc.stderr.closed:
+                proc.stderr.close()
+        except Exception:
+            pass
 
         t_out.join(timeout=1.0)
         t_err.join(timeout=1.0)
@@ -235,6 +344,13 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
             "images": [],
             "exit_code": -1
         }
+    finally:
+        if job and _kernel32:
+            try:
+                _kernel32.CloseHandle(job)
+            except Exception:
+                pass
+
 
 
 def execute_python_chunk(code: str, capture_plot: bool = True,
@@ -464,9 +580,240 @@ def _split_sql_statements(sql: str) -> List[str]:
     return statements
 
 
+def _build_sql_runner_source() -> str:
+    """生成隔离子进程执行 SQL 的轻量脚本源码。"""
+    return f'''# -*- coding: utf-8 -*-
+import sqlite3
+import sys
+import os
+from typing import List
+
+MAX_OUTPUT_CHARS = {MAX_OUTPUT_CHARS}
+MAX_SQL_ROWS = {MAX_SQL_ROWS}
+MAX_CELL_CHARS = 500
+
+def _split_sql_statements(sql: str) -> List[str]:
+    statements = []
+    current = []
+    in_single_quote = False
+    in_double_quote = False
+    in_backtick = False
+    in_line_comment = False
+    in_block_comment = False
+    i = 0
+    n = len(sql)
+    while i < n:
+        ch = sql[i]
+        nxt = sql[i + 1] if i + 1 < n else ''
+        if in_line_comment:
+            current.append(ch)
+            if ch == '\\n':
+                in_line_comment = False
+            i += 1
+            continue
+        if in_block_comment:
+            current.append(ch)
+            if ch == '*' and nxt == '/':
+                current.append(nxt)
+                in_block_comment = False
+                i += 2
+                continue
+            i += 1
+            continue
+        if in_single_quote:
+            current.append(ch)
+            if ch == "'":
+                if nxt == "'":
+                    current.append(nxt)
+                    i += 2
+                    continue
+                in_single_quote = False
+            elif ch == '\\\\' and nxt:
+                current.append(nxt)
+                i += 2
+                continue
+            i += 1
+            continue
+        if in_double_quote:
+            current.append(ch)
+            if ch == '"':
+                if nxt == '"':
+                    current.append(nxt)
+                    i += 2
+                    continue
+                in_double_quote = False
+            elif ch == '\\\\' and nxt:
+                current.append(nxt)
+                i += 2
+                continue
+            i += 1
+            continue
+        if in_backtick:
+            current.append(ch)
+            if ch == '`':
+                in_backtick = False
+            i += 1
+            continue
+        if ch == '-' and nxt == '-':
+            current.append(ch)
+            current.append(nxt)
+            in_line_comment = True
+            i += 2
+            continue
+        elif ch == '/' and nxt == '*':
+            current.append(ch)
+            current.append(nxt)
+            in_block_comment = True
+            i += 2
+            continue
+        elif ch == "'":
+            current.append(ch)
+            in_single_quote = True
+            i += 1
+            continue
+        elif ch == '"':
+            current.append(ch)
+            in_double_quote = True
+            i += 1
+            continue
+        elif ch == '`':
+            current.append(ch)
+            in_backtick = True
+            i += 1
+            continue
+        elif ch == ';':
+            stmt = ''.join(current).strip()
+            if stmt:
+                statements.append(stmt)
+            current = []
+            i += 1
+            continue
+        current.append(ch)
+        i += 1
+    last = ''.join(current).strip()
+    if last:
+        statements.append(last)
+    return statements
+
+def format_cell(val):
+    if val is None:
+        return "NULL"
+    if isinstance(val, (bytes, bytearray, memoryview)):
+        return f"<BLOB {{len(val)}} bytes>"
+    s = str(val)
+    if len(s) > MAX_CELL_CHARS:
+        return s[:MAX_CELL_CHARS - 3] + "..."
+    return s
+
+def run_sql():
+    sql_file = os.path.join(os.path.dirname(__file__), "query.sql")
+    with open(sql_file, "r", encoding="utf-8") as f:
+        code = f.read()
+
+    con = sqlite3.connect(":memory:")
+    cur = con.cursor()
+    statements = _split_sql_statements(code)
+    results = []
+    any_truncated = False
+
+    try:
+        for stmt in statements:
+            if not stmt.strip():
+                continue
+            cur.execute(stmt)
+            if cur.description:
+                headers = [d[0] for d in cur.description]
+                buffered_rows = []
+                truncated_rows = False
+                col_widths = [len(h) for h in headers]
+                total_row_chars = 0
+
+                while True:
+                    batch = cur.fetchmany(100)
+                    if not batch:
+                        break
+                    for row in batch:
+                        formatted = [format_cell(v) for v in row]
+                        for idx, cell in enumerate(formatted):
+                            if len(cell) > col_widths[idx]:
+                                col_widths[idx] = len(cell)
+                        buffered_rows.append(formatted)
+                        total_row_chars += sum(len(c) for c in formatted) + len(formatted) * 3
+                        if len(buffered_rows) >= MAX_SQL_ROWS or total_row_chars >= MAX_OUTPUT_CHARS:
+                            truncated_rows = True
+                            any_truncated = True
+                            break
+                    if truncated_rows:
+                        break
+
+                header_line = " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
+                sep_line = "-+-".join("-" * col_widths[i] for i in range(len(headers)))
+                row_lines = [" | ".join(val.ljust(col_widths[i]) for i, val in enumerate(r)) for r in buffered_rows]
+                table_str = f"{{header_line}}\\n{{sep_line}}\\n" + "\\n".join(row_lines)
+                if truncated_rows:
+                    table_str += f"\\n[Output truncated at {{len(buffered_rows)}} rows]"
+                results.append(table_str)
+            else:
+                results.append(f"Query OK, {{cur.rowcount}} rows affected.")
+        con.commit()
+    except sqlite3.OperationalError as e:
+        sys.stderr.write(str(e))
+        sys.exit(1)
+    except Exception as e:
+        sys.stderr.write(str(e))
+        sys.exit(1)
+    finally:
+        try:
+            con.close()
+        except Exception:
+            pass
+
+    out_text = "\\n\\n".join(results)
+    if any_truncated or len(out_text) > MAX_OUTPUT_CHARS:
+        sys.stderr.write("__READMD_SQL_TRUNCATED__\\n")
+    sys.stdout.write(out_text[:MAX_OUTPUT_CHARS])
+
+if __name__ == '__main__':
+    run_sql()
+'''
+
+
+def _execute_sql_chunk(code: str, cwd: Optional[str] = None, timeout: int = EXECUTION_TIMEOUT) -> Dict[str, Any]:
+    """隔离子进程安全执行 SQL 并进行单元格与累积字符有界流式保护。"""
+    timeout = max(1, min(int(timeout or EXECUTION_TIMEOUT), MAX_TIMEOUT_SECONDS))
+    tmp_script, script_dir = _write_temp_script('.py', _build_sql_runner_source(), cwd)
+    sql_path = os.path.join(script_dir, 'query.sql')
+    with open(sql_path, 'w', encoding='utf-8') as f:
+        f.write(code)
+
+    try:
+        res = _run_process([sys.executable, tmp_script], cwd=cwd, timeout=timeout)
+        res["lang"] = "sql"
+        if not res["ok"]:
+            if res.get("error_code") == "execution_timeout":
+                res["error"] = f"SQL 执行超时 (超过 {timeout} 秒限制)"
+            elif not res.get("error"):
+                res["error"] = f"SQL 执行错误: {res.get('stderr') or 'Unknown error'}"
+            return res
+
+        stderr = res.get("stderr", "")
+        truncated = "__READMD_SQL_TRUNCATED__" in stderr or res.get("warning") == "output_truncated"
+        if "__READMD_SQL_TRUNCATED__" in stderr:
+            res["stderr"] = stderr.replace("__READMD_SQL_TRUNCATED__", "").strip()
+        if truncated:
+            res["warning"] = "output_truncated"
+        return res
+    finally:
+        _cleanup_temp_script(tmp_script, script_dir)
+
+
+execute_sql_chunk = _execute_sql_chunk
+
+
 def _execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = True,
                         timeout: int = EXECUTION_TIMEOUT,
                         cwd: Optional[str] = None) -> Dict[str, Any]:
+
     """Internal dispatcher; ``cwd`` has already passed the sandbox gate."""
     normalized_lang = lang.lower().strip().lstrip('.')
 
@@ -530,100 +877,8 @@ def _execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tr
 
     # 5. SQL 内存与本地 SQLite 调度
     elif normalized_lang in ('sql', 'sqlite', 'sqlite3'):
-        con = None
-        start_time = time.monotonic()
-        deadline = start_time + timeout
-        try:
-            import sqlite3
-            con = sqlite3.connect(":memory:")
+        return _execute_sql_chunk(code, cwd=cwd, timeout=timeout)
 
-            def _sql_progress():
-                return 1 if time.monotonic() > deadline else 0
-
-            con.set_progress_handler(_sql_progress, 500)
-            cur = con.cursor()
-            results = []
-            statements = _split_sql_statements(code)
-
-            for stmt in statements:
-                cur.execute(stmt)
-                if cur.description:
-                    headers = [d[0] for d in cur.description]
-                    rows: List[Any] = []
-                    truncated_rows = False
-                    while True:
-                        batch = cur.fetchmany(500)
-                        if not batch:
-                            break
-                        rows.extend(batch)
-                        if len(rows) >= MAX_SQL_ROWS:
-                            truncated_rows = True
-                            break
-
-                    col_widths = [len(h) for h in headers]
-                    for r in rows:
-                        for idx, val in enumerate(r):
-                            col_widths[idx] = max(col_widths[idx], len(str(val)))
-                    header_line = " | ".join(h.ljust(col_widths[i]) for i, h in enumerate(headers))
-                    sep_line = "-+-".join("-" * col_widths[i] for i in range(len(headers)))
-                    row_lines = [" | ".join(str(val).ljust(col_widths[i]) for i, val in enumerate(r)) for r in rows]
-                    table_str = f"{header_line}\n{sep_line}\n" + "\n".join(row_lines)
-                    if truncated_rows:
-                        table_str += f"\n[Output truncated at {MAX_SQL_ROWS} rows]"
-                    results.append(table_str)
-                else:
-                    results.append(f"Query OK, {cur.rowcount} rows affected.")
-            con.commit()
-            stdout_str = "\n\n".join(results)
-            truncated = len(stdout_str) > MAX_OUTPUT_CHARS
-            return {
-                "ok": True,
-                "error": None,
-                "stdout": stdout_str[:MAX_OUTPUT_CHARS].strip(),
-                "stderr": "",
-                "images": [],
-                "exit_code": 0,
-                "lang": "sql",
-                "warning": "output_truncated" if truncated else None,
-            }
-        except sqlite3.OperationalError as e:
-            is_timeout = "interrupted" in str(e).lower() or time.monotonic() >= deadline
-            if is_timeout:
-                return {
-                    "ok": False,
-                    "error_code": "execution_timeout",
-                    "error": f"SQL 执行超时 (超过 {timeout} 秒限制)",
-                    "stdout": "",
-                    "stderr": str(e),
-                    "images": [],
-                    "exit_code": -1,
-                    "lang": "sql"
-                }
-            return {
-                "ok": False,
-                "error": f"SQL 执行错误: {str(e)}",
-                "stdout": "",
-                "stderr": str(e),
-                "images": [],
-                "exit_code": 1,
-                "lang": "sql"
-            }
-        except Exception as e:
-            return {
-                "ok": False,
-                "error": f"SQL 执行错误: {str(e)}",
-                "stdout": "",
-                "stderr": str(e),
-                "images": [],
-                "exit_code": 1,
-                "lang": "sql"
-            }
-        finally:
-            if con:
-                try:
-                    con.close()
-                except Exception:
-                    pass
 
     # 6. Go 语言调度
     elif normalized_lang in ('go', 'golang'):

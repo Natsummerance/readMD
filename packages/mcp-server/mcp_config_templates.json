@@ -4,7 +4,7 @@
       "readmd": {
         "command": "python",
         "args": [
-          "${workspaceFolder}/packages/mcp-server/readmd_mcp_server.py"
+          "/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"
         ],
         "env": {
           "PYTHONIOENCODING": "utf-8"
@@ -17,8 +17,11 @@
       "readmd": {
         "command": "python",
         "args": [
-          "${workspaceFolder}/packages/mcp-server/readmd_mcp_server.py"
-        ]
+          "/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"
+        ],
+        "env": {
+          "PYTHONIOENCODING": "utf-8"
+        }
       }
     }
   },
@@ -30,7 +33,10 @@
           "command": "python",
           "args": [
             "${workspaceFolder}/packages/mcp-server/readmd_mcp_server.py"
-          ]
+          ],
+          "env": {
+            "PYTHONIOENCODING": "utf-8"
+          }
         }
       }
     }
@@ -40,9 +46,13 @@
       "readmd": {
         "command": "python",
         "args": [
-          "${workspaceFolder}/packages/mcp-server/readmd_mcp_server.py"
-        ]
+          "/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"
+        ],
+        "env": {
+          "PYTHONIOENCODING": "utf-8"
+        }
       }
     }
   }
+
 }

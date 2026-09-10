@@ -22,7 +22,7 @@ class TestReadMDMCPServer(unittest.TestCase):
     def test_tools_list_schema_integrity(self):
         """测试 MCP 工具注册表完整性。"""
         tools = readmd_mcp_server.TOOLS
-        self.assertEqual(len(tools), 17)
+        self.assertEqual(len(tools), 21)
         tool_names = [t["name"] for t in tools]
         expected_names = [
             "readmd_fix_markdown",
@@ -42,9 +42,14 @@ class TestReadMDMCPServer(unittest.TestCase):
             "readmd_export_presentation",
             "readmd_export_epub",
             "readmd_run_code_chunk",
+            "readmd_pdf_audit",
+            "readmd_pdf_preview_edit",
+            "readmd_pdf_apply_edit",
+            "readmd_pdf_rollback",
         ]
         for name in expected_names:
             self.assertIn(name, tool_names)
+
 
     def test_tool_fix_markdown(self):
         """测试 readmd_fix_markdown 工具。"""
@@ -255,6 +260,36 @@ class TestReadMDMCPServer(unittest.TestCase):
             if os.path.exists(tmp_img):
                 os.remove(tmp_img)
 
+    def test_output_target_symlink_rejection(self):
+        """测试 _mcp_output_target 拒绝符号链接目标 (BUG-006)。"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fake_target = os.path.join(tmpdir, "out.md")
+            with patch("os.path.islink", return_value=True):
+                with self.assertRaises(ValueError) as ctx:
+                    readmd_mcp_server._mcp_output_target(fake_target, ".md")
+                self.assertIn("output_target_symlink_denied", str(ctx.exception))
+
+    def test_output_target_parent_symlink_rejection(self):
+        """测试 _mcp_output_target 拒绝包含符号链接的父目录链 (BUG-006)。"""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fake_target = os.path.join(tmpdir, "subdir", "out.md")
+            def fake_islink(path):
+                return os.path.basename(path) == "subdir"
+            with patch("os.path.islink", side_effect=fake_islink):
+                with self.assertRaises(ValueError) as ctx:
+                    readmd_mcp_server._mcp_output_target(fake_target, ".md")
+                self.assertIn("output_target_symlink_denied", str(ctx.exception))
+
+    def test_optional_module_missing_graceful_error(self):
+        """测试可选依赖缺失时返回规范的 MCP 错误响应而非 NameError (BUG-007)。"""
+        with patch.dict(readmd_mcp_server.OPTIONAL_MODULES, {"ocr": None}, clear=False):
+            with patch.dict(readmd_mcp_server.OPTIONAL_ERRORS, {"ocr": "No module named 'tesseract'"}):
+                res = readmd_mcp_server.handle_tool_call("readmd_ocr_to_markdown", {"file_path": "fake.png"})
+                self.assertTrue(res.get("isError", False))
+                text = res["content"][0]["text"]
+                self.assertIn("module_not_available", text)
+
 
 if __name__ == '__main__':
     unittest.main()
+

@@ -9,7 +9,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from src.readmd_core.readmd_fix import fix_markdown, FixResult
+from src.readmd_core.readmd_fix import fix_markdown, FixResult, mask_code_spans, mask_all_code
+
 
 
 class TestReadmdFix(unittest.TestCase):
@@ -92,6 +93,37 @@ class TestReadmdFix(unittest.TestCase):
         self.assertIn("纯文本 4", res.text)
 
 
+    def test_code_span_exact_length_matching(self):
+        """测试行内代码闭合标记长度必须与起始标记严格一致 (BUG-003, CommonMark 6.1)。"""
+        text = "`a`` b`"
+        masked, spans = mask_code_spans(text)
+        self.assertEqual(len(spans), 1)
+        self.assertEqual(spans[0][1], "`a`` b`")
+
+    def test_fence_closing_suffix_and_opening_info_validation(self):
+        """测试代码块闭合围栏尾部不得包含非空白字符，且反引号起始围栏 info string 不得含反引号 (BUG-004, CommonMark 4.5)。"""
+        text = "```python\n#not_a_heading\n```suffix\n#still_inside_code\n```"
+        res = fix_markdown(text)
+        self.assertIn("#still_inside_code", res.text)
+        self.assertNotIn("# still_inside_code", res.text)
+
+        invalid_fence_text = "```python`extra\n#标题未空格\n```"
+        res2 = fix_markdown(invalid_fence_text)
+        self.assertIn("# 标题未空格", res2.text)
+
+    def test_escaped_backtick_not_code_span_start(self):
+        """测试转义反引号不作为行内代码起点，代码跨度内部反斜杠作为字面量 (BUG-005)。"""
+        escaped_text = r"\`not_code\`"
+        masked, spans = mask_code_spans(escaped_text)
+        self.assertEqual(len(spans), 0, "转义反引号被误识别为代码块起点")
+
+        two_slashes = r"\\`real_code\`"
+        masked2, spans2 = mask_code_spans(two_slashes)
+        self.assertEqual(len(spans2), 1)
+        self.assertEqual(spans2[0][1], r"`real_code\`")
+
+
 if __name__ == '__main__':
     unittest.main()
+
 

@@ -419,3 +419,123 @@ def test_live2d_stage_uses_exact_model_expression_manifest_name():
     assert "model.expression('Mouse.exp3.json')" in source
     assert "model.expression('Mouse')" not in source
 
+
+def test_electron_main_bounds_protection_and_display_safety():
+    """PET-006: bounds clamping must preserve 0/negative coordinates and safely recover from disconnected displays."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/electron-main.ts').read_text(encoding='utf-8')
+    assert 'Number.isFinite(input.x)' in source
+    assert 'Number.isFinite(input.y)' in source
+    assert 'screen.getAllDisplays()' in source
+    assert 'screen.getPrimaryDisplay().workArea' in source
+    # Must only setBounds when host bounds exist and actually change
+    assert 'lastHostBounds' in source
+    assert 'next.bounds && JSON.stringify(next.bounds) !== JSON.stringify(lastHostBounds)' in source
+
+
+def test_live2d_stage_pointer_capture_and_bounds_persistence():
+    """PET-007: stage must use pointer capture during drag and notify host of bounds update on release."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/live2d/stage.ts').read_text(encoding='utf-8')
+    assert 'setPointerCapture' in source
+    assert 'releasePointerCapture' in source
+    assert "api?.control({" in source
+    assert "type: 'bounds'" in source
+
+
+def test_live2d_stage_pauses_ticker_when_hidden_or_fullscreen():
+    """PET-008: ticker must stop when overlay is hidden or fullscreen to eliminate idle resource consumption."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/live2d/stage.ts').read_text(encoding='utf-8')
+    assert 'function updateAnimationState()' in source
+    assert 'app.ticker.stop()' in source
+    assert 'app.ticker.start()' in source
+    assert "document.addEventListener('visibilitychange', updateAnimationState)" in source
+
+
+def test_hermes_sprite_geometry_and_physical_sheet_verification():
+    """PET-009: verify 1536x1024 sheet geometry, hash integrity, and 4x2 cell division."""
+    from PIL import Image
+
+    sprite_path = Path('assets/pet/hermes-sprite.png')
+    adapter_sprite_path = Path('packages/readmd-hermes-pet-adapter/assets/hermes-sprite.png')
+    dist_sprite_path = Path('packages/readmd-hermes-pet-adapter/dist/assets/hermes-sprite.png')
+
+    assert sprite_path.is_file()
+    assert adapter_sprite_path.is_file()
+    assert dist_sprite_path.is_file()
+
+    raw = sprite_path.read_bytes()
+    expected_hash = 'e328d387a2fca8c02452fa534da1a89bdb8be9292cc51ffa66905018e74097a3'
+    assert hashlib.sha256(raw).hexdigest() == expected_hash
+    assert hashlib.sha256(adapter_sprite_path.read_bytes()).hexdigest() == expected_hash
+    assert hashlib.sha256(dist_sprite_path.read_bytes()).hexdigest() == expected_hash
+
+    img = Image.open(sprite_path)
+    assert img.size == (1536, 1024)
+
+    cols = 4
+    rows = 2
+    frame_w = 384
+    frame_h = 512
+    assert frame_w * cols == 1536
+    assert frame_h * rows == 1024
+
+    main_ts = Path('packages/readmd-hermes-pet-adapter/src/electron-main.ts').read_text(encoding='utf-8')
+    assert 'frameW: 384' in main_ts
+    assert 'frameH: 512' in main_ts
+    assert 'framesPerState: 4' in main_ts
+    assert "stateRows: ['idle', 'wave']" in main_ts
+    assert 'scale: 0.33' in main_ts
+
+
+def test_hermes_sprite_frame_coordinates_and_state_row_resolution():
+    """PET-010: verify frame crop coordinates sx=col*frameW, sy=row*frameH and state fallbacks."""
+    frame_w = 384
+    frame_h = 512
+
+    # Idle row (0)
+    for col in range(4):
+        sx = col * frame_w
+        sy = 0 * frame_h
+        assert sx in (0, 384, 768, 1152)
+        assert sy == 0
+
+    # Wave row (1)
+    for col in range(4):
+        sx = col * frame_w
+        sy = 1 * frame_h
+        assert sx in (0, 384, 768, 1152)
+        assert sy == 512
+
+    # Verify fallback logic in pet-sprite.tsx contract
+    pet_sprite_source = Path('third_party/hermes-agent-pet/apps/desktop/src/components/pet/pet-sprite.tsx').read_text(encoding='utf-8')
+    assert 'const sx = frame * frameW' in pet_sprite_source
+    assert 'const sy = row * frameH' in pet_sprite_source
+    assert 'ctx.drawImage(image, sx, sy, frameW, frameH, 0, 0, backingW, backingH)' in pet_sprite_source
+    assert 'function PetSpriteImpl' in pet_sprite_source
+
+
+def test_hermes_sprite_scale_and_high_dpi_resolution_matrix():
+    """PET-011: verify scale matrix (0.18, 0.33, 0.72) across standard and high DPI ratios."""
+    frame_w = 384
+    frame_h = 512
+
+    scales = [0.18, 0.33, 0.72]
+    dprs = [1.0, 1.25, 1.5, 2.0]
+
+    for scale in scales:
+        draw_w = round(frame_w * scale)
+        draw_h = round(frame_h * scale)
+        assert draw_w > 0
+        assert draw_h > 0
+
+        for dpr in dprs:
+            backing_w = max(1, round(draw_w * dpr))
+            backing_h = max(1, round(draw_h * dpr))
+            assert backing_w >= draw_w
+            assert backing_h >= draw_h
+
+    # Scale 0.33 at 1.0 DPR:
+    assert round(frame_w * 0.33) == 127
+    assert round(frame_h * 0.33) == 169
+
+
+

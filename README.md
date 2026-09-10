@@ -109,18 +109,40 @@ ReadMD 解决的是长期资料库里的实际问题：大文件能继续读，�
 - **核心功能**：打开 Markdown 文件点击右上角书本图标开启同步预览；右键菜单支持一键自动修复语法错误与转换为 LaTeX 源码。
 
 ### 2. MCP (Model Context Protocol) Server 配置
-直接下载解压 [`readmd-mcp-server-2.3.9.zip`](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd-mcp-server-2.3.9.zip)，在 Claude Desktop、Cursor、Antigravity 与 Cline 中配置：
+直接下载解压 [`readmd-mcp-server-2.3.9.zip`](https://github.com/Natsummerance/readMD/releases/download/v2.3.9/readmd-mcp-server-2.3.9.zip)，在 Claude Desktop、Cursor、Antigravity 与 Cline 中配置（请将 `args` 中的路径替换为本机解压的**绝对路径**）：
 
+**Windows**:
 ```json
 {
- "mcpServers": {
- "readmd": {
- "command": "python",
- "args": ["packages/mcp-server/readmd_mcp_server.py"]
- }
- }
+  "mcpServers": {
+    "readmd": {
+      "command": "python",
+      "args": ["C:\\path\\to\\readmd\\packages\\mcp-server\\readmd_mcp_server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
 }
 ```
+
+**macOS / Linux**:
+```json
+{
+  "mcpServers": {
+    "readmd": {
+      "command": "python3",
+      "args": ["/path/to/readmd/packages/mcp-server/readmd_mcp_server.py"],
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      }
+    }
+  }
+}
+```
+
+> **注意**：必须使用脚本的完整绝对路径，不能使用相对路径；Windows 路径中的反斜杠必须写为 `\\` 或改用正斜杠 `/`。推荐配置 `PYTHONIOENCODING=utf-8` 以确保跨平台编码一致。
+
 
 ---
 

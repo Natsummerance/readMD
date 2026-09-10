@@ -98,6 +98,16 @@ def _looks_like_code_indent(line):
 
 # ---------------------------------------------------------------- 代码遮蔽
 
+def _escaped(s, pos):
+    """判断 pos 位置的字符是否被奇数个前置反斜杠转义。"""
+    count = 0
+    k = pos - 1
+    while k >= 0 and s[k] == '\\':
+        count += 1
+        k -= 1
+    return count % 2 == 1
+
+
 def mask_code_spans(s, start_idx=0):
     """把行内代码 `` `...` `` 替换为占位符，避免后续修复误伤。"""
     if '`' not in s:
@@ -108,9 +118,13 @@ def mask_code_spans(s, start_idx=0):
     n = len(s)
     idx = start_idx
     while i < n:
-        if s[i] != '`':
-            j = s.find('`', i)
-            if j == -1:
+        if s[i] != '`' or _escaped(s, i):
+            j = i + 1 if s[i] == '`' else i
+            while j < n:
+                if s[j] == '`' and not _escaped(s, j):
+                    break
+                j += 1
+            if j >= n:
                 out.append(s[i:])
                 break
             out.append(s[i:j])
@@ -128,7 +142,8 @@ def mask_code_spans(s, start_idx=0):
             e = k
             while e < n and s[e] == '`':
                 e += 1
-            if e - k >= run_len:
+            # CommonMark 6.1: 行内代码闭合标记长度必须严格等于起始标记长度
+            if e - k == run_len:
                 found = e
                 break
             m = e
@@ -159,7 +174,8 @@ def mask_all_code(text):
         line = lines[i]
         if fence:
             m = _FENCE_RE.match(line)
-            if m and m.group(2)[0] == fence[0] and len(m.group(2)) >= fence[1]:
+            # CommonMark 4.5: 闭合围栏必须使用相同字符且长度>=起始围栏，且尾部只能有空白
+            if m and m.group(2)[0] == fence[0] and len(m.group(2)) >= fence[1] and not m.group(3).strip():
                 fence = None
             ph = '\x1aF%d\x1a' % len(spans)
             spans.append((ph, line))
@@ -167,18 +183,23 @@ def mask_all_code(text):
             i += 1
             continue
         m = _FENCE_RE.match(line)
+        # CommonMark 4.5: 反引号起始围栏的 info string 不得包含反引号
         if m and m.group(2)[0] in ('`', '~'):
-            fence = (m.group(2)[0], len(m.group(2)))
-            ph = '\x1aF%d\x1a' % len(spans)
-            spans.append((ph, line))
-            out.append(ph)
-            i += 1
-            continue
+            if m.group(2)[0] == '`' and '`' in m.group(3):
+                pass
+            else:
+                fence = (m.group(2)[0], len(m.group(2)))
+                ph = '\x1aF%d\x1a' % len(spans)
+                spans.append((ph, line))
+                out.append(ph)
+                i += 1
+                continue
         masked_line, line_spans = mask_code_spans(line, start_idx=len(spans))
         spans.extend(line_spans)
         out.append(masked_line)
         i += 1
     return '\n'.join(out), spans
+
 
 
 _RESTORE_RE = re.compile(r'\x1a[A-Za-z0-9_]+\x1a')

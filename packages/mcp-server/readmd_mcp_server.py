@@ -37,21 +37,76 @@ ROOT_DIR = next((candidate for candidate in _ROOT_CANDIDATES
 if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
+# 核心服务基座依赖（缺失则 MCP 无法启动）
 try:
-    import src.readmd_modules as RM
     from src.readmd_core import readmd_fix
     from src.readmd_core.toc_engine import process_toc_markers, generate_toc_markdown, extract_headings
-    from src.readmd_modules import bibtex, convert, latex2omml, mdexport, ocr, pdf_editor, texmd, txtmd, web
     from src.readmd_modules.import_processor import process_markdown_imports
-    from src.readmd_modules.mdexport.presentation_render import render_presentation_html
-    from src.readmd_modules.mdexport.epub_render import export_epub
     from src.readmd_modules.code_chunk_runner import execute_python_chunk, execute_code_chunk
     from src.readmd_modules.skills import SkillRegistry, SkillError, default_skill_roots
     from src.readmd_core.service import ReadMDCoreService
     from src.readmd_core import upstream as upstream_sources
     from src.readmd_core.config import VERSION, HISTORY_FILE
+    import src.readmd_modules as RM
 except ImportError as e:
-    logging.warning("ReadMD modules import warning in MCP server: %s", e)
+    sys.stderr.write(f"[ReadMD MCP] Fatal: 核心依赖缺失，服务无法启动: {e}\n")
+    raise SystemExit(1)
+
+# 可选模块与扩展工具：独立导入与状态注册，缺失时不阻塞服务启动，调用时返回标准化错误响应
+OPTIONAL_MODULES: Dict[str, Any] = {}
+OPTIONAL_ERRORS: Dict[str, str] = {}
+
+
+def _load_optional(name: str, loader):
+    try:
+        mod = loader()
+        OPTIONAL_MODULES[name] = mod
+        return mod
+    except Exception as exc:
+        OPTIONAL_MODULES[name] = None
+        OPTIONAL_ERRORS[name] = str(exc)
+        logging.warning("ReadMD optional module '%s' not available: %s", name, exc)
+        return None
+
+
+bibtex = _load_optional("bibtex", lambda: __import__("src.readmd_modules.bibtex", fromlist=["bibtex"]))
+convert = _load_optional("convert", lambda: __import__("src.readmd_modules.convert", fromlist=["convert"]))
+latex2omml = _load_optional("latex2omml", lambda: __import__("src.readmd_modules.latex2omml", fromlist=["latex2omml"]))
+mdexport = _load_optional("mdexport", lambda: __import__("src.readmd_modules.mdexport", fromlist=["mdexport"]))
+ocr = _load_optional("ocr", lambda: __import__("src.readmd_modules.ocr", fromlist=["ocr"]))
+pdf_editor = _load_optional("pdf_editor", lambda: __import__("src.readmd_modules.pdf_editor", fromlist=["pdf_editor"]))
+texmd = _load_optional("texmd", lambda: __import__("src.readmd_modules.texmd", fromlist=["texmd"]))
+txtmd = _load_optional("txtmd", lambda: __import__("src.readmd_modules.txtmd", fromlist=["txtmd"]))
+web = _load_optional("web", lambda: __import__("src.readmd_modules.web", fromlist=["web"]))
+
+_presentation_mod = _load_optional("presentation_render", lambda: __import__("src.readmd_modules.mdexport.presentation_render", fromlist=["render_presentation_html"]))
+render_presentation_html = getattr(_presentation_mod, "render_presentation_html", None) if _presentation_mod else None
+
+_epub_mod = _load_optional("epub_render", lambda: __import__("src.readmd_modules.mdexport.epub_render", fromlist=["export_epub"]))
+export_epub = getattr(_epub_mod, "export_epub", None) if _epub_mod else None
+
+
+def _check_optional_module(name: str, mod_obj: Any) -> Optional[Dict[str, Any]]:
+    """检查可选模块是否可用，不可用时返回标准 MCP 错误字典。"""
+    active = OPTIONAL_MODULES.get(name) if name in OPTIONAL_MODULES else mod_obj
+    if active is None or mod_obj is None:
+        reason = OPTIONAL_ERRORS.get(name, "module_not_installed")
+        return {
+            "isError": True,
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps({
+                        "ok": False,
+                        "error_code": "module_not_available",
+                        "module": name,
+                        "error": f"可选工具模块 '{name}' 当前不可用 ({reason})，请先安装相关可选依赖"
+                    }, ensure_ascii=False, indent=2)
+                }
+            ]
+        }
+    return None
+
 
 # Workflow metadata is deliberately kept separate from instructions.  The
 # registry below reads the same built-in/user/project Skills as the desktop
@@ -86,23 +141,42 @@ def _mcp_output_target(raw_path: Any, suffix: str, overwrite: bool = False) -> s
 
     MCP callers may choose the destination, but the server must never turn an
     omitted/relative path into the current working directory or silently
-    replace an existing file.  Realpath normalization also makes symlinked
-    targets fail closed through the regular-file check below.
+    replace an existing file. Symlinks are strictly denied to prevent bypasses.
     """
     raw = os.fspath(raw_path or "")
     if not raw or "\x00" in raw or not os.path.isabs(raw):
         raise ValueError("output_path_must_be_absolute")
-    target = os.path.realpath(os.path.abspath(raw))
-    if not target.lower().endswith(str(suffix).lower()):
+
+    abs_raw = os.path.abspath(raw)
+
+    # BUG-006: 严格符号链接拒绝策略。在 realpath 解析前检查目标本身与父级目录链
+    if os.path.islink(abs_raw):
+        raise ValueError("output_target_symlink_denied")
+
+    curr = os.path.dirname(abs_raw)
+    while curr and curr != os.path.dirname(curr):
+        if os.path.islink(curr):
+            raise ValueError("output_target_symlink_denied")
+        curr = os.path.dirname(curr)
+
+    if not abs_raw.lower().endswith(str(suffix).lower()):
         raise ValueError("invalid_output_extension")
+
+    target = os.path.realpath(abs_raw)
+    if os.path.islink(target):
+        raise ValueError("output_target_symlink_denied")
+
     parent = os.path.dirname(target)
     if not os.path.isdir(parent):
         raise ValueError("output_directory_not_found")
+    if os.path.lexists(abs_raw) and not os.path.isfile(abs_raw):
+        raise ValueError("output_target_not_regular")
     if os.path.lexists(target) and not os.path.isfile(target):
         raise ValueError("output_target_not_regular")
-    if os.path.isfile(target) and not overwrite:
+    if (os.path.isfile(abs_raw) or os.path.isfile(target)) and not overwrite:
         raise FileExistsError("output_exists")
     return target
+
 
 
 def _mcp_error(code: str) -> Dict[str, Any]:
@@ -491,20 +565,32 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
 
             ext = os.path.splitext(fp)[1].lower()
             if ext == '.tex':
+                err = _check_optional_module("texmd", texmd)
+                if err:
+                    return err
                 with open(fp, 'r', encoding='utf-8', errors='replace') as f:
                     raw_tex = f.read()
                 md = texmd.latex_to_markdown(raw_tex)
                 return {"content": [{"type": "text", "text": md}]}
             elif ext == '.txt':
+                err = _check_optional_module("txtmd", txtmd)
+                if err:
+                    return err
                 with open(fp, 'r', encoding='utf-8', errors='replace') as f:
                     raw_txt = f.read()
                 md, _ = txtmd.to_markdown(raw_txt)
                 return {"content": [{"type": "text", "text": md}]}
             else:
+                err = _check_optional_module("convert", convert)
+                if err:
+                    return err
                 md = convert.to_markdown(fp)
                 return {"content": [{"type": "text", "text": md}]}
 
         elif name == "readmd_web_to_markdown":
+            err = _check_optional_module("web", web)
+            if err:
+                return err
             target_url = str(args.get("url", "")).strip()
             if not target_url.startswith(('http://', 'https://')):
                 return {"isError": True, "content": [{"type": "text", "text": "URL 必须以 http:// 或 https:// 开头"}]}
@@ -526,6 +612,9 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
             }
 
         elif name == "readmd_ocr_to_markdown":
+            err = _check_optional_module("ocr", ocr)
+            if err:
+                return err
             fp = os.path.abspath(str(args.get("file_path", "")))
             if not os.path.isfile(fp):
                 return {"isError": True, "content": [{"type": "text", "text": f"文件不存在: {fp}"}]}
@@ -549,11 +638,17 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
                 return _mcp_error(str(exc))
 
             if fmt == 'tex':
+                err = _check_optional_module("texmd", texmd)
+                if err:
+                    return err
                 tex = texmd.markdown_to_latex(md_content, title=title)
                 with open(out_path, 'w', encoding='utf-8') as f:
                     f.write(tex)
                 return {"content": [{"type": "text", "text": f"已成功编译并导出 LaTeX 到: {out_path}"}]}
 
+            err = _check_optional_module("mdexport", mdexport)
+            if err:
+                return err
             style = mdexport.styles.preset_style(preset)
             res = mdexport.export(
                 fmt=fmt,
@@ -579,22 +674,34 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
             }
 
         elif name == "readmd_latex_to_md":
+            err = _check_optional_module("texmd", texmd)
+            if err:
+                return err
             latex_content = str(args.get("latex_content", ""))
             md = texmd.latex_to_markdown(latex_content)
             return {"content": [{"type": "text", "text": md}]}
 
         elif name == "readmd_md_to_latex":
+            err = _check_optional_module("texmd", texmd)
+            if err:
+                return err
             md_content = str(args.get("markdown_content", ""))
             title = str(args.get("doc_title", "ReadMD Document"))
             tex = texmd.markdown_to_latex(md_content, title=title)
             return {"content": [{"type": "text", "text": tex}]}
 
         elif name == "readmd_parse_bibtex":
+            err = _check_optional_module("bibtex", bibtex)
+            if err:
+                return err
             bp = str(args.get("bib_file_path", ""))
             res = bibtex.find_and_load_bib_for_file(bp)
             return {"content": [{"type": "text", "text": json.dumps(res, ensure_ascii=False, indent=2)}]}
 
         elif name == "readmd_latex_to_omml":
+            err = _check_optional_module("latex2omml", latex2omml)
+            if err:
+                return err
             formula = str(args.get("latex_formula", ""))
             omml = latex2omml.latex_to_omml(formula)
             return {"content": [{"type": "text", "text": omml}]}
@@ -710,6 +817,9 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
             return {"content": [{"type": "text", "text": toc_md}]}
 
         elif name == "readmd_export_presentation":
+            err = _check_optional_module("presentation_render", render_presentation_html)
+            if err:
+                return err
             md_content = str(args.get("markdown_content", ""))
             title = str(args.get("title", "ReadMD Presentation"))
             theme = str(args.get("theme", "black"))
@@ -738,6 +848,9 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
             }
 
         elif name == "readmd_export_epub":
+            err = _check_optional_module("epub_render", export_epub)
+            if err:
+                return err
             md_content = str(args.get("markdown_content", ""))
             title = str(args.get("title", "ReadMD 电子书"))
             author = str(args.get("author", "ReadMD Author"))
@@ -778,6 +891,9 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
             }
 
         elif name == "readmd_pdf_audit":
+            err = _check_optional_module("pdf_editor", pdf_editor)
+            if err:
+                return err
             pdf_path = str(args.get("pdf_path", ""))
             page_num = args.get("page_num")
             if page_num is not None:
@@ -787,6 +903,9 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
             return {"content": [{"type": "text", "text": json.dumps(res, ensure_ascii=False, indent=2)}]}
 
         elif name == "readmd_pdf_preview_edit":
+            err = _check_optional_module("pdf_editor", pdf_editor)
+            if err:
+                return err
             pdf_path = str(args.get("pdf_path", ""))
             edits = args.get("edits", [])
             page_num = int(args.get("page_num", 0))
@@ -796,6 +915,9 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
             return {"content": [{"type": "text", "text": json.dumps(res, ensure_ascii=False, indent=2)}]}
 
         elif name == "readmd_pdf_apply_edit":
+            err = _check_optional_module("pdf_editor", pdf_editor)
+            if err:
+                return err
             pdf_path = str(args.get("pdf_path", ""))
             edits = args.get("edits", [])
             page_num = int(args.get("page_num", 0))
@@ -806,9 +928,13 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
             return {"content": [{"type": "text", "text": json.dumps(res, ensure_ascii=False, indent=2)}]}
 
         elif name == "readmd_pdf_rollback":
+            err = _check_optional_module("pdf_editor", pdf_editor)
+            if err:
+                return err
             pdf_path = str(args.get("pdf_path", ""))
             res = pdf_editor.rollback(pdf_path)
             return {"content": [{"type": "text", "text": json.dumps(res, ensure_ascii=False, indent=2)}]}
+
 
         return {"isError": True, "content": [{"type": "text", "text": f"未知的工具名称: {name}"}]}
 

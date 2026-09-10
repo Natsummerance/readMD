@@ -81,30 +81,98 @@ async function requestConfigurePet(config) {
 // File Batch Drop & Process Bridge
 // --------------------------------------------------------------------------
 
-async function receivePetBatch(paths) {
-  const safePaths = (paths || []).filter(path => typeof path === 'string' && path);
-  if (!safePaths.length) return;
-  petBatchInbox.push(safePaths);
-  if (petBatchConfirming) return;
-  petBatchConfirming = true;
-  try {
-    while (petBatchInbox.length) {
-      const next = petBatchInbox.shift();
-      const confirmed = typeof confirmAction === 'function' ? await confirmAction({
-        title: petT('batch.title', undefined, '批量转换'),
-        message: petT('batch.note', undefined, '确定将文件加入转换队列吗？'),
-        confirmText: petT('dialog.confirm', undefined, '确定'),
-        cancelText: petT('dialog.cancel', undefined, '取消'),
-      }) : true;
-      if (confirmed && typeof enqueueBatchFiles === 'function') {
-        await enqueueBatchFiles(next, false);
-      }
+let petDropQueue = [];
+let petDropProcessing = false;
+
+async function handlePetDroppedFiles(rawItems) {
+  if (!rawItems || !rawItems.length) return;
+  const paths = [];
+  for (const item of rawItems) {
+    if (typeof item === 'string' && item) {
+      paths.push(item);
+    } else if (item && typeof item === 'object') {
+      const p = item.path ? item.path : (typeof uploadFile === 'function' ? await uploadFile(item) : null);
+      if (p) paths.push(p);
     }
-  } finally {
-    petBatchConfirming = false;
+  }
+  if (!paths.length) return;
+
+  const isConvert = (p) => {
+    const isBin = typeof CONVERT_BINARY_RE !== 'undefined' ? CONVERT_BINARY_RE.test(p) : /\.(docx?|pptx?|xlsx?|pdf|epub|mobi|rtf|odt)$/i.test(p);
+    const isImg = typeof IMG_RE !== 'undefined' ? IMG_RE.test(p) : /\.(png|jpe?g|bmp|webp|gif|tiff?)$/i.test(p);
+    return isBin || isImg;
+  };
+
+  const convertFiles = paths.filter(isConvert);
+  const textFiles = paths.filter(p => !isConvert(p));
+
+  // 1. 单个 Markdown / 纯文本 / 代码文件 -> 直接在阅读器中加载打开
+  if (textFiles.length === 1 && convertFiles.length === 0) {
+    const filePath = textFiles[0];
+    const fileName = filePath.split(/[/\\]/).pop() || filePath;
+    showPetBubble(petT('pet.bubbleOpening', { name: fileName }, `正在为你打开 ${fileName}...`), 3000, PET_BUBBLE_PRIORITY.CRITICAL);
+    if (typeof loadFile === 'function') {
+      await loadFile(filePath, { force: true });
+      showPetBubble(petT('pet.bubbleOpened', { name: fileName }, `${fileName} 已打开！`), 3500, PET_BUBBLE_PRIORITY.CRITICAL);
+    }
+    return;
+  }
+
+  // 2. 单个需转换/OCR文档（PDF, Word, 图片等） -> 自动启动转换并直接打开阅读
+  if (convertFiles.length === 1 && textFiles.length === 0) {
+    const filePath = convertFiles[0];
+    const fileName = filePath.split(/[/\\]/).pop() || filePath;
+    showPetBubble(petT('pet.bubbleConverting', { name: fileName }, `正在为你转换并打开 ${fileName}...`), 4000, PET_BUBBLE_PRIORITY.CRITICAL);
+    if (typeof convertOrOcr === 'function') {
+      convertOrOcr(filePath, 'convert');
+    } else if (typeof enqueueBatchFiles === 'function') {
+      await enqueueBatchFiles([filePath], false);
+    }
+    return;
+  }
+
+  // 3. 多个纯文本 / Markdown 文件 -> 多标签页依次直接打开
+  if (textFiles.length > 1 && convertFiles.length === 0) {
+    showPetBubble(petT('pet.bubbleOpeningMulti', { count: textFiles.length }, `正在为你打开 ${textFiles.length} 篇文档...`), 3500, PET_BUBBLE_PRIORITY.CRITICAL);
+    if (typeof loadFile === 'function') {
+      for (const p of textFiles) {
+        await loadFile(p);
+      }
+      showPetBubble(petT('pet.bubbleOpenedMulti', { count: textFiles.length }, `已全部打开 ${textFiles.length} 篇文档！`), 3500, PET_BUBBLE_PRIORITY.CRITICAL);
+    }
+    return;
+  }
+
+  // 4. 包含需转换的多个文档或混合文档：文本文件先打开，转换文件进批量工作台
+  if (textFiles.length > 0 && typeof loadFile === 'function') {
+    for (const p of textFiles) {
+      await loadFile(p);
+    }
+  }
+
+  if (convertFiles.length > 0 && typeof enqueueBatchFiles === 'function') {
+    showPetBubble(petT('pet.bubbleBatchConverting', { count: convertFiles.length }, `已将 ${convertFiles.length} 个文档加入批量转换工作台`), 4000, PET_BUBBLE_PRIORITY.CRITICAL);
+    await enqueueBatchFiles(convertFiles, false);
   }
 }
 
+async function receivePetBatch(paths) {
+  const safePaths = (paths || []).filter(path => typeof path === 'string' && path);
+  if (!safePaths.length) return;
+  petDropQueue.push(safePaths);
+  if (petDropProcessing) return;
+  petDropProcessing = true;
+  try {
+    while (petDropQueue.length) {
+      const next = petDropQueue.shift();
+      await handlePetDroppedFiles(next);
+    }
+  } finally {
+    petDropProcessing = false;
+  }
+}
+
+window.handlePetDroppedFiles = handlePetDroppedFiles;
 window.receivePetBatch = receivePetBatch;
 
 // --------------------------------------------------------------------------
@@ -387,13 +455,7 @@ function initPetDirectManipulation() {
 
     const dt = e.dataTransfer;
     if (dt && dt.files && dt.files.length) {
-      showPetBubble(petT('pet.bubbleDropReceived') || '收到文件！正在为你开启极速转换...', 4000, PET_BUBBLE_PRIORITY.CRITICAL);
-      if (typeof enqueueBatchFiles === 'function') {
-        await enqueueBatchFiles(Array.from(dt.files), false);
-      } else {
-        const paths = Array.from(dt.files).map(f => f.path || f.name).filter(Boolean);
-        await receivePetBatch(paths);
-      }
+      await handlePetDroppedFiles(Array.from(dt.files));
     }
   });
 

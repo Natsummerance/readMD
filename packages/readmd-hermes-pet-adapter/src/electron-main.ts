@@ -2,7 +2,7 @@
 // semantics stay in the immutable Hermes source snapshot.
 import fs from 'node:fs'
 import path from 'node:path'
-import { app, BrowserWindow, clipboard, ipcMain } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, screen } from 'electron'
 import { registerPetOverlayIpc } from '../../../third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc'
 
 type Bounds = { x?: number; y?: number; width?: number; height?: number }
@@ -31,6 +31,7 @@ let bridgeTimer: NodeJS.Timeout | undefined
 let lastBridgeContents = ''
 let fallbackSpriteInfo: Record<string, unknown> | undefined
 let lastRenderer: string | undefined
+let lastHostBounds: Bounds | undefined
 
 function getFallbackSpriteInfo(): Record<string, unknown> {
   if (fallbackSpriteInfo) return fallbackSpriteInfo
@@ -73,7 +74,29 @@ function normalizeState(payload: RuntimeState = {}): RuntimeState {
 function clampBounds(input: Bounds = {}): Required<Bounds> {
   const width = Math.max(240, Math.min(640, Math.round(Number(input.width) || 300)))
   const height = Math.max(300, Math.min(720, Math.round(Number(input.height) || 420)))
-  return { width, height, x: Math.round(Number(input.x) || 72), y: Math.round(Number(input.y) || 72) }
+  let x = Number.isFinite(input.x) ? Math.round(Number(input.x)) : 72
+  let y = Number.isFinite(input.y) ? Math.round(Number(input.y)) : 72
+
+  if (app.isReady()) {
+    try {
+      const displays = screen.getAllDisplays()
+      const isVisible = displays.some(display => {
+        const { x: dx, y: dy, width: dw, height: dh } = display.workArea
+        return (
+          x + width >= dx + 40 &&
+          x <= dx + dw - 40 &&
+          y + height >= dy + 40 &&
+          y <= dy + dh - 40
+        )
+      })
+      if (!isVisible && displays.length > 0) {
+        const primary = screen.getPrimaryDisplay().workArea
+        x = primary.x + Math.max(12, primary.width - width - 24)
+        y = primary.y + Math.max(12, primary.height - height - 24)
+      }
+    } catch { /* screen API unavailable */ }
+  }
+  return { width, height, x, y }
 }
 
 function currentOpacity(): number {
@@ -169,10 +192,14 @@ function pollBridge(): void {
     const renderer = typeof next.renderer === 'string' ? next.renderer : undefined
     if (!overlay || overlay.isDestroyed()) {
       lastRenderer = renderer
+      lastHostBounds = next.bounds ? { ...next.bounds } : undefined
       openPetOverlay(next.bounds, renderer)
       return
     }
-    overlay.setBounds(clampBounds(next.bounds || {}))
+    if (next.bounds && JSON.stringify(next.bounds) !== JSON.stringify(lastHostBounds)) {
+      lastHostBounds = { ...next.bounds }
+      overlay.setBounds(clampBounds({ ...overlay.getBounds(), ...next.bounds }))
+    }
     if (next.fullscreen === true) overlay.hide()
     else overlay.showInactive()
     if (renderer !== lastRenderer) {

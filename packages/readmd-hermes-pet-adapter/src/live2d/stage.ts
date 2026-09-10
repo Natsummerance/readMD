@@ -99,7 +99,7 @@ async function mountLive2dStage(): Promise<void> {
 
   let state: OverlayState = {}
   let bounds = { x: 0, y: 0, width: 300, height: 420 }
-  let dragging: { startX: number; startY: number; bounds: typeof bounds } | undefined
+  let dragging: { startX: number; startY: number; pointerId: number; target?: Element; bounds: typeof bounds } | undefined
   let clickTimer: number | undefined
   let ignoringMouse = true
 
@@ -111,10 +111,20 @@ async function mountLive2dStage(): Promise<void> {
     model.y = app.screen.height - model.height
   }
 
+  function updateAnimationState(): void {
+    const hidden = document.visibilityState === 'hidden' || Boolean((state as OverlayState & { fullscreen?: boolean }).fullscreen)
+    if (hidden) {
+      if (app.ticker.started) app.ticker.stop()
+    } else {
+      if (!app.ticker.started) app.ticker.start()
+    }
+  }
+
   function applyState(next: unknown): void {
     state = (next || {}) as OverlayState
     if (state.bounds) bounds = { ...state.bounds }
     layout()
+    updateAnimationState()
     if (state.activity?.error) model.expression('Mouse.exp3.json')
   }
 
@@ -141,6 +151,7 @@ async function mountLive2dStage(): Promise<void> {
   api?.onState(applyState)
   api?.control({ type: 'ready' })
   window.addEventListener('resize', layout)
+  document.addEventListener('visibilitychange', updateAnimationState)
   window.addEventListener('pointermove', event => {
     if (dragging) {
       const nextX = Math.round(dragging.bounds.x + event.screenX - dragging.startX)
@@ -158,19 +169,49 @@ async function mountLive2dStage(): Promise<void> {
     setIgnoringMouse(!hitModel(event.clientX, event.clientY))
   })
   window.addEventListener('pointerdown', event => {
-    if (!hitModel(event.clientX, event.clientY)) return
-    dragging = { startX: event.screenX, startY: event.screenY, bounds: { ...bounds } }
+    if (event.button !== 0 || !hitModel(event.clientX, event.clientY)) return
+    setIgnoringMouse(false)
+    const target = event.target as Element
+    target?.setPointerCapture?.(event.pointerId)
+    dragging = {
+      startX: event.screenX,
+      startY: event.screenY,
+      pointerId: event.pointerId,
+      target,
+      bounds: { ...bounds }
+    }
   })
   window.addEventListener('pointerup', event => {
     if (!dragging) return
-    const moved = Math.hypot(event.screenX - dragging.startX, event.screenY - dragging.startY)
-    bounds.x = Math.round(dragging.bounds.x + event.screenX - dragging.startX)
-    bounds.y = Math.round(dragging.bounds.y + event.screenY - dragging.startY)
+    const drag = dragging
     dragging = undefined
-    if (moved > DRAG_THRESHOLD_PX) return
+    try { drag.target?.releasePointerCapture?.(drag.pointerId) } catch { /* ignore */ }
+    const moved = Math.hypot(event.screenX - drag.startX, event.screenY - drag.startY)
+    bounds.x = Math.round(drag.bounds.x + event.screenX - drag.startX)
+    bounds.y = Math.round(drag.bounds.y + event.screenY - drag.startY)
+    if (moved > DRAG_THRESHOLD_PX) {
+      api?.control({
+        type: 'bounds',
+        bounds: {
+          x: bounds.x,
+          y: bounds.y,
+          width: drag.bounds.width,
+          height: drag.bounds.height
+        }
+      })
+      setIgnoringMouse(!hitModel(event.clientX, event.clientY))
+      return
+    }
+    setIgnoringMouse(!hitModel(event.clientX, event.clientY))
     handleTap()
   })
-  window.addEventListener('pointercancel', () => { dragging = undefined })
+  window.addEventListener('pointercancel', () => {
+    if (dragging) {
+      try { dragging.target?.releasePointerCapture?.(dragging.pointerId) } catch { /* ignore */ }
+      dragging = undefined
+      setIgnoringMouse(true)
+    }
+  })
 
   layout()
   document.body.dataset.live2dReady = 'true'

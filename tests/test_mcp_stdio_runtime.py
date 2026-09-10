@@ -29,7 +29,10 @@ EXPECTED_TOOL_NAMES = [
     "readmd_ai_assistant", "readmd_ai_providers", "readmd_ai_chat",
     "readmd_process_imports", "readmd_generate_toc", "readmd_export_presentation",
     "readmd_export_epub", "readmd_run_code_chunk",
+    "readmd_pdf_audit", "readmd_pdf_preview_edit", "readmd_pdf_apply_edit",
+    "readmd_pdf_rollback",
 ]
+
 
 
 def _wait_for(predicate, timeout=15.0, message="condition not met in time"):
@@ -170,8 +173,9 @@ class TestStdioSubprocessProtocol(unittest.TestCase):
 
             tools = rpc({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
             names = [t["name"] for t in tools["result"]["tools"]]
-            self.assertEqual(len(names), 17)
+            self.assertEqual(len(names), 21)
             for expected in EXPECTED_TOOL_NAMES:
+
                 self.assertIn(expected, names)
 
             call = rpc({"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {
@@ -199,7 +203,8 @@ class TestStdioSubprocessProtocol(unittest.TestCase):
                 "jsonrpc": "2.0", "method": "readmd/test-notify"}) + "\n").encode("utf-8"))
             proc.stdin.flush()
             after = rpc({"jsonrpc": "2.0", "id": 7, "method": "tools/list"})
-            self.assertEqual(len(after["result"]["tools"]), 17)
+            self.assertEqual(len(after["result"]["tools"]), 21)
+
 
             deadline = time.time() + 2.0
             echoed = False
@@ -312,8 +317,9 @@ class TestStdioLoopStreaming(unittest.TestCase):
             # While the worker is still streaming, the main loop must answer tools/list.
             stdin.push({"jsonrpc": "2.0", "id": 22, "method": "tools/list"})
             _wait_for(lambda: stdout.of_id(22), message="main loop blocked by tools/call")
-            self.assertEqual(len(stdout.of_id(22)[0]["result"]["tools"]), 17)
+            self.assertEqual(len(stdout.of_id(22)[0]["result"]["tools"]), 21)
             _wait_for(lambda: stdout.of_id(21), message="streaming call never completed")
+
             payload = json.loads(stdout.of_id(21)[0]["result"]["content"][0]["text"])
             self.assertTrue(payload["ok"])
             self.assertEqual(payload["content"], "".join("t%d" % i for i in range(40)))

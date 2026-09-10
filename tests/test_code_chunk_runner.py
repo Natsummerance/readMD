@@ -61,5 +61,48 @@ class TestCodeChunkRunner(unittest.TestCase):
         self.assertIn("early output", res["stdout"])
 
 
+    def test_sql_blob_and_large_text_truncation(self):
+        """测试 SQL 超大 BLOB 与超长文本字段在单元格层受限截断，不耗尽主进程内存 (BUG-001)。"""
+        sql = "SELECT zeroblob(10000000) AS big_blob, hex(zeroblob(2000)) AS big_text;"
+        res = execute_code_chunk(sql, lang="sql")
+        self.assertTrue(res["ok"], msg=f"SQL failed: {res.get('error')}")
+        self.assertIn("<BLOB 10000000 bytes>", res["stdout"])
+        self.assertNotIn("b'\\x00", res["stdout"])
+        self.assertIn("...", res["stdout"])
+
+    def test_sql_output_budget_truncation(self):
+        """测试 SQL 超大量数据行触发有界字符预算截断 (BUG-001)。"""
+        sql = (
+            "WITH RECURSIVE cnt(x) AS (VALUES(1) UNION ALL SELECT x+1 FROM cnt WHERE x < 6000) "
+            "SELECT x, 'abcdefghijklmnopqrstuvwxyz0123456789' AS data FROM cnt;"
+        )
+        res = execute_code_chunk(sql, lang="sql")
+        self.assertTrue(res["ok"])
+        self.assertLessEqual(len(res["stdout"]), 200_000)
+        self.assertIn("Output truncated", res["stdout"])
+        self.assertEqual(res.get("warning"), "output_truncated")
+
+
+    def test_child_process_tree_cleanup(self):
+        """测试父进程退出后，其派生的后台子进程树被彻底清理，管道无残留悬挂 (BUG-002)。"""
+        import psutil
+        import time
+        code = (
+            "import subprocess, sys, time\n"
+            "p = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(10)'])\n"
+            "print('parent finished', p.pid, flush=True)\n"
+        )
+        t0 = time.monotonic()
+        res = execute_python_chunk(code, capture_plot=False)
+        duration = time.monotonic() - t0
+        self.assertTrue(res["ok"], msg=f"Execution failed: {res.get('error')}")
+        self.assertIn("parent finished", res["stdout"])
+        self.assertLess(duration, 1.8, f"Pipe join hung for {duration:.2f}s")
+        parts = res["stdout"].strip().split()
+        grandchild_pid = int(parts[2])
+        self.assertFalse(psutil.pid_exists(grandchild_pid), f"Grandchild PID {grandchild_pid} still running!")
+
+
 if __name__ == '__main__':
     unittest.main()
+
