@@ -59,9 +59,33 @@ class LanShareSecurityTest(unittest.TestCase):
 
     def test_share_mode_blocks_privileged_routes(self):
         with tempfile.TemporaryDirectory() as tmp:
-            for path in ('/api/code/run', '/api/update/apply', '/api/upload'):
+            blocked_paths = (
+                '/api/code/run', '/api/update/apply', '/api/upload',
+                '/api/plugins/list', '/api/plugins/install', '/api/plugins/toggle',
+                '/api/plugins/uninstall', '/api/control/pet-batch', '/api/control/pet-menu'
+            )
+            for path in blocked_paths:
                 handler = self.handler(path + '?t=share-token', shared_root=tmp)
-                self.assertFalse(handler._lan_authorized())
+                self.assertFalse(handler._lan_authorized(), f"Path {path} should be blocked in LAN mode")
+
+    def test_shared_links_routes_validate_path_and_dir_scope(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            inside = os.path.join(tmp, 'doc.md').replace('\\', '/')
+            outside = os.path.realpath(os.path.join(tmp, '..', 'escape.md')).replace('\\', '/')
+            
+            # Inside directory passes
+            handler_ok = self.handler(f'/api/links/graph?dir={tmp}', shared_root=os.path.realpath(tmp))
+            self.assertTrue(handler_ok._lan_authorized())
+            
+            # Outside directory fails
+            handler_bad = self.handler(f'/api/links/graph?dir={outside}', shared_root=os.path.realpath(tmp))
+            self.assertFalse(handler_bad._lan_authorized())
+            
+            # Path parameter checking
+            handler_path_ok = self.handler(f'/api/links/backlinks?path={inside}', shared_root=os.path.realpath(tmp))
+            self.assertTrue(handler_path_ok._lan_authorized())
+            handler_path_bad = self.handler(f'/api/links/backlinks?path={outside}', shared_root=os.path.realpath(tmp))
+            self.assertFalse(handler_path_bad._lan_authorized())
 
 
 if __name__ == '__main__':

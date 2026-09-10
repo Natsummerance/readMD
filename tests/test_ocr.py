@@ -28,11 +28,19 @@ class TestOcrModule(unittest.TestCase):
                 self.assertEqual(eng, 'winrt')
 
     def test_pick_engine_tesseract(self):
-        """测试无原生 OCR 时回退至 Tesseract。"""
+        """测试无原生 OCR 且无 RapidOCR 插件时回退至 Tesseract。"""
         with patch.object(ocr, 'IS_WIN', False), patch.object(ocr, 'IS_MAC', False):
-            with patch('subprocess.run', return_value=MagicMock(returncode=0)):
+            with patch('src.readmd_modules.plugin_manager.is_plugin_enabled', return_value=False):
+                with patch('subprocess.run', return_value=MagicMock(returncode=0)):
+                    eng = ocr._pick_engine()
+                    self.assertEqual(eng, 'tesseract')
+
+    def test_pick_engine_rapidocr(self):
+        """测试无原生 OCR 时优先使用已启用的 RapidOCR。"""
+        with patch.object(ocr, 'IS_WIN', False), patch.object(ocr, 'IS_MAC', False):
+            with patch('src.readmd_modules.plugin_manager.is_plugin_enabled', return_value=True):
                 eng = ocr._pick_engine()
-                self.assertEqual(eng, 'tesseract')
+                self.assertEqual(eng, 'rapidocr')
 
     def test_normalize_ocr_text(self):
         """测试 OCR 文本排版规范化（去除中文字符间空格、连字符修复）。"""

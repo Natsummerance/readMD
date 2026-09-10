@@ -134,6 +134,240 @@ def _tesseract_ocr_bytes(data):
             pass
 
 
+# ---------------------------------------------------------------- RapidOCR 极速高精引擎（ONNX 离线）
+
+_rapidocr_engine = None
+
+
+def _xy_cut_lines(items):
+    """递归 XY-Cut 空间投影切分算法直接生成行字符串列表。
+
+    投影优先顺序：
+    1. 垂直空白投影（X-Cut）：切分多栏（Columns）。
+       左栏与右栏分别递归生成行列表并拼接，彻底杜绝跨栏行误合并。
+    2. 水平空白投影（Y-Cut）：在列块内部切分段落和行块（Rows）。
+    3. 叶子块内部：按 y_top 行聚类，行内按 x_left 从左到右排序拼接为字符串。
+    """
+    if not items:
+        return []
+    if len(items) == 1:
+        text = items[0].get('text', '').strip()
+        return [text] if text else []
+
+    avg_h = sum(it.get('height', 15.0) for it in items) / len(items)
+
+    # 1. 优先尝试 X-Cut (垂直空白投影切割，学术/报纸多栏切分)
+    sorted_by_x = sorted(items, key=lambda it: it['x_left'])
+    x_cut_idx = -1
+    max_x_gap = 0.0
+    col_gap_threshold = max(25.0, avg_h * 1.8)
+
+    curr_right = sorted_by_x[0]['x_left'] + sorted_by_x[0].get('width', 20.0)
+    for i in range(len(sorted_by_x) - 1):
+        it = sorted_by_x[i]
+        curr_right = max(curr_right, it['x_left'] + it.get('width', 20.0))
+        next_left = sorted_by_x[i + 1]['x_left']
+        gap = next_left - curr_right
+        if gap >= col_gap_threshold and gap > max_x_gap:
+            max_x_gap = gap
+            x_cut_idx = i + 1
+
+    if x_cut_idx > 0:
+        left_part = sorted_by_x[:x_cut_idx]
+        right_part = sorted_by_x[x_cut_idx:]
+        return _xy_cut_lines(left_part) + _xy_cut_lines(right_part)
+
+    # 2. 尝试 Y-Cut (水平空白投影切割，上下大块/段落切分)
+    sorted_by_y = sorted(items, key=lambda it: it['y_top'])
+    y_cut_idx = -1
+    max_y_gap = 0.0
+    y_threshold = max(8.0, avg_h * 0.8)
+
+    curr_bottom = sorted_by_y[0]['y_top'] + sorted_by_y[0].get('height', 15.0)
+    for i in range(len(sorted_by_y) - 1):
+        it = sorted_by_y[i]
+        curr_bottom = max(curr_bottom, it['y_top'] + it.get('height', 15.0))
+        next_top = sorted_by_y[i + 1]['y_top']
+        gap = next_top - curr_bottom
+        if gap >= y_threshold and gap > max_y_gap:
+            max_y_gap = gap
+            y_cut_idx = i + 1
+
+    if y_cut_idx > 0:
+        top_part = sorted_by_y[:y_cut_idx]
+        bottom_part = sorted_by_y[y_cut_idx:]
+        return _xy_cut_lines(top_part) + _xy_cut_lines(bottom_part)
+
+    # 3. 基础叶子块（单栏/单段内）：行优先聚类，行内自左向右拼接
+    line_thresh = max(6.0, avg_h * 0.5)
+    rows = []
+    for it in sorted(items, key=lambda x: x['y_top']):
+        matched = None
+        for r in rows:
+            if abs(it['y_top'] - r['y_ref']) <= line_thresh:
+                matched = r
+                break
+        if matched is not None:
+            matched['items'].append(it)
+            matched['y_ref'] = sum(x['y_top'] for x in matched['items']) / len(matched['items'])
+        else:
+            rows.append({'y_ref': it['y_top'], 'items': [it]})
+
+    lines = []
+    for r in sorted(rows, key=lambda row: row['y_ref']):
+        sorted_row = sorted(r['items'], key=lambda it: it['x_left'])
+        line_str = ' '.join(x['text'] for x in sorted_row if x.get('text'))
+        if line_str:
+            lines.append(line_str)
+    return lines
+
+
+def _sort_rapidocr_boxes(result):
+    """对 RapidOCR 识别框使用递归 XY-Cut 按人类自然阅读顺序排版。"""
+    if not result:
+        return []
+    items = []
+    for item in result:
+        if not item or len(item) < 2 or not item[1]:
+            continue
+        box = item[0]
+        try:
+            xs = [float(p[0]) for p in box]
+            ys = [float(p[1]) for p in box]
+            x_left = min(xs)
+            x_right = max(xs)
+            y_top = min(ys)
+            y_bottom = max(ys)
+            width = max(x_right - x_left, 1.0)
+            height = max(y_bottom - y_top, 5.0)
+        except Exception:
+            x_left, y_top, width, height = 0.0, 0.0, 50.0, 20.0
+        items.append({
+            'text': str(item[1]).strip(),
+            'y_top': y_top,
+            'x_left': x_left,
+            'width': width,
+            'height': height,
+        })
+    if not items:
+        return []
+    return _xy_cut_lines(items)
+
+
+def _get_rapidocr_engine():
+    global _rapidocr_engine
+    if _rapidocr_engine is None:
+        from . import plugin_manager as pm
+        pm.mount_sandbox()
+        from rapidocr_onnxruntime import RapidOCR
+        _rapidocr_engine = RapidOCR()
+    return _rapidocr_engine
+
+
+def _ocr_rapidocr(image_path_or_bytes):
+    """使用 RapidOCR 极速 ONNX 离线引擎识别文本与多列排版。"""
+    try:
+        from . import plugin_manager as pm
+        if not pm.is_plugin_enabled('rapidocr'):
+            return None
+        engine = _get_rapidocr_engine()
+        result, _ = engine(image_path_or_bytes)
+        if not result:
+            return ''
+        lines = _sort_rapidocr_boxes(result)
+        return '\n'.join(lines).strip()
+    except Exception as exc:
+        logging.warning('RapidOCR recognition skipped/failed: %s', exc)
+        return None
+
+
+def _rapidocr_bytes(data):
+    """供统一入口 _ocr_bytes 调用的 RapidOCR 分支。"""
+    res = _ocr_rapidocr(data)
+    if res is None:
+        raise RuntimeError('ocr-no-engine：RapidOCR 引擎未安装或初始化失败')
+    return res
+
+
+def _matrix_to_md_table(rows: list) -> str:
+    """将二维单元格矩阵格式化为标准 Markdown 表格字符串。"""
+    if not rows:
+        return ''
+    max_cols = max(len(r) for r in rows)
+    if max_cols == 0:
+        return ''
+    normalized = [r + [''] * (max_cols - len(r)) for r in rows]
+    header = '| ' + ' | '.join(normalized[0]) + ' |'
+    separator = '| ' + ' | '.join(['---'] * max_cols) + ' |'
+    body = ['| ' + ' | '.join(r) + ' |' for r in normalized[1:]]
+    return '\n'.join([header, separator] + body)
+
+
+def _html_table_to_md(html_str: str) -> str:
+    """将 HTML 表格字符串转换为标准 Markdown 表格。"""
+    if not html_str or '<table' not in html_str.lower():
+        return ''
+    import re
+    rows = re.findall(r'<tr[^>]*>(.*?)</tr>', html_str, re.IGNORECASE | re.DOTALL)
+    if not rows:
+        return ''
+    md_rows = []
+    for row in rows:
+        cells = re.findall(r'<t[dh][^>]*>(.*?)</t[dh]>', row, re.IGNORECASE | re.DOTALL)
+        clean_cells = [re.sub(r'<[^>]+>', '', c).strip().replace('|', '\\|') for c in cells]
+        if clean_cells:
+            md_rows.append(clean_cells)
+    return _matrix_to_md_table(md_rows)
+
+
+def extract_table_to_md(image_path_or_bytes) -> str:
+    """从图片中提取表格并转换为原生 Markdown 表格格式。
+    优先调用已挂载的 rapid_table 插件；若未启用则利用 OCR 文本对齐启发式构建表格。
+    """
+    # 1. 优先尝试 rapid_table 专用模型插件
+    try:
+        from . import plugin_manager as pm
+        if pm.is_plugin_enabled('rapid_table'):
+            pm.mount_sandbox()
+            from rapid_table import RapidTable
+            table_engine = RapidTable()
+            table_html, _ = table_engine(image_path_or_bytes)
+            md = _html_table_to_md(table_html)
+            if md:
+                return md
+    except Exception as exc:
+        logging.debug('rapid_table extraction failed or skipped: %s', exc)
+
+    # 2. 兜底尝试从 OCR 结果中的行列特征构建 Markdown 表格
+    try:
+        if isinstance(image_path_or_bytes, str):
+            with open(image_path_or_bytes, 'rb') as f:
+                data = f.read()
+        else:
+            data = image_path_or_bytes
+        raw_text = _ocr_cascade(data)
+        if not raw_text:
+            return ''
+        lines = [l.strip() for l in raw_text.split('\n') if l.strip()]
+        table_rows = []
+        for l in lines:
+            if '\t' in l:
+                cols = [c.strip() for c in l.split('\t') if c.strip()]
+            elif '  ' in l:
+                import re
+                cols = [c.strip() for c in re.split(r'\s{2,}', l) if c.strip()]
+            else:
+                cols = [l]
+            if len(cols) >= 2:
+                table_rows.append(cols)
+        if len(table_rows) >= 2:
+            return _matrix_to_md_table(table_rows)
+    except Exception:
+        pass
+
+    return ''
+
+
 # ---------------------------------------------------------------- 统一入口
 
 def _pick_engine():
@@ -155,6 +389,14 @@ def _pick_engine():
         except ImportError:
             pass
     if engine is None:
+        # 优先使用 RapidOCR（免系统外部依赖，毫秒级 ONNX）
+        try:
+            from . import plugin_manager as pm
+            if pm.is_plugin_enabled('rapidocr'):
+                engine = 'rapidocr'
+        except Exception:
+            pass
+    if engine is None:
         # Tesseract 兜底
         try:
             subprocess.run(['tesseract', '--version'], capture_output=True, timeout=5)
@@ -173,10 +415,16 @@ def _ocr_bytes(data):
         return _winrt_ocr_bytes(data, lang)
     elif engine == 'mac_vision':
         return _mac_vision_ocr_bytes(data)
+    elif engine == 'rapidocr':
+        return _rapidocr_bytes(data)
     elif engine == 'tesseract':
         return _tesseract_ocr_bytes(data)
     else:
-        raise RuntimeError('ocr-no-engine：无可用 OCR 引擎。Windows 需要 WinRT，macOS 需要 PyObjC，其他平台需要 Tesseract。')
+        # 兜底探测 RapidOCR
+        rapid_text = _ocr_rapidocr(data)
+        if rapid_text is not None:
+            return rapid_text
+        raise RuntimeError('ocr-no-engine：无可用 OCR 引擎。Windows 需要 WinRT，macOS 需要 PyObjC，其他平台需要 RapidOCR 插件或 Tesseract。')
 
 
 def load():
@@ -280,12 +528,77 @@ def normalize_ocr_text(text):
         return cleaned_text.strip()
 
 
+_easyocr_reader = None
+
+
+def _ocr_easyocr(image_path_or_bytes):
+    """使用 EasyOCR 插件深度识别手写体、复杂倾斜或低对比度图片。"""
+    try:
+        from . import plugin_manager as pm
+        if not pm.is_plugin_enabled('easyocr'):
+            return None
+        pm.mount_sandbox()
+        import easyocr
+        global _easyocr_reader
+        if _easyocr_reader is None:
+            _easyocr_reader = easyocr.Reader(['ch_sim', 'en'], gpu=True)
+        results = _easyocr_reader.readtext(image_path_or_bytes)
+        lines = [text for _, text, conf in results if conf > 0.3]
+        return '\n'.join(lines).strip()
+    except Exception as exc:
+        logging.warning('EasyOCR recognition skipped/failed: %s', exc)
+        return None
+
+
+def _ocr_cascade(data, fallback_path=None):
+    """OCR 识别渐进式级联回退：
+    Tier 0: 原生引擎（WinRT / macOS Vision / Tesseract）
+    Tier 1: RapidOCR 极速 ONNX 离线引擎
+    Tier 2: EasyOCR 深度识别插件
+    """
+    # A user-selected optional engine takes precedence over native OCR.
+    # Each helper checks current enablement, including after an engine switch.
+    from . import plugin_manager as pm
+    if pm.is_plugin_enabled('rapidocr'):
+        selected = _ocr_rapidocr(data)
+        if selected:
+            return selected.strip()
+    elif pm.is_plugin_enabled('easyocr'):
+        selected = _ocr_easyocr(fallback_path if fallback_path else data)
+        if selected:
+            return selected.strip()
+    text = ''
+    try:
+        text = _ocr_bytes(data).strip()
+    except Exception as exc:
+        logging.debug('Primary OCR attempt failed: %s', exc)
+        text = ''
+
+    if not text:
+        try:
+            rapid_text = _ocr_rapidocr(data)
+            if rapid_text:
+                text = rapid_text.strip()
+        except Exception as exc:
+            logging.debug('RapidOCR cascade failed: %s', exc)
+
+    if not text:
+        try:
+            easy_target = fallback_path if fallback_path else data
+            easy_text = _ocr_easyocr(easy_target)
+            if easy_text:
+                text = easy_text.strip()
+        except Exception as exc:
+            logging.debug('EasyOCR cascade failed: %s', exc)
+
+    return text
+
+
 def ocr_image(path, dpi=None):
-    """识别单张图片，返回识别文本。"""
+    """识别单张图片，返回识别文本。通过 _ocr_cascade 自动按序尝试原生、RapidOCR 与 EasyOCR 深度识别兜底。"""
     with open(path, 'rb') as f:
         data = f.read()
-    text = _ocr_bytes(data).strip()
-    return text
+    return _ocr_cascade(data, fallback_path=path)
 
 
 def ocr_image_to_md(path):
@@ -302,7 +615,7 @@ def ocr_image_to_md(path):
 
 
 def ocr_pdf_to_md(path, max_pages=200):
-    """PDF → Markdown：有文字层直接提取，否则逐页 OCR，并统一执行智能排版规范化。"""
+    """PDF → Markdown：有文字层直接提取，否则逐页执行完整级联 OCR，并统一执行智能排版规范化。"""
     import fitz
     doc = fitz.open(path)
     pages = list(doc)[:max_pages]
@@ -317,7 +630,7 @@ def ocr_pdf_to_md(path, max_pages=200):
             try:
                 pix = page.get_pixmap(dpi=200)
                 png = pix.tobytes('png')
-                text = _ocr_bytes(png).strip()
+                text = _ocr_cascade(png).strip()
             except Exception as e:  # noqa: BLE001
                 logging.exception('page %d ocr failed', idx)
                 text = ''

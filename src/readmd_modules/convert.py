@@ -24,6 +24,8 @@ import struct
 import html as _html
 import xml.etree.ElementTree as ET
 from collections import Counter
+from dataclasses import dataclass
+from typing import Optional, Tuple
 
 _engine = None
 
@@ -75,9 +77,22 @@ _BINARY_ONLY_EXTS = frozenset({
     '.mp3', '.wav', '.mp4', '.mov', '.avi', '.mkv', '.woff', '.woff2',
 })
 
-_MATH_CHARS = set('+-*/=<>^_~%∑∫√∞≈≠±×÷∂∇∏πθαβγδφψωλμνστρΔΩΦΓΛεηζξοπς')
+_MATH_CHARS = set('+-*/=<>^_~%∑∫√∞≈≠±×÷∂∇∏πθαβγδφψωλμνστρΔΩΦΓΛεηζξοπς≤≥∈∉⊂⊆∪∩∀∃¬∧∨→⇒↔⇔∝∠⊥⋅∓∛∜∬∭∮∐≡≅∼≪≫')
 # 强数学算子：连字符/百分号不算（日期、电话、百分数会被密度误判成公式）
-_STRONG_MATH = set('=+*/^_~<>' + '∑∫√∞≈≠±×÷∂∇∏π')
+_STRONG_MATH = set('=+*/^_~<>' + '∑∫√∞≈≠±×÷∂∇∏π≤≥∈∉⊂⊆∪∩∀∃¬∧∨→⇒↔⇔∝∠⊥⋅∓∛∜∬∭∮∐≡≅∼≪≫')
+
+_MATH_FONT_HINTS = (
+    'cmr', 'cmmi', 'cmsy', 'cmex', 'cmti', 'cmbx',
+    'math', 'tex', 'symbol', 'euclid', 'stix', 'katex', 'mathjax',
+    'nimbusromno9l-reguital', 'msam', 'msbm', 'eufm', 'wasy'
+)
+
+
+def _is_math_font(font_name: str) -> bool:
+    if not font_name:
+        return False
+    fn = font_name.lower()
+    return any(hint in fn for hint in _MATH_FONT_HINTS)
 
 
 def load():
@@ -481,6 +496,26 @@ def _pptx_to_md(path):
         return '\n'.join(out).strip() + '\n'
 
 
+def _convert_latex_native(tex_content: str, base_dir: Optional[str] = None) -> str:
+    """纯 Python 高保真 LaTeX 源码转 Markdown 引擎（基于内置 texmd）。"""
+    from . import texmd
+    return texmd.latex_to_md(tex_content, base_dir=base_dir)
+
+
+def _convert_latex_file(path: str) -> Tuple[str, str, Optional[str]]:
+    """将 .tex / .latex 源码文件转换为 Markdown。"""
+    try:
+        with open(path, 'r', encoding='utf-8', errors='replace') as f:
+            tex_content = f.read()
+
+        # A plain-text LaTeX decoder loses headings, tables and math delimiters.
+        # Keep the Markdown converter authoritative even with pylatexenc installed.
+        md_text = _convert_latex_native(tex_content, base_dir=os.path.dirname(os.path.abspath(path)))
+        return md_text, 'texmd', None
+    except Exception as e:  # noqa: BLE001
+        return '', '', 'LaTeX 转换失败：%s' % e
+
+
 def convert_verbose(path, form_tables=True):
     """返回 (text, engine, error)。engine: 'docx' | 'pdf' | 'csv' | 'code' | 'txtmd' | 'texmd' | 'xlsx' | 'pptx' | 'markitdown' | ''"""
     ext = os.path.splitext(path)[1].lower()
@@ -506,6 +541,19 @@ def convert_verbose(path, form_tables=True):
             return md, 'markitdown', None
         return '', '', err
     if ext == '.pdf':
+        try:
+            from . import plugin_manager as pm
+            if pm.is_plugin_enabled('docling'):
+                pm.mount_sandbox()
+                from docling.document_converter import DocumentConverter
+                converter = DocumentConverter()
+                res = converter.convert(path)
+                md = res.document.export_to_markdown()
+                if md and md.strip():
+                    return md.strip() + '\n', 'docling', None
+        except Exception as docling_err:
+            logging.info('Docling fallback: %s', docling_err)
+
         try:
             return pdf2md(path), 'pdf', None
         except Exception as e:  # noqa: BLE001
@@ -537,13 +585,18 @@ def convert_verbose(path, form_tables=True):
         except Exception as e:  # noqa: BLE001
             return '', '', 'CSV 表格转换失败：%s' % e
     if ext in ('.tex', '.latex'):
+        return _convert_latex_file(path)
+    if ext in ('.mp3', '.wav', '.m4a', '.mp4', '.flac', '.ogg', '.webm', '.aac', '.wma', '.mkv', '.mov', '.avi'):
         try:
-            from . import texmd
-            with open(path, 'r', encoding='utf-8', errors='replace') as f:
-                tex_content = f.read()
-            return texmd.latex_to_md(tex_content, base_dir=os.path.dirname(os.path.abspath(path))), 'texmd', None
+            from . import transcribe
+            text, err = transcribe.transcribe_to_md(path)
+            if err:
+                return '', 'whisper', '音视频转写未就绪或失败：%s' % err
+            if text:
+                return text, 'whisper', None
+            return '', 'whisper', '音视频转写未产生内容'
         except Exception as e:  # noqa: BLE001
-            return '', '', 'LaTeX 转换失败：%s' % e
+            return '', 'whisper', '音视频转写失败：%s' % e
     if ext in ('.txt', '.text'):
         try:
             from . import txtmd
@@ -564,9 +617,13 @@ def convert_verbose(path, form_tables=True):
             return '', '', 'ODT 转换失败：%s' % e
     if ext == '.epub':
         try:
-            return _epub_to_md(path), 'epub', None
-        except Exception as e:  # noqa: BLE001
-            return '', '', 'EPUB 转换失败：%s' % e
+            from . import convert_ext
+            return convert_ext.epub_to_markdown(path), 'epub', None
+        except Exception as e:
+            try:
+                return _epub_to_md(path), 'epub', None
+            except Exception as e_old:
+                return '', '', 'EPUB 转换失败：%s（旧版备用也失败：%s）' % (e, e_old)
     if ext == '.xlsx':
         try:
             return _xlsx_to_md(path), 'xlsx', None
@@ -1881,12 +1938,35 @@ def _merge_split_tables(md):
     return '\n'.join(out)
 
 
-def _looks_like_formula(line):
+@dataclass
+class ExtractedPdfLine:
+    """PDF 逐行提取版面元数据（消除 Data Clumps 坏味道，强类型封装）。"""
+    y0: float
+    seq: int
+    text: str
+    size: float
+    bold: bool
+    mono: bool
+    math_font: bool
+    math_ratio: float
+    body_size: float
+    has_baseline_shift: bool = False
+
+
+def _looks_like_formula(line: str, math_ratio: float = 0.0, has_baseline_shift: bool = False) -> bool:
     s = line.strip()
-    if not s or len(s) < 2 or len(s) > 160:
+    if not s or len(s) < 2 or len(s) > 200:
         return False
     if any('\u4e00' <= ch <= '\u9fff' for ch in s):
         return False
+    # 具有高比例 TeX / 数学字体的跨度，直接判定为公式
+    if math_ratio >= 0.35:
+        return True
+    if math_ratio > 0.0 and any(ch in _STRONG_MATH or ch in _MATH_CHARS for ch in s):
+        return True
+    # 2D 拓扑空间几何关系：垂直基线跳变（上下标特征）且包含变量或算符
+    if has_baseline_shift and any(ch in _STRONG_MATH or ch in _MATH_CHARS or ch in '=^_' for ch in s):
+        return True
     if not any(ch in _STRONG_MATH for ch in s):
         return False
     sig = sum(1 for ch in s if ch in _MATH_CHARS or ch.isdigit() or ch in '()[]{},.')
@@ -1895,15 +1975,30 @@ def _looks_like_formula(line):
 
 def _accept_text_table(rows):
     """text 策略候选的行列门槛：≥2 列，且 ≥2 行各有 ≥2 个非空单元格。"""
-    if not rows:
+    def _row_empty_ratio(r):
+        if not r:
+            return 1.0
+        empty_cnt = sum(1 for c in r if not (c or '').strip())
+        return empty_cnt / len(r)
+
+    rows = [r for r in rows if _row_empty_ratio(r) < 1.0]
+    if len(rows) < 2:
         return False
     if max(len(r) for r in rows) < 2:
         return False
+
     multi = 0
+    single = 0
     for r in rows:
-        if sum(1 for c in r if (c or '').strip()) >= 2:
+        non_empty = sum(1 for c in r if (c or '').strip())
+        if non_empty >= 2:
             multi += 1
-    return multi >= 2
+        elif non_empty == 1:
+            single += 1
+    # 严格门槛：必须至少有 2 行包含多列；若单列行数量过多（多于多列行），说明是普通段落被误切成了表格
+    if multi < 2 or single >= multi:
+        return False
+    return (multi / len(rows)) >= 0.6
 
 
 def _retry_text_strategy_tables(page):
@@ -1933,6 +2028,16 @@ def _page_to_md(page, default_body_size: float = 11.0):
         tables = list(page.find_tables().tables)
     except Exception:  # noqa: BLE001
         tables = []
+    # 优先使用精细字块几何聚类（识别无边框、中文多列表格且精准切除上下段落）
+    if not tables:
+        try:
+            from . import convert_ext
+            clustered = convert_ext.extract_page_table_cluster(page)
+            if clustered:
+                tables = [clustered]
+        except Exception as _ce:
+            pass
+    # 仍未识别到时，再尝试 PyMuPDF 的内置 text 策略
     if not tables:
         tables = _retry_text_strategy_tables(page)
     tbl_boxes = []
@@ -1959,7 +2064,10 @@ def _page_to_md(page, default_body_size: float = 11.0):
     seq = 0
     for t in tables:
         try:
-            md = _data_to_md(t.extract())
+            if hasattr(t, 'get_markdown'):
+                md = t.get_markdown()
+            else:
+                md = _data_to_md(t.extract())
         except Exception:  # noqa: BLE001
             md = ''
         if md:
@@ -2003,16 +2111,37 @@ def _page_to_md(page, default_body_size: float = 11.0):
                 max_size = max(sp.get('size', body_size) for sp in spans)
                 is_bold = any(bool(sp.get('flags', 0) & 2) or 'bold' in (sp.get('font') or '').lower() for sp in spans)
                 is_mono = any(_is_mono_font(sp.get('font') or '') for sp in spans)
+                has_math_font = any(_is_math_font(sp.get('font') or '') for sp in spans)
+                math_chars = sum(len((sp.get('text') or '').strip()) for sp in spans if _is_math_font(sp.get('font') or ''))
+                line_stripped_len = max(len(line_text.strip()), 1)
+                math_ratio = math_chars / line_stripped_len
 
-                extracted_lines.append({
-                    'y0': bbox.y0,
-                    'seq': seq,
-                    'text': line_text,
-                    'size': max_size,
-                    'bold': is_bold,
-                    'mono': is_mono,
-                    'body_size': body_size
-                })
+                has_baseline_shift = False
+                if len(spans) >= 2:
+                    for s_idx in range(len(spans) - 1):
+                        sp_a = spans[s_idx]
+                        sp_b = spans[s_idx + 1]
+                        orig_a = sp_a.get('origin')
+                        orig_b = sp_b.get('origin')
+                        if orig_a and orig_b and len(orig_a) >= 2 and len(orig_b) >= 2:
+                            delta_y = abs(float(orig_a[1]) - float(orig_b[1]))
+                            ref_sz = min(float(sp_a.get('size', body_size)), float(sp_b.get('size', body_size)))
+                            if delta_y >= max(2.0, ref_sz * 0.18):
+                                has_baseline_shift = True
+                                break
+
+                extracted_lines.append(ExtractedPdfLine(
+                    y0=bbox.y0,
+                    seq=seq,
+                    text=line_text,
+                    size=max_size,
+                    bold=is_bold,
+                    mono=is_mono,
+                    math_font=has_math_font,
+                    math_ratio=math_ratio,
+                    body_size=body_size,
+                    has_baseline_shift=has_baseline_shift,
+                ))
                 seq += 1
     except Exception:  # noqa: BLE001
         pass
@@ -2020,70 +2149,75 @@ def _page_to_md(page, default_body_size: float = 11.0):
     idx = 0
     while idx < len(extracted_lines):
         cur = extracted_lines[idx]
-        txt = cur['text'].strip()
+        txt = cur.text.strip()
 
         # 1. 代码块判断（等宽字体）
-        if cur['mono']:
-            code_lines = [cur['text']]
+        if cur.mono:
+            code_lines = [cur.text]
             j = idx + 1
-            while j < len(extracted_lines) and extracted_lines[j]['mono']:
-                code_lines.append(extracted_lines[j]['text'])
+            while j < len(extracted_lines) and extracted_lines[j].mono:
+                code_lines.append(extracted_lines[j].text)
                 j += 1
             code_content = '\n'.join(code_lines)
-            items.append((cur['y0'], cur['seq'], 'code', '```\n' + code_content + '\n```'))
+            items.append((cur.y0, cur.seq, 'code', '```\n' + code_content + '\n```'))
             idx = j
             continue
 
         # 2. 标题判断
-        bs = cur['body_size']
-        sz = cur['size']
-        is_bold = cur['bold']
+        bs = cur.body_size
+        sz = cur.size
+        is_bold = cur.bold
         is_short = len(txt) <= 80 and not txt.endswith(('。', '.', '；', ';', '，', ','))
 
         if sz >= 1.45 * bs and is_short:
-            items.append((cur['y0'], cur['seq'], 'heading', '# ' + txt))
+            items.append((cur.y0, cur.seq, 'heading', '# ' + txt))
             idx += 1
             continue
         elif sz >= 1.25 * bs and is_short:
-            items.append((cur['y0'], cur['seq'], 'heading', '## ' + txt))
+            items.append((cur.y0, cur.seq, 'heading', '## ' + txt))
             idx += 1
             continue
         elif (sz >= 1.12 * bs or (is_bold and sz >= bs)) and is_short:
-            items.append((cur['y0'], cur['seq'], 'heading', '### ' + txt))
+            items.append((cur.y0, cur.seq, 'heading', '### ' + txt))
             idx += 1
             continue
 
         # 3. 列表判断
         if _BULLET_PREFIX_RE.match(txt):
             clean_item = _BULLET_PREFIX_RE.sub('', txt).strip()
-            items.append((cur['y0'], cur['seq'], 'list', '- ' + clean_item))
+            items.append((cur.y0, cur.seq, 'list', '- ' + clean_item))
             idx += 1
             continue
         elif _ORDERED_PREFIX_RE.match(txt):
-            items.append((cur['y0'], cur['seq'], 'list', txt))
+            items.append((cur.y0, cur.seq, 'list', txt))
             idx += 1
             continue
 
-        # 4. 公式判断
-        if _looks_like_formula(txt):
-            items.append((cur['y0'], cur['seq'], 'formula', '$' + txt + '$'))
+        # 4. 公式判断 (字符启发式 + TeX 字体特征 + 2D 拓扑基线跳变)
+        if _looks_like_formula(txt, cur.math_ratio, cur.has_baseline_shift):
+            is_block_eq = ('=' in txt or len(txt) > 25 or cur.math_ratio >= 0.5)
+            wrapper = '$$' if is_block_eq else '$'
+            items.append((cur.y0, cur.seq, 'formula', f'{wrapper}{txt}{wrapper}'))
             idx += 1
             continue
 
         # 5. 普通正文段落拼接
-        para_text = cur['text']
+        para_text = cur.text
         j = idx + 1
         while j < len(extracted_lines):
             nxt = extracted_lines[j]
-            nxt_txt = nxt['text'].strip()
-            if nxt['mono'] or nxt['size'] >= 1.12 * bs or _BULLET_PREFIX_RE.match(nxt_txt) or _ORDERED_PREFIX_RE.match(nxt_txt) or _looks_like_formula(nxt_txt):
+            nxt_txt = nxt.text.strip()
+            if (nxt.mono or nxt.size >= 1.12 * bs or
+                    _BULLET_PREFIX_RE.match(nxt_txt) or
+                    _ORDERED_PREFIX_RE.match(nxt_txt) or
+                    _looks_like_formula(nxt_txt, nxt.math_ratio, nxt.has_baseline_shift)):
                 break
-            if abs(nxt['y0'] - extracted_lines[j-1]['y0']) > (nxt['size'] * 2.2):
+            if abs(nxt.y0 - extracted_lines[j-1].y0) > (nxt.size * 2.2):
                 break
-            para_text = _join_lines(para_text, nxt['text'])
+            para_text = _join_lines(para_text, nxt.text)
             j += 1
 
-        items.append((cur['y0'], cur['seq'], 'text', para_text.strip()))
+        items.append((cur.y0, cur.seq, 'text', para_text.strip()))
         idx = j
 
     items.sort(key=lambda it: (round(it[0], 1), it[1]))
@@ -2157,6 +2291,8 @@ def extract_zip_archive(zip_source, base_temp_dir=None):
         '.json', '.csv', '.tsv', '.yaml', '.yml', '.xml', '.sql',
         '.py', '.js', '.ts', '.html', '.css', '.c', '.cpp', '.h', '.rs', '.go', '.java', '.sh', '.bat', '.ps1',
         '.doc', '.docx', '.ppt', '.pptx', '.xls', '.xlsx', '.pdf', '.epub', '.mobi', '.rtf', '.odt',
+        '.tex', '.latex',
+        '.mp3', '.wav', '.m4a', '.mp4', '.flac', '.ogg', '.webm', '.aac', '.wma', '.mkv', '.mov', '.avi',
         '.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif'
     }
 
