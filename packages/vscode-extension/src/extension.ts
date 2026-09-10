@@ -47,7 +47,111 @@ function errorText(error: unknown): string {
     ai_cancelled: ['errAiCancelled', 'AI generation cancelled'],
   };
   const pair = messages[code];
-  return pair ? l10n(pair[0], pair[1]) : l10n('errOperationFailed', 'Operation failed; try again');
+  if (pair) return l10n(pair[0], pair[1]);
+  if (code && (code.startsWith('ReadMD:') || code.includes(' '))) return code;
+  return l10n('errOperationFailed', 'Operation failed; try again');
+}
+
+export function parseJsoncSafely(text: string): Record<string, any> {
+  let inString = false;
+  let inLineComment = false;
+  let inBlockComment = false;
+  let stringEscape = false;
+  const chars = text.split('');
+
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+    const next = chars[i + 1];
+
+    if (inLineComment) {
+      if (ch === '\n' || ch === '\r') {
+        inLineComment = false;
+      } else {
+        chars[i] = ' ';
+      }
+      continue;
+    }
+
+    if (inBlockComment) {
+      if (ch === '*' && next === '/') {
+        chars[i] = ' ';
+        chars[i + 1] = ' ';
+        i++;
+        inBlockComment = false;
+      } else {
+        if (ch !== '\n' && ch !== '\r') chars[i] = ' ';
+      }
+      continue;
+    }
+
+    if (inString) {
+      if (stringEscape) {
+        stringEscape = false;
+      } else if (ch === '\\') {
+        stringEscape = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (ch === '/' && next === '/') {
+      inLineComment = true;
+      chars[i] = ' ';
+      chars[i + 1] = ' ';
+      i++;
+      continue;
+    }
+
+    if (ch === '/' && next === '*') {
+      inBlockComment = true;
+      chars[i] = ' ';
+      chars[i + 1] = ' ';
+      i++;
+      continue;
+    }
+  }
+
+  const finalChars = chars;
+  inString = false;
+  stringEscape = false;
+  for (let i = 0; i < finalChars.length; i++) {
+    const ch = finalChars[i];
+    if (inString) {
+      if (stringEscape) {
+        stringEscape = false;
+      } else if (ch === '\\') {
+        stringEscape = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      continue;
+    }
+    if (ch === ',') {
+      let j = i + 1;
+      while (j < finalChars.length && (finalChars[j] === ' ' || finalChars[j] === '\t' || finalChars[j] === '\n' || finalChars[j] === '\r')) {
+        j++;
+      }
+      if (j < finalChars.length && (finalChars[j] === '}' || finalChars[j] === ']')) {
+        finalChars[i] = ' ';
+      }
+    }
+  }
+
+  const parsed = JSON.parse(finalChars.join(''));
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    return parsed;
+  }
+  return {};
 }
 
 export function activate(context: vscode.ExtensionContext) {
@@ -72,6 +176,11 @@ export function activate(context: vscode.ExtensionContext) {
   const aiWorkbenchDisposable = vscode.commands.registerCommand('readmd.openAiWorkbench', async () => {
     const editor = vscode.window.activeTextEditor;
     if (!editor) { vscode.window.showInformationMessage(l10n('openDocFirst', 'Please open a Markdown document first')); return; }
+    const targetDoc = editor.document;
+    const initialDocUri = targetDoc.uri.toString();
+    const initialDocVersion = targetDoc.version;
+    const initialSelection = editor.selection;
+
     try {
       const prompts = await bridge.listPrompts();
       if (!prompts.length) {
@@ -109,7 +218,7 @@ export function activate(context: vscode.ExtensionContext) {
       }, async (progress, token) => {
         const result: any = await bridge.aiChatStreaming({
           provider: provider.value.id, credential_id: provider.value.credential_id,
-          model, skill_id: workflow.skillId, markdown_content: editor.document.getText(),
+          model, skill_id: workflow.skillId, markdown_content: targetDoc.getText(),
           language: vscode.env.language || 'en', stream: true,
         }, chunk => {
           output += chunk;
@@ -129,9 +238,40 @@ export function activate(context: vscode.ExtensionContext) {
       if (!output) { vscode.window.showWarningMessage(l10n('noAiOutput', 'AI did not return applicable content')); return; }
       const choice = await vscode.window.showInformationMessage(l10n('aiResultGenerated', 'ReadMD AI result generated'), l10n('btnReplaceSelection', 'Replace Selection'), l10n('btnInsertEnd', 'Insert at End'), l10n('btnViewOnly', 'View Only'));
       if (choice === l10n('btnReplaceSelection', 'Replace Selection') || choice === '替换选区') {
-        await editor.edit(editBuilder => editBuilder.replace(editor.selection, output));
+        const currentEditor = vscode.window.activeTextEditor;
+        const isSameDoc = currentEditor && currentEditor.document.uri.toString() === initialDocUri;
+        const isUnchanged = isSameDoc && currentEditor.document.version === initialDocVersion;
+
+        if (!isUnchanged || !currentEditor) {
+          const protectChoice = await vscode.window.showWarningMessage(
+            l10n('docModifiedDuringAi', 'ReadMD: Document content was modified during AI generation; replacement aborted to prevent overwriting changes.'),
+            l10n('btnViewBeside', 'View Result Beside'),
+            l10n('btnInsertEnd', 'Insert at End')
+          );
+          if (protectChoice === l10n('btnViewBeside', 'View Result Beside') || protectChoice === '侧边查看') {
+            const doc = await vscode.workspace.openTextDocument({ content: output, language: 'markdown' });
+            await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+          } else if (protectChoice === l10n('btnInsertEnd', 'Insert at End') || protectChoice === '插入末尾') {
+            if (currentEditor && currentEditor.document.uri.toString() === initialDocUri) {
+              await currentEditor.edit(editBuilder =>
+                editBuilder.insert(currentEditor.document.positionAt(currentEditor.document.getText().length), `\n\n${output}\n`)
+              );
+            }
+          }
+          return;
+        }
+        await currentEditor.edit(editBuilder => editBuilder.replace(initialSelection, output));
       } else if (choice === l10n('btnInsertEnd', 'Insert at End') || choice === '插入末尾') {
-        await editor.edit(editBuilder => editBuilder.insert(editor.document.positionAt(editor.document.getText().length), `\n\n${output}\n`));
+        const currentEditor = vscode.window.activeTextEditor;
+        const docToInsert = (currentEditor && currentEditor.document.uri.toString() === initialDocUri)
+          ? currentEditor.document
+          : targetDoc;
+        const editorToInsert = (currentEditor && currentEditor.document.uri.toString() === initialDocUri)
+          ? currentEditor
+          : await vscode.window.showTextDocument(docToInsert);
+        await editorToInsert.edit(editBuilder =>
+          editBuilder.insert(docToInsert.positionAt(docToInsert.getText().length), `\n\n${output}\n`)
+        );
       } else if (choice === l10n('btnViewOnly', 'View Only') || choice === '仅查看') {
         const doc = await vscode.workspace.openTextDocument({ content: output, language: 'markdown' });
         await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
@@ -199,6 +339,17 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
+    const docDir = path.dirname(editor.document.fileName);
+    const localRoots: vscode.Uri[] = [];
+    if (docDir) {
+      try { localRoots.push(vscode.Uri.file(docDir)); } catch (_) {}
+    }
+    if (vscode.workspace.workspaceFolders) {
+      for (const f of vscode.workspace.workspaceFolders) {
+        localRoots.push(f.uri);
+      }
+    }
+
     const panel = vscode.window.createWebviewPanel(
       'readmdPreview',
       `ReadMD: ${path.basename(editor.document.fileName)}`,
@@ -206,22 +357,42 @@ export function activate(context: vscode.ExtensionContext) {
       {
         enableScripts: true,
         retainContextWhenHidden: true,
+        localResourceRoots: localRoots,
       }
     );
 
-    const updateWebview = () => {
+    const sendUpdate = () => {
       const text = editor.document.getText();
-      panel.webview.html = getEnhancedWebviewContent(text, path.basename(editor.document.fileName));
+      const resolved = resolveMarkdownImages(text, docDir, panel.webview);
+      if (typeof panel.webview.postMessage === 'function') {
+        panel.webview.postMessage({ type: 'updateContent', markdown: resolved });
+      }
     };
 
-    updateWebview();
+    const initialText = editor.document.getText();
+    const resolvedInitial = resolveMarkdownImages(initialText, docDir, panel.webview);
+    panel.webview.html = getEnhancedWebviewContent(resolvedInitial, path.basename(editor.document.fileName));
+
+    if (typeof panel.webview.onDidReceiveMessage === 'function') {
+      panel.webview.onDidReceiveMessage(message => {
+        if (message && message.type === 'webviewReady') {
+          sendUpdate();
+        }
+      }, null, context.subscriptions);
+    }
+
+    let debounceTimer: NodeJS.Timeout | undefined;
     const changeDocSubscription = vscode.workspace.onDidChangeTextDocument(e => {
       if (e.document.uri.toString() === editor.document.uri.toString()) {
-        updateWebview();
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          sendUpdate();
+        }, 200);
       }
     });
 
     panel.onDidDispose(() => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       changeDocSubscription.dispose();
     }, null, context.subscriptions);
   });
@@ -466,23 +637,54 @@ export function activate(context: vscode.ExtensionContext) {
 
     const selection = editor.selection;
     let codeText = editor.document.getText(selection);
+    let language = 'python';
 
-    if (!codeText.trim()) {
-      // 提取光标所在的代码块
-      const fullText = editor.document.getText();
-      const cursorOffset = editor.document.offsetAt(selection.active);
-      const codeBlockRegex = /```(?:python|py)\b[^\n]*\n([\s\S]*?)```/g;
-      let match;
-      while ((match = codeBlockRegex.exec(fullText)) !== null) {
-        if (cursorOffset >= match.index && cursorOffset <= match.index + match[0].length) {
-          codeText = match[1];
-          break;
-        }
+    const fullText = editor.document.getText();
+    const cursorOffset = editor.document.offsetAt(selection.active);
+    const codeBlockRegex = /```([a-zA-Z0-9_-]+)?\b[^\n]*\n([\s\S]*?)```/g;
+
+    let enclosingFence: { lang: string; code: string } | undefined;
+    let match;
+    while ((match = codeBlockRegex.exec(fullText)) !== null) {
+      if (cursorOffset >= match.index && cursorOffset <= match.index + match[0].length) {
+        enclosingFence = {
+          lang: (match[1] || 'python').toLowerCase(),
+          code: match[2],
+        };
+        break;
       }
     }
 
     if (!codeText.trim()) {
-      vscode.window.showInformationMessage(l10n('cursorInPythonChunk', 'Please move the cursor inside a Python code chunk or select the code to run'));
+      if (enclosingFence) {
+        codeText = enclosingFence.code;
+        language = enclosingFence.lang;
+      }
+    } else {
+      if (enclosingFence) {
+        language = enclosingFence.lang;
+      } else {
+        const directMatch = /^```([a-zA-Z0-9_-]+)?\b[^\n]*\n([\s\S]*?)```$/s.exec(codeText.trim());
+        if (directMatch) {
+          language = (directMatch[1] || 'python').toLowerCase();
+          codeText = directMatch[2];
+        }
+      }
+    }
+
+    const langAliases: Record<string, string> = {
+      py: 'python',
+      js: 'javascript',
+      node: 'javascript',
+      sh: 'bash',
+      shell: 'bash',
+    };
+    if (langAliases[language]) {
+      language = langAliases[language];
+    }
+
+    if (!codeText.trim()) {
+      vscode.window.showInformationMessage(l10n('cursorInCodeChunk', 'Please move the cursor inside a code chunk or select the code to run'));
       return;
     }
 
@@ -492,7 +694,7 @@ export function activate(context: vscode.ExtensionContext) {
       cancellable: false,
     }, async () => {
       try {
-        const res = await bridge.runCodeChunk(codeText);
+        const res = await bridge.runCodeChunk(codeText, language);
         if (res.ok) {
           let msg = res.stdout ? `输出:\n${res.stdout}` : '代码执行成功 (无标准输出)';
           if (res.images && res.images.length > 0) {
@@ -758,18 +960,16 @@ export function activate(context: vscode.ExtensionContext) {
 
       let existingConfig: Record<string, any> = {};
       if (fs.existsSync(targetFile)) {
+        const raw = fs.readFileSync(targetFile, 'utf-8');
         try {
-          const raw = fs.readFileSync(targetFile, 'utf-8');
-          const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-            existingConfig = parsed;
-          }
+          existingConfig = parseJsoncSafely(raw);
         } catch (parseErr) {
+          let backupFile = '';
           try {
-            const backupFile = `${targetFile}.bak.${Date.now()}`;
+            backupFile = `${targetFile}.bak.${Date.now()}`;
             fs.copyFileSync(targetFile, backupFile);
           } catch (_) {}
-          existingConfig = {};
+          throw new Error(l10n('mcpParseFailedAborted', `ReadMD: 无法解析已有的 ${targetFile}。已创建备份 ${backupFile || targetFile + '.bak'}，终止写入以防配置丢失！`, { file: targetFile, backup: backupFile }));
         }
       }
 
@@ -860,13 +1060,54 @@ ${safeMarkdown}
 </html>`;
 }
 
-function getEnhancedWebviewContent(markdown: string, docTitle: string): string {
+export function resolveMarkdownImages(markdown: string, docDir: string, webview: vscode.Webview): string {
+  const mdImgRegex = /!\[([^\]]*)\]\(([^)\s]+)(?:\s+["']([^"']*)["'])?\)/g;
+  let result = markdown.replace(mdImgRegex, (match, alt, src, title) => {
+    if (/^(https?:\/\/|data:|vscode-webview:)/i.test(src)) {
+      return match;
+    }
+    try {
+      const absPath = path.isAbsolute(src) ? src : path.join(docDir, src);
+      const uri = typeof webview.asWebviewUri === 'function'
+        ? webview.asWebviewUri(vscode.Uri.file(absPath)).toString()
+        : `vscode-resource://${absPath}`;
+      const titlePart = title ? ` "${title}"` : '';
+      return `![${alt}](${uri}${titlePart})`;
+    } catch (_) {
+      return match;
+    }
+  });
+
+  const htmlImgRegex = /<img\b([^>]*?)\bsrc=["']([^"']+)["']([^>]*?)>/gi;
+  result = result.replace(htmlImgRegex, (match, before, src, after) => {
+    if (/^(https?:\/\/|data:|vscode-webview:)/i.test(src)) {
+      return match;
+    }
+    try {
+      const absPath = path.isAbsolute(src) ? src : path.join(docDir, src);
+      const uri = typeof webview.asWebviewUri === 'function'
+        ? webview.asWebviewUri(vscode.Uri.file(absPath)).toString()
+        : `vscode-resource://${absPath}`;
+      return `<img${before}src="${uri}"${after}>`;
+    } catch (_) {
+      return match;
+    }
+  });
+
+  return result;
+}
+
+export function getEnhancedWebviewContent(markdownOrTitle: string, docTitle?: string): string {
+  const title = docTitle !== undefined ? docTitle : markdownOrTitle;
+  const initialMarkdown = docTitle !== undefined ? markdownOrTitle : '';
+  const safeInitialRaw = JSON.stringify(initialMarkdown).replace(/<\/(script)/gi, '<\\/$1');
+
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ReadMD: ${docTitle}</title>
+  <title>ReadMD: ${title}</title>
   <!-- KaTeX CSS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <style>
@@ -951,22 +1192,55 @@ function getEnhancedWebviewContent(markdown: string, docTitle: string): string {
 <body>
   <div id="content"></div>
   <script>
-    const raw = ${JSON.stringify(markdown)};
+    const vscode = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : null;
     const el = document.getElementById('content');
-    el.innerHTML = marked.parse(raw);
-    if (window.renderMathInElement) {
-      renderMathInElement(el, {
-        delimiters: [
-          {left: '$$', right: '$$', display: true},
-          {left: '$', right: '$', display: false},
-          {left: '\\\\[', right: '\\\\]', display: true},
-          {left: '\\\\(', right: '\\\\)', display: false}
-        ],
-        throwOnError: false
-      });
+
+    function renderMarkdown(md) {
+      const scrollRatio = (window.scrollY || document.documentElement.scrollTop) /
+        ((document.documentElement.scrollHeight - window.innerHeight) || 1);
+
+      if (window.marked) {
+        el.innerHTML = marked.parse(md || '');
+      } else {
+        el.innerText = md || '';
+      }
+
+      if (window.renderMathInElement) {
+        renderMathInElement(el, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+            {left: '\\\\[', right: '\\\\]', display: true},
+            {left: '\\\\(', right: '\\\\)', display: false}
+          ],
+          throwOnError: false
+        });
+      }
+      if (window.mermaid) {
+        try {
+          mermaid.run({ nodes: el.querySelectorAll('.mermaid') });
+        } catch (_) {}
+      }
+
+      const newScroll = scrollRatio * (document.documentElement.scrollHeight - window.innerHeight);
+      if (Number.isFinite(newScroll) && newScroll > 0) {
+        window.scrollTo(0, newScroll);
+      }
     }
-    if (window.mermaid) {
-      mermaid.initialize({ startOnLoad: true, theme: 'default' });
+
+    window.addEventListener('message', event => {
+      const message = event.data;
+      if (message && message.type === 'updateContent') {
+        renderMarkdown(message.markdown);
+      }
+    });
+
+    const initialMd = ${safeInitialRaw};
+    if (initialMd) {
+      renderMarkdown(initialMd);
+    }
+    if (vscode) {
+      vscode.postMessage({ type: 'webviewReady' });
     }
   </script>
 </body>

@@ -251,3 +251,77 @@ test('cancellation rejects with ai_cancelled, notifies the core, and ignores the
   assert.deepEqual(await bridge.callMcpMethod('tools/list'), { ok: true });
   bridge.dispose();
 });
+
+test('consumeOutput properly decodes multi-byte UTF-8 split across chunks', async () => {
+  const proc = makeFakeProc();
+  fakeCp.spawn = () => proc;
+  const bridge = new ReadMDBridge({ extensionPath: '/fake-ext' });
+  proc.stdin.write = () => true;
+
+  const pending = bridge.callMcpMethod('test_utf8');
+  await sleep();
+  proc.emit('spawn');
+
+  const jsonStr = JSON.stringify({
+    jsonrpc: '2.0',
+    id: 1,
+    result: { text: '测试中文字符串与Emoji🚀' },
+  }) + '\n';
+  const buf = Buffer.from(jsonStr, 'utf-8');
+
+  // Split in the middle of UTF-8 multi-byte sequence
+  // Find index of '测' in utf8 buffer
+  const splitIdx = 42;
+  proc.stdout.emit('data', buf.subarray(0, splitIdx));
+  await sleep(5);
+  proc.stdout.emit('data', buf.subarray(splitIdx));
+
+  const result = await pending;
+  assert.deepStrictEqual(result, { text: '测试中文字符串与Emoji🚀' });
+  bridge.dispose();
+});
+
+test('bridge resets idle timeout on progress notifications and notifies cancellation', async () => {
+  const proc = makeFakeProc();
+  const writes = [];
+  proc.stdin.write = (payload) => {
+    const msg = JSON.parse(payload);
+    writes.push(msg);
+    return true;
+  };
+  fakeCp.spawn = () => proc;
+  const bridge = new ReadMDBridge({ extensionPath: '/fake-ext' });
+
+  let chunkCount = 0;
+  const pending = bridge.callMcpToolStreaming('long_tool', {}, () => {
+    chunkCount += 1;
+  });
+  await sleep();
+  proc.emit('spawn');
+
+  // Emit progress notifications with token
+  await sleep(10);
+  const req = writes[0];
+  const token = req.params._meta.progressToken;
+
+  proc.stdout.emit('data', Buffer.from(JSON.stringify({
+    jsonrpc: '2.0',
+    method: 'notifications/progress',
+    params: { progressToken: token, message: 'processing step 1' },
+  }) + '\n'));
+
+  await sleep(10);
+  assert.strictEqual(chunkCount, 1);
+
+  // Complete the call
+  proc.stdout.emit('data', Buffer.from(JSON.stringify({
+    jsonrpc: '2.0',
+    id: req.id,
+    result: { content: [{ type: 'text', text: JSON.stringify({ ok: true }) }] },
+  }) + '\n'));
+
+  const res = await pending;
+  assert.deepStrictEqual(res, { ok: true });
+  bridge.dispose();
+});
+

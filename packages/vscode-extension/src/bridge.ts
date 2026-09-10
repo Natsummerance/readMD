@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import { StringDecoder } from 'string_decoder';
 import { findPythonPath } from './pythonFinder';
 
 export interface FixResult {
@@ -26,10 +27,13 @@ export class ReadMDBridge {
   private starting?: Promise<void>;
   private nextId = 1;
   private buffer = '';
+  private decoder = new StringDecoder('utf8');
   private pending = new Map<number, {
     resolve: (value: any) => void;
     reject: (reason?: any) => void;
-    timer: NodeJS.Timeout;
+    idleTimer: NodeJS.Timeout;
+    maxTimer: NodeJS.Timeout;
+    resetIdle: () => void;
     onProgress?: (message: string) => void;
   }>();
   private disposed = false;
@@ -82,7 +86,11 @@ export class ReadMDBridge {
       });
       this.proc = proc;
       this.procSpawned = false;
-      proc.stdout.on('data', chunk => this.consumeOutput(chunk.toString()));
+      this.decoder = new StringDecoder('utf8');
+      proc.stdout.on('data', chunk => {
+        const text = typeof chunk === 'string' ? chunk : this.decoder.write(chunk);
+        this.consumeOutput(text);
+      });
       proc.stderr.on('data', chunk => { /* protocol responses stay on stdout */ void chunk; });
       proc.on('error', err => {
         if (this.proc === proc) this.failProcess(err);
@@ -121,13 +129,18 @@ export class ReadMDBridge {
           if (response.method === 'notifications/progress') {
             const token = Number(response.params?.progressToken);
             const waiter = this.pending.get(token);
-            const message = String(response.params?.message ?? '');
-            if (waiter?.onProgress && message) waiter.onProgress(message);
+            if (waiter) {
+              waiter.resetIdle();
+              const message = String(response.params?.message ?? '');
+              if (waiter.onProgress && message) waiter.onProgress(message);
+            }
           } else {
             const id = Number(response.id);
             const waiter = this.pending.get(id);
             if (waiter) {
-              this.pending.delete(id); clearTimeout(waiter.timer);
+              this.pending.delete(id);
+              clearTimeout(waiter.idleTimer);
+              clearTimeout(waiter.maxTimer);
               if (response.error) waiter.reject(new Error(String(response.error.code || 'mcp_request_failed')));
               else waiter.resolve(response.result);
             }
@@ -143,8 +156,14 @@ export class ReadMDBridge {
     const wasConnected = this.everConnected && !this.disposed;
     this.proc = undefined;
     this.procSpawned = false;
-    for (const waiter of this.pending.values()) { clearTimeout(waiter.timer); waiter.reject(error); }
-    this.pending.clear(); this.buffer = '';
+    for (const waiter of this.pending.values()) {
+      clearTimeout(waiter.idleTimer);
+      clearTimeout(waiter.maxTimer);
+      waiter.reject(error);
+    }
+    this.pending.clear();
+    this.buffer = '';
+    this.decoder.end();
     if (wasConnected) this.fireDisconnected();
   }
 
@@ -187,34 +206,60 @@ export class ReadMDBridge {
     }
     const request = { jsonrpc: '2.0', id, method, params };
     return new Promise((resolve, reject) => {
-      let timer!: NodeJS.Timeout;
+      const IDLE_TIMEOUT_MS = 45000;
+      const MAX_TIMEOUT_MS = 600000; // 10 minutes
+      let idleTimer!: NodeJS.Timeout;
+      let maxTimer!: NodeJS.Timeout;
       let cancelDisposable: vscode.Disposable | undefined;
       let settled = false;
+
+      const sendCancelNotice = () => {
+        if (proc.stdin.writable) {
+          try {
+            proc.stdin.write(JSON.stringify({
+              jsonrpc: '2.0', method: 'notifications/cancelled', params: { requestId: id },
+            }) + '\n');
+          } catch { /* process may already be gone */ }
+        }
+      };
+
       const settle = (ok: boolean, value: any) => {
         if (settled) return;
         settled = true;
         this.pending.delete(id);
-        clearTimeout(timer);
+        clearTimeout(idleTimer);
+        clearTimeout(maxTimer);
         cancelDisposable?.dispose();
         (ok ? resolve : reject)(value);
       };
-      timer = setTimeout(() => settle(false, new Error('core_operation_timeout')), 60000);
+
+      const resetIdle = () => {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          sendCancelNotice();
+          settle(false, new Error('core_operation_timeout'));
+        }, IDLE_TIMEOUT_MS);
+      };
+
+      resetIdle();
+      maxTimer = setTimeout(() => {
+        sendCancelNotice();
+        settle(false, new Error('core_operation_timeout'));
+      }, MAX_TIMEOUT_MS);
+
       this.pending.set(id, {
         resolve: value => settle(true, value),
         reject: value => settle(false, value),
-        timer,
+        idleTimer,
+        maxTimer,
+        resetIdle,
         onProgress,
       });
+
       if (token) {
         cancelDisposable = token.onCancellationRequested(() => {
+          sendCancelNotice();
           settle(false, new Error('ai_cancelled'));
-          if (proc.stdin.writable) {
-            try {
-              proc.stdin.write(JSON.stringify({
-                jsonrpc: '2.0', method: 'notifications/cancelled', params: { requestId: id },
-              }) + '\n');
-            } catch { /* process may already be gone */ }
-          }
         });
       }
       proc.stdin.write(JSON.stringify(request) + '\n');
@@ -265,7 +310,11 @@ export class ReadMDBridge {
 
   public dispose(): void {
     this.disposed = true;
-    for (const waiter of this.pending.values()) { clearTimeout(waiter.timer); waiter.reject(new Error('core_closed')); }
+    for (const waiter of this.pending.values()) {
+      clearTimeout(waiter.idleTimer);
+      clearTimeout(waiter.maxTimer);
+      waiter.reject(new Error('core_closed'));
+    }
     this.pending.clear(); this.proc?.kill(); this.proc = undefined;
   }
 

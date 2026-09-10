@@ -17,6 +17,8 @@ let errors = [];
 let openedDocs = [];
 let bridgeCalls = {};
 let clipboardText = '';
+let lastWebviewOptions = null;
+let lastPostedMessages = [];
 
 function makeEditor(text = '# 测试文档', version = 1) {
   return {
@@ -70,10 +72,18 @@ const vscodeStub = {
     createStatusBarItem: () => ({ text: '', tooltip: '', command: '', name: '', show() {}, hide() {}, dispose() {} }),
     onDidChangeActiveTextEditor: () => ({ dispose() {} }),
     registerTreeDataProvider: () => {},
-    createWebviewPanel: () => ({
-      webview: { html: '' },
-      onDidDispose: () => ({ dispose() {} }),
-    }),
+    createWebviewPanel: (viewType, title, col, options) => {
+      lastWebviewOptions = options;
+      return {
+        webview: {
+          html: '',
+          asWebviewUri: uri => ({ toString: () => `vscode-webview://${uri.fsPath}` }),
+          postMessage: msg => lastPostedMessages.push(msg),
+          onDidReceiveMessage: () => ({ dispose() {} }),
+        },
+        onDidDispose: () => ({ dispose() {} }),
+      };
+    },
     withProgress: (options, cb) => cb(
       { report() {} },
       { onCancellationRequested: () => ({ dispose() {} }) }
@@ -154,7 +164,7 @@ Module._load = function patchedLoad(request, parent, isMain) {
   return originalLoad.call(this, request, parent, isMain);
 };
 
-const { activate } = require(path.join(outDir, 'extension.js'));
+const { activate, resolveMarkdownImages, getEnhancedWebviewContent, parseJsoncSafely } = require(path.join(outDir, 'extension.js'));
 
 function freshState() {
   registered = {};
@@ -163,6 +173,8 @@ function freshState() {
   errors = [];
   openedDocs = [];
   bridgeCalls = {};
+  lastWebviewOptions = null;
+  lastPostedMessages = [];
   vscodeStub.window.activeTextEditor = makeEditor();
 }
 
@@ -244,6 +256,63 @@ test('openAiWorkbench reports server-side cancellation via ai_cancelled', async 
   assert.strictEqual(errors.length, 0);
 });
 
+test('openAiWorkbench aborts replacing selection if document version changed during generation', async () => {
+  freshState();
+  let editCalled = false;
+  vscodeStub.window.activeTextEditor = {
+    document: {
+      version: 1,
+      getText: () => '# 初始文档',
+      fileName: '/tmp/doc.md',
+      languageId: 'markdown',
+      uri: { toString: () => 'file:///tmp/doc.md' },
+      positionAt: offset => ({ line: 0, character: offset }),
+      offsetAt: () => 0,
+    },
+    selection: { active: { line: 0, character: 0 } },
+    edit: async cb => {
+      editCalled = true;
+      cb({ replace: () => {}, insert: () => {} });
+      return true;
+    },
+  };
+  const origAiChat = fakeBridgeInstance.aiChatStreaming;
+  fakeBridgeInstance.aiChatStreaming = async (args, onChunk) => {
+    // 模拟生成期间用户修改了文档
+    vscodeStub.window.activeTextEditor.document.version = 2;
+    if (onChunk) onChunk('AI生成内容');
+    return { ok: true, content: 'AI生成内容' };
+  };
+  const origShowInfo = vscodeStub.window.showInformationMessage;
+  vscodeStub.window.showInformationMessage = async (...args) => {
+    messages.push(args[0]);
+    return '替换选区'; // 用户点击替换选区
+  };
+  let warningShown = false;
+  const origShowWarn = vscodeStub.window.showWarningMessage;
+  vscodeStub.window.showWarningMessage = async (...args) => {
+    warningShown = true;
+    messages.push(args[0]);
+    return undefined;
+  };
+
+  try {
+    activateExtension();
+    const workflow = { label: 'readmd-summary', description: '总结', skillId: 'readmd-summary' };
+    const provider = { label: 'Test Provider', description: '已配置凭据', value: { id: 'custom:test', credential_id: 'cred:abc12345', models: ['mock-a'] } };
+    quickPickQueue.push(workflow, provider);
+    await registered['readmd.openAiWorkbench']();
+
+    assert.strictEqual(editCalled, false, 'editor.edit must not be called when document version changed');
+    assert.strictEqual(warningShown, true, 'Warning message must be shown');
+    assert.ok(messages.some(m => m && m.includes('已变更')), 'Must notify user that document changed');
+  } finally {
+    fakeBridgeInstance.aiChatStreaming = origAiChat;
+    vscodeStub.window.showInformationMessage = origShowInfo;
+    vscodeStub.window.showWarningMessage = origShowWarn;
+  }
+});
+
 test('openAiWorkbench surfaces tool failures as error messages', async () => {
   freshState();
   bridgeCalls.aiChatStreamingResult = 'failed';
@@ -318,6 +387,47 @@ test('setupMcpServer merges and preserves existing MCP server configurations', a
   });
 });
 
+test('setupMcpServer safely parses JSONC with comments and trailing commas without wiping config', async () => {
+  freshState();
+  const ws = tempWorkspace();
+  const cursorDir = path.join(ws, '.cursor');
+  fs.mkdirSync(cursorDir, { recursive: true });
+  const jsoncContent = `{\n  // Single line comment\n  "customProp": "http://example.com/test", // inline comment\n  /* Block\n     Comment */\n  "mcpServers": {\n    "existingTool": {\n      "command": "node",\n      "args": ["server.js", ], // trailing comma\n    },\n  },\n}`;
+  fs.writeFileSync(path.join(cursorDir, 'mcp.json'), jsoncContent, 'utf-8');
+
+  vscodeStub.workspace.workspaceFolders = [{ uri: { fsPath: ws } }];
+  activateExtension();
+  quickPickQueue.push({ label: 'cursor', value: 'cursor' });
+  await registered['readmd.setupMcpServer']();
+
+  const written = JSON.parse(fs.readFileSync(path.join(cursorDir, 'mcp.json'), 'utf-8'));
+  assert.strictEqual(written.customProp, 'http://example.com/test');
+  assert.deepStrictEqual(written.mcpServers.existingTool, {
+    command: 'node',
+    args: ['server.js'],
+  });
+  assert.ok(written.mcpServers.readmd, 'readmd config must be added');
+});
+
+test('setupMcpServer aborts and preserves file if JSON cannot be repaired', async () => {
+  freshState();
+  const ws = tempWorkspace();
+  const cursorDir = path.join(ws, '.cursor');
+  fs.mkdirSync(cursorDir, { recursive: true });
+  const corrupted = 'NOT VALID JSON {{{ [[[ ';
+  fs.writeFileSync(path.join(cursorDir, 'mcp.json'), corrupted, 'utf-8');
+
+  vscodeStub.workspace.workspaceFolders = [{ uri: { fsPath: ws } }];
+  activateExtension();
+  quickPickQueue.push({ label: 'cursor', value: 'cursor' });
+  await registered['readmd.setupMcpServer']();
+
+  // File must NOT be replaced with empty or overwritten with only readmd
+  assert.strictEqual(fs.readFileSync(path.join(cursorDir, 'mcp.json'), 'utf-8'), corrupted);
+  assert.ok(errors.length > 0, 'Error must be surfaced to user');
+  assert.ok(errors.some(e => e && e.includes('无法解析') || e.includes('Failed to parse')), 'Error message must explain parsing abort');
+});
+
 test('setupMcpServer writes the Cursor .cursor/mcp.json contract', async () => {
   freshState();
   const ws = tempWorkspace();
@@ -347,10 +457,66 @@ test('setupMcpServer copies the Claude Desktop config to the clipboard without a
   });
 });
 
-test('preview builds a webview and tracks document changes', () => {
+test('preview builds a webview and tracks document changes with localResourceRoots', () => {
   freshState();
   activateExtension();
   registered['readmd.preview']();
+  assert.ok(lastWebviewOptions, 'Webview options must be passed');
+  assert.ok(Array.isArray(lastWebviewOptions.localResourceRoots), 'localResourceRoots must be an array');
+  assert.strictEqual(lastWebviewOptions.enableScripts, true);
+  assert.strictEqual(lastWebviewOptions.retainContextWhenHidden, true);
+});
+
+test('getEnhancedWebviewContent escapes </script> inside markdown safely', () => {
+  const malicious = '# Title\n\n```html\n<script>alert("hack")</script>\n```\n</script><script>window.pwned=true;</script>';
+  const html = getEnhancedWebviewContent(malicious, 'Test Doc');
+  // Must not contain unescaped raw </script> inside the script tag
+  assert.ok(!html.includes('</script><script>window.pwned=true;</script>'), 'Unescaped script closing tags must not exist');
+  assert.ok(html.includes('<\\/script>'), 'Script closing tags inside JSON must be escaped');
+  assert.ok(html.includes('window.addEventListener(\'message\''), 'Webview must contain message event listener');
+});
+
+test('resolveMarkdownImages converts relative paths to asWebviewUri and preserves remote URLs', () => {
+  const fakeWebview = {
+    asWebviewUri: uri => ({ toString: () => `vscode-webview://assets/${path.basename(uri.fsPath)}` }),
+  };
+  const docDir = '/workspace/docs';
+  const md = [
+    '![local](./images/diagram.png)',
+    '![remote](https://example.com/logo.png)',
+    '![data](data:image/png;base64,abc123==)',
+    '<img src="./images/graph.svg" alt="graph">',
+    '<img src="https://cdn.example.com/img.jpg">',
+  ].join('\n');
+
+  const resolved = resolveMarkdownImages(md, docDir, fakeWebview);
+  assert.ok(resolved.includes('![local](vscode-webview://assets/diagram.png)'));
+  assert.ok(resolved.includes('![remote](https://example.com/logo.png)'));
+  assert.ok(resolved.includes('![data](data:image/png;base64,abc123==)'));
+  assert.ok(resolved.includes('<img src="vscode-webview://assets/graph.svg" alt="graph">'));
+  assert.ok(resolved.includes('<img src="https://cdn.example.com/img.jpg">'));
+});
+
+test('parseJsoncSafely parses complex comments and strings with slashes', () => {
+  const input = `
+  {
+    // Single line comment
+    "url": "http://example.com/api?foo=//bar/*baz*/",
+    /* Multi-line
+       Comment */
+    "items": [
+      1,
+      2, // inline comment
+    ],
+    "nested": {
+      "key": "val",
+    },
+  }
+  `;
+  const result = parseJsoncSafely(input);
+  assert.strictEqual(result.url, 'http://example.com/api?foo=//bar/*baz*/');
+  assert.deepStrictEqual(result.items, [1, 2]);
+  assert.deepStrictEqual(result.nested, { key: 'val' });
 });
 
 test('fixCurrentDocument applies repaired content to the editor', async () => {
@@ -419,6 +585,58 @@ test('runCodeChunk reports successful execution output', async () => {
   await registered['readmd.runCodeChunk']();
   assert.strictEqual(errors.length, 0);
   assert.ok(messages.some(m => m && m.includes('SUM=30')));
+});
+
+test('runCodeChunk detects javascript fence and passes language to bridge', async () => {
+  freshState();
+  let passedCode = null;
+  let passedLang = null;
+  fakeBridgeInstance.runCodeChunk = async (code, lang) => {
+    passedCode = code;
+    passedLang = lang;
+    return { ok: true, stdout: 'JS_OUT:42', images: [] };
+  };
+  const jsMd = '```javascript\nconsole.log(42);\n```';
+  vscodeStub.window.activeTextEditor = {
+    document: {
+      getText: () => jsMd,
+      fileName: '/tmp/test.md',
+      languageId: 'markdown',
+      uri: { toString: () => 'file:///tmp/test.md' },
+      positionAt: () => ({ line: 1, character: 2 }),
+      offsetAt: () => 18,
+    },
+    selection: { active: { line: 1, character: 2 } },
+  };
+  activateExtension();
+  await registered['readmd.runCodeChunk']();
+  assert.strictEqual(passedLang, 'javascript');
+  assert.ok(passedCode && passedCode.includes('console.log(42)'));
+  assert.ok(messages.some(m => m && m.includes('JS_OUT:42')));
+});
+
+test('runCodeChunk normalizes sh and py aliases', async () => {
+  freshState();
+  let passedLang = null;
+  fakeBridgeInstance.runCodeChunk = async (code, lang) => {
+    passedLang = lang;
+    return { ok: true, stdout: 'OK' };
+  };
+  const shMd = '```sh\necho hello\n```';
+  vscodeStub.window.activeTextEditor = {
+    document: {
+      getText: () => shMd,
+      fileName: '/tmp/test.md',
+      languageId: 'markdown',
+      uri: { toString: () => 'file:///tmp/test.md' },
+      positionAt: () => ({ line: 1, character: 2 }),
+      offsetAt: () => 10,
+    },
+    selection: { active: { line: 1, character: 2 } },
+  };
+  activateExtension();
+  await registered['readmd.runCodeChunk']();
+  assert.strictEqual(passedLang, 'bash');
 });
 
 test('fetchWebToMarkdown requires an http(s) URL and renders the fetched doc', async () => {
