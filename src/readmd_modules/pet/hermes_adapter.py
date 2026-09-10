@@ -71,19 +71,43 @@ class HermesPetBridge:
 
     def take_command(self) -> Optional[Dict[str, Any]]:
         """Return one validated command, deleting no state file on parse failure."""
+        claim_path = self.command_path.with_name(
+            f"{self.command_path.name}.claim.{os.getpid()}.{time.time_ns()}"
+        )
         try:
-            raw = self.command_path.read_text(encoding="utf-8")
+            os.replace(str(self.command_path), str(claim_path))
+        except OSError:
+            return None
+
+        def _restore_or_discard():
+            if not self.command_path.exists():
+                try:
+                    os.replace(str(claim_path), str(self.command_path))
+                    return
+                except OSError:
+                    pass
+            try:
+                claim_path.unlink()
+            except OSError:
+                pass
+
+        try:
+            raw = claim_path.read_text(encoding="utf-8")
             value = json.loads(raw)
         except (OSError, ValueError, TypeError):
+            _restore_or_discard()
             return None
         if not isinstance(value, dict) or not isinstance(value.get("command"), dict):
+            _restore_or_discard()
             return None
         command = value["command"]
         kind = command.get("type")
         if kind not in self._COMMANDS:
+            _restore_or_discard()
             return None
         if kind == "bounds":
             if not isinstance(command.get("bounds"), dict):
+                _restore_or_discard()
                 return None
             command = dict(command)
             command["bounds"] = self._safe_bounds(command["bounds"])
@@ -91,15 +115,19 @@ class HermesPetBridge:
             try:
                 scale = round(float(command.get("scale")), 2)
             except (TypeError, ValueError):
+                _restore_or_discard()
                 return None
             if not 0.18 <= scale <= 0.72:
+                _restore_or_discard()
                 return None
             command = {"type": "scale", "scale": scale}
         if kind == "drop":
             paths = command.get("paths")
             if not isinstance(paths, list) or not paths or len(paths) > 128:
+                _restore_or_discard()
                 return None
             if any(not isinstance(path, str) or not path or len(path) > 32768 for path in paths):
+                _restore_or_discard()
                 return None
             command = {"type": "drop", "paths": list(paths)}
         if kind == "clipboard":
@@ -107,14 +135,17 @@ class HermesPetBridge:
             image = command.get("image_png", "")
             paths = command.get("paths", [])
             if not isinstance(text, str) or len(text.encode("utf-8")) > 4 * 1024 * 1024:
+                _restore_or_discard()
                 return None
             if not isinstance(image, str) or len(image) > 24 * 1024 * 1024:
+                _restore_or_discard()
                 return None
             if not isinstance(paths, list) or len(paths) > 128 or any(not isinstance(path, str) or len(path) > 32768 for path in paths):
+                _restore_or_discard()
                 return None
             command = {"type": "clipboard", "text": text, "image_png": image, "paths": list(paths)}
         try:
-            self.command_path.unlink()
+            claim_path.unlink()
         except OSError:
             pass
         return command

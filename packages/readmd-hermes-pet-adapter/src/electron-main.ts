@@ -131,6 +131,7 @@ function openPetOverlay(bounds: unknown, renderer?: string): void {
     frame: false,
     hasShadow: false,
     resizable: false,
+    show: false,
     skipTaskbar: true,
     transparent: true,
     webPreferences: { contextIsolation: true, nodeIntegration: false, preload: path.join(app.getAppPath(), 'preload.cjs') }
@@ -194,9 +195,7 @@ function pollBridge(): void {
       lastRenderer = renderer
       lastHostBounds = next.bounds ? { ...next.bounds } : undefined
       openPetOverlay(next.bounds, renderer)
-      return
-    }
-    if (next.bounds && JSON.stringify(next.bounds) !== JSON.stringify(lastHostBounds)) {
+    } else if (next.bounds && JSON.stringify(next.bounds) !== JSON.stringify(lastHostBounds)) {
       lastHostBounds = { ...next.bounds }
       overlay.setBounds(clampBounds({ ...overlay.getBounds(), ...next.bounds }))
     }

@@ -108,11 +108,31 @@ def inline_text(nodes):
 
 def _split_row(line):
     line = line.strip()
-    if line.startswith('|'):
-        line = line[1:]
-    if line.endswith('|'):
-        line = line[:-1]
-    return [c.strip().replace('\\|', '|') for c in line.split('|')]
+    tokens = []
+    token_chars = []
+    bs_count = 0
+    for ch in line:
+        if ch == '\\':
+            bs_count += 1
+            token_chars.append(ch)
+        elif ch == '|':
+            if bs_count % 2 == 1:
+                token_chars.pop()
+                token_chars.append('|')
+                bs_count = 0
+            else:
+                tokens.append(''.join(token_chars))
+                token_chars = []
+                bs_count = 0
+        else:
+            bs_count = 0
+            token_chars.append(ch)
+    tokens.append(''.join(token_chars))
+    if tokens and tokens[0] == '':
+        tokens.pop(0)
+    if tokens and tokens[-1] == '':
+        tokens.pop()
+    return [c.strip() for c in tokens]
 
 
 def _split_align(line):
@@ -150,7 +170,10 @@ def _is_block_start(line):
     return False
 
 
-def parse(md_text):
+MAX_QUOTE_DEPTH = 64
+
+
+def parse(md_text, _depth=0):
     """Markdown 文本 -> 块列表。"""
     lines = (md_text or '').replace('\r\n', '\n').replace('\r', '\n').split('\n')
     blocks = []
@@ -167,10 +190,11 @@ def parse(md_text):
         m = _FENCE_RE.match(stripped)
         if m:
             fence, lang = m.group(1), m.group(2).strip()
+            closing = re.compile(r'^' + re.escape(fence[0]) + '{' + str(len(fence)) + r',}[ \t]*$')
             code = []
             i += 1
             while i < n:
-                if lines[i].strip().startswith(fence[0] * len(fence)):
+                if closing.fullmatch(lines[i].strip()):
                     i += 1
                     break
                 code.append(lines[i])
@@ -185,14 +209,19 @@ def parse(md_text):
                 blocks.append({'type': 'math', 'display': True, 'latex': m2.group(1).strip()})
                 i += 1
                 continue
-            buf = []
+            opening_content = stripped[2:].strip()
+            buf = [opening_content] if opening_content else []
             i += 1
             while i < n:
-                if '$$' in lines[i]:
-                    buf.append(lines[i].replace('$$', ''))
+                cur = lines[i]
+                if '$$' in cur:
+                    idx = cur.find('$$')
+                    before = cur[:idx].strip()
+                    if before:
+                        buf.append(before)
                     i += 1
                     break
-                buf.append(lines[i])
+                buf.append(cur)
                 i += 1
             blocks.append({'type': 'math', 'display': True, 'latex': '\n'.join(buf).strip()})
             continue
@@ -229,7 +258,11 @@ def parse(md_text):
             while i < n and lines[i].strip().startswith('>'):
                 q.append(re.sub(r'^\s*>\s?', '', lines[i]))
                 i += 1
-            blocks.append({'type': 'quote', 'blocks': parse('\n'.join(q))})
+            if _depth >= MAX_QUOTE_DEPTH:
+                blocks.append({'type': 'paragraph',
+                               'text': [{'t': 'text', 'v': '\n'.join(q)}]})
+            else:
+                blocks.append({'type': 'quote', 'blocks': parse('\n'.join(q), _depth + 1)})
             continue
 
         # 列表

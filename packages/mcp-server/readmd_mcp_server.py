@@ -178,6 +178,27 @@ def _mcp_output_target(raw_path: Any, suffix: str, overwrite: bool = False) -> s
     return target
 
 
+def _safe_write_text(path: str, content: str, overwrite: bool) -> None:
+    """Write text to target path honoring overwrite and symlink denial."""
+    if not overwrite:
+        with open(path, 'x', encoding='utf-8') as f:
+            f.write(content)
+        return
+    # When overwrite=True, write to exclusive temp file and atomically replace
+    # destination entry so symlinks are replaced rather than followed.
+    tmp_path = f"{path}.tmp.{os.getpid()}.{time.monotonic_ns()}"
+    try:
+        with open(tmp_path, 'x', encoding='utf-8') as f:
+            f.write(content)
+        os.replace(tmp_path, path)
+    finally:
+        try:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+        except OSError:
+            pass
+
+
 
 def _mcp_error(code: str) -> Dict[str, Any]:
     return {"isError": True, "content": [{"type": "text", "text": json.dumps({
@@ -642,8 +663,10 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
                 if err:
                     return err
                 tex = texmd.markdown_to_latex(md_content, title=title)
-                with open(out_path, 'w', encoding='utf-8') as f:
-                    f.write(tex)
+                try:
+                    _safe_write_text(out_path, tex, bool(args.get("overwrite", False)))
+                except FileExistsError:
+                    return _mcp_error("output_exists")
                 return {"content": [{"type": "text", "text": f"已成功编译并导出 LaTeX 到: {out_path}"}]}
 
             err = _check_optional_module("mdexport", mdexport)
@@ -832,8 +855,10 @@ def handle_tool_call(name: str, args: Dict[str, Any], progress=None,
             except ValueError as exc:
                 return _mcp_error(str(exc))
             html = render_presentation_html(md_content, title=title, theme=theme, transition=transition)
-            with open(out_path, 'w', encoding='utf-8') as f:
-                f.write(html)
+            try:
+                _safe_write_text(out_path, html, bool(args.get("overwrite", False)))
+            except FileExistsError:
+                return _mcp_error("output_exists")
             return {
                 "content": [
                     {
@@ -1069,6 +1094,7 @@ def run_stdio_server():
             pass
 
     while True:
+        req_id = None
         try:
             line = sys.stdin.readline()
             if not line:
@@ -1076,8 +1102,15 @@ def run_stdio_server():
             line = line.strip()
             if not line:
                 continue
-            req = json.loads(line)
+            try:
+                req = json.loads(line)
+            except Exception:
+                _write_message({"jsonrpc": "2.0", "id": None,
+                                "error": {"code": -32700, "message": "Parse error"}})
+                continue
             if not isinstance(req, dict):
+                _write_message({"jsonrpc": "2.0", "id": None,
+                                "error": {"code": -32600, "message": "Invalid Request"}})
                 continue
             req_id = req.get("id")
             method = req.get("method")
@@ -1115,12 +1148,16 @@ def run_stdio_server():
             elif method == "resources/list":
                 res = {"jsonrpc": "2.0", "id": req_id, "result": {"resources": _all_resources()}}
             elif method == "resources/read":
-                params = req.get("params", {})
+                params = req.get("params") or {}
                 res = {"jsonrpc": "2.0", "id": req_id, "result": _read_resource(params.get("uri"))}
             elif method == "prompts/list":
                 res = {"jsonrpc": "2.0", "id": req_id, "result": {"prompts": _prompt_descriptors()}}
             elif method == "prompts/get":
-                params = req.get("params", {})
+                params = req.get("params")
+                if not isinstance(params, dict):
+                    _write_message({"jsonrpc": "2.0", "id": req_id,
+                                    "error": {"code": -32602, "message": "Invalid params"}})
+                    continue
                 requested = str(params.get("name") or "readmd-quick-read")
                 skill_id = _resolve_skill_id(requested)
                 skill = _skills_registry().get(skill_id)
@@ -1136,9 +1173,20 @@ def run_stdio_server():
                 res = {"jsonrpc": "2.0", "id": req_id, "result": {"description": name,
                     "messages": [{"role": "user", "content": {"type": "text", "text": prompt}}]}}
             elif method == "tools/call":
-                params = req.get("params", {})
+                raw_params = req.get("params")
+                if not isinstance(raw_params, dict):
+                    _write_message({"jsonrpc": "2.0", "id": req_id,
+                                    "error": {"code": -32602, "message": "Invalid params"}})
+                    continue
+                params = raw_params
                 name = params.get("name")
                 arguments = params.get("arguments", {})
+                if arguments is None:
+                    arguments = {}
+                elif not isinstance(arguments, dict):
+                    _write_message({"jsonrpc": "2.0", "id": req_id,
+                                    "error": {"code": -32602, "message": "Invalid params"}})
+                    continue
                 progress = _progress_emitter((params.get("_meta") or {}).get("progressToken"))
                 cancel_event = threading.Event()
                 _CANCEL_EVENTS[req_id] = cancel_event
@@ -1173,7 +1221,7 @@ def run_stdio_server():
         except Exception as e:
             err_res = {
                 "jsonrpc": "2.0",
-                "id": None,
+                "id": req_id,
                 "error": {
                     "code": -32603,
                     "message": str(e)

@@ -129,7 +129,7 @@ _PATH_ESCAPE_PATTERNS = (
 )
 
 
-def _limit_child_resources(timeout: int) -> None:
+def _limit_child_resources(timeout: int, runtime: Optional[str] = None) -> None:
     """Apply best-effort OS resource ceilings before starting user code.
 
     Unix kernels enforce CPU, address-space, file-size and child-process
@@ -140,12 +140,16 @@ def _limit_child_resources(timeout: int) -> None:
     if _resource is None:
         return
     cpu = max(1, min(int(timeout or EXECUTION_TIMEOUT), MAX_TIMEOUT_SECONDS)) + 1
-    limits = (
+    limits = [
         ('RLIMIT_CPU', cpu),
-        ('RLIMIT_AS', MAX_MEMORY_BYTES),
         ('RLIMIT_FSIZE', MAX_FILE_BYTES),
         ('RLIMIT_NPROC', MAX_CHILD_PROCESSES),
-    )
+    ]
+    if runtime != 'node':
+        limits.append(('RLIMIT_AS', MAX_MEMORY_BYTES))
+    elif hasattr(_resource, 'RLIMIT_DATA'):
+        limits.append(('RLIMIT_DATA', MAX_MEMORY_BYTES))
+
     for name, ceiling in limits:
         kind = getattr(_resource, name, None)
         if kind is None:
@@ -184,93 +188,201 @@ except Exception as _e:
 """
 
 
-def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECUTION_TIMEOUT) -> Dict[str, Any]:
+def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECUTION_TIMEOUT, runtime: Optional[str] = None) -> Dict[str, Any]:
     """底层安全进程调用与 UTF-8 管道捕获（有界流式内存保护与全路径截断）。"""
     env = {key: os.environ[key] for key in _SAFE_ENV_KEYS if os.environ.get(key)}
     env['PYTHONIOENCODING'] = 'utf-8'
     env['PYTHONUTF8'] = '1'
-    env['NODE_OPTIONS'] = '--no-warnings'
+    env['NODE_OPTIONS'] = '--no-warnings --max-old-space-size=128' if runtime == 'node' else '--no-warnings'
     timeout = max(1, min(int(timeout or EXECUTION_TIMEOUT), MAX_TIMEOUT_SECONDS))
 
     job = None
     proc = None
-    t_out = None
-    t_err = None
     try:
         popen_kwargs = {}
-        if sys.platform == 'win32':
+        is_posix = sys.platform != 'win32'
+        if is_posix:
+            popen_kwargs['start_new_session'] = True
+            popen_kwargs['preexec_fn'] = lambda: _limit_child_resources(timeout, runtime=runtime)
+        else:
             popen_kwargs['creationflags'] = getattr(subprocess, 'CREATE_NEW_PROCESS_GROUP', 0)
             try:
                 job = _create_job_object()
             except Exception:
                 job = None
-        else:
-            popen_kwargs['start_new_session'] = True
-            popen_kwargs['preexec_fn'] = lambda: _limit_child_resources(timeout)
+
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
-            encoding='utf-8',
-            errors='replace',
+            text=not is_posix,
+            encoding=None if is_posix else 'utf-8',
+            errors=None if is_posix else 'replace',
             env=env,
             cwd=cwd,
             **popen_kwargs
         )
 
-        if job and _kernel32 and hasattr(proc, '_handle'):
-            try:
-                _kernel32.AssignProcessToJobObject(job, int(proc._handle))
-            except Exception:
-                pass
+        if is_posix:
+            import selectors
+            sel = selectors.DefaultSelector()
+            stdout_fd = proc.stdout.fileno()
+            stderr_fd = proc.stderr.fileno()
+            os.set_blocking(stdout_fd, False)
+            os.set_blocking(stderr_fd, False)
 
-        stdout_chunks: List[str] = []
-        stderr_chunks: List[str] = []
-        stdout_truncated = [False]
-        stderr_truncated = [False]
+            stdout_chunks: List[str] = []
+            stderr_chunks: List[str] = []
+            stdout_truncated = [False]
+            stderr_truncated = [False]
+            stdout_total = 0
+            stderr_total = 0
 
-        def _bounded_reader(stream, chunks: List[str], trunc_flag: List[bool], limit: int):
-            total = 0
-            try:
-                while True:
-                    chunk = stream.read(4096)
+            sel.register(stdout_fd, selectors.EVENT_READ, data='stdout')
+            sel.register(stderr_fd, selectors.EVENT_READ, data='stderr')
+            open_fds = {stdout_fd, stderr_fd}
+
+            deadline = time.monotonic() + timeout
+            timed_out = False
+            child_exited = False
+
+            while open_fds:
+                now = time.monotonic()
+                if now >= deadline:
+                    timed_out = True
+                    break
+
+                if not child_exited and proc.poll() is not None:
+                    child_exited = True
+                    deadline = min(deadline, now + 0.1)
+
+                remaining = max(0.0, deadline - time.monotonic())
+                events = sel.select(timeout=min(remaining, 0.05))
+
+                if not events and child_exited:
+                    break
+
+                for key, _ in events:
+                    fd = key.fd
+                    stream_name = key.data
+                    try:
+                        chunk = os.read(fd, 4096)
+                    except (OSError, BlockingIOError):
+                        chunk = b''
+
                     if not chunk:
-                        break
-                    if total < limit:
-                        rem = limit - total
-                        chunks.append(chunk[:rem])
-                        total += min(len(chunk), rem)
-                        if len(chunk) > rem:
-                            trunc_flag[0] = True
+                        try:
+                            sel.unregister(fd)
+                        except Exception:
+                            pass
+                        open_fds.discard(fd)
+                        continue
+
+                    text_chunk = chunk.decode('utf-8', errors='replace')
+                    if stream_name == 'stdout':
+                        if stdout_total < MAX_OUTPUT_CHARS:
+                            rem = MAX_OUTPUT_CHARS - stdout_total
+                            stdout_chunks.append(text_chunk[:rem])
+                            stdout_total += min(len(text_chunk), rem)
+                            if len(text_chunk) > rem:
+                                stdout_truncated[0] = True
+                        else:
+                            stdout_truncated[0] = True
                     else:
-                        trunc_flag[0] = True
+                        if stderr_total < MAX_OUTPUT_CHARS:
+                            rem = MAX_OUTPUT_CHARS - stderr_total
+                            stderr_chunks.append(text_chunk[:rem])
+                            stderr_total += min(len(text_chunk), rem)
+                            if len(text_chunk) > rem:
+                                stderr_truncated[0] = True
+                        else:
+                            stderr_truncated[0] = True
+
+            try:
+                sel.close()
             except Exception:
                 pass
-            finally:
+
+            if timed_out or proc.poll() is None:
                 try:
-                    stream.close()
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except Exception:
+                    try:
+                        proc.kill()
+                    except Exception:
+                        pass
+                try:
+                    proc.wait(timeout=0.5)
+                except Exception:
+                    pass
+                exit_code = -1
+            else:
+                exit_code = proc.poll()
+
+            try:
+                proc.stdout.close()
+            except Exception:
+                pass
+            try:
+                proc.stderr.close()
+            except Exception:
+                pass
+
+            stdout = "".join(stdout_chunks)
+            stderr = "".join(stderr_chunks)
+
+        else:
+            if job and _kernel32 and hasattr(proc, '_handle'):
+                try:
+                    _kernel32.AssignProcessToJobObject(job, int(proc._handle))
                 except Exception:
                     pass
 
-        t_out = threading.Thread(target=_bounded_reader, args=(proc.stdout, stdout_chunks, stdout_truncated, MAX_OUTPUT_CHARS))
-        t_err = threading.Thread(target=_bounded_reader, args=(proc.stderr, stderr_chunks, stderr_truncated, MAX_OUTPUT_CHARS))
-        t_out.daemon = True
-        t_err.daemon = True
-        t_out.start()
-        t_err.start()
+            stdout_chunks: List[str] = []
+            stderr_chunks: List[str] = []
+            stdout_truncated = [False]
+            stderr_truncated = [False]
 
-        timed_out = False
-        try:
-            exit_code = proc.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            timed_out = True
-            exit_code = -1
-        except Exception:
-            exit_code = -1
+            def _bounded_reader(stream, chunks: List[str], trunc_flag: List[bool], limit: int):
+                total = 0
+                try:
+                    while True:
+                        chunk = stream.read(4096)
+                        if not chunk:
+                            break
+                        if total < limit:
+                            rem = limit - total
+                            chunks.append(chunk[:rem])
+                            total += min(len(chunk), rem)
+                            if len(chunk) > rem:
+                                trunc_flag[0] = True
+                        else:
+                            trunc_flag[0] = True
+                except Exception:
+                    pass
+                finally:
+                    try:
+                        stream.close()
+                    except Exception:
+                        pass
 
-        # 无论正常退出还是超时异常，彻底清理进程树与关闭管道
-        if sys.platform == 'win32':
+            t_out = threading.Thread(target=_bounded_reader, args=(proc.stdout, stdout_chunks, stdout_truncated, MAX_OUTPUT_CHARS))
+            t_err = threading.Thread(target=_bounded_reader, args=(proc.stderr, stderr_chunks, stderr_truncated, MAX_OUTPUT_CHARS))
+            t_out.daemon = True
+            t_err.daemon = True
+            t_out.start()
+            t_err.start()
+
+            timed_out = False
+            try:
+                exit_code = proc.wait(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                exit_code = -1
+            except Exception:
+                exit_code = -1
+
+            # 无论正常退出还是超时异常，彻底清理进程树与关闭管道
             if job and _kernel32:
                 try:
                     _kernel32.TerminateJobObject(job, 0)
@@ -288,31 +400,25 @@ def _run_process(cmd: List[str], cwd: Optional[str] = None, timeout: int = EXECU
                                    check=False)
             except Exception:
                 pass
-        else:
-            try:
-                os.killpg(proc.pid, signal.SIGKILL)
-            except Exception:
+
+            t_out.join(timeout=1.0)
+            t_err.join(timeout=1.0)
+
+            if not t_out.is_alive():
                 try:
-                    proc.kill()
+                    if proc.stdout and not proc.stdout.closed:
+                        proc.stdout.close()
+                except Exception:
+                    pass
+            if not t_err.is_alive():
+                try:
+                    if proc.stderr and not proc.stderr.closed:
+                        proc.stderr.close()
                 except Exception:
                     pass
 
-        try:
-            if proc.stdout and not proc.stdout.closed:
-                proc.stdout.close()
-        except Exception:
-            pass
-        try:
-            if proc.stderr and not proc.stderr.closed:
-                proc.stderr.close()
-        except Exception:
-            pass
-
-        t_out.join(timeout=1.0)
-        t_err.join(timeout=1.0)
-
-        stdout = "".join(stdout_chunks)
-        stderr = "".join(stderr_chunks)
+            stdout = "".join(stdout_chunks)
+            stderr = "".join(stderr_chunks)
 
         if timed_out:
             return {
@@ -507,10 +613,6 @@ def _split_sql_statements(sql: str) -> List[str]:
                     i += 2
                     continue
                 in_single_quote = False
-            elif ch == '\\' and nxt:
-                current.append(nxt)
-                i += 2
-                continue
             i += 1
             continue
 
@@ -522,10 +624,6 @@ def _split_sql_statements(sql: str) -> List[str]:
                     i += 2
                     continue
                 in_double_quote = False
-            elif ch == '\\' and nxt:
-                current.append(nxt)
-                i += 2
-                continue
             i += 1
             continue
 
@@ -628,10 +726,6 @@ def _split_sql_statements(sql: str) -> List[str]:
                     i += 2
                     continue
                 in_single_quote = False
-            elif ch == '\\\\' and nxt:
-                current.append(nxt)
-                i += 2
-                continue
             i += 1
             continue
         if in_double_quote:
@@ -642,10 +736,6 @@ def _split_sql_statements(sql: str) -> List[str]:
                     i += 2
                     continue
                 in_double_quote = False
-            elif ch == '\\\\' and nxt:
-                current.append(nxt)
-                i += 2
-                continue
             i += 1
             continue
         if in_backtick:
@@ -838,7 +928,7 @@ def _execute_code_chunk(code: str, lang: str = "python", capture_plot: bool = Tr
             }
         tmp_script, script_dir = _write_temp_script('.js', code, cwd)
         try:
-            res = _run_process([node_bin, tmp_script], cwd=cwd, timeout=timeout)
+            res = _run_process([node_bin, tmp_script], cwd=cwd, timeout=timeout, runtime='node')
             res["lang"] = normalized_lang
             return res
         finally:
