@@ -8712,6 +8712,7 @@ function toggleAiPanel() {
       renderAiEmptyState();
     }
     setTimeout(() => $('ai-prompt') && $('ai-prompt').focus(), 0);
+    updateAiContextStrip();
   } else {
     // 关闭 AI 面板时，若由打开 AI 面板而暂时收起了预览，自动恢复原预览布局
     if (state._pvLayoutBeforeAi && state.editing) {
@@ -8778,9 +8779,35 @@ function renderAiEmptyState() {
       </svg>
       <div class="ai-empty-title">${_t('ai.emptyTitle') || ''}</div>
       <div class="ai-empty-desc">${_t('ai.emptyDesc') || ''}</div>
+      <div class="ai-starter-grid">
+        <button type="button" data-starter="ux.askSummary"><strong>${_t('ux.starterSummary')}</strong><span>${_t('ux.starterSummaryHint')}</span></button>
+        <button type="button" data-starter="ux.askQuestions"><strong>${_t('ux.starterQuestions')}</strong><span>${_t('ux.starterQuestionsHint')}</span></button>
+      </div>
     </div>
   `;
+  out.querySelectorAll('[data-starter]').forEach(button => button.addEventListener('click', () => {
+    $('ai-prompt').value = _t(button.dataset.starter);
+    $('ai-prompt').dispatchEvent(new Event('input'));
+    $('ai-prompt').focus();
+  }));
 }
+
+function updateAiContextStrip() {
+  const label = $('ai-context-file');
+  if (!label) return;
+  label.textContent = (typeof state !== 'undefined' && (state.path || state.title))?.split(/[\\/]/).pop() || window.i18n.t('ux.noDocument');
+  label.title = typeof state !== 'undefined' ? (state.path || '') : '';
+}
+
+function initAiComposerUx() {
+  const input = $('ai-prompt'), out = $('ai-output'), latest = $('ai-jump-latest');
+  if (!input || !out || !latest) return;
+  input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(180, input.scrollHeight) + 'px'; });
+  out.addEventListener('scroll', () => latest.classList.toggle('hidden', out.scrollHeight - out.scrollTop - out.clientHeight < 100));
+  latest.addEventListener('click', () => { out.scrollTop = out.scrollHeight; input.focus({ preventScroll: true }); });
+  document.addEventListener('readmd:document-loaded', updateAiContextStrip);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAiComposerUx); else initAiComposerUx();
 
 async function loadAiOnDemand() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
@@ -8845,10 +8872,32 @@ const TPL_CATEGORIES = {
 };
 
 function getCategoryLabel(cat) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : '';
+  const key = 'ai.tplCategory.' + cat;
+  const trans = _t(key);
+  if (trans && trans !== key) return trans;
   const activeLocale = String((window.i18n && (window.i18n.currentLang || window.i18n.locale)) || '').toLowerCase();
   const isZh = activeLocale.startsWith('zh');
   const catObj = TPL_CATEGORIES[cat] || TPL_CATEGORIES.general;
   return isZh ? catObj.label : catObj.labelEn;
+}
+
+function getLocalizedSkillName(t) {
+  if (!t) return '';
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : '';
+  if (t.id) {
+    const act = _t('ai.action.' + t.id);
+    if (act && act !== 'ai.action.' + t.id) return act;
+  }
+  if (t.skill_id) {
+    const sName = _t('skill.' + t.skill_id + '.name');
+    if (sName && sName !== 'skill.' + t.skill_id + '.name') return sName;
+  }
+  if (t.id) {
+    const directSkill = _t('skill.' + t.id + '.name');
+    if (directSkill && directSkill !== 'skill.' + t.id + '.name') return directSkill;
+  }
+  return t.name || t.id || '';
 }
 
 function getTemplateCategory(t) {
@@ -8872,7 +8921,7 @@ function fillAiTemplates() {
   sel.innerHTML = '';
   const none = document.createElement('option');
   none.value = '';
-  none.textContent = _t('ai.defaultAction') || '默认通用助手';
+  none.textContent = _t('ai.defaultAction') || '默认动作（不使用模板）';
   sel.appendChild(none);
 
   const groups = { general: [], writing: [], coding: [], academic: [], custom: [] };
@@ -8891,7 +8940,7 @@ function fillAiTemplates() {
     items.forEach(t => {
       const o = document.createElement('option');
       o.value = t.id;
-      o.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
+      o.textContent = (t.builtin ? '◆ ' : '◇ ') + getLocalizedSkillName(t);
       optgroup.appendChild(o);
     });
     sel.appendChild(optgroup);
@@ -8932,7 +8981,13 @@ function renderTplList() {
   if (!list) return;
   const q = ($('tpl-search') && $('tpl-search').value || '').trim().toLowerCase();
   list.innerHTML = '';
-  const filtered = (state.ai.templates || []).filter(t => !q || (t.name || '').toLowerCase().includes(q) || (t.system || '').toLowerCase().includes(q));
+  const filtered = (state.ai.templates || []).filter(t => {
+    if (!q) return true;
+    const locName = getLocalizedSkillName(t).toLowerCase();
+    const origName = (t.name || '').toLowerCase();
+    const sys = (t.system || '').toLowerCase();
+    return origName.includes(q) || locName.includes(q) || sys.includes(q);
+  });
   if (!filtered.length) {
     const empty = document.createElement('li');
     empty.className = 'ai-history-empty';
@@ -8963,12 +9018,13 @@ function renderTplList() {
     items.forEach(t => {
       const li = document.createElement('li');
       const disabled = !t.builtin && t.metadata && t.metadata.enabled === false;
-      li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name + (disabled ? ' ⏸' : '');
+      const displayName = getLocalizedSkillName(t);
+      li.textContent = (t.builtin ? '◆ ' : '◇ ') + displayName + (disabled ? ' ⏸' : '');
       li.dataset.id = t.id;
       li.setAttribute('role', 'option');
       li.tabIndex = 0;
       li.setAttribute('aria-selected', 'false');
-      li.title = t.name
+      li.title = displayName
         + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '')) : '')
         + (disabled ? (' · ' + (_t('tpl.disable') || '')) : '');
       li.addEventListener('click', () => selectTpl(t.id));
@@ -9019,7 +9075,7 @@ function renderSkillOverview(t) {
   host.replaceChildren();
   if (!t) return;
   const title = document.createElement('h4');
-  title.textContent = t.name || t.skill_id || t.id || '';
+  title.textContent = (t ? getLocalizedSkillName(t) : '') || (t && (t.name || t.skill_id || t.id)) || '';
   host.appendChild(title);
   if (t.description) {
     const description = document.createElement('p');
@@ -9097,7 +9153,7 @@ function selectTpl(id, editing) {
     li.setAttribute('aria-selected', selected ? 'true' : 'false');
   });
   $('tpl-id').value = t ? t.id : '';
-  $('tpl-name').value = t ? t.name : '';
+  $('tpl-name').value = t ? (builtin ? getLocalizedSkillName(t) : t.name) : '';
   if ($('tpl-action')) $('tpl-action').value = (t && t.action) || 'custom';
   $('tpl-system').value = t ? (t.system || '') : '';
   $('tpl-user').value = t ? (t.user || '') : '';
@@ -9152,6 +9208,16 @@ function openSkillIdeaDialog() {
     const goBtn = $('skill-create-go');
     const cancelBtn = $('skill-create-cancel');
     const closeBtn = $('skill-create-close');
+    const error = $('skill-create-error');
+    const format = $('skill-create-format');
+    const example = $('skill-create-example');
+    const update = () => {
+      $('skill-create-count').textContent = `${purposeInput.value.length} / 4000`;
+      error.textContent = '';
+      nameInput.removeAttribute('aria-invalid'); purposeInput.removeAttribute('aria-invalid');
+      try { sessionStorage.setItem('readmd.skill-idea', JSON.stringify({ name: nameInput.value, purpose: purposeInput.value, format: format.value })); } catch (_) {}
+    };
+    const fillExample = () => { nameInput.value = _t('ux.exampleName'); purposeInput.value = _t('ux.examplePurpose'); update(); purposeInput.focus(); };
     let finished = false;
     const finish = value => {
       if (finished) return;
@@ -9162,6 +9228,7 @@ function openSkillIdeaDialog() {
       closeBtn && closeBtn.removeEventListener('click', onCancel);
       modal.removeEventListener('keydown', onKeyDown);
       modal.removeEventListener('click', onClick);
+      nameInput.removeEventListener('input', update); purposeInput.removeEventListener('input', update); format.removeEventListener('change', update); example.removeEventListener('click', fillExample);
       modal.classList.add('hidden');
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true });
       resolve(value);
@@ -9171,21 +9238,33 @@ function openSkillIdeaDialog() {
       const name = nameInput.value.trim();
       const purpose = purposeInput.value.trim();
       if (!name || !purpose) {
-        showToast(_t('tpl.createFieldsReq') || '');
+        error.textContent = _t('tpl.createFieldsReq');
+        (name ? purposeInput : nameInput).setAttribute('aria-invalid', 'true');
         (name ? purposeInput : nameInput).focus();
         return;
       }
-      finish({ name, purpose });
+      try { sessionStorage.removeItem('readmd.skill-idea'); } catch (_) {}
+      finish({ name, purpose: purpose + '\n' + _t('ux.outputFormat') + ': ' + format.selectedOptions[0].textContent });
     };
     const onKeyDown = event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); finish(null); }
       else if (event.key === 'Enter' && event.target === nameInput) { event.preventDefault(); purposeInput.focus(); }
+      else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); onGo(); }
+      else if (event.key === 'Tab') {
+        const items = [...modal.querySelectorAll('button,input,textarea,select')].filter(el => !el.disabled && el.getClientRects().length);
+        if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1).focus(); }
+        else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0].focus(); }
+      }
     };
     const onClick = event => { if (event.target === modal) finish(null); };
 
     skillIdeaFinish = () => finish(null);
     nameInput.value = '';
     purposeInput.value = '';
+    format.value = 'Markdown'; error.textContent = '';
+    try { const draft = JSON.parse(sessionStorage.getItem('readmd.skill-idea') || '{}'); nameInput.value = draft.name || ''; purposeInput.value = draft.purpose || ''; format.value = draft.format || 'Markdown'; } catch (_) {}
+    update();
+    nameInput.addEventListener('input', update); purposeInput.addEventListener('input', update); format.addEventListener('change', update); example.addEventListener('click', fillExample);
     goBtn.addEventListener('click', onGo);
     cancelBtn.addEventListener('click', onCancel);
     closeBtn && closeBtn.addEventListener('click', onCancel);
@@ -10643,8 +10722,10 @@ async function runAi(action) {
   const render = () => {
     renderTimer = null;
     if (!state.ai.raw) return;
+    const follow = out.scrollHeight - out.scrollTop - out.clientHeight < 100;
     aiBody.innerHTML = renderSafeMarkdown(state.ai.raw) + '<span class="streaming-cursor"></span>';
-    out.scrollTop = out.scrollHeight;
+    if (follow) out.scrollTop = out.scrollHeight;
+    $('ai-jump-latest')?.classList.toggle('hidden', follow);
   };
   try {
     const r = await apiFetch('/api/ai/chat', {
@@ -11177,6 +11258,16 @@ async function saveAiAs() {
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
   }
 }
+
+window.addEventListener('readmd:language-changed', () => {
+  fillAiTemplates();
+  if ($('tpl-modal') && !$('tpl-modal').classList.contains('hidden')) {
+    renderTplList();
+    const curId = $('tpl-id') && $('tpl-id').value;
+    const selected = (state.ai.templates || []).find(x => x.id === curId) || (state.ai.templates || [])[0];
+    if (selected) selectTpl(selected.id);
+  }
+});
 
 
 ;
@@ -12194,8 +12285,48 @@ let petPokeComboCount = 0;
 let petLastPokeTime = 0;
 
 /**
+ * 伴读气泡智能自适应视口碰撞与避让（Flip & Clamp）
+ * 当桌宠被拖动至顶部（top < 120px）时自动下翻至脚底弹出；靠两侧时水平安全吸附
+ */
+function updateBubblePosition(bubble) {
+  if (!bubble) return;
+  const widget = $('readmd-pet-widget');
+  if (!widget) return;
+  const rect = widget.getBoundingClientRect();
+
+  // 1. 顶部视口碰撞检测与自适应翻转 (Flip)
+  const shouldFlip = rect.top < 120;
+  if (shouldFlip) {
+    bubble.classList.add('is-flipped');
+  } else {
+    bubble.classList.remove('is-flipped');
+  }
+
+  // 2. 左右侧视口安全内收避让 (Clamp)
+  const widgetCenterX = rect.left + rect.width / 2;
+  const halfBubbleW = 110;
+  const minMargin = 16;
+  const maxMargin = window.innerWidth - 16;
+  let shiftX = 0;
+  if (widgetCenterX - halfBubbleW < minMargin) {
+    shiftX = minMargin - (widgetCenterX - halfBubbleW);
+  } else if (widgetCenterX + halfBubbleW > maxMargin) {
+    shiftX = maxMargin - (widgetCenterX + halfBubbleW);
+  }
+
+  bubble.style.transform = `translateX(calc(-50% + ${shiftX}px)) scale(1)`;
+  const arrow = typeof bubble.querySelector === 'function' ? bubble.querySelector('.pet-bubble-arrow') : null;
+  if (arrow) {
+    arrow.style.transform = `translateX(calc(-50% - ${shiftX}px))`;
+  }
+}
+
+let isBubbleHovered = false;
+
+/**
  * 优先级气泡管理器：高优先级气泡展示期间，低优先级消息不可抢占
  * 移植自 stevenjoezhang/live2d-widget (10.9k stars) message.ts 调度逻辑
+ * 支持：视口碰撞翻转避让 (Flip & Clamp)、鼠标悬停暂停、点击直接关闭
  */
 function showPetBubble(text, durationMs = 4500, priority = PET_BUBBLE_PRIORITY.LOW_IDLE) {
   const bubble = $('pet-bubble');
@@ -12214,9 +12345,11 @@ function showPetBubble(text, durationMs = 4500, priority = PET_BUBBLE_PRIORITY.L
 
   currentBubblePriority = priority;
   bubbleText.textContent = text;
+  updateBubblePosition(bubble);
   bubble.classList.add('is-visible');
 
-  if (durationMs > 0) {
+  // 若用户鼠标未悬停在气泡上，正常安排倒计时关闭
+  if (durationMs > 0 && !isBubbleHovered) {
     petBubbleTimer = setTimeout(() => {
       bubble.classList.remove('is-visible');
       petBubbleTimer = null;
@@ -12235,6 +12368,136 @@ function hidePetBubble() {
     petBubbleTimer = null;
   }
   currentBubblePriority = 0;
+}
+
+function initBubbleInteractions() {
+  const bubble = $('pet-bubble');
+  if (!bubble || (bubble.dataset && bubble.dataset.bubbleEventsBound) || bubble._bubbleEventsBound) return;
+  if (bubble.dataset) bubble.dataset.bubbleEventsBound = 'true';
+  bubble._bubbleEventsBound = true;
+
+  // 1. 悬停暂停：鼠标悬停在气泡上时暂停倒计时，移开后延时关闭，防止长文本闪退
+  bubble.addEventListener('mouseenter', () => {
+    isBubbleHovered = true;
+    if (petBubbleTimer) {
+      clearTimeout(petBubbleTimer);
+      petBubbleTimer = null;
+    }
+  });
+
+  bubble.addEventListener('mouseleave', () => {
+    isBubbleHovered = false;
+    if (bubble.classList.contains('is-visible') && !petBubbleTimer) {
+      petBubbleTimer = setTimeout(() => {
+        bubble.classList.remove('is-visible');
+        petBubbleTimer = null;
+        currentBubblePriority = 0;
+      }, 1800);
+    }
+  });
+
+  // 2. 点击气泡即刻关闭
+  bubble.addEventListener('click', (e) => {
+    e.stopPropagation();
+    hidePetBubble();
+  });
+}
+
+// --------------------------------------------------------------------------
+// 多角色个性化台词与情境情绪矩阵 (Role Personality Dialogue Matrix)
+// --------------------------------------------------------------------------
+
+let currentActivePetSlug = '';
+
+function getActivePetSlug() {
+  if (currentActivePetSlug) return currentActivePetSlug;
+  const select = $('pet-gallery');
+  return (select && select.value) ? select.value : '';
+}
+
+const PET_ROLE_PERSONALITIES = {
+  mochi: {
+    name: '糯米 / Mochi',
+    pokesNormal: [
+      '喵呜~ 揉揉毛可以，别戳痛我啦 🐾',
+      '呼噜呼噜……陪你读书真舒服 ✨',
+      '喵~ 你的手指好暖和呀！',
+      '喵呜？今天有什么好玩的段落吗？'
+    ],
+    pokesCombo: [
+      '喵呀！爪子要亮出来抓你啦！😾',
+      '有小鱼干吗？没有的话我就不理你啦！🐟',
+      '再戳我就要变成猫咪抱枕逃走啦~ 🐾',
+      '好啦好啦，投降投降！快专心看书吧喵！'
+    ],
+    bored: [
+      '伸个大懒腰~ 喵呜~ 🐾',
+      '窗外有小鸟飞过……不过还是陪你更重要 👀',
+      '喵好奇地凑过来：你在读哪一页呀？'
+    ],
+    dozing: '唔……眼睛快要睁不开了，喵呜…… 🥱',
+    sleeping: 'zZ... 呼噜呼噜…… (蜷成一个小猫球睡着了) 💤',
+    awake: '喵！小猫咪瞬间清醒，继续元气陪读！✨'
+  },
+  moss: {
+    name: '苔苔 / Moss',
+    pokesNormal: [
+      '啵~（Q弹轻微晃动）💧',
+      '头顶的双嫩叶欢快地摇了摇 🌱',
+      '咕噜~ 感觉身体又变得更水灵了！',
+      '啵啵！今天也是元气满满的史莱姆~'
+    ],
+    pokesCombo: [
+      '咕噜咕噜……身体要被戳凹进去啦！💦',
+      '啵啵！给你注入满满的阅读活力！✨',
+      '弹弹弹！史莱姆可不会轻易认输~ 🟢',
+      '呀！身体差点被你戳飞出去啦！'
+    ],
+    bored: [
+      '呆呆地看着屏幕，身体轻轻起伏着…… 🍃',
+      '光合作用中……今天的文档很有养分呢 ☀️',
+      '啵~ 悄悄收集了一颗知识小水滴 💧'
+    ],
+    dozing: '咕噜……身体变成果冻布丁了…… 🥱',
+    sleeping: 'zZ... 啵…… (变成了一滩软绵绵的果冻) 💤',
+    awake: '啵的一下弹起来！苔苔精神百倍！🌱'
+  },
+  amber: {
+    name: '琥珀 / Amber',
+    pokesNormal: [
+      '嗷呜！小狐狸的蓬松大尾巴可不能随便抓！🦊',
+      '耳朵动了动……是不是读到精彩章节啦？✨',
+      '摇摇尾巴~ 今天也陪你读完这一章！',
+      '狐狸的目光正注视着你哦，继续加油！'
+    ],
+    pokesCombo: [
+      '哼，戳我这么多次，等下要分我好吃的零食哦！🍪',
+      '嗷呜嗷呜！小心狐狸的小爪爪反击！🐾',
+      '别闹啦，专心看书，狐狸可是很严格的监督员！🦊',
+      '再戳一下，我就用尾巴挡住你的屏幕啦！嘻嘻~'
+    ],
+    bored: [
+      '大尾巴轻轻摆动，专注地注视着你…… 🌾',
+      '狐狸的直觉告诉我，这是一篇很棒的文章！📖',
+      '微风吹过，尾巴上的软毛轻轻飘动~ ✨'
+    ],
+    dozing: '尾巴抱住爪子……有一点困了呢…… 🥱',
+    sleeping: 'zZ... 呼…… (用蓬松大尾巴裹住整只狐狸睡着了) 💤',
+    awake: '抖抖耳朵轻盈跃起！琥珀已经准备就绪！🦊'
+  }
+};
+
+function getRoleSpecificQuote(type, fallbackKey, defaultFallback = '') {
+  const slug = getActivePetSlug();
+  const personality = PET_ROLE_PERSONALITIES[slug];
+  if (personality && personality[type]) {
+    const entry = personality[type];
+    if (Array.isArray(entry)) {
+      return entry[Math.floor(Math.random() * entry.length)];
+    }
+    return entry;
+  }
+  return (fallbackKey ? petT(fallbackKey) : '') || defaultFallback;
 }
 
 /**
@@ -12293,6 +12556,21 @@ function syncPetWidgetVisibility(status) {
     widget.classList.remove('hidden');
     const prefs = (status && status.preferences) || {};
     applyWidgetAppearance(prefs.scale, prefs.opacity);
+    const charEl = $('pet-character');
+    if (charEl) {
+      const isLive2d = (prefs.renderer === 'live2d');
+      charEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite');
+      if (isLive2d) {
+        charEl.classList.add('is-arch-chan', 'is-live2d');
+        charEl.style.backgroundImage = 'url("/assets/pet/arch-chan-avatar.png")';
+      } else {
+        charEl.classList.add('hermes-sprite', 'is-hermes');
+        const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
+        charEl.style.backgroundImage = activeSlug
+          ? `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`
+          : 'url("/assets/pet/hermes-sprite.png")';
+      }
+    }
     restoreWidgetPosition();
   } else {
     widget.classList.add('hidden');
@@ -12499,6 +12777,11 @@ function handlePetInteractiveClick() {
 
   if (petPokeComboCount >= 4) {
     petPokeComboCount = 0;
+    const comboQuote = getRoleSpecificQuote('pokesCombo', null, '');
+    if (comboQuote) {
+      showPetBubble(comboQuote, 3500, PET_BUBBLE_PRIORITY.INTERACTION);
+      return;
+    }
     const pokeResponses = [
       petT('pet.pokeQuote1') || '哇！别戳啦别戳啦，在看书呢！🙈',
       petT('pet.pokeQuote2') || '再戳我就要变成猫咪逃走啦~ 🐾',
@@ -12510,9 +12793,15 @@ function handlePetInteractiveClick() {
     return;
   }
 
-  // 常规互动：50% 概率触发时段问候，50% 概率触发鼓励台词
-  if (Math.random() < 0.5) {
+  // 常规互动：40% 概率触发时段问候，60% 概率触发角色专属/鼓励台词
+  if (Math.random() < 0.4) {
     showPetBubble(getContextualGreeting(), 4500, PET_BUBBLE_PRIORITY.INTERACTION);
+    return;
+  }
+
+  const normalQuote = getRoleSpecificQuote('pokesNormal', null, '');
+  if (normalQuote) {
+    showPetBubble(normalQuote, 4500, PET_BUBBLE_PRIORITY.INTERACTION);
     return;
   }
 
@@ -12615,18 +12904,44 @@ function renderPetSettings(status) {
 
   updatePetRangeLabels();
 
+  const isInApp = $('pet-runtime')?.value === 'in-app' || status?.in_app !== false;
   const isInstalled = Boolean(status && (status.installed ?? status.adapter?.available));
   const installBtn = $('pet-install');
-  if (installBtn) {
-    installBtn.classList.remove('hidden');
-    if (isInstalled) {
-      installBtn.className = 'tb-btn danger';
-      installBtn.textContent = petT('pet.disable');
-      installBtn.dataset.action = 'uninstall';
+  const installRuntimeBtn = $('pet-install-runtime');
+  if (installRuntimeBtn) {
+    if (isInApp) {
+      installRuntimeBtn.classList.add('hidden');
     } else {
-      installBtn.className = 'tb-btn accent';
-      installBtn.textContent = petT('pet.enable');
-      installBtn.dataset.action = 'install';
+      installRuntimeBtn.classList.remove('hidden');
+      if (isInstalled) {
+        const up = status?.update;
+        if (up && up.has_update) {
+          const newVer = up.update_info?.version ? ` (${up.update_info.version})` : '';
+          installRuntimeBtn.textContent = (petT('pet.runtime.update') || '更新桌宠') + newVer;
+        } else {
+          installRuntimeBtn.textContent = petT('pet.runtime.update') || '更新桌宠';
+        }
+        installRuntimeBtn.dataset.action = 'update';
+      } else {
+        installRuntimeBtn.textContent = petT('pet.runtime.install') || '一键安装桌面扩展';
+        installRuntimeBtn.dataset.action = 'install';
+      }
+    }
+  }
+  if (installBtn) {
+    if (isInApp) {
+      installBtn.classList.add('hidden');
+    } else {
+      installBtn.classList.remove('hidden');
+      if (isInstalled) {
+        installBtn.className = 'tb-btn danger';
+        installBtn.textContent = petT('pet.disable');
+        installBtn.dataset.action = 'uninstall';
+      } else {
+        installBtn.className = 'tb-btn accent';
+        installBtn.textContent = petT('pet.enable');
+        installBtn.dataset.action = 'install';
+      }
     }
   }
 
@@ -12643,7 +12958,7 @@ function renderPetSettings(status) {
     if (status && status.enabled) {
       statusDot.classList.add('is-running');
       statusText.textContent = petT('pet.statusRunning');
-    } else if (isInstalled) {
+    } else if (isInApp || isInstalled) {
       statusDot.classList.add('is-stopped');
       statusText.textContent = petT('pet.statusStopped');
     } else {
@@ -12653,7 +12968,9 @@ function renderPetSettings(status) {
   }
 
   if (statusLine) {
-    if (isInstalled) {
+    if (status && status.enabled) {
+      statusLine.textContent = isInApp ? (petT('pet.statusInAppActive') || '桌宠伴读小组件已在阅读器内运行') : petT('pet.installSuccess');
+    } else if (isInApp || isInstalled) {
       statusLine.textContent = petT('pet.installSuccess');
     } else {
       statusLine.textContent = petT('pet.statusEnableHint');
@@ -12665,14 +12982,40 @@ function renderPetSettings(status) {
 
 function updateCharacterPreview(rendererVal) {
   const charEl = document.querySelector('.pet-preview-character');
+  const widgetCharEl = $('pet-character');
   const slugEl = $('pet-active-slug');
   const isLive2d = rendererVal === 'live2d';
   if (charEl) {
     charEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan');
     charEl.classList.add(isLive2d ? 'is-arch-chan' : 'is-hermes');
+    if (isLive2d) {
+      charEl.style.backgroundImage = 'url("/assets/pet/arch-chan-avatar.png")';
+    } else {
+      const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
+      charEl.style.backgroundImage = activeSlug
+        ? `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`
+        : 'url("/assets/pet/hermes-sprite.png")';
+    }
+  }
+  if (widgetCharEl) {
+    widgetCharEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite');
+    if (isLive2d) {
+      widgetCharEl.classList.add('is-arch-chan', 'is-live2d');
+      widgetCharEl.style.backgroundImage = 'url("/assets/pet/arch-chan-avatar.png")';
+    } else {
+      widgetCharEl.classList.add('hermes-sprite', 'is-hermes');
+      const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
+      widgetCharEl.style.backgroundImage = activeSlug
+        ? `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`
+        : 'url("/assets/pet/hermes-sprite.png")';
+    }
   }
   if (slugEl) {
-    slugEl.textContent = isLive2d ? petT('pet.renderer.live2d') : petT('pet.renderer.sprite');
+    slugEl.textContent = isLive2d ? (petT('pet.renderer.live2d') || 'Arch-Chan') : (petT('pet.renderer.sprite') || 'Hermes');
+  }
+  const galleryRow = $('pet-gallery-row');
+  if (galleryRow) {
+    galleryRow.classList.toggle('hidden', isLive2d);
   }
 }
 
@@ -12692,41 +13035,48 @@ function closePetSettings() {
   $('pet-settings-modal')?.classList.add('hidden');
 }
 
+let isPetConfiguring = false;
 async function savePetSettings() {
-  const enabled = Boolean($('pet-enabled')?.checked);
-  const scale = Number($('pet-scale')?.value || 33) / 100;
-  const opacity = Number($('pet-opacity')?.value || 100) / 100;
-  const renderer = $('pet-renderer')?.value || 'hermes-sprite';
+  if (isPetConfiguring) return;
+  isPetConfiguring = true;
+  try {
+    const enabled = Boolean($('pet-enabled')?.checked);
+    const scale = Number($('pet-scale')?.value || 33) / 100;
+    const opacity = Number($('pet-opacity')?.value || 100) / 100;
+    const renderer = $('pet-renderer')?.value || 'hermes-sprite';
 
-  const isDesktopChoice = $('pet-runtime')?.value === 'desktop';
-  const config = {
-    enabled,
-    scale,
-    opacity,
-    renderer,
-    in_app: renderer !== 'live2d' && !isDesktopChoice
-  };
+    const isDesktopChoice = $('pet-runtime')?.value === 'desktop';
+    const config = {
+      enabled,
+      scale,
+      opacity,
+      renderer,
+      in_app: !isDesktopChoice
+    };
 
-  const stateChanged = Boolean(activePetSettingsStatus && activePetSettingsStatus.enabled !== enabled);
-  if (enabled && !config.in_app && !activePetSettingsStatus?.adapter?.available) {
-    const installed = await installDefaultPetRuntime();
-    if (!installed.ok) {
-      renderPetSettings(await fetchPetRuntimeStatus());
-      return;
+    const stateChanged = Boolean(activePetSettingsStatus && activePetSettingsStatus.enabled !== enabled);
+    if (enabled && !config.in_app && !activePetSettingsStatus?.adapter?.available) {
+      const installed = await installDefaultPetRuntime();
+      if (!installed.ok) {
+        renderPetSettings(await fetchPetRuntimeStatus());
+        return;
+      }
     }
-  }
-  const result = await requestConfigurePet(config);
-  if (!result || !result.ok) {
-    const code = (result && result.code) || 'unknown';
-    if (typeof showToast === 'function') showToast(petT('pet.configFailed', { code }));
-  } else if (stateChanged) {
-    if (typeof showToast === 'function') showToast(enabled ? petT('pet.enabledToast') : petT('pet.disabledToast'));
-  }
+    const result = await requestConfigurePet(config);
+    if (!result || !result.ok) {
+      const code = (result && result.code) || 'unknown';
+      if (typeof showToast === 'function') showToast(petT('pet.configFailed', { code }));
+    } else if (stateChanged) {
+      if (typeof showToast === 'function') showToast(enabled ? petT('pet.enabledToast') : petT('pet.disabledToast'));
+    }
 
-  const updatedStatus = await fetchPetRuntimeStatus();
-  renderPetSettings(updatedStatus);
-  setPetMenuStatus(updatedStatus);
-  syncPetWidgetVisibility(updatedStatus);
+    const updatedStatus = await fetchPetRuntimeStatus();
+    renderPetSettings(updatedStatus);
+    setPetMenuStatus(updatedStatus);
+    syncPetWidgetVisibility(updatedStatus);
+  } finally {
+    isPetConfiguring = false;
+  }
 }
 
 async function openPetSettings() {
@@ -12756,7 +13106,17 @@ window.savePetSettings = savePetSettings;
 window.applyWidgetAppearance = applyWidgetAppearance;
 window.restoreWidgetPosition = restoreWidgetPosition;
 window.hidePetBubble = hidePetBubble;
+window.showPetBubble = showPetBubble;
+window.refreshPetGallery = refreshPetGallery;
+window.updatePetDeleteButtonVisibility = updatePetDeleteButtonVisibility;
+window.renderPetSettings = renderPetSettings;
 window.PET_BUBBLE_PRIORITY = PET_BUBBLE_PRIORITY;
+window.getActivePetSlug = getActivePetSlug;
+window.getRoleSpecificQuote = getRoleSpecificQuote;
+window.PET_ROLE_PERSONALITIES = PET_ROLE_PERSONALITIES;
+window.initBubbleInteractions = initBubbleInteractions;
+window.markPetUserActive = markPetUserActive;
+window.checkPetIdleState = checkPetIdleState;
 
 // --------------------------------------------------------------------------
 // Background Polling & Handlers
@@ -12799,6 +13159,7 @@ function initPetSystem() {
   void refreshPetGallery();
   initPetDirectManipulation();
   initReadingProgressObserver();
+  initBubbleInteractions();
 
   $('pet-settings-close')?.addEventListener('click', closePetSettings);
   const petModal = $('pet-settings-modal');
@@ -12812,6 +13173,7 @@ function initPetSystem() {
   // 安装 / 卸载点击事件闭环 (支持 Native Pywebview 双通道与 HTTP 兜底)
   $('pet-install')?.addEventListener('click', async () => {
     const btn = $('pet-install');
+    if (!btn || btn.disabled) return;
     const isUninstall = btn?.dataset.action === 'uninstall';
 
     if (isUninstall) {
@@ -12876,10 +13238,105 @@ function initPetSystem() {
   });
 
   $('pet-enabled')?.addEventListener('change', () => { void savePetSettings(); });
-  $('pet-runtime')?.addEventListener('change', () => { void savePetSettings(); });
+  $('pet-runtime')?.addEventListener('change', (e) => {
+    const isDesktop = e.target.value === 'desktop';
+    const installRuntimeBtn = $('pet-install-runtime');
+    const installBtn = $('pet-install');
+    if (installRuntimeBtn) installRuntimeBtn.classList.toggle('hidden', !isDesktop);
+    if (installBtn) installBtn.classList.toggle('hidden', !isDesktop);
+    void savePetSettings();
+  });
+  async function handlePetUpdateClick(btn) {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = petT('pet.checkingUpdate') || '正在检查更新...';
+    }
+    const progressRow = $('pet-update-progress-row');
+    const progressBar = $('pet-update-progress-bar');
+    const progressText = $('pet-update-progress-text');
+    const progressPercent = $('pet-update-progress-percent');
+
+    try {
+      const res = await petGalleryRequest('/api/pets/check_update', { allow_network: true });
+      if (res && res.has_update) {
+        const ver = res.version || (res.update_info && res.update_info.version) || '';
+        const confirmMsg = petT('pet.updateConfirm', { ver }) || `发现桌宠新版本 ${ver}，是否立即更新？`;
+        let confirmed = false;
+        if (typeof confirmAction === 'function') {
+          confirmed = await confirmAction({
+            title: petT('pet.runtime.update') || '更新桌宠',
+            message: confirmMsg,
+          });
+        } else {
+          confirmed = window.confirm(confirmMsg);
+        }
+        if (!confirmed) return;
+
+        if (btn) btn.textContent = petT('pet.updating') || '正在更新...';
+        if (progressRow) progressRow.classList.remove('hidden');
+        if (progressBar) progressBar.style.width = '0%';
+        if (progressPercent) progressPercent.textContent = '0%';
+
+        let pollTimer = setInterval(async () => {
+          try {
+            const stRes = await (typeof apiFetch === 'function' ? apiFetch('/api/pets/update_status') : fetch('/api/pets/update_status'));
+            if (stRes.ok) {
+              const st = await stRes.json();
+              const prog = st?.progress;
+              if (prog && prog.percent !== undefined) {
+                if (progressBar) progressBar.style.width = prog.percent + '%';
+                if (progressPercent) progressPercent.textContent = prog.percent + '%';
+                if (progressText) progressText.textContent = `正在下载更新 (${prog.percent}%)...`;
+              }
+            }
+          } catch (_) {}
+        }, 400);
+
+        try {
+          const applyRes = await petGalleryRequest('/api/pets/apply_update', {});
+          if (applyRes && applyRes.ok) {
+            if (typeof showToast === 'function') {
+              showToast(petT('pet.updateSuccess') || '桌宠已成功更新并平滑重载！');
+            }
+          } else {
+            if (typeof showToast === 'function') {
+              showToast(petT('pet.updateFailed', { code: applyRes?.code || applyRes?.error_code }) || '桌宠更新失败');
+            }
+          }
+        } finally {
+          clearInterval(pollTimer);
+          if (progressRow) progressRow.classList.add('hidden');
+        }
+      } else {
+        if (typeof showToast === 'function') {
+          showToast(petT('pet.updateLatest') || '当前桌宠已是最新版本');
+        }
+      }
+    } catch (e) {
+      if (typeof showToast === 'function') {
+        showToast(petT('pet.checkUpdateFail') || '检查更新失败，请稍后重试');
+      }
+    } finally {
+      if (btn) btn.disabled = false;
+      renderPetSettings(await fetchPetRuntimeStatus());
+    }
+  }
+
   $('pet-install-runtime')?.addEventListener('click', async () => {
-    await installDefaultPetRuntime();
-    renderPetSettings(await fetchPetRuntimeStatus());
+    const btn = $('pet-install-runtime');
+    if (!btn || btn.disabled) return;
+    const action = btn.dataset.action;
+    if (action === 'install') {
+      btn.disabled = true;
+      try {
+        await installDefaultPetRuntime();
+        renderPetSettings(await fetchPetRuntimeStatus());
+      } finally {
+        btn.disabled = false;
+      }
+    } else if (action === 'update') {
+      await handlePetUpdateClick(btn);
+    }
   });
   $('pet-gallery-import')?.addEventListener('change', async e => {
     const file = e.target.files?.[0];
@@ -12902,10 +13359,40 @@ function initPetSystem() {
     finally { e.target.value = ''; }
   });
   $('pet-gallery')?.addEventListener('change', async e => {
+    currentActivePetSlug = e.target.value;
+    updatePetDeleteButtonVisibility(e.target.value);
     const result = await petGalleryRequest('/api/pets/active', { slug: e.target.value, confirm: true });
     if (!result.ok) showToast(petT('pet.configFailed', { code: result.error_code || result.code }));
     await refreshPetGallery();
     if (result.ok) await requestConfigurePet({});
+  });
+  $('pet-gallery-delete')?.addEventListener('click', async () => {
+    const select = $('pet-gallery');
+    const slug = select ? select.value : '';
+    if (!slug) return;
+    const selectedOption = select.selectedOptions && select.selectedOptions[0];
+    const petName = selectedOption ? selectedOption.textContent : slug;
+    const confirmMsg = petT('pet.gallery.deleteConfirm', { name: petName }) || `确定要删除自定义桌宠精灵图「${petName}」吗？`;
+    let confirmed = false;
+    if (typeof confirmAction === 'function') {
+      confirmed = await confirmAction({
+        title: petT('pet.gallery.delete') || '删除',
+        message: confirmMsg,
+        danger: true,
+      });
+    } else {
+      confirmed = window.confirm(confirmMsg);
+    }
+    if (!confirmed) return;
+
+    const result = await petGalleryRequest('/api/pets/remove', { slug, confirm: true });
+    if (result.ok) {
+      showToast(petT('pet.gallery.deleteSuccess') || '已删除自定义桌宠精灵图');
+      await refreshPetGallery();
+      await requestConfigurePet({});
+    } else {
+      showToast(petT('pet.configFailed', { code: result.error_code || result.code }));
+    }
   });
   $('pet-renderer')?.addEventListener('change', (e) => {
     updateCharacterPreview(e.target.value);
@@ -12946,7 +13433,8 @@ function markPetUserActive() {
       char.classList.add('pet-bounce');
       setTimeout(() => char.classList.remove('pet-bounce'), 1000);
     }
-    showPetBubble(petT('pet.returnQuote') || '唔……你回来啦！继续一起阅读吧 ✨', 3500, PET_BUBBLE_PRIORITY.LOW_IDLE);
+    const awakeText = getRoleSpecificQuote('awake', 'pet.returnQuote', '唔……你回来啦！继续一起阅读吧 ✨');
+    showPetBubble(awakeText, 3500, PET_BUBBLE_PRIORITY.LOW_IDLE);
   }
   currentPetState = PET_STATE.ACTIVE;
 }
@@ -12977,7 +13465,8 @@ function checkPetIdleState() {
         char.classList.remove('pet-dozing');
         char.classList.add('pet-sleeping');
       }
-      showPetBubble(petT('pet.sleepQuote1') || 'zZ... 呼……噜…… (睡着了) 💤', 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
+      const sleepText = getRoleSpecificQuote('sleeping', 'pet.sleepQuote1', 'zZ... 呼……噜…… (睡着了) 💤');
+      showPetBubble(sleepText, 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
     }
   }
   // 4分钟无操作 -> 打瞌睡
@@ -12987,20 +13476,26 @@ function checkPetIdleState() {
       if (char) {
         char.classList.add('pet-dozing');
       }
-      showPetBubble(petT('pet.sleepQuote2') || '有点困困的呢…… (揉眼睛) 🥱', 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
+      const dozeText = getRoleSpecificQuote('dozing', 'pet.sleepQuote2', '有点困困的呢…… (揉眼睛) 🥱');
+      showPetBubble(dozeText, 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
     }
   }
   // 1.5分钟无操作 -> 发呆动作池
   else if (idleDuration > 90 * 1000) {
     if (currentPetState === PET_STATE.ACTIVE || currentPetState === PET_STATE.IDLE) {
       currentPetState = PET_STATE.BORED;
-      const boredQuotes = [
-        petT('pet.idleQuote1') || '静静地看着你读书~ 🍵',
-        petT('pet.idleQuote2') || '你在读哪一章呀？我也想瞧瞧 👀',
-        petT('pet.idleQuote3') || '窗外微风正好，好适合安静看书呀 🍃'
-      ];
-      const quote = boredQuotes[Math.floor(Math.random() * boredQuotes.length)];
-      showPetBubble(quote, 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
+      const boredText = getRoleSpecificQuote('bored', null, '');
+      if (boredText) {
+        showPetBubble(boredText, 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
+      } else {
+        const boredQuotes = [
+          petT('pet.idleQuote1') || '静静地看着你读书~ 🍵',
+          petT('pet.idleQuote2') || '你在读哪一章呀？我也想瞧瞧 👀',
+          petT('pet.idleQuote3') || '窗外微风正好，好适合安静看书呀 🍃'
+        ];
+        const quote = boredQuotes[Math.floor(Math.random() * boredQuotes.length)];
+        showPetBubble(quote, 4000, PET_BUBBLE_PRIORITY.LOW_IDLE);
+      }
     }
   } else {
     currentPetState = PET_STATE.ACTIVE;
@@ -13044,16 +13539,39 @@ async function installDefaultPetRuntime() {
   return petRuntimeInstallPromise;
 }
 
+let currentGalleryPets = [];
+
+function updatePetDeleteButtonVisibility(slug) {
+  const deleteBtn = $('pet-gallery-delete');
+  if (deleteBtn) {
+    const isBuiltin = !slug || slug === 'hermes' || currentGalleryPets.some(p => p.slug === slug && p.is_builtin);
+    if (isBuiltin) {
+      deleteBtn.classList.add('hidden');
+    } else {
+      deleteBtn.classList.remove('hidden');
+    }
+  }
+}
+
 async function refreshPetGallery() {
   const result = await petGalleryRequest('/api/pets');
   if (!result.ok) return;
+  currentGalleryPets = result.pets || [];
+  currentActivePetSlug = result.active || '';
   const select = $('pet-gallery');
   if (select) {
-    select.replaceChildren(new Option('Hermes', ''));
-    for (const pet of result.pets || []) select.add(new Option(pet.display_name || pet.slug, pet.slug));
+    select.replaceChildren(new Option(petT('pet.gallery.hermes') || 'Hermes', ''));
+    for (const pet of currentGalleryPets) {
+      const label = (pet.slug && petT('pet.preset.' + pet.slug)) || pet.display_name || pet.slug;
+      select.add(new Option(label, pet.slug));
+    }
     select.value = result.active || '';
+    updatePetDeleteButtonVisibility(select.value);
   }
-  const image = result.active ? `url("/api/pets/thumb?slug=${encodeURIComponent(result.active)}")` : '';
+  const isLive2d = ($('pet-renderer')?.value === 'live2d') || (activePetSettingsStatus?.preferences?.renderer === 'live2d');
+  const image = isLive2d
+    ? 'url("/assets/pet/arch-chan-avatar.png")'
+    : (result.active ? `url("/api/pets/thumb?slug=${encodeURIComponent(result.active)}")` : 'url("/assets/pet/hermes-sprite.png")');
   for (const id of ['pet-character', 'pet-preview-character']) {
     const element = $(id);
     if (element) element.style.backgroundImage = image;
@@ -14924,723 +15442,274 @@ async function cancelUpdateDownload() {
 
 
 ;
-// assets/js/features/graph.js
-// ReadMD Canvas 2D 极速力导向知识图谱与反向链接抽屉 (Zero Dependencies, 60 FPS)
-
+// Three-dimensional layout, perspective projection and accessible note navigation.
 (function () {
   'use strict';
+  const t = (key, params) => window.i18n?.t(key, params) || key;
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const api = (url) => (typeof apiFetch === 'function' ? apiFetch(url) : fetch(url)).then(async res => {
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  });
+  let modal, canvas, ctx, drawer, opener, requestId = 0, backlinkRequest = 0;
+  let nodes = [], edges = [], projected = [], selected = null, hovered = null, currentFile = null;
+  let yaw = .35, pitch = -.22, zoom = 1, panX = 0, panY = 0, frame = 0, ticks = 0;
+  let is3d = true, onlyNeighbors = false, labels = true, query = '', linkQuery = '', linkTab = 'incoming';
+  let backlinkData = { backlinks: [], forward_links: [] };
+  const pointers = new Map();
+  let gesture = null;
+  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const visible = () => modal && !modal.classList.contains('hidden');
+  const activeDoc = () => typeof state !== 'undefined' && ['file', 'virtual'].includes(state.mode) && !!state.original;
+  const basename = path => String(path || '').split(/[\\/]/).pop();
 
-  const _t = (key, fallback) => {
-    try {
-      if (typeof i18n === 'function') {
-        const val = i18n(key);
-        if (val && val !== key) return val;
-      }
-    } catch (_) {}
-    return fallback;
-  };
-
-  const _escapeHtml = (str) => {
-    if (str == null) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  };
-
-  let _modal = null;
-  let _canvas = null;
-  let _ctx = null;
-  let _tooltip = null;
-  let _backlinksPanel = null;
-
-  let _nodes = [];
-  let _edges = [];
-  let _nodesById = new Map();
-  let _animId = null;
-  let _animating = false;
-
-  let _panX = 0;
-  let _panY = 0;
-  let _zoom = 1.0;
-  let _isPanning = false;
-  let _panStartX = 0;
-  let _panStartY = 0;
-
-  let _draggedNode = null;
-  let _hoveredNode = null;
-  let _currentFilePath = null;
-  let _currentDirectory = null;
-
-  // ---------------------------------------------------------------- UI 模态框构建
-  function _createModalIfNeeded() {
-    if (_modal) return;
-
-    _modal = document.createElement('div');
-    _modal.id = 'graph-modal';
-    _modal.className = 'graph-modal hidden';
-    _modal.innerHTML = `
-      <div class="graph-backdrop"></div>
-      <div class="graph-dialog">
-        <div class="graph-header">
-          <div class="graph-title-row">
-            <span class="graph-title-icon"><svg class="graph-title-svg" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="8" r="3"/><circle cx="12" cy="18" r="3"/><path d="M8.5 7.5l7 1.5M7.5 8.5l3.5 7M16.5 10l-3.5 6"/></svg></span>
-            <h3 class="graph-title" data-i18n="graph.title">${_t('graph.title')}</h3>
-            <span class="graph-stats-badge" id="graph-stats-badge">${_t('graph.statsSimple', {nodes: 0, links: 0}) || '0 节点 · 0 关系'}</span>
-          </div>
-          <div class="graph-toolbar">
-            <button class="graph-tool-btn" id="graph-btn-zoom-in" title="${_t('graph.zoomIn')}">+</button>
-            <button class="graph-tool-btn" id="graph-btn-zoom-out" title="${_t('graph.zoomOut')}">-</button>
-            <button class="graph-tool-btn" id="graph-btn-reset" title="${_t('graph.reset')}">&#x21bb;</button>
-            <button class="graph-tool-btn graph-close-btn" id="graph-btn-close" title="${_t('toolbar.close')}">&times;</button>
-          </div>
-        </div>
-        <div class="graph-body">
-          <canvas id="graph-canvas"></canvas>
-          <div id="graph-tooltip" class="graph-tooltip hidden"></div>
-          <div id="graph-loading" class="graph-loading hidden">
-            <div class="graph-spinner"></div>
-            <span>${_t('graph.loading', '正在构建关系网络...')}</span>
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(_modal);
-
-    _canvas = _modal.querySelector('#graph-canvas');
-    _ctx = _canvas.getContext('2d');
-    _tooltip = _modal.querySelector('#graph-tooltip');
-
-    _modal.querySelector('.graph-backdrop').addEventListener('click', closeGraphModal);
-    _modal.querySelector('#graph-btn-close').addEventListener('click', closeGraphModal);
-
-    _modal.querySelector('#graph-btn-zoom-in').addEventListener('click', () => _zoomAtCenter(1.25));
-    _modal.querySelector('#graph-btn-zoom-out').addEventListener('click', () => _zoomAtCenter(0.8));
-    _modal.querySelector('#graph-btn-reset').addEventListener('click', _resetView);
-
-    window.addEventListener('resize', () => {
-      if (!_modal.classList.contains('hidden')) _resizeCanvas();
+  function createModal() {
+    if (modal) return;
+    modal = document.createElement('div');
+    modal.id = 'graph-modal'; modal.className = 'graph-modal hidden';
+    modal.setAttribute('role', 'dialog'); modal.setAttribute('aria-modal', 'true'); modal.setAttribute('aria-labelledby', 'graph-title');
+    modal.innerHTML = `<div class="graph-backdrop"></div><div class="graph-dialog">
+      <header class="graph-header"><div class="graph-title-row"><h3 id="graph-title">${t('graph.title')}</h3><span id="graph-stats-badge" class="graph-stats-badge" aria-live="polite"></span></div>
+      <div class="graph-toolbar"><button id="graph-btn-dimension" class="graph-tool-btn" aria-pressed="true">3D</button><button id="graph-btn-reset" class="graph-tool-btn" title="${t('graph.reset')}">↺</button><button id="graph-btn-close" class="graph-tool-btn" aria-label="${t('toolbar.close')}">×</button></div></header>
+      <div class="graph-workspace"><aside class="graph-sidebar"><label class="ux-search"><span>⌕</span><input id="graph-search" type="search" placeholder="${t('ux.graphSearch')}" aria-label="${t('ux.graphSearch')}"></label>
+      <div class="graph-options"><label><input id="graph-labels" type="checkbox" checked> ${t('ux.labels')}</label><label><input id="graph-neighbors" type="checkbox"> ${t('ux.neighbors')}</label></div>
+      <div id="graph-node-list" class="graph-node-list" aria-label="${t('ux.notes')}"></div></aside>
+      <div class="graph-body"><canvas id="graph-canvas" tabindex="0" aria-label="${t('ux.graphControls')}"></canvas>
+      <div id="graph-loading" class="graph-loading hidden" role="status"></div>
+      <div id="graph-tooltip" class="graph-tooltip hidden"></div>
+      <div class="graph-viewport-tools"><button id="graph-btn-zoom-out" class="graph-tool-btn" aria-label="${t('graph.zoomOut')}">−</button><output id="graph-zoom">100%</output><button id="graph-btn-zoom-in" class="graph-tool-btn" aria-label="${t('graph.zoomIn')}">+</button></div>
+      <p class="graph-control-hint">${t('ux.graphControls')}</p>
+      <section id="graph-detail" class="graph-detail hidden" aria-live="polite"></section></div></div></div>`;
+    document.body.appendChild(modal);
+    canvas = modal.querySelector('canvas'); ctx = canvas.getContext('2d');
+    modal.querySelector('.graph-backdrop').onclick = close;
+    modal.querySelector('#graph-btn-close').onclick = close;
+    modal.querySelector('#graph-btn-reset').onclick = reset;
+    modal.querySelector('#graph-btn-zoom-in').onclick = () => setZoom(zoom * 1.2);
+    modal.querySelector('#graph-btn-zoom-out').onclick = () => setZoom(zoom / 1.2);
+    modal.querySelector('#graph-btn-dimension').onclick = e => {
+      is3d = !is3d; e.currentTarget.textContent = is3d ? '3D' : '2D';
+      e.currentTarget.setAttribute('aria-pressed', String(is3d)); render();
+    };
+    modal.querySelector('#graph-search').oninput = e => { query = e.target.value.trim().toLowerCase(); renderList(); render(); };
+    modal.querySelector('#graph-labels').onchange = e => { labels = e.target.checked; render(); };
+    modal.querySelector('#graph-neighbors').onchange = e => { onlyNeighbors = e.target.checked; renderList(); render(); };
+    modal.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { e.stopPropagation(); close(); }
+      if (e.key === 'Tab') trapFocus(e, modal);
     });
-
-    _initCanvasEvents();
-  }
-
-  function _createBacklinksPanelIfNeeded() {
-    if (_backlinksPanel) return;
-
-    _backlinksPanel = document.createElement('div');
-    _backlinksPanel.id = 'backlinks-panel';
-    _backlinksPanel.className = 'backlinks-panel hidden';
-    _backlinksPanel.innerHTML = `
-      <div class="backlinks-header">
-        <span class="backlinks-title-icon"><svg class="backlinks-title-svg" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
-        <span class="backlinks-title" data-i18n="graph.backlinks">${_t('graph.backlinks', '反向链接')}</span>
-        <button class="backlinks-close-btn" id="backlinks-btn-close">&times;</button>
-      </div>
-      <div class="backlinks-content" id="backlinks-content">
-        <div class="backlinks-empty">${_t('graph.noLinks', '暂无关联笔记')}</div>
-      </div>
-    `;
-    document.body.appendChild(_backlinksPanel);
-
-    _backlinksPanel.querySelector('#backlinks-btn-close').addEventListener('click', () => {
-      _backlinksPanel.classList.add('hidden');
-    });
-  }
-
-  // ---------------------------------------------------------------- 物理力导向引擎
-  function _initSimulation(data) {
-    _nodes = (data.nodes || []).map((n, i) => {
-      const angle = (i / Math.max(data.nodes.length, 1)) * Math.PI * 2;
-      const radius = 100 + Math.random() * 150;
-      return {
-        ...n,
-        x: Math.cos(angle) * radius,
-        y: Math.sin(angle) * radius,
-        vx: 0,
-        vy: 0,
-        radius: Math.max(6, Math.min(6 + (n.degree || 0) * 2, 22)),
-        is_current: _currentFilePath && n.path && n.path === _currentFilePath,
-      };
-    });
-
-    _nodesById = new Map();
-    _nodes.forEach(n => _nodesById.set(n.id, n));
-
-    _edges = (data.edges || []).map(e => {
-      return {
-        ...e,
-        sourceNode: _nodesById.get(e.source),
-        targetNode: _nodesById.get(e.target),
-      };
-    }).filter(e => e.sourceNode && e.targetNode);
-
-    _resetView();
-    _startSimulation();
-  }
-
-  function _stepPhysics() {
-    const kRep = 1200;
-    const kAtt = 0.04;
-    const targetLen = 80;
-    const kGrav = 0.015;
-    const damping = 0.86;
-
-    let totalEnergy = 0;
-
-    // 1. 库仑排斥力 (所有节点对)
-    for (let i = 0; i < _nodes.length; i++) {
-      const n1 = _nodes[i];
-      for (let j = i + 1; j < _nodes.length; j++) {
-        const n2 = _nodes[j];
-        const dx = n2.x - n1.x;
-        const dy = n2.y - n1.y;
-        const distSq = dx * dx + dy * dy + 1.0;
-        const dist = Math.sqrt(distSq);
-
-        if (dist < 450) {
-          const force = kRep / distSq;
-          const fx = (dx / dist) * force;
-          const fy = (dy / dist) * force;
-          n1.vx -= fx;
-          n1.vy -= fy;
-          n2.vx += fx;
-          n2.vy += fy;
-        }
-      }
-    }
-
-    // 2. 弹簧胡克引力 (连线两端)
-    for (let i = 0; i < _edges.length; i++) {
-      const e = _edges[i];
-      const s = e.sourceNode;
-      const t = e.targetNode;
-      const dx = t.x - s.x;
-      const dy = t.y - s.y;
-      const dist = Math.sqrt(dx * dx + dy * dy) + 0.1;
-      const force = (dist - targetLen) * kAtt;
-      const fx = (dx / dist) * force;
-      const fy = (dy / dist) * force;
-
-      s.vx += fx;
-      s.vy += fy;
-      t.vx -= fx;
-      t.vy -= fy;
-    }
-
-    // 3. 向心重力与速度位置积分
-    for (let i = 0; i < _nodes.length; i++) {
-      const n = _nodes[i];
-      if (n === _draggedNode) continue; // 拖拽中固定
-
-      n.vx -= n.x * kGrav;
-      n.vy -= n.y * kGrav;
-
-      n.vx *= damping;
-      n.vy *= damping;
-
-      // 限速
-      const speed = Math.sqrt(n.vx * n.vx + n.vy * n.vy);
-      if (speed > 16) {
-        n.vx = (n.vx / speed) * 16;
-        n.vy = (n.vy / speed) * 16;
-      }
-
-      n.x += n.vx;
-      n.y += n.vy;
-
-      totalEnergy += speed;
-    }
-
-    return totalEnergy;
-  }
-
-  function _startSimulation() {
-    if (_animating) return;
-    _animating = true;
-
-    function loop() {
-      const energy = _stepPhysics();
-      _render();
-
-      if (energy > 0.05 || _draggedNode) {
-        _animId = requestAnimationFrame(loop);
+    new ResizeObserver(() => { if (visible()) resize(); }).observe(modal.querySelector('.graph-body'));
+    canvas.addEventListener('wheel', e => { e.preventDefault(); setZoom(zoom * Math.exp(-e.deltaY * .001)); }, { passive: false });
+    canvas.oncontextmenu = e => e.preventDefault();
+    canvas.onpointerdown = e => {
+      if (e.button > 1) return;
+      canvas.setPointerCapture(e.pointerId); canvas.focus({ preventScroll: true });
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      gesture = { x: e.clientX, y: e.clientY, moved: false, pan: e.shiftKey || e.button === 1 || !is3d };
+    };
+    canvas.onpointermove = e => {
+      const old = pointers.get(e.pointerId);
+      if (old && gesture) {
+        const dx = e.clientX - old.x, dy = e.clientY - old.y;
+        if (Math.hypot(e.clientX - gesture.x, e.clientY - gesture.y) > 4) gesture.moved = true;
+        const other = [...pointers.entries()].find(([id]) => id !== e.pointerId)?.[1];
+        if (other) {
+          const before = Math.hypot(old.x - other.x, old.y - other.y);
+          if (before > 1) setZoom(zoom * Math.hypot(e.clientX - other.x, e.clientY - other.y) / before);
+          gesture.moved = true;
+        } else if (gesture.pan) { panX += dx; panY += dy; }
+        else { yaw += dx * .007; pitch = Math.max(-1.4, Math.min(1.4, pitch + dy * .007)); }
+        pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); render();
       } else {
-        _animating = false;
-        _render(); // 稳定后画最后一帧
+        const rect = canvas.getBoundingClientRect();
+        hovered = hit(e.clientX - rect.left, e.clientY - rect.top)?.node || null;
+        canvas.style.cursor = hovered ? 'pointer' : 'grab'; render();
       }
-    }
-
-    _animId = requestAnimationFrame(loop);
-  }
-
-  function _wakeSimulation() {
-    if (!_animating) {
-      _startSimulation();
-    }
-  }
-
-  // ---------------------------------------------------------------- Canvas 渲染管线
-  function _resizeCanvas() {
-    if (!_canvas) return;
-    const rect = _canvas.parentElement.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    _canvas.width = rect.width * dpr;
-    _canvas.height = rect.height * dpr;
-    _canvas.style.width = rect.width + 'px';
-    _canvas.style.height = rect.height + 'px';
-    _render();
-  }
-
-  function _resetView() {
-    if (!_canvas) return;
-    const rect = _canvas.getBoundingClientRect();
-    _panX = rect.width / 2;
-    _panY = rect.height / 2;
-    _zoom = 1.0;
-    _render();
-  }
-
-  function _zoomAtCenter(factor) {
-    if (!_canvas) return;
-    const rect = _canvas.getBoundingClientRect();
-    const cx = rect.width / 2;
-    const cy = rect.height / 2;
-    _panX = cx - (cx - _panX) * factor;
-    _panY = cy - (cy - _panY) * factor;
-    _zoom = Math.max(0.15, Math.min(_zoom * factor, 4.0));
-    _render();
-  }
-
-  function _render() {
-    if (!_ctx || !_canvas) return;
-    const dpr = window.devicePixelRatio || 1;
-    const width = _canvas.width / dpr;
-    const height = _canvas.height / dpr;
-
-    _ctx.save();
-    _ctx.scale(dpr, dpr);
-    _ctx.clearRect(0, 0, width, height);
-
-    // 坐标系位移与缩放
-    _ctx.translate(_panX, _panY);
-    _ctx.scale(_zoom, _zoom);
-
-    const isDark = document.body.classList.contains('dark') ||
-      window.matchMedia('(prefers-color-scheme: dark)').matches;
-
-    const edgeColor = isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.14)';
-    const edgeHighlight = '#38bdf8';
-    const deadEdgeColor = 'rgba(239, 68, 68, 0.45)';
-
-    // 1. 绘制连线
-    for (let i = 0; i < _edges.length; i++) {
-      const e = _edges[i];
-      const s = e.sourceNode;
-      const t = e.targetNode;
-
-      const isConnectedToHover = _hoveredNode && (s === _hoveredNode || t === _hoveredNode);
-      const isDead = t.is_deadlink;
-
-      _ctx.beginPath();
-      if (isDead) {
-        _ctx.setLineDash([4, 4]);
-        _ctx.strokeStyle = deadEdgeColor;
-        _ctx.lineWidth = 1.2;
-      } else if (isConnectedToHover) {
-        _ctx.setLineDash([]);
-        _ctx.strokeStyle = edgeHighlight;
-        _ctx.lineWidth = 2.0;
-      } else {
-        _ctx.setLineDash([]);
-        _ctx.strokeStyle = edgeColor;
-        _ctx.lineWidth = 1.0;
+    };
+    canvas.onpointerup = e => {
+      if (gesture && !gesture.moved) {
+        const r = canvas.getBoundingClientRect(); select(hit(e.clientX - r.left, e.clientY - r.top)?.node || null);
       }
-
-      _ctx.moveTo(s.x, s.y);
-      _ctx.lineTo(t.x, t.y);
-      _ctx.stroke();
-    }
-    _ctx.setLineDash([]);
-
-    // 2. 绘制节点
-    for (let i = 0; i < _nodes.length; i++) {
-      const n = _nodes[i];
-      const isHovered = n === _hoveredNode;
-      const isCurrent = n.is_current;
-      const isDead = n.is_deadlink;
-
-      let fill = isDark ? '#64748b' : '#94a3b8';
-      let stroke = isDark ? '#94a3b8' : '#cbd5e1';
-
-      if (isDead) {
-        fill = '#ef4444';
-        stroke = '#b91c1c';
-      } else if (isCurrent) {
-        fill = '#3b82f6';
-        stroke = '#60a5fa';
-      } else if (n.degree > 3) {
-        fill = '#0284c7';
-        stroke = '#38bdf8';
-      }
-
-      // 外发光/焦点圈
-      if (isCurrent || isHovered) {
-        _ctx.beginPath();
-        _ctx.arc(n.x, n.y, n.radius + 5, 0, Math.PI * 2);
-        _ctx.fillStyle = isCurrent ? 'rgba(59, 130, 246, 0.25)' : 'rgba(56, 189, 248, 0.25)';
-        _ctx.fill();
-      }
-
-      // 节点圆本体
-      _ctx.beginPath();
-      _ctx.arc(n.x, n.y, n.radius, 0, Math.PI * 2);
-      _ctx.fillStyle = fill;
-      _ctx.fill();
-      _ctx.strokeStyle = stroke;
-      _ctx.lineWidth = 1.8;
-      _ctx.stroke();
-
-      // 节点文本
-      if (_zoom > 0.45 || isHovered || isCurrent || n.degree > 2) {
-        _ctx.font = '11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        _ctx.fillStyle = isDark ? '#e2e8f0' : '#1e293b';
-        _ctx.textAlign = 'center';
-        _ctx.textBaseline = 'top';
-        const label = n.label.length > 20 ? n.label.slice(0, 18) + '…' : n.label;
-        _ctx.fillText(label, n.x, n.y + n.radius + 4);
-      }
-    }
-
-    _ctx.restore();
-  }
-
-  // ---------------------------------------------------------------- 交互事件处理
-  function _screenToWorld(sx, sy) {
-    return {
-      x: (sx - _panX) / _zoom,
-      y: (sy - _panY) / _zoom,
+      pointers.delete(e.pointerId); if (!pointers.size) gesture = null;
+    };
+    canvas.onpointercancel = e => { pointers.delete(e.pointerId); gesture = null; };
+    canvas.onpointerleave = () => { hovered = null; render(); };
+    canvas.onkeydown = e => {
+      if (e.key === '+') setZoom(zoom * 1.2);
+      else if (e.key === '-') setZoom(zoom / 1.2);
+      else if (e.key === '0') reset();
+      else if (e.key === 'ArrowLeft') yaw -= .15;
+      else if (e.key === 'ArrowRight') yaw += .15;
+      else if (e.key === 'ArrowUp') pitch -= .1;
+      else if (e.key === 'ArrowDown') pitch += .1;
+      else return;
+      e.preventDefault(); render();
     };
   }
-
-  function _findNodeAt(sx, sy) {
-    const w = _screenToWorld(sx, sy);
-    for (let i = _nodes.length - 1; i >= 0; i--) {
-      const n = _nodes[i];
-      const dx = w.x - n.x;
-      const dy = w.y - n.y;
-      if (dx * dx + dy * dy <= (n.radius + 4) * (n.radius + 4)) {
-        return n;
-      }
+  function trapFocus(e, parent) {
+    const items = [...parent.querySelectorAll('button,input,select,textarea,[tabindex="0"]')].filter(el => !el.disabled && el.getClientRects().length);
+    const first = items[0], last = items.at(-1);
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+  }
+  function matches(n) { return (!query || `${n.label} ${n.path}`.toLowerCase().includes(query)) && (!onlyNeighbors || !selected || n === selected || selected.neighbors.has(n.id)); }
+  function renderList() {
+    const list = modal.querySelector('#graph-node-list');
+    const filtered = nodes.filter(matches);
+    list.innerHTML = filtered.length ? filtered.map(n => `<button class="graph-node-row ${n === selected ? 'selected' : ''}" data-node="${esc(n.id)}" aria-pressed="${n === selected}"><span class="graph-node-dot ${n.is_deadlink ? 'dead' : ''}"></span><span>${esc(n.label)}</span><small>${n.neighbors.size}</small></button>`).join('') : `<p class="ux-empty">${t('ux.noResults')}</p>`;
+    list.querySelectorAll('button').forEach(el => { el.onclick = () => select(nodes.find(n => String(n.id) === el.dataset.node)); });
+  }
+  function select(n) {
+    selected = n; renderList(); render();
+    const detail = modal.querySelector('#graph-detail'); detail.classList.toggle('hidden', !n);
+    if (!n) return;
+    detail.innerHTML = `<div><strong>${esc(n.label)}</strong><p>${esc(n.path || t('graph.deadlinkUncreated'))}</p><small>${t('ux.connections', { count: n.neighbors.size })}</small></div><button class="tb-btn accent" ${!n.path ? 'disabled' : ''}>${t('ux.openNote')}</button>`;
+    detail.querySelector('button').onclick = () => { close(); window.loadFile?.(n.path); };
+  }
+  function init(data) {
+    selected = hovered = null; query = ''; modal.querySelector('#graph-search').value = ''; modal.querySelector('#graph-detail').classList.add('hidden');
+    const raw = (data.nodes || []).slice(0, 500), count = raw.length;
+    nodes = raw.map((n, i) => {
+      const z = 1 - 2 * (i + .5) / Math.max(count, 1), phi = i * 2.399963;
+      const r = Math.max(100, Math.sqrt(count) * 21), ring = Math.sqrt(1 - z * z);
+      return { ...n, label: String(n.label || basename(n.path) || n.id), x: Math.cos(phi) * ring * r, y: Math.sin(phi) * ring * r, z: z * r, vx: 0, vy: 0, vz: 0, neighbors: new Set(), radius: Math.min(13, 5 + Math.sqrt(n.degree || 0) * 2) };
+    });
+    const byId = new Map(nodes.map(n => [n.id, n]));
+    edges = (data.edges || []).map(e => ({ s: byId.get(e.source), t: byId.get(e.target) })).filter(e => e.s && e.t);
+    edges.forEach(({s, t}) => { s.neighbors.add(t.id); t.neighbors.add(s.id); });
+    modal.querySelector('#graph-stats-badge').textContent = t('graph.statsSimple', { nodes: count, links: edges.length });
+    renderList(); reset(); ticks = 0; wake();
+  }
+  function physics() {
+    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j], dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
+      const d2 = dx*dx + dy*dy + dz*dz + 4, f = 1800 / (d2 * Math.sqrt(d2));
+      a.vx -= dx*f; a.vy -= dy*f; a.vz -= dz*f; b.vx += dx*f; b.vy += dy*f; b.vz += dz*f;
     }
-    return null;
+    edges.forEach(({s, t}) => {
+      const dx = t.x-s.x, dy = t.y-s.y, dz = t.z-s.z, d = Math.hypot(dx,dy,dz) || 1, f = (d-100)*.016/d;
+      s.vx += dx*f; s.vy += dy*f; s.vz += dz*f; t.vx -= dx*f; t.vy -= dy*f; t.vz -= dz*f;
+    });
+    let energy = 0;
+    nodes.forEach(n => {
+      for (const axis of ['x','y','z']) { const v = 'v'+axis; n[v] = Math.max(-8, Math.min(8, (n[v]-n[axis]*.002)*.83)); n[axis] += n[v]; energy += Math.abs(n[v]); }
+    });
+    return energy;
   }
-
-  function _initCanvasEvents() {
-    _canvas.addEventListener('mousedown', e => {
-      const rect = _canvas.getBoundingClientRect();
-      const sx = e.clientX - rect.left;
-      const sy = e.clientY - rect.top;
-
-      const hit = _findNodeAt(sx, sy);
-      if (hit) {
-        _draggedNode = hit;
-        hit.vx = 0;
-        hit.vy = 0;
-        _wakeSimulation();
-      } else {
-        _isPanning = true;
-        _panStartX = sx - _panX;
-        _panStartY = sy - _panY;
-      }
-    });
-
-    window.addEventListener('mousemove', e => {
-      if (!_canvas || _modal.classList.contains('hidden')) return;
-      const rect = _canvas.getBoundingClientRect();
-      const sx = e.clientX - rect.left;
-      const sy = e.clientY - rect.top;
-
-      if (_draggedNode) {
-        const w = _screenToWorld(sx, sy);
-        _draggedNode.x = w.x;
-        _draggedNode.y = w.y;
-        _draggedNode.vx = 0;
-        _draggedNode.vy = 0;
-        _wakeSimulation();
-        return;
-      }
-
-      if (_isPanning) {
-        _panX = sx - _panStartX;
-        _panY = sy - _panStartY;
-        _render();
-        return;
-      }
-
-      // 悬停检测
-      const hit = _findNodeAt(sx, sy);
-      if (hit !== _hoveredNode) {
-        _hoveredNode = hit;
-        _canvas.style.cursor = hit ? 'pointer' : 'default';
-        _render();
-
-        if (hit) {
-          _tooltip.innerHTML = `
-            <strong>${_escapeHtml(hit.label)}</strong><br>
-            <span class="muted">${_escapeHtml(hit.path || (_t('graph.deadlinkUncreated') || '（未创建文档）'))}</span><br>
-            <span>${_t('graph.inOutLinks', {out: hit.link_count, in: hit.backlink_count}) || `出链: ${hit.link_count} · 入链: ${hit.backlink_count}`}</span>
-          `;
-          _tooltip.style.left = `${sx + 15}px`;
-          _tooltip.style.top = `${sy + 15}px`;
-          _tooltip.classList.remove('hidden');
-        } else {
-          _tooltip.classList.add('hidden');
-        }
-      }
-    });
-
-    window.addEventListener('mouseup', () => {
-      _draggedNode = null;
-      _isPanning = false;
-    });
-
-    _canvas.addEventListener('wheel', e => {
-      e.preventDefault();
-      const rect = _canvas.getBoundingClientRect();
-      const sx = e.clientX - rect.left;
-      const sy = e.clientY - rect.top;
-
-      const delta = e.deltaY < 0 ? 1.15 : 0.85;
-      const newZoom = Math.max(0.15, Math.min(_zoom * delta, 4.0));
-
-      _panX = sx - (sx - _panX) * (newZoom / _zoom);
-      _panY = sy - (sy - _panY) * (newZoom / _zoom);
-      _zoom = newZoom;
-
-      _render();
-    }, { passive: false });
-
-    _canvas.addEventListener('click', e => {
-      const rect = _canvas.getBoundingClientRect();
-      const sx = e.clientX - rect.left;
-      const sy = e.clientY - rect.top;
-
-      const hit = _findNodeAt(sx, sy);
-      if (hit && hit.path) {
-        closeGraphModal();
-        if (typeof window.loadFile === 'function') {
-          window.loadFile(hit.path);
-        }
-      }
-    });
+  function wake() {
+    cancelAnimationFrame(frame);
+    const loop = () => {
+      if (!visible() || document.hidden) { frame = 0; return; }
+      const energy = physics(); render(); ticks++;
+      if (!reduced() && ticks < 200 && energy > .3) frame = requestAnimationFrame(loop); else frame = 0;
+    }; frame = requestAnimationFrame(loop);
   }
-
-  function _hasActiveDocument() {
-    if (typeof state === 'undefined' || !state) return false;
-    return (state.mode === 'file' || state.mode === 'virtual') && !!state.original;
+  function resize() {
+    const r = canvas.parentElement.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = Math.round(r.width*d); canvas.height = Math.round(r.height*d);
+    canvas.style.width = `${r.width}px`; canvas.style.height = `${r.height}px`; render();
   }
-
-  // ---------------------------------------------------------------- 公开 API 与接口
-  async function openGraphModal(directory) {
-    if (!_hasActiveDocument()) {
-      if (typeof showToast === 'function') {
-        const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-        showToast(_t('toast.openDocumentToUse', '请先打开文档'));
+  function reset() { yaw = .35; pitch = -.22; panX = panY = 0; zoom = Math.min(1.5, 280 / Math.max(180, Math.sqrt(nodes.length)*21)); render(); }
+  function setZoom(value) { zoom = Math.max(.15, Math.min(4, value)); render(); }
+  function render() {
+    if (!ctx || !visible()) return;
+    const w = canvas.clientWidth, h = canvas.clientHeight, d = Math.min(devicePixelRatio || 1, 2);
+    ctx.setTransform(d,0,0,d,0,0); ctx.clearRect(0,0,w,h);
+    const style = getComputedStyle(document.body), fg = style.getPropertyValue('--fg').trim() || '#172133', accent = style.getPropertyValue('--accent').trim() || '#3478f6';
+    const cy = Math.cos(yaw), sy = Math.sin(yaw), cp = Math.cos(pitch), sp = Math.sin(pitch);
+    projected = nodes.map(node => {
+      const rx = is3d ? node.x*cy-node.z*sy : node.x, rz = is3d ? node.x*sy+node.z*cy : 0;
+      const ry = is3d ? node.y*cp-rz*sp : node.y, depth = is3d ? node.y*sp+rz*cp : 0;
+      const perspective = 900 / Math.max(300, 900+depth), scale = perspective*zoom;
+      return { node, x: w/2+panX+rx*scale, y: h/2+panY+ry*scale, depth, r: Math.max(3,node.radius*scale), scale, match: matches(node) };
+    }).sort((a,b) => b.depth-a.depth);
+    const map = new Map(projected.map(p => [p.node.id,p]));
+    edges.forEach(({s,t}) => {
+      const a=map.get(s.id),b=map.get(t.id), focus = selected || hovered;
+      ctx.globalAlpha = a.match && b.match ? (focus && (s===focus||t===focus) ? .65 : .14) : .035;
+      ctx.strokeStyle = t.is_deadlink ? '#df6363' : focus && (s===focus||t===focus) ? accent : fg;
+      ctx.lineWidth = 1; ctx.setLineDash(t.is_deadlink ? [3,4] : []); ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+    }); ctx.setLineDash([]);
+    projected.forEach(p => {
+      const n=p.node, focus=n===selected||n===hovered||n.path===currentFile;
+      ctx.globalAlpha=p.match ? Math.max(.45,Math.min(1,p.scale/zoom)) : .13;
+      if (focus) { ctx.beginPath();ctx.arc(p.x,p.y,p.r+5,0,Math.PI*2);ctx.strokeStyle=accent;ctx.lineWidth=1.5;ctx.stroke(); }
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      const fill=ctx.createRadialGradient(p.x-p.r*.3,p.y-p.r*.35,0,p.x,p.y,p.r);
+      fill.addColorStop(0,n.is_deadlink?'#f9aaaa':'#b7d6ff');fill.addColorStop(1,n.is_deadlink?'#cc5252':focus?accent:'#547da9');ctx.fillStyle=fill;ctx.fill();
+      if (p.match && (focus || query || (labels && (nodes.length<75 || n.neighbors.size>3)))) {
+        ctx.globalAlpha=focus?1:.78;ctx.fillStyle=fg;ctx.font=`${focus?'600':'400'} 12px system-ui`;ctx.textAlign='center';
+        ctx.fillText(n.label.length>24?n.label.slice(0,22)+'…':n.label,p.x,p.y+p.r+17);
       }
-      return;
-    }
-    _createModalIfNeeded();
-    _modal.classList.remove('hidden');
-    _resizeCanvas();
-
-    const loading = _modal.querySelector('#graph-loading');
-    loading.classList.remove('hidden');
-
-    _currentDirectory = directory || null;
-
+    }); ctx.globalAlpha=1;
+    modal.querySelector('#graph-zoom').textContent = `${Math.round(zoom*100)}%`;
+    canvas.dataset.dimensions = is3d ? '3' : '2'; canvas.dataset.yaw = yaw.toFixed(3); canvas.dataset.nodeCount = String(nodes.length);
+  }
+  function hit(x,y) { return [...projected].reverse().find(p => p.match && Math.hypot(x-p.x,y-p.y)<p.r+8); }
+  async function open(directory) {
+    if (!activeDoc()) { if (typeof showToast==='function') showToast(t('toast.openDocumentToUse')); return; }
+    createModal(); opener=document.activeElement; modal.classList.remove('hidden'); resize();
+    modal.querySelector('#graph-search').focus();
+    const id=++requestId, loading=modal.querySelector('#graph-loading'); loading.classList.remove('hidden'); loading.textContent=t('graph.loading');
     try {
-      let data = null;
-      if (window.pywebview && window.pywebview.api && window.pywebview.api.get_links_graph) {
-        const res = await window.pywebview.api.get_links_graph(directory || '');
-        if (res && res.ok) data = res.graph;
-      } else {
-        const url = `/api/links/graph?dir=${encodeURIComponent(directory || '')}&max_nodes=500`;
-        const res = await fetch(url);
-        const json = await res.json();
-        if (json && json.ok) data = json.graph;
-      }
-
-      if (data) {
-        const badge = _modal.querySelector('#graph-stats-badge');
-        if (badge && data.stats) {
-          badge.textContent = _t('graph.statsBadge', {
-            nodes: data.stats.total_nodes,
-            edges: data.stats.total_edges,
-            deadlinks: data.stats.deadlinks_count
-          }) || `${data.stats.total_nodes} 节点 · ${data.stats.total_edges} 关系 · ${data.stats.deadlinks_count} 死链`;
-        }
-        _initSimulation(data);
-      }
-    } catch (err) {
-      console.error('Failed to load knowledge graph:', err);
-    } finally {
-      loading.classList.add('hidden');
-    }
+      const res=window.pywebview?.api?.get_links_graph ? await window.pywebview.api.get_links_graph(directory||'') : await api(`/api/links/graph?dir=${encodeURIComponent(directory||'')}&max_nodes=500`);
+      if(id!==requestId||!visible()) return;
+      if(!res?.ok||!res.graph) throw new Error('graph_unavailable');
+      init(res.graph); loading.classList.toggle('hidden',nodes.length>0); loading.textContent=t('graph.noLinks');
+    } catch (_) { if(id===requestId) { nodes=[];edges=[];render();renderList();loading.textContent=t('ux.loadFailed'); } }
   }
+  function close() { if(!modal) return; ++requestId; modal.classList.add('hidden');cancelAnimationFrame(frame);frame=0;pointers.clear();gesture=null;opener?.isConnected&&opener.focus({preventScroll:true}); }
 
-  function closeGraphModal() {
-    if (!_modal) return;
-    _modal.classList.add('hidden');
-    if (_animId) {
-      cancelAnimationFrame(_animId);
-      _animId = null;
-    }
-    _animating = false;
+  function createDrawer() {
+    if(drawer) return;
+    drawer=document.createElement('aside');drawer.id='backlinks-panel';drawer.className='backlinks-panel hidden';drawer.setAttribute('aria-labelledby','backlinks-title');
+    drawer.innerHTML=`<header class="backlinks-header"><div><h3 id="backlinks-title">${t('graph.backlinks')}</h3><p id="backlinks-file"></p></div><button id="backlinks-btn-close" class="graph-tool-btn" aria-label="${t('toolbar.close')}">×</button></header>
+      <label class="ux-search"><span>⌕</span><input id="backlinks-search" type="search" placeholder="${t('ux.filterLinks')}" aria-label="${t('ux.filterLinks')}"></label>
+      <div class="backlinks-tabs" role="tablist"><button data-tab="incoming" role="tab" aria-selected="true"></button><button data-tab="outgoing" role="tab" aria-selected="false"></button></div>
+      <div id="backlinks-content" class="backlinks-content" role="tabpanel" aria-live="polite"></div>`;
+    document.body.appendChild(drawer);
+    drawer.querySelector('#backlinks-btn-close').onclick=()=>{drawer.classList.add('hidden');document.getElementById('btn-backlinks-menu')?.focus();};
+    drawer.querySelector('#backlinks-search').oninput=e=>{linkQuery=e.target.value.trim().toLowerCase();renderLinks();};
+    drawer.querySelectorAll('[data-tab]').forEach(btn=>{
+      btn.onclick=()=>{linkTab=btn.dataset.tab;renderLinks();};
+      btn.onkeydown=e=>{if(e.key==='ArrowLeft'||e.key==='ArrowRight'){e.preventDefault();const next=drawer.querySelector(`[data-tab="${linkTab==='incoming'?'outgoing':'incoming'}"]`);next.click();next.focus();}};
+    });
   }
-
-  const WIKILINK_RE = /\[\[([^\]\n|#]+)(?:#([^\]\n|]+))?(?:\|([^\]\n]+))?\]\]/;
-
-  function hasGraphElements(explicitContent) {
-    if (typeof explicitContent === 'string') {
-      return explicitContent.includes('[[') && WIKILINK_RE.test(explicitContent);
-    }
-    if (typeof state === 'undefined' || !state || state.mode === 'welcome' || !_hasActiveDocument()) return false;
-    const content = state.fixed || state.original || (state.tabs && state.tabs.find(t => t.id === state.activeTabId)?.content) || '';
-    return typeof content === 'string' && content.includes('[[') && WIKILINK_RE.test(content);
+  function renderLinks() {
+    const incoming=linkTab==='incoming', all=incoming?backlinkData.backlinks:backlinkData.forward_links;
+    drawer.querySelectorAll('[data-tab]').forEach(btn=>{
+      const isIn=btn.dataset.tab==='incoming';btn.textContent=`${t(isIn?'graph.backlinks':'graph.outgoing')} · ${(isIn?backlinkData.backlinks:backlinkData.forward_links).length}`;
+      btn.setAttribute('aria-selected',String(btn.dataset.tab===linkTab));btn.tabIndex=btn.dataset.tab===linkTab?0:-1;
+    });
+    const rows=all.filter(item=>JSON.stringify(item).toLowerCase().includes(linkQuery));
+    const content=drawer.querySelector('#backlinks-content');
+    content.innerHTML=rows.length?rows.map(item=>{
+      const path=incoming?item.source_path:item.target_path, title=incoming?(item.source_title||basename(path)):(item.target_clean||item.target_raw);
+      return `<button class="backlink-item ${!path?'deadlink':''}" data-path="${esc(path||'')}" ${!path?'disabled':''}><span class="backlink-title">${esc(title)}</span><span class="backlink-context">${esc(item.alias||'')}${item.line_no?' · '+t('graph.linePrefix',{line:item.line_no}):''}</span><span class="backlink-path">${esc(path||t('graph.deadlinkUncreated'))}</span></button>`;
+    }).join(''):`<div class="ux-empty"><strong>${t(linkQuery?'ux.noResults':'graph.noLinks')}</strong><p>${t('ux.linkHint')}</p></div>`;
+    content.querySelectorAll('button[data-path]').forEach(btn=>{btn.onclick=()=>window.loadFile?.(btn.dataset.path);});
   }
-
-  function setTopGraphButtonVisible(visible) {
-    const btn = document.getElementById('btn-graph');
-    if (!btn) return;
-    const hasDoc = _hasActiveDocument();
-    btn.disabled = !hasDoc;
-    if (visible && hasDoc) {
-      btn.classList.remove('hidden');
-    } else {
-      btn.classList.add('hidden');
-    }
-  }
-
-  function updateGraphButtonVisibility(forceVisible) {
-    if (forceVisible === false) {
-      setTopGraphButtonVisible(false);
-      return;
-    }
-    if (forceVisible === true) {
-      setTopGraphButtonVisible(true);
-      return;
-    }
-    setTopGraphButtonVisible(hasGraphElements());
-  }
-
   async function refreshBacklinks(filePath) {
-    _currentFilePath = filePath || null;
-    _createBacklinksPanelIfNeeded();
-
-    if (!filePath) {
-      _backlinksPanel.querySelector('#backlinks-content').innerHTML = `
-        <div class="backlinks-empty">${_t('graph.noLinks', '暂无关联笔记')}</div>
-      `;
-      updateGraphButtonVisibility(false);
-      return;
-    }
-
+    currentFile=filePath||null;createDrawer();const id=++backlinkRequest;
+    drawer.querySelector('#backlinks-file').textContent=basename(filePath)||t('ux.notes');
+    backlinkData={backlinks:[],forward_links:[]};renderLinks();
+    if(!filePath){updateVisibility(false);return;}
+    drawer.querySelector('#backlinks-content').textContent=t('graph.loading');
     try {
-      let resData = null;
-      if (window.pywebview && window.pywebview.api && window.pywebview.api.get_backlinks) {
-        const res = await window.pywebview.api.get_backlinks(filePath);
-        if (res && res.ok) resData = res;
-      } else {
-        const url = `/api/links/backlinks?path=${encodeURIComponent(filePath)}`;
-        const res = await fetch(url);
-        const json = await res.json();
-        if (json && json.ok) resData = json;
-      }
-
-      const backlinks = (resData && resData.backlinks) || [];
-      const forwardLinks = (resData && resData.forward_links) || [];
-      const contentEl = _backlinksPanel.querySelector('#backlinks-content');
-
-      const hasConnections = (backlinks.length > 0) || (forwardLinks.length > 0) || hasGraphElements();
-      setTopGraphButtonVisible(hasConnections);
-
-      if (!backlinks.length && !forwardLinks.length) {
-        contentEl.innerHTML = `<div class="backlinks-empty">${_t('graph.noLinks', '暂无关联笔记')}</div>`;
-        return;
-      }
-
-      let html = '';
-      if (backlinks.length > 0) {
-        html += `<div class="backlinks-group-title">${_t('graph.backlinks', '反向链接')} (${backlinks.length})</div>`;
-        for (const item of backlinks) {
-          const title = item.source_title || item.source_path.split(/[\\/]/).pop();
-          html += `
-            <div class="backlink-item" data-path="${_escapeHtml(item.source_path)}" data-line="${item.line_no}">
-              <div class="backlink-title">${_escapeHtml(title)}</div>
-              <div class="backlink-context">${_t('graph.linePrefix', {line: item.line_no}) || ('行 ' + item.line_no)}${item.alias ? ' · ' + _escapeHtml(item.alias) : ''}</div>
-            </div>
-          `;
-        }
-      }
-
-      if (forwardLinks.length > 0) {
-        html += `<div class="backlinks-group-title">${_t('graph.outgoing', '正向出链')} (${forwardLinks.length})</div>`;
-        for (const item of forwardLinks) {
-          const target = item.target_clean || item.target_raw;
-          const isDead = !item.target_path;
-          html += `
-            <div class="backlink-item ${isDead ? 'deadlink' : ''}" data-path="${_escapeHtml(item.target_path || '')}">
-              <div class="backlink-title">${_escapeHtml(target)}</div>
-              <div class="backlink-context">${_escapeHtml(item.alias || '')}</div>
-            </div>
-          `;
-        }
-      }
-
-      contentEl.innerHTML = html;
-
-      // 绑定点击跳转
-      contentEl.querySelectorAll('.backlink-item').forEach(el => {
-        el.addEventListener('click', () => {
-          const targetPath = el.dataset.path;
-          if (targetPath && typeof window.loadFile === 'function') {
-            window.loadFile(targetPath);
-          }
-        });
-      });
-    } catch (err) {
-      console.error('Failed to fetch backlinks:', err);
-      updateGraphButtonVisibility();
-    }
+      const res=window.pywebview?.api?.get_backlinks?await window.pywebview.api.get_backlinks(filePath):await api(`/api/links/backlinks?path=${encodeURIComponent(filePath)}`);
+      if(id!==backlinkRequest)return;if(!res?.ok)throw new Error('backlinks_unavailable');
+      backlinkData={backlinks:res.backlinks||[],forward_links:res.forward_links||[]};renderLinks();
+      updateVisibility(backlinkData.backlinks.length>0||backlinkData.forward_links.length>0||hasGraph());
+    }catch(_){if(id===backlinkRequest){drawer.querySelector('#backlinks-content').textContent=t('ux.loadFailed');updateVisibility();}}
   }
-
-  function toggleBacklinksDrawer() {
-    if (!_hasActiveDocument()) {
-      if (typeof showToast === 'function') {
-        const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
-        showToast(_t('toast.openDocumentToUse', '请先打开文档'));
-      }
-      return;
-    }
-    _createBacklinksPanelIfNeeded();
-    _backlinksPanel.classList.toggle('hidden');
-    if (!_backlinksPanel.classList.contains('hidden') && _currentFilePath) {
-      refreshBacklinks(_currentFilePath);
-    }
-  }
-
-  // 挂载到全局
-  window.ReadMDGraph = {
-    open: openGraphModal,
-    close: closeGraphModal,
-    refreshBacklinks: refreshBacklinks,
-    toggleDrawer: toggleBacklinksDrawer,
-    updateVisibility: updateGraphButtonVisibility,
-    hasGraph: hasGraphElements,
-  };
+  function toggleDrawer(){if(!activeDoc())return;createDrawer();drawer.classList.toggle('hidden');if(!drawer.classList.contains('hidden')){refreshBacklinks(currentFile||state.path);drawer.querySelector('input').focus();}}
+  const WIKILINK_RE=/\[\[([^\]\n|#]+)(?:#([^\]\n|]+))?(?:\|([^\]\n]+))?\]\]/;
+  function hasGraph(content){if(typeof content==='string')return WIKILINK_RE.test(content);return activeDoc()&&WIKILINK_RE.test(state.fixed||state.original||'');}
+  function updateVisibility(force){const btn=document.getElementById('btn-graph');if(btn){btn.disabled=!activeDoc();btn.classList.toggle('hidden',!activeDoc()||!(force??hasGraph()));}}
+  document.addEventListener('visibilitychange',()=>{if(visible()){if(document.hidden){cancelAnimationFrame(frame);frame=0;}else wake();}});
+  new MutationObserver(()=>render()).observe(document.body,{attributes:true,attributeFilter:['data-theme','class']});
+  window.ReadMDGraph={open,close,refreshBacklinks,toggleDrawer,updateVisibility,hasGraph};
 })();
 
 ;

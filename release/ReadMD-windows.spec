@@ -42,6 +42,27 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+
+# 过滤并修正 a.binaries 中的 MSVC 运行时库：
+# 避免由第三方 wheel（如旧版 winrt 等）引入陈旧的 MSVCP140.dll（如 VS2017 14.16），
+# 该陈旧版本与现代编译的 C 扩展（如 onnxruntime）存在底层 ABI 冲突并触发 0xC0000005 闪退。
+# 统一强制使用 System32 下宿主系统最新的现代 MSVC 运行时。
+sys32_dir = os.path.join(os.environ.get('WINDIR', 'C:\\Windows'), 'System32')
+vc_runtimes = {
+    'msvcp140.dll', 'msvcp140_1.dll', 'msvcp140_2.dll', 'msvcp140_atomic_wait.dll',
+    'vcruntime140.dll', 'vcruntime140_1.dll', 'vcomp140.dll'
+}
+fixed_binaries = []
+for dest, src, typ in a.binaries:
+    base = os.path.basename(dest).lower()
+    if base in vc_runtimes:
+        sys32_path = os.path.join(sys32_dir, os.path.basename(dest))
+        if os.path.exists(sys32_path):
+            fixed_binaries.append((dest, sys32_path, typ))
+            continue
+    fixed_binaries.append((dest, src, typ))
+a.binaries = fixed_binaries
+
 pyz = PYZ(a.pure)
 
 if ONEFILE:

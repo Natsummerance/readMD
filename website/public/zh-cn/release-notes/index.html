@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ReadMD v2.3.8 发布说明 | 统一批量工作台与更安全的图表</title>
-  <meta name="description" content="ReadMD v2.3.8 正式版发布说明：统一批量工作台支持取消与逐行追溯，PPTX/XLSX 原生 OOXML 解析，zip 解压与图表渲染安全加固，VS Code 与 MCP 流式控制，46 种语言界面全部就绪。">
+  <title>ReadMD v2.3.9 发布说明 | 桌面伴读桌宠与矢量 PDF 工具</title>
+  <meta name="description" content="ReadMD v2.3.9 正式版发布说明：CC0 许可 Arch-Chan Live2D 桌面伴读桌宠，原生高保真矢量 PDF 编辑器与 FastMCP 扩展工具链，纯 Python Word .doc 与复杂表格重构，内核沙箱安全审计，46 种语言 100% 对齐与前端无 Emoji 规范。">
   <meta name="author" content="ReadMD">
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="ReadMD">
-  <meta property="og:title" content="ReadMD v2.3.8 发布说明 | 统一批量工作台与更安全的图表">
-  <meta property="og:description" content="v2.3.8 正式版的版本事实：统一批量工作台、原生 OOXML 解析、图表与压缩包安全加固、46 种语言本地化。">
+  <meta property="og:title" content="ReadMD v2.3.9 发布说明 | 桌面伴读桌宠与矢量 PDF 工具">
+  <meta property="og:description" content="v2.3.9 正式版的版本事实：Live2D 桌面伴读桌宠、原生矢量 PDF 编辑器与 MCP 工具、离线 Word 解析、内核安全审计与 46 种语言本地化。">
   <meta property="og:url" content="https://readmd.asia/zh-cn/release-notes/">
   <meta property="og:image" content="https://readmd.asia/media/overview-reader.png">
   <meta property="og:image:type" content="image/png">
@@ -22,8 +22,8 @@
   <meta property="og:locale:alternate" content="zh_TW">
   <meta property="og:locale:alternate" content="ja_JP">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="ReadMD v2.3.8 发布说明 | 统一批量工作台与更安全的图表">
-  <meta name="twitter:description" content="了解 v2.3.8 正式版的发布边界、平台资产和校验清单。">
+  <meta name="twitter:title" content="ReadMD v2.3.9 发布说明 | 桌面伴读桌宠与矢量 PDF 工具">
+  <meta name="twitter:description" content="了解 v2.3.9 正式版的发布边界、平台资产和校验清单。">
   <meta name="twitter:image" content="https://readmd.asia/media/overview-reader.png">
   <meta name="twitter:image:alt" content="ReadMD 桌面界面显示排版后的 Markdown 文档和目录。">
   <link rel="alternate" type="application/atom+xml" title="ReadMD releases" href="https://github.com/Natsummerance/readMD/releases.atom">
@@ -47,7 +47,7 @@
       "@type": "WebPage",
       "@id": "https://readmd.asia/zh-cn/release-notes/#webpage",
       "url": "https://readmd.asia/zh-cn/release-notes/",
-      "name": "ReadMD v2.3.8 发布说明 | 统一批量工作台与更安全的图表",
+      "name": "ReadMD v2.3.9 发布说明 | 桌面伴读桌宠与矢量 PDF 工具",
       "isPartOf": {
         "@id": "https://readmd.asia/#website"
       },
@@ -55,7 +55,7 @@
         "@id": "https://readmd.asia/zh-cn/release-notes/#software"
       },
       "primaryImageOfPage": "https://readmd.asia/media/overview-reader.png",
-      "dateModified": "2026-09-03",
+      "dateModified": "2026-09-10",
       "speakable": {
         "@type": "SpeakableSpecification",
         "cssSelector": [
@@ -79,7 +79,7 @@
       "operatingSystem": "Windows 10/11, macOS 13+, Linux x86_64/ARM64",
       "applicationCategory": "UtilitiesApplication",
       "softwareVersion": "2.3.9",
-      "dateModified": "2026-09-03",
+      "dateModified": "2026-09-10",
       "isAccessibleForFree": true,
       "license": "https://github.com/Natsummerance/readMD/blob/main/LICENSE",
       "downloadUrl": "https://github.com/Natsummerance/readMD/releases/latest",
@@ -102,7 +102,7 @@
     {
       "@type": "HowTo",
       "@id": "https://readmd.asia/zh-cn/release-notes/#howto",
-      "name": "如何安全安装 ReadMD v2.3.8 正式版",
+      "name": "如何安全安装 ReadMD v2.3.9 正式版",
       "step": [
         {
           "@type": "HowToStep",
@@ -112,28 +112,28 @@
         {
           "@type": "HowToStep",
           "name": "首次运行会有未签名提示",
-          "text": "v2.3.8 经 READMD_SELF_USE_RELEASE 自用通道发布，资产未做 Authenticode 与 macOS codesign 签名；Windows SmartScreen 和 macOS Gatekeeper 可能请求确认。"
+          "text": "v2.3.9 经 READMD_SELF_USE_RELEASE 自用通道发布，资产未做 Authenticode 与 macOS codesign 签名；Windows SmartScreen 和 macOS Gatekeeper 可能请求确认。"
         },
         {
           "@type": "HowToStep",
-          "name": "批量任务随时可取消",
-          "text": "统一批量工作台中的每项任务都可取消，结果逐行可追溯；PPTX 与 XLSX 由原生 OOXML 读取器解析。"
+          "name": "探索 Live2D 伴读桌宠与 PDF 工具",
+          "text": "体验 CC0 许可的 Arch-Chan Live2D 伴读桌宠，高 DPI 自适应缩放与平滑拖拽，并使用原生矢量 PDF 编辑与 FastMCP 工具。"
         },
         {
           "@type": "HowToStep",
-          "name": "图表在沙箱内渲染",
-          "text": "Vega 与 Vega-Lite 由服务端沙箱渲染，不加载外部数据且 CSP 不含 unsafe-eval；Chart.js 离线渲染；PlantUML 远程渲染前先确认。"
+          "name": "内核沙箱加固与纯净前端",
+          "text": "代码执行沙箱采用 64 位 Windows Job Object 与 POSIX 选择器超时保护，前端全面升级为矢量 SVG 图标并达成 46 种语言 100% 对齐。"
         }
       ]
     },
     {
       "@type": "TechArticle",
       "@id": "https://readmd.asia/zh-cn/release-notes/#article",
-      "headline": "ReadMD v2.3.8 发布说明 | 统一批量工作台与更安全的图表",
-      "description": "ReadMD v2.3.8 正式版发布说明：统一批量工作台支持取消与逐行追溯，PPTX/XLSX 原生 OOXML 解析，zip 解压与图表渲染安全加固，VS Code 与 MCP 流式控制，46 种语言界面全部就绪。",
+      "headline": "ReadMD v2.3.9 发布说明 | 桌面伴读桌宠与矢量 PDF 工具",
+      "description": "ReadMD v2.3.9 正式版发布说明：CC0 许可 Arch-Chan Live2D 桌面伴读桌宠，原生高保真矢量 PDF 编辑器与 FastMCP 扩展工具链，纯 Python Word .doc 与复杂表格重构，内核沙箱安全审计，46 种语言 100% 对齐与前端无 Emoji 规范。",
       "inLanguage": "en",
-      "datePublished": "2026-09-03",
-      "dateModified": "2026-09-03",
+      "datePublished": "2026-09-10",
+      "dateModified": "2026-09-10",
       "author": {
         "@id": "https://readmd.asia/#organization"
       },
@@ -159,10 +159,10 @@
   "mainEntity": [
     {
       "@type": "Question",
-      "name": "v2.3.8 是正式版吗？",
+      "name": "v2.3.9 是正式版吗？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "是。v2.3.8 已于 2026-09-03 在 GitHub 以正式发布（非预发布）形式上线，经 READMD_SELF_USE_RELEASE 自用通道发布：资产未做签名，原生平台证据清单按参考口径提供；安装前请保留备份并核对 SHA256SUMS.txt。"
+        "text": "是。v2.3.9 已于 2026-09-10 在 GitHub 以正式发布（非预发布）形式上线，经 READMD_SELF_USE_RELEASE 自用通道发布：资产未做签名，原生平台证据清单按参考口径提供；安装前请保留备份并核对 SHA256SUMS.txt。"
       }
     },
     {
@@ -186,7 +186,7 @@
       "name": "哪些平台会收到安装包？",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "正式版安装包覆盖 Windows 10/11（x64/ARM64）、macOS 13+（Intel 与 Apple Silicon），以及 Ubuntu 22.04/24.04 和 Debian 12 的 Linux x86_64/ARM64；统信 UOS、银河麒麟与 Deepin 仍缺原生证据，不构成正式支持承诺；HarmonyOS/OpenHarmony 不在 v2.3.8 范围内。"
+        "text": "正式版安装包覆盖 Windows 10/11（x64/ARM64）、macOS 13+（Intel 与 Apple Silicon），以及 Ubuntu 22.04/24.04 和 Debian 12 的 Linux x86_64/ARM64；统信 UOS、银河麒麟与 Deepin 仍缺原生证据，不构成正式支持承诺；HarmonyOS/OpenHarmony 不在 v2.3.9 范围内。"
       }
     }
   ]
@@ -205,7 +205,7 @@
     {
       "@type": "ListItem",
       "position": 2,
-      "name": "v2.3.8",
+      "name": "v2.3.9",
       "item": "https://readmd.asia/zh-cn/release-notes/"
     }
   ]
@@ -216,30 +216,30 @@
     <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5"><a class="text-lg font-semibold tracking-tight" href="/zh-cn/">ReadMD</a><nav aria-label="Primary" class="hidden items-center gap-7 text-sm md:flex"><a href="#release-highlights">发布重点</a><a href="/zh-cn/workflows/">更多答案</a><a href="https://github.com/Natsummerance/readMD">源码</a></nav><a class="button-primary text-sm" href="https://github.com/Natsummerance/readMD/releases/tag/v2.3.9">下载</a></div>
   </header>
   <main>
-    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-cn/">首页</a> / <span>发布说明</span> / <span>v2.3.8</span></nav>
+    <nav class="mx-auto max-w-5xl px-5 pt-8 text-sm text-muted" aria-label="Breadcrumb"><a class="link-action" href="/zh-cn/">首页</a> / <span>发布说明</span> / <span>v2.3.9</span></nav>
     <section class="mx-auto max-w-5xl px-5 pb-16 pt-14 md:pt-20">
-      <h1 class="display-title">ReadMD v2.3.8 改了什么。</h1>
-      <p class="section-copy mt-6 max-w-[68ch]">ReadMD v2.3.8 是自用通道发布的第一个正式版：批量转换合并进统一工作台且随时可取消，PPTX 与 XLSX 改为原生解析，图表与压缩包处理完成安全加固，46 种语言界面全部收尾。</p>
+      <h1 class="display-title">ReadMD v2.3.9 改了什么。</h1>
+      <p class="section-copy mt-6 max-w-[68ch]">ReadMD v2.3.9 是自用通道发布的正式版：推出 CC0 许可的 Arch-Chan Live2D 桌面伴读桌宠，新增原生矢量 PDF 编辑器与 FastMCP 工具链，强化纯 Python Word .doc 与复杂表格聚类重构，完成多项内核与沙箱安全审计，实现前端全面去 Emoji 与 46 种语言 100% 对齐。</p>
       <figure class="product-frame mt-10"><picture><source srcset="/media/overview-reader.webp" type="image/webp"><img src="/media/overview-reader.png" width="2880" height="1620" alt="ReadMD 桌面界面显示排版后的 Markdown 文档和目录。" loading="eager" fetchpriority="high" decoding="async"></picture></figure>
     </section>
     <section id="release-highlights" class="bg-[var(--color-surface)] py-16">
       <div class="mx-auto max-w-5xl px-5">
         <h2 class="text-2xl font-semibold tracking-tight">发布亮点与边界</h2>
         <ol class="mt-8 grid gap-6 md:grid-cols-2">
-          <li class="answer-card"><h3 class="text-lg font-semibold">统一批量工作台</h3><p>转换、OCR 与导出任务共用一个工作台，任何任务都能取消，结果逐行可追溯。</p></li>
-          <li class="answer-card"><h3 class="text-lg font-semibold">原生 OOXML 解析</h3><p>PPTX 与 XLSX 直接按文件格式读取；旧版 Office 格式会得到明确错误提示，而不是莫名失败。</p></li>
-          <li class="answer-card"><h3 class="text-lg font-semibold">图表与压缩包加固</h3><p>zip 解压拒绝路径穿越与压缩包炸弹；Vega/Vega-Lite 改由服务端沙箱渲染且 CSP 不含 unsafe-eval；PlantUML 远程渲染前需确认；Chart.js 支持离线渲染。</p></li>
-          <li class="answer-card"><h3 class="text-lg font-semibold">46 种语言与更稳的扩展</h3><p>从系统托盘到技能导入的界面文案覆盖 46 种语言；VS Code 与 MCP 支持动态技能、流式取消与连接状态展示；技能导入失败自动回滚。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">Live2D 桌面伴读宠物</h3><p>集成 CC0 许可 Arch-Chan Live2D 模型，支持高 DPI 视网膜缩放、双向看门狗、命中测试、拖拽文件即开读以及 46 种语言气泡对话。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">原生矢量 PDF 与 MCP 工具</h3><p>内置原生高保真矢量 PDF 编辑引擎，扩展 MCP Server 审阅与标注工具，全面赋能外部 Agent 集成。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">离线 Word 与复杂表格</h3><p>纯 Python 解析 Word .doc 二进制流（FIB/CLX），摆脱 COM 依赖；引入复杂表格聚类重建跨行跨列结构。</p></li>
+          <li class="answer-card"><h3 class="text-lg font-semibold">内核沙箱加固与纯净体验</h3><p>64 位 Windows Job Object、POSIX 选择器剩余超时等待、SQL 沙箱隔离，前端全面去硬编码 Emoji 升级矢量 SVG 并达成 46 种语言词条对齐。</p></li>
           </ol>
       </div>
     </section>
     <section class="mx-auto max-w-5xl px-5 py-16">
-      <h2 class="text-2xl font-semibold tracking-tight">v2.3.8 正式版常见问题</h2>
+      <h2 class="text-2xl font-semibold tracking-tight">v2.3.9 正式版常见问题</h2>
       <div class="mt-8 grid gap-6 md:grid-cols-2">
-        <article class="answer-card"><h3>v2.3.8 是正式版吗？</h3><p>是。v2.3.8 已于 2026-09-03 在 GitHub 以正式发布（非预发布）形式上线，经 READMD_SELF_USE_RELEASE 自用通道发布：资产未做签名，原生平台证据清单按参考口径提供；安装前请保留备份并核对 SHA256SUMS.txt。</p></article>
+        <article class="answer-card"><h3>v2.3.9 是正式版吗？</h3><p>是。v2.3.9 已于 2026-09-10 在 GitHub 以正式发布（非预发布）形式上线，经 READMD_SELF_USE_RELEASE 自用通道发布：资产未做签名，原生平台证据清单按参考口径提供；安装前请保留备份并核对 SHA256SUMS.txt。</p></article>
         <article class="answer-card"><h3>显示修复会改写我的 Markdown 吗？</h3><p>不会。渲染修复只影响内存中的显示层；只有你明确编辑并保存时，源文件字节才会变化。</p></article>
         <article class="answer-card"><h3>更新包如何检查？</h3><p>更新只来自官方 GitHub Release 资产，先进入固定目录和临时文件，经 SHA-256 校验后原子发布，并在执行前复核。</p></article>
-        <article class="answer-card"><h3>哪些平台会收到安装包？</h3><p>正式版安装包覆盖 Windows 10/11（x64/ARM64）、macOS 13+（Intel 与 Apple Silicon），以及 Ubuntu 22.04/24.04 和 Debian 12 的 Linux x86_64/ARM64；统信 UOS、银河麒麟与 Deepin 仍缺原生证据，不构成正式支持承诺；HarmonyOS/OpenHarmony 不在 v2.3.8 范围内。</p></article>
+        <article class="answer-card"><h3>哪些平台会收到安装包？</h3><p>正式版安装包覆盖 Windows 10/11（x64/ARM64）、macOS 13+（Intel 与 Apple Silicon），以及 Ubuntu 22.04/24.04 和 Debian 12 的 Linux x86_64/ARM64；统信 UOS、银河麒麟与 Deepin 仍缺原生证据，不构成正式支持承诺；HarmonyOS/OpenHarmony 不在 v2.3.9 范围内。</p></article>
       </div>
       <div class="mt-10 flex flex-wrap gap-5">
         <a class="link-action" href="/download/">下载 ReadMD</a>

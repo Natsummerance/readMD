@@ -117,3 +117,11 @@ ui-tests/.npm-cache/
 /.pytest-tmp-*/
 /.pytest-review-results.txt
 /ui-tests/test-results-pet-*/
+/ui-tests/test-results-pagination/
+/docs/evidence/
+/ui-tests/record_pet_showcase.js
+/ui-tests/verify_pet_polish.js
+.firecrawl/
+/pet/
+/plugins/
+packages/readmd-hermes-pet-adapter/readmd-pet-windows/
