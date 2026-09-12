@@ -122,3 +122,15 @@
   .tpl-github-fields { display: grid; grid-template-columns: minmax(0, 1fr) 34px; }
   .tpl-github-credential { grid-column: 1 / -1; }
 }
+
+/* Skill 创建弹窗：通用 .modal-dialog 基类不带内边距（旧弹窗各自内联补丁），
+   表单区与页脚需要与标题对齐的内边距，避免标签和输入框贴边。 */
+#skill-create-modal .modal-form-group,
+#skill-create-modal .modal-footer {
+  padding-inline: 20px;
+}
+
+#skill-create-modal .modal-footer {
+  padding-bottom: 20px;
+  margin-top: 18px;
+}

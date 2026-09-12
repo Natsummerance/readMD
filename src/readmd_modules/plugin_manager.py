@@ -230,7 +230,8 @@ def load_manifest() -> Dict[str, Dict[str, Any]]:
                 'approx_size': spec['approx_size'],
                 'installed': installed,
                 'cached': _check_model_cached(pid),
-                'enabled': entry.get('enabled', True) if installed and pid in CONNECTED_PLUGINS else False,
+                # 接入管线的插件安装即默认启用；轻量工具包安装后由用户开关决定。
+                'enabled': (entry.get('enabled', pid in CONNECTED_PLUGINS) if installed else False),
                 'uninstalled': bool(entry.get('uninstalled', False)),
                 'version': entry.get('version', ''),
                 'installing': task_info.get('status') == 'installing',
@@ -613,6 +614,7 @@ def _run_pip_subprocess(args: Sequence[str], on_line) -> int:
 
 def _run_pip_inprocess(args: Sequence[str], on_line) -> int:
     stdout, stderr, argv = sys.stdout, sys.stderr, sys.argv
+    saved_main = sys.modules.get('__main__')
     saved_env = {key: os.environ.get(key) for key in ('PIP_PROGRESS_BAR', 'NO_COLOR')}
     # 关掉进度条才有稳定的按行输出；冻结态无法分配 tty，动画进度条也无处可画。
     os.environ['PIP_PROGRESS_BAR'] = 'off'
@@ -662,6 +664,10 @@ def _run_pip_inprocess(args: Sequence[str], on_line) -> int:
             emitter.flush()
         finally:
             sys.stdout, sys.stderr, sys.argv = stdout, stderr, argv
+            if saved_main is not None:
+                sys.modules['__main__'] = saved_main
+            else:
+                sys.modules.pop('__main__', None)
         if _orig_make is not None:
             _distlib_scripts.ScriptMaker.make = _orig_make
         for key, value in saved_env.items():

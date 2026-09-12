@@ -482,6 +482,48 @@ class TestPluginManager(unittest.TestCase):
                     thread.join(5)
         self.assertTrue(second_entered.is_set())
 
+    def test_run_pip_inprocess_preserves_main_module(self):
+        """确保在冻结态运行 pip 之后，sys.modules['__main__'] 不会被 pip 模块替换破坏。"""
+        original_main = sys.modules.get('__main__')
+        sentinel_main = types.ModuleType('__main__')
+        sentinel_main.__file__ = 'fake_main.py'
+        sys.modules['__main__'] = sentinel_main
+
+        def fake_run_module(module_name, run_name=None, alter_sys=False):
+            sys.modules['__main__'] = types.ModuleType('pip.__main__')
+            raise SystemExit(0)
+
+        try:
+            with patch.object(pm.runpy, 'run_module', side_effect=fake_run_module):
+                code = pm._run_pip_inprocess(['install', 'pylatexenc'], lambda line: None)
+            self.assertEqual(code, 0)
+            self.assertIs(sys.modules.get('__main__'), sentinel_main)
+        finally:
+            if original_main is not None:
+                sys.modules['__main__'] = original_main
+            else:
+                sys.modules.pop('__main__', None)
+
+    def test_install_plugin_async_silently_enables_on_success(self):
+        """安装成功后应立即落盘 enabled: True 并置 success，实现主进程内无重启静默启用。"""
+        def fake_pip(args, on_line):
+            _write_sandbox_install(pm.PLUGINS_SITE_PACKAGES, 'pylatexenc', 'pylatexenc', '2.11')
+            return 0
+
+        with patch.object(pm.threading, 'Thread', _ImmediateThread), patch.object(
+            pm, '_environment_plugin_ready', side_effect=[(False, ''), (True, '2.11')]
+        ), patch.object(pm, '_run_pip', side_effect=fake_pip):
+            ok = pm.install_plugin_async('pylatexenc')
+
+        self.assertTrue(ok)
+        task = pm._install_tasks.get('pylatexenc', {})
+        self.assertEqual(task.get('status'), 'success')
+        self.assertEqual(task.get('progress'), 100)
+        manifest = pm.load_manifest()
+        self.assertTrue(manifest['pylatexenc']['installed'])
+        # 验证静默启用：直接开启，无需用户重启
+        self.assertTrue(pm._read_manifest_data()['pylatexenc']['enabled'])
+
 
 if __name__ == '__main__':
     unittest.main()

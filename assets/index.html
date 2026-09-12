@@ -8,6 +8,7 @@
 <meta name="readmd-app-token" content="">
 <title>ReadMD</title>
 <link rel="stylesheet" href="/assets/style.css?v=2.3.9">
+<link rel="stylesheet" href="/assets/workspace-ui.css?v=2.3.9">
 <link rel="stylesheet" href="/assets/skill-workbench.css?v=2.3.9">
 </head>
 <body>
@@ -346,8 +347,10 @@
     </div>
 
     <div class="ai-body">
+      <div class="ai-context-strip"><span class="ai-context-dot"></span><span id="ai-context-file"></span><span class="ai-context-hint" data-i18n="ux.contextHint">作为本次对话的上下文</span></div>
       <div class="ai-output-wrap" aria-label="对话内容" data-i18n-aria="ai.outputAria">
         <div id="ai-output" aria-live="polite"></div>
+        <button id="ai-jump-latest" class="tb-btn hidden" data-i18n="ux.latest">↓ 回到最新消息</button>
       </div>
 
       <div class="ai-composer-wrapper">
@@ -420,9 +423,10 @@
             <option value="desktop" data-i18n="pet.runtime.desktop">独立桌面（需桌宠扩展）</option>
           </select>
         </div>
-        <div class="apple-list-row">
+        <div class="apple-list-row" id="pet-gallery-row">
           <label for="pet-gallery" data-i18n="pet.gallery">Hermes 桌宠库</label>
           <select id="pet-gallery" class="apple-select"><option value="">Hermes</option></select>
+          <button id="pet-gallery-delete" class="tb-btn danger hidden" type="button" data-i18n="pet.gallery.delete">删除</button>
           <label class="tb-btn" for="pet-gallery-import" data-i18n="pet.gallery.import">导入精灵图</label>
           <input id="pet-gallery-import" type="file" accept="image/png,image/webp" hidden>
         </div>
@@ -479,6 +483,18 @@
             <input id="pet-bubble-toggle" class="plugin-switch-input" type="checkbox" checked data-i18n-aria="pet.bubbleEnable">
             <span class="apple-switch-track plugin-switch-track" aria-hidden="true"><span class="apple-switch-thumb plugin-switch-thumb"></span></span>
           </label>
+        </div>
+
+        <div class="apple-list-row hidden" id="pet-update-progress-row">
+          <div class="apple-row-info" style="width: 100%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:4px;">
+              <span id="pet-update-progress-text" class="apple-row-desc">正在下载更新...</span>
+              <span id="pet-update-progress-percent" style="font-weight:600; color:var(--accent,#007aff);">0%</span>
+            </div>
+            <div class="pet-progress-bar-wrap">
+              <div class="pet-progress-bar" id="pet-update-progress-bar" style="width: 0%;"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -775,22 +791,27 @@
 
 <!-- Skill AI 创作第一步：询问名称与用途 -->
 <div id="skill-create-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="skill-create-title">
-  <div class="modal-dialog">
+  <div class="modal-dialog skill-create-dialog">
     <div class="modal-header">
       <h3 id="skill-create-title" data-i18n="tpl.createTitle">创建新 Skill</h3>
       <button id="skill-create-close" class="modal-close" aria-label="关闭" data-i18n-aria="toolbar.close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     </div>
+    <p class="skill-create-intro" data-i18n="ux.skillIntro">把重复工作写成一个可复用的 Skill。生成后仍可编辑、测试和保存。</p>
+    <div class="skill-create-layout"><aside class="skill-create-guide"><span class="skill-guide-mark">S</span><h4 data-i18n="ux.skillGuide">从一个明确的任务开始</h4><p data-i18n="ux.skillGuideDesc">说明输入是什么、希望得到什么，以及必须遵守的规则。</p><button id="skill-create-example" type="button" class="tb-btn" data-i18n="ux.skillExample">填入精读示例 ↗</button></aside><div class="skill-create-fields">
     <div class="modal-form-group">
       <label for="skill-create-name" data-i18n="tpl.createNameLabel">Skill 名称</label>
-      <input id="skill-create-name" class="modal-input" type="text" placeholder="例如：论文深度精读" data-i18n-placeholder="tpl.createNamePlaceholder" autocomplete="off">
+      <input id="skill-create-name" class="modal-input" type="text" maxlength="80" required placeholder="例如：论文深度精读" data-i18n-placeholder="tpl.createNamePlaceholder" autocomplete="off" aria-describedby="skill-create-error">
     </div>
     <div class="modal-form-group">
       <label for="skill-create-purpose" data-i18n="tpl.createPurposeLabel">用途与要求</label>
-      <textarea id="skill-create-purpose" class="modal-textarea" rows="5" placeholder="描述这个 Skill 要完成什么、输出格式与注意事项…" data-i18n-placeholder="tpl.createPurposePlaceholder"></textarea>
+      <textarea id="skill-create-purpose" class="modal-textarea" rows="6" maxlength="4000" required placeholder="描述这个 Skill 要完成什么、输出格式与注意事项…" data-i18n-placeholder="tpl.createPurposePlaceholder" aria-describedby="skill-create-error"></textarea>
     </div>
+    <div class="skill-format-row"><label for="skill-create-format" data-i18n="ux.outputFormat">输出形式</label><select id="skill-create-format"><option value="Markdown">Markdown</option><option value="table" data-i18n="ux.formatTable">结构化表格</option><option value="checklist" data-i18n="ux.formatChecklist">行动清单</option></select><output id="skill-create-count">0 / 4000</output></div>
+    <p id="skill-create-error" class="ux-field-error" role="alert"></p></div></div>
     <div class="modal-footer">
+      <span class="skill-create-shortcut">Ctrl / ⌘ + Enter</span>
       <button id="skill-create-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
       <button id="skill-create-go" class="tb-btn accent" data-i18n="tpl.createGo">生成草稿</button>
     </div>

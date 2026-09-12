@@ -5394,6 +5394,56 @@ body.zen-mode #edit-area {
   border-color: var(--accent);
 }
 
+/* —— 窄宽自适应：AI 面板 / 分屏挤压阅读区时，分页条随实际可用宽度收缩 ——
+   视口媒体查询感知不到侧栏挤压，因此以分页条自身为容器做容器查询；
+   宽度充足时布局与旧版完全一致。 */
+#pagination-bar {
+  container-type: inline-size;
+  container-name: pagination-bar;
+}
+
+.pg-center {
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.pg-center > button {
+  flex-shrink: 0;
+}
+
+.pg-page-select-wrap {
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.pg-select {
+  width: 100%;
+  min-width: 0;
+}
+
+@container pagination-bar (max-width: 620px) {
+  .pg-chapter-label,
+  .pg-total-label { display: none; }
+
+  #pg-first-btn,
+  #pg-last-btn { display: none; }
+
+  .pg-center { gap: 4px; }
+
+  .pg-left { gap: 4px; }
+
+  .pg-page-select-wrap { max-width: 220px; }
+}
+
+@container pagination-bar (max-width: 430px) {
+  .pg-mode-badge { display: none; }
+
+  .pg-page-select-wrap {
+    max-width: 150px;
+    padding-inline: 6px;
+  }
+}
+
 /* 状态栏分页指示小角标 */
 .status-pagination {
   font-family: inherit;
@@ -6798,18 +6848,25 @@ body.zen-mode #content {
 .pet-sheet-body {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow: hidden;
   display: grid;
   grid-template-columns: minmax(180px, 0.8fr) minmax(280px, 1.4fr);
   gap: 16px;
-  padding-right: 4px;
+  padding-right: 0;
+}
+
+.pet-options-col {
+  overflow-y: auto;
+  max-height: 100%;
+  overscroll-behavior: contain;
 }
 
 @media (max-width: 640px) {
-  .pet-sheet-body { display: flex; flex-direction: column; }
+  .pet-sheet-body { display: flex; flex-direction: column; overflow-y: auto; }
   .pet-sheet-foot, .pet-foot-actions { flex-wrap: wrap; }
   #pet-gallery { max-width: 130px; }
+  .apple-grouped-list { min-height: auto; height: auto; max-height: none; overflow-y: visible; }
+  .pet-preview-stage { position: static; }
 }
 
 .pet-sheet-close {
@@ -6865,7 +6922,9 @@ body[data-theme="dark"] .pet-sheet-close:hover {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  position: relative;
+  position: sticky;
+  top: 0;
+  align-self: start;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 body[data-theme="dark"] .pet-preview-stage {
@@ -6887,8 +6946,10 @@ body[data-theme="dark"] .pet-preview-stage {
   background-size: 400% 200%;
   background-position: 0% 0%;
   background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: -webkit-optimize-contrast;
   filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.22));
-  animation: petBreathe 3s ease-in-out infinite;
+  animation: petSpriteIdle 1.2s steps(1) infinite, petBreathe 3s ease-in-out infinite;
   transform-origin: bottom center;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
 }
@@ -6900,6 +6961,7 @@ body[data-theme="dark"] .pet-preview-stage {
   background-size: 400% 200%;
   background-position: 0% 0%;
   background-repeat: no-repeat;
+  animation: petSpriteIdle 1.2s steps(1) infinite;
 }
 
 .pet-preview-character.is-live2d,
@@ -6911,6 +6973,7 @@ body[data-theme="dark"] .pet-preview-stage {
   background-position: center bottom;
   background-repeat: no-repeat;
   filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.2));
+  animation: archChanBreathe 3.5s ease-in-out infinite;
 }
 
 .pet-preview-badge {
@@ -6952,9 +7015,33 @@ body[data-theme="dark"] .pet-preview-badge {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 14px;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(128, 128, 128, 0.35) transparent;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.apple-grouped-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.apple-grouped-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.apple-grouped-list::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.28);
+  border-radius: 999px;
+}
+
+.apple-grouped-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.48);
 }
 
 .apple-list-row {
@@ -6968,6 +7055,7 @@ body[data-theme="dark"] .pet-preview-badge {
 
 .apple-list-row:last-child {
   border-bottom: none;
+  padding-bottom: 16px;
 }
 
 .apple-row-info {
@@ -7102,6 +7190,40 @@ body[data-theme="dark"] .pet-preview-badge {
   border-color: #ff3b30 !important;
 }
 
+.pet-desktop-info-row {
+  align-items: center;
+}
+
+.pet-update-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tb-btn.small {
+  padding: 4px 10px;
+  font-size: 12px;
+  min-height: 28px;
+  line-height: 1.2;
+}
+
+.pet-progress-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: var(--bg3, rgba(128, 128, 128, 0.16));
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.pet-progress-bar {
+  height: 100%;
+  background: var(--accent, #007aff);
+  transition: width 0.2s ease;
+  border-radius: 999px;
+}
+
 /* ==========================================================================
    悬浮桌宠小组件 (In-App Desktop Pet Widget)
    ========================================================================== */
@@ -7110,6 +7232,8 @@ body[data-theme="dark"] .pet-preview-badge {
   position: fixed;
   right: 28px;
   bottom: 32px;
+  width: max-content;
+  height: max-content;
   z-index: 990;
   user-select: none;
   touch-action: none;
@@ -7139,18 +7263,74 @@ body[data-theme="dark"] .pet-preview-badge {
   background-size: 400% 200%;
   background-position: 0% 0%;
   background-repeat: no-repeat;
+  image-rendering: pixelated;
+  image-rendering: -webkit-optimize-contrast;
   filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.2));
-  animation: petBreathe 3s ease-in-out infinite;
+  animation: petSpriteIdle 1.2s steps(1) infinite, petBreathe 3s ease-in-out infinite;
   transform-origin: bottom center;
   transition: filter 0.2s ease, transform 0.15s ease;
 }
 
 .pet-widget-character.hermes-waving {
-  background-position: 0% 100%;
+  animation: petSpriteWave 1.0s steps(1) infinite !important;
+}
+
+.pet-widget-character.is-arch-chan,
+.pet-widget-character.is-live2d {
+  width: 104px;
+  height: 138px;
+  background-image: url('/assets/pet/arch-chan-avatar.png');
+  background-size: contain;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.22));
+  animation: archChanBreathe 3.5s ease-in-out infinite !important;
+}
+
+@keyframes petSpriteIdle {
+  0%, 100% { background-position: 0% 0%; }
+  25% { background-position: 33.333333% 0%; }
+  50% { background-position: 66.666667% 0%; }
+  75% { background-position: 100% 0%; }
+}
+
+@keyframes petSpriteWave {
+  0%, 100% { background-position: 0% 100%; }
+  25% { background-position: 33.333333% 100%; }
+  50% { background-position: 66.666667% 100%; }
+  75% { background-position: 100% 100%; }
+}
+
+@keyframes archChanBreathe {
+  0%, 100% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-2.5px) scale(1.025, 1.015); }
+  65% { transform: translateY(1px) scale(0.99, 0.995); }
 }
 
 .pet-widget-character.pet-bounce {
   animation: petJoyBounce 0.65s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.pet-widget-character.pet-dozing {
+  animation: petDozingBreathe 4.5s ease-in-out infinite !important;
+  opacity: 0.92;
+}
+
+@keyframes petDozingBreathe {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  40% { transform: rotate(2.5deg) scale(0.98, 0.96); }
+  70% { transform: rotate(-1.5deg) scale(0.99, 0.97); }
+}
+
+.pet-widget-character.pet-sleeping {
+  animation: petSleepingBreathe 6s ease-in-out infinite !important;
+  opacity: 0.85;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+@keyframes petSleepingBreathe {
+  0%, 100% { transform: translateY(3px) rotate(2deg) scale(0.97, 0.94); }
+  50% { transform: translateY(1px) rotate(3deg) scale(0.99, 0.96); }
 }
 
 .pet-widget-character-wrap:hover .pet-widget-character {
@@ -7177,10 +7357,15 @@ body[data-theme="dark"] .pet-preview-badge {
   text-align: center;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  transition: opacity 0.22s ease, transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   z-index: 1002;
+}
+
+.pet-widget-bubble:hover {
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.25), 0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .pet-widget-bubble.is-visible {
@@ -7199,6 +7384,18 @@ body[data-theme="dark"] .pet-preview-badge {
   border-left: 6px solid transparent;
   border-right: 6px solid transparent;
   border-top: 6px solid var(--bg2, #ffffff);
+}
+
+.pet-widget-bubble.is-flipped {
+  bottom: auto;
+  top: calc(100% + 12px);
+}
+
+.pet-widget-bubble.is-flipped .pet-bubble-arrow {
+  bottom: auto;
+  top: -6px;
+  border-top: none;
+  border-bottom: 6px solid var(--bg2, #ffffff);
 }
 
 /* 拖拽直接转换文件环 (Direct File Drop Target Ring) */

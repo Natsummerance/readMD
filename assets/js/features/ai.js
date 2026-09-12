@@ -39,6 +39,7 @@ function toggleAiPanel() {
       renderAiEmptyState();
     }
     setTimeout(() => $('ai-prompt') && $('ai-prompt').focus(), 0);
+    updateAiContextStrip();
   } else {
     // 关闭 AI 面板时，若由打开 AI 面板而暂时收起了预览，自动恢复原预览布局
     if (state._pvLayoutBeforeAi && state.editing) {
@@ -105,9 +106,35 @@ function renderAiEmptyState() {
       </svg>
       <div class="ai-empty-title">${_t('ai.emptyTitle') || ''}</div>
       <div class="ai-empty-desc">${_t('ai.emptyDesc') || ''}</div>
+      <div class="ai-starter-grid">
+        <button type="button" data-starter="ux.askSummary"><strong>${_t('ux.starterSummary')}</strong><span>${_t('ux.starterSummaryHint')}</span></button>
+        <button type="button" data-starter="ux.askQuestions"><strong>${_t('ux.starterQuestions')}</strong><span>${_t('ux.starterQuestionsHint')}</span></button>
+      </div>
     </div>
   `;
+  out.querySelectorAll('[data-starter]').forEach(button => button.addEventListener('click', () => {
+    $('ai-prompt').value = _t(button.dataset.starter);
+    $('ai-prompt').dispatchEvent(new Event('input'));
+    $('ai-prompt').focus();
+  }));
 }
+
+function updateAiContextStrip() {
+  const label = $('ai-context-file');
+  if (!label) return;
+  label.textContent = (typeof state !== 'undefined' && (state.path || state.title))?.split(/[\\/]/).pop() || window.i18n.t('ux.noDocument');
+  label.title = typeof state !== 'undefined' ? (state.path || '') : '';
+}
+
+function initAiComposerUx() {
+  const input = $('ai-prompt'), out = $('ai-output'), latest = $('ai-jump-latest');
+  if (!input || !out || !latest) return;
+  input.addEventListener('input', () => { input.style.height = 'auto'; input.style.height = Math.min(180, input.scrollHeight) + 'px'; });
+  out.addEventListener('scroll', () => latest.classList.toggle('hidden', out.scrollHeight - out.scrollTop - out.clientHeight < 100));
+  latest.addEventListener('click', () => { out.scrollTop = out.scrollHeight; input.focus({ preventScroll: true }); });
+  document.addEventListener('readmd:document-loaded', updateAiContextStrip);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initAiComposerUx); else initAiComposerUx();
 
 async function loadAiOnDemand() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
@@ -172,10 +199,32 @@ const TPL_CATEGORIES = {
 };
 
 function getCategoryLabel(cat) {
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : '';
+  const key = 'ai.tplCategory.' + cat;
+  const trans = _t(key);
+  if (trans && trans !== key) return trans;
   const activeLocale = String((window.i18n && (window.i18n.currentLang || window.i18n.locale)) || '').toLowerCase();
   const isZh = activeLocale.startsWith('zh');
   const catObj = TPL_CATEGORIES[cat] || TPL_CATEGORIES.general;
   return isZh ? catObj.label : catObj.labelEn;
+}
+
+function getLocalizedSkillName(t) {
+  if (!t) return '';
+  const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : '';
+  if (t.id) {
+    const act = _t('ai.action.' + t.id);
+    if (act && act !== 'ai.action.' + t.id) return act;
+  }
+  if (t.skill_id) {
+    const sName = _t('skill.' + t.skill_id + '.name');
+    if (sName && sName !== 'skill.' + t.skill_id + '.name') return sName;
+  }
+  if (t.id) {
+    const directSkill = _t('skill.' + t.id + '.name');
+    if (directSkill && directSkill !== 'skill.' + t.id + '.name') return directSkill;
+  }
+  return t.name || t.id || '';
 }
 
 function getTemplateCategory(t) {
@@ -199,7 +248,7 @@ function fillAiTemplates() {
   sel.innerHTML = '';
   const none = document.createElement('option');
   none.value = '';
-  none.textContent = _t('ai.defaultAction') || '默认通用助手';
+  none.textContent = _t('ai.defaultAction') || '默认动作（不使用模板）';
   sel.appendChild(none);
 
   const groups = { general: [], writing: [], coding: [], academic: [], custom: [] };
@@ -218,7 +267,7 @@ function fillAiTemplates() {
     items.forEach(t => {
       const o = document.createElement('option');
       o.value = t.id;
-      o.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name;
+      o.textContent = (t.builtin ? '◆ ' : '◇ ') + getLocalizedSkillName(t);
       optgroup.appendChild(o);
     });
     sel.appendChild(optgroup);
@@ -259,7 +308,13 @@ function renderTplList() {
   if (!list) return;
   const q = ($('tpl-search') && $('tpl-search').value || '').trim().toLowerCase();
   list.innerHTML = '';
-  const filtered = (state.ai.templates || []).filter(t => !q || (t.name || '').toLowerCase().includes(q) || (t.system || '').toLowerCase().includes(q));
+  const filtered = (state.ai.templates || []).filter(t => {
+    if (!q) return true;
+    const locName = getLocalizedSkillName(t).toLowerCase();
+    const origName = (t.name || '').toLowerCase();
+    const sys = (t.system || '').toLowerCase();
+    return origName.includes(q) || locName.includes(q) || sys.includes(q);
+  });
   if (!filtered.length) {
     const empty = document.createElement('li');
     empty.className = 'ai-history-empty';
@@ -290,12 +345,13 @@ function renderTplList() {
     items.forEach(t => {
       const li = document.createElement('li');
       const disabled = !t.builtin && t.metadata && t.metadata.enabled === false;
-      li.textContent = (t.builtin ? '◆ ' : '◇ ') + t.name + (disabled ? ' ⏸' : '');
+      const displayName = getLocalizedSkillName(t);
+      li.textContent = (t.builtin ? '◆ ' : '◇ ') + displayName + (disabled ? ' ⏸' : '');
       li.dataset.id = t.id;
       li.setAttribute('role', 'option');
       li.tabIndex = 0;
       li.setAttribute('aria-selected', 'false');
-      li.title = t.name
+      li.title = displayName
         + (t.user ? (' · ' + (_t('ai.hasUserTpl') || '')) : '')
         + (disabled ? (' · ' + (_t('tpl.disable') || '')) : '');
       li.addEventListener('click', () => selectTpl(t.id));
@@ -346,7 +402,7 @@ function renderSkillOverview(t) {
   host.replaceChildren();
   if (!t) return;
   const title = document.createElement('h4');
-  title.textContent = t.name || t.skill_id || t.id || '';
+  title.textContent = (t ? getLocalizedSkillName(t) : '') || (t && (t.name || t.skill_id || t.id)) || '';
   host.appendChild(title);
   if (t.description) {
     const description = document.createElement('p');
@@ -424,7 +480,7 @@ function selectTpl(id, editing) {
     li.setAttribute('aria-selected', selected ? 'true' : 'false');
   });
   $('tpl-id').value = t ? t.id : '';
-  $('tpl-name').value = t ? t.name : '';
+  $('tpl-name').value = t ? (builtin ? getLocalizedSkillName(t) : t.name) : '';
   if ($('tpl-action')) $('tpl-action').value = (t && t.action) || 'custom';
   $('tpl-system').value = t ? (t.system || '') : '';
   $('tpl-user').value = t ? (t.user || '') : '';
@@ -479,6 +535,16 @@ function openSkillIdeaDialog() {
     const goBtn = $('skill-create-go');
     const cancelBtn = $('skill-create-cancel');
     const closeBtn = $('skill-create-close');
+    const error = $('skill-create-error');
+    const format = $('skill-create-format');
+    const example = $('skill-create-example');
+    const update = () => {
+      $('skill-create-count').textContent = `${purposeInput.value.length} / 4000`;
+      error.textContent = '';
+      nameInput.removeAttribute('aria-invalid'); purposeInput.removeAttribute('aria-invalid');
+      try { sessionStorage.setItem('readmd.skill-idea', JSON.stringify({ name: nameInput.value, purpose: purposeInput.value, format: format.value })); } catch (_) {}
+    };
+    const fillExample = () => { nameInput.value = _t('ux.exampleName'); purposeInput.value = _t('ux.examplePurpose'); update(); purposeInput.focus(); };
     let finished = false;
     const finish = value => {
       if (finished) return;
@@ -489,6 +555,7 @@ function openSkillIdeaDialog() {
       closeBtn && closeBtn.removeEventListener('click', onCancel);
       modal.removeEventListener('keydown', onKeyDown);
       modal.removeEventListener('click', onClick);
+      nameInput.removeEventListener('input', update); purposeInput.removeEventListener('input', update); format.removeEventListener('change', update); example.removeEventListener('click', fillExample);
       modal.classList.add('hidden');
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus({ preventScroll: true });
       resolve(value);
@@ -498,21 +565,33 @@ function openSkillIdeaDialog() {
       const name = nameInput.value.trim();
       const purpose = purposeInput.value.trim();
       if (!name || !purpose) {
-        showToast(_t('tpl.createFieldsReq') || '');
+        error.textContent = _t('tpl.createFieldsReq');
+        (name ? purposeInput : nameInput).setAttribute('aria-invalid', 'true');
         (name ? purposeInput : nameInput).focus();
         return;
       }
-      finish({ name, purpose });
+      try { sessionStorage.removeItem('readmd.skill-idea'); } catch (_) {}
+      finish({ name, purpose: purpose + '\n' + _t('ux.outputFormat') + ': ' + format.selectedOptions[0].textContent });
     };
     const onKeyDown = event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); finish(null); }
       else if (event.key === 'Enter' && event.target === nameInput) { event.preventDefault(); purposeInput.focus(); }
+      else if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); onGo(); }
+      else if (event.key === 'Tab') {
+        const items = [...modal.querySelectorAll('button,input,textarea,select')].filter(el => !el.disabled && el.getClientRects().length);
+        if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1).focus(); }
+        else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0].focus(); }
+      }
     };
     const onClick = event => { if (event.target === modal) finish(null); };
 
     skillIdeaFinish = () => finish(null);
     nameInput.value = '';
     purposeInput.value = '';
+    format.value = 'Markdown'; error.textContent = '';
+    try { const draft = JSON.parse(sessionStorage.getItem('readmd.skill-idea') || '{}'); nameInput.value = draft.name || ''; purposeInput.value = draft.purpose || ''; format.value = draft.format || 'Markdown'; } catch (_) {}
+    update();
+    nameInput.addEventListener('input', update); purposeInput.addEventListener('input', update); format.addEventListener('change', update); example.addEventListener('click', fillExample);
     goBtn.addEventListener('click', onGo);
     cancelBtn.addEventListener('click', onCancel);
     closeBtn && closeBtn.addEventListener('click', onCancel);
@@ -1970,8 +2049,10 @@ async function runAi(action) {
   const render = () => {
     renderTimer = null;
     if (!state.ai.raw) return;
+    const follow = out.scrollHeight - out.scrollTop - out.clientHeight < 100;
     aiBody.innerHTML = renderSafeMarkdown(state.ai.raw) + '<span class="streaming-cursor"></span>';
-    out.scrollTop = out.scrollHeight;
+    if (follow) out.scrollTop = out.scrollHeight;
+    $('ai-jump-latest')?.classList.toggle('hidden', follow);
   };
   try {
     const r = await apiFetch('/api/ai/chat', {
@@ -2504,4 +2585,14 @@ async function saveAiAs() {
     setTimeout(() => URL.revokeObjectURL(a.href), 3000);
   }
 }
+
+window.addEventListener('readmd:language-changed', () => {
+  fillAiTemplates();
+  if ($('tpl-modal') && !$('tpl-modal').classList.contains('hidden')) {
+    renderTplList();
+    const curId = $('tpl-id') && $('tpl-id').value;
+    const selected = (state.ai.templates || []).find(x => x.id === curId) || (state.ai.templates || [])[0];
+    if (selected) selectTpl(selected.id);
+  }
+});
 
