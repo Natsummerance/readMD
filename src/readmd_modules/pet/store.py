@@ -42,6 +42,7 @@ class InstalledPet:
     directory: str
     spritesheet: str
     sha256: str
+    is_builtin: bool = False
 
     def as_dict(self) -> dict:
         return {
@@ -51,7 +52,61 @@ class InstalledPet:
             "directory": self.directory,
             "spritesheet": self.spritesheet,
             "sha256": self.sha256,
+            "is_builtin": self.is_builtin,
         }
+
+
+BUILTIN_PETS = {
+    "mochi": {
+        "slug": "mochi",
+        "display_name": "糯米 / Mochi",
+        "description": "奶油白的小猫，焦糖色耳尖与尾巴，系一条鼠尾草绿围巾。",
+        "filename": "mochi-sprite.png",
+    },
+    "moss": {
+        "slug": "moss",
+        "display_name": "苔苔 / Moss",
+        "description": "圆润的浅绿色史莱姆，头顶两片嫩叶，深墨绿豆豆眼。",
+        "filename": "moss-sprite.png",
+    },
+    "amber": {
+        "slug": "amber",
+        "display_name": "琥珀 / Amber",
+        "description": "橘色小狐狸，奶白胸口与尾尖，短腿大尾巴。",
+        "filename": "amber-sprite.png",
+    },
+}
+
+
+def get_builtin_pet_asset_path(slug: str) -> Path | None:
+    item = BUILTIN_PETS.get(slug)
+    if not item:
+        return None
+    root = Path(__file__).resolve().parents[3]
+    asset = root / "assets" / "pet" / item["filename"]
+    if asset.is_file():
+        return asset
+    cwd_asset = Path("assets/pet") / item["filename"]
+    if cwd_asset.is_file():
+        return cwd_asset.resolve()
+    return None
+
+
+def get_builtin_pets() -> list[InstalledPet]:
+    res: list[InstalledPet] = []
+    for slug, info in BUILTIN_PETS.items():
+        path = get_builtin_pet_asset_path(slug)
+        if path and path.is_file():
+            res.append(InstalledPet(
+                slug=slug,
+                display_name=info["display_name"],
+                description=info["description"],
+                directory=str(path.parent),
+                spritesheet=str(path),
+                sha256=_sha256(path),
+                is_builtin=True,
+            ))
+    return res
 
 
 def _root(data_dir: os.PathLike[str] | str) -> Path:
@@ -93,9 +148,11 @@ def _spritesheet_path(directory: Path, metadata: dict) -> Path | None:
     return None
 
 
-def list_pets(data_dir: os.PathLike[str] | str) -> list[InstalledPet]:
+def list_pets(data_dir: os.PathLike[str] | str, include_builtins: bool = False) -> list[InstalledPet]:
     root = _root(data_dir)
     result: list[InstalledPet] = []
+    if include_builtins:
+        result.extend(get_builtin_pets())
     for directory in sorted(root.iterdir(), key=lambda item: item.name):
         if not directory.is_dir() or directory.is_symlink():
             continue
@@ -161,6 +218,11 @@ def register_local_pet(
         raise PetStoreError("pet_spritesheet_too_large")
     if not (raw.startswith(_PNG) or (raw[:4] == _RIFF and raw[8:12] == _WEBP)):
         raise PetStoreError("pet_spritesheet_format_invalid")
+    try:
+        from .sprite_processor import normalize_and_segment_spritesheet
+        raw = normalize_and_segment_spritesheet(raw)
+    except Exception:
+        pass
     root = _root(data_dir)
     directory = root / slug
     # Never write through a pre-existing symlink.  ``mkdir(exist_ok=True)``
@@ -189,6 +251,8 @@ def register_local_pet(
 
 def remove_pet(data_dir: os.PathLike[str] | str, slug: str) -> bool:
     slug = _safe_slug(slug)
+    if slug in BUILTIN_PETS:
+        raise PetStoreError("pet_cannot_delete_builtin")
     root = _root(data_dir)
     directory = (root / slug).resolve()
     if directory.parent != root.resolve() or not directory.is_dir() or directory.is_symlink():
@@ -202,4 +266,14 @@ def remove_pet(data_dir: os.PathLike[str] | str, slug: str) -> bool:
     return True
 
 
-__all__ = ["InstalledPet", "PetStoreError", "list_pets", "register_local_pet", "remove_pet", "slugify"]
+__all__ = [
+    "BUILTIN_PETS",
+    "InstalledPet",
+    "PetStoreError",
+    "get_builtin_pet_asset_path",
+    "get_builtin_pets",
+    "list_pets",
+    "register_local_pet",
+    "remove_pet",
+    "slugify",
+]

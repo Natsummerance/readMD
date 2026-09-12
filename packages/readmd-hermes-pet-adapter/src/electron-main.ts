@@ -5,6 +5,19 @@ import path from 'node:path'
 import { app, BrowserWindow, clipboard, ipcMain, screen } from 'electron'
 import { registerPetOverlayIpc } from '../../../third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc'
 
+// Enforce single instance: prevent launching multiple desktop pets simultaneously
+const gotTheLock = app.requestSingleInstanceLock()
+if (!gotTheLock) {
+  app.exit(0)
+}
+
+app.on('second-instance', () => {
+  if (overlay && !overlay.isDestroyed()) {
+    overlay.showInactive()
+    pushState()
+  }
+})
+
 type Bounds = { x?: number; y?: number; width?: number; height?: number }
 type RuntimeState = { info?: Record<string, unknown>; activity?: Record<string, unknown>; busy?: boolean; awaiting?: boolean; unread?: boolean }
 
@@ -57,7 +70,7 @@ function getFallbackSpriteInfo(): Record<string, unknown> {
       // 0.18–0.72 range.
       scale: 0.33,
       spritesheetBase64: fs.readFileSync(path.join(__dirname, 'assets', 'hermes-sprite.png')).toString('base64'),
-      spritesheetRevision: 'hermes-fallback-e328d387a2fca8c0',
+      spritesheetRevision: 'hermes-fallback-a5661b457de00b9a',
       stateRows: ['idle', 'wave']
     }
   } catch {
@@ -112,7 +125,11 @@ function applyOverlayOpacity(): void {
 // the Electron process and its registered IPC handlers are never restarted.
 function loadOverlayPage(renderer?: string): void {
   if (!overlay || overlay.isDestroyed()) return
-  overlay.loadFile(path.join(app.getAppPath(), 'renderer', 'index.html'), renderer ? { query: { renderer } } : undefined)
+  const query: Record<string, string> = {}
+  if (renderer) query.renderer = renderer
+  if (process.env.READMD_PET_LIVE2D_PROBE === '1') query.live2dProbe = '1'
+  const loadOptions = Object.keys(query).length ? { query } : undefined
+  overlay.loadFile(path.join(app.getAppPath(), 'renderer', 'index.html'), loadOptions)
   overlay.webContents.once('did-finish-load', () => pushState())
 }
 

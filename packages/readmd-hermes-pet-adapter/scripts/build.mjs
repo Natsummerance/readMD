@@ -66,7 +66,10 @@ try {
   }
   fs.mkdirSync(path.join(out, 'assets'), { recursive: true })
   await ensureCubismCore()
-  fs.copyFileSync(path.join(root, 'assets', 'hermes-sprite.png'), path.join(out, 'assets', 'hermes-sprite.png'))
+  for (const sprite of ['hermes-sprite.png', 'mochi-sprite.png', 'moss-sprite.png', 'amber-sprite.png']) {
+    const src = path.join(root, 'assets', sprite)
+    if (fs.existsSync(src)) fs.copyFileSync(src, path.join(out, 'assets', sprite))
+  }
   fs.writeFileSync(path.join(out, 'package.json'), JSON.stringify({ main: 'electron-main.cjs', type: 'commonjs' }, null, 2))
 } finally {
   fs.rmSync(generated, { force: true, recursive: true })

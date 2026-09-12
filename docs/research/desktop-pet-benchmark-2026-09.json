@@ -1,0 +1,292 @@
+{
+  "captured_date": "2026-09-12",
+  "method_note": "Firecrawl CLI v1.23.3 verified installed/authenticated, but API returned HTTP 402 (credits exhausted: -98/1000) and keyless tier was IP-blocked; therefore data was collected via GitHub REST API (exact stargazers_count, first-hand), GitHub repo pages via WebFetch (displayed star count, license, topics), raw.githubusercontent.com READMEs/licenses, and 3 web searches. Raw evidence saved under .firecrawl/.",
+  "items": [
+    {
+      "rank": 1,
+      "repo": "moeru-ai/airi",
+      "url": "https://github.com/moeru-ai/airi",
+      "stars": 49053,
+      "page_display": "49.1k",
+      "language": "TypeScript (Vue/Vite monorepo; desktop shell migrated to Electron, Godot stage WIP; WebGPU/WebAudio/WASM)",
+      "license": "MIT",
+      "topics": ["ai-companion", "ai-vtuber", "airi", "digital-life", "grok-companion", "live2d", "neuro-sama", "vrm", "vtuber"],
+      "last_commit": "2026-09-12",
+      "latest_release": "v0.12.0-beta.5",
+      "rendering": "Live2D + VRM (3D), WebGPU-based stages; auto-blink/auto look-at; MMD mentioned by community docs",
+      "platforms": ["Web (PWA)", "Windows", "macOS", "Linux (Nix/winget/scoop/homebrew)", "Mobile via Capacitor 'Stage Pocket'"],
+      "key_features": [
+        "Recreates Neuro-sama as self-hosted AI companion: realtime voice chat (ASR + talking detection, multi-provider TTS incl. ElevenLabs/Azure/OpenAI-compatible/local Kokoro)",
+        "Plays games: Minecraft (working), Factorio (WIP), Helldivers 2 co-play (WIP); chats via Telegram/Discord",
+        "Desktop 'Stage Tamagotchi' + browser 'Stage Web' + mobile 'Stage Pocket'; WIP plugin system and MCP integrations; 30+ LLM providers via xsAI",
+        "Multi-language READMEs (zh/en/ja/ru/vi/fr/ko) + Crowdin translation project"
+      ],
+      "takeaways": [
+        "Companion-first architecture: the avatar is a 'stage' client over a provider-agnostic agent core",
+        "Model control layer (auto-blink, look-at, idle motion) is what makes Live2D/VRM feel alive",
+        "Install ergonomics matter: winget/scoop/homebrew cask distribution"
+      ]
+    },
+    {
+      "rank": 2,
+      "repo": "ayangweb/BongoCat",
+      "url": "https://github.com/ayangweb/BongoCat",
+      "stars": 23092,
+      "page_display": "23.1k",
+      "language": "Vue/TypeScript + Rust (Tauri v2, src-tauri)",
+      "license": "MIT",
+      "topics": ["bongo-cat", "bongocat", "cross-platform", "desktop-app", "desktop-pet", "linux", "macos", "pet", "rust", "tauri", "windows"],
+      "last_commit": "2026-09-11",
+      "latest_release": "frequent GitHub Releases (downloads badge on README)",
+      "rendering": "Layered sprite model (custom format; online converter from Bongo-Cat-Mver models)",
+      "platforms": ["Windows", "macOS", "Linux (x11)"],
+      "key_features": [
+        "Cat reacts to keyboard, mouse and gamepad input in real time (transparent always-on-top overlay)",
+        "Import custom models; online converter for Bongo-Cat-Mver models; community model repo Awesome-BongoCat (1,968 stars)",
+        "Fully open source, offline-capable, collects no user data",
+        "i18n via src/locales/*.json (verified en-US.json)"
+      ],
+      "takeaways": [
+        "Zero-AI, one-gimmick pet can out-star everything: instant input-mirror feedback loop is the killer feature",
+        "Model converter + community model gallery lowers content barrier drastically",
+        "Tauri keeps the overlay light; original Bongo-Cat-Mver was Windows-only — cross-platform porting itself created the market leader"
+      ]
+    },
+    {
+      "rank": 3,
+      "repo": "Open-LLM-VTuber/Open-LLM-VTuber",
+      "url": "https://github.com/Open-LLM-VTuber/Open-LLM-VTuber",
+      "stars": 13709,
+      "page_display": "13.7k",
+      "language": "Python backend (FastAPI-style server) + separate web/Electron frontend (Open-LLM-VTuber-Web)",
+      "license": "MIT (code) — bundled Live2D sample models under separate Live2D Free Material License (LICENSE-Live2D.md)",
+      "topics": ["ai", "ai-companion", "ai-vtuber", "ai-waifu", "chatbots", "live2d", "live2d-web", "llm", "neuro-sama", "ollama"],
+      "last_commit": "2026-05-15",
+      "latest_release": "not captured; docs at https://open-llm-vtuber.github.io/",
+      "rendering": "Live2D (expressions driven by backend emotion mapping)",
+      "platforms": ["Windows", "macOS", "Linux", "runs fully offline or via cloud APIs"],
+      "key_features": [
+        "Hands-free voice interaction with interruption (echo-avoidance without headphones); proactive AI speaking; persistent chat logs",
+        "Pet mode: transparent background + click-through, touch/drag feedback on avatar",
+        "Pluggable ASR (sherpa-onnx, FunASR, Faster-Whisper, Whisper.cpp, Azure), TTS (MeloTTS, GPT-SoVITS, CosyVoice, Edge TTS, Fish Audio), LLM (Ollama, OpenAI-compatible, Gemini, Claude, Mistral, DeepSeek, GGUF, LM Studio, vLLM)",
+        "Visual perception; TTS translation"
+      ],
+      "takeaways": [
+        "Reference architecture for local AI pet: Python server + thin frontend over WebSocket",
+        "Explicit pet mode (transparent + click-through) as a first-class feature flag",
+        "Clean license split: MIT code, separate license for Live2D sample assets"
+      ]
+    },
+    {
+      "rank": 4,
+      "repo": "stevenjoezhang/live2d-widget",
+      "url": "https://github.com/stevenjoezhang/live2d-widget",
+      "stars": 10949,
+      "page_display": "10.9k",
+      "language": "TypeScript (rollup build)",
+      "license": "GPL-3.0 (excludes Live2D Cubism SDK proprietary components; models remain copyrighted by original authors, research/study use stated)",
+      "topics": ["javascript-plugin", "live2d"],
+      "last_commit": "2026-09-09",
+      "latest_release": "npm live2d-widgets@1.0.1 (per quick-install snippet)",
+      "rendering": "Live2D Cubism 2 and Cubism 3+/5, dynamically loading the right Core at runtime",
+      "platforms": ["WEB ONLY — it is a web page widget (看板娘), NOT a desktop app; README links to separate desktop projects (PPet, L2dPetForMac, Wallpaper Engine version). Included here per task instruction with this annotation."],
+      "key_features": [
+        "Single <script> tag embed; jsDelivr CDN distribution; no backend needed since v1.0",
+        "Static model discovery via model_list.json + textures.cache; swap/dress-up supported",
+        "Only runtime dependency is Live2D Cubism Core; config options: waifuPath, cdnPath, modelId, drag, showToggleAfterQuit",
+        "Drag interaction, tool buttons, greeting/tip messages"
+      ],
+      "takeaways": [
+        "De-facto reference for pixi-live2d-display-based stacks (closest cousin to ReadMD's renderer)",
+        "model_list.json convention = zero-backend model library; directly reusable pattern",
+        "Sharp license hygiene: code GPL, models stay with authors"
+      ]
+    },
+    {
+      "rank": 5,
+      "repo": "runcat-dev/RunCat365",
+      "url": "https://github.com/runcat-dev/RunCat365",
+      "stars": 10300,
+      "page_display": "10.3k",
+      "language": "C# / Win32 / .NET 9.0",
+      "license": "Apache-2.0",
+      "topics": ["c#", "win32", ".net-9.0", "visual-studio", "runcat"],
+      "last_commit": "2026-07-15",
+      "latest_release": "distributed via Microsoft Store (Windows 10 19041+)",
+      "rendering": "Sprite animation in the taskbar (Win32 tray area); custom runner images supported",
+      "platforms": ["Windows 10+ (Microsoft Store)"],
+      "key_features": [
+        "Running cat on the Windows taskbar as system-load indicator (RunCat family concept: animation speed mirrors CPU load)",
+        "Custom runner (custom_runner.png) and an endless game mode",
+        "8 UI languages: zh-CN, zh-TW, en, fr, de, ja, ko, es",
+        "Family: RunCatNeo (macOS menubar, 840 stars, Swift, Apache-2.0); legacy Kyome22/menubar_runcat (510 stars)"
+      ],
+      "takeaways": [
+        "The pet can be an ambient telemetry indicator, not an interactive character",
+        "Store distribution = normal users, hence huge star/usage numbers with tiny code surface",
+        "Strict contribution rules (English-only, templates) keep a massive casual community manageable"
+      ]
+    },
+    {
+      "rank": 6,
+      "repo": "LorisYounger/VPet",
+      "url": "https://github.com/LorisYounger/VPet",
+      "stars": 6784,
+      "page_display": "6.8k",
+      "language": "C# / WPF (.NET), NuGet VPet-Simulator.Core",
+      "license": "Apache-2.0 (code); bundled animation assets copyrighted by VUP-Simulator team with separate terms",
+      "topics": ["desktop-pet", "wpf"],
+      "last_commit": "2026-09-11",
+      "latest_release": "active; 1,272 commits; Steam distribution + embeddable NuGet",
+      "rendering": "WPF bitmap frame animation: 32 (kinds) x 4 (states) x 3 (types) animation graphs; mods can add Live2D/Spine display schemes",
+      "platforms": ["Windows (Steam + GitHub); fan-made Mac port exists (justaLoli/VPet-Mac, 73 stars)"],
+      "key_features": [
+        "Full nurturing loop: food/drink items (IFood, 3-layer sandwich animation), HP/FV stats, WorkTimer jobs, save data",
+        "Interactions: head pat, lifting/dragging, wall climbing; talk/dialogue text moddable",
+        "Steam Workshop ecosystem: items, food, jobs, dialogues, themes, code plugins (demo plugin repo + VPet.ModMaker mod-creator, 100 stars); ChatGPT settings window in app",
+        "Embeddable in any WPF app via VPet-Simulator.Core; README in zh-Hans/zh-Hant/en/ja"
+      ],
+      "takeaways": [
+        "Most complete 'tamagotchi' state machine in open source: stats -> animation graph -> dialogue",
+        "Workshop + MOD-maker = user-generated content flywheel; code-plugin interface allows new display schemes (Live2D/Spine)",
+        "Embed-the-engine strategy (NuGet) turns the pet into a component others ship"
+      ]
+    },
+    {
+      "rank": 7,
+      "repo": "rullerzhou-afk/clawd-on-desk",
+      "url": "https://github.com/rullerzhou-afk/clawd-on-desk",
+      "stars": 6204,
+      "page_display": "6.2k",
+      "language": "JavaScript / Node.js (Electron desktop app)",
+      "license": "AGPL-3.0 (code); artwork/theme assets excluded and all-rights-reserved",
+      "topics": ["claude-code", "codex", "copilot", "cursor", "desktop-pet", "electron", "gemini", "pixel-art", "svg-animation"],
+      "last_commit": "2026-09-11",
+      "latest_release": "active; 2,309 commits; WinGet id rullerzhou-afk.clawd-on-desk; Homebrew cask",
+      "rendering": "Pixel-art / SVG sprite animation (12 animated states)",
+      "platforms": ["Windows 11 (x64/ARM64)", "macOS (.dmg)", "Ubuntu (.AppImage/.deb); multi-monitor aware"],
+      "key_features": [
+        "Pixel crab that watches AI coding agents in real time: 12 states (idle, thinking, typing, building, subagent groove, multi-subagent juggling, error, happy, notification, sweeping, carrying, sleeping) + eye tracking, sleep/wake, click reactions, mini mode",
+        "Deep agent integrations via hooks: Claude Code (command + HTTP permission hooks), Codex CLI (official hooks + JSONL fallback), Copilot/Gemini/Cursor/Kiro/Kimi/Qwen/opencode/Pi/OpenClaw/Hermes etc.; custom agents POST lifecycle events to a dynamic /state endpoint",
+        "Permission bubbles surface agent approval requests on the desktop; Telegram/Feishu remote approval, Slack notifications, LAN PWA mirror",
+        "3 built-in themes (Clawd crab, Calico, Cloudling) + custom themes + Codex Pet animation pack imports"
+      ],
+      "takeaways": [
+        "2026's breakout pattern: pet as the face of long-running background work (AI agents) — 'watch the worker, not the clock'",
+        "Hook-based integration is cheap to build and enormously extensible; /state endpoint makes any tool a puppeteer",
+        "Permission-bubble UI is genuinely useful, not cosmetic — the pet earns its desktop presence"
+      ]
+    },
+    {
+      "rank": 8,
+      "repo": "tonybaloney/vscode-pets",
+      "url": "https://github.com/tonybaloney/vscode-pets",
+      "stars": 4171,
+      "page_display": "4.2k",
+      "language": "TypeScript (VS Code extension, webpack)",
+      "license": "MIT",
+      "topics": ["hacktoberfest", "typescript", "visual-studio-code", "vscode", "vscode-extension"],
+      "last_commit": "2026-09-10",
+      "latest_release": "active; 1,519 commits; VS Code Marketplace (ext install tonybaloney.vscode-pets)",
+      "rendering": "Pixel sprites inside an editor panel (not a floating window)",
+      "platforms": ["VS Code desktop (Windows/macOS/Linux); docs at tonybaloney.github.io/vscode-pets"],
+      "key_features": [
+        "Pets live in your VS Code window: cat, dog, snake, rubber duck, Clippy, cockatiel, Ferris, fox, akita, turtle, horse, snail, frog, panda, squirrel, skeleton and more",
+        "Interactions: throw ball, petting; themes (none/forest/castle/winter); spawn many pets; 'Start pet coding session' command",
+        "i18n via Crowdin (many package.nls.*.json locale files) and community translations",
+        "Hacktoberfest-friendly contribution pipeline"
+      ],
+      "takeaways": [
+        "Embedding the pet inside an existing app panel avoids all transparency/click-through OS pain",
+        "A pet panel with fixed sprite packs + theme backgrounds is enough to sustain 4k+ stars",
+        "Editor pets share the host's rendering loop — performance isolation is the main engineering concern (relevant to ReadMD)"
+      ]
+    },
+    {
+      "rank": 9,
+      "repo": "shinyflvre/Mate-Engine",
+      "url": "https://github.com/shinyflvre/Mate-Engine",
+      "stars": 3649,
+      "page_display": "3.6k",
+      "language": "Unity / C# (ShaderLab present)",
+      "license": "Mixed: GNU AGPL v3 + custom MateProv2 license (non-commercial, copyleft-style, distribution restricted to open-source platforms; Steam distribution of derivatives prohibited)",
+      "topics": ["anime", "desktop", "desktop-mate", "desktop-pet", "mate-engine", "pet"],
+      "last_commit": "2026-01-20",
+      "latest_release": "526 commits; Steam release ($3.99) + free GitHub build",
+      "rendering": "3D VRM avatars on Unity; spine/eye tracking; MMD music animation player; chibi mode",
+      "platforms": ["Windows (MateEngineX.exe); unofficial Linux port (Marksonthegamer/Mate-Engine-Linux-Port)"],
+      "key_features": [
+        "Free Desktop Mate alternative (Desktop Mate charges $10-25 per character DLC and disabled modding): custom VRM inject, up to 9 avatars at once",
+        "Event-based messages when you drag/dance/window-sit; touch regions; screensaver mode; dance-to-music; Discord Rich Presence; Minecraft integration; food system; AI chat with bundled Apache-2.0 Qwen 2.5 1.5B",
+        "Modding: built-in SDK, custom .ME format, community mods (Custom Dance Player); Steam Workshop for Steam version",
+        "Cautionary notes: unsigned binary triggers Windows Defender false positive (Trojan:Script/Wacatac.B1ml claimed FP); default avatar is All Rights Reserved"
+      ],
+      "takeaways": [
+        "Open-source competitor to a paid closed app can win on moddability + custom model freedom",
+        "3D VRM path brings heavy features (spine/eye tracking) that sprite pets cannot do",
+        "Custom non-commercial licenses protect mod ecosystem but wall off commercial reuse — a real trade-off"
+      ]
+    },
+    {
+      "rank": 10,
+      "repo": "SlimeBoyOwO/LingChat",
+      "url": "https://github.com/SlimeBoyOwO/LingChat",
+      "stars": 2151,
+      "page_display": "2.2k",
+      "language": "Rust (Tauri, src-tauri) + TypeScript (Vite); rewritten from earlier Python 3.8 build",
+      "license": "AGPL-3.0",
+      "topics": [],
+      "last_commit": "2026-09-11",
+      "latest_release": "v0.5 (Win10 64-bit); 5,480 commits on main",
+      "rendering": "Galgame-style character sprites with emotion-differential expressions (18-emotion classifier drives face/bubbles/backgrounds/music); not Live2D",
+      "platforms": ["Windows 10 64-bit (legacy win32 build available)"],
+      "key_features": [
+        "Immersive AI galgame chat: emotion model classifies each reply, driving expression/bubble/background/music changes",
+        "Desktop pet mode with screen-state awareness (working/gaming/idle) and proactive conversation; vision-model 'peek' at screen (e.g. Qwen API)",
+        "Productivity: pomodoro, schedules, to-dos with AI reminders",
+        "Characters: custom OC import, outfit switching, touch interactions, multi-character scripts, bond/affection storylines with achievements, per-save persistent memory; VITS voice (Style-Bert-VITS2 / vits-simple-api); BYO LLM API (DeepSeek etc.)"
+      ],
+      "takeaways": [
+        "Emotion classification as the single signal that drives visuals+audio is a clean, replicable design",
+        "Screen/vision awareness pushes 'companionship' much further than tap-to-react pets",
+        "Rust/Tauri rewrite of a Python desktop app shows the stack migration path for Electron-class pet apps"
+      ]
+    }
+  ],
+  "honorable_mentions": [
+    {"repo": "zenghongtu/PPet", "stars": 2032, "note": "Electron+React Live2D desktop pet (Mac/Win/Linux), stale since 2024-06; closest technical cousin to ReadMD's stack", "url": "https://github.com/zenghongtu/PPet"},
+    {"repo": "kuroni/bongocat-osu", "stars": 2463, "note": "archived osu! rhythm-game overlay, not a desktop pet", "url": "https://github.com/kuroni/bongocat-osu"},
+    {"repo": "Externalizable/bongo.cat", "stars": 3780, "note": "pure web app (hit-the-bongos website), excluded from ranking", "url": "https://github.com/Externalizable/bongo.cat"},
+    {"repo": "morettt/my-neuro", "stars": 1357, "note": "AI desktop companion with customizable characters/voice", "url": "https://github.com/morettt/my-neuro"},
+    {"repo": "adryd325/oneko.js", "stars": 1312, "note": "web script version of classic oneko cat-follows-cursor", "url": "https://github.com/adryd325/oneko.js"},
+    {"repo": "jofizcd/Soul-of-Waifu", "stars": 1310, "note": "desktop roleplay & AI companion with Live2D/VRM avatars", "url": "https://github.com/jofizcd/Soul-of-Waifu"},
+    {"repo": "OpenPetsHQ/openpets", "stars": 1184, "note": "local-first desktop companion platform, animated pets + plugin SDK + coding-agent integrations", "url": "https://github.com/OpenPetsHQ/openpets"},
+    {"repo": "Adrianotiger/desktopPet", "stars": 1144, "note": "eSheep revival (1995 Stray Sheep), C# XML-driven A-pet", "url": "https://github.com/Adrianotiger/desktopPet"},
+    {"repo": "isHarryh/Ark-Pets", "stars": 1088, "note": "Arknights desktop pets, Java + libGDX + Spine runtime", "url": "https://github.com/isHarryh/Ark-Pets"},
+    {"repo": "ChaozhongLiu/DyberPet", "stars": 972, "note": "PySide6 desktop cyber pet framework, JSON-configured MOD ecosystem (pets/items/sounds/mini-pets), v0.10.3, LLM module in development", "url": "https://github.com/ChaozhongLiu/DyberPet"},
+    {"repo": "worm128/AI-YinMei", "stars": 966, "note": "AI Vtuber/桌宠/智能体 (Python)", "url": "https://github.com/worm128/AI-YinMei"},
+    {"repo": "legeling/awesome-codex-pet", "stars": 918, "note": "curated gallery of community-made Codex (coding agent) pets", "url": "https://github.com/legeling/awesome-codex-pet"},
+    {"repo": "runcat-dev/RunCatNeo", "stars": 840, "note": "macOS menubar RunCat successor", "url": "https://github.com/runcat-dev/RunCatNeo"},
+    {"repo": "FerryYoungFan/VirtualCockroach", "stars": 716, "note": "classic virtual cockroach desktop pet (ActionScript)", "url": "https://github.com/FerryYoungFan/VirtualCockroach"},
+    {"repo": "PC2005-cloud/dsh-pet", "stars": 604, "note": "DSH desktop pet, one-command transparent animated pets, AI-video DIY asset pipeline", "url": "https://github.com/PC2005-cloud/dsh-pet"},
+    {"repo": "Zao-chen/ZcChat", "stars": 562, "note": "C++ galgame-style AI desktop pet", "url": "https://github.com/Zao-chen/ZcChat"},
+    {"repo": "Hanzoe/Pet-GPT", "stars": 429, "note": "PyQt desktop pet with OpenAI context chat, proactive messages", "url": "https://github.com/Hanzoe/Pet-GPT"},
+    {"repo": "HELPMEEADICE/BANDORI-PET-REV", "stars": 410, "note": "Live2D + PySide6 pet with 50+ BanG Dream characters (third-party IP risk exemplar)", "url": "https://github.com/HELPMEEADICE/BANDORI-PET-REV"},
+    {"repo": "TSKI433/hime-display", "stars": 253, "note": "universal desktop model displayer for Live2D/Spine/MMD/VRoid (Electron)", "url": "https://github.com/TSKI433/hime-display"},
+    {"repo": "Eikanya/Live2d-model", "stars": 3386, "note": "Live2D model collection (resource ecosystem, not an app)", "url": "https://github.com/Eikanya/Live2d-model"}
+  ],
+  "excluded_not_pets": [
+    {"repo": "NanmiCoder/cc-haha", "stars": 14345, "reason": "local-first desktop workspace GUI for Claude Code/agents — matched 'desktop pet' search but is not a pet"},
+    {"repo": "MemTensor/memmy-agent", "stars": 1888, "reason": "personal AI agent & shared memory hub, not a pet"},
+    {"repo": "xiufengsun/TokenTracker", "stars": 1586, "reason": "AI token usage/cost tracker, not a pet"},
+    {"repo": "steve02081504/fount", "stars": 707, "reason": "AI character/agent framework, not a desktop pet app"},
+    {"repo": "DoomVoss/BASpark", "stars": 750, "reason": "mouse-click effect tool (Blue Archive UI style), not a pet"},
+    {"repo": "Dujltqzv/Some-Many-Books", "stars": 23431, "reason": "book list repo, keyword noise"},
+    {"repo": "cirosantilli/x86-bare-metal-examples", "stars": 5358, "reason": "OS examples, keyword noise"}
+  ],
+  "closed_source_reference": [
+    {"name": "Desktop Mate", "note": "Steam app, free base + $10-25 character DLC, modding disabled in later versions; spawned open alternatives (Mate-Engine). Steam: https://store.steampowered.com/app/3301060/Desktop_Mate/"},
+    {"name": "Desktop Goose", "note": "popular closed-source desktop pet distributed via itch.io (samperson), frequently cited in this genre"},
+    {"name": "Shimeji-ee (kilkakon)", "note": "legendary Java desktop mascot framework; official distribution is via kilkakon.com — no active official GitHub repo found (kilkakon/shimeji and kilkakon/shimeji-ee return 404 on 2026-09-12). Active GitHub derivatives: pixelomer/Shijima-Qt (200 stars, Qt6), CluelessCatBurger/wl_shimeji (200, Wayland), estenv/linux-shimeji (166). Massive mascot-pack ecosystem with hundreds of fan-made packs remains its legacy."}
+  ]
+}

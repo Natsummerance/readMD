@@ -13,6 +13,7 @@ import logging
 import os
 import hashlib
 import shutil
+import stat
 import subprocess
 import threading
 import tempfile
@@ -20,6 +21,44 @@ import time
 import zipfile
 from pathlib import Path
 from typing import Any, Dict, Optional
+
+
+def kill_processes_by_target(target_dir: Path) -> None:
+    """Forcefully terminate any process running from or within target_dir."""
+    try:
+        resolved_str = str(target_dir.resolve()).lower()
+    except (OSError, ValueError):
+        resolved_str = str(target_dir).lower()
+
+    # 1. Try psutil for exact path match and recursive child process tree termination
+    try:
+        import psutil
+        for proc in psutil.process_iter(['pid', 'name', 'exe']):
+            try:
+                exe = proc.info.get('exe')
+                if exe and resolved_str in str(exe).lower():
+                    try:
+                        for child in proc.children(recursive=True):
+                            try:
+                                child.kill()
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                    proc.kill()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+    except Exception:
+        pass
+
+    # 2. Windows fallback: check PowerShell / taskkill if on Windows
+    if os.name == 'nt':
+        try:
+            ps_script = f'$p = "{resolved_str}".Replace("\\", "\\\\"); Get-Process -Name electron -ErrorAction SilentlyContinue | Where-Object {{ $_.Path -and $_.Path.ToLower().Contains($p) }} | ForEach-Object {{ Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }}'
+            subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', ps_script],
+                           capture_output=True, timeout=5)
+        except Exception:
+            pass
 
 
 class HermesPetBridge:
@@ -171,6 +210,7 @@ class HermesPetLauncher:
         self._bridge = bridge
         self._external_adapter_dir = Path(adapter_dir).resolve() if adapter_dir else None
         self._process: Optional[subprocess.Popen] = None
+        self._launch_lock = threading.Lock()
 
     @property
     def adapter_dir(self) -> Path:
@@ -183,42 +223,96 @@ class HermesPetLauncher:
     def status(self) -> Dict[str, Any]:
         runtime = self.adapter_dir / "electron.exe"
         app = self.adapter_dir / "app" / "package.json"
+        is_running = self._process is not None and self._process.poll() is None
+        if not is_running and os.name == 'nt' and runtime.is_file():
+            try:
+                import psutil
+                resolved_runtime = str(runtime.resolve()).lower()
+                for proc in psutil.process_iter(['pid', 'exe']):
+                    try:
+                        exe = proc.info.get('exe')
+                        if exe and str(exe).lower() == resolved_runtime:
+                            is_running = True
+                            break
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        continue
+            except Exception:
+                pass
         return {
             "available": os.name == "nt" and runtime.is_file() and app.is_file(),
             # The bridge path is an implementation detail.  Returning it from
             # the public status API would expose the user's data directory.
             "bridge_ready": self._bridge.state_path.is_file(),
-            "running": self._process is not None and self._process.poll() is None,
+            "running": is_running,
         }
 
     def start(self) -> Dict[str, Any]:
-        status = self.status()
-        if not status["available"]:
-            return {"ok": False, "code": "hermes_adapter_not_installed", "runtime": status}
-        if status["running"]:
-            return {"ok": True, "runtime": status}
-        runtime = self.adapter_dir / "electron.exe"
-        app = self.adapter_dir / "app"
-        env = os.environ.copy()
-        env.pop('ELECTRON_RUN_AS_NODE', None)
-        # Electron consumes arbitrary command-line switches before the adapter
-        # sees argv on some platforms. A child-only environment variable keeps
-        # the bridge path explicit without exposing it to the renderer.
-        env["READMD_PET_BRIDGE_FILE"] = str(self._bridge.state_path)
-        env["READMD_PARENT_PID"] = str(os.getpid())
-        try:
-            self._process = subprocess.Popen(
-                [str(runtime), str(app)], cwd=str(app), close_fds=True, env=env,
-            )
-        except OSError:
-            logging.exception('Could not launch desktop pet')
-            return {"ok": False, "code": "hermes_adapter_start_failed", "runtime": self.status()}
-        return {"ok": True, "runtime": self.status()}
+        with self._launch_lock:
+            status = self.status()
+            if not status["available"]:
+                return {"ok": False, "code": "hermes_adapter_not_installed", "runtime": status}
+            if status["running"]:
+                return {"ok": True, "runtime": status}
+
+            # Terminate any orphaned / zombie electron processes running from this adapter dir
+            kill_processes_by_target(self.adapter_dir)
+
+            runtime = self.adapter_dir / "electron.exe"
+            app = self.adapter_dir / "app"
+            env = os.environ.copy()
+            env.pop('ELECTRON_RUN_AS_NODE', None)
+            # Electron consumes arbitrary command-line switches before the adapter
+            # sees argv on some platforms. A child-only environment variable keeps
+            # the bridge path explicit without exposing it to the renderer.
+            env["READMD_PET_BRIDGE_FILE"] = str(self._bridge.state_path)
+            env["READMD_PARENT_PID"] = str(os.getpid())
+            try:
+                self._process = subprocess.Popen(
+                    [str(runtime), str(app)], cwd=str(app), close_fds=True, env=env,
+                )
+            except OSError:
+                logging.exception('Could not launch desktop pet')
+                return {"ok": False, "code": "hermes_adapter_start_failed", "runtime": self.status()}
+            return {"ok": True, "runtime": self.status()}
 
     def stop(self) -> None:
-        if self._process is not None and self._process.poll() is None:
-            self._process.terminate()
-        self._process = None
+        with self._launch_lock:
+            if self._process is not None:
+                pid = getattr(self._process, 'pid', None)
+                if pid and os.name == 'nt':
+                    try:
+                        subprocess.run(['taskkill', '/F', '/T', '/PID', str(pid)], capture_output=True, timeout=3)
+                    except Exception:
+                        pass
+                try:
+                    self._process.terminate()
+                except Exception:
+                    pass
+                try:
+                    self._process.wait(timeout=2)
+                except Exception:
+                    pass
+                self._process = None
+
+            # Also ensure all lingering child processes or unmanaged electron.exe under adapter_dir are killed
+            kill_processes_by_target(self.adapter_dir)
+            time.sleep(0.3)
+
+
+def get_app_install_dir() -> Path:
+    import sys
+    if getattr(sys, 'frozen', False):
+        return Path(sys.executable).resolve().parent
+    # Return repo root / app root
+    return Path(__file__).resolve().parents[3]
+
+
+def get_default_pet_install_root() -> Path:
+    # Desktop pet runtime must reside strictly within the ReadMD program directory, never on C: drive.
+    install_dir = get_app_install_dir()
+    plugins_dir = install_dir / "plugins"
+    plugins_dir.mkdir(parents=True, exist_ok=True)
+    return plugins_dir
 
 
 class HermesPetPluginInstaller:
@@ -232,27 +326,107 @@ class HermesPetPluginInstaller:
     SWEEP_ATTEMPTS = 8
     SWEEP_RETRY_DELAY = 0.25
 
-    def __init__(self, data_dir: str):
-        self.root = Path(data_dir).resolve() / "pet"
+    def __init__(self, data_dir: Optional[str] = None):
+        if data_dir is not None:
+            self.root = Path(data_dir).resolve() / "pet"
+        else:
+            self.root = get_default_pet_install_root() / "pet"
         self.target = self.root / "hermes-adapter"
 
+    def get_installed_manifest(self) -> Optional[Dict[str, Any]]:
+        manifest_path = self.target / "readmd-pet-plugin.json"
+        if not manifest_path.is_file():
+            return None
+        try:
+            return json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            return None
+
+    def get_installed_manifest_hash(self) -> Optional[str]:
+        manifest_path = self.target / "readmd-pet-plugin.json"
+        if not manifest_path.is_file():
+            return None
+        try:
+            return self._sha256(manifest_path)
+        except OSError:
+            return None
+
+    def get_release_info(self) -> Dict[str, Any]:
+        info_path = self.target / "pet-release-info.json"
+        if not info_path.is_file():
+            return {}
+        try:
+            val = json.loads(info_path.read_text(encoding="utf-8"))
+            return val if isinstance(val, dict) else {}
+        except (OSError, ValueError, TypeError):
+            return {}
+
+    def set_release_info(self, info: Dict[str, Any]) -> None:
+        if not self.target.is_dir():
+            return
+        info_path = self.target / "pet-release-info.json"
+        try:
+            info_path.write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
+        except OSError:
+            pass
+
     def _remove_tree(self, path: Path) -> bool:
-        # A single ignore_errors rmtree is not evidence of anything: Windows
-        # scanners keep freshly written files open for seconds at a time, which
-        # makes the first attempt report success while the tree stays on disk.
+        if not path.exists():
+            return True
+
+        def _handle_remove_readonly(func, p, _exc):
+            try:
+                os.chmod(p, stat.S_IWRITE)
+                func(p)
+            except Exception:
+                pass
+
         for remaining in range(self.SWEEP_ATTEMPTS - 1, -1, -1):
-            shutil.rmtree(path, ignore_errors=True)
+            try:
+                import sys
+                if sys.version_info >= (3, 12):
+                    shutil.rmtree(path, onexc=lambda func, p, exc: _handle_remove_readonly(func, p, exc))
+                else:
+                    shutil.rmtree(path, onerror=_handle_remove_readonly)
+            except Exception:
+                pass
             if not path.exists():
                 return True
             if remaining:
+                kill_processes_by_target(path)
                 time.sleep(self.SWEEP_RETRY_DELAY)
         return not path.exists()
 
     def uninstall(self) -> bool:
-        """Removes installed hermes-adapter directory."""
+        """Removes installed hermes-adapter directory and clears staging & legacy C-drive remnants."""
+        # 1. Force kill any running processes under root or target
+        kill_processes_by_target(self.root)
+
+        # 2. Sweep all stale staging directories
+        self._sweep_stale_staging()
+
+        # 3. Remove target
+        removed = True
         if self.target.exists():
-            return self._remove_tree(self.target)
-        return True
+            removed = self._remove_tree(self.target)
+
+        # 4. Clean legacy C: drive remnants unconditionally
+        try:
+            from .updater import clean_legacy_pet_installations
+            clean_legacy_pet_installations(self.target)
+        except Exception:
+            pass
+
+        # 5. If root directory (plugins/pet) is empty, clean it up
+        try:
+            if self.root.is_dir():
+                children = [c for c in self.root.iterdir() if not c.name.startswith('.')]
+                if not children:
+                    shutil.rmtree(self.root, ignore_errors=True)
+        except Exception:
+            pass
+
+        return removed
 
     def _sweep_stale_staging(self) -> None:
         """清掉此前失败安装留下的暂存目录，删不掉的如实记入日志。"""
@@ -272,6 +446,57 @@ class HermesPetPluginInstaller:
                 if remaining == 0:
                     raise
                 time.sleep(self.SWAP_RETRY_DELAY)
+
+    def _replace_tree_in_place(self, staged: Path, target: Path) -> None:
+        """Overwrite a directory that cannot be renamed with a verified tree.
+
+        A pinned working directory (a lingering crash reporter or an open
+        Explorer window) blocks renaming the target itself while every child
+        path stays writable.  Each file lands through a temporary sibling so a
+        crash mid-copy cannot leave a truncated runtime behind, and entries
+        missing from the staged tree are removed so installs never accumulate
+        stale files.
+        """
+        staged_names = set()
+        for root, dirs, files in os.walk(staged):
+            rel = os.path.relpath(root, staged)
+            for name in dirs:
+                staged_names.add(os.path.normpath(os.path.join(rel, name)))
+            for name in files:
+                staged_names.add(os.path.normpath(os.path.join(rel, name)))
+            destination_root = target if rel == os.curdir else target / rel
+            destination_root.mkdir(parents=True, exist_ok=True)
+            for name in files:
+                destination = destination_root / name
+                temporary = destination.with_name(destination.name + ".readmd-new")
+                shutil.copyfile(os.path.join(root, name), temporary)
+                try:
+                    os.replace(str(temporary), str(destination))
+                except PermissionError:
+                    # A scanner can hold a freshly touched runtime file open
+                    # briefly.  Wait out that window once; a locked file whose
+                    # bytes already equal the staged copy needs no replace.
+                    time.sleep(self.SWAP_RETRY_DELAY)
+                    try:
+                        os.replace(str(temporary), str(destination))
+                    except PermissionError:
+                        if self._sha256(Path(destination)) == self._sha256(Path(temporary)):
+                            temporary.unlink(missing_ok=True)
+                            continue
+                        raise
+        for root, dirs, files in os.walk(target, topdown=False):
+            rel = os.path.relpath(root, target)
+            for name in dirs + files:
+                if os.path.normpath(os.path.join(rel, name)) in staged_names:
+                    continue
+                path = os.path.join(root, name)
+                if os.path.isdir(path):
+                    shutil.rmtree(path, ignore_errors=True)
+                else:
+                    try:
+                        os.unlink(path)
+                    except OSError:
+                        pass
 
     @staticmethod
     def _is_safe_name(name: str) -> bool:
@@ -356,7 +581,14 @@ class HermesPetPluginInstaller:
                     if backup.exists():
                         shutil.rmtree(backup)
                     if self.target.exists():
-                        self._replace_with_retry(self.target, backup)
+                        try:
+                            self._replace_with_retry(self.target, backup)
+                        except PermissionError:
+                            # Renaming the target itself failed while the
+                            # staged tree is already fully verified, so swap
+                            # its contents in place instead of directories.
+                            self._replace_tree_in_place(staged, self.target)
+                            return {"ok": True, "installed": True, "files": len(expected)}
                     try:
                         try:
                             self._replace_with_retry(staged, self.target)
@@ -382,4 +614,5 @@ class HermesPetPluginInstaller:
                         shutil.rmtree(backup)
             return {"ok": True, "installed": True, "files": len(expected)}
         except (OSError, ValueError, zipfile.BadZipFile, UnicodeError):
+            logging.exception('pet plugin install failed for %s', archive_path)
             return {"ok": False, "code": "pet_plugin_install_failed"}

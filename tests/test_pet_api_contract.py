@@ -46,6 +46,24 @@ def test_api_refuses_live2d_without_a_verified_original_model(monkeypatch):
     assert api.get_pet_runtime_status()["enabled"] is False
 
 
+def test_api_allows_live2d_in_app_companion_mode(monkeypatch):
+    monkeypatch.setattr(readmd, "verify_model_bundle", lambda _path: {
+        "ready": True,
+        "code": "ready_for_platform_probe",
+    })
+    api = readmd.Api()
+    published = []
+    monkeypatch.setattr(api, "_publish_pet_runtime", lambda runtime=None: published.append(runtime) or {})
+
+    result = api.configure_pet({"enabled": True, "renderer": "live2d", "in_app": True})
+
+    assert result["ok"] is True
+    assert result["renderer"] == "live2d"
+    assert result["in_app"] is True
+    assert result["runtime"]["enabled"] is True
+    assert api.get_pet_runtime_status()["preferences"]["renderer"] == "live2d"
+
+
 def test_api_can_enable_copied_hermes_sprite_without_live2d_model(monkeypatch):
     monkeypatch.setattr(readmd, "verify_model_bundle", lambda _path: {
         "ready": False,
@@ -379,6 +397,12 @@ def test_pet_configure_fails_when_in_app_false_and_launcher_unavailable(monkeypa
 def test_uninstall_companion_pet_removes_adapter_files(tmp_path, monkeypatch):
     monkeypatch.setattr(readmd, "DATA_DIR", str(tmp_path))
     monkeypatch.setattr(readmd, "SETTINGS_FILE", str(tmp_path / "settings.json"))
+    # The optional runtime lives under <app>/plugins, so the install root
+    # must be pinned to the temporary tree; a live fallback that reads the
+    # real DATA_DIR would otherwise target the developer's own install.
+    # Api.__init__ imports the resolver locally, so patch it at the source.
+    import src.readmd_modules.pet as pet_module
+    monkeypatch.setattr(pet_module, "get_default_pet_install_root", lambda: tmp_path / "plugins")
     api = readmd.Api()
     adapter_dir = tmp_path / "plugins" / "pet" / "hermes-adapter"
     adapter_dir.mkdir(parents=True, exist_ok=True)
@@ -428,4 +452,152 @@ def test_http_api_pets_configure_and_status(monkeypatch, tmp_path):
     assert s_code == 200
     assert s_payload["ok"] is True
     assert s_payload["status"]["enabled"] is True
+
+
+def test_http_api_pets_import_and_remove(monkeypatch, tmp_path):
+    import io
+    from PIL import Image
+
+    monkeypatch.setattr(readmd, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(readmd, "SETTINGS_FILE", str(tmp_path / "settings.json"))
+
+    handler = object.__new__(readmd.Handler)
+    handler.command = 'POST'
+    sent_responses = []
+    handler._send_json = lambda code, obj: sent_responses.append((code, obj))
+
+    img = Image.new("RGBA", (100, 100), (255, 0, 0, 255))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    b64_png = base64.b64encode(buf.getvalue()).decode('utf-8')
+
+    body_import = {
+        "confirm": True,
+        "slug": "custom-companion",
+        "display_name": "Custom Companion",
+        "image_base64": b64_png,
+    }
+    raw_body = json.dumps(body_import).encode('utf-8')
+    handler.headers = {'Content-Length': str(len(raw_body))}
+    handler.rfile = io.BytesIO(raw_body)
+    handler._api_pet_import()
+
+    assert len(sent_responses) == 1
+    code, payload = sent_responses[0]
+    assert code == 200
+    assert payload["ok"] is True
+    assert payload["pet"]["slug"] == "custom-companion"
+
+    readmd.save_json(str(tmp_path / "settings.json"), {"pet_slug": "custom-companion"})
+
+    sent_remove = []
+    handler._send_json = lambda code, obj: sent_remove.append((code, obj))
+    body_remove = {"confirm": True, "slug": "custom-companion"}
+    raw_remove = json.dumps(body_remove).encode('utf-8')
+    handler.headers = {'Content-Length': str(len(raw_remove))}
+    handler.rfile = io.BytesIO(raw_remove)
+    handler._api_pet_remove()
+
+    assert len(sent_remove) == 1
+    r_code, r_payload = sent_remove[0]
+    assert r_code == 200
+    assert r_payload["ok"] is True
+
+    updated_settings = readmd.load_json(str(tmp_path / "settings.json"), {})
+    assert "pet_slug" not in updated_settings
+
+
+def test_builtin_pets_api_and_protection(monkeypatch, tmp_path):
+    import io
+    monkeypatch.setattr(readmd, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(readmd, "SETTINGS_FILE", str(tmp_path / "settings.json"))
+
+    handler = object.__new__(readmd.Handler)
+    handler.command = 'GET'
+    sent_list = []
+    handler._send_json = lambda code, obj: sent_list.append((code, obj))
+    handler._api_pets()
+
+    assert len(sent_list) == 1
+    code, payload = sent_list[0]
+    assert code == 200
+    assert payload["ok"] is True
+    slugs = [p["slug"] for p in payload["pets"]]
+    assert "mochi" in slugs
+    assert "moss" in slugs
+    assert "amber" in slugs
+    mochi_pet = next(p for p in payload["pets"] if p["slug"] == "mochi")
+    assert mochi_pet["is_builtin"] is True
+
+    # Test removing builtin pet is rejected
+    handler.command = 'POST'
+    sent_remove = []
+    handler._send_json = lambda code, obj: sent_remove.append((code, obj))
+    body_remove = {"confirm": True, "slug": "mochi"}
+    raw_remove = json.dumps(body_remove).encode('utf-8')
+    handler.headers = {'Content-Length': str(len(raw_remove))}
+    handler.rfile = io.BytesIO(raw_remove)
+    handler._api_pet_remove()
+
+    assert len(sent_remove) == 1
+    r_code, r_payload = sent_remove[0]
+    assert r_code == 400
+    assert r_payload["error_code"] == "pet_cannot_delete_builtin"
+
+    # Test thumb endpoint delivers builtin sprite
+    handler.command = 'GET'
+    delivered = []
+    handler._send = lambda code, mime, body, **kw: delivered.append((code, mime, len(body)))
+    handler._api_pet_thumb({'slug': ['mochi']})
+    assert len(delivered) == 1
+    t_code, t_mime, t_len = delivered[0]
+    assert t_code == 200
+    assert t_mime == 'image/png'
+    assert t_len > 1000
+
+    # Test publish pushes builtin sprite to desktop bridge
+    readmd.save_json(str(tmp_path / "settings.json"), {"pet_slug": "mochi"})
+    api = readmd.Api()
+    published = []
+    monkeypatch.setattr(api._pet_bridge, "publish", lambda runtime, **kw: published.append(kw))
+    api._publish_pet_runtime()
+    assert len(published) == 1
+    info = published[0].get("info", {})
+    assert "spritesheetBase64" in info
+    assert info.get("mime") == "image/png"
+    assert info.get("spritesheetRevision")
+
+
+def test_publish_pet_runtime_carries_animation_budget(tmp_path, monkeypatch):
+    """The bridge must carry the controller frame budget so overlay renderers
+    stop running at full display refresh rate (PET-012 host half)."""
+    monkeypatch.setattr(readmd, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(readmd, "SETTINGS_FILE", str(tmp_path / "settings.json"))
+    api = readmd.Api()
+    published = []
+    monkeypatch.setattr(api._pet_bridge, "publish", lambda runtime, **kw: published.append(kw))
+
+    api._publish_pet_runtime()
+    idle = published[-1]["info"]["animation"]
+    assert set(idle) == {"enabled", "fpsCap"}
+    assert isinstance(idle["enabled"], bool)
+    assert idle["fpsCap"] in (0, 6, 30)
+
+    api._pet_controller.enable()
+    api._publish_pet_runtime()
+    idle_on = published[-1]["info"]["animation"]
+    assert idle_on == {"enabled": True, "fpsCap": 6}
+
+    api._pet_controller.handle_event("work_started")
+    api._publish_pet_runtime()
+    busy = published[-1]["info"]["animation"]
+    assert busy == {"enabled": True, "fpsCap": 30}
+
+    api._pet_controller.set_reduced_motion(True)
+    api._publish_pet_runtime()
+    reduced = published[-1]["info"]["animation"]
+    assert reduced == {"enabled": False, "fpsCap": 0}
+
+
+
 

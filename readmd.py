@@ -37,6 +37,7 @@ import webbrowser
 from datetime import datetime, timezone
 from email.utils import formatdate, parsedate_to_datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from src.readmd_core import (
@@ -63,6 +64,11 @@ from src.readmd_modules.pet import (
     PetController,
     foreground_fullscreen,
     verify_model_bundle,
+    get_app_install_dir,
+    get_default_pet_install_root,
+    clean_legacy_pet_installations,
+    check_pet_update,
+    apply_pet_update,
 )
 import src.readmd_modules.skill_import as _skill_import
 from src.readmd_core.service import ReadMDCoreService
@@ -1014,7 +1020,8 @@ class Handler(BaseHTTPRequestHandler):
         '/api/control/open', '/api/control/next', '/api/control/pet-batch',
         '/api/control/pet-menu', '/api/pets/import', '/api/pets/remove',
         '/api/pets/active', '/api/pets/configure', '/api/pets/install', '/api/pets/runtime/install',
-        '/api/pets/uninstall',
+        '/api/pets/uninstall', '/api/pets/update_status', '/api/pets/check_update',
+        '/api/pets/apply_update',
         '/api/plugins/list', '/api/plugins/install', '/api/plugins/toggle',
         '/api/plugins/uninstall',
         '/api/links/index',
@@ -1254,6 +1261,12 @@ class Handler(BaseHTTPRequestHandler):
             self._api_pet_uninstall()
         elif path == '/api/pets/thumb':
             self._api_pet_thumb(qs)
+        elif path == '/api/pets/update_status':
+            self._api_pet_update_status()
+        elif path == '/api/pets/check_update':
+            self._api_pet_check_update()
+        elif path == '/api/pets/apply_update':
+            self._api_pet_apply_update()
         elif path == '/api/skill-imports':
             self._api_skill_imports()
         elif path == '/api/skill-imports/preview':
@@ -1291,14 +1304,14 @@ class Handler(BaseHTTPRequestHandler):
         elif path == '/api/system/language':
             self._api_system_language()
         elif path == '/api/autostart/get':
-            self._send_json(200, {'ok': True, 'enabled': Api().get_autostart()})
+            self._send_json(200, {'ok': True, 'enabled': _get_shared_api().get_autostart()})
         elif path == '/api/autostart/set':
             n = int(self.headers.get('Content-Length', 0) or 0)
             try:
                 body = json.loads(self.rfile.read(n).decode('utf-8')) if n else {}
             except Exception:
                 body = {}
-            self._send_json(200, Api().set_autostart(bool(body.get('enabled'))))
+            self._send_json(200, _get_shared_api().set_autostart(bool(body.get('enabled'))))
         elif path == '/api/code/run':
             self._api_code_run()
         elif path == '/api/diagram/render':
@@ -1631,7 +1644,7 @@ class Handler(BaseHTTPRequestHandler):
             settings = load_json(SETTINGS_FILE, {})
             active = str(settings.get('pet_slug') or '') if isinstance(settings, dict) else ''
             self._send_json(200, {'ok': True, 'active': active,
-                                  'pets': [item.as_dict() for item in list_pets(DATA_DIR)]})
+                                  'pets': [item.as_dict() for item in list_pets(DATA_DIR, include_builtins=True)]})
         except Exception:
             logging.exception('pets list failed')
             self._send_json(500, {'ok': False, 'error_code': 'pet_list_failed'})
@@ -1746,7 +1759,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             slug = str(body.get('slug') or '').strip().lower()
             from src.readmd_modules.pet import list_pets
-            if slug and slug not in {item.slug for item in list_pets(DATA_DIR)}:
+            if slug and slug not in {item.slug for item in list_pets(DATA_DIR, include_builtins=True)}:
                 self._send_json(404, {'ok': False, 'error_code': 'pet_not_found'})
                 return
             settings = load_json(SETTINGS_FILE, {})
@@ -1767,12 +1780,12 @@ class Handler(BaseHTTPRequestHandler):
         try:
             slug = str(qs.get('slug', [''])[0] or '')
             from src.readmd_modules.pet import list_pets
-            pet = next((item for item in list_pets(DATA_DIR) if item.slug == slug), None)
+            pet = next((item for item in list_pets(DATA_DIR, include_builtins=True) if item.slug == slug), None)
             if not pet:
                 self._send_json(404, {'ok': False, 'error_code': 'pet_not_found'})
                 return
             path = os.path.realpath(pet.spritesheet)
-            if os.path.dirname(path) != os.path.realpath(pet.directory):
+            if not pet.is_builtin and os.path.dirname(path) != os.path.realpath(pet.directory):
                 self._send_json(403, {'ok': False, 'error_code': 'pet_path_invalid'})
                 return
             mime = 'image/png' if path.lower().endswith('.png') else 'image/webp'
@@ -1784,6 +1797,45 @@ class Handler(BaseHTTPRequestHandler):
             self._send(200, mime, body, cache_control='private, max-age=3600')
         except OSError:
             self._send_json(404, {'ok': False, 'error_code': 'pet_not_found'})
+
+    def _api_pet_update_status(self):
+        if self.command != 'GET':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            api = _get_shared_api()
+            res = api.get_pet_update_status()
+            self._send_json(200, res)
+        except Exception:
+            logging.exception('pet update status failed')
+            self._send_json(500, {'ok': False, 'error_code': 'pet_update_status_failed'})
+
+    def _api_pet_check_update(self):
+        if self.command != 'POST':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            body = self._read_json_body(65536)
+            allow_network = bool(body.get('allow_network', True))
+            api = _get_shared_api()
+            res = api.check_pet_update(allow_network=allow_network)
+            self._send_json(200, res)
+        except Exception:
+            logging.exception('pet check update failed')
+            self._send_json(500, {'ok': False, 'error_code': 'pet_check_update_failed'})
+
+    def _api_pet_apply_update(self):
+        if self.command != 'POST':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            body = self._read_json_body(65536)
+            api = _get_shared_api()
+            res = api.apply_pet_update(body.get('update_info'))
+            self._send_json(200, res)
+        except Exception:
+            logging.exception('pet apply update failed')
+            self._send_json(500, {'ok': False, 'error_code': 'pet_apply_update_failed'})
 
     def _api_diagram_render(self):
         from src.readmd_modules import diagrams
@@ -1901,7 +1953,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_api_error(400, 'plugin_id_required')
                 return
             from src.readmd_modules import plugin_manager as pm
-            if plugin_id not in pm.CONNECTED_PLUGINS:
+            # 安装资格只看插件是否在清单中定义：轻量工具包（pylatexenc/pygments/
+            # jieba/pandoc_bridge）供沙盒与技能使用，不要求接入运行时管线。
+            if plugin_id not in pm.PLUGIN_SPECS:
                 self._send_api_error(400, 'plugin_not_integrated')
                 return
             ok = pm.install_plugin_async(plugin_id)
@@ -1924,7 +1978,7 @@ class Handler(BaseHTTPRequestHandler):
             plugin_id = str(body.get('plugin_id', '')).strip()
             enabled = bool(body.get('enabled'))
             from src.readmd_modules import plugin_manager as pm
-            if enabled and plugin_id not in pm.CONNECTED_PLUGINS:
+            if plugin_id not in pm.PLUGIN_SPECS:
                 self._send_api_error(400, 'plugin_not_integrated')
                 return
             if not pm.is_plugin_installed(plugin_id):
@@ -2159,7 +2213,7 @@ class Handler(BaseHTTPRequestHandler):
                 paths = body.get('paths')
             elif qs.get('p'):
                 paths = [unquote(qs.get('p', [''])[0])]
-            res = Api().check_recent_status(paths)
+            res = _get_shared_api().check_recent_status(paths)
             self._send_json(200 if res.get('ok') else 400, res)
         except ValueError:
             self._send_json(400, {'ok': False, 'code': 'invalid_recent_paths'})
@@ -2174,7 +2228,7 @@ class Handler(BaseHTTPRequestHandler):
             path = body.get('path')
             if not isinstance(path, str) or not path or len(path) > Api.MAX_RECENT_PATH_LENGTH:
                 raise ValueError('invalid path')
-            self._send_json(200, {'ok': bool(Api().add_recent(path))})
+            self._send_json(200, {'ok': bool(_get_shared_api().add_recent(path))})
         except ValueError:
             self._send_json(400, {'ok': False, 'code': 'invalid_recent_path'})
         except Exception:
@@ -2183,7 +2237,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _api_recent_clear(self):
         try:
-            self._send_json(200, {'ok': bool(Api().clear_recent())})
+            self._send_json(200, {'ok': bool(_get_shared_api().clear_recent())})
         except Exception:
             logging.exception('recent clear failed')
             self._send_json(500, {'ok': False, 'code': 'recent_clear_failed'})
@@ -2195,7 +2249,7 @@ class Handler(BaseHTTPRequestHandler):
             path = body.get('path')
             if not isinstance(path, str) or not path or len(path) > Api.MAX_RECENT_PATH_LENGTH:
                 raise ValueError('invalid path')
-            ok = Api().remove_recent(path)
+            ok = _get_shared_api().remove_recent(path)
             self._send_json(200, {'ok': ok})
         except ValueError:
             self._send_json(400, {'ok': False, 'code': 'invalid_recent_path'})
@@ -3636,16 +3690,25 @@ class Api(object):
             HermesPetPluginInstaller,
             PetBatchQueue,
             PetController,
+            get_default_pet_install_root,
+            clean_legacy_pet_installations,
         )
         self._pet_controller = PetController()
         self._pet_in_app = True
         self._pet_queue = PetBatchQueue()
-        self._pet_bridge = HermesPetBridge(DATA_DIR)
+        pet_install_root = get_default_pet_install_root()
+        self._pet_installer = HermesPetPluginInstaller(str(pet_install_root))
+        self._pet_bridge = HermesPetBridge(str(pet_install_root))
         self._pet_install_lock = threading.RLock()
-        self._pet_installer = HermesPetPluginInstaller(os.path.join(DATA_DIR, 'plugins'))
-        legacy_pet_installer = HermesPetPluginInstaller(DATA_DIR)
-        if not self._pet_installer.target.exists() and legacy_pet_installer.target.exists():
-            self._pet_installer = legacy_pet_installer
+        self._cached_pet_update = None
+        self._pet_update_progress = None
+
+        # Clean any legacy pet files under %APPDATA% (C: drive) without copying them back
+        try:
+            clean_legacy_pet_installations(self._pet_installer.target)
+        except Exception:
+            pass
+
         self._pet_launcher = HermesPetLauncher(
             APP_DIR, self._pet_bridge,
             adapter_dir=str(self._pet_installer.target),
@@ -3654,6 +3717,24 @@ class Api(object):
         self._pet_command_stop = threading.Event()
         self._pet_command_thread = None
         self._pet_fullscreen_thread = None
+        self._start_pet_startup_sync()
+
+    def _start_pet_startup_sync(self):
+        def _sync_worker():
+            try:
+                from src.readmd_modules.pet import clean_legacy_pet_installations, check_pet_update, apply_pet_update
+                clean_legacy_pet_installations(self._pet_installer.target)
+                update_res = check_pet_update(self._pet_installer, self._pet_launcher, allow_network=False)
+                if update_res.get('ok') and update_res.get('has_update') and update_res.get('source') == 'bundled':
+                    logging.info('Auto-updating desktop pet from bundled archive...')
+                    with self._pet_install_lock:
+                        apply_pet_update(self._pet_installer, self._pet_launcher, update_res)
+                    logging.info('Desktop pet successfully updated from bundled archive.')
+            except Exception:
+                logging.debug('Pet startup sync failed', exc_info=True)
+
+        t = threading.Thread(target=_sync_worker, name='readmd-pet-sync', daemon=True)
+        t.start()
 
     @staticmethod
     def _web_origin(url):
@@ -4919,23 +5000,37 @@ class Api(object):
         renderer = settings.get('pet_renderer')
         if renderer not in ('hermes-sprite', 'live2d'):
             renderer = 'hermes-sprite'
+        info = {
+            'scale': max(0.18, min(0.72, scale)),
+            'opacity': max(0.35, min(1.0, opacity)),
+        }
+        try:
+            locale, lines = _pet_locale_line_pack(self.get_system_language())
+        except Exception:
+            locale, lines = 'en', {}
+        info['locale'] = locale
+        info['lines'] = lines
         return {
             'bounds': bounds,
             'renderer': renderer,
-            'info': {
-                'scale': max(0.18, min(0.72, scale)),
-                'opacity': max(0.35, min(1.0, opacity)),
-            },
+            'info': info,
         }
 
     def _publish_pet_runtime(self, runtime=None):
         runtime = runtime if isinstance(runtime, dict) else self._pet_controller.snapshot()
         prefs = self._pet_preferences()
+        if 'animation_enabled' in runtime and 'fps_cap' in runtime:
+            # The renderer-owned frame budget: desktop overlay renderers apply
+            # this instead of running at full display refresh rate.
+            prefs['info'].update(animation={
+                'enabled': bool(runtime.get('animation_enabled')),
+                'fpsCap': runtime.get('fps_cap') or 0,
+            })
         settings = load_json(SETTINGS_FILE, {})
         slug = settings.get('pet_slug') if isinstance(settings, dict) else None
         if slug:
             from src.readmd_modules.pet import list_pets
-            pet = next((item for item in list_pets(DATA_DIR) if item.slug == slug), None)
+            pet = next((item for item in list_pets(DATA_DIR, include_builtins=True) if item.slug == slug), None)
             if pet:
                 with open(pet.spritesheet, 'rb') as source:
                     prefs['info'].update(spritesheetBase64=base64.b64encode(source.read()).decode('ascii'),
@@ -4961,11 +5056,77 @@ class Api(object):
         status['preferences'] = dict(prefs['info'], renderer=prefs['renderer'])
         settings = load_json(SETTINGS_FILE, {})
         status['active_slug'] = str(settings.get('pet_slug') or '') if isinstance(settings, dict) else ''
-        if isinstance(settings, dict) and 'pet_installed' in settings:
+        if self._pet_in_app:
+            status['installed'] = True
+        elif isinstance(settings, dict) and 'pet_installed' in settings:
             status['installed'] = bool(settings['pet_installed'])
         else:
             status['installed'] = bool(status.get('adapter', {}).get('available'))
+        status['install_path'] = str(self._pet_installer.target)
+        try:
+            status['update'] = self.get_pet_update_status()
+        except Exception:
+            status['update'] = {'ok': True, 'has_update': False}
         return status
+
+    def get_pet_update_status(self):
+        is_installed = self._pet_launcher.status().get('available', False)
+        release_info = self._pet_installer.get_release_info()
+        manifest = self._pet_installer.get_installed_manifest()
+        version = release_info.get('release_tag') or (manifest.get('version') if manifest else ('0.1.0' if is_installed else None))
+        cached = getattr(self, '_cached_pet_update', None)
+        return {
+            'ok': True,
+            'installed': is_installed,
+            'install_path': str(self._pet_installer.target),
+            'version': version,
+            'source': release_info.get('source', 'bundled'),
+            'updated_at': release_info.get('updated_at'),
+            'has_update': bool(cached and cached.get('has_update')),
+            'update_info': cached if (cached and cached.get('has_update')) else None,
+            'progress': getattr(self, '_pet_update_progress', None),
+        }
+
+    def check_pet_update(self, allow_network=True):
+        from src.readmd_modules.pet import check_pet_update
+        res = check_pet_update(self._pet_installer, self._pet_launcher, allow_network=allow_network)
+        if res.get('ok') and res.get('has_update'):
+            self._cached_pet_update = res
+        else:
+            self._cached_pet_update = None
+        return res
+
+    def apply_pet_update(self, update_info=None):
+        from src.readmd_modules.pet import apply_pet_update, check_pet_update
+        if not update_info:
+            update_info = getattr(self, '_cached_pet_update', None)
+        if not update_info or not update_info.get('has_update'):
+            update_info = check_pet_update(self._pet_installer, self._pet_launcher, allow_network=True)
+            if not update_info.get('ok') or not update_info.get('has_update'):
+                return {'ok': False, 'code': 'no_update_available'}
+
+        def on_progress(downloaded, total):
+            if total > 0:
+                self._pet_update_progress = {
+                    'percent': round(downloaded / total * 100, 1),
+                    'downloaded': downloaded,
+                    'total': total,
+                }
+
+        self._pet_update_progress = {'percent': 0, 'downloaded': 0, 'total': 0}
+        try:
+            with self._pet_install_lock:
+                res = apply_pet_update(
+                    self._pet_installer,
+                    self._pet_launcher,
+                    update_info,
+                    progress_callback=on_progress,
+                )
+            if res.get('ok'):
+                self._cached_pet_update = None
+            return res
+        finally:
+            self._pet_update_progress = None
 
     def install_companion_pet(self):
         """Activate the selected renderer without silently reverting to Hermes."""
@@ -5057,7 +5218,17 @@ class Api(object):
     def install_default_pet_plugin(self):
         """Install the supplied desktop runtime into ReadMD's managed plugins."""
         with self._pet_install_lock:
-            return self._install_default_pet_plugin_locked()
+            res = self._install_default_pet_plugin_locked()
+            if res.get('ok'):
+                return res
+            # Fallback to GitHub releases download if local candidate missing
+            try:
+                up = self.check_pet_update(allow_network=True)
+                if up.get('ok') and up.get('has_update') and up.get('source') == 'github':
+                    return self.apply_pet_update(up)
+            except Exception:
+                pass
+            return res
 
     def _install_default_pet_plugin_locked(self):
         if os.name != 'nt':
@@ -5092,6 +5263,8 @@ class Api(object):
                 if os.path.isfile(archive):
                     res = self.install_pet_plugin(archive, confirm=True)
                     if res.get('ok'):
+                        from src.readmd_modules.pet import clean_legacy_pet_installations
+                        clean_legacy_pet_installations(self._pet_installer.target)
                         return res
             # Fallback scan for any pet zip archive in root
             try:
@@ -5101,6 +5274,8 @@ class Api(object):
                         if os.path.isfile(archive):
                             res = self.install_pet_plugin(archive, confirm=True)
                             if res.get('ok'):
+                                from src.readmd_modules.pet import clean_legacy_pet_installations
+                                clean_legacy_pet_installations(self._pet_installer.target)
                                 return res
             except OSError:
                 pass
@@ -5131,8 +5306,6 @@ class Api(object):
         if enabled and renderer == 'live2d':
             if not model.get('ready'):
                 return {'ok': False, 'code': model.get('code', 'model_not_ready')}
-            if in_app:
-                return {'ok': False, 'code': 'live2d_requires_desktop'}
         if enabled and not in_app:
             launched = self._pet_launcher.start()
             if not launched.get('ok'):
@@ -6231,6 +6404,72 @@ def main():
 
 _tray_icon = {'icon': None, 'started': False}
 _tray_lock = threading.Lock()
+
+
+# Companion lines pushed to the desktop pet overlay.  The Electron renderer
+# renders speech bubbles from these localized strings only, so the desktop pet
+# speaks the same localized wording as the reader UI.  Missing keys fall back
+# to en.json.
+PET_LINE_KEYS = (
+    'pet.bubbleQuote1',
+    'pet.bubbleQuote2',
+    'pet.bubbleQuote3',
+    'pet.bubbleQuote4',
+    'pet.greetingAfternoon',
+    'pet.greetingEarlyMorning',
+    'pet.greetingEvening',
+    'pet.greetingMorning',
+    'pet.greetingNight',
+    'pet.greetingNoon',
+    'pet.idleQuote1',
+    'pet.idleQuote2',
+    'pet.idleQuote3',
+    'pet.pokeQuote1',
+    'pet.pokeQuote2',
+    'pet.pokeQuote3',
+    'pet.pokeQuote4',
+    'pet.reading100',
+    'pet.returnQuote',
+    'pet.sleepQuote1',
+    'pet.sleepQuote2',
+    'pet.taskBusy',
+    'pet.taskError',
+)
+
+_pet_line_pack_cache = {}
+
+
+def _pet_locale_line_pack(locale):
+    """Resolve the desktop pet's localized line pack (locale -> en fallback)."""
+    code = re.sub(r'[^A-Za-z0-9_-]', '', str(locale or 'en').strip()) or 'en'
+    cached = _pet_line_pack_cache.get(code)
+    if cached is not None:
+        return code, cached
+    strings = {}
+    for candidate in (code, 'en'):
+        try:
+            path = os.path.join(APP_DIR, 'assets', 'i18n', f'{candidate}.json')
+            with open(path, encoding='utf-8') as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict):
+                localized = {
+                    key: value for key, value in loaded.items()
+                    if key in PET_LINE_KEYS and isinstance(value, str) and value.strip()
+                }
+                # The en pass must only fill gaps; a plain update would clobber
+                # the localized values with English for every key en.json has.
+                if candidate == 'en':
+                    for key, value in localized.items():
+                        strings.setdefault(key, value)
+                else:
+                    strings.update(localized)
+        except Exception:
+            continue
+        if candidate == 'en':
+            break
+    pack = {key: strings[key] for key in PET_LINE_KEYS if key in strings}
+    _pet_line_pack_cache[code] = pack
+    return code, pack
 
 
 def _tray_labels():

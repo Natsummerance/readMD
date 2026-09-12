@@ -45,3 +45,17 @@ def test_list_ignores_symlink_or_malformed_entries(tmp_path):
     malformed.mkdir()
     (malformed / "pet.json").write_text(json.dumps({"id": "broken"}), encoding="utf-8")
     assert list_pets(tmp_path) == []
+
+
+def test_builtin_pets_protection_and_listing(tmp_path):
+    builtins = list_pets(tmp_path, include_builtins=True)
+    slugs = [p.slug for p in builtins]
+    assert "mochi" in slugs
+    assert "moss" in slugs
+    assert "amber" in slugs
+    assert all(p.is_builtin for p in builtins if p.slug in ("mochi", "moss", "amber"))
+
+    with pytest.raises(PetStoreError) as exc:
+        remove_pet(tmp_path, "mochi")
+    assert exc.value.code == "pet_cannot_delete_builtin"
+

@@ -1,11 +1,11 @@
 # Hermes fallback sprite provenance
 
-`hermes-sprite.png` is copied byte-for-byte from:
+`hermes-sprite.png` is derived from:
 
 - repository: `https://github.com/NousResearch/hermes-agent`
 - revision: `fb27614addac115d55299bc6538ae112fd01f688`
 - source path: `apps/desktop/public/hermes-sprite.png`
-- SHA-256: `e328d387a2fca8c02452fa534da1a89bdb8be9292cc51ffa66905018e74097a3`
+- SHA-256: `a5661b457de00b9a57570effcb7a3ecb8f6cb960b48c6633987a32542f2f58e0` (re-normalized locally to exact 384x512 cells)
 - license: MIT; see `third_party/hermes-agent-pet/LICENSE`
 
 It is a fallback for exercising the copied Hermes sprite renderer. Its source

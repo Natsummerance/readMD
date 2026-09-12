@@ -34,7 +34,7 @@ def test_optional_host_applies_a_bounded_native_window_opacity():
 def test_optional_host_loads_the_overlay_with_a_renderer_query():
     source = Path('packages/readmd-hermes-pet-adapter/src/electron-main.ts').read_text(encoding='utf-8')
     assert "loadFile(path.join(app.getAppPath(), 'renderer', 'index.html')" in source
-    assert 'query: { renderer }' in source
+    assert 'query.renderer = renderer' in source or 'query: { renderer }' in source
 
 
 def test_optional_host_reloads_in_place_when_the_renderer_preference_changes():
@@ -369,6 +369,40 @@ def test_install_falls_back_to_copy_when_a_staged_file_stays_locked(tmp_path, mo
     assert not (installer.root / "hermes-adapter.previous").exists()
 
 
+def test_install_replaces_contents_in_place_when_the_target_itself_is_pinned(tmp_path, monkeypatch):
+    # A pinned working directory (a lingering crash reporter or an open
+    # Explorer window) blocks renaming the target directory itself while
+    # every child path stays writable.  The verified tree must still land
+    # through an in-place content replacement instead of failing forever.
+    first = tmp_path / "readmd-pet-one.zip"
+    second = tmp_path / "readmd-pet-two.zip"
+    _write_plugin_archive(first)
+    _write_plugin_archive(second)
+    installer = HermesPetPluginInstaller(str(tmp_path / "data"))
+    monkeypatch.setattr(installer, "SWAP_ATTEMPTS", 2, raising=False)
+    monkeypatch.setattr(installer, "SWAP_RETRY_DELAY", 0.0, raising=False)
+
+    assert installer.install_archive(str(first), confirm=True)["ok"] is True
+    stale = installer.target / "app" / "stale-file.txt"
+    stale.write_bytes(b"leftover")
+    (installer.target / "app" / "package.json").write_text('{"version":"old"}', encoding="utf-8")
+
+    real_replace = os.replace
+
+    def rename_denied_for_pinned_target(source, destination):
+        if Path(source).name == "hermes-adapter" and Path(destination).name == "hermes-adapter.previous":
+            raise PermissionError(5, "target directory is pinned as a working directory")
+        return real_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", rename_denied_for_pinned_target)
+
+    assert installer.install_archive(str(second), confirm=True) == {"ok": True, "installed": True, "files": 5}
+    assert (installer.target / "app" / "package.json").read_text(encoding="utf-8") == "{}"
+    assert (installer.target / "electron.exe").read_bytes() == b"runtime"
+    assert not stale.exists()
+    assert not (installer.root / "hermes-adapter.previous").exists()
+
+
 def test_install_sweeps_stale_temp_dirs_left_by_failed_installs(tmp_path):
     archive = tmp_path / "readmd-pet.zip"
     _write_plugin_archive(archive)
@@ -447,6 +481,17 @@ def test_live2d_stage_pauses_ticker_when_hidden_or_fullscreen():
     assert 'function updateAnimationState()' in source
     assert 'app.ticker.stop()' in source
     assert 'app.ticker.start()' in source
+
+
+def test_live2d_stage_honors_host_animation_budget():
+    """PET-012: the stage must apply the host frame budget and freeze entirely on reduced motion."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/live2d/stage.ts').read_text(encoding='utf-8')
+    assert "animation?: { enabled?: boolean; fpsCap?: number }" in source
+    assert 'animation.enabled === false' in source
+    assert 'app.ticker.maxFPS' in source
+    # The sprite flipbook budget (6fps idle) needs a smoothness floor for a
+    # skeletal model; full-rate rendering is only allowed without a budget.
+    assert 'Math.max(24, Math.min(cap, 60))' in source
     assert "document.addEventListener('visibilitychange', updateAnimationState)" in source
 
 
@@ -463,7 +508,7 @@ def test_hermes_sprite_geometry_and_physical_sheet_verification():
     assert dist_sprite_path.is_file()
 
     raw = sprite_path.read_bytes()
-    expected_hash = 'e328d387a2fca8c02452fa534da1a89bdb8be9292cc51ffa66905018e74097a3'
+    expected_hash = 'a5661b457de00b9a57570effcb7a3ecb8f6cb960b48c6633987a32542f2f58e0'
     assert hashlib.sha256(raw).hexdigest() == expected_hash
     assert hashlib.sha256(adapter_sprite_path.read_bytes()).hexdigest() == expected_hash
     assert hashlib.sha256(dist_sprite_path.read_bytes()).hexdigest() == expected_hash
@@ -539,3 +584,51 @@ def test_hermes_sprite_scale_and_high_dpi_resolution_matrix():
 
 
 
+
+
+def test_live2d_animation_runs_inside_runtime_parameter_bracket():
+    """PET-012: lifelike param writes must hook beforeModelUpdate so the runtime's
+    frame-end loadParameters() wipe keeps additive sway from accumulating (the
+    frozen-model defect).  The ticker fallback must self-compensate instead."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/live2d/stage.ts').read_text(encoding='utf-8')
+    assert "internalModel.on('beforeModelUpdate', applyLife)" in source
+    assert 'additiveState.compensate = true' in source
+    # Gesture sequencer keeps the idle loop visibly alive beyond plain sway.
+    assert 'gestureOffsets' in source
+
+
+def test_companion_layer_mounts_on_both_renderers():
+    """PET-013: speech bubbles + FSM must run in both the sprite and Live2D pages."""
+    renderer = Path('packages/readmd-hermes-pet-adapter/src/renderer.tsx').read_text(encoding='utf-8')
+    assert renderer.count('mountPetLife(') == 2
+    stage = Path('packages/readmd-hermes-pet-adapter/src/live2d/stage.ts').read_text(encoding='utf-8')
+    assert 'setTalking' in stage
+    assert 'setMood' in stage
+    assert 'celebrate' in stage
+
+
+def test_companion_lines_come_from_host_bridge_only():
+    """PET-014: pet-life must not hardcode user-facing copy; lines arrive localized
+    through the bridge (info.lines) so the desktop pet speaks the UI language."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/pet-life.ts').read_text(encoding='utf-8')
+    assert 'state.info?.lines' in source
+    assert "'pet.greetingMorning'" in source
+    assert 'BORED_AFTER_MS' in source
+    assert 'SLEEPING_AFTER_MS' in source
+    assert 'POKE_COMBO_COUNT' in source
+
+
+def test_live2d_probe_flag_is_gated_behind_env():
+    """PET-015: the live2dProbe query is a diagnostic and must only be added when
+    READMD_PET_LIVE2D_PROBE=1 is explicitly set."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/electron-main.ts').read_text(encoding='utf-8')
+    assert "process.env.READMD_PET_LIVE2D_PROBE === '1'" in source
+    assert 'live2dProbe' in source
+
+
+def test_mount_failure_is_surfaced_not_silent():
+    """PET-016: a failed overlay mount must set a diagnostic flag instead of
+    leaving a silently empty transparent window."""
+    source = Path('packages/readmd-hermes-pet-adapter/src/renderer.tsx').read_text(encoding='utf-8')
+    assert 'overlayMountState' in source
+    assert "'failed'" in source
