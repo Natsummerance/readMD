@@ -128,7 +128,24 @@ window.i18n = {
     'ux.starterQuestions': '带着问题阅读',
     'ux.starterQuestionsHint': '发现疑点与值得追问的地方',
     'ux.noDocument': '自由对话 · 尚未打开文档',
-    'batch.statusOk': '成功'
+    'batch.statusOk': '成功',
+    'plugin.capability.ocr': '光学识别',
+    'plugin.capability.table': '表格解析',
+    'plugin.capability.pdf': 'PDF 解析',
+    'plugin.capability.audio': '语音识别',
+    'plugin.capability.web': '网页提取',
+    'plugin.category.web': '网页提取',
+    'plugin.capability.document': '文档转换',
+    'plugin.capability.latex': 'LaTeX 解析',
+    'plugin.capability.keywords': '关键词提取',
+    'plugin.capability.highlight': '代码高亮',
+    'plugin.capability.encoding': '字符编码',
+    'plugin.filter.all': '全部',
+    'plugin.pluggedIn': '已接通运行',
+    'plugin.standby': '就绪待命',
+    'plugin.exclusiveNotice': '同能力互斥',
+    'plugin.requiresModel': '需模型权重',
+    'plugin.switchedMutual': '已接通 {name}，同能力插件 {other} 已自动切换为休眠'
   },
 
   browserDefaults: {
