@@ -122,8 +122,8 @@ function renderAiEmptyState() {
 function updateAiContextStrip() {
   const label = $('ai-context-file');
   if (!label) return;
-  label.textContent = (typeof state !== 'undefined' && (state.path || state.title))?.split(/[\\/]/).pop() || window.i18n.t('ux.noDocument');
-  label.title = typeof state !== 'undefined' ? (state.path || '') : '';
+  label.textContent = (typeof state !== 'undefined' && (state.file || state.sourceName || state.title))?.split(/[\\/]/).pop() || window.i18n.t('ux.noDocument');
+  label.title = typeof state !== 'undefined' ? (state.file || '') : '';
 }
 
 function initAiComposerUx() {

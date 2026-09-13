@@ -71,7 +71,9 @@ class StaticCacheTest(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(headers.get('Content-Encoding'), 'gzip')
         self.assertIn('Accept-Encoding', headers.get('Vary', ''))
-        self.assertLess(len(body), 200_000)
+        # Includes the 3D graph and companion workbench added in the UI refresh.
+        self.assertLess(len(body), 220_000)
+        self.assertLess(len(body), len(gzip.decompress(body)) * 0.30)
         self.assertIn(b'window.addEventListener', gzip.decompress(body))
 
     def test_modified_since_can_revalidate(self):

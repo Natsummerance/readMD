@@ -7,6 +7,7 @@ const IMG_C = 'C:/conv-test/c.png';
 async function waitForApp(page) {
   await page.goto('/');
   await page.waitForFunction(() => typeof openBatchModal === 'function');
+  await page.waitForFunction(() => window.i18n && window.i18n.dict && Object.keys(window.i18n.dict).length > 0);
 }
 
 async function mockModulesReady(page) {
@@ -39,6 +40,7 @@ test('all-to-markdown workbench is the single entry point for batch conversion',
   await waitForApp(page);
   await page.locator('#btn-more').click();
   await expect(page.locator('#more-menu')).toHaveClass(/open/);
+  await page.locator('.more-group:has(#btn-convert) .more-group-header').click();
   await page.locator('#btn-convert').click();
   await expect(page.locator('#convert-modal')).toBeVisible();
   await expect(page.locator('#convert-title')).toContainText('转 Markdown');

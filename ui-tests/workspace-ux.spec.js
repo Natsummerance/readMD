@@ -1,5 +1,6 @@
 const { test, expect } = require('@playwright/test');
 test.beforeEach(async ({ page }) => {
+  page.on('pageerror', error => console.log('Workspace runtime error:', error.message));
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.ReadMDGraph && typeof openSkillIdeaDialog === 'function');
 });
@@ -52,4 +53,31 @@ test('Backlinks filters, switches tabs and exposes unresolved targets',async({pa
   await page.locator('#backlinks-search').fill('');
   await page.locator('[data-tab="outgoing"]').click();
   await expect(page.locator('.backlink-item')).toBeDisabled();
+});
+
+test('Companion workbench exposes character cards and persistent quiet mode', async ({ page }) => {
+  await page.evaluate(() => openPetSettings());
+  await expect(page.locator('#pet-roster .pet-character-card')).not.toHaveCount(0);
+  await page.locator('#pet-renderer').selectOption('live2d');
+  await expect(page.locator('.pet-character-card[data-renderer="live2d"]')).toContainText('Live2D');
+  await page.locator('#pet-renderer').selectOption('hermes-sprite');
+  await page.locator('[data-pet-section="companion"]').click();
+  await page.locator('#pet-mode-quiet').click();
+  await expect(page.locator('#pet-mode-quiet')).toHaveAttribute('aria-pressed', 'true');
+  const quiet = await page.evaluate(() => {
+    hidePetBubble(); showPetBubble('passive', 3000, 1);
+    return { preference: localStorage.getItem('readmd.pet.quiet'), bubble: document.getElementById('pet-bubble').classList.contains('is-visible') };
+  });
+  expect(quiet).toEqual({ preference: 'true', bubble: false });
+  await page.locator('[data-pet-section="settings"]').click();
+  await expect(page.locator('#pet-runtime')).toBeVisible();
+  await expect(page.locator('#pet-scale')).toBeVisible();
+
+  // Verify that no raw i18n keys (ux.* or pet.*) are exposed anywhere in the pet workbench interface
+  for (const tab of ['characters', 'companion', 'settings']) {
+    await page.locator(`[data-pet-section="${tab}"]`).click();
+    const boxText = await page.locator('#pet-settings-box').innerText();
+    expect(boxText).not.toMatch(/\bux\.[a-zA-Z0-9_]+\b/);
+    expect(boxText).not.toMatch(/\bpet\.[a-zA-Z0-9_]+\b/);
+  }
 });

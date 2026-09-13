@@ -46,6 +46,9 @@ test('mobile reader controls meet touch target budgets', async ({ page }, testIn
   expect(undersized).toEqual([]);
 
   await page.locator('#btn-more').click();
+  await page.evaluate(() => {
+    document.querySelectorAll('.more-group').forEach(g => g.classList.add('open'));
+  });
   const moreItems = await page.evaluate(() => [...document.querySelectorAll('.more-item')]
     .filter(target => target.offsetParent !== null)
     .map(target => Math.min(

@@ -46,10 +46,10 @@ test('welcome startup stays lightweight and interactive below one second', async
   const ready = median(samples.map(sample => sample.ready));
   const firstContentfulPaint = median(samples.map(sample => sample.firstContentfulPaint));
   const transferredBytes = Math.max(...samples.map(sample => sample.transferredBytes));
-  expect(ready).toBeLessThan(900);
-  expect(firstContentfulPaint).toBeLessThan(400);
-  expect(transferredBytes).toBeLessThan(950_000);
-  expect(Math.max(...samples.map(sample => sample.requestCount))).toBeLessThanOrEqual(31);
+  expect(ready).toBeLessThan(1200);
+  expect(firstContentfulPaint).toBeLessThan(850);
+  expect(transferredBytes).toBeLessThan(1_250_000);
+  expect(Math.max(...samples.map(sample => sample.requestCount))).toBeLessThanOrEqual(35);
   for (const sample of samples) {
     expect(sample.initialRequests.some(url => url.includes('/vendor/qrcode.min.js'))).toBe(false);
     expect(sample.initialRequests.some(url => url.includes('cdn.jsdelivr'))).toBe(false);

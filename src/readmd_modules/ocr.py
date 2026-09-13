@@ -331,7 +331,8 @@ def extract_table_to_md(image_path_or_bytes) -> str:
             pm.mount_sandbox()
             from rapid_table import RapidTable
             table_engine = RapidTable()
-            table_html, _ = table_engine(image_path_or_bytes)
+            table_result = table_engine(image_path_or_bytes)
+            table_html = table_result[0] if isinstance(table_result, (tuple, list)) else str(table_result or '')
             md = _html_table_to_md(table_html)
             if md:
                 return md

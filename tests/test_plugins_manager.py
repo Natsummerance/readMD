@@ -59,6 +59,13 @@ class TestPluginManager(unittest.TestCase):
         self._orig_bin = pm.PLUGINS_BIN
         self._orig_tasks = dict(pm._install_tasks)
         self._orig_path_env = os.environ.get('PATH', '')
+        self._orig_sys_path = list(sys.path)
+
+        orig_site_norm = os.path.normcase(os.path.abspath(self._orig_site))
+        sys.path[:] = [
+            p for p in sys.path
+            if not os.path.normcase(os.path.abspath(p)).startswith(orig_site_norm)
+        ]
 
         pm.PLUGINS_DIR = self.test_dir
         pm.PLUGINS_MANIFEST = os.path.join(self.test_dir, 'plugins.json')
@@ -77,6 +84,7 @@ class TestPluginManager(unittest.TestCase):
         pm._install_tasks.clear()
         pm._install_tasks.update(self._orig_tasks)
         os.environ['PATH'] = self._orig_path_env
+        sys.path[:] = self._orig_sys_path
         for leaked in (self.test_dir + os.sep, self.test_dir):
             sys.path[:] = [entry for entry in sys.path if not entry.startswith(leaked)]
         for mod in ('pylatexenc', 'easyocr', 'rapidocr_onnxruntime', 'rapid_table', 'whisper', 'jieba', 'pygments', 'pypandoc'):

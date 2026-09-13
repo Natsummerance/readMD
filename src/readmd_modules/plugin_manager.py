@@ -88,7 +88,7 @@ PLUGIN_SPECS: Dict[str, Dict[str, Any]] = {
         'name_key': 'plugin.rapid_table.name',
         'desc_key': 'plugin.rapid_table.desc',
         'package': 'rapid_table',
-        'pip_args': ['rapid_table'],
+        'pip_args': ['rapid_table>=0.1.3,<=0.3.0'],
         'import_name': 'rapid_table',
         'category': 'document',
         'weight': 'light',
@@ -616,6 +616,11 @@ def _run_pip_inprocess(args: Sequence[str], on_line) -> int:
     stdout, stderr, argv = sys.stdout, sys.stderr, sys.argv
     saved_main = sys.modules.get('__main__')
     saved_env = {key: os.environ.get(key) for key in ('PIP_PROGRESS_BAR', 'NO_COLOR')}
+    saved_executable = sys.executable
+    if getattr(sys, 'frozen', False):
+        py_exe = shutil.which('python') or shutil.which('python3')
+        if py_exe:
+            sys.executable = py_exe
     # 关掉进度条才有稳定的按行输出；冻结态无法分配 tty，动画进度条也无处可画。
     os.environ['PIP_PROGRESS_BAR'] = 'off'
     os.environ['NO_COLOR'] = '1'
@@ -664,6 +669,7 @@ def _run_pip_inprocess(args: Sequence[str], on_line) -> int:
             emitter.flush()
         finally:
             sys.stdout, sys.stderr, sys.argv = stdout, stderr, argv
+            sys.executable = saved_executable
             if saved_main is not None:
                 sys.modules['__main__'] = saved_main
             else:
@@ -791,6 +797,9 @@ def install_plugin_async(plugin_id: str) -> bool:
             '60',
             *spec['pip_args'],
         ]
+        if getattr(sys, 'frozen', False):
+            # 冻结态 PyInstaller 下 ReadMD.exe 无法作为 python 解释器编译源码包，强制仅使用预编译 wheel
+            pip_args.extend(['--only-binary', ':all:'])
         seen_lines: List[str] = []
 
         def on_line(raw: str) -> None:

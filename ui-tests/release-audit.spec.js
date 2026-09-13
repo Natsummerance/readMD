@@ -51,7 +51,7 @@ test('presentation renders offline with initialized Reveal assets', async ({ pag
   });
 
   await page.goto('/');
-  await page.waitForFunction(() => typeof launchPresentationMode === 'function');
+  await page.waitForFunction(() => typeof launchPresentationMode === 'function' && window.i18n && Object.keys(window.i18n.dict || {}).length > 0);
   await page.locator('#btn-zen').focus();
   await page.evaluate(async () => {
     state.original = [

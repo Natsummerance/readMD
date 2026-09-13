@@ -66,7 +66,7 @@
     <button id="btn-more" class="tb-btn icon" title="更多功能" aria-label="更多功能" data-i18n-title="toolbar.more" data-i18n-aria="toolbar.more" aria-haspopup="true" aria-expanded="false">
       <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
     </button>
-    <div id="more-menu" class="more-menu" role="menu" aria-label="更多功能">
+    <div id="more-menu" class="more-menu" role="menu" aria-label="更多功能" data-i18n-aria="menu.moreAria">
       <div class="more-group">
         <button class="more-group-header" type="button" aria-expanded="false"><span data-i18n="menu.grpImport">导入</span><span class="more-group-arrow">›</span></button>
         <div class="more-group-items">
@@ -244,7 +244,7 @@
     <div id="pagination-bar" class="pagination-bar hidden" role="navigation" aria-label="文档分页导航" data-i18n-aria="pagination.ariaLabel">
       <div id="pagination-live" role="status" aria-live="polite" class="visually-hidden"></div>
       <div class="pg-left">
-        <span class="pg-mode-badge" id="pg-mode-badge" title="分页阅读模式">
+        <span class="pg-mode-badge" id="pg-mode-badge" title="分页阅读模式" data-i18n-title="pagination.pageModeTitle">
           <svg class="tb-ic" viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         </span>
         <span class="pg-chapter-label" id="pg-chapter-label"></span>
@@ -357,9 +357,9 @@
         <div class="composer-skill-bar">
           <div class="skill-selector-wrap">
             <svg class="skill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            <select id="ai-template" class="skill-select" title="Prompt 模板：选择后应用到本次对话" data-i18n-title="ai.tplSelectTitle" aria-label="Prompt 模板"></select>
+            <select id="ai-template" class="skill-select" title="Prompt 模板：选择后应用到本次对话" data-i18n-title="ai.tplSelectTitle" aria-label="Prompt 模板" data-i18n-aria="ai.tplAria"></select>
           </div>
-          <button id="ai-tpl-btn" class="skill-manage-btn" title="Skill 工作台与导入" data-i18n-title="ai.templateManage" aria-label="Skill 工作台">
+          <button id="ai-tpl-btn" class="skill-manage-btn" title="Skill 工作台与导入" data-i18n-title="ai.templateManage" aria-label="Skill 工作台" data-i18n-aria="ai.templateManage">
             <span data-i18n="ai.templateManage">模板库</span>
           </button>
         </div>
@@ -375,7 +375,7 @@
             <div class="composer-toolbar-right">
               <button id="ai-clear-ctx" class="new-chat-btn" title="开始一轮新对话" data-i18n="ai.newSession" data-i18n-title="ai.newSession">新对话</button>
               <button id="ai-stop" class="new-chat-btn hidden" data-i18n="ai.stop" disabled>停止</button>
-              <button id="ai-run" class="send-btn" title="发送 (Enter)" aria-label="发送" data-i18n-title="ai.send">
+              <button id="ai-run" class="send-btn" title="发送 (Enter)" aria-label="发送" data-i18n-title="ai.send" data-i18n-aria="ai.send">
                 <span data-i18n="ai.send">发送</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
               </button>
@@ -409,7 +409,7 @@
           <span id="pet-status-dot" class="status-indicator conn-dot"></span>
           <span id="pet-status-text" data-i18n="pet.statusStopped">就绪</span>
           <span class="pet-slug-divider">·</span>
-          <span id="pet-active-slug">Hermes</span>
+          <span id="pet-active-slug" data-i18n="pet.gallery.companion">伴读使者</span>
         </div>
         <p id="pet-status-line" class="pet-status-note" role="status" aria-live="polite"></p>
       </div>
@@ -424,8 +424,8 @@
           </select>
         </div>
         <div class="apple-list-row" id="pet-gallery-row">
-          <label for="pet-gallery" data-i18n="pet.gallery">Hermes 桌宠库</label>
-          <select id="pet-gallery" class="apple-select"><option value="">Hermes</option></select>
+          <label for="pet-gallery" data-i18n="pet.gallery">桌宠库</label>
+          <select id="pet-gallery" class="apple-select"><option value="" data-i18n="pet.gallery.companion">伴读使者</option></select>
           <button id="pet-gallery-delete" class="tb-btn danger hidden" type="button" data-i18n="pet.gallery.delete">删除</button>
           <label class="tb-btn" for="pet-gallery-import" data-i18n="pet.gallery.import">导入精灵图</label>
           <input id="pet-gallery-import" type="file" accept="image/png,image/webp" hidden>
@@ -441,13 +441,13 @@
           </label>
         </div>
 
-        <div class="apple-list-row">
+        <div class="apple-list-row" id="pet-renderer-row">
           <div class="apple-row-info">
             <span class="apple-row-title" data-i18n="pet.renderer">渲染角色</span>
             <span class="apple-row-desc" data-i18n="pet.rendererDesc">选择伴读外观与动画模型</span>
           </div>
           <select id="pet-renderer" class="apple-select" data-i18n-aria="pet.renderer">
-            <option value="hermes-sprite" data-i18n="pet.renderer.sprite">Hermes 伴读使者</option>
+            <option value="hermes-sprite" data-i18n="pet.renderer.sprite">精灵图</option>
             <option value="live2d" data-i18n="pet.renderer.live2d">Arch-Chan 少女</option>
           </select>
         </div>
@@ -488,7 +488,7 @@
         <div class="apple-list-row hidden" id="pet-update-progress-row">
           <div class="apple-row-info" style="width: 100%;">
             <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:4px;">
-              <span id="pet-update-progress-text" class="apple-row-desc">正在下载更新...</span>
+              <span id="pet-update-progress-text" class="apple-row-desc" data-i18n="pet.updateDownloading">正在下载更新...</span>
               <span id="pet-update-progress-percent" style="font-weight:600; color:var(--accent,#007aff);">0%</span>
             </div>
             <div class="pet-progress-bar-wrap">
@@ -514,12 +514,12 @@
 </div>
 
 <!-- 原生桌宠悬浮伴读小组件 (可直接拖拽操控与拖放文档转换) -->
-<div id="readmd-pet-widget" class="pet-widget hidden" role="complementary" aria-label="桌宠伴侣">
+<div id="readmd-pet-widget" class="pet-widget hidden" role="complementary" aria-label="桌宠伴侣" data-i18n-aria="pet.widgetAria">
   <div class="pet-widget-bubble" id="pet-bubble" aria-live="polite">
-    <span class="pet-bubble-text" id="pet-bubble-text">你好呀！我是你的伴读桌宠~</span>
+    <span class="pet-bubble-text" id="pet-bubble-text" data-i18n="pet.bubbleHello">你好呀！我是你的伴读桌宠~</span>
     <span class="pet-bubble-arrow"></span>
   </div>
-  <div class="pet-widget-character-wrap" id="pet-character-wrap" tabindex="0" role="button" aria-label="与桌宠互动">
+  <div class="pet-widget-character-wrap" id="pet-character-wrap" tabindex="0" role="button" aria-label="与桌宠互动" data-i18n-aria="pet.characterAria">
     <div class="pet-widget-character hermes-sprite" id="pet-character"></div>
     <div class="pet-widget-drop-ring" id="pet-drop-ring" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -527,10 +527,10 @@
     </div>
   </div>
   <div class="pet-widget-quick-bar">
-    <button class="pet-quick-btn" id="pet-quick-settings" title="桌宠设置" aria-label="桌宠设置">
+    <button class="pet-quick-btn" id="pet-quick-settings" title="桌宠设置" aria-label="桌宠设置" data-i18n-title="pet.settingsTitle" data-i18n-aria="pet.settingsTitle">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
-    <button class="pet-quick-btn" id="pet-quick-hide" title="收起桌宠" aria-label="收起桌宠">
+    <button class="pet-quick-btn" id="pet-quick-hide" title="收起桌宠" aria-label="收起桌宠" data-i18n-title="pet.hideTitle" data-i18n-aria="pet.hideTitle">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
@@ -689,7 +689,7 @@
           <label class="img-ctl"><span data-i18n="img.angle">角度</span> <input id="img-angle" type="range" min="-180" max="180" step="0.1" value="0"><input id="img-angle-number" class="img-number" type="number" min="-180" max="180" step="0.1" value="0" aria-label="角度" data-i18n-aria="img.angle">°</label></div>
         <div class="img-section"><strong data-i18n="img.view">查看</strong><label class="img-ctl"><span data-i18n="img.zoom">画布缩放</span> <input id="img-view-zoom" type="range" min="25" max="400" value="100"><span id="img-view-zoom-val">100%</span></label><p class="img-help" data-i18n="img.help">滚轮缩放 · 空格拖拽平移 · +/- 缩放</p></div>
         <div class="img-section"><strong data-i18n="img.cropAndOutput">裁剪与输出</strong><select id="img-ratio" title="裁剪比例" data-i18n-title="img.ratio"><option value="free" data-i18n="img.ratioFree">自由比例</option><option value="1:1" data-i18n="img.ratio1_1">1:1 方形</option><option value="4:3" data-i18n="img.ratio4_3">4:3</option><option value="3:2" data-i18n="img.ratio3_2">3:2</option><option value="16:9" data-i18n="img.ratio16_9">16:9</option><option value="orig" data-i18n="img.ratioOrig">原图比例</option></select>
-<div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" aria-label="锁定宽高比" title="锁定宽高比" data-i18n-title="img.lockRatio"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
+<div class="img-size-row"><label><span data-i18n="img.width">宽</span> <input id="img-out-w" class="img-number" type="number" min="1" max="16000"></label><button id="img-size-lock" class="tb-btn icon active" aria-pressed="true" aria-label="锁定宽高比" title="锁定宽高比" data-i18n-title="img.lockRatio" data-i18n-aria="img.lockRatio"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></button><label><span data-i18n="img.height">高</span> <input id="img-out-h" class="img-number" type="number" min="1" max="16000"></label></div></div>
         <div class="img-btn-row"><button id="img-undo" class="tb-btn" data-i18n="editor.undo" disabled>撤销</button><button id="img-redo" class="tb-btn" data-i18n="editor.redo" disabled>重做</button><button id="img-reset" class="tb-btn" data-i18n="img.reset">重置</button></div>
       </aside>
     </div>
@@ -714,7 +714,7 @@
       </button>
     </div>
     <div class="tpl-toolbar-actions">
-      <input id="tpl-search" type="search" placeholder="搜索模板..." aria-label="搜索模板" data-i18n-placeholder="tpl.searchPlaceholder">
+      <input id="tpl-search" type="search" placeholder="搜索模板..." aria-label="搜索模板" data-i18n-placeholder="tpl.searchPlaceholder" data-i18n-aria="tpl.searchPlaceholder">
       <button id="tpl-import-btn" class="tb-btn" title="支持导入 .md / .json 格式的提示词模板文件" data-i18n="tpl.importMd" data-i18n-title="tpl.importHint" aria-expanded="false" aria-controls="tpl-import-menu">
         <svg class="tb-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         <span data-i18n="tpl.importMd">导入模板 (.md)</span>
@@ -958,8 +958,8 @@
       </div>
     </div>
     <div class="close-confirm-actions">
-      <button id="confirm-cancel" class="tb-btn">取消</button>
-      <button id="confirm-action" class="tb-btn danger">确认</button>
+      <button id="confirm-cancel" class="tb-btn" data-i18n="dialog.cancel">取消</button>
+      <button id="confirm-action" class="tb-btn danger" data-i18n="dialog.confirm">确认</button>
     </div>
   </div>
 </div>
@@ -1169,7 +1169,7 @@
       <div class="plugin-meta-indicators">
         <div class="plugin-indicator-item">
           <span class="plugin-meta-label" data-i18n="plugin.ffmpegStatus">FFmpeg 状态</span>：
-          <span id="plugin-ffmpeg-badge" class="plugin-badge">检测中…</span>
+          <span id="plugin-ffmpeg-badge" class="plugin-badge" data-i18n="plugin.detecting">检测中…</span>
         </div>
         <span id="plugin-sandbox-path" class="plugin-path hidden">—</span>
       </div>
@@ -1269,7 +1269,7 @@
     <div class="lang-search-wrap">
 <input id="lang-search-input" class="lang-search-input" type="text" placeholder="搜索语言 / Search language..." aria-label="搜索语言" aria-controls="lang-grid" data-i18n-placeholder="lang.search" data-i18n-aria="lang.search">
     </div>
-    <div id="lang-grid" class="lang-grid-container" role="listbox" aria-label="语言 / Language"></div>
+    <div id="lang-grid" class="lang-grid-container" role="listbox" aria-label="语言 / Language" data-i18n-aria="lang.title"></div>
   </div>
 </div>
 
@@ -1293,7 +1293,7 @@
 <footer id="statusbar">
   <div class="statusbar-left-group">
     <span id="status-version" class="status-version" title="ReadMD 当前版本" data-i18n-title="status.version">v2.3.9</span>
-    <button id="status-pagination" type="button" class="status-pagination hidden" title="点击切换阅读模式"></button>
+    <button id="status-pagination" type="button" class="status-pagination hidden" title="点击切换阅读模式" data-i18n-title="pagination.switchModeTitle"></button>
     <span id="status-left"></span>
   </div>
   <span id="status-right"></span>
@@ -1361,10 +1361,10 @@
       <div class="modal-form-group">
         <label for="code-chunk-lang" data-i18n="editor.codeChunkLang">编程语言：</label>
         <select id="code-chunk-lang" class="modal-select">
-          <option value="python">Python (Pyodide / 本地运行)</option>
+          <option value="python" data-i18n="code.python">Python (Pyodide / 本地运行)</option>
           <option value="javascript">JavaScript (Node / Web)</option>
           <option value="bash">Bash / Shell</option>
-          <option value="r">R (科学计算)</option>
+          <option value="r" data-i18n="code.r">R (科学计算)</option>
           <option value="php">PHP</option>
           <option value="go">Go</option>
           <option value="ruby">Ruby</option>
@@ -1403,13 +1403,13 @@
       <div class="modal-form-group">
         <label for="diagram-type" data-i18n="editor.diagramType">图表类型：</label>
         <select id="diagram-type" class="modal-select">
-          <option value="plantuml">PlantUML (时序图 / 架构图 / UML · 默认联网渲染，本地 Java+JAR 可离线)</option>
-          <option value="tikz">TikZ / PGFPlots (LaTeX 矢量几何与函数图 · 离线)</option>
-          <option value="wavedrom">WaveDrom (数字电路波形图 · 离线)</option>
-          <option value="vega-lite">Vega-Lite (统计数据可视化与图表 · 离线)</option>
-          <option value="chart">Chart.js (离线)</option>
-          <option value="graphviz">Graphviz / DOT (有向图与网络拓扑 · 离线)</option>
-          <option value="bitfield">BitField (硬件寄存器与协议字段图 · 离线)</option>
+          <option value="plantuml" data-i18n="diagram.plantuml">PlantUML (时序图 / 架构图 / UML)</option>
+          <option value="tikz" data-i18n="diagram.tikz">TikZ / PGFPlots (LaTeX 矢量几何与函数图 · 离线)</option>
+          <option value="wavedrom" data-i18n="diagram.wavedrom">WaveDrom (数字电路波形图 · 离线)</option>
+          <option value="vega-lite" data-i18n="diagram.vegalite">Vega-Lite (统计数据可视化与图表 · 离线)</option>
+          <option value="chart" data-i18n="diagram.chartjs">Chart.js (图表 · 离线)</option>
+          <option value="graphviz" data-i18n="diagram.graphviz">Graphviz / DOT (有向图与网络拓扑 · 离线)</option>
+          <option value="bitfield" data-i18n="diagram.bitfield">BitField (硬件寄存器与协议字段图 · 离线)</option>
         </select>
       </div>
         <div class="modal-form-group form-gap-top">
@@ -1436,7 +1436,7 @@
       <div class="modal-form-group">
         <label for="doc-import-path" data-i18n="editor.docImportPath">子文档相对路径：</label>
         <div class="doc-import-path-row">
-          <input id="doc-import-path" type="text" class="modal-input doc-import-path-input" placeholder="chapter1.md 或 ./subdocs/appendix.md">
+          <input id="doc-import-path" type="text" class="modal-input doc-import-path-input" placeholder="chapter1.md 或 ./subdocs/appendix.md" data-i18n-placeholder="subdoc.pathPlaceholder">
           <button id="doc-import-browse" type="button" class="tb-btn" data-i18n="editor.browseFile">浏览…</button>
         </div>
       </div>
@@ -1451,7 +1451,7 @@
         </div>
         <div class="modal-form-group">
         <label for="doc-import-lines" data-i18n="editor.docImportLines">行号切片 (可选)：</label>
-          <input id="doc-import-lines" type="text" class="modal-input" placeholder="例如: 10-50">
+          <input id="doc-import-lines" type="text" class="modal-input" placeholder="例如: 10-50" data-i18n-placeholder="subdoc.linesPlaceholder">
         </div>
       </div>
       <div class="modal-footer">
@@ -1473,7 +1473,7 @@
       <p style="font-size:12px;color:var(--text-muted);margin:0 0 12px;" data-i18n="editor.frontmatterModalDesc">在文档顶部插入标准 YAML Frontmatter，用于配置文档标题、作者、Reveal.js 演示主题及全局样式。</p>
       <div class="modal-form-group">
         <label for="fm-input-title" data-i18n="editor.frontmatterTitle">文档标题：</label>
-        <input id="fm-input-title" type="text" class="modal-input" placeholder="我的演说 / 报告文档">
+        <input id="fm-input-title" type="text" class="modal-input" placeholder="我的演说 / 报告文档" data-i18n-placeholder="presentation.titlePlaceholder">
       </div>
       <div class="modal-form-group form-gap-top">
         <label for="fm-input-author" data-i18n="editor.frontmatterAuthor">作者 / 演讲者：</label>
@@ -1483,27 +1483,27 @@
         <div class="modal-form-group">
           <label for="fm-select-theme" data-i18n="editor.frontmatterTheme">Reveal.js 演示主题：</label>
           <select id="fm-select-theme" class="modal-select">
-            <option value="black">Black (现代深色 / 默认)</option>
-            <option value="white">White (明亮纯白)</option>
-            <option value="league">League (几何现代灰)</option>
-            <option value="beige">Beige (复古暖米色)</option>
-            <option value="night">Night (暗夜高对比)</option>
-            <option value="serif">Serif (优雅衬线文学)</option>
-            <option value="simple">Simple (极简清爽)</option>
-            <option value="solarized">Solarized (程序员经典太阳色)</option>
-            <option value="blood">Blood (深红暗黑风格)</option>
-            <option value="moon">Moon (蓝调月夜)</option>
+            <option value="black" data-i18n="presentation.themeBlack">Black (现代深色 / 默认)</option>
+            <option value="white" data-i18n="presentation.themeWhite">White (明亮纯白)</option>
+            <option value="league" data-i18n="presentation.themeLeague">League (几何现代灰)</option>
+            <option value="beige" data-i18n="presentation.themeBeige">Beige (复古暖米色)</option>
+            <option value="night" data-i18n="presentation.themeNight">Night (暗夜高对比)</option>
+            <option value="serif" data-i18n="presentation.themeSerif">Serif (优雅衬线文学)</option>
+            <option value="simple" data-i18n="presentation.themeSimple">Simple (极简清爽)</option>
+            <option value="solarized" data-i18n="presentation.themeSolarized">Solarized (程序员经典太阳色)</option>
+            <option value="blood" data-i18n="presentation.themeBlood">Blood (深红暗黑风格)</option>
+            <option value="moon" data-i18n="presentation.themeMoon">Moon (蓝调月夜)</option>
           </select>
         </div>
         <div class="modal-form-group">
           <label for="fm-select-transition" data-i18n="editor.frontmatterTransition">幻灯片切页动效：</label>
           <select id="fm-select-transition" class="modal-select">
-            <option value="slide">Slide (平滑滑动 / 默认)</option>
-            <option value="fade">Fade (淡入淡出)</option>
-            <option value="convex">Convex (凸面翻转)</option>
-            <option value="concave">Concave (凹面翻转)</option>
-            <option value="zoom">Zoom (缩放进出)</option>
-            <option value="none">None (无动画)</option>
+            <option value="slide" data-i18n="presentation.transSlide">Slide (平滑滑动 / 默认)</option>
+            <option value="fade" data-i18n="presentation.transFade">Fade (淡入淡出)</option>
+            <option value="convex" data-i18n="presentation.transConvex">Convex (凸面翻转)</option>
+            <option value="concave" data-i18n="presentation.transConcave">Concave (凹面翻转)</option>
+            <option value="zoom" data-i18n="presentation.transZoom">Zoom (缩放进出)</option>
+            <option value="none" data-i18n="presentation.transNone">None (无动画)</option>
           </select>
         </div>
       </div>

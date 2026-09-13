@@ -304,6 +304,7 @@ test('welcome keeps toolbar disabled and six modules; clipboard lives in more me
   }
   await expect(page.locator('#btn-clipboard-new')).toBeHidden();
   await page.locator('#btn-more').click();
+  await page.locator('.more-group:has(#btn-clipboard-new) .more-group-header').click();
   await expect(page.locator('#btn-clipboard-new')).toBeVisible();
 });
 
@@ -858,12 +859,8 @@ test('v2.3.7 more menu accordion groups and document-dependent disabled state', 
   await expect(page.locator('#btn-share')).toHaveAttribute('disabled', '');
 
   // 4. 打开/加载虚拟文档后，依赖功能激活
-  await page.evaluate(() => {
-    state.tabs = [{ id: 'tab_v1', title: 'test.md', name: 'test.md', content: '# Hello World\n```python\nprint(1)\n```', isDirty: false }];
-    state.activeTabId = 'tab_v1';
-    state.original = '# Hello World\n```python\nprint(1)\n```';
-    state.mode = 'virtual';
-    updateStatus();
+  await page.evaluate(async () => {
+    await renderVirtual('test', 'test.md', '', '# Hello World\n```python cmd=true\nprint(1)\n```', []);
   });
 
   await expect(page.locator('#btn-presentation-menu')).not.toHaveAttribute('disabled', '');
@@ -878,6 +875,7 @@ test('v2.3.7 custom styles and html head injection modal', async ({ page }) => {
   await page.waitForSelector('#btn-more');
 
   await page.locator('#btn-more').click();
+  await page.locator('.more-group:has(#btn-style-custom) .more-group-header').click();
   await page.locator('#btn-style-custom').click();
 
   const modal = page.locator('#style-custom-modal');
@@ -1356,7 +1354,6 @@ test('browser mode opens, edits, and saves a local document end to end', async (
       mode: state.mode,
       file: state.file,
       browserCopy: state.browserCopy,
-      original: state.original,
       toast: document.getElementById('toast')?.textContent,
     }));
     expect(uploadState).toMatchObject({ mode: 'file', browserCopy: true });
@@ -1653,7 +1650,7 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
   await page.waitForFunction(() => typeof renderTabsBar === 'function');
   const buildVersion = (await fs.readFile(path.join(__dirname, '../VERSION'), 'utf8')).trim();
   await expect(page.locator('#status-version')).toHaveText(`v${buildVersion}`);
-  await expect(page.locator('#menu-version-label')).toHaveText(`当前版本 v${buildVersion}`);
+  await expect(page.locator('#menu-version-label')).toHaveText(new RegExp(`当前版本 [vV]${buildVersion}`));
 
   for (const id of [
     'ai-settings-modal', 'ai-history-modal', 'history-modal', 'img-modal', 'formula-modal',
@@ -1685,11 +1682,11 @@ test('core workflow controls satisfy accessibility contracts', async ({ page }) 
   await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'true');
 
   const firstGroupHeader = page.locator('.more-group-header').first();
-  await expect(firstGroupHeader).toHaveAttribute('aria-expanded', 'true');
-  await firstGroupHeader.click();
   await expect(firstGroupHeader).toHaveAttribute('aria-expanded', 'false');
   await firstGroupHeader.click();
   await expect(firstGroupHeader).toHaveAttribute('aria-expanded', 'true');
+  await firstGroupHeader.click();
+  await expect(firstGroupHeader).toHaveAttribute('aria-expanded', 'false');
   await page.keyboard.press('Escape');
   await expect(page.locator('#btn-more')).toHaveAttribute('aria-expanded', 'false');
   await expect(page.locator('#btn-more')).toBeFocused();

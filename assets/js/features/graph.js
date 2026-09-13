@@ -1,7 +1,36 @@
 // Three-dimensional layout, perspective projection and accessible note navigation.
 (function () {
-  'use strict';
-  const t = (key, params) => window.i18n?.t(key, params) || key;
+  const GRAPH_FALLBACKS = {
+    'graph.title': '知识图谱',
+    'graph.reset': '重置视角',
+    'toolbar.close': '关闭',
+    'graph.zoomOut': '缩小',
+    'graph.zoomIn': '放大',
+    'ux.graphSearch': '搜索节点与别名',
+    'ux.labels': '显示名称',
+    'ux.neighbors': '仅邻近关联',
+    'ux.notes': '关联笔记列表',
+    'ux.graphControls': '拖拽旋转 · 滚轮缩放 · 2D/3D切换',
+    'ux.noResults': '未找到匹配节点',
+    'ux.connections': '{count} 处关联',
+    'ux.openNote': '打开笔记',
+    'ux.loadFailed': '加载失败',
+    'ux.filterLinks': '过滤双向链接...',
+    'ux.linkHint': '使用 [[双链]] 建立笔记关联',
+    'graph.noLinks': '暂无双向链接',
+    'graph.deadlinkUncreated': '未创建的笔记'
+  };
+  const t = (key, params) => {
+    const val = window.i18n?.t(key, params);
+    if (val && val !== key) return val;
+    let fallback = GRAPH_FALLBACKS[key] || key;
+    if (typeof fallback === 'string' && params) {
+      for (const [k, v] of Object.entries(params)) {
+        fallback = fallback.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+      }
+    }
+    return fallback;
+  };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const api = (url) => (typeof apiFetch === 'function' ? apiFetch(url) : fetch(url)).then(async res => {
     const data = await res.json();
@@ -259,7 +288,7 @@
       updateVisibility(backlinkData.backlinks.length>0||backlinkData.forward_links.length>0||hasGraph());
     }catch(_){if(id===backlinkRequest){drawer.querySelector('#backlinks-content').textContent=t('ux.loadFailed');updateVisibility();}}
   }
-  function toggleDrawer(){if(!activeDoc())return;createDrawer();drawer.classList.toggle('hidden');if(!drawer.classList.contains('hidden')){refreshBacklinks(currentFile||state.path);drawer.querySelector('input').focus();}}
+  function toggleDrawer(){if(!activeDoc())return;createDrawer();drawer.classList.toggle('hidden');if(!drawer.classList.contains('hidden')){refreshBacklinks(currentFile||state.file);drawer.querySelector('input').focus();}}
   const WIKILINK_RE=/\[\[([^\]\n|#]+)(?:#([^\]\n|]+))?(?:\|([^\]\n]+))?\]\]/;
   function hasGraph(content){if(typeof content==='string')return WIKILINK_RE.test(content);return activeDoc()&&WIKILINK_RE.test(state.fixed||state.original||'');}
   function updateVisibility(force){const btn=document.getElementById('btn-graph');if(btn){btn.disabled=!activeDoc();btn.classList.toggle('hidden',!activeDoc()||!(force??hasGraph()));}}

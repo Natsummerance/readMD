@@ -1247,6 +1247,8 @@ class Handler(BaseHTTPRequestHandler):
             self._api_pet_status()
         elif path == '/api/pets/configure':
             self._api_pet_configure()
+        elif path == '/api/pets/interact':
+            self._api_pet_interact()
         elif path == '/api/pets/import':
             self._api_pet_import()
         elif path == '/api/pets/remove':
@@ -1678,6 +1680,23 @@ class Handler(BaseHTTPRequestHandler):
             logging.exception('pet configure failed')
             self._send_json(500, {'ok': False, 'error_code': 'pet_configure_failed'})
 
+    def _api_pet_interact(self):
+        if self.command != 'POST':
+            self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
+            return
+        try:
+            body = self._read_json_body(65536)
+            action = str(body.get('action') or '').strip()
+            character = str(body.get('character') or '').strip() or None
+            api = _get_shared_api()
+            res = api.interact_pet(action, character=character)
+            self._send_json(200, res)
+        except ValueError as e:
+            self._send_json(400, {'ok': False, 'code': str(e)})
+        except Exception:
+            logging.exception('pet interact failed')
+            self._send_json(500, {'ok': False, 'code': 'pet_interact_failed'})
+
     def _handle_pet_lifecycle_action(self, action_name, method_name, error_code):
         if self.command != 'POST':
             self._send_json(405, {'ok': False, 'error_code': 'method_not_allowed'})
@@ -1758,10 +1777,17 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json(400, {'ok': False, 'error_code': 'confirmation_required'})
                 return
             slug = str(body.get('slug') or '').strip().lower()
-            from src.readmd_modules.pet import list_pets
-            if slug and slug not in {item.slug for item in list_pets(DATA_DIR, include_builtins=True)}:
+            from src.readmd_modules.pet import find_pet
+            if slug and not find_pet(DATA_DIR, slug):
                 self._send_json(404, {'ok': False, 'error_code': 'pet_not_found'})
                 return
+            if slug:
+                asset_pet_dir = os.path.join(APP_DIR, 'assets', 'pet', slug)
+                target_dir = os.path.join(DATA_DIR, 'pets', slug)
+                if os.path.isdir(asset_pet_dir) and not os.path.isdir(target_dir):
+                    import shutil
+                    os.makedirs(os.path.dirname(target_dir), exist_ok=True)
+                    shutil.copytree(asset_pet_dir, target_dir)
             settings = load_json(SETTINGS_FILE, {})
             settings = settings if isinstance(settings, dict) else {}
             if slug:
@@ -1779,8 +1805,14 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             slug = str(qs.get('slug', [''])[0] or '')
-            from src.readmd_modules.pet import list_pets
-            pet = next((item for item in list_pets(DATA_DIR, include_builtins=True) if item.slug == slug), None)
+            thumb_path = os.path.join(APP_DIR, 'assets', 'pet', 'thumbs', f'{slug}.png')
+            if os.path.isfile(thumb_path):
+                with open(thumb_path, 'rb') as stream:
+                    body = stream.read(5 * 1024 * 1024)
+                self._send(200, 'image/png', body, cache_control='private, max-age=86400')
+                return
+            from src.readmd_modules.pet import find_pet
+            pet = find_pet(DATA_DIR, slug)
             if not pet:
                 self._send_json(404, {'ok': False, 'error_code': 'pet_not_found'})
                 return
@@ -3475,9 +3507,9 @@ class Handler(BaseHTTPRequestHandler):
                 target = os.path.join(upload_dir, safe_name)
             with open(target, 'wb') as f:
                 f.write(data)
-            # 用户拖入或上传新文件时，主动清理此前遗留的同名输出 .md，杜绝已存在误报
+            # 用户拖入或上传新文件时，主动清理此前遗留的同名输出 .md，杜绝已存在误报（非 .md 自身）
             target_md = _md_output_path(target)
-            if os.path.isfile(target_md):
+            if os.path.abspath(target_md) != os.path.abspath(target) and os.path.isfile(target_md):
                 try:
                     os.remove(target_md)
                 except OSError:
@@ -3689,11 +3721,13 @@ class Api(object):
             HermesPetLauncher,
             HermesPetPluginInstaller,
             PetBatchQueue,
+            PetCompanion,
             PetController,
             get_default_pet_install_root,
             clean_legacy_pet_installations,
         )
         self._pet_controller = PetController()
+        self._pet_companion = PetCompanion(DATA_DIR)
         self._pet_in_app = True
         self._pet_queue = PetBatchQueue()
         pet_install_root = get_default_pet_install_root()
@@ -5010,6 +5044,41 @@ class Api(object):
             locale, lines = 'en', {}
         info['locale'] = locale
         info['lines'] = lines
+        slug = str(settings.get('pet_slug') or '') if isinstance(settings, dict) else ''
+        companion_character = slug or 'arch-chan'
+        try:
+            info['companion'] = self._pet_companion.snapshot(companion_character)
+        except Exception:
+            pass
+        try:
+            from src.readmd_modules.pet.store import get_catalog_pets
+            catalog = get_catalog_pets()
+            char_list = []
+            live2d_name = lines.get('pet.renderer.live2d', 'Live2D')
+            char_list.append({'slug': 'arch-chan', 'name': f'Arch-chan ({live2d_name})', 'renderer': 'live2d'})
+            preset_dict = {}
+            for cand in (locale, 'en'):
+                try:
+                    p = os.path.join(APP_DIR, 'assets', 'i18n', f'{cand}.json')
+                    with open(p, encoding='utf-8') as f:
+                        d = json.load(f)
+                    for k, v in d.items():
+                        if k.startswith('pet.preset.'):
+                            preset_dict.setdefault(k, v)
+                except Exception:
+                    pass
+            is_zh = str(locale).lower().startswith('zh')
+            for p in catalog:
+                pslug = p.get('slug')
+                if not pslug:
+                    continue
+                pname = preset_dict.get(f'pet.preset.{pslug}')
+                if not pname:
+                    pname = p.get('zh_name') if is_zh else p.get('en_name') or pslug
+                char_list.append({'slug': pslug, 'name': pname, 'renderer': 'hermes-sprite'})
+            info['characters'] = char_list
+        except Exception:
+            pass
         return {
             'bounds': bounds,
             'renderer': renderer,
@@ -5029,13 +5098,28 @@ class Api(object):
         settings = load_json(SETTINGS_FILE, {})
         slug = settings.get('pet_slug') if isinstance(settings, dict) else None
         if slug:
-            from src.readmd_modules.pet import list_pets
-            pet = next((item for item in list_pets(DATA_DIR, include_builtins=True) if item.slug == slug), None)
-            if pet:
+            from src.readmd_modules.pet import find_pet, inspect_sprite_geometry
+            pet = find_pet(DATA_DIR, slug)
+            if pet and os.path.isfile(pet.spritesheet):
+                geo = inspect_sprite_geometry(pet.spritesheet)
                 with open(pet.spritesheet, 'rb') as source:
-                    prefs['info'].update(spritesheetBase64=base64.b64encode(source.read()).decode('ascii'),
-                                         spritesheetRevision=pet.sha256,
-                                         mime='image/webp' if pet.spritesheet.endswith('.webp') else 'image/png')
+                    prefs['info'].update(
+                        spritesheetBase64=base64.b64encode(source.read()).decode('ascii'),
+                        spritesheetRevision=pet.sha256,
+                        mime='image/webp' if pet.spritesheet.endswith('.webp') else 'image/png',
+                        displayName=pet.display_name,
+                        frameW=geo['frameW'],
+                        frameH=geo['frameH'],
+                        framesPerState=geo['framesPerState'],
+                        isSingleFrame=geo.get('isSingleFrame', False),
+                    )
+                    if geo.get('stateRows'):
+                        prefs['info']['stateRows'] = geo['stateRows']
+        companion_character = str(slug or '') or 'arch-chan'
+        try:
+            prefs['info']['companion'] = self._pet_companion.snapshot(companion_character)
+        except Exception:
+            pass
         return self._pet_bridge.publish(
             runtime, info=prefs['info'], bounds=prefs['bounds'],
             renderer=prefs['renderer'], fullscreen=foreground_fullscreen(),
@@ -5056,6 +5140,11 @@ class Api(object):
         status['preferences'] = dict(prefs['info'], renderer=prefs['renderer'])
         settings = load_json(SETTINGS_FILE, {})
         status['active_slug'] = str(settings.get('pet_slug') or '') if isinstance(settings, dict) else ''
+        companion_character = status['active_slug'] or 'arch-chan'
+        try:
+            status['companion'] = self._pet_companion.snapshot(companion_character)
+        except Exception:
+            status['companion'] = None
         if self._pet_in_app:
             status['installed'] = True
         elif isinstance(settings, dict) and 'pet_installed' in settings:
@@ -5068,6 +5157,16 @@ class Api(object):
         except Exception:
             status['update'] = {'ok': True, 'has_update': False}
         return status
+
+    def interact_pet(self, action, character=None):
+        if not character:
+            settings = load_json(SETTINGS_FILE, {})
+            character = str(settings.get('pet_slug') or '') if isinstance(settings, dict) else ''
+        companion_character = character or 'arch-chan'
+        res = self._pet_companion.interact(companion_character, action)
+        if res.get('ok'):
+            self._publish_pet_runtime()
+        return res
 
     def get_pet_update_status(self):
         is_installed = self._pet_launcher.status().get('available', False)
@@ -5198,9 +5297,9 @@ class Api(object):
         if confirm is not True:
             return {'ok': False, 'error_code': 'confirmation_required'}
         try:
-            from src.readmd_modules.pet import list_pets
+            from src.readmd_modules.pet import find_pet
             slug = str(slug or '').strip().lower()
-            if slug and slug not in {item.slug for item in list_pets(DATA_DIR)}:
+            if slug and not find_pet(DATA_DIR, slug):
                 return {'ok': False, 'error_code': 'pet_not_found'}
             self.save_settings({'pet_slug': slug} if slug else {'pet_slug': None})
             return {'ok': True, 'active': slug}
@@ -5353,6 +5452,9 @@ class Api(object):
         command = self._pet_bridge.take_command()
         if not command:
             return None
+        if command.get('type') == 'ready':
+            self._publish_pet_runtime()
+            return {'type': 'ready', 'ok': True}
         if command.get('type') == 'open-menu':
             push_pet_menu()
             return {'type': 'open-menu', 'ok': True}
@@ -6434,7 +6536,68 @@ PET_LINE_KEYS = (
     'pet.sleepQuote2',
     'pet.taskBusy',
     'pet.taskError',
+    'pet.action.pet',
+    'pet.action.feed',
+    'pet.action.play',
+    'pet.action.rest',
+    'pet.action.wake',
+    'pet.life.level',
+    'pet.life.energy',
+    'pet.life.mood',
+    'pet.life.affection',
+    'pet.life.characters',
+    'pet.life.reader',
+    'pet.action.pet.done',
+    'pet.action.feed.done',
+    'pet.action.play.done',
+    'pet.action.rest.done',
+    'pet.action.wake.done',
+    'pet.life.needsRest',
+    'pet.life.cooldown',
 )
+
+PET_LINE_DEFAULTS = {
+    'zh-CN': {
+        'pet.action.pet': '摸摸头',
+        'pet.action.feed': '投喂',
+        'pet.action.play': '玩耍',
+        'pet.action.rest': '休息',
+        'pet.action.wake': '叫醒',
+        'pet.life.level': '等级',
+        'pet.life.energy': '体力',
+        'pet.life.mood': '心情',
+        'pet.life.affection': '亲密度',
+        'pet.life.characters': '角色切换',
+        'pet.life.reader': '打开阅读器',
+        'pet.action.pet.done': '摸摸头真舒服，继续陪你读书！',
+        'pet.action.feed.done': '谢谢投喂，补充好体力啦！',
+        'pet.action.play.done': '玩得很开心！和你更亲近啦。',
+        'pet.action.rest.done': '我先休息一会儿，慢慢恢复体力。',
+        'pet.action.wake.done': '醒来啦，继续陪着你！',
+        'pet.life.needsRest': '体力不足，先喂食或休息一会儿吧。',
+        'pet.life.cooldown': '过会儿再来一次吧。',
+    },
+    'en': {
+        'pet.action.pet': 'Pet',
+        'pet.action.feed': 'Feed',
+        'pet.action.play': 'Play',
+        'pet.action.rest': 'Rest',
+        'pet.action.wake': 'Wake up',
+        'pet.life.level': 'Level',
+        'pet.life.energy': 'Energy',
+        'pet.life.mood': 'Mood',
+        'pet.life.affection': 'Bond',
+        'pet.life.characters': 'Characters',
+        'pet.life.reader': 'Open reader',
+        'pet.action.pet.done': 'That feels nice! Let us keep reading.',
+        'pet.action.feed.done': 'Thanks for the snack! Energy restored.',
+        'pet.action.play.done': 'That was fun! Our bond is growing.',
+        'pet.action.rest.done': 'I will rest a while to recover energy.',
+        'pet.action.wake.done': 'I am awake and ready to join you.',
+        'pet.life.needsRest': 'Time to rest or have a snack first.',
+        'pet.life.cooldown': 'Please wait a moment before trying again.',
+    },
+}
 
 _pet_line_pack_cache = {}
 
@@ -6467,6 +6630,14 @@ def _pet_locale_line_pack(locale):
             continue
         if candidate == 'en':
             break
+
+    is_zh = code.lower().startswith('zh')
+    default_dict = PET_LINE_DEFAULTS.get('zh-CN' if is_zh else 'en', {})
+    for key, val in default_dict.items():
+        strings.setdefault(key, val)
+    for key, val in PET_LINE_DEFAULTS.get('en', {}).items():
+        strings.setdefault(key, val)
+
     pack = {key: strings[key] for key in PET_LINE_KEYS if key in strings}
     _pet_line_pack_cache[code] = pack
     return code, pack

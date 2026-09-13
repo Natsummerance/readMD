@@ -133,6 +133,7 @@ function saveLastFile(path) {
 
 function afterRender() {
   startModules();
+  if (typeof updateAiContextStrip === 'function') updateAiContextStrip();
   if (window.ReadMDGraph && typeof window.ReadMDGraph.updateVisibility === 'function') {
     window.ReadMDGraph.updateVisibility();
   }

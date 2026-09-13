@@ -1,9 +1,13 @@
 const { test } = require('@playwright/test');
 
 test('measure tpl-box width and layout', async ({ page }) => {
-  await page.goto('http://127.0.0.1:26891/');
-  await page.waitForFunction(() => typeof openTplModal === 'function');
-  await page.evaluate(() => openTplModal());
+  await page.goto('/');
+  await page.waitForFunction(() => window.__readmdAppReady === true);
+  await page.evaluate(() => {
+    const btn = document.getElementById('ai-tpl-btn');
+    if (btn) btn.click();
+    else document.getElementById('tpl-modal').classList.remove('hidden');
+  });
   await page.waitForTimeout(300);
   const m = await page.evaluate(() => {
     const box = document.querySelector('#tpl-box');
