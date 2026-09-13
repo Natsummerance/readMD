@@ -37,6 +37,7 @@ export interface PetInfo {
   loopMs?: number
   scale?: number
   stateRows?: string[]
+  isSingleFrame?: boolean
 }
 
 export interface PetInfoMeta {

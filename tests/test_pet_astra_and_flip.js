@@ -56,6 +56,7 @@ elements['pet-status-line'] = mockElement('pet-status-line');
 
 global.$ = id => elements[id] || null;
 global.window = {
+  dispatchEvent() {},
   innerWidth: 1024,
   innerHeight: 768,
   addEventListener() {},
@@ -63,7 +64,7 @@ global.window = {
   i18n: {
     t(key) {
       const dict = {
-        'pet.gallery.hermes': 'Hermes 伴读使者',
+        'pet.gallery.hermes': '伴读使者',
         'pet.preset.mochi': '糯米 / Mochi',
         'pet.preset.moss': '苔苔 / Moss',
         'pet.preset.amber': '琥珀 / Amber',
@@ -121,8 +122,8 @@ global.apiFetch = async (url) => {
 (async () => {
   await window.refreshPetGallery();
   const select = elements['pet-gallery'];
-  assert.strictEqual(select.options.length, 5, 'Should have Hermes + 3 builtins + 1 custom = 5 options');
-  assert.strictEqual(select.options[0].text, 'Hermes 伴读使者');
+  assert.strictEqual(select.options.length, 5, 'Should have default + 3 builtins + 1 custom = 5 options');
+  assert.strictEqual(select.options[0].text, '伴读使者');
   assert.strictEqual(select.options[1].text, '糯米 / Mochi');
   assert.strictEqual(select.options[2].text, '苔苔 / Moss');
   assert.strictEqual(select.options[3].text, '琥珀 / Amber');

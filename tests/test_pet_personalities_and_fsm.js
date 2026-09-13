@@ -78,6 +78,7 @@ elements['pet-status-line'] = mockElement('pet-status-line');
 
 global.$ = id => elements[id] || null;
 global.window = {
+  dispatchEvent() {},
   innerWidth: 1024,
   innerHeight: 768,
   addEventListener() {},
@@ -85,7 +86,7 @@ global.window = {
   i18n: {
     t(key) {
       const dict = {
-        'pet.gallery.hermes': 'Hermes 伴读使者',
+        'pet.gallery.hermes': '伴读使者',
         'pet.preset.mochi': '糯米 / Mochi',
         'pet.preset.moss': '苔苔 / Moss',
         'pet.preset.amber': '琥珀 / Amber',
@@ -159,7 +160,7 @@ assert.ok(amberPoke.includes('尾巴') || amberPoke.includes('狐狸') || amberP
 const amberSleep = window.getRoleSpecificQuote('sleeping', null, '');
 assert.ok(amberSleep.includes('大尾巴') || amberSleep.includes('小狐狸'), `Amber sleep quote should match: ${amberSleep}`);
 
-// Fallback to default/Hermes
+// Fallback to default
 elements['pet-gallery'].value = '';
 assert.strictEqual(window.getActivePetSlug(), '');
 const defaultPoke = window.getRoleSpecificQuote('pokesCombo', null, '默认戳戳');

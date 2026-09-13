@@ -34,6 +34,126 @@ _RIFF = b"RIFF"
 _WEBP = b"WEBP"
 
 
+def _read_image_size(path: Path | str) -> tuple[int, int] | None:
+    try:
+        from PIL import Image
+        with Image.open(path) as im:
+            return im.size
+    except Exception:
+        pass
+    try:
+        import struct
+        with open(path, "rb") as f:
+            head = f.read(64)
+            if head.startswith(b"\x89PNG\r\n\x1a\n"):
+                w, h = struct.unpack(">II", head[16:24])
+                return w, h
+            if head[:4] == b"RIFF" and head[8:12] == b"WEBP":
+                chunk = head[12:16]
+                if chunk == b"VP8X":
+                    f.seek(24)
+                    data = f.read(6)
+                    return 1 + (data[0] | (data[1] << 8) | (data[2] << 16)), 1 + (data[3] | (data[4] << 8) | (data[5] << 16))
+                elif chunk == b"VP8 ":
+                    f.seek(26)
+                    data = f.read(4)
+                    return (data[0] | (data[1] << 8)) & 0x3fff, (data[2] | (data[3] << 8)) & 0x3fff
+                elif chunk == b"VP8L":
+                    f.seek(21)
+                    b = f.read(4)
+                    return 1 + (((b[1] & 0x3f) << 8) | b[0]), 1 + (((b[3] & 0xf) << 10) | (b[2] << 2) | ((b[1] & 0xc0) >> 6))
+    except Exception:
+        pass
+    return None
+
+
+def inspect_sprite_geometry(path: Path | str, metadata: dict | None = None) -> dict:
+    """Inspect sprite geometry, returning frame dimensions and layout definition."""
+    meta = metadata or {}
+    if not meta:
+        try:
+            p = Path(path)
+            cand_json = p.parent / "pet.json"
+            if cand_json.is_file() and cand_json.stat().st_size <= _MAX_META:
+                meta = json.loads(cand_json.read_text(encoding="utf-8"))
+        except Exception:
+            meta = {}
+
+    if "frameW" in meta and "frameH" in meta:
+        return {
+            "frameW": int(meta["frameW"]),
+            "frameH": int(meta["frameH"]),
+            "framesPerState": int(meta.get("framesPerState", 6)),
+            "stateRows": meta.get("stateRows", None),
+            "isSingleFrame": bool(meta.get("isSingleFrame", False)),
+        }
+
+    sz = _read_image_size(path)
+    if not sz:
+        return {
+            "frameW": 384,
+            "frameH": 512,
+            "framesPerState": 4,
+            "stateRows": ["idle", "wave"],
+            "isSingleFrame": False,
+        }
+    w, h = sz
+    # 1536 x 1024: Hermes / Astra standard (4x2, 384x512)
+    if w == 1536 and h == 1024:
+        return {
+            "frameW": 384,
+            "frameH": 512,
+            "framesPerState": 4,
+            "stateRows": ["idle", "wave"],
+            "isSingleFrame": False,
+        }
+    # 1536 x 2288: Petdex standard (8x11, 192x208)
+    if w == 1536 and h == 2288:
+        return {
+            "frameW": 192,
+            "frameH": 208,
+            "framesPerState": 6,
+            "stateRows": [
+                "idle", "running-right", "running-left", "waving",
+                "jumping", "failed", "waiting", "running", "review"
+            ],
+            "isSingleFrame": False,
+        }
+    # Small single frame avatar (thumbs <= 160x160)
+    if w <= 160 and h <= 160:
+        return {
+            "frameW": 192,
+            "frameH": 208,
+            "framesPerState": 1,
+            "stateRows": ["idle"],
+            "isSingleFrame": True,
+        }
+    # Generic multiple grids
+    if w % 192 == 0 and h % 208 == 0:
+        return {
+            "frameW": 192,
+            "frameH": 208,
+            "framesPerState": min(6, w // 192),
+            "stateRows": None,
+            "isSingleFrame": False,
+        }
+    if w % 384 == 0 and h % 512 == 0:
+        return {
+            "frameW": 384,
+            "frameH": 512,
+            "framesPerState": w // 384,
+            "stateRows": ["idle", "wave"],
+            "isSingleFrame": False,
+        }
+    return {
+        "frameW": 192,
+        "frameH": 208,
+        "framesPerState": 1,
+        "stateRows": ["idle"],
+        "isSingleFrame": True,
+    }
+
+
 @dataclass(frozen=True)
 class InstalledPet:
     slug: str
@@ -107,6 +227,95 @@ def get_builtin_pets() -> list[InstalledPet]:
                 is_builtin=True,
             ))
     return res
+
+
+_CATALOG_PETS: list[dict] | None = None
+
+
+def get_catalog_pets() -> list[dict]:
+    global _CATALOG_PETS
+    if _CATALOG_PETS is not None:
+        return _CATALOG_PETS
+    root = Path(__file__).resolve().parents[3]
+    cat_file = root / "assets" / "pet" / "catalog.json"
+    if not cat_file.is_file():
+        cwd_cat = Path("assets/pet/catalog.json")
+        if cwd_cat.is_file():
+            cat_file = cwd_cat.resolve()
+    if cat_file.is_file():
+        try:
+            _CATALOG_PETS = json.loads(cat_file.read_text(encoding="utf-8"))
+            return _CATALOG_PETS
+        except Exception:
+            pass
+    return []
+
+
+_PET_PATH_CACHE: dict[str, Path | None] = {}
+_SHA256_CACHE: dict[str, str] = {}
+
+
+def _cached_sha256(path: Path) -> str:
+    path_str = str(path)
+    if path_str in _SHA256_CACHE:
+        return _SHA256_CACHE[path_str]
+    val = _sha256(path)
+    _SHA256_CACHE[path_str] = val
+    return val
+
+
+def _assets_dir() -> Path:
+    root = Path(__file__).resolve().parents[3]
+    asset = root / "assets" / "pet"
+    if asset.is_dir():
+        return asset
+    cwd_asset = Path("assets/pet")
+    if cwd_asset.is_dir():
+        return cwd_asset.resolve()
+    return asset
+
+
+def resolve_catalog_pet_path(slug: str) -> Path | None:
+    if slug in _PET_PATH_CACHE:
+        return _PET_PATH_CACHE[slug]
+    assets = _assets_dir()
+    candidates = [
+        assets / slug / "spritesheet.webp",
+        assets / slug / "spritesheet.png",
+        assets / f"{slug}-sprite.png",
+        assets / "thumbs" / f"{slug}.png",
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            _PET_PATH_CACHE[slug] = candidate
+            return candidate
+    _PET_PATH_CACHE[slug] = None
+    return None
+
+
+def find_pet(data_dir: os.PathLike[str] | str, slug: str) -> InstalledPet | None:
+    slug = str(slug or "").strip().lower()
+    if not slug:
+        return None
+    # 1. Local installed pets & builtins
+    for pet in list_pets(data_dir, include_builtins=True):
+        if pet.slug == slug:
+            return pet
+    # 2. 73 Catalog pets
+    for item in get_catalog_pets():
+        if item.get("slug") == slug:
+            sprite_path = resolve_catalog_pet_path(slug)
+            if sprite_path and sprite_path.is_file():
+                return InstalledPet(
+                    slug=slug,
+                    display_name=item.get("zh_name") or item.get("en_name") or slug,
+                    description=item.get("description") or "",
+                    directory=str(sprite_path.parent),
+                    spritesheet=str(sprite_path),
+                    sha256=_cached_sha256(sprite_path),
+                    is_builtin=False,
+                )
+    return None
 
 
 def _root(data_dir: os.PathLike[str] | str) -> Path:
@@ -270,10 +479,14 @@ __all__ = [
     "BUILTIN_PETS",
     "InstalledPet",
     "PetStoreError",
+    "find_pet",
     "get_builtin_pet_asset_path",
     "get_builtin_pets",
+    "get_catalog_pets",
     "list_pets",
     "register_local_pet",
     "remove_pet",
+    "resolve_catalog_pet_path",
     "slugify",
+    "inspect_sprite_geometry",
 ]

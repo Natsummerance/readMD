@@ -41,6 +41,8 @@ def test_enabled_ocr_runs_before_native_engine(plugin_state, monkeypatch):
 
 
 def test_default_install_uses_sidecar_without_picker(monkeypatch, tmp_path):
+    import src.readmd_modules.pet as pet_module
+    monkeypatch.setattr(pet_module, 'get_default_pet_install_root', lambda: tmp_path / 'plugins')
     monkeypatch.setattr(readmd, 'APP_DIR', str(tmp_path))
     monkeypatch.setattr(readmd, 'DATA_DIR', str(tmp_path / 'data'))
     archive = tmp_path / 'ReadMD-Desktop-Pet.zip'
@@ -52,7 +54,7 @@ def test_default_install_uses_sidecar_without_picker(monkeypatch, tmp_path):
     monkeypatch.setattr(api, 'install_pet_plugin', lambda path, confirm: calls.append((path, confirm)) or {'ok': True})
     assert api.install_default_pet_plugin()['ok']
     assert calls == [(str(archive), True)]
-    assert api._pet_installer.target == tmp_path / 'data' / 'plugins' / 'pet' / 'hermes-adapter'
+    assert api._pet_installer.target == tmp_path / 'plugins' / 'pet' / 'hermes-adapter'
 
 
 def test_companion_install_preserves_selected_live2d(monkeypatch, tmp_path):
@@ -68,6 +70,8 @@ def test_companion_install_preserves_selected_live2d(monkeypatch, tmp_path):
 
 
 def test_model_readiness_uses_installed_extension(monkeypatch, tmp_path):
+    import src.readmd_modules.pet as pet_module
+    monkeypatch.setattr(pet_module, 'get_default_pet_install_root', lambda: tmp_path / 'plugins')
     monkeypatch.setattr(readmd, 'DATA_DIR', str(tmp_path))
     api = readmd.Api()
     model = api._pet_installer.target / 'app' / 'models' / 'arch-chan'

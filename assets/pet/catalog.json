@@ -1,0 +1,586 @@
+[
+  {
+    "slug": "cache-capy",
+    "zh_name": "Cache Capy（淡定水豚）",
+    "en_name": "Cache Capy",
+    "category": "creature",
+    "author": "railly",
+    "has_local": true
+  },
+  {
+    "slug": "niu-lai",
+    "zh_name": "牛来（招财毛绒牛）",
+    "en_name": "Niu Lai",
+    "category": "creature",
+    "author": "henryjing96",
+    "has_local": true
+  },
+  {
+    "slug": "boba",
+    "zh_name": "Boba（波霸奶茶兽）",
+    "en_name": "Boba",
+    "category": "creature",
+    "author": "railly",
+    "has_local": false
+  },
+  {
+    "slug": "boxcat",
+    "zh_name": "Boxcat（纸箱猫咪）",
+    "en_name": "Boxcat",
+    "category": "creature",
+    "author": "railly",
+    "has_local": false
+  },
+  {
+    "slug": "byte-bunny",
+    "zh_name": "Byte Bunny（字节小兔）",
+    "en_name": "Byte Bunny",
+    "category": "creature",
+    "author": "railly",
+    "has_local": false
+  },
+  {
+    "slug": "captain-quack",
+    "zh_name": "Captain Quack（嘎嘎鸭船长）",
+    "en_name": "Captain Quack",
+    "category": "creature",
+    "author": "Petdex seed",
+    "has_local": false
+  },
+  {
+    "slug": "cash-cuy",
+    "zh_name": "Cash Cuy",
+    "en_name": "Cash Cuy",
+    "category": "creature",
+    "author": "railly",
+    "has_local": false
+  },
+  {
+    "slug": "daemon-dumpling",
+    "zh_name": "Daemon Dumpling（守护饺子）",
+    "en_name": "Daemon Dumpling",
+    "category": "creature",
+    "author": "Petdex seed",
+    "has_local": false
+  },
+  {
+    "slug": "gourmand-slugcat",
+    "zh_name": "RainWorld 饕餮蛞蝓猫",
+    "en_name": "Gourmand Slugcat",
+    "category": "creature",
+    "author": "ruohan l.",
+    "has_local": false
+  },
+  {
+    "slug": "kebo",
+    "zh_name": "Kebo",
+    "en_name": "Kebo",
+    "category": "creature",
+    "author": "railly",
+    "has_local": false
+  },
+  {
+    "slug": "lulu-capybara-2",
+    "zh_name": "噜噜水豚",
+    "en_name": "Lulu Capybara 2",
+    "category": "creature",
+    "author": "gitcjp",
+    "has_local": false
+  },
+  {
+    "slug": "mecha-xiaobai",
+    "zh_name": "机甲小白",
+    "en_name": "Mecha Xiaobai",
+    "category": "character",
+    "author": "369772958",
+    "has_local": false
+  },
+  {
+    "slug": "mini-midgardsormr",
+    "zh_name": "Mini Midgardsormr（FF14 迷你尘世幻龙）",
+    "en_name": "Mini Midgardsormr",
+    "category": "creature",
+    "author": "pmcpm",
+    "has_local": false
+  },
+  {
+    "slug": "nikita-boar",
+    "zh_name": "Nikita Boar（小野猪骑士）",
+    "en_name": "Nikita Boar",
+    "category": "creature",
+    "author": "asimons81",
+    "has_local": false
+  },
+  {
+    "slug": "nivo",
+    "zh_name": "Nivo",
+    "en_name": "Nivo",
+    "category": "creature",
+    "author": "pipilu",
+    "has_local": false
+  },
+  {
+    "slug": "noir-webling",
+    "zh_name": "Noir Webling",
+    "en_name": "Noir Webling",
+    "category": "creature",
+    "author": "railly",
+    "has_local": false
+  },
+  {
+    "slug": "pixel-panda",
+    "zh_name": "Pixel Panda（像素大熊猫）",
+    "en_name": "Pixel Panda",
+    "category": "creature",
+    "author": "railly",
+    "has_local": false
+  },
+  {
+    "slug": "prompt-penguin",
+    "zh_name": "Prompt Penguin（提示词企鹅）",
+    "en_name": "Prompt Penguin",
+    "category": "creature",
+    "author": "railly",
+    "has_local": false
+  },
+  {
+    "slug": "roubao",
+    "zh_name": "肉包（蒸笼包子萌宠）",
+    "en_name": "Roubao",
+    "category": "creature",
+    "author": "happy y.",
+    "has_local": false
+  },
+  {
+    "slug": "shuangsheng-linger",
+    "zh_name": "双生灵儿",
+    "en_name": "Shuangsheng Linger",
+    "category": "creature",
+    "author": "369772958",
+    "has_local": false
+  },
+  {
+    "slug": "skipper",
+    "zh_name": "Skipper",
+    "en_name": "Skipper",
+    "category": "creature",
+    "author": "Petdex seed",
+    "has_local": false
+  },
+  {
+    "slug": "socksy",
+    "zh_name": "Socksy（白袜黑猫）",
+    "en_name": "Socksy",
+    "category": "character",
+    "author": "railly",
+    "has_local": false
+  },
+  {
+    "slug": "spritesheet-11",
+    "zh_name": "Haru Corgi（乳牛柯基犬）",
+    "en_name": "Haru Corgi",
+    "category": "creature",
+    "author": "Julia",
+    "has_local": false
+  },
+  {
+    "slug": "yy",
+    "zh_name": "源源",
+    "en_name": "Yy",
+    "category": "character",
+    "author": "zhenyuefu",
+    "has_local": false
+  },
+  {
+    "slug": "ban-niujiao-xiaowu",
+    "zh_name": "半牛角小乌",
+    "en_name": "Ban Niujiao Xiaowu",
+    "category": "creature",
+    "author": "佳宾 吴.",
+    "has_local": false
+  },
+  {
+    "slug": "chun-niuma",
+    "zh_name": "纯牛马（打工人）",
+    "en_name": "Chun Niuma",
+    "category": "creature",
+    "author": "wantwant123",
+    "has_local": false
+  },
+  {
+    "slug": "cowboy-tidings-of-spring",
+    "zh_name": "牛仔·春日信使",
+    "en_name": "Cowboy Tidings Of Spring",
+    "category": "character",
+    "author": "旭 阿.",
+    "has_local": false
+  },
+  {
+    "slug": "cyber-niuma",
+    "zh_name": "Cyber Niuma",
+    "en_name": "Cyber Niuma",
+    "category": "creature",
+    "author": "endluca",
+    "has_local": false
+  },
+  {
+    "slug": "david-chao-duo",
+    "zh_name": "牛经理与超超",
+    "en_name": "David Chao Duo",
+    "category": "character",
+    "author": "weicheng f.",
+    "has_local": false
+  },
+  {
+    "slug": "grassland-cow",
+    "zh_name": "草地牛",
+    "en_name": "Grassland Cow",
+    "category": "creature",
+    "author": "Kesi S.",
+    "has_local": false
+  },
+  {
+    "slug": "hengheng-cow",
+    "zh_name": "哼哼牛",
+    "en_name": "Hengheng Cow",
+    "category": "creature",
+    "author": "yunfei L.",
+    "has_local": false
+  },
+  {
+    "slug": "moumou",
+    "zh_name": "牟牟草地牛",
+    "en_name": "Moumou",
+    "category": "creature",
+    "author": "zpd6814",
+    "has_local": false
+  },
+  {
+    "slug": "niu-niu",
+    "zh_name": "牛牛",
+    "en_name": "Niu Niu",
+    "category": "creature",
+    "author": "zcloveyou2333",
+    "has_local": false
+  },
+  {
+    "slug": "niu-xiaohan",
+    "zh_name": "草原牛·小憨",
+    "en_name": "Niu Xiaohan",
+    "category": "creature",
+    "author": "zhixiang z.",
+    "has_local": false
+  },
+  {
+    "slug": "niuniu",
+    "zh_name": "牛牛",
+    "en_name": "Niuniu",
+    "category": "creature",
+    "author": "小艺 粥.",
+    "has_local": false
+  },
+  {
+    "slug": "niuniu-2",
+    "zh_name": "妞妞",
+    "en_name": "Niuniu 2",
+    "category": "creature",
+    "author": "Yunhao L.",
+    "has_local": false
+  },
+  {
+    "slug": "quarrel-cow",
+    "zh_name": "吵架牛",
+    "en_name": "Quarrel Cow",
+    "category": "creature",
+    "author": "ibreeze2017",
+    "has_local": false
+  },
+  {
+    "slug": "xianling-niu-v2",
+    "zh_name": "县令牛（威严断案）",
+    "en_name": "Xianling Niu V2",
+    "category": "character",
+    "author": "alpacaknight",
+    "has_local": false
+  },
+  {
+    "slug": "batmeme",
+    "zh_name": "Batmeme（蝙蝠侠经典梗图）",
+    "en_name": "Batmeme",
+    "category": "character",
+    "author": "Furkan T.",
+    "has_local": false
+  },
+  {
+    "slug": "cosmo",
+    "zh_name": "Crafternauta",
+    "en_name": "Crafternauta",
+    "category": "character",
+    "author": "railly",
+    "has_local": false
+  },
+  {
+    "slug": "dalek",
+    "zh_name": "Dalek（戴立克）",
+    "en_name": "Dalek",
+    "category": "character",
+    "author": "hanjin714",
+    "has_local": false
+  },
+  {
+    "slug": "denia-2",
+    "zh_name": "Denia",
+    "en_name": "Denia",
+    "category": "character",
+    "author": "a-shishen",
+    "has_local": false
+  },
+  {
+    "slug": "homelander",
+    "zh_name": "Homelander（祖国人）",
+    "en_name": "Homelander",
+    "category": "character",
+    "author": "Serhat",
+    "has_local": false
+  },
+  {
+    "slug": "humboldt",
+    "zh_name": "Humboldt",
+    "en_name": "Humboldt",
+    "category": "character",
+    "author": "daviddao",
+    "has_local": false
+  },
+  {
+    "slug": "hyein",
+    "zh_name": "Hyein",
+    "en_name": "Hyein",
+    "category": "character",
+    "author": "yingqi",
+    "has_local": false
+  },
+  {
+    "slug": "jill-stingray",
+    "zh_name": "Jill Stingray（赛博朋克酒保行动）",
+    "en_name": "Jill Stingray",
+    "category": "character",
+    "author": "anigilator322",
+    "has_local": false
+  },
+  {
+    "slug": "kuni-tibetan",
+    "zh_name": "Kuni Tibetan",
+    "en_name": "Kuni Tibetan",
+    "category": "character",
+    "author": "兴宇 高.",
+    "has_local": false
+  },
+  {
+    "slug": "niko",
+    "zh_name": "Niko（OneShot 日光猫猫）",
+    "en_name": "Niko",
+    "category": "character",
+    "author": "joewangxxx",
+    "has_local": false
+  },
+  {
+    "slug": "nina-3",
+    "zh_name": "Nina（井芹仁菜 - GBC）",
+    "en_name": "Nina",
+    "category": "character",
+    "author": "mytristan",
+    "has_local": false
+  },
+  {
+    "slug": "panam",
+    "zh_name": "Panam（赛博朋克2077 帕南）",
+    "en_name": "Panam",
+    "category": "character",
+    "author": "Degenerative A.",
+    "has_local": false
+  },
+  {
+    "slug": "alder-catalog-foot",
+    "zh_name": "Alder Catalog Foot",
+    "en_name": "Alder Catalog Foot",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "alder-divider-block",
+    "zh_name": "Alder Divider Block",
+    "en_name": "Alder Divider Block",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "cotton-index-bridge",
+    "zh_name": "Cotton Index Bridge",
+    "en_name": "Cotton Index Bridge",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "creamware-archive-wedge",
+    "zh_name": "Creamware Archive Wedge",
+    "en_name": "Creamware Archive Wedge",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "enamel-ledger-spacer",
+    "zh_name": "Enamel Ledger Spacer",
+    "en_name": "Enamel Ledger Spacer",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "glass-index-bridge",
+    "zh_name": "Glass Index Bridge",
+    "en_name": "Glass Index Bridge",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "glass-label-runner",
+    "zh_name": "Glass Label Runner",
+    "en_name": "Glass Label Runner",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "linen-catalog-foot",
+    "zh_name": "Linen Catalog Foot",
+    "en_name": "Linen Catalog Foot",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "maple-sleeve-rest",
+    "zh_name": "Maple Sleeve Rest",
+    "en_name": "Maple Sleeve Rest",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "marble-index-bridge",
+    "zh_name": "Marble Index Bridge",
+    "en_name": "Marble Index Bridge",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "nickel-index-bridge",
+    "zh_name": "Nickel Index Bridge",
+    "en_name": "Nickel Index Bridge",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "nickel-ledger-spacer",
+    "zh_name": "Nickel Ledger Spacer",
+    "en_name": "Nickel Ledger Spacer",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "nukey",
+    "zh_name": "Nukey（复古核弹发射按钮）",
+    "en_name": "Nukey",
+    "category": "object",
+    "author": "railly",
+    "has_local": false
+  },
+  {
+    "slug": "opal-file-ledger",
+    "zh_name": "Opal File Ledger",
+    "en_name": "Opal File Ledger",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "paper-ledger-spacer",
+    "zh_name": "Paper Ledger Spacer",
+    "en_name": "Paper Ledger Spacer",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "paperclip",
+    "zh_name": "Paperclip（微软经典大眼夹 / 回形针助手）",
+    "en_name": "Paperclip",
+    "category": "object",
+    "author": "Vlad T.",
+    "has_local": false
+  },
+  {
+    "slug": "pearl-index-bridge",
+    "zh_name": "Pearl Index Bridge",
+    "en_name": "Pearl Index Bridge",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "pewter-catalog-foot",
+    "zh_name": "Pewter Catalog Foot",
+    "en_name": "Pewter Catalog Foot",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "porcelain-folio-button",
+    "zh_name": "Porcelain Folio Button",
+    "en_name": "Porcelain Folio Button",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "scoop",
+    "zh_name": "Scoop（像素小冰淇淋勺）",
+    "en_name": "Scoop",
+    "category": "object",
+    "author": "railly",
+    "has_local": false
+  },
+  {
+    "slug": "tarnished-folder-rail",
+    "zh_name": "Tarnished Folder Rail",
+    "en_name": "Tarnished Folder Rail",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "walnut-catalog-foot",
+    "zh_name": "Walnut Catalog Foot",
+    "en_name": "Walnut Catalog Foot",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  },
+  {
+    "slug": "walnut-divider-block",
+    "zh_name": "Walnut Divider Block",
+    "en_name": "Walnut Divider Block",
+    "category": "object",
+    "author": "codexfede",
+    "has_local": false
+  }
+]

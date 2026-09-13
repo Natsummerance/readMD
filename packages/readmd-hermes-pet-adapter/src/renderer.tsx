@@ -11,12 +11,14 @@ async function mountOverlay(): Promise<void> {
     const live2d = await stage.mountLive2dStage()
     const { mountPetLife } = await import('./pet-life')
     mountPetLife({ live2d })
+    window.hermesDesktop?.petOverlay?.control({ type: 'renderer-ready', renderer: 'live2d' })
     return
   }
   const root = await import('../.generated/overlay-root')
   await root.mountPetOverlay()
   const { mountPetLife } = await import('./pet-life')
   mountPetLife()
+  window.hermesDesktop?.petOverlay?.control({ type: 'renderer-ready', renderer: 'hermes-sprite' })
 }
 
 const mount = mountOverlay()
@@ -26,6 +28,7 @@ mount.catch(error => {
   // Surface the failure instead of leaving a silently empty transparent
   // window: host diagnostics and tests read this flag.
   document.body.dataset.overlayMountState = 'failed'
+  window.hermesDesktop?.petOverlay?.control({ type: 'renderer-failed', renderer: requested || 'hermes-sprite', code: 'pet_model_load_failed' })
 })
 
 // A host-side listener adds ReadMD file intake without altering the copied

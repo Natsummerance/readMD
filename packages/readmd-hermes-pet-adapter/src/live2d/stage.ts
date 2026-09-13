@@ -29,6 +29,7 @@ type OverlayState = {
 }
 
 type Live2dModel = {
+  update: (elapsedMS: number) => void
   scale: { x: number; set: (value: number) => void }
   x: number
   y: number
@@ -105,7 +106,7 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
   const { Live2DModel } = await import('pixi-live2d-display/cubism4')
   Live2DModel.registerTicker(PIXI.Ticker)
 
-  const dpr = Math.max(1, window.devicePixelRatio || 1)
+  const dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1))
   const app = new PIXI.Application({ backgroundAlpha: 0, autoDensity: true, resolution: dpr, resizeTo: window })
   // The shared overlay shell reserves a full-height #root. Appending after
   // it places the canvas below the viewport, where overflow:hidden clips it.
@@ -117,9 +118,12 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
   const manifest = await readManifest()
   if (!manifest.entry) throw new Error('live2d manifest has no entry')
   const modelUrl = new URL(manifest.entry, new URL(MANIFEST_URL, window.location.href)).toString()
-  const model = await Live2DModel.from(modelUrl, { autoInteract: true }) as unknown as Live2dModel
+  const model = await Live2DModel.from(modelUrl, { autoInteract: true, autoUpdate: false }) as unknown as Live2dModel
   const naturalWidth = model.width / (model.scale.x || 1)
   app.stage.addChild(model)
+  // One ticker owns both model updates and drawing; the shared PIXI ticker
+  // otherwise continues animating even after the application ticker stops.
+  app.ticker.add(() => model.update(Math.min(250, app.ticker.deltaMS)), undefined, PIXI.UPDATE_PRIORITY.HIGH)
 
   const hitModel = (x: number, y: number) => {
     const areas = typeof model.hitTest === 'function' ? model.hitTest(x, y) : []
@@ -170,32 +174,32 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
 
   function updateAnimationState(): void {
     const animation = state.info && state.info.animation
-    const disabled = Boolean(animation && animation.enabled === false)
+    const disabled = Boolean(animation && (animation.enabled === false || animation.fpsCap === 0))
     const hidden = document.visibilityState === 'hidden' || Boolean((state as OverlayState & { fullscreen?: boolean }).fullscreen)
     if (disabled || hidden) {
       if (app.ticker.started) app.ticker.stop()
+      if (!hidden) app.renderer.render(app.stage)
       return
     }
     const cap = Number(animation && animation.fpsCap)
-    // The host budget (6 idle / 30 active / 0 off) was tuned for the sprite
-    // flipbook; a skeletal Live2D model needs a smoothness floor, so an idle
-    // cap of 6 still renders at 24fps while active work keeps 30.  A missing
-    // budget (older hosts) keeps the previous unlimited rendering.
-    app.ticker.maxFPS = Number.isFinite(cap) && cap > 0 ? Math.max(24, Math.min(cap, 60)) : 0
+    app.ticker.maxFPS = Number.isFinite(cap) && cap > 0 ? Math.max(24, Math.min(cap, 60)) : 30
     if (!app.ticker.started) app.ticker.start()
   }
 
+  let hadError = false, hadCompleted = false
   function applyState(next: unknown): void {
     state = (next || {}) as OverlayState
     if (state.bounds) bounds = { ...state.bounds }
     layout()
     updateAnimationState()
-    if (state.activity?.error) {
+    if (state.activity?.error && !hadError) {
       model.expression('Mouse.exp3.json')
       tapReactionWeight = 0.6
-    } else if (state.activity?.justCompleted) {
+    } else if (state.activity?.justCompleted && !hadCompleted) {
       tapReactionWeight = 1.0
     }
+    hadError = Boolean(state.activity?.error)
+    hadCompleted = Boolean(state.activity?.justCompleted)
   }
 
   function setIgnoringMouse(ignore: boolean): void {
@@ -375,7 +379,12 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
     })
   }
 
-  api?.onState(applyState)
+  const unsubscribe = api?.onState(applyState) as unknown as (() => void) | undefined
+  window.addEventListener('pagehide', () => {
+    unsubscribe?.()
+    if (clickTimer !== undefined) window.clearTimeout(clickTimer)
+    app.destroy(true, { children: true, texture: true, baseTexture: true })
+  }, { once: true })
   api?.control({ type: 'ready' })
   window.addEventListener('resize', layout)
   document.addEventListener('visibilitychange', updateAnimationState)

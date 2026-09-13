@@ -3,6 +3,11 @@ const { test, expect } = require('@playwright/test');
 test('Live2D enable installs its runtime without opening a file picker', async ({ page }) => {
   const status = { installed: true, enabled: false, in_app: true, adapter: { available: false }, preferences: { renderer: 'hermes-sprite', scale: .33, opacity: 1 } };
   let installs = 0;
+  let updateChecks = 0;
+  await page.route('**/api/pets/check_update', async route => {
+    updateChecks++;
+    await route.fulfill({ json: { ok: true, has_update: false } });
+  });
   await page.route('**/api/pets/status', route => route.fulfill({ json: { ok: true, status } }));
   await page.route('**/api/pets/runtime/install', async route => {
     installs++;
@@ -27,5 +32,6 @@ test('Live2D enable installs its runtime without opening a file picker', async (
   await expect(page.locator('#pet-enabled')).toBeChecked();
   await expect(page.locator('#pet-renderer')).toHaveValue('live2d');
   await page.locator('#pet-install-runtime').click();
-  await expect.poll(() => installs).toBe(2);
+  await expect.poll(() => updateChecks).toBe(1);
+  expect(installs).toBe(1);
 });

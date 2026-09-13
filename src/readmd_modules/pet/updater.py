@@ -122,6 +122,16 @@ def find_bundled_candidate_archives(app_install_dir: Optional[Path] = None) -> L
                         found.append(archive)
                 except OSError:
                     pass
+
+    def _cand_sort_key(p: Path):
+        is_canonical = 1 if p.name.lower() == 'readmd-desktop-pet.zip' else 0
+        try:
+            mtime = p.stat().st_mtime
+        except OSError:
+            mtime = 0
+        return (is_canonical, mtime)
+
+    found.sort(key=_cand_sort_key, reverse=True)
     return found
 
 
@@ -172,19 +182,30 @@ def check_pet_update(
 
     # Step 1: Check bundled candidate archive (Follow Software Update)
     candidates = candidate_archives if candidate_archives is not None else find_bundled_candidate_archives()
-    for cand in candidates:
-        cand_hash = _get_archive_manifest_hash(cand)
-        if cand_hash and cand_hash != installed_manifest_hash:
-            return {
-                'ok': True,
-                'has_update': True,
-                'source': 'bundled',
-                'version': 'bundled_update',
-                'archive_path': str(cand.resolve()),
-                'installed': is_installed,
-                'install_path': str(installer.target),
-                'reason': '检测到软件内置了更新版本的伴侣桌宠包',
-            }
+    if candidates:
+        installed_matches_any = False
+        if is_installed and installed_manifest_hash:
+            for cand in candidates:
+                cand_hash = _get_archive_manifest_hash(cand)
+                if cand_hash and cand_hash == installed_manifest_hash:
+                    installed_matches_any = True
+                    break
+
+        if not installed_matches_any:
+            cand = candidates[0]
+            cand_hash = _get_archive_manifest_hash(cand)
+            if cand_hash and cand_hash != installed_manifest_hash:
+                return {
+                    'ok': True,
+                    'has_update': True,
+                    'source': 'bundled',
+                    'version': 'bundled_update',
+                    'archive_path': str(cand.resolve()),
+                    'installed': is_installed,
+                    'install_path': str(installer.target),
+                    'reason': '检测到软件内置了更新版本的伴侣桌宠包',
+                }
+
 
     # Step 2: Check GitHub Releases
     if allow_network:

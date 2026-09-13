@@ -2,8 +2,9 @@
 // semantics stay in the immutable Hermes source snapshot.
 import fs from 'node:fs'
 import path from 'node:path'
-import { app, BrowserWindow, clipboard, ipcMain, screen } from 'electron'
+import { app, BrowserWindow, clipboard, ipcMain, screen, Menu } from 'electron'
 import { registerPetOverlayIpc } from '../../../third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc'
+import { publishCommand, SnapshotReader } from './bridge-transport'
 
 // Enforce single instance: prevent launching multiple desktop pets simultaneously
 const gotTheLock = app.requestSingleInstanceLock()
@@ -34,14 +35,17 @@ function isHostProcessAlive(): boolean {
     process.kill(parentPid, 0)
     return true
   } catch (err: unknown) {
-    // ESRCH means process does not exist
-    return false
+    return (err as NodeJS.ErrnoException).code !== 'ESRCH'
   }
 }
 let overlay: BrowserWindow | null = null
 let latest: RuntimeState = {}
 let bridgeTimer: NodeJS.Timeout | undefined
-let lastBridgeContents = ''
+const snapshotReader = new SnapshotReader(bridgeFile)
+let bridgeWatcher: fs.FSWatcher | undefined
+let bridgeDebounce: NodeJS.Timeout | undefined
+let shuttingDown = false
+let recoveries: number[] = []
 let fallbackSpriteInfo: Record<string, unknown> | undefined
 let lastRenderer: string | undefined
 let lastHostBounds: Bounds | undefined
@@ -129,7 +133,8 @@ function loadOverlayPage(renderer?: string): void {
   if (renderer) query.renderer = renderer
   if (process.env.READMD_PET_LIVE2D_PROBE === '1') query.live2dProbe = '1'
   const loadOptions = Object.keys(query).length ? { query } : undefined
-  overlay.loadFile(path.join(app.getAppPath(), 'renderer', 'index.html'), loadOptions)
+  reportHealth('loading', renderer)
+  void overlay.loadFile(path.join(app.getAppPath(), 'renderer', 'index.html'), loadOptions).catch(() => reportHealth('failed', renderer, 'pet_page_load_failed'))
   overlay.webContents.once('did-finish-load', () => pushState())
 }
 
@@ -156,6 +161,15 @@ function openPetOverlay(bounds: unknown, renderer?: string): void {
   applyOverlayOpacity()
   overlay.setAlwaysOnTop(true, 'screen-saver')
   overlay.on('closed', () => { overlay = null })
+  overlay.webContents.on('context-menu', () => showCompanionMenu())
+  overlay.webContents.on('render-process-gone', (_event, details) => {
+    if (shuttingDown || details.reason === 'clean-exit') return
+    reportHealth('failed', lastRenderer, 'pet_renderer_crashed')
+    recoveries = recoveries.filter(moment => Date.now() - moment < 60_000)
+    if (recoveries.length >= 3) return
+    recoveries.push(Date.now())
+    setTimeout(() => { if (!shuttingDown) loadOverlayPage(lastRenderer) }, 500 * recoveries.length)
+  })
   loadOverlayPage(renderer)
 }
 
@@ -174,8 +188,39 @@ function pushState(): void {
 
 function writeCommand(command: unknown): void {
   if (!bridgeFile) return
-  const commandFile = `${bridgeFile}.command`
-  try { fs.writeFileSync(commandFile, JSON.stringify({ command, created_at: Date.now() }), 'utf8') } catch { /* host may be closing */ }
+  try { publishCommand(bridgeFile, command) }
+  catch (error) { reportHealth('degraded', lastRenderer, (error as Error).message) }
+}
+
+function reportHealth(state: string, renderer?: string, code?: string): void {
+  if (!bridgeFile) return
+  const target = `${bridgeFile}.health.json`, temp = `${target}.tmp`
+  try {
+    fs.writeFileSync(temp, JSON.stringify({ state, renderer, code, pid: process.pid, updated_at: Date.now() }), 'utf8')
+    fs.renameSync(temp, target)
+  } catch { /* host may be closing */ }
+}
+
+function showCompanionMenu(): void {
+  if (!overlay || overlay.isDestroyed()) return
+  const lines = (latest.info?.lines || {}) as Record<string, string>
+  const life = (latest.info?.companion || {}) as { character?: string; level?: number; energy?: number; mood?: number; resting?: boolean; cooldowns?: Record<string, number> }
+  const label = (key: string, fallback: string) => lines[key] || fallback
+  const characters = Array.isArray(latest.info?.characters) ? latest.info.characters as { slug: string; name: string; renderer: string }[] : []
+  const actions = ['pet', 'feed', 'play', life.resting ? 'wake' : 'rest']
+  const fallback: Record<string, string> = { pet: 'Pet', feed: 'Feed', play: 'Play', rest: 'Rest', wake: 'Wake up' }
+  Menu.buildFromTemplate([
+    { label: `${label('pet.life.level', 'Level')} ${life.level || 1} · ${label('pet.life.energy', 'Energy')} ${life.energy ?? 80} · ${label('pet.life.mood', 'Mood')} ${life.mood ?? 75}`, enabled: false },
+    { type: 'separator' },
+    ...actions.map(action => ({ label: label(`pet.action.${action}`, fallback[action]), enabled: !(life.cooldowns?.[action]) && (action !== 'play' || (life.energy ?? 80) >= 10), click: () => writeCommand({ type: 'interact', action }) })),
+    { type: 'separator' },
+    { label: label('pet.life.characters', 'Characters'), submenu: characters.slice(0, 128).map(character => ({
+      label: character.name, type: 'radio' as const,
+      checked: life.character === (character.renderer === 'live2d' ? 'live2d:arch-chan' : character.slug || 'hermes'),
+      click: () => writeCommand({ type: 'character', slug: character.slug, renderer: character.renderer })
+    })) },
+    { label: label('pet.life.reader', 'Open reader'), click: () => writeCommand({ type: 'open-menu' }) }
+  ]).popup({ window: overlay })
 }
 
 function clipboardCommand(): Record<string, unknown> {
@@ -191,7 +236,8 @@ function clipboardCommand(): Record<string, unknown> {
   return { type: 'clipboard', text, image_png: imagePng.slice(0, 24 * 1024 * 1024), paths }
 }
 
-function pollBridge(): void {
+async function pollBridge(): Promise<void> {
+  if (shuttingDown) return
   if (!isHostProcessAlive()) {
     closePetOverlay()
     app.exit(0)
@@ -199,14 +245,12 @@ function pollBridge(): void {
   }
   if (!bridgeFile) return
   try {
-    const contents = fs.readFileSync(bridgeFile, 'utf8')
+    const next = await snapshotReader.read() as (RuntimeState & { bounds?: Bounds; visible?: boolean; renderer?: string; fullscreen?: boolean }) | undefined
     // Do not continually reapply the last host position.  Hermes owns a live
     // drag through `setBounds`; the host only publishes a changed snapshot.
-    if (contents === lastBridgeContents) return
-    lastBridgeContents = contents
-    const next = JSON.parse(contents) as RuntimeState & { bounds?: Bounds; visible?: boolean; renderer?: string; fullscreen?: boolean }
+    if (!next || shuttingDown) return
     latest = normalizeState(next)
-    if (next.visible === false) { closePetOverlay(); return }
+    if (next.visible === false && !next.fullscreen) { closePetOverlay(); return }
     const renderer = typeof next.renderer === 'string' ? next.renderer : undefined
     if (!overlay || overlay.isDestroyed()) {
       lastRenderer = renderer
@@ -243,7 +287,11 @@ app.whenReady().then(() => {
     // The unmodified Hermes overlay announces that its `onState` listener is
     // mounted.  Reply then, rather than relying on a load-time race.
     const type = (payload as { type?: string } | null)?.type
-    if (type === 'ready') pushState()
+    if (type === 'renderer-ready' || type === 'renderer-failed') {
+      const data = payload as { renderer?: string; code?: string }
+      reportHealth(type === 'renderer-ready' ? 'ready' : 'failed', data.renderer, data.code)
+    }
+    else if (type === 'ready') pushState()
     else if (type === 'toggle-app') writeCommand(clipboardCommand())
     else if (type === 'open-menu') writeCommand({ type: 'open-menu' })
     else writeCommand(payload)
@@ -253,9 +301,24 @@ app.whenReady().then(() => {
     const safePaths = paths.filter(path => typeof path === 'string' && path.length > 0 && path.length <= 32768).slice(0, 128)
     if (safePaths.length) writeCommand({ type: 'drop', paths: safePaths })
   })
-  pollBridge()
-  bridgeTimer = setInterval(pollBridge, 250)
+  void pollBridge()
+  // Directory watch survives Python's atomic rename. The slow poll recovers
+  // lost OS notifications and checks parent liveness without reading images.
+  try {
+    bridgeWatcher = fs.watch(path.dirname(bridgeFile), (_event, name) => {
+      if (name && name.toString() !== path.basename(bridgeFile)) return
+      if (bridgeDebounce) clearTimeout(bridgeDebounce)
+      bridgeDebounce = setTimeout(() => { void pollBridge() }, 20)
+    })
+    bridgeWatcher.on('error', () => { bridgeWatcher?.close(); bridgeWatcher = undefined })
+  } catch { /* poll remains available */ }
+  bridgeTimer = setInterval(() => { void pollBridge() }, 2000)
 })
 
 app.on('window-all-closed', () => { /* overlay lifecycle follows bridge state */ })
-app.on('before-quit', () => { if (bridgeTimer) clearInterval(bridgeTimer) })
+app.on('before-quit', () => {
+  shuttingDown = true
+  if (bridgeTimer) clearInterval(bridgeTimer)
+  if (bridgeDebounce) clearTimeout(bridgeDebounce)
+  bridgeWatcher?.close()
+})

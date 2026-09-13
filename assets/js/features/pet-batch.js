@@ -42,9 +42,9 @@ async function fetchPetRuntimeStatus() {
   } catch (_err) { /* offline or mock */ }
 
   return {
-    adapter: { available: false, name: 'Hermes Pet Adapter' },
+    adapter: { available: false, name: 'Desktop Pet Adapter' },
     active_pet: 'hermes-sprite',
-    active_slug: 'Hermes',
+    active_slug: '',
     enabled: false,
     installed: false,
     in_app: true,
@@ -244,6 +244,7 @@ let isBubbleHovered = false;
  * 支持：视口碰撞翻转避让 (Flip & Clamp)、鼠标悬停暂停、点击直接关闭
  */
 function showPetBubble(text, durationMs = 4500, priority = PET_BUBBLE_PRIORITY.LOW_IDLE) {
+  if (window.petQuietMode && (priority === PET_BUBBLE_PRIORITY.LOW_IDLE || priority === PET_BUBBLE_PRIORITY.MILESTONE)) return;
   const bubble = $('pet-bubble');
   const bubbleText = $('pet-bubble-text');
   if (!bubble || !bubbleText || !text) return;
@@ -262,6 +263,7 @@ function showPetBubble(text, durationMs = 4500, priority = PET_BUBBLE_PRIORITY.L
   bubbleText.textContent = text;
   updateBubblePosition(bubble);
   bubble.classList.add('is-visible');
+  window.dispatchEvent(new CustomEvent('readmd:pet-message', { detail: { text, priority } }));
 
   // 若用户鼠标未悬停在气泡上，正常安排倒计时关闭
   if (durationMs > 0 && !isBubbleHovered) {
@@ -474,16 +476,18 @@ function syncPetWidgetVisibility(status) {
     const charEl = $('pet-character');
     if (charEl) {
       const isLive2d = (prefs.renderer === 'live2d');
-      charEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite');
+      const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
+      const isAnimSprite = !activeSlug || activeSlug === 'hermes';
+      charEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite', 'is-sprite-anim', 'is-sprite-avatar');
       if (isLive2d) {
         charEl.classList.add('is-arch-chan', 'is-live2d');
         charEl.style.backgroundImage = 'url("/assets/pet/arch-chan-avatar.png")';
+      } else if (isAnimSprite) {
+        charEl.classList.add('hermes-sprite', 'is-hermes', 'is-sprite-anim');
+        charEl.style.backgroundImage = 'url("/assets/pet/hermes-sprite.png")';
       } else {
-        charEl.classList.add('hermes-sprite', 'is-hermes');
-        const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
-        charEl.style.backgroundImage = activeSlug
-          ? `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`
-          : 'url("/assets/pet/hermes-sprite.png")';
+        charEl.classList.add('is-sprite-avatar');
+        charEl.style.backgroundImage = `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
       }
     }
     restoreWidgetPosition();
@@ -628,6 +632,11 @@ function initPetDirectManipulation() {
 
   charWrap.addEventListener('pointerup', handlePointerEnd);
   charWrap.addEventListener('pointercancel', handlePointerEnd);
+  charWrap.addEventListener('keydown', e => {
+    if (e.target === charWrap && !e.repeat && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault(); handlePetInteractiveClick();
+    }
+  });
 
   // File Drag & Drop Direct Target
   charWrap.addEventListener('dragover', (e) => {
@@ -805,6 +814,7 @@ async function refreshPetMenuStatus() {
 
 function renderPetSettings(status) {
   activePetSettingsStatus = status || null;
+  window.dispatchEvent(new CustomEvent('readmd:pet-state', { detail: status }));
   const preferences = status && status.preferences ? status.preferences : {};
   const enabled = $('pet-enabled');
   const renderer = $('pet-renderer');
@@ -820,7 +830,8 @@ function renderPetSettings(status) {
   updatePetRangeLabels();
 
   const isInApp = $('pet-runtime')?.value === 'in-app' || status?.in_app !== false;
-  const isInstalled = Boolean(status && (status.installed ?? status.adapter?.available));
+  const isInstalled = Boolean(status && (status.adapter?.available ?? status.installed));
+  const isRunning = Boolean(status?.enabled && (isInApp || (status?.adapter?.running ?? status?.running)));
   const installBtn = $('pet-install');
   const installRuntimeBtn = $('pet-install-runtime');
   if (installRuntimeBtn) {
@@ -870,7 +881,7 @@ function renderPetSettings(status) {
 
   if (statusDot && statusText) {
     statusDot.classList.remove('is-running', 'is-stopped', 'is-unavailable');
-    if (status && status.enabled) {
+    if (isRunning) {
       statusDot.classList.add('is-running');
       statusText.textContent = petT('pet.statusRunning');
     } else if (isInApp || isInstalled) {
@@ -883,8 +894,10 @@ function renderPetSettings(status) {
   }
 
   if (statusLine) {
-    if (status && status.enabled) {
+    if (isRunning) {
       statusLine.textContent = isInApp ? (petT('pet.statusInAppActive') || '桌宠伴读小组件已在阅读器内运行') : petT('pet.installSuccess');
+    } else if (status?.enabled && !isInApp) {
+      statusLine.textContent = petT('pet.runtime.stoppedHint');
     } else if (isInApp || isInstalled) {
       statusLine.textContent = petT('pet.installSuccess');
     } else {
@@ -900,37 +913,49 @@ function updateCharacterPreview(rendererVal) {
   const widgetCharEl = $('pet-character');
   const slugEl = $('pet-active-slug');
   const isLive2d = rendererVal === 'live2d';
+  const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
+  const isAnimSprite = !activeSlug || activeSlug === 'hermes';
   if (charEl) {
-    charEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan');
-    charEl.classList.add(isLive2d ? 'is-arch-chan' : 'is-hermes');
+    charEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'is-sprite-anim', 'is-sprite-avatar');
     if (isLive2d) {
+      charEl.classList.add('is-arch-chan', 'is-live2d');
       charEl.style.backgroundImage = 'url("/assets/pet/arch-chan-avatar.png")';
+    } else if (isAnimSprite) {
+      charEl.classList.add('is-hermes', 'is-sprite-anim');
+      charEl.style.backgroundImage = 'url("/assets/pet/hermes-sprite.png")';
     } else {
-      const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
-      charEl.style.backgroundImage = activeSlug
-        ? `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`
-        : 'url("/assets/pet/hermes-sprite.png")';
+      charEl.classList.add('is-sprite-avatar');
+      charEl.style.backgroundImage = `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
     }
   }
   if (widgetCharEl) {
-    widgetCharEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite');
+    widgetCharEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite', 'is-sprite-anim', 'is-sprite-avatar');
     if (isLive2d) {
       widgetCharEl.classList.add('is-arch-chan', 'is-live2d');
       widgetCharEl.style.backgroundImage = 'url("/assets/pet/arch-chan-avatar.png")';
+    } else if (isAnimSprite) {
+      widgetCharEl.classList.add('hermes-sprite', 'is-hermes', 'is-sprite-anim');
+      widgetCharEl.style.backgroundImage = 'url("/assets/pet/hermes-sprite.png")';
     } else {
-      widgetCharEl.classList.add('hermes-sprite', 'is-hermes');
-      const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
-      widgetCharEl.style.backgroundImage = activeSlug
-        ? `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`
-        : 'url("/assets/pet/hermes-sprite.png")';
+      widgetCharEl.classList.add('is-sprite-avatar');
+      widgetCharEl.style.backgroundImage = `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
     }
   }
   if (slugEl) {
-    slugEl.textContent = isLive2d ? (petT('pet.renderer.live2d') || 'Arch-Chan') : (petT('pet.renderer.sprite') || 'Hermes');
+    if (isLive2d) {
+      slugEl.textContent = petT('pet.renderer.live2d') || 'Arch-Chan';
+    } else {
+      const optionText = $('pet-gallery')?.selectedOptions?.[0]?.textContent;
+      const fallbackName = (activeSlug && petT('pet.preset.' + activeSlug)) || activeSlug || petT('pet.gallery.hermes') || '伴读使者';
+      slugEl.textContent = optionText || fallbackName;
+    }
   }
   const galleryRow = $('pet-gallery-row');
   if (galleryRow) {
     galleryRow.classList.toggle('hidden', isLive2d);
+  }
+  if (isLive2d && $('pet-runtime')) {
+    $('pet-runtime').value = 'desktop';
   }
 }
 
@@ -939,6 +964,19 @@ function updatePetRangeLabels() {
   const opacity = $('pet-opacity');
   const scaleVal = scale ? Number(scale.value) : 33;
   const opacityVal = opacity ? Number(opacity.value) : 100;
+
+  if (scale) {
+    const min = Number(scale.min || 18);
+    const max = Number(scale.max || 72);
+    const pct = Math.max(0, Math.min(100, ((scaleVal - min) / (max - min)) * 100));
+    scale.style.setProperty('--range-progress', `${pct}%`);
+  }
+  if (opacity) {
+    const min = Number(opacity.min || 35);
+    const max = Number(opacity.max || 100);
+    const pct = Math.max(0, Math.min(100, ((opacityVal - min) / (max - min)) * 100));
+    opacity.style.setProperty('--range-progress', `${pct}%`);
+  }
 
   if ($('pet-scale-value') && scale) $('pet-scale-value').textContent = scale.value + '%';
   if ($('pet-opacity-value') && opacity) $('pet-opacity-value').textContent = opacity.value + '%';
@@ -952,7 +990,7 @@ function closePetSettings() {
 
 let isPetConfiguring = false;
 async function savePetSettings() {
-  if (isPetConfiguring) return;
+  if (isPetConfiguring) return { ok: false, code: 'pet_config_busy' };
   isPetConfiguring = true;
   try {
     const enabled = Boolean($('pet-enabled')?.checked);
@@ -960,6 +998,7 @@ async function savePetSettings() {
     const opacity = Number($('pet-opacity')?.value || 100) / 100;
     const renderer = $('pet-renderer')?.value || 'hermes-sprite';
 
+    if (renderer === 'live2d' && $('pet-runtime')) $('pet-runtime').value = 'desktop';
     const isDesktopChoice = $('pet-runtime')?.value === 'desktop';
     const config = {
       enabled,
@@ -974,7 +1013,7 @@ async function savePetSettings() {
       const installed = await installDefaultPetRuntime();
       if (!installed.ok) {
         renderPetSettings(await fetchPetRuntimeStatus());
-        return;
+        return installed;
       }
     }
     const result = await requestConfigurePet(config);
@@ -989,6 +1028,7 @@ async function savePetSettings() {
     renderPetSettings(updatedStatus);
     setPetMenuStatus(updatedStatus);
     syncPetWidgetVisibility(updatedStatus);
+    return result;
   } finally {
     isPetConfiguring = false;
   }
@@ -999,6 +1039,7 @@ async function openPetSettings() {
   const modal = $('pet-settings-modal');
   if (!modal) return;
   modal.classList.remove('hidden');
+  window.dispatchEvent(new CustomEvent('readmd:pet-open-settings'));
   const immediateRenderer = $('pet-renderer')?.value || 'hermes-sprite';
   updateCharacterPreview(immediateRenderer);
   try {
@@ -1311,7 +1352,6 @@ function initPetSystem() {
   });
   $('pet-renderer')?.addEventListener('change', (e) => {
     updateCharacterPreview(e.target.value);
-    void savePetSettings();
   });
   $('pet-scale')?.addEventListener('input', updatePetRangeLabels);
   $('pet-opacity')?.addEventListener('input', updatePetRangeLabels);
@@ -1473,10 +1513,22 @@ async function refreshPetGallery() {
   if (!result.ok) return;
   currentGalleryPets = result.pets || [];
   currentActivePetSlug = result.active || '';
+  window.dispatchEvent(new CustomEvent('readmd:pet-gallery', { detail: result }));
   const select = $('pet-gallery');
   if (select) {
-    select.replaceChildren(new Option(petT('pet.gallery.hermes') || 'Hermes', ''));
-    for (const pet of currentGalleryPets) {
+    select.replaceChildren(new Option(petT('pet.gallery.hermes') || '伴读使者', ''));
+    const allGalleryPets = [...currentGalleryPets];
+    if (Array.isArray(result.catalog)) {
+      for (const item of result.catalog) {
+        if (!allGalleryPets.some(p => p.slug === item.slug)) {
+          allGalleryPets.push({
+            slug: item.slug,
+            display_name: item.zh_name || item.en_name || item.display_name || item.slug,
+          });
+        }
+      }
+    }
+    for (const pet of allGalleryPets) {
       const label = (pet.slug && petT('pet.preset.' + pet.slug)) || pet.display_name || pet.slug;
       select.add(new Option(label, pet.slug));
     }
@@ -1484,11 +1536,23 @@ async function refreshPetGallery() {
     updatePetDeleteButtonVisibility(select.value);
   }
   const isLive2d = ($('pet-renderer')?.value === 'live2d') || (activePetSettingsStatus?.preferences?.renderer === 'live2d');
+  const activeSlug = result.active || '';
+  const isAnimSprite = !activeSlug || activeSlug === 'hermes';
   const image = isLive2d
     ? 'url("/assets/pet/arch-chan-avatar.png")'
-    : (result.active ? `url("/api/pets/thumb?slug=${encodeURIComponent(result.active)}")` : 'url("/assets/pet/hermes-sprite.png")');
+    : (activeSlug ? `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")` : 'url("/assets/pet/hermes-sprite.png")');
   for (const id of ['pet-character', 'pet-preview-character']) {
     const element = $(id);
-    if (element) element.style.backgroundImage = image;
+    if (element) {
+      element.style.backgroundImage = image;
+      element.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite', 'is-sprite-anim', 'is-sprite-avatar');
+      if (isLive2d) {
+        element.classList.add('is-arch-chan', 'is-live2d');
+      } else if (isAnimSprite) {
+        element.classList.add('hermes-sprite', 'is-hermes', 'is-sprite-anim');
+      } else {
+        element.classList.add('is-sprite-avatar');
+      }
+    }
   }
 }

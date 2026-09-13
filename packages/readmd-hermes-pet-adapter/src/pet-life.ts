@@ -13,7 +13,7 @@ type PetOverlayApi = {
 }
 
 type LifeState = {
-  info?: { lines?: Record<string, string>; locale?: string; petName?: string }
+  info?: { lines?: Record<string, string>; locale?: string; petName?: string; companion?: { character?: string; revision?: number; last_action?: string; resting?: boolean } }
   activity?: { busy?: boolean; error?: boolean; justCompleted?: boolean }
 }
 
@@ -163,6 +163,7 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
   let lastEventAt: Record<string, number> = {}
   let sawActivity: { busy?: boolean; error?: boolean; justCompleted?: boolean } = {}
   let greeted = false
+  let companionEvent = '', resting = false
 
   const line = (key: string): string => (lines[key] || '').trim()
 
@@ -247,6 +248,7 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
   function tick(): void {
     const moment = now()
     if (shown && moment >= shown.until) hideBubble()
+    if (document.hidden || resting || sawActivity.busy) return
     if (phase === 'sleeping') return
 
     if (moment - lastInteraction >= SLEEPING_AFTER_MS && phase === 'dozing') {
@@ -298,6 +300,18 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
     const state = (next || {}) as LifeState
     if (probeActive) console.log('[pet-life] state push', JSON.stringify({ activity: state.activity, hasLines: Boolean(state.info?.lines) }))
     if (state.info?.lines) lines = state.info.lines
+    const companion = state.info?.companion
+    resting = Boolean(companion?.resting)
+    if (companion) {
+      options.live2d?.setMood(resting ? 'sleeping' : 'normal')
+      layer.classList.toggle('is-sleeping', resting)
+      const event = `${companion.character}:${companion.revision}`
+      if (companionEvent && event !== companionEvent && companion.last_action) {
+        show(line(`pet.action.${companion.last_action}.done`), POKE)
+        if (companion.last_action === 'play' || companion.last_action === 'pet') options.live2d?.celebrate()
+      }
+      companionEvent = event
+    }
     handleActivity(state.activity)
     greet(state)
   })
@@ -321,7 +335,8 @@ export function mountPetLife(options: PetLifeOptions = {}): void {
     lastInteraction = now()
   })
 
-  window.setInterval(tick, 1000)
+  const timer = window.setInterval(tick, 1000)
+  window.addEventListener('pagehide', () => { clearInterval(timer); hideBubble() }, { once: true })
 }
 
 export { mountPetLife as default }

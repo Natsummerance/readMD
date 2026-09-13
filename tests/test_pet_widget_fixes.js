@@ -38,6 +38,7 @@ elements['pet-character-wrap'] = mockElement('pet-character-wrap');
 
 const listeners = {};
 const windowMock = {
+  dispatchEvent() {},
   innerWidth: 800,
   innerHeight: 600,
   addEventListener(event, fn) {

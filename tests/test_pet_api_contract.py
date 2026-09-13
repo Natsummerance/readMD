@@ -599,5 +599,78 @@ def test_publish_pet_runtime_carries_animation_budget(tmp_path, monkeypatch):
     assert reduced == {"enabled": False, "fpsCap": 0}
 
 
+def test_pet_interact_api_contract(tmp_path, monkeypatch):
+    import io
+    monkeypatch.setattr(readmd, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(readmd, "SETTINGS_FILE", str(tmp_path / "settings.json"))
+
+    api = readmd.Api()
+    monkeypatch.setattr(readmd, "_SHARED_API", api)
+
+    # 1. Direct Api call
+    res = api.interact_pet("pet", character="mochi")
+    assert res["ok"] is True
+    assert res["companion"]["last_action"] == "pet"
+    assert "companion" in res
+
+    # 2. Runtime status includes companion snapshot
+    status = api.get_pet_runtime_status()
+    assert "companion" in status
+    assert status["companion"] is not None
+
+    # 3. Handler /api/pets/interact POST contract
+    handler = object.__new__(readmd.Handler)
+    handler.command = "POST"
+    sent = []
+    handler._send_json = lambda code, obj: sent.append((code, obj))
+    body = {"action": "feed", "character": "mochi"}
+    raw = json.dumps(body).encode("utf-8")
+    handler.headers = {"Content-Length": str(len(raw))}
+    handler.rfile = io.BytesIO(raw)
+
+    handler._api_pet_interact()
+    assert len(sent) == 1
+    code, payload = sent[0]
+    assert code == 200
+    assert payload["ok"] is True
+    assert payload["companion"]["last_action"] == "feed"
+
+
+def test_pet_companion_overlay_sync_and_lines(tmp_path, monkeypatch):
+    monkeypatch.setattr(readmd, "DATA_DIR", str(tmp_path))
+    monkeypatch.setattr(readmd, "SETTINGS_FILE", str(tmp_path / "settings.json"))
+
+    code_zh, pack_zh = readmd._pet_locale_line_pack('zh-CN')
+    assert 'pet.action.pet.done' in pack_zh
+    assert 'pet.action.feed.done' in pack_zh
+    assert 'pet.action.play.done' in pack_zh
+    assert 'pet.action.rest.done' in pack_zh
+    assert 'pet.action.wake.done' in pack_zh
+    assert pack_zh['pet.action.pet.done'] == '摸摸头真舒服，继续陪你读书！'
+
+    code_en, pack_en = readmd._pet_locale_line_pack('en')
+    assert 'pet.action.pet.done' in pack_en
+    assert 'pet.action.feed.done' in pack_en
+    assert pack_en['pet.action.pet.done'] == 'That feels nice! Let us keep reading.'
+
+    api = readmd.Api()
+    prefs = api._pet_preferences()
+    assert 'companion' in prefs['info']
+    assert prefs['info']['companion'] is not None
+
+    published_states = []
+    monkeypatch.setattr(api._pet_bridge, 'publish', lambda runtime, **kwargs: published_states.append(kwargs))
+    res = api.interact_pet("play", character="arch-chan")
+    assert res["ok"] is True
+    assert len(published_states) == 1
+    published_info = published_states[0]['info']
+    assert 'companion' in published_info
+    assert published_info['companion']['last_action'] == 'play'
+    assert published_info['companion']['character'] == 'arch-chan'
+    assert 'pet.action.play.done' in published_info['lines']
+
+
+
+
 
 

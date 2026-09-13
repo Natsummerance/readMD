@@ -363,6 +363,21 @@ function PetSpriteImpl({ info, zoom = 1, stateOverride, rowOverride, pauseWhenUn
         return
       }
 
+      const isSingle = Boolean(info.isSingleFrame || frames <= 1 || (image.naturalWidth <= frameW && image.naturalHeight <= frameH))
+      if (isSingle) {
+        const breath = Math.sin((now % 3200) / 3200 * Math.PI * 2) * 0.024 + 0.988
+        const bW = backingW * breath
+        const bH = backingH * breath
+        const ox = (backingW - bW) / 2
+        const oy = backingH - bH
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingQuality = 'high'
+        ctx.drawImage(image, 0, 0, image.naturalWidth, image.naturalHeight, ox, oy, bW, bH)
+        scheduleFrame(33)
+        return
+      }
+
       // Only touch the canvas when the visible cell actually changes. The RAF
       // wakes when a sprite cell is due, so the idle path avoids a 60Hz loop.
       if (frame !== drawnFrame || row !== drawnRow) {

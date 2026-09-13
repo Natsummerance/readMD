@@ -7,6 +7,7 @@ passes :func:`verify_model_bundle` and platform evidence is attached.
 """
 
 from .controller import PetController
+from .companion import PetCompanion
 from .fullscreen import foreground_fullscreen
 from .hermes_adapter import (
     HermesPetBridge,
@@ -22,11 +23,15 @@ from .store import (
     BUILTIN_PETS,
     InstalledPet,
     PetStoreError,
+    find_pet,
     get_builtin_pets,
+    get_catalog_pets,
     list_pets,
     register_local_pet,
     remove_pet,
+    resolve_catalog_pet_path,
     slugify,
+    inspect_sprite_geometry,
 )
 from .updater import (
     apply_pet_update,
@@ -47,14 +52,19 @@ __all__ = [
     "clean_legacy_pet_installations",
     "PetBatchQueue",
     "PetController",
+    "PetCompanion",
     "PetProbeDragBridge",
     "foreground_fullscreen",
     "verify_model_bundle",
     "InstalledPet",
     "PetStoreError",
+    "find_pet",
     "get_builtin_pets",
+    "get_catalog_pets",
     "list_pets",
     "register_local_pet",
     "remove_pet",
+    "resolve_catalog_pet_path",
     "slugify",
+    "inspect_sprite_geometry",
 ]

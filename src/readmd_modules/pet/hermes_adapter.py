@@ -9,6 +9,7 @@ receives ReadMD settings, credentials, document contents, or network URLs.
 from __future__ import annotations
 
 import json
+import math
 import logging
 import os
 import hashlib
@@ -31,12 +32,13 @@ def kill_processes_by_target(target_dir: Path) -> None:
         resolved_str = str(target_dir).lower()
 
     # 1. Try psutil for exact path match and recursive child process tree termination
+    psutil_success = False
     try:
         import psutil
         for proc in psutil.process_iter(['pid', 'name', 'exe']):
             try:
                 exe = proc.info.get('exe')
-                if exe and resolved_str in str(exe).lower():
+                if exe and os.path.normcase(os.path.realpath(exe)).startswith(os.path.normcase(resolved_str) + os.sep):
                     try:
                         for child in proc.children(recursive=True):
                             try:
@@ -48,40 +50,53 @@ def kill_processes_by_target(target_dir: Path) -> None:
                     proc.kill()
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
+        psutil_success = True
     except Exception:
-        pass
+        psutil_success = False
 
-    # 2. Windows fallback: check PowerShell / taskkill if on Windows
-    if os.name == 'nt':
+    # 2. Windows fallback: check PowerShell / taskkill ONLY if psutil failed or is unavailable
+    if os.name == 'nt' and not psutil_success:
         try:
-            ps_script = f'$p = "{resolved_str}".Replace("\\", "\\\\"); Get-Process -Name electron -ErrorAction SilentlyContinue | Where-Object {{ $_.Path -and $_.Path.ToLower().Contains($p) }} | ForEach-Object {{ Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }}'
+            startupinfo = None
+            if hasattr(subprocess, 'STARTUPINFO'):
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= getattr(subprocess, 'STARTF_USESHOWWINDOW', 1)
+                startupinfo.wShowWindow = 0
+            creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+            safe_target = (resolved_str.rstrip('\\/') + '\\').replace("'", "''")
+            ps_script = f"$petTarget = '{safe_target}'; Get-Process -Name electron -ErrorAction SilentlyContinue | Where-Object {{ $_.Path -and $_.Path.StartsWith($petTarget, [System.StringComparison]::OrdinalIgnoreCase) }} | Stop-Process -Force -ErrorAction SilentlyContinue"
             subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', ps_script],
-                           capture_output=True, timeout=5)
+                           capture_output=True, timeout=5,
+                           startupinfo=startupinfo, creationflags=creationflags)
         except Exception:
             pass
+
 
 
 class HermesPetBridge:
     """Versioned file bridge shared by ReadMD and the copied Hermes overlay."""
 
     FORMAT_VERSION = 1
-    _COMMANDS = frozenset({"bounds", "clipboard", "drop", "open-app", "open-menu", "pop-in", "scale", "submit", "toggle-app"})
+    _COMMANDS = frozenset({"bounds", "clipboard", "drop", "open-app", "open-menu", "pop-in", "scale", "submit", "toggle-app", "interact", "character"})
 
     def __init__(self, data_dir: str):
         root = Path(data_dir).resolve() / "pet"
         self._root = root
         self.state_path = root / "hermes-overlay-state.json"
         self.command_path = root / "hermes-overlay-state.json.command"
+        self.commands_dir = root / "hermes-overlay-state.json.commands"
         self._lock = threading.Lock()
+        self._command_lock = threading.Lock()
+        self._last_encoded = None
 
     def publish(self, runtime: Dict[str, Any], *, info: Optional[Dict[str, Any]] = None,
                 activity: Optional[Dict[str, Any]] = None, bounds: Optional[Dict[str, Any]] = None,
                 renderer: Optional[str] = None, fullscreen: Optional[bool] = None) -> Dict[str, Any]:
         """Atomically publish only the narrow display state required by Hermes."""
         runtime = runtime if isinstance(runtime, dict) else {}
-        state = str(runtime.get("state") or "")
+        state = str(runtime.get("activity_state", runtime.get("state")) or "")
         derived_activity = {
-            "busy": state == "busy",
+            "busy": bool(runtime.get("active_tasks", state == "busy")),
             "error": state == "error",
             "justCompleted": state == "success",
         }
@@ -90,7 +105,7 @@ class HermesPetBridge:
             "visible": bool(runtime.get("visible")),
             "info": dict(info or {}),
             "activity": {**derived_activity, **dict(activity or {})},
-            "busy": state == "busy",
+            "busy": derived_activity['busy'],
             "awaiting": False,
             "unread": False,
         }
@@ -104,24 +119,41 @@ class HermesPetBridge:
         tmp = self.state_path.with_suffix(".tmp")
         encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         with self._lock:
+            if encoded == self._last_encoded and self.state_path.is_file():
+                return payload
             tmp.write_text(encoded, encoding="utf-8")
-            os.replace(str(tmp), str(self.state_path))
+            try:
+                os.replace(str(tmp), str(self.state_path))
+                self._last_encoded = encoded
+            finally:
+                tmp.unlink(missing_ok=True)
         return payload
 
     def take_command(self) -> Optional[Dict[str, Any]]:
+        with self._command_lock:
+            # Durable FIFO commands are unique atomic files. Legacy single-slot
+            # writers remain supported during an adapter update.
+            queued = sorted(self.commands_dir.glob('*.json')) if self.commands_dir.is_dir() else []
+            for source in queued[:128]:
+                command = self._take_command_file(source, durable=True)
+                if command is not None:
+                    return command
+            return self._take_command_file(self.command_path)
+
+    def _take_command_file(self, source, durable=False) -> Optional[Dict[str, Any]]:
         """Return one validated command, deleting no state file on parse failure."""
-        claim_path = self.command_path.with_name(
-            f"{self.command_path.name}.claim.{os.getpid()}.{time.time_ns()}"
+        claim_path = source.with_name(
+            f"{source.name}.claim.{os.getpid()}.{time.time_ns()}"
         )
         try:
-            os.replace(str(self.command_path), str(claim_path))
+            os.replace(str(source), str(claim_path))
         except OSError:
             return None
 
         def _restore_or_discard():
-            if not self.command_path.exists():
+            if not durable and not source.exists():
                 try:
-                    os.replace(str(claim_path), str(self.command_path))
+                    os.replace(str(claim_path), str(source))
                     return
                 except OSError:
                     pass
@@ -131,6 +163,9 @@ class HermesPetBridge:
                 pass
 
         try:
+            if claim_path.is_symlink() or claim_path.stat().st_size > 32 * 1024 * 1024:
+                _restore_or_discard()
+                return None
             raw = claim_path.read_text(encoding="utf-8")
             value = json.loads(raw)
         except (OSError, ValueError, TypeError):
@@ -144,12 +179,27 @@ class HermesPetBridge:
         if kind not in self._COMMANDS:
             _restore_or_discard()
             return None
+        if kind == 'interact':
+            if command.get('action') not in {'pet', 'feed', 'play', 'rest', 'wake'}:
+                _restore_or_discard()
+                return None
+            command = {'type': kind, 'action': command['action']}
+        if kind == 'character':
+            slug = command.get('slug', '')
+            if not isinstance(slug, str) or len(slug) > 63 or command.get('renderer') not in {'hermes-sprite', 'live2d'}:
+                _restore_or_discard()
+                return None
+            command = {'type': kind, 'slug': slug, 'renderer': command['renderer']}
         if kind == "bounds":
             if not isinstance(command.get("bounds"), dict):
                 _restore_or_discard()
                 return None
             command = dict(command)
-            command["bounds"] = self._safe_bounds(command["bounds"])
+            try:
+                command["bounds"] = self._safe_bounds(command["bounds"])
+            except ValueError:
+                _restore_or_discard()
+                return None
         if kind == "scale":
             try:
                 scale = round(float(command.get("scale")), 2)
@@ -195,8 +245,11 @@ class HermesPetBridge:
         for key, low, high in (("x", -32768, 32768), ("y", -32768, 32768),
                                ("width", 80, 2048), ("height", 80, 2048)):
             try:
-                number = int(round(float(value[key])))
-            except (KeyError, TypeError, ValueError):
+                number = float(value[key])
+                if not math.isfinite(number):
+                    raise ValueError('invalid_pet_bounds')
+                number = int(round(number))
+            except (KeyError, TypeError, ValueError, OverflowError):
                 raise ValueError("invalid_pet_bounds")
             result[key] = max(low, min(high, number))
         return result
@@ -211,6 +264,8 @@ class HermesPetLauncher:
         self._external_adapter_dir = Path(adapter_dir).resolve() if adapter_dir else None
         self._process: Optional[subprocess.Popen] = None
         self._launch_lock = threading.Lock()
+        self._scan_until = 0.0
+        self._scan_running = False
 
     @property
     def adapter_dir(self) -> Path:
@@ -224,7 +279,9 @@ class HermesPetLauncher:
         runtime = self.adapter_dir / "electron.exe"
         app = self.adapter_dir / "app" / "package.json"
         is_running = self._process is not None and self._process.poll() is None
-        if not is_running and os.name == 'nt' and runtime.is_file():
+        if not is_running and time.monotonic() < self._scan_until:
+            is_running = self._scan_running
+        elif not is_running and os.name == 'nt' and runtime.is_file():
             try:
                 import psutil
                 resolved_runtime = str(runtime.resolve()).lower()
@@ -238,12 +295,24 @@ class HermesPetLauncher:
                         continue
             except Exception:
                 pass
+            self._scan_until = time.monotonic() + 2.0
+            self._scan_running = is_running
+        health = {}
+        try:
+            health_path = Path(str(self._bridge.state_path) + '.health.json')
+            if health_path.stat().st_size < 16384:
+                raw = json.loads(health_path.read_text(encoding='utf-8'))
+                if isinstance(raw, dict):
+                    health = {key: raw[key] for key in ('state', 'renderer', 'code') if isinstance(raw.get(key), str)}
+        except (OSError, ValueError):
+            pass
         return {
             "available": os.name == "nt" and runtime.is_file() and app.is_file(),
             # The bridge path is an implementation detail.  Returning it from
             # the public status API would expose the user's data directory.
             "bridge_ready": self._bridge.state_path.is_file(),
             "running": is_running,
+            "health": health if is_running else {},
         }
 
     def start(self) -> Dict[str, Any]:
@@ -267,8 +336,17 @@ class HermesPetLauncher:
             env["READMD_PET_BRIDGE_FILE"] = str(self._bridge.state_path)
             env["READMD_PARENT_PID"] = str(os.getpid())
             try:
+                startupinfo = None
+                creationflags = 0
+                if os.name == 'nt':
+                    if hasattr(subprocess, 'STARTUPINFO'):
+                        startupinfo = subprocess.STARTUPINFO()
+                        startupinfo.dwFlags |= getattr(subprocess, 'STARTF_USESHOWWINDOW', 1)
+                        startupinfo.wShowWindow = 0
+                    creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
                 self._process = subprocess.Popen(
                     [str(runtime), str(app)], cwd=str(app), close_fds=True, env=env,
+                    startupinfo=startupinfo, creationflags=creationflags,
                 )
             except OSError:
                 logging.exception('Could not launch desktop pet')
@@ -281,7 +359,17 @@ class HermesPetLauncher:
                 pid = getattr(self._process, 'pid', None)
                 if pid and os.name == 'nt':
                     try:
-                        subprocess.run(['taskkill', '/F', '/T', '/PID', str(pid)], capture_output=True, timeout=3)
+                        startupinfo = None
+                        if hasattr(subprocess, 'STARTUPINFO'):
+                            startupinfo = subprocess.STARTUPINFO()
+                            startupinfo.dwFlags |= getattr(subprocess, 'STARTF_USESHOWWINDOW', 1)
+                            startupinfo.wShowWindow = 0
+                        creationflags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+                        subprocess.run(
+                            ['taskkill', '/F', '/T', '/PID', str(pid)],
+                            capture_output=True, timeout=3,
+                            startupinfo=startupinfo, creationflags=creationflags,
+                        )
                     except Exception:
                         pass
                 try:
@@ -293,6 +381,7 @@ class HermesPetLauncher:
                 except Exception:
                     pass
                 self._process = None
+
 
             # Also ensure all lingering child processes or unmanaged electron.exe under adapter_dir are killed
             kill_processes_by_target(self.adapter_dir)
@@ -569,7 +658,11 @@ class HermesPetPluginInstaller:
                             target.write(source.read())
                         if self._sha256(destination) != expected[name]:
                             return {"ok": False, "code": "pet_plugin_hash_mismatch"}
+                    # Persist readmd-pet-plugin.json so get_installed_manifest_hash() can verify existing installs
+                    manifest_dest = staged / "readmd-pet-plugin.json"
+                    manifest_dest.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
                     # A complete manifest means no unlisted executables can be
+
                     # smuggled into the runtime. The installation is a replace
                     # operation only after every listed file verified.
                     backup = self.root / "hermes-adapter.previous"
