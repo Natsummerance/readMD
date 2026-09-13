@@ -12,6 +12,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 
 
 def percentile(values, percent):
@@ -87,14 +88,15 @@ def main():
     parser = argparse.ArgumentParser(description='repeat ReadMD startup probes')
     parser.add_argument('--runs', type=int, default=5)
     parser.add_argument('--warmup', type=int, default=0, help='number of unrecorded warmup runs before benchmarking')
+    parser.add_argument('--cooldown', type=float, default=0.5, help='seconds to sleep between probe runs to release file locks')
     parser.add_argument('--timeout', type=float, default=20)
     parser.add_argument('--executable', help='packaged ReadMD executable (default: source entrypoint)')
     parser.add_argument('--output', help='write the aggregate gate report as JSON')
     parser.add_argument('--max-page-loaded-ms', type=float, default=2000)
     parser.add_argument('--max-window-overhead-ms', type=float, default=120)
     args = parser.parse_args()
-    if args.runs <= 0 or args.timeout <= 0 or args.warmup < 0:
-        parser.error('--runs and --timeout must be positive, --warmup non-negative')
+    if args.runs <= 0 or args.timeout <= 0 or args.warmup < 0 or args.cooldown < 0:
+        parser.error('--runs and --timeout must be positive, --warmup and --cooldown non-negative')
     if args.max_page_loaded_ms <= 0 or args.max_window_overhead_ms <= 0:
         parser.error('startup budgets must be positive')
     app = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'readmd.py')
@@ -110,6 +112,8 @@ def main():
                 subprocess.run(
                     ([sys.executable, app] if not args.executable else [args.executable]) + command_tail,
                     text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+                if args.cooldown > 0:
+                    time.sleep(args.cooldown)
 
     reports = []
     with tempfile.TemporaryDirectory(prefix='readmd-startup-probe-') as directory:
@@ -129,6 +133,8 @@ def main():
             except OSError:
                 report['error'] = report.get('error', 'probe did not produce JSON')
             reports.append(report)
+            if args.cooldown > 0 and index < args.runs - 1:
+                time.sleep(args.cooldown)
     gate = evaluate_startup_reports(
         reports, args.max_page_loaded_ms, args.max_window_overhead_ms,
     )
