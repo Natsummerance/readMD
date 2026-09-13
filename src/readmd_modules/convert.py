@@ -524,6 +524,10 @@ def _convert_latex_file(path: str) -> Tuple[str, str, Optional[str]]:
 def convert_verbose(path, form_tables=True):
     """返回 (text, engine, error)。engine: 'docx' | 'pdf' | 'csv' | 'code' | 'txtmd' | 'texmd' | 'xlsx' | 'pptx' | 'markitdown' | ''"""
     ext = os.path.splitext(path)[1].lower()
+    from .plugin_runtime import convert_file as plugin_convert
+    plugin_result = plugin_convert(path)
+    if plugin_result:
+        return plugin_result
     if ext == '.docx':
         try:
             return docx2md(path, form_tables=form_tables), 'docx', None
@@ -546,19 +550,6 @@ def convert_verbose(path, form_tables=True):
             return md, 'markitdown', None
         return '', '', err
     if ext == '.pdf':
-        try:
-            from . import plugin_manager as pm
-            if pm.is_plugin_enabled('docling'):
-                pm.mount_sandbox()
-                from docling.document_converter import DocumentConverter
-                converter = DocumentConverter()
-                res = converter.convert(path)
-                md = res.document.export_to_markdown()
-                if md and md.strip():
-                    return md.strip() + '\n', 'docling', None
-        except Exception as docling_err:
-            logging.info('Docling fallback: %s', docling_err)
-
         try:
             return pdf2md(path), 'pdf', None
         except Exception as e:  # noqa: BLE001

@@ -323,6 +323,8 @@ def latex_to_md(tex_content: str, base_dir: str = '') -> str:
         val = re.sub(r'\\url\{([^}]*)\}', r'\1', val)
         val = re.sub(r'\\href\{[^}]*\}\{([^}]*)\}', r'\1', val)
         val = re.sub(r'\\(?:And|AND|and)\b', ' & ', val)
+        from .plugin_runtime import latex_label
+        val = latex_label(val)
         val = val.replace('\\\\', ' ')
         val = val.replace('\\', '')
         val = val.replace('{', '').replace('}', '')

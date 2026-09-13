@@ -96,10 +96,15 @@ def render(md_content, out_path, style, source_name, assets_dir, warns):
     if not mathjax_js:
         warns.append('MathJax 未找到，公式可能无法渲染')
     css = _build_css(style)
+    from ..plugin_runtime import highlighted_blocks, keywords
+    highlights = json.dumps(highlighted_blocks(md_content), ensure_ascii=False).replace('<', '\\u003c')
+    keyword_text = keywords(md_content)
     title = (style['meta'].get('title') or source_name or 'ReadMD 导出')
     md_esc = json.dumps(md_content or '', ensure_ascii=False).replace('<', '\\u003c')
     html = _TEMPLATE.replace('__TITLE__', _esc_attr(title)) \
                    .replace('__CSS__', css) \
+                   .replace('__KEYWORDS__', _esc_attr(keyword_text)) \
+                   .replace('__HIGHLIGHTS__', highlights) \
                    .replace('__MARKED__', marked_js) \
                    .replace('__MATHJAX__', mathjax_js) \
                    .replace('__MD__', md_esc)
@@ -118,6 +123,7 @@ _TEMPLATE = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="generator" content="ReadMD">
+<meta name="keywords" content="__KEYWORDS__">
 <title>__TITLE__</title>
 <style>
 __CSS__
@@ -147,6 +153,11 @@ __MATHJAX__
   catch (e) { html = '<p>渲染失败：' + e.message + '</p>'; }
   document.getElementById('content').innerHTML = html;
   var root = document.getElementById('content');
+  var highlights = __HIGHLIGHTS__;
+  root.querySelectorAll('pre > code').forEach(function (code) {
+    var key = code.textContent.replace(/\n+$/, '');
+    if (Object.prototype.hasOwnProperty.call(highlights, key)) code.innerHTML = highlights[key];
+  });
   var walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
   var breaks = [], node;
   while ((node = walker.nextNode())) {

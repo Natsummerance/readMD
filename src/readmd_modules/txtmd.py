@@ -38,6 +38,10 @@ def read_text(path):
         data = f.read()
     if data.startswith(b'\xef\xbb\xbf'):
         return data.decode('utf-8-sig'), 'utf-8-sig'
+    from .plugin_runtime import decode_text
+    decoded = decode_text(data)
+    if decoded:
+        return decoded
     for enc in _ENCODINGS:
         try:
             return data.decode(enc), enc

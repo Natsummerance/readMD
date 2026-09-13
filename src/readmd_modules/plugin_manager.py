@@ -40,7 +40,9 @@ _lock = threading.RLock()
 # Keep this separate from _lock so status polling remains responsive.
 _install_lock = threading.Lock()
 _install_tasks: Dict[str, Dict[str, Any]] = {}
-CONNECTED_PLUGINS = frozenset({'easyocr', 'rapidocr', 'rapid_table', 'whisper'})
+DEFAULT_ENABLED = frozenset({'easyocr', 'rapidocr', 'rapid_table', 'whisper'})
+_runtime_status: Dict[str, Dict[str, Any]] = {}
+_active_uses: Dict[str, int] = {}
 
 # 插件定义清单（可扩展）
 PLUGIN_SPECS: Dict[str, Dict[str, Any]] = {
@@ -151,6 +153,15 @@ PLUGIN_SPECS: Dict[str, Dict[str, Any]] = {
 }
 
 
+from .plugin_catalog import CAPABILITIES, extend_catalog
+extend_catalog(PLUGIN_SPECS)
+CONNECTED_PLUGINS = frozenset({
+    'easyocr', 'rapidocr', 'rapid_table', 'whisper',
+    'faster_whisper', 'docling', 'pymupdf4llm', 'markdownify',
+    'trafilatura', 'charset_normalizer'
+})
+
+
 def _ensure_dirs():
     """确保插件目录结构就绪。"""
     try:
@@ -223,6 +234,12 @@ def load_manifest() -> Dict[str, Dict[str, Any]]:
             result[pid] = {
                 'id': pid,
                 'runtime_connected': pid in CONNECTED_PLUGINS,
+                'name': spec['name'],
+                'capability': spec['capability'],
+                'alternatives': [other for other in CAPABILITIES[spec['capability']] if other != pid],
+                'requires_model': spec.get('requires_model', False),
+                'runtime': dict(_runtime_status.get(pid, {})),
+                'busy': bool(_active_uses.get(pid)),
                 'name_key': spec['name_key'],
                 'desc_key': spec['desc_key'],
                 'category': spec['category'],
@@ -231,7 +248,7 @@ def load_manifest() -> Dict[str, Dict[str, Any]]:
                 'installed': installed,
                 'cached': _check_model_cached(pid),
                 # 接入管线的插件安装即默认启用；轻量工具包安装后由用户开关决定。
-                'enabled': (entry.get('enabled', pid in CONNECTED_PLUGINS) if installed else False),
+                'enabled': (entry.get('enabled', pid in DEFAULT_ENABLED) if installed else False),
                 'uninstalled': bool(entry.get('uninstalled', False)),
                 'version': entry.get('version', ''),
                 'installing': task_info.get('status') == 'installing',
@@ -242,9 +259,12 @@ def load_manifest() -> Dict[str, Dict[str, Any]]:
                 'last_log': task_info.get('last_log', ''),
             }
         # Legacy manifests and environment-provided packages may enable both.
-        active_ocr = [pid for pid in ('rapidocr', 'easyocr') if result[pid]['enabled']]
-        for pid in active_ocr[1:]:
-            result[pid]['enabled'] = False
+        for providers in CAPABILITIES.values():
+            active = [pid for pid in providers if result[pid]['enabled']]
+            # Explicit choices win over automatically detected environment packages.
+            active.sort(key=lambda pid: data.get(pid, {}).get('enabled') is not True)
+            for pid in active[1:]:
+                result[pid]['enabled'] = False
         return result
 
 
@@ -334,11 +354,37 @@ def set_plugin_enabled(plugin_id: str, enabled: bool) -> bool:
 
 
 def _disable_competing_plugins(manifest, plugin_id):
-    # Table reconstruction is an enhancement, not an alternative OCR engine.
-    if plugin_id in ('easyocr', 'rapidocr'):
-        for other in ('easyocr', 'rapidocr'):
-            if other != plugin_id:
-                manifest.setdefault(other, {})['enabled'] = False
+    capability = PLUGIN_SPECS[plugin_id]['capability']
+    for other in CAPABILITIES[capability]:
+        if other != plugin_id:
+            manifest.setdefault(other, {})['enabled'] = False
+
+
+def active_provider(capability):
+    manifest = load_manifest()
+    return next((pid for pid in CAPABILITIES.get(capability, ()) if manifest[pid]['enabled']), None)
+
+
+def run_plugin(plugin_id, callback, default=None):
+    """Lease a selected provider for one operation and expose its real outcome."""
+    with _lock:
+        if not plugin_id or not is_plugin_enabled(plugin_id):
+            return default
+        _active_uses[plugin_id] = _active_uses.get(plugin_id, 0) + 1
+    try:
+        mount_sandbox()
+        result = callback()
+        with _lock:
+            _runtime_status[plugin_id] = {'state': 'ready', 'error': ''}
+        return result
+    except Exception as error:
+        with _lock:
+            _runtime_status[plugin_id] = {'state': 'error', 'error': str(error)[:500]}
+        logging.warning('Plugin %s failed; using built-in fallback: %s', plugin_id, error)
+        return default
+    finally:
+        with _lock:
+            _active_uses[plugin_id] -= 1
 
 
 def _normalize_dist_name(name: str) -> str:
@@ -912,7 +958,7 @@ def uninstall_plugin(plugin_id: str) -> bool:
     import_name = spec['import_name']
     package = str(spec.get('package') or import_name)
     with _lock:
-        if _install_tasks.get(plugin_id, {}).get('status') == 'installing':
+        if _install_tasks.get(plugin_id, {}).get('status') == 'installing' or _active_uses.get(plugin_id):
             return False
         failures: List[str] = []
         for artifact in _sandbox_artifacts(import_name, package):

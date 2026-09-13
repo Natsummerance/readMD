@@ -216,22 +216,53 @@ async function refreshPluginList() {
   }
 }
 
+let currentPluginCategory = 'all';
+let lastPluginsCache = {};
+let pluginTabsInitialized = false;
+
+function initPluginTabsOnce() {
+  if (pluginTabsInitialized) return;
+  const container = $('plugin-category-tabs');
+  if (!container) return;
+  pluginTabsInitialized = true;
+  container.addEventListener('click', (e) => {
+    const btn = e.target.closest('.plugin-tab-pill');
+    if (!btn) return;
+    container.querySelectorAll('.plugin-tab-pill').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    currentPluginCategory = btn.dataset.category || 'all';
+    renderPluginCards(lastPluginsCache);
+  });
+}
+
 const PLUGIN_ICONS = {
   whisper: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>',
+  faster_whisper: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
   audio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>',
   rapidocr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" x2="17" y1="9" y2="9"/><line x1="12" x2="12" y1="9" y2="17"/><line x1="9" x2="15" y1="17" y2="17"/></svg>',
   easyocr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" x2="17" y1="9" y2="9"/><line x1="12" x2="12" y1="9" y2="17"/><line x1="9" x2="15" y1="17" y2="17"/></svg>',
   ocr: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><line x1="7" x2="17" y1="9" y2="9"/><line x1="12" x2="12" y1="9" y2="17"/><line x1="9" x2="15" y1="17" y2="17"/></svg>',
   rapid_table: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>',
+  table: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>',
   pylatexenc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4 8 2.5 8 3-12 3 12 2.5-8"/><line x1="17" x2="21" y1="12" y2="12"/><line x1="17" x2="21" y1="16" y2="16"/></svg>',
   latex: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m4 8 2.5 8 3-12 3 12 2.5-8"/><line x1="17" x2="21" y1="12" y2="12"/><line x1="17" x2="21" y1="16" y2="16"/></svg>',
   jieba: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><line x1="8.5" x2="15.5" y1="7.5" y2="7.5"/><line x1="7.5" x2="10.5" y1="8.5" y2="15.5"/><line x1="16.5" x2="13.5" y1="8.5" y2="15.5"/></svg>',
+  keywords: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><line x1="8.5" x2="15.5" y1="7.5" y2="7.5"/><line x1="7.5" x2="10.5" y1="8.5" y2="15.5"/><line x1="16.5" x2="13.5" y1="8.5" y2="15.5"/></svg>',
   pygments: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+  highlight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>',
+  pymupdf4llm: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+  docling: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6"/><path d="M9 11h6"/></svg>',
+  pdf: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>',
+  markdownify: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  trafilatura: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  web: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+  charset_normalizer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>',
+  encoding: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>',
   default: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>'
 };
 
-function getPluginIconSvg(id, category) {
-  return PLUGIN_ICONS[id] || PLUGIN_ICONS[category] || PLUGIN_ICONS.default;
+function getPluginIconSvg(id, category, capability) {
+  return PLUGIN_ICONS[id] || PLUGIN_ICONS[capability] || PLUGIN_ICONS[category] || PLUGIN_ICONS.default;
 }
 
 // 每个错误码对应一个字面量 _t() 调用：key 只有在调用点写成字面量时
@@ -246,8 +277,6 @@ const PLUGIN_ERROR_TEXT = {
   uninstall_locked: () => _t('plugin.error.uninstall_locked'),
 };
 
-// 后缀来自 p.category / 插件 id 等运行时变量，_t() 只能拼出前缀，
-// 所以这里逐类写成字面量调用，否则 tools/check_js_i18n_keys.py 看不到。
 const PLUGIN_CATEGORY_TEXT = {
   audio: () => _t('plugin.category.audio'),
   code: () => _t('plugin.category.code'),
@@ -256,6 +285,19 @@ const PLUGIN_CATEGORY_TEXT = {
   ocr: () => _t('plugin.category.ocr'),
   text: () => _t('plugin.category.text'),
   tools: () => _t('plugin.category.tools'),
+};
+
+const PLUGIN_CAPABILITY_TEXT = {
+  ocr: () => _t('plugin.capability.ocr'),
+  table: () => _t('plugin.capability.table'),
+  pdf: () => _t('plugin.capability.pdf'),
+  audio: () => _t('plugin.capability.audio'),
+  web: () => _t('plugin.capability.web'),
+  document: () => _t('plugin.capability.document'),
+  latex: () => _t('plugin.capability.latex'),
+  keywords: () => _t('plugin.capability.keywords'),
+  highlight: () => _t('plugin.capability.highlight'),
+  encoding: () => _t('plugin.capability.encoding'),
 };
 
 // i18n.t() 查不到 key 时返回 key 本身，所以 `_t(k) || '中文'` 结构上永远兜不了底，
@@ -281,27 +323,53 @@ function pluginErrorMarkup(p) {
   `;
 }
 
+function matchesPluginCategory(p, cat) {
+  if (cat === 'all') return true;
+  if (cat === 'ocr') return p.capability === 'ocr' || p.capability === 'table' || p.category === 'ocr';
+  if (cat === 'document') return p.capability === 'pdf' || p.capability === 'document' || p.category === 'document';
+  if (cat === 'audio') return p.capability === 'audio' || p.category === 'audio';
+  if (cat === 'web') return p.capability === 'web' || p.category === 'web';
+  if (cat === 'tools') return p.capability === 'latex' || p.capability === 'keywords' || p.capability === 'highlight' || p.capability === 'encoding' || p.category === 'tools' || p.category === 'code' || p.category === 'text';
+  return true;
+}
+
 function renderPluginCards(plugins) {
+  lastPluginsCache = plugins || {};
+  initPluginTabsOnce();
   const grid = $('plugin-cards-grid');
   if (!grid) return;
   grid.innerHTML = '';
 
   for (const [id, p] of Object.entries(plugins)) {
+    if (!matchesPluginCategory(p, currentPluginCategory)) {
+      continue;
+    }
     const card = document.createElement('div');
     card.className = 'plugin-card' + (p.enabled ? ' is-enabled' : '');
     card.dataset.pluginId = id;
 
-    const title = translatePluginText('plugin.' + id + '.name', p.name_key || id);
+    const title = translatePluginText('plugin.' + id + '.name', p.name || p.name_key || id);
     const desc = translatePluginText('plugin.' + id + '.desc', p.desc_key);
     const category = PLUGIN_CATEGORY_TEXT[p.category] ? PLUGIN_CATEGORY_TEXT[p.category]() : (p.category || '');
+    const capName = PLUGIN_CAPABILITY_TEXT[p.capability] ? PLUGIN_CAPABILITY_TEXT[p.capability]() : (p.capability || '');
     const isCached = Boolean(p.installed && p.cached);
     const sizeStr = p.approx_size ? p.approx_size : '';
+    const isExclusive = Boolean(p.alternatives && p.alternatives.length > 0);
+
     const metaParts = [];
     if (sizeStr) metaParts.push(sizeStr);
     if (category) metaParts.push(category);
+    if (p.requires_model) metaParts.push(_t('plugin.requiresModel'));
     metaParts.push(isCached ? _t('plugin.cacheReady') : (p.installed ? _t('plugin.installed') : _t('plugin.available')));
 
-    const iconSvg = getPluginIconSvg(id, p.category);
+    const capBadge = capName ? `
+      <span class="plugin-capability-badge">
+        ${p.enabled ? '<span class="plugin-pulse-pip"></span>' : ''}
+        ${escapeHtml(capName)}${isExclusive ? ' · ' + escapeHtml(_t('plugin.exclusiveNotice')) : ''}
+      </span>
+    ` : '';
+
+    const iconSvg = getPluginIconSvg(id, p.category, p.capability);
 
     let footLeft = '';
     let footRight = '';
@@ -329,7 +397,7 @@ function renderPluginCards(plugins) {
         <label class="apple-switch plugin-switch">
           <input type="checkbox" class="plugin-switch-input" ${p.enabled ? 'checked' : ''} data-action="toggle" aria-label="${escapeHtml(title)}">
           <span class="apple-switch-track plugin-switch-track" aria-hidden="true"><span class="apple-switch-thumb plugin-switch-thumb"></span></span>
-          <span class="plugin-status-txt ${p.enabled ? 'active' : ''}">${p.enabled ? _t('plugin.enabled') : _t('plugin.disabled')}</span>
+          <span class="plugin-status-txt ${p.enabled ? 'active' : ''}">${p.enabled ? _t('plugin.pluggedIn') : _t('plugin.standby')}</span>
         </label>
       `;
       footRight = `
@@ -352,7 +420,10 @@ function renderPluginCards(plugins) {
       <div class="plugin-card-head">
         <div class="plugin-app-icon" aria-hidden="true">${iconSvg}</div>
         <div class="plugin-card-meta-wrap">
-          <h4 class="plugin-card-title">${escapeHtml(title)}</h4>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+            <h4 class="plugin-card-title">${escapeHtml(title)}</h4>
+            ${capBadge}
+          </div>
           <div class="plugin-card-submeta">
             ${escapeHtml(metaParts.join(' · '))}
           </div>
@@ -394,6 +465,14 @@ function renderPluginCards(plugins) {
 
 async function setPluginToggle(id, enabled, name) {
   try {
+    if (enabled && lastPluginsCache[id]) {
+      const alts = lastPluginsCache[id].alternatives || [];
+      const activeAlt = alts.find(altId => lastPluginsCache[altId] && lastPluginsCache[altId].enabled);
+      if (activeAlt) {
+        const altTitle = translatePluginText('plugin.' + activeAlt + '.name', activeAlt);
+        showToast(_t('plugin.switchedMutual', { name: name || id, other: altTitle }));
+      }
+    }
     const res = await apiFetch('/api/plugins/toggle', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -155,20 +155,26 @@ def transcribe_to_md(path: str, language: Optional[str] = None, model_name: str 
     if not is_supported_media(path):
         return None, 'unsupported_media_format'
 
+    faster = pm.is_plugin_enabled('faster_whisper')
     has_whisper, has_ffmpeg = check_transcribe_prerequisites()
-    if not has_whisper or not has_ffmpeg:
+    if not faster and (not has_whisper or not has_ffmpeg):
         return _make_whisper_notice(path, '未检测到语音转写模型或 FFmpeg 工具'), 'Whisper plugin or FFmpeg not available.'
 
     try:
-        model = _get_whisper_model(model_name)
-        if model is None:
-            return _make_whisper_notice(path, '未检测到语音转写模型'), 'whisper_not_available'
-
         kwargs = {}
         if language and language.strip():
             kwargs['language'] = language.strip()
 
-        result = model.transcribe(path, **kwargs)
+        if faster:
+            from .plugin_runtime import faster_transcribe
+            result = faster_transcribe(path, model_name, language)
+            if result is None:
+                return None, 'faster_whisper_failed'
+        else:
+            model = _get_whisper_model(model_name)
+            if model is None:
+                return _make_whisper_notice(path, '未检测到语音转写模型'), 'whisper_not_available'
+            result = model.transcribe(path, **kwargs)
         segments = result.get('segments', [])
 
         title = os.path.basename(path)
