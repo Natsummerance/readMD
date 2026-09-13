@@ -171,6 +171,10 @@ def add_inline(paragraph, nodes, style, tmpdir, resolve):
                         r = paragraph.add_run(nd.get('latex', ''))
                         _set_font(r, size=size, color=color, italic=True)
     _emit(nodes)
+    font = {'MicrosoftYaHei': 'Microsoft YaHei'}.get(style['typography']['font'], style['typography']['font'])
+    for run in paragraph.runs:
+        if run.font.name == _BASE_FONT:
+            _set_font(run, name=font)
 
 
 def _add_hyperlink(paragraph, url, text, color):
@@ -228,18 +232,23 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
     normal = doc.styles['Normal']
     normal.font.name = _BASE_FONT
     normal.font.size = Pt(float(style['typography']['size']))
+    body_font = {'MicrosoftYaHei': 'Microsoft YaHei'}.get(style['typography']['font'], style['typography']['font'])
+    normal.font.name = body_font
+    normal.paragraph_format.line_spacing = float(style['typography']['lineHeight'])
+    normal.paragraph_format.space_after = Pt(float(style['typography']['spacing']))
+    normal.paragraph_format.first_line_indent = Mm(style['typography'].get('firstLineIndent', 0))
+    normal.paragraph_format.widow_control = True
     try:
-        normal.element.rPr.rFonts.set(qn('w:eastAsia'), _BASE_FONT)
+        normal.element.rPr.rFonts.set(qn('w:eastAsia'), body_font)
     except Exception:
         pass
 
     # 页面设置
     sec = doc.sections[0]
     page = style['page']
-    sizes = {'A4': (210, 297), 'A5': (148, 210), 'B5': (176, 250), 'Letter': (215.9, 279.4), 'Legal': (215.9, 355.6)}
-    w, h = sizes.get(page['size'], (210, 297))
+    from .styles import page_dimensions
+    w, h = page_dimensions(style)
     if page['orientation'] == 'landscape':
-        w, h = h, w
         sec.orientation = WD_ORIENT.LANDSCAPE
     else:
         sec.orientation = WD_ORIENT.PORTRAIT
@@ -249,6 +258,11 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
     sec.right_margin = Mm(page['marginRight'])
     sec.bottom_margin = Mm(page['marginBottom'])
     sec.left_margin = Mm(page['marginLeft'])
+    if style['header']['text']:
+        hp = sec.header.paragraphs[0]
+        hp.text = style['header']['text']
+        hp.alignment = {'left': WD_ALIGN_PARAGRAPH.LEFT, 'center': WD_ALIGN_PARAGRAPH.CENTER, 'right': WD_ALIGN_PARAGRAPH.RIGHT}.get(style['header']['align'], WD_ALIGN_PARAGRAPH.LEFT)
+        for run in hp.runs: _set_font(run, name=body_font, size=8)
 
     # 页脚页码
     footer = sec.footer
@@ -282,6 +296,11 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
     def _add_heading(level, nodes):
         p = doc.add_heading(level=min(level, 6))
         h = style['headings']['h%d' % min(level, 6)]
+        p.paragraph_format.space_before = Pt(h['before'])
+        p.paragraph_format.space_after = Pt(h['after'])
+        p.paragraph_format.keep_with_next = True
+        p.paragraph_format.first_line_indent = Mm(0)
+        p.paragraph_format.page_break_before = h.get('pageBreakBefore', False)
         p.alignment = {'left': WD_ALIGN_PARAGRAPH.LEFT, 'center': WD_ALIGN_PARAGRAPH.CENTER,
                        'right': WD_ALIGN_PARAGRAPH.RIGHT, 'justify': WD_ALIGN_PARAGRAPH.JUSTIFY}.get(h['align'], WD_ALIGN_PARAGRAPH.LEFT)
         # 清空默认 run 后重写
@@ -289,10 +308,26 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
             r._element.getparent().remove(r._element)
         add_inline(p, nodes, style, tmpdir, resolve)
         for r in p.runs:
-            _set_font(r, size=float(h['size']), color=_hex_rgb(h['color']), bold=bool(h['bold']))
+            _set_font(r, name=body_font, size=float(h['size']), color=_hex_rgb(h['color']), bold=bool(h['bold']))
 
     def _add_paragraph(nodes):
         p = doc.add_paragraph()
+        if len(nodes) == 1 and nodes[0]['t'] == 'image':
+            source = resolve(nodes[0]['src'])
+            if source:
+                try:
+                    from PIL import Image as PillowImage
+                    with PillowImage.open(source) as image:
+                        iw, ih = image.size
+                    width = (w - page['marginLeft'] - page['marginRight']) * style['images']['widthPct'] / 100
+                    height = (h - page['marginTop'] - page['marginBottom']) * style['images']['maxHeightPct'] / 100
+                    width = min(width, height * iw / ih)
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    p.paragraph_format.first_line_indent = Mm(0)
+                    p.add_run().add_picture(source, width=Mm(width))
+                    return p
+                except Exception:
+                    warns.append('图片无法按版心缩放：' + nodes[0]['src'])
         p.alignment = {'left': WD_ALIGN_PARAGRAPH.LEFT, 'center': WD_ALIGN_PARAGRAPH.CENTER,
                        'right': WD_ALIGN_PARAGRAPH.RIGHT, 'justify': WD_ALIGN_PARAGRAPH.JUSTIFY}.get(style['typography']['align'], WD_ALIGN_PARAGRAPH.LEFT)
         add_inline(p, nodes, style, tmpdir, resolve)
@@ -320,11 +355,21 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
             _set_font(r, size=11, color=RGBColor(0x88, 0x88, 0x88))
         doc.add_page_break()
 
+    if style['toc']['enabled']:
+        paragraph = doc.add_paragraph()
+        field = OxmlElement('w:fldSimple')
+        field.set(qn('w:instr'), ' TOC \\o "1-3" \\h \\z \\u ')
+        paragraph._p.append(field)
+        update = OxmlElement('w:updateFields'); update.set(qn('w:val'), 'true')
+        doc.settings.element.append(update)
+        doc.add_page_break()
     tb = style['table']
     for blk in blocks:
         t = blk['type']
         if t == 'heading':
             _add_heading(blk['level'], blk.get('text', []))
+        elif t == 'pagebreak':
+            doc.add_page_break()
         elif t == 'paragraph':
             _add_paragraph(blk.get('text', []))
         elif t == 'table':
@@ -339,6 +384,8 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
             table.style = 'Table Grid'
             table.alignment = WD_TABLE_ALIGNMENT.CENTER
             table.autofit = False
+            repeat = OxmlElement('w:tblHeader')
+            table.rows[0]._tr.get_or_add_trPr().append(repeat)
             content_w_mm = (sec.page_width - sec.left_margin - sec.right_margin) / 36000.0  # EMU->mm
             table_w_mm = content_w_mm * float(tb['widthPct']) / 100.0
             col_mm = table_w_mm / ncols
@@ -346,6 +393,12 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
                 for j in range(ncols):
                     cell = table.cell(i, j)
                     cell.width = Mm(col_mm)
+                    margins = OxmlElement('w:tcMar')
+                    for edge in ('top', 'left', 'bottom', 'right'):
+                        inset = OxmlElement('w:' + edge)
+                        inset.set(qn('w:w'), str(round(tb['cellPadding'] * 20)))
+                        inset.set(qn('w:type'), 'dxa'); margins.append(inset)
+                    cell._tc.get_or_add_tcPr().append(margins)
                     p0 = cell.paragraphs[0]
                     p0.alignment = {'left': WD_ALIGN_PARAGRAPH.LEFT, 'center': WD_ALIGN_PARAGRAPH.CENTER,
                                     'right': WD_ALIGN_PARAGRAPH.RIGHT, 'justify': WD_ALIGN_PARAGRAPH.JUSTIFY}.get(
@@ -357,11 +410,11 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
                     if i == 0:
                         _shade_cell(cell, _hex_val(tb['headerBg']))
                         for r0 in p0.runs:
-                            _set_font(r0, size=float(tb['cellSize']),
+                            _set_font(r0, name=body_font, size=float(tb['cellSize']),
                                       color=_hex_rgb(tb['headerColor']), bold=bool(tb['headerBold']))
                     else:
                         for r0 in p0.runs:
-                            _set_font(r0, size=float(tb['cellSize']))
+                            _set_font(r0, name=body_font, size=float(tb['cellSize']))
                         if tb.get('banded') and i % 2 == 0:
                             _shade_cell(cell, _hex_val(tb['bandColor']))
             for j in range(ncols):

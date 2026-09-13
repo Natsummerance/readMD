@@ -123,6 +123,11 @@ def html_to_markdown_clean(html_content: str) -> str:
     return text.strip()
 
 def epub_to_markdown(epub_path: str) -> str:
+    try:
+        from .rich_documents import epub_to_md
+        return epub_to_md(epub_path)
+    except ImportError:
+        pass
     """纯标准库解析 EPUB 电子书并按章节顺序组装为完整 Markdown"""
     if not zipfile.is_zipfile(epub_path):
         raise ValueError("无效的 EPUB 文件")

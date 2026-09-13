@@ -155,6 +155,8 @@ def _is_block_start(line):
     s = line.strip()
     if not s:
         return True
+    if s in ('<!-- pagebreak -->', '<!-- page-break -->', '\\newpage'):
+        return True
     if s.startswith('```') or s.startswith('~~~'):
         return True
     if s.startswith('$$'):
@@ -183,6 +185,10 @@ def parse(md_text, _depth=0):
         line = lines[i]
         stripped = line.strip()
         if not stripped:
+            i += 1
+            continue
+        if stripped in ('<!-- pagebreak -->', '<!-- page-break -->', '\\newpage'):
+            blocks.append({'type': 'pagebreak'})
             i += 1
             continue
 

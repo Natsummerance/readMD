@@ -19,12 +19,15 @@
 """
 
 import copy
+import math
 
 DEFAULT_STYLE = {
-    'page': {'size': 'A4', 'orientation': 'portrait',
+    'page': {'size': 'A4', 'orientation': 'portrait', 'width': 210, 'height': 297,
              'marginTop': 20, 'marginRight': 18, 'marginBottom': 20, 'marginLeft': 18},
     'cover': {'enabled': False, 'title': '', 'subtitle': '', 'date': '', 'align': 'center'},
     'toc': {'enabled': False},
+    'header': {'text': '', 'align': 'left'},
+    'images': {'widthPct': 92, 'maxHeightPct': 85},
     'typography': {'font': 'MicrosoftYaHei', 'size': 11, 'lineHeight': 1.6,
                    'spacing': 6, 'color': '#262626', 'align': 'left'},
     'headings': {
@@ -103,7 +106,7 @@ PRESETS = {
     },
 }
 
-PAGE_SIZES = ('A4', 'A5', 'B5', 'Letter', 'Legal')
+PAGE_SIZES = ('A3', 'A4', 'A5', 'B5', 'Letter', 'Legal', 'Custom')
 ORIENTATIONS = ('portrait', 'landscape')
 HTML_THEMES = ('light', 'dark', 'sepia')
 _FONTS = ('MicrosoftYaHei', 'SimHei', 'SimSun', 'KaiTi', 'DengXian', 'Arial')
@@ -131,13 +134,20 @@ def _clamp(v, lo, hi, default):
         f = float(v)
     except (TypeError, ValueError):
         return default
+    if not math.isfinite(f):
+        return default
     return max(lo, min(hi, f))
 
 
 def sanitize(options):
     """把任意用户输入规整为合法样式（非法值回退默认）。"""
     s = deep_merge(DEFAULT_STYLE, options or {})
+    for key, default in DEFAULT_STYLE.items():
+        if isinstance(default, dict) and not isinstance(s.get(key), dict):
+            s[key] = copy.deepcopy(default)
     p = s['page']
+    p['width'] = _clamp(p.get('width'), 80, 600, 210)
+    p['height'] = _clamp(p.get('height'), 80, 600, 297)
     if p['size'] not in PAGE_SIZES:
         p['size'] = DEFAULT_STYLE['page']['size']
     if p['orientation'] not in ORIENTATIONS:
@@ -152,9 +162,17 @@ def sanitize(options):
     t['align'] = t['align'] if t.get('align') in _ALIGNS else 'left'
     t['color'] = _hex(t.get('color'), '#262626')
     t['font'] = _font(t.get('font'))
+    t['firstLineIndent'] = _clamp(t.get('firstLineIndent'), 0, 30, 0)
+    s['header']['text'] = str(s['header'].get('text') or '')[:120]
+    s['header']['align'] = s['header'].get('align') if s['header'].get('align') in _ALIGNS else 'left'
+    s['images']['widthPct'] = _clamp(s['images'].get('widthPct'), 10, 100, 92)
+    s['images']['maxHeightPct'] = _clamp(s['images'].get('maxHeightPct'), 10, 100, 85)
 
     for i in range(1, 7):
+        if not isinstance(s['headings'].get('h%d' % i), dict):
+            s['headings']['h%d' % i] = copy.deepcopy(DEFAULT_STYLE['headings']['h%d' % i])
         h = s['headings']['h%d' % i]
+        h['pageBreakBefore'] = bool(h.get('pageBreakBefore', False))
         h['size'] = _clamp(h.get('size'), 8, 40, DEFAULT_STYLE['headings']['h%d' % i]['size'])
         h['bold'] = bool(h.get('bold', True))
         h['align'] = h['align'] if h.get('align') in _ALIGNS else 'left'
@@ -206,7 +224,19 @@ def sanitize(options):
         cover[k] = str(cover.get(k) or '')[:120]
     cover['align'] = cover['align'] if cover.get('align') in ('left', 'center', 'right') else 'center'
     s['toc']['enabled'] = bool(s['toc'].get('enabled'))
+    width, height = page_dimensions(s)
+    for a, b, limit in [('marginLeft', 'marginRight', width), ('marginTop', 'marginBottom', height)]:
+        total = p[a] + p[b]
+        if total > limit - 30:
+            p[a], p[b] = p[a] * (limit - 30) / total, p[b] * (limit - 30) / total
     return s
+
+
+def page_dimensions(style):
+    page = style['page']
+    sizes = {'A3': (297, 420), 'A4': (210, 297), 'A5': (148, 210), 'B5': (176, 250), 'Letter': (215.9, 279.4), 'Legal': (215.9, 355.6)}
+    width, height = (page['width'], page['height']) if page['size'] == 'Custom' else sizes.get(page['size'], sizes['A4'])
+    return (max(width, height), min(width, height)) if page['orientation'] == 'landscape' else (width, height)
 
 
 def preset_style(name):

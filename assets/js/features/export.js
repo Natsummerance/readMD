@@ -8,7 +8,7 @@
 const EXPORT_FONTS = ['MicrosoftYaHei', 'SimHei', 'SimSun', 'KaiTi', 'DengXian', 'Arial'];
 const EXPORT_MONO = ['Consolas', 'Courier New', 'SimHei'];
 const EXPORT_ALIGNS = ['left', 'center', 'right', 'justify'];
-const EXPORT_PAGES = ['A4', 'A5', 'B5', 'Letter', 'Legal'];
+const EXPORT_PAGES = ['A3', 'A4', 'A5', 'B5', 'Letter', 'Legal', 'Custom'];
 
 function getExportPresetNames() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
@@ -72,6 +72,8 @@ function getExportSections() {
     /* --- PDF / DOCX 页面与版式 --- */
     { title: _t('export.secPage') || '', fmts: ['pdf', 'docx'], fields: [
       { k: 'page.size', label: _t('export.pageSize') || '', type: 'select', opts: EXPORT_PAGES },
+      { k: 'page.width', label: _t('export.customWidth'), type: 'number', min: 80, max: 600 },
+      { k: 'page.height', label: _t('export.customHeight'), type: 'number', min: 80, max: 600 },
       { k: 'page.orientation', label: _t('export.pageOrientation') || '', type: 'select', opts: [['portrait', _t('export.portrait') || ''], ['landscape', _t('export.landscape') || '']] },
       { k: 'page.marginTop', label: _t('export.marginTop') || '', type: 'number', min: 0, max: 60 },
       { k: 'page.marginRight', label: _t('export.marginRight') || '', type: 'number', min: 0, max: 60 },
@@ -84,13 +86,15 @@ function getExportSections() {
       { k: 'cover.subtitle', label: _t('export.coverSubtitle') || '', type: 'text', full: true },
       { k: 'cover.date', label: _t('export.coverDate') || '', type: 'text' },
       { k: 'cover.align', label: _t('export.coverAlign') || '', type: 'select', opts: [['center', _t('export.alignCenter') || ''], ['left', _t('export.alignLeft') || ''], ['right', _t('export.alignRight') || '']] },
-      { k: 'toc.enabled', label: _t('export.enablePdfToc') || '', type: 'checkbox', fmts: ['pdf'] },
+      { k: 'toc.enabled', label: _t('export.enablePdfToc') || '', type: 'checkbox', fmts: ['pdf', 'docx'] },
+      { k: 'headings.h1.pageBreakBefore', label: _t('export.chapterPageBreak'), type: 'checkbox' },
     ]},
     { title: _t('export.secTypography') || '', fmts: ['pdf', 'docx', 'html'], fields: [
       { k: 'typography.font', label: _t('export.bodyFont') || '', type: 'select', opts: EXPORT_FONTS.map(f => [f, f]) },
       { k: 'typography.size', label: _t('export.bodySize') || '', type: 'number', min: 8, max: 20 },
       { k: 'typography.lineHeight', label: _t('export.lineHeight') || '', type: 'number', min: 1, max: 2.5, step: 0.1 },
       { k: 'typography.spacing', label: _t('export.paragraphSpacing') || '', type: 'number', min: 0, max: 30 },
+      { k: 'typography.firstLineIndent', label: _t('export.firstLineIndent'), type: 'number', min: 0, max: 30 },
       { k: 'typography.color', label: _t('export.bodyColor') || '', type: 'color' },
       { k: 'typography.align', label: _t('export.align') || '', type: 'select', opts: [['left', _t('export.alignLeft') || ''], ['center', _t('export.alignCenter') || ''], ['right', _t('export.alignRight') || ''], ['justify', _t('export.alignJustify') || '']] },
     ]},
@@ -125,6 +129,10 @@ function getExportSections() {
       { k: 'hr.color', label: _t('export.hrColor') || '', type: 'color' },
     ]},
     { title: _t('export.secFooterMeta') || '', fmts: ['pdf', 'docx'], fields: [
+      { k: 'header.text', label: _t('export.headerText'), type: 'text', full: true },
+      { k: 'header.align', label: _t('export.align'), type: 'select', opts: EXPORT_ALIGNS.slice(0, 3) },
+      { k: 'images.widthPct', label: _t('export.imageWidth'), type: 'number', min: 10, max: 100 },
+      { k: 'images.maxHeightPct', label: _t('export.imageHeight'), type: 'number', min: 10, max: 100 },
       { k: 'footer.pageNumbers', label: _t('export.showPageNumbers') || '', type: 'checkbox' },
       { k: 'footer.text', label: _t('export.footerTextLabel') || '', type: 'text', full: true },
       { k: 'meta.title', label: _t('export.docMetaTitle') || '', type: 'text', full: true },
@@ -421,8 +429,8 @@ function generateExportPreviewCss(opts, fmt) {
       font-size: ${ty.size || 11}pt !important;
       line-height: ${ty.lineHeight || 1.6} !important;
       text-align: ${ty.align || 'left'} !important;
-      padding: ${page.marginTop || 20}mm ${page.marginRight || 18}mm ${page.marginBottom || 20}mm ${page.marginLeft || 18}mm !important;
-      ${page.orientation === 'landscape' ? 'width: 297mm; height: 210mm;' : 'width: 210mm; height: 297mm;'}
+      padding: ${page.marginTop ?? 20}mm ${page.marginRight ?? 18}mm ${page.marginBottom ?? 20}mm ${page.marginLeft ?? 18}mm !important;
+      width: ${exportPaperSize(page)[0]}mm; height: ${exportPaperSize(page)[1]}mm;
       box-sizing: border-box !important;
       overflow: hidden !important;
       display: flex !important;
@@ -1251,4 +1259,10 @@ async function generateExportStyleWithAi(stylePrompt) {
     }
     showToast((_t('toast.unknownError') || '') + e.message);
   }
+}
+
+function exportPaperSize(page) {
+  const dimensions = {A3:[297,420],A4:[210,297],A5:[148,210],B5:[176,250],Letter:[215.9,279.4],Legal:[215.9,355.6]};
+  const pair = page.size === 'Custom' ? [Number(page.width)||210,Number(page.height)||297] : dimensions[page.size] || dimensions.A4;
+  return page.orientation === 'landscape' ? [Math.max(...pair),Math.min(...pair)] : pair;
 }

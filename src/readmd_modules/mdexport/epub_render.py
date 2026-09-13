@@ -214,8 +214,20 @@ def split_into_chapters(markdown_content: str, split_level: str = 'h1') -> List[
     curr_lines = []
     
     match_prefixes = ('# ',) if split_level == 'h1' else ('# ', '## ')
-
+    fence = None
     for line in lines:
+        match = re.match(r'^\s{0,3}(`{3,}|~{3,})(.*)$', line)
+        if match:
+            marker = match[1]
+            if fence is None:
+                fence = marker
+            elif marker[0] == fence[0] and len(marker) >= len(fence) and not match[2].strip():
+                fence = None
+            curr_lines.append(line)
+            continue
+        if fence is not None:
+            curr_lines.append(line)
+            continue
         if any(line.startswith(p) for p in match_prefixes):
             if curr_lines:
                 chapters.append((curr_title, "\n".join(curr_lines)))
@@ -235,9 +247,24 @@ def export_epub(markdown_content: str, output_path: str,
                 title: str = "ReadMD 电子书",
                 author: str = "ReadMD Author",
                 language: str = "zh-CN",
-                options: Optional[Dict] = None) -> str:
+                options: Optional[Dict] = None, resolve=None) -> str:
     """将 Markdown 编译打包为标准 EPUB 3 电子书文件。"""
     opts = options or {}
+    resources = {}
+    if resolve is not None:
+        import hashlib
+        import mimetypes
+        def package_image(match):
+            source = resolve(match[2])
+            if not source or os.path.getsize(source) > 24 * 1024 * 1024:
+                return match[1]
+            with open(source, 'rb') as handle: blob = handle.read()
+            mime = mimetypes.guess_type(source)[0] or ''
+            if not mime.startswith('image/'): return match[1]
+            target = 'images/' + hashlib.sha256(blob).hexdigest()[:24] + os.path.splitext(source)[1]
+            resources[target] = (mime, blob)
+            return '![' + match[1] + '](' + target + ')'
+        markdown_content = re.sub(r'!\[([^\]]*)\]\(([^)\s]+)\)', package_image, markdown_content)
     epub_opts = opts.get('epub') or {}
     
     # 提取覆盖元数据
@@ -266,7 +293,8 @@ def export_epub(markdown_content: str, output_path: str,
     for idx, (chap_title, chap_md) in enumerate(raw_chapters):
         chap_id = f"chap_{idx+1}"
         chap_filename = f"chapter_{idx+1}.xhtml"
-        chap_body = _simple_md_to_html(chap_md)
+        from . import parser, xhtml_render
+        chap_body = xhtml_render.render(parser.parse(chap_md))
         chap_xhtml = f"""<?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="{book_lang}" lang="{book_lang}">
@@ -334,6 +362,8 @@ def export_epub(markdown_content: str, output_path: str,
     ]
     for cid, fn, _, _ in chapter_files:
         manifest_items.append(f'<item id="{cid}" href="{fn}" media-type="application/xhtml+xml"/>')
+    for index, (name, (mime, _)) in enumerate(resources.items()):
+        manifest_items.append(f'<item id="image{index}" href="{html.escape(name, quote=True)}" media-type="{mime}"/>')
 
     spine_items = ['<itemref idref="nav"/>']
     for cid, _, _, _ in chapter_files:
@@ -380,6 +410,8 @@ def export_epub(markdown_content: str, output_path: str,
         zf.writestr('OEBPS/nav.xhtml', nav_xhtml)
         zf.writestr('OEBPS/toc.ncx', toc_ncx)
         zf.writestr('OEBPS/style.css', custom_css)
+        for name, (_, blob) in resources.items():
+            zf.writestr('OEBPS/' + name, blob)
 
         for _, fn, _, xhtml_content in chapter_files:
             zf.writestr(f'OEBPS/{fn}', xhtml_content)
@@ -389,11 +421,11 @@ def export_epub(markdown_content: str, output_path: str,
 
 def render_epub(markdown_content: str, output_path: str,
                 style: Optional[Dict] = None, source_name: str = '',
-                warns: Optional[List[str]] = None) -> str:
+                warns: Optional[List[str]] = None, resolve=None) -> str:
     """ReadMD mdexport 统一接口规范。"""
     title = (style.get('epub', {}).get('title') if isinstance(style, dict) else None) or source_name or "ReadMD Document"
     author = (style.get('epub', {}).get('author') if isinstance(style, dict) else None) or ""
-    return export_epub(markdown_content, output_path, title=title, author=author, options=style)
+    return export_epub(markdown_content, output_path, title=title, author=author, options=style, resolve=resolve)
 
 
 # 兼容别名

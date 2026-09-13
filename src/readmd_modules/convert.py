@@ -427,6 +427,11 @@ def _xlsx_to_md(path):
 
 
 def _pptx_to_md(path):
+    try:
+        from .rich_documents import pptx_to_md
+        return pptx_to_md(path)
+    except (ImportError, KeyError, ValueError, AttributeError, OSError):
+        pass
     """Extract slide titles, paragraphs and tables from a PPTX package."""
     p_ns = '{%s}' % _PPT_NS
     with zipfile.ZipFile(path) as archive:
@@ -1199,7 +1204,7 @@ def doc2md(path, form_tables=True):
                 last = e
                 continue
             if out and os.path.isfile(out):
-                return docx2md(out, form_tables=form_tables), None
+                return docx2md(out, form_tables=form_tables, asset_source=path), None
 
     # 内置纯 Python 文本流与表格提取（0 外部依赖，0 弹窗，开箱即用）
     pure_text = _doc_extract_text_pure_python(path)
@@ -1568,7 +1573,8 @@ def _para_inline_with_math(p, doc=None):
     from docx.text.run import Run
     parts = []
 
-    for child in p._p:
+    from .rich_documents import word_children, save_asset
+    for child in word_children(p._p):
         tag = child.tag
         if not isinstance(tag, str):
             continue
@@ -1577,6 +1583,13 @@ def _para_inline_with_math(p, doc=None):
         if local == 'r':
             r = Run(child, p)
             t = r.text or ''
+            for reference in child.findall('.//{http://schemas.openxmlformats.org/drawingml/2006/main}blip'):
+                rid = reference.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed')
+                if rid and doc is not None and getattr(doc.part, '_readmd_source', None):
+                    part = doc.part.related_parts.get(rid)
+                    if part is not None:
+                        uri = save_asset(doc.part._readmd_source, part.blob, os.path.splitext(str(part.partname))[1])
+                        parts.append('![image](%s)' % uri)
             if not t:
                 continue
             if _run_font_lower(r) in _MONO_FONTS:
@@ -1724,7 +1737,7 @@ def _para_list_info(p):
     return False, 0, False
 
 
-def docx2md(path, form_tables=True):
+def docx2md(path, form_tables=True, asset_source=None):
     """docx → Markdown：OMML 公式→LaTeX、标题层级、表格、等宽字体代码块。"""
     from docx import Document
     from docx.oxml.ns import qn
@@ -1732,6 +1745,7 @@ def docx2md(path, form_tables=True):
     from docx.text.paragraph import Paragraph
 
     doc = Document(path)
+    doc.part._readmd_source = os.path.abspath(asset_source or path)
     base_dir = os.path.dirname(os.path.abspath(path))
     lines = []
     code_buf = []
@@ -1802,7 +1816,8 @@ def docx2md(path, form_tables=True):
         lines.append('')
 
     body = doc.element.body
-    for child in body.iterchildren():
+    from .rich_documents import word_children
+    for child in word_children(body):
         if child.tag == qn('w:p'):
             handle_para(Paragraph(child, doc))
         elif child.tag == qn('w:tbl'):
@@ -2254,7 +2269,31 @@ def pdf2md(path):
             global_body_size = Counter(all_sizes).most_common(1)[0][0]
 
         for page in doc:
-            p = _page_to_md(page, default_body_size=global_body_size)
+            from .rich_documents import pdf_columns, save_asset
+            p = pdf_columns(page, _page_to_md, global_body_size) or _page_to_md(page, default_body_size=global_body_size)
+            if not p.strip():
+                with tempfile.TemporaryDirectory(prefix='readmd-pdf-page-') as temporary:
+                    image_path = os.path.join(temporary, 'page.png')
+                    page.get_pixmap(dpi=144).save(image_path)
+                    try:
+                        from . import ocr
+                        p = ocr.ocr_image(image_path) or ''
+                    except Exception:
+                        p = ''
+                    if not p.strip():
+                        with open(image_path, 'rb') as image:
+                            uri = save_asset(path, image.read(), 'png')
+                        p = '> Page %d: OCR unavailable; page image preserved.\n\n![Page %d](%s)' % (page.number + 1, page.number + 1, uri)
+            else:
+                seen = set()
+                for image in page.get_images(full=True):
+                    xref = image[0]
+                    if xref in seen: continue
+                    seen.add(xref)
+                    data = doc.extract_image(xref)
+                    if data and data.get('width', 0) >= 32 and data.get('height', 0) >= 32:
+                        uri = save_asset(path, data['image'], data['ext'])
+                        p += '\n\n![Figure](%s)' % uri
             if p.strip():
                 parts.append(p)
     finally:

@@ -10,12 +10,15 @@ import os
 import shutil
 import sys
 import tempfile
+import base64
+import mimetypes
+from urllib.parse import unquote
 
 from . import styles as _styles
 from . import parser as _parser
 
 APP_DIR = (sys._MEIPASS if getattr(sys, 'frozen', False)
-           else os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+           else os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
 ASSETS_DIR = os.path.join(APP_DIR, 'assets')
 
 EXTS = {'pdf': '.pdf', 'docx': '.docx', 'html': '.html', 'tex': '.tex', 'latex': '.tex', 'epub': '.epub'}
@@ -30,22 +33,36 @@ def load():
 class ImageResolver(object):
     """把 markdown 里的图片 src 解析为本地绝对路径；缺失返回 None。"""
 
-    def __init__(self, base_dir, warns):
+    def __init__(self, base_dir, warns, tmpdir=None):
         self.base_dir = base_dir or ''
         self.warns = warns
         self._cache = {}
+        self.tmpdir = tmpdir
 
     def resolve(self, src):
         src = (src or '').strip()
         if not src:
             return None
+        if src.startswith('data:image/') and self.tmpdir:
+            if src in self._cache: return self._cache[src]
+            import re
+            match = re.fullmatch(r'data:image/(png|jpeg|gif|webp);base64,([A-Za-z0-9+/=\s]+)', src)
+            if match and len(match[2]) <= 32 * 1024 * 1024:
+                try:
+                    blob = base64.b64decode(match[2], validate=True)
+                    import hashlib
+                    path = os.path.join(self.tmpdir, hashlib.sha256(blob).hexdigest() + '.' + match[1])
+                    with open(path, 'wb') as handle: handle.write(blob)
+                    self._cache[src] = path
+                    return path
+                except (ValueError, OSError): pass
         if src.startswith(('http://', 'https://'), ) or src.startswith('data:'):
             self.warns.append('远程/内联图片不支持嵌入，已跳过：%s' % src[:80])
             return None
         if src in self._cache:
             return self._cache[src]
         out = None
-        cand = src
+        cand = unquote(src)
         if not os.path.isabs(cand):
             cand = os.path.join(self.base_dir or '', cand)
         cand = os.path.normpath(cand)
@@ -84,7 +101,7 @@ def export(fmt, content, base_dir, out_path, options=None, source_name='', *, ov
             stage = 'formula'
             from . import formula
             formula.prepare(blocks, style, warns)
-        resolve = ImageResolver(base_dir, warns).resolve
+        resolve = ImageResolver(base_dir, warns, tmpdir).resolve
 
         stage = 'write'
         output_dir = os.path.dirname(os.path.abspath(out_path))
@@ -103,10 +120,19 @@ def export(fmt, content, base_dir, out_path, options=None, source_name='', *, ov
             docx_render.render(blocks, output_tmp, style, tmpdir, resolve, warns)
         elif fmt == 'html':
             from . import html_render
-            html_render.render(content, output_tmp, style, source_name, ASSETS_DIR, warns)
+            import re
+            def embed_image(match):
+                path = resolve(match[2])
+                if not path: return match[0]
+                mime = mimetypes.guess_type(path)[0] or 'application/octet-stream'
+                if not mime.startswith('image/') or os.path.getsize(path) > 24 * 1024 * 1024: return match[0]
+                with open(path, 'rb') as image: encoded = base64.b64encode(image.read()).decode('ascii')
+                return '![' + match[1] + '](data:' + mime + ';base64,' + encoded + ')'
+            embedded = re.sub(r'!\[([^\]]*)\]\(([^)\s]+)\)', embed_image, content)
+            html_render.render(embedded, output_tmp, style, source_name, ASSETS_DIR, warns)
         elif fmt == 'epub':
             from . import epub_render
-            epub_render.render_epub(content, output_tmp, style=style, source_name=source_name, warns=warns)
+            epub_render.render_epub(content, output_tmp, style=style, source_name=source_name, warns=warns, resolve=resolve)
         elif fmt in ('tex', 'latex'):
             from .. import texmd
             title = (style.get('title') if isinstance(style, dict) else None) or source_name or 'Document'

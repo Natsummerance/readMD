@@ -2,6 +2,7 @@
 """Markdown 文本 -> 单文件自包含 HTML（内联 marked + MathJax，离线可开）。"""
 
 import os
+import json
 
 _FONT_MAP = {
     'MicrosoftYaHei': '"Microsoft YaHei", "Microsoft YaHei UI", "PingFang SC", "微软雅黑", sans-serif',
@@ -43,12 +44,12 @@ def _build_css(style):
     css.append('#content { max-width:820px; margin:0 auto; word-wrap:break-word; }')
     for i in range(1, 7):
         h = style['headings']['h%d' % i]
-        css.append('h%d { font-size:%gpx; color:%s; font-weight:%s; text-align:%s; '
-                   'margin-top:%gpx; margin-bottom:%gpx; line-height:1.35; }' % (
+        css.append('h%d { font-size:%gpt; color:%s; font-weight:%s; text-align:%s; '
+                   'margin-top:%gpt; margin-bottom:%gpt; line-height:1.35; }' % (
                        i, float(h['size']), h['color'], 'bold' if h['bold'] else 'normal',
                        h['align'], float(h['before']), float(h['after'])))
     tb = style['table']
-    css.append('table { border-collapse:collapse; width:%g%%; margin:%gpx auto; font-size:%gpx; }' % (
+    css.append('table { border-collapse:collapse; width:%g%%; margin:%gpx auto; font-size:%gpt; }' % (
         float(tb['widthPct']), 8, float(tb['cellSize'])))
     css.append('th, td { border:%.2fpx solid %s; padding:%gpx %gpx; text-align:%s; }' % (
         float(tb['borderWidth']), tb['borderColor'], float(tb['cellPadding']), float(tb['cellPadding']),
@@ -60,7 +61,7 @@ def _build_css(style):
     code = style['code']
     css.append('pre { background:%s; color:%s; border:%.2fpx solid %s; border-radius:%s; '
                'padding:12px 14px; overflow:auto; font-family:%s, Consolas, monospace; '
-               'font-size:%gpx; line-height:1.5; }' % (
+               'font-size:%gpt; line-height:1.5; }' % (
                    code['bg'], code['color'], float(code['borderWidth']), code['borderColor'],
                    '8px' if code['rounded'] else '0', code['font'], float(code['size'])))
     css.append('code { font-family:%s, Consolas, monospace; }' % code['font'])
@@ -70,10 +71,20 @@ def _build_css(style):
                'border-left:4px solid %s; }' % (8, q['bg'], q['color'], q['barColor']))
     css.append('a { color:%s; }' % style['link']['color'])
     css.append('hr { border:none; border-top:1px solid %s; margin:16px 0; }' % style['hr']['color'])
-    css.append('img { max-width:100%%; height:auto; }')
+    css.append('img { max-width:100%; height:auto; }')
+    css.append('p > img:only-child { display:block; max-width:%g%%; margin:0 auto; object-fit:contain; }' % style['images']['widthPct'])
     css.append('li.task-list-item { list-style:none; margin-left:-20px; }')
     css.append('blockquote p, blockquote li { margin:4px 0; }')
-    css.append('@media print { body { padding:0; } #content { max-width:none; } }')
+    from .styles import page_dimensions
+    width, height = page_dimensions(style)
+    page = style['page']
+    css.append('@page { size:%gmm %gmm; margin:%gmm %gmm %gmm %gmm; }' % (width, height, page['marginTop'], page['marginRight'], page['marginBottom'], page['marginLeft']))
+    css.append('body { font-size:%gpt; } p { text-align:%s; text-indent:%gmm; margin-bottom:%gpt; }' % (ty['size'], ty['align'], ty.get('firstLineIndent', 0), ty['spacing']))
+    css.append('h1,h2,h3,h4,h5,h6 { break-after:avoid; text-indent:0; } thead { display:table-header-group; } pre { white-space:pre-wrap; overflow-wrap:anywhere; }')
+    for i in range(1, 7):
+        if style['headings']['h%d' % i].get('pageBreakBefore'): css.append('h%d { break-before:page; }' % i)
+    css.append('@media print { body { padding:0; } #content { max-width:none; } p { orphans:3; widows:3; } }')
+    css.append('.readmd-pagebreak { break-after:page; page-break-after:always; }')
     return '\n'.join(css)
 
 
@@ -86,8 +97,7 @@ def render(md_content, out_path, style, source_name, assets_dir, warns):
         warns.append('MathJax 未找到，公式可能无法渲染')
     css = _build_css(style)
     title = (style['meta'].get('title') or source_name or 'ReadMD 导出')
-    md_esc = (md_content or '').replace('</script>', '<\\/script>')
-    # HTML 转义仅针对 <script> 包裹内容（textContent 不需要转义 & <）
+    md_esc = json.dumps(md_content or '', ensure_ascii=False).replace('<', '\\u003c')
     html = _TEMPLATE.replace('__TITLE__', _esc_attr(title)) \
                    .replace('__CSS__', css) \
                    .replace('__MARKED__', marked_js) \
@@ -115,7 +125,7 @@ __CSS__
 </head>
 <body>
 <article id="content" class="readmd-export"></article>
-<script type="text/markdown" id="md-source">__MD__</script>
+<script type="application/json" id="md-source">__MD__</script>
 <script>
 window.MathJax = {
   tex: { inlineMath: [['$', '$'], ['\\\\(', '\\\\)']], displayMath: [['$$', '$$'], ['\\\\[', '\\\\]']] },
@@ -131,11 +141,24 @@ __MATHJAX__
 </script>
 <script>
 (function () {
-  var md = document.getElementById('md-source').textContent;
+  var md = JSON.parse(document.getElementById('md-source').textContent);
   var html;
   try { html = marked.parse(md, { gfm: true, breaks: true }); }
   catch (e) { html = '<p>渲染失败：' + e.message + '</p>'; }
   document.getElementById('content').innerHTML = html;
+  var root = document.getElementById('content');
+  var walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
+  var breaks = [], node;
+  while ((node = walker.nextNode())) {
+    if (/^page-?break$/.test(node.textContent.trim())) breaks.push(node);
+  }
+  root.querySelectorAll('p').forEach(function (p) {
+    if (p.textContent.trim() === '\\\\newpage') breaks.push(p);
+  });
+  breaks.forEach(function (node) {
+    var div = document.createElement('div');
+    div.className = 'readmd-pagebreak'; node.replaceWith(div);
+  });
   if (window.MathJax && MathJax.typesetPromise) {
     try { MathJax.typesetPromise().catch(function () {}); } catch (e) {}
   }

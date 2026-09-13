@@ -195,13 +195,20 @@ class _ExportDoc(BaseDocTemplate):
         w, h = doc.pagesize
         try:
             if self._footer_text:
-                canv.setFont('Helvetica', 8)
+                canv.setFont(getattr(self, '_body_font', 'Helvetica'), 8)
                 canv.setFillColor(colors.HexColor('#999999'))
-                canv.drawString(18 * mm, 10 * mm, self._footer_text[:120])
+                canv.drawString(doc.leftMargin, max(3 * mm, doc.bottomMargin / 2), self._footer_text[:120])
             if self._page_numbers:
-                canv.setFont('Helvetica', 8)
+                canv.setFont(getattr(self, '_body_font', 'Helvetica'), 8)
                 canv.setFillColor(colors.HexColor('#999999'))
-                canv.drawCentredString(w / 2.0, 10 * mm, str(canv.getPageNumber()))
+                canv.drawCentredString(w / 2.0, max(3 * mm, doc.bottomMargin / 2), str(canv.getPageNumber()))
+            header = getattr(self, '_header', {})
+            if header.get('text'):
+                canv.setFont(getattr(self, '_body_font', 'Helvetica'), 8)
+                y = h - max(3 * mm, doc.topMargin / 2)
+                if header.get('align') == 'center': canv.drawCentredString(w / 2, y, header['text'])
+                elif header.get('align') == 'right': canv.drawRightString(w - doc.rightMargin, y, header['text'])
+                else: canv.drawString(doc.leftMargin, y, header['text'])
         except Exception:
             pass
         canv.restoreState()
@@ -210,10 +217,18 @@ class _ExportDoc(BaseDocTemplate):
 def render(blocks, out_path, style, tmpdir, resolve, warns):
     """生成 PDF。"""
     font = register_fonts()
+    selected = style['typography']['font']
+    candidates = {'SimHei': 'simhei.ttf', 'SimSun': 'simsun.ttc', 'KaiTi': 'simkai.ttf', 'DengXian': 'Deng.ttf', 'Arial': 'arial.ttf'}
+    if selected in candidates:
+        try:
+            if not _font_ready(selected):
+                pdfmetrics.registerFont(TTFont(selected, os.path.join(os.environ.get('WINDIR', 'C:/Windows'), 'Fonts', candidates[selected]), subfontIndex=0))
+            font = selected
+        except Exception:
+            warns.append('所选字体不可用，已使用中文后备字体：' + selected)
     page = style['page']
-    size = _PAGE_MAP.get(page['size'], A4)
-    if page['orientation'] == 'landscape':
-        size = (size[1], size[0])
+    from .styles import page_dimensions
+    size = tuple(value * mm for value in page_dimensions(style))
 
     doc = _ExportDoc(
         out_path, pagesize=size,
@@ -225,17 +240,20 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
     )
     doc._footer_text = style['footer'].get('text', '')
     doc._page_numbers = bool(style['footer'].get('pageNumbers', True))
+    doc._header = style['header']
+    doc._body_font = font
 
     frame = Frame(doc.leftMargin, doc.bottomMargin, doc.width, doc.height, id='main')
     doc.addPageTemplates([PageTemplate(id='all', frames=[frame], onPage=doc._footer)])
 
-    avail = doc.width
+    avail = doc.width - 12
     ty = style['typography']
     body_style = ParagraphStyle(
         'Body', fontName=font, fontSize=_size(ty['size']),
         leading=_size(ty['size']) * float(ty['lineHeight']),
         spaceAfter=float(ty['spacing']), textColor=_hex(ty['color']),
         alignment=_TA.get(ty['align'], TA_LEFT),
+        firstLineIndent=ty.get('firstLineIndent', 0) * mm,
     )
     head_styles = {}
     for i in range(1, 7):
@@ -245,6 +263,7 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
             leading=_size(h['size']) * 1.35, spaceBefore=float(h['before']),
             spaceAfter=float(h['after']), textColor=_hex(h['color']),
             alignment=_TA.get(h['align'], TA_LEFT),
+            firstLineIndent=0, keepWithNext=True,
             fontName=(font + '-Bold') if (h['bold'] and (font + '-Bold') in pdfmetrics.getRegisteredFontNames()) else font,
         )
     li_style = ParagraphStyle('Li', parent=body_style, leftIndent=18, firstLineIndent=0)
@@ -300,7 +319,11 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
     for blk in blocks:
         t = blk['type']
         if t == 'heading':
+            if style['headings']['h%d' % min(blk['level'], 6)].get('pageBreakBefore') and story:
+                story.append(PageBreak())
             _add_inline_par(blk['text'], head_styles[min(blk['level'], 6)])
+        elif t == 'pagebreak':
+            story.append(PageBreak())
         elif t == 'paragraph':
             txt = blk.get('text', [])
             if len(txt) == 1 and txt[0].get('t') == 'image' and not txt[0].get('src', '').startswith(('http://', 'https://')):
@@ -309,8 +332,9 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
                     try:
                         ir = ImageReader(src)
                         iw, ih = ir.getSize()
-                        max_w = avail * 0.92
-                        scale = min(1.0, max_w / iw)
+                        max_w = avail * style['images']['widthPct'] / 100
+                        max_h = (doc.height - 24) * style['images']['maxHeightPct'] / 100
+                        scale = min(1.0, max_w / iw, max_h / ih)
                         story.append(Image(src, width=iw * scale, height=ih * scale))
                         story.append(Spacer(1, 6))
                     except Exception:
@@ -334,7 +358,18 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
             tb = style['table']
             table_w = avail * float(tb['widthPct']) / 100.0
             col_w = table_w / ncols
-            tbl = Table(data, colWidths=[col_w] * ncols, repeatRows=1)
+            for ri, row in enumerate(data):
+                for ci, value in enumerate(row):
+                    aligns = blk.get('aligns', [])
+                    alignment = aligns[ci] if ci < len(aligns) else tb['align']
+                    cell_style = ParagraphStyle(
+                        'TableCell', parent=body_style, fontSize=float(tb['cellSize']),
+                        leading=float(tb['cellSize']) * 1.35, firstLineIndent=0,
+                        spaceAfter=0, alignment=_TA.get(alignment, TA_LEFT),
+                        textColor=_hex(tb['headerColor'] if ri == 0 else ty['color']),
+                    )
+                    data[ri][ci] = Paragraph(value, cell_style)
+            tbl = Table(data, colWidths=[col_w] * ncols, repeatRows=1, splitInRow=1)
             cmds = [
                 ('BACKGROUND', (0, 0), (-1, 0), _hex(tb['headerBg'])),
                 ('TEXTCOLOR', (0, 0), (-1, 0), _hex(tb['headerColor'])),
@@ -366,18 +401,10 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
             if lang:
                 story.append(Paragraph(_esc(lang), ParagraphStyle('LangTag', parent=body_style,
                                      fontSize=8, textColor=colors.HexColor('#888888'), spaceBefore=6)))
-            ct = Table([[XPreformatted(content, code_style)]], colWidths=[avail])
-            cmds = [
-                ('BACKGROUND', (0, 0), (-1, -1), _hex(style['code']['bg'])),
-                ('BOX', (0, 0), (-1, -1), float(style['code']['borderWidth']), _hex(style['code']['borderColor'])),
-                ('TOPPADDING', (0, 0), (-1, -1), 8),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                ('LEFTPADDING', (0, 0), (-1, -1), 10),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-            ]
-            ct.setStyle(TableStyle(cmds))
-            story.append(ct)
-            story.append(Spacer(1, 10))
+            from reportlab.platypus import Preformatted
+            flow_style = ParagraphStyle('CodeFlow', parent=code_style, backColor=_hex(style['code']['bg']), borderPadding=8, spaceAfter=10)
+            story.append(Preformatted(content, flow_style, maxLineLength=max(20, int((avail - 20) / (float(style['code']['size']) * .65)))))
+            continue
         elif t == 'list':
             for idx, it in enumerate(blk.get('items', [])):
                 prefix = ''
@@ -398,7 +425,7 @@ def render(blocks, out_path, style, tmpdir, resolve, warns):
                 elif qb['type'] == 'heading':
                     inner.append('<b>%s</b>' % _esc(_parser.inline_text(qb.get('text', []))))
             if inner:
-                qt = Table([[Paragraph('<br/>'.join(inner), quote_style)]], colWidths=[avail])
+                qt = Table([[Paragraph('<br/>'.join(inner), quote_style)]], colWidths=[avail], splitInRow=1)
                 qt.setStyle(TableStyle([
                     ('BACKGROUND', (0, 0), (-1, -1), _hex(style['quote']['bg'])),
                     ('LINEBEFORE', (0, 0), (0, -1), 3, _hex(style['quote']['barColor'])),
