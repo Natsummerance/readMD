@@ -142,7 +142,7 @@ def bundle_readmd_boot():
         'js/reader/search.js', 'js/reader/folder.js', 'js/reader/render.js',
         'js/editor/preview.js', 'js/editor/image.js', 'js/editor/editor.js',
         'js/features/ai.js', 'js/features/share.js', 'js/features/convert.js',
-        'js/features/batch.js', 'js/features/pet-batch.js',
+        'js/features/batch.js', 'js/features/pet-batch.js', 'js/features/pet-workbench.js', 'js/features/pet-companion-actions.js',
         'js/features/ocr.js', 'js/features/web.js', 'js/features/clipboard.js',
         'js/features/export.js', 'js/features/updater.js', 'js/features/graph.js',
         'app.js'

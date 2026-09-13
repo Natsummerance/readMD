@@ -24,8 +24,8 @@ datas = [
     (os.path.join(ROOT_DIR, 'src', 'readmd_fix.py'), 'src'),
     (os.path.join(ROOT_DIR, 'VERSION'), '.'),
 ]
-hiddenimports = ['src.readmd_fix', 'src.readmd_core', 'runpy']
-for _bundled in ('magika', 'docx', 'reportlab', 'matplotlib', 'trafilatura', 'pip'):
+hiddenimports = ['src.readmd_fix', 'src.readmd_core', 'runpy', 'webview', 'clr', 'pythonnet', 'clr_loader']
+for _bundled in ('magika', 'docx', 'pptx', 'bs4', 'markdownify', 'reportlab', 'matplotlib', 'trafilatura', 'pip', 'webview', 'pythonnet', 'clr_loader'):
     datas += collect_data_files(_bundled)
     hiddenimports += collect_submodules(_bundled)
 
@@ -38,7 +38,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['torch', 'torchvision', 'paddle', 'cv2', 'scipy', 'numba'],
     noarchive=False,
     optimize=0,
 )

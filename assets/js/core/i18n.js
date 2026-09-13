@@ -63,6 +63,17 @@ window.i18n = {
     'app.loading': '加载中...',
     'app.success': '成功',
     'app.failed': '失败',
+    'pet.bubbleOpening': '正在为你打开 {name}...',
+    'pet.bubbleOpened': '{name} 已打开！',
+    'pet.bubbleConverting': '正在为你转换并打开 {name}...',
+    'pet.bubbleOpeningMulti': '正在为你打开 {count} 篇文档...',
+    'pet.bubbleOpenedMulti': '已全部打开 {count} 篇文档！',
+    'pet.bubbleBatchConverting': '已将 {count} 个文档加入批量转换工作台',
+    'pet.bubbleBatchFailed': '部分文件处理失败',
+    'pet.renderer.sprite': '精灵图',
+    'pet.gallery': '桌宠库',
+    'pet.gallery.hermes': '伴读使者',
+    'pet.gallery.companion': '伴读使者',
     'menu.checkUpdate': '检查更新',
     'menu.autoStart': '开机自启',
     'menu.assoc': '设为默认',
@@ -85,7 +96,39 @@ window.i18n = {
     'toast.openedPages': '已打开：{name} · {count} 页',
     'toast.openFailed': '无法打开：{error}',
     'toast.loadFailed': '加载失败：{error}',
-    'toast.openFolderBrowserNotice': '浏览器模式下请使用“打开文件”'
+    'toast.openFolderBrowserNotice': '浏览器模式下请使用“打开文件”',
+    'ai.title': 'AI 助手',
+    'ux.petSections': '桌宠设置分组',
+    'ux.petCharacters': '角色库',
+    'ux.petCompanion': '陪伴方式',
+    'ux.petSettings': '显示与运行',
+    'ux.petStyle': '选择陪伴节奏',
+    'ux.petSocial': '互动陪伴',
+    'ux.petQuiet': '安静阅读',
+    'ux.petQuietHint': '安静模式暂停主动问候和阅读提醒；你仍可点击互动，文件处理结果也会正常提示。',
+    'ux.petActions': '快捷互动',
+    'ux.petHello': '打个招呼',
+    'ux.petGreeting': '我在这里，陪你读完这一页。',
+    'ux.petPreviewHint': '角色外观预览 · 拖放文件到桌宠即可转换',
+    'ux.petLive2d': 'Live2D · 独立桌面',
+    'ux.petSprite': '精灵动画',
+    'ux.graphSearch': '搜索节点与别名',
+    'ux.labels': '显示名称',
+    'ux.neighbors': '仅邻近关联',
+    'ux.notes': '关联笔记列表',
+    'ux.graphControls': '拖拽旋转 · 滚轮缩放 · 2D/3D切换',
+    'ux.noResults': '未找到匹配节点',
+    'ux.connections': '{count} 处关联',
+    'ux.openNote': '打开笔记',
+    'ux.loadFailed': '加载失败',
+    'ux.filterLinks': '过滤双向链接...',
+    'ux.linkHint': '使用 [[双链]] 建立笔记关联',
+    'ux.starterSummary': '梳理文档',
+    'ux.starterSummaryHint': '提炼论点、证据与结论',
+    'ux.starterQuestions': '带着问题阅读',
+    'ux.starterQuestionsHint': '发现疑点与值得追问的地方',
+    'ux.noDocument': '自由对话 · 尚未打开文档',
+    'batch.statusOk': '成功'
   },
 
   browserDefaults: {
@@ -119,6 +162,8 @@ window.i18n = {
         // fallback avoids a second 50+ KB English request during startup.
         // Other languages still load English lazily after the first paint.
         this.fallbackDict = d;
+        this.translateDOM();
+        window.dispatchEvent(new CustomEvent('readmd:language-changed', { detail: { lang: 'zh-CN' } }));
       }
       return;
     }

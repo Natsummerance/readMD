@@ -43,21 +43,23 @@ macOS / Linux：
 - 导出：PDF、DOCX、HTML、LaTeX、EPUB 和 Reveal.js 演示文稿。
 - 学术：LaTeX/Markdown 互转、LaTeX 转 OMML、BibTeX 解析。
 - 本地能力：OCR、受限代码块执行。
+- PDF 矢量编辑：PDF 结构审计、DPI 与噪点采样、沙箱预览差分质检（Zero-Contamination Gate）、物理落盘（带 `.bak` 备份与只读属性解锁）及一键回滚。
 - AI：动态读取桌面端 Provider，列出并调用同一组 Skills；MCP `prompts/list` 与当前 Skill Registry 一一对应，不内置另一套写死提示词。
 - Resources：只读公开当前文档、会话、Skills 元数据和离线上游来源信息。
 
-当前工具列表以客户端返回的 `tools/list` 为准。常用工具包括：
+当前工具列表以客户端返回的 `tools/list` 为准。包含 21 项标准化工具：
 
-`readmd_fix_markdown`、`readmd_convert_to_markdown`、`readmd_web_to_markdown`、`readmd_ocr_to_markdown`、`readmd_export_document`、`readmd_latex_to_md`、`readmd_md_to_latex`、`readmd_parse_bibtex`、`readmd_latex_to_omml`、`readmd_ai_assistant`、`readmd_ai_providers`、`readmd_ai_chat`、`readmd_process_imports`、`readmd_generate_toc`、`readmd_export_presentation`、`readmd_export_epub`、`readmd_run_code_chunk`。
+`readmd_fix_markdown`、`readmd_convert_to_markdown`、`readmd_web_to_markdown`、`readmd_ocr_to_markdown`、`readmd_export_document`、`readmd_latex_to_md`、`readmd_md_to_latex`、`readmd_parse_bibtex`、`readmd_latex_to_omml`、`readmd_ai_assistant`、`readmd_ai_providers`、`readmd_ai_chat`、`readmd_process_imports`、`readmd_generate_toc`、`readmd_export_presentation`、`readmd_export_epub`、`readmd_run_code_chunk`、`readmd_pdf_audit`、`readmd_pdf_preview_edit`、`readmd_pdf_apply_edit`、`readmd_pdf_rollback`。
 
 ## 安全边界
 
-读取、分析和内存内转换默认可用。下列操作有副作用，调用参数必须明确包含 `"confirm": true`：
+读取、分析、内存内转换及沙箱预览（如 `readmd_pdf_preview_edit`）默认安全可用。下列操作有副作用，调用参数必须明确包含 `"confirm": true`：
 
-- 联网抓取网页；
-- 写入或覆盖导出文件；
-- 生成演示文稿或 EPUB 文件；
-- 执行代码块。
+- 联网抓取网页（`readmd_web_to_markdown`）；
+- 写入或覆盖导出文件（`readmd_export_document`）；
+- 生成演示文稿或 EPUB 文件（`readmd_export_presentation`、`readmd_export_epub`）；
+- 在沙箱中执行代码块（`readmd_run_code_chunk`）；
+- 物理写入或回滚 PDF 编辑（`readmd_pdf_apply_edit`、`readmd_pdf_rollback`）。
 
 文件工具只处理调用中明确给出的路径。MCP 不暴露桌面应用更新、托盘、开机启动、通知和窗口控制。AI 密钥不会出现在工具结果、URL、历史或导出配置中；服务只使用 ReadMD 配置保存的 `credential_id`。
 

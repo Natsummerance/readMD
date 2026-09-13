@@ -31,7 +31,10 @@
 | You have DOCX / PPTX / XLSX / PDF / HTML | Convert it to Markdown instead of rebuilding formatting by hand |
 | An image contains text you need | Use native OS OCR in an offline workflow where supported |
 | You write papers or technical documents | Use BibTeX cards, theorem/proof boxes and LaTeX export |
-| You want an AI-assisted workflow | Use the VS Code extension and FastMCP stdio server |
+| You want desktop companion & interaction | CC0 Arch-Chan Live2D & 73 micro-breathing sprites with full-stack bubble sync |
+| You need lossless PDF text repair | Built-in vector PDF editor with zero-contamination gate and one-click rollback |
+| You want an AI-assisted workflow | Use the VS Code extension and FastMCP stdio server (21 tools) |
+| Multilingual team collaboration | 46 languages 100% dictionary parity (1563 keys) with zero English copy leaks |
 
 ## Direct downloads
 
@@ -50,6 +53,24 @@
 1. Download the installer or portable build for your system.
 2. Open a real large file and check outline, search and table rendering.
 3. Edit only when you are ready; rendering repairs do not silently write to your source.
+
+## Desktop Companion Pet System (Live2D & 73 Breathing Sprites)
+
+- **CC0 Arch-Chan Live2D**: High-definition Live2D skeletal animation that dynamically reacts to reading progress and time of day, featuring smooth drag, mouse pass-through, and high-sensitivity hit testing.
+- **73 Petdex Sprites with Micro-Breathing Engine**: Automatic geometry inference resolves dense spritesheets and standalone icons with zero latency; bottom-anchor sinusoidal micro-breathing brings static sprites to life.
+- **Companion Life State Engine**: Persistent growth system with Level, Energy, Mood, and Affection, supporting petting, feeding, playing, resting, and waking interactions.
+- **Full-Stack Bubble & Context Menu Sync**: Floating desktop window, in-app widget, and settings stage keep dialogue bubbles synchronized in real-time, integrated with the Electron tray menu.
+- **Tactile Apple-Style Slider (/apple-design)**: Apple HIG 4px slim track with an 18px physical tactile knob, active energy glow, and tabular numeral pill readouts.
+
+---
+
+## Native Vector PDF Editor
+
+- **Structural & Microscopic Audit**: Automatically inspects PDF geometry, DPI, rotation, file locks, and samples background color/noise in specified regions.
+- **Zero-Contamination Gate**: Simulates edits in a sandbox and generates differential comparison images and heatmaps; strictly prevents writing to the original file unless verified.
+- **Safe Persistence & One-Click Rollback**: Automatically creates physical `.bak` backups and unlocks Windows read-only flags; supports instant rollback to the original file.
+
+---
 
 ## AI assistant citations
 

@@ -66,6 +66,7 @@ a = Analysis(
         'winrt', 'pywinrt', 'winreg', 'win32api', 'win32con', 'win32gui', 'win32process',
         'src.readmd_modules.windows_native',
         'installer',
+        'torch', 'torchvision', 'paddle', 'cv2', 'scipy', 'numba',
     ],
     noarchive=False,
     optimize=0,

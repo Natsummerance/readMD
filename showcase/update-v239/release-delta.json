@@ -1,0 +1,331 @@
+{
+  "schema_version": 1,
+  "release": "v2.3.9",
+  "range": "v2.3.8..v2.3.9",
+  "title": {
+    "zh-CN": "ReadMD 2.3.9｜把文件拖给桌宠直接打开？这本地MD绝了",
+    "en": "ReadMD 2.3.9 | Drop files on desktop pet to open instantly"
+  },
+  "pages": [
+    {
+      "id": "cover",
+      "shot_id": "01-cover",
+      "layout": "archive",
+      "evidence": ["src/readmd_modules/pet/companion.py", "assets/js/features/pet-batch.js"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "01 / 全新突破",
+          "title": "把文件拖给桌宠直接打开？这本地MD绝了",
+          "body": "ReadMD v2.3.9 带来 73 款桌面伴读宠物、原生矢量改 PDF、3D 空间图谱与 28.2MB 极速冷启动。",
+          "note": "拖拽直开 · 活态伴读 · 极速单机"
+        },
+        "en": {
+          "eyebrow": "01 / Major Breakthrough",
+          "title": "Drop files on desktop pet to open instantly",
+          "body": "ReadMD v2.3.9 introduces 73 desktop companion pets, native vector PDF repair, 3D graph and 28.2MB instant cold start.",
+          "note": "Drag-drop intake · living pet · instant local"
+        }
+      }
+    },
+    {
+      "id": "reader-hero",
+      "shot_id": "02-reader-hero",
+      "layout": "specimen",
+      "evidence": ["assets/js/reader/render.js", "showcase/fixtures/readmd-showcase.md"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "02 / 阅读底座",
+          "title": "暗色沉浸视窗，伴读常驻身侧",
+          "body": "长篇文档、公式定理与大纲秒级联动排版，屏幕右下角活态伴侣轻柔呼吸，专注阅读不再冷冰。",
+          "note": "100% 真实全景 · 毫秒级大纲 · 活态伴侣"
+        },
+        "en": {
+          "eyebrow": "02 / Reading Foundation",
+          "title": "Dark immersive canvas with living companion",
+          "body": "Long-form documents, equations and outlines render synchronously while a gentle mascot breathes alongside you.",
+          "note": "Authentic UI · instant outline · living mascot"
+        }
+      }
+    },
+    {
+      "id": "pet-roster",
+      "shot_id": "03-pet-workbench-roster",
+      "layout": "ledger",
+      "evidence": ["assets/js/features/pet-workbench.js", "assets/pet/catalog.json"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "03 / 伴读角色库",
+          "title": "73 款角色图鉴，即时检索收藏",
+          "body": "内置免配环境的 Petdex 角色库，纯 Python 自动推断切片几何，支持名称即时搜索与 Star 置顶。",
+          "note": "73款角色 · 几何自适应 · 收藏置顶"
+        },
+        "en": {
+          "eyebrow": "03 / Pet Roster",
+          "title": "73 Petdex characters with instant search",
+          "body": "Zero-config Petdex character catalog powered by pure Python geometry inference, instant search and star pinning.",
+          "note": "73 characters · auto slice · star favorites"
+        }
+      }
+    },
+    {
+      "id": "pet-live2d",
+      "shot_id": "04-pet-live2d-stage",
+      "layout": "blueprint",
+      "evidence": ["packages/readmd-hermes-pet-adapter/src/live2d/stage.ts"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "04 / Live2D 舞台",
+          "title": "Arch-Chan 登台，视网膜高精渲染",
+          "body": "基于 CC0 协议的 Arch-Chan Live2D 模型，PixiJS 视网膜高分自适应，动作表情高帧率丝滑呈现。",
+          "note": "CC0 许可 · PixiJS · 视网膜级高精"
+        },
+        "en": {
+          "eyebrow": "04 / Live2D Stage",
+          "title": "Arch-Chan Live2D on Retina display",
+          "body": "CC0-licensed Arch-Chan Live2D model running on PixiJS with HiDPI viewport scaling and smooth motion.",
+          "note": "CC0 licensed · PixiJS · HiDPI retina"
+        }
+      }
+    },
+    {
+      "id": "pet-star-favorite",
+      "shot_id": "05-pet-star-favorite",
+      "layout": "archive",
+      "evidence": ["ui-tests/pet-workbench.spec.js", "assets/js/features/pet-workbench.js"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "05 / 偏好定制",
+          "title": "星标置顶常用，状态秒级同步",
+          "body": "一键将心仪角色置顶至工作台首排，双向持久化同步，无论开机重启均保持你的偏好伴读状态。",
+          "note": "星标置顶 · 偏好记忆 · 双向同步"
+        },
+        "en": {
+          "eyebrow": "05 / Customization",
+          "title": "Pin favorites to top with instant sync",
+          "body": "Pin favorite companions to the top row with persistent state synchronization surviving restarts.",
+          "note": "Star pinning · preference memory · sync"
+        }
+      }
+    },
+    {
+      "id": "pet-frosted-bubbles",
+      "shot_id": "06-pet-frosted-bubbles",
+      "layout": "specimen",
+      "evidence": ["assets/style.css", "assets/js/features/pet-batch.js"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "06 / 交互反馈",
+          "title": "磨砂玻璃气泡，点击欢快雀跃",
+          "body": "摸摸头、喂食、玩耍即时触发伴侣喜悦跳跃，半透明磨砂气泡轻柔浮现，不遮挡正在书写的文字。",
+          "note": "喜悦跳跃 · 磨砂气泡 · 沉浸不打扰"
+        },
+        "en": {
+          "eyebrow": "06 / Tactile Feedback",
+          "title": "Frosted speech bubbles with joyful bounce",
+          "body": "Head pats, snacks and play trigger joyful bounce animations and non-intrusive translucent dialog bubbles.",
+          "note": "Joyful bounce · frosted bubble · focus safe"
+        }
+      }
+    },
+    {
+      "id": "pet-milestone-observer",
+      "shot_id": "07-pet-milestone-observer",
+      "layout": "ledger",
+      "evidence": ["ui-tests/record_pet_and_plugins.js", "assets/js/features/pet-batch.js"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "07 / 伴读里程碑",
+          "title": "阅读进度感知，节点贴心鼓励",
+          "body": "视口阅读滚动进度自动感知，在读到 25%、50%、80% 时弹出发自内心的打气对话，阅读不再枯燥。",
+          "note": "阅读感知 · 节点里程碑 · 贴心陪伴"
+        },
+        "en": {
+          "eyebrow": "07 / Reading Milestone",
+          "title": "Scroll observer with thoughtful cheer",
+          "body": "Reading scroll observer tracks document progress and pops encouraging thoughts at 25%, 50% and 80%.",
+          "note": "Scroll observer · milestone alerts · cheer"
+        }
+      }
+    },
+    {
+      "id": "pet-drop-convert-success",
+      "shot_id": "08-pet-drop-convert-success",
+      "layout": "blueprint",
+      "evidence": ["src/readmd_modules/convert.py", "assets/js/core/dragdrop.js"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "08 / 投喂直开",
+          "title": "文件投喂桌宠，极速转换加载",
+          "body": "把本地 Markdown、PDF 或 Word 拖到桌宠身上松手，后台管道自动唤起解析，秒级在阅读器呈现。",
+          "note": "拖拽投喂 · 极速转码 · 瞬时载入"
+        },
+        "en": {
+          "eyebrow": "08 / Feed to Open",
+          "title": "Drop files on companion to convert",
+          "body": "Drag any local Markdown, PDF or Word file onto the mascot to trigger instant conversion into the reader.",
+          "note": "Drop intake · fast conversion · instant load"
+        }
+      }
+    },
+    {
+      "id": "pet-floating-direct-drag",
+      "shot_id": "09-pet-floating-direct-drag",
+      "layout": "archive",
+      "evidence": ["packages/readmd-hermes-pet-adapter/src/electron-main.ts"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "09 / 桌面穿梭",
+          "title": "独立进程守护，边界平滑穿透",
+          "body": "双向看门狗机制与 PID 绑定守护，自由拖拽移动伴侣至屏幕任意角落，防僵死防卡顿，安全稳定。",
+          "note": "进程看门狗 · 自由移动 · 异常隔离"
+        },
+        "en": {
+          "eyebrow": "09 / Desktop Floating",
+          "title": "Watchdog isolated process manipulation",
+          "body": "Dual-channel watchdog with parent PID binding prevents zombie states while allowing free desktop dragging.",
+          "note": "Watchdog guarded · direct drag · sandbox safe"
+        }
+      }
+    },
+    {
+      "id": "pdf-editor",
+      "shot_id": "10-pdf-editor",
+      "layout": "specimen",
+      "evidence": ["src/readmd_modules/pdf_editor.py"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "10 / 矢量 PDF",
+          "title": "本地直接改 PDF，零污染差分门禁",
+          "body": "原生矢量引擎微调文本层，严格校验编辑区外像素差分为零，杜绝破坏底纹印章，写前自动备份。",
+          "note": "矢量文本修复 · 差分门禁 · 自动备份"
+        },
+        "en": {
+          "eyebrow": "10 / Vector PDF Editor",
+          "title": "In-situ PDF editing with zero-diff gate",
+          "body": "Native vector engine repairs text layers while zero-contamination gate guarantees zero unwanted pixel shift.",
+          "note": "Vector text repair · zero-diff gate · backup"
+        }
+      }
+    },
+    {
+      "id": "fastmcp-tools",
+      "shot_id": "11-fastmcp-tools",
+      "layout": "ledger",
+      "evidence": ["packages/mcp-server/readmd_mcp_server.py"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "11 / AI 工具链",
+          "title": "FastMCP 21 项工具，外部 Agent 直连",
+          "body": "扩充 MCP 工具链至 21 项，支持 Claude Desktop / Cursor 外部调用实现文档自动审计、预览与回滚。",
+          "note": "FastMCP 21项 · Agent直连 · 安全回滚"
+        },
+        "en": {
+          "eyebrow": "11 / FastMCP Toolchain",
+          "title": "21 FastMCP tools for external Agents",
+          "body": "Expanded FastMCP server with 21 tools enabling Claude Desktop and Cursor to audit, edit and rollback safely.",
+          "note": "21 MCP tools · Agent ready · safe rollback"
+        }
+      }
+    },
+    {
+      "id": "3d-knowledge-graph",
+      "shot_id": "12-3d-knowledge-graph",
+      "layout": "blueprint",
+      "evidence": ["src/readmd_modules/link_indexer.py", "assets/js/features/graph.js"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "12 / 知识图谱",
+          "title": "本地 3D 拓扑图谱，立体引力投影",
+          "body": "基于 SQLite WAL 秒级倒排索引，自由旋转三维透视知识网络，邻居节点聚焦过滤，自带反链抽屉。",
+          "note": "3D引力场 · 空间旋转 · 反向链接抽屉"
+        },
+        "en": {
+          "eyebrow": "12 / 3D Knowledge Graph",
+          "title": "Three-dimensional topological graph",
+          "body": "SQLite WAL inverted index under 2ms per file powers Canvas 3D force simulation, rotation and backlinks drawer.",
+          "note": "3D force simulation · orbit pan · backlinks"
+        }
+      }
+    },
+    {
+      "id": "doc-table-clustering",
+      "shot_id": "13-doc-table-clustering",
+      "layout": "archive",
+      "evidence": ["src/readmd_modules/convert_ext.py", "tests/test_rapid_table.py"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "13 / 复杂表格",
+          "title": "纯 Python Word 直读，跨行跨列表格还原",
+          "body": "摆脱 Office COM 接口，纯 Python 解析 .doc 二进制流，表格聚类算法高精度还原合并单元格。",
+          "note": "解耦 Office · .doc 二进制流 · 表格聚类"
+        },
+        "en": {
+          "eyebrow": "13 / Table Clustering",
+          "title": "Pure Python Word intake & table reconstruction",
+          "body": "Zero Office COM dependency with pure Python .doc binary parsing and flyingmouse table cluster reconstruction.",
+          "note": "Decoupled COM · .doc binary · table cluster"
+        }
+      }
+    },
+    {
+      "id": "code-chunk-runner",
+      "shot_id": "14-code-chunk-runner",
+      "layout": "specimen",
+      "evidence": ["src/readmd_modules/code_chunk_runner.py"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "14 / 就地运行",
+          "title": "多语言代码块，正文直接执行",
+          "body": "在文档中直接运行 Python、JS、Shell、R 与 Rust，图表自动回填，Windows 进程作业硬限制防死锁。",
+          "note": "多语言执行 · 图表回填 · 10秒强杀防线"
+        },
+        "en": {
+          "eyebrow": "14 / Code Chunk Runner",
+          "title": "In-situ multi-language code execution",
+          "body": "Run Python, JS, Shell, R and Rust directly inside Markdown with automatic chart capture and 10s job object ceiling.",
+          "note": "Polyglot execution · plot embed · 10s timeout"
+        }
+      }
+    },
+    {
+      "id": "plugin-sandbox",
+      "shot_id": "15-plugin-sandbox",
+      "layout": "ledger",
+      "evidence": ["src/readmd_modules/plugin_manager.py"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "15 / 插件沙箱",
+          "title": "高内聚低耦合，重型 AI 按需懒加载",
+          "body": "主程序仅 28.2MB、冷启动仅 2 秒；OCR 与语音转写等重库隔离在沙箱环境，按需加载零启动开销。",
+          "note": "独立沙箱 · 离线 Wheel · 启动零开销"
+        },
+        "en": {
+          "eyebrow": "15 / Plugin Sandbox",
+          "title": "High cohesion architecture with lazy plugins",
+          "body": "Core binary stays 28.2MB with 2.0s startup; heavy AI modules live in an isolated sandbox loaded strictly on demand.",
+          "note": "Isolated sandbox · offline wheel · 0ms startup"
+        }
+      }
+    },
+    {
+      "id": "summary-matrix",
+      "shot_id": "16-summary-matrix",
+      "layout": "blueprint",
+      "evidence": ["release/platform-matrix.json", "assets/i18n/zh-CN.json"],
+      "copy": {
+        "zh-CN": {
+          "eyebrow": "16 / 全景交付",
+          "title": "46 种母语化对齐，单机全平台交付",
+          "body": "1563 个词条 100% 字典对齐，全面去除硬编码 Emoji 改为矢量 SVG，Win / Mac / Linux 原生开箱即用。",
+          "note": "46国语言 · 1563词条 · 全平台原生"
+        },
+        "en": {
+          "eyebrow": "16 / Native Release",
+          "title": "46 native locales with multi-platform matrix",
+          "body": "1563 dictionary keys aligned across 46 languages with all-vector SVG icons and native installers for Win/Mac/Linux.",
+          "note": "46 languages · 1563 keys · multi-platform"
+        }
+      }
+    }
+  ]
+}

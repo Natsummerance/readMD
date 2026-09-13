@@ -68,7 +68,14 @@ def scan_file(path, label, failures, is_source_tree=True):
         return
     if "/assets/upstream/" in norm_label or norm_label.startswith("assets/upstream/"):
         return
-    if "/tests/" in norm_label or norm_label.startswith("tests/"):
+    if (
+        "/tests/" in norm_label
+        or norm_label.startswith("tests/")
+        or "/ui-tests/" in norm_label
+        or norm_label.startswith("ui-tests/")
+        or "/showcase/" in norm_label
+        or norm_label.startswith("showcase/")
+    ):
         return
     if (
         "verify-macos" in norm_label
@@ -84,7 +91,7 @@ def scan_file(path, label, failures, is_source_tree=True):
         '.exe', '.dll', '.pyd', '.pyc', '.dylib', '.so', '.zip', '.gz',
         '.bin', '.dat', '.obj', '.o', '.a', '.node', '.vsix', '.hap',
         '.deb', '.appimage', '.AppImage', '.tar', '.xz', '.bz2', '.7z', '.pak', '.dmg',
-        '.dylib', '.strings', '.nib', '.storyboardc'
+        '.dylib', '.strings', '.nib', '.storyboardc', '.db', '.sqlite', '.sqlite3'
     )
     is_binary = norm_label.endswith(binary_extensions) or norm_label.endswith('/ReadMD') or '/MacOS/ReadMD' in norm_label or norm_label.endswith('ReadMD')
     if is_binary:

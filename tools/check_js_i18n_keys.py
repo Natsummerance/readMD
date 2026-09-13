@@ -34,11 +34,11 @@ SCAN_FILES = [os.path.join(ROOT_DIR, 'assets', 'app.js')]
 # _t('x') / _t("x") / i18n.t('x') / window.i18n.t("x")，允许第一个参数后紧跟逗号传参。
 # 末尾 lookahead 排除 `'前缀' + 变量` 这种拼接写法：那不是完整 key。
 LITERAL_RE = re.compile(
-    r'(?:^|[^\w$.])(?:_t|t)\(\s*(["\'])([A-Za-z0-9_]+\.[A-Za-z0-9_.]+)\1(?!\s*\+)'
+    r'(?:^|[^\w$.])(?:_t|t|petT)\(\s*(["\'])([A-Za-z0-9_]+\.[A-Za-z0-9_.]+)\1(?!\s*\+)'
 )
 # 第一个参数不是字符串字面量：静态扫描无法判定，单独列出而不是当作通过
-DYNAMIC_RE = re.compile(r'(?:^|[^\w$.])(?:_t|t)\(\s*(?![\'"`])\S')
-CONCAT_RE = re.compile(r'(?:^|[^\w$.])(?:_t|t)\(\s*(["\'])([A-Za-z0-9_]+\.[A-Za-z0-9_.]*)\1\s*\+')
+DYNAMIC_RE = re.compile(r'(?:^|[^\w$.])(?:_t|t|petT)\(\s*(?![\'"`])\S')
+CONCAT_RE = re.compile(r'(?:^|[^\w$.])(?:_t|t|petT)\(\s*(["\'])([A-Za-z0-9_]+\.[A-Za-z0-9_.]*)\1\s*\+')
 T_MEMBER_RE = re.compile(r'\.t\(\s*(["\'])([A-Za-z0-9_]+\.[A-Za-z0-9_.]+)\1(?!\s*\+)')
 
 

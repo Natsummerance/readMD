@@ -204,6 +204,7 @@ function saveLastFile(path) {
 
 function afterRender() {
   startModules();
+  if (typeof updateAiContextStrip === 'function') updateAiContextStrip();
   if (window.ReadMDGraph && typeof window.ReadMDGraph.updateVisibility === 'function') {
     window.ReadMDGraph.updateVisibility();
   }
@@ -291,6 +292,17 @@ window.i18n = {
     'app.loading': '加载中...',
     'app.success': '成功',
     'app.failed': '失败',
+    'pet.bubbleOpening': '正在为你打开 {name}...',
+    'pet.bubbleOpened': '{name} 已打开！',
+    'pet.bubbleConverting': '正在为你转换并打开 {name}...',
+    'pet.bubbleOpeningMulti': '正在为你打开 {count} 篇文档...',
+    'pet.bubbleOpenedMulti': '已全部打开 {count} 篇文档！',
+    'pet.bubbleBatchConverting': '已将 {count} 个文档加入批量转换工作台',
+    'pet.bubbleBatchFailed': '部分文件处理失败',
+    'pet.renderer.sprite': '精灵图',
+    'pet.gallery': '桌宠库',
+    'pet.gallery.hermes': '伴读使者',
+    'pet.gallery.companion': '伴读使者',
     'menu.checkUpdate': '检查更新',
     'menu.autoStart': '开机自启',
     'menu.assoc': '设为默认',
@@ -313,7 +325,39 @@ window.i18n = {
     'toast.openedPages': '已打开：{name} · {count} 页',
     'toast.openFailed': '无法打开：{error}',
     'toast.loadFailed': '加载失败：{error}',
-    'toast.openFolderBrowserNotice': '浏览器模式下请使用“打开文件”'
+    'toast.openFolderBrowserNotice': '浏览器模式下请使用“打开文件”',
+    'ai.title': 'AI 助手',
+    'ux.petSections': '桌宠设置分组',
+    'ux.petCharacters': '角色库',
+    'ux.petCompanion': '陪伴方式',
+    'ux.petSettings': '显示与运行',
+    'ux.petStyle': '选择陪伴节奏',
+    'ux.petSocial': '互动陪伴',
+    'ux.petQuiet': '安静阅读',
+    'ux.petQuietHint': '安静模式暂停主动问候和阅读提醒；你仍可点击互动，文件处理结果也会正常提示。',
+    'ux.petActions': '快捷互动',
+    'ux.petHello': '打个招呼',
+    'ux.petGreeting': '我在这里，陪你读完这一页。',
+    'ux.petPreviewHint': '角色外观预览 · 拖放文件到桌宠即可转换',
+    'ux.petLive2d': 'Live2D · 独立桌面',
+    'ux.petSprite': '精灵动画',
+    'ux.graphSearch': '搜索节点与别名',
+    'ux.labels': '显示名称',
+    'ux.neighbors': '仅邻近关联',
+    'ux.notes': '关联笔记列表',
+    'ux.graphControls': '拖拽旋转 · 滚轮缩放 · 2D/3D切换',
+    'ux.noResults': '未找到匹配节点',
+    'ux.connections': '{count} 处关联',
+    'ux.openNote': '打开笔记',
+    'ux.loadFailed': '加载失败',
+    'ux.filterLinks': '过滤双向链接...',
+    'ux.linkHint': '使用 [[双链]] 建立笔记关联',
+    'ux.starterSummary': '梳理文档',
+    'ux.starterSummaryHint': '提炼论点、证据与结论',
+    'ux.starterQuestions': '带着问题阅读',
+    'ux.starterQuestionsHint': '发现疑点与值得追问的地方',
+    'ux.noDocument': '自由对话 · 尚未打开文档',
+    'batch.statusOk': '成功'
   },
 
   browserDefaults: {
@@ -347,6 +391,8 @@ window.i18n = {
         // fallback avoids a second 50+ KB English request during startup.
         // Other languages still load English lazily after the first paint.
         this.fallbackDict = d;
+        this.translateDOM();
+        window.dispatchEvent(new CustomEvent('readmd:language-changed', { detail: { lang: 'zh-CN' } }));
       }
       return;
     }
@@ -8795,8 +8841,8 @@ function renderAiEmptyState() {
 function updateAiContextStrip() {
   const label = $('ai-context-file');
   if (!label) return;
-  label.textContent = (typeof state !== 'undefined' && (state.path || state.title))?.split(/[\\/]/).pop() || window.i18n.t('ux.noDocument');
-  label.title = typeof state !== 'undefined' ? (state.path || '') : '';
+  label.textContent = (typeof state !== 'undefined' && (state.file || state.sourceName || state.title))?.split(/[\\/]/).pop() || window.i18n.t('ux.noDocument');
+  label.title = typeof state !== 'undefined' ? (state.file || '') : '';
 }
 
 function initAiComposerUx() {
@@ -12127,9 +12173,9 @@ async function fetchPetRuntimeStatus() {
   } catch (_err) { /* offline or mock */ }
 
   return {
-    adapter: { available: false, name: 'Hermes Pet Adapter' },
+    adapter: { available: false, name: 'Desktop Pet Adapter' },
     active_pet: 'hermes-sprite',
-    active_slug: 'Hermes',
+    active_slug: '',
     enabled: false,
     installed: false,
     in_app: true,
@@ -12329,6 +12375,7 @@ let isBubbleHovered = false;
  * 支持：视口碰撞翻转避让 (Flip & Clamp)、鼠标悬停暂停、点击直接关闭
  */
 function showPetBubble(text, durationMs = 4500, priority = PET_BUBBLE_PRIORITY.LOW_IDLE) {
+  if (window.petQuietMode && (priority === PET_BUBBLE_PRIORITY.LOW_IDLE || priority === PET_BUBBLE_PRIORITY.MILESTONE)) return;
   const bubble = $('pet-bubble');
   const bubbleText = $('pet-bubble-text');
   if (!bubble || !bubbleText || !text) return;
@@ -12347,6 +12394,7 @@ function showPetBubble(text, durationMs = 4500, priority = PET_BUBBLE_PRIORITY.L
   bubbleText.textContent = text;
   updateBubblePosition(bubble);
   bubble.classList.add('is-visible');
+  window.dispatchEvent(new CustomEvent('readmd:pet-message', { detail: { text, priority } }));
 
   // 若用户鼠标未悬停在气泡上，正常安排倒计时关闭
   if (durationMs > 0 && !isBubbleHovered) {
@@ -12559,16 +12607,18 @@ function syncPetWidgetVisibility(status) {
     const charEl = $('pet-character');
     if (charEl) {
       const isLive2d = (prefs.renderer === 'live2d');
-      charEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite');
+      const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
+      const isAnimSprite = !activeSlug || activeSlug === 'hermes';
+      charEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite', 'is-sprite-anim', 'is-sprite-avatar');
       if (isLive2d) {
         charEl.classList.add('is-arch-chan', 'is-live2d');
         charEl.style.backgroundImage = 'url("/assets/pet/arch-chan-avatar.png")';
+      } else if (isAnimSprite) {
+        charEl.classList.add('hermes-sprite', 'is-hermes', 'is-sprite-anim');
+        charEl.style.backgroundImage = 'url("/assets/pet/hermes-sprite.png")';
       } else {
-        charEl.classList.add('hermes-sprite', 'is-hermes');
-        const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
-        charEl.style.backgroundImage = activeSlug
-          ? `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`
-          : 'url("/assets/pet/hermes-sprite.png")';
+        charEl.classList.add('is-sprite-avatar');
+        charEl.style.backgroundImage = `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
       }
     }
     restoreWidgetPosition();
@@ -12713,6 +12763,11 @@ function initPetDirectManipulation() {
 
   charWrap.addEventListener('pointerup', handlePointerEnd);
   charWrap.addEventListener('pointercancel', handlePointerEnd);
+  charWrap.addEventListener('keydown', e => {
+    if (e.target === charWrap && !e.repeat && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault(); handlePetInteractiveClick();
+    }
+  });
 
   // File Drag & Drop Direct Target
   charWrap.addEventListener('dragover', (e) => {
@@ -12890,6 +12945,7 @@ async function refreshPetMenuStatus() {
 
 function renderPetSettings(status) {
   activePetSettingsStatus = status || null;
+  window.dispatchEvent(new CustomEvent('readmd:pet-state', { detail: status }));
   const preferences = status && status.preferences ? status.preferences : {};
   const enabled = $('pet-enabled');
   const renderer = $('pet-renderer');
@@ -12905,7 +12961,8 @@ function renderPetSettings(status) {
   updatePetRangeLabels();
 
   const isInApp = $('pet-runtime')?.value === 'in-app' || status?.in_app !== false;
-  const isInstalled = Boolean(status && (status.installed ?? status.adapter?.available));
+  const isInstalled = Boolean(status && (status.adapter?.available ?? status.installed));
+  const isRunning = Boolean(status?.enabled && (isInApp || (status?.adapter?.running ?? status?.running)));
   const installBtn = $('pet-install');
   const installRuntimeBtn = $('pet-install-runtime');
   if (installRuntimeBtn) {
@@ -12955,7 +13012,7 @@ function renderPetSettings(status) {
 
   if (statusDot && statusText) {
     statusDot.classList.remove('is-running', 'is-stopped', 'is-unavailable');
-    if (status && status.enabled) {
+    if (isRunning) {
       statusDot.classList.add('is-running');
       statusText.textContent = petT('pet.statusRunning');
     } else if (isInApp || isInstalled) {
@@ -12968,8 +13025,10 @@ function renderPetSettings(status) {
   }
 
   if (statusLine) {
-    if (status && status.enabled) {
+    if (isRunning) {
       statusLine.textContent = isInApp ? (petT('pet.statusInAppActive') || '桌宠伴读小组件已在阅读器内运行') : petT('pet.installSuccess');
+    } else if (status?.enabled && !isInApp) {
+      statusLine.textContent = petT('pet.runtime.stoppedHint');
     } else if (isInApp || isInstalled) {
       statusLine.textContent = petT('pet.installSuccess');
     } else {
@@ -12985,37 +13044,49 @@ function updateCharacterPreview(rendererVal) {
   const widgetCharEl = $('pet-character');
   const slugEl = $('pet-active-slug');
   const isLive2d = rendererVal === 'live2d';
+  const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
+  const isAnimSprite = !activeSlug || activeSlug === 'hermes';
   if (charEl) {
-    charEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan');
-    charEl.classList.add(isLive2d ? 'is-arch-chan' : 'is-hermes');
+    charEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'is-sprite-anim', 'is-sprite-avatar');
     if (isLive2d) {
+      charEl.classList.add('is-arch-chan', 'is-live2d');
       charEl.style.backgroundImage = 'url("/assets/pet/arch-chan-avatar.png")';
+    } else if (isAnimSprite) {
+      charEl.classList.add('is-hermes', 'is-sprite-anim');
+      charEl.style.backgroundImage = 'url("/assets/pet/hermes-sprite.png")';
     } else {
-      const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
-      charEl.style.backgroundImage = activeSlug
-        ? `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`
-        : 'url("/assets/pet/hermes-sprite.png")';
+      charEl.classList.add('is-sprite-avatar');
+      charEl.style.backgroundImage = `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
     }
   }
   if (widgetCharEl) {
-    widgetCharEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite');
+    widgetCharEl.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite', 'is-sprite-anim', 'is-sprite-avatar');
     if (isLive2d) {
       widgetCharEl.classList.add('is-arch-chan', 'is-live2d');
       widgetCharEl.style.backgroundImage = 'url("/assets/pet/arch-chan-avatar.png")';
+    } else if (isAnimSprite) {
+      widgetCharEl.classList.add('hermes-sprite', 'is-hermes', 'is-sprite-anim');
+      widgetCharEl.style.backgroundImage = 'url("/assets/pet/hermes-sprite.png")';
     } else {
-      widgetCharEl.classList.add('hermes-sprite', 'is-hermes');
-      const activeSlug = $('pet-gallery')?.value || currentActivePetSlug;
-      widgetCharEl.style.backgroundImage = activeSlug
-        ? `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`
-        : 'url("/assets/pet/hermes-sprite.png")';
+      widgetCharEl.classList.add('is-sprite-avatar');
+      widgetCharEl.style.backgroundImage = `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")`;
     }
   }
   if (slugEl) {
-    slugEl.textContent = isLive2d ? (petT('pet.renderer.live2d') || 'Arch-Chan') : (petT('pet.renderer.sprite') || 'Hermes');
+    if (isLive2d) {
+      slugEl.textContent = petT('pet.renderer.live2d') || 'Arch-Chan';
+    } else {
+      const optionText = $('pet-gallery')?.selectedOptions?.[0]?.textContent;
+      const fallbackName = (activeSlug && petT('pet.preset.' + activeSlug)) || activeSlug || petT('pet.gallery.hermes') || '伴读使者';
+      slugEl.textContent = optionText || fallbackName;
+    }
   }
   const galleryRow = $('pet-gallery-row');
   if (galleryRow) {
     galleryRow.classList.toggle('hidden', isLive2d);
+  }
+  if (isLive2d && $('pet-runtime')) {
+    $('pet-runtime').value = 'desktop';
   }
 }
 
@@ -13024,6 +13095,19 @@ function updatePetRangeLabels() {
   const opacity = $('pet-opacity');
   const scaleVal = scale ? Number(scale.value) : 33;
   const opacityVal = opacity ? Number(opacity.value) : 100;
+
+  if (scale) {
+    const min = Number(scale.min || 18);
+    const max = Number(scale.max || 72);
+    const pct = Math.max(0, Math.min(100, ((scaleVal - min) / (max - min)) * 100));
+    scale.style.setProperty('--range-progress', `${pct}%`);
+  }
+  if (opacity) {
+    const min = Number(opacity.min || 35);
+    const max = Number(opacity.max || 100);
+    const pct = Math.max(0, Math.min(100, ((opacityVal - min) / (max - min)) * 100));
+    opacity.style.setProperty('--range-progress', `${pct}%`);
+  }
 
   if ($('pet-scale-value') && scale) $('pet-scale-value').textContent = scale.value + '%';
   if ($('pet-opacity-value') && opacity) $('pet-opacity-value').textContent = opacity.value + '%';
@@ -13037,7 +13121,7 @@ function closePetSettings() {
 
 let isPetConfiguring = false;
 async function savePetSettings() {
-  if (isPetConfiguring) return;
+  if (isPetConfiguring) return { ok: false, code: 'pet_config_busy' };
   isPetConfiguring = true;
   try {
     const enabled = Boolean($('pet-enabled')?.checked);
@@ -13045,6 +13129,7 @@ async function savePetSettings() {
     const opacity = Number($('pet-opacity')?.value || 100) / 100;
     const renderer = $('pet-renderer')?.value || 'hermes-sprite';
 
+    if (renderer === 'live2d' && $('pet-runtime')) $('pet-runtime').value = 'desktop';
     const isDesktopChoice = $('pet-runtime')?.value === 'desktop';
     const config = {
       enabled,
@@ -13059,7 +13144,7 @@ async function savePetSettings() {
       const installed = await installDefaultPetRuntime();
       if (!installed.ok) {
         renderPetSettings(await fetchPetRuntimeStatus());
-        return;
+        return installed;
       }
     }
     const result = await requestConfigurePet(config);
@@ -13074,6 +13159,7 @@ async function savePetSettings() {
     renderPetSettings(updatedStatus);
     setPetMenuStatus(updatedStatus);
     syncPetWidgetVisibility(updatedStatus);
+    return result;
   } finally {
     isPetConfiguring = false;
   }
@@ -13084,6 +13170,7 @@ async function openPetSettings() {
   const modal = $('pet-settings-modal');
   if (!modal) return;
   modal.classList.remove('hidden');
+  window.dispatchEvent(new CustomEvent('readmd:pet-open-settings'));
   const immediateRenderer = $('pet-renderer')?.value || 'hermes-sprite';
   updateCharacterPreview(immediateRenderer);
   try {
@@ -13396,7 +13483,6 @@ function initPetSystem() {
   });
   $('pet-renderer')?.addEventListener('change', (e) => {
     updateCharacterPreview(e.target.value);
-    void savePetSettings();
   });
   $('pet-scale')?.addEventListener('input', updatePetRangeLabels);
   $('pet-opacity')?.addEventListener('input', updatePetRangeLabels);
@@ -13558,10 +13644,22 @@ async function refreshPetGallery() {
   if (!result.ok) return;
   currentGalleryPets = result.pets || [];
   currentActivePetSlug = result.active || '';
+  window.dispatchEvent(new CustomEvent('readmd:pet-gallery', { detail: result }));
   const select = $('pet-gallery');
   if (select) {
-    select.replaceChildren(new Option(petT('pet.gallery.hermes') || 'Hermes', ''));
-    for (const pet of currentGalleryPets) {
+    select.replaceChildren(new Option(petT('pet.gallery.hermes') || '伴读使者', ''));
+    const allGalleryPets = [...currentGalleryPets];
+    if (Array.isArray(result.catalog)) {
+      for (const item of result.catalog) {
+        if (!allGalleryPets.some(p => p.slug === item.slug)) {
+          allGalleryPets.push({
+            slug: item.slug,
+            display_name: item.zh_name || item.en_name || item.display_name || item.slug,
+          });
+        }
+      }
+    }
+    for (const pet of allGalleryPets) {
       const label = (pet.slug && petT('pet.preset.' + pet.slug)) || pet.display_name || pet.slug;
       select.add(new Option(label, pet.slug));
     }
@@ -13569,14 +13667,558 @@ async function refreshPetGallery() {
     updatePetDeleteButtonVisibility(select.value);
   }
   const isLive2d = ($('pet-renderer')?.value === 'live2d') || (activePetSettingsStatus?.preferences?.renderer === 'live2d');
+  const activeSlug = result.active || '';
+  const isAnimSprite = !activeSlug || activeSlug === 'hermes';
   const image = isLive2d
     ? 'url("/assets/pet/arch-chan-avatar.png")'
-    : (result.active ? `url("/api/pets/thumb?slug=${encodeURIComponent(result.active)}")` : 'url("/assets/pet/hermes-sprite.png")');
+    : (activeSlug ? `url("/api/pets/thumb?slug=${encodeURIComponent(activeSlug)}")` : 'url("/assets/pet/hermes-sprite.png")');
   for (const id of ['pet-character', 'pet-preview-character']) {
     const element = $(id);
-    if (element) element.style.backgroundImage = image;
+    if (element) {
+      element.style.backgroundImage = image;
+      element.classList.remove('is-hermes', 'is-live2d', 'is-arch-chan', 'hermes-sprite', 'is-sprite-anim', 'is-sprite-avatar');
+      if (isLive2d) {
+        element.classList.add('is-arch-chan', 'is-live2d');
+      } else if (isAnimSprite) {
+        element.classList.add('hermes-sprite', 'is-hermes', 'is-sprite-anim');
+      } else {
+        element.classList.add('is-sprite-avatar');
+      }
+    }
   }
 }
+
+;
+/* ReadMD's own companion controls; no third-party character assets or hooks. */
+(function () {
+  'use strict';
+  const FALLBACKS = {
+    'ux.petSections': '桌宠设置分组',
+    'ux.petCharacters': '角色库',
+    'ux.petCompanion': '陪伴方式',
+    'ux.petSettings': '显示与运行',
+    'ux.petStyle': '选择陪伴节奏',
+    'ux.petSocial': '互动陪伴',
+    'ux.petQuiet': '安静阅读',
+    'ux.petQuietHint': '安静模式暂停主动问候和阅读提醒；你仍可点击互动，文件处理结果也会正常提示。',
+    'ux.petActions': '快捷互动',
+    'ux.petHello': '打个招呼',
+    'ux.petGreeting': '我在这里，陪你读完这一页。',
+    'ux.petPreviewHint': '角色外观预览 · 拖放文件到桌宠即可转换',
+    'ux.petLive2d': 'Live2D · 独立桌面',
+    'ux.petSprite': '精灵动画',
+    'ai.title': 'AI 助手',
+    'pet.gallery.hermes': '伴读使者'
+  };
+  const t = (key, params) => {
+    const val = window.i18n?.t(key, params);
+    if (val && val !== key) return val;
+    return FALLBACKS[key] || key;
+  };
+  let gallery = { pets: [], active: '', catalog: [] }, status = null, activeTab = 'characters', initialized = false;
+  let choosing = false, lastTap = 0, query = '', catalogPets = [];
+  try { window.petQuietMode = localStorage.getItem('readmd.pet.quiet') === 'true'; } catch (_) { window.petQuietMode = false; }
+
+  function getFavorites() {
+    try {
+      const raw = localStorage.getItem('readmd.pet.favorites');
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) return new Set(arr);
+      }
+    } catch (_) {}
+    return new Set();
+  }
+
+  function toggleFavorite(slug) {
+    const favs = getFavorites();
+    if (favs.has(slug)) {
+      favs.delete(slug);
+    } else {
+      favs.add(slug);
+    }
+    try {
+      localStorage.setItem('readmd.pet.favorites', JSON.stringify(Array.from(favs)));
+    } catch (_) {}
+    renderRoster();
+  }
+
+  async function loadCatalog() {
+    try {
+      const res = await fetch('/assets/pet/catalog.json');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length) {
+          catalogPets = data;
+          renderRoster();
+        }
+      }
+    } catch (_) {}
+  }
+
+  function translateWorkbench() {
+    const box = document.getElementById('pet-settings-box');
+    if (!box) return;
+    const tabs = box.querySelector('.pet-workbench-tabs');
+    if (tabs) {
+      tabs.setAttribute('aria-label', t('ux.petSections'));
+      tabs.querySelectorAll('button[data-pet-section]').forEach(btn => {
+        const key = btn.getAttribute('data-i18n');
+        if (key) btn.textContent = t(key);
+      });
+    }
+    const companion = box.querySelector('.pet-companion-controls');
+    if (companion) {
+      companion.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (key) el.textContent = t(key);
+      });
+    }
+    const hint = box.querySelector('.pet-workbench-preview-hint');
+    if (hint) {
+      hint.textContent = t('ux.petPreviewHint');
+    }
+    const search = document.getElementById('pet-roster-search');
+    if (search) search.placeholder = t('toolbar.search');
+    for (const [id, key] of [['pet-quick-chat', 'ai.title'], ['pet-quick-quiet', 'ux.petQuiet']]) {
+      const button = document.getElementById(id);
+      if (button) { button.title = t(key); button.setAttribute('aria-label', t(key)); }
+    }
+  }
+
+  function init() {
+    if (initialized) return;
+    const box = document.getElementById('pet-settings-box'); if (!box) return; initialized = true;
+    box.classList.add('pet-workbench');
+    const tabs = document.createElement('nav');
+    tabs.className = 'pet-workbench-tabs';
+    tabs.setAttribute('aria-label', t('ux.petSections'));
+    tabs.setAttribute('data-i18n-aria', 'ux.petSections');
+    for (const [id, key] of [['characters','ux.petCharacters'],['companion','ux.petCompanion'],['settings','ux.petSettings']]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.dataset.petSection = id;
+      button.setAttribute('data-i18n', key);
+      button.textContent = t(key);
+      button.onclick = () => { activeTab = id; renderTabs(); };
+      tabs.appendChild(button);
+    }
+    box.querySelector('.pet-sheet-body').before(tabs);
+    const list = box.querySelector('.apple-grouped-list');
+    list.querySelectorAll('.apple-list-row').forEach(row => {
+      row.dataset.petSectionContent = row.querySelector('#pet-gallery') ? 'characters' : row.querySelector('#pet-bubble-toggle') ? 'companion' : 'settings';
+    });
+    const roster = document.createElement('section');
+    roster.id = 'pet-roster';
+    roster.dataset.petSectionContent = 'characters';
+    list.prepend(roster);
+    const search = document.createElement('input');
+    search.id = 'pet-roster-search'; search.type = 'search';
+    search.dataset.petSectionContent = 'characters';
+    search.placeholder = t('toolbar.search'); search.setAttribute('aria-label', t('toolbar.search'));
+    search.oninput = () => { query = search.value.trim().toLocaleLowerCase(); if (list) list.scrollTop = 0; renderRoster(); };
+    roster.before(search);
+
+    const rendererRow = document.getElementById('pet-renderer-row') || document.getElementById('pet-renderer')?.closest('.apple-list-row');
+    if (rendererRow) {
+      rendererRow.dataset.petSectionContent = 'characters';
+      search.before(rendererRow);
+    }
+    const rendererSelect = document.getElementById('pet-renderer');
+    if (rendererSelect) {
+      rendererSelect.addEventListener('change', () => {
+        rendererSelect.dataset.userChanged = 'true';
+        if (list) list.scrollTop = 0;
+        renderRoster();
+      });
+    }
+
+    const galleryRow = document.getElementById('pet-gallery-row') || document.getElementById('pet-gallery')?.closest('.apple-list-row');
+    if (galleryRow) {
+      galleryRow.dataset.petSectionContent = 'characters';
+      search.after(galleryRow);
+    }
+
+    const feedback = document.createElement('p');
+    feedback.id = 'pet-choice-feedback'; feedback.setAttribute('role', 'status');
+    roster.after(feedback);
+
+    const companion = document.createElement('section');
+    companion.dataset.petSectionContent = 'companion';
+    companion.className = 'pet-companion-controls';
+    companion.innerHTML = `<h4 data-i18n="ux.petStyle">${t('ux.petStyle')}</h4><div class="pet-mode-buttons"><button id="pet-mode-social" type="button" data-i18n="ux.petSocial">${t('ux.petSocial')}</button><button id="pet-mode-quiet" type="button" data-i18n="ux.petQuiet">${t('ux.petQuiet')}</button></div><p data-i18n="ux.petQuietHint">${t('ux.petQuietHint')}</p><h4 data-i18n="ux.petActions">${t('ux.petActions')}</h4><div class="pet-action-buttons"><button id="pet-say-hello" type="button" data-i18n="ux.petHello">${t('ux.petHello')}</button><button id="pet-chat-open" type="button"><span data-i18n="ai.title">${t('ai.title')}</span> ↗</button></div>`;
+    list.appendChild(companion);
+
+    companion.querySelector('#pet-mode-social').onclick = () => quiet(false);
+    companion.querySelector('#pet-mode-quiet').onclick = () => quiet(true);
+    companion.querySelector('#pet-say-hello').onclick = () => { if (typeof handlePetInteractiveClick === 'function') handlePetInteractiveClick(); else window.showPetBubble?.(t('ux.petGreeting'), 3500, 2); };
+    const chat = () => { window.closePetSettings?.(); window.openAiPanelWithPrompt?.(null, '', null); };
+    companion.querySelector('#pet-chat-open').onclick = chat;
+    const quickbar = document.querySelector('.pet-widget-quick-bar');
+    for (const [id, key, icon, action] of [
+      ['pet-quick-chat', 'ai.title', '<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9H13a8.5 8.5 0 0 1 8 8z"/>', chat],
+      ['pet-quick-quiet', 'ux.petQuiet', '<path d="M21 12.8A9 9 0 0 1 11.2 3 9 9 0 1 0 21 12.8z"/>', () => quiet(!window.petQuietMode)]
+    ]) {
+      if (!quickbar) break;
+      const button = document.createElement('button');
+      button.id = id; button.type = 'button'; button.className = 'pet-quick-btn';
+      button.title = t(key); button.setAttribute('aria-label', t(key));
+      button.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">${icon}</svg>`;
+      button.onclick = action; quickbar.prepend(button);
+    }
+    const preview = box.querySelector('.pet-preview-stage');
+    const enabledRow = document.getElementById('pet-enabled')?.closest('.apple-list-row');
+    if (enabledRow) { delete enabledRow.dataset.petSectionContent; preview.appendChild(enabledRow); }
+    const speech = document.createElement('p');
+    speech.id = 'pet-interaction-preview'; speech.setAttribute('role', 'status'); preview.appendChild(speech);
+    window.addEventListener('readmd:pet-message', e => {
+      if (!document.getElementById('pet-settings-modal')?.classList.contains('hidden')) speech.textContent = e.detail.text;
+    });
+    const hint = document.createElement('p');
+    hint.className = 'pet-workbench-preview-hint';
+    hint.setAttribute('data-i18n', 'ux.petPreviewHint');
+    hint.textContent = t('ux.petPreviewHint');
+    preview.appendChild(hint);
+    quiet(window.petQuietMode, false);
+    void loadCatalog();
+    renderTabs();
+    renderRoster();
+
+    // Local UI feedback only. No global keyboard hook, recording or background input collection.
+    document.addEventListener('keydown', e => {
+      if (e.repeat || window.petQuietMode || document.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches || Date.now()-lastTap<500) return;
+      const pet = document.getElementById('readmd-pet-widget');
+      if (!pet || pet.classList.contains('hidden') || !e.target.matches('textarea,[contenteditable="true"],.cm-content')) return;
+      lastTap = Date.now(); pet.classList.add('pet-input-react'); setTimeout(() => pet.classList.remove('pet-input-react'), 220);
+    });
+  }
+  function quiet(value, persist = true) {
+    window.petQuietMode = value;
+    if (persist) { try { localStorage.setItem('readmd.pet.quiet', String(value)); } catch (_) {} }
+    if (value && typeof hidePetBubble === 'function') hidePetBubble();
+    document.getElementById('readmd-pet-widget')?.classList.toggle('pet-quiet', value);
+    document.getElementById('pet-mode-social')?.setAttribute('aria-pressed', String(!value));
+    document.getElementById('pet-mode-quiet')?.setAttribute('aria-pressed', String(value));
+    document.getElementById('pet-quick-quiet')?.setAttribute('aria-pressed', String(value));
+  }
+  function renderTabs() {
+    const box = document.getElementById('pet-settings-box');
+    if (box) box.dataset.petTab = activeTab;
+    const list = document.querySelector('#pet-settings-box .apple-grouped-list');
+    if (list) list.scrollTop = 0;
+    document.querySelectorAll('[data-pet-section]').forEach(btn => btn.setAttribute('aria-current', btn.dataset.petSection === activeTab ? 'page' : 'false'));
+    document.querySelectorAll('[data-pet-section-content]').forEach(el => el.classList.toggle('pet-section-inactive', el.dataset.petSectionContent !== activeTab));
+  }
+  async function choose(renderer, slug) {
+    if (choosing) return; choosing = true;
+    const previousSlug = gallery.active;
+    gallery.active = slug;
+    if (typeof currentActivePetSlug !== 'undefined') currentActivePetSlug = slug;
+    renderRoster();
+    const feedback = document.getElementById('pet-choice-feedback');
+    feedback.textContent = '';
+    let changedGallery = false;
+    try {
+      if (renderer === 'hermes-sprite') {
+        const result = await petGalleryRequest('/api/pets/active', { slug, confirm: true });
+        if (!result.ok) throw new Error(result.error_code || result.code);
+        changedGallery = true;
+        await refreshPetGallery();
+      }
+      const rendererSelect = document.getElementById('pet-renderer');
+      if (rendererSelect) {
+        rendererSelect.value = renderer;
+        delete rendererSelect.dataset.userChanged;
+      }
+      if (renderer === 'live2d') document.getElementById('pet-runtime').value = 'desktop';
+      const result = await savePetSettings();
+      if (!result?.ok) throw new Error(result?.code || 'pet_config_failed');
+    } catch (error) {
+      if (changedGallery) {
+        gallery.active = previousSlug;
+        if (typeof currentActivePetSlug !== 'undefined') currentActivePetSlug = previousSlug;
+        await petGalleryRequest('/api/pets/active', { slug: previousSlug, confirm: true }).catch(() => null);
+        await refreshPetGallery().catch(() => null);
+      }
+      feedback.textContent = petT('pet.configFailed', { code: error.message });
+    }
+    finally {
+      choosing = false; renderRoster();
+      Array.from(document.querySelectorAll('#pet-roster button')).find(button => button.dataset.slug === slug && button.dataset.renderer === renderer)?.focus({ preventScroll: true });
+    }
+  }
+  function renderRoster() {
+    const host = document.getElementById('pet-roster'); if (!host) return;
+    const focused = host.contains(document.activeElement) ? document.activeElement.dataset : null;
+    const focusedSlug = focused?.slug, focusedRenderer = focused?.renderer;
+    host.setAttribute('aria-busy', String(choosing));
+    host.replaceChildren();
+    host.scrollTop = 0;
+    const select = document.getElementById('pet-gallery'); if (select) select.disabled = choosing;
+
+    const rendererSelect = document.getElementById('pet-renderer');
+    const filterRenderer = rendererSelect?.value || (status?.preferences?.renderer === 'live2d' ? 'live2d' : 'hermes-sprite');
+
+    const defaultPetName = t('pet.gallery.hermes') || '伴读使者';
+
+    // Group 0: User's 3 created pets
+    const customSlugs = ['mochi', 'moss', 'amber'];
+    const customPets = [
+      { slug: 'mochi', display_name: '糯米 / Mochi', renderer: 'hermes-sprite', groupPriority: 0 },
+      { slug: 'moss', display_name: '苔苔 / Moss', renderer: 'hermes-sprite', groupPriority: 0 },
+      { slug: 'amber', display_name: '琥珀 / Amber', renderer: 'hermes-sprite', groupPriority: 0 }
+    ];
+
+    // Group 1: 伴读使者
+    const companionPet = { slug: '', display_name: defaultPetName, renderer: 'hermes-sprite', groupPriority: 1 };
+
+    // Group 2: 73 loaded sprite pets from catalog
+    const spriteCatalog = (catalogPets.length ? catalogPets : (gallery.catalog || [])).map(p => ({
+      slug: p.slug,
+      display_name: p.zh_name || p.display_name || p.name || p.slug,
+      renderer: 'hermes-sprite',
+      groupPriority: 2
+    }));
+
+    // Other installed pets from gallery (e.g. test custom-cat or user imports)
+    const otherInstalled = (gallery.pets || [])
+      .filter(p => !customSlugs.includes(p.slug) && p.slug !== '' && !spriteCatalog.some(c => c.slug === p.slug))
+      .map(p => ({
+        ...p,
+        renderer: 'hermes-sprite',
+        groupPriority: 2
+      }));
+
+    // Live2D pets
+    const live2dPets = [
+      { slug: 'arch-chan', display_name: 'Arch-Chan', renderer: 'live2d', groupPriority: 0 }
+    ];
+
+    const allItems = [...customPets, companionPet, ...spriteCatalog, ...otherInstalled, ...live2dPets];
+    allItems.forEach((it, idx) => { it.originalIndex = idx; });
+
+    // Filter by selected renderer:
+    const filtered = allItems.filter(item => {
+      if (item.renderer !== filterRenderer) return false;
+      const label = (item.slug && petT('pet.preset.' + item.slug)) || item.display_name || item.slug;
+      if (query && !`${label} ${item.slug} ${item.renderer}`.toLocaleLowerCase().includes(query)) return false;
+      return true;
+    });
+
+    const favorites = getFavorites();
+    filtered.sort((a, b) => {
+      const favA = favorites.has(a.slug) ? 0 : 1;
+      const favB = favorites.has(b.slug) ? 0 : 1;
+      if (favA !== favB) return favA - favB;
+      if (a.groupPriority !== b.groupPriority) return a.groupPriority - b.groupPriority;
+      return a.originalIndex - b.originalIndex;
+    });
+
+    for (const item of filtered) {
+      const label = (item.slug && petT('pet.preset.' + item.slug)) || item.display_name || item.slug;
+      const live = item.renderer === 'live2d';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'pet-character-card';
+      button.disabled = choosing;
+      const currentActive = status?.active_slug ?? gallery.active;
+      const selected = live
+        ? status?.preferences?.renderer === 'live2d'
+        : status?.preferences?.renderer !== 'live2d' && item.slug === currentActive;
+      button.setAttribute('aria-pressed', String(selected));
+      button.dataset.renderer = item.renderer;
+      button.dataset.slug = item.slug;
+
+      const favBtn = document.createElement('span');
+      favBtn.role = 'button';
+      favBtn.tabIndex = 0;
+      const isFav = favorites.has(item.slug);
+      favBtn.className = 'pet-fav-btn' + (isFav ? ' is-favorite' : '');
+      favBtn.setAttribute('aria-label', isFav ? '已收藏' : '收藏');
+      favBtn.title = isFav ? '已收藏' : '收藏';
+      favBtn.innerHTML = `<svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+      const onFavClick = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        toggleFavorite(item.slug);
+      };
+      favBtn.onclick = onFavClick;
+      favBtn.onkeydown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.stopPropagation();
+          e.preventDefault();
+          toggleFavorite(item.slug);
+        }
+      };
+      button.appendChild(favBtn);
+
+      const art = document.createElement('span');
+      art.className = live ? 'pet-card-art live2d' : 'pet-card-art sprite';
+      art.style.backgroundImage = live
+        ? 'url("/assets/pet/arch-chan-avatar.png")'
+        : item.slug
+          ? `url("/api/pets/thumb?slug=${encodeURIComponent(item.slug)}")`
+          : 'url("/assets/pet/hermes-sprite.png")';
+
+      const name = document.createElement('strong');
+      name.textContent = label;
+      const kind = document.createElement('small');
+      const kindKey = live ? 'ux.petLive2d' : 'ux.petSprite';
+      kind.setAttribute('data-i18n', kindKey);
+      kind.textContent = t(kindKey);
+
+      button.append(art, name, kind);
+      button.onclick = () => choose(item.renderer, item.slug);
+      host.appendChild(button);
+
+      if (!choosing && focusedSlug === item.slug && focusedRenderer === item.renderer) {
+        button.focus({ preventScroll: true });
+      }
+    }
+    if (!host.childElementCount) {
+      const empty = document.createElement('p');
+      empty.textContent = t('ux.noResults');
+      host.appendChild(empty);
+    }
+  }
+
+  window.addEventListener('readmd:pet-state', e => {
+    status = e.detail;
+    const rendererSelect = document.getElementById('pet-renderer');
+    if (rendererSelect && status?.preferences?.renderer && !rendererSelect.dataset.userChanged) {
+      rendererSelect.value = status.preferences.renderer;
+    }
+    renderRoster();
+  });
+  window.addEventListener('readmd:pet-gallery', e => {
+    gallery = e.detail;
+    if (Array.isArray(gallery.catalog) && gallery.catalog.length) {
+      catalogPets = gallery.catalog;
+    }
+    renderRoster();
+  });
+  window.addEventListener('readmd:language-changed', () => { translateWorkbench(); renderRoster(); });
+  window.addEventListener('readmd:pet-open-settings', () => {
+    const box = document.getElementById('pet-settings-box');
+    if (box) box.dataset.petTab = activeTab;
+    const rendererSelect = document.getElementById('pet-renderer');
+    if (rendererSelect && status?.preferences?.renderer) {
+      rendererSelect.value = status.preferences.renderer;
+      delete rendererSelect.dataset.userChanged;
+    }
+    translateWorkbench();
+    renderRoster();
+  });
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+
+;
+/* Controls backed by the same persistent companion service as the desktop pet. */
+(() => {
+  const t = (key, params) => window.i18n?.t(key, params) || key;
+  const fallbackText = {
+    'pet.action.pet': '摸摸头',
+    'pet.action.feed': '喂食',
+    'pet.action.play': '玩耍',
+    'pet.action.rest': '休息',
+    'pet.action.wake': '唤醒',
+    'pet.action.pet.done': '摸摸头真舒服，继续陪你读书！',
+    'pet.action.feed.done': '谢谢投喂，补充好体力啦！',
+    'pet.action.play.done': '玩得很开心！和你更亲近啦。',
+    'pet.action.rest.done': '我先休息一会儿，慢慢恢复体力。',
+    'pet.action.wake.done': '醒来啦，继续陪着你！',
+    'pet.life.level': '等级',
+    'pet.life.energy': '体力',
+    'pet.life.mood': '心情',
+    'pet.life.affection': '亲密度',
+    'pet.life.needsRest': '体力不足，先喂食或休息一会儿吧。',
+  };
+  const getI18n = (key, params) => {
+    const res = t(key, params);
+    if (res && res !== key) return res;
+    if (key === 'pet.life.cooldown' && params?.seconds !== undefined) {
+      return `过 ${params.seconds} 秒再来一次吧。`;
+    }
+    return fallbackText[key] || res;
+  };
+
+  let current;
+  function render(value) {
+    current = value || current;
+    const stats = document.getElementById('pet-life-stats');
+    if (!stats || !current) return;
+    stats.textContent = `${getI18n('pet.life.level')} ${current.level} · ${getI18n('pet.life.energy')} ${current.energy} · ${getI18n('pet.life.mood')} ${current.mood} · ${getI18n('pet.life.affection')} ${current.affection}`;
+    document.querySelector('[data-pet-action="rest"]')?.classList.toggle('hidden', current.resting);
+    document.querySelector('[data-pet-action="wake"]')?.classList.toggle('hidden', !current.resting);
+  }
+
+  function init() {
+    const host = document.querySelector('.pet-companion-controls');
+    if (!host || document.getElementById('pet-life-stats')) return;
+    const life = document.createElement('section'); life.className = 'pet-life-controls';
+    life.innerHTML = '<p id="pet-life-stats" role="status"></p><div class="pet-action-buttons"></div><p id="pet-life-feedback" role="status"></p>';
+    for (const action of ['pet', 'feed', 'play', 'rest', 'wake']) {
+      const button = document.createElement('button'); button.type = 'button';
+      button.dataset.petAction = action; button.dataset.i18n = 'pet.action.' + action;
+      button.textContent = getI18n('pet.action.' + action);
+      button.onclick = async () => {
+        life.querySelectorAll('button').forEach(item => { item.disabled = true; });
+        try {
+          const result = await petGalleryRequest('/api/pets/interact', { action });
+          if (result && result.companion) {
+            render(result.companion);
+          }
+          const feedback = document.getElementById('pet-life-feedback');
+          let feedbackText = '';
+          if (result.ok) {
+            feedbackText = getI18n('pet.action.' + action + '.done');
+          } else if (result.code === 'pet_action_cooldown') {
+            feedbackText = getI18n('pet.life.cooldown', { seconds: result.retry_after });
+          } else if (result.code === 'pet_needs_rest') {
+            feedbackText = getI18n('pet.life.needsRest');
+          } else {
+            feedbackText = t('pet.configFailed', { code: result.code || result.error_code || 'interact_failed' });
+          }
+          if (feedback) {
+            feedback.textContent = feedbackText;
+          }
+          if (feedbackText) {
+            if (typeof window.showPetBubble === 'function') {
+              window.showPetBubble(feedbackText, 4500, 2);
+            }
+            window.dispatchEvent(new CustomEvent('readmd:pet-message', {
+              detail: { text: feedbackText, priority: 2 }
+            }));
+          }
+        } catch (_) {
+          const feedback = document.getElementById('pet-life-feedback');
+          const errorText = t('pet.configFailed', { code: 'pet_connection_failed' });
+          if (feedback) {
+            feedback.textContent = errorText;
+          }
+          if (typeof window.showPetBubble === 'function') {
+            window.showPetBubble(errorText, 3500, 2);
+          }
+          window.dispatchEvent(new CustomEvent('readmd:pet-message', {
+            detail: { text: errorText, priority: 2 }
+          }));
+        } finally { life.querySelectorAll('button').forEach(item => { item.disabled = false; }); }
+      };
+      life.querySelector('div').appendChild(button);
+    }
+    host.appendChild(life);
+    if (!current && window.currentPetRuntimeStatus?.companion) {
+      render(window.currentPetRuntimeStatus.companion);
+    } else {
+      render();
+    }
+  }
+  window.addEventListener('readmd:pet-state', e => { render(e.detail?.companion); });
+  window.addEventListener('readmd:language-changed', () => render());
+  window.addEventListener('readmd:pet-open-settings', init);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+})();
+
 
 ;
 'use strict';
@@ -13964,7 +14606,7 @@ async function createFromClipboard() {
 const EXPORT_FONTS = ['MicrosoftYaHei', 'SimHei', 'SimSun', 'KaiTi', 'DengXian', 'Arial'];
 const EXPORT_MONO = ['Consolas', 'Courier New', 'SimHei'];
 const EXPORT_ALIGNS = ['left', 'center', 'right', 'justify'];
-const EXPORT_PAGES = ['A4', 'A5', 'B5', 'Letter', 'Legal'];
+const EXPORT_PAGES = ['A3', 'A4', 'A5', 'B5', 'Letter', 'Legal', 'Custom'];
 
 function getExportPresetNames() {
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
@@ -14028,6 +14670,8 @@ function getExportSections() {
     /* --- PDF / DOCX 页面与版式 --- */
     { title: _t('export.secPage') || '', fmts: ['pdf', 'docx'], fields: [
       { k: 'page.size', label: _t('export.pageSize') || '', type: 'select', opts: EXPORT_PAGES },
+      { k: 'page.width', label: _t('export.customWidth'), type: 'number', min: 80, max: 600 },
+      { k: 'page.height', label: _t('export.customHeight'), type: 'number', min: 80, max: 600 },
       { k: 'page.orientation', label: _t('export.pageOrientation') || '', type: 'select', opts: [['portrait', _t('export.portrait') || ''], ['landscape', _t('export.landscape') || '']] },
       { k: 'page.marginTop', label: _t('export.marginTop') || '', type: 'number', min: 0, max: 60 },
       { k: 'page.marginRight', label: _t('export.marginRight') || '', type: 'number', min: 0, max: 60 },
@@ -14040,13 +14684,15 @@ function getExportSections() {
       { k: 'cover.subtitle', label: _t('export.coverSubtitle') || '', type: 'text', full: true },
       { k: 'cover.date', label: _t('export.coverDate') || '', type: 'text' },
       { k: 'cover.align', label: _t('export.coverAlign') || '', type: 'select', opts: [['center', _t('export.alignCenter') || ''], ['left', _t('export.alignLeft') || ''], ['right', _t('export.alignRight') || '']] },
-      { k: 'toc.enabled', label: _t('export.enablePdfToc') || '', type: 'checkbox', fmts: ['pdf'] },
+      { k: 'toc.enabled', label: _t('export.enablePdfToc') || '', type: 'checkbox', fmts: ['pdf', 'docx'] },
+      { k: 'headings.h1.pageBreakBefore', label: _t('export.chapterPageBreak'), type: 'checkbox' },
     ]},
     { title: _t('export.secTypography') || '', fmts: ['pdf', 'docx', 'html'], fields: [
       { k: 'typography.font', label: _t('export.bodyFont') || '', type: 'select', opts: EXPORT_FONTS.map(f => [f, f]) },
       { k: 'typography.size', label: _t('export.bodySize') || '', type: 'number', min: 8, max: 20 },
       { k: 'typography.lineHeight', label: _t('export.lineHeight') || '', type: 'number', min: 1, max: 2.5, step: 0.1 },
       { k: 'typography.spacing', label: _t('export.paragraphSpacing') || '', type: 'number', min: 0, max: 30 },
+      { k: 'typography.firstLineIndent', label: _t('export.firstLineIndent'), type: 'number', min: 0, max: 30 },
       { k: 'typography.color', label: _t('export.bodyColor') || '', type: 'color' },
       { k: 'typography.align', label: _t('export.align') || '', type: 'select', opts: [['left', _t('export.alignLeft') || ''], ['center', _t('export.alignCenter') || ''], ['right', _t('export.alignRight') || ''], ['justify', _t('export.alignJustify') || '']] },
     ]},
@@ -14081,6 +14727,10 @@ function getExportSections() {
       { k: 'hr.color', label: _t('export.hrColor') || '', type: 'color' },
     ]},
     { title: _t('export.secFooterMeta') || '', fmts: ['pdf', 'docx'], fields: [
+      { k: 'header.text', label: _t('export.headerText'), type: 'text', full: true },
+      { k: 'header.align', label: _t('export.align'), type: 'select', opts: EXPORT_ALIGNS.slice(0, 3) },
+      { k: 'images.widthPct', label: _t('export.imageWidth'), type: 'number', min: 10, max: 100 },
+      { k: 'images.maxHeightPct', label: _t('export.imageHeight'), type: 'number', min: 10, max: 100 },
       { k: 'footer.pageNumbers', label: _t('export.showPageNumbers') || '', type: 'checkbox' },
       { k: 'footer.text', label: _t('export.footerTextLabel') || '', type: 'text', full: true },
       { k: 'meta.title', label: _t('export.docMetaTitle') || '', type: 'text', full: true },
@@ -14377,8 +15027,8 @@ function generateExportPreviewCss(opts, fmt) {
       font-size: ${ty.size || 11}pt !important;
       line-height: ${ty.lineHeight || 1.6} !important;
       text-align: ${ty.align || 'left'} !important;
-      padding: ${page.marginTop || 20}mm ${page.marginRight || 18}mm ${page.marginBottom || 20}mm ${page.marginLeft || 18}mm !important;
-      ${page.orientation === 'landscape' ? 'width: 297mm; height: 210mm;' : 'width: 210mm; height: 297mm;'}
+      padding: ${page.marginTop ?? 20}mm ${page.marginRight ?? 18}mm ${page.marginBottom ?? 20}mm ${page.marginLeft ?? 18}mm !important;
+      width: ${exportPaperSize(page)[0]}mm; height: ${exportPaperSize(page)[1]}mm;
       box-sizing: border-box !important;
       overflow: hidden !important;
       display: flex !important;
@@ -15209,6 +15859,12 @@ async function generateExportStyleWithAi(stylePrompt) {
   }
 }
 
+function exportPaperSize(page) {
+  const dimensions = {A3:[297,420],A4:[210,297],A5:[148,210],B5:[176,250],Letter:[215.9,279.4],Legal:[215.9,355.6]};
+  const pair = page.size === 'Custom' ? [Number(page.width)||210,Number(page.height)||297] : dimensions[page.size] || dimensions.A4;
+  return page.orientation === 'landscape' ? [Math.max(...pair),Math.min(...pair)] : pair;
+}
+
 ;
 'use strict';
 /* ============================================================
@@ -15444,8 +16100,37 @@ async function cancelUpdateDownload() {
 ;
 // Three-dimensional layout, perspective projection and accessible note navigation.
 (function () {
-  'use strict';
-  const t = (key, params) => window.i18n?.t(key, params) || key;
+  const GRAPH_FALLBACKS = {
+    'graph.title': '知识图谱',
+    'graph.reset': '重置视角',
+    'toolbar.close': '关闭',
+    'graph.zoomOut': '缩小',
+    'graph.zoomIn': '放大',
+    'ux.graphSearch': '搜索节点与别名',
+    'ux.labels': '显示名称',
+    'ux.neighbors': '仅邻近关联',
+    'ux.notes': '关联笔记列表',
+    'ux.graphControls': '拖拽旋转 · 滚轮缩放 · 2D/3D切换',
+    'ux.noResults': '未找到匹配节点',
+    'ux.connections': '{count} 处关联',
+    'ux.openNote': '打开笔记',
+    'ux.loadFailed': '加载失败',
+    'ux.filterLinks': '过滤双向链接...',
+    'ux.linkHint': '使用 [[双链]] 建立笔记关联',
+    'graph.noLinks': '暂无双向链接',
+    'graph.deadlinkUncreated': '未创建的笔记'
+  };
+  const t = (key, params) => {
+    const val = window.i18n?.t(key, params);
+    if (val && val !== key) return val;
+    let fallback = GRAPH_FALLBACKS[key] || key;
+    if (typeof fallback === 'string' && params) {
+      for (const [k, v] of Object.entries(params)) {
+        fallback = fallback.replace(new RegExp(`\\{${k}\\}`, 'g'), v);
+      }
+    }
+    return fallback;
+  };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const api = (url) => (typeof apiFetch === 'function' ? apiFetch(url) : fetch(url)).then(async res => {
     const data = await res.json();
@@ -15703,7 +16388,7 @@ async function cancelUpdateDownload() {
       updateVisibility(backlinkData.backlinks.length>0||backlinkData.forward_links.length>0||hasGraph());
     }catch(_){if(id===backlinkRequest){drawer.querySelector('#backlinks-content').textContent=t('ux.loadFailed');updateVisibility();}}
   }
-  function toggleDrawer(){if(!activeDoc())return;createDrawer();drawer.classList.toggle('hidden');if(!drawer.classList.contains('hidden')){refreshBacklinks(currentFile||state.path);drawer.querySelector('input').focus();}}
+  function toggleDrawer(){if(!activeDoc())return;createDrawer();drawer.classList.toggle('hidden');if(!drawer.classList.contains('hidden')){refreshBacklinks(currentFile||state.file);drawer.querySelector('input').focus();}}
   const WIKILINK_RE=/\[\[([^\]\n|#]+)(?:#([^\]\n|]+))?(?:\|([^\]\n]+))?\]\]/;
   function hasGraph(content){if(typeof content==='string')return WIKILINK_RE.test(content);return activeDoc()&&WIKILINK_RE.test(state.fixed||state.original||'');}
   function updateVisibility(force){const btn=document.getElementById('btn-graph');if(btn){btn.disabled=!activeDoc();btn.classList.toggle('hidden',!activeDoc()||!(force??hasGraph()));}}

@@ -1,6 +1,6 @@
 # ReadMD v2.3.9 更新说明
 
-ReadMD 是本地优先的 Markdown 阅读、编辑与格式转换工具。v2.3.9 在延续本地优先、全语种母语化与格式转换能力的基础上，正式推出 **CC0 许可的 Arch-Chan Live2D 桌面伴读宠物系统**，新增 **原生矢量高保真 PDF 编辑器及 FastMCP 扩展工具链**，强化 **纯 Python Word .doc 二进制流（FIB/CLX）与复杂表格聚类重构**，实现 **前端 UI 全面消除 Emoji 并达成 46 种语言 100% 字典对齐**，并完成了 **多项核心代码沙箱执行、Windows 64 位 Job Object、POSIX 选择器非阻塞等待与导入处理器资源预算等安全审计修复**。
+ReadMD 是本地优先的 Markdown 阅读、编辑与格式转换工具。v2.3.9 在延续本地优先、全语种母语化与格式转换能力的基础上，正式推出 **CC0 许可的 Arch-Chan Live2D 与 73 款 Petdex 精灵图桌面伴读宠物系统（含活态微呼吸自适应引擎与全端台词联动）**，重构 **纯正苹果风原生拖动条（Apple HIG 4px 细轨道与 18px 物理触觉旋钮）**，新增 **原生矢量高保真 PDF 编辑器及 FastMCP 21 项扩展工具链**，强化 **纯 Python Word .doc 二进制流（FIB/CLX）与复杂表格聚类重构**，达成 **46 种语言 100% 字典对齐（1563 词条零裸露、零空值、零英文照搬）**，并实现 **打包彻底瘦身至 28.2MB 与 2 秒极速冷启动**。
 
 ## 正式支持矩阵与发布资产
 
@@ -22,18 +22,21 @@ HarmonyOS/OpenHarmony、Windows 7/8、LoongArch、MIPS、SW64、RISC-V、Alpine�
 
 ### 新增功能 (Features)
 
-- **Live2D 桌面伴读宠物系统**：
+- **Live2D 与 73 款 Petdex 精灵图桌面伴读宠物系统**：
   - 集成 CC0 许可的 Arch-Chan Live2D 模型，基于 PixiJS 运行时与 `devicePixelRatio` 高 DPI 视网膜屏幕自适应缩放；
+  - 核心几何自动推断算法：使用纯 Python `struct` 极速解析精灵图头部尺寸，智能识别 4×2、8×11（Petdex 高密序列）与单立绘小图，彻底杜绝切片越界与撕裂错位；
+  - 桌面 Canvas 活态微呼吸动效：单立绘立绘以脚底为锚点做周期 3.2 秒的正弦波柔和微缩放与浮动，注入生动生命感；
+  - 伴读伴侣生活状态引擎：支持等级、体力、心情、亲密度持久化成长与行为冷却机制；
+  - 全端对话气泡与快捷动作打通：摸摸头、喂食、玩耍、休息、唤醒动作实时联动桌面悬浮窗、应用内小部件与设置舞台三端对话气泡，Electron 右键菜单与后端双向同步；
   - 双向进程生命周期看门狗（`READMD_PARENT_PID` + `isHostProcessAlive` 宿主失活自动安全退出）；
   - 原生穿透与平滑连续拖拽，动态窗口边界同步与高灵敏点击命中测试（hit testing）；
   - 支持拖拽文件直接扔给桌宠打开阅读；
   - 气泡系统：持久化优先级保护、平滑淡入淡出透明度区间截断（opacity range clamping）、队列批处理隔离（`receivePetBatch` 异常隔离防阻塞）；
-  - 46 种语言桌宠对话 100% 本地化覆盖（时段问候、戳一戳、打盹/发呆/唤醒、阅读进度里程碑）；
   - 插件包搜索路径扩充与 zip fallback 保护（防御 `pet_plugin_bundle_missing`）；
   - 守护进程桥接：`HermesPetBridge` 原子化文件命令置换，防止并发指令丢失。
-- **原生高保真矢量 PDF 编辑器与 MCP 工具链**：
+- **原生高保真矢量 PDF 编辑器与 MCP 21 项工具链**：
   - 新增 `readmd_modules.pdf_editor` 原生矢量 PDF 编辑引擎，支持文本层高保真修复与标注；
-  - 扩充 ReadMD MCP Server 工具集：增加 PDF inspection、结构化审阅与批注工具，全面赋能外部 Agent 集成；
+  - 扩充 ReadMD MCP Server 工具集至完整的 21 项工具：增加 `readmd_pdf_audit`（结构与底色噪点采样）、`readmd_pdf_preview_edit`（沙箱预览差分质检）、`readmd_pdf_apply_edit`（物理更新与 .bak 备份）、`readmd_pdf_rollback`（一键回滚），全面赋能外部 Agent 集成；
   - MCP 协议健壮性：严格校验 JSON-RPC 请求参数（非法参数保留 `req_id` 并返回标准错误码 `-32602`），修复深层配置合并，增加防 TOCTOU 竞争条件的符号链接与排他写入防护。
 - **插件中心现代化与离线安装支持**：
   - 为 PyInstaller 冻结环境引入 `distlib` wheel 离线安装器；
@@ -47,9 +50,15 @@ HarmonyOS/OpenHarmony、Windows 7/8、LoongArch、MIPS、SW64、RISC-V、Alpine�
 
 ### 修复与改进 (Fixes)
 
-- **VS Code 扩展深度优化**：解决 bugs 001-008，引入快照保护机制、内置容错 JSONC 解析器、UTF-8 解码健壮性增强与现代 Webview 适配。
+- **VS Code 扩展深度优化**：解决 bugs 001-008，引入快照保护机制、内置容错 JSONC 解析器、UTF-8 解码健壮性增强、39 项单元测试通过与现代 Webview 适配。
 - **阅读器交互与边界加固**：`loadFile` 强制重载的空指针保护（`existingTab` 判空防护，防止 `browserCopy TypeError`）；代码块结束反引号行严格匹配。
-- **国际化与多语言对齐**：全面清理历史冗余字符串，消除多语言英文 fallback 泄露，规范化繁体中文（zh-TW 与 zh-HK），达成 46 种支持语言 100% 词条对齐（1325 词条）。
+- **国际化与多语言深度治理（100% 词条母语化对齐）**：
+  - 基准字典扩充并规范至 **1563 词条**，46 种语言 100% 键位 Parity；
+  - 彻底消除非英语语言中的英文照搬与占位符，达成 **0 裸露 key、0 空值、0 未授权英文复制**；
+  - 前端 HTML 模板原生中文 100% 绑定 `data-i18n*`，彻底消除硬编码与缺失属性。
+- **轻量秒开与打包优化**：
+  - 严格排除重型 AI 与计算库（torch, paddle, cv2, scipy, numba 等），可执行文件由 122MB 瘦身至 28.2MB；
+  - 彻底解决冷启动卡顿问题，Windows 窗体建立时间缩短至 85ms，完整冷启动耗时缩短至 2.0 秒。
 
 ### 安全与内核审计 (Security & Audit)
 
@@ -66,6 +75,14 @@ HarmonyOS/OpenHarmony、Windows 7/8、LoongArch、MIPS、SW64、RISC-V、Alpine�
 
 ### 前端规范与体验 (UI & Experience)
 
+- **纯正苹果原生质感拖动条重塑 (/apple-design & Apple HIG)**：
+  - 彻底抛弃笨重臃肿样式，采用 4px 极简精致轨道（`border-radius: 999px`），亮色模式活力蓝、深色模式通透半透明磨砂轨道；
+  - 18px 实体金属/塑料微环境光泽悬浮圆钮，Active 拖动触觉能量光晕反馈；
+  - San Francisco 等宽排版数字药丸读数（`tabular-nums`），拖动实时平滑反馈无抖动。
+- **桌宠设置工作台空间精致化重排**：
+  - 彻底解决底栏遮挡与 120px 巨大留白死区，双轴拉伸自适应；
+  - 角色库操作栏（搜索、图鉴下拉、导入与删除）置顶排列；
+  - 支持角色即时搜索与收藏置顶（Star Favorites）。
 - **前端核心 UI 全面去硬编码 Emoji**：
   - CSS 伪元素、关系图谱弹窗、反向链接抽屉、工具栏及更多菜单中的硬编码 Emoji 全面升级为内联高精度矢量 SVG 与自适应图标系统；
   - 严格规范化保留 `index.html` 与 `ai.js` 既有基础排版符号（`&#9789;`、`✕`、`⏸`、`⚙`）；
