@@ -3,7 +3,7 @@
   "spec_sha256": "0ebd4a40dac8dbd6ad08c4270e8e38d9183dd94892f2e42265b8e3db93ad986e",
   "line_count": 947,
   "byte_count": 60486,
-  "git_commit": "1af271e5d219c7c8ecf4fb285022793d1677c9e9",
+  "git_commit": "494f46119cb2e31c70ab1bdffc829d1ee43bf15a",
   "golden_commit_sha": "4dcfd73ce81a14ace7e429791e0594bea47b24e5",
   "linter_version": "v1.4.5",
   "linter_passed": true,
