@@ -1,0 +1,41 @@
+{
+  "": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GoldenBuildProvenanceSchema",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "vendor_revision",
+    "source_nodes",
+    "transform_nodes",
+    "generated_nodes",
+    "runtime_nodes",
+    "edges",
+    "sprite_provenance"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "vendor_revision": {
+      "type": "string"
+    },
+    "source_nodes": {
+      "type": "array"
+    },
+    "transform_nodes": {
+      "type": "array"
+    },
+    "generated_nodes": {
+      "type": "array"
+    },
+    "runtime_nodes": {
+      "type": "array"
+    },
+    "edges": {
+      "type": "array"
+    },
+    "sprite_provenance": {
+      "type": "object"
+    }
+  }
+}

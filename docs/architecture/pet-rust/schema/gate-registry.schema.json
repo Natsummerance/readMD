@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GateRegistrySchema",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["id", "display_order", "scope", "owner_component", "required_for", "evidence_type", "blocking"],
+    "properties": {
+      "id": { "type": "string" },
+      "display_order": { "type": "integer" },
+      "scope": { "type": "string" },
+      "owner_component": { "type": "string" },
+      "required_for": { "type": "array", "items": { "type": "string" } },
+      "evidence_type": { "type": "string" },
+      "blocking": { "type": "boolean" }
+    }
+  }
+}

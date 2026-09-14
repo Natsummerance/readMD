@@ -1,15 +1,26 @@
 {
-  "spec_path": "docs/architecture/pet-rust/spec.md",
-  "spec_sha256": "0ebd4a40dac8dbd6ad08c4270e8e38d9183dd94892f2e42265b8e3db93ad986e",
-  "line_count": 947,
-  "byte_count": 60486,
-  "git_commit": "f06074ef65b5c9f4afd1b7190fa0233932904cbf",
-  "golden_commit_sha": "4dcfd73ce81a14ace7e429791e0594bea47b24e5",
-  "linter_version": "v1.4.5",
-  "linter_passed": true,
-  "validation_items_count": 51,
-  "open_blockers_count": 33,
-  "registered_gates_count": 71,
-  "closed_decisions_count": 18,
-  "platform_tuples_count": 24
+  "": "schema/spec-integrity.schema.json",
+  "spec_version": "v1.4.6-Candidate",
+  "git_commit": "47c40a38a60f27df369b60ed29dac4a4a037e3f6",
+  "artifacts": {
+    "spec.md": "b8b9704880e9d6fbefc499cfa530800ae529c211b6ae03fdc1c9d9e623096096",
+    "golden-contract.json": "897c729426ba3d9b68b3dc1f9f2ecd25347712f5a7907a430529c246a8689116",
+    "golden-build-provenance.json": "243952146b8bcccec462392696258b7d3d58698b22be1bad0681305a7e5747f2",
+    "tuple-registry.json": "ac4998e6ce96d8fc2890a95309649c204bf272d9c6650a9486d153e6a8b8b0a3",
+    "validation-registry.json": "c988996b59fbd59834e6220f91fa0ff293a3c644285d22dd4c27afb7da705746",
+    "gate-registry.json": "85aaa3d637de38009085d4ec1b8f6a1fb7eb7c0c9f797cd2cb7031394c75f019",
+    "blocker-registry.json": "7e8120e87f74b8ba96501de72d42d3cc80fedd86f13c24a3c096b2517e772242",
+    "registry-manifest.json": "a8f4455339b92b401e1b1e90b4a679227044946d101cf20767639d63ccb90fde"
+  },
+  "counts": {
+    "behavior_inputs": 9,
+    "build_inputs": 3,
+    "generated_inputs": 3,
+    "runtime_assets": 5,
+    "supporting_evidence": 2,
+    "tuples": 24,
+    "validations": 57,
+    "gates": 75,
+    "blockers": 33
+  }
 }

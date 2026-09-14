@@ -1,10 +1,11 @@
-# ReadMD Desktop Overlay v1.4.5 Semantic Closure Candidate
+# ReadMD Desktop Overlay v1.4.6 Evidence & Validation Closure Candidate
 
-> **版本**：v1.4.5-Candidate
-> **状态说明**：Semantic Closure Candidate / Architecture Design Candidate ready for Phase 0
-> **架构冻结裁决**：**NO — Production Architecture Freeze**（严禁进入正式生产冻结）
-> **Phase 1 Rust Host 生产实现状态**：**严格禁止**（必须在 Phase 0 物理 PoC 实机验证完成且硬件门禁全部通过后方可解锁）
-> **前序版本审计依据**：彻底修复 v1.4.4 中所有语义冲突、状态机遗漏、非原子元组及虚构行为。
+> **版本标识**：v1.4.6-Candidate
+> **阶段说明**：Evidence & Validation Closure Candidate / Phase 0 Readiness Gate
+> **架构冻结判定**：**NO — Production Architecture Freeze**（严禁进入正式生产代码实现）
+> **Phase 1 Rust Host 生产实现状态**：**严格禁止**（在 Phase 0 物理硬件概念验证全数通过前严禁进入正式生产代码）
+> **Phase 0 全量验证状态**：**BLOCKED**（允许 Phase 0 tooling/bootstrap、GoldenCapture、isolated backend spike 准备；但正式 PASS 需物理实机证据链）
+> **前序版本溯源**：解决 v1.4.5 中遗留的 Artifact Provenance、Golden Build Closure、Validation Registry、Phase-0 Matrix 与 Evidence Classification 问题
 
 ---
 
@@ -64,23 +65,40 @@
 
 ## 1. Golden Contract 权威行为源与基准契约
 
-### 1.1 核心行为源与 Git 提交哈希锁定 (P0-91, P0-103, P0-158)
-本项目严格以 Git Commit `4dcfd73ce81a14ace7e429791e0594bea47b24e5` 下的真实实现为黄金基准：
-- **Golden Git Commit SHA**：`4dcfd73ce81a14ace7e429791e0594bea47b24e5`
+### 1.1 黄金行为输入闭包 (Golden Behavioral Input Closure) (P0-172, P0-173, P0-174, P0-189)
+本项目不再以固定主观的人工“核心文件数”定义基准，而是建立**黄金行为输入闭包 (Golden Behavioral Input Closure)**。
+任何改变可观测桌面浮窗行为的源码、构建适配脚本、打包配置、运行时资产与依赖锁文件，均作为显式输入纳入机器注册表：
+- **上游厂商仓库**：`https://github.com/NousResearch/hermes-agent`
+- **上游固定提交 (Pinned Upstream Revision)**：`fb27614addac115d55299bc6538ae112fd01f688`（记录于 `third_party/hermes-agent-pet/UPSTREAM.md`，CI 实施强校验拦截）
+- **黄金基准提交 (Golden Git Commit SHA)**：`47c40a38a60f27df369b60ed29dac4a4a037e3f6`
+- **构建起源图谱 (Build Provenance Graph)**：`docs/architecture/pet-rust/golden-build-provenance.json`
 - **机器可读契约源**：`docs/architecture/pet-rust/golden-contract.json`
 
 <!-- GENERATED: golden-source-table -->
-| 序号 | 行为源文件路径 | 承担的核心合约职责 | 文件大小 | 精确 SHA-256 哈希 |
-|---|---|---|---|---|
-| **1** | `packages/readmd-hermes-pet-adapter/src/electron-main.ts` | 主窗口生命周期、右键菜单模型、托盘与剪贴板捕获 | 14,929 B | `0a1b6473d155f8121d77d1463316a7968b0d973f76bb6080f4abb58de65a269d` |
-| **2** | `packages/readmd-hermes-pet-adapter/src/preload.ts` | Preload ABI 上下文暴露 (window.__HERMES_PET__) | 1,883 B | `fafeb3c1e5241efe3c25646f4ec1cb818ca46a17e375f85e3e16710963df1179` |
-| **3** | `packages/readmd-hermes-pet-adapter/src/bridge-transport.ts` | Durable FIFO 队列与 SnapshotReader 严格原子读取器 | 2,276 B | `7055deed1d644687fe8fc1a3adff39fba85185644903e334be6b502397100723` |
-| **4** | `packages/readmd-hermes-pet-adapter/src/renderer.tsx` | 前端 React 挂载、状态驱动、错误边界与控制事件分发 | 2,002 B | `5bbbd06c222c572d75b68b10bb09e910a5e02e6f1e89475a9811d0934dccaa36` |
-| **5** | `packages/readmd-hermes-pet-adapter/src/live2d/stage.ts` | Live2D 舞台命中判定 (hitTest || bounds.contains) | 19,525 B | `bec994ed0a299fd7f05156f54cef6fa06da750f96f6f931a547313bd3e64522a` |
-| **6** | `third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts` | 上游宠物 IPC 管道与窗口穿透控制 | 5,824 B | `5c99fce416fece34d0fb66fdb662af0fb0169b9c4e8aae71977f9a46ac171d8d` |
-| **7** | `src/readmd_modules/pet/hermes_adapter.py` | Python 宿主控制逻辑、生命周期与剪贴板 FIFO 响应 | 33,603 B | `2a2f09188d3f9f6f52ac9a0a0571d3a94eaf2e385949184ef24058f3ec5b03ee` |
-| **8** (证据) | `packages/readmd-hermes-pet-adapter/package.json` | 依赖版本与包元数据 | 709 B | `ee63a91062219ea13672d4440246745f5eb821573a3007b30a7385e857780600` |
-| **9** (证据) | `packages/readmd-hermes-pet-adapter/src/pet-life.ts` | 宠物伴侣状态机与角色属性定义 | 12,123 B | `21ef9bf62592d4d00a3b99cd3fd6f50944245fb26ac1f51cd3f3ad2db20d1dd5` |
+| 分类 | 路径 | 职责角色 | 文件大小 | 精确 SHA-256 哈希 | 行为关键 |
+|---|---|---|---|---|---|
+| **行为输入** | `third_party/hermes-agent-pet/apps/desktop/src/app/pet-overlay/pet-overlay-app.tsx` | Upstream Sprite click-through, double-click, and event handling | 6,185 B | `9b2c3d492d0f2adaaa4e2b7ac536e988dea1908208ee7a321fa23203b2c7357d` | **是** |
+| **行为输入** | `packages/readmd-hermes-pet-adapter/scripts/build.mjs` | Build-time adaptation script patching single-click to open-menu and generating bundle | 4,661 B | `59fe50c2d31841aadef9013d2b47b107f49dac62434cebb5d3106bb97ca51db2` | **是** |
+| **行为输入** | `packages/readmd-hermes-pet-adapter/src/electron-main.ts` | Main window lifecycle, context menu model, tray and clipboard capture | 14,929 B | `0a1b6473d155f8121d77d1463316a7968b0d973f76bb6080f4abb58de65a269d` | **是** |
+| **行为输入** | `packages/readmd-hermes-pet-adapter/src/preload.ts` | Preload ABI context exposure (window.__HERMES_PET__) | 1,883 B | `fafeb3c1e5241efe3c25646f4ec1cb818ca46a17e375f85e3e16710963df1179` | **是** |
+| **行为输入** | `packages/readmd-hermes-pet-adapter/src/bridge-transport.ts` | Durable FIFO queue and SnapshotReader atomic reader | 2,276 B | `7055deed1d644687fe8fc1a3adff39fba85185644903e334be6b502397100723` | **是** |
+| **行为输入** | `packages/readmd-hermes-pet-adapter/src/renderer.tsx` | Frontend React mounting, state dispatch, and error boundary | 2,002 B | `5bbbd06c222c572d75b68b10bb09e910a5e02e6f1e89475a9811d0934dccaa36` | **是** |
+| **行为输入** | `packages/readmd-hermes-pet-adapter/src/live2d/stage.ts` | Live2D stage hit test and bounds checking | 19,525 B | `bec994ed0a299fd7f05156f54cef6fa06da750f96f6f931a547313bd3e64522a` | **是** |
+| **行为输入** | `third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts` | Upstream pet IPC protocol and window click-through control | 5,824 B | `5c99fce416fece34d0fb66fdb662af0fb0169b9c4e8aae71977f9a46ac171d8d` | **是** |
+| **行为输入** | `src/readmd_modules/pet/hermes_adapter.py` | Python host orchestrator, lifecycle management, and FIFO response | 33,603 B | `2a2f09188d3f9f6f52ac9a0a0571d3a94eaf2e385949184ef24058f3ec5b03ee` | **是** |
+| **构建输入** | `packages/readmd-hermes-pet-adapter/vite.config.mjs` | Vite bundling configuration for renderer | 1,358 B | `8a5ed317a59a567fa8660e887d3b4e6067375583f85cb6072f7090cfae7c17db` | **是** |
+| **构建输入** | `packages/readmd-hermes-pet-adapter/package.json` | Dependencies, build scripts, and package metadata | 709 B | `ee63a91062219ea13672d4440246745f5eb821573a3007b30a7385e857780600` | **是** |
+| **构建输入** | `packages/readmd-hermes-pet-adapter/package-lock.json` | Dependency lockfile ensuring reproducible toolchain | 120,446 B | `c354caaed6f277fbddad21b6e27d6e2de961f6cefa9a397f3e213a9ecf3efb4f` | 否 |
+| **生成产物** | `packages/readmd-hermes-pet-adapter/dist/electron-main.cjs` | Production bundled Electron main host | 20,120 B | `b5747182b5e883e2e89aad869affbd3a7d3a7b8f70642a4997d757adb569f921` | **是** |
+| **生成产物** | `packages/readmd-hermes-pet-adapter/dist/preload.cjs` | Production bundled Preload script | 3,014 B | `50d95c7d2b62f3ba3198597c0a73cb53d4fa6c89d36534d59268a3a0fb8c08e0` | **是** |
+| **生成产物** | `packages/readmd-hermes-pet-adapter/dist/renderer/index.html` | Production bundled Renderer HTML entry | 536 B | `d9f1da3457bac312a2790d270f6052de02c87290a19d623ee5d23bfb378ccb9d` | **是** |
+| **运行资产** | `packages/readmd-hermes-pet-adapter/assets/hermes-sprite.png` | Default Hermes character sprite sheet | 180,556 B | `a5661b457de00b9a57570effcb7a3ecb8f6cb960b48c6633987a32542f2f58e0` | **是** |
+| **运行资产** | `packages/readmd-hermes-pet-adapter/assets/mochi-sprite.png` | Mochi character sprite sheet | 171,542 B | `6e03b6065b5790b9ec860f13edcf930c902930456e5be5915b264eb225c68c01` | 否 |
+| **运行资产** | `packages/readmd-hermes-pet-adapter/assets/moss-sprite.png` | Moss character sprite sheet | 165,431 B | `088f67906646a79d1bf8232d8bce324d5b000185ba52dcf12853c9ccd4a99af6` | 否 |
+| **运行资产** | `packages/readmd-hermes-pet-adapter/assets/amber-sprite.png` | Amber character sprite sheet | 174,921 B | `fe9a84570db99898b20ac40e31012228b4959c84b636c166447a15f5cfa26bab` | 否 |
+| **运行资产** | `packages/readmd-hermes-pet-adapter/dist/models/arch-chan/arch chan model0.model3.json` | Arch-Chan Live2D model definition | 689 B | `5d1a05c2eadba5296d2e26f67da5369191a9ca0d124a5e9fcbb142dff578679c` | **是** |
+| **辅助证据** | `packages/readmd-hermes-pet-adapter/src/pet-life.ts` | Pet life companion state machine and attribute constants | 12,123 B | `21ef9bf62592d4d00a3b99cd3fd6f50944245fb26ac1f51cd3f3ad2db20d1dd5` | 否 |
+| **辅助证据** | `third_party/hermes-agent-pet/UPSTREAM.md` | Upstream provenance documentation and revision record | 966 B | `35076f31d0ea6d70df494d6b2fab258d6348a24706e707c373629fea75d51110` | 否 |
 
 ### 1.2 权威 Preload ABI 规范 (P0-92, P0-146)
 逐字对照 `preload.ts`，锁定宿主与渲染层通信标准：
@@ -118,13 +136,14 @@ export interface ReadMDPetPreloadABI {
    return (Array.isArray(areas) && areas.length > 0) || Boolean(model.getBounds?.().contains(x, y));
    ```
    **物理事实**：只要 `model.hitTest(x, y)` 命中了有效部件，或者坐标落在模型包围盒 `model.getBounds()` 内，即视为命中宠物本体（禁止私自改成仅包含 HitArea 的方案）。
-2. **Sprite 判定合约 (`third_party/.../pet-overlay-app.tsx` L132-L165)**：
+2. **Sprite 判定合约 (`third_party/.../pet-overlay-app.tsx` L132-L165)** (P0-160, P0-173, P0-188)：
    - 使用 `document.elementFromPoint(x, y)` 检测拾取目标；
    - 若拾取目标不在宠物根容器 `petRef` 内，判定为透明穿透区域（返回 `false`）；
    - 若拾取目标为非 Canvas 交互 DOM 元素（如对话气泡 `PetBubble`、未读邮件图标 `Mail`、弹出式输入框 `composer`），直接信任 DOM 命中测试（返回 `true`）；
    - 若拾取目标为 `HTMLCanvasElement`，则获取 2D 上下文并在对应纹理坐标处进行像素采样：
      $$\text{Solid Pixel} \iff \text{ctx.getImageData}(px, py, 1, 1).\text{data}[3] \ge 16 \quad (\text{ALPHA\_HIT\_THRESHOLD} = 16)$$
-   - 若 Canvas 受到污染（Tainted）或读取抛出异常，执行安全打开策略（fail-open，返回 `true`），确保桌宠依然可被鼠标抓取。
+   - 若 Canvas 受到污染（Tainted）或读取抛出异常，执行安全打开策略（fail-open，返回 `true`），确保桌宠依然可被鼠标抓取；
+   - **构建起源绑定 (P0-188)**：Sprite 原生源码经由 `packages/readmd-hermes-pet-adapter/scripts/build.mjs` 进行单次点击行为适配（单次点击触发 `open-menu`，双击保持 `toggle-app`），构建产物哈希与原始源码哈希在 `golden-build-provenance.json` 中完整绑定。
 
 ### 1.5 ReadMD 适配器 `toggle-app` 语义 (P0-96)
 恢复 `hermes_adapter.py` 第 309-322 行逻辑：
@@ -150,17 +169,28 @@ export interface ReadMDPetPreloadABI {
 - PNG 图片 Base64 上限：24M 字符（24 * 1024 * 1024）；
 - Windows 路径列表上限：128 项（从 `CF_HDROP` / `FileNameW` 缓冲区解析）。
 
-### 1.8 渲染层崩溃自愈与健康度报告 (P0-99, P0-149, P0-150)
-恢复 `electron-main.ts` 第 165-172 行原生自愈时序：
-1. **优先报告健康度 (P0-149)**：收到 `render-process-gone` 事件且非正常退出时，**立即上报健康度**：`reportHealth('failed', lastRenderer, 'pet_renderer_crashed')`；
-2. **时间窗口过滤**：过滤出过去 60 秒内的崩溃时间戳列表：`recoveries = recoveries.filter(t => Date.now() - t < 60_000)`；
-3. **熔断判定**：若 `recoveries.length >= 3`，触发熔断，停止自愈并保持静默；
-4. **延迟重载**：若未熔断，记录当前时间戳并延时重启：`setTimeout(() => loadOverlayPage(lastRenderer), 500 * recoveries.length)`。
-- **边界用例矩阵 (P0-150)**：
-  - 第 1 次崩溃：延时 500ms 重载；
-  - 第 2 次崩溃：延时 1000ms 重载；
-  - 第 3 次崩溃：延时 1500ms 重载；
-  - 同一 60 秒内发生第 4 次崩溃：熔断打开，不执行重载。
+### 1.8 宿主感知渲染层崩溃自愈与健康度报告 (P0-99, P0-149, P0-150, P0-186, P0-187)
+严格还原 `electron-main.ts` 第 165-172 行原生自愈时序。**主体责任界定 (P0-187)**：渲染进程崩溃属于**宿主进程直接观测事件 (Host-Observed Failure)**。在 Electron 中由主进程监听 `render-process-gone` 并由主进程自身执行 `reportHealth(...)`；在 Rust 宿主中由主事件循环监听 WebView 进程终止事件并向 `<bridge>.rust.health.json` 写入故障报告，渲染层沙箱绝无直接写盘权限。
+
+```typescript
+// 冻结原生 Golden 自愈逻辑 (P0-186)
+recoveries = recoveries.filter(t => now - t < 60_000)
+reportHealth("failed", renderer, "pet_renderer_crashed")
+
+if (recoveries.length >= 3) {
+    return // 过去 60 秒内已有 3 次自愈记录，触发熔断，停止重载
+}
+
+recoveries.push(now)
+delay = 500 * recoveries.length
+scheduleReload(delay)
+```
+
+- **边界判定与执行阶梯矩阵 (P0-186)**：
+  - **第 1 次崩溃**：检测前 `recoveries.length == 0`（未达熔断阈值 3），记录当前时间戳（长度变为 1），延时 `500 * 1 = 500ms` 执行重载；
+  - **第 2 次崩溃**：检测前 `recoveries.length == 1`（未达阈值 3），记录当前时间戳（长度变为 2），延时 `500 * 2 = 1000ms` 执行重载；
+  - **第 3 次崩溃**：检测前 `recoveries.length == 2`（未达阈值 3），记录当前时间戳（长度变为 3），延时 `500 * 3 = 1500ms` 执行重载；
+  - **同一 60 秒内第 4 次崩溃**：检测前 `recoveries.length == 3`（`recoveries.length >= 3` 成立），立即触发熔断并 `return`，**不记录时间戳、不执行任何延时重载**，保持静默故障状态。
 
 ### 1.9 Fallback 雪碧图权威元数据 (P0-125)
 - 帧宽度：192 DIP；帧高度：208 DIP；缩放系数：0.33；底部边距：24 DIP。
@@ -224,6 +254,13 @@ gtk_layer_shell::set_keyboard_mode(&window, gtk_layer_shell::KeyboardMode::None)
 
 ### 4.3 合成器避让候选策略 (P0-113, P0-163)
 Wayland 环境缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 与 `exclusive_zone(0)` 作为候选避让策略，其具体行为依赖 `VAL-31` 物理实机验证。不同合成器（KWin, Sway, Hyprland）可能呈现差异行为，系统支持通过能力探针进行策略切换。
+
+---
+
+### 4.4 GNOME 桌面环境强约束禁止调用 (P0-179)
+GNOME Wayland (Mutter) 在架构上不支持 `zwlr_layer_shell_v1` 协议。**严禁在 GNOME 桌面环境下将任何窗口或图层绑定到 LayerShellBackend**，任何在 GNOME Wayland 下尝试加载或调用 `gtk_layer_shell` 的行为均视为严重架构违规。
+- **LayerShellBackend** 严格限定于支持 Layer-Shell 的合成器：KDE Plasma 6 (KWin Wayland)、Sway、Hyprland、Deepin Treeland；
+- **GNOME Wayland** 必须且只能绑定 **GnomeCompanionBackend**（借助 Companion 扩展与 Mutter 通信）。
 
 ---
 
@@ -448,3 +485,199 @@ pub struct AppliedOverlayState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HostLifecycle {
     Booting,
+    Probing,
+    Running,
+    Suspended,
+    Degraded,
+    ShuttingDown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SurfaceState {
+    Absent,
+    Creating,
+    Loading,
+    Ready,
+    Recovering,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InputState {
+    PassThrough,
+    Interactive,
+    Dragging,
+    MenuOpen,
+    TextInput,
+}
+```
+
+### 16.3 状态对齐函数与优先级仲裁 (P0-134)
+```rust
+pub fn reconcile(
+    desired: &DesiredOverlayState,
+    applied: &AppliedOverlayState,
+    lifecycle: HostLifecycle,
+    surface: SurfaceState,
+    input: InputState,
+    capabilities: &BackendCapabilities,
+) -> Vec<Effect>
+```
+**仲裁优先级**：
+$$\text{ShuttingDown} > \text{Suspended} > (\text{visible=false} \land \neg\text{fullscreen}) > (\text{fullscreen=true}) > (\text{Recovering/Loading}) > \text{Ready}$$
+**拖拽保护规则**：若当前处于 `InputState::Dragging` 且收到了 `visible=false` 或 `fullscreen=true`，必须先发出 `Effect::AbortDrag` 中断拖拽，随后再执行隐藏或销毁操作。
+
+---
+
+## 17. 健康度监控所有权与原子写入规范 (P0-85, P0-136, P0-137, P0-151)
+
+### 17.1 所有权边界清晰划分 (P0-136)
+- **遗留 Electron 宿主健康文件**：`${bridge}.health.json`，**唯一所有者为 Electron 宿主主进程**（通过 `electron-main.ts` 中的 `reportHealth` 写入），渲染层严禁直接写入该文件；
+- **Rust 宿主健康文件**：`${bridge}.rust.health.json`，唯一所有者为 Rust 宿主进程；
+- **渲染层通信机制**：渲染层仅在完成挂载或遇到错误时，通过 Control IPC 发送 `renderer-ready` 或 `renderer-failed` 事件通知宿主。
+
+### 17.2 健康度负载契约 (P0-137)
+- **遗留 Schema (Legacy Schema)**：
+  ```json
+  {
+    "state": "loading",
+    "renderer": "live2d",
+    "code": "optional_code",
+    "pid": 12345,
+    "updated_at": 1726300000000
+  }
+  ```
+- **Rust 扩展 Schema (Rust Schema)**：
+  ```json
+  {
+    "engine": "rust",
+    "state": "ready",
+    "renderer": "live2d",
+    "code": null,
+    "pid": 12345,
+    "updated_at": 1726300000000,
+    "engine_generation": 1,
+    "protocol_version": 1
+  }
+  ```
+- **原子写入契约 (P0-151)**：写入 `<target>.tmp` 临时文件后，通过原子 `rename` 替换目标文件，防止读取方解析到截断的残缺 JSON。
+
+---
+
+## 18. 权威构建与依赖规范 (Cargo Specification) (P0-55, P0-56, P0-57, P0-58)
+
+### 18.1 全平台统一母体：Cargo.toml
+```toml
+[package]
+name = "readmd-pet-rust"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85.0"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.43", features = ["sync", "time", "rt"] }
+tao = { version = "0.37.0", default-features = false, features = ["rwh_06"] }
+wry = { version = "0.57.0", default-features = false, features = ["os-webview"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Dwm",
+    "Win32_Security"
+] }
+muda = "0.15"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.5"
+objc2-app-kit = "0.2"
+objc2-foundation = "0.2"
+muda = "0.15"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+gtk = { version = "0.18", default-features = false }
+gdk = { version = "0.18", default-features = false }
+glib = "0.20"
+gtk-layer-shell = { version = "0.4.0", features = ["v0_6"] }
+
+[features]
+default = []
+linux-production = []
+```
+
+---
+
+## 19. 临时测量参考指标与性能基线 (P0-109, P0-169)
+启动耗时与常驻内存目标仅作为 Phase 0 物理概念验证阶段的测量参考指标，在形成正式经过批准的平台 ADR 之前，绝不作为全局发布阻断门禁。
+
+---
+
+## 20. 平台认证元组规范 (Platform Certification Tuples) (P0-71, P0-72, P0-107, P0-138, P0-139, P0-152)
+
+### 20.1 认证生命周期模型
+```
+[ Planned ] --(Phase 0 PoC 通过)--> [ Candidate ] --(实测全通过)--> [ Certified ]
+     |                                    |
+     +------------(验证失败)-------------> [ Rejected ]
+```
+**所有 24 个平台认证元组当前统一处于 Planned 状态**。
+
+### 20.2 权威原子平台认证元组表 (P0-138, P0-152)
+以稳定主键 `tuple_key` 作为机器标识，每个字段保持原子单值：
+
+| 序号 | 稳定主键 (tuple_key) | 操作系统与版本 | 架构 | 显示服务 | 规划适配器实现 | 当前生命周期 |
+|---|---|---|---|---|---|---|
+| **T-01** | `windows-11-24h2-x64-dwm-win32` | Windows 11 (24H2) | x86_64 | DWM / DWM | `Win32Backend` | **Planned** |
+| **T-02** | `windows-11-23h2-x64-dwm-win32` | Windows 11 (23H2) | x86_64 | DWM / DWM | `Win32Backend` | **Planned** |
+| **T-03** | `windows-11-24h2-arm64-dwm-win32` | Windows 11 (24H2) | aarch64 | DWM / DWM | `Win32Backend` | **Planned** |
+| **T-04** | `windows-10-22h2-x64-dwm-win32` | Windows 10 (22H2) | x86_64 | DWM / DWM | `Win32Backend` | **Planned** |
+| **T-05** | `macos-26-tahoe-arm64-quartz-cocoa` | macOS 26 (Tahoe) | aarch64 | Quartz / WindowServer | `CocoaBackend` | **Planned** |
+| **T-06** | `macos-15-sequoia-arm64-quartz-cocoa` | macOS 15 (Sequoia) | aarch64 | Quartz / WindowServer | `CocoaBackend` | **Planned** |
+| **T-07** | `macos-14-sonoma-arm64-quartz-cocoa` | macOS 14 (Sonoma) | aarch64 | Quartz / WindowServer | `CocoaBackend` | **Planned** |
+| **T-08** | `macos-13-ventura-arm64-quartz-cocoa` | macOS 13 (Ventura) | aarch64 | Quartz / WindowServer | `CocoaBackend` | **Planned** |
+| **T-09** | `macos-15-sequoia-x64-quartz-cocoa` | macOS 15 (Sequoia) | x86_64 | Quartz / WindowServer | `CocoaBackend` | **Planned** |
+| **T-10** | `macos-14-sonoma-x64-quartz-cocoa` | macOS 14 (Sonoma) | x86_64 | Quartz / WindowServer | `CocoaBackend` | **Planned** |
+| **T-11** | `macos-13-ventura-x64-quartz-cocoa` | macOS 13 (Ventura) | x86_64 | Quartz / WindowServer | `CocoaBackend` | **Planned** |
+| **T-12** | `ubuntu-24.04-gnome46-x64-wayland-gnomecompanion` | Ubuntu 24.04 (LTS) | x86_64 | Wayland / Mutter | `GnomeCompanionBackend` | **Planned** |
+| **T-13** | `ubuntu-24.04-gnome46-arm64-wayland-gnomecompanion` | Ubuntu 24.04 (LTS) | aarch64 | Wayland / Mutter | `GnomeCompanionBackend` | **Planned** |
+| **T-14** | `ubuntu-22.04-gnome42-x64-x11-x11backend` | Ubuntu 22.04 (LTS) | x86_64 | X11 / Mutter | `X11Backend` | **Planned** |
+| **T-15** | `debian-12-gnome43-x64-wayland-gnomecompanion` | Debian 12 (Bookworm) | x86_64 | Wayland / Mutter | `GnomeCompanionBackend` | **Planned** |
+| **T-16** | `fedora-40-kde6-x64-wayland-layershell` | Fedora 40 (Standard) | x86_64 | Wayland / KWin | `LayerShellBackend` | **Planned** |
+| **T-17** | `fedora-42-kde6-x64-wayland-layershell` | Fedora 42 (Rawhide) | x86_64 | Wayland / KWin | `LayerShellBackend` | **Planned** |
+| **T-18** | `fedora-42-gnome50-x64-wayland-gnomecompanion` | Fedora 42 (Rawhide) | x86_64 | Wayland / Mutter | `GnomeCompanionBackend` | **Planned** |
+| **T-19** | `archlinux-rolling-sway-x64-wayland-layershell` | ArchLinux Rolling (Current) | x86_64 | Wayland / wlroots | `LayerShellBackend` | **Planned** |
+| **T-20** | `archlinux-rolling-hyprland-x64-wayland-layershell` | ArchLinux Rolling (Current) | x86_64 | Wayland / wlroots | `LayerShellBackend` | **Planned** |
+| **T-21** | `uos-20-sp1-x64-x11-x11backend` | UOS 20 (SP1) | x86_64 | X11 / KWin-DDE | `X11Backend` | **Planned** |
+| **T-22** | `uos-20-sp1-arm64-x11-x11backend` | UOS 20 (SP1) | aarch64 | X11 / KWin-DDE | `X11Backend` | **Planned** |
+| **T-23** | `kylin-v10-sp1-x64-x11-x11backend` | Kylin V10 (SP1) | x86_64 | X11 / UKUI-KWin | `X11Backend` | **Planned** |
+| **T-24** | `deepin-23-treeland-x64-wayland-layershell` | Deepin 23 (Release) | x86_64 | Wayland / Treeland | `LayerShellBackend` | **Planned** |
+
+---
+
+## 21. 自动化质量门禁体系 (Quality Assurance Gates)
+全系统已在机器注册表中注册 71 道全域门禁，涵盖 Core、Golden、Backend 及 Tuple 四大维度。
+
+---
+
+## 22. 全屏感知与桌面环境业务规则 (P0-110, P0-129, P0-132)
+
+### 22.1 业务归属与禁止主动探测规则 (P0-132)
+- **唯一规则**：全屏状态属于 Python 宿主的权威业务状态（`snapshot.fullscreen`）；
+- **Rust 宿主行为禁令**：
+  - 严禁扫描或检测前台是否存在全屏独占应用；
+  - 严禁探测独占游戏进程；
+  - 严禁根据操作系统窗口几何尺寸私自推断全屏状态；
+  - 严禁脱离 Python 快照指示自行切换浮窗显示状态；
+- **平台后端唯一下发行为**：
+  $$\text{desired.fullscreen} == \text{true} \implies \text{hide()}$$
+  $$\text{desired.fullscreen} == \text{false} \implies \text{continue normal visible reconciliation}$$
+- **保留 Golden 边界特异性**：
+  - `visible === false && fullscreen === false`：关闭窗口，Surface 处于 Absent 状态；
+  - `visible === false && fullscreen === true`：隐藏窗口，Surface 可保留在后台但处于不可见状态。
+
+### 22.2 Windows 虚拟桌面行为 (P0-110, P0-129)
+Golden 行为仅依附于当前活动的虚拟桌面，不进行跨虚拟桌面伪造。
+
+---
+```rust
+let broken = true;

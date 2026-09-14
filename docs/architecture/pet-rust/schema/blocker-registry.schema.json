@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BlockerRegistrySchema",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "id",
+      "title",
+      "design_state",
+      "validation_state",
+      "scope",
+      "decision_id",
+      "blocking_until",
+      "gate_ids",
+      "applies_to"
+    ],
+    "properties": {
+      "id": { "type": "string" },
+      "title": { "type": "string" },
+      "design_state": { "type": "string", "enum": ["resolved", "open"] },
+      "validation_state": { "type": "string", "enum": ["pending", "validated", "failed"] },
+      "scope": { "type": "string" },
+      "decision_id": { "type": "string" },
+      "blocking_until": { "type": "string" },
+      "gate_ids": { "type": "array", "items": { "type": "string" } },
+      "applies_to": { "type": "array", "items": { "type": "string" } }
+    }
+  }
+}

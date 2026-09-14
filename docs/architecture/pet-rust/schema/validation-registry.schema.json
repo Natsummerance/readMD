@@ -1,0 +1,79 @@
+{
+  "": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ValidationRegistrySchema",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "id",
+      "title",
+      "scope",
+      "backend",
+      "tuple_keys",
+      "evidence_class",
+      "required_artifacts",
+      "blocking_gate",
+      "associated_blockers",
+      "risk_and_physical_facts",
+      "status"
+    ],
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "title": {
+        "type": "string"
+      },
+      "scope": {
+        "type": "string"
+      },
+      "backend": {
+        "type": "string"
+      },
+      "tuple_keys": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "evidence_class": {
+        "type": "string",
+        "enum": [
+          "unit",
+          "integration",
+          "vm",
+          "physical",
+          "physical_gpu_required"
+        ]
+      },
+      "required_artifacts": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "blocking_gate": {
+        "type": "string"
+      },
+      "associated_blockers": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "risk_and_physical_facts": {
+        "type": "string"
+      },
+      "status": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "running",
+          "passed",
+          "failed",
+          "blocked"
+        ]
+      }
+    }
+  }
+}

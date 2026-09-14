@@ -1,0 +1,109 @@
+{
+  "": {
+    "input_item": {
+      "type": "object",
+      "required": [
+        "path",
+        "role",
+        "sha256",
+        "provenance",
+        "behavior_critical"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "provenance": {
+          "type": "string"
+        },
+        "behavior_critical": {
+          "type": "boolean"
+        },
+        "key_lines": {
+          "type": "string"
+        },
+        "byte_size": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "title": "GoldenContractSchema",
+  "type": "object",
+  "required": [
+    "version",
+    "golden_generation",
+    "golden_commit_sha",
+    "vendor",
+    "pinned_revision",
+    "behavior_inputs",
+    "build_inputs",
+    "generated_inputs",
+    "runtime_assets",
+    "supporting_evidence",
+    "preload_abi",
+    "bounds_policies"
+  ],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "golden_generation": {
+      "type": "string"
+    },
+    "golden_commit_sha": {
+      "type": "string"
+    },
+    "vendor": {
+      "type": "string"
+    },
+    "pinned_revision": {
+      "type": "string"
+    },
+    "upstream_repository": {
+      "type": "string"
+    },
+    "behavior_inputs": {
+      "type": "array",
+      "items": {
+        "": "#//input_item"
+      }
+    },
+    "build_inputs": {
+      "type": "array",
+      "items": {
+        "": "#//input_item"
+      }
+    },
+    "generated_inputs": {
+      "type": "array",
+      "items": {
+        "": "#//input_item"
+      }
+    },
+    "runtime_assets": {
+      "type": "array",
+      "items": {
+        "": "#//input_item"
+      }
+    },
+    "supporting_evidence": {
+      "type": "array",
+      "items": {
+        "": "#//input_item"
+      }
+    },
+    "preload_abi": {
+      "type": "object"
+    },
+    "bounds_policies": {
+      "type": "object"
+    }
+  }
+}

@@ -1,10 +1,11 @@
-# ReadMD Desktop Overlay v1.4.5 Semantic Closure Candidate
+# ReadMD Desktop Overlay v1.4.6 Evidence & Validation Closure Candidate
 
-> **版本**：v1.4.5-Candidate
-> **状态说明**：Semantic Closure Candidate / Architecture Design Candidate ready for Phase 0
-> **架构冻结裁决**：**NO — Production Architecture Freeze**（严禁进入正式生产冻结）
-> **Phase 1 Rust Host 生产实现状态**：**严格禁止**（必须在 Phase 0 物理 PoC 实机验证完成且硬件门禁全部通过后方可解锁）
-> **前序版本审计依据**：彻底修复 v1.4.4 中所有语义冲突、状态机遗漏、非原子元组及虚构行为。
+> **版本标识**：v1.4.6-Candidate
+> **阶段说明**：Evidence & Validation Closure Candidate / Phase 0 Readiness Gate
+> **架构冻结判定**：**NO — Production Architecture Freeze**（严禁进入正式生产代码实现）
+> **Phase 1 Rust Host 生产实现状态**：**严格禁止**（在 Phase 0 物理硬件概念验证全数通过前严禁进入正式生产代码）
+> **Phase 0 全量验证状态**：**BLOCKED**（允许 Phase 0 tooling/bootstrap、GoldenCapture、isolated backend spike 准备；但正式 PASS 需物理实机证据链）
+> **前序版本溯源**：解决 v1.4.5 中遗留的 Artifact Provenance、Golden Build Closure、Validation Registry、Phase-0 Matrix 与 Evidence Classification 问题
 
 ---
 
@@ -64,23 +65,40 @@
 
 ## 1. Golden Contract 权威行为源与基准契约
 
-### 1.1 核心行为源与 Git 提交哈希锁定 (P0-91, P0-103, P0-158)
-本项目严格以 Git Commit `4dcfd73ce81a14ace7e429791e0594bea47b24e5` 下的真实实现为黄金基准：
-- **Golden Git Commit SHA**：`4dcfd73ce81a14ace7e429791e0594bea47b24e5`
+### 1.1 黄金行为输入闭包 (Golden Behavioral Input Closure) (P0-172, P0-173, P0-174, P0-189)
+本项目不再以固定主观的人工“核心文件数”定义基准，而是建立**黄金行为输入闭包 (Golden Behavioral Input Closure)**。
+任何改变可观测桌面浮窗行为的源码、构建适配脚本、打包配置、运行时资产与依赖锁文件，均作为显式输入纳入机器注册表：
+- **上游厂商仓库**：`https://github.com/NousResearch/hermes-agent`
+- **上游固定提交 (Pinned Upstream Revision)**：`fb27614addac115d55299bc6538ae112fd01f688`（记录于 `third_party/hermes-agent-pet/UPSTREAM.md`，CI 实施强校验拦截）
+- **黄金基准提交 (Golden Git Commit SHA)**：`47c40a38a60f27df369b60ed29dac4a4a037e3f6`
+- **构建起源图谱 (Build Provenance Graph)**：`docs/architecture/pet-rust/golden-build-provenance.json`
 - **机器可读契约源**：`docs/architecture/pet-rust/golden-contract.json`
 
 <!-- GENERATED: golden-source-table -->
-| 序号 | 行为源文件路径 | 承担的核心合约职责 | 文件大小 | 精确 SHA-256 哈希 |
-|---|---|---|---|---|
-| **1** | `packages/readmd-hermes-pet-adapter/src/electron-main.ts` | 主窗口生命周期、右键菜单模型、托盘与剪贴板捕获 | 14,929 B | `0a1b6473d155f8121d77d1463316a7968b0d973f76bb6080f4abb58de65a269d` |
-| **2** | `packages/readmd-hermes-pet-adapter/src/preload.ts` | Preload ABI 上下文暴露 (window.__HERMES_PET__) | 1,883 B | `fafeb3c1e5241efe3c25646f4ec1cb818ca46a17e375f85e3e16710963df1179` |
-| **3** | `packages/readmd-hermes-pet-adapter/src/bridge-transport.ts` | Durable FIFO 队列与 SnapshotReader 严格原子读取器 | 2,276 B | `7055deed1d644687fe8fc1a3adff39fba85185644903e334be6b502397100723` |
-| **4** | `packages/readmd-hermes-pet-adapter/src/renderer.tsx` | 前端 React 挂载、状态驱动、错误边界与控制事件分发 | 2,002 B | `5bbbd06c222c572d75b68b10bb09e910a5e02e6f1e89475a9811d0934dccaa36` |
-| **5** | `packages/readmd-hermes-pet-adapter/src/live2d/stage.ts` | Live2D 舞台命中判定 (hitTest || bounds.contains) | 19,525 B | `bec994ed0a299fd7f05156f54cef6fa06da750f96f6f931a547313bd3e64522a` |
-| **6** | `third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts` | 上游宠物 IPC 管道与窗口穿透控制 | 5,824 B | `5c99fce416fece34d0fb66fdb662af0fb0169b9c4e8aae71977f9a46ac171d8d` |
-| **7** | `src/readmd_modules/pet/hermes_adapter.py` | Python 宿主控制逻辑、生命周期与剪贴板 FIFO 响应 | 33,603 B | `2a2f09188d3f9f6f52ac9a0a0571d3a94eaf2e385949184ef24058f3ec5b03ee` |
-| **8** (证据) | `packages/readmd-hermes-pet-adapter/package.json` | 依赖版本与包元数据 | 709 B | `ee63a91062219ea13672d4440246745f5eb821573a3007b30a7385e857780600` |
-| **9** (证据) | `packages/readmd-hermes-pet-adapter/src/pet-life.ts` | 宠物伴侣状态机与角色属性定义 | 12,123 B | `21ef9bf62592d4d00a3b99cd3fd6f50944245fb26ac1f51cd3f3ad2db20d1dd5` |
+| 分类 | 路径 | 职责角色 | 文件大小 | 精确 SHA-256 哈希 | 行为关键 |
+|---|---|---|---|---|---|
+| **行为输入** | `third_party/hermes-agent-pet/apps/desktop/src/app/pet-overlay/pet-overlay-app.tsx` | Upstream Sprite click-through, double-click, and event handling | 6,185 B | `9b2c3d492d0f2adaaa4e2b7ac536e988dea1908208ee7a321fa23203b2c7357d` | **是** |
+| **行为输入** | `packages/readmd-hermes-pet-adapter/scripts/build.mjs` | Build-time adaptation script patching single-click to open-menu and generating bundle | 4,661 B | `59fe50c2d31841aadef9013d2b47b107f49dac62434cebb5d3106bb97ca51db2` | **是** |
+| **行为输入** | `packages/readmd-hermes-pet-adapter/src/electron-main.ts` | Main window lifecycle, context menu model, tray and clipboard capture | 14,929 B | `0a1b6473d155f8121d77d1463316a7968b0d973f76bb6080f4abb58de65a269d` | **是** |
+| **行为输入** | `packages/readmd-hermes-pet-adapter/src/preload.ts` | Preload ABI context exposure (window.__HERMES_PET__) | 1,883 B | `fafeb3c1e5241efe3c25646f4ec1cb818ca46a17e375f85e3e16710963df1179` | **是** |
+| **行为输入** | `packages/readmd-hermes-pet-adapter/src/bridge-transport.ts` | Durable FIFO queue and SnapshotReader atomic reader | 2,276 B | `7055deed1d644687fe8fc1a3adff39fba85185644903e334be6b502397100723` | **是** |
+| **行为输入** | `packages/readmd-hermes-pet-adapter/src/renderer.tsx` | Frontend React mounting, state dispatch, and error boundary | 2,002 B | `5bbbd06c222c572d75b68b10bb09e910a5e02e6f1e89475a9811d0934dccaa36` | **是** |
+| **行为输入** | `packages/readmd-hermes-pet-adapter/src/live2d/stage.ts` | Live2D stage hit test and bounds checking | 19,525 B | `bec994ed0a299fd7f05156f54cef6fa06da750f96f6f931a547313bd3e64522a` | **是** |
+| **行为输入** | `third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts` | Upstream pet IPC protocol and window click-through control | 5,824 B | `5c99fce416fece34d0fb66fdb662af0fb0169b9c4e8aae71977f9a46ac171d8d` | **是** |
+| **行为输入** | `src/readmd_modules/pet/hermes_adapter.py` | Python host orchestrator, lifecycle management, and FIFO response | 33,603 B | `2a2f09188d3f9f6f52ac9a0a0571d3a94eaf2e385949184ef24058f3ec5b03ee` | **是** |
+| **构建输入** | `packages/readmd-hermes-pet-adapter/vite.config.mjs` | Vite bundling configuration for renderer | 1,358 B | `8a5ed317a59a567fa8660e887d3b4e6067375583f85cb6072f7090cfae7c17db` | **是** |
+| **构建输入** | `packages/readmd-hermes-pet-adapter/package.json` | Dependencies, build scripts, and package metadata | 709 B | `ee63a91062219ea13672d4440246745f5eb821573a3007b30a7385e857780600` | **是** |
+| **构建输入** | `packages/readmd-hermes-pet-adapter/package-lock.json` | Dependency lockfile ensuring reproducible toolchain | 120,446 B | `c354caaed6f277fbddad21b6e27d6e2de961f6cefa9a397f3e213a9ecf3efb4f` | 否 |
+| **生成产物** | `packages/readmd-hermes-pet-adapter/dist/electron-main.cjs` | Production bundled Electron main host | 20,120 B | `b5747182b5e883e2e89aad869affbd3a7d3a7b8f70642a4997d757adb569f921` | **是** |
+| **生成产物** | `packages/readmd-hermes-pet-adapter/dist/preload.cjs` | Production bundled Preload script | 3,014 B | `50d95c7d2b62f3ba3198597c0a73cb53d4fa6c89d36534d59268a3a0fb8c08e0` | **是** |
+| **生成产物** | `packages/readmd-hermes-pet-adapter/dist/renderer/index.html` | Production bundled Renderer HTML entry | 536 B | `d9f1da3457bac312a2790d270f6052de02c87290a19d623ee5d23bfb378ccb9d` | **是** |
+| **运行资产** | `packages/readmd-hermes-pet-adapter/assets/hermes-sprite.png` | Default Hermes character sprite sheet | 180,556 B | `a5661b457de00b9a57570effcb7a3ecb8f6cb960b48c6633987a32542f2f58e0` | **是** |
+| **运行资产** | `packages/readmd-hermes-pet-adapter/assets/mochi-sprite.png` | Mochi character sprite sheet | 171,542 B | `6e03b6065b5790b9ec860f13edcf930c902930456e5be5915b264eb225c68c01` | 否 |
+| **运行资产** | `packages/readmd-hermes-pet-adapter/assets/moss-sprite.png` | Moss character sprite sheet | 165,431 B | `088f67906646a79d1bf8232d8bce324d5b000185ba52dcf12853c9ccd4a99af6` | 否 |
+| **运行资产** | `packages/readmd-hermes-pet-adapter/assets/amber-sprite.png` | Amber character sprite sheet | 174,921 B | `fe9a84570db99898b20ac40e31012228b4959c84b636c166447a15f5cfa26bab` | 否 |
+| **运行资产** | `packages/readmd-hermes-pet-adapter/dist/models/arch-chan/arch chan model0.model3.json` | Arch-Chan Live2D model definition | 689 B | `5d1a05c2eadba5296d2e26f67da5369191a9ca0d124a5e9fcbb142dff578679c` | **是** |
+| **辅助证据** | `packages/readmd-hermes-pet-adapter/src/pet-life.ts` | Pet life companion state machine and attribute constants | 12,123 B | `21ef9bf62592d4d00a3b99cd3fd6f50944245fb26ac1f51cd3f3ad2db20d1dd5` | 否 |
+| **辅助证据** | `third_party/hermes-agent-pet/UPSTREAM.md` | Upstream provenance documentation and revision record | 966 B | `35076f31d0ea6d70df494d6b2fab258d6348a24706e707c373629fea75d51110` | 否 |
 
 ### 1.2 权威 Preload ABI 规范 (P0-92, P0-146)
 逐字对照 `preload.ts`，锁定宿主与渲染层通信标准：
@@ -118,13 +136,14 @@ export interface ReadMDPetPreloadABI {
    return (Array.isArray(areas) && areas.length > 0) || Boolean(model.getBounds?.().contains(x, y));
    ```
    **物理事实**：只要 `model.hitTest(x, y)` 命中了有效部件，或者坐标落在模型包围盒 `model.getBounds()` 内，即视为命中宠物本体（禁止私自改成仅包含 HitArea 的方案）。
-2. **Sprite 判定合约 (`third_party/.../pet-overlay-app.tsx` L132-L165)**：
+2. **Sprite 判定合约 (`third_party/.../pet-overlay-app.tsx` L132-L165)** (P0-160, P0-173, P0-188)：
    - 使用 `document.elementFromPoint(x, y)` 检测拾取目标；
    - 若拾取目标不在宠物根容器 `petRef` 内，判定为透明穿透区域（返回 `false`）；
    - 若拾取目标为非 Canvas 交互 DOM 元素（如对话气泡 `PetBubble`、未读邮件图标 `Mail`、弹出式输入框 `composer`），直接信任 DOM 命中测试（返回 `true`）；
    - 若拾取目标为 `HTMLCanvasElement`，则获取 2D 上下文并在对应纹理坐标处进行像素采样：
      $$\text{Solid Pixel} \iff \text{ctx.getImageData}(px, py, 1, 1).\text{data}[3] \ge 16 \quad (\text{ALPHA\_HIT\_THRESHOLD} = 16)$$
-   - 若 Canvas 受到污染（Tainted）或读取抛出异常，执行安全打开策略（fail-open，返回 `true`），确保桌宠依然可被鼠标抓取。
+   - 若 Canvas 受到污染（Tainted）或读取抛出异常，执行安全打开策略（fail-open，返回 `true`），确保桌宠依然可被鼠标抓取；
+   - **构建起源绑定 (P0-188)**：Sprite 原生源码经由 `packages/readmd-hermes-pet-adapter/scripts/build.mjs` 进行单次点击行为适配（单次点击触发 `open-menu`，双击保持 `toggle-app`），构建产物哈希与原始源码哈希在 `golden-build-provenance.json` 中完整绑定。
 
 ### 1.5 ReadMD 适配器 `toggle-app` 语义 (P0-96)
 恢复 `hermes_adapter.py` 第 309-322 行逻辑：
@@ -150,17 +169,28 @@ export interface ReadMDPetPreloadABI {
 - PNG 图片 Base64 上限：24M 字符（24 * 1024 * 1024）；
 - Windows 路径列表上限：128 项（从 `CF_HDROP` / `FileNameW` 缓冲区解析）。
 
-### 1.8 渲染层崩溃自愈与健康度报告 (P0-99, P0-149, P0-150)
-恢复 `electron-main.ts` 第 165-172 行原生自愈时序：
-1. **优先报告健康度 (P0-149)**：收到 `render-process-gone` 事件且非正常退出时，**立即上报健康度**：`reportHealth('failed', lastRenderer, 'pet_renderer_crashed')`；
-2. **时间窗口过滤**：过滤出过去 60 秒内的崩溃时间戳列表：`recoveries = recoveries.filter(t => Date.now() - t < 60_000)`；
-3. **熔断判定**：若 `recoveries.length >= 3`，触发熔断，停止自愈并保持静默；
-4. **延迟重载**：若未熔断，记录当前时间戳并延时重启：`setTimeout(() => loadOverlayPage(lastRenderer), 500 * recoveries.length)`。
-- **边界用例矩阵 (P0-150)**：
-  - 第 1 次崩溃：延时 500ms 重载；
-  - 第 2 次崩溃：延时 1000ms 重载；
-  - 第 3 次崩溃：延时 1500ms 重载；
-  - 同一 60 秒内发生第 4 次崩溃：熔断打开，不执行重载。
+### 1.8 宿主感知渲染层崩溃自愈与健康度报告 (P0-99, P0-149, P0-150, P0-186, P0-187)
+严格还原 `electron-main.ts` 第 165-172 行原生自愈时序。**主体责任界定 (P0-187)**：渲染进程崩溃属于**宿主进程直接观测事件 (Host-Observed Failure)**。在 Electron 中由主进程监听 `render-process-gone` 并由主进程自身执行 `reportHealth(...)`；在 Rust 宿主中由主事件循环监听 WebView 进程终止事件并向 `<bridge>.rust.health.json` 写入故障报告，渲染层沙箱绝无直接写盘权限。
+
+```typescript
+// 冻结原生 Golden 自愈逻辑 (P0-186)
+recoveries = recoveries.filter(t => now - t < 60_000)
+reportHealth("failed", renderer, "pet_renderer_crashed")
+
+if (recoveries.length >= 3) {
+    return // 过去 60 秒内已有 3 次自愈记录，触发熔断，停止重载
+}
+
+recoveries.push(now)
+delay = 500 * recoveries.length
+scheduleReload(delay)
+```
+
+- **边界判定与执行阶梯矩阵 (P0-186)**：
+  - **第 1 次崩溃**：检测前 `recoveries.length == 0`（未达熔断阈值 3），记录当前时间戳（长度变为 1），延时 `500 * 1 = 500ms` 执行重载；
+  - **第 2 次崩溃**：检测前 `recoveries.length == 1`（未达阈值 3），记录当前时间戳（长度变为 2），延时 `500 * 2 = 1000ms` 执行重载；
+  - **第 3 次崩溃**：检测前 `recoveries.length == 2`（未达阈值 3），记录当前时间戳（长度变为 3），延时 `500 * 3 = 1500ms` 执行重载；
+  - **同一 60 秒内第 4 次崩溃**：检测前 `recoveries.length == 3`（`recoveries.length >= 3` 成立），立即触发熔断并 `return`，**不记录时间戳、不执行任何延时重载**，保持静默故障状态。
 
 ### 1.9 Fallback 雪碧图权威元数据 (P0-125)
 - 帧宽度：192 DIP；帧高度：208 DIP；缩放系数：0.33；底部边距：24 DIP。
@@ -227,6 +257,13 @@ Wayland 环境缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 与 `exc
 
 ---
 
+### 4.4 GNOME 桌面环境强约束禁止调用 (P0-179)
+GNOME Wayland (Mutter) 在架构上不支持 `zwlr_layer_shell_v1` 协议。**严禁在 GNOME 桌面环境下将任何窗口或图层绑定到 LayerShellBackend**，任何在 GNOME Wayland 下尝试加载或调用 `gtk_layer_shell` 的行为均视为严重架构违规。
+- **LayerShellBackend** 严格限定于支持 Layer-Shell 的合成器：KDE Plasma 6 (KWin Wayland)、Sway、Hyprland、Deepin Treeland；
+- **GNOME Wayland** 必须且只能绑定 **GnomeCompanionBackend**（借助 Companion 扩展与 Mutter 通信）。
+
+---
+
 ## 5. GNOME Wayland 专属扩展：ReadMD GNOME Shell Companion
 
 ### 5.1 AppID 绑定、窗口穿透与多窗口消歧 (P0-65, P0-66, P0-80, P0-81, P0-164, P0-165)
@@ -270,7 +307,7 @@ pub struct PhysicalPxRect { pub x: i32, pub y: i32, pub width: u32, pub height: 
 ```rust
 pub struct InteractionRegionSnapshot {
     pub generation: u64,
-    pub rects: Vec<BridgeDipRect>, // 全局坐标
+    pub rects: Vec<BridgeDipRect>, // 必须采用以窗口自身左上角为原点的局部坐标
 }
 ```
 **坐标转换链条**：
@@ -733,8 +770,91 @@ Golden 行为仅依附于当前活动的虚拟桌面，不进行跨虚拟桌面�
 
 ---
 
-## 24. Phase 0 物理概念验证计划 (PoC Spikes)
+## 24. Phase 0 物理概念验证计划 (PoC Spikes) (P0-179, P0-180, P0-182, P0-196, P0-198)
 在正式启动产品功能实现前，必须在真实物理机环境下完成 Wayland 穿透、GNOME Companion 通信、Windows ARM64 加速等核心技术难题的独立验证。
+
+### 24.1 试验代码隔离与生产禁令 (Phase 0 Spike Boundary) (P0-196)
+- **允许代码**：Phase 0 概念验证代码必须存放于 `experiments/pet-rust/` 目录中，包括一次性 PoC、Layer-Shell 探针、GNOME GJS 通信脚手架、Win32/Cocoa 穿透验证程序及 GoldenCapture 工具；
+- **严格禁止**：在 Phase 0 物理概念验证门禁全数通过前，**绝对禁止将生产级 `readmd-pet-rust` 宿主代码合并至主源码树或生产发布配置**。
+
+<!-- GENERATED: phase0-validation-plan -->
+> **统计**：Phase 0 验证计划直接由 `validation-registry.json` 生成，共包含 **57 项实证验证项（VAL-01 ~ VAL-57）**，严禁人工手写映射。
+
+| 验证编号 | 验证目标 / 领域 | 范围 | 绑定后端 | 证据等级 (Evidence Class) | 关联门禁 |
+|---|---|---|---|---|---|
+| **VAL-01** | Layer-Shell + WRY 容器 | `backend` | `LayerShellBackend` | `physical` | `Gate-LayerShell-02` |
+| **VAL-02** | Layer-Shell 跨屏拖拽 | `backend` | `LayerShellBackend` | `physical` | `Gate-LayerShell-01` |
+| **VAL-03** | Layer-Shell 按需输入法 | `backend` | `LayerShellBackend` | `physical` | `Gate-LayerShell-03` |
+| **VAL-04** | GNOME Companion 跨版本稳定性 | `backend` | `GnomeCompanionBackend` | `physical` | `Gate-GnomeCompanion-02` |
+| **VAL-05** | Windows ARM64 渲染基准 | `tuple` | `Win32Backend` | `physical_gpu_required` | `CERT-WIN11-ARM64` |
+| **VAL-06** | 国产 Linux 发行版依赖 | `tuple` | `All` | `integration` | `CERT-UOS20-X64` |
+| **VAL-07** | Linux 通用单二进制 PoC | `architecture` | `All` | `integration` | `Gate-Linux-Universal` |
+| **VAL-08** | muda GTK 菜单在 KWin Wayland | `backend` | `LayerShellBackend` | `physical` | `Gate-Menu-KWin-Wayland` |
+| **VAL-09** | muda GTK 菜单在 GNOME Wayland | `backend` | `GnomeCompanionBackend` | `physical` | `Gate-Menu-GNOME-Wayland` |
+| **VAL-10** | WRY custom DnD 副作用 | `architecture` | `All` | `integration` | `Gate-Core-10` |
+| **VAL-11** | 调和状态机事件序列 Fuzz | `architecture` | `All` | `integration` | `Gate-Core-11` |
+| **VAL-12** | LayerShell 全局转局部坐标映射 | `backend` | `LayerShellBackend` | `physical` | `Gate-LayerShell-04` |
+| **VAL-13** | GNOME move_frame 混合 DPI 映射 | `backend` | `GnomeCompanionBackend` | `physical` | `Gate-GnomeCompanion-03` |
+| **VAL-14** | GNOME Legacy (<=44) Companion | `tuple` | `GnomeCompanionBackend` | `physical` | `CERT-UBUNTU22-X64` |
+| **VAL-15** | GNOME ESM (>=45) Companion | `tuple` | `GnomeCompanionBackend` | `physical` | `CERT-UBUNTU24-X64` |
+| **VAL-16** | Windows HTTPS 资产 Scheme | `architecture` | `Win32Backend` | `physical` | `Gate-Asset-HTTPS-Win` |
+| **VAL-17** | Custom Protocol 路径沙盒 | `architecture` | `All` | `integration` | `Gate-Asset-Sandbox` |
+| **VAL-18** | 统信 UOS 运行时 WebKitGTK 验证 | `tuple` | `All` | `integration` | `CERT-UOS20-ARM64` |
+| **VAL-19** | 银河麒麟运行时 WebKitGTK 验证 | `tuple` | `All` | `integration` | `CERT-KYLIN10-ARM64` |
+| **VAL-20** | macOS 13~26 支持周期认证 | `backend` | `CocoaBackend` | `physical` | `CERT-MACOS-ALL` |
+| **VAL-21** | Layer-Shell Pre-Realize 生命周期 | `backend` | `LayerShellBackend` | `physical` | `Gate-LayerShell-05` |
+| **VAL-22** | GNOME Meta.Window AppID 传播 | `backend` | `GnomeCompanionBackend` | `physical` | `Gate-GnomeCompanion-04` |
+| **VAL-23** | GNOME Companion 畸形 IPC Fuzz | `backend` | `GnomeCompanionBackend` | `integration` | `Gate-GnomeCompanion-05` |
+| **VAL-24** | Wayland 工作区与面板避让对齐 | `backend` | `LayerShellBackend` | `physical` | `Gate-LayerShell-06` |
+| **VAL-25** | 导航代际隔离异步消息丢弃测试 | `architecture` | `All` | `integration` | `Gate-IPC-Generation` |
+| **VAL-26** | 调和状态 AppliedState 异步生效竞态 | `architecture` | `All` | `integration` | `Gate-Core-Reconciliation` |
+| **VAL-27** | 权威规范产物完整性与发布检查 | `architecture` | `All` | `integration` | `Gate-Core-SpecIntegrity` |
+| **VAL-28** | muda 零 libxdo 依赖实测证明 | `architecture` | `All` | `integration` | `Gate-Linux-MudaTargetIsolation` |
+| **VAL-29** | 当前 GNOME 50 扩展兼容性实测 | `tuple` | `GnomeCompanionBackend` | `physical` | `CERT-GNOME50-X64` |
+| **VAL-30** | macOS 26 (Tahoe) 桌宠实机认证 | `tuple` | `CocoaBackend` | `physical` | `CERT-MACOS26-ARM64` |
+| **VAL-31** | Layer-Shell compositor usable-area / exclusive-zone parity | `backend` | `LayerShellBackend` | `physical` | `Gate-LayerShell-06` |
+| **VAL-32** | Golden preload ABI differential | `architecture` | `All` | `integration` | `Gate-Golden-ABI` |
+| **VAL-33** | Golden bounds policy differential | `architecture` | `All` | `integration` | `Gate-Golden-Bounds` |
+| **VAL-34** | Golden control/toggle-app differential | `architecture` | `All` | `integration` | `Gate-Golden-Differential` |
+| **VAL-35** | Golden menu model differential | `architecture` | `All` | `integration` | `Gate-Golden-Menu` |
+| **VAL-36** | Golden clipboard payload differential | `architecture` | `All` | `integration` | `Gate-Golden-Clipboard` |
+| **VAL-37** | Golden FIFO byte/filename parity | `architecture` | `All` | `integration` | `Gate-Golden-FIFO` |
+| **VAL-38** | Golden SnapshotReader retry parity | `architecture` | `All` | `integration` | `Gate-Golden-Differential` |
+| **VAL-39** | Golden hit-region differential | `architecture` | `All` | `integration` | `Gate-Golden-HitRegion` |
+| **VAL-40** | Golden pushState / anti-snapback differential | `architecture` | `All` | `integration` | `Gate-Golden-AntiSnapback` |
+| **VAL-41** | Windows virtual-desktop Golden behavior | `backend` | `Win32Backend` | `physical` | `Gate-Win32-VirtualDesktop` |
+| **VAL-42** | Runtime detached-signature verification | `architecture` | `All` | `integration` | `Gate-Crypto-DetachedSig` |
+| **VAL-43** | Asset sandbox TOCTOU threat-model/handle test | `architecture` | `All` | `integration` | `Gate-Asset-TOCTOU` |
+| **VAL-44** | Runtime Security & Packaging | `architecture` | `All` | `integration` | `Gate-Crypto-VerifierPackaging` |
+| **VAL-45** | Wayland Hit Geometry Transformation | `backend` | `LayerShellBackend` | `physical` | `Gate-Wayland-TransformParity` |
+| **VAL-46** | GNOME Shell Companion Click-Through | `backend` | `GnomeCompanionBackend` | `physical` | `Gate-GnomeCompanion-ClickThrough` |
+| **VAL-47** | GNOME Multi-Window Disambiguation | `backend` | `GnomeCompanionBackend` | `integration` | `Gate-GnomeCompanion-Disambiguation` |
+| **VAL-48** | Security Epoch Rollback Defense | `architecture` | `All` | `integration` | `Gate-Crypto-RollbackProtection` |
+| **VAL-49** | Health Protocol Ownership & Atomic Write | `architecture` | `All` | `integration` | `Gate-Golden-Health` |
+| **VAL-50** | Parent Liveness Prompt Teardown | `architecture` | `All` | `integration` | `Gate-Golden-ParentDeath` |
+| **VAL-51** | Golden SnapshotReader Retry Differential | `architecture` | `All` | `integration` | `Gate-Golden-SnapshotReader` |
+| **VAL-52** | Golden build provenance closure | `golden` | `All` | `integration` | `Gate-Golden-BuildProvenance` |
+| **VAL-53** | Generated renderer bundle provenance | `golden` | `All` | `integration` | `Gate-Golden-BuildProvenance` |
+| **VAL-54** | Report <-> Registry consistency | `core` | `All` | `unit` | `Gate-Report-Consistency` |
+| **VAL-55** | Remote repository provenance reproducibility | `evidence` | `All` | `integration` | `Gate-Evidence-RemoteProvenance` |
+| **VAL-56** | Phase0 plan registry generation correctness | `core` | `All` | `unit` | `Gate-Core-SpecIntegrity` |
+| **VAL-57** | Validation evidence-class enforcement | `evidence` | `All` | `unit` | `Gate-Validation-EvidenceClass` |
+
+<!-- GENERATED: phase0-representative-matrix -->
+### 24.2 Phase 0 代表环境矩阵 (Phase 0 Representative Matrix) (P0-182, P0-198)
+> **架构约束**：Phase 0 代表矩阵仅用于验证四大后端的最小代表性技术可行性与物理穿透能力，**不等于最终全量平台认证矩阵 (Certification Matrix)**。全量平台认证必须在 Phase 0 代表性门禁全数通过后，针对所有 24 个平台元组逐项实机交付通过。
+
+| 代表环境编号 | 平台与版本 | 桌面环境 / 架构 | 绑定后端 | 代表性验证目标 |
+|---|---|---|---|---|
+| **T-01** | Windows 11 (24H2) | DWM / x86_64 | `Win32Backend` | Phase 0 代表性实机 Spike 环境 |
+| **T-03** | Windows 11 (24H2) | DWM / aarch64 | `Win32Backend` | Phase 0 代表性实机 Spike 环境 |
+| **T-05** | macOS 26 (Tahoe) | Aqua / aarch64 | `CocoaBackend` | Phase 0 代表性实机 Spike 环境 |
+| **T-12** | Ubuntu 24.04 (LTS) | GNOME / x86_64 | `GnomeCompanionBackend` | Phase 0 代表性实机 Spike 环境 |
+| **T-14** | Ubuntu 22.04 (LTS) | GNOME / x86_64 | `X11Backend` | Phase 0 代表性实机 Spike 环境 |
+| **T-16** | Fedora 40 (Standard) | KDE / x86_64 | `LayerShellBackend` | Phase 0 代表性实机 Spike 环境 |
+| **T-18** | Fedora 42 (Rawhide) | GNOME / x86_64 | `GnomeCompanionBackend` | Phase 0 代表性实机 Spike 环境 |
+| **T-19** | ArchLinux Rolling (Current) | Sway / x86_64 | `LayerShellBackend` | Phase 0 代表性实机 Spike 环境 |
+| **T-22** | UOS 20 (SP1) | DDE / aarch64 | `X11Backend` | Phase 0 代表性实机 Spike 环境 |
 
 ---
 
@@ -764,7 +884,7 @@ $$\forall v \in \text{Validations}(\text{applies\_to}(T)), \quad v == \text{PASS
 ## 27. 验收标准与准出公式 (P0-108)
 
 ### 27.1 候选状态定义
-当前版本属于 `v1.4.5-Candidate`，在所有开放实证项未清零前，禁止宣称 Production Freeze。
+当前版本属于 `v1.4.6-Candidate`，在所有开放实证项未清零前，禁止宣称 Production Freeze。
 
 ### 27.2 判定公式
 $$\text{Production Freeze Ready} \iff (\text{Unresolved Architecture Blockers} === 0) \land (\text{Unresolved Architecture Validations} === 0)$$
@@ -802,61 +922,67 @@ $$\text{Production Freeze Ready} \iff (\text{Unresolved Architecture Blockers} =
 *权威数据源：`docs/architecture/pet-rust/validation-registry.json`*
 
 <!-- GENERATED: validation-summary -->
-> **统计**：当前共注册 **51 项实证验证项（VAL-01 ~ VAL-51）**，统一在 Phase 0 物理测试床中执行。
+> **统计**：当前共注册 **57 项实证验证项（VAL-01 ~ VAL-57）**，统一在 Phase 0 物理测试床中执行。
 
-| 编号 | 领域与验证项 | 范围 / 目标平台 | 物理风险与验证指标 | 关联阻断门禁 | 关联架构阻塞项 |
-|---|---|---|---|---|---|
-| **VAL-01** | Layer-Shell + WRY 容器 | `backend` (wayland-layershell) | WebKitGTK 子表面是否会二次截获透明穿透区域的鼠标事件 | `Gate-LayerShell-02` | `BLOCKER-01` |
-| **VAL-02** | Layer-Shell 跨屏拖拽 | `backend` (wayland-layershell) | 重设 Monitor 时 Wayland 合成器的 Implicit Pointer Grab 是否中断 | `Gate-LayerShell-01` | `BLOCKER-02` |
-| **VAL-03** | Layer-Shell 按需输入法 | `backend` (wayland-layershell) | 合成器对 zwlr_layer_shell_v1 v4+ KeyboardMode::OnDemand 的支持率 | `Gate-LayerShell-03` | 无直接阻塞 |
-| **VAL-04** | GNOME Companion 跨版本稳定性 | `backend` (gnome-wayland) | GNOME 42~50 各大版本中 Mutter move_frame 的内部接口稳定性 | `Gate-GnomeCompanion-02` | `BLOCKER-03` |
-| **VAL-05** | Windows ARM64 渲染基准 | `tuple` (windows-11-24h2-arm64-dwm-win32) | 高通骁龙平台 WebView2 透明窗口层叠与 CPU 占用基准 | `CERT-WIN11-ARM64` | `BLOCKER-05` |
-| **VAL-06** | 国产 Linux 发行版依赖 | `tuple` (uos-20-sp1-x64-x11-x11backend) | 统信 UOS / 麒麟软件源中 webkit2gtk-4.1 的预装与动态链接一致性 | `CERT-UOS20-X64` | 无直接阻塞 |
-| **VAL-07** | Linux 通用单二进制 PoC | `architecture` (all) | 单一二进制在 X11 与 Wayland 环境下的 GDK 动态加载与行为一致性 | `Gate-Linux-Universal` | `BLOCKER-04` |
-| **VAL-08** | muda GTK 菜单在 KWin Wayland | `backend` (wayland-layershell) | KWin 环境下右键弹出菜单的准确定位、失焦关闭与层级行为 | `Gate-Menu-KWin-Wayland` | 无直接阻塞 |
-| **VAL-09** | muda GTK 菜单在 GNOME Wayland | `backend` (gnome-wayland) | Mutter 环境下右键弹出菜单的输入捕获释放与穿透恢复 | `Gate-Menu-GNOME-Wayland` | 无直接阻塞 |
-| **VAL-10** | WRY custom DnD 副作用 | `architecture` (all) | Windows 上启用 with_drag_drop_handler 时渲染端 DOM 与文件拖放回归 | `Gate-Core-10` | 无直接阻塞 |
-| **VAL-11** | 调和状态机事件序列 Fuzz | `architecture` (all) | proptest 50,000 条极端并发事件序列下的状态不变性与防死锁 | `Gate-Core-11` | 无直接阻塞 |
-| **VAL-12** | LayerShell 全局转局部坐标映射 | `backend` (wayland-layershell) | 多屏排布下 VirtualDesktopMapper 的边距计算与跨屏对齐 | `Gate-LayerShell-04` | 无直接阻塞 |
-| **VAL-13** | GNOME move_frame 混合 DPI 映射 | `backend` (gnome-wayland) | 混合缩放比例下 GnomeCoordinateMapper 与 Mutter Stage 坐标一致性 | `Gate-GnomeCompanion-03` | 无直接阻塞 |
-| **VAL-14** | GNOME Legacy (<=44) Companion | `tuple` (ubuntu-22.04-gnome42-x64-x11-x11backend) | Ubuntu 22.04 / Debian 12 下 GJS imports 扩展加载与通信 | `CERT-UBUNTU22-X64` | 无直接阻塞 |
-| **VAL-15** | GNOME ESM (>=45) Companion | `tuple` (ubuntu-24.04-gnome46-x64-wayland-gnomecompanion) | Ubuntu 24.04 / Fedora 39+ 下 ESM 扩展加载、热重载与会话恢复 | `CERT-UBUNTU24-X64` | 无直接阻塞 |
-| **VAL-16** | Windows HTTPS 资产 Scheme | `architecture` (all) | Windows 10/11 下 with_https_scheme(true) 与最低运行时能力探针 | `Gate-Asset-HTTPS-Win` | 无直接阻塞 |
-| **VAL-17** | Custom Protocol 路径沙盒 | `architecture` (all) | 跨平台路径穿越、符号链接逃逸、NUL 注入实测防御拦截率 100% | `Gate-Asset-Sandbox` | `BLOCKER-16` |
-| **VAL-18** | 统信 UOS 运行时 WebKitGTK 验证 | `tuple` (uos-20-sp1-arm64-x11-x11backend) | UOS 20 SP1 物理机环境下动态链接库真实加载实证 | `CERT-UOS20-ARM64` | 无直接阻塞 |
-| **VAL-19** | 银河麒麟运行时 WebKitGTK 验证 | `tuple` (kylin-v10-sp1-arm64-x11-x11backend) | Kylin V10 SP1 物理机环境下动态链接库真实加载实证 | `CERT-KYLIN10-ARM64` | 无直接阻塞 |
-| **VAL-20** | macOS 13~26 支持周期认证 | `backend` (macos) | macOS 13 (Ventura) ~ 26 (Tahoe) 在 Apple Silicon 与 Intel 上的认证 | `CERT-MACOS-ALL` | `BLOCKER-15` |
-| **VAL-21** | Layer-Shell Pre-Realize 生命周期 | `backend` (wayland-layershell) | GTK 窗口在未 realize 前绑定 Layer-Shell 且成功挂载 WRY 的实测路径 | `Gate-LayerShell-05` | `BLOCKER-09` |
-| **VAL-22** | GNOME Meta.Window AppID 传播 | `backend` (gnome-wayland) | WRY/GTK 顶层窗口在 Mutter 内部 get_gtk_application_id() 真实返回值验证 | `Gate-GnomeCompanion-04` | `BLOCKER-10` |
-| **VAL-23** | GNOME Companion 畸形 IPC Fuzz | `backend` (gnome-wayland) | 极端非法 JSON 与畸形指令下 GNOME Shell 进程零崩溃证明 | `Gate-GnomeCompanion-05` | 无直接阻塞 |
-| **VAL-24** | Wayland 工作区与面板避让对齐 | `backend` (wayland-layershell) | Layer-Shell margins 映射与 KDE/wlroots 边缘独占区域对齐实测 | `Gate-LayerShell-06` | `BLOCKER-13` |
-| **VAL-25** | 导航代际隔离异步消息丢弃测试 | `architecture` (all) | 构造跨导航延迟 IPC 消息，验证 Rust 宿主 100% 拒绝陈旧调用 | `Gate-IPC-Generation` | `BLOCKER-11` |
-| **VAL-26** | 调和状态 AppliedState 异步生效竞态 | `architecture` (all) | 构造高频乱序 snapshot 事件，验证 AppliedState 拒绝陈旧代际状态生效 | `Gate-Core-Reconciliation` | `BLOCKER-12` |
-| **VAL-27** | 权威规范产物完整性与发布检查 | `architecture` (all) | 验证规范本体哈希与完整性，自动化检查 release 产物 linux-production 特性 | `Gate-Core-SpecIntegrity` | `BLOCKER-06`, `BLOCKER-08` |
-| **VAL-28** | muda 零 libxdo 依赖实测证明 | `architecture` (all) | 通过 readelf/ldd 证明 Linux 二进制完全不依赖 libxdo.so | `Gate-Linux-MudaTargetIsolation` | `BLOCKER-07` |
-| **VAL-29** | 当前 GNOME 50 扩展兼容性实测 | `tuple` (fedora-42-gnome50-x64-wayland-gnomecompanion) | 验证 GNOME 50 环境下 ESM 扩展加载与 Mutter 接口调用平滑 | `CERT-GNOME50-X64` | `BLOCKER-14` |
-| **VAL-30** | macOS 26 (Tahoe) 桌宠实机认证 | `tuple` (macos-26-tahoe-arm64-quartz-cocoa) | 验证 macOS 26 开发者/正式版下透明渲染、点击穿透与 Spaces 随同 | `CERT-MACOS26-ARM64` | `BLOCKER-15` |
-| **VAL-31** | Layer-Shell compositor usable-area / exclusive-zone parity | `backend` (wayland-layershell) | 实测不同 Wayland 合成器在 Layer::Overlay + exclusive_zone(0) 下的面板避让与工作区对齐语义 | `Gate-LayerShell-06` | `BLOCKER-27` |
-| **VAL-32** | Golden preload ABI differential | `architecture` (all) | 逐项对比 Rust 注入 bridge 与 Golden preload.ts 的 9 个 API 方法、参数个数与取消订阅函数 | `Gate-Golden-ABI` | `BLOCKER-17`, `BLOCKER-18` |
-| **VAL-33** | Golden bounds policy differential | `architecture` (all) | 分别测试 HostSnapshotBoundsPolicy (40 DIP workArea) 与 RendererInteractiveBoundsPolicy (80x80 min) | `Gate-Golden-Bounds` | `BLOCKER-19` |
-| **VAL-34** | Golden control/toggle-app differential | `architecture` (all) | 实测 toggle-app 触发剪贴板读取并向 FIFO 写入 clipboard 消息，验证无窗口隐藏误动作 | `Gate-Golden-Differential` | `BLOCKER-21` |
-| **VAL-35** | Golden menu model differential | `architecture` (all) | 实测右键菜单 4 项互动动作 (Pet, Feed, Play, Rest/Wake)、Characters 子菜单、Open reader、disabled header 与 separators 顺序 | `Gate-Golden-Menu` | 无直接阻塞 |
-| **VAL-36** | Golden clipboard payload differential | `architecture` (all) | 实测 4M 字符文本截断、24M 字符 base64 PNG 截断与 Windows 128 路径解析的一致性 | `Gate-Golden-Clipboard` | 无直接阻塞 |
-| **VAL-37** | Golden FIFO byte/filename parity | `architecture` (all) | 实测 <bridge>.commands 目录排队、32MB 单体限制、64MB 总量限制与 .tmp 独占写原子重命名 | `Gate-Golden-FIFO` | `BLOCKER-20` |
-| **VAL-38** | Golden SnapshotReader retry parity | `architecture` (all) | 构造非法 JSON snapshot 验证签名未被污染，后续合法 snapshot 能立即被识别与消费 | `Gate-Golden-Differential` | 无直接阻塞 |
-| **VAL-39** | Golden hit-region differential | `architecture` (all) | 运行确定性点网格与边缘测试，验证 Live2D hitTest || bounds.contains 与 Sprite 规则的精确等价性 | `Gate-Golden-HitRegion` | `BLOCKER-26` |
-| **VAL-40** | Golden pushState / anti-snapback differential | `architecture` (all) | 实测 pushState 下发时以实际当前窗口 bounds 覆盖 snapshot bounds，防止拖拽后回弹 | `Gate-Golden-AntiSnapback` | 无直接阻塞 |
-| **VAL-41** | Windows virtual-desktop Golden behavior | `backend` (windows) | 实测 Windows 虚拟桌面切换时桌宠仅在当前桌面显示，验证无私有 API 越界注入 | `Gate-Win32-VirtualDesktop` | `BLOCKER-25` |
-| **VAL-42** | Runtime detached-signature verification | `architecture` (all) | 实测分离签名 manifest.json.sig 配合固定公钥环进行验签，拒绝 manifest 自签名注入 | `Gate-Crypto-DetachedSig` | `BLOCKER-28` |
-| **VAL-43** | Asset sandbox TOCTOU threat-model/handle test | `architecture` (all) | 在只读托管沙盒根目录下模拟同用户重解析点与符号链接交换，验证只读受管根的不可变防御边界 | `Gate-Asset-TOCTOU` | 无直接阻塞 |
-| **VAL-44** | Runtime Security & Packaging | `architecture` (all) | Production signature verifier dependency (cryptography>=42.0) availability across all supported OS/arch packaging matrices | `Gate-Crypto-VerifierPackaging` | `BLOCKER-28` |
-| **VAL-45** | Wayland Hit Geometry Transformation | `backend` (wayland) | Renderer CSS/local geometry -> SurfaceLocalDip -> wl_region coordinate transform parity under fractional scaling (1.25x, 1.5x, 2.0x) | `Gate-Wayland-TransformParity` | `BLOCKER-02`, `BLOCKER-26` |
-| **VAL-46** | GNOME Shell Companion Click-Through | `backend` (gnome-wayland) | GNOME Companion input-region and click-through implementation path (GTK/GDK client surface region vs Mutter Shell-side) | `Gate-GnomeCompanion-ClickThrough` | `BLOCKER-03` |
-| **VAL-47** | GNOME Multi-Window Disambiguation | `backend` (gnome-wayland) | GNOME Peer PID + GTK app ID (asia.readmd.pet) + window tag deterministically resolving single Meta.Window among multiple process surfaces | `Gate-GnomeCompanion-Disambiguation` | `BLOCKER-10` |
-| **VAL-48** | Security Epoch Rollback Defense | `architecture` (all) | security_epoch persistent state machine rejecting outdated manifest replays across portable, reinstall, and profile reset flows | `Gate-Crypto-RollbackProtection` | `BLOCKER-28` |
-| **VAL-49** | Health Protocol Ownership & Atomic Write | `architecture` (all) | Electron host main process owns <bridge>.health.json, Rust host owns <bridge>.rust.health.json, temp file + atomic rename parity | `Gate-Golden-Health` | `BLOCKER-31` |
-| **VAL-50** | Parent Liveness Prompt Teardown | `architecture` (all) | Parent pipe EOF triggers immediate shutdown without 2.5s delay; orchestrator replacement maintains <=2500ms timeout | `Gate-Golden-ParentDeath` | `BLOCKER-32` |
-| **VAL-51** | Golden SnapshotReader Retry Differential | `architecture` (all) | SnapshotReader exact signature (${ino}:${mtimeNs}:${ctimeNs}:${size}), 32MB limit, format_version:1, parse failure never poisons signature | `Gate-Golden-SnapshotReader` | `BLOCKER-33` |
+| 编号 | 领域与验证项 | 范围 / 目标后端 | 证据等级 | 物理风险与验证指标 | 关联阻断门禁 | 关联架构阻塞项 |
+|---|---|---|---|---|---|---|
+| **VAL-01** | Layer-Shell + WRY 容器 | `backend` (LayerShellBackend) | `physical` | WebKitGTK 子表面是否会二次截获透明穿透区域的鼠标事件 | `Gate-LayerShell-02` | BLOCKER-01 |
+| **VAL-02** | Layer-Shell 跨屏拖拽 | `backend` (LayerShellBackend) | `physical` | 重设 Monitor 时 Wayland 合成器的 Implicit Pointer Grab 是否中断 | `Gate-LayerShell-01` | BLOCKER-02 |
+| **VAL-03** | Layer-Shell 按需输入法 | `backend` (LayerShellBackend) | `physical` | 合成器对 zwlr_layer_shell_v1 v4+ KeyboardMode::OnDemand 的支持率 | `Gate-LayerShell-03` | 无直接阻塞 |
+| **VAL-04** | GNOME Companion 跨版本稳定性 | `backend` (GnomeCompanionBackend) | `physical` | GNOME 42~50 各大版本中 Mutter move_frame 的内部接口稳定性 | `Gate-GnomeCompanion-02` | BLOCKER-03 |
+| **VAL-05** | Windows ARM64 渲染基准 | `tuple` (Win32Backend) | `physical_gpu_required` | 高通骁龙平台 WebView2 透明窗口层叠与 CPU 占用基准 | `CERT-WIN11-ARM64` | BLOCKER-05 |
+| **VAL-06** | 国产 Linux 发行版依赖 | `tuple` (All) | `integration` | 统信 UOS / 麒麟软件源中 webkit2gtk-4.1 的预装与动态链接一致性 | `CERT-UOS20-X64` | 无直接阻塞 |
+| **VAL-07** | Linux 通用单二进制 PoC | `architecture` (All) | `integration` | 单一二进制在 X11 与 Wayland 环境下的 GDK 动态加载与行为一致性 | `Gate-Linux-Universal` | BLOCKER-04 |
+| **VAL-08** | muda GTK 菜单在 KWin Wayland | `backend` (LayerShellBackend) | `physical` | KWin 环境下右键弹出菜单的准确定位、失焦关闭与层级行为 | `Gate-Menu-KWin-Wayland` | 无直接阻塞 |
+| **VAL-09** | muda GTK 菜单在 GNOME Wayland | `backend` (GnomeCompanionBackend) | `physical` | Mutter 环境下右键弹出菜单的输入捕获释放与穿透恢复 | `Gate-Menu-GNOME-Wayland` | 无直接阻塞 |
+| **VAL-10** | WRY custom DnD 副作用 | `architecture` (All) | `integration` | Windows 上启用 with_drag_drop_handler 时渲染端 DOM 与文件拖放回归 | `Gate-Core-10` | 无直接阻塞 |
+| **VAL-11** | 调和状态机事件序列 Fuzz | `architecture` (All) | `integration` | proptest 50,000 条极端并发事件序列下的状态不变性与防死锁 | `Gate-Core-11` | 无直接阻塞 |
+| **VAL-12** | LayerShell 全局转局部坐标映射 | `backend` (LayerShellBackend) | `physical` | 多屏排布下 VirtualDesktopMapper 的边距计算与跨屏对齐 | `Gate-LayerShell-04` | 无直接阻塞 |
+| **VAL-13** | GNOME move_frame 混合 DPI 映射 | `backend` (GnomeCompanionBackend) | `physical` | 混合缩放比例下 GnomeCoordinateMapper 与 Mutter Stage 坐标一致性 | `Gate-GnomeCompanion-03` | 无直接阻塞 |
+| **VAL-14** | GNOME Legacy (<=44) Companion | `tuple` (GnomeCompanionBackend) | `physical` | Ubuntu 22.04 / Debian 12 下 GJS imports 扩展加载与通信 | `CERT-UBUNTU22-X64` | 无直接阻塞 |
+| **VAL-15** | GNOME ESM (>=45) Companion | `tuple` (GnomeCompanionBackend) | `physical` | Ubuntu 24.04 / Fedora 39+ 下 ESM 扩展加载、热重载与会话恢复 | `CERT-UBUNTU24-X64` | 无直接阻塞 |
+| **VAL-16** | Windows HTTPS 资产 Scheme | `architecture` (Win32Backend) | `physical` | Windows 10/11 下 with_https_scheme(true) 与最低运行时能力探针 | `Gate-Asset-HTTPS-Win` | 无直接阻塞 |
+| **VAL-17** | Custom Protocol 路径沙盒 | `architecture` (All) | `integration` | 跨平台路径穿越、符号链接逃逸、NUL 注入实测防御拦截率 100% | `Gate-Asset-Sandbox` | BLOCKER-16 |
+| **VAL-18** | 统信 UOS 运行时 WebKitGTK 验证 | `tuple` (All) | `integration` | UOS 20 SP1 物理机环境下动态链接库真实加载实证 | `CERT-UOS20-ARM64` | 无直接阻塞 |
+| **VAL-19** | 银河麒麟运行时 WebKitGTK 验证 | `tuple` (All) | `integration` | Kylin V10 SP1 物理机环境下动态链接库真实加载实证 | `CERT-KYLIN10-ARM64` | 无直接阻塞 |
+| **VAL-20** | macOS 13~26 支持周期认证 | `backend` (CocoaBackend) | `physical` | macOS 13 (Ventura) ~ 26 (Tahoe) 在 Apple Silicon 与 Intel 上的认证 | `CERT-MACOS-ALL` | BLOCKER-15 |
+| **VAL-21** | Layer-Shell Pre-Realize 生命周期 | `backend` (LayerShellBackend) | `physical` | GTK 窗口在未 realize 前绑定 Layer-Shell 且成功挂载 WRY 的实测路径 | `Gate-LayerShell-05` | BLOCKER-09 |
+| **VAL-22** | GNOME Meta.Window AppID 传播 | `backend` (GnomeCompanionBackend) | `physical` | WRY/GTK 顶层窗口在 Mutter 内部 get_gtk_application_id() 真实返回值验证 | `Gate-GnomeCompanion-04` | BLOCKER-10 |
+| **VAL-23** | GNOME Companion 畸形 IPC Fuzz | `backend` (GnomeCompanionBackend) | `integration` | 极端非法 JSON 与畸形指令下 GNOME Shell 进程零崩溃证明 | `Gate-GnomeCompanion-05` | 无直接阻塞 |
+| **VAL-24** | Wayland 工作区与面板避让对齐 | `backend` (LayerShellBackend) | `physical` | Layer-Shell margins 映射与 KDE/wlroots 边缘独占区域对齐实测 | `Gate-LayerShell-06` | BLOCKER-13 |
+| **VAL-25** | 导航代际隔离异步消息丢弃测试 | `architecture` (All) | `integration` | 构造跨导航延迟 IPC 消息，验证 Rust 宿主 100% 拒绝陈旧调用 | `Gate-IPC-Generation` | BLOCKER-11 |
+| **VAL-26** | 调和状态 AppliedState 异步生效竞态 | `architecture` (All) | `integration` | 构造高频乱序 snapshot 事件，验证 AppliedState 拒绝陈旧代际状态生效 | `Gate-Core-Reconciliation` | BLOCKER-12 |
+| **VAL-27** | 权威规范产物完整性与发布检查 | `architecture` (All) | `integration` | 验证规范本体哈希与完整性，自动化检查 release 产物 linux-production 特性 | `Gate-Core-SpecIntegrity` | BLOCKER-06, BLOCKER-08 |
+| **VAL-28** | muda 零 libxdo 依赖实测证明 | `architecture` (All) | `integration` | 通过 readelf/ldd 证明 Linux 二进制完全不依赖 libxdo.so | `Gate-Linux-MudaTargetIsolation` | BLOCKER-07 |
+| **VAL-29** | 当前 GNOME 50 扩展兼容性实测 | `tuple` (GnomeCompanionBackend) | `physical` | 验证 GNOME 50 环境下 ESM 扩展加载与 Mutter 接口调用平滑 | `CERT-GNOME50-X64` | BLOCKER-14 |
+| **VAL-30** | macOS 26 (Tahoe) 桌宠实机认证 | `tuple` (CocoaBackend) | `physical` | 验证 macOS 26 开发者/正式版下透明渲染、点击穿透与 Spaces 随同 | `CERT-MACOS26-ARM64` | BLOCKER-15 |
+| **VAL-31** | Layer-Shell compositor usable-area / exclusive-zone parity | `backend` (LayerShellBackend) | `physical` | 实测不同 Wayland 合成器在 Layer::Overlay + exclusive_zone(0) 下的面板避让与工作区对齐语义 | `Gate-LayerShell-06` | BLOCKER-27 |
+| **VAL-32** | Golden preload ABI differential | `architecture` (All) | `integration` | 逐项对比 Rust 注入 bridge 与 Golden preload.ts 的 9 个 API 方法、参数个数与取消订阅函数 | `Gate-Golden-ABI` | BLOCKER-17, BLOCKER-18 |
+| **VAL-33** | Golden bounds policy differential | `architecture` (All) | `integration` | 分别测试 HostSnapshotBoundsPolicy (40 DIP workArea) 与 RendererInteractiveBoundsPolicy (80x80 min) | `Gate-Golden-Bounds` | BLOCKER-19 |
+| **VAL-34** | Golden control/toggle-app differential | `architecture` (All) | `integration` | 实测 toggle-app 触发剪贴板读取并向 FIFO 写入 clipboard 消息，验证无窗口隐藏误动作 | `Gate-Golden-Differential` | BLOCKER-21 |
+| **VAL-35** | Golden menu model differential | `architecture` (All) | `integration` | 实测右键菜单 4 项互动动作 (Pet, Feed, Play, Rest/Wake)、Characters 子菜单、Open reader、disabled header 与 separators 顺序 | `Gate-Golden-Menu` | 无直接阻塞 |
+| **VAL-36** | Golden clipboard payload differential | `architecture` (All) | `integration` | 实测 4M 字符文本截断、24M 字符 base64 PNG 截断与 Windows 128 路径解析的一致性 | `Gate-Golden-Clipboard` | 无直接阻塞 |
+| **VAL-37** | Golden FIFO byte/filename parity | `architecture` (All) | `integration` | 实测 <bridge>.commands 目录排队、32MB 单体限制、64MB 总量限制与 .tmp 独占写原子重命名 | `Gate-Golden-FIFO` | BLOCKER-20 |
+| **VAL-38** | Golden SnapshotReader retry parity | `architecture` (All) | `integration` | 构造非法 JSON snapshot 验证签名未被污染，后续合法 snapshot 能立即被识别与消费 | `Gate-Golden-Differential` | 无直接阻塞 |
+| **VAL-39** | Golden hit-region differential | `architecture` (All) | `integration` | 运行确定性点网格与边缘测试，验证 Live2D hitTest || bounds.contains 与 Sprite 规则的精确等价性 | `Gate-Golden-HitRegion` | BLOCKER-26 |
+| **VAL-40** | Golden pushState / anti-snapback differential | `architecture` (All) | `integration` | 实测 pushState 下发时以实际当前窗口 bounds 覆盖 snapshot bounds，防止拖拽后回弹 | `Gate-Golden-AntiSnapback` | 无直接阻塞 |
+| **VAL-41** | Windows virtual-desktop Golden behavior | `backend` (Win32Backend) | `physical` | 实测 Windows 虚拟桌面切换时桌宠仅在当前桌面显示，验证无私有 API 越界注入 | `Gate-Win32-VirtualDesktop` | BLOCKER-25 |
+| **VAL-42** | Runtime detached-signature verification | `architecture` (All) | `integration` | 实测分离签名 manifest.json.sig 配合固定公钥环进行验签，拒绝 manifest 自签名注入 | `Gate-Crypto-DetachedSig` | BLOCKER-28 |
+| **VAL-43** | Asset sandbox TOCTOU threat-model/handle test | `architecture` (All) | `integration` | 在只读托管沙盒根目录下模拟同用户重解析点与符号链接交换，验证只读受管根的不可变防御边界 | `Gate-Asset-TOCTOU` | 无直接阻塞 |
+| **VAL-44** | Runtime Security & Packaging | `architecture` (All) | `integration` | Production signature verifier dependency (cryptography>=42.0) availability across all supported OS/arch packaging matrices | `Gate-Crypto-VerifierPackaging` | BLOCKER-28 |
+| **VAL-45** | Wayland Hit Geometry Transformation | `backend` (LayerShellBackend) | `physical` | Renderer CSS/local geometry -> SurfaceLocalDip -> wl_region coordinate transform parity under fractional scaling (1.25x, 1.5x, 2.0x) | `Gate-Wayland-TransformParity` | BLOCKER-02, BLOCKER-26 |
+| **VAL-46** | GNOME Shell Companion Click-Through | `backend` (GnomeCompanionBackend) | `physical` | GNOME Companion input-region and click-through implementation path (GTK/GDK client surface region vs Mutter Shell-side) | `Gate-GnomeCompanion-ClickThrough` | BLOCKER-03 |
+| **VAL-47** | GNOME Multi-Window Disambiguation | `backend` (GnomeCompanionBackend) | `integration` | GNOME Peer PID + GTK app ID (asia.readmd.pet) + window tag deterministically resolving single Meta.Window among multiple process surfaces | `Gate-GnomeCompanion-Disambiguation` | BLOCKER-10 |
+| **VAL-48** | Security Epoch Rollback Defense | `architecture` (All) | `integration` | security_epoch persistent state machine rejecting outdated manifest replays across portable, reinstall, and profile reset flows | `Gate-Crypto-RollbackProtection` | BLOCKER-28 |
+| **VAL-49** | Health Protocol Ownership & Atomic Write | `architecture` (All) | `integration` | Electron host main process owns <bridge>.health.json, Rust host owns <bridge>.rust.health.json, temp file + atomic rename parity | `Gate-Golden-Health` | BLOCKER-31 |
+| **VAL-50** | Parent Liveness Prompt Teardown | `architecture` (All) | `integration` | Parent pipe EOF triggers immediate shutdown without 2.5s delay; orchestrator replacement maintains <=2500ms timeout | `Gate-Golden-ParentDeath` | BLOCKER-32 |
+| **VAL-51** | Golden SnapshotReader Retry Differential | `architecture` (All) | `integration` | SnapshotReader exact signature (${ino}:${mtimeNs}:${ctimeNs}:${size}), 32MB limit, format_version:1, parse failure never poisons signature | `Gate-Golden-SnapshotReader` | BLOCKER-33 |
+| **VAL-52** | Golden build provenance closure | `golden` (All) | `integration` | Verify all upstream, adaptation, and bundle hashes in golden-build-provenance match disk exactly | `Gate-Golden-BuildProvenance` | 无直接阻塞 |
+| **VAL-53** | Generated renderer bundle provenance | `golden` (All) | `integration` | Verify production renderer bundle hashes match between build script and dist output | `Gate-Golden-BuildProvenance` | 无直接阻塞 |
+| **VAL-54** | Report <-> Registry consistency | `core` (All) | `unit` | Verify report hashes, commit, counts, validation mappings, and tuple lists are 100% consistent with registry files | `Gate-Report-Consistency` | 无直接阻塞 |
+| **VAL-55** | Remote repository provenance reproducibility | `evidence` (All) | `integration` | Verify git rev-parse HEAD matches remote GitHub resolvable commit on main or explicitly marks LOCAL_ONLY | `Gate-Evidence-RemoteProvenance` | 无直接阻塞 |
+| **VAL-56** | Phase0 plan registry generation correctness | `core` (All) | `unit` | Verify Phase 0 validation table in spec is 100% generated from validation-registry.json with zero manual drift | `Gate-Core-SpecIntegrity` | 无直接阻塞 |
+| **VAL-57** | Validation evidence-class enforcement | `evidence` (All) | `unit` | Enforce that VM evidence cannot substitute for physical or physical_gpu_required validation gates | `Gate-Validation-EvidenceClass` | 无直接阻塞 |
 
 ### 29.3 架构阻塞项台账 (Architecture Blockers Registry) (P0-121, P0-154, P0-155, P0-156)
 *权威数据源：`docs/architecture/pet-rust/blocker-registry.json`*
@@ -905,13 +1031,13 @@ $$\text{Production Freeze Ready} \iff (\text{Unresolved Architecture Blockers} =
 ```json
 {
   "spec_path": "docs/architecture/pet-rust/spec.md",
-  "golden_commit_sha": "4dcfd73ce81a14ace7e429791e0594bea47b24e5",
-  "linter_version": "v1.4.5",
-  "registry_referential_integrity": true,
-  "registered_gates_count": 71,
-  "validation_items_count": 51,
+  "golden_commit_sha": "47c40a38a60f27df369b60ed29dac4a4a037e3f6",
+  "vendor_pinned_revision": "fb27614addac115d55299bc6538ae112fd01f688",
+  "linter_version": "v1.4.6",
+  "registry_manifest_artifacts": 7,
+  "registered_gates_count": 75,
+  "validation_items_count": 57,
   "open_blockers_count": 33,
-  "closed_decisions_count": 18,
   "platform_tuples_count": 24
 }
 ```

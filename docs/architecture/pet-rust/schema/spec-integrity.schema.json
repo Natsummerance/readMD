@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SpecIntegritySchema",
+  "type": "object",
+  "required": ["spec_version", "git_commit", "artifacts", "counts"],
+  "properties": {
+    "spec_version": { "type": "string" },
+    "git_commit": { "type": "string" },
+    "artifacts": { "type": "object" },
+    "counts": { "type": "object" }
+  }
+}

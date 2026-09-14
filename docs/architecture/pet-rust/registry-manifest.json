@@ -1,0 +1,41 @@
+{
+  "": "schema/registry-manifest.schema.json",
+  "version": "v1.4.6",
+  "artifacts": [
+    {
+      "role": "golden_contract",
+      "path": "docs/architecture/pet-rust/golden-contract.json",
+      "description": "Golden behavioral input closure and upstream vendor pin"
+    },
+    {
+      "role": "golden_build_provenance",
+      "path": "docs/architecture/pet-rust/golden-build-provenance.json",
+      "description": "End-to-end build provenance graph linking upstream sources to production bundle"
+    },
+    {
+      "role": "tuple_registry",
+      "path": "docs/architecture/pet-rust/tuple-registry.json",
+      "description": "24 atomic platform certification tuples with single-valued fields and lifecycle"
+    },
+    {
+      "role": "validation_registry",
+      "path": "docs/architecture/pet-rust/validation-registry.json",
+      "description": "Empirical validation items with evidence class and backend bindings"
+    },
+    {
+      "role": "gate_registry",
+      "path": "docs/architecture/pet-rust/gate-registry.json",
+      "description": "Graduated verification gates with semantic IDs and display ordering"
+    },
+    {
+      "role": "blocker_registry",
+      "path": "docs/architecture/pet-rust/blocker-registry.json",
+      "description": "Architecture blocker registry with resolved design state and pending validation"
+    },
+    {
+      "role": "spec_integrity",
+      "path": "docs/architecture/pet-rust/spec.integrity.json",
+      "description": "External cryptographic integrity manifest binding spec and registry files"
+    }
+  ]
+}

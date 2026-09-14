@@ -12,7 +12,8 @@
     "compositor": "DWM",
     "planned_backend": "Win32Backend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": true
   },
   {
     "tuple_key": "windows-11-23h2-x64-dwm-win32",
@@ -27,7 +28,8 @@
     "compositor": "DWM",
     "planned_backend": "Win32Backend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "windows-11-24h2-arm64-dwm-win32",
@@ -42,7 +44,8 @@
     "compositor": "DWM",
     "planned_backend": "Win32Backend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": true
   },
   {
     "tuple_key": "windows-10-22h2-x64-dwm-win32",
@@ -57,7 +60,8 @@
     "compositor": "DWM",
     "planned_backend": "Win32Backend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "macos-26-tahoe-arm64-quartz-cocoa",
@@ -72,7 +76,8 @@
     "compositor": "WindowServer",
     "planned_backend": "CocoaBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": true
   },
   {
     "tuple_key": "macos-15-sequoia-arm64-quartz-cocoa",
@@ -87,7 +92,8 @@
     "compositor": "WindowServer",
     "planned_backend": "CocoaBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "macos-14-sonoma-arm64-quartz-cocoa",
@@ -102,7 +108,8 @@
     "compositor": "WindowServer",
     "planned_backend": "CocoaBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "macos-13-ventura-arm64-quartz-cocoa",
@@ -117,7 +124,8 @@
     "compositor": "WindowServer",
     "planned_backend": "CocoaBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "macos-15-sequoia-x64-quartz-cocoa",
@@ -132,7 +140,8 @@
     "compositor": "WindowServer",
     "planned_backend": "CocoaBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "macos-14-sonoma-x64-quartz-cocoa",
@@ -147,7 +156,8 @@
     "compositor": "WindowServer",
     "planned_backend": "CocoaBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "macos-13-ventura-x64-quartz-cocoa",
@@ -162,7 +172,8 @@
     "compositor": "WindowServer",
     "planned_backend": "CocoaBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "ubuntu-24.04-gnome46-x64-wayland-gnomecompanion",
@@ -177,7 +188,8 @@
     "compositor": "Mutter",
     "planned_backend": "GnomeCompanionBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": true
   },
   {
     "tuple_key": "ubuntu-24.04-gnome46-arm64-wayland-gnomecompanion",
@@ -192,7 +204,8 @@
     "compositor": "Mutter",
     "planned_backend": "GnomeCompanionBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "ubuntu-22.04-gnome42-x64-x11-x11backend",
@@ -207,7 +220,8 @@
     "compositor": "Mutter",
     "planned_backend": "X11Backend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": true
   },
   {
     "tuple_key": "debian-12-gnome43-x64-wayland-gnomecompanion",
@@ -222,7 +236,8 @@
     "compositor": "Mutter",
     "planned_backend": "GnomeCompanionBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "fedora-40-kde6-x64-wayland-layershell",
@@ -237,7 +252,8 @@
     "compositor": "KWin",
     "planned_backend": "LayerShellBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": true
   },
   {
     "tuple_key": "fedora-42-kde6-x64-wayland-layershell",
@@ -252,7 +268,8 @@
     "compositor": "KWin",
     "planned_backend": "LayerShellBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "fedora-42-gnome50-x64-wayland-gnomecompanion",
@@ -267,7 +284,8 @@
     "compositor": "Mutter",
     "planned_backend": "GnomeCompanionBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": true
   },
   {
     "tuple_key": "archlinux-rolling-sway-x64-wayland-layershell",
@@ -282,7 +300,8 @@
     "compositor": "wlroots",
     "planned_backend": "LayerShellBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": true
   },
   {
     "tuple_key": "archlinux-rolling-hyprland-x64-wayland-layershell",
@@ -297,7 +316,8 @@
     "compositor": "wlroots",
     "planned_backend": "LayerShellBackend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "uos-20-sp1-x64-x11-x11backend",
@@ -312,7 +332,8 @@
     "compositor": "KWin-DDE",
     "planned_backend": "X11Backend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "uos-20-sp1-arm64-x11-x11backend",
@@ -327,7 +348,8 @@
     "compositor": "KWin-DDE",
     "planned_backend": "X11Backend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": true
   },
   {
     "tuple_key": "kylin-v10-sp1-x64-x11-x11backend",
@@ -342,7 +364,8 @@
     "compositor": "UKUI-KWin",
     "planned_backend": "X11Backend",
     "backend_binding_status": "Planned",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   },
   {
     "tuple_key": "deepin-23-treeland-x64-wayland-layershell",
@@ -357,6 +380,7 @@
     "compositor": "Treeland",
     "planned_backend": "LayerShellBackend",
     "backend_binding_status": "Pending VAL",
-    "lifecycle": "Planned"
+    "lifecycle": "Planned",
+    "is_phase0_representative": false
   }
 ]

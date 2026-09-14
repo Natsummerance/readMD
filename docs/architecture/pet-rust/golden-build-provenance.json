@@ -1,0 +1,213 @@
+{
+  "$schema": "schema/golden-build-provenance.schema.json",
+  "schema_version": "1.0.0",
+  "vendor_revision": "fb27614addac115d55299bc6538ae112fd01f688",
+  "source_nodes": [
+    {
+      "id": "src_upstream_pet_overlay_app",
+      "path": "third_party/hermes-agent-pet/apps/desktop/src/app/pet-overlay/pet-overlay-app.tsx",
+      "role": "Upstream Sprite click-through, drag, and event handling component",
+      "sha256": "9b2c3d492d0f2adaaa4e2b7ac536e988dea1908208ee7a321fa23203b2c7357d",
+      "provenance": "vendor_pinned_snapshot"
+    },
+    {
+      "id": "src_upstream_overlay_root",
+      "path": "third_party/hermes-agent-pet/apps/desktop/src/app/pet-overlay/overlay-root.tsx",
+      "role": "Upstream overlay root layout and state provider",
+      "sha256": "acdc372c4cae5dab68b65d54ef4d54f3a2a5c57c2ec51c8a7ef2bd4f5637fad3",
+      "provenance": "vendor_pinned_snapshot"
+    },
+    {
+      "id": "src_upstream_ipc",
+      "path": "third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts",
+      "role": "Upstream pet IPC protocol contracts",
+      "sha256": "5c99fce416fece34d0fb66fdb662af0fb0169b9c4e8aae71977f9a46ac171d8d",
+      "provenance": "vendor_pinned_snapshot"
+    },
+    {
+      "id": "src_adapter_electron_main",
+      "path": "packages/readmd-hermes-pet-adapter/src/electron-main.ts",
+      "role": "ReadMD host Electron main process implementation",
+      "sha256": "0a1b6473d155f8121d77d1463316a7968b0d973f76bb6080f4abb58de65a269d",
+      "provenance": "readmd_host_adapter"
+    },
+    {
+      "id": "src_adapter_preload",
+      "path": "packages/readmd-hermes-pet-adapter/src/preload.ts",
+      "role": "ReadMD host Preload script exposing window.__HERMES_PET__",
+      "sha256": "fafeb3c1e5241efe3c25646f4ec1cb818ca46a17e375f85e3e16710963df1179",
+      "provenance": "readmd_host_adapter"
+    },
+    {
+      "id": "src_adapter_bridge_transport",
+      "path": "packages/readmd-hermes-pet-adapter/src/bridge-transport.ts",
+      "role": "Durable FIFO command queue and SnapshotReader",
+      "sha256": "7055deed1d644687fe8fc1a3adff39fba85185644903e334be6b502397100723",
+      "provenance": "readmd_host_adapter"
+    },
+    {
+      "id": "src_adapter_renderer",
+      "path": "packages/readmd-hermes-pet-adapter/src/renderer.tsx",
+      "role": "Renderer entry point and React root mount",
+      "sha256": "5bbbd06c222c572d75b68b10bb09e910a5e02e6f1e89475a9811d0934dccaa36",
+      "provenance": "readmd_renderer"
+    },
+    {
+      "id": "src_adapter_stage",
+      "path": "packages/readmd-hermes-pet-adapter/src/live2d/stage.ts",
+      "role": "Live2D PIXI stage and hit test implementation",
+      "sha256": "bec994ed0a299fd7f05156f54cef6fa06da750f96f6f931a547313bd3e64522a",
+      "provenance": "readmd_renderer"
+    },
+    {
+      "id": "src_python_orchestrator",
+      "path": "src/readmd_modules/pet/hermes_adapter.py",
+      "role": "Python pet orchestrator, state generation, and process supervision",
+      "sha256": "2a2f09188d3f9f6f52ac9a0a0571d3a94eaf2e385949184ef24058f3ec5b03ee",
+      "provenance": "readmd_core_python"
+    }
+  ],
+  "transform_nodes": [
+    {
+      "id": "transform_build_mjs",
+      "path": "packages/readmd-hermes-pet-adapter/scripts/build.mjs",
+      "role": "Generates host adaptation patching single-click to open-menu and orchestrates bundling",
+      "sha256": "59fe50c2d31841aadef9013d2b47b107f49dac62434cebb5d3106bb97ca51db2",
+      "provenance": "readmd_adaptation_script"
+    },
+    {
+      "id": "transform_vite",
+      "path": "packages/readmd-hermes-pet-adapter/vite.config.mjs",
+      "role": "Vite React bundling compiler",
+      "sha256": "8a5ed317a59a567fa8660e887d3b4e6067375583f85cb6072f7090cfae7c17db",
+      "provenance": "readmd_build_config"
+    }
+  ],
+  "generated_nodes": [
+    {
+      "id": "gen_adapted_pet_overlay_app",
+      "path": "packages/readmd-hermes-pet-adapter/.generated/pet-overlay-app.tsx",
+      "role": "Hermes overlay app source patched with open-menu single-click handler",
+      "sha256": "ea266476b462fa8e6e6cd3aa1a3dbce96cad2718ebdb4e541aa8cc5eb9d0a3a5",
+      "provenance": "build_mjs_generated"
+    },
+    {
+      "id": "gen_renderer_bundle",
+      "path": "packages/readmd-hermes-pet-adapter/dist/renderer/index.html",
+      "role": "Production compiled Vite renderer web application",
+      "sha256": "d9f1da3457bac312a2790d270f6052de02c87290a19d623ee5d23bfb378ccb9d",
+      "provenance": "vite_bundle"
+    },
+    {
+      "id": "gen_electron_main_bundle",
+      "path": "packages/readmd-hermes-pet-adapter/dist/electron-main.cjs",
+      "role": "Production compiled Electron main host bundle",
+      "sha256": "b5747182b5e883e2e89aad869affbd3a7d3a7b8f70642a4997d757adb569f921",
+      "provenance": "esbuild_bundle"
+    },
+    {
+      "id": "gen_preload_bundle",
+      "path": "packages/readmd-hermes-pet-adapter/dist/preload.cjs",
+      "role": "Production compiled Preload script bundle",
+      "sha256": "50d95c7d2b62f3ba3198597c0a73cb53d4fa6c89d36534d59268a3a0fb8c08e0",
+      "provenance": "esbuild_bundle"
+    }
+  ],
+  "runtime_nodes": [
+    {
+      "id": "runtime_electron_adapter_dist",
+      "path": "packages/readmd-hermes-pet-adapter/dist",
+      "role": "Complete production runnable Electron pet adapter package",
+      "provenance": "production_dist"
+    },
+    {
+      "id": "runtime_golden_behavior",
+      "role": "Observable Golden behavior: single click opens menu, double click toggles app, Sprite 2D alpha >= 16 transparent click-through",
+      "provenance": "observable_behavior"
+    }
+  ],
+  "edges": [
+    {
+      "from": "src_upstream_pet_overlay_app",
+      "to": "transform_build_mjs",
+      "type": "input"
+    },
+    {
+      "from": "transform_build_mjs",
+      "to": "gen_adapted_pet_overlay_app",
+      "type": "output"
+    },
+    {
+      "from": "gen_adapted_pet_overlay_app",
+      "to": "transform_vite",
+      "type": "input"
+    },
+    {
+      "from": "src_adapter_renderer",
+      "to": "transform_vite",
+      "type": "input"
+    },
+    {
+      "from": "src_adapter_stage",
+      "to": "transform_vite",
+      "type": "input"
+    },
+    {
+      "from": "transform_vite",
+      "to": "gen_renderer_bundle",
+      "type": "output"
+    },
+    {
+      "from": "src_adapter_electron_main",
+      "to": "transform_build_mjs",
+      "type": "input"
+    },
+    {
+      "from": "transform_build_mjs",
+      "to": "gen_electron_main_bundle",
+      "type": "output"
+    },
+    {
+      "from": "src_adapter_preload",
+      "to": "transform_build_mjs",
+      "type": "input"
+    },
+    {
+      "from": "transform_build_mjs",
+      "to": "gen_preload_bundle",
+      "type": "output"
+    },
+    {
+      "from": "gen_renderer_bundle",
+      "to": "runtime_electron_adapter_dist",
+      "type": "assembly"
+    },
+    {
+      "from": "gen_electron_main_bundle",
+      "to": "runtime_electron_adapter_dist",
+      "type": "assembly"
+    },
+    {
+      "from": "gen_preload_bundle",
+      "to": "runtime_electron_adapter_dist",
+      "type": "assembly"
+    },
+    {
+      "from": "runtime_electron_adapter_dist",
+      "to": "runtime_golden_behavior",
+      "type": "runtime_execution"
+    }
+  ],
+  "sprite_provenance": {
+    "upstream_source_sha256": "9b2c3d492d0f2adaaa4e2b7ac536e988dea1908208ee7a321fa23203b2c7357d",
+    "adaptation_script_sha256": "59fe50c2d31841aadef9013d2b47b107f49dac62434cebb5d3106bb97ca51db2",
+    "generated_source_sha256": "ea266476b462fa8e6e6cd3aa1a3dbce96cad2718ebdb4e541aa8cc5eb9d0a3a5",
+    "renderer_bundle_sha256": "d9f1da3457bac312a2790d270f6052de02c87290a19d623ee5d23bfb378ccb9d"
+  },
+  "bundle_hashes": {
+    "build_input_hash": "59fe50c2d31841aadef9013d2b47b107f49dac62434cebb5d3106bb97ca51db2",
+    "renderer_bundle_hash": "d9f1da3457bac312a2790d270f6052de02c87290a19d623ee5d23bfb378ccb9d",
+    "preload_bundle_hash": "50d95c7d2b62f3ba3198597c0a73cb53d4fa6c89d36534d59268a3a0fb8c08e0",
+    "electron_main_bundle_hash": "b5747182b5e883e2e89aad869affbd3a7d3a7b8f70642a4997d757adb569f921"
+  }
+}

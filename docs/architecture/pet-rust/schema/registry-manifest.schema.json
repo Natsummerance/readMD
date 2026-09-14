@@ -1,0 +1,36 @@
+{
+  "": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RegistryManifestSchema",
+  "type": "object",
+  "required": [
+    "version",
+    "artifacts"
+  ],
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "role",
+          "path",
+          "description"
+        ],
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

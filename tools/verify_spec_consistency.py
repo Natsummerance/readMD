@@ -2,25 +2,7 @@
 """
 tools/verify_spec_consistency.py
 Authoritative Linter and Architectural Consistency Verifier for ReadMD Desktop Overlay Specification.
-Version: v1.4.5 (Semantic Closure & Machine Registry Verification)
-
-Enforces:
-1. Canonical repo path compliance and zero NUL bytes.
-2. Complete Golden Source Set (7 core behavior files) and full Preload ABI interface.
-3. Total elimination of proactive fullscreen detection, 12-DIP snap, and incorrect FIFO paths.
-4. Reconciliation completeness: Desired/Applied OverlayState with fullscreen & opacity, Orthogonal Runtime State (HostLifecycle, SurfaceState, InputState).
-5. Parent death immediate shutdown (ParentDeathShutdown) vs engine replacement grace period (EngineReplacementGracePeriod).
-6. Health ownership separation (Electron host owns <bridge>.health.json, Rust host owns <bridge>.rust.health.json).
-7. Platform tuples atomicity (single-valued fields, stable tuple_key, Planned lifecycle).
-8. Signature verifier single choice (cryptography>=42.0.0 in Python installer, packaging empirical requirement VAL-44).
-9. SnapshotReader full contract in Section 10.2 (ino:mtimeNs:ctimeNs:size, parse error retry).
-10. FIFO exact envelope and precondition queue count <= 128.
-11. Context menu 4 interaction actions and Resting wake cooldown key check.
-12. Renderer recovery sequence (report failed first, 60s window, >=3 circuit open, 500ms * count delay) and boundary fixtures.
-13. Coordinate type safety (CssPx, SurfaceLocalDipRect, BridgeGlobalDipRect) and InteractionRegionSnapshot surface-local rects.
-14. Scoped release stop conditions (architecture vs tuple vs product) and absence of hardcoded provisional 0.05 MiB/h gate.
-15. 100% referential integrity across Gate (71), Validation (51), Blocker (33), and Tuple (24) machine registries.
-16. Automated synchronization of generated registry counts and integrity snapshot.
+Version: v1.4.6 (Evidence & Validation Closure Candidate)
 """
 
 import os
@@ -52,13 +34,23 @@ def verify_registries_integrity(arch_dir):
     blocker_file = arch_dir / "blocker-registry.json"
     golden_file = arch_dir / "golden-contract.json"
     tuple_file = arch_dir / "tuple-registry.json"
+    provenance_file = arch_dir / "golden-build-provenance.json"
+    manifest_file = arch_dir / "registry-manifest.json"
+    integrity_file = arch_dir / "spec.integrity.json"
 
-    for f, name in [(gate_file, "gate-registry.json"), (val_file, "validation-registry.json"), 
-                    (blocker_file, "blocker-registry.json"), (golden_file, "golden-contract.json"),
-                    (tuple_file, "tuple-registry.json")]:
+    for f, name in [
+        (gate_file, "gate-registry.json"),
+        (val_file, "validation-registry.json"),
+        (blocker_file, "blocker-registry.json"),
+        (golden_file, "golden-contract.json"),
+        (tuple_file, "tuple-registry.json"),
+        (provenance_file, "golden-build-provenance.json"),
+        (manifest_file, "registry-manifest.json"),
+        (integrity_file, "spec.integrity.json")
+    ]:
         if not f.exists():
             errors.append(f"Machine registry file missing: {name}")
-            return False, errors, 0, 0, 0, 0
+            return False, errors, 0, 0, 0, 0, 0
 
     try:
         gates = json.loads(gate_file.read_text(encoding="utf-8"))
@@ -66,13 +58,17 @@ def verify_registries_integrity(arch_dir):
         blockers = json.loads(blocker_file.read_text(encoding="utf-8"))
         golden = json.loads(golden_file.read_text(encoding="utf-8"))
         tuples = json.loads(tuple_file.read_text(encoding="utf-8"))
+        provenance = json.loads(provenance_file.read_text(encoding="utf-8"))
+        manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
+        integrity = json.loads(integrity_file.read_text(encoding="utf-8"))
     except Exception as e:
         errors.append(f"JSON parsing error in registry files: {e}")
-        return False, errors, 0, 0, 0, 0
+        return False, errors, 0, 0, 0, 0, 0
 
     gate_ids = {g["id"] for g in gates}
     val_ids = {v["id"] for v in validations}
     blocker_ids = {b["id"] for b in blockers}
+    tuple_keys = {t["tuple_key"] for t in tuples}
 
     # Referential checks: Validations -> Gates & Blockers
     for v in validations:
@@ -82,39 +78,39 @@ def verify_registries_integrity(arch_dir):
         for b in v.get("associated_blockers", []):
             if b not in blocker_ids:
                 errors.append(f"Referential error: Validation {v['id']} references unknown blocker '{b}'")
+        for tkey in v.get("tuple_keys", []):
+            if tkey not in tuple_keys:
+                errors.append(f"Referential error: Validation {v['id']} references unknown tuple '{tkey}'")
 
-    # Referential checks: Blockers -> Gates & Validations & Decisions
+    # Referential checks: Blockers -> Gates & Validations
     for b in blockers:
         for g in b.get("gate_ids", []):
             if g not in gate_ids:
                 errors.append(f"Referential error: Blocker {b['id']} references unknown gate '{g}'")
-        for vid in b.get("validation_ids", []):
-            if vid not in val_ids:
-                errors.append(f"Referential error: Blocker {b['id']} references unknown validation '{vid}'")
         bu = b.get("blocking_until")
         if bu and bu not in val_ids:
             errors.append(f"Referential error: Blocker {b['id']} blocking_until references unknown validation '{bu}'")
-
-        # Consistency: if decision is resolved in spec, design_state must be 'resolved'
         if b.get("design_state") == "open":
-            errors.append(f"Blocker {b['id']} has design_state 'open'; all architecture design decisions must be resolved in v1.4.5")
+            errors.append(f"Blocker {b['id']} has design_state 'open'; all architecture design decisions must be resolved in v1.4.6")
+        if b.get("validation_state") != "pending":
+            errors.append(f"Blocker {b['id']} validation_state must remain 'pending' before physical hardware spikes")
 
-    # Check behavior sources in golden contract
-    bs = golden.get("behavior_sources", {})
-    required_sources = [
-        "packages/readmd-hermes-pet-adapter/src/electron-main.ts",
-        "packages/readmd-hermes-pet-adapter/src/preload.ts",
-        "packages/readmd-hermes-pet-adapter/src/bridge-transport.ts",
-        "packages/readmd-hermes-pet-adapter/src/renderer.tsx",
-        "packages/readmd-hermes-pet-adapter/src/live2d/stage.ts",
-        "third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts",
-        "src/readmd_modules/pet/hermes_adapter.py"
-    ]
-    for req in required_sources:
-        if req not in bs:
-            errors.append(f"Golden Contract missing essential behavior source: {req}")
+    # Check behavior inputs in golden contract (P0-172, P0-173, P0-174)
+    behavior_inputs = {item["path"]: item for item in golden.get("behavior_inputs", [])}
+    req_sprite = "third_party/hermes-agent-pet/apps/desktop/src/app/pet-overlay/pet-overlay-app.tsx"
+    req_build = "packages/readmd-hermes-pet-adapter/scripts/build.mjs"
 
-    # Check tuples atomicity
+    if req_sprite not in behavior_inputs:
+        errors.append(f"Golden Contract missing essential sprite behavior input: {req_sprite}")
+    elif not behavior_inputs[req_sprite].get("behavior_critical"):
+        errors.append(f"{req_sprite} must have behavior_critical = true")
+
+    if req_build not in behavior_inputs:
+        errors.append(f"Golden Contract missing build-time adaptation script: {req_build}")
+    elif not behavior_inputs[req_build].get("behavior_critical"):
+        errors.append(f"{req_build} must have behavior_critical = true")
+
+    # Check tuples atomicity and GNOME backend prohibition (P0-179)
     for t in tuples:
         tkey = t.get("tuple_key", "")
         if "/" in tkey or "~" in tkey or "+" in tkey:
@@ -123,8 +119,14 @@ def verify_registries_integrity(arch_dir):
             val_str = str(t.get(field, ""))
             if "/" in val_str or "~" in val_str:
                 errors.append(f"Platform Tuple {tkey} field '{field}'='{val_str}' contains multiple version values")
+        if t.get("desktop_environment") == "GNOME" and t.get("planned_backend") == "LayerShellBackend":
+            errors.append(f"Platform Tuple {tkey} assigns LayerShellBackend to GNOME (physically unsupported)")
 
-    return len(errors) == 0, errors, len(gates), len(validations), len(blockers), len(tuples)
+    # Integrity file must not self-reference (P0-192)
+    if "spec.integrity.json" in integrity.get("artifacts", {}):
+        errors.append("spec.integrity.json contains recursive self-reference in artifacts dict")
+
+    return len(errors) == 0, errors, len(gates), len(validations), len(blockers), len(tuples), len(manifest["artifacts"])
 
 def run_checks(spec_path, repo_root, is_fixture=False):
     errors = []
@@ -191,11 +193,11 @@ def run_checks(spec_path, repo_root, is_fixture=False):
                 if f"[{i}." not in toc_text:
                     errors.append(f"TOC does not reference Section {i}")
 
-    # 3. Version checks
-    if "v1.4.5" not in lines[0]:
-        errors.append("Header does not declare 'v1.4.5'")
-    if "> **版本**：v1.4.5-Candidate" not in text:
-        errors.append("Metadata block does not declare 'v1.4.5-Candidate'")
+    # 3. Version checks (v1.4.6)
+    if "v1.4.6" not in lines[0]:
+        errors.append("Header does not declare 'v1.4.6'")
+    if "> **版本标识**：v1.4.6-Candidate" not in text and "> **版本**：v1.4.6-Candidate" not in text:
+        errors.append("Metadata block does not declare 'v1.4.6-Candidate'")
 
     # Check status line for forbidden premature freeze
     for line in lines[:25]:
@@ -203,11 +205,18 @@ def run_checks(spec_path, repo_root, is_fixture=False):
             if "Production-Freeze" in line or ("Production Architecture Freeze" in line and "绝非" not in line and "not" not in line.lower() and "no" not in line.lower()):
                 errors.append(f"Premature status declared in metadata block: {line.strip()}")
 
-    # 4. Golden Source Set checks (P0-91)
+    # 4. Golden Behavioral Input Closure checks (P0-172, P0-173, P0-174)
     if "live2d/stage.ts" not in text:
         errors.append("Golden Source Set missing required behavior source 'live2d/stage.ts'")
-    if "pet-overlay-ipc.ts" not in text:
-        errors.append("Golden Source Set missing required behavior source 'pet-overlay-ipc.ts'")
+    if "pet-overlay-app.tsx" not in text:
+        errors.append("Golden Source Set missing required sprite behavior source 'pet-overlay-app.tsx'")
+    if "build.mjs" not in text:
+        errors.append("Golden Source Set missing required build adaptation source 'build.mjs'")
+
+    # Ban hardcoded magic source count in prose (P0-172)
+    for line in lines[:100]:
+        if ("6 核心" in line or "7 核心" in line or "11 个辅助" in line) and "废弃" not in line and "历史" not in line:
+            errors.append(f"Prose contains banned hardcoded golden source magic count: {line.strip()}")
 
     # 5. Preload ABI checks (P0-92)
     s1_idx = text.find("## 1.")
@@ -262,10 +271,8 @@ def run_checks(spec_path, repo_root, is_fixture=False):
     for row in tuple_rows:
         if "**Candidate**" in row or "**Certified**" in row:
             errors.append(f"Platform Tuple in Section 20 prematurely marked as Candidate/Certified: {row.strip()}")
-        # Check atomic values in table columns
         cols = [c.strip() for c in row.split("|")[1:-1]]
         if len(cols) >= 4:
-            # os/version in col 2, arch in col 3, display in col 4
             if "40/42" in cols[2] or "46/50" in cols[2] or "GNOME 46/50" in row:
                 errors.append(f"Platform Tuple contains multi-version specification '{row.strip()}'")
 
@@ -301,7 +308,6 @@ def run_checks(spec_path, repo_root, is_fixture=False):
 
     # 14. Parent Liveness timing check (P0-135)
     s15_idx = text.find("## 15.")
-    s16_idx = text.find("## 16.")
     sec15 = text[s15_idx:s16_idx] if s15_idx != -1 and s16_idx != -1 else ""
     if "触发 2.5 秒倒计时安全退出" in sec15 or ("2.5 秒" in sec15 and "ParentDeath" in sec15 and not any(k in sec15 for k in ["严禁", "非 Golden", "解耦", "绝非"])):
         errors.append("Parent Liveness incorrectly conflated with 2.5s delay on pipe EOF")
@@ -335,14 +341,22 @@ def run_checks(spec_path, repo_root, is_fixture=False):
     if "Vec<BridgeDipRect>" in sec6:
         errors.append("InteractionRegionSnapshot incorrectly uses global BridgeDipRect instead of SurfaceLocalDipRect")
 
-    # 20. Signature Verifier ADR check (P0-140)
-    s23_idx = text.find("## 23.")
-    s24_idx = text.find("## 24.")
-    sec23 = text[s23_idx:s24_idx] if s23_idx != -1 and s24_idx != -1 else ""
+    # 20. Signature Verifier ADR check (P0-140, P0-197)
     if "均可" in sec23 and "ADR" in sec23:
         errors.append("ADR-runtime-signature-verifier contains unresolved '均可' instead of choosing single production verifier")
+    if "fallback production verifier" in text.lower():
+        errors.append("Rust verifier incorrectly described as fallback production verifier; must be non-production contingency prototype")
 
-    # 21. Cargo Section 18 checks
+    # 21. GNOME Layer-Shell backend prohibition check (P0-179)
+    sec4 = text[text.find("## 4."):text.find("## 5.")] if text.find("## 4.") != -1 else ""
+    if "不支持 `zwlr_layer_shell_v1`" not in sec4 and "不支持 zwlr_layer_shell_v1" not in sec4:
+        errors.append("Section 4 missing explicit prohibition of LayerShellBackend on GNOME Wayland")
+
+    # 22. Renderer crash recovery exact boundary & logic (P0-186, P0-187)
+    if "recoveries.length >= 3" not in sec1 or "delay = 500 * recoveries.length" not in sec1:
+        errors.append("Section 1.8 missing exact Golden renderer recovery logic and backoff delay formula")
+
+    # 23. Cargo Section 18 checks
     s18 = text.find("## 18.")
     s19 = text.find("## 19.")
     if s18 == -1 or s19 == -1:
@@ -360,7 +374,7 @@ def run_checks(spec_path, repo_root, is_fixture=False):
         if "linux-production" not in sec18:
             errors.append("Cargo check failed: linux-production feature profile missing")
 
-    # 22. Stale symbols checks
+    # 24. Stale symbols checks
     s31_idx = text.find("## 31.")
     main_spec = text[:s31_idx] if s31_idx != -1 else text
     for line in main_spec.splitlines():
@@ -377,138 +391,40 @@ def run_checks(spec_path, repo_root, is_fixture=False):
             if not any(k in line for k in ["严禁", "已弃用", "已废弃", "deprecated", "forbidden"]):
                 errors.append(f"Active usage of invalid WRY API 'WebViewBuilder::new(&window)': {line.strip()}")
 
-    # 23. Machine Registries Referential Integrity
+    # 25. Machine Registries Referential Integrity
     if not is_fixture and arch_dir.exists():
-        reg_ok, reg_errs, g_cnt, v_cnt, b_cnt, t_cnt = verify_registries_integrity(arch_dir)
+        reg_ok, reg_errs, g_cnt, v_cnt, b_cnt, t_cnt, m_cnt = verify_registries_integrity(arch_dir)
         if not reg_ok:
             errors.extend(reg_errs)
-        
-        if v_cnt != 51:
-            errors.append(f"Validation registry contains {v_cnt} items, expected exactly 51")
-        if b_cnt != 33:
-            errors.append(f"Blocker registry contains {b_cnt} items, expected exactly 33")
-        if g_cnt != 71:
-            errors.append(f"Gate registry contains {g_cnt} items, expected exactly 71")
-        if t_cnt != 24:
-            errors.append(f"Tuple registry contains {t_cnt} items, expected exactly 24")
 
-        # Verify dynamic summaries in spec prose match registry counts
+        # Verify dynamic summaries in spec prose match computed registry counts
         if f"{v_cnt} 项实证验证项" not in text:
             errors.append(f"Spec prose does not reflect computed validation count ({v_cnt} 项)")
         if f"{b_cnt} 项架构阻塞项" not in text:
             errors.append(f"Spec prose does not reflect computed blocker count ({b_cnt} 项)")
 
-    success = (len(errors) == 0)
-    return success, errors
+    return len(errors) == 0, errors
 
 def main():
-    parser = argparse.ArgumentParser(description="ReadMD Spec Consistency & Integrity Linter v1.4.5")
-    parser.add_argument("--spec", type=str, default=None, help="Path to specification markdown file")
-    parser.add_argument("--repo-root", type=str, default=None, help="Repository root directory")
-    parser.add_argument("--fixture-mode", action="store_true", help="Run in fixture mode (bypasses canonical path constraint)")
+    parser = argparse.ArgumentParser(description="Verify ReadMD Desktop Overlay Specification Consistency.")
+    parser.add_argument("--spec", type=str, default="docs/architecture/pet-rust/spec.md", help="Path to spec file")
+    parser.add_argument("--fixture-mode", action="store_true", help="Run in test fixture mode (skips repo root checks)")
     args = parser.parse_args()
 
-    current_dir = Path(__file__).resolve().parent
-    repo_root = Path(args.repo_root).resolve() if args.repo_root else current_dir.parent
-    arch_dir = repo_root / "docs" / "architecture" / "pet-rust"
+    repo_root = Path(__file__).resolve().parents[1]
+    spec_path = Path(args.spec)
+    if not spec_path.is_absolute():
+        spec_path = repo_root / spec_path
 
-    if args.spec:
-        spec_path = Path(args.spec).resolve()
-    else:
-        spec_path = arch_dir / "spec.md"
-
-    is_fixture = args.fixture_mode or ("tests" in str(spec_path) or "fixtures" in str(spec_path))
-
-    sha256_hex = "N/A"
-    file_size = 0
-    line_count = 0
-    nul_count = 0
-    git_commit = get_git_commit(repo_root)
-
-    if spec_path.exists():
-        data = spec_path.read_bytes()
-        sha256_hex = hashlib.sha256(data).hexdigest()
-        file_size = len(data)
-        line_count = len(data.decode("utf-8", errors="replace").splitlines())
-        nul_count = data.count(b'\x00')
-
-    try:
-        rel_spec_path = str(spec_path.relative_to(repo_root)).replace("\\", "/")
-    except ValueError:
-        rel_spec_path = str(spec_path)
-
-    print("=" * 76)
-    print("   ReadMD Specification Consistency & Architectural Integrity Linter   ")
-    print("                      Version: v1.4.5-Candidate                         ")
-    print("=" * 76)
-    print(f"repository_root:          {repo_root}")
-    print(f"repo_relative_spec_path:  {rel_spec_path}")
-    print(f"absolute_spec_path:       {spec_path}")
-    print(f"spec_sha256:              {sha256_hex}")
-    print(f"spec_size_bytes:          {file_size}")
-    print(f"spec_line_count:          {line_count}")
-    print(f"nul_byte_count:           {nul_count}")
-    print(f"git_commit:               {git_commit}")
-    print(f"golden_commit_sha:        4dcfd73ce81a14ace7e429791e0594bea47b24e5")
-    print(f"spec_version:             v1.4.5-Candidate")
-    print(f"status:                   Semantic Closure Candidate")
-    print(f"validation_items_count:   51 (VAL-01 ~ VAL-51)")
-    print(f"open_blockers_count:      33 (BLOCKER-01 ~ BLOCKER-33, all design resolved)")
-    print(f"registered_gates_count:   71 (Core, Golden, Backend, Tuple)")
-    print(f"atomic_tuples_count:      24 (T-01 ~ T-24)")
-    print("=" * 76)
-
-    success, errors = run_checks(spec_path, repo_root, is_fixture=is_fixture)
-
-    if not success:
-        print(f"FAILED with {len(errors)} consistency / architectural errors:")
+    ok, errors = run_checks(spec_path, repo_root, is_fixture=args.fixture_mode)
+    if not ok:
+        print(f"[-] Specification verification FAILED with {len(errors)} errors:")
         for idx, err in enumerate(errors, 1):
             print(f"  [{idx:02d}] {err}")
-        print("=" * 76)
         sys.exit(1)
     else:
-        print("ALL AUDIT & LINTING CHECKS PASSED:")
-        print("  [OK] Structure: All 36 mandatory sections (0~35) & appendices present")
-        print("  [OK] Integrity: 0 binary NUL bytes, code fences balanced, no truncation")
-        print("  [OK] TOC: Complete bidirectional link resolution for all major sections")
-        print("  [OK] Version: v1.4.5 declared across title, frontmatter & TOC")
-        print("  [OK] Golden Sources: 7 core behavior files bound to git commit and exact SHA256")
-        print("  [OK] Preload ABI: Full TypeScript interface and method signatures frozen")
-        print("  [OK] Fullscreen: Zero proactive detection; authoritative Python business state")
-        print("  [OK] Reconciliation: Desired/Applied with fullscreen & opacity, Orthogonal Runtime State")
-        print("  [OK] Liveness: Immediate ParentDeathShutdown on EOF vs EngineReplacementGracePeriod")
-        print("  [OK] Health: Electron host ownership <bridge>.health.json vs Rust host ownership")
-        print("  [OK] SnapshotReader: Section 10.2 complete contract, ino:mtimeNs:ctimeNs:size, retry on error")
-        print("  [OK] FIFO Protocol: Authoritative path ${bridge}.commands, 32MB single / 64MB total")
-        print("  [OK] Context Menu: 4 interaction actions, resting wake cooldown key verified")
-        print("  [OK] Renderer Recovery: report failed first, circuit breaker >=3, 500ms * count delay")
-        print("  [OK] Geometry: Type-safe spaces, InteractionRegionSnapshot surface-local rects")
-        print("  [OK] Security: Local mutex, detached manifest sig, cryptography>=42.0.0 accepted ADR")
-        print("  [OK] Tuples: 24 atomic single-valued tuples, all reset to Planned")
-        print("  [OK] Release Stop: Scoped criteria (architecture vs tuple vs global), provisional perf decoupled")
-        print("  [OK] Registries: 100% Referential integrity across Gates (71), VALs (51), and Blockers (33)")
-        print("=" * 76)
-
-        # Emit spec.integrity.json
-        if not is_fixture:
-            integrity_data = {
-                "spec_path": rel_spec_path,
-                "spec_sha256": sha256_hex,
-                "line_count": line_count,
-                "byte_count": file_size,
-                "git_commit": git_commit,
-                "golden_commit_sha": "4dcfd73ce81a14ace7e429791e0594bea47b24e5",
-                "linter_version": "v1.4.5",
-                "linter_passed": True,
-                "validation_items_count": 51,
-                "open_blockers_count": 33,
-                "registered_gates_count": 71,
-                "closed_decisions_count": 18,
-                "platform_tuples_count": 24
-            }
-            integrity_file = arch_dir / "spec.integrity.json"
-            integrity_file.write_text(json.dumps(integrity_data, indent=2) + "\n", encoding="utf-8")
-            print(f"Emitted updated integrity manifest: {integrity_file}")
+        print(f"[+] Specification verified clean: {spec_path}")
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()

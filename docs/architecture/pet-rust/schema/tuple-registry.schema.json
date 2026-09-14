@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TupleRegistrySchema",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": [
+      "display_id",
+      "tuple_key",
+      "os",
+      "os_version",
+      "os_build",
+      "arch",
+      "desktop_environment",
+      "desktop_version",
+      "display_protocol",
+      "compositor",
+      "planned_backend",
+      "backend_binding_status",
+      "lifecycle",
+      "is_phase0_representative"
+    ],
+    "properties": {
+      "display_id": { "type": "string" },
+      "tuple_key": { "type": "string" },
+      "os": { "type": "string" },
+      "os_version": { "type": "string" },
+      "os_build": { "type": "string" },
+      "arch": { "type": "string" },
+      "desktop_environment": { "type": "string" },
+      "desktop_version": { "type": "string" },
+      "display_protocol": { "type": "string" },
+      "compositor": { "type": "string" },
+      "planned_backend": { "type": "string" },
+      "backend_binding_status": { "type": "string" },
+      "lifecycle": { "type": "string" },
+      "is_phase0_representative": { "type": "boolean" }
+    }
+  }
+}
