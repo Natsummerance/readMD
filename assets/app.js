@@ -1259,10 +1259,13 @@ function finishInit() {
   startupServicesStarted = true;
   checkAutostart(); // 初始化开机自启状态
   startControlPoll(); // 启动后端单例 IPC 唤醒与文件打开指令轮询
-  setTimeout(() => checkUpdate(true), 2500); // 延迟 2.5s 静默检查软件更新
+  if (!window.__STARTUP_PROBE__) {
+    setTimeout(() => checkUpdate(true), 2500); // 延迟 2.5s 静默检查软件更新
+  }
 }
 
 function reportNativeReady() {
+  if (!hasPy) bindPy();
   if (hasPy) {
     if (py.report_ready) { try { py.report_ready(); } catch (e) { /* ignore */ } }
     window.__trayOpenFile = loadFileDialog;
@@ -1353,10 +1356,10 @@ function closeStyleModal() {
 window.addEventListener('pywebviewready', async () => {
   const upgraded = !hasPy && bindPy();
   if (upgraded) {
+    reportNativeReady();
     await loadSettings();
     refreshRecent();
     syncDesktopControls();
-    reportNativeReady();
   }
 });
 window.addEventListener('DOMContentLoaded', init);

@@ -1523,6 +1523,9 @@ class Handler(BaseHTTPRequestHandler):
         if app_token:
             data = data.replace(b'<meta name="readmd-app-token" content="">',
                                 ('<meta name="readmd-app-token" content="%s">' % app_token).encode('utf-8'))
+        if _STARTUP_PROBE.get('enabled'):
+            data = data.replace(b'<meta name="readmd-startup-probe" content="0">',
+                                b'<meta name="readmd-startup-probe" content="1">')
         self._send(200, 'text/html; charset=utf-8', data, 'no-store',
                    x_frame_options='DENY')
 
@@ -1534,6 +1537,9 @@ class Handler(BaseHTTPRequestHandler):
             pass
 
     def _api_update_check(self):
+        if _STARTUP_PROBE.get('enabled'):
+            self._send_json(200, {'ok': False, 'error_code': 'probe_mode'})
+            return
         try:
             from src.readmd_modules import updater
             res = updater.check_update(VERSION)
@@ -4969,6 +4975,8 @@ class Api(object):
             return False
 
     def check_update(self):
+        if _STARTUP_PROBE.get('enabled'):
+            return {'ok': False, 'error_code': 'probe_mode'}
         from src.readmd_modules import updater
         return updater.check_update(VERSION)
 
@@ -5749,6 +5757,8 @@ class Api(object):
 
     def check_upgrade(self):
         """启动后前端调用：静默检查 GitHub 最新 Release（失败返回空结果）。"""
+        if _STARTUP_PROBE.get('enabled'):
+            return {}
         try:
             return check_latest_release() or {}
         except Exception:
@@ -6372,6 +6382,12 @@ def main():
     # 页面加载完成（Python 侧兜底；JS report_ready 为精确 page_loaded 打点）
     def _on_loaded():
         milestone('boot', 'window_loaded')
+        if args.startup_probe:
+            def _probe_fallback():
+                time.sleep(0.35)
+                if not api._page_ready:
+                    api.report_ready()
+            threading.Thread(target=_probe_fallback, daemon=True).start()
 
     try:
         window.events.loaded += _on_loaded

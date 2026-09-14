@@ -25,6 +25,8 @@ function bindPy() {
 
 const LAN_TOKEN = window.LAN_TOKEN || null;
 const APP_TOKEN = document.querySelector('meta[name="readmd-app-token"]')?.content || null;
+const IS_STARTUP_PROBE = document.querySelector('meta[name="readmd-startup-probe"]')?.content === '1' || !!window.__STARTUP_PROBE__;
+window.__STARTUP_PROBE__ = IS_STARTUP_PROBE;
 
 function apiFetch(url, opts) {
   opts = opts || {};

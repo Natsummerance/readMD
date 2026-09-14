@@ -226,8 +226,8 @@ def clean_old_update_artifacts():
 
 # GitHub API 在部分网络下会偶发 TLS 连接复位（UNEXPECTED_EOF/超时）：
 # 同一地址先做短退避重试，全部失败再交由调用方降级到镜像列表。
-TRANSIENT_FETCH_ATTEMPTS = 3
-TRANSIENT_FETCH_BACKOFF = (0.5, 1.0)
+TRANSIENT_FETCH_ATTEMPTS = 2
+TRANSIENT_FETCH_BACKOFF = (0.3,)
 
 
 def _open_with_retry(url, timeout):
@@ -286,16 +286,18 @@ class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
         return None
 
 
-def _sniff_latest_tag_redirect(timeout=3.5):
+def _sniff_latest_tag_redirect(timeout=2.5):
     """通过 HTTP 302 重定向 Location 响应头嗅探最新 Release Tag。
 
     免调用 GitHub REST API，不受 API 速率限制影响，并支持通过国内加速镜像探测。
     """
-    candidates = [
-        f'https://github.com/{GITHUB_REPO}/releases/latest',
-        f'https://ghfast.top/https://github.com/{GITHUB_REPO}/releases/latest',
-        f'https://ghproxy.net/https://github.com/{GITHUB_REPO}/releases/latest',
-    ]
+    candidates = [f'https://github.com/{GITHUB_REPO}/releases/latest']
+    is_ci = os.environ.get('CI') == 'true' or os.environ.get('GITHUB_ACTIONS') == 'true'
+    if not is_ci:
+        candidates.extend([
+            f'https://ghfast.top/https://github.com/{GITHUB_REPO}/releases/latest',
+            f'https://ghproxy.net/https://github.com/{GITHUB_REPO}/releases/latest',
+        ])
     opener = urllib.request.build_opener(_NoRedirectHandler)
     tag_re = re.compile(r'/releases/tag/([^/?#\s]+)')
 
@@ -325,16 +327,18 @@ def _sniff_latest_tag_redirect(timeout=3.5):
     return None
 
 
-def _fetch_manifest_assets(tag_name, timeout=4.0):
+def _fetch_manifest_assets(tag_name, timeout=2.5):
     """从官方及加速源获取指定 Tag 的 SHA256SUMS.txt，并逆向装配 Release 资产元数据。"""
     if not tag_name:
         return None
 
-    manifest_urls = [
-        f'https://github.com/{GITHUB_REPO}/releases/download/{tag_name}/SHA256SUMS.txt',
-        f'https://ghfast.top/https://github.com/{GITHUB_REPO}/releases/download/{tag_name}/SHA256SUMS.txt',
-        f'https://ghproxy.net/https://github.com/{GITHUB_REPO}/releases/download/{tag_name}/SHA256SUMS.txt',
-    ]
+    manifest_urls = [f'https://github.com/{GITHUB_REPO}/releases/download/{tag_name}/SHA256SUMS.txt']
+    is_ci = os.environ.get('CI') == 'true' or os.environ.get('GITHUB_ACTIONS') == 'true'
+    if not is_ci:
+        manifest_urls.extend([
+            f'https://ghfast.top/https://github.com/{GITHUB_REPO}/releases/download/{tag_name}/SHA256SUMS.txt',
+            f'https://ghproxy.net/https://github.com/{GITHUB_REPO}/releases/download/{tag_name}/SHA256SUMS.txt',
+        ])
 
     manifest_text = None
     for url in manifest_urls:
@@ -379,7 +383,7 @@ def _fetch_manifest_assets(tag_name, timeout=4.0):
     return assets
 
 
-def check_update(current_version, timeout=4):
+def check_update(current_version, timeout=2.5):
     """请求 GitHub API 获取最新 Release 信息（支持多级国内加速降级与 302 嗅探），并返回更新详情。"""
     data = None
     urls_to_try = _release_check_urls(current_version)

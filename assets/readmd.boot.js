@@ -96,6 +96,8 @@ function bindPy() {
 
 const LAN_TOKEN = window.LAN_TOKEN || null;
 const APP_TOKEN = document.querySelector('meta[name="readmd-app-token"]')?.content || null;
+const IS_STARTUP_PROBE = document.querySelector('meta[name="readmd-startup-probe"]')?.content === '1' || !!window.__STARTUP_PROBE__;
+window.__STARTUP_PROBE__ = IS_STARTUP_PROBE;
 
 function apiFetch(url, opts) {
   opts = opts || {};
@@ -15973,6 +15975,7 @@ let isUpdating = false;
 let upgradeUrl = null;
 
 async function checkUpdate(silent = true) {
+  if (window.__STARTUP_PROBE__) return;
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   try {
     let res = null;
@@ -15980,10 +15983,18 @@ async function checkUpdate(silent = true) {
       res = await py.check_update();
     } else {
       const resp = await fetch('/api/update/check');
-      if (resp.ok) res = await resp.json();
+      res = await resp.json().catch(() => null);
     }
     if (!res || !res.ok) {
-      if (!silent) showToast(res && res.error ? _t('update.checkFail') + '：' + res.error : _t('update.checkFail'));
+      if (!silent) {
+        let msg = _t('update.checkFail');
+        if (res && res.error) {
+          msg = _t('update.checkFail') + '：' + res.error;
+        } else if (res && res.error_code === 'update_network_error') {
+          msg = _t('update.failed');
+        }
+        showToast(msg);
+      }
       return;
     }
     if (res && res.current_version) {
@@ -17755,10 +17766,13 @@ function finishInit() {
   startupServicesStarted = true;
   checkAutostart(); // 初始化开机自启状态
   startControlPoll(); // 启动后端单例 IPC 唤醒与文件打开指令轮询
-  setTimeout(() => checkUpdate(true), 2500); // 延迟 2.5s 静默检查软件更新
+  if (!window.__STARTUP_PROBE__) {
+    setTimeout(() => checkUpdate(true), 2500); // 延迟 2.5s 静默检查软件更新
+  }
 }
 
 function reportNativeReady() {
+  if (!hasPy) bindPy();
   if (hasPy) {
     if (py.report_ready) { try { py.report_ready(); } catch (e) { /* ignore */ } }
     window.__trayOpenFile = loadFileDialog;
@@ -17849,10 +17863,10 @@ function closeStyleModal() {
 window.addEventListener('pywebviewready', async () => {
   const upgraded = !hasPy && bindPy();
   if (upgraded) {
+    reportNativeReady();
     await loadSettings();
     refreshRecent();
     syncDesktopControls();
-    reportNativeReady();
   }
 });
 window.addEventListener('DOMContentLoaded', init);

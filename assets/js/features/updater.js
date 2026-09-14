@@ -9,6 +9,7 @@ let isUpdating = false;
 let upgradeUrl = null;
 
 async function checkUpdate(silent = true) {
+  if (window.__STARTUP_PROBE__) return;
   const _t = (k, p) => window.i18n ? window.i18n.t(k, p) : k;
   try {
     let res = null;
