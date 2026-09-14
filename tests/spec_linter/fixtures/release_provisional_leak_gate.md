@@ -181,7 +181,7 @@ export interface ReadMDPetPreloadABI {
 ## 2. 桌面级 Shell 保真度契约
 
 ### 2.1 普通用户交互隔离 (P0-104)
-普通用户设置项中提供 desktop_pet_engine: ["electron", "rust"] 单选下拉列表。
+普通用户界面严禁出现 `electron` / `rust` 底层技术名词，仅提供“随主程序内嵌”与“独立桌面浮窗”两种业务开关。
 
 ### 2.2 启动登录态原子传递 (P1-131)
 启动子进程时，通过标准输入（stdin）或受控临时 IPC 管道注入会话凭证，严禁暴露在进程命令行参数中。
@@ -752,7 +752,7 @@ $$\forall v \in \text{Validations}(\text{applies\_to}(T)), \quad v == \text{PASS
 当且仅当本期规划发布所必需的目标平台元组均已获得 **Certified** 认证，且：
 1. 无未处理的核心缺陷；
 2. 异常退出率 $= 0.00\%$；
-3. 若存在经批准的平台性能预算，实测内存泄露指标不得超出该预算。
+3. 72 小时内存泄露斜率 > 0.05 MiB/h 立即熔断发布。
 
 ---
 

@@ -6,6 +6,10 @@
     "blocking_gate": "Gate-LayerShell-02",
     "associated_blockers": [
       "BLOCKER-01"
+    ],
+    "scope": "backend",
+    "applies_to": [
+      "wayland-layershell"
     ]
   },
   {
@@ -15,6 +19,10 @@
     "blocking_gate": "Gate-LayerShell-01",
     "associated_blockers": [
       "BLOCKER-02"
+    ],
+    "scope": "backend",
+    "applies_to": [
+      "wayland-layershell"
     ]
   },
   {
@@ -22,7 +30,11 @@
     "area": "Layer-Shell 按需输入法",
     "risk_and_physical_facts": "合成器对 zwlr_layer_shell_v1 v4+ KeyboardMode::OnDemand 的支持率",
     "blocking_gate": "Gate-LayerShell-03",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "backend",
+    "applies_to": [
+      "wayland-layershell"
+    ]
   },
   {
     "id": "VAL-04",
@@ -31,6 +43,10 @@
     "blocking_gate": "Gate-GnomeCompanion-02",
     "associated_blockers": [
       "BLOCKER-03"
+    ],
+    "scope": "backend",
+    "applies_to": [
+      "gnome-wayland"
     ]
   },
   {
@@ -40,6 +56,10 @@
     "blocking_gate": "CERT-WIN11-ARM64",
     "associated_blockers": [
       "BLOCKER-05"
+    ],
+    "scope": "tuple",
+    "applies_to": [
+      "windows-11-24h2-arm64-dwm-win32"
     ]
   },
   {
@@ -47,7 +67,11 @@
     "area": "国产 Linux 发行版依赖",
     "risk_and_physical_facts": "统信 UOS / 麒麟软件源中 webkit2gtk-4.1 的预装与动态链接一致性",
     "blocking_gate": "CERT-UOS20-X64",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "tuple",
+    "applies_to": [
+      "uos-20-sp1-x64-x11-x11backend"
+    ]
   },
   {
     "id": "VAL-07",
@@ -56,6 +80,10 @@
     "blocking_gate": "Gate-Linux-Universal",
     "associated_blockers": [
       "BLOCKER-04"
+    ],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ]
   },
   {
@@ -63,63 +91,99 @@
     "area": "muda GTK 菜单在 KWin Wayland",
     "risk_and_physical_facts": "KWin 环境下右键弹出菜单的准确定位、失焦关闭与层级行为",
     "blocking_gate": "Gate-Menu-KWin-Wayland",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "backend",
+    "applies_to": [
+      "wayland-layershell"
+    ]
   },
   {
     "id": "VAL-09",
     "area": "muda GTK 菜单在 GNOME Wayland",
     "risk_and_physical_facts": "Mutter 环境下右键弹出菜单的输入捕获释放与穿透恢复",
     "blocking_gate": "Gate-Menu-GNOME-Wayland",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "backend",
+    "applies_to": [
+      "gnome-wayland"
+    ]
   },
   {
     "id": "VAL-10",
     "area": "WRY custom DnD 副作用",
     "risk_and_physical_facts": "Windows 上启用 with_drag_drop_handler 时渲染端 DOM 与文件拖放回归",
     "blocking_gate": "Gate-Core-10",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ]
   },
   {
     "id": "VAL-11",
     "area": "调和状态机事件序列 Fuzz",
     "risk_and_physical_facts": "proptest 50,000 条极端并发事件序列下的状态不变性与防死锁",
     "blocking_gate": "Gate-Core-11",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ]
   },
   {
     "id": "VAL-12",
     "area": "LayerShell 全局转局部坐标映射",
     "risk_and_physical_facts": "多屏排布下 VirtualDesktopMapper 的边距计算与跨屏对齐",
     "blocking_gate": "Gate-LayerShell-04",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "backend",
+    "applies_to": [
+      "wayland-layershell"
+    ]
   },
   {
     "id": "VAL-13",
     "area": "GNOME move_frame 混合 DPI 映射",
     "risk_and_physical_facts": "混合缩放比例下 GnomeCoordinateMapper 与 Mutter Stage 坐标一致性",
     "blocking_gate": "Gate-GnomeCompanion-03",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "backend",
+    "applies_to": [
+      "gnome-wayland"
+    ]
   },
   {
     "id": "VAL-14",
     "area": "GNOME Legacy (<=44) Companion",
     "risk_and_physical_facts": "Ubuntu 22.04 / Debian 12 下 GJS imports 扩展加载与通信",
     "blocking_gate": "CERT-UBUNTU22-X64",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "tuple",
+    "applies_to": [
+      "ubuntu-22.04-gnome42-x64-x11-x11backend"
+    ]
   },
   {
     "id": "VAL-15",
     "area": "GNOME ESM (>=45) Companion",
     "risk_and_physical_facts": "Ubuntu 24.04 / Fedora 39+ 下 ESM 扩展加载、热重载与会话恢复",
     "blocking_gate": "CERT-UBUNTU24-X64",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "tuple",
+    "applies_to": [
+      "ubuntu-24.04-gnome46-x64-wayland-gnomecompanion"
+    ]
   },
   {
     "id": "VAL-16",
     "area": "Windows HTTPS 资产 Scheme",
     "risk_and_physical_facts": "Windows 10/11 下 with_https_scheme(true) 与最低运行时能力探针",
     "blocking_gate": "Gate-Asset-HTTPS-Win",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ]
   },
   {
     "id": "VAL-17",
@@ -128,6 +192,10 @@
     "blocking_gate": "Gate-Asset-Sandbox",
     "associated_blockers": [
       "BLOCKER-16"
+    ],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ]
   },
   {
@@ -135,14 +203,22 @@
     "area": "统信 UOS 运行时 WebKitGTK 验证",
     "risk_and_physical_facts": "UOS 20 SP1 物理机环境下动态链接库真实加载实证",
     "blocking_gate": "CERT-UOS20-ARM64",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "tuple",
+    "applies_to": [
+      "uos-20-sp1-arm64-x11-x11backend"
+    ]
   },
   {
     "id": "VAL-19",
     "area": "银河麒麟运行时 WebKitGTK 验证",
     "risk_and_physical_facts": "Kylin V10 SP1 物理机环境下动态链接库真实加载实证",
     "blocking_gate": "CERT-KYLIN10-ARM64",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "tuple",
+    "applies_to": [
+      "kylin-v10-sp1-arm64-x11-x11backend"
+    ]
   },
   {
     "id": "VAL-20",
@@ -151,6 +227,10 @@
     "blocking_gate": "CERT-MACOS-ALL",
     "associated_blockers": [
       "BLOCKER-15"
+    ],
+    "scope": "backend",
+    "applies_to": [
+      "macos"
     ]
   },
   {
@@ -160,6 +240,10 @@
     "blocking_gate": "Gate-LayerShell-05",
     "associated_blockers": [
       "BLOCKER-09"
+    ],
+    "scope": "backend",
+    "applies_to": [
+      "wayland-layershell"
     ]
   },
   {
@@ -169,6 +253,10 @@
     "blocking_gate": "Gate-GnomeCompanion-04",
     "associated_blockers": [
       "BLOCKER-10"
+    ],
+    "scope": "backend",
+    "applies_to": [
+      "gnome-wayland"
     ]
   },
   {
@@ -176,7 +264,11 @@
     "area": "GNOME Companion 畸形 IPC Fuzz",
     "risk_and_physical_facts": "极端非法 JSON 与畸形指令下 GNOME Shell 进程零崩溃证明",
     "blocking_gate": "Gate-GnomeCompanion-05",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "backend",
+    "applies_to": [
+      "gnome-wayland"
+    ]
   },
   {
     "id": "VAL-24",
@@ -185,6 +277,10 @@
     "blocking_gate": "Gate-LayerShell-06",
     "associated_blockers": [
       "BLOCKER-13"
+    ],
+    "scope": "backend",
+    "applies_to": [
+      "wayland-layershell"
     ]
   },
   {
@@ -194,6 +290,10 @@
     "blocking_gate": "Gate-IPC-Generation",
     "associated_blockers": [
       "BLOCKER-11"
+    ],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ]
   },
   {
@@ -203,6 +303,10 @@
     "blocking_gate": "Gate-Core-Reconciliation",
     "associated_blockers": [
       "BLOCKER-12"
+    ],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ]
   },
   {
@@ -213,6 +317,10 @@
     "associated_blockers": [
       "BLOCKER-06",
       "BLOCKER-08"
+    ],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ]
   },
   {
@@ -222,6 +330,10 @@
     "blocking_gate": "Gate-Linux-MudaTargetIsolation",
     "associated_blockers": [
       "BLOCKER-07"
+    ],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ]
   },
   {
@@ -231,6 +343,10 @@
     "blocking_gate": "CERT-GNOME50-X64",
     "associated_blockers": [
       "BLOCKER-14"
+    ],
+    "scope": "tuple",
+    "applies_to": [
+      "fedora-42-gnome50-x64-wayland-gnomecompanion"
     ]
   },
   {
@@ -240,6 +356,10 @@
     "blocking_gate": "CERT-MACOS26-ARM64",
     "associated_blockers": [
       "BLOCKER-15"
+    ],
+    "scope": "tuple",
+    "applies_to": [
+      "macos-26-tahoe-arm64-quartz-cocoa"
     ]
   },
   {
@@ -249,6 +369,10 @@
     "blocking_gate": "Gate-LayerShell-06",
     "associated_blockers": [
       "BLOCKER-27"
+    ],
+    "scope": "backend",
+    "applies_to": [
+      "wayland-layershell"
     ]
   },
   {
@@ -259,6 +383,10 @@
     "associated_blockers": [
       "BLOCKER-17",
       "BLOCKER-18"
+    ],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ]
   },
   {
@@ -268,6 +396,10 @@
     "blocking_gate": "Gate-Golden-Bounds",
     "associated_blockers": [
       "BLOCKER-19"
+    ],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ]
   },
   {
@@ -277,21 +409,33 @@
     "blocking_gate": "Gate-Golden-Differential",
     "associated_blockers": [
       "BLOCKER-21"
+    ],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ]
   },
   {
     "id": "VAL-35",
     "area": "Golden menu model differential",
-    "risk_and_physical_facts": "实测右键菜单 5 项动作顺序、header 禁用、Play 能量阈值 (>=10) 与最大 128 角色单选列表",
+    "risk_and_physical_facts": "实测右键菜单 4 项互动动作 (Pet, Feed, Play, Rest/Wake)、Characters 子菜单、Open reader、disabled header 与 separators 顺序",
     "blocking_gate": "Gate-Golden-Menu",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ]
   },
   {
     "id": "VAL-36",
     "area": "Golden clipboard payload differential",
     "risk_and_physical_facts": "实测 4M 字符文本截断、24M 字符 base64 PNG 截断与 Windows 128 路径解析的一致性",
     "blocking_gate": "Gate-Golden-Clipboard",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ]
   },
   {
     "id": "VAL-37",
@@ -300,6 +444,10 @@
     "blocking_gate": "Gate-Golden-FIFO",
     "associated_blockers": [
       "BLOCKER-20"
+    ],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ]
   },
   {
@@ -307,7 +455,11 @@
     "area": "Golden SnapshotReader retry parity",
     "risk_and_physical_facts": "构造非法 JSON snapshot 验证签名未被污染，后续合法 snapshot 能立即被识别与消费",
     "blocking_gate": "Gate-Golden-Differential",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ]
   },
   {
     "id": "VAL-39",
@@ -316,6 +468,10 @@
     "blocking_gate": "Gate-Golden-HitRegion",
     "associated_blockers": [
       "BLOCKER-26"
+    ],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ]
   },
   {
@@ -323,7 +479,11 @@
     "area": "Golden pushState / anti-snapback differential",
     "risk_and_physical_facts": "实测 pushState 下发时以实际当前窗口 bounds 覆盖 snapshot bounds，防止拖拽后回弹",
     "blocking_gate": "Gate-Golden-AntiSnapback",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ]
   },
   {
     "id": "VAL-41",
@@ -332,6 +492,10 @@
     "blocking_gate": "Gate-Win32-VirtualDesktop",
     "associated_blockers": [
       "BLOCKER-25"
+    ],
+    "scope": "backend",
+    "applies_to": [
+      "windows"
     ]
   },
   {
@@ -341,6 +505,10 @@
     "blocking_gate": "Gate-Crypto-DetachedSig",
     "associated_blockers": [
       "BLOCKER-28"
+    ],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ]
   },
   {
@@ -348,6 +516,115 @@
     "area": "Asset sandbox TOCTOU threat-model/handle test",
     "risk_and_physical_facts": "在只读托管沙盒根目录下模拟同用户重解析点与符号链接交换，验证只读受管根的不可变防御边界",
     "blocking_gate": "Gate-Asset-TOCTOU",
-    "associated_blockers": []
+    "associated_blockers": [],
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ]
+  },
+  {
+    "id": "VAL-44",
+    "area": "Runtime Security & Packaging",
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ],
+    "risk_and_physical_facts": "Production signature verifier dependency (cryptography>=42.0) availability across all supported OS/arch packaging matrices",
+    "blocking_gate": "Gate-Crypto-VerifierPackaging",
+    "associated_blockers": [
+      "BLOCKER-28"
+    ]
+  },
+  {
+    "id": "VAL-45",
+    "area": "Wayland Hit Geometry Transformation",
+    "scope": "backend",
+    "applies_to": [
+      "wayland"
+    ],
+    "risk_and_physical_facts": "Renderer CSS/local geometry -> SurfaceLocalDip -> wl_region coordinate transform parity under fractional scaling (1.25x, 1.5x, 2.0x)",
+    "blocking_gate": "Gate-Wayland-TransformParity",
+    "associated_blockers": [
+      "BLOCKER-02",
+      "BLOCKER-26"
+    ]
+  },
+  {
+    "id": "VAL-46",
+    "area": "GNOME Shell Companion Click-Through",
+    "scope": "backend",
+    "applies_to": [
+      "gnome-wayland"
+    ],
+    "risk_and_physical_facts": "GNOME Companion input-region and click-through implementation path (GTK/GDK client surface region vs Mutter Shell-side)",
+    "blocking_gate": "Gate-GnomeCompanion-ClickThrough",
+    "associated_blockers": [
+      "BLOCKER-03"
+    ]
+  },
+  {
+    "id": "VAL-47",
+    "area": "GNOME Multi-Window Disambiguation",
+    "scope": "backend",
+    "applies_to": [
+      "gnome-wayland"
+    ],
+    "risk_and_physical_facts": "GNOME Peer PID + GTK app ID (asia.readmd.pet) + window tag deterministically resolving single Meta.Window among multiple process surfaces",
+    "blocking_gate": "Gate-GnomeCompanion-Disambiguation",
+    "associated_blockers": [
+      "BLOCKER-10"
+    ]
+  },
+  {
+    "id": "VAL-48",
+    "area": "Security Epoch Rollback Defense",
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ],
+    "risk_and_physical_facts": "security_epoch persistent state machine rejecting outdated manifest replays across portable, reinstall, and profile reset flows",
+    "blocking_gate": "Gate-Crypto-RollbackProtection",
+    "associated_blockers": [
+      "BLOCKER-28"
+    ]
+  },
+  {
+    "id": "VAL-49",
+    "area": "Health Protocol Ownership & Atomic Write",
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ],
+    "risk_and_physical_facts": "Electron host main process owns <bridge>.health.json, Rust host owns <bridge>.rust.health.json, temp file + atomic rename parity",
+    "blocking_gate": "Gate-Golden-Health",
+    "associated_blockers": [
+      "BLOCKER-31"
+    ]
+  },
+  {
+    "id": "VAL-50",
+    "area": "Parent Liveness Prompt Teardown",
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ],
+    "risk_and_physical_facts": "Parent pipe EOF triggers immediate shutdown without 2.5s delay; orchestrator replacement maintains <=2500ms timeout",
+    "blocking_gate": "Gate-Golden-ParentDeath",
+    "associated_blockers": [
+      "BLOCKER-32"
+    ]
+  },
+  {
+    "id": "VAL-51",
+    "area": "Golden SnapshotReader Retry Differential",
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ],
+    "risk_and_physical_facts": "SnapshotReader exact signature (${ino}:${mtimeNs}:${ctimeNs}:${size}), 32MB limit, format_version:1, parse failure never poisons signature",
+    "blocking_gate": "Gate-Golden-SnapshotReader",
+    "associated_blockers": [
+      "BLOCKER-33"
+    ]
   }
 ]

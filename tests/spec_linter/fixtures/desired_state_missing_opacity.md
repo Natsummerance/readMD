@@ -181,7 +181,7 @@ export interface ReadMDPetPreloadABI {
 ## 2. 桌面级 Shell 保真度契约
 
 ### 2.1 普通用户交互隔离 (P0-104)
-普通用户设置项中提供 desktop_pet_engine: ["electron", "rust"] 单选下拉列表。
+普通用户界面严禁出现 `electron` / `rust` 底层技术名词，仅提供“随主程序内嵌”与“独立桌面浮窗”两种业务开关。
 
 ### 2.2 启动登录态原子传递 (P1-131)
 启动子进程时，通过标准输入（stdin）或受控临时 IPC 管道注入会话凭证，严禁暴露在进程命令行参数中。
@@ -426,7 +426,6 @@ pub struct DesiredOverlayState {
     pub visible: bool,
     pub fullscreen: bool,
     pub bounds: BridgeDipRect,
-    pub opacity: f64,
     pub renderer: RendererKind,
     pub snapshot_revision: u64,
 }
@@ -436,7 +435,6 @@ pub struct AppliedOverlayState {
     pub surface_exists: bool,
     pub visible: bool,
     pub bounds: BridgeDipRect,
-    pub opacity: f64,
     pub renderer: RendererKind,
     pub backend_generation: u64,
     pub navigation_generation: u64,

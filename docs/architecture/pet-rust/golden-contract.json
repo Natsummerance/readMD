@@ -1,247 +1,251 @@
 {
-  "$schema": "./golden-contract.schema.json",
-  "version": "1.4.4",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "v1.4.5",
   "golden_commit_sha": "4dcfd73ce81a14ace7e429791e0594bea47b24e5",
   "behavior_sources": {
     "packages/readmd-hermes-pet-adapter/src/electron-main.ts": {
-      "role": "Host process lifecycle, clamp bounds, context menu, recoveries, clipboard forwarding",
-      "sha256": "0a1b6473d155f8121d77d1463316a7968b0d973f76bb6080f4abb58de65a269d",
-      "bytes": 14929
+      "role": "主窗口生命周期、右键菜单模型、托盘与剪贴板捕获",
+      "key_lines": "L87-L142, L165-L172, L195-L202, L226-L237",
+      "byte_size": 14929,
+      "sha256": "0a1b6473d155f8121d77d1463316a7968b0d973f76bb6080f4abb58de65a269d"
     },
     "packages/readmd-hermes-pet-adapter/src/preload.ts": {
-      "role": "Isolated context bridge exposing hermesDesktop.petOverlay and readmdPet.dropFiles",
-      "sha256": "fafeb3c1e5241efe3c25646f4ec1cb818ca46a17e375f85e3e16710963df1179",
-      "bytes": 1883
+      "role": "Preload ABI 上下文暴露 (window.__HERMES_PET__)",
+      "key_lines": "L1-L40",
+      "byte_size": 1883,
+      "sha256": "fafeb3c1e5241efe3c25646f4ec1cb818ca46a17e375f85e3e16710963df1179"
     },
     "packages/readmd-hermes-pet-adapter/src/bridge-transport.ts": {
-      "role": "Atomic snapshot reader and durable bounded FIFO command queue publisher",
-      "sha256": "7055deed1d644687fe8fc1a3adff39fba85185644903e334be6b502397100723",
-      "bytes": 2276
+      "role": "Durable FIFO 队列与 SnapshotReader 严格原子读取器",
+      "key_lines": "L8-L29, L31-L53",
+      "byte_size": 2276,
+      "sha256": "7055deed1d644687fe8fc1a3adff39fba85185644903e334be6b502397100723"
     },
     "packages/readmd-hermes-pet-adapter/src/renderer.tsx": {
-      "role": "Renderer mount point, stage switching (live2d vs sprite), ready/failed signaling",
-      "sha256": "5bbbd06c222c572d75b68b10bb09e910a5e02e6f1e89475a9811d0934dccaa36",
-      "bytes": 2002
+      "role": "前端 React 挂载、状态驱动、错误边界与控制事件分发",
+      "key_lines": "L6-L44",
+      "byte_size": 2002,
+      "sha256": "5bbbd06c222c572d75b68b10bb09e910a5e02e6f1e89475a9811d0934dccaa36"
     },
     "packages/readmd-hermes-pet-adapter/src/live2d/stage.ts": {
-      "role": "Live2D Pixi stage, model hit testing (hitTest OR bounds.contains), render loop",
-      "sha256": "bec994ed0a299fd7f05156f54cef6fa06da750f96f6f931a547313bd3e64522a",
-      "bytes": 19525
+      "role": "Live2D 舞台命中判定 (hitTest || bounds.contains)",
+      "key_lines": "L125-L135",
+      "byte_size": 19525,
+      "sha256": "bec994ed0a299fd7f05156f54cef6fa06da750f96f6f931a547313bd3e64522a"
     },
     "third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts": {
-      "role": "Vendor Hermes overlay IPC handlers (open, set-bounds with resizable toggle, ignore-mouse)",
-      "sha256": "5c99fce416fece34d0fb66fdb662af0fb0169b9c4e8aae71977f9a46ac171d8d",
-      "bytes": 5824
+      "role": "上游宠物 IPC 管道与窗口穿透控制",
+      "key_lines": "L1-L150",
+      "byte_size": 5824,
+      "sha256": "5c99fce416fece34d0fb66fdb662af0fb0169b9c4e8aae71977f9a46ac171d8d"
     },
     "src/readmd_modules/pet/hermes_adapter.py": {
-      "role": "Python host process adapter, bridge state writer, FIFO queue consumer, health reader",
-      "sha256": "2a2f09188d3f9f6f52ac9a0a0571d3a94eaf2e385949184ef24058f3ec5b03ee",
-      "bytes": 33603
+      "role": "Python 宿主控制逻辑、生命周期与剪贴板 FIFO 响应",
+      "key_lines": "L309-L322, L364-L390",
+      "byte_size": 33603,
+      "sha256": "2a2f09188d3f9f6f52ac9a0a0571d3a94eaf2e385949184ef24058f3ec5b03ee"
     }
   },
   "supporting_evidence": {
     "packages/readmd-hermes-pet-adapter/package.json": {
-      "sha256": "ee63a91062219ea13672d4440246745f5eb821573a3007b30a7385e857780600",
-      "bytes": 709
+      "role": "依赖版本与包元数据",
+      "key_lines": "L1-L30",
+      "byte_size": 709,
+      "sha256": "ee63a91062219ea13672d4440246745f5eb821573a3007b30a7385e857780600"
     },
     "packages/readmd-hermes-pet-adapter/src/pet-life.ts": {
-      "sha256": "21ef9bf62592d4d00a3b99cd3fd6f50944245fb26ac1f51cd3f3ad2db20d1dd5",
-      "bytes": 12123
+      "role": "宠物伴侣状态机与角色属性定义",
+      "key_lines": "L1-L150",
+      "byte_size": 12123,
+      "sha256": "21ef9bf62592d4d00a3b99cd3fd6f50944245fb26ac1f51cd3f3ad2db20d1dd5"
     }
   },
   "preload_abi": {
-    "namespace_hermesDesktop": "window.hermesDesktop.petOverlay",
+    "interface_name": "ReadMDPetPreloadABI",
+    "global_paths": [
+      "window.__HERMES_PET__",
+      "window.hermesDesktop.petOverlay",
+      "window.readmdPet"
+    ],
     "methods": {
-      "open": {
-        "signature": "(request?: { bounds?: unknown; screen?: boolean }) => Promise<{ ok: boolean; bounds?: unknown }>",
-        "kind": "async_invoke"
-      },
-      "close": {
-        "signature": "() => Promise<{ ok: boolean }>",
-        "kind": "async_invoke"
-      },
-      "setBounds": {
-        "signature": "(bounds: { x: number; y: number; width: number; height: number }) => void",
-        "kind": "sync_send"
-      },
-      "setIgnoreMouse": {
-        "signature": "(ignore: boolean) => void",
-        "kind": "sync_send"
-      },
-      "setFocusable": {
-        "signature": "(focusable: boolean) => void",
-        "kind": "sync_send"
-      },
-      "pushState": {
-        "signature": "(payload: unknown) => void",
-        "kind": "sync_send"
-      },
-      "control": {
-        "signature": "(payload: { type: string; [key: string]: unknown }) => void",
-        "kind": "sync_send",
-        "exact_param_count": 1
-      },
-      "onState": {
-        "signature": "(callback: (payload: unknown) => void) => () => void",
-        "kind": "subscribe_listener",
-        "returns_unsubscribe": true
-      },
-      "onControl": {
-        "signature": "(callback: (payload: unknown) => void) => () => void",
-        "kind": "subscribe_listener",
-        "returns_unsubscribe": true
-      }
-    },
-    "namespace_readmdPet": "window.readmdPet",
-    "methods_readmdPet": {
-      "dropFiles": {
-        "signature": "(files: File[]) => void",
-        "kind": "sync_send",
-        "max_files": 128
-      }
+      "open": "open(bounds: Bounds, renderer?: string) => Promise<boolean>",
+      "close": "close() => Promise<boolean>",
+      "setBounds": "setBounds(bounds: Bounds) => void",
+      "setIgnoreMouse": "setIgnoreMouse(ignore: boolean, options?: { forward?: boolean }) => void",
+      "setFocusable": "setFocusable(focusable: boolean) => void",
+      "pushState": "pushState(payload: unknown) => void",
+      "control": "control(payload: { action?: string; type?: string; [key: string]: unknown }) => void",
+      "onState": "onState(listener: (payload: any) => void) => () => void",
+      "onControl": "onControl(listener: (payload: any) => void) => () => void",
+      "dropFiles": "dropFiles(files: string[]) => void"
     }
   },
   "bounds_policies": {
-    "HostSnapshotBoundsPolicy": {
-      "source": "readmd-hermes-pet-adapter/src/electron-main.ts (clampBounds)",
-      "width_min": 240,
-      "width_max": 640,
-      "width_default": 300,
-      "height_min": 300,
-      "height_max": 720,
-      "height_default": 420,
-      "x_default": 72,
-      "y_default": 72,
-      "work_area_visibility_margin": 40,
-      "offscreen_fallback": {
-        "margin_x": 12,
-        "margin_y": 12,
-        "inset_x": 24,
-        "inset_y": 24,
-        "formula_x": "primary.x + max(12, primary.width - width - 24)",
-        "formula_y": "primary.y + max(12, primary.height - height - 24)"
+    "host_snapshot_bounds": {
+      "min_width": 240,
+      "min_height": 300,
+      "max_width": 640,
+      "max_height": 720,
+      "min_overlap_dip": 40,
+      "offscreen_margins": {
+        "top": -12,
+        "left": -12,
+        "bottom": -24,
+        "right": -24
       },
-      "snapping_threshold": null
+      "snap_distance_dip": 0
     },
-    "RendererInteractiveBoundsPolicy": {
-      "source": "third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts (hermes:pet-overlay:set-bounds)",
-      "width_min": 80,
-      "height_min": 80,
-      "temporary_resizable_toggle": true
+    "renderer_interactive_bounds": {
+      "min_width": 80,
+      "min_height": 80,
+      "allow_temporary_resize": true,
+      "snap_distance_dip": 0
     }
   },
   "hit_region_contract": {
     "live2d": {
-      "source": "packages/readmd-hermes-pet-adapter/src/live2d/stage.ts",
-      "rule": "areas = typeof model.hitTest === 'function' ? model.hitTest(x, y) : []; return (Array.isArray(areas) && areas.length > 0) || Boolean(model.getBounds?.().contains(x, y))",
-      "logical_expression": "(model.hitTest(x, y).length > 0) || (model.getBounds().contains(x, y))"
+      "source": "packages/readmd-hermes-pet-adapter/src/live2d/stage.ts L128-L129",
+      "formula": "(model.hitTest(x, y).length > 0) || (model.getBounds().contains(x, y))"
     },
     "sprite": {
-      "source": "packages/readmd-hermes-pet-adapter/src/renderer.tsx / overlay-root",
-      "rule": "DOM rect of sprite element or canvas active bounds"
+      "source": "third_party/hermes-agent-pet/apps/desktop/src/app/pet-overlay/pet-overlay-app.tsx L132-L165",
+      "rules": [
+        "if target outside petRef => return false (pass through)",
+        "if !(target instanceof HTMLCanvasElement) => return true (interactive DOM chrome: bubble, mail button, composer)",
+        "if target is HTMLCanvasElement => sample 2D context pixel alpha at (px, py): return alpha >= 16 (ALPHA_HIT_THRESHOLD)",
+        "if canvas read throws or context is tainted => return true (fail-open so pet remains grabbable)"
+      ],
+      "alpha_hit_threshold": 16
     }
   },
   "toggle_app_contract": {
-    "trigger": "control({ type: 'toggle-app' })",
-    "action": "read clipboard (text max 4M chars, image_png max 24M chars, paths max 128) -> writeCommand(clipboardCommand())",
-    "banned_behavior": "show/minimize main window (vendor default superseded by ReadMD adapter topology)"
+    "source": "src/readmd_modules/pet/hermes_adapter.py L309-L322",
+    "action": "Reads system clipboard (text, PNG image, file paths) and writes { type: 'clipboard', text, image_png, paths } to FIFO. Never toggles window minimize/restore directly."
   },
   "context_menu_contract": {
-    "items_order": [
-      {
-        "type": "header",
-        "label": "Level N · Energy N · Mood N",
-        "enabled": false
-      },
-      {
-        "type": "separator"
-      },
-      {
-        "type": "action",
-        "label": "Pet",
-        "enabled_rule": "cooldown === 0"
-      },
-      {
-        "type": "action",
-        "label": "Feed",
-        "enabled_rule": "cooldown === 0"
-      },
-      {
-        "type": "action",
-        "label": "Play",
-        "enabled_rule": "energy >= 10 && cooldown === 0"
-      },
-      {
-        "type": "action",
-        "label_resting": "Wake up",
-        "label_active": "Rest",
-        "enabled_rule": "cooldown === 0"
-      },
-      {
-        "type": "separator"
-      },
-      {
-        "type": "characters",
-        "max_count": 128,
-        "type_ui": "radio"
-      },
-      {
-        "type": "separator"
-      },
-      {
-        "type": "action",
-        "label": "Open reader",
-        "enabled": true
-      }
+    "source": "packages/readmd-hermes-pet-adapter/src/electron-main.ts L205-L224",
+    "disabled_header": "Level {level} · Energy {energy} · Mood {mood}",
+    "interaction_actions": [
+      "pet",
+      "feed",
+      "play",
+      "rest_or_wake"
     ],
-    "banned_items": [
-      "Hide pet",
-      "Quit",
-      "Settings"
-    ]
+    "rest_wake_cooldown_rule": "When resting is true, action is 'wake' and checks cooldowns['wake']. When resting is false, action is 'rest' and checks cooldowns['rest'].",
+    "play_threshold_energy": 10,
+    "max_characters_radio_items": 128,
+    "reader_menu_action": "Open reader (writes command { type: 'open-menu' })"
   },
   "clipboard_limits": {
     "text_max_chars": 4194304,
     "image_png_base64_max_chars": 25165824,
-    "windows_paths_max": 128,
-    "schema": {
-      "type": "clipboard",
-      "text": "string",
-      "image_png": "string (base64 PNG)",
-      "paths": "string[]"
-    }
+    "paths_max_items": 128
   },
   "fifo_commands_contract": {
-    "directory": "${bridge}.commands",
-    "banned_directory": "<runtime_dir>/events/",
-    "max_body_bytes": 33554432,
-    "max_queue_files": 128,
-    "max_queue_pending_bytes": 67108864,
-    "file_naming": "${wall_clock_ms.padStart(16,'0')}-${sequence.padStart(8,'0')}-${UUID}.json",
-    "atomic_write_strategy": "write to .tmp with flag 'wx' -> atomic rename to .json"
+    "source": "packages/readmd-hermes-pet-adapter/src/bridge-transport.ts L8-L29",
+    "directory_template": "${bridge}.commands",
+    "envelope": "JSON.stringify({ command, created_at: Date.now() })",
+    "precondition_queue_max": 128,
+    "precondition_check": "existing_json_files.length >= 128 => reject with pet_command_queue_full",
+    "single_file_max_bytes": 33554432,
+    "total_dir_max_bytes": 67108864,
+    "filename_pattern": "${Date.now().padStart(16,'0')}-${sequence.padStart(8,'0')}-${UUID}.json",
+    "temp_pattern": "${target}.tmp",
+    "write_mode": "exclusive_flag_wx_and_rename"
   },
-  "fallback_sprite_metadata": {
-    "frameH": 512,
-    "frameW": 384,
-    "framesPerState": 4,
-    "mime": "image/png",
-    "scale": 0.33,
-    "spritesheetRevision": "hermes-fallback-a5661b457de00b9a",
-    "stateRows": [
-      "idle",
-      "wave"
+  "snapshot_reader_contract": {
+    "source": "packages/readmd-hermes-pet-adapter/src/bridge-transport.ts L31-L53",
+    "max_bytes": 33554432,
+    "golden_signature_formula": "${stat.ino}:${stat.mtimeNs}:${stat.ctimeNs}:${stat.size}",
+    "windows_equivalent_signature": "${stat.volume_serial}:${stat.file_index}:${stat.last_write_time}:${stat.size}",
+    "execution_flow": [
+      "if this.reading return undefined",
+      "stat file (bigint: true)",
+      "if !stat.isFile() or stat.size > MAX_BYTES throw invalid_pet_snapshot",
+      "compute signature",
+      "if signature === this.signature return undefined",
+      "read UTF-8 file content and JSON.parse",
+      "validate: typeof value === 'object', !Array.isArray(value), value.format_version === 1",
+      "on success: this.signature = signature and return value",
+      "on failure: do NOT update this.signature (allows repair retry)"
     ]
   },
-  "bridge_poll_sequence": [
-    "read new snapshot",
-    "if parent dead: exit process",
-    "normalize snapshot state",
-    "if visible === false && fullscreen !== true: close overlay and return",
-    "resolve renderer",
-    "if window absent: open overlay window",
-    "else if snapshot bounds changed compared with lastHostBounds: apply bounds and update lastHostBounds",
-    "if fullscreen === true: hide window; else: showInactive",
-    "if renderer changed: reload overlay page and return",
-    "pushState(latestState + currentActualWindowBounds)"
-  ]
+  "health_contract": {
+    "legacy_health_file": "${bridge}.health.json",
+    "legacy_owner": "Electron host main process (reportHealth function)",
+    "rust_health_file": "${bridge}.rust.health.json",
+    "rust_owner": "Rust host process",
+    "write_protocol": "write to ${target}.tmp then atomic renameSync",
+    "states": [
+      "loading",
+      "ready",
+      "failed",
+      "degraded"
+    ],
+    "legacy_payload_schema": {
+      "state": "string (loading|ready|failed|degraded)",
+      "renderer": "string (optional)",
+      "code": "string (optional)",
+      "pid": "number",
+      "updated_at": "number"
+    },
+    "rust_payload_schema": {
+      "engine": "rust",
+      "state": "string (loading|ready|failed|degraded)",
+      "renderer": "string (optional)",
+      "code": "string (optional)",
+      "pid": "number",
+      "updated_at": "number",
+      "engine_generation": "number",
+      "protocol_version": "number"
+    },
+    "control_events_from_renderer": [
+      "renderer-ready",
+      "renderer-failed"
+    ]
+  },
+  "renderer_recovery_contract": {
+    "source": "packages/readmd-hermes-pet-adapter/src/electron-main.ts L165-L172",
+    "trigger": "render-process-gone when details.reason !== 'clean-exit' and not shuttingDown",
+    "step1_report_failed": "reportHealth('failed', lastRenderer, 'pet_renderer_crashed')",
+    "step2_filter_window_ms": 60000,
+    "step3_circuit_breaker_limit": 3,
+    "step4_delay_formula": "500ms * recoveries.length",
+    "boundary_fixtures": {
+      "crash_1": "reload after 500ms",
+      "crash_2": "reload after 1000ms",
+      "crash_3": "reload after 1500ms",
+      "crash_4_within_60s": "circuit open, no reload"
+    }
+  },
+  "parent_liveness_contract": {
+    "parent_death_shutdown": {
+      "trigger": "Rust inherited stdin/pipe EOF detected",
+      "action": "Immediate close overlay surface and exit process promptly. Zero arbitrary 2.5s delay.",
+      "watchdog": "Optional bounded teardown watchdog (<=500ms) strictly to prevent process hangs."
+    },
+    "engine_replacement_grace_period": {
+      "owner": "Python orchestrator",
+      "action": "When swapping engine, request graceful shutdown, wait <= 2500ms, then terminate/kill exact child PID."
+    }
+  },
+  "fallback_sprite_metadata": {
+    "default_frame_w": 192,
+    "default_frame_h": 208,
+    "default_scale": 0.33,
+    "padding_bottom_dip": 24
+  },
+  "bridge_poll_sequence": {
+    "poll_interval_ms": 100,
+    "steps": [
+      "check parent host liveness; if dead close and exit promptly",
+      "read snapshot via SnapshotReader",
+      "if visible === false && !fullscreen close and return",
+      "if surface not created: open surface",
+      "else if bounds changed: clampBounds and setBounds",
+      "if fullscreen === true: hide() else showInactive()",
+      "if renderer changed: loadOverlayPage(renderer) and return",
+      "host_publish_state()"
+    ]
+  }
 }

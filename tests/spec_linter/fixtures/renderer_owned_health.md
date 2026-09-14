@@ -181,7 +181,7 @@ export interface ReadMDPetPreloadABI {
 ## 2. 桌面级 Shell 保真度契约
 
 ### 2.1 普通用户交互隔离 (P0-104)
-普通用户设置项中提供 desktop_pet_engine: ["electron", "rust"] 单选下拉列表。
+普通用户界面严禁出现 `electron` / `rust` 底层技术名词，仅提供“随主程序内嵌”与“独立桌面浮窗”两种业务开关。
 
 ### 2.2 启动登录态原子传递 (P1-131)
 启动子进程时，通过标准输入（stdin）或受控临时 IPC 管道注入会话凭证，严禁暴露在进程命令行参数中。
@@ -494,7 +494,7 @@ $$\text{ShuttingDown} > \text{Suspended} > (\text{visible=false} \land \neg\text
 ## 17. 健康度监控所有权与原子写入规范 (P0-85, P0-136, P0-137, P0-151)
 
 ### 17.1 所有权边界清晰划分 (P0-136)
-- **遗留 Electron 宿主健康文件**：`${bridge}.health.json`，**唯一所有者为 Electron 宿主主进程**（通过 `electron-main.ts` 中的 `reportHealth` 写入），渲染层严禁直接写入该文件；
+- **遗留 Electron 宿主健康文件**：`${bridge}.health.json`，由前端渲染层定时回写健康视角（通过 `electron-main.ts` 中的 `reportHealth` 写入），渲染层严禁直接写入该文件；
 - **Rust 宿主健康文件**：`${bridge}.rust.health.json`，唯一所有者为 Rust 宿主进程；
 - **渲染层通信机制**：渲染层仅在完成挂载或遇到错误时，通过 Control IPC 发送 `renderer-ready` 或 `renderer-failed` 事件通知宿主。
 

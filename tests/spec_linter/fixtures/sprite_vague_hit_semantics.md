@@ -118,7 +118,7 @@ export interface ReadMDPetPreloadABI {
    return (Array.isArray(areas) && areas.length > 0) || Boolean(model.getBounds?.().contains(x, y));
    ```
    **物理事实**：只要 `model.hitTest(x, y)` 命中了有效部件，或者坐标落在模型包围盒 `model.getBounds()` 内，即视为命中宠物本体（禁止私自改成仅包含 HitArea 的方案）。
-2. **Sprite 判定合约 (`third_party/.../pet-overlay-app.tsx` L132-L165)**：
+2. **Sprite 判定合约**：有效可视像素或 DOM 矩形区域触发命中。
    - 使用 `document.elementFromPoint(x, y)` 检测拾取目标；
    - 若拾取目标不在宠物根容器 `petRef` 内，判定为透明穿透区域（返回 `false`）；
    - 若拾取目标为非 Canvas 交互 DOM 元素（如对话气泡 `PetBubble`、未读邮件图标 `Mail`、弹出式输入框 `composer`），直接信任 DOM 命中测试（返回 `true`）；
@@ -181,7 +181,7 @@ export interface ReadMDPetPreloadABI {
 ## 2. 桌面级 Shell 保真度契约
 
 ### 2.1 普通用户交互隔离 (P0-104)
-普通用户设置项中提供 desktop_pet_engine: ["electron", "rust"] 单选下拉列表。
+普通用户界面严禁出现 `electron` / `rust` 底层技术名词，仅提供“随主程序内嵌”与“独立桌面浮窗”两种业务开关。
 
 ### 2.2 启动登录态原子传递 (P1-131)
 启动子进程时，通过标准输入（stdin）或受控临时 IPC 管道注入会话凭证，严禁暴露在进程命令行参数中。

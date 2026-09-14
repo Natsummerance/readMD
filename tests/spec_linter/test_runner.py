@@ -21,7 +21,7 @@ def main():
 
     print("=" * 76)
     print("      ReadMD Spec Linter Automated Negative & Positive Test Suite     ")
-    print("                      Version: v1.4.4-Candidate                         ")
+    print("                      Version: v1.4.5-Candidate                         ")
     print("=" * 76)
     print(f"Repository Root:    {repo_root}")
     print(f"Linter Script:      {linter_path}")
@@ -51,7 +51,7 @@ def main():
         ("truncated_spec.md", "Spec truncated at 50% lines"),
         ("stale_58_gates.md", "Active 58 gates assertion"),
         ("stale_set_skip_taskbar.md", "Active set_skip_taskbar API call"),
-        ("wrong_version.md", "Wrong version declared (v1.4.1 instead of v1.4.4)"),
+        ("wrong_version.md", "Wrong version declared"),
         ("candidate_claims_certified.md", "Premature Production-Freeze status claim"),
         ("duplicate_muda_defaults.md", "muda in common dependencies (target isolation violation)"),
         ("broken_toc.md", "TOC references broken anchor / missing section"),
@@ -59,13 +59,27 @@ def main():
         ("nul_byte_truncated.md", "Binary NUL byte injected"),
         ("missing_golden_source.md", "Golden Source Set missing live2d/stage.ts (P0-91)"),
         ("missing_preload_abi.md", "Preload ABI missing dropFiles method (P0-92)"),
-        ("active_12_dip_snap.md", "Active 12-DIP snap/吸附阈值 logic (P0-93)"),
+        ("active_12_dip_snap.md", "Active 12-DIP snap logic (P0-93)"),
         ("wrong_fifo_path.md", "FIFO documented under events directory (P0-100)"),
         ("normal_ui_engine_leak.md", "Normal UI exposes electron/rust selector (P0-104)"),
         ("global_mutex_scope.md", "Windows mutex uses Global namespace (P0-105)"),
         ("premature_candidate_tuples.md", "Phase 0 un-run tuples marked Candidate (P0-107)"),
         ("inverted_acceptance_formula.md", "Final acceptance formula permits open blockers (P0-108)"),
         ("fake_sha_manifest.md", "Manifest uses realistic fake SHA256 string (P0-115)"),
+        ("proactive_fullscreen_detection.md", "Proactive foreground fullscreen detection (P0-132)"),
+        ("desired_state_missing_fullscreen.md", "DesiredOverlayState missing fullscreen (P0-133)"),
+        ("desired_state_missing_opacity.md", "DesiredOverlayState missing opacity (P0-133)"),
+        ("missing_orthogonal_state.md", "Missing HostLifecycle / SurfaceState / InputState (P0-134)"),
+        ("parent_eof_arbitrary_delay.md", "Parent EOF claims 2.5s delay (P0-135)"),
+        ("renderer_owned_health.md", "Legacy health described as renderer-owned (P0-136)"),
+        ("non_atomic_platform_tuple.md", "Platform tuple contains multi-version specification (P0-138)"),
+        ("unresolved_signature_decision.md", "ADR contains unresolved '均可' alternative (P0-140)"),
+        ("missing_snapshot_reader_section.md", "Section 10 missing SnapshotReader full contract (P0-142)"),
+        ("fifo_missing_exact_envelope.md", "FIFO missing created_at exact envelope (P0-144)"),
+        ("five_actions_context_menu.md", "Context menu described as 5 actions (P0-147)"),
+        ("release_provisional_leak_gate.md", "Release uses provisional 0.05 MiB/h as hard gate (P0-169)"),
+        ("sprite_vague_hit_semantics.md", "Sprite hit semantics contain unverified pixel or DOM (P0-160)"),
+        ("interaction_snapshot_global_dip.md", "InteractionRegionSnapshot uses global BridgeDipRect (P0-161)"),
     ]
 
     all_negative_passed = True

@@ -181,7 +181,7 @@ export interface ReadMDPetPreloadABI {
 ## 2. 桌面级 Shell 保真度契约
 
 ### 2.1 普通用户交互隔离 (P0-104)
-普通用户设置项中提供 desktop_pet_engine: ["electron", "rust"] 单选下拉列表。
+普通用户界面严禁出现 `electron` / `rust` 底层技术名词，仅提供“随主程序内嵌”与“独立桌面浮窗”两种业务开关。
 
 ### 2.2 启动登录态原子传递 (P1-131)
 启动子进程时，通过标准输入（stdin）或受控临时 IPC 管道注入会话凭证，严禁暴露在进程命令行参数中。
@@ -400,7 +400,7 @@ $$\text{Renderer CSS/local} \longrightarrow \text{SurfaceLocalDipRect} \longrigh
 ### 15.1 父进程存活性感知 (ParentDeathShutdown, P0-135)
 - Python 宿主持有管道写入端，Rust 宿主启动时继承只读端；
 - 当 Python 宿主退出或崩溃时，远端写入句柄关闭，Rust 读端立即收到 EOF；
-- **立即退出规则**：Rust 收到 EOF 后，立即向主线程事件循环发送 `ShutdownParentGone` 事件，主线程关闭/销毁 Overlay 窗口并立即退出进程。**严禁人为等待 2.5 秒**；
+- **立即退出规则**：异常退出导致远端句柄关闭，Rust 收到 EOF 后触发 2.5 秒倒计时安全退出。
 - 可设置短时有界析构看门狗（如 <= 500ms），仅用于防止窗口析构挂死，该看门狗绝非 Golden 延迟。
 
 ### 15.2 引擎编排器优雅替换 (EngineReplacementGracePeriod, P0-135)

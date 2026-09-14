@@ -1,13 +1,15 @@
 {
   "spec_path": "docs/architecture/pet-rust/spec.md",
-  "spec_sha256": "716a5486ceb9d94a67f4abe0c0830bbc028173afbc451e9ee55c224b002416db",
-  "line_count": 980,
-  "byte_count": 72994,
-  "git_commit": "6aa1c59465806ad5e36c3ae6ceb8bafb46261d41",
+  "spec_sha256": "0ebd4a40dac8dbd6ad08c4270e8e38d9183dd94892f2e42265b8e3db93ad986e",
+  "line_count": 947,
+  "byte_count": 60486,
+  "git_commit": "1af271e5d219c7c8ecf4fb285022793d1677c9e9",
   "golden_commit_sha": "4dcfd73ce81a14ace7e429791e0594bea47b24e5",
-  "linter_version": "v1.4.4",
+  "linter_version": "v1.4.5",
   "linter_passed": true,
-  "validation_items_count": 43,
-  "open_blockers_count": 30,
-  "registered_gates_count": 63
+  "validation_items_count": 51,
+  "open_blockers_count": 33,
+  "registered_gates_count": 71,
+  "closed_decisions_count": 18,
+  "platform_tuples_count": 24
 }

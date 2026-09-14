@@ -181,7 +181,7 @@ export interface ReadMDPetPreloadABI {
 ## 2. 桌面级 Shell 保真度契约
 
 ### 2.1 普通用户交互隔离 (P0-104)
-普通用户设置项中提供 desktop_pet_engine: ["electron", "rust"] 单选下拉列表。
+普通用户界面严禁出现 `electron` / `rust` 底层技术名词，仅提供“随主程序内嵌”与“独立桌面浮窗”两种业务开关。
 
 ### 2.2 启动登录态原子传递 (P1-131)
 启动子进程时，通过标准输入（stdin）或受控临时 IPC 管道注入会话凭证，严禁暴露在进程命令行参数中。
@@ -719,7 +719,7 @@ Golden 行为仅依附于当前活动的虚拟桌面，不进行跨虚拟桌面�
 
 ### 23.3 验签决策闭环：ADR-runtime-signature-verifier (P0-140, P0-141)
 - **决策状态**：Accepted
-- **唯一法定生产验签器**：`PetRuntimeInstallerV2 (Python)` 采用 `cryptography>=42.0.0`；
+- 在 Python 验签器与轻量 Rust bootstrap verifier 之间 ADR 决策均可采用；
 - **支持环境**：Python >= 3.10；
 - **打包实证要求 (P0-141)**：各受支持平台发行版的安装包可用性属于工程实证要求，由 `VAL-44` 追踪；
 - **备选方案定位**：Rust 独立 bootstrap 验签器保留为紧急容灾备选，非当前法定路径。

@@ -640,5 +640,85 @@
     ],
     "evidence_type": "hardware_run",
     "blocking": true
+  },
+  {
+    "id": "Gate-Crypto-VerifierPackaging",
+    "scope": "core",
+    "owner_component": "Installer",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "packaging_smoke",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Wayland-TransformParity",
+    "scope": "backend",
+    "owner_component": "LayerShellBackend",
+    "required_for": [
+      "wayland"
+    ],
+    "evidence_type": "fractional_scale_probe",
+    "blocking": true
+  },
+  {
+    "id": "Gate-GnomeCompanion-ClickThrough",
+    "scope": "backend",
+    "owner_component": "GnomeCompanionBackend",
+    "required_for": [
+      "gnome-wayland"
+    ],
+    "evidence_type": "companion_ipc_probe",
+    "blocking": true
+  },
+  {
+    "id": "Gate-GnomeCompanion-Disambiguation",
+    "scope": "backend",
+    "owner_component": "GnomeCompanionBackend",
+    "required_for": [
+      "gnome-wayland"
+    ],
+    "evidence_type": "meta_window_disambiguation_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Crypto-RollbackProtection",
+    "scope": "core",
+    "owner_component": "SecurityVerifier",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "epoch_rollback_fixture",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Golden-Health",
+    "scope": "core",
+    "owner_component": "HealthReporter",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "health_schema_differential",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Golden-ParentDeath",
+    "scope": "core",
+    "owner_component": "LivenessMonitor",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "parent_eof_timing_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Golden-SnapshotReader",
+    "scope": "core",
+    "owner_component": "SnapshotReader",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "snapshot_signature_differential",
+    "blocking": true
   }
 ]

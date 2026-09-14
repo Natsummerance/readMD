@@ -181,7 +181,7 @@ export interface ReadMDPetPreloadABI {
 ## 2. 桌面级 Shell 保真度契约
 
 ### 2.1 普通用户交互隔离 (P0-104)
-普通用户设置项中提供 desktop_pet_engine: ["electron", "rust"] 单选下拉列表。
+普通用户界面严禁出现 `electron` / `rust` 底层技术名词，仅提供“随主程序内嵌”与“独立桌面浮窗”两种业务开关。
 
 ### 2.2 启动登录态原子传递 (P1-131)
 启动子进程时，通过标准输入（stdin）或受控临时 IPC 管道注入会话凭证，严禁暴露在进程命令行参数中。
@@ -338,23 +338,6 @@ $$\text{Renderer CSS/local} \longrightarrow \text{SurfaceLocalDipRect} \longrigh
   ```
   写入前已存在文件数量必须在 0 到 127 之间，写入成功后目录内最大文件数不超过 128 个。
 - **容量与原子写入**：单文件上限 32 MiB，总待处理容量上限 64 MiB；先写入 `<target>.tmp`，然后原子 `renameSync` 至 `<target>.json`。
-
-### 10.2 Golden SnapshotReader 契约 (P0-142, P0-143)
-还原 `bridge-transport.ts` 第 31-53 行原生实现规范：
-- **最大快照限制**：`MAX_BYTES = 32 * 1024 * 1024`（32 MiB）；
-- **Golden 签名格式**：
-  `${stat.ino}:${stat.mtimeNs}:${stat.ctimeNs}:${stat.size}`
-- **Windows 等价实现说明 (P0-143)**：Node.js Golden 在各平台统一通过 `fs.promises.stat(..., {bigint: true})` 暴露上述属性。Rust Windows 实现若采用 `volume_serial:file_index:last_write_time:size`，属于等价平台实现，必须通过 `VAL-51` 差异测试证明行为完全一致。
-- **执行流程与自愈重试**：
-  1. 若当前正在读取中（`reading === true`），立即返回 `undefined`；
-  2. 读取文件元数据，若非正规文件或体积大于 32 MiB，抛出 `invalid_pet_snapshot`；
-  3. 计算当前签名，若与上次成功签名 `this.signature` 相同，立即返回 `undefined`；
-  4. 读取 UTF-8 文本并执行 `JSON.parse`；
-  5. 校验快照结构：必须为非 null 对象、非数组，且满足 `format_version === 1`；
-  6. **关键规则**：只有在解析与校验完全成功后，才更新 `this.signature = signature` 并返回快照对象；
-  7. **任何读取、解析或校验失败均不得更新签名缓存**，确保快照文件被修复后可在下一个轮询时隙立即重试。
-
----
 
 ## 11. 原生文件拖拽：WRY 0.57 官方路径规范 (P0-102)
 - 提取文件绝对路径，过滤非空字符串（长度 <= 32768，数组上限 128 项）；

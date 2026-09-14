@@ -2,352 +2,662 @@
   {
     "id": "BLOCKER-01",
     "title": "Wayland WebKitGTK 透明子表面事件穿透",
-    "risk_and_resolution": "WebKitGTK 子表面在 Wayland 下可能二次拦截透明区域鼠标事件；需验证 cairo input region 穿透",
-    "validation_ids": [
-      "VAL-01"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "backend",
+    "applies_to": [
+      "wayland"
     ],
+    "decision_id": "DEC-04",
+    "blocking_until": "VAL-01",
+    "risk_and_resolution": "WebKitGTK 子表面在 Wayland 下可能二次拦截透明区域鼠标事件；需验证 cairo input region 穿透",
     "gate_ids": [
       "Gate-LayerShell-02"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-01"
+    ]
   },
   {
     "id": "BLOCKER-02",
     "title": "Layer-Shell 分数缩放与 Hit Region 不连续",
-    "risk_and_resolution": "合成器在分数缩放（如 125%、150%）下对子表面 input shape 的舍入截断；需实机测试无死区",
-    "validation_ids": [
-      "VAL-02"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "backend",
+    "applies_to": [
+      "wayland"
     ],
+    "decision_id": "DEC-05",
+    "blocking_until": "VAL-02",
+    "risk_and_resolution": "合成器在分数缩放（如 125%、150%）下对子表面 input shape 的舍入截断；需实机测试无死区",
     "gate_ids": [
       "Gate-LayerShell-01"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-02"
+    ]
   },
   {
     "id": "BLOCKER-03",
     "title": "GNOME 45+ Mutter 跨小版本内部接口稳定性",
-    "risk_and_resolution": "Mutter 内部 move_frame、get_gtk_application_id 在 45~50 跨版本 API 变动；需 ESM 扩展隔离",
-    "validation_ids": [
-      "VAL-04"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "backend",
+    "applies_to": [
+      "gnome-wayland"
     ],
+    "decision_id": "DEC-06",
+    "blocking_until": "VAL-04",
+    "risk_and_resolution": "Mutter 内部 move_frame、get_gtk_application_id 在 45~50 跨版本 API 变动；需 ESM 扩展隔离",
     "gate_ids": [
       "Gate-GnomeCompanion-02"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-04"
+    ]
   },
   {
     "id": "BLOCKER-04",
     "title": "Linux 多 GDK 会话与多 Seat 隔离",
-    "risk_and_resolution": "相同用户或多显示服务器下单二进制 GDK 静态上下文污染；需验证独立 DISPLAY/WAYLAND_DISPLAY 隔离",
-    "validation_ids": [
-      "VAL-07"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "backend",
+    "applies_to": [
+      "linux"
     ],
+    "decision_id": "DEC-09",
+    "blocking_until": "VAL-07",
+    "risk_and_resolution": "相同用户或多显示服务器下单二进制 GDK 静态上下文污染；需验证独立 DISPLAY/WAYLAND_DISPLAY 隔离",
     "gate_ids": [
       "Gate-Linux-GdkMultiSeat"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-07"
+    ]
   },
   {
     "id": "BLOCKER-05",
     "title": "Windows on ARM64 渲染基准与透明层叠",
-    "risk_and_resolution": "高通骁龙平台 WebView2 在 DWM 透明窗口下的 GPU 加速层叠与 CPU 占用基准；需实机达标",
-    "validation_ids": [
-      "VAL-05"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "tuple",
+    "applies_to": [
+      "windows-11-24h2-arm64-dwm-win32"
     ],
+    "decision_id": "DEC-11",
+    "blocking_until": "VAL-05",
+    "risk_and_resolution": "高通骁龙平台 WebView2 在 DWM 透明窗口下的 GPU 加速层叠与 CPU 占用基准；需实机达标",
     "gate_ids": [
       "CERT-WIN11-ARM64"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-05"
+    ]
   },
   {
     "id": "BLOCKER-06",
     "title": "权威规范产物完整性与 SHA256 强校验",
-    "risk_and_resolution": "规范交付链截断、TOC 锚点悬空或哈希不匹配；需通过 Spec Linter 完整性自动化校验",
-    "validation_ids": [
-      "VAL-27"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ],
+    "decision_id": "DEC-08",
+    "blocking_until": "VAL-27",
+    "risk_and_resolution": "规范交付链截断、TOC 锚点悬空或哈希不匹配；需通过 Spec Linter 完整性自动化校验",
     "gate_ids": [
       "Gate-Core-SpecIntegrity"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-27"
+    ]
   },
   {
     "id": "BLOCKER-07",
     "title": "Cargo muda 特性联合污染隔离",
-    "risk_and_resolution": "通用依赖引入 muda 导致 Linux 错误激活默认 libxdo 特性；必须按 target 隔离依赖",
-    "validation_ids": [
-      "VAL-28"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "linux"
     ],
+    "decision_id": "DEC-09",
+    "blocking_until": "VAL-28",
+    "risk_and_resolution": "通用依赖引入 muda 导致 Linux 错误激活默认 libxdo 特性；必须按 target 隔离依赖",
     "gate_ids": [
       "Gate-Linux-MudaTargetIsolation"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-28"
+    ]
   },
   {
     "id": "BLOCKER-08",
     "title": "gtk-layer-shell v0_6 特性链与 Linux 发布锁定",
-    "risk_and_resolution": "调用 protocol_version() 必须显式激活 v0_6；发布配置必须激活 linux-production",
-    "validation_ids": [
-      "VAL-27"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "linux"
     ],
+    "decision_id": "DEC-10",
+    "blocking_until": "VAL-27",
+    "risk_and_resolution": "调用 protocol_version() 必须显式激活 v0_6；发布配置必须激活 linux-production",
     "gate_ids": [
       "Gate-Linux-LayerShellV06"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-27"
+    ]
   },
   {
     "id": "BLOCKER-09",
     "title": "Layer-Shell 窗口 pre-realize 初始化生命周期",
-    "risk_and_resolution": "GTK 窗口在 realize 之后调用 layer-shell 初始化会触发底层断言 panic；必须在 show/realize 前绑定",
-    "validation_ids": [
-      "VAL-21"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "backend",
+    "applies_to": [
+      "wayland"
     ],
+    "decision_id": "DEC-04",
+    "blocking_until": "VAL-21",
+    "risk_and_resolution": "GTK 窗口在 realize 之后调用 layer-shell 初始化会触发底层断言 panic；必须在 show/realize 前绑定",
     "gate_ids": [
       "Gate-LayerShell-05"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-21"
+    ]
   },
   {
     "id": "BLOCKER-10",
     "title": "GNOME AppID 传播与 Meta.Window 发现",
-    "risk_and_resolution": "WRY/GTK 窗口创建时必须传播 asia.readmd.pet，使 Mutter get_gtk_application_id() 稳定识别",
-    "validation_ids": [
-      "VAL-22"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "backend",
+    "applies_to": [
+      "gnome-wayland"
     ],
+    "decision_id": "DEC-06",
+    "blocking_until": "VAL-22",
+    "risk_and_resolution": "WRY/GTK 窗口创建时必须传播 asia.readmd.pet，使 Mutter get_gtk_application_id() 稳定识别",
     "gate_ids": [
       "Gate-GnomeCompanion-04"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-22"
+    ]
   },
   {
     "id": "BLOCKER-11",
     "title": "渲染端导航代际与 WebView 实例会话严格解耦",
-    "risk_and_resolution": "跨导航异步回调必须持有独立 generation token；防止页面重载后陈旧 IPC 调用执行",
-    "validation_ids": [
-      "VAL-25"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ],
+    "decision_id": "DEC-07",
+    "blocking_until": "VAL-25",
+    "risk_and_resolution": "跨导航异步回调必须持有独立 generation token；防止页面重载后陈旧 IPC 调用执行",
     "gate_ids": [
       "Gate-IPC-Generation"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-25"
+    ]
   },
   {
     "id": "BLOCKER-12",
     "title": "调和状态机 AppliedState 异步生效竞态与陈旧防护",
-    "risk_and_resolution": "异步更新生效前必须记录 applied_generation，忽略晚到的过时 snapshot",
-    "validation_ids": [
-      "VAL-26"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ],
+    "decision_id": "DEC-07",
+    "blocking_until": "VAL-26",
+    "risk_and_resolution": "异步更新生效前必须记录 applied_generation，忽略晚到的过时 snapshot",
     "gate_ids": [
       "Gate-Core-Reconciliation"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-26"
+    ]
   },
   {
     "id": "BLOCKER-13",
     "title": "Wayland 工作区与 exclusive-zone 面板避让一致性",
-    "risk_and_resolution": "Layer-Shell margins 必须与各合成器 panels / dock 边距动态对齐，防止桌宠遮挡面板",
-    "validation_ids": [
-      "VAL-24"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "backend",
+    "applies_to": [
+      "wayland"
     ],
+    "decision_id": "DEC-04",
+    "blocking_until": "VAL-24",
+    "risk_and_resolution": "Layer-Shell margins 必须与各合成器 panels / dock 边距动态对齐，防止桌宠遮挡面板",
     "gate_ids": [
       "Gate-LayerShell-06"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-24"
+    ]
   },
   {
     "id": "BLOCKER-14",
     "title": "GNOME 50 当前版本扩展兼容性实机认证",
-    "risk_and_resolution": "GNOME 50 新架构规范与扩展接口兼容性验证，确保扩展零崩溃",
-    "validation_ids": [
-      "VAL-29"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "tuple",
+    "applies_to": [
+      "fedora-42-gnome50-x64-wayland-gnomecompanion"
     ],
+    "decision_id": "DEC-06",
+    "blocking_until": "VAL-29",
+    "risk_and_resolution": "GNOME 50 新架构规范与扩展接口兼容性验证，确保扩展零崩溃",
     "gate_ids": [
       "CERT-GNOME50-X64"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-29"
+    ]
   },
   {
     "id": "BLOCKER-15",
     "title": "macOS 26 (Tahoe) 架构与硬件分离认证",
-    "risk_and_resolution": "macOS 26 上 Spaces 随同、透明点击穿透与 ARM64/Intel 硬件分离实机认证",
-    "validation_ids": [
-      "VAL-20",
-      "VAL-30"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "backend",
+    "applies_to": [
+      "macos"
     ],
+    "decision_id": "DEC-11",
+    "blocking_until": "VAL-30",
+    "risk_and_resolution": "macOS 26 上 Spaces 随同、透明点击穿透与 ARM64/Intel 硬件分离实机认证",
     "gate_ids": [
       "CERT-MACOS26-ARM64"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-20",
+      "VAL-30"
+    ]
   },
   {
     "id": "BLOCKER-16",
     "title": "Secure Asset Protocol 产物截断防护与沙盒 TOCTOU 拦截",
-    "risk_and_resolution": "静态资产协议支持严格路径沙盒、零 NUL 注入、双重扩展名拦截与符号链接 TOCTOU 防御",
-    "validation_ids": [
-      "VAL-17"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ],
+    "decision_id": "DEC-12",
+    "blocking_until": "VAL-17",
+    "risk_and_resolution": "静态资产协议支持严格路径沙盒、零 NUL 注入、双重扩展名拦截与符号链接 TOCTOU 防御",
     "gate_ids": [
       "Gate-Asset-Sandbox"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-17"
+    ]
   },
   {
     "id": "BLOCKER-17",
     "title": "Golden source-set corruption",
-    "risk_and_resolution": "核心行为源遗漏 live2d/stage.ts 与 pet-overlay-ipc.ts；需绑定 7 大核心源码及 SHA256",
-    "validation_ids": [
-      "VAL-32"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ],
+    "decision_id": "DEC-01",
+    "blocking_until": "VAL-32",
+    "risk_and_resolution": "核心行为源遗漏 live2d/stage.ts 与 pet-overlay-ipc.ts；需绑定 7 大核心源码及 SHA256",
     "gate_ids": [
       "Gate-Golden-ABI"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-32"
+    ]
   },
   {
     "id": "BLOCKER-18",
     "title": "Golden preload ABI information loss",
-    "risk_and_resolution": "Preload ABI 沦为自然语言摘要导致方法签名失真；需完整冻结 TypeScript 接口定义",
-    "validation_ids": [
-      "VAL-32"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ],
+    "decision_id": "DEC-01",
+    "blocking_until": "VAL-32",
+    "risk_and_resolution": "Preload ABI 沦为自然语言摘要导致方法签名失真；需完整冻结 TypeScript 接口定义",
     "gate_ids": [
       "Gate-Golden-ABI"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-32"
+    ]
   },
   {
     "id": "BLOCKER-19",
     "title": "Invented 12-DIP snap behavior",
-    "risk_and_resolution": "将工作区退让边距误当成桌宠吸附阈值；需彻底从规范删除虚构吸附逻辑并恢复真实 clamp",
-    "validation_ids": [
-      "VAL-33"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ],
+    "decision_id": "DEC-02",
+    "blocking_until": "VAL-33",
+    "risk_and_resolution": "将工作区退让边距误当成桌宠吸附阈值；需彻底从规范删除虚构吸附逻辑并恢复真实 clamp",
     "gate_ids": [
       "Gate-Golden-Bounds"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-33"
+    ]
   },
   {
     "id": "BLOCKER-20",
     "title": "Durable FIFO path/schema regression",
-    "risk_and_resolution": "FIFO 路径误写为 events 目录；需恢复为 <bridge>.commands 目录及原子重命名策略",
-    "validation_ids": [
-      "VAL-37"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ],
+    "decision_id": "DEC-03",
+    "blocking_until": "VAL-37",
+    "risk_and_resolution": "FIFO 路径误写为 events 目录；需恢复为 <bridge>.commands 目录及原子重命名策略",
     "gate_ids": [
       "Gate-Golden-FIFO"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-37"
+    ]
   },
   {
     "id": "BLOCKER-21",
     "title": "ReadMD toggle-app semantics missing",
-    "risk_and_resolution": "误用 vendor 主窗口最小化逻辑；需恢复 ReadMD 适配层独有的剪贴板读取与命令派发语义",
-    "validation_ids": [
-      "VAL-34"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ],
+    "decision_id": "DEC-01",
+    "blocking_until": "VAL-34",
+    "risk_and_resolution": "误用 vendor 主窗口最小化逻辑；需恢复 ReadMD 适配层独有的剪贴板读取与命令派发语义",
     "gate_ids": [
       "Gate-Golden-Differential"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-34"
+    ]
   },
   {
     "id": "BLOCKER-22",
     "title": "Windows Global mutex scope regression",
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "backend",
+    "applies_to": [
+      "windows"
+    ],
+    "decision_id": "DEC-11",
+    "blocking_until": "VAL-41",
     "risk_and_resolution": "单实例互斥体误用 Global 命名空间跨越所有用户会话；需调整为基于用户 SID 和配置隔离的 Local 互斥体",
-    "validation_ids": [],
     "gate_ids": [
       "Gate-Win32-SingleInstance"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-41"
+    ]
   },
   {
     "id": "BLOCKER-23",
     "title": "Tuple lifecycle state contradiction",
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ],
+    "decision_id": "DEC-14",
+    "blocking_until": "VAL-27",
     "risk_and_resolution": "在未运行 Phase 0 PoC 的情况下将平台元组标为 Candidate；需将所有平台元组重置为 Planned",
-    "validation_ids": [],
     "gate_ids": [
       "Gate-Tuple-Lifecycle"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-27"
+    ]
   },
   {
     "id": "BLOCKER-24",
     "title": "Final acceptance formula inverted",
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ],
+    "decision_id": "DEC-15",
+    "blocking_until": "VAL-27",
     "risk_and_resolution": "最终验收公式将候选期未解决阻塞项误当成验收通过条件；需修正为未解决阻塞项等于 0",
-    "validation_ids": [],
     "gate_ids": [
       "Gate-Acceptance-Formula"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-27"
+    ]
   },
   {
     "id": "BLOCKER-25",
     "title": "Windows virtual-desktop false assumption",
-    "risk_and_resolution": "虚构 Windows 全虚拟桌面穿透特性；需明确 Golden 行为仅依附于当前虚拟桌面",
-    "validation_ids": [
-      "VAL-41"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "backend",
+    "applies_to": [
+      "windows"
     ],
+    "decision_id": "DEC-11",
+    "blocking_until": "VAL-41",
+    "risk_and_resolution": "虚构 Windows 全虚拟桌面穿透特性；需明确 Golden 行为仅依附于当前虚拟桌面",
     "gate_ids": [
       "Gate-Win32-VirtualDesktop"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-41"
+    ]
   },
   {
     "id": "BLOCKER-26",
     "title": "Wayland input-region chicken-and-egg",
-    "risk_and_resolution": "光标进入才开启 input region 的被动模型在 Wayland 下无法接收 enter 事件；需改为主动 snapshot 推送模型",
-    "validation_ids": [
-      "VAL-39"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "backend",
+    "applies_to": [
+      "wayland"
     ],
+    "decision_id": "DEC-05",
+    "blocking_until": "VAL-39",
+    "risk_and_resolution": "光标进入才开启 input region 的被动模型在 Wayland 下无法接收 enter 事件；需改为主动 snapshot 推送模型",
     "gate_ids": [
       "Gate-LayerShell-02"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-39"
+    ]
   },
   {
     "id": "BLOCKER-27",
     "title": "Layer-Shell usable-area source undefined",
-    "risk_and_resolution": "假定 Wayland 客户端原生具备 Electron 风格全局工作区；需明确 exclusive-zone(0) 的合成器避让语义",
-    "validation_ids": [
-      "VAL-31"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "backend",
+    "applies_to": [
+      "wayland"
     ],
+    "decision_id": "DEC-04",
+    "blocking_until": "VAL-31",
+    "risk_and_resolution": "假定 Wayland 客户端原生具备 Electron 风格全局工作区；需明确 exclusive-zone(0) 的合成器避让语义",
     "gate_ids": [
       "Gate-LayerShell-06"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-31"
+    ]
   },
   {
     "id": "BLOCKER-28",
     "title": "Runtime signature trust-root model",
-    "risk_and_resolution": "Manifest 内部包含自身公钥导致自签名安全失效；需改为分离式签名 manifest.json.sig 与内置受信任密钥环",
-    "validation_ids": [
-      "VAL-42"
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
     ],
+    "decision_id": "DEC-13",
+    "blocking_until": "VAL-42",
+    "risk_and_resolution": "Manifest 内部包含自身公钥导致自签名安全失效；需改为分离式签名 manifest.json.sig 与内置受信任密钥环",
     "gate_ids": [
       "Gate-Crypto-DetachedSig"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-42"
+    ]
   },
   {
     "id": "BLOCKER-29",
     "title": "Validation/Gate referential-integrity failure",
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ],
+    "decision_id": "DEC-08",
+    "blocking_until": "VAL-27",
     "risk_and_resolution": "手工维护的表格存在交叉引用错位与悬空 ID；需建立机器注册表与自动化引用完整性检验",
-    "validation_ids": [],
     "gate_ids": [
       "Gate-Core-SpecIntegrity"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-27"
+    ]
   },
   {
     "id": "BLOCKER-30",
     "title": "Canonical spec integrity evidence absent",
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ],
+    "decision_id": "DEC-08",
+    "blocking_until": "VAL-27",
     "risk_and_resolution": "规范完整性结论缺乏机器背书；需生成 spec.integrity.json 并将 exact SHA256 与 git commit 绑定",
-    "validation_ids": [],
     "gate_ids": [
       "Gate-Core-SpecIntegrity"
     ],
-    "status": "OPEN"
+    "validation_ids": [
+      "VAL-27"
+    ]
+  },
+  {
+    "id": "BLOCKER-31",
+    "title": "Health File Ownership and Atomic Write Parity",
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ],
+    "decision_id": "DEC-16",
+    "blocking_until": "VAL-49",
+    "risk_and_resolution": "Clarify that Electron host owns <bridge>.health.json and Rust host owns <bridge>.rust.health.json; renderer never writes file directly",
+    "gate_ids": [
+      "Gate-Golden-Health"
+    ],
+    "validation_ids": [
+      "VAL-49"
+    ]
+  },
+  {
+    "id": "BLOCKER-32",
+    "title": "Parent Liveness Immediate Exit vs Orchestrator Grace Period",
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ],
+    "decision_id": "DEC-17",
+    "blocking_until": "VAL-50",
+    "risk_and_resolution": "Decouple Rust parent pipe EOF immediate exit (no arbitrary 2.5s delay) from Python orchestrator engine replacement grace period (<=2500ms)",
+    "gate_ids": [
+      "Gate-Golden-ParentDeath"
+    ],
+    "validation_ids": [
+      "VAL-50"
+    ]
+  },
+  {
+    "id": "BLOCKER-33",
+    "title": "SnapshotReader Exact Signature and Repaired Retry Differential",
+    "design_state": "resolved",
+    "validation_state": "pending",
+    "release_blocking": true,
+    "scope": "architecture",
+    "applies_to": [
+      "all"
+    ],
+    "decision_id": "DEC-18",
+    "blocking_until": "VAL-51",
+    "risk_and_resolution": "Document exact Node.js signature formula (${ino}:${mtimeNs}:${ctimeNs}:${size}) and verify parse failures do not update signature cache",
+    "gate_ids": [
+      "Gate-Golden-SnapshotReader"
+    ],
+    "validation_ids": [
+      "VAL-51"
+    ]
   }
 ]

@@ -181,7 +181,7 @@ export interface ReadMDPetPreloadABI {
 ## 2. 桌面级 Shell 保真度契约
 
 ### 2.1 普通用户交互隔离 (P0-104)
-普通用户设置项中提供 desktop_pet_engine: ["electron", "rust"] 单选下拉列表。
+普通用户界面严禁出现 `electron` / `rust` 底层技术名词，仅提供“随主程序内嵌”与“独立桌面浮窗”两种业务开关。
 
 ### 2.2 启动登录态原子传递 (P1-131)
 启动子进程时，通过标准输入（stdin）或受控临时 IPC 管道注入会话凭证，严禁暴露在进程命令行参数中。
@@ -601,7 +601,7 @@ linux-production = []
 | **T-09** | `macos-15-sequoia-x64-quartz-cocoa` | macOS 15 (Sequoia) | x86_64 | Quartz / WindowServer | `CocoaBackend` | **Planned** |
 | **T-10** | `macos-14-sonoma-x64-quartz-cocoa` | macOS 14 (Sonoma) | x86_64 | Quartz / WindowServer | `CocoaBackend` | **Planned** |
 | **T-11** | `macos-13-ventura-x64-quartz-cocoa` | macOS 13 (Ventura) | x86_64 | Quartz / WindowServer | `CocoaBackend` | **Planned** |
-| **T-12** | `ubuntu-24.04-gnome46-x64-wayland-gnomecompanion` | Ubuntu 24.04 (LTS) | x86_64 | Wayland / Mutter | `GnomeCompanionBackend` | **Planned** |
+| **T-12** | `ubuntu-24.04-gnome46/50-x64-wayland-gnomecompanion` | Ubuntu 24.04 (GNOME 46/50) | x86_64 | Wayland / Mutter | `GnomeCompanionBackend` | **Planned** |
 | **T-13** | `ubuntu-24.04-gnome46-arm64-wayland-gnomecompanion` | Ubuntu 24.04 (LTS) | aarch64 | Wayland / Mutter | `GnomeCompanionBackend` | **Planned** |
 | **T-14** | `ubuntu-22.04-gnome42-x64-x11-x11backend` | Ubuntu 22.04 (LTS) | x86_64 | X11 / Mutter | `X11Backend` | **Planned** |
 | **T-15** | `debian-12-gnome43-x64-wayland-gnomecompanion` | Debian 12 (Bookworm) | x86_64 | Wayland / Mutter | `GnomeCompanionBackend` | **Planned** |
