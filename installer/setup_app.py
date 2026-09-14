@@ -245,6 +245,22 @@ def bundled_exe(name):
     return None
 
 
+def bundled_pet_plugin_archive():
+    """Return the optional desktop-pet ZIP embedded in the setup bundle."""
+    name = 'ReadMD-Desktop-Pet.zip'
+    candidates = []
+    if getattr(sys, '_MEIPASS', None):
+        candidates.append(os.path.join(sys._MEIPASS, name))
+    candidates.extend((
+        os.path.join(resource_path(name)),
+        os.path.join(asset_root(), 'dist', name),
+    ))
+    for candidate in candidates:
+        if candidate and os.path.isfile(candidate):
+            return candidate
+    return None
+
+
 def bundled_app_dir():
     """onedir 应用目录（ReadMD.exe + _internal）：优先安装器内嵌，回退本地 dist。"""
     for cand in (
@@ -745,6 +761,12 @@ def _copy_install_payload(stage_dir, opts):
     else:
         _copy_file(bundled_exe(APP_EXE), os.path.join(stage_dir, APP_EXE))
     _copy_file(bundled_exe(UNINST_EXE), os.path.join(stage_dir, UNINST_EXE), optional=True)
+    # Keep the optional desktop runtime beside ReadMD.exe.  ReadMD discovers
+    # this fixed-name sidecar and installs it automatically below
+    # ``<ReadMD>/plugins/pet/hermes-adapter``; no second destination prompt is
+    # shown and the normal reader remains independent of Electron.
+    _copy_file(bundled_pet_plugin_archive(),
+               os.path.join(stage_dir, 'ReadMD-Desktop-Pet.zip'), optional=True)
     if opts.get('webview2', False):
         rt = bundled_webview2_runtime_dir()
         if rt is None:

@@ -5315,11 +5315,13 @@ class Api(object):
             return {'ok': False, 'error_code': 'pet_active_failed'}
 
     def install_pet_plugin(self, archive_path, confirm=False):
-        """Install an explicit local desktop-pet package into user data only."""
+        """Install a local desktop-pet package into ReadMD's managed subtree."""
         if self._pet_launcher.status().get('running'):
             return {'ok': False, 'code': 'pet_plugin_stop_before_install'}
         if not isinstance(archive_path, str) or len(archive_path) > 32768:
             return {'ok': False, 'code': 'invalid_pet_plugin_archive'}
+        if os.path.isdir(archive_path):
+            return self._pet_installer.install_directory(archive_path, confirm=bool(confirm))
         return self._pet_installer.install_archive(archive_path, confirm=bool(confirm))
 
     def install_default_pet_plugin(self):
@@ -5354,7 +5356,13 @@ class Api(object):
             os.path.join(APP_DIR, 'dist'),
             os.path.join(APP_DIR, 'dist', 'ReadMD'),
             os.path.join(APP_DIR, 'packages', 'readmd-hermes-pet-adapter', 'dist'),
+            os.path.join(APP_DIR, 'packages', 'readmd-hermes-pet-adapter', 'stage'),
         ])
+        directory_names = (
+            'readmd-pet-windows',
+            'ReadMD-Desktop-Pet',
+            'readmd-pet-plugin',
+        )
         candidate_names = (
             'ReadMD-Desktop-Pet.zip',
             'ReadMD-Desktop-Pet-review.zip',
@@ -5365,6 +5373,18 @@ class Api(object):
             if not root or root in seen_roots or not os.path.isdir(root):
                 continue
             seen_roots.add(root)
+            # A development build or a portable package may ship the staged
+            # directory instead of a ZIP.  Install it through the same secure
+            # manifest/hash path and keep the destination fixed below ReadMD.
+            for directory_name in directory_names:
+                directory = os.path.join(root, directory_name)
+                if not os.path.isdir(directory):
+                    continue
+                res = self.install_pet_plugin(directory, confirm=True)
+                if res.get('ok'):
+                    from src.readmd_modules.pet import clean_legacy_pet_installations
+                    clean_legacy_pet_installations(self._pet_installer.target)
+                    return res
             for name in candidate_names:
                 archive = os.path.join(root, name)
                 if os.path.isfile(archive):

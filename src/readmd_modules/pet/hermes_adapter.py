@@ -13,6 +13,7 @@ import math
 import logging
 import os
 import hashlib
+import re
 import shutil
 import stat
 import subprocess
@@ -278,6 +279,7 @@ class HermesPetLauncher:
     def status(self) -> Dict[str, Any]:
         runtime = self.adapter_dir / "electron.exe"
         app = self.adapter_dir / "app" / "package.json"
+        available = os.name == "nt" and runtime.is_file() and app.is_file() and self._renderer_assets_ready()
         is_running = self._process is not None and self._process.poll() is None
         if not is_running and time.monotonic() < self._scan_until:
             is_running = self._scan_running
@@ -307,13 +309,27 @@ class HermesPetLauncher:
         except (OSError, ValueError):
             pass
         return {
-            "available": os.name == "nt" and runtime.is_file() and app.is_file(),
+            "available": available,
             # The bridge path is an implementation detail.  Returning it from
             # the public status API would expose the user's data directory.
             "bridge_ready": self._bridge.state_path.is_file(),
             "running": is_running,
             "health": health if is_running else {},
         }
+
+    def _renderer_assets_ready(self) -> bool:
+        """Reject a half-copied Vite renderer before Electron is launched."""
+        index = self.adapter_dir / "app" / "renderer" / "index.html"
+        if not index.is_file():
+            # Small launcher fixtures and older sprite-only packages have no
+            # renderer index; the required package files still gate launch.
+            return True
+        try:
+            html = index.read_text(encoding="utf-8")
+            references = re.findall(r"(?:src|href)=[\"'](?:\./)?assets/([^\"']+)[\"']", html)
+            return all((index.parent / "assets" / name).is_file() for name in references)
+        except (OSError, UnicodeError):
+            return False
 
     def start(self) -> Dict[str, Any]:
         with self._launch_lock:
@@ -405,7 +421,7 @@ def get_default_pet_install_root() -> Path:
 
 
 class HermesPetPluginInstaller:
-    """Install a signed-by-manifest external plugin without touching the app tree."""
+    """Install a manifest-verified optional runtime below the ReadMD app tree."""
 
     MAX_ARCHIVE_BYTES = 350 * 1024 * 1024
     MAX_EXPANDED_BYTES = 750 * 1024 * 1024
@@ -600,6 +616,87 @@ class HermesPetPluginInstaller:
                 digest.update(chunk)
         return digest.hexdigest()
 
+    @classmethod
+    def _manifest_expected(cls, manifest: Any) -> tuple[Optional[Dict[str, str]], Optional[str]]:
+        """Validate the package manifest and return its path-to-hash map.
+
+        Renderer bundles contain content-hashed Vite chunks.  They are all
+        required at runtime, so the installer treats the manifest as the
+        authority for the verified files and accepts only the two harmless
+        legacy extras produced by older packagers (generated renderer chunks
+        and release metadata).
+        """
+        if not isinstance(manifest, dict) or manifest.get("id") != "readmd-hermes-pet" or manifest.get("format_version") != 1:
+            return None, "invalid_pet_plugin_manifest"
+        listed = manifest.get("files")
+        if not isinstance(listed, list) or not listed:
+            return None, "invalid_pet_plugin_manifest"
+        expected: Dict[str, str] = {}
+        for item in listed:
+            if not isinstance(item, dict) or not cls._is_safe_name(str(item.get("path") or "")):
+                return None, "invalid_pet_plugin_manifest"
+            path = str(item["path"])
+            if path == "readmd-pet-plugin.json" or path in expected:
+                return None, "invalid_pet_plugin_manifest"
+            digest = str(item.get("sha256") or "").lower()
+            if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
+                return None, "invalid_pet_plugin_manifest"
+            expected[path] = digest
+        required = {"electron.exe", "app/package.json", "app/electron-main.cjs", "app/preload.cjs"}
+        if not required.issubset(expected):
+            return None, "pet_plugin_required_file_missing"
+        return expected, None
+
+    @staticmethod
+    def _allowed_legacy_extra(name: str) -> bool:
+        # A stale archive made by the pre-Vite packager omitted these hashed
+        # chunks from its manifest even though index.html references them.
+        # Copying them is necessary for backwards compatibility; arbitrary
+        # unlisted executables remain rejected.
+        if name == "pet-release-info.json":
+            return True
+        if not name.startswith("app/renderer/assets/") or not name.endswith(".js"):
+            return False
+        leaf = name.rsplit("/", 1)[-1]
+        # Vite's generated chunks use a stable label followed by an 8+ byte
+        # content hash (for example ``stage-B3T0dW7u.js``).  Restricting the
+        # legacy exception to that shape keeps arbitrary renderer payloads out
+        # of the package while retaining old, correctly generated bundles.
+        return bool(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*-[A-Za-z0-9_-]{8,}[.]js", leaf))
+
+    def _publish_staged_tree(self, staged: Path, expected: Dict[str, str]) -> Dict[str, Any]:
+        """Atomically publish a fully verified optional runtime tree."""
+        backup = self.root / "hermes-adapter.previous"
+        if backup.exists():
+            shutil.rmtree(backup)
+        if self.target.exists():
+            try:
+                self._replace_with_retry(self.target, backup)
+            except PermissionError:
+                # Renaming the target itself failed while the staged tree is
+                # verified, so swap its contents in place instead.
+                self._replace_tree_in_place(staged, self.target)
+                return {"ok": True, "installed": True, "files": len(expected)}
+        try:
+            try:
+                self._replace_with_retry(staged, self.target)
+            except PermissionError:
+                # A scanner can keep a staged file open. Copying to fresh
+                # target paths is unaffected by that handle.
+                try:
+                    shutil.copytree(staged, self.target)
+                except OSError:
+                    shutil.rmtree(self.target, ignore_errors=True)
+                    raise
+        except OSError:
+            # Preserve the last working adapter if publishing fails.
+            if backup.exists() and not self.target.exists():
+                self._replace_with_retry(backup, self.target)
+            raise
+        if backup.exists():
+            shutil.rmtree(backup)
+        return {"ok": True, "installed": True, "files": len(expected)}
+
     def install_archive(self, archive_path: str, *, confirm: bool = False) -> Dict[str, Any]:
         if not confirm:
             return {"ok": False, "code": "pet_install_confirmation_required"}
@@ -625,25 +722,16 @@ class HermesPetPluginInstaller:
                 if manifest_item is None:
                     return {"ok": False, "code": "pet_plugin_manifest_missing"}
                 manifest = json.loads(bundle.read(manifest_item).decode("utf-8"))
-                if not isinstance(manifest, dict) or manifest.get("id") != "readmd-hermes-pet" or manifest.get("format_version") != 1:
-                    return {"ok": False, "code": "invalid_pet_plugin_manifest"}
-                listed = manifest.get("files")
-                if not isinstance(listed, list) or not listed:
-                    return {"ok": False, "code": "invalid_pet_plugin_manifest"}
-                expected = {}
-                for item in listed:
-                    if not isinstance(item, dict) or not self._is_safe_name(str(item.get("path") or "")):
-                        return {"ok": False, "code": "invalid_pet_plugin_manifest"}
-                    digest = str(item.get("sha256") or "").lower()
-                    if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
-                        return {"ok": False, "code": "invalid_pet_plugin_manifest"}
-                    expected[str(item["path"])] = digest
-                required = {"electron.exe", "app/package.json", "app/electron-main.cjs", "app/preload.cjs"}
-                if not required.issubset(expected):
-                    return {"ok": False, "code": "pet_plugin_required_file_missing"}
+                expected, manifest_error = self._manifest_expected(manifest)
+                if manifest_error:
+                    return {"ok": False, "code": manifest_error}
+                assert expected is not None
                 names = {item.filename for item in entries if not item.is_dir()}
                 if not set(expected).issubset(names):
                     return {"ok": False, "code": "pet_plugin_file_missing"}
+                extras = names - set(expected) - {"readmd-pet-plugin.json"}
+                if any(not self._allowed_legacy_extra(name) for name in extras):
+                    return {"ok": False, "code": "pet_plugin_unlisted_file"}
                 self.root.mkdir(parents=True, exist_ok=True)
                 # A previously failed install can leave a locked staging dir
                 # behind; clear it before opening a fresh one.
@@ -651,61 +739,91 @@ class HermesPetPluginInstaller:
                 with tempfile.TemporaryDirectory(prefix="readmd-pet-", dir=str(self.root), ignore_cleanup_errors=True) as temporary:
                     staged = Path(temporary) / "adapter"
                     staged.mkdir()
-                    for name in expected:
+                    for name in sorted(set(expected) | extras):
                         destination = staged / name
                         destination.parent.mkdir(parents=True, exist_ok=True)
                         with bundle.open(name) as source, destination.open("wb") as target:
                             target.write(source.read())
-                        if self._sha256(destination) != expected[name]:
+                        if name in expected and self._sha256(destination) != expected[name]:
                             return {"ok": False, "code": "pet_plugin_hash_mismatch"}
                     # Persist readmd-pet-plugin.json so get_installed_manifest_hash() can verify existing installs
                     manifest_dest = staged / "readmd-pet-plugin.json"
                     manifest_dest.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
-                    # A complete manifest means no unlisted executables can be
-
-                    # smuggled into the runtime. The installation is a replace
-                    # operation only after every listed file verified.
-                    backup = self.root / "hermes-adapter.previous"
-                    # The optional Electron runtime is intentionally large.
-                    # Unlike a user-authored Skill, it has no user-editable
-                    # state and therefore gains nothing from an implicit full
-                    # duplicate. Remove a stale, never-launched rollback only
-                    # after the new archive has passed every verification.
-                    if backup.exists():
-                        shutil.rmtree(backup)
-                    if self.target.exists():
-                        try:
-                            self._replace_with_retry(self.target, backup)
-                        except PermissionError:
-                            # Renaming the target itself failed while the
-                            # staged tree is already fully verified, so swap
-                            # its contents in place instead of directories.
-                            self._replace_tree_in_place(staged, self.target)
-                            return {"ok": True, "installed": True, "files": len(expected)}
-                    try:
-                        try:
-                            self._replace_with_retry(staged, self.target)
-                        except PermissionError:
-                            # A scanner can keep an open handle on a freshly
-                            # written file inside the staged tree for longer
-                            # than any retry budget, which keeps blocking the
-                            # directory rename itself. Copying to fresh target
-                            # paths is unaffected by such handles and the bytes
-                            # were already verified above.
-                            try:
-                                shutil.copytree(staged, self.target)
-                            except OSError:
-                                shutil.rmtree(self.target, ignore_errors=True)
-                                raise
-                    except OSError:
-                        # Preserve the last working adapter if the publish
-                        # itself fails; no partially extracted runtime remains.
-                        if backup.exists() and not self.target.exists():
-                            self._replace_with_retry(backup, self.target)
-                        raise
-                    if backup.exists():
-                        shutil.rmtree(backup)
-            return {"ok": True, "installed": True, "files": len(expected)}
+                    return self._publish_staged_tree(staged, expected)
         except (OSError, ValueError, zipfile.BadZipFile, UnicodeError):
             logging.exception('pet plugin install failed for %s', archive_path)
+            return {"ok": False, "code": "pet_plugin_install_failed"}
+
+    def install_directory(self, directory_path: str, *, confirm: bool = False) -> Dict[str, Any]:
+        """Install a verified staged plugin directory without a picker.
+
+        This is used by source checkouts and portable bundles that unpack the
+        optional runtime beside ReadMD.  It uses the same manifest, hash and
+        atomic publish path as ZIP installation and never changes the source
+        directory or asks the user for a destination.
+        """
+        if not confirm:
+            return {"ok": False, "code": "pet_install_confirmation_required"}
+        source_input = Path(directory_path)
+        if source_input.is_symlink():
+            return {"ok": False, "code": "unsafe_pet_plugin_path"}
+        source = source_input.resolve()
+        if not source.is_dir():
+            return {"ok": False, "code": "invalid_pet_plugin_directory"}
+        try:
+            manifest_path = source / "readmd-pet-plugin.json"
+            if not manifest_path.is_file() or manifest_path.is_symlink():
+                return {"ok": False, "code": "pet_plugin_manifest_missing"}
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            expected, manifest_error = self._manifest_expected(manifest)
+            if manifest_error:
+                return {"ok": False, "code": manifest_error}
+            assert expected is not None
+
+            actual = set()
+            total_size = 0
+            for root, dirs, files in os.walk(source, followlinks=False):
+                root_path = Path(root)
+                for name in dirs:
+                    if (root_path / name).is_symlink():
+                        return {"ok": False, "code": "unsafe_pet_plugin_path"}
+                for name in files:
+                    path = root_path / name
+                    if path.is_symlink():
+                        return {"ok": False, "code": "unsafe_pet_plugin_path"}
+                    relative = path.relative_to(source).as_posix()
+                    if not self._is_safe_name(relative):
+                        return {"ok": False, "code": "unsafe_pet_plugin_path"}
+                    actual.add(relative)
+                    total_size += path.stat().st_size
+            if not actual or len(actual) > self.MAX_FILES:
+                return {"ok": False, "code": "invalid_pet_plugin_contents"}
+            if total_size > self.MAX_EXPANDED_BYTES:
+                return {"ok": False, "code": "pet_plugin_expanded_too_large"}
+            if not set(expected).issubset(actual):
+                return {"ok": False, "code": "pet_plugin_file_missing"}
+            extras = actual - set(expected) - {"readmd-pet-plugin.json"}
+            if any(not self._allowed_legacy_extra(name) for name in extras):
+                return {"ok": False, "code": "pet_plugin_unlisted_file"}
+
+            self.root.mkdir(parents=True, exist_ok=True)
+            self._sweep_stale_staging()
+            with tempfile.TemporaryDirectory(prefix="readmd-pet-", dir=str(self.root), ignore_cleanup_errors=True) as temporary:
+                staged = Path(temporary) / "adapter"
+                staged.mkdir()
+                for name in sorted(set(expected) | extras):
+                    origin = source / Path(name)
+                    destination = staged / Path(name)
+                    if not origin.is_file() or origin.is_symlink():
+                        return {"ok": False, "code": "pet_plugin_file_missing"}
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(origin, destination)
+                    if name in expected and self._sha256(destination) != expected[name]:
+                        return {"ok": False, "code": "pet_plugin_hash_mismatch"}
+                (staged / "readmd-pet-plugin.json").write_text(
+                    json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8"
+                )
+                return self._publish_staged_tree(staged, expected)
+        except (OSError, ValueError, UnicodeError):
+            logging.exception('pet plugin directory install failed for %s', directory_path)
             return {"ok": False, "code": "pet_plugin_install_failed"}

@@ -123,7 +123,15 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
   app.stage.addChild(model)
   // One ticker owns both model updates and drawing; the shared PIXI ticker
   // otherwise continues animating even after the application ticker stops.
-  app.ticker.add(() => model.update(Math.min(250, app.ticker.deltaMS)), undefined, PIXI.UPDATE_PRIORITY.HIGH)
+  // PIXI 6 exposes UPDATE_PRIORITY, but keep the stage compatible with the
+  // lightweight/mock PIXI builds used by the packaged fallback and diagnostics.
+  // An undefined priority is rejected by some ticker implementations and used
+  // to leave the Live2D window transparent before the first frame.
+  const updatePriority = Number(PIXI.UPDATE_PRIORITY?.HIGH ?? 50)
+  const addTicker = typeof app.ticker?.add === 'function'
+    ? (listener: () => void, priority?: number) => app.ticker.add(listener, undefined, priority)
+    : undefined
+  addTicker?.(() => model.update(Math.min(250, app.ticker.deltaMS)), updatePriority)
 
   const hitModel = (x: number, y: number) => {
     const areas = typeof model.hitTest === 'function' ? model.hitTest(x, y) : []
@@ -160,7 +168,10 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
     getCharacterTop: () => model.y
   }
 
-  const probeActive = new URLSearchParams(window.location.search).has('live2dProbe')
+  const probeQuery = typeof URLSearchParams === 'function'
+    ? new URLSearchParams(window.location?.search || '')
+    : undefined
+  const probeActive = Boolean(probeQuery?.has('live2dProbe'))
   const probeHost = window as unknown as { __live2dProbe?: { frame: number; params: Record<string, number>; fps?: number } }
   if (probeActive) probeHost.__live2dProbe = { frame: 0, params: {}, fps: 0 }
 
@@ -373,7 +384,7 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
     // keep animating from the app ticker but enable explicit compensation so
     // additive writes still cancel themselves across frames.
     additiveState.compensate = true
-    app.ticker.add(() => {
+    addTicker?.(() => {
       if (getTime() - lastLifeTime < 4) return
       applyLife()
     })

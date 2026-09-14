@@ -12256,10 +12256,26 @@ function petPercent(value, fallback) {
 // Dual-Channel API (Native Pywebview Bridge + HTTP REST Fallback)
 // --------------------------------------------------------------------------
 
+function petNativeApi() {
+  // ``py``/``hasPy`` are lexical bindings in the bundled boot script, so they
+  // are not properties of ``window``.  The old window-only check silently
+  // forced every pywebview build onto HTTP and made desktop-pet enablement
+  // fail when the loopback server was not reachable yet.
+  try {
+    if (typeof bindPy === 'function') bindPy();
+  } catch (_err) { /* standalone/browser bundle */ }
+  try {
+    if (typeof hasPy !== 'undefined' && hasPy && typeof py !== 'undefined' && py) return py;
+  } catch (_err) { /* lexical bridge is unavailable in this isolated script */ }
+  if (window.hasPy && window.py) return window.py;
+  return window.pywebview?.api || null;
+}
+
 async function fetchPetRuntimeStatus() {
-  if (window.hasPy && window.py && typeof window.py.get_pet_runtime_status === 'function') {
+  const nativeApi = petNativeApi();
+  if (nativeApi && typeof nativeApi.get_pet_runtime_status === 'function') {
     try {
-      return await window.py.get_pet_runtime_status();
+      return await nativeApi.get_pet_runtime_status();
     } catch (_err) { /* fallback to HTTP */ }
   }
   try {
@@ -12283,9 +12299,10 @@ async function fetchPetRuntimeStatus() {
 }
 
 async function requestConfigurePet(config) {
-  if (window.hasPy && window.py && typeof window.py.configure_pet === 'function') {
+  const nativeApi = petNativeApi();
+  if (nativeApi && typeof nativeApi.configure_pet === 'function') {
     try {
-      return await window.py.configure_pet(config);
+      return await nativeApi.configure_pet(config);
     } catch (_err) { /* fallback to HTTP */ }
   }
   try {
@@ -13377,12 +13394,13 @@ function initPetSystem() {
     }
     try {
       let data = null;
-      if (window.hasPy && window.py) {
+      const nativeApi = petNativeApi();
+      if (nativeApi) {
         try {
-          if (isUninstall && typeof window.py.uninstall_companion_pet === 'function') {
-            data = await window.py.uninstall_companion_pet();
-          } else if (!isUninstall && typeof window.py.install_companion_pet === 'function') {
-            data = await window.py.install_companion_pet();
+          if (isUninstall && typeof nativeApi.uninstall_companion_pet === 'function') {
+            data = await nativeApi.uninstall_companion_pet();
+          } else if (!isUninstall && typeof nativeApi.install_companion_pet === 'function') {
+            data = await nativeApi.install_companion_pet();
           }
         } catch (pyErr) {
           console.warn('Native pet lifecycle call failed, trying HTTP:', pyErr);
@@ -13712,7 +13730,10 @@ async function installDefaultPetRuntime() {
   if (button) button.disabled = true;
   petRuntimeInstallPromise = (async () => {
     try {
-      const result = await petGalleryRequest('/api/pets/runtime/install', { confirm: true });
+      const nativeApi = petNativeApi();
+      const result = nativeApi && typeof nativeApi.install_default_pet_plugin === 'function'
+        ? await nativeApi.install_default_pet_plugin()
+        : await petGalleryRequest('/api/pets/runtime/install', { confirm: true });
       showToast(result.ok ? petT('pet.installSuccess') : petT('pet.configFailed', { code: result.code || result.error_code }));
       return result;
     } finally {

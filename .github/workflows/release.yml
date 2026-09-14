@@ -149,9 +149,25 @@ jobs:
           python-version: '3.11'
           cache: pip
           cache-dependency-path: config/requirements-windows.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: packages/readmd-hermes-pet-adapter/package-lock.json
       - run: python -m pip install --disable-pip-version-check -r config/requirements-windows.txt pyinstaller
       - run: python tools/make_icon.py
       - run: python tools/make_file_icon.py
+      - name: Build the optional desktop-pet sidecar
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm --prefix packages/readmd-hermes-pet-adapter ci
+          npm --prefix packages/readmd-hermes-pet-adapter run build
+          npm --prefix packages/readmd-hermes-pet-adapter run stage -- "$env:GITHUB_WORKSPACE/dist/readmd-pet-windows"
+          if (!(Test-Path 'dist/readmd-pet-windows/electron.exe')) { throw 'desktop pet Electron runtime missing' }
+          if (!(Test-Path 'dist/readmd-pet-windows/readmd-pet-plugin.json')) { throw 'desktop pet manifest missing' }
+          Compress-Archive -Path 'dist/readmd-pet-windows/*' -DestinationPath 'dist/ReadMD-Desktop-Pet.zip' -CompressionLevel Optimal
+          if (!(Test-Path 'dist/ReadMD-Desktop-Pet.zip')) { throw 'desktop pet ZIP missing' }
       - name: Build, probe and smoke-test Windows assets
         shell: pwsh
         run: |
@@ -163,7 +179,7 @@ jobs:
           python -m PyInstaller --noconfirm --clean release/ReadMD-windows.spec
           $env:READMD_ONEFILE = '0'
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." installer/setup_app.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." --add-binary "dist/ReadMD;ReadMD" --add-binary "dist/ReadMDUninstall.exe;." installer/setup_app.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." --add-data "dist/ReadMD-Desktop-Pet.zip;." --add-binary "dist/ReadMD;ReadMD" --add-binary "dist/ReadMDUninstall.exe;." installer/setup_app.py
           Move-Item dist/ReadMDSetup.exe "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
           Move-Item dist/ReadMD-portable.exe "dist/ReadMD-portable-v$env:READMD_VERSION.exe"
           $onedir = Start-Process -FilePath 'dist/ReadMD/ReadMD.exe' -ArgumentList '--selftest' -WindowStyle Hidden -Wait -PassThru
@@ -210,6 +226,7 @@ jobs:
           path: |
             dist/ReadMDSetup-v${{ env.READMD_VERSION }}.exe
             dist/ReadMD-portable-v${{ env.READMD_VERSION }}.exe
+            dist/ReadMD-Desktop-Pet.zip
             dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix
             dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip
           if-no-files-found: error
@@ -223,6 +240,7 @@ jobs:
           path: |
             dist/ReadMDSetup-v${{ env.READMD_VERSION }}.exe
             dist/ReadMD-portable-v${{ env.READMD_VERSION }}.exe
+            dist/ReadMD-Desktop-Pet.zip
             dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix
             dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip
           if-no-files-found: error
@@ -567,7 +585,7 @@ jobs:
               print(" -", f)
           PY
           V="${{ env.READMD_VERSION }}"
-          for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "ReadMD-linux-x86_64-v${V}.AppImage" "ReadMD-linux-aarch64-v${V}.AppImage" "readmd_${V}_arm64.deb" "readmd-mcp-server-${V}.zip"; do
+          for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMD-Desktop-Pet.zip" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "ReadMD-linux-x86_64-v${V}.AppImage" "ReadMD-linux-aarch64-v${V}.AppImage" "readmd_${V}_arm64.deb" "readmd-mcp-server-${V}.zip"; do
             test -s "release-assets/$asset"
           done
           python tools/sync_version.py --check
