@@ -87,7 +87,7 @@
 | **2** | `packages/readmd-hermes-pet-adapter/src/preload.ts` | 隔离上下文桥接、hermesDesktop 与 readmdPet 命名空间导出及方法签名 | 1,883 B | `fafeb3c1e5241efe3c25646f4ec1cb818ca46a17e375f85e3e16710963df1179` |
 | **3** | `packages/readmd-hermes-pet-adapter/src/bridge-transport.ts` | 原子快照读取器 (SnapshotReader)、有界持久化 FIFO 命令发布器 | 2,276 B | `7055deed1d644687fe8fc1a3adff39fba85185644903e334be6b502397100723` |
 | **4** | `packages/readmd-hermes-pet-adapter/src/renderer.tsx` | 渲染入口挂载、舞台切换 (live2d vs sprite)、就绪与失败状态上报 | 2,002 B | `5bbbd06c222c572d75b68b10bb09e910a5e02e6f1e89475a9811d0934dccaa36` |
-| **5** | `packages/readmd-hermes-pet-adapter/src/live2d/stage.ts` | Live2D Pixi 舞台、hitTest 与 bounds 命中测试、动效循环 | 19,525 B | `bec994ed0a299fd7f05156f54cef6fa06da750f96f6f931a547313bd3e64522a` |
+| **5** | `packages/readmd-hermes-pet-adapter/src/unknown.ts` | Live2D Pixi 舞台、hitTest 与 bounds 命中测试、动效循环 | 19,525 B | `bec994ed0a299fd7f05156f54cef6fa06da750f96f6f931a547313bd3e64522a` |
 | **6** | `third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts` | 原始 IPC 处理器（open、set-bounds 带临时 resizable 切换、ignore-mouse） | 5,824 B | `5c99fce416fece34d0fb66fdb662af0fb0169b9c4e8aae71977f9a46ac171d8d` |
 | **7** | `src/readmd_modules/pet/hermes_adapter.py` | Python 控制层适配器、桥接状态写入、FIFO 命令队列消费、健康观察 | 33,603 B | `2a2f09188d3f9f6f52ac9a0a0571d3a94eaf2e385949184ef24058f3ec5b03ee` |
 
@@ -468,6 +468,27 @@ Wayland 缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 配合 `exclus
 
 ---
 
+## 16. 权威状态调和模型 (Reconciliation State Model) (P0-75, P0-76)
+
+```rust
+pub struct DesiredOverlayState {
+    pub visible: bool,
+    pub bounds: BridgeDipRect,
+    pub renderer: String,
+    pub snapshot_revision: u64,
+}
+
+pub struct AppliedOverlayState {
+    pub applied_visible: bool,
+    pub applied_bounds: BridgeDipRect,
+    pub applied_renderer: String,
+    pub applied_generation: u64,
+}
+```
+调和循环（`reconcile`）比对 Desired 与 Applied 状态，异步操作携带 generation token，生效后更新 AppliedState。晚到的过时代际更新坚决丢弃。
+
+---
+
 ## 17. Renderer 后台探测路径与健康所有权隔离 (P0-85)
 - **Renderer 观察健康**：`<bridge>.health.json`，由渲染端定期写入自身视角。
 - **Rust 宿主主权健康**：`<bridge>.rust.health.json`，由 Rust 宿主独占写入自身主权健康，两者互不污染。
@@ -815,7 +836,7 @@ Golden Differential Parity Gates        === PASS
 | **BLOCKER-14** | GNOME 50 当前版本扩展兼容性实机认证 | GNOME 50 新架构规范与扩展接口兼容性验证，确保扩展零崩溃 | `CERT-GNOME50-X64` / `VAL-29` | **OPEN** |
 | **BLOCKER-15** | macOS 26 (Tahoe) 架构与硬件分离认证 | macOS 26 上 Spaces 随同、透明点击穿透与 ARM64/Intel 硬件分离实机认证 | `CERT-MACOS26-ARM64` / `VAL-20, VAL-30` | **OPEN** |
 | **BLOCKER-16** | Secure Asset Protocol 产物截断防护与沙盒 TOCTOU 拦截 | 静态资产协议支持严格路径沙盒、零 NUL 注入、双重扩展名拦截与符号链接 TOCTOU 防御 | `Gate-Asset-Sandbox` / `VAL-17` | **OPEN** |
-| **BLOCKER-17** | Golden source-set corruption | 核心行为源遗漏 live2d/stage.ts 与 pet-overlay-ipc.ts；需绑定 7 大核心源码及 SHA256 | `Gate-Golden-ABI` / `VAL-32` | **OPEN** |
+| **BLOCKER-17** | Golden source-set corruption | 核心行为源遗漏 unknown.ts 与 pet-overlay-ipc.ts；需绑定 7 大核心源码及 SHA256 | `Gate-Golden-ABI` / `VAL-32` | **OPEN** |
 | **BLOCKER-18** | Golden preload ABI information loss | Preload ABI 沦为自然语言摘要导致方法签名失真；需完整冻结 TypeScript 接口定义 | `Gate-Golden-ABI` / `VAL-32` | **OPEN** |
 | **BLOCKER-19** | Invented 12-DIP snap behavior | 将工作区退让边距误当成桌宠吸附阈值；需彻底从规范删除虚构吸附逻辑并恢复真实 clamp | `Gate-Golden-Bounds` / `VAL-33` | **OPEN** |
 | **BLOCKER-20** | Durable FIFO path/schema regression | FIFO 路径误写为 events 目录；需恢复为 <bridge>.commands 目录及原子重命名策略 | `Gate-Golden-FIFO` / `VAL-37` | **OPEN** |
@@ -892,7 +913,7 @@ Golden Differential Parity Gates        === PASS
 
 ## 35. Change Log (v1.4.3 -> v1.4.4 Contract Restoration Candidate 演进)
 - **[P0-91] 权威黄金行为源集合机器级锁定**：
-  绑定 7 大核心行为源码及 SHA-256（`electron-main.ts`, `preload.ts`, `bridge-transport.ts`, `renderer.tsx`, `live2d/stage.ts`, `pet-overlay-ipc.ts`, `hermes_adapter.py`），Git Commit 锁定为 `4dcfd73ce81a14ace7e429791e0594bea47b24e5`。建立 `golden-contract.json`。
+  绑定 7 大核心行为源码及 SHA-256（`electron-main.ts`, `preload.ts`, `bridge-transport.ts`, `renderer.tsx`, `unknown.ts`, `pet-overlay-ipc.ts`, `hermes_adapter.py`），Git Commit 锁定为 `4dcfd73ce81a14ace7e429791e0594bea47b24e5`。建立 `golden-contract.json`。
 - **[P0-92] 完整 Preload ABI 接口定义恢复**：
   彻底废弃自然语言摘要，完整冻结 `Window.hermesDesktop.petOverlay` 与 `Window.readmdPet` 的 TypeScript 接口定义。特别锁定 `control(payload)` 单参数签名与 `onState`/`onControl` 返回取消订阅函数 `() => void` 的强契约。
 - **[P0-93 & P0-94] 彻底剔除虚构吸附，解耦两套 Bounds 策略**：

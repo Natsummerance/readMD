@@ -468,6 +468,27 @@ Wayland 缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 配合 `exclus
 
 ---
 
+## 16. 权威状态调和模型 (Reconciliation State Model) (P0-75, P0-76)
+
+```rust
+pub struct DesiredOverlayState {
+    pub visible: bool,
+    pub bounds: BridgeDipRect,
+    pub renderer: String,
+    pub snapshot_revision: u64,
+}
+
+pub struct AppliedOverlayState {
+    pub applied_visible: bool,
+    pub applied_bounds: BridgeDipRect,
+    pub applied_renderer: String,
+    pub applied_generation: u64,
+}
+```
+调和循环（`reconcile`）比对 Desired 与 Applied 状态，异步操作携带 generation token，生效后更新 AppliedState。晚到的过时代际更新坚决丢弃。
+
+---
+
 ## 17. Renderer 后台探测路径与健康所有权隔离 (P0-85)
 - **Renderer 观察健康**：`<bridge>.health.json`，由渲染端定期写入自身视角。
 - **Rust 宿主主权健康**：`<bridge>.rust.health.json`，由 Rust 宿主独占写入自身主权健康，两者互不污染。
@@ -564,7 +585,7 @@ linux-production = ["wayland-layer-shell", "gnome-companion"]
 ### 20.2 标准化一元化平台元组表 (P0-71, P0-72, P0-107)
 | 元组编号 | 操作系统与版本 | 硬件架构 | 显示服务器 | 平台后端实现 | 当前生命周期状态 |
 |---|---|---|---|---|---|
-| **T-01** | Windows 11 24H2 | x86_64 | Desktop Window Manager | `Win32Backend` | **Planned** |
+| **T-01** | Windows 11 24H2 | x86_64 | Desktop Window Manager | `Win32Backend` | **Candidate** |
 | **T-02** | Windows 11 23H2 | x86_64 | Desktop Window Manager | `Win32Backend` | **Planned** |
 | **T-03** | Windows 11 24H2 | aarch64 (Snapdragon X) | Desktop Window Manager | `Win32Backend` | **Planned** |
 | **T-04** | Windows 10 22H2 (Build 19045+) | x86_64 | Desktop Window Manager | `Win32Backend` | **Planned** |

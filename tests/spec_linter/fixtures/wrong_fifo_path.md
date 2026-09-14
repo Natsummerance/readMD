@@ -407,7 +407,7 @@ Wayland 缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 配合 `exclus
 
 ## 10. 权威 Durable FIFO 字节级协议规范 (P0-100)
 
-- **唯一权威目录路径**：`${bridge}.commands`（**严禁使用虚构的 events 运行时路径**）。
+- **唯一权威目录路径**：`<runtime_dir>/events/`。
 - **容量与排队限制**：单文件体积 $\le 32	ext{ MiB}$；队列文件总数 $\le 128$ 个；队列总未消费容量 $\le 64	ext{ MiB}$。
 - **文件名格式**：`${wall_clock_ms.padStart(16,'0')}-${sequence.padStart(8,'0')}-${UUID}.json`。
 - **原子写入**：写入 `<target>.tmp`（flag `wx` 独占创建） $	o$ 原子 `rename` 至 `<target>.json`。
@@ -465,6 +465,27 @@ Wayland 缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 配合 `exclus
 - Rust 子进程仅继承读端（READ end）；Python 在子进程启动后立即关闭自身持有的读端副本。
 - Rust 绝不持有写端，由 Rust 衍生的 WebView 子进程也不可能继承写端。
 - 父进程异常退出 $	o$ 内核自动回收写端句柄 $	o$ Rust 读端收到 EOF $	o$ 触发 2.5 秒倒计时优雅退场。
+
+---
+
+## 16. 权威状态调和模型 (Reconciliation State Model) (P0-75, P0-76)
+
+```rust
+pub struct DesiredOverlayState {
+    pub visible: bool,
+    pub bounds: BridgeDipRect,
+    pub renderer: String,
+    pub snapshot_revision: u64,
+}
+
+pub struct AppliedOverlayState {
+    pub applied_visible: bool,
+    pub applied_bounds: BridgeDipRect,
+    pub applied_renderer: String,
+    pub applied_generation: u64,
+}
+```
+调和循环（`reconcile`）比对 Desired 与 Applied 状态，异步操作携带 generation token，生效后更新 AppliedState。晚到的过时代际更新坚决丢弃。
 
 ---
 

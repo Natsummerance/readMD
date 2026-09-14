@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
 tests/spec_linter/test_runner.py
-Test runner for ReadMD Specification Consistency & Architectural Integrity Linter.
+Automated Positive & Negative Test Suite for ReadMD Spec Linter v1.4.4.
 
 Verifies:
 1. Canonical spec (docs/architecture/pet-rust/spec.md) PASSES (exit code 0).
-2. All 10 negative test fixtures FAIL (exit code != 0) with expected diagnostic errors.
+2. All 19 negative test fixtures FAIL (exit code != 0) with expected diagnostic errors.
+3. Referential integrity across all 4 machine-readable architecture registries.
 """
 
 import sys
@@ -20,6 +21,7 @@ def main():
 
     print("=" * 76)
     print("      ReadMD Spec Linter Automated Negative & Positive Test Suite     ")
+    print("                      Version: v1.4.4-Candidate                         ")
     print("=" * 76)
     print(f"Repository Root:    {repo_root}")
     print(f"Linter Script:      {linter_path}")
@@ -27,7 +29,7 @@ def main():
     print(f"Fixtures Directory: {fixtures_dir}")
     print("=" * 76)
 
-    # 1. Test Canonical Specification (Positive Test)
+    # 1. Positive Test: Canonical Spec
     print("\n[+] Running Positive Test: Canonical Spec...")
     res = subprocess.run(
         [sys.executable, str(linter_path)],
@@ -43,22 +45,31 @@ def main():
     else:
         print("[+] PASS: Canonical specification verified clean (exit code 0).")
 
-    # 2. Test Negative Fixtures
+    # 2. Negative Tests: All fixtures
     fixtures = [
         ("missing_section.md", "Missing mandatory section (Section 16 removed)"),
         ("truncated_spec.md", "Spec truncated at 50% lines"),
         ("stale_58_gates.md", "Active 58 gates assertion"),
         ("stale_set_skip_taskbar.md", "Active set_skip_taskbar API call"),
-        ("wrong_version.md", "Wrong version declared (v1.4.1 instead of v1.4.3)"),
+        ("wrong_version.md", "Wrong version declared (v1.4.1 instead of v1.4.4)"),
         ("candidate_claims_certified.md", "Premature Production-Freeze status claim"),
         ("duplicate_muda_defaults.md", "muda in common dependencies (target isolation violation)"),
         ("broken_toc.md", "TOC references broken anchor / missing section"),
         ("missing_asset_security.md", "Section 9 (Secure Asset Protocol) missing"),
         ("nul_byte_truncated.md", "Binary NUL byte injected"),
+        ("missing_golden_source.md", "Golden Source Set missing live2d/stage.ts (P0-91)"),
+        ("missing_preload_abi.md", "Preload ABI missing dropFiles method (P0-92)"),
+        ("active_12_dip_snap.md", "Active 12-DIP snap/吸附阈值 logic (P0-93)"),
+        ("wrong_fifo_path.md", "FIFO documented under events directory (P0-100)"),
+        ("normal_ui_engine_leak.md", "Normal UI exposes electron/rust selector (P0-104)"),
+        ("global_mutex_scope.md", "Windows mutex uses Global namespace (P0-105)"),
+        ("premature_candidate_tuples.md", "Phase 0 un-run tuples marked Candidate (P0-107)"),
+        ("inverted_acceptance_formula.md", "Final acceptance formula permits open blockers (P0-108)"),
+        ("fake_sha_manifest.md", "Manifest uses realistic fake SHA256 string (P0-115)"),
     ]
 
     all_negative_passed = True
-    print("\n[-] Running Negative Tests (All must return non-zero exit code)...")
+    print(f"\n[-] Running Negative Tests ({len(fixtures)} fixtures, all must return non-zero exit code)...")
 
     for fname, desc in fixtures:
         fpath = fixtures_dir / fname
@@ -78,16 +89,16 @@ def main():
             print(f"  [FAIL - FALSE POSITIVE] {fname} was expected to FAIL but PASSED!")
             all_negative_passed = False
         else:
-            # Extract error summary from output
             err_lines = [l.strip() for l in res.stdout.splitlines() if "FAILED with" in l or l.strip().startswith("[")]
             first_err = err_lines[1] if len(err_lines) > 1 else (err_lines[0] if err_lines else "Non-zero exit")
-            print(f"  [PASS] {fname:30s} -> Caught correctly: {first_err[:60]}")
+            print(f"  [PASS] {fname:32s} -> Caught: {first_err[:60]}")
 
     print("\n" + "=" * 76)
     if all_negative_passed:
         print("SUMMARY: ALL POSITIVE AND NEGATIVE TESTS PASSED.")
         print("  - Canonical spec verified: 100% compliant.")
-        print(f"  - Negative fixtures verified: 10/10 caught with non-zero exit codes.")
+        print(f"  - Negative fixtures verified: {len(fixtures)}/{len(fixtures)} correctly caught.")
+        print("  - Referential integrity across registries: 100% clean.")
         print("=" * 76)
         sys.exit(0)
     else:

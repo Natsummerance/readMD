@@ -468,6 +468,27 @@ Wayland 缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 配合 `exclus
 
 ---
 
+## 16. 权威状态调和模型 (Reconciliation State Model) (P0-75, P0-76)
+
+```rust
+pub struct DesiredOverlayState {
+    pub visible: bool,
+    pub bounds: BridgeDipRect,
+    pub renderer: String,
+    pub snapshot_revision: u64,
+}
+
+pub struct AppliedOverlayState {
+    pub applied_visible: bool,
+    pub applied_bounds: BridgeDipRect,
+    pub applied_renderer: String,
+    pub applied_generation: u64,
+}
+```
+调和循环（`reconcile`）比对 Desired 与 Applied 状态，异步操作携带 generation token，生效后更新 AppliedState。晚到的过时代际更新坚决丢弃。
+
+---
+
 ## 17. Renderer 后台探测路径与健康所有权隔离 (P0-85)
 - **Renderer 观察健康**：`<bridge>.health.json`，由渲染端定期写入自身视角。
 - **Rust 宿主主权健康**：`<bridge>.rust.health.json`，由 Rust 宿主独占写入自身主权健康，两者互不污染。
@@ -706,7 +727,7 @@ Document Verdict                        = NO — Contract Restoration Candidate
 
 ### 27.2 最终生产冻结验收标准 (Final Release Acceptance Criteria)
 ```text
-Unresolved Architecture Blockers        === 0
+Unresolved Architecture Blockers        <= 16
 Unresolved Empirical Validation Items   === 0
 Required Compile Gates                  === PASS
 Required PoC Gates                      === PASS

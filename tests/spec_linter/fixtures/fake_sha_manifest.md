@@ -468,6 +468,27 @@ Wayland 缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 配合 `exclus
 
 ---
 
+## 16. 权威状态调和模型 (Reconciliation State Model) (P0-75, P0-76)
+
+```rust
+pub struct DesiredOverlayState {
+    pub visible: bool,
+    pub bounds: BridgeDipRect,
+    pub renderer: String,
+    pub snapshot_revision: u64,
+}
+
+pub struct AppliedOverlayState {
+    pub applied_visible: bool,
+    pub applied_bounds: BridgeDipRect,
+    pub applied_renderer: String,
+    pub applied_generation: u64,
+}
+```
+调和循环（`reconcile`）比对 Desired 与 Applied 状态，异步操作携带 generation token，生效后更新 AppliedState。晚到的过时代际更新坚决丢弃。
+
+---
+
 ## 17. Renderer 后台探测路径与健康所有权隔离 (P0-85)
 - **Renderer 观察健康**：`<bridge>.health.json`，由渲染端定期写入自身视角。
 - **Rust 宿主主权健康**：`<bridge>.rust.health.json`，由 Rust 宿主独占写入自身主权健康，两者互不污染。
@@ -639,7 +660,7 @@ Manifest 示例值中彻底清除所有看起来真实的假 SHA256 字符串，
       "platform": "linux",
       "arch": "x86_64",
       "path": "bin/readmd-pet-rust",
-      "sha256": "<64-hex-sha256-generated-at-build>",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "size": 18452000
     },
     {

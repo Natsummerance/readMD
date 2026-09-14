@@ -1,0 +1,353 @@
+[
+  {
+    "id": "VAL-01",
+    "area": "Layer-Shell + WRY 容器",
+    "risk_and_physical_facts": "WebKitGTK 子表面是否会二次截获透明穿透区域的鼠标事件",
+    "blocking_gate": "Gate-LayerShell-02",
+    "associated_blockers": [
+      "BLOCKER-01"
+    ]
+  },
+  {
+    "id": "VAL-02",
+    "area": "Layer-Shell 跨屏拖拽",
+    "risk_and_physical_facts": "重设 Monitor 时 Wayland 合成器的 Implicit Pointer Grab 是否中断",
+    "blocking_gate": "Gate-LayerShell-01",
+    "associated_blockers": [
+      "BLOCKER-02"
+    ]
+  },
+  {
+    "id": "VAL-03",
+    "area": "Layer-Shell 按需输入法",
+    "risk_and_physical_facts": "合成器对 zwlr_layer_shell_v1 v4+ KeyboardMode::OnDemand 的支持率",
+    "blocking_gate": "Gate-LayerShell-03",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-04",
+    "area": "GNOME Companion 跨版本稳定性",
+    "risk_and_physical_facts": "GNOME 42~50 各大版本中 Mutter move_frame 的内部接口稳定性",
+    "blocking_gate": "Gate-GnomeCompanion-02",
+    "associated_blockers": [
+      "BLOCKER-03"
+    ]
+  },
+  {
+    "id": "VAL-05",
+    "area": "Windows ARM64 渲染基准",
+    "risk_and_physical_facts": "高通骁龙平台 WebView2 透明窗口层叠与 CPU 占用基准",
+    "blocking_gate": "CERT-WIN11-ARM64",
+    "associated_blockers": [
+      "BLOCKER-05"
+    ]
+  },
+  {
+    "id": "VAL-06",
+    "area": "国产 Linux 发行版依赖",
+    "risk_and_physical_facts": "统信 UOS / 麒麟软件源中 webkit2gtk-4.1 的预装与动态链接一致性",
+    "blocking_gate": "CERT-UOS20-X64",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-07",
+    "area": "Linux 通用单二进制 PoC",
+    "risk_and_physical_facts": "单一二进制在 X11 与 Wayland 环境下的 GDK 动态加载与行为一致性",
+    "blocking_gate": "Gate-Linux-Universal",
+    "associated_blockers": [
+      "BLOCKER-04"
+    ]
+  },
+  {
+    "id": "VAL-08",
+    "area": "muda GTK 菜单在 KWin Wayland",
+    "risk_and_physical_facts": "KWin 环境下右键弹出菜单的准确定位、失焦关闭与层级行为",
+    "blocking_gate": "Gate-Menu-KWin-Wayland",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-09",
+    "area": "muda GTK 菜单在 GNOME Wayland",
+    "risk_and_physical_facts": "Mutter 环境下右键弹出菜单的输入捕获释放与穿透恢复",
+    "blocking_gate": "Gate-Menu-GNOME-Wayland",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-10",
+    "area": "WRY custom DnD 副作用",
+    "risk_and_physical_facts": "Windows 上启用 with_drag_drop_handler 时渲染端 DOM 与文件拖放回归",
+    "blocking_gate": "Gate-Core-10",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-11",
+    "area": "调和状态机事件序列 Fuzz",
+    "risk_and_physical_facts": "proptest 50,000 条极端并发事件序列下的状态不变性与防死锁",
+    "blocking_gate": "Gate-Core-11",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-12",
+    "area": "LayerShell 全局转局部坐标映射",
+    "risk_and_physical_facts": "多屏排布下 VirtualDesktopMapper 的边距计算与跨屏对齐",
+    "blocking_gate": "Gate-LayerShell-04",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-13",
+    "area": "GNOME move_frame 混合 DPI 映射",
+    "risk_and_physical_facts": "混合缩放比例下 GnomeCoordinateMapper 与 Mutter Stage 坐标一致性",
+    "blocking_gate": "Gate-GnomeCompanion-03",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-14",
+    "area": "GNOME Legacy (<=44) Companion",
+    "risk_and_physical_facts": "Ubuntu 22.04 / Debian 12 下 GJS imports 扩展加载与通信",
+    "blocking_gate": "CERT-UBUNTU22-X64",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-15",
+    "area": "GNOME ESM (>=45) Companion",
+    "risk_and_physical_facts": "Ubuntu 24.04 / Fedora 39+ 下 ESM 扩展加载、热重载与会话恢复",
+    "blocking_gate": "CERT-UBUNTU24-X64",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-16",
+    "area": "Windows HTTPS 资产 Scheme",
+    "risk_and_physical_facts": "Windows 10/11 下 with_https_scheme(true) 与最低运行时能力探针",
+    "blocking_gate": "Gate-Asset-HTTPS-Win",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-17",
+    "area": "Custom Protocol 路径沙盒",
+    "risk_and_physical_facts": "跨平台路径穿越、符号链接逃逸、NUL 注入实测防御拦截率 100%",
+    "blocking_gate": "Gate-Asset-Sandbox",
+    "associated_blockers": [
+      "BLOCKER-16"
+    ]
+  },
+  {
+    "id": "VAL-18",
+    "area": "统信 UOS 运行时 WebKitGTK 验证",
+    "risk_and_physical_facts": "UOS 20 SP1 物理机环境下动态链接库真实加载实证",
+    "blocking_gate": "CERT-UOS20-ARM64",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-19",
+    "area": "银河麒麟运行时 WebKitGTK 验证",
+    "risk_and_physical_facts": "Kylin V10 SP1 物理机环境下动态链接库真实加载实证",
+    "blocking_gate": "CERT-KYLIN10-ARM64",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-20",
+    "area": "macOS 13~26 支持周期认证",
+    "risk_and_physical_facts": "macOS 13 (Ventura) ~ 26 (Tahoe) 在 Apple Silicon 与 Intel 上的认证",
+    "blocking_gate": "CERT-MACOS-ALL",
+    "associated_blockers": [
+      "BLOCKER-15"
+    ]
+  },
+  {
+    "id": "VAL-21",
+    "area": "Layer-Shell Pre-Realize 生命周期",
+    "risk_and_physical_facts": "GTK 窗口在未 realize 前绑定 Layer-Shell 且成功挂载 WRY 的实测路径",
+    "blocking_gate": "Gate-LayerShell-05",
+    "associated_blockers": [
+      "BLOCKER-09"
+    ]
+  },
+  {
+    "id": "VAL-22",
+    "area": "GNOME Meta.Window AppID 传播",
+    "risk_and_physical_facts": "WRY/GTK 顶层窗口在 Mutter 内部 get_gtk_application_id() 真实返回值验证",
+    "blocking_gate": "Gate-GnomeCompanion-04",
+    "associated_blockers": [
+      "BLOCKER-10"
+    ]
+  },
+  {
+    "id": "VAL-23",
+    "area": "GNOME Companion 畸形 IPC Fuzz",
+    "risk_and_physical_facts": "极端非法 JSON 与畸形指令下 GNOME Shell 进程零崩溃证明",
+    "blocking_gate": "Gate-GnomeCompanion-05",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-24",
+    "area": "Wayland 工作区与面板避让对齐",
+    "risk_and_physical_facts": "Layer-Shell margins 映射与 KDE/wlroots 边缘独占区域对齐实测",
+    "blocking_gate": "Gate-LayerShell-06",
+    "associated_blockers": [
+      "BLOCKER-13"
+    ]
+  },
+  {
+    "id": "VAL-25",
+    "area": "导航代际隔离异步消息丢弃测试",
+    "risk_and_physical_facts": "构造跨导航延迟 IPC 消息，验证 Rust 宿主 100% 拒绝陈旧调用",
+    "blocking_gate": "Gate-IPC-Generation",
+    "associated_blockers": [
+      "BLOCKER-11"
+    ]
+  },
+  {
+    "id": "VAL-26",
+    "area": "调和状态 AppliedState 异步生效竞态",
+    "risk_and_physical_facts": "构造高频乱序 snapshot 事件，验证 AppliedState 拒绝陈旧代际状态生效",
+    "blocking_gate": "Gate-Core-Reconciliation",
+    "associated_blockers": [
+      "BLOCKER-12"
+    ]
+  },
+  {
+    "id": "VAL-27",
+    "area": "权威规范产物完整性与发布检查",
+    "risk_and_physical_facts": "验证规范本体哈希与完整性，自动化检查 release 产物 linux-production 特性",
+    "blocking_gate": "Gate-Core-SpecIntegrity",
+    "associated_blockers": [
+      "BLOCKER-06",
+      "BLOCKER-08"
+    ]
+  },
+  {
+    "id": "VAL-28",
+    "area": "muda 零 libxdo 依赖实测证明",
+    "risk_and_physical_facts": "通过 readelf/ldd 证明 Linux 二进制完全不依赖 libxdo.so",
+    "blocking_gate": "Gate-Linux-MudaTargetIsolation",
+    "associated_blockers": [
+      "BLOCKER-07"
+    ]
+  },
+  {
+    "id": "VAL-29",
+    "area": "当前 GNOME 50 扩展兼容性实测",
+    "risk_and_physical_facts": "验证 GNOME 50 环境下 ESM 扩展加载与 Mutter 接口调用平滑",
+    "blocking_gate": "CERT-GNOME50-X64",
+    "associated_blockers": [
+      "BLOCKER-14"
+    ]
+  },
+  {
+    "id": "VAL-30",
+    "area": "macOS 26 (Tahoe) 桌宠实机认证",
+    "risk_and_physical_facts": "验证 macOS 26 开发者/正式版下透明渲染、点击穿透与 Spaces 随同",
+    "blocking_gate": "CERT-MACOS26-ARM64",
+    "associated_blockers": [
+      "BLOCKER-15"
+    ]
+  },
+  {
+    "id": "VAL-31",
+    "area": "Layer-Shell compositor usable-area / exclusive-zone parity",
+    "risk_and_physical_facts": "实测不同 Wayland 合成器在 Layer::Overlay + exclusive_zone(0) 下的面板避让与工作区对齐语义",
+    "blocking_gate": "Gate-LayerShell-06",
+    "associated_blockers": [
+      "BLOCKER-27"
+    ]
+  },
+  {
+    "id": "VAL-32",
+    "area": "Golden preload ABI differential",
+    "risk_and_physical_facts": "逐项对比 Rust 注入 bridge 与 Golden preload.ts 的 9 个 API 方法、参数个数与取消订阅函数",
+    "blocking_gate": "Gate-Golden-ABI",
+    "associated_blockers": [
+      "BLOCKER-17",
+      "BLOCKER-18"
+    ]
+  },
+  {
+    "id": "VAL-33",
+    "area": "Golden bounds policy differential",
+    "risk_and_physical_facts": "分别测试 HostSnapshotBoundsPolicy (40 DIP workArea) 与 RendererInteractiveBoundsPolicy (80x80 min)",
+    "blocking_gate": "Gate-Golden-Bounds",
+    "associated_blockers": [
+      "BLOCKER-19"
+    ]
+  },
+  {
+    "id": "VAL-34",
+    "area": "Golden control/toggle-app differential",
+    "risk_and_physical_facts": "实测 toggle-app 触发剪贴板读取并向 FIFO 写入 clipboard 消息，验证无窗口隐藏误动作",
+    "blocking_gate": "Gate-Golden-Differential",
+    "associated_blockers": [
+      "BLOCKER-21"
+    ]
+  },
+  {
+    "id": "VAL-35",
+    "area": "Golden menu model differential",
+    "risk_and_physical_facts": "实测右键菜单 5 项动作顺序、header 禁用、Play 能量阈值 (>=10) 与最大 128 角色单选列表",
+    "blocking_gate": "Gate-Golden-Menu",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-36",
+    "area": "Golden clipboard payload differential",
+    "risk_and_physical_facts": "实测 4M 字符文本截断、24M 字符 base64 PNG 截断与 Windows 128 路径解析的一致性",
+    "blocking_gate": "Gate-Golden-Clipboard",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-37",
+    "area": "Golden FIFO byte/filename parity",
+    "risk_and_physical_facts": "实测 <bridge>.commands 目录排队、32MB 单体限制、64MB 总量限制与 .tmp 独占写原子重命名",
+    "blocking_gate": "Gate-Golden-FIFO",
+    "associated_blockers": [
+      "BLOCKER-20"
+    ]
+  },
+  {
+    "id": "VAL-38",
+    "area": "Golden SnapshotReader retry parity",
+    "risk_and_physical_facts": "构造非法 JSON snapshot 验证签名未被污染，后续合法 snapshot 能立即被识别与消费",
+    "blocking_gate": "Gate-Golden-Differential",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-39",
+    "area": "Golden hit-region differential",
+    "risk_and_physical_facts": "运行确定性点网格与边缘测试，验证 Live2D hitTest || bounds.contains 与 Sprite 规则的精确等价性",
+    "blocking_gate": "Gate-Golden-HitRegion",
+    "associated_blockers": [
+      "BLOCKER-26"
+    ]
+  },
+  {
+    "id": "VAL-40",
+    "area": "Golden pushState / anti-snapback differential",
+    "risk_and_physical_facts": "实测 pushState 下发时以实际当前窗口 bounds 覆盖 snapshot bounds，防止拖拽后回弹",
+    "blocking_gate": "Gate-Golden-AntiSnapback",
+    "associated_blockers": []
+  },
+  {
+    "id": "VAL-41",
+    "area": "Windows virtual-desktop Golden behavior",
+    "risk_and_physical_facts": "实测 Windows 虚拟桌面切换时桌宠仅在当前桌面显示，验证无私有 API 越界注入",
+    "blocking_gate": "Gate-Win32-VirtualDesktop",
+    "associated_blockers": [
+      "BLOCKER-25"
+    ]
+  },
+  {
+    "id": "VAL-42",
+    "area": "Runtime detached-signature verification",
+    "risk_and_physical_facts": "实测分离签名 manifest.json.sig 配合固定公钥环进行验签，拒绝 manifest 自签名注入",
+    "blocking_gate": "Gate-Crypto-DetachedSig",
+    "associated_blockers": [
+      "BLOCKER-28"
+    ]
+  },
+  {
+    "id": "VAL-43",
+    "area": "Asset sandbox TOCTOU threat-model/handle test",
+    "risk_and_physical_facts": "在只读托管沙盒根目录下模拟同用户重解析点与符号链接交换，验证只读受管根的不可变防御边界",
+    "blocking_gate": "Gate-Asset-TOCTOU",
+    "associated_blockers": []
+  }
+]

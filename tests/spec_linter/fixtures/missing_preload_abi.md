@@ -136,7 +136,7 @@ interface Window {
 
   readmdPet: {
     // 同步调用：从原生拖放事件注入文件路径（最多 128 个文件）
-    dropFiles(files: File[]): void;
+    sendDroppedFiles(paths: string[]): void;
   };
 }
 ```
@@ -465,6 +465,27 @@ Wayland 缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 配合 `exclus
 - Rust 子进程仅继承读端（READ end）；Python 在子进程启动后立即关闭自身持有的读端副本。
 - Rust 绝不持有写端，由 Rust 衍生的 WebView 子进程也不可能继承写端。
 - 父进程异常退出 $	o$ 内核自动回收写端句柄 $	o$ Rust 读端收到 EOF $	o$ 触发 2.5 秒倒计时优雅退场。
+
+---
+
+## 16. 权威状态调和模型 (Reconciliation State Model) (P0-75, P0-76)
+
+```rust
+pub struct DesiredOverlayState {
+    pub visible: bool,
+    pub bounds: BridgeDipRect,
+    pub renderer: String,
+    pub snapshot_revision: u64,
+}
+
+pub struct AppliedOverlayState {
+    pub applied_visible: bool,
+    pub applied_bounds: BridgeDipRect,
+    pub applied_renderer: String,
+    pub applied_generation: u64,
+}
+```
+调和循环（`reconcile`）比对 Desired 与 Applied 状态，异步操作携带 generation token，生效后更新 AppliedState。晚到的过时代际更新坚决丢弃。
 
 ---
 

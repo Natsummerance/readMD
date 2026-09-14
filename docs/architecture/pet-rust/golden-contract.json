@@ -1,0 +1,247 @@
+{
+  "$schema": "./golden-contract.schema.json",
+  "version": "1.4.4",
+  "golden_commit_sha": "4dcfd73ce81a14ace7e429791e0594bea47b24e5",
+  "behavior_sources": {
+    "packages/readmd-hermes-pet-adapter/src/electron-main.ts": {
+      "role": "Host process lifecycle, clamp bounds, context menu, recoveries, clipboard forwarding",
+      "sha256": "0a1b6473d155f8121d77d1463316a7968b0d973f76bb6080f4abb58de65a269d",
+      "bytes": 14929
+    },
+    "packages/readmd-hermes-pet-adapter/src/preload.ts": {
+      "role": "Isolated context bridge exposing hermesDesktop.petOverlay and readmdPet.dropFiles",
+      "sha256": "fafeb3c1e5241efe3c25646f4ec1cb818ca46a17e375f85e3e16710963df1179",
+      "bytes": 1883
+    },
+    "packages/readmd-hermes-pet-adapter/src/bridge-transport.ts": {
+      "role": "Atomic snapshot reader and durable bounded FIFO command queue publisher",
+      "sha256": "7055deed1d644687fe8fc1a3adff39fba85185644903e334be6b502397100723",
+      "bytes": 2276
+    },
+    "packages/readmd-hermes-pet-adapter/src/renderer.tsx": {
+      "role": "Renderer mount point, stage switching (live2d vs sprite), ready/failed signaling",
+      "sha256": "5bbbd06c222c572d75b68b10bb09e910a5e02e6f1e89475a9811d0934dccaa36",
+      "bytes": 2002
+    },
+    "packages/readmd-hermes-pet-adapter/src/live2d/stage.ts": {
+      "role": "Live2D Pixi stage, model hit testing (hitTest OR bounds.contains), render loop",
+      "sha256": "bec994ed0a299fd7f05156f54cef6fa06da750f96f6f931a547313bd3e64522a",
+      "bytes": 19525
+    },
+    "third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts": {
+      "role": "Vendor Hermes overlay IPC handlers (open, set-bounds with resizable toggle, ignore-mouse)",
+      "sha256": "5c99fce416fece34d0fb66fdb662af0fb0169b9c4e8aae71977f9a46ac171d8d",
+      "bytes": 5824
+    },
+    "src/readmd_modules/pet/hermes_adapter.py": {
+      "role": "Python host process adapter, bridge state writer, FIFO queue consumer, health reader",
+      "sha256": "2a2f09188d3f9f6f52ac9a0a0571d3a94eaf2e385949184ef24058f3ec5b03ee",
+      "bytes": 33603
+    }
+  },
+  "supporting_evidence": {
+    "packages/readmd-hermes-pet-adapter/package.json": {
+      "sha256": "ee63a91062219ea13672d4440246745f5eb821573a3007b30a7385e857780600",
+      "bytes": 709
+    },
+    "packages/readmd-hermes-pet-adapter/src/pet-life.ts": {
+      "sha256": "21ef9bf62592d4d00a3b99cd3fd6f50944245fb26ac1f51cd3f3ad2db20d1dd5",
+      "bytes": 12123
+    }
+  },
+  "preload_abi": {
+    "namespace_hermesDesktop": "window.hermesDesktop.petOverlay",
+    "methods": {
+      "open": {
+        "signature": "(request?: { bounds?: unknown; screen?: boolean }) => Promise<{ ok: boolean; bounds?: unknown }>",
+        "kind": "async_invoke"
+      },
+      "close": {
+        "signature": "() => Promise<{ ok: boolean }>",
+        "kind": "async_invoke"
+      },
+      "setBounds": {
+        "signature": "(bounds: { x: number; y: number; width: number; height: number }) => void",
+        "kind": "sync_send"
+      },
+      "setIgnoreMouse": {
+        "signature": "(ignore: boolean) => void",
+        "kind": "sync_send"
+      },
+      "setFocusable": {
+        "signature": "(focusable: boolean) => void",
+        "kind": "sync_send"
+      },
+      "pushState": {
+        "signature": "(payload: unknown) => void",
+        "kind": "sync_send"
+      },
+      "control": {
+        "signature": "(payload: { type: string; [key: string]: unknown }) => void",
+        "kind": "sync_send",
+        "exact_param_count": 1
+      },
+      "onState": {
+        "signature": "(callback: (payload: unknown) => void) => () => void",
+        "kind": "subscribe_listener",
+        "returns_unsubscribe": true
+      },
+      "onControl": {
+        "signature": "(callback: (payload: unknown) => void) => () => void",
+        "kind": "subscribe_listener",
+        "returns_unsubscribe": true
+      }
+    },
+    "namespace_readmdPet": "window.readmdPet",
+    "methods_readmdPet": {
+      "dropFiles": {
+        "signature": "(files: File[]) => void",
+        "kind": "sync_send",
+        "max_files": 128
+      }
+    }
+  },
+  "bounds_policies": {
+    "HostSnapshotBoundsPolicy": {
+      "source": "readmd-hermes-pet-adapter/src/electron-main.ts (clampBounds)",
+      "width_min": 240,
+      "width_max": 640,
+      "width_default": 300,
+      "height_min": 300,
+      "height_max": 720,
+      "height_default": 420,
+      "x_default": 72,
+      "y_default": 72,
+      "work_area_visibility_margin": 40,
+      "offscreen_fallback": {
+        "margin_x": 12,
+        "margin_y": 12,
+        "inset_x": 24,
+        "inset_y": 24,
+        "formula_x": "primary.x + max(12, primary.width - width - 24)",
+        "formula_y": "primary.y + max(12, primary.height - height - 24)"
+      },
+      "snapping_threshold": null
+    },
+    "RendererInteractiveBoundsPolicy": {
+      "source": "third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts (hermes:pet-overlay:set-bounds)",
+      "width_min": 80,
+      "height_min": 80,
+      "temporary_resizable_toggle": true
+    }
+  },
+  "hit_region_contract": {
+    "live2d": {
+      "source": "packages/readmd-hermes-pet-adapter/src/live2d/stage.ts",
+      "rule": "areas = typeof model.hitTest === 'function' ? model.hitTest(x, y) : []; return (Array.isArray(areas) && areas.length > 0) || Boolean(model.getBounds?.().contains(x, y))",
+      "logical_expression": "(model.hitTest(x, y).length > 0) || (model.getBounds().contains(x, y))"
+    },
+    "sprite": {
+      "source": "packages/readmd-hermes-pet-adapter/src/renderer.tsx / overlay-root",
+      "rule": "DOM rect of sprite element or canvas active bounds"
+    }
+  },
+  "toggle_app_contract": {
+    "trigger": "control({ type: 'toggle-app' })",
+    "action": "read clipboard (text max 4M chars, image_png max 24M chars, paths max 128) -> writeCommand(clipboardCommand())",
+    "banned_behavior": "show/minimize main window (vendor default superseded by ReadMD adapter topology)"
+  },
+  "context_menu_contract": {
+    "items_order": [
+      {
+        "type": "header",
+        "label": "Level N · Energy N · Mood N",
+        "enabled": false
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "type": "action",
+        "label": "Pet",
+        "enabled_rule": "cooldown === 0"
+      },
+      {
+        "type": "action",
+        "label": "Feed",
+        "enabled_rule": "cooldown === 0"
+      },
+      {
+        "type": "action",
+        "label": "Play",
+        "enabled_rule": "energy >= 10 && cooldown === 0"
+      },
+      {
+        "type": "action",
+        "label_resting": "Wake up",
+        "label_active": "Rest",
+        "enabled_rule": "cooldown === 0"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "type": "characters",
+        "max_count": 128,
+        "type_ui": "radio"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "type": "action",
+        "label": "Open reader",
+        "enabled": true
+      }
+    ],
+    "banned_items": [
+      "Hide pet",
+      "Quit",
+      "Settings"
+    ]
+  },
+  "clipboard_limits": {
+    "text_max_chars": 4194304,
+    "image_png_base64_max_chars": 25165824,
+    "windows_paths_max": 128,
+    "schema": {
+      "type": "clipboard",
+      "text": "string",
+      "image_png": "string (base64 PNG)",
+      "paths": "string[]"
+    }
+  },
+  "fifo_commands_contract": {
+    "directory": "${bridge}.commands",
+    "banned_directory": "<runtime_dir>/events/",
+    "max_body_bytes": 33554432,
+    "max_queue_files": 128,
+    "max_queue_pending_bytes": 67108864,
+    "file_naming": "${wall_clock_ms.padStart(16,'0')}-${sequence.padStart(8,'0')}-${UUID}.json",
+    "atomic_write_strategy": "write to .tmp with flag 'wx' -> atomic rename to .json"
+  },
+  "fallback_sprite_metadata": {
+    "frameH": 512,
+    "frameW": 384,
+    "framesPerState": 4,
+    "mime": "image/png",
+    "scale": 0.33,
+    "spritesheetRevision": "hermes-fallback-a5661b457de00b9a",
+    "stateRows": [
+      "idle",
+      "wave"
+    ]
+  },
+  "bridge_poll_sequence": [
+    "read new snapshot",
+    "if parent dead: exit process",
+    "normalize snapshot state",
+    "if visible === false && fullscreen !== true: close overlay and return",
+    "resolve renderer",
+    "if window absent: open overlay window",
+    "else if snapshot bounds changed compared with lastHostBounds: apply bounds and update lastHostBounds",
+    "if fullscreen === true: hide window; else: showInactive",
+    "if renderer changed: reload overlay page and return",
+    "pushState(latestState + currentActualWindowBounds)"
+  ]
+}

@@ -1,47 +1,47 @@
-# ReadMD Desktop Overlay（桌面桌宠）全平台重构执行规格书
-## —— v1.4.3 Architecture Freeze Candidate (True Multiplatform Architecture)
+# ReadMD Desktop Overlay（桌面桌宠）全平台重构执行规格
+## —— v1.4.4 Contract Restoration Candidate (Golden Contract & Pure Architecture)
 
-> **版本**：v1.4.3-Candidate (Architecture Freeze Candidate)  
-> **状态说明**：本版本为 Freeze Candidate，暂不接受 Production Architecture Freeze。所有平台的最终 Certified 状态必须由自动化工具根据 Phase 0 PoC 及实机门禁报告机器生成，规格书本身无权单方面宣布生产认证。  
-> **文档定位**：不可降级的工业级生产实施蓝图，指导 Phase 0 PoC 实机验证、动态门禁组合与平台认证落地。  
-> **唯一黄金参考标准（Golden Reference）**：当前 Windows Electron 生产实现 (`packages/readmd-hermes-pet-adapter`) 与 Python 权威桥接 (`src/readmd_modules/pet/hermes_adapter.py`)。  
-> **重构四大红线原则**：  
-> 1. **全平台性**：严禁通过将不支持的平台简单降级为 In-App 网页阅读器内部弹窗，来伪装“全平台支持”。必须为 Windows、macOS、Linux X11/XWayland、KDE/wlroots 原生 Wayland、GNOME 原生 Wayland 提供明确、可验证的原生能力路径。  
-> 2. **真实生态事实为唯一基准**：严禁虚构任何底层 API、crate 版本（WRY 0.57.0, Tao 0.37.0, muda 0.19.3, gtk-layer-shell 0.8.2）或 MSRV（Rust 1.85.0）。依赖 crates.io 真实元数据，与 GNOME Shell / Mutter / Wayland 协议严格对齐。  
-> 3. **不可修改黄金参考（Golden Reference Immutable）**：重构目标是让 Rust 宿主 100% 还原现有 Electron 行为。严禁为迁就 Rust 而修改现行 Electron 与 Python 契约。  
-> 4. **统一平台后端族（Platform Backend Family）**：摒弃单一 Tao 窗口适应全平台的粗糙假设，确立 `OverlayWindowBackend` 统一抽象，各平台提供 Win32、Cocoa、X11、Layer-Shell 与 GNOME Companion 专属后端。
+> **版本**：v1.4.4-Candidate (Contract Restoration Candidate)  
+> **状态说明**：本版本为 Contract Restoration Candidate，绝非 Production Architecture Freeze。所有平台认证元组（Platform Tuples T-01 ~ T-23）状态严格保持为 **Planned**（等待 Phase 0 PoC 实测证据产生后方可进入 Candidate）。  
+> **核心使命**：彻底恢复被前序版本压缩与虚构的真实 Golden Contract，机器级绑定 7 大核心源码及 SHA-256，确立机器可读注册表，消除一切推测性 API 假设与虚构吸附逻辑。  
+> **唯一黄金参考源（Golden Reference）**：当前生产 Windows Electron 完整实现 (`packages/readmd-hermes-pet-adapter`)、第三方底层 IPC 原型 (`third_party/hermes-agent-pet`) 与 Python 宿主控制层 (`src/readmd_modules/pet/hermes_adapter.py`)。  
+> **重构四大核心原则**：  
+> 1. **全平台真机原生支持**：严禁通过将不支持的平台简单降级为 In-App 网页阅读器内部元素来伪装支持。为 Windows、macOS、Linux X11/XWayland、KDE/wlroots 原生 Wayland、GNOME 原生 Wayland 提供明确、可验证的原生能力路径。  
+> 2. **真实生态事实为唯一标准**：严禁虚构任何底层 API 与 crate 特性；统一锁定 **Rust 1.85.0**、`wry 0.57.0` (开启 `os-webview`)、`tao 0.37.0`、`muda 0.19.3` (按目标隔离，Linux 禁用默认 `libxdo`)、`gtk-layer-shell 0.8.2` (显式激活 `v0_6`)。  
+> 3. **不可篡改的黄金行为基准（Golden Contract Immutable）**：重构目标是 Rust 宿主 100% 行为等价还原现有 Electron 表现，严禁为适应 Rust 实现而反向修改现有 Python 契约与 Renderer 假设。  
+> 4. **统一平台后端族（Platform Backend Family）**：单一 Tao 无法应对全平台差异，明确 `OverlayWindowBackend` 统一抽象，各平台提供 Win32、Cocoa、X11、Layer-Shell 及 GNOME Companion 专属后端实现。
 
 ---
 
 ## 目录
-1. [0. 真实生态事实与架构原则](#0-真实生态事实与架构原则)
-2. [1. Golden Contract 可读基准源](#1-golden-contract-可读基准源)
-3. [2. 双轨驱动：Engine Orchestrator](#2-双轨驱动engine-orchestrator)
+1. [0. 现实生态事实与架构原则](#0-现实生态事实与架构原则)
+2. [1. Golden Contract 权威行为源与基准契约](#1-golden-contract-权威行为源与基准契约)
+3. [2. 引擎编排器 (Engine Orchestrator) 与产品交互模型](#2-引擎编排器-engine-orchestrator-与产品交互模型)
 4. [3. 统一平台后端族 Platform Backend Family 架构](#3-统一平台后端族-platform-backend-family-架构)
-5. [4. Native Wayland Layer-Shell 深度设计 (KDE / wlroots)](#4-native-wayland-layer-shell-深度设计-kde--wlroots)
-6. [5. GNOME Wayland 生产路径：ReadMD GNOME Shell Companion](#5-gnome-wayland-生产路径readmd-gnome-shell-companion)
-7. [6. Wayland Input Model 极限设计](#6-wayland-input-model-极限设计)
-8. [7. 黄金交互区域 Golden Hit Region 原理与交互边界](#7-黄金交互区域-golden-hit-region-原理与交互边界)
-9. [8. ReadMD Pet IPC v1：会话代际隔离与 WRY 官方 API](#8-readmd-pet-ipc-v1会话代际隔离与-wry-官方-api)
+5. [4. Native Wayland Layer-Shell 后端 (KDE / wlroots)](#4-native-wayland-layer-shell-后端-kde--wlroots)
+6. [5. GNOME Wayland 专属后端：ReadMD GNOME Shell Companion](#5-gnome-wayland-专属后端readmd-gnome-shell-companion)
+7. [6. Wayland Input Model 主动推送几何模型](#6-wayland-input-model-主动推送几何模型)
+8. [7. 黄金交互区 Golden Hit Region 原则与交互边界](#7-黄金交互区-golden-hit-region-原则与交互边界)
+9. [8. ReadMD Pet IPC v1：会话解耦与 WRY 官方 API 对齐](#8-readmd-pet-ipc-v1会话解耦与-wry-官方-api-对齐)
 10. [9. 完整安全资产协议 (Secure Asset Protocol)](#9-完整安全资产协议-secure-asset-protocol)
-11. [10. 文件 Durable FIFO 字节级协议规范](#10-文件-durable-fifo-字节级协议规范)
-12. [11. Native Drag & Drop：WRY 0.57 官方路径与回归门禁](#11-native-drag--dropwry-057-官方路径与回归门禁)
-13. [12. CSP 防御与偏门资产沙箱](#12-csp-防御与偏门资产沙箱)
-14. [13. 跨平台剪贴板 ClipboardService 规范](#13-跨平台剪贴板-clipboardservice-规范)
-15. [14. 多实例 Scope 与用户 Profile 隔离](#14-多实例-scope-与用户-profile-隔离)
-16. [15. Parent Liveness Pipe 继承模型与防孤儿保证](#15-parent-liveness-pipe-继承模型与防孤儿保证)
-17. [16. 权威状态与对齐调和模型 (Reconciliation State Model)](#16-权威状态与对齐调和模型-reconciliation-state-model)
-18. [17. Renderer 保活与后台探活路径](#17-renderer-保活与后台探活路径)
-19. [18. 权威依赖配置与构建规范 (Authoritative Cargo Specification)](#18-权威依赖配置与构建规范-authoritative-cargo-specification)
-20. [19. 性能协议：各阶段时延与全局内存预算](#19-性能协议各阶段时延与全局内存预算)
+11. [10. 权威 Durable FIFO 字节级协议规范](#10-权威-durable-fifo-字节级协议规范)
+12. [11. Native Drag & Drop：WRY 0.57 官方路径重构解耦](#11-native-drag--dropwry-057-官方路径重构解耦)
+13. [12. CSP 策略与资产沙盒边界](#12-csp-策略与资产沙盒边界)
+14. [13. 跨平台安全 ClipboardService 规范](#13-跨平台安全-clipboardservice-规范)
+15. [14. 实例 Scope 与用户 Profile 隔离](#14-实例-scope-与用户-profile-隔离)
+16. [15. Parent Liveness Pipe 继承模型与深度验证](#15-parent-liveness-pipe-继承模型与深度验证)
+17. [16. 权威状态调和模型 (Reconciliation State Model)](#16-权威状态调和模型-reconciliation-state-model)
+18. [17. Renderer 后台探测路径与健康所有权隔离](#17-renderer-后台探测路径与健康所有权隔离)
+19. [18. 权威代码与构建规范 (Authoritative Cargo Specification)](#18-权威代码与构建规范-authoritative-cargo-specification)
+20. [19. 性能协议：阶段性时间与内存预算](#19-性能协议阶段性时间与内存预算)
 21. [20. 平台认证元组规范 (Platform Certification Tuples)](#20-平台认证元组规范-platform-certification-tuples)
-22. [21. 动态门禁组合模型 (Dynamic Gate Composition Model)](#21-动态门禁组合模型-dynamic-gate-composition-model)
-23. [22. Fullscreen、Workspace 与虚拟桌面平台化规范](#22-fullscreenworkspace-与虚拟桌面平台化规范)
-24. [23. 运行时分发、健康所有权与 A/B 升级 (PetRuntimeInstallerV2)](#23-运行时分发健康所有权与-ab-升级-petruntimeinstallerv2)
-25. [24. 供应链安全、代码签名与权限边界](#24-供应链安全代码签名与权限边界)
+22. [21. 动态门禁架构模型 (Dynamic Gate Composition Model)](#21-动态门禁架构模型-dynamic-gate-composition-model)
+23. [22. Fullscreen 与虚拟桌面跨平台规范](#22-fullscreen-与虚拟桌面跨平台规范)
+24. [23. 运行时分发与权威 A/B 升级 (PetRuntimeInstallerV2)](#23-运行时分发与权威-ab-升级-petruntimeinstallerv2)
+25. [24. 供应链安全、签名与权限边界](#24-供应链安全签名与权限边界)
 26. [25. Release Stop Conditions 严格红线](#25-release-stop-conditions-严格红线)
-27. [26. Codex 实施执行协议与交接模式](#26-codex-实施执行协议与交接模式)
-28. [27. 最终验收与重构判断标准](#27-最终验收与重构判断标准)
+27. [26. Codex 实施执行协议与 Golden 差异测试套件](#26-codex-实施执行协议与-golden-差异测试套件)
+28. [27. 重构验收判断标准](#27-重构验收判断标准)
 29. [28. Platform Capability Matrix 综合平台能力矩阵](#28-platform-capability-matrix-综合平台能力矩阵)
 30. [29. 架构决策与实机实证项注册表 (Empirical Validation Register)](#29-架构决策与实机实证项注册表-empirical-validation-register)
 31. [30. Real Hardware Certification Matrix 实机硬件认证矩阵](#30-real-hardware-certification-matrix-实机硬件认证矩阵)
@@ -49,300 +49,385 @@
 33. [32. Change Log (v1.4.0 -> v1.4.1 Freeze Candidate 演进)](#32-change-log-v140---v141-freeze-candidate-演进)
 34. [33. Change Log (v1.4.1 -> v1.4.2 Freeze Candidate 演进)](#33-change-log-v141---v142-freeze-candidate-演进)
 35. [34. Change Log (v1.4.2 -> v1.4.3 Architecture Freeze Candidate 演进)](#34-change-log-v142---v143-architecture-freeze-candidate-演进)
-36. [附录 A：已验证关键系统底层事实](#附录-a已验证关键系统底层事实)
-37. [附录 B：Phase 0 实施执行清单与 ADR-0001 草案](#附录-bphase-0-实施执行清单与-adr-0001-草案)
+36. [35. Change Log (v1.4.3 -> v1.4.4 Contract Restoration Candidate 演进)](#35-change-log-v143---v144-contract-restoration-candidate-演进)
+37. [附录 A：验证关键系统底层实现](#附录-a验证关键系统底层实现)
+38. [附录 B：Phase 0 实施执行清单与 ADR-0001 草案](#附录-bphase-0-实施执行清单与-adr-0001-草案)
 
 ---
 
-## 0. 真实生态事实与架构原则
+## 0. 现实生态事实与架构原则
 
-### 0.1 上游生态真实事实审计与 Linux 单二进制 ADR 决策
-在进入规格书前，已对 crates.io、FreeDesktop、GNOME 与各大图形系统的当前真实源码与 API 完成严格实测审计：
-
-1. **WRY / Tao / muda 依赖与 Feature Matrix 真实事实**：
-   - 当前最新 stable 产物：`wry = "0.57.0"`，`tao = "0.37.0"`，`muda = "0.19.3"`，`gtk-layer-shell = "0.8.2"`。
-   - crates.io 真实元数据证实：`wry 0.57.0` 的 `rust_version = "1.85"`，`tao 0.37.0` 的 `rust_version = "1.85"`。
-   - **WRY Feature 依赖铁律**：WRY 明确规定 `"os-webview must be enabled for the crate to work"`。严禁在没有开启 `os-webview` 时声明 `default-features = false`，否则将彻底剥离 WebView 核心驱动！
-   - **muda Target 隔离依赖事实 (P0-55)**：muda 0.19.3 默认开启 `gtk` 与 `libxdo`。严禁在公共 `[dependencies]` 声明 muda，否则 Cargo feature union 会将 `libxdo` 强加给 Linux target！必须按 Target 分离声明，Linux 下使用 `default-features = false, features = ["gtk"]`，彻底消除 Pure Wayland 环境对 `libxdo.so` 的无谓污染。
-   - **gtk-layer-shell API Feature 要求 (P0-57)**：调用 `gtk_layer_shell::is_supported()` 需要 `v0_5`，调用 `protocol_version()` 需要 `v0_6`。因此依赖声明必须显式开启 `features = ["v0_6"]`。
-   - **macOS objc2 生态版本统一 (P0-56)**：统一至与 muda 0.19.3 一致的 `objc2 0.6`、`objc2-app-kit 0.3`、`objc2-foundation 0.3` 生态族，禁止在一个二进制内混用 objc2 0.5 与 0.6。
-   - **工具链锁定**：统一锁定至 **Rust 1.85.0**（`rust-version = "1.85.0"`）。
-
-2. **Linux 发行架构决策：单二进制方案 (ADR-0002: Single Linux Production Binary)**：
-   - **业务事实**：ReadMD Linux 以统一的 AppImage / deb 发行（如 `ReadMD-linux-x86_64-v2.3.9.AppImage`），必须能够开箱即用地在 X11、XWayland 与 Native Wayland（KDE/GNOME）环境下无缝运行，绝不拆分为多个架构发行包。
-   - **Cargo Feature 不是运行时切换器**：Cargo feature 是编译期静态添加物（Compile-time Additive），不能按用户的桌面环境在编译期做二选一。
-   - **统一 Linux 生产 Feature Profile (P0-58)**：
-     定义唯一发布 profile `linux-production = ["wayland-layer-shell", "gnome-companion"]`。
-   - **运行时动态后端分发 (Runtime Backend Dispatch)**：
-     GTK3 内部原生集成了 X11 与 Wayland GDK 后端。主程序在启动时通过 `$WAYLAND_DISPLAY`、`GDK_IS_WAYLAND_DISPLAY` 及桌面环境变量执行运行时探测：
-     - 若为 GNOME Wayland $	o$ 激活 `GnomeCompanionBackend`
-     - 若为 KDE / wlroots Wayland $	o$ 激活 `LayerShellBackend`（通过 `gtk_layer_shell::is_supported()` 动态门禁）
-     - 若为 X11 / XWayland $	o$ 激活 `X11Backend`
-     Native Wayland 下通过 `WebViewBuilderExtUnix::build_gtk(container)` 将 WebKitGTK 容器挂载入 GTK 窗口，无需剥离编译期 `x11` 特性。
-
-### 0.2 项目口径定义：交付物全平台 vs 桌面桌宠全平台
-必须区分两个层级：
-- **A. 整体软件交付物全平台**：主程序阅读器提供跨平台支持（Windows / macOS / Linux / UOS / 麒麟）。
-- **B. 桌面桌宠 (Desktop Overlay) 全平台**：
-  必须基于各平台原生合成器提供与 Windows 完全对等的置顶、透明与点击穿透体验。
-  **目标能力（Target Capability）**：Golden Equivalent。
-  **认证结果（Certification Result）**：在 Phase 0 自动化实机门禁报告签署前，标定为 `not yet proven`。
-  严禁在设计阶段宣称“100% 已等价”，所有结论由实体机测试数据背书。
+### 0.1 核心依赖与 MSRV 事实约束 (P0-55, P0-56, P0-57, P0-58)
+1. **Rust 编译工具链基准**：MSRV 锁定为 **Rust 1.85.0**（2021 Edition）。
+2. **WRY 0.57.0 约束**：
+   - 必须显式激活 `features = ["os-webview"]`。
+   - 严禁在 new 中传入窗口指针引用（如已废弃的 `new(&window)` 虚构模式），统一采用 `WebViewBuilder::new()` 链式构建后调用 `.build(&window)`。
+   - 自定义拖放事件枚举 `DragDropEvent` 包含 `Enter`、`Over`、`Drop`、`Leave` 四种变体，**严禁使用虚构的 `Hover`**。
+3. **muda 0.19.3 特性联合污染隔离 (P0-55)**：
+   - muda 0.19.3 默认开启 `libxdo` 特性，在 Linux 上会导致动态链接 `libxdo.so.3`。
+   - **架构强制约束**：禁止在通用 `[dependencies]` 中声明 `muda`；必须按目标平台在 `[target.'cfg(...)'.dependencies]` 中分别声明。Linux 目标必须显式声明 `muda = { version = "=0.19.3", default-features = false, features = ["gtk"] }`。
+4. **gtk-layer-shell 0.8.2 特性链锁定 (P0-57)**：
+   - `is_supported()` 需要 feature `v0_5`，`protocol_version()` 需要 feature `v0_6`。
+   - Linux 构建必须配置：`gtk-layer-shell = { version = "=0.8.2", default-features = false, features = ["v0_6"], optional = true }`。
+   - 生产发布特性统一定义：`linux-production = ["wayland-layer-shell", "gnome-companion"]`。
+5. **macOS objc2 生态版本统一 (P0-56)**：
+   - 锁定 `objc2 = "0.6"`, `objc2-app-kit = "0.3"`, `objc2-foundation = "0.3"`，彻底根除老旧 `objc 0.2` 的符号与运行时冲突。
 
 ---
+## 1. Golden Contract 权威行为源与基准契约
 
-## 1. Golden Contract 可读基准源
+### 1.1 黄金行为源集合与 Git 提交哈希绑定 (P0-91, P0-103)
+本重构规格唯一承认的黄金行为基准（Golden Behavior Set）由且仅由以下 7 个核心源码文件构成。规格已与代码库当前提交建立不可篡改的机器级绑定：
+- **Golden Git Commit SHA**：`4dcfd73ce81a14ace7e429791e0594bea47b24e5`
+- **机器可读契约定义**：`docs/architecture/pet-rust/golden-contract.json`
 
-### 1.1 必须固化的基准源文件与 SHA-256 锚点
-实施前在 `docs/architecture/pet-rust/golden-contract.json` 中固化 7 个文件的真实哈希：
-1. `src/readmd_modules/pet/hermes_adapter.py`
-2. `packages/readmd-hermes-pet-adapter/package.json`
-3. `packages/readmd-hermes-pet-adapter/src/electron-main.ts`
-4. `packages/readmd-hermes-pet-adapter/src/preload.ts`
-5. `packages/readmd-hermes-pet-adapter/src/renderer.tsx`
-6. `packages/readmd-hermes-pet-adapter/src/pet-life.ts`
-7. `packages/readmd-hermes-pet-adapter/src/bridge-transport.ts`
+| 序号 | 核心行为源码文件路径 | 承担的核心契约职责 | 文件大小 | 精确 SHA-256 哈希 |
+|---|---|---|---|---|
+| **1** | `packages/readmd-hermes-pet-adapter/src/electron-main.ts` | 宿主生命周期、clampBounds 计算、右键菜单模型、恢复基线、剪贴板转发 | 14,929 B | `0a1b6473d155f8121d77d1463316a7968b0d973f76bb6080f4abb58de65a269d` |
+| **2** | `packages/readmd-hermes-pet-adapter/src/preload.ts` | 隔离上下文桥接、hermesDesktop 与 readmdPet 命名空间导出及方法签名 | 1,883 B | `fafeb3c1e5241efe3c25646f4ec1cb818ca46a17e375f85e3e16710963df1179` |
+| **3** | `packages/readmd-hermes-pet-adapter/src/bridge-transport.ts` | 原子快照读取器 (SnapshotReader)、有界持久化 FIFO 命令发布器 | 2,276 B | `7055deed1d644687fe8fc1a3adff39fba85185644903e334be6b502397100723` |
+| **4** | `packages/readmd-hermes-pet-adapter/src/renderer.tsx` | 渲染入口挂载、舞台切换 (live2d vs sprite)、就绪与失败状态上报 | 2,002 B | `5bbbd06c222c572d75b68b10bb09e910a5e02e6f1e89475a9811d0934dccaa36` |
+| **5** | `packages/readmd-hermes-pet-adapter/src/live2d/stage.ts` | Live2D Pixi 舞台、hitTest 与 bounds 命中测试、动效循环 | 19,525 B | `bec994ed0a299fd7f05156f54cef6fa06da750f96f6f931a547313bd3e64522a` |
+| **6** | `third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts` | 原始 IPC 处理器（open、set-bounds 带临时 resizable 切换、ignore-mouse） | 5,824 B | `5c99fce416fece34d0fb66fdb662af0fb0169b9c4e8aae71977f9a46ac171d8d` |
+| **7** | `src/readmd_modules/pet/hermes_adapter.py` | Python 控制层适配器、桥接状态写入、FIFO 命令队列消费、健康观察 | 33,603 B | `2a2f09188d3f9f6f52ac9a0a0571d3a94eaf2e385949184ef24058f3ec5b03ee` |
 
-任何对上述 7 个文件的篡改将直接熔断构建。
+**支持性证据文件（Supporting Evidence，不作为独立行为判定源）**：
+- `packages/readmd-hermes-pet-adapter/package.json` (709 B, `ee63a91062219ea13672d4440246745f5eb821573a3007b30a7385e857780600`)
+- `packages/readmd-hermes-pet-adapter/src/pet-life.ts` (12,123 B, `21ef9bf62592d4d00a3b99cd3fd6f50944245fb26ac1f51cd3f3ad2db20d1dd5`)
 
-### 1.2 Golden ABI 强约束
-- 窗口透明度范围：`0.35` ~ `1.0`。
-- 坐标系统：标准 Electron 全局虚拟桌面 DIP（Device Independent Pixels）。
-- 离手阈值：吸附检测距离固定为 `12 DIP`。
-- 物理交互区域：必须 100% 保持 Sprite 与 Live2D 现有交互多边形。
+**黄金契约变更管理与重录流程 (P0-103)**：
+区分“迁移基准（Migration Golden Baseline）”与“当前产品源码（Current Product Source）”。若未来 Electron 代码发生合法变更导致上述文件哈希改变，CI 迁移门禁将拦截报警，但绝不影响主程序常规构建。解除条件为触发权威重录流程：人工与 API 联合审阅变更差异 $	o$ 重新生成 `golden-contract.json` $	o$ 更新 Rust 差异测试 Fixture $	o$ 运行差异对比门禁 $	o$ 签署并提交新的 `golden_commit_sha`。
+
+### 1.2 权威 Preload ABI 规范 (P0-92)
+渲染端通过 `contextBridge` 访问的接口必须 100% 逐字义还原，严禁使用摘要式模糊定义。Rust 注入的兼容层脚本必须提供完全一致的调用签名：
+
+```typescript
+interface Window {
+  hermesDesktop: {
+    petOverlay: {
+      // 异步调用：调用宿主打开悬浮窗，返回操作结果及解析后的屏幕坐标
+      open(request?: { bounds?: unknown; screen?: boolean }): Promise<{ ok: boolean; bounds?: unknown }>;
+
+      // 异步调用：关闭悬浮窗
+      close(): Promise<{ ok: boolean }>;
+
+      // 同步调用：通知宿主设置窗口物理边界
+      setBounds(bounds: { x: number; y: number; width: number; height: number }): void;
+
+      // 同步调用：切换鼠标事件穿透状态
+      setIgnoreMouse(ignore: boolean): void;
+
+      // 同步调用：切换窗口是否可获取焦点
+      setFocusable(focusable: boolean): void;
+
+      // 同步调用：渲染端向宿主回推自身状态
+      pushState(payload: unknown): void;
+
+      // 同步调用：控制信令派发（必须为单个 payload 对象，严禁改为多参数签名）
+      control(payload: { type: string; [key: string]: unknown }): void;
+
+      // 事件监听：监听宿主推送的状态，必须返回取消订阅函数 () => void
+      onState(callback: (payload: unknown) => void): () => void;
+
+      // 事件监听：监听宿主推送的控制信令，必须返回取消订阅函数 () => void
+      onControl(callback: (payload: unknown) => void): () => void;
+    };
+  };
+
+  readmdPet: {
+    // 同步调用：从原生拖放事件注入文件路径（最多 128 个文件）
+    dropFiles(files: File[]): void;
+  };
+}
+```
+
+**关键 ABI 语义红线**：
+1. `control(payload)` 必须严格接收单一 payload 对象，严禁设计为 `control(action, payload)`。
+2. `onState` 和 `onControl` 必须返回一个无参取消订阅函数 `() => void`。
+3. 同步触发方法（`setBounds`, `setIgnoreMouse`, `setFocusable`, `pushState`, `control`, `dropFiles`）与 Promise 异步方法（`open`, `close`）严禁混淆互换。
+
+### 1.3 窗口尺寸策略解耦：彻底删除虚构吸附 (P0-93, P0-94)
+**严正声明**：生产 Electron 源码中**根本不存在任何拖拽自动贴边吸附机制（彻底剔除历史版本出现的 12 DIP 离手吸附伪设定）**。前序版本出现的“12 DIP 离手吸附”系编造内容，必须从规范中彻底剔除！
+
+真实 Golden 实现包含两个完全解耦的边界策略：
+1. **宿主快照边界策略 (HostSnapshotBoundsPolicy)**：
+   - 源码来源：`packages/readmd-hermes-pet-adapter/src/electron-main.ts` 中的 `clampBounds` 函数。
+   - 宽度范围：`Math.max(240, Math.min(640, Math.round(Number(input.width) || 300)))`。
+   - 高度范围：`Math.max(300, Math.min(720, Math.round(Number(input.height) || 420)))`。
+   - 默认坐标：`x = 72`, `y = 72`。
+   - **工作区合法性约束**：遍历系统所有显示器，窗口矩形必须在至少一个 `display.workArea` 内满足边缘重叠 $\ge 40	ext{ DIP}$：
+     ```typescript
+     x + width >= dx + 40 &&
+     x <= dx + dw - 40 &&
+     y + height >= dy + 40 &&
+     y <= dy + dh - 40
+     ```
+   - **离屏退让机制 (Offscreen Fallback)**：若完全脱离所有工作区，移动至主显示器右下角安全区域：
+     ```typescript
+     primary = screen.getPrimaryDisplay().workArea;
+     x = primary.x + Math.max(12, primary.width - width - 24);
+     y = primary.y + Math.max(12, primary.height - height - 24);
+     ```
+     *注：公式中的 12 与 24 是主显示器边界的安全留白边距（Margin），绝对不是拖拽吸附检测阈值！*
+2. **渲染端交互式边界策略 (RendererInteractiveBoundsPolicy)**：
+   - 源码来源：`third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts` 中的 `set-bounds` 处理器。
+   - 限制下限：`width >= 80`, `height >= 80`。
+   - **尺寸切换原子锁**：当请求尺寸与当前窗口不一致时，必须执行临时可调整开关切换：
+     ```typescript
+     const resizing = width !== curW || height !== curH;
+     if (resizing && !win.isResizable()) win.setResizable(true);
+     win.setBounds({ x: Math.round(bounds.x), y: Math.round(bounds.y), width, height });
+     if (resizing) win.setResizable(false);
+     ```
+
+### 1.4 Golden Hit Region 真实判定与测试模型 (P0-95, P0-112)
+彻底废除“交互多边形”等简化假设，严格还原 Live2D 与 Sprite 的真实判定逻辑：
+1. **Live2D 判定契约 (stage.ts L128-L129)**：
+   ```typescript
+   const areas = typeof model.hitTest === 'function' ? model.hitTest(x, y) : [];
+   return (Array.isArray(areas) && areas.length > 0) || Boolean(model.getBounds?.().contains(x, y));
+   ```
+   **核心逻辑**：只要满足 `model.hitTest(x, y)` 非空 **或者** `model.getBounds().contains(x, y)` 为真，即判定为命中！
+   由于 `getBounds()` 覆盖了整个可视轮廓，绝大部分有效交互均被外接矩形覆盖。Phase 0 必须输出 `Live2D Golden Region Complexity Report`，决定底层最佳表达形式。
+2. **Sprite 判定契约**：
+   依据渲染端 DOM 矩形或 Canvas 激活区域计算，光标悬浮在精灵图有效帧区域内时开启鼠标捕获。
+3. **确定性测试网格 (Deterministic Fixture Grid)**：
+   在 `golden/hit-region/` 下建立包含内部网格点、精确轮廓边界点、外部非命中点的机器验证集。
+
+### 1.5 ReadMD 适配层拓扑特有的 `toggle-app` 语义 (P0-96)
+在 vendor Hermes 原生实现中，`toggle-app` 信令用于切换主窗口显示与最小化。但在 ReadMD 生产适配层中，注册 IPC 时显式传入了 `getMainWindow: () => null`，并独立拦截了 `toggle-app` 信令：
+```typescript
+else if (type === 'toggle-app') writeCommand(clipboardCommand());
+```
+**权威规范冻结**：
+- 当渲染端派发 `control({ type: "toggle-app" })` 时，Rust 宿主必须读取系统当前剪贴板，并将提取的数据打包写入持久化 FIFO 命令队列：
+  ```json
+  {
+    "type": "clipboard",
+    "text": "...",
+    "image_png": "...",
+    "paths": []
+  }
+  ```
+- **架构红线**：严禁将 `toggle-app` 误实现为最小化或显示宿主窗口！本次重构的黄金基准是 ReadMD 外部适配层拓扑，而非 vendor 独立拓扑。
+
+### 1.6 右键上下文菜单 Golden Contract (P0-97)
+右键菜单必须精确保持现有生产顺序与使能条件，严禁擅自增删菜单项：
+1. **Header 状态展示**：`Level N · Energy N · Mood N`（固定 `enabled = false`）。
+2. **Separator 分隔线**。
+3. **互动动作序列**：
+   - `Pet`（摸摸）：无冷却时可用。
+   - `Feed`（喂食）：无冷却时可用。
+   - `Play`（玩耍）：**仅当 `energy >= 10` 且无冷却时可用**。
+   - `Rest`（休息）：激活状态显示；若桌宠正处于休息状态，则文字自动变为 `Wake up`（唤醒）；无冷却时可用。
+4. **Separator 分隔线**。
+5. **角色列表 (Characters)**：单选菜单列表（Radio items），最多展示 128 个角色，选中项与当前装载角色严格对齐。
+6. **Separator 分隔线**。
+7. **`Open reader`**：触发打开主阅读器窗口。
+*红线：严禁在未经过产品 ADR 审批前加入 "Hide pet"、"Quit"、"Settings" 等非黄金契约项。*
+
+### 1.7 剪贴板读取 Golden 边界与容量上限 (P0-98)
+当触发剪贴板抓取（如 `toggle-app` 或拖入文本）时，必须严格遵守以下截断边界：
+- **文本内容 (text)**：`clipboard.readText().slice(0, 4 * 1024 * 1024)`，最大截取 4M 字符。
+- **图像内容 (image_png)**：将原生图像转为 PNG 并编码为 Base64 字符串，截取最大 **24 * 1024 * 1024 字符**（*注：这是 Base64 字符串长度切片，绝非 24MB 裸二进制字节！*）。
+- **文件路径 (paths)**：
+  - Windows：读取 `FileNameW` 缓冲区，按 UTF-16LE 解码，使用 `\0` 拆分并过滤空值，最多截取 128 个路径。
+  - macOS / Linux：通过对应的原生 URI / 文件剪贴板协议读取，过滤后最多保留 128 个路径。
+- **下发信令结构**：
+  ```json
+  {
+    "type": "clipboard",
+    "text": "...",
+    "image_png": "...",
+    "paths": ["..."]
+  }
+  ```
+
+### 1.8 渲染端异常恢复黄金基线 (Renderer Recovery Baseline, P0-99)
+生产 Electron 针对渲染进程崩溃（`render-process-gone`）的恢复基线如下：
+1. 若正在主动关闭或崩溃原因为正常退出（`clean-exit`），则直接忽略。
+2. 记录崩溃时刻至恢复窗口数组，过滤保留过去 60 秒内的记录。
+3. **熔断阈值**：若 60 秒内崩溃恢复次数已达到 **3 次**，彻底放弃重启，向健康文件写入 `pet_renderer_crashed` 失败标记。
+4. **渐进退避**：若未达熔断阈值，安排延迟重载当前页面，延迟时间为 `500ms * recoveries.length`。
+*Rust 架构可以在此基线之上实现更先进的断路器（Circuit Breaker），但其向 Python 暴露的可观察行为必须完全兼容。*
+
+### 1.9 Fallback 精灵图权威元数据 (P0-125)
+当无网络或模型加载失败时，内置备用精灵图的渲染参数必须严格一致：
+```json
+{
+  "frameH": 512,
+  "frameW": 384,
+  "framesPerState": 4,
+  "mime": "image/png",
+  "scale": 0.33,
+  "spritesheetRevision": "hermes-fallback-a5661b457de00b9a",
+  "stateRows": ["idle", "wave"]
+}
+```
+
+### 1.10 Bridge 轮询时序与 `pushState` 防回弹语义 (P0-126, P0-127, P0-128)
+1. **权威轮询判定时序**：
+   `读取 snapshot.json` $	o$ `检查父进程存活` $	o$ `规范化状态` $	o$ `若 visible === false 且 fullscreen !== true 则关闭窗口并退出` $	o$ `解析目标 renderer` $	o$ `若窗口不存在则打开` $	o$ `比对 lastHostBounds 应用新 bounds` $	o$ `若 fullscreen === true 则 hide 否则 showInactive` $	o$ `若 renderer 变更则 reload 页面并返回` $	o$ `执行 pushState`。
+2. **`pushState` 防回弹关键设计 (Anti-Snapback)**：
+   在向渲染端推送 `pushState(payload)` 前，宿主必须调用原生 `overlay.getBounds()` 获取当前物理窗口的实际坐标，并强制覆盖 payload 中的 bounds 字段。这样拖拽松手后，渲染端收到的永远是当前已经物理生效的坐标，彻底消除坐标回跳 Bug。
+3. **全屏状态与可见性边缘判定 (P0-128)**：
+   当 `visible === false` 且 `fullscreen === true` 时，窗口执行隐藏（`hide`）保持后台实例，绝不销毁重建。
 
 ---
+## 2. 引擎编排器 (Engine Orchestrator) 与产品交互模型
 
-## 2. 双轨驱动：Engine Orchestrator
+### 2.1 面向普通用户的极简交互模型 (P0-104)
+在 ReadMD 主程序设置面板中，面向普通终端用户的配置界面必须保持绝对简洁，彻底隐藏底层技术实现：
+- **普通用户界面选项**：
+  ```text
+  桌面桌宠运行位置：
+  ○ 阅读器内 (In-App)
+  ○ 独立桌面 (Standalone Desktop)
+  ```
+- **底层引擎选择逻辑**：
+  - 内部配置项固定为 `pet.runtime.engine = "auto"`。
+  - 严禁在普通用户界面展示任何有关 "Rust"、"Electron"、"WRY"、"Layer-Shell" 或 "GNOME Companion" 的单选项！
+  - 仅在主程序进入“开发者模式（Developer Mode）”或“故障诊断（Diagnostics）”时，才提供调试下拉菜单：
+    `[ Auto (推荐) | Rust (Candidate) | Electron (Legacy) | Force In-App ]`。
 
-### 2.1 用户界面无感切换
-前端设置界面仅增加单一键值 `desktop_pet_engine: "electron" | "rust"`，不增加任何额外 i18n 负担。
+### 2.2 本地优先的诊断事件原则 (P1-131)
+- 当发生引擎降级、异常崩溃或健康报警时，编排器默认**仅记录本地诊断日志文件与诊断事件（Local Diagnostics Events）**。
+- 严禁借由 Rust 引擎重构引入任何隐式的未经授权的网络遥测（Telemetry）上报。所有网络级数据同步必须严格继承主程序已有的隐私协议与用户显式授权。
 
-### 2.2 Python Engine Orchestrator 状态机与安全终止 (P0-64)
-- **精准 PID 追踪**：Orchestrator 启动子进程时必须保存其确切的子进程 PID 及 OS 进程句柄（Windows JobObject / Unix process group / pidfd）。
-- **禁止盲目批量杀死**：**严禁使用 `kill_processes_by_target` 扫描可执行文件名进行批量 kill**！正常退出流程为：发送优雅退出命令 $	o$ 等待 2500ms 超时 $	o$ 仅向该 exact PID 派发 SIGKILL 或 TerminateProcess。
-- **故障自动回退**：Rust 引擎连续 3 次启动异常或 72h 稳态泄露超标时，Orchestrator 自动将配置回退为 `electron`，并产生遥测报警。
+### 2.3 确定性子进程生命周期管理 (P0-64)
+- 严禁编排器使用 `kill_processes_by_target` 遍历全系统同名进程。
+- 必须通过启动时记录的 Exact PID，在 Windows 上绑定 JobObject，在 Linux 上使用 `pidfd` 进行精确生命周期管理。
 
 ---
-
 ## 3. 统一平台后端族 Platform Backend Family 架构
 
-定义核心抽象特征 `OverlayWindowBackend`，将平台原生特性彻底下沉：
+各平台窗口服务器的底层拓扑差异极大，架构定义 `OverlayWindowBackend` 统一接口：
+- **Win32Backend**：Windows 10/11，DirectComposition / DWM 透明穿透分层。
+- **CocoaBackend**：macOS 13~26，NSWindow CollectionBehavior，Spaces 随同与无标题栏穿透。
+- **X11Backend**：Linux X11 / XWayland，XShape / XFixes 输入穿透与 EWMH 状态。
+- **LayerShellBackend**：KDE Plasma / wlroots 原生 Wayland，`zwlr_layer_shell_v1` Overlay 层级。
+- **GnomeCompanionBackend**：GNOME 42~50 原生 Wayland，专用 GNOME Shell Companion 协同扩展。
 
-### 3.1 强类型坐标系统与严格主线程所有权 (Thread Safety Axiom)
-建立强类型坐标体系以消除歧义：
-- `BridgeDipRect`：Python 桥接层传递的标准 Electron 全局虚拟桌面 DIP 坐标。
-- `OutputLocalDipRect`：相对于具体物理显示器（Monitor / Output）左上角的局部 DIP 坐标。
-- `OutputPlacement`：包含具体输出显示器标识与局部坐标的排布结构体。
+主线程独占 GUI 事件循环，后端 Trait 彻底剔除 `Send + Sync` 标记，由后台 Tokio 线程池通过 mpsc 信道向主线程下发更新指令。
 
+---
+
+## 4. Native Wayland Layer-Shell 后端 (KDE / wlroots)
+
+### 4.1 Route A 初始化生命周期 (P0-59)
+GTK Window 必须在调用 `widget.show()` 或 `widget.realize()` **之前**绑定 Layer-Shell，否则会触发底层断言崩溃：
 ```rust
-// packages/readmd-pet-rust/src/window/coords.rs
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct BridgeDipRect {
-    pub x: f64,
-    pub y: f64,
-    pub width: f64,
-    pub height: f64,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct OutputLocalDipRect {
-    pub x: f64,
-    pub y: f64,
-    pub width: f64,
-    pub height: f64,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct OutputPlacement {
-    pub output_id: String, // 会话内局部标识，如 "DP-1"
-    pub local_rect: OutputLocalDipRect,
-    pub scale_factor: f64,
-}
+let window = gtk::Window::new(gtk::WindowType::Toplevel);
+gtk_layer_shell::init_for_window(&window);
+gtk_layer_shell::set_layer(&window, gtk_layer_shell::Layer::Overlay);
+gtk_layer_shell::set_namespace(&window, "readmd-pet");
+gtk_layer_shell::set_keyboard_mode(&window, gtk_layer_shell::KeyboardMode::None);
+// 随后再将 WRY 的 WebKitWebView 容器挂载到 GTK 容器中并 show_all
 ```
 
-- **主线程所有权法则**：`OverlayWindowBackend` **严禁声明 `Send + Sync`**！窗口、WebView、上下文菜单必须由 Main GUI Thread 独占。
-- **禁止 `#[tokio::main]` 接管 GUI 主线程 (P0-63)**：操作系统主线程独占运行原生事件循环 (`EventLoop::run`)。异步 Tokio 运行时仅在后台工作线程启动，跨线程指令必须通过 `EventLoopProxy` 单向分发。
+### 4.2 能力探测冻结 (P0-60)
+`is_supported()` 与 `protocol_version()` 仅在启动 probe 阶段执行一次，探测结果冻结在不可变 `LayerShellCapabilities` 结构体中，严禁在渲染循环中频繁跨 IPC 查询。
 
-```rust
-// packages/readmd-pet-rust/src/platform/backend.rs
-use crate::window::coords::{BridgeDipRect, OutputPlacement};
-use crate::window::interaction::GoldenInteractionRegion;
-
-bitflags::bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct BackendCapabilities: u32 {
-        const ABSOLUTE_PLACEMENT          = 1 << 0; // 支持全局屏幕绝对坐标定位 (Win32, Cocoa, X11)
-        const OUTPUT_RELATIVE_PLACEMENT   = 1 << 1; // 支持基于屏幕输出与边距的定位 (Layer-Shell)
-        const COMPANION_MANAGED_PLACEMENT = 1 << 2; // 由桌面辅助扩展控制定位 (GNOME Companion)
-        const NATIVE_INPUT_REGION         = 1 << 3; // 支持表面级输入穿透区域 (Wayland Surface)
-        const GLOBAL_CURSOR_OBSERVATION   = 1 << 4; // 支持全局光标探测 (Win32, Cocoa, X11)
-        const WORKSPACE_STICK             = 1 << 5; // 支持全工作区常驻 (canJoinAllSpaces, _NET_WM_DESKTOP)
-        const KEYBOARD_ON_DEMAND          = 1 << 6; // 支持按需键盘交互模式 (Layer-Shell v4+)
-    }
-}
-
-pub trait OverlayWindowBackend {
-    fn capabilities(&self) -> BackendCapabilities;
-    fn create(&mut self, initial_bounds: BridgeDipRect, title: &str) -> Result<(), String>;
-    fn show_inactive(&mut self) -> Result<(), String>;
-    fn hide(&mut self) -> Result<(), String>;
-    fn close(&mut self) -> Result<(), String>;
-    fn set_bounds(&mut self, bounds: BridgeDipRect) -> Result<(), String>;
-    fn bounds(&self) -> Result<BridgeDipRect, String>;
-    fn set_opacity(&mut self, opacity: f64) -> Result<(), String>;
-    fn set_focusable(&mut self, focusable: bool) -> Result<(), String>;
-    fn set_interaction_region(&mut self, region: &GoldenInteractionRegion) -> Result<(), String>;
-    fn set_above(&mut self, above: bool) -> Result<(), String>;
-    fn set_all_workspaces(&mut self, stick: bool) -> Result<(), String>;
-    fn begin_drag(&mut self, start_x: f64, start_y: f64) -> Result<(), String>;
-    fn update_drag(&mut self, delta_x: f64, delta_y: f64) -> Result<BridgeDipRect, String>;
-    fn end_drag(&mut self) -> Result<BridgeDipRect, String>;
-    fn get_work_areas(&self) -> Result<Vec<BridgeDipRect>, String>;
-}
-```
-
-### 3.2 平台后端映射表
-| 操作系统环境 | 运行时判定规则 | 绑定后端实现 | 核心底层机制 |
-|---|---|---|---|
-| **Windows 10 / 11** | `cfg(target_os = "windows")` | `Win32Backend` | Win32 API, `WS_EX_TOPMOST`, `WS_EX_LAYERED`, OLE DnD |
-| **macOS 13+** | `cfg(target_os = "macos")` | `CocoaBackend` | Cocoa `NSWindow`, `canJoinAllSpaces`, Level 3 |
-| **Linux (KDE / wlroots)** | `$WAYLAND_DISPLAY` 且 Layer-Shell 支持 | `LayerShellBackend` | `zwlr_layer_shell_v1`, Margins 映射, Surface Input Region |
-| **Linux (GNOME Wayland)** | `$WAYLAND_DISPLAY` 且 GNOME 环境 | `GnomeCompanionBackend` | GNOME Shell 扩展, Mutter `move_frame`, UNIX Socket |
-| **Linux (X11 / XWayland)**| `$DISPLAY` 且 XOpenDisplay 成功 | `X11Backend` | EWMH 协议, XShape 掩模穿透, X11 光标采样 |
-| **Linux (Pure Wayland 不支持)**| 无 X11 且无可用 Wayland 后端 | `None` (Fail-Closed) | 触发 `DesktopOverlayUnsupportedForTuple`，回退 In-App |
+### 4.3 合成器避让与独占区语义 (P0-113)
+Wayland 缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 配合 `exclusive_zone(0)`，声明桌宠期望被顶层面板避让，结合 margins 映射实现边缘防遮挡。增加实机验证项 `VAL-31`。
 
 ---
 
-## 4. Native Wayland Layer-Shell 深度设计 (KDE / wlroots)
+## 5. GNOME Wayland 专属后端：ReadMD GNOME Shell Companion
 
-### 4.1 gtk-layer-shell 依赖策略与 Pre-Realize 生命周期铁律 (P0-59)
-`gtk-layer-shell` 官方规定：`gtk_layer_init_for_window(window)` **必须在 GtkWindow 被 realize（映射为 X11/Wayland 表面）之前调用**。
-- **窗口所有权裁决 (Route A)**：
-  在 `LayerShellBackend` 中，后端直接拥有原生的 `gtk::ApplicationWindow`（而非由 Tao 先行创建并 realize）。
-  执行顺序严格为：
-  `gtk::ApplicationWindow::new()` $	o$ `gtk_layer_shell::init_for_window()` $	o$ `set_layer/set_anchor/set_margin` $	o$ 挂载 WebKitGTK 容器 $	o$ `window.show_all()`。
-  记录为 **`VAL-21 — LayerShell Pre-Realize Creation Order`**。
+### 5.1 架构分工与 AppID 传播 (P0-65, P0-66, P0-80, P0-81)
+- GNOME Wayland 严禁 layer-shell 协议。桌宠采用标准 Wayland 顶层窗口，通过专用 Companion 扩展在 Mutter 内部将窗口强制置顶、穿透并隐藏任务栏。
+- **AppID 唯一标识**：`PET_OVERLAY_APP_ID = "asia.readmd.pet"`。
+- **单窗口精确匹配**：扩展通过连接 Unix Domain Socket 的 Peer PID，在 Mutter 窗口树中精确匹配 `metaWindow.get_pid() === clientPid`，杜绝误操作同名窗口。
+- **真实 Mutter API**：彻底剔除虚构的 `set_skip_taskbar`，统一调用 `metaWindow.hide_from_window_list()`。
 
-### 4.2 能力探针隔离与不可变能力结构体 (P0-60)
-`is_supported()` 与 `protocol_version()` 涉及与合成器的阻塞式 Roundtrip，**严禁在鼠标移动、拖动或调和热路径中调用**。
-必须在 `HostLifecycle::Probing` 阶段仅执行一次，并将结果固化为不可变结构体：
-```rust
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct LayerShellCapabilities {
-    pub supported: bool,
-    pub protocol_version: u32,
-    pub keyboard_on_demand: bool,
-}
-```
+### 5.2 双产物分发与扩展生命周期 (P0-67, P0-68, P0-69)
+- GNOME 42~44（Ubuntu 22.04 / Debian 12）：分发 Legacy GJS imports 产物。
+- GNOME 45~50（Ubuntu 24.04 / Fedora 40+）：分发 ESM 模块标准产物。
+- 扩展安装时显式提示用户登出当前会话以加载扩展。扩展内部注入异步崩溃防护 (`VAL-23`)，确保畸形 IPC 不影响 GNOME Shell 稳定性。
 
-### 4.3 边距映射与工作区/面板避让 (VAL-24, P0-79)
-Layer-Shell 通过锚定与 Margins 排布窗口。必须结合合成器 Exclusive Zones（面板、Dock 占用区域）实现与 Electron `Display.workArea` 100% 对齐的边界钳夹算法：
-```rust
-// [PSEUDOCODE]
-pub fn apply_layer_margins(window: &gtk::ApplicationWindow, placement: OutputPlacement, work_area: OutputLocalDipRect) {
-    gtk_layer_shell::set_layer(window, gtk_layer_shell::Layer::Overlay);
-    gtk_layer_shell::set_anchor(window, gtk_layer_shell::Edge::Top, true);
-    gtk_layer_shell::set_anchor(window, gtk_layer_shell::Edge::Left, true);
-    
-    // 钳夹至有效工作区
-    let clamped_x = placement.local_rect.x.max(work_area.x).min(work_area.x + work_area.width - placement.local_rect.width);
-    let clamped_y = placement.local_rect.y.max(work_area.y).min(work_area.y + work_area.height - placement.local_rect.height);
+---
 
-    gtk_layer_shell::set_margin(window, gtk_layer_shell::Edge::Left, clamped_x as i32);
-    gtk_layer_shell::set_margin(window, gtk_layer_shell::Edge::Top, clamped_y as i32);
-}
+## 6. Wayland Input Model 主动推送几何模型 (P0-111)
+
+### 6.1 解决 Chicken-and-Egg 死锁
+若在 Wayland 下当光标进入模型轮廓时才开启 input region，则在进入之前 client 由于 input region 为空根本无法接收到 pointer enter/motion 事件。
+**主动推送模型**：
+渲染端模型或几何状态变更 $	o$ 生成 `InteractionRegionSnapshot { generation: u64, rects: Vec<BridgeDipRect> }` $	o$ Rust 宿主转换为表面局部物理坐标 $	o$ 调用 `wl_surface.set_input_region(region)` $	o$ `wl_surface.commit()`。
+交互区域由几何变更主动维护，彻底消除指针死锁。
+
+---
+
+## 7. 黄金交互区 Golden Hit Region 原则与交互边界 (P0-95, P0-112)
+
+彻底删除历史版本中限制在 64 个矩形以内的有损近似描述，以真实渲染器命中为唯一准绳。
+- **Live2D**：`model.hitTest(x, y).length > 0 || model.getBounds().contains(x, y)`。
+- **Sprite**：有效可视像素或 DOM 矩形区域。
+- 坐标系统使用严格强类型：`BridgeDipRect`、`OutputLocalDipRect` 与 `OutputPlacement`。
+
+---
+
+## 8. ReadMD Pet IPC v1：会话解耦与 WRY 官方 API 对齐 (P0-73, P0-74, P0-88, P0-89)
+
+### 8.1 会话解耦模型
+- `webview_session_id`：表示宿主进程创建该 WebView 实例的全局唯一 UUID。
+- `navigation_generation`：原子递增计数器，页面每次发生导航或重载时递增。
+跨代纪异步 IPC 消息持有已失效的 generation token 时，宿主坚决予以丢弃，消除陈旧回调覆盖。
+
+### 8.2 IIFE 包装防语法错误 (P0-73)
+初始化脚本必须使用立即执行函数（IIFE）包装，防止顶层 `return` 导致 `SyntaxError: Illegal return statement`：
+```javascript
+(() => {
+  if (window.top !== window.self) {
+    console.warn("[ReadMD] Blocked petOverlay initialization in non-top frame");
+    return;
+  }
+  // 注入 window.hermesDesktop 与 window.readmdPet
+})();
 ```
 
 ---
 
-## 5. GNOME Wayland 生产路径：ReadMD GNOME Shell Companion
+## 9. 完整安全资产协议 (Secure Asset Protocol) (P0-86, P0-87, P0-118, P0-119)
 
-针对 GNOME Wayland 拒绝支持 Layer-Shell 的现状，通过专用轻量 Shell 扩展提供原生定位与层级控制：
+### 9.1 平台专属 Origin
+- macOS / Linux：`readmd-pet://localhost/`
+- Windows (WebView2)：`http://readmd-pet.localhost/`（或 `https://readmd-pet.localhost/` 配合安全探针）。
 
-### 5.1 通信信道、身份发现与安全隔离 (P0-65, P0-66, P0-68)
-- **Socket 路径与权限**：强制使用 `$XDG_RUNTIME_DIR/readmd-pet-gnome-companion.sock`，权限 `0600`。
-- **对端 UID 强鉴权**：通过 `SO_PEERCRED` 提取对端 UID，必须等于当前运行用户的 UID。
-- **窗口所有权发现机制 (No Fake Window ID)**：
-  Rust 宿主无需声明虚构的内部窗口 ID。Companion 通过遍历全局窗口 actor：
-  `global.get_window_actors().filter(w => w.meta_window.get_pid() == peer_pid)`，匹配到唯一的桌宠窗口后绑定。
-- **GNOME Shell 防崩溃熔断 (Crash Containment)**：
-  Extension 运行于 Shell 进程内部！严禁任何同步阻塞循环。使用 GIO 异步 Socket 服务，单条消息上限 $\le 64	ext{ KB}$，每条命令包裹在独立的 `try/catch` 中，异常直接关闭客户端连接，严禁冒泡抛出到 Shell 主事件循环。
+### 9.2 严格路径沙盒与 TOCTOU 防御 (P0-118)
+- 资产统一部署在只读托管沙盒根目录（Staged Readonly Managed Root）。
+- 防御 `..`、NUL 字符 `0x00`、盘符穿透与 UNC 路径。
+- Unix 采用目录相对描述符结合 `O_NOFOLLOW` 打开；Windows 结合 Final Opened Handle Path 校验，防御同用户软链接交换攻击。
 
-### 5.2 GNOME 45+ ESM 与 GNOME 42-44 Legacy 双产物架构 (P0-33, P0-69)
-GNOME 45 之后全面切换为 ESM 语法，旧版 GJS 遇到 `import` 语句会直接触发 Parse Error 崩溃。因此建立双产物目录：
-```
-docs/architecture/pet-rust/companion/
-├── legacy/                # GNOME 42 ~ 44 (Ubuntu 22.04 / Debian 12)
-│   ├── extension.js       # 使用 GJS imports 语法
-│   └── metadata.json      # shell-version: ["42", "43", "44"]
-└── esm/                   # GNOME 45 ~ 50+ (Ubuntu 24.04 / Fedora 40+)
-    ├── extension.js       # 使用标准 ESM export default 语法
-    └── metadata.json      # 由 CI 认证矩阵机器生成支持的 shell-version
-```
-
-### 5.3 真实 Mutter 窗口 API 与混合 DPI 坐标映射 (P0-32, P0-39)
-- **任务栏隐藏真实 API**：彻底清除虚构的 `set_skip_taskbar`，统一调用 `metaWindow.hide_from_window_list()`。
-- **GnomeCoordinateMapper (VAL-13)**：Mutter `move_frame(true, x, y)` 接受 Stage 坐标。在 100%、125%、150%、200% 混合 DPI 下，通过 `GnomeCoordinateMapper` 将全局 DIP 映射为 Stage 物理/逻辑坐标。
+### 9.3 生产 DevTools 与功能权限锁定 (P0-119)
+- 生产构建强制关闭 DevTools（`with_devtools(false)`），仅在诊断模式显式开启。
+- 彻底禁止外部导航、新窗口弹出、摄像头、麦克风、地理定位、系统通知与用户扩展的可执行脚本。
 
 ---
 
-## 6. Wayland Input Model 极限设计
+## 10. 权威 Durable FIFO 字节级协议规范 (P0-100)
 
-### 6.1 原生 Input Region 穿透模型
-Wayland 客户端绝不允许全局轮询光标。宿主通过 Wayland 协议的 `wl_surface::set_input_region` 设置输入区域：
-- 桌宠透明区域设为**空区域（Empty Region）**，合成器将指针事件直接下发给底层桌面图标与其它窗口；
-- 仅当光标进入桌宠有效模型轮廓时，才将对应多边形集合设为有效输入区域。
-
-### 6.2 实体穿透测试基准 (VAL-01, Gate-LayerShell-02)
-在实体 Wayland 测试机上，桌宠窗口下方放置原生测试按钮，点击桌宠透明空区域，**底层按钮必须 100% 接收到物理鼠标点击事件**，以此证实 WebKitGTK 子表面不截留事件。
+- **唯一权威目录路径**：`${bridge}.commands`（**严禁使用虚构的 events 运行时路径**）。
+- **容量与排队限制**：单文件体积 $\le 32	ext{ MiB}$；队列文件总数 $\le 128$ 个；队列总未消费容量 $\le 64	ext{ MiB}$。
+- **文件名格式**：`${wall_clock_ms.padStart(16,'0')}-${sequence.padStart(8,'0')}-${UUID}.json`。
+- **原子写入**：写入 `<target>.tmp`（flag `wx` 独占创建） $	o$ 原子 `rename` 至 `<target>.json`。
 
 ---
 
-## 7. 黄金交互区域 Golden Hit Region 原理与交互边界
+## 11. Native Drag & Drop：WRY 0.57 官方路径重构解耦 (P0-102)
 
-### 7.1 Golden 语义优先于性能优化 (P0-37, P0-77)
-彻底删除任何“强制通过网格聚类将区域近似为 $\le 64$ 个矩形”的有损假定：
-1. **精确表达优先**：Phase 0 完整捕获 Sprite 与 Live2D 的 Golden 交互区域。若 Golden 表现为边界盒，则为 1 个矩形；若为离散部件，则精确表示。
-2. **复杂度预算 (RegionComplexityBudget)**：
-   设定平台复杂度预算门槛。若几何多边形超出预算，**直接判定门禁失败并阻断认证**，严禁单方面擅自执行有损简化改变用户点击语义。
-
----
-
-## 8. ReadMD Pet IPC v1：会话代际隔离与 WRY 官方 API
-
-### 8.1 安全 Session 标识符的安全边界澄清 (P0-36)
-- **核心职能**：`webview_session_id`（128-bit CSPRNG）与 `navigation_generation`（递增计数器）仅用于**代际隔离、陈旧异步消息丢弃与导航生命周期绑定**。
-- **禁止视作鉴权密钥**：该标识会注入受信任的 Renderer JS。系统的真正安全边界由 CSP、Secure Asset Protocol 路径沙盒与强类型校验构成。
-
-### 8.2 WRY 官方 IPC 接口与 Frame 鉴权 (P0-88, P0-89)
-WRY Linux 下子 frame IPC 请求的 URI 可能与主 frame 相同，因此**严禁依赖 `request.uri()` 作为 frame 鉴权依据**。安全隔离依赖主 frame 专用守卫与代际令牌校验。
+- 接收拖放文件后，提取路径数组校验（每个路径必须为非空字符串，长度 $\le 32768$，总数 $\le 128$）。
+- 通过 FIFO 发布标准命令：
+  ```json
+  {
+    "type": "drop",
+    "paths": ["/path/to/file1.pdf", "/path/to/file2.epub"]
+  }
+  ```
 
 ---
 
-## 9. 完整安全资产协议 (Secure Asset Protocol)
-
-全面恢复并固化自定义资产协议规范：
-
-### 9.1 平台专属 Origin 映射
-- **macOS / Linux**：`readmd-pet://localhost/`
-- **Windows (WebView2)**：
-  默认基线：`http://readmd-pet.localhost/`；
-  在运行时支持时开启 `WebViewBuilderExtWindows::with_https_scheme(builder, true)` $	o$ `https://readmd-pet.localhost/`。
-  宿主通过 `AssetOriginResolver` 动态处理，前端不硬编码协议头。
-
-### 9.2 资产源隔离与用户资产执行禁令
-1. **内置受信任资产 (Bundled Trusted Assets)**：随包分发，基于签名清单与 SHA-256 白名单直接加载。
-2. **用户扩展桌宠资产 (User Pet Assets)**：用户目录下的模型，**严禁包含或执行任何 HTML、JavaScript、WASM 或系统动态库**！仅允许读取静态数据（PNG, WebP, JPEG, JSON, moc3, WAV, MP3）。
-
-### 9.3 严格路径沙盒解析器与 TOCTOU 防御 (AssetOriginResolver, P0-87)
-所有资产读取必须经过：
-1. 单次 percent-decode，严禁二次解码穿越；
-2. 拒绝包含 `..`、NUL 字符（`0x00`）、`\`、驱动器盘符 `C:`、UNC 路径 `\\`；
-3. **TOCTOU 防御**：用户模型包在导入时通过 Staged 校验解压至只读资产根目录，运行时通过规范化路径校验 `resolved.starts_with(&asset_root)`，拒绝越界符号链接；
-4. 强制注入安全响应头：`X-Content-Type-Options: nosniff` 与 `Cache-Control: immutable, max-age=31536000`。
-
-### 9.4 严格内容安全策略 (Content Security Policy)
+## 12. CSP 策略与资产沙盒边界
 ```html
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'none';
@@ -361,165 +446,45 @@ WRY Linux 下子 frame IPC 请求的 URI 可能与主 frame 相同，因此**严
 ">
 ```
 
-### 9.5 运行时行为全面封锁与 IIFE 主 Frame 隔离守卫 (P0-73)
-1. **导航拦截**：`with_navigation_handler` 仅放行内部 `readmd-pet` origin，拒绝任何外部导航；
-2. **新窗口拦截**：`with_new_window_req_handler` 恒定返回 `false`；
-3. **系统权限**：摄像头、麦克风、地理位置、通知全部拒绝；
-4. **IIFE 主 Frame 隔离守卫 (P0-73)**：
-   针对 Windows WebView2 子 frame 注入特性，采取双保险机制。注入脚本首行必须包裹在 IIFE 中，**严禁在顶层直接执行 return 以免产生 SyntaxError**：
-   ```javascript
-   (() => {
-       if (window.top !== window.self) {
-           console.warn("[ReadMD] Blocked petOverlay initialization in non-top frame");
-           return;
-       }
-       // 挂载 window.readmdPet 客户端桥接
-   })();
-   ```
+---
+
+## 13. 跨平台安全 ClipboardService 规范 (P0-98)
+统一遵照 §1.7 限制，按平台原生 API 安全抓取文本（截取 4M 字符）、PNG Base64 编码（截取 24M 字符）与文件路径列表（最多 128 项）。
 
 ---
 
-## 10. 文件 Durable FIFO 字节级协议规范
-
-### 10.1 协议行格式与单调递增保证
-FIFO 文件位于 `<runtime_dir>/events/`。
-首条序号严格为 1。时钟回拨时，文件名时间戳序列严格保持单调递增。
-
-### 10.2 SnapshotReader 签名机制
-基于设备号、Inode 与纳秒时间戳追踪快照变更，防御编辑器原子重命名写入导致的文件变更丢失。
+## 14. 实例 Scope 与用户 Profile 隔离 (P0-105)
+- Windows 互斥体**严禁使用全局会话命名空间（禁止使用 Global 作用域）**。
+- 采用局部会话与用户隔离命名空间：`Local\ReadMDPetOverlay_<UserSIDHash>_<DataDirHash>`。
+- 同一用户同一 Profile 单实例互斥；不同用户会话（Fast User Switching）或不同 DataDir 允许独立并存。
 
 ---
 
-## 11. Native Drag & Drop：WRY 0.57 官方路径与回归门禁
+## 15. Parent Liveness Pipe 继承模型与深度验证 (P0-106)
+- Python 父进程创建管道并持有写端（WRITE end）。
+- Rust 子进程仅继承读端（READ end）；Python 在子进程启动后立即关闭自身持有的读端副本。
+- Rust 绝不持有写端，由 Rust 衍生的 WebView 子进程也不可能继承写端。
+- 父进程异常退出 $	o$ 内核自动回收写端句柄 $	o$ Rust 读端收到 EOF $	o$ 触发 2.5 秒倒计时优雅退场。
 
-### 11.1 WRY 0.57 规范 API 与跨平台构建 (P0-27)
+---
+
+## 16. 权威状态调和模型 (Reconciliation State Model) (P0-75, P0-76)
+
 ```rust
-let mut builder = wry::WebViewBuilder::new();
-
-builder = builder.with_drag_drop_handler(|event| {
-    match event {
-        wry::DragDropEvent::Drop { paths, position } => {
-            handle_native_file_drop(paths, position);
-            true
-        }
-        wry::DragDropEvent::Enter { paths, position } => true,
-        wry::DragDropEvent::Over { position } => true,
-        wry::DragDropEvent::Leave => true,
-        _ => false,
-    }
-});
-
-#[cfg(not(target_os = "linux"))]
-let webview = builder.build(&window)?;
-
-#[cfg(target_os = "linux")]
-let webview = wry::WebViewBuilderExtUnix::build_gtk(&builder, &gtk_box_container)?;
-```
-
-### 11.2 Windows custom DnD 副作用与 Golden DnD 依赖清册 (P0-28)
-实机源码审计证实：
-- `@readmd/hermes-pet-adapter` 的模型拖拽通过 Pointer/Mouse 事件驱动，**不依赖 HTML5 `draggable="true"`**；
-- 界面内**不存在任何 `<input type="file">` 元素**；
-- 设立 `Gate-Core-10` 固化此不变性，检测到新增 HTML5 DnD 依赖时熔断构建。
-
-### 11.3 readmdPet.dropFiles 语义（Host ABI Exception）
-保持 `window.readmdPet.dropFiles(files)` 方法签名存在，静默返回并记录遥测，实际文件拖放完全由宿主原生回调接管。
-
----
-
-## 12. CSP 防御与偏门资产沙箱
-
-生产环境下完全剥离 `unsafe-eval`，任何动态 JS 代码执行均被严格禁止。
-
----
-
-## 13. 跨平台剪贴板 ClipboardService 规范
-
-- Windows：`CF_HDROP` / Win32 API
-- macOS：`NSPasteboard`
-- Linux：`GtkClipboard`（适配 `CLIPBOARD` 与 `PRIMARY` 选择区）
-
----
-
-## 14. 多实例 Scope 与用户 Profile 隔离
-
-- macOS：`~/Library/Application Support/ReadMD/runtime/readmd-pet-<ProfileHash>.lock` + `flock`
-- Linux：`$XDG_RUNTIME_DIR/readmd/pet-<ProfileHash>.lock` + `flock`
-- Windows：命名互斥体 `Global\ReadMD-Pet-<ProfileHash>`
-
----
-
-## 15. Parent Liveness Pipe 继承模型与防孤儿保证
-
-Rust 端仅创建并持有管道读端，写端由 Python 父进程持有。Rust 端绝不创建写句柄，从源头上杜绝 WebView2 辅助进程继承写端句柄导致 EOF 失效。
-
----
-
-## 16. 权威状态与对齐调和模型 (Reconciliation State Model)
-
-废除一维 14 状态枚举机，确立调和模型：
-
-### 16.1 状态正交解耦与 AppliedState 引入 (P0-29, P0-75, P0-76)
-```rust
-// packages/readmd-pet-rust/src/state/mod.rs
-use crate::window::coords::BridgeDipRect;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum RendererKind {
-    Sprite,
-    Live2D,
-}
-
-#[derive(Debug, Clone, PartialEq)]
 pub struct DesiredOverlayState {
     pub visible: bool,
-    pub fullscreen: bool,
     pub bounds: BridgeDipRect,
-    pub opacity: f64,
-    pub renderer: RendererKind,
+    pub renderer: String,
     pub snapshot_revision: u64,
 }
 
-#[derive(Debug, Clone, PartialEq)]
 pub struct AppliedOverlayState {
-    pub visible: bool,
-    pub bounds: BridgeDipRect,
-    pub opacity: f64,
-    pub renderer: RendererKind,
-    pub backend_generation: u64,
-    pub navigation_generation: u64,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum HostLifecycle {
-    Booting,
-    Probing,
-    Running,
-    Suspended,
-    Degraded,
-    ShuttingDown,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SurfaceState {
-    Absent,
-    Creating,
-    Loading,
-    Ready,
-    Recovering,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InputState {
-    PassThrough,
-    Interactive,
-    Dragging,
-    MenuOpen,
-    TextInput,
+    pub applied_visible: bool,
+    pub applied_bounds: BridgeDipRect,
+    pub applied_renderer: String,
+    pub applied_generation: u64,
 }
 ```
+调和循环（`reconcile`）比对 Desired 与 Applied 状态，异步操作携带 generation token，生效后更新 AppliedState。晚到的过时代际更新坚决丢弃。
 
-### 16.2 确定性调和函数与绝对优先级法则 (P0-30)
-优先级准则：
-$$	ext{ShuttingDown} > 	ext{Suspended} > (	ext{visible} = 	ext{false}) > (	ext{fullscreen} = 	ext{true}) > 	ext{Recovering/Loading} > 	ext{Ready}$$
-- **拖拽强中断**：用户物理拖动时，若快照变为 `visible=false` 或 `fullscreen=true`，立即派发 `InputEffect::AbortDrag` 强行终止指针捕获并关闭/隐匿窗口，**绝不等待 `mouseup`**。
+---

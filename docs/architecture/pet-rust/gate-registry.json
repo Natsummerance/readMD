@@ -1,0 +1,644 @@
+[
+  {
+    "id": "Gate-Core-SpecIntegrity",
+    "scope": "core",
+    "owner_component": "Specification",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "linter_pass",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-AssetSecurity",
+    "scope": "core",
+    "owner_component": "AssetSecurity",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "security_audit",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-GUIThreadOwnership",
+    "scope": "core",
+    "owner_component": "Runtime",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "code_inspection",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-Reconciliation",
+    "scope": "core",
+    "owner_component": "StateModel",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "fuzz_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-01",
+    "scope": "core",
+    "owner_component": "WindowManagement",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "unit_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-02",
+    "scope": "core",
+    "owner_component": "WindowManagement",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "unit_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-03",
+    "scope": "core",
+    "owner_component": "WindowManagement",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "unit_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-04",
+    "scope": "core",
+    "owner_component": "IPC",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "unit_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-05",
+    "scope": "core",
+    "owner_component": "IPC",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "unit_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-06",
+    "scope": "core",
+    "owner_component": "IPC",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "unit_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-07",
+    "scope": "core",
+    "owner_component": "IPC",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "unit_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-08",
+    "scope": "core",
+    "owner_component": "IPC",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "unit_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-09",
+    "scope": "core",
+    "owner_component": "IPC",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "unit_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-10",
+    "scope": "core",
+    "owner_component": "DragDrop",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Core-11",
+    "scope": "core",
+    "owner_component": "StateModel",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "proptest_fuzz",
+    "blocking": true
+  },
+  {
+    "id": "Gate-IPC-Generation",
+    "scope": "core",
+    "owner_component": "IPC",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "unit_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-IPC-01",
+    "scope": "core",
+    "owner_component": "IPC",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "unit_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Acceptance-Formula",
+    "scope": "core",
+    "owner_component": "ReleaseManagement",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "linter_pass",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Crypto-DetachedSig",
+    "scope": "core",
+    "owner_component": "Installer",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "crypto_verify",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Asset-TOCTOU",
+    "scope": "core",
+    "owner_component": "AssetSecurity",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "security_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Tuple-Lifecycle",
+    "scope": "core",
+    "owner_component": "Certification",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "audit_check",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Golden-Differential",
+    "scope": "core",
+    "owner_component": "GoldenParity",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "golden_harness",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Golden-ABI",
+    "scope": "core",
+    "owner_component": "GoldenParity",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "golden_harness",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Golden-Bounds",
+    "scope": "core",
+    "owner_component": "GoldenParity",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "golden_harness",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Golden-FIFO",
+    "scope": "core",
+    "owner_component": "GoldenParity",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "golden_harness",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Golden-Clipboard",
+    "scope": "core",
+    "owner_component": "GoldenParity",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "golden_harness",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Golden-Menu",
+    "scope": "core",
+    "owner_component": "GoldenParity",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "golden_harness",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Golden-HitRegion",
+    "scope": "core",
+    "owner_component": "GoldenParity",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "golden_harness",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Golden-AntiSnapback",
+    "scope": "core",
+    "owner_component": "GoldenParity",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "golden_harness",
+    "blocking": true
+  },
+  {
+    "id": "Gate-LayerShell-01",
+    "scope": "backend",
+    "owner_component": "LayerShellBackend",
+    "required_for": [
+      "linux_wayland_wlroots",
+      "linux_wayland_kwin"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-LayerShell-02",
+    "scope": "backend",
+    "owner_component": "LayerShellBackend",
+    "required_for": [
+      "linux_wayland_wlroots",
+      "linux_wayland_kwin"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-LayerShell-03",
+    "scope": "backend",
+    "owner_component": "LayerShellBackend",
+    "required_for": [
+      "linux_wayland_wlroots",
+      "linux_wayland_kwin"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-LayerShell-04",
+    "scope": "backend",
+    "owner_component": "LayerShellBackend",
+    "required_for": [
+      "linux_wayland_wlroots",
+      "linux_wayland_kwin"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-LayerShell-05",
+    "scope": "backend",
+    "owner_component": "LayerShellBackend",
+    "required_for": [
+      "linux_wayland_wlroots",
+      "linux_wayland_kwin"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-LayerShell-06",
+    "scope": "backend",
+    "owner_component": "LayerShellBackend",
+    "required_for": [
+      "linux_wayland_wlroots",
+      "linux_wayland_kwin"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-GnomeCompanion-01",
+    "scope": "backend",
+    "owner_component": "GnomeCompanionBackend",
+    "required_for": [
+      "linux_wayland_gnome"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-GnomeCompanion-02",
+    "scope": "backend",
+    "owner_component": "GnomeCompanionBackend",
+    "required_for": [
+      "linux_wayland_gnome"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-GnomeCompanion-03",
+    "scope": "backend",
+    "owner_component": "GnomeCompanionBackend",
+    "required_for": [
+      "linux_wayland_gnome"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-GnomeCompanion-04",
+    "scope": "backend",
+    "owner_component": "GnomeCompanionBackend",
+    "required_for": [
+      "linux_wayland_gnome"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-GnomeCompanion-05",
+    "scope": "backend",
+    "owner_component": "GnomeCompanionBackend",
+    "required_for": [
+      "linux_wayland_gnome"
+    ],
+    "evidence_type": "fuzz_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Linux-Universal",
+    "scope": "backend",
+    "owner_component": "LinuxUniversal",
+    "required_for": [
+      "linux_all"
+    ],
+    "evidence_type": "runtime_probe",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Linux-Binary",
+    "scope": "backend",
+    "owner_component": "Packaging",
+    "required_for": [
+      "linux_all"
+    ],
+    "evidence_type": "readelf_check",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Linux-MudaTargetIsolation",
+    "scope": "backend",
+    "owner_component": "Dependencies",
+    "required_for": [
+      "linux_all"
+    ],
+    "evidence_type": "ldd_check",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Linux-LayerShellV06",
+    "scope": "backend",
+    "owner_component": "Dependencies",
+    "required_for": [
+      "linux_all"
+    ],
+    "evidence_type": "compile_check",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Linux-GdkMultiSeat",
+    "scope": "backend",
+    "owner_component": "LinuxUniversal",
+    "required_for": [
+      "linux_all"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Menu-KWin-Wayland",
+    "scope": "backend",
+    "owner_component": "Menu",
+    "required_for": [
+      "linux_wayland_kwin"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Menu-GNOME-Wayland",
+    "scope": "backend",
+    "owner_component": "Menu",
+    "required_for": [
+      "linux_wayland_gnome"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Menu-Dependency",
+    "scope": "backend",
+    "owner_component": "Dependencies",
+    "required_for": [
+      "linux_all"
+    ],
+    "evidence_type": "ldd_check",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Win32-SingleInstance",
+    "scope": "backend",
+    "owner_component": "Win32Backend",
+    "required_for": [
+      "windows_all"
+    ],
+    "evidence_type": "unit_test",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Win32-VirtualDesktop",
+    "scope": "backend",
+    "owner_component": "Win32Backend",
+    "required_for": [
+      "windows_all"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Cocoa-Thread",
+    "scope": "backend",
+    "owner_component": "CocoaBackend",
+    "required_for": [
+      "macos_all"
+    ],
+    "evidence_type": "thread_assert",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Asset-HTTPS-Win",
+    "scope": "backend",
+    "owner_component": "AssetSecurity",
+    "required_for": [
+      "windows_all"
+    ],
+    "evidence_type": "poc_run",
+    "blocking": true
+  },
+  {
+    "id": "Gate-Asset-Sandbox",
+    "scope": "core",
+    "owner_component": "AssetSecurity",
+    "required_for": [
+      "all"
+    ],
+    "evidence_type": "security_test",
+    "blocking": true
+  },
+  {
+    "id": "CERT-WIN11-ARM64",
+    "scope": "tuple",
+    "owner_component": "PlatformCertification",
+    "required_for": [
+      "T-03"
+    ],
+    "evidence_type": "hardware_run",
+    "blocking": true
+  },
+  {
+    "id": "CERT-UOS20-X64",
+    "scope": "tuple",
+    "owner_component": "PlatformCertification",
+    "required_for": [
+      "T-19"
+    ],
+    "evidence_type": "hardware_run",
+    "blocking": true
+  },
+  {
+    "id": "CERT-UOS20-ARM64",
+    "scope": "tuple",
+    "owner_component": "PlatformCertification",
+    "required_for": [
+      "T-20"
+    ],
+    "evidence_type": "hardware_run",
+    "blocking": true
+  },
+  {
+    "id": "CERT-KYLIN10-ARM64",
+    "scope": "tuple",
+    "owner_component": "PlatformCertification",
+    "required_for": [
+      "T-22"
+    ],
+    "evidence_type": "hardware_run",
+    "blocking": true
+  },
+  {
+    "id": "CERT-UBUNTU22-X64",
+    "scope": "tuple",
+    "owner_component": "PlatformCertification",
+    "required_for": [
+      "T-14"
+    ],
+    "evidence_type": "hardware_run",
+    "blocking": true
+  },
+  {
+    "id": "CERT-UBUNTU24-X64",
+    "scope": "tuple",
+    "owner_component": "PlatformCertification",
+    "required_for": [
+      "T-12"
+    ],
+    "evidence_type": "hardware_run",
+    "blocking": true
+  },
+  {
+    "id": "CERT-MACOS-ALL",
+    "scope": "tuple",
+    "owner_component": "PlatformCertification",
+    "required_for": [
+      "T-05",
+      "T-06",
+      "T-07",
+      "T-08",
+      "T-09",
+      "T-10",
+      "T-11"
+    ],
+    "evidence_type": "hardware_run",
+    "blocking": true
+  },
+  {
+    "id": "CERT-GNOME50-X64",
+    "scope": "tuple",
+    "owner_component": "PlatformCertification",
+    "required_for": [
+      "T-12"
+    ],
+    "evidence_type": "hardware_run",
+    "blocking": true
+  },
+  {
+    "id": "CERT-MACOS26-ARM64",
+    "scope": "tuple",
+    "owner_component": "PlatformCertification",
+    "required_for": [
+      "T-05"
+    ],
+    "evidence_type": "hardware_run",
+    "blocking": true
+  },
+  {
+    "id": "CERT-FEDORA42-X64",
+    "scope": "tuple",
+    "owner_component": "PlatformCertification",
+    "required_for": [
+      "T-16"
+    ],
+    "evidence_type": "hardware_run",
+    "blocking": true
+  }
+]

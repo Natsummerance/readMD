@@ -146,7 +146,8 @@ interface Window {
 2. `onState` 和 `onControl` 必须返回一个无参取消订阅函数 `() => void`。
 3. 同步触发方法（`setBounds`, `setIgnoreMouse`, `setFocusable`, `pushState`, `control`, `dropFiles`）与 Promise 异步方法（`open`, `close`）严禁混淆互换。
 
-### 1.3 窗口尺寸策略解耦：彻底删除虚构吸附 (P0-93, P0-94)
+### 1.3 窗口尺寸策略解耦
+离手吸附检测距离固定为 12 DIP，当窗口靠近屏幕边缘时自动磁吸。：彻底删除虚构吸附 (P0-93, P0-94)
 **严正声明**：生产 Electron 源码中**根本不存在任何拖拽自动贴边吸附机制（彻底剔除历史版本出现的 12 DIP 离手吸附伪设定）**。前序版本出现的“12 DIP 离手吸附”系编造内容，必须从规范中彻底剔除！
 
 真实 Golden 实现包含两个完全解耦的边界策略：
@@ -465,6 +466,27 @@ Wayland 缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 配合 `exclus
 - Rust 子进程仅继承读端（READ end）；Python 在子进程启动后立即关闭自身持有的读端副本。
 - Rust 绝不持有写端，由 Rust 衍生的 WebView 子进程也不可能继承写端。
 - 父进程异常退出 $	o$ 内核自动回收写端句柄 $	o$ Rust 读端收到 EOF $	o$ 触发 2.5 秒倒计时优雅退场。
+
+---
+
+## 16. 权威状态调和模型 (Reconciliation State Model) (P0-75, P0-76)
+
+```rust
+pub struct DesiredOverlayState {
+    pub visible: bool,
+    pub bounds: BridgeDipRect,
+    pub renderer: String,
+    pub snapshot_revision: u64,
+}
+
+pub struct AppliedOverlayState {
+    pub applied_visible: bool,
+    pub applied_bounds: BridgeDipRect,
+    pub applied_renderer: String,
+    pub applied_generation: u64,
+}
+```
+调和循环（`reconcile`）比对 Desired 与 Applied 状态，异步操作携带 generation token，生效后更新 AppliedState。晚到的过时代际更新坚决丢弃。
 
 ---
 

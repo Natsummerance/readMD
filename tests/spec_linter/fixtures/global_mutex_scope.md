@@ -455,7 +455,7 @@ Wayland 缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 配合 `exclus
 
 ## 14. 实例 Scope 与用户 Profile 隔离 (P0-105)
 - Windows 互斥体**严禁使用全局会话命名空间（禁止使用 Global 作用域）**。
-- 采用局部会话与用户隔离命名空间：`Local\ReadMDPetOverlay_<UserSIDHash>_<DataDirHash>`。
+- 采用局部会话与用户隔离命名空间：`Global\ReadMDPetOverlay_<UserSIDHash>_<DataDirHash>`。
 - 同一用户同一 Profile 单实例互斥；不同用户会话（Fast User Switching）或不同 DataDir 允许独立并存。
 
 ---
@@ -465,6 +465,27 @@ Wayland 缺乏全局 `Display.workArea`。使用 `Layer::Overlay` 配合 `exclus
 - Rust 子进程仅继承读端（READ end）；Python 在子进程启动后立即关闭自身持有的读端副本。
 - Rust 绝不持有写端，由 Rust 衍生的 WebView 子进程也不可能继承写端。
 - 父进程异常退出 $	o$ 内核自动回收写端句柄 $	o$ Rust 读端收到 EOF $	o$ 触发 2.5 秒倒计时优雅退场。
+
+---
+
+## 16. 权威状态调和模型 (Reconciliation State Model) (P0-75, P0-76)
+
+```rust
+pub struct DesiredOverlayState {
+    pub visible: bool,
+    pub bounds: BridgeDipRect,
+    pub renderer: String,
+    pub snapshot_revision: u64,
+}
+
+pub struct AppliedOverlayState {
+    pub applied_visible: bool,
+    pub applied_bounds: BridgeDipRect,
+    pub applied_renderer: String,
+    pub applied_generation: u64,
+}
+```
+调和循环（`reconcile`）比对 Desired 与 Applied 状态，异步操作携带 generation token，生效后更新 AppliedState。晚到的过时代际更新坚决丢弃。
 
 ---
 
@@ -916,7 +937,7 @@ Golden Differential Parity Gates        === PASS
 - **[P0-104] 普通用户设置界面消除技术泄露**：
   普通用户 UI 仅暴露“阅读器内”与“独立桌面”选项，彻底隐藏 Electron 与 Rust 单选项。
 - **[P0-105] Windows 单实例互斥体命名空间纠偏**：
-  删除 `Global\`，改为基于用户 SID 和配置哈希隔离的 `Local\ReadMDPetOverlay_<UserSIDHash>_<DataDirHash>`，支持快速用户切换。
+  删除 `Global\`，改为基于用户 SID 和配置哈希隔离的 `Global\ReadMDPetOverlay_<UserSIDHash>_<DataDirHash>`，支持快速用户切换。
 - **[P0-106] 进程存活管道精准所有权界定**：
   明确 Python 持有写端、Rust 仅继承读端，Python 退出内核自动关闭写句柄触发 Rust EOF。
 - **[P0-107] 平台认证元组生命周期重置为 Planned**：
