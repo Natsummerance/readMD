@@ -6,12 +6,12 @@
 - **基线版本**：`v1.4.6 Evidence & Validation Closure Candidate`
 - **代码仓库**：`Natsummerance/readMD`
 - **Git 分支**：`main`
-- **报告所描述的提交 (parent commit SHA)**：`a90a3fd87dbfcc745b82dbdff037e9cba936cac9`
+- **报告所描述的提交 (parent commit SHA)**：`adc7bde9c703f19872bb0072a1ee990d8f2bafd6`
   _（此报告描述其生成时所在的提交，而非报告文件本身最终落入的提交）_
-- **远端提交 SHA**：`a90a3fd87dbfcc745b82dbdff037e9cba936cac9`
-- **工作树状态**：`DIRTY (tracked files modified)`
-- **Git HEAD 出处状态**：`DIRTY_HEAD_MATCHES_REMOTE`
-- **制品出处状态 (Artifact Provenance State)**：`UNVERIFIED DIRTY WORKTREE — REMOTE_VERIFIED blocked until clean commit is pushed`
+- **远端提交 SHA**：`adc7bde9c703f19872bb0072a1ee990d8f2bafd6`
+- **工作树状态**：`CLEAN`
+- **Git HEAD 出处状态**：`REMOTE_VERIFIED`
+- **制品出处状态 (Artifact Provenance State)**：`REMOTE_VERIFIED`
 - **架构冻结结论**：**`NO — Production Architecture Freeze`**
 - **Phase 1 生产实现准入**：**`STRICTLY FORBIDDEN`**（严禁编写正式 Rust Host 生产代码）
 - **Phase 0 全量验证启动**：**`BLOCKED`**（允许 Tooling / GoldenCapture / isolated backend spike 准备；实机验证待硬件证据链输入）
@@ -24,17 +24,17 @@
 {
   "repository": "Natsummerance/readMD",
   "branch": "main",
-  "local_commit_sha": "a90a3fd87dbfcc745b82dbdff037e9cba936cac9",
-  "remote_commit_sha": "a90a3fd87dbfcc745b82dbdff037e9cba936cac9",
-  "working_tree_clean": false,
-  "git_head_provenance_state": "DIRTY_HEAD_MATCHES_REMOTE",
-  "artifact_provenance_state": "UNCOMMITTED_EVIDENCE",
-  "provenance_state": "UNCOMMITTED_EVIDENCE"
+  "local_commit_sha": "adc7bde9c703f19872bb0072a1ee990d8f2bafd6",
+  "remote_commit_sha": "adc7bde9c703f19872bb0072a1ee990d8f2bafd6",
+  "working_tree_clean": true,
+  "git_head_provenance_state": "REMOTE_VERIFIED",
+  "artifact_provenance_state": "REMOTE_VERIFIED",
+  "provenance_state": "REMOTE_VERIFIED"
 }
 ```
 
 > [!NOTE]
-> 当前处于 `LOCAL_ONLY` 模式，所有指标属于本地工作树证据 (local working tree evidence only)。推送至远端 GitHub 分支后将自动跃迁至 `REMOTE_VERIFIED`。
+> 当前已实现 `REMOTE_VERIFIED`，本地 HEAD 与 GitHub 远端分支 SHA 严格一致，工作树干净，外部完全可解析复现。
 
 ---
 
@@ -248,8 +248,8 @@ Current Version           : v1.4.7-Candidate
 Milestone Stage           : Reproducible Evidence Candidate
 Architecture Design State : 33/33 blockers resolved
 Empirical Validations     : 0/57 empirical validations passed
-Artifact Provenance State : UNCOMMITTED_EVIDENCE
-Phase 0 Readiness         : BLOCKED_BY_EVIDENCE — artifacts are not REMOTE_VERIFIED with a clean worktree. Push a clean commit where all declared artifacts are committed before Phase 0 evidence can be validated remotely.
+Artifact Provenance State : REMOTE_VERIFIED
+Phase 0 Readiness         : READY (All artifact, golden, registry, report, and platform checks PASS)
 Phase 0 Full Validation   : BLOCKED (Awaiting physical hardware test execution)
 Phase 1 Production Rust   : STRICTLY FORBIDDEN (No production implementation code)
 Production Freeze Verdict : NO — Production Architecture Freeze
