@@ -39,7 +39,7 @@
   "required": [
     "version",
     "golden_generation",
-    "golden_commit_sha",
+    "migration_golden_commit_sha",
     "vendor",
     "pinned_revision",
     "behavior_inputs",
@@ -57,7 +57,7 @@
     "golden_generation": {
       "type": "string"
     },
-    "golden_commit_sha": {
+    "migration_golden_commit_sha": {
       "type": "string"
     },
     "vendor": {

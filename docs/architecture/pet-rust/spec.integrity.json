@@ -1,16 +1,17 @@
 {
   "": "schema/spec-integrity.schema.json",
-  "spec_version": "v1.4.6-Candidate",
-  "git_commit": "47c40a38a60f27df369b60ed29dac4a4a037e3f6",
+  "spec_version": "v1.4.7-Candidate",
   "artifacts": {
-    "spec.md": "b8b9704880e9d6fbefc499cfa530800ae529c211b6ae03fdc1c9d9e623096096",
-    "golden-contract.json": "897c729426ba3d9b68b3dc1f9f2ecd25347712f5a7907a430529c246a8689116",
-    "golden-build-provenance.json": "243952146b8bcccec462392696258b7d3d58698b22be1bad0681305a7e5747f2",
-    "tuple-registry.json": "ac4998e6ce96d8fc2890a95309649c204bf272d9c6650a9486d153e6a8b8b0a3",
+    "spec.md": "c013dd291b6ecf7d91828e85742da526db945b82101974fdc93b81b2d894fe97",
+    "golden-contract.json": "a316a1fa97c86fb6b50c394c7f51b67c78a072d819540b3e400f990af004925c",
+    "golden-build-provenance.json": "8735b71b7475e9699093a42b1ef1a01ba8260d318a9c90c1632468e7c12404e0",
+    "tuple-registry.json": "b37b992d7fca571976586aa98ad7ae0a10ceded31f7545e89c504276c00412c5",
     "validation-registry.json": "c988996b59fbd59834e6220f91fa0ff293a3c644285d22dd4c27afb7da705746",
     "gate-registry.json": "85aaa3d637de38009085d4ec1b8f6a1fb7eb7c0c9f797cd2cb7031394c75f019",
     "blocker-registry.json": "7e8120e87f74b8ba96501de72d42d3cc80fedd86f13c24a3c096b2517e772242",
-    "registry-manifest.json": "a8f4455339b92b401e1b1e90b4a679227044946d101cf20767639d63ccb90fde"
+    "registry-manifest.json": "1e0621940661fa52187b090be18a6542650f033b5c218d78ec5f8629f23b2e4b",
+    "preload-abi.fixture.json": "bc0e613f6c3b8e6fe3f2896a866a4a1218194e47e8e486c728ee5092b1b7a7ff",
+    "pet-architecture-attestation.json": "bd3139e842a6423a37a581239c64e511bbe604e13f4faa33ea75317ffc034384"
   },
   "counts": {
     "behavior_inputs": 9,
@@ -18,7 +19,7 @@
     "generated_inputs": 3,
     "runtime_assets": 5,
     "supporting_evidence": 2,
-    "tuples": 24,
+    "tuples": 28,
     "validations": 57,
     "gates": 75,
     "blockers": 33

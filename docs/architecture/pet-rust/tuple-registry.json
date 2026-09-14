@@ -13,7 +13,10 @@
     "planned_backend": "Win32Backend",
     "backend_binding_status": "Planned",
     "lifecycle": "Planned",
-    "is_phase0_representative": true
+    "is_phase0_representative": true,
+    "support_role": "legacy_supported",
+    "fact_checked_at": "2026-09-14",
+    "fact_source": "Microsoft Windows Servicing Matrix 2026"
   },
   {
     "tuple_key": "windows-11-23h2-x64-dwm-win32",
@@ -45,7 +48,10 @@
     "planned_backend": "Win32Backend",
     "backend_binding_status": "Planned",
     "lifecycle": "Planned",
-    "is_phase0_representative": true
+    "is_phase0_representative": true,
+    "support_role": "legacy_supported",
+    "fact_checked_at": "2026-09-14",
+    "fact_source": "Microsoft Windows Servicing Matrix 2026"
   },
   {
     "tuple_key": "windows-10-22h2-x64-dwm-win32",
@@ -189,7 +195,10 @@
     "planned_backend": "GnomeCompanionBackend",
     "backend_binding_status": "Planned",
     "lifecycle": "Planned",
-    "is_phase0_representative": true
+    "is_phase0_representative": true,
+    "support_role": "current_representative",
+    "fact_checked_at": "2026-09-14",
+    "fact_source": "Ubuntu LTS 24.04 Release"
   },
   {
     "tuple_key": "ubuntu-24.04-gnome46-arm64-wayland-gnomecompanion",
@@ -253,14 +262,17 @@
     "planned_backend": "LayerShellBackend",
     "backend_binding_status": "Planned",
     "lifecycle": "Planned",
-    "is_phase0_representative": true
+    "is_phase0_representative": true,
+    "support_role": "legacy_supported",
+    "fact_checked_at": "2026-09-14",
+    "fact_source": "Fedora Release Schedule 2026"
   },
   {
     "tuple_key": "fedora-42-kde6-x64-wayland-layershell",
     "display_id": "T-17",
     "os": "Fedora",
     "os_version": "42",
-    "os_build": "Rawhide",
+    "os_build": "Standard",
     "arch": "x86_64",
     "desktop_environment": "KDE",
     "desktop_version": "6.2",
@@ -269,14 +281,17 @@
     "planned_backend": "LayerShellBackend",
     "backend_binding_status": "Planned",
     "lifecycle": "Planned",
-    "is_phase0_representative": false
+    "is_phase0_representative": false,
+    "support_role": "legacy_supported",
+    "fact_checked_at": "2026-09-14",
+    "fact_source": "Fedora Release Schedule 2026"
   },
   {
     "tuple_key": "fedora-42-gnome50-x64-wayland-gnomecompanion",
     "display_id": "T-18",
     "os": "Fedora",
     "os_version": "42",
-    "os_build": "Rawhide",
+    "os_build": "Standard",
     "arch": "x86_64",
     "desktop_environment": "GNOME",
     "desktop_version": "50",
@@ -285,7 +300,10 @@
     "planned_backend": "GnomeCompanionBackend",
     "backend_binding_status": "Planned",
     "lifecycle": "Planned",
-    "is_phase0_representative": true
+    "is_phase0_representative": true,
+    "support_role": "legacy_supported",
+    "fact_checked_at": "2026-09-14",
+    "fact_source": "Fedora Release Schedule 2026"
   },
   {
     "tuple_key": "archlinux-rolling-sway-x64-wayland-layershell",
@@ -301,7 +319,12 @@
     "planned_backend": "LayerShellBackend",
     "backend_binding_status": "Planned",
     "lifecycle": "Planned",
-    "is_phase0_representative": true
+    "is_phase0_representative": true,
+    "snapshot_date": "2026-09-14",
+    "os_build_snapshot_id": "archlinux-2026.09.01-x86_64.iso",
+    "support_role": "current_representative",
+    "fact_checked_at": "2026-09-14",
+    "fact_source": "Arch Linux Rolling Release"
   },
   {
     "tuple_key": "archlinux-rolling-hyprland-x64-wayland-layershell",
@@ -317,7 +340,12 @@
     "planned_backend": "LayerShellBackend",
     "backend_binding_status": "Planned",
     "lifecycle": "Planned",
-    "is_phase0_representative": false
+    "is_phase0_representative": false,
+    "snapshot_date": "2026-09-14",
+    "os_build_snapshot_id": "archlinux-2026.09.01-x86_64.iso",
+    "support_role": "current_representative",
+    "fact_checked_at": "2026-09-14",
+    "fact_source": "Arch Linux Rolling Release"
   },
   {
     "tuple_key": "uos-20-sp1-x64-x11-x11backend",
@@ -382,5 +410,81 @@
     "backend_binding_status": "Pending VAL",
     "lifecycle": "Planned",
     "is_phase0_representative": false
+  },
+  {
+    "tuple_key": "fedora-44-gnome50-x64-wayland-gnomecompanion",
+    "display_id": "T-25",
+    "os": "Fedora",
+    "os_version": "44",
+    "os_build": "Workstation",
+    "arch": "x86_64",
+    "desktop_environment": "GNOME",
+    "desktop_version": "50",
+    "display_protocol": "Wayland",
+    "compositor": "Mutter",
+    "planned_backend": "GnomeCompanionBackend",
+    "backend_binding_status": "Planned",
+    "lifecycle": "Planned",
+    "is_phase0_representative": true,
+    "support_role": "current_representative",
+    "fact_checked_at": "2026-09-14",
+    "fact_source": "Fedora 44 Workstation Release 2026"
+  },
+  {
+    "tuple_key": "fedora-44-kde66-x64-wayland-layershell",
+    "display_id": "T-26",
+    "os": "Fedora",
+    "os_version": "44",
+    "os_build": "KDE Plasma Desktop",
+    "arch": "x86_64",
+    "desktop_environment": "KDE",
+    "desktop_version": "6.6",
+    "display_protocol": "Wayland",
+    "compositor": "KWin",
+    "planned_backend": "LayerShellBackend",
+    "backend_binding_status": "Planned",
+    "lifecycle": "Planned",
+    "is_phase0_representative": true,
+    "support_role": "current_representative",
+    "fact_checked_at": "2026-09-14",
+    "fact_source": "Fedora KDE Plasma Desktop 44 Release 2026 / Plasma 6.6"
+  },
+  {
+    "tuple_key": "windows-11-25h2-x64-dwm-win32",
+    "display_id": "T-27",
+    "os": "Windows",
+    "os_version": "11",
+    "os_build": "25H2",
+    "arch": "x86_64",
+    "desktop_environment": "DWM",
+    "desktop_version": "10.0.27xx",
+    "display_protocol": "DWM",
+    "compositor": "DWM",
+    "planned_backend": "Win32Backend",
+    "backend_binding_status": "Planned",
+    "lifecycle": "Planned",
+    "is_phase0_representative": true,
+    "support_role": "current_representative",
+    "fact_checked_at": "2026-09-14",
+    "fact_source": "Microsoft Windows 11 25H2 mainstream release 2026"
+  },
+  {
+    "tuple_key": "windows-11-26h1-arm64-dwm-win32",
+    "display_id": "T-28",
+    "os": "Windows",
+    "os_version": "11",
+    "os_build": "26H1",
+    "arch": "aarch64",
+    "desktop_environment": "DWM",
+    "desktop_version": "10.0.28xx",
+    "display_protocol": "DWM",
+    "compositor": "DWM",
+    "planned_backend": "Win32Backend",
+    "backend_binding_status": "Planned",
+    "lifecycle": "Planned",
+    "is_phase0_representative": true,
+    "support_role": "current_representative",
+    "fact_checked_at": "2026-09-14",
+    "fact_source": "Microsoft Windows 11 26H1 new-device ARM64 release 2026"
   }
 ]

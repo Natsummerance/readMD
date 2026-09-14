@@ -1,6 +1,6 @@
 {
   "": "schema/registry-manifest.schema.json",
-  "version": "v1.4.6",
+  "version": "v1.4.7",
   "artifacts": [
     {
       "role": "golden_contract",
@@ -15,7 +15,7 @@
     {
       "role": "tuple_registry",
       "path": "docs/architecture/pet-rust/tuple-registry.json",
-      "description": "24 atomic platform certification tuples with single-valued fields and lifecycle"
+      "description": "28 atomic platform certification tuples with single-valued fields and lifecycle"
     },
     {
       "role": "validation_registry",
@@ -36,6 +36,16 @@
       "role": "spec_integrity",
       "path": "docs/architecture/pet-rust/spec.integrity.json",
       "description": "External cryptographic integrity manifest binding spec and registry files"
+    },
+    {
+      "role": "preload_abi_fixture",
+      "path": "docs/architecture/pet-rust/preload-abi.fixture.json",
+      "description": "Machine-verifiable Preload ABI structural fixture: forbidden namespaces, required namespaces, method arities and result shapes for Gate-Golden-ABI"
+    },
+    {
+      "role": "pet_architecture_attestation",
+      "path": "docs/architecture/pet-rust/pet-architecture-attestation.json",
+      "description": "CI attestation template for pet overlay architecture evidence: architecture_spec_commit_sha, tested_commit_sha and empirical validation slots"
     }
   ]
-}
+}

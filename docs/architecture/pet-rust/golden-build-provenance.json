@@ -34,7 +34,7 @@
     {
       "id": "src_adapter_preload",
       "path": "packages/readmd-hermes-pet-adapter/src/preload.ts",
-      "role": "ReadMD host Preload script exposing window.__HERMES_PET__",
+      "role": "ReadMD host Preload script exposing window.hermesDesktop and window.readmdPet",
       "sha256": "fafeb3c1e5241efe3c25646f4ec1cb818ca46a17e375f85e3e16710963df1179",
       "provenance": "readmd_host_adapter"
     },
@@ -209,5 +209,19 @@
     "renderer_bundle_hash": "d9f1da3457bac312a2790d270f6052de02c87290a19d623ee5d23bfb378ccb9d",
     "preload_bundle_hash": "50d95c7d2b62f3ba3198597c0a73cb53d4fa6c89d36534d59268a3a0fb8c08e0",
     "electron_main_bundle_hash": "b5747182b5e883e2e89aad869affbd3a7d3a7b8f70642a4997d757adb569f921"
+  },
+  "readmd_host_fallback_sprite_metadata": {
+    "frameH": 512,
+    "frameW": 384,
+    "framesPerState": 4,
+    "mime": "image/png",
+    "scale": 0.33,
+    "spritesheetRevision": "hermes-fallback-a5661b457de00b9a",
+    "stateRows": ["idle", "wave"]
+  },
+  "vendor_renderer_default_geometry": {
+    "width": 192,
+    "height": 208,
+    "paddingBottom": 24
   }
 }

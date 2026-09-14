@@ -1,0 +1,3 @@
+@echo off
+echo ?????????????? Microsoft Edge ???...
+start "" "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --remote-debugging-port=9222 --remote-allow-origins=* "https://creator.xiaohongshu.com/login"

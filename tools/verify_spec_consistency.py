@@ -2,7 +2,7 @@
 """
 tools/verify_spec_consistency.py
 Authoritative Linter and Architectural Consistency Verifier for ReadMD Desktop Overlay Specification.
-Version: v1.4.6 (Evidence & Validation Closure Candidate)
+Version: v1.4.7 (Reproducible Evidence Candidate)
 """
 
 import os
@@ -193,11 +193,11 @@ def run_checks(spec_path, repo_root, is_fixture=False):
                 if f"[{i}." not in toc_text:
                     errors.append(f"TOC does not reference Section {i}")
 
-    # 3. Version checks (v1.4.6)
-    if "v1.4.6" not in lines[0]:
-        errors.append("Header does not declare 'v1.4.6'")
-    if "> **版本标识**：v1.4.6-Candidate" not in text and "> **版本**：v1.4.6-Candidate" not in text:
-        errors.append("Metadata block does not declare 'v1.4.6-Candidate'")
+    # 3. Version checks (v1.4.7)
+    if "v1.4.7" not in lines[0]:
+        errors.append("Header does not declare 'v1.4.7'")
+    if "> **版本标识**：v1.4.7-Candidate" not in text and "> **版本**：v1.4.7-Candidate" not in text:
+        errors.append("Metadata block does not declare 'v1.4.7-Candidate'")
 
     # Check status line for forbidden premature freeze
     for line in lines[:25]:

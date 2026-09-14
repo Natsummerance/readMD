@@ -1,0 +1,96 @@
+{
+  "$schema": "../schema/preload-abi-fixture.schema.json",
+  "_description": "Machine-verifiable Preload ABI structural fixture. Gate-Golden-ABI must compare this structure exactly, not substring match.",
+  "fixture_version": "v1.4.7",
+  "migration_golden_commit_sha": "4dcfd73ce81a14ace7e429791e0594bea47b24e5",
+  "forbidden_namespaces": [
+    "window.__HERMES_PET__"
+  ],
+  "required_namespaces": [
+    "window.hermesDesktop.petOverlay",
+    "window.readmdPet"
+  ],
+  "namespace_contracts": {
+    "window.hermesDesktop.petOverlay": {
+      "required_methods": [
+        "open",
+        "close",
+        "setBounds",
+        "setIgnoreMouse",
+        "setFocusable",
+        "pushState",
+        "control",
+        "onState",
+        "onControl"
+      ],
+      "method_contracts": {
+        "open": {
+          "arity": 1,
+          "result_shape": "void",
+          "forbidden_signatures": [
+            "open(bounds, renderer?)",
+            "open(bounds: Bounds, renderer?: string) => Promise<boolean>"
+          ]
+        },
+        "close": {
+          "arity": 0,
+          "result_shape": "void",
+          "forbidden_signatures": [
+            "close() => Promise<boolean>"
+          ]
+        },
+        "setBounds": {
+          "arity": 1,
+          "result_shape": "void"
+        },
+        "setIgnoreMouse": {
+          "arity": 1,
+          "result_shape": "void",
+          "forbidden_arity": 2,
+          "forbidden_signatures": [
+            "setIgnoreMouse(ignore: boolean, options?: { forward?: boolean }) => void",
+            "setIgnoreMouse(ignore, options?)"
+          ]
+        },
+        "setFocusable": {
+          "arity": 1,
+          "result_shape": "void"
+        },
+        "pushState": {
+          "arity": 1,
+          "result_shape": "void"
+        },
+        "control": {
+          "arity": 1,
+          "result_shape": "void"
+        },
+        "onState": {
+          "arity": 1,
+          "result_shape": "unsubscribe_fn"
+        },
+        "onControl": {
+          "arity": 1,
+          "result_shape": "unsubscribe_fn"
+        }
+      }
+    },
+    "window.readmdPet": {
+      "required_methods": [
+        "dropFiles"
+      ],
+      "method_contracts": {
+        "dropFiles": {
+          "arity": 1,
+          "result_shape": "void",
+          "input_type": "File[]",
+          "forbidden_input_types": [
+            "string[]"
+          ],
+          "forbidden_signatures": [
+            "dropFiles(files: string[]) => void"
+          ]
+        }
+      }
+    }
+  }
+}

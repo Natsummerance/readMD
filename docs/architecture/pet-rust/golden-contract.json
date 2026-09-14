@@ -1,8 +1,9 @@
 {
-  "": "schema/golden-contract.schema.json",
-  "version": "v1.4.6",
+  "$schema": "schema/golden-contract.schema.json",
+  "version": "v1.4.7",
   "golden_generation": "2026-09-14",
-  "golden_commit_sha": "47c40a38a60f27df369b60ed29dac4a4a037e3f6",
+  "migration_golden_commit_sha": "4dcfd73ce81a14ace7e429791e0594bea47b24e5",
+  "_commit_identity_note": "migration_golden_commit_sha is IMMUTABLE. Requires Explicit Golden Re-record ADR + Golden Differential review + human approval to change. architecture_spec_commit_sha and tested_commit_sha are set externally by CI attestation.",
   "vendor": "hermes-agent-pet",
   "pinned_revision": "fb27614addac115d55299bc6538ae112fd01f688",
   "upstream_repository": "https://github.com/NousResearch/hermes-agent",
@@ -12,36 +13,40 @@
       "role": "Upstream Sprite click-through, double-click, and event handling",
       "key_lines": "L132-L165, L187-L210",
       "byte_size": 6185,
-      "sha256": "9b2c3d492d0f2adaaa4e2b7ac536e988dea1908208ee7a321fa23203b2c7357d",
+      "sha256": "2e028c2c8a0cb2e70a60c9623a968212ad36016c1d24733bbb0060e9f26c0c8d",
       "provenance": "vendor_pinned_snapshot",
-      "behavior_critical": true
+      "behavior_critical": true,
+      "golden_source_read": "git show 4dcfd73ce81a14ace7e429791e0594bea47b24e5:third_party/hermes-agent-pet/apps/desktop/src/app/pet-overlay/pet-overlay-app.tsx"
     },
     {
       "path": "packages/readmd-hermes-pet-adapter/scripts/build.mjs",
-      "role": "Build-time adaptation script patching single-click to open-menu and generating bundle",
+      "role": "Build-time adaptation script patching setComposerOpen to control({type:'open-menu'}) and generating bundle",
       "key_lines": "L41-L58, L60-L77",
       "byte_size": 4661,
-      "sha256": "59fe50c2d31841aadef9013d2b47b107f49dac62434cebb5d3106bb97ca51db2",
+      "sha256": "5cf9569da19ab1bc362ef57d012bbf46bf630eb0029536ffc0c0df4eef9d8245",
       "provenance": "readmd_adaptation_script",
-      "behavior_critical": true
+      "behavior_critical": true,
+      "golden_source_read": "git show 4dcfd73ce81a14ace7e429791e0594bea47b24e5:packages/readmd-hermes-pet-adapter/scripts/build.mjs"
     },
     {
       "path": "packages/readmd-hermes-pet-adapter/src/electron-main.ts",
-      "role": "Main window lifecycle, context menu model, tray and clipboard capture",
+      "role": "Main window lifecycle, context menu model, tray and clipboard capture; toggle-app IPC owner",
       "key_lines": "L87-L142, L165-L172, L195-L202, L226-L237",
       "byte_size": 14929,
-      "sha256": "0a1b6473d155f8121d77d1463316a7968b0d973f76bb6080f4abb58de65a269d",
+      "sha256": "b63eb9e0ff57bf0e7a3bcceaf6f9ed57432baf53ababb63993c31eba8453052f",
       "provenance": "readmd_host_adapter",
-      "behavior_critical": true
+      "behavior_critical": true,
+      "golden_source_read": "git show 4dcfd73ce81a14ace7e429791e0594bea47b24e5:packages/readmd-hermes-pet-adapter/src/electron-main.ts"
     },
     {
       "path": "packages/readmd-hermes-pet-adapter/src/preload.ts",
-      "role": "Preload ABI context exposure (window.__HERMES_PET__)",
+      "role": "Preload ABI context exposure (window.hermesDesktop.petOverlay + window.readmdPet)",
       "key_lines": "L1-L40",
       "byte_size": 1883,
-      "sha256": "fafeb3c1e5241efe3c25646f4ec1cb818ca46a17e375f85e3e16710963df1179",
+      "sha256": "a8671a97faa51a1cfc5e61d5f41e9dd56f568d0166174f7487987006355d6815",
       "provenance": "readmd_host_adapter",
-      "behavior_critical": true
+      "behavior_critical": true,
+      "golden_source_read": "git show 4dcfd73ce81a14ace7e429791e0594bea47b24e5:packages/readmd-hermes-pet-adapter/src/preload.ts"
     },
     {
       "path": "packages/readmd-hermes-pet-adapter/src/bridge-transport.ts",
@@ -50,43 +55,48 @@
       "byte_size": 2276,
       "sha256": "7055deed1d644687fe8fc1a3adff39fba85185644903e334be6b502397100723",
       "provenance": "readmd_host_adapter",
-      "behavior_critical": true
+      "behavior_critical": true,
+      "golden_source_read": "git show 4dcfd73ce81a14ace7e429791e0594bea47b24e5:packages/readmd-hermes-pet-adapter/src/bridge-transport.ts"
     },
     {
       "path": "packages/readmd-hermes-pet-adapter/src/renderer.tsx",
       "role": "Frontend React mounting, state dispatch, and error boundary",
       "key_lines": "L6-L44",
       "byte_size": 2002,
-      "sha256": "5bbbd06c222c572d75b68b10bb09e910a5e02e6f1e89475a9811d0934dccaa36",
+      "sha256": "ad147c26de82ca732012d993cf7de2f5b2592ed408cb5b75f1c676d6ffcf561d",
       "provenance": "readmd_renderer",
-      "behavior_critical": true
+      "behavior_critical": true,
+      "golden_source_read": "git show 4dcfd73ce81a14ace7e429791e0594bea47b24e5:packages/readmd-hermes-pet-adapter/src/renderer.tsx"
     },
     {
       "path": "packages/readmd-hermes-pet-adapter/src/live2d/stage.ts",
       "role": "Live2D stage hit test and bounds checking",
       "key_lines": "L125-L135",
       "byte_size": 19525,
-      "sha256": "bec994ed0a299fd7f05156f54cef6fa06da750f96f6f931a547313bd3e64522a",
+      "sha256": "e32893090119b7f25bf96925f47d44edba1d3e042d3e0228bac3b13cefc0c509",
       "provenance": "readmd_renderer",
-      "behavior_critical": true
+      "behavior_critical": true,
+      "golden_source_read": "git show 4dcfd73ce81a14ace7e429791e0594bea47b24e5:packages/readmd-hermes-pet-adapter/src/live2d/stage.ts"
     },
     {
       "path": "third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts",
       "role": "Upstream pet IPC protocol and window click-through control",
       "key_lines": "L1-L150",
       "byte_size": 5824,
-      "sha256": "5c99fce416fece34d0fb66fdb662af0fb0169b9c4e8aae71977f9a46ac171d8d",
+      "sha256": "f85431c76335fdce6594a8f9d527062eb5027ecc08e3b4a5492ac4d638c9d439",
       "provenance": "vendor_pinned_snapshot",
-      "behavior_critical": true
+      "behavior_critical": true,
+      "golden_source_read": "git show 4dcfd73ce81a14ace7e429791e0594bea47b24e5:third_party/hermes-agent-pet/apps/desktop/electron/pet-overlay-ipc.ts"
     },
     {
       "path": "src/readmd_modules/pet/hermes_adapter.py",
-      "role": "Python host orchestrator, lifecycle management, and FIFO response",
+      "role": "Python host orchestrator, lifecycle management, and FIFO response; FIFO consumer only - NOT toggle-app IPC owner",
       "key_lines": "L309-L322, L364-L390",
       "byte_size": 33603,
-      "sha256": "2a2f09188d3f9f6f52ac9a0a0571d3a94eaf2e385949184ef24058f3ec5b03ee",
+      "sha256": "095a69aa3c368e86fb6747378dd6659629849fba20c92fed5ac587e9cc0d4b3d",
       "provenance": "readmd_core_python",
-      "behavior_critical": true
+      "behavior_critical": true,
+      "golden_source_read": "git show 4dcfd73ce81a14ace7e429791e0594bea47b24e5:src/readmd_modules/pet/hermes_adapter.py"
     }
   ],
   "build_inputs": [
@@ -94,7 +104,7 @@
       "path": "packages/readmd-hermes-pet-adapter/vite.config.mjs",
       "role": "Vite bundling configuration for renderer",
       "byte_size": 1358,
-      "sha256": "8a5ed317a59a567fa8660e887d3b4e6067375583f85cb6072f7090cfae7c17db",
+      "sha256": "cf207a6a6f2288cbf42b239ab291d18dc71f3faeb0c89d1e4ac7daa7f0f96017",
       "provenance": "readmd_build_config",
       "behavior_critical": true
     },
@@ -102,7 +112,7 @@
       "path": "packages/readmd-hermes-pet-adapter/package.json",
       "role": "Dependencies, build scripts, and package metadata",
       "byte_size": 709,
-      "sha256": "ee63a91062219ea13672d4440246745f5eb821573a3007b30a7385e857780600",
+      "sha256": "5b6237fa75d9848e77cc2fbede9f84b21f9427b3dfbe6d80fd78ad5ec23066d2",
       "provenance": "readmd_package_meta",
       "behavior_critical": true
     },
@@ -110,7 +120,7 @@
       "path": "packages/readmd-hermes-pet-adapter/package-lock.json",
       "role": "Dependency lockfile ensuring reproducible toolchain",
       "byte_size": 120446,
-      "sha256": "c354caaed6f277fbddad21b6e27d6e2de961f6cefa9a397f3e213a9ecf3efb4f",
+      "sha256": "37ce1a2345839e0fcb5dde85ca58bff0e3a3bf86c36c2217218cc14c972bdbe9",
       "provenance": "adapter_lockfile",
       "behavior_critical": false
     }
@@ -196,29 +206,92 @@
       "path": "third_party/hermes-agent-pet/UPSTREAM.md",
       "role": "Upstream provenance documentation and revision record",
       "byte_size": 966,
-      "sha256": "35076f31d0ea6d70df494d6b2fab258d6348a24706e707c373629fea75d51110",
+      "sha256": "44bfe1f1d884c3e0b9a8268827c8a4ce867b0961a3a645878ce7c24d297daa42",
       "provenance": "vendor_doc",
       "behavior_critical": false
     }
   ],
   "preload_abi": {
     "interface_name": "ReadMDPetPreloadABI",
-    "global_paths": [
-      "window.__HERMES_PET__",
-      "window.hermesDesktop.petOverlay",
-      "window.readmdPet"
-    ],
-    "methods": {
-      "open": "open(bounds: Bounds, renderer?: string) => Promise<boolean>",
-      "close": "close() => Promise<boolean>",
-      "setBounds": "setBounds(bounds: Bounds) => void",
-      "setIgnoreMouse": "setIgnoreMouse(ignore: boolean, options?: { forward?: boolean }) => void",
-      "setFocusable": "setFocusable(focusable: boolean) => void",
-      "pushState": "pushState(payload: unknown) => void",
-      "control": "control(payload: { action?: string; type?: string; [key: string]: unknown }) => void",
-      "onState": "onState(listener: (payload: any) => void) => () => void",
-      "onControl": "onControl(listener: (payload: any) => void) => () => void",
-      "dropFiles": "dropFiles(files: string[]) => void"
+    "_namespace_note": "window.__HERMES_PET__ does NOT exist in real preload.ts. True namespaces: window.hermesDesktop.petOverlay (overlay control) and window.readmdPet (file drop). Do not invent or document window.__HERMES_PET__.",
+    "namespaces": {
+      "window.hermesDesktop.petOverlay": {
+        "open": {
+          "signature": "open(request: OpenRequest) => void",
+          "arity": 1,
+          "result_shape": "void",
+          "transport": "ipc",
+          "channel": "pet-overlay:open"
+        },
+        "close": {
+          "signature": "close() => void",
+          "arity": 0,
+          "result_shape": "void",
+          "transport": "ipc",
+          "channel": "pet-overlay:close"
+        },
+        "setBounds": {
+          "signature": "setBounds(bounds: Bounds) => void",
+          "arity": 1,
+          "result_shape": "void",
+          "transport": "ipc",
+          "channel": "pet-overlay:set-bounds"
+        },
+        "setIgnoreMouse": {
+          "signature": "setIgnoreMouse(ignore: boolean) => void",
+          "arity": 1,
+          "_arity_note": "No optional second argument. options? parameter does NOT exist in real source.",
+          "result_shape": "void",
+          "transport": "ipc",
+          "channel": "pet-overlay:set-ignore-mouse"
+        },
+        "setFocusable": {
+          "signature": "setFocusable(focusable: boolean) => void",
+          "arity": 1,
+          "result_shape": "void",
+          "transport": "ipc",
+          "channel": "pet-overlay:set-focusable"
+        },
+        "pushState": {
+          "signature": "pushState(payload: unknown) => void",
+          "arity": 1,
+          "result_shape": "void",
+          "transport": "ipc",
+          "channel": "pet-overlay:push-state"
+        },
+        "control": {
+          "signature": "control(payload: { action?: string; type?: string; [key: string]: unknown }) => void",
+          "arity": 1,
+          "result_shape": "void",
+          "transport": "ipc",
+          "channel": "pet-overlay:control"
+        },
+        "onState": {
+          "signature": "onState(callback: (payload: any) => void) => () => void",
+          "arity": 1,
+          "result_shape": "unsubscribe_fn",
+          "transport": "ipc_listener",
+          "channel": "pet-overlay:state"
+        },
+        "onControl": {
+          "signature": "onControl(callback: (payload: any) => void) => () => void",
+          "arity": 1,
+          "result_shape": "unsubscribe_fn",
+          "transport": "ipc_listener",
+          "channel": "pet-overlay:control-event"
+        }
+      },
+      "window.readmdPet": {
+        "dropFiles": {
+          "signature": "dropFiles(files: File[]) => void",
+          "arity": 1,
+          "input_type": "File[]",
+          "_type_note": "files is File[] (browser File objects), NOT string[]",
+          "result_shape": "void",
+          "transport": "ipc",
+          "channel": "readmd:drop-files"
+        }
+      }
     }
   },
   "bounds_policies": {
@@ -228,13 +301,13 @@
       "max_width": 640,
       "max_height": 720,
       "min_overlap_dip": 40,
-      "offscreen_margins": {
-        "top": -12,
-        "left": -12,
-        "bottom": -24,
-        "right": -24
-      },
-      "snap_distance_dip": 0
+      "placement_formula": {
+        "x_expr": "primary.x + Math.max(12, primary.width - width - 24)",
+        "y_expr": "primary.y + Math.max(12, primary.height - height - 24)",
+        "near_origin_min_margin": 12,
+        "far_edge_margin": 24,
+        "_formula_note": "Margins must NOT reduce to negative values. min/max guards ensure position stays within display bounds."
+      }
     },
     "renderer_interactive_bounds": {
       "min_width": 80,
@@ -243,5 +316,31 @@
       "max_height": 720,
       "live2d_auto_scale": true
     }
+  },
+  "golden_observable_contract": {
+    "_note": "These are Electron host observable facts. They are GOLDEN. Rust target-equivalence strategies are recorded separately.",
+    "parent_liveness_check": "process.kill(parentPid, 0) throws ESRCH => closePetOverlay() + app.exit(0)",
+    "snapshot_reader_key": "ino:mtimeNs:ctimeNs:size",
+    "toggle_app_ipc_source": "packages/readmd-hermes-pet-adapter/src/electron-main.ts",
+    "_toggle_note": "hermes_adapter.py is FIFO consumer, NOT toggle-app IPC remapping owner",
+    "poll_sequence": [
+      "check parent liveness",
+      "ensure bridgeFile",
+      "SnapshotReader.read()",
+      "if no new snapshot: return early",
+      "latest = normalizeState(next)",
+      "if visible=false && !fullscreen: close + return",
+      "resolve renderer",
+      "open or apply host bounds",
+      "fullscreen: hide/showInactive",
+      "if renderer changed: load + return",
+      "host_publish_state"
+    ],
+    "_normalize_note": "normalizeState MUST occur before visible/window reconciliation step"
+  },
+  "target_equivalence_strategy": {
+    "_note": "These are Rust implementation candidates, NOT golden facts. Subject to VAL validation.",
+    "parent_liveness_rust_candidate": "inherited pipe EOF => shutdown (SUBJECT TO VAL, not yet golden)",
+    "snapshot_reader_rust_candidate": "ino:mtimeNs:ctimeNs:size on Windows Rust (CANDIDATE - subject to VAL)"
   }
 }

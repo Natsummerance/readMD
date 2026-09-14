@@ -1,11 +1,11 @@
-# ReadMD Desktop Overlay v1.4.6 Evidence & Validation Closure Candidate
+# ReadMD Desktop Overlay v1.4.7 Reproducible Evidence Candidate
 
-> **版本标识**：v1.4.6-Candidate
-> **阶段说明**：Evidence & Validation Closure Candidate / Phase 0 Readiness Gate
+> **版本标识**：v1.4.7-Candidate
+> **阶段说明**：Reproducible Evidence Candidate / Phase 0 Readiness Gate
 > **架构冻结判定**：**NO — Production Architecture Freeze**（严禁进入正式生产代码实现）
 > **Phase 1 Rust Host 生产实现状态**：**严格禁止**（在 Phase 0 物理硬件概念验证全数通过前严禁进入正式生产代码）
 > **Phase 0 全量验证状态**：**BLOCKED**（允许 Phase 0 tooling/bootstrap、GoldenCapture、isolated backend spike 准备；但正式 PASS 需物理实机证据链）
-> **前序版本溯源**：解决 v1.4.5 中遗留的 Artifact Provenance、Golden Build Closure、Validation Registry、Phase-0 Matrix 与 Evidence Classification 问题
+> **前序版本溯源**：解决 v1.4.6 中遗留的 Git/Artifact Provenance、Golden Baseline Identity、Machine Golden Contract Fidelity、Platform Tuple Factual Correctness 与 Evidence Generation Reproducibility 问题
 
 ---
 

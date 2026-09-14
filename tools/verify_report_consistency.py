@@ -2,7 +2,7 @@
 """
 tools/verify_report_consistency.py
 Verifies parity and consistency between audit report and machine registries.
-Version: v1.4.6
+Version: v1.4.7
 """
 
 import os
@@ -15,10 +15,10 @@ from pathlib import Path
 def main():
     repo_root = Path(__file__).resolve().parents[1]
     arch_dir = repo_root / "docs" / "architecture" / "pet-rust"
-    report_file = arch_dir / "audit-report-v1.4.6.md"
+    report_file = arch_dir / "audit-report-v1.4.7.md"
 
     if not report_file.exists():
-        print("[-] FATAL: audit-report-v1.4.6.md missing!")
+        print("[-] FATAL: audit-report-v1.4.7.md missing!")
         sys.exit(1)
 
     with open(report_file, "r", encoding="utf-8") as f:
@@ -42,8 +42,8 @@ def main():
     errors = []
 
     # 1. Check Version and Verdict
-    if "v1.4.6" not in report_text:
-        errors.append("Report does not declare 'v1.4.6'")
+    if "v1.4.7" not in report_text:
+        errors.append("Report does not declare 'v1.4.7'")
     if "NO — Production Architecture Freeze" not in report_text:
         errors.append("Report missing mandatory verdict: 'NO — Production Architecture Freeze'")
     if "STRICTLY FORBIDDEN" not in report_text:
@@ -88,7 +88,7 @@ def main():
             print(f"  [{idx:02d}] {err}")
         sys.exit(1)
 
-    print("[+] PASS: audit-report-v1.4.6.md consistency verified clean with all registries.")
+    print("[+] PASS: audit-report-v1.4.7.md consistency verified clean with all registries.")
 
 if __name__ == "__main__":
     main()

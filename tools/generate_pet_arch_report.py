@@ -2,7 +2,7 @@
 """
 tools/generate_pet_arch_report.py
 Generates authoritative architecture audit and evidence closure report from machine registries and git facts.
-Version: v1.4.6
+Version: v1.4.7
 """
 
 import os
@@ -36,7 +36,7 @@ def get_git_info(repo_root):
         branch = "main"
 
     remote_sha = None
-    remote_resolvable = False
+    head_matches_remote = False
     try:
         ls_rem = subprocess.run(
             ["git", "ls-remote", "origin", f"refs/heads/{branch}"],
@@ -47,10 +47,10 @@ def get_git_info(repo_root):
         ).stdout.strip()
         if ls_rem:
             remote_sha = ls_rem.split()[0]
-            remote_resolvable = (remote_sha == local_sha)
+            head_matches_remote = (remote_sha == local_sha)
     except Exception:
         remote_sha = None
-        remote_resolvable = False
+        head_matches_remote = False
 
     try:
         status_out = subprocess.run(
@@ -60,7 +60,7 @@ def get_git_info(repo_root):
             text=True,
             check=True
         ).stdout.strip()
-        # check if tracked files are dirty
+        # check if tracked files are dirty (untracked ?? lines don't count)
         tracked_dirty = False
         for line in status_out.splitlines():
             if not line.startswith("??"):
@@ -70,16 +70,43 @@ def get_git_info(repo_root):
     except Exception:
         working_tree_clean = False
 
-    provenance_state = "REMOTE_VERIFIED" if remote_resolvable else "LOCAL_ONLY"
+    # ── P0-199 / P0-200: Separate git_head_provenance_state from artifact_provenance_state ──
+    #
+    # REMOTE_VERIFIED requires ALL of:
+    #   1. working_tree_clean == True   (no tracked dirty files)
+    #   2. local HEAD SHA == remote HEAD SHA
+    #
+    # If working tree is dirty, HEAD matching remote only proves the HEAD commit
+    # exists remotely — it does NOT prove the artifacts in the working tree are
+    # identical to those in the remote commit.  Must emit DIRTY_HEAD_MATCHES_REMOTE.
+
+    if working_tree_clean and head_matches_remote:
+        git_head_provenance_state = "REMOTE_VERIFIED"
+    elif not working_tree_clean and head_matches_remote:
+        git_head_provenance_state = "DIRTY_HEAD_MATCHES_REMOTE"
+    elif not head_matches_remote and remote_sha is not None:
+        git_head_provenance_state = "LOCAL_AHEAD_OF_REMOTE"
+    else:
+        git_head_provenance_state = "LOCAL_ONLY"
+
+    # artifact_provenance_state: reflects whether the working-tree artifacts
+    # are provably identical to a specific remote commit's artifacts.
+    # Only REMOTE_VERIFIED when both conditions above are met.
+    if working_tree_clean and head_matches_remote:
+        artifact_provenance_state = "REMOTE_VERIFIED"
+    else:
+        artifact_provenance_state = "UNCOMMITTED_EVIDENCE"
 
     return {
         "repository": "Natsummerance/readMD",
         "branch": branch,
         "local_commit_sha": local_sha,
         "remote_commit_sha": remote_sha if remote_sha else "unreachable",
-        "remote_resolvable": remote_resolvable,
         "working_tree_clean": working_tree_clean,
-        "provenance_state": provenance_state
+        "git_head_provenance_state": git_head_provenance_state,
+        "artifact_provenance_state": artifact_provenance_state,
+        # Legacy compat field — equals artifact_provenance_state
+        "provenance_state": artifact_provenance_state,
     }
 
 def get_file_info(p):
@@ -126,20 +153,44 @@ def main():
 
     spec_info = get_file_info(arch_dir / "spec.md")
 
-    # Build report text
-    prov_badge = "REMOTE_VERIFIED" if git_info["remote_resolvable"] else "LOCAL_ONLY (Local working tree evidence only)"
+    # ── P0-220: prov_badge must reflect artifact_provenance_state, never REMOTE_VERIFIED when dirty ──
+    artifact_prov = git_info["artifact_provenance_state"]
+    if artifact_prov == "REMOTE_VERIFIED":
+        prov_badge = "REMOTE_VERIFIED"
+    elif artifact_prov == "UNCOMMITTED_EVIDENCE":
+        prov_badge = "UNVERIFIED DIRTY WORKTREE — REMOTE_VERIFIED blocked until clean commit is pushed"
+    else:
+        prov_badge = f"LOCAL_ONLY (Local working tree evidence only) [{artifact_prov}]"
+
+    # ── P0-222: Architecture decisions count and empirical validations are ALWAYS shown separately ──
+    resolved_blockers = sum(1 for b in blockers if b.get("design_state") == "resolved")
+    total_blockers = len(blockers)
+    passed_validations = sum(1 for v in validations if v.get("status") == "PASS")
+    total_validations = len(validations)
+
+    # ── P0-221: Phase 0 readiness state machine ──
+    if artifact_prov == "REMOTE_VERIFIED":
+        phase0_readiness = "READY (All artifact, golden, registry, report, and platform checks PASS)"
+    else:
+        phase0_readiness = (
+            "BLOCKED_BY_EVIDENCE — artifacts are not REMOTE_VERIFIED with a clean worktree. "
+            "Push a clean commit where all declared artifacts are committed before Phase 0 evidence can be validated remotely."
+        )
 
     lines = []
-    lines.append("# ReadMD Desktop Overlay v1.4.6 Evidence & Validation Closure Candidate 架构整改与终审报告\n")
-    lines.append("- **报告标识**：`REPORT-PET-OVERLAY-V146-EVIDENCE-CLOSURE`")
-    lines.append("- **目标规格**：`ReadMD Desktop Overlay Architecture Specification v1.4.6-Candidate`")
-    lines.append("- **版本阶段**：`Evidence & Validation Closure Candidate` (证据链与实证闭环候选)")
-    lines.append("- **基线版本**：`v1.4.5 Semantic Closure Candidate`")
+    lines.append("# ReadMD Desktop Overlay v1.4.7 Reproducible Evidence Candidate 架构整改与终审报告\n")
+    lines.append("- **报告标识**：`REPORT-PET-OVERLAY-V147-EVIDENCE-CLOSURE`")
+    lines.append("- **目标规格**：`ReadMD Desktop Overlay Architecture Specification v1.4.7-Candidate`")
+    lines.append("- **版本阶段**：`Reproducible Evidence Candidate` (可复现证据候选)")
+    lines.append("- **基线版本**：`v1.4.6 Evidence & Validation Closure Candidate`")
     lines.append(f"- **代码仓库**：`{git_info['repository']}`")
     lines.append(f"- **Git 分支**：`{git_info['branch']}`")
-    lines.append(f"- **本地提交 SHA**：`{git_info['local_commit_sha']}`")
+    lines.append(f"- **报告所描述的提交 (parent commit SHA)**：`{git_info['local_commit_sha']}`")
+    lines.append(f"  _（此报告描述其生成时所在的提交，而非报告文件本身最终落入的提交）_")
     lines.append(f"- **远端提交 SHA**：`{git_info['remote_commit_sha']}`")
-    lines.append(f"- **代码出处状态 (Provenance State)**：`{prov_badge}`")
+    lines.append(f"- **工作树状态**：`{'CLEAN' if git_info['working_tree_clean'] else 'DIRTY (tracked files modified)'}`")
+    lines.append(f"- **Git HEAD 出处状态**：`{git_info['git_head_provenance_state']}`")
+    lines.append(f"- **制品出处状态 (Artifact Provenance State)**：`{prov_badge}`")
     lines.append("- **架构冻结结论**：**`NO — Production Architecture Freeze`**")
     lines.append("- **Phase 1 生产实现准入**：**`STRICTLY FORBIDDEN`**（严禁编写正式 Rust Host 生产代码）")
     lines.append("- **Phase 0 全量验证启动**：**`BLOCKED`**（允许 Tooling / GoldenCapture / isolated backend spike 准备；实机验证待硬件证据链输入）\n")
@@ -149,10 +200,12 @@ def main():
     lines.append("```json")
     lines.append(json.dumps(git_info, indent=2))
     lines.append("```\n")
-    if git_info["provenance_state"] == "LOCAL_ONLY":
-        lines.append("> [!NOTE]\n> 当前处于 `LOCAL_ONLY` 模式，所有指标属于本地工作树证据 (local working tree evidence only)。推送至远端 GitHub 分支后将自动跃迁至 `REMOTE_VERIFIED`。\n")
+    if artifact_prov == "REMOTE_VERIFIED":
+        lines.append("> [!NOTE]\n> 当前已实现 `REMOTE_VERIFIED`，本地 HEAD 与 GitHub 远端分支 SHA 严格一致，工作树干净，外部完全可解析复现。\n")
+    elif artifact_prov == "DIRTY_HEAD_MATCHES_REMOTE":
+        lines.append("> [!WARNING]\n> 当前为 `DIRTY_HEAD_MATCHES_REMOTE`：HEAD 提交已推送至远端，但工作树存在未提交的修改文件。制品出处状态阻断于 `REMOTE_VERIFIED`，必须提交并推送干净工作树后方可达到 REMOTE_VERIFIED。\n")
     else:
-        lines.append("> [!NOTE]\n> 当前已实现 `REMOTE_VERIFIED`，本地 HEAD 与 GitHub 远端分支 SHA 严格一致，外部完全可解析复现。\n")
+        lines.append("> [!NOTE]\n> 当前处于 `LOCAL_ONLY` 模式，所有指标属于本地工作树证据 (local working tree evidence only)。推送至远端 GitHub 分支后将自动跃迁至 `REMOTE_VERIFIED`。\n")
 
     lines.append("---\n")
     lines.append("## 2. 机器注册表清单与外部完整性校验基线 (P0-178, P0-191, P0-192)\n")
@@ -169,7 +222,7 @@ def main():
     lines.append("## 3. 黄金行为输入闭包与构建起源图谱 (P0-172, P0-173, P0-174, P0-175, P0-188, P0-189)\n")
     lines.append(f"- **上游厂商**：`{contract['vendor']}` (`{contract['upstream_repository']}`)")
     lines.append(f"- **上游固定提交 (Pinned Upstream Revision)**：`{contract['pinned_revision']}`（记录于 `third_party/hermes-agent-pet/UPSTREAM.md`）")
-    lines.append(f"- **黄金基准提交 (Golden Git Commit SHA)**：`{contract['golden_commit_sha']}`\n")
+    lines.append(f"- **黄金基准提交 (Migration Golden Commit SHA)**：`{contract.get('migration_golden_commit_sha') or contract.get('golden_commit_sha', 'MISSING')}`\n")
     lines.append("### 3.1 闭包输入统计 (Behavioral Input Closure Counts)\n")
     lines.append(f"- **行为输入 (Behavior Inputs)**：`{len(contract['behavior_inputs'])} 个`（包含 `pet-overlay-app.tsx` 与 `build.mjs`，均为 `behavior_critical = true`）")
     lines.append(f"- **构建输入 (Build Inputs)**：`{len(contract['build_inputs'])} 个`")
@@ -260,19 +313,21 @@ def main():
     lines.append("================================================================================")
     lines.append("                    READMD ARCHITECTURAL GATE STATUS                            ")
     lines.append("================================================================================")
-    lines.append("Current Version           : v1.4.6-Candidate")
-    lines.append("Milestone Stage           : Evidence & Validation Closure Candidate")
-    lines.append("Architecture Design State : ALL 33 BLOCKERS RESOLVED")
-    lines.append("Phase 0 Readiness         : READY (Tooling, Contracts, Graph & Schemas complete)")
-    lines.append("Phase 0 Full Validation   : BLOCKED (Awaiting physical hardware test execution)")
-    lines.append("Phase 1 Production Rust   : STRICTLY FORBIDDEN (No production implementation code)")
-    lines.append("Production Freeze Verdict : NO — Production Architecture Freeze")
+    lines.append(f"Current Version           : v1.4.7-Candidate")
+    lines.append(f"Milestone Stage           : Reproducible Evidence Candidate")
+    lines.append(f"Architecture Design State : {resolved_blockers}/{total_blockers} blockers resolved")
+    lines.append(f"Empirical Validations     : {passed_validations}/{total_validations} empirical validations passed")
+    lines.append(f"Artifact Provenance State : {artifact_prov}")
+    lines.append(f"Phase 0 Readiness         : {phase0_readiness}")
+    lines.append(f"Phase 0 Full Validation   : BLOCKED (Awaiting physical hardware test execution)")
+    lines.append(f"Phase 1 Production Rust   : STRICTLY FORBIDDEN (No production implementation code)")
+    lines.append(f"Production Freeze Verdict : NO — Production Architecture Freeze")
     lines.append("================================================================================")
     lines.append("```\n")
 
     report_content = "\n".join(lines)
 
-    target_file = arch_dir / "audit-report-v1.4.6.md"
+    target_file = arch_dir / "audit-report-v1.4.7.md"
     with open(target_file, "w", encoding="utf-8") as f:
         f.write(report_content)
 
