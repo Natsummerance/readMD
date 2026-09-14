@@ -101,7 +101,7 @@ def _release_check_urls(current_version):
     """GitHub /latest excludes prereleases, so beta builds scan the release list."""
     current = parse_version(current_version)
     primary = GITHUB_API_RELEASES if current and current[1] == 0 else GITHUB_API_LATEST
-    return [primary] + [prefix + primary for prefix in MIRROR_PREFIXES]
+    return [primary]
 
 
 def detect_app_flavor():
@@ -281,8 +281,106 @@ def resolve_expected_sha(sha_url, asset_name, timeout=5):
     return None
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _sniff_latest_tag_redirect(timeout=3.5):
+    """通过 HTTP 302 重定向 Location 响应头嗅探最新 Release Tag。
+
+    免调用 GitHub REST API，不受 API 速率限制影响，并支持通过国内加速镜像探测。
+    """
+    candidates = [
+        f'https://github.com/{GITHUB_REPO}/releases/latest',
+        f'https://ghfast.top/https://github.com/{GITHUB_REPO}/releases/latest',
+        f'https://ghproxy.net/https://github.com/{GITHUB_REPO}/releases/latest',
+    ]
+    opener = urllib.request.build_opener(_NoRedirectHandler)
+    tag_re = re.compile(r'/releases/tag/([^/?#\s]+)')
+
+    for url in candidates:
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'ReadMD-Updater'})
+            location = ''
+            try:
+                resp = opener.open(req, timeout=timeout)
+                location = resp.headers.get('Location') or ''
+            except urllib.error.HTTPError as exc:
+                location = exc.headers.get('Location') or ''
+            except Exception as exc:
+                logging.debug('Sniff redirect attempt failed on %s: %s', url, exc)
+                continue
+
+            if location:
+                match = tag_re.search(location)
+                if match:
+                    tag = match.group(1).strip()
+                    if tag:
+                        logging.debug('Successfully sniffed release tag %s from %s', tag, url)
+                        return tag
+        except Exception as exc:
+            logging.debug('Sniff redirect error: %s', exc)
+            continue
+    return None
+
+
+def _fetch_manifest_assets(tag_name, timeout=4.0):
+    """从官方及加速源获取指定 Tag 的 SHA256SUMS.txt，并逆向装配 Release 资产元数据。"""
+    if not tag_name:
+        return None
+
+    manifest_urls = [
+        f'https://github.com/{GITHUB_REPO}/releases/download/{tag_name}/SHA256SUMS.txt',
+        f'https://ghfast.top/https://github.com/{GITHUB_REPO}/releases/download/{tag_name}/SHA256SUMS.txt',
+        f'https://ghproxy.net/https://github.com/{GITHUB_REPO}/releases/download/{tag_name}/SHA256SUMS.txt',
+    ]
+
+    manifest_text = None
+    for url in manifest_urls:
+        try:
+            req = urllib.request.Request(url, headers={'User-Agent': 'ReadMD-Updater'})
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                status = getattr(resp, 'status', 200)
+                if status == 200:
+                    data = resp.read()
+                    if isinstance(data, bytes):
+                        manifest_text = data.decode('utf-8', errors='replace')
+                    elif isinstance(data, str):
+                        manifest_text = data
+                    if manifest_text and ('ReadMD' in manifest_text or len(manifest_text) > 20):
+                        break
+        except Exception as exc:
+            logging.debug('Fetch manifest attempt failed on %s: %s', url, exc)
+            continue
+
+    if not manifest_text:
+        return None
+
+    assets = []
+    for line in manifest_text.splitlines():
+        match = re.match(r'^\s*\*?([A-Fa-f0-9]{64})\s+\*?(.+?)\s*$', line)
+        if match:
+            sha, filename = match.group(1).lower(), match.group(2).strip()
+            assets.append({
+                'name': filename,
+                'browser_download_url': f'https://github.com/{GITHUB_REPO}/releases/download/{tag_name}/{filename}',
+                'expected_sha': sha,
+                'size': 0,
+            })
+
+    if assets:
+        assets.append({
+            'name': 'SHA256SUMS.txt',
+            'browser_download_url': f'https://github.com/{GITHUB_REPO}/releases/download/{tag_name}/SHA256SUMS.txt',
+            'size': len(manifest_text),
+        })
+
+    return assets
+
+
 def check_update(current_version, timeout=4):
-    """请求 GitHub API 获取最新 Release 信息（支持国内加速镜像自动降级），并返回更新详情。"""
+    """请求 GitHub API 获取最新 Release 信息（支持多级国内加速降级与 302 嗅探），并返回更新详情。"""
     data = None
     urls_to_try = _release_check_urls(current_version)
     last_error_code = ''
@@ -300,8 +398,30 @@ def check_update(current_version, timeout=4):
             last_error_code = 'update_network_error'
             continue
 
+    # Tier 2 & 3: 若官方 REST API 失败/限流，自动降级至 302 嗅探 + SHA256SUMS 清单装配
+    if not data or not data.get('tag_name'):
+        try:
+            sniffed_tag = _sniff_latest_tag_redirect(timeout=timeout)
+            if sniffed_tag:
+                assets = _fetch_manifest_assets(sniffed_tag, timeout=timeout)
+                if assets:
+                    data = {
+                        'tag_name': sniffed_tag,
+                        'name': f'ReadMD {sniffed_tag}',
+                        'body': f'ReadMD {sniffed_tag}',
+                        'published_at': '',
+                        'html_url': f'https://github.com/{GITHUB_REPO}/releases/tag/{sniffed_tag}',
+                        'assets': assets,
+                    }
+        except Exception as exc:
+            logging.debug('Fallback manifest/redirect check failed: %s', exc)
+
     if not data:
-        return {'ok': False, 'error_code': last_error_code or 'update_check_failed'}
+        return {
+            'ok': False,
+            'error_code': last_error_code or 'update_network_error',
+            'html_url': f'https://github.com/{GITHUB_REPO}/releases',
+        }
 
     try:
         latest_tag = data.get('tag_name', '')
@@ -309,11 +429,15 @@ def check_update(current_version, timeout=4):
         flavor = detect_app_flavor()
         assets = data.get('assets', [])
         best_asset, sha_asset = match_release_asset(assets, flavor)
-        expected_sha = resolve_expected_sha(
-            sha_asset.get('browser_download_url') if sha_asset else None,
-            best_asset.get('name') if best_asset else None,
-            timeout=timeout,
-        )
+        expected_sha = None
+        if best_asset and best_asset.get('expected_sha'):
+            expected_sha = best_asset.get('expected_sha')
+        if not expected_sha:
+            expected_sha = resolve_expected_sha(
+                sha_asset.get('browser_download_url') if sha_asset else None,
+                best_asset.get('name') if best_asset else None,
+                timeout=timeout,
+            )
 
         return {
             'ok': True,
@@ -445,11 +569,55 @@ def download_asset_thread(download_url, target_filename, expected_sha=None, use_
             'cancel_requested': False,
         })
 
+    candidates = [url]
+    if use_mirror:
+        for prefix in MIRROR_PREFIXES:
+            cand = prefix + download_url
+            if cand not in candidates:
+                candidates.append(cand)
+        if download_url not in candidates:
+            candidates.append(download_url)
+    else:
+        for prefix in MIRROR_PREFIXES:
+            cand = prefix + download_url
+            if cand not in candidates:
+                candidates.append(cand)
+
+    resp = None
+    for cand_url in candidates:
+        try:
+            req = urllib.request.Request(cand_url)
+            req.add_header('User-Agent', 'ReadMD-Updater')
+            cand_resp = urllib.request.urlopen(req, timeout=25)
+            status = getattr(cand_resp, 'status', 200)
+            if status == 200:
+                resp = cand_resp
+                break
+            if hasattr(cand_resp, 'close'):
+                cand_resp.close()
+        except Exception as exc:
+            logging.debug('Candidate download URL %s failed: %s', cand_url, exc)
+            continue
+
+    if not resp:
+        with _download_lock:
+            _download_state.update({
+                'status': 'error',
+                'error': '',
+                'error_code': 'update_download_failed',
+                'running': False,
+                'target_file': '',
+                'expected_sha': '',
+            })
+        try:
+            if download_path and os.path.isfile(download_path):
+                os.unlink(download_path)
+        except Exception:
+            pass
+        return
+
     try:
-        req = urllib.request.Request(url)
-        req.add_header('User-Agent', 'ReadMD-Updater')
-        
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        with resp:
             total = int(resp.headers.get('Content-Length') or 0)
             with _download_lock:
                 _download_state['total_bytes'] = total

@@ -16,10 +16,18 @@ async function checkUpdate(silent = true) {
       res = await py.check_update();
     } else {
       const resp = await fetch('/api/update/check');
-      if (resp.ok) res = await resp.json();
+      res = await resp.json().catch(() => null);
     }
     if (!res || !res.ok) {
-      if (!silent) showToast(res && res.error ? _t('update.checkFail') + '：' + res.error : _t('update.checkFail'));
+      if (!silent) {
+        let msg = _t('update.checkFail');
+        if (res && res.error) {
+          msg = _t('update.checkFail') + '：' + res.error;
+        } else if (res && res.error_code === 'update_network_error') {
+          msg = _t('update.failed');
+        }
+        showToast(msg);
+      }
       return;
     }
     if (res && res.current_version) {

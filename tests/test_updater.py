@@ -159,11 +159,72 @@ class TestUpdaterModule(unittest.TestCase):
             self.assertFalse(res.get('has_update'))
 
     def test_check_update_failure_never_returns_exception_text(self):
-        with patch('src.readmd_modules.updater._fetch_release_json', side_effect=RuntimeError('secret path C:/Users/test')):
+        with patch('src.readmd_modules.updater._fetch_release_json', side_effect=RuntimeError('secret path C:/Users/test')), \
+             patch('src.readmd_modules.updater._sniff_latest_tag_redirect', side_effect=RuntimeError('secret path C:/Users/test')):
             res = updater.check_update(current_version='2.3.3')
         self.assertFalse(res.get('ok'))
         self.assertIn(res.get('error_code'), {'update_network_error', 'update_check_failed'})
         self.assertNotIn('C:/Users/test', str(res))
+
+    def test_sniff_latest_tag_redirect(self):
+        """测试 302 重定向 Location 响应头中版本号嗅探。"""
+        import urllib.error
+
+        class FakeOpener:
+            def open(self, req, timeout=3.5):
+                raise urllib.error.HTTPError(
+                    req.full_url, 302, 'Found',
+                    {'Location': 'https://github.com/Natsummerance/readMD/releases/tag/v2.4.5'},
+                    None
+                )
+
+        with patch('urllib.request.build_opener', return_value=FakeOpener()):
+            tag = updater._sniff_latest_tag_redirect()
+            self.assertEqual(tag, 'v2.4.5')
+
+    def test_fetch_manifest_assets(self):
+        """测试从 SHA256SUMS.txt 文本重构 Release 资产字典。"""
+        manifest = (
+            '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef  ReadMDSetup-v2.4.5.exe\n'
+            'fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210  ReadMD-portable-v2.4.5.exe\n'
+        )
+        class FakeResponse:
+            status = 200
+            def read(self):
+                return manifest.encode('utf-8')
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+
+        with patch('urllib.request.urlopen', return_value=FakeResponse()):
+            assets = updater._fetch_manifest_assets('v2.4.5')
+            self.assertIsNotNone(assets)
+            names = [a['name'] for a in assets]
+            self.assertIn('ReadMDSetup-v2.4.5.exe', names)
+            self.assertIn('SHA256SUMS.txt', names)
+            setup_asset = next(a for a in assets if a['name'] == 'ReadMDSetup-v2.4.5.exe')
+            self.assertEqual(setup_asset['expected_sha'], '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')
+
+    def test_check_update_tier2_fallback_when_api_fails(self):
+        """测试当 GitHub API 阻断时，顺利降级到 302 嗅探与清单装配。"""
+        manifest_assets = [
+            {
+                'name': 'ReadMDSetup-v2.4.5.exe',
+                'browser_download_url': 'https://github.com/Natsummerance/readMD/releases/download/v2.4.5/ReadMDSetup-v2.4.5.exe',
+                'expected_sha': '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+                'size': 0
+            }
+        ]
+        with patch('src.readmd_modules.updater._fetch_release_json', side_effect=Exception('API 403 Forbidden')), \
+             patch('src.readmd_modules.updater._sniff_latest_tag_redirect', return_value='v2.4.5'), \
+             patch('src.readmd_modules.updater._fetch_manifest_assets', return_value=manifest_assets):
+            res = updater.check_update(current_version='2.3.8')
+            self.assertTrue(res['ok'])
+            self.assertTrue(res['has_update'])
+            self.assertEqual(res['latest_version'], 'v2.4.5')
+            self.assertEqual(res['asset']['name'], 'ReadMDSetup-v2.4.5.exe')
+            self.assertEqual(res['asset']['expected_sha'], '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')
 
     def test_update_source_is_pinned_to_official_release(self):
         """Only checksummed official release assets may enter the updater."""
@@ -212,6 +273,49 @@ class TestUpdaterModule(unittest.TestCase):
                 self.assertTrue(os.path.isfile(target))
                 self.assertEqual(updater._download_state['status'], 'ready')
                 self.assertFalse(any(name.endswith('.part') for name in os.listdir(tmp)))
+        finally:
+            updater._download_state.clear()
+            updater._download_state.update(original_state)
+
+    def test_download_multi_mirror_failover(self):
+        """测试下载时首选镜像失败自动故障转移到备选镜像。"""
+        payload = b'ReadMD mirror failover update payload'
+        import hashlib
+        digest = hashlib.sha256(payload).hexdigest()
+        url = 'https://github.com/Natsummerance/readMD/releases/download/v2.4.0/ReadMD-portable-v2.4.0.exe'
+
+        class FakeResponse:
+            status = 200
+            headers = {'Content-Length': str(len(payload))}
+            chunks = [payload]
+            def read(self, size):
+                return self.chunks.pop(0) if self.chunks else b''
+            def __enter__(self):
+                return self
+            def __exit__(self, *args):
+                return False
+
+        attempts = []
+        def fake_urlopen(req, timeout):
+            attempts.append(req.full_url)
+            if len(attempts) == 1:
+                # 第一个镜像模拟握手失败/403/500
+                raise ConnectionResetError('mirror 1 connection failed')
+            return FakeResponse()
+
+        original_state = dict(updater._download_state)
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                with patch('tempfile.gettempdir', return_value=tmp), \
+                     patch('src.readmd_modules.updater.urllib.request.urlopen', side_effect=fake_urlopen):
+                    updater.download_asset_thread(
+                        url, 'ReadMD-portable-v2.4.0.exe', digest, use_mirror=True,
+                    )
+                target = updater._download_state['target_file']
+                self.assertTrue(target.startswith(os.path.realpath(tmp)))
+                self.assertTrue(os.path.isfile(target))
+                self.assertEqual(updater._download_state['status'], 'ready')
+                self.assertGreaterEqual(len(attempts), 2)
         finally:
             updater._download_state.clear()
             updater._download_state.update(original_state)

@@ -1537,7 +1537,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             from src.readmd_modules import updater
             res = updater.check_update(VERSION)
-            self._send_json(200 if res.get('ok') else 500, res)
+            self._send_json(200, res)
         except Exception as e:
             logging.exception('api_update_check failed')
             self._send_api_error(500, 'update_check_failed')
