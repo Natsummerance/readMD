@@ -394,6 +394,30 @@ def test_pet_configure_fails_when_in_app_false_and_launcher_unavailable(monkeypa
     assert result["code"] == "hermes_adapter_not_installed"
 
 
+def test_desktop_configure_publishes_snapshot_before_native_start(monkeypatch, tmp_path):
+    """A fresh Rust host must see a valid snapshot before health is awaited."""
+    monkeypatch.setattr(readmd, "DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setattr(readmd, "SETTINGS_FILE", str(tmp_path / "settings.json"))
+    import src.readmd_modules.pet as pet_module
+    monkeypatch.setattr(pet_module, "get_default_pet_install_root", lambda: tmp_path / "plugins")
+    api = readmd.Api()
+    monkeypatch.setattr(api, "_start_pet_command_loop", lambda: None)
+    monkeypatch.setattr(api, "_start_pet_fullscreen_loop", lambda: None)
+    seen = {}
+
+    def fake_start():
+        seen["state"] = json.loads(api._pet_bridge.state_path.read_text(encoding="utf-8"))
+        return {"ok": True, "runtime": {"available": True, "running": True}}
+
+    monkeypatch.setattr(api._pet_launcher, "start", fake_start)
+    result = api.configure_pet({"enabled": True, "in_app": False, "renderer": "hermes-sprite"})
+
+    assert result["ok"] is True
+    assert seen["state"]["visible"] is True
+    assert seen["state"]["renderer"] == "hermes-sprite"
+    assert seen["state"]["info"]["spritesheetBase64"]
+
+
 def test_uninstall_companion_pet_removes_adapter_files(tmp_path, monkeypatch):
     monkeypatch.setattr(readmd, "DATA_DIR", str(tmp_path))
     monkeypatch.setattr(readmd, "SETTINGS_FILE", str(tmp_path / "settings.json"))

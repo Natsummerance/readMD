@@ -16,6 +16,13 @@ from .hermes_adapter import (
     get_app_install_dir,
     get_default_pet_install_root,
 )
+from .runtime import (
+    PetRuntimeBackend,
+    PetRuntimeOrchestrator,
+    RustPetRuntime,
+    RustPetRuntimeInstaller,
+    ElectronPetRuntime,
+)
 from .model_manifest import verify_model_bundle
 from .task_queue import PetBatchQueue
 from .window_adapter import NativePetProbe, PetProbeDragBridge
@@ -45,6 +52,11 @@ __all__ = [
     "HermesPetBridge",
     "HermesPetLauncher",
     "HermesPetPluginInstaller",
+    "PetRuntimeBackend",
+    "PetRuntimeOrchestrator",
+    "RustPetRuntime",
+    "RustPetRuntimeInstaller",
+    "ElectronPetRuntime",
     "get_app_install_dir",
     "get_default_pet_install_root",
     "apply_pet_update",

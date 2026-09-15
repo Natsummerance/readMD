@@ -94,11 +94,19 @@ def find_bundled_candidate_archives(app_install_dir: Optional[Path] = None) -> L
         install_dir / 'dist',
         install_dir / 'dist' / 'ReadMD',
         install_dir / 'packages' / 'readmd-hermes-pet-adapter' / 'dist',
+        install_dir / 'packages' / 'readmd-pet-rust' / 'dist',
     ]
     candidate_names = (
         'ReadMD-Desktop-Pet.zip',
         'ReadMD-Desktop-Pet-review.zip',
         'readmd-hermes-pet-adapter-v0.1.0.zip',
+        'ReadMD-Pet-Rust.zip',
+        'ReadMD-Pet-Rust-windows-x86_64.zip',
+        'ReadMD-Pet-Rust-windows-aarch64.zip',
+        'ReadMD-Pet-Rust-macos-x86_64.zip',
+        'ReadMD-Pet-Rust-macos-aarch64.zip',
+        'ReadMD-Pet-Rust-linux-x86_64.zip',
+        'ReadMD-Pet-Rust-linux-aarch64.zip',
     )
     found: List[Path] = []
     seen = set()
@@ -139,12 +147,38 @@ def _get_archive_manifest_hash(archive_path: Path) -> Optional[str]:
     import hashlib
     try:
         with zipfile.ZipFile(archive_path) as zf:
-            if 'readmd-pet-plugin.json' in zf.namelist():
-                data = zf.read('readmd-pet-plugin.json')
+            names = zf.namelist()
+            manifest_name = (
+                'runtime-manifest.json'
+                if 'runtime-manifest.json' in names
+                else 'readmd-pet-plugin.json'
+                if 'readmd-pet-plugin.json' in names
+                else None
+            )
+            if manifest_name:
+                data = zf.read(manifest_name)
                 return hashlib.sha256(data).hexdigest()
     except (OSError, zipfile.BadZipFile):
         pass
     return None
+
+
+def _installer_runtime(installer: Any) -> str:
+    """Identify the package family without importing the optional Rust module."""
+    return 'rust' if installer.__class__.__name__.lower().startswith('rustpetruntimeinstaller') else 'electron'
+
+
+def _archive_matches_runtime(archive_path: Path, runtime: str) -> bool:
+    try:
+        with zipfile.ZipFile(archive_path) as bundle:
+            names = set(bundle.namelist())
+        return (
+            'runtime-manifest.json' in names
+            if runtime == 'rust'
+            else 'readmd-pet-plugin.json' in names
+        )
+    except (OSError, zipfile.BadZipFile):
+        return False
 
 
 def _fetch_github_json(url: str, timeout: float = 12.0) -> Any:
@@ -176,12 +210,14 @@ def check_pet_update(
     allow_network: bool = True,
 ) -> Dict[str, Any]:
     """Check whether a desktop pet update is available (bundled or GitHub)."""
+    runtime = _installer_runtime(installer)
     is_installed = launcher.status().get('available', False)
     installed_manifest_hash = installer.get_installed_manifest_hash()
     release_info = installer.get_release_info()
 
     # Step 1: Check bundled candidate archive (Follow Software Update)
     candidates = candidate_archives if candidate_archives is not None else find_bundled_candidate_archives()
+    candidates = [candidate for candidate in candidates if _archive_matches_runtime(Path(candidate), runtime)]
     if candidates:
         installed_matches_any = False
         if is_installed and installed_manifest_hash:
@@ -203,6 +239,7 @@ def check_pet_update(
                     'archive_path': str(cand.resolve()),
                     'installed': is_installed,
                     'install_path': str(installer.target),
+                    'runtime': runtime,
                     'reason': '检测到软件内置了更新版本的伴侣桌宠包',
                 }
 
@@ -215,9 +252,28 @@ def check_pet_update(
                 assets = rel.get('assets', [])
                 tag_name = str(rel.get('tag_name') or '').strip()
                 pet_asset = None
+                platform = getattr(installer, '_platform', lambda: '')()
+                arch = getattr(installer, '_arch', lambda: '')()
+                if runtime == 'rust':
+                    preferred = {
+                        ('windows', 'x86_64'): 'readmd-pet-rust.zip',
+                        ('windows', 'aarch64'): 'readmd-pet-rust-windows-aarch64.zip',
+                        ('macos', 'x86_64'): 'readmd-pet-rust-macos-x86_64.zip',
+                        ('macos', 'aarch64'): 'readmd-pet-rust-macos-aarch64.zip',
+                        ('linux', 'x86_64'): 'readmd-pet-rust-linux-x86_64.zip',
+                        ('linux', 'aarch64'): 'readmd-pet-rust-linux-aarch64.zip',
+                    }
+                    preferred_name = preferred.get((platform, arch), '')
                 for a in assets:
                     name = str(a.get('name') or '').lower()
-                    if name in ('readmd-desktop-pet.zip', 'readmd-hermes-pet-adapter-v0.1.0.zip') or ('pet' in name and name.endswith('.zip')):
+                    if runtime == 'rust':
+                        if preferred_name and name == preferred_name:
+                            pet_asset = a
+                            break
+                        if not preferred_name and name.startswith('readmd-pet-rust') and name.endswith('.zip'):
+                            pet_asset = a
+                            break
+                    elif name in ('readmd-desktop-pet.zip', 'readmd-hermes-pet-adapter-v0.1.0.zip') or ('pet' in name and name.endswith('.zip') and 'rust' not in name):
                         pet_asset = a
                         break
                 if pet_asset:
@@ -248,6 +304,7 @@ def check_pet_update(
                             'release_notes': str(rel.get('body') or '')[:600],
                             'installed': is_installed,
                             'install_path': str(installer.target),
+                            'runtime': runtime,
                             'reason': f'GitHub 发布了最新桌宠版本 {tag_name}',
                         }
         except Exception as exc:
@@ -260,6 +317,7 @@ def check_pet_update(
         'current_version': release_info.get('release_tag') or 'bundled',
         'installed': is_installed,
         'install_path': str(installer.target),
+        'runtime': runtime,
     }
 
 

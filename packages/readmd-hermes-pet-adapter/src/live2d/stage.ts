@@ -143,6 +143,7 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
   let dragging: { startX: number; startY: number; pointerId: number; target?: Element; bounds: typeof bounds } | undefined
   let clickTimer: number | undefined
   let ignoringMouse: boolean | undefined = undefined
+  let lastInteractionRegion = ''
 
   const getTime = (): number => (typeof performance !== 'undefined' ? performance.now() : Date.now())
 
@@ -181,6 +182,21 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
     model.scale.set((app.screen.width * scale) / naturalWidth)
     model.x = (app.screen.width - model.width) / 2
     model.y = app.screen.height - model.height
+    publishInteractionRegion()
+  }
+
+  function publishInteractionRegion(): void {
+    const x = Math.max(0, Math.min(app.screen.width, Number(model.x) || 0))
+    const y = Math.max(0, Math.min(app.screen.height, Number(model.y) || 0))
+    const right = Math.min(app.screen.width, x + Math.max(0, Number(model.width) || 0))
+    const bottom = Math.min(app.screen.height, y + Math.max(0, Number(model.height) || 0))
+    const rect = right > x && bottom > y
+      ? { x, y, width: right - x, height: bottom - y }
+      : undefined
+    const key = rect ? [rect.x, rect.y, rect.width, rect.height].map(value => Math.round(value * 100) / 100).join(',') : ''
+    if (key === lastInteractionRegion) return
+    lastInteractionRegion = key
+    api?.control({ type: 'interaction-regions', rects: rect ? [rect] : [] })
   }
 
   function updateAnimationState(): void {
@@ -396,6 +412,7 @@ async function mountLive2dStage(): Promise<Live2dLifeController> {
     if (clickTimer !== undefined) window.clearTimeout(clickTimer)
     app.destroy(true, { children: true, texture: true, baseTexture: true })
   }, { once: true })
+  layout()
   api?.control({ type: 'ready' })
   window.addEventListener('resize', layout)
   document.addEventListener('visibilitychange', updateAnimationState)

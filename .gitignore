@@ -125,3 +125,4 @@ ui-tests/.npm-cache/
 /pet/
 /plugins/
 packages/readmd-hermes-pet-adapter/readmd-pet-windows/
+packages/readmd-pet-rust/target/

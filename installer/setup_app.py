@@ -247,7 +247,24 @@ def bundled_exe(name):
 
 def bundled_pet_plugin_archive():
     """Return the optional desktop-pet ZIP embedded in the setup bundle."""
-    name = 'ReadMD-Desktop-Pet.zip'
+    return _bundled_pet_archive('ReadMD-Desktop-Pet.zip')
+
+
+def bundled_rust_pet_plugin_archive():
+    """Return the native Rust pet ZIP embedded in the setup bundle."""
+    machine = (os.environ.get('PROCESSOR_ARCHITECTURE') or '').lower()
+    if machine in ('arm64', 'aarch64'):
+        names = ('ReadMD-Pet-Rust-windows-aarch64.zip', 'ReadMD-Pet-Rust.zip')
+    else:
+        names = ('ReadMD-Pet-Rust.zip', 'ReadMD-Pet-Rust-windows-x86_64.zip')
+    for name in names:
+        candidate = _bundled_pet_archive(name)
+        if candidate:
+            return candidate
+    return None
+
+
+def _bundled_pet_archive(name):
     candidates = []
     if getattr(sys, '_MEIPASS', None):
         candidates.append(os.path.join(sys._MEIPASS, name))
@@ -767,6 +784,11 @@ def _copy_install_payload(stage_dir, opts):
     # shown and the normal reader remains independent of Electron.
     _copy_file(bundled_pet_plugin_archive(),
                os.path.join(stage_dir, 'ReadMD-Desktop-Pet.zip'), optional=True)
+    # The native runtime is independent from the Electron compatibility
+    # package. Both archives remain beside ReadMD.exe so the app can verify
+    # and install them into their fixed plugin subdirectories on first use.
+    _copy_file(bundled_rust_pet_plugin_archive(),
+               os.path.join(stage_dir, 'ReadMD-Pet-Rust.zip'), optional=True)
     if opts.get('webview2', False):
         rt = bundled_webview2_runtime_dir()
         if rt is None:

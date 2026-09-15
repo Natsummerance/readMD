@@ -154,6 +154,9 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: packages/readmd-hermes-pet-adapter/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
       - run: python -m pip install --disable-pip-version-check -r config/requirements-windows.txt pyinstaller
       - run: python tools/make_icon.py
       - run: python tools/make_file_icon.py
@@ -168,6 +171,14 @@ jobs:
           if (!(Test-Path 'dist/readmd-pet-windows/readmd-pet-plugin.json')) { throw 'desktop pet manifest missing' }
           Compress-Archive -Path 'dist/readmd-pet-windows/*' -DestinationPath 'dist/ReadMD-Desktop-Pet.zip' -CompressionLevel Optimal
           if (!(Test-Path 'dist/ReadMD-Desktop-Pet.zip')) { throw 'desktop pet ZIP missing' }
+      - name: Build the production Rust desktop-pet runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python packages/readmd-pet-rust/scripts/build-package.py --platform windows --arch x86_64 --output dist
+          if (!(Test-Path 'dist/ReadMD-Pet-Rust.zip')) { throw 'Rust desktop pet ZIP missing' }
+          if (!(Test-Path 'dist/ReadMD-Pet-Rust-windows-x86_64/readmd-pet-rust.exe')) { throw 'Rust desktop pet executable missing' }
+          if (!(Test-Path 'dist/ReadMD-Pet-Rust-windows-x86_64/renderer/index.html')) { throw 'Rust desktop pet renderer missing' }
       - name: Build, probe and smoke-test Windows assets
         shell: pwsh
         run: |
@@ -179,7 +190,7 @@ jobs:
           python -m PyInstaller --noconfirm --clean release/ReadMD-windows.spec
           $env:READMD_ONEFILE = '0'
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." installer/setup_app.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." --add-data "dist/ReadMD-Desktop-Pet.zip;." --add-binary "dist/ReadMD;ReadMD" --add-binary "dist/ReadMDUninstall.exe;." installer/setup_app.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." --add-data "dist/ReadMD-Desktop-Pet.zip;." --add-data "dist/ReadMD-Pet-Rust.zip;." --add-binary "dist/ReadMD;ReadMD" --add-binary "dist/ReadMDUninstall.exe;." installer/setup_app.py
           Move-Item dist/ReadMDSetup.exe "dist/ReadMDSetup-v$env:READMD_VERSION.exe"
           Move-Item dist/ReadMD-portable.exe "dist/ReadMD-portable-v$env:READMD_VERSION.exe"
           $onedir = Start-Process -FilePath 'dist/ReadMD/ReadMD.exe' -ArgumentList '--selftest' -WindowStyle Hidden -Wait -PassThru
@@ -227,6 +238,7 @@ jobs:
             dist/ReadMDSetup-v${{ env.READMD_VERSION }}.exe
             dist/ReadMD-portable-v${{ env.READMD_VERSION }}.exe
             dist/ReadMD-Desktop-Pet.zip
+            dist/ReadMD-Pet-Rust.zip
             dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix
             dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip
           if-no-files-found: error
@@ -241,6 +253,7 @@ jobs:
             dist/ReadMDSetup-v${{ env.READMD_VERSION }}.exe
             dist/ReadMD-portable-v${{ env.READMD_VERSION }}.exe
             dist/ReadMD-Desktop-Pet.zip
+            dist/ReadMD-Pet-Rust.zip
             dist/readmd-vscode-${{ env.READMD_VERSION }}.vsix
             dist/readmd-mcp-server-${{ env.READMD_VERSION }}.zip
           if-no-files-found: error
@@ -282,18 +295,32 @@ jobs:
           python-version: '3.11'
           cache: pip
           cache-dependency-path: config/requirements-windows.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: packages/readmd-hermes-pet-adapter/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: aarch64-pc-windows-msvc
       - run: python -m pip install --disable-pip-version-check -r config/requirements-windows.txt pyinstaller
       - name: Build and smoke-test ARM64 assets
         shell: pwsh
         run: |
           if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString() -ne 'Arm64') { throw 'runner is not ARM64' }
+          npm --prefix packages/readmd-hermes-pet-adapter ci
+          npm --prefix packages/readmd-hermes-pet-adapter run build
+          python packages/readmd-pet-rust/scripts/build-package.py --platform windows --arch aarch64 --output dist
+          if (!(Test-Path 'dist/ReadMD-Pet-Rust-windows-aarch64.zip')) { throw 'ARM64 Rust desktop pet ZIP missing' }
+          if (!(Test-Path 'dist/ReadMD-Pet-Rust-windows-aarch64/readmd-pet-rust.exe')) { throw 'ARM64 Rust desktop pet executable missing' }
           $env:READMD_ARTIFACT_NAME = 'ReadMD-arm64'; $env:READMD_ONEFILE = '0'
           python -m PyInstaller --noconfirm --clean release/ReadMD-windows.spec
           $env:READMD_ARTIFACT_NAME = 'ReadMD-portable-arm64'; $env:READMD_ONEFILE = '1'
           python -m PyInstaller --noconfirm --clean release/ReadMD-windows.spec
           $env:READMD_ONEFILE = '0'
           python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDUninstall-arm64 --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." installer/setup_app.py
-          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup-arm64 --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." --add-binary "dist/ReadMD-arm64;ReadMD" --add-binary "dist/ReadMDUninstall-arm64.exe;." installer/setup_app.py
+          python -m PyInstaller --noconfirm --clean --onefile --windowed --name ReadMDSetup-arm64 --icon assets/readmd.ico --add-data "installer/setup.html;installer" --add-data "VERSION;." --add-data "dist/ReadMD-Pet-Rust-windows-aarch64.zip;." --add-binary "dist/ReadMD-arm64;ReadMD" --add-binary "dist/ReadMDUninstall-arm64.exe;." installer/setup_app.py
           $portable = Start-Process -FilePath "dist/ReadMD-portable-arm64.exe" -ArgumentList '--selftest' -WindowStyle Hidden -Wait -PassThru
           if ($portable.ExitCode -ne 0) { throw 'ARM64 portable selftest failed' }
           $installer = Start-Process -FilePath "dist/ReadMDSetup-arm64.exe" -ArgumentList '--version' -RedirectStandardOutput "$env:RUNNER_TEMP\readmd-installer-arm64-version.txt" -WindowStyle Hidden -Wait -PassThru
@@ -311,6 +338,7 @@ jobs:
             dist/ReadMD-arm64
             dist/ReadMD-portable-arm64-v${{ env.READMD_VERSION }}.exe
             dist/ReadMDSetup-arm64-v${{ env.READMD_VERSION }}.exe
+            dist/ReadMD-Pet-Rust-windows-aarch64.zip
           if-no-files-found: error
           overwrite: true
           retention-days: 7
@@ -323,6 +351,7 @@ jobs:
             dist/ReadMD-arm64
             dist/ReadMD-portable-arm64-v${{ env.READMD_VERSION }}.exe
             dist/ReadMDSetup-arm64-v${{ env.READMD_VERSION }}.exe
+            dist/ReadMD-Pet-Rust-windows-aarch64.zip
           if-no-files-found: error
           overwrite: true
 
@@ -337,9 +366,13 @@ jobs:
           - os: macos-15-intel
             arch: x64
             machine: x86_64
+            runtime_arch: x86_64
+            rust_target: x86_64-apple-darwin
           - os: macos-14
             arch: arm64
             machine: arm64
+            runtime_arch: aarch64
+            rust_target: aarch64-apple-darwin
     runs-on: ${{ matrix.os }}
     env:
       READMD_FORMAL_RELEASE: ${{ startsWith(github.ref, 'refs/tags/v') && '1' || '0' }}
@@ -352,9 +385,24 @@ jobs:
           cache: pip
           cache-dependency-path: config/requirements-test-macos.txt
       - run: python -m pip install --disable-pip-version-check -r config/requirements-test-macos.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: packages/readmd-hermes-pet-adapter/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.rust_target }}
       - name: Build and verify native app bundle
         run: |
           set -euo pipefail
+          npm --prefix packages/readmd-hermes-pet-adapter ci
+          npm --prefix packages/readmd-hermes-pet-adapter run build
+          python packages/readmd-pet-rust/scripts/build-package.py --platform macos --arch "${{ matrix.runtime_arch }}" --output dist
+          test -s "dist/ReadMD-Pet-Rust-macos-${{ matrix.runtime_arch }}.zip"
+          test -s "dist/ReadMD-Pet-Rust-macos-${{ matrix.runtime_arch }}/readmd-pet-rust"
+          test -s "dist/ReadMD-Pet-Rust-macos-${{ matrix.runtime_arch }}/renderer/index.html"
           python -m PyInstaller --noconfirm --clean release/ReadMD-macOS.spec
           test "$(uname -m)" = "${{ matrix.machine }}"
           file dist/ReadMD.app/Contents/MacOS/ReadMD | grep "${{ matrix.machine }}"
@@ -368,6 +416,8 @@ jobs:
           fi
           mkdir -p dist/ReadMD.app/Contents/Resources/assets
           cp -R assets/* dist/ReadMD.app/Contents/Resources/assets/ 2>/dev/null || true
+          cp "dist/ReadMD-Pet-Rust-macos-${{ matrix.runtime_arch }}.zip" dist/ReadMD.app/Contents/Resources/
+          test -s "dist/ReadMD.app/Contents/Resources/ReadMD-Pet-Rust-macos-${{ matrix.runtime_arch }}.zip"
           test -s dist/ReadMD.app/Contents/Resources/assets/vendor/readability.bundle.js
           test -s dist/ReadMD.app/Contents/Resources/assets/vendor/defuddle.bundle.js
           test -s dist/ReadMD.app/Contents/Resources/assets/vendor/defuddle.LICENSE.txt
@@ -390,7 +440,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: rc-macos-${{ matrix.arch }}-${{ github.sha }}
-          path: ReadMD-macos-${{ matrix.arch }}-v${{ env.READMD_VERSION }}.zip
+          path: |
+            ReadMD-macos-${{ matrix.arch }}-v${{ env.READMD_VERSION }}.zip
+            dist/ReadMD-Pet-Rust-macos-${{ matrix.runtime_arch }}.zip
           if-no-files-found: error
           overwrite: true
           retention-days: 7
@@ -399,7 +451,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-macos-${{ matrix.arch }}
-          path: ReadMD-macos-${{ matrix.arch }}-v${{ env.READMD_VERSION }}.zip
+          path: |
+            ReadMD-macos-${{ matrix.arch }}-v${{ env.READMD_VERSION }}.zip
+            dist/ReadMD-Pet-Rust-macos-${{ matrix.runtime_arch }}.zip
           if-no-files-found: error
           overwrite: true
 
@@ -415,6 +469,15 @@ jobs:
           python-version: '3.11'
           cache: pip
           cache-dependency-path: config/requirements-linux.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: packages/readmd-hermes-pet-adapter/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: x86_64-unknown-linux-gnu
       - name: Install system dependencies
         run: |
           for i in {1..3}; do sudo apt-get update && break || sleep 5; done
@@ -431,9 +494,17 @@ jobs:
             zip \
             file
           python -m pip install --disable-pip-version-check -r config/requirements-linux.txt pyinstaller
+          npm --prefix packages/readmd-hermes-pet-adapter ci
+          npm --prefix packages/readmd-hermes-pet-adapter run build
       - name: Build Linux onedir, AppImage, and Deb
         run: |
           bash scripts/linux/build_linux.sh
+          python packages/readmd-pet-rust/scripts/build-package.py --platform linux --arch x86_64 --output dist
+          test -s dist/ReadMD-Pet-Rust-linux-x86_64.zip
+          test -s dist/ReadMD-Pet-Rust-linux-x86_64/readmd-pet-rust
+          test -s dist/ReadMD-Pet-Rust-linux-x86_64/renderer/index.html
+          mkdir -p dist/ReadMD/_internal
+          cp dist/ReadMD-Pet-Rust-linux-x86_64.zip dist/ReadMD/_internal/
       - name: Smoke test Linux binary
         run: |
           ./dist/ReadMD/ReadMD --selftest
@@ -449,6 +520,7 @@ jobs:
           path: |
             dist/ReadMD-linux-x86_64-v${{ env.READMD_VERSION }}.AppImage
             dist/readmd_${{ env.READMD_VERSION }}_amd64.deb
+            dist/ReadMD-Pet-Rust-linux-x86_64.zip
           if-no-files-found: error
           overwrite: true
           retention-days: 7
@@ -460,6 +532,7 @@ jobs:
           path: |
             dist/ReadMD-linux-x86_64-v${{ env.READMD_VERSION }}.AppImage
             dist/readmd_${{ env.READMD_VERSION }}_amd64.deb
+            dist/ReadMD-Pet-Rust-linux-x86_64.zip
           if-no-files-found: error
           overwrite: true
 
@@ -480,6 +553,15 @@ jobs:
             libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
             libsqlite3-dev libffi-dev liblzma-dev
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: packages/readmd-hermes-pet-adapter/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: aarch64-unknown-linux-gnu
       - name: Install Python 3.11 for ARM64 compatibility candidate
         run: |
           export DEBIAN_FRONTEND=noninteractive
@@ -515,8 +597,17 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install --disable-pip-version-check -r config/requirements-linux.txt pyinstaller
+          npm --prefix packages/readmd-hermes-pet-adapter ci
+          npm --prefix packages/readmd-hermes-pet-adapter run build
       - name: Build generic Linux ARM64 bundle (not Kylin/UOS evidence)
-        run: bash scripts/linux/build_linux.sh
+        run: |
+          bash scripts/linux/build_linux.sh
+          python packages/readmd-pet-rust/scripts/build-package.py --platform linux --arch aarch64 --output dist
+          test -s dist/ReadMD-Pet-Rust-linux-aarch64.zip
+          test -s dist/ReadMD-Pet-Rust-linux-aarch64/readmd-pet-rust
+          test -s dist/ReadMD-Pet-Rust-linux-aarch64/renderer/index.html
+          mkdir -p dist/ReadMD/_internal
+          cp dist/ReadMD-Pet-Rust-linux-aarch64.zip dist/ReadMD/_internal/
       - name: Smoke test and verify ARM64 binary
         run: |
           ./dist/ReadMD/ReadMD --selftest
@@ -531,6 +622,7 @@ jobs:
           path: |
             dist/ReadMD-linux-aarch64-v${{ env.READMD_VERSION }}.AppImage
             dist/readmd_${{ env.READMD_VERSION }}_arm64.deb
+            dist/ReadMD-Pet-Rust-linux-aarch64.zip
           if-no-files-found: error
           overwrite: true
           retention-days: 7
@@ -542,6 +634,7 @@ jobs:
           path: |
             dist/ReadMD-linux-aarch64-v${{ env.READMD_VERSION }}.AppImage
             dist/readmd_${{ env.READMD_VERSION }}_arm64.deb
+            dist/ReadMD-Pet-Rust-linux-aarch64.zip
           if-no-files-found: error
           overwrite: true
 
@@ -585,7 +678,7 @@ jobs:
               print(" -", f)
           PY
           V="${{ env.READMD_VERSION }}"
-          for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMD-Desktop-Pet.zip" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "ReadMD-linux-x86_64-v${V}.AppImage" "ReadMD-linux-aarch64-v${V}.AppImage" "readmd_${V}_arm64.deb" "readmd-mcp-server-${V}.zip"; do
+          for asset in "ReadMDSetup-v${V}.exe" "ReadMD-portable-v${V}.exe" "ReadMD-Desktop-Pet.zip" "ReadMD-Pet-Rust.zip" "ReadMD-Pet-Rust-macos-x86_64.zip" "ReadMD-Pet-Rust-macos-aarch64.zip" "ReadMD-Pet-Rust-linux-x86_64.zip" "ReadMD-Pet-Rust-linux-aarch64.zip" "ReadMD-macos-x64-v${V}.zip" "ReadMD-macos-arm64-v${V}.zip" "readmd-vscode-${V}.vsix" "readmd_${V}_amd64.deb" "ReadMD-linux-x86_64-v${V}.AppImage" "ReadMD-linux-aarch64-v${V}.AppImage" "readmd_${V}_arm64.deb" "readmd-mcp-server-${V}.zip"; do
             test -s "release-assets/$asset"
           done
           python tools/sync_version.py --check

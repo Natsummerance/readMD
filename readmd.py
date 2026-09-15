@@ -33,6 +33,7 @@ import sys
 import tempfile
 import time
 import threading
+import zipfile
 import webbrowser
 from datetime import datetime, timezone
 from email.utils import formatdate, parsedate_to_datetime
@@ -3726,6 +3727,8 @@ class Api(object):
             HermesPetBridge,
             HermesPetLauncher,
             HermesPetPluginInstaller,
+            PetRuntimeOrchestrator,
+            RustPetRuntimeInstaller,
             PetBatchQueue,
             PetCompanion,
             PetController,
@@ -3738,10 +3741,12 @@ class Api(object):
         self._pet_queue = PetBatchQueue()
         pet_install_root = get_default_pet_install_root()
         self._pet_installer = HermesPetPluginInstaller(str(pet_install_root))
+        self._rust_installer = RustPetRuntimeInstaller(str(pet_install_root))
         self._pet_bridge = HermesPetBridge(str(pet_install_root))
         self._pet_install_lock = threading.RLock()
         self._cached_pet_update = None
         self._pet_update_progress = None
+        self._pet_default_sprite_info = None
 
         # Clean any legacy pet files under %APPDATA% (C: drive) without copying them back
         try:
@@ -3749,9 +3754,10 @@ class Api(object):
         except Exception:
             pass
 
-        self._pet_launcher = HermesPetLauncher(
+        self._pet_launcher = PetRuntimeOrchestrator(
             APP_DIR, self._pet_bridge,
-            adapter_dir=str(self._pet_installer.target),
+            rust_dir=str(self._rust_installer.target),
+            electron_dir=str(self._pet_installer.target),
         )
         register_active_pet_launcher(self._pet_launcher)
         self._pet_command_stop = threading.Event()
@@ -3764,11 +3770,13 @@ class Api(object):
             try:
                 from src.readmd_modules.pet import clean_legacy_pet_installations, check_pet_update, apply_pet_update
                 clean_legacy_pet_installations(self._pet_installer.target)
-                update_res = check_pet_update(self._pet_installer, self._pet_launcher, allow_network=False)
+                adapter_status = self._pet_launcher.status()
+                installer = self._rust_installer if adapter_status.get('rust', {}).get('available') else self._pet_installer
+                update_res = check_pet_update(installer, self._pet_launcher, allow_network=False)
                 if update_res.get('ok') and update_res.get('has_update') and update_res.get('source') == 'bundled':
                     logging.info('Auto-updating desktop pet from bundled archive...')
                     with self._pet_install_lock:
-                        apply_pet_update(self._pet_installer, self._pet_launcher, update_res)
+                        apply_pet_update(installer, self._pet_launcher, update_res)
                     logging.info('Desktop pet successfully updated from bundled archive.')
             except Exception:
                 logging.debug('Pet startup sync failed', exc_info=True)
@@ -5016,7 +5024,9 @@ class Api(object):
 
     def _pet_model_status(self):
         try:
-            installed_model = self._pet_installer.target / 'app' / 'models' / 'arch-chan'
+            rust_model = self._rust_installer.target / 'models' / 'arch-chan'
+            electron_model = self._pet_installer.target / 'app' / 'models' / 'arch-chan'
+            installed_model = rust_model if rust_model.is_dir() else electron_model
             return verify_model_bundle(installed_model if installed_model.is_dir() else PET_MODEL_DIR)
         except Exception:
             return {'ready': False, 'code': 'model_validation_failed'}
@@ -5093,9 +5103,10 @@ class Api(object):
             'info': info,
         }
 
-    def _publish_pet_runtime(self, runtime=None):
+    def _publish_pet_runtime(self, runtime=None, *, renderer_override=None):
         runtime = runtime if isinstance(runtime, dict) else self._pet_controller.snapshot()
         prefs = self._pet_preferences()
+        renderer = renderer_override if renderer_override in ('hermes-sprite', 'live2d') else prefs['renderer']
         if 'animation_enabled' in runtime and 'fps_cap' in runtime:
             # The renderer-owned frame budget: desktop overlay renderers apply
             # this instead of running at full display refresh rate.
@@ -5123,6 +5134,21 @@ class Api(object):
                     )
                     if geo.get('stateRows'):
                         prefs['info']['stateRows'] = geo['stateRows']
+        # The Rust host receives the same narrow snapshot as the Electron
+        # compatibility runtime.  Keep a built-in Hermes sheet in that
+        # snapshot when no gallery slug has been selected so a fresh desktop
+        # install renders a visible pet immediately instead of mounting an
+        # empty transparent WebView.
+        if not prefs['info'].get('spritesheetBase64'):
+            fallback = self._default_pet_sprite_info()
+            for key, value in fallback.items():
+                prefs['info'].setdefault(key, value)
+        if prefs['info'].get('spritesheetBase64'):
+            # The copied Hermes component intentionally renders nothing when
+            # `info.enabled` is false or absent. Electron used to normalize
+            # this field in its main process; the Rust host receives the
+            # snapshot directly, so make the same contract explicit here.
+            prefs['info'].setdefault('enabled', True)
         companion_character = str(slug or '') or 'arch-chan'
         try:
             prefs['info']['companion'] = self._pet_companion.snapshot(companion_character)
@@ -5130,8 +5156,42 @@ class Api(object):
             pass
         return self._pet_bridge.publish(
             runtime, info=prefs['info'], bounds=prefs['bounds'],
-            renderer=prefs['renderer'], fullscreen=foreground_fullscreen(),
+            renderer=renderer, fullscreen=foreground_fullscreen(),
         )
+
+    def _default_pet_sprite_info(self):
+        """Return the bundled Hermes sheet used before a gallery selection."""
+        if isinstance(self._pet_default_sprite_info, dict):
+            return dict(self._pet_default_sprite_info)
+        candidates = (
+            os.path.join(APP_DIR, 'assets', 'pet', 'hermes-sprite.png'),
+            os.path.join(APP_DIR, 'packages', 'readmd-hermes-pet-adapter', 'assets', 'hermes-sprite.png'),
+        )
+        for candidate in candidates:
+            try:
+                if not os.path.isfile(candidate):
+                    continue
+                with open(candidate, 'rb') as source:
+                    raw = source.read()
+                from src.readmd_modules.pet import inspect_sprite_geometry
+                geo = inspect_sprite_geometry(candidate)
+                self._pet_default_sprite_info = {
+                    'enabled': True,
+                    'displayName': 'ReadMD',
+                    'spritesheetBase64': base64.b64encode(raw).decode('ascii'),
+                    'spritesheetRevision': hashlib.sha256(raw).hexdigest(),
+                    'mime': 'image/png',
+                    'frameW': geo['frameW'],
+                    'frameH': geo['frameH'],
+                    'framesPerState': geo['framesPerState'],
+                    'isSingleFrame': geo.get('isSingleFrame', False),
+                    'stateRows': geo.get('stateRows') or ['idle', 'wave'],
+                }
+                return dict(self._pet_default_sprite_info)
+            except (OSError, ValueError, TypeError, KeyError):
+                logging.debug('bundled default pet sprite unavailable: %s', candidate, exc_info=True)
+        self._pet_default_sprite_info = {'enabled': False}
+        return dict(self._pet_default_sprite_info)
 
     def _record_pet_event(self, event):
         try:
@@ -5143,6 +5203,8 @@ class Api(object):
         status = self._pet_controller.snapshot()
         status['model'] = self._pet_model_status()
         status['adapter'] = self._pet_launcher.status()
+        status['runtime_backend'] = status['adapter'].get('backend')
+        status['rust_runtime'] = status['adapter'].get('rust', {})
         status['in_app'] = self._pet_in_app
         prefs = self._pet_preferences()
         status['preferences'] = dict(prefs['info'], renderer=prefs['renderer'])
@@ -5159,7 +5221,8 @@ class Api(object):
             status['installed'] = bool(settings['pet_installed'])
         else:
             status['installed'] = bool(status.get('adapter', {}).get('available'))
-        status['install_path'] = str(self._pet_installer.target)
+        status['install_path'] = str(self._rust_installer.target)
+        status['legacy_install_path'] = str(self._pet_installer.target)
         try:
             status['update'] = self.get_pet_update_status()
         except Exception:
@@ -5177,26 +5240,33 @@ class Api(object):
         return res
 
     def get_pet_update_status(self):
-        is_installed = self._pet_launcher.status().get('available', False)
-        release_info = self._pet_installer.get_release_info()
-        manifest = self._pet_installer.get_installed_manifest()
+        adapter_status = self._pet_launcher.status()
+        rust_available = bool(adapter_status.get('rust', {}).get('available'))
+        installer = self._rust_installer if rust_available else self._pet_installer
+        is_installed = bool(adapter_status.get('available', False))
+        release_info = installer.get_release_info()
+        manifest = installer.get_installed_manifest()
         version = release_info.get('release_tag') or (manifest.get('version') if manifest else ('0.1.0' if is_installed else None))
         cached = getattr(self, '_cached_pet_update', None)
         return {
             'ok': True,
             'installed': is_installed,
-            'install_path': str(self._pet_installer.target),
+            'install_path': str(self._rust_installer.target),
+            'legacy_install_path': str(self._pet_installer.target),
             'version': version,
             'source': release_info.get('source', 'bundled'),
             'updated_at': release_info.get('updated_at'),
             'has_update': bool(cached and cached.get('has_update')),
             'update_info': cached if (cached and cached.get('has_update')) else None,
             'progress': getattr(self, '_pet_update_progress', None),
+            'runtime': 'rust' if rust_available else 'electron' if adapter_status.get('electron', {}).get('available') else None,
         }
 
     def check_pet_update(self, allow_network=True):
         from src.readmd_modules.pet import check_pet_update
-        res = check_pet_update(self._pet_installer, self._pet_launcher, allow_network=allow_network)
+        adapter_status = self._pet_launcher.status()
+        installer = self._rust_installer if adapter_status.get('rust', {}).get('available') else self._pet_installer
+        res = check_pet_update(installer, self._pet_launcher, allow_network=allow_network)
         if res.get('ok') and res.get('has_update'):
             self._cached_pet_update = res
         else:
@@ -5208,7 +5278,9 @@ class Api(object):
         if not update_info:
             update_info = getattr(self, '_cached_pet_update', None)
         if not update_info or not update_info.get('has_update'):
-            update_info = check_pet_update(self._pet_installer, self._pet_launcher, allow_network=True)
+            adapter_status = self._pet_launcher.status()
+            installer = self._rust_installer if adapter_status.get('rust', {}).get('available') else self._pet_installer
+            update_info = check_pet_update(installer, self._pet_launcher, allow_network=True)
             if not update_info.get('ok') or not update_info.get('has_update'):
                 return {'ok': False, 'code': 'no_update_available'}
 
@@ -5222,9 +5294,11 @@ class Api(object):
 
         self._pet_update_progress = {'percent': 0, 'downloaded': 0, 'total': 0}
         try:
+            adapter_status = self._pet_launcher.status()
+            installer = self._rust_installer if update_info.get('runtime') == 'rust' or adapter_status.get('rust', {}).get('available') else self._pet_installer
             with self._pet_install_lock:
                 res = apply_pet_update(
-                    self._pet_installer,
+                    installer,
                     self._pet_launcher,
                     update_info,
                     progress_callback=on_progress,
@@ -5252,7 +5326,9 @@ class Api(object):
     def uninstall_companion_pet(self):
         """Stop the pet and report actual optional-runtime removal failures."""
         self.configure_pet({'enabled': False})
-        if not self._pet_installer.uninstall():
+        legacy_removed = self._pet_installer.uninstall()
+        rust_removed = self._rust_installer.uninstall()
+        if not legacy_removed or not rust_removed:
             return {'ok': False, 'code': 'pet_plugin_remove_failed', 'status': self.get_pet_runtime_status()}
         self.save_settings({'pet_installed': False, 'pet_enabled': False})
         return {'ok': True, 'installed': False, 'status': self.get_pet_runtime_status()}
@@ -5320,9 +5396,28 @@ class Api(object):
             return {'ok': False, 'code': 'pet_plugin_stop_before_install'}
         if not isinstance(archive_path, str) or len(archive_path) > 32768:
             return {'ok': False, 'code': 'invalid_pet_plugin_archive'}
+        # Rust packages are independent of the legacy Hermes adapter. Their
+        # manifest decides the installer and destination; no destination picker
+        # is ever shown for either package type.
+        if self._is_rust_pet_package(archive_path):
+            if os.path.isdir(archive_path):
+                return self._rust_installer.install_directory(archive_path, confirm=bool(confirm))
+            return self._rust_installer.install_archive(archive_path, confirm=bool(confirm))
         if os.path.isdir(archive_path):
             return self._pet_installer.install_directory(archive_path, confirm=bool(confirm))
         return self._pet_installer.install_archive(archive_path, confirm=bool(confirm))
+
+    @staticmethod
+    def _is_rust_pet_package(path):
+        try:
+            if os.path.isdir(path):
+                return os.path.isfile(os.path.join(path, 'runtime-manifest.json'))
+            if not str(path).lower().endswith('.zip') or not os.path.isfile(path):
+                return False
+            with zipfile.ZipFile(path) as bundle:
+                return 'runtime-manifest.json' in bundle.namelist()
+        except (OSError, zipfile.BadZipFile):
+            return False
 
     def install_default_pet_plugin(self):
         """Install the supplied desktop runtime into ReadMD's managed plugins."""
@@ -5332,16 +5427,20 @@ class Api(object):
                 return res
             # Fallback to GitHub releases download if local candidate missing
             try:
-                up = self.check_pet_update(allow_network=True)
+                # Rust is the production backend even when no bundled archive
+                # was found. Ask the updater for the platform-specific native
+                # asset before allowing the orchestrator's Electron fallback.
+                from src.readmd_modules.pet import check_pet_update, apply_pet_update
+                up = check_pet_update(self._rust_installer, self._pet_launcher, allow_network=True)
                 if up.get('ok') and up.get('has_update') and up.get('source') == 'github':
-                    return self.apply_pet_update(up)
+                    return apply_pet_update(self._rust_installer, self._pet_launcher, up)
             except Exception:
                 pass
             return res
 
     def _install_default_pet_plugin_locked(self):
-        if os.name != 'nt':
-            return {'ok': False, 'code': 'pet_runtime_platform_unsupported'}
+        if self._rust_installer.available():
+            return {'ok': True, 'installed': True, 'runtime': 'rust', 'install_path': str(self._rust_installer.target)}
         if self._pet_launcher.status().get('available'):
             return {'ok': True, 'installed': True}
         # Packaged applications find the sidecar next to ReadMD.exe or in parent dirs;
@@ -5357,7 +5456,30 @@ class Api(object):
             os.path.join(APP_DIR, 'dist', 'ReadMD'),
             os.path.join(APP_DIR, 'packages', 'readmd-hermes-pet-adapter', 'dist'),
             os.path.join(APP_DIR, 'packages', 'readmd-hermes-pet-adapter', 'stage'),
+            os.path.join(APP_DIR, 'packages', 'readmd-pet-rust', 'dist'),
         ])
+        rust_directory_names = (
+            'readmd-rust-host',
+            'readmd-pet-rust-windows',
+            'ReadMD-Pet-Rust',
+            'ReadMD-Pet-Rust-windows-x86_64',
+            'ReadMD-Pet-Rust-windows-aarch64',
+            'ReadMD-Pet-Rust-macos-x86_64',
+            'ReadMD-Pet-Rust-macos-aarch64',
+            'ReadMD-Pet-Rust-linux-x86_64',
+            'ReadMD-Pet-Rust-linux-aarch64',
+        )
+        rust_candidate_names = (
+            'ReadMD-Pet-Rust.zip',
+            'ReadMD-Pet-Rust-windows-x86_64.zip',
+            'ReadMD-Pet-Rust-windows-aarch64.zip',
+            'ReadMD-Pet-Rust-macos-x86_64.zip',
+            'ReadMD-Pet-Rust-macos-aarch64.zip',
+            'ReadMD-Pet-Rust-linux-x86_64.zip',
+            'ReadMD-Pet-Rust-linux-aarch64.zip',
+            'ReadMD-Pet-Rust-windows.zip',
+            'readmd-pet-rust-windows.zip',
+        )
         directory_names = (
             'readmd-pet-windows',
             'ReadMD-Desktop-Pet',
@@ -5373,6 +5495,20 @@ class Api(object):
             if not root or root in seen_roots or not os.path.isdir(root):
                 continue
             seen_roots.add(root)
+            for directory_name in rust_directory_names:
+                directory = os.path.join(root, directory_name)
+                if not os.path.isdir(directory):
+                    continue
+                res = self._rust_installer.install_directory(directory, confirm=True)
+                if res.get('ok'):
+                    return res
+            for name in rust_candidate_names:
+                archive = os.path.join(root, name)
+                if not os.path.isfile(archive):
+                    continue
+                res = self._rust_installer.install_archive(archive, confirm=True)
+                if res.get('ok'):
+                    return res
             # A development build or a portable package may ship the staged
             # directory instead of a ZIP.  Install it through the same secure
             # manifest/hash path and keep the destination fixed below ReadMD.
@@ -5428,16 +5564,26 @@ class Api(object):
             if not low <= value <= high:
                 return {'ok': False, 'code': 'invalid_pet_' + key}
             preference_updates['pet_' + key] = value
-        enabled = settings.get('enabled', self._pet_controller.snapshot().get('enabled'))
+        previous_runtime = self._pet_controller.snapshot()
+        previous_enabled = bool(previous_runtime.get('enabled'))
+        previous_in_app = self._pet_in_app
+        previous_renderer = self._pet_preferences()['renderer']
+        enabled = settings.get('enabled', previous_enabled)
+        try:
+            # The running Rust host reloads the existing renderer in-place;
+            # this setter only selects the next snapshot/host navigation.
+            self._pet_launcher.set_renderer(renderer)
+        except AttributeError:
+            pass
         model = self._pet_model_status()
         if enabled and renderer == 'live2d':
             if not model.get('ready'):
                 return {'ok': False, 'code': model.get('code', 'model_not_ready')}
-        if enabled and not in_app:
-            launched = self._pet_launcher.start()
-            if not launched.get('ok'):
-                return launched
-        elif 'enabled' in settings or in_app != self._pet_in_app:
+        # Stop an existing independent host only when disabling it or moving
+        # back into the reader.  Keeping the process alive for a renderer or
+        # preference change lets the Rust host reload the page in the same
+        # native window, and avoids the old start-before-snapshot deadlock.
+        if (in_app != previous_in_app) or (not enabled and not in_app):
             self._pet_command_stop.set()
             self._pet_launcher.stop()
         if 'renderer' in settings:
@@ -5448,16 +5594,36 @@ class Api(object):
             preference_updates['pet_enabled'] = enabled
         if preference_updates:
             self.save_settings(preference_updates)
-        self._pet_in_app = in_app
         if 'reduced_motion' in settings:
             self._pet_controller.set_reduced_motion(bool(settings['reduced_motion']))
         if not enabled:
             runtime = self._pet_controller.disable()
-        elif not self._pet_controller.snapshot().get('enabled'):
+        elif not previous_enabled:
             runtime = self._pet_controller.enable()
         else:
             runtime = self._pet_controller.snapshot()
+        self._pet_in_app = in_app
+
+        # Publish before starting Rust.  The Rust host waits for the first
+        # valid snapshot before it can report renderer-ready; waiting for
+        # health first would otherwise time out on a fresh installation.
         self._publish_pet_runtime(runtime)
+        if enabled and not in_app:
+            launched = self._pet_launcher.start()
+            if not launched.get('ok'):
+                # Do not leave the controller claiming an enabled desktop pet
+                # when no runtime owns a window. Restore the previous in-app
+                # selection and publish a hidden state for any still-running
+                # compatibility process.
+                self._pet_controller.disable()
+                self._pet_in_app = previous_in_app
+                self.save_settings({
+                    'pet_enabled': False,
+                    'pet_in_app': previous_in_app,
+                    'pet_renderer': previous_renderer,
+                })
+                self._publish_pet_runtime()
+                return launched
         if enabled and not in_app:
             self._start_pet_command_loop()
             self._start_pet_fullscreen_loop()
