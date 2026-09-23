@@ -1312,6 +1312,7 @@ pub struct HermesPetBridge {
     pub commands_dir: PathBuf,
     lock: Mutex<()>,
     command_lock: Mutex<()>,
+    claim_lock: Mutex<()>,
     last_encoded: Mutex<Option<String>>,
 }
 
@@ -1325,6 +1326,7 @@ impl HermesPetBridge {
             commands_dir: root.join(format!("{STATE_FILE_NAME}.commands")),
             lock: Mutex::new(()),
             command_lock: Mutex::new(()),
+            claim_lock: Mutex::new(()),
             last_encoded: Mutex::new(None),
             state_path,
             root,
@@ -1440,6 +1442,7 @@ impl HermesPetBridge {
     /// — an un-positioned pet, a missing measurement — is *valid* Python input
     /// that the old reader rejected, silently deleting a durable queue entry.
     pub fn take_command_file(&self, source: &Path, durable: bool) -> Option<OrdValue> {
+        let _claim_guard = self.claim_lock.lock().unwrap();
         let source_name = source.file_name()?.to_string_lossy().into_owned();
         let claim_path = path_with_name(source, &claim_name(&source_name, std::process::id(), time_ns()));
         if std::fs::rename(source, &claim_path).is_err() {
