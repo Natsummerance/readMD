@@ -426,20 +426,6 @@ fn is_pet_slug(slug: &str) -> bool {
         .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-')
 }
 
-/// `^[a-z0-9][a-z0-9-]{0,63}$` (`skills._NAME_RE` / `skill_import._ID_RE`).
-fn is_kebab_id(value: &str) -> bool {
-    let bytes = value.as_bytes();
-    if bytes.is_empty() || bytes.len() > 64 {
-        return false;
-    }
-    let first = bytes[0];
-    if !(first.is_ascii_lowercase() || first.is_ascii_digit()) {
-        return false;
-    }
-    bytes[1..]
-        .iter()
-        .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-')
-}
 
 /// `store.slugify`.
 fn slugify(value: &str) -> String {
@@ -466,33 +452,6 @@ fn slugify(value: &str) -> String {
     }
 }
 
-/// `skill_import._slug`.
-fn import_slug(value: &str) -> String {
-    let lowered = value.to_ascii_lowercase();
-    let mut out = String::new();
-    let mut pending_dash = false;
-    for ch in lowered.chars() {
-        if ch.is_ascii_lowercase() || ch.is_ascii_digit() {
-            if pending_dash && !out.is_empty() {
-                out.push('-');
-            }
-            pending_dash = false;
-            out.push(ch);
-        } else {
-            pending_dash = true;
-        }
-    }
-    let mut out: String = out.chars().take(64).collect();
-    while out.ends_with('-') {
-        out.pop();
-    }
-    let out = out.trim_matches('-').to_string();
-    if out.is_empty() {
-        "imported-skill".to_string()
-    } else {
-        out
-    }
-}
 
 // --------------------------------------------------------------- pet store
 
@@ -4304,6 +4263,7 @@ pub mod zip {
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use std::time::Duration;
 
     fn scratch_dir(tag: &str) -> PathBuf {
         let nanos = SystemTime::now()

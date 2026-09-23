@@ -6578,19 +6578,6 @@ fn extract_rtf_text(rtf: &str) -> String {
     result.trim().to_string()
 }
 
-// Helper function for regex replacement (pure Rust, no external deps)
-fn regex_replace(text: &str, pattern: &str, replacement: &str) -> String {
-    // For the simple pattern \n{3,}, do a direct replacement
-    if pattern == r"\n{3,}" && replacement == "\n\n" {
-        let mut result = text.to_string();
-        while result.contains("\n\n\n") {
-            result = result.replace("\n\n\n", "\n\n");
-        }
-        return result;
-    }
-    
-    text.to_string()
-}
 
 /// OpenDocument Text to Markdown converter (.odt)
 /// `convert.py:240-278` `_odt_to_md` (defect D11).

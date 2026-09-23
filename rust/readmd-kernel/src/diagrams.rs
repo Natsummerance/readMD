@@ -136,10 +136,6 @@ pub fn plantuml_encode(text: &str) -> String {
     }
 }
 
-/// `batch2::h_diagram_render` 旧调用点保留的别名，语义同 [`plantuml_encode`]。
-pub(crate) fn encode_plantuml(text: &str) -> String {
-    plantuml_encode(text)
-}
 
 /// 生成 PlantUML 在线 SVG 渲染 URL（= Python `get_plantuml_svg_url`）。
 ///

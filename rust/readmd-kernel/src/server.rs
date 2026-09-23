@@ -1689,12 +1689,6 @@ fn h_list(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     ok_json(json!({ "dir": raw, "files": files }))
 }
 
-fn h_tree(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let dir = dir_arg(app, req, &["p", "dir", "path"])?;
-    let mut value = content::tree(&dir);
-    value["ok"] = json!(true);
-    ok_json(value)
-}
 
 /// `Handler._send_raw` (`readmd.py:3564-3578`).
 ///
@@ -1722,29 +1716,6 @@ fn h_raw(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     Err(ApiError::plain_text(404, "not found"))
 }
 
-fn h_render(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let md = match req.field("markdown").or_else(|| req.field("content")).or_else(|| req.q("p").map(|s| s.to_string())) {
-        Some(v) if !v.is_empty() && req.q("p").is_some() => {
-            let path = resolve_arg(app, req, &["p"])?;
-            content::read_text(&path).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?
-        }
-        Some(v) => v,
-        None => String::new(),
-    };
-    let with_headings = req.q("headings") == Some("1");
-    let mut value = json!({
-        "ok": true,
-        "html": content::render_html(&md),
-        "engine": "pulldown-cmark",
-    });
-    if with_headings {
-        value["headings"] = json!(content::headings(&md)
-            .iter()
-            .map(|h| json!({ "level": h.level, "text": h.text, "line": h.line, "id": h.id }))
-            .collect::<Vec<_>>());
-    }
-    ok_json(value)
-}
 
 /// `save_text_atomic` (`src/readmd_core/file_writer.py:17-83`).
 ///
@@ -2056,33 +2027,6 @@ fn uuid_hex(req: &Request) -> String {
     out
 }
 
-fn h_document_create(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let raw = req
-        .field("path")
-        .or_else(|| req.field("name"))
-        .or_else(|| req.field("title"))
-        .ok_or_else(|| ApiError::bad_request("missing_path"))?;
-    let mut candidate = app.paths.resolve_doc(&raw).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    if candidate.extension().map(|e| !e.is_empty()).unwrap_or(true) && content::ext_of(&candidate).is_empty() {
-        candidate = candidate.with_extension("md");
-    }
-    let title = req.field("title").unwrap_or_else(|| {
-        candidate
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("Untitled")
-            .to_string()
-    });
-    let template = req.field("content").unwrap_or(format!("# {title}\n\n"));
-    if candidate.exists() {
-        let parent = candidate.parent().unwrap_or(Path::new(".")).to_path_buf();
-        let name = candidate.file_name().and_then(|n| n.to_str()).unwrap_or("untitled").to_string();
-        candidate = content::unique_path(&parent, &name, &content::ext_of(&candidate));
-    }
-    let value = content::save(app, &candidate, &template).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    let _ = app.store.touch_recent(&app.paths.display_path(&candidate), &title);
-    Ok(Response::json_status(201, &value))
-}
 
 /// `readmd.py:127` — `ALL_TEXT_EXTS = MD_EXTS + CODE_CONFIG_EXTS`, spelled out
 /// with the leading dot exactly the way `Api.rename_file` tests it.
@@ -2382,83 +2326,9 @@ fn h_rename(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     })))
 }
 
-fn h_delete(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let path = resolve_arg(app, req, &["p", "path", "file"])?;
-    if !path.exists() {
-        return Err(ApiError::not_found("file_missing"));
-    }
-    app.paths.check_allowed(&path).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    let display = app.paths.display_path(&path);
-    let result = if path.is_dir() {
-        std::fs::remove_dir_all(&path)
-    } else {
-        std::fs::remove_file(&path)
-    };
-    result.map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    let _ = app.store.delete_document(&display);
-    let _ = app.store.remove_recent(&display);
-    ok_json(json!({ "ok": true, "deleted": true, "path": display }))
-}
 
-fn h_search(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let query = req.field("q").or_else(|| req.field("query")).unwrap_or_default();
-    let limit: usize = req
-        .field("limit")
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(50)
-        .clamp(1, 500);
-    let hits = app.store.search(&query, limit).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    let mapped: Vec<Value> = hits
-        .iter()
-        .map(|h| {
-            json!({
-                "path": h.path,
-                "absPath": app.paths.workspace.join(&h.path).to_string_lossy(),
-                "title": h.title,
-                "score": h.score,
-                "snippet": h.snippet,
-                "mtime": h.mtime as f64 / 1000.0,
-                "mtimeMs": h.mtime,
-            })
-        })
-        .collect();
-    ok_json(json!({
-        "ok": true,
-        "query": query,
-        "hits": mapped,
-        "results": mapped,
-        "count": hits.len(),
-    }))
-}
 
-fn h_stats(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
-    let mut value = app.store.stats().map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    if let Some(obj) = value.as_object_mut() {
-        obj.insert("ok".into(), json!(true));
-        obj.insert("engine".into(), json!("rust"));
-        obj.insert("uptimeMs".into(), json!(app.started_at.elapsed().as_millis() as u64));
-    }
-    ok_json(value)
-}
 
-fn h_wordcount(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let text = match req.field("content").or_else(|| req.field("text")) {
-        Some(t) => t,
-        None => {
-            let path = resolve_arg(app, req, &["p", "path"])?;
-            content::read_text(&path).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?
-        }
-    };
-    let chars = text.chars().count() as i64;
-    ok_json(json!({
-        "ok": true,
-        "words": content::count_words(&text),
-        "chars": chars,
-        "charsNoSpace": text.chars().filter(|c| !c.is_whitespace()).count() as i64,
-        "lines": text.lines().count() as i64,
-        "readingMinutes": (content::count_words(&text) as f64 / 250.0).ceil() as i64,
-    }))
-}
 
 fn h_recent_status(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     // `_api_recent_status` (`readmd.py:2243`-`2261`): a bad body is a
@@ -2694,35 +2564,7 @@ fn h_links_deadlinks(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
     ok_json(json!({ "ok": true, "deadlinks": list, "items": list, "count": list.len() }))
 }
 
-fn h_links_extract(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let path = resolve_arg(app, req, &["p", "path"])?;
-    let text = content::read_text(&path).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    let raw = content::extract_links(&text);
-    let resolved = content::resolve_link_targets(app, &path, &raw);
-    let missing: Vec<&String> = raw
-        .iter()
-        .zip(resolved.iter())
-        .filter(|(_, r)| !app.paths.workspace.join(r).exists())
-        .map(|(l, _)| l)
-        .collect();
-    ok_json(json!({
-        "ok": true,
-        "links": raw,
-        "resolved": resolved,
-        "missing": missing,
-    }))
-}
 
-fn h_pin(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    let path = resolve_arg(app, req, &["p", "path"])?;
-    let display = app.paths.display_path(&path);
-    let pinned = req
-        .field("pinned")
-        .map(|v| matches!(v.as_str(), "1" | "true" | "yes"))
-        .unwrap_or_else(|| req.q("value") != Some("0"));
-    app.store.set_pinned(&display, pinned).map_err(|e| ApiError::internal(format!("serialize_failed: {e}")))?;
-    ok_json(json!({ "ok": true, "path": display, "pinned": pinned }))
-}
 
 /// KERNEL BRIDGE — not a parity route.  `readmd.py`'s HTTP dispatcher
 /// (`readmd.py:1186`-`1378`) has **no** `/api/settings`; this path exists only so
@@ -4750,14 +4592,6 @@ fn split_fields(body: &str) -> Vec<(usize, String)> {
     out
 }
 
-fn payload_base64(payload: &Value) -> Option<Vec<u8>> {
-    let raw = payload.get("content").or_else(|| payload.get("base64")).and_then(|v| v.as_str())?;
-    let cleaned = match raw.rsplit_once(',') {
-        Some((_, b)) => b,
-        None => raw,
-    };
-    base64_decode(cleaned)
-}
 
 const B64_ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 

@@ -2205,7 +2205,6 @@ fn unused_buf() -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
     use std::collections::HashMap;
 
     /// Every expected value below is measured, never assumed.  The probe
@@ -2231,23 +2230,6 @@ mod tests {
         dir
     }
 
-    /// An `App` whose module registry has been forced into `state`, so gate
-    /// tests never depend on whether this machine has an OCR engine.
-    fn app_with(tag: &str, name: &str, state: &str) -> App {
-        let dir = scratch_dir(tag);
-        std::fs::create_dir_all(dir.join("assets")).unwrap();
-        let paths = crate::paths::AppPaths::with_dirs(&dir.join("data"), &dir, &dir.join("assets"));
-        let app = App::bootstrap(paths).unwrap();
-        {
-            let mut reg = app.modules.lock().unwrap();
-            if state == "error" {
-                reg.set_error(name, "engine import failed");
-            } else {
-                reg.set(name, state);
-            }
-        }
-        app
-    }
 
     fn request(method: &str, path: &str, query: &[(&str, &str)], body: &[u8]) -> Request {
         Request {
@@ -2266,9 +2248,6 @@ mod tests {
         request("POST", "/api/web/extract", &[], serde_json::to_vec(body).unwrap().as_slice())
     }
 
-    fn raw_post(path: &str, raw: &[u8]) -> Request {
-        request("POST", path, &[], raw)
-    }
 
     fn answered(res: &Response) -> Value {
         serde_json::from_slice(&res.body).expect("handler answered with JSON")

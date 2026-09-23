@@ -1754,7 +1754,7 @@ mod tests {
         let f2 = dir.join("b.md");
         fs::write(&f1, "a").unwrap();
         fs::write(&f2, "b").unwrap();
-        let recents = m.add_recent_file(f1.to_str().unwrap(), 20);
+        let _ = m.add_recent_file(f1.to_str().unwrap(), 20);
         let recents = m.add_recent_file(f2.to_str().unwrap(), 20);
         assert_eq!(recents.len(), 2);
         assert_eq!(recents[0], py_abspath(f2.to_str().unwrap()));
@@ -2714,7 +2714,7 @@ mod tests {
     #[test]
     fn test_generated_tables_are_consistent() {
         // 每一段必须恰好覆盖 0..9，且空白表不含 ASCII 之外的 C0 控制符误判
-        for (start, len) in DECIMAL_RUNS.iter() {
+        for (_start, len) in DECIMAL_RUNS.iter() {
             assert!(*len <= 10);
         }
         assert!(is_unicode_space('\u{85}'));
