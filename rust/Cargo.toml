@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+members = ["readmd-kernel"]
+
+[workspace.package]
+version = "2.4.0"
+edition = "2021"
+rust-version = "1.85"
+license = "MIT"
+authors = ["Natsummerance"]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+opt-level = "s"

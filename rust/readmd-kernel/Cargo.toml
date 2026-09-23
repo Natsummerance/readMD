@@ -1,0 +1,54 @@
+[package]
+name = "readmd-kernel"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+publish = false
+description = "Rust native kernel for ReadMD: storage, documents, search, HTTP API, desktop host"
+
+[lib]
+name = "readmd_kernel"
+path = "src/lib.rs"
+
+[[bin]]
+name = "readmd"
+path = "src/main.rs"
+
+[dependencies]
+rusqlite = { version = "=0.40.2", features = ["bundled"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+pulldown-cmark = { version = "=0.13.4", default-features = false, features = ["html"] }
+sha2 = "=0.10.9"
+percent-encoding = "=2.3.2"
+walkdir = "=2.5.0"
+thiserror = "=2.0.20"
+tao = "=0.37.0"
+wry = { version = "=0.57.0", features = ["os-webview"] }
+time = { version = "=0.3.44", features = ["serde-human-readable"] }
+uuid = { version = "=1.18.0", features = ["v4", "serde"] }
+flate2 = "=1.1.0"
+base64 = "=0.22.1"
+ureq = { version = "=2.12.1", features = ["json"] }
+regex = "=1.11.1"
+lazy_static = "=1.5.0"
+dunce = "=1.0.5"
+log = "=0.4.28"
+getrandom = "=0.3.4"
+tempfile = "=3.26.0"
+pdf-extract = "0.12.1"
+lopdf = "0.42.0"
+# Fernet (`src/readmd_modules/crypto.py`) is AES-128-CBC + HMAC-SHA256, not GCM:
+# these two are already in Cargo.lock as lopdf's transitive deps and vendored in
+# ~/.cargo, so the offline build stays intact.  HMAC is hand-rolled on `sha2`
+# because `hmac` is not in the tree at all.
+aes = "=0.8.4"
+cbc = "=0.1.2"
+
+[dev-dependencies]
+tempfile = "=3.26.0"
+
+[build-dependencies]
+winres = "0.1"
