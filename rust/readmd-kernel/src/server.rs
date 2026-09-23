@@ -6089,7 +6089,6 @@ fn kernel_b64_decode(input: &str) -> Option<Vec<u8>> {
 }
 
 fn kernel_sha256_hex(bytes: &[u8]) -> String {
-    use sha2::Digest;
     let mut h = <sha2::Sha256 as sha2::Digest>::new();
     sha2::Digest::update(&mut h, bytes);
     let digest = sha2::Digest::finalize(h);

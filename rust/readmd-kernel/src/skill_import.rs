@@ -20,7 +20,6 @@
 //! 与 crate 内的路径常量塞进 [`Ctx`]，本模块的其余逻辑与 Python 完全一致。
 #![allow(dead_code)]
 
-use std::collections::BTreeMap;
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Component, Path, PathBuf};
@@ -268,8 +267,8 @@ impl JVal {
         match self {
             JVal::Str(v) => py_str_repr(v),
             other => match other {
-                JVal::List(items) => other.py_str(),
-                JVal::Obj(items) => other.py_str(),
+                JVal::List(_items) => other.py_str(),
+                JVal::Obj(_items) => other.py_str(),
                 v => v.py_str(),
             },
         }
@@ -854,7 +853,7 @@ impl Sha256 {
 
     pub fn hexdigest(&self) -> String {
         // Python 侧从不调用两次 hexdigest，这里按“快照”语义复制状态。
-        let mut clone = self.clone();
+        let clone = self.clone();
         let digest = clone.finalize();
         hex_encode(&digest)
     }
@@ -2647,7 +2646,7 @@ fn sidecar_metadata_invalid(sidecar: &JVal, name: &str) -> bool {
     };
     let declared_present = matches!(declared, Some(v) if !matches!(v, JVal::None));
     let required_present = matches!(required, Some(v) if !matches!(v, JVal::None));
-    let mut invalid_declared = declared_present
+    let invalid_declared = declared_present
         && match &declared_list {
             None => true,
             Some(items) => items.iter().any(|v| !ALLOWED_VARIABLES.contains(&v.as_str())),
@@ -3000,7 +2999,7 @@ fn end_rec_data64(blob: &[u8], loc: i64, base: EndRecord) -> Result<EndRecord, S
         return Err("BadZipFile: Zip64 end of central directory record not found".to_string());
     }
     let sz = u64_le(rec, 4);
-    let dircount = u64_le(rec, 24);
+    let _dircount = u64_le(rec, 24);
     let dirsize = u64_le(rec, 40);
     let diroffset = u64_le(rec, 48);
     if diroffset + dirsize != reloff || sz + 12 != (SIZE_EOCD64 as u64) + extrasz {

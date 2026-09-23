@@ -2080,7 +2080,7 @@ pub(crate) fn md_parse(md: &str, depth: usize) -> Vec<MdBlock> {
             }
             continue;
         }
-        if let Some(lm) = list_match(&line) {
+        if let Some(_lm) = list_match(&line) {
             let mut items: Vec<Vec<MdInline>> = Vec::new();
             let mut ordered = false;
             while i < n {
@@ -2775,10 +2775,10 @@ fn civil_from_days(days: i64) -> (i64, u32, u32) {
 
 pub fn export_docx(
     content: &str,
-    base_dir: &str,
+    _base_dir: &str,
     out_path: &str,
-    options: &Value,
-    source_name: &str,
+    _options: &Value,
+    _source_name: &str,
 ) -> Result<ExportResult, String> {
     let mut body_xml = String::new();
 
@@ -4188,10 +4188,10 @@ pub(crate) fn html_unescape(s: &str) -> String {
             continue;
         }
         // `&(#[0-9]+;?|#[xX][0-9a-fA-F]+;?|[^ \t\n\f <&#;]{1,32};?)`
-        let mut j = i + 1;
+        let j = i + 1;
         let mut cand: Option<(usize, usize)> = None; // (body_start, exclusive end)
         if j < n && c[j] == '#' {
-            let mut k = j + 1;
+            let k = j + 1;
             if k < n && (c[k] == 'x' || c[k] == 'X') {
                 let ds = k + 1;
                 let mut de = ds;
@@ -4513,7 +4513,7 @@ fn html_tokenize(src: &str) -> Vec<HtmlTok> {
         if cdata.is_some() {
             // `</elem` — parse_endtag owns it.
             match pres_parse_end_tag(&c, i) {
-                Some((tag, next)) => out.push(HtmlTok::End(tag)),
+                Some((tag, _next)) => out.push(HtmlTok::End(tag)),
                 None => {}
             }
             cdata = None;
@@ -4555,7 +4555,7 @@ fn html_tokenize(src: &str) -> Vec<HtmlTok> {
                 break;
             }
             match pres_parse_end_tag(&c, i) {
-                Some((tag, next)) => out.push(HtmlTok::End(tag)),
+                Some((tag, _next)) => out.push(HtmlTok::End(tag)),
                 None => {}
             }
             // An unterminated `</x` swallows the remainder (CPython: k = n).

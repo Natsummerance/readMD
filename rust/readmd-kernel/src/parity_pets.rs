@@ -29,7 +29,7 @@ use std::fs;
 use std::io::Read;
 use std::path::{Component, Path, PathBuf};
 use std::sync::{Arc, Mutex, OnceLock};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 // ------------------------------------------------------------------ helpers
 
@@ -2433,7 +2433,7 @@ fn fetch_github_json(url: &str) -> Option<Value> {
 }
 
 fn github_update(
-    app: &App,
+    _app: &App,
     is_installed: bool,
     install_path: &str,
     release_info: &Value,
