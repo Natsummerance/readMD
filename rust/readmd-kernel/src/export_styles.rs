@@ -768,10 +768,9 @@ mod tests {
         assert!(bad.is_empty(), "sanitize diverges:\n{}", bad.join("\n"));
     }
 
-    /// serde_json renders objects in sorted-key order (BTreeMap default, the
-    /// `preserve_order` feature is not enabled), which is exactly what
-    /// `json.dumps(sort_keys=True)` produced, so the two are comparable as
-    /// parsed values *and* as text.
+    /// Render a tree to text.  The goldens carry `json.dumps(sort_keys=True)`
+    /// bytes, so a text comparison is only sound while the computed tree is
+    /// built in that same order; the assertions that use this are what pin it.
     fn compact(v: &Value) -> String {
         serde_json::to_string(v).unwrap()
     }

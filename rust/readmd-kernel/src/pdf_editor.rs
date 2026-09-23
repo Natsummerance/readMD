@@ -1728,14 +1728,15 @@ const FIXTURE_LEN: usize = 1202;
         assert_eq!(
             keys,
             vec![
+                "ok",
+                "path",
                 "file_size",
                 "is_readonly",
                 "locking_processes",
-                "ok",
-                "pages",
-                "path",
-                "total_pages"
-            ]
+                "total_pages",
+                "pages"
+            ],
+            "`pdf_editor.py:158-166` declares the result dict in this order"
         );
     }
 
@@ -2051,18 +2052,16 @@ const FIXTURE_LEN: usize = 1202;
         v.as_object().unwrap().keys().cloned().collect()
     }
 
-    /// `serde_json::Map` is a `BTreeMap` in this build (`preserve_order` off), so
-    /// `keys()` comes out alphabetical while Python's dict keeps insertion order.
-    /// Sorting the expected list is the honest way to compare the two.
+    /// The captured Python key lists are compared in the order the authority
+    /// declares its dict, so `key_names()` (Rust insertion order, now observable
+    /// because `preserve_order` is on) is checked against it verbatim.
     fn python_keys(raw: &str) -> Vec<String> {
-        let mut v: Vec<String> = parsed(raw)
+        parsed(raw)
             .as_array()
             .unwrap()
             .iter()
             .map(|s| s.as_str().unwrap().to_string())
-            .collect();
-        v.sort();
-        v
+            .collect()
     }
 
     #[test]
@@ -2082,12 +2081,13 @@ const FIXTURE_LEN: usize = 1202;
         assert_eq!(
             key_names(&not_rasterized_gate()),
             vec![
-                "allowed_boxes_count",
+                "passed",
+                "violations_count",
                 "max_leakage_diff",
                 "mean_leakage_diff",
-                "passed",
-                "violations_count"
-            ]
+                "allowed_boxes_count"
+            ],
+            "`pdf_editor.py:302-307`"
         );
         assert_eq!(not_rasterized_gate()["allowed_boxes_count"], json!(0));
     }

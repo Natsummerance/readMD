@@ -317,10 +317,9 @@ fn py_or_str(value: &Value) -> String {
     }
 }
 
-/// `repr(value)` for the JSON types `str()` cannot handle directly.  serde_json
-/// is built without `preserve_order` here, so an object prints its keys sorted
-/// rather than in document order — a key *set* is identical, only the order
-/// differs, and order is an accepted deviation in this rewrite.
+/// `repr(value)` for the JSON types `str()` cannot handle directly.  An object
+/// prints its keys in the order the parsed document carries them, which is what
+/// CPython's `repr(dict)` does.
 fn py_repr_value(value: &Value) -> String {
     match value {
         Value::Null => "None".to_string(),

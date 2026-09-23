@@ -44,12 +44,10 @@
 //! * `str.strip()` also treats `\x1c`-`\x1f` (and `\x85`/`\xa0`-class
 //!   separators) as whitespace; [`py_strip`] uses Rust's `char::is_whitespace`
 //!   (the `\x1c`-`\x1f` group differs).
-//! * Objects that were parsed by `serde_json` iterate in **key-sorted** order.
-//!   Request bodies, `usage` events and headers are emitted through the
-//!   order-preserving helpers in this file, so their wire order is exact; the
-//!   only place where Python's dict order can still leak through is
-//!   `提供商错误：<json.dumps(frame)>`, whose top-level keys come back
-//!   alphabetical.
+//! * Objects parsed by `serde_json` iterate in the order the wire carried
+//!   them: `preserve_order` is on, which is CPython's `json.loads` behaviour.
+//!   Request bodies, `usage` events and headers additionally go through the
+//!   explicit order-preserving helpers in this file.
 //! * Python's `float.__str__` spells large values `1e+20`; `serde_json`/ryu
 //!   writes `1e20`.
 //! * `json.loads` accepts `NaN`/`Infinity`/`-Infinity`; `serde_json` rejects
@@ -442,8 +440,9 @@ fn dump_value(v: &Value, ascii_only: bool, out: &mut String) {
     }
 }
 
-/// Serialises an object whose key order is *not* alphabetical (request bodies,
-/// where `serde_json`'s `BTreeMap` would reorder `model`/`messages`/`stream`).
+/// Serialises an object from already-rendered member strings, so the caller
+/// fixes the key order (`model`, `messages`, `stream`, ...) exactly as the
+/// Python request body literal does.
 pub fn dumps_ordered(pairs: &[(String, String)]) -> String {
     let mut out = String::from("{");
     for (i, (k, v)) in pairs.iter().enumerate() {
@@ -2586,9 +2585,10 @@ mod tests {
 
     #[test]
     fn dumps_uses_python_separators_and_surrogates() {
-        assert_eq!(py_dumps(&json!({"b": 1, "a": "中😀"})), "{\"a\": \"\\u4e2d\\ud83d\\ude00\", \"b\": 1}");
-        // serde_json::Map is a BTreeMap: insertion order is lost for hand-built Values (documented divergence).
-        assert_eq!(py_dumps_unicode(&json!({"type": "error", "error": {"message": "nope"}})), "{\"error\": {\"message\": \"nope\"}, \"type\": \"error\"}");
+        // `preserve_order` is on, so a hand-built `Value` keeps the order of its
+        // literal exactly like CPython's `json.dumps` keeps a dict's insertion order.
+        assert_eq!(py_dumps(&json!({"b": 1, "a": "中😀"})), "{\"b\": 1, \"a\": \"\\u4e2d\\ud83d\\ude00\"}");
+        assert_eq!(py_dumps_unicode(&json!({"type": "error", "error": {"message": "nope"}})), "{\"type\": \"error\", \"error\": {\"message\": \"nope\"}}");
         assert_eq!(py_str(&json!("x")), "x");
         assert_eq!(py_str(&json!(null)), "None");
         assert_eq!(py_str(&json!(true)), "True");
@@ -2708,8 +2708,9 @@ mod tests {
         let svc = MockSkills::ok("R");
         skill_messages(&payload, &svc).unwrap();
         let seen = svc.seen.lock().unwrap().clone().unwrap();
-        // serde_json sorts the parsed object's keys; the setdefault tail keeps Python's order.
-        assert_eq!(seen.keys(), vec!["document", "language", "request", "context", "selection", "output_format"]);
+        // `ai.py:456-464` copies the caller's `skill_variables` dict first, so the
+        // explicit names keep their wire order and only the setdefault tail is appended.
+        assert_eq!(seen.keys(), vec!["language", "document", "request", "context", "selection", "output_format"]);
         assert_eq!(seen.get("document"), Some(&json!("mine")));
         assert_eq!(seen.get("selection"), Some(&json!("mine")));
     }
@@ -2949,9 +2950,9 @@ mod tests {
         provider["mode"] = json!("responses");
         let http = MockTransport::new("", vec![sse("{\"type\": \"error\", \"error\": {\"message\": \"nope\"}}"), sse("[DONE]")]);
         let err = collect(&openai_payload(json!({"stream": true})), &dir_with(provider), &skills(), &http).unwrap_err();
-        // serde_json sorts *every* parsed level, so both "error" and "type" land in key order
-        // (Python would emit {"type": "error", "error": {...}}); nested single-key object is stable.
-        assert_eq!(err.message, "提供商错误：{\"error\": {\"message\": \"nope\"}, \"type\": \"error\"}");
+        // `preserve_order` keeps the frame's wire order through the parse/serialise
+        // round trip, which is CPython's behaviour (`json.loads` then `json.dumps`).
+        assert_eq!(err.message, "提供商错误：{\"type\": \"error\", \"error\": {\"message\": \"nope\"}}");
         assert!(err.message.contains(r#""error": {"message": "nope"}"#), "{}", err.message);
     }
 

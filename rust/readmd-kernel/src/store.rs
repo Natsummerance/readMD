@@ -789,13 +789,12 @@ fn migrate(conn: &mut Connection) -> Result<()> {
 // `src/readmd_core/utils.py: save_json`, i.e.
 // `json.dump(data, f, ensure_ascii=False, indent=2)` written to a unique
 // sibling temp file and then `os.replace`d with six short retries.  Two
-// properties of that call are load-bearing for byte parity and cannot be
-// reproduced with the pinned `serde_json` (no `preserve_order`, so
-// `Value::Object` is a `BTreeMap` and reorders every key): object keys keep
+// properties of that call are load-bearing for byte parity: object keys keep
 // *insertion* order, and non-ASCII text is emitted raw while `0x7f` stays raw
-// as well.  [`pyjson::Pj`] is therefore the representation used for anything
-// that touches disk.  HTTP response bodies keep using `serde_json::Value`
-// because the parity harness compares object keys as a sorted set.
+// as well.  `serde_json` now covers the order with `preserve_order`, but only
+// [`pyjson::Pj`] reproduces CPython's `json.dump` bytes, so it stays the
+// representation used for anything that touches disk.  HTTP response bodies use
+// `serde_json::Value`, whose keys are likewise in insertion order.
 
 pub use pyjson::Pj;
 

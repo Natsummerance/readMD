@@ -166,13 +166,12 @@ pub const ENV_RUN_AS_NODE: &str = "ELECTRON_RUN_AS_NODE";
 ///
 /// `json.dumps` writes the state payload in *insertion* order
 /// (`hermes_adapter.py:121`) and those bytes are the cross-process contract
-/// with the Electron overlay.  The crate's `serde_json` is built without
-/// `preserve_order` (`rust/Cargo.lock`: deps are `itoa`, `memchr`, `serde`,
-/// `serde_core`, `zmij`), so a plain `serde_json::Map` silently re-sorts keys,
-/// and `Number::from_f64` has no `NaN`/`inf` case at all — `json!({"x":
-/// f64::NAN})` degrades to `Value::Null`.  Both gaps are what [`OrdValue`]
-/// closes: [`py_json_loads`] builds every object level here, so a command read
-/// from disk keeps its key order and its `NaN` all the way to [`OrdValue::dump`].
+/// with the Electron overlay.  `serde_json` keeps that order now
+/// (`preserve_order` is on) but its `Number::from_f64` still has no `NaN`/`inf`
+/// case at all — `json!({"x": f64::NAN})` degrades to `Value::Null` — so
+/// [`OrdValue`] exists to carry the non-finite floats: [`py_json_loads`] builds
+/// every object level here and [`OrdValue::dump`] re-emits the exact
+/// `json.dumps` bytes.
 ///
 /// Leaf values that arrive as a caller-supplied `serde_json::Value` (an
 /// `info` field, a `Value`-typed argument) keep serde_json's sorted rendering
@@ -301,11 +300,10 @@ impl OrdValue {
     }
     /// The same data as a plain `serde_json::Value` for programmatic use.
     ///
-    /// Two losses, both forced by `Value` itself: object key order is gone
-    /// (`Map` is a `BTreeMap` without `preserve_order`) and
-    /// [`OrdValue::NotFinite`] becomes `Value::Null`, which is exactly what
-    /// `json!(f64::NAN)` already yields.  Use [`OrdValue::dump`] when the bytes
-    /// matter, which is why the durable command path returns `OrdValue`.
+    /// One loss, forced by `Value` itself: [`OrdValue::NotFinite`] becomes
+    /// `Value::Null`, which is exactly what `json!(f64::NAN)` already yields.
+    /// Use [`OrdValue::dump`] when the bytes matter, which is why the durable
+    /// command path returns `OrdValue`.
     pub fn to_json(&self) -> Value {
         match self {
             OrdValue::Json(value) => value.clone(),
@@ -1567,9 +1565,9 @@ fn sort_key(path: &Path) -> String {
 /// place* for `bounds` (`command = dict(command)` then
 /// `command["bounds"] = self._safe_bounds(...)`, `:208-209`), and in both cases
 /// the result is a `dict` whose key order is the one Python would have.  A
-/// `serde_json::Value` cannot express that — its `Map` is a `BTreeMap` unless the
-/// `preserve_order` feature is on, which this crate deliberately does not enable
-/// — so the rebuilt command has to live somewhere else.  See
+/// `serde_json::Value` cannot express it: `preserve_order` carries the order
+/// but a `Number` cannot hold a non-finite float, so the rebuilt command has to
+/// live somewhere else.  See
 /// `scratch/rust_parity/pet_json_s1/goldens.txt` for the
 /// `json.dumps`-byte comparisons this function is checked against.
 ///

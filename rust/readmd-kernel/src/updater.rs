@@ -530,10 +530,9 @@ pub fn fetch_manifest_assets(
 /// recovers — CPython's dict literal order, measured as
 /// `['tag_name','name','body','published_at','html_url','assets']`.
 ///
-/// The container cannot carry it: `serde_json::Map` is a `BTreeMap` unless the
-/// crate's `preserve_order` feature is on, and it is off in this build
-/// (`Cargo.lock`'s `serde_json` stanza lists `itoa, memchr, serde, serde_core,
-/// zmij` — no `indexmap`).  Nothing in Python reads this document by iteration
+/// The container carries it: `serde_json` is built with `preserve_order`, so a
+/// `Value` keeps the order it was built in.  Nothing in Python reads this
+/// document by iteration
 /// (only `data.get(...)`), so the observable contract is the key **set**; the
 /// constant exists so that set, and the order it came from, are pinned in one
 /// place rather than being folklore in a test.
@@ -2281,13 +2280,11 @@ mod tests {
         let data = check_update_fallback(false, &mut s, &mut m).unwrap();
         // CPython's literal order *is* insertion order — measured as
         // `['tag_name','name','body','published_at','html_url','assets']` — but
-        // `serde_json::Map` is a `BTreeMap` in this build: `preserve_order` is off
-        // (`Cargo.lock`: serde_json 1.0.151 deps = itoa, memchr, serde,
-        // serde_core, zmij; no indexmap), and turning it on belongs to the lane
-        // that owns `Cargo.toml`.  What is checkable — and what Python actually
-        // relies on, since it only ever does `data.get(key)` — is that the
-        // document carries exactly those six keys, so the key *set* is pinned
-        // against the constant that records Python's order.
+        // `preserve_order` is on, so the order above is now observable too.  What
+        // this assertion pins is what Python actually relies on, since it only
+        // ever does `data.get(key)`: the document carries exactly those six keys,
+        // so the key *set* is compared against the constant that records
+        // Python's order.
         let keys = data.as_object().unwrap();
         assert_eq!(keys.len(), FALLBACK_DOC_KEYS.len(), "no key added or dropped");
         let mut sorted = keys.keys().cloned().collect::<Vec<_>>();

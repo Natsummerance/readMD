@@ -19,7 +19,13 @@ path = "src/main.rs"
 [dependencies]
 rusqlite = { version = "=0.40.2", features = ["bundled"] }
 serde = { version = "=1.0.229", features = ["derive"] }
-serde_json = "=1.0.151"
+# `preserve_order`: CPython's `json.dumps` emits object keys in dict insertion
+# order; the default `Map` is a `BTreeMap` and emits them alphabetically.
+# `assets/js/` iterates response objects with `for...in`/`Object.keys`, which
+# follows insertion order, so alphabetical keys silently reorder menus, setting
+# panels and any other object-iterating render.  `indexmap` is already in
+# Cargo.lock, so this stays an offline build.
+serde_json = { version = "=1.0.151", features = ["preserve_order"] }
 pulldown-cmark = { version = "=0.13.4", default-features = false, features = ["html"] }
 sha2 = "=0.10.9"
 percent-encoding = "=2.3.2"
