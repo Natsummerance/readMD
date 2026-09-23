@@ -3,7 +3,11 @@
 
 use crate::batch2;
 use crate::error::{ApiError, ApiResult};
-use crate::{ai_providers, content, parity_code, parity_diagram, parity_pets, parity_web, paths, App};
+use crate::{
+    ai_providers, content, parity_code, parity_diagram, parity_pets, parity_web, paths,
+    skill_import, App,
+};
+use crate::skill_import::JVal;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
@@ -841,24 +845,6 @@ pub const LEGACY_DYNAMIC_PREFIXES: &[&str] = &[
 /// `p1_every_legacy_route_is_either_routed_or_pending` fails when a route falls
 /// out of both sets.
 pub const PENDING: &[&str] = &[
-    // `Handler._api_skill_import_source` (`readmd.py:2855`) serves
-    // `/api/skill-imports/<source_id>/check|update`; the Skill-source manager it
-    // delegates to has no kernel port.
-    //
-    // Wave E1 (F4) measured the chain and it is still four calls deep into an
-    // unported module: `readmd.py:1279` -> `_api_skill_import_source(path)` ->
-    // `_skill_import.find_source(source_id)`,
-    // `_skill_import.preview_saved_source(source, credential_id)`,
-    // `_skill_import.source_preview_changed(source, preview)` and, for `update`,
-    // `_skill_import.apply_source_import(preview, selections, credential_id,
-    // confirm=True)` — all of `src/readmd_modules/skill_import.py`, which the
-    // kernel has no equivalent of (`batch2.rs` ports only `list`, `preview` and
-    // `apply` for the *unsaved* URL/zip flow).  `skill_import_source_response`
-    // now answers the purely syntactic half — every other sub-path shape gets
-    // Python's `404 source_not_found` JSON — so what stays pending here is
-    // exactly the part that needs the manager.  Port that module first.
-    "/api/skill-imports/{source_id}/check",
-    "/api/skill-imports/{source_id}/update",
     // `Handler._api_file` structures `.txt` through `src.readmd_modules.txtmd`
     // (`readmd.py:3056`); the route answers, but `structured` stays false and
     // `content` is the raw text.
@@ -892,7 +878,13 @@ fn dispatch(app: &Arc<App>, req: &Request, peer_is_loopback: bool) -> Response {
         return error_response(err);
     }
     if let Some(stripped) = req.path.strip_suffix('/') {
-        if !stripped.is_empty() {
+        // `readmd.py:1273-1284` compares `path == ...` first and only then
+        // `path.startswith(...)`, so `/api/skill-imports/` and
+        // `/api/upstream-sources/` reach their sub-dispatchers with an empty
+        // tail and answer 404 there — they are *not* the list endpoints.
+        // Retrying the table on the stripped name would serve the list instead.
+        let legacy_prefix_root = LEGACY_DYNAMIC_PREFIXES.contains(&stripped);
+        if !stripped.is_empty() && !legacy_prefix_root {
             if let Some(found) = table().get(stripped) {
                 return call(app, req, found);
             }
@@ -925,18 +917,14 @@ fn dispatch(app: &Arc<App>, req: &Request, peer_is_loopback: bool) -> Response {
 /// cannot ride along unimplemented and fall through to Python's bare
 /// `text/plain` 404 unnoticed.
 ///
-/// `None` means "no prefix matched, or the prefix matched with nothing behind
-/// it" — `/api/upstream-sources/` and `/api/skill-imports/` with an empty tail
-/// are already answered by the trailing-slash lookup in `dispatch`, and the
-/// declared pending surface / plain 404 handle whatever is left.
+/// An empty tail belongs here too, unlike everywhere else: both sub-dispatchers
+/// make their own 404 from it, which is why `dispatch` does not retry the table
+/// on the stripped name.
 fn dynamic_prefix_response(app: &Arc<App>, req: &Request) -> Option<Response> {
     for prefix in LEGACY_DYNAMIC_PREFIXES {
         let Some(rest) = req.path.strip_prefix(prefix) else {
             continue;
         };
-        if rest.is_empty() {
-            continue;
-        }
         return match *prefix {
             // `Handler._api_upstream_source_detail` (`readmd.py:2912`), which
             // re-splits `<source_id>/files/<file_id>` itself.
@@ -944,37 +932,333 @@ fn dynamic_prefix_response(app: &Arc<App>, req: &Request) -> Option<Response> {
                 Ok(res) => Some(res),
                 Err(err) => Some(error_response(err)),
             },
-            "/api/skill-imports/" => skill_import_source_response(rest),
+            // `Handler._api_skill_import_source` (`readmd.py:2855`).
+            "/api/skill-imports/" => Some(h_skill_import_source(app, req, rest)),
             _ => None,
         };
     }
     None
 }
 
-/// The syntactic half of `Handler._api_skill_import_source`
-/// (`readmd.py:2855`), ported in Wave E1 (F4).
+/// `Handler._api_skill_import_source` (`readmd.py:2855`): the whole `check` /
+/// `update` surface for one pinned Skill source.
 ///
-/// Python splits the tail into `parts` and answers
-/// `404 {'ok': False, 'error_code': 'source_not_found', 'error': 'Skill 来源不存在'}`
-/// unless the tail is exactly two segments whose second one is `check` or
-/// `update`.  That decision needs no Skill-source manager, so the kernel now
-/// makes it, which is closer to Python than the bare `text/plain` 404 the path
-/// used to fall through to.
+/// Python layers its three failure shapes by *where a statement sits relative
+/// to the endpoint's `try:`*, and the order is load-bearing:
 ///
-/// `check` and `update` themselves return `None` on purpose: they still need
-/// `_skill_import.find_source`, `preview_saved_source`,
-/// `source_preview_changed` and `apply_source_import`
-/// (`src/readmd_modules/skill_import.py`), none of which is ported, so
-/// `dispatch` answers them with the `501 rust_kernel_pending` that the two
-/// [`PENDING`] rows declare.  They stay there until the manager lands.
-fn skill_import_source_response(rest: &str) -> Option<Response> {
-    let parts: Vec<&str> = rest.split('/').filter(|p| !p.is_empty()).collect();
-    if parts.len() == 2 && matches!(parts[1], "check" | "update") {
-        return None;
+/// * the 404 for a tail that is not exactly `<id>/<check|update>`, and the 404
+///   for an unknown source, are both answered **before** the `POST` check — so a
+///   `GET` against a missing source reads as missing, not as the wrong verb;
+/// * `find_source` sits **outside** the `try:` (`readmd.py:2864`), so a
+///   skills.json whose privacy migration cannot be rewritten raises
+///   `config_write_failed` past the endpoint into `Handler.do_POST`'s
+///   `except Exception` → `text/plain` 500, not the JSON one;
+/// * below the `try:`, `SkillImportError` → `_skill_import_error` →
+///   `400 {'ok': False, 'error_code': <code>}` (the message never leaves the
+///   process, `readmd.py:2764`) and any other error → the JSON 500.
+fn h_skill_import_source(app: &Arc<App>, req: &Request, rest: &str) -> Response {
+    let missing = || ApiError::not_found("source_not_found").noted("error", "Skill 来源不存在");
+    // `parts = [unquote(p) for p in rest.split('/') if p]`: `read_request` has
+    // already percent-decoded the path once, so no second decode belongs here.
+    let parts: Vec<&str> = rest.trim_matches('/').split('/').filter(|p| !p.is_empty()).collect();
+    if parts.len() != 2 || !matches!(parts[1], "check" | "update") {
+        return error_response(missing());
     }
-    Some(error_response(
-        ApiError::not_found("source_not_found").noted("error", "Skill 来源不存在"),
-    ))
+    let (source_id, action) = (parts[0], parts[1]);
+    let ctx = skill_import_ctx(app);
+    let source = match skill_import::find_source(&ctx, source_id) {
+        Ok(Some(source)) => source,
+        Ok(None) => return error_response(missing()),
+        Err(_) => return error_response(ApiError::plain_text(500, "internal error")),
+    };
+    if req.method != "POST" {
+        return error_response(
+            ApiError::new(405, "method_not_allowed").noted("error", "仅支持 POST 请求"),
+        );
+    }
+    match skill_import_source_action(&ctx, req, &source, source_id, action) {
+        Ok(value) => skill_import_json(200, &value),
+        Err(err) => error_response(err),
+    }
+}
+
+/// The `try:` body of `_api_skill_import_source`, minus the exception handlers.
+fn skill_import_source_action(
+    ctx: &skill_import::Ctx,
+    req: &Request,
+    source: &JVal,
+    source_id: &str,
+    action: &str,
+) -> Result<JVal, ApiError> {
+    let body = skill_import_body(req)?;
+    // `str(body.get('credential_id') or source.get('credential_id') or '').strip()`
+    let credential_id = skill_import::py_strip(
+        &body
+            .get("credential_id")
+            .filter(|value| value.truthy())
+            .or_else(|| source.get("credential_id").filter(|value| value.truthy()))
+            .map(|value| value.py_str())
+            .unwrap_or_default(),
+    );
+    let preview = skill_import::preview_saved_source(ctx, source, &credential_id)
+        .map_err(skill_import_failure)?;
+    let changed = skill_import::source_preview_changed(source, &preview);
+    let mut out = skill_import::obj(&[
+        ("ok", JVal::Bool(true)),
+        ("source_id", skill_import::s(source_id)),
+        ("changed", JVal::Bool(changed)),
+    ]);
+    if action == "check" {
+        // `'current_commit': source.get('resolved_commit', '')` — a key that is
+        // present but null stays null; only an absent key takes the default.
+        let commit = source
+            .get("resolved_commit")
+            .cloned()
+            .unwrap_or_else(|| skill_import::s(""));
+        out.set_item("current_commit", commit);
+        out.set_item("preview", preview);
+        return Ok(out);
+    }
+    if !body.get("confirm").map(|value| value.is_true()).unwrap_or(false) {
+        return Err(skill_import_failure(skill_import::SkillImportError::new(
+            "confirmation_required",
+            "更新 Skill 来源需要明确确认",
+        )));
+    }
+    let selections = match body.get("selections") {
+        Some(JVal::List(items)) if !items.is_empty() => items.clone(),
+        _ => {
+            return Err(skill_import_failure(skill_import::SkillImportError::new(
+                "selection_required",
+                "更新前请先选择要导入的 Skill",
+            )))
+        }
+    };
+    let result =
+        skill_import::apply_source_import(ctx, &preview, &selections, &credential_id, true)
+            .map_err(skill_import_failure)?;
+    // `{**prefix, **result}`: a repeated key keeps the prefix's slot, which is
+    // what `dict` display does — and what `set_item` implements.
+    if let JVal::Obj(items) = result {
+        for (key, value) in items {
+            out.set_item(&key, value);
+        }
+    }
+    Ok(out)
+}
+
+/// `Handler._skill_import_error` for the codes the module raises, plus the
+/// endpoint's `except Exception` for the ones that stand in for a non-SkillError.
+fn skill_import_failure(error: skill_import::SkillImportError) -> ApiError {
+    if error.code == "internal_error" {
+        // `internal()` in the ported module means "an exception Python would not
+        // have typed as SkillImportError", i.e. the JSON 500 — and the legacy
+        // handler says 检查 for both actions, which is reproduced verbatim.
+        return ApiError::new(500, "internal_error")
+            .noted("error", "Skill 来源检查失败")
+            .noted("detail", error.message);
+    }
+    ApiError::bad_request(error.code)
+}
+
+/// The outside world the Skill-import manager needs, assembled per request.
+fn skill_import_ctx(app: &Arc<App>) -> skill_import::Ctx {
+    let data_dir = app.paths.data_dir.clone();
+    skill_import::Ctx {
+        skills_file: data_dir.join("skills.json"),
+        fetch: Some(Box::new(skill_import_fetch)),
+        credential: Some(Box::new(skill_import_credential)),
+        validator: Some(Box::new(skill_import_validate)),
+        data_dir,
+        ..skill_import::Ctx::new()
+    }
+}
+
+/// `crypto.load_credential`; `_token` turns any failure into `credential_invalid`.
+fn skill_import_credential(credential_id: &str) -> Result<String, String> {
+    crate::crypto::load_credential(credential_id).map_err(|error| error.to_string())
+}
+
+/// `skills.SkillRegistry([parent]).validate(destination)` is `load_skill`, and
+/// `load_runtime_skill` is the kernel's `load_skill`.  Every way it can fail is
+/// a `SkillError` in Python — the escape-the-root check is vacuous for a folder
+/// against its own parent — so `Err(false)` is never produced.
+fn skill_import_validate(folder: &Path) -> Result<(), bool> {
+    if load_runtime_skill(folder).is_some() {
+        Ok(())
+    } else {
+        Err(true)
+    }
+}
+
+/// `urllib.request.build_opener(_SafeRedirectHandler(api)).open(req, timeout=25)`.
+///
+/// `redirects(0)` on the agent hands the hop policy back to this function, which
+/// is the point: `_SafeRedirectHandler.redirect_request` calls `_safe_url()` on
+/// every hop **before** urllib opens the next connection, so an untrusted
+/// `Location` must never be contacted.  Returning it as the *result* url lets
+/// `request()`'s own `_safe_url(response.geturl())` produce the identical
+/// `github_redirect_blocked` without a second error channel in [`skill_import::Fetcher`].
+///
+/// `Fetcher` has no `limit` argument, so the read cap is fixed at
+/// `MAX_RESPONSE_BYTES + 1` — which is Python's `response.read(limit + 1)` for
+/// every call site, since `request_json` and the archive download both pass
+/// `MAX_RESPONSE_BYTES`.
+fn skill_import_fetch(
+    url: &str,
+    token: &str,
+    api: bool,
+) -> Result<skill_import::FetchResult, skill_import::HttpError> {
+    // `HTTPRedirectHandler.max_repeats` / `.max_redirections`.
+    const MAX_REPEATS: usize = 4;
+    const MAX_REDIRECTS: usize = 10;
+    // `req.redirect_dict`: created by the first redirect and only consulted from
+    // the second onward, which is why the first hop is never rejected as a repeat.
+    let mut visited: Option<Vec<(String, usize)>> = None;
+    let mut target = url.to_string();
+    loop {
+        // Rebuilt per hop: a redirect that crosses into a `NO_PROXY` host has to
+        // drop back to a direct connection, same as `http_request`.
+        let agent = egress_agent(&target);
+        let mut request = agent
+            .request("GET", &target)
+            .set("Accept", "application/vnd.github+json")
+            .set("User-Agent", "ReadMD-Skill-Importer")
+            // `timeout=25` is a socket timeout applied to each `open()`, not a
+            // deadline shared across hops — so it belongs on the per-hop request.
+            .timeout(Duration::from_secs(25));
+        if !token.is_empty() {
+            request = request.set("Authorization", &format!("Bearer {token}"));
+        }
+        let response = match request.call() {
+            Ok(response) => response,
+            Err(ureq::Error::Status(status, response)) => {
+                return Err(skill_import::HttpError {
+                    status,
+                    rate_limit_remaining: response
+                        .header("X-RateLimit-Remaining")
+                        .map(str::to_string),
+                });
+            }
+            // `URLError` / `TimeoutError`: there is no status line to read.
+            Err(_) => return Err(skill_import::HttpError { status: 0, rate_limit_remaining: None }),
+        };
+        let status = response.status();
+        let location = match response.header("Location") {
+            Some(value) => value.to_string(),
+            None => {
+                return Ok(skill_import::FetchResult {
+                    body: read_egress_body_bounded(response, skill_import::MAX_RESPONSE_BYTES + 1),
+                    final_url: target,
+                })
+            }
+        };
+        if !(301..=308).contains(&status) {
+            return Ok(skill_import::FetchResult {
+                body: read_egress_body_bounded(response, skill_import::MAX_RESPONSE_BYTES + 1),
+                final_url: target,
+            });
+        }
+        // Drain the redirect body before moving on, or the pooled connection is
+        // leaked instead of reused by the next hop.
+        let _ = read_egress_body(response);
+        let next = resolve_location(&target, &location).unwrap_or_else(|_| target.clone());
+        let mut counts = visited.take().unwrap_or_default();
+        if visited.is_some() {
+            let seen = counts
+                .iter()
+                .find(|(url, _)| *url == next)
+                .map(|(_, count)| *count)
+                .unwrap_or(0);
+            if seen >= MAX_REPEATS || counts.len() >= MAX_REDIRECTS {
+                // `HTTPError(req.full_url, code, …)` carrying the redirect's own
+                // status → `github_http_error（HTTP <status>）`.
+                return Err(skill_import::HttpError { status, rate_limit_remaining: None });
+            }
+        }
+        match counts.iter_mut().find(|(url, _)| *url == next) {
+            Some(entry) => entry.1 += 1,
+            None => counts.push((next.clone(), 1)),
+        }
+        visited = Some(counts);
+        // `_SafeRedirectHandler.redirect_request` → `_safe_url(newurl)` happens
+        // before urllib opens the next connection, so an untrusted hop is never
+        // contacted; handing it back as `final_url` is what makes `request()`
+        // raise the same `github_redirect_blocked`.
+        if skill_import::safe_url(&next, api).is_err() {
+            return Ok(skill_import::FetchResult { body: Vec::new(), final_url: next });
+        }
+        target = next;
+    }
+}
+
+/// [`read_egress_body`] with `response.read(limit + 1)`'s cap: reading past the
+/// limit is exactly what the size check in `request()` exists to catch.
+fn read_egress_body_bounded(response: ureq::Response, cap: usize) -> Vec<u8> {
+    let mut data = Vec::new();
+    let _ = response.into_reader().take(cap as u64).read_to_end(&mut data);
+    data
+}
+
+/// `Handler._skill_import_body` (`readmd.py:2747`) over the bytes `read_body`
+/// already buffered for this request.
+fn skill_import_body(req: &Request) -> Result<JVal, ApiError> {
+    let invalid_size =
+        || skill_import_failure(skill_import::SkillImportError::new("request_invalid", "请求体大小无效"));
+    // `int(handler.headers.get('Content-Length', 0) or 0)`: an absent *or* empty
+    // header is 0, anything `int()` rejects is `request_invalid`.
+    let declared = req.header("content-length").unwrap_or("").trim();
+    let length = if declared.is_empty() {
+        0
+    } else {
+        match declared.parse::<i64>() {
+            Ok(value) => value,
+            Err(_) => return Err(invalid_size()),
+        }
+    };
+    if length < 0 || length > 2 * 1024 * 1024 {
+        return Err(skill_import_failure(skill_import::SkillImportError::new(
+            "request_too_large",
+            "请求体超过安全大小限制",
+        )));
+    }
+    if length == 0 {
+        return Ok(JVal::Obj(Vec::new()));
+    }
+    let invalid_body = || {
+        skill_import_failure(skill_import::SkillImportError::new(
+            "request_invalid",
+            "请求体必须是有效 JSON",
+        ))
+    };
+    let text = match std::str::from_utf8(&req.body) {
+        Ok(value) => value,
+        Err(_) => return Err(invalid_body()),
+    };
+    match skill_import::json_loads(text) {
+        // `if not isinstance(body, dict): request_invalid`
+        Ok(value) if value.is_dict() => Ok(value),
+        Ok(_) => Err(skill_import_failure(skill_import::SkillImportError::new(
+            "request_invalid",
+            "请求体必须是 JSON 对象",
+        ))),
+        Err(_) => Err(invalid_body()),
+    }
+}
+
+/// `Handler._send_json(status, obj)` without re-encoding through `serde_json`:
+/// `skill_import::json_dumps` *is* `json.dumps(obj, ensure_ascii=False)` — same
+/// `", "` / `": "` separators and the same float formatting — and it carries the
+/// key order the endpoint built instead of sorting it.
+fn skill_import_json(status: u16, value: &JVal) -> Response {
+    Response {
+        status,
+        headers: vec![(
+            "Content-Type".to_string(),
+            "application/json; charset=utf-8".to_string(),
+        )],
+        body: skill_import::json_dumps(value, None).into_bytes(),
+    }
 }
 
 fn call(app: &Arc<App>, req: &Request, handler: &Handler) -> Response {
@@ -5381,30 +5665,34 @@ mod tests {
         assert_eq!(String::from_utf8_lossy(&res.body), "not found");
     }
 
-    /// Wave E1 (F4): `/api/skill-imports/<id>/check|update` stay declared
-    /// `PENDING` — the Skill-source manager is not ported — but every other
-    /// sub-path shape now answers the same
+    /// Wave E1 (F4) declared `/api/skill-imports/<id>/check|update` `PENDING`
+    /// because the Skill-source manager was assumed unported.  It is ported
+    /// (`skill_import.rs`), so `h_skill_import_source` serves both actions and
+    /// neither template may creep back into the declared-pending list.  Every
+    /// sub-path shape still answers the same
     /// `404 {'ok': False, 'error_code': 'source_not_found', ...}`
-    /// `readmd.py:2857-2861` does, instead of the dispatcher's bare text 404.
+    /// `readmd.py:2857-2861` does, not the dispatcher's bare text 404.
     #[test]
-    fn skill_import_source_subpaths_split_pending_from_pythons_404() {
+    fn skill_import_source_subpaths_answer_pythons_404_never_a_pending_501() {
         let _env = env_guard();
         let app = sample_app("we1-skillsrc");
         for action in ["check", "update"] {
             let template = format!("/api/skill-imports/{{source_id}}/{action}");
             assert!(
-                PENDING.iter().any(|p| *p == template),
-                "{template} must stay hand-declared in PENDING"
+                !PENDING.iter().any(|p| *p == template),
+                "{template} is served by h_skill_import_source; declaring it pending \
+                 would understate the port and inflate pendingCount"
             );
-            let path = format!("/api/skill-imports/owner--repo/{action}");
-            let res = dispatch(&app, &request("POST", &path, b"{}"), true);
-            assert_eq!(res.status, 501, "{path} is declared pending, never served");
-            let body: Value = serde_json::from_slice(&res.body).unwrap();
-            assert_eq!(body["error_code"], json!("rust_kernel_pending"), "{path}");
-            assert_eq!(body["feature"], json!(template), "{path}");
+            assert_ne!(
+                dispatch(&app, &request("POST", &format!("/api/skill-imports/owner--repo/{action}"), b"{}"), true).status,
+                501,
+                "a declared-pending row must not be what this path answers"
+            );
         }
         for path in [
             "/api/skill-imports/owner--repo",
+            "/api/skill-imports/owner--repo/check",
+            "/api/skill-imports/owner--repo/update",
             "/api/skill-imports/owner--repo/delete",
             "/api/skill-imports/a/b/c",
         ] {
@@ -5429,6 +5717,111 @@ mod tests {
         );
     }
 
+    /// The gates `readmd.py:2855-2895` runs, in order, against a *registered*
+    /// source and without a network: the unknown-source 404 precedes the verb
+    /// check, `Content-Length` is sized before the body is parsed, the parse
+    /// precedes the preview, and `_skill_import_error` answers a
+    /// `SkillImportError` with its code only — the Chinese message never leaves
+    /// the process (`readmd.py:2764`).  Key order is asserted from the wire text
+    /// because `serde_json` equality ignores it.
+    #[test]
+    fn skill_import_source_gates_run_in_pythons_order() {
+        let _env = env_guard();
+        let app = sample_app("we1-srcorder");
+        std::fs::write(
+            app.paths.data_dir.join("skills.json"),
+            br#"{
+                "schema_version": 2,
+                "sources": [
+                    {"source_id": "blank--repo", "source_type": "github", "repository_url": ""},
+                    {"source_id": "odd--repo", "source_type": "ftp",
+                     "repository_url": "https://github.com/odd/repo"}
+                ]
+            }"#,
+        )
+        .unwrap();
+        let envelope = |res: &Response| -> (u16, String, Value) {
+            let body: Value = serde_json::from_slice(&res.body).unwrap_or_else(|_| {
+                panic!("body is not JSON: {}", String::from_utf8_lossy(&res.body))
+            });
+            let keys = body
+                .as_object()
+                .map(|map| map.keys().cloned().collect::<Vec<_>>().join(","))
+                .unwrap_or_default();
+            (res.status, keys, body)
+        };
+        let post = |source_id: &str, action: &str, body: &[u8]| {
+            dispatch(
+                &app,
+                &request("POST", &format!("/api/skill-imports/{source_id}/{action}"), body),
+                true,
+            )
+        };
+
+        // 404 before the verb check: a `GET` on a source that is not registered
+        // reads as missing, not as the wrong method.
+        let (status, keys, body) = envelope(&dispatch(
+            &app,
+            &request("GET", "/api/skill-imports/nope--repo/check", &[]),
+            true,
+        ));
+        assert_eq!((status, keys.as_str()), (404, "ok,error_code,error"));
+        assert_eq!(body["error_code"], json!("source_not_found"));
+
+        // The registered source reaches the verb gate, which is where the one
+        // message this endpoint does echo lives.
+        let (status, keys, body) = envelope(&dispatch(
+            &app,
+            &request("GET", "/api/skill-imports/blank--repo/update", &[]),
+            true,
+        ));
+        assert_eq!(
+            (status, keys.as_str()),
+            (405, "ok,error_code,error"),
+            "`readmd.py:2869-2872` is a three-key envelope"
+        );
+        assert_eq!(
+            body,
+            json!({"ok": false, "error_code": "method_not_allowed", "error": "仅支持 POST 请求"})
+        );
+
+        // Body gate: a non-object JSON body is rejected before the source is
+        // previewed, and an announced size is what is bounded — never the bytes
+        // actually read.
+        let (status, keys, body) = envelope(&post("blank--repo", "check", b"[1, 2]"));
+        assert_eq!((status, keys.as_str()), (400, "ok,error_code"));
+        assert_eq!(body, json!({"ok": false, "error_code": "request_invalid"}));
+        for (declared, code) in [
+            ("3000000", "request_too_large"),
+            ("-1", "request_too_large"),
+            ("not-a-number", "request_invalid"),
+        ] {
+            let mut req = request("POST", "/api/skill-imports/blank--repo/check", b"{}");
+            req.headers.insert("content-length".to_string(), declared.to_string());
+            let res = dispatch(&app, &req, true);
+            let (status, keys, body) = envelope(&res);
+            assert_eq!((status, keys.as_str()), (400, "ok,error_code"), "{declared}");
+            assert_eq!(body["error_code"], json!(code), "Content-Length: {declared}");
+        }
+
+        // Preview gate: both codes below come from the ported module, so the
+        // two-key `_skill_import_error` envelope is the proof the module — not a
+        // stub — answered.
+        let (status, keys, body) = envelope(&post("blank--repo", "check", b"{}"));
+        assert_eq!((status, keys.as_str()), (400, "ok,error_code"));
+        assert_eq!(
+            body,
+            json!({"ok": false, "error_code": "source_not_found"}),
+            "preview_saved_source's 来源不可用 message must not leave the process"
+        );
+        let (status, _, body) = envelope(&post("odd--repo", "update", b"{}"));
+        assert_eq!(status, 400);
+        assert_eq!(body["error_code"], json!("source_type_invalid"));
+        // `confirm`/`selections` are checked *after* the preview, so the
+        // `update` gate above already proves the ordering; the values themselves
+        // are covered by the module's own tests.
+    }
+
     /// The guard `PENDING`'s doc comment promises: the list stays hand-declared,
     /// non-empty, and never describes something the table actually serves.
     #[test]
@@ -5448,19 +5841,12 @@ mod tests {
                 *entry != "/api/settings/save",
                 "a path Python 404s is not pending work, it is over-surface"
             );
+            assert!(
+                !entry.starts_with("/api/skill-imports/"),
+                "the whole skill-imports surface is served by `h_skill_import_source` \
+                 and the batch handlers; {entry} would re-add a retired 501"
+            );
         }
-        assert!(
-            PENDING
-                .iter()
-                .any(|p| *p == "/api/skill-imports/{source_id}/check"),
-            "F4 left the two skill-source actions declared"
-        );
-        assert!(
-            PENDING
-                .iter()
-                .any(|p| *p == "/api/skill-imports/{source_id}/update"),
-            "F4 left the two skill-source actions declared"
-        );
     }
 
     /// The other guard `PENDING`'s doc comment promises: no legacy path may fall

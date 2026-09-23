@@ -3618,6 +3618,10 @@ pub struct FetchResult {
 /// `urllib.error.HTTPError` / `(URLError, TimeoutError)` 的失败结果。
 #[derive(Clone, Debug)]
 pub struct HttpError {
+    /// `exc.code`，或者 **`0`** 表示“根本没有响应”：Python 的
+    /// `(URLError, TimeoutError)` 分支拿不到状态码，`request()` 只能靠这个哨兵把它
+    /// 和真正的 HTTP 错误分开（前者是 `github_network_error`，后者是
+    /// `github_http_error（HTTP n）`）。
     pub status: u16,
     /// `exc.headers.get("X-RateLimit-Remaining")`，只有 HTTP 错误分支用得到。
     pub rate_limit_remaining: Option<String>,
@@ -3625,12 +3629,12 @@ pub struct HttpError {
 
 pub type Fetcher = Box<dyn Fn(&str, &str, bool) -> Result<FetchResult, HttpError> + Send + Sync>;
 /// `crypto.load_credential(credential_id) -> str`（`src/readmd_modules/crypto.py:220`）。
-// WIRING: readmd_modules::crypto.load_credential
+// SUPPLIED BY: server.rs::skill_import_credential
 pub type CredentialLoader = Box<dyn Fn(&str) -> Result<String, String> + Send + Sync>;
 /// `skills.SkillRegistry([parent]).validate(destination)`（`src/readmd_modules/skills.py`）。
 /// `Err(true)` = 抛出了 `SkillError` ⇒ `skill_invalid`；`Err(false)` = 其它异常 ⇒ 原样上抛
 /// （在 `readmd.py` 里落到 `except Exception` ⇒ 500）。
-// WIRING: readmd_modules::skills::SkillRegistry::validate
+// SUPPLIED BY: server.rs::skill_import_validate
 pub type SkillValidator = Box<dyn Fn(&Path) -> Result<(), bool> + Send + Sync>;
 
 /// 本模块需要的全部外部世界：配置路径、HTTP、凭据解密、结构校验与时钟。
@@ -3639,10 +3643,10 @@ pub type SkillValidator = Box<dyn Fn(&Path) -> Result<(), bool> + Send + Sync>;
 #[derive(Default)]
 pub struct Ctx {
     /// `readmd_core.config.DATA_DIR`
-    // WIRING: readmd_kernel::paths::DATA_DIR
+    // SUPPLIED BY: server.rs::skill_import_ctx（`app.paths.data_dir`）
     pub data_dir: PathBuf,
     /// `readmd_core.config.SKILLS_FILE`（= `DATA_DIR/skills.json`）
-    // WIRING: readmd_kernel::paths::SKILLS_FILE
+    // SUPPLIED BY: server.rs::skill_import_ctx
     pub skills_file: PathBuf,
     pub fetch: Option<Fetcher>,
     pub credential: Option<CredentialLoader>,
@@ -3708,6 +3712,11 @@ pub fn request(ctx: &Ctx, url: &str, token: &str, api: bool, limit: usize) -> R<
         Ok(value) => value,
         Err(failure) => {
             let status = failure.status;
+            // `except (urllib.error.URLError, TimeoutError)`：没有响应可供读状态码，
+            // Python 只会给出 `github_network_error`。
+            if status == 0 {
+                return err("github_network_error", "无法连接 GitHub，请检查网络后重试");
+            }
             if status == 429 || (status == 403 && failure.rate_limit_remaining.as_deref() == Some("0")) {
                 return err("github_rate_limited", "GitHub 请求已达到速率限制，请稍后重试");
             }
