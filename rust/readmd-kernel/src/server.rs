@@ -2502,66 +2502,80 @@ fn h_links_index(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
     }
 }
 
-fn h_links_graph(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    // `_api_links_graph` (`readmd.py:2105`-`2115`): the only guard is the
-    // blanket `except Exception` -> `_send_api_error(500,
-    // 'links_graph_failed')`, i.e. the `{'ok':False,'error_code':...}` shape.
-    let Ok(mut value) = app.store.graph() else {
+/// Every arm runs inside Python's blanket `except Exception` -> `500
+/// links_graph_failed`, and `get_indexer()` failing is part of that same arm.
+fn h_links_graph(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
+    // `_api_links_graph` (`readmd.py:2103`-`2117`): reads **only** `dir` and
+    // `max_nodes` from the query, and answers the *nested* shape
+    // `{'ok': True, 'graph': indexer.get_graph_data(...)}`.  The previous port
+    // served `app.store.graph()` -- a `docs`/`links(src,dst)` schema the
+    // reference never touches -- flattened `ok` in at the top level, and
+    // `assets/js/features/graph.js:243` (`if (!res?.ok || !res.graph) throw`)
+    // therefore could not open 知识图谱 at all (R7 §B7).
+    let directory = req.q("dir").map(|s| s.trim_matches(py_isspace as fn(char) -> bool).to_string()).unwrap_or_default();
+    // `directory or None`: Python truthiness, so a whitespace-only `dir` is
+    // *unscoped*, not a scope of `''`.
+    let root_dir = if directory.is_empty() { None } else { Some(directory.as_str()) };
+    let max_raw = req.q("max_nodes").map(|s| s.trim_matches(py_isspace as fn(char) -> bool).to_string()).unwrap_or_default();
+    let max_nodes = match max_raw.replace('_', "").parse::<i64>() {
+        Ok(v) => v.max(10).min(2000),
+        Err(_) => 500,
+    };
+    let Ok(indexer) = crate::link_indexer::get_indexer(None) else {
         return Err(ApiError::internal("links_graph_failed"));
     };
-    if let Some(dir) = req.field("dir").or_else(|| req.field("path")) {
-        let wanted = dir.to_ascii_lowercase();
-        if let Some(obj) = value.as_object_mut() {
-            obj.insert("dir".into(), json!(dir));
-            obj.insert("nodes".into(), json!(filter_nodes(obj.get("nodes"), &wanted)));
-        }
+    match indexer.get_graph_data(root_dir, max_nodes) {
+        Ok(graph) => ok_json(json!({ "ok": true, "graph": graph })),
+        Err(_) => Err(ApiError::internal("links_graph_failed")),
     }
-    if let Some(obj) = value.as_object_mut() {
-        obj.insert("ok".into(), json!(true));
-    }
-    ok_json(value)
 }
 
-fn filter_nodes(nodes: Option<&Value>, dir_lower: &str) -> Vec<Value> {
-    nodes
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter(|n| {
-                    n.get("id")
-                        .and_then(|i| i.as_str())
-                        .map(|id| id.to_ascii_lowercase().starts_with(dir_lower.trim_start_matches('/')))
-                        .unwrap_or(true)
-                })
-                .cloned()
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
-fn h_links_backlinks(app: &Arc<App>, req: &Request) -> ApiResult<Response> {
-    // `_api_links_backlinks` (`readmd.py:2117`-`2135`).  Python hands the
-    // caller's raw string to `indexer.get_backlinks()`; there is no allowed-root
-    // resolution, so an out-of-root path is simply "no backlinks", never a 403.
-    let raw = req.field("path").unwrap_or_default();
-    let raw = raw.trim().to_string();
-    if raw.is_empty() {
+fn h_links_backlinks(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
+    // `_api_links_backlinks` (`readmd.py:2119`-`2137`).  Python hands the
+    // caller's raw string to `indexer.get_backlinks()` and echoes it back
+    // **verbatim** in `path`; there is no allowed-root resolution, so an
+    // out-of-root path is simply "no backlinks", never a 403.  The response
+    // carries `forward_links` too -- `graph.js:265` reads it for the 出站 tab.
+    let file_path = req.q("path").map(|s| s.trim_matches(py_isspace as fn(char) -> bool).to_string()).unwrap_or_default();
+    if file_path.is_empty() {
         return Err(ApiError::bad_request("missing_path"));
     }
-    let canonical = paths::canonical_existing(Path::new(&raw)).unwrap_or_else(|_| PathBuf::from(&raw));
-    let display = app.paths.display_path(&canonical);
-    let Ok(list) = app.store.backlinks(&display) else {
+    let Ok(indexer) = crate::link_indexer::get_indexer(None) else {
         return Err(ApiError::internal("links_backlinks_failed"));
     };
-    ok_json(json!({ "ok": true, "path": display, "backlinks": list, "items": list, "count": list.len() }))
+    let backlinks = match indexer.get_backlinks(&file_path) {
+        Ok(backlinks) => backlinks,
+        Err(_) => return Err(ApiError::internal("links_backlinks_failed")),
+    };
+    let forward_links = match indexer.get_forward_links(&file_path) {
+        Ok(forward_links) => forward_links,
+        Err(_) => return Err(ApiError::internal("links_backlinks_failed")),
+    };
+    ok_json(json!({
+        "ok": true,
+        "path": file_path,
+        "backlinks": backlinks,
+        "forward_links": forward_links,
+    }))
 }
 
-fn h_links_deadlinks(app: &Arc<App>, _req: &Request) -> ApiResult<Response> {
-    // `_api_links_deadlinks` (`readmd.py:2137`-`2151`).
-    let Ok(list) = app.store.deadlinks() else {
+fn h_links_deadlinks(_app: &Arc<App>, req: &Request) -> ApiResult<Response> {
+    // `_api_links_deadlinks` (`readmd.py:2139`-`2148`): `dir` **is** read, so an
+    // empty query is not equivalent to Python's unscoped scan, and the body is
+    // exactly `{'ok': True, 'deadlinks': deadlinks}`.  The previous port ignored
+    // the request entirely and served `{ok,deadlinks,items,count}` from
+    // `app.store.deadlinks()`, whose rows are `{source,target}` instead of
+    // Python's `{link_id,source_path,source_title,target_raw,target_clean,
+    // alias,line_no}`.
+    let directory = req.q("dir").map(|s| s.trim_matches(py_isspace as fn(char) -> bool).to_string()).unwrap_or_default();
+    let root_dir = if directory.is_empty() { None } else { Some(directory.as_str()) };
+    let Ok(indexer) = crate::link_indexer::get_indexer(None) else {
         return Err(ApiError::internal("links_deadlinks_failed"));
     };
-    ok_json(json!({ "ok": true, "deadlinks": list, "items": list, "count": list.len() }))
+    match indexer.get_deadlinks(root_dir) {
+        Ok(deadlinks) => ok_json(json!({ "ok": true, "deadlinks": deadlinks })),
+        Err(_) => Err(ApiError::internal("links_deadlinks_failed")),
+    }
 }
 
 
