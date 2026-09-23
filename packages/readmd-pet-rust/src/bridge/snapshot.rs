@@ -103,8 +103,62 @@ mod tests {
         assert!(reader.read().unwrap().is_some());
     }
 
+    #[test]
+    fn reader_rejects_all_invalid_shapes_and_size_limits() {
+        let dir = tempfile_dir();
+        let path = dir.join("invalid-state.json");
+        let invalid = [
+            b"".as_slice(),
+            b"{".as_slice(),
+            br#"[]"#.as_slice(),
+            br#"null"#.as_slice(),
+            br#"{}"#.as_slice(),
+            br#"{"format_version":2}"#.as_slice(),
+            br#"{"format_version":1,"bounds":{"x":0,"y":0,"width":1,"height":1}}"#.as_slice(),
+        ];
+        for bytes in invalid {
+            fs::write(&path, bytes).unwrap();
+            let mut reader = SnapshotReader::new(&path);
+            assert!(
+                reader.read().is_err(),
+                "input should be rejected: {bytes:?}"
+            );
+        }
+        fs::write(&path, vec![b'x'; MAX_SNAPSHOT_BYTES + 1]).unwrap();
+        let mut reader = SnapshotReader::new(&path);
+        assert_eq!(reader.read().unwrap_err(), "pet_snapshot_too_large");
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn reader_consumes_high_frequency_atomic_replacements_without_partial_json() {
+        let dir = tempfile_dir();
+        let path = dir.join("atomic-state.json");
+        let mut reader = SnapshotReader::new(&path);
+        for generation in 1..=10_000u64 {
+            let temp = path.with_extension("tmp");
+            let bytes =
+                format!(r#"{{"format_version":1,"generation":{generation},"visible":true}}"#);
+            fs::write(&temp, bytes).unwrap();
+            // `rename` replaces an existing destination on Unix but not on
+            // Windows.  The production Python writer uses ReplaceFile/os
+            // replace; remove only the prior test file here before renaming.
+            let _ = fs::remove_file(&path);
+            fs::rename(&temp, &path).unwrap();
+            let update = reader.read().unwrap().expect("new atomic snapshot");
+            assert_eq!(update.snapshot.generation, generation);
+        }
+        assert!(reader.read().unwrap().is_none());
+        let _ = fs::remove_dir_all(dir);
+    }
+
     fn tempfile_dir() -> PathBuf {
-        let path = std::env::temp_dir().join(format!("readmd-pet-test-{}", std::process::id()));
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|value| value.as_nanos())
+            .unwrap_or_default();
+        let path =
+            std::env::temp_dir().join(format!("readmd-pet-test-{}-{nonce}", std::process::id()));
         let _ = fs::create_dir_all(&path);
         path
     }

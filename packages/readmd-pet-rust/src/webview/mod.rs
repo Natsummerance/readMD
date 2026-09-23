@@ -16,6 +16,7 @@ pub const PRELOAD_ABI: &str = r#"
 (function () {
   const stateListeners = new Set();
   const controlListeners = new Set();
+  const bongoListeners = new Set();
   const query = new URLSearchParams(window.location.search);
   const generation = Number(query.get('generation') || 0);
   const session = query.get('session') || '';
@@ -30,7 +31,8 @@ pub const PRELOAD_ABI: &str = r#"
   };
   window.__readmdRustDispatch = {
     state: (payload) => stateListeners.forEach((callback) => { try { callback(payload); } catch (_) {} }),
-    control: (payload) => controlListeners.forEach((callback) => { try { callback(payload); } catch (_) {} })
+    control: (payload) => controlListeners.forEach((callback) => { try { callback(payload); } catch (_) {} }),
+    bongoInput: (payload) => bongoListeners.forEach((callback) => { try { callback(payload); } catch (_) {} })
   };
   const on = (set, callback) => { set.add(callback); return () => set.delete(callback); };
   window.hermesDesktop = window.hermesDesktop || {};
@@ -38,12 +40,14 @@ pub const PRELOAD_ABI: &str = r#"
     open: (request) => { send({type: 'open', request: request || {}}); return Promise.resolve({ok: true}); },
     close: () => { send({type: 'close'}); return Promise.resolve({ok: true}); },
     setBounds: (bounds) => send({type: 'bounds', bounds: bounds || {}}),
+    startDrag: () => send({type: 'drag-start'}),
     setIgnoreMouse: (ignore) => send({type: 'ignore-mouse', ignore: !!ignore}),
     setFocusable: (focusable) => send({type: 'focusable', focusable: !!focusable}),
     pushState: (payload) => send({type: 'state', payload: payload || {}}),
     control: (payload) => send({type: 'control', payload: payload || {}}),
     onState: (callback) => on(stateListeners, callback),
-    onControl: (callback) => on(controlListeners, callback)
+    onControl: (callback) => on(controlListeners, callback),
+    onBongoInput: (callback) => on(bongoListeners, callback)
   };
   window.readmdPet = window.readmdPet || {};
   window.readmdPet.dropFiles = (files) => {
@@ -95,20 +99,17 @@ impl WebViewHost {
         let page_callback = callback.clone();
         let page_load_handler = move |event: wry::PageLoadEvent, url: String| {
             if matches!(event, wry::PageLoadEvent::Finished) {
-                page_callback(crate::protocol::RendererMessage {
-                    kind: "page-finished".into(),
-                    payload: serde_json::json!({"url": url}),
-                });
+                page_callback(RendererMessage::host(
+                    "page-finished",
+                    serde_json::json!({"url": url}),
+                ));
             }
         };
         let drop_callback = callback;
         let drag_handler = move |event: DragDropEvent| {
             if let DragDropEvent::Drop { paths, .. } = event {
                 let payload = serde_json::json!({"paths":paths.iter().map(|path| path.to_string_lossy().to_string()).collect::<Vec<_>>()});
-                drop_callback(crate::protocol::RendererMessage {
-                    kind: "drop".into(),
-                    payload,
-                });
+                drop_callback(RendererMessage::host("drop", payload));
             }
             true
         };
@@ -181,6 +182,18 @@ impl WebViewHost {
         if renderer == self.renderer {
             return Ok(());
         }
+        self.navigate_renderer(renderer)
+    }
+
+    /// Reload the current renderer with a fresh navigation generation.  A
+    /// failed WebView page must never be retried with the old generation: any
+    /// delayed IPC from the failed page then becomes stale and is ignored by
+    /// the host.
+    pub fn reload_renderer(&mut self) -> HostResult<()> {
+        self.navigate_renderer(self.renderer)
+    }
+
+    fn navigate_renderer(&mut self, renderer: RendererKind) -> HostResult<()> {
         let generation = self.navigation_generation.saturating_add(1);
         let url = renderer_url(renderer, generation, &self.session_token)?;
         self.view
@@ -205,6 +218,15 @@ impl WebViewHost {
         self.view
             .evaluate_script(&format!(
                 "window.__readmdRustDispatch && window.__readmdRustDispatch.control({encoded});"
+            ))
+            .map_err(|error| HostError::WebView(error.to_string()))
+    }
+
+    pub fn send_bongo_input(&self, payload: &crate::input::BongoInputState) -> HostResult<()> {
+        let encoded = serde_json::to_string(payload)?;
+        self.view
+            .evaluate_script(&format!(
+                "window.__readmdRustDispatch && window.__readmdRustDispatch.bongoInput({encoded});"
             ))
             .map_err(|error| HostError::WebView(error.to_string()))
     }
@@ -240,50 +262,12 @@ fn asset_response(
         .decode_utf8()
         .map_err(|_| "invalid_asset_path".to_string())?;
     let relative = raw.trim_start_matches('/');
-    let relative_path = Path::new(relative);
-    if relative.is_empty()
-        || relative_path.is_absolute()
-        || relative_path
-            .components()
-            .any(|component| matches!(component, std::path::Component::ParentDir))
-        || relative.contains('\\')
-    {
-        return Err("unsafe_asset_path".into());
-    }
-    let renderer_root = root.canonicalize().map_err(|error| error.to_string())?;
-    // The renderer bundle is kept under `renderer/`, while the native
-    // package deliberately keeps large Live2D models and the Cubism vendor
-    // runtime as sibling directories. Expose only those two fixed siblings;
-    // never turn the custom protocol into a general filesystem server.
-    let (asset_root, asset_relative) = if let Some(path) = relative.strip_prefix("vendor/") {
-        (
-            renderer_root
-                .parent()
-                .unwrap_or(&renderer_root)
-                .join("vendor"),
-            path,
-        )
-    } else if let Some(path) = relative.strip_prefix("models/") {
-        (
-            renderer_root
-                .parent()
-                .unwrap_or(&renderer_root)
-                .join("models"),
-            path,
-        )
-    } else {
-        (renderer_root.clone(), relative)
-    };
-    let asset_root = asset_root
-        .canonicalize()
-        .map_err(|error| error.to_string())?;
-    let candidate = asset_root
-        .join(asset_relative)
-        .canonicalize()
-        .map_err(|error| error.to_string())?;
-    if !candidate.starts_with(&asset_root) {
-        return Err("unsafe_asset_path".into());
-    }
+    // Single source of truth for containment: `security::RendererAssetRouter`
+    // mirrors `RustPetRuntime._safe_name`, refuses symlinked members the way
+    // `_verify_tree` does, and caps a single served file.  The protocol must
+    // not grow its own copy of these rules.
+    let router = crate::security::RendererAssetRouter::new(root).map_err(|error| error.to_string())?;
+    let candidate = router.serve(relative).map_err(|error| error.to_string())?;
     let bytes = std::fs::read(&candidate).map_err(|error| error.to_string())?;
     let content_type = match candidate
         .extension()
@@ -303,6 +287,67 @@ fn asset_response(
     wry::http::Response::builder()
         .status(200)
         .header("Content-Type", content_type)
+        .header("Access-Control-Allow-Origin", "*")
         .body(bytes)
         .map_err(|error| error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn request(uri: &str) -> wry::http::Request<Vec<u8>> {
+        wry::http::Request::builder()
+            .uri(uri)
+            .body(Vec::new())
+            .unwrap()
+    }
+
+    #[test]
+    fn the_asset_protocol_answers_only_from_the_verified_runtime_layout() {
+        let package = std::env::temp_dir().join(format!(
+            "readmd-pet-protocol-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let renderer = package.join("renderer");
+        std::fs::create_dir_all(renderer.join("assets")).unwrap();
+        std::fs::create_dir_all(package.join("vendor")).unwrap();
+        std::fs::write(renderer.join("index.html"), b"<html>").unwrap();
+        std::fs::write(renderer.join("assets").join("sheet.png"), b"png").unwrap();
+        std::fs::write(package.join("vendor").join("cubm.js"), b"js").unwrap();
+        std::fs::write(package.join("secret.txt"), b"no").unwrap();
+
+        let served = asset_response(&renderer, request("/index.html")).unwrap();
+        assert_eq!(served.status().as_u16(), 200);
+        assert_eq!(served.body(), b"<html>");
+        assert_eq!(
+            asset_response(&renderer, request("/assets/sheet.png"))
+                .unwrap()
+                .headers()["Content-Type"],
+            "image/png"
+        );
+        assert_eq!(
+            asset_response(&renderer, request("/vendor/cubm.js"))
+                .unwrap()
+                .body(),
+            b"js"
+        );
+        // Percent-decoded traversal and a sibling of renderer/ must both fail.
+        for uri in [
+            "/%2e%2e/secret.txt",
+            "/../secret.txt",
+            "/vendor/%2e%2e%2fsecret.txt",
+            "/secret.txt",
+        ] {
+            let error = asset_response(&renderer, request(uri))
+                .err()
+                .unwrap_or_else(|| panic!("{uri} must not be served"));
+            assert!(!error.is_empty(), "{error}");
+        }
+        let _ = std::fs::remove_dir_all(package);
+    }
 }

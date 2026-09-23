@@ -22,6 +22,14 @@ pub trait PlatformBackend {
     fn name(&self) -> &'static str;
     fn init(&mut self, window: &Window) -> HostResult<()>;
     fn set_bounds(&mut self, window: &Window, bounds: SnapshotBounds) -> HostResult<()>;
+    /// The rect `set_bounds` actually applied.  A backend that adjusts the
+    /// requested position (keeping the pet on screen, for instance) has to be
+    /// able to say so, otherwise the host echoes geometry the application then
+    /// persists and the pet reappears somewhere else on the next launch.
+    /// `None` means the backend applied the request unchanged.
+    fn applied_bounds(&self) -> Option<SnapshotBounds> {
+        None
+    }
     fn set_visible(&mut self, window: &Window, visible: bool) -> HostResult<()>;
     fn set_opacity(&mut self, window: &Window, opacity: f64) -> HostResult<()>;
     fn set_click_through(&mut self, window: &Window, click_through: bool) -> HostResult<()>;
@@ -33,6 +41,13 @@ pub trait PlatformBackend {
     ) -> HostResult<()>;
     fn show_context_menu(&mut self, _window: &Window) -> HostResult<()> {
         Ok(())
+    }
+    fn drag_window(&self, window: &Window) -> HostResult<()> {
+        let _ = window.drag_window();
+        Ok(())
+    }
+    fn win32_hwnd(&self) -> Option<isize> {
+        None
     }
 }
 
@@ -61,7 +76,9 @@ pub fn configure_builder(builder: WindowBuilder) -> WindowBuilder {
 #[cfg(windows)]
 fn configure_builder_platform(builder: WindowBuilder) -> WindowBuilder {
     use tao::platform::windows::WindowBuilderExtWindows;
-    builder.with_skip_taskbar(true)
+    builder
+        .with_skip_taskbar(true)
+        .with_undecorated_shadow(false)
 }
 
 #[cfg(target_os = "macos")]
